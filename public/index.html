@@ -1,0 +1,1185 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>WMS — Sistema</title>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Segoe UI',Arial,sans-serif;background:#1e2a3a;color:#e2e8f0;height:100dvh;overflow:hidden}
+
+    /* ── LOGIN ── */
+    #tela-login{position:fixed;inset:0;background:#1e2a3a;display:flex;align-items:center;justify-content:center;z-index:9999}
+    .login-box{background:#253347;border:1px solid #2d4a6e;border-radius:20px;padding:40px 36px;width:100%;max-width:420px;text-align:center}
+    .login-logo{font-size:36px;margin-bottom:8px}
+    .login-titulo{font-size:22px;font-weight:900;color:#f59e0b;margin-bottom:4px}
+    .login-sub{font-size:12px;color:#64748b;margin-bottom:28px}
+    .perfil-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:24px}
+    .perfil-btn{padding:14px 8px;border:2px solid #2d4a6e;border-radius:12px;background:#1a2535;color:#64748b;cursor:pointer;font-size:11px;font-weight:700;letter-spacing:.5px;transition:all .2s}
+    .perfil-btn:hover{border-color:#3b82f6;color:#cbd5e1}
+    .perfil-btn.ativo{border-color:#f59e0b;background:#1a2535;color:#f59e0b}
+    .perfil-btn .perfil-icone{font-size:24px;display:block;margin-bottom:6px}
+    .login-campo{margin-bottom:14px;text-align:left}
+    .login-campo label{font-size:10px;color:#60a5fa;font-weight:700;letter-spacing:1px;display:block;margin-bottom:5px}
+    .login-campo input{width:100%;padding:11px 14px;background:#1a2535;border:2px solid #2d4a6e;border-radius:9px;color:#e2e8f0;font-size:15px;outline:none}
+    .login-campo input:focus{border-color:#f59e0b;box-shadow:0 0 0 3px rgba(245,158,11,.2)}
+    .btn-login{width:100%;padding:13px;background:#f59e0b;border:none;border-radius:10px;color:#1a2535;font-size:15px;font-weight:900;cursor:pointer;transition:background .2s;margin-top:4px}
+    .btn-login:hover{background:#fbbf24}
+    .login-erro{color:#f87171;font-size:12px;margin-top:10px;display:none}
+
+    /* ── LAYOUT ── */
+    #app{display:none;height:100dvh;overflow:hidden}
+    header{background:#253347;border-bottom:3px solid #f59e0b;padding:0 16px;display:flex;align-items:center;justify-content:space-between;height:52px;flex-shrink:0}
+    .logo{color:#f59e0b;font-size:16px;font-weight:900}
+    .logo span{color:#94a3b8;font-size:10px;display:block;font-weight:normal}
+    .header-dir{display:flex;align-items:center;gap:14px}
+    .usuario-info{text-align:right;font-size:11px;color:#94a3b8}
+    .usuario-info b{color:#f59e0b;font-size:12px;display:block}
+    .btn-sair-header{padding:6px 12px;background:transparent;border:1px solid #dc2626;border-radius:7px;color:#f87171;font-size:11px;font-weight:700;cursor:pointer}
+    .btn-sair-header:hover{background:#dc2626;color:white}
+    .layout{display:flex;height:calc(100dvh - 52px)}
+
+    /* ── SIDEBAR ── */
+    .sidebar{width:200px;background:#1a2535;border-right:1px solid #2d4a6e;display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
+    .sidebar::-webkit-scrollbar{width:4px}
+    .sidebar::-webkit-scrollbar-thumb{background:#3b5a8a;border-radius:10px}
+    .menu-grupo{padding:14px 10px 4px 14px;font-size:9px;font-weight:700;color:#475569;letter-spacing:1.5px}
+    .menu-item{display:flex;align-items:center;gap:10px;padding:10px 14px;color:#64748b;font-size:12px;font-weight:600;cursor:pointer;border-left:3px solid transparent;transition:all .2s;text-decoration:none}
+    .menu-item:hover{background:#1e2d42;color:#cbd5e1}
+    .menu-item.ativo{background:#1e2d42;color:#f59e0b;border-left-color:#f59e0b}
+    .menu-item .mi-icone{font-size:15px;flex-shrink:0}
+    .menu-badge{background:#dc2626;color:white;border-radius:10px;padding:1px 6px;font-size:9px;font-weight:700;margin-left:auto}
+
+    /* ── CONTEUDO ── */
+    .conteudo{flex:1;overflow-y:auto;padding:16px;background:#1e2a3a}
+    .conteudo::-webkit-scrollbar{width:6px}
+    .conteudo::-webkit-scrollbar-thumb{background:#3b5a8a;border-radius:10px}
+    .pagina{display:none}
+    .pagina.ativa{display:block}
+
+    /* ── CARDS / TABELAS ── */
+    .card{background:#253347;border:1px solid #2d4a6e;border-radius:12px;padding:16px;margin-bottom:16px}
+    .card-header{background:#2d4a6e;margin:-16px -16px 14px -16px;padding:10px 16px;border-radius:12px 12px 0 0;font-size:11px;font-weight:700;color:#94a3b8;letter-spacing:1px;display:flex;align-items:center;justify-content:space-between}
+    .grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px}
+    .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    .contador-card{background:#253347;border:1px solid #2d4a6e;border-radius:12px;padding:14px;text-align:center}
+    .contador-card.verde  {border-color:#16a34a;background:linear-gradient(135deg,#1a3324,#253347)}
+    .contador-card.amarelo{border-color:#ca8a04;background:linear-gradient(135deg,#33280f,#253347)}
+    .contador-card.azul   {border-color:#2563eb;background:linear-gradient(135deg,#1a2d4a,#253347)}
+    .contador-card.vermelho{border-color:#dc2626;background:linear-gradient(135deg,#3b0f0f,#253347)}
+    .contador-label{font-size:9px;font-weight:700;letter-spacing:2px;color:#94a3b8;margin-bottom:4px}
+    .contador-valor{font-size:28px;font-weight:900;line-height:1}
+    .contador-card.verde   .contador-valor{color:#4ade80}
+    .contador-card.amarelo .contador-valor{color:#fbbf24}
+    .contador-card.azul    .contador-valor{color:#60a5fa}
+    .contador-card.vermelho .contador-valor{color:#f87171}
+    .contador-sub{font-size:9px;color:#64748b;margin-top:3px}
+    .filtros{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}
+    .filtro-grupo{display:flex;flex-direction:column;gap:4px}
+    .filtro-grupo label{font-size:10px;color:#60a5fa;font-weight:700;letter-spacing:1px}
+    .filtro-grupo input,.filtro-grupo select{padding:8px 12px;background:#1a2535;border:1px solid #2d4a6e;border-radius:8px;color:#e2e8f0;font-size:12px;outline:none;min-width:140px}
+    .filtro-grupo input:focus,.filtro-grupo select:focus{border-color:#3b82f6}
+    .btn{padding:8px 16px;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;letter-spacing:.5px}
+    .btn-primary{background:#2563eb;color:white}.btn-primary:hover{background:#3b82f6}
+    .btn-success{background:#15803d;color:white}.btn-success:hover{background:#16a34a}
+    .btn-danger{background:#dc2626;color:white}.btn-danger:hover{background:#ef4444}
+    .btn-outline{background:transparent;border:1px solid #3b82f6;color:#60a5fa}.btn-outline:hover{background:#1a2d4a}
+    .btn-sm{padding:5px 10px;font-size:11px}
+    .tabela-wrap{overflow-x:auto;border-radius:8px}
+    table{width:100%;border-collapse:collapse;font-size:12px}
+    thead th{background:#1a2d4a;color:#64748b;font-size:10px;letter-spacing:1px;padding:10px 14px;text-align:left;position:sticky;top:0;z-index:1;white-space:nowrap}
+    tbody tr:nth-child(even){background:#1e2e42}
+    tbody tr:nth-child(odd){background:#253347}
+    tbody tr:hover{background:#1a2d4a}
+    td{padding:10px 14px;vertical-align:middle}
+    .pill{display:inline-block;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;white-space:nowrap}
+    .pill.pendente  {background:#1e3a5f;color:#93c5fd}
+    .pill.separando {background:#1d4ed8;color:#bfdbfe}
+    .pill.concluido {background:#15803d;color:#bbf7d0}
+    .pill.falta     {background:#7f1d1d;color:#fca5a5}
+    .pill.reposto   {background:#15803d;color:#bbf7d0}
+    .pill.ativo     {background:#15803d;color:#bbf7d0}
+    .pill.inativo   {background:#7f1d1d;color:#fca5a5}
+    .pill.supervisor{background:#7c3aed;color:#ddd6fe}
+    .pill.repositor {background:#b45309;color:#fde68a}
+    .pill.separador {background:#1d4ed8;color:#bfdbfe}
+    .form-grupo{margin-bottom:12px}
+    .form-grupo label{font-size:10px;color:#60a5fa;font-weight:700;letter-spacing:1px;display:block;margin-bottom:4px}
+    .form-grupo input,.form-grupo select{width:100%;padding:9px 12px;background:#1a2535;border:1px solid #2d4a6e;border-radius:8px;color:#e2e8f0;font-size:13px;outline:none}
+    .form-grupo input:focus,.form-grupo select:focus{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.15)}
+    .prod-barra{height:6px;background:#1a2535;border-radius:3px;margin-top:4px;overflow:hidden}
+    .prod-barra-fill{height:100%;background:#3b82f6;border-radius:3px;transition:width .5s}
+    .select-sep{padding:5px 8px;background:#1a2535;border:1px solid #2d4a6e;border-radius:6px;color:#e2e8f0;font-size:11px;outline:none;cursor:pointer}
+    .upload-area{border:2px dashed #2d4a6e;border-radius:12px;padding:32px;text-align:center;cursor:pointer;transition:all .2s}
+    .upload-area:hover,.upload-area.drag{border-color:#3b82f6;background:#1a2d4a}
+    .upload-icon{font-size:40px;margin-bottom:10px}
+    .upload-titulo{font-size:14px;font-weight:700;color:#cbd5e1;margin-bottom:6px}
+    .upload-sub{font-size:11px;color:#64748b;margin-bottom:14px}
+    #input-arquivo{display:none}
+    .historico-item{background:#1a2535;border:1px solid #2d4a6e;border-radius:8px;padding:10px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;font-size:12px}
+    .aviso-card{background:#2d0f0f;border:1px solid #dc2626;border-radius:12px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .aviso-card.reposto{background:#0f2d1a;border-color:#16a34a;opacity:.7}
+    .aviso-card.nao_encontrado{background:#1a1a2d;border-color:#6366f1;opacity:.7}
+    .aviso-info{flex:1}
+    .aviso-cod{font-size:13px;font-weight:700;color:#f87171}
+    .aviso-desc{font-size:12px;color:#e2e8f0;margin:2px 0}
+    .aviso-det{font-size:11px;color:#94a3b8}
+
+    /* ── SEPARAÇÃO ── */
+    .bip-input{flex:1;padding:14px 16px;background:#1a2535;border:2px solid #3b82f6;border-radius:10px;color:#60a5fa;font-size:20px;font-weight:700;outline:none;letter-spacing:2px}
+    .bip-input:focus{border-color:#60a5fa;box-shadow:0 0 0 3px rgba(59,130,246,.25)}
+    .bip-input::placeholder{color:#3b5a8a;font-weight:400;font-size:13px}
+    .btn-confirmar{padding:14px 20px;background:#1a2d4a;border:2px solid #3b82f6;border-radius:10px;color:#60a5fa;font-size:20px;cursor:pointer;transition:all .2s}
+    .btn-confirmar:hover{background:#2563eb;color:white}
+    .checklist-wrap{background:#253347;border:1px solid #2d4a6e;border-radius:12px;overflow:hidden;margin-top:14px}
+    .checklist-header{background:#2d4a6e;padding:10px 14px;font-size:10px;font-weight:700;color:#94a3b8;letter-spacing:1px;display:flex;justify-content:space-between;align-items:center}
+    .checklist-progresso{height:5px;background:#1a2535}
+    .checklist-progresso-fill{height:100%;background:#3b82f6;transition:width .4s}
+    .checklist-lista{overflow-y:auto;max-height:400px;padding:8px;display:flex;flex-direction:column;gap:6px}
+    .checklist-lista::-webkit-scrollbar{width:5px}
+    .checklist-lista::-webkit-scrollbar-thumb{background:#3b5a8a;border-radius:10px}
+    .item-card{border-radius:10px;padding:10px 12px;display:flex;align-items:flex-start;gap:10px;border:1px solid;transition:all .2s;animation:fadeInUp .2s ease}
+    .item-card.pendente  {background:#1e2a3a;border-color:#2d4a6e}
+    .item-card.encontrado{background:#0f2d1a;border-color:#16a34a}
+    .item-card.falta     {background:#2d0f0f;border-color:#dc2626}
+    .item-card.parcial   {background:#2d1f0f;border-color:#b45309}
+    .item-icone{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;margin-top:2px}
+    .item-card.pendente   .item-icone{background:#2d4a6e}
+    .item-card.encontrado .item-icone{background:#15803d}
+    .item-card.falta      .item-icone{background:#b91c1c}
+    .item-card.parcial    .item-icone{background:#b45309}
+    .item-info{flex:1;min-width:0}
+    .item-cod{font-size:11px;font-weight:700;color:#60a5fa}
+    .item-card.encontrado .item-cod{color:#4ade80}
+    .item-card.falta      .item-cod{color:#f87171}
+    .item-card.parcial    .item-cod{color:#fbbf24}
+    .item-desc{font-size:12px;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .item-det{font-size:10px;color:#64748b;margin-top:2px}
+    .item-aviso{font-size:10px;color:#fbbf24;margin-top:3px}
+    .parcial-wrap{margin-top:8px;background:#1a2535;border:1px solid #b45309;border-radius:8px;padding:8px 10px;display:none}
+    .parcial-wrap.aberto{display:block}
+    .parcial-wrap label{font-size:10px;color:#fbbf24;font-weight:700;display:block;margin-bottom:4px;letter-spacing:.5px}
+    .parcial-row{display:flex;gap:8px;align-items:center}
+    .parcial-input{flex:1;padding:8px 10px;background:#253347;border:1px solid #b45309;border-radius:6px;color:#fbbf24;font-size:16px;font-weight:700;outline:none;text-align:center}
+    .btn-parcial-ok{padding:8px 14px;background:#b45309;border:none;border-radius:6px;color:white;font-size:12px;font-weight:700;cursor:pointer}
+    .btn-parcial-ok:hover{background:#d97706}
+    .item-btns{display:flex;gap:6px;flex-shrink:0}
+    .btn-item{width:36px;height:36px;border-radius:8px;border:2px solid;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;background:transparent}
+    .btn-item.ok{border-color:#16a34a;color:#4ade80}.btn-item.ok:hover{background:#15803d;color:white}
+    .btn-item.parcial-btn{border-color:#b45309;color:#fbbf24;font-size:13px;font-weight:700}.btn-item.parcial-btn:hover{background:#b45309;color:white}
+    .btn-item.nok{border-color:#dc2626;color:#f87171}.btn-item.nok:hover{background:#dc2626;color:white}
+    .btn-item:disabled{opacity:.3;cursor:not-allowed}
+    .checklist-footer{padding:10px 12px;border-top:1px solid #2d4a6e;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+    .btn-acao{flex:1;padding:12px;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;min-width:160px}
+    .btn-acao.concluir{background:#15803d;color:white}.btn-acao.concluir:hover:not(:disabled){background:#16a34a}
+    .btn-acao.aguardar{background:#92400e;color:#fde68a;cursor:not-allowed}
+    .btn-acao:disabled{background:#1a2535;color:#4a5568;border:1px solid #2d3748;cursor:not-allowed}
+    .fila-tabela{overflow-y:auto;max-height:220px}
+    .fila-tabela::-webkit-scrollbar{width:5px}
+    .fila-tabela::-webkit-scrollbar-thumb{background:#3b5a8a;border-radius:10px}
+    tbody tr.meu{border-left:3px solid #3b82f6;background:#1a2d4a!important}
+    .contadores-sep{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+
+    /* ── MOBILE ── */
+    @media(max-width:700px){
+      .sidebar{display:none}
+      .grid-4{grid-template-columns:1fr 1fr}
+      .grid-2{grid-template-columns:1fr}
+      .checklist-lista{max-height:none}
+      .item-desc{white-space:normal}
+      .contadores-sep{grid-template-columns:repeat(3,1fr)}
+    }
+    @keyframes fadeInUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+  </style>
+</head>
+<body>
+  <!-- ══ TELA DE LOGIN ══ -->
+<div id="tela-login">
+  <div class="login-box">
+    <div class="login-logo">📦</div>
+    <div class="login-titulo">WMS — Miess</div>
+    <div class="login-sub">Controle de Separação de Pedidos</div>
+
+    <div class="perfil-grid">
+      <button class="perfil-btn" onclick="selecionarPerfil('supervisor',this)">
+        <span class="perfil-icone">👔</span>SUPERVISOR
+      </button>
+      <button class="perfil-btn" onclick="selecionarPerfil('separador',this)">
+        <span class="perfil-icone">📦</span>SEPARADOR
+      </button>
+      <button class="perfil-btn" onclick="selecionarPerfil('repositor',this)">
+        <span class="perfil-icone">🔧</span>REPOSITOR
+      </button>
+    </div>
+
+    <div class="login-campo">
+      <label>LOGIN / USUÁRIO</label>
+      <input type="text" id="login-usuario" placeholder="Ex: joao.silva" autocomplete="username"/>
+    </div>
+    <div class="login-campo">
+      <label>SENHA</label>
+      <input type="password" id="login-senha" placeholder="••••••••"
+        onkeydown="if(event.key==='Enter')fazerLogin()" autocomplete="current-password"/>
+    </div>
+    <div class="login-erro" id="login-erro"></div>
+    <button class="btn-login" onclick="fazerLogin()">▶ ENTRAR</button>
+  </div>
+</div>
+
+<!-- ══ APP ══ -->
+<div id="app">
+  <header>
+    <div class="logo">📦 WMS — Miess <span>Controle de Separação de Pedidos</span></div>
+    <div class="header-dir">
+      <span id="data-hora" style="font-size:11px;color:#94a3b8"></span>
+      <div class="usuario-info">
+        <b id="header-nome">—</b>
+        <span id="header-perfil">—</span>
+      </div>
+      <button class="btn-sair-header" onclick="sair()">✖ Sair</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <nav class="sidebar" id="sidebar"></nav>
+
+    <div class="conteudo" id="conteudo">
+
+      <!-- ══ DASHBOARD ══ -->
+      <div class="pagina" id="pag-dashboard">
+        <div class="grid-4">
+          <div class="contador-card verde"><div class="contador-label">CONCLUÍDOS HOJE</div><div class="contador-valor" id="dash-hoje">0</div><div class="contador-sub">pedidos</div></div>
+          <div class="contador-card amarelo"><div class="contador-label">EM SEPARAÇÃO</div><div class="contador-valor" id="dash-separando">0</div><div class="contador-sub">pedidos</div></div>
+          <div class="contador-card vermelho"><div class="contador-label">AGUARD. REPOSITOR</div><div class="contador-valor" id="dash-repositor">0</div><div class="contador-sub">itens em falta</div></div>
+          <div class="contador-card azul"><div class="contador-label">PENDENTES</div><div class="contador-valor" id="dash-pendentes">0</div><div class="contador-sub">pedidos</div></div>
+        </div>
+        <div class="card">
+          <div class="card-header">📊 PRODUTIVIDADE POR SEPARADOR
+            <button class="btn btn-outline btn-sm" onclick="carregarDashboard()">🔄 Atualizar</button>
+          </div>
+          <div class="filtros">
+            <div class="filtro-grupo"><label>DATA INÍCIO</label><input type="date" id="filtro-data-ini"/></div>
+            <div class="filtro-grupo"><label>DATA FIM</label><input type="date" id="filtro-data-fim"/></div>
+            <div class="filtro-grupo"><label>SEPARADOR</label><select id="filtro-sep-prod"><option value="">Todos</option></select></div>
+            <div class="filtro-grupo" style="justify-content:flex-end"><button class="btn btn-primary" onclick="carregarProdutividade()">🔍 Filtrar</button></div>
+          </div>
+          <div class="tabela-wrap"><table>
+            <thead><tr><th>SEPARADOR</th><th>HOJE</th><th>MÊS</th><th>ANO</th><th>PROGRESSO</th><th>STATUS</th></tr></thead>
+            <tbody id="tbody-produtividade"><tr><td colspan="6" style="color:#64748b;text-align:center;padding:30px">Carregando...</td></tr></tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <!-- ══ PEDIDOS ══ -->
+      <div class="pagina" id="pag-pedidos">
+        <div class="card">
+          <div class="card-header">📋 TODOS OS PEDIDOS
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-success btn-sm" onclick="exportarCSV()">⬇ CSV</button>
+              <button class="btn btn-outline btn-sm" onclick="carregarPedidos()">🔄 Atualizar</button>
+            </div>
+          </div>
+          <div class="filtros">
+            <div class="filtro-grupo"><label>DATA</label><input type="date" id="filtro-pedido-data"/></div>
+            <div class="filtro-grupo"><label>SEPARADOR</label><select id="filtro-pedido-sep"><option value="">Todos</option></select></div>
+            <div class="filtro-grupo"><label>STATUS</label>
+              <select id="filtro-pedido-status">
+                <option value="">Todos</option>
+                <option value="pendente">Pendente</option>
+                <option value="separando">Separando</option>
+                <option value="concluido">Concluído</option>
+              </select>
+            </div>
+            <div class="filtro-grupo" style="justify-content:flex-end"><button class="btn btn-primary" onclick="carregarPedidos()">🔍 Filtrar</button></div>
+          </div>
+          <div class="tabela-wrap"><table>
+            <thead><tr><th>Nº PEDIDO</th><th>SEPARADOR</th><th>STATUS</th><th>ITENS</th><th>DATA</th><th>HORA</th><th>ATRIBUIR</th></tr></thead>
+            <tbody id="tbody-pedidos"><tr><td colspan="7" style="color:#64748b;text-align:center;padding:30px">Carregando...</td></tr></tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <!-- ══ CADASTROS ══ -->
+      <div class="pagina" id="pag-cadastros">
+        <div style="display:flex;gap:4px;margin-bottom:16px;background:#1a2535;padding:6px;border-radius:10px;width:fit-content">
+          <button class="btn btn-primary btn-sm" id="ctab-separadores" onclick="trocarCadastroTab('separadores')">👤 Separadores</button>
+          <button class="btn btn-outline btn-sm" id="ctab-usuarios"    onclick="trocarCadastroTab('usuarios')">🔐 Usuários</button>
+          <button class="btn btn-outline btn-sm" id="ctab-importar"    onclick="trocarCadastroTab('importar')">📂 Importar</button>
+        </div>
+
+        <!-- Sub-aba Separadores -->
+        <div id="cad-separadores">
+          <div class="grid-2">
+            <div class="card">
+              <div class="card-header">👤 CADASTRO DE SEPARADOR</div>
+              <div class="form-grupo"><label>NOME COMPLETO</label><input type="text" id="sep-nome" placeholder="Ex: João da Silva"/></div>
+              <div class="form-grupo"><label>ID / MATRÍCULA</label><input type="text" id="sep-matricula" placeholder="Ex: 001"/></div>
+              <div class="form-grupo"><label>TURNO</label>
+                <select id="sep-turno">
+                  <option value="Manhã">Manhã</option>
+                  <option value="Tarde">Tarde</option>
+                  <option value="Noite">Noite</option>
+                </select>
+              </div>
+              <button class="btn btn-primary" style="width:100%" onclick="cadastrarSeparador()">✚ Cadastrar Separador</button>
+            </div>
+            <div class="card">
+              <div class="card-header">📋 SEPARADORES CADASTRADOS</div>
+              <div class="tabela-wrap"><table>
+                <thead><tr><th>NOME</th><th>MATRÍCULA</th><th>TURNO</th><th>STATUS</th><th>AÇÕES</th></tr></thead>
+                <tbody id="tbody-separadores"></tbody>
+              </table></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sub-aba Usuários -->
+        <div id="cad-usuarios" style="display:none">
+          <div class="grid-2">
+            <div class="card">
+              <div class="card-header">🔐 CADASTRO DE USUÁRIO</div>
+              <div class="form-grupo"><label>NOME COMPLETO</label><input type="text" id="usr-nome" placeholder="Ex: João da Silva"/></div>
+              <div class="form-grupo"><label>LOGIN</label><input type="text" id="usr-login" placeholder="Ex: joao.silva"/></div>
+              <div class="form-grupo"><label>SENHA</label><input type="password" id="usr-senha" placeholder="Mínimo 6 caracteres"/></div>
+              <div class="form-grupo"><label>PERFIL</label>
+                <select id="usr-perfil">
+                  <option value="supervisor">👔 Supervisor</option>
+                  <option value="separador">📦 Separador</option>
+                  <option value="repositor">🔧 Repositor</option>
+                </select>
+              </div>
+              <button class="btn btn-primary" style="width:100%" onclick="cadastrarUsuario()">✚ Cadastrar Usuário</button>
+            </div>
+            <div class="card">
+              <div class="card-header">📋 USUÁRIOS CADASTRADOS
+                <button class="btn btn-outline btn-sm" onclick="carregarUsuarios()">🔄</button>
+              </div>
+              <div class="tabela-wrap"><table>
+                <thead><tr><th>NOME</th><th>LOGIN</th><th>PERFIL</th><th>STATUS</th><th>AÇÕES</th></tr></thead>
+                <tbody id="tbody-usuarios"></tbody>
+              </table></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sub-aba Importar -->
+        <div id="cad-importar" style="display:none">
+          <div class="grid-2">
+            <div class="card">
+              <div class="card-header">📂 IMPORTAR PEDIDOS</div>
+              <div class="upload-area" id="upload-area"
+                onclick="document.getElementById('input-arquivo').click()"
+                ondragover="event.preventDefault();this.classList.add('drag')"
+                ondragleave="this.classList.remove('drag')"
+                ondrop="handleDrop(event)">
+                <div class="upload-icon">📄</div>
+                <div class="upload-titulo">Clique ou arraste o arquivo</div>
+                <div class="upload-sub">Excel (.xlsx) ou CSV (.csv)<br><b>Colunas: numero_pedido, codigo, descricao, endereco, quantidade</b></div>
+                <button class="btn btn-primary" onclick="event.stopPropagation();document.getElementById('input-arquivo').click()">📂 Selecionar</button>
+              </div>
+              <input type="file" id="input-arquivo" accept=".xlsx,.xls,.csv" onchange="processarArquivo(event)"/>
+              <div id="status-leitura" style="display:none;margin-top:10px;padding:10px;border-radius:8px;font-size:12px;font-weight:600;text-align:center"></div>
+              <div id="preview-importacao" style="display:none;margin-top:14px">
+                <div style="font-size:10px;color:#64748b;letter-spacing:1px;margin-bottom:8px;font-weight:700">PRÉ-VISUALIZAÇÃO</div>
+                <div class="tabela-wrap" style="max-height:180px;overflow-y:auto"><table>
+                  <thead><tr><th>Nº PEDIDO</th><th>CÓDIGO</th><th>DESCRIÇÃO</th><th>ENDEREÇO</th><th>QTD</th></tr></thead>
+                  <tbody id="tbody-preview"></tbody>
+                </table></div>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px">
+                  <span id="txt-total-import" style="font-size:12px;color:#94a3b8"></span>
+                  <button class="btn btn-success" onclick="confirmarImportacao()">✔ Importar</button>
+                </div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header">📜 HISTÓRICO
+                <button class="btn btn-sm btn-outline" onclick="limparHistorico()">🗑 Limpar</button>
+              </div>
+              <div id="historico-importacoes"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ SEPARAÇÃO ══ -->
+      <div class="pagina" id="pag-separacao">
+        <div class="contadores-sep">
+          <div class="contador-card verde"><div class="contador-label">HOJE</div><div class="contador-valor" id="sep-cnt-hoje">0</div><div class="contador-sub">pedidos</div></div>
+          <div class="contador-card amarelo"><div class="contador-label">MÊS</div><div class="contador-valor" id="sep-cnt-mes">0</div><div class="contador-sub">pedidos</div></div>
+          <div class="contador-card azul"><div class="contador-label">ANO</div><div class="contador-valor" id="sep-cnt-ano">0</div><div class="contador-sub">pedidos</div></div>
+        </div>
+        <div class="card">
+          <div class="card-header">📷 LEITURA DE PEDIDO</div>
+          <div style="display:flex;gap:10px">
+            <input type="text" class="bip-input" id="input-pedido" placeholder="🔍 Digite ou bipe o pedido..."/>
+            <button class="btn-confirmar" onclick="confirmarPedido()">✔</button>
+          </div>
+          <div id="status-atual" style="font-size:11px;color:#94a3b8;margin-top:6px;text-align:center;min-height:18px"></div>
+        </div>
+        <div class="checklist-wrap" id="checklist-wrap" style="display:none">
+          <div class="checklist-header">
+            <span id="checklist-titulo">📋 ITENS DO PEDIDO</span>
+            <span id="checklist-contador" style="color:#60a5fa">0/0</span>
+          </div>
+          <div class="checklist-progresso"><div class="checklist-progresso-fill" id="checklist-barra" style="width:0%"></div></div>
+          <div class="checklist-lista" id="checklist-lista"></div>
+          <div class="checklist-footer">
+            <div style="font-size:11px;color:#94a3b8;flex:1" id="checklist-resumo"></div>
+            <button class="btn-acao concluir" id="btn-concluir" onclick="concluirPedido()" disabled>🔒 CONCLUIR PEDIDO</button>
+            <button class="btn-acao aguardar" id="btn-aguardar" style="display:none">⏳ AGUARDANDO REPOSITOR</button>
+          </div>
+        </div>
+        <div class="card" style="margin-top:14px">
+          <div class="card-header">📌 FILA GERAL
+            <div>
+              <span id="badge-meus"  style="background:#15803d;color:white;border-radius:20px;padding:1px 8px;font-size:10px;font-weight:700;margin-right:4px">0 meus</span>
+              <span id="badge-fila"  style="background:#2563eb;color:white;border-radius:20px;padding:1px 8px;font-size:10px;font-weight:700">0 total</span>
+            </div>
+          </div>
+          <div class="fila-tabela"><table>
+            <thead><tr><th>Nº PEDIDO</th><th>ITENS</th><th>STATUS</th><th>SITUAÇÃO</th></tr></thead>
+            <tbody id="tbody-fila"></tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <!-- ══ REPOSIÇÃO ══ -->
+      <div class="pagina" id="pag-reposicao">
+        <div style="display:flex;gap:14px;margin-bottom:16px;flex-wrap:wrap">
+          <div class="contador-card vermelho" style="flex:1;min-width:140px"><div class="contador-label">AGUARDANDO</div><div class="contador-valor" id="rep-pendente">0</div><div class="contador-sub">itens em falta</div></div>
+          <div class="contador-card verde"    style="flex:1;min-width:140px"><div class="contador-label">REPOSTOS HOJE</div><div class="contador-valor" id="rep-reposto">0</div><div class="contador-sub">itens</div></div>
+        </div>
+        <div class="card">
+          <div class="card-header">🔴 ITENS EM FALTA
+            <div style="display:flex;gap:8px;align-items:center">
+              <select id="filtro-rep-status" style="padding:5px 8px;background:#1a2535;border:1px solid #2d4a6e;border-radius:6px;color:#e2e8f0;font-size:11px" onchange="carregarAvisos()">
+                <option value="pendente">Pendentes</option>
+                <option value="reposto">Repostos</option>
+                <option value="nao_encontrado">Não Encontrados</option>
+                <option value="">Todos</option>
+              </select>
+              <button class="btn btn-outline btn-sm" onclick="carregarAvisos()">🔄</button>
+            </div>
+          </div>
+          <div id="lista-avisos"><div style="color:#64748b;text-align:center;padding:40px">✅ Nenhum item em falta</div></div>
+        </div>
+      </div>
+
+    </div><!-- /conteudo -->
+  </div><!-- /layout -->
+</div><!-- /app -->
+<script>
+const API = window.location.origin;
+let usuarioAtual   = null;
+let separadorAtual = null;
+let pedidoAtualId  = null, pedidoAtualNum = null, itensAtuais = [];
+const hoje = new Date().toISOString().split('T')[0];
+let todosSeparadores = [];
+let pedidosImportar  = [];
+let historicoImportacoes = JSON.parse(localStorage.getItem('historico_importacoes') || '[]');
+
+function atualizarRelogio(){document.getElementById('data-hora').textContent=new Date().toLocaleString('pt-BR')}
+setInterval(atualizarRelogio,1000); atualizarRelogio();
+
+function toast(msg,tipo='info'){
+  const cores={info:'#2563eb',sucesso:'#15803d',erro:'#dc2626',aviso:'#b45309'};
+  const t=document.createElement('div');
+  t.textContent=msg;
+  t.style.cssText=`position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9999;background:${cores[tipo]};color:#fff;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:600;box-shadow:0 4px 20px rgba(0,0,0,.4);max-width:90vw;text-align:center;animation:fadeInUp .2s ease`;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(),3500);
+}
+
+// ══ LOGIN ══
+let perfilSelecionado = '';
+function selecionarPerfil(p,btn){
+  perfilSelecionado=p;
+  document.querySelectorAll('.perfil-btn').forEach(b=>b.classList.remove('ativo'));
+  btn.classList.add('ativo');
+  document.getElementById('login-erro').style.display='none';
+}
+
+async function fazerLogin(){
+  const login  = document.getElementById('login-usuario').value.trim();
+  const senha  = document.getElementById('login-senha').value;
+  const erroEl = document.getElementById('login-erro');
+  if(!perfilSelecionado){erroEl.textContent='Selecione um perfil!';erroEl.style.display='block';return}
+  if(!login||!senha){erroEl.textContent='Preencha login e senha!';erroEl.style.display='block';return}
+  try{
+    const res  = await fetch(`${API}/auth/login`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({login,senha,perfil:perfilSelecionado})});
+    const data = await res.json();
+    if(!res.ok){erroEl.textContent=data.erro||'Erro ao entrar!';erroEl.style.display='block';return}
+    usuarioAtual   = data.usuario;
+    separadorAtual = data.separador;
+    erroEl.style.display='none';
+    document.getElementById('tela-login').style.display='none';
+    document.getElementById('app').style.display='block';
+    document.getElementById('header-nome').textContent   = usuarioAtual.nome;
+    document.getElementById('header-perfil').textContent = perfilSelecionado.toUpperCase();
+    montarSidebar();
+    iniciarPorPerfil();
+  }catch(e){erroEl.textContent='Erro ao conectar com o servidor!';erroEl.style.display='block'}
+}
+
+function sair(){
+  if(!confirm('Deseja sair do sistema?'))return;
+  usuarioAtual=null;separadorAtual=null;pedidoAtualId=null;pedidoAtualNum=null;itensAtuais=[];
+  document.getElementById('app').style.display='none';
+  document.getElementById('tela-login').style.display='flex';
+  document.getElementById('login-usuario').value='';
+  document.getElementById('login-senha').value='';
+  perfilSelecionado='';
+  document.querySelectorAll('.perfil-btn').forEach(b=>b.classList.remove('ativo'));
+}
+
+function montarSidebar(){
+  const sb = document.getElementById('sidebar');
+  const menus = {
+    supervisor:`
+      <div class="menu-grupo">SUPERVISÃO</div>
+      <a class="menu-item ativo" onclick="irPara('dashboard',this)"><span class="mi-icone">📊</span>Dashboard</a>
+      <a class="menu-item" onclick="irPara('pedidos',this)"><span class="mi-icone">📋</span>Pedidos</a>
+      <a class="menu-item" onclick="irPara('cadastros',this)"><span class="mi-icone">⚙️</span>Cadastros</a>
+      <div class="menu-grupo">OPERAÇÃO</div>
+      <a class="menu-item" onclick="irPara('separacao',this)"><span class="mi-icone">📦</span>Separação</a>
+      <a class="menu-item" onclick="irPara('reposicao',this)"><span class="mi-icone">🔧</span>Reposição <span class="menu-badge" id="menu-badge-rep" style="display:none">0</span></a>`,
+    separador:`
+      <div class="menu-grupo">SEPARAÇÃO</div>
+      <a class="menu-item ativo" onclick="irPara('separacao',this)"><span class="mi-icone">📦</span>Pedidos</a>`,
+    repositor:`
+      <div class="menu-grupo">REPOSIÇÃO</div>
+      <a class="menu-item ativo" onclick="irPara('reposicao',this)"><span class="mi-icone">🔧</span>Solicitações <span class="menu-badge" id="menu-badge-rep" style="display:none">0</span></a>`
+  };
+  sb.innerHTML = menus[usuarioAtual.perfil] || '';
+}
+
+function irPara(pag,el){
+  document.querySelectorAll('.pagina').forEach(p=>p.classList.remove('ativa'));
+  document.querySelectorAll('.menu-item').forEach(m=>m.classList.remove('ativo'));
+  document.getElementById(`pag-${pag}`).classList.add('ativa');
+  if(el) el.classList.add('ativo');
+  if(pag==='dashboard') carregarDashboard();
+  if(pag==='pedidos')  {popularSelects();carregarPedidos();}
+  if(pag==='cadastros'){trocarCadastroTab('separadores');carregarSeparadores();}
+  if(pag==='separacao') carregarFila();
+  if(pag==='reposicao') carregarAvisos();
+}
+
+function iniciarPorPerfil(){
+  if(usuarioAtual.perfil==='supervisor'){
+    document.getElementById('pag-dashboard').classList.add('ativa');
+    document.getElementById('filtro-data-ini').value=hoje;
+    document.getElementById('filtro-data-fim').value=hoje;
+    document.getElementById('filtro-pedido-data').value=hoje;
+    carregarDashboard();
+    setInterval(atualizarBadgeRep,15000);
+    atualizarBadgeRep();
+  }
+  if(usuarioAtual.perfil==='separador'){
+    document.getElementById('pag-separacao').classList.add('ativa');
+    if(separadorAtual) carregarContadoresSep();
+    setInterval(()=>{carregarFila();if(pedidoAtualId)carregarChecklist();},30000);
+    setTimeout(()=>document.getElementById('input-pedido').focus(),300);
+  }
+  if(usuarioAtual.perfil==='repositor'){
+    document.getElementById('pag-reposicao').classList.add('ativa');
+    carregarAvisos();
+    setInterval(carregarAvisos,30000);
+  }
+}
+
+async function atualizarBadgeRep(){
+  try{
+    const res=await fetch(`${API}/repositor/avisos?status=pendente`);
+    const av=await res.json();
+    const n=av.length;
+    ['menu-badge-rep','dash-repositor'].forEach(id=>{
+      const el=document.getElementById(id);if(!el)return;
+      if(id.includes('badge')){el.textContent=n;el.style.display=n>0?'inline':'none';}
+      else el.textContent=n;
+    });
+  }catch(e){}
+}
+
+function trocarCadastroTab(tab){
+  ['separadores','usuarios','importar'].forEach(t=>{
+    document.getElementById(`cad-${t}`).style.display=t===tab?'block':'none';
+    const btn=document.getElementById(`ctab-${t}`);
+    if(btn) btn.className=t===tab?'btn btn-primary btn-sm':'btn btn-outline btn-sm';
+  });
+  if(tab==='separadores') carregarSeparadores();
+  if(tab==='usuarios')    carregarUsuarios();
+  if(tab==='importar')    renderHistorico();
+}
+
+// ══ DASHBOARD ══
+async function carregarDashboard(){
+  await popularSelects();
+  await carregarContadoresGerais();
+  await carregarProdutividade();
+  await atualizarBadgeRep();
+}
+
+async function carregarContadoresGerais(){
+  try{
+    const res=await fetch(`${API}/pedidos`);
+    const ps=await res.json();
+    document.getElementById('dash-hoje').textContent     =ps.filter(p=>p.status==='concluido'&&p.data_pedido===hoje).length;
+    document.getElementById('dash-separando').textContent=ps.filter(p=>p.status==='separando').length;
+    document.getElementById('dash-pendentes').textContent=ps.filter(p=>p.status==='pendente').length;
+  }catch(e){}
+}
+
+async function carregarProdutividade(){
+  try{
+    const sepId=document.getElementById('filtro-sep-prod').value;
+    const res=await fetch(`${API}/produtividade${sepId?'?separador_id='+sepId:''}`);
+    const dados=await res.json();
+    const tbody=document.getElementById('tbody-produtividade');
+    if(!dados.length){tbody.innerHTML='<tr><td colspan="6" style="color:#64748b;text-align:center;padding:30px">Nenhum separador</td></tr>';return}
+    const max=Math.max(...dados.map(d=>d.hoje||0),1);
+    tbody.innerHTML=dados.map(d=>`<tr>
+      <td style="color:#e2e8f0;font-weight:600">${d.nome}</td>
+      <td style="color:#4ade80;font-weight:700">${d.hoje||0}</td>
+      <td style="color:#fbbf24">${d.mes||0}</td>
+      <td style="color:#60a5fa">${d.total_ano||0}</td>
+      <td style="min-width:120px">
+        <div style="font-size:10px;color:#94a3b8">${d.hoje||0} pedidos</div>
+        <div class="prod-barra"><div class="prod-barra-fill" style="width:${Math.round(((d.hoje||0)/max)*100)}%"></div></div>
+      </td>
+      <td><span class="pill ${d.status}">${d.status}</span></td>
+    </tr>`).join('');
+  }catch(e){}
+}
+
+async function popularSelects(){
+  try{
+    const res=await fetch(`${API}/separadores`);
+    todosSeparadores=await res.json();
+    ['filtro-sep-prod','filtro-pedido-sep'].forEach(id=>{
+      const sel=document.getElementById(id);if(!sel)return;
+      const val=sel.value;
+      sel.innerHTML='<option value="">Todos</option>'+todosSeparadores.map(s=>`<option value="${s.id}">${s.nome}</option>`).join('');
+      sel.value=val;
+    });
+  }catch(e){}
+}
+
+// ══ PEDIDOS ══
+async function carregarPedidos(){
+  try{
+    const data  =document.getElementById('filtro-pedido-data').value;
+    const sepId =document.getElementById('filtro-pedido-sep').value;
+    const status=document.getElementById('filtro-pedido-status').value;
+    let url=`${API}/pedidos?`;
+    if(data)   url+=`data=${data}&`;
+    if(sepId)  url+=`separador_id=${sepId}&`;
+    if(status) url+=`status=${encodeURIComponent(status)}&`;
+    const res=await fetch(url);
+    const ps=await res.json();
+    const tbody=document.getElementById('tbody-pedidos');
+    if(!ps.length){tbody.innerHTML='<tr><td colspan="7" style="color:#64748b;text-align:center;padding:30px">Nenhum pedido encontrado</td></tr>';return}
+    tbody.innerHTML=ps.map(p=>`<tr>
+      <td style="color:#e2e8f0;font-weight:600">${p.numero_pedido}</td>
+      <td style="color:#94a3b8">${p.separador_nome||'—'}</td>
+      <td><span class="pill ${(p.status||'').replace(' ','-')}">${p.status}</span></td>
+      <td style="color:#cbd5e1">${p.itens||'—'}</td>
+      <td style="color:#64748b">${p.data_pedido||'—'}</td>
+      <td style="color:#64748b">${p.hora_pedido||'—'}</td>
+      <td><select class="select-sep" onchange="atribuirSeparador(${p.id},this.value)">
+        <option value="">— atribuir —</option>
+        ${todosSeparadores.map(s=>`<option value="${s.id}"${p.separador_id==s.id?' selected':''}>${s.nome}</option>`).join('')}
+      </select></td>
+    </tr>`).join('');
+  }catch(e){}
+}
+
+async function atribuirSeparador(pid,sid){
+  if(!sid)return;
+  try{
+    await fetch(`${API}/pedidos/${pid}/separador`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({separador_id:sid})});
+    toast('Separador atribuído!','sucesso');
+  }catch(e){toast('Erro ao atribuir!','erro')}
+}
+
+function exportarCSV(){
+  const rows=[['Nº Pedido','Separador','Status','Itens','Data','Hora']];
+  document.querySelectorAll('#tbody-pedidos tr').forEach(tr=>{
+    const tds=tr.querySelectorAll('td');
+    if(tds.length>1) rows.push([tds[0].textContent,tds[1].textContent,tds[2].textContent,tds[3].textContent,tds[4].textContent,tds[5].textContent]);
+  });
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(rows.map(r=>r.join(',')).join('\n'));
+  a.download=`pedidos_${hoje}.csv`;a.click();
+}
+
+// ══ USUÁRIOS ══
+async function carregarUsuarios(){
+  try{
+    const res=await fetch(`${API}/usuarios`);
+    const users=await res.json();
+    const tbody=document.getElementById('tbody-usuarios');
+    if(!users.length){tbody.innerHTML='<tr><td colspan="5" style="color:#64748b;text-align:center;padding:16px">Nenhum usuário</td></tr>';return}
+    tbody.innerHTML=users.map(u=>`<tr>
+      <td style="color:#e2e8f0">${u.nome}</td>
+      <td style="color:#60a5fa">${u.login}</td>
+      <td><span class="pill ${u.perfil}">${u.perfil}</span></td>
+      <td><span class="pill ${u.status}">${u.status}</span></td>
+      <td style="display:flex;gap:6px">
+        <button class="btn btn-sm" style="background:${u.status==='ativo'?'#b45309':'#15803d'};color:white"
+          onclick="alterarStatusUsuario(${u.id},'${u.status==='ativo'?'inativo':'ativo'}','${u.nome}','${u.login}','${u.perfil}')">
+          ${u.status==='ativo'?'⛔ Desativar':'✅ Ativar'}
+        </button>
+        <button class="btn btn-sm btn-danger" onclick="excluirUsuario(${u.id},'${u.nome}')">🗑</button>
+      </td>
+    </tr>`).join('');
+  }catch(e){}
+}
+
+async function cadastrarUsuario(){
+  const nome  =document.getElementById('usr-nome').value.trim();
+  const login =document.getElementById('usr-login').value.trim();
+  const senha =document.getElementById('usr-senha').value;
+  const perfil=document.getElementById('usr-perfil').value;
+  if(!nome||!login||!senha){toast('Preencha todos os campos!','aviso');return}
+  if(senha.length<6){toast('Senha mínimo 6 caracteres!','aviso');return}
+  try{
+    const res=await fetch(`${API}/usuarios`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nome,login,senha,perfil})});
+    const data=await res.json();
+    if(data.erro){toast(data.erro,'erro');return}
+    toast('Usuário cadastrado!','sucesso');
+    document.getElementById('usr-nome').value='';
+    document.getElementById('usr-login').value='';
+    document.getElementById('usr-senha').value='';
+    carregarUsuarios();
+  }catch(e){toast('Erro ao cadastrar!','erro')}
+}
+
+async function alterarStatusUsuario(id,novoStatus,nome,login,perfil){
+  try{
+    await fetch(`${API}/usuarios/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({nome,login,perfil,status:novoStatus})});
+    toast(`Usuário ${novoStatus==='ativo'?'ativado':'desativado'}!`,'sucesso');
+    carregarUsuarios();
+  }catch(e){toast('Erro!','erro')}
+}
+
+async function excluirUsuario(id,nome){
+  if(!confirm(`Excluir "${nome}"?`))return;
+  try{
+    await fetch(`${API}/usuarios/${id}`,{method:'DELETE'});
+    toast('Usuário excluído!','sucesso');carregarUsuarios();
+  }catch(e){toast('Erro!','erro')}
+}
+
+// ══ SEPARADORES ══
+async function cadastrarSeparador(){
+  const nome     =document.getElementById('sep-nome').value.trim();
+  const matricula=document.getElementById('sep-matricula').value.trim();
+  const turno    =document.getElementById('sep-turno').value;
+  if(!nome||!matricula){toast('Preencha nome e matrícula!','aviso');return}
+  try{
+    const res=await fetch(`${API}/separadores`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nome,matricula,turno})});
+    const data=await res.json();
+    if(data.erro){toast(data.erro,'erro');return}
+    toast('Separador cadastrado!','sucesso');
+    document.getElementById('sep-nome').value='';
+    document.getElementById('sep-matricula').value='';
+    carregarSeparadores();
+  }catch(e){toast('Erro ao cadastrar!','erro')}
+}
+
+async function carregarSeparadores(){
+  try{
+    const res=await fetch(`${API}/separadores`);
+    todosSeparadores=await res.json();
+    const tbody=document.getElementById('tbody-separadores');
+    if(!todosSeparadores.length){tbody.innerHTML='<tr><td colspan="5" style="color:#64748b;text-align:center;padding:16px">Nenhum separador</td></tr>';return}
+    tbody.innerHTML=todosSeparadores.map(s=>`<tr>
+      <td style="color:#e2e8f0">${s.nome}</td>
+      <td style="color:#60a5fa">${s.matricula}</td>
+      <td style="color:#94a3b8">${s.turno}</td>
+      <td><span class="pill ${s.status}">${s.status}</span></td>
+      <td style="display:flex;gap:6px">
+        <button class="btn btn-sm" style="background:${s.status==='ativo'?'#b45309':'#15803d'};color:white"
+          onclick="alterarStatusSep(${s.id},'${s.status==='ativo'?'inativo':'ativo'}')">
+          ${s.status==='ativo'?'⛔ Desativar':'✅ Ativar'}
+        </button>
+        <button class="btn btn-sm btn-danger" onclick="excluirSep(${s.id},'${s.nome}')">🗑</button>
+      </td>
+    </tr>`).join('');
+  }catch(e){}
+}
+
+async function alterarStatusSep(id,novoStatus){
+  try{
+    const res=await fetch(`${API}/separadores/${id}`);
+    const sep=await res.json();
+    await fetch(`${API}/separadores/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({nome:sep.nome,matricula:sep.matricula,turno:sep.turno,status:novoStatus})});
+    toast(`Separador ${novoStatus==='ativo'?'ativado':'desativado'}!`,'sucesso');
+    carregarSeparadores();
+  }catch(e){toast('Erro!','erro')}
+}
+
+async function excluirSep(id,nome){
+  if(!confirm(`Excluir "${nome}"?`))return;
+  try{await fetch(`${API}/separadores/${id}`,{method:'DELETE'});toast('Excluído!','sucesso');carregarSeparadores();}
+  catch(e){toast('Erro!','erro')}
+}
+
+// ══ IMPORTAÇÃO ══
+function handleDrop(e){
+  e.preventDefault();document.getElementById('upload-area').classList.remove('drag');
+  const f=e.dataTransfer.files[0];if(f)processarArquivoFile(f);
+}
+function processarArquivo(e){const f=e.target.files[0];if(f)processarArquivoFile(f);}
+
+function processarArquivoFile(file){
+  mostrarStatus('⏳ Lendo arquivo...','carregando');
+  document.getElementById('preview-importacao').style.display='none';
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{defval:'',header:1});
+      if(!rows.length)throw new Error('Arquivo vazio');
+      const cab=rows[0].map(c=>String(c).toLowerCase().trim());
+      const temCab=cab.some(c=>c.includes('numero')||c.includes('pedido')||c.includes('codigo'));
+      const ini=temCab?1:0;
+      const iNum =temCab?cab.findIndex(c=>c.includes('numero')||c.includes('pedido')):0;
+      const iCod =temCab?cab.findIndex(c=>c.includes('cod')):1;
+      const iDesc=temCab?cab.findIndex(c=>c.includes('desc')):2;
+      const iEnd =temCab?cab.findIndex(c=>c.includes('end')||c.includes('rua')):3;
+      const iQtd =temCab?cab.findIndex(c=>c.includes('qtd')||c.includes('quant')):4;
+      const dados=[];
+      for(let i=ini;i<rows.length;i++){
+        const r=rows[i];
+        const num=String(r[iNum>=0?iNum:0]||'').trim();
+        if(!num)continue;
+        dados.push({numero_pedido:num,
+          codigo:   String(r[iCod >=0?iCod :1]||'').trim(),
+          descricao:String(r[iDesc>=0?iDesc:2]||'').trim(),
+          endereco: String(r[iEnd >=0?iEnd :3]||'').trim(),
+          quantidade:parseInt(r[iQtd>=0?iQtd:4])||1});
+      }
+      if(!dados.length){mostrarStatus('❌ Nenhuma linha encontrada!','erro');return}
+      pedidosImportar=dados;
+      const totalP=new Set(dados.map(d=>d.numero_pedido)).size;
+      mostrarStatus(`✅ ${dados.length} linha(s) em ${totalP} pedido(s) — clique Importar`,'sucesso');
+      document.getElementById('tbody-preview').innerHTML=
+        dados.slice(0,10).map(d=>`<tr>
+          <td>${d.numero_pedido}</td>
+          <td style="color:#60a5fa">${d.codigo}</td>
+          <td style="color:#94a3b8;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.descricao}</td>
+          <td style="color:#fbbf24">${d.endereco}</td>
+          <td style="color:#4ade80">${d.quantidade}</td>
+        </tr>`).join('')+
+        (dados.length>10?`<tr><td colspan="5" style="color:#64748b;text-align:center;padding:8px">... +${dados.length-10} linhas</td></tr>`:'');
+      document.getElementById('txt-total-import').textContent=`${totalP} pedido(s) • ${dados.length} itens`;
+      document.getElementById('preview-importacao').style.display='block';
+    }catch(err){mostrarStatus(`❌ ${err.message}`,'erro')}
+  };
+  reader.onerror=()=>mostrarStatus('❌ Erro ao abrir arquivo!','erro');
+  reader.readAsArrayBuffer(file);
+}
+
+async function confirmarImportacao(){
+  if(!pedidosImportar.length)return;
+  mostrarStatus('⏳ Importando...','carregando');
+  try{
+    const res=await fetch(`${API}/importar`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({linhas:pedidosImportar})});
+    const data=await res.json();
+    if(data.erro){mostrarStatus(`❌ ${data.erro}`,'erro');return}
+    const reg={
+      data:new Date().toLocaleDateString('pt-BR'),
+      hora:new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
+      total:data.total,ok:data.importados,erro:data.ignorados
+    };
+    historicoImportacoes.unshift(reg);
+    if(historicoImportacoes.length>20)historicoImportacoes=historicoImportacoes.slice(0,20);
+    localStorage.setItem('historico_importacoes',JSON.stringify(historicoImportacoes));
+    renderHistorico();
+    mostrarStatus(`✅ ${data.importados} pedido(s) importado(s)!${data.ignorados>0?` ⚠️ ${data.ignorados} já existiam.`:''}`,'sucesso');
+    document.getElementById('preview-importacao').style.display='none';
+    pedidosImportar=[];
+    document.getElementById('input-arquivo').value='';
+    toast(`${data.importados} pedidos importados!`,'sucesso');
+  }catch(e){mostrarStatus('❌ Erro na importação!','erro')}
+}
+
+function renderHistorico(){
+  const el=document.getElementById('historico-importacoes');
+  if(!historicoImportacoes.length){el.innerHTML='<div style="color:#64748b;font-size:11px;text-align:center;padding:12px">Nenhuma importação</div>';return}
+  el.innerHTML=historicoImportacoes.map(h=>`
+    <div class="historico-item">
+      <div>
+        <div style="color:#4ade80;font-weight:700">✅ ${h.ok} pedido(s) importado(s)</div>
+        ${h.erro>0?`<div style="color:#fbbf24;font-size:10px">⚠️ ${h.erro} já existiam</div>`:''}
+      </div>
+      <div style="color:#64748b;font-size:10px">${h.data} às ${h.hora}</div>
+    </div>`).join('');
+}
+
+function limparHistorico(){
+  if(!confirm('Limpar histórico?'))return;
+  historicoImportacoes=[];localStorage.removeItem('historico_importacoes');
+  renderHistorico();toast('Histórico limpo!','info');
+}
+
+function mostrarStatus(msg,tipo){
+  const cores={
+    carregando:'background:#1a2d4a;border:1px solid #2563eb;color:#60a5fa',
+    sucesso:   'background:#1a3324;border:1px solid #16a34a;color:#4ade80',
+    erro:      'background:#3b0f0f;border:1px solid #dc2626;color:#fca5a5'
+  };
+  const el=document.getElementById('status-leitura');
+  el.setAttribute('style',`display:block;margin-top:10px;padding:10px;border-radius:8px;font-size:12px;font-weight:600;text-align:center;${cores[tipo]}`);
+  el.textContent=msg;
+}
+
+// ══ SEPARAÇÃO ══
+async function confirmarPedido(){
+  const num=document.getElementById('input-pedido').value.trim();
+  if(!num){toast('Bipe ou digite o número!','aviso');return}
+  if(!separadorAtual){toast('Usuário sem separador vinculado!','erro');return}
+  try{
+    const res=await fetch(`${API}/pedidos/bipar`,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({numero_pedido:num,separador_id:separadorAtual.id})});
+    const data=await res.json();
+    if(res.status===404){toast('❌ Pedido não encontrado!','erro');document.getElementById('input-pedido').value='';return}
+    if(res.status===409||res.status===400){toast(`⚠️ ${data.erro}`,'aviso');document.getElementById('input-pedido').value='';return}
+    if(!res.ok){toast(`❌ ${data.erro}`,'erro');return}
+    pedidoAtualId=data.pedido_id;pedidoAtualNum=num;
+    document.getElementById('status-atual').innerHTML=`Pedido <b style="color:#e2e8f0">${num}</b> — 🔵 Separando`;
+    toast(data.ja_atribuido?`Pedido ${num} carregado`:`✅ Pedido ${num} → SEPARANDO`,data.ja_atribuido?'info':'sucesso');
+    await carregarChecklist();
+    carregarFila();
+  }catch(e){toast('Erro ao conectar!','erro')}
+}
+
+async function carregarChecklist(){
+  if(!pedidoAtualId)return;
+  try{
+    const res=await fetch(`${API}/pedidos/${pedidoAtualId}/itens`);
+    itensAtuais=await res.json();
+    if(!itensAtuais.length){document.getElementById('checklist-wrap').style.display='none';return}
+    document.getElementById('checklist-wrap').style.display='block';
+    renderChecklist();
+  }catch(e){toast('Erro ao carregar itens!','erro')}
+}
+
+function renderChecklist(){
+  const total      =itensAtuais.length;
+  const verificados=itensAtuais.filter(i=>i.status!=='pendente').length;
+  const encontrados=itensAtuais.filter(i=>i.status==='encontrado').length;
+  const faltas     =itensAtuais.filter(i=>i.status==='falta').length;
+  const parciais   =itensAtuais.filter(i=>i.status==='parcial').length;
+  const pct        =total>0?Math.round((verificados/total)*100):0;
+  const todosVerif =verificados===total;
+  const temProblema=faltas>0||parciais>0;
+
+  document.getElementById('checklist-titulo').textContent  =`📋 PEDIDO #${pedidoAtualNum}`;
+  document.getElementById('checklist-contador').textContent=`${verificados}/${total} itens`;
+  document.getElementById('checklist-barra').style.width   =`${pct}%`;
+  document.getElementById('checklist-resumo').innerHTML    =`✅ ${encontrados} ok &nbsp;🟡 ${parciais} parcial &nbsp;❌ ${faltas} falta &nbsp;⬜ ${total-verificados} pendente`;
+
+  const btnC=document.getElementById('btn-concluir');
+  const btnA=document.getElementById('btn-aguardar');
+
+  if(!todosVerif){
+    btnC.style.display='block';btnC.disabled=true;
+    btnC.textContent=`🔒 CONCLUIR (${total-verificados} pendentes)`;
+    btnA.style.display='none';
+  } else if(temProblema){
+    const itensP=itensAtuais.filter(i=>i.status==='falta'||i.status==='parcial');
+    const todosR=itensP.every(i=>i.aviso_status==='reposto'||i.aviso_status==='nao_encontrado');
+    if(todosR){
+      btnC.style.display='block';btnC.disabled=false;
+      btnC.textContent='✅ CONCLUIR PEDIDO';btnA.style.display='none';
+    } else {
+      const qtdP=itensP.filter(i=>i.aviso_status!=='reposto'&&i.aviso_status!=='nao_encontrado').length;
+      btnC.style.display='none';btnA.style.display='block';
+      btnA.textContent=`⏳ AGUARDANDO REPOSITOR (${qtdP} item${qtdP>1?'s':''})`;
+    }
+  } else {
+    btnC.style.display='block';btnC.disabled=false;
+    btnC.textContent='✅ CONCLUIR PEDIDO';btnA.style.display='none';
+  }
+
+  document.getElementById('checklist-lista').innerHTML=itensAtuais.map(item=>{
+    const icones={pendente:'⬜',encontrado:'✅',falta:'❌',parcial:'🟡'};
+    const v=item.status!=='pendente';
+    return `<div class="item-card ${item.status}" id="ic-${item.id}">
+      <div class="item-icone">${icones[item.status]||'⬜'}</div>
+      <div class="item-info">
+        <div class="item-cod">${item.codigo||'—'} &nbsp;•&nbsp; 📍 ${item.endereco||'—'}</div>
+        <div class="item-desc">${item.descricao||'—'}</div>
+        <div class="item-det">Qtd: <b style="color:#e2e8f0">${item.quantidade||1}</b>${item.hora_verificado?` &nbsp;•&nbsp; ${item.hora_verificado}`:''}</div>
+        ${item.status==='falta'  ?`<div class="item-aviso">❌ Falta total — repositor avisado</div>`:''}
+        ${item.status==='parcial'?`<div class="item-aviso">🟡 ${item.obs||''} — repositor avisado</div>`:''}
+        ${(item.status==='falta'||item.status==='parcial')&&item.aviso_status==='reposto'
+          ?`<div style="font-size:10px;color:#4ade80;margin-top:3px">✅ Repositor repôs!</div>`:''}
+        ${(item.status==='falta'||item.status==='parcial')&&item.aviso_status==='nao_encontrado'
+          ?`<div style="font-size:10px;color:#f87171;margin-top:3px">🚫 Não encontrado no estoque</div>`:''}
+        <div class="parcial-wrap" id="pw-${item.id}">
+          <label>Quantidade encontrada (de ${item.quantidade||1}):</label>
+          <div class="parcial-row">
+            <input type="number" class="parcial-input" id="pi-${item.id}" min="0" max="${(item.quantidade||1)-1}" placeholder="0" inputmode="numeric"/>
+            <button class="btn-parcial-ok" onclick="confirmarParcial(${item.id},${item.quantidade||1})">Confirmar</button>
+          </div>
+          <div style="font-size:10px;color:#94a3b8;margin-top:4px">Digite quantas unidades encontrou</div>
+        </div>
+      </div>
+      <div class="item-btns">
+        <button class="btn-item ok"          ${v?'disabled':''} onclick="verificarItem(${item.id},'encontrado')">✔</button>
+        <button class="btn-item parcial-btn" ${v?'disabled':''} onclick="toggleParcial(${item.id})" title="Parcial">±</button>
+        <button class="btn-item nok"         ${v?'disabled':''} onclick="verificarItem(${item.id},'falta')">✖</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleParcial(id){
+  const w=document.getElementById(`pw-${id}`);if(!w)return;
+  const a=w.classList.toggle('aberto');
+  if(a)setTimeout(()=>document.getElementById(`pi-${id}`)?.focus(),100);
+}
+
+async function confirmarParcial(id,qtdTotal){
+  const input=document.getElementById(`pi-${id}`);
+  const qtdEnc=parseInt(input?.value);
+  if(isNaN(qtdEnc)||qtdEnc<0){toast('Digite uma quantidade válida!','aviso');return}
+  if(qtdEnc>=qtdTotal){toast('Se encontrou tudo, use ✔!','aviso');return}
+  const qtdFalta=qtdTotal-qtdEnc;
+  await verificarItem(id,'parcial',`Encontrou ${qtdEnc} de ${qtdTotal} — faltam ${qtdFalta}`,qtdFalta);
+}
+
+async function verificarItem(itemId,status,obs='',qtdFalta=0){
+  if(!separadorAtual)return;
+  try{
+    const item=itensAtuais.find(i=>i.id===itemId);
+    await fetch(`${API}/itens/${itemId}/verificar`,{method:'PUT',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({status,obs,qtd_falta:status==='falta'?(item?.quantidade||1):qtdFalta,
+        separador_id:separadorAtual.id,separador_nome:separadorAtual.nome})});
+    if(item){item.status=status;item.obs=obs;item.aviso_status='';}
+    if(status==='falta')    toast('❌ Falta total — repositor avisado!','aviso');
+    if(status==='parcial')  toast('🟡 Parcial registrado — repositor avisado!','aviso');
+    if(status==='encontrado') toast('✅ Item confirmado!','sucesso');
+    renderChecklist();
+  }catch(e){toast('Erro ao verificar item!','erro')}
+}
+
+async function concluirPedido(){
+  if(!pedidoAtualId)return;
+  try{
+    const res=await fetch(`${API}/pedidos/${pedidoAtualId}/concluir`,{method:'PUT'});
+    const data=await res.json();
+    if(data.aguardando){toast('⏳ Ainda aguardando o repositor!','aviso');return}
+    if(data.erro){toast(`⚠️ ${data.erro}`,'aviso');return}
+    toast(`🎉 Pedido ${pedidoAtualNum} CONCLUÍDO!`,'sucesso');
+    document.getElementById('checklist-wrap').style.display='none';
+    document.getElementById('input-pedido').value='';
+    document.getElementById('status-atual').textContent='';
+    pedidoAtualId=null;pedidoAtualNum=null;itensAtuais=[];
+    carregarContadoresSep();carregarFila();
+    setTimeout(()=>document.getElementById('input-pedido').focus(),300);
+  }catch(e){toast('Erro ao concluir!','erro')}
+}
+
+async function carregarContadoresSep(){
+  if(!separadorAtual)return;
+  try{
+    const res=await fetch(`${API}/produtividade?separador_id=${separadorAtual.id}`);
+    const dados=await res.json();
+    if(dados.length){
+      document.getElementById('sep-cnt-hoje').textContent=dados[0].hoje||0;
+      document.getElementById('sep-cnt-mes').textContent =dados[0].mes||0;
+      document.getElementById('sep-cnt-ano').textContent =dados[0].total_ano||0;
+    }
+  }catch(e){}
+}
+
+async function carregarFila(){
+  if(!separadorAtual)return;
+  try{
+    const res=await fetch(`${API}/pedidos`);
+    const todos=await res.json();
+    const ativos=todos.filter(p=>p.status!=='concluido');
+    const meus=ativos.filter(p=>p.separador_id===separadorAtual.id);
+    document.getElementById('badge-fila').textContent=`${ativos.length} total`;
+    document.getElementById('badge-meus').textContent=`${meus.length} meus`;
+    const html=!ativos.length
+      ?'<tr><td colspan="4" style="color:#64748b;text-align:center;padding:20px">Nenhum pedido na fila</td></tr>'
+      :ativos.map(p=>{
+        const eMeu=p.separador_id===separadorAtual.id;
+        const ocup=p.separador_id&&p.separador_id!==separadorAtual.id;
+        const sit=eMeu?`<span class="pill separando">Meu</span>`:ocup?`<span class="pill falta">Ocupado</span>`:`<span class="pill pendente">Livre</span>`;
+        const clk=!ocup?`onclick="selecionarPedidoFila('${p.numero_pedido}')" style="cursor:pointer"`:'';
+        return `<tr class="${eMeu?'meu':''}" ${clk}>
+          <td style="color:${eMeu?'#60a5fa':'#cbd5e1'};font-weight:${eMeu?700:400}">${p.numero_pedido}</td>
+          <td>${p.itens||'—'}</td>
+          <td><span class="pill ${(p.status||'').replace(' ','-')}">${p.status}</span></td>
+          <td>${sit}</td>
+        </tr>`;
+      }).join('');
+    document.getElementById('tbody-fila').innerHTML=html;
+  }catch(e){}
+}
+
+function selecionarPedidoFila(num){
+  document.getElementById('input-pedido').value=num;
+  confirmarPedido();
+}
+
+// ══ REPOSIÇÃO ══
+async function carregarAvisos(){
+  try{
+    const status=document.getElementById('filtro-rep-status').value;
+    let url=`${API}/repositor/avisos`;if(status)url+=`?status=${status}`;
+    const res=await fetch(url);const avisos=await res.json();
+    const pend=avisos.filter(a=>a.status==='pendente').length;
+    const rep =avisos.filter(a=>a.status==='reposto').length;
+    document.getElementById('rep-pendente').textContent=pend;
+    document.getElementById('rep-reposto').textContent=rep;
+    const badge=document.getElementById('menu-badge-rep');
+    if(badge){badge.textContent=pend;badge.style.display=pend>0?'inline':'none';}
+    const lista=document.getElementById('lista-avisos');
+    if(!avisos.length){lista.innerHTML='<div style="color:#64748b;text-align:center;padding:40px;font-size:13px">✅ Nenhum item encontrado</div>';return}
+    lista.innerHTML=avisos.map(a=>`
+      <div class="aviso-card ${a.status}" id="aviso-${a.id}">
+        <div style="font-size:22px">${a.status==='reposto'?'✅':a.status==='nao_encontrado'?'🚫':'🔴'}</div>
+        <div class="aviso-info">
+          <div class="aviso-cod">${a.codigo||'—'}
+            <span style="font-size:10px;font-weight:400;color:#94a3b8;margin-left:8px">Pedido #${a.numero_pedido}</span>
+          </div>
+          <div class="aviso-desc">${a.descricao||'—'}</div>
+          <div class="aviso-det">📍 ${a.endereco||'—'} &nbsp;•&nbsp; 📦 Qtd: ${a.quantidade||'—'} &nbsp;•&nbsp; 👤 ${a.separador_nome||'—'}</div>
+          ${a.status==='reposto'       ?`<div style="font-size:10px;color:#4ade80;margin-top:4px">✅ Reposto às ${a.hora_reposto||'—'}</div>`:''}
+          ${a.status==='nao_encontrado'?`<div style="font-size:10px;color:#a78bfa;margin-top:4px">🚫 Não encontrado às ${a.hora_reposto||'—'}</div>`:''}
+          ${a.status==='pendente'      ?`<div style="font-size:10px;color:#f87171;margin-top:4px">⏱ Aviso às ${a.hora_aviso||'—'}</div>`:''}
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
+          ${a.status==='pendente'?`
+            <button class="btn btn-success btn-sm" onclick="marcarReposto(${a.id})">✅ Reposto</button>
+            <button class="btn btn-sm" style="background:#6366f1;color:white" onclick="marcarNaoEncontrado(${a.id})">🚫 Não encontrei</button>
+          `:`<span class="pill ${a.status==='reposto'?'reposto':'pendente'}">${a.status==='reposto'?'Reposto':'Não encontrado'}</span>`}
+        </div>
+      </div>`).join('');
+  }catch(e){document.getElementById('lista-avisos').innerHTML='<div style="color:#f87171;text-align:center;padding:20px">Erro ao carregar</div>'}
+}
+
+async function marcarReposto(id){
+  try{await fetch(`${API}/repositor/avisos/${id}/reposto`,{method:'PUT'});toast('✅ Marcado como reposto!','sucesso');carregarAvisos();}
+  catch(e){toast('Erro!','erro')}
+}
+
+async function marcarNaoEncontrado(id){
+  try{await fetch(`${API}/repositor/avisos/${id}/nao_encontrado`,{method:'PUT'});toast('🚫 Marcado como não encontrado!','aviso');carregarAvisos();}
+  catch(e){toast('Erro!','erro')}
+}
+
+document.getElementById('input-pedido')?.addEventListener('keypress',e=>{if(e.key==='Enter')confirmarPedido()});
+</script>
+</body>
+</html>
