@@ -3,224 +3,490 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>WMS — Sistema</title>
+  <title>WMS — Miess</title>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
   <style>
-    *{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:'Segoe UI',Arial,sans-serif;background:#1e2a3a;color:#e2e8f0;height:100dvh;overflow:hidden}
+/* ══════════════════════════════════════════
+   VARIÁVEIS — TEMA CLARO (supervisor/default)
+══════════════════════════════════════════ */
+:root {
+  --bg:        #EFF4FB;
+  --surface:   #FFFFFF;
+  --surface2:  #F5F8FD;
+  --border:    #DDE5F0;
+  --accent:    #2563EB;
+  --accent2:   #1D4ED8;
+  --green:     #16A34A;
+  --red:       #DC2626;
+  --amber:     #D97706;
+  --indigo:    #6366F1;
+  --text:      #0F172A;
+  --text2:     #475569;
+  --text3:     #94A3B8;
+  --sh:        0 1px 3px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.04);
+  --sh-lg:     0 8px 32px rgba(0,0,0,.09);
+  --r:         14px;
+  --r-sm:      9px;
+}
 
-    /* ── LOGIN ── */
-    #tela-login{position:fixed;inset:0;background:#1e2a3a;display:flex;align-items:center;justify-content:center;z-index:9999}
-    .login-box{background:#253347;border:1px solid #2d4a6e;border-radius:20px;padding:40px 36px;width:100%;max-width:420px;text-align:center}
-    .login-logo{font-size:36px;margin-bottom:8px}
-    .login-titulo{font-size:22px;font-weight:900;color:#f59e0b;margin-bottom:4px}
-    .login-sub{font-size:12px;color:#64748b;margin-bottom:28px}
-    .perfil-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:24px}
-    .perfil-btn{padding:14px 8px;border:2px solid #2d4a6e;border-radius:12px;background:#1a2535;color:#64748b;cursor:pointer;font-size:11px;font-weight:700;letter-spacing:.5px;transition:all .2s}
-    .perfil-btn:hover{border-color:#3b82f6;color:#cbd5e1}
-    .perfil-btn.ativo{border-color:#f59e0b;background:#1a2535;color:#f59e0b}
-    .perfil-btn .perfil-icone{font-size:24px;display:block;margin-bottom:6px}
-    .login-campo{margin-bottom:14px;text-align:left}
-    .login-campo label{font-size:10px;color:#60a5fa;font-weight:700;letter-spacing:1px;display:block;margin-bottom:5px}
-    .login-campo input{width:100%;padding:11px 14px;background:#1a2535;border:2px solid #2d4a6e;border-radius:9px;color:#e2e8f0;font-size:15px;outline:none}
-    .login-campo input:focus{border-color:#f59e0b;box-shadow:0 0 0 3px rgba(245,158,11,.2)}
-    .btn-login{width:100%;padding:13px;background:#f59e0b;border:none;border-radius:10px;color:#1a2535;font-size:15px;font-weight:900;cursor:pointer;transition:background .2s;margin-top:4px}
-    .btn-login:hover{background:#fbbf24}
-    .login-erro{color:#f87171;font-size:12px;margin-top:10px;display:none}
+/* ══════════════════════════════════════════
+   VARIÁVEIS — TEMA ESCURO (separador/repositor)
+══════════════════════════════════════════ */
+body.dark {
+  --bg:        #0B1520;
+  --surface:   #111E2E;
+  --surface2:  #152336;
+  --border:    #1C3050;
+  --accent:    #3B82F6;
+  --accent2:   #2563EB;
+  --green:     #22C55E;
+  --red:       #EF4444;
+  --amber:     #F59E0B;
+  --indigo:    #818CF8;
+  --text:      #E2E8F0;
+  --text2:     #94A3B8;
+  --text3:     #3D5A80;
+  --sh:        0 2px 8px rgba(0,0,0,.4),0 8px 32px rgba(0,0,0,.25);
+  --sh-lg:     0 8px 40px rgba(0,0,0,.5);
+}
 
-    /* ── LAYOUT ── */
-    #app{display:none;height:100dvh;overflow:hidden}
-    header{background:#253347;border-bottom:3px solid #f59e0b;padding:0 16px;display:flex;align-items:center;justify-content:space-between;height:52px;flex-shrink:0}
-    .logo{color:#f59e0b;font-size:16px;font-weight:900}
-    .logo span{color:#94a3b8;font-size:10px;display:block;font-weight:normal}
-    .header-dir{display:flex;align-items:center;gap:14px}
-    .usuario-info{text-align:right;font-size:11px;color:#94a3b8}
-    .usuario-info b{color:#f59e0b;font-size:12px;display:block}
-    .btn-sair-header{padding:6px 12px;background:transparent;border:1px solid #dc2626;border-radius:7px;color:#f87171;font-size:11px;font-weight:700;cursor:pointer}
-    .btn-sair-header:hover{background:#dc2626;color:white}
-    .layout{display:flex;height:calc(100dvh - 52px)}
+/* ══════════════════════════════════════════
+   BASE
+══════════════════════════════════════════ */
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);font-size:14px;transition:background .25s,color .25s}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:10px}
 
-    /* ── SIDEBAR ── */
-    .sidebar{width:200px;background:#1a2535;border-right:1px solid #2d4a6e;display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
-    .sidebar::-webkit-scrollbar{width:4px}
-    .sidebar::-webkit-scrollbar-thumb{background:#3b5a8a;border-radius:10px}
-    .menu-grupo{padding:14px 10px 4px 14px;font-size:9px;font-weight:700;color:#475569;letter-spacing:1.5px}
-    .menu-item{display:flex;align-items:center;gap:10px;padding:10px 14px;color:#64748b;font-size:12px;font-weight:600;cursor:pointer;border-left:3px solid transparent;transition:all .2s;text-decoration:none}
-    .menu-item:hover{background:#1e2d42;color:#cbd5e1}
-    .menu-item.ativo{background:#1e2d42;color:#f59e0b;border-left-color:#f59e0b}
-    .menu-item .mi-icone{font-size:15px;flex-shrink:0}
-    .menu-badge{background:#dc2626;color:white;border-radius:10px;padding:1px 6px;font-size:9px;font-weight:700;margin-left:auto}
+/* ══════════════════════════════════════════
+   LOGIN
+══════════════════════════════════════════ */
+#tela-login{position:fixed;inset:0;background:linear-gradient(145deg,#0B1A2E 0%,#0F172A 100%);display:flex;align-items:center;justify-content:center;z-index:9999}
+.login-box{background:rgba(255,255,255,.05);backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,.1);border-radius:24px;padding:44px 40px;width:100%;max-width:420px;text-align:center}
+.login-logo{font-size:46px;margin-bottom:12px;filter:drop-shadow(0 0 24px rgba(59,130,246,.5))}
+.login-titulo{font-family:'Space Mono',monospace;font-size:21px;color:#fff;margin-bottom:4px}
+.login-sub{font-size:11px;color:rgba(255,255,255,.35);margin-bottom:28px;letter-spacing:.8px;text-transform:uppercase}
+.perfil-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:26px}
+.perfil-btn{padding:13px 8px;border:1.5px solid rgba(255,255,255,.12);border-radius:12px;background:rgba(255,255,255,.04);color:rgba(255,255,255,.4);cursor:pointer;font-size:10px;font-weight:700;letter-spacing:.8px;transition:all .2s;font-family:'DM Sans',sans-serif}
+.perfil-btn:hover{border-color:rgba(59,130,246,.6);color:rgba(255,255,255,.8);background:rgba(59,130,246,.08)}
+.perfil-btn.ativo{border-color:#3B82F6;background:rgba(37,99,235,.25);color:#93C5FD;box-shadow:0 0 0 3px rgba(59,130,246,.15)}
+.perfil-btn .pi{font-size:22px;display:block;margin-bottom:5px}
+.login-campo{margin-bottom:14px;text-align:left}
+.login-campo label{font-size:10px;color:rgba(96,165,250,.8);font-weight:700;letter-spacing:1.2px;display:block;margin-bottom:5px}
+.login-campo input{width:100%;padding:12px 14px;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.1);border-radius:10px;color:#fff;font-size:15px;outline:none;font-family:'DM Sans',sans-serif;transition:border-color .2s}
+.login-campo input::placeholder{color:rgba(255,255,255,.2)}
+.login-campo input:focus{border-color:rgba(96,165,250,.6);background:rgba(255,255,255,.09)}
+.btn-login{width:100%;padding:13px;background:#2563EB;border:none;border-radius:10px;color:#fff;font-size:15px;font-weight:800;cursor:pointer;transition:all .2s;font-family:'DM Sans',sans-serif;margin-top:4px;letter-spacing:.3px}
+.btn-login:hover{background:#1D4ED8;transform:translateY(-1px);box-shadow:0 6px 22px rgba(37,99,235,.4)}
+.login-erro{color:#FCA5A5;font-size:12px;margin-top:10px;display:none;padding:8px 12px;background:rgba(220,38,38,.12);border-radius:8px;border:1px solid rgba(220,38,38,.25)}
 
-    /* ── CONTEUDO ── */
-    .conteudo{flex:1;overflow-y:auto;padding:16px;background:#1e2a3a}
-    .conteudo::-webkit-scrollbar{width:6px}
-    .conteudo::-webkit-scrollbar-thumb{background:#3b5a8a;border-radius:10px}
-    .pagina{display:none}
-    .pagina.ativa{display:block}
+/* ══════════════════════════════════════════
+   APP SHELL
+══════════════════════════════════════════ */
+#app{display:none;height:100dvh;flex-direction:column}
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 18px;display:flex;align-items:center;justify-content:space-between;height:54px;flex-shrink:0;box-shadow:var(--sh)}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-ic{width:32px;height:32px;background:linear-gradient(135deg,#2563EB,#6366F1);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.logo-tx{font-family:'Space Mono',monospace;font-size:14px;color:var(--text);letter-spacing:-.5px}
+.logo-tx small{font-family:'DM Sans',sans-serif;font-size:10px;color:var(--text3);display:block;font-weight:500;letter-spacing:0}
+.hdir{display:flex;align-items:center;gap:12px}
+.uinfo b{font-size:13px;color:var(--text);display:block;font-weight:700;text-align:right}
+.uinfo small{font-size:10px;color:var(--text3);font-weight:500;letter-spacing:.5px}
+#data-hora{font-size:11px;color:var(--text3);font-variant-numeric:tabular-nums}
+.btn-sair{padding:6px 13px;background:transparent;border:1.5px solid rgba(220,38,38,.4);border-radius:8px;color:var(--red);font-size:11px;font-weight:700;cursor:pointer;transition:all .2s;font-family:'DM Sans',sans-serif}
+.btn-sair:hover{background:var(--red);color:#fff;border-color:var(--red)}
+.layout{display:flex;flex:1;overflow:hidden}
 
-    /* ── CARDS / TABELAS ── */
-    .card{background:#253347;border:1px solid #2d4a6e;border-radius:12px;padding:16px;margin-bottom:16px}
-    .card-header{background:#2d4a6e;margin:-16px -16px 14px -16px;padding:10px 16px;border-radius:12px 12px 0 0;font-size:11px;font-weight:700;color:#94a3b8;letter-spacing:1px;display:flex;align-items:center;justify-content:space-between}
-    .grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px}
-    .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-    .contador-card{background:#253347;border:1px solid #2d4a6e;border-radius:12px;padding:14px;text-align:center}
-    .contador-card.verde  {border-color:#16a34a;background:linear-gradient(135deg,#1a3324,#253347)}
-    .contador-card.amarelo{border-color:#ca8a04;background:linear-gradient(135deg,#33280f,#253347)}
-    .contador-card.azul   {border-color:#2563eb;background:linear-gradient(135deg,#1a2d4a,#253347)}
-    .contador-card.vermelho{border-color:#dc2626;background:linear-gradient(135deg,#3b0f0f,#253347)}
-    .contador-label{font-size:9px;font-weight:700;letter-spacing:2px;color:#94a3b8;margin-bottom:4px}
-    .contador-valor{font-size:28px;font-weight:900;line-height:1}
-    .contador-card.verde   .contador-valor{color:#4ade80}
-    .contador-card.amarelo .contador-valor{color:#fbbf24}
-    .contador-card.azul    .contador-valor{color:#60a5fa}
-    .contador-card.vermelho .contador-valor{color:#f87171}
-    .contador-sub{font-size:9px;color:#64748b;margin-top:3px}
-    .filtros{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}
-    .filtro-grupo{display:flex;flex-direction:column;gap:4px}
-    .filtro-grupo label{font-size:10px;color:#60a5fa;font-weight:700;letter-spacing:1px}
-    .filtro-grupo input,.filtro-grupo select{padding:8px 12px;background:#1a2535;border:1px solid #2d4a6e;border-radius:8px;color:#e2e8f0;font-size:12px;outline:none;min-width:140px}
-    .filtro-grupo input:focus,.filtro-grupo select:focus{border-color:#3b82f6}
-    .btn{padding:8px 16px;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;letter-spacing:.5px}
-    .btn-primary{background:#2563eb;color:white}.btn-primary:hover{background:#3b82f6}
-    .btn-success{background:#15803d;color:white}.btn-success:hover{background:#16a34a}
-    .btn-danger{background:#dc2626;color:white}.btn-danger:hover{background:#ef4444}
-    .btn-outline{background:transparent;border:1px solid #3b82f6;color:#60a5fa}.btn-outline:hover{background:#1a2d4a}
-    .btn-sm{padding:5px 10px;font-size:11px}
-    .tabela-wrap{overflow-x:auto;border-radius:8px}
-    table{width:100%;border-collapse:collapse;font-size:12px}
-    thead th{background:#1a2d4a;color:#64748b;font-size:10px;letter-spacing:1px;padding:10px 14px;text-align:left;position:sticky;top:0;z-index:1;white-space:nowrap}
-    tbody tr:nth-child(even){background:#1e2e42}
-    tbody tr:nth-child(odd){background:#253347}
-    tbody tr:hover{background:#1a2d4a}
-    td{padding:10px 14px;vertical-align:middle}
-    .pill{display:inline-block;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;white-space:nowrap}
-    .pill.pendente  {background:#1e3a5f;color:#93c5fd}
-    .pill.separando {background:#1d4ed8;color:#bfdbfe}
-    .pill.concluido {background:#15803d;color:#bbf7d0}
-    .pill.falta     {background:#7f1d1d;color:#fca5a5}
-    .pill.reposto   {background:#15803d;color:#bbf7d0}
-    .pill.ativo     {background:#15803d;color:#bbf7d0}
-    .pill.inativo   {background:#7f1d1d;color:#fca5a5}
-    .pill.supervisor{background:#7c3aed;color:#ddd6fe}
-    .pill.repositor {background:#b45309;color:#fde68a}
-    .pill.separador {background:#1d4ed8;color:#bfdbfe}
-    .form-grupo{margin-bottom:12px}
-    .form-grupo label{font-size:10px;color:#60a5fa;font-weight:700;letter-spacing:1px;display:block;margin-bottom:4px}
-    .form-grupo input,.form-grupo select{width:100%;padding:9px 12px;background:#1a2535;border:1px solid #2d4a6e;border-radius:8px;color:#e2e8f0;font-size:13px;outline:none}
-    .form-grupo input:focus,.form-grupo select:focus{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.15)}
-    .prod-barra{height:6px;background:#1a2535;border-radius:3px;margin-top:4px;overflow:hidden}
-    .prod-barra-fill{height:100%;background:#3b82f6;border-radius:3px;transition:width .5s}
-    .select-sep{padding:5px 8px;background:#1a2535;border:1px solid #2d4a6e;border-radius:6px;color:#e2e8f0;font-size:11px;outline:none;cursor:pointer}
-    .upload-area{border:2px dashed #2d4a6e;border-radius:12px;padding:32px;text-align:center;cursor:pointer;transition:all .2s}
-    .upload-area:hover,.upload-area.drag{border-color:#3b82f6;background:#1a2d4a}
-    .upload-icon{font-size:40px;margin-bottom:10px}
-    .upload-titulo{font-size:14px;font-weight:700;color:#cbd5e1;margin-bottom:6px}
-    .upload-sub{font-size:11px;color:#64748b;margin-bottom:14px}
-    #input-arquivo{display:none}
-    .historico-item{background:#1a2535;border:1px solid #2d4a6e;border-radius:8px;padding:10px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;font-size:12px}
-    .aviso-card{background:#2d0f0f;border:1px solid #dc2626;border-radius:12px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:12px}
-    .aviso-card.reposto{background:#0f2d1a;border-color:#16a34a;opacity:.7}
-    .aviso-card.nao_encontrado{background:#1a1a2d;border-color:#6366f1;opacity:.7}
-    .aviso-info{flex:1}
-    .aviso-cod{font-size:13px;font-weight:700;color:#f87171}
-    .aviso-desc{font-size:12px;color:#e2e8f0;margin:2px 0}
-    .aviso-det{font-size:11px;color:#94a3b8}
+/* ══════════════════════════════════════════
+   SIDEBAR (desktop supervisor)
+══════════════════════════════════════════ */
+.sidebar{width:205px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto;padding:12px 8px}
+.mg{padding:10px 10px 4px;font-size:9px;font-weight:700;color:var(--text3);letter-spacing:2px;text-transform:uppercase}
+.mi{display:flex;align-items:center;gap:9px;padding:9px 12px;color:var(--text2);font-size:13px;font-weight:500;cursor:pointer;border-radius:var(--r-sm);transition:all .18s;text-decoration:none;margin-bottom:2px}
+.mi:hover{background:var(--bg);color:var(--text)}
+.mi.ativo{background:linear-gradient(135deg,rgba(37,99,235,.1),rgba(99,102,241,.07));color:var(--accent);font-weight:700}
+.mi-ic{font-size:15px;flex-shrink:0;width:20px;text-align:center}
+.mbadge{background:var(--red);color:#fff;border-radius:10px;padding:1px 6px;font-size:9px;font-weight:700;margin-left:auto}
 
-    /* ── SEPARAÇÃO ── */
-    .bip-input{flex:1;padding:14px 16px;background:#1a2535;border:2px solid #3b82f6;border-radius:10px;color:#60a5fa;font-size:20px;font-weight:700;outline:none;letter-spacing:2px}
-    .bip-input:focus{border-color:#60a5fa;box-shadow:0 0 0 3px rgba(59,130,246,.25)}
-    .bip-input::placeholder{color:#3b5a8a;font-weight:400;font-size:13px}
-    .btn-confirmar{padding:14px 20px;background:#1a2d4a;border:2px solid #3b82f6;border-radius:10px;color:#60a5fa;font-size:20px;cursor:pointer;transition:all .2s}
-    .btn-confirmar:hover{background:#2563eb;color:white}
-    .checklist-wrap{background:#253347;border:1px solid #2d4a6e;border-radius:12px;overflow:hidden;margin-top:14px}
-    .checklist-header{background:#2d4a6e;padding:10px 14px;font-size:10px;font-weight:700;color:#94a3b8;letter-spacing:1px;display:flex;justify-content:space-between;align-items:center}
-    .checklist-progresso{height:5px;background:#1a2535}
-    .checklist-progresso-fill{height:100%;background:#3b82f6;transition:width .4s}
-    .checklist-lista{overflow-y:auto;max-height:400px;padding:8px;display:flex;flex-direction:column;gap:6px}
-    .checklist-lista::-webkit-scrollbar{width:5px}
-    .checklist-lista::-webkit-scrollbar-thumb{background:#3b5a8a;border-radius:10px}
-    .item-card{border-radius:10px;padding:10px 12px;display:flex;align-items:flex-start;gap:10px;border:1px solid;transition:all .2s;animation:fadeInUp .2s ease}
-    .item-card.pendente  {background:#1e2a3a;border-color:#2d4a6e}
-    .item-card.encontrado{background:#0f2d1a;border-color:#16a34a}
-    .item-card.falta     {background:#2d0f0f;border-color:#dc2626}
-    .item-card.parcial   {background:#2d1f0f;border-color:#b45309}
-    .item-icone{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;margin-top:2px}
-    .item-card.pendente   .item-icone{background:#2d4a6e}
-    .item-card.encontrado .item-icone{background:#15803d}
-    .item-card.falta      .item-icone{background:#b91c1c}
-    .item-card.parcial    .item-icone{background:#b45309}
-    .item-info{flex:1;min-width:0}
-    .item-cod{font-size:11px;font-weight:700;color:#60a5fa}
-    .item-card.encontrado .item-cod{color:#4ade80}
-    .item-card.falta      .item-cod{color:#f87171}
-    .item-card.parcial    .item-cod{color:#fbbf24}
-    .item-desc{font-size:12px;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .item-det{font-size:10px;color:#64748b;margin-top:2px}
-    .item-aviso{font-size:10px;color:#fbbf24;margin-top:3px}
-    .parcial-wrap{margin-top:8px;background:#1a2535;border:1px solid #b45309;border-radius:8px;padding:8px 10px;display:none}
-    .parcial-wrap.aberto{display:block}
-    .parcial-wrap label{font-size:10px;color:#fbbf24;font-weight:700;display:block;margin-bottom:4px;letter-spacing:.5px}
-    .parcial-row{display:flex;gap:8px;align-items:center}
-    .parcial-input{flex:1;padding:8px 10px;background:#253347;border:1px solid #b45309;border-radius:6px;color:#fbbf24;font-size:16px;font-weight:700;outline:none;text-align:center}
-    .btn-parcial-ok{padding:8px 14px;background:#b45309;border:none;border-radius:6px;color:white;font-size:12px;font-weight:700;cursor:pointer}
-    .btn-parcial-ok:hover{background:#d97706}
-    .item-btns{display:flex;gap:6px;flex-shrink:0}
-    .btn-item{width:36px;height:36px;border-radius:8px;border:2px solid;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;background:transparent}
-    .btn-item.ok{border-color:#16a34a;color:#4ade80}.btn-item.ok:hover{background:#15803d;color:white}
-    .btn-item.parcial-btn{border-color:#b45309;color:#fbbf24;font-size:13px;font-weight:700}.btn-item.parcial-btn:hover{background:#b45309;color:white}
-    .btn-item.nok{border-color:#dc2626;color:#f87171}.btn-item.nok:hover{background:#dc2626;color:white}
-    .btn-item:disabled{opacity:.3;cursor:not-allowed}
-    .checklist-footer{padding:10px 12px;border-top:1px solid #2d4a6e;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
-    .btn-acao{flex:1;padding:12px;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;min-width:160px}
-    .btn-acao.concluir{background:#15803d;color:white}.btn-acao.concluir:hover:not(:disabled){background:#16a34a}
-    .btn-acao.aguardar{background:#92400e;color:#fde68a;cursor:not-allowed}
-    .btn-acao:disabled{background:#1a2535;color:#4a5568;border:1px solid #2d3748;cursor:not-allowed}
-    .fila-tabela{overflow-y:auto;max-height:220px}
-    .fila-tabela::-webkit-scrollbar{width:5px}
-    .fila-tabela::-webkit-scrollbar-thumb{background:#3b5a8a;border-radius:10px}
-    tbody tr.meu{border-left:3px solid #3b82f6;background:#1a2d4a!important}
-    .contadores-sep{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+/* ══════════════════════════════════════════
+   CONTENT AREA
+══════════════════════════════════════════ */
+.conteudo{flex:1;overflow-y:auto;padding:18px;background:var(--bg)}
+.pagina{display:none}
+.pagina.ativa{display:block;animation:fadeUp .2s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
 
-    /* ── MOBILE ── */
-    @media(max-width:700px){
-      .sidebar{display:none}
-      .grid-4{grid-template-columns:1fr 1fr}
-      .grid-2{grid-template-columns:1fr}
-      .checklist-lista{max-height:none}
-      .item-desc{white-space:normal}
-      .contadores-sep{grid-template-columns:repeat(3,1fr)}
-    }
-    @keyframes fadeInUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+/* ══════════════════════════════════════════
+   CARDS
+══════════════════════════════════════════ */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:16px;box-shadow:var(--sh)}
+.card-hd{background:var(--surface2);margin:-16px -16px 14px;padding:10px 16px;border-radius:var(--r) var(--r) 0 0;font-size:10px;font-weight:700;color:var(--text2);letter-spacing:1.2px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
+.pg-title{font-family:'Space Mono',monospace;font-size:17px;color:var(--text);margin-bottom:16px;letter-spacing:-.5px;display:flex;align-items:center;gap:10px}
+
+/* ══════════════════════════════════════════
+   COUNTER CARDS
+══════════════════════════════════════════ */
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:13px;margin-bottom:16px}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.cnt-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:15px 16px;box-shadow:var(--sh);position:relative;overflow:hidden}
+.cnt-card::after{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:var(--r) var(--r) 0 0}
+.cnt-card.verde::after {background:linear-gradient(90deg,#16A34A,#4ADE80)}
+.cnt-card.amarelo::after{background:linear-gradient(90deg,#D97706,#FCD34D)}
+.cnt-card.vermelho::after{background:linear-gradient(90deg,#DC2626,#F87171)}
+.cnt-card.azul::after  {background:linear-gradient(90deg,#2563EB,#60A5FA)}
+.cnt-card.roxo::after  {background:linear-gradient(90deg,#6366F1,#A78BFA)}
+.cnt-lbl{font-size:9px;font-weight:700;letter-spacing:2px;color:var(--text3);margin-bottom:5px;text-transform:uppercase}
+.cnt-val{font-family:'Space Mono',monospace;font-size:30px;font-weight:700;line-height:1}
+.cnt-card.verde  .cnt-val{color:var(--green)}
+.cnt-card.amarelo .cnt-val{color:var(--amber)}
+.cnt-card.vermelho .cnt-val{color:var(--red)}
+.cnt-card.azul   .cnt-val{color:var(--accent)}
+.cnt-card.roxo   .cnt-val{color:var(--indigo)}
+.cnt-sub{font-size:11px;color:var(--text3);margin-top:3px}
+
+/* ══════════════════════════════════════════
+   BUTTONS
+══════════════════════════════════════════ */
+.btn{padding:8px 16px;border:none;border-radius:var(--r-sm);font-size:12px;font-weight:600;cursor:pointer;transition:all .18s;font-family:'DM Sans',sans-serif;letter-spacing:.2px}
+.btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{background:var(--accent2)}
+.btn-success{background:var(--green);color:#fff}.btn-success:hover{filter:brightness(1.1)}
+.btn-danger {background:var(--red);color:#fff}  .btn-danger:hover {filter:brightness(1.1)}
+.btn-outline{background:transparent;border:1.5px solid var(--border);color:var(--text2)}.btn-outline:hover{border-color:var(--accent);color:var(--accent);background:var(--bg)}
+.btn-sm{padding:5px 11px;font-size:11px}
+
+/* ══════════════════════════════════════════
+   FORM / FILTERS
+══════════════════════════════════════════ */
+.filtros{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}
+.fg{display:flex;flex-direction:column;gap:4px}
+.fg label{font-size:10px;color:var(--accent);font-weight:700;letter-spacing:1px}
+.fg input,.fg select,.form-grp input,.form-grp select{
+  padding:8px 11px;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r-sm);
+  color:var(--text);font-size:13px;outline:none;min-width:130px;font-family:'DM Sans',sans-serif;transition:border-color .2s
+}
+.fg input:focus,.fg select:focus,.form-grp input:focus,.form-grp select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+.form-grp{margin-bottom:12px}
+.form-grp label{font-size:10px;color:var(--accent);font-weight:700;letter-spacing:1px;display:block;margin-bottom:4px}
+.form-grp input,.form-grp select{width:100%}
+.sel-sm{padding:5px 8px;background:var(--surface);border:1.5px solid var(--border);border-radius:6px;color:var(--text);font-size:11px;outline:none;cursor:pointer;font-family:'DM Sans',sans-serif}
+
+/* ══════════════════════════════════════════
+   TABLE
+══════════════════════════════════════════ */
+.tabela-wrap{overflow-x:auto;border-radius:var(--r-sm);border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead th{background:var(--surface2);color:var(--text3);font-size:10px;letter-spacing:1px;padding:10px 13px;text-align:left;white-space:nowrap;border-bottom:1px solid var(--border);font-weight:700;text-transform:uppercase}
+tbody tr{border-bottom:1px solid var(--border);transition:background .12s}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:var(--surface2)}
+td{padding:10px 13px;vertical-align:middle;color:var(--text2)}
+
+/* ══════════════════════════════════════════
+   PILLS
+══════════════════════════════════════════ */
+.pill{display:inline-block;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;white-space:nowrap;letter-spacing:.3px}
+.pill.pendente  {background:#EFF6FF;color:#2563EB;border:1px solid #BFDBFE}
+.pill.separando {background:#EFF6FF;color:#1D4ED8;border:1px solid #93C5FD}
+.pill.concluido {background:#F0FDF4;color:#16A34A;border:1px solid #BBF7D0}
+.pill.falta     {background:#FEF2F2;color:#DC2626;border:1px solid #FECACA}
+.pill.reposto   {background:#F0FDF4;color:#16A34A;border:1px solid #BBF7D0}
+.pill.ativo     {background:#F0FDF4;color:#16A34A;border:1px solid #BBF7D0}
+.pill.inativo   {background:#FEF2F2;color:#DC2626;border:1px solid #FECACA}
+.pill.supervisor{background:#F5F3FF;color:#6366F1;border:1px solid #DDD6FE}
+.pill.repositor {background:#FFFBEB;color:#D97706;border:1px solid #FDE68A}
+.pill.separador {background:#EFF6FF;color:#2563EB;border:1px solid #BFDBFE}
+/* Pills no dark */
+body.dark .pill.pendente  {background:#0D1E35;color:#60A5FA;border-color:#1C3050}
+body.dark .pill.separando {background:#0D1E35;color:#93C5FD;border-color:#1E4070}
+body.dark .pill.concluido {background:#052E16;color:#4ADE80;border-color:#14532D}
+body.dark .pill.falta     {background:#2D0F0F;color:#F87171;border-color:#7F1D1D}
+body.dark .pill.reposto   {background:#052E16;color:#4ADE80;border-color:#14532D}
+body.dark .pill.ativo     {background:#052E16;color:#4ADE80;border-color:#14532D}
+body.dark .pill.inativo   {background:#2D0F0F;color:#F87171;border-color:#7F1D1D}
+
+/* ══════════════════════════════════════════
+   TOAST
+══════════════════════════════════════════ */
+#toast-root{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:99999;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none}
+.toast{padding:11px 20px;border-radius:12px;font-size:13px;font-weight:600;box-shadow:var(--sh-lg);max-width:92vw;text-align:center;animation:slideUp .25s ease;white-space:nowrap}
+@keyframes slideUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.toast.info   {background:#EFF6FF;color:#1D4ED8;border:1px solid #BFDBFE}
+.toast.sucesso{background:#F0FDF4;color:#15803D;border:1px solid #BBF7D0}
+.toast.erro   {background:#FEF2F2;color:#DC2626;border:1px solid #FECACA}
+.toast.aviso  {background:#FFFBEB;color:#D97706;border:1px solid #FDE68A}
+body.dark .toast.info   {background:#0D1E35;color:#60A5FA;border-color:#1C3050}
+body.dark .toast.sucesso{background:#052E16;color:#4ADE80;border-color:#14532D}
+body.dark .toast.erro   {background:#2D0F0F;color:#F87171;border-color:#7F1D1D}
+body.dark .toast.aviso  {background:#2D1A05;color:#F59E0B;border-color:#78350F}
+
+/* ══════════════════════════════════════════
+   PROD BAR / TIMELINE
+══════════════════════════════════════════ */
+.prod-bar{height:5px;background:var(--border);border-radius:3px;margin-top:4px;overflow:hidden}
+.prod-bar-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--indigo));border-radius:3px;transition:width .5s}
+.tl-wrap{max-height:300px;overflow-y:auto;padding:2px 0}
+.tl-item{display:flex;gap:12px;padding:9px 0;border-bottom:1px solid var(--border);align-items:flex-start;font-size:12px}
+.tl-item:last-child{border-bottom:none}
+.tl-hora{font-family:'Space Mono',monospace;font-size:10px;color:var(--text3);white-space:nowrap;min-width:40px;margin-top:2px}
+.tl-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:4px}
+.tl-dot.concluido{background:var(--green)}.tl-dot.separando{background:var(--accent)}.tl-dot.pendente{background:var(--text3)}.tl-dot.falta{background:var(--red)}
+.tl-titulo{font-weight:600;color:var(--text);font-size:12px}
+.tl-sub{color:var(--text3);font-size:11px;margin-top:1px}
+
+/* ══════════════════════════════════════════
+   UPLOAD
+══════════════════════════════════════════ */
+.upload-area{border:2px dashed var(--border);border-radius:var(--r);padding:32px;text-align:center;cursor:pointer;transition:all .2s}
+.upload-area:hover,.upload-area.drag{border-color:var(--accent);background:rgba(37,99,235,.04)}
+#input-arquivo{display:none}
+.hist-item{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:9px 13px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;font-size:12px}
+.status-box{display:none;margin-top:10px;padding:10px 13px;border-radius:var(--r-sm);font-size:12px;font-weight:600;text-align:center}
+
+/* ══════════════════════════════════════════
+   REPOSIÇÃO
+══════════════════════════════════════════ */
+.aviso-card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r);padding:13px 16px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:12px;box-shadow:var(--sh)}
+.aviso-card.pendente {border-color:#FECACA;background:#FEF2F2}
+.aviso-card.reposto  {border-color:#BBF7D0;background:#F0FDF4;opacity:.75}
+.aviso-card.nao_encontrado{border-color:#DDD6FE;background:#F5F3FF;opacity:.75}
+body.dark .aviso-card.pendente {background:#2D0F0F;border-color:#7F1D1D}
+body.dark .aviso-card.reposto  {background:#052E16;border-color:#14532D;opacity:.75}
+body.dark .aviso-card.nao_encontrado{background:#1E1B4B;border-color:#3730A3;opacity:.75}
+.aviso-info{flex:1}
+.aviso-cod {font-size:13px;font-weight:700;color:var(--red)}
+.aviso-card.reposto .aviso-cod{color:var(--green)}
+.aviso-card.nao_encontrado .aviso-cod{color:var(--indigo)}
+.aviso-desc{font-size:12px;color:var(--text);margin:2px 0}
+.aviso-det {font-size:11px;color:var(--text3)}
+
+/* ══════════════════════════════════════════
+   ██ SEPARADOR — TABS MOBILE ██
+══════════════════════════════════════════ */
+/* Tab bar fixa no fundo — só aparece no mobile para separador */
+.sep-tabbar{
+  display:none; /* ativado via JS quando separador no mobile */
+  position:fixed;bottom:0;left:0;right:0;
+  height:62px;
+  background:var(--surface);
+  border-top:1px solid var(--border);
+  z-index:100;
+  flex-direction:row;
+  box-shadow:0 -4px 20px rgba(0,0,0,.15);
+}
+.sep-tab{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:3px;cursor:pointer;transition:all .2s;color:var(--text3);
+  font-size:10px;font-weight:700;letter-spacing:.4px;
+  border:none;background:transparent;font-family:'DM Sans',sans-serif;
+  position:relative;
+}
+.sep-tab.ativo{color:var(--accent)}
+.sep-tab.ativo::before{content:'';position:absolute;top:0;left:20%;right:20%;height:2px;background:var(--accent);border-radius:0 0 3px 3px}
+.sep-tab-ic{font-size:22px;line-height:1}
+.sep-tab-badge{position:absolute;top:6px;right:calc(50% - 22px);background:var(--red);color:#fff;border-radius:10px;padding:1px 5px;font-size:9px;font-weight:700;min-width:16px;text-align:center}
+
+/* Páginas das tabs do separador */
+.sep-tab-page{display:none;flex-direction:column;height:100%}
+.sep-tab-page.ativa{display:flex}
+
+/* Conteudo da tab com padding inferior para não ficar atrás da tabbar */
+.sep-scroll{flex:1;overflow-y:auto;padding:14px 14px 72px}
+
+/* ══════════════════════════════════════════
+   CAMPO DE LEITURA (separador)
+══════════════════════════════════════════ */
+.bip-wrap{display:flex;gap:10px;margin-bottom:12px}
+.bip-input{
+  flex:1;padding:15px 16px;
+  background:var(--surface2);border:2px solid var(--accent);border-radius:12px;
+  color:var(--text);font-size:22px;font-weight:700;outline:none;
+  letter-spacing:4px;font-family:'Space Mono',monospace;transition:all .2s
+}
+.bip-input:focus{border-color:var(--accent2);box-shadow:0 0 0 4px rgba(37,99,235,.12)}
+.bip-input::placeholder{color:var(--text3);font-weight:400;font-size:13px;letter-spacing:0;font-family:'DM Sans',sans-serif}
+.btn-bip{
+  padding:15px 18px;background:var(--surface2);
+  border:2px solid var(--border);border-radius:12px;
+  color:var(--accent);font-size:22px;cursor:pointer;transition:all .2s;
+  display:flex;align-items:center;justify-content:center;min-width:54px
+}
+.btn-bip:hover,.btn-bip:active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.status-pedido{
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:var(--r-sm);padding:9px 14px;margin-bottom:12px;
+  font-size:13px;color:var(--text2);display:none
+}
+
+/* ══════════════════════════════════════════
+   CHECKLIST
+══════════════════════════════════════════ */
+.cl-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;box-shadow:var(--sh);display:none}
+.cl-header{background:var(--surface2);padding:11px 14px;font-size:11px;font-weight:700;color:var(--text2);letter-spacing:1px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border)}
+.cl-prog{height:4px;background:var(--border)}
+.cl-prog-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--indigo));transition:width .4s}
+.cl-resumo{padding:7px 14px;font-size:11px;color:var(--text2);border-bottom:1px solid var(--border);background:var(--surface2)}
+.cl-lista{overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:7px}
+.cl-footer{padding:11px 13px;border-top:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap;background:var(--surface2)}
+
+/* Item cards */
+.item-card{border-radius:10px;padding:11px 13px;display:flex;align-items:flex-start;gap:11px;border:1.5px solid;transition:all .2s;animation:fadeUp .15s ease}
+.item-card.pendente  {background:var(--surface);border-color:var(--border)}
+.item-card.encontrado{background:#F0FDF4;border-color:#BBF7D0}
+.item-card.falta     {background:#FEF2F2;border-color:#FECACA}
+.item-card.parcial   {background:#FFFBEB;border-color:#FDE68A}
+body.dark .item-card.pendente  {background:var(--surface2);border-color:var(--border)}
+body.dark .item-card.encontrado{background:#052E16;border-color:#14532D}
+body.dark .item-card.falta     {background:#2D0F0F;border-color:#7F1D1D}
+body.dark .item-card.parcial   {background:#2D1A05;border-color:#78350F}
+
+.item-ic{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.item-card.pendente   .item-ic{background:var(--border)}
+.item-card.encontrado .item-ic{background:#BBF7D0}
+.item-card.falta      .item-ic{background:#FECACA}
+.item-card.parcial    .item-ic{background:#FDE68A}
+body.dark .item-card.pendente   .item-ic{background:var(--border)}
+body.dark .item-card.encontrado .item-ic{background:#14532D}
+body.dark .item-card.falta      .item-ic{background:#7F1D1D}
+body.dark .item-card.parcial    .item-ic{background:#78350F}
+
+.item-info{flex:1;min-width:0}
+.item-cod {font-size:11px;font-weight:700;color:var(--accent)}
+.item-card.encontrado .item-cod{color:var(--green)}
+.item-card.falta      .item-cod{color:var(--red)}
+.item-card.parcial    .item-cod{color:var(--amber)}
+.item-desc{font-size:13px;color:var(--text);margin:2px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item-det {font-size:11px;color:var(--text3)}
+.item-aviso{font-size:10px;color:var(--amber);margin-top:3px;font-weight:600}
+.parcial-wrap{margin-top:8px;background:var(--bg);border:1.5px solid #FDE68A;border-radius:8px;padding:9px 11px;display:none}
+.parcial-wrap.aberto{display:block}
+.parcial-wrap label{font-size:10px;color:var(--amber);font-weight:700;display:block;margin-bottom:5px}
+.parcial-row{display:flex;gap:8px;align-items:center}
+.parcial-input{flex:1;padding:8px 10px;background:var(--surface);border:1.5px solid #FDE68A;border-radius:6px;color:var(--text);font-size:18px;font-weight:700;outline:none;text-align:center;font-family:'Space Mono',monospace}
+.btn-parc-ok{padding:8px 14px;background:var(--amber);border:none;border-radius:6px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif}
+
+.item-btns{display:flex;gap:6px;flex-shrink:0}
+.btn-item{width:40px;height:40px;border-radius:9px;border:1.5px solid;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;background:transparent}
+.btn-item.ok    {border-color:#BBF7D0;color:var(--green)}.btn-item.ok:hover:not(:disabled)    {background:var(--green);color:#fff;border-color:var(--green)}
+.btn-item.parc  {border-color:#FDE68A;color:var(--amber);font-size:13px;font-weight:700}.btn-item.parc:hover:not(:disabled){background:var(--amber);color:#fff}
+.btn-item.nok   {border-color:#FECACA;color:var(--red)}.btn-item.nok:hover:not(:disabled)   {background:var(--red);color:#fff;border-color:var(--red)}
+.btn-item:disabled{opacity:.3;cursor:not-allowed}
+body.dark .btn-item.ok  {border-color:#14532D;color:#4ADE80}
+body.dark .btn-item.parc{border-color:#78350F;color:#F59E0B}
+body.dark .btn-item.nok {border-color:#7F1D1D;color:#F87171}
+
+.btn-acao{flex:1;padding:13px;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;min-width:130px;font-family:'DM Sans',sans-serif}
+.btn-acao.concluir{background:var(--green);color:#fff}.btn-acao.concluir:hover:not(:disabled){filter:brightness(1.1)}
+.btn-acao.aguardar{background:var(--surface);color:var(--amber);border:1px solid #FDE68A;cursor:not-allowed}
+.btn-acao:disabled{background:var(--surface2);color:var(--text3);border:1px solid var(--border);cursor:not-allowed}
+
+/* ══════════════════════════════════════════
+   FILA (tab 2 do separador)
+══════════════════════════════════════════ */
+.fila-card{
+  background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r);
+  padding:13px 15px;margin-bottom:9px;display:flex;align-items:center;gap:12px;
+  box-shadow:var(--sh);cursor:pointer;transition:all .2s
+}
+.fila-card:hover,.fila-card:active{border-color:var(--accent);background:var(--surface2)}
+.fila-card.meu{border-color:var(--accent);background:rgba(37,99,235,.05)}
+.fila-card.ocupado{opacity:.55;cursor:not-allowed}
+body.dark .fila-card.meu{background:rgba(59,130,246,.08);border-color:var(--accent)}
+.fila-num{font-family:'Space Mono',monospace;font-size:16px;font-weight:700;color:var(--text);flex:1}
+.fila-card.meu .fila-num{color:var(--accent)}
+.fila-meta{font-size:11px;color:var(--text3);text-align:right}
+.fila-meta b{display:block;font-size:12px;color:var(--text2);font-weight:600}
+
+/* ══════════════════════════════════════════
+   STATS (tab 3 do separador — cards grandes)
+══════════════════════════════════════════ */
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px;margin-bottom:16px}
+.stat-big{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--r);
+  padding:22px 16px;text-align:center;box-shadow:var(--sh);position:relative;overflow:hidden
+}
+.stat-big::after{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:var(--r) var(--r) 0 0}
+.stat-big.azul::after  {background:linear-gradient(90deg,#2563EB,#60A5FA)}
+.stat-big.verde::after {background:linear-gradient(90deg,#16A34A,#4ADE80)}
+.stat-big.roxo::after  {background:linear-gradient(90deg,#6366F1,#A78BFA)}
+.stat-big.span2{grid-column:span 2}
+.stat-big .s-lbl{font-size:10px;font-weight:700;letter-spacing:2px;color:var(--text3);margin-bottom:8px;text-transform:uppercase}
+.stat-big .s-val{font-family:'Space Mono',monospace;font-size:48px;font-weight:700;line-height:1}
+.stat-big.azul .s-val  {color:var(--accent)}
+.stat-big.verde .s-val {color:var(--green)}
+.stat-big.roxo .s-val  {color:var(--indigo)}
+.stat-big .s-sub{font-size:12px;color:var(--text3);margin-top:6px}
+.stat-nome{font-size:13px;color:var(--text2);font-weight:600;text-align:center;margin-bottom:16px;padding:10px 14px;background:var(--surface2);border-radius:var(--r-sm);border:1px solid var(--border)}
+
+/* ══════════════════════════════════════════
+   DESKTOP: separador sem tabbar → usa layout normal
+══════════════════════════════════════════ */
+.sep-desktop{display:none} /* mostrado só no desktop para separador */
+
+/* ══════════════════════════════════════════
+   RESPONSIVE
+══════════════════════════════════════════ */
+@media(max-width:768px){
+  /* Esconde sidebar */
+  .sidebar{display:none}
+  /* Conteudo sem padding lateral grande */
+  .conteudo{padding:10px}
+  /* Grids */
+  .grid-4{grid-template-columns:1fr 1fr}
+  .grid-2{grid-template-columns:1fr}
+  /* Data hora sumia — esconde no mobile */
+  #data-hora{display:none}
+  /* Logo menor */
+  .logo-tx small{display:none}
+  /* Header compacto */
+  header{height:50px;padding:0 12px}
+  .logo-ic{width:28px;height:28px;font-size:14px}
+  .logo-tx{font-size:13px}
+  .uinfo b{font-size:12px}
+  .btn-sair{padding:5px 10px;font-size:10px}
+}
+
+/* App separador no mobile: sem sidebar, com tabbar */
+@media(max-width:768px){
+  body.sep-mobile #app{overflow:hidden}
+  body.sep-mobile .sidebar{display:none}
+  body.sep-mobile .conteudo{display:none} /* usa tabs em vez de conteudo normal */
+  body.sep-mobile .sep-tabbar{display:flex}
+  body.sep-mobile #sep-mobile-root{display:flex;flex-direction:column;flex:1;overflow:hidden}
+  body.sep-mobile .layout{overflow:hidden}
+}
+/* Sep mobile root escondido por padrão */
+#sep-mobile-root{display:none}
+
+/* Desktop separador: usa conteudo normal */
+@media(min-width:769px){
+  .sep-desktop{display:block}
+  #sep-mobile-root{display:none!important}
+  body.sep-mobile .conteudo{display:block!important}
+  body.sep-mobile .sidebar{display:flex!important}
+  .sep-tabbar{display:none!important}
+}
   </style>
 </head>
 <body>
-  <!-- ══ TELA DE LOGIN ══ -->
+
+<div id="toast-root"></div>
+
+<!-- ══ LOGIN ══ -->
 <div id="tela-login">
   <div class="login-box">
     <div class="login-logo">📦</div>
     <div class="login-titulo">WMS — Miess</div>
-    <div class="login-sub">Controle de Separação de Pedidos</div>
-
+    <div class="login-sub">Controle de Separação</div>
     <div class="perfil-grid">
-      <button class="perfil-btn" onclick="selecionarPerfil('supervisor',this)">
-        <span class="perfil-icone">👔</span>SUPERVISOR
-      </button>
-      <button class="perfil-btn" onclick="selecionarPerfil('separador',this)">
-        <span class="perfil-icone">📦</span>SEPARADOR
-      </button>
-      <button class="perfil-btn" onclick="selecionarPerfil('repositor',this)">
-        <span class="perfil-icone">🔧</span>REPOSITOR
-      </button>
+      <button class="perfil-btn" onclick="selecionarPerfil('supervisor',this)"><span class="pi">👔</span>SUPERVISOR</button>
+      <button class="perfil-btn" onclick="selecionarPerfil('separador',this)"><span class="pi">📦</span>SEPARADOR</button>
+      <button class="perfil-btn" onclick="selecionarPerfil('repositor',this)"><span class="pi">🔧</span>REPOSITOR</button>
     </div>
-    <div class="login-campo">
-      <label>LOGIN / USUÁRIO</label>
-      <input type="text" id="login-usuario" placeholder="Ex: joao.silva" autocomplete="username"/>
-    </div>
-    <div class="login-campo">
-      <label>SENHA</label>
-      <input type="password" id="login-senha" placeholder="••••••••"
-        onkeydown="if(event.key==='Enter')fazerLogin()" autocomplete="current-password"/>
-    </div>
+    <div class="login-campo"><label>USUÁRIO</label><input type="text" id="login-usuario" placeholder="Ex: joao.silva" autocomplete="username"/></div>
+    <div class="login-campo"><label>SENHA</label><input type="password" id="login-senha" placeholder="••••••••" onkeydown="if(event.key==='Enter')fazerLogin()" autocomplete="current-password"/></div>
     <div class="login-erro" id="login-erro"></div>
     <button class="btn-login" onclick="fazerLogin()">▶ ENTRAR</button>
   </div>
@@ -229,986 +495,1188 @@
 <!-- ══ APP ══ -->
 <div id="app">
   <header>
-    <div class="logo">📦 WMS — Miess <span>Controle de Separação de Pedidos</span></div>
-    <div class="header-dir">
-      <span id="data-hora" style="font-size:11px;color:#94a3b8"></span>
-      <div class="usuario-info">
-        <b id="header-nome">—</b>
-        <span id="header-perfil">—</span>
-      </div>
-      <button class="btn-sair-header" onclick="sair()">✖ Sair</button>
+    <div class="logo">
+      <div class="logo-ic">📦</div>
+      <div class="logo-tx">WMS — Miess<small>Separação de Pedidos</small></div>
+    </div>
+    <div class="hdir">
+      <span id="data-hora"></span>
+      <div class="uinfo"><b id="hdr-nome">—</b><small id="hdr-perfil">—</small></div>
+      <button class="btn-sair" onclick="sair()">✖ Sair</button>
     </div>
   </header>
 
   <div class="layout">
     <nav class="sidebar" id="sidebar"></nav>
 
+    <!-- ══ CONTEÚDO NORMAL (supervisor / desktop separador) ══ -->
     <div class="conteudo" id="conteudo">
 
-      <!-- ══ DASHBOARD ══ -->
+      <!-- DASHBOARD -->
       <div class="pagina" id="pag-dashboard">
+        <div class="pg-title">📊 Dashboard</div>
         <div class="grid-4">
-          <div class="contador-card verde"><div class="contador-label">CONCLUÍDOS HOJE</div><div class="contador-valor" id="dash-hoje">0</div><div class="contador-sub">pedidos</div></div>
-          <div class="contador-card amarelo"><div class="contador-label">EM SEPARAÇÃO</div><div class="contador-valor" id="dash-separando">0</div><div class="contador-sub">pedidos</div></div>
-          <div class="contador-card vermelho"><div class="contador-label">AGUARD. REPOSITOR</div><div class="contador-valor" id="dash-repositor">0</div><div class="contador-sub">itens em falta</div></div>
-          <div class="contador-card azul"><div class="contador-label">PENDENTES</div><div class="contador-valor" id="dash-pendentes">0</div><div class="contador-sub">pedidos</div></div>
+          <div class="cnt-card verde"><div class="cnt-lbl">CONCLUÍDOS HOJE</div><div class="cnt-val" id="dash-hoje">0</div><div class="cnt-sub">pedidos</div></div>
+          <div class="cnt-card amarelo"><div class="cnt-lbl">EM SEPARAÇÃO</div><div class="cnt-val" id="dash-separando">0</div><div class="cnt-sub">pedidos</div></div>
+          <div class="cnt-card vermelho"><div class="cnt-lbl">AGUARD. REPOSITOR</div><div class="cnt-val" id="dash-repositor">0</div><div class="cnt-sub">itens em falta</div></div>
+          <div class="cnt-card azul"><div class="cnt-lbl">PENDENTES</div><div class="cnt-val" id="dash-pendentes">0</div><div class="cnt-sub">pedidos</div></div>
         </div>
-        <div class="card">
-          <div class="card-header">📊 PRODUTIVIDADE POR SEPARADOR
-            <button class="btn btn-outline btn-sm" onclick="carregarDashboard()">🔄 Atualizar</button>
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-hd">📊 PRODUTIVIDADE
+              <button class="btn btn-outline btn-sm" onclick="carregarDashboard()">🔄</button>
+            </div>
+            <div class="filtros">
+              <div class="fg"><label>USUÁRIO</label><select id="filtro-sep-prod" onchange="carregarProdutividade()"><option value="">Todos</option></select></div>
+              <div class="fg"><label>DE</label><input type="date" id="filtro-data-ini"/></div>
+              <div class="fg"><label>ATÉ</label><input type="date" id="filtro-data-fim"/></div>
+              <button class="btn btn-primary btn-sm" onclick="carregarProdutividade()">Filtrar</button>
+            </div>
+            <div class="tabela-wrap"><table><thead><tr><th>USUÁRIO</th><th>HOJE</th><th>MÊS</th><th>ANO</th><th>PROGRESSO</th><th>STATUS</th></tr></thead><tbody id="tbody-prod"></tbody></table></div>
           </div>
-          <div class="filtros">
-            <div class="filtro-grupo"><label>DATA INÍCIO</label><input type="date" id="filtro-data-ini"/></div>
-            <div class="filtro-grupo"><label>DATA FIM</label><input type="date" id="filtro-data-fim"/></div>
-            <div class="filtro-grupo"><label>SEPARADOR</label><select id="filtro-sep-prod"><option value="">Todos</option></select></div>
-            <div class="filtro-grupo" style="justify-content:flex-end"><button class="btn btn-primary" onclick="carregarProdutividade()">🔍 Filtrar</button></div>
+          <div class="card">
+            <div class="card-hd">🕐 LINHA DO TEMPO
+              <button class="btn btn-outline btn-sm" onclick="carregarTimeline()">🔄</button>
+            </div>
+            <div class="filtros">
+              <div class="fg"><label>DATA</label><input type="date" id="filtro-tl-data"/></div>
+              <button class="btn btn-primary btn-sm" onclick="carregarTimeline()">Filtrar</button>
+            </div>
+            <div class="tl-wrap" id="tl-lista"><div style="color:var(--text3);text-align:center;padding:24px;font-size:13px">Carregando...</div></div>
           </div>
-          <div class="tabela-wrap"><table>
-            <thead><tr><th>SEPARADOR</th><th>HOJE</th><th>MÊS</th><th>ANO</th><th>PROGRESSO</th><th>STATUS</th></tr></thead>
-            <tbody id="tbody-produtividade"><tr><td colspan="6" style="color:#64748b;text-align:center;padding:30px">Carregando...</td></tr></tbody>
-          </table></div>
         </div>
       </div>
 
-      <!-- ══ PEDIDOS ══ -->
+      <!-- PEDIDOS -->
       <div class="pagina" id="pag-pedidos">
+        <div class="pg-title">📋 Pedidos</div>
         <div class="card">
-          <div class="card-header">📋 TODOS OS PEDIDOS
+          <div class="card-hd">FILTROS
             <div style="display:flex;gap:8px">
-              <button class="btn btn-success btn-sm" onclick="exportarCSV()">⬇ CSV</button>
               <button class="btn btn-outline btn-sm" onclick="carregarPedidos()">🔄 Atualizar</button>
+              <button class="btn btn-success btn-sm" onclick="exportarExcel()">⬇ Excel</button>
             </div>
           </div>
           <div class="filtros">
-            <div class="filtro-grupo"><label>DATA</label><input type="date" id="filtro-pedido-data"/></div>
-            <div class="filtro-grupo"><label>SEPARADOR</label><select id="filtro-pedido-sep"><option value="">Todos</option></select></div>
-            <div class="filtro-grupo"><label>STATUS</label>
-              <select id="filtro-pedido-status">
+            <div class="fg"><label>DE</label><input type="date" id="filtro-ped-ini"/></div>
+            <div class="fg"><label>ATÉ</label><input type="date" id="filtro-ped-fim"/></div>
+            <div class="fg"><label>USUÁRIO</label><select id="filtro-ped-sep"><option value="">Todos</option></select></div>
+            <div class="fg"><label>STATUS</label>
+              <select id="filtro-ped-status">
                 <option value="">Todos</option>
                 <option value="pendente">Pendente</option>
                 <option value="separando">Separando</option>
                 <option value="concluido">Concluído</option>
               </select>
             </div>
-            <div class="filtro-grupo" style="justify-content:flex-end"><button class="btn btn-primary" onclick="carregarPedidos()">🔍 Filtrar</button></div>
+            <div class="fg"><label>Nº PEDIDO</label><input type="text" id="filtro-ped-num" placeholder="Buscar..."/></div>
+            <button class="btn btn-primary btn-sm" onclick="carregarPedidos()">🔍 Filtrar</button>
           </div>
-          <div class="tabela-wrap"><table>
-            <thead><tr><th>Nº PEDIDO</th><th>SEPARADOR</th><th>STATUS</th><th>ITENS</th><th>DATA</th><th>HORA</th><th>ATRIBUIR</th></tr></thead>
-            <tbody id="tbody-pedidos"><tr><td colspan="7" style="color:#64748b;text-align:center;padding:30px">Carregando...</td></tr></tbody>
-          </table></div>
+          <div class="tabela-wrap"><table><thead><tr><th>Nº PEDIDO</th><th>USUÁRIO</th><th>STATUS</th><th>ITENS</th><th>DATA</th><th>HORA</th><th>ATRIBUIR</th></tr></thead><tbody id="tbody-ped"></tbody></table></div>
         </div>
       </div>
 
-      <!-- ══ CADASTROS ══ -->
+      <!-- CADASTROS -->
       <div class="pagina" id="pag-cadastros">
-        <div style="display:flex;gap:4px;margin-bottom:16px;background:#1a2535;padding:6px;border-radius:10px;width:fit-content">
-          <button class="btn btn-primary btn-sm" id="ctab-separadores" onclick="trocarCadastroTab('separadores')">👤 Separadores</button>
-          <button class="btn btn-outline btn-sm" id="ctab-usuarios"    onclick="trocarCadastroTab('usuarios')">🔐 Usuários</button>
-          <button class="btn btn-outline btn-sm" id="ctab-importar"    onclick="trocarCadastroTab('importar')">📂 Importar</button>
+        <div class="pg-title">⚙️ Cadastros</div>
+        <div style="display:flex;gap:8px;margin-bottom:16px">
+          <button class="btn btn-primary btn-sm" id="ctab-usuarios" onclick="trocarCadastroTab('usuarios')">👥 Usuários</button>
+          <button class="btn btn-outline btn-sm" id="ctab-importar" onclick="trocarCadastroTab('importar')">📥 Importar</button>
         </div>
-
-        <!-- Sub-aba Separadores -->
-        <div id="cad-separadores">
+        <div id="cad-usuarios">
           <div class="grid-2">
             <div class="card">
-              <div class="card-header">👤 CADASTRO DE SEPARADOR</div>
-              <div class="form-grupo"><label>NOME COMPLETO</label><input type="text" id="sep-nome" placeholder="Ex: João da Silva"/></div>
-              <div class="form-grupo"><label>ID / MATRÍCULA</label><input type="text" id="sep-matricula" placeholder="Ex: 001"/></div>
-              <div class="form-grupo"><label>TURNO</label>
-                <select id="sep-turno">
-                  <option value="Manhã">Manhã</option>
-                  <option value="Tarde">Tarde</option>
-                  <option value="Noite">Noite</option>
-                </select>
-              </div>
-              <button class="btn btn-primary" style="width:100%" onclick="cadastrarSeparador()">✚ Cadastrar Separador</button>
-            </div>
-            <div class="card">
-              <div class="card-header">📋 SEPARADORES CADASTRADOS</div>
-              <div class="tabela-wrap"><table>
-                <thead><tr><th>NOME</th><th>MATRÍCULA</th><th>TURNO</th><th>STATUS</th><th>AÇÕES</th></tr></thead>
-                <tbody id="tbody-separadores"></tbody>
-              </table></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Sub-aba Usuários -->
-        <div id="cad-usuarios" style="display:none">
-          <div class="grid-2">
-            <div class="card">
-              <div class="card-header">🔐 CADASTRO DE USUÁRIO</div>
-              <div class="form-grupo"><label>NOME COMPLETO</label><input type="text" id="usr-nome" placeholder="Ex: João da Silva"/></div>
-              <div class="form-grupo"><label>LOGIN</label><input type="text" id="usr-login" placeholder="Ex: joao.silva"/></div>
-              <div class="form-grupo"><label>SENHA</label><input type="password" id="usr-senha" placeholder="Mínimo 6 caracteres"/></div>
-              <div class="form-grupo"><label>PERFIL</label>
+              <div class="card-hd">➕ NOVO USUÁRIO</div>
+              <div class="form-grp"><label>NOME COMPLETO</label><input type="text" id="usr-nome" placeholder="Nome do colaborador"/></div>
+              <div class="form-grp"><label>LOGIN</label><input type="text" id="usr-login" placeholder="Ex: joao.silva"/></div>
+              <div class="form-grp"><label>SENHA</label><input type="password" id="usr-senha" placeholder="Mínimo 6 caracteres"/></div>
+              <div class="form-grp"><label>PERFIL</label>
                 <select id="usr-perfil">
-                  <option value="supervisor">👔 Supervisor</option>
-                  <option value="separador">📦 Separador</option>
-                  <option value="repositor">🔧 Repositor</option>
+                  <option value="separador">Separador</option>
+                  <option value="supervisor">Supervisor</option>
+                  <option value="repositor">Repositor</option>
                 </select>
               </div>
-              <button class="btn btn-primary" style="width:100%" onclick="cadastrarUsuario()">✚ Cadastrar Usuário</button>
+              <div class="form-grp"><label>TURNO</label>
+                <select id="usr-turno"><option value="Manhã">Manhã</option><option value="Tarde">Tarde</option><option value="Noite">Noite</option></select>
+              </div>
+              <button class="btn btn-primary" style="width:100%;margin-top:4px" onclick="cadastrarUsuario()">✅ Cadastrar Usuário</button>
             </div>
             <div class="card">
-              <div class="card-header">📋 USUÁRIOS CADASTRADOS
-                <button class="btn btn-outline btn-sm" onclick="carregarUsuarios()">🔄</button>
-              </div>
-              <div class="tabela-wrap"><table>
-                <thead><tr><th>NOME</th><th>LOGIN</th><th>PERFIL</th><th>STATUS</th><th>AÇÕES</th></tr></thead>
-                <tbody id="tbody-usuarios"></tbody>
-              </table></div>
+              <div class="card-hd">👥 USUÁRIOS CADASTRADOS <button class="btn btn-outline btn-sm" onclick="carregarUsuarios()">🔄</button></div>
+              <div class="tabela-wrap"><table><thead><tr><th>NOME</th><th>LOGIN</th><th>PERFIL</th><th>TURNO</th><th>STATUS</th><th>AÇÕES</th></tr></thead><tbody id="tbody-usr"></tbody></table></div>
             </div>
           </div>
         </div>
-
-        <!-- Sub-aba Importar -->
         <div id="cad-importar" style="display:none">
           <div class="grid-2">
             <div class="card">
-              <div class="card-header">📂 IMPORTAR PEDIDOS</div>
+              <div class="card-hd">📥 IMPORTAR PLANILHA</div>
               <div class="upload-area" id="upload-area"
-                onclick="document.getElementById('input-arquivo').click()"
                 ondragover="event.preventDefault();this.classList.add('drag')"
                 ondragleave="this.classList.remove('drag')"
-                ondrop="handleDrop(event)">
-                <div class="upload-icon">📄</div>
-                <div class="upload-titulo">Clique ou arraste o arquivo</div>
-                <!-- ✅ CORRIGIDO: colunas corretas da planilha -->
-                <div class="upload-sub">Excel (.xlsx) ou CSV (.csv)<br><b>Colunas: Pedido, Codigo, Descricao, Qtde, Endereço</b></div>
-                <button class="btn btn-primary" onclick="event.stopPropagation();document.getElementById('input-arquivo').click()">📂 Selecionar</button>
+                ondrop="handleDrop(event)"
+                onclick="document.getElementById('input-arquivo').click()">
+                <div style="font-size:40px;margin-bottom:10px">📊</div>
+                <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:6px">Arraste o arquivo aqui</div>
+                <div style="font-size:11px;color:var(--text3);margin-bottom:14px">ou clique para selecionar<br><b style="color:var(--text2)">Colunas: Pedido, Codigo, Descricao, Qtde, Endereço</b></div>
+                <input type="file" id="input-arquivo" accept=".xlsx,.xls,.csv" onchange="processarArquivo(event)"/>
+                <button class="btn btn-outline btn-sm" onclick="event.stopPropagation()">📂 Selecionar Arquivo</button>
               </div>
-              <input type="file" id="input-arquivo" accept=".xlsx,.xls,.csv" onchange="processarArquivo(event)"/>
-              <div id="status-leitura" style="display:none;margin-top:10px;padding:10px;border-radius:8px;font-size:12px;font-weight:600;text-align:center"></div>
+              <div class="status-box" id="status-leitura"></div>
               <div id="preview-importacao" style="display:none;margin-top:14px">
-                <div style="font-size:10px;color:#64748b;letter-spacing:1px;margin-bottom:8px;font-weight:700">PRÉ-VISUALIZAÇÃO</div>
-                <div class="tabela-wrap" style="max-height:180px;overflow-y:auto"><table>
-                  <thead><tr><th>Nº PEDIDO</th><th>CÓDIGO</th><th>DESCRIÇÃO</th><th>ENDEREÇO</th><th>QTD</th></tr></thead>
-                  <tbody id="tbody-preview"></tbody>
-                </table></div>
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px">
-                  <span id="txt-total-import" style="font-size:12px;color:#94a3b8"></span>
-                  <button class="btn btn-success" onclick="confirmarImportacao()">✔ Importar</button>
+                <div style="font-size:11px;color:var(--text3);margin-bottom:8px">PREVIEW (10 primeiras linhas)</div>
+                <div class="tabela-wrap" style="max-height:200px;overflow-y:auto">
+                  <table><thead><tr><th>PEDIDO</th><th>CÓDIGO</th><th>DESCRIÇÃO</th><th>ENDEREÇO</th><th>QTDE</th></tr></thead><tbody id="tbody-prev"></tbody></table>
+                </div>
+                <div style="margin-top:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+                  <span id="txt-total-import" style="font-size:12px;color:var(--text2);font-weight:600"></span>
+                  <button class="btn btn-success" onclick="confirmarImportacao()">📥 Importar para Fila</button>
                 </div>
               </div>
             </div>
             <div class="card">
-              <div class="card-header">📜 HISTÓRICO
-                <button class="btn btn-sm btn-outline" onclick="limparHistorico()">🗑 Limpar</button>
-              </div>
-              <div id="historico-importacoes"></div>
+              <div class="card-hd">📋 HISTÓRICO <button class="btn btn-danger btn-sm" onclick="limparHistorico()">🗑 Limpar</button></div>
+              <div id="hist-importacoes"></div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- ══ SEPARAÇÃO ══ -->
+      <!-- SEPARAÇÃO (desktop) -->
       <div class="pagina" id="pag-separacao">
-        <div class="contadores-sep">
-          <div class="contador-card verde"><div class="contador-label">HOJE</div><div class="contador-valor" id="sep-cnt-hoje">0</div><div class="contador-sub">pedidos</div></div>
-          <div class="contador-card amarelo"><div class="contador-label">MÊS</div><div class="contador-valor" id="sep-cnt-mes">0</div><div class="contador-sub">pedidos</div></div>
-          <div class="contador-card azul"><div class="contador-label">ANO</div><div class="contador-valor" id="sep-cnt-ano">0</div><div class="contador-sub">pedidos</div></div>
+        <div class="pg-title">📦 Separação</div>
+        <!-- Contadores -->
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px">
+          <div class="cnt-card azul"><div class="cnt-lbl">HOJE</div><div class="cnt-val" id="sep-cnt-hoje" style="font-size:26px">0</div><div class="cnt-sub">pedidos</div></div>
+          <div class="cnt-card verde"><div class="cnt-lbl">MÊS</div><div class="cnt-val" id="sep-cnt-mes" style="font-size:26px">0</div><div class="cnt-sub">pedidos</div></div>
+          <div class="cnt-card roxo"><div class="cnt-lbl">ANO</div><div class="cnt-val" id="sep-cnt-ano" style="font-size:26px">0</div><div class="cnt-sub">pedidos</div></div>
         </div>
-        <div class="card">
-          <div class="card-header">📷 LEITURA DE PEDIDO</div>
-          <div style="display:flex;gap:10px">
-            <input type="text" class="bip-input" id="input-pedido" placeholder="🔍 Digite ou bipe o pedido..."/>
-            <button class="btn-confirmar" onclick="confirmarPedido()">✔</button>
+        <!-- Leitura -->
+        <div class="card" style="margin-bottom:13px">
+          <div class="card-hd">🔍 LEITURA DE PEDIDO</div>
+          <div class="bip-wrap">
+            <input type="text" class="bip-input" id="input-pedido" placeholder="Bipe ou digite o número do pedido..." autocomplete="off" inputmode="numeric"/>
+            <button class="btn-bip" onclick="confirmarPedido()">▶</button>
           </div>
-          <div id="status-atual" style="font-size:11px;color:#94a3b8;margin-top:6px;text-align:center;min-height:18px"></div>
+          <div class="status-pedido" id="status-atual"></div>
         </div>
-        <div class="checklist-wrap" id="checklist-wrap" style="display:none">
-          <div class="checklist-header">
-            <span id="checklist-titulo">📋 ITENS DO PEDIDO</span>
-            <span id="checklist-contador" style="color:#60a5fa">0/0</span>
-          </div>
-          <div class="checklist-progresso"><div class="checklist-progresso-fill" id="checklist-barra" style="width:0%"></div></div>
-          <div class="checklist-lista" id="checklist-lista"></div>
-          <div class="checklist-footer">
-            <div style="font-size:11px;color:#94a3b8;flex:1" id="checklist-resumo"></div>
-            <button class="btn-acao concluir" id="btn-concluir" onclick="concluirPedido()" disabled>🔒 CONCLUIR PEDIDO</button>
-            <button class="btn-acao aguardar" id="btn-aguardar" style="display:none">⏳ AGUARDANDO REPOSITOR</button>
+        <!-- Checklist desktop -->
+        <div class="cl-wrap" id="cl-wrap">
+          <div class="cl-header"><span id="cl-titulo">📋 PEDIDO</span><span id="cl-contador" style="color:var(--accent);font-weight:700">0/0</span></div>
+          <div class="cl-prog"><div class="cl-prog-fill" id="cl-barra" style="width:0%"></div></div>
+          <div class="cl-resumo" id="cl-resumo"></div>
+          <div class="cl-lista" id="cl-lista" style="max-height:380px"></div>
+          <div class="cl-footer">
+            <button class="btn-acao concluir" id="btn-concluir" onclick="concluirPedido()" disabled>🔒 CONCLUIR</button>
+            <button class="btn-acao aguardar" id="btn-aguardar" style="display:none">⏳ AGUARDANDO</button>
           </div>
         </div>
-        <div class="card" style="margin-top:14px">
-          <div class="card-header">📌 FILA DE PEDIDOS
-            <div>
-              <span id="badge-meus"  style="background:#15803d;color:white;border-radius:20px;padding:1px 8px;font-size:10px;font-weight:700;margin-right:4px">0 meus</span>
-              <span id="badge-fila"  style="background:#2563eb;color:white;border-radius:20px;padding:1px 8px;font-size:10px;font-weight:700">0 total</span>
+        <!-- Fila desktop -->
+        <div class="card" style="margin-top:13px">
+          <div class="card-hd">📋 FILA DE PEDIDOS
+            <div style="display:flex;gap:8px;align-items:center">
+              <span id="badge-fila-d" style="font-size:11px;color:var(--text3);font-weight:600"></span>
+              <span id="badge-meus-d" style="font-size:11px;color:var(--accent);font-weight:700"></span>
+              <button class="btn btn-outline btn-sm" onclick="carregarFila()">🔄</button>
             </div>
           </div>
-          <!-- ✅ FILA: mostra só pendentes e separando, concluídos somem -->
-          <div class="fila-tabela"><table>
-            <thead><tr><th>Nº PEDIDO</th><th>ITENS</th><th>STATUS</th><th>SITUAÇÃO</th></tr></thead>
-            <tbody id="tbody-fila"></tbody>
-          </table></div>
+          <div style="max-height:220px;overflow-y:auto">
+            <div class="tabela-wrap"><table><thead><tr><th>Nº PEDIDO</th><th>ITENS</th><th>STATUS</th><th>SITUAÇÃO</th></tr></thead><tbody id="tbody-fila-d"></tbody></table></div>
+          </div>
         </div>
       </div>
 
-      <!-- ══ REPOSIÇÃO ══ -->
+      <!-- REPOSIÇÃO -->
       <div class="pagina" id="pag-reposicao">
-        <div style="display:flex;gap:14px;margin-bottom:16px;flex-wrap:wrap">
-          <div class="contador-card vermelho" style="flex:1;min-width:140px"><div class="contador-label">AGUARDANDO</div><div class="contador-valor" id="rep-pendente">0</div><div class="contador-sub">itens em falta</div></div>
-          <div class="contador-card verde"    style="flex:1;min-width:140px"><div class="contador-label">REPOSTOS HOJE</div><div class="contador-valor" id="rep-reposto">0</div><div class="contador-sub">itens</div></div>
-        </div>
+        <div class="pg-title">🔧 Reposição</div>
         <div class="card">
-          <div class="card-header">🔴 ITENS EM FALTA
-            <div style="display:flex;gap:8px;align-items:center">
-              <select id="filtro-rep-status" style="padding:5px 8px;background:#1a2535;border:1px solid #2d4a6e;border-radius:6px;color:#e2e8f0;font-size:11px" onchange="carregarAvisos()">
-                <option value="pendente">Pendentes</option>
-                <option value="reposto">Repostos</option>
-                <option value="nao_encontrado">Não Encontrados</option>
+          <div class="card-hd">AVISOS DE FALTA
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <span style="font-size:12px;color:var(--red);font-weight:700">🔴 <span id="rep-pend">0</span> pendentes</span>
+              <span style="font-size:12px;color:var(--green);font-weight:600">✅ <span id="rep-rep">0</span> repostos</span>
+              <select id="filtro-rep-status" class="sel-sm" onchange="carregarAvisos()" style="min-width:120px">
                 <option value="">Todos</option>
+                <option value="pendente">Pendente</option>
+                <option value="reposto">Reposto</option>
+                <option value="nao_encontrado">Não encontrado</option>
               </select>
               <button class="btn btn-outline btn-sm" onclick="carregarAvisos()">🔄</button>
             </div>
           </div>
-          <div id="lista-avisos"><div style="color:#64748b;text-align:center;padding:40px">✅ Nenhum item em falta</div></div>
+          <div id="lista-avisos"><div style="color:var(--text3);text-align:center;padding:40px;font-size:13px">✅ Nenhum item em falta</div></div>
         </div>
       </div>
 
     </div><!-- /conteudo -->
+
+    <!-- ══ SEPARADOR MOBILE — 3 ABAS ══ -->
+    <div id="sep-mobile-root">
+
+      <!-- ABA 1 — SEPARAR -->
+      <div class="sep-tab-page ativa" id="sep-tab-separar">
+        <div class="sep-scroll">
+          <div class="bip-wrap">
+            <input type="text" class="bip-input" id="m-input-pedido" placeholder="Bipe ou número do pedido..." autocomplete="off" inputmode="numeric"/>
+            <button class="btn-bip" onclick="confirmarPedidoMobile()">▶</button>
+          </div>
+          <div class="status-pedido" id="m-status-atual"></div>
+          <!-- Checklist mobile -->
+          <div class="cl-wrap" id="m-cl-wrap">
+            <div class="cl-header"><span id="m-cl-titulo">📋 PEDIDO</span><span id="m-cl-contador" style="color:var(--accent);font-weight:700;font-size:12px">0/0</span></div>
+            <div class="cl-prog"><div class="cl-prog-fill" id="m-cl-barra" style="width:0%"></div></div>
+            <div class="cl-resumo" id="m-cl-resumo"></div>
+            <div class="cl-lista" id="m-cl-lista"></div>
+            <div class="cl-footer">
+              <button class="btn-acao concluir" id="m-btn-concluir" onclick="concluirPedidoMobile()" disabled>🔒 CONCLUIR</button>
+              <button class="btn-acao aguardar" id="m-btn-aguardar" style="display:none">⏳ AGUARDANDO</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ABA 2 — FILA -->
+      <div class="sep-tab-page" id="sep-tab-fila">
+        <div class="sep-scroll">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">📋 Fila</div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <span id="badge-fila-m" style="font-size:11px;color:var(--text3);font-weight:600"></span>
+              <span id="badge-meus-m" style="font-size:11px;color:var(--accent);font-weight:700"></span>
+              <button class="btn btn-outline btn-sm" onclick="carregarFilaMobile()">🔄</button>
+            </div>
+          </div>
+          <div id="lista-fila-mobile">
+            <div style="color:var(--text3);text-align:center;padding:30px;font-size:13px">Carregando fila...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ABA 3 — STATS -->
+      <div class="sep-tab-page" id="sep-tab-stats">
+        <div class="sep-scroll">
+          <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text);margin-bottom:14px">📈 Meu Desempenho</div>
+          <div class="stat-nome" id="m-stat-nome">—</div>
+          <div class="stats-grid">
+            <div class="stat-big azul"><div class="s-lbl">HOJE</div><div class="s-val" id="m-stat-hoje">0</div><div class="s-sub">pedidos separados</div></div>
+            <div class="stat-big verde"><div class="s-lbl">MÊS</div><div class="s-val" id="m-stat-mes">0</div><div class="s-sub">pedidos separados</div></div>
+            <div class="stat-big roxo span2"><div class="s-lbl">ANO</div><div class="s-val" id="m-stat-ano">0</div><div class="s-sub">pedidos separados no ano</div></div>
+          </div>
+          <button class="btn btn-outline" style="width:100%;margin-top:4px" onclick="carregarStatsMobile()">🔄 Atualizar</button>
+        </div>
+      </div>
+
+    </div><!-- /sep-mobile-root -->
+
   </div><!-- /layout -->
 </div><!-- /app -->
+
+<!-- Tab bar -->
+<div class="sep-tabbar" id="sep-tabbar">
+  <button class="sep-tab ativo" id="stab-separar" onclick="mudarTabSep('separar')">
+    <span class="sep-tab-ic">📦</span>
+    SEPARAR
+  </button>
+  <button class="sep-tab" id="stab-fila" onclick="mudarTabSep('fila')">
+    <span class="sep-tab-ic">📋</span>
+    FILA
+    <span class="sep-tab-badge" id="stab-fila-badge" style="display:none">0</span>
+  </button>
+  <button class="sep-tab" id="stab-stats" onclick="mudarTabSep('stats')">
+    <span class="sep-tab-ic">📈</span>
+    ESTATÍSTICAS
+  </button>
+</div>
+
 <script>
+/* ══════════════════════════════════════════
+   ESTADO GLOBAL
+══════════════════════════════════════════ */
 const API = window.location.origin;
-let usuarioAtual   = null;
-let separadorAtual = null;
-let pedidoAtualId  = null, pedidoAtualNum = null, itensAtuais = [];
-const hoje = new Date().toISOString().split('T')[0];
+let usuarioAtual     = null;
+let separadorAtual   = null;
+let pedidoAtualId    = null;
+let pedidoAtualNum   = null;
+let itensAtuais      = [];
 let todosSeparadores = [];
 let pedidosImportar  = [];
 let historicoImportacoes = JSON.parse(localStorage.getItem('historico_importacoes') || '[]');
+let isMobile = () => window.innerWidth <= 768;
 
-function atualizarRelogio(){document.getElementById('data-hora').textContent=new Date().toLocaleString('pt-BR')}
-setInterval(atualizarRelogio,1000); atualizarRelogio();
+function hojeLocal() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+const hoje = hojeLocal();
 
-function toast(msg,tipo='info'){
-  const cores={info:'#2563eb',sucesso:'#15803d',erro:'#dc2626',aviso:'#b45309'};
-  const t=document.createElement('div');
-  t.textContent=msg;
-  t.style.cssText=`position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9999;background:${cores[tipo]};color:#fff;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:600;box-shadow:0 4px 20px rgba(0,0,0,.4);max-width:90vw;text-align:center;animation:fadeInUp .2s ease`;
-  document.body.appendChild(t);
-  setTimeout(()=>t.remove(),3500);
+/* ── Relógio ── */
+function atualizarRelogio() { document.getElementById('data-hora').textContent = new Date().toLocaleString('pt-BR'); }
+setInterval(atualizarRelogio, 1000); atualizarRelogio();
+
+/* ── Toast ── */
+function toast(msg, tipo='info') {
+  const el = document.createElement('div');
+  el.className = `toast ${tipo}`;
+  el.textContent = msg;
+  const root = document.getElementById('toast-root');
+  root.appendChild(el);
+  setTimeout(() => el.remove(), 3500);
 }
 
-// ══ LOGIN ══
+/* ══════════════════════════════════════════
+   LOGIN
+══════════════════════════════════════════ */
 let perfilSelecionado = '';
-function selecionarPerfil(p,btn){
-  perfilSelecionado=p;
-  document.querySelectorAll('.perfil-btn').forEach(b=>b.classList.remove('ativo'));
+function selecionarPerfil(p, btn) {
+  perfilSelecionado = p;
+  document.querySelectorAll('.perfil-btn').forEach(b => b.classList.remove('ativo'));
   btn.classList.add('ativo');
-  document.getElementById('login-erro').style.display='none';
+  document.getElementById('login-erro').style.display = 'none';
 }
 
-async function fazerLogin(){
+async function fazerLogin() {
   const login  = document.getElementById('login-usuario').value.trim();
   const senha  = document.getElementById('login-senha').value;
   const erroEl = document.getElementById('login-erro');
-  if(!perfilSelecionado){erroEl.textContent='Selecione um perfil!';erroEl.style.display='block';return}
-  if(!login||!senha){erroEl.textContent='Preencha login e senha!';erroEl.style.display='block';return}
-  try{
-    const res  = await fetch(`${API}/auth/login`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({login,senha,perfil:perfilSelecionado})});
+  if (!perfilSelecionado) { erroEl.textContent = 'Selecione um perfil!'; erroEl.style.display = 'block'; return; }
+  if (!login || !senha)   { erroEl.textContent = 'Preencha usuário e senha!'; erroEl.style.display = 'block'; return; }
+  try {
+    const res  = await fetch(`${API}/auth/login`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({login,senha,perfil:perfilSelecionado}) });
     const data = await res.json();
-    if(!res.ok){erroEl.textContent=data.erro||'Erro ao entrar!';erroEl.style.display='block';return}
+    if (!res.ok) { erroEl.textContent = data.erro || 'Erro ao entrar!'; erroEl.style.display = 'block'; return; }
     usuarioAtual   = data.usuario;
     separadorAtual = data.separador;
-    erroEl.style.display='none';
-    document.getElementById('tela-login').style.display='none';
-    document.getElementById('app').style.display='block';
-    document.getElementById('header-nome').textContent   = usuarioAtual.nome;
-    document.getElementById('header-perfil').textContent = perfilSelecionado.toUpperCase();
+    erroEl.style.display = 'none';
+    ativarApp();
+  } catch(e) { erroEl.textContent = 'Erro ao conectar com o servidor!'; erroEl.style.display = 'block'; }
+}
+
+function ativarApp() {
+  document.getElementById('tela-login').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  document.getElementById('hdr-nome').textContent   = usuarioAtual.nome;
+  document.getElementById('hdr-perfil').textContent = usuarioAtual.perfil.toUpperCase();
+
+  // Tema escuro para separador e repositor
+  if (usuarioAtual.perfil === 'separador' || usuarioAtual.perfil === 'repositor') {
+    document.body.classList.add('dark');
+  }
+
+  // Mobile separador → ativa interface de tabs
+  if (usuarioAtual.perfil === 'separador' && isMobile()) {
+    ativarMobileSep();
+  } else {
     montarSidebar();
     iniciarPorPerfil();
-  }catch(e){erroEl.textContent='Erro ao conectar com o servidor!';erroEl.style.display='block'}
+  }
 }
 
-function sair(){
-  if(!confirm('Deseja sair do sistema?'))return;
-  usuarioAtual=null;separadorAtual=null;pedidoAtualId=null;pedidoAtualNum=null;itensAtuais=[];
-  document.getElementById('app').style.display='none';
-  document.getElementById('tela-login').style.display='flex';
-  document.getElementById('login-usuario').value='';
-  document.getElementById('login-senha').value='';
-  perfilSelecionado='';
-  document.querySelectorAll('.perfil-btn').forEach(b=>b.classList.remove('ativo'));
+function ativarMobileSep() {
+  document.body.classList.add('sep-mobile');
+  document.getElementById('sep-mobile-root').style.display = 'flex';
+  document.getElementById('sep-tabbar').style.display = 'flex';
+  mudarTabSep('separar');
+  // Foco no input
+  setTimeout(() => document.getElementById('m-input-pedido').focus(), 400);
+  // Atualiza stats
+  carregarStatsMobile();
+  // Carrega fila em background
+  carregarFilaMobile();
+  // Auto-refresh
+  setInterval(() => {
+    carregarFilaMobile();
+    if (pedidoAtualId) carregarChecklistMobile();
+  }, 30000);
 }
 
-function montarSidebar(){
+function sair() {
+  if (!confirm('Deseja sair do sistema?')) return;
+  fetch(`${API}/auth/logout`, { method:'POST' }).catch(()=>{});
+  usuarioAtual = null; separadorAtual = null; pedidoAtualId = null; pedidoAtualNum = null; itensAtuais = [];
+  document.body.classList.remove('dark','sep-mobile');
+  document.getElementById('app').style.display     = 'none';
+  document.getElementById('sep-mobile-root').style.display = 'none';
+  document.getElementById('sep-tabbar').style.display      = 'none';
+  document.getElementById('tela-login').style.display      = 'flex';
+  document.getElementById('login-usuario').value = '';
+  document.getElementById('login-senha').value   = '';
+  perfilSelecionado = '';
+  document.querySelectorAll('.perfil-btn').forEach(b => b.classList.remove('ativo'));
+}
+
+/* ══════════════════════════════════════════
+   TABS MOBILE DO SEPARADOR
+══════════════════════════════════════════ */
+function mudarTabSep(tab) {
+  ['separar','fila','stats'].forEach(t => {
+    document.getElementById(`sep-tab-${t}`).classList.toggle('ativa', t === tab);
+    document.getElementById(`stab-${t}`).classList.toggle('ativo', t === tab);
+  });
+  if (tab === 'fila')  carregarFilaMobile();
+  if (tab === 'stats') carregarStatsMobile();
+  if (tab === 'separar' && pedidoAtualId) renderChecklistMobile();
+}
+
+/* ══════════════════════════════════════════
+   SIDEBAR (supervisor / desktop)
+══════════════════════════════════════════ */
+function montarSidebar() {
   const sb = document.getElementById('sidebar');
   const menus = {
-    supervisor:`
-      <div class="menu-grupo">SUPERVISÃO</div>
-      <a class="menu-item ativo" onclick="irPara('dashboard',this)"><span class="mi-icone">📊</span>Dashboard</a>
-      <a class="menu-item" onclick="irPara('pedidos',this)"><span class="mi-icone">📋</span>Pedidos</a>
-      <a class="menu-item" onclick="irPara('cadastros',this)"><span class="mi-icone">⚙️</span>Cadastros</a>
-      <div class="menu-grupo">OPERAÇÃO</div>
-      <a class="menu-item" onclick="irPara('separacao',this)"><span class="mi-icone">📦</span>Separação</a>
-      <a class="menu-item" onclick="irPara('reposicao',this)"><span class="mi-icone">🔧</span>Reposição <span class="menu-badge" id="menu-badge-rep" style="display:none">0</span></a>`,
-    separador:`
-      <div class="menu-grupo">SEPARAÇÃO</div>
-      <a class="menu-item ativo" onclick="irPara('separacao',this)"><span class="mi-icone">📦</span>Pedidos</a>`,
-    repositor:`
-      <div class="menu-grupo">REPOSIÇÃO</div>
-      <a class="menu-item ativo" onclick="irPara('reposicao',this)"><span class="mi-icone">🔧</span>Solicitações <span class="menu-badge" id="menu-badge-rep" style="display:none">0</span></a>`
+    supervisor: `
+      <div class="mg">SUPERVISÃO</div>
+      <a class="mi ativo" onclick="irPara('dashboard',this)"><span class="mi-ic">📊</span>Dashboard</a>
+      <a class="mi" onclick="irPara('pedidos',this)"><span class="mi-ic">📋</span>Pedidos</a>
+      <a class="mi" onclick="irPara('cadastros',this)"><span class="mi-ic">⚙️</span>Cadastros</a>
+      <div class="mg">OPERAÇÃO</div>
+      <a class="mi" onclick="irPara('reposicao',this)"><span class="mi-ic">🔧</span>Reposição <span class="mbadge" id="menu-badge-rep" style="display:none">0</span></a>`,
+    separador: `
+      <div class="mg">SEPARAÇÃO</div>
+      <a class="mi ativo" onclick="irPara('separacao',this)"><span class="mi-ic">📦</span>Pedidos</a>`,
+    repositor: `
+      <div class="mg">REPOSIÇÃO</div>
+      <a class="mi ativo" onclick="irPara('reposicao',this)"><span class="mi-ic">🔧</span>Solicitações <span class="mbadge" id="menu-badge-rep" style="display:none">0</span></a>`
   };
   sb.innerHTML = menus[usuarioAtual.perfil] || '';
 }
 
-function irPara(pag,el){
-  document.querySelectorAll('.pagina').forEach(p=>p.classList.remove('ativa'));
-  document.querySelectorAll('.menu-item').forEach(m=>m.classList.remove('ativo'));
-  document.getElementById(`pag-${pag}`).classList.add('ativa');
-  if(el) el.classList.add('ativo');
-  if(pag==='dashboard') carregarDashboard();
-  if(pag==='pedidos')  {popularSelects();carregarPedidos();}
-  if(pag==='cadastros'){trocarCadastroTab('separadores');carregarSeparadores();}
-  if(pag==='separacao') carregarFila();
-  if(pag==='reposicao') carregarAvisos();
+function irPara(pag, el) {
+  document.querySelectorAll('.pagina').forEach(p => p.classList.remove('ativa'));
+  document.querySelectorAll('.mi').forEach(m => m.classList.remove('ativo'));
+  const pg = document.getElementById(`pag-${pag}`);
+  if (pg) pg.classList.add('ativa');
+  if (el) el.classList.add('ativo');
+  if (pag === 'dashboard') carregarDashboard();
+  if (pag === 'pedidos')   { popularSelects(); carregarPedidos(); }
+  if (pag === 'cadastros') { trocarCadastroTab('usuarios'); carregarUsuarios(); }
+  if (pag === 'separacao') { carregarFila(); if (separadorAtual) carregarContadoresSep(); }
+  if (pag === 'reposicao') carregarAvisos();
 }
 
-function iniciarPorPerfil(){
-  if(usuarioAtual.perfil==='supervisor'){
+function iniciarPorPerfil() {
+  if (usuarioAtual.perfil === 'supervisor') {
     document.getElementById('pag-dashboard').classList.add('ativa');
-    document.getElementById('filtro-data-ini').value=hoje;
-    document.getElementById('filtro-data-fim').value=hoje;
-    document.getElementById('filtro-pedido-data').value=hoje;
+    document.getElementById('filtro-data-ini').value   = hoje;
+    document.getElementById('filtro-data-fim').value   = hoje;
+    document.getElementById('filtro-ped-ini').value    = hoje;
+    document.getElementById('filtro-ped-fim').value    = hoje;
+    document.getElementById('filtro-tl-data').value    = hoje;
     carregarDashboard();
-    setInterval(atualizarBadgeRep,15000);
+    setInterval(atualizarBadgeRep, 15000);
     atualizarBadgeRep();
   }
-  if(usuarioAtual.perfil==='separador'){
+  if (usuarioAtual.perfil === 'separador') {
     document.getElementById('pag-separacao').classList.add('ativa');
-    if(separadorAtual) carregarContadoresSep();
-    // ✅ Atualiza fila a cada 15s automaticamente
-    setInterval(()=>{carregarFila();if(pedidoAtualId)carregarChecklist();},15000);
-    setTimeout(()=>document.getElementById('input-pedido').focus(),300);
-    carregarFila();
+    if (separadorAtual) carregarContadoresSep();
+    setInterval(() => { carregarFila(); if(pedidoAtualId) carregarChecklist(); }, 30000);
+    setTimeout(() => document.getElementById('input-pedido').focus(), 300);
   }
-  if(usuarioAtual.perfil==='repositor'){
+  if (usuarioAtual.perfil === 'repositor') {
     document.getElementById('pag-reposicao').classList.add('ativa');
     carregarAvisos();
-    setInterval(carregarAvisos,30000);
+    setInterval(carregarAvisos, 30000);
   }
 }
 
-async function atualizarBadgeRep(){
-  try{
-    const res=await fetch(`${API}/repositor/avisos?status=pendente`);
-    const av=await res.json();
-    const n=av.length;
-    ['menu-badge-rep','dash-repositor'].forEach(id=>{
-      const el=document.getElementById(id);if(!el)return;
-      if(id.includes('badge')){el.textContent=n;el.style.display=n>0?'inline':'none';}
-      else el.textContent=n;
+async function atualizarBadgeRep() {
+  try {
+    const res = await fetch(`${API}/repositor/avisos?status=pendente`);
+    const av  = await res.json();
+    const n   = av.length;
+    ['menu-badge-rep','dash-repositor'].forEach(id => {
+      const el = document.getElementById(id); if (!el) return;
+      if (id.includes('badge')) { el.textContent=n; el.style.display=n>0?'inline':'none'; }
+      else el.textContent = n;
     });
-  }catch(e){}
+  } catch(e) {}
 }
 
-function trocarCadastroTab(tab){
-  ['separadores','usuarios','importar'].forEach(t=>{
-    document.getElementById(`cad-${t}`).style.display=t===tab?'block':'none';
-    const btn=document.getElementById(`ctab-${t}`);
-    if(btn) btn.className=t===tab?'btn btn-primary btn-sm':'btn btn-outline btn-sm';
+function trocarCadastroTab(tab) {
+  ['usuarios','importar'].forEach(t => {
+    const el  = document.getElementById(`cad-${t}`);
+    const btn = document.getElementById(`ctab-${t}`);
+    if (el)  el.style.display  = t===tab ? 'block' : 'none';
+    if (btn) btn.className = t===tab ? 'btn btn-primary btn-sm' : 'btn btn-outline btn-sm';
   });
-  if(tab==='separadores') carregarSeparadores();
-  if(tab==='usuarios')    carregarUsuarios();
-  if(tab==='importar')    renderHistorico();
+  if (tab === 'usuarios') carregarUsuarios();
+  if (tab === 'importar') renderHistorico();
 }
 
-// ══ DASHBOARD ══
-async function carregarDashboard(){
+/* ══════════════════════════════════════════
+   DASHBOARD
+══════════════════════════════════════════ */
+async function carregarDashboard() {
   await popularSelects();
   await carregarContadoresGerais();
   await carregarProdutividade();
+  await carregarTimeline();
   await atualizarBadgeRep();
 }
 
-async function carregarContadoresGerais(){
-  try{
-    const res=await fetch(`${API}/pedidos`);
-    const ps=await res.json();
-    document.getElementById('dash-hoje').textContent     =ps.filter(p=>p.status==='concluido'&&p.data_pedido===hoje).length;
-    document.getElementById('dash-separando').textContent=ps.filter(p=>p.status==='separando').length;
-    document.getElementById('dash-pendentes').textContent=ps.filter(p=>p.status==='pendente').length;
-  }catch(e){}
+async function carregarContadoresGerais() {
+  try {
+    const res = await fetch(`${API}/pedidos`);
+    const ps  = await res.json();
+    document.getElementById('dash-hoje').textContent      = ps.filter(p=>p.status==='concluido'&&p.data_pedido===hoje).length;
+    document.getElementById('dash-separando').textContent = ps.filter(p=>p.status==='separando').length;
+    document.getElementById('dash-pendentes').textContent = ps.filter(p=>p.status==='pendente').length;
+  } catch(e) {}
 }
 
-async function carregarProdutividade(){
-  try{
-    const sepId=document.getElementById('filtro-sep-prod').value;
-    const res=await fetch(`${API}/produtividade${sepId?'?separador_id='+sepId:''}`);
-    const dados=await res.json();
-    const tbody=document.getElementById('tbody-produtividade');
-    if(!dados.length){tbody.innerHTML='<tr><td colspan="6" style="color:#64748b;text-align:center;padding:30px">Nenhum separador</td></tr>';return}
-    const max=Math.max(...dados.map(d=>d.hoje||0),1);
-    tbody.innerHTML=dados.map(d=>`<tr>
-      <td style="color:#e2e8f0;font-weight:600">${d.nome}</td>
-      <td style="color:#4ade80;font-weight:700">${d.hoje||0}</td>
-      <td style="color:#fbbf24">${d.mes||0}</td>
-      <td style="color:#60a5fa">${d.total_ano||0}</td>
-      <td style="min-width:120px">
-        <div style="font-size:10px;color:#94a3b8">${d.hoje||0} pedidos</div>
-        <div class="prod-barra"><div class="prod-barra-fill" style="width:${Math.round(((d.hoje||0)/max)*100)}%"></div></div>
+async function carregarProdutividade() {
+  try {
+    const sepId = document.getElementById('filtro-sep-prod').value;
+    const res   = await fetch(`${API}/produtividade${sepId?'?separador_id='+sepId:''}`);
+    const dados = await res.json();
+    const tbody = document.getElementById('tbody-prod');
+    if (!dados.length) { tbody.innerHTML = '<tr><td colspan="6" style="color:var(--text3);text-align:center;padding:20px">Nenhum usuário</td></tr>'; return; }
+    const max = Math.max(...dados.map(d=>d.hoje||0), 1);
+    tbody.innerHTML = dados.map(d=>`<tr>
+      <td style="font-weight:600;color:var(--text)">${d.nome}</td>
+      <td style="color:var(--green);font-weight:700">${d.hoje||0}</td>
+      <td style="color:var(--amber)">${d.mes||0}</td>
+      <td style="color:var(--accent)">${d.total_ano||0}</td>
+      <td style="min-width:100px">
+        <div style="font-size:10px;color:var(--text3)">${d.hoje||0} pedidos</div>
+        <div class="prod-bar"><div class="prod-bar-fill" style="width:${Math.round(((d.hoje||0)/max)*100)}%"></div></div>
       </td>
       <td><span class="pill ${d.status}">${d.status}</span></td>
     </tr>`).join('');
-  }catch(e){}
+  } catch(e) {}
 }
 
-async function popularSelects(){
-  try{
-    const res=await fetch(`${API}/separadores`);
-    todosSeparadores=await res.json();
-    ['filtro-sep-prod','filtro-pedido-sep'].forEach(id=>{
-      const sel=document.getElementById(id);if(!sel)return;
-      const val=sel.value;
-      sel.innerHTML='<option value="">Todos</option>'+todosSeparadores.map(s=>`<option value="${s.id}">${s.nome}</option>`).join('');
-      sel.value=val;
+async function carregarTimeline() {
+  try {
+    const data = document.getElementById('filtro-tl-data').value || hoje;
+    const res  = await fetch(`${API}/pedidos?data=${data}`);
+    const ps   = await res.json();
+    const el   = document.getElementById('tl-lista');
+    if (!ps.length) { el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:24px;font-size:13px">Nenhum pedido nesta data</div>'; return; }
+    const sorted = [...ps].sort((a,b) => (a.hora_pedido||'').localeCompare(b.hora_pedido||''));
+    el.innerHTML = sorted.map(p => `
+      <div class="tl-item">
+        <div class="tl-hora">${p.hora_pedido||'--:--'}</div>
+        <div class="tl-dot ${p.status}"></div>
+        <div style="flex:1">
+          <div class="tl-titulo">Pedido #${p.numero_pedido}</div>
+          <div class="tl-sub">${p.separador_nome||'Sem usuário'} &nbsp;•&nbsp; <span class="pill ${p.status}" style="font-size:9px;padding:2px 7px">${p.status}</span> &nbsp;•&nbsp; ${p.itens||0} itens</div>
+        </div>
+      </div>`).join('');
+  } catch(e) {}
+}
+
+async function popularSelects() {
+  try {
+    const res   = await fetch(`${API}/usuarios`);
+    const users = await res.json();
+    const seps  = users.filter(u => u.perfil === 'separador');
+    todosSeparadores = seps;
+    ['filtro-sep-prod','filtro-ped-sep'].forEach(id => {
+      const sel = document.getElementById(id); if (!sel) return;
+      const val = sel.value;
+      sel.innerHTML = '<option value="">Todos</option>' + seps.map(s=>`<option value="${s.id}">${s.nome}</option>`).join('');
+      sel.value = val;
     });
-  }catch(e){}
+  } catch(e) {}
 }
 
-// ══ PEDIDOS ══
-async function carregarPedidos(){
-  try{
-    const data  =document.getElementById('filtro-pedido-data').value;
-    const sepId =document.getElementById('filtro-pedido-sep').value;
-    const status=document.getElementById('filtro-pedido-status').value;
-    let url=`${API}/pedidos?`;
-    if(data)   url+=`data=${data}&`;
-    if(sepId)  url+=`separador_id=${sepId}&`;
-    if(status) url+=`status=${encodeURIComponent(status)}&`;
-    const res=await fetch(url);
-    const ps=await res.json();
-    const tbody=document.getElementById('tbody-pedidos');
-    if(!ps.length){tbody.innerHTML='<tr><td colspan="7" style="color:#64748b;text-align:center;padding:30px">Nenhum pedido encontrado</td></tr>';return}
-    tbody.innerHTML=ps.map(p=>`<tr>
-      <td style="color:#e2e8f0;font-weight:600">${p.numero_pedido}</td>
-      <td style="color:#94a3b8">${p.separador_nome||'—'}</td>
+/* ══════════════════════════════════════════
+   PEDIDOS
+══════════════════════════════════════════ */
+async function carregarPedidos() {
+  try {
+    const ini    = document.getElementById('filtro-ped-ini').value;
+    const fim    = document.getElementById('filtro-ped-fim').value;
+    const sepId  = document.getElementById('filtro-ped-sep').value;
+    const status = document.getElementById('filtro-ped-status').value;
+    const numPed = document.getElementById('filtro-ped-num').value.trim();
+    let url = `${API}/pedidos?`;
+    if (sepId)  url += `separador_id=${sepId}&`;
+    if (status) url += `status=${encodeURIComponent(status)}&`;
+    if (numPed) url += `numero_pedido=${encodeURIComponent(numPed)}&`;
+    const res = await fetch(url);
+    let ps    = await res.json();
+    if (ini) ps = ps.filter(p => p.data_pedido >= ini);
+    if (fim) ps = ps.filter(p => p.data_pedido <= fim);
+    const tbody = document.getElementById('tbody-ped');
+    if (!ps.length) { tbody.innerHTML = '<tr><td colspan="7" style="color:var(--text3);text-align:center;padding:28px">Nenhum pedido</td></tr>'; return; }
+    tbody.innerHTML = ps.map(p=>`<tr>
+      <td style="font-weight:600;color:var(--text)">${p.numero_pedido}</td>
+      <td>${p.separador_nome||'—'}</td>
       <td><span class="pill ${(p.status||'').replace(' ','-')}">${p.status}</span></td>
-      <td style="color:#cbd5e1">${p.itens||'—'}</td>
-      <td style="color:#64748b">${p.data_pedido||'—'}</td>
-      <td style="color:#64748b">${p.hora_pedido||'—'}</td>
-      <td><select class="select-sep" onchange="atribuirSeparador(${p.id},this.value)">
+      <td>${p.itens||'—'}</td>
+      <td>${p.data_pedido||'—'}</td>
+      <td>${p.hora_pedido||'—'}</td>
+      <td><select class="sel-sm" onchange="atribuirSeparador(${p.id},this.value)">
         <option value="">— atribuir —</option>
         ${todosSeparadores.map(s=>`<option value="${s.id}"${p.separador_id==s.id?' selected':''}>${s.nome}</option>`).join('')}
       </select></td>
     </tr>`).join('');
-  }catch(e){}
+  } catch(e) {}
 }
 
-async function atribuirSeparador(pid,sid){
-  if(!sid)return;
-  try{
-    await fetch(`${API}/pedidos/${pid}/separador`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({separador_id:sid})});
-    toast('Separador atribuído!','sucesso');
-  }catch(e){toast('Erro ao atribuir!','erro')}
+async function atribuirSeparador(pid, sid) {
+  if (!sid) return;
+  try {
+    await fetch(`${API}/pedidos/${pid}/separador`, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({separador_id:sid}) });
+    toast('Usuário atribuído!', 'sucesso');
+  } catch(e) { toast('Erro ao atribuir!', 'erro'); }
 }
 
-function exportarCSV(){
-  const rows=[['Nº Pedido','Separador','Status','Itens','Data','Hora']];
-  document.querySelectorAll('#tbody-pedidos tr').forEach(tr=>{
-    const tds=tr.querySelectorAll('td');
-    if(tds.length>1) rows.push([tds[0].textContent,tds[1].textContent,tds[2].textContent,tds[3].textContent,tds[4].textContent,tds[5].textContent]);
+function exportarExcel() {
+  const rows = [['Nº Pedido','Usuário','Status','Itens','Data','Hora']];
+  document.querySelectorAll('#tbody-ped tr').forEach(tr => {
+    const tds = tr.querySelectorAll('td');
+    if (tds.length > 1) rows.push([tds[0].textContent, tds[1].textContent, tds[2].textContent.trim(), tds[3].textContent, tds[4].textContent, tds[5].textContent]);
   });
-  const a=document.createElement('a');
-  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(rows.map(r=>r.join(',')).join('\n'));
-  a.download=`pedidos_${hoje}.csv`;a.click();
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Pedidos');
+  XLSX.writeFile(wb, `pedidos_${hoje}.xlsx`);
 }
 
-// ══ USUÁRIOS ══
-async function carregarUsuarios(){
-  try{
-    const res=await fetch(`${API}/usuarios`);
-    const users=await res.json();
-    const tbody=document.getElementById('tbody-usuarios');
-    if(!users.length){tbody.innerHTML='<tr><td colspan="5" style="color:#64748b;text-align:center;padding:16px">Nenhum usuário</td></tr>';return}
-    tbody.innerHTML=users.map(u=>`<tr>
-      <td style="color:#e2e8f0">${u.nome}</td>
-      <td style="color:#60a5fa">${u.login}</td>
+/* ══════════════════════════════════════════
+   USUÁRIOS
+══════════════════════════════════════════ */
+async function carregarUsuarios() {
+  try {
+    const res   = await fetch(`${API}/usuarios`);
+    const users = await res.json();
+    const tbody = document.getElementById('tbody-usr');
+    if (!users.length) { tbody.innerHTML = '<tr><td colspan="6" style="color:var(--text3);text-align:center;padding:14px">Nenhum usuário</td></tr>'; return; }
+    tbody.innerHTML = users.map(u=>`<tr>
+      <td style="color:var(--text);font-weight:600">${u.nome}</td>
+      <td style="color:var(--accent)">${u.login}</td>
       <td><span class="pill ${u.perfil}">${u.perfil}</span></td>
+      <td>${u.turno||'—'}</td>
       <td><span class="pill ${u.status}">${u.status}</span></td>
-      <td style="display:flex;gap:6px">
-        <button class="btn btn-sm" style="background:${u.status==='ativo'?'#b45309':'#15803d'};color:white"
-          onclick="alterarStatusUsuario(${u.id},'${u.status==='ativo'?'inativo':'ativo'}','${u.nome}','${u.login}','${u.perfil}')">
-          ${u.status==='ativo'?'⛔ Desativar':'✅ Ativar'}
+      <td style="display:flex;gap:5px;flex-wrap:wrap">
+        <button class="btn btn-sm" style="background:${u.status==='ativo'?'var(--amber)':'var(--green)'};color:#fff"
+          onclick="alterarStatusUsuario(${u.id},'${u.status==='ativo'?'inativo':'ativo'}','${u.nome}','${u.login}','${u.perfil}','${u.turno||''}')">
+          ${u.status==='ativo'?'⛔':'✅'}
         </button>
         <button class="btn btn-sm btn-danger" onclick="excluirUsuario(${u.id},'${u.nome}')">🗑</button>
       </td>
     </tr>`).join('');
-  }catch(e){}
+  } catch(e) {}
 }
 
-async function cadastrarUsuario(){
-  const nome  =document.getElementById('usr-nome').value.trim();
-  const login =document.getElementById('usr-login').value.trim();
-  const senha =document.getElementById('usr-senha').value;
-  const perfil=document.getElementById('usr-perfil').value;
-  if(!nome||!login||!senha){toast('Preencha todos os campos!','aviso');return}
-  if(senha.length<6){toast('Senha mínimo 6 caracteres!','aviso');return}
-  try{
-    const res=await fetch(`${API}/usuarios`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nome,login,senha,perfil})});
-    const data=await res.json();
-    if(data.erro){toast(data.erro,'erro');return}
+async function cadastrarUsuario() {
+  const nome   = document.getElementById('usr-nome').value.trim();
+  const login  = document.getElementById('usr-login').value.trim();
+  const senha  = document.getElementById('usr-senha').value;
+  const perfil = document.getElementById('usr-perfil').value;
+  const turno  = document.getElementById('usr-turno').value;
+  if (!nome||!login||!senha) { toast('Preencha todos os campos!','aviso'); return; }
+  if (senha.length < 6)      { toast('Senha mínimo 6 caracteres!','aviso'); return; }
+  try {
+    const res  = await fetch(`${API}/usuarios`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({nome,login,senha,perfil,turno}) });
+    const data = await res.json();
+    if (data.erro) { toast(data.erro,'erro'); return; }
     toast('Usuário cadastrado!','sucesso');
-    document.getElementById('usr-nome').value='';
-    document.getElementById('usr-login').value='';
-    document.getElementById('usr-senha').value='';
+    document.getElementById('usr-nome').value  = '';
+    document.getElementById('usr-login').value = '';
+    document.getElementById('usr-senha').value = '';
     carregarUsuarios();
-  }catch(e){toast('Erro ao cadastrar!','erro')}
+  } catch(e) { toast('Erro ao cadastrar!','erro'); }
 }
 
-async function alterarStatusUsuario(id,novoStatus,nome,login,perfil){
-  try{
-    await fetch(`${API}/usuarios/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({nome,login,perfil,status:novoStatus})});
+async function alterarStatusUsuario(id, novoStatus, nome, login, perfil, turno) {
+  try {
+    await fetch(`${API}/usuarios/${id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({nome,login,perfil,turno:turno||'Manhã',status:novoStatus}) });
     toast(`Usuário ${novoStatus==='ativo'?'ativado':'desativado'}!`,'sucesso');
     carregarUsuarios();
-  }catch(e){toast('Erro!','erro')}
+  } catch(e) { toast('Erro!','erro'); }
 }
 
-async function excluirUsuario(id,nome){
-  if(!confirm(`Excluir "${nome}"?`))return;
-  try{
-    await fetch(`${API}/usuarios/${id}`,{method:'DELETE'});
-    toast('Usuário excluído!','sucesso');carregarUsuarios();
-  }catch(e){toast('Erro!','erro')}
+async function excluirUsuario(id, nome) {
+  if (!confirm(`Excluir "${nome}"?`)) return;
+  try {
+    await fetch(`${API}/usuarios/${id}`, { method:'DELETE' });
+    toast('Excluído!','sucesso'); carregarUsuarios();
+  } catch(e) { toast('Erro!','erro'); }
 }
 
-// ══ SEPARADORES ══
-async function cadastrarSeparador(){
-  const nome     =document.getElementById('sep-nome').value.trim();
-  const matricula=document.getElementById('sep-matricula').value.trim();
-  const turno    =document.getElementById('sep-turno').value;
-  if(!nome||!matricula){toast('Preencha nome e matrícula!','aviso');return}
-  try{
-    const res=await fetch(`${API}/separadores`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nome,matricula,turno})});
-    const data=await res.json();
-    if(data.erro){toast(data.erro,'erro');return}
-    toast('Separador cadastrado!','sucesso');
-    document.getElementById('sep-nome').value='';
-    document.getElementById('sep-matricula').value='';
-    carregarSeparadores();
-  }catch(e){toast('Erro ao cadastrar!','erro')}
+/* ══════════════════════════════════════════
+   IMPORTAÇÃO
+══════════════════════════════════════════ */
+function handleDrop(e) {
+  e.preventDefault(); document.getElementById('upload-area').classList.remove('drag');
+  const f = e.dataTransfer.files[0]; if (f) processarArquivoFile(f);
 }
+function processarArquivo(e) { const f = e.target.files[0]; if (f) processarArquivoFile(f); }
 
-async function carregarSeparadores(){
-  try{
-    const res=await fetch(`${API}/separadores`);
-    todosSeparadores=await res.json();
-    const tbody=document.getElementById('tbody-separadores');
-    if(!todosSeparadores.length){tbody.innerHTML='<tr><td colspan="5" style="color:#64748b;text-align:center;padding:16px">Nenhum separador</td></tr>';return}
-    tbody.innerHTML=todosSeparadores.map(s=>`<tr>
-      <td style="color:#e2e8f0">${s.nome}</td>
-      <td style="color:#60a5fa">${s.matricula}</td>
-      <td style="color:#94a3b8">${s.turno}</td>
-      <td><span class="pill ${s.status}">${s.status}</span></td>
-      <td style="display:flex;gap:6px">
-        <button class="btn btn-sm" style="background:${s.status==='ativo'?'#b45309':'#15803d'};color:white"
-          onclick="alterarStatusSep(${s.id},'${s.status==='ativo'?'inativo':'ativo'}')">
-          ${s.status==='ativo'?'⛔ Desativar':'✅ Ativar'}
-        </button>
-        <button class="btn btn-sm btn-danger" onclick="excluirSep(${s.id},'${s.nome}')">🗑</button>
-      </td>
-    </tr>`).join('');
-  }catch(e){}
-}
-
-async function alterarStatusSep(id,novoStatus){
-  try{
-    const res=await fetch(`${API}/separadores/${id}`);
-    const sep=await res.json();
-    await fetch(`${API}/separadores/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({nome:sep.nome,matricula:sep.matricula,turno:sep.turno,status:novoStatus})});
-    toast(`Separador ${novoStatus==='ativo'?'ativado':'desativado'}!`,'sucesso');
-    carregarSeparadores();
-  }catch(e){toast('Erro!','erro')}
-}
-
-async function excluirSep(id,nome){
-  if(!confirm(`Excluir "${nome}"?`))return;
-  try{await fetch(`${API}/separadores/${id}`,{method:'DELETE'});toast('Excluído!','sucesso');carregarSeparadores();}
-  catch(e){toast('Erro!','erro')}
-}
-
-// ══ IMPORTAÇÃO ══
-// ✅ CORRIGIDO: parser aceita colunas Pedido, Codigo, Descricao, Qtde, Endereço
-function handleDrop(e){
-  e.preventDefault();document.getElementById('upload-area').classList.remove('drag');
-  const f=e.dataTransfer.files[0];if(f)processarArquivoFile(f);
-}
-function processarArquivo(e){const f=e.target.files[0];if(f)processarArquivoFile(f);}
-
-function processarArquivoFile(file){
+function processarArquivoFile(file) {
   mostrarStatus('⏳ Lendo arquivo...','carregando');
-  document.getElementById('preview-importacao').style.display='none';
-  const reader=new FileReader();
-  reader.onload=function(e){
-    try{
-      const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
-      const ws=wb.Sheets[wb.SheetNames[0]];
-      const rows=XLSX.utils.sheet_to_json(ws,{defval:'',header:1});
-      if(!rows.length)throw new Error('Arquivo vazio');
-
-      // ✅ Detecta cabeçalho de forma flexível
-      // Aceita: Pedido/pedido/numero_pedido, Codigo/codigo/cod, Descricao/descricao/desc,
-      //         Qtde/qtd/quantidade, Endereço/endereco/end
-      const cab = rows[0].map(c=>String(c).toLowerCase().trim()
-        .normalize('NFD').replace(/[\u0300-\u036f]/g,'')); // remove acentos para comparar
-
-      const temCab = cab.some(c=>
-        c.includes('pedido')||c.includes('numero')||c.includes('cod')||c.includes('desc')
-      );
-
-      const ini = temCab ? 1 : 0;
-
-      function findCol(keywords){
-        const idx = cab.findIndex(c=>keywords.some(k=>c.includes(k)));
-        return idx >= 0 ? idx : -1;
+  document.getElementById('preview-importacao').style.display = 'none';
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const wb   = XLSX.read(new Uint8Array(e.target.result), { type:'array' });
+      const ws   = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { defval:'', header:1 });
+      if (!rows.length) throw new Error('Arquivo vazio');
+      // Mapeamento flexível: Pedido, Codigo, Descricao, Qtde, Endereço
+      const cab = rows[0].map(c => String(c).toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g,''));
+      const temCab = cab.some(c => c.includes('pedido') || c.includes('codigo') || c.includes('descricao'));
+      const ini  = temCab ? 1 : 0;
+      const iNum  = temCab ? Math.max(cab.findIndex(c=>c.includes('pedido')||c.includes('numero')), 0) : 0;
+      const iCod  = temCab ? (cab.findIndex(c=>c.includes('cod')) >= 0 ? cab.findIndex(c=>c.includes('cod')) : 1) : 1;
+      const iDesc = temCab ? (cab.findIndex(c=>c.includes('desc')) >= 0 ? cab.findIndex(c=>c.includes('desc')) : 2) : 2;
+      const iQtd  = temCab ? (cab.findIndex(c=>c.includes('qtd')||c.includes('quant')) >= 0 ? cab.findIndex(c=>c.includes('qtd')||c.includes('quant')) : 4) : 4;
+      const iEnd  = temCab ? (cab.findIndex(c=>c.includes('end')||c.includes('rua')||c.includes('ender')) >= 0 ? cab.findIndex(c=>c.includes('end')||c.includes('rua')||c.includes('ender')) : 3) : 3;
+      const dados = [];
+      for (let i = ini; i < rows.length; i++) {
+        const r   = rows[i];
+        const num = String(r[iNum] || '').trim();
+        if (!num) continue;
+        dados.push({ numero_pedido:num, codigo:String(r[iCod]||'').trim(), descricao:String(r[iDesc]||'').trim(), quantidade:parseInt(r[iQtd])||1, endereco:String(r[iEnd]||'').trim() });
       }
-
-      // ✅ Mapeamento: Pedido→numero_pedido, Codigo→codigo, Descricao→descricao, Qtde→quantidade, Endereço→endereco
-      const iNum  = temCab ? findCol(['pedido','numero']) : 0;
-      const iCod  = temCab ? findCol(['cod'])             : 1;
-      const iDesc = temCab ? findCol(['desc'])            : 2;
-      const iQtd  = temCab ? findCol(['qtde','qtd','quant']) : 3;
-      const iEnd  = temCab ? findCol(['end','rua','local'])  : 4;
-
-      const dados=[];
-      for(let i=ini;i<rows.length;i++){
-        const r=rows[i];
-        const num=String(r[iNum>=0?iNum:0]||'').trim();
-        if(!num||num==='-')continue;
-        dados.push({
-          numero_pedido: num,
-          codigo:        String(r[iCod >=0?iCod :1]||'').trim(),
-          descricao:     String(r[iDesc>=0?iDesc:2]||'').trim(),
-          quantidade:    parseInt(r[iQtd >=0?iQtd :3])||1,
-          endereco:      String(r[iEnd >=0?iEnd :4]||'').trim()
-        });
-      }
-
-      if(!dados.length){mostrarStatus('❌ Nenhuma linha encontrada! Verifique se as colunas estão corretas.','erro');return}
-
-      pedidosImportar=dados;
-      const totalP=new Set(dados.map(d=>d.numero_pedido)).size;
+      if (!dados.length) { mostrarStatus('❌ Nenhuma linha encontrada!','erro'); return; }
+      pedidosImportar = dados;
+      const totalP = new Set(dados.map(d=>d.numero_pedido)).size;
       mostrarStatus(`✅ ${dados.length} linha(s) em ${totalP} pedido(s) — clique Importar`,'sucesso');
-      document.getElementById('tbody-preview').innerHTML=
-        dados.slice(0,10).map(d=>`<tr>
-          <td>${d.numero_pedido}</td>
-          <td style="color:#60a5fa">${d.codigo}</td>
-          <td style="color:#94a3b8;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.descricao}</td>
-          <td style="color:#fbbf24">${d.endereco}</td>
-          <td style="color:#4ade80">${d.quantidade}</td>
-        </tr>`).join('')+
-        (dados.length>10?`<tr><td colspan="5" style="color:#64748b;text-align:center;padding:8px">... +${dados.length-10} linhas</td></tr>`:'');
-      document.getElementById('txt-total-import').textContent=`${totalP} pedido(s) • ${dados.length} itens`;
-      document.getElementById('preview-importacao').style.display='block';
-    }catch(err){mostrarStatus(`❌ ${err.message}`,'erro')}
+      document.getElementById('tbody-prev').innerHTML =
+        dados.slice(0,10).map(d=>`<tr><td>${d.numero_pedido}</td><td style="color:var(--accent)">${d.codigo}</td><td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.descricao}</td><td style="color:var(--amber)">${d.endereco}</td><td style="color:var(--green)">${d.quantidade}</td></tr>`).join('') +
+        (dados.length>10?`<tr><td colspan="5" style="color:var(--text3);text-align:center;padding:8px">... +${dados.length-10} linhas</td></tr>`:'');
+      document.getElementById('txt-total-import').textContent = `${totalP} pedido(s) • ${dados.length} itens`;
+      document.getElementById('preview-importacao').style.display = 'block';
+    } catch(err) { mostrarStatus(`❌ ${err.message}`,'erro'); }
   };
-  reader.onerror=()=>mostrarStatus('❌ Erro ao abrir arquivo!','erro');
+  reader.onerror = () => mostrarStatus('❌ Erro ao abrir arquivo!','erro');
   reader.readAsArrayBuffer(file);
 }
 
-async function confirmarImportacao(){
-  if(!pedidosImportar.length)return;
+async function confirmarImportacao() {
+  if (!pedidosImportar.length) return;
   mostrarStatus('⏳ Importando...','carregando');
-  try{
-    const res=await fetch(`${API}/importar`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({linhas:pedidosImportar})});
-    const data=await res.json();
-    if(data.erro){mostrarStatus(`❌ ${data.erro}`,'erro');return}
-    const reg={
-      data:new Date().toLocaleDateString('pt-BR'),
-      hora:new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
-      total:data.total,ok:data.importados,erro:data.ignorados
-    };
+  try {
+    const res  = await fetch(`${API}/importar`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({linhas:pedidosImportar}) });
+    const data = await res.json();
+    if (data.erro) { mostrarStatus(`❌ ${data.erro}`,'erro'); return; }
+    const reg = { data:new Date().toLocaleDateString('pt-BR'), hora:new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}), total:data.total, ok:data.importados, erro:data.ignorados };
     historicoImportacoes.unshift(reg);
-    if(historicoImportacoes.length>20)historicoImportacoes=historicoImportacoes.slice(0,20);
-    localStorage.setItem('historico_importacoes',JSON.stringify(historicoImportacoes));
+    if (historicoImportacoes.length > 20) historicoImportacoes = historicoImportacoes.slice(0,20);
+    localStorage.setItem('historico_importacoes', JSON.stringify(historicoImportacoes));
     renderHistorico();
-    mostrarStatus(`✅ ${data.importados} pedido(s) importado(s)!${data.ignorados>0?` ⚠️ ${data.ignorados} já existiam.`:''}`,'sucesso');
-    document.getElementById('preview-importacao').style.display='none';
-    pedidosImportar=[];
-    document.getElementById('input-arquivo').value='';
-    toast(`${data.importados} pedidos importados!`,'sucesso');
-  }catch(e){mostrarStatus('❌ Erro na importação!','erro')}
+    mostrarStatus(`✅ ${data.importados} pedido(s) importado(s) para a fila!${data.ignorados>0?` ⚠️ ${data.ignorados} já existiam.`:''}`,'sucesso');
+    document.getElementById('preview-importacao').style.display = 'none';
+    pedidosImportar = []; document.getElementById('input-arquivo').value = '';
+    toast(`${data.importados} pedidos na fila!`,'sucesso');
+  } catch(e) { mostrarStatus('❌ Erro na importação!','erro'); }
 }
 
-function renderHistorico(){
-  const el=document.getElementById('historico-importacoes');
-  if(!historicoImportacoes.length){el.innerHTML='<div style="color:#64748b;font-size:11px;text-align:center;padding:12px">Nenhuma importação</div>';return}
-  el.innerHTML=historicoImportacoes.map(h=>`
-    <div class="historico-item">
-      <div>
-        <div style="color:#4ade80;font-weight:700">✅ ${h.ok} pedido(s) importado(s)</div>
-        ${h.erro>0?`<div style="color:#fbbf24;font-size:10px">⚠️ ${h.erro} já existiam</div>`:''}
-      </div>
-      <div style="color:#64748b;font-size:10px">${h.data} às ${h.hora}</div>
+function renderHistorico() {
+  const el = document.getElementById('hist-importacoes');
+  if (!historicoImportacoes.length) { el.innerHTML = '<div style="color:var(--text3);font-size:11px;text-align:center;padding:14px">Nenhuma importação</div>'; return; }
+  el.innerHTML = historicoImportacoes.map(h=>`
+    <div class="hist-item">
+      <div><div style="color:var(--green);font-weight:700">✅ ${h.ok} pedido(s)</div>${h.erro>0?`<div style="color:var(--amber);font-size:10px">⚠️ ${h.erro} já existiam</div>`:''}</div>
+      <div style="color:var(--text3);font-size:10px">${h.data} às ${h.hora}</div>
     </div>`).join('');
 }
 
-function limparHistorico(){
-  if(!confirm('Limpar histórico?'))return;
-  historicoImportacoes=[];localStorage.removeItem('historico_importacoes');
-  renderHistorico();toast('Histórico limpo!','info');
+function limparHistorico() {
+  if (!confirm('Limpar histórico?')) return;
+  historicoImportacoes = []; localStorage.removeItem('historico_importacoes');
+  renderHistorico(); toast('Histórico limpo!','info');
 }
 
-function mostrarStatus(msg,tipo){
-  const cores={
-    carregando:'background:#1a2d4a;border:1px solid #2563eb;color:#60a5fa',
-    sucesso:   'background:#1a3324;border:1px solid #16a34a;color:#4ade80',
-    erro:      'background:#3b0f0f;border:1px solid #dc2626;color:#fca5a5'
-  };
-  const el=document.getElementById('status-leitura');
-  el.setAttribute('style',`display:block;margin-top:10px;padding:10px;border-radius:8px;font-size:12px;font-weight:600;text-align:center;${cores[tipo]}`);
-  el.textContent=msg;
+function mostrarStatus(msg, tipo) {
+  const cores = { carregando:'background:#EFF6FF;border:1px solid #BFDBFE;color:#1D4ED8', sucesso:'background:#F0FDF4;border:1px solid #BBF7D0;color:#15803D', erro:'background:#FEF2F2;border:1px solid #FECACA;color:#DC2626' };
+  const el = document.getElementById('status-leitura');
+  el.setAttribute('style', `display:block;margin-top:10px;padding:10px;border-radius:8px;font-size:12px;font-weight:600;text-align:center;${cores[tipo]}`);
+  el.textContent = msg;
 }
 
-// ══ SEPARAÇÃO ══
-async function confirmarPedido(){
-  const num=document.getElementById('input-pedido').value.trim();
-  if(!num){toast('Bipe ou digite o número!','aviso');return}
-  if(!separadorAtual){toast('Usuário sem separador vinculado!','erro');return}
-  try{
-    const res=await fetch(`${API}/pedidos/bipar`,{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({numero_pedido:num,separador_id:separadorAtual.id})});
-    const data=await res.json();
-    if(res.status===404){toast('❌ Pedido não encontrado!','erro');document.getElementById('input-pedido').value='';return}
-    if(res.status===409||res.status===400){toast(`⚠️ ${data.erro}`,'aviso');document.getElementById('input-pedido').value='';return}
-    if(!res.ok){toast(`❌ ${data.erro}`,'erro');return}
-    pedidoAtualId=data.pedido_id;pedidoAtualNum=num;
-    document.getElementById('status-atual').innerHTML=`Pedido <b style="color:#e2e8f0">${num}</b> — 🔵 Separando`;
-    toast(data.ja_atribuido?`Pedido ${num} carregado`:`✅ Pedido ${num} → SEPARANDO`,data.ja_atribuido?'info':'sucesso');
-    await carregarChecklist();
-    carregarFila();
-  }catch(e){toast('Erro ao conectar!','erro')}
+/* ══════════════════════════════════════════
+   SEPARAÇÃO — DESKTOP
+══════════════════════════════════════════ */
+async function confirmarPedido() {
+  const num = document.getElementById('input-pedido').value.trim();
+  if (!num) { toast('Digite o número!','aviso'); return; }
+  if (!separadorAtual) { toast('Usuário sem separador vinculado!','erro'); return; }
+  await _confirmarPedidoCore(num, 'input-pedido', 'status-atual', 'cl-wrap', carregarChecklist, carregarFila);
 }
 
-async function carregarChecklist(){
-  if(!pedidoAtualId)return;
-  try{
-    const res=await fetch(`${API}/pedidos/${pedidoAtualId}/itens`);
-    itensAtuais=await res.json();
-    if(!itensAtuais.length){document.getElementById('checklist-wrap').style.display='none';return}
-    document.getElementById('checklist-wrap').style.display='block';
-    renderChecklist();
-  }catch(e){toast('Erro ao carregar itens!','erro')}
+async function carregarChecklist() {
+  if (!pedidoAtualId) return;
+  try {
+    const res = await fetch(`${API}/pedidos/${pedidoAtualId}/itens`);
+    itensAtuais = await res.json();
+    const wrap = document.getElementById('cl-wrap');
+    if (!itensAtuais.length) { wrap.style.display = 'none'; return; }
+    wrap.style.display = 'block';
+    renderChecklist('cl');
+  } catch(e) { toast('Erro ao carregar itens!','erro'); }
 }
 
-function renderChecklist(){
-  const total      =itensAtuais.length;
-  const verificados=itensAtuais.filter(i=>i.status!=='pendente').length;
-  const encontrados=itensAtuais.filter(i=>i.status==='encontrado').length;
-  const faltas     =itensAtuais.filter(i=>i.status==='falta').length;
-  const parciais   =itensAtuais.filter(i=>i.status==='parcial').length;
-  const pct        =total>0?Math.round((verificados/total)*100):0;
-  const todosVerif =verificados===total;
-  const temProblema=faltas>0||parciais>0;
+async function concluirPedido() {
+  await _concluirCore('cl', carregarChecklist, carregarFila, carregarContadoresSep, 'input-pedido', 'status-atual');
+}
 
-  document.getElementById('checklist-titulo').textContent  =`📋 PEDIDO #${pedidoAtualNum}`;
-  document.getElementById('checklist-contador').textContent=`${verificados}/${total} itens`;
-  document.getElementById('checklist-barra').style.width   =`${pct}%`;
-  document.getElementById('checklist-resumo').innerHTML    =`✅ ${encontrados} ok &nbsp;🟡 ${parciais} parcial &nbsp;❌ ${faltas} falta &nbsp;⬜ ${total-verificados} pendente`;
+async function carregarContadoresSep() {
+  if (!separadorAtual) return;
+  try {
+    const res   = await fetch(`${API}/produtividade?separador_id=${separadorAtual.id}`);
+    const dados = await res.json();
+    if (dados.length) {
+      document.getElementById('sep-cnt-hoje').textContent = dados[0].hoje||0;
+      document.getElementById('sep-cnt-mes').textContent  = dados[0].mes||0;
+      document.getElementById('sep-cnt-ano').textContent  = dados[0].total_ano||0;
+    }
+  } catch(e) {}
+}
 
-  const btnC=document.getElementById('btn-concluir');
-  const btnA=document.getElementById('btn-aguardar');
+async function carregarFila() {
+  if (!separadorAtual) return;
+  try {
+    const res   = await fetch(`${API}/pedidos`);
+    const todos = await res.json();
+    const ativos = todos.filter(p=>p.status!=='concluido');
+    const meus   = ativos.filter(p=>p.separador_id===separadorAtual.id);
+    document.getElementById('badge-fila-d').textContent = `${ativos.length} total`;
+    document.getElementById('badge-meus-d').textContent = `${meus.length} meus`;
+    const html = !ativos.length
+      ? '<tr><td colspan="4" style="color:var(--text3);text-align:center;padding:18px">Nenhum pedido na fila</td></tr>'
+      : ativos.map(p => {
+          const eMeu = p.separador_id===separadorAtual.id;
+          const ocup = p.separador_id && p.separador_id!==separadorAtual.id;
+          const sit  = eMeu?`<span class="pill separando">Meu</span>`:ocup?`<span class="pill falta">Ocupado</span>`:`<span class="pill pendente">Livre</span>`;
+          const clk  = !ocup ? `onclick="selecionarPedidoFila('${p.numero_pedido}')" style="cursor:pointer"` : '';
+          return `<tr class="${eMeu?'meu':''}" ${clk}>
+            <td style="font-weight:${eMeu?700:400};color:${eMeu?'var(--accent)':'var(--text)'}">${p.numero_pedido}</td>
+            <td>${p.itens||'—'}</td>
+            <td><span class="pill ${(p.status||'').replace(' ','-')}">${p.status}</span></td>
+            <td>${sit}</td>
+          </tr>`;
+        }).join('');
+    document.getElementById('tbody-fila-d').innerHTML = html;
+  } catch(e) {}
+}
 
-  if(!todosVerif){
-    btnC.style.display='block';btnC.disabled=true;
-    btnC.textContent=`🔒 CONCLUIR (${total-verificados} pendentes)`;
-    btnA.style.display='none';
-  } else if(temProblema){
-    const itensP=itensAtuais.filter(i=>i.status==='falta'||i.status==='parcial');
-    const todosR=itensP.every(i=>i.aviso_status==='reposto'||i.aviso_status==='nao_encontrado');
-    if(todosR){
-      btnC.style.display='block';btnC.disabled=false;
-      btnC.textContent='✅ CONCLUIR PEDIDO';btnA.style.display='none';
+function selecionarPedidoFila(num) {
+  document.getElementById('input-pedido').value = num;
+  confirmarPedido();
+}
+
+/* ══════════════════════════════════════════
+   SEPARAÇÃO — MOBILE (tabs)
+══════════════════════════════════════════ */
+async function confirmarPedidoMobile() {
+  const num = document.getElementById('m-input-pedido').value.trim();
+  if (!num) { toast('Digite o número!','aviso'); return; }
+  if (!separadorAtual) { toast('Usuário sem separador vinculado!','erro'); return; }
+  await _confirmarPedidoCore(num, 'm-input-pedido', 'm-status-atual', 'm-cl-wrap', carregarChecklistMobile, carregarFilaMobile);
+}
+
+async function carregarChecklistMobile() {
+  if (!pedidoAtualId) return;
+  try {
+    const res = await fetch(`${API}/pedidos/${pedidoAtualId}/itens`);
+    itensAtuais = await res.json();
+    const wrap = document.getElementById('m-cl-wrap');
+    if (!itensAtuais.length) { wrap.style.display = 'none'; return; }
+    wrap.style.display = 'block';
+    renderChecklist('m-cl');
+  } catch(e) { toast('Erro ao carregar itens!','erro'); }
+}
+
+function renderChecklistMobile() { renderChecklist('m-cl'); }
+
+async function concluirPedidoMobile() {
+  await _concluirCore('m-cl', carregarChecklistMobile, carregarFilaMobile, carregarStatsMobile, 'm-input-pedido', 'm-status-atual');
+}
+
+async function carregarFilaMobile() {
+  if (!separadorAtual) return;
+  try {
+    const res   = await fetch(`${API}/pedidos`);
+    const todos = await res.json();
+    const ativos = todos.filter(p=>p.status!=='concluido');
+    const meus   = ativos.filter(p=>p.separador_id===separadorAtual.id);
+    document.getElementById('badge-fila-m').textContent = `${ativos.length} total`;
+    document.getElementById('badge-meus-m').textContent = `${meus.length} meus`;
+    // Atualiza badge da tab
+    const badge = document.getElementById('stab-fila-badge');
+    if (badge) { badge.textContent = ativos.length; badge.style.display = ativos.length > 0 ? 'inline' : 'none'; }
+    const lista = document.getElementById('lista-fila-mobile');
+    if (!ativos.length) { lista.innerHTML = '<div style="color:var(--text3);text-align:center;padding:30px;font-size:13px">Nenhum pedido na fila 🎉</div>'; return; }
+    lista.innerHTML = ativos.map(p => {
+      const eMeu = p.separador_id === separadorAtual.id;
+      const ocup = p.separador_id && p.separador_id !== separadorAtual.id;
+      return `<div class="fila-card ${eMeu?'meu':''} ${ocup?'ocupado':''}" ${!ocup?`onclick="selecionarPedidoFilaMobile('${p.numero_pedido}')"`:''}">
+        <div style="font-size:20px">${eMeu?'📦':ocup?'🔒':'📋'}</div>
+        <div style="flex:1">
+          <div class="fila-num">${p.numero_pedido}</div>
+          <div class="fila-meta"><b>${p.itens||0} itens</b>${p.separador_nome?` • ${p.separador_nome}`:''}</div>
+        </div>
+        <div>${eMeu?`<span class="pill separando">Meu</span>`:ocup?`<span class="pill falta">Ocupado</span>`:`<span class="pill pendente">Livre</span>`}</div>
+      </div>`;
+    }).join('');
+  } catch(e) {}
+}
+
+function selecionarPedidoFilaMobile(num) {
+  mudarTabSep('separar');
+  document.getElementById('m-input-pedido').value = num;
+  confirmarPedidoMobile();
+}
+
+async function carregarStatsMobile() {
+  if (!separadorAtual) return;
+  try {
+    const res   = await fetch(`${API}/produtividade?separador_id=${separadorAtual.id}`);
+    const dados = await res.json();
+    const nomeEl = document.getElementById('m-stat-nome');
+    if (nomeEl) nomeEl.textContent = `👤 ${separadorAtual.nome||usuarioAtual.nome}`;
+    if (dados.length) {
+      document.getElementById('m-stat-hoje').textContent = dados[0].hoje||0;
+      document.getElementById('m-stat-mes').textContent  = dados[0].mes||0;
+      document.getElementById('m-stat-ano').textContent  = dados[0].total_ano||0;
+    }
+  } catch(e) {}
+}
+
+/* ══════════════════════════════════════════
+   CORE COMPARTILHADO (desktop + mobile)
+══════════════════════════════════════════ */
+async function _confirmarPedidoCore(num, inputId, statusId, clWrapId, fnChecklist, fnFila) {
+  try {
+    const res  = await fetch(`${API}/pedidos/bipar`, { method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({numero_pedido:num, separador_id:separadorAtual.id}) });
+    const data = await res.json();
+    if (res.status===404) { toast('❌ Pedido não encontrado!','erro'); document.getElementById(inputId).value=''; return; }
+    if (res.status===409||res.status===400) { toast(`⚠️ ${data.erro}`,'aviso'); document.getElementById(inputId).value=''; return; }
+    if (!res.ok) { toast(`❌ ${data.erro}`,'erro'); return; }
+    pedidoAtualId  = data.pedido_id;
+    pedidoAtualNum = num;
+    const statusEl = document.getElementById(statusId);
+    if (statusEl) { statusEl.innerHTML = `Pedido <b style="color:var(--text)">${num}</b> — 🔵 Separando`; statusEl.style.display = 'block'; }
+    toast(data.ja_atribuido ? `Pedido ${num} carregado` : `✅ Pedido ${num} → SEPARANDO`, data.ja_atribuido?'info':'sucesso');
+    await fnChecklist();
+    fnFila();
+  } catch(e) { toast('Erro ao conectar!','erro'); }
+}
+
+async function _concluirCore(prefix, fnChecklist, fnFila, fnStats, inputId, statusId) {
+  if (!pedidoAtualId) return;
+  try {
+    const res  = await fetch(`${API}/pedidos/${pedidoAtualId}/concluir`, { method:'PUT' });
+    const data = await res.json();
+    if (data.aguardando) { toast('⏳ Ainda aguardando o repositor!','aviso'); return; }
+    if (data.erro)       { toast(`⚠️ ${data.erro}`,'aviso'); return; }
+    toast(`🎉 Pedido ${pedidoAtualNum} CONCLUÍDO!`,'sucesso');
+    const wrap = document.getElementById(`${prefix}-wrap`);
+    if (wrap) wrap.style.display = 'none';
+    const statusEl = document.getElementById(statusId);
+    if (statusEl) statusEl.style.display = 'none';
+    document.getElementById(inputId).value = '';
+    pedidoAtualId=null; pedidoAtualNum=null; itensAtuais=[];
+    fnFila(); fnStats();
+    setTimeout(() => document.getElementById(inputId).focus(), 300);
+  } catch(e) { toast('Erro ao concluir!','erro'); }
+}
+
+/* ══════════════════════════════════════════
+   RENDER CHECKLIST (compartilhado)
+══════════════════════════════════════════ */
+function renderChecklist(prefix) {
+  const total       = itensAtuais.length;
+  const verificados = itensAtuais.filter(i=>i.status!=='pendente').length;
+  const encontrados = itensAtuais.filter(i=>i.status==='encontrado').length;
+  const faltas      = itensAtuais.filter(i=>i.status==='falta').length;
+  const parciais    = itensAtuais.filter(i=>i.status==='parcial').length;
+  const pct         = total>0 ? Math.round((verificados/total)*100) : 0;
+  const todosVerif  = verificados===total;
+  const temProblema = faltas>0 || parciais>0;
+
+  const set = (id,val) => { const el=document.getElementById(`${prefix}-${id}`); if(el) el[typeof val==='string'&&id!=='style'?'textContent':'innerHTML'] = val; };
+  document.getElementById(`${prefix}-titulo`).textContent   = `📋 PEDIDO #${pedidoAtualNum}`;
+  document.getElementById(`${prefix}-contador`).textContent = `${verificados}/${total} itens`;
+  document.getElementById(`${prefix}-barra`).style.width    = `${pct}%`;
+  document.getElementById(`${prefix}-resumo`).innerHTML     = `✅ ${encontrados} ok &nbsp;🟡 ${parciais} parcial &nbsp;❌ ${faltas} falta &nbsp;⬜ ${total-verificados} pend.`;
+
+  const btnC = document.getElementById(`${prefix.replace('cl','btn-concluir').replace('m-cl','m-btn-concluir')}`);
+  const btnA = document.getElementById(`${prefix.replace('cl','btn-aguardar').replace('m-cl','m-btn-aguardar')}`);
+  // Map prefix to btn ids
+  const bcId = prefix === 'cl' ? 'btn-concluir' : 'm-btn-concluir';
+  const baId = prefix === 'cl' ? 'btn-aguardar' : 'm-btn-aguardar';
+  const bc = document.getElementById(bcId);
+  const ba = document.getElementById(baId);
+
+  if (!todosVerif) {
+    if(bc){bc.style.display='block';bc.disabled=true;bc.textContent=`🔒 CONCLUIR (${total-verificados} pend.)`}
+    if(ba) ba.style.display='none';
+  } else if (temProblema) {
+    const itensP = itensAtuais.filter(i=>i.status==='falta'||i.status==='parcial');
+    const todosR = itensP.every(i=>i.aviso_status==='reposto'||i.aviso_status==='nao_encontrado');
+    if (todosR) {
+      if(bc){bc.style.display='block';bc.disabled=false;bc.textContent='✅ CONCLUIR PEDIDO';}
+      if(ba) ba.style.display='none';
     } else {
-      const qtdP=itensP.filter(i=>i.aviso_status!=='reposto'&&i.aviso_status!=='nao_encontrado').length;
-      btnC.style.display='none';btnA.style.display='block';
-      btnA.textContent=`⏳ AGUARDANDO REPOSITOR (${qtdP} item${qtdP>1?'s':''})`;
+      const qtdP = itensP.filter(i=>i.aviso_status!=='reposto'&&i.aviso_status!=='nao_encontrado').length;
+      if(bc) bc.style.display='none';
+      if(ba){ba.style.display='block';ba.textContent=`⏳ AGUARDANDO REPOSITOR (${qtdP})`;}
     }
   } else {
-    btnC.style.display='block';btnC.disabled=false;
-    btnC.textContent='✅ CONCLUIR PEDIDO';btnA.style.display='none';
+    if(bc){bc.style.display='block';bc.disabled=false;bc.textContent='✅ CONCLUIR PEDIDO';}
+    if(ba) ba.style.display='none';
   }
 
-  document.getElementById('checklist-lista').innerHTML=itensAtuais.map(item=>{
-    const icones={pendente:'⬜',encontrado:'✅',falta:'❌',parcial:'🟡'};
-    const v=item.status!=='pendente';
-    return `<div class="item-card ${item.status}" id="ic-${item.id}">
-      <div class="item-icone">${icones[item.status]||'⬜'}</div>
+  const listEl = document.getElementById(`${prefix}-lista`);
+  if (!listEl) return;
+  const isMob = prefix.startsWith('m-');
+  listEl.innerHTML = itensAtuais.map(item => {
+    const icones = { pendente:'⬜', encontrado:'✅', falta:'❌', parcial:'🟡' };
+    const v = item.status !== 'pendente';
+    const fnVerif  = isMob ? 'verificarItemMobile' : 'verificarItemDesktop';
+    const fnToggle = isMob ? 'toggleParcialMobile'  : 'toggleParcialDesktop';
+    const fnParcOk = isMob ? 'confirmarParcialMobile' : 'confirmarParcialDesktop';
+    return `<div class="item-card ${item.status}" id="${prefix}-ic-${item.id}">
+      <div class="item-ic">${icones[item.status]||'⬜'}</div>
       <div class="item-info">
         <div class="item-cod">${item.codigo||'—'} &nbsp;•&nbsp; 📍 ${item.endereco||'—'}</div>
         <div class="item-desc">${item.descricao||'—'}</div>
-        <div class="item-det">Qtd: <b style="color:#e2e8f0">${item.quantidade||1}</b>${item.hora_verificado?` &nbsp;•&nbsp; ${item.hora_verificado}`:''}</div>
+        <div class="item-det">Qtde: <b style="color:var(--text)">${item.quantidade||1}</b>${item.hora_verificado?` &nbsp;•&nbsp; ${item.hora_verificado}`:''}</div>
         ${item.status==='falta'  ?`<div class="item-aviso">❌ Falta total — repositor avisado</div>`:''}
         ${item.status==='parcial'?`<div class="item-aviso">🟡 ${item.obs||''} — repositor avisado</div>`:''}
-        ${(item.status==='falta'||item.status==='parcial')&&item.aviso_status==='reposto'
-          ?`<div style="font-size:10px;color:#4ade80;margin-top:3px">✅ Repositor repôs!</div>`:''}
-        ${(item.status==='falta'||item.status==='parcial')&&item.aviso_status==='nao_encontrado'
-          ?`<div style="font-size:10px;color:#f87171;margin-top:3px">🚫 Não encontrado no estoque</div>`:''}
-        <div class="parcial-wrap" id="pw-${item.id}">
-          <label>Quantidade encontrada (de ${item.quantidade||1}):</label>
+        ${(item.status==='falta'||item.status==='parcial')&&item.aviso_status==='reposto'?`<div style="font-size:10px;color:var(--green);margin-top:3px;font-weight:600">✅ Repositor repôs!</div>`:''}
+        ${(item.status==='falta'||item.status==='parcial')&&item.aviso_status==='nao_encontrado'?`<div style="font-size:10px;color:var(--red);margin-top:3px;font-weight:600">🚫 Não encontrado</div>`:''}
+        <div class="parcial-wrap" id="${prefix}-pw-${item.id}">
+          <label>Qtde encontrada (de ${item.quantidade||1}):</label>
           <div class="parcial-row">
-            <input type="number" class="parcial-input" id="pi-${item.id}" min="0" max="${(item.quantidade||1)-1}" placeholder="0" inputmode="numeric"/>
-            <button class="btn-parcial-ok" onclick="confirmarParcial(${item.id},${item.quantidade||1})">Confirmar</button>
+            <input type="number" class="parcial-input" id="${prefix}-pi-${item.id}" min="0" max="${(item.quantidade||1)-1}" placeholder="0" inputmode="numeric"/>
+            <button class="btn-parc-ok" onclick="${fnParcOk}(${item.id},${item.quantidade||1},'${prefix}')">OK</button>
           </div>
-          <div style="font-size:10px;color:#94a3b8;margin-top:4px">Digite quantas unidades encontrou</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:4px">Digite quantas unidades encontrou</div>
         </div>
       </div>
       <div class="item-btns">
-        <button class="btn-item ok"          ${v?'disabled':''} onclick="verificarItem(${item.id},'encontrado')">✔</button>
-        <button class="btn-item parcial-btn" ${v?'disabled':''} onclick="toggleParcial(${item.id})" title="Parcial">±</button>
-        <button class="btn-item nok"         ${v?'disabled':''} onclick="verificarItem(${item.id},'falta')">✖</button>
+        <button class="btn-item ok"   ${v?'disabled':''} onclick="${fnVerif}(${item.id},'encontrado','${prefix}')">✔</button>
+        <button class="btn-item parc" ${v?'disabled':''} onclick="${fnToggle}(${item.id},'${prefix}')" title="Parcial">±</button>
+        <button class="btn-item nok"  ${v?'disabled':''} onclick="${fnVerif}(${item.id},'falta','${prefix}')">✖</button>
       </div>
     </div>`;
   }).join('');
 }
 
-function toggleParcial(id){
-  const w=document.getElementById(`pw-${id}`);if(!w)return;
-  const a=w.classList.toggle('aberto');
-  if(a)setTimeout(()=>document.getElementById(`pi-${id}`)?.focus(),100);
+/* Wrappers verificar/parcial para desktop e mobile */
+function verificarItemDesktop(id,status,prefix){ verificarItem(id,status,''  ,0,prefix,'cl'); }
+function verificarItemMobile (id,status,prefix){ verificarItem(id,status,''  ,0,prefix,'m-cl'); }
+function toggleParcialDesktop(id,prefix){ toggleParcial(id,prefix); }
+function toggleParcialMobile (id,prefix){ toggleParcial(id,prefix); }
+function confirmarParcialDesktop(id,qtd,prefix){ confirmarParcial(id,qtd,prefix,'cl'); }
+function confirmarParcialMobile (id,qtd,prefix){ confirmarParcial(id,qtd,prefix,'m-cl'); }
+
+function toggleParcial(id, prefix) {
+  const w = document.getElementById(`${prefix}-pw-${id}`); if (!w) return;
+  const a = w.classList.toggle('aberto');
+  if (a) setTimeout(() => document.getElementById(`${prefix}-pi-${id}`)?.focus(), 100);
 }
 
-async function confirmarParcial(id,qtdTotal){
-  const input=document.getElementById(`pi-${id}`);
-  const qtdEnc=parseInt(input?.value);
-  if(isNaN(qtdEnc)||qtdEnc<0){toast('Digite uma quantidade válida!','aviso');return}
-  if(qtdEnc>=qtdTotal){toast('Se encontrou tudo, use ✔!','aviso');return}
-  const qtdFalta=qtdTotal-qtdEnc;
-  await verificarItem(id,'parcial',`Encontrou ${qtdEnc} de ${qtdTotal} — faltam ${qtdFalta}`,qtdFalta);
+async function confirmarParcial(id, qtdTotal, prefix, renderPrefix) {
+  const input  = document.getElementById(`${prefix}-pi-${id}`);
+  const qtdEnc = parseInt(input?.value);
+  if (isNaN(qtdEnc)||qtdEnc<0)   { toast('Digite uma quantidade válida!','aviso'); return; }
+  if (qtdEnc >= qtdTotal)          { toast('Se encontrou tudo, use ✔!','aviso'); return; }
+  const qtdFalta = qtdTotal - qtdEnc;
+  await verificarItem(id,'parcial',`Encontrou ${qtdEnc} de ${qtdTotal} — faltam ${qtdFalta}`,qtdFalta,prefix,renderPrefix);
 }
 
-async function verificarItem(itemId,status,obs='',qtdFalta=0){
-  if(!separadorAtual)return;
-  try{
-    const item=itensAtuais.find(i=>i.id===itemId);
-    await fetch(`${API}/itens/${itemId}/verificar`,{method:'PUT',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({status,obs,qtd_falta:status==='falta'?(item?.quantidade||1):qtdFalta,
-        separador_id:separadorAtual.id,separador_nome:separadorAtual.nome})});
-    if(item){item.status=status;item.obs=obs;item.aviso_status='';}
-    if(status==='falta')    toast('❌ Falta total — repositor avisado!','aviso');
-    if(status==='parcial')  toast('🟡 Parcial registrado — repositor avisado!','aviso');
-    if(status==='encontrado') toast('✅ Item confirmado!','sucesso');
-    renderChecklist();
-  }catch(e){toast('Erro ao verificar item!','erro')}
+async function verificarItem(itemId, status, obs='', qtdFalta=0, prefix, renderPrefix) {
+  if (!separadorAtual) return;
+  try {
+    const item = itensAtuais.find(i=>i.id===itemId);
+    await fetch(`${API}/itens/${itemId}/verificar`, { method:'PUT', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ status, obs, qtd_falta:status==='falta'?(item?.quantidade||1):qtdFalta,
+        separador_id:separadorAtual.id, separador_nome:separadorAtual.nome }) });
+    if (item) { item.status=status; item.obs=obs; item.aviso_status=''; }
+    if (status==='falta')    toast('❌ Falta total — repositor avisado!','aviso');
+    if (status==='parcial')  toast('🟡 Parcial — repositor avisado!','aviso');
+    if (status==='encontrado') toast('✅ Item confirmado!','sucesso');
+    renderChecklist(renderPrefix);
+  } catch(e) { toast('Erro ao verificar item!','erro'); }
 }
 
-async function concluirPedido(){
-  if(!pedidoAtualId)return;
-  try{
-    const res=await fetch(`${API}/pedidos/${pedidoAtualId}/concluir`,{method:'PUT'});
-    const data=await res.json();
-    if(data.aguardando){toast('⏳ Ainda aguardando o repositor!','aviso');return}
-    if(data.erro){toast(`⚠️ ${data.erro}`,'aviso');return}
-    toast(`🎉 Pedido ${pedidoAtualNum} CONCLUÍDO!`,'sucesso');
-    document.getElementById('checklist-wrap').style.display='none';
-    document.getElementById('input-pedido').value='';
-    document.getElementById('status-atual').textContent='';
-    pedidoAtualId=null;pedidoAtualNum=null;itensAtuais=[];
-    carregarContadoresSep();
-    // ✅ Atualiza fila imediatamente após concluir — pedido some da lista
-    carregarFila();
-    setTimeout(()=>document.getElementById('input-pedido').focus(),300);
-  }catch(e){toast('Erro ao concluir!','erro')}
-}
-
-async function carregarContadoresSep(){
-  if(!separadorAtual)return;
-  try{
-    const res=await fetch(`${API}/produtividade?separador_id=${separadorAtual.id}`);
-    const dados=await res.json();
-    if(dados.length){
-      document.getElementById('sep-cnt-hoje').textContent=dados[0].hoje||0;
-      document.getElementById('sep-cnt-mes').textContent =dados[0].mes||0;
-      document.getElementById('sep-cnt-ano').textContent =dados[0].total_ano||0;
-    }
-  }catch(e){}
-}
-
-// ✅ CORRIGIDO: fila mostra apenas pedidos NÃO concluídos (pendente + separando)
-async function carregarFila(){
-  if(!separadorAtual)return;
-  try{
-    const res=await fetch(`${API}/pedidos`);
-    const todos=await res.json();
-    // Filtra: apenas pendente e separando (concluídos NÃO aparecem)
-    const ativos=todos.filter(p=>p.status==='pendente'||p.status==='separando');
-    const meus  =ativos.filter(p=>p.separador_id===separadorAtual.id);
-    document.getElementById('badge-fila').textContent=`${ativos.length} total`;
-    document.getElementById('badge-meus').textContent=`${meus.length} meus`;
-    const html=!ativos.length
-      ?'<tr><td colspan="4" style="color:#64748b;text-align:center;padding:20px">✅ Nenhum pedido na fila</td></tr>'
-      :ativos.map(p=>{
-        const eMeu=p.separador_id===separadorAtual.id;
-        const ocup=p.separador_id&&p.separador_id!==separadorAtual.id;
-        const sit=eMeu?`<span class="pill separando">Meu</span>`:ocup?`<span class="pill falta">Ocupado</span>`:`<span class="pill pendente">Livre</span>`;
-        const clk=!ocup?`onclick="selecionarPedidoFila('${p.numero_pedido}')" style="cursor:pointer"`:'';
-        return `<tr class="${eMeu?'meu':''}" ${clk}>
-          <td style="color:${eMeu?'#60a5fa':'#cbd5e1'};font-weight:${eMeu?700:400}">${p.numero_pedido}</td>
-          <td>${p.itens||'—'}</td>
-          <td><span class="pill ${(p.status||'').replace(' ','-')}">${p.status}</span></td>
-          <td>${sit}</td>
-        </tr>`;
-      }).join('');
-    document.getElementById('tbody-fila').innerHTML=html;
-  }catch(e){}
-}
-
-function selecionarPedidoFila(num){
-  document.getElementById('input-pedido').value=num;
-  confirmarPedido();
-}
-
-// ══ REPOSIÇÃO ══
-async function carregarAvisos(){
-  try{
-    const status=document.getElementById('filtro-rep-status').value;
-    let url=`${API}/repositor/avisos`;if(status)url+=`?status=${status}`;
-    const res=await fetch(url);const avisos=await res.json();
-    const pend=avisos.filter(a=>a.status==='pendente').length;
-    const rep =avisos.filter(a=>a.status==='reposto').length;
-    document.getElementById('rep-pendente').textContent=pend;
-    document.getElementById('rep-reposto').textContent=rep;
-    const badge=document.getElementById('menu-badge-rep');
-    if(badge){badge.textContent=pend;badge.style.display=pend>0?'inline':'none';}
-    const lista=document.getElementById('lista-avisos');
-    if(!avisos.length){lista.innerHTML='<div style="color:#64748b;text-align:center;padding:40px;font-size:13px">✅ Nenhum item encontrado</div>';return}
-    lista.innerHTML=avisos.map(a=>`
-      <div class="aviso-card ${a.status}" id="aviso-${a.id}">
+/* ══════════════════════════════════════════
+   REPOSIÇÃO
+══════════════════════════════════════════ */
+async function carregarAvisos() {
+  try {
+    const status = document.getElementById('filtro-rep-status').value;
+    let url = `${API}/repositor/avisos`; if (status) url += `?status=${status}`;
+    const res    = await fetch(url);
+    const avisos = await res.json();
+    const pend   = avisos.filter(a=>a.status==='pendente').length;
+    const rep    = avisos.filter(a=>a.status==='reposto').length;
+    document.getElementById('rep-pend').textContent = pend;
+    document.getElementById('rep-rep').textContent  = rep;
+    const badge = document.getElementById('menu-badge-rep');
+    if (badge) { badge.textContent=pend; badge.style.display=pend>0?'inline':'none'; }
+    const lista = document.getElementById('lista-avisos');
+    if (!avisos.length) { lista.innerHTML = '<div style="color:var(--text3);text-align:center;padding:36px;font-size:13px">✅ Nenhum item encontrado</div>'; return; }
+    lista.innerHTML = avisos.map(a=>`
+      <div class="aviso-card ${a.status}">
         <div style="font-size:22px">${a.status==='reposto'?'✅':a.status==='nao_encontrado'?'🚫':'🔴'}</div>
         <div class="aviso-info">
-          <div class="aviso-cod">${a.codigo||'—'}
-            <span style="font-size:10px;font-weight:400;color:#94a3b8;margin-left:8px">Pedido #${a.numero_pedido}</span>
-          </div>
+          <div class="aviso-cod">${a.codigo||'—'} <span style="font-size:10px;font-weight:400;color:var(--text3);margin-left:6px">Pedido #${a.numero_pedido}</span></div>
           <div class="aviso-desc">${a.descricao||'—'}</div>
-          <div class="aviso-det">📍 ${a.endereco||'—'} &nbsp;•&nbsp; 📦 Qtd: ${a.quantidade||'—'} &nbsp;•&nbsp; 👤 ${a.separador_nome||'—'}</div>
-          ${a.status==='reposto'       ?`<div style="font-size:10px;color:#4ade80;margin-top:4px">✅ Reposto às ${a.hora_reposto||'—'}</div>`:''}
-          ${a.status==='nao_encontrado'?`<div style="font-size:10px;color:#a78bfa;margin-top:4px">🚫 Não encontrado às ${a.hora_reposto||'—'}</div>`:''}
-          ${a.status==='pendente'      ?`<div style="font-size:10px;color:#f87171;margin-top:4px">⏱ Aviso às ${a.hora_aviso||'—'}</div>`:''}
+          <div class="aviso-det">📍 ${a.endereco||'—'} &nbsp;•&nbsp; 📦 Qtde: ${a.quantidade||'—'} &nbsp;•&nbsp; 👤 ${a.separador_nome||'—'}</div>
+          ${a.status==='reposto'       ?`<div style="font-size:10px;color:var(--green);margin-top:3px;font-weight:600">✅ Reposto às ${a.hora_reposto||'—'}</div>`:''}
+          ${a.status==='nao_encontrado'?`<div style="font-size:10px;color:var(--indigo);margin-top:3px;font-weight:600">🚫 Não encontrado às ${a.hora_reposto||'—'}</div>`:''}
+          ${a.status==='pendente'      ?`<div style="font-size:10px;color:var(--red);margin-top:3px;font-weight:600">⏱ Aviso às ${a.hora_aviso||'—'}</div>`:''}
         </div>
-        <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;flex-shrink:0">
           ${a.status==='pendente'?`
             <button class="btn btn-success btn-sm" onclick="marcarReposto(${a.id})">✅ Reposto</button>
-            <button class="btn btn-sm" style="background:#6366f1;color:white" onclick="marcarNaoEncontrado(${a.id})">🚫 Não encontrei</button>
+            <button class="btn btn-sm" style="background:var(--indigo);color:#fff" onclick="marcarNaoEncontrado(${a.id})">🚫 Não encontrei</button>
           `:`<span class="pill ${a.status==='reposto'?'reposto':'pendente'}">${a.status==='reposto'?'Reposto':'Não encontrado'}</span>`}
         </div>
       </div>`).join('');
-  }catch(e){document.getElementById('lista-avisos').innerHTML='<div style="color:#f87171;text-align:center;padding:20px">Erro ao carregar</div>'}
+  } catch(e) { document.getElementById('lista-avisos').innerHTML='<div style="color:var(--red);text-align:center;padding:20px">Erro ao carregar</div>'; }
 }
 
-async function marcarReposto(id){
-  try{await fetch(`${API}/repositor/avisos/${id}/reposto`,{method:'PUT'});toast('✅ Marcado como reposto!','sucesso');carregarAvisos();}
-  catch(e){toast('Erro!','erro')}
+async function marcarReposto(id) {
+  try { await fetch(`${API}/repositor/avisos/${id}/reposto`,{method:'PUT'}); toast('✅ Reposto!','sucesso'); carregarAvisos(); }
+  catch(e) { toast('Erro!','erro'); }
+}
+async function marcarNaoEncontrado(id) {
+  try { await fetch(`${API}/repositor/avisos/${id}/nao_encontrado`,{method:'PUT'}); toast('🚫 Não encontrado!','aviso'); carregarAvisos(); }
+  catch(e) { toast('Erro!','erro'); }
 }
 
-async function marcarNaoEncontrado(id){
-  try{await fetch(`${API}/repositor/avisos/${id}/nao_encontrado`,{method:'PUT'});toast('🚫 Marcado como não encontrado!','aviso');carregarAvisos();}
-  catch(e){toast('Erro!','erro')}
-}
+/* ══════════════════════════════════════════
+   EVENTOS
+══════════════════════════════════════════ */
+document.getElementById('input-pedido')?.addEventListener('keypress', e => { if(e.key==='Enter') confirmarPedido(); });
+document.getElementById('m-input-pedido')?.addEventListener('keypress', e => { if(e.key==='Enter') confirmarPedidoMobile(); });
 
-document.getElementById('input-pedido')?.addEventListener('keypress',e=>{if(e.key==='Enter')confirmarPedido()});
+/* Adapta ao redimensionar */
+window.addEventListener('resize', () => {
+  if (!usuarioAtual || usuarioAtual.perfil !== 'separador') return;
+  const mob = isMobile();
+  document.body.classList.toggle('sep-mobile', mob);
+  document.getElementById('sep-mobile-root').style.display = mob ? 'flex' : 'none';
+  document.getElementById('sep-tabbar').style.display      = mob ? 'flex' : 'none';
+  if (mob) { document.getElementById('conteudo').style.display = 'none'; }
+  else     { document.getElementById('conteudo').style.display = 'block'; }
+});
+
+/* ══════════════════════════════════════════
+   VERIFICAR SESSÃO AO CARREGAR
+══════════════════════════════════════════ */
+(async function verificarSessao() {
+  try {
+    const res  = await fetch(`${API}/auth/me`);
+    if (!res.ok) return;
+    const data = await res.json();
+    usuarioAtual      = data.usuario;
+    separadorAtual    = data.separador;
+    perfilSelecionado = data.usuario.perfil;
+    ativarApp();
+  } catch(e) {}
+})();
 </script>
 </body>
 </html>
