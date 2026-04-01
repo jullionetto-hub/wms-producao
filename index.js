@@ -3,25 +3,38 @@ const sqlite3 = require('sqlite3').verbose();
 const cors = require('cors');
 const path = require('path');
 const crypto = require('crypto');
+const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-const db = new sqlite3.Database('./wms.db', err => {
-  if (err) console.error(err.message);
-  else console.log('Banco conectado!');
+// ─── BANCO PERSISTENTE ───────────────────────────────────────────────────────
+// No Render: crie um Disk com Mount Path = /data e use DB_PATH=/data/wms.db
+// Localmente: salva em ./wms.db normalmente
+const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'wms.db');
+
+const dbDir = path.dirname(DB_PATH);
+if (!fs.existsSync(dbDir)) {
+  fs.mkdirSync(dbDir, { recursive: true });
+}
+
+const db = new sqlite3.Database(DB_PATH, err => {
+  if (err) console.error('Erro ao conectar banco:', err.message);
+  else console.log('Banco conectado em:', DB_PATH);
 });
 
 db.run('PRAGMA journal_mode=WAL');
+db.run('PRAGMA foreign_keys=ON');
 
+// ─── CRIAÇÃO DAS TABELAS ─────────────────────────────────────────────────────
 db.serialize(() => {
   db.run(`CREATE TABLE IF NOT EXISTS usuarios (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -105,41 +118,33 @@ db.serialize(() => {
   db.run(`CREATE INDEX IF NOT EXISTS idx_usuarios_login ON usuarios(login)`);
 });
 
+// ─── UTILITÁRIOS ─────────────────────────────────────────────────────────────
 function hashSenha(senha) {
   return crypto.createHash('sha256').update(senha + 'wms_salt_2026').digest('hex');
 }
 
 function criarUsuarioPadrao() {
-  const senhaPadrao = '123456';
-  const senhaHash = hashSenha(senhaPadrao);
-
+  const senhaHash = hashSenha('123456');
   db.run(
     `INSERT OR IGNORE INTO usuarios (nome, login, senha_hash, perfil, status)
      VALUES (?, ?, ?, ?, ?)`,
     ['Supervisor Master', 'admin', senhaHash, 'supervisor', 'ativo'],
     function (err) {
-      if (err) {
-        console.error('Erro ao criar usuário padrão:', err.message);
-      } else if (this.changes > 0) {
-        console.log('Usuário padrão criado: login=admin senha=123456');
-      } else {
-        console.log('Usuário padrão já existe.');
-      }
+      if (err) console.error('Erro ao criar usuário padrão:', err.message);
+      else if (this.changes > 0) console.log('Usuário padrão criado: login=admin senha=123456');
+      else console.log('Usuário padrão já existe.');
     }
   );
 }
 
 criarUsuarioPadrao();
 
+// ─── AUTH ─────────────────────────────────────────────────────────────────────
 app.post('/auth/login', (req, res) => {
   const { login, senha, perfil } = req.body;
-
-  if (!login || !senha || !perfil) {
-    return res.status(400).json({ erro: 'Dados incompletos!' });
-  }
+  if (!login || !senha || !perfil) return res.status(400).json({ erro: 'Dados incompletos!' });
 
   const hash = hashSenha(senha);
-
   db.get(
     `SELECT * FROM usuarios WHERE login=? AND senha_hash=? AND perfil=? AND status='ativo'`,
     [login, hash, perfil],
@@ -169,18 +174,13 @@ app.post('/auth/login', (req, res) => {
   );
 });
 
+// ─── USUÁRIOS ─────────────────────────────────────────────────────────────────
 app.get('/usuarios', (req, res) => {
   const { perfil } = req.query;
   let sql = 'SELECT id,nome,login,perfil,status,data_cadastro FROM usuarios WHERE 1=1';
   const params = [];
-
-  if (perfil) {
-    sql += ' AND perfil=?';
-    params.push(perfil);
-  }
-
+  if (perfil) { sql += ' AND perfil=?'; params.push(perfil); }
   sql += ' ORDER BY nome';
-
   db.all(sql, params, (err, rows) => {
     if (err) return res.status(500).json({ erro: err.message });
     res.json(rows);
@@ -189,24 +189,17 @@ app.get('/usuarios', (req, res) => {
 
 app.post('/usuarios', (req, res) => {
   const { nome, login, senha, perfil } = req.body;
-
-  if (!nome || !login || !senha || !perfil) {
-    return res.status(400).json({ erro: 'Preencha todos os campos!' });
-  }
+  if (!nome || !login || !senha || !perfil) return res.status(400).json({ erro: 'Preencha todos os campos!' });
 
   const hash = hashSenha(senha);
-
   db.run(
     `INSERT INTO usuarios (nome,login,senha_hash,perfil) VALUES (?,?,?,?)`,
     [nome, login, hash, perfil],
     function (err) {
       if (err) {
-        if (err.message.includes('UNIQUE')) {
-          return res.status(409).json({ erro: 'Login já cadastrado!' });
-        }
+        if (err.message.includes('UNIQUE')) return res.status(409).json({ erro: 'Login já cadastrado!' });
         return res.status(500).json({ erro: err.message });
       }
-
       res.json({ id: this.lastID, mensagem: 'Usuário cadastrado!' });
     }
   );
@@ -214,7 +207,6 @@ app.post('/usuarios', (req, res) => {
 
 app.put('/usuarios/:id', (req, res) => {
   const { nome, login, senha, perfil, status } = req.body;
-
   if (senha) {
     const hash = hashSenha(senha);
     db.run(
@@ -244,6 +236,7 @@ app.delete('/usuarios/:id', (req, res) => {
   });
 });
 
+// ─── SEPARADORES ──────────────────────────────────────────────────────────────
 app.get('/separadores', (req, res) => {
   db.all('SELECT * FROM separadores ORDER BY nome', [], (err, rows) => {
     if (err) return res.status(500).json({ erro: err.message });
@@ -272,15 +265,12 @@ app.get('/separadores/:id', (req, res) => {
 
 app.post('/separadores', (req, res) => {
   const { nome, matricula, turno, usuario_id } = req.body;
-
   db.run(
     'INSERT INTO separadores (nome,matricula,turno,usuario_id) VALUES (?,?,?,?)',
     [nome, matricula, turno || 'Manhã', usuario_id || null],
     function (err) {
       if (err) {
-        if (err.message.includes('UNIQUE')) {
-          return res.status(409).json({ erro: 'Matrícula já cadastrada!' });
-        }
+        if (err.message.includes('UNIQUE')) return res.status(409).json({ erro: 'Matrícula já cadastrada!' });
         return res.status(500).json({ erro: err.message });
       }
       res.json({ id: this.lastID, mensagem: 'Separador cadastrado!' });
@@ -290,7 +280,6 @@ app.post('/separadores', (req, res) => {
 
 app.put('/separadores/:id', (req, res) => {
   const { nome, matricula, turno, status, usuario_id } = req.body;
-
   db.run(
     'UPDATE separadores SET nome=?,matricula=?,turno=?,status=?,usuario_id=? WHERE id=?',
     [nome, matricula, turno, status, usuario_id || null, req.params.id],
@@ -308,6 +297,7 @@ app.delete('/separadores/:id', (req, res) => {
   });
 });
 
+// ─── PEDIDOS ──────────────────────────────────────────────────────────────────
 app.get('/pedidos', (req, res) => {
   const { separador_id, status, data, numero_pedido } = req.query;
   let query = `SELECT p.*, s.nome as separador_nome
@@ -316,29 +306,33 @@ app.get('/pedidos', (req, res) => {
                WHERE 1=1`;
   const params = [];
 
-  if (separador_id) {
-    query += ' AND p.separador_id=?';
-    params.push(separador_id);
-  }
-  if (status) {
-    query += ' AND p.status=?';
-    params.push(status);
-  }
-  if (data) {
-    query += ' AND p.data_pedido=?';
-    params.push(data);
-  }
-  if (numero_pedido) {
-    query += ' AND p.numero_pedido=?';
-    params.push(numero_pedido);
-  }
+  if (separador_id) { query += ' AND p.separador_id=?'; params.push(separador_id); }
+  if (status) { query += ' AND p.status=?'; params.push(status); }
+  if (data) { query += ' AND p.data_pedido=?'; params.push(data); }
+  if (numero_pedido) { query += ' AND p.numero_pedido=?'; params.push(numero_pedido); }
 
-  query += ' ORDER BY p.data_pedido DESC, p.hora_pedido DESC';
+  query += ' ORDER BY p.data_criacao DESC';
 
   db.all(query, params, (err, rows) => {
     if (err) return res.status(500).json({ erro: err.message });
     res.json(rows);
   });
+});
+
+// Fila pública de pedidos pendentes para separadores
+app.get('/pedidos/fila', (req, res) => {
+  db.all(
+    `SELECT p.*, s.nome as separador_nome
+     FROM pedidos p
+     LEFT JOIN separadores s ON p.separador_id=s.id
+     WHERE p.status='pendente'
+     ORDER BY p.data_criacao ASC`,
+    [],
+    (err, rows) => {
+      if (err) return res.status(500).json({ erro: err.message });
+      res.json(rows);
+    }
+  );
 });
 
 app.post('/pedidos', (req, res) => {
@@ -351,9 +345,7 @@ app.post('/pedidos', (req, res) => {
     [numero_pedido, separador_id || null, status || 'pendente', itens || 0, rua || '', hoje, hora],
     function (err) {
       if (err) {
-        if (err.message.includes('UNIQUE')) {
-          return res.status(409).json({ erro: 'Pedido já cadastrado!' });
-        }
+        if (err.message.includes('UNIQUE')) return res.status(409).json({ erro: 'Pedido já cadastrado!' });
         return res.status(500).json({ erro: err.message });
       }
       res.json({ id: this.lastID, mensagem: 'Pedido cadastrado!' });
@@ -363,7 +355,6 @@ app.post('/pedidos', (req, res) => {
 
 app.put('/pedidos/:id/status', (req, res) => {
   const { status } = req.body;
-
   db.run('UPDATE pedidos SET status=? WHERE id=?', [status, req.params.id], err => {
     if (err) return res.status(500).json({ erro: err.message });
     res.json({ mensagem: 'Status atualizado!' });
@@ -372,7 +363,6 @@ app.put('/pedidos/:id/status', (req, res) => {
 
 app.put('/pedidos/:id/separador', (req, res) => {
   const { separador_id } = req.body;
-
   db.run('UPDATE pedidos SET separador_id=? WHERE id=?', [separador_id, req.params.id], err => {
     if (err) return res.status(500).json({ erro: err.message });
     res.json({ mensagem: 'Separador atribuído!' });
@@ -381,10 +371,7 @@ app.put('/pedidos/:id/separador', (req, res) => {
 
 app.post('/pedidos/bipar', (req, res) => {
   const { numero_pedido, separador_id } = req.body;
-
-  if (!numero_pedido || !separador_id) {
-    return res.status(400).json({ erro: 'Dados incompletos!' });
-  }
+  if (!numero_pedido || !separador_id) return res.status(400).json({ erro: 'Dados incompletos!' });
 
   db.get('SELECT * FROM pedidos WHERE numero_pedido=?', [numero_pedido], (err, pedido) => {
     if (err) return res.status(500).json({ erro: err.message });
@@ -419,7 +406,6 @@ app.post('/pedidos/bipar', (req, res) => {
         if (this.changes === 0) {
           return res.status(409).json({ erro: 'Pedido acabou de ser pego por outro operador!' });
         }
-
         res.json({ mensagem: 'Pedido atribuído!', pedido_id: pedido.id, status: 'separando' });
       }
     );
@@ -447,15 +433,11 @@ app.put('/itens/:id/verificar', (req, res) => {
   const data = new Date().toISOString().split('T')[0];
 
   db.get(
-    `SELECT i.*, p.numero_pedido
-     FROM itens_pedido i
-     JOIN pedidos p ON i.pedido_id=p.id
-     WHERE i.id=?`,
+    `SELECT i.*, p.numero_pedido FROM itens_pedido i
+     JOIN pedidos p ON i.pedido_id=p.id WHERE i.id=?`,
     [req.params.id],
     (err, item) => {
-      if (err || !item) {
-        return res.status(500).json({ erro: err?.message || 'Item não encontrado' });
-      }
+      if (err || !item) return res.status(500).json({ erro: err?.message || 'Item não encontrado' });
 
       const obsTexto = obs || '';
       const qtdFaltou = qtd_falta || 0;
@@ -490,21 +472,13 @@ app.put('/itens/:id/verificar', (req, res) => {
 
                 db.run(
                   `INSERT INTO avisos_repositor
-                  (item_id,pedido_id,numero_pedido,separador_id,separador_nome,codigo,descricao,endereco,quantidade,obs,status,hora_aviso,data_aviso)
-                  VALUES (?,?,?,?,?,?,?,?,?,?,'pendente',?,?)`,
+                   (item_id,pedido_id,numero_pedido,separador_id,separador_nome,codigo,descricao,endereco,quantidade,obs,status,hora_aviso,data_aviso)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,'pendente',?,?)`,
                   [
-                    item.id,
-                    item.pedido_id,
-                    item.numero_pedido,
-                    separador_id,
-                    separador_nome,
-                    item.codigo,
-                    item.descricao,
-                    item.endereco,
-                    qtdAviso,
-                    obsAviso,
-                    hora,
-                    data
+                    item.id, item.pedido_id, item.numero_pedido,
+                    separador_id, separador_nome,
+                    item.codigo, item.descricao, item.endereco,
+                    qtdAviso, obsAviso, hora, data
                   ],
                   err4 => {
                     if (err4) return res.status(500).json({ erro: err4.message });
@@ -528,7 +502,6 @@ app.put('/pedidos/:id/concluir', (req, res) => {
     [req.params.id],
     (err, pendentes) => {
       if (err) return res.status(500).json({ erro: err.message });
-
       if (pendentes.length > 0) {
         return res.status(400).json({ erro: `Ainda há ${pendentes.length} item(s) não verificado(s)!` });
       }
@@ -538,7 +511,6 @@ app.put('/pedidos/:id/concluir', (req, res) => {
         [req.params.id],
         (err2, avisosPendentes) => {
           if (err2) return res.status(500).json({ erro: err2.message });
-
           if (avisosPendentes.length > 0) {
             return res.status(400).json({
               erro: `Aguardando repositor resolver ${avisosPendentes.length} item(s)!`,
@@ -556,23 +528,14 @@ app.put('/pedidos/:id/concluir', (req, res) => {
   );
 });
 
+// ─── REPOSITOR ────────────────────────────────────────────────────────────────
 app.get('/repositor/avisos', (req, res) => {
   const { status, data } = req.query;
   let query = 'SELECT * FROM avisos_repositor WHERE 1=1';
   const params = [];
-
-  if (status) {
-    query += ' AND status=?';
-    params.push(status);
-  }
-
-  if (data) {
-    query += ' AND data_aviso=?';
-    params.push(data);
-  }
-
+  if (status) { query += ' AND status=?'; params.push(status); }
+  if (data) { query += ' AND data_aviso=?'; params.push(data); }
   query += ' ORDER BY id DESC';
-
   db.all(query, params, (err, rows) => {
     if (err) return res.status(500).json({ erro: err.message });
     res.json(rows);
@@ -581,7 +544,6 @@ app.get('/repositor/avisos', (req, res) => {
 
 app.put('/repositor/avisos/:id/reposto', (req, res) => {
   const hora = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-
   db.run(
     'UPDATE avisos_repositor SET status="reposto",hora_reposto=? WHERE id=?',
     [hora, req.params.id],
@@ -594,7 +556,6 @@ app.put('/repositor/avisos/:id/reposto', (req, res) => {
 
 app.put('/repositor/avisos/:id/nao_encontrado', (req, res) => {
   const hora = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-
   db.run(
     'UPDATE avisos_repositor SET status="nao_encontrado",hora_reposto=? WHERE id=?',
     [hora, req.params.id],
@@ -605,42 +566,56 @@ app.put('/repositor/avisos/:id/nao_encontrado', (req, res) => {
   );
 });
 
+// ─── IMPORTAR PLANILHA ────────────────────────────────────────────────────────
+// Colunas aceitas: Pedido, Codigo, Descricao, Qtde, Endereço
 app.post('/importar', (req, res) => {
   const { linhas } = req.body;
-
-  if (!linhas || !linhas.length) {
-    return res.status(400).json({ erro: 'Nenhuma linha enviada!' });
-  }
+  if (!linhas || !linhas.length) return res.status(400).json({ erro: 'Nenhuma linha enviada!' });
 
   const hoje = new Date().toISOString().split('T')[0];
   const hora = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
   let importados = 0;
   let ignorados = 0;
   let erros = 0;
   const pedidosMap = {};
 
   linhas.forEach(l => {
-    const num = String(l.numero_pedido || '').trim();
+    const num = String(
+      l.Pedido || l.pedido || l.numero_pedido || l.PEDIDO || ''
+    ).trim();
     if (!num) return;
+
     if (!pedidosMap[num]) pedidosMap[num] = [];
-    pedidosMap[num].push(l);
+
+    pedidosMap[num].push({
+      codigo:    String(l.Codigo    || l.codigo    || l.CODIGO    || '').trim(),
+      descricao: String(l.Descricao || l.descricao || l.DESCRICAO || '').trim(),
+      quantidade: parseInt(l.Qtde  || l.qtde      || l.quantidade || l.QTDE || 1) || 1,
+      endereco:  String(l['Endereço'] || l.Endereco || l.endereco || l.ENDERECO || '').trim()
+    });
   });
 
   const numeros = Object.keys(pedidosMap);
-  let processados = 0;
 
   if (numeros.length === 0) {
-    return res.status(400).json({ erro: 'Nenhum pedido válido encontrado!' });
+    return res.status(400).json({
+      erro: 'Nenhum pedido válido encontrado! Verifique se a planilha tem a coluna "Pedido".'
+    });
   }
+
+  let processados = 0;
 
   numeros.forEach(numero => {
     const itens = pedidosMap[numero];
 
     db.run(
-      'INSERT OR IGNORE INTO pedidos (numero_pedido,status,itens,rua,data_pedido,hora_pedido) VALUES (?,"pendente",?,?,?,?)',
+      `INSERT OR IGNORE INTO pedidos
+       (numero_pedido, status, itens, rua, data_pedido, hora_pedido)
+       VALUES (?, 'pendente', ?, ?, ?, ?)`,
       [numero, itens.length, itens[0]?.endereco || '', hoje, hora],
-      function (err) {
-        if (err) erros++;
+      function (errIns) {
+        if (errIns) erros++;
 
         db.get('SELECT id FROM pedidos WHERE numero_pedido=?', [numero], (err2, pedido) => {
           if (err2 || !pedido) {
@@ -654,17 +629,12 @@ app.post('/importar', (req, res) => {
           else ignorados++;
 
           const stmt = db.prepare(
-            'INSERT OR IGNORE INTO itens_pedido (pedido_id,codigo,descricao,endereco,quantidade) VALUES (?,?,?,?,?)'
+            `INSERT INTO itens_pedido (pedido_id, codigo, descricao, endereco, quantidade)
+             VALUES (?, ?, ?, ?, ?)`
           );
 
           itens.forEach(item => {
-            stmt.run([
-              pedido.id,
-              String(item.codigo || '').trim(),
-              String(item.descricao || '').trim(),
-              String(item.endereco || '').trim(),
-              parseInt(item.quantidade) || 1
-            ]);
+            stmt.run([pedido.id, item.codigo, item.descricao, item.endereco, item.quantidade]);
           });
 
           stmt.finalize(() => {
@@ -689,6 +659,20 @@ app.post('/importar', (req, res) => {
   }
 });
 
+// ─── LIMPAR PEDIDOS CONCLUÍDOS (supervisor) ───────────────────────────────────
+app.delete('/pedidos/limpar', (req, res) => {
+  const { status } = req.query;
+  let sql = 'DELETE FROM pedidos WHERE 1=1';
+  const params = [];
+  if (status) { sql += ' AND status=?'; params.push(status); }
+
+  db.run(sql, params, function (err) {
+    if (err) return res.status(500).json({ erro: err.message });
+    res.json({ mensagem: `${this.changes} pedido(s) removido(s)!` });
+  });
+});
+
+// ─── PRODUTIVIDADE ────────────────────────────────────────────────────────────
 app.get('/produtividade', (req, res) => {
   const { separador_id } = req.query;
   let query = `
@@ -702,12 +686,7 @@ app.get('/produtividade', (req, res) => {
     WHERE 1=1
   `;
   const params = [];
-
-  if (separador_id) {
-    query += ' AND s.id=?';
-    params.push(separador_id);
-  }
-
+  if (separador_id) { query += ' AND s.id=?'; params.push(separador_id); }
   query += ' GROUP BY s.id ORDER BY s.nome';
 
   db.all(query, params, (err, rows) => {
@@ -718,4 +697,5 @@ app.get('/produtividade', (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`Servidor WMS rodando na porta ${PORT}`);
+  console.log(`Banco de dados: ${DB_PATH}`);
 });

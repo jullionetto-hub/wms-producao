@@ -212,7 +212,6 @@
         <span class="perfil-icone">🔧</span>REPOSITOR
       </button>
     </div>
-
     <div class="login-campo">
       <label>LOGIN / USUÁRIO</label>
       <input type="text" id="login-usuario" placeholder="Ex: joao.silva" autocomplete="username"/>
@@ -375,7 +374,8 @@
                 ondrop="handleDrop(event)">
                 <div class="upload-icon">📄</div>
                 <div class="upload-titulo">Clique ou arraste o arquivo</div>
-                <div class="upload-sub">Excel (.xlsx) ou CSV (.csv)<br><b>Colunas: numero_pedido, codigo, descricao, endereco, quantidade</b></div>
+                <!-- ✅ CORRIGIDO: colunas corretas da planilha -->
+                <div class="upload-sub">Excel (.xlsx) ou CSV (.csv)<br><b>Colunas: Pedido, Codigo, Descricao, Qtde, Endereço</b></div>
                 <button class="btn btn-primary" onclick="event.stopPropagation();document.getElementById('input-arquivo').click()">📂 Selecionar</button>
               </div>
               <input type="file" id="input-arquivo" accept=".xlsx,.xls,.csv" onchange="processarArquivo(event)"/>
@@ -431,12 +431,13 @@
           </div>
         </div>
         <div class="card" style="margin-top:14px">
-          <div class="card-header">📌 FILA GERAL
+          <div class="card-header">📌 FILA DE PEDIDOS
             <div>
               <span id="badge-meus"  style="background:#15803d;color:white;border-radius:20px;padding:1px 8px;font-size:10px;font-weight:700;margin-right:4px">0 meus</span>
               <span id="badge-fila"  style="background:#2563eb;color:white;border-radius:20px;padding:1px 8px;font-size:10px;font-weight:700">0 total</span>
             </div>
           </div>
+          <!-- ✅ FILA: mostra só pendentes e separando, concluídos somem -->
           <div class="fila-tabela"><table>
             <thead><tr><th>Nº PEDIDO</th><th>ITENS</th><th>STATUS</th><th>SITUAÇÃO</th></tr></thead>
             <tbody id="tbody-fila"></tbody>
@@ -579,8 +580,10 @@ function iniciarPorPerfil(){
   if(usuarioAtual.perfil==='separador'){
     document.getElementById('pag-separacao').classList.add('ativa');
     if(separadorAtual) carregarContadoresSep();
-    setInterval(()=>{carregarFila();if(pedidoAtualId)carregarChecklist();},30000);
+    // ✅ Atualiza fila a cada 15s automaticamente
+    setInterval(()=>{carregarFila();if(pedidoAtualId)carregarChecklist();},15000);
     setTimeout(()=>document.getElementById('input-pedido').focus(),300);
+    carregarFila();
   }
   if(usuarioAtual.perfil==='repositor'){
     document.getElementById('pag-reposicao').classList.add('ativa');
@@ -828,6 +831,7 @@ async function excluirSep(id,nome){
 }
 
 // ══ IMPORTAÇÃO ══
+// ✅ CORRIGIDO: parser aceita colunas Pedido, Codigo, Descricao, Qtde, Endereço
 function handleDrop(e){
   e.preventDefault();document.getElementById('upload-area').classList.remove('drag');
   const f=e.dataTransfer.files[0];if(f)processarArquivoFile(f);
@@ -844,26 +848,47 @@ function processarArquivoFile(file){
       const ws=wb.Sheets[wb.SheetNames[0]];
       const rows=XLSX.utils.sheet_to_json(ws,{defval:'',header:1});
       if(!rows.length)throw new Error('Arquivo vazio');
-      const cab=rows[0].map(c=>String(c).toLowerCase().trim());
-      const temCab=cab.some(c=>c.includes('numero')||c.includes('pedido')||c.includes('codigo'));
-      const ini=temCab?1:0;
-      const iNum =temCab?cab.findIndex(c=>c.includes('numero')||c.includes('pedido')):0;
-      const iCod =temCab?cab.findIndex(c=>c.includes('cod')):1;
-      const iDesc=temCab?cab.findIndex(c=>c.includes('desc')):2;
-      const iEnd =temCab?cab.findIndex(c=>c.includes('end')||c.includes('rua')):3;
-      const iQtd =temCab?cab.findIndex(c=>c.includes('qtd')||c.includes('quant')):4;
+
+      // ✅ Detecta cabeçalho de forma flexível
+      // Aceita: Pedido/pedido/numero_pedido, Codigo/codigo/cod, Descricao/descricao/desc,
+      //         Qtde/qtd/quantidade, Endereço/endereco/end
+      const cab = rows[0].map(c=>String(c).toLowerCase().trim()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g,'')); // remove acentos para comparar
+
+      const temCab = cab.some(c=>
+        c.includes('pedido')||c.includes('numero')||c.includes('cod')||c.includes('desc')
+      );
+
+      const ini = temCab ? 1 : 0;
+
+      function findCol(keywords){
+        const idx = cab.findIndex(c=>keywords.some(k=>c.includes(k)));
+        return idx >= 0 ? idx : -1;
+      }
+
+      // ✅ Mapeamento: Pedido→numero_pedido, Codigo→codigo, Descricao→descricao, Qtde→quantidade, Endereço→endereco
+      const iNum  = temCab ? findCol(['pedido','numero']) : 0;
+      const iCod  = temCab ? findCol(['cod'])             : 1;
+      const iDesc = temCab ? findCol(['desc'])            : 2;
+      const iQtd  = temCab ? findCol(['qtde','qtd','quant']) : 3;
+      const iEnd  = temCab ? findCol(['end','rua','local'])  : 4;
+
       const dados=[];
       for(let i=ini;i<rows.length;i++){
         const r=rows[i];
         const num=String(r[iNum>=0?iNum:0]||'').trim();
-        if(!num)continue;
-        dados.push({numero_pedido:num,
-          codigo:   String(r[iCod >=0?iCod :1]||'').trim(),
-          descricao:String(r[iDesc>=0?iDesc:2]||'').trim(),
-          endereco: String(r[iEnd >=0?iEnd :3]||'').trim(),
-          quantidade:parseInt(r[iQtd>=0?iQtd:4])||1});
+        if(!num||num==='-')continue;
+        dados.push({
+          numero_pedido: num,
+          codigo:        String(r[iCod >=0?iCod :1]||'').trim(),
+          descricao:     String(r[iDesc>=0?iDesc:2]||'').trim(),
+          quantidade:    parseInt(r[iQtd >=0?iQtd :3])||1,
+          endereco:      String(r[iEnd >=0?iEnd :4]||'').trim()
+        });
       }
-      if(!dados.length){mostrarStatus('❌ Nenhuma linha encontrada!','erro');return}
+
+      if(!dados.length){mostrarStatus('❌ Nenhuma linha encontrada! Verifique se as colunas estão corretas.','erro');return}
+
       pedidosImportar=dados;
       const totalP=new Set(dados.map(d=>d.numero_pedido)).size;
       mostrarStatus(`✅ ${dados.length} linha(s) em ${totalP} pedido(s) — clique Importar`,'sucesso');
@@ -1082,7 +1107,9 @@ async function concluirPedido(){
     document.getElementById('input-pedido').value='';
     document.getElementById('status-atual').textContent='';
     pedidoAtualId=null;pedidoAtualNum=null;itensAtuais=[];
-    carregarContadoresSep();carregarFila();
+    carregarContadoresSep();
+    // ✅ Atualiza fila imediatamente após concluir — pedido some da lista
+    carregarFila();
     setTimeout(()=>document.getElementById('input-pedido').focus(),300);
   }catch(e){toast('Erro ao concluir!','erro')}
 }
@@ -1100,17 +1127,19 @@ async function carregarContadoresSep(){
   }catch(e){}
 }
 
+// ✅ CORRIGIDO: fila mostra apenas pedidos NÃO concluídos (pendente + separando)
 async function carregarFila(){
   if(!separadorAtual)return;
   try{
     const res=await fetch(`${API}/pedidos`);
     const todos=await res.json();
-    const ativos=todos.filter(p=>p.status!=='concluido');
-    const meus=ativos.filter(p=>p.separador_id===separadorAtual.id);
+    // Filtra: apenas pendente e separando (concluídos NÃO aparecem)
+    const ativos=todos.filter(p=>p.status==='pendente'||p.status==='separando');
+    const meus  =ativos.filter(p=>p.separador_id===separadorAtual.id);
     document.getElementById('badge-fila').textContent=`${ativos.length} total`;
     document.getElementById('badge-meus').textContent=`${meus.length} meus`;
     const html=!ativos.length
-      ?'<tr><td colspan="4" style="color:#64748b;text-align:center;padding:20px">Nenhum pedido na fila</td></tr>'
+      ?'<tr><td colspan="4" style="color:#64748b;text-align:center;padding:20px">✅ Nenhum pedido na fila</td></tr>'
       :ativos.map(p=>{
         const eMeu=p.separador_id===separadorAtual.id;
         const ocup=p.separador_id&&p.separador_id!==separadorAtual.id;
