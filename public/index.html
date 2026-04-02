@@ -1213,23 +1213,52 @@ function processarArquivoFile(file) {
   reader.readAsArrayBuffer(file);
 }
 
-async function confirmarImportacao() {
-  if (!pedidosImportar.length) return;
-  mostrarStatus('⏳ Importando...','carregando');
+() {if (!pedidosImportar.length) return;
+  mostrarStatus('⏳ Importando...', 'carregando');
+  
+  const LOTE = 50;
+  let totalImportados = 0;
+  let totalIgnorados  = 0;
+
   try {
-    const res  = await fetch(`${API}/importar`, { credentials:'include', method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({linhas:pedidosImportar}) });
-    const data = await res.json();
-    if (data.erro) { mostrarStatus(`❌ ${data.erro}`,'erro'); return; }
-    const reg = { data:new Date().toLocaleDateString('pt-BR'), hora:new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}), total:data.total, ok:data.importados, erro:data.ignorados };
+    for (let i = 0; i < pedidosImportar.length; i += LOTE) {
+      const lote = pedidosImportar.slice(i, i + LOTE);
+      const progresso = Math.round(((i + lote.length) / pedidosImportar.length) * 100);
+      mostrarStatus(`⏳ Importando... ${progresso}%`, 'carregando');
+
+      const res  = await fetch(`${API}/importar`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ linhas: lote })
+      });
+      const data = await res.json();
+      if (data.erro) { mostrarStatus(`❌ ${data.erro}`, 'erro'); return; }
+
+      totalImportados += data.importados || 0;
+      totalIgnorados  += data.ignorados  || 0;
+    }
+
+    const reg = {
+      data: new Date().toLocaleDateString('pt-BR'),
+      hora: new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' }),
+      total: pedidosImportar.length,
+      ok:    totalImportados,
+      erro:  totalIgnorados
+    };
     historicoImportacoes.unshift(reg);
-    if (historicoImportacoes.length > 20) historicoImportacoes = historicoImportacoes.slice(0,20);
+    if (historicoImportacoes.length > 20) historicoImportacoes = historicoImportacoes.slice(0, 20);
     localStorage.setItem('historico_importacoes', JSON.stringify(historicoImportacoes));
     renderHistorico();
-    mostrarStatus(`✅ ${data.importados} pedido(s) importado(s) para a fila!${data.ignorados>0?` ⚠️ ${data.ignorados} já existiam.`:''}`,'sucesso');
+
+    mostrarStatus(`✅ ${totalImportados} pedido(s) importado(s)!${totalIgnorados > 0 ? ` ⚠️ ${totalIgnorados} já existiam.` : ''}`, 'sucesso');
     document.getElementById('preview-importacao').style.display = 'none';
-    pedidosImportar = []; document.getElementById('input-arquivo').value = '';
-    toast(`${data.importados} pedidos na fila!`,'sucesso');
-  } catch(e) { mostrarStatus('❌ Erro na importação!','erro'); }
+    pedidosImportar = [];
+    document.getElementById('input-arquivo').value = '';
+    toast(`${totalImportados} pedidos na fila!`, 'sucesso');
+  } catch(e) {
+    mostrarStatus('❌ Erro na importação!', 'erro');
+  }
 }
 
 function renderHistorico() {
