@@ -1213,7 +1213,8 @@ function processarArquivoFile(file) {
   reader.readAsArrayBuffer(file);
 }
 
-() {if (!pedidosImportar.length) return;
+() async function confirmarImportacao() {
+  if (!pedidosImportar.length) return;
   mostrarStatus('⏳ Importando...', 'carregando');
   
   const LOTE = 50;
