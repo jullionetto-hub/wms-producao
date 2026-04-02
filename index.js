@@ -8,15 +8,31 @@ const session = require('express-session');
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors({ credentials:true, origin:true }));
+// CORS com origem explícita — necessário para cookies de sessão funcionarem
+app.use(cors({
+  credentials: true,
+  origin: function(origin, callback) {
+    // Aceita localhost e qualquer IP local
+    callback(null, origin || 'http://localhost:3000');
+  }
+}));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Sessão persistente com cookie correto para HTTP local
+const SQLiteStore = require('connect-sqlite3')(session);
 
 app.use(session({
   secret: 'wms_session_secret_2026',
   resave: false,
   saveUninitialized: false,
-  cookie: { maxAge: 8 * 60 * 60 * 1000 } // 8 horas
+  store: new SQLiteStore({ db: 'sessions.db', dir: __dirname }),
+  cookie: {
+    maxAge:   8 * 60 * 60 * 1000, // 8 horas
+    httpOnly: true,
+    secure:   false,               // false para HTTP local
+    sameSite: 'lax'
+  }
 }));
 
 app.get('/', (req, res) => {

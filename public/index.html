@@ -31,26 +31,6 @@
   --r-sm:      9px;
 }
 
-/* ══════════════════════════════════════════
-   VARIÁVEIS — TEMA ESCURO (separador/repositor)
-══════════════════════════════════════════ */
-body.dark {
-  --bg:        #0B1520;
-  --surface:   #111E2E;
-  --surface2:  #152336;
-  --border:    #1C3050;
-  --accent:    #3B82F6;
-  --accent2:   #2563EB;
-  --green:     #22C55E;
-  --red:       #EF4444;
-  --amber:     #F59E0B;
-  --indigo:    #818CF8;
-  --text:      #E2E8F0;
-  --text2:     #94A3B8;
-  --text3:     #3D5A80;
-  --sh:        0 2px 8px rgba(0,0,0,.4),0 8px 32px rgba(0,0,0,.25);
-  --sh-lg:     0 8px 40px rgba(0,0,0,.5);
-}
 
 /* ══════════════════════════════════════════
    BASE
@@ -198,14 +178,7 @@ td{padding:10px 13px;vertical-align:middle;color:var(--text2)}
 .pill.supervisor{background:#F5F3FF;color:#6366F1;border:1px solid #DDD6FE}
 .pill.repositor {background:#FFFBEB;color:#D97706;border:1px solid #FDE68A}
 .pill.separador {background:#EFF6FF;color:#2563EB;border:1px solid #BFDBFE}
-/* Pills no dark */
-body.dark .pill.pendente  {background:#0D1E35;color:#60A5FA;border-color:#1C3050}
-body.dark .pill.separando {background:#0D1E35;color:#93C5FD;border-color:#1E4070}
-body.dark .pill.concluido {background:#052E16;color:#4ADE80;border-color:#14532D}
-body.dark .pill.falta     {background:#2D0F0F;color:#F87171;border-color:#7F1D1D}
-body.dark .pill.reposto   {background:#052E16;color:#4ADE80;border-color:#14532D}
-body.dark .pill.ativo     {background:#052E16;color:#4ADE80;border-color:#14532D}
-body.dark .pill.inativo   {background:#2D0F0F;color:#F87171;border-color:#7F1D1D}
+
 
 /* ══════════════════════════════════════════
    TOAST
@@ -217,10 +190,7 @@ body.dark .pill.inativo   {background:#2D0F0F;color:#F87171;border-color:#7F1D1D
 .toast.sucesso{background:#F0FDF4;color:#15803D;border:1px solid #BBF7D0}
 .toast.erro   {background:#FEF2F2;color:#DC2626;border:1px solid #FECACA}
 .toast.aviso  {background:#FFFBEB;color:#D97706;border:1px solid #FDE68A}
-body.dark .toast.info   {background:#0D1E35;color:#60A5FA;border-color:#1C3050}
-body.dark .toast.sucesso{background:#052E16;color:#4ADE80;border-color:#14532D}
-body.dark .toast.erro   {background:#2D0F0F;color:#F87171;border-color:#7F1D1D}
-body.dark .toast.aviso  {background:#2D1A05;color:#F59E0B;border-color:#78350F}
+
 
 /* ══════════════════════════════════════════
    PROD BAR / TIMELINE
@@ -373,9 +343,7 @@ body.dark .item-card.parcial    .item-ic{background:#78350F}
 .btn-item.parc  {border-color:#FDE68A;color:var(--amber);font-size:13px;font-weight:700}.btn-item.parc:hover:not(:disabled){background:var(--amber);color:#fff}
 .btn-item.nok   {border-color:#FECACA;color:var(--red)}.btn-item.nok:hover:not(:disabled)   {background:var(--red);color:#fff;border-color:var(--red)}
 .btn-item:disabled{opacity:.3;cursor:not-allowed}
-body.dark .btn-item.ok  {border-color:#14532D;color:#4ADE80}
-body.dark .btn-item.parc{border-color:#78350F;color:#F59E0B}
-body.dark .btn-item.nok {border-color:#7F1D1D;color:#F87171}
+
 
 .btn-acao{flex:1;padding:13px;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;min-width:130px;font-family:'DM Sans',sans-serif}
 .btn-acao.concluir{background:var(--green);color:#fff}.btn-acao.concluir:hover:not(:disabled){filter:brightness(1.1)}
@@ -393,7 +361,7 @@ body.dark .btn-item.nok {border-color:#7F1D1D;color:#F87171}
 .fila-card:hover,.fila-card:active{border-color:var(--accent);background:var(--surface2)}
 .fila-card.meu{border-color:var(--accent);background:rgba(37,99,235,.05)}
 .fila-card.ocupado{opacity:.55;cursor:not-allowed}
-body.dark .fila-card.meu{background:rgba(59,130,246,.08);border-color:var(--accent)}
+
 .fila-num{font-family:'Space Mono',monospace;font-size:16px;font-weight:700;color:var(--text);flex:1}
 .fila-card.meu .fila-num{color:var(--accent)}
 .fila-meta{font-size:11px;color:var(--text3);text-align:right}
@@ -841,7 +809,7 @@ async function fazerLogin() {
   if (!perfilSelecionado) { erroEl.textContent = 'Selecione um perfil!'; erroEl.style.display = 'block'; return; }
   if (!login || !senha)   { erroEl.textContent = 'Preencha usuário e senha!'; erroEl.style.display = 'block'; return; }
   try {
-    const res  = await fetch(`${API}/auth/login`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({login,senha,perfil:perfilSelecionado}) });
+    const res  = await fetch(`${API}/auth/login`, { credentials:'include', method:'POST', credentials:'include', headers:{'Content-Type':'application/json'}, body:JSON.stringify({login,senha,perfil:perfilSelecionado}) });
     const data = await res.json();
     if (!res.ok) { erroEl.textContent = data.erro || 'Erro ao entrar!'; erroEl.style.display = 'block'; return; }
     usuarioAtual   = data.usuario;
@@ -857,10 +825,7 @@ function ativarApp() {
   document.getElementById('hdr-nome').textContent   = usuarioAtual.nome;
   document.getElementById('hdr-perfil').textContent = usuarioAtual.perfil.toUpperCase();
 
-  // Tema escuro para separador e repositor
-  if (usuarioAtual.perfil === 'separador' || usuarioAtual.perfil === 'repositor') {
-    document.body.classList.add('dark');
-  }
+  // Interface unificada — mesmo tema claro para todos os perfis
 
   // Mobile separador → ativa interface de tabs
   if (usuarioAtual.perfil === 'separador' && isMobile()) {
@@ -891,9 +856,9 @@ function ativarMobileSep() {
 
 function sair() {
   if (!confirm('Deseja sair do sistema?')) return;
-  fetch(`${API}/auth/logout`, { method:'POST' }).catch(()=>{});
+  fetch(`${API}/auth/logout`, { method:'POST', credentials:'include' }).catch(()=>{});
   usuarioAtual = null; separadorAtual = null; pedidoAtualId = null; pedidoAtualNum = null; itensAtuais = [];
-  document.body.classList.remove('dark','sep-mobile');
+  document.body.classList.remove('sep-mobile');
   document.getElementById('app').style.display     = 'none';
   document.getElementById('sep-mobile-root').style.display = 'none';
   document.getElementById('sep-tabbar').style.display      = 'none';
@@ -929,6 +894,7 @@ function montarSidebar() {
       <a class="mi" onclick="irPara('pedidos',this)"><span class="mi-ic">📋</span>Pedidos</a>
       <a class="mi" onclick="irPara('cadastros',this)"><span class="mi-ic">⚙️</span>Cadastros</a>
       <div class="mg">OPERAÇÃO</div>
+      <a class="mi" onclick="irPara('separacao',this)"><span class="mi-ic">📦</span>Separação</a>
       <a class="mi" onclick="irPara('reposicao',this)"><span class="mi-ic">🔧</span>Reposição <span class="mbadge" id="menu-badge-rep" style="display:none">0</span></a>`,
     separador: `
       <div class="mg">SEPARAÇÃO</div>
@@ -980,7 +946,7 @@ function iniciarPorPerfil() {
 
 async function atualizarBadgeRep() {
   try {
-    const res = await fetch(`${API}/repositor/avisos?status=pendente`);
+    const res = await fetch(`${API}/repositor/avisos?status=pendente`, { credentials:'include' });
     const av  = await res.json();
     const n   = av.length;
     ['menu-badge-rep','dash-repositor'].forEach(id => {
@@ -1015,7 +981,7 @@ async function carregarDashboard() {
 
 async function carregarContadoresGerais() {
   try {
-    const res = await fetch(`${API}/pedidos`);
+    const res = await fetch(`${API}/pedidos`, { credentials:'include' });
     const ps  = await res.json();
     document.getElementById('dash-hoje').textContent      = ps.filter(p=>p.status==='concluido'&&p.data_pedido===hoje).length;
     document.getElementById('dash-separando').textContent = ps.filter(p=>p.status==='separando').length;
@@ -1026,7 +992,7 @@ async function carregarContadoresGerais() {
 async function carregarProdutividade() {
   try {
     const sepId = document.getElementById('filtro-sep-prod').value;
-    const res   = await fetch(`${API}/produtividade${sepId?'?separador_id='+sepId:''}`);
+    const res   = await fetch(`${API}/produtividade${sepId?'?separador_id='+sepId:''}`, { credentials:'include' });
     const dados = await res.json();
     const tbody = document.getElementById('tbody-prod');
     if (!dados.length) { tbody.innerHTML = '<tr><td colspan="6" style="color:var(--text3);text-align:center;padding:20px">Nenhum usuário</td></tr>'; return; }
@@ -1048,7 +1014,7 @@ async function carregarProdutividade() {
 async function carregarTimeline() {
   try {
     const data = document.getElementById('filtro-tl-data').value || hoje;
-    const res  = await fetch(`${API}/pedidos?data=${data}`);
+    const res  = await fetch(`${API}/pedidos?data=${data}`, { credentials:'include' });
     const ps   = await res.json();
     const el   = document.getElementById('tl-lista');
     if (!ps.length) { el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:24px;font-size:13px">Nenhum pedido nesta data</div>'; return; }
@@ -1067,7 +1033,7 @@ async function carregarTimeline() {
 
 async function popularSelects() {
   try {
-    const res   = await fetch(`${API}/usuarios`);
+    const res   = await fetch(`${API}/usuarios`, { credentials:'include' });
     const users = await res.json();
     const seps  = users.filter(u => u.perfil === 'separador');
     todosSeparadores = seps;
@@ -1118,7 +1084,7 @@ async function carregarPedidos() {
 async function atribuirSeparador(pid, sid) {
   if (!sid) return;
   try {
-    await fetch(`${API}/pedidos/${pid}/separador`, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({separador_id:sid}) });
+    await fetch(`${API}/pedidos/${pid}/separador`, { credentials:'include', method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({separador_id:sid}) });
     toast('Usuário atribuído!', 'sucesso');
   } catch(e) { toast('Erro ao atribuir!', 'erro'); }
 }
@@ -1140,7 +1106,7 @@ function exportarExcel() {
 ══════════════════════════════════════════ */
 async function carregarUsuarios() {
   try {
-    const res   = await fetch(`${API}/usuarios`);
+    const res   = await fetch(`${API}/usuarios`, { credentials:'include' });
     const users = await res.json();
     const tbody = document.getElementById('tbody-usr');
     if (!users.length) { tbody.innerHTML = '<tr><td colspan="6" style="color:var(--text3);text-align:center;padding:14px">Nenhum usuário</td></tr>'; return; }
@@ -1170,7 +1136,7 @@ async function cadastrarUsuario() {
   if (!nome||!login||!senha) { toast('Preencha todos os campos!','aviso'); return; }
   if (senha.length < 6)      { toast('Senha mínimo 6 caracteres!','aviso'); return; }
   try {
-    const res  = await fetch(`${API}/usuarios`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({nome,login,senha,perfil,turno}) });
+    const res  = await fetch(`${API}/usuarios`, { credentials:'include', method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({nome,login,senha,perfil,turno}) });
     const data = await res.json();
     if (data.erro) { toast(data.erro,'erro'); return; }
     toast('Usuário cadastrado!','sucesso');
@@ -1183,7 +1149,7 @@ async function cadastrarUsuario() {
 
 async function alterarStatusUsuario(id, novoStatus, nome, login, perfil, turno) {
   try {
-    await fetch(`${API}/usuarios/${id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({nome,login,perfil,turno:turno||'Manhã',status:novoStatus}) });
+    await fetch(`${API}/usuarios/${id}`, { credentials:'include', method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({nome,login,perfil,turno:turno||'Manhã',status:novoStatus}) });
     toast(`Usuário ${novoStatus==='ativo'?'ativado':'desativado'}!`,'sucesso');
     carregarUsuarios();
   } catch(e) { toast('Erro!','erro'); }
@@ -1192,7 +1158,7 @@ async function alterarStatusUsuario(id, novoStatus, nome, login, perfil, turno) 
 async function excluirUsuario(id, nome) {
   if (!confirm(`Excluir "${nome}"?`)) return;
   try {
-    await fetch(`${API}/usuarios/${id}`, { method:'DELETE' });
+    await fetch(`${API}/usuarios/${id}`, { credentials:'include', method:'DELETE' });
     toast('Excluído!','sucesso'); carregarUsuarios();
   } catch(e) { toast('Erro!','erro'); }
 }
@@ -1251,7 +1217,7 @@ async function confirmarImportacao() {
   if (!pedidosImportar.length) return;
   mostrarStatus('⏳ Importando...','carregando');
   try {
-    const res  = await fetch(`${API}/importar`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({linhas:pedidosImportar}) });
+    const res  = await fetch(`${API}/importar`, { credentials:'include', method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({linhas:pedidosImportar}) });
     const data = await res.json();
     if (data.erro) { mostrarStatus(`❌ ${data.erro}`,'erro'); return; }
     const reg = { data:new Date().toLocaleDateString('pt-BR'), hora:new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}), total:data.total, ok:data.importados, erro:data.ignorados };
@@ -1302,7 +1268,7 @@ async function confirmarPedido() {
 async function carregarChecklist() {
   if (!pedidoAtualId) return;
   try {
-    const res = await fetch(`${API}/pedidos/${pedidoAtualId}/itens`);
+    const res = await fetch(`${API}/pedidos/${pedidoAtualId}/itens`, { credentials:'include' });
     itensAtuais = await res.json();
     const wrap = document.getElementById('cl-wrap');
     if (!itensAtuais.length) { wrap.style.display = 'none'; return; }
@@ -1318,7 +1284,7 @@ async function concluirPedido() {
 async function carregarContadoresSep() {
   if (!separadorAtual) return;
   try {
-    const res   = await fetch(`${API}/produtividade?separador_id=${separadorAtual.id}`);
+    const res   = await fetch(`${API}/produtividade?separador_id=${separadorAtual.id}`, { credentials:'include' });
     const dados = await res.json();
     if (dados.length) {
       document.getElementById('sep-cnt-hoje').textContent = dados[0].hoje||0;
@@ -1331,7 +1297,7 @@ async function carregarContadoresSep() {
 async function carregarFila() {
   if (!separadorAtual) return;
   try {
-    const res   = await fetch(`${API}/pedidos`);
+    const res   = await fetch(`${API}/pedidos`, { credentials:'include' });
     const todos = await res.json();
     const ativos = todos.filter(p=>p.status!=='concluido');
     const meus   = ativos.filter(p=>p.separador_id===separadorAtual.id);
@@ -1373,7 +1339,7 @@ async function confirmarPedidoMobile() {
 async function carregarChecklistMobile() {
   if (!pedidoAtualId) return;
   try {
-    const res = await fetch(`${API}/pedidos/${pedidoAtualId}/itens`);
+    const res = await fetch(`${API}/pedidos/${pedidoAtualId}/itens`, { credentials:'include' });
     itensAtuais = await res.json();
     const wrap = document.getElementById('m-cl-wrap');
     if (!itensAtuais.length) { wrap.style.display = 'none'; return; }
@@ -1391,7 +1357,7 @@ async function concluirPedidoMobile() {
 async function carregarFilaMobile() {
   if (!separadorAtual) return;
   try {
-    const res   = await fetch(`${API}/pedidos`);
+    const res   = await fetch(`${API}/pedidos`, { credentials:'include' });
     const todos = await res.json();
     const ativos = todos.filter(p=>p.status!=='concluido');
     const meus   = ativos.filter(p=>p.separador_id===separadorAtual.id);
@@ -1426,7 +1392,7 @@ function selecionarPedidoFilaMobile(num) {
 async function carregarStatsMobile() {
   if (!separadorAtual) return;
   try {
-    const res   = await fetch(`${API}/produtividade?separador_id=${separadorAtual.id}`);
+    const res   = await fetch(`${API}/produtividade?separador_id=${separadorAtual.id}`, { credentials:'include' });
     const dados = await res.json();
     const nomeEl = document.getElementById('m-stat-nome');
     if (nomeEl) nomeEl.textContent = `👤 ${separadorAtual.nome||usuarioAtual.nome}`;
@@ -1443,7 +1409,7 @@ async function carregarStatsMobile() {
 ══════════════════════════════════════════ */
 async function _confirmarPedidoCore(num, inputId, statusId, clWrapId, fnChecklist, fnFila) {
   try {
-    const res  = await fetch(`${API}/pedidos/bipar`, { method:'POST', headers:{'Content-Type':'application/json'},
+    const res  = await fetch(`${API}/pedidos/bipar`, { credentials:'include', method:'POST', headers:{'Content-Type':'application/json'},
       body:JSON.stringify({numero_pedido:num, separador_id:separadorAtual.id}) });
     const data = await res.json();
     if (res.status===404) { toast('❌ Pedido não encontrado!','erro'); document.getElementById(inputId).value=''; return; }
@@ -1462,7 +1428,7 @@ async function _confirmarPedidoCore(num, inputId, statusId, clWrapId, fnChecklis
 async function _concluirCore(prefix, fnChecklist, fnFila, fnStats, inputId, statusId) {
   if (!pedidoAtualId) return;
   try {
-    const res  = await fetch(`${API}/pedidos/${pedidoAtualId}/concluir`, { method:'PUT' });
+    const res  = await fetch(`${API}/pedidos/${pedidoAtualId}/concluir`, { credentials:'include', method:'PUT' });
     const data = await res.json();
     if (data.aguardando) { toast('⏳ Ainda aguardando o repositor!','aviso'); return; }
     if (data.erro)       { toast(`⚠️ ${data.erro}`,'aviso'); return; }
@@ -1588,7 +1554,7 @@ async function verificarItem(itemId, status, obs='', qtdFalta=0, prefix, renderP
   if (!separadorAtual) return;
   try {
     const item = itensAtuais.find(i=>i.id===itemId);
-    await fetch(`${API}/itens/${itemId}/verificar`, { method:'PUT', headers:{'Content-Type':'application/json'},
+    await fetch(`${API}/itens/${itemId}/verificar`, { credentials:'include', method:'PUT', headers:{'Content-Type':'application/json'},
       body:JSON.stringify({ status, obs, qtd_falta:status==='falta'?(item?.quantidade||1):qtdFalta,
         separador_id:separadorAtual.id, separador_nome:separadorAtual.nome }) });
     if (item) { item.status=status; item.obs=obs; item.aviso_status=''; }
@@ -1638,11 +1604,11 @@ async function carregarAvisos() {
 }
 
 async function marcarReposto(id) {
-  try { await fetch(`${API}/repositor/avisos/${id}/reposto`,{method:'PUT'}); toast('✅ Reposto!','sucesso'); carregarAvisos(); }
+  try { await fetch(`${API}/repositor/avisos/${id}/reposto`,{ credentials:'include',method:'PUT'}); toast('✅ Reposto!','sucesso'); carregarAvisos(); }
   catch(e) { toast('Erro!','erro'); }
 }
 async function marcarNaoEncontrado(id) {
-  try { await fetch(`${API}/repositor/avisos/${id}/nao_encontrado`,{method:'PUT'}); toast('🚫 Não encontrado!','aviso'); carregarAvisos(); }
+  try { await fetch(`${API}/repositor/avisos/${id}/nao_encontrado`,{ credentials:'include',method:'PUT'}); toast('🚫 Não encontrado!','aviso'); carregarAvisos(); }
   catch(e) { toast('Erro!','erro'); }
 }
 
@@ -1668,7 +1634,7 @@ window.addEventListener('resize', () => {
 ══════════════════════════════════════════ */
 (async function verificarSessao() {
   try {
-    const res  = await fetch(`${API}/auth/me`);
+    const res  = await fetch(`${API}/auth/me`, { credentials:'include' });
     if (!res.ok) return;
     const data = await res.json();
     usuarioAtual      = data.usuario;
