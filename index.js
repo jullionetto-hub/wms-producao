@@ -530,6 +530,49 @@ app.put('/pedidos/:id/concluir', (req, res) => {
 
 // ─── REPOSITOR ────────────────────────────────────────────────────────────────
 
+// Migração segura para novas colunas do repositor
+db.run(`ALTER TABLE avisos_repositor ADD COLUMN qtd_encontrada INTEGER DEFAULT 0`, () => {});
+db.run(`ALTER TABLE avisos_repositor ADD COLUMN repositor_nome TEXT DEFAULT ''`, () => {});
+
+// Busca pedidos que contêm determinado código de produto
+app.get('/repositor/buscar-produto', (req, res) => {
+  const { codigo } = req.query;
+  if (!codigo) return res.status(400).json({ erro: 'Código não informado!' });
+  db.all(
+    `SELECT i.*, p.numero_pedido, p.status as pedido_status,
+            COALESCE(a.status,'') as aviso_status
+     FROM itens_pedido i
+     JOIN pedidos p ON i.pedido_id = p.id
+     LEFT JOIN avisos_repositor a ON a.item_id = i.id AND a.status = 'pendente'
+     WHERE i.codigo LIKE ? AND p.status != 'concluido'
+     ORDER BY p.numero_pedido`,
+    [`%${codigo.trim()}%`],
+    (err, rows) => {
+      if (err) return res.status(500).json({ erro: err.message });
+      res.json(rows);
+    }
+  );
+});
+
+// Verifica duplicatas: mesmo produto em múltiplos pedidos com avisos pendentes
+app.get('/repositor/duplicatas', (req, res) => {
+  db.all(
+    `SELECT i.codigo, i.descricao, COUNT(DISTINCT i.pedido_id) as total_pedidos,
+            GROUP_CONCAT(p.numero_pedido, ', ') as pedidos
+     FROM itens_pedido i
+     JOIN pedidos p ON i.pedido_id = p.id
+     JOIN avisos_repositor a ON a.item_id = i.id
+     WHERE a.status = 'pendente'
+     GROUP BY i.codigo
+     HAVING COUNT(DISTINCT i.pedido_id) > 1`,
+    [],
+    (err, rows) => {
+      if (err) return res.status(500).json({ erro: err.message });
+      res.json(rows);
+    }
+  );
+});
+
 app.get('/repositor/avisos', (req, res) => {
   const { status, data } = req.query;
   let query = 'SELECT * FROM avisos_repositor WHERE 1=1';
@@ -545,18 +588,46 @@ app.get('/repositor/avisos', (req, res) => {
 
 app.put('/repositor/avisos/:id/reposto', (req, res) => {
   const { hora } = dataHoraLocal();
-  db.run('UPDATE avisos_repositor SET status="reposto",hora_reposto=? WHERE id=?', [hora, req.params.id], err => {
-    if (err) return res.status(500).json({ erro: err.message });
-    res.json({ mensagem:'Item reposto!' });
-  });
+  const { qtd_encontrada, repositor_nome } = req.body || {};
+  const qtd = parseInt(qtd_encontrada) || 0;
+  const nome = repositor_nome || '';
+  db.run(
+    'UPDATE avisos_repositor SET status="reposto",hora_reposto=?,qtd_encontrada=?,repositor_nome=? WHERE id=?',
+    [hora, qtd, nome, req.params.id],
+    err => {
+      if (err) return res.status(500).json({ erro: err.message });
+      res.json({ mensagem:'Item reposto!' });
+    }
+  );
 });
 
 app.put('/repositor/avisos/:id/nao_encontrado', (req, res) => {
   const { hora } = dataHoraLocal();
-  db.run('UPDATE avisos_repositor SET status="nao_encontrado",hora_reposto=? WHERE id=?', [hora, req.params.id], err => {
-    if (err) return res.status(500).json({ erro: err.message });
-    res.json({ mensagem:'Marcado como não encontrado!' });
-  });
+  const { repositor_nome } = req.body || {};
+  const nome = repositor_nome || '';
+  db.run(
+    'UPDATE avisos_repositor SET status="nao_encontrado",hora_reposto=?,repositor_nome=? WHERE id=?',
+    [hora, nome, req.params.id],
+    err => {
+      if (err) return res.status(500).json({ erro: err.message });
+      res.json({ mensagem:'Marcado como não encontrado!' });
+    }
+  );
+});
+
+// Protocolo de análise — item vai para análise em vez de simplesmente "não encontrado"
+app.put('/repositor/avisos/:id/protocolo', (req, res) => {
+  const { hora } = dataHoraLocal();
+  const { repositor_nome } = req.body || {};
+  const nome = repositor_nome || '';
+  db.run(
+    'UPDATE avisos_repositor SET status="protocolo",hora_reposto=?,repositor_nome=? WHERE id=?',
+    [hora, nome, req.params.id],
+    err => {
+      if (err) return res.status(500).json({ erro: err.message });
+      res.json({ mensagem:'Enviado para análise de protocolo!' });
+    }
+  );
 });
 
 // ─── IMPORTAÇÃO ───────────────────────────────────────────────────────────────
@@ -599,8 +670,9 @@ app.post('/importar', (req, res) => {
 
           if (foiNovo) {
             importados++;
+            // CORRIGIDO: usar INSERT simples (não OR IGNORE) para garantir que TODOS os itens sejam inseridos
             const stmt = db.prepare(
-              'INSERT OR IGNORE INTO itens_pedido (pedido_id,codigo,descricao,endereco,quantidade) VALUES (?,?,?,?,?)'
+              'INSERT INTO itens_pedido (pedido_id,codigo,descricao,endereco,quantidade) VALUES (?,?,?,?,?)'
             );
             itens.forEach(item => {
               stmt.run([
