@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: wms-miess
+    env: node
+    buildCommand: npm install
+    startCommand: node index.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: RENDER
+        value: "true"
+    disk:
+      name: wms-data
+      mountPath: /var/data
+      sizeGB: 1
