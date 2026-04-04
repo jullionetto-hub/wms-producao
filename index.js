@@ -424,11 +424,18 @@ app.post('/pedidos/bipar', (req, res) => {
 });
 
 app.get('/pedidos/:id/itens', (req, res) => {
+  // CORRIGIDO: usa subquery para evitar duplicação de linhas quando
+  // um item tem múltiplos registros em avisos_repositor
   db.all(
-    `SELECT i.*, COALESCE(a.status,'') as aviso_status
+    `SELECT i.*,
+       COALESCE(
+         (SELECT a.status FROM avisos_repositor a
+          WHERE a.item_id = i.id
+          ORDER BY a.id DESC LIMIT 1),
+         ''
+       ) as aviso_status
      FROM itens_pedido i
-     LEFT JOIN avisos_repositor a ON a.item_id=i.id AND a.status IN ('reposto','nao_encontrado')
-     WHERE i.pedido_id=?
+     WHERE i.pedido_id = ?
      ORDER BY i.id`,
     [req.params.id],
     (err, rows) => {
@@ -530,49 +537,6 @@ app.put('/pedidos/:id/concluir', (req, res) => {
 
 // ─── REPOSITOR ────────────────────────────────────────────────────────────────
 
-// Migração segura para novas colunas do repositor
-db.run(`ALTER TABLE avisos_repositor ADD COLUMN qtd_encontrada INTEGER DEFAULT 0`, () => {});
-db.run(`ALTER TABLE avisos_repositor ADD COLUMN repositor_nome TEXT DEFAULT ''`, () => {});
-
-// Busca pedidos que contêm determinado código de produto
-app.get('/repositor/buscar-produto', (req, res) => {
-  const { codigo } = req.query;
-  if (!codigo) return res.status(400).json({ erro: 'Código não informado!' });
-  db.all(
-    `SELECT i.*, p.numero_pedido, p.status as pedido_status,
-            COALESCE(a.status,'') as aviso_status
-     FROM itens_pedido i
-     JOIN pedidos p ON i.pedido_id = p.id
-     LEFT JOIN avisos_repositor a ON a.item_id = i.id AND a.status = 'pendente'
-     WHERE i.codigo LIKE ? AND p.status != 'concluido'
-     ORDER BY p.numero_pedido`,
-    [`%${codigo.trim()}%`],
-    (err, rows) => {
-      if (err) return res.status(500).json({ erro: err.message });
-      res.json(rows);
-    }
-  );
-});
-
-// Verifica duplicatas: mesmo produto em múltiplos pedidos com avisos pendentes
-app.get('/repositor/duplicatas', (req, res) => {
-  db.all(
-    `SELECT i.codigo, i.descricao, COUNT(DISTINCT i.pedido_id) as total_pedidos,
-            GROUP_CONCAT(p.numero_pedido, ', ') as pedidos
-     FROM itens_pedido i
-     JOIN pedidos p ON i.pedido_id = p.id
-     JOIN avisos_repositor a ON a.item_id = i.id
-     WHERE a.status = 'pendente'
-     GROUP BY i.codigo
-     HAVING COUNT(DISTINCT i.pedido_id) > 1`,
-    [],
-    (err, rows) => {
-      if (err) return res.status(500).json({ erro: err.message });
-      res.json(rows);
-    }
-  );
-});
-
 app.get('/repositor/avisos', (req, res) => {
   const { status, data } = req.query;
   let query = 'SELECT * FROM avisos_repositor WHERE 1=1';
@@ -588,114 +552,132 @@ app.get('/repositor/avisos', (req, res) => {
 
 app.put('/repositor/avisos/:id/reposto', (req, res) => {
   const { hora } = dataHoraLocal();
-  const { qtd_encontrada, repositor_nome } = req.body || {};
-  const qtd = parseInt(qtd_encontrada) || 0;
-  const nome = repositor_nome || '';
-  db.run(
-    'UPDATE avisos_repositor SET status="reposto",hora_reposto=?,qtd_encontrada=?,repositor_nome=? WHERE id=?',
-    [hora, qtd, nome, req.params.id],
-    err => {
-      if (err) return res.status(500).json({ erro: err.message });
-      res.json({ mensagem:'Item reposto!' });
-    }
-  );
+  db.run('UPDATE avisos_repositor SET status="reposto",hora_reposto=? WHERE id=?', [hora, req.params.id], err => {
+    if (err) return res.status(500).json({ erro: err.message });
+    res.json({ mensagem:'Item reposto!' });
+  });
 });
 
 app.put('/repositor/avisos/:id/nao_encontrado', (req, res) => {
   const { hora } = dataHoraLocal();
-  const { repositor_nome } = req.body || {};
-  const nome = repositor_nome || '';
-  db.run(
-    'UPDATE avisos_repositor SET status="nao_encontrado",hora_reposto=?,repositor_nome=? WHERE id=?',
-    [hora, nome, req.params.id],
-    err => {
-      if (err) return res.status(500).json({ erro: err.message });
-      res.json({ mensagem:'Marcado como não encontrado!' });
-    }
-  );
-});
-
-// Protocolo de análise — item vai para análise em vez de simplesmente "não encontrado"
-app.put('/repositor/avisos/:id/protocolo', (req, res) => {
-  const { hora } = dataHoraLocal();
-  const { repositor_nome } = req.body || {};
-  const nome = repositor_nome || '';
-  db.run(
-    'UPDATE avisos_repositor SET status="protocolo",hora_reposto=?,repositor_nome=? WHERE id=?',
-    [hora, nome, req.params.id],
-    err => {
-      if (err) return res.status(500).json({ erro: err.message });
-      res.json({ mensagem:'Enviado para análise de protocolo!' });
-    }
-  );
+  db.run('UPDATE avisos_repositor SET status="nao_encontrado",hora_reposto=? WHERE id=?', [hora, req.params.id], err => {
+    if (err) return res.status(500).json({ erro: err.message });
+    res.json({ mensagem:'Marcado como não encontrado!' });
+  });
 });
 
 // ─── IMPORTAÇÃO ───────────────────────────────────────────────────────────────
 
-app.post('/importar', (req, res) => {
-  const { linhas } = req.body;
-  if (!linhas||!linhas.length) return res.status(400).json({ erro:'Nenhuma linha enviada!' });
+// Helper: executa db.run com Promise
+function dbRun(sql, params) {
+  return new Promise((resolve, reject) => {
+    db.run(sql, params, function(err) {
+      if (err) reject(err);
+      else resolve(this);
+    });
+  });
+}
 
-  // FIX: usa data/hora local do servidor, não UTC
+// Helper: executa db.get com Promise
+function dbGet(sql, params) {
+  return new Promise((resolve, reject) => {
+    db.get(sql, params, (err, row) => {
+      if (err) reject(err);
+      else resolve(row);
+    });
+  });
+}
+
+app.post('/importar', async (req, res) => {
+  const { linhas } = req.body;
+  if (!linhas || !linhas.length)
+    return res.status(400).json({ erro: 'Nenhuma linha enviada!' });
+
   const { data: hoje, hora } = dataHoraLocal();
 
-  let importados = 0, ignorados = 0, erros = 0;
+  // Agrupar linhas por número de pedido
   const pedidosMap = {};
-
   linhas.forEach(l => {
-    const num = String(l.numero_pedido||'').trim();
+    const num = String(l.numero_pedido || '').trim();
     if (!num) return;
     if (!pedidosMap[num]) pedidosMap[num] = [];
     pedidosMap[num].push(l);
   });
 
   const numeros = Object.keys(pedidosMap);
-  if (numeros.length === 0) return res.status(400).json({ erro:'Nenhum pedido válido encontrado!' });
+  if (numeros.length === 0)
+    return res.status(400).json({ erro: 'Nenhum pedido válido encontrado!' });
 
-  let processados = 0;
+  let importados = 0, ignorados = 0, erros = 0;
 
-  numeros.forEach(numero => {
+  // Processar pedidos UM A UM em série (evita race conditions do SQLite)
+  for (const numero of numeros) {
     const itens = pedidosMap[numero];
+    try {
+      // Tenta inserir o pedido
+      const result = await dbRun(
+        `INSERT OR IGNORE INTO pedidos (numero_pedido,status,itens,rua,data_pedido,hora_pedido)
+         VALUES (?, 'pendente', ?, ?, ?, ?)`,
+        [numero, itens.length, itens[0]?.endereco || '', hoje, hora]
+      );
 
-    db.run(
-      `INSERT OR IGNORE INTO pedidos (numero_pedido,status,itens,rua,data_pedido,hora_pedido) VALUES (?,'pendente',?,?,?,?)`,
-      [numero, itens.length, itens[0]?.endereco||'', hoje, hora],
-      function(errInsert) {
-        if (errInsert) { erros++; processados++; verificarFim(); return; }
+      const foiNovo = result.changes > 0;
 
-        const foiNovo = this.changes > 0;
+      // Busca o id do pedido (novo ou já existente)
+      const pedido = await dbGet(
+        'SELECT id FROM pedidos WHERE numero_pedido=?',
+        [numero]
+      );
 
-        db.get('SELECT id FROM pedidos WHERE numero_pedido=?', [numero], (errGet, pedido) => {
-          if (errGet||!pedido) { erros++; processados++; verificarFim(); return; }
+      if (!pedido) { erros++; continue; }
 
-          if (foiNovo) {
-            importados++;
-            // CORRIGIDO: usar INSERT simples (não OR IGNORE) para garantir que TODOS os itens sejam inseridos
-            const stmt = db.prepare(
-              'INSERT INTO itens_pedido (pedido_id,codigo,descricao,endereco,quantidade) VALUES (?,?,?,?,?)'
-            );
-            itens.forEach(item => {
-              stmt.run([
-                pedido.id,
-                String(item.codigo    ||'').trim(),
-                String(item.descricao ||'').trim(),
-                String(item.endereco  ||'').trim(),
-                parseInt(item.quantidade)||1
-              ]);
-            });
-            stmt.finalize(() => { processados++; verificarFim(); });
-          } else {
-            ignorados++; processados++; verificarFim();
-          }
-        });
+      if (!foiNovo) {
+        // Pedido já existia — não reimporta
+        ignorados++;
+        continue;
       }
-    );
-  });
 
-  function verificarFim() {
-    if (processados === numeros.length)
-      res.json({ mensagem:'Importação concluída!', importados, ignorados, erros, total:numeros.length });
+      // ── INSERÇÃO DOS ITENS ──────────────────────────────────────────────
+      // Usa transação explícita para garantir que TODOS os itens são gravados
+      await dbRun('BEGIN', []);
+      try {
+        for (const item of itens) {
+          await dbRun(
+            `INSERT INTO itens_pedido (pedido_id, codigo, descricao, endereco, quantidade)
+             VALUES (?, ?, ?, ?, ?)`,
+            [
+              pedido.id,
+              String(item.codigo    || '').trim(),
+              String(item.descricao || '').trim(),
+              String(item.endereco  || '').trim(),
+              parseInt(item.quantidade) || 1
+            ]
+          );
+        }
+        await dbRun('COMMIT', []);
+        importados++;
+      } catch (errItem) {
+        await dbRun('ROLLBACK', []).catch(() => {});
+        console.error(`Erro ao inserir itens do pedido ${numero}:`, errItem.message);
+        // Remove o pedido pai que foi criado sem itens
+        await dbRun('DELETE FROM pedidos WHERE id=?', [pedido.id]).catch(() => {});
+        erros++;
+      }
+      // ───────────────────────────────────────────────────────────────────
+
+    } catch (err) {
+      console.error(`Erro ao processar pedido ${numero}:`, err.message);
+      erros++;
+    }
   }
+
+  res.json({
+    mensagem: 'Importação concluída!',
+    importados,
+    ignorados,
+    erros,
+    total: numeros.length
+  });
 });
 
 // ─── PRODUTIVIDADE ────────────────────────────────────────────────────────────
