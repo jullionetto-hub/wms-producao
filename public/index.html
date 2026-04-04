@@ -37,7 +37,7 @@
 ══════════════════════════════════════════ */
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 html,body{height:100%;overflow:hidden}
-body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);font-size:15px;transition:background .25s,color .25s}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);font-size:14px;transition:background .25s,color .25s}
 ::-webkit-scrollbar{width:4px;height:4px}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:10px}
 
@@ -173,7 +173,6 @@ td{padding:10px 13px;vertical-align:middle;color:var(--text2)}
 .pill.concluido {background:#F0FDF4;color:#16A34A;border:1px solid #BBF7D0}
 .pill.falta     {background:#FEF2F2;color:#DC2626;border:1px solid #FECACA}
 .pill.reposto   {background:#F0FDF4;color:#16A34A;border:1px solid #BBF7D0}
-.pill.protocolo {background:#FFFBEB;color:#D97706;border:1px solid #FDE68A}
 .pill.ativo     {background:#F0FDF4;color:#16A34A;border:1px solid #BBF7D0}
 .pill.inativo   {background:#FEF2F2;color:#DC2626;border:1px solid #FECACA}
 .pill.supervisor{background:#F5F3FF;color:#6366F1;border:1px solid #DDD6FE}
@@ -223,28 +222,15 @@ td{padding:10px 13px;vertical-align:middle;color:var(--text2)}
 .aviso-card.pendente {border-color:#FECACA;background:#FEF2F2}
 .aviso-card.reposto  {border-color:#BBF7D0;background:#F0FDF4;opacity:.75}
 .aviso-card.nao_encontrado{border-color:#DDD6FE;background:#F5F3FF;opacity:.75}
-.aviso-card.protocolo{border-color:#FDE68A;background:#FFFBEB;opacity:.85}
 body.dark .aviso-card.pendente {background:#2D0F0F;border-color:#7F1D1D}
 body.dark .aviso-card.reposto  {background:#052E16;border-color:#14532D;opacity:.75}
 body.dark .aviso-card.nao_encontrado{background:#1E1B4B;border-color:#3730A3;opacity:.75}
-body.dark .aviso-card.protocolo{background:#2D1A05;border-color:#78350F;opacity:.85}
-/* Aviso de duplicata — mesmo item em vários pedidos */
-.aviso-duplicata{background:#FFF7ED;border:2px solid #F97316;border-radius:var(--r);padding:12px 16px;margin-bottom:12px;font-size:13px;color:#C2410C;font-weight:700;display:flex;align-items:center;gap:10px}
-/* Campo quantidade encontrada no repositor */
-.qtd-enc-wrap{display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap}
-.qtd-enc-wrap label{font-size:11px;font-weight:700;color:var(--text2)}
-.qtd-enc-input{width:80px;padding:6px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:15px;font-weight:700;text-align:center;font-family:'Space Mono',monospace;color:var(--text);background:var(--surface);outline:none}
-.qtd-enc-input:focus{border-color:var(--accent)}
-/* Campo busca produto repositor */
-.rep-busca-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;margin-bottom:16px;box-shadow:var(--sh)}
-.rep-busca-wrap .bip-wrap{margin-bottom:0}
 .aviso-info{flex:1}
-.aviso-cod {font-size:16px;font-weight:800;color:var(--red)}
+.aviso-cod {font-size:13px;font-weight:700;color:var(--red)}
 .aviso-card.reposto .aviso-cod{color:var(--green)}
 .aviso-card.nao_encontrado .aviso-cod{color:var(--indigo)}
-.aviso-card.protocolo .aviso-cod{color:var(--amber)}
-.aviso-desc{font-size:14px;color:var(--text);margin:3px 0;font-weight:600}
-.aviso-det {font-size:12px;color:var(--text3)}
+.aviso-desc{font-size:12px;color:var(--text);margin:2px 0}
+.aviso-det {font-size:11px;color:var(--text3)}
 
 /* ══════════════════════════════════════════
    ██ SEPARADOR — TABS MOBILE ██
@@ -337,12 +323,12 @@ body.dark .item-card.falta      .item-ic{background:#7F1D1D}
 body.dark .item-card.parcial    .item-ic{background:#78350F}
 
 .item-info{flex:1;min-width:0}
-.item-cod {font-size:13px;font-weight:700;color:var(--accent)}
+.item-cod {font-size:11px;font-weight:700;color:var(--accent)}
 .item-card.encontrado .item-cod{color:var(--green)}
 .item-card.falta      .item-cod{color:var(--red)}
 .item-card.parcial    .item-cod{color:var(--amber)}
-.item-desc{font-size:15px;color:var(--text);margin:2px 0;font-weight:600}
-.item-det {font-size:12px;color:var(--text3)}
+.item-desc{font-size:13px;color:var(--text);margin:2px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item-det {font-size:11px;color:var(--text3)}
 .item-aviso{font-size:10px;color:var(--amber);margin-top:3px;font-weight:600}
 .parcial-wrap{margin-top:8px;background:var(--bg);border:1.5px solid #FDE68A;border-radius:8px;padding:9px 11px;display:none}
 .parcial-wrap.aberto{display:block}
@@ -628,6 +614,12 @@ body.dark .item-card.parcial    .item-ic{background:#78350F}
       <!-- SEPARAÇÃO (desktop) -->
       <div class="pagina" id="pag-separacao">
         <div class="pg-title">📦 Separação</div>
+        <!-- Contadores -->
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px">
+          <div class="cnt-card azul"><div class="cnt-lbl">HOJE</div><div class="cnt-val" id="sep-cnt-hoje" style="font-size:26px">0</div><div class="cnt-sub">pedidos</div></div>
+          <div class="cnt-card verde"><div class="cnt-lbl">MÊS</div><div class="cnt-val" id="sep-cnt-mes" style="font-size:26px">0</div><div class="cnt-sub">pedidos</div></div>
+          <div class="cnt-card roxo"><div class="cnt-lbl">ANO</div><div class="cnt-val" id="sep-cnt-ano" style="font-size:26px">0</div><div class="cnt-sub">pedidos</div></div>
+        </div>
         <!-- Leitura -->
         <div class="card" style="margin-bottom:13px">
           <div class="card-hd">🔍 LEITURA DE PEDIDO</div>
@@ -636,6 +628,18 @@ body.dark .item-card.parcial    .item-ic{background:#78350F}
             <button class="btn-bip" onclick="confirmarPedido()">▶</button>
           </div>
           <div class="status-pedido" id="status-atual"></div>
+          <!-- Campo caixa desktop -->
+          <div id="cl-caixa-wrap" style="display:none;margin-top:10px;padding:10px 0 0;border-top:1px solid var(--border)">
+            <div style="font-size:11px;font-weight:700;color:var(--amber);letter-spacing:1px;margin-bottom:6px">📦 VINCULAR NÚMERO DA CAIXA</div>
+            <div class="bip-wrap" style="margin-bottom:0">
+              <input type="text" class="bip-input" id="cl-input-caixa"
+                placeholder="Número da caixa..."
+                autocomplete="off" inputmode="numeric"
+                style="font-size:18px;letter-spacing:2px;border-color:var(--amber)"/>
+              <button class="btn-bip" style="border-color:var(--amber);color:var(--amber)" onclick="vincularCaixaDesktop()">📦</button>
+            </div>
+            <div id="cl-caixa-status" style="font-size:12px;color:var(--text3);margin-top:6px;padding:6px 10px;background:var(--surface2);border-radius:6px;display:none"></div>
+          </div>
         </div>
         <!-- Checklist desktop -->
         <div class="cl-wrap" id="cl-wrap">
@@ -666,36 +670,125 @@ body.dark .item-card.parcial    .item-ic{background:#78350F}
       <!-- REPOSIÇÃO -->
       <div class="pagina" id="pag-reposicao">
         <div class="pg-title">🔧 Reposição</div>
-
-        <!-- Busca por código de produto -->
-        <div class="rep-busca-wrap">
-          <div style="font-size:11px;font-weight:700;color:var(--accent);letter-spacing:1px;margin-bottom:8px">🔍 BUSCAR PRODUTO NOS PEDIDOS</div>
-          <div class="bip-wrap" style="margin-bottom:8px">
-            <input type="text" class="bip-input" id="rep-input-cod" placeholder="Digite o código do produto..." autocomplete="off" style="font-size:16px;letter-spacing:1px"/>
-            <button class="btn-bip" onclick="buscarProdutoRepositor()">▶</button>
-          </div>
-          <div id="rep-busca-resultado" style="display:none;margin-top:10px"></div>
-        </div>
-
-        <!-- Avisos de duplicata -->
-        <div id="rep-duplicatas-wrap" style="display:none;margin-bottom:12px"></div>
-
         <div class="card">
           <div class="card-hd">AVISOS DE FALTA
             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-              <span style="font-size:13px;color:var(--red);font-weight:700">🔴 <span id="rep-pend">0</span> pendentes</span>
-              <span style="font-size:13px;color:var(--green);font-weight:600">✅ <span id="rep-rep">0</span> repostos</span>
+              <span style="font-size:12px;color:var(--red);font-weight:700">🔴 <span id="rep-pend">0</span> pendentes</span>
+              <span style="font-size:12px;color:var(--green);font-weight:600">✅ <span id="rep-rep">0</span> repostos</span>
               <select id="filtro-rep-status" class="sel-sm" onchange="carregarAvisos()" style="min-width:120px">
                 <option value="">Todos</option>
                 <option value="pendente">Pendente</option>
                 <option value="reposto">Reposto</option>
                 <option value="nao_encontrado">Não encontrado</option>
-                <option value="protocolo">Protocolo</option>
               </select>
               <button class="btn btn-outline btn-sm" onclick="carregarAvisos()">🔄</button>
             </div>
           </div>
           <div id="lista-avisos"><div style="color:var(--text3);text-align:center;padding:40px;font-size:13px">✅ Nenhum item em falta</div></div>
+        </div>
+      </div>
+
+      <!-- ESTATÍSTICAS -->
+      <div class="pagina" id="pag-estatisticas">
+        <div class="pg-title">📈 Estatísticas</div>
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-hd">📅 FILTRO DE PERÍODO
+            <button class="btn btn-outline btn-sm" onclick="carregarEstatisticas()">🔄</button>
+          </div>
+          <div class="filtros">
+            <div class="fg"><label>DE</label><input type="date" id="est-ini"/></div>
+            <div class="fg"><label>ATÉ</label><input type="date" id="est-fim"/></div>
+            <button class="btn btn-primary btn-sm" onclick="carregarEstatisticas()">🔍 Filtrar</button>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px">
+          <div class="cnt-card verde">
+            <div class="cnt-lbl">PEDIDOS HOJE</div>
+            <div class="cnt-val" id="est-hoje-c" style="font-size:36px">0</div>
+            <div class="cnt-sub">concluídos</div>
+            <div style="font-size:12px;color:var(--text3);margin-top:4px">Total: <b id="est-hoje-t">0</b></div>
+          </div>
+          <div class="cnt-card azul">
+            <div class="cnt-lbl">PEDIDOS NO MÊS</div>
+            <div class="cnt-val" id="est-mes-c" style="font-size:36px">0</div>
+            <div class="cnt-sub">concluídos</div>
+            <div style="font-size:12px;color:var(--text3);margin-top:4px">Total: <b id="est-mes-t">0</b></div>
+          </div>
+          <div class="cnt-card roxo">
+            <div class="cnt-lbl">PEDIDOS NO ANO</div>
+            <div class="cnt-val" id="est-ano-c" style="font-size:36px">0</div>
+            <div class="cnt-sub">concluídos</div>
+            <div style="font-size:12px;color:var(--text3);margin-top:4px">Total: <b id="est-ano-t">0</b></div>
+          </div>
+        </div>
+        <div id="est-periodo-wrap" style="display:none" class="card">
+          <div class="card-hd">📊 RESULTADO DO PERÍODO FILTRADO</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:10px 0">
+            <div class="cnt-card verde">
+              <div class="cnt-lbl">CONCLUÍDOS</div>
+              <div class="cnt-val" id="est-per-c" style="font-size:32px">0</div>
+              <div class="cnt-sub">no período</div>
+            </div>
+            <div class="cnt-card azul">
+              <div class="cnt-lbl">TOTAL IMPORTADOS</div>
+              <div class="cnt-val" id="est-per-t" style="font-size:32px">0</div>
+              <div class="cnt-sub">no período</div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-hd">👥 PRODUTIVIDADE POR SEPARADOR
+            <button class="btn btn-outline btn-sm" onclick="carregarEstatisticas()">🔄</button>
+          </div>
+          <div class="tabela-wrap">
+            <table><thead><tr><th>SEPARADOR</th><th>HOJE</th><th>MÊS</th><th>ANO</th><th>STATUS</th></tr></thead>
+            <tbody id="tbody-est-sep"></tbody></table>
+          </div>
+        </div>
+      </div>
+
+      <!-- CHECKOUT -->
+      <div class="pagina" id="pag-checkout">
+        <div class="pg-title">📦 Checkout</div>
+
+        <!-- Busca por caixa -->
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-hd">🔍 BUSCAR POR NÚMERO DE CAIXA</div>
+          <div class="bip-wrap" style="margin-bottom:0">
+            <input type="text" class="bip-input" id="ck-input-caixa"
+              placeholder="Digite ou bipe o número da caixa..."
+              autocomplete="off" inputmode="numeric"
+              style="font-size:20px;letter-spacing:3px"/>
+            <button class="btn-bip" onclick="buscarCaixa()">▶</button>
+          </div>
+        </div>
+
+        <!-- Resultado da busca -->
+        <div id="ck-resultado" style="display:none">
+          <div class="card" style="margin-bottom:16px">
+            <div class="card-hd" id="ck-res-titulo">RESULTADO</div>
+            <div id="ck-res-conteudo"></div>
+          </div>
+        </div>
+
+        <!-- Lista geral de checkouts -->
+        <div class="card">
+          <div class="card-hd">📋 TODOS OS CHECKOUTS
+            <div style="display:flex;gap:8px;align-items:center">
+              <select id="filtro-ck-status" class="sel-sm" onchange="carregarCheckoutLista()">
+                <option value="">Todos</option>
+                <option value="pendente">Pendente</option>
+                <option value="concluido">Concluído</option>
+              </select>
+              <button class="btn btn-outline btn-sm" onclick="carregarCheckoutLista()">🔄</button>
+            </div>
+          </div>
+          <div class="tabela-wrap">
+            <table>
+              <thead><tr><th>CAIXA</th><th>Nº PEDIDO</th><th>SEPARADOR</th><th>STATUS</th><th>HORA</th><th>AÇÃO</th></tr></thead>
+              <tbody id="tbody-checkout"></tbody>
+            </table>
+          </div>
         </div>
       </div>
 
@@ -712,6 +805,18 @@ body.dark .item-card.parcial    .item-ic{background:#78350F}
             <button class="btn-bip" onclick="confirmarPedidoMobile()">▶</button>
           </div>
           <div class="status-pedido" id="m-status-atual"></div>
+          <!-- Campo caixa mobile -->
+          <div id="m-caixa-wrap" style="display:none;margin-bottom:12px">
+            <div style="font-size:11px;font-weight:700;color:var(--accent);letter-spacing:1px;margin-bottom:6px">📦 VINCULAR CAIXA AO PEDIDO</div>
+            <div class="bip-wrap" style="margin-bottom:0">
+              <input type="text" class="bip-input" id="m-input-caixa"
+                placeholder="Número da caixa..."
+                autocomplete="off" inputmode="numeric"
+                style="font-size:18px;letter-spacing:2px;border-color:var(--amber)"/>
+              <button class="btn-bip" style="border-color:var(--amber);color:var(--amber)" onclick="vincularCaixaMobile()">📦</button>
+            </div>
+            <div id="m-caixa-status" style="font-size:12px;color:var(--text3);margin-top:6px;padding:6px 10px;background:var(--surface2);border-radius:6px;display:none"></div>
+          </div>
           <!-- Checklist mobile -->
           <div class="cl-wrap" id="m-cl-wrap">
             <div class="cl-header"><span id="m-cl-titulo">📋 PEDIDO</span><span id="m-cl-contador" style="color:var(--accent);font-weight:700;font-size:12px">0/0</span></div>
@@ -918,24 +1023,18 @@ function montarSidebar() {
       <a class="mi" onclick="irPara('cadastros',this)"><span class="mi-ic">⚙️</span>Cadastros</a>
       <div class="mg">OPERAÇÃO</div>
       <a class="mi" onclick="irPara('separacao',this)"><span class="mi-ic">📦</span>Separação</a>
-      <a class="mi" onclick="irPara('reposicao',this)"><span class="mi-ic">🔧</span>Reposição <span class="mbadge" id="menu-badge-rep" style="display:none">0</span></a>`,
+      <a class="mi" onclick="irPara('estatisticas',this)"><span class="mi-ic">📈</span>Estatísticas</a>
+      <a class="mi" onclick="irPara('reposicao',this)"><span class="mi-ic">🔧</span>Reposição <span class="mbadge" id="menu-badge-rep" style="display:none">0</span></a>
+      <a class="mi" onclick="irPara('checkout',this)"><span class="mi-ic">📦</span>Checkout</a>`,
     separador: `
       <div class="mg">SEPARAÇÃO</div>
       <a class="mi ativo" onclick="irPara('separacao',this)"><span class="mi-ic">📦</span>Pedidos</a>`,
     repositor: `
       <div class="mg">REPOSIÇÃO</div>
-      <a class="mi ativo" onclick="irPara('reposicao',this)"><span class="mi-ic">🔧</span>Solicitações <span class="mbadge" id="menu-badge-rep" style="display:none">0</span></a>`
+      <a class="mi ativo" onclick="irPara('reposicao',this)"><span class="mi-ic">🔧</span>Solicitações <span class="mbadge" id="menu-badge-rep" style="display:none">0</span></a>
+      <a class="mi" onclick="irPara('checkout',this)"><span class="mi-ic">📦</span>Checkout</a>`
   };
   sb.innerHTML = menus[usuarioAtual.perfil] || '';
-
-  // Repositor: esconde info de separador no header
-  if (usuarioAtual.perfil === 'repositor') {
-    document.getElementById('hdr-perfil').textContent = 'REPOSITOR';
-  }
-  // Separador: esconde info desnecessária
-  if (usuarioAtual.perfil === 'separador') {
-    document.getElementById('hdr-perfil').textContent = 'SEPARADOR';
-  }
 }
 
 function irPara(pag, el) {
@@ -944,11 +1043,13 @@ function irPara(pag, el) {
   const pg = document.getElementById(`pag-${pag}`);
   if (pg) pg.classList.add('ativa');
   if (el) el.classList.add('ativo');
-  if (pag === 'dashboard') carregarDashboard();
-  if (pag === 'pedidos')   { popularSelects(); carregarPedidos(); }
-  if (pag === 'cadastros') { trocarCadastroTab('usuarios'); carregarUsuarios(); }
-  if (pag === 'separacao') carregarFila();
-  if (pag === 'reposicao') { carregarAvisos(); carregarDuplicatas(); }
+  if (pag === 'dashboard')    carregarDashboard();
+  if (pag === 'pedidos')      { popularSelects(); carregarPedidos(); }
+  if (pag === 'cadastros')    { trocarCadastroTab('usuarios'); carregarUsuarios(); }
+  if (pag === 'separacao')    { carregarFila(); if (separadorAtual) carregarContadoresSep(); }
+  if (pag === 'estatisticas') carregarEstatisticas();
+  if (pag === 'reposicao')    { carregarAvisos(); verificarDuplicatas(); }
+  if (pag === 'checkout')     carregarCheckoutLista();
 }
 
 function iniciarPorPerfil() {
@@ -964,17 +1065,18 @@ function iniciarPorPerfil() {
     atualizarBadgeRep();
   }
   if (usuarioAtual.perfil === 'separador') {
-    // Separador vai direto para separação — SEM dashboard
+    // Separador vai direto para tela de separação (sem dashboard)
     document.getElementById('pag-separacao').classList.add('ativa');
     carregarFila();
+    if (separadorAtual) carregarContadoresSep();
     setInterval(() => { carregarFila(); if(pedidoAtualId) carregarChecklist(); }, 30000);
-    setTimeout(() => document.getElementById('input-pedido').focus(), 300);
+    setTimeout(() => { const el = document.getElementById('input-pedido'); if (el) el.focus(); }, 300);
   }
   if (usuarioAtual.perfil === 'repositor') {
     document.getElementById('pag-reposicao').classList.add('ativa');
     carregarAvisos();
-    carregarDuplicatas();
-    setInterval(() => { carregarAvisos(); carregarDuplicatas(); }, 20000);
+    verificarDuplicatas();
+    setInterval(() => { carregarAvisos(); verificarDuplicatas(); }, 30000);
   }
 }
 
@@ -1250,36 +1352,22 @@ function processarArquivoFile(file) {
  async function confirmarImportacao() {
   if (!pedidosImportar.length) return;
   mostrarStatus('⏳ Importando...', 'carregando');
-
-  // CORREÇÃO CRÍTICA: agrupar por pedido e enviar TODOS os itens de uma vez
-  // Enviar em lotes de pedidos completos (não de linhas), garantindo que
-  // todos os itens de um mesmo pedido são enviados juntos.
-  const pedidosMap = {};
-  pedidosImportar.forEach(l => {
-    const num = l.numero_pedido;
-    if (!pedidosMap[num]) pedidosMap[num] = [];
-    pedidosMap[num].push(l);
-  });
-
-  const numeros = Object.keys(pedidosMap);
-  const LOTE_PEDIDOS = 20; // lote de até 20 pedidos completos por vez
+  
+  const LOTE = 50;
   let totalImportados = 0;
   let totalIgnorados  = 0;
 
   try {
-    for (let i = 0; i < numeros.length; i += LOTE_PEDIDOS) {
-      const loteNums = numeros.slice(i, i + LOTE_PEDIDOS);
-      // Monta as linhas do lote mantendo todos os itens de cada pedido juntos
-      const linhasLote = [];
-      loteNums.forEach(n => linhasLote.push(...pedidosMap[n]));
-      const progresso = Math.round(((i + loteNums.length) / numeros.length) * 100);
-      mostrarStatus(`⏳ Importando... ${progresso}% (${i + loteNums.length}/${numeros.length} pedidos)`, 'carregando');
+    for (let i = 0; i < pedidosImportar.length; i += LOTE) {
+      const lote = pedidosImportar.slice(i, i + LOTE);
+      const progresso = Math.round(((i + lote.length) / pedidosImportar.length) * 100);
+      mostrarStatus(`⏳ Importando... ${progresso}%`, 'carregando');
 
       const res  = await fetch(`${API}/importar`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ linhas: linhasLote })
+        body: JSON.stringify({ linhas: lote })
       });
       const data = await res.json();
       if (data.erro) { mostrarStatus(`❌ ${data.erro}`, 'erro'); return; }
@@ -1291,7 +1379,7 @@ function processarArquivoFile(file) {
     const reg = {
       data: new Date().toLocaleDateString('pt-BR'),
       hora: new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' }),
-      total: numeros.length,
+      total: pedidosImportar.length,
       ok:    totalImportados,
       erro:  totalIgnorados
     };
@@ -1339,7 +1427,6 @@ function mostrarStatus(msg, tipo) {
 async function confirmarPedido() {
   const num = document.getElementById('input-pedido').value.trim();
   if (!num) { toast('Digite o número!','aviso'); return; }
-  if (!separadorAtual) { toast('Usuário sem separador vinculado!','erro'); return; }
   await _confirmarPedidoCore(num, 'input-pedido', 'status-atual', 'cl-wrap', carregarChecklist, carregarFila);
 }
 
@@ -1373,19 +1460,20 @@ async function carregarContadoresSep() {
 }
 
 async function carregarFila() {
-  if (!separadorAtual) return;
   try {
     const res   = await fetch(`${API}/pedidos`, { credentials:'include' });
     const todos = await res.json();
     const ativos = todos.filter(p=>p.status!=='concluido');
-    const meus   = ativos.filter(p=>p.separador_id===separadorAtual.id);
-    document.getElementById('badge-fila-d').textContent = `${ativos.length} total`;
-    document.getElementById('badge-meus-d').textContent = `${meus.length} meus`;
+    const meus   = separadorAtual ? ativos.filter(p=>p.separador_id===separadorAtual.id) : [];
+    const bdFila = document.getElementById('badge-fila-d');
+    const bdMeus = document.getElementById('badge-meus-d');
+    if (bdFila) bdFila.textContent = `${ativos.length} total`;
+    if (bdMeus) bdMeus.textContent = meus.length > 0 ? `${meus.length} meus` : '';
     const html = !ativos.length
       ? '<tr><td colspan="4" style="color:var(--text3);text-align:center;padding:18px">Nenhum pedido na fila</td></tr>'
       : ativos.map(p => {
-          const eMeu = p.separador_id===separadorAtual.id;
-          const ocup = p.separador_id && p.separador_id!==separadorAtual.id;
+          const eMeu = separadorAtual && p.separador_id===separadorAtual.id;
+          const ocup = separadorAtual && p.separador_id && p.separador_id!==separadorAtual.id;
           const sit  = eMeu?`<span class="pill separando">Meu</span>`:ocup?`<span class="pill falta">Ocupado</span>`:`<span class="pill pendente">Livre</span>`;
           const clk  = !ocup ? `onclick="selecionarPedidoFila('${p.numero_pedido}')" style="cursor:pointer"` : '';
           return `<tr class="${eMeu?'meu':''}" ${clk}>
@@ -1395,7 +1483,8 @@ async function carregarFila() {
             <td>${sit}</td>
           </tr>`;
         }).join('');
-    document.getElementById('tbody-fila-d').innerHTML = html;
+    const el = document.getElementById('tbody-fila-d');
+    if (el) el.innerHTML = html;
   } catch(e) {}
 }
 
@@ -1410,7 +1499,6 @@ function selecionarPedidoFila(num) {
 async function confirmarPedidoMobile() {
   const num = document.getElementById('m-input-pedido').value.trim();
   if (!num) { toast('Digite o número!','aviso'); return; }
-  if (!separadorAtual) { toast('Usuário sem separador vinculado!','erro'); return; }
   await _confirmarPedidoCore(num, 'm-input-pedido', 'm-status-atual', 'm-cl-wrap', carregarChecklistMobile, carregarFilaMobile);
 }
 
@@ -1433,22 +1521,23 @@ async function concluirPedidoMobile() {
 }
 
 async function carregarFilaMobile() {
-  if (!separadorAtual) return;
   try {
     const res   = await fetch(`${API}/pedidos`, { credentials:'include' });
     const todos = await res.json();
     const ativos = todos.filter(p=>p.status!=='concluido');
-    const meus   = ativos.filter(p=>p.separador_id===separadorAtual.id);
-    document.getElementById('badge-fila-m').textContent = `${ativos.length} total`;
-    document.getElementById('badge-meus-m').textContent = `${meus.length} meus`;
-    // Atualiza badge da tab
+    const meus   = separadorAtual ? ativos.filter(p=>p.separador_id===separadorAtual.id) : [];
+    const bdFila = document.getElementById('badge-fila-m');
+    const bdMeus = document.getElementById('badge-meus-m');
+    if (bdFila) bdFila.textContent = `${ativos.length} total`;
+    if (bdMeus) bdMeus.textContent = meus.length > 0 ? `${meus.length} meus` : '';
     const badge = document.getElementById('stab-fila-badge');
     if (badge) { badge.textContent = ativos.length; badge.style.display = ativos.length > 0 ? 'inline' : 'none'; }
     const lista = document.getElementById('lista-fila-mobile');
+    if (!lista) return;
     if (!ativos.length) { lista.innerHTML = '<div style="color:var(--text3);text-align:center;padding:30px;font-size:13px">Nenhum pedido na fila 🎉</div>'; return; }
     lista.innerHTML = ativos.map(p => {
-      const eMeu = p.separador_id === separadorAtual.id;
-      const ocup = p.separador_id && p.separador_id !== separadorAtual.id;
+      const eMeu = separadorAtual && p.separador_id === separadorAtual.id;
+      const ocup = separadorAtual && p.separador_id && p.separador_id !== separadorAtual.id;
       return `<div class="fila-card ${eMeu?'meu':''} ${ocup?'ocupado':''}" ${!ocup?`onclick="selecionarPedidoFilaMobile('${p.numero_pedido}')"`:''}">
         <div style="font-size:20px">${eMeu?'📦':ocup?'🔒':'📋'}</div>
         <div style="flex:1">
@@ -1468,11 +1557,12 @@ function selecionarPedidoFilaMobile(num) {
 }
 
 async function carregarStatsMobile() {
-  if (!separadorAtual) return;
   try {
+    const nomeEl = document.getElementById('m-stat-nome');
+    if (nomeEl) nomeEl.textContent = `👤 ${usuarioAtual?.nome || '—'}`;
+    if (!separadorAtual) return;
     const res   = await fetch(`${API}/produtividade?separador_id=${separadorAtual.id}`, { credentials:'include' });
     const dados = await res.json();
-    const nomeEl = document.getElementById('m-stat-nome');
     if (nomeEl) nomeEl.textContent = `👤 ${separadorAtual.nome||usuarioAtual.nome}`;
     if (dados.length) {
       document.getElementById('m-stat-hoje').textContent = dados[0].hoje||0;
@@ -1487,8 +1577,9 @@ async function carregarStatsMobile() {
 ══════════════════════════════════════════ */
 async function _confirmarPedidoCore(num, inputId, statusId, clWrapId, fnChecklist, fnFila) {
   try {
+    const sepId = separadorAtual ? separadorAtual.id : null;
     const res  = await fetch(`${API}/pedidos/bipar`, { credentials:'include', method:'POST', headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({numero_pedido:num, separador_id:separadorAtual.id}) });
+      body:JSON.stringify({numero_pedido:num, separador_id:sepId}) });
     const data = await res.json();
     if (res.status===404) { toast('❌ Pedido não encontrado!','erro'); document.getElementById(inputId).value=''; return; }
     if (res.status===409||res.status===400) { toast(`⚠️ ${data.erro}`,'aviso'); document.getElementById(inputId).value=''; return; }
@@ -1498,6 +1589,7 @@ async function _confirmarPedidoCore(num, inputId, statusId, clWrapId, fnChecklis
     const statusEl = document.getElementById(statusId);
     if (statusEl) { statusEl.innerHTML = `Pedido <b style="color:var(--text)">${num}</b> — 🔵 Separando`; statusEl.style.display = 'block'; }
     toast(data.ja_atribuido ? `Pedido ${num} carregado` : `✅ Pedido ${num} → SEPARANDO`, data.ja_atribuido?'info':'sucesso');
+    mostrarCampoCaixa(true);
     await fnChecklist();
     fnFila();
   } catch(e) { toast('Erro ao conectar!','erro'); }
@@ -1516,6 +1608,7 @@ async function _concluirCore(prefix, fnChecklist, fnFila, fnStats, inputId, stat
     const statusEl = document.getElementById(statusId);
     if (statusEl) statusEl.style.display = 'none';
     document.getElementById(inputId).value = '';
+    mostrarCampoCaixa(false);
     pedidoAtualId=null; pedidoAtualNum=null; itensAtuais=[];
     fnFila(); fnStats();
     setTimeout(() => document.getElementById(inputId).focus(), 300);
@@ -1646,165 +1739,48 @@ async function verificarItem(itemId, status, obs='', qtdFalta=0, prefix, renderP
 /* ══════════════════════════════════════════
    REPOSIÇÃO
 ══════════════════════════════════════════ */
-// Alias para compatibilidade
-const carregarDuplicatas = verificarDuplicatas;
-
-async function verificarDuplicatas() {
-  try {
-    const res  = await fetch(`${API}/repositor/duplicatas`);
-    const dups = await res.json();
-    const wrap = document.getElementById('rep-duplicatas-wrap');
-    if (!wrap) return;
-    if (!dups.length) { wrap.style.display = 'none'; return; }
-    wrap.style.display = 'block';
-    wrap.innerHTML = dups.map(d => `
-      <div class="aviso-duplicata">
-        <span style="font-size:22px">⚠️</span>
-        <div>
-          <div>Produto <b>${d.codigo}</b> aparece em <b>${d.total_pedidos}</b> pedidos diferentes!</div>
-          <div style="font-size:11px;font-weight:400;margin-top:2px;color:#9A3412">Pedidos: ${d.pedidos}</div>
-          <div style="font-size:11px;font-weight:400;color:#9A3412">${d.descricao||''}</div>
-        </div>
-      </div>`).join('');
-  } catch(e) {}
-}
-
-async function buscarProdutoRepositor() {
-  const cod = document.getElementById('rep-input-cod')?.value?.trim();
-  if (!cod) { toast('Digite um código!','aviso'); return; }
-  const res = document.getElementById('rep-busca-resultado');
-  res.style.display = 'block';
-  res.innerHTML = '<div style="color:var(--text3);padding:10px;font-size:13px">🔍 Buscando...</div>';
-  try {
-    const r    = await fetch(`${API}/repositor/buscar-produto?codigo=${encodeURIComponent(cod)}`);
-    const rows = await r.json();
-    if (!rows.length) {
-      res.innerHTML = '<div style="color:var(--text3);padding:10px;font-size:13px">Nenhum pedido encontrado com este código.</div>';
-      return;
-    }
-    const total = rows.length;
-    const pedidos = [...new Set(rows.map(r=>r.numero_pedido))];
-    res.innerHTML = `
-      <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:8px">
-        📦 <b>${total}</b> item(ns) em <b>${pedidos.length}</b> pedido(s): ${pedidos.join(', ')}
-      </div>
-      ${pedidos.length > 1 ? `<div class="aviso-duplicata" style="margin-bottom:8px"><span>⚠️</span> Este produto aparece em múltiplos pedidos!</div>` : ''}
-      <div style="display:flex;flex-direction:column;gap:6px">
-        ${rows.map(item => `
-          <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 13px;font-size:13px">
-            <div style="font-weight:700;color:var(--accent)">${item.codigo} &nbsp;•&nbsp; Pedido #${item.numero_pedido}</div>
-            <div style="font-weight:600;color:var(--text);margin:2px 0">${item.descricao||'—'}</div>
-            <div style="color:var(--text3);font-size:11px">📍 ${item.endereco||'—'} &nbsp;•&nbsp; Qtde: ${item.quantidade||1} &nbsp;•&nbsp; Status: <b>${item.status}</b></div>
-          </div>`).join('')}
-      </div>`;
-  } catch(e) {
-    res.innerHTML = '<div style="color:var(--red);padding:10px">Erro ao buscar.</div>';
-  }
-}
-
 async function carregarAvisos() {
   try {
-    const status = document.getElementById('filtro-rep-status')?.value;
+    const status = document.getElementById('filtro-rep-status').value;
     let url = `${API}/repositor/avisos`; if (status) url += `?status=${status}`;
-    const r      = await fetch(url);
-    const avisos = await r.json();
+    const res    = await fetch(url);
+    const avisos = await res.json();
     const pend   = avisos.filter(a=>a.status==='pendente').length;
     const rep    = avisos.filter(a=>a.status==='reposto').length;
-    const el_pend = document.getElementById('rep-pend');
-    const el_rep  = document.getElementById('rep-rep');
-    if (el_pend) el_pend.textContent = pend;
-    if (el_rep)  el_rep.textContent  = rep;
+    document.getElementById('rep-pend').textContent = pend;
+    document.getElementById('rep-rep').textContent  = rep;
     const badge = document.getElementById('menu-badge-rep');
     if (badge) { badge.textContent=pend; badge.style.display=pend>0?'inline':'none'; }
     const lista = document.getElementById('lista-avisos');
-    if (!lista) return;
-    if (!avisos.length) { lista.innerHTML = '<div style="color:var(--text3);text-align:center;padding:36px;font-size:14px">✅ Nenhum item encontrado</div>'; return; }
-
-    lista.innerHTML = avisos.map(a=>{
-      const isPendente = a.status === 'pendente';
-      const isReposto  = a.status === 'reposto';
-      const isNE       = a.status === 'nao_encontrado';
-      const isProto    = a.status === 'protocolo';
-      const icon = isReposto ? '✅' : isNE ? '🚫' : isProto ? '📋' : '🔴';
-
-      return `
+    if (!avisos.length) { lista.innerHTML = '<div style="color:var(--text3);text-align:center;padding:36px;font-size:13px">✅ Nenhum item encontrado</div>'; return; }
+    lista.innerHTML = avisos.map(a=>`
       <div class="aviso-card ${a.status}">
-        <div style="font-size:26px;flex-shrink:0">${icon}</div>
+        <div style="font-size:22px">${a.status==='reposto'?'✅':a.status==='nao_encontrado'?'🚫':'🔴'}</div>
         <div class="aviso-info">
-          <div class="aviso-cod">${a.codigo||'—'} <span style="font-size:11px;font-weight:500;color:var(--text3);margin-left:6px">Pedido #${a.numero_pedido}</span></div>
+          <div class="aviso-cod">${a.codigo||'—'} <span style="font-size:10px;font-weight:400;color:var(--text3);margin-left:6px">Pedido #${a.numero_pedido}</span></div>
           <div class="aviso-desc">${a.descricao||'—'}</div>
-          <div class="aviso-det">📍 ${a.endereco||'—'} &nbsp;•&nbsp; 📦 Pedido: <b>${a.quantidade||'—'}</b></div>
-          ${isReposto  ? `<div style="font-size:12px;color:var(--green);margin-top:4px;font-weight:700">✅ Reposto às ${a.hora_reposto||'—'}${a.qtd_encontrada>0?' — Encontrou: '+a.qtd_encontrada+' un.':''}</div>` : ''}
-          ${isNE       ? `<div style="font-size:12px;color:var(--indigo);margin-top:4px;font-weight:700">🚫 Não encontrado às ${a.hora_reposto||'—'}</div>` : ''}
-          ${isProto    ? `<div style="font-size:12px;color:var(--amber);margin-top:4px;font-weight:700">📋 Análise de protocolo às ${a.hora_reposto||'—'}</div>` : ''}
-          ${isPendente ? `<div style="font-size:12px;color:var(--red);margin-top:4px;font-weight:700">⏱ Aviso às ${a.hora_aviso||'—'}</div>` : ''}
-          ${a.obs ? `<div style="font-size:11px;color:var(--text2);margin-top:3px">📝 ${a.obs}</div>` : ''}
-          ${isPendente ? `
-            <div class="qtd-enc-wrap">
-              <label>Qtde encontrada:</label>
-              <input type="number" class="qtd-enc-input" id="qtd-enc-${a.id}" min="0" max="${a.quantidade||99}" placeholder="0" inputmode="numeric" value=""/>
-              <span style="font-size:11px;color:var(--text3)">de ${a.quantidade||'?'}</span>
-            </div>` : ''}
+          <div class="aviso-det">📍 ${a.endereco||'—'} &nbsp;•&nbsp; 📦 Qtde: ${a.quantidade||'—'} &nbsp;•&nbsp; 👤 ${a.separador_nome||'—'}</div>
+          ${a.status==='reposto'       ?`<div style="font-size:10px;color:var(--green);margin-top:3px;font-weight:600">✅ Reposto às ${a.hora_reposto||'—'}</div>`:''}
+          ${a.status==='nao_encontrado'?`<div style="font-size:10px;color:var(--indigo);margin-top:3px;font-weight:600">🚫 Não encontrado às ${a.hora_reposto||'—'}</div>`:''}
+          ${a.status==='pendente'      ?`<div style="font-size:10px;color:var(--red);margin-top:3px;font-weight:600">⏱ Aviso às ${a.hora_aviso||'—'}</div>`:''}
         </div>
-        <div style="display:flex;flex-direction:column;gap:7px;align-items:flex-end;flex-shrink:0">
-          ${isPendente ? `
-            <button class="btn btn-success btn-sm" style="font-size:12px;padding:8px 14px" onclick="marcarReposto(${a.id},${a.quantidade||0})">✅ Reposto</button>
-            <button class="btn btn-sm" style="background:var(--indigo);color:#fff;font-size:12px;padding:8px 14px" onclick="marcarNaoEncontrado(${a.id})">🚫 Não encontrei</button>
-            <button class="btn btn-sm" style="background:var(--amber);color:#fff;font-size:12px;padding:8px 14px" onclick="marcarProtocolo(${a.id})">📋 Protocolo</button>
-          ` : `<span class="pill ${isReposto?'reposto':isProto?'protocolo':'pendente'}">${isReposto?'Reposto':isProto?'Protocolo':'Não encontrado'}</span>`}
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;flex-shrink:0">
+          ${a.status==='pendente'?`
+            <button class="btn btn-success btn-sm" onclick="marcarReposto(${a.id})">✅ Reposto</button>
+            <button class="btn btn-sm" style="background:var(--indigo);color:#fff" onclick="marcarNaoEncontrado(${a.id})">🚫 Não encontrei</button>
+          `:`<span class="pill ${a.status==='reposto'?'reposto':'pendente'}">${a.status==='reposto'?'Reposto':'Não encontrado'}</span>`}
         </div>
-      </div>`;
-    }).join('');
-
-    // Verificar duplicatas ao carregar
-    verificarDuplicatas();
-
-  } catch(e) {
-    const lista = document.getElementById('lista-avisos');
-    if (lista) lista.innerHTML='<div style="color:var(--red);text-align:center;padding:20px">Erro ao carregar</div>';
-  }
+      </div>`).join('');
+  } catch(e) { document.getElementById('lista-avisos').innerHTML='<div style="color:var(--red);text-align:center;padding:20px">Erro ao carregar</div>'; }
 }
 
-async function marcarReposto(id, qtdTotal) {
-  const input   = document.getElementById(`qtd-enc-${id}`);
-  const qtdEnc  = parseInt(input?.value) || 0;
-  const nome    = usuarioAtual?.nome || '';
-  try {
-    await fetch(`${API}/repositor/avisos/${id}/reposto`, {
-      credentials:'include', method:'PUT',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ qtd_encontrada: qtdEnc || qtdTotal, repositor_nome: nome })
-    });
-    toast('✅ Reposto!','sucesso');
-    carregarAvisos();
-  } catch(e) { toast('Erro!','erro'); }
+async function marcarReposto(id) {
+  try { await fetch(`${API}/repositor/avisos/${id}/reposto`,{ credentials:'include',method:'PUT'}); toast('✅ Reposto!','sucesso'); carregarAvisos(); }
+  catch(e) { toast('Erro!','erro'); }
 }
-
 async function marcarNaoEncontrado(id) {
-  const nome = usuarioAtual?.nome || '';
-  try {
-    await fetch(`${API}/repositor/avisos/${id}/nao_encontrado`, {
-      credentials:'include', method:'PUT',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ repositor_nome: nome })
-    });
-    toast('🚫 Marcado como não encontrado!','aviso');
-    carregarAvisos();
-  } catch(e) { toast('Erro!','erro'); }
-}
-
-async function marcarProtocolo(id) {
-  if (!confirm('Enviar para análise de protocolo?')) return;
-  const nome = usuarioAtual?.nome || '';
-  try {
-    await fetch(`${API}/repositor/avisos/${id}/protocolo`, {
-      credentials:'include', method:'PUT',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ repositor_nome: nome })
-    });
-    toast('📋 Enviado para análise de protocolo!','info');
-    carregarAvisos();
-  } catch(e) { toast('Erro!','erro'); }
+  try { await fetch(`${API}/repositor/avisos/${id}/nao_encontrado`,{ credentials:'include',method:'PUT'}); toast('🚫 Não encontrado!','aviso'); carregarAvisos(); }
+  catch(e) { toast('Erro!','erro'); }
 }
 
 /* ══════════════════════════════════════════
@@ -1812,7 +1788,6 @@ async function marcarProtocolo(id) {
 ══════════════════════════════════════════ */
 document.getElementById('input-pedido')?.addEventListener('keypress', e => { if(e.key==='Enter') confirmarPedido(); });
 document.getElementById('m-input-pedido')?.addEventListener('keypress', e => { if(e.key==='Enter') confirmarPedidoMobile(); });
-document.getElementById('rep-input-cod')?.addEventListener('keypress', e => { if(e.key==='Enter') buscarProdutoRepositor(); });
 
 /* Adapta ao redimensionar */
 window.addEventListener('resize', () => {
@@ -1826,8 +1801,209 @@ window.addEventListener('resize', () => {
 });
 
 /* ══════════════════════════════════════════
-   VERIFICAR SESSÃO AO CARREGAR
+   ESTATÍSTICAS
 ══════════════════════════════════════════ */
+async function carregarEstatisticas() {
+  try {
+    const ini = document.getElementById('est-ini')?.value || '';
+    const fim = document.getElementById('est-fim')?.value || '';
+    let url = `${API}/estatisticas/pedidos`;
+    if (ini && fim) url += `?data_ini=${ini}&data_fim=${fim}`;
+    const res  = await fetch(url, { credentials:'include' });
+    const data = await res.json();
+
+    const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val ?? 0; };
+    set('est-hoje-c', data.concluidos_hoje);
+    set('est-hoje-t', data.total_hoje);
+    set('est-mes-c',  data.concluidos_mes);
+    set('est-mes-t',  data.total_mes);
+    set('est-ano-c',  data.concluidos_ano);
+    set('est-ano-t',  data.total_ano);
+
+    const periodoWrap = document.getElementById('est-periodo-wrap');
+    if (ini && fim && periodoWrap) {
+      periodoWrap.style.display = 'block';
+      set('est-per-c', data.concluidos_periodo);
+      set('est-per-t', data.total_periodo);
+    } else if (periodoWrap) {
+      periodoWrap.style.display = 'none';
+    }
+
+    // Produtividade por separador
+    const res2   = await fetch(`${API}/produtividade`, { credentials:'include' });
+    const prods  = await res2.json();
+    const tbody  = document.getElementById('tbody-est-sep');
+    if (tbody) {
+      if (!prods.length) { tbody.innerHTML = '<tr><td colspan="5" style="color:var(--text3);text-align:center;padding:20px">Nenhum separador</td></tr>'; }
+      else tbody.innerHTML = prods.map(d => `<tr>
+        <td style="font-weight:600;color:var(--text)">${d.nome}</td>
+        <td style="color:var(--green);font-weight:700">${d.hoje||0}</td>
+        <td style="color:var(--amber)">${d.mes||0}</td>
+        <td style="color:var(--accent)">${d.total_ano||0}</td>
+        <td><span class="pill ${d.status}">${d.status}</span></td>
+      </tr>`).join('');
+    }
+  } catch(e) { toast('Erro ao carregar estatísticas!','erro'); }
+}
+
+/* ══════════════════════════════════════════
+   CHECKOUT
+══════════════════════════════════════════ */
+// Gera SVG de código de barras Code-128 simples
+function gerarCodigoBarrasSVG(texto) {
+  // Representação visual simples em SVG para exibição
+  const chars = String(texto).split('');
+  const largura = Math.max(200, chars.length * 12 + 60);
+  let barras = '';
+  let x = 20;
+  // Padrão visual baseado nos caracteres
+  chars.forEach((c, i) => {
+    const code = c.charCodeAt(0);
+    const larg1 = 2 + (code % 3);
+    const larg2 = 1 + ((code >> 2) % 3);
+    barras += `<rect x="${x}" y="10" width="${larg1}" height="60" fill="#000"/>`;
+    x += larg1 + larg2;
+    barras += `<rect x="${x}" y="10" width="1" height="60" fill="#fff"/>`;
+    x += 2;
+  });
+  // barra final
+  barras += `<rect x="${x}" y="10" width="3" height="60" fill="#000"/>`;
+  const totalLarg = x + 40;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${totalLarg}" height="90" style="max-width:100%">
+    <rect width="${totalLarg}" height="90" fill="#fff"/>
+    ${barras}
+    <text x="${totalLarg/2}" y="84" text-anchor="middle" font-family="monospace" font-size="12" fill="#000">${texto}</text>
+  </svg>`;
+}
+
+async function buscarCaixa() {
+  const num = document.getElementById('ck-input-caixa')?.value?.trim();
+  if (!num) { toast('Digite o número da caixa!','aviso'); return; }
+  const wrap = document.getElementById('ck-resultado');
+  const cont = document.getElementById('ck-res-conteudo');
+  const tit  = document.getElementById('ck-res-titulo');
+  wrap.style.display = 'block';
+  cont.innerHTML = '<div style="color:var(--text3);padding:16px;text-align:center">🔍 Buscando...</div>';
+  try {
+    const res  = await fetch(`${API}/checkout/caixa/${encodeURIComponent(num)}`, { credentials:'include' });
+    const rows = await res.json();
+    if (tit) tit.textContent = `CAIXA ${num}`;
+    if (!rows.length) {
+      cont.innerHTML = '<div style="color:var(--text3);padding:20px;text-align:center;font-size:14px">Nenhum pedido vinculado a esta caixa.</div>';
+      return;
+    }
+    cont.innerHTML = rows.map(r => `
+      <div style="border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px;background:var(--surface2)">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px">
+          <div>
+            <div style="font-size:20px;font-weight:800;color:var(--accent);font-family:'Space Mono',monospace">#${r.numero_pedido}</div>
+            <div style="font-size:12px;color:var(--text3);margin-top:2px">
+              📦 ${r.ped_itens||0} itens &nbsp;•&nbsp;
+              👤 ${r.sep_nome||r.separador_nome||'—'} &nbsp;•&nbsp;
+              Status: <b class="pill ${r.ped_status||r.status}" style="font-size:10px">${r.ped_status||r.status}</b>
+            </div>
+            ${r.hora_criacao ? `<div style="font-size:11px;color:var(--text3);margin-top:2px">🕐 Vinculado às ${r.hora_criacao}</div>` : ''}
+          </div>
+          ${r.status === 'pendente' ? `
+            <button class="btn btn-success" onclick="confirmarCheckout(${r.id})">✅ Confirmar Checkout</button>
+          ` : `<span class="pill concluido">✅ Checkout feito às ${r.hora_checkout||'—'}</span>`}
+        </div>
+        <!-- Código de barras do pedido -->
+        <div style="text-align:center;background:#fff;padding:12px;border-radius:8px;border:1px solid var(--border)">
+          <div style="font-size:10px;color:var(--text3);margin-bottom:6px;font-weight:700;letter-spacing:1px">CÓDIGO DO PEDIDO — BIPE PARA CHECKOUT</div>
+          ${gerarCodigoBarrasSVG(r.numero_pedido)}
+        </div>
+      </div>`).join('');
+  } catch(e) { cont.innerHTML = '<div style="color:var(--red);padding:20px;text-align:center">Erro ao buscar!</div>'; }
+}
+
+async function confirmarCheckout(id) {
+  try {
+    await fetch(`${API}/checkout/${id}/confirmar`, { credentials:'include', method:'PUT' });
+    toast('✅ Checkout confirmado!','sucesso');
+    buscarCaixa();
+    carregarCheckoutLista();
+  } catch(e) { toast('Erro ao confirmar!','erro'); }
+}
+
+async function carregarCheckoutLista() {
+  try {
+    const status = document.getElementById('filtro-ck-status')?.value || '';
+    const url = `${API}/checkout${status ? '?status='+status : ''}`;
+    const res  = await fetch(url, { credentials:'include' });
+    const rows = await res.json();
+    const tbody = document.getElementById('tbody-checkout');
+    if (!tbody) return;
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="6" style="color:var(--text3);text-align:center;padding:24px">Nenhum checkout</td></tr>';
+      return;
+    }
+    tbody.innerHTML = rows.map(r => `<tr>
+      <td style="font-family:'Space Mono',monospace;font-weight:700;font-size:14px;color:var(--amber)">${r.numero_caixa||'—'}</td>
+      <td style="font-weight:700;color:var(--accent)">${r.numero_pedido}</td>
+      <td>${r.separador_nome||'—'}</td>
+      <td><span class="pill ${r.status}">${r.status==='concluido'?'Concluído':'Pendente'}</span></td>
+      <td style="font-size:11px;color:var(--text3)">${r.hora_checkout||r.hora_criacao||'—'}</td>
+      <td>${r.status==='pendente'
+        ? `<button class="btn btn-success btn-sm" onclick="confirmarCheckout(${r.id})">✅ OK</button>`
+        : `<span style="color:var(--green);font-size:11px">✓ Feito</span>`}
+      </td>
+    </tr>`).join('');
+  } catch(e) {}
+}
+
+/* ══════════════════════════════════════════
+   VINCULAR CAIXA — SEPARADOR
+══════════════════════════════════════════ */
+async function vincularCaixaCore(caixa, inputStatusId) {
+  if (!pedidoAtualId) { toast('Nenhum pedido ativo!','aviso'); return; }
+  if (!caixa) { toast('Digite o número da caixa!','aviso'); return; }
+  try {
+    const res  = await fetch(`${API}/pedidos/${pedidoAtualId}/caixa`, {
+      credentials:'include', method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ numero_caixa: caixa })
+    });
+    const data = await res.json();
+    if (data.erro) { toast(data.erro,'erro'); return; }
+    toast(`📦 Caixa ${caixa} vinculada ao pedido ${pedidoAtualNum}!`,'sucesso');
+    const statusEl = document.getElementById(inputStatusId);
+    if (statusEl) {
+      statusEl.style.display = 'block';
+      statusEl.innerHTML = `✅ Caixa <b>${caixa}</b> vinculada — Pedido #${pedidoAtualNum}`;
+      statusEl.style.color = 'var(--green)';
+    }
+  } catch(e) { toast('Erro ao vincular caixa!','erro'); }
+}
+function vincularCaixaDesktop() {
+  const caixa = document.getElementById('cl-input-caixa')?.value?.trim();
+  vincularCaixaCore(caixa, 'cl-caixa-status');
+}
+function vincularCaixaMobile() {
+  const caixa = document.getElementById('m-input-caixa')?.value?.trim();
+  vincularCaixaCore(caixa, 'm-caixa-status');
+}
+
+// Mostra campo caixa quando pedido é carregado
+function mostrarCampoCaixa(show) {
+  const d = document.getElementById('cl-caixa-wrap');
+  const m = document.getElementById('m-caixa-wrap');
+  if (d) d.style.display = show ? 'block' : 'none';
+  if (m) m.style.display = show ? 'block' : 'none';
+}
+
+/* Eventos caixa */
+document.getElementById('cl-input-caixa')?.addEventListener('keypress', e => { if(e.key==='Enter') vincularCaixaDesktop(); });
+document.getElementById('m-input-caixa')?.addEventListener('keypress', e => { if(e.key==='Enter') vincularCaixaMobile(); });
+document.getElementById('ck-input-caixa')?.addEventListener('keypress', e => { if(e.key==='Enter') buscarCaixa(); });
+
+/* Datas padrão estatísticas */
+(function() {
+  const ini = document.getElementById('est-ini');
+  const fim = document.getElementById('est-fim');
+  if (ini) ini.value = hoje;
+  if (fim) fim.value = hoje;
+})();
 (async function verificarSessao() {
   try {
     const res  = await fetch(`${API}/auth/me`, { credentials:'include' });
