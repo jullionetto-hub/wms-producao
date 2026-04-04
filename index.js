@@ -51,13 +51,14 @@ function dbGet(sql, params) {
   });
 }
 
-// ── Data/hora local ──────────────────────────────────────────────────────────
+// ── Data/hora local — sempre America/Sao_Paulo ───────────────────────────────
 function dataHoraLocal() {
-  const agora = new Date();
-  const data  = agora.toLocaleDateString('pt-BR', { year:'numeric', month:'2-digit', day:'2-digit' });
-  const [d, m, y] = data.split('/');
-  const dataISO = `${y}-${m}-${d}`;
-  const hora    = agora.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
+  const agora   = new Date();
+  const opcData = { timeZone:'America/Sao_Paulo', year:'numeric', month:'2-digit', day:'2-digit' };
+  const opcHora = { timeZone:'America/Sao_Paulo', hour:'2-digit', minute:'2-digit', hour12:false };
+  const partes  = agora.toLocaleDateString('pt-BR', opcData).split('/');   // DD/MM/YYYY
+  const dataISO = `${partes[2]}-${partes[1]}-${partes[0]}`;                // YYYY-MM-DD
+  const hora    = agora.toLocaleTimeString('pt-BR', opcHora);               // HH:MM
   return { data: dataISO, hora };
 }
 
@@ -183,6 +184,9 @@ app.post('/auth/login', (req, res) => {
   const { login, senha, perfil } = req.body;
   if (!login||!senha||!perfil) return res.status(400).json({ erro:'Dados incompletos!' });
   const hash = hashSenha(senha);
+  // Perfis válidos
+  const perfisValidos = ['supervisor','separador','repositor','checkout'];
+  if (!perfisValidos.includes(perfil)) return res.status(400).json({ erro:'Perfil inválido!' });
   db.get(`SELECT * FROM usuarios WHERE login=? AND senha_hash=? AND perfil=? AND status='ativo'`,
     [login, hash, perfil], (err, user) => {
       if (err)   return res.status(500).json({ erro: err.message });
@@ -547,17 +551,30 @@ app.put('/repositor/avisos/:id/protocolo', (req, res) => {
 });
 
 // ─── CHECKOUT ────────────────────────────────────────────────────────────────
-app.get('/checkout/caixa/:numero', (req, res) => {
+app.get('/checkout/caixa/:numero', async (req, res) => {
   const numero = String(req.params.numero).trim();
-  db.all(`SELECT c.*, p.status as ped_status, p.itens as ped_itens, p.numero_caixa,
-     s.nome as sep_nome
-   FROM checkout c JOIN pedidos p ON c.pedido_id=p.id
-   LEFT JOIN separadores s ON p.separador_id=s.id
-   WHERE c.numero_caixa=? ORDER BY c.id DESC`,
-    [numero], (err, rows) => {
-      if (err) return res.status(500).json({ erro: err.message });
-      res.json(rows);
+  try {
+    const rows = await new Promise((resolve, reject) => {
+      db.all(`SELECT c.*, p.status as ped_status, p.itens as ped_itens, p.numero_caixa,
+         s.nome as sep_nome
+       FROM checkout c JOIN pedidos p ON c.pedido_id=p.id
+       LEFT JOIN separadores s ON p.separador_id=s.id
+       WHERE c.numero_caixa=? ORDER BY c.id DESC`,
+        [numero], (err, r) => { if (err) reject(err); else resolve(r); });
     });
+    // Para cada checkout busca os itens do pedido
+    const result = [];
+    for (const row of rows) {
+      const itens = await new Promise((resolve, reject) => {
+        db.all(`SELECT codigo, descricao, endereco, quantidade, status FROM itens_pedido WHERE pedido_id=? ORDER BY id`,
+          [row.pedido_id], (err, r) => { if (err) reject(err); else resolve(r); });
+      });
+      result.push({ ...row, itens_lista: itens });
+    }
+    res.json(result);
+  } catch(err) {
+    res.status(500).json({ erro: err.message });
+  }
 });
 
 app.get('/checkout/pedido/:numero', (req, res) => {
