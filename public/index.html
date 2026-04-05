@@ -32,6 +32,8 @@
 }
 
 
+
+
 /* ══════════════════════════════════════════
    BASE
 ══════════════════════════════════════════ */
@@ -40,6 +42,7 @@ html,body{height:100%;overflow:hidden}
 body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);font-size:14px;transition:background .25s,color .25s}
 ::-webkit-scrollbar{width:4px;height:4px}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:10px}
+
 
 /* ══════════════════════════════════════════
    LOGIN
@@ -63,6 +66,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
 .btn-login:hover{background:#1D4ED8;transform:translateY(-1px);box-shadow:0 6px 22px rgba(37,99,235,.4)}
 .login-erro{color:#FCA5A5;font-size:12px;margin-top:10px;display:none;padding:8px 12px;background:rgba(220,38,38,.12);border-radius:8px;border:1px solid rgba(220,38,38,.25)}
 
+
 /* ══════════════════════════════════════════
    APP SHELL
 ══════════════════════════════════════════ */
@@ -80,6 +84,7 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
 .btn-sair:hover{background:var(--red);color:#fff;border-color:var(--red)}
 .layout{display:flex;flex:1;overflow:hidden}
 
+
 /* ══════════════════════════════════════════
    SIDEBAR (desktop supervisor)
 ══════════════════════════════════════════ */
@@ -91,6 +96,7 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
 .mi-ic{font-size:15px;flex-shrink:0;width:20px;text-align:center}
 .mbadge{background:var(--red);color:#fff;border-radius:10px;padding:1px 6px;font-size:9px;font-weight:700;margin-left:auto}
 
+
 /* ══════════════════════════════════════════
    CONTENT AREA
 ══════════════════════════════════════════ */
@@ -99,12 +105,14 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
 .pagina.ativa{display:block;animation:fadeUp .2s ease}
 @keyframes fadeUp{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
 
+
 /* ══════════════════════════════════════════
    CARDS
 ══════════════════════════════════════════ */
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:16px;box-shadow:var(--sh)}
 .card-hd{background:var(--surface2);margin:-16px -16px 14px;padding:10px 16px;border-radius:var(--r) var(--r) 0 0;font-size:10px;font-weight:700;color:var(--text2);letter-spacing:1.2px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
 .pg-title{font-family:'Space Mono',monospace;font-size:17px;color:var(--text);margin-bottom:16px;letter-spacing:-.5px;display:flex;align-items:center;gap:10px}
+
 
 /* ══════════════════════════════════════════
    COUNTER CARDS
@@ -127,6 +135,7 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
 .cnt-card.roxo   .cnt-val{color:var(--indigo)}
 .cnt-sub{font-size:11px;color:var(--text3);margin-top:3px}
 
+
 /* ══════════════════════════════════════════
    BUTTONS
 ══════════════════════════════════════════ */
@@ -136,6 +145,7 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
 .btn-danger {background:var(--red);color:#fff}  .btn-danger:hover {filter:brightness(1.1)}
 .btn-outline{background:transparent;border:1.5px solid var(--border);color:var(--text2)}.btn-outline:hover{border-color:var(--accent);color:var(--accent);background:var(--bg)}
 .btn-sm{padding:5px 11px;font-size:11px}
+
 
 /* ══════════════════════════════════════════
    FORM / FILTERS
@@ -153,6 +163,7 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
 .form-grp input,.form-grp select{width:100%}
 .sel-sm{padding:5px 8px;background:var(--surface);border:1.5px solid var(--border);border-radius:6px;color:var(--text);font-size:11px;outline:none;cursor:pointer;font-family:'DM Sans',sans-serif}
 
+
 /* ══════════════════════════════════════════
    TABLE
 ══════════════════════════════════════════ */
@@ -163,6 +174,7 @@ tbody tr{border-bottom:1px solid var(--border);transition:background .12s}
 tbody tr:last-child{border-bottom:none}
 tbody tr:hover{background:var(--surface2)}
 td{padding:10px 13px;vertical-align:middle;color:var(--text2)}
+
 
 /* ══════════════════════════════════════════
    PILLS
@@ -181,6 +193,8 @@ td{padding:10px 13px;vertical-align:middle;color:var(--text2)}
 .pill.checkout  {background:#F0FDFA;color:#0D9488;border:1px solid #99F6E4}
 
 
+
+
 /* ══════════════════════════════════════════
    TOAST
 ══════════════════════════════════════════ */
@@ -193,8 +207,11 @@ td{padding:10px 13px;vertical-align:middle;color:var(--text2)}
 .toast.aviso  {background:#FFFBEB;color:#D97706;border:1px solid #FDE68A}
 
 
+
+
 .pill.liberado  {background:#F5F3FF;color:var(--indigo);border:1px solid #DDD6FE}
 .pill.protocolo {background:#FFFBEB;color:var(--amber);border:1px solid #FDE68A}
+
 
 /* Toast mobile — wrap longo */
 @media(max-width:768px){
@@ -211,6 +228,7 @@ td{padding:10px 13px;vertical-align:middle;color:var(--text2)}
 .tl-titulo{font-weight:600;color:var(--text);font-size:12px}
 .tl-sub{color:var(--text3);font-size:11px;margin-top:1px}
 
+
 /* ══════════════════════════════════════════
    UPLOAD
 ══════════════════════════════════════════ */
@@ -219,6 +237,7 @@ td{padding:10px 13px;vertical-align:middle;color:var(--text2)}
 #input-arquivo{display:none}
 .hist-item{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:9px 13px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;font-size:12px}
 .status-box{display:none;margin-top:10px;padding:10px 13px;border-radius:var(--r-sm);font-size:12px;font-weight:600;text-align:center}
+
 
 /* ══════════════════════════════════════════
    REPOSIÇÃO
@@ -240,6 +259,7 @@ body.dark .aviso-card.nao_encontrado{background:#1E1B4B;border-color:#3730A3;opa
 .aviso-card.nao_encontrado .aviso-cod{color:var(--indigo)}
 .aviso-desc{font-size:12px;color:var(--text);margin:2px 0}
 .aviso-det {font-size:11px;color:var(--text3)}
+
 
 /* ══════════════════════════════════════════
    ██ SEPARADOR — TABS MOBILE ██
@@ -267,12 +287,15 @@ body.dark .aviso-card.nao_encontrado{background:#1E1B4B;border-color:#3730A3;opa
 .sep-tab-ic{font-size:22px;line-height:1}
 .sep-tab-badge{position:absolute;top:6px;right:calc(50% - 22px);background:var(--red);color:#fff;border-radius:10px;padding:1px 5px;font-size:9px;font-weight:700;min-width:16px;text-align:center}
 
+
 /* Páginas das tabs do separador */
 .sep-tab-page{display:none;flex-direction:column;height:100%}
 .sep-tab-page.ativa{display:flex}
 
+
 /* Conteudo da tab com padding inferior para não ficar atrás da tabbar */
 .sep-scroll{flex:1;overflow-y:auto;padding:14px 14px 72px}
+
 
 /* ══════════════════════════════════════════
    CAMPO DE LEITURA (separador)
@@ -299,6 +322,7 @@ body.dark .aviso-card.nao_encontrado{background:#1E1B4B;border-color:#3730A3;opa
   font-size:13px;color:var(--text2);display:none
 }
 
+
 /* ══════════════════════════════════════════
    CHECKLIST
 ══════════════════════════════════════════ */
@@ -309,6 +333,7 @@ body.dark .aviso-card.nao_encontrado{background:#1E1B4B;border-color:#3730A3;opa
 .cl-resumo{padding:7px 14px;font-size:11px;color:var(--text2);border-bottom:1px solid var(--border);background:var(--surface2)}
 .cl-lista{overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:7px}
 .cl-footer{padding:11px 13px;border-top:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap;background:var(--surface2)}
+
 
 /* Item cards */
 .item-card{border-radius:10px;padding:11px 13px;display:flex;align-items:flex-start;gap:11px;border:1.5px solid;transition:all .2s;animation:fadeUp .15s ease}
@@ -321,6 +346,7 @@ body.dark .item-card.encontrado{background:#052E16;border-color:#14532D}
 body.dark .item-card.falta     {background:#2D0F0F;border-color:#7F1D1D}
 body.dark .item-card.parcial   {background:#2D1A05;border-color:#78350F}
 
+
 .item-ic{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
 .item-card.pendente   .item-ic{background:var(--border)}
 .item-card.encontrado .item-ic{background:#BBF7D0}
@@ -330,6 +356,7 @@ body.dark .item-card.pendente   .item-ic{background:var(--border)}
 body.dark .item-card.encontrado .item-ic{background:#14532D}
 body.dark .item-card.falta      .item-ic{background:#7F1D1D}
 body.dark .item-card.parcial    .item-ic{background:#78350F}
+
 
 .item-info{flex:1;min-width:0}
 .item-cod {font-size:11px;font-weight:700;color:var(--accent)}
@@ -346,6 +373,7 @@ body.dark .item-card.parcial    .item-ic{background:#78350F}
 .parcial-input{flex:1;padding:8px 10px;background:var(--surface);border:1.5px solid #FDE68A;border-radius:6px;color:var(--text);font-size:18px;font-weight:700;outline:none;text-align:center;font-family:'Space Mono',monospace}
 .btn-parc-ok{padding:8px 14px;background:var(--amber);border:none;border-radius:6px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif}
 
+
 .item-btns{display:flex;gap:6px;flex-shrink:0}
 .btn-item{width:40px;height:40px;border-radius:9px;border:1.5px solid;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;background:transparent}
 .btn-item.ok    {border-color:#BBF7D0;color:var(--green)}.btn-item.ok:hover:not(:disabled)    {background:var(--green);color:#fff;border-color:var(--green)}
@@ -354,10 +382,13 @@ body.dark .item-card.parcial    .item-ic{background:#78350F}
 .btn-item:disabled{opacity:.3;cursor:not-allowed}
 
 
+
+
 .btn-acao{flex:1;padding:13px;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;min-width:130px;font-family:'DM Sans',sans-serif}
 .btn-acao.concluir{background:var(--green);color:#fff}.btn-acao.concluir:hover:not(:disabled){filter:brightness(1.1)}
 .btn-acao.aguardar{background:var(--surface);color:var(--amber);border:1px solid #FDE68A;cursor:not-allowed}
 .btn-acao:disabled{background:var(--surface2);color:var(--text3);border:1px solid var(--border);cursor:not-allowed}
+
 
 /* ══════════════════════════════════════════
    FILA (tab 2 do separador)
@@ -371,10 +402,12 @@ body.dark .item-card.parcial    .item-ic{background:#78350F}
 .fila-card.meu{border-color:var(--accent);background:rgba(37,99,235,.05)}
 .fila-card.ocupado{opacity:.55;cursor:not-allowed}
 
+
 .fila-num{font-family:'Space Mono',monospace;font-size:16px;font-weight:700;color:var(--text);flex:1}
 .fila-card.meu .fila-num{color:var(--accent)}
 .fila-meta{font-size:11px;color:var(--text3);text-align:right}
 .fila-meta b{display:block;font-size:12px;color:var(--text2);font-weight:600}
+
 
 /* ══════════════════════════════════════════
    STATS (tab 3 do separador — cards grandes)
@@ -397,10 +430,12 @@ body.dark .item-card.parcial    .item-ic{background:#78350F}
 .stat-big .s-sub{font-size:12px;color:var(--text3);margin-top:6px}
 .stat-nome{font-size:13px;color:var(--text2);font-weight:600;text-align:center;margin-bottom:16px;padding:10px 14px;background:var(--surface2);border-radius:var(--r-sm);border:1px solid var(--border)}
 
+
 /* ══════════════════════════════════════════
    DESKTOP: separador sem tabbar → usa layout normal
 ══════════════════════════════════════════ */
 .sep-desktop{display:none} /* mostrado só no desktop para separador */
+
 
 /* ══════════════════════════════════════════
    RESPONSIVE
@@ -425,6 +460,7 @@ body.dark .item-card.parcial    .item-ic{background:#78350F}
   .btn-sair{padding:5px 10px;font-size:10px}
 }
 
+
 /* App separador no mobile: sem sidebar, com tabbar */
 @media(max-width:768px){
   body.sep-mobile #app{overflow:hidden}
@@ -437,6 +473,7 @@ body.dark .item-card.parcial    .item-ic{background:#78350F}
 /* Sep mobile root escondido por padrão */
 #sep-mobile-root{display:none}
 
+
 /* Desktop separador: usa conteudo normal */
 @media(min-width:769px){
   .sep-desktop{display:block}
@@ -446,6 +483,7 @@ body.dark .item-card.parcial    .item-ic{background:#78350F}
   .sep-tabbar{display:none!important}
 }
   .perm-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:6px}.perm-item{display:flex;align-items:center;gap:10px;padding:12px 14px;border:1.5px solid var(--border);border-radius:12px;background:var(--surface2);font-size:13px;font-weight:600;color:var(--text);cursor:pointer}.perm-item input{width:18px;height:18px;accent-color:var(--accent);flex-shrink:0}.perm-item span{display:block;line-height:1.2}@media(max-width:768px){.perm-grid{grid-template-columns:1fr}}
+
 
 /* ══════════════════════════════════════════
    KPI CARDS — DASHBOARD
@@ -476,11 +514,13 @@ body.dark .item-card.parcial    .item-ic{background:#78350F}
 .kpi-trend{font-size:10px;font-weight:700;margin-top:4px}
 .kpi-trend.up{color:var(--green)}.kpi-trend.down{color:var(--red)}
 
+
 /* ══════════════════════════════════════════
    ESTATÍSTICAS — PERFIS
 ══════════════════════════════════════════ */
 .pag-stats-perfil{display:none}
 .pag-stats-perfil.ativa{display:block;animation:fadeUp .2s ease}
+
 
 /* ══════════════════════════════════════════
    MOBILE TABS — REPOSITOR E CHECKOUT
@@ -505,9 +545,11 @@ body.dark .item-card.parcial    .item-ic{background:#78350F}
 .rep-tab-ic,.ck-tab-ic{font-size:22px;line-height:1}
 .rep-tab-badge{position:absolute;top:6px;right:calc(50% - 22px);background:var(--red);color:#fff;border-radius:10px;padding:1px 5px;font-size:9px;font-weight:700;min-width:16px;text-align:center}
 
+
 .rep-tab-page,.ck-tab-page{display:none;flex-direction:column;height:100%}
 .rep-tab-page.ativa,.ck-tab-page.ativa{display:flex}
 .rep-scroll,.ck-scroll{flex:1;overflow-y:auto;padding:14px 14px 72px}
+
 
 /* Mobile repositor root */
 #rep-mobile-root,#ck-mobile-root{display:none}
@@ -518,6 +560,7 @@ body.dark .item-card.parcial    .item-ic{background:#78350F}
   body.rep-mobile .rep-tabbar{display:flex}
   body.rep-mobile #rep-mobile-root{display:flex;flex-direction:column;flex:1;overflow:hidden}
   body.rep-mobile .layout{overflow:hidden}
+
 
   body.ck-mobile #app{overflow:hidden}
   body.ck-mobile .sidebar{display:none}
@@ -537,6 +580,7 @@ body.dark .item-card.parcial    .item-ic{background:#78350F}
   .ck-tabbar{display:none!important}
 }
 
+
 /* ══════════════════════════════════════════
    FILTRO DE DATA — melhorado
 ══════════════════════════════════════════ */
@@ -546,9 +590,11 @@ body.dark .item-card.parcial    .item-ic{background:#78350F}
 .excel-btn{display:flex;align-items:center;gap:6px;padding:8px 14px;background:#16A34A;color:#fff;border:none;border-radius:var(--r-sm);font-size:12px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .18s;white-space:nowrap}
 .excel-btn:hover{filter:brightness(1.1);transform:translateY(-1px)}
 
+
 /* Tabela de pedidos — hora formato BR */
 .hora-br{font-variant-numeric:tabular-nums;white-space:nowrap}
 .data-br{white-space:nowrap}
+
 
 /* ══════════════════════════════════════════
    MOBILE IMPROVEMENTS
@@ -571,12 +617,14 @@ body.dark .item-card.parcial    .item-ic{background:#78350F}
   .kpi-val{font-size:24px}
 }
 
+
 /* ══════════════════════════════════════════
    QTD ENCONTRADA — repositor
 ══════════════════════════════════════════ */
 .qtd-enc-wrap{display:flex;align-items:center;gap:8px;margin-top:8px;background:var(--bg);border:1.5px solid #FDE68A;border-radius:8px;padding:7px 10px;flex-wrap:wrap}
 .qtd-enc-wrap label{font-size:10px;color:var(--amber);font-weight:700;white-space:nowrap}
 .qtd-enc-input{width:70px;padding:6px 8px;background:var(--surface);border:1.5px solid #FDE68A;border-radius:6px;color:var(--text);font-size:16px;font-weight:700;outline:none;text-align:center;font-family:'Space Mono',monospace}
+
 
 /* ══════════════════════════════════════════
    AVISO DUPLICATA
@@ -587,7 +635,9 @@ body.dark .aviso-duplicata{background:#2D1A05;border-color:#78350F;color:#FCD34D
 </head>
 <body>
 
+
 <div id="toast-root"></div>
+
 
 <!-- ══ LOGIN ══ -->
 <div id="tela-login">
@@ -608,6 +658,7 @@ body.dark .aviso-duplicata{background:#2D1A05;border-color:#78350F;color:#FCD34D
   </div>
 </div>
 
+
 <!-- ══ APP ══ -->
 <div id="app">
   <header>
@@ -622,11 +673,14 @@ body.dark .aviso-duplicata{background:#2D1A05;border-color:#78350F;color:#FCD34D
     </div>
   </header>
 
+
   <div class="layout">
     <nav class="sidebar" id="sidebar"></nav>
 
+
     <!-- ══ CONTEÚDO NORMAL (supervisor / desktop separador) ══ -->
     <div class="conteudo" id="conteudo">
+
 
       <!-- DASHBOARD -->
       <div class="pagina" id="pag-dashboard">
@@ -673,9 +727,11 @@ body.dark .aviso-duplicata{background:#2D1A05;border-color:#78350F;color:#FCD34D
         </div>
       </div>
 
+
       <!-- PEDIDOS -->
       <div class="pagina" id="pag-pedidos">
         <div class="pg-title">📋 Pedidos</div>
+
 
         <!-- Painel de pedidos bloqueados -->
         <div class="card" id="dash-bloqueados-wrap" style="display:none;margin-bottom:16px;border-left:4px solid var(--red);border-top:1.5px solid #FECACA;border-right:1.5px solid #FECACA;border-bottom:1.5px solid #FECACA">
@@ -711,6 +767,7 @@ body.dark .aviso-duplicata{background:#2D1A05;border-color:#78350F;color:#FCD34D
         </div>
       </div>
 
+
       <!-- CADASTROS -->
       <div class="pagina" id="pag-cadastros">
         <div class="pg-title">⚙️ Cadastros</div>
@@ -732,7 +789,8 @@ body.dark .aviso-duplicata{background:#2D1A05;border-color:#78350F;color:#FCD34D
                   <option value="repositor">Repositor</option>
                   <option value="checkout">Checkout</option>
                 </select>
-              </div>
+              
+      <div class="form-grp" id="grp-funcao-repositor" style="display:none">\n        <label>FUNÇÃO DO REPOSITOR</label>\n        <select id="usr-funcao-repositor">\n          <option value="">Repositor geral</option>\n          <option value="busca">Busca / Armazém</option>\n          <option value="abastecimento">Abastecimento</option>\n        </select>\n      </div></div>
               <div class="form-grp"><label>PODE ACESSAR TAMBÉM</label><div class="perm-grid"><label class="perm-item"><input type="checkbox" class="usr-perm" value="supervisor"><span>Supervisor</span></label><label class="perm-item"><input type="checkbox" class="usr-perm" value="separador"><span>Separador</span></label><label class="perm-item"><input type="checkbox" class="usr-perm" value="repositor"><span>Repositor</span></label><label class="perm-item"><input type="checkbox" class="usr-perm" value="checkout"><span>Checkout</span></label></div></div>
               <div class="form-grp"><label>TURNO</label>
                 <select id="usr-turno"><option value="Manhã">Manhã</option><option value="Tarde">Tarde</option><option value="Noite">Noite</option></select>
@@ -779,6 +837,7 @@ body.dark .aviso-duplicata{background:#2D1A05;border-color:#78350F;color:#FCD34D
           </div>
         </div>
       </div>
+
 
       <!-- SEPARAÇÃO (desktop) -->
       <div class="pagina" id="pag-separacao">
@@ -836,6 +895,7 @@ body.dark .aviso-duplicata{background:#2D1A05;border-color:#78350F;color:#FCD34D
         </div>
       </div>
 
+
       <!-- REPOSIÇÃO -->
       <div class="pagina" id="pag-reposicao">
         <div class="pg-title">🔧 Reposição</div>
@@ -857,6 +917,7 @@ body.dark .aviso-duplicata{background:#2D1A05;border-color:#78350F;color:#FCD34D
           <div id="lista-avisos"><div style="color:var(--text3);text-align:center;padding:40px;font-size:13px">✅ Nenhum item em falta</div></div>
         </div>
       </div>
+
 
       <!-- ESTATÍSTICAS -->
       <div class="pagina" id="pag-estatisticas">
@@ -940,6 +1001,7 @@ body.dark .aviso-duplicata{background:#2D1A05;border-color:#78350F;color:#FCD34D
         </div>
       </div>
 
+
       <!-- CHECKOUT -->
       <div class="pagina" id="pag-checkout">
         <div class="pg-title">📦 Checkout</div>
@@ -962,6 +1024,7 @@ body.dark .aviso-duplicata{background:#2D1A05;border-color:#78350F;color:#FCD34D
           </div>
         </div>
       </div>
+
 
       <!-- ESTATÍSTICAS REPOSITOR -->
       <div class="pagina" id="pag-stats-repositor">
@@ -997,6 +1060,7 @@ body.dark .aviso-duplicata{background:#2D1A05;border-color:#78350F;color:#FCD34D
           </div>
         </div>
       </div>
+
 
       <!-- ESTATÍSTICAS CHECKOUT -->
       <div class="pagina" id="pag-stats-checkout">
@@ -1040,7 +1104,9 @@ body.dark .aviso-duplicata{background:#2D1A05;border-color:#78350F;color:#FCD34D
         </div>
       </div>
 
+
     </div><!-- /conteudo -->
+
 
     <!-- ══ REPOSITOR MOBILE — 2 ABAS ══ -->
     <div id="rep-mobile-root">
@@ -1078,6 +1144,7 @@ body.dark .aviso-duplicata{background:#2D1A05;border-color:#78350F;color:#FCD34D
       </div>
     </div><!-- /rep-mobile-root -->
 
+
     <!-- ══ CHECKOUT MOBILE — 2 ABAS ══ -->
     <div id="ck-mobile-root">
       <!-- ABA 1 — CHECKOUT -->
@@ -1108,6 +1175,7 @@ body.dark .aviso-duplicata{background:#2D1A05;border-color:#78350F;color:#FCD34D
       </div>
     </div><!-- /ck-mobile-root -->
     <div id="sep-mobile-root">
+
 
       <!-- ABA 1 — SEPARAR -->
       <div class="sep-tab-page ativa" id="sep-tab-separar">
@@ -1143,6 +1211,7 @@ body.dark .aviso-duplicata{background:#2D1A05;border-color:#78350F;color:#FCD34D
         </div>
       </div>
 
+
       <!-- ABA 2 — FILA -->
       <div class="sep-tab-page" id="sep-tab-fila">
         <div class="sep-scroll">
@@ -1160,6 +1229,7 @@ body.dark .aviso-duplicata{background:#2D1A05;border-color:#78350F;color:#FCD34D
         </div>
       </div>
 
+
       <!-- ABA 3 — AVISOS DO REPOSITOR -->
       <div class="sep-tab-page" id="sep-tab-avisos-sep">
         <div class="sep-scroll">
@@ -1172,6 +1242,7 @@ body.dark .aviso-duplicata{background:#2D1A05;border-color:#78350F;color:#FCD34D
           </div>
         </div>
       </div>
+
 
       <!-- ABA 4 — STATS -->
       <div class="sep-tab-page" id="sep-tab-stats">
@@ -1187,10 +1258,13 @@ body.dark .aviso-duplicata{background:#2D1A05;border-color:#78350F;color:#FCD34D
         </div>
       </div>
 
+
     </div><!-- /sep-mobile-root -->
+
 
   </div><!-- /layout -->
 </div><!-- /app -->
+
 
 <!-- Tab bar -->
 <div class="sep-tabbar" id="sep-tabbar">
@@ -1214,6 +1288,7 @@ body.dark .aviso-duplicata{background:#2D1A05;border-color:#78350F;color:#FCD34D
   </button>
 </div>
 
+
 <!-- Tab bar Repositor -->
 <div class="rep-tabbar" id="rep-tabbar">
   <button class="rep-tab ativo" id="rtab-avisos" onclick="mudarTabRep('avisos')">
@@ -1227,6 +1302,7 @@ body.dark .aviso-duplicata{background:#2D1A05;border-color:#78350F;color:#FCD34D
   </button>
 </div>
 
+
 <!-- Tab bar Checkout -->
 <div class="ck-tabbar" id="ck-tabbar">
   <button class="ck-tab ativo" id="cktab-busca" onclick="mudarTabCk('busca')">
@@ -1238,6 +1314,7 @@ body.dark .aviso-duplicata{background:#2D1A05;border-color:#78350F;color:#FCD34D
     ESTATÍSTICAS
   </button>
 </div>
+
 
 <script>
 /* ══════════════════════════════════════════
@@ -1254,11 +1331,13 @@ let pedidosImportar  = [];
 let historicoImportacoes = JSON.parse(localStorage.getItem('historico_importacoes') || '[]');
 let isMobile = () => window.innerWidth <= 768;
 
+
 function hojeLocal() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 const hoje = hojeLocal();
+
 
 /* ── Relógio ── */
 function atualizarRelogio() {
@@ -1268,6 +1347,7 @@ function atualizarRelogio() {
   if (el) el.textContent = str;
 }
 setInterval(atualizarRelogio, 1000); atualizarRelogio();
+
 
 /* ── Toast ── */
 function toast(msg, tipo='info') {
@@ -1279,6 +1359,7 @@ function toast(msg, tipo='info') {
   setTimeout(() => el.remove(), 3500);
 }
 
+
 /* ══════════════════════════════════════════
    LOGIN
 ══════════════════════════════════════════ */
@@ -1289,6 +1370,7 @@ function selecionarPerfil(p, btn) {
   btn.classList.add('ativo');
   document.getElementById('login-erro').style.display = 'none';
 }
+
 
 async function fazerLogin() {
   const login  = document.getElementById('login-usuario').value.trim();
@@ -1307,14 +1389,17 @@ async function fazerLogin() {
   } catch(e) { erroEl.textContent = 'Erro ao conectar com o servidor!'; erroEl.style.display = 'block'; }
 }
 
+
 function ativarApp() {
   document.getElementById('tela-login').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
   document.getElementById('hdr-nome').textContent   = usuarioAtual.nome;
   document.getElementById('hdr-perfil').textContent = usuarioAtual.perfil.toUpperCase();
 
+
   const perfil = usuarioAtual.perfil;
   const mob = isMobile();
+
 
   if (perfil === 'separador' && mob) {
     ativarMobileSep();
@@ -1327,6 +1412,7 @@ function ativarApp() {
     iniciarPorPerfil();
   }
 }
+
 
 function ativarMobileSep() {
   document.body.classList.add('sep-mobile');
@@ -1343,6 +1429,7 @@ function ativarMobileSep() {
     if (pedidoAtualId) carregarChecklistMobile();
   }, 30000);
 }
+
 
 function sair() {
   if (!confirm('Deseja sair do sistema?')) return;
@@ -1367,6 +1454,7 @@ function sair() {
   document.querySelectorAll('.perfil-btn').forEach(b => b.classList.remove('ativo'));
 }
 
+
 /* ══════════════════════════════════════════
    TABS MOBILE DO SEPARADOR
 ══════════════════════════════════════════ */
@@ -1382,6 +1470,7 @@ function mudarTabSep(tab) {
   if (tab === 'avisos-sep') carregarAvisosSeparador();
   if (tab === 'separar' && pedidoAtualId) renderChecklistMobile();
 }
+
 
 async function carregarAvisosSeparador() {
   if (!separadorAtual) return;
@@ -1425,6 +1514,7 @@ async function carregarAvisosSeparador() {
   }
 }
 
+
 /* ══════════════════════════════════════════
    SIDEBAR (supervisor / desktop)
 ══════════════════════════════════════════ */
@@ -1459,6 +1549,7 @@ function montarSidebar() {
   sb.innerHTML = menus[usuarioAtual.perfil] || '';
 }
 
+
 function irPara(pag, el) {
   document.querySelectorAll('.pagina').forEach(p => p.classList.remove('ativa'));
   document.querySelectorAll('.mi').forEach(m => m.classList.remove('ativo'));
@@ -1475,6 +1566,7 @@ function irPara(pag, el) {
   if (pag === 'stats-repositor') carregarStatsRepositor();
   if (pag === 'stats-checkout')  carregarStatsCheckout();
 }
+
 
 function iniciarPorPerfil() {
   if (usuarioAtual.perfil === 'supervisor') {
@@ -1509,6 +1601,7 @@ function iniciarPorPerfil() {
   }
 }
 
+
 async function atualizarBadgeRep() {
   try {
     const res = await fetch(`${API}/repositor/avisos?status=pendente`, { credentials:'include' });
@@ -1522,6 +1615,7 @@ async function atualizarBadgeRep() {
   } catch(e) {}
 }
 
+
 function trocarCadastroTab(tab) {
   ['usuarios','importar'].forEach(t => {
     const el  = document.getElementById(`cad-${t}`);
@@ -1532,6 +1626,7 @@ function trocarCadastroTab(tab) {
   if (tab === 'usuarios') carregarUsuarios();
   if (tab === 'importar') renderHistorico();
 }
+
 
 /* ══════════════════════════════════════════
    DASHBOARD
@@ -1545,6 +1640,7 @@ async function carregarDashboard() {
   const el = document.getElementById('dash-ultima-atualizacao');
   if (el) el.textContent = '— atualizado ' + new Date().toLocaleTimeString('pt-BR', {timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit'});
 }
+
 
 async function carregarKPIs() {
   try {
@@ -1562,9 +1658,11 @@ async function carregarKPIs() {
   } catch(e) {}
 }
 
+
 async function carregarContadoresGerais() {
   await carregarKPIs();
 }
+
 
 async function carregarProdutividade() {
   try {
@@ -1588,6 +1686,7 @@ async function carregarProdutividade() {
   } catch(e) {}
 }
 
+
 async function carregarTimeline() {
   try {
     const data = document.getElementById('filtro-tl-data').value || hoje;
@@ -1608,6 +1707,7 @@ async function carregarTimeline() {
   } catch(e) {}
 }
 
+
 async function popularSelects() {
   try {
     const res   = await fetch(`${API}/usuarios`, { credentials:'include' });
@@ -1623,6 +1723,7 @@ async function popularSelects() {
   } catch(e) {}
 }
 
+
 /* ══════════════════════════════════════════
    HELPERS
 ══════════════════════════════════════════ */
@@ -1632,6 +1733,7 @@ function formatarData(iso) {
   if (p.length === 3) return `${p[2]}/${p[1]}/${p[0]}`;
   return iso;
 }
+
 
 /* ══════════════════════════════════════════
    PEDIDOS
@@ -1668,6 +1770,7 @@ async function carregarPedidos() {
   } catch(e) {}
 }
 
+
 async function atribuirSeparador(pid, sid) {
   if (!sid) return;
   try {
@@ -1676,12 +1779,14 @@ async function atribuirSeparador(pid, sid) {
   } catch(e) { toast('Erro ao atribuir!', 'erro'); }
 }
 
+
 /* ══════════════════════════════════════════
    USUÁRIOS
 ══════════════════════════════════════════ */
 function coletarPerfisMarcados() {
   return Array.from(document.querySelectorAll('.usr-perm:checked')).map(el => el.value);
 }
+
 
 async function carregarUsuarios() {
   try {
@@ -1707,6 +1812,7 @@ async function carregarUsuarios() {
   } catch(e) {}
 }
 
+
 async function cadastrarUsuario() {
   const nome   = document.getElementById('usr-nome').value.trim();
   const login  = document.getElementById('usr-login').value.trim();
@@ -1731,6 +1837,7 @@ async function cadastrarUsuario() {
   }
 }
 
+
 async function alterarStatusUsuario(id, novoStatus, nome, login, perfil, turno) {
   try {
     await fetch(`${API}/usuarios/${id}`, { credentials:'include', method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({nome,login,perfil,turno:turno||'Manhã',status:novoStatus}) });
@@ -1738,6 +1845,7 @@ async function alterarStatusUsuario(id, novoStatus, nome, login, perfil, turno) 
     carregarUsuarios();
   } catch(e) { toast('Erro!','erro'); }
 }
+
 
 async function excluirUsuario(id, nome) {
   if (!confirm(`Excluir "${nome}"?`)) return;
@@ -1747,6 +1855,7 @@ async function excluirUsuario(id, nome) {
   } catch(e) { toast('Erro!','erro'); }
 }
 
+
 /* ══════════════════════════════════════════
    IMPORTAÇÃO
 ══════════════════════════════════════════ */
@@ -1755,6 +1864,7 @@ function handleDrop(e) {
   const f = e.dataTransfer.files[0]; if (f) processarArquivoFile(f);
 }
 function processarArquivo(e) { const f = e.target.files[0]; if (f) processarArquivoFile(f); }
+
 
 function processarArquivoFile(file) {
   mostrarStatus('⏳ Lendo arquivo...','carregando');
@@ -1797,9 +1907,11 @@ function processarArquivoFile(file) {
   reader.readAsArrayBuffer(file);
 }
 
+
  async function confirmarImportacao() {
   if (!pedidosImportar.length) return;
   mostrarStatus('⏳ Importando...', 'carregando');
+
 
   // Agrupa por pedido antes de enviar — garante que todos os itens ficam juntos
   const pedMapLocal = {};
@@ -1813,6 +1925,7 @@ function processarArquivoFile(file) {
   const LOTE_PEDIDOS = 20; // lote de 20 pedidos completos por vez
   let totalImportados = 0, totalIgnorados = 0;
 
+
   try {
     for (let i = 0; i < numeros.length; i += LOTE_PEDIDOS) {
       const loteNums  = numeros.slice(i, i + LOTE_PEDIDOS);
@@ -1820,6 +1933,7 @@ function processarArquivoFile(file) {
       loteNums.forEach(n => linhasLote.push(...pedMapLocal[n]));
       const progresso = Math.round(((i + loteNums.length) / numeros.length) * 100);
       mostrarStatus(`⏳ Importando... ${progresso}% (${Math.min(i+LOTE_PEDIDOS,numeros.length)}/${numeros.length} pedidos)`, 'carregando');
+
 
       const res  = await fetch(`${API}/importar`, {
         method:'POST', credentials:'include',
@@ -1831,6 +1945,7 @@ function processarArquivoFile(file) {
       totalImportados += data.importados || 0;
       totalIgnorados  += data.ignorados  || 0;
     }
+
 
     const reg = {
       data: new Date().toLocaleDateString('pt-BR', {timeZone:'America/Sao_Paulo'}),
@@ -1851,6 +1966,7 @@ function processarArquivoFile(file) {
   }
 }
 
+
 function renderHistorico() {
   const el = document.getElementById('hist-importacoes');
   if (!historicoImportacoes.length) { el.innerHTML = '<div style="color:var(--text3);font-size:11px;text-align:center;padding:14px">Nenhuma importação</div>'; return; }
@@ -1861,11 +1977,13 @@ function renderHistorico() {
     </div>`).join('');
 }
 
+
 function limparHistorico() {
   if (!confirm('Limpar histórico?')) return;
   historicoImportacoes = []; localStorage.removeItem('historico_importacoes');
   renderHistorico(); toast('Histórico limpo!','info');
 }
+
 
 function mostrarStatus(msg, tipo) {
   const cores = { carregando:'background:#EFF6FF;border:1px solid #BFDBFE;color:#1D4ED8', sucesso:'background:#F0FDF4;border:1px solid #BBF7D0;color:#15803D', erro:'background:#FEF2F2;border:1px solid #FECACA;color:#DC2626' };
@@ -1873,6 +1991,7 @@ function mostrarStatus(msg, tipo) {
   el.setAttribute('style', `display:block;margin-top:10px;padding:10px;border-radius:8px;font-size:12px;font-weight:600;text-align:center;${cores[tipo]}`);
   el.textContent = msg;
 }
+
 
 /* ══════════════════════════════════════════
    MOBILE REPOSITOR
@@ -1886,6 +2005,7 @@ function ativarMobileRep() {
   setInterval(() => { carregarAvisosMobile(); }, 30000);
 }
 
+
 function mudarTabRep(tab) {
   ['avisos','stats'].forEach(t => {
     document.getElementById(`rep-tab-${t}`).classList.toggle('ativa', t === tab);
@@ -1895,11 +2015,13 @@ function mudarTabRep(tab) {
   if (tab === 'stats')  carregarStatsRepMobile();
 }
 
+
 async function carregarAvisosMobile() {
   try {
     // Carrega duplicatas do dia primeiro
     const resDup = await fetch(`${API}/repositor/duplicatas-dia`, { credentials:'include' });
     const dups   = resDup.ok ? await resDup.json() : [];
+
 
     const filtroEl = document.getElementById('m-filtro-rep-status');
     const status   = filtroEl ? filtroEl.value : '';
@@ -1915,11 +2037,14 @@ async function carregarAvisosMobile() {
     const lista = document.getElementById('m-lista-avisos');
     if (!lista) return;
 
+
     // Mapa de duplicatas por código
     const dupMap = {};
     dups.forEach(d => { dupMap[d.codigo] = d; });
 
+
     let html = '';
+
 
     // Banner de duplicatas
     if (dups.length > 0) {
@@ -1931,11 +2056,13 @@ async function carregarAvisosMobile() {
         </div>`).join('');
     }
 
+
     if (!avisos.length) {
       html += '<div style="color:var(--text3);text-align:center;padding:36px;font-size:14px">✅ Nenhum item</div>';
       lista.innerHTML = html;
       return;
     }
+
 
     html += avisos.map(a => {
       const isPend  = a.status==='pendente';
@@ -1947,11 +2074,13 @@ async function carregarAvisosMobile() {
       const icon    = isEnc?'✅':isSubiu?'⬆️':isAbast?'📦':isNE?'🚫':isProto?'📋':'🔴';
       const bgCard  = isPend?'background:#FEF2F2;border-color:#FECACA':isEnc||isSubiu||isAbast?'background:#F0FDF4;border-color:#BBF7D0':isNE?'background:#F5F3FF;border-color:#DDD6FE':'background:#FFFBEB;border-color:#FDE68A';
 
+
       // Alerta de duplicata inline
       const dupAlerta = dupMap[a.codigo] && isPend ? `
         <div style="background:#FEF3C7;border:1px solid #F59E0B;border-radius:8px;padding:7px 10px;margin-bottom:8px;font-size:11px;color:#92400E;font-weight:700">
           ⚠️ Este item também foi solicitado para: <b>${dupMap[a.codigo].pedidos}</b>
         </div>` : '';
+
 
       return `
       <div style="border:2px solid;border-radius:14px;padding:14px;margin-bottom:12px;${bgCard}">
@@ -1970,6 +2099,7 @@ async function carregarAvisosMobile() {
         ${dupAlerta}
         <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:6px;line-height:1.3">${a.descricao||'—'}</div>
         <div style="font-size:13px;color:var(--text2);margin-bottom:8px">📍 <b>${a.endereco||'—'}</b></div>
+
 
         ${isPend ? `
         <div style="background:var(--red);color:#fff;border-radius:10px;padding:10px 14px;margin-bottom:10px;text-align:center">
@@ -2009,6 +2139,7 @@ async function carregarAvisosMobile() {
   } catch(e) { console.error(e); }
 }
 
+
 // Função unificada para marcar aviso no mobile
 async function marcarAvisoMobile(id, qtdTotal, acao) {
   if ((acao==='nao_encontrado'||acao==='protocolo') && !confirm(`Confirmar: ${acao==='nao_encontrado'?'Não encontrado':'Protocolo'}? O supervisor será notificado.`)) return;
@@ -2030,10 +2161,12 @@ async function marcarAvisoMobile(id, qtdTotal, acao) {
   } catch(e) { toast('Erro!','erro'); }
 }
 
+
 // Manter compatibilidade com funções antigas
 async function marcarRepostoMobile(id, qtdTotal) { await marcarAvisoMobile(id, qtdTotal, 'encontrado'); }
 async function marcarNaoEncontradoMobile(id) { await marcarAvisoMobile(id, 0, 'nao_encontrado'); }
 async function marcarProtocoloMobile(id) { await marcarAvisoMobile(id, 0, 'protocolo'); }
+
 
 async function carregarStatsRepMobile() {
   try {
@@ -2048,6 +2181,7 @@ async function carregarStatsRepMobile() {
   } catch(e) {}
 }
 
+
 /* ══════════════════════════════════════════
    MOBILE CHECKOUT
 ══════════════════════════════════════════ */
@@ -2059,6 +2193,7 @@ function ativarMobileCk() {
   setTimeout(() => document.getElementById('m-ck-input-caixa')?.focus(), 400);
 }
 
+
 function mudarTabCk(tab) {
   ['busca','stats'].forEach(t => {
     document.getElementById(`ck-tab-${t}`).classList.toggle('ativa', t === tab);
@@ -2067,6 +2202,7 @@ function mudarTabCk(tab) {
   if (tab === 'busca')  setTimeout(() => document.getElementById('m-ck-input-caixa')?.focus(), 200);
   if (tab === 'stats')  carregarStatsCkMobile();
 }
+
 
 async function buscarCaixaMobile() {
   const num = document.getElementById('m-ck-input-caixa')?.value?.trim();
@@ -2127,6 +2263,7 @@ async function buscarCaixaMobile() {
   } catch(e) { if(cont) cont.innerHTML='<div style="color:var(--red);padding:10px;text-align:center">Erro ao buscar!</div>'; }
 }
 
+
 async function confirmarCheckoutMobile(id) {
   try {
     await fetch(`${API}/checkout/${id}/confirmar`, { credentials:'include', method:'PUT' });
@@ -2134,6 +2271,7 @@ async function confirmarCheckoutMobile(id) {
     buscarCaixaMobile();
   } catch(e) { toast('Erro ao confirmar!','erro'); }
 }
+
 
 async function liberarCaixaMobile(id) {
   if (!confirm('Liberar esta caixa? Ela ficará disponível para uso.')) return;
@@ -2148,6 +2286,7 @@ async function liberarCaixaMobile(id) {
   } catch(e) { toast('Erro ao liberar!','erro'); }
 }
 
+
 async function carregarStatsCkMobile() {
   try {
     const res  = await fetch(`${API}/estatisticas/checkout`, { credentials:'include' });
@@ -2158,6 +2297,7 @@ async function carregarStatsCkMobile() {
     set('m-ck-pend', data.pendentes);
   } catch(e) {}
 }
+
 
 /* ══════════════════════════════════════════
    ESTATÍSTICAS REPOSITOR (desktop)
@@ -2189,6 +2329,7 @@ async function carregarStatsRepositor() {
     }
   } catch(e) { toast('Erro ao carregar estatísticas de reposição!','erro'); }
 }
+
 
 /* ══════════════════════════════════════════
    ESTATÍSTICAS CHECKOUT (desktop)
@@ -2222,6 +2363,7 @@ async function carregarStatsCheckout() {
   } catch(e) { toast('Erro ao carregar estatísticas de checkout!','erro'); }
 }
 
+
 /* ══════════════════════════════════════════
    PEDIDOS BLOQUEADOS (supervisor)
 ══════════════════════════════════════════ */
@@ -2251,6 +2393,7 @@ async function carregarPedidosBloqueados() {
   } catch(e) {}
 }
 
+
 async function desbloquearPedido(id, num) {
   if (!confirm(`Liberar pedido #${num}? Ele será marcado como concluído.`)) return;
   try {
@@ -2260,6 +2403,7 @@ async function desbloquearPedido(id, num) {
     carregarKPIs();
   } catch(e) { toast('Erro!','erro'); }
 }
+
 
 async function liberarCaixaDesktop(id) {
   if (!confirm('Liberar esta caixa? Ela ficará disponível para uso.')) return;
@@ -2320,6 +2464,7 @@ function exportarExcel(tipo) {
   } catch(e) { toast('Erro ao exportar!','erro'); }
 }
 
+
 function exportarAvisosExcel() {
   try {
     // Collect from current avisos state via the carregarAvisos data
@@ -2342,11 +2487,13 @@ function exportarAvisosExcel() {
   } catch(e) { toast('Erro ao exportar!','erro'); }
 }
 
+
 async function confirmarPedido() {
   const num = document.getElementById('input-pedido').value.trim();
   if (!num) { toast('Digite o número!','aviso'); return; }
   await _confirmarPedidoCore(num, 'input-pedido', 'status-atual', 'cl-wrap', carregarChecklist, carregarFila);
 }
+
 
 async function carregarChecklist() {
   if (!pedidoAtualId) return;
@@ -2360,9 +2507,11 @@ async function carregarChecklist() {
   } catch(e) { toast('Erro ao carregar itens!','erro'); }
 }
 
+
 async function concluirPedido() {
   await _concluirCore('cl', carregarChecklist, carregarFila, carregarContadoresSep, 'input-pedido', 'status-atual');
 }
+
 
 async function carregarContadoresSep() {
   if (!separadorAtual) return;
@@ -2376,6 +2525,7 @@ async function carregarContadoresSep() {
     }
   } catch(e) {}
 }
+
 
 async function carregarFila() {
   try {
@@ -2406,10 +2556,12 @@ async function carregarFila() {
   } catch(e) {}
 }
 
+
 function selecionarPedidoFila(num) {
   document.getElementById('input-pedido').value = num;
   confirmarPedido();
 }
+
 
 /* ══════════════════════════════════════════
    SEPARAÇÃO — MOBILE (tabs)
@@ -2419,6 +2571,7 @@ async function confirmarPedidoMobile() {
   if (!num) { toast('Digite o número!','aviso'); return; }
   await _confirmarPedidoCore(num, 'm-input-pedido', 'm-status-atual', 'm-cl-wrap', carregarChecklistMobile, carregarFilaMobile);
 }
+
 
 async function carregarChecklistMobile() {
   if (!pedidoAtualId) return;
@@ -2432,11 +2585,14 @@ async function carregarChecklistMobile() {
   } catch(e) { toast('Erro ao carregar itens!','erro'); }
 }
 
+
 function renderChecklistMobile() { renderChecklist('m-cl'); }
+
 
 async function concluirPedidoMobile() {
   await _concluirCore('m-cl', carregarChecklistMobile, carregarFilaMobile, carregarStatsMobile, 'm-input-pedido', 'm-status-atual');
 }
+
 
 async function carregarFilaMobile() {
   try {
@@ -2468,11 +2624,13 @@ async function carregarFilaMobile() {
   } catch(e) {}
 }
 
+
 function selecionarPedidoFilaMobile(num) {
   mudarTabSep('separar');
   document.getElementById('m-input-pedido').value = num;
   confirmarPedidoMobile();
 }
+
 
 async function carregarStatsMobile() {
   try {
@@ -2489,6 +2647,7 @@ async function carregarStatsMobile() {
     }
   } catch(e) {}
 }
+
 
 /* ══════════════════════════════════════════
    CORE COMPARTILHADO (desktop + mobile)
@@ -2513,6 +2672,7 @@ async function _confirmarPedidoCore(num, inputId, statusId, clWrapId, fnChecklis
   } catch(e) { toast('Erro ao conectar!','erro'); }
 }
 
+
 async function _concluirCore(prefix, fnChecklist, fnFila, fnStats, inputId, statusId) {
   if (!pedidoAtualId) return;
   try {
@@ -2534,6 +2694,7 @@ async function _concluirCore(prefix, fnChecklist, fnFila, fnStats, inputId, stat
   } catch(e) { toast('Erro ao concluir!','erro'); }
 }
 
+
 /* ══════════════════════════════════════════
    RENDER CHECKLIST (compartilhado)
 ══════════════════════════════════════════ */
@@ -2547,11 +2708,13 @@ function renderChecklist(prefix) {
   const todosVerif  = verificados===total;
   const temProblema = faltas>0 || parciais>0;
 
+
   const set = (id,val) => { const el=document.getElementById(`${prefix}-${id}`); if(el) el[typeof val==='string'&&id!=='style'?'textContent':'innerHTML'] = val; };
   document.getElementById(`${prefix}-titulo`).textContent   = `📋 PEDIDO #${pedidoAtualNum}`;
   document.getElementById(`${prefix}-contador`).textContent = `${verificados}/${total} itens`;
   document.getElementById(`${prefix}-barra`).style.width    = `${pct}%`;
   document.getElementById(`${prefix}-resumo`).innerHTML     = `✅ ${encontrados} ok &nbsp;🟡 ${parciais} parcial &nbsp;❌ ${faltas} falta &nbsp;⬜ ${total-verificados} pend.`;
+
 
   const btnC = document.getElementById(`${prefix.replace('cl','btn-concluir').replace('m-cl','m-btn-concluir')}`);
   const btnA = document.getElementById(`${prefix.replace('cl','btn-aguardar').replace('m-cl','m-btn-aguardar')}`);
@@ -2560,6 +2723,7 @@ function renderChecklist(prefix) {
   const baId = prefix === 'cl' ? 'btn-aguardar' : 'm-btn-aguardar';
   const bc = document.getElementById(bcId);
   const ba = document.getElementById(baId);
+
 
   if (!todosVerif) {
     if(bc){bc.style.display='block';bc.disabled=true;bc.textContent=`🔒 CONCLUIR (${total-verificados} pend.)`}
@@ -2572,6 +2736,7 @@ function renderChecklist(prefix) {
     const todosResolvidos = itensP.every(i => statusOk.includes(i.aviso_status) || statusBloq.includes(i.aviso_status));
     const temBloqueio = itensP.some(i => statusBloq.includes(i.aviso_status));
     const temPendente = itensP.some(i => !statusOk.includes(i.aviso_status) && !statusBloq.includes(i.aviso_status));
+
 
     if (temPendente) {
       // Ainda aguardando repositor resolver
@@ -2593,6 +2758,7 @@ function renderChecklist(prefix) {
     if(ba) ba.style.display='none';
   }
 
+
   const listEl = document.getElementById(`${prefix}-lista`);
   if (!listEl) return;
   const isMob = prefix.startsWith('m-');
@@ -2602,6 +2768,7 @@ function renderChecklist(prefix) {
     const fnVerif  = isMob ? 'verificarItemMobile' : 'verificarItemDesktop';
     const fnToggle = isMob ? 'toggleParcialMobile'  : 'toggleParcialDesktop';
     const fnParcOk = isMob ? 'confirmarParcialMobile' : 'confirmarParcialDesktop';
+
 
     if (isMob) {
       // Layout mobile otimizado: ícone menor, código e localização maiores
@@ -2640,6 +2807,7 @@ function renderChecklist(prefix) {
       </div>`;
     }
 
+
     // Layout desktop — mantém original
     return `<div class="item-card ${item.status}" id="${prefix}-ic-${item.id}">
       <div class="item-ic">${icones[item.status]||'⬜'}</div>
@@ -2672,6 +2840,7 @@ function renderChecklist(prefix) {
   }).join('');
 }
 
+
 /* Wrappers verificar/parcial para desktop e mobile */
 function verificarItemDesktop(id,status,prefix){ verificarItem(id,status,''  ,0,prefix,'cl'); }
 function verificarItemMobile (id,status,prefix){ verificarItem(id,status,''  ,0,prefix,'m-cl'); }
@@ -2680,11 +2849,13 @@ function toggleParcialMobile (id,prefix){ toggleParcial(id,prefix); }
 function confirmarParcialDesktop(id,qtd,prefix){ confirmarParcial(id,qtd,prefix,'cl'); }
 function confirmarParcialMobile (id,qtd,prefix){ confirmarParcial(id,qtd,prefix,'m-cl'); }
 
+
 function toggleParcial(id, prefix) {
   const w = document.getElementById(`${prefix}-pw-${id}`); if (!w) return;
   const a = w.classList.toggle('aberto');
   if (a) setTimeout(() => document.getElementById(`${prefix}-pi-${id}`)?.focus(), 100);
 }
+
 
 async function confirmarParcial(id, qtdTotal, prefix, renderPrefix) {
   const input  = document.getElementById(`${prefix}-pi-${id}`);
@@ -2694,6 +2865,7 @@ async function confirmarParcial(id, qtdTotal, prefix, renderPrefix) {
   const qtdFalta = qtdTotal - qtdEnc;
   await verificarItem(id,'parcial',`Encontrou ${qtdEnc} de ${qtdTotal} — faltam ${qtdFalta}`,qtdFalta,prefix,renderPrefix);
 }
+
 
 async function verificarItem(itemId, status, obs='', qtdFalta=0, prefix, renderPrefix) {
   // Usa separadorAtual se disponível, senão usa dados do usuário logado
@@ -2719,6 +2891,7 @@ async function verificarItem(itemId, status, obs='', qtdFalta=0, prefix, renderP
     renderChecklist(renderPrefix);
   } catch(e) { toast('Erro ao verificar item!','erro'); }
 }
+
 
 /* ══════════════════════════════════════════
    REPOSIÇÃO
@@ -2746,6 +2919,7 @@ async function verificarDuplicatas() {
       </div>`).join('');
   } catch(e) {}
 }
+
 
 async function buscarProdutoRepositor() {
   const cod = document.getElementById('rep-input-cod')?.value?.trim();
@@ -2775,6 +2949,7 @@ async function buscarProdutoRepositor() {
   } catch(e) { resEl.innerHTML = '<div style="color:var(--red);padding:10px">Erro ao buscar.</div>'; }
 }
 
+
 async function carregarAvisos() {
   try {
     // Carrega duplicatas do dia
@@ -2782,6 +2957,7 @@ async function carregarAvisos() {
     const dups   = resDup.ok ? await resDup.json() : [];
     const dupMap = {};
     dups.forEach(d => { dupMap[d.codigo] = d; });
+
 
     const filtroEl = document.getElementById('filtro-rep-status');
     const status   = filtroEl ? filtroEl.value : '';
@@ -2800,6 +2976,7 @@ async function carregarAvisos() {
     const lista = document.getElementById('lista-avisos');
     if (!lista) return;
 
+
     let html = '';
     // Banner de duplicatas do dia
     if (dups.length > 0) {
@@ -2813,11 +2990,13 @@ async function carregarAvisos() {
         </div>`).join('')}</div>`;
     }
 
+
     if (!avisos.length) {
       html += '<div style="color:var(--text3);text-align:center;padding:36px;font-size:14px">✅ Nenhum item encontrado</div>';
       lista.innerHTML = html;
       return;
     }
+
 
     html += avisos.map(a => {
       const isPend  = a.status==='pendente';
@@ -2869,6 +3048,7 @@ async function carregarAvisos() {
   }
 }
 
+
 async function marcarAviso(id, qtdTotal, acao) {
   if ((acao==='nao_encontrado'||acao==='protocolo') && !confirm(`Confirmar: ${acao==='nao_encontrado'?'Não encontrado':'Protocolo'}? O supervisor será notificado.`)) return;
   const input  = document.getElementById(`qtd-enc-${id}`);
@@ -2893,6 +3073,7 @@ async function marcarReposto(id,q){ await marcarAviso(id,q,'encontrado'); }
 async function marcarNaoEncontrado(id){ await marcarAviso(id,0,'nao_encontrado'); }
 async function marcarProtocolo(id){ await marcarAviso(id,0,'protocolo'); }
 
+
 /* ══════════════════════════════════════════
    EVENTOS
 ══════════════════════════════════════════ */
@@ -2900,11 +3081,13 @@ document.getElementById('input-pedido')?.addEventListener('keypress', e => { if(
 document.getElementById('m-input-pedido')?.addEventListener('keypress', e => { if(e.key==='Enter') confirmarPedidoMobile(); });
 document.getElementById('m-ck-input-caixa')?.addEventListener('keypress', e => { if(e.key==='Enter') buscarCaixaMobile(); });
 
+
 /* Adapta ao redimensionar */
 window.addEventListener('resize', () => {
   if (!usuarioAtual) return;
   const perfil = usuarioAtual.perfil;
   const mob = isMobile();
+
 
   if (perfil === 'separador') {
     document.body.classList.toggle('sep-mobile', mob);
@@ -2930,6 +3113,7 @@ window.addEventListener('resize', () => {
   }
 });
 
+
 /* ══════════════════════════════════════════
    ESTATÍSTICAS
 ══════════════════════════════════════════ */
@@ -2942,6 +3126,7 @@ async function carregarEstatisticas() {
     const res  = await fetch(url, { credentials:'include' });
     const data = await res.json();
 
+
     const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val ?? 0; };
     set('est-hoje-c', data.concluidos_hoje);
     set('est-hoje-t', data.total_hoje);
@@ -2949,6 +3134,7 @@ async function carregarEstatisticas() {
     set('est-mes-t',  data.total_mes);
     set('est-ano-c',  data.concluidos_ano);
     set('est-ano-t',  data.total_ano);
+
 
     const periodoWrap = document.getElementById('est-periodo-wrap');
     if (ini && fim && periodoWrap) {
@@ -2958,6 +3144,7 @@ async function carregarEstatisticas() {
     } else if (periodoWrap) {
       periodoWrap.style.display = 'none';
     }
+
 
     // Produtividade por separador
     const res2   = await fetch(`${API}/produtividade`, { credentials:'include' });
@@ -2975,6 +3162,7 @@ async function carregarEstatisticas() {
     }
   } catch(e) { toast('Erro ao carregar estatísticas!','erro'); }
 }
+
 
 /* ══════════════════════════════════════════
    CHECKOUT
@@ -3006,6 +3194,7 @@ function gerarCodigoBarrasSVG(texto) {
     <text x="${totalLarg/2}" y="${altura+32}" text-anchor="middle" font-family="monospace" font-size="18" font-weight="bold" fill="#000">${texto}</text>
   </svg>`;
 }
+
 
 async function buscarCaixa() {
   const num = document.getElementById('ck-input-caixa')?.value?.trim();
@@ -3076,6 +3265,7 @@ async function buscarCaixa() {
   }
 }
 
+
 async function confirmarCheckout(id) {
   try {
     await fetch(`${API}/checkout/${id}/confirmar`, { credentials:'include', method:'PUT' });
@@ -3084,6 +3274,7 @@ async function confirmarCheckout(id) {
     carregarCheckoutLista();
   } catch(e) { toast('Erro ao confirmar!','erro'); }
 }
+
 
 async function carregarCheckoutLista() {
   try {
@@ -3112,6 +3303,7 @@ async function carregarCheckoutLista() {
     </tr>`).join('');
   } catch(e) {}
 }
+
 
 /* ══════════════════════════════════════════
    VINCULAR CAIXA — SEPARADOR
@@ -3145,6 +3337,7 @@ function vincularCaixaMobile() {
   vincularCaixaCore(caixa, 'm-caixa-status');
 }
 
+
 // Mostra campo caixa quando pedido é carregado
 function mostrarCampoCaixa(show) {
   const d = document.getElementById('cl-caixa-wrap');
@@ -3153,10 +3346,12 @@ function mostrarCampoCaixa(show) {
   if (m) m.style.display = show ? 'block' : 'none';
 }
 
+
 /* Eventos caixa */
 document.getElementById('cl-input-caixa')?.addEventListener('keypress', e => { if(e.key==='Enter') vincularCaixaDesktop(); });
 document.getElementById('m-input-caixa')?.addEventListener('keypress', e => { if(e.key==='Enter') vincularCaixaMobile(); });
 document.getElementById('ck-input-caixa')?.addEventListener('keypress', e => { if(e.key==='Enter') buscarCaixa(); });
+
 
 /* Datas padrão estatísticas */
 (function() {
@@ -3176,6 +3371,31 @@ document.getElementById('ck-input-caixa')?.addEventListener('keypress', e => { i
     ativarApp();
   } catch(e) {}
 })();
+</script>
+<script>
+
+(function(){
+  function toggleFuncaoRepositor(){
+    var perfilEl = document.getElementById('usr-perfil');
+    var grp = document.getElementById('grp-funcao-repositor');
+    if (!perfilEl || !grp) return;
+    if (perfilEl.value === 'repositor') {
+      grp.style.display = 'block';
+    } else {
+      grp.style.display = 'none';
+      var f = document.getElementById('usr-funcao-repositor');
+      if (f) f.value = '';
+    }
+  }
+  document.addEventListener('DOMContentLoaded', function(){
+    var perfilEl = document.getElementById('usr-perfil');
+    if (perfilEl) {
+      perfilEl.addEventListener('change', toggleFuncaoRepositor);
+      toggleFuncaoRepositor();
+    }
+  });
+})();
+
 </script>
 </body>
 </html>
