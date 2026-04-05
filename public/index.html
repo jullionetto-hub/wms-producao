@@ -437,7 +437,8 @@ body.dark .item-card.parcial    .item-ic{background:#78350F}
   body.sep-mobile .sidebar{display:flex!important}
   .sep-tabbar{display:none!important}
 }
-  </style>
+  .perm-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:6px}.perm-item{display:flex;align-items:center;gap:10px;padding:12px 14px;border:1.5px solid var(--border);border-radius:12px;background:var(--surface2);font-size:13px;font-weight:600;color:var(--text);cursor:pointer}.perm-item input{width:18px;height:18px;accent-color:var(--accent);flex-shrink:0}.perm-item span{display:block;line-height:1.2}@media(max-width:768px){.perm-grid{grid-template-columns:1fr}}
+</style>
 </head>
 <body>
 
@@ -560,7 +561,7 @@ body.dark .item-card.parcial    .item-ic{background:#78350F}
               <div class="form-grp"><label>NOME COMPLETO</label><input type="text" id="usr-nome" placeholder="Nome do colaborador"/></div>
               <div class="form-grp"><label>LOGIN</label><input type="text" id="usr-login" placeholder="Ex: joao.silva"/></div>
               <div class="form-grp"><label>SENHA</label><input type="password" id="usr-senha" placeholder="Mínimo 6 caracteres"/></div>
-              <div class="form-grp"><label>PERFIL</label>
+              <div class="form-grp"><label>PERFIL PRINCIPAL</label>
                 <select id="usr-perfil">
                   <option value="separador">Separador</option>
                   <option value="supervisor">Supervisor</option>
@@ -568,6 +569,7 @@ body.dark .item-card.parcial    .item-ic{background:#78350F}
                   <option value="checkout">Checkout</option>
                 </select>
               </div>
+              <div class="form-grp"><label>PODE ACESSAR TAMBÉM</label><div class="perm-grid"><label class="perm-item"><input type="checkbox" class="usr-perm" value="supervisor"><span>Supervisor</span></label><label class="perm-item"><input type="checkbox" class="usr-perm" value="separador"><span>Separador</span></label><label class="perm-item"><input type="checkbox" class="usr-perm" value="repositor"><span>Repositor</span></label><label class="perm-item"><input type="checkbox" class="usr-perm" value="checkout"><span>Checkout</span></label></div></div>
               <div class="form-grp"><label>TURNO</label>
                 <select id="usr-turno"><option value="Manhã">Manhã</option><option value="Tarde">Tarde</option><option value="Noite">Noite</option></select>
               </div>
@@ -575,7 +577,7 @@ body.dark .item-card.parcial    .item-ic{background:#78350F}
             </div>
             <div class="card">
               <div class="card-hd">👥 USUÁRIOS CADASTRADOS <button class="btn btn-outline btn-sm" onclick="carregarUsuarios()">🔄</button></div>
-              <div class="tabela-wrap"><table><thead><tr><th>NOME</th><th>LOGIN</th><th>PERFIL</th><th>TURNO</th><th>STATUS</th><th>AÇÕES</th></tr></thead><tbody id="tbody-usr"></tbody></table></div>
+              <div class="tabela-wrap"><table><thead><tr><th>NOME</th><th>LOGIN</th><th>PERFIL</th><th>ACESSOS</th><th>TURNO</th><th>STATUS</th><th>AÇÕES</th></tr></thead><tbody id="tbody-usr"></tbody></table></div>
             </div>
           </div>
         </div>
@@ -1251,16 +1253,21 @@ function exportarExcel() {
 /* ══════════════════════════════════════════
    USUÁRIOS
 ══════════════════════════════════════════ */
+function coletarPerfisMarcados() {
+  return Array.from(document.querySelectorAll('.usr-perm:checked')).map(el => el.value);
+}
+
 async function carregarUsuarios() {
   try {
     const res   = await fetch(`${API}/usuarios`, { credentials:'include' });
     const users = await res.json();
     const tbody = document.getElementById('tbody-usr');
-    if (!users.length) { tbody.innerHTML = '<tr><td colspan="6" style="color:var(--text3);text-align:center;padding:14px">Nenhum usuário</td></tr>'; return; }
+    if (!users.length) { tbody.innerHTML = '<tr><td colspan="7" style="color:var(--text3);text-align:center;padding:14px">Nenhum usuário</td></tr>'; return; }
     tbody.innerHTML = users.map(u=>`<tr>
       <td style="color:var(--text);font-weight:600">${u.nome}</td>
       <td style="color:var(--accent)">${u.login}</td>
       <td><span class="pill ${u.perfil}">${u.perfil}</span></td>
+      <td style="font-size:11px;color:var(--text2);max-width:180px">${([u.perfil].concat((u.perfis_acesso||'').split(',').filter(Boolean))).join(', ')}</td>
       <td>${u.turno||'—'}</td>
       <td><span class="pill ${u.status}">${u.status}</span></td>
       <td style="display:flex;gap:5px;flex-wrap:wrap">
@@ -1280,18 +1287,22 @@ async function cadastrarUsuario() {
   const senha  = document.getElementById('usr-senha').value;
   const perfil = document.getElementById('usr-perfil').value;
   const turno  = document.getElementById('usr-turno').value;
-  if (!nome||!login||!senha) { toast('Preencha todos os campos!','aviso'); return; }
-  if (senha.length < 6)      { toast('Senha mínimo 6 caracteres!','aviso'); return; }
+  const perfis_acesso = coletarPerfisMarcados().filter(p => p !== perfil);
+  if (!nome || !login || !senha) { toast('Preencha todos os campos!','aviso'); return; }
+  if (senha.length < 6) { toast('Senha mínimo 6 caracteres!','aviso'); return; }
   try {
-    const res  = await fetch(`${API}/usuarios`, { credentials:'include', method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({nome,login,senha,perfil,turno}) });
+    const res = await fetch(`${API}/usuarios`, { credentials:'include', method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ nome, login, senha, perfil, turno, perfis_acesso }) });
     const data = await res.json();
-    if (data.erro) { toast(data.erro,'erro'); return; }
+    if (!res.ok) { toast(data.erro || 'Erro ao cadastrar!','erro'); return; }
     toast('Usuário cadastrado!','sucesso');
-    document.getElementById('usr-nome').value  = '';
+    document.getElementById('usr-nome').value = '';
     document.getElementById('usr-login').value = '';
     document.getElementById('usr-senha').value = '';
+    document.querySelectorAll('.usr-perm').forEach(el => el.checked = false);
     carregarUsuarios();
-  } catch(e) { toast('Erro ao cadastrar!','erro'); }
+  } catch(e) {
+    toast('Erro ao cadastrar!','erro');
+  }
 }
 
 async function alterarStatusUsuario(id, novoStatus, nome, login, perfil, turno) {
