@@ -199,7 +199,7 @@ app.post('/auth/login', (req, res) => {
       if (!user) return res.status(401).json({ erro:'Login ou senha incorretos!' });
 const permitidos = perfisPermitidos(user);
 if (!permitidos.includes(perfil)) return res.status(403).json({ erro:'Este colaborador nao pode acessar este perfil!' });
-      if (perfil === 'separador' || extras.includes('separador')) {
+      if (perfil === 'separador') {
         db.get(`SELECT * FROM separadores WHERE usuario_id=? AND status='ativo'`, [user.id], (err2, sep) => {
           if (err2) return res.status(500).json({ erro: err2.message });
           req.session.usuario   = { id:user.id, nome:user.nome, login:user.login, perfil:user.perfil, turno:user.turno };
@@ -235,7 +235,7 @@ app.get('/usuarios', (req, res) => {
   });
 });
 app.post('/usuarios', (req, res) => {
-  const { nome, login, senha, perfil, turno, perfis_acesso } = req.body;
+  const { nome, login, senha, perfil, turno } = req.body;
   if (!nome||!login||!senha||!perfil) return res.status(400).json({ erro:'Preencha todos os campos!' });
   const hash = hashSenha(senha);
   db.run(`INSERT INTO usuarios (nome,login,senha_hash,perfil,turno) VALUES (?,?,?,?,?)`,
@@ -245,7 +245,7 @@ app.post('/usuarios', (req, res) => {
         return res.status(500).json({ erro: err.message });
       }
       const novoId = this.lastID;
-      if (perfil === 'separador' || extras.includes('separador')) {
+      if (perfil === 'separador') {
         db.run(`INSERT OR IGNORE INTO separadores (nome,matricula,turno,usuario_id) VALUES (?,?,?,?)`,
           [nome, login, turno||'Manha', novoId], () => {});
       }
@@ -363,32 +363,42 @@ app.put('/pedidos/:id/separador', (req, res) => {
 
 // Vincular número de caixa ao pedido
 app.put('/pedidos/:id/caixa', (req, res) => {
-  const { numero_caixa } = req.body;
-  if (!numero_caixa) return res.status(400).json({ erro:'Numero da caixa nao informado!' });
-  const { data, hora } = dataHoraLocal();
-  const caixa = String(numero_caixa).trim();
+const { numero_caixa } = req.body;
+if (!numero_caixa) return res.status(400).json({ erro:'Numero da caixa nao informado!' });
+const { data, hora } = dataHoraLocal();
+const caixa = String(numero_caixa).trim();
 
-  db.run('UPDATE pedidos SET numero_caixa=? WHERE id=?', [caixa, req.params.id], err => {
-    if (err) return res.status(500).json({ erro: err.message });
+db.get(`SELECT c.id, c.numero_pedido FROM checkout c WHERE c.numero_caixa=? AND c.status='pendente' AND c.pedido_id<>? ORDER BY c.id DESC LIMIT 1`, [caixa, req.params.id], (err0, usada) => {
+if (err0) return res.status(500).json({ erro: err0.message });
+if (usada) return res.status(409).json({ erro:`A caixa ${caixa} ja esta vinculada ao pedido ${usada.numero_pedido} e sera liberada somente apos o checkout.` });
 
-    db.get('SELECT p.*, s.nome as sep_nome FROM pedidos p LEFT JOIN separadores s ON p.separador_id=s.id WHERE p.id=?',
-      [req.params.id], (err2, ped) => {
-        if (err2 || !ped) return res.json({ mensagem:'Caixa vinculada!' });
-        const sepNome = ped.sep_nome || '';
+db.get(`SELECT id, numero_pedido FROM pedidos WHERE numero_caixa=? AND id<>? AND status<>'concluido'`, [caixa, req.params.id], (err00, outroPed) => {
+if (err00) return res.status(500).json({ erro: err00.message });
+if (outroPed) return res.status(409).json({ erro:`A caixa ${caixa} ja esta em uso no pedido ${outroPed.numero_pedido}.` });
 
-        db.get('SELECT id FROM checkout WHERE pedido_id=?', [req.params.id], (err3, ck) => {
-          if (ck) {
-            db.run('UPDATE checkout SET numero_caixa=?, separador_nome=? WHERE pedido_id=?',
-              [caixa, sepNome, req.params.id], () => {});
-          } else {
-            db.run(`INSERT INTO checkout (numero_caixa,pedido_id,numero_pedido,separador_nome,status,hora_criacao,data_checkout)
-                    VALUES (?,?,?,?,'pendente',?,?)`,
-              [caixa, req.params.id, ped.numero_pedido, sepNome, hora, data], () => {});
-          }
-          res.json({ mensagem:'Caixa vinculada!', pedido_id: req.params.id, numero_pedido: ped.numero_pedido });
-        });
-      });
-  });
+db.run('UPDATE pedidos SET numero_caixa=? WHERE id=?', [caixa, req.params.id], err => {
+if (err) return res.status(500).json({ erro: err.message });
+
+db.get('SELECT p.*, s.nome as sep_nome FROM pedidos p LEFT JOIN separadores s ON p.separador_id=s.id WHERE p.id=?',
+[req.params.id], (err2, ped) => {
+if (err2 || !ped) return res.json({ mensagem:'Caixa vinculada!' });
+const sepNome = ped.sep_nome || '';
+
+db.get('SELECT id FROM checkout WHERE pedido_id=?', [req.params.id], (err3, ck) => {
+if (ck) {
+db.run("UPDATE checkout SET numero_caixa=?, separador_nome=?, status='pendente', hora_checkout=NULL, data_checkout=NULL WHERE pedido_id=?",
+[caixa, sepNome, req.params.id], () => {});
+} else {
+db.run(`INSERT INTO checkout (numero_caixa,pedido_id,numero_pedido,separador_nome,status,hora_criacao,data_checkout)
+VALUES (?,?,?,?,'pendente',?,?)`,
+[caixa, req.params.id, ped.numero_pedido, sepNome, hora, data], () => {});
+}
+res.json({ mensagem:'Caixa vinculada!', pedido_id: req.params.id, numero_pedido: ped.numero_pedido });
+});
+});
+});
+});
+});
 });
 
 // Bipar pedido — SEM necessidade de separador vinculado
