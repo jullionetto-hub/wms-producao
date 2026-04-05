@@ -418,10 +418,10 @@ app.post('/pedidos/bipar', (req, res) => {
     if (separador_id && pedido.separador_id && String(pedido.separador_id) !== String(separador_id) && pedido.status === 'separando')
       return res.status(409).json({ erro:'Pedido sendo separado por outro operador!' });
 
-    const { hora } = dataHoraLocal();
     const sepId = separador_id || pedido.separador_id || null;
-    db.run(`UPDATE pedidos SET separador_id=?, status='separando', hora_pedido=? WHERE id=?`,
-      [sepId, hora, pedido.id], function(err2) {
+    // hora_pedido NÃO é atualizada aqui — já foi fixada na importação
+    db.run(`UPDATE pedidos SET separador_id=?, status='separando' WHERE id=?`,
+      [sepId, pedido.id], function(err2) {
         if (err2) return res.status(500).json({ erro: err2.message });
         res.json({ mensagem:'Pedido atribuido!', pedido_id:pedido.id, status:'separando' });
       });
@@ -748,6 +748,92 @@ app.get('/estatisticas/pedidos', (req, res) => {
         res.json(row);
       }
     });
+});
+
+// ─── ESTATÍSTICAS REPOSITOR ──────────────────────────────────────────────────
+app.get('/estatisticas/repositor', (req, res) => {
+  const { data_ini, data_fim, repositor_nome } = req.query;
+  const { data: dataHoje } = dataHoraLocal();
+  const mesAtual = dataHoje.substring(0, 7);
+  const anoAtual = dataHoje.substring(0, 4);
+  let filtroNome = '';
+  const params1 = [dataHoje, dataHoje, mesAtual, mesAtual, anoAtual, anoAtual];
+  if (repositor_nome) { filtroNome = ' AND repositor_nome=?'; }
+
+  db.get(`SELECT
+    SUM(CASE WHEN data_aviso=? AND status='reposto' THEN 1 ELSE 0 END) as repostos_hoje,
+    SUM(CASE WHEN data_aviso=? THEN 1 ELSE 0 END) as avisos_hoje,
+    SUM(CASE WHEN substr(data_aviso,1,7)=? AND status='reposto' THEN 1 ELSE 0 END) as repostos_mes,
+    SUM(CASE WHEN substr(data_aviso,1,7)=? THEN 1 ELSE 0 END) as avisos_mes,
+    SUM(CASE WHEN substr(data_aviso,1,4)=? AND status='reposto' THEN 1 ELSE 0 END) as repostos_ano,
+    SUM(CASE WHEN substr(data_aviso,1,4)=? THEN 1 ELSE 0 END) as avisos_ano,
+    SUM(CASE WHEN status='pendente' THEN 1 ELSE 0 END) as pendentes_total,
+    SUM(CASE WHEN status='nao_encontrado' THEN 1 ELSE 0 END) as nao_encontrados,
+    SUM(CASE WHEN status='protocolo' THEN 1 ELSE 0 END) as protocolos
+    FROM avisos_repositor WHERE 1=1${filtroNome}`,
+    repositor_nome ? [...params1, repositor_nome] : params1, (err, row) => {
+      if (err) return res.status(500).json({ erro: err.message });
+      // Produtividade por repositor
+      db.all(`SELECT repositor_nome as nome,
+        COUNT(*) as total,
+        SUM(CASE WHEN status='reposto' THEN 1 ELSE 0 END) as repostos,
+        SUM(CASE WHEN status='nao_encontrado' THEN 1 ELSE 0 END) as nao_encontrados,
+        SUM(CASE WHEN data_aviso=? THEN 1 ELSE 0 END) as hoje
+        FROM avisos_repositor WHERE repositor_nome != '' GROUP BY repositor_nome ORDER BY repostos DESC`,
+        [dataHoje], (err2, produtividade) => {
+          if (err2) return res.status(500).json({ erro: err2.message });
+          res.json({ ...row, produtividade: produtividade || [] });
+        });
+    });
+});
+
+// ─── ESTATÍSTICAS CHECKOUT ───────────────────────────────────────────────────
+app.get('/estatisticas/checkout', (req, res) => {
+  const { data_ini, data_fim } = req.query;
+  const { data: dataHoje } = dataHoraLocal();
+  const mesAtual = dataHoje.substring(0, 7);
+  const anoAtual = dataHoje.substring(0, 4);
+
+  db.get(`SELECT
+    SUM(CASE WHEN data_checkout=? AND status='concluido' THEN 1 ELSE 0 END) as concluidos_hoje,
+    SUM(CASE WHEN data_checkout=? THEN 1 ELSE 0 END) as total_hoje,
+    SUM(CASE WHEN substr(data_checkout,1,7)=? AND status='concluido' THEN 1 ELSE 0 END) as concluidos_mes,
+    SUM(CASE WHEN substr(data_checkout,1,7)=? THEN 1 ELSE 0 END) as total_mes,
+    SUM(CASE WHEN substr(data_checkout,1,4)=? AND status='concluido' THEN 1 ELSE 0 END) as concluidos_ano,
+    SUM(CASE WHEN substr(data_checkout,1,4)=? THEN 1 ELSE 0 END) as total_ano,
+    SUM(CASE WHEN status='pendente' THEN 1 ELSE 0 END) as pendentes
+    FROM checkout`,
+    [dataHoje, dataHoje, mesAtual, mesAtual, anoAtual, anoAtual], (err, row) => {
+      if (err) return res.status(500).json({ erro: err.message });
+      res.json(row || {});
+    });
+});
+
+// ─── KPIs DASHBOARD ─────────────────────────────────────────────────────────
+app.get('/kpis', (req, res) => {
+  const { data: dataHoje } = dataHoraLocal();
+  const mesAtual = dataHoje.substring(0, 7);
+
+  const sql = `SELECT
+    (SELECT COUNT(*) FROM pedidos WHERE status='concluido' AND data_pedido=?) as concluidos_hoje,
+    (SELECT COUNT(*) FROM pedidos WHERE status='separando') as em_separacao,
+    (SELECT COUNT(*) FROM pedidos WHERE status='pendente') as pendentes,
+    (SELECT COUNT(*) FROM avisos_repositor WHERE status='pendente') as faltas_abertas,
+    (SELECT COUNT(*) FROM checkout WHERE status='pendente') as checkout_pendente,
+    (SELECT COUNT(*) FROM checkout WHERE status='concluido' AND data_checkout=?) as checkout_hoje,
+    (SELECT COUNT(*) FROM pedidos WHERE status='concluido' AND substr(data_pedido,1,7)=?) as concluidos_mes,
+    (SELECT COUNT(*) FROM pedidos WHERE data_pedido=?) as importados_hoje,
+    (SELECT ROUND(AVG(CAST(
+      (strftime('%s', date('now')) - strftime('%s', date(data_pedido))) AS REAL) / 3600), 1)
+      FROM pedidos WHERE status='concluido' AND substr(data_pedido,1,7)=?) as tmo_horas,
+    (SELECT COUNT(DISTINCT separador_id) FROM pedidos WHERE status='separando') as seps_ativos,
+    (SELECT COUNT(*) FROM avisos_repositor WHERE status='nao_encontrado' AND data_aviso=?) as nao_encontrados_hoje,
+    (SELECT COUNT(*) FROM avisos_repositor WHERE data_aviso=?) as total_faltas_hoje`;
+
+  db.get(sql, [dataHoje, dataHoje, mesAtual, dataHoje, mesAtual, dataHoje, dataHoje], (err, row) => {
+    if (err) return res.status(500).json({ erro: err.message });
+    res.json(row || {});
+  });
 });
 
 // ─── START ────────────────────────────────────────────────────────────────────

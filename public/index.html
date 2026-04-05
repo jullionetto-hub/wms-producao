@@ -438,6 +438,143 @@ body.dark .item-card.parcial    .item-ic{background:#78350F}
   .sep-tabbar{display:none!important}
 }
   .perm-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:6px}.perm-item{display:flex;align-items:center;gap:10px;padding:12px 14px;border:1.5px solid var(--border);border-radius:12px;background:var(--surface2);font-size:13px;font-weight:600;color:var(--text);cursor:pointer}.perm-item input{width:18px;height:18px;accent-color:var(--accent);flex-shrink:0}.perm-item span{display:block;line-height:1.2}@media(max-width:768px){.perm-grid{grid-template-columns:1fr}}
+
+/* ══════════════════════════════════════════
+   KPI CARDS — DASHBOARD
+══════════════════════════════════════════ */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:13px;margin-bottom:16px}
+.kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px;box-shadow:var(--sh);position:relative;overflow:hidden;transition:transform .15s,box-shadow .15s}
+.kpi-card:hover{transform:translateY(-2px);box-shadow:var(--sh-lg)}
+.kpi-card::after{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:var(--r) var(--r) 0 0}
+.kpi-card.verde::after {background:linear-gradient(90deg,#16A34A,#4ADE80)}
+.kpi-card.amarelo::after{background:linear-gradient(90deg,#D97706,#FCD34D)}
+.kpi-card.vermelho::after{background:linear-gradient(90deg,#DC2626,#F87171)}
+.kpi-card.azul::after  {background:linear-gradient(90deg,#2563EB,#60A5FA)}
+.kpi-card.roxo::after  {background:linear-gradient(90deg,#6366F1,#A78BFA)}
+.kpi-card.ciano::after {background:linear-gradient(90deg,#0D9488,#2DD4BF)}
+.kpi-card.laranja::after{background:linear-gradient(90deg,#EA580C,#FB923C)}
+.kpi-card.rosa::after  {background:linear-gradient(90deg,#BE185D,#F472B6)}
+.kpi-lbl{font-size:9px;font-weight:700;letter-spacing:2px;color:var(--text3);margin-bottom:6px;text-transform:uppercase}
+.kpi-val{font-family:'Space Mono',monospace;font-size:34px;font-weight:700;line-height:1;margin-bottom:4px}
+.kpi-card.verde   .kpi-val{color:var(--green)}
+.kpi-card.amarelo .kpi-val{color:var(--amber)}
+.kpi-card.vermelho .kpi-val{color:var(--red)}
+.kpi-card.azul    .kpi-val{color:var(--accent)}
+.kpi-card.roxo    .kpi-val{color:var(--indigo)}
+.kpi-card.ciano   .kpi-val{color:#0D9488}
+.kpi-card.laranja .kpi-val{color:#EA580C}
+.kpi-card.rosa    .kpi-val{color:#BE185D}
+.kpi-sub{font-size:11px;color:var(--text3)}
+.kpi-trend{font-size:10px;font-weight:700;margin-top:4px}
+.kpi-trend.up{color:var(--green)}.kpi-trend.down{color:var(--red)}
+
+/* ══════════════════════════════════════════
+   ESTATÍSTICAS — PERFIS
+══════════════════════════════════════════ */
+.pag-stats-perfil{display:none}
+.pag-stats-perfil.ativa{display:block;animation:fadeUp .2s ease}
+
+/* ══════════════════════════════════════════
+   MOBILE TABS — REPOSITOR E CHECKOUT
+══════════════════════════════════════════ */
+.rep-tabbar,.ck-tabbar{
+  display:none;
+  position:fixed;bottom:0;left:0;right:0;
+  height:62px;background:var(--surface);
+  border-top:1px solid var(--border);
+  z-index:100;flex-direction:row;
+  box-shadow:0 -4px 20px rgba(0,0,0,.15);
+}
+.rep-tab,.ck-tab{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:3px;cursor:pointer;transition:all .2s;color:var(--text3);
+  font-size:10px;font-weight:700;letter-spacing:.4px;
+  border:none;background:transparent;font-family:'DM Sans',sans-serif;
+  position:relative;
+}
+.rep-tab.ativo,.ck-tab.ativo{color:var(--accent)}
+.rep-tab.ativo::before,.ck-tab.ativo::before{content:'';position:absolute;top:0;left:20%;right:20%;height:2px;background:var(--accent);border-radius:0 0 3px 3px}
+.rep-tab-ic,.ck-tab-ic{font-size:22px;line-height:1}
+.rep-tab-badge{position:absolute;top:6px;right:calc(50% - 22px);background:var(--red);color:#fff;border-radius:10px;padding:1px 5px;font-size:9px;font-weight:700;min-width:16px;text-align:center}
+
+.rep-tab-page,.ck-tab-page{display:none;flex-direction:column;height:100%}
+.rep-tab-page.ativa,.ck-tab-page.ativa{display:flex}
+.rep-scroll,.ck-scroll{flex:1;overflow-y:auto;padding:14px 14px 72px}
+
+/* Mobile repositor root */
+#rep-mobile-root,#ck-mobile-root{display:none}
+@media(max-width:768px){
+  body.rep-mobile #app{overflow:hidden}
+  body.rep-mobile .sidebar{display:none}
+  body.rep-mobile .conteudo{display:none}
+  body.rep-mobile .rep-tabbar{display:flex}
+  body.rep-mobile #rep-mobile-root{display:flex;flex-direction:column;flex:1;overflow:hidden}
+  body.rep-mobile .layout{overflow:hidden}
+
+  body.ck-mobile #app{overflow:hidden}
+  body.ck-mobile .sidebar{display:none}
+  body.ck-mobile .conteudo{display:none}
+  body.ck-mobile .ck-tabbar{display:flex}
+  body.ck-mobile #ck-mobile-root{display:flex;flex-direction:column;flex:1;overflow:hidden}
+  body.ck-mobile .layout{overflow:hidden}
+}
+@media(min-width:769px){
+  #rep-mobile-root{display:none!important}
+  #ck-mobile-root{display:none!important}
+  body.rep-mobile .conteudo{display:block!important}
+  body.rep-mobile .sidebar{display:flex!important}
+  body.ck-mobile .conteudo{display:block!important}
+  body.ck-mobile .sidebar{display:flex!important}
+  .rep-tabbar{display:none!important}
+  .ck-tabbar{display:none!important}
+}
+
+/* ══════════════════════════════════════════
+   FILTRO DE DATA — melhorado
+══════════════════════════════════════════ */
+.date-filter-bar{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px;padding:12px 14px;background:var(--surface2);border-radius:var(--r-sm);border:1px solid var(--border)}
+.date-filter-bar .fg label{color:var(--accent);font-size:10px;font-weight:700;letter-spacing:1px}
+.date-filter-bar input[type=date]{min-width:140px}
+.excel-btn{display:flex;align-items:center;gap:6px;padding:8px 14px;background:#16A34A;color:#fff;border:none;border-radius:var(--r-sm);font-size:12px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .18s;white-space:nowrap}
+.excel-btn:hover{filter:brightness(1.1);transform:translateY(-1px)}
+
+/* Tabela de pedidos — hora formato BR */
+.hora-br{font-variant-numeric:tabular-nums;white-space:nowrap}
+.data-br{white-space:nowrap}
+
+/* ══════════════════════════════════════════
+   MOBILE IMPROVEMENTS
+══════════════════════════════════════════ */
+@media(max-width:768px){
+  .kpi-grid{grid-template-columns:1fr 1fr}
+  .kpi-val{font-size:28px}
+  .filtros{gap:8px}
+  .fg input,.fg select{min-width:100px;font-size:12px}
+  .date-filter-bar{padding:10px}
+  .card{padding:12px}
+  .card-hd{padding:8px 12px;margin:-12px -12px 10px}
+  .excel-btn{padding:7px 10px;font-size:11px}
+  .tabela-wrap{font-size:11px}
+  thead th{font-size:9px;padding:8px 10px}
+  td{padding:8px 10px}
+}
+@media(max-width:480px){
+  .kpi-grid{grid-template-columns:1fr 1fr}
+  .kpi-val{font-size:24px}
+}
+
+/* ══════════════════════════════════════════
+   QTD ENCONTRADA — repositor
+══════════════════════════════════════════ */
+.qtd-enc-wrap{display:flex;align-items:center;gap:8px;margin-top:8px;background:var(--bg);border:1.5px solid #FDE68A;border-radius:8px;padding:7px 10px;flex-wrap:wrap}
+.qtd-enc-wrap label{font-size:10px;color:var(--amber);font-weight:700;white-space:nowrap}
+.qtd-enc-input{width:70px;padding:6px 8px;background:var(--surface);border:1.5px solid #FDE68A;border-radius:6px;color:var(--text);font-size:16px;font-weight:700;outline:none;text-align:center;font-family:'Space Mono',monospace}
+
+/* ══════════════════════════════════════════
+   AVISO DUPLICATA
+══════════════════════════════════════════ */
+.aviso-duplicata{background:#FEF3C7;border:1.5px solid #FCD34D;border-radius:10px;padding:12px 15px;margin-bottom:12px;display:flex;align-items:center;gap:10px;font-size:13px;font-weight:700;color:#92400E}
+body.dark .aviso-duplicata{background:#2D1A05;border-color:#78350F;color:#FCD34D}
 </style>
 </head>
 <body>
@@ -485,12 +622,22 @@ body.dark .item-card.parcial    .item-ic{background:#78350F}
 
       <!-- DASHBOARD -->
       <div class="pagina" id="pag-dashboard">
-        <div class="pg-title">📊 Dashboard</div>
-        <div class="grid-4">
-          <div class="cnt-card verde"><div class="cnt-lbl">CONCLUÍDOS HOJE</div><div class="cnt-val" id="dash-hoje">0</div><div class="cnt-sub">pedidos</div></div>
-          <div class="cnt-card amarelo"><div class="cnt-lbl">EM SEPARAÇÃO</div><div class="cnt-val" id="dash-separando">0</div><div class="cnt-sub">pedidos</div></div>
-          <div class="cnt-card vermelho"><div class="cnt-lbl">AGUARD. REPOSITOR</div><div class="cnt-val" id="dash-repositor">0</div><div class="cnt-sub">itens em falta</div></div>
-          <div class="cnt-card azul"><div class="cnt-lbl">PENDENTES</div><div class="cnt-val" id="dash-pendentes">0</div><div class="cnt-sub">pedidos</div></div>
+        <div class="pg-title">📊 Dashboard
+          <span style="font-size:12px;color:var(--text3);font-weight:400;font-family:'DM Sans',sans-serif" id="dash-ultima-atualizacao"></span>
+        </div>
+        <!-- KPIs Principais -->
+        <div class="kpi-grid" style="margin-bottom:8px">
+          <div class="kpi-card verde"><div class="kpi-lbl">CONCLUÍDOS HOJE</div><div class="kpi-val" id="dash-hoje">0</div><div class="kpi-sub">pedidos finalizados</div></div>
+          <div class="kpi-card amarelo"><div class="kpi-lbl">EM SEPARAÇÃO</div><div class="kpi-val" id="dash-separando">0</div><div class="kpi-sub">em andamento agora</div></div>
+          <div class="kpi-card vermelho"><div class="kpi-lbl">FALTAS ABERTAS</div><div class="kpi-val" id="dash-repositor">0</div><div class="kpi-sub">aguardando repositor</div></div>
+          <div class="kpi-card azul"><div class="kpi-lbl">PENDENTES</div><div class="kpi-val" id="dash-pendentes">0</div><div class="kpi-sub">na fila</div></div>
+        </div>
+        <!-- KPIs Secundários -->
+        <div class="kpi-grid" style="margin-bottom:16px">
+          <div class="kpi-card roxo"><div class="kpi-lbl">CHECKOUT HOJE</div><div class="kpi-val" id="kpi-ck-hoje">0</div><div class="kpi-sub">caixas expedidas</div></div>
+          <div class="kpi-card ciano"><div class="kpi-lbl">CHECKPOINT PEND.</div><div class="kpi-val" id="kpi-ck-pend">0</div><div class="kpi-sub">aguardando checkout</div></div>
+          <div class="kpi-card laranja"><div class="kpi-lbl">SEPARADORES ATIVOS</div><div class="kpi-val" id="kpi-seps-ativos">0</div><div class="kpi-sub">trabalhando agora</div></div>
+          <div class="kpi-card rosa"><div class="kpi-lbl">NÃO ENCONTR. HOJE</div><div class="kpi-val" id="kpi-nao-enc">0</div><div class="kpi-sub">itens não localizados</div></div>
         </div>
         <div class="grid-2">
           <div class="card">
@@ -525,10 +672,10 @@ body.dark .item-card.parcial    .item-ic{background:#78350F}
           <div class="card-hd">FILTROS
             <div style="display:flex;gap:8px">
               <button class="btn btn-outline btn-sm" onclick="carregarPedidos()">🔄 Atualizar</button>
-              <button class="btn btn-success btn-sm" onclick="exportarExcel()">⬇ Excel</button>
+              <button class="excel-btn" onclick="exportarExcel('pedidos')">📊 Excel</button>
             </div>
           </div>
-          <div class="filtros">
+          <div class="date-filter-bar">
             <div class="fg"><label>DE</label><input type="date" id="filtro-ped-ini"/></div>
             <div class="fg"><label>ATÉ</label><input type="date" id="filtro-ped-fim"/></div>
             <div class="fg"><label>USUÁRIO</label><select id="filtro-ped-sep"><option value="">Todos</option></select></div>
@@ -687,6 +834,7 @@ body.dark .item-card.parcial    .item-ic{background:#78350F}
                 <option value="nao_encontrado">Não encontrado</option>
               </select>
               <button class="btn btn-outline btn-sm" onclick="carregarAvisos()">🔄</button>
+              <button class="excel-btn" onclick="exportarAvisosExcel()">📊 Excel</button>
             </div>
           </div>
           <div id="lista-avisos"><div style="color:var(--text3);text-align:center;padding:40px;font-size:13px">✅ Nenhum item em falta</div></div>
@@ -698,9 +846,12 @@ body.dark .item-card.parcial    .item-ic{background:#78350F}
         <div class="pg-title">📈 Estatísticas</div>
         <div class="card" style="margin-bottom:16px">
           <div class="card-hd">📅 FILTRO DE PERÍODO
-            <button class="btn btn-outline btn-sm" onclick="carregarEstatisticas()">🔄</button>
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-outline btn-sm" onclick="carregarEstatisticas()">🔄</button>
+              <button class="excel-btn" onclick="exportarExcel('estatisticas')">📊 Excel</button>
+            </div>
           </div>
-          <div class="filtros">
+          <div class="date-filter-bar">
             <div class="fg"><label>DE</label><input type="date" id="est-ini"/></div>
             <div class="fg"><label>ATÉ</label><input type="date" id="est-fim"/></div>
             <button class="btn btn-primary btn-sm" onclick="carregarEstatisticas()">🔍 Filtrar</button>
@@ -760,6 +911,7 @@ body.dark .item-card.parcial    .item-ic{background:#78350F}
                 <option value="concluido">Concluído</option>
               </select>
               <button class="btn btn-outline btn-sm" onclick="carregarCheckoutLista()">🔄</button>
+              <button class="excel-btn" onclick="exportarExcel('checkout-lista')">📊 Excel</button>
             </div>
           </div>
           <div class="tabela-wrap">
@@ -794,9 +946,150 @@ body.dark .item-card.parcial    .item-ic{background:#78350F}
         </div>
       </div>
 
+      <!-- ESTATÍSTICAS REPOSITOR -->
+      <div class="pagina" id="pag-stats-repositor">
+        <div class="pg-title">📈 Estatísticas — Reposição</div>
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-hd">📅 FILTRO DE PERÍODO
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-outline btn-sm" onclick="carregarStatsRepositor()">🔄</button>
+              <button class="excel-btn" onclick="exportarExcel('stats-repositor')">📊 Excel</button>
+            </div>
+          </div>
+          <div class="date-filter-bar">
+            <div class="fg"><label>DE</label><input type="date" id="srep-ini"/></div>
+            <div class="fg"><label>ATÉ</label><input type="date" id="srep-fim"/></div>
+            <button class="btn btn-primary btn-sm" onclick="carregarStatsRepositor()">🔍 Filtrar</button>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:13px;margin-bottom:16px">
+          <div class="cnt-card verde"><div class="cnt-lbl">REPOSTOS HOJE</div><div class="cnt-val" id="srep-rep-hoje" style="font-size:32px">0</div><div class="cnt-sub">itens repostos</div></div>
+          <div class="cnt-card azul"><div class="cnt-lbl">REPOSTOS NO MÊS</div><div class="cnt-val" id="srep-rep-mes" style="font-size:32px">0</div><div class="cnt-sub">itens repostos</div></div>
+          <div class="cnt-card vermelho"><div class="cnt-lbl">PENDENTES AGORA</div><div class="cnt-val" id="srep-pendentes" style="font-size:32px">0</div><div class="cnt-sub">aguardando</div></div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:13px;margin-bottom:16px">
+          <div class="cnt-card roxo"><div class="cnt-lbl">NÃO ENCONTRADOS</div><div class="cnt-val" id="srep-nao-enc" style="font-size:32px">0</div><div class="cnt-sub">total</div></div>
+          <div class="cnt-card amarelo"><div class="cnt-lbl">PROTOCOLOS</div><div class="cnt-val" id="srep-proto" style="font-size:32px">0</div><div class="cnt-sub">em análise</div></div>
+          <div class="cnt-card verde"><div class="cnt-lbl">AVISOS NO ANO</div><div class="cnt-val" id="srep-ano" style="font-size:32px">0</div><div class="cnt-sub">total de avisos</div></div>
+        </div>
+        <div class="card">
+          <div class="card-hd">👥 PRODUTIVIDADE POR REPOSITOR</div>
+          <div class="tabela-wrap">
+            <table><thead><tr><th>REPOSITOR</th><th>HOJE</th><th>REPOSTOS</th><th>NÃO ENCONTR.</th><th>TOTAL</th></tr></thead>
+            <tbody id="tbody-srep-prod"></tbody></table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ESTATÍSTICAS CHECKOUT -->
+      <div class="pagina" id="pag-stats-checkout">
+        <div class="pg-title">📈 Estatísticas — Checkout</div>
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-hd">📅 FILTRO DE PERÍODO
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-outline btn-sm" onclick="carregarStatsCheckout()">🔄</button>
+              <button class="excel-btn" onclick="exportarExcel('stats-checkout')">📊 Excel</button>
+            </div>
+          </div>
+          <div class="date-filter-bar">
+            <div class="fg"><label>DE</label><input type="date" id="sck-ini"/></div>
+            <div class="fg"><label>ATÉ</label><input type="date" id="sck-fim"/></div>
+            <button class="btn btn-primary btn-sm" onclick="carregarStatsCheckout()">🔍 Filtrar</button>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:13px;margin-bottom:16px">
+          <div class="cnt-card verde"><div class="cnt-lbl">EXPEDIDOS HOJE</div><div class="cnt-val" id="sck-hoje" style="font-size:32px">0</div><div class="cnt-sub">checkouts</div></div>
+          <div class="cnt-card azul"><div class="cnt-lbl">EXPEDIDOS NO MÊS</div><div class="cnt-val" id="sck-mes" style="font-size:32px">0</div><div class="cnt-sub">checkouts</div></div>
+          <div class="cnt-card roxo"><div class="cnt-lbl">EXPEDIDOS NO ANO</div><div class="cnt-val" id="sck-ano" style="font-size:32px">0</div><div class="cnt-sub">checkouts</div></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:13px;margin-bottom:16px">
+          <div class="cnt-card amarelo"><div class="cnt-lbl">PENDENTES AGORA</div><div class="cnt-val" id="sck-pend" style="font-size:32px">0</div><div class="cnt-sub">aguardando checkout</div></div>
+          <div class="cnt-card vermelho"><div class="cnt-lbl">IMPORTADOS HOJE</div><div class="cnt-val" id="sck-importados" style="font-size:32px">0</div><div class="cnt-sub">pedidos do dia</div></div>
+        </div>
+        <div class="card">
+          <div class="card-hd">📦 ÚLTIMOS CHECKOUTS
+            <div style="display:flex;gap:8px;align-items:center">
+              <select id="sck-filtro-status" class="sel-sm" onchange="carregarStatsCheckout()">
+                <option value="">Todos</option>
+                <option value="pendente">Pendente</option>
+                <option value="concluido">Concluído</option>
+              </select>
+            </div>
+          </div>
+          <div class="tabela-wrap">
+            <table><thead><tr><th>CAIXA</th><th>Nº PEDIDO</th><th>SEPARADOR</th><th>STATUS</th><th>DATA</th><th>HORA</th></tr></thead>
+            <tbody id="tbody-sck-lista"></tbody></table>
+          </div>
+        </div>
+      </div>
+
     </div><!-- /conteudo -->
 
-    <!-- ══ SEPARADOR MOBILE — 3 ABAS ══ -->
+    <!-- ══ REPOSITOR MOBILE — 2 ABAS ══ -->
+    <div id="rep-mobile-root">
+      <!-- ABA 1 — SOLICITAÇÕES -->
+      <div class="rep-tab-page ativa" id="rep-tab-avisos">
+        <div class="rep-scroll">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">🔧 Solicitações</div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <span style="font-size:12px;color:var(--red);font-weight:700">🔴 <span id="m-rep-pend">0</span></span>
+              <select id="m-filtro-rep-status" class="sel-sm" onchange="carregarAvisosMobile()" style="min-width:110px">
+                <option value="">Todos</option>
+                <option value="pendente">Pendente</option>
+                <option value="reposto">Reposto</option>
+                <option value="nao_encontrado">Não encontrado</option>
+              </select>
+              <button class="btn btn-outline btn-sm" onclick="carregarAvisosMobile()">🔄</button>
+            </div>
+          </div>
+          <div id="m-lista-avisos"><div style="color:var(--text3);text-align:center;padding:40px;font-size:13px">✅ Nenhum item em falta</div></div>
+        </div>
+      </div>
+      <!-- ABA 2 — ESTATÍSTICAS REPOSITOR MOBILE -->
+      <div class="rep-tab-page" id="rep-tab-stats">
+        <div class="rep-scroll">
+          <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text);margin-bottom:14px">📈 Meu Desempenho</div>
+          <div class="stat-nome" id="m-rep-nome">—</div>
+          <div class="stats-grid">
+            <div class="stat-big verde"><div class="s-lbl">REPOSTOS HOJE</div><div class="s-val" id="m-rep-hoje">0</div><div class="s-sub">itens repostos</div></div>
+            <div class="stat-big azul"><div class="s-lbl">MÊS</div><div class="s-val" id="m-rep-mes">0</div><div class="s-sub">reposições</div></div>
+            <div class="stat-big vermelho span2"><div class="s-lbl">PENDENTES AGORA</div><div class="s-val" id="m-rep-pendentes" style="font-size:38px">0</div><div class="s-sub">aguardando resolução</div></div>
+          </div>
+          <button class="btn btn-outline" style="width:100%;margin-top:4px" onclick="carregarStatsRepMobile()">🔄 Atualizar</button>
+        </div>
+      </div>
+    </div><!-- /rep-mobile-root -->
+
+    <!-- ══ CHECKOUT MOBILE — 2 ABAS ══ -->
+    <div id="ck-mobile-root">
+      <!-- ABA 1 — CHECKOUT -->
+      <div class="ck-tab-page ativa" id="ck-tab-busca">
+        <div class="ck-scroll">
+          <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text);margin-bottom:12px">🏷️ Checkout</div>
+          <div class="bip-wrap">
+            <input type="text" class="bip-input" id="m-ck-input-caixa"
+              placeholder="Bipe ou número da caixa..."
+              autocomplete="off" inputmode="numeric"
+              style="font-size:20px;letter-spacing:3px"/>
+            <button class="btn-bip" onclick="buscarCaixaMobile()">▶</button>
+          </div>
+          <div id="m-ck-resultado"></div>
+        </div>
+      </div>
+      <!-- ABA 2 — ESTATÍSTICAS CHECKOUT MOBILE -->
+      <div class="ck-tab-page" id="ck-tab-stats">
+        <div class="ck-scroll">
+          <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text);margin-bottom:14px">📈 Estatísticas Checkout</div>
+          <div class="stats-grid">
+            <div class="stat-big verde"><div class="s-lbl">HOJE</div><div class="s-val" id="m-ck-hoje">0</div><div class="s-sub">expedidos</div></div>
+            <div class="stat-big azul"><div class="s-lbl">MÊS</div><div class="s-val" id="m-ck-mes">0</div><div class="s-sub">expedidos</div></div>
+            <div class="stat-big amarelo span2"><div class="s-lbl">PENDENTES</div><div class="s-val" id="m-ck-pend" style="font-size:38px">0</div><div class="s-sub">aguardando checkout</div></div>
+          </div>
+          <button class="btn btn-outline" style="width:100%;margin-top:4px" onclick="carregarStatsCkMobile()">🔄 Atualizar</button>
+        </div>
+      </div>
+    </div><!-- /ck-mobile-root -->
     <div id="sep-mobile-root">
 
       <!-- ABA 1 — SEPARAR -->
@@ -886,6 +1179,31 @@ body.dark .item-card.parcial    .item-ic{background:#78350F}
   </button>
 </div>
 
+<!-- Tab bar Repositor -->
+<div class="rep-tabbar" id="rep-tabbar">
+  <button class="rep-tab ativo" id="rtab-avisos" onclick="mudarTabRep('avisos')">
+    <span class="rep-tab-ic">🔧</span>
+    SOLICITAÇÕES
+    <span class="rep-tab-badge" id="rtab-badge" style="display:none">0</span>
+  </button>
+  <button class="rep-tab" id="rtab-stats" onclick="mudarTabRep('stats')">
+    <span class="rep-tab-ic">📈</span>
+    ESTATÍSTICAS
+  </button>
+</div>
+
+<!-- Tab bar Checkout -->
+<div class="ck-tabbar" id="ck-tabbar">
+  <button class="ck-tab ativo" id="cktab-busca" onclick="mudarTabCk('busca')">
+    <span class="ck-tab-ic">🏷️</span>
+    CHECKOUT
+  </button>
+  <button class="ck-tab" id="cktab-stats" onclick="mudarTabCk('stats')">
+    <span class="ck-tab-ic">📈</span>
+    ESTATÍSTICAS
+  </button>
+</div>
+
 <script>
 /* ══════════════════════════════════════════
    ESTADO GLOBAL
@@ -960,11 +1278,15 @@ function ativarApp() {
   document.getElementById('hdr-nome').textContent   = usuarioAtual.nome;
   document.getElementById('hdr-perfil').textContent = usuarioAtual.perfil.toUpperCase();
 
-  // Interface unificada — mesmo tema claro para todos os perfis
+  const perfil = usuarioAtual.perfil;
+  const mob = isMobile();
 
-  // Mobile separador → ativa interface de tabs
-  if (usuarioAtual.perfil === 'separador' && isMobile()) {
+  if (perfil === 'separador' && mob) {
     ativarMobileSep();
+  } else if (perfil === 'repositor' && mob) {
+    ativarMobileRep();
+  } else if (perfil === 'checkout' && mob) {
+    ativarMobileCk();
   } else {
     montarSidebar();
     iniciarPorPerfil();
@@ -993,10 +1315,18 @@ function sair() {
   if (!confirm('Deseja sair do sistema?')) return;
   fetch(`${API}/auth/logout`, { method:'POST', credentials:'include' }).catch(()=>{});
   usuarioAtual = null; separadorAtual = null; pedidoAtualId = null; pedidoAtualNum = null; itensAtuais = [];
-  document.body.classList.remove('sep-mobile');
+  document.body.classList.remove('sep-mobile','rep-mobile','ck-mobile');
   document.getElementById('app').style.display     = 'none';
   document.getElementById('sep-mobile-root').style.display = 'none';
   document.getElementById('sep-tabbar').style.display      = 'none';
+  const repRoot = document.getElementById('rep-mobile-root');
+  const repBar  = document.getElementById('rep-tabbar');
+  const ckRoot  = document.getElementById('ck-mobile-root');
+  const ckBar   = document.getElementById('ck-tabbar');
+  if (repRoot) repRoot.style.display = 'none';
+  if (repBar)  repBar.style.display  = 'none';
+  if (ckRoot)  ckRoot.style.display  = 'none';
+  if (ckBar)   ckBar.style.display   = 'none';
   document.getElementById('tela-login').style.display      = 'flex';
   document.getElementById('login-usuario').value = '';
   document.getElementById('login-senha').value   = '';
@@ -1039,11 +1369,14 @@ function montarSidebar() {
     repositor: `
       <div class="mg">REPOSIÇÃO</div>
       <a class="mi ativo" onclick="irPara('reposicao',this)"><span class="mi-ic">🔧</span>Solicitações <span class="mbadge" id="menu-badge-rep" style="display:none">0</span></a>
-      <a class="mi" onclick="irPara('checkout',this)"><span class="mi-ic">🏷️</span>Checkout</a>`,
+      <a class="mi" onclick="irPara('checkout',this)"><span class="mi-ic">🏷️</span>Checkout</a>
+      <div class="mg">ANÁLISE</div>
+      <a class="mi" onclick="irPara('stats-repositor',this)"><span class="mi-ic">📈</span>Estatísticas</a>`,
     checkout: `
       <div class="mg">CHECKOUT</div>
       <a class="mi ativo" onclick="irPara('checkout',this)"><span class="mi-ic">🏷️</span>Checkout</a>
-      <a class="mi" onclick="irPara('estatisticas',this)"><span class="mi-ic">📈</span>Estatísticas</a>`
+      <div class="mg">ANÁLISE</div>
+      <a class="mi" onclick="irPara('stats-checkout',this)"><span class="mi-ic">📈</span>Estatísticas</a>`,
   };
   sb.innerHTML = menus[usuarioAtual.perfil] || '';
 }
@@ -1054,13 +1387,15 @@ function irPara(pag, el) {
   const pg = document.getElementById(`pag-${pag}`);
   if (pg) pg.classList.add('ativa');
   if (el) el.classList.add('ativo');
-  if (pag === 'dashboard')    carregarDashboard();
-  if (pag === 'pedidos')      { popularSelects(); carregarPedidos(); }
-  if (pag === 'cadastros')    { trocarCadastroTab('usuarios'); carregarUsuarios(); }
-  if (pag === 'separacao')    { carregarFila(); if (separadorAtual) carregarContadoresSep(); }
-  if (pag === 'estatisticas') { carregarEstatisticas(); carregarCheckoutLista(); }
-  if (pag === 'reposicao')    { carregarAvisos(); verificarDuplicatas(); }
-  if (pag === 'checkout')     { const el2 = document.getElementById('ck-input-caixa'); if(el2) setTimeout(()=>el2.focus(),200); }
+  if (pag === 'dashboard')       carregarDashboard();
+  if (pag === 'pedidos')         { popularSelects(); carregarPedidos(); }
+  if (pag === 'cadastros')       { trocarCadastroTab('usuarios'); carregarUsuarios(); }
+  if (pag === 'separacao')       { carregarFila(); if (separadorAtual) carregarContadoresSep(); }
+  if (pag === 'estatisticas')    { carregarEstatisticas(); carregarCheckoutLista(); }
+  if (pag === 'reposicao')       { carregarAvisos(); verificarDuplicatas(); }
+  if (pag === 'checkout')        { const el2 = document.getElementById('ck-input-caixa'); if(el2) setTimeout(()=>el2.focus(),200); }
+  if (pag === 'stats-repositor') carregarStatsRepositor();
+  if (pag === 'stats-checkout')  carregarStatsCheckout();
 }
 
 function iniciarPorPerfil() {
@@ -1122,20 +1457,32 @@ function trocarCadastroTab(tab) {
 ══════════════════════════════════════════ */
 async function carregarDashboard() {
   await popularSelects();
-  await carregarContadoresGerais();
+  await carregarKPIs();
   await carregarProdutividade();
   await carregarTimeline();
   await atualizarBadgeRep();
+  const el = document.getElementById('dash-ultima-atualizacao');
+  if (el) el.textContent = '— atualizado ' + new Date().toLocaleTimeString('pt-BR', {timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit'});
+}
+
+async function carregarKPIs() {
+  try {
+    const res  = await fetch(`${API}/kpis`, { credentials:'include' });
+    const data = await res.json();
+    const set  = (id, val) => { const e = document.getElementById(id); if(e) e.textContent = val ?? 0; };
+    set('dash-hoje',       data.concluidos_hoje);
+    set('dash-separando',  data.em_separacao);
+    set('dash-repositor',  data.faltas_abertas);
+    set('dash-pendentes',  data.pendentes);
+    set('kpi-ck-hoje',     data.checkout_hoje);
+    set('kpi-ck-pend',     data.checkout_pendente);
+    set('kpi-seps-ativos', data.seps_ativos);
+    set('kpi-nao-enc',     data.nao_encontrados_hoje);
+  } catch(e) {}
 }
 
 async function carregarContadoresGerais() {
-  try {
-    const res = await fetch(`${API}/pedidos`, { credentials:'include' });
-    const ps  = await res.json();
-    document.getElementById('dash-hoje').textContent      = ps.filter(p=>p.status==='concluido'&&p.data_pedido===hoje).length;
-    document.getElementById('dash-separando').textContent = ps.filter(p=>p.status==='separando').length;
-    document.getElementById('dash-pendentes').textContent = ps.filter(p=>p.status==='pendente').length;
-  } catch(e) {}
+  await carregarKPIs();
 }
 
 async function carregarProdutividade() {
@@ -1174,7 +1521,7 @@ async function carregarTimeline() {
         <div class="tl-dot ${p.status}"></div>
         <div style="flex:1">
           <div class="tl-titulo">Pedido #${p.numero_pedido}</div>
-          <div class="tl-sub">${p.separador_nome||'Sem usuário'} &nbsp;•&nbsp; <span class="pill ${p.status}" style="font-size:9px;padding:2px 7px">${p.status}</span> &nbsp;•&nbsp; ${p.itens||0} itens</div>
+          <div class="tl-sub">${p.separador_nome||'Sem usuário'} &nbsp;•&nbsp; <span class="pill ${p.status}" style="font-size:9px;padding:2px 7px">${p.status}</span> &nbsp;•&nbsp; ${p.itens||0} itens &nbsp;•&nbsp; ${formatarData(p.data_pedido)}</div>
         </div>
       </div>`).join('');
   } catch(e) {}
@@ -1193,6 +1540,16 @@ async function popularSelects() {
       sel.value = val;
     });
   } catch(e) {}
+}
+
+/* ══════════════════════════════════════════
+   HELPERS
+══════════════════════════════════════════ */
+function formatarData(iso) {
+  if (!iso) return '—';
+  const p = iso.split('-');
+  if (p.length === 3) return `${p[2]}/${p[1]}/${p[0]}`;
+  return iso;
 }
 
 /* ══════════════════════════════════════════
@@ -1220,8 +1577,8 @@ async function carregarPedidos() {
       <td>${p.separador_nome||'—'}</td>
       <td><span class="pill ${(p.status||'').replace(' ','-')}">${p.status}</span></td>
       <td>${p.itens||'—'}</td>
-      <td>${p.data_pedido||'—'}</td>
-      <td>${p.hora_pedido||'—'}</td>
+      <td class="data-br">${formatarData(p.data_pedido)}</td>
+      <td class="hora-br">${p.hora_pedido||'—'}</td>
       <td><select class="sel-sm" onchange="atribuirSeparador(${p.id},this.value)">
         <option value="">— atribuir —</option>
         ${todosSeparadores.map(s=>`<option value="${s.id}"${p.separador_id==s.id?' selected':''}>${s.nome}</option>`).join('')}
@@ -1236,18 +1593,6 @@ async function atribuirSeparador(pid, sid) {
     await fetch(`${API}/pedidos/${pid}/separador`, { credentials:'include', method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({separador_id:sid}) });
     toast('Usuário atribuído!', 'sucesso');
   } catch(e) { toast('Erro ao atribuir!', 'erro'); }
-}
-
-function exportarExcel() {
-  const rows = [['Nº Pedido','Usuário','Status','Itens','Data','Hora']];
-  document.querySelectorAll('#tbody-ped tr').forEach(tr => {
-    const tds = tr.querySelectorAll('td');
-    if (tds.length > 1) rows.push([tds[0].textContent, tds[1].textContent, tds[2].textContent.trim(), tds[3].textContent, tds[4].textContent, tds[5].textContent]);
-  });
-  const ws = XLSX.utils.aoa_to_sheet(rows);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Pedidos');
-  XLSX.writeFile(wb, `pedidos_${hoje}.xlsx`);
 }
 
 /* ══════════════════════════════════════════
@@ -1449,8 +1794,335 @@ function mostrarStatus(msg, tipo) {
 }
 
 /* ══════════════════════════════════════════
-   SEPARAÇÃO — DESKTOP
+   MOBILE REPOSITOR
 ══════════════════════════════════════════ */
+function ativarMobileRep() {
+  document.body.classList.add('rep-mobile');
+  document.getElementById('rep-mobile-root').style.display = 'flex';
+  document.getElementById('rep-tabbar').style.display = 'flex';
+  mudarTabRep('avisos');
+  carregarAvisosMobile();
+  setInterval(() => { carregarAvisosMobile(); }, 30000);
+}
+
+function mudarTabRep(tab) {
+  ['avisos','stats'].forEach(t => {
+    document.getElementById(`rep-tab-${t}`).classList.toggle('ativa', t === tab);
+    document.getElementById(`rtab-${t}`).classList.toggle('ativo', t === tab);
+  });
+  if (tab === 'avisos') carregarAvisosMobile();
+  if (tab === 'stats')  carregarStatsRepMobile();
+}
+
+async function carregarAvisosMobile() {
+  try {
+    const filtroEl = document.getElementById('m-filtro-rep-status');
+    const status   = filtroEl ? filtroEl.value : '';
+    let url = `${API}/repositor/avisos`; if (status) url += `?status=${status}`;
+    const r      = await fetch(url, { credentials:'include' });
+    if (!r.ok) return;
+    const avisos = await r.json();
+    const pend   = avisos.filter(a=>a.status==='pendente').length;
+    const elPend = document.getElementById('m-rep-pend');
+    if (elPend) elPend.textContent = pend;
+    const badge = document.getElementById('rtab-badge');
+    if (badge) { badge.textContent=pend; badge.style.display=pend>0?'inline':'none'; }
+    const lista = document.getElementById('m-lista-avisos');
+    if (!lista) return;
+    if (!avisos.length) { lista.innerHTML = '<div style="color:var(--text3);text-align:center;padding:36px;font-size:14px">✅ Nenhum item</div>'; return; }
+    lista.innerHTML = avisos.map(a => {
+      const isPend = a.status==='pendente';
+      const isRep  = a.status==='reposto';
+      const isNE   = a.status==='nao_encontrado';
+      const isProto= a.status==='protocolo';
+      const icon   = isRep?'✅':isNE?'🚫':isProto?'📋':'🔴';
+      return `
+      <div class="aviso-card ${a.status}" style="flex-direction:column;align-items:stretch;gap:10px">
+        <div style="display:flex;align-items:flex-start;gap:10px">
+          <div style="font-size:24px;flex-shrink:0">${icon}</div>
+          <div class="aviso-info" style="flex:1">
+            <div class="aviso-cod">${a.codigo||'—'} <span style="font-size:11px;color:var(--text3);font-weight:500">Ped. #${a.numero_pedido}</span></div>
+            <div class="aviso-desc">${a.descricao||'—'}</div>
+            <div class="aviso-det">📍 ${a.endereco||'—'} &nbsp;•&nbsp; Qtde: <b>${a.quantidade||'—'}</b></div>
+            ${isPend  ? `<div style="font-size:11px;color:var(--red);font-weight:700;margin-top:3px">⏱ Aviso às ${a.hora_aviso||'—'}</div>` : ''}
+            ${isRep   ? `<div style="font-size:11px;color:var(--green);font-weight:700;margin-top:3px">✅ Reposto às ${a.hora_reposto||'—'}${a.qtd_encontrada>0?' — '+a.qtd_encontrada+' un.':''}</div>` : ''}
+            ${isNE    ? `<div style="font-size:11px;color:var(--indigo);font-weight:700;margin-top:3px">🚫 Não encontrado às ${a.hora_reposto||'—'}</div>` : ''}
+            ${isProto ? `<div style="font-size:11px;color:var(--amber);font-weight:700;margin-top:3px">📋 Protocolo às ${a.hora_reposto||'—'}</div>` : ''}
+            ${a.obs   ? `<div style="font-size:11px;color:var(--text2);margin-top:3px">📝 ${a.obs}</div>` : ''}
+          </div>
+        </div>
+        ${isPend ? `
+        <div class="qtd-enc-wrap">
+          <label>Qtde encontrada:</label>
+          <input type="number" class="qtd-enc-input" id="m-qtd-enc-${a.id}" min="0" max="${a.quantidade||99}" placeholder="0" inputmode="numeric"/>
+          <span style="font-size:11px;color:var(--text3)">de ${a.quantidade||'?'}</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-top:4px">
+          <button class="btn btn-success btn-sm" onclick="marcarRepostoMobile(${a.id},${a.quantidade||0})">✅ Reposto</button>
+          <button class="btn btn-sm" style="background:var(--indigo);color:#fff" onclick="marcarNaoEncontradoMobile(${a.id})">🚫 N/E</button>
+          <button class="btn btn-sm" style="background:var(--amber);color:#fff" onclick="marcarProtocoloMobile(${a.id})">📋 Proto.</button>
+        </div>` : `<div style="text-align:right"><span class="pill ${isRep?'reposto':isProto?'repositor':'pendente'}">${isRep?'Reposto':isProto?'Protocolo':'Não encontrado'}</span></div>`}
+      </div>`;
+    }).join('');
+  } catch(e) {}
+}
+
+async function marcarRepostoMobile(id, qtdTotal) {
+  const input  = document.getElementById(`m-qtd-enc-${id}`);
+  const qtdEnc = parseInt(input?.value) || qtdTotal || 0;
+  const nome   = usuarioAtual?.nome || '';
+  try {
+    await fetch(`${API}/repositor/avisos/${id}/reposto`, {
+      credentials:'include', method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ qtd_encontrada: qtdEnc, repositor_nome: nome })
+    });
+    toast('✅ Reposto!','sucesso');
+    carregarAvisosMobile();
+  } catch(e) { toast('Erro!','erro'); }
+}
+async function marcarNaoEncontradoMobile(id) {
+  const nome = usuarioAtual?.nome || '';
+  try {
+    await fetch(`${API}/repositor/avisos/${id}/nao_encontrado`, {
+      credentials:'include', method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ repositor_nome: nome })
+    });
+    toast('🚫 Não encontrado!','aviso');
+    carregarAvisosMobile();
+  } catch(e) { toast('Erro!','erro'); }
+}
+async function marcarProtocoloMobile(id) {
+  if (!confirm('Enviar para protocolo?')) return;
+  const nome = usuarioAtual?.nome || '';
+  try {
+    await fetch(`${API}/repositor/avisos/${id}/protocolo`, {
+      credentials:'include', method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ repositor_nome: nome })
+    });
+    toast('📋 Protocolo!','info');
+    carregarAvisosMobile();
+  } catch(e) { toast('Erro!','erro'); }
+}
+
+async function carregarStatsRepMobile() {
+  try {
+    const nomeEl = document.getElementById('m-rep-nome');
+    if (nomeEl) nomeEl.textContent = `👤 ${usuarioAtual?.nome || '—'}`;
+    const res  = await fetch(`${API}/estatisticas/repositor`, { credentials:'include' });
+    const data = await res.json();
+    const set  = (id, val) => { const e = document.getElementById(id); if(e) e.textContent = val ?? 0; };
+    set('m-rep-hoje',      data.repostos_hoje);
+    set('m-rep-mes',       data.repostos_mes);
+    set('m-rep-pendentes', data.pendentes_total);
+  } catch(e) {}
+}
+
+/* ══════════════════════════════════════════
+   MOBILE CHECKOUT
+══════════════════════════════════════════ */
+function ativarMobileCk() {
+  document.body.classList.add('ck-mobile');
+  document.getElementById('ck-mobile-root').style.display = 'flex';
+  document.getElementById('ck-tabbar').style.display = 'flex';
+  mudarTabCk('busca');
+  setTimeout(() => document.getElementById('m-ck-input-caixa')?.focus(), 400);
+}
+
+function mudarTabCk(tab) {
+  ['busca','stats'].forEach(t => {
+    document.getElementById(`ck-tab-${t}`).classList.toggle('ativa', t === tab);
+    document.getElementById(`cktab-${t}`).classList.toggle('ativo', t === tab);
+  });
+  if (tab === 'busca')  setTimeout(() => document.getElementById('m-ck-input-caixa')?.focus(), 200);
+  if (tab === 'stats')  carregarStatsCkMobile();
+}
+
+async function buscarCaixaMobile() {
+  const num = document.getElementById('m-ck-input-caixa')?.value?.trim();
+  if (!num) { toast('Digite o número da caixa!','aviso'); return; }
+  const cont = document.getElementById('m-ck-resultado');
+  if (cont) cont.innerHTML = '<div style="color:var(--text3);padding:16px;text-align:center">🔍 Buscando...</div>';
+  try {
+    const res  = await fetch(`${API}/checkout/caixa/${encodeURIComponent(num)}`, { credentials:'include' });
+    const rows = await res.json();
+    if (!rows.length) {
+      if (cont) cont.innerHTML = `<div style="color:var(--text3);padding:20px;text-align:center;font-size:14px">Nenhum pedido para a caixa ${num}.</div>`;
+      return;
+    }
+    if (cont) cont.innerHTML = rows.map(r => `
+      <div style="border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px;background:var(--surface2)">
+        <div style="font-size:20px;font-weight:800;color:var(--accent);font-family:'Space Mono',monospace">#${r.numero_pedido}</div>
+        <div style="font-size:13px;color:var(--text3);margin:3px 0">📦 ${r.ped_itens||0} itens &nbsp;•&nbsp; 👤 ${r.sep_nome||r.separador_nome||'—'}</div>
+        ${r.hora_criacao?`<div style="font-size:11px;color:var(--text3)">🕐 Vinculado às ${r.hora_criacao}</div>`:''}
+        <div style="margin-top:10px">
+          ${r.status==='pendente'
+            ? `<button class="btn btn-success" style="width:100%" onclick="confirmarCheckoutMobile(${r.id})">✅ Confirmar Checkout</button>`
+            : `<div style="text-align:center;padding:8px;background:#F0FDF4;border-radius:8px;color:var(--green);font-weight:700">✅ Checkout às ${r.hora_checkout||'—'}</div>`}
+        </div>
+        ${gerarCodigoBarrasSVG(r.numero_pedido)}
+      </div>`).join('');
+  } catch(e) { if(cont) cont.innerHTML='<div style="color:var(--red);padding:10px">Erro ao buscar!</div>'; }
+}
+
+async function confirmarCheckoutMobile(id) {
+  try {
+    await fetch(`${API}/checkout/${id}/confirmar`, { credentials:'include', method:'PUT' });
+    toast('✅ Checkout confirmado!','sucesso');
+    buscarCaixaMobile();
+  } catch(e) { toast('Erro ao confirmar!','erro'); }
+}
+
+async function carregarStatsCkMobile() {
+  try {
+    const res  = await fetch(`${API}/estatisticas/checkout`, { credentials:'include' });
+    const data = await res.json();
+    const set  = (id, val) => { const e = document.getElementById(id); if(e) e.textContent = val ?? 0; };
+    set('m-ck-hoje', data.concluidos_hoje);
+    set('m-ck-mes',  data.concluidos_mes);
+    set('m-ck-pend', data.pendentes);
+  } catch(e) {}
+}
+
+/* ══════════════════════════════════════════
+   ESTATÍSTICAS REPOSITOR (desktop)
+══════════════════════════════════════════ */
+async function carregarStatsRepositor() {
+  try {
+    const ini = document.getElementById('srep-ini')?.value || '';
+    const fim = document.getElementById('srep-fim')?.value || '';
+    const res  = await fetch(`${API}/estatisticas/repositor`, { credentials:'include' });
+    const data = await res.json();
+    const set  = (id, val) => { const e = document.getElementById(id); if(e) e.textContent = val ?? 0; };
+    set('srep-rep-hoje',  data.repostos_hoje);
+    set('srep-rep-mes',   data.repostos_mes);
+    set('srep-pendentes', data.pendentes_total);
+    set('srep-nao-enc',   data.nao_encontrados);
+    set('srep-proto',     data.protocolos);
+    set('srep-ano',       data.avisos_ano);
+    const tbody = document.getElementById('tbody-srep-prod');
+    if (tbody) {
+      const prod = data.produtividade || [];
+      if (!prod.length) { tbody.innerHTML = '<tr><td colspan="5" style="color:var(--text3);text-align:center;padding:20px">Nenhum repositor com atividade</td></tr>'; }
+      else tbody.innerHTML = prod.map(d=>`<tr>
+        <td style="font-weight:600;color:var(--text)">${d.nome||'—'}</td>
+        <td style="color:var(--green);font-weight:700">${d.hoje||0}</td>
+        <td style="color:var(--accent)">${d.repostos||0}</td>
+        <td style="color:var(--red)">${d.nao_encontrados||0}</td>
+        <td style="color:var(--text2)">${d.total||0}</td>
+      </tr>`).join('');
+    }
+  } catch(e) { toast('Erro ao carregar estatísticas de reposição!','erro'); }
+}
+
+/* ══════════════════════════════════════════
+   ESTATÍSTICAS CHECKOUT (desktop)
+══════════════════════════════════════════ */
+async function carregarStatsCheckout() {
+  try {
+    const res  = await fetch(`${API}/estatisticas/checkout`, { credentials:'include' });
+    const data = await res.json();
+    const set  = (id, val) => { const e = document.getElementById(id); if(e) e.textContent = val ?? 0; };
+    set('sck-hoje',       data.concluidos_hoje);
+    set('sck-mes',        data.concluidos_mes);
+    set('sck-ano',        data.concluidos_ano);
+    set('sck-pend',       data.pendentes);
+    set('sck-importados', data.total_hoje);
+    // Carrega lista
+    const status = document.getElementById('sck-filtro-status')?.value || '';
+    const res2   = await fetch(`${API}/checkout${status?'?status='+status:''}`, { credentials:'include' });
+    const rows   = await res2.json();
+    const tbody  = document.getElementById('tbody-sck-lista');
+    if (tbody) {
+      if (!rows.length) { tbody.innerHTML = '<tr><td colspan="6" style="color:var(--text3);text-align:center;padding:18px">Nenhum checkout</td></tr>'; return; }
+      tbody.innerHTML = rows.map(r=>`<tr>
+        <td style="font-family:'Space Mono',monospace;font-weight:700;color:var(--amber)">${r.numero_caixa||'—'}</td>
+        <td style="font-weight:700;color:var(--accent)">${r.numero_pedido}</td>
+        <td>${r.separador_nome||'—'}</td>
+        <td><span class="pill ${r.status}">${r.status==='concluido'?'Concluído':'Pendente'}</span></td>
+        <td class="data-br">${formatarData(r.data_checkout)}</td>
+        <td class="hora-br">${r.hora_checkout||r.hora_criacao||'—'}</td>
+      </tr>`).join('');
+    }
+  } catch(e) { toast('Erro ao carregar estatísticas de checkout!','erro'); }
+}
+
+/* ══════════════════════════════════════════
+   EXPORTAR EXCEL UNIFICADO
+══════════════════════════════════════════ */
+function exportarExcel(tipo) {
+  let rows = [];
+  let nomeArq = 'exportacao';
+  try {
+    if (tipo === 'pedidos') {
+      rows = [['Nº Pedido','Usuário','Status','Itens','Data','Hora']];
+      document.querySelectorAll('#tbody-ped tr').forEach(tr => {
+        const tds = tr.querySelectorAll('td');
+        if (tds.length > 1) rows.push([tds[0].textContent.trim(), tds[1].textContent.trim(), tds[2].textContent.trim(), tds[3].textContent.trim(), tds[4].textContent.trim(), tds[5].textContent.trim()]);
+      });
+      nomeArq = `pedidos_${hoje}`;
+    } else if (tipo === 'estatisticas') {
+      rows = [['Separador','Hoje','Mês','Ano','Status']];
+      document.querySelectorAll('#tbody-est-sep tr').forEach(tr => {
+        const tds = tr.querySelectorAll('td');
+        if (tds.length > 1) rows.push([tds[0].textContent.trim(), tds[1].textContent.trim(), tds[2].textContent.trim(), tds[3].textContent.trim(), tds[4].textContent.trim()]);
+      });
+      nomeArq = `estatisticas_separadores_${hoje}`;
+    } else if (tipo === 'stats-repositor') {
+      rows = [['Repositor','Hoje','Repostos','Não Encontrados','Total']];
+      document.querySelectorAll('#tbody-srep-prod tr').forEach(tr => {
+        const tds = tr.querySelectorAll('td');
+        if (tds.length > 1) rows.push([tds[0].textContent.trim(), tds[1].textContent.trim(), tds[2].textContent.trim(), tds[3].textContent.trim(), tds[4].textContent.trim()]);
+      });
+      nomeArq = `estatisticas_repositor_${hoje}`;
+    } else if (tipo === 'checkout-lista') {
+      rows = [['Caixa','Nº Pedido','Separador','Status','Hora']];
+      document.querySelectorAll('#tbody-checkout tr').forEach(tr => {
+        const tds = tr.querySelectorAll('td');
+        if (tds.length > 1) rows.push([tds[0].textContent.trim(), tds[1].textContent.trim(), tds[2].textContent.trim(), tds[3].textContent.trim(), tds[4].textContent.trim()]);
+      });
+      nomeArq = `checkouts_${hoje}`;
+    } else if (tipo === 'stats-checkout') {
+      rows = [['Caixa','Nº Pedido','Separador','Status','Data','Hora']];
+      document.querySelectorAll('#tbody-sck-lista tr').forEach(tr => {
+        const tds = tr.querySelectorAll('td');
+        if (tds.length > 1) rows.push([tds[0].textContent.trim(), tds[1].textContent.trim(), tds[2].textContent.trim(), tds[3].textContent.trim(), tds[4].textContent.trim(), tds[5].textContent.trim()]);
+      });
+      nomeArq = `stats_checkout_${hoje}`;
+    }
+    if (rows.length <= 1) { toast('Nenhum dado para exportar!','aviso'); return; }
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Dados');
+    XLSX.writeFile(wb, `${nomeArq}.xlsx`);
+    toast('✅ Excel exportado!','sucesso');
+  } catch(e) { toast('Erro ao exportar!','erro'); }
+}
+
+function exportarAvisosExcel() {
+  try {
+    // Collect from current avisos state via the carregarAvisos data
+    const rows = [['Código','Descrição','Endereço','Pedido','Qtde','Status','Hora Aviso']];
+    document.querySelectorAll('#lista-avisos .aviso-card').forEach(card => {
+      const cod    = card.querySelector('.aviso-cod')?.textContent?.trim().split('\n')[0]?.split(' ')[0] || '—';
+      const pedido = card.querySelector('.aviso-cod span')?.textContent?.replace('Pedido #','').trim() || '—';
+      const desc   = card.querySelector('.aviso-desc')?.textContent?.trim() || '—';
+      const det    = card.querySelector('.aviso-det')?.textContent?.trim() || '';
+      const cls    = [...card.classList].find(c => ['pendente','reposto','nao_encontrado','protocolo'].includes(c)) || '—';
+      const hora   = card.querySelector('[style*="hora_aviso"], [style*="hora_reposto"]')?.textContent?.trim() || '—';
+      rows.push([cod, desc, det, pedido, '', cls, hora]);
+    });
+    if (rows.length <= 1) { toast('Nenhum aviso para exportar!','aviso'); return; }
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Avisos');
+    XLSX.writeFile(wb, `avisos_reposicao_${hoje}.xlsx`);
+    toast('✅ Excel exportado!','sucesso');
+  } catch(e) { toast('Erro ao exportar!','erro'); }
+}
+
 async function confirmarPedido() {
   const num = document.getElementById('input-pedido').value.trim();
   if (!num) { toast('Digite o número!','aviso'); return; }
@@ -1937,16 +2609,36 @@ async function marcarProtocolo(id) {
 ══════════════════════════════════════════ */
 document.getElementById('input-pedido')?.addEventListener('keypress', e => { if(e.key==='Enter') confirmarPedido(); });
 document.getElementById('m-input-pedido')?.addEventListener('keypress', e => { if(e.key==='Enter') confirmarPedidoMobile(); });
+document.getElementById('m-ck-input-caixa')?.addEventListener('keypress', e => { if(e.key==='Enter') buscarCaixaMobile(); });
 
 /* Adapta ao redimensionar */
 window.addEventListener('resize', () => {
-  if (!usuarioAtual || usuarioAtual.perfil !== 'separador') return;
+  if (!usuarioAtual) return;
+  const perfil = usuarioAtual.perfil;
   const mob = isMobile();
-  document.body.classList.toggle('sep-mobile', mob);
-  document.getElementById('sep-mobile-root').style.display = mob ? 'flex' : 'none';
-  document.getElementById('sep-tabbar').style.display      = mob ? 'flex' : 'none';
-  if (mob) { document.getElementById('conteudo').style.display = 'none'; }
-  else     { document.getElementById('conteudo').style.display = 'block'; }
+
+  if (perfil === 'separador') {
+    document.body.classList.toggle('sep-mobile', mob);
+    document.getElementById('sep-mobile-root').style.display = mob ? 'flex' : 'none';
+    document.getElementById('sep-tabbar').style.display      = mob ? 'flex' : 'none';
+    document.getElementById('conteudo').style.display = mob ? 'none' : 'block';
+    const sidebar = document.getElementById('sidebar');
+    if (sidebar) sidebar.style.display = mob ? 'none' : '';
+  } else if (perfil === 'repositor') {
+    const repRoot = document.getElementById('rep-mobile-root');
+    const repBar  = document.getElementById('rep-tabbar');
+    document.body.classList.toggle('rep-mobile', mob);
+    if (repRoot) repRoot.style.display = mob ? 'flex' : 'none';
+    if (repBar)  repBar.style.display  = mob ? 'flex' : 'none';
+    document.getElementById('conteudo').style.display = mob ? 'none' : 'block';
+  } else if (perfil === 'checkout') {
+    const ckRoot = document.getElementById('ck-mobile-root');
+    const ckBar  = document.getElementById('ck-tabbar');
+    document.body.classList.toggle('ck-mobile', mob);
+    if (ckRoot) ckRoot.style.display = mob ? 'flex' : 'none';
+    if (ckBar)  ckBar.style.display  = mob ? 'flex' : 'none';
+    document.getElementById('conteudo').style.display = mob ? 'none' : 'block';
+  }
 });
 
 /* ══════════════════════════════════════════
@@ -2114,7 +2806,7 @@ async function carregarCheckoutLista() {
       <td style="font-weight:700;color:var(--accent)">${r.numero_pedido}</td>
       <td>${r.separador_nome||'—'}</td>
       <td><span class="pill ${r.status}">${r.status==='concluido'?'Concluído':'Pendente'}</span></td>
-      <td style="font-size:11px;color:var(--text3)">${r.hora_checkout||r.hora_criacao||'—'}</td>
+      <td style="font-size:11px;color:var(--text3)" class="hora-br">${r.hora_checkout||r.hora_criacao||'—'}</td>
       <td>${r.status==='pendente'
         ? `<button class="btn btn-success btn-sm" onclick="confirmarCheckout(${r.id})">✅ OK</button>`
         : `<span style="color:var(--green);font-size:11px">✓ Feito</span>`}
