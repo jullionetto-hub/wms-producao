@@ -224,11 +224,15 @@ td{padding:10px 13px;vertical-align:middle;color:var(--text2)}
    REPOSIÇÃO
 ══════════════════════════════════════════ */
 .aviso-card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r);padding:13px 16px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:12px;box-shadow:var(--sh)}
-.aviso-card.pendente {border-color:#FECACA;background:#FEF2F2}
-.aviso-card.reposto  {border-color:#BBF7D0;background:#F0FDF4;opacity:.75}
-.aviso-card.nao_encontrado{border-color:#DDD6FE;background:#F5F3FF;opacity:.75}
-body.dark .aviso-card.pendente {background:#2D0F0F;border-color:#7F1D1D}
-body.dark .aviso-card.reposto  {background:#052E16;border-color:#14532D;opacity:.75}
+.aviso-card.pendente       {border-color:#FECACA;background:#FEF2F2}
+.aviso-card.reposto        {border-color:#BBF7D0;background:#F0FDF4;opacity:.85}
+.aviso-card.encontrado     {border-color:#BBF7D0;background:#F0FDF4;opacity:.85}
+.aviso-card.subiu          {border-color:#99F6E4;background:#F0FDFA;opacity:.85}
+.aviso-card.abastecido     {border-color:#BFDBFE;background:#EFF6FF;opacity:.85}
+.aviso-card.nao_encontrado {border-color:#DDD6FE;background:#F5F3FF;opacity:.75}
+body.dark .aviso-card.pendente    {background:#2D0F0F;border-color:#7F1D1D}
+body.dark .aviso-card.reposto,
+body.dark .aviso-card.encontrado  {background:#052E16;border-color:#14532D;opacity:.75}
 body.dark .aviso-card.nao_encontrado{background:#1E1B4B;border-color:#3730A3;opacity:.75}
 .aviso-info{flex:1}
 .aviso-cod {font-size:13px;font-weight:700;color:var(--red)}
@@ -1156,7 +1160,20 @@ body.dark .aviso-duplicata{background:#2D1A05;border-color:#78350F;color:#FCD34D
         </div>
       </div>
 
-      <!-- ABA 3 — STATS -->
+      <!-- ABA 3 — AVISOS DO REPOSITOR -->
+      <div class="sep-tab-page" id="sep-tab-avisos-sep">
+        <div class="sep-scroll">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+            <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">🔔 Avisos do Repositor</div>
+            <button class="btn btn-outline btn-sm" onclick="carregarAvisosSeparador()">🔄</button>
+          </div>
+          <div id="sep-avisos-lista">
+            <div style="color:var(--text3);text-align:center;padding:40px;font-size:13px">✅ Nenhum aviso</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ABA 4 — STATS -->
       <div class="sep-tab-page" id="sep-tab-stats">
         <div class="sep-scroll">
           <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text);margin-bottom:14px">📈 Meu Desempenho</div>
@@ -1186,9 +1203,14 @@ body.dark .aviso-duplicata{background:#2D1A05;border-color:#78350F;color:#FCD34D
     FILA
     <span class="sep-tab-badge" id="stab-fila-badge" style="display:none">0</span>
   </button>
+  <button class="sep-tab" id="stab-avisos-sep" onclick="mudarTabSep('avisos-sep')">
+    <span class="sep-tab-ic">🔔</span>
+    AVISOS
+    <span class="sep-tab-badge" id="stab-avisos-sep-badge" style="display:none">0</span>
+  </button>
   <button class="sep-tab" id="stab-stats" onclick="mudarTabSep('stats')">
     <span class="sep-tab-ic">📈</span>
-    ESTATÍSTICAS
+    STATS
   </button>
 </div>
 
@@ -1311,15 +1333,13 @@ function ativarMobileSep() {
   document.getElementById('sep-mobile-root').style.display = 'flex';
   document.getElementById('sep-tabbar').style.display = 'flex';
   mudarTabSep('separar');
-  // Foco no input
   setTimeout(() => document.getElementById('m-input-pedido').focus(), 400);
-  // Atualiza stats
   carregarStatsMobile();
-  // Carrega fila em background
   carregarFilaMobile();
-  // Auto-refresh
+  carregarAvisosSeparador();
   setInterval(() => {
     carregarFilaMobile();
+    carregarAvisosSeparador();
     if (pedidoAtualId) carregarChecklistMobile();
   }, 30000);
 }
@@ -1351,13 +1371,58 @@ function sair() {
    TABS MOBILE DO SEPARADOR
 ══════════════════════════════════════════ */
 function mudarTabSep(tab) {
-  ['separar','fila','stats'].forEach(t => {
-    document.getElementById(`sep-tab-${t}`).classList.toggle('ativa', t === tab);
-    document.getElementById(`stab-${t}`).classList.toggle('ativo', t === tab);
+  ['separar','fila','avisos-sep','stats'].forEach(t => {
+    const pg = document.getElementById(`sep-tab-${t}`);
+    const bt = document.getElementById(`stab-${t}`);
+    if (pg) pg.classList.toggle('ativa', t === tab);
+    if (bt) bt.classList.toggle('ativo', t === tab);
   });
-  if (tab === 'fila')  carregarFilaMobile();
-  if (tab === 'stats') carregarStatsMobile();
+  if (tab === 'fila')       carregarFilaMobile();
+  if (tab === 'stats')      carregarStatsMobile();
+  if (tab === 'avisos-sep') carregarAvisosSeparador();
   if (tab === 'separar' && pedidoAtualId) renderChecklistMobile();
+}
+
+async function carregarAvisosSeparador() {
+  if (!separadorAtual) return;
+  const lista = document.getElementById('sep-avisos-lista');
+  if (!lista) return;
+  try {
+    const res  = await fetch(`${API}/repositor/avisos/separador/${separadorAtual.id}`, { credentials:'include' });
+    const avisos = await res.json();
+    // Atualiza badge
+    const badge = document.getElementById('stab-avisos-sep-badge');
+    if (badge) { badge.textContent = avisos.length; badge.style.display = avisos.length > 0 ? 'inline' : 'none'; }
+    if (!avisos.length) {
+      lista.innerHTML = '<div style="color:var(--text3);text-align:center;padding:40px;font-size:13px">✅ Nenhum aviso do repositor hoje</div>';
+      return;
+    }
+    lista.innerHTML = avisos.map(a => {
+      const isSubiu = a.status === 'subiu';
+      const isAbast = a.status === 'abastecido';
+      const bg    = isSubiu ? '#F0FDF4' : '#EFF6FF';
+      const bord  = isSubiu ? '#BBF7D0' : '#BFDBFE';
+      const icon  = isSubiu ? '⬆️' : '📦';
+      const label = isSubiu ? 'SUBIU' : 'ABASTECIDO';
+      const cor   = isSubiu ? 'var(--green)' : 'var(--accent)';
+      return `
+      <div style="background:${bg};border:2px solid ${bord};border-radius:14px;padding:14px;margin-bottom:10px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <div style="font-size:30px">${icon}</div>
+          <div>
+            <div style="font-size:12px;font-weight:800;color:${cor};letter-spacing:1px">${label}</div>
+            <div style="font-size:11px;color:var(--text3)">Pedido <b style="color:var(--text)">#${a.numero_pedido}</b> &nbsp;•&nbsp; ${a.hora_reposto||'—'}</div>
+          </div>
+        </div>
+        <div style="font-size:16px;font-weight:800;color:var(--accent);font-family:'Space Mono',monospace">${a.codigo||'—'}</div>
+        <div style="font-size:13px;font-weight:600;color:var(--text);margin:4px 0">${a.descricao||'—'}</div>
+        <div style="font-size:12px;color:var(--text2)">📍 <b>${a.endereco||'—'}</b> &nbsp;•&nbsp; Qtde: <b>${a.qtd_encontrada||a.quantidade||1}</b></div>
+        ${a.repositor_nome ? `<div style="font-size:11px;color:var(--text3);margin-top:4px">👷 ${a.repositor_nome}</div>` : ''}
+      </div>`;
+    }).join('');
+  } catch(e) {
+    lista.innerHTML = '<div style="color:var(--red);text-align:center;padding:20px">Erro ao carregar avisos</div>';
+  }
 }
 
 /* ══════════════════════════════════════════
@@ -1832,6 +1897,10 @@ function mudarTabRep(tab) {
 
 async function carregarAvisosMobile() {
   try {
+    // Carrega duplicatas do dia primeiro
+    const resDup = await fetch(`${API}/repositor/duplicatas-dia`, { credentials:'include' });
+    const dups   = resDup.ok ? await resDup.json() : [];
+
     const filtroEl = document.getElementById('m-filtro-rep-status');
     const status   = filtroEl ? filtroEl.value : '';
     let url = `${API}/repositor/avisos`; if (status) url += `?status=${status}`;
@@ -1845,109 +1914,126 @@ async function carregarAvisosMobile() {
     if (badge) { badge.textContent=pend; badge.style.display=pend>0?'inline':'none'; }
     const lista = document.getElementById('m-lista-avisos');
     if (!lista) return;
-    if (!avisos.length) { lista.innerHTML = '<div style="color:var(--text3);text-align:center;padding:36px;font-size:14px">✅ Nenhum item</div>'; return; }
-    lista.innerHTML = avisos.map(a => {
-      const isPend = a.status==='pendente';
-      const isRep  = a.status==='reposto';
-      const isNE   = a.status==='nao_encontrado';
-      const isProto= a.status==='protocolo';
-      const icon   = isRep?'✅':isNE?'🚫':isProto?'📋':'🔴';
-      const bgCard = isPend?'background:#FEF2F2;border-color:#FECACA':isRep?'background:#F0FDF4;border-color:#BBF7D0':isNE?'background:#F5F3FF;border-color:#DDD6FE':'background:#FFFBEB;border-color:#FDE68A';
+
+    // Mapa de duplicatas por código
+    const dupMap = {};
+    dups.forEach(d => { dupMap[d.codigo] = d; });
+
+    let html = '';
+
+    // Banner de duplicatas
+    if (dups.length > 0) {
+      html += dups.map(d => `
+        <div style="background:#FEF3C7;border:2px solid #F59E0B;border-radius:12px;padding:12px 14px;margin-bottom:10px">
+          <div style="font-size:13px;font-weight:800;color:#92400E">⚠️ ATENÇÃO — ITEM DUPLICADO HOJE</div>
+          <div style="font-size:13px;font-weight:700;color:var(--text);margin-top:4px">${d.codigo} — ${d.descricao||'—'}</div>
+          <div style="font-size:12px;color:#78350F;margin-top:3px">Já solicitado hoje para os pedidos: <b>${d.pedidos}</b></div>
+        </div>`).join('');
+    }
+
+    if (!avisos.length) {
+      html += '<div style="color:var(--text3);text-align:center;padding:36px;font-size:14px">✅ Nenhum item</div>';
+      lista.innerHTML = html;
+      return;
+    }
+
+    html += avisos.map(a => {
+      const isPend  = a.status==='pendente';
+      const isEnc   = a.status==='encontrado'||a.status==='reposto';
+      const isSubiu = a.status==='subiu';
+      const isAbast = a.status==='abastecido';
+      const isNE    = a.status==='nao_encontrado';
+      const isProto = a.status==='protocolo';
+      const icon    = isEnc?'✅':isSubiu?'⬆️':isAbast?'📦':isNE?'🚫':isProto?'📋':'🔴';
+      const bgCard  = isPend?'background:#FEF2F2;border-color:#FECACA':isEnc||isSubiu||isAbast?'background:#F0FDF4;border-color:#BBF7D0':isNE?'background:#F5F3FF;border-color:#DDD6FE':'background:#FFFBEB;border-color:#FDE68A';
+
+      // Alerta de duplicata inline
+      const dupAlerta = dupMap[a.codigo] && isPend ? `
+        <div style="background:#FEF3C7;border:1px solid #F59E0B;border-radius:8px;padding:7px 10px;margin-bottom:8px;font-size:11px;color:#92400E;font-weight:700">
+          ⚠️ Este item também foi solicitado para: <b>${dupMap[a.codigo].pedidos}</b>
+        </div>` : '';
+
       return `
       <div style="border:2px solid;border-radius:14px;padding:14px;margin-bottom:12px;${bgCard}">
-        <!-- Cabeçalho com código e pedido -->
         <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px">
           <div style="flex:1">
-            <div style="font-size:16px;font-weight:800;color:${isPend?'var(--red)':isRep?'var(--green)':'var(--indigo)'}">
+            <div style="font-size:16px;font-weight:800;color:${isPend?'var(--red)':isEnc||isSubiu||isAbast?'var(--green)':'var(--indigo)'}">
               ${icon} ${a.codigo||'—'}
             </div>
-            <div style="font-size:12px;color:var(--text3);margin-top:2px">Pedido <b style="color:var(--text)">#${a.numero_pedido}</b></div>
+            <div style="font-size:12px;color:var(--text3);margin-top:2px">Pedido <b style="color:var(--text)">#${a.numero_pedido}</b> &nbsp;•&nbsp; Sep: ${a.separador_nome||'—'}</div>
           </div>
-          <!-- QUANTIDADE em destaque grande -->
           <div style="text-align:center;background:${isPend?'var(--red)':'var(--text3)'};color:#fff;border-radius:10px;padding:6px 12px;flex-shrink:0;margin-left:8px">
             <div style="font-size:9px;font-weight:700;letter-spacing:1px;opacity:.85">QTDE</div>
             <div style="font-size:28px;font-weight:800;font-family:'Space Mono',monospace;line-height:1">${a.quantidade||1}</div>
           </div>
         </div>
-        <!-- Descrição -->
+        ${dupAlerta}
         <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:6px;line-height:1.3">${a.descricao||'—'}</div>
-        <!-- Endereço -->
         <div style="font-size:13px;color:var(--text2);margin-bottom:8px">📍 <b>${a.endereco||'—'}</b></div>
-        <!-- FALTA TOTAL — destaque grande -->
+
         ${isPend ? `
         <div style="background:var(--red);color:#fff;border-radius:10px;padding:10px 14px;margin-bottom:10px;text-align:center">
           <div style="font-size:11px;font-weight:700;letter-spacing:1px;opacity:.9">FALTA TOTAL</div>
           <div style="font-size:26px;font-weight:800;font-family:'Space Mono',monospace;line-height:1.2">${a.quantidade||1} unidade${(a.quantidade||1)>1?'s':''}</div>
-          ${a.obs ? `<div style="font-size:11px;opacity:.85;margin-top:4px">📝 ${a.obs}</div>` : ''}
+          ${a.obs ? '<div style="font-size:11px;opacity:.85;margin-top:4px">📝 '+a.obs+'</div>' : ''}
         </div>
-        <div style="font-size:11px;color:var(--red);font-weight:700;margin-bottom:8px">⏱ Aviso às ${a.hora_aviso||'—'} • Sep: ${a.separador_nome||'—'}</div>
-        <!-- Campo qtde encontrada -->
+        <div style="font-size:11px;color:var(--red);font-weight:700;margin-bottom:8px">⏱ Aviso às ${a.hora_aviso||'—'}</div>
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;background:#fff;border:1.5px solid #FDE68A;border-radius:10px;padding:10px 12px">
           <span style="font-size:12px;color:var(--amber);font-weight:700;white-space:nowrap">Qtde encontrada:</span>
-          <input type="number" style="flex:1;padding:8px;background:transparent;border:none;outline:none;font-size:22px;font-weight:800;font-family:'Space Mono',monospace;color:var(--text);text-align:center;min-width:0" 
+          <input type="number" style="flex:1;padding:8px;background:transparent;border:none;outline:none;font-size:22px;font-weight:800;font-family:'Space Mono',monospace;color:var(--text);text-align:center;min-width:0"
             id="m-qtd-enc-${a.id}" min="0" max="${a.quantidade||99}" placeholder="0" inputmode="numeric"/>
           <span style="font-size:12px;color:var(--text3);white-space:nowrap">de <b>${a.quantidade||'?'}</b></span>
         </div>
-        <!-- Botões de ação grandes -->
         <div style="display:flex;flex-direction:column;gap:8px">
-          <button style="width:100%;padding:14px;background:var(--green);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif" onclick="marcarRepostoMobile(${a.id},${a.quantidade||0})">✅ Reposto</button>
+          <button style="width:100%;padding:14px;background:var(--green);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif" onclick="marcarAvisoMobile(${a.id},${a.quantidade||0},'encontrado')">✅ Encontrado</button>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-            <button style="padding:12px;background:var(--indigo);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif" onclick="marcarNaoEncontradoMobile(${a.id})">🚫 Não Encontrei</button>
-            <button style="padding:12px;background:var(--amber);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif" onclick="marcarProtocoloMobile(${a.id})">📋 Protocolo</button>
+            <button style="padding:12px;background:#0D9488;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif" onclick="marcarAvisoMobile(${a.id},${a.quantidade||0},'subiu')">⬆️ Subiu</button>
+            <button style="padding:12px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif" onclick="marcarAvisoMobile(${a.id},${a.quantidade||0},'abastecido')">📦 Abastecido</button>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <button style="padding:12px;background:var(--indigo);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif" onclick="marcarAvisoMobile(${a.id},0,'nao_encontrado')">🚫 Não Encontrei</button>
+            <button style="padding:12px;background:var(--amber);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif" onclick="marcarAvisoMobile(${a.id},0,'protocolo')">📋 Protocolo</button>
           </div>
         </div>
-        ` : `
-        <div style="margin-top:4px">
-          ${isRep   ? `<div style="font-size:13px;color:var(--green);font-weight:700">✅ Reposto às ${a.hora_reposto||'—'}${a.qtd_encontrada>0?' — '+a.qtd_encontrada+' un.':''}</div>` : ''}
-          ${isNE    ? `<div style="font-size:13px;color:var(--indigo);font-weight:700">🚫 Não encontrado às ${a.hora_reposto||'—'}</div>` : ''}
-          ${isProto ? `<div style="font-size:13px;color:var(--amber);font-weight:700">📋 Protocolo às ${a.hora_reposto||'—'}</div>` : ''}
-          ${a.obs   ? `<div style="font-size:11px;color:var(--text2);margin-top:3px">📝 ${a.obs}</div>` : ''}
-        </div>
-        `}
+        ` : '<div style="margin-top:4px">' +
+          (isEnc   ? '<div style="font-size:13px;color:var(--green);font-weight:700">✅ Encontrado às '+(a.hora_reposto||'—')+(a.qtd_encontrada>0?' — '+a.qtd_encontrada+' un.':'')+'</div>' : '') +
+          (isSubiu ? '<div style="font-size:13px;color:#0D9488;font-weight:700">⬆️ Subiu às '+(a.hora_reposto||'—')+(a.qtd_encontrada>0?' — '+a.qtd_encontrada+' un.':'')+'</div>' : '') +
+          (isAbast ? '<div style="font-size:13px;color:var(--accent);font-weight:700">📦 Abastecido às '+(a.hora_reposto||'—')+(a.qtd_encontrada>0?' — '+a.qtd_encontrada+' un.':'')+'</div>' : '') +
+          (isNE    ? '<div style="font-size:13px;color:var(--indigo);font-weight:700">🚫 Não encontrado às '+(a.hora_reposto||'—')+'</div>' : '') +
+          (isProto ? '<div style="font-size:13px;color:var(--amber);font-weight:700">📋 Protocolo às '+(a.hora_reposto||'—')+'</div>' : '') +
+          (a.obs   ? '<div style="font-size:11px;color:var(--text2);margin-top:3px">📝 '+a.obs+'</div>' : '') +
+          '</div>'}
       </div>`;
     }).join('');
-  } catch(e) {}
+    lista.innerHTML = html;
+  } catch(e) { console.error(e); }
 }
 
-async function marcarRepostoMobile(id, qtdTotal) {
+// Função unificada para marcar aviso no mobile
+async function marcarAvisoMobile(id, qtdTotal, acao) {
+  if ((acao==='nao_encontrado'||acao==='protocolo') && !confirm(`Confirmar: ${acao==='nao_encontrado'?'Não encontrado':'Protocolo'}? O supervisor será notificado.`)) return;
   const input  = document.getElementById(`m-qtd-enc-${id}`);
-  const qtdEnc = parseInt(input?.value) || qtdTotal || 0;
+  const qtdEnc = (acao==='nao_encontrado'||acao==='protocolo') ? 0 : (parseInt(input?.value) || qtdTotal || 0);
   const nome   = usuarioAtual?.nome || '';
   try {
-    await fetch(`${API}/repositor/avisos/${id}/reposto`, {
+    const res = await fetch(`${API}/repositor/avisos/${id}/${acao}`, {
       credentials:'include', method:'PUT',
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ qtd_encontrada: qtdEnc, repositor_nome: nome })
     });
-    toast('✅ Reposto!','sucesso');
+    const data = await res.json();
+    if (data.erro) { toast(data.erro,'erro'); return; }
+    const msgs = { encontrado:'✅ Encontrado!', subiu:'⬆️ Subiu!', abastecido:'📦 Abastecido!', nao_encontrado:'🚫 Não encontrado!', protocolo:'📋 Protocolo!' };
+    const tipos = { encontrado:'sucesso', subiu:'sucesso', abastecido:'sucesso', nao_encontrado:'aviso', protocolo:'aviso' };
+    toast(msgs[acao]||'OK', tipos[acao]||'info');
     carregarAvisosMobile();
   } catch(e) { toast('Erro!','erro'); }
 }
-async function marcarNaoEncontradoMobile(id) {
-  const nome = usuarioAtual?.nome || '';
-  try {
-    await fetch(`${API}/repositor/avisos/${id}/nao_encontrado`, {
-      credentials:'include', method:'PUT',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ repositor_nome: nome })
-    });
-    toast('🚫 Não encontrado!','aviso');
-    carregarAvisosMobile();
-  } catch(e) { toast('Erro!','erro'); }
-}
-async function marcarProtocoloMobile(id) {
-  if (!confirm('Enviar para protocolo?')) return;
-  const nome = usuarioAtual?.nome || '';
-  try {
-    await fetch(`${API}/repositor/avisos/${id}/protocolo`, {
-      credentials:'include', method:'PUT',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ repositor_nome: nome })
-    });
-    toast('📋 Protocolo!','info');
-    carregarAvisosMobile();
-  } catch(e) { toast('Erro!','erro'); }
-}
+
+// Manter compatibilidade com funções antigas
+async function marcarRepostoMobile(id, qtdTotal) { await marcarAvisoMobile(id, qtdTotal, 'encontrado'); }
+async function marcarNaoEncontradoMobile(id) { await marcarAvisoMobile(id, 0, 'nao_encontrado'); }
+async function marcarProtocoloMobile(id) { await marcarAvisoMobile(id, 0, 'protocolo'); }
 
 async function carregarStatsRepMobile() {
   try {
@@ -2433,6 +2519,7 @@ async function _concluirCore(prefix, fnChecklist, fnFila, fnStats, inputId, stat
     const res  = await fetch(`${API}/pedidos/${pedidoAtualId}/concluir`, { credentials:'include', method:'PUT' });
     const data = await res.json();
     if (data.aguardando) { toast('⏳ Ainda aguardando o repositor!','aviso'); return; }
+    if (data.bloqueado)  { toast('⛔ Bloqueado! Aguarde o supervisor liberar.','erro'); return; }
     if (data.erro)       { toast(`⚠️ ${data.erro}`,'aviso'); return; }
     toast(`🎉 Pedido ${pedidoAtualNum} CONCLUÍDO!`,'sucesso');
     const wrap = document.getElementById(`${prefix}-wrap`);
@@ -2479,14 +2566,27 @@ function renderChecklist(prefix) {
     if(ba) ba.style.display='none';
   } else if (temProblema) {
     const itensP = itensAtuais.filter(i=>i.status==='falta'||i.status==='parcial');
-    const todosR = itensP.every(i=>i.aviso_status==='reposto'||i.aviso_status==='nao_encontrado');
-    if (todosR) {
-      if(bc){bc.style.display='block';bc.disabled=false;bc.textContent='✅ CONCLUIR PEDIDO';}
-      if(ba) ba.style.display='none';
-    } else {
-      const qtdP = itensP.filter(i=>i.aviso_status!=='reposto'&&i.aviso_status!=='nao_encontrado').length;
+    // Status que liberam o concluir: encontrado, subiu, abastecido
+    const statusOk = ['encontrado','reposto','subiu','abastecido'];
+    const statusBloq = ['nao_encontrado','protocolo'];
+    const todosResolvidos = itensP.every(i => statusOk.includes(i.aviso_status) || statusBloq.includes(i.aviso_status));
+    const temBloqueio = itensP.some(i => statusBloq.includes(i.aviso_status));
+    const temPendente = itensP.some(i => !statusOk.includes(i.aviso_status) && !statusBloq.includes(i.aviso_status));
+
+    if (temPendente) {
+      // Ainda aguardando repositor resolver
+      const qtdP = itensP.filter(i => !statusOk.includes(i.aviso_status) && !statusBloq.includes(i.aviso_status)).length;
       if(bc) bc.style.display='none';
       if(ba){ba.style.display='block';ba.textContent=`⏳ AGUARDANDO REPOSITOR (${qtdP})`;}
+    } else if (temBloqueio) {
+      // Bloqueado — aguarda supervisor
+      const qtdBloq = itensP.filter(i => statusBloq.includes(i.aviso_status)).length;
+      if(bc) bc.style.display='none';
+      if(ba){ba.style.display='block';ba.textContent=`⛔ BLOQUEADO — AGUARDA SUPERVISOR (${qtdBloq})`;}
+    } else {
+      // Todos resolvidos pelo repositor
+      if(bc){bc.style.display='block';bc.disabled=false;bc.textContent='✅ CONCLUIR PEDIDO';}
+      if(ba) ba.style.display='none';
     }
   } else {
     if(bc){bc.style.display='block';bc.disabled=false;bc.textContent='✅ CONCLUIR PEDIDO';}
@@ -2677,43 +2777,72 @@ async function buscarProdutoRepositor() {
 
 async function carregarAvisos() {
   try {
+    // Carrega duplicatas do dia
+    const resDup = await fetch(`${API}/repositor/duplicatas-dia`, { credentials:'include' });
+    const dups   = resDup.ok ? await resDup.json() : [];
+    const dupMap = {};
+    dups.forEach(d => { dupMap[d.codigo] = d; });
+
     const filtroEl = document.getElementById('filtro-rep-status');
     const status   = filtroEl ? filtroEl.value : '';
     let url = `${API}/repositor/avisos`; if (status) url += `?status=${status}`;
-    const r      = await fetch(url);
+    const r      = await fetch(url, { credentials:'include' });
     if (!r.ok) return;
     const avisos = await r.json();
     const pend   = avisos.filter(a=>a.status==='pendente').length;
-    const rep    = avisos.filter(a=>a.status==='reposto').length;
+    const enc    = avisos.filter(a=>['encontrado','reposto','subiu','abastecido'].includes(a.status)).length;
     const elPend = document.getElementById('rep-pend');
     const elRep  = document.getElementById('rep-rep');
     if (elPend) elPend.textContent = pend;
-    if (elRep)  elRep.textContent  = rep;
+    if (elRep)  elRep.textContent  = enc;
     const badge = document.getElementById('menu-badge-rep');
     if (badge) { badge.textContent=pend; badge.style.display=pend>0?'inline':'none'; }
     const lista = document.getElementById('lista-avisos');
     if (!lista) return;
+
+    let html = '';
+    // Banner de duplicatas do dia
+    if (dups.length > 0) {
+      html += `<div style="margin-bottom:12px">${dups.map(d=>`
+        <div class="aviso-duplicata">
+          <span style="font-size:20px">⚠️</span>
+          <div>
+            <div style="font-size:13px;font-weight:800">ATENÇÃO — Item duplicado hoje: <b>${d.codigo}</b> — ${d.descricao||''}</div>
+            <div style="font-size:12px;font-weight:400;margin-top:2px">Já solicitado hoje para os pedidos: <b>${d.pedidos}</b></div>
+          </div>
+        </div>`).join('')}</div>`;
+    }
+
     if (!avisos.length) {
-      lista.innerHTML = '<div style="color:var(--text3);text-align:center;padding:36px;font-size:14px">✅ Nenhum item encontrado</div>';
+      html += '<div style="color:var(--text3);text-align:center;padding:36px;font-size:14px">✅ Nenhum item encontrado</div>';
+      lista.innerHTML = html;
       return;
     }
-    lista.innerHTML = avisos.map(a => {
+
+    html += avisos.map(a => {
       const isPend  = a.status==='pendente';
-      const isRep   = a.status==='reposto';
+      const isEnc   = a.status==='encontrado'||a.status==='reposto';
+      const isSubiu = a.status==='subiu';
+      const isAbast = a.status==='abastecido';
       const isNE    = a.status==='nao_encontrado';
       const isProto = a.status==='protocolo';
-      const icon    = isRep?'✅':isNE?'🚫':isProto?'📋':'🔴';
+      const icon    = isEnc?'✅':isSubiu?'⬆️':isAbast?'📦':isNE?'🚫':isProto?'📋':'🔴';
+      const dupAlerta = dupMap[a.codigo] && isPend
+        ? `<div style="font-size:11px;color:#92400E;font-weight:700;background:#FEF3C7;border:1px solid #F59E0B;border-radius:6px;padding:5px 8px;margin-top:5px">⚠️ Já solicitado hoje para: <b>${dupMap[a.codigo].pedidos}</b></div>` : '';
       return `
       <div class="aviso-card ${a.status}">
         <div style="font-size:26px;flex-shrink:0">${icon}</div>
         <div class="aviso-info">
           <div class="aviso-cod">${a.codigo||'—'} <span style="font-size:11px;font-weight:500;color:var(--text3);margin-left:6px">Pedido #${a.numero_pedido}</span></div>
           <div class="aviso-desc">${a.descricao||'—'}</div>
-          <div class="aviso-det">📍 ${a.endereco||'—'} &nbsp;•&nbsp; 📦 Pedido: <b>${a.quantidade||'—'}</b></div>
-          ${isRep   ? `<div style="font-size:12px;color:var(--green);margin-top:4px;font-weight:700">✅ Reposto às ${a.hora_reposto||'—'}${a.qtd_encontrada>0?' — Encontrou '+a.qtd_encontrada+' un.':''}</div>` : ''}
+          <div class="aviso-det">📍 ${a.endereco||'—'} &nbsp;•&nbsp; Qtde: <b>${a.quantidade||'—'}</b></div>
+          ${dupAlerta}
+          ${isEnc   ? `<div style="font-size:12px;color:var(--green);margin-top:4px;font-weight:700">✅ Encontrado às ${a.hora_reposto||'—'}${a.qtd_encontrada>0?' — '+a.qtd_encontrada+' un.':''}</div>` : ''}
+          ${isSubiu ? `<div style="font-size:12px;color:#0D9488;margin-top:4px;font-weight:700">⬆️ Subiu às ${a.hora_reposto||'—'}${a.qtd_encontrada>0?' — '+a.qtd_encontrada+' un.':''}</div>` : ''}
+          ${isAbast ? `<div style="font-size:12px;color:var(--accent);margin-top:4px;font-weight:700">📦 Abastecido às ${a.hora_reposto||'—'}${a.qtd_encontrada>0?' — '+a.qtd_encontrada+' un.':''}</div>` : ''}
           ${isNE    ? `<div style="font-size:12px;color:var(--indigo);margin-top:4px;font-weight:700">🚫 Não encontrado às ${a.hora_reposto||'—'}</div>` : ''}
           ${isProto ? `<div style="font-size:12px;color:var(--amber);margin-top:4px;font-weight:700">📋 Protocolo às ${a.hora_reposto||'—'}</div>` : ''}
-          ${isPend  ? `<div style="font-size:12px;color:var(--red);margin-top:4px;font-weight:700">⏱ Aviso às ${a.hora_aviso||'—'}</div>` : ''}
+          ${isPend  ? `<div style="font-size:12px;color:var(--red);margin-top:4px;font-weight:700">⏱ Aviso às ${a.hora_aviso||'—'} &nbsp;•&nbsp; Sep: ${a.separador_nome||'—'}</div>` : ''}
           ${a.obs   ? `<div style="font-size:11px;color:var(--text2);margin-top:3px">📝 ${a.obs}</div>` : ''}
           ${isPend  ? `
             <div class="qtd-enc-wrap">
@@ -2724,60 +2853,45 @@ async function carregarAvisos() {
         </div>
         <div style="display:flex;flex-direction:column;gap:7px;align-items:flex-end;flex-shrink:0">
           ${isPend ? `
-            <button class="btn btn-success btn-sm" style="min-width:110px" onclick="marcarReposto(${a.id},${a.quantidade||0})">✅ Reposto</button>
-            <button class="btn btn-sm" style="background:var(--indigo);color:#fff;min-width:110px" onclick="marcarNaoEncontrado(${a.id})">🚫 Não encontrei</button>
-            <button class="btn btn-sm" style="background:var(--amber);color:#fff;min-width:110px" onclick="marcarProtocolo(${a.id})">📋 Protocolo</button>
-          ` : `<span class="pill ${isRep?'reposto':isProto?'protocolo':'pendente'}">${isRep?'Reposto':isProto?'Protocolo':'Não encontrado'}</span>`}
+            <button class="btn btn-success btn-sm" style="min-width:110px" onclick="marcarAviso(${a.id},${a.quantidade||0},'encontrado')">✅ Encontrado</button>
+            <button class="btn btn-sm" style="background:#0D9488;color:#fff;min-width:110px" onclick="marcarAviso(${a.id},${a.quantidade||0},'subiu')">⬆️ Subiu</button>
+            <button class="btn btn-sm" style="background:var(--accent);color:#fff;min-width:110px" onclick="marcarAviso(${a.id},${a.quantidade||0},'abastecido')">📦 Abastecido</button>
+            <button class="btn btn-sm" style="background:var(--indigo);color:#fff;min-width:110px" onclick="marcarAviso(${a.id},0,'nao_encontrado')">🚫 Não encontrei</button>
+            <button class="btn btn-sm" style="background:var(--amber);color:#fff;min-width:110px" onclick="marcarAviso(${a.id},0,'protocolo')">📋 Protocolo</button>
+          ` : `<span class="pill ${isEnc?'reposto':isSubiu?'ciano':isAbast?'separador':isProto?'protocolo':isNE?'inativo':'pendente'}">${isEnc?'Encontrado':isSubiu?'Subiu':isAbast?'Abastecido':isProto?'Protocolo':'Não encontrado'}</span>`}
         </div>
       </div>`;
     }).join('');
+    lista.innerHTML = html;
   } catch(e) {
     const lista = document.getElementById('lista-avisos');
     if (lista) lista.innerHTML = '<div style="color:var(--red);text-align:center;padding:20px">Erro ao carregar</div>';
   }
 }
 
-async function marcarReposto(id, qtdTotal) {
+async function marcarAviso(id, qtdTotal, acao) {
+  if ((acao==='nao_encontrado'||acao==='protocolo') && !confirm(`Confirmar: ${acao==='nao_encontrado'?'Não encontrado':'Protocolo'}? O supervisor será notificado.`)) return;
   const input  = document.getElementById(`qtd-enc-${id}`);
-  const qtdEnc = parseInt(input?.value) || qtdTotal || 0;
+  const qtdEnc = (acao==='nao_encontrado'||acao==='protocolo') ? 0 : (parseInt(input?.value) || qtdTotal || 0);
   const nome   = usuarioAtual?.nome || '';
   try {
-    await fetch(`${API}/repositor/avisos/${id}/reposto`, {
+    const res = await fetch(`${API}/repositor/avisos/${id}/${acao}`, {
       credentials:'include', method:'PUT',
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ qtd_encontrada: qtdEnc, repositor_nome: nome })
     });
-    toast('✅ Reposto!','sucesso');
+    const data = await res.json();
+    if (data.erro) { toast(data.erro,'erro'); return; }
+    const msgs = { encontrado:'✅ Encontrado!', subiu:'⬆️ Subiu!', abastecido:'📦 Abastecido!', nao_encontrado:'🚫 Não encontrado!', protocolo:'📋 Protocolo!' };
+    const tipos = { encontrado:'sucesso', subiu:'sucesso', abastecido:'sucesso', nao_encontrado:'aviso', protocolo:'aviso' };
+    toast(msgs[acao]||'OK', tipos[acao]||'info');
     carregarAvisos();
   } catch(e) { toast('Erro!','erro'); }
 }
-
-async function marcarNaoEncontrado(id) {
-  const nome = usuarioAtual?.nome || '';
-  try {
-    await fetch(`${API}/repositor/avisos/${id}/nao_encontrado`, {
-      credentials:'include', method:'PUT',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ repositor_nome: nome })
-    });
-    toast('🚫 Não encontrado!','aviso');
-    carregarAvisos();
-  } catch(e) { toast('Erro!','erro'); }
-}
-
-async function marcarProtocolo(id) {
-  if (!confirm('Enviar para análise de protocolo?')) return;
-  const nome = usuarioAtual?.nome || '';
-  try {
-    await fetch(`${API}/repositor/avisos/${id}/protocolo`, {
-      credentials:'include', method:'PUT',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ repositor_nome: nome })
-    });
-    toast('📋 Enviado para análise de protocolo!','info');
-    carregarAvisos();
-  } catch(e) { toast('Erro!','erro'); }
-}
+// Compatibilidade
+async function marcarReposto(id,q){ await marcarAviso(id,q,'encontrado'); }
+async function marcarNaoEncontrado(id){ await marcarAviso(id,0,'nao_encontrado'); }
+async function marcarProtocolo(id){ await marcarAviso(id,0,'protocolo'); }
 
 /* ══════════════════════════════════════════
    EVENTOS

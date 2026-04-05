@@ -491,9 +491,18 @@ app.put('/pedidos/:id/concluir', (req, res) => {
       if (err2) return res.status(500).json({ erro: err2.message });
       if (avisosPendentes.length > 0)
         return res.status(400).json({ erro:`Aguardando repositor resolver ${avisosPendentes.length} item(s)!`, aguardando:true });
-      db.run('UPDATE pedidos SET status="concluido" WHERE id=?', [req.params.id], err3 => {
+      // Bloquear se há itens nao_encontrado ou protocolo sem liberação do supervisor
+      db.all(`SELECT * FROM avisos_repositor WHERE pedido_id=? AND status IN ('nao_encontrado','protocolo')`, [req.params.id], (err3, bloqueados) => {
         if (err3) return res.status(500).json({ erro: err3.message });
-        res.json({ mensagem:'Pedido concluido!' });
+        if (bloqueados.length > 0)
+          return res.status(400).json({
+            erro:`Pedido bloqueado! ${bloqueados.length} item(s) com nao encontrado/protocolo aguardam liberacao do supervisor!`,
+            bloqueado: true
+          });
+        db.run('UPDATE pedidos SET status="concluido" WHERE id=?', [req.params.id], err4 => {
+          if (err4) return res.status(500).json({ erro: err4.message });
+          res.json({ mensagem:'Pedido concluido!' });
+        });
       });
     });
   });
@@ -542,10 +551,40 @@ app.get('/repositor/avisos', (req, res) => {
 app.put('/repositor/avisos/:id/reposto', (req, res) => {
   const { hora } = dataHoraLocal();
   const { qtd_encontrada, repositor_nome } = req.body || {};
-  db.run('UPDATE avisos_repositor SET status="reposto",hora_reposto=?,qtd_encontrada=?,repositor_nome=? WHERE id=?',
+  db.run('UPDATE avisos_repositor SET status="encontrado",hora_reposto=?,qtd_encontrada=?,repositor_nome=? WHERE id=?',
     [hora, parseInt(qtd_encontrada)||0, repositor_nome||'', req.params.id], err => {
       if (err) return res.status(500).json({ erro: err.message });
-      res.json({ mensagem:'Item reposto!' });
+      res.json({ mensagem:'Item encontrado!' });
+    });
+});
+
+app.put('/repositor/avisos/:id/encontrado', (req, res) => {
+  const { hora } = dataHoraLocal();
+  const { qtd_encontrada, repositor_nome } = req.body || {};
+  db.run('UPDATE avisos_repositor SET status="encontrado",hora_reposto=?,qtd_encontrada=?,repositor_nome=? WHERE id=?',
+    [hora, parseInt(qtd_encontrada)||0, repositor_nome||'', req.params.id], err => {
+      if (err) return res.status(500).json({ erro: err.message });
+      res.json({ mensagem:'Item encontrado!' });
+    });
+});
+
+app.put('/repositor/avisos/:id/subiu', (req, res) => {
+  const { hora } = dataHoraLocal();
+  const { qtd_encontrada, repositor_nome } = req.body || {};
+  db.run('UPDATE avisos_repositor SET status="subiu",hora_reposto=?,qtd_encontrada=?,repositor_nome=? WHERE id=?',
+    [hora, parseInt(qtd_encontrada)||0, repositor_nome||'', req.params.id], err => {
+      if (err) return res.status(500).json({ erro: err.message });
+      res.json({ mensagem:'Item subiu para o estoque!' });
+    });
+});
+
+app.put('/repositor/avisos/:id/abastecido', (req, res) => {
+  const { hora } = dataHoraLocal();
+  const { qtd_encontrada, repositor_nome } = req.body || {};
+  db.run('UPDATE avisos_repositor SET status="abastecido",hora_reposto=?,qtd_encontrada=?,repositor_nome=? WHERE id=?',
+    [hora, parseInt(qtd_encontrada)||0, repositor_nome||'', req.params.id], err => {
+      if (err) return res.status(500).json({ erro: err.message });
+      res.json({ mensagem:'Estoque abastecido!' });
     });
 });
 
@@ -566,6 +605,36 @@ app.put('/repositor/avisos/:id/protocolo', (req, res) => {
     [hora, repositor_nome||'', req.params.id], err => {
       if (err) return res.status(500).json({ erro: err.message });
       res.json({ mensagem:'Enviado para analise de protocolo!' });
+    });
+});
+
+// Avisos para o separador — itens com status subiu/abastecido do seu pedido
+app.get('/repositor/avisos/separador/:separador_id', (req, res) => {
+  const { data: dataHoje } = dataHoraLocal();
+  db.all(`SELECT a.* FROM avisos_repositor a
+    WHERE a.separador_id=? AND a.status IN ('subiu','abastecido') AND a.data_aviso=?
+    ORDER BY a.id DESC`,
+    [req.params.separador_id, dataHoje], (err, rows) => {
+      if (err) return res.status(500).json({ erro: err.message });
+      res.json(rows || []);
+    });
+});
+
+// Duplicatas no dia — mesmo código com aviso em mais de um pedido hoje
+app.get('/repositor/duplicatas-dia', (req, res) => {
+  const { data: dataHoje } = dataHoraLocal();
+  db.all(`SELECT a.codigo, a.descricao,
+    COUNT(DISTINCT a.pedido_id) as total_pedidos,
+    GROUP_CONCAT(DISTINCT a.numero_pedido) as pedidos,
+    MIN(a.hora_aviso) as primeira_hora
+    FROM avisos_repositor a
+    WHERE a.data_aviso=? AND a.status IN ('pendente','encontrado','subiu','abastecido')
+    GROUP BY a.codigo
+    HAVING COUNT(DISTINCT a.pedido_id) > 1
+    ORDER BY total_pedidos DESC`,
+    [dataHoje], (err, rows) => {
+      if (err) return res.status(500).json({ erro: err.message });
+      res.json(rows || []);
     });
 });
 
