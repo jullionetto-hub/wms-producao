@@ -643,13 +643,6 @@ body.dark .aviso-duplicata{background:#2D1A05;border-color:#78350F;color:#FCD34D
           <div class="kpi-card laranja"><div class="kpi-lbl">SEPARADORES ATIVOS</div><div class="kpi-val" id="kpi-seps-ativos">0</div><div class="kpi-sub">trabalhando agora</div></div>
           <div class="kpi-card rosa"><div class="kpi-lbl">NÃO ENCONTR. HOJE</div><div class="kpi-val" id="kpi-nao-enc">0</div><div class="kpi-sub">itens não localizados</div></div>
         </div>
-        <!-- Pedidos bloqueados por nao_encontrado/protocolo -->
-        <div class="card" id="dash-bloqueados-wrap" style="margin-bottom:16px;display:none;border-left:4px solid var(--red)">
-          <div class="card-hd" style="background:#FEF2F2;color:var(--red)">⛔ PEDIDOS AGUARDANDO LIBERAÇÃO DO SUPERVISOR
-            <button class="btn btn-outline btn-sm" onclick="carregarPedidosBloqueados()">🔄</button>
-          </div>
-          <div id="lista-bloqueados"></div>
-        </div>
         <div class="grid-2">
           <div class="card">
             <div class="card-hd">📊 PRODUTIVIDADE
@@ -679,6 +672,15 @@ body.dark .aviso-duplicata{background:#2D1A05;border-color:#78350F;color:#FCD34D
       <!-- PEDIDOS -->
       <div class="pagina" id="pag-pedidos">
         <div class="pg-title">📋 Pedidos</div>
+
+        <!-- Painel de pedidos bloqueados -->
+        <div class="card" id="dash-bloqueados-wrap" style="display:none;margin-bottom:16px;border-left:4px solid var(--red);border-top:1.5px solid #FECACA;border-right:1.5px solid #FECACA;border-bottom:1.5px solid #FECACA">
+          <div class="card-hd" style="background:#FEF2F2;color:var(--red);border-radius:var(--r) var(--r) 0 0">
+            ⛔ AGUARDANDO LIBERAÇÃO DO SUPERVISOR
+            <button class="btn btn-outline btn-sm" onclick="carregarPedidosBloqueados()">🔄</button>
+          </div>
+          <div id="lista-bloqueados"></div>
+        </div>
         <div class="card">
           <div class="card-hd">FILTROS
             <div style="display:flex;gap:8px">
@@ -1367,7 +1369,7 @@ function montarSidebar() {
     supervisor: `
       <div class="mg">SUPERVISÃO</div>
       <a class="mi ativo" onclick="irPara('dashboard',this)"><span class="mi-ic">📊</span>Dashboard</a>
-      <a class="mi" onclick="irPara('pedidos',this)"><span class="mi-ic">📋</span>Pedidos</a>
+      <a class="mi" onclick="irPara('pedidos',this)"><span class="mi-ic">📋</span>Pedidos <span class="mbadge" id="menu-badge-bloq" style="display:none;background:var(--red)">!</span></a>
       <a class="mi" onclick="irPara('cadastros',this)"><span class="mi-ic">⚙️</span>Cadastros</a>
       <div class="mg">OPERAÇÃO</div>
       <a class="mi" onclick="irPara('separacao',this)"><span class="mi-ic">📦</span>Separação</a>
@@ -1399,7 +1401,7 @@ function irPara(pag, el) {
   if (pg) pg.classList.add('ativa');
   if (el) el.classList.add('ativo');
   if (pag === 'dashboard')       carregarDashboard();
-  if (pag === 'pedidos')         { popularSelects(); carregarPedidos(); }
+  if (pag === 'pedidos')         { popularSelects(); carregarPedidos(); carregarPedidosBloqueados(); }
   if (pag === 'cadastros')       { trocarCadastroTab('usuarios'); carregarUsuarios(); }
   if (pag === 'separacao')       { carregarFila(); if (separadorAtual) carregarContadoresSep(); }
   if (pag === 'estatisticas')    { carregarEstatisticas(); carregarCheckoutLista(); }
@@ -1419,6 +1421,9 @@ function iniciarPorPerfil() {
     carregarDashboard();
     setInterval(atualizarBadgeRep, 15000);
     atualizarBadgeRep();
+    // Verifica bloqueados periodicamente para manter badge atualizado
+    setInterval(carregarPedidosBloqueados, 20000);
+    carregarPedidosBloqueados();
   }
   if (usuarioAtual.perfil === 'separador') {
     document.getElementById('pag-separacao').classList.add('ativa');
@@ -1472,7 +1477,6 @@ async function carregarDashboard() {
   await carregarProdutividade();
   await carregarTimeline();
   await atualizarBadgeRep();
-  await carregarPedidosBloqueados();
   const el = document.getElementById('dash-ultima-atualizacao');
   if (el) el.textContent = '— atualizado ' + new Date().toLocaleTimeString('pt-BR', {timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit'});
 }
@@ -2141,14 +2145,20 @@ async function carregarPedidosBloqueados() {
     const rows = await res.json();
     const wrap = document.getElementById('dash-bloqueados-wrap');
     const lista= document.getElementById('lista-bloqueados');
+    // Atualiza badge no menu Pedidos
+    const badge = document.getElementById('menu-badge-bloq');
+    if (badge) { badge.textContent = rows.length; badge.style.display = rows.length > 0 ? 'inline' : 'none'; }
     if (!wrap || !lista) return;
     if (!rows.length) { wrap.style.display='none'; return; }
     wrap.style.display = 'block';
     lista.innerHTML = rows.map(r => `
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border-bottom:1px solid #FECACA;flex-wrap:wrap;gap:8px">
         <div>
-          <div style="font-weight:700;color:var(--red)">Pedido #${r.numero_pedido}</div>
-          <div style="font-size:11px;color:var(--text3)">${r.separador_nome||'—'} &nbsp;•&nbsp; Itens bloqueados: <b>${r.codigos_bloqueados||'—'}</b></div>
+          <div style="font-weight:700;color:var(--red);font-size:14px">⛔ Pedido #${r.numero_pedido}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px">
+            👤 ${r.separador_nome||'—'} &nbsp;•&nbsp; 
+            Itens bloqueados: <b style="color:var(--text)">${r.codigos_bloqueados||'—'}</b>
+          </div>
         </div>
         <button class="btn btn-success btn-sm" onclick="desbloquearPedido(${r.id},'${r.numero_pedido}')">✅ Liberar Pedido</button>
       </div>`).join('');
@@ -2492,13 +2502,52 @@ function renderChecklist(prefix) {
     const fnVerif  = isMob ? 'verificarItemMobile' : 'verificarItemDesktop';
     const fnToggle = isMob ? 'toggleParcialMobile'  : 'toggleParcialDesktop';
     const fnParcOk = isMob ? 'confirmarParcialMobile' : 'confirmarParcialDesktop';
+
+    if (isMob) {
+      // Layout mobile otimizado: ícone menor, código e localização maiores
+      return `<div class="item-card ${item.status}" id="${prefix}-ic-${item.id}" style="padding:10px 11px;gap:8px">
+        <!-- Ícone pequeno -->
+        <div class="item-ic" style="width:28px;height:28px;font-size:13px;flex-shrink:0;margin-top:2px">${icones[item.status]||'⬜'}</div>
+        <!-- Info central com código e endereço maiores -->
+        <div class="item-info" style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:3px">
+            <span style="font-size:15px;font-weight:800;color:${item.status==='encontrado'?'var(--green)':item.status==='falta'?'var(--red)':item.status==='parcial'?'var(--amber)':'var(--accent)'};font-family:'Space Mono',monospace">${item.codigo||'—'}</span>
+            <span style="font-size:13px;font-weight:700;color:var(--text2)">📍 ${item.endereco||'—'}</span>
+          </div>
+          <div style="font-size:12px;color:var(--text);margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${item.descricao||'—'}</div>
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+            <span style="background:var(--accent);color:#fff;border-radius:6px;padding:3px 10px;font-size:16px;font-weight:800;font-family:'Space Mono',monospace">x${item.quantidade||1}</span>
+            ${item.hora_verificado?`<span style="font-size:11px;color:var(--text3)">${item.hora_verificado}</span>`:''}
+          </div>
+          ${item.status==='falta'  ?`<div class="item-aviso" style="margin-top:4px">❌ Falta total — repositor avisado</div>`:''}
+          ${item.status==='parcial'?`<div class="item-aviso" style="margin-top:4px">🟡 ${item.obs||''} — repositor avisado</div>`:''}
+          ${(item.status==='falta'||item.status==='parcial')&&item.aviso_status==='reposto'?`<div style="font-size:10px;color:var(--green);margin-top:3px;font-weight:600">✅ Repositor repôs!</div>`:''}
+          ${(item.status==='falta'||item.status==='parcial')&&item.aviso_status==='nao_encontrado'?`<div style="font-size:10px;color:var(--red);margin-top:3px;font-weight:600">🚫 Não encontrado</div>`:''}
+          <div class="parcial-wrap" id="${prefix}-pw-${item.id}">
+            <label>Qtde encontrada (de ${item.quantidade||1}):</label>
+            <div class="parcial-row">
+              <input type="number" class="parcial-input" id="${prefix}-pi-${item.id}" min="0" max="${(item.quantidade||1)-1}" placeholder="0" inputmode="numeric"/>
+              <button class="btn-parc-ok" onclick="${fnParcOk}(${item.id},${item.quantidade||1},'${prefix}')">OK</button>
+            </div>
+          </div>
+        </div>
+        <!-- Botões ação -->
+        <div class="item-btns" style="flex-direction:column;gap:5px;flex-shrink:0">
+          <button class="btn-item ok"   ${v?'disabled':''} onclick="${fnVerif}(${item.id},'encontrado','${prefix}')" style="width:38px;height:38px">✔</button>
+          <button class="btn-item parc" ${v?'disabled':''} onclick="${fnToggle}(${item.id},'${prefix}')" style="width:38px;height:38px" title="Parcial">±</button>
+          <button class="btn-item nok"  ${v?'disabled':''} onclick="${fnVerif}(${item.id},'falta','${prefix}')" style="width:38px;height:38px">✖</button>
+        </div>
+      </div>`;
+    }
+
+    // Layout desktop — mantém original
     return `<div class="item-card ${item.status}" id="${prefix}-ic-${item.id}">
       <div class="item-ic">${icones[item.status]||'⬜'}</div>
       <div class="item-info">
         <div class="item-cod">${item.codigo||'—'} &nbsp;•&nbsp; 📍 ${item.endereco||'—'}</div>
         <div class="item-desc">${item.descricao||'—'}</div>
         <div class="item-det">
-          <span style="background:var(--accent);color:#fff;border-radius:6px;padding:3px 10px;font-size:${isMob?'16px':'13px'};font-weight:800;font-family:'Space Mono',monospace">x${item.quantidade||1}</span>
+          <span style="background:var(--accent);color:#fff;border-radius:6px;padding:3px 10px;font-size:13px;font-weight:800;font-family:'Space Mono',monospace">x${item.quantidade||1}</span>
           ${item.hora_verificado?`<span style="font-size:11px;color:var(--text3);margin-left:6px">${item.hora_verificado}</span>`:''}
         </div>
         ${item.status==='falta'  ?`<div class="item-aviso">❌ Falta total — repositor avisado</div>`:''}
