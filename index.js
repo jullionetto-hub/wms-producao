@@ -31,7 +31,7 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// ── Banco ───────────────────────────────────────────────────────────────────
+// â”€â”€ Banco â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const DB_PATH = path.join(__dirname, 'wms.db');
 const db = new sqlite3.Database(DB_PATH, err => {
   if (err) console.error(err.message);
@@ -39,7 +39,7 @@ const db = new sqlite3.Database(DB_PATH, err => {
 });
 db.run('PRAGMA journal_mode=WAL');
 
-// ── Helpers Promise ──────────────────────────────────────────────────────────
+// â”€â”€ Helpers Promise â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function dbRun(sql, params) {
   return new Promise((resolve, reject) => {
     db.run(sql, params, function(err) { if (err) reject(err); else resolve(this); });
@@ -51,7 +51,7 @@ function dbGet(sql, params) {
   });
 }
 
-// ── Data/hora local — sempre America/Sao_Paulo ───────────────────────────────
+// â”€â”€ Data/hora local â€” sempre America/Sao_Paulo â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function dataHoraLocal() {
   const agora   = new Date();
   const opcData = { timeZone:'America/Sao_Paulo', year:'numeric', month:'2-digit', day:'2-digit' };
@@ -62,7 +62,7 @@ function dataHoraLocal() {
   return { data: dataISO, hora };
 }
 
-// ── Tabelas ──────────────────────────────────────────────────────────────────
+// â”€â”€ Tabelas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 db.serialize(() => {
   db.run(`CREATE TABLE IF NOT EXISTS usuarios (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -167,12 +167,6 @@ db.serialize(() => {
   db.run(`CREATE INDEX IF NOT EXISTS idx_checkout_caixa ON checkout(numero_caixa)`);
 });
 
-
-function perfisPermitidos(user) {
-  const extras = String(user.perfis_acesso || '').split(',').map(s => s.trim()).filter(Boolean);
-  return Array.from(new Set([user.perfil, ...extras]));
-}
-
 function hashSenha(senha) {
   return crypto.createHash('sha256').update(senha + 'wms_salt_2026').digest('hex');
 }
@@ -185,20 +179,18 @@ function criarUsuarioPadrao() {
 }
 criarUsuarioPadrao();
 
-// ─── AUTH ────────────────────────────────────────────────────────────────────
+// â”€â”€â”€ AUTH â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.post('/auth/login', (req, res) => {
   const { login, senha, perfil } = req.body;
   if (!login||!senha||!perfil) return res.status(400).json({ erro:'Dados incompletos!' });
   const hash = hashSenha(senha);
-  // Perfis válidos
+  // Perfis vÃ¡lidos
   const perfisValidos = ['supervisor','separador','repositor','checkout'];
-  if (!perfisValidos.includes(perfil)) return res.status(400).json({ erro:'Perfil inválido!' });
+  if (!perfisValidos.includes(perfil)) return res.status(400).json({ erro:'Perfil invÃ¡lido!' });
   db.get(`SELECT * FROM usuarios WHERE login=? AND senha_hash=? AND perfil=? AND status='ativo'`,
     [login, hash, perfil], (err, user) => {
       if (err)   return res.status(500).json({ erro: err.message });
       if (!user) return res.status(401).json({ erro:'Login ou senha incorretos!' });
-      const permitidos = perfisPermitidos(user);
-      if (!permitidos.includes(perfil)) return res.status(403).json({ erro:'Este usuário não pode acessar este perfil!' });
       if (perfil === 'separador') {
         db.get(`SELECT * FROM separadores WHERE usuario_id=? AND status='ativo'`, [user.id], (err2, sep) => {
           if (err2) return res.status(500).json({ erro: err2.message });
@@ -222,10 +214,10 @@ app.get('/auth/me', (req, res) => {
   res.json({ usuario: req.session.usuario, separador: req.session.separador || null });
 });
 
-// ─── USUÁRIOS ────────────────────────────────────────────────────────────────
+// â”€â”€â”€ USUÃRIOS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.get('/usuarios', (req, res) => {
   const { perfil } = req.query;
-  let sql = 'SELECT id,nome,login,perfil,perfis_acesso,turno,status,data_cadastro FROM usuarios WHERE 1=1';
+  let sql = 'SELECT id,nome,login,perfil,turno,status,data_cadastro FROM usuarios WHERE 1=1';
   const params = [];
   if (perfil) { sql += ' AND perfil=?'; params.push(perfil); }
   sql += ' ORDER BY nome';
@@ -235,7 +227,7 @@ app.get('/usuarios', (req, res) => {
   });
 });
 app.post('/usuarios', (req, res) => {
-  const { nome, login, senha, perfil, turno, perfis_acesso } = req.body;
+  const { nome, login, senha, perfil, turno } = req.body;
   if (!nome||!login||!senha||!perfil) return res.status(400).json({ erro:'Preencha todos os campos!' });
   const hash = hashSenha(senha);
   db.run(`INSERT INTO usuarios (nome,login,senha_hash,perfil,turno) VALUES (?,?,?,?,?)`,
@@ -254,7 +246,7 @@ app.post('/usuarios', (req, res) => {
   );
 });
 app.put('/usuarios/:id', (req, res) => {
-  const { nome, login, senha, perfil, turno, status, perfis_acesso } = req.body;
+  const { nome, login, senha, perfil, turno, status } = req.body;
   if (senha) {
     const hash = hashSenha(senha);
     db.run(`UPDATE usuarios SET nome=?,login=?,senha_hash=?,perfil=?,turno=?,status=? WHERE id=?`,
@@ -273,7 +265,7 @@ app.delete('/usuarios/:id', (req, res) => {
   });
 });
 
-// ─── SEPARADORES ─────────────────────────────────────────────────────────────
+// â”€â”€â”€ SEPARADORES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.get('/separadores', (req, res) => {
   db.all(`SELECT s.*, u.nome as usuario_nome FROM separadores s LEFT JOIN usuarios u ON s.usuario_id=u.id ORDER BY s.nome`,
     [], (err, rows) => {
@@ -311,7 +303,7 @@ app.delete('/separadores/:id', (req, res) => {
   });
 });
 
-// ─── PEDIDOS ─────────────────────────────────────────────────────────────────
+// â”€â”€â”€ PEDIDOS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.get('/pedidos', (req, res) => {
   const { separador_id, status, data, data_ini, data_fim, numero_pedido } = req.query;
   let query = `SELECT p.*, s.nome as separador_nome
@@ -360,40 +352,37 @@ app.put('/pedidos/:id/separador', (req, res) => {
   });
 });
 
-// Vincular número de caixa ao pedido
-app.put('/pedidos/:id/caixa', async (req, res) => {
-  const numero_caixa = String(req.body.numero_caixa || '').trim();
-  if (!numero_caixa) return res.status(400).json({ erro:'Número da caixa não informado!' });
-  try {
-    const pedido = await dbGet(`SELECT p.*, s.nome as sepnome FROM pedidos p LEFT JOIN separadores s ON p.separador_id=s.id WHERE p.id=?`, [req.params.id]);
-    if (!pedido) return res.status(404).json({ erro:'Pedido não encontrado!' });
+// Vincular nÃºmero de caixa ao pedido
+app.put('/pedidos/:id/caixa', (req, res) => {
+  const { numero_caixa } = req.body;
+  if (!numero_caixa) return res.status(400).json({ erro:'Numero da caixa nao informado!' });
+  const { data, hora } = dataHoraLocal();
+  const caixa = String(numero_caixa).trim();
 
-    const emUso = await dbGet(`
-      SELECT c.id, c.numero_pedido
-      FROM checkout c
-      WHERE c.numero_caixa=? AND c.status='pendente' AND c.pedido_id<>?
-      ORDER BY c.id DESC LIMIT 1
-    `, [numero_caixa, req.params.id]);
-    if (emUso) return res.status(409).json({ erro:`A caixa ${numero_caixa} já está vinculada ao pedido ${emUso.numero_pedido} e só será liberada após o checkout!` });
+  db.run('UPDATE pedidos SET numero_caixa=? WHERE id=?', [caixa, req.params.id], err => {
+    if (err) return res.status(500).json({ erro: err.message });
 
-    const emOutroPedido = await dbGet(`SELECT id, numero_pedido FROM pedidos WHERE numero_caixa=? AND id<>? AND status<>'concluido'`, [numero_caixa, req.params.id]);
-    if (emOutroPedido) return res.status(409).json({ erro:`A caixa ${numero_caixa} já está em uso no pedido ${emOutroPedido.numero_pedido}!` });
+    db.get('SELECT p.*, s.nome as sep_nome FROM pedidos p LEFT JOIN separadores s ON p.separador_id=s.id WHERE p.id=?',
+      [req.params.id], (err2, ped) => {
+        if (err2 || !ped) return res.json({ mensagem:'Caixa vinculada!' });
+        const sepNome = ped.sep_nome || '';
 
-    await dbRun(`UPDATE pedidos SET numero_caixa=? WHERE id=?`, [numero_caixa, req.params.id]);
-    const existente = await dbGet(`SELECT id FROM checkout WHERE pedido_id=?`, [req.params.id]);
-    if (existente) {
-      await dbRun(`UPDATE checkout SET numero_caixa=?, separador_nome=?, status='pendente', hora_checkout=NULL, data_checkout=NULL WHERE pedido_id=?`, [numero_caixa, pedido.sepnome || '', req.params.id]);
-    } else {
-      const { data, hora } = dataHoraLocal();
-      await dbRun(`INSERT INTO checkout (numero_caixa,pedido_id,numero_pedido,separador_nome,status,hora_criacao,data_checkout) VALUES (?,?,?,?, 'pendente', ?, ?)`, [numero_caixa, req.params.id, pedido.numero_pedido, pedido.sepnome || '', hora, data]);
-    }
-    res.json({ mensagem:'Caixa vinculada com exclusividade!', pedido_id: pedido.id, numero_pedido: pedido.numero_pedido, numero_caixa });
-  } catch (err) {
-    res.status(500).json({ erro: err.message });
-  }
+        db.get('SELECT id FROM checkout WHERE pedido_id=?', [req.params.id], (err3, ck) => {
+          if (ck) {
+            db.run('UPDATE checkout SET numero_caixa=?, separador_nome=? WHERE pedido_id=?',
+              [caixa, sepNome, req.params.id], () => {});
+          } else {
+            db.run(`INSERT INTO checkout (numero_caixa,pedido_id,numero_pedido,separador_nome,status,hora_criacao,data_checkout)
+                    VALUES (?,?,?,?,'pendente',?,?)`,
+              [caixa, req.params.id, ped.numero_pedido, sepNome, hora, data], () => {});
+          }
+          res.json({ mensagem:'Caixa vinculada!', pedido_id: req.params.id, numero_pedido: ped.numero_pedido });
+        });
+      });
+  });
 });
 
-// Bipar pedido — SEM necessidade de separador vinculado
+// Bipar pedido â€” SEM necessidade de separador vinculado
 app.post('/pedidos/bipar', (req, res) => {
   const { numero_pedido, separador_id } = req.body;
   if (!numero_pedido) return res.status(400).json({ erro:'Numero do pedido nao informado!' });
@@ -491,7 +480,7 @@ app.put('/pedidos/:id/concluir', (req, res) => {
   });
 });
 
-// ─── REPOSITOR ────────────────────────────────────────────────────────────────
+// â”€â”€â”€ REPOSITOR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.get('/repositor/buscar-produto', (req, res) => {
   const { codigo } = req.query;
   if (!codigo) return res.status(400).json({ erro: 'Codigo nao informado!' });
@@ -561,7 +550,7 @@ app.put('/repositor/avisos/:id/protocolo', (req, res) => {
     });
 });
 
-// ─── CHECKOUT ────────────────────────────────────────────────────────────────
+// â”€â”€â”€ CHECKOUT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.get('/checkout/caixa/:numero', async (req, res) => {
   const numero = String(req.params.numero).trim();
   try {
@@ -629,7 +618,7 @@ app.get('/checkout', (req, res) => {
   });
 });
 
-// ─── IMPORTAÇÃO ───────────────────────────────────────────────────────────────
+// â”€â”€â”€ IMPORTAÃ‡ÃƒO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.post('/importar', async (req, res) => {
   const { linhas } = req.body;
   if (!linhas || !linhas.length)
@@ -688,7 +677,7 @@ app.post('/importar', async (req, res) => {
   res.json({ mensagem:'Importacao concluida!', importados, ignorados, erros, total: numeros.length });
 });
 
-// ─── PRODUTIVIDADE ────────────────────────────────────────────────────────────
+// â”€â”€â”€ PRODUTIVIDADE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.get('/produtividade', (req, res) => {
   const { separador_id } = req.query;
   const { data: dataHoje } = dataHoraLocal();
@@ -711,7 +700,7 @@ app.get('/produtividade', (req, res) => {
   });
 });
 
-// ─── ESTATÍSTICAS ─────────────────────────────────────────────────────────────
+// â”€â”€â”€ ESTATÃSTICAS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.get('/estatisticas/pedidos', (req, res) => {
   const { data_ini, data_fim } = req.query;
   const { data: dataHoje } = dataHoraLocal();
@@ -742,65 +731,9 @@ app.get('/estatisticas/pedidos', (req, res) => {
     });
 });
 
-// ─── START ────────────────────────────────────────────────────────────────────
+// â”€â”€â”€ START â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.listen(PORT, () => {
   console.log(`Servidor WMS rodando na porta ${PORT}`);
   const { data, hora } = dataHoraLocal();
   console.log(`Data/hora local: ${data} ${hora}`);
-});
-
-app.get('/protocolo', (req, res) => {
-  const { status='', dataini='', datafim='' } = req.query;
-  let sql = `SELECT id,item_id,pedido_id,numero_pedido,codigo,descricao,quantidade,obs,status,hora_aviso,hora_reposto,data_aviso,repositor_nome FROM avisos_repositor WHERE 1=1`;
-  const params = [];
-  if (status) { sql += ` AND status=?`; params.push(status); }
-  if (dataini) { sql += ` AND data_aviso>=?`; params.push(dataini); }
-  if (datafim) { sql += ` AND data_aviso<=?`; params.push(datafim); }
-  sql += ` ORDER BY id DESC`;
-  db.all(sql, params, (err, rows) => {
-    if (err) return res.status(500).json({ erro: err.message });
-    res.json(rows);
-  });
-});
-
-app.put('/supervisor/protocolo/:id/liberar', async (req, res) => {
-  try {
-    await dbRun(`UPDATE avisos_repositor SET status='nao_encontrado' WHERE id=?`, [req.params.id]);
-    res.json({ mensagem:'Pedido liberado pelo supervisor!' });
-  } catch (err) {
-    res.status(500).json({ erro: err.message });
-  }
-});
-
-app.get('/ranking/separadores', async (req, res) => {
-  try {
-    const rows = await new Promise((resolve, reject) => db.all(`
-      SELECT s.id, s.nome,
-        COUNT(CASE WHEN p.status='concluido' THEN 1 END) AS pedidos,
-        COALESCE(SUM(CASE WHEN p.status='concluido' THEN p.itens ELSE 0 END),0) AS itens,
-        ROUND(AVG(CASE WHEN p.status='concluido' AND p.hora_pedido IS NOT NULL THEN 1 ELSE NULL END),2) AS tempo_medio
-      FROM separadores s
-      LEFT JOIN pedidos p ON p.separador_id=s.id
-      GROUP BY s.id, s.nome
-      ORDER BY pedidos DESC, itens DESC, s.nome
-    `, [], (e,r)=> e?reject(e):resolve(r)));
-    res.json(rows);
-  } catch (err) {
-    res.status(500).json({ erro: err.message });
-  }
-});
-
-app.get('/estatisticas/horas', async (req, res) => {
-  try {
-    const rows = await new Promise((resolve, reject) => db.all(`
-      SELECT substr(COALESCE(hora_pedido,'00:00'),1,2) as hora, COUNT(*) as total
-      FROM pedidos
-      WHERE status='concluido'
-      GROUP BY substr(COALESCE(hora_pedido,'00:00'),1,2)
-      ORDER BY hora
-    `, [], (e,r)=> e?reject(e):resolve(r)));
-    res.json(rows);
-  } catch (err) {
-    res.status(500).json({ erro: err.message });
-  }
 });

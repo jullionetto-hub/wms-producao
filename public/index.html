@@ -437,28 +437,7 @@ body.dark .item-card.parcial    .item-ic{background:#78350F}
   body.sep-mobile .sidebar{display:flex!important}
   .sep-tabbar{display:none!important}
 }
-  
-.sep-layout-desktop{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(340px,.9fr);gap:16px;align-items:start}
-.sep-main-top{display:flex;flex-direction:column;gap:14px}
-.kpi-row-3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-.kpi-row-4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
-.qty-hero{font-family:'Space Mono',monospace;font-size:34px;font-weight:700;line-height:1;color:var(--accent)}
-.qty-badge{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;background:rgba(37,99,235,.08);color:var(--accent);font-size:12px;font-weight:700}
-.protocol-card{border:1px solid var(--border);border-radius:12px;background:var(--surface2);padding:14px;margin-bottom:10px}
-.protocol-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px}
-.protocol-meta{font-size:12px;color:var(--text3)}
-.field-beauty{display:flex;align-items:center;gap:10px;background:var(--surface2);border:1.5px solid var(--border);border-radius:12px;padding:10px 12px}
-.field-beauty input{border:none;background:transparent;outline:none;flex:1;font-size:20px;font-weight:700;color:var(--text);font-family:'Space Mono',monospace}
-.lista-dia{display:grid;gap:10px}
-.lista-dia-item{display:flex;justify-content:space-between;gap:10px;padding:12px 14px;border:1px solid var(--border);border-radius:12px;background:var(--surface2)}
-.grafico-horas{display:grid;grid-template-columns:repeat(12,1fr);gap:8px;align-items:end;min-height:180px}
-.graf-bar{background:linear-gradient(180deg,#60A5FA,#2563EB);border-radius:10px 10px 4px 4px;min-height:18px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:6px;color:#fff;font-size:10px;font-weight:700}
-.graf-col{display:flex;flex-direction:column;align-items:center;gap:8px}
-.graf-lbl{font-size:10px;color:var(--text3);font-weight:700}
-@media(max-width:1024px){.sep-layout-desktop{grid-template-columns:1fr}.kpi-row-4{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:768px){.kpi-row-3,.kpi-row-4{grid-template-columns:1fr}.qty-hero{font-size:42px}.item-desc{white-space:normal}.item-det{font-size:13px}.item-card{padding:14px}.btn-item{width:48px;height:48px}.cl-lista{gap:10px}.bip-input{font-size:26px}.field-beauty input{font-size:24px}}
-
-</style>
+  </style>
 </head>
 <body>
 
@@ -581,21 +560,13 @@ body.dark .item-card.parcial    .item-ic{background:#78350F}
               <div class="form-grp"><label>NOME COMPLETO</label><input type="text" id="usr-nome" placeholder="Nome do colaborador"/></div>
               <div class="form-grp"><label>LOGIN</label><input type="text" id="usr-login" placeholder="Ex: joao.silva"/></div>
               <div class="form-grp"><label>SENHA</label><input type="password" id="usr-senha" placeholder="Mínimo 6 caracteres"/></div>
-              <div class="form-grp"><label>PERFIL PRINCIPAL</label>
+              <div class="form-grp"><label>PERFIL</label>
                 <select id="usr-perfil">
                   <option value="separador">Separador</option>
                   <option value="supervisor">Supervisor</option>
                   <option value="repositor">Repositor</option>
                   <option value="checkout">Checkout</option>
                 </select>
-              </div>
-              <div class="form-grp"><label>PODE ACESSAR TAMBÉM</label>
-                <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px">
-                  <label><input type="checkbox" class="usr-perm" value="supervisor"> Supervisor</label>
-                  <label><input type="checkbox" class="usr-perm" value="separador"> Separador</label>
-                  <label><input type="checkbox" class="usr-perm" value="repositor"> Repositor</label>
-                  <label><input type="checkbox" class="usr-perm" value="checkout"> Checkout</label>
-                </div>
               </div>
               <div class="form-grp"><label>TURNO</label>
                 <select id="usr-turno"><option value="Manhã">Manhã</option><option value="Tarde">Tarde</option><option value="Noite">Noite</option></select>
@@ -753,7 +724,7 @@ body.dark .item-card.parcial    .item-ic{background:#78350F}
             <div style="font-size:12px;color:var(--text3);margin-top:4px">Total: <b id="est-ano-t">0</b></div>
           </div>
         </div>
-        <div class="card" style="margin-bottom:16px"><div class="card-hd">📦 PEDIDOS REALIZADOS NO DIA</div><div id="est-lista-dia" class="lista-dia"><div style="color:var(--text3);padding:10px">Carregando...</div></div></div><div id="est-periodo-wrap" style="display:none" class="card">
+        <div id="est-periodo-wrap" style="display:none" class="card">
           <div class="card-hd">📊 RESULTADO DO PERÍODO</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:10px 0">
             <div class="cnt-card verde">
@@ -798,29 +769,9 @@ body.dark .item-card.parcial    .item-ic{background:#78350F}
         </div>
       </div>
 
-      
-      <!-- PROTOCOLO -->
-      <div class="pagina" id="pag-protocolo">
-        <div class="pg-title">📋 Protocolo</div>
-        <div class="card">
-          <div class="card-hd">ITENS EM PROTOCOLO <button class="btn btn-outline btn-sm" onclick="carregarProtocolo()">🔄</button></div>
-          <div class="filtros">
-            <div class="fg"><label>DE</label><input type="date" id="pro-ini"/></div>
-            <div class="fg"><label>ATÉ</label><input type="date" id="pro-fim"/></div>
-            <button class="btn btn-primary btn-sm" onclick="carregarProtocolo()">Filtrar</button>
-          </div>
-          <div id="lista-protocolo"></div>
-        </div>
-      </div>
-
-<!-- CHECKOUT -->
+      <!-- CHECKOUT -->
       <div class="pagina" id="pag-checkout">
         <div class="pg-title">📦 Checkout</div>
-        <div class="kpi-row-3" style="margin-bottom:16px">
-          <div class="cnt-card azul"><div class="cnt-lbl">PENDENTES</div><div class="cnt-val" id="ck-kpi-pend">0</div><div class="cnt-sub">caixas</div></div>
-          <div class="cnt-card verde"><div class="cnt-lbl">CONCLUÍDOS HOJE</div><div class="cnt-val" id="ck-kpi-hoje">0</div><div class="cnt-sub">checkouts</div></div>
-          <div class="cnt-card roxo"><div class="cnt-lbl">ÚLTIMA CAIXA</div><div class="cnt-val" id="ck-kpi-ult" style="font-size:24px">—</div><div class="cnt-sub">confirmada</div></div>
-        </div>
         <!-- Busca por caixa -->
         <div class="card" style="margin-bottom:16px">
           <div class="card-hd">🔍 BUSCAR POR NÚMERO DE CAIXA</div>
@@ -945,7 +896,7 @@ let pedidoAtualNum   = null;
 let itensAtuais      = [];
 let todosSeparadores = [];
 let pedidosImportar  = [];
-let historicoImportacoes = []; // storage em memória para compatibilidade no Render iframe
+let historicoImportacoes = JSON.parse(localStorage.getItem('historico_importacoes') || '[]');
 let isMobile = () => window.innerWidth <= 768;
 
 function hojeLocal() {
@@ -1079,16 +1030,14 @@ function montarSidebar() {
       <a class="mi" onclick="irPara('separacao',this)"><span class="mi-ic">📦</span>Separação</a>
       <a class="mi" onclick="irPara('estatisticas',this)"><span class="mi-ic">📈</span>Estatísticas</a>
       <a class="mi" onclick="irPara('reposicao',this)"><span class="mi-ic">🔧</span>Reposição <span class="mbadge" id="menu-badge-rep" style="display:none">0</span></a>
-      <a class="mi" onclick="irPara('protocolo',this)"><span class="mi-ic">📋</span>Protocolo</a>
       <a class="mi" onclick="irPara('checkout',this)"><span class="mi-ic">🏷️</span>Checkout</a>`,
     separador: `
       <div class="mg">SEPARAÇÃO</div>
-      <a class="mi ativo" onclick="irPara('separacao',this)"><span class="mi-ic">📦</span>Pedidos</a><a class="mi" onclick="irPara('estatisticas',this)"><span class="mi-ic">📈</span>Estatísticas</a>`,
+      <a class="mi ativo" onclick="irPara('separacao',this)"><span class="mi-ic">📦</span>Pedidos</a>`,
     repositor: `
       <div class="mg">REPOSIÇÃO</div>
       <a class="mi ativo" onclick="irPara('reposicao',this)"><span class="mi-ic">🔧</span>Solicitações <span class="mbadge" id="menu-badge-rep" style="display:none">0</span></a>
-      <a class="mi" onclick="irPara('protocolo',this)"><span class="mi-ic">📋</span>Protocolo</a>
-      <a class="mi" onclick="irPara('estatisticas',this)"><span class="mi-ic">📈</span>Estatísticas</a>`,
+      <a class="mi" onclick="irPara('checkout',this)"><span class="mi-ic">🏷️</span>Checkout</a>`,
     checkout: `
       <div class="mg">CHECKOUT</div>
       <a class="mi ativo" onclick="irPara('checkout',this)"><span class="mi-ic">🏷️</span>Checkout</a>
@@ -1453,7 +1402,7 @@ function processarArquivoFile(file) {
     };
     historicoImportacoes.unshift(reg);
     if (historicoImportacoes.length > 20) historicoImportacoes = historicoImportacoes.slice(0, 20);
-    
+    localStorage.setItem('historico_importacoes', JSON.stringify(historicoImportacoes));
     renderHistorico();
     mostrarStatus(`✅ ${totalImportados} pedido(s) importado(s)!${totalIgnorados > 0 ? ` ⚠️ ${totalIgnorados} já existiam.` : ''}`, 'sucesso');
     document.getElementById('preview-importacao').style.display = 'none';
@@ -1477,7 +1426,7 @@ function renderHistorico() {
 
 function limparHistorico() {
   if (!confirm('Limpar histórico?')) return;
-  historicoImportacoes = [];
+  historicoImportacoes = []; localStorage.removeItem('historico_importacoes');
   renderHistorico(); toast('Histórico limpo!','info');
 }
 
@@ -2215,113 +2164,6 @@ document.getElementById('ck-input-caixa')?.addEventListener('keypress', e => { i
   if (ini) ini.value = hoje;
   if (fim) fim.value = hoje;
 })();
-
-function formatarDataBR(dataIso){
-  if(!dataIso) return '—';
-  const [y,m,d] = String(dataIso).split('-');
-  return `${d}/${m}/${y}`;
-}
-function coletarPerfisMarcados(){
-  return Array.from(document.querySelectorAll('.usr-perm:checked')).map(el=>el.value);
-}
-async function carregarProtocolo(){
-  const ini = document.getElementById('pro-ini')?.value || '';
-  const fim = document.getElementById('pro-fim')?.value || '';
-  let url = `${API}/protocolo?status=protocolo`;
-  if(ini) url += `&dataini=${ini}`;
-  if(fim) url += `&datafim=${fim}`;
-  const box = document.getElementById('lista-protocolo');
-  if(!box) return;
-  try{
-    const res = await fetch(url,{credentials:'include'});
-    const rows = await res.json();
-    if(!rows.length){ box.innerHTML = '<div style="color:var(--text3);padding:14px">Nenhum item em protocolo.</div>'; return; }
-    box.innerHTML = rows.map(r=>`<div class="protocol-card"><div class="protocol-title">Pedido #${r.numero_pedido} • ${r.codigo||'—'}</div><div class="protocol-meta">${r.descricao||'—'} • Qtde: ${r.quantidade||0} • ${formatarDataBR(r.data_aviso)} ${r.hora_reposto||r.hora_aviso||''}</div>${usuarioAtual?.perfil==='supervisor'?`<div style="margin-top:10px"><button class="btn btn-success btn-sm" onclick="liberarProtocolo(${r.id})">Liberar pedido</button></div>`:''}</div>`).join('');
-  }catch(e){ box.innerHTML = '<div style="color:var(--red);padding:14px">Erro ao carregar protocolo.</div>'; }
-}
-async function liberarProtocolo(id){
-  try{ await fetch(`${API}/supervisor/protocolo/${id}/liberar`,{method:'PUT',credentials:'include'}); toast('Pedido liberado pelo supervisor!','sucesso'); carregarProtocolo(); carregarAvisos(); }catch(e){ toast('Erro ao liberar!','erro'); }
-}
-async function carregarEstatisticas(){
-  try {
-    const ini = document.getElementById('est-ini')?.value || '';
-    const fim = document.getElementById('est-fim')?.value || '';
-    let url = `${API}/estatisticas/pedidos`;
-    if (ini && fim) url += `?data_ini=${ini}&data_fim=${fim}`;
-    const res  = await fetch(url, { credentials:'include' });
-    const data = await res.json();
-    const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val ?? 0; };
-    set('est-hoje-c', data.concluidos_hoje); set('est-hoje-t', data.total_hoje); set('est-mes-c', data.concluidos_mes); set('est-mes-t', data.total_mes); set('est-ano-c', data.concluidos_ano); set('est-ano-t', data.total_ano);
-    const periodoWrap = document.getElementById('est-periodo-wrap');
-    if (ini && fim && periodoWrap) { periodoWrap.style.display = 'block'; set('est-per-c', data.concluidos_periodo); set('est-per-t', data.total_periodo); } else if (periodoWrap) { periodoWrap.style.display = 'none'; }
-    const resP = await fetch(`${API}/pedidos?data=${ini||hoje}`, {credentials:'include'}); const pedidosDia = await resP.json();
-    const listaDia = document.getElementById('est-lista-dia');
-    if(listaDia){ listaDia.innerHTML = pedidosDia.length ? pedidosDia.map(p=>`<div class="lista-dia-item"><div><div style="font-weight:700;color:var(--text)">Pedido #${p.numero_pedido}</div><div style="font-size:12px;color:var(--text3)">${p.separador_nome||'—'} • ${formatarDataBR(p.data_pedido)} • ${p.hora_pedido||'—'}</div></div><div><span class="pill ${(p.status||'').replace(' ','-')}">${p.status}</span></div></div>`).join('') : '<div style="color:var(--text3);padding:10px">Nenhum pedido no dia.</div>'; }
-    if(usuarioAtual?.perfil === 'separador'){ document.querySelector('#tbody-est-sep')?.closest('.card')?.remove(); }
-    if(usuarioAtual?.perfil !== 'supervisor'){ const ckCard = document.querySelector('#tbody-checkout')?.closest('.card'); if(ckCard) ckCard.style.display = usuarioAtual?.perfil==='checkout' ? 'none' : ckCard.style.display; }
-    const res2 = await fetch(`${API}/produtividade`, { credentials:'include' }); const prods = await res2.json(); const tbody = document.getElementById('tbody-est-sep');
-    if (tbody) tbody.innerHTML = prods.length ? prods.map(d => `<tr><td style="font-weight:600;color:var(--text)">${d.nome}</td><td style="color:var(--green);font-weight:700">${d.hoje||0}</td><td style="color:var(--amber)">${d.mes||0}</td><td style="color:var(--accent)">${d.total_ano||0}</td><td><span class="pill ${d.status}">${d.status}</span></td></tr>`).join('') : '<tr><td colspan="5" style="color:var(--text3);text-align:center;padding:20px">Nenhum separador</td></tr>';
-    if(usuarioAtual?.perfil === 'supervisor'){
-      const rankRes = await fetch(`${API}/ranking/separadores`, {credentials:'include'}); const ranking = await rankRes.json();
-      let rankCard = document.getElementById('rank-wrap');
-      if(!rankCard){
-        const pag = document.getElementById('pag-dashboard');
-        const el = document.createElement('div'); el.id='rank-wrap';
-        el.className='card'; el.innerHTML='<div class="card-hd">🏆 RANKING DOS SEPARADORES</div><div class="tabela-wrap"><table><thead><tr><th>SEPARADOR</th><th>PEDIDOS</th><th>ITENS</th><th>TEMPO</th></tr></thead><tbody id="tbody-ranking"></tbody></table></div><div class="card-hd" style="margin-top:14px">⏰ GRÁFICO POR HORA</div><div id="graf-horas" class="grafico-horas"></div>';
-        pag.appendChild(el); rankCard = el;
-      }
-      const tb = document.getElementById('tbody-ranking'); if(tb) tb.innerHTML = ranking.map(r=>`<tr><td style="font-weight:700;color:var(--text)">${r.nome}</td><td>${r.pedidos||0}</td><td>${r.itens||0}</td><td>${r.tempo_medio||0}</td></tr>`).join('');
-      const hrRes = await fetch(`${API}/estatisticas/horas`, {credentials:'include'}); const horas = await hrRes.json();
-      const g = document.getElementById('graf-horas'); if(g){ const mapa={}; horas.forEach(h=>mapa[h.hora]=h.total); const max=Math.max(...Object.values(mapa),1); g.innerHTML = Array.from({length:12},(_,i)=>String(i+8).padStart(2,'0')).map(h=>{ const v=mapa[h]||0; const ht=Math.max(18, Math.round((v/max)*150)); return `<div class="graf-col"><div class="graf-bar" style="height:${ht}px">${v}</div><div class="graf-lbl">${h}h</div></div>`; }).join(''); }
-    }
-  } catch(e) { toast('Erro ao carregar estatísticas!','erro'); }
-}
-async function carregarCheckoutLista() {
-  try {
-    const status = document.getElementById('filtro-ck-status')?.value || '';
-    const url = `${API}/checkout${status ? '?status='+status : ''}`;
-    const res  = await fetch(url, { credentials:'include' });
-    const rows = await res.json();
-    const tbody = document.getElementById('tbody-checkout');
-    const pend = rows.filter(r=>r.status==='pendente').length; const hojeC = rows.filter(r=>r.status==='concluido').length; const ult = rows.find(r=>r.status==='concluido');
-    const a=(id,v)=>{const el=document.getElementById(id); if(el) el.textContent=v;}; a('ck-kpi-pend',pend); a('ck-kpi-hoje',hojeC); a('ck-kpi-ult',ult?.numero_caixa||'—');
-    if (!tbody) return;
-    if (!rows.length) { tbody.innerHTML = '<tr><td colspan="6" style="color:var(--text3);text-align:center;padding:24px">Nenhum checkout</td></tr>'; return; }
-    tbody.innerHTML = rows.map(r => `<tr><td style="font-family:'Space Mono',monospace;font-weight:700;font-size:14px;color:var(--amber)">${r.numero_caixa||'—'}</td><td style="font-weight:700;color:var(--accent)">${r.numero_pedido}</td><td>${r.separador_nome||'—'}</td><td><span class="pill ${r.status}">${r.status==='concluido'?'Concluído':'Pendente'}</span></td><td style="font-size:11px;color:var(--text3)">${r.hora_checkout||r.hora_criacao||'—'}</td><td>${r.status==='pendente' ? `<button class="btn btn-success btn-sm" onclick="confirmarCheckout(${r.id})">✅ OK</button>` : `<span style="color:var(--green);font-size:11px">✓ Feito</span>`}</td></tr>`).join('');
-  } catch(e) {}
-}
-async function cadastrarUsuario() {
-  const nome   = document.getElementById('usr-nome').value.trim();
-  const login  = document.getElementById('usr-login').value.trim();
-  const senha  = document.getElementById('usr-senha').value;
-  const perfil = document.getElementById('usr-perfil').value;
-  const turno  = document.getElementById('usr-turno').value;
-  const perfis_acesso = coletarPerfisMarcados().filter(p=>p!==perfil);
-  if (!nome||!login||!senha) { toast('Preencha todos os campos!','aviso'); return; }
-  if (senha.length < 6)      { toast('Senha mínimo 6 caracteres!','aviso'); return; }
-  try {
-    const res  = await fetch(`${API}/usuarios`, { credentials:'include', method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({nome,login,senha,perfil,turno,perfis_acesso}) });
-    const data = await res.json();
-    if (data.erro) { toast(data.erro,'erro'); return; }
-    toast('Usuário cadastrado!','sucesso');
-    document.getElementById('usr-nome').value=''; document.getElementById('usr-login').value=''; document.getElementById('usr-senha').value=''; document.querySelectorAll('.usr-perm').forEach(el=>el.checked=false); carregarUsuarios();
-  } catch(e) { toast('Erro ao cadastrar!','erro'); }
-}
-function irPara(pag, el) {
-  document.querySelectorAll('.pagina').forEach(p => p.classList.remove('ativa'));
-  document.querySelectorAll('.mi').forEach(m => m.classList.remove('ativo'));
-  const pg = document.getElementById(`pag-${pag}`);
-  if (pg) pg.classList.add('ativa'); if (el) el.classList.add('ativo');
-  if (pag === 'dashboard') carregarDashboard();
-  if (pag === 'pedidos') { popularSelects(); carregarPedidos(); }
-  if (pag === 'cadastros') { trocarCadastroTab('usuarios'); carregarUsuarios(); }
-  if (pag === 'separacao') { carregarFila(); if (separadorAtual) carregarContadoresSep(); }
-  if (pag === 'estatisticas') { carregarEstatisticas(); if(usuarioAtual?.perfil==='checkout') carregarCheckoutLista(); }
-  if (pag === 'reposicao') { carregarAvisos(); verificarDuplicatas(); }
-  if (pag === 'protocolo') { carregarProtocolo(); }
-  if (pag === 'checkout') { carregarCheckoutLista(); const el2 = document.getElementById('ck-input-caixa'); if(el2) setTimeout(()=>el2.focus(),200); }
-}
-
 (async function verificarSessao() {
   try {
     const res  = await fetch(`${API}/auth/me`, { credentials:'include' });
