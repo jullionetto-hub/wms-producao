@@ -370,11 +370,11 @@ const caixa = String(numero_caixa).trim();
 
 db.get(`SELECT c.id, c.numero_pedido FROM checkout c WHERE c.numero_caixa=? AND c.status='pendente' AND c.pedido_id<>? ORDER BY c.id DESC LIMIT 1`, [caixa, req.params.id], (err0, usada) => {
 if (err0) return res.status(500).json({ erro: err0.message });
-if (usada) return res.status(409).json({ erro:`A caixa ${caixa} ja esta vinculada ao pedido ${usada.numero_pedido} e sera liberada somente apos o checkout.` });
+if (usada) return res.status(409).json({ erro:`Caixa ${caixa} em uso no ped. ${usada.numero_pedido}. Aguarde o checkout liberar.` });
 
 db.get(`SELECT id, numero_pedido FROM pedidos WHERE numero_caixa=? AND id<>? AND status<>'concluido'`, [caixa, req.params.id], (err00, outroPed) => {
 if (err00) return res.status(500).json({ erro: err00.message });
-if (outroPed) return res.status(409).json({ erro:`A caixa ${caixa} ja esta em uso no pedido ${outroPed.numero_pedido}.` });
+if (outroPed) return res.status(409).json({ erro:`Caixa ${caixa} em uso no pedido ${outroPed.numero_pedido}.` });
 
 db.run('UPDATE pedidos SET numero_caixa=? WHERE id=?', [caixa, req.params.id], err => {
 if (err) return res.status(500).json({ erro: err.message });
@@ -621,6 +621,50 @@ app.put('/checkout/:id/confirmar', (req, res) => {
       if (err) return res.status(500).json({ erro: err.message });
       res.json({ mensagem:'Checkout confirmado!' });
     });
+});
+
+// Liberar caixa — zera numero_caixa do pedido e remove checkout pendente
+app.put('/checkout/:id/liberar', (req, res) => {
+  const { hora, data } = dataHoraLocal();
+  db.get('SELECT * FROM checkout WHERE id=?', [req.params.id], (err, ck) => {
+    if (err || !ck) return res.status(404).json({ erro:'Checkout nao encontrado!' });
+    db.run("UPDATE checkout SET status='liberado', hora_checkout=?, data_checkout=? WHERE id=?",
+      [hora, data, req.params.id], err2 => {
+        if (err2) return res.status(500).json({ erro: err2.message });
+        // Limpa numero_caixa do pedido para liberar a caixa
+        db.run("UPDATE pedidos SET numero_caixa='' WHERE id=?", [ck.pedido_id], () => {});
+        res.json({ mensagem:'Caixa liberada!' });
+      });
+  });
+});
+
+// Pedidos bloqueados por nao_encontrado/protocolo — supervisor desbloqueia
+app.get('/pedidos/bloqueados', (req, res) => {
+  db.all(`SELECT DISTINCT p.id, p.numero_pedido, p.status, p.separador_id,
+    s.nome as separador_nome,
+    COUNT(DISTINCT a.id) as total_bloqueios,
+    GROUP_CONCAT(DISTINCT a.codigo) as codigos_bloqueados
+    FROM pedidos p
+    JOIN avisos_repositor a ON a.pedido_id=p.id
+    LEFT JOIN separadores s ON p.separador_id=s.id
+    WHERE a.status IN ('nao_encontrado','protocolo')
+      AND p.status IN ('separando','concluido')
+      AND NOT EXISTS (
+        SELECT 1 FROM avisos_repositor a2
+        WHERE a2.pedido_id=p.id AND a2.status='pendente'
+      )
+    GROUP BY p.id ORDER BY p.id DESC`,
+    [], (err, rows) => {
+      if (err) return res.status(500).json({ erro: err.message });
+      res.json(rows || []);
+    });
+});
+
+app.put('/pedidos/:id/desbloquear', (req, res) => {
+  db.run("UPDATE pedidos SET status='concluido' WHERE id=?", [req.params.id], err => {
+    if (err) return res.status(500).json({ erro: err.message });
+    res.json({ mensagem:'Pedido desbloqueado e concluido!' });
+  });
 });
 
 app.get('/checkout', (req, res) => {

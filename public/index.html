@@ -193,9 +193,13 @@ td{padding:10px 13px;vertical-align:middle;color:var(--text2)}
 .toast.aviso  {background:#FFFBEB;color:#D97706;border:1px solid #FDE68A}
 
 
-/* ══════════════════════════════════════════
-   PROD BAR / TIMELINE
-══════════════════════════════════════════ */
+.pill.liberado  {background:#F5F3FF;color:var(--indigo);border:1px solid #DDD6FE}
+.pill.protocolo {background:#FFFBEB;color:var(--amber);border:1px solid #FDE68A}
+
+/* Toast mobile — wrap longo */
+@media(max-width:768px){
+  .toast{white-space:normal;max-width:88vw;text-align:center;font-size:12px;padding:10px 14px;word-break:break-word}
+}
 .prod-bar{height:5px;background:var(--border);border-radius:3px;margin-top:4px;overflow:hidden}
 .prod-bar-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--indigo));border-radius:3px;transition:width .5s}
 .tl-wrap{max-height:300px;overflow-y:auto;padding:2px 0}
@@ -638,6 +642,13 @@ body.dark .aviso-duplicata{background:#2D1A05;border-color:#78350F;color:#FCD34D
           <div class="kpi-card ciano"><div class="kpi-lbl">CHECKPOINT PEND.</div><div class="kpi-val" id="kpi-ck-pend">0</div><div class="kpi-sub">aguardando checkout</div></div>
           <div class="kpi-card laranja"><div class="kpi-lbl">SEPARADORES ATIVOS</div><div class="kpi-val" id="kpi-seps-ativos">0</div><div class="kpi-sub">trabalhando agora</div></div>
           <div class="kpi-card rosa"><div class="kpi-lbl">NÃO ENCONTR. HOJE</div><div class="kpi-val" id="kpi-nao-enc">0</div><div class="kpi-sub">itens não localizados</div></div>
+        </div>
+        <!-- Pedidos bloqueados por nao_encontrado/protocolo -->
+        <div class="card" id="dash-bloqueados-wrap" style="margin-bottom:16px;display:none;border-left:4px solid var(--red)">
+          <div class="card-hd" style="background:#FEF2F2;color:var(--red)">⛔ PEDIDOS AGUARDANDO LIBERAÇÃO DO SUPERVISOR
+            <button class="btn btn-outline btn-sm" onclick="carregarPedidosBloqueados()">🔄</button>
+          </div>
+          <div id="lista-bloqueados"></div>
         </div>
         <div class="grid-2">
           <div class="card">
@@ -1461,6 +1472,7 @@ async function carregarDashboard() {
   await carregarProdutividade();
   await carregarTimeline();
   await atualizarBadgeRep();
+  await carregarPedidosBloqueados();
   const el = document.getElementById('dash-ultima-atualizacao');
   if (el) el.textContent = '— atualizado ' + new Date().toLocaleTimeString('pt-BR', {timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit'});
 }
@@ -1836,32 +1848,58 @@ async function carregarAvisosMobile() {
       const isNE   = a.status==='nao_encontrado';
       const isProto= a.status==='protocolo';
       const icon   = isRep?'✅':isNE?'🚫':isProto?'📋':'🔴';
+      const bgCard = isPend?'background:#FEF2F2;border-color:#FECACA':isRep?'background:#F0FDF4;border-color:#BBF7D0':isNE?'background:#F5F3FF;border-color:#DDD6FE':'background:#FFFBEB;border-color:#FDE68A';
       return `
-      <div class="aviso-card ${a.status}" style="flex-direction:column;align-items:stretch;gap:10px">
-        <div style="display:flex;align-items:flex-start;gap:10px">
-          <div style="font-size:24px;flex-shrink:0">${icon}</div>
-          <div class="aviso-info" style="flex:1">
-            <div class="aviso-cod">${a.codigo||'—'} <span style="font-size:11px;color:var(--text3);font-weight:500">Ped. #${a.numero_pedido}</span></div>
-            <div class="aviso-desc">${a.descricao||'—'}</div>
-            <div class="aviso-det">📍 ${a.endereco||'—'} &nbsp;•&nbsp; Qtde: <b>${a.quantidade||'—'}</b></div>
-            ${isPend  ? `<div style="font-size:11px;color:var(--red);font-weight:700;margin-top:3px">⏱ Aviso às ${a.hora_aviso||'—'}</div>` : ''}
-            ${isRep   ? `<div style="font-size:11px;color:var(--green);font-weight:700;margin-top:3px">✅ Reposto às ${a.hora_reposto||'—'}${a.qtd_encontrada>0?' — '+a.qtd_encontrada+' un.':''}</div>` : ''}
-            ${isNE    ? `<div style="font-size:11px;color:var(--indigo);font-weight:700;margin-top:3px">🚫 Não encontrado às ${a.hora_reposto||'—'}</div>` : ''}
-            ${isProto ? `<div style="font-size:11px;color:var(--amber);font-weight:700;margin-top:3px">📋 Protocolo às ${a.hora_reposto||'—'}</div>` : ''}
-            ${a.obs   ? `<div style="font-size:11px;color:var(--text2);margin-top:3px">📝 ${a.obs}</div>` : ''}
+      <div style="border:2px solid;border-radius:14px;padding:14px;margin-bottom:12px;${bgCard}">
+        <!-- Cabeçalho com código e pedido -->
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px">
+          <div style="flex:1">
+            <div style="font-size:16px;font-weight:800;color:${isPend?'var(--red)':isRep?'var(--green)':'var(--indigo)'}">
+              ${icon} ${a.codigo||'—'}
+            </div>
+            <div style="font-size:12px;color:var(--text3);margin-top:2px">Pedido <b style="color:var(--text)">#${a.numero_pedido}</b></div>
+          </div>
+          <!-- QUANTIDADE em destaque grande -->
+          <div style="text-align:center;background:${isPend?'var(--red)':'var(--text3)'};color:#fff;border-radius:10px;padding:6px 12px;flex-shrink:0;margin-left:8px">
+            <div style="font-size:9px;font-weight:700;letter-spacing:1px;opacity:.85">QTDE</div>
+            <div style="font-size:28px;font-weight:800;font-family:'Space Mono',monospace;line-height:1">${a.quantidade||1}</div>
           </div>
         </div>
+        <!-- Descrição -->
+        <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:6px;line-height:1.3">${a.descricao||'—'}</div>
+        <!-- Endereço -->
+        <div style="font-size:13px;color:var(--text2);margin-bottom:8px">📍 <b>${a.endereco||'—'}</b></div>
+        <!-- FALTA TOTAL — destaque grande -->
         ${isPend ? `
-        <div class="qtd-enc-wrap">
-          <label>Qtde encontrada:</label>
-          <input type="number" class="qtd-enc-input" id="m-qtd-enc-${a.id}" min="0" max="${a.quantidade||99}" placeholder="0" inputmode="numeric"/>
-          <span style="font-size:11px;color:var(--text3)">de ${a.quantidade||'?'}</span>
+        <div style="background:var(--red);color:#fff;border-radius:10px;padding:10px 14px;margin-bottom:10px;text-align:center">
+          <div style="font-size:11px;font-weight:700;letter-spacing:1px;opacity:.9">FALTA TOTAL</div>
+          <div style="font-size:26px;font-weight:800;font-family:'Space Mono',monospace;line-height:1.2">${a.quantidade||1} unidade${(a.quantidade||1)>1?'s':''}</div>
+          ${a.obs ? `<div style="font-size:11px;opacity:.85;margin-top:4px">📝 ${a.obs}</div>` : ''}
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-top:4px">
-          <button class="btn btn-success btn-sm" onclick="marcarRepostoMobile(${a.id},${a.quantidade||0})">✅ Reposto</button>
-          <button class="btn btn-sm" style="background:var(--indigo);color:#fff" onclick="marcarNaoEncontradoMobile(${a.id})">🚫 N/E</button>
-          <button class="btn btn-sm" style="background:var(--amber);color:#fff" onclick="marcarProtocoloMobile(${a.id})">📋 Proto.</button>
-        </div>` : `<div style="text-align:right"><span class="pill ${isRep?'reposto':isProto?'repositor':'pendente'}">${isRep?'Reposto':isProto?'Protocolo':'Não encontrado'}</span></div>`}
+        <div style="font-size:11px;color:var(--red);font-weight:700;margin-bottom:8px">⏱ Aviso às ${a.hora_aviso||'—'} • Sep: ${a.separador_nome||'—'}</div>
+        <!-- Campo qtde encontrada -->
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;background:#fff;border:1.5px solid #FDE68A;border-radius:10px;padding:10px 12px">
+          <span style="font-size:12px;color:var(--amber);font-weight:700;white-space:nowrap">Qtde encontrada:</span>
+          <input type="number" style="flex:1;padding:8px;background:transparent;border:none;outline:none;font-size:22px;font-weight:800;font-family:'Space Mono',monospace;color:var(--text);text-align:center;min-width:0" 
+            id="m-qtd-enc-${a.id}" min="0" max="${a.quantidade||99}" placeholder="0" inputmode="numeric"/>
+          <span style="font-size:12px;color:var(--text3);white-space:nowrap">de <b>${a.quantidade||'?'}</b></span>
+        </div>
+        <!-- Botões de ação grandes -->
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <button style="width:100%;padding:14px;background:var(--green);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif" onclick="marcarRepostoMobile(${a.id},${a.quantidade||0})">✅ Reposto</button>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <button style="padding:12px;background:var(--indigo);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif" onclick="marcarNaoEncontradoMobile(${a.id})">🚫 Não Encontrei</button>
+            <button style="padding:12px;background:var(--amber);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif" onclick="marcarProtocoloMobile(${a.id})">📋 Protocolo</button>
+          </div>
+        </div>
+        ` : `
+        <div style="margin-top:4px">
+          ${isRep   ? `<div style="font-size:13px;color:var(--green);font-weight:700">✅ Reposto às ${a.hora_reposto||'—'}${a.qtd_encontrada>0?' — '+a.qtd_encontrada+' un.':''}</div>` : ''}
+          ${isNE    ? `<div style="font-size:13px;color:var(--indigo);font-weight:700">🚫 Não encontrado às ${a.hora_reposto||'—'}</div>` : ''}
+          ${isProto ? `<div style="font-size:13px;color:var(--amber);font-weight:700">📋 Protocolo às ${a.hora_reposto||'—'}</div>` : ''}
+          ${a.obs   ? `<div style="font-size:11px;color:var(--text2);margin-top:3px">📝 ${a.obs}</div>` : ''}
+        </div>
+        `}
       </div>`;
     }).join('');
   } catch(e) {}
@@ -1949,22 +1987,54 @@ async function buscarCaixaMobile() {
     const res  = await fetch(`${API}/checkout/caixa/${encodeURIComponent(num)}`, { credentials:'include' });
     const rows = await res.json();
     if (!rows.length) {
-      if (cont) cont.innerHTML = `<div style="color:var(--text3);padding:20px;text-align:center;font-size:14px">Nenhum pedido para a caixa ${num}.</div>`;
+      if (cont) cont.innerHTML = `<div style="color:var(--text3);padding:20px;text-align:center;font-size:14px;background:var(--surface);border-radius:12px;border:1px solid var(--border)">📦 Nenhum pedido vinculado à caixa <b>${num}</b></div>`;
       return;
     }
-    if (cont) cont.innerHTML = rows.map(r => `
-      <div style="border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px;background:var(--surface2)">
-        <div style="font-size:20px;font-weight:800;color:var(--accent);font-family:'Space Mono',monospace">#${r.numero_pedido}</div>
-        <div style="font-size:13px;color:var(--text3);margin:3px 0">📦 ${r.ped_itens||0} itens &nbsp;•&nbsp; 👤 ${r.sep_nome||r.separador_nome||'—'}</div>
-        ${r.hora_criacao?`<div style="font-size:11px;color:var(--text3)">🕐 Vinculado às ${r.hora_criacao}</div>`:''}
-        <div style="margin-top:10px">
-          ${r.status==='pendente'
-            ? `<button class="btn btn-success" style="width:100%" onclick="confirmarCheckoutMobile(${r.id})">✅ Confirmar Checkout</button>`
-            : `<div style="text-align:center;padding:8px;background:#F0FDF4;border-radius:8px;color:var(--green);font-weight:700">✅ Checkout às ${r.hora_checkout||'—'}</div>`}
+    if (cont) cont.innerHTML = rows.map(r => {
+      const concluido = r.status === 'concluido';
+      const liberado  = r.status === 'liberado';
+      const itensHtml = (r.itens_lista||[]).length > 0
+        ? `<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px">
+            <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1px;margin-bottom:8px">ITENS DO PEDIDO</div>
+            ${r.itens_lista.map(it => `
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--surface);border-radius:8px;margin-bottom:5px;border:1.5px solid ${it.status==='encontrado'?'#BBF7D0':it.status==='falta'?'#FECACA':'var(--border)'}">
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:12px;font-weight:700;color:var(--accent)">${it.codigo||'—'}</div>
+                  <div style="font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${it.descricao||'—'}</div>
+                  <div style="font-size:11px;color:var(--text3)">📍 ${it.endereco||'—'}</div>
+                </div>
+                <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0;margin-left:8px">
+                  <span style="font-size:15px;font-weight:800;color:var(--text)">x${it.quantidade||1}</span>
+                  <span class="pill ${it.status||'pendente'}" style="font-size:9px">${it.status||'pendente'}</span>
+                </div>
+              </div>`).join('')}
+          </div>` : '';
+      return `
+      <div style="border:1.5px solid ${concluido?'#BBF7D0':liberado?'#DDD6FE':'var(--accent)'};border-radius:12px;padding:14px;margin-bottom:10px;background:${concluido?'#F0FDF4':liberado?'#F5F3FF':'var(--surface)'}">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div>
+            <div style="font-size:22px;font-weight:800;color:var(--accent);font-family:'Space Mono',monospace">#${r.numero_pedido}</div>
+            <div style="font-size:12px;color:var(--text3);margin-top:2px">
+              📦 <b style="color:var(--text)">${r.ped_itens||0} itens</b> &nbsp;•&nbsp; 👤 ${r.sep_nome||r.separador_nome||'—'}
+            </div>
+            ${r.hora_criacao?`<div style="font-size:11px;color:var(--text3)">🕐 Vinculado às ${r.hora_criacao}</div>`:''}
+          </div>
+          <div style="font-size:28px">${concluido?'✅':liberado?'🔓':'📦'}</div>
+        </div>
+        <div style="margin-bottom:10px">
+          ${!concluido && !liberado
+            ? `<button class="btn btn-success" style="width:100%;padding:14px;font-size:15px;font-weight:700;border-radius:10px;margin-bottom:8px" onclick="confirmarCheckoutMobile(${r.id})">✅ CONFIRMAR CHECKOUT</button>
+               <button class="btn" style="width:100%;padding:11px;font-size:13px;background:var(--surface2);border:1.5px solid var(--border);color:var(--text2);border-radius:10px" onclick="liberarCaixaMobile(${r.id})">🔓 Liberar Caixa Sem Checkout</button>`
+            : concluido
+              ? `<div style="text-align:center;padding:10px;background:#F0FDF4;border-radius:10px;color:var(--green);font-weight:700;font-size:14px">✅ Checkout realizado às ${r.hora_checkout||'—'}</div>
+                 <button class="btn" style="width:100%;padding:11px;font-size:13px;background:var(--surface2);border:1.5px solid var(--border);color:var(--text2);border-radius:10px;margin-top:8px" onclick="liberarCaixaMobile(${r.id})">🔓 Liberar Caixa</button>`
+              : `<div style="text-align:center;padding:10px;background:#F5F3FF;border-radius:10px;color:var(--indigo);font-weight:700;font-size:14px">🔓 Caixa Liberada</div>`}
         </div>
         ${gerarCodigoBarrasSVG(r.numero_pedido)}
-      </div>`).join('');
-  } catch(e) { if(cont) cont.innerHTML='<div style="color:var(--red);padding:10px">Erro ao buscar!</div>'; }
+        ${itensHtml}
+      </div>`;
+    }).join('');
+  } catch(e) { if(cont) cont.innerHTML='<div style="color:var(--red);padding:10px;text-align:center">Erro ao buscar!</div>'; }
 }
 
 async function confirmarCheckoutMobile(id) {
@@ -1973,6 +2043,19 @@ async function confirmarCheckoutMobile(id) {
     toast('✅ Checkout confirmado!','sucesso');
     buscarCaixaMobile();
   } catch(e) { toast('Erro ao confirmar!','erro'); }
+}
+
+async function liberarCaixaMobile(id) {
+  if (!confirm('Liberar esta caixa? Ela ficará disponível para uso.')) return;
+  try {
+    const res = await fetch(`${API}/checkout/${id}/liberar`, { credentials:'include', method:'PUT' });
+    const data = await res.json();
+    if (data.erro) { toast(data.erro,'erro'); return; }
+    toast('🔓 Caixa liberada!','sucesso');
+    document.getElementById('m-ck-input-caixa').value = '';
+    document.getElementById('m-ck-resultado').innerHTML = '';
+    carregarStatsCkMobile();
+  } catch(e) { toast('Erro ao liberar!','erro'); }
 }
 
 async function carregarStatsCkMobile() {
@@ -2050,8 +2133,48 @@ async function carregarStatsCheckout() {
 }
 
 /* ══════════════════════════════════════════
-   EXPORTAR EXCEL UNIFICADO
+   PEDIDOS BLOQUEADOS (supervisor)
 ══════════════════════════════════════════ */
+async function carregarPedidosBloqueados() {
+  try {
+    const res  = await fetch(`${API}/pedidos/bloqueados`, { credentials:'include' });
+    const rows = await res.json();
+    const wrap = document.getElementById('dash-bloqueados-wrap');
+    const lista= document.getElementById('lista-bloqueados');
+    if (!wrap || !lista) return;
+    if (!rows.length) { wrap.style.display='none'; return; }
+    wrap.style.display = 'block';
+    lista.innerHTML = rows.map(r => `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px">
+        <div>
+          <div style="font-weight:700;color:var(--red)">Pedido #${r.numero_pedido}</div>
+          <div style="font-size:11px;color:var(--text3)">${r.separador_nome||'—'} &nbsp;•&nbsp; Itens bloqueados: <b>${r.codigos_bloqueados||'—'}</b></div>
+        </div>
+        <button class="btn btn-success btn-sm" onclick="desbloquearPedido(${r.id},'${r.numero_pedido}')">✅ Liberar Pedido</button>
+      </div>`).join('');
+  } catch(e) {}
+}
+
+async function desbloquearPedido(id, num) {
+  if (!confirm(`Liberar pedido #${num}? Ele será marcado como concluído.`)) return;
+  try {
+    await fetch(`${API}/pedidos/${id}/desbloquear`, { credentials:'include', method:'PUT' });
+    toast(`✅ Pedido #${num} liberado!`,'sucesso');
+    carregarPedidosBloqueados();
+    carregarKPIs();
+  } catch(e) { toast('Erro!','erro'); }
+}
+
+async function liberarCaixaDesktop(id) {
+  if (!confirm('Liberar esta caixa? Ela ficará disponível para uso.')) return;
+  try {
+    const res = await fetch(`${API}/checkout/${id}/liberar`, { credentials:'include', method:'PUT' });
+    const data = await res.json();
+    if (data.erro) { toast(data.erro,'erro'); return; }
+    toast('🔓 Caixa liberada!','sucesso');
+    carregarCheckoutLista();
+  } catch(e) { toast('Erro!','erro'); }
+}
 function exportarExcel(tipo) {
   let rows = [];
   let nomeArq = 'exportacao';
@@ -2374,7 +2497,10 @@ function renderChecklist(prefix) {
       <div class="item-info">
         <div class="item-cod">${item.codigo||'—'} &nbsp;•&nbsp; 📍 ${item.endereco||'—'}</div>
         <div class="item-desc">${item.descricao||'—'}</div>
-        <div class="item-det">Qtde: <b style="color:var(--text)">${item.quantidade||1}</b>${item.hora_verificado?` &nbsp;•&nbsp; ${item.hora_verificado}`:''}</div>
+        <div class="item-det">
+          <span style="background:var(--accent);color:#fff;border-radius:6px;padding:3px 10px;font-size:${isMob?'16px':'13px'};font-weight:800;font-family:'Space Mono',monospace">x${item.quantidade||1}</span>
+          ${item.hora_verificado?`<span style="font-size:11px;color:var(--text3);margin-left:6px">${item.hora_verificado}</span>`:''}
+        </div>
         ${item.status==='falta'  ?`<div class="item-aviso">❌ Falta total — repositor avisado</div>`:''}
         ${item.status==='parcial'?`<div class="item-aviso">🟡 ${item.obs||''} — repositor avisado</div>`:''}
         ${(item.status==='falta'||item.status==='parcial')&&item.aviso_status==='reposto'?`<div style="font-size:10px;color:var(--green);margin-top:3px;font-weight:600">✅ Repositor repôs!</div>`:''}
@@ -2735,24 +2861,26 @@ async function buscarCaixa() {
       return;
     }
     if (cont) cont.innerHTML = rows.map(r => {
+      const concluido = r.status === 'concluido';
+      const liberado  = r.status === 'liberado';
       const itensHtml = (r.itens_lista||[]).length > 0
         ? `<div style="margin-top:10px;border-top:1px solid var(--border);padding-top:10px">
             <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:1px;margin-bottom:6px">ITENS DO PEDIDO</div>
             ${r.itens_lista.map(it=>`
-              <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 8px;background:var(--surface);border-radius:6px;margin-bottom:4px;border:1px solid var(--border)">
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;background:var(--surface);border-radius:8px;margin-bottom:4px;border:1.5px solid ${it.status==='encontrado'?'#BBF7D0':it.status==='falta'?'#FECACA':'var(--border)'}">
                 <div>
                   <span style="font-size:12px;font-weight:700;color:var(--accent)">${it.codigo||'—'}</span>
                   <span style="font-size:12px;color:var(--text);margin-left:8px">${it.descricao||'—'}</span>
+                  <span style="font-size:11px;color:var(--text3);margin-left:6px">📍${it.endereco||'—'}</span>
                 </div>
-                <div style="display:flex;align-items:center;gap:8px">
-                  <span style="font-size:11px;color:var(--text3)">📍${it.endereco||'—'}</span>
-                  <span style="font-size:11px;font-weight:700;color:var(--text)">Qtde: ${it.quantidade||1}</span>
+                <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+                  <span style="background:var(--accent);color:#fff;border-radius:6px;padding:2px 8px;font-size:13px;font-weight:800;font-family:'Space Mono',monospace">x${it.quantidade||1}</span>
                   <span class="pill ${it.status||'pendente'}" style="font-size:9px">${it.status||'pendente'}</span>
                 </div>
               </div>`).join('')}
           </div>` : '';
       return `
-      <div style="border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px;background:var(--surface2)">
+      <div style="border:1.5px solid ${concluido?'#BBF7D0':liberado?'#DDD6FE':'var(--border)'};border-radius:12px;padding:14px;margin-bottom:10px;background:${concluido?'#F0FDF4':liberado?'#F5F3FF':'var(--surface2)'}">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px">
           <div>
             <div style="font-size:22px;font-weight:800;color:var(--accent);font-family:'Space Mono',monospace">#${r.numero_pedido}</div>
@@ -2763,11 +2891,16 @@ async function buscarCaixa() {
             </div>
             ${r.hora_criacao?`<div style="font-size:11px;color:var(--text3);margin-top:2px">🕐 Vinculado às ${r.hora_criacao}</div>`:''}
           </div>
-          ${r.status==='pendente'
-            ? `<button class="btn btn-success" onclick="confirmarCheckout(${r.id})">✅ Confirmar Checkout</button>`
-            : `<span class="pill concluido" style="font-size:12px">✅ Checkout às ${r.hora_checkout||'—'}</span>`}
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            ${!concluido && !liberado
+              ? `<button class="btn btn-success" onclick="confirmarCheckout(${r.id})">✅ Confirmar Checkout</button>
+                 <button class="btn btn-outline" onclick="liberarCaixaDesktop(${r.id})">🔓 Liberar Caixa</button>`
+              : concluido
+                ? `<span class="pill concluido" style="font-size:12px">✅ Checkout às ${r.hora_checkout||'—'}</span>
+                   <button class="btn btn-outline btn-sm" onclick="liberarCaixaDesktop(${r.id})">🔓 Liberar Caixa</button>`
+                : `<span class="pill" style="background:#F5F3FF;color:var(--indigo);border:1px solid #DDD6FE;font-size:12px">🔓 Caixa Liberada</span>`}
+          </div>
         </div>
-        <!-- Código de barras grande para coletor -->
         <div style="text-align:center;background:#fff;padding:16px;border-radius:8px;border:1px solid var(--border);overflow-x:auto">
           <div style="font-size:11px;color:var(--text3);margin-bottom:8px;font-weight:700;letter-spacing:1px">CÓDIGO DO PEDIDO — BIPE PARA CHECKOUT</div>
           ${gerarCodigoBarrasSVG(r.numero_pedido)}
@@ -2809,7 +2942,9 @@ async function carregarCheckoutLista() {
       <td style="font-size:11px;color:var(--text3)" class="hora-br">${r.hora_checkout||r.hora_criacao||'—'}</td>
       <td>${r.status==='pendente'
         ? `<button class="btn btn-success btn-sm" onclick="confirmarCheckout(${r.id})">✅ OK</button>`
-        : `<span style="color:var(--green);font-size:11px">✓ Feito</span>`}
+        : r.status==='concluido'
+          ? `<span style="display:flex;gap:5px;align-items:center"><span style="color:var(--green);font-size:11px">✓ Feito</span><button class="btn btn-sm btn-outline" onclick="liberarCaixaDesktop(${r.id})" title="Liberar caixa">🔓</button></span>`
+          : `<span style="color:var(--text3);font-size:11px">Liberado</span>`}
       </td>
     </tr>`).join('');
   } catch(e) {}
