@@ -70,12 +70,14 @@ db.serialize(() => {
     login TEXT NOT NULL UNIQUE,
     senha_hash TEXT NOT NULL,
     perfil TEXT NOT NULL DEFAULT 'separador',
+    subtipo_repositor TEXT DEFAULT 'geral',
     turno TEXT DEFAULT 'Manha',
     status TEXT DEFAULT 'ativo',
     data_cadastro DATETIME DEFAULT CURRENT_TIMESTAMP
   )`);
+  db.run(`ALTER TABLE usuarios ADD COLUMN subtipo_repositor TEXT DEFAULT 'geral'`, () => {});
   db.run(`ALTER TABLE usuarios ADD COLUMN turno TEXT DEFAULT 'Manha'`, () => {});
-db.run(`ALTER TABLE usuarios ADD COLUMN perfis_acesso TEXT DEFAULT ''`, () => {});
+  db.run(`ALTER TABLE usuarios ADD COLUMN perfis_acesso TEXT DEFAULT ''`, () => {});
 
   db.run(`CREATE TABLE IF NOT EXISTS separadores (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -202,12 +204,12 @@ if (!permitidos.includes(perfil)) return res.status(403).json({ erro:'Este colab
       if (perfil === 'separador') {
         db.get(`SELECT * FROM separadores WHERE usuario_id=? AND status='ativo'`, [user.id], (err2, sep) => {
           if (err2) return res.status(500).json({ erro: err2.message });
-          req.session.usuario   = { id:user.id, nome:user.nome, login:user.login, perfil:user.perfil, turno:user.turno };
+          req.session.usuario   = { id:user.id, nome:user.nome, login:user.login, perfil:user.perfil, subtipo_repositor:user.subtipo_repositor || 'geral', turno:user.turno };
           req.session.separador = sep || null;
           return res.json({ usuario: req.session.usuario, separador: req.session.separador });
         });
       } else {
-        req.session.usuario   = { id:user.id, nome:user.nome, login:user.login, perfil:user.perfil, turno:user.turno };
+        req.session.usuario   = { id:user.id, nome:user.nome, login:user.login, perfil:user.perfil, subtipo_repositor:user.subtipo_repositor || 'geral', turno:user.turno };
         req.session.separador = null;
         return res.json({ usuario: req.session.usuario, separador: null });
       }
@@ -225,7 +227,7 @@ app.get('/auth/me', (req, res) => {
 // ─── USUÁRIOS ────────────────────────────────────────────────────────────────
 app.get('/usuarios', (req, res) => {
   const { perfil } = req.query;
-  let sql = 'SELECT id,nome,login,perfil,perfis_acesso,turno,status,data_cadastro FROM usuarios WHERE 1=1';
+  let sql = 'SELECT id,nome,login,perfil,subtipo_repositor,perfis_acesso,turno,status,data_cadastro FROM usuarios WHERE 1=1';
   const params = [];
   if (perfil) { sql += ' AND perfil=?'; params.push(perfil); }
   sql += ' ORDER BY nome';
@@ -235,11 +237,15 @@ app.get('/usuarios', (req, res) => {
   });
 });
 app.post('/usuarios', (req, res) => {
-  const { nome, login, senha, perfil, turno } = req.body;
+  const { nome, login, senha, perfil, subtipo_repositor, turno, perfis_acesso } = req.body;
   if (!nome||!login||!senha||!perfil) return res.status(400).json({ erro:'Preencha todos os campos!' });
   const hash = hashSenha(senha);
-  db.run(`INSERT INTO usuarios (nome,login,senha_hash,perfil,turno) VALUES (?,?,?,?,?)`,
-    [nome, login, hash, perfil, turno||'Manha'], function(err) {
+  const extras = Array.isArray(perfis_acesso)
+    ? perfis_acesso.filter(Boolean).filter(p => p !== perfil).join(',')
+    : String(perfis_acesso || '');
+  const subtipo = perfil === 'repositor' ? (subtipo_repositor || 'geral') : 'geral';
+  db.run(`INSERT INTO usuarios (nome,login,senha_hash,perfil,subtipo_repositor,perfis_acesso,turno) VALUES (?,?,?,?,?,?,?)`,
+    [nome, login, hash, perfil, subtipo, extras, turno||'Manha'], function(err) {
       if (err) {
         if (err.message.includes('UNIQUE')) return res.status(409).json({ erro:'Login ja cadastrado!' });
         return res.status(500).json({ erro: err.message });
@@ -254,16 +260,19 @@ app.post('/usuarios', (req, res) => {
   );
 });
 app.put('/usuarios/:id', (req, res) => {
-  const { nome, login, senha, perfil, turno, status, perfis_acesso } = req.body;
-const extras = Array.isArray(perfis_acesso) ? perfis_acesso.filter(Boolean).filter(p => p !== perfil) : [];
+  const { nome, login, senha, perfil, subtipo_repositor, turno, status, perfis_acesso } = req.body;
+  const extras = Array.isArray(perfis_acesso)
+    ? perfis_acesso.filter(Boolean).filter(p => p !== perfil).join(',')
+    : String(perfis_acesso || '');
+  const subtipo = perfil === 'repositor' ? (subtipo_repositor || 'geral') : 'geral';
   if (senha) {
     const hash = hashSenha(senha);
-    db.run(`UPDATE usuarios SET nome=?,login=?,senha_hash=?,perfil=?,turno=?,status=? WHERE id=?`,
-      [nome, login, hash, perfil, turno||'Manha', status, req.params.id],
+    db.run(`UPDATE usuarios SET nome=?,login=?,senha_hash=?,perfil=?,subtipo_repositor=?,perfis_acesso=?,turno=?,status=? WHERE id=?`,
+      [nome, login, hash, perfil, subtipo, extras, turno||'Manha', status, req.params.id],
       err => { if (err) return res.status(500).json({ erro: err.message }); res.json({ mensagem:'Atualizado!' }); });
   } else {
-    db.run(`UPDATE usuarios SET nome=?,login=?,perfil=?,turno=?,status=? WHERE id=?`,
-      [nome, login, perfil, turno||'Manha', status, req.params.id],
+    db.run(`UPDATE usuarios SET nome=?,login=?,perfil=?,subtipo_repositor=?,perfis_acesso=?,turno=?,status=? WHERE id=?`,
+      [nome, login, perfil, subtipo, extras, turno||'Manha', status, req.params.id],
       err => { if (err) return res.status(500).json({ erro: err.message }); res.json({ mensagem:'Atualizado!' }); });
   }
 });

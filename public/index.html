@@ -783,14 +783,19 @@ body.dark .aviso-duplicata{background:#2D1A05;border-color:#78350F;color:#FCD34D
               <div class="form-grp"><label>LOGIN</label><input type="text" id="usr-login" placeholder="Ex: joao.silva"/></div>
               <div class="form-grp"><label>SENHA</label><input type="password" id="usr-senha" placeholder="Mínimo 6 caracteres"/></div>
               <div class="form-grp"><label>PERFIL PRINCIPAL</label>
-                <select id="usr-perfil">
+                <select id="usr-perfil" onchange="toggleSubtipoRepositor()">
                   <option value="separador">Separador</option>
                   <option value="supervisor">Supervisor</option>
                   <option value="repositor">Repositor</option>
                   <option value="checkout">Checkout</option>
                 </select>
-              
-      <div class="form-grp" id="grp-funcao-repositor" style="display:none">\n        <label>FUNÇÃO DO REPOSITOR</label>\n        <select id="usr-funcao-repositor">\n          <option value="">Repositor geral</option>\n          <option value="busca">Busca / Armazém</option>\n          <option value="abastecimento">Abastecimento</option>\n        </select>\n      </div></div>
+              </div>
+              <div class="form-grp" id="usr-subtipo-wrap" style="display:none"><label>FUNÇÃO DO REPOSITOR</label>
+                <select id="usr-subtipo-repositor">
+                  <option value="geral">Geral</option>
+                  <option value="busca">Busca no armazém</option>
+                  <option value="abastecimento">Abastecimento</option>
+                </select></div>
               <div class="form-grp"><label>PODE ACESSAR TAMBÉM</label><div class="perm-grid"><label class="perm-item"><input type="checkbox" class="usr-perm" value="supervisor"><span>Supervisor</span></label><label class="perm-item"><input type="checkbox" class="usr-perm" value="separador"><span>Separador</span></label><label class="perm-item"><input type="checkbox" class="usr-perm" value="repositor"><span>Repositor</span></label><label class="perm-item"><input type="checkbox" class="usr-perm" value="checkout"><span>Checkout</span></label></div></div>
               <div class="form-grp"><label>TURNO</label>
                 <select id="usr-turno"><option value="Manhã">Manhã</option><option value="Tarde">Tarde</option><option value="Noite">Noite</option></select>
@@ -1337,6 +1342,20 @@ function hojeLocal() {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 const hoje = hojeLocal();
+function labelSubtipoRepositor(v) {
+  if (v === 'busca') return 'REPOSITOR BUSCA';
+  if (v === 'abastecimento') return 'REPOSITOR ABASTECIMENTO';
+  return 'REPOSITOR';
+}
+function modoRepositorAtual() {
+  return usuarioAtual?.subtipo_repositor || 'geral';
+}
+function toggleSubtipoRepositor() {
+  const perf = document.getElementById('usr-perfil');
+  const wrap = document.getElementById('usr-subtipo-wrap');
+  if (!perf || !wrap) return;
+  wrap.style.display = perf.value === 'repositor' ? 'block' : 'none';
+}
 
 
 /* ── Relógio ── */
@@ -1394,7 +1413,7 @@ function ativarApp() {
   document.getElementById('tela-login').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
   document.getElementById('hdr-nome').textContent   = usuarioAtual.nome;
-  document.getElementById('hdr-perfil').textContent = usuarioAtual.perfil.toUpperCase();
+  document.getElementById('hdr-perfil').textContent = usuarioAtual.perfil === 'repositor' ? labelSubtipoRepositor(usuarioAtual.subtipo_repositor) : usuarioAtual.perfil.toUpperCase();
 
 
   const perfil = usuarioAtual.perfil;
@@ -1797,7 +1816,7 @@ async function carregarUsuarios() {
     tbody.innerHTML = users.map(u=>`<tr>
       <td style="color:var(--text);font-weight:600">${u.nome}</td>
       <td style="color:var(--accent)">${u.login}</td>
-      <td><span class="pill ${u.perfil}">${u.perfil}</span></td>
+      <td><span class="pill ${u.perfil}">${u.perfil}</span>${u.perfil==='repositor' ? `<div style="font-size:11px;color:var(--text3);margin-top:4px">${u.subtipo_repositor==='busca'?'Busca no armazém':u.subtipo_repositor==='abastecimento'?'Abastecimento':'Geral'}</div>` : ``}</td>
       <td style="font-size:11px;color:var(--text2);max-width:180px">${([u.perfil].concat((u.perfis_acesso||'').split(',').filter(Boolean))).join(', ')}</td>
       <td>${u.turno||'—'}</td>
       <td><span class="pill ${u.status}">${u.status}</span></td>
@@ -1818,12 +1837,13 @@ async function cadastrarUsuario() {
   const login  = document.getElementById('usr-login').value.trim();
   const senha  = document.getElementById('usr-senha').value;
   const perfil = document.getElementById('usr-perfil').value;
+  const subtipo_repositor = document.getElementById('usr-subtipo-repositor')?.value || 'geral';
   const turno  = document.getElementById('usr-turno').value;
   const perfis_acesso = coletarPerfisMarcados().filter(p => p !== perfil);
   if (!nome || !login || !senha) { toast('Preencha todos os campos!','aviso'); return; }
   if (senha.length < 6) { toast('Senha mínimo 6 caracteres!','aviso'); return; }
   try {
-    const res = await fetch(`${API}/usuarios`, { credentials:'include', method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ nome, login, senha, perfil, turno, perfis_acesso }) });
+    const res = await fetch(`${API}/usuarios`, { credentials:'include', method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ nome, login, senha, perfil, subtipo_repositor, turno, perfis_acesso }) });
     const data = await res.json();
     if (!res.ok) { toast(data.erro || 'Erro ao cadastrar!','erro'); return; }
     toast('Usuário cadastrado!','sucesso');
@@ -3371,31 +3391,6 @@ document.getElementById('ck-input-caixa')?.addEventListener('keypress', e => { i
     ativarApp();
   } catch(e) {}
 })();
-</script>
-<script>
-
-(function(){
-  function toggleFuncaoRepositor(){
-    var perfilEl = document.getElementById('usr-perfil');
-    var grp = document.getElementById('grp-funcao-repositor');
-    if (!perfilEl || !grp) return;
-    if (perfilEl.value === 'repositor') {
-      grp.style.display = 'block';
-    } else {
-      grp.style.display = 'none';
-      var f = document.getElementById('usr-funcao-repositor');
-      if (f) f.value = '';
-    }
-  }
-  document.addEventListener('DOMContentLoaded', function(){
-    var perfilEl = document.getElementById('usr-perfil');
-    if (perfilEl) {
-      perfilEl.addEventListener('change', toggleFuncaoRepositor);
-      toggleFuncaoRepositor();
-    }
-  });
-})();
-
 </script>
 </body>
 </html>
