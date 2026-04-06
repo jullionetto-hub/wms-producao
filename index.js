@@ -71,6 +71,7 @@ db.serialize(() => {
     senha_hash TEXT NOT NULL,
     perfil TEXT NOT NULL DEFAULT 'separador',
     subtipo_repositor TEXT DEFAULT 'geral',
+    perfis_acesso TEXT DEFAULT '',
     turno TEXT DEFAULT 'Manha',
     status TEXT DEFAULT 'ativo',
     data_cadastro DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -171,8 +172,8 @@ db.serialize(() => {
 });
 
 function perfisPermitidos(user) {
-const extras = String(user.perfis_acesso || '').split(',').map(s => s.trim()).filter(Boolean);
-return Array.from(new Set([user.perfil, ...extras]));
+  const extras = String(user.perfis_acesso || '').split(',').map(s => s.trim()).filter(Boolean);
+  return Array.from(new Set([user.perfil, ...extras]));
 }
 
 function hashSenha(senha) {
@@ -190,32 +191,41 @@ criarUsuarioPadrao();
 // ─── AUTH ────────────────────────────────────────────────────────────────────
 app.post('/auth/login', (req, res) => {
   const { login, senha, perfil } = req.body;
-  if (!login||!senha||!perfil) return res.status(400).json({ erro:'Dados incompletos!' });
+  if (!login || !senha || !perfil) return res.status(400).json({ erro:'Dados incompletos!' });
+  
   const hash = hashSenha(senha);
-  // Perfis válidos
   const perfisValidos = ['supervisor','separador','repositor','checkout'];
   if (!perfisValidos.includes(perfil)) return res.status(400).json({ erro:'Perfil inválido!' });
-  db.get(`SELECT * FROM usuarios WHERE login=? AND senha_hash=? AND perfil=? AND status='ativo'`,
-    [login, hash, perfil], (err, user) => {
+
+  // Busca usuário SEM filtrar por perfil — só login+senha
+  db.get(`SELECT * FROM usuarios WHERE login=? AND senha_hash=? AND status='ativo'`,
+    [login, hash], (err, user) => {
       if (err)   return res.status(500).json({ erro: err.message });
       if (!user) return res.status(401).json({ erro:'Login ou senha incorretos!' });
-const permitidos = perfisPermitidos(user);
-if (!permitidos.includes(perfil)) return res.status(403).json({ erro:'Este colaborador nao pode acessar este perfil!' });
-      if (perfil === 'separador') {
+
+      const permitidos = perfisPermitidos(user);
+      if (!permitidos.includes(perfil)) {
+        return res.status(403).json({ erro:'Este colaborador nao pode acessar este perfil!' });
+      }
+
+      const perfilSessao = perfil; // perfil escolhido na tela
+
+      if (perfilSessao === 'separador') {
         db.get(`SELECT * FROM separadores WHERE usuario_id=? AND status='ativo'`, [user.id], (err2, sep) => {
           if (err2) return res.status(500).json({ erro: err2.message });
-          req.session.usuario   = { id:user.id, nome:user.nome, login:user.login, perfil:user.perfil, subtipo_repositor:user.subtipo_repositor || 'geral', turno:user.turno };
+          req.session.usuario   = { id:user.id, nome:user.nome, login:user.login, perfil:perfilSessao, subtipo_repositor:user.subtipo_repositor || 'geral', turno:user.turno };
           req.session.separador = sep || null;
           return res.json({ usuario: req.session.usuario, separador: req.session.separador });
         });
       } else {
-        req.session.usuario   = { id:user.id, nome:user.nome, login:user.login, perfil:user.perfil, subtipo_repositor:user.subtipo_repositor || 'geral', turno:user.turno };
+        req.session.usuario   = { id:user.id, nome:user.nome, login:user.login, perfil:perfilSessao, subtipo_repositor:user.subtipo_repositor || 'geral', turno:user.turno };
         req.session.separador = null;
         return res.json({ usuario: req.session.usuario, separador: null });
       }
     }
   );
 });
+
 app.post('/auth/logout', (req, res) => {
   req.session.destroy(() => res.json({ mensagem:'Logout realizado!' }));
 });
@@ -236,6 +246,7 @@ app.get('/usuarios', (req, res) => {
     res.json(rows);
   });
 });
+
 app.post('/usuarios', (req, res) => {
   const { nome, login, senha, perfil, subtipo_repositor, turno, perfis_acesso } = req.body;
   if (!nome||!login||!senha||!perfil) return res.status(400).json({ erro:'Preencha todos os campos!' });
@@ -259,23 +270,45 @@ app.post('/usuarios', (req, res) => {
     }
   );
 });
+
 app.put('/usuarios/:id', (req, res) => {
   const { nome, login, senha, perfil, subtipo_repositor, turno, status, perfis_acesso } = req.body;
-  const extras = Array.isArray(perfis_acesso)
-    ? perfis_acesso.filter(Boolean).filter(p => p !== perfil).join(',')
-    : String(perfis_acesso || '');
+  
+  let extrasString = null;
+  if (Array.isArray(perfis_acesso)) {
+    extrasString = perfis_acesso.filter(Boolean).filter(p => p !== perfil).join(',');
+  } else if (typeof perfis_acesso === 'string') {
+    extrasString = perfis_acesso;
+  }
+
   const subtipo = perfil === 'repositor' ? (subtipo_repositor || 'geral') : 'geral';
+
+  let sql;
+  const params = [];
+
   if (senha) {
     const hash = hashSenha(senha);
-    db.run(`UPDATE usuarios SET nome=?,login=?,senha_hash=?,perfil=?,subtipo_repositor=?,perfis_acesso=?,turno=?,status=? WHERE id=?`,
-      [nome, login, hash, perfil, subtipo, extras, turno||'Manha', status, req.params.id],
-      err => { if (err) return res.status(500).json({ erro: err.message }); res.json({ mensagem:'Atualizado!' }); });
+    sql = `UPDATE usuarios SET nome=?,login=?,senha_hash=?,perfil=?,subtipo_repositor=?,turno=?,status=?`;
+    params.push(nome, login, hash, perfil, subtipo, turno||'Manha', status);
   } else {
-    db.run(`UPDATE usuarios SET nome=?,login=?,perfil=?,subtipo_repositor=?,perfis_acesso=?,turno=?,status=? WHERE id=?`,
-      [nome, login, perfil, subtipo, extras, turno||'Manha', status, req.params.id],
-      err => { if (err) return res.status(500).json({ erro: err.message }); res.json({ mensagem:'Atualizado!' }); });
+    sql = `UPDATE usuarios SET nome=?,login=?,perfil=?,subtipo_repositor=?,turno=?,status=?`;
+    params.push(nome, login, perfil, subtipo, turno||'Manha', status);
   }
+
+  if (extrasString !== null) {
+    sql += `,perfis_acesso=?`;
+    params.push(extrasString);
+  }
+
+  sql += ` WHERE id=?`;
+  params.push(req.params.id);
+
+  db.run(sql, params, err => {
+    if (err) return res.status(500).json({ erro: err.message });
+    res.json({ mensagem:'Atualizado!' });
+  });
 });
+
 app.delete('/usuarios/:id', (req, res) => {
   db.run('DELETE FROM usuarios WHERE id=?', [req.params.id], err => {
     if (err) return res.status(500).json({ erro: err.message });
