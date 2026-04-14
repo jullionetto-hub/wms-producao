@@ -3,589 +3,456 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>WMS — Miess</title>
-  <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+  <title>Reposição — WMS Miess</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
-  <!-- CSS separado -->
-  <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:#EFF4FB; --surface:#FFFFFF; --surface2:#F5F8FD; --border:#DDE5F0;
+      --accent:#2563EB; --accent2:#1D4ED8; --green:#16A34A; --red:#DC2626;
+      --amber:#D97706; --indigo:#6366F1; --teal:#0D9488; --purple:#7C3AED;
+      --text:#0F172A; --text2:#475569; --text3:#94A3B8;
+      --sh:0 1px 3px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.04);
+      --sh-lg:0 8px 32px rgba(0,0,0,.09); --r:14px; --r-sm:9px;
+    }
+    *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+    html,body{height:100%;background:var(--bg);font-family:'DM Sans',sans-serif;color:var(--text);font-size:14px}
+    ::-webkit-scrollbar{width:4px;height:4px}
+    ::-webkit-scrollbar-thumb{background:var(--border);border-radius:10px}
+
+    /* ── HEADER ── */
+    header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 20px;height:56px;display:flex;align-items:center;justify-content:space-between;box-shadow:var(--sh);position:sticky;top:0;z-index:50}
+    .logo{display:flex;align-items:center;gap:10px}
+    .logo-ic{width:34px;height:34px;background:linear-gradient(135deg,#2563EB,#6366F1);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:17px}
+    .logo-tx{font-family:'Space Mono',monospace;font-size:14px;color:var(--text);letter-spacing:-.5px}
+    .logo-tx small{font-family:'DM Sans',sans-serif;font-size:10px;color:var(--text3);display:block;font-weight:500}
+
+    /* ── TABS ── */
+    .tabs{display:flex;gap:4px;background:var(--surface2);border-bottom:1px solid var(--border);padding:0 20px;overflow-x:auto}
+    .tab{padding:12px 18px;font-size:13px;font-weight:700;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:all .2s;background:none;border-top:none;border-left:none;border-right:none;font-family:'DM Sans',sans-serif}
+    .tab:hover{color:var(--text2)}
+    .tab.ativo{color:var(--accent);border-bottom-color:var(--accent)}
+    .tab-badge{background:var(--red);color:#fff;border-radius:10px;padding:1px 6px;font-size:9px;font-weight:700;margin-left:5px;display:inline-block}
+
+    /* ── FUNCIONARIO BAR ── */
+    #func-bar{background:linear-gradient(135deg,rgba(37,99,235,.06),rgba(99,102,241,.04));border-bottom:1px solid var(--border);padding:10px 20px;display:flex;align-items:center;gap:12px}
+    #func-bar label{font-size:11px;font-weight:700;color:var(--accent);letter-spacing:1px;white-space:nowrap}
+    #func-select{flex:1;max-width:320px;padding:9px 13px;background:var(--surface);border:2px solid var(--accent);border-radius:10px;color:var(--text);font-size:14px;font-weight:700;outline:none;font-family:'DM Sans',sans-serif;cursor:pointer}
+    #func-nome-atual{font-size:13px;font-weight:700;color:var(--accent);padding:8px 14px;background:rgba(37,99,235,.08);border-radius:8px;border:1px solid rgba(37,99,235,.2)}
+
+    /* ── CONTENT ── */
+    .page{display:none;padding:20px;max-width:900px;margin:0 auto}
+    .page.ativa{display:block}
+
+    /* ── CARDS DOS AVISOS ── */
+    .aviso-card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r);padding:16px 18px;margin-bottom:12px;box-shadow:var(--sh);transition:all .2s}
+    .aviso-card.pendente{border-color:#FECACA;background:#FEF2F2}
+    .aviso-card.encontrado,.aviso-card.separado{border-color:#BBF7D0;background:#F0FDF4}
+    .aviso-card.subiu{border-color:#99F6E4;background:#F0FDFA}
+    .aviso-card.abastecido{border-color:#BFDBFE;background:#EFF6FF}
+    .aviso-card.verificando{border-color:#DDD6FE;background:#F5F3FF}
+    .aviso-card.protocolo{border-color:#FDE68A;background:#FFFBEB}
+    .aviso-card.devolucao{border-color:#E9D5FF;background:#FAF5FF}
+    .aviso-card.nao_encontrado{border-color:#DDD6FE;background:#F5F3FF;opacity:.8}
+
+    .aviso-top{display:flex;align-items:flex-start;gap:14px;margin-bottom:12px}
+    .aviso-icon{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+    .aviso-card.pendente .aviso-icon{background:#FECACA}
+    .aviso-card.encontrado .aviso-icon,.aviso-card.separado .aviso-icon{background:#BBF7D0}
+    .aviso-card.subiu .aviso-icon{background:#99F6E4}
+    .aviso-card.abastecido .aviso-icon{background:#BFDBFE}
+    .aviso-card.verificando .aviso-icon{background:#DDD6FE}
+    .aviso-card.protocolo .aviso-icon{background:#FDE68A}
+    .aviso-card.devolucao .aviso-icon{background:#E9D5FF}
+
+    .aviso-info{flex:1;min-width:0}
+    .aviso-cod{font-size:15px;font-weight:800;color:var(--red);font-family:'Space Mono',monospace}
+    .aviso-card.encontrado .aviso-cod,.aviso-card.separado .aviso-cod{color:var(--green)}
+    .aviso-card.subiu .aviso-cod{color:var(--teal)}
+    .aviso-card.abastecido .aviso-cod{color:var(--accent)}
+    .aviso-card.verificando .aviso-cod{color:var(--indigo)}
+    .aviso-card.protocolo .aviso-cod{color:var(--amber)}
+    .aviso-card.devolucao .aviso-cod{color:var(--purple)}
+    .aviso-pedido{font-size:11px;color:var(--text3);margin-left:10px;font-weight:500}
+    .aviso-desc{font-size:13px;color:var(--text);margin:4px 0;line-height:1.4}
+    .aviso-end{font-size:12px;color:var(--text2);font-weight:600}
+    .aviso-qtd{display:inline-block;background:var(--red);color:#fff;border-radius:8px;padding:4px 12px;font-size:18px;font-weight:800;font-family:'Space Mono',monospace;margin-top:6px}
+    .aviso-card.encontrado .aviso-qtd,.aviso-card.separado .aviso-qtd{background:var(--green)}
+    .aviso-card.subiu .aviso-qtd{background:var(--teal)}
+    .aviso-card.abastecido .aviso-qtd{background:var(--accent)}
+    .aviso-status-line{font-size:12px;font-weight:700;margin-top:6px}
+    .aviso-sep-line{font-size:11px;color:var(--text3);margin-top:2px}
+
+    /* ── QTDE INPUT ── */
+    .qtd-row{display:flex;align-items:center;gap:10px;margin:10px 0;padding:10px 12px;background:#fff;border:1.5px solid #FDE68A;border-radius:10px}
+    .qtd-row label{font-size:12px;color:var(--amber);font-weight:700;white-space:nowrap}
+    .qtd-row input{flex:1;max-width:100px;padding:6px 10px;background:var(--surface2);border:1.5px solid #FDE68A;border-radius:7px;font-size:20px;font-weight:800;font-family:'Space Mono',monospace;color:var(--text);text-align:center;outline:none}
+    .qtd-row span{font-size:12px;color:var(--text3);white-space:nowrap}
+
+    /* ── ACTION BUTTONS ── */
+    .btns-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+    @media(min-width:600px){.btns-grid{grid-template-columns:repeat(6,1fr)}}
+    .btn-acao{padding:12px 6px;border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;color:#fff;transition:all .18s;display:flex;flex-direction:column;align-items:center;gap:4px}
+    .btn-acao:hover{filter:brightness(1.1);transform:translateY(-1px)}
+    .btn-acao .ic{font-size:20px}
+    .btn-sep  {background:#16A34A}
+    .btn-subiu{background:#0D9488}
+    .btn-abast{background:#2563EB}
+    .btn-verif{background:#6366F1}
+    .btn-proto{background:#D97706}
+    .btn-devol {background:#7C3AED}
+
+    /* ── HISTORICO ── */
+    .hist-item{background:var(--surface);border:1.5px solid var(--border);border-radius:12px;padding:13px 16px;margin-bottom:8px;display:flex;align-items:flex-start;gap:12px}
+    .hist-etapa{font-size:11px;font-weight:800;letter-spacing:.8px;padding:3px 10px;border-radius:20px;white-space:nowrap;flex-shrink:0}
+    .hist-info{flex:1;min-width:0}
+    .hist-pedido{font-size:12px;font-weight:700;color:var(--accent);font-family:'Space Mono',monospace}
+    .hist-cod{font-size:13px;color:var(--text);margin:2px 0}
+    .hist-end{font-size:11px;color:var(--text3)}
+    .hist-func{font-size:11px;font-weight:700;color:var(--text2);margin-top:4px}
+    .hist-hora{font-size:11px;color:var(--text3);font-family:'Space Mono',monospace;flex-shrink:0}
+
+    /* ── FILTROS ── */
+    .filtro-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px;padding:12px 14px;background:var(--surface);border-radius:var(--r-sm);border:1px solid var(--border)}
+    .filtro-bar select,.filtro-bar input{padding:7px 11px;background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--r-sm);color:var(--text);font-size:13px;outline:none;font-family:'DM Sans',sans-serif}
+    .filtro-bar select:focus,.filtro-bar input:focus{border-color:var(--accent)}
+    .btn-refresh{padding:7px 14px;background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--r-sm);color:var(--text2);font-size:12px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif}
+    .btn-refresh:hover{border-color:var(--accent);color:var(--accent)}
+
+    /* ── TOAST ── */
+    #toast-root{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9999;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none}
+    .toast{padding:11px 22px;border-radius:12px;font-size:13px;font-weight:600;box-shadow:var(--sh-lg);max-width:90vw;text-align:center;animation:slideUp .25s ease;white-space:nowrap}
+    @keyframes slideUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+    .toast.info   {background:#EFF6FF;color:#1D4ED8;border:1px solid #BFDBFE}
+    .toast.sucesso{background:#F0FDF4;color:#15803D;border:1px solid #BBF7D0}
+    .toast.erro   {background:#FEF2F2;color:#DC2626;border:1px solid #FECACA}
+    .toast.aviso  {background:#FFFBEB;color:#D97706;border:1px solid #FDE68A}
+
+    /* ── PILL ── */
+    .pill{display:inline-block;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.3px}
+    .pill.pendente{background:#FEF2F2;color:#DC2626;border:1px solid #FECACA}
+    .pill.encontrado,.pill.separado{background:#F0FDF4;color:#16A34A;border:1px solid #BBF7D0}
+    .pill.subiu{background:#F0FDFA;color:#0D9488;border:1px solid #99F6E4}
+    .pill.abastecido{background:#EFF6FF;color:#2563EB;border:1px solid #BFDBFE}
+    .pill.verificando{background:#F5F3FF;color:#6366F1;border:1px solid #DDD6FE}
+    .pill.protocolo{background:#FFFBEB;color:#D97706;border:1px solid #FDE68A}
+    .pill.devolucao{background:#FAF5FF;color:#7C3AED;border:1px solid #E9D5FF}
+
+    .empty{color:var(--text3);text-align:center;padding:48px;font-size:14px}
+
+    @media(max-width:600px){
+      .tabs .tab{padding:10px 12px;font-size:12px}
+      .page{padding:12px}
+    }
+  </style>
 </head>
 <body>
 
 <div id="toast-root"></div>
 
-<!-- ══ LOGIN ══ -->
-<div id="tela-login">
-  <div class="login-box">
-    <div class="login-logo">📦</div>
-    <div class="login-titulo">WMS — Miess</div>
-    <div class="login-sub">Controle de Separação</div>
-    <div class="perfil-grid" style="grid-template-columns:repeat(2,1fr)">
-      <button class="perfil-btn" onclick="selecionarPerfil('supervisor',this)"><span class="pi">👔</span>SUPERVISOR</button>
-      <button class="perfil-btn" onclick="selecionarPerfil('separador',this)"><span class="pi">📦</span>SEPARADOR</button>
-      <button class="perfil-btn" onclick="selecionarPerfil('repositor',this)"><span class="pi">🔧</span>REPOSITOR</button>
-      <button class="perfil-btn" onclick="selecionarPerfil('checkout',this)"><span class="pi">🏷️</span>CHECKOUT</button>
-    </div>
-    <div class="login-campo"><label>USUÁRIO</label><input type="text" id="login-usuario" placeholder="Ex: joao.silva" autocomplete="username"/></div>
-    <div class="login-campo"><label>SENHA</label><input type="password" id="login-senha" placeholder="••••••••" onkeydown="if(event.key==='Enter')fazerLogin()" autocomplete="current-password"/></div>
-    <div class="login-erro" id="login-erro"></div>
-    <button class="btn-login" onclick="fazerLogin()">▶ ENTRAR</button>
+<header>
+  <div class="logo">
+    <div class="logo-ic">🔧</div>
+    <div class="logo-tx">Reposição<small>WMS — Miess</small></div>
   </div>
+  <div id="func-nome-atual" style="display:none"></div>
+</header>
+
+<!-- Seletor de funcionário -->
+<div id="func-bar">
+  <label>👤 COLABORADOR:</label>
+  <select id="func-select" onchange="selecionarFuncionario(this.value)">
+    <option value="">— Selecione seu nome —</option>
+  </select>
 </div>
 
-<!-- ══ APP ══ -->
-<div id="app">
-  <header>
-    <div class="logo">
-      <div class="logo-ic">📦</div>
-      <div class="logo-tx">WMS — Miess<small>Separação de Pedidos</small></div>
-    </div>
-    <div class="hdir">
-      <span id="data-hora"></span>
-      <div class="uinfo"><b id="hdr-nome">—</b><small id="hdr-perfil">—</small></div>
-      <button class="btn-sair" onclick="sair()">✖ Sair</button>
-    </div>
-  </header>
-
-  <div class="layout">
-    <nav class="sidebar" id="sidebar"></nav>
-
-    <!-- ══ CONTEÚDO NORMAL (supervisor / desktop separador) ══ -->
-    <div class="conteudo" id="conteudo">
-
-      <!-- DASHBOARD -->
-      <div class="pagina" id="pag-dashboard">
-        <div class="pg-title">📊 Dashboard
-          <span style="font-size:12px;color:var(--text3);font-weight:400;font-family:'DM Sans',sans-serif" id="dash-ultima-atualizacao"></span>
-        </div>
-        <div class="kpi-grid" style="margin-bottom:8px">
-          <div class="kpi-card verde"><div class="kpi-lbl">CONCLUÍDOS HOJE</div><div class="kpi-val" id="dash-hoje">0</div><div class="kpi-sub">pedidos finalizados</div></div>
-          <div class="kpi-card amarelo"><div class="kpi-lbl">EM SEPARAÇÃO</div><div class="kpi-val" id="dash-separando">0</div><div class="kpi-sub">em andamento agora</div></div>
-          <div class="kpi-card vermelho"><div class="kpi-lbl">FALTAS ABERTAS</div><div class="kpi-val" id="dash-repositor">0</div><div class="kpi-sub">aguardando repositor</div></div>
-          <div class="kpi-card azul"><div class="kpi-lbl">PENDENTES</div><div class="kpi-val" id="dash-pendentes">0</div><div class="kpi-sub">na fila</div></div>
-        </div>
-        <div class="kpi-grid" style="margin-bottom:16px">
-          <div class="kpi-card roxo"><div class="kpi-lbl">CHECKOUT HOJE</div><div class="kpi-val" id="kpi-ck-hoje">0</div><div class="kpi-sub">caixas expedidas</div></div>
-          <div class="kpi-card ciano"><div class="kpi-lbl">CHECKPOINT PEND.</div><div class="kpi-val" id="kpi-ck-pend">0</div><div class="kpi-sub">aguardando checkout</div></div>
-          <div class="kpi-card laranja"><div class="kpi-lbl">SEPARADORES ATIVOS</div><div class="kpi-val" id="kpi-seps-ativos">0</div><div class="kpi-sub">trabalhando agora</div></div>
-          <div class="kpi-card rosa"><div class="kpi-lbl">NÃO ENCONTR. HOJE</div><div class="kpi-val" id="kpi-nao-enc">0</div><div class="kpi-sub">itens não localizados</div></div>
-        </div>
-        <div class="grid-2">
-          <div class="card">
-            <div class="card-hd">📊 PRODUTIVIDADE
-              <button class="btn btn-outline btn-sm" onclick="carregarDashboard()">🔄</button>
-            </div>
-            <div class="filtros">
-              <div class="fg"><label>USUÁRIO</label><select id="filtro-sep-prod" onchange="carregarProdutividade()"><option value="">Todos</option></select></div>
-              <div class="fg"><label>DE</label><input type="date" id="filtro-data-ini"/></div>
-              <div class="fg"><label>ATÉ</label><input type="date" id="filtro-data-fim"/></div>
-              <button class="btn btn-primary btn-sm" onclick="carregarProdutividade()">Filtrar</button>
-            </div>
-            <div class="tabela-wrap"><table><thead><tr><th>USUÁRIO</th><th>HOJE</th><th>MÊS</th><th>ANO</th><th>PROGRESSO</th><th>STATUS</th></tr></thead><tbody id="tbody-prod"></tbody></table></div>
-          </div>
-          <div class="card">
-            <div class="card-hd">🕐 LINHA DO TEMPO
-              <button class="btn btn-outline btn-sm" onclick="carregarTimeline()">🔄</button>
-            </div>
-            <div class="filtros">
-              <div class="fg"><label>DATA</label><input type="date" id="filtro-tl-data"/></div>
-              <button class="btn btn-primary btn-sm" onclick="carregarTimeline()">Filtrar</button>
-            </div>
-            <div class="tl-wrap" id="tl-lista"><div style="color:var(--text3);text-align:center;padding:24px;font-size:13px">Carregando...</div></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- PEDIDOS -->
-      <div class="pagina" id="pag-pedidos">
-        <div class="pg-title">📋 Pedidos</div>
-        <div class="card" id="dash-bloqueados-wrap" style="display:none;margin-bottom:16px;border-left:4px solid var(--red);border-top:1.5px solid #FECACA;border-right:1.5px solid #FECACA;border-bottom:1.5px solid #FECACA">
-          <div class="card-hd" style="background:#FEF2F2;color:var(--red);border-radius:var(--r) var(--r) 0 0">
-            ⛔ AGUARDANDO LIBERAÇÃO DO SUPERVISOR
-            <button class="btn btn-outline btn-sm" onclick="carregarPedidosBloqueados()">🔄</button>
-          </div>
-          <div id="lista-bloqueados"></div>
-        </div>
-        <div class="card">
-          <div class="card-hd">FILTROS
-            <div style="display:flex;gap:8px">
-              <button class="btn btn-outline btn-sm" onclick="carregarPedidos()">🔄 Atualizar</button>
-              <button class="excel-btn" onclick="exportarExcel('pedidos')">📊 Excel</button>
-            </div>
-          </div>
-          <div class="date-filter-bar">
-            <div class="fg"><label>DE</label><input type="date" id="filtro-ped-ini"/></div>
-            <div class="fg"><label>ATÉ</label><input type="date" id="filtro-ped-fim"/></div>
-            <div class="fg"><label>USUÁRIO</label><select id="filtro-ped-sep"><option value="">Todos</option></select></div>
-            <div class="fg"><label>STATUS</label>
-              <select id="filtro-ped-status">
-                <option value="">Todos</option>
-                <option value="pendente">Pendente</option>
-                <option value="separando">Separando</option>
-                <option value="concluido">Concluído</option>
-              </select>
-            </div>
-            <div class="fg"><label>Nº PEDIDO</label><input type="text" id="filtro-ped-num" placeholder="Buscar..."/></div>
-            <button class="btn btn-primary btn-sm" onclick="carregarPedidos()">🔍 Filtrar</button>
-          </div>
-          <div class="tabela-wrap"><table><thead><tr><th>Nº PEDIDO</th><th>USUÁRIO</th><th>STATUS</th><th>ITENS</th><th>DATA</th><th>HORA</th><th>ATRIBUIR</th></tr></thead><tbody id="tbody-ped"></tbody></table></div>
-        </div>
-      </div>
-
-      <!-- CADASTROS -->
-      <div class="pagina" id="pag-cadastros">
-        <div class="pg-title">⚙️ Cadastros</div>
-        <div style="display:flex;gap:8px;margin-bottom:16px">
-          <button class="btn btn-primary btn-sm" id="ctab-usuarios" onclick="trocarCadastroTab('usuarios')">👥 Usuários</button>
-          <button class="btn btn-outline btn-sm" id="ctab-importar" onclick="trocarCadastroTab('importar')">📥 Importar</button>
-        </div>
-        <div id="cad-usuarios">
-          <div class="grid-2">
-            <div class="card">
-              <div class="card-hd">➕ NOVO USUÁRIO</div>
-              <div class="form-grp"><label>NOME COMPLETO</label><input type="text" id="usr-nome" placeholder="Nome do colaborador"/></div>
-              <div class="form-grp"><label>LOGIN</label><input type="text" id="usr-login" placeholder="Ex: joao.silva"/></div>
-              <div class="form-grp"><label>SENHA</label><input type="password" id="usr-senha" placeholder="Mínimo 6 caracteres"/></div>
-              <div class="form-grp"><label>PERFIL PRINCIPAL</label>
-                <select id="usr-perfil" onchange="toggleSubtipoRepositor()">
-                  <option value="separador">Separador</option>
-                  <option value="supervisor">Supervisor</option>
-                  <option value="repositor">Repositor</option>
-                  <option value="checkout">Checkout</option>
-                </select>
-              </div>
-              <div class="form-grp" id="usr-subtipo-wrap" style="display:none"><label>FUNÇÃO DO REPOSITOR</label>
-                <select id="usr-subtipo-repositor">
-                  <option value="geral">Geral</option>
-                  <option value="busca">Busca no armazém</option>
-                  <option value="abastecimento">Abastecimento</option>
-                </select></div>
-              <div class="form-grp"><label>PODE ACESSAR TAMBÉM</label><div class="perm-grid"><label class="perm-item"><input type="checkbox" class="usr-perm" value="supervisor"><span>Supervisor</span></label><label class="perm-item"><input type="checkbox" class="usr-perm" value="separador"><span>Separador</span></label><label class="perm-item"><input type="checkbox" class="usr-perm" value="repositor"><span>Repositor</span></label><label class="perm-item"><input type="checkbox" class="usr-perm" value="checkout"><span>Checkout</span></label></div></div>
-              <div class="form-grp"><label>TURNO</label>
-                <select id="usr-turno"><option value="Manhã">Manhã</option><option value="Tarde">Tarde</option><option value="Noite">Noite</option></select>
-              </div>
-              <button class="btn btn-primary" style="width:100%;margin-top:4px" onclick="cadastrarUsuario()">✅ Cadastrar Usuário</button>
-            </div>
-            <div class="card">
-              <div class="card-hd">👥 USUÁRIOS CADASTRADOS <button class="btn btn-outline btn-sm" onclick="carregarUsuarios()">🔄</button></div>
-              <div class="tabela-wrap"><table><thead><tr><th>NOME</th><th>LOGIN</th><th>PERFIL</th><th>ACESSOS</th><th>TURNO</th><th>STATUS</th><th>AÇÕES</th></tr></thead><tbody id="tbody-usr"></tbody></table></div>
-            </div>
-          </div>
-        </div>
-        <div id="cad-importar" style="display:none">
-          <div class="grid-2">
-            <div class="card">
-              <div class="card-hd">📥 IMPORTAR PLANILHA</div>
-              <div class="upload-area" id="upload-area"
-                ondragover="event.preventDefault();this.classList.add('drag')"
-                ondragleave="this.classList.remove('drag')"
-                ondrop="handleDrop(event)"
-                onclick="document.getElementById('input-arquivo').click()">
-                <div style="font-size:40px;margin-bottom:10px">📊</div>
-                <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:6px">Arraste o arquivo aqui</div>
-                <div style="font-size:11px;color:var(--text3);margin-bottom:14px">ou clique para selecionar<br><b style="color:var(--text2)">Colunas: Pedido, Codigo, Descricao, Qtde, Endereço</b></div>
-                <input type="file" id="input-arquivo" accept=".xlsx,.xls,.csv" onchange="processarArquivo(event)"/>
-                <button class="btn btn-outline btn-sm" onclick="event.stopPropagation()">📂 Selecionar Arquivo</button>
-              </div>
-              <div class="status-box" id="status-leitura"></div>
-              <div id="preview-importacao" style="display:none;margin-top:14px">
-                <div style="font-size:11px;color:var(--text3);margin-bottom:8px">PREVIEW (10 primeiras linhas)</div>
-                <div class="tabela-wrap" style="max-height:200px;overflow-y:auto">
-                  <table><thead><tr><th>PEDIDO</th><th>CÓDIGO</th><th>DESCRIÇÃO</th><th>ENDEREÇO</th><th>QTDE</th></tr></thead><tbody id="tbody-prev"></tbody></table>
-                </div>
-                <div style="margin-top:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-                  <span id="txt-total-import" style="font-size:12px;color:var(--text2);font-weight:600"></span>
-                  <button class="btn btn-success" onclick="confirmarImportacao()">📥 Importar para Fila</button>
-                </div>
-              </div>
-            </div>
-            <div class="card">
-              <div class="card-hd">📋 HISTÓRICO <button class="btn btn-danger btn-sm" onclick="limparHistorico()">🗑 Limpar</button></div>
-              <div id="hist-importacoes"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- SEPARAÇÃO (desktop) -->
-      <div class="pagina" id="pag-separacao">
-        <div class="pg-title">📦 Separação</div>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px">
-          <div class="cnt-card azul"><div class="cnt-lbl">HOJE</div><div class="cnt-val" id="sep-cnt-hoje" style="font-size:26px">0</div><div class="cnt-sub">pedidos</div></div>
-          <div class="cnt-card verde"><div class="cnt-lbl">MÊS</div><div class="cnt-val" id="sep-cnt-mes" style="font-size:26px">0</div><div class="cnt-sub">pedidos</div></div>
-          <div class="cnt-card roxo"><div class="cnt-lbl">ANO</div><div class="cnt-val" id="sep-cnt-ano" style="font-size:26px">0</div><div class="cnt-sub">pedidos</div></div>
-        </div>
-        <div class="card" style="margin-bottom:13px">
-          <div class="card-hd">🔍 LEITURA DE PEDIDO</div>
-          <div class="bip-wrap">
-            <input type="text" class="bip-input" id="input-pedido" placeholder="Bipe ou digite o número do pedido..." autocomplete="off" inputmode="numeric"/>
-            <button class="btn-bip" onclick="confirmarPedido()">▶</button>
-          </div>
-          <div class="status-pedido" id="status-atual"></div>
-          <div id="cl-caixa-wrap" style="display:none;margin-top:10px;padding:10px 0 0;border-top:1px solid var(--border)">
-            <div style="font-size:11px;font-weight:700;color:var(--amber);letter-spacing:1px;margin-bottom:6px">📦 VINCULAR NÚMERO DA CAIXA</div>
-            <div class="bip-wrap" style="margin-bottom:0">
-              <input type="text" class="bip-input" id="cl-input-caixa" placeholder="Número da caixa..." autocomplete="off" inputmode="numeric" style="font-size:18px;letter-spacing:2px;border-color:var(--amber)"/>
-              <button class="btn-bip" style="border-color:var(--amber);color:var(--amber)" onclick="vincularCaixaDesktop()">📦</button>
-            </div>
-            <div id="cl-caixa-status" style="font-size:12px;color:var(--text3);margin-top:6px;padding:6px 10px;background:var(--surface2);border-radius:6px;display:none"></div>
-          </div>
-        </div>
-        <div class="cl-wrap" id="cl-wrap">
-          <div class="cl-header"><span id="cl-titulo">📋 PEDIDO</span><span id="cl-contador" style="color:var(--accent);font-weight:700">0/0</span></div>
-          <div class="cl-prog"><div class="cl-prog-fill" id="cl-barra" style="width:0%"></div></div>
-          <div class="cl-resumo" id="cl-resumo"></div>
-          <div class="cl-lista" id="cl-lista" style="max-height:380px"></div>
-          <div class="cl-footer">
-            <button class="btn-acao concluir" id="btn-concluir" onclick="concluirPedido()" disabled>🔒 CONCLUIR</button>
-            <button class="btn-acao aguardar" id="btn-aguardar" style="display:none">⏳ AGUARDANDO</button>
-          </div>
-        </div>
-        <div class="card" style="margin-top:13px">
-          <div class="card-hd">📋 FILA DE PEDIDOS
-            <div style="display:flex;gap:8px;align-items:center">
-              <span id="badge-fila-d" style="font-size:11px;color:var(--text3);font-weight:600"></span>
-              <span id="badge-meus-d" style="font-size:11px;color:var(--accent);font-weight:700"></span>
-              <button class="btn btn-outline btn-sm" onclick="carregarFila()">🔄</button>
-            </div>
-          </div>
-          <div style="max-height:220px;overflow-y:auto">
-            <div class="tabela-wrap"><table><thead><tr><th>Nº PEDIDO</th><th>ITENS</th><th>STATUS</th><th>SITUAÇÃO</th></tr></thead><tbody id="tbody-fila-d"></tbody></table></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- REPOSIÇÃO -->
-      <div class="pagina" id="pag-reposicao">
-        <div class="pg-title">🔧 Reposição</div>
-        <div class="card">
-          <div class="card-hd">AVISOS DE FALTA
-            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-              <span style="font-size:12px;color:var(--red);font-weight:700">🔴 <span id="rep-pend">0</span> pendentes</span>
-              <span style="font-size:12px;color:var(--green);font-weight:600">✅ <span id="rep-rep">0</span> repostos</span>
-              <select id="filtro-rep-status" class="sel-sm" onchange="carregarAvisos()" style="min-width:120px">
-                <option value="">Todos</option>
-                <option value="pendente">Pendente</option>
-                <option value="reposto">Reposto</option>
-                <option value="nao_encontrado">Não encontrado</option>
-              </select>
-              <button class="btn btn-outline btn-sm" onclick="carregarAvisos()">🔄</button>
-              <button class="excel-btn" onclick="exportarAvisosExcel()">📊 Excel</button>
-            </div>
-          </div>
-          <div id="lista-avisos"><div style="color:var(--text3);text-align:center;padding:40px;font-size:13px">✅ Nenhum item em falta</div></div>
-        </div>
-      </div>
-
-      <!-- ESTATÍSTICAS -->
-      <div class="pagina" id="pag-estatisticas">
-        <div class="pg-title">📈 Estatísticas</div>
-        <div class="card" style="margin-bottom:16px">
-          <div class="card-hd">📅 FILTRO DE PERÍODO
-            <div style="display:flex;gap:8px">
-              <button class="btn btn-outline btn-sm" onclick="carregarEstatisticas()">🔄</button>
-              <button class="excel-btn" onclick="exportarExcel('estatisticas')">📊 Excel</button>
-            </div>
-          </div>
-          <div class="date-filter-bar">
-            <div class="fg"><label>DE</label><input type="date" id="est-ini"/></div>
-            <div class="fg"><label>ATÉ</label><input type="date" id="est-fim"/></div>
-            <button class="btn btn-primary btn-sm" onclick="carregarEstatisticas()">🔍 Filtrar</button>
-          </div>
-        </div>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px">
-          <div class="cnt-card verde"><div class="cnt-lbl">PEDIDOS HOJE</div><div class="cnt-val" id="est-hoje-c" style="font-size:36px">0</div><div class="cnt-sub">concluídos</div><div style="font-size:12px;color:var(--text3);margin-top:4px">Total: <b id="est-hoje-t">0</b></div></div>
-          <div class="cnt-card azul"><div class="cnt-lbl">PEDIDOS NO MÊS</div><div class="cnt-val" id="est-mes-c" style="font-size:36px">0</div><div class="cnt-sub">concluídos</div><div style="font-size:12px;color:var(--text3);margin-top:4px">Total: <b id="est-mes-t">0</b></div></div>
-          <div class="cnt-card roxo"><div class="cnt-lbl">PEDIDOS NO ANO</div><div class="cnt-val" id="est-ano-c" style="font-size:36px">0</div><div class="cnt-sub">concluídos</div><div style="font-size:12px;color:var(--text3);margin-top:4px">Total: <b id="est-ano-t">0</b></div></div>
-        </div>
-        <div id="est-periodo-wrap" style="display:none" class="card">
-          <div class="card-hd">📊 RESULTADO DO PERÍODO</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:10px 0">
-            <div class="cnt-card verde"><div class="cnt-lbl">CONCLUÍDOS</div><div class="cnt-val" id="est-per-c" style="font-size:32px">0</div><div class="cnt-sub">no período</div></div>
-            <div class="cnt-card azul"><div class="cnt-lbl">TOTAL IMPORTADOS</div><div class="cnt-val" id="est-per-t" style="font-size:32px">0</div><div class="cnt-sub">no período</div></div>
-          </div>
-        </div>
-        <div class="card" style="margin-bottom:16px">
-          <div class="card-hd">👥 PRODUTIVIDADE POR SEPARADOR <button class="btn btn-outline btn-sm" onclick="carregarEstatisticas()">🔄</button></div>
-          <div class="tabela-wrap"><table><thead><tr><th>SEPARADOR</th><th>HOJE</th><th>MÊS</th><th>ANO</th><th>STATUS</th></tr></thead><tbody id="tbody-est-sep"></tbody></table></div>
-        </div>
-        <div class="card">
-          <div class="card-hd">📦 TODOS OS CHECKOUTS
-            <div style="display:flex;gap:8px;align-items:center">
-              <select id="filtro-ck-status" class="sel-sm" onchange="carregarCheckoutLista()">
-                <option value="">Todos</option>
-                <option value="pendente">Pendente</option>
-                <option value="concluido">Concluído</option>
-              </select>
-              <button class="btn btn-outline btn-sm" onclick="carregarCheckoutLista()">🔄</button>
-              <button class="excel-btn" onclick="exportarExcel('checkout-lista')">📊 Excel</button>
-            </div>
-          </div>
-          <div class="tabela-wrap">
-            <table><thead><tr><th>CAIXA</th><th>Nº PEDIDO</th><th>SEPARADOR</th><th>STATUS</th><th>HORA</th><th>AÇÃO</th></tr></thead><tbody id="tbody-checkout"></tbody></table>
-          </div>
-        </div>
-      </div>
-
-      <!-- CHECKOUT -->
-      <div class="pagina" id="pag-checkout">
-        <div class="pg-title">📦 Checkout</div>
-        <div class="card" style="margin-bottom:16px">
-          <div class="card-hd">🔍 BUSCAR POR NÚMERO DE CAIXA</div>
-          <div class="bip-wrap" style="margin-bottom:0">
-            <input type="text" class="bip-input" id="ck-input-caixa" placeholder="Digite ou bipe o número da caixa..." autocomplete="off" inputmode="numeric" style="font-size:20px;letter-spacing:3px"/>
-            <button class="btn-bip" onclick="buscarCaixa()">▶</button>
-          </div>
-        </div>
-        <div id="ck-resultado" style="display:none">
-          <div class="card" style="margin-bottom:16px">
-            <div class="card-hd" id="ck-res-titulo">RESULTADO</div>
-            <div id="ck-res-conteudo"></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ESTATÍSTICAS REPOSITOR -->
-      <div class="pagina" id="pag-stats-repositor">
-        <div class="pg-title">📈 Estatísticas — Reposição</div>
-        <div class="card" style="margin-bottom:16px">
-          <div class="card-hd">📅 FILTRO DE PERÍODO
-            <div style="display:flex;gap:8px">
-              <button class="btn btn-outline btn-sm" onclick="carregarStatsRepositor()">🔄</button>
-              <button class="excel-btn" onclick="exportarExcel('stats-repositor')">📊 Excel</button>
-            </div>
-          </div>
-          <div class="date-filter-bar">
-            <div class="fg"><label>DE</label><input type="date" id="srep-ini"/></div>
-            <div class="fg"><label>ATÉ</label><input type="date" id="srep-fim"/></div>
-            <button class="btn btn-primary btn-sm" onclick="carregarStatsRepositor()">🔍 Filtrar</button>
-          </div>
-        </div>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:13px;margin-bottom:16px">
-          <div class="cnt-card verde"><div class="cnt-lbl">REPOSTOS HOJE</div><div class="cnt-val" id="srep-rep-hoje" style="font-size:32px">0</div><div class="cnt-sub">itens repostos</div></div>
-          <div class="cnt-card azul"><div class="cnt-lbl">REPOSTOS NO MÊS</div><div class="cnt-val" id="srep-rep-mes" style="font-size:32px">0</div><div class="cnt-sub">itens repostos</div></div>
-          <div class="cnt-card vermelho"><div class="cnt-lbl">PENDENTES AGORA</div><div class="cnt-val" id="srep-pendentes" style="font-size:32px">0</div><div class="cnt-sub">aguardando</div></div>
-        </div>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:13px;margin-bottom:16px">
-          <div class="cnt-card roxo"><div class="cnt-lbl">NÃO ENCONTRADOS</div><div class="cnt-val" id="srep-nao-enc" style="font-size:32px">0</div><div class="cnt-sub">total</div></div>
-          <div class="cnt-card amarelo"><div class="cnt-lbl">PROTOCOLOS</div><div class="cnt-val" id="srep-proto" style="font-size:32px">0</div><div class="cnt-sub">em análise</div></div>
-          <div class="cnt-card verde"><div class="cnt-lbl">AVISOS NO ANO</div><div class="cnt-val" id="srep-ano" style="font-size:32px">0</div><div class="cnt-sub">total de avisos</div></div>
-        </div>
-        <div class="card">
-          <div class="card-hd">👥 PRODUTIVIDADE POR REPOSITOR</div>
-          <div class="tabela-wrap"><table><thead><tr><th>REPOSITOR</th><th>HOJE</th><th>REPOSTOS</th><th>NÃO ENCONTR.</th><th>TOTAL</th></tr></thead><tbody id="tbody-srep-prod"></tbody></table></div>
-        </div>
-      </div>
-
-      <!-- ESTATÍSTICAS CHECKOUT -->
-      <div class="pagina" id="pag-stats-checkout">
-        <div class="pg-title">📈 Estatísticas — Checkout</div>
-        <div class="card" style="margin-bottom:16px">
-          <div class="card-hd">📅 FILTRO DE PERÍODO
-            <div style="display:flex;gap:8px">
-              <button class="btn btn-outline btn-sm" onclick="carregarStatsCheckout()">🔄</button>
-              <button class="excel-btn" onclick="exportarExcel('stats-checkout')">📊 Excel</button>
-            </div>
-          </div>
-          <div class="date-filter-bar">
-            <div class="fg"><label>DE</label><input type="date" id="sck-ini"/></div>
-            <div class="fg"><label>ATÉ</label><input type="date" id="sck-fim"/></div>
-            <button class="btn btn-primary btn-sm" onclick="carregarStatsCheckout()">🔍 Filtrar</button>
-          </div>
-        </div>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:13px;margin-bottom:16px">
-          <div class="cnt-card verde"><div class="cnt-lbl">EXPEDIDOS HOJE</div><div class="cnt-val" id="sck-hoje" style="font-size:32px">0</div><div class="cnt-sub">checkouts</div></div>
-          <div class="cnt-card azul"><div class="cnt-lbl">EXPEDIDOS NO MÊS</div><div class="cnt-val" id="sck-mes" style="font-size:32px">0</div><div class="cnt-sub">checkouts</div></div>
-          <div class="cnt-card roxo"><div class="cnt-lbl">EXPEDIDOS NO ANO</div><div class="cnt-val" id="sck-ano" style="font-size:32px">0</div><div class="cnt-sub">checkouts</div></div>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:13px;margin-bottom:16px">
-          <div class="cnt-card amarelo"><div class="cnt-lbl">PENDENTES AGORA</div><div class="cnt-val" id="sck-pend" style="font-size:32px">0</div><div class="cnt-sub">aguardando checkout</div></div>
-          <div class="cnt-card vermelho"><div class="cnt-lbl">IMPORTADOS HOJE</div><div class="cnt-val" id="sck-importados" style="font-size:32px">0</div><div class="cnt-sub">pedidos do dia</div></div>
-        </div>
-        <div class="card">
-          <div class="card-hd">📦 ÚLTIMOS CHECKOUTS
-            <div style="display:flex;gap:8px;align-items:center">
-              <select id="sck-filtro-status" class="sel-sm" onchange="carregarStatsCheckout()">
-                <option value="">Todos</option>
-                <option value="pendente">Pendente</option>
-                <option value="concluido">Concluído</option>
-              </select>
-            </div>
-          </div>
-          <div class="tabela-wrap">
-            <table><thead><tr><th>CAIXA</th><th>Nº PEDIDO</th><th>SEPARADOR</th><th>STATUS</th><th>DATA</th><th>HORA</th></tr></thead><tbody id="tbody-sck-lista"></tbody></table>
-          </div>
-        </div>
-      </div>
-
-    </div><!-- /conteudo -->
-
-    <!-- ══ REPOSITOR MOBILE ══ -->
-    <div id="rep-mobile-root">
-
-      <!-- ABA 1 — SOLICITAÇÕES -->
-      <div class="rep-tab-page ativa" id="rep-tab-avisos">
-        <div class="rep-scroll">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-            <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">🔧 Solicitações</div>
-            <div style="display:flex;gap:8px;align-items:center">
-              <span style="font-size:12px;color:var(--red);font-weight:700">🔴 <span id="m-rep-pend">0</span></span>
-              <select id="m-filtro-rep-status" class="sel-sm" onchange="carregarAvisosMobile()" style="min-width:110px">
-                <option value="">Todos</option>
-                <option value="pendente">Pendente</option>
-                <option value="encontrado">Separado</option>
-                <option value="subiu">Subiu</option>
-                <option value="abastecido">Abastecido</option>
-                <option value="verificando">Verificando</option>
-                <option value="protocolo">Protocolo</option>
-                <option value="devolucao">Devolução</option>
-              </select>
-              <button class="btn btn-outline btn-sm" onclick="carregarAvisosMobile()">🔄</button>
-            </div>
-          </div>
-          <div id="m-lista-avisos"><div style="color:var(--text3);text-align:center;padding:40px;font-size:13px">✅ Nenhum item em falta</div></div>
-        </div>
-      </div>
-      <!-- ABA 2 — HISTÓRICO DO DIA -->
-      <div class="rep-tab-page" id="rep-tab-historico">
-        <div class="rep-scroll">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-            <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">📋 Histórico do Dia</div>
-            <button class="btn btn-outline btn-sm" onclick="carregarHistoricoDia()">🔄</button>
-          </div>
-          <div id="rep-tab-historico-lista"><div style="color:var(--text3);text-align:center;padding:36px;font-size:14px">Nenhuma etapa hoje</div></div>
-        </div>
-      </div>
-      <!-- ABA 3 — ESTATÍSTICAS -->
-      <div class="rep-tab-page" id="rep-tab-stats">
-        <div class="rep-scroll">
-          <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text);margin-bottom:14px">📈 Meu Desempenho</div>
-          <div class="stat-nome" id="m-rep-nome">—</div>
-          <div class="stats-grid">
-            <div class="stat-big verde"><div class="s-lbl">REPOSTOS HOJE</div><div class="s-val" id="m-rep-hoje">0</div><div class="s-sub">itens repostos</div></div>
-            <div class="stat-big azul"><div class="s-lbl">MÊS</div><div class="s-val" id="m-rep-mes">0</div><div class="s-sub">reposições</div></div>
-            <div class="stat-big vermelho span2"><div class="s-lbl">PENDENTES AGORA</div><div class="s-val" id="m-rep-pendentes" style="font-size:38px">0</div><div class="s-sub">aguardando resolução</div></div>
-          </div>
-          <button class="btn btn-outline" style="width:100%;margin-top:4px" onclick="carregarStatsRepMobile()">🔄 Atualizar</button>
-        </div>
-      </div>
-    </div><!-- /rep-mobile-root -->
-
-    <!-- ══ CHECKOUT MOBILE ══ -->
-    <div id="ck-mobile-root">
-      <div class="ck-tab-page ativa" id="ck-tab-busca">
-        <div class="ck-scroll">
-          <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text);margin-bottom:12px">🏷️ Checkout</div>
-          <div class="bip-wrap">
-            <input type="text" class="bip-input" id="m-ck-input-caixa" placeholder="Bipe ou número da caixa..." autocomplete="off" inputmode="numeric" style="font-size:20px;letter-spacing:3px"/>
-            <button class="btn-bip" onclick="buscarCaixaMobile()">▶</button>
-          </div>
-          <div id="m-ck-resultado"></div>
-        </div>
-      </div>
-      <div class="ck-tab-page" id="ck-tab-stats">
-        <div class="ck-scroll">
-          <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text);margin-bottom:14px">📈 Estatísticas Checkout</div>
-          <div class="stats-grid">
-            <div class="stat-big verde"><div class="s-lbl">HOJE</div><div class="s-val" id="m-ck-hoje">0</div><div class="s-sub">expedidos</div></div>
-            <div class="stat-big azul"><div class="s-lbl">MÊS</div><div class="s-val" id="m-ck-mes">0</div><div class="s-sub">expedidos</div></div>
-            <div class="stat-big amarelo span2"><div class="s-lbl">PENDENTES</div><div class="s-val" id="m-ck-pend" style="font-size:38px">0</div><div class="s-sub">aguardando checkout</div></div>
-          </div>
-          <button class="btn btn-outline" style="width:100%;margin-top:4px" onclick="carregarStatsCkMobile()">🔄 Atualizar</button>
-        </div>
-      </div>
-    </div><!-- /ck-mobile-root -->
-
-    <!-- ══ SEPARADOR MOBILE ══ -->
-    <div id="sep-mobile-root">
-      <div class="sep-tab-page ativa" id="sep-tab-separar">
-        <div class="sep-scroll">
-          <div class="bip-wrap">
-            <input type="text" class="bip-input" id="m-input-pedido" placeholder="Bipe ou número do pedido..." autocomplete="off" inputmode="numeric"/>
-            <button class="btn-bip" onclick="confirmarPedidoMobile()">▶</button>
-          </div>
-          <div class="status-pedido" id="m-status-atual"></div>
-          <div id="m-caixa-wrap" style="display:none;margin-bottom:12px">
-            <div style="font-size:11px;font-weight:700;color:var(--accent);letter-spacing:1px;margin-bottom:6px">📦 VINCULAR CAIXA AO PEDIDO</div>
-            <div class="bip-wrap" style="margin-bottom:0">
-              <input type="text" class="bip-input" id="m-input-caixa" placeholder="Número da caixa..." autocomplete="off" inputmode="numeric" style="font-size:18px;letter-spacing:2px;border-color:var(--amber)"/>
-              <button class="btn-bip" style="border-color:var(--amber);color:var(--amber)" onclick="vincularCaixaMobile()">📦</button>
-            </div>
-            <div id="m-caixa-status" style="font-size:12px;color:var(--text3);margin-top:6px;padding:6px 10px;background:var(--surface2);border-radius:6px;display:none"></div>
-          </div>
-          <div class="cl-wrap" id="m-cl-wrap">
-            <div class="cl-header"><span id="m-cl-titulo">📋 PEDIDO</span><span id="m-cl-contador" style="color:var(--accent);font-weight:700;font-size:12px">0/0</span></div>
-            <div class="cl-prog"><div class="cl-prog-fill" id="m-cl-barra" style="width:0%"></div></div>
-            <div class="cl-resumo" id="m-cl-resumo"></div>
-            <div class="cl-lista" id="m-cl-lista"></div>
-            <div class="cl-footer">
-              <button class="btn-acao concluir" id="m-btn-concluir" onclick="concluirPedidoMobile()" disabled>🔒 CONCLUIR</button>
-              <button class="btn-acao aguardar" id="m-btn-aguardar" style="display:none">⏳ AGUARDANDO</button>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="sep-tab-page" id="sep-tab-fila">
-        <div class="sep-scroll">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-            <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">📋 Fila</div>
-            <div style="display:flex;gap:8px;align-items:center">
-              <span id="badge-fila-m" style="font-size:11px;color:var(--text3);font-weight:600"></span>
-              <span id="badge-meus-m" style="font-size:11px;color:var(--accent);font-weight:700"></span>
-              <button class="btn btn-outline btn-sm" onclick="carregarFilaMobile()">🔄</button>
-            </div>
-          </div>
-          <div id="lista-fila-mobile"><div style="color:var(--text3);text-align:center;padding:30px;font-size:13px">Carregando fila...</div></div>
-        </div>
-      </div>
-      <div class="sep-tab-page" id="sep-tab-avisos-sep">
-        <div class="sep-scroll">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-            <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">🔔 Avisos do Repositor</div>
-            <button class="btn btn-outline btn-sm" onclick="carregarAvisosSeparador()">🔄</button>
-          </div>
-          <div id="sep-avisos-lista"><div style="color:var(--text3);text-align:center;padding:40px;font-size:13px">✅ Nenhum aviso</div></div>
-        </div>
-      </div>
-      <div class="sep-tab-page" id="sep-tab-stats">
-        <div class="sep-scroll">
-          <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text);margin-bottom:14px">📈 Meu Desempenho</div>
-          <div class="stat-nome" id="m-stat-nome">—</div>
-          <div class="stats-grid">
-            <div class="stat-big azul"><div class="s-lbl">HOJE</div><div class="s-val" id="m-stat-hoje">0</div><div class="s-sub">pedidos separados</div></div>
-            <div class="stat-big verde"><div class="s-lbl">MÊS</div><div class="s-val" id="m-stat-mes">0</div><div class="s-sub">pedidos separados</div></div>
-            <div class="stat-big roxo span2"><div class="s-lbl">ANO</div><div class="s-val" id="m-stat-ano">0</div><div class="s-sub">pedidos separados no ano</div></div>
-          </div>
-          <button class="btn btn-outline" style="width:100%;margin-top:4px" onclick="carregarStatsMobile()">🔄 Atualizar</button>
-        </div>
-      </div>
-    </div><!-- /sep-mobile-root -->
-
-  </div><!-- /layout -->
-</div><!-- /app -->
-
-<!-- Tab bar Separador -->
-<div class="sep-tabbar" id="sep-tabbar">
-  <button class="sep-tab ativo" id="stab-separar" onclick="mudarTabSep('separar')"><span class="sep-tab-ic">📦</span>SEPARAR</button>
-  <button class="sep-tab" id="stab-fila" onclick="mudarTabSep('fila')"><span class="sep-tab-ic">📋</span>FILA<span class="sep-tab-badge" id="stab-fila-badge" style="display:none">0</span></button>
-  <button class="sep-tab" id="stab-avisos-sep" onclick="mudarTabSep('avisos-sep')"><span class="sep-tab-ic">🔔</span>AVISOS<span class="sep-tab-badge" id="stab-avisos-sep-badge" style="display:none">0</span></button>
-  <button class="sep-tab" id="stab-stats" onclick="mudarTabSep('stats')"><span class="sep-tab-ic">📈</span>STATS</button>
+<!-- Abas -->
+<div class="tabs">
+  <button class="tab ativo" id="tab-solicitacoes" onclick="mudarAba('solicitacoes')">
+    🔧 Solicitações <span class="tab-badge" id="badge-pend" style="display:none">0</span>
+  </button>
+  <button class="tab" id="tab-historico" onclick="mudarAba('historico')">📋 Histórico</button>
 </div>
 
-<!-- Tab bar Repositor -->
-<div class="rep-tabbar" id="rep-tabbar">
-  <button class="rep-tab ativo" id="rtab-avisos" onclick="mudarTabRep('avisos')"><span class="rep-tab-ic">🔧</span>PEDIDOS<span class="rep-tab-badge" id="rtab-badge" style="display:none">0</span></button>
-  <button class="rep-tab" id="rtab-historico" onclick="mudarTabRep('historico')"><span class="rep-tab-ic">📋</span>HISTÓRICO</button>
-  <button class="rep-tab" id="rtab-stats" onclick="mudarTabRep('stats')"><span class="rep-tab-ic">📈</span>STATS</button>
+<!-- ══ ABA: SOLICITAÇÕES ══ -->
+<div class="page ativa" id="page-solicitacoes">
+  <div class="filtro-bar">
+    <select id="filtro-status" onchange="carregarAvisos()">
+      <option value="">Todos</option>
+      <option value="pendente">🔴 Pendente</option>
+      <option value="encontrado">✅ Separado</option>
+      <option value="subiu">⬆️ Subiu</option>
+      <option value="abastecido">📦 Abastecido</option>
+      <option value="verificando">🔍 Verificando</option>
+      <option value="protocolo">📋 Protocolo</option>
+      <option value="devolucao">↩️ Devolução</option>
+    </select>
+    <span style="font-size:12px;color:var(--red);font-weight:700">🔴 <span id="cnt-pend">0</span> pendentes</span>
+    <span style="font-size:12px;color:var(--green);font-weight:600">✅ <span id="cnt-rep">0</span> resolvidos</span>
+    <button class="btn-refresh" onclick="carregarAvisos()">🔄 Atualizar</button>
+  </div>
+  <div id="lista-avisos"><div class="empty">Carregando...</div></div>
 </div>
 
-<!-- Tab bar Checkout -->
-<div class="ck-tabbar" id="ck-tabbar">
-  <button class="ck-tab ativo" id="cktab-busca" onclick="mudarTabCk('busca')"><span class="ck-tab-ic">🏷️</span>CHECKOUT</button>
-  <button class="ck-tab" id="cktab-stats" onclick="mudarTabCk('stats')"><span class="ck-tab-ic">📈</span>ESTATÍSTICAS</button>
+<!-- ══ ABA: HISTÓRICO ══ -->
+<div class="page" id="page-historico">
+  <div class="filtro-bar">
+    <input type="date" id="hist-data" onchange="carregarHistorico()"/>
+    <select id="hist-func" onchange="carregarHistorico()">
+      <option value="">Todos os funcionários</option>
+    </select>
+    <button class="btn-refresh" onclick="carregarHistorico()">🔄 Atualizar</button>
+  </div>
+  <div id="lista-historico"><div class="empty">Selecione uma data</div></div>
 </div>
 
-<!-- JavaScript separado -->
-<script src="app.js"></script>
+<script>
+const API = window.location.origin;
+let funcionarioAtivo = '';
+let intervalId = null;
+
+// ── Toast ──
+function toast(msg, tipo='info') {
+  const el = document.createElement('div');
+  el.className = `toast ${tipo}`;
+  el.textContent = msg;
+  document.getElementById('toast-root').appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+
+// ── Data hoje ──
+function hojeLocal() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+// ── Carregar funcionários ──
+async function carregarFuncionarios() {
+  try {
+    const res  = await fetch(`${API}/usuarios`);
+    const list = await res.json();
+    const sel  = document.getElementById('func-select');
+    const selH = document.getElementById('hist-func');
+    const opts = list.map(f=>`<option value="${f.nome}">${f.nome}</option>`).join('');
+    sel.innerHTML  = '<option value="">— Selecione seu nome —</option>' + opts;
+    selH.innerHTML = '<option value="">Todos os funcionários</option>' + opts;
+    const salvo = localStorage.getItem('rep_funcionario_desktop');
+    if (salvo) { sel.value = salvo; selecionarFuncionario(salvo); }
+  } catch(e) {}
+}
+
+function selecionarFuncionario(nome) {
+  funcionarioAtivo = nome;
+  localStorage.setItem('rep_funcionario_desktop', nome);
+  const badge = document.getElementById('func-nome-atual');
+  if (nome) { badge.textContent = `👤 ${nome}`; badge.style.display='block'; }
+  else badge.style.display = 'none';
+}
+
+// ── Mudar aba ──
+function mudarAba(aba) {
+  ['solicitacoes','historico'].forEach(a => {
+    document.getElementById(`page-${a}`).classList.toggle('ativa', a===aba);
+    document.getElementById(`tab-${a}`).classList.toggle('ativo', a===aba);
+  });
+  if (aba==='historico') carregarHistorico();
+  if (aba==='solicitacoes') carregarAvisos();
+}
+
+// ── Ícone por status ──
+function statusIcon(s) {
+  return {pendente:'🔴',encontrado:'✅',separado:'✅',subiu:'⬆️',abastecido:'📦',verificando:'🔍',protocolo:'📋',devolucao:'↩️',nao_encontrado:'🚫'}[s]||'•';
+}
+function statusLabel(s) {
+  return {pendente:'Pendente',encontrado:'Separado',separado:'Separado',subiu:'Subiu',abastecido:'Abastecido',verificando:'Verificando',protocolo:'Protocolo',devolucao:'Devolução',nao_encontrado:'Não encontrado'}[s]||s;
+}
+
+// ── Carregar avisos ──
+async function carregarAvisos() {
+  const filtro = document.getElementById('filtro-status').value;
+  let url = `${API}/repositor/avisos`;
+  if (filtro) url += `?status=${filtro}`;
+  try {
+    const res    = await fetch(url);
+    const avisos = await res.json();
+    const pend   = avisos.filter(a=>a.status==='pendente').length;
+    const resol  = avisos.filter(a=>a.status!=='pendente').length;
+    document.getElementById('cnt-pend').textContent = pend;
+    document.getElementById('cnt-rep').textContent  = resol;
+    const badge = document.getElementById('badge-pend');
+    badge.textContent = pend; badge.style.display = pend>0?'inline':'none';
+
+    const lista = document.getElementById('lista-avisos');
+    if (!avisos.length) { lista.innerHTML = '<div class="empty">✅ Nenhum aviso no momento</div>'; return; }
+
+    lista.innerHTML = avisos.map(a => {
+      const isPend = a.status === 'pendente';
+      const icon   = statusIcon(a.status);
+
+      const qtdInput = isPend ? `
+        <div class="qtd-row">
+          <label>Qtde encontrada:</label>
+          <input type="number" id="qtd-${a.id}" min="0" max="${a.quantidade||99}" value="${a.quantidade||1}" inputmode="numeric"/>
+          <span>de <b>${a.quantidade||'?'}</b></span>
+        </div>` : '';
+
+      const btns = isPend ? `
+        <div class="btns-grid">
+          <button class="btn-acao btn-sep"   onclick="marcar(${a.id},${a.quantidade||0},'separado')">  <span class="ic">✅</span>Separado</button>
+          <button class="btn-acao btn-subiu" onclick="marcar(${a.id},${a.quantidade||0},'subiu')">    <span class="ic">⬆️</span>Subiu</button>
+          <button class="btn-acao btn-abast" onclick="marcar(${a.id},${a.quantidade||0},'abastecido')"><span class="ic">📦</span>Abastecido</button>
+          <button class="btn-acao btn-verif" onclick="marcar(${a.id},0,'verificando')">               <span class="ic">🔍</span>Verificando</button>
+          <button class="btn-acao btn-proto" onclick="marcar(${a.id},0,'protocolo')">                 <span class="ic">📋</span>Protocolo</button>
+          <button class="btn-acao btn-devol" onclick="marcar(${a.id},0,'devolucao')">                 <span class="ic">↩️</span>Devolução</button>
+        </div>` : '';
+
+      const statusLine = !isPend ? `
+        <div class="aviso-status-line" style="color:${['encontrado','separado'].includes(a.status)?'var(--green)':a.status==='subiu'?'var(--teal)':a.status==='abastecido'?'var(--accent)':a.status==='verificando'?'var(--indigo)':a.status==='protocolo'?'var(--amber)':'var(--purple)'}">
+          ${icon} ${statusLabel(a.status)} às ${a.hora_reposto||'—'}${a.qtd_encontrada>0?' — '+a.qtd_encontrada+' un.':''}
+        </div>
+        ${a.repositor_nome ? `<div class="aviso-sep-line">👤 ${a.repositor_nome}</div>` : ''}` : '';
+
+      const avisoInfo = isPend ? `<div style="font-size:11px;color:var(--red);font-weight:600;margin-top:4px">⏱ Aviso às ${a.hora_aviso||'—'} • Sep: ${a.separador_nome||'—'}</div>` : '';
+
+      return `<div class="aviso-card ${a.status}">
+        <div class="aviso-top">
+          <div class="aviso-icon">${icon}</div>
+          <div class="aviso-info">
+            <div><span class="aviso-cod">${a.codigo||'—'}</span><span class="aviso-pedido">Pedido #${a.numero_pedido}</span></div>
+            <div class="aviso-desc">${a.descricao||'—'}</div>
+            <div class="aviso-end">📍 ${a.endereco||'—'}</div>
+            <span class="aviso-qtd">x${a.quantidade||1}</span>
+            ${avisoInfo}
+            ${statusLine}
+          </div>
+        </div>
+        ${qtdInput}
+        ${btns}
+        <div id="hist-${a.id}"></div>
+      </div>`;
+    }).join('');
+    // Carrega histórico de etapas de cada aviso
+    for (const a of avisos) { carregarHistoricoAviso(a.id); }
+  } catch(e) {
+    document.getElementById('lista-avisos').innerHTML = '<div class="empty" style="color:var(--red)">Erro ao carregar</div>';
+  }
+}
+
+// ── Histórico de etapas por aviso ──
+async function carregarHistoricoAviso(avisoId) {
+  const el = document.getElementById(`hist-${avisoId}`);
+  if (!el) return;
+  try {
+    const res  = await fetch(`${API}/repositor/historico/${avisoId}`);
+    const rows = await res.json();
+    if (!rows.length) { el.innerHTML = ''; return; }
+    const etapaLabel = {
+      separado:'✅ Separado', subiu:'⬆️ Subiu', abastecido:'📦 Abastecido',
+      verificando:'🔍 Verificando', protocolo:'📋 Protocolo', devolucao:'↩️ Devolução',
+      encontrado:'✅ Separado', nao_encontrado:'🚫 Não encontrado'
+    };
+    const etapaCor = {
+      separado:'#16A34A', subiu:'#0D9488', abastecido:'#2563EB',
+      verificando:'#6366F1', protocolo:'#D97706', devolucao:'#7C3AED',
+      encontrado:'#16A34A', nao_encontrado:'#DC2626'
+    };
+    el.innerHTML = `
+      <div style="border-top:1px solid var(--border);padding-top:10px;margin-top:8px">
+        <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1.5px;margin-bottom:8px">HISTÓRICO DE ETAPAS</div>
+        <div style="display:flex;flex-direction:column;gap:0">
+          ${rows.map((r,i) => `
+            <div style="display:flex;align-items:center;gap:12px;padding:7px 0;${i<rows.length-1?'border-bottom:1px solid var(--border)':''}">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:0;flex-shrink:0">
+                <div style="width:10px;height:10px;border-radius:50%;background:${etapaCor[r.etapa]||'var(--text3)'}"></div>
+                ${i<rows.length-1?`<div style="width:2px;height:20px;background:var(--border);margin-top:2px"></div>`:''}
+              </div>
+              <div style="flex:1;min-width:0">
+                <span style="font-size:13px;font-weight:700;color:${etapaCor[r.etapa]||'var(--text2)'}">${etapaLabel[r.etapa]||r.etapa}</span>
+                ${r.qtd_encontrada>0?`<span style="font-size:12px;color:var(--text3);margin-left:6px">— ${r.qtd_encontrada} un.</span>`:''}
+              </div>
+              <div style="text-align:right;flex-shrink:0">
+                <div style="font-size:13px;font-weight:700;color:var(--text2)">👤 ${r.funcionario||'—'}</div>
+                <div style="font-size:11px;color:var(--text3);font-family:'Space Mono',monospace">${r.hora||'—'}</div>
+              </div>
+            </div>`).join('')}
+        </div>
+      </div>`;
+  } catch(e) {}
+}
+
+// ── Marcar ação ──
+async function marcar(id, qtdTotal, acao) {
+  if (!funcionarioAtivo) { toast('Selecione seu nome antes de marcar!','aviso'); return; }
+  if (['protocolo','devolucao'].includes(acao) && !confirm(`Confirmar: ${acao==='protocolo'?'Protocolo':'Devolução'}? O supervisor será notificado.`)) return;
+  const inputEl = document.getElementById(`qtd-${id}`);
+  const qtdEnc  = ['verificando','protocolo','devolucao','nao_encontrado'].includes(acao) ? 0 : (parseInt(inputEl?.value)||qtdTotal||0);
+  try {
+    const res  = await fetch(`${API}/repositor/avisos/${id}/${acao}`, {
+      method:'PUT', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ qtd_encontrada: qtdEnc, repositor_nome: funcionarioAtivo })
+    });
+    const data = await res.json();
+    if (data.erro) { toast(data.erro,'erro'); return; }
+    const msgs = { separado:'✅ Separado!', subiu:'⬆️ Subiu!', abastecido:'📦 Abastecido!', verificando:'🔍 Verificando...', protocolo:'📋 Protocolo!', devolucao:'↩️ Devolução!' };
+    toast(msgs[acao]||'OK!','sucesso');
+    await carregarAvisos();
+    carregarHistoricoAviso(id);
+  } catch(e) { toast('Erro ao marcar!','erro'); }
+}
+
+// ── Carregar histórico ──
+async function carregarHistorico() {
+  const data  = document.getElementById('hist-data').value;
+  const func  = document.getElementById('hist-func').value;
+  if (!data) return;
+
+  const lista = document.getElementById('lista-historico');
+  lista.innerHTML = '<div class="empty">Carregando...</div>';
+
+  try {
+    const res  = await fetch(`${API}/repositor/historico-dia`);
+    let rows   = await res.json();
+    if (func)  rows = rows.filter(r => r.funcionario === func);
+
+    // Filtra por data local (histórico-dia já filtra por hoje, mas se a data for diferente avisa)
+    const hoje = hojeLocal();
+    if (data !== hoje) {
+      lista.innerHTML = '<div class="empty">O histórico disponível é somente do dia atual. Consulte relatórios para datas anteriores.</div>';
+      return;
+    }
+
+    if (!rows.length) { lista.innerHTML = '<div class="empty">Nenhuma etapa registrada hoje</div>'; return; }
+
+    const etapaColor = {separado:'#16A34A',subiu:'#0D9488',abastecido:'#2563EB',verificando:'#6366F1',protocolo:'#D97706',devolucao:'#7C3AED',encontrado:'#16A34A',nao_encontrado:'#DC2626'};
+    const etapaBg    = {separado:'#F0FDF4',subiu:'#F0FDFA',abastecido:'#EFF6FF',verificando:'#F5F3FF',protocolo:'#FFFBEB',devolucao:'#FAF5FF',encontrado:'#F0FDF4',nao_encontrado:'#F5F3FF'};
+
+    lista.innerHTML = rows.map(r => `
+      <div class="hist-item">
+        <div class="hist-etapa" style="background:${etapaBg[r.etapa]||'var(--surface2)'};color:${etapaColor[r.etapa]||'var(--text2)'};border:1px solid ${etapaColor[r.etapa]||'var(--border)'}30">
+          ${statusIcon(r.etapa)} ${statusLabel(r.etapa)}
+        </div>
+        <div class="hist-info">
+          <div class="hist-pedido">Pedido #${r.numero_pedido||'—'}</div>
+          <div class="hist-cod">${r.codigo||'—'} — ${r.descricao||'—'}</div>
+          <div class="hist-end">📍 ${r.endereco||'—'}${r.qtd_encontrada>0?' &nbsp;•&nbsp; Qtde: <b>'+r.qtd_encontrada+'</b>':''}</div>
+          <div class="hist-func">👤 ${r.funcionario||'—'}</div>
+        </div>
+        <div class="hist-hora">${r.hora||'—'}</div>
+      </div>`).join('');
+  } catch(e) {
+    lista.innerHTML = '<div class="empty" style="color:var(--red)">Erro ao carregar</div>';
+  }
+}
+
+// ── Init ──
+(async function init() {
+  // Define data de hoje nos filtros
+  document.getElementById('hist-data').value = hojeLocal();
+  await carregarFuncionarios();
+  await carregarAvisos();
+  // Auto-refresh a cada 20s
+  intervalId = setInterval(carregarAvisos, 20000);
+})();
+</script>
 </body>
 </html>

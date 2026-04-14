@@ -995,10 +995,13 @@ async function carregarAvisosMobile() {
           (isNE    ? '<div style="font-size:13px;color:var(--indigo);font-weight:700">🚫 Não encontrado às '+(a.hora_reposto||'—')+'</div>' : '') +
           (isProto ? '<div style="font-size:13px;color:var(--amber);font-weight:700">📋 Protocolo às '+(a.hora_reposto||'—')+'</div>' : '') +
           (a.obs   ? '<div style="font-size:11px;color:var(--text2);margin-top:3px">📝 '+a.obs+'</div>' : '') +
+          `<div id="hist-mob-${a.id}" style="margin-top:6px"></div>` +
           '</div>'}
       </div>`;
     }).join('');
     lista.innerHTML = html;
+    // Carrega histórico de etapas de cada aviso
+    for (const a of avisos) { carregarHistoricoAviso(a.id, `hist-mob-${a.id}`); }
   } catch(e) { console.error(e); }
 }
 
@@ -1006,6 +1009,45 @@ async function carregarAvisosMobile() {
 
 
 // Função unificada para marcar aviso no mobile
+// Carrega e renderiza o histórico de etapas de um aviso específico
+async function carregarHistoricoAviso(avisoId, containerId) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  try {
+    const res  = await fetch(`${API}/repositor/historico/${avisoId}`, { credentials:'include' });
+    const rows = await res.json();
+    if (!rows.length) return;
+    const etapaLabel = {
+    separado:'✅ Separado', subiu:'⬆️ Subiu', abastecido:'📦 Abastecido',
+    verificando:'🔍 Verificando', protocolo:'📋 Protocolo', devolucao:'↩️ Devolução',
+    encontrado:'✅ Separado', nao_encontrado:'🚫 Não encontrado'
+  };
+    const etapaCor = {
+      separado:'#16A34A', subiu:'#0D9488', abastecido:'#2563EB',
+      verificando:'#6366F1', protocolo:'#D97706', devolucao:'#7C3AED',
+      encontrado:'#16A34A', nao_encontrado:'#DC2626'
+    };
+    el.innerHTML = `
+      <div style="border-top:1px solid var(--border);padding-top:8px;margin-top:4px">
+        <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1px;margin-bottom:6px">HISTÓRICO DE ETAPAS</div>
+        ${rows.map(r => `
+          <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)">
+            <div style="width:8px;height:8px;border-radius:50%;background:${etapaCor[r.etapa]||'var(--text3)'};flex-shrink:0"></div>
+            <div style="flex:1;min-width:0">
+              <span style="font-size:12px;font-weight:700;color:${etapaCor[r.etapa]||'var(--text2)'}">
+                ${etapaLabel[r.etapa]||r.etapa}
+              </span>
+              ${r.qtd_encontrada > 0 ? `<span style="font-size:11px;color:var(--text3)"> — ${r.qtd_encontrada} un.</span>` : ''}
+            </div>
+            <div style="text-align:right;flex-shrink:0">
+              <div style="font-size:11px;font-weight:700;color:var(--text2)">${r.funcionario||'—'}</div>
+              <div style="font-size:10px;color:var(--text3)">${r.hora||'—'}</div>
+            </div>
+          </div>`).join('')}
+      </div>`;
+  } catch(e) {}
+}
+
 async function marcarAvisoMobile(id, qtdTotal, acao) {
   if ((acao==='protocolo'||acao==='devolucao') && !confirm(`Confirmar: ${acao==='protocolo'?'Protocolo':'Devolução'}? O supervisor será notificado.`)) return;
   const input  = document.getElementById(`m-qtd-enc-${id}`);
