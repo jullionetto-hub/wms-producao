@@ -639,40 +639,89 @@ function processarArquivo(e) { const f = e.target.files[0]; if (f) processarArqu
 
 
 
+/* Variável global para transportadoras lidas */
+let transportadorasImportar = [];
+
 function processarArquivoFile(file) {
   mostrarStatus('⏳ Lendo arquivo...','carregando');
   document.getElementById('preview-importacao').style.display = 'none';
   const reader = new FileReader();
   reader.onload = function(e) {
     try {
-      const wb   = XLSX.read(new Uint8Array(e.target.result), { type:'array' });
-      const ws   = wb.Sheets[wb.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(ws, { defval:'', header:1 });
+      const wb = XLSX.read(new Uint8Array(e.target.result), { type:'array' });
+
+      // ── Detecta aba de itens (primeira que tem "codigo" ou "pedido") ──
+      function lerAba(sheetName) {
+        const ws = wb.Sheets[sheetName];
+        return XLSX.utils.sheet_to_json(ws, { defval:'', header:1 });
+      }
+      function norm(s) { return String(s).toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
+
+      // Procura aba de Itens (tem coluna "codigo" ou "descricao")
+      let abaItens = null, abaTransp = null;
+      for (const name of wb.SheetNames) {
+        const rows = lerAba(name);
+        if (!rows.length) continue;
+        const cab = rows[0].map(norm);
+        const temItens = cab.some(c=>c.includes('cod')) && cab.some(c=>c.includes('desc'));
+        const temTransp = cab.some(c=>c.includes('transp')||c.includes('entrega')||c.includes('servico')||c.includes('servi'));
+        if (temItens && !abaItens) abaItens = name;
+        if (temTransp && !abaTransp) abaTransp = name;
+      }
+      if (!abaItens) abaItens = wb.SheetNames[0];
+
+      // ── Lê aba de Itens ──
+      const rows = lerAba(abaItens);
       if (!rows.length) throw new Error('Arquivo vazio');
-      // Mapeamento flexível: Pedido, Codigo, Descricao, Qtde, Endereço
-      const cab = rows[0].map(c => String(c).toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g,''));
-      const temCab = cab.some(c => c.includes('pedido') || c.includes('codigo') || c.includes('descricao'));
-      const ini  = temCab ? 1 : 0;
-      const iNum  = temCab ? Math.max(cab.findIndex(c=>c.includes('pedido')||c.includes('numero')), 0) : 0;
-      const iCod  = temCab ? (cab.findIndex(c=>c.includes('cod')) >= 0 ? cab.findIndex(c=>c.includes('cod')) : 1) : 1;
-      const iDesc = temCab ? (cab.findIndex(c=>c.includes('desc')) >= 0 ? cab.findIndex(c=>c.includes('desc')) : 2) : 2;
-      const iQtd  = temCab ? (cab.findIndex(c=>c.includes('qtd')||c.includes('quant')) >= 0 ? cab.findIndex(c=>c.includes('qtd')||c.includes('quant')) : 4) : 4;
-      const iEnd  = temCab ? (cab.findIndex(c=>c.includes('end')||c.includes('rua')||c.includes('ender')) >= 0 ? cab.findIndex(c=>c.includes('end')||c.includes('rua')||c.includes('ender')) : 3) : 3;
+      const cab = rows[0].map(norm);
+      const temCab = cab.some(c=>c.includes('pedido')||c.includes('codigo')||c.includes('descricao'));
+      const ini   = temCab ? 1 : 0;
+      const iNum  = temCab ? Math.max(cab.findIndex(c=>c.includes('pedido')||c.includes('numero')),0) : 0;
+      const iCod  = temCab ? (cab.findIndex(c=>c.includes('cod'))>=0 ? cab.findIndex(c=>c.includes('cod')) : 1) : 1;
+      const iDesc = temCab ? (cab.findIndex(c=>c.includes('desc'))>=0 ? cab.findIndex(c=>c.includes('desc')) : 2) : 2;
+      const iQtd  = temCab ? (cab.findIndex(c=>c.includes('qtd')||c.includes('quant'))>=0 ? cab.findIndex(c=>c.includes('qtd')||c.includes('quant')) : 4) : 4;
+      const iEnd  = temCab ? (cab.findIndex(c=>c.includes('end')||c.includes('rua')||c.includes('ender'))>=0 ? cab.findIndex(c=>c.includes('end')||c.includes('rua')||c.includes('ender')) : 3) : 3;
       const dados = [];
       for (let i = ini; i < rows.length; i++) {
-        const r   = rows[i];
-        const num = String(r[iNum] || '').trim();
+        const r = rows[i];
+        const num = String(r[iNum]||'').trim();
         if (!num) continue;
         dados.push({ numero_pedido:num, codigo:String(r[iCod]||'').trim(), descricao:String(r[iDesc]||'').trim(), quantidade:parseInt(r[iQtd])||1, endereco:String(r[iEnd]||'').trim() });
       }
       if (!dados.length) { mostrarStatus('❌ Nenhuma linha encontrada!','erro'); return; }
       pedidosImportar = dados;
+
+      // ── Lê aba de Transportadora (se existir) ──
+      transportadorasImportar = [];
+      if (abaTransp) {
+        const tRows = lerAba(abaTransp);
+        if (tRows.length > 1) {
+          const tCab = tRows[0].map(norm);
+          const tNum   = tCab.findIndex(c=>c.includes('pedido')||c.includes('numero'));
+          // Procura coluna de serviço de entrega
+          const tTransp= tCab.findIndex(c=>c.includes('servico')||c.includes('servi')||c.includes('entrega')||c.includes('transp'));
+          // Razão social / nome do destinatário
+          const tRazao = tCab.findIndex(c=>c.includes('razao')||c.includes('social')||c.includes('nome')||c.includes('destinat'));
+          for (let i = 1; i < tRows.length; i++) {
+            const r = tRows[i];
+            const num = String(r[tNum>=0?tNum:0]||'').trim();
+            if (!num) continue;
+            transportadorasImportar.push({
+              numero_pedido: num,
+              transportadora: tTransp>=0 ? String(r[tTransp]||'').trim() : '',
+              razao_social:   tRazao>=0  ? String(r[tRazao]||'').trim()  : ''
+            });
+          }
+        }
+      }
+
       const totalP = new Set(dados.map(d=>d.numero_pedido)).size;
-      mostrarStatus(`✅ ${dados.length} linha(s) em ${totalP} pedido(s) — clique Importar`,'sucesso');
+      const transpInfo = transportadorasImportar.length > 0 ? ` • 🚚 ${transportadorasImportar.length} transportadoras` : '';
+      mostrarStatus(`✅ ${dados.length} linha(s) em ${totalP} pedido(s)${transpInfo} — clique Importar`,'sucesso');
       document.getElementById('tbody-prev').innerHTML =
         dados.slice(0,10).map(d=>`<tr><td>${d.numero_pedido}</td><td style="color:var(--accent)">${d.codigo}</td><td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.descricao}</td><td style="color:var(--amber)">${d.endereco}</td><td style="color:var(--green)">${d.quantidade}</td></tr>`).join('') +
         (dados.length>10?`<tr><td colspan="5" style="color:var(--text3);text-align:center;padding:8px">... +${dados.length-10} linhas</td></tr>`:'');
-      document.getElementById('txt-total-import').textContent = `${totalP} pedido(s) • ${dados.length} itens`;
+      document.getElementById('txt-total-import').textContent = `${totalP} pedido(s) • ${dados.length} itens${transpInfo}`;
       document.getElementById('preview-importacao').style.display = 'block';
     } catch(err) { mostrarStatus(`❌ ${err.message}`,'erro'); }
   };
@@ -719,7 +768,7 @@ function processarArquivoFile(file) {
       const res  = await fetch(`${API}/importar`, {
         method:'POST', credentials:'include',
         headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ linhas: linhasLote })
+        body: JSON.stringify({ linhas: linhasLote, transportadoras: transportadorasImportar })
       });
       const data = await res.json();
       if (data.erro) { mostrarStatus(`❌ ${data.erro}`, 'erro'); return; }
@@ -1535,7 +1584,23 @@ async function _confirmarPedidoCore(num, inputId, statusId, clWrapId, fnChecklis
     pedidoAtualId  = data.pedido_id;
     pedidoAtualNum = num;
     const statusEl = document.getElementById(statusId);
-    if (statusEl) { statusEl.innerHTML = `Pedido <b style="color:var(--text)">${num}</b> — 🔵 Separando`; statusEl.style.display = 'block'; }
+    // Monta linha de info com transportadora
+    const transpHtml = data.transportadora
+      ? `<div style="margin-top:6px;padding:8px 12px;background:linear-gradient(135deg,rgba(37,99,235,.08),rgba(99,102,241,.06));border:1.5px solid var(--accent);border-radius:10px;display:flex;align-items:center;gap:10px">
+           <span style="font-size:20px">🚚</span>
+           <div>
+             <div style="font-size:14px;font-weight:800;color:var(--accent)">${data.transportadora}</div>
+             ${data.razao_social ? `<div style="font-size:12px;color:var(--text2);margin-top:1px">👤 ${data.razao_social}</div>` : ''}
+           </div>
+         </div>` : '';
+    const caixaAviso = !data.caixa_vinculada
+      ? `<div style="margin-top:6px;padding:8px 12px;background:#FEF3C7;border:1.5px solid #F59E0B;border-radius:10px;font-size:12px;font-weight:700;color:#92400E">
+           📦 Vincule uma caixa ao pedido para iniciar a separação
+         </div>` : '';
+    if (statusEl) {
+      statusEl.innerHTML = `<b style="color:var(--text)">#${num}</b> — 🔵 Separando${transpHtml}${caixaAviso}`;
+      statusEl.style.display = 'block';
+    }
     toast(data.ja_atribuido ? `Pedido ${num} carregado` : `✅ Pedido ${num} → SEPARANDO`, data.ja_atribuido?'info':'sucesso');
     mostrarCampoCaixa(true);
     await fnChecklist();
@@ -1551,6 +1616,7 @@ async function _concluirCore(prefix, fnChecklist, fnFila, fnStats, inputId, stat
   try {
     const res  = await fetch(`${API}/pedidos/${pedidoAtualId}/concluir`, { credentials:'include', method:'PUT' });
     const data = await res.json();
+    if (data.sem_caixa)  { toast('📦 Vincule uma caixa ao pedido antes de concluir!','aviso'); return; }
     if (data.aguardando) { toast('⏳ Ainda aguardando o repositor!','aviso'); return; }
     if (data.bloqueado)  { toast('⛔ Bloqueado! Aguarde o supervisor liberar.','erro'); return; }
     if (data.erro)       { toast(`⚠️ ${data.erro}`,'aviso'); return; }
@@ -2262,6 +2328,12 @@ async function vincularCaixaCore(caixa, inputStatusId) {
       statusEl.style.display = 'block';
       statusEl.innerHTML = `✅ Caixa <b>${caixa}</b> vinculada — Pedido #${pedidoAtualNum}`;
       statusEl.style.color = 'var(--green)';
+    }
+    // Atualiza status do pedido para remover aviso de caixa
+    const stEl = document.getElementById(inputStatusId === 'cl-caixa-status' ? 'status-atual' : 'm-status-atual');
+    if (stEl && stEl.querySelector) {
+      const avisoDiv = stEl.querySelector('[style*="FEF3C7"]');
+      if (avisoDiv) avisoDiv.remove();
     }
   } catch(e) { toast('Erro ao vincular caixa!','erro'); }
 }
