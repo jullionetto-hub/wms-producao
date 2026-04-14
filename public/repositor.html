@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Reposição — WMS Miess</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:#EFF4FB; --surface:#FFF; --surface2:#F5F8FD; --border:#DDE5F0;
+      --accent:#2563EB; --green:#16A34A; --red:#DC2626; --amber:#D97706;
+      --indigo:#6366F1; --teal:#0D9488; --purple:#7C3AED;
+      --text:#0F172A; --text2:#475569; --text3:#94A3B8;
+      --sh:0 1px 3px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.04);
+      --sh-lg:0 8px 32px rgba(0,0,0,.09); --r:14px; --r-sm:9px;
+    }
+    *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+    html,body{min-height:100%;background:var(--bg);font-family:'DM Sans',sans-serif;color:var(--text);font-size:14px}
+    ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--border);border-radius:10px}
+
+    /* LOGIN */
+    #tela-login{position:fixed;inset:0;background:linear-gradient(145deg,#0B1A2E,#0F172A);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px}
+    .login-box{background:rgba(255,255,255,.05);backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,.1);border-radius:24px;padding:40px;width:100%;max-width:420px;text-align:center}
+    .login-logo{font-size:46px;margin-bottom:10px;filter:drop-shadow(0 0 20px rgba(59,130,246,.5))}
+    .login-titulo{font-family:'Space Mono',monospace;font-size:19px;color:#fff;margin-bottom:3px}
+    .login-sub{font-size:11px;color:rgba(255,255,255,.3);margin-bottom:26px;letter-spacing:.8px;text-transform:uppercase}
+    .lf{margin-bottom:13px;text-align:left}
+    .lf label{font-size:10px;color:rgba(96,165,250,.8);font-weight:700;letter-spacing:1.2px;display:block;margin-bottom:5px}
+    .lf input,.lf select{width:100%;padding:12px 14px;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.1);border-radius:10px;color:#fff;font-size:15px;outline:none;font-family:'DM Sans',sans-serif;transition:border-color .2s}
+    .lf input::placeholder{color:rgba(255,255,255,.25)}
+    .lf input:focus,.lf select:focus{border-color:rgba(96,165,250,.6);background:rgba(255,255,255,.09)}
+    .lf select option{color:#000;background:#fff}
+    .btn-entrar{width:100%;padding:13px;background:#2563EB;border:none;border-radius:10px;color:#fff;font-size:15px;font-weight:800;cursor:pointer;transition:all .2s;font-family:'DM Sans',sans-serif;margin-top:4px}
+    .btn-entrar:hover{background:#1D4ED8;transform:translateY(-1px);box-shadow:0 6px 22px rgba(37,99,235,.4)}
+    .l-erro{color:#FCA5A5;font-size:12px;margin-top:10px;display:none;padding:8px 12px;background:rgba(220,38,38,.12);border-radius:8px;border:1px solid rgba(220,38,38,.25)}
+
+    /* HEADER */
+    header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 20px;height:56px;display:flex;align-items:center;justify-content:space-between;box-shadow:var(--sh);position:sticky;top:0;z-index:50}
+    .logo{display:flex;align-items:center;gap:10px}
+    .logo-ic{width:34px;height:34px;background:linear-gradient(135deg,#2563EB,#6366F1);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:17px}
+    .logo-tx{font-family:'Space Mono',monospace;font-size:14px;color:var(--text)}
+    .logo-tx small{font-family:'DM Sans',sans-serif;font-size:10px;color:var(--text3);display:block;font-weight:500}
+    .hdir{display:flex;align-items:center;gap:10px}
+    .colab-badge{font-size:13px;font-weight:700;color:var(--accent);padding:6px 12px;background:rgba(37,99,235,.08);border-radius:8px;border:1px solid rgba(37,99,235,.2)}
+    .btn-sair{padding:6px 12px;background:transparent;border:1.5px solid rgba(220,38,38,.4);border-radius:8px;color:var(--red);font-size:11px;font-weight:700;cursor:pointer;transition:all .2s;font-family:'DM Sans',sans-serif}
+    .btn-sair:hover{background:var(--red);color:#fff}
+
+    /* COLABORADOR BAR */
+    #colab-bar{background:linear-gradient(135deg,rgba(37,99,235,.05),rgba(99,102,241,.03));border-bottom:1px solid var(--border);padding:10px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+    #colab-bar label{font-size:11px;font-weight:700;color:var(--accent);letter-spacing:1px;white-space:nowrap}
+    #colab-select{flex:1;max-width:340px;padding:9px 13px;background:var(--surface);border:2px solid var(--accent);border-radius:10px;color:var(--text);font-size:14px;font-weight:700;outline:none;font-family:'DM Sans',sans-serif}
+    .colab-hint{font-size:11px;color:var(--amber);font-weight:600;padding:6px 12px;background:#FFFBEB;border-radius:8px;border:1px solid #FDE68A}
+
+    /* TABS */
+    .tabs{display:flex;background:var(--surface);border-bottom:1px solid var(--border);padding:0 20px}
+    .tab{padding:13px 20px;font-size:13px;font-weight:700;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:all .2s;background:none;border-top:none;border-left:none;border-right:none;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:6px}
+    .tab.ativo{color:var(--accent);border-bottom-color:var(--accent)}
+    .tab-badge{background:var(--red);color:#fff;border-radius:10px;padding:2px 7px;font-size:10px;font-weight:700}
+
+    /* CONTENT */
+    .page{display:none;padding:20px;max-width:960px;margin:0 auto}
+    .page.ativa{display:block}
+
+    /* FILTRO */
+    .filtro-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px;padding:12px 14px;background:var(--surface);border-radius:var(--r-sm);border:1px solid var(--border);box-shadow:var(--sh)}
+    .filtro-bar select{padding:7px 11px;background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--r-sm);color:var(--text);font-size:13px;outline:none;font-family:'DM Sans',sans-serif}
+    .btn-refresh{padding:7px 14px;background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--r-sm);color:var(--text2);font-size:12px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .18s}
+    .btn-refresh:hover{border-color:var(--accent);color:var(--accent)}
+
+    /* AVISO CARD */
+    .aviso-card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r);padding:18px 20px;margin-bottom:14px;box-shadow:var(--sh)}
+    .aviso-card.pendente{border-color:#FECACA;background:#FEF2F2}
+    .aviso-card.encontrado,.aviso-card.separado{border-color:#BBF7D0;background:#F0FDF4}
+    .aviso-card.subiu{border-color:#99F6E4;background:#F0FDFA}
+    .aviso-card.abastecido{border-color:#BFDBFE;background:#EFF6FF}
+    .aviso-card.verificando{border-color:#DDD6FE;background:#F5F3FF}
+    .aviso-card.protocolo{border-color:#FDE68A;background:#FFFBEB}
+    .aviso-card.devolucao{border-color:#E9D5FF;background:#FAF5FF}
+    .aviso-top{display:flex;gap:14px;align-items:flex-start}
+    .aviso-icon{width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+    .aviso-card.pendente .aviso-icon{background:#FECACA}
+    .aviso-card.encontrado .aviso-icon,.aviso-card.separado .aviso-icon{background:#BBF7D0}
+    .aviso-card.subiu .aviso-icon{background:#99F6E4}
+    .aviso-card.abastecido .aviso-icon{background:#BFDBFE}
+    .aviso-card.verificando .aviso-icon{background:#DDD6FE}
+    .aviso-card.protocolo .aviso-icon{background:#FDE68A}
+    .aviso-card.devolucao .aviso-icon{background:#E9D5FF}
+    .aviso-info{flex:1;min-width:0}
+    .aviso-cod{font-family:'Space Mono',monospace;font-size:15px;font-weight:700;color:var(--red)}
+    .aviso-card.encontrado .aviso-cod,.aviso-card.separado .aviso-cod{color:var(--green)}
+    .aviso-card.subiu .aviso-cod{color:var(--teal)}
+    .aviso-card.abastecido .aviso-cod{color:var(--accent)}
+    .aviso-card.verificando .aviso-cod{color:var(--indigo)}
+    .aviso-card.protocolo .aviso-cod{color:var(--amber)}
+    .aviso-card.devolucao .aviso-cod{color:var(--purple)}
+    .aviso-pedido{font-size:12px;color:var(--text3);margin-left:10px}
+    .aviso-desc{font-size:14px;color:var(--text);margin:4px 0;line-height:1.4;font-weight:500}
+    .aviso-end{font-size:13px;color:var(--text2);font-weight:600}
+    .aviso-qtd{display:inline-block;padding:4px 13px;border-radius:8px;font-size:19px;font-weight:800;font-family:'Space Mono',monospace;margin-top:7px;color:#fff;background:var(--red)}
+    .aviso-card.encontrado .aviso-qtd,.aviso-card.separado .aviso-qtd{background:var(--green)}
+    .aviso-card.subiu .aviso-qtd{background:var(--teal)}
+    .aviso-card.abastecido .aviso-qtd{background:var(--accent)}
+
+    /* QTD INPUT */
+    .qtd-wrap{display:flex;align-items:center;gap:12px;margin:12px 0;padding:12px 14px;background:#fff;border:1.5px solid #FDE68A;border-radius:10px;flex-wrap:wrap}
+    .qtd-wrap label{font-size:12px;color:var(--amber);font-weight:700;white-space:nowrap}
+    .qtd-wrap input{width:90px;padding:7px 10px;background:var(--surface2);border:1.5px solid #FDE68A;border-radius:7px;font-size:22px;font-weight:800;font-family:'Space Mono',monospace;color:var(--text);text-align:center;outline:none}
+    .qtd-wrap span{font-size:13px;color:var(--text3)}
+    .qtd-err{font-size:12px;color:var(--red);font-weight:600;width:100%;margin-top:4px;padding:6px 10px;background:#FEF2F2;border-radius:6px;display:none}
+
+    /* BOTÕES */
+    .btns-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
+    @media(min-width:700px){.btns-grid{grid-template-columns:repeat(6,1fr)}}
+    .btn-ac{padding:14px 8px;border:none;border-radius:12px;font-size:12px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;color:#fff;transition:all .18s;display:flex;flex-direction:column;align-items:center;gap:5px}
+    .btn-ac:hover{filter:brightness(1.1);transform:translateY(-2px);box-shadow:0 4px 14px rgba(0,0,0,.15)}
+    .btn-ac .ic{font-size:22px}
+    .b-sep{background:#16A34A}.b-sub{background:#0D9488}.b-aba{background:#2563EB}
+    .b-ver{background:#6366F1}.b-pro{background:#D97706}.b-dev{background:#7C3AED}
+
+    /* HISTÓRICO INLINE */
+    .etapas-wrap{border-top:1.5px solid var(--border);margin-top:14px;padding-top:12px}
+    .etapas-tit{font-size:10px;font-weight:800;color:var(--text3);letter-spacing:2px;margin-bottom:10px;text-transform:uppercase}
+    .etapa-row{display:flex;align-items:center;gap:12px;padding:8px 0}
+    .etapa-row:not(:last-child){border-bottom:1px solid var(--border)}
+    .etapa-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+    .etapa-label{font-size:13px;font-weight:700;flex:1}
+    .etapa-qtd{font-size:12px;color:var(--text3);margin-left:4px;font-weight:400}
+    .etapa-right{text-align:right;flex-shrink:0}
+    .etapa-func{font-size:13px;font-weight:700;color:var(--text2)}
+    .etapa-hora{font-size:11px;color:var(--text3);font-family:'Space Mono',monospace}
+
+    /* HISTÓRICO ABA */
+    .hist-item{background:var(--surface);border:1.5px solid var(--border);border-radius:12px;padding:13px 16px;margin-bottom:8px;display:flex;gap:12px;box-shadow:var(--sh)}
+    .hist-etapa-badge{font-size:11px;font-weight:800;padding:4px 11px;border-radius:20px;white-space:nowrap;flex-shrink:0;margin-top:2px}
+    .hist-info{flex:1;min-width:0}
+    .hist-pedido{font-size:12px;font-weight:700;color:var(--accent);font-family:'Space Mono',monospace}
+    .hist-cod{font-size:13px;color:var(--text);margin:2px 0}
+    .hist-end{font-size:11px;color:var(--text3)}
+    .hist-func{font-size:12px;font-weight:700;color:var(--text2);margin-top:4px}
+    .hist-hora{font-size:11px;color:var(--text3);font-family:'Space Mono',monospace;flex-shrink:0;margin-top:2px}
+
+    /* TOAST */
+    #toast-root{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9999;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none}
+    .toast{padding:11px 22px;border-radius:12px;font-size:13px;font-weight:600;box-shadow:var(--sh-lg);max-width:90vw;text-align:center;animation:slideUp .25s ease}
+    @keyframes slideUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+    .toast.info{background:#EFF6FF;color:#1D4ED8;border:1px solid #BFDBFE}
+    .toast.sucesso{background:#F0FDF4;color:#15803D;border:1px solid #BBF7D0}
+    .toast.erro{background:#FEF2F2;color:#DC2626;border:1px solid #FECACA}
+    .toast.aviso{background:#FFFBEB;color:#D97706;border:1px solid #FDE68A}
+    .empty{color:var(--text3);text-align:center;padding:56px;font-size:14px}
+
+    @media(max-width:600px){
+      .page{padding:12px}
+      .aviso-card{padding:13px 14px}
+      .btns-grid{gap:7px}
+      .btn-ac{padding:11px 4px;font-size:11px}
+      .btn-ac .ic{font-size:18px}
+      .login-box{padding:32px 24px}
+    }
+  </style>
+</head>
+<body>
+<div id="toast-root"></div>
+
+<!-- ══ LOGIN ══ -->
+<div id="tela-login">
+  <div class="login-box">
+    <div class="login-logo">🔧</div>
+    <div class="login-titulo">Reposição</div>
+    <div class="login-sub">WMS — Miess</div>
+    <div class="lf"><label>LOGIN</label><input type="text" id="l-login" placeholder="reposicao" autocomplete="username"/></div>
+    <div class="lf"><label>SENHA</label><input type="password" id="l-senha" placeholder="••••••••" onkeydown="if(event.key==='Enter')fazerLogin()" autocomplete="current-password"/></div>
+    <div class="lf">
+      <label>COLABORADOR — quem está usando agora</label>
+      <select id="l-colab"><option value="">— Selecione seu nome —</option></select>
+    </div>
+    <div class="l-erro" id="l-erro"></div>
+    <button class="btn-entrar" onclick="fazerLogin()">▶ ENTRAR</button>
+  </div>
+</div>
+
+<!-- ══ APP ══ -->
+<div id="app" style="display:none;flex-direction:column;min-height:100vh">
+  <header>
+    <div class="logo">
+      <div class="logo-ic">🔧</div>
+      <div class="logo-tx">Reposição<small>WMS — Miess</small></div>
+    </div>
+    <div class="hdir">
+      <span class="colab-badge" id="colab-nome">—</span>
+      <button class="btn-sair" onclick="sair()">✖ Sair</button>
+    </div>
+  </header>
+
+  <div id="colab-bar">
+    <label>👤 COLABORADOR:</label>
+    <select id="colab-select" onchange="trocarColaborador(this.value)">
+      <option value="">— Selecione —</option>
+    </select>
+    <span class="colab-hint" id="colab-hint" style="display:none">⚠️ Selecione seu nome para registrar ações</span>
+  </div>
+
+  <div class="tabs">
+    <button class="tab ativo" id="tab-solicitacoes" onclick="mudarAba('solicitacoes')">
+      🔧 Solicitações <span class="tab-badge" id="badge-pend" style="display:none">0</span>
+    </button>
+    <button class="tab" id="tab-historico" onclick="mudarAba('historico')">📋 Histórico do Dia</button>
+  </div>
+
+  <!-- SOLICITAÇÕES -->
+  <div class="page ativa" id="page-solicitacoes">
+    <div class="filtro-bar">
+      <select id="filtro-status" onchange="carregarAvisos()">
+        <option value="">Todos</option>
+        <option value="pendente">🔴 Pendente</option>
+        <option value="encontrado">✅ Separado</option>
+        <option value="subiu">⬆️ Subiu</option>
+        <option value="abastecido">📦 Abastecido</option>
+        <option value="verificando">🔍 Verificando</option>
+        <option value="protocolo">📋 Protocolo</option>
+        <option value="devolucao">↩️ Devolução</option>
+      </select>
+      <span style="font-size:12px;color:var(--red);font-weight:700">🔴 <span id="cnt-pend">0</span> pendentes</span>
+      <span style="font-size:12px;color:var(--green);font-weight:600">✅ <span id="cnt-rep">0</span> resolvidos</span>
+      <button class="btn-refresh" onclick="carregarAvisos()">🔄 Atualizar</button>
+    </div>
+    <div id="lista-avisos"><div class="empty">Carregando...</div></div>
+  </div>
+
+  <!-- HISTÓRICO -->
+  <div class="page" id="page-historico">
+    <div class="filtro-bar">
+      <select id="hist-func" onchange="carregarHistorico()">
+        <option value="">Todos os colaboradores</option>
+      </select>
+      <button class="btn-refresh" onclick="carregarHistorico()">🔄 Atualizar</button>
+    </div>
+    <div id="lista-historico"><div class="empty">Carregando...</div></div>
+  </div>
+</div>
+
+<script>
+const API = window.location.origin;
+let colaboradorAtivo = '';
+let timerAvisos = null;
+
+function toast(msg, tipo='info') {
+  const el = document.createElement('div');
+  el.className = `toast ${tipo}`;
+  el.textContent = msg;
+  document.getElementById('toast-root').appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+
+const etapaLabel = {separado:'✅ Separado',subiu:'⬆️ Subiu',abastecido:'📦 Abastecido',verificando:'🔍 Verificando',protocolo:'📋 Protocolo',devolucao:'↩️ Devolução',encontrado:'✅ Separado',nao_encontrado:'🚫 Não encontrado'};
+const etapaCor   = {separado:'#16A34A',subiu:'#0D9488',abastecido:'#2563EB',verificando:'#6366F1',protocolo:'#D97706',devolucao:'#7C3AED',encontrado:'#16A34A',nao_encontrado:'#DC2626'};
+const etapaBg    = {separado:'#F0FDF4',subiu:'#F0FDFA',abastecido:'#EFF6FF',verificando:'#F5F3FF',protocolo:'#FFFBEB',devolucao:'#FAF5FF',encontrado:'#F0FDF4',nao_encontrado:'#F5F3FF'};
+function sIcon(s){return {pendente:'🔴',encontrado:'✅',separado:'✅',subiu:'⬆️',abastecido:'📦',verificando:'🔍',protocolo:'📋',devolucao:'↩️',nao_encontrado:'🚫'}[s]||'•'}
+
+async function carregarColaboradores() {
+  try {
+    const res  = await fetch(`${API}/usuarios`);
+    const list = await res.json();
+    const opts = list.map(f=>`<option value="${f.nome}">${f.nome}</option>`).join('');
+    ['l-colab','colab-select'].forEach(id => {
+      const el = document.getElementById(id); if (!el) return;
+      const ph = id==='hist-func'?'<option value="">Todos</option>':'<option value="">— Selecione seu nome —</option>';
+      el.innerHTML = ph + opts;
+    });
+    const hf = document.getElementById('hist-func');
+    if (hf) hf.innerHTML = '<option value="">Todos os colaboradores</option>' + opts;
+  } catch(e) {}
+}
+
+async function fazerLogin() {
+  const login = document.getElementById('l-login').value.trim();
+  const senha = document.getElementById('l-senha').value;
+  const colab = document.getElementById('l-colab').value;
+  const erroEl = document.getElementById('l-erro');
+  if (!login||!senha) { erroEl.textContent='Preencha login e senha!'; erroEl.style.display='block'; return; }
+  if (!colab) { erroEl.textContent='Selecione o colaborador!'; erroEl.style.display='block'; return; }
+  try {
+    const res = await fetch(`${API}/repositor/login`,{
+      method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({login,senha,colaborador:colab})
+    });
+    const data = await res.json();
+    if (!res.ok) { erroEl.textContent=data.erro||'Erro!'; erroEl.style.display='block'; return; }
+    colaboradorAtivo = data.nome;
+    erroEl.style.display='none';
+    ativarApp();
+  } catch(e) { erroEl.textContent='Erro ao conectar!'; erroEl.style.display='block'; }
+}
+
+function ativarApp() {
+  document.getElementById('tela-login').style.display='none';
+  document.getElementById('app').style.display='flex';
+  document.getElementById('colab-nome').textContent=`👤 ${colaboradorAtivo}`;
+  const sel = document.getElementById('colab-select');
+  if (sel) sel.value = colaboradorAtivo;
+  atualizarHint();
+  carregarAvisos();
+  timerAvisos = setInterval(carregarAvisos, 20000);
+}
+
+function trocarColaborador(nome) {
+  colaboradorAtivo = nome;
+  document.getElementById('colab-nome').textContent = nome ? `👤 ${nome}` : '—';
+  atualizarHint();
+  fetch(`${API}/repositor/login`,{
+    method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({login:'x',senha:'x',colaborador:nome,_apenas_colab:true})
+  }).catch(()=>{});
+}
+
+function atualizarHint() {
+  const h = document.getElementById('colab-hint');
+  if (h) h.style.display = colaboradorAtivo ? 'none' : 'inline';
+}
+
+function sair() {
+  if (!confirm('Sair da tela de reposição?')) return;
+  fetch(`${API}/repositor/logout`,{method:'POST',credentials:'include'}).catch(()=>{});
+  clearInterval(timerAvisos);
+  colaboradorAtivo='';
+  document.getElementById('app').style.display='none';
+  document.getElementById('tela-login').style.display='flex';
+  document.getElementById('l-login').value='';
+  document.getElementById('l-senha').value='';
+  document.getElementById('l-colab').value='';
+}
+
+function mudarAba(aba) {
+  ['solicitacoes','historico'].forEach(a => {
+    document.getElementById(`page-${a}`).classList.toggle('ativa',a===aba);
+    document.getElementById(`tab-${a}`).classList.toggle('ativo',a===aba);
+  });
+  if (aba==='historico') carregarHistorico();
+}
+
+async function carregarAvisos() {
+  const filtro = document.getElementById('filtro-status').value;
+  let url = `${API}/repositor/avisos`; if(filtro) url+=`?status=${filtro}`;
+  try {
+    const res    = await fetch(url,{credentials:'include'});
+    const avisos = await res.json();
+    const pend   = avisos.filter(a=>a.status==='pendente').length;
+    const resol  = avisos.filter(a=>a.status!=='pendente').length;
+    document.getElementById('cnt-pend').textContent=pend;
+    document.getElementById('cnt-rep').textContent=resol;
+    const badge=document.getElementById('badge-pend');
+    badge.textContent=pend; badge.style.display=pend>0?'inline':'none';
+
+    const lista=document.getElementById('lista-avisos');
+    if(!avisos.length){lista.innerHTML='<div class="empty">✅ Nenhum aviso no momento</div>';return;}
+
+    lista.innerHTML = avisos.map(a=>{
+      const isPend = a.status==='pendente';
+      const icon   = sIcon(a.status);
+      const qtdWrap = isPend ? `
+        <div class="qtd-wrap">
+          <label>Qtde encontrada:</label>
+          <input type="number" id="qtd-${a.id}" min="0" max="${a.quantidade||99}" value="${a.quantidade||1}" inputmode="numeric"/>
+          <span>de <b>${a.quantidade||'?'}</b></span>
+          <div class="qtd-err" id="qtd-err-${a.id}"></div>
+        </div>` : '';
+      const btns = isPend ? `
+        <div class="btns-grid">
+          <button class="btn-ac b-sep" onclick="marcar(${a.id},${a.quantidade||1},'separado')">  <span class="ic">✅</span>Separado</button>
+          <button class="btn-ac b-sub" onclick="marcar(${a.id},${a.quantidade||1},'subiu')">    <span class="ic">⬆️</span>Subiu</button>
+          <button class="btn-ac b-aba" onclick="marcar(${a.id},${a.quantidade||1},'abastecido')"><span class="ic">📦</span>Abastecido</button>
+          <button class="btn-ac b-ver" onclick="marcar(${a.id},0,'verificando')">               <span class="ic">🔍</span>Verificando</button>
+          <button class="btn-ac b-pro" onclick="marcar(${a.id},0,'protocolo')">                 <span class="ic">📋</span>Protocolo</button>
+          <button class="btn-ac b-dev" onclick="marcar(${a.id},0,'devolucao')">                 <span class="ic">↩️</span>Devolução</button>
+        </div>` : '';
+      const statusLine = !isPend
+        ? `<div style="margin-top:8px;font-size:13px;font-weight:700;color:${etapaCor[a.status]||'var(--text2)'}">
+             ${icon} ${etapaLabel[a.status]||a.status} às ${a.hora_reposto||'—'}${a.qtd_encontrada>0?' — '+a.qtd_encontrada+' un.':''}
+           </div>
+           ${a.repositor_nome?`<div style="font-size:12px;color:var(--text3);margin-top:2px">👤 ${a.repositor_nome}</div>`:''}`
+        : `<div style="margin-top:6px;font-size:11px;color:var(--red);font-weight:600">⏱ ${a.hora_aviso||'—'} • Sep: ${a.separador_nome||'—'}</div>`;
+      return `<div class="aviso-card ${a.status}">
+        <div class="aviso-top">
+          <div class="aviso-icon">${icon}</div>
+          <div class="aviso-info">
+            <div><span class="aviso-cod">${a.codigo||'—'}</span><span class="aviso-pedido">Pedido #${a.numero_pedido}</span></div>
+            <div class="aviso-desc">${a.descricao||'—'}</div>
+            <div class="aviso-end">📍 ${a.endereco||'—'}</div>
+            <span class="aviso-qtd">x${a.quantidade||1}</span>
+            ${statusLine}
+          </div>
+        </div>
+        ${qtdWrap}${btns}
+        <div id="hist-${a.id}"></div>
+      </div>`;
+    }).join('');
+    for(const a of avisos) carregarHistoricoAviso(a.id);
+  } catch(e){document.getElementById('lista-avisos').innerHTML='<div class="empty" style="color:var(--red)">Erro ao carregar</div>';}
+}
+
+async function carregarHistoricoAviso(avisoId) {
+  const el=document.getElementById(`hist-${avisoId}`); if(!el) return;
+  try {
+    const res  = await fetch(`${API}/repositor/historico/${avisoId}`,{credentials:'include'});
+    const rows = await res.json();
+    if(!rows.length){el.innerHTML='';return;}
+    el.innerHTML=`<div class="etapas-wrap">
+      <div class="etapas-tit">Histórico de Etapas</div>
+      ${rows.map(r=>`
+        <div class="etapa-row">
+          <div class="etapa-dot" style="background:${etapaCor[r.etapa]||'var(--text3)'}"></div>
+          <div class="etapa-label" style="color:${etapaCor[r.etapa]||'var(--text2)'}">
+            ${etapaLabel[r.etapa]||r.etapa}
+            ${r.qtd_encontrada>0?`<span class="etapa-qtd">— ${r.qtd_encontrada} un.</span>`:''}
+          </div>
+          <div class="etapa-right">
+            <div class="etapa-func">👤 ${r.funcionario||'—'}</div>
+            <div class="etapa-hora">${r.hora||'—'}</div>
+          </div>
+        </div>`).join('')}
+    </div>`;
+  } catch(e){}
+}
+
+async function marcar(id, qtdTotal, acao) {
+  if (!colaboradorAtivo) { toast('Selecione o colaborador antes de marcar!','aviso'); return; }
+  if (['protocolo','devolucao'].includes(acao) && !confirm(`Confirmar: ${acao==='protocolo'?'Protocolo':'Devolução'}?`)) return;
+  const acoesCom = ['separado','encontrado','subiu','abastecido'];
+  const inputEl  = document.getElementById(`qtd-${id}`);
+  const errEl    = document.getElementById(`qtd-err-${id}`);
+  const qtdEnc   = acoesCom.includes(acao) ? (parseInt(inputEl?.value)||0) : 0;
+
+  if (acoesCom.includes(acao) && qtdEnc < qtdTotal) {
+    const msg = `⚠️ Encontrou ${qtdEnc} de ${qtdTotal}. Use "Verificando" se ainda está buscando. Só marque Separado/Subiu/Abastecido com a quantidade TOTAL.`;
+    if (errEl) { errEl.textContent=msg; errEl.style.display='block'; }
+    toast(`Quantidade insuficiente! ${qtdEnc} de ${qtdTotal}.`,'aviso');
+    return;
+  }
+  if (errEl) errEl.style.display='none';
+
+  try {
+    const res  = await fetch(`${API}/repositor/avisos/${id}/${acao}`,{
+      method:'PUT',credentials:'include',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({qtd_encontrada:qtdEnc,repositor_nome:colaboradorAtivo})
+    });
+    const data = await res.json();
+    if (data.erro) { toast(data.erro,'erro'); return; }
+    const msgs={separado:'✅ Separado!',subiu:'⬆️ Subiu!',abastecido:'📦 Abastecido!',verificando:'🔍 Verificando...',protocolo:'📋 Protocolo!',devolucao:'↩️ Devolução!'};
+    toast(msgs[acao]||'OK!','sucesso');
+    await carregarAvisos();
+  } catch(e){toast('Erro ao marcar!','erro');}
+}
+
+async function carregarHistorico() {
+  const func  = document.getElementById('hist-func').value;
+  const lista = document.getElementById('lista-historico');
+  lista.innerHTML='<div class="empty">Carregando...</div>';
+  try {
+    const res  = await fetch(`${API}/repositor/historico-dia`,{credentials:'include'});
+    let rows   = await res.json();
+    if (func) rows = rows.filter(r=>r.funcionario===func);
+    if (!rows.length){lista.innerHTML='<div class="empty">Nenhuma etapa registrada hoje</div>';return;}
+    lista.innerHTML=rows.map(r=>`
+      <div class="hist-item">
+        <span class="hist-etapa-badge" style="background:${etapaBg[r.etapa]||'var(--surface2)'};color:${etapaCor[r.etapa]||'var(--text2)'};border:1px solid ${etapaCor[r.etapa]||'var(--border)'}40">
+          ${sIcon(r.etapa)} ${etapaLabel[r.etapa]||r.etapa}
+        </span>
+        <div class="hist-info">
+          <div class="hist-pedido">Pedido #${r.numero_pedido||'—'}</div>
+          <div class="hist-cod">${r.codigo||'—'} — ${r.descricao||'—'}</div>
+          <div class="hist-end">📍 ${r.endereco||'—'}${r.qtd_encontrada>0?' • Qtde: <b>'+r.qtd_encontrada+'</b>':''}</div>
+          <div class="hist-func">👤 ${r.funcionario||'—'}</div>
+        </div>
+        <div class="hist-hora">${r.hora||'—'}</div>
+      </div>`).join('');
+  } catch(e){lista.innerHTML='<div class="empty" style="color:var(--red)">Erro ao carregar</div>';}
+}
+
+(async function init(){
+  await carregarColaboradores();
+  try {
+    const res  = await fetch(`${API}/repositor/sessao`,{credentials:'include'});
+    const data = await res.json();
+    if (data.logado){ colaboradorAtivo=data.colaborador||''; ativarApp(); }
+  } catch(e){}
+})();
+</script>
+</body>
+</html>
