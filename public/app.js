@@ -837,37 +837,16 @@ function mostrarStatus(msg, tipo) {
 /* ══════════════════════════════════════════
    MOBILE REPOSITOR
 ══════════════════════════════════════════ */
-// Funcionário ativo na tela de repositor (sem login)
-let repFuncionarioAtivo = '';
-
 function ativarMobileRep() {
   document.body.classList.add('rep-mobile');
   document.getElementById('rep-mobile-root').style.display = 'flex';
   document.getElementById('rep-tabbar').style.display = 'flex';
   mudarTabRep('avisos');
-  carregarFuncionariosRep();
   carregarAvisosMobile();
   setInterval(() => { carregarAvisosMobile(); }, 20000);
 }
 
-async function carregarFuncionariosRep() {
-  try {
-    const res  = await fetch(`${API}/repositor/funcionarios`);
-    const list = await res.json();
-    const sel  = document.getElementById('rep-select-func');
-    if (!sel) return;
-    sel.innerHTML = '<option value="">— Quem sou eu? —</option>' +
-      list.map(f=>`<option value="${f.nome}">${f.nome}</option>`).join('');
-    // Restaura seleção salva no localStorage
-    const salvo = localStorage.getItem('rep_funcionario');
-    if (salvo) { sel.value = salvo; repFuncionarioAtivo = salvo; }
-  } catch(e) {}
-}
 
-function selecionarFuncionarioRep(val) {
-  repFuncionarioAtivo = val;
-  localStorage.setItem('rep_funcionario', val);
-}
 
 
 
@@ -1001,13 +980,13 @@ async function carregarAvisosMobile() {
             id="m-qtd-enc-${a.id}" min="0" max="${a.quantidade||99}" placeholder="0" inputmode="numeric"/>
           <span style="font-size:12px;color:var(--text3);white-space:nowrap">de <b>${a.quantidade||'?'}</b></span>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-          <button style="padding:13px;background:#16A34A;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif" onclick="marcarAvisoMobile(${a.id},${a.quantidade||0},'separado')">✅ Separado</button>
-          <button style="padding:13px;background:#0D9488;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif" onclick="marcarAvisoMobile(${a.id},${a.quantidade||0},'subiu')">⬆️ Subiu</button>
-          <button style="padding:13px;background:#2563EB;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif" onclick="marcarAvisoMobile(${a.id},${a.quantidade||0},'abastecido')">📦 Abastecido</button>
-          <button style="padding:13px;background:#6366F1;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif" onclick="marcarAvisoMobile(${a.id},0,'verificando')">🔍 Verificando</button>
-          <button style="padding:13px;background:#D97706;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif" onclick="marcarAvisoMobile(${a.id},0,'protocolo')">📋 Protocolo</button>
-          <button style="padding:13px;background:#7C3AED;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif" onclick="marcarAvisoMobile(${a.id},0,'devolucao')">↩️ Devolução</button>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-bottom:8px">
+          <button style="padding:11px 4px;background:#16A34A;color:#fff;border:none;border-radius:10px;font-size:11px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;flex-direction:column;align-items:center;gap:3px" onclick="marcarAvisoMobile(${a.id},${a.quantidade||0},'separado')"><span style="font-size:17px">✅</span>Separado</button>
+          <button style="padding:11px 4px;background:#0D9488;color:#fff;border:none;border-radius:10px;font-size:11px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;flex-direction:column;align-items:center;gap:3px" onclick="marcarAvisoMobile(${a.id},${a.quantidade||0},'subiu')"><span style="font-size:17px">⬆️</span>Subiu</button>
+          <button style="padding:11px 4px;background:#2563EB;color:#fff;border:none;border-radius:10px;font-size:11px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;flex-direction:column;align-items:center;gap:3px" onclick="marcarAvisoMobile(${a.id},${a.quantidade||0},'abastecido')"><span style="font-size:17px">📦</span>Abastecido</button>
+          <button style="padding:11px 4px;background:#6366F1;color:#fff;border:none;border-radius:10px;font-size:11px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;flex-direction:column;align-items:center;gap:3px" onclick="marcarAvisoMobile(${a.id},0,'verificando')"><span style="font-size:17px">🔍</span>Verificando</button>
+          <button style="padding:11px 4px;background:#D97706;color:#fff;border:none;border-radius:10px;font-size:11px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;flex-direction:column;align-items:center;gap:3px" onclick="marcarAvisoMobile(${a.id},0,'protocolo')"><span style="font-size:17px">📋</span>Protocolo</button>
+          <button style="padding:11px 4px;background:#7C3AED;color:#fff;border:none;border-radius:10px;font-size:11px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;flex-direction:column;align-items:center;gap:3px" onclick="marcarAvisoMobile(${a.id},0,'devolucao')"><span style="font-size:17px">↩️</span>Devolução</button>
         </div>
         ` : '<div style="margin-top:4px">' +
           (isEnc   ? '<div style="font-size:13px;color:var(--green);font-weight:700">✅ Encontrado às '+(a.hora_reposto||'—')+(a.qtd_encontrada>0?' — '+a.qtd_encontrada+' un.':'')+'</div>' : '') +
@@ -1028,11 +1007,10 @@ async function carregarAvisosMobile() {
 
 // Função unificada para marcar aviso no mobile
 async function marcarAvisoMobile(id, qtdTotal, acao) {
-  if (!repFuncionarioAtivo) { toast('Selecione seu nome antes de marcar!','aviso'); return; }
   if ((acao==='protocolo'||acao==='devolucao') && !confirm(`Confirmar: ${acao==='protocolo'?'Protocolo':'Devolução'}? O supervisor será notificado.`)) return;
   const input  = document.getElementById(`m-qtd-enc-${id}`);
   const qtdEnc = ['nao_encontrado','protocolo','verificando','devolucao'].includes(acao) ? 0 : (parseInt(input?.value) || qtdTotal || 0);
-  const nome   = repFuncionarioAtivo;
+  const nome   = usuarioAtual?.nome || '';
   try {
     const res = await fetch(`${API}/repositor/avisos/${id}/${acao}`, {
       credentials:'include', method:'PUT',
@@ -1065,7 +1043,9 @@ async function carregarHistoricoDia() {
   lista.innerHTML = '<div style="color:var(--text3);text-align:center;padding:24px">Carregando...</div>';
   try {
     const res  = await fetch(`${API}/repositor/historico-dia`, { credentials:'include' });
-    const rows = await res.json();
+    let rows = await res.json();
+    const nomeAtual = usuarioAtual?.nome || '';
+    if (nomeAtual) rows = rows.filter(r => r.funcionario === nomeAtual);
     if (!rows.length) {
       lista.innerHTML = '<div style="color:var(--text3);text-align:center;padding:36px;font-size:14px">Nenhuma etapa registrada hoje</div>';
       return;
@@ -1098,7 +1078,9 @@ async function carregarStatsRepMobile() {
   try {
     const nomeEl = document.getElementById('m-rep-nome');
     if (nomeEl) nomeEl.textContent = `👤 ${usuarioAtual?.nome || '—'}`;
-    const res  = await fetch(`${API}/estatisticas/repositor`, { credentials:'include' });
+    const nomeRep = usuarioAtual?.nome || '';
+    const urlStats = nomeRep ? `${API}/estatisticas/repositor?repositor_nome=${encodeURIComponent(nomeRep)}` : `${API}/estatisticas/repositor`;
+    const res  = await fetch(urlStats, { credentials:'include' });
     const data = await res.json();
     const set  = (id, val) => { const e = document.getElementById(id); if(e) e.textContent = val ?? 0; };
     set('m-rep-hoje',      data.repostos_hoje);
