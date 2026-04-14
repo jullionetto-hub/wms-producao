@@ -422,6 +422,15 @@
 
     <!-- ══ REPOSITOR MOBILE ══ -->
     <div id="rep-mobile-root">
+      <!-- SELETOR DE FUNCIONÁRIO — aparece no topo sempre -->
+      <div id="rep-func-bar" style="background:var(--surface);border-bottom:1px solid var(--border);padding:10px 14px;flex-shrink:0">
+        <div style="font-size:10px;font-weight:700;color:var(--accent);letter-spacing:1px;margin-bottom:5px">👤 QUEM SOU EU</div>
+        <select id="rep-select-func" onchange="selecionarFuncionarioRep(this.value)"
+          style="width:100%;padding:10px 12px;background:var(--surface2);border:2px solid var(--accent);border-radius:10px;color:var(--text);font-size:15px;font-weight:700;outline:none;font-family:'DM Sans',sans-serif">
+          <option value="">— Selecione seu nome —</option>
+        </select>
+      </div>
+      <!-- ABA 1 — SOLICITAÇÕES -->
       <div class="rep-tab-page ativa" id="rep-tab-avisos">
         <div class="rep-scroll">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
@@ -431,8 +440,12 @@
               <select id="m-filtro-rep-status" class="sel-sm" onchange="carregarAvisosMobile()" style="min-width:110px">
                 <option value="">Todos</option>
                 <option value="pendente">Pendente</option>
-                <option value="reposto">Reposto</option>
-                <option value="nao_encontrado">Não encontrado</option>
+                <option value="encontrado">Separado</option>
+                <option value="subiu">Subiu</option>
+                <option value="abastecido">Abastecido</option>
+                <option value="verificando">Verificando</option>
+                <option value="protocolo">Protocolo</option>
+                <option value="devolucao">Devolução</option>
               </select>
               <button class="btn btn-outline btn-sm" onclick="carregarAvisosMobile()">🔄</button>
             </div>
@@ -440,6 +453,17 @@
           <div id="m-lista-avisos"><div style="color:var(--text3);text-align:center;padding:40px;font-size:13px">✅ Nenhum item em falta</div></div>
         </div>
       </div>
+      <!-- ABA 2 — HISTÓRICO DO DIA -->
+      <div class="rep-tab-page" id="rep-tab-historico">
+        <div class="rep-scroll">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+            <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">📋 Histórico do Dia</div>
+            <button class="btn btn-outline btn-sm" onclick="carregarHistoricoDia()">🔄</button>
+          </div>
+          <div id="rep-tab-historico-lista"><div style="color:var(--text3);text-align:center;padding:36px;font-size:14px">Nenhuma etapa hoje</div></div>
+        </div>
+      </div>
+      <!-- ABA 3 — ESTATÍSTICAS -->
       <div class="rep-tab-page" id="rep-tab-stats">
         <div class="rep-scroll">
           <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text);margin-bottom:14px">📈 Meu Desempenho</div>
@@ -557,8 +581,9 @@
 
 <!-- Tab bar Repositor -->
 <div class="rep-tabbar" id="rep-tabbar">
-  <button class="rep-tab ativo" id="rtab-avisos" onclick="mudarTabRep('avisos')"><span class="rep-tab-ic">🔧</span>SOLICITAÇÕES<span class="rep-tab-badge" id="rtab-badge" style="display:none">0</span></button>
-  <button class="rep-tab" id="rtab-stats" onclick="mudarTabRep('stats')"><span class="rep-tab-ic">📈</span>ESTATÍSTICAS</button>
+  <button class="rep-tab ativo" id="rtab-avisos" onclick="mudarTabRep('avisos')"><span class="rep-tab-ic">🔧</span>PEDIDOS<span class="rep-tab-badge" id="rtab-badge" style="display:none">0</span></button>
+  <button class="rep-tab" id="rtab-historico" onclick="mudarTabRep('historico')"><span class="rep-tab-ic">📋</span>HISTÓRICO</button>
+  <button class="rep-tab" id="rtab-stats" onclick="mudarTabRep('stats')"><span class="rep-tab-ic">📈</span>STATS</button>
 </div>
 
 <!-- Tab bar Checkout -->

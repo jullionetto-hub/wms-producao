@@ -194,6 +194,21 @@ db.serialize(() => {
   )`);
   db.run(`ALTER TABLE checkout ADD COLUMN separador_nome TEXT DEFAULT ''`, () => {});
 
+  db.run(`CREATE TABLE IF NOT EXISTS historico_etapas (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    aviso_id INTEGER NOT NULL,
+    numero_pedido TEXT,
+    codigo TEXT,
+    descricao TEXT,
+    endereco TEXT,
+    etapa TEXT NOT NULL,
+    funcionario TEXT NOT NULL,
+    hora TEXT,
+    data TEXT,
+    qtd_encontrada INTEGER DEFAULT 0
+  )`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_hist_aviso ON historico_etapas(aviso_id)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_hist_data  ON historico_etapas(data)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_pedidos_sep    ON pedidos(separador_id, status)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_pedidos_num    ON pedidos(numero_pedido)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_itens_pedido   ON itens_pedido(pedido_id)`);
@@ -262,6 +277,15 @@ app.get('/auth/me', (req, res) => {
 });
 
 // ─── USUÁRIOS ─────────────────────────────────────────────────────────────────
+// Lista de repositores para tela aberta
+app.get('/repositor/funcionarios', (req, res) => {
+  db.all(`SELECT id, nome FROM usuarios WHERE status='ativo' AND (perfil='repositor' OR perfis_acesso LIKE '%repositor%') ORDER BY nome`,
+    [], (err, rows) => {
+      if (err) return res.status(500).json({ erro: err.message });
+      res.json(rows || []);
+    });
+});
+
 app.get('/usuarios', (req, res) => {
   const { perfil } = req.query;
   let sql = 'SELECT id,nome,login,perfil,subtipo_repositor,perfis_acesso,turno,status,data_cadastro FROM usuarios WHERE 1=1';
@@ -603,32 +627,78 @@ app.get('/repositor/avisos', (req, res) => {
 // Rota unificada para marcar aviso (encontrado, subiu, abastecido, nao_encontrado, protocolo)
 app.put('/repositor/avisos/:id/:acao', (req, res) => {
   const { acao } = req.params;
-  const acoes = ['reposto','encontrado','subiu','abastecido','nao_encontrado','protocolo'];
+  // Novas ações: separado, verificando, devolucao além das antigas
+  const acoes = ['reposto','encontrado','separado','subiu','abastecido','nao_encontrado','protocolo','verificando','devolucao'];
   if (!acoes.includes(acao)) return res.status(400).json({ erro:'Acao invalida!' });
-  const { hora } = dataHoraLocal();
+  const { hora, data } = dataHoraLocal();
   const { qtd_encontrada, repositor_nome } = req.body || {};
-  const statusMap = { reposto:'encontrado', encontrado:'encontrado', subiu:'subiu', abastecido:'abastecido', nao_encontrado:'nao_encontrado', protocolo:'protocolo' };
+  // Mapeia ação para status no banco
+  const statusMap = {
+    reposto:'encontrado', encontrado:'encontrado', separado:'encontrado',
+    subiu:'subiu', abastecido:'abastecido',
+    nao_encontrado:'nao_encontrado', protocolo:'protocolo',
+    verificando:'verificando', devolucao:'devolucao'
+  };
   const novoStatus = statusMap[acao];
-  const temQtd = ['encontrado','reposto','subiu','abastecido'].includes(acao);
-  if (temQtd) {
-    db.run('UPDATE avisos_repositor SET status=?,hora_reposto=?,qtd_encontrada=?,repositor_nome=? WHERE id=?',
-      [novoStatus, hora, parseInt(qtd_encontrada)||0, repositor_nome||'', req.params.id], err => {
-        if (err) return res.status(500).json({ erro: err.message });
-        res.json({ mensagem:'OK!' });
+  const temQtd = ['encontrado','reposto','separado','subiu','abastecido'].includes(acao);
+  // Etapas que notificam o separador
+  const etapasNotifica = ['separado','subiu','abastecido'];
+
+  db.get('SELECT * FROM avisos_repositor WHERE id=?', [req.params.id], (err0, aviso) => {
+    if (err0 || !aviso) return res.status(404).json({ erro:'Aviso nao encontrado!' });
+
+    const qtdEnc = parseInt(qtd_encontrada)||0;
+    const func   = repositor_nome || '';
+
+    const salvarHistorico = (cb) => {
+      db.run(`INSERT INTO historico_etapas (aviso_id,numero_pedido,codigo,descricao,endereco,etapa,funcionario,hora,data,qtd_encontrada)
+        VALUES (?,?,?,?,?,?,?,?,?,?)`,
+        [aviso.id, aviso.numero_pedido, aviso.codigo, aviso.descricao, aviso.endereco,
+         acao, func, hora, data, temQtd ? qtdEnc : 0], cb);
+    };
+
+    const updateAviso = (cb) => {
+      if (temQtd) {
+        db.run('UPDATE avisos_repositor SET status=?,hora_reposto=?,qtd_encontrada=?,repositor_nome=? WHERE id=?',
+          [novoStatus, hora, qtdEnc, func, req.params.id], cb);
+      } else {
+        db.run('UPDATE avisos_repositor SET status=?,hora_reposto=?,repositor_nome=? WHERE id=?',
+          [novoStatus, hora, func, req.params.id], cb);
+      }
+    };
+
+    updateAviso(err => {
+      if (err) return res.status(500).json({ erro: err.message });
+      salvarHistorico(() => {
+        res.json({ mensagem:'OK!', notifica: etapasNotifica.includes(acao), acao });
       });
-  } else {
-    db.run('UPDATE avisos_repositor SET status=?,hora_reposto=?,repositor_nome=? WHERE id=?',
-      [novoStatus, hora, repositor_nome||'', req.params.id], err => {
-        if (err) return res.status(500).json({ erro: err.message });
-        res.json({ mensagem:'OK!' });
-      });
-  }
+    });
+  });
+});
+
+// Histórico de etapas de um aviso
+app.get('/repositor/historico/:aviso_id', (req, res) => {
+  db.all('SELECT * FROM historico_etapas WHERE aviso_id=? ORDER BY id ASC',
+    [req.params.aviso_id], (err, rows) => {
+      if (err) return res.status(500).json({ erro: err.message });
+      res.json(rows || []);
+    });
+});
+
+// Histórico geral do dia
+app.get('/repositor/historico-dia', (req, res) => {
+  const { data: dataHoje } = dataHoraLocal();
+  db.all('SELECT * FROM historico_etapas WHERE data=? ORDER BY id DESC LIMIT 200',
+    [dataHoje], (err, rows) => {
+      if (err) return res.status(500).json({ erro: err.message });
+      res.json(rows || []);
+    });
 });
 
 app.get('/repositor/avisos/separador/:separador_id', (req, res) => {
   const { data: dataHoje } = dataHoraLocal();
   db.all(`SELECT a.* FROM avisos_repositor a
-    WHERE a.separador_id=? AND a.status IN ('subiu','abastecido') AND a.data_aviso=?
+    WHERE a.separador_id=? AND a.status IN ('encontrado','subiu','abastecido') AND a.data_aviso=?
     ORDER BY a.id DESC`,
     [req.params.separador_id, dataHoje], (err, rows) => {
       if (err) return res.status(500).json({ erro: err.message });
