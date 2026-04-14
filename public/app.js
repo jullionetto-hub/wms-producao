@@ -11,6 +11,12 @@ let todosSeparadores = [];
 let pedidosImportar  = [];
 let historicoImportacoes = JSON.parse(localStorage.getItem('historico_importacoes') || '[]');
 let isMobile = () => window.innerWidth <= 768;
+
+// ── Segurança: escapa HTML para evitar XSS ──
+function esc(str) {
+  if (!str) return '—';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
 let pedidoCaixaVinculada = false;
 
 
@@ -34,6 +40,35 @@ function toggleSubtipoRepositor() {
   const wrap = document.getElementById('usr-subtipo-wrap');
   if (!perf || !wrap) return;
   wrap.style.display = perf.value === 'repositor' ? 'block' : 'none';
+  // Marca visualmente o perfil principal como ativo e desabilita o checkbox dele
+  ['supervisor','separador','repositor','checkout'].forEach(p => {
+    const cb  = document.getElementById(`perm-cb-${p}`);
+    const lbl = document.getElementById(`perm-${p}`);
+    if (!cb || !lbl) return;
+    const isMain = p === perf.value;
+    cb.disabled = isMain;
+    cb.checked  = isMain ? false : cb.checked;
+    lbl.style.opacity   = isMain ? '.5' : '1';
+    lbl.style.cursor    = isMain ? 'not-allowed' : 'pointer';
+    lbl.title = isMain ? 'Este é o perfil principal' : '';
+    atualizarPermVisual(p);
+  });
+}
+
+// Atualiza visual do label quando checkbox muda
+function atualizarPermVisual(perfil) {
+  const cb  = document.getElementById(`perm-cb-${perfil}`);
+  const lbl = document.getElementById(`perm-${perfil}`);
+  if (!cb || !lbl) return;
+  if (cb.checked && !cb.disabled) {
+    lbl.style.borderColor = 'var(--accent)';
+    lbl.style.background  = 'rgba(37,99,235,.08)';
+    lbl.style.color       = 'var(--accent)';
+  } else {
+    lbl.style.borderColor = 'var(--border)';
+    lbl.style.background  = 'var(--surface2)';
+    lbl.style.color       = 'var(--text)';
+  }
 }
 
 
@@ -573,19 +608,26 @@ async function carregarUsuarios() {
         .filter((v,i,arr) => arr.indexOf(v) === i)
         .join(', ');
       
+      const perfilIcon = {supervisor:'👔',separador:'📦',repositor:'🔧',checkout:'🏷️'};
+      const perfilLabel = {supervisor:'Supervisão',separador:'Separação',repositor:'Reposição',checkout:'Checkout'};
+      const acessosHtml = acessos.split(', ').filter(Boolean).map(p =>
+        `<span style="display:inline-block;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:700;background:rgba(37,99,235,.08);color:var(--accent);border:1px solid rgba(37,99,235,.2);margin:2px">${perfilIcon[p]||''} ${perfilLabel[p]||p}</span>`
+      ).join('');
       return `<tr>
-        <td style="color:var(--text);font-weight:600">${u.nome}</td>
-        <td style="color:var(--accent)">${u.login}</td>
-        <td><span class="pill ${u.perfil}">${u.perfil}</span></td>
-        <td style="font-size:11px;color:var(--text2);max-width:180px">${acessos}</td>
-        <td>${u.turno||'—'}</td>
-        <td><span class="pill ${u.status}">${u.status}</span></td>
-        <td style="display:flex;gap:5px;flex-wrap:wrap">
-          <button class="btn btn-sm" style="background:${u.status==='ativo'?'var(--amber)':'var(--green)'};color:#fff"
-            onclick="alterarStatusUsuario(${u.id},'${u.status==='ativo'?'inativo':'ativo'}','${u.nome}','${u.login}','${u.perfil}','${u.turno||''}')">
-            ${u.status==='ativo'?'⛔':'✅'}
-          </button>
-          <button class="btn btn-sm btn-danger" onclick="excluirUsuario(${u.id},'${u.nome}')">🗑</button>
+        <td style="color:var(--text);font-weight:600;font-size:13px">${u.nome}</td>
+        <td style="color:var(--accent);font-size:12px;font-family:'Space Mono',monospace">${u.login}</td>
+        <td><span class="pill ${u.perfil}" style="font-size:11px">${perfilIcon[u.perfil]||''} ${perfilLabel[u.perfil]||u.perfil}</span></td>
+        <td style="max-width:180px">${acessosHtml||'<span style="color:var(--text3);font-size:11px">—</span>'}</td>
+        <td style="font-size:12px;color:var(--text2)">${u.turno||'—'}</td>
+        <td><span class="pill ${u.status}">${u.status==='ativo'?'✅ Ativo':'⛔ Inativo'}</span></td>
+        <td>
+          <div style="display:flex;gap:5px">
+            <button class="btn btn-sm" style="background:${u.status==='ativo'?'var(--amber)':'var(--green)'};color:#fff;padding:5px 10px"
+              onclick="alterarStatusUsuario(${u.id},'${u.status==='ativo'?'inativo':'ativo'}','${u.nome}','${u.login}','${u.perfil}','${u.turno||''}')">
+              ${u.status==='ativo'?'⛔':'✅'}
+            </button>
+            <button class="btn btn-sm btn-danger" style="padding:5px 10px" onclick="excluirUsuario(${u.id},'${u.nome}')">🗑</button>
+          </div>
         </td>
       </tr>`;
     }).join('');
@@ -606,7 +648,7 @@ async function cadastrarUsuario() {
   if (!nome || !login || !senha) { toast('Preencha todos os campos!','aviso'); return; }
   if (senha.length < 6) { toast('Senha mínimo 6 caracteres!','aviso'); return; }
   try {
-    const res = await fetch(`${API}/usuarios`, { credentials:'include', method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ nome, login, senha, perfil, subtipo_repositor, turno, perfis_acesso }) });
+    const res = await fetch(`${API}/usuarios`, { credentials:'include', method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ nome, login, senha, perfil, subtipo_repositor, turno, perfis_acesso: perfis_acesso }) });
     const data = await res.json();
     if (!res.ok) { toast(data.erro || 'Erro ao cadastrar!','erro'); return; }
     toast('Usuário cadastrado!','sucesso');
@@ -614,7 +656,10 @@ async function cadastrarUsuario() {
     document.getElementById('usr-login').value = '';
     document.getElementById('usr-senha').value = '';
     document.querySelectorAll('.usr-perm').forEach(el => el.checked = false);
+    document.getElementById('usr-perfil').value = 'separador';
+    toggleSubtipoRepositor();
     carregarUsuarios();
+    popularSelects();
   } catch(e) {
     toast('Erro ao cadastrar!','erro');
   }

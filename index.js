@@ -14,8 +14,38 @@ app.use(cors({
     callback(null, origin || 'http://localhost:3000');
   }
 }));
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+// ── Segurança: headers básicos ───────────────────
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  next();
+});
+
+// ── Rate limiting simples (sem lib externa) ──────
+const rateLimitMap = new Map();
+function rateLimit(req, res, next) {
+  const key  = req.ip + ':' + req.path;
+  const now  = Date.now();
+  const entry = rateLimitMap.get(key) || { count:0, reset: now + 60000 };
+  if (now > entry.reset) { entry.count = 0; entry.reset = now + 60000; }
+  entry.count++;
+  rateLimitMap.set(key, entry);
+  if (entry.count > 120) { // 120 req/min por IP por rota
+    return res.status(429).json({ erro: 'Muitas requisições. Tente novamente em breve.' });
+  }
+  next();
+}
+app.use(rateLimit);
+// Limpa rate limit map a cada 5 minutos
+setInterval(() => {
+  const now = Date.now();
+  for (const [k,v] of rateLimitMap) { if (now > v.reset) rateLimitMap.delete(k); }
+}, 300000);
+
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 const SQLiteStore = require('connect-sqlite3')(session);
@@ -38,6 +68,10 @@ const db = new sqlite3.Database(DB_PATH, err => {
   else console.log('Banco conectado em:', DB_PATH);
 });
 db.run('PRAGMA journal_mode=WAL');
+db.run('PRAGMA synchronous=NORMAL');
+db.run('PRAGMA cache_size=10000');
+db.run('PRAGMA temp_store=MEMORY');
+db.run('PRAGMA mmap_size=268435456'); // 256MB
 
 // ── Helpers Promise ───────────────────────────────────────────────────────────
 function dbRun(sql, params) {
@@ -283,6 +317,17 @@ app.post('/auth/login', (req, res) => {
 app.post('/auth/logout', (req, res) => {
   req.session.destroy(() => res.json({ mensagem:'Logout realizado!' }));
 });
+// Middleware de autenticação para rotas protegidas
+function requireAuth(req, res, next) {
+  if (!req.session.usuario) return res.status(401).json({ erro:'Não autenticado' });
+  next();
+}
+function requireSupervisor(req, res, next) {
+  if (!req.session.usuario) return res.status(401).json({ erro:'Não autenticado' });
+  if (req.session.usuario.perfil !== 'supervisor') return res.status(403).json({ erro:'Acesso negado' });
+  next();
+}
+
 app.get('/auth/me', (req, res) => {
   if (!req.session.usuario) return res.status(401).json({ erro:'Nao autenticado' });
   res.json({ usuario: req.session.usuario, separador: req.session.separador || null });
@@ -310,13 +355,21 @@ app.get('/usuarios', (req, res) => {
   });
 });
 
-app.post('/usuarios', (req, res) => {
+app.post('/usuarios', requireSupervisor, (req, res) => {
   const { nome, login, senha, perfil, subtipo_repositor, turno, perfis_acesso } = req.body;
   if (!nome||!login||!senha||!perfil) return res.status(400).json({ erro:'Preencha todos os campos!' });
   const hash = hashSenha(senha);
-  const extras = Array.isArray(perfis_acesso)
-    ? perfis_acesso.filter(Boolean).filter(p => p !== perfil).join(',')
-    : String(perfis_acesso || '');
+  // Normaliza perfis_acesso: remove o perfil principal, deduplica, limpa
+  let extrasArr = Array.isArray(perfis_acesso)
+    ? perfis_acesso
+    : String(perfis_acesso || '').split(',');
+  const extras = extrasArr
+    .map(p => String(p).trim())
+    .filter(Boolean)
+    .filter(p => p !== perfil)
+    .filter(p => ['supervisor','separador','repositor','checkout'].includes(p))
+    .filter((v,i,a) => a.indexOf(v) === i)
+    .join(',');
   const subtipo = perfil === 'repositor' ? (subtipo_repositor || 'geral') : 'geral';
   db.run(`INSERT INTO usuarios (nome,login,senha_hash,perfil,subtipo_repositor,perfis_acesso,turno) VALUES (?,?,?,?,?,?,?)`,
     [nome, login, hash, perfil, subtipo, extras, turno||'Manha'], function(err) {
@@ -334,13 +387,20 @@ app.post('/usuarios', (req, res) => {
   );
 });
 
-app.put('/usuarios/:id', (req, res) => {
+app.put('/usuarios/:id', requireSupervisor, (req, res) => {
   const { nome, login, senha, perfil, subtipo_repositor, turno, status, perfis_acesso } = req.body;
   let extrasString = null;
-  if (Array.isArray(perfis_acesso)) {
-    extrasString = perfis_acesso.filter(Boolean).filter(p => p !== perfil).join(',');
-  } else if (typeof perfis_acesso === 'string') {
-    extrasString = perfis_acesso;
+  if (perfis_acesso !== undefined) {
+    const arr = Array.isArray(perfis_acesso)
+      ? perfis_acesso
+      : String(perfis_acesso || '').split(',');
+    extrasString = arr
+      .map(p => String(p).trim())
+      .filter(Boolean)
+      .filter(p => p !== perfil)
+      .filter(p => ['supervisor','separador','repositor','checkout'].includes(p))
+      .filter((v,i,a) => a.indexOf(v) === i)
+      .join(',');
   }
   const subtipo = perfil === 'repositor' ? (subtipo_repositor || 'geral') : 'geral';
   let sql;
@@ -362,7 +422,7 @@ app.put('/usuarios/:id', (req, res) => {
   });
 });
 
-app.delete('/usuarios/:id', (req, res) => {
+app.delete('/usuarios/:id', requireSupervisor, (req, res) => {
   db.run('DELETE FROM usuarios WHERE id=?', [req.params.id], err => {
     if (err) return res.status(500).json({ erro: err.message });
     res.json({ mensagem:'Excluido!' });
@@ -813,7 +873,7 @@ app.get('/pedidos/bloqueados', (req, res) => {
     });
 });
 
-app.put('/pedidos/:id/desbloquear', (req, res) => {
+app.put('/pedidos/:id/desbloquear', requireSupervisor, (req, res) => {
   db.run("UPDATE pedidos SET status='concluido' WHERE id=?", [req.params.id], err => {
     if (err) return res.status(500).json({ erro: err.message });
     res.json({ mensagem:'Pedido desbloqueado e concluido!' });
@@ -835,7 +895,7 @@ app.get('/checkout', (req, res) => {
 });
 
 // ─── IMPORTAÇÃO — suporta duas abas: "Itens" e "Transportadora" ──────────────
-app.post('/importar', async (req, res) => {
+app.post('/importar', requireAuth, async (req, res) => {
   const { linhas, transportadoras } = req.body;
   if (!linhas || !linhas.length)
     return res.status(400).json({ erro: 'Nenhuma linha enviada!' });
@@ -857,7 +917,7 @@ app.post('/importar', async (req, res) => {
   // Agrupa itens por pedido
   const pedidosMap = {};
   linhas.forEach(l => {
-    const num = String(l.numero_pedido || '').trim();
+    const num = String(l.numero_pedido || '').trim().replace(/[^a-zA-Z0-9\-_]/g,'');
     if (!num) return;
     if (!pedidosMap[num]) pedidosMap[num] = [];
     pedidosMap[num].push(l);

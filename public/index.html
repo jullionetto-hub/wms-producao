@@ -146,34 +146,108 @@
         </div>
         <div id="cad-usuarios">
           <div class="grid-2">
+            <!-- ── FORMULÁRIO NOVO USUÁRIO ── -->
             <div class="card">
-              <div class="card-hd">➕ NOVO USUÁRIO</div>
-              <div class="form-grp"><label>NOME COMPLETO</label><input type="text" id="usr-nome" placeholder="Nome do colaborador"/></div>
-              <div class="form-grp"><label>LOGIN</label><input type="text" id="usr-login" placeholder="Ex: joao.silva"/></div>
-              <div class="form-grp"><label>SENHA</label><input type="password" id="usr-senha" placeholder="Mínimo 6 caracteres"/></div>
-              <div class="form-grp"><label>PERFIL PRINCIPAL</label>
-                <select id="usr-perfil" onchange="toggleSubtipoRepositor()">
-                  <option value="separador">Separador</option>
-                  <option value="supervisor">Supervisor</option>
-                  <option value="repositor">Repositor</option>
-                  <option value="checkout">Checkout</option>
-                </select>
+              <div class="card-hd" style="background:linear-gradient(135deg,rgba(37,99,235,.08),rgba(99,102,241,.05))">
+                ➕ NOVO USUÁRIO
               </div>
-              <div class="form-grp" id="usr-subtipo-wrap" style="display:none"><label>FUNÇÃO DO REPOSITOR</label>
+
+              <div class="form-grp">
+                <label>NOME COMPLETO</label>
+                <input type="text" id="usr-nome" placeholder="Ex: João da Silva" autocomplete="off"/>
+              </div>
+
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                <div class="form-grp">
+                  <label>LOGIN</label>
+                  <input type="text" id="usr-login" placeholder="Ex: joao.silva" autocomplete="off"/>
+                </div>
+                <div class="form-grp">
+                  <label>SENHA</label>
+                  <input type="password" id="usr-senha" placeholder="Mín. 6 caracteres"/>
+                </div>
+              </div>
+
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                <div class="form-grp">
+                  <label>PERFIL PRINCIPAL</label>
+                  <select id="usr-perfil" onchange="toggleSubtipoRepositor()">
+                    <option value="separador">📦 Separação</option>
+                    <option value="supervisor">👔 Supervisão</option>
+                    <option value="repositor">🔧 Reposição</option>
+                    <option value="checkout">🏷️ Checkout</option>
+                  </select>
+                </div>
+                <div class="form-grp">
+                  <label>TURNO</label>
+                  <select id="usr-turno">
+                    <option value="Manhã">🌅 Manhã</option>
+                    <option value="Tarde">☀️ Tarde</option>
+                    <option value="Noite">🌙 Noite</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-grp" id="usr-subtipo-wrap" style="display:none">
+                <label>FUNÇÃO DO REPOSITOR</label>
                 <select id="usr-subtipo-repositor">
                   <option value="geral">Geral</option>
                   <option value="busca">Busca no armazém</option>
                   <option value="abastecimento">Abastecimento</option>
-                </select></div>
-              <div class="form-grp"><label>PODE ACESSAR TAMBÉM</label><div class="perm-grid"><label class="perm-item"><input type="checkbox" class="usr-perm" value="supervisor"><span>Supervisor</span></label><label class="perm-item"><input type="checkbox" class="usr-perm" value="separador"><span>Separador</span></label><label class="perm-item"><input type="checkbox" class="usr-perm" value="repositor"><span>Repositor</span></label><label class="perm-item"><input type="checkbox" class="usr-perm" value="checkout"><span>Checkout</span></label></div></div>
-              <div class="form-grp"><label>TURNO</label>
-                <select id="usr-turno"><option value="Manhã">Manhã</option><option value="Tarde">Tarde</option><option value="Noite">Noite</option></select>
+                </select>
               </div>
-              <button class="btn btn-primary" style="width:100%;margin-top:4px" onclick="cadastrarUsuario()">✅ Cadastrar Usuário</button>
+
+              <!-- PODE ACESSAR TAMBÉM — layout melhorado -->
+              <div class="form-grp">
+                <label>PODE ACESSAR TAMBÉM</label>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px" id="perm-grid-wrap">
+                  <label id="perm-supervisor" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;background:var(--surface2);cursor:pointer;transition:all .2s;user-select:none">
+                    <input type="checkbox" class="usr-perm" value="supervisor" id="perm-cb-supervisor" style="width:18px;height:18px;accent-color:var(--accent);flex-shrink:0" onchange="atualizarPermVisual('supervisor')">
+                    <span style="font-size:13px;font-weight:600">👔 Supervisão</span>
+                  </label>
+                  <label id="perm-separador" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;background:var(--surface2);cursor:pointer;transition:all .2s;user-select:none">
+                    <input type="checkbox" class="usr-perm" value="separador" id="perm-cb-separador" style="width:18px;height:18px;accent-color:var(--accent);flex-shrink:0" onchange="atualizarPermVisual('separador')">
+                    <span style="font-size:13px;font-weight:600">📦 Separação</span>
+                  </label>
+                  <label id="perm-repositor" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;background:var(--surface2);cursor:pointer;transition:all .2s;user-select:none">
+                    <input type="checkbox" class="usr-perm" value="repositor" id="perm-cb-repositor" style="width:18px;height:18px;accent-color:var(--accent);flex-shrink:0" onchange="atualizarPermVisual('repositor')">
+                    <span style="font-size:13px;font-weight:600">🔧 Reposição</span>
+                  </label>
+                  <label id="perm-checkout" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;background:var(--surface2);cursor:pointer;transition:all .2s;user-select:none">
+                    <input type="checkbox" class="usr-perm" value="checkout" id="perm-cb-checkout" style="width:18px;height:18px;accent-color:var(--accent);flex-shrink:0" onchange="atualizarPermVisual('checkout')">
+                    <span style="font-size:13px;font-weight:600">🏷️ Checkout</span>
+                  </label>
+                </div>
+                <div style="font-size:10px;color:var(--text3);margin-top:6px">O perfil principal é habilitado automaticamente. Marque os acessos extras.</div>
+              </div>
+
+              <button class="btn btn-primary" style="width:100%;margin-top:8px;padding:13px;font-size:14px;font-weight:700;border-radius:10px" onclick="cadastrarUsuario()">
+                ✅ Cadastrar Usuário
+              </button>
             </div>
+
+            <!-- ── LISTA DE USUÁRIOS ── -->
             <div class="card">
-              <div class="card-hd">👥 USUÁRIOS CADASTRADOS <button class="btn btn-outline btn-sm" onclick="carregarUsuarios()">🔄</button></div>
-              <div class="tabela-wrap"><table><thead><tr><th>NOME</th><th>LOGIN</th><th>PERFIL</th><th>ACESSOS</th><th>TURNO</th><th>STATUS</th><th>AÇÕES</th></tr></thead><tbody id="tbody-usr"></tbody></table></div>
+              <div class="card-hd" style="background:linear-gradient(135deg,rgba(37,99,235,.08),rgba(99,102,241,.05))">
+                👥 USUÁRIOS CADASTRADOS
+                <button class="btn btn-outline btn-sm" onclick="carregarUsuarios()">🔄</button>
+              </div>
+              <div class="tabela-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>NOME</th>
+                      <th>LOGIN</th>
+                      <th>PERFIL</th>
+                      <th>TAMBÉM ACESSA</th>
+                      <th>TURNO</th>
+                      <th>STATUS</th>
+                      <th>AÇÕES</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbody-usr"></tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>

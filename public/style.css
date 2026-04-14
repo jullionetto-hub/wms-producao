@@ -552,3 +552,102 @@ body.dark .item-card.parcial    .item-ic{background:#78350F}
 ══════════════════════════════════════════ */
 .aviso-duplicata{background:#FEF3C7;border:1.5px solid #FCD34D;border-radius:10px;padding:12px 15px;margin-bottom:12px;display:flex;align-items:center;gap:10px;font-size:13px;font-weight:700;color:#92400E}
 body.dark .aviso-duplicata{background:#2D1A05;border-color:#78350F;color:#FCD34D}
+
+
+/* ══════════════════════════════════════════
+   MELHORIAS GERAIS DE LAYOUT v2
+══════════════════════════════════════════ */
+
+/* Formulários — melhor espaçamento e foco */
+.form-grp input:hover,.form-grp select:hover,
+.fg input:hover,.fg select:hover {
+  border-color:rgba(37,99,235,.4);
+}
+.form-grp input,.form-grp select {
+  transition:border-color .2s,box-shadow .2s;
+}
+
+/* Tabela — zebra striping sutil */
+tbody tr:nth-child(even) { background:var(--surface2); }
+tbody tr:nth-child(even):hover { background:rgba(37,99,235,.04); }
+tbody tr:hover { background:rgba(37,99,235,.04) !important; }
+
+/* Card hover sutil */
+.card { transition:box-shadow .2s; }
+.card:hover { box-shadow:var(--sh-lg); }
+
+/* Botões — melhor toque mobile */
+.btn { min-height:34px; }
+@media(max-width:768px) {
+  .btn { min-height:40px; }
+  td, th { font-size:11px !important; padding:8px 9px !important; }
+}
+
+/* Permissões — estado checked */
+.perm-item input:checked + span {
+  color:var(--accent);
+  font-weight:700;
+}
+
+/* Pill melhorado */
+.pill { letter-spacing:.2px; font-size:11px; }
+
+/* Input focus global */
+input:focus, select:focus, textarea:focus {
+  outline:none;
+  border-color:var(--accent) !important;
+  box-shadow:0 0 0 3px rgba(37,99,235,.1);
+}
+
+/* Scrollbar mais fina em tabelas */
+.tabela-wrap::-webkit-scrollbar { height:3px; }
+.tabela-wrap::-webkit-scrollbar-thumb { background:var(--border); border-radius:10px; }
+
+/* Aviso card melhorado */
+.aviso-card { cursor:default; }
+
+/* KPI cards — número maior em mobile */
+@media(max-width:480px) {
+  .kpi-val { font-size:26px !important; }
+  .kpi-lbl { font-size:8px; }
+}
+
+/* Header compacto com sombra */
+header { box-shadow:0 2px 12px rgba(0,0,0,.08); }
+
+/* Sidebar item ativo com linha lateral */
+.mi.ativo {
+  border-left:3px solid var(--accent);
+  padding-left:9px;
+}
+
+/* Botão primário com gradiente */
+.btn-primary {
+  background:linear-gradient(135deg,#2563EB,#1D4ED8);
+}
+.btn-primary:hover {
+  background:linear-gradient(135deg,#1D4ED8,#1E40AF);
+}
+
+/* Bip input melhorado */
+.bip-input {
+  border-width:2px;
+}
+
+/* Form grp label mais legível */
+.form-grp label, .fg label {
+  text-transform:uppercase;
+}
+
+/* Checklist item card — transição mais suave */
+.item-card {
+  transition:background .15s, border-color .15s;
+}
+
+/* Fila card */
+.fila-card {
+  border-left-width:3px;
+}
+.fila-card.meu {
+  border-left-color:var(--accent);
+}
