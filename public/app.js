@@ -11,6 +11,7 @@ let todosSeparadores = [];
 let pedidosImportar  = [];
 let historicoImportacoes = JSON.parse(localStorage.getItem('historico_importacoes') || '[]');
 let isMobile = () => window.innerWidth <= 768;
+let pedidoCaixaVinculada = false;
 
 
 
@@ -1583,6 +1584,7 @@ async function _confirmarPedidoCore(num, inputId, statusId, clWrapId, fnChecklis
     if (!res.ok) { toast(`❌ ${data.erro}`,'erro'); return; }
     pedidoAtualId  = data.pedido_id;
     pedidoAtualNum = num;
+    pedidoCaixaVinculada = !!(data.caixa_vinculada || data.numero_caixa);
     const statusEl = document.getElementById(statusId);
     // Monta linha de info com transportadora
     const transpHtml = data.transportadora
@@ -1627,7 +1629,7 @@ async function _concluirCore(prefix, fnChecklist, fnFila, fnStats, inputId, stat
     if (statusEl) statusEl.style.display = 'none';
     document.getElementById(inputId).value = '';
     mostrarCampoCaixa(false);
-    pedidoAtualId=null; pedidoAtualNum=null; itensAtuais=[];
+    pedidoAtualId=null; pedidoAtualNum=null; itensAtuais=[]; pedidoCaixaVinculada=false;
     fnFila(); fnStats();
     setTimeout(() => document.getElementById(inputId).focus(), 300);
   } catch(e) { toast('Erro ao concluir!','erro'); }
@@ -1724,39 +1726,51 @@ function renderChecklist(prefix) {
 
 
     if (isMob) {
-      // Layout mobile otimizado: ícone menor, código e localização maiores
-      return `<div class="item-card ${item.status}" id="${prefix}-ic-${item.id}" style="padding:10px 11px;gap:8px">
-        <!-- Ícone pequeno -->
-        <div class="item-ic" style="width:28px;height:28px;font-size:13px;flex-shrink:0;margin-top:2px">${icones[item.status]||'⬜'}</div>
-        <!-- Info central com código e endereço maiores -->
-        <div class="item-info" style="flex:1;min-width:0">
-          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:3px">
-            <span style="font-size:15px;font-weight:800;color:${item.status==='encontrado'?'var(--green)':item.status==='falta'?'var(--red)':item.status==='parcial'?'var(--amber)':'var(--accent)'};font-family:'Space Mono',monospace">${item.codigo||'—'}</span>
-            <span style="font-size:13px;font-weight:700;color:var(--text2)">📍 ${item.endereco||'—'}</span>
-          </div>
-          <div style="font-size:12px;color:var(--text);margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${item.descricao||'—'}</div>
-          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-            <span style="background:var(--accent);color:#fff;border-radius:6px;padding:3px 10px;font-size:16px;font-weight:800;font-family:'Space Mono',monospace">x${item.quantidade||1}</span>
-            ${item.hora_verificado?`<span style="font-size:11px;color:var(--text3)">${item.hora_verificado}</span>`:''}
-          </div>
-          ${item.status==='falta'  ?`<div class="item-aviso" style="margin-top:4px">❌ Falta total — repositor avisado</div>`:''}
-          ${item.status==='parcial'?`<div class="item-aviso" style="margin-top:4px">🟡 ${item.obs||''} — repositor avisado</div>`:''}
-          ${(item.status==='falta'||item.status==='parcial')&&item.aviso_status==='reposto'?`<div style="font-size:10px;color:var(--green);margin-top:3px;font-weight:600">✅ Repositor repôs!</div>`:''}
-          ${(item.status==='falta'||item.status==='parcial')&&item.aviso_status==='nao_encontrado'?`<div style="font-size:10px;color:var(--red);margin-top:3px;font-weight:600">🚫 Não encontrado</div>`:''}
-          <div class="parcial-wrap" id="${prefix}-pw-${item.id}">
-            <label>Qtde encontrada (de ${item.quantidade||1}):</label>
-            <div class="parcial-row">
-              <input type="number" class="parcial-input" id="${prefix}-pi-${item.id}" min="0" max="${(item.quantidade||1)-1}" placeholder="0" inputmode="numeric"/>
-              <button class="btn-parc-ok" onclick="${fnParcOk}(${item.id},${item.quantidade||1},'${prefix}')">OK</button>
+      // Verifica se caixa foi vinculada — bloqueia botões se não tiver
+      const semCaixa = !pedidoCaixaVinculada;
+      const corCod = item.status==='encontrado'?'var(--green)':item.status==='falta'?'var(--red)':item.status==='parcial'?'var(--amber)':'var(--accent)';
+      const bgCard = item.status==='encontrado'?'#F0FDF4':item.status==='falta'?'#FEF2F2':item.status==='parcial'?'#FFFBEB':'var(--surface)';
+      const borderCard = item.status==='encontrado'?'#BBF7D0':item.status==='falta'?'#FECACA':item.status==='parcial'?'#FDE68A':'var(--border)';
+      return `<div id="${prefix}-ic-${item.id}" style="border-radius:12px;padding:12px 13px;border:1.5px solid ${borderCard};background:${bgCard};margin-bottom:2px;transition:all .2s">
+        <!-- Linha topo: ícone + código + endereço -->
+        <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:8px">
+          <div style="width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;background:${borderCard}">${icones[item.status]||'⬜'}</div>
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+              <span style="font-size:16px;font-weight:800;color:${corCod};font-family:'Space Mono',monospace">${item.codigo||'—'}</span>
+              <span style="font-size:12px;font-weight:700;color:var(--text3)">📍 ${item.endereco||'—'}</span>
+            </div>
+            <div style="font-size:13px;color:var(--text);margin-top:3px;line-height:1.3">${item.descricao||'—'}</div>
+            <div style="display:flex;align-items:center;gap:8px;margin-top:5px;flex-wrap:wrap">
+              <span style="background:var(--accent);color:#fff;border-radius:7px;padding:3px 12px;font-size:17px;font-weight:800;font-family:'Space Mono',monospace">x${item.quantidade||1}</span>
+              ${item.hora_verificado?`<span style="font-size:11px;color:var(--text3)">${item.hora_verificado}</span>`:''}
             </div>
           </div>
         </div>
-        <!-- Botões ação -->
-        <div class="item-btns" style="flex-direction:column;gap:5px;flex-shrink:0">
-          <button class="btn-item ok"   ${v?'disabled':''} onclick="${fnVerif}(${item.id},'encontrado','${prefix}')" style="width:38px;height:38px">✔</button>
-          <button class="btn-item parc" ${v?'disabled':''} onclick="${fnToggle}(${item.id},'${prefix}')" style="width:38px;height:38px" title="Parcial">±</button>
-          <button class="btn-item nok"  ${v?'disabled':''} onclick="${fnVerif}(${item.id},'falta','${prefix}')" style="width:38px;height:38px">✖</button>
+        ${item.status==='falta'  ?`<div style="font-size:11px;color:var(--red);font-weight:700;margin-bottom:6px">❌ Falta total — repositor avisado</div>`:''}
+        ${item.status==='parcial'?`<div style="font-size:11px;color:var(--amber);font-weight:700;margin-bottom:6px">🟡 ${item.obs||''} — repositor avisado</div>`:''}
+        ${(item.status==='falta'||item.status==='parcial')&&item.aviso_status==='reposto'?`<div style="font-size:11px;color:var(--green);font-weight:600;margin-bottom:6px">✅ Repositor repôs!</div>`:''}
+        ${(item.status==='falta'||item.status==='parcial')&&item.aviso_status==='nao_encontrado'?`<div style="font-size:11px;color:var(--red);font-weight:600;margin-bottom:6px">🚫 Não encontrado</div>`:''}
+        <div class="parcial-wrap" id="${prefix}-pw-${item.id}">
+          <label>Qtde encontrada (de ${item.quantidade||1}):</label>
+          <div class="parcial-row">
+            <input type="number" class="parcial-input" id="${prefix}-pi-${item.id}" min="0" max="${(item.quantidade||1)-1}" placeholder="0" inputmode="numeric"/>
+            <button class="btn-parc-ok" onclick="${fnParcOk}(${item.id},${item.quantidade||1},'${prefix}')">OK</button>
+          </div>
         </div>
+        <!-- Botões ABAIXO — só aparecem se caixa vinculada e item pendente -->
+        ${!v && !semCaixa ? `
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:10px">
+          <button onclick="${fnVerif}(${item.id},'encontrado','${prefix}')"
+            style="padding:12px 0;background:#16A34A;color:#fff;border:none;border-radius:10px;font-size:20px;cursor:pointer;font-weight:700">✔</button>
+          <button onclick="${fnToggle}(${item.id},'${prefix}')"
+            style="padding:12px 0;background:#D97706;color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:800;cursor:pointer">±</button>
+          <button onclick="${fnVerif}(${item.id},'falta','${prefix}')"
+            style="padding:12px 0;background:#DC2626;color:#fff;border:none;border-radius:10px;font-size:20px;cursor:pointer;font-weight:700">✖</button>
+        </div>` : !v && semCaixa ? `
+        <div style="margin-top:8px;padding:8px 10px;background:#FEF3C7;border-radius:8px;font-size:11px;color:#92400E;font-weight:700;text-align:center">
+          📦 Vincule a caixa para separar
+        </div>` : ''}
       </div>`;
     }
 
@@ -1850,7 +1864,7 @@ async function verificarItem(itemId, status, obs='', qtdFalta=0, prefix, renderP
     if (item) { item.status=status; item.obs=obs; item.aviso_status=''; }
     if (status==='falta')     toast('❌ Falta total — repositor avisado!','aviso');
     if (status==='parcial')   toast('🟡 Parcial — repositor avisado!','aviso');
-    if (status==='encontrado') toast('✅ Item confirmado!','sucesso');
+    // sem toast para encontrado — a linha fica verde
     renderChecklist(renderPrefix);
   } catch(e) { toast('Erro ao verificar item!','erro'); }
 }
@@ -2322,7 +2336,10 @@ async function vincularCaixaCore(caixa, inputStatusId) {
     });
     const data = await res.json();
     if (data.erro) { toast(data.erro,'erro'); return; }
+    pedidoCaixaVinculada = true;
     toast(`📦 Caixa ${caixa} vinculada ao pedido ${pedidoAtualNum}!`,'sucesso');
+    // Re-renderiza checklist para mostrar botões
+    if (pedidoAtualId) { const isMob2 = document.getElementById('m-cl-lista'); if(isMob2) renderChecklist('m-cl'); else renderChecklist('cl'); }
     const statusEl = document.getElementById(inputStatusId);
     if (statusEl) {
       statusEl.style.display = 'block';
