@@ -73,6 +73,9 @@ function selecionarPerfil(p, btn) {
   document.querySelectorAll('.perfil-btn').forEach(b => b.classList.remove('ativo'));
   btn.classList.add('ativo');
   document.getElementById('login-erro').style.display = 'none';
+  // Dica para Reposição
+  const hint = document.getElementById('rep-login-hint');
+  if (hint) hint.style.display = p === 'repositor' ? 'block' : 'none';
 }
 
 
@@ -84,6 +87,20 @@ async function fazerLogin() {
   const erroEl = document.getElementById('login-erro');
   if (!perfilSelecionado) { erroEl.textContent = 'Selecione um perfil!'; erroEl.style.display = 'block'; return; }
   if (!login || !senha)   { erroEl.textContent = 'Preencha usuário e senha!'; erroEl.style.display = 'block'; return; }
+  // Reposição tem tela própria — valida credenciais e redireciona
+  if (perfilSelecionado === 'repositor') {
+    try {
+      const res  = await fetch(`${API}/repositor/login`, {
+        method:'POST', credentials:'include',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ login, senha, colaborador: login })
+      });
+      const data = await res.json();
+      if (!res.ok) { erroEl.textContent = data.erro || 'Login incorreto!'; erroEl.style.display = 'block'; return; }
+      window.location.href = '/repositor-tela';
+    } catch(e) { erroEl.textContent = 'Erro ao conectar!'; erroEl.style.display = 'block'; }
+    return;
+  }
   try {
     const res  = await fetch(`${API}/auth/login`, { credentials:'include', method:'POST', credentials:'include', headers:{'Content-Type':'application/json'}, body:JSON.stringify({login,senha,perfil:perfilSelecionado}) });
     const data = await res.json();

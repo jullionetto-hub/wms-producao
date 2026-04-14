@@ -233,6 +233,12 @@ function criarUsuarioPadrao() {
     ['Supervisor Master','admin',hash,'supervisor','separador,repositor,checkout','ativo'],
     function(err) { if (!err && this.changes > 0) console.log('Usuario padrao criado: admin / 123456'); }
   );
+  // Usuário padrão da tela de reposição (computador)
+  const hashRep = hashSenha('reposicao2026');
+  db.run(`INSERT OR IGNORE INTO usuarios (nome,login,senha_hash,perfil,status) VALUES (?,?,?,?,?)`,
+    ['Reposição','reposicao',hashRep,'repositor','ativo'],
+    function(err) { if (!err && this.changes > 0) console.log('Usuario reposicao criado: reposicao / reposicao2026'); }
+  );
 }
 criarUsuarioPadrao();
 
@@ -243,6 +249,12 @@ app.post('/auth/login', (req, res) => {
   const hash = hashSenha(senha);
   const perfisValidos = ['supervisor','separador','repositor','checkout'];
   if (!perfisValidos.includes(perfil)) return res.status(400).json({ erro:'Perfil inválido!' });
+  // Permite atualizar só o colaborador sem revalidar login
+  if (req.body._apenas_colab) {
+    if (!req.session.rep_usuario) return res.status(401).json({ erro:'Sessão expirada!' });
+    req.session.rep_colaborador = colaborador || req.session.rep_usuario.nome;
+    return res.json({ ok:true, nome: req.session.rep_colaborador });
+  }
   db.get(`SELECT * FROM usuarios WHERE login=? AND senha_hash=? AND status='ativo'`,
     [login, hash], (err, user) => {
       if (err)   return res.status(500).json({ erro: err.message });
@@ -277,9 +289,9 @@ app.get('/auth/me', (req, res) => {
 });
 
 // ─── USUÁRIOS ─────────────────────────────────────────────────────────────────
-// Lista de repositores para tela aberta
+// Lista de todos usuários ativos para tela de repositor aberta
 app.get('/repositor/funcionarios', (req, res) => {
-  db.all(`SELECT id, nome FROM usuarios WHERE status='ativo' AND (perfil='repositor' OR perfis_acesso LIKE '%repositor%') ORDER BY nome`,
+  db.all(`SELECT id, nome FROM usuarios WHERE status='ativo' ORDER BY nome`,
     [], (err, rows) => {
       if (err) return res.status(500).json({ erro: err.message });
       res.json(rows || []);
@@ -649,6 +661,15 @@ app.put('/repositor/avisos/:id/:acao', (req, res) => {
 
     const qtdEnc = parseInt(qtd_encontrada)||0;
     const func   = repositor_nome || '';
+
+    // Bloqueia separado/subiu/abastecido se qtd insuficiente
+    const acoesCompletas = ['separado','encontrado','subiu','abastecido'];
+    if (acoesCompletas.includes(acao) && qtdEnc < (aviso.quantidade||1)) {
+      return res.status(400).json({
+        erro: `Quantidade insuficiente! Encontrou ${qtdEnc} de ${aviso.quantidade||1}. Use Verificando se ainda está buscando.`,
+        qtd_insuficiente: true
+      });
+    }
 
     const salvarHistorico = (cb) => {
       db.run(`INSERT INTO historico_etapas (aviso_id,numero_pedido,codigo,descricao,endereco,etapa,funcionario,hora,data,qtd_encontrada)
@@ -1034,6 +1055,43 @@ app.get('/kpis', (req, res) => {
     if (err) return res.status(500).json({ erro: err.message });
     res.json(row || {});
   });
+});
+
+// ─── ROTA REPOSITOR — requer login repositor ────
+app.get('/repositor-tela', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'repositor.html'));
+});
+
+// Login específico para tela de reposição (retorna token simples em session)
+app.post('/repositor/login', (req, res) => {
+  const { login, senha, colaborador } = req.body;
+  if (!login || !senha) return res.status(400).json({ erro:'Preencha login e senha!' });
+  const hash = hashSenha(senha);
+  db.get(`SELECT * FROM usuarios WHERE login=? AND senha_hash=? AND status='ativo'`,
+    [login, hash], (err, user) => {
+      if (err)   return res.status(500).json({ erro: err.message });
+      if (!user) return res.status(401).json({ erro:'Login ou senha incorretos!' });
+      // Aceita supervisor ou repositor
+      const perfisOk = ['supervisor','repositor'];
+      const perfisUser = [user.perfil, ...(user.perfis_acesso||'').split(',').filter(Boolean)];
+      if (!perfisOk.some(p => perfisUser.includes(p)))
+        return res.status(403).json({ erro:'Sem permissão para esta tela!' });
+      // Salva colaborador selecionado na sessão
+      req.session.rep_colaborador = colaborador || user.nome;
+      req.session.rep_usuario = { id: user.id, nome: user.nome, login: user.login };
+      res.json({ ok: true, nome: req.session.rep_colaborador });
+    });
+});
+
+app.get('/repositor/sessao', (req, res) => {
+  if (!req.session.rep_usuario) return res.status(401).json({ logado: false });
+  res.json({ logado: true, colaborador: req.session.rep_colaborador || req.session.rep_usuario.nome });
+});
+
+app.post('/repositor/logout', (req, res) => {
+  req.session.rep_colaborador = null;
+  req.session.rep_usuario = null;
+  res.json({ ok: true });
 });
 
 // ─── START ────────────────────────────────────────────────────────────────────
