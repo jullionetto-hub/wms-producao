@@ -985,16 +985,24 @@ async function carregarAvisosMobile() {
 
 
         ${isPend ? `
-        <div style="background:var(--red);color:#fff;border-radius:10px;padding:10px 14px;margin-bottom:10px;text-align:center">
-          <div style="font-size:11px;font-weight:700;letter-spacing:1px;opacity:.9">FALTA TOTAL</div>
-          <div style="font-size:26px;font-weight:800;font-family:'Space Mono',monospace;line-height:1.2">${a.quantidade||1} unidade${(a.quantidade||1)>1?'s':''}</div>
-          ${a.obs ? '<div style="font-size:11px;opacity:.85;margin-top:4px">📝 '+a.obs+'</div>' : ''}
+        <!-- Destaque FALTA -->
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;padding:10px 12px;background:#FEF2F2;border:1.5px solid #FECACA;border-radius:10px">
+          <div style="text-align:center;background:var(--red);color:#fff;border-radius:10px;padding:6px 14px;flex-shrink:0">
+            <div style="font-size:9px;font-weight:700;letter-spacing:1px;opacity:.9">FALTA</div>
+            <div style="font-size:28px;font-weight:800;font-family:'Space Mono',monospace;line-height:1.1">${a.quantidade||1}</div>
+            <div style="font-size:9px;opacity:.8">un.</div>
+          </div>
+          <div style="font-size:12px;color:var(--red);font-weight:600;line-height:1.6">
+            ⏱ Aviso às ${a.hora_aviso||'—'}<br>
+            👤 ${a.separador_nome||'—'}
+            ${a.obs?'<br>📝 '+a.obs:''}
+          </div>
         </div>
-        <div style="font-size:11px;color:var(--red);font-weight:700;margin-bottom:8px">⏱ Aviso às ${a.hora_aviso||'—'}</div>
+        <!-- Campo qtde encontrada -->
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;background:#fff;border:1.5px solid #FDE68A;border-radius:10px;padding:10px 12px">
           <span style="font-size:12px;color:var(--amber);font-weight:700;white-space:nowrap">Qtde encontrada:</span>
           <input type="number" style="flex:1;padding:8px;background:transparent;border:none;outline:none;font-size:22px;font-weight:800;font-family:'Space Mono',monospace;color:var(--text);text-align:center;min-width:0"
-            id="m-qtd-enc-${a.id}" min="0" max="${a.quantidade||99}" placeholder="0" inputmode="numeric"/>
+            id="m-qtd-enc-${a.id}" min="0" max="${a.quantidade||99}" value="" placeholder="0" inputmode="numeric"/>
           <span style="font-size:12px;color:var(--text3);white-space:nowrap">de <b>${a.quantidade||'?'}</b></span>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-bottom:8px">
