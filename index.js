@@ -635,7 +635,8 @@ app.put('/pedidos/:id/concluir', (req, res) => {
       if (err) return res.status(500).json({ erro: err.message });
       if (pendentes.length > 0)
         return res.status(400).json({ erro:`Ainda ha ${pendentes.length} item(s) nao verificado(s)!` });
-      db.all(`SELECT * FROM avisos_repositor WHERE pedido_id=? AND status='pendente'`, [req.params.id], (err2, avisosPendentes) => {
+      // Pendente = repositor ainda não agiu. Verificando = em andamento mas não liberou
+      db.all(`SELECT * FROM avisos_repositor WHERE pedido_id=? AND status IN ('pendente','verificando')`, [req.params.id], (err2, avisosPendentes) => {
         if (err2) return res.status(500).json({ erro: err2.message });
         if (avisosPendentes.length > 0)
           return res.status(400).json({ erro:`Aguardando repositor resolver ${avisosPendentes.length} item(s)!`, aguardando:true });
@@ -769,8 +770,30 @@ app.get('/repositor/historico/:aviso_id', (req, res) => {
 // Histórico geral do dia
 app.get('/repositor/historico-dia', (req, res) => {
   const { data: dataHoje } = dataHoraLocal();
-  db.all('SELECT * FROM historico_etapas WHERE data=? ORDER BY id DESC LIMIT 200',
-    [dataHoje], (err, rows) => {
+  const usuario = req.session.usuario;
+  // Supervisor vê tudo, repositor vê só o dele
+  const ehSupervisor = usuario && usuario.perfil === 'supervisor';
+  let sql = 'SELECT * FROM historico_etapas WHERE data=?';
+  const params = [dataHoje];
+  if (!ehSupervisor && usuario) {
+    sql += ' AND funcionario=?';
+    params.push(usuario.nome);
+  }
+  sql += ' ORDER BY id DESC LIMIT 500';
+  db.all(sql, params, (err, rows) => {
+    if (err) return res.status(500).json({ erro: err.message });
+    res.json(rows || []);
+  });
+});
+
+// Histórico completo por data (supervisor)
+app.get('/repositor/historico-completo', requireSupervisor, (req, res) => {
+  const { data } = req.query;
+  const { data: dataHoje } = dataHoraLocal();
+  db.all(`SELECT h.*, 
+    COUNT(*) OVER (PARTITION BY h.funcionario) as total_funcionario
+    FROM historico_etapas h WHERE h.data=? ORDER BY h.id DESC LIMIT 1000`,
+    [data || dataHoje], (err, rows) => {
       if (err) return res.status(500).json({ erro: err.message });
       res.json(rows || []);
     });

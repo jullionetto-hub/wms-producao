@@ -420,6 +420,26 @@
         </div>
       </div>
 
+      <!-- HISTÓRICO COMPLETO REPOSITOR (supervisor) -->
+      <div class="pagina" id="pag-historico-rep">
+        <div class="pg-title">📋 Histórico de Reposição</div>
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-hd">🔍 FILTROS
+            <button class="btn btn-outline btn-sm" onclick="carregarHistoricoCompleto()">🔄</button>
+          </div>
+          <div class="date-filter-bar">
+            <div class="fg"><label>DATA</label><input type="date" id="hist-completo-data" onchange="carregarHistoricoCompleto()"/></div>
+            <div class="fg"><label>COLABORADOR</label>
+              <select id="hist-completo-func" onchange="carregarHistoricoCompleto()" style="min-width:180px">
+                <option value="">Todos os colaboradores</option>
+              </select>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="carregarHistoricoCompleto()">🔍 Filtrar</button>
+          </div>
+        </div>
+        <div id="hist-completo-lista"><div style="color:var(--text3);text-align:center;padding:40px">Selecione uma data para carregar</div></div>
+      </div>
+
       <!-- ESTATÍSTICAS REPOSITOR -->
       <div class="pagina" id="pag-stats-repositor">
         <div class="pg-title">📈 Estatísticas — Reposição</div>

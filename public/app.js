@@ -323,6 +323,12 @@ function irPara(pag, el) {
   if (pag === 'separacao')       { carregarFila(); if (separadorAtual) carregarContadoresSep(); }
   if (pag === 'estatisticas')    { carregarEstatisticas(); carregarCheckoutLista(); }
   if (pag === 'reposicao')       { carregarAvisos(); verificarDuplicatas(); }
+  if (pag === 'historico-rep')   {
+    const hoje = hojeLocal();
+    const el = document.getElementById('hist-completo-data');
+    if (el && !el.value) el.value = hoje;
+    carregarHistoricoCompleto();
+  }
   if (pag === 'checkout')        { const el2 = document.getElementById('ck-input-caixa'); if(el2) setTimeout(()=>el2.focus(),200); }
   if (pag === 'stats-repositor') carregarStatsRepositor();
   if (pag === 'stats-checkout')  carregarStatsCheckout();
@@ -1337,6 +1343,57 @@ async function carregarStatsCkMobile() {
 /* ══════════════════════════════════════════
    ESTATÍSTICAS REPOSITOR (desktop)
 ══════════════════════════════════════════ */
+// ══ HISTÓRICO COMPLETO — SUPERVISOR ══
+async function carregarHistoricoCompleto() {
+  const lista = document.getElementById('hist-completo-lista');
+  if (!lista) return;
+  lista.innerHTML = '<div style="color:var(--text3);text-align:center;padding:24px">Carregando...</div>';
+  try {
+    const dataFiltro = document.getElementById('hist-completo-data')?.value || '';
+    const funcFiltro = document.getElementById('hist-completo-func')?.value || '';
+    const url = `${API}/repositor/historico-completo${dataFiltro?'?data='+dataFiltro:''}`;
+    const res  = await fetch(url, { credentials:'include' });
+    let rows   = await res.json();
+    if (funcFiltro) rows = rows.filter(r => r.funcionario === funcFiltro);
+
+    // Atualiza select de funcionários
+    const funcs = [...new Set(rows.map(r=>r.funcionario).filter(Boolean))];
+    const selFunc = document.getElementById('hist-completo-func');
+    if (selFunc) {
+      const cur = selFunc.value;
+      selFunc.innerHTML = '<option value="">Todos os colaboradores</option>' +
+        funcs.map(f=>`<option value="${f}"${f===cur?' selected':''}>${f}</option>`).join('');
+    }
+
+    if (!rows.length) { lista.innerHTML='<div style="color:var(--text3);text-align:center;padding:40px">Nenhuma etapa registrada</div>'; return; }
+
+    const etapaLabel={separado:'✅ Separado',subiu:'⬆️ Subiu',abastecido:'📦 Abastecido',verificando:'🔍 Verificando',protocolo:'📋 Protocolo',devolucao:'↩️ Devolução',encontrado:'✅ Separado',nao_encontrado:'🚫 Não encontrado'};
+    const etapaCor  ={separado:'#16A34A',subiu:'#0D9488',abastecido:'#2563EB',verificando:'#6366F1',protocolo:'#D97706',devolucao:'#7C3AED',encontrado:'#16A34A',nao_encontrado:'#DC2626'};
+    const etapaBg   ={separado:'#F0FDF4',subiu:'#F0FDFA',abastecido:'#EFF6FF',verificando:'#F5F3FF',protocolo:'#FFFBEB',devolucao:'#FAF5FF',encontrado:'#F0FDF4',nao_encontrado:'#F5F3FF'};
+
+    lista.innerHTML = rows.map(r=>`
+      <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:12px;padding:12px 16px;margin-bottom:8px;display:flex;align-items:flex-start;gap:12px;box-shadow:var(--sh)">
+        <span style="font-size:11px;font-weight:800;padding:4px 11px;border-radius:20px;white-space:nowrap;flex-shrink:0;margin-top:2px;background:${etapaBg[r.etapa]||'var(--surface2)'};color:${etapaCor[r.etapa]||'var(--text2)'};border:1px solid ${etapaCor[r.etapa]||'var(--border)'}40">
+          ${etapaLabel[r.etapa]||r.etapa}
+        </span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12px;font-weight:700;color:var(--accent);font-family:'Space Mono',monospace">Pedido #${r.numero_pedido||'—'}</div>
+          <div style="font-size:13px;color:var(--text);margin:2px 0">${r.codigo||'—'} — ${r.descricao||'—'}</div>
+          <div style="font-size:11px;color:var(--text3)">📍 ${r.endereco||'—'}${r.qtd_encontrada>0?' &nbsp;•&nbsp; Qtde: <b>'+r.qtd_encontrada+'</b>':''}</div>
+          <div style="margin-top:5px;display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:rgba(37,99,235,.06);border-radius:8px;border:1px solid rgba(37,99,235,.15)">
+            <span style="font-size:13px">👤</span>
+            <span style="font-size:12px;font-weight:700;color:var(--accent)">${r.funcionario||'—'}</span>
+          </div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-size:11px;color:var(--text3);font-family:'Space Mono',monospace">${r.hora||'—'}</div>
+        </div>
+      </div>`).join('');
+  } catch(e) {
+    if (lista) lista.innerHTML='<div style="color:var(--red);text-align:center;padding:20px">Erro ao carregar</div>';
+  }
+}
+
 async function carregarStatsRepositor() {
   try {
     const ini = document.getElementById('srep-ini')?.value || '';
@@ -1832,7 +1889,7 @@ function renderChecklist(prefix) {
   } else if (temProblema) {
     const itensP = itensAtuais.filter(i=>i.status==='falta'||i.status==='parcial');
     // Status que liberam o concluir: encontrado, subiu, abastecido
-    const statusOk = ['encontrado','reposto','subiu','abastecido'];
+    const statusOk = ['encontrado','reposto','separado','subiu','abastecido'];
     const statusBloq = ['nao_encontrado','protocolo'];
     const todosResolvidos = itensP.every(i => statusOk.includes(i.aviso_status) || statusBloq.includes(i.aviso_status));
     const temBloqueio = itensP.some(i => statusBloq.includes(i.aviso_status));
