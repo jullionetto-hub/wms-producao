@@ -108,9 +108,7 @@ function selecionarPerfil(p, btn) {
   document.querySelectorAll('.perfil-btn').forEach(b => b.classList.remove('ativo'));
   btn.classList.add('ativo');
   document.getElementById('login-erro').style.display = 'none';
-  // Dica para Reposição
-  const hint = document.getElementById('rep-login-hint');
-  if (hint) hint.style.display = p === 'repositor' ? 'block' : 'none';
+
 }
 
 
@@ -122,20 +120,7 @@ async function fazerLogin() {
   const erroEl = document.getElementById('login-erro');
   if (!perfilSelecionado) { erroEl.textContent = 'Selecione um perfil!'; erroEl.style.display = 'block'; return; }
   if (!login || !senha)   { erroEl.textContent = 'Preencha usuário e senha!'; erroEl.style.display = 'block'; return; }
-  // Reposição tem tela própria — valida credenciais e redireciona
-  if (perfilSelecionado === 'repositor') {
-    try {
-      const res  = await fetch(`${API}/repositor/login`, {
-        method:'POST', credentials:'include',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ login, senha, colaborador: login })
-      });
-      const data = await res.json();
-      if (!res.ok) { erroEl.textContent = data.erro || 'Login incorreto!'; erroEl.style.display = 'block'; return; }
-      window.location.href = '/repositor-tela';
-    } catch(e) { erroEl.textContent = 'Erro ao conectar!'; erroEl.style.display = 'block'; }
-    return;
-  }
+
   try {
     const res  = await fetch(`${API}/auth/login`, { credentials:'include', method:'POST', credentials:'include', headers:{'Content-Type':'application/json'}, body:JSON.stringify({login,senha,perfil:perfilSelecionado}) });
     const data = await res.json();
@@ -899,13 +884,25 @@ function mostrarStatus(msg, tipo) {
 /* ══════════════════════════════════════════
    MOBILE REPOSITOR
 ══════════════════════════════════════════ */
+let repFiltroAtual = '';
+
+function setFiltroRep(status, btn) {
+  repFiltroAtual = status;
+  document.querySelectorAll('.rep-filtro-btn').forEach(b => b.classList.remove('ativo'));
+  if (btn) btn.classList.add('ativo');
+  carregarAvisosMobile();
+}
+
 function ativarMobileRep() {
   document.body.classList.add('rep-mobile');
   document.getElementById('rep-mobile-root').style.display = 'flex';
   document.getElementById('rep-tabbar').style.display = 'flex';
   mudarTabRep('avisos');
   carregarAvisosMobile();
-  setInterval(() => { carregarAvisosMobile(); }, 20000);
+  setInterval(() => {
+    carregarAvisosMobile();
+    if (document.getElementById('rep-tab-historico')?.classList.contains('ativa')) carregarHistoricoDia();
+  }, 20000);
 }
 
 
@@ -935,9 +932,11 @@ async function carregarAvisosMobile() {
 
 
 
-    const filtroEl = document.getElementById('m-filtro-rep-status');
-    const status   = filtroEl ? filtroEl.value : '';
+    const status = repFiltroAtual || '';
     let url = `${API}/repositor/avisos`; if (status) url += `?status=${status}`;
+    // Mostra nome do usuário logado
+    const userInfoEl = document.getElementById('m-rep-user-info');
+    if (userInfoEl) userInfoEl.textContent = `👤 ${usuarioAtual?.nome||'—'}`;
     const r      = await fetch(url, { credentials:'include' });
     if (!r.ok) return;
     const avisos = await r.json();
@@ -1059,9 +1058,9 @@ async function carregarAvisosMobile() {
           <button style="padding:11px 4px;background:#7C3AED;color:#fff;border:none;border-radius:10px;font-size:11px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;flex-direction:column;align-items:center;gap:3px" onclick="marcarAvisoMobile(${a.id},0,'devolucao')"><span style="font-size:17px">↩️</span>Devolução</button>
         </div>
         ` : '<div style="margin-top:4px">' +
-          (isEnc   ? '<div style="font-size:13px;color:var(--green);font-weight:700">✅ Encontrado às '+(a.hora_reposto||'—')+(a.qtd_encontrada>0?' — '+a.qtd_encontrada+' un.':'')+'</div>' : '') +
-          (isSubiu ? '<div style="font-size:13px;color:#0D9488;font-weight:700">⬆️ Subiu às '+(a.hora_reposto||'—')+(a.qtd_encontrada>0?' — '+a.qtd_encontrada+' un.':'')+'</div>' : '') +
-          (isAbast ? '<div style="font-size:13px;color:var(--accent);font-weight:700">📦 Abastecido às '+(a.hora_reposto||'—')+(a.qtd_encontrada>0?' — '+a.qtd_encontrada+' un.':'')+'</div>' : '') +
+          (isEnc   ? '<div style="font-size:13px;color:var(--green);font-weight:700">✅ Separado às '+(a.hora_reposto||'—')+(a.qtd_encontrada>0?' — '+a.qtd_encontrada+' un.':'')+(a.repositor_nome?' 👤 '+a.repositor_nome:'')+'</div>' : '') +
+          (isSubiu ? '<div style="font-size:13px;color:#0D9488;font-weight:700">⬆️ Subiu às '+(a.hora_reposto||'—')+(a.qtd_encontrada>0?' — '+a.qtd_encontrada+' un.':'')+(a.repositor_nome?' 👤 '+a.repositor_nome:'')+'</div>' : '') +
+          (isAbast ? '<div style="font-size:13px;color:var(--accent);font-weight:700">📦 Abastecido às '+(a.hora_reposto||'—')+(a.qtd_encontrada>0?' — '+a.qtd_encontrada+' un.':'')+(a.repositor_nome?' 👤 '+a.repositor_nome:'')+'</div>' : '') +
           (isNE    ? '<div style="font-size:13px;color:var(--indigo);font-weight:700">🚫 Não encontrado às '+(a.hora_reposto||'—')+'</div>' : '') +
           (isProto ? '<div style="font-size:13px;color:var(--amber);font-weight:700">📋 Protocolo às '+(a.hora_reposto||'—')+'</div>' : '') +
           (a.obs   ? '<div style="font-size:11px;color:var(--text2);margin-top:3px">📝 '+a.obs+'</div>' : '') +
@@ -1158,6 +1157,8 @@ async function carregarHistoricoDia() {
     let rows = await res.json();
     const nomeAtual = usuarioAtual?.nome || '';
     if (nomeAtual) rows = rows.filter(r => r.funcionario === nomeAtual);
+    const lblEl = document.getElementById('m-hist-user-label');
+    if (lblEl) lblEl.textContent = nomeAtual ? `👤 ${nomeAtual} — ações de hoje` : 'Suas ações de hoje';
     if (!rows.length) {
       lista.innerHTML = '<div style="color:var(--text3);text-align:center;padding:36px;font-size:14px">Nenhuma etapa registrada hoje</div>';
       return;
@@ -1889,7 +1890,7 @@ function renderChecklist(prefix) {
           <div style="flex:1;min-width:0">
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
               <span style="font-size:16px;font-weight:800;color:${corCod};font-family:'Space Mono',monospace">${item.codigo||'—'}</span>
-              <span style="font-size:12px;font-weight:700;color:var(--text3)">📍 ${item.endereco||'—'}</span>
+              <span style="font-size:15px;font-weight:800;color:var(--accent);background:rgba(37,99,235,.1);padding:3px 10px;border-radius:6px;border:1px solid rgba(37,99,235,.2)">📍 ${item.endereco||'—'}</span>
             </div>
             <div style="font-size:13px;color:var(--text);margin-top:3px;line-height:1.3">${item.descricao||'—'}</div>
             <div style="display:flex;align-items:center;gap:8px;margin-top:5px;flex-wrap:wrap">

@@ -651,3 +651,29 @@ header { box-shadow:0 2px 12px rgba(0,0,0,.08); }
 .fila-card.meu {
   border-left-color:var(--accent);
 }
+
+
+/* ── Filtro botões repositor mobile ── */
+.rep-filtro-btn {
+  padding:7px 13px;
+  border:1.5px solid var(--border);
+  border-radius:20px;
+  background:var(--surface);
+  color:var(--text2);
+  font-size:12px;
+  font-weight:600;
+  cursor:pointer;
+  white-space:nowrap;
+  font-family:'DM Sans',sans-serif;
+  transition:all .18s;
+  flex-shrink:0;
+}
+.rep-filtro-btn:hover {
+  border-color:var(--accent);
+  color:var(--accent);
+}
+.rep-filtro-btn.ativo {
+  background:var(--accent);
+  border-color:var(--accent);
+  color:#fff;
+}
