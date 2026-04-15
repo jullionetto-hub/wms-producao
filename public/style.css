@@ -33,13 +33,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
 /* ══════════════════════════════════════════
    LOGIN
 ══════════════════════════════════════════ */
-#tela-login{position:fixed;inset:0;background:linear-gradient(145deg,#0B1A2E 0%,#0F172A 100%);display:flex;align-items:center;justify-content:center;z-index:9999}
-.login-box{background:rgba(255,255,255,.05);backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,.1);border-radius:24px;padding:44px 40px;width:100%;max-width:420px;text-align:center}
+#tela-login{position:fixed;inset:0;background:linear-gradient(145deg,#0B1A2E 0%,#0F172A 100%);display:flex;align-items:center;justify-content:center;z-index:9999;pointer-events:all}
+.login-box{background:rgba(255,255,255,.05);backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,.1);border-radius:24px;padding:44px 40px;width:100%;max-width:420px;text-align:center;position:relative;z-index:10000}
 .login-logo{font-size:46px;margin-bottom:12px;filter:drop-shadow(0 0 24px rgba(59,130,246,.5))}
 .login-titulo{font-family:'Space Mono',monospace;font-size:21px;color:#fff;margin-bottom:4px}
 .login-sub{font-size:11px;color:rgba(255,255,255,.35);margin-bottom:28px;letter-spacing:.8px;text-transform:uppercase}
-.perfil-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:26px}
-.perfil-btn{padding:13px 8px;border:1.5px solid rgba(255,255,255,.12);border-radius:12px;background:rgba(255,255,255,.04);color:rgba(255,255,255,.4);cursor:pointer;font-size:10px;font-weight:700;letter-spacing:.8px;transition:all .2s;font-family:'DM Sans',sans-serif}
+.perfil-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:26px;position:relative;z-index:10000}
+.perfil-btn{padding:13px 8px;border:1.5px solid rgba(255,255,255,.12);border-radius:12px;background:rgba(255,255,255,.04);color:rgba(255,255,255,.4);cursor:pointer;font-size:10px;font-weight:700;letter-spacing:.8px;transition:all .2s;font-family:'DM Sans',sans-serif;pointer-events:all;position:relative;z-index:10000;-webkit-tap-highlight-color:rgba(59,130,246,.3)}
 .perfil-btn:hover{border-color:rgba(59,130,246,.6);color:rgba(255,255,255,.8);background:rgba(59,130,246,.08)}
 .perfil-btn.ativo{border-color:#3B82F6;background:rgba(37,99,235,.25);color:#93C5FD;box-shadow:0 0 0 3px rgba(59,130,246,.15)}
 .perfil-btn .pi{font-size:22px;display:block;margin-bottom:5px}

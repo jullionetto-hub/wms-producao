@@ -105,8 +105,22 @@ function toast(msg, tipo='info') {
 let perfilSelecionado = '';
 function selecionarPerfil(p, btn) {
   perfilSelecionado = p;
-  document.querySelectorAll('.perfil-btn').forEach(b => b.classList.remove('ativo'));
-  if (btn) btn.classList.add('ativo');
+  // Reset all perfil buttons
+  ['supervisor','repositor','separador','checkout'].forEach(perfil => {
+    const el = document.getElementById('pbtn-' + perfil);
+    if (el) {
+      el.style.borderColor = 'rgba(255,255,255,.15)';
+      el.style.background  = 'rgba(255,255,255,.05)';
+      el.style.color       = 'rgba(255,255,255,.5)';
+    }
+  });
+  // Highlight selected button
+  const selected = document.getElementById('pbtn-' + p);
+  if (selected) {
+    selected.style.borderColor = '#3B82F6';
+    selected.style.background  = 'rgba(37,99,235,.3)';
+    selected.style.color       = '#93C5FD';
+  }
   const erroEl = document.getElementById('login-erro');
   if (erroEl) erroEl.style.display = 'none';
 }
@@ -589,7 +603,6 @@ async function carregarMetas() {
       const el2 = document.getElementById('layout-estoque-visual-ped');
       if (el2) el2.innerHTML = layoutHtml;
     }
-    }); // end forEach
   } catch(e) {}
 }
 

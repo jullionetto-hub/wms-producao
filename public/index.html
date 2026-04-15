@@ -15,27 +15,59 @@
 <div id="toast-root"></div>
 
 <!-- ══ LOGIN ══ -->
-<div id="tela-login">
-  <div class="login-box">
-    <div class="login-logo">📦</div>
-    <div class="login-titulo">WMS — Miess</div>
-    <div class="login-sub">Controle de Pedidos</div>
-    <div class="perfil-grid" style="grid-template-columns:repeat(2,1fr)">
-      <button class="perfil-btn" onclick="selecionarPerfil('supervisor',this)"><span class="pi">👔</span>SUPERVISÃO</button>
-      <button class="perfil-btn" onclick="selecionarPerfil('repositor',this)" id="btn-reposicao"><span class="pi">🔧</span>REPOSIÇÃO</button>
-      <button class="perfil-btn" onclick="selecionarPerfil('separador',this)"><span class="pi">📦</span>SEPARAÇÃO</button>
-      <button class="perfil-btn" onclick="selecionarPerfil('checkout',this)"><span class="pi">🏷️</span>CHECKOUT</button>
+<div id="tela-login" style="position:fixed;inset:0;background:linear-gradient(145deg,#0B1A2E,#0F172A);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px">
+  <div style="background:rgba(255,255,255,.05);backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,.1);border-radius:24px;padding:40px 36px;width:100%;max-width:420px;text-align:center;position:relative;z-index:10000">
+    <div style="font-size:48px;margin-bottom:10px">📦</div>
+    <div style="font-family:'Space Mono',monospace;font-size:20px;color:#fff;margin-bottom:4px">WMS — Miess</div>
+    <div style="font-size:11px;color:rgba(255,255,255,.3);letter-spacing:1.5px;margin-bottom:28px;text-transform:uppercase">Controle de Pedidos</div>
+
+    <!-- PERFIS -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:24px">
+      <button type="button" id="pbtn-supervisor"
+        onclick="selecionarPerfil('supervisor',this)"
+        style="padding:16px 8px;border:1.5px solid rgba(255,255,255,.15);border-radius:12px;background:rgba(255,255,255,.05);color:rgba(255,255,255,.5);cursor:pointer;font-size:11px;font-weight:700;letter-spacing:.8px;font-family:'DM Sans',sans-serif;transition:all .2s">
+        <span style="font-size:24px;display:block;margin-bottom:6px">👔</span>SUPERVISÃO
+      </button>
+      <button type="button" id="pbtn-repositor"
+        onclick="selecionarPerfil('repositor',this)"
+        style="padding:16px 8px;border:1.5px solid rgba(255,255,255,.15);border-radius:12px;background:rgba(255,255,255,.05);color:rgba(255,255,255,.5);cursor:pointer;font-size:11px;font-weight:700;letter-spacing:.8px;font-family:'DM Sans',sans-serif;transition:all .2s">
+        <span style="font-size:24px;display:block;margin-bottom:6px">🔧</span>REPOSIÇÃO
+      </button>
+      <button type="button" id="pbtn-separador"
+        onclick="selecionarPerfil('separador',this)"
+        style="padding:16px 8px;border:1.5px solid rgba(255,255,255,.15);border-radius:12px;background:rgba(255,255,255,.05);color:rgba(255,255,255,.5);cursor:pointer;font-size:11px;font-weight:700;letter-spacing:.8px;font-family:'DM Sans',sans-serif;transition:all .2s">
+        <span style="font-size:24px;display:block;margin-bottom:6px">📦</span>SEPARAÇÃO
+      </button>
+      <button type="button" id="pbtn-checkout"
+        onclick="selecionarPerfil('checkout',this)"
+        style="padding:16px 8px;border:1.5px solid rgba(255,255,255,.15);border-radius:12px;background:rgba(255,255,255,.05);color:rgba(255,255,255,.5);cursor:pointer;font-size:11px;font-weight:700;letter-spacing:.8px;font-family:'DM Sans',sans-serif;transition:all .2s">
+        <span style="font-size:24px;display:block;margin-bottom:6px">🏷️</span>CHECKOUT
+      </button>
     </div>
 
-    <div class="login-campo"><label>USUÁRIO</label><input type="text" id="login-usuario" placeholder="Ex: joao.silva" autocomplete="username"/></div>
-    <div class="login-campo"><label>SENHA</label><input type="password" id="login-senha" placeholder="••••••••" onkeydown="if(event.key==='Enter')fazerLogin()" autocomplete="current-password"/></div>
-    <div class="login-erro" id="login-erro"></div>
-    <button class="btn-login" onclick="fazerLogin()">▶ ENTRAR</button>
+    <div style="margin-bottom:12px;text-align:left">
+      <div style="font-size:10px;color:rgba(96,165,250,.8);font-weight:700;letter-spacing:1.2px;margin-bottom:5px">USUÁRIO</div>
+      <input type="text" id="login-usuario" placeholder="Ex: admin" autocomplete="username"
+        style="width:100%;padding:12px 14px;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.1);border-radius:10px;color:#fff;font-size:15px;outline:none;font-family:'DM Sans',sans-serif;box-sizing:border-box"
+        onkeydown="if(event.key==='Enter')fazerLogin()"/>
+    </div>
+    <div style="margin-bottom:16px;text-align:left">
+      <div style="font-size:10px;color:rgba(96,165,250,.8);font-weight:700;letter-spacing:1.2px;margin-bottom:5px">SENHA</div>
+      <input type="password" id="login-senha" placeholder="••••••••" autocomplete="current-password"
+        style="width:100%;padding:12px 14px;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.1);border-radius:10px;color:#fff;font-size:15px;outline:none;font-family:'DM Sans',sans-serif;box-sizing:border-box"
+        onkeydown="if(event.key==='Enter')fazerLogin()"/>
+    </div>
+
+    <div id="login-erro" style="display:none;color:#FCA5A5;font-size:12px;margin-bottom:12px;padding:8px 12px;background:rgba(220,38,38,.12);border-radius:8px;border:1px solid rgba(220,38,38,.25)"></div>
+
+    <button type="button" onclick="fazerLogin()"
+      style="width:100%;padding:13px;background:#2563EB;border:none;border-radius:10px;color:#fff;font-size:15px;font-weight:800;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s">
+      ▶ ENTRAR
+    </button>
   </div>
 </div>
-
 <!-- ══ APP ══ -->
-<div id="app">
+<div id="app" style="display:none">
   <header>
     <div class="logo">
       <div class="logo-ic">📦</div>
