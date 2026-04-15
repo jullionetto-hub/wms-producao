@@ -2,6 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
+  <meta name="description" content="WMS Miess — Sistema de Gestão de Separação de Pedidos">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>WMS — Miess</title>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
@@ -11,8 +12,8 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
-<div id="toast-root"></div>
+<a href="#conteudo" class="skip-link">Ir para o conteúdo</a>
+<div id="toast-root" role="status" aria-live="polite" aria-atomic="true"></div>
 
 <!-- ══ LOGIN ══ -->
 <div id="tela-login" style="position:fixed;inset:0;background:linear-gradient(145deg,#0B1A2E,#0F172A);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px">
@@ -81,10 +82,10 @@
   </header>
 
   <div class="layout">
-    <nav class="sidebar" id="sidebar"></nav>
+    <nav class="sidebar" id="sidebar" aria-label="Menu de navegação"></nav>
 
     <!-- ══ CONTEÚDO NORMAL (supervisor / desktop separador) ══ -->
-    <div class="conteudo" id="conteudo">
+    <div class="conteudo" id="conteudo" role="main">
 
       <!-- DASHBOARD -->
       <div class="pagina" id="pag-dashboard">
@@ -133,8 +134,9 @@
       <div class="pagina" id="pag-pedidos">
         <div class="pg-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
           <span>📋 Pedidos</span>
-          <div style="display:flex;gap:8px;align-items:center">
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
             <button class="btn btn-outline btn-sm" id="btn-ped-tab-lista" onclick="trocarPedidosTab('lista')">📋 Lista</button>
+            <button class="btn btn-outline btn-sm" id="btn-ped-tab-importar" onclick="trocarPedidosTab('importar')">📥 Importar Pedidos</button>
             <button class="btn btn-outline btn-sm" id="btn-ped-tab-metas" onclick="trocarPedidosTab('metas')">🎯 Metas</button>
           </div>
         </div>
@@ -186,6 +188,66 @@
         </div>
         </div><!-- /ped-tab-lista -->
 
+        <!-- TAB IMPORTAR PEDIDOS -->
+        <div id="ped-tab-importar" style="display:none">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+
+            <!-- Upload card -->
+            <div class="card">
+              <div class="card-hd" style="background:linear-gradient(135deg,rgba(37,99,235,.08),rgba(99,102,241,.05))">📥 IMPORTAR PLANILHA DE PEDIDOS</div>
+
+              <!-- Drag & Drop Area -->
+              <div id="upload-area" class="upload-zone" style="margin-bottom:14px"
+                ondragover="event.preventDefault();this.style.borderColor='var(--accent)';this.style.background='rgba(37,99,235,.05)'"
+                ondragleave="this.style.borderColor='var(--border)';this.style.background='var(--surface2)'"
+                ondrop="handleDrop(event);this.style.borderColor='var(--border)';this.style.background='var(--surface2)'"
+                onclick="document.getElementById('file-input-hidden').click()">
+                <input type="file" id="file-input-hidden" accept=".xlsx,.xls" style="display:none" onchange="processarArquivo(event)"/>
+                <div style="font-size:40px;margin-bottom:10px">📂</div>
+                <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">Clique ou arraste o arquivo aqui</div>
+                <div style="font-size:12px;color:var(--text3)">Aceita .xlsx e .xls</div>
+              </div>
+
+              <!-- Preview info -->
+              <div id="preview-importacao" style="display:none">
+                <div style="background:var(--surface2);border-radius:10px;padding:12px 14px;border:1px solid var(--border);margin-bottom:12px">
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+                    <span style="font-size:12px;font-weight:700;color:var(--text2)">📊 ARQUIVO LIDO</span>
+                    <span id="txt-total-import" style="font-size:13px;font-weight:800;color:var(--accent)">0 pedidos</span>
+                  </div>
+                  <div style="font-size:12px;color:var(--text3)" id="txt-itens-import">0 itens no total</div>
+                </div>
+                <button class="btn btn-primary" style="width:100%;padding:13px;font-size:14px;font-weight:800;border-radius:10px" onclick="confirmarImportacao()">
+                  🚀 Iniciar Importação
+                </button>
+              </div>
+
+              <!-- Status / Progresso -->
+              <div id="import-status-wrap" style="display:none;margin-top:14px">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+                  <span id="import-status-txt" style="font-size:13px;font-weight:600;color:var(--text2)">Aguardando...</span>
+                  <span id="import-pct" style="font-size:14px;font-weight:800;color:var(--accent)">0%</span>
+                </div>
+                <div style="height:10px;background:var(--border);border-radius:10px;overflow:hidden;margin-bottom:8px">
+                  <div id="import-bar" style="height:100%;width:0%;background:var(--accent);border-radius:10px;transition:width .4s ease"></div>
+                </div>
+                <div id="import-status-detalhe" style="font-size:11px;color:var(--text3)"></div>
+              </div>
+            </div>
+
+            <!-- Histórico -->
+            <div class="card">
+              <div class="card-hd" style="background:linear-gradient(135deg,rgba(37,99,235,.08),rgba(99,102,241,.05))">
+                📋 HISTÓRICO DE IMPORTAÇÕES
+                <button class="btn btn-danger btn-sm" onclick="limparHistorico()">🗑</button>
+              </div>
+              <div id="hist-importacoes" style="max-height:400px;overflow-y:auto">
+                <div style="color:var(--text3);text-align:center;padding:30px;font-size:13px">Nenhuma importação ainda</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- TAB METAS -->
         <div id="ped-tab-metas" style="display:none">
           <div class="card" style="max-width:600px">
@@ -226,8 +288,6 @@
         <div class="pg-title">⚙️ Cadastros</div>
         <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
           <button class="btn btn-primary btn-sm" id="ctab-usuarios" onclick="trocarCadastroTab('usuarios')">👥 Usuários</button>
-          <button class="btn btn-outline btn-sm" id="ctab-importar" onclick="trocarCadastroTab('importar')">📥 Importar</button>
-          <button class="btn btn-outline btn-sm" id="ctab-metas"    onclick="trocarCadastroTab('metas')">🎯 Metas</button>
         </div>
 
         <!-- ABA: USUÁRIOS -->
@@ -279,21 +339,25 @@
               <div class="form-grp">
                 <label>PODE ACESSAR TAMBÉM</label>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px">
-                  <label id="perm-supervisor" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;background:var(--surface2);cursor:pointer;transition:all .2s;user-select:none">
-                    <input type="checkbox" class="usr-perm" value="supervisor" id="perm-cb-supervisor" style="width:18px;height:18px;accent-color:var(--accent);flex-shrink:0" onchange="atualizarPermVisual('supervisor')">
-                    <span style="font-size:13px;font-weight:600">👔 Supervisão</span>
+                  <label id="perm-supervisor" style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--border);border-radius:10px;background:var(--surface2);cursor:pointer;transition:all .2s;user-select:none">
+                    <input type="checkbox" class="usr-perm" value="supervisor" id="perm-cb-supervisor" style="width:16px;height:16px;accent-color:var(--accent);flex-shrink:0" onchange="atualizarPermVisual('supervisor')">
+                    <span style="font-size:18px;flex-shrink:0">👔</span>
+                    <span style="font-size:12px;font-weight:600;color:var(--text)">Supervisão</span>
                   </label>
-                  <label id="perm-separador" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;background:var(--surface2);cursor:pointer;transition:all .2s;user-select:none">
-                    <input type="checkbox" class="usr-perm" value="separador" id="perm-cb-separador" style="width:18px;height:18px;accent-color:var(--accent);flex-shrink:0" onchange="atualizarPermVisual('separador')">
-                    <span style="font-size:13px;font-weight:600">📦 Separação</span>
+                  <label id="perm-separador" style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--border);border-radius:10px;background:var(--surface2);cursor:pointer;transition:all .2s;user-select:none">
+                    <input type="checkbox" class="usr-perm" value="separador" id="perm-cb-separador" style="width:16px;height:16px;accent-color:var(--accent);flex-shrink:0" onchange="atualizarPermVisual('separador')">
+                    <span style="font-size:18px;flex-shrink:0">📦</span>
+                    <span style="font-size:12px;font-weight:600;color:var(--text)">Separação</span>
                   </label>
-                  <label id="perm-repositor" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;background:var(--surface2);cursor:pointer;transition:all .2s;user-select:none">
-                    <input type="checkbox" class="usr-perm" value="repositor" id="perm-cb-repositor" style="width:18px;height:18px;accent-color:var(--accent);flex-shrink:0" onchange="atualizarPermVisual('repositor')">
-                    <span style="font-size:13px;font-weight:600">🔧 Reposição</span>
+                  <label id="perm-repositor" style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--border);border-radius:10px;background:var(--surface2);cursor:pointer;transition:all .2s;user-select:none">
+                    <input type="checkbox" class="usr-perm" value="repositor" id="perm-cb-repositor" style="width:16px;height:16px;accent-color:var(--accent);flex-shrink:0" onchange="atualizarPermVisual('repositor')">
+                    <span style="font-size:18px;flex-shrink:0">🔧</span>
+                    <span style="font-size:12px;font-weight:600;color:var(--text)">Reposição</span>
                   </label>
-                  <label id="perm-checkout" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;background:var(--surface2);cursor:pointer;transition:all .2s;user-select:none">
-                    <input type="checkbox" class="usr-perm" value="checkout" id="perm-cb-checkout" style="width:18px;height:18px;accent-color:var(--accent);flex-shrink:0" onchange="atualizarPermVisual('checkout')">
-                    <span style="font-size:13px;font-weight:600">🏷️ Checkout</span>
+                  <label id="perm-checkout" style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--border);border-radius:10px;background:var(--surface2);cursor:pointer;transition:all .2s;user-select:none">
+                    <input type="checkbox" class="usr-perm" value="checkout" id="perm-cb-checkout" style="width:16px;height:16px;accent-color:var(--accent);flex-shrink:0" onchange="atualizarPermVisual('checkout')">
+                    <span style="font-size:18px;flex-shrink:0">🏷️</span>
+                    <span style="font-size:12px;font-weight:600;color:var(--text)">Checkout</span>
                   </label>
                 </div>
                 <div style="font-size:10px;color:var(--text3);margin-top:6px">O perfil principal é habilitado automaticamente. Marque os acessos extras.</div>
@@ -315,60 +379,9 @@
           </div>
         </div>
 
-        <!-- ABA: IMPORTAR -->
-        <div id="cad-importar" style="display:none">
-          <div class="grid-2">
-            <div class="card">
-              <div class="card-hd">📥 IMPORTAR PLANILHA</div>
-              <div class="form-grp">
-                <label>ARQUIVO .XLSX</label>
-                <input type="file" id="import-file" accept=".xlsx,.xls" style="padding:10px;border:1.5px dashed var(--border);border-radius:10px;width:100%;background:var(--surface2);cursor:pointer"/>
-              </div>
-              <button class="btn btn-primary" style="width:100%;margin-top:4px" onclick="importarPlanilha()">📤 Importar Pedidos</button>
-              <div id="import-status" style="margin-top:14px"></div>
-            </div>
-            <div class="card">
-              <div class="card-hd">📋 HISTÓRICO DE IMPORTAÇÕES <button class="btn btn-danger btn-sm" onclick="limparHistorico()">🗑 Limpar</button></div>
-              <div id="hist-importacoes"></div>
-            </div>
-          </div>
-        </div>
 
-        <!-- ABA: METAS -->
-        <div id="cad-metas" style="display:none">
-          <div class="card" style="max-width:520px">
-            <div class="card-hd" style="background:linear-gradient(135deg,rgba(37,99,235,.08),rgba(99,102,241,.05))">🎯 METAS DIÁRIAS</div>
-            <div class="form-grp" style="margin-top:4px">
-              <label>META DE PEDIDOS POR DIA</label>
-              <input type="number" id="meta-pedidos" placeholder="Ex: 25" min="1" max="200"/>
-              <div style="font-size:11px;color:var(--text3);margin-top:4px">Pedidos concluídos que cada separador deve atingir por dia</div>
-            </div>
-            <div class="form-grp">
-              <label>META DE PONTOS POR DIA</label>
-              <input type="number" id="meta-pontos" placeholder="Ex: 300" min="1"/>
-              <div style="font-size:11px;color:var(--text3);margin-top:4px">Pontos = (corredores × dificuldade × 3) + (itens × 1) + (unidades × 0.5)</div>
-            </div>
-            <div style="background:var(--surface2);border-radius:10px;padding:12px;margin-bottom:14px;border:1px solid var(--border)">
-              <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:8px">⚡ COMO O PESO É CALCULADO</div>
-              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center;margin-bottom:10px">
-                <div style="background:var(--surface);border-radius:8px;padding:10px;border:1px solid var(--border)">
-                  <div style="font-size:18px">🛣️</div><div style="font-size:12px;font-weight:800;color:var(--indigo)">dif.×3</div><div style="font-size:10px;color:var(--text3)">por corredor</div>
-                </div>
-                <div style="background:var(--surface);border-radius:8px;padding:10px;border:1px solid var(--border)">
-                  <div style="font-size:18px">📋</div><div style="font-size:12px;font-weight:800;color:var(--accent)">×1 ponto</div><div style="font-size:10px;color:var(--text3)">por item</div>
-                </div>
-                <div style="background:var(--surface);border-radius:8px;padding:10px;border:1px solid var(--border)">
-                  <div style="font-size:18px">📦</div><div style="font-size:12px;font-weight:800;color:var(--green)">×0.5 pt</div><div style="font-size:10px;color:var(--text3)">por unidade</div>
-                </div>
-              </div>
-              <div style="font-size:11px;color:var(--text3);margin-bottom:6px;font-weight:600">🗺️ DIFICULDADE POR CORREDOR (seu estoque)</div>
-              <div id="layout-estoque-visual">
-                <div style="color:var(--text3);font-size:12px;padding:8px">Carregando mapa do estoque...</div>
-              </div>
-            </div>
-            <button class="btn btn-primary" style="width:100%;padding:12px;font-size:14px;font-weight:700" onclick="salvarMetas()">💾 Salvar Metas</button>
-          </div>
-        </div>
+
+
 
       </div>
 
@@ -498,7 +511,7 @@
         <div class="card" style="margin-bottom:16px">
           <div class="card-hd">🔍 BUSCAR POR NÚMERO DE CAIXA</div>
           <div class="bip-wrap" style="margin-bottom:0">
-            <input type="text" class="bip-input" id="ck-input-caixa" placeholder="Digite ou bipe o número da caixa..." autocomplete="off" inputmode="numeric" style="font-size:20px;letter-spacing:3px"/>
+            <input type="text" class="bip-input" id="ck-input-caixa" autocomplete="off" placeholder="Digite ou bipe o número da caixa..." autocomplete="off" inputmode="numeric" style="font-size:20px;letter-spacing:3px"/>
             <button class="btn-bip" onclick="buscarCaixa()">▶</button>
           </div>
         </div>
@@ -861,6 +874,15 @@
 </div>
 
 <!-- JavaScript separado -->
-<script src="app.js"></script>
+<script src="state.js"></script>
+  <script src="utils.js"></script>
+  <script src="auth.js"></script>
+  <script src="pedidos.js"></script>
+  <script src="separacao.js"></script>
+  <script src="reposicao.js"></script>
+  <script src="checkout.js"></script>
+  <script src="supervisao.js"></script>
+  <script src="cadastros.js"></script>
+  <script src="importar.js"></script>
 </body>
 </html>

@@ -677,3 +677,87 @@ header { box-shadow:0 2px 12px rgba(0,0,0,.08); }
   border-color:var(--accent);
   color:#fff;
 }
+
+
+/* ══════════════════════════════════════════
+   CLASSES UTILITÁRIAS — elimina inline styles
+══════════════════════════════════════════ */
+
+/* Status badges — para avisos de reposição */
+.aviso-status-separado { color:#16A34A; font-weight:700; font-size:13px; }
+.aviso-status-subiu    { color:#0D9488; font-weight:700; font-size:13px; }
+.aviso-status-abastecido{ color:#2563EB; font-weight:700; font-size:13px; }
+.aviso-status-verificando{ color:#6366F1; font-weight:700; font-size:13px; }
+.aviso-status-protocolo { color:#D97706; font-weight:700; font-size:13px; }
+.aviso-status-devolucao { color:#7C3AED; font-weight:700; font-size:13px; }
+.aviso-status-pendente  { color:#DC2626; font-weight:700; font-size:13px; }
+
+/* Corredor badges */
+.cor-verde  { color:#16A34A; background:rgba(22,163,74,.1);  border:1px solid rgba(22,163,74,.2);  padding:3px 10px; border-radius:6px; font-weight:800; font-size:15px; }
+.cor-azul   { color:#0070C0; background:rgba(0,112,192,.1);  border:1px solid rgba(0,112,192,.2);  padding:3px 10px; border-radius:6px; font-weight:800; font-size:15px; }
+.cor-verm   { color:#DC2626; background:rgba(220,38,38,.1);  border:1px solid rgba(220,38,38,.2);  padding:3px 10px; border-radius:6px; font-weight:800; font-size:15px; }
+.cor-neutro { color:var(--accent); background:rgba(37,99,235,.1); border:1px solid rgba(37,99,235,.2); padding:3px 10px; border-radius:6px; font-weight:800; font-size:15px; }
+
+/* Etapas históricas */
+.etapa-row { display:flex; align-items:center; gap:12px; padding:8px 0; }
+.etapa-row:not(:last-child) { border-bottom:1px solid var(--border); }
+.etapa-dot  { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+.etapa-label{ font-size:13px; font-weight:700; flex:1; }
+.etapa-meta { text-align:right; flex-shrink:0; }
+.etapa-func { font-size:13px; font-weight:700; color:var(--text2); }
+.etapa-hora { font-size:11px; color:var(--text3); font-family:'Space Mono',monospace; }
+
+/* Grid de botões mobile repositor */
+.rep-btns-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:7px; margin-bottom:8px; }
+.btn-rep { padding:11px 4px; border:none; border-radius:10px; font-size:11px; font-weight:700; cursor:pointer; font-family:'DM Sans',sans-serif; color:#fff; display:flex; flex-direction:column; align-items:center; gap:3px; transition:all .18s; }
+.btn-rep:hover { filter:brightness(1.1); transform:translateY(-1px); }
+.btn-rep .ic { font-size:18px; }
+.btn-rep.separado   { background:#16A34A; }
+.btn-rep.subiu      { background:#0D9488; }
+.btn-rep.abastecido { background:#2563EB; }
+.btn-rep.verificando{ background:#6366F1; }
+.btn-rep.protocolo  { background:#D97706; }
+.btn-rep.devolucao  { background:#7C3AED; }
+
+/* Cards de aviso mobile */
+.aviso-falta-badge { display:inline-block; padding:4px 13px; border-radius:8px; font-size:19px; font-weight:800; font-family:'Space Mono',monospace; margin-top:7px; color:#fff; background:var(--red); }
+.aviso-falta-badge.resolvido { background:var(--green); }
+
+/* Formulário de importação */
+.upload-zone { border:2px dashed var(--border); border-radius:12px; padding:32px 20px; text-align:center; cursor:pointer; transition:all .2s; background:var(--surface2); }
+.upload-zone:hover,.upload-zone.drag { border-color:var(--accent); background:rgba(37,99,235,.04); }
+.upload-zone .upload-icon { font-size:40px; margin-bottom:10px; display:block; }
+
+/* Barra de progresso de importação */
+.progress-wrap { margin-top:14px; }
+.progress-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+.progress-bar-bg { height:10px; background:var(--border); border-radius:10px; overflow:hidden; }
+.progress-bar-fill { height:100%; border-radius:10px; background:var(--accent); transition:width .4s ease, background .4s; }
+.progress-bar-fill.done { background:var(--green); }
+
+/* Tabela responsiva */
+@media(max-width:900px) {
+  .tabela-wrap { font-size:12px; }
+  .tabela-wrap th, .tabela-wrap td { padding:7px 8px; }
+}
+
+/* Focus visible para acessibilidade */
+button:focus-visible, input:focus-visible, select:focus-visible {
+  outline:2px solid var(--accent);
+  outline-offset:2px;
+}
+
+/* Skip to content (acessibilidade) */
+.skip-link {
+  position:absolute; top:-100px; left:10px; z-index:99999;
+  background:var(--accent); color:#fff; padding:8px 14px; border-radius:6px;
+  font-size:13px; font-weight:700; text-decoration:none;
+}
+.skip-link:focus { top:10px; }
+
+/* Print styles */
+@media print {
+  .sidebar, header, .rep-tabbar, .sep-tabbar, .btn, button { display:none !important; }
+  .conteudo { margin:0 !important; }
+  .pagina.ativa { display:block !important; }
+}

@@ -1,3 +1,12 @@
+// Captura erros não tratados em callbacks do SQLite
+process.on('uncaughtException', (err) => {
+  if (err.code === 'SQLITE_ERROR' || err.message?.includes('SQLITE')) {
+    // Log mas não mata o processo para erros SQLite em callbacks
+    return;
+  }
+  process.exit(1);
+});
+
 const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
 const cors    = require('cors');
@@ -7,6 +16,14 @@ const session = require('express-session');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
+
+const zlib = require('zlib');
+app.use((req,res,next)=>{
+  if(!(req.headers['accept-encoding']||'').includes('gzip')) return next();
+  const _j=res.json.bind(res);
+  res.json=function(d){ zlib.gzip(Buffer.from(JSON.stringify(d),'utf8'),(e,gz)=>{ if(e||res.headersSent) return _j(d); res.setHeader('Content-Encoding','gzip'); res.setHeader('Content-Type','application/json;charset=utf-8'); res.end(gz); }); return this; };
+  next();
+});
 
 app.use(cors({
   credentials: true,
@@ -50,7 +67,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 const SQLiteStore = require('connect-sqlite3')(session);
 app.use(session({
-  secret: 'wms_session_secret_2026',
+  secret: process.env.SESSION_SECRET || 'wms_session_secret_2026',
   resave: false,
   saveUninitialized: false,
   store: new SQLiteStore({ db: 'sessions.db', dir: __dirname }),
@@ -290,7 +307,13 @@ function perfisPermitidos(user) {
 }
 
 function hashSenha(senha) {
-  return crypto.createHash('sha256').update(senha + 'wms_salt_2026').digest('hex');
+  return crypto.pbkdf2Sync(senha, 'wms_pbkdf2_salt_miess_2026', 100000, 64, 'sha512').toString('hex');
+}
+function verificarSenha(senha, hash) {
+  if (!hash) return false;
+  if (hash.length === 64) // legado SHA-256
+    return crypto.createHash('sha256').update(senha + 'wms_salt_2026').digest('hex') === hash;
+  return hashSenha(senha) === hash;
 }
 function criarUsuarioPadrao() {
   const hash = hashSenha('123456');
@@ -365,14 +388,6 @@ app.get('/auth/me', (req, res) => {
 });
 
 // ─── USUÁRIOS ─────────────────────────────────────────────────────────────────
-// Lista de todos usuários ativos para tela de repositor aberta
-app.get('/repositor/funcionarios', (req, res) => {
-  db.all(`SELECT id, nome FROM usuarios WHERE status='ativo' ORDER BY nome`,
-    [], (err, rows) => {
-      if (err) return res.status(500).json({ erro: err.message });
-      res.json(rows || []);
-    });
-});
 
 app.get('/usuarios', (req, res) => {
   const { perfil } = req.query;
@@ -1090,7 +1105,9 @@ app.post('/importar', requireAuth, async (req, res) => {
 
 // ─── LAYOUT DO ESTOQUE ──────────────────────────────────────────────────────
 app.get('/layout-estoque', requireAuth, (req, res) => {
-  res.json({
+  const cached = cacheGet('layout', 3600);
+  if (cached) return res.json(cached);
+  const data = {
     corredores: {
       verde:    ['A','B','C','D','E','P','Q','R','S','T','U'],
       azul:     ['M','N','O','V','W','X','Y','Z'],
@@ -1102,20 +1119,26 @@ app.get('/layout-estoque', requireAuth, (req, res) => {
       azul:     '🔵 Médio — corredores de acesso médio (×2 pontos)',
       vermelho: '🔴 Difícil — corredores de difícil acesso (×3 pontos)'
     }
-  });
+  };
+  cacheSet('layout', data);
+  res.json(data);
 });
 
 // ─── CONFIGURAÇÕES / METAS ──────────────────────────────────────────────────
 app.get('/configuracoes', requireAuth, (req, res) => {
+  const cached = cacheGet('cfg', 300);
+  if (cached) return res.json(cached);
   db.all('SELECT chave, valor FROM configuracoes', [], (err, rows) => {
     if (err) return res.status(500).json({ erro: err.message });
     const cfg = {};
     rows.forEach(r => cfg[r.chave] = r.valor);
+    cacheSet('cfg', cfg);
     res.json(cfg);
   });
 });
 
 app.put('/configuracoes', requireSupervisor, (req, res) => {
+  delete _mc['cfg'];
   const updates = req.body;
   const stmt = db.prepare('INSERT OR REPLACE INTO configuracoes (chave,valor,atualizado_em) VALUES (?,?,CURRENT_TIMESTAMP)');
   Object.entries(updates).forEach(([k,v]) => stmt.run([k, String(v)]));
@@ -1363,44 +1386,27 @@ app.get('/kpis', (req, res) => {
   });
 });
 
-// ─── ROTA REPOSITOR — requer login repositor ────
-app.get('/repositor-tela', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'repositor.html'));
-});
-
 // Login específico para tela de reposição (retorna token simples em session)
-app.post('/repositor/login', (req, res) => {
-  const { login, senha, colaborador } = req.body;
-  if (!login || !senha) return res.status(400).json({ erro:'Preencha login e senha!' });
-  const hash = hashSenha(senha);
-  db.get(`SELECT * FROM usuarios WHERE login=? AND senha_hash=? AND status='ativo'`,
-    [login, hash], (err, user) => {
-      if (err)   return res.status(500).json({ erro: err.message });
-      if (!user) return res.status(401).json({ erro:'Login ou senha incorretos!' });
-      // Aceita supervisor ou repositor
-      const perfisOk = ['supervisor','repositor'];
-      const perfisUser = [user.perfil, ...(user.perfis_acesso||'').split(',').filter(Boolean)];
-      if (!perfisOk.some(p => perfisUser.includes(p)))
-        return res.status(403).json({ erro:'Sem permissão para esta tela!' });
-      // Salva colaborador selecionado na sessão
-      req.session.rep_colaborador = colaborador || user.nome;
-      req.session.rep_usuario = { id: user.id, nome: user.nome, login: user.login };
-      res.json({ ok: true, nome: req.session.rep_colaborador });
-    });
-});
 
-app.get('/repositor/sessao', (req, res) => {
-  if (!req.session.rep_usuario) return res.status(401).json({ logado: false });
-  res.json({ logado: true, colaborador: req.session.rep_colaborador || req.session.rep_usuario.nome });
-});
 
-app.post('/repositor/logout', (req, res) => {
-  req.session.rep_colaborador = null;
-  req.session.rep_usuario = null;
-  res.json({ ok: true });
-});
+
+
+// ── Cache em memória para rotas estáticas ──────────────────────────────────
+const _mc = {};
+function cacheGet(key, ttlSec) {
+  const e = _mc[key];
+  if (e && Date.now() - e.ts < ttlSec * 1000) return e.data;
+  return null;
+}
+function cacheSet(key, data) { _mc[key] = { data, ts: Date.now() }; }
+
+const asyncRoute = fn => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 
 // ─── START ────────────────────────────────────────────────────────────────────
+app.use((err, req, res, next) => { // global error handler
+  res.status(err.status || 500).json({ erro: process.env.NODE_ENV==='production' ? 'Erro interno' : (err.message||'Erro') });
+});
+
 app.listen(PORT, () => {
   console.log(`Servidor WMS rodando na porta ${PORT}`);
   const { data, hora } = dataHoraLocal();
