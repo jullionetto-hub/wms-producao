@@ -75,19 +75,6 @@ function atualizarPermVisual(perfil) {
 
 
 /* ── Relógio ── */
-// Adiciona animação pulse para alertas
-(function addAlertCSS() {
-  const s = document.createElement('style');
-  s.textContent = `
-    @keyframes pulseAlert {
-      0%,100% { opacity:1; }
-      50% { opacity:.75; }
-    }
-    #alertas-banner { transition: all .3s; }
-  `;
-  document.head.appendChild(s);
-})();
-
 function atualizarRelogio() {
   const agora = new Date();
   const str   = agora.toLocaleString('pt-BR', { timeZone:'America/Sao_Paulo' });
@@ -119,9 +106,9 @@ let perfilSelecionado = '';
 function selecionarPerfil(p, btn) {
   perfilSelecionado = p;
   document.querySelectorAll('.perfil-btn').forEach(b => b.classList.remove('ativo'));
-  btn.classList.add('ativo');
-  document.getElementById('login-erro').style.display = 'none';
-
+  if (btn) btn.classList.add('ativo');
+  const erroEl = document.getElementById('login-erro');
+  if (erroEl) erroEl.style.display = 'none';
 }
 
 
@@ -149,6 +136,13 @@ async function fazerLogin() {
 
 
 function ativarApp() {
+  // Inject alert animation CSS once
+  if (!document.getElementById('wms-alert-css')) {
+    const s = document.createElement('style');
+    s.id = 'wms-alert-css';
+    s.textContent = '@keyframes pulseAlert{0%,100%{opacity:1}50%{opacity:.75}}#alertas-banner{transition:all .3s}';
+    document.head.appendChild(s);
+  }
   document.getElementById('tela-login').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
   document.getElementById('hdr-nome').textContent   = usuarioAtual.nome;

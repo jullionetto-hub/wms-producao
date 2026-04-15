@@ -576,7 +576,7 @@
     </div><!-- /conteudo -->
 
     <!-- ══ REPOSITOR MOBILE ══ -->
-    <div id="rep-mobile-root">
+    <div id="rep-mobile-root" style="display:none">
 
       <!-- ABA 1 — SOLICITAÇÕES -->
       <div class="rep-tab-page ativa" id="rep-tab-avisos">
@@ -648,7 +648,7 @@
     </div><!-- /rep-mobile-root -->
 
     <!-- ══ CHECKOUT MOBILE ══ -->
-    <div id="ck-mobile-root">
+    <div id="ck-mobile-root" style="display:none">
       <div class="ck-tab-page ativa" id="ck-tab-busca">
         <div class="ck-scroll">
           <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text);margin-bottom:12px">🏷️ Checkout</div>
@@ -741,7 +741,7 @@
     </div>
 
     <!-- ══ SEPARADOR MOBILE ══ -->
-    <div id="sep-mobile-root">
+    <div id="sep-mobile-root" style="display:none">
       <div class="sep-tab-page ativa" id="sep-tab-separar">
         <div class="sep-scroll">
           <div class="bip-wrap">
@@ -809,7 +809,7 @@
 </div><!-- /app -->
 
 <!-- Tab bar Separador -->
-<div class="sep-tabbar" id="sep-tabbar">
+<div class="sep-tabbar" id="sep-tabbar" style="display:none">
   <button class="sep-tab ativo" id="stab-separar" onclick="mudarTabSep('separar')"><span class="sep-tab-ic">📦</span>SEPARAR</button>
   <button class="sep-tab" id="stab-fila" onclick="mudarTabSep('fila')"><span class="sep-tab-ic">📋</span>FILA<span class="sep-tab-badge" id="stab-fila-badge" style="display:none">0</span></button>
   <button class="sep-tab" id="stab-avisos-sep" onclick="mudarTabSep('avisos-sep')"><span class="sep-tab-ic">🔔</span>AVISOS<span class="sep-tab-badge" id="stab-avisos-sep-badge" style="display:none">0</span></button>
@@ -817,7 +817,7 @@
 </div>
 
 <!-- Tab bar Repositor -->
-<div class="rep-tabbar" id="rep-tabbar">
+<div class="rep-tabbar" id="rep-tabbar" style="display:none">
   <button class="rep-tab ativo" id="rtab-avisos" onclick="mudarTabRep('avisos')"><span class="rep-tab-ic">🔧</span>PEDIDOS<span class="rep-tab-badge" id="rtab-badge" style="display:none">0</span></button>
   <button class="rep-tab" id="rtab-guardar" onclick="mudarTabRep('guardar')"><span class="rep-tab-ic">📦</span>GUARDAR<span class="rep-tab-badge" id="rtab-guardar-badge" style="display:none">0</span></button>
   <button class="rep-tab" id="rtab-historico" onclick="mudarTabRep('historico')"><span class="rep-tab-ic">📋</span>HISTÓRICO</button>
