@@ -85,6 +85,26 @@ function dbGet(sql, params) {
   });
 }
 
+// ── Mapa de dificuldade dos corredores (baseado no layout do estoque) ─────────
+const CORREDOR_DIFICULDADE = {
+  // 🟢 Verde — fácil (×1): A, B, C, D, E, P, Q, R, S, T, U
+  'A':1,'B':1,'C':1,'D':1,'E':1,'P':1,'Q':1,'R':1,'S':1,'T':1,'U':1,
+  // 🔵 Azul — médio (×2): M, N, O, V, W, X, Y, Z
+  'M':2,'N':2,'O':2,'V':2,'W':2,'X':2,'Y':2,'Z':2,
+  // 🔴 Vermelho — difícil (×3): F, G, H, I, J, K, L
+  'F':3,'G':3,'H':3,'I':3,'J':3,'K':3,'L':3
+};
+
+function getDificuldade(endereco) {
+  if (!endereco) return 1;
+  const primeiro = String(endereco).split(',')[0].trim();
+  const match    = primeiro.match(/^([A-Za-z]+)/);
+  if (!match) return 1;
+  const letra = match[1].toUpperCase();
+  // Para corredores compostos como 'VERT', 'STAFF', usa a primeira letra
+  return CORREDOR_DIFICULDADE[letra] || CORREDOR_DIFICULDADE[letra[0]] || 1;
+}
+
 // ── Data/hora local ───────────────────────────────────────────────────────────
 function dataHoraLocal() {
   const agora   = new Date();
@@ -168,6 +188,9 @@ db.serialize(() => {
     FOREIGN KEY (separador_id) REFERENCES separadores(id)
   )`);
   db.run(`ALTER TABLE pedidos ADD COLUMN numero_caixa TEXT DEFAULT ''`, () => {});
+  db.run(`ALTER TABLE pedidos ADD COLUMN peso INTEGER DEFAULT 0`, () => {});
+  db.run(`ALTER TABLE pedidos ADD COLUMN corredores_count INTEGER DEFAULT 0`, () => {});
+  db.run(`ALTER TABLE pedidos ADD COLUMN unidades_total INTEGER DEFAULT 0`, () => {});
   db.run(`ALTER TABLE pedidos ADD COLUMN transportadora TEXT DEFAULT ''`, () => {});
   db.run(`ALTER TABLE pedidos ADD COLUMN razao_social TEXT DEFAULT ''`, () => {});
 
@@ -243,6 +266,14 @@ db.serialize(() => {
   )`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_hist_aviso ON historico_etapas(aviso_id)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_hist_data  ON historico_etapas(data)`);
+  db.run(`CREATE TABLE IF NOT EXISTS configuracoes (
+    chave TEXT PRIMARY KEY,
+    valor TEXT NOT NULL,
+    atualizado_em DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
+  // Metas padrão
+  db.run(`INSERT OR IGNORE INTO configuracoes (chave,valor) VALUES ('meta_pontos_dia','300')`, ()=>{});
+  db.run(`INSERT OR IGNORE INTO configuracoes (chave,valor) VALUES ('meta_pedidos_dia','25')`, ()=>{});
   db.run(`CREATE INDEX IF NOT EXISTS idx_pedidos_sep    ON pedidos(separador_id, status)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_pedidos_num    ON pedidos(numero_pedido)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_itens_pedido   ON itens_pedido(pedido_id)`);
@@ -988,9 +1019,21 @@ app.post('/importar', requireAuth, async (req, res) => {
     const itens = pedidosMap[numero];
     const transp = transpMap[numero] || { transportadora:'', razao_social:'' };
     try {
+      // Calcula peso do pedido com dificuldade real de cada corredor
+      const corridorKey = (e) => { const m=(String(e||'').split(',')[0].trim()).match(/^([A-Za-z]+)/); return m?m[1].toUpperCase():'ZZZ'; };
+      const corredoresSet = new Set(itens.map(i => corridorKey(i.endereco)));
+      const corredoresUnicos = corredoresSet.size;
+      const totalUnidades    = itens.reduce((s,i) => s + (parseInt(i.quantidade)||1), 0);
+      const totalItens       = itens.length;
+      // Pontuação por corredor usando dificuldade real do estoque
+      let pontosCorredores = 0;
+      corredoresSet.forEach(cor => { pontosCorredores += getDificuldade(cor) * 3; });
+      // Fórmula final: pontos_corredores + itens×1 + unidades×0.5
+      const pesoPedido = Math.round(pontosCorredores + (totalItens * 1) + (totalUnidades * 0.5));
+
       const result = await dbRun(
-        `INSERT OR IGNORE INTO pedidos (numero_pedido,status,itens,rua,data_pedido,hora_pedido,transportadora,razao_social) VALUES (?, 'pendente', ?, ?, ?, ?, ?, ?)`,
-        [numero, itens.length, itens[0]?.endereco || '', hoje, hora, transp.transportadora, transp.razao_social]
+        `INSERT OR IGNORE INTO pedidos (numero_pedido,status,itens,rua,data_pedido,hora_pedido,transportadora,razao_social,peso,corredores_count,unidades_total) VALUES (?, 'pendente', ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [numero, itens.length, itens[0]?.endereco || '', hoje, hora, transp.transportadora, transp.razao_social, pesoPedido, corredoresUnicos, totalUnidades]
       );
       const foiNovo = result.changes > 0;
       const pedido  = await dbGet('SELECT id FROM pedidos WHERE numero_pedido=?', [numero]);
@@ -1017,6 +1060,10 @@ app.post('/importar', requireAuth, async (req, res) => {
           const nB = parseInt((String(b.endereco||'').split(',')[0].match(/[0-9]+/)||['9999'])[0]);
           return nA - nB;
         });
+        // Salva dificuldade de cada item
+        itensOrdenados.forEach(item => {
+          item._dificuldade = getDificuldade(item.endereco);
+        });
 
         for (const item of itensOrdenados) {
           const corredor = corridorKey(item.endereco);
@@ -1041,6 +1088,61 @@ app.post('/importar', requireAuth, async (req, res) => {
   res.json({ mensagem:'Importacao concluida!', importados, ignorados, erros, total: numeros.length });
 });
 
+// ─── LAYOUT DO ESTOQUE ──────────────────────────────────────────────────────
+app.get('/layout-estoque', requireAuth, (req, res) => {
+  res.json({
+    corredores: {
+      verde:    ['A','B','C','D','E','P','Q','R','S','T','U'],
+      azul:     ['M','N','O','V','W','X','Y','Z'],
+      vermelho: ['F','G','H','I','J','K','L']
+    },
+    multiplicadores: { verde:1, azul:2, vermelho:3 },
+    descricoes: {
+      verde:    '🟢 Fácil — corredores de fácil acesso (×1 ponto)',
+      azul:     '🔵 Médio — corredores de acesso médio (×2 pontos)',
+      vermelho: '🔴 Difícil — corredores de difícil acesso (×3 pontos)'
+    }
+  });
+});
+
+// ─── CONFIGURAÇÕES / METAS ──────────────────────────────────────────────────
+app.get('/configuracoes', requireAuth, (req, res) => {
+  db.all('SELECT chave, valor FROM configuracoes', [], (err, rows) => {
+    if (err) return res.status(500).json({ erro: err.message });
+    const cfg = {};
+    rows.forEach(r => cfg[r.chave] = r.valor);
+    res.json(cfg);
+  });
+});
+
+app.put('/configuracoes', requireSupervisor, (req, res) => {
+  const updates = req.body;
+  const stmt = db.prepare('INSERT OR REPLACE INTO configuracoes (chave,valor,atualizado_em) VALUES (?,?,CURRENT_TIMESTAMP)');
+  Object.entries(updates).forEach(([k,v]) => stmt.run([k, String(v)]));
+  stmt.finalize(() => res.json({ mensagem:'Configurações salvas!' }));
+});
+
+// ─── SUGESTÃO DE ATRIBUIÇÃO (balanceamento) ──────────────────────────────────
+app.get('/sugestao-separador/:pedido_id', requireAuth, (req, res) => {
+  const { data: dataHoje } = dataHoraLocal();
+  // Busca separadores ativos e seus pontos acumulados hoje
+  db.all(`SELECT s.id, s.nome,
+    COALESCE(SUM(CASE WHEN p.status='concluido' AND p.data_pedido=? THEN p.peso ELSE 0 END),0) as pontos_hoje,
+    COALESCE(COUNT(CASE WHEN p.status='concluido' AND p.data_pedido=? THEN 1 END),0) as pedidos_hoje,
+    COALESCE(COUNT(CASE WHEN p.status='separando' THEN 1 END),0) as em_separacao
+    FROM separadores s
+    LEFT JOIN pedidos p ON p.separador_id=s.id
+    WHERE s.status='ativo'
+    GROUP BY s.id ORDER BY pontos_hoje ASC, em_separacao ASC`,
+    [dataHoje, dataHoje], (err, separadores) => {
+      if (err) return res.status(500).json({ erro: err.message });
+      if (!separadores.length) return res.json({ sugestao: null, separadores: [] });
+      // Sugere quem tem menos pontos hoje e menos pedidos em separação
+      const sugestao = separadores.find(s => s.em_separacao === 0) || separadores[0];
+      res.json({ sugestao, separadores });
+    });
+});
+
 // ─── PRODUTIVIDADE ────────────────────────────────────────────────────────────
 app.get('/produtividade', (req, res) => {
   const { separador_id } = req.query;
@@ -1048,14 +1150,16 @@ app.get('/produtividade', (req, res) => {
   const mesAtual = dataHoje.substring(0, 7);
   let query = `
     SELECT s.id, s.nome, s.matricula, s.status,
-      SUM(CASE WHEN p.data_pedido=? THEN 1 ELSE 0 END) as hoje,
-      SUM(CASE WHEN substr(p.data_pedido,1,7)=? THEN 1 ELSE 0 END) as mes,
-      COUNT(p.id) as total_ano,
-      COALESCE(SUM(p.pontuacao),0) as pontuacao_total
+      COALESCE(SUM(CASE WHEN p.data_pedido=? THEN 1 ELSE 0 END),0) as hoje,
+      COALESCE(SUM(CASE WHEN substr(p.data_pedido,1,7)=? THEN 1 ELSE 0 END),0) as mes,
+      COALESCE(COUNT(p.id),0) as total_ano,
+      COALESCE(SUM(CASE WHEN p.data_pedido=? THEN p.peso ELSE 0 END),0) as pontos_hoje,
+      COALESCE(SUM(p.peso),0) as pontos_total,
+      COALESCE(SUM(CASE WHEN p.data_pedido=? THEN p.unidades_total ELSE 0 END),0) as unidades_hoje
     FROM separadores s
     LEFT JOIN pedidos p ON p.separador_id=s.id AND p.status='concluido'
     WHERE 1=1`;
-  const params = [dataHoje, mesAtual];
+  const params = [dataHoje, mesAtual, dataHoje, dataHoje];
   if (separador_id) { query += ' AND s.id=?'; params.push(separador_id); }
   query += ' GROUP BY s.id ORDER BY s.nome';
   db.all(query, params, (err, rows) => {
@@ -1141,6 +1245,50 @@ app.get('/estatisticas/checkout', (req, res) => {
       if (err) return res.status(500).json({ erro: err.message });
       res.json(row || {});
     });
+});
+
+// ─── ALERTAS EM TEMPO REAL ───────────────────────────────────────────────
+app.get('/alertas', requireAuth, (req, res) => {
+  const { data: dataHoje } = dataHoraLocal();
+
+  const sqlTravados = `SELECT p.id, p.numero_pedido, p.hora_pedido,
+      s.nome as separador_nome,
+      CAST((julianday('now','localtime') - julianday(p.data_pedido || ' ' || p.hora_pedido)) * 1440 AS INTEGER) as minutos
+    FROM pedidos p LEFT JOIN separadores s ON p.separador_id=s.id
+    WHERE p.status='separando' AND p.data_pedido=? AND p.hora_pedido IS NOT NULL
+      AND (julianday('now','localtime') - julianday(p.data_pedido || ' ' || p.hora_pedido)) * 1440 > 30
+    ORDER BY minutos DESC`;
+
+  const sqlFaltas = `SELECT a.id, a.codigo, a.descricao, a.numero_pedido,
+      a.separador_nome, a.hora_aviso,
+      CAST((julianday('now','localtime') - julianday(a.data_aviso || ' ' || a.hora_aviso)) * 1440 AS INTEGER) as minutos
+    FROM avisos_repositor a
+    WHERE a.status='pendente' AND a.data_aviso=? AND a.hora_aviso IS NOT NULL
+      AND (julianday('now','localtime') - julianday(a.data_aviso || ' ' || a.hora_aviso)) * 1440 > 30
+    ORDER BY minutos DESC`;
+
+  const sqlBloqueados = `SELECT DISTINCT p.id, p.numero_pedido,
+      s.nome as separador_nome,
+      GROUP_CONCAT(DISTINCT a.codigo) as codigos,
+      COUNT(DISTINCT a.id) as total
+    FROM pedidos p JOIN avisos_repositor a ON a.pedido_id=p.id
+    LEFT JOIN separadores s ON p.separador_id=s.id
+    WHERE a.status IN ('nao_encontrado','protocolo')
+      AND p.status IN ('separando','pendente')
+    GROUP BY p.id ORDER BY p.id DESC`;
+
+  db.all(sqlTravados, [dataHoje], (e1, travados) => {
+    db.all(sqlFaltas, [dataHoje], (e2, faltas) => {
+      db.all(sqlBloqueados, [], (e3, bloqueados) => {
+        res.json({
+          pedidos_travados:    travados  || [],
+          faltas_sem_resposta: faltas    || [],
+          pedidos_bloqueados:  bloqueados|| [],
+          tem_alerta: !!(travados?.length || faltas?.length || bloqueados?.length)
+        });
+      });
+    });
+  });
 });
 
 app.get('/kpis', (req, res) => {

@@ -75,6 +75,19 @@ function atualizarPermVisual(perfil) {
 
 
 /* ── Relógio ── */
+// Adiciona animação pulse para alertas
+(function addAlertCSS() {
+  const s = document.createElement('style');
+  s.textContent = `
+    @keyframes pulseAlert {
+      0%,100% { opacity:1; }
+      50% { opacity:.75; }
+    }
+    #alertas-banner { transition: all .3s; }
+  `;
+  document.head.appendChild(s);
+})();
+
 function atualizarRelogio() {
   const agora = new Date();
   const str   = agora.toLocaleString('pt-BR', { timeZone:'America/Sao_Paulo' });
@@ -150,7 +163,9 @@ function ativarApp() {
 
 
 
-  if (perfil === 'separador' && mob) {
+  if (perfil === 'supervisor' && mob) {
+    ativarMobileSup();
+  } else if (perfil === 'separador' && mob) {
     ativarMobileSep();
   } else if (perfil === 'repositor' && mob) {
     ativarMobileRep();
@@ -184,14 +199,158 @@ function ativarMobileSep() {
 
 
 
+// ══ SUPERVISOR MOBILE ══
+function ativarMobileSup() {
+  document.body.classList.add('sep-mobile');
+  document.getElementById('sup-mobile-root').style.display = 'flex';
+  document.getElementById('sup-tabbar').style.display = 'flex';
+  mudarTabSup('dashboard');
+  carregarDashboardMobile();
+  carregarAlertas();
+  alertaInterval = setInterval(() => {
+    carregarDashboardMobile();
+    carregarAlertas();
+  }, 30000);
+}
+
+function mudarTabSup(tab) {
+  ['dashboard','pedidos','reposicao'].forEach(t => {
+    const pg = document.getElementById(`sup-tab-${t}`); if(pg) pg.classList.toggle('ativa', t===tab);
+    const bt = document.getElementById(`stab-sup-${t}`); if(bt) bt.classList.toggle('ativo', t===tab);
+  });
+  if (tab==='dashboard') carregarDashboardMobile();
+  if (tab==='pedidos')   carregarPedidosMobile();
+  if (tab==='reposicao') carregarReposicaoMobile();
+}
+
+async function carregarDashboardMobile() {
+  try {
+    // KPIs
+    const res  = await fetch(`${API}/kpis`, { credentials:'include' });
+    const data = await res.json();
+    const set  = (id,v) => { const e=document.getElementById(id); if(e) e.textContent=v??0; };
+    set('m-sup-hoje',   data.concluidos_hoje);
+    set('m-sup-sep',    data.em_separacao);
+    set('m-sup-faltas', data.faltas_abertas);
+    set('m-sup-pend',   data.pendentes);
+    set('m-sup-ck',     data.checkout_hoje);
+    set('m-sup-ativos', data.seps_ativos);
+
+    // Alertas
+    const resA = await fetch(`${API}/alertas`, { credentials:'include' });
+    const alertas = await resA.json();
+    window._lastAlertas = alertas;
+
+    const supAlertasEl = document.getElementById('sup-alertas-mobile');
+    const supAlertasTxt = document.getElementById('sup-alertas-txt');
+    if (supAlertasEl) {
+      const total = (alertas.pedidos_bloqueados?.length||0) + (alertas.pedidos_travados?.length||0) + (alertas.faltas_sem_resposta?.length||0);
+      supAlertasEl.style.display = total > 0 ? 'block' : 'none';
+      if (supAlertasTxt) {
+        let partes = [];
+        if (alertas.pedidos_bloqueados?.length)  partes.push(`⛔ ${alertas.pedidos_bloqueados.length} bloqueado(s)`);
+        if (alertas.pedidos_travados?.length)    partes.push(`⏱ ${alertas.pedidos_travados.length} travado(s)`);
+        if (alertas.faltas_sem_resposta?.length) partes.push(`🔴 ${alertas.faltas_sem_resposta.length} falta(s) +30min`);
+        supAlertasTxt.textContent = partes.join(' • ');
+      }
+    }
+
+    // Pedidos travados
+    const travWrap = document.getElementById('sup-travados-wrap');
+    const travLista = document.getElementById('sup-travados-lista');
+    if (travWrap && travLista) {
+      if (alertas.pedidos_travados?.length) {
+        travWrap.style.display = 'block';
+        travLista.innerHTML = alertas.pedidos_travados.map(p=>`
+          <div style="background:#FFFBEB;border:1.5px solid #FDE68A;border-radius:10px;padding:10px 12px;margin-bottom:6px">
+            <div style="font-weight:700;color:var(--amber)">Pedido #${p.numero_pedido}</div>
+            <div style="font-size:12px;color:var(--text3)">👤 ${p.separador_nome||'—'} &nbsp;•&nbsp; ${p.minutos>=60?Math.floor(p.minutos/60)+'h '+p.minutos%60+'min':p.minutos+'min'} em separação</div>
+          </div>`).join('');
+      } else travWrap.style.display = 'none';
+    }
+
+    // Pedidos bloqueados
+    const bloqWrap  = document.getElementById('sup-bloq-wrap');
+    const bloqLista = document.getElementById('sup-bloq-lista');
+    if (bloqWrap && bloqLista) {
+      if (alertas.pedidos_bloqueados?.length) {
+        bloqWrap.style.display = 'block';
+        const badge = document.getElementById('stab-sup-rep-badge');
+        if (badge) { badge.textContent=alertas.pedidos_bloqueados.length; badge.style.display='inline'; }
+        bloqLista.innerHTML = alertas.pedidos_bloqueados.map(p=>`
+          <div style="background:#FEF2F2;border:1.5px solid #FECACA;border-radius:10px;padding:10px 12px;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;gap:8px">
+            <div>
+              <div style="font-weight:700;color:var(--red)">Pedido #${p.numero_pedido}</div>
+              <div style="font-size:12px;color:var(--text3)">👤 ${p.separador_nome||'—'}</div>
+            </div>
+            <button class="btn btn-success btn-sm" onclick="desbloquearPedido(${p.id},'${p.numero_pedido}')">✅</button>
+          </div>`).join('');
+      } else { bloqWrap.style.display='none'; }
+    }
+  } catch(e) {}
+}
+
+async function carregarPedidosMobile() {
+  const lista  = document.getElementById('sup-pedidos-lista');
+  const status = document.getElementById('m-filtro-ped-status')?.value || '';
+  if (!lista) return;
+  try {
+    let url = `${API}/pedidos`;
+    if (status) url += `?status=${status}`;
+    const res = await fetch(url, { credentials:'include' });
+    const ps  = await res.json();
+    if (!ps.length) { lista.innerHTML='<div style="color:var(--text3);text-align:center;padding:30px">Nenhum pedido</div>'; return; }
+    lista.innerHTML = ps.slice(0,50).map(p=>`
+      <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:8px;box-shadow:var(--sh)">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div>
+            <div style="font-family:'Space Mono',monospace;font-weight:700;font-size:15px;color:var(--accent)">#${p.numero_pedido}</div>
+            <div style="font-size:12px;color:var(--text3);margin-top:2px">👤 ${p.separador_nome||'—'} &nbsp;•&nbsp; ${p.itens||0} itens &nbsp;•&nbsp; ${p.hora_pedido||'—'}</div>
+          </div>
+          <span class="pill ${p.status}">${p.status}</span>
+        </div>
+      </div>`).join('');
+  } catch(e) {}
+}
+
+async function carregarReposicaoMobile() {
+  const lista = document.getElementById('sup-rep-lista');
+  if (!lista) return;
+  try {
+    const res    = await fetch(`${API}/repositor/avisos`, { credentials:'include' });
+    const avisos = await res.json();
+    const pend   = avisos.filter(a=>a.status==='pendente').length;
+    const badge  = document.getElementById('stab-sup-rep-badge');
+    if (badge) { badge.textContent=pend; badge.style.display=pend>0?'inline':'none'; }
+    if (!avisos.length) { lista.innerHTML='<div style="color:var(--text3);text-align:center;padding:30px">✅ Nenhum aviso</div>'; return; }
+    const sIcon = s=>({pendente:'🔴',encontrado:'✅',separado:'✅',subiu:'⬆️',abastecido:'📦',verificando:'🔍',protocolo:'📋',devolucao:'↩️',nao_encontrado:'🚫'}[s]||'•');
+    lista.innerHTML = avisos.map(a=>`
+      <div style="background:var(--surface);border:1.5px solid ${a.status==='pendente'?'#FECACA':'var(--border)'};border-radius:12px;padding:12px 14px;margin-bottom:8px;background:${a.status==='pendente'?'#FEF2F2':'var(--surface)'}">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:700;color:${a.status==='pendente'?'var(--red)':'var(--green)'};font-size:13px">${sIcon(a.status)} ${a.codigo||'—'} <span style="font-size:11px;color:var(--text3);font-weight:400">Pedido #${a.numero_pedido}</span></div>
+            <div style="font-size:12px;color:var(--text);margin:2px 0">${a.descricao||'—'}</div>
+            <div style="font-size:11px;color:var(--text3)">📍 ${a.endereco||'—'} &nbsp;•&nbsp; Qtde: ${a.quantidade||1}</div>
+            ${a.status==='pendente'?`<div style="font-size:11px;color:var(--red);font-weight:600;margin-top:3px">⏱ ${a.hora_aviso||'—'} &nbsp;•&nbsp; Sep: ${a.separador_nome||'—'}</div>`:''}
+          </div>
+        </div>
+      </div>`).join('');
+  } catch(e) {}
+}
+
 function sair() {
   if (!confirm('Deseja sair do sistema?')) return;
   fetch(`${API}/auth/logout`, { method:'POST', credentials:'include' }).catch(()=>{});
   usuarioAtual = null; separadorAtual = null; pedidoAtualId = null; pedidoAtualNum = null; itensAtuais = [];
   document.body.classList.remove('sep-mobile','rep-mobile','ck-mobile');
+  if (alertaInterval) { clearInterval(alertaInterval); alertaInterval=null; }
   document.getElementById('app').style.display     = 'none';
   document.getElementById('sep-mobile-root').style.display = 'none';
   document.getElementById('sep-tabbar').style.display      = 'none';
+  const supRoot = document.getElementById('sup-mobile-root');
+  const supBar  = document.getElementById('sup-tabbar');
+  if (supRoot) supRoot.style.display = 'none';
+  if (supBar)  supBar.style.display  = 'none';
   const repRoot = document.getElementById('rep-mobile-root');
   const repBar  = document.getElementById('rep-tabbar');
   const ckRoot  = document.getElementById('ck-mobile-root');
@@ -347,9 +506,11 @@ function iniciarPorPerfil() {
     carregarDashboard();
     setInterval(atualizarBadgeRep, 15000);
     atualizarBadgeRep();
-    // Verifica bloqueados periodicamente para manter badge atualizado
     setInterval(carregarPedidosBloqueados, 20000);
     carregarPedidosBloqueados();
+    // Alertas em tempo real — verifica a cada 2 minutos
+    carregarAlertas();
+    alertaInterval = setInterval(carregarAlertas, 120000);
   }
   if (usuarioAtual.perfil === 'separador') {
     document.getElementById('pag-separacao').classList.add('ativa');
@@ -390,7 +551,7 @@ async function atualizarBadgeRep() {
 
 
 function trocarCadastroTab(tab) {
-  ['usuarios','importar'].forEach(t => {
+  ['usuarios','importar','metas'].forEach(t => {
     const el  = document.getElementById(`cad-${t}`);
     const btn = document.getElementById(`ctab-${t}`);
     if (el)  el.style.display  = t===tab ? 'block' : 'none';
@@ -398,6 +559,54 @@ function trocarCadastroTab(tab) {
   });
   if (tab === 'usuarios') carregarUsuarios();
   if (tab === 'importar') renderHistorico();
+  if (tab === 'metas')    carregarMetas();
+}
+
+async function carregarMetas() {
+  try {
+    const res = await fetch(`${API}/configuracoes`, { credentials:'include' });
+    const cfg = await res.json();
+    const elP = document.getElementById('meta-pedidos');
+    const elPt= document.getElementById('meta-pontos');
+    if (elP)  elP.value  = cfg.meta_pedidos_dia || 25;
+    if (elPt) elPt.value = cfg.meta_pontos_dia  || 300;
+
+    // Carrega e exibe layout do estoque
+    const resL = await fetch(`${API}/layout-estoque`, { credentials:'include' });
+    const layout = await resL.json();
+    const el = document.getElementById('layout-estoque-visual');
+    if (el) {
+      el.innerHTML = Object.entries(layout.corredores).map(([tipo, cors]) => {
+        const cor   = tipo==='verde'?'#16A34A':tipo==='azul'?'#0070C0':'#DC2626';
+        const bg    = tipo==='verde'?'#F0FDF4':tipo==='azul'?'#EFF6FF':'#FEF2F2';
+        const multi = layout.multiplicadores[tipo];
+        return `<div style="background:${bg};border:1.5px solid ${cor}30;border-radius:10px;padding:10px 14px;margin-bottom:8px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+            <span style="font-size:13px;font-weight:700;color:${cor}">${layout.descricoes[tipo]}</span>
+            <span style="background:${cor};color:#fff;border-radius:6px;padding:2px 10px;font-size:12px;font-weight:800">×${multi}</span>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px">
+            ${cors.map(c=>`<span style="background:${cor};color:#fff;border-radius:6px;padding:3px 10px;font-size:13px;font-weight:800">${c}</span>`).join('')}
+          </div>
+        </div>`;
+      }).join('');
+    }
+  } catch(e) {}
+}
+
+async function salvarMetas() {
+  const pedidos = parseInt(document.getElementById('meta-pedidos')?.value) || 30;
+  const pontos  = parseInt(document.getElementById('meta-pontos')?.value)  || 200;
+  try {
+    const res = await fetch(`${API}/configuracoes`, {
+      method:'PUT', credentials:'include',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ meta_pedidos_dia: pedidos, meta_pontos_dia: pontos })
+    });
+    const data = await res.json();
+    if (data.erro) { toast(data.erro,'erro'); return; }
+    toast(`✅ Metas salvas! ${pedidos} pedidos / ${pontos} pontos por dia`,'sucesso');
+  } catch(e) { toast('Erro ao salvar!','erro'); }
 }
 
 
@@ -406,6 +615,112 @@ function trocarCadastroTab(tab) {
 /* ══════════════════════════════════════════
    DASHBOARD
 ══════════════════════════════════════════ */
+// ══ ALERTAS EM TEMPO REAL ══
+let alertaInterval = null;
+
+async function carregarAlertas() {
+  if (usuarioAtual?.perfil !== 'supervisor') return;
+  try {
+    const res  = await fetch(`${API}/alertas`, { credentials:'include' });
+    const data = await res.json();
+    renderAlertasBanner(data);
+  } catch(e) {}
+}
+
+function renderAlertasBanner(data) {
+  let banner = document.getElementById('alertas-banner');
+  if (!banner) {
+    banner = document.createElement('div');
+    banner.id = 'alertas-banner';
+    // Insere depois do header
+    const header = document.querySelector('header');
+    if (header?.nextSibling) header.parentNode.insertBefore(banner, header.nextSibling);
+    else document.body.prepend(banner);
+  }
+
+  const total = (data.pedidos_bloqueados?.length||0) + (data.pedidos_travados?.length||0) + (data.faltas_sem_resposta?.length||0);
+  if (!data.tem_alerta || total === 0) { banner.style.display='none'; return; }
+
+  banner.style.cssText = 'display:block;background:linear-gradient(135deg,#7F1D1D,#991B1B);color:#fff;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;z-index:49;animation:pulseAlert 2s infinite';
+  banner.onclick = () => mostrarModalAlertas(data);
+
+  let partes = [];
+  if (data.pedidos_bloqueados?.length)  partes.push(`⛔ ${data.pedidos_bloqueados.length} pedido(s) bloqueado(s)`);
+  if (data.pedidos_travados?.length)    partes.push(`⏱ ${data.pedidos_travados.length} pedido(s) travado(s) +30min`);
+  if (data.faltas_sem_resposta?.length) partes.push(`🔴 ${data.faltas_sem_resposta.length} falta(s) sem resposta +30min`);
+
+  banner.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;max-width:1200px;margin:0 auto">
+      <div style="display:flex;align-items:center;gap:12px">
+        <span style="font-size:20px;animation:pulseAlert 1s infinite">🚨</span>
+        <span>${partes.join(' &nbsp;•&nbsp; ')}</span>
+      </div>
+      <span style="font-size:11px;opacity:.8;text-decoration:underline">Clique para ver detalhes →</span>
+    </div>`;
+}
+
+function mostrarModalAlertas(data) {
+  let modal = document.getElementById('alertas-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'alertas-modal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9998;display:flex;align-items:center;justify-content:center;padding:20px';
+    modal.onclick = (e) => { if(e.target===modal) modal.style.display='none'; };
+    document.body.appendChild(modal);
+  }
+
+  const fmtMin = (m) => m >= 60 ? `${Math.floor(m/60)}h ${m%60}min` : `${m}min`;
+
+  let html = `<div style="background:var(--surface);border-radius:16px;padding:24px;max-width:600px;width:100%;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.4)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <div style="font-family:'Space Mono',monospace;font-size:17px;color:var(--text)">🚨 Alertas Ativos</div>
+      <button onclick="document.getElementById('alertas-modal').style.display='none'" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text3)">✕</button>
+    </div>`;
+
+  if (data.pedidos_bloqueados?.length) {
+    html += `<div style="margin-bottom:16px">
+      <div style="font-size:11px;font-weight:800;color:var(--red);letter-spacing:1.5px;margin-bottom:8px">⛔ PEDIDOS BLOQUEADOS</div>
+      ${data.pedidos_bloqueados.map(p=>`
+        <div style="background:#FEF2F2;border:1.5px solid #FECACA;border-radius:10px;padding:10px 14px;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between">
+          <div>
+            <div style="font-weight:700;color:var(--red)">Pedido #${p.numero_pedido}</div>
+            <div style="font-size:12px;color:var(--text3)">👤 ${p.separador_nome||'—'} &nbsp;•&nbsp; Itens: ${p.codigos||'—'}</div>
+          </div>
+          <button class="btn btn-success btn-sm" onclick="desbloquearPedido(${p.id},'${p.numero_pedido}');document.getElementById('alertas-modal').style.display='none'">✅ Liberar</button>
+        </div>`).join('')}
+    </div>`;
+  }
+
+  if (data.pedidos_travados?.length) {
+    html += `<div style="margin-bottom:16px">
+      <div style="font-size:11px;font-weight:800;color:var(--amber);letter-spacing:1.5px;margin-bottom:8px">⏱ PEDIDOS TRAVADOS (+30 MIN)</div>
+      ${data.pedidos_travados.map(p=>`
+        <div style="background:#FFFBEB;border:1.5px solid #FDE68A;border-radius:10px;padding:10px 14px;margin-bottom:6px">
+          <div style="font-weight:700;color:var(--amber)">Pedido #${p.numero_pedido} — ${fmtMin(p.minutos)}</div>
+          <div style="font-size:12px;color:var(--text3)">👤 ${p.separador_nome||'—'} &nbsp;•&nbsp; Iniciou às ${p.hora_pedido||'—'}</div>
+        </div>`).join('')}
+    </div>`;
+  }
+
+  if (data.faltas_sem_resposta?.length) {
+    html += `<div style="margin-bottom:16px">
+      <div style="font-size:11px;font-weight:800;color:var(--red);letter-spacing:1.5px;margin-bottom:8px">🔴 FALTAS SEM RESPOSTA (+30 MIN)</div>
+      ${data.faltas_sem_resposta.map(a=>`
+        <div style="background:#FEF2F2;border:1.5px solid #FECACA;border-radius:10px;padding:10px 14px;margin-bottom:6px">
+          <div style="font-weight:700;color:var(--red)">${a.codigo} — ${a.descricao||'—'}</div>
+          <div style="font-size:12px;color:var(--text3)">Pedido #${a.numero_pedido} &nbsp;•&nbsp; Aviso às ${a.hora_aviso||'—'} &nbsp;•&nbsp; ${fmtMin(a.minutos)} sem resposta</div>
+        </div>`).join('')}
+    </div>`;
+  }
+
+  html += `<div style="text-align:center;margin-top:8px">
+    <button class="btn btn-outline" onclick="document.getElementById('alertas-modal').style.display='none'">Fechar</button>
+  </div></div>`;
+
+  modal.innerHTML = html;
+  modal.style.display = 'flex';
+}
+
 async function carregarDashboard() {
   await popularSelects();
   await carregarKPIs();
@@ -453,17 +768,41 @@ async function carregarProdutividade() {
     const tbody = document.getElementById('tbody-prod');
     if (!dados.length) { tbody.innerHTML = '<tr><td colspan="6" style="color:var(--text3);text-align:center;padding:20px">Nenhum usuário</td></tr>'; return; }
     const max = Math.max(...dados.map(d=>d.hoje||0), 1);
-    tbody.innerHTML = dados.map(d=>`<tr>
-      <td style="font-weight:600;color:var(--text)">${d.nome}</td>
-      <td style="color:var(--green);font-weight:700">${d.hoje||0}</td>
-      <td style="color:var(--amber)">${d.mes||0}</td>
-      <td style="color:var(--accent)">${d.total_ano||0}</td>
-      <td style="min-width:100px">
-        <div style="font-size:10px;color:var(--text3)">${d.hoje||0} pedidos</div>
-        <div class="prod-bar"><div class="prod-bar-fill" style="width:${Math.round(((d.hoje||0)/max)*100)}%"></div></div>
-      </td>
-      <td><span class="pill ${d.status}">${d.status}</span></td>
-    </tr>`).join('');
+    // Busca metas
+    let metaPontos = 200, metaPedidos = 30;
+    try {
+      const cfgRes = await fetch(`${API}/configuracoes`, { credentials:'include' });
+      const cfg = await cfgRes.json();
+      metaPontos  = parseInt(cfg.meta_pontos_dia)  || 200;
+      metaPedidos = parseInt(cfg.meta_pedidos_dia) || 30;
+    } catch(e) {}
+
+    const maxPontos = Math.max(...dados.map(d=>d.pontos_hoje||0), metaPontos);
+    tbody.innerHTML = dados.map(d=>{
+      const pctPedidos = Math.min(Math.round(((d.hoje||0)/metaPedidos)*100),100);
+      const pctPontos  = Math.min(Math.round(((d.pontos_hoje||0)/metaPontos)*100),100);
+      const corPed = pctPedidos>=100?'var(--green)':pctPedidos>=70?'var(--amber)':'var(--accent)';
+      const corPts = pctPontos>=100?'var(--green)':pctPontos>=70?'var(--amber)':'var(--accent)';
+      return `<tr>
+        <td style="font-weight:600;color:var(--text)">${d.nome}</td>
+        <td style="color:var(--green);font-weight:700">${d.hoje||0}</td>
+        <td style="color:var(--amber)">${d.mes||0}</td>
+        <td style="color:var(--accent)">${d.total_ano||0}</td>
+        <td style="min-width:140px">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+            <span style="font-size:10px;color:var(--text3);white-space:nowrap">📦 ${d.hoje||0}/${metaPedidos}</span>
+            <div class="prod-bar" style="flex:1"><div class="prod-bar-fill" style="width:${pctPedidos}%;background:${corPed}"></div></div>
+            <span style="font-size:10px;font-weight:700;color:${corPed}">${pctPedidos}%</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span style="font-size:10px;color:var(--text3);white-space:nowrap">⚡ ${d.pontos_hoje||0}/${metaPontos}</span>
+            <div class="prod-bar" style="flex:1"><div class="prod-bar-fill" style="width:${pctPontos}%;background:${corPts}"></div></div>
+            <span style="font-size:10px;font-weight:700;color:${corPts}">${pctPontos}%</span>
+          </div>
+        </td>
+        <td><span class="pill ${d.status}">${d.status}</span></td>
+      </tr>`;
+    }).join('');
   } catch(e) {}
 }
 
@@ -551,16 +890,39 @@ async function carregarPedidos() {
       <td>${p.itens||'—'}</td>
       <td class="data-br">${formatarData(p.data_pedido)}</td>
       <td class="hora-br">${p.hora_pedido||'—'}</td>
-      <td><select class="sel-sm" onchange="atribuirSeparador(${p.id},this.value)">
-        <option value="">— atribuir —</option>
-        ${todosSeparadores.map(s=>`<option value="${s.id}"${p.separador_id==s.id?' selected':''}>${s.nome}</option>`).join('')}
-      </select></td>
+      <td>
+        <div style="display:flex;flex-direction:column;gap:4px">
+          ${(p.peso||0)>0?`<span style="font-size:10px;font-weight:700;color:${(p.peso||0)>=30?'var(--red)':(p.peso||0)>=15?'var(--amber)':'var(--green)'}">⚡ ${p.peso||0} pts &nbsp;•&nbsp; 🛣️ ${p.corredores_count||0} ruas &nbsp;•&nbsp; 📦 ${p.unidades_total||0} un.</span>`:''}
+          <select class="sel-sm" onchange="atribuirSeparador(${p.id},this.value)" id="sel-sep-${p.id}">
+            <option value="">— atribuir —</option>
+            ${todosSeparadores.map(s=>`<option value="${s.id}"${p.separador_id==s.id?' selected':''}>${s.nome}</option>`).join('')}
+          </select>
+          <button class="btn btn-outline btn-sm" style="font-size:10px;padding:3px 8px" onclick="sugerirSeparador(${p.id})">💡 Sugerir</button>
+        </div>
+      </td>
     </tr>`).join('');
   } catch(e) {}
 }
 
 
 
+
+async function sugerirSeparador(pedidoId) {
+  try {
+    const res  = await fetch(`${API}/sugestao-separador/${pedidoId}`, { credentials:'include' });
+    const data = await res.json();
+    if (!data.sugestao) { toast('Nenhum separador disponível','aviso'); return; }
+    const s = data.sugestao;
+    const msg = `💡 Sugestão: ${s.nome}\n📦 ${s.pedidos_hoje} pedidos hoje &nbsp; ⚡ ${s.pontos_hoje} pontos\nAtribuir este separador?`;
+    if (!confirm(msg)) return;
+    // Seleciona no dropdown e atribui
+    const sel = document.getElementById(`sel-sep-${pedidoId}`);
+    if (sel) { sel.value = s.id; }
+    await atribuirSeparador(pedidoId, s.id);
+    // Mostra placar rápido
+    toast(`✅ Atribuído para ${s.nome} (${s.pontos_hoje} pts hoje)`,'sucesso');
+  } catch(e) { toast('Erro ao buscar sugestão','erro'); }
+}
 
 async function atribuirSeparador(pid, sid) {
   if (!sid) return;
@@ -1743,15 +2105,24 @@ async function carregarFila() {
     if (bdFila) bdFila.textContent = `${ativos.length} total`;
     if (bdMeus) bdMeus.textContent = meus.length > 0 ? `${meus.length} meus` : '';
     const html = !ativos.length
-      ? '<tr><td colspan="4" style="color:var(--text3);text-align:center;padding:18px">Nenhum pedido na fila</td></tr>'
+      ? '<tr><td colspan="5" style="color:var(--text3);text-align:center;padding:18px">Nenhum pedido na fila</td></tr>'
       : ativos.map(p => {
           const eMeu = separadorAtual && p.separador_id===separadorAtual.id;
           const ocup = separadorAtual && p.separador_id && p.separador_id!==separadorAtual.id;
           const sit  = eMeu?`<span class="pill separando">Meu</span>`:ocup?`<span class="pill falta">Ocupado</span>`:`<span class="pill pendente">Livre</span>`;
           const clk  = !ocup ? `onclick="selecionarPedidoFila('${p.numero_pedido}')" style="cursor:pointer"` : '';
+          // Peso visual
+          const peso = p.peso || 0;
+          // Thresholds ajustados para pontuação com dificuldade de corredor
+          const pesoCor = peso>=50?'var(--red)':peso>=20?'var(--amber)':'var(--green)';
+          const pesoLabel = peso>=50?'🔴 Pesado':peso>=20?'🟡 Médio':'🟢 Leve';
           return `<tr class="${eMeu?'meu':''}" ${clk}>
             <td style="font-weight:${eMeu?700:400};color:${eMeu?'var(--accent)':'var(--text)'}">${p.numero_pedido}</td>
             <td>${p.itens||'—'}</td>
+            <td style="font-size:11px">
+              <span style="color:${pesoCor};font-weight:700">${pesoLabel}</span>
+              <span style="color:var(--text3);margin-left:4px">${peso}pts</span>
+            </td>
             <td><span class="pill ${(p.status||'').replace(' ','-')}">${p.status}</span></td>
             <td>${sit}</td>
           </tr>`;
@@ -2040,7 +2411,18 @@ function renderChecklist(prefix) {
           <div style="flex:1;min-width:0">
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
               <span style="font-size:16px;font-weight:800;color:${corCod};font-family:'Space Mono',monospace">${item.codigo||'—'}</span>
-              <span style="font-size:15px;font-weight:800;color:var(--accent);background:rgba(37,99,235,.1);padding:3px 10px;border-radius:6px;border:1px solid rgba(37,99,235,.2)">📍 ${item.endereco||'—'}</span>
+              ${(function(){
+                const e = item.endereco||'';
+                const m = e.split(',')[0].trim().match(/^([A-Za-z]+)/);
+                const l = m ? m[1].toUpperCase() : '';
+                const verde=['A','B','C','D','E','P','Q','R','S','T','U'];
+                const azul=['M','N','O','V','W','X','Y','Z'];
+                const verm=['F','G','H','I','J','K','L'];
+                const cor = verde.includes(l)?'#16A34A':azul.includes(l)?'#0070C0':verm.includes(l)?'#DC2626':'var(--accent)';
+                const bg  = verde.includes(l)?'rgba(22,163,74,.1)':azul.includes(l)?'rgba(0,112,192,.1)':verm.includes(l)?'rgba(220,38,38,.1)':'rgba(37,99,235,.1)';
+                const ic  = verde.includes(l)?'🟢':azul.includes(l)?'🔵':verm.includes(l)?'🔴':'📍';
+                return `<span style="font-size:15px;font-weight:800;color:${cor};background:${bg};padding:3px 10px;border-radius:6px;border:1px solid ${cor}40">${ic} ${e||'—'}</span>`;
+              })()}
             </div>
             <div style="font-size:13px;color:var(--text);margin-top:3px;line-height:1.3">${item.descricao||'—'}</div>
             <div style="display:flex;align-items:center;gap:8px;margin-top:5px;flex-wrap:wrap">

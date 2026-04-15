@@ -136,9 +136,10 @@
       <!-- CADASTROS -->
       <div class="pagina" id="pag-cadastros">
         <div class="pg-title">⚙️ Cadastros</div>
-        <div style="display:flex;gap:8px;margin-bottom:16px">
+        <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
           <button class="btn btn-primary btn-sm" id="ctab-usuarios" onclick="trocarCadastroTab('usuarios')">👥 Usuários</button>
           <button class="btn btn-outline btn-sm" id="ctab-importar" onclick="trocarCadastroTab('importar')">📥 Importar</button>
+          <button class="btn btn-outline btn-sm" id="ctab-metas" onclick="trocarCadastroTab('metas')">🎯 Metas</button>
         </div>
         <div id="cad-usuarios">
           <div class="grid-2">
@@ -282,6 +283,44 @@
         </div>
       </div>
 
+        <!-- METAS -->
+        <div id="cad-metas" style="display:none">
+          <div class="card" style="max-width:520px">
+            <div class="card-hd" style="background:linear-gradient(135deg,rgba(37,99,235,.08),rgba(99,102,241,.05))">🎯 METAS DIÁRIAS</div>
+            <div class="form-grp" style="margin-top:4px">
+              <label>META DE PEDIDOS POR DIA</label>
+              <input type="number" id="meta-pedidos" placeholder="Ex: 30" min="1" max="200"/>
+              <div style="font-size:11px;color:var(--text3);margin-top:4px">Pedidos concluídos que cada separador deve atingir por dia</div>
+            </div>
+            <div class="form-grp">
+              <label>META DE PONTOS POR DIA</label>
+              <input type="number" id="meta-pontos" placeholder="Ex: 200" min="1"/>
+              <div style="font-size:11px;color:var(--text3);margin-top:4px">Pontos = (corredores ×3) + (itens ×1) + (unidades ×0.5)</div>
+            </div>
+            <div style="background:var(--surface2);border-radius:10px;padding:12px;margin-bottom:8px;border:1px solid var(--border)">
+              <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:8px">⚡ COMO O PESO É CALCULADO</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center;margin-bottom:10px">
+                <div style="background:var(--surface);border-radius:8px;padding:10px;border:1px solid var(--border)">
+                  <div style="font-size:18px">🛣️</div><div style="font-size:12px;font-weight:800;color:var(--indigo)">dif.×3</div><div style="font-size:10px;color:var(--text3)">por corredor</div>
+                </div>
+                <div style="background:var(--surface);border-radius:8px;padding:10px;border:1px solid var(--border)">
+                  <div style="font-size:18px">📋</div><div style="font-size:12px;font-weight:800;color:var(--accent)">×1 ponto</div><div style="font-size:10px;color:var(--text3)">por item</div>
+                </div>
+                <div style="background:var(--surface);border-radius:8px;padding:10px;border:1px solid var(--border)">
+                  <div style="font-size:18px">📦</div><div style="font-size:12px;font-weight:800;color:var(--green)">×0.5 pt</div><div style="font-size:10px;color:var(--text3)">por unidade</div>
+                </div>
+              </div>
+              <div style="font-size:11px;color:var(--text3);margin-bottom:4px;font-weight:600">🗺️ DIFICULDADE POR CORREDOR (seu estoque)</div>
+              <div id="layout-estoque-visual">
+                <div style="color:var(--text3);font-size:12px;padding:8px">Carregando mapa do estoque...</div>
+              </div>
+            </div>
+            <button class="btn btn-primary" style="width:100%;padding:12px;font-size:14px;font-weight:700" onclick="salvarMetas()">💾 Salvar Metas</button>
+          </div>
+        </div>
+
+      </div>
+
       <!-- SEPARAÇÃO (desktop) -->
       <div class="pagina" id="pag-separacao">
         <div class="pg-title">📦 Separação</div>
@@ -325,7 +364,7 @@
             </div>
           </div>
           <div style="max-height:220px;overflow-y:auto">
-            <div class="tabela-wrap"><table><thead><tr><th>Nº PEDIDO</th><th>ITENS</th><th>STATUS</th><th>SITUAÇÃO</th></tr></thead><tbody id="tbody-fila-d"></tbody></table></div>
+            <div class="tabela-wrap"><table><thead><tr><th>Nº PEDIDO</th><th>ITENS</th><th>PESO</th><th>STATUS</th><th>SITUAÇÃO</th></tr></thead><tbody id="tbody-fila-d"></tbody></table></div>
           </div>
         </div>
       </div>
@@ -611,6 +650,74 @@
         </div>
       </div>
     </div><!-- /ck-mobile-root -->
+
+    <!-- ══ SUPERVISOR MOBILE ══ -->
+    <div id="sup-mobile-root" style="display:none;flex-direction:column;flex:1;overflow:hidden">
+      <!-- ABA 1: DASHBOARD -->
+      <div class="sep-tab-page ativa" id="sup-tab-dashboard">
+        <div class="sep-scroll">
+          <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text);margin-bottom:14px">
+            📊 Dashboard
+            <button class="btn btn-outline btn-sm" style="margin-left:10px" onclick="carregarDashboardMobile()">🔄</button>
+          </div>
+          <!-- Alertas mobile -->
+          <div id="sup-alertas-mobile" style="display:none;background:linear-gradient(135deg,#7F1D1D,#991B1B);color:#fff;border-radius:12px;padding:12px 14px;margin-bottom:14px;cursor:pointer" onclick="carregarAlertas();mostrarModalAlertas(window._lastAlertas||{})">
+            <div style="font-size:13px;font-weight:800">🚨 <span id="sup-alertas-txt">Alertas ativos</span></div>
+            <div style="font-size:11px;opacity:.8;margin-top:3px">Toque para ver detalhes</div>
+          </div>
+          <!-- KPIs em grid 2x2 -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+            <div class="cnt-card verde" style="padding:14px"><div class="cnt-lbl">CONCLUÍDOS</div><div class="cnt-val" id="m-sup-hoje" style="font-size:28px">0</div><div class="cnt-sub">hoje</div></div>
+            <div class="cnt-card amarelo" style="padding:14px"><div class="cnt-lbl">SEPARANDO</div><div class="cnt-val" id="m-sup-sep" style="font-size:28px">0</div><div class="cnt-sub">agora</div></div>
+            <div class="cnt-card vermelho" style="padding:14px"><div class="cnt-lbl">FALTAS</div><div class="cnt-val" id="m-sup-faltas" style="font-size:28px">0</div><div class="cnt-sub">abertas</div></div>
+            <div class="cnt-card azul" style="padding:14px"><div class="cnt-lbl">PENDENTES</div><div class="cnt-val" id="m-sup-pend" style="font-size:28px">0</div><div class="cnt-sub">na fila</div></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+            <div class="cnt-card roxo" style="padding:14px"><div class="cnt-lbl">CHECKOUT</div><div class="cnt-val" id="m-sup-ck" style="font-size:28px">0</div><div class="cnt-sub">hoje</div></div>
+            <div class="cnt-card azul" style="padding:14px"><div class="cnt-lbl">SEP. ATIVOS</div><div class="cnt-val" id="m-sup-ativos" style="font-size:28px">0</div><div class="cnt-sub">trabalhando</div></div>
+          </div>
+          <!-- Pedidos travados -->
+          <div id="sup-travados-wrap" style="display:none">
+            <div style="font-size:11px;font-weight:800;color:var(--amber);letter-spacing:1.5px;margin-bottom:8px">⏱ PEDIDOS TRAVADOS +30MIN</div>
+            <div id="sup-travados-lista"></div>
+          </div>
+          <!-- Pedidos bloqueados -->
+          <div id="sup-bloq-wrap" style="display:none;margin-top:10px">
+            <div style="font-size:11px;font-weight:800;color:var(--red);letter-spacing:1.5px;margin-bottom:8px">⛔ PEDIDOS BLOQUEADOS</div>
+            <div id="sup-bloq-lista"></div>
+          </div>
+        </div>
+      </div>
+      <!-- ABA 2: PEDIDOS -->
+      <div class="sep-tab-page" id="sup-tab-pedidos">
+        <div class="sep-scroll">
+          <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text);margin-bottom:14px">📋 Pedidos</div>
+          <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+            <button class="btn btn-outline btn-sm" onclick="carregarPedidosMobile()">🔄</button>
+            <select id="m-filtro-ped-status" class="sel-sm" onchange="carregarPedidosMobile()">
+              <option value="">Todos</option>
+              <option value="pendente">Pendente</option>
+              <option value="separando">Separando</option>
+              <option value="concluido">Concluído</option>
+            </select>
+          </div>
+          <div id="sup-pedidos-lista"><div style="color:var(--text3);text-align:center;padding:30px">Carregando...</div></div>
+        </div>
+      </div>
+      <!-- ABA 3: REPOSIÇÃO -->
+      <div class="sep-tab-page" id="sup-tab-reposicao">
+        <div class="sep-scroll">
+          <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text);margin-bottom:14px">🔧 Reposição</div>
+          <div id="sup-rep-lista"><div style="color:var(--text3);text-align:center;padding:30px">Carregando...</div></div>
+        </div>
+      </div>
+    </div>
+    <!-- Tab bar supervisor mobile -->
+    <div class="sep-tabbar" id="sup-tabbar" style="display:none">
+      <button class="sep-tab ativo" id="stab-sup-dashboard" onclick="mudarTabSup('dashboard')"><span class="sep-tab-ic">📊</span>DASHBOARD</button>
+      <button class="sep-tab" id="stab-sup-pedidos" onclick="mudarTabSup('pedidos')"><span class="sep-tab-ic">📋</span>PEDIDOS</button>
+      <button class="sep-tab" id="stab-sup-reposicao" onclick="mudarTabSup('reposicao')"><span class="sep-tab-ic">🔧</span>REPOSIÇÃO<span class="sep-tab-badge" id="stab-sup-rep-badge" style="display:none">0</span></button>
+    </div>
 
     <!-- ══ SEPARADOR MOBILE ══ -->
     <div id="sep-mobile-root">
