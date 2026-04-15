@@ -786,6 +786,30 @@ app.get('/repositor/historico-dia', (req, res) => {
   });
 });
 
+// ── PARA GUARDAR: itens que subiram mas ainda não foram abastecidos ──
+app.get('/repositor/para-guardar', (req, res) => {
+  db.all(`SELECT a.*,
+    (SELECT GROUP_CONCAT(h.etapa || '|' || h.funcionario || '|' || h.hora, ';;')
+     FROM historico_etapas h WHERE h.aviso_id = a.id ORDER BY h.id ASC) as etapas_json
+    FROM avisos_repositor a
+    WHERE a.status = 'subiu'
+    ORDER BY a.hora_reposto DESC`,
+    [], (err, rows) => {
+      if (err) return res.status(500).json({ erro: err.message });
+      // Parse etapas
+      const result = rows.map(r => ({
+        ...r,
+        etapas: r.etapas_json
+          ? r.etapas_json.split(';;').map(e => {
+              const [etapa, funcionario, hora] = e.split('|');
+              return { etapa, funcionario, hora };
+            })
+          : []
+      }));
+      res.json(result);
+    });
+});
+
 // Histórico completo por data (supervisor)
 app.get('/repositor/historico-completo', requireSupervisor, (req, res) => {
   const { data } = req.query;

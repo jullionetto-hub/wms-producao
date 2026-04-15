@@ -905,6 +905,7 @@ function ativarMobileRep() {
   document.getElementById('rep-tabbar').style.display = 'flex';
   mudarTabRep('avisos');
   carregarAvisosMobile();
+  carregarParaGuardar(); // pré-carrega badge
   setInterval(() => {
     carregarAvisosMobile();
     if (document.getElementById('rep-tab-historico')?.classList.contains('ativa')) carregarHistoricoDia();
@@ -917,11 +918,12 @@ function ativarMobileRep() {
 
 
 function mudarTabRep(tab) {
-  ['avisos','historico','stats'].forEach(t => {
+  ['avisos','guardar','historico','stats'].forEach(t => {
     const pg = document.getElementById(`rep-tab-${t}`); if(pg) pg.classList.toggle('ativa', t === tab);
     const bt = document.getElementById(`rtab-${t}`);    if(bt) bt.classList.toggle('ativo', t === tab);
   });
   if (tab === 'avisos')    carregarAvisosMobile();
+  if (tab === 'guardar')   carregarParaGuardar();
   if (tab === 'historico') carregarHistoricoDia();
   if (tab === 'stats')     carregarStatsRepMobile();
 }
@@ -1343,6 +1345,97 @@ async function carregarStatsCkMobile() {
 /* ══════════════════════════════════════════
    ESTATÍSTICAS REPOSITOR (desktop)
 ══════════════════════════════════════════ */
+// ══ PARA GUARDAR — itens que subiram, aguardando ser abastecidos ══
+async function carregarParaGuardar() {
+  const lista = document.getElementById('rep-para-guardar-lista');
+  if (!lista) return;
+  lista.innerHTML = '<div style="color:var(--text3);text-align:center;padding:28px">Carregando...</div>';
+  try {
+    const res  = await fetch(`${API}/repositor/para-guardar`, { credentials:'include' });
+    const rows = await res.json();
+
+    const badge = document.getElementById('stab-guardar-badge') || document.getElementById('rtab-guardar-badge');
+    if (badge) { badge.textContent = rows.length; badge.style.display = rows.length > 0 ? 'inline' : 'none'; }
+
+    if (!rows.length) {
+      lista.innerHTML = '<div style="color:var(--text3);text-align:center;padding:40px;font-size:14px">✅ Nenhum item aguardando ser guardado</div>';
+      return;
+    }
+
+    lista.innerHTML = rows.map(r => {
+      const etapas = r.etapas || [];
+      const etapaLabel = {separado:'✅ Separado',subiu:'⬆️ Subiu',abastecido:'📦 Abastecido',verificando:'🔍 Verificando',protocolo:'📋 Protocolo',devolucao:'↩️ Devolução',encontrado:'✅ Separado'};
+      const etapaCor   = {separado:'#16A34A',subiu:'#0D9488',abastecido:'#2563EB',verificando:'#6366F1',protocolo:'#D97706',encontrado:'#16A34A'};
+
+      const etapasHtml = etapas.map((e,i) => `
+        <div style="display:flex;align-items:center;gap:8px;padding:5px 0;${i<etapas.length-1?'border-bottom:1px solid var(--border)':''}">
+          <div style="width:8px;height:8px;border-radius:50%;background:${etapaCor[e.etapa]||'var(--text3)'};flex-shrink:0"></div>
+          <div style="flex:1;font-size:12px;font-weight:700;color:${etapaCor[e.etapa]||'var(--text2)'}">
+            ${etapaLabel[e.etapa]||e.etapa}
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:12px;font-weight:700;color:var(--text2)">👤 ${e.funcionario||'—'}</div>
+            <div style="font-size:10px;color:var(--text3);font-family:'Space Mono',monospace">${e.hora||'—'}</div>
+          </div>
+        </div>`).join('');
+
+      return `
+      <div style="background:var(--surface);border:1.5px solid #99F6E4;border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:var(--sh)">
+        <!-- Header do item -->
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px">
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+              <span style="font-size:15px;font-weight:800;color:var(--teal,#0D9488);font-family:'Space Mono',monospace">${r.codigo||'—'}</span>
+              <span style="font-size:12px;color:var(--text3)">Pedido <b style="color:var(--text)">#${r.numero_pedido}</b></span>
+            </div>
+            <div style="font-size:13px;color:var(--text);margin:4px 0;line-height:1.3;font-weight:500">${r.descricao||'—'}</div>
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px">
+              <span style="font-size:15px;font-weight:800;color:var(--accent);background:rgba(37,99,235,.1);padding:3px 12px;border-radius:7px;border:1px solid rgba(37,99,235,.2)">📍 ${r.endereco||'—'}</span>
+              <span style="background:#0D9488;color:#fff;border-radius:7px;padding:3px 10px;font-size:13px;font-weight:800;font-family:'Space Mono',monospace">x${r.quantidade||1}</span>
+            </div>
+          </div>
+          <!-- Destaque SUBIU -->
+          <div style="text-align:center;background:#F0FDFA;border:1.5px solid #99F6E4;border-radius:10px;padding:8px 12px;flex-shrink:0">
+            <div style="font-size:10px;font-weight:700;color:#0D9488;letter-spacing:1px">SUBIU</div>
+            <div style="font-size:22px">⬆️</div>
+            <div style="font-size:10px;color:var(--text3)">${r.hora_reposto||'—'}</div>
+          </div>
+        </div>
+
+        <!-- Histórico de etapas -->
+        <div style="background:var(--surface2);border-radius:10px;padding:10px 12px;margin-bottom:10px">
+          <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:1.5px;margin-bottom:8px;text-transform:uppercase">Histórico</div>
+          ${etapasHtml}
+        </div>
+
+        <!-- Botão GUARDAR (Abastecer) -->
+        <button onclick="guardarItem(${r.id},${r.quantidade||1})"
+          style="width:100%;padding:13px;background:linear-gradient(135deg,#2563EB,#6366F1);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;justify-content:center;gap:8px">
+          <span style="font-size:20px">📦</span> Guardar no Estoque (Abastecer)
+        </button>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    if (lista) lista.innerHTML='<div style="color:var(--red);text-align:center;padding:20px">Erro ao carregar</div>';
+  }
+}
+
+async function guardarItem(avisoId, qtd) {
+  const nome = usuarioAtual?.nome || '';
+  try {
+    const res  = await fetch(`${API}/repositor/avisos/${avisoId}/abastecido`, {
+      method:'PUT', credentials:'include',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ qtd_encontrada: qtd, repositor_nome: nome })
+    });
+    const data = await res.json();
+    if (data.erro) { toast(data.erro,'erro'); return; }
+    toast('📦 Item guardado no estoque!','sucesso');
+    carregarParaGuardar();
+    carregarAvisosMobile && carregarAvisosMobile();
+  } catch(e) { toast('Erro!','erro'); }
+}
+
 // ══ HISTÓRICO COMPLETO — SUPERVISOR ══
 async function carregarHistoricoCompleto() {
   const lista = document.getElementById('hist-completo-lista');

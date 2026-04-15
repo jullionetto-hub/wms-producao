@@ -545,7 +545,23 @@
           <div id="m-lista-avisos"><div style="color:var(--text3);text-align:center;padding:40px;font-size:13px">✅ Nenhum item em falta</div></div>
         </div>
       </div>
-      <!-- ABA 2 — HISTÓRICO DO DIA -->
+      <!-- ABA 2 — PARA GUARDAR -->
+      <div class="rep-tab-page" id="rep-tab-guardar">
+        <div class="sep-scroll">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+            <div>
+              <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">📦 Para Guardar</div>
+              <div style="font-size:11px;color:var(--text3);margin-top:2px">Itens que subiram e aguardam ser guardados</div>
+            </div>
+            <button class="btn btn-outline btn-sm" onclick="carregarParaGuardar()">🔄</button>
+          </div>
+          <div id="rep-para-guardar-lista">
+            <div style="color:var(--text3);text-align:center;padding:40px;font-size:14px">Carregando...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ABA 3 — HISTÓRICO DO DIA -->
       <div class="rep-tab-page" id="rep-tab-historico">
         <div class="sep-scroll">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
@@ -675,6 +691,7 @@
 <!-- Tab bar Repositor -->
 <div class="rep-tabbar" id="rep-tabbar">
   <button class="rep-tab ativo" id="rtab-avisos" onclick="mudarTabRep('avisos')"><span class="rep-tab-ic">🔧</span>PEDIDOS<span class="rep-tab-badge" id="rtab-badge" style="display:none">0</span></button>
+  <button class="rep-tab" id="rtab-guardar" onclick="mudarTabRep('guardar')"><span class="rep-tab-ic">📦</span>GUARDAR<span class="rep-tab-badge" id="rtab-guardar-badge" style="display:none">0</span></button>
   <button class="rep-tab" id="rtab-historico" onclick="mudarTabRep('historico')"><span class="rep-tab-ic">📋</span>HISTÓRICO</button>
   <button class="rep-tab" id="rtab-stats" onclick="mudarTabRep('stats')"><span class="rep-tab-ic">📈</span>STATS</button>
 </div>
