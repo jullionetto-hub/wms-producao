@@ -1122,6 +1122,57 @@ app.put('/configuracoes', requireSupervisor, (req, res) => {
   stmt.finalize(() => res.json({ mensagem:'Configurações salvas!' }));
 });
 
+// ─── DISTRIBUIÇÃO AUTOMÁTICA DE TODOS OS PENDENTES ─────────────────────────
+app.post('/distribuir-pedidos', requireSupervisor, (req, res) => {
+  const { data: dataHoje } = dataHoraLocal();
+
+  // Busca separadores ativos com seus pontos de hoje
+  db.all(`SELECT s.id, s.nome,
+    COALESCE(SUM(CASE WHEN p.status='concluido' AND p.data_pedido=? THEN p.peso ELSE 0 END),0) as pontos_hoje,
+    COALESCE(COUNT(CASE WHEN p.status='separando' THEN 1 END),0) as em_separacao
+    FROM separadores s
+    LEFT JOIN pedidos p ON p.separador_id=s.id
+    WHERE s.status='ativo'
+    GROUP BY s.id`,
+    [dataHoje], (err, seps) => {
+      if (err || !seps.length) return res.status(400).json({ erro:'Nenhum separador ativo!' });
+
+      // Busca pedidos pendentes sem separador, ordenados por peso desc
+      db.all(`SELECT id, numero_pedido, peso FROM pedidos
+        WHERE status='pendente' AND (separador_id IS NULL OR separador_id=0)
+        ORDER BY peso DESC`,
+        [], (err2, pedidos) => {
+          if (err2) return res.status(500).json({ erro: err2.message });
+          if (!pedidos.length) return res.json({ mensagem:'Nenhum pedido pendente para distribuir!', distribuidos:0 });
+
+          // Distribui balanceando por pontos acumulados (greedy least-loaded)
+          const carga = seps.map(s => ({ ...s, pontos_acumulados: s.pontos_hoje }));
+          const atribuicoes = [];
+
+          for (const pedido of pedidos) {
+            // Escolhe separador com menor carga acumulada
+            carga.sort((a,b) => a.pontos_acumulados - b.pontos_acumulados);
+            const escolhido = carga[0];
+            atribuicoes.push({ pedido_id: pedido.id, sep_id: escolhido.id, sep_nome: escolhido.nome, peso: pedido.peso||0 });
+            carga[0].pontos_acumulados += (pedido.peso || 0);
+          }
+
+          // Salva no banco
+          let done = 0;
+          const resumo = {};
+          atribuicoes.forEach(a => {
+            resumo[a.sep_nome] = (resumo[a.sep_nome] || 0) + 1;
+            db.run('UPDATE pedidos SET separador_id=? WHERE id=?', [a.sep_id, a.pedido_id], () => {
+              done++;
+              if (done === atribuicoes.length) {
+                res.json({ mensagem:'Distribuição concluída!', distribuidos: atribuicoes.length, resumo });
+              }
+            });
+          });
+        });
+    });
+});
+
 // ─── SUGESTÃO DE ATRIBUIÇÃO (balanceamento) ──────────────────────────────────
 app.get('/sugestao-separador/:pedido_id', requireAuth, (req, res) => {
   const { data: dataHoje } = dataHoraLocal();

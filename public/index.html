@@ -99,7 +99,28 @@
 
       <!-- PEDIDOS -->
       <div class="pagina" id="pag-pedidos">
-        <div class="pg-title">📋 Pedidos</div>
+        <div class="pg-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+          <span>📋 Pedidos</span>
+          <div style="display:flex;gap:8px;align-items:center">
+            <button class="btn btn-outline btn-sm" id="btn-ped-tab-lista" onclick="trocarPedidosTab('lista')">📋 Lista</button>
+            <button class="btn btn-outline btn-sm" id="btn-ped-tab-metas" onclick="trocarPedidosTab('metas')">🎯 Metas</button>
+          </div>
+        </div>
+
+        <!-- TAB LISTA -->
+        <div id="ped-tab-lista">
+        <div class="card" style="margin-bottom:12px;background:linear-gradient(135deg,#EFF6FF,#F5F3FF);border-color:rgba(37,99,235,.2)">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+            <div>
+              <div style="font-size:13px;font-weight:700;color:var(--accent)">💡 Distribuição Automática</div>
+              <div style="font-size:12px;color:var(--text3);margin-top:2px">Atribui todos os pedidos pendentes equilibrando a carga entre os separadores</div>
+            </div>
+            <button class="btn btn-primary" style="padding:11px 22px;font-size:14px;font-weight:800;background:linear-gradient(135deg,#2563EB,#6366F1)" onclick="distribuirPedidos()">
+              ⚡ Distribuir Todos
+            </button>
+          </div>
+        </div>
+
         <div class="card" id="dash-bloqueados-wrap" style="display:none;margin-bottom:16px;border-left:4px solid var(--red);border-top:1.5px solid #FECACA;border-right:1.5px solid #FECACA;border-bottom:1.5px solid #FECACA">
           <div class="card-hd" style="background:#FEF2F2;color:var(--red);border-radius:var(--r) var(--r) 0 0">
             ⛔ AGUARDANDO LIBERAÇÃO DO SUPERVISOR

@@ -576,7 +576,7 @@ async function carregarMetas() {
     const layout = await resL.json();
     const el = document.getElementById('layout-estoque-visual');
     if (el) {
-      el.innerHTML = Object.entries(layout.corredores).map(([tipo, cors]) => {
+      const layoutHtml = Object.entries(layout.corredores).map(([tipo, cors]) => {
         const cor   = tipo==='verde'?'#16A34A':tipo==='azul'?'#0070C0':'#DC2626';
         const bg    = tipo==='verde'?'#F0FDF4':tipo==='azul'?'#EFF6FF':'#FEF2F2';
         const multi = layout.multiplicadores[tipo];
@@ -590,7 +590,12 @@ async function carregarMetas() {
           </div>
         </div>`;
       }).join('');
+      el.innerHTML = layoutHtml;
+      // Also update the one in pedidos tab
+      const el2 = document.getElementById('layout-estoque-visual-ped');
+      if (el2) el2.innerHTML = layoutHtml;
     }
+    }); // end forEach
   } catch(e) {}
 }
 
@@ -866,6 +871,107 @@ function formatarData(iso) {
 /* ══════════════════════════════════════════
    PEDIDOS
 ══════════════════════════════════════════ */
+// ══ TABS DE PEDIDOS ══
+function trocarPedidosTab(tab) {
+  ['lista','metas'].forEach(t => {
+    const el  = document.getElementById(`ped-tab-${t}`);
+    const btn = document.getElementById(`btn-ped-tab-${t}`);
+    if (el)  el.style.display  = t === tab ? 'block' : 'none';
+    if (btn) btn.className = t === tab ? 'btn btn-primary btn-sm' : 'btn btn-outline btn-sm';
+  });
+  if (tab === 'metas') {
+    carregarMetas();
+    carregarPlacarHoje();
+  }
+}
+
+// ══ DISTRIBUIÇÃO AUTOMÁTICA ══
+async function distribuirPedidos() {
+  const pendentes = document.querySelectorAll('#tbody-pedidos tr').length;
+  if (!confirm('Distribuir todos os pedidos pendentes automaticamente entre os separadores ativos?')) return;
+  try {
+    const res  = await fetch(`${API}/distribuir-pedidos`, {
+      method:'POST', credentials:'include',
+      headers:{'Content-Type':'application/json'}
+    });
+    const data = await res.json();
+    if (data.erro) { toast(data.erro,'erro'); return; }
+
+    // Mostra resumo da distribuição
+    let resumoHtml = Object.entries(data.resumo||{})
+      .map(([sep,qtd]) => `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)">
+        <span style="font-weight:600">👤 ${sep}</span>
+        <span style="color:var(--accent);font-weight:700">${qtd} pedido${qtd>1?'s':''}</span>
+      </div>`).join('');
+
+    const msg = document.createElement('div');
+    msg.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--surface);border-radius:16px;padding:24px;max-width:400px;width:90%;z-index:9999;box-shadow:0 20px 60px rgba(0,0,0,.3)';
+    msg.innerHTML = `
+      <div style="font-family:'Space Mono',monospace;font-size:16px;color:var(--text);margin-bottom:16px">✅ Distribuição Concluída!</div>
+      <div style="font-size:13px;color:var(--text3);margin-bottom:12px">${data.distribuidos} pedidos distribuídos</div>
+      <div style="background:var(--surface2);border-radius:10px;padding:10px 14px;margin-bottom:16px">${resumoHtml}</div>
+      <button class="btn btn-primary" style="width:100%" onclick="this.parentNode.remove();carregarPedidos()">OK</button>`;
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9998';
+    overlay.onclick = () => { overlay.remove(); msg.remove(); carregarPedidos(); };
+    document.body.appendChild(overlay);
+    document.body.appendChild(msg);
+  } catch(e) { toast('Erro ao distribuir!','erro'); }
+}
+
+// ══ PLACAR DE HOJE ══
+async function carregarPlacarHoje() {
+  const lista = document.getElementById('placar-hoje-lista');
+  if (!lista) return;
+  try {
+    const res  = await fetch(`${API}/produtividade`, { credentials:'include' });
+    const data = await res.json();
+    const seps = data.dados || data || [];
+    // Load metas
+    const cfgRes = await fetch(`${API}/configuracoes`, { credentials:'include' });
+    const cfg = await cfgRes.json();
+    const metaPts = parseInt(cfg.meta_pontos_dia)||300;
+    const metaPed = parseInt(cfg.meta_pedidos_dia)||25;
+
+    if (!seps.length) { lista.innerHTML='<div style="color:var(--text3);text-align:center;padding:20px">Nenhum separador</div>'; return; }
+
+    lista.innerHTML = seps.filter(s=>s.status==='ativo').map(s => {
+      const pctPed = Math.min(Math.round(((s.hoje||0)/metaPed)*100),100);
+      const pctPts = Math.min(Math.round(((s.pontos_hoje||0)/metaPts)*100),100);
+      const corPed = pctPed>=100?'var(--green)':pctPed>=70?'var(--amber)':'var(--accent)';
+      const corPts = pctPts>=100?'var(--green)':pctPts>=70?'var(--amber)':'var(--accent)';
+      return `<div style="padding:12px 0;border-bottom:1px solid var(--border)">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <span style="font-weight:700;color:var(--text)">${s.nome}</span>
+          <div style="display:flex;gap:8px">
+            <span style="font-size:12px;font-weight:700;color:${corPed}">📦 ${s.hoje||0}/${metaPed}</span>
+            <span style="font-size:12px;font-weight:700;color:${corPts}">⚡ ${s.pontos_hoje||0}/${metaPts}</span>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:11px;color:var(--text3);width:60px">Pedidos</span>
+            <div style="flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden">
+              <div style="width:${pctPed}%;height:100%;background:${corPed};border-radius:3px;transition:width .5s"></div>
+            </div>
+            <span style="font-size:11px;font-weight:700;color:${corPed};width:30px;text-align:right">${pctPed}%</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:11px;color:var(--text3);width:60px">Pontos</span>
+            <div style="flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden">
+              <div style="width:${pctPts}%;height:100%;background:${corPts};border-radius:3px;transition:width .5s"></div>
+            </div>
+            <span style="font-size:11px;font-weight:700;color:${corPts};width:30px;text-align:right">${pctPts}%</span>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) {}
+}
+
+// Atualiza carregarMetas para usar o id duplicado da aba pedidos também
+const _carregarMetasOrig = carregarMetas;
+
 async function carregarPedidos() {
   try {
     const ini    = document.getElementById('filtro-ped-ini').value;
@@ -897,7 +1003,6 @@ async function carregarPedidos() {
             <option value="">— atribuir —</option>
             ${todosSeparadores.map(s=>`<option value="${s.id}"${p.separador_id==s.id?' selected':''}>${s.nome}</option>`).join('')}
           </select>
-          <button class="btn btn-outline btn-sm" style="font-size:10px;padding:3px 8px" onclick="sugerirSeparador(${p.id})">💡 Sugerir</button>
         </div>
       </td>
     </tr>`).join('');
