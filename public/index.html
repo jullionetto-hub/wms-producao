@@ -184,6 +184,41 @@
           </div>
           <div class="tabela-wrap"><table><thead><tr><th>Nº PEDIDO</th><th>USUÁRIO</th><th>STATUS</th><th>ITENS</th><th>DATA</th><th>HORA</th><th>ATRIBUIR</th></tr></thead><tbody id="tbody-ped"></tbody></table></div>
         </div>
+        </div><!-- /ped-tab-lista -->
+
+        <!-- TAB METAS -->
+        <div id="ped-tab-metas" style="display:none">
+          <div class="card" style="max-width:600px">
+            <div class="card-hd" style="background:linear-gradient(135deg,rgba(37,99,235,.08),rgba(99,102,241,.05))">🎯 METAS DIÁRIAS</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+              <div class="form-grp">
+                <label>META DE PEDIDOS/DIA</label>
+                <input type="number" id="meta-pedidos" placeholder="Ex: 25" min="1"/>
+                <div style="font-size:11px;color:var(--text3);margin-top:3px">Por separador</div>
+              </div>
+              <div class="form-grp">
+                <label>META DE PONTOS/DIA</label>
+                <input type="number" id="meta-pontos" placeholder="Ex: 300" min="1"/>
+                <div style="font-size:11px;color:var(--text3);margin-top:3px">Por separador</div>
+              </div>
+            </div>
+            <div style="background:var(--surface2);border-radius:10px;padding:12px;margin-bottom:14px;border:1px solid var(--border)">
+              <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:8px">⚡ COMO O PESO É CALCULADO</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center;margin-bottom:10px">
+                <div style="background:var(--surface);border-radius:8px;padding:10px;border:1px solid var(--border)"><div style="font-size:18px">🛣️</div><div style="font-size:12px;font-weight:800;color:var(--indigo)">dif.×3</div><div style="font-size:10px;color:var(--text3)">por corredor</div></div>
+                <div style="background:var(--surface);border-radius:8px;padding:10px;border:1px solid var(--border)"><div style="font-size:18px">📋</div><div style="font-size:12px;font-weight:800;color:var(--accent)">×1 ponto</div><div style="font-size:10px;color:var(--text3)">por item</div></div>
+                <div style="background:var(--surface);border-radius:8px;padding:10px;border:1px solid var(--border)"><div style="font-size:18px">📦</div><div style="font-size:12px;font-weight:800;color:var(--green)">×0.5 pt</div><div style="font-size:10px;color:var(--text3)">por unidade</div></div>
+              </div>
+              <div style="font-size:11px;color:var(--text3);margin-bottom:6px;font-weight:600">🗺️ DIFICULDADE POR CORREDOR</div>
+              <div id="layout-estoque-visual-ped"><div style="color:var(--text3);font-size:12px">Carregando...</div></div>
+            </div>
+            <button class="btn btn-primary" style="width:100%;padding:12px;font-size:14px;font-weight:700" onclick="salvarMetas()">💾 Salvar Metas</button>
+          </div>
+          <div class="card" style="max-width:600px;margin-top:14px">
+            <div class="card-hd">📊 PLACAR DE HOJE</div>
+            <div id="placar-hoje-lista"><div style="color:var(--text3);text-align:center;padding:20px">Carregando...</div></div>
+          </div>
+        </div>
       </div>
 
       <!-- CADASTROS -->
@@ -192,21 +227,18 @@
         <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
           <button class="btn btn-primary btn-sm" id="ctab-usuarios" onclick="trocarCadastroTab('usuarios')">👥 Usuários</button>
           <button class="btn btn-outline btn-sm" id="ctab-importar" onclick="trocarCadastroTab('importar')">📥 Importar</button>
-          <button class="btn btn-outline btn-sm" id="ctab-metas" onclick="trocarCadastroTab('metas')">🎯 Metas</button>
+          <button class="btn btn-outline btn-sm" id="ctab-metas"    onclick="trocarCadastroTab('metas')">🎯 Metas</button>
         </div>
+
+        <!-- ABA: USUÁRIOS -->
         <div id="cad-usuarios">
           <div class="grid-2">
-            <!-- ── FORMULÁRIO NOVO USUÁRIO ── -->
             <div class="card">
-              <div class="card-hd" style="background:linear-gradient(135deg,rgba(37,99,235,.08),rgba(99,102,241,.05))">
-                ➕ NOVO USUÁRIO
-              </div>
-
+              <div class="card-hd" style="background:linear-gradient(135deg,rgba(37,99,235,.08),rgba(99,102,241,.05))">➕ NOVO USUÁRIO</div>
               <div class="form-grp">
                 <label>NOME COMPLETO</label>
                 <input type="text" id="usr-nome" placeholder="Ex: João da Silva" autocomplete="off"/>
               </div>
-
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
                 <div class="form-grp">
                   <label>LOGIN</label>
@@ -217,7 +249,6 @@
                   <input type="password" id="usr-senha" placeholder="Mín. 6 caracteres"/>
                 </div>
               </div>
-
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
                 <div class="form-grp">
                   <label>PERFIL PRINCIPAL</label>
@@ -237,7 +268,6 @@
                   </select>
                 </div>
               </div>
-
               <div class="form-grp" id="usr-subtipo-wrap" style="display:none">
                 <label>FUNÇÃO DO REPOSITOR</label>
                 <select id="usr-subtipo-repositor">
@@ -246,11 +276,9 @@
                   <option value="abastecimento">Abastecimento</option>
                 </select>
               </div>
-
-              <!-- PODE ACESSAR TAMBÉM — layout melhorado -->
               <div class="form-grp">
                 <label>PODE ACESSAR TAMBÉM</label>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px" id="perm-grid-wrap">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px">
                   <label id="perm-supervisor" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;background:var(--surface2);cursor:pointer;transition:all .2s;user-select:none">
                     <input type="checkbox" class="usr-perm" value="supervisor" id="perm-cb-supervisor" style="width:18px;height:18px;accent-color:var(--accent);flex-shrink:0" onchange="atualizarPermVisual('supervisor')">
                     <span style="font-size:13px;font-weight:600">👔 Supervisão</span>
@@ -270,13 +298,8 @@
                 </div>
                 <div style="font-size:10px;color:var(--text3);margin-top:6px">O perfil principal é habilitado automaticamente. Marque os acessos extras.</div>
               </div>
-
-              <button class="btn btn-primary" style="width:100%;margin-top:8px;padding:13px;font-size:14px;font-weight:700;border-radius:10px" onclick="cadastrarUsuario()">
-                ✅ Cadastrar Usuário
-              </button>
+              <button class="btn btn-primary" style="width:100%;margin-top:8px;padding:13px;font-size:14px;font-weight:700;border-radius:10px" onclick="cadastrarUsuario()">✅ Cadastrar Usuário</button>
             </div>
-
-            <!-- ── LISTA DE USUÁRIOS ── -->
             <div class="card">
               <div class="card-hd" style="background:linear-gradient(135deg,rgba(37,99,235,.08),rgba(99,102,241,.05))">
                 👥 USUÁRIOS CADASTRADOS
@@ -284,73 +307,48 @@
               </div>
               <div class="tabela-wrap">
                 <table>
-                  <thead>
-                    <tr>
-                      <th>NOME</th>
-                      <th>LOGIN</th>
-                      <th>PERFIL</th>
-                      <th>TAMBÉM ACESSA</th>
-                      <th>TURNO</th>
-                      <th>STATUS</th>
-                      <th>AÇÕES</th>
-                    </tr>
-                  </thead>
+                  <thead><tr><th>NOME</th><th>LOGIN</th><th>PERFIL</th><th>TAMBÉM ACESSA</th><th>TURNO</th><th>STATUS</th><th>AÇÕES</th></tr></thead>
                   <tbody id="tbody-usr"></tbody>
                 </table>
               </div>
             </div>
           </div>
         </div>
+
+        <!-- ABA: IMPORTAR -->
         <div id="cad-importar" style="display:none">
           <div class="grid-2">
             <div class="card">
               <div class="card-hd">📥 IMPORTAR PLANILHA</div>
-              <div class="upload-area" id="upload-area"
-                ondragover="event.preventDefault();this.classList.add('drag')"
-                ondragleave="this.classList.remove('drag')"
-                ondrop="handleDrop(event)"
-                onclick="document.getElementById('input-arquivo').click()">
-                <div style="font-size:40px;margin-bottom:10px">📊</div>
-                <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:6px">Arraste o arquivo aqui</div>
-                <div style="font-size:11px;color:var(--text3);margin-bottom:14px">ou clique para selecionar<br><b style="color:var(--text2)">Colunas: Pedido, Codigo, Descricao, Qtde, Endereço</b></div>
-                <input type="file" id="input-arquivo" accept=".xlsx,.xls,.csv" onchange="processarArquivo(event)"/>
-                <button class="btn btn-outline btn-sm" onclick="event.stopPropagation()">📂 Selecionar Arquivo</button>
+              <div class="form-grp">
+                <label>ARQUIVO .XLSX</label>
+                <input type="file" id="import-file" accept=".xlsx,.xls" style="padding:10px;border:1.5px dashed var(--border);border-radius:10px;width:100%;background:var(--surface2);cursor:pointer"/>
               </div>
-              <div class="status-box" id="status-leitura"></div>
-              <div id="preview-importacao" style="display:none;margin-top:14px">
-                <div style="font-size:11px;color:var(--text3);margin-bottom:8px">PREVIEW (10 primeiras linhas)</div>
-                <div class="tabela-wrap" style="max-height:200px;overflow-y:auto">
-                  <table><thead><tr><th>PEDIDO</th><th>CÓDIGO</th><th>DESCRIÇÃO</th><th>ENDEREÇO</th><th>QTDE</th></tr></thead><tbody id="tbody-prev"></tbody></table>
-                </div>
-                <div style="margin-top:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-                  <span id="txt-total-import" style="font-size:12px;color:var(--text2);font-weight:600"></span>
-                  <button class="btn btn-success" onclick="confirmarImportacao()">📥 Importar para Fila</button>
-                </div>
-              </div>
+              <button class="btn btn-primary" style="width:100%;margin-top:4px" onclick="importarPlanilha()">📤 Importar Pedidos</button>
+              <div id="import-status" style="margin-top:14px"></div>
             </div>
             <div class="card">
-              <div class="card-hd">📋 HISTÓRICO <button class="btn btn-danger btn-sm" onclick="limparHistorico()">🗑 Limpar</button></div>
+              <div class="card-hd">📋 HISTÓRICO DE IMPORTAÇÕES <button class="btn btn-danger btn-sm" onclick="limparHistorico()">🗑 Limpar</button></div>
               <div id="hist-importacoes"></div>
             </div>
           </div>
         </div>
-      </div>
 
-        <!-- METAS -->
+        <!-- ABA: METAS -->
         <div id="cad-metas" style="display:none">
           <div class="card" style="max-width:520px">
             <div class="card-hd" style="background:linear-gradient(135deg,rgba(37,99,235,.08),rgba(99,102,241,.05))">🎯 METAS DIÁRIAS</div>
             <div class="form-grp" style="margin-top:4px">
               <label>META DE PEDIDOS POR DIA</label>
-              <input type="number" id="meta-pedidos" placeholder="Ex: 30" min="1" max="200"/>
+              <input type="number" id="meta-pedidos" placeholder="Ex: 25" min="1" max="200"/>
               <div style="font-size:11px;color:var(--text3);margin-top:4px">Pedidos concluídos que cada separador deve atingir por dia</div>
             </div>
             <div class="form-grp">
               <label>META DE PONTOS POR DIA</label>
-              <input type="number" id="meta-pontos" placeholder="Ex: 200" min="1"/>
-              <div style="font-size:11px;color:var(--text3);margin-top:4px">Pontos = (corredores ×3) + (itens ×1) + (unidades ×0.5)</div>
+              <input type="number" id="meta-pontos" placeholder="Ex: 300" min="1"/>
+              <div style="font-size:11px;color:var(--text3);margin-top:4px">Pontos = (corredores × dificuldade × 3) + (itens × 1) + (unidades × 0.5)</div>
             </div>
-            <div style="background:var(--surface2);border-radius:10px;padding:12px;margin-bottom:8px;border:1px solid var(--border)">
+            <div style="background:var(--surface2);border-radius:10px;padding:12px;margin-bottom:14px;border:1px solid var(--border)">
               <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:8px">⚡ COMO O PESO É CALCULADO</div>
               <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center;margin-bottom:10px">
                 <div style="background:var(--surface);border-radius:8px;padding:10px;border:1px solid var(--border)">
@@ -363,7 +361,7 @@
                   <div style="font-size:18px">📦</div><div style="font-size:12px;font-weight:800;color:var(--green)">×0.5 pt</div><div style="font-size:10px;color:var(--text3)">por unidade</div>
                 </div>
               </div>
-              <div style="font-size:11px;color:var(--text3);margin-bottom:4px;font-weight:600">🗺️ DIFICULDADE POR CORREDOR (seu estoque)</div>
+              <div style="font-size:11px;color:var(--text3);margin-bottom:6px;font-weight:600">🗺️ DIFICULDADE POR CORREDOR (seu estoque)</div>
               <div id="layout-estoque-visual">
                 <div style="color:var(--text3);font-size:12px;padding:8px">Carregando mapa do estoque...</div>
               </div>
