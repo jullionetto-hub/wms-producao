@@ -34,13 +34,6 @@ async function retryFetch(url, opts={}, retries=2) {
   }
 }
 
-async function retryFetch(url, opts={}, retries=2) {
-  for (let i=0; i<=retries; i++) {
-    try { return await apiFetch(url, opts); }
-    catch(e) { if (i===retries || e.status) throw e; await new Promise(r=>setTimeout(r,1000*(i+1))); }
-  }
-}
-
 function setLoading(btn, loading, originalText=null) {
   if (!btn) return;
   if (loading) {
@@ -71,37 +64,10 @@ function labelSubtipoRepositor(v) {
   return 'REPOSITOR';
 }
 
-function labelSubtipoRepositor(v) {
-  if (v === 'busca') return 'REPOSITOR BUSCA';
-  if (v === 'abastecimento') return 'REPOSITOR ABASTECIMENTO';
-  return 'REPOSITOR';
-}
 function modoRepositorAtual() {
   return usuarioAtual?.subtipo_repositor || 'geral';
 }
 
-function modoRepositorAtual() {
-  return usuarioAtual?.subtipo_repositor || 'geral';
-}
-function toggleSubtipoRepositor() {
-  const perf = document.getElementById('usr-perfil');
-  const wrap = document.getElementById('usr-subtipo-wrap');
-  if (!perf || !wrap) return;
-  wrap.style.display = perf.value === 'repositor' ? 'block' : 'none';
-  // Marca visualmente o perfil principal como ativo e desabilita o checkbox dele
-  ['supervisor','separador','repositor','checkout'].forEach(p => {
-    const cb  = document.getElementById(`perm-cb-${p}`);
-    const lbl = document.getElementById(`perm-${p}`);
-    if (!cb || !lbl) return;
-    const isMain = p === perf.value;
-    cb.disabled = isMain;
-    cb.checked  = isMain ? false : cb.checked;
-    lbl.style.opacity   = isMain ? '.5' : '1';
-    lbl.style.cursor    = isMain ? 'not-allowed' : 'pointer';
-    lbl.title = isMain ? 'Este é o perfil principal' : '';
-    atualizarPermVisual(p);
-  });
-}
 
 function atualizarRelogio() {
   const agora = new Date();
