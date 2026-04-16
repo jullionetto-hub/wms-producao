@@ -2945,6 +2945,12 @@ async function carregarFila() {
 
 
 function selecionarPedidoFila(num) {
+  // Reseta estado do pedido anterior antes de iniciar novo
+  caixaJaVinculada = false;
+  const caixaInp = document.getElementById('cl-input-caixa');
+  const caixaSt  = document.getElementById('cl-caixa-status');
+  if (caixaInp) caixaInp.value = '';
+  if (caixaSt)  { caixaSt.style.display = 'none'; caixaSt.innerHTML = ''; }
   document.getElementById('input-pedido').value = num;
   confirmarPedido();
 }
@@ -3038,6 +3044,15 @@ async function carregarFilaMobile() {
 
 
 function selecionarPedidoFilaMobile(num) {
+  // Reseta estado do pedido anterior antes de iniciar novo
+  caixaJaVinculada = false;
+  const caixaInp = document.getElementById('m-input-caixa');
+  const caixaSt  = document.getElementById('m-caixa-status');
+  if (caixaInp) caixaInp.value = '';
+  if (caixaSt)  { caixaSt.style.display = 'none'; caixaSt.innerHTML = ''; }
+  // Esconde placeholder se existir
+  const ph = document.getElementById('m-cl-wrap-placeholder');
+  if (ph) ph.style.display = 'none';
   mudarTabSep('separar');
   document.getElementById('m-input-pedido').value = num;
   confirmarPedidoMobile();
@@ -3138,13 +3153,29 @@ async function _concluirCore(prefix, fnChecklist, fnFila, fnStats, inputId, stat
     if (data.aguardando) { toast('⏳ Ainda aguardando o repositor!','aviso'); return; }
     if (data.bloqueado)  { toast('⛔ Bloqueado! Aguarde o supervisor liberar.','erro'); return; }
     if (data.erro)       { toast(`⚠️ ${data.erro}`,'aviso'); return; }
-    toast(`🎉 Pedido ${pedidoAtualNum} CONCLUÍDO!`,'sucesso');
+    toast(`Pedido ${pedidoAtualNum} concluído`, 'sucesso');
     const wrap = document.getElementById(`${prefix}-wrap`);
     if (wrap) wrap.style.display = 'none';
     const statusEl = document.getElementById(statusId);
     if (statusEl) statusEl.style.display = 'none';
     document.getElementById(inputId).value = '';
+    // Limpa campos de caixa
+    const caixaDesktop = document.getElementById('cl-input-caixa');
+    const caixaMobile  = document.getElementById('m-input-caixa');
+    const caixaStD = document.getElementById('cl-caixa-status');
+    const caixaStM = document.getElementById('m-caixa-status');
+    if (caixaDesktop) caixaDesktop.value = '';
+    if (caixaMobile)  caixaMobile.value  = '';
+    if (caixaStD) { caixaStD.style.display = 'none'; caixaStD.innerHTML = ''; }
+    if (caixaStM) { caixaStM.style.display = 'none'; caixaStM.innerHTML = ''; }
+    // Esconde placeholders
+    ['m-cl-wrap-placeholder','cl-wrap-placeholder'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = 'none';
+    });
     mostrarCampoCaixa(false);
+    // RESET: obriga vincular caixa no próximo pedido
+    caixaJaVinculada = false;
     pedidoAtualId=null; pedidoAtualNum=null; itensAtuais=[];
     fnFila(); fnStats();
     setTimeout(() => document.getElementById(inputId).focus(), 300);
@@ -3265,7 +3296,7 @@ function renderChecklist(prefix) {
           </div>
           <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;margin-left:10px">
             ${item.status!=='pendente'?`<span style="font-size:9px;font-weight:800;letter-spacing:1.5px;padding:3px 8px;border-radius:4px;background:${cardAccent};color:#fff">${statusLabel}</span>`:''}
-            <span style="font-family:'Space Mono',monospace;font-size:20px;font-weight:800;color:#0F172A">×${item.quantidade||1}</span>
+            <span style="font-family:'Space Mono',monospace;font-size:28px;font-weight:800;color:#0F172A;line-height:1">×${item.quantidade||1}</span>
           </div>
         </div>
         <!-- Linha 2: Descrição -->
