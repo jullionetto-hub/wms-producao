@@ -16,4 +16,3 @@ let perfilSelecionado  = '';
 let repFiltroAtual     = '';
 let repFiltroAtivo     = '';
 
-let isMobile = () => window.innerWidth <= 768;

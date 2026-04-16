@@ -1,7 +1,8 @@
-/* ══ UTILS.JS ══ WMS Miess ══ */
-
+/* UTILS.JS - WMS Miess */
 
 let isMobile = () => window.innerWidth <= 768;
+
+
 
 async function apiFetch(url, opts={}) {
   try {
@@ -51,13 +52,11 @@ function esc(str) {
   if (typeof str === 'number') return String(str);
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
-let pedidoCaixaVinculada = false;
 
 function hojeLocal() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
-const hoje = hojeLocal();
 function labelSubtipoRepositor(v) {
   if (v === 'busca') return 'REPOSITOR BUSCA';
   if (v === 'abastecimento') return 'REPOSITOR ABASTECIMENTO';
