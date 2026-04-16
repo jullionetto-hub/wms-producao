@@ -1019,14 +1019,14 @@ body.dark .aviso-duplicata{background:#2D1A05;border-color:#78350F;color:#FCD34D
           </div>
           <div class="status-pedido" id="status-atual"></div>
           <!-- Campo caixa desktop -->
-          <div id="cl-caixa-wrap" style="display:none;margin-top:10px;padding:10px 0 0;border-top:1px solid var(--border)">
-            <div style="font-size:11px;font-weight:700;color:var(--red);letter-spacing:1px;margin-bottom:6px">📦 VINCULAR NÚMERO DA CAIXA — OBRIGATÓRIO PARA CONCLUIR</div>
+          <div id="cl-caixa-wrap" style="display:none;margin-top:10px;padding:12px;background:#FFF8F8;border:1.5px solid #FECACA;border-radius:9px">
+            <div style="font-size:11px;font-weight:800;color:#B91C1C;letter-spacing:1px;margin-bottom:8px;display:flex;align-items:center;gap:6px"><span style="width:6px;height:6px;background:#DC2626;border-radius:50%;flex-shrink:0"></span>VINCULAR CAIXA ANTES DE INICIAR</div>
             <div class="bip-wrap" style="margin-bottom:0">
               <input type="text" class="bip-input" id="cl-input-caixa"
                 placeholder="Número da caixa..."
                 autocomplete="off" inputmode="numeric"
-                style="font-size:18px;letter-spacing:2px;border-color:var(--amber)"/>
-              <button class="btn-bip" style="border-color:var(--amber);color:var(--amber)" onclick="vincularCaixaDesktop()">📦</button>
+                style="font-size:20px;letter-spacing:3px;border-color:#DC2626;border-width:2px"/>
+              <button class="btn-bip" style="background:#DC2626;color:#fff;border:none" onclick="vincularCaixaDesktop()">📦</button>
             </div>
             <div id="cl-caixa-status" style="font-size:12px;color:var(--text3);margin-top:6px;padding:6px 10px;background:var(--surface2);border-radius:6px;display:none"></div>
           </div>
@@ -1366,14 +1366,17 @@ body.dark .aviso-duplicata{background:#2D1A05;border-color:#78350F;color:#FCD34D
           </div>
           <div class="status-pedido" id="m-status-atual"></div>
           <!-- Campo caixa mobile -->
-          <div id="m-caixa-wrap" style="display:none;margin-bottom:12px">
-            <div style="font-size:11px;font-weight:700;color:var(--red);letter-spacing:1px;margin-bottom:6px">📦 VINCULAR CAIXA — OBRIGATÓRIO PARA CONCLUIR</div>
+          <div id="m-caixa-wrap" style="display:none;margin-bottom:12px;padding:12px;background:#FFF8F8;border:1.5px solid #FECACA;border-radius:9px">
+            <div style="font-size:11px;font-weight:800;color:#B91C1C;letter-spacing:1px;margin-bottom:8px;display:flex;align-items:center;gap:6px">
+            <span style="width:6px;height:6px;background:#DC2626;border-radius:50%;flex-shrink:0"></span>
+            VINCULAR CAIXA — OBRIGATÓRIO ANTES DE INICIAR
+          </div>
             <div class="bip-wrap" style="margin-bottom:0">
               <input type="text" class="bip-input" id="m-input-caixa"
                 placeholder="Número da caixa..."
                 autocomplete="off" inputmode="numeric"
-                style="font-size:18px;letter-spacing:2px;border-color:var(--amber)"/>
-              <button class="btn-bip" style="border-color:var(--amber);color:var(--amber)" onclick="vincularCaixaMobile()">📦</button>
+                style="font-size:20px;letter-spacing:3px;border-color:#DC2626;border-width:2px"/>
+              <button class="btn-bip" style="background:#DC2626;color:#fff;border:none" onclick="vincularCaixaMobile()">📦</button>
             </div>
             <div id="m-caixa-status" style="font-size:12px;color:var(--text3);margin-top:6px;padding:6px 10px;background:var(--surface2);border-radius:6px;display:none"></div>
           </div>
@@ -1526,6 +1529,7 @@ let pedidoAtualNum   = null;
 let itensAtuais      = [];
 let todosSeparadores = [];
 let pedidosImportar  = [];
+let caixaJaVinculada = false; // bloqueia checklist até vincular caixa
 let historicoImportacoes = JSON.parse(localStorage.getItem('historico_importacoes') || '[]');
 let isMobile = () => window.innerWidth <= 768;
 
@@ -3006,19 +3010,24 @@ async function carregarFilaMobile() {
     const ordenadosMob = [...meusMob].sort((a,b)=>(a.itens||0)-(b.itens||0));
     if (badge) { badge.textContent = ordenadosMob.length; badge.style.display = ordenadosMob.length > 0 ? 'inline' : 'none'; }
     if (!ordenadosMob.length) { lista.innerHTML = '<div style="color:var(--text3);text-align:center;padding:30px;font-size:13px">Nenhum pedido na fila 🎉</div>'; return; }
-    lista.innerHTML = ordenadosMob.map(p => {
-      const isDrive = String(p.transportadora||'').toUpperCase().includes('DRIVE');
-      return `<div class="fila-card meu ${isDrive?'drive':''}" onclick="selecionarPedidoFilaMobile('${p.numero_pedido}')">
+    lista.innerHTML = ordenadosMob.map((p,idx) => {
+      const transp = String(p.transportadora||'').toUpperCase();
+      const isDrive = transp.includes('DRIVE');
+      const numColor = isDrive ? '#DC2626' : '#2563EB';
+      const cardBorderLeft = isDrive ? '3px solid #DC2626' : '3px solid #2563EB';
+      return `<div style="background:#fff;border:1px solid #E2E8F0;border-left:${cardBorderLeft};border-radius:10px;padding:14px 16px;margin-bottom:7px;display:flex;align-items:center;gap:12px;cursor:pointer" onclick="selecionarPedidoFilaMobile('${p.numero_pedido}')">
         <div style="flex:1;min-width:0">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">
-            <span class="fila-num" style="color:${isDrive?'var(--red)':'var(--accent)'}">${p.numero_pedido}</span>
-            ${isDrive?`<span class="fila-badge drive">DRIVE THRU</span>`:`<span class="fila-badge meu">MEU</span>`}
+            <span style="font-family:'Space Mono',monospace;font-size:15px;font-weight:700;color:${numColor}">${p.numero_pedido}</span>
+            ${isDrive
+              ? `<span style="font-size:9px;font-weight:800;letter-spacing:1px;padding:2px 7px;border-radius:4px;background:#FEF2F2;color:#DC2626;border:1px solid #FECACA">DRIVE THRU</span>`
+              : `<span style="font-size:9px;font-weight:700;letter-spacing:.5px;padding:2px 7px;border-radius:4px;background:#EFF6FF;color:#2563EB;border:1px solid #BFDBFE">MEU</span>`}
           </div>
           <div style="font-size:11px;color:#64748B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.cliente||'—'}</div>
         </div>
         <div style="text-align:right;flex-shrink:0">
-          <div style="font-size:13px;font-weight:700;color:#0F172A">${p.itens||0}</div>
-          <div style="font-size:10px;color:#94A3B8;letter-spacing:.5px">ITENS</div>
+          <div style="font-size:14px;font-weight:700;color:#0F172A">${p.itens||0}</div>
+          <div style="font-size:9px;color:#94A3B8;letter-spacing:1px;text-transform:uppercase">itens</div>
         </div>
       </div>`;
     }).join('');
@@ -3089,9 +3098,25 @@ async function _confirmarPedidoCore(num, inputId, statusId, clWrapId, fnChecklis
       statusEl.innerHTML = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:${infoTransp?'8px':'0'}"><span style="width:8px;height:8px;background:var(--accent);border-radius:50%;flex-shrink:0;display:inline-block"></span><span style="font-size:13px;color:#475569">Pedido <b style="color:#0F172A;font-family:'Space Mono',monospace">${num}</b> — <span style="font-weight:700;color:var(--accent)">Em separação</span></span></div>${infoTransp}`; 
       statusEl.style.display = 'block'; 
     }
-    toast(data.ja_atribuido ? `Pedido ${num} carregado` : `✅ Pedido ${num} → SEPARANDO`, data.ja_atribuido?'info':'sucesso');
+    // Drive Thru — destaque vermelho no info card
+    const isDrive = (infoTransp||'').toUpperCase().includes('DRIVE');
+    if (statusEl && isDrive) {
+      statusEl.style.borderLeftColor = 'var(--red)';
+    }
+    toast(data.ja_atribuido ? `Pedido ${num} carregado` : `Pedido ${num} iniciado`, 'info');
+    caixaJaVinculada = false; // reset — exige nova vinculação
     mostrarCampoCaixa(true);
-    await fnChecklist();
+    // NÃO carrega checklist — espera caixa ser vinculada
+    // Mostra aviso visual no checklist wrap
+    const clWrap = document.getElementById(clWrapId);
+    if (clWrap) {
+      clWrap.style.display = 'block';
+      clWrap.innerHTML = `<div style="text-align:center;padding:32px 20px;color:#94A3B8">
+        <div style="font-size:32px;margin-bottom:10px">📦</div>
+        <div style="font-size:13px;font-weight:700;color:#475569;margin-bottom:4px">Vincule o número da caixa</div>
+        <div style="font-size:11px;color:#94A3B8">A lista de itens será liberada após vincular a caixa ao pedido</div>
+      </div>`;
+    }
     fnFila();
   } catch(e) { toast('Erro ao conectar!','erro'); }
 }
@@ -3207,7 +3232,7 @@ function renderChecklist(prefix) {
 
   const listEl = document.getElementById(`${prefix}-lista`);
   if (!listEl) return;
-  const isMob = prefix.startsWith('m-');
+  const isMob = prefix.startsWith('m-') || document.body.classList.contains('sep-mobile');
   listEl.innerHTML = itensAtuais.map(item => {
     const icones = { pendente:'⬜', encontrado:'✅', falta:'❌', parcial:'🟡' };
     const v = item.status !== 'pendente';
@@ -3836,12 +3861,20 @@ async function vincularCaixaCore(caixa, inputStatusId) {
     });
     const data = await res.json();
     if (data.erro) { toast(data.erro,'erro'); return; }
-    toast(`📦 Caixa ${caixa} vinculada ao pedido ${pedidoAtualNum}!`,'sucesso');
+    toast(`Caixa ${caixa} vinculada`, 'sucesso');
     const statusEl = document.getElementById(inputStatusId);
     if (statusEl) {
       statusEl.style.display = 'block';
       statusEl.innerHTML = `✅ Caixa <b>${caixa}</b> vinculada — Pedido #${pedidoAtualNum}`;
       statusEl.style.color = 'var(--green)';
+    }
+    // Agora sim carrega o checklist
+    caixaJaVinculada = true;
+    const isMobileNow = window.innerWidth <= 768;
+    if (isMobileNow) {
+      await carregarChecklistMobile();
+    } else {
+      await carregarChecklist();
     }
   } catch(e) { toast('Erro ao vincular caixa!','erro'); }
 }
