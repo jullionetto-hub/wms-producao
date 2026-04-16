@@ -2,1211 +2,905 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
+  <meta name="description" content="WMS Miess — Sistema de Gestão de Separação de Pedidos">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>WMS — Sistema</title>
+  <title>WMS — Miess</title>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
-  <style>
-    *{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:'Segoe UI',Arial,sans-serif;background:#1e2a3a;color:#e2e8f0;height:100dvh;overflow:hidden}
-
-    /* ── LOGIN ── */
-    #tela-login{position:fixed;inset:0;background:#1e2a3a;display:flex;align-items:center;justify-content:center;z-index:9999}
-    .login-box{background:#253347;border:1px solid #2d4a6e;border-radius:20px;padding:40px 36px;width:100%;max-width:420px;text-align:center}
-    .login-logo{font-size:36px;margin-bottom:8px}
-    .login-titulo{font-size:22px;font-weight:900;color:#f59e0b;margin-bottom:4px}
-    .login-sub{font-size:12px;color:#64748b;margin-bottom:28px}
-    .perfil-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:24px}
-    .perfil-btn{padding:14px 8px;border:2px solid #2d4a6e;border-radius:12px;background:#1a2535;color:#64748b;cursor:pointer;font-size:11px;font-weight:700;letter-spacing:.5px;transition:all .2s}
-    .perfil-btn:hover{border-color:#3b82f6;color:#cbd5e1}
-    .perfil-btn.ativo{border-color:#f59e0b;background:#1a2535;color:#f59e0b}
-    .perfil-btn .perfil-icone{font-size:24px;display:block;margin-bottom:6px}
-    .login-campo{margin-bottom:14px;text-align:left}
-    .login-campo label{font-size:10px;color:#60a5fa;font-weight:700;letter-spacing:1px;display:block;margin-bottom:5px}
-    .login-campo input{width:100%;padding:11px 14px;background:#1a2535;border:2px solid #2d4a6e;border-radius:9px;color:#e2e8f0;font-size:15px;outline:none}
-    .login-campo input:focus{border-color:#f59e0b;box-shadow:0 0 0 3px rgba(245,158,11,.2)}
-    .btn-login{width:100%;padding:13px;background:#f59e0b;border:none;border-radius:10px;color:#1a2535;font-size:15px;font-weight:900;cursor:pointer;transition:background .2s;margin-top:4px}
-    .btn-login:hover{background:#fbbf24}
-    .login-erro{color:#f87171;font-size:12px;margin-top:10px;display:none}
-
-    /* ── LAYOUT ── */
-    #app{display:none;height:100dvh;overflow:hidden}
-    header{background:#253347;border-bottom:3px solid #f59e0b;padding:0 16px;display:flex;align-items:center;justify-content:space-between;height:52px;flex-shrink:0}
-    .logo{color:#f59e0b;font-size:16px;font-weight:900}
-    .logo span{color:#94a3b8;font-size:10px;display:block;font-weight:normal}
-    .header-dir{display:flex;align-items:center;gap:14px}
-    .usuario-info{text-align:right;font-size:11px;color:#94a3b8}
-    .usuario-info b{color:#f59e0b;font-size:12px;display:block}
-    .btn-sair-header{padding:6px 12px;background:transparent;border:1px solid #dc2626;border-radius:7px;color:#f87171;font-size:11px;font-weight:700;cursor:pointer}
-    .btn-sair-header:hover{background:#dc2626;color:white}
-    .layout{display:flex;height:calc(100dvh - 52px)}
-
-    /* ── SIDEBAR ── */
-    .sidebar{width:200px;background:#1a2535;border-right:1px solid #2d4a6e;display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
-    .sidebar::-webkit-scrollbar{width:4px}
-    .sidebar::-webkit-scrollbar-thumb{background:#3b5a8a;border-radius:10px}
-    .menu-grupo{padding:14px 10px 4px 14px;font-size:9px;font-weight:700;color:#475569;letter-spacing:1.5px}
-    .menu-item{display:flex;align-items:center;gap:10px;padding:10px 14px;color:#64748b;font-size:12px;font-weight:600;cursor:pointer;border-left:3px solid transparent;transition:all .2s;text-decoration:none}
-    .menu-item:hover{background:#1e2d42;color:#cbd5e1}
-    .menu-item.ativo{background:#1e2d42;color:#f59e0b;border-left-color:#f59e0b}
-    .menu-item .mi-icone{font-size:15px;flex-shrink:0}
-    .menu-badge{background:#dc2626;color:white;border-radius:10px;padding:1px 6px;font-size:9px;font-weight:700;margin-left:auto}
-
-    /* ── CONTEUDO ── */
-    .conteudo{flex:1;overflow-y:auto;padding:16px;background:#1e2a3a}
-    .conteudo::-webkit-scrollbar{width:6px}
-    .conteudo::-webkit-scrollbar-thumb{background:#3b5a8a;border-radius:10px}
-    .pagina{display:none}
-    .pagina.ativa{display:block}
-
-    /* ── CARDS / TABELAS ── */
-    .card{background:#253347;border:1px solid #2d4a6e;border-radius:12px;padding:16px;margin-bottom:16px}
-    .card-header{background:#2d4a6e;margin:-16px -16px 14px -16px;padding:10px 16px;border-radius:12px 12px 0 0;font-size:11px;font-weight:700;color:#94a3b8;letter-spacing:1px;display:flex;align-items:center;justify-content:space-between}
-    .grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px}
-    .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-    .contador-card{background:#253347;border:1px solid #2d4a6e;border-radius:12px;padding:14px;text-align:center}
-    .contador-card.verde  {border-color:#16a34a;background:linear-gradient(135deg,#1a3324,#253347)}
-    .contador-card.amarelo{border-color:#ca8a04;background:linear-gradient(135deg,#33280f,#253347)}
-    .contador-card.azul   {border-color:#2563eb;background:linear-gradient(135deg,#1a2d4a,#253347)}
-    .contador-card.vermelho{border-color:#dc2626;background:linear-gradient(135deg,#3b0f0f,#253347)}
-    .contador-label{font-size:9px;font-weight:700;letter-spacing:2px;color:#94a3b8;margin-bottom:4px}
-    .contador-valor{font-size:28px;font-weight:900;line-height:1}
-    .contador-card.verde   .contador-valor{color:#4ade80}
-    .contador-card.amarelo .contador-valor{color:#fbbf24}
-    .contador-card.azul    .contador-valor{color:#60a5fa}
-    .contador-card.vermelho .contador-valor{color:#f87171}
-    .contador-sub{font-size:9px;color:#64748b;margin-top:3px}
-    .filtros{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}
-    .filtro-grupo{display:flex;flex-direction:column;gap:4px}
-    .filtro-grupo label{font-size:10px;color:#60a5fa;font-weight:700;letter-spacing:1px}
-    .filtro-grupo input,.filtro-grupo select{padding:8px 12px;background:#1a2535;border:1px solid #2d4a6e;border-radius:8px;color:#e2e8f0;font-size:12px;outline:none;min-width:140px}
-    .filtro-grupo input:focus,.filtro-grupo select:focus{border-color:#3b82f6}
-    .btn{padding:8px 16px;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;letter-spacing:.5px}
-    .btn-primary{background:#2563eb;color:white}.btn-primary:hover{background:#3b82f6}
-    .btn-success{background:#15803d;color:white}.btn-success:hover{background:#16a34a}
-    .btn-danger{background:#dc2626;color:white}.btn-danger:hover{background:#ef4444}
-    .btn-outline{background:transparent;border:1px solid #3b82f6;color:#60a5fa}.btn-outline:hover{background:#1a2d4a}
-    .btn-sm{padding:5px 10px;font-size:11px}
-    .tabela-wrap{overflow-x:auto;border-radius:8px}
-    table{width:100%;border-collapse:collapse;font-size:12px}
-    thead th{background:#1a2d4a;color:#64748b;font-size:10px;letter-spacing:1px;padding:10px 14px;text-align:left;position:sticky;top:0;z-index:1;white-space:nowrap}
-    tbody tr:nth-child(even){background:#1e2e42}
-    tbody tr:nth-child(odd){background:#253347}
-    tbody tr:hover{background:#1a2d4a}
-    td{padding:10px 14px;vertical-align:middle}
-    .pill{display:inline-block;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;white-space:nowrap}
-    .pill.pendente  {background:#1e3a5f;color:#93c5fd}
-    .pill.separando {background:#1d4ed8;color:#bfdbfe}
-    .pill.concluido {background:#15803d;color:#bbf7d0}
-    .pill.falta     {background:#7f1d1d;color:#fca5a5}
-    .pill.reposto   {background:#15803d;color:#bbf7d0}
-    .pill.ativo     {background:#15803d;color:#bbf7d0}
-    .pill.inativo   {background:#7f1d1d;color:#fca5a5}
-    .pill.supervisor{background:#7c3aed;color:#ddd6fe}
-    .pill.repositor {background:#b45309;color:#fde68a}
-    .pill.separador {background:#1d4ed8;color:#bfdbfe}
-    .form-grupo{margin-bottom:12px}
-    .form-grupo label{font-size:10px;color:#60a5fa;font-weight:700;letter-spacing:1px;display:block;margin-bottom:4px}
-    .form-grupo input,.form-grupo select{width:100%;padding:9px 12px;background:#1a2535;border:1px solid #2d4a6e;border-radius:8px;color:#e2e8f0;font-size:13px;outline:none}
-    .form-grupo input:focus,.form-grupo select:focus{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.15)}
-    .prod-barra{height:6px;background:#1a2535;border-radius:3px;margin-top:4px;overflow:hidden}
-    .prod-barra-fill{height:100%;background:#3b82f6;border-radius:3px;transition:width .5s}
-    .select-sep{padding:5px 8px;background:#1a2535;border:1px solid #2d4a6e;border-radius:6px;color:#e2e8f0;font-size:11px;outline:none;cursor:pointer}
-    .upload-area{border:2px dashed #2d4a6e;border-radius:12px;padding:32px;text-align:center;cursor:pointer;transition:all .2s}
-    .upload-area:hover,.upload-area.drag{border-color:#3b82f6;background:#1a2d4a}
-    .upload-icon{font-size:40px;margin-bottom:10px}
-    .upload-titulo{font-size:14px;font-weight:700;color:#cbd5e1;margin-bottom:6px}
-    .upload-sub{font-size:11px;color:#64748b;margin-bottom:14px}
-    #input-arquivo{display:none}
-    .historico-item{background:#1a2535;border:1px solid #2d4a6e;border-radius:8px;padding:10px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;font-size:12px}
-    .aviso-card{background:#2d0f0f;border:1px solid #dc2626;border-radius:12px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:12px}
-    .aviso-card.reposto{background:#0f2d1a;border-color:#16a34a;opacity:.7}
-    .aviso-card.nao_encontrado{background:#1a1a2d;border-color:#6366f1;opacity:.7}
-    .aviso-info{flex:1}
-    .aviso-cod{font-size:13px;font-weight:700;color:#f87171}
-    .aviso-desc{font-size:12px;color:#e2e8f0;margin:2px 0}
-    .aviso-det{font-size:11px;color:#94a3b8}
-
-    /* ── SEPARAÇÃO ── */
-    .bip-input{flex:1;padding:14px 16px;background:#1a2535;border:2px solid #3b82f6;border-radius:10px;color:#60a5fa;font-size:20px;font-weight:700;outline:none;letter-spacing:2px}
-    .bip-input:focus{border-color:#60a5fa;box-shadow:0 0 0 3px rgba(59,130,246,.25)}
-    .bip-input::placeholder{color:#3b5a8a;font-weight:400;font-size:13px}
-    .btn-confirmar{padding:14px 20px;background:#1a2d4a;border:2px solid #3b82f6;border-radius:10px;color:#60a5fa;font-size:20px;cursor:pointer;transition:all .2s}
-    .btn-confirmar:hover{background:#2563eb;color:white}
-    .checklist-wrap{background:#253347;border:1px solid #2d4a6e;border-radius:12px;overflow:hidden;margin-top:14px}
-    .checklist-header{background:#2d4a6e;padding:10px 14px;font-size:10px;font-weight:700;color:#94a3b8;letter-spacing:1px;display:flex;justify-content:space-between;align-items:center}
-    .checklist-progresso{height:5px;background:#1a2535}
-    .checklist-progresso-fill{height:100%;background:#3b82f6;transition:width .4s}
-    .checklist-lista{overflow-y:auto;max-height:400px;padding:8px;display:flex;flex-direction:column;gap:6px}
-    .checklist-lista::-webkit-scrollbar{width:5px}
-    .checklist-lista::-webkit-scrollbar-thumb{background:#3b5a8a;border-radius:10px}
-    .item-card{border-radius:10px;padding:10px 12px;display:flex;align-items:flex-start;gap:10px;border:1px solid;transition:all .2s;animation:fadeInUp .2s ease}
-    .item-card.pendente  {background:#1e2a3a;border-color:#2d4a6e}
-    .item-card.encontrado{background:#0f2d1a;border-color:#16a34a}
-    .item-card.falta     {background:#2d0f0f;border-color:#dc2626}
-    .item-card.parcial   {background:#2d1f0f;border-color:#b45309}
-    .item-icone{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;margin-top:2px}
-    .item-card.pendente   .item-icone{background:#2d4a6e}
-    .item-card.encontrado .item-icone{background:#15803d}
-    .item-card.falta      .item-icone{background:#b91c1c}
-    .item-card.parcial    .item-icone{background:#b45309}
-    .item-info{flex:1;min-width:0}
-    .item-cod{font-size:11px;font-weight:700;color:#60a5fa}
-    .item-card.encontrado .item-cod{color:#4ade80}
-    .item-card.falta      .item-cod{color:#f87171}
-    .item-card.parcial    .item-cod{color:#fbbf24}
-    .item-desc{font-size:12px;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .item-det{font-size:10px;color:#64748b;margin-top:2px}
-    .item-aviso{font-size:10px;color:#fbbf24;margin-top:3px}
-    .parcial-wrap{margin-top:8px;background:#1a2535;border:1px solid #b45309;border-radius:8px;padding:8px 10px;display:none}
-    .parcial-wrap.aberto{display:block}
-    .parcial-wrap label{font-size:10px;color:#fbbf24;font-weight:700;display:block;margin-bottom:4px;letter-spacing:.5px}
-    .parcial-row{display:flex;gap:8px;align-items:center}
-    .parcial-input{flex:1;padding:8px 10px;background:#253347;border:1px solid #b45309;border-radius:6px;color:#fbbf24;font-size:16px;font-weight:700;outline:none;text-align:center}
-    .btn-parcial-ok{padding:8px 14px;background:#b45309;border:none;border-radius:6px;color:white;font-size:12px;font-weight:700;cursor:pointer}
-    .btn-parcial-ok:hover{background:#d97706}
-    .item-btns{display:flex;gap:6px;flex-shrink:0}
-    .btn-item{width:36px;height:36px;border-radius:8px;border:2px solid;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;background:transparent}
-    .btn-item.ok{border-color:#16a34a;color:#4ade80}.btn-item.ok:hover{background:#15803d;color:white}
-    .btn-item.parcial-btn{border-color:#b45309;color:#fbbf24;font-size:13px;font-weight:700}.btn-item.parcial-btn:hover{background:#b45309;color:white}
-    .btn-item.nok{border-color:#dc2626;color:#f87171}.btn-item.nok:hover{background:#dc2626;color:white}
-    .btn-item:disabled{opacity:.3;cursor:not-allowed}
-    .checklist-footer{padding:10px 12px;border-top:1px solid #2d4a6e;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
-    .btn-acao{flex:1;padding:12px;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;min-width:160px}
-    .btn-acao.concluir{background:#15803d;color:white}.btn-acao.concluir:hover:not(:disabled){background:#16a34a}
-    .btn-acao.aguardar{background:#92400e;color:#fde68a;cursor:not-allowed}
-    .btn-acao:disabled{background:#1a2535;color:#4a5568;border:1px solid #2d3748;cursor:not-allowed}
-    .fila-tabela{overflow-y:auto;max-height:220px}
-    .fila-tabela::-webkit-scrollbar{width:5px}
-    .fila-tabela::-webkit-scrollbar-thumb{background:#3b5a8a;border-radius:10px}
-    tbody tr.meu{border-left:3px solid #3b82f6;background:#1a2d4a!important}
-    .contadores-sep{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
-
-    /* ── MOBILE ── */
-    @media(max-width:700px){
-      .sidebar{display:none}
-      .grid-4{grid-template-columns:1fr 1fr}
-      .grid-2{grid-template-columns:1fr}
-      .checklist-lista{max-height:none}
-      .item-desc{white-space:normal}
-      .contadores-sep{grid-template-columns:repeat(3,1fr)}
-    }
-    @keyframes fadeInUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-  </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
+  <!-- CSS separado -->
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <!-- ══ TELA DE LOGIN ══ -->
-<div id="tela-login">
-  <div class="login-box">
-    <div class="login-logo">📦</div>
-    <div class="login-titulo">WMS — Miess</div>
-    <div class="login-sub">Controle de Separação de Pedidos</div>
+<a href="#conteudo" class="skip-link">Ir para o conteúdo</a>
+<div id="toast-root" role="status" aria-live="polite" aria-atomic="true"></div>
 
-    <div class="perfil-grid">
-      <button class="perfil-btn" onclick="selecionarPerfil('supervisor',this)">
-        <span class="perfil-icone">👔</span>SUPERVISOR
+<!-- ══ LOGIN ══ -->
+<div id="tela-login" style="position:fixed;inset:0;background:linear-gradient(145deg,#0B1A2E,#0F172A);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px">
+  <div style="background:rgba(255,255,255,.05);backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,.1);border-radius:24px;padding:40px 36px;width:100%;max-width:420px;text-align:center;position:relative;z-index:10000">
+    <div style="font-size:48px;margin-bottom:10px">📦</div>
+    <div style="font-family:'Space Mono',monospace;font-size:20px;color:#fff;margin-bottom:4px">WMS — Miess</div>
+    <div style="font-size:11px;color:rgba(255,255,255,.3);letter-spacing:1.5px;margin-bottom:28px;text-transform:uppercase">Controle de Pedidos</div>
+
+    <!-- PERFIS -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:24px">
+      <button type="button" id="pbtn-supervisor"
+        onclick="selecionarPerfil('supervisor',this)"
+        style="padding:16px 8px;border:1.5px solid rgba(255,255,255,.15);border-radius:12px;background:rgba(255,255,255,.05);color:rgba(255,255,255,.5);cursor:pointer;font-size:11px;font-weight:700;letter-spacing:.8px;font-family:'DM Sans',sans-serif;transition:all .2s">
+        <span style="font-size:24px;display:block;margin-bottom:6px">👔</span>SUPERVISÃO
       </button>
-      <button class="perfil-btn" onclick="selecionarPerfil('separador',this)">
-        <span class="perfil-icone">📦</span>SEPARADOR
+      <button type="button" id="pbtn-repositor"
+        onclick="selecionarPerfil('repositor',this)"
+        style="padding:16px 8px;border:1.5px solid rgba(255,255,255,.15);border-radius:12px;background:rgba(255,255,255,.05);color:rgba(255,255,255,.5);cursor:pointer;font-size:11px;font-weight:700;letter-spacing:.8px;font-family:'DM Sans',sans-serif;transition:all .2s">
+        <span style="font-size:24px;display:block;margin-bottom:6px">🔧</span>REPOSIÇÃO
       </button>
-      <button class="perfil-btn" onclick="selecionarPerfil('repositor',this)">
-        <span class="perfil-icone">🔧</span>REPOSITOR
+      <button type="button" id="pbtn-separador"
+        onclick="selecionarPerfil('separador',this)"
+        style="padding:16px 8px;border:1.5px solid rgba(255,255,255,.15);border-radius:12px;background:rgba(255,255,255,.05);color:rgba(255,255,255,.5);cursor:pointer;font-size:11px;font-weight:700;letter-spacing:.8px;font-family:'DM Sans',sans-serif;transition:all .2s">
+        <span style="font-size:24px;display:block;margin-bottom:6px">📦</span>SEPARAÇÃO
+      </button>
+      <button type="button" id="pbtn-checkout"
+        onclick="selecionarPerfil('checkout',this)"
+        style="padding:16px 8px;border:1.5px solid rgba(255,255,255,.15);border-radius:12px;background:rgba(255,255,255,.05);color:rgba(255,255,255,.5);cursor:pointer;font-size:11px;font-weight:700;letter-spacing:.8px;font-family:'DM Sans',sans-serif;transition:all .2s">
+        <span style="font-size:24px;display:block;margin-bottom:6px">🏷️</span>CHECKOUT
       </button>
     </div>
 
-    <div class="login-campo">
-      <label>LOGIN / USUÁRIO</label>
-      <input type="text" id="login-usuario" placeholder="Ex: joao.silva" autocomplete="username"/>
+    <div style="margin-bottom:12px;text-align:left">
+      <div style="font-size:10px;color:rgba(96,165,250,.8);font-weight:700;letter-spacing:1.2px;margin-bottom:5px">USUÁRIO</div>
+      <input type="text" id="login-usuario" placeholder="Ex: admin" autocomplete="username"
+        style="width:100%;padding:12px 14px;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.1);border-radius:10px;color:#fff;font-size:15px;outline:none;font-family:'DM Sans',sans-serif;box-sizing:border-box"
+        onkeydown="if(event.key==='Enter')fazerLogin()"/>
     </div>
-    <div class="login-campo">
-      <label>SENHA</label>
-      <input type="password" id="login-senha" placeholder="••••••••"
-        onkeydown="if(event.key==='Enter')fazerLogin()" autocomplete="current-password"/>
+    <div style="margin-bottom:16px;text-align:left">
+      <div style="font-size:10px;color:rgba(96,165,250,.8);font-weight:700;letter-spacing:1.2px;margin-bottom:5px">SENHA</div>
+      <input type="password" id="login-senha" placeholder="••••••••" autocomplete="current-password"
+        style="width:100%;padding:12px 14px;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.1);border-radius:10px;color:#fff;font-size:15px;outline:none;font-family:'DM Sans',sans-serif;box-sizing:border-box"
+        onkeydown="if(event.key==='Enter')fazerLogin()"/>
     </div>
-    <div class="login-erro" id="login-erro"></div>
-    <button class="btn-login" onclick="fazerLogin()">▶ ENTRAR</button>
+
+    <div id="login-erro" style="display:none;color:#FCA5A5;font-size:12px;margin-bottom:12px;padding:8px 12px;background:rgba(220,38,38,.12);border-radius:8px;border:1px solid rgba(220,38,38,.25)"></div>
+
+    <button type="button" onclick="fazerLogin()"
+      style="width:100%;padding:13px;background:#2563EB;border:none;border-radius:10px;color:#fff;font-size:15px;font-weight:800;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s">
+      ▶ ENTRAR
+    </button>
   </div>
 </div>
-
 <!-- ══ APP ══ -->
-<div id="app">
+<div id="app" style="display:none">
   <header>
-    <div class="logo">📦 WMS — Miess <span>Controle de Separação de Pedidos</span></div>
-    <div class="header-dir">
-      <span id="data-hora" style="font-size:11px;color:#94a3b8"></span>
-      <div class="usuario-info">
-        <b id="header-nome">—</b>
-        <span id="header-perfil">—</span>
-      </div>
-      <button class="btn-sair-header" onclick="sair()">✖ Sair</button>
+    <div class="logo">
+      <div class="logo-ic">📦</div>
+      <div class="logo-tx">WMS — Miess<small>Separação de Pedidos</small></div>
+    </div>
+    <div class="hdir">
+      <span id="data-hora"></span>
+      <div class="uinfo"><b id="hdr-nome">—</b><small id="hdr-perfil">—</small></div>
+      <button class="btn-sair" onclick="sair()">✖ Sair</button>
     </div>
   </header>
 
   <div class="layout">
-    <nav class="sidebar" id="sidebar"></nav>
+    <nav class="sidebar" id="sidebar" aria-label="Menu de navegação"></nav>
 
-    <div class="conteudo" id="conteudo">
+    <!-- ══ CONTEÚDO NORMAL (supervisor / desktop separador) ══ -->
+    <div class="conteudo" id="conteudo" role="main">
 
-      <!-- ══ DASHBOARD ══ -->
+      <!-- DASHBOARD -->
       <div class="pagina" id="pag-dashboard">
-        <div class="grid-4">
-          <div class="contador-card verde"><div class="contador-label">CONCLUÍDOS HOJE</div><div class="contador-valor" id="dash-hoje">0</div><div class="contador-sub">pedidos</div></div>
-          <div class="contador-card amarelo"><div class="contador-label">EM SEPARAÇÃO</div><div class="contador-valor" id="dash-separando">0</div><div class="contador-sub">pedidos</div></div>
-          <div class="contador-card vermelho"><div class="contador-label">AGUARD. REPOSITOR</div><div class="contador-valor" id="dash-repositor">0</div><div class="contador-sub">itens em falta</div></div>
-          <div class="contador-card azul"><div class="contador-label">PENDENTES</div><div class="contador-valor" id="dash-pendentes">0</div><div class="contador-sub">pedidos</div></div>
+        <div class="pg-title">📊 Dashboard
+          <span style="font-size:12px;color:var(--text3);font-weight:400;font-family:'DM Sans',sans-serif" id="dash-ultima-atualizacao"></span>
         </div>
-        <div class="card">
-          <div class="card-header">📊 PRODUTIVIDADE POR SEPARADOR
-            <button class="btn btn-outline btn-sm" onclick="carregarDashboard()">🔄 Atualizar</button>
+        <div class="kpi-grid" style="margin-bottom:8px">
+          <div class="kpi-card verde"><div class="kpi-lbl">CONCLUÍDOS HOJE</div><div class="kpi-val" id="dash-hoje">0</div><div class="kpi-sub">pedidos finalizados</div></div>
+          <div class="kpi-card amarelo"><div class="kpi-lbl">EM SEPARAÇÃO</div><div class="kpi-val" id="dash-separando">0</div><div class="kpi-sub">em andamento agora</div></div>
+          <div class="kpi-card vermelho"><div class="kpi-lbl">FALTAS ABERTAS</div><div class="kpi-val" id="dash-repositor">0</div><div class="kpi-sub">aguardando repositor</div></div>
+          <div class="kpi-card azul"><div class="kpi-lbl">PENDENTES</div><div class="kpi-val" id="dash-pendentes">0</div><div class="kpi-sub">na fila</div></div>
+        </div>
+        <div class="kpi-grid" style="margin-bottom:16px">
+          <div class="kpi-card roxo"><div class="kpi-lbl">CHECKOUT HOJE</div><div class="kpi-val" id="kpi-ck-hoje">0</div><div class="kpi-sub">caixas expedidas</div></div>
+          <div class="kpi-card ciano"><div class="kpi-lbl">CHECKPOINT PEND.</div><div class="kpi-val" id="kpi-ck-pend">0</div><div class="kpi-sub">aguardando checkout</div></div>
+          <div class="kpi-card laranja"><div class="kpi-lbl">SEPARADORES ATIVOS</div><div class="kpi-val" id="kpi-seps-ativos">0</div><div class="kpi-sub">trabalhando agora</div></div>
+          <div class="kpi-card rosa"><div class="kpi-lbl">NÃO ENCONTR. HOJE</div><div class="kpi-val" id="kpi-nao-enc">0</div><div class="kpi-sub">itens não localizados</div></div>
+        </div>
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-hd">📊 PRODUTIVIDADE
+              <button class="btn btn-outline btn-sm" onclick="carregarDashboard()">🔄</button>
+            </div>
+            <div class="filtros">
+              <div class="fg"><label>USUÁRIO</label><select id="filtro-sep-prod" onchange="carregarProdutividade()"><option value="">Todos</option></select></div>
+              <div class="fg"><label>DE</label><input type="date" id="filtro-data-ini"/></div>
+              <div class="fg"><label>ATÉ</label><input type="date" id="filtro-data-fim"/></div>
+              <button class="btn btn-primary btn-sm" onclick="carregarProdutividade()">Filtrar</button>
+            </div>
+            <div class="tabela-wrap"><table><thead><tr><th>USUÁRIO</th><th>HOJE</th><th>MÊS</th><th>ANO</th><th>PROGRESSO</th><th>STATUS</th></tr></thead><tbody id="tbody-prod"></tbody></table></div>
           </div>
-          <div class="filtros">
-            <div class="filtro-grupo"><label>DATA INÍCIO</label><input type="date" id="filtro-data-ini"/></div>
-            <div class="filtro-grupo"><label>DATA FIM</label><input type="date" id="filtro-data-fim"/></div>
-            <div class="filtro-grupo"><label>SEPARADOR</label><select id="filtro-sep-prod"><option value="">Todos</option></select></div>
-            <div class="filtro-grupo" style="justify-content:flex-end"><button class="btn btn-primary" onclick="carregarProdutividade()">🔍 Filtrar</button></div>
+          <div class="card">
+            <div class="card-hd">🕐 LINHA DO TEMPO
+              <button class="btn btn-outline btn-sm" onclick="carregarTimeline()">🔄</button>
+            </div>
+            <div class="filtros">
+              <div class="fg"><label>DATA</label><input type="date" id="filtro-tl-data"/></div>
+              <button class="btn btn-primary btn-sm" onclick="carregarTimeline()">Filtrar</button>
+            </div>
+            <div class="tl-wrap" id="tl-lista"><div style="color:var(--text3);text-align:center;padding:24px;font-size:13px">Carregando...</div></div>
           </div>
-          <div class="tabela-wrap"><table>
-            <thead><tr><th>SEPARADOR</th><th>HOJE</th><th>MÊS</th><th>ANO</th><th>PROGRESSO</th><th>STATUS</th></tr></thead>
-            <tbody id="tbody-produtividade"><tr><td colspan="6" style="color:#64748b;text-align:center;padding:30px">Carregando...</td></tr></tbody>
-          </table></div>
         </div>
       </div>
 
-      <!-- ══ PEDIDOS ══ -->
+      <!-- PEDIDOS -->
       <div class="pagina" id="pag-pedidos">
+        <div class="pg-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+          <span>📋 Pedidos</span>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <button class="btn btn-outline btn-sm" id="btn-ped-tab-lista" onclick="trocarPedidosTab('lista')">📋 Lista</button>
+            <button class="btn btn-outline btn-sm" id="btn-ped-tab-importar" onclick="trocarPedidosTab('importar')">📥 Importar Pedidos</button>
+            <button class="btn btn-outline btn-sm" id="btn-ped-tab-metas" onclick="trocarPedidosTab('metas')">🎯 Metas</button>
+          </div>
+        </div>
+
+        <!-- TAB LISTA -->
+        <div id="ped-tab-lista">
+        <div class="card" style="margin-bottom:12px;background:linear-gradient(135deg,#EFF6FF,#F5F3FF);border-color:rgba(37,99,235,.2)">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+            <div>
+              <div style="font-size:13px;font-weight:700;color:var(--accent)">💡 Distribuição Automática</div>
+              <div style="font-size:12px;color:var(--text3);margin-top:2px">Atribui todos os pedidos pendentes equilibrando a carga entre os separadores</div>
+            </div>
+            <button class="btn btn-primary" style="padding:11px 22px;font-size:14px;font-weight:800;background:linear-gradient(135deg,#2563EB,#6366F1)" onclick="distribuirPedidos()">
+              ⚡ Distribuir Todos
+            </button>
+          </div>
+        </div>
+
+        <div class="card" id="dash-bloqueados-wrap" style="display:none;margin-bottom:16px;border-left:4px solid var(--red);border-top:1.5px solid #FECACA;border-right:1.5px solid #FECACA;border-bottom:1.5px solid #FECACA">
+          <div class="card-hd" style="background:#FEF2F2;color:var(--red);border-radius:var(--r) var(--r) 0 0">
+            ⛔ AGUARDANDO LIBERAÇÃO DO SUPERVISOR
+            <button class="btn btn-outline btn-sm" onclick="carregarPedidosBloqueados()">🔄</button>
+          </div>
+          <div id="lista-bloqueados"></div>
+        </div>
         <div class="card">
-          <div class="card-header">📋 TODOS OS PEDIDOS
+          <div class="card-hd">FILTROS
             <div style="display:flex;gap:8px">
-              <button class="btn btn-success btn-sm" onclick="exportarCSV()">⬇ CSV</button>
               <button class="btn btn-outline btn-sm" onclick="carregarPedidos()">🔄 Atualizar</button>
+              <button class="excel-btn" onclick="exportarExcel('pedidos')">📊 Excel</button>
             </div>
           </div>
-          <div class="filtros">
-            <div class="filtro-grupo"><label>DATA</label><input type="date" id="filtro-pedido-data"/></div>
-            <div class="filtro-grupo"><label>SEPARADOR</label><select id="filtro-pedido-sep"><option value="">Todos</option></select></div>
-            <div class="filtro-grupo"><label>STATUS</label>
-              <select id="filtro-pedido-status">
+          <div class="date-filter-bar">
+            <div class="fg"><label>DE</label><input type="date" id="filtro-ped-ini"/></div>
+            <div class="fg"><label>ATÉ</label><input type="date" id="filtro-ped-fim"/></div>
+            <div class="fg"><label>USUÁRIO</label><select id="filtro-ped-sep"><option value="">Todos</option></select></div>
+            <div class="fg"><label>STATUS</label>
+              <select id="filtro-ped-status">
                 <option value="">Todos</option>
                 <option value="pendente">Pendente</option>
                 <option value="separando">Separando</option>
                 <option value="concluido">Concluído</option>
               </select>
             </div>
-            <div class="filtro-grupo" style="justify-content:flex-end"><button class="btn btn-primary" onclick="carregarPedidos()">🔍 Filtrar</button></div>
+            <div class="fg"><label>Nº PEDIDO</label><input type="text" id="filtro-ped-num" placeholder="Buscar..."/></div>
+            <button class="btn btn-primary btn-sm" onclick="carregarPedidos()">🔍 Filtrar</button>
           </div>
-          <div class="tabela-wrap"><table>
-            <thead><tr><th>Nº PEDIDO</th><th>SEPARADOR</th><th>STATUS</th><th>ITENS</th><th>DATA</th><th>HORA</th><th>ATRIBUIR</th></tr></thead>
-            <tbody id="tbody-pedidos"><tr><td colspan="7" style="color:#64748b;text-align:center;padding:30px">Carregando...</td></tr></tbody>
-          </table></div>
+          <div class="tabela-wrap"><table><thead><tr><th>Nº PEDIDO</th><th>USUÁRIO</th><th>STATUS</th><th>ITENS</th><th>DATA</th><th>HORA</th><th>ATRIBUIR</th></tr></thead><tbody id="tbody-ped"></tbody></table></div>
+        </div>
+        </div><!-- /ped-tab-lista -->
+
+        <!-- TAB IMPORTAR PEDIDOS -->
+        <div id="ped-tab-importar" style="display:none">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+
+            <!-- Upload card -->
+            <div class="card">
+              <div class="card-hd" style="background:linear-gradient(135deg,rgba(37,99,235,.08),rgba(99,102,241,.05))">📥 IMPORTAR PLANILHA DE PEDIDOS</div>
+
+              <!-- Drag & Drop Area -->
+              <div id="upload-area" class="upload-zone" style="margin-bottom:14px"
+                ondragover="event.preventDefault();this.style.borderColor='var(--accent)';this.style.background='rgba(37,99,235,.05)'"
+                ondragleave="this.style.borderColor='var(--border)';this.style.background='var(--surface2)'"
+                ondrop="handleDrop(event);this.style.borderColor='var(--border)';this.style.background='var(--surface2)'"
+                onclick="document.getElementById('file-input-hidden').click()">
+                <input type="file" id="file-input-hidden" accept=".xlsx,.xls" style="display:none" onchange="processarArquivo(event)"/>
+                <div style="font-size:40px;margin-bottom:10px">📂</div>
+                <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">Clique ou arraste o arquivo aqui</div>
+                <div style="font-size:12px;color:var(--text3)">Aceita .xlsx e .xls</div>
+              </div>
+
+              <!-- Preview info -->
+              <div id="preview-importacao" style="display:none">
+                <div style="background:var(--surface2);border-radius:10px;padding:12px 14px;border:1px solid var(--border);margin-bottom:10px">
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+                    <span style="font-size:12px;font-weight:700;color:var(--text2)">📊 ARQUIVO LIDO</span>
+                    <span id="txt-total-import" style="font-size:13px;font-weight:800;color:var(--accent)">0 pedidos</span>
+                  </div>
+                  <div style="font-size:12px;color:var(--text3);margin-bottom:10px" id="txt-itens-import">0 itens no total</div>
+                  <!-- Preview dos primeiros itens -->
+                  <div class="tabela-wrap" style="max-height:160px;overflow-y:auto;margin-bottom:0">
+                    <table style="font-size:11px">
+                      <thead><tr><th>Pedido</th><th>Código</th><th>Descrição</th><th>Endereço</th><th>Qtd</th></tr></thead>
+                      <tbody id="tbody-prev"></tbody>
+                    </table>
+                  </div>
+                </div>
+                <button class="btn btn-primary" style="width:100%;padding:13px;font-size:14px;font-weight:800;border-radius:10px" onclick="confirmarImportacao()">
+                  🚀 Iniciar Importação
+                </button>
+              </div>
+
+              <!-- Status / Progresso -->
+              <div id="import-status-wrap" style="display:none;margin-top:14px">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+                  <span id="import-status-txt" style="font-size:13px;font-weight:600;color:var(--text2)">Aguardando...</span>
+                  <span id="import-pct" style="font-size:14px;font-weight:800;color:var(--accent)">0%</span>
+                </div>
+                <div style="height:10px;background:var(--border);border-radius:10px;overflow:hidden;margin-bottom:8px">
+                  <div id="import-bar" style="height:100%;width:0%;background:var(--accent);border-radius:10px;transition:width .4s ease"></div>
+                </div>
+                <div id="import-status-detalhe" style="font-size:11px;color:var(--text3)"></div>
+              </div>
+            </div>
+
+            <!-- Histórico -->
+            <div class="card">
+              <div class="card-hd" style="background:linear-gradient(135deg,rgba(37,99,235,.08),rgba(99,102,241,.05))">
+                📋 HISTÓRICO DE IMPORTAÇÕES
+                <button class="btn btn-danger btn-sm" onclick="limparHistorico()">🗑</button>
+              </div>
+              <div id="hist-importacoes" style="max-height:400px;overflow-y:auto">
+                <div style="color:var(--text3);text-align:center;padding:30px;font-size:13px">Nenhuma importação ainda</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB METAS -->
+        <div id="ped-tab-metas" style="display:none">
+          <div class="card" style="max-width:600px">
+            <div class="card-hd" style="background:linear-gradient(135deg,rgba(37,99,235,.08),rgba(99,102,241,.05))">🎯 METAS DIÁRIAS</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+              <div class="form-grp">
+                <label>META DE PEDIDOS/DIA</label>
+                <input type="number" id="meta-pedidos" placeholder="Ex: 25" min="1"/>
+                <div style="font-size:11px;color:var(--text3);margin-top:3px">Por separador</div>
+              </div>
+              <div class="form-grp">
+                <label>META DE PONTOS/DIA</label>
+                <input type="number" id="meta-pontos" placeholder="Ex: 300" min="1"/>
+                <div style="font-size:11px;color:var(--text3);margin-top:3px">Por separador</div>
+              </div>
+            </div>
+            <div style="background:var(--surface2);border-radius:10px;padding:12px;margin-bottom:14px;border:1px solid var(--border)">
+              <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:8px">⚡ COMO O PESO É CALCULADO</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center;margin-bottom:10px">
+                <div style="background:var(--surface);border-radius:8px;padding:10px;border:1px solid var(--border)"><div style="font-size:18px">🛣️</div><div style="font-size:12px;font-weight:800;color:var(--indigo)">dif.×3</div><div style="font-size:10px;color:var(--text3)">por corredor</div></div>
+                <div style="background:var(--surface);border-radius:8px;padding:10px;border:1px solid var(--border)"><div style="font-size:18px">📋</div><div style="font-size:12px;font-weight:800;color:var(--accent)">×1 ponto</div><div style="font-size:10px;color:var(--text3)">por item</div></div>
+                <div style="background:var(--surface);border-radius:8px;padding:10px;border:1px solid var(--border)"><div style="font-size:18px">📦</div><div style="font-size:12px;font-weight:800;color:var(--green)">×0.5 pt</div><div style="font-size:10px;color:var(--text3)">por unidade</div></div>
+              </div>
+              <div style="font-size:11px;color:var(--text3);margin-bottom:6px;font-weight:600">🗺️ DIFICULDADE POR CORREDOR</div>
+              <div id="layout-estoque-visual-ped"><div style="color:var(--text3);font-size:12px">Carregando...</div></div>
+            </div>
+            <button class="btn btn-primary" style="width:100%;padding:12px;font-size:14px;font-weight:700" onclick="salvarMetas()">💾 Salvar Metas</button>
+          </div>
+          <div class="card" style="max-width:600px;margin-top:14px">
+            <div class="card-hd">📊 PLACAR DE HOJE</div>
+            <div id="placar-hoje-lista"><div style="color:var(--text3);text-align:center;padding:20px">Carregando...</div></div>
+          </div>
         </div>
       </div>
 
-      <!-- ══ CADASTROS ══ -->
+      <!-- CADASTROS -->
       <div class="pagina" id="pag-cadastros">
-        <div style="display:flex;gap:4px;margin-bottom:16px;background:#1a2535;padding:6px;border-radius:10px;width:fit-content">
-          <button class="btn btn-primary btn-sm" id="ctab-usuarios" onclick="trocarCadastroTab('usuarios')">🔐 Usuários</button>
-          <button class="btn btn-outline btn-sm" id="ctab-importar" onclick="trocarCadastroTab('importar')">📂 Importar</button>
+        <div class="pg-title">⚙️ Cadastros</div>
+        <div style="display:flex;gap:8px;margin-bottom:20px">
+          <button class="btn btn-primary btn-sm" id="ctab-usuarios" onclick="trocarCadastroTab('usuarios')">👥 Usuários</button>
         </div>
 
-        <!-- Sub-aba Separadores -->
-        <div id="cad-separadores" style="display:none">
-          <div class="grid-2">
-            <div class="card">
-              <div class="card-header">👤 CADASTRO DE SEPARADOR</div>
-              <div class="form-grupo"><label>NOME COMPLETO</label><input type="text" id="sep-nome" placeholder="Ex: João da Silva"/></div>
-              <div class="form-grupo"><label>ID / MATRÍCULA</label><input type="text" id="sep-matricula" placeholder="Ex: 001"/></div>
-              <div class="form-grupo"><label>TURNO</label>
-                <select id="sep-turno">
-                  <option value="Manhã">Manhã</option>
-                  <option value="Tarde">Tarde</option>
-                  <option value="Noite">Noite</option>
-                </select>
-              </div>
-              <button class="btn btn-primary" style="width:100%" onclick="cadastrarSeparador()">✚ Cadastrar Separador</button>
-            </div>
-            <div class="card">
-              <div class="card-header">📋 SEPARADORES CADASTRADOS</div>
-              <div class="tabela-wrap"><table>
-                <thead><tr><th>NOME</th><th>MATRÍCULA</th><th>TURNO</th><th>STATUS</th><th>AÇÕES</th></tr></thead>
-                <tbody id="tbody-separadores"></tbody>
-              </table></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Sub-aba Usuários -->
+        <!-- ABA: USUÁRIOS -->
         <div id="cad-usuarios">
           <div class="grid-2">
-            <div class="card">
-              <div class="card-header">🔐 CADASTRO DE USUÁRIO</div>
-              <div class="form-grupo"><label>ID (automático)</label><input type="text" id="usr-id" placeholder="Gerado automaticamente..." readonly style="background:#111d2c;color:#4ade80;font-weight:700;cursor:not-allowed"/></div>
-              <div class="form-grupo"><label>NOME COMPLETO</label><input type="text" id="usr-nome" placeholder="Ex: João da Silva"/></div>
-              <div class="form-grupo"><label>LOGIN</label><input type="text" id="usr-login" placeholder="Ex: joao.silva"/></div>
-              <div class="form-grupo"><label>TURNO</label>
-                <select id="usr-turno">
-                  <option value="Manhã">Manhã</option>
-                  <option value="Tarde">Tarde</option>
-                  <option value="Noite">Noite</option>
-                </select>
-              </div>
-              <div class="form-grupo"><label>SENHA</label><input type="password" id="usr-senha" placeholder="Mínimo 6 caracteres"/></div>
-              <div class="form-grupo"><label>PERFIL</label>
-                <select id="usr-perfil">
-                  <option value="supervisor">👔 Supervisor</option>
-                  <option value="separador">📦 Separador</option>
-                  <option value="repositor">🔧 Repositor</option>
-                </select>
-              </div>
-              <button class="btn btn-primary" style="width:100%" onclick="cadastrarUsuario()">✚ Cadastrar Usuário</button>
-            </div>
-            <div class="card">
-              <div class="card-header">📋 USUÁRIOS CADASTRADOS
-                <button class="btn btn-outline btn-sm" onclick="carregarUsuarios()">🔄</button>
-              </div>
-              <div class="tabela-wrap"><table>
-                <thead><tr><th>ID</th><th>NOME</th><th>LOGIN</th><th>TURNO</th><th>PERFIL</th><th>STATUS</th><th>AÇÕES</th></tr></thead>
-                <tbody id="tbody-usuarios"></tbody>
-              </table></div>
-            </div>
-          </div>
-        </div>
 
-        <!-- Sub-aba Importar -->
-        <div id="cad-importar" style="display:none">
-          <div class="grid-2">
+            <!-- FORMULÁRIO -->
             <div class="card">
-              <div class="card-header">📂 IMPORTAR PEDIDOS</div>
-              <div class="upload-area" id="upload-area"
-                onclick="document.getElementById('input-arquivo').click()"
-                ondragover="event.preventDefault();this.classList.add('drag')"
-                ondragleave="this.classList.remove('drag')"
-                ondrop="handleDrop(event)">
-                <div class="upload-icon">📄</div>
-                <div class="upload-titulo">Clique ou arraste o arquivo</div>
-                <div class="upload-sub">Excel (.xlsx) ou CSV (.csv)<br><b>Colunas: numero_pedido, codigo, descricao, endereco, quantidade</b></div>
-                <button class="btn btn-primary" onclick="event.stopPropagation();document.getElementById('input-arquivo').click()">📂 Selecionar</button>
+              <div class="card-hd" style="background:linear-gradient(135deg,rgba(37,99,235,.08),rgba(99,102,241,.05));border-radius:var(--r) var(--r) 0 0">
+                ➕ NOVO USUÁRIO
               </div>
-              <input type="file" id="input-arquivo" accept=".xlsx,.xls,.csv" onchange="processarArquivo(event)"/>
-              <div id="status-leitura" style="display:none;margin-top:10px;padding:10px;border-radius:8px;font-size:12px;font-weight:600;text-align:center"></div>
-              <div id="preview-importacao" style="display:none;margin-top:14px">
-                <div style="font-size:10px;color:#64748b;letter-spacing:1px;margin-bottom:8px;font-weight:700">PRÉ-VISUALIZAÇÃO</div>
-                <div class="tabela-wrap" style="max-height:180px;overflow-y:auto"><table>
-                  <thead><tr><th>Nº PEDIDO</th><th>CÓDIGO</th><th>DESCRIÇÃO</th><th>ENDEREÇO</th><th>QTD</th></tr></thead>
-                  <tbody id="tbody-preview"></tbody>
-                </table></div>
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px">
-                  <span id="txt-total-import" style="font-size:12px;color:#94a3b8"></span>
-                  <button class="btn btn-success" onclick="confirmarImportacao()">✔ Importar</button>
+
+              <div class="form-grp">
+                <label>NOME COMPLETO</label>
+                <input type="text" id="usr-nome" placeholder="Ex: João da Silva" autocomplete="off"/>
+              </div>
+
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                <div class="form-grp">
+                  <label>LOGIN</label>
+                  <input type="text" id="usr-login" placeholder="Ex: joao.silva" autocomplete="off"/>
+                </div>
+                <div class="form-grp">
+                  <label>SENHA</label>
+                  <input type="password" id="usr-senha" placeholder="Mín. 6 caracteres"/>
                 </div>
               </div>
-            </div>
-            <div class="card">
-              <div class="card-header">📜 HISTÓRICO
-                <button class="btn btn-sm btn-outline" onclick="limparHistorico()">🗑 Limpar</button>
+
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                <div class="form-grp">
+                  <label>PERFIL PRINCIPAL</label>
+                  <select id="usr-perfil" onchange="toggleSubtipoRepositor()">
+                    <option value="separador">📦 Separação</option>
+                    <option value="supervisor">👔 Supervisão</option>
+                    <option value="repositor">🔧 Reposição</option>
+                    <option value="checkout">🏷️ Checkout</option>
+                  </select>
+                </div>
+                <div class="form-grp">
+                  <label>TURNO</label>
+                  <select id="usr-turno">
+                    <option value="Manhã">🌅 Manhã</option>
+                    <option value="Tarde">☀️ Tarde</option>
+                    <option value="Noite">🌙 Noite</option>
+                  </select>
+                </div>
               </div>
-              <div id="historico-importacoes"></div>
+
+              <div class="form-grp" id="usr-subtipo-wrap" style="display:none">
+                <label>FUNÇÃO DO REPOSITOR</label>
+                <select id="usr-subtipo-repositor">
+                  <option value="geral">Geral</option>
+                  <option value="busca">Busca no armazém</option>
+                  <option value="abastecimento">Abastecimento</option>
+                </select>
+              </div>
+
+              <div class="form-grp">
+                <label>PODE ACESSAR TAMBÉM</label>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px">
+                  <label id="perm-supervisor" style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;background:var(--surface2);cursor:pointer;transition:all .2s;user-select:none">
+                    <input type="checkbox" class="usr-perm" value="supervisor" id="perm-cb-supervisor" style="width:16px;height:16px;accent-color:var(--accent);flex-shrink:0" onchange="atualizarPermVisual('supervisor')">
+                    <span style="font-size:18px;flex-shrink:0">👔</span>
+                    <span style="font-size:12px;font-weight:600">Supervisão</span>
+                  </label>
+                  <label id="perm-separador" style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;background:var(--surface2);cursor:pointer;transition:all .2s;user-select:none">
+                    <input type="checkbox" class="usr-perm" value="separador" id="perm-cb-separador" style="width:16px;height:16px;accent-color:var(--accent);flex-shrink:0" onchange="atualizarPermVisual('separador')">
+                    <span style="font-size:18px;flex-shrink:0">📦</span>
+                    <span style="font-size:12px;font-weight:600">Separação</span>
+                  </label>
+                  <label id="perm-repositor" style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;background:var(--surface2);cursor:pointer;transition:all .2s;user-select:none">
+                    <input type="checkbox" class="usr-perm" value="repositor" id="perm-cb-repositor" style="width:16px;height:16px;accent-color:var(--accent);flex-shrink:0" onchange="atualizarPermVisual('repositor')">
+                    <span style="font-size:18px;flex-shrink:0">🔧</span>
+                    <span style="font-size:12px;font-weight:600">Reposição</span>
+                  </label>
+                  <label id="perm-checkout" style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;background:var(--surface2);cursor:pointer;transition:all .2s;user-select:none">
+                    <input type="checkbox" class="usr-perm" value="checkout" id="perm-cb-checkout" style="width:16px;height:16px;accent-color:var(--accent);flex-shrink:0" onchange="atualizarPermVisual('checkout')">
+                    <span style="font-size:18px;flex-shrink:0">🏷️</span>
+                    <span style="font-size:12px;font-weight:600">Checkout</span>
+                  </label>
+                </div>
+                <div style="font-size:10px;color:var(--text3);margin-top:6px">O perfil principal é habilitado automaticamente. Marque os acessos extras.</div>
+              </div>
+
+              <button class="btn btn-primary" style="width:100%;margin-top:12px;padding:14px;font-size:14px;font-weight:700;border-radius:10px" onclick="cadastrarUsuario()">
+                ✅ Cadastrar Usuário
+              </button>
             </div>
+
+            <!-- LISTA DE USUÁRIOS -->
+            <div class="card">
+              <div class="card-hd" style="background:linear-gradient(135deg,rgba(37,99,235,.08),rgba(99,102,241,.05));display:flex;align-items:center;justify-content:space-between">
+                <span>👥 USUÁRIOS CADASTRADOS</span>
+                <button class="btn btn-outline btn-sm" onclick="carregarUsuarios()" title="Atualizar">🔄</button>
+              </div>
+              <div class="tabela-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>NOME</th>
+                      <th>LOGIN</th>
+                      <th>PERFIL</th>
+                      <th>TAMBÉM ACESSA</th>
+                      <th>TURNO</th>
+                      <th>STATUS</th>
+                      <th>AÇÕES</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbody-usr"></tbody>
+                </table>
+              </div>
+            </div>
+
           </div>
         </div>
-      </div>
 
-      <!-- ══ SEPARAÇÃO ══ -->
+      <!-- SEPARAÇÃO (desktop) -->
       <div class="pagina" id="pag-separacao">
-        <div class="contadores-sep">
-          <div class="contador-card verde"><div class="contador-label">HOJE</div><div class="contador-valor" id="sep-cnt-hoje">0</div><div class="contador-sub">pedidos</div></div>
-          <div class="contador-card amarelo"><div class="contador-label">MÊS</div><div class="contador-valor" id="sep-cnt-mes">0</div><div class="contador-sub">pedidos</div></div>
-          <div class="contador-card azul"><div class="contador-label">ANO</div><div class="contador-valor" id="sep-cnt-ano">0</div><div class="contador-sub">pedidos</div></div>
+        <div class="pg-title">📦 Separação</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px">
+          <div class="cnt-card azul"><div class="cnt-lbl">HOJE</div><div class="cnt-val" id="sep-cnt-hoje" style="font-size:26px">0</div><div class="cnt-sub">pedidos</div></div>
+          <div class="cnt-card verde"><div class="cnt-lbl">MÊS</div><div class="cnt-val" id="sep-cnt-mes" style="font-size:26px">0</div><div class="cnt-sub">pedidos</div></div>
+          <div class="cnt-card roxo"><div class="cnt-lbl">ANO</div><div class="cnt-val" id="sep-cnt-ano" style="font-size:26px">0</div><div class="cnt-sub">pedidos</div></div>
         </div>
-        <div class="card">
-          <div class="card-header">📷 LEITURA DE PEDIDO</div>
-          <div style="display:flex;gap:10px">
-            <input type="text" class="bip-input" id="input-pedido" placeholder="🔍 Digite ou bipe o pedido..."/>
-            <button class="btn-confirmar" onclick="confirmarPedido()">✔</button>
+        <div class="card" style="margin-bottom:13px">
+          <div class="card-hd">🔍 LEITURA DE PEDIDO</div>
+          <div class="bip-wrap">
+            <input type="text" class="bip-input" id="input-pedido" placeholder="Bipe ou digite o número do pedido..." autocomplete="off" inputmode="numeric"/>
+            <button class="btn-bip" onclick="confirmarPedido()">▶</button>
           </div>
-          <div id="status-atual" style="font-size:11px;color:#94a3b8;margin-top:6px;text-align:center;min-height:18px"></div>
-        </div>
-        <div class="checklist-wrap" id="checklist-wrap" style="display:none">
-          <div class="checklist-header">
-            <span id="checklist-titulo">📋 ITENS DO PEDIDO</span>
-            <span id="checklist-contador" style="color:#60a5fa">0/0</span>
-          </div>
-          <div class="checklist-progresso"><div class="checklist-progresso-fill" id="checklist-barra" style="width:0%"></div></div>
-          <div class="checklist-lista" id="checklist-lista"></div>
-          <div class="checklist-footer">
-            <div style="font-size:11px;color:#94a3b8;flex:1" id="checklist-resumo"></div>
-            <button class="btn-acao concluir" id="btn-concluir" onclick="concluirPedido()" disabled>🔒 CONCLUIR PEDIDO</button>
-            <button class="btn-acao aguardar" id="btn-aguardar" style="display:none">⏳ AGUARDANDO REPOSITOR</button>
+          <div class="status-pedido" id="status-atual"></div>
+          <div id="cl-caixa-wrap" style="display:none;margin-top:10px;padding:10px 0 0;border-top:1px solid var(--border)">
+            <div style="font-size:11px;font-weight:700;color:var(--amber);letter-spacing:1px;margin-bottom:6px">📦 VINCULAR NÚMERO DA CAIXA</div>
+            <div class="bip-wrap" style="margin-bottom:0">
+              <input type="text" class="bip-input" id="cl-input-caixa" placeholder="Número da caixa..." autocomplete="off" inputmode="numeric" style="font-size:18px;letter-spacing:2px;border-color:var(--amber)"/>
+              <button class="btn-bip" style="border-color:var(--amber);color:var(--amber)" onclick="vincularCaixaDesktop()">📦</button>
+            </div>
+            <div id="cl-caixa-status" style="font-size:12px;color:var(--text3);margin-top:6px;padding:6px 10px;background:var(--surface2);border-radius:6px;display:none"></div>
           </div>
         </div>
-        <div class="card" style="margin-top:14px">
-          <div class="card-header">📌 FILA GERAL
-            <div>
-              <span id="badge-meus"  style="background:#15803d;color:white;border-radius:20px;padding:1px 8px;font-size:10px;font-weight:700;margin-right:4px">0 meus</span>
-              <span id="badge-fila"  style="background:#2563eb;color:white;border-radius:20px;padding:1px 8px;font-size:10px;font-weight:700">0 total</span>
+        <div class="cl-wrap" id="cl-wrap">
+          <div class="cl-header"><span id="cl-titulo">📋 PEDIDO</span><span id="cl-contador" style="color:var(--accent);font-weight:700">0/0</span></div>
+          <div class="cl-prog"><div class="cl-prog-fill" id="cl-barra" style="width:0%"></div></div>
+          <div class="cl-resumo" id="cl-resumo"></div>
+          <div class="cl-lista" id="cl-lista" style="max-height:380px"></div>
+          <div class="cl-footer">
+            <button class="btn-acao concluir" id="btn-concluir" onclick="concluirPedido()" disabled>🔒 CONCLUIR</button>
+            <button class="btn-acao aguardar" id="btn-aguardar" style="display:none">⏳ AGUARDANDO</button>
+          </div>
+        </div>
+        <div class="card" style="margin-top:13px">
+          <div class="card-hd">📋 FILA DE PEDIDOS
+            <div style="display:flex;gap:8px;align-items:center">
+              <span id="badge-fila-d" style="font-size:11px;color:var(--text3);font-weight:600"></span>
+              <span id="badge-meus-d" style="font-size:11px;color:var(--accent);font-weight:700"></span>
+              <button class="btn btn-outline btn-sm" onclick="carregarFila()">🔄</button>
             </div>
           </div>
-          <div class="fila-tabela"><table>
-            <thead><tr><th>Nº PEDIDO</th><th>ITENS</th><th>STATUS</th><th>SITUAÇÃO</th></tr></thead>
-            <tbody id="tbody-fila"></tbody>
-          </table></div>
+          <div style="max-height:220px;overflow-y:auto">
+            <div class="tabela-wrap"><table><thead><tr><th>Nº PEDIDO</th><th>ITENS</th><th>PESO</th><th>STATUS</th><th>SITUAÇÃO</th></tr></thead><tbody id="tbody-fila-d"></tbody></table></div>
+          </div>
         </div>
       </div>
 
-      <!-- ══ REPOSIÇÃO ══ -->
+      <!-- REPOSIÇÃO -->
       <div class="pagina" id="pag-reposicao">
-        <div style="display:flex;gap:14px;margin-bottom:16px;flex-wrap:wrap">
-          <div class="contador-card vermelho" style="flex:1;min-width:140px"><div class="contador-label">AGUARDANDO</div><div class="contador-valor" id="rep-pendente">0</div><div class="contador-sub">itens em falta</div></div>
-          <div class="contador-card verde"    style="flex:1;min-width:140px"><div class="contador-label">REPOSTOS HOJE</div><div class="contador-valor" id="rep-reposto">0</div><div class="contador-sub">itens</div></div>
-        </div>
+        <div class="pg-title">🔧 Reposição</div>
         <div class="card">
-          <div class="card-header">🔴 ITENS EM FALTA
-            <div style="display:flex;gap:8px;align-items:center">
-              <select id="filtro-rep-status" style="padding:5px 8px;background:#1a2535;border:1px solid #2d4a6e;border-radius:6px;color:#e2e8f0;font-size:11px" onchange="carregarAvisos()">
-                <option value="pendente">Pendentes</option>
-                <option value="reposto">Repostos</option>
-                <option value="nao_encontrado">Não Encontrados</option>
+          <div class="card-hd">AVISOS DE FALTA
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <span style="font-size:12px;color:var(--red);font-weight:700">🔴 <span id="rep-pend">0</span> pendentes</span>
+              <span style="font-size:12px;color:var(--green);font-weight:600">✅ <span id="rep-rep">0</span> repostos</span>
+              <select id="filtro-rep-status" class="sel-sm" onchange="carregarAvisos()" style="min-width:120px">
                 <option value="">Todos</option>
+                <option value="pendente">Pendente</option>
+                <option value="reposto">Reposto</option>
+                <option value="nao_encontrado">Não encontrado</option>
               </select>
               <button class="btn btn-outline btn-sm" onclick="carregarAvisos()">🔄</button>
+              <button class="excel-btn" onclick="exportarAvisosExcel()">📊 Excel</button>
             </div>
           </div>
-          <div id="lista-avisos"><div style="color:#64748b;text-align:center;padding:40px">✅ Nenhum item em falta</div></div>
+          <div id="lista-avisos"><div style="color:var(--text3);text-align:center;padding:40px;font-size:13px">✅ Nenhum item em falta</div></div>
+        </div>
+      </div>
+
+      <!-- ESTATÍSTICAS -->
+      <div class="pagina" id="pag-estatisticas">
+        <div class="pg-title">📈 Estatísticas</div>
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-hd">📅 FILTRO DE PERÍODO
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-outline btn-sm" onclick="carregarEstatisticas()">🔄</button>
+              <button class="excel-btn" onclick="exportarExcel('estatisticas')">📊 Excel</button>
+            </div>
+          </div>
+          <div class="date-filter-bar">
+            <div class="fg"><label>DE</label><input type="date" id="est-ini"/></div>
+            <div class="fg"><label>ATÉ</label><input type="date" id="est-fim"/></div>
+            <button class="btn btn-primary btn-sm" onclick="carregarEstatisticas()">🔍 Filtrar</button>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px">
+          <div class="cnt-card verde"><div class="cnt-lbl">PEDIDOS HOJE</div><div class="cnt-val" id="est-hoje-c" style="font-size:36px">0</div><div class="cnt-sub">concluídos</div><div style="font-size:12px;color:var(--text3);margin-top:4px">Total: <b id="est-hoje-t">0</b></div></div>
+          <div class="cnt-card azul"><div class="cnt-lbl">PEDIDOS NO MÊS</div><div class="cnt-val" id="est-mes-c" style="font-size:36px">0</div><div class="cnt-sub">concluídos</div><div style="font-size:12px;color:var(--text3);margin-top:4px">Total: <b id="est-mes-t">0</b></div></div>
+          <div class="cnt-card roxo"><div class="cnt-lbl">PEDIDOS NO ANO</div><div class="cnt-val" id="est-ano-c" style="font-size:36px">0</div><div class="cnt-sub">concluídos</div><div style="font-size:12px;color:var(--text3);margin-top:4px">Total: <b id="est-ano-t">0</b></div></div>
+        </div>
+        <div id="est-periodo-wrap" style="display:none" class="card">
+          <div class="card-hd">📊 RESULTADO DO PERÍODO</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:10px 0">
+            <div class="cnt-card verde"><div class="cnt-lbl">CONCLUÍDOS</div><div class="cnt-val" id="est-per-c" style="font-size:32px">0</div><div class="cnt-sub">no período</div></div>
+            <div class="cnt-card azul"><div class="cnt-lbl">TOTAL IMPORTADOS</div><div class="cnt-val" id="est-per-t" style="font-size:32px">0</div><div class="cnt-sub">no período</div></div>
+          </div>
+        </div>
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-hd">👥 PRODUTIVIDADE POR SEPARADOR <button class="btn btn-outline btn-sm" onclick="carregarEstatisticas()">🔄</button></div>
+          <div class="tabela-wrap"><table><thead><tr><th>SEPARADOR</th><th>HOJE</th><th>MÊS</th><th>ANO</th><th>STATUS</th></tr></thead><tbody id="tbody-est-sep"></tbody></table></div>
+        </div>
+        <div class="card">
+          <div class="card-hd">📦 TODOS OS CHECKOUTS
+            <div style="display:flex;gap:8px;align-items:center">
+              <select id="filtro-ck-status" class="sel-sm" onchange="carregarCheckoutLista()">
+                <option value="">Todos</option>
+                <option value="pendente">Pendente</option>
+                <option value="concluido">Concluído</option>
+              </select>
+              <button class="btn btn-outline btn-sm" onclick="carregarCheckoutLista()">🔄</button>
+              <button class="excel-btn" onclick="exportarExcel('checkout-lista')">📊 Excel</button>
+            </div>
+          </div>
+          <div class="tabela-wrap">
+            <table><thead><tr><th>CAIXA</th><th>Nº PEDIDO</th><th>SEPARADOR</th><th>STATUS</th><th>HORA</th><th>AÇÃO</th></tr></thead><tbody id="tbody-checkout"></tbody></table>
+          </div>
+        </div>
+      </div>
+
+      <!-- CHECKOUT -->
+      <div class="pagina" id="pag-checkout">
+        <div class="pg-title">📦 Checkout</div>
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-hd">🔍 BUSCAR POR NÚMERO DE CAIXA</div>
+          <div class="bip-wrap" style="margin-bottom:0">
+            <input type="text" class="bip-input" id="ck-input-caixa" autocomplete="off" placeholder="Digite ou bipe o número da caixa..." autocomplete="off" inputmode="numeric" style="font-size:20px;letter-spacing:3px"/>
+            <button class="btn-bip" onclick="buscarCaixa()">▶</button>
+          </div>
+        </div>
+        <div id="ck-resultado" style="display:none">
+          <div class="card" style="margin-bottom:16px">
+            <div class="card-hd" id="ck-res-titulo">RESULTADO</div>
+            <div id="ck-res-conteudo"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- HISTÓRICO COMPLETO REPOSITOR (supervisor) -->
+      <div class="pagina" id="pag-historico-rep">
+        <div class="pg-title">📋 Histórico de Reposição</div>
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-hd">🔍 FILTROS
+            <button class="btn btn-outline btn-sm" onclick="carregarHistoricoCompleto()">🔄</button>
+          </div>
+          <div class="date-filter-bar">
+            <div class="fg"><label>DATA</label><input type="date" id="hist-completo-data" onchange="carregarHistoricoCompleto()"/></div>
+            <div class="fg"><label>COLABORADOR</label>
+              <select id="hist-completo-func" onchange="carregarHistoricoCompleto()" style="min-width:180px">
+                <option value="">Todos os colaboradores</option>
+              </select>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="carregarHistoricoCompleto()">🔍 Filtrar</button>
+          </div>
+        </div>
+        <div id="hist-completo-lista"><div style="color:var(--text3);text-align:center;padding:40px">Selecione uma data para carregar</div></div>
+      </div>
+
+      <!-- ESTATÍSTICAS REPOSITOR -->
+      <div class="pagina" id="pag-stats-repositor">
+        <div class="pg-title">📈 Estatísticas — Reposição</div>
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-hd">📅 FILTRO DE PERÍODO
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-outline btn-sm" onclick="carregarStatsRepositor()">🔄</button>
+              <button class="excel-btn" onclick="exportarExcel('stats-repositor')">📊 Excel</button>
+            </div>
+          </div>
+          <div class="date-filter-bar">
+            <div class="fg"><label>DE</label><input type="date" id="srep-ini"/></div>
+            <div class="fg"><label>ATÉ</label><input type="date" id="srep-fim"/></div>
+            <button class="btn btn-primary btn-sm" onclick="carregarStatsRepositor()">🔍 Filtrar</button>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:13px;margin-bottom:16px">
+          <div class="cnt-card verde"><div class="cnt-lbl">REPOSTOS HOJE</div><div class="cnt-val" id="srep-rep-hoje" style="font-size:32px">0</div><div class="cnt-sub">itens repostos</div></div>
+          <div class="cnt-card azul"><div class="cnt-lbl">REPOSTOS NO MÊS</div><div class="cnt-val" id="srep-rep-mes" style="font-size:32px">0</div><div class="cnt-sub">itens repostos</div></div>
+          <div class="cnt-card vermelho"><div class="cnt-lbl">PENDENTES AGORA</div><div class="cnt-val" id="srep-pendentes" style="font-size:32px">0</div><div class="cnt-sub">aguardando</div></div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:13px;margin-bottom:16px">
+          <div class="cnt-card roxo"><div class="cnt-lbl">NÃO ENCONTRADOS</div><div class="cnt-val" id="srep-nao-enc" style="font-size:32px">0</div><div class="cnt-sub">total</div></div>
+          <div class="cnt-card amarelo"><div class="cnt-lbl">PROTOCOLOS</div><div class="cnt-val" id="srep-proto" style="font-size:32px">0</div><div class="cnt-sub">em análise</div></div>
+          <div class="cnt-card verde"><div class="cnt-lbl">AVISOS NO ANO</div><div class="cnt-val" id="srep-ano" style="font-size:32px">0</div><div class="cnt-sub">total de avisos</div></div>
+        </div>
+        <div class="card">
+          <div class="card-hd">👥 PRODUTIVIDADE POR REPOSITOR</div>
+          <div class="tabela-wrap"><table><thead><tr><th>REPOSITOR</th><th>HOJE</th><th>REPOSTOS</th><th>NÃO ENCONTR.</th><th>TOTAL</th></tr></thead><tbody id="tbody-srep-prod"></tbody></table></div>
+        </div>
+      </div>
+
+      <!-- ESTATÍSTICAS CHECKOUT -->
+      <div class="pagina" id="pag-stats-checkout">
+        <div class="pg-title">📈 Estatísticas — Checkout</div>
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-hd">📅 FILTRO DE PERÍODO
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-outline btn-sm" onclick="carregarStatsCheckout()">🔄</button>
+              <button class="excel-btn" onclick="exportarExcel('stats-checkout')">📊 Excel</button>
+            </div>
+          </div>
+          <div class="date-filter-bar">
+            <div class="fg"><label>DE</label><input type="date" id="sck-ini"/></div>
+            <div class="fg"><label>ATÉ</label><input type="date" id="sck-fim"/></div>
+            <button class="btn btn-primary btn-sm" onclick="carregarStatsCheckout()">🔍 Filtrar</button>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:13px;margin-bottom:16px">
+          <div class="cnt-card verde"><div class="cnt-lbl">EXPEDIDOS HOJE</div><div class="cnt-val" id="sck-hoje" style="font-size:32px">0</div><div class="cnt-sub">checkouts</div></div>
+          <div class="cnt-card azul"><div class="cnt-lbl">EXPEDIDOS NO MÊS</div><div class="cnt-val" id="sck-mes" style="font-size:32px">0</div><div class="cnt-sub">checkouts</div></div>
+          <div class="cnt-card roxo"><div class="cnt-lbl">EXPEDIDOS NO ANO</div><div class="cnt-val" id="sck-ano" style="font-size:32px">0</div><div class="cnt-sub">checkouts</div></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:13px;margin-bottom:16px">
+          <div class="cnt-card amarelo"><div class="cnt-lbl">PENDENTES AGORA</div><div class="cnt-val" id="sck-pend" style="font-size:32px">0</div><div class="cnt-sub">aguardando checkout</div></div>
+          <div class="cnt-card vermelho"><div class="cnt-lbl">IMPORTADOS HOJE</div><div class="cnt-val" id="sck-importados" style="font-size:32px">0</div><div class="cnt-sub">pedidos do dia</div></div>
+        </div>
+        <div class="card">
+          <div class="card-hd">📦 ÚLTIMOS CHECKOUTS
+            <div style="display:flex;gap:8px;align-items:center">
+              <select id="sck-filtro-status" class="sel-sm" onchange="carregarStatsCheckout()">
+                <option value="">Todos</option>
+                <option value="pendente">Pendente</option>
+                <option value="concluido">Concluído</option>
+              </select>
+            </div>
+          </div>
+          <div class="tabela-wrap">
+            <table><thead><tr><th>CAIXA</th><th>Nº PEDIDO</th><th>SEPARADOR</th><th>STATUS</th><th>DATA</th><th>HORA</th></tr></thead><tbody id="tbody-sck-lista"></tbody></table>
+          </div>
         </div>
       </div>
 
     </div><!-- /conteudo -->
+
+    <!-- ══ REPOSITOR MOBILE ══ -->
+    <div id="rep-mobile-root" style="display:none">
+
+      <!-- ABA 1 — SOLICITAÇÕES -->
+      <div class="rep-tab-page ativa" id="rep-tab-avisos">
+        <div class="sep-scroll">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+            <div>
+              <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">🔧 Solicitações</div>
+              <div style="font-size:11px;color:var(--text3);margin-top:2px" id="m-rep-user-info"></div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <span style="font-size:13px;color:var(--red);font-weight:800;background:#FEF2F2;padding:4px 10px;border-radius:8px;border:1px solid #FECACA">🔴 <span id="m-rep-pend">0</span></span>
+              <button class="btn btn-outline btn-sm" onclick="carregarAvisosMobile()">🔄</button>
+            </div>
+          </div>
+          <!-- Filtro compacto -->
+          <div style="display:flex;gap:8px;margin-bottom:12px;overflow-x:auto;padding-bottom:4px">
+            <button class="rep-filtro-btn ativo" onclick="setFiltroRep('',this)">Todos</button>
+            <button class="rep-filtro-btn" onclick="setFiltroRep('pendente',this)">🔴 Pendente</button>
+            <button class="rep-filtro-btn" onclick="setFiltroRep('encontrado',this)">✅ Separado</button>
+            <button class="rep-filtro-btn" onclick="setFiltroRep('subiu',this)">⬆️ Subiu</button>
+            <button class="rep-filtro-btn" onclick="setFiltroRep('abastecido',this)">📦 Abastecido</button>
+            <button class="rep-filtro-btn" onclick="setFiltroRep('verificando',this)">🔍 Verif.</button>
+            <button class="rep-filtro-btn" onclick="setFiltroRep('protocolo',this)">📋 Proto.</button>
+            <button class="rep-filtro-btn" onclick="setFiltroRep('devolucao',this)">↩️ Dev.</button>
+          </div>
+          <div id="m-lista-avisos"><div style="color:var(--text3);text-align:center;padding:40px;font-size:13px">✅ Nenhum item em falta</div></div>
+        </div>
+      </div>
+      <!-- ABA 2 — PARA GUARDAR -->
+      <div class="rep-tab-page" id="rep-tab-guardar">
+        <div class="sep-scroll">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+            <div>
+              <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">📦 Para Guardar</div>
+              <div style="font-size:11px;color:var(--text3);margin-top:2px">Itens que subiram e aguardam ser guardados</div>
+            </div>
+            <button class="btn btn-outline btn-sm" onclick="carregarParaGuardar()">🔄</button>
+          </div>
+          <div id="rep-para-guardar-lista">
+            <div style="color:var(--text3);text-align:center;padding:40px;font-size:14px">Carregando...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ABA 3 — HISTÓRICO DO DIA -->
+      <div class="rep-tab-page" id="rep-tab-historico">
+        <div class="sep-scroll">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+            <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">📋 Meu Histórico</div>
+            <button class="btn btn-outline btn-sm" onclick="carregarHistoricoDia()">🔄</button>
+          </div>
+          <div style="font-size:12px;color:var(--text3);margin-bottom:14px" id="m-hist-user-label">Suas ações de hoje</div>
+          <div id="rep-tab-historico-lista"><div style="color:var(--text3);text-align:center;padding:36px;font-size:14px">Nenhuma etapa hoje</div></div>
+        </div>
+      </div>
+      <!-- ABA 3 — ESTATÍSTICAS -->
+      <div class="rep-tab-page" id="rep-tab-stats">
+        <div class="rep-scroll">
+          <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text);margin-bottom:14px">📈 Meu Desempenho</div>
+          <div class="stat-nome" id="m-rep-nome">—</div>
+          <div class="stats-grid">
+            <div class="stat-big verde"><div class="s-lbl">REPOSTOS HOJE</div><div class="s-val" id="m-rep-hoje">0</div><div class="s-sub">itens repostos</div></div>
+            <div class="stat-big azul"><div class="s-lbl">MÊS</div><div class="s-val" id="m-rep-mes">0</div><div class="s-sub">reposições</div></div>
+            <div class="stat-big vermelho span2"><div class="s-lbl">PENDENTES AGORA</div><div class="s-val" id="m-rep-pendentes" style="font-size:38px">0</div><div class="s-sub">aguardando resolução</div></div>
+          </div>
+          <button class="btn btn-outline" style="width:100%;margin-top:4px" onclick="carregarStatsRepMobile()">🔄 Atualizar</button>
+        </div>
+      </div>
+    </div><!-- /rep-mobile-root -->
+
+    <!-- ══ CHECKOUT MOBILE ══ -->
+    <div id="ck-mobile-root" style="display:none">
+      <div class="ck-tab-page ativa" id="ck-tab-busca">
+        <div class="ck-scroll">
+          <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text);margin-bottom:12px">🏷️ Checkout</div>
+          <div class="bip-wrap">
+            <input type="text" class="bip-input" id="m-ck-input-caixa" placeholder="Bipe ou número da caixa..." autocomplete="off" inputmode="numeric" style="font-size:20px;letter-spacing:3px"/>
+            <button class="btn-bip" onclick="buscarCaixaMobile()">▶</button>
+          </div>
+          <div id="m-ck-resultado"></div>
+        </div>
+      </div>
+      <div class="ck-tab-page" id="ck-tab-stats">
+        <div class="ck-scroll">
+          <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text);margin-bottom:14px">📈 Estatísticas Checkout</div>
+          <div class="stats-grid">
+            <div class="stat-big verde"><div class="s-lbl">HOJE</div><div class="s-val" id="m-ck-hoje">0</div><div class="s-sub">expedidos</div></div>
+            <div class="stat-big azul"><div class="s-lbl">MÊS</div><div class="s-val" id="m-ck-mes">0</div><div class="s-sub">expedidos</div></div>
+            <div class="stat-big amarelo span2"><div class="s-lbl">PENDENTES</div><div class="s-val" id="m-ck-pend" style="font-size:38px">0</div><div class="s-sub">aguardando checkout</div></div>
+          </div>
+          <button class="btn btn-outline" style="width:100%;margin-top:4px" onclick="carregarStatsCkMobile()">🔄 Atualizar</button>
+        </div>
+      </div>
+    </div><!-- /ck-mobile-root -->
+
+    <!-- ══ SUPERVISOR MOBILE ══ -->
+    <div id="sup-mobile-root" style="display:none;flex-direction:column;flex:1;overflow:hidden">
+      <!-- ABA 1: DASHBOARD -->
+      <div class="sep-tab-page ativa" id="sup-tab-dashboard">
+        <div class="sep-scroll">
+          <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text);margin-bottom:14px">
+            📊 Dashboard
+            <button class="btn btn-outline btn-sm" style="margin-left:10px" onclick="carregarDashboardMobile()">🔄</button>
+          </div>
+          <!-- Alertas mobile -->
+          <div id="sup-alertas-mobile" style="display:none;background:linear-gradient(135deg,#7F1D1D,#991B1B);color:#fff;border-radius:12px;padding:12px 14px;margin-bottom:14px;cursor:pointer" onclick="carregarAlertas();mostrarModalAlertas(window._lastAlertas||{})">
+            <div style="font-size:13px;font-weight:800">🚨 <span id="sup-alertas-txt">Alertas ativos</span></div>
+            <div style="font-size:11px;opacity:.8;margin-top:3px">Toque para ver detalhes</div>
+          </div>
+          <!-- KPIs em grid 2x2 -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+            <div class="cnt-card verde" style="padding:14px"><div class="cnt-lbl">CONCLUÍDOS</div><div class="cnt-val" id="m-sup-hoje" style="font-size:28px">0</div><div class="cnt-sub">hoje</div></div>
+            <div class="cnt-card amarelo" style="padding:14px"><div class="cnt-lbl">SEPARANDO</div><div class="cnt-val" id="m-sup-sep" style="font-size:28px">0</div><div class="cnt-sub">agora</div></div>
+            <div class="cnt-card vermelho" style="padding:14px"><div class="cnt-lbl">FALTAS</div><div class="cnt-val" id="m-sup-faltas" style="font-size:28px">0</div><div class="cnt-sub">abertas</div></div>
+            <div class="cnt-card azul" style="padding:14px"><div class="cnt-lbl">PENDENTES</div><div class="cnt-val" id="m-sup-pend" style="font-size:28px">0</div><div class="cnt-sub">na fila</div></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+            <div class="cnt-card roxo" style="padding:14px"><div class="cnt-lbl">CHECKOUT</div><div class="cnt-val" id="m-sup-ck" style="font-size:28px">0</div><div class="cnt-sub">hoje</div></div>
+            <div class="cnt-card azul" style="padding:14px"><div class="cnt-lbl">SEP. ATIVOS</div><div class="cnt-val" id="m-sup-ativos" style="font-size:28px">0</div><div class="cnt-sub">trabalhando</div></div>
+          </div>
+          <!-- Pedidos travados -->
+          <div id="sup-travados-wrap" style="display:none">
+            <div style="font-size:11px;font-weight:800;color:var(--amber);letter-spacing:1.5px;margin-bottom:8px">⏱ PEDIDOS TRAVADOS +30MIN</div>
+            <div id="sup-travados-lista"></div>
+          </div>
+          <!-- Pedidos bloqueados -->
+          <div id="sup-bloq-wrap" style="display:none;margin-top:10px">
+            <div style="font-size:11px;font-weight:800;color:var(--red);letter-spacing:1.5px;margin-bottom:8px">⛔ PEDIDOS BLOQUEADOS</div>
+            <div id="sup-bloq-lista"></div>
+          </div>
+        </div>
+      </div>
+      <!-- ABA 2: PEDIDOS -->
+      <div class="sep-tab-page" id="sup-tab-pedidos">
+        <div class="sep-scroll">
+          <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text);margin-bottom:14px">📋 Pedidos</div>
+          <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+            <button class="btn btn-outline btn-sm" onclick="carregarPedidosMobile()">🔄</button>
+            <select id="m-filtro-ped-status" class="sel-sm" onchange="carregarPedidosMobile()">
+              <option value="">Todos</option>
+              <option value="pendente">Pendente</option>
+              <option value="separando">Separando</option>
+              <option value="concluido">Concluído</option>
+            </select>
+          </div>
+          <div id="sup-pedidos-lista"><div style="color:var(--text3);text-align:center;padding:30px">Carregando...</div></div>
+        </div>
+      </div>
+      <!-- ABA 3: REPOSIÇÃO -->
+      <div class="sep-tab-page" id="sup-tab-reposicao">
+        <div class="sep-scroll">
+          <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text);margin-bottom:14px">🔧 Reposição</div>
+          <div id="sup-rep-lista"><div style="color:var(--text3);text-align:center;padding:30px">Carregando...</div></div>
+        </div>
+      </div>
+    </div>
+    <!-- Tab bar supervisor mobile -->
+    <div class="sep-tabbar" id="sup-tabbar" style="display:none">
+      <button class="sep-tab ativo" id="stab-sup-dashboard" onclick="mudarTabSup('dashboard')"><span class="sep-tab-ic">📊</span>DASHBOARD</button>
+      <button class="sep-tab" id="stab-sup-pedidos" onclick="mudarTabSup('pedidos')"><span class="sep-tab-ic">📋</span>PEDIDOS</button>
+      <button class="sep-tab" id="stab-sup-reposicao" onclick="mudarTabSup('reposicao')"><span class="sep-tab-ic">🔧</span>REPOSIÇÃO<span class="sep-tab-badge" id="stab-sup-rep-badge" style="display:none">0</span></button>
+    </div>
+
+    <!-- ══ SEPARADOR MOBILE ══ -->
+    <div id="sep-mobile-root" style="display:none">
+      <div class="sep-tab-page ativa" id="sep-tab-separar">
+        <div class="sep-scroll">
+          <div class="bip-wrap">
+            <input type="text" class="bip-input" id="m-input-pedido" placeholder="Bipe ou número do pedido..." autocomplete="off" inputmode="numeric"/>
+            <button class="btn-bip" onclick="confirmarPedidoMobile()">▶</button>
+          </div>
+          <div class="status-pedido" id="m-status-atual"></div>
+          <div id="m-caixa-wrap" style="display:none;margin-bottom:12px">
+            <div style="font-size:11px;font-weight:700;color:var(--accent);letter-spacing:1px;margin-bottom:6px">📦 VINCULAR CAIXA AO PEDIDO</div>
+            <div class="bip-wrap" style="margin-bottom:0">
+              <input type="text" class="bip-input" id="m-input-caixa" placeholder="Número da caixa..." autocomplete="off" inputmode="numeric" style="font-size:18px;letter-spacing:2px;border-color:var(--amber)"/>
+              <button class="btn-bip" style="border-color:var(--amber);color:var(--amber)" onclick="vincularCaixaMobile()">📦</button>
+            </div>
+            <div id="m-caixa-status" style="font-size:12px;color:var(--text3);margin-top:6px;padding:6px 10px;background:var(--surface2);border-radius:6px;display:none"></div>
+          </div>
+          <div class="cl-wrap" id="m-cl-wrap">
+            <div class="cl-header"><span id="m-cl-titulo">📋 PEDIDO</span><span id="m-cl-contador" style="color:var(--accent);font-weight:700;font-size:12px">0/0</span></div>
+            <div class="cl-prog"><div class="cl-prog-fill" id="m-cl-barra" style="width:0%"></div></div>
+            <div class="cl-resumo" id="m-cl-resumo"></div>
+            <div class="cl-lista" id="m-cl-lista"></div>
+            <div class="cl-footer">
+              <button class="btn-acao concluir" id="m-btn-concluir" onclick="concluirPedidoMobile()" disabled>🔒 CONCLUIR</button>
+              <button class="btn-acao aguardar" id="m-btn-aguardar" style="display:none">⏳ AGUARDANDO</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="sep-tab-page" id="sep-tab-fila">
+        <div class="sep-scroll">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">📋 Fila</div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <span id="badge-fila-m" style="font-size:11px;color:var(--text3);font-weight:600"></span>
+              <span id="badge-meus-m" style="font-size:11px;color:var(--accent);font-weight:700"></span>
+              <button class="btn btn-outline btn-sm" onclick="carregarFilaMobile()">🔄</button>
+            </div>
+          </div>
+          <div id="lista-fila-mobile"><div style="color:var(--text3);text-align:center;padding:30px;font-size:13px">Carregando fila...</div></div>
+        </div>
+      </div>
+      <div class="sep-tab-page" id="sep-tab-avisos-sep">
+        <div class="sep-scroll">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+            <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">🔔 Avisos do Repositor</div>
+            <button class="btn btn-outline btn-sm" onclick="carregarAvisosSeparador()">🔄</button>
+          </div>
+          <div id="sep-avisos-lista"><div style="color:var(--text3);text-align:center;padding:40px;font-size:13px">✅ Nenhum aviso</div></div>
+        </div>
+      </div>
+      <div class="sep-tab-page" id="sep-tab-stats">
+        <div class="sep-scroll">
+          <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text);margin-bottom:14px">📈 Meu Desempenho</div>
+          <div class="stat-nome" id="m-stat-nome">—</div>
+          <div class="stats-grid">
+            <div class="stat-big azul"><div class="s-lbl">HOJE</div><div class="s-val" id="m-stat-hoje">0</div><div class="s-sub">pedidos separados</div></div>
+            <div class="stat-big verde"><div class="s-lbl">MÊS</div><div class="s-val" id="m-stat-mes">0</div><div class="s-sub">pedidos separados</div></div>
+            <div class="stat-big roxo span2"><div class="s-lbl">ANO</div><div class="s-val" id="m-stat-ano">0</div><div class="s-sub">pedidos separados no ano</div></div>
+          </div>
+          <button class="btn btn-outline" style="width:100%;margin-top:4px" onclick="carregarStatsMobile()">🔄 Atualizar</button>
+        </div>
+      </div>
+    </div><!-- /sep-mobile-root -->
+
+  </div><!-- closes conteudo -->
   </div><!-- /layout -->
 </div><!-- /app -->
-<script>
-const API = `http://${location.hostname === 'localhost' ? 'localhost' : location.hostname}:3000`;
-let usuarioAtual   = null;
-let separadorAtual = null;
-let pedidoAtualId  = null, pedidoAtualNum = null, itensAtuais = [];
-const hoje = new Date().toISOString().split('T')[0];
-let todosSeparadores = [];
-let pedidosImportar  = [];
-let historicoImportacoes = JSON.parse(localStorage.getItem('historico_importacoes') || '[]');
 
-function atualizarRelogio(){document.getElementById('data-hora').textContent=new Date().toLocaleString('pt-BR')}
-setInterval(atualizarRelogio,1000); atualizarRelogio();
+<!-- Tab bar Separador -->
+<div class="sep-tabbar" id="sep-tabbar" style="display:none">
+  <button class="sep-tab ativo" id="stab-separar" onclick="mudarTabSep('separar')"><span class="sep-tab-ic">📦</span>SEPARAR</button>
+  <button class="sep-tab" id="stab-fila" onclick="mudarTabSep('fila')"><span class="sep-tab-ic">📋</span>FILA<span class="sep-tab-badge" id="stab-fila-badge" style="display:none">0</span></button>
+  <button class="sep-tab" id="stab-avisos-sep" onclick="mudarTabSep('avisos-sep')"><span class="sep-tab-ic">🔔</span>AVISOS<span class="sep-tab-badge" id="stab-avisos-sep-badge" style="display:none">0</span></button>
+  <button class="sep-tab" id="stab-stats" onclick="mudarTabSep('stats')"><span class="sep-tab-ic">📈</span>STATS</button>
+</div>
 
-function toast(msg,tipo='info'){
-  const cores={info:'#2563eb',sucesso:'#15803d',erro:'#dc2626',aviso:'#b45309'};
-  const t=document.createElement('div');
-  t.textContent=msg;
-  t.style.cssText=`position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9999;background:${cores[tipo]};color:#fff;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:600;box-shadow:0 4px 20px rgba(0,0,0,.4);max-width:90vw;text-align:center;animation:fadeInUp .2s ease`;
-  document.body.appendChild(t);
-  setTimeout(()=>t.remove(),3500);
-}
+<!-- Tab bar Repositor -->
+<div class="rep-tabbar" id="rep-tabbar" style="display:none">
+  <button class="rep-tab ativo" id="rtab-avisos" onclick="mudarTabRep('avisos')"><span class="rep-tab-ic">🔧</span>PEDIDOS<span class="rep-tab-badge" id="rtab-badge" style="display:none">0</span></button>
+  <button class="rep-tab" id="rtab-guardar" onclick="mudarTabRep('guardar')"><span class="rep-tab-ic">📦</span>GUARDAR<span class="rep-tab-badge" id="rtab-guardar-badge" style="display:none">0</span></button>
+  <button class="rep-tab" id="rtab-historico" onclick="mudarTabRep('historico')"><span class="rep-tab-ic">📋</span>HISTÓRICO</button>
+  <button class="rep-tab" id="rtab-stats" onclick="mudarTabRep('stats')"><span class="rep-tab-ic">📈</span>STATS</button>
+</div>
 
-// ══ LOGIN ══
-let perfilSelecionado = '';
-function selecionarPerfil(p,btn){
-  perfilSelecionado=p;
-  document.querySelectorAll('.perfil-btn').forEach(b=>b.classList.remove('ativo'));
-  btn.classList.add('ativo');
-  document.getElementById('login-erro').style.display='none';
-}
+<!-- Tab bar Checkout -->
+<div class="ck-tabbar" id="ck-tabbar">
+  <button class="ck-tab ativo" id="cktab-busca" onclick="mudarTabCk('busca')"><span class="ck-tab-ic">🏷️</span>CHECKOUT</button>
+  <button class="ck-tab" id="cktab-stats" onclick="mudarTabCk('stats')"><span class="ck-tab-ic">📈</span>ESTATÍSTICAS</button>
+</div>
 
-async function fazerLogin(){
-  const login  = document.getElementById('login-usuario').value.trim();
-  const senha  = document.getElementById('login-senha').value;
-  const erroEl = document.getElementById('login-erro');
-  if(!perfilSelecionado){erroEl.textContent='Selecione um perfil!';erroEl.style.display='block';return}
-  if(!login||!senha){erroEl.textContent='Preencha login e senha!';erroEl.style.display='block';return}
-  try{
-    const res  = await fetch(`${API}/auth/login`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({login,senha,perfil:perfilSelecionado})});
-    const data = await res.json();
-    if(!res.ok){erroEl.textContent=data.erro||'Erro ao entrar!';erroEl.style.display='block';return}
-    usuarioAtual   = data.usuario;
-    separadorAtual = data.separador;
-    erroEl.style.display='none';
-    document.getElementById('tela-login').style.display='none';
-    document.getElementById('app').style.display='block';
-    document.getElementById('header-nome').textContent   = usuarioAtual.nome;
-    document.getElementById('header-perfil').textContent = perfilSelecionado.toUpperCase();
-    montarSidebar();
-    iniciarPorPerfil();
-  }catch(e){erroEl.textContent='Erro ao conectar com o servidor!';erroEl.style.display='block'}
-}
-
-function sair(){
-  if(!confirm('Deseja sair do sistema?'))return;
-  usuarioAtual=null;separadorAtual=null;pedidoAtualId=null;pedidoAtualNum=null;itensAtuais=[];
-  document.getElementById('app').style.display='none';
-  document.getElementById('tela-login').style.display='flex';
-  document.getElementById('login-usuario').value='';
-  document.getElementById('login-senha').value='';
-  perfilSelecionado='';
-  document.querySelectorAll('.perfil-btn').forEach(b=>b.classList.remove('ativo'));
-}
-
-function montarSidebar(){
-  const sb = document.getElementById('sidebar');
-  const menus = {
-    supervisor:`
-      <div class="menu-grupo">SUPERVISÃO</div>
-      <a class="menu-item ativo" onclick="irPara('dashboard',this)"><span class="mi-icone">📊</span>Dashboard</a>
-      <a class="menu-item" onclick="irPara('pedidos',this)"><span class="mi-icone">📋</span>Pedidos</a>
-      <a class="menu-item" onclick="irPara('cadastros',this)"><span class="mi-icone">⚙️</span>Cadastros</a>
-      <div class="menu-grupo">OPERAÇÃO</div>
-      <a class="menu-item" onclick="irPara('separacao',this)"><span class="mi-icone">📦</span>Separação</a>
-      <a class="menu-item" onclick="irPara('reposicao',this)"><span class="mi-icone">🔧</span>Reposição <span class="menu-badge" id="menu-badge-rep" style="display:none">0</span></a>`,
-    separador:`
-      <div class="menu-grupo">SEPARAÇÃO</div>
-      <a class="menu-item ativo" onclick="irPara('separacao',this)"><span class="mi-icone">📦</span>Pedidos</a>`,
-    repositor:`
-      <div class="menu-grupo">REPOSIÇÃO</div>
-      <a class="menu-item ativo" onclick="irPara('reposicao',this)"><span class="mi-icone">🔧</span>Solicitações <span class="menu-badge" id="menu-badge-rep" style="display:none">0</span></a>`
-  };
-  sb.innerHTML = menus[usuarioAtual.perfil] || '';
-}
-
-function irPara(pag,el){
-  document.querySelectorAll('.pagina').forEach(p=>p.classList.remove('ativa'));
-  document.querySelectorAll('.menu-item').forEach(m=>m.classList.remove('ativo'));
-  document.getElementById(`pag-${pag}`).classList.add('ativa');
-  if(el) el.classList.add('ativo');
-  if(pag==='dashboard') carregarDashboard();
-  if(pag==='pedidos')  {popularSelects();carregarPedidos();}
-  if(pag==='cadastros'){trocarCadastroTab('usuarios');}
-  if(pag==='separacao') carregarFila();
-  if(pag==='reposicao') carregarAvisos();
-}
-
-function iniciarPorPerfil(){
-  if(usuarioAtual.perfil==='supervisor'){
-    document.getElementById('pag-dashboard').classList.add('ativa');
-    document.getElementById('filtro-data-ini').value=hoje;
-    document.getElementById('filtro-data-fim').value=hoje;
-    document.getElementById('filtro-pedido-data').value=hoje;
-    carregarDashboard();
-    setInterval(atualizarBadgeRep,15000);
-    atualizarBadgeRep();
-  }
-  if(usuarioAtual.perfil==='separador'){
-    document.getElementById('pag-separacao').classList.add('ativa');
-    if(separadorAtual) carregarContadoresSep();
-    setInterval(()=>{carregarFila();if(pedidoAtualId)carregarChecklist();},30000);
-    setTimeout(()=>document.getElementById('input-pedido').focus(),300);
-  }
-  if(usuarioAtual.perfil==='repositor'){
-    document.getElementById('pag-reposicao').classList.add('ativa');
-    carregarAvisos();
-    setInterval(carregarAvisos,30000);
-  }
-}
-
-async function atualizarBadgeRep(){
-  try{
-    const res=await fetch(`${API}/repositor/avisos?status=pendente`);
-    const av=await res.json();
-    const n=av.length;
-    ['menu-badge-rep','dash-repositor'].forEach(id=>{
-      const el=document.getElementById(id);if(!el)return;
-      if(id.includes('badge')){el.textContent=n;el.style.display=n>0?'inline':'none';}
-      else el.textContent=n;
-    });
-  }catch(e){}
-}
-
-function trocarCadastroTab(tab){
-  ['usuarios','importar'].forEach(t=>{
-    const el=document.getElementById(`cad-${t}`);
-    if(el) el.style.display=t===tab?'block':'none';
-    const btn=document.getElementById(`ctab-${t}`);
-    if(btn) btn.className=t===tab?'btn btn-primary btn-sm':'btn btn-outline btn-sm';
-  });
-  if(tab==='usuarios')  { carregarUsuarios(); gerarProximoId(); }
-  if(tab==='importar')    renderHistorico();
-}
-
-// ══ DASHBOARD ══
-async function carregarDashboard(){
-  await popularSelects();
-  await carregarContadoresGerais();
-  await carregarProdutividade();
-  await atualizarBadgeRep();
-}
-
-async function carregarContadoresGerais(){
-  try{
-    const res=await fetch(`${API}/pedidos`);
-    const ps=await res.json();
-    document.getElementById('dash-hoje').textContent     =ps.filter(p=>p.status==='concluido'&&p.data_pedido===hoje).length;
-    document.getElementById('dash-separando').textContent=ps.filter(p=>p.status==='separando').length;
-    document.getElementById('dash-pendentes').textContent=ps.filter(p=>p.status==='pendente').length;
-  }catch(e){}
-}
-
-async function carregarProdutividade(){
-  try{
-    const sepId=document.getElementById('filtro-sep-prod').value;
-    const res=await fetch(`${API}/produtividade${sepId?'?separador_id='+sepId:''}`);
-    const dados=await res.json();
-    const tbody=document.getElementById('tbody-produtividade');
-    if(!dados.length){tbody.innerHTML='<tr><td colspan="6" style="color:#64748b;text-align:center;padding:30px">Nenhum separador</td></tr>';return}
-    const max=Math.max(...dados.map(d=>d.hoje||0),1);
-    tbody.innerHTML=dados.map(d=>`<tr>
-      <td style="color:#e2e8f0;font-weight:600">${d.nome}</td>
-      <td style="color:#4ade80;font-weight:700">${d.hoje||0}</td>
-      <td style="color:#fbbf24">${d.mes||0}</td>
-      <td style="color:#60a5fa">${d.total_ano||0}</td>
-      <td style="min-width:120px">
-        <div style="font-size:10px;color:#94a3b8">${d.hoje||0} pedidos</div>
-        <div class="prod-barra"><div class="prod-barra-fill" style="width:${Math.round(((d.hoje||0)/max)*100)}%"></div></div>
-      </td>
-      <td><span class="pill ${d.status}">${d.status}</span></td>
-    </tr>`).join('');
-  }catch(e){}
-}
-
-async function popularSelects(){
-  try{
-    const res=await fetch(`${API}/separadores`);
-    todosSeparadores=await res.json();
-    ['filtro-sep-prod','filtro-pedido-sep'].forEach(id=>{
-      const sel=document.getElementById(id);if(!sel)return;
-      const val=sel.value;
-      sel.innerHTML='<option value="">Todos</option>'+todosSeparadores.map(s=>`<option value="${s.id}">${s.nome}</option>`).join('');
-      sel.value=val;
-    });
-  }catch(e){}
-}
-
-// ══ PEDIDOS ══
-async function carregarPedidos(){
-  try{
-    // Garante separadores carregados antes de montar o select de atribuição
-    if(!todosSeparadores.length) await popularSelects();
-    const data  =document.getElementById('filtro-pedido-data').value;
-    const sepId =document.getElementById('filtro-pedido-sep').value;
-    const status=document.getElementById('filtro-pedido-status').value;
-    let url=`${API}/pedidos?`;
-    if(data)   url+=`data=${data}&`;
-    if(sepId)  url+=`separador_id=${sepId}&`;
-    if(status) url+=`status=${encodeURIComponent(status)}&`;
-    const res=await fetch(url);
-    const ps=await res.json();
-    const tbody=document.getElementById('tbody-pedidos');
-    if(!ps.length){tbody.innerHTML='<tr><td colspan="7" style="color:#64748b;text-align:center;padding:30px">Nenhum pedido encontrado</td></tr>';return}
-    tbody.innerHTML=ps.map(p=>`<tr>
-      <td style="color:#e2e8f0;font-weight:600">${p.numero_pedido}</td>
-      <td style="color:#94a3b8">${p.separador_nome||'—'}</td>
-      <td><span class="pill ${(p.status||'').replace(' ','-')}">${p.status}</span></td>
-      <td style="color:#cbd5e1">${p.itens||'—'}</td>
-      <td style="color:#64748b">${p.data_pedido||'—'}</td>
-      <td style="color:#64748b">${p.hora_pedido||'—'}</td>
-      <td><select class="select-sep" onchange="atribuirSeparador(${p.id},this.value)">
-        <option value="">— atribuir —</option>
-        ${todosSeparadores.map(s=>`<option value="${s.id}"${p.separador_id==s.id?' selected':''}>${s.nome}</option>`).join('')}
-      </select></td>
-    </tr>`).join('');
-  }catch(e){}
-}
-
-async function atribuirSeparador(pid,sid){
-  if(!sid)return;
-  try{
-    await fetch(`${API}/pedidos/${pid}/separador`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({separador_id:sid})});
-    toast('Separador atribuído!','sucesso');
-  }catch(e){toast('Erro ao atribuir!','erro')}
-}
-
-function exportarCSV(){
-  const rows=[['Nº Pedido','Separador','Status','Itens','Data','Hora']];
-  document.querySelectorAll('#tbody-pedidos tr').forEach(tr=>{
-    const tds=tr.querySelectorAll('td');
-    if(tds.length>1) rows.push([tds[0].textContent,tds[1].textContent,tds[2].textContent,tds[3].textContent,tds[4].textContent,tds[5].textContent]);
-  });
-  const a=document.createElement('a');
-  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(rows.map(r=>r.join(',')).join('\n'));
-  a.download=`pedidos_${hoje}.csv`;a.click();
-}
-
-// ══ USUÁRIOS ══
-async function carregarUsuarios(){
-  try{
-    const res=await fetch(`${API}/usuarios`);
-    const users=await res.json();
-    const tbody=document.getElementById('tbody-usuarios');
-    if(!users.length){tbody.innerHTML='<tr><td colspan="5" style="color:#64748b;text-align:center;padding:16px">Nenhum usuário</td></tr>';return}
-    tbody.innerHTML=users.map(u=>`<tr>
-      <td style="color:#4ade80;font-weight:700">${String(u.id).padStart(3,'0')}</td>
-      <td style="color:#e2e8f0">${u.nome}</td>
-      <td style="color:#60a5fa">${u.login}</td>
-      <td style="color:#94a3b8">${u.turno||'—'}</td>
-      <td><span class="pill ${u.perfil}">${u.perfil}</span></td>
-      <td><span class="pill ${u.status}">${u.status}</span></td>
-      <td style="display:flex;gap:6px">
-        <button class="btn btn-sm" style="background:${u.status==='ativo'?'#b45309':'#15803d'};color:white"
-          onclick="alterarStatusUsuario(${u.id},'${u.status==='ativo'?'inativo':'ativo'}','${u.nome}','${u.login}','${u.perfil}','${u.turno||''}')">
-          ${u.status==='ativo'?'⛔ Desativar':'✅ Ativar'}
-        </button>
-        <button class="btn btn-sm btn-danger" onclick="excluirUsuario(${u.id},'${u.nome}')">🗑</button>
-      </td>
-    </tr>`).join('');
-  }catch(e){}
-}
-
-async function gerarProximoId(){
-  try{
-    const res=await fetch(`${API}/usuarios`);
-    const users=await res.json();
-    const maxId=users.reduce((mx,u)=>Math.max(mx,u.id),0);
-    const proximo=String(maxId+1).padStart(3,'0');
-    const el=document.getElementById('usr-id');
-    if(el) el.value=proximo;
-  }catch(e){}
-}
-
-async function cadastrarUsuario(){
-  const nome  =document.getElementById('usr-nome').value.trim();
-  const login =document.getElementById('usr-login').value.trim();
-  const turno =document.getElementById('usr-turno').value;
-  const senha =document.getElementById('usr-senha').value;
-  const perfil=document.getElementById('usr-perfil').value;
-  if(!nome||!login||!senha){toast('Preencha todos os campos!','aviso');return}
-  if(senha.length<6){toast('Senha mínimo 6 caracteres!','aviso');return}
-  try{
-    const res=await fetch(`${API}/usuarios`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nome,login,senha,perfil,turno})});
-    const data=await res.json();
-    if(data.erro){toast(data.erro,'erro');return}
-    toast(`✅ Usuário cadastrado! ID: ${String(data.id).padStart(3,'0')}`,'sucesso');
-    document.getElementById('usr-nome').value='';
-    document.getElementById('usr-login').value='';
-    document.getElementById('usr-senha').value='';
-    carregarUsuarios();
-    gerarProximoId();
-  }catch(e){toast('Erro ao cadastrar!','erro')}
-}
-
-async function alterarStatusUsuario(id,novoStatus,nome,login,perfil,turno){
-  try{
-    await fetch(`${API}/usuarios/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({nome,login,perfil,turno,status:novoStatus})});
-    toast(`Usuário ${novoStatus==='ativo'?'ativado':'desativado'}!`,'sucesso');
-    carregarUsuarios();
-  }catch(e){toast('Erro!','erro')}
-}
-
-async function excluirUsuario(id,nome){
-  if(!confirm(`Excluir "${nome}"?`))return;
-  try{
-    await fetch(`${API}/usuarios/${id}`,{method:'DELETE'});
-    toast('Usuário excluído!','sucesso');carregarUsuarios();
-  }catch(e){toast('Erro!','erro')}
-}
-
-// ══ SEPARADORES ══
-async function cadastrarSeparador(){
-  const nome     =document.getElementById('sep-nome').value.trim();
-  const matricula=document.getElementById('sep-matricula').value.trim();
-  const turno    =document.getElementById('sep-turno').value;
-  if(!nome||!matricula){toast('Preencha nome e matrícula!','aviso');return}
-  try{
-    const res=await fetch(`${API}/separadores`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nome,matricula,turno})});
-    const data=await res.json();
-    if(data.erro){toast(data.erro,'erro');return}
-    toast('Separador cadastrado!','sucesso');
-    document.getElementById('sep-nome').value='';
-    document.getElementById('sep-matricula').value='';
-    carregarSeparadores();
-  }catch(e){toast('Erro ao cadastrar!','erro')}
-}
-
-async function carregarSeparadores(){
-  try{
-    const res=await fetch(`${API}/separadores`);
-    todosSeparadores=await res.json();
-    const tbody=document.getElementById('tbody-separadores');
-    if(!todosSeparadores.length){tbody.innerHTML='<tr><td colspan="5" style="color:#64748b;text-align:center;padding:16px">Nenhum separador</td></tr>';return}
-    tbody.innerHTML=todosSeparadores.map(s=>`<tr>
-      <td style="color:#e2e8f0">${s.nome}</td>
-      <td style="color:#60a5fa">${s.matricula}</td>
-      <td style="color:#94a3b8">${s.turno}</td>
-      <td><span class="pill ${s.status}">${s.status}</span></td>
-      <td style="display:flex;gap:6px">
-        <button class="btn btn-sm" style="background:${s.status==='ativo'?'#b45309':'#15803d'};color:white"
-          onclick="alterarStatusSep(${s.id},'${s.status==='ativo'?'inativo':'ativo'}')">
-          ${s.status==='ativo'?'⛔ Desativar':'✅ Ativar'}
-        </button>
-        <button class="btn btn-sm btn-danger" onclick="excluirSep(${s.id},'${s.nome}')">🗑</button>
-      </td>
-    </tr>`).join('');
-  }catch(e){}
-}
-
-async function alterarStatusSep(id,novoStatus){
-  try{
-    const res=await fetch(`${API}/separadores/${id}`);
-    const sep=await res.json();
-    await fetch(`${API}/separadores/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({nome:sep.nome,matricula:sep.matricula,turno:sep.turno,status:novoStatus})});
-    toast(`Separador ${novoStatus==='ativo'?'ativado':'desativado'}!`,'sucesso');
-    carregarSeparadores();
-  }catch(e){toast('Erro!','erro')}
-}
-
-async function excluirSep(id,nome){
-  if(!confirm(`Excluir "${nome}"?`))return;
-  try{await fetch(`${API}/separadores/${id}`,{method:'DELETE'});toast('Excluído!','sucesso');carregarSeparadores();}
-  catch(e){toast('Erro!','erro')}
-}
-
-// ══ IMPORTAÇÃO ══
-function handleDrop(e){
-  e.preventDefault();document.getElementById('upload-area').classList.remove('drag');
-  const f=e.dataTransfer.files[0];if(f)processarArquivoFile(f);
-}
-function processarArquivo(e){const f=e.target.files[0];if(f)processarArquivoFile(f);}
-
-function processarArquivoFile(file){
-  mostrarStatus('⏳ Lendo arquivo...','carregando');
-  document.getElementById('preview-importacao').style.display='none';
-  const reader=new FileReader();
-  reader.onload=function(e){
-    try{
-      const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
-      const ws=wb.Sheets[wb.SheetNames[0]];
-      const rows=XLSX.utils.sheet_to_json(ws,{defval:'',header:1});
-      if(!rows.length)throw new Error('Arquivo vazio');
-      const cab=rows[0].map(c=>String(c).toLowerCase().trim());
-      const temCab=cab.some(c=>c.includes('numero')||c.includes('pedido')||c.includes('codigo'));
-      const ini=temCab?1:0;
-      const iNum =temCab?cab.findIndex(c=>c.includes('numero')||c.includes('pedido')):0;
-      const iCod =temCab?cab.findIndex(c=>c.includes('cod')):1;
-      const iDesc=temCab?cab.findIndex(c=>c.includes('desc')):2;
-      const iEnd =temCab?cab.findIndex(c=>c.includes('end')||c.includes('rua')):3;
-      const iQtd =temCab?cab.findIndex(c=>c.includes('qtd')||c.includes('quant')):4;
-      const dados=[];
-      for(let i=ini;i<rows.length;i++){
-        const r=rows[i];
-        const num=String(r[iNum>=0?iNum:0]||'').trim();
-        if(!num)continue;
-        dados.push({numero_pedido:num,
-          codigo:   String(r[iCod >=0?iCod :1]||'').trim(),
-          descricao:String(r[iDesc>=0?iDesc:2]||'').trim(),
-          endereco: String(r[iEnd >=0?iEnd :3]||'').trim(),
-          quantidade:parseInt(r[iQtd>=0?iQtd:4])||1});
-      }
-      if(!dados.length){mostrarStatus('❌ Nenhuma linha encontrada!','erro');return}
-      pedidosImportar=dados;
-      const totalP=new Set(dados.map(d=>d.numero_pedido)).size;
-      mostrarStatus(`✅ ${dados.length} linha(s) em ${totalP} pedido(s) — clique Importar`,'sucesso');
-      document.getElementById('tbody-preview').innerHTML=
-        dados.slice(0,10).map(d=>`<tr>
-          <td>${d.numero_pedido}</td>
-          <td style="color:#60a5fa">${d.codigo}</td>
-          <td style="color:#94a3b8;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.descricao}</td>
-          <td style="color:#fbbf24">${d.endereco}</td>
-          <td style="color:#4ade80">${d.quantidade}</td>
-        </tr>`).join('')+
-        (dados.length>10?`<tr><td colspan="5" style="color:#64748b;text-align:center;padding:8px">... +${dados.length-10} linhas</td></tr>`:'');
-      document.getElementById('txt-total-import').textContent=`${totalP} pedido(s) • ${dados.length} itens`;
-      document.getElementById('preview-importacao').style.display='block';
-    }catch(err){mostrarStatus(`❌ ${err.message}`,'erro')}
-  };
-  reader.onerror=()=>mostrarStatus('❌ Erro ao abrir arquivo!','erro');
-  reader.readAsArrayBuffer(file);
-}
-
-async function confirmarImportacao(){
-  if(!pedidosImportar.length)return;
-  mostrarStatus('⏳ Importando...','carregando');
-  try{
-    const res=await fetch(`${API}/importar`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({linhas:pedidosImportar})});
-    const data=await res.json();
-    if(data.erro){mostrarStatus(`❌ ${data.erro}`,'erro');return}
-    const reg={
-      data:new Date().toLocaleDateString('pt-BR'),
-      hora:new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
-      total:data.total,ok:data.importados,erro:data.ignorados
-    };
-    historicoImportacoes.unshift(reg);
-    if(historicoImportacoes.length>20)historicoImportacoes=historicoImportacoes.slice(0,20);
-    localStorage.setItem('historico_importacoes',JSON.stringify(historicoImportacoes));
-    renderHistorico();
-    mostrarStatus(`✅ ${data.importados} pedido(s) importado(s)!${data.ignorados>0?` ⚠️ ${data.ignorados} já existiam.`:''}`,'sucesso');
-    document.getElementById('preview-importacao').style.display='none';
-    pedidosImportar=[];
-    document.getElementById('input-arquivo').value='';
-    toast(`${data.importados} pedidos importados!`,'sucesso');
-  }catch(e){mostrarStatus('❌ Erro na importação!','erro')}
-}
-
-function renderHistorico(){
-  const el=document.getElementById('historico-importacoes');
-  if(!historicoImportacoes.length){el.innerHTML='<div style="color:#64748b;font-size:11px;text-align:center;padding:12px">Nenhuma importação</div>';return}
-  el.innerHTML=historicoImportacoes.map(h=>`
-    <div class="historico-item">
-      <div>
-        <div style="color:#4ade80;font-weight:700">✅ ${h.ok} pedido(s) importado(s)</div>
-        ${h.erro>0?`<div style="color:#fbbf24;font-size:10px">⚠️ ${h.erro} já existiam</div>`:''}
-      </div>
-      <div style="color:#64748b;font-size:10px">${h.data} às ${h.hora}</div>
-    </div>`).join('');
-}
-
-function limparHistorico(){
-  if(!confirm('Limpar histórico?'))return;
-  historicoImportacoes=[];localStorage.removeItem('historico_importacoes');
-  renderHistorico();toast('Histórico limpo!','info');
-}
-
-function mostrarStatus(msg,tipo){
-  const cores={
-    carregando:'background:#1a2d4a;border:1px solid #2563eb;color:#60a5fa',
-    sucesso:   'background:#1a3324;border:1px solid #16a34a;color:#4ade80',
-    erro:      'background:#3b0f0f;border:1px solid #dc2626;color:#fca5a5'
-  };
-  const el=document.getElementById('status-leitura');
-  el.setAttribute('style',`display:block;margin-top:10px;padding:10px;border-radius:8px;font-size:12px;font-weight:600;text-align:center;${cores[tipo]}`);
-  el.textContent=msg;
-}
-
-// ══ SEPARAÇÃO ══
-async function confirmarPedido(){
-  const num=document.getElementById('input-pedido').value.trim();
-  if(!num){toast('Bipe ou digite o número!','aviso');return}
-  if(!separadorAtual){toast('Usuário sem separador vinculado!','erro');return}
-  try{
-    const res=await fetch(`${API}/pedidos/bipar`,{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({numero_pedido:num,separador_id:separadorAtual.id})});
-    const data=await res.json();
-    if(res.status===404){toast('❌ Pedido não encontrado!','erro');document.getElementById('input-pedido').value='';return}
-    if(res.status===409||res.status===400){toast(`⚠️ ${data.erro}`,'aviso');document.getElementById('input-pedido').value='';return}
-    if(!res.ok){toast(`❌ ${data.erro}`,'erro');return}
-    pedidoAtualId=data.pedido_id;pedidoAtualNum=num;
-    document.getElementById('status-atual').innerHTML=`Pedido <b style="color:#e2e8f0">${num}</b> — 🔵 Separando`;
-    toast(data.ja_atribuido?`Pedido ${num} carregado`:`✅ Pedido ${num} → SEPARANDO`,data.ja_atribuido?'info':'sucesso');
-    await carregarChecklist();
-    carregarFila();
-  }catch(e){toast('Erro ao conectar!','erro')}
-}
-
-async function carregarChecklist(){
-  if(!pedidoAtualId)return;
-  try{
-    const res=await fetch(`${API}/pedidos/${pedidoAtualId}/itens`);
-    itensAtuais=await res.json();
-    if(!itensAtuais.length){document.getElementById('checklist-wrap').style.display='none';return}
-    document.getElementById('checklist-wrap').style.display='block';
-    renderChecklist();
-  }catch(e){toast('Erro ao carregar itens!','erro')}
-}
-
-function renderChecklist(){
-  const total      =itensAtuais.length;
-  const verificados=itensAtuais.filter(i=>i.status!=='pendente').length;
-  const encontrados=itensAtuais.filter(i=>i.status==='encontrado').length;
-  const faltas     =itensAtuais.filter(i=>i.status==='falta').length;
-  const parciais   =itensAtuais.filter(i=>i.status==='parcial').length;
-  const pct        =total>0?Math.round((verificados/total)*100):0;
-  const todosVerif =verificados===total;
-  const temProblema=faltas>0||parciais>0;
-
-  document.getElementById('checklist-titulo').textContent  =`📋 PEDIDO #${pedidoAtualNum}`;
-  document.getElementById('checklist-contador').textContent=`${verificados}/${total} itens`;
-  document.getElementById('checklist-barra').style.width   =`${pct}%`;
-  document.getElementById('checklist-resumo').innerHTML    =`✅ ${encontrados} ok &nbsp;🟡 ${parciais} parcial &nbsp;❌ ${faltas} falta &nbsp;⬜ ${total-verificados} pendente`;
-
-  const btnC=document.getElementById('btn-concluir');
-  const btnA=document.getElementById('btn-aguardar');
-
-  if(!todosVerif){
-    btnC.style.display='block';btnC.disabled=true;
-    btnC.textContent=`🔒 CONCLUIR (${total-verificados} pendentes)`;
-    btnA.style.display='none';
-  } else if(temProblema){
-    const itensP=itensAtuais.filter(i=>i.status==='falta'||i.status==='parcial');
-    const todosR=itensP.every(i=>i.aviso_status==='reposto'||i.aviso_status==='nao_encontrado');
-    if(todosR){
-      btnC.style.display='block';btnC.disabled=false;
-      btnC.textContent='✅ CONCLUIR PEDIDO';btnA.style.display='none';
-    } else {
-      const qtdP=itensP.filter(i=>i.aviso_status!=='reposto'&&i.aviso_status!=='nao_encontrado').length;
-      btnC.style.display='none';btnA.style.display='block';
-      btnA.textContent=`⏳ AGUARDANDO REPOSITOR (${qtdP} item${qtdP>1?'s':''})`;
-    }
-  } else {
-    btnC.style.display='block';btnC.disabled=false;
-    btnC.textContent='✅ CONCLUIR PEDIDO';btnA.style.display='none';
-  }
-
-  document.getElementById('checklist-lista').innerHTML=itensAtuais.map(item=>{
-    const icones={pendente:'⬜',encontrado:'✅',falta:'❌',parcial:'🟡'};
-    const v=item.status!=='pendente';
-    return `<div class="item-card ${item.status}" id="ic-${item.id}">
-      <div class="item-icone">${icones[item.status]||'⬜'}</div>
-      <div class="item-info">
-        <div class="item-cod">${item.codigo||'—'} &nbsp;•&nbsp; 📍 ${item.endereco||'—'}</div>
-        <div class="item-desc">${item.descricao||'—'}</div>
-        <div class="item-det">Qtd: <b style="color:#e2e8f0">${item.quantidade||1}</b>${item.hora_verificado?` &nbsp;•&nbsp; ${item.hora_verificado}`:''}</div>
-        ${item.status==='falta'  ?`<div class="item-aviso">❌ Falta total — repositor avisado</div>`:''}
-        ${item.status==='parcial'?`<div class="item-aviso">🟡 ${item.obs||''} — repositor avisado</div>`:''}
-        ${(item.status==='falta'||item.status==='parcial')&&item.aviso_status==='reposto'
-          ?`<div style="font-size:10px;color:#4ade80;margin-top:3px">✅ Repositor repôs!</div>`:''}
-        ${(item.status==='falta'||item.status==='parcial')&&item.aviso_status==='nao_encontrado'
-          ?`<div style="font-size:10px;color:#f87171;margin-top:3px">🚫 Não encontrado no estoque</div>`:''}
-        <div class="parcial-wrap" id="pw-${item.id}">
-          <label>Quantidade encontrada (de ${item.quantidade||1}):</label>
-          <div class="parcial-row">
-            <input type="number" class="parcial-input" id="pi-${item.id}" min="0" max="${(item.quantidade||1)-1}" placeholder="0" inputmode="numeric"/>
-            <button class="btn-parcial-ok" onclick="confirmarParcial(${item.id},${item.quantidade||1})">Confirmar</button>
-          </div>
-          <div style="font-size:10px;color:#94a3b8;margin-top:4px">Digite quantas unidades encontrou</div>
-        </div>
-      </div>
-      <div class="item-btns">
-        <button class="btn-item ok"          ${v?'disabled':''} onclick="verificarItem(${item.id},'encontrado')">✔</button>
-        <button class="btn-item parcial-btn" ${v?'disabled':''} onclick="toggleParcial(${item.id})" title="Parcial">±</button>
-        <button class="btn-item nok"         ${v?'disabled':''} onclick="verificarItem(${item.id},'falta')">✖</button>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-function toggleParcial(id){
-  const w=document.getElementById(`pw-${id}`);if(!w)return;
-  const a=w.classList.toggle('aberto');
-  if(a)setTimeout(()=>document.getElementById(`pi-${id}`)?.focus(),100);
-}
-
-async function confirmarParcial(id,qtdTotal){
-  const input=document.getElementById(`pi-${id}`);
-  const qtdEnc=parseInt(input?.value);
-  if(isNaN(qtdEnc)||qtdEnc<0){toast('Digite uma quantidade válida!','aviso');return}
-  if(qtdEnc>=qtdTotal){toast('Se encontrou tudo, use ✔!','aviso');return}
-  const qtdFalta=qtdTotal-qtdEnc;
-  await verificarItem(id,'parcial',`Encontrou ${qtdEnc} de ${qtdTotal} — faltam ${qtdFalta}`,qtdFalta);
-}
-
-async function verificarItem(itemId,status,obs='',qtdFalta=0){
-  if(!separadorAtual)return;
-  try{
-    const item=itensAtuais.find(i=>i.id===itemId);
-    await fetch(`${API}/itens/${itemId}/verificar`,{method:'PUT',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({status,obs,qtd_falta:status==='falta'?(item?.quantidade||1):qtdFalta,
-        separador_id:separadorAtual.id,separador_nome:separadorAtual.nome})});
-    if(item){item.status=status;item.obs=obs;item.aviso_status='';}
-    if(status==='falta')    toast('❌ Falta total — repositor avisado!','aviso');
-    if(status==='parcial')  toast('🟡 Parcial registrado — repositor avisado!','aviso');
-    if(status==='encontrado') toast('✅ Item confirmado!','sucesso');
-    renderChecklist();
-  }catch(e){toast('Erro ao verificar item!','erro')}
-}
-
-async function concluirPedido(){
-  if(!pedidoAtualId)return;
-  try{
-    const res=await fetch(`${API}/pedidos/${pedidoAtualId}/concluir`,{method:'PUT'});
-    const data=await res.json();
-    if(data.aguardando){toast('⏳ Ainda aguardando o repositor!','aviso');return}
-    if(data.erro){toast(`⚠️ ${data.erro}`,'aviso');return}
-    toast(`🎉 Pedido ${pedidoAtualNum} CONCLUÍDO!`,'sucesso');
-    document.getElementById('checklist-wrap').style.display='none';
-    document.getElementById('input-pedido').value='';
-    document.getElementById('status-atual').textContent='';
-    pedidoAtualId=null;pedidoAtualNum=null;itensAtuais=[];
-    carregarContadoresSep();carregarFila();
-    setTimeout(()=>document.getElementById('input-pedido').focus(),300);
-  }catch(e){toast('Erro ao concluir!','erro')}
-}
-
-async function carregarContadoresSep(){
-  if(!separadorAtual)return;
-  try{
-    const res=await fetch(`${API}/produtividade?separador_id=${separadorAtual.id}`);
-    const dados=await res.json();
-    if(dados.length){
-      document.getElementById('sep-cnt-hoje').textContent=dados[0].hoje||0;
-      document.getElementById('sep-cnt-mes').textContent =dados[0].mes||0;
-      document.getElementById('sep-cnt-ano').textContent =dados[0].total_ano||0;
-    }
-  }catch(e){}
-}
-
-async function carregarFila(){
-  if(!separadorAtual){
-    document.getElementById('tbody-fila').innerHTML='<tr><td colspan="4" style="color:#f87171;text-align:center;padding:20px">⚠️ Usuário sem separador vinculado</td></tr>';
-    return;
-  }
-  try{
-    const res=await fetch(`${API}/pedidos`);
-    const todos=await res.json();
-    const ativos=todos.filter(p=>p.status!=='concluido');
-    const meus=ativos.filter(p=>p.separador_id===separadorAtual.id);
-    document.getElementById('badge-fila').textContent=`${ativos.length} total`;
-    document.getElementById('badge-meus').textContent=`${meus.length} meus`;
-    const html=!ativos.length
-      ?'<tr><td colspan="4" style="color:#64748b;text-align:center;padding:20px">Nenhum pedido na fila</td></tr>'
-      :ativos.map(p=>{
-        const eMeu=p.separador_id===separadorAtual.id;
-        const ocup=p.separador_id&&p.separador_id!==separadorAtual.id;
-        const sit=eMeu?`<span class="pill separando">Meu</span>`:ocup?`<span class="pill falta">Ocupado</span>`:`<span class="pill pendente">Livre</span>`;
-        const clk=!ocup?`onclick="selecionarPedidoFila('${p.numero_pedido}')" style="cursor:pointer"`:'';
-        return `<tr class="${eMeu?'meu':''}" ${clk}>
-          <td style="color:${eMeu?'#60a5fa':'#cbd5e1'};font-weight:${eMeu?700:400}">${p.numero_pedido}</td>
-          <td>${p.itens||'—'}</td>
-          <td><span class="pill ${(p.status||'').replace(' ','-')}">${p.status}</span></td>
-          <td>${sit}</td>
-        </tr>`;
-      }).join('');
-    document.getElementById('tbody-fila').innerHTML=html;
-  }catch(e){}
-}
-
-function selecionarPedidoFila(num){
-  document.getElementById('input-pedido').value=num;
-  confirmarPedido();
-}
-
-// ══ REPOSIÇÃO ══
-async function carregarAvisos(){
-  try{
-    const status=document.getElementById('filtro-rep-status').value;
-    let url=`${API}/repositor/avisos`;if(status)url+=`?status=${status}`;
-    const res=await fetch(url);const avisos=await res.json();
-    const pend=avisos.filter(a=>a.status==='pendente').length;
-    const rep =avisos.filter(a=>a.status==='reposto').length;
-    document.getElementById('rep-pendente').textContent=pend;
-    document.getElementById('rep-reposto').textContent=rep;
-    const badge=document.getElementById('menu-badge-rep');
-    if(badge){badge.textContent=pend;badge.style.display=pend>0?'inline':'none';}
-    const lista=document.getElementById('lista-avisos');
-    if(!avisos.length){lista.innerHTML='<div style="color:#64748b;text-align:center;padding:40px;font-size:13px">✅ Nenhum item encontrado</div>';return}
-    lista.innerHTML=avisos.map(a=>`
-      <div class="aviso-card ${a.status}" id="aviso-${a.id}">
-        <div style="font-size:22px">${a.status==='reposto'?'✅':a.status==='nao_encontrado'?'🚫':'🔴'}</div>
-        <div class="aviso-info">
-          <div class="aviso-cod">${a.codigo||'—'}
-            <span style="font-size:10px;font-weight:400;color:#94a3b8;margin-left:8px">Pedido #${a.numero_pedido}</span>
-          </div>
-          <div class="aviso-desc">${a.descricao||'—'}</div>
-          <div class="aviso-det">📍 ${a.endereco||'—'} &nbsp;•&nbsp; 📦 Qtd: ${a.quantidade||'—'} &nbsp;•&nbsp; 👤 ${a.separador_nome||'—'}</div>
-          ${a.status==='reposto'       ?`<div style="font-size:10px;color:#4ade80;margin-top:4px">✅ Reposto às ${a.hora_reposto||'—'}</div>`:''}
-          ${a.status==='nao_encontrado'?`<div style="font-size:10px;color:#a78bfa;margin-top:4px">🚫 Não encontrado às ${a.hora_reposto||'—'}</div>`:''}
-          ${a.status==='pendente'      ?`<div style="font-size:10px;color:#f87171;margin-top:4px">⏱ Aviso às ${a.hora_aviso||'—'}</div>`:''}
-        </div>
-        <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
-          ${a.status==='pendente'?`
-            <button class="btn btn-success btn-sm" onclick="marcarReposto(${a.id})">✅ Reposto</button>
-            <button class="btn btn-sm" style="background:#6366f1;color:white" onclick="marcarNaoEncontrado(${a.id})">🚫 Não encontrei</button>
-          `:`<span class="pill ${a.status==='reposto'?'reposto':'pendente'}">${a.status==='reposto'?'Reposto':'Não encontrado'}</span>`}
-        </div>
-      </div>`).join('');
-  }catch(e){document.getElementById('lista-avisos').innerHTML='<div style="color:#f87171;text-align:center;padding:20px">Erro ao carregar</div>'}
-}
-
-async function marcarReposto(id){
-  try{await fetch(`${API}/repositor/avisos/${id}/reposto`,{method:'PUT'});toast('✅ Marcado como reposto!','sucesso');carregarAvisos();}
-  catch(e){toast('Erro!','erro')}
-}
-
-async function marcarNaoEncontrado(id){
-  try{await fetch(`${API}/repositor/avisos/${id}/nao_encontrado`,{method:'PUT'});toast('🚫 Marcado como não encontrado!','aviso');carregarAvisos();}
-  catch(e){toast('Erro!','erro')}
-}
-
-document.getElementById('input-pedido')?.addEventListener('keypress',e=>{if(e.key==='Enter')confirmarPedido()});
-</script>
+<!-- JavaScript separado -->
+<script src="app.js"></script>
 </body>
 </html>
