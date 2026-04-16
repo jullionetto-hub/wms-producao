@@ -13,4 +13,7 @@ let historicoImportacoes = JSON.parse(localStorage.getItem('historico_importacoe
 let pedidoCaixaVinculada = false;
 let alertaInterval     = null;
 let perfilSelecionado  = '';
+let repFiltroAtual     = '';
 let repFiltroAtivo     = '';
+
+let isMobile = () => window.innerWidth <= 768;
