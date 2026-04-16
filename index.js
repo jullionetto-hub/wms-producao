@@ -820,10 +820,20 @@ app.post('/importar', async (req, res) => {
   for (const numero of numeros) {
     const itens = pedidosMap[numero];
     try {
-      // Calcula pontuação: itens * 1.5 + ruas_unicas * 2 + produtos_unicos * 1
-      const ruasUnicas = new Set(itens.map(i => String(i.endereco||'').split(',')[0].trim())).size;
-      const produtosUnicos = new Set(itens.map(i => i.codigo)).size;
-      const pontuacao = Math.round(itens.length * 1.5 + ruasUnicas * 2 + produtosUnicos * 1);
+      // Pontuação por peso de corredor + ruas únicas
+      function _pesoCorredor(end) {
+        if (!end) return 1.0;
+        const e = String(end).trim().toUpperCase();
+        if (e.startsWith('ZA') || e.toLowerCase().includes('arara')) return 2.0;
+        const l = e.charAt(0);
+        if ('ABCDEPQRSTU'.includes(l)) return 1.0;
+        if ('MNOUVWXYZ'.includes(l)) return 1.5;
+        if ('FGHIJKL'.includes(l)) return 2.0;
+        return 1.0;
+      }
+      const ruasUnicas = new Set(itens.map(i => String(i.endereco||'').split(',')[0].trim().replace(/\d+/g,'').trim())).size;
+      const somaItens = itens.reduce((s,i) => s + _pesoCorredor(i.endereco) * (parseInt(i.quantidade)||1), 0);
+      const pontuacao = Math.round(somaItens + ruasUnicas * 2);
       const cliente = itens[0]?.cliente || '';
       const transportadora = itens[0]?.transportadora || '';
       const result = await dbRun(
@@ -1013,78 +1023,119 @@ app.get('/pedidos/info/:numero_pedido', (req, res) => {
 });
 
 // ─── DISTRIBUIÇÃO JUSTA DE PEDIDOS ──────────────────────────────────────────
-// Algoritmo: calcula pontuação de cada pedido (itens, ruas, produtos únicos)
-// Distribui de forma balanceada usando greedy algorithm (menor carga primeiro)
+//
+// PONTUAÇÃO por corredor (extrai primeira letra do endereço):
+//   Fácil  (A-E, P-U)        → peso 1.0
+//   Médio  (M, N, O, V-Z)    → peso 1.5
+//   Difícil (F-L, ZA, Arara) → peso 2.0
+//
+// Fórmula por item: peso_corredor
+// Fórmula por pedido: Σ(peso_corredor × qtd) + ruas_únicas × 2
+//
+// Prioridade: RETIRADA DRIVE THRU vai sempre primeiro na distribuição
+// Ordenação: mais antigo primeiro (hora_pedido ASC) dentro de cada grupo
+// Algoritmo: greedy — atribui sempre ao separador com menor carga total
+//
+function calcularPesoCorredor(endereco) {
+  if (!endereco) return 1.0;
+  const end = String(endereco).trim().toUpperCase();
+  // ZA e Arara — difícil
+  if (end.startsWith('ZA') || end.toLowerCase().includes('arara')) return 2.0;
+  const letra = end.charAt(0);
+  // Fácil: A,B,C,D,E,P,Q,R,S,T,U
+  if ('ABCDEPQRSTU'.includes(letra)) return 1.0;
+  // Médio: M,N,O,V,W,X,Y,Z
+  if ('MNOUVWXYZ'.includes(letra)) return 1.5;
+  // Difícil: F,G,H,I,J,K,L
+  if ('FGHIJKL'.includes(letra)) return 2.0;
+  return 1.0;
+}
+
+function calcularPontuacaoPedido(itens) {
+  if (!itens || !itens.length) return 0;
+  // Soma peso por item × quantidade
+  const somaItens = itens.reduce((sum, it) => {
+    const peso = calcularPesoCorredor(it.endereco);
+    return sum + peso * (it.quantidade || 1);
+  }, 0);
+  // Ruas únicas (primeira parte do endereço antes de vírgula ou número)
+  const ruas = new Set(itens.map(it => {
+    const end = String(it.endereco || '').split(',')[0].trim().replace(/\d+/g,'').trim();
+    return end;
+  }));
+  return Math.round(somaItens + ruas.size * 2);
+}
+
 app.post('/pedidos/distribuicao', async (req, res) => {
-  const { separadores } = req.body;
+  const { separadores, hora_ini, hora_fim, apenas_sem_sep } = req.body;
   if (!separadores || !separadores.length)
     return res.status(400).json({ erro: 'Informe os separadores!' });
 
   try {
-    // Busca pedidos pendentes sem separador (ou redistribuível)
+    // Busca pedidos pendentes com itens para calcular pontuação real
+    let where = "p.status='pendente'";
+    if (apenas_sem_sep !== false) where += ' AND p.separador_id IS NULL';
+    if (hora_ini) where += ` AND p.hora_pedido >= '${hora_ini}'`;
+    if (hora_fim) where += ` AND p.hora_pedido <= '${hora_fim}'`;
+
     const pedidos = await new Promise((resolve, reject) => {
       db.all(
-        `SELECT p.*, 
-          (SELECT COUNT(DISTINCT substr(i.endereco,1, CASE WHEN instr(i.endereco,',')>0 THEN instr(i.endereco,',')-1 ELSE length(i.endereco) END))
-           FROM itens_pedido i WHERE i.pedido_id=p.id) as ruas_unicas,
-          (SELECT COUNT(DISTINCT i.codigo) FROM itens_pedido i WHERE i.pedido_id=p.id) as produtos_unicos
-         FROM pedidos p
-         WHERE p.status='pendente'
-         ORDER BY p.pontuacao DESC, p.itens DESC`,
+        `SELECT p.* FROM pedidos p WHERE ${where} ORDER BY p.hora_pedido ASC, p.id ASC`,
         [], (err, rows) => { if (err) reject(err); else resolve(rows || []); }
       );
     });
 
     if (!pedidos.length) return res.json({ plano: [], total_pedidos: 0 });
 
-    // Busca nomes dos separadores
-    const sepNomes = await new Promise((resolve, reject) => {
-      const placeholders = separadores.map(()=>'?').join(',');
-      db.all(
-        `SELECT s.id, s.nome FROM separadores s WHERE s.usuario_id IN (${placeholders}) OR s.id IN (${placeholders})`,
-        [...separadores, ...separadores],
-        (err, rows) => { if (err) reject(err); else resolve(rows || []); }
-      );
-    });
-
-    // Busca separadores por usuario_id
-    const sepMap = {};
-    for (const sepId of separadores) {
-      const row = await new Promise((resolve, reject) => {
-        db.get(
-          'SELECT s.id, s.nome FROM separadores s WHERE s.usuario_id=? OR s.id=? LIMIT 1',
-          [sepId, sepId],
-          (err, r) => { if (err) reject(err); else resolve(r); }
-        );
+    // Busca itens de cada pedido e calcula pontuação real
+    for (const ped of pedidos) {
+      const itens = await new Promise((resolve, reject) => {
+        db.all('SELECT endereco, quantidade FROM itens_pedido WHERE pedido_id=?',
+          [ped.id], (err, r) => { if (err) reject(err); else resolve(r || []); });
       });
-      if (row) sepMap[sepId] = row;
-      else {
-        const userRow = await new Promise((resolve, reject) => {
-          db.get('SELECT id, nome FROM usuarios WHERE id=?', [sepId], (err, r) => { if (err) reject(err); else resolve(r); });
-        });
-        if (userRow) sepMap[sepId] = { id: sepId, nome: userRow.nome };
-      }
+      ped._pontuacao = calcularPontuacaoPedido(itens);
+      ped._itens = itens;
     }
 
-    // Algoritmo greedy: ordena pedidos por pontuação DESC, atribui ao sep com menor carga
+    // Separa RETIRADA DRIVE THRU (prioridade máxima — vai primeiro)
+    const drive = pedidos.filter(p => String(p.transportadora||'').toUpperCase().includes('DRIVE'));
+    const outros = pedidos.filter(p => !String(p.transportadora||'').toUpperCase().includes('DRIVE'));
+    // Ordena outros por pontuação DESC (mais pesado primeiro para melhor balanceamento)
+    outros.sort((a,b) => b._pontuacao - a._pontuacao);
+    const ordenados = [...drive, ...outros];
+
+    // Resolve separadores (por usuario_id ou separador_id)
+    const sepMap = {};
+    for (const sid of separadores) {
+      let row = await new Promise((resolve, reject) => {
+        db.get('SELECT s.id, s.nome FROM separadores s WHERE s.usuario_id=? LIMIT 1',
+          [sid], (err, r) => { if (err) reject(err); else resolve(r); });
+      });
+      if (!row) row = await new Promise((resolve, reject) => {
+        db.get('SELECT id, nome FROM usuarios WHERE id=?',
+          [sid], (err, r) => { if (err) reject(err); else resolve(r); });
+      });
+      if (row) sepMap[sid] = row;
+    }
+
+    // Algoritmo greedy — atribui ao sep com menor carga
     const filas = separadores.map(sid => ({
       separador_id: sid,
       separador_nome: sepMap[sid]?.nome || `Sep ${sid}`,
       pedidos: [],
-      pontuacao_total: 0
+      pontuacao_total: 0,
+      sep_db_id: sepMap[sid]?.id || null
     }));
 
-    for (const ped of pedidos) {
-      // Recalcula pontuação se não armazenada
-      const pts = ped.pontuacao || Math.round((ped.itens||0)*1.5 + (ped.ruas_unicas||0)*2 + (ped.produtos_unicos||0));
-      // Encontra fila com menor pontuação total (menor carga)
+    for (const ped of ordenados) {
       filas.sort((a,b) => a.pontuacao_total - b.pontuacao_total);
       filas[0].pedidos.push(ped.numero_pedido);
-      filas[0].pontuacao_total += pts;
+      filas[0].pontuacao_total += ped._pontuacao;
     }
 
     const plano = filas.map(f => ({
       separador_id: f.separador_id,
+      sep_db_id: f.sep_db_id,
       separador_nome: f.separador_nome,
       pedidos: f.pedidos,
       pontuacao_total: f.pontuacao_total
@@ -1116,12 +1167,13 @@ app.post('/pedidos/distribuicao/confirmar', async (req, res) => {
         });
         const sepId = sep ? sep.id : null;
         
-        if (sepId) {
-          await dbRun(
+        const dbSepId = item.sep_db_id || sepId;
+        if (dbSepId) {
+          const r = await dbRun(
             "UPDATE pedidos SET separador_id=? WHERE numero_pedido=? AND status='pendente'",
-            [sepId, numPedido]
+            [dbSepId, numPedido]
           );
-          distribuidos++;
+          if (r.changes > 0) distribuidos++;
         }
       }
     }
