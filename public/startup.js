@@ -1,28 +1,28 @@
-﻿/* STARTUP.JS - WMS Miess */
+/* ══ STARTUP.JS ══ WMS Miess — Inicialização ══ */
+/* Carregado por último, após todos os módulos */
 
-var hoje = hojeLocal();
+// Variáveis globais restantes
+const hoje = hojeLocal();
 
-var elCaixa = document.getElementById('cl-input-caixa');
-if (elCaixa) elCaixa.addEventListener('keypress', function(e){ if(e.key==='Enter') vincularCaixaDesktop(); });
+/* Eventos de teclado para inputs de caixa */
+document.getElementById('cl-input-caixa')?.addEventListener('keypress', e => { if(e.key==='Enter') vincularCaixaDesktop(); });
+document.getElementById('m-input-caixa')?.addEventListener('keypress', e => { if(e.key==='Enter') vincularCaixaMobile(); });
+document.getElementById('ck-input-caixa')?.addEventListener('keypress', e => { if(e.key==='Enter') buscarCaixa(); });
 
-var elMCaixa = document.getElementById('m-input-caixa');
-if (elMCaixa) elMCaixa.addEventListener('keypress', function(e){ if(e.key==='Enter') vincularCaixaMobile(); });
-
-var elCk = document.getElementById('ck-input-caixa');
-if (elCk) elCk.addEventListener('keypress', function(e){ if(e.key==='Enter') buscarCaixa(); });
-
+/* Datas padrão nas estatísticas */
 (function() {
-  var ini = document.getElementById('est-ini');
-  var fim = document.getElementById('est-fim');
+  const ini = document.getElementById('est-ini');
+  const fim = document.getElementById('est-fim');
   if (ini) ini.value = hoje;
   if (fim) fim.value = hoje;
 })();
 
+/* Inicialização — verifica sessão existente */
 (async function verificarSessao() {
   try {
-    var res = await fetch(API + '/auth/me', { credentials:'include' });
+    const res  = await fetch(`${API}/auth/me`, { credentials:'include' });
     if (!res.ok) return;
-    var data = await res.json();
+    const data = await res.json();
     usuarioAtual      = data.usuario;
     separadorAtual    = data.separador;
     perfilSelecionado = data.usuario.perfil;

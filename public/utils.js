@@ -1,59 +1,63 @@
-﻿/* UTILS.JS - WMS Miess */
+/* ══ UTILS.JS ══ WMS Miess ══ */
 
-async function apiFetch(url, opts) {
-  opts = opts || {};
+
+let isMobile = () => window.innerWidth <= 768;
+
+async function apiFetch(url, opts={}) {
   try {
-    var res = await fetch(url, Object.assign({ credentials:'include' }, opts));
-    var data = await res.json().catch(function(){ return {}; });
-    if (!res.ok) throw new Error(data.erro || 'HTTP ' + res.status);
+    const res = await fetch(url, { credentials:'include', ...opts });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw Object.assign(new Error(data.erro || `HTTP ${res.status}`), { status: res.status });
     return data;
   } catch(e) {
-    if (e.name === 'TypeError') throw new Error('Sem conexao com o servidor');
+    if (e.name === 'TypeError') throw new Error('Sem conexão com o servidor');
     throw e;
   }
 }
 
-function sanitize(str, maxLen) {
-  maxLen = maxLen || 200;
+function sanitize(str, maxLen=200) {
   if (!str) return '';
   return String(str).trim().slice(0, maxLen);
 }
 
-function debounce(fn, ms) {
-  ms = ms || 300;
-  var t;
-  return function() {
-    var args = arguments;
-    clearTimeout(t);
-    t = setTimeout(function(){ fn.apply(null, args); }, ms);
-  };
+// ── Segurança: escapa HTML para evitar XSS ──
+
+function debounce(fn, ms=300) {
+  let t; return (...args) => { clearTimeout(t); t = setTimeout(()=>fn(...args), ms); };
 }
 
-async function retryFetch(url, opts, retries) {
-  retries = retries || 2;
-  for (var i = 0; i <= retries; i++) {
-    try { return await apiFetch(url, opts || {}); }
-    catch(e) { if (i === retries || e.status) throw e; await new Promise(function(r){ setTimeout(r, 1000*(i+1)); }); }
+// RetryFetch: retentar em caso de falha de rede
+async function retryFetch(url, opts={}, retries=2) {
+  for (let i=0; i<=retries; i++) {
+    try { return await apiFetch(url, opts); }
+    catch(e) { if (i===retries || e.status) throw e; await new Promise(r=>setTimeout(r,1000*(i+1))); }
   }
 }
 
-function setLoading(btn, loading) {
+function setLoading(btn, loading, originalText=null) {
   if (!btn) return;
-  if (loading) { btn._orig = btn.innerHTML; btn.disabled = true; btn.innerHTML = 'Aguarde...'; }
-  else { btn.disabled = false; btn.innerHTML = btn._orig || btn.innerHTML; }
+  if (loading) {
+    btn._origText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span style="opacity:.7">⏳ Aguarde...</span>';
+  } else {
+    btn.disabled = false;
+    btn.innerHTML = originalText || btn._origText || btn.innerHTML;
+  }
 }
 
 function esc(str) {
-  if (str === null || str === undefined) return '--';
+  if (str === null || str === undefined) return '—';
   if (typeof str === 'number') return String(str);
-  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
+let pedidoCaixaVinculada = false;
 
 function hojeLocal() {
-  var d = new Date();
-  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
-
+const hoje = hojeLocal();
 function labelSubtipoRepositor(v) {
   if (v === 'busca') return 'REPOSITOR BUSCA';
   if (v === 'abastecimento') return 'REPOSITOR ABASTECIMENTO';
@@ -61,35 +65,22 @@ function labelSubtipoRepositor(v) {
 }
 
 function modoRepositorAtual() {
-  return (usuarioAtual && usuarioAtual.subtipo_repositor) ? usuarioAtual.subtipo_repositor : 'geral';
+  return usuarioAtual?.subtipo_repositor || 'geral';
 }
 
+
 function atualizarRelogio() {
-  var agora = new Date();
-  var str = agora.toLocaleString('pt-BR', { timeZone:'America/Sao_Paulo' });
-  var el = document.getElementById('data-hora');
+  const agora = new Date();
+  const str   = agora.toLocaleString('pt-BR', { timeZone:'America/Sao_Paulo' });
+  const el    = document.getElementById('data-hora');
   if (el) el.textContent = str;
 }
 
-function toast(msg, tipo) {
-  tipo = tipo || 'info';
-  var el = document.createElement('div');
-  el.className = 'toast ' + tipo;
+function toast(msg, tipo='info') {
+  const el = document.createElement('div');
+  el.className = `toast ${tipo}`;
   el.textContent = msg;
-  var root = document.getElementById('toast-root');
-  if (root) root.appendChild(el);
-  setTimeout(function(){ el.remove(); }, 3500);
-}
-
-function mostrarStatus(msg, tipo, pct) {
-  var wrap = document.getElementById('import-status-wrap');
-  var txt  = document.getElementById('import-status-txt');
-  var bar  = document.getElementById('import-bar');
-  var pctEl = document.getElementById('import-pct');
-  if (wrap) wrap.style.display = 'block';
-  if (txt) { txt.textContent = msg; txt.style.color = tipo==='erro' ? 'var(--red)' : tipo==='sucesso' ? 'var(--green)' : 'var(--text2)'; }
-  if (pct !== null && pct !== undefined) {
-    if (bar) { bar.style.width = pct + '%'; bar.style.background = pct >= 100 ? 'var(--green)' : 'var(--accent)'; }
-    if (pctEl) { pctEl.textContent = pct + '%'; pctEl.style.color = pct >= 100 ? 'var(--green)' : 'var(--accent)'; }
-  }
+  const root = document.getElementById('toast-root');
+  root.appendChild(el);
+  setTimeout(() => el.remove(), 3500);
 }
