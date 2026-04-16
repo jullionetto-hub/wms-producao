@@ -2192,7 +2192,7 @@ function processarArquivoFile(file) {
       }
       if (!dados.length) { mostrarStatus('❌ Nenhuma linha encontrada!','erro'); return; }
       pedidosImportar = dados;
-      const totalP = new Set(dados.map(d=>d.numero_pedido)).size;
+      const totalP = new Set(dadosUsar.map(d=>d.numero_pedido)).size;
       mostrarStatus(`✅ ${dados.length} linha(s) em ${totalP} pedido(s) — clique Importar`,'sucesso');
       document.getElementById('tbody-prev').innerHTML =
         dados.slice(0,10).map(d=>`<tr><td>${d.numero_pedido}</td><td style="color:var(--accent)">${d.codigo}</td><td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.descricao}</td><td style="color:var(--amber)">${d.endereco}</td><td style="color:var(--green)">${d.quantidade}</td></tr>`).join('') +
@@ -2300,7 +2300,7 @@ function limparHistorico() {
 
 
 function mostrarStatus(msg, tipo) {
-  const cores = { carregando:'background:#EFF6FF;border:1px solid #BFDBFE;color:#1D4ED8', sucesso:'background:#F0FDF4;border:1px solid #BBF7D0;color:#15803D', erro:'background:#FEF2F2;border:1px solid #FECACA;color:#DC2626' };
+  const cores = { carregando:'background:#EFF6FF;border:1px solid #BFDBFE;color:#1D4ED8', sucesso:'background:#F0FDF4;border:1px solid #BBF7D0;color:#15803D', erro:'background:#FEF2F2;border:1px solid #FECACA;color:#DC2626', aviso:'background:#FFFBEB;border:1px solid #FDE68A;color:#D97706' };
   const el = document.getElementById('status-leitura');
   el.setAttribute('style', `display:block;margin-top:10px;padding:10px;border-radius:8px;font-size:12px;font-weight:600;text-align:center;${cores[tipo]}`);
   el.textContent = msg;
@@ -3947,13 +3947,30 @@ function processarArquivoModalFile(file) {
           transpData[num] = { cliente:String(r[iCli]||'').trim(), transportadora:String(r[iServ]||'').trim(), aguardando_desde:agVal };
         }
       }
-      dados.forEach(d => { const t = transpData[d.numero_pedido]; if (t) { d.cliente = t.cliente; d.transportadora = t.transportadora; d.aguardando_desde = t.aguardando_desde||''; } });
-      if (!dados.length) { mostrarStatusModal('❌ Nenhuma linha encontrada!','erro'); return; }
-      pedidosImportarModal = dados;
-      const totalP = new Set(dados.map(d=>d.numero_pedido)).size;
+      // Filtra: só importa pedidos que existem na aba Transportadora
+      // (pedidos sem correspondência são de outros lotes/datas e devem ser ignorados)
+      let dadosFiltrados = dados;
+      if (transpSheet && Object.keys(transpData).length > 0) {
+        const antes = new Set(dados.map(d=>d.numero_pedido)).size;
+        dadosFiltrados = dados.filter(d => transpData[d.numero_pedido]);
+        dadosFiltrados.forEach(d => { const t = transpData[d.numero_pedido]; d.cliente = t.cliente; d.transportadora = t.transportadora; d.aguardando_desde = t.aguardando_desde||''; });
+        const depois = new Set(dadosFiltrados.map(d=>d.numero_pedido)).size;
+        const ignorados = antes - depois;
+        if (ignorados > 0) {
+          mostrarStatusModal(`⚠️ ${ignorados} pedido(s) da aba Itens não encontrados na aba Transportadora foram ignorados.`, 'aviso');
+          setTimeout(() => mostrarStatusModal('', ''), 4000);
+        }
+      } else {
+        dadosFiltrados.forEach(d => { const t = transpData[d.numero_pedido]; if (t) { d.cliente = t.cliente; d.transportadora = t.transportadora; d.aguardando_desde = t.aguardando_desde||''; } });
+      }
+      const dados_final = dadosFiltrados;
+      const dadosUsar = (typeof dados_final !== 'undefined') ? dados_final : dados;
+      if (!dadosUsar.length) { mostrarStatusModal('❌ Nenhuma linha encontrada!','erro'); return; }
+      pedidosImportarModal = dadosUsar;
+      const totalP = new Set(dadosUsar.map(d=>d.numero_pedido)).size;
       mostrarStatusModal(`✅ ${dados.length} linha(s) em ${totalP} pedido(s)${transpSheet?' — Transportadora OK':''}`, 'sucesso');
       document.getElementById('modal-tbody-prev').innerHTML =
-        dados.slice(0,10).map(d=>`<tr><td>${d.numero_pedido}</td><td style="color:var(--accent)">${d.codigo}</td><td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.descricao}</td><td style="color:var(--amber)">${d.endereco}</td><td style="color:var(--green)">${d.quantidade}</td></tr>`).join('') +
+        dadosUsar.slice(0,10).map(d=>`<tr><td>${d.numero_pedido}</td><td style="color:var(--accent)">${d.codigo}</td><td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.descricao}</td><td style="color:var(--amber)">${d.endereco}</td><td style="color:var(--green)">${d.quantidade}</td></tr>`).join('') +
         (dados.length>10?`<tr><td colspan="5" style="color:var(--text3);text-align:center;padding:8px">... +${dados.length-10} linhas</td></tr>`:'');
       document.getElementById('modal-txt-total-import').textContent = `${totalP} pedido(s) • ${dados.length} itens${transpSheet?' • Transportadora OK':''}`;
       document.getElementById('modal-preview-importacao').style.display = 'block';
@@ -4001,7 +4018,7 @@ function renderHistoricoModal() {
   el.innerHTML = historicoImportacoes.map(h=>`<div class="hist-item"><div><div style="color:var(--green);font-weight:700">✅ ${h.ok} pedido(s)</div>${h.erro>0?`<div style="color:var(--amber);font-size:10px">⚠️ ${h.erro} já existiam</div>`:''}</div><div style="color:var(--text3);font-size:10px">${h.data} às ${h.hora}</div></div>`).join('');
 }
 function mostrarStatusModal(msg, tipo) {
-  const cores = { carregando:'background:#EFF6FF;border:1px solid #BFDBFE;color:#1D4ED8', sucesso:'background:#F0FDF4;border:1px solid #BBF7D0;color:#15803D', erro:'background:#FEF2F2;border:1px solid #FECACA;color:#DC2626' };
+  const cores = { carregando:'background:#EFF6FF;border:1px solid #BFDBFE;color:#1D4ED8', sucesso:'background:#F0FDF4;border:1px solid #BBF7D0;color:#15803D', erro:'background:#FEF2F2;border:1px solid #FECACA;color:#DC2626', aviso:'background:#FFFBEB;border:1px solid #FDE68A;color:#D97706' };
   const el = document.getElementById('modal-status-leitura');
   if (!el) return;
   if (!msg) { el.style.display='none'; return; }
@@ -4020,6 +4037,8 @@ async function abrirModalDistribuicao() {
   document.getElementById('btn-confirmar-dist').style.display = 'none';
   document.getElementById('btn-calcular-dist').style.display = 'inline-flex';
   distribuicaoPlano = null;
+  // Recalcula pontuação de pedidos antigos em background
+  fetch(`${API}/pedidos/recalcular-pontuacao`, { method:'POST', credentials:'include' }).catch(()=>{});
   await carregarSeparadoresDistribuicao();
   await carregarPedidosDistribuicao();
 }
@@ -4043,7 +4062,13 @@ async function carregarPedidosDistribuicao() {
     const pedidos = await res.json();
     const el = document.getElementById('dist-preview');
     if (!pedidos.length) { el.innerHTML = '<div style="color:var(--text3);font-size:12px;text-align:center;padding:20px">Nenhum pedido pendente para distribuir</div>'; return; }
-    el.innerHTML = `<div style="font-size:11px;color:var(--text3);margin-bottom:8px">${pedidos.length} pedido(s) pendentes</div><div class="tabela-wrap"><table><thead><tr><th>PEDIDO</th><th>CLIENTE</th><th>HORÁRIO</th><th>ITENS</th><th>PONTUAÇÃO</th><th>ATRIBUÍDO A</th></tr></thead><tbody>${pedidos.map(p=>`<tr><td style="font-weight:600;color:var(--text)">${p.numero_pedido}</td><td style="font-size:11px;color:var(--text2)">${p.cliente||'—'}</td><td>${p.itens||0}</td><td><span style="font-family:'Space Mono',monospace;color:var(--indigo)">${p.pontuacao||Math.round((p.itens||0)*1.5)}</span></td><td style="color:var(--text3)">${p.separador_nome||'—'}</td></tr>`).join('')}</tbody></table></div>`;
+    const qtdInput = parseInt(document.getElementById('dist-quantidade')?.value)||0;
+    const apenasSemCheck = document.getElementById('dist-apenas-sem-sep')?.checked !== false;
+    const respHora = document.getElementById('dist-respeitar-hora')?.checked !== false;
+    let lista = apenasSemCheck ? pedidos.filter(p=>!p.separador_id) : pedidos;
+    if (respHora) lista.sort((a,b)=>(a.aguardando_desde||a.hora_pedido||'').localeCompare(b.aguardando_desde||b.hora_pedido||''));
+    if (qtdInput > 0) lista = lista.slice(0, qtdInput);
+    el.innerHTML = `<div style="font-size:11px;color:var(--text3);margin-bottom:8px">${lista.length} de ${pedidos.length} pedido(s) serão distribuídos</div><div class="tabela-wrap" style="max-height:240px;overflow-y:auto"><table><thead><tr><th>PEDIDO</th><th>CLIENTE</th><th>HORÁRIO</th><th>ITENS</th><th>PONTUAÇÃO</th><th>STATUS</th></tr></thead><tbody>${lista.map(p=>`<tr><td style="font-weight:700;color:var(--text);font-family:'Space Mono',monospace;font-size:11px">${p.numero_pedido}</td><td style="font-size:11px;color:var(--text2);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.cliente||'—'}</td><td style="font-size:11px;color:var(--amber);font-weight:600;white-space:nowrap">${(p.aguardando_desde||p.hora_pedido||'—').replace('15/04/2026 ','').replace('16/04/2026 ','')}</td><td style="font-weight:600">${p.itens||0}</td><td><span style="font-family:'Space Mono',monospace;color:var(--indigo);font-weight:700">${p.pontuacao||'—'}</span></td><td><span class="pill ${(p.status||'pendente')}">${p.status||'pendente'}</span></td></tr>`).join('')}</tbody></table></div>`;
   } catch(e) {}
 }
 async function calcularDistribuicao() {
@@ -4135,14 +4160,21 @@ window.addEventListener('click', e => {
 <div id="modal-distribuicao" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9998;align-items:center;justify-content:center;padding:16px">
   <div style="background:var(--surface);border-radius:var(--r);box-shadow:var(--sh-lg);width:100%;max-width:700px;max-height:90vh;overflow-y:auto">
     <div style="background:var(--surface2);padding:14px 18px;border-bottom:1px solid var(--border);border-radius:var(--r) var(--r) 0 0;display:flex;align-items:center;justify-content:space-between">
-      <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">⚖️ Distribuição Justa de Pedidos</div>
+      <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">⚖️ Distribuição de Pedidos</div>
       <button onclick="fecharModalDistribuicao()" style="background:transparent;border:none;font-size:22px;cursor:pointer;color:var(--text3);padding:0 4px">✕</button>
     </div>
     <div style="padding:18px">
-      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px;margin-bottom:14px;font-size:12px;color:var(--text2)">
-        <b style="color:var(--accent)">Como funciona:</b> Pontuação = <b>itens × peso_corredor + ruas_únicas × 2</b>.<br>
-        Corredores fáceis (A-E,P-U): peso 1 &nbsp;•&nbsp; Médios (M-O,V-Z): peso 1.5 &nbsp;•&nbsp; Difíceis (F-L,ZA,Arara): peso 2<br>
-        <b>RETIRADA DRIVE THRU</b> vai sempre primeiro 🚗
+      <div style="background:linear-gradient(135deg,rgba(37,99,235,.04),rgba(99,102,241,.04));border:1px solid rgba(37,99,235,.15);border-radius:var(--r-sm);padding:14px 16px;margin-bottom:16px">
+        <div style="font-size:11px;font-weight:800;color:var(--accent);letter-spacing:1.5px;margin-bottom:10px;text-transform:uppercase">📊 Critérios de Distribuição</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:11px;color:var(--text2)">
+          <div style="display:flex;align-items:flex-start;gap:6px"><span style="color:var(--green);font-size:13px">●</span><span><b style="color:var(--text)">Corredores fáceis</b> (A–E, P–U)<br><span style="color:var(--text3)">Peso 1.0 por item</span></span></div>
+          <div style="display:flex;align-items:flex-start;gap:6px"><span style="color:var(--amber);font-size:13px">●</span><span><b style="color:var(--text)">Corredores médios</b> (M, N, O, V–Z)<br><span style="color:var(--text3)">Peso 1.5 por item</span></span></div>
+          <div style="display:flex;align-items:flex-start;gap:6px"><span style="color:var(--red);font-size:13px">●</span><span><b style="color:var(--text)">Corredores difíceis</b> (F–L, ZA, Arara)<br><span style="color:var(--text3)">Peso 2.0 por item</span></span></div>
+          <div style="display:flex;align-items:flex-start;gap:6px"><span style="color:var(--indigo);font-size:13px">●</span><span><b style="color:var(--text)">Ruas únicas</b> no pedido<br><span style="color:var(--text3)">+ 2 pontos cada</span></span></div>
+        </div>
+        <div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(37,99,235,.12);font-size:11px;color:var(--text2);display:flex;align-items:center;gap:6px">
+          🚗 <span>Pedidos <b style="color:var(--text)">RETIRADA DRIVE THRU</b> são priorizados e distribuídos primeiro, independentemente do horário.</span>
+        </div>
       </div>
       <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px;align-items:flex-end">
         <div class="fg">

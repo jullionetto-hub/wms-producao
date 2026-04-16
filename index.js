@@ -372,7 +372,7 @@ app.get('/pedidos', (req, res) => {
   if (data_ini)     { query += ' AND p.data_pedido>=?'; params.push(data_ini); }
   if (data_fim)     { query += ' AND p.data_pedido<=?'; params.push(data_fim); }
   if (numero_pedido){ query += ' AND p.numero_pedido=?'; params.push(numero_pedido); }
-  query += ' ORDER BY p.data_pedido DESC, p.hora_pedido DESC';
+  query += ' ORDER BY CASE WHEN p.aguardando_desde IS NOT NULL AND p.aguardando_desde != \'\' THEN p.aguardando_desde ELSE p.data_pedido || \' \' || COALESCE(p.hora_pedido,\'\') END ASC';
   db.all(query, params, (err, rows) => {
     if (err) return res.status(500).json({ erro: err.message });
     res.json(rows);
@@ -1095,7 +1095,14 @@ app.post('/pedidos/distribuicao', async (req, res) => {
         db.all('SELECT endereco, quantidade FROM itens_pedido WHERE pedido_id=?',
           [ped.id], (err, r) => { if (err) reject(err); else resolve(r || []); });
       });
-      ped._pontuacao = calcularPontuacaoPedido(itens);
+      // Usa pontuação salva ou recalcula se zero/nulo
+      if (ped.pontuacao && ped.pontuacao > 0) {
+        ped._pontuacao = ped.pontuacao;
+      } else {
+        ped._pontuacao = calcularPontuacaoPedido(itens);
+        // Salva no banco para próximas vezes
+        db.run('UPDATE pedidos SET pontuacao=? WHERE id=?', [ped._pontuacao, ped.id], ()=>{});
+      }
       ped._itens = itens;
     }
 
@@ -1165,6 +1172,32 @@ app.post('/pedidos/distribuicao', async (req, res) => {
     res.json({ plano, total_pedidos: pedidos.length });
   } catch(err) {
     console.error(err);
+    res.status(500).json({ erro: err.message });
+  }
+});
+
+
+// ─── RECALCULAR PONTUAÇÃO (para pedidos importados antes da nova fórmula) ────
+app.post('/pedidos/recalcular-pontuacao', async (req, res) => {
+  try {
+    const pedidos = await new Promise((resolve, reject) => {
+      db.all("SELECT id FROM pedidos WHERE pontuacao=0 OR pontuacao IS NULL", [], 
+        (err, r) => { if (err) reject(err); else resolve(r||[]); });
+    });
+    let atualizados = 0;
+    for (const ped of pedidos) {
+      const itens = await new Promise((resolve, reject) => {
+        db.all('SELECT endereco, quantidade FROM itens_pedido WHERE pedido_id=?',
+          [ped.id], (err, r) => { if (err) reject(err); else resolve(r||[]); });
+      });
+      const pts = calcularPontuacaoPedido(itens);
+      if (pts > 0) {
+        await dbRun('UPDATE pedidos SET pontuacao=? WHERE id=?', [pts, ped.id]);
+        atualizados++;
+      }
+    }
+    res.json({ mensagem:`${atualizados} pedidos recalculados`, atualizados });
+  } catch(err) {
     res.status(500).json({ erro: err.message });
   }
 });
