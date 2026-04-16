@@ -114,3 +114,133 @@ function limparHistorico() {
   historicoImportacoes = []; localStorage.removeItem('historico_importacoes');
   renderHistorico(); toast('Histórico limpo!','info');
 }
+
+async function confirmarImportacao() {
+  if (!pedidosImportar.length) return;
+  mostrarStatus('Preparando importação...', 'carregando', 0);
+
+  // Agrupa por pedido antes de enviar — garante que todos os itens ficam juntos
+  const pedMapLocal = {};
+  pedidosImportar.forEach(l => {
+    const n = String(l.numero_pedido||'').trim();
+    if (!n) return;
+    if (!pedMapLocal[n]) pedMapLocal[n] = [];
+    pedMapLocal[n].push(l);
+  });
+  const numeros = Object.keys(pedMapLocal);
+  const LOTE_PEDIDOS = 20; // lote de 20 pedidos completos por vez
+  let totalImportados = 0, totalIgnorados = 0;
+
+  try {
+    for (let i = 0; i < numeros.length; i += LOTE_PEDIDOS) {
+      const loteNums  = numeros.slice(i, i + LOTE_PEDIDOS);
+      const linhasLote = [];
+      loteNums.forEach(n => linhasLote.push(...pedMapLocal[n]));
+      const progresso = Math.round(((i + loteNums.length) / numeros.length) * 100);
+      mostrarStatus(`Importando pedidos... (${Math.min(i+LOTE_PEDIDOS,numeros.length)} de ${numeros.length})`, 'carregando', progresso);
+
+      const res  = await fetch(`${API}/importar`, {
+        method:'POST', credentials:'include',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ linhas: linhasLote, transportadoras: transportadorasImportar })
+      });
+      const data = await res.json();
+      if (data.erro) { mostrarStatus(`❌ ${data.erro}`, 'erro'); return; }
+      totalImportados += data.importados || 0;
+      totalIgnorados  += data.ignorados  || 0;
+    }
+
+    const reg = {
+      data: new Date().toLocaleDateString('pt-BR', {timeZone:'America/Sao_Paulo'}),
+      hora: new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit', timeZone:'America/Sao_Paulo' }),
+      total: numeros.length, ok: totalImportados, erro: totalIgnorados
+    };
+    historicoImportacoes.unshift(reg);
+    if (historicoImportacoes.length > 20) historicoImportacoes = historicoImportacoes.slice(0, 20);
+    localStorage.setItem('historico_importacoes', JSON.stringify(historicoImportacoes));
+    renderHistorico();
+    mostrarStatus(`✅ ${totalImportados} pedido(s) importado(s)!${totalIgnorados > 0 ? ` ⚠️ ${totalIgnorados} já existiam.` : ''}`, 'sucesso');
+    document.getElementById('preview-importacao').style.display = 'none';
+    pedidosImportar = [];
+    document.getElementById('input-arquivo').value = '';
+    toast(`${totalImportados} pedidos na fila!`, 'sucesso');
+  } catch(e) {
+    mostrarStatus('❌ Erro na importação!', 'erro');
+  }
+}
+
+function renderHistorico() {
+  const el = document.getElementById('hist-importacoes');
+  if (!historicoImportacoes.length) { el.innerHTML = '<div style="color:var(--text3);font-size:11px;text-align:center;padding:14px">Nenhuma importação</div>'; return; }
+  el.innerHTML = historicoImportacoes.map(h=>`
+    <div class="hist-item">
+      <div><div style="color:var(--green);font-weight:700">✅ ${h.ok} pedido(s)</div>${h.erro>0?`<div style="color:var(--amber);font-size:10px">⚠️ ${h.erro} já existiam</div>`:''}</div>
+      <div style="color:var(--text3);font-size:10px">${h.data} às ${h.hora}</div>
+    </div>`).join('');
+}
+
+function limparHistorico() {
+  if (!confirm('Limpar histórico?')) return;
+  historicoImportacoes = []; localStorage.removeItem('historico_importacoes');
+  renderHistorico(); toast('Histórico limpo!','info');
+}
+
+function mostrarStatus(msg, tipo='info', pct=null) {
+  // Nova UI de progresso
+  const wrap = document.getElementById('import-status-wrap');
+  const txt  = document.getElementById('import-status-txt');
+  const bar  = document.getElementById('import-bar');
+  const pctEl= document.getElementById('import-pct');
+  if (wrap) {
+    wrap.style.display = 'block';
+    if (txt)  { txt.textContent = msg; txt.style.color = tipo==='erro'?'var(--red)':tipo==='sucesso'?'var(--green)':'var(--text2)'; }
+    if (pct !== null) {
+      const p = Math.min(Math.max(pct,0),100);
+      if (bar)   { bar.style.width=p+'%'; bar.style.background=p>=100?'var(--green)':'var(--accent)'; }
+      if (pctEl) { pctEl.textContent=p+'%'; pctEl.style.color=p>=100?'var(--green)':'var(--accent)'; }
+    }
+  }
+  // Fallback: status-leitura antigo
+  const el = document.getElementById('status-leitura');
+  if (el) {
+    const cores = { carregando:'background:#EFF6FF;border:1px solid #BFDBFE;color:#1D4ED8', sucesso:'background:#F0FDF4;border:1px solid #BBF7D0;color:#15803D', erro:'background:#FEF2F2;border:1px solid #FECACA;color:#DC2626' };
+    el.setAttribute('style', `display:block;margin-top:10px;padding:10px;border-radius:8px;font-size:12px;font-weight:600;text-align:center;${cores[tipo]||''}`);
+    el.textContent = msg;
+  }
+}
+
+/* ══════════════════════════════════════════
+   MOBILE REPOSITOR
+══════════════════════════════════════════ */
+let repFiltroAtual = '';
+
+function setFiltroRep(status, btn) {
+  repFiltroAtual = status;
+  document.querySelectorAll('.rep-filtro-btn').forEach(b => b.classList.remove('ativo'));
+  if (btn) btn.classList.add('ativo');
+  carregarAvisosMobile();
+}
+
+function ativarMobileRep() {
+  document.body.classList.add('rep-mobile');
+  document.getElementById('rep-mobile-root').style.display = 'flex';
+  document.getElementById('rep-tabbar').style.display = 'flex';
+  mudarTabRep('avisos');
+  carregarAvisosMobile();
+  carregarParaGuardar(); // pré-carrega badge
+  setInterval(() => {
+    carregarAvisosMobile();
+    if (document.getElementById('rep-tab-historico')?.classList.contains('ativa')) carregarHistoricoDia();
+  }, 20000);
+}
+
+function mudarTabRep(tab) {
+  ['avisos','guardar','historico','stats'].forEach(t => {
+    const pg = document.getElementById(`rep-tab-${t}`); if(pg) pg.classList.toggle('ativa', t === tab);
+    const bt = document.getElementById(`rtab-${t}`);    if(bt) bt.classList.toggle('ativo', t === tab);
+  });
+  if (tab === 'avisos')    carregarAvisosMobile();
+  if (tab === 'guardar')   carregarParaGuardar();
+  if (tab === 'historico') carregarHistoricoDia();
+  if (tab === 'stats')     carregarStatsRepMobile();
+}
