@@ -26,7 +26,8 @@ async function carregarPedidos() {
     if (sepId)  url += `separador_id=${sepId}&`;
     if (status) url += `status=${encodeURIComponent(status)}&`;
     if (numPed) url += `numero_pedido=${encodeURIComponent(numPed)}&`;
-    const res = await fetch(url);
+    const res = await fetch(url, { credentials:'include' });
+    if (!res.ok) { document.getElementById('tbody-ped').innerHTML = '<tr><td colspan="7" style="color:var(--red);text-align:center;padding:28px">Erro ao carregar pedidos</td></tr>'; return; }
     let ps    = await res.json();
     if (ini) ps = ps.filter(p => p.data_pedido >= ini);
     if (fim) ps = ps.filter(p => p.data_pedido <= fim);
