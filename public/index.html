@@ -556,7 +556,39 @@ body.dark .item-card.parcial    .item-ic{background:#78350F}
   body.sep-mobile .sidebar{display:flex!important}
   .sep-tabbar{display:none!important}
 }
-  .perm-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:6px}.perm-item{display:flex;align-items:center;gap:10px;padding:12px 14px;border:1.5px solid var(--border);border-radius:12px;background:var(--surface2);font-size:13px;font-weight:600;color:var(--text);cursor:pointer}.perm-item input{width:18px;height:18px;accent-color:var(--accent);flex-shrink:0}.perm-item span{display:block;line-height:1.2}@media(max-width:768px){.perm-grid{grid-template-columns:1fr}}
+  .perm-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:8px}
+.perm-item{position:relative;display:flex;align-items:center;gap:0;border-radius:12px;overflow:hidden;cursor:pointer;transition:all .2s}
+.perm-item input[type=checkbox]{position:absolute;opacity:0;width:0;height:0}
+.perm-item .perm-label{flex:1;display:flex;align-items:center;gap:10px;padding:11px 14px;border:2px solid var(--border);border-radius:12px;background:var(--surface2);font-size:12px;font-weight:700;color:var(--text3);cursor:pointer;transition:all .2s;letter-spacing:.3px}
+.perm-item input:checked + .perm-label{border-color:var(--accent);background:rgba(37,99,235,.07);color:var(--accent)}
+.perm-item .perm-label .perm-icon{font-size:18px;flex-shrink:0}
+.perm-item .perm-check{width:18px;height:18px;border-radius:5px;border:2px solid var(--border);background:var(--surface);flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .2s;margin-left:auto}
+.perm-item input:checked + .perm-label .perm-check{background:var(--accent);border-color:var(--accent)}
+.perm-item input:checked + .perm-label .perm-check::after{content:"✓";color:#fff;font-size:12px;font-weight:800}
+@media(max-width:768px){.perm-grid{grid-template-columns:1fr}}
+
+/* User cards */
+.usr-card{background:var(--surface);border:1.5px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:14px;transition:all .2s;position:relative;overflow:hidden}
+.usr-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;border-radius:14px 0 0 14px}
+.usr-card.ativo::before{background:linear-gradient(180deg,var(--green),#4ADE80)}
+.usr-card.inativo::before{background:linear-gradient(180deg,var(--red),#F87171);opacity:.5}
+.usr-card:hover{border-color:var(--accent);box-shadow:0 4px 20px rgba(37,99,235,.08);transform:translateY(-1px)}
+.usr-avatar{width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--indigo));display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:800;color:#fff;flex-shrink:0;letter-spacing:-.5px}
+.usr-info{flex:1;min-width:0}
+.usr-name{font-size:14px;font-weight:700;color:var(--text);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.usr-login{font-size:11px;color:var(--text3);font-family:'Space Mono',monospace;margin-bottom:5px}
+.usr-pills{display:flex;flex-wrap:wrap;gap:4px}
+.usr-pill{font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px;letter-spacing:.5px;white-space:nowrap}
+.usr-pill.supervisor{background:#F5F3FF;color:#6366F1;border:1px solid #DDD6FE}
+.usr-pill.separador{background:#EFF6FF;color:#2563EB;border:1px solid #BFDBFE}
+.usr-pill.repositor{background:#FFFBEB;color:#D97706;border:1px solid #FDE68A}
+.usr-pill.checkout{background:#F0FDFA;color:#0D9488;border:1px solid #99F6E4}
+.usr-pill.turno{background:var(--surface2);color:var(--text3);border:1px solid var(--border)}
+.usr-actions{display:flex;gap:6px;flex-shrink:0}
+.usr-btn{width:36px;height:36px;border-radius:10px;border:none;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .18s;font-family:'DM Sans',sans-serif}
+.usr-btn.toggle-on{background:#FEF3C7;color:#D97706}.usr-btn.toggle-on:hover{background:var(--amber);color:#fff}
+.usr-btn.toggle-off{background:#F0FDF4;color:var(--green)}.usr-btn.toggle-off:hover{background:var(--green);color:#fff}
+.usr-btn.del{background:#FEF2F2;color:var(--red)}.usr-btn.del:hover{background:var(--red);color:#fff}
 
 
 
@@ -875,11 +907,9 @@ body.dark .aviso-duplicata{background:#2D1A05;border-color:#78350F;color:#FCD34D
               </select>
             </div>
             <div class="fg"><label>Nº PEDIDO</label><input type="text" id="filtro-ped-num" placeholder="Buscar..."/></div>
-            <div class="fg"><label>HORA INI</label><input type="time" id="filtro-ped-hora-ini" style="min-width:100px"/></div>
-            <div class="fg"><label>HORA FIM</label><input type="time" id="filtro-ped-hora-fim" style="min-width:100px"/></div>
             <button class="btn btn-primary btn-sm" onclick="carregarPedidos()">🔍 Filtrar</button>
           </div>
-          <div class="tabela-wrap"><table><thead><tr><th>Nº PEDIDO</th><th>CLIENTE</th><th>TRANSPORTADORA</th><th>USUÁRIO</th><th>STATUS</th><th>ITENS</th><th>DATA</th><th>HORA</th></tr></thead><tbody id="tbody-ped"></tbody></table></div>
+          <div class="tabela-wrap"><table><thead><tr><th>Nº PEDIDO</th><th>CLIENTE</th><th>TRANSPORTADORA</th><th>AGUARDANDO DESDE</th><th>USUÁRIO</th><th>STATUS</th><th>ITENS</th></tr></thead><tbody id="tbody-ped"></tbody></table></div>
         </div>
       </div>
 
@@ -913,15 +943,20 @@ body.dark .aviso-duplicata{background:#2D1A05;border-color:#78350F;color:#FCD34D
                   <option value="busca">Busca no armazém</option>
                   <option value="abastecimento">Abastecimento</option>
                 </select></div>
-              <div class="form-grp"><label>PODE ACESSAR TAMBÉM</label><div class="perm-grid"><label class="perm-item"><input type="checkbox" class="usr-perm" value="supervisor"><span>Supervisor</span></label><label class="perm-item"><input type="checkbox" class="usr-perm" value="separador"><span>Separador</span></label><label class="perm-item"><input type="checkbox" class="usr-perm" value="repositor"><span>Repositor</span></label><label class="perm-item"><input type="checkbox" class="usr-perm" value="checkout"><span>Checkout</span></label></div></div>
+              <div class="form-grp"><label>PODE ACESSAR TAMBÉM</label><div class="perm-grid">
+  <label class="perm-item"><input type="checkbox" class="usr-perm" value="supervisor"><div class="perm-label"><span class="perm-icon">👔</span><span>Supervisor</span><span class="perm-check"></span></div></label>
+  <label class="perm-item"><input type="checkbox" class="usr-perm" value="separador"><div class="perm-label"><span class="perm-icon">📦</span><span>Separador</span><span class="perm-check"></span></div></label>
+  <label class="perm-item"><input type="checkbox" class="usr-perm" value="repositor"><div class="perm-label"><span class="perm-icon">🔧</span><span>Repositor</span><span class="perm-check"></span></div></label>
+  <label class="perm-item"><input type="checkbox" class="usr-perm" value="checkout"><div class="perm-label"><span class="perm-icon">🏷️</span><span>Checkout</span><span class="perm-check"></span></div></label>
+</div></div>
               <div class="form-grp"><label>TURNO</label>
                 <select id="usr-turno"><option value="Manhã">Manhã</option><option value="Tarde">Tarde</option><option value="Noite">Noite</option></select>
               </div>
               <button class="btn btn-primary" style="width:100%;margin-top:4px" onclick="cadastrarUsuario()">✅ Cadastrar Usuário</button>
             </div>
             <div class="card">
-              <div class="card-hd">👥 USUÁRIOS CADASTRADOS <button class="btn btn-outline btn-sm" onclick="carregarUsuarios()">🔄</button></div>
-              <div class="tabela-wrap"><table><thead><tr><th>NOME</th><th>LOGIN</th><th>PERFIL</th><th>ACESSOS</th><th>TURNO</th><th>STATUS</th><th>AÇÕES</th></tr></thead><tbody id="tbody-usr"></tbody></table></div>
+              <div class="card-hd">👥 USUÁRIOS CADASTRADOS <span id="usr-count" style="font-size:11px;color:var(--text3);font-weight:500"></span><button class="btn btn-outline btn-sm" onclick="carregarUsuarios()" style="margin-left:auto">🔄</button></div>
+              <div id="lista-usuarios" style="padding:4px 0"></div>
             </div>
           </div>
         </div>
@@ -1936,7 +1971,12 @@ async function popularSelects() {
     ['filtro-sep-prod','filtro-ped-sep'].forEach(id => {
       const sel = document.getElementById(id); if (!sel) return;
       const val = sel.value;
-      sel.innerHTML = '<option value="">Todos</option>' + seps.map(s=>`<option value="${s.id}">${s.nome}</option>`).join('');
+      // filtro-ped-sep usa nome para comparar com separador_nome nos pedidos
+      if (id === 'filtro-ped-sep') {
+        sel.innerHTML = '<option value="">Todos</option>' + seps.map(s=>`<option value="${s.nome}">${s.nome}</option>`).join('');
+      } else {
+        sel.innerHTML = '<option value="">Todos</option>' + seps.map(s=>`<option value="${s.id}">${s.nome}</option>`).join('');
+      }
       sel.value = val;
     });
   } catch(e) {}
@@ -1965,11 +2005,9 @@ async function carregarPedidos() {
   try {
     const ini     = document.getElementById('filtro-ped-ini').value;
     const fim     = document.getElementById('filtro-ped-fim').value;
-    const usrId   = document.getElementById('filtro-ped-sep').value;
+    const usrId   = document.getElementById('filtro-ped-sep').value; // agora é o nome do separador
     const status  = document.getElementById('filtro-ped-status').value;
     const numPed  = document.getElementById('filtro-ped-num').value.trim();
-    const horaIni = document.getElementById('filtro-ped-hora-ini')?.value || '';
-    const horaFim = document.getElementById('filtro-ped-hora-fim')?.value || '';
     let url = `${API}/pedidos?`;
     if (status) url += `status=${encodeURIComponent(status)}&`;
     if (numPed) url += `numero_pedido=${encodeURIComponent(numPed)}&`;
@@ -1977,24 +2015,22 @@ async function carregarPedidos() {
     let ps    = await res.json();
     if (ini) ps = ps.filter(p => p.data_pedido >= ini);
     if (fim) ps = ps.filter(p => p.data_pedido <= fim);
-    if (horaIni) ps = ps.filter(p => (p.hora_pedido||'') >= horaIni);
-    if (horaFim) ps = ps.filter(p => (p.hora_pedido||'') <= horaFim);
+
     // Filtra por usuário usando separador_nome (evita confusão entre usuario_id e separador_id)
     if (usrId) {
-      const sepSel = todosSeparadores.find(s=>String(s.id)===String(usrId));
-      if (sepSel) ps = ps.filter(p => p.separador_nome === sepSel.nome);
+      // usrId agora é o nome do separador diretamente
+      ps = ps.filter(p => p.separador_nome === usrId);
     }
     const tbody = document.getElementById('tbody-ped');
     if (!ps.length) { tbody.innerHTML = '<tr><td colspan="7" style="color:var(--text3);text-align:center;padding:28px">Nenhum pedido</td></tr>'; return; }
     tbody.innerHTML = ps.map(p=>`<tr>
-      <td style="font-weight:600;color:var(--text)">${p.numero_pedido}</td>
-      <td style="font-size:11px;color:var(--text2);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.cliente||'—'}</td>
-      <td style="font-size:11px;color:var(--indigo);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.transportadora||'—'}</td>
-      <td>${p.separador_nome||'—'}</td>
+      <td style="font-weight:700;color:var(--text);font-family:'Space Mono',monospace;font-size:12px">${p.numero_pedido}</td>
+      <td style="font-size:11px;color:var(--text2);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.cliente||''}">${p.cliente||'—'}</td>
+      <td style="font-size:11px;font-weight:700;color:var(--indigo)">${p.transportadora||'—'}</td>
+      <td style="font-size:11px;color:var(--amber);font-weight:600;white-space:nowrap">${p.aguardando_desde||'—'}</td>
+      <td style="font-size:12px;color:var(--text2)">${p.separador_nome||'—'}</td>
       <td><span class="pill ${(p.status||'').replace(' ','-')}">${p.status}</span></td>
-      <td>${p.itens||'—'}</td>
-      <td class="data-br">${formatarData(p.data_pedido)}</td>
-      <td class="hora-br">${p.hora_pedido||'—'}</td>
+      <td style="font-weight:600;color:${(p.itens||0)>20?'var(--red)':(p.itens||0)>10?'var(--amber)':'var(--text)'}">${p.itens||'—'}</td>
     </tr>`).join('');
   } catch(e) {}
 }
@@ -2027,33 +2063,38 @@ async function carregarUsuarios() {
   try {
     const res   = await fetch(`${API}/usuarios`, { credentials:'include' });
     const users = await res.json();
-    const tbody = document.getElementById('tbody-usr');
+    const el = document.getElementById('lista-usuarios');
+    if (!el) return;
     if (!users.length) {
-      tbody.innerHTML = '<tr><td colspan="7" style="color:var(--text3);text-align:center;padding:14px">Nenhum usuário</td></tr>';
+      el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:24px;font-size:13px">Nenhum usuário cadastrado</div>';
       return;
     }
-    
-    tbody.innerHTML = users.map(u => {
-      const acessos = [u.perfil]
-        .concat((u.perfis_acesso || '').split(',').filter(Boolean))
-        .filter((v,i,arr) => arr.indexOf(v) === i)
-        .join(', ');
-      
-      return `<tr>
-        <td style="color:var(--text);font-weight:600">${u.nome}</td>
-        <td style="color:var(--accent)">${u.login}</td>
-        <td><span class="pill ${u.perfil}">${u.perfil}</span></td>
-        <td style="font-size:11px;color:var(--text2);max-width:180px">${acessos}</td>
-        <td>${u.turno||'—'}</td>
-        <td><span class="pill ${u.status}">${u.status}</span></td>
-        <td style="display:flex;gap:5px;flex-wrap:wrap">
-          <button class="btn btn-sm" style="background:${u.status==='ativo'?'var(--amber)':'var(--green)'};color:#fff"
+    const countEl = document.getElementById('usr-count');
+    if (countEl) countEl.textContent = `• ${users.length} usuário(s)`;
+    el.innerHTML = users.map(u => {
+      const perfisExtra = (u.perfis_acesso || '').split(',').filter(Boolean).filter(p => p !== u.perfil);
+      const todosAcessos = [u.perfil, ...perfisExtra];
+      const iniciais = u.nome.split(' ').slice(0,2).map(n=>n[0]).join('').toUpperCase();
+      const perfIcons = {supervisor:'👔',separador:'📦',repositor:'🔧',checkout:'🏷️'};
+      return `<div class="usr-card ${u.status}">
+        <div class="usr-avatar">${iniciais}</div>
+        <div class="usr-info">
+          <div class="usr-name">${u.nome}</div>
+          <div class="usr-login">@${u.login}</div>
+          <div class="usr-pills">
+            ${todosAcessos.map(p=>`<span class="usr-pill ${p}">${perfIcons[p]||''} ${p}</span>`).join('')}
+            <span class="usr-pill turno">⏰ ${u.turno||'—'}</span>
+            <span class="pill ${u.status}" style="font-size:9px;padding:2px 7px">${u.status}</span>
+          </div>
+        </div>
+        <div class="usr-actions">
+          <button class="usr-btn ${u.status==='ativo'?'toggle-on':'toggle-off'}" title="${u.status==='ativo'?'Desativar':'Ativar'}"
             onclick="alterarStatusUsuario(${u.id},'${u.status==='ativo'?'inativo':'ativo'}','${u.nome}','${u.login}','${u.perfil}','${u.turno||''}')">
-            ${u.status==='ativo'?'⛔':'✅'}
+            ${u.status==='ativo'?'⏸':'▶'}
           </button>
-          <button class="btn btn-sm btn-danger" onclick="excluirUsuario(${u.id},'${u.nome}')">🗑</button>
-        </td>
-      </tr>`;
+          <button class="usr-btn del" title="Excluir" onclick="excluirUsuario(${u.id},'${u.nome}')">🗑</button>
+        </div>
+      </div>`;
     }).join('');
   } catch(e) {}
 }
@@ -2879,7 +2920,7 @@ async function carregarFila() {
     const ordenadosFila = [...meusFila].sort((a,b)=>(a.itens||0)-(b.itens||0));
     if (bdFila) bdFila.textContent = `${meusFila.length} meus`;
     const html = !ordenadosFila.length
-      ? '<tr><td colspan="4" style="color:var(--text3);text-align:center;padding:18px">Nenhum pedido atribuído a você</td></tr>'
+      ? '<tr><td colspan="4" style="color:var(--text3);text-align:center;padding:18px">Nenhum pedido na fila</td></tr>'
       : ordenadosFila.map(p => {
           return `<tr class="meu" onclick="selecionarPedidoFila('${p.numero_pedido}')" style="cursor:pointer">
             <td style="font-weight:700;color:var(--accent)">${p.numero_pedido}</td>
@@ -2961,7 +3002,7 @@ async function carregarFilaMobile() {
     const meusMob = separadorAtual ? ativos.filter(p=>p.separador_id===separadorAtual.id) : ativos;
     const ordenadosMob = [...meusMob].sort((a,b)=>(a.itens||0)-(b.itens||0));
     if (badge) { badge.textContent = ordenadosMob.length; badge.style.display = ordenadosMob.length > 0 ? 'inline' : 'none'; }
-    if (!ordenadosMob.length) { lista.innerHTML = '<div style="color:var(--text3);text-align:center;padding:30px;font-size:13px">Nenhum pedido atribuído a você 🎉</div>'; return; }
+    if (!ordenadosMob.length) { lista.innerHTML = '<div style="color:var(--text3);text-align:center;padding:30px;font-size:13px">Nenhum pedido na fila 🎉</div>'; return; }
     lista.innerHTML = ordenadosMob.map(p => {
       return `<div class="fila-card meu" onclick="selecionarPedidoFilaMobile('${p.numero_pedido}')">
         <div style="font-size:20px">📦</div>
@@ -3889,10 +3930,24 @@ function processarArquivoModalFile(file) {
           const r = tRows[i];
           const num = String(r[iPed]||'').trim();
           if (!num) continue;
-          transpData[num] = { cliente:String(r[iCli]||'').trim(), transportadora:String(r[iServ]||'').trim() };
+          // Aba Transportadora: Nº pedido | Aguardando desde | Razão social | Qtde | Tipo entrega
+          const iAg = tCab.findIndex(c=>c.includes('aguardando')||c.includes('desde')) >= 0 
+            ? tCab.findIndex(c=>c.includes('aguardando')||c.includes('desde')) : 1;
+          let agVal = '';
+          if (r[iAg]) {
+            // Pode vir como Date object ou string "dd/MM/yyyy HH:mm"
+            const raw = r[iAg];
+            if (raw instanceof Date || (typeof raw === 'object' && raw !== null)) {
+              const d = new Date(raw);
+              agVal = d.toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+            } else {
+              agVal = String(raw).trim();
+            }
+          }
+          transpData[num] = { cliente:String(r[iCli]||'').trim(), transportadora:String(r[iServ]||'').trim(), aguardando_desde:agVal };
         }
       }
-      dados.forEach(d => { const t = transpData[d.numero_pedido]; if (t) { d.cliente = t.cliente; d.transportadora = t.transportadora; } });
+      dados.forEach(d => { const t = transpData[d.numero_pedido]; if (t) { d.cliente = t.cliente; d.transportadora = t.transportadora; d.aguardando_desde = t.aguardando_desde||''; } });
       if (!dados.length) { mostrarStatusModal('❌ Nenhuma linha encontrada!','erro'); return; }
       pedidosImportarModal = dados;
       const totalP = new Set(dados.map(d=>d.numero_pedido)).size;
@@ -3988,7 +4043,7 @@ async function carregarPedidosDistribuicao() {
     const pedidos = await res.json();
     const el = document.getElementById('dist-preview');
     if (!pedidos.length) { el.innerHTML = '<div style="color:var(--text3);font-size:12px;text-align:center;padding:20px">Nenhum pedido pendente para distribuir</div>'; return; }
-    el.innerHTML = `<div style="font-size:11px;color:var(--text3);margin-bottom:8px">${pedidos.length} pedido(s) pendentes</div><div class="tabela-wrap"><table><thead><tr><th>PEDIDO</th><th>CLIENTE</th><th>ITENS</th><th>PONTUAÇÃO</th><th>ATRIBUÍDO A</th></tr></thead><tbody>${pedidos.map(p=>`<tr><td style="font-weight:600;color:var(--text)">${p.numero_pedido}</td><td style="font-size:11px;color:var(--text2)">${p.cliente||'—'}</td><td>${p.itens||0}</td><td><span style="font-family:'Space Mono',monospace;color:var(--indigo)">${p.pontuacao||Math.round((p.itens||0)*1.5)}</span></td><td style="color:var(--text3)">${p.separador_nome||'—'}</td></tr>`).join('')}</tbody></table></div>`;
+    el.innerHTML = `<div style="font-size:11px;color:var(--text3);margin-bottom:8px">${pedidos.length} pedido(s) pendentes</div><div class="tabela-wrap"><table><thead><tr><th>PEDIDO</th><th>CLIENTE</th><th>HORÁRIO</th><th>ITENS</th><th>PONTUAÇÃO</th><th>ATRIBUÍDO A</th></tr></thead><tbody>${pedidos.map(p=>`<tr><td style="font-weight:600;color:var(--text)">${p.numero_pedido}</td><td style="font-size:11px;color:var(--text2)">${p.cliente||'—'}</td><td>${p.itens||0}</td><td><span style="font-family:'Space Mono',monospace;color:var(--indigo)">${p.pontuacao||Math.round((p.itens||0)*1.5)}</span></td><td style="color:var(--text3)">${p.separador_nome||'—'}</td></tr>`).join('')}</tbody></table></div>`;
   } catch(e) {}
 }
 async function calcularDistribuicao() {
@@ -3996,10 +4051,10 @@ async function calcularDistribuicao() {
   if (!checks.length) { toast('Selecione pelo menos um separador!', 'aviso'); return; }
   const seps = Array.from(checks).map(c => ({ id:parseInt(c.value), nome:c.dataset.nome }));
   try {
-    const horaIni = document.getElementById('dist-hora-ini')?.value || '';
-    const horaFim = document.getElementById('dist-hora-fim')?.value || '';
+    const quantidade = parseInt(document.getElementById('dist-quantidade')?.value) || 0;
     const apenasSem = document.getElementById('dist-apenas-sem-sep')?.checked !== false;
-    const res = await fetch(`${API}/pedidos/distribuicao`, { credentials:'include', method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ separadores:seps.map(s=>s.id), hora_ini:horaIni, hora_fim:horaFim, apenas_sem_sep:apenasSem }) });
+    const respeitarHora = document.getElementById('dist-respeitar-hora')?.checked !== false;
+    const res = await fetch(`${API}/pedidos/distribuicao`, { credentials:'include', method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ separadores:seps.map(s=>s.id), quantidade: quantidade||null, apenas_sem_sep:apenasSem, respeitar_hora:respeitarHora }) });
     const data = await res.json();
     if (data.erro) { toast(data.erro, 'erro'); return; }
     distribuicaoPlano = data.plano;
@@ -4089,12 +4144,18 @@ window.addEventListener('click', e => {
         Corredores fáceis (A-E,P-U): peso 1 &nbsp;•&nbsp; Médios (M-O,V-Z): peso 1.5 &nbsp;•&nbsp; Difíceis (F-L,ZA,Arara): peso 2<br>
         <b>RETIRADA DRIVE THRU</b> vai sempre primeiro 🚗
       </div>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;align-items:flex-end">
-        <div class="fg"><label>HORA INI (pedidos a partir de)</label><input type="time" id="dist-hora-ini" style="min-width:110px"/></div>
-        <div class="fg"><label>HORA FIM (pedidos até)</label><input type="time" id="dist-hora-fim" style="min-width:110px"/></div>
-        <label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;cursor:pointer">
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px;align-items:flex-end">
+        <div class="fg">
+          <label>QUANTIDADE DE PEDIDOS A DISTRIBUIR</label>
+          <input type="number" id="dist-quantidade" placeholder="Todos" min="1" style="min-width:180px;font-size:15px;font-weight:700"/>
+        </div>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;cursor:pointer;margin-bottom:4px">
           <input type="checkbox" id="dist-apenas-sem-sep" checked style="accent-color:var(--accent)">
           Apenas sem separador atribuído
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;cursor:pointer;margin-bottom:4px">
+          <input type="checkbox" id="dist-respeitar-hora" checked style="accent-color:var(--accent)">
+          Respeitar horário do pedido (mais antigo primeiro)
         </label>
       </div>
       <div style="margin-bottom:14px">

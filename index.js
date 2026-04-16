@@ -102,6 +102,7 @@ db.serialize(() => {
     numero_caixa TEXT DEFAULT '',
     cliente TEXT DEFAULT '',
     transportadora TEXT DEFAULT '',
+    aguardando_desde TEXT DEFAULT '',
     data_pedido TEXT,
     hora_pedido TEXT,
     data_criacao DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -110,6 +111,7 @@ db.serialize(() => {
   db.run(`ALTER TABLE pedidos ADD COLUMN numero_caixa TEXT DEFAULT ''`, () => {});
   db.run(`ALTER TABLE pedidos ADD COLUMN cliente TEXT DEFAULT ''`, () => {});
   db.run(`ALTER TABLE pedidos ADD COLUMN transportadora TEXT DEFAULT ''`, () => {});
+  db.run(`ALTER TABLE pedidos ADD COLUMN aguardando_desde TEXT DEFAULT ''`, () => {});
 
   db.run(`CREATE TABLE IF NOT EXISTS itens_pedido (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -361,7 +363,7 @@ app.delete('/separadores/:id', (req, res) => {
 // ─── PEDIDOS ─────────────────────────────────────────────────────────────────
 app.get('/pedidos', (req, res) => {
   const { separador_id, status, data, data_ini, data_fim, numero_pedido } = req.query;
-  let query = `SELECT p.*, s.nome as separador_nome, p.cliente, p.transportadora
+  let query = `SELECT p.*, s.nome as separador_nome, p.cliente, p.transportadora, p.aguardando_desde
                FROM pedidos p LEFT JOIN separadores s ON p.separador_id=s.id WHERE 1=1`;
   const params = [];
   if (separador_id) { query += ' AND p.separador_id=?'; params.push(separador_id); }
@@ -836,9 +838,10 @@ app.post('/importar', async (req, res) => {
       const pontuacao = Math.round(somaItens + ruasUnicas * 2);
       const cliente = itens[0]?.cliente || '';
       const transportadora = itens[0]?.transportadora || '';
+      const aguardando_desde = itens[0]?.aguardando_desde || '';
       const result = await dbRun(
-        `INSERT OR IGNORE INTO pedidos (numero_pedido,status,itens,rua,cliente,transportadora,pontuacao,data_pedido,hora_pedido) VALUES (?, 'pendente', ?, ?, ?, ?, ?, ?, ?)`,
-        [numero, itens.length, itens[0]?.endereco || '', cliente, transportadora, pontuacao, hoje, hora]
+        `INSERT OR IGNORE INTO pedidos (numero_pedido,status,itens,rua,cliente,transportadora,aguardando_desde,pontuacao,data_pedido,hora_pedido) VALUES (?, 'pendente', ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [numero, itens.length, itens[0]?.endereco || '', cliente, transportadora, aguardando_desde, pontuacao, hoje, hora]
       );
       const foiNovo = result.changes > 0;
       const pedido  = await dbGet('SELECT id FROM pedidos WHERE numero_pedido=?', [numero]);
@@ -1067,16 +1070,15 @@ function calcularPontuacaoPedido(itens) {
 }
 
 app.post('/pedidos/distribuicao', async (req, res) => {
-  const { separadores, hora_ini, hora_fim, apenas_sem_sep } = req.body;
+  const { separadores, quantidade } = req.body;
   if (!separadores || !separadores.length)
     return res.status(400).json({ erro: 'Informe os separadores!' });
 
   try {
     // Busca pedidos pendentes com itens para calcular pontuação real
+    const { apenas_sem_sep } = req.body;
     let where = "p.status='pendente'";
     if (apenas_sem_sep !== false) where += ' AND p.separador_id IS NULL';
-    if (hora_ini) where += ` AND p.hora_pedido >= '${hora_ini}'`;
-    if (hora_fim) where += ` AND p.hora_pedido <= '${hora_fim}'`;
 
     const pedidos = await new Promise((resolve, reject) => {
       db.all(
@@ -1097,11 +1099,30 @@ app.post('/pedidos/distribuicao', async (req, res) => {
       ped._itens = itens;
     }
 
-    // Separa RETIRADA DRIVE THRU (prioridade máxima — vai primeiro)
-    const drive = pedidos.filter(p => String(p.transportadora||'').toUpperCase().includes('DRIVE'));
-    const outros = pedidos.filter(p => !String(p.transportadora||'').toUpperCase().includes('DRIVE'));
-    // Ordena outros por pontuação DESC (mais pesado primeiro para melhor balanceamento)
-    outros.sort((a,b) => b._pontuacao - a._pontuacao);
+    // Aplica limite de quantidade
+    const limite = (req.body.quantidade && req.body.quantidade > 0) ? req.body.quantidade : pedidos.length;
+    const { respeitar_hora } = req.body;
+
+    // Separa RETIRADA DRIVE THRU — sempre primeiro
+    const isDrive = p => String(p.transportadora||'').toUpperCase().includes('DRIVE');
+    const drive = pedidos.filter(isDrive).slice(0, limite);
+    let outros = pedidos.filter(p => !isDrive(p));
+
+    // Se respeitando hora: ordena por aguardando_desde ASC (mais antigo primeiro)
+    // Se não: ordena por pontuação DESC (maior carga primeiro → melhor balanceamento)
+    if (respeitar_hora !== false) {
+      outros.sort((a,b) => {
+        const ha = String(a.aguardando_desde||a.hora_pedido||'');
+        const hb = String(b.aguardando_desde||b.hora_pedido||'');
+        return ha.localeCompare(hb);
+      });
+    } else {
+      outros.sort((a,b) => b._pontuacao - a._pontuacao);
+    }
+
+    // Limita total (drive já incluídos)
+    const restante = Math.max(0, limite - drive.length);
+    outros = outros.slice(0, restante);
     const ordenados = [...drive, ...outros];
 
     // Resolve separadores (por usuario_id ou separador_id)
