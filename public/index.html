@@ -857,6 +857,8 @@ body.dark .aviso-duplicata{background:#2D1A05;border-color:#78350F;color:#FCD34D
           <div class="card-hd">FILTROS
             <div style="display:flex;gap:8px">
               <button class="btn btn-outline btn-sm" onclick="carregarPedidos()">🔄 Atualizar</button>
+              <button class="btn btn-primary btn-sm" onclick="abrirModalImportar()" style="background:var(--indigo)">📥 Importar</button>
+              <button class="btn btn-success btn-sm" onclick="abrirModalDistribuicao()" style="font-size:11px">⚖️ Distribuir</button>
               <button class="excel-btn" onclick="exportarExcel('pedidos')">📊 Excel</button>
             </div>
           </div>
@@ -875,7 +877,7 @@ body.dark .aviso-duplicata{background:#2D1A05;border-color:#78350F;color:#FCD34D
             <div class="fg"><label>Nº PEDIDO</label><input type="text" id="filtro-ped-num" placeholder="Buscar..."/></div>
             <button class="btn btn-primary btn-sm" onclick="carregarPedidos()">🔍 Filtrar</button>
           </div>
-          <div class="tabela-wrap"><table><thead><tr><th>Nº PEDIDO</th><th>USUÁRIO</th><th>STATUS</th><th>ITENS</th><th>DATA</th><th>HORA</th><th>ATRIBUIR</th></tr></thead><tbody id="tbody-ped"></tbody></table></div>
+          <div class="tabela-wrap"><table><thead><tr><th>Nº PEDIDO</th><th>CLIENTE</th><th>TRANSPORTADORA</th><th>USUÁRIO</th><th>STATUS</th><th>ITENS</th><th>DATA</th><th>HORA</th><th>ATRIBUIR</th></tr></thead><tbody id="tbody-ped"></tbody></table></div>
         </div>
       </div>
 
@@ -887,7 +889,6 @@ body.dark .aviso-duplicata{background:#2D1A05;border-color:#78350F;color:#FCD34D
         <div class="pg-title">⚙️ Cadastros</div>
         <div style="display:flex;gap:8px;margin-bottom:16px">
           <button class="btn btn-primary btn-sm" id="ctab-usuarios" onclick="trocarCadastroTab('usuarios')">👥 Usuários</button>
-          <button class="btn btn-outline btn-sm" id="ctab-importar" onclick="trocarCadastroTab('importar')">📥 Importar</button>
         </div>
         <div id="cad-usuarios">
           <div class="grid-2">
@@ -979,7 +980,7 @@ body.dark .aviso-duplicata{background:#2D1A05;border-color:#78350F;color:#FCD34D
           <div class="status-pedido" id="status-atual"></div>
           <!-- Campo caixa desktop -->
           <div id="cl-caixa-wrap" style="display:none;margin-top:10px;padding:10px 0 0;border-top:1px solid var(--border)">
-            <div style="font-size:11px;font-weight:700;color:var(--amber);letter-spacing:1px;margin-bottom:6px">📦 VINCULAR NÚMERO DA CAIXA</div>
+            <div style="font-size:11px;font-weight:700;color:var(--red);letter-spacing:1px;margin-bottom:6px">📦 VINCULAR NÚMERO DA CAIXA — OBRIGATÓRIO PARA CONCLUIR</div>
             <div class="bip-wrap" style="margin-bottom:0">
               <input type="text" class="bip-input" id="cl-input-caixa"
                 placeholder="Número da caixa..."
@@ -1326,7 +1327,7 @@ body.dark .aviso-duplicata{background:#2D1A05;border-color:#78350F;color:#FCD34D
           <div class="status-pedido" id="m-status-atual"></div>
           <!-- Campo caixa mobile -->
           <div id="m-caixa-wrap" style="display:none;margin-bottom:12px">
-            <div style="font-size:11px;font-weight:700;color:var(--accent);letter-spacing:1px;margin-bottom:6px">📦 VINCULAR CAIXA AO PEDIDO</div>
+            <div style="font-size:11px;font-weight:700;color:var(--red);letter-spacing:1px;margin-bottom:6px">📦 VINCULAR CAIXA — OBRIGATÓRIO PARA CONCLUIR</div>
             <div class="bip-wrap" style="margin-bottom:0">
               <input type="text" class="bip-input" id="m-input-caixa"
                 placeholder="Número da caixa..."
@@ -1829,7 +1830,6 @@ function trocarCadastroTab(tab) {
     if (btn) btn.className = t===tab ? 'btn btn-primary btn-sm' : 'btn btn-outline btn-sm';
   });
   if (tab === 'usuarios') carregarUsuarios();
-  if (tab === 'importar') renderHistorico();
 }
 
 
@@ -1978,6 +1978,8 @@ async function carregarPedidos() {
     if (!ps.length) { tbody.innerHTML = '<tr><td colspan="7" style="color:var(--text3);text-align:center;padding:28px">Nenhum pedido</td></tr>'; return; }
     tbody.innerHTML = ps.map(p=>`<tr>
       <td style="font-weight:600;color:var(--text)">${p.numero_pedido}</td>
+      <td style="font-size:11px;color:var(--text2);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.cliente||'—'}</td>
+      <td style="font-size:11px;color:var(--indigo);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.transportadora||'—'}</td>
       <td>${p.separador_nome||'—'}</td>
       <td><span class="pill ${(p.status||'').replace(' ','-')}">${p.status}</span></td>
       <td>${p.itens||'—'}</td>
@@ -3011,7 +3013,24 @@ async function _confirmarPedidoCore(num, inputId, statusId, clWrapId, fnChecklis
     pedidoAtualId  = data.pedido_id;
     pedidoAtualNum = num;
     const statusEl = document.getElementById(statusId);
-    if (statusEl) { statusEl.innerHTML = `Pedido <b style="color:var(--text)">${num}</b> — 🔵 Separando`; statusEl.style.display = 'block'; }
+    // Busca info de transportadora/cliente
+    let infoTransp = '';
+    try {
+      const tRes = await fetch(`${API}/pedidos/info/${encodeURIComponent(num)}`, { credentials:'include' });
+      if (tRes.ok) {
+        const tData = await tRes.json();
+        if (tData.cliente || tData.transportadora) {
+          infoTransp = `<div style="margin-top:6px;padding:8px 10px;background:rgba(37,99,235,.06);border:1px solid rgba(37,99,235,.18);border-radius:8px;font-size:12px">
+            ${tData.cliente ? `<div>👤 <b style="color:var(--text)">${tData.cliente}</b></div>` : ''}
+            ${tData.transportadora ? `<div>🚚 <b style="color:var(--accent)">${tData.transportadora}</b></div>` : ''}
+          </div>`;
+        }
+      }
+    } catch(e) {}
+    if (statusEl) { 
+      statusEl.innerHTML = `Pedido <b style="color:var(--text)">${num}</b> — 🔵 Separando${infoTransp}`; 
+      statusEl.style.display = 'block'; 
+    }
     toast(data.ja_atribuido ? `Pedido ${num} carregado` : `✅ Pedido ${num} → SEPARANDO`, data.ja_atribuido?'info':'sucesso');
     mostrarCampoCaixa(true);
     await fnChecklist();
@@ -3082,8 +3101,16 @@ function renderChecklist(prefix) {
 
 
 
+  // Verifica se caixa foi vinculada
+  const inputCaixa = document.getElementById(prefix === 'cl' ? 'cl-input-caixa' : 'm-input-caixa');
+  const statusCaixaEl = document.getElementById(prefix === 'cl' ? 'cl-caixa-status' : 'm-caixa-status');
+  const caixaVinculada = statusCaixaEl && statusCaixaEl.style.display !== 'none' && statusCaixaEl.textContent.includes('✅');
+
   if (!todosVerif) {
     if(bc){bc.style.display='block';bc.disabled=true;bc.textContent=`🔒 CONCLUIR (${total-verificados} pend.)`}
+    if(ba) ba.style.display='none';
+  } else if (!caixaVinculada && pedidoAtualId) {
+    if(bc){bc.style.display='block';bc.disabled=true;bc.textContent='📦 VINCULE A CAIXA ANTES DE CONCLUIR'}
     if(ba) ba.style.display='none';
   } else if (temProblema) {
     const itensP = itensAtuais.filter(i=>i.status==='falta'||i.status==='parcial');
@@ -3791,5 +3818,86 @@ document.getElementById('ck-input-caixa')?.addEventListener('keypress', e => { i
   } catch(e) {}
 })();
 </script>
+
+
+<!-- ══ MODAL IMPORTAR ══ -->
+<div id="modal-importar" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9998;align-items:center;justify-content:center;padding:16px">
+  <div style="background:var(--surface);border-radius:var(--r);box-shadow:var(--sh-lg);width:100%;max-width:880px;max-height:90vh;overflow-y:auto">
+    <div style="background:var(--surface2);padding:14px 18px;border-bottom:1px solid var(--border);border-radius:var(--r) var(--r) 0 0;display:flex;align-items:center;justify-content:space-between">
+      <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">📥 Importar Planilha de Pedidos</div>
+      <button onclick="fecharModalImportar()" style="background:transparent;border:none;font-size:22px;cursor:pointer;color:var(--text3);padding:0 4px">✕</button>
+    </div>
+    <div style="padding:18px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div>
+          <div style="font-size:10px;font-weight:700;color:var(--accent);letter-spacing:1px;margin-bottom:10px">📥 IMPORTAR PLANILHA</div>
+          <div class="upload-area" id="modal-upload-area"
+            ondragover="event.preventDefault();this.classList.add('drag')"
+            ondragleave="this.classList.remove('drag')"
+            ondrop="handleDropModal(event)"
+            onclick="document.getElementById('modal-input-arquivo').click()">
+            <div style="font-size:36px;margin-bottom:8px">📊</div>
+            <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">Arraste o arquivo aqui</div>
+            <div style="font-size:11px;color:var(--text3);margin-bottom:12px">ou clique para selecionar<br><b style="color:var(--text2)">Aba "Itens": Codigo, Pedido, Descricao, Quantidade, Endereço<br>Aba "Transportadora": Pedido, Razão social, Serviço de entrega</b></div>
+            <input type="file" id="modal-input-arquivo" accept=".xlsx,.xls,.csv" onchange="processarArquivoModal(event)" style="display:none"/>
+            <button class="btn btn-outline btn-sm" onclick="event.stopPropagation()">📂 Selecionar Arquivo</button>
+          </div>
+          <div class="status-box" id="modal-status-leitura"></div>
+          <div id="modal-preview-importacao" style="display:none;margin-top:14px">
+            <div style="font-size:11px;color:var(--text3);margin-bottom:8px">PREVIEW (10 primeiras linhas)</div>
+            <div class="tabela-wrap" style="max-height:200px;overflow-y:auto">
+              <table><thead><tr><th>PEDIDO</th><th>CÓDIGO</th><th>DESCRIÇÃO</th><th>ENDEREÇO</th><th>QTDE</th></tr></thead><tbody id="modal-tbody-prev"></tbody></table>
+            </div>
+            <div style="margin-top:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+              <span id="modal-txt-total-import" style="font-size:12px;color:var(--text2);font-weight:600"></span>
+              <button class="btn btn-success" onclick="confirmarImportacaoModal()">📥 Importar para Fila</button>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:10px;font-weight:700;color:var(--accent);letter-spacing:1px;margin-bottom:10px">📋 HISTÓRICO</div>
+          <div id="modal-hist-importacoes"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL DISTRIBUIÇÃO ══ -->
+<div id="modal-distribuicao" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9998;align-items:center;justify-content:center;padding:16px">
+  <div style="background:var(--surface);border-radius:var(--r);box-shadow:var(--sh-lg);width:100%;max-width:700px;max-height:90vh;overflow-y:auto">
+    <div style="background:var(--surface2);padding:14px 18px;border-bottom:1px solid var(--border);border-radius:var(--r) var(--r) 0 0;display:flex;align-items:center;justify-content:space-between">
+      <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">⚖️ Distribuição Justa de Pedidos</div>
+      <button onclick="fecharModalDistribuicao()" style="background:transparent;border:none;font-size:22px;cursor:pointer;color:var(--text3);padding:0 4px">✕</button>
+    </div>
+    <div style="padding:18px">
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px;margin-bottom:14px;font-size:12px;color:var(--text2)">
+        <b style="color:var(--accent)">Como funciona:</b> O sistema calcula a pontuação de cada pedido com base em 
+        <b>quantidade de itens</b>, <b>número de ruas diferentes</b> e <b>quantidade de produtos únicos</b>.
+        Os pedidos são distribuídos de forma balanceada entre os separadores disponíveis, garantindo carga de trabalho igual.
+      </div>
+      <div style="margin-bottom:14px">
+        <div style="font-size:10px;font-weight:700;color:var(--accent);letter-spacing:1px;margin-bottom:8px">SEPARADORES ATIVOS</div>
+        <div id="dist-separadores-lista" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+          <div style="color:var(--text3);font-size:12px">Carregando...</div>
+        </div>
+      </div>
+      <div style="margin-bottom:14px">
+        <div style="font-size:10px;font-weight:700;color:var(--accent);letter-spacing:1px;margin-bottom:8px">PEDIDOS PENDENTES PARA DISTRIBUIR</div>
+        <div id="dist-preview" style="max-height:300px;overflow-y:auto">
+          <div style="color:var(--text3);font-size:12px;text-align:center;padding:20px">Carregando pedidos...</div>
+        </div>
+      </div>
+      <div id="dist-resultado" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px;margin-bottom:14px">
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn btn-outline" onclick="fecharModalDistribuicao()">Cancelar</button>
+        <button class="btn btn-primary" onclick="calcularDistribuicao()" id="btn-calcular-dist">🔍 Calcular Distribuição</button>
+        <button class="btn btn-success" onclick="confirmarDistribuicao()" id="btn-confirmar-dist" style="display:none">✅ Confirmar Distribuição</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
