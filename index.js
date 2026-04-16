@@ -1115,22 +1115,44 @@ app.post('/pedidos/distribuicao', async (req, res) => {
     const drive = pedidos.filter(isDrive).slice(0, limite);
     let outros = pedidos.filter(p => !isDrive(p));
 
-    // Se respeitando hora: ordena por aguardando_desde ASC (mais antigo primeiro)
-    // Se não: ordena por pontuação DESC (maior carga primeiro → melhor balanceamento)
-    if (respeitar_hora !== false) {
-      outros.sort((a,b) => {
-        const ha = String(a.aguardando_desde||a.hora_pedido||'');
-        const hb = String(b.aguardando_desde||b.hora_pedido||'');
-        return ha.localeCompare(hb);
-      });
-    } else {
-      outros.sort((a,b) => b._pontuacao - a._pontuacao);
-    }
-
     // Limita total (drive já incluídos)
     const restante = Math.max(0, limite - drive.length);
-    outros = outros.slice(0, restante);
-    const ordenados = [...drive, ...outros];
+
+    let ordenados;
+    if (respeitar_hora !== false) {
+      // Agrupa por minuto do horário (ex: "10:35")
+      // Dentro de cada grupo ordena por pontuação DESC para melhor balanceamento
+      const getMinuto = p => {
+        const s = String(p.aguardando_desde||p.hora_pedido||'');
+        // Extrai HH:MM de "dd/mm/yyyy HH:MM" ou "HH:MM"
+        const m = s.match(/(\d{2}:\d{2})/);
+        return m ? m[1] : s;
+      };
+      // Ordena primeiro por minuto ASC
+      outros.sort((a,b) => getMinuto(a).localeCompare(getMinuto(b)));
+      // Agrupa por minuto e reordena por pontuação DESC dentro de cada grupo
+      const grupos = {};
+      for (const p of outros) {
+        const min = getMinuto(p);
+        if (!grupos[min]) grupos[min] = [];
+        grupos[min].push(p);
+      }
+      const minutosOrdenados = Object.keys(grupos).sort();
+      const outrosOrdenados = [];
+      for (const min of minutosOrdenados) {
+        // Dentro do mesmo minuto: maior pontuação primeiro (melhor balanceamento greedy)
+        grupos[min].sort((a,b) => b._pontuacao - a._pontuacao);
+        outrosOrdenados.push(...grupos[min]);
+      }
+      outros = outrosOrdenados.slice(0, restante);
+    } else {
+      // Sem restrição de hora: ordena tudo por pontuação DESC
+      outros.sort((a,b) => b._pontuacao - a._pontuacao);
+      outros = outros.slice(0, restante);
+    }
+
+    // Drive THRU sempre na frente
+    ordenados = [...drive, ...outros];
 
     // Resolve separadores (por usuario_id ou separador_id)
     const sepMap = {};

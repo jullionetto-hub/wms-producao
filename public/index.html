@@ -3106,17 +3106,23 @@ async function _confirmarPedidoCore(num, inputId, statusId, clWrapId, fnChecklis
     toast(data.ja_atribuido ? `Pedido ${num} carregado` : `Pedido ${num} iniciado`, 'info');
     caixaJaVinculada = false; // reset — exige nova vinculação
     mostrarCampoCaixa(true);
-    // NÃO carrega checklist — espera caixa ser vinculada
-    // Mostra aviso visual no checklist wrap
+    // Esconde o cl-wrap e mostra placeholder separado
     const clWrap = document.getElementById(clWrapId);
-    if (clWrap) {
-      clWrap.style.display = 'block';
-      clWrap.innerHTML = `<div style="text-align:center;padding:32px 20px;color:#94A3B8">
-        <div style="font-size:32px;margin-bottom:10px">📦</div>
-        <div style="font-size:13px;font-weight:700;color:#475569;margin-bottom:4px">Vincule o número da caixa</div>
-        <div style="font-size:11px;color:#94A3B8">A lista de itens será liberada após vincular a caixa ao pedido</div>
-      </div>`;
+    if (clWrap) clWrap.style.display = 'none';
+    // Mostra ou cria placeholder (não destrói estrutura do wrap)
+    let phId = clWrapId + '-placeholder';
+    let ph = document.getElementById(phId);
+    if (!ph) {
+      ph = document.createElement('div');
+      ph.id = phId;
+      clWrap?.parentNode?.insertBefore(ph, clWrap?.nextSibling || clWrap);
     }
+    ph.style.display = 'block';
+    ph.innerHTML = `<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;text-align:center;padding:32px 20px">
+      <div style="font-size:30px;margin-bottom:10px">📦</div>
+      <div style="font-size:13px;font-weight:700;color:#475569;margin-bottom:4px">Vincule o número da caixa</div>
+      <div style="font-size:11px;color:#94A3B8">A lista de itens será liberada após vincular a caixa ao pedido</div>
+    </div>`;
     fnFila();
   } catch(e) { toast('Erro ao conectar!','erro'); }
 }
@@ -3868,12 +3874,21 @@ async function vincularCaixaCore(caixa, inputStatusId) {
       statusEl.innerHTML = `✅ Caixa <b>${caixa}</b> vinculada — Pedido #${pedidoAtualNum}`;
       statusEl.style.color = 'var(--green)';
     }
-    // Agora sim carrega o checklist
+    // Esconde placeholder e mostra checklist real
     caixaJaVinculada = true;
+    // Esconde placeholder se existir
+    ['m-cl-wrap-placeholder','cl-wrap-placeholder'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = 'none';
+    });
     const isMobileNow = window.innerWidth <= 768;
     if (isMobileNow) {
+      const wrap = document.getElementById('m-cl-wrap');
+      if (wrap) wrap.style.display = 'block';
       await carregarChecklistMobile();
     } else {
+      const wrap = document.getElementById('cl-wrap');
+      if (wrap) wrap.style.display = 'block';
       await carregarChecklist();
     }
   } catch(e) { toast('Erro ao vincular caixa!','erro'); }
