@@ -1657,6 +1657,7 @@ function ativarMobileSep() {
   carregarStatsMobile();
   carregarFilaMobile();
   carregarAvisosSeparador();
+  carregarPedidosPendentesReposicao();
   setInterval(() => {
     carregarFilaMobile();
     carregarAvisosSeparador();
@@ -2881,6 +2882,17 @@ async function carregarChecklist() {
     itensAtuais = await res.json();
     const wrap = document.getElementById('cl-wrap');
     if (!itensAtuais.length) { wrap.style.display = 'none'; return; }
+    const RUAS_ORD = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'];
+    itensAtuais.sort((a,b) => {
+      const ra = String(a.endereco||'').split(',')[0].trim();
+      const rb = String(b.endereco||'').split(',')[0].trim();
+      const rua_a = ra.match(/^([A-Z]+)/)?.[1] || 'Z';
+      const rua_b = rb.match(/^([A-Z]+)/)?.[1] || 'Z';
+      const num_a = parseInt(ra.match(/\d+/)?.[0]||0);
+      const num_b = parseInt(rb.match(/\d+/)?.[0]||0);
+      const ri = (RUAS_ORD.indexOf(rua_a) - RUAS_ORD.indexOf(rua_b));
+      return ri !== 0 ? ri : num_a - num_b;
+    });
     wrap.style.display = 'block';
     renderChecklist('cl');
   } catch(e) { toast('Erro ao carregar itens!','erro'); }
@@ -2977,6 +2989,18 @@ async function carregarChecklistMobile() {
     itensAtuais = await res.json();
     const wrap = document.getElementById('m-cl-wrap');
     if (!itensAtuais.length) { wrap.style.display = 'none'; return; }
+    // Ordena por rota: rua (ordem do corredor) + número da colméia
+    const RUAS_ORD = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'];
+    itensAtuais.sort((a,b) => {
+      const ra = String(a.endereco||'').split(',')[0].trim();
+      const rb = String(b.endereco||'').split(',')[0].trim();
+      const rua_a = ra.match(/^([A-Z]+)/)?.[1] || 'Z';
+      const rua_b = rb.match(/^([A-Z]+)/)?.[1] || 'Z';
+      const num_a = parseInt(ra.match(/\d+/)?.[0]||0);
+      const num_b = parseInt(rb.match(/\d+/)?.[0]||0);
+      const ri = (RUAS_ORD.indexOf(rua_a) - RUAS_ORD.indexOf(rua_b));
+      return ri !== 0 ? ri : num_a - num_b;
+    });
     wrap.style.display = 'block';
     renderChecklist('m-cl');
   } catch(e) { toast('Erro ao carregar itens!','erro'); }
@@ -2999,41 +3023,67 @@ async function concluirPedidoMobile() {
 
 async function carregarFilaMobile() {
   try {
-    const res   = await fetch(`${API}/pedidos`, { credentials:'include' });
-    const todos = await res.json();
+    // Busca pedidos e avisos pendentes em paralelo
+    const [resPed, resAv] = await Promise.all([
+      fetch(`${API}/pedidos`, { credentials:'include' }),
+      fetch(`${API}/repositor/avisos?status=pendente`, { credentials:'include' })
+    ]);
+    const todos  = await resPed.json();
+    const avisos = resAv.ok ? await resAv.json() : [];
+
+    // Pedidos com itens aguardando repositor (deste separador)
+    const pedidosComFalta = {};
+    avisos
+      .filter(a => !separadorAtual || String(a.separador_id) === String(separadorAtual.id))
+      .forEach(a => {
+        const n = String(a.numero_pedido);
+        if (!pedidosComFalta[n]) pedidosComFalta[n] = 0;
+        pedidosComFalta[n]++;
+      });
+
     const ativos = todos.filter(p=>p.status!=='concluido');
-    const meus   = separadorAtual ? ativos.filter(p=>p.separador_id===separadorAtual.id) : [];
-    const bdFila = document.getElementById('badge-fila-m');
-    const bdMeus = document.getElementById('badge-meus-m');
-    if (bdFila) bdFila.textContent = `${ativos.length} total`;
-    if (bdMeus) bdMeus.textContent = meus.length > 0 ? `${meus.length} meus` : '';
-    const badge = document.getElementById('stab-fila-badge');
-    if (badge) { badge.textContent = ativos.length; badge.style.display = ativos.length > 0 ? 'inline' : 'none'; }
-    const lista = document.getElementById('lista-fila-mobile');
-    if (!lista) return;
-    // Só mostra pedidos atribuídos a mim, ordenados por itens ASC (menor primeiro)
     const meusMob = separadorAtual ? ativos.filter(p=>p.separador_id===separadorAtual.id) : ativos;
     const ordenadosMob = [...meusMob].sort((a,b)=>(a.itens||0)-(b.itens||0));
+
+    const badge = document.getElementById('stab-fila-badge');
     if (badge) { badge.textContent = ordenadosMob.length; badge.style.display = ordenadosMob.length > 0 ? 'inline' : 'none'; }
-    if (!ordenadosMob.length) { lista.innerHTML = '<div style="color:var(--text3);text-align:center;padding:30px;font-size:13px">Nenhum pedido na fila 🎉</div>'; return; }
-    lista.innerHTML = ordenadosMob.map((p,idx) => {
-      const transp = String(p.transportadora||'').toUpperCase();
-      const isDrive = transp.includes('DRIVE');
-      const numColor = isDrive ? '#DC2626' : '#2563EB';
-      const cardBorderLeft = isDrive ? '3px solid #DC2626' : '3px solid #2563EB';
-      return `<div style="background:#fff;border:1px solid #E2E8F0;border-left:${cardBorderLeft};border-radius:10px;padding:14px 16px;margin-bottom:7px;display:flex;align-items:center;gap:12px;cursor:pointer" onclick="selecionarPedidoFilaMobile('${p.numero_pedido}')">
-        <div style="flex:1;min-width:0">
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">
-            <span style="font-family:'Space Mono',monospace;font-size:15px;font-weight:700;color:${numColor}">${p.numero_pedido}</span>
-            ${isDrive
-              ? `<span style="font-size:9px;font-weight:800;letter-spacing:1px;padding:2px 7px;border-radius:4px;background:#FEF2F2;color:#DC2626;border:1px solid #FECACA">DRIVE THRU</span>`
-              : `<span style="font-size:9px;font-weight:700;letter-spacing:.5px;padding:2px 7px;border-radius:4px;background:#EFF6FF;color:#2563EB;border:1px solid #BFDBFE">MEU</span>`}
+    const bdFila = document.getElementById('badge-fila-m');
+    if (bdFila) bdFila.textContent = `${ordenadosMob.length} pedidos`;
+
+    const lista = document.getElementById('lista-fila-mobile');
+    if (!lista) return;
+    if (!ordenadosMob.length) { lista.innerHTML = '<div style="color:var(--text3);text-align:center;padding:30px;font-size:13px">Nenhum pedido na fila</div>'; return; }
+
+    lista.innerHTML = ordenadosMob.map(p => {
+      const transp   = String(p.transportadora||'').toUpperCase();
+      const isDrive  = transp.includes('DRIVE');
+      const qtdFalta = pedidosComFalta[String(p.numero_pedido)] || 0;
+      const temFalta = qtdFalta > 0;
+
+      // Hierarquia visual: falta > drive thru > normal
+      const bordLeft  = temFalta ? '3px solid #F59E0B' : isDrive ? '3px solid #DC2626' : '3px solid #2563EB';
+      const cardBg    = temFalta ? '#FFFBEB' : '#fff';
+      const bordColor = temFalta ? '#FDE68A' : '#E2E8F0';
+      const numColor  = isDrive  ? '#DC2626' : '#2563EB';
+
+      return `<div style="background:${cardBg};border:1px solid ${bordColor};border-left:${bordLeft};border-radius:10px;padding:14px 16px;margin-bottom:7px;cursor:pointer"
+        onclick="selecionarPedidoFilaMobile('${p.numero_pedido}')">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:7px;margin-bottom:3px;flex-wrap:wrap">
+              <span style="font-family:'Space Mono',monospace;font-size:15px;font-weight:700;color:${numColor}">${p.numero_pedido}</span>
+              ${isDrive ? `<span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:4px;background:#FEF2F2;color:#DC2626;border:1px solid #FECACA">DRIVE THRU</span>` : ''}
+            </div>
+            <div style="font-size:11px;color:#64748B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:${temFalta?'5px':'0'}">${p.cliente||'—'}</div>
+            ${temFalta ? `<div style="display:inline-flex;align-items:center;gap:5px;background:#FEF3C7;border:1px solid #FDE68A;border-radius:6px;padding:4px 9px;">
+              <div style="width:6px;height:6px;border-radius:50%;background:#D97706;flex-shrink:0;"></div>
+              <span style="font-size:11px;font-weight:500;color:#92400E;">${qtdFalta} item${qtdFalta>1?'s':''} aguardando repositor</span>
+            </div>` : ''}
           </div>
-          <div style="font-size:11px;color:#64748B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.cliente||'—'}</div>
-        </div>
-        <div style="text-align:right;flex-shrink:0">
-          <div style="font-size:14px;font-weight:700;color:#0F172A">${p.itens||0}</div>
-          <div style="font-size:9px;color:#94A3B8;letter-spacing:1px;text-transform:uppercase">itens</div>
+          <div style="text-align:right;flex-shrink:0">
+            <div style="font-size:14px;font-weight:700;color:#0F172A">${p.itens||0}</div>
+            <div style="font-size:9px;color:#94A3B8;letter-spacing:1px;text-transform:uppercase">itens</div>
+          </div>
         </div>
       </div>`;
     }).join('');
@@ -3189,6 +3239,7 @@ async function _concluirCore(prefix, fnChecklist, fnFila, fnStats, inputId, stat
    RENDER CHECKLIST (compartilhado)
 ══════════════════════════════════════════ */
 function renderChecklist(prefix) {
+  const RUAS_ORD = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'];
   const total       = itensAtuais.length;
   const verificados = itensAtuais.filter(i=>i.status!=='pendente').length;
   const encontrados = itensAtuais.filter(i=>i.status==='encontrado').length;
@@ -3198,14 +3249,37 @@ function renderChecklist(prefix) {
   const todosVerif  = verificados===total;
   const temProblema = faltas>0 || parciais>0;
 
+  // Extrai rua do endereço
+  const getRua = (end) => String(end||'').split(',')[0].trim().match(/^([A-Z]+)/)?.[1] || '?';
 
+  // Ruas únicas neste pedido, na ordem do corredor
+  const ruasNoPedido = [...new Set(itensAtuais.map(i=>getRua(i.endereco)))]
+    .sort((a,b)=>RUAS_ORD.indexOf(a)-RUAS_ORD.indexOf(b));
 
+  // Rua atual = primeira rua com itens pendentes
+  const primeirosPendentes = itensAtuais.filter(i=>i.status==='pendente');
+  const ruaEmFoco = primeirosPendentes.length ? getRua(primeirosPendentes[0].endereco) : '';
 
-  const set = (id,val) => { const el=document.getElementById(`${prefix}-${id}`); if(el) el[typeof val==='string'&&id!=='style'?'textContent':'innerHTML'] = val; };
-  document.getElementById(`${prefix}-titulo`).textContent   = `📋 PEDIDO #${pedidoAtualNum}`;
-  document.getElementById(`${prefix}-contador`).textContent = `${verificados}/${total} itens`;
-  document.getElementById(`${prefix}-barra`).style.width    = `${pct}%`;
-  document.getElementById(`${prefix}-resumo`).innerHTML     = `✅ ${encontrados} ok &nbsp;🟡 ${parciais} parcial &nbsp;❌ ${faltas} falta &nbsp;⬜ ${total-verificados} pend.`;
+  const tituloEl = document.getElementById(`${prefix}-titulo`);
+  const contEl   = document.getElementById(`${prefix}-contador`);
+  const barraEl  = document.getElementById(`${prefix}-barra`);
+  const resumoEl = document.getElementById(`${prefix}-resumo`);
+
+  if(tituloEl) tituloEl.textContent = `PEDIDO #${pedidoAtualNum}`;
+  if(contEl)   contEl.textContent   = `${verificados}/${total} itens`;
+  if(barraEl)  barraEl.style.width  = `${pct}%`;
+
+  // Rota no resumo — pills de rua com destaque na atual
+  if(resumoEl) {
+    resumoEl.innerHTML = ruasNoPedido.map(r => {
+      const ruaOk = itensAtuais.filter(i=>getRua(i.endereco)===r).every(i=>i.status!=='pendente');
+      const ativo = r === ruaEmFoco;
+      const bg  = ativo?'#185FA5':ruaOk?'#EAF3DE':'#F1F5F9';
+      const cor = ativo?'#fff':ruaOk?'#27500A':'#64748B';
+      const bord= ativo?'#185FA5':ruaOk?'#97C459':'#CBD5E1';
+      return `<span style="display:inline-block;font-size:11px;font-weight:500;padding:2px 9px;border-radius:20px;background:${bg};color:${cor};border:1px solid ${bord};margin:2px 2px 2px 0;">${r}</span>`;
+    }).join('');
+  }
 
 
 
@@ -3281,13 +3355,39 @@ function renderChecklist(prefix) {
 
 
     if (isMob) {
+      // Agrupamento por rua — injeta header antes do primeiro item de cada rua
+      const itemRua = getRua ? getRua(item.endereco) : String(item.endereco||'').split(',')[0].trim().match(/^([A-Z]+)/)?.[1]||'?';
+      const idxNoGrupo = itensAtuais.filter(i2 => {
+        const r2 = String(i2.endereco||'').split(',')[0].trim().match(/^([A-Z]+)/)?.[1]||'?';
+        return r2 === itemRua;
+      }).indexOf(item);
+      const grupoOk = itensAtuais.filter(i2=>{
+        const r2=String(i2.endereco||'').split(',')[0].trim().match(/^([A-Z]+)/)?.[1]||'?';
+        return r2===itemRua;
+      }).every(i2=>i2.status!=='pendente');
+      const grupoAlgum = itensAtuais.filter(i2=>{
+        const r2=String(i2.endereco||'').split(',')[0].trim().match(/^([A-Z]+)/)?.[1]||'?';
+        return r2===itemRua;
+      }).some(i2=>i2.status!=='pendente');
+      const grupoCount = itensAtuais.filter(i2=>{
+        const r2=String(i2.endereco||'').split(',')[0].trim().match(/^([A-Z]+)/)?.[1]||'?';
+        return r2===itemRua;
+      });
+      const headerHtml = idxNoGrupo === 0 ? `<div style="display:flex;align-items:center;gap:8px;padding:8px 4px 4px;margin-top:${listEl.innerHTML?'8px':'0'}">
+        <div style="width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;
+          background:${grupoOk?'#EAF3DE':grupoAlgum?'#FAEEDA':'#F1F5F9'};
+          color:${grupoOk?'#27500A':grupoAlgum?'#633806':'#475569'};
+          border:1px solid ${grupoOk?'#97C459':grupoAlgum?'#EF9F27':'#CBD5E1'};">${itemRua}</div>
+        <span style="font-size:11px;color:#94A3B8;">${grupoCount.filter(i2=>i2.status!=='pendente').length} / ${grupoCount.length} coletados</span>
+      </div>` : '';
+
       // Estado visual do card
       const cardBg = item.status==='encontrado'?'#F8FFFE':item.status==='falta'?'#FFF8F8':item.status==='parcial'?'#FFFCF0':'var(--surface)';
       const cardBord = item.status==='encontrado'?'#C6F6D5':item.status==='falta'?'#FED7D7':item.status==='parcial'?'#FEF08A':'var(--border)';
       const cardAccent = item.status==='encontrado'?'var(--green)':item.status==='falta'?'var(--red)':item.status==='parcial'?'var(--amber)':'var(--border)';
       const statusLabel = item.status==='encontrado'?'COLETADO':item.status==='falta'?'FALTA':item.status==='parcial'?'PARCIAL':'PENDENTE';
       const avisoStatus = item.aviso_status||'';
-      return `<div id="${prefix}-ic-${item.id}" style="background:${cardBg};border:1px solid ${cardBord};border-left:4px solid ${cardAccent};border-radius:10px;padding:14px;margin-bottom:8px">
+      return headerHtml + `<div id="${prefix}-ic-${item.id}" style="background:${cardBg};border:1px solid ${cardBord};border-left:4px solid ${cardAccent};border-radius:10px;padding:14px;margin-bottom:6px;margin-left:8px">
         <!-- Linha 1: Código + Endereço + Status badge -->
         <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px">
           <div style="flex:1;min-width:0">
@@ -3640,6 +3740,103 @@ document.getElementById('m-ck-input-caixa')?.addEventListener('keypress', e => {
 
 
 
+
+
+/* ══════════════════════════════════════════
+   PEDIDOS PENDENTES DE REPOSIÇÃO (separador)
+══════════════════════════════════════════ */
+async function carregarPedidosPendentesReposicao() {
+  if (!separadorAtual) return;
+  const el = document.getElementById('sep-pedidos-reposicao');
+  if (!el) return;
+  el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:16px;font-size:13px">Carregando...</div>';
+  try {
+    // Busca todos os avisos pendentes do repositor para este separador
+    const res = await fetch(`${API}/repositor/avisos?status=pendente`, { credentials:'include' });
+    const avisos = await res.json();
+
+    // Filtra apenas os do separador atual
+    const meus = avisos.filter(a => String(a.separador_id) === String(separadorAtual.id));
+
+    if (!meus.length) {
+      el.innerHTML = '<div style="background:#F0FDF4;border:1px solid #C6F6D5;border-radius:10px;padding:14px 16px;text-align:center;">' +
+        '<div style="font-size:13px;font-weight:500;color:#15803D;">Nenhum item aguardando reposição</div>' +
+        '<div style="font-size:11px;color:#16A34A;margin-top:4px;">Todos os seus pedidos estão completos</div>' +
+        '</div>';
+      return;
+    }
+
+    // Agrupa por pedido
+    const porPedido = {};
+    meus.forEach(a => {
+      if (!porPedido[a.numero_pedido]) porPedido[a.numero_pedido] = [];
+      porPedido[a.numero_pedido].push(a);
+    });
+
+    const numPedidos = Object.keys(porPedido).length;
+    const totalItens = meus.length;
+
+    // Atualiza badge da aba
+    const badge = document.getElementById('stab-avisos-sep-badge');
+    if (badge) { badge.textContent = totalItens; badge.style.display = totalItens > 0 ? 'inline' : 'none'; }
+
+    let html = `<div style="display:flex;gap:8px;margin-bottom:10px;">
+      <div style="flex:1;background:#FEF2F2;border:1px solid #FECACA;border-radius:8px;padding:10px;text-align:center;">
+        <div style="font-size:20px;font-weight:500;color:#B91C1C;">${numPedidos}</div>
+        <div style="font-size:10px;color:#DC2626;letter-spacing:.5px;">PEDIDOS</div>
+      </div>
+      <div style="flex:1;background:#FEF2F2;border:1px solid #FECACA;border-radius:8px;padding:10px;text-align:center;">
+        <div style="font-size:20px;font-weight:500;color:#B91C1C;">${totalItens}</div>
+        <div style="font-size:10px;color:#DC2626;letter-spacing:.5px;">ITENS</div>
+      </div>
+    </div>`;
+
+    Object.entries(porPedido).forEach(([numPed, itensAviso]) => {
+      const tempoMaisAntigo = itensAviso.reduce((m, a) => a.hora_aviso < m ? a.hora_aviso : m, itensAviso[0].hora_aviso);
+      html += `<div style="background:var(--surface);border:1px solid #FECACA;border-left:3px solid #DC2626;border-radius:0 10px 10px 0;margin-bottom:8px;overflow:hidden;">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#FFF8F8;">
+          <div>
+            <span style="font-family:'Space Mono',monospace;font-size:14px;font-weight:500;color:#0F172A;">#${numPed}</span>
+            <span style="font-size:10px;color:#94A3B8;margin-left:8px;">desde ${tempoMaisAntigo||'—'}</span>
+          </div>
+          <span style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;background:#FEF2F2;color:#B91C1C;border:1px solid #FECACA;">${itensAviso.length} item${itensAviso.length>1?'s':''}</span>
+        </div>`;
+
+      itensAviso.forEach(a => {
+        html += `<div style="padding:10px 14px;border-top:0.5px solid #FECACA;">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
+            <div style="flex:1;min-width:0;">
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;">
+                <span style="font-family:'Space Mono',monospace;font-size:12px;font-weight:500;color:#0F172A;">${a.endereco||'—'}</span>
+                <span style="font-size:10px;font-weight:500;padding:1px 6px;border-radius:4px;background:#FEF2F2;color:#B91C1C;">aguardando</span>
+              </div>
+              <div style="font-size:10px;color:#64748B;font-family:monospace;">${a.codigo||'—'}</div>
+              <div style="font-size:12px;color:#0F172A;line-height:1.3;margin-top:1px;">${a.descricao||'—'}</div>
+            </div>
+            <div style="font-size:20px;font-weight:500;color:#0F172A;flex-shrink:0;">×${a.quantidade||1}</div>
+          </div>
+        </div>`;
+      });
+
+      // Botão para ir ao pedido
+      html += `<div style="padding:10px 14px;border-top:0.5px solid #FECACA;background:#FFF8F8;">
+        <button onclick="irParaPedidoComFalta('${numPed}')" style="width:100%;padding:9px;border-radius:8px;border:1px solid #FECACA;background:#FEF2F2;color:#B91C1C;font-size:12px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif;">
+          Abrir pedido #${numPed}
+        </button>
+      </div></div>`;
+    });
+
+    el.innerHTML = html;
+  } catch(e) {
+    el.innerHTML = '<div style="color:var(--red);text-align:center;padding:16px;font-size:13px">Erro ao carregar</div>';
+  }
+}
+
+function irParaPedidoComFalta(numPed) {
+  mudarTabSep('separar');
+  document.getElementById('m-input-pedido').value = numPed;
+  confirmarPedidoMobile();
+}
 
 /* Adapta ao redimensionar */
 window.addEventListener('resize', () => {
