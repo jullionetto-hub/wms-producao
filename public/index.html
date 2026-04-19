@@ -830,6 +830,7 @@ body.dark .aviso-duplicata{background:#2D1A05;border-color:#78350F;color:#FCD34D
         <div class="pg-title">Dashboard
           <span style="font-size:12px;color:var(--text3);font-weight:400;font-family:'DM Sans',sans-serif" id="dash-ultima-atualizacao"></span>
         </div>
+
         <!-- KPIs Principais -->
         <div class="kpi-grid" style="margin-bottom:8px">
           <div class="kpi-card verde"><div class="kpi-lbl">CONCLUÍDOS HOJE</div><div class="kpi-val" id="dash-hoje">0</div><div class="kpi-sub">pedidos finalizados</div></div>
@@ -837,54 +838,87 @@ body.dark .aviso-duplicata{background:#2D1A05;border-color:#78350F;color:#FCD34D
           <div class="kpi-card vermelho"><div class="kpi-lbl">FALTAS ABERTAS</div><div class="kpi-val" id="dash-repositor">0</div><div class="kpi-sub">aguardando repositor</div></div>
           <div class="kpi-card azul"><div class="kpi-lbl">PENDENTES</div><div class="kpi-val" id="dash-pendentes">0</div><div class="kpi-sub">na fila</div></div>
         </div>
-        <!-- KPIs Secundários -->
         <div class="kpi-grid" style="margin-bottom:16px">
           <div class="kpi-card roxo"><div class="kpi-lbl">CHECKOUT HOJE</div><div class="kpi-val" id="kpi-ck-hoje">0</div><div class="kpi-sub">caixas expedidas</div></div>
           <div class="kpi-card ciano"><div class="kpi-lbl">CHECKPOINT PEND.</div><div class="kpi-val" id="kpi-ck-pend">0</div><div class="kpi-sub">aguardando checkout</div></div>
           <div class="kpi-card laranja"><div class="kpi-lbl">SEPARADORES ATIVOS</div><div class="kpi-val" id="kpi-seps-ativos">0</div><div class="kpi-sub">trabalhando agora</div></div>
           <div class="kpi-card rosa"><div class="kpi-lbl">NÃO ENCONTR. HOJE</div><div class="kpi-val" id="kpi-nao-enc">0</div><div class="kpi-sub">itens não localizados</div></div>
         </div>
-        <div class="grid-2">
-          <div class="card">
-            <div class="card-hd">📊 PRODUTIVIDADE
-              <button class="btn btn-outline btn-sm" onclick="carregarDashboard()">🔄</button>
+
+        <!-- ABAS DO DASHBOARD -->
+        <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:16px">
+          <button id="dtab-btn-visao" onclick="mudarDashTab('visao')"
+            style="padding:10px 18px;border:none;background:transparent;font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.5px;cursor:pointer;border-bottom:2px solid var(--accent);margin-bottom:-2px;font-family:'DM Sans',sans-serif">
+            VISÃO GERAL
+          </button>
+          <button id="dtab-btn-mapa" onclick="mudarDashTab('mapa')"
+            style="padding:10px 18px;border:none;background:transparent;font-size:12px;font-weight:700;color:var(--text3);letter-spacing:.5px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;font-family:'DM Sans',sans-serif">
+            MAPA DO ESTOQUE
+          </button>
+        </div>
+
+        <!-- ABA 1: VISÃO GERAL -->
+        <div id="dtab-visao">
+          <div class="grid-2">
+            <div class="card">
+              <div class="card-hd">PRODUTIVIDADE
+                <button class="btn btn-outline btn-sm" onclick="carregarDashboard()">🔄</button>
+              </div>
+              <div class="filtros">
+                <div class="fg"><label>USUÁRIO</label><select id="filtro-sep-prod" onchange="carregarProdutividade()"><option value="">Todos</option></select></div>
+                <div class="fg"><label>DE</label><input type="date" id="filtro-data-ini"/></div>
+                <div class="fg"><label>ATÉ</label><input type="date" id="filtro-data-fim"/></div>
+                <button class="btn btn-primary btn-sm" onclick="carregarProdutividade()">Filtrar</button>
+              </div>
+              <div class="tabela-wrap"><table><thead><tr><th>USUÁRIO</th><th>HOJE</th><th>MÊS</th><th>ANO</th><th>PROGRESSO</th><th>STATUS</th></tr></thead><tbody id="tbody-prod"></tbody></table></div>
             </div>
-            <div class="filtros">
-              <div class="fg"><label>USUÁRIO</label><select id="filtro-sep-prod" onchange="carregarProdutividade()"><option value="">Todos</option></select></div>
-              <div class="fg"><label>DE</label><input type="date" id="filtro-data-ini"/></div>
-              <div class="fg"><label>ATÉ</label><input type="date" id="filtro-data-fim"/></div>
-              <button class="btn btn-primary btn-sm" onclick="carregarProdutividade()">Filtrar</button>
+            <div class="card">
+              <div class="card-hd">LINHA DO TEMPO
+                <button class="btn btn-outline btn-sm" onclick="carregarTimeline()">🔄</button>
+              </div>
+              <div class="filtros">
+                <div class="fg"><label>DATA</label><input type="date" id="filtro-tl-data"/></div>
+                <button class="btn btn-primary btn-sm" onclick="carregarTimeline()">Filtrar</button>
+              </div>
+              <div class="tl-wrap" id="tl-lista"><div style="color:var(--text3);text-align:center;padding:24px;font-size:13px">Carregando...</div></div>
             </div>
-            <div class="tabela-wrap"><table><thead><tr><th>USUÁRIO</th><th>HOJE</th><th>MÊS</th><th>ANO</th><th>PROGRESSO</th><th>STATUS</th></tr></thead><tbody id="tbody-prod"></tbody></table></div>
-          </div>
-          <div class="card">
-            <div class="card-hd">🕐 LINHA DO TEMPO
-              <button class="btn btn-outline btn-sm" onclick="carregarTimeline()">🔄</button>
-            </div>
-            <div class="filtros">
-              <div class="fg"><label>DATA</label><input type="date" id="filtro-tl-data"/></div>
-              <button class="btn btn-primary btn-sm" onclick="carregarTimeline()">Filtrar</button>
-            </div>
-            <div class="tl-wrap" id="tl-lista"><div style="color:var(--text3);text-align:center;padding:24px;font-size:13px">Carregando...</div></div>
           </div>
         </div>
 
-        <!-- MAPA DO ESTOQUE -->
-        <div class="card" style="margin-top:4px">
-          <div class="card-hd">MAPA DO ESTOQUE — ATIVIDADE DE HOJE
-            <div style="display:flex;gap:8px;align-items:center">
-              <div class="fg"><label style="font-size:9px">SEPARADOR</label><select id="mapa-filtro-sep" class="sel-sm" onchange="carregarMapaEstoque()" style="min-width:130px"><option value="">Todos</option></select></div>
-              <button class="btn btn-outline btn-sm" onclick="carregarMapaEstoque()">🔄</button>
+        <!-- ABA 2: MAPA DO ESTOQUE -->
+        <div id="dtab-mapa" style="display:none">
+          <div class="card">
+            <div class="card-hd">MAPA DO ESTOQUE
+              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                <div class="fg">
+                  <label style="font-size:9px;letter-spacing:1px">PEDIDO</label>
+                  <select id="mapa-filtro-pedido" class="sel-sm" onchange="carregarMapaEstoque()" style="min-width:160px">
+                    <option value="">Todos os pedidos de hoje</option>
+                  </select>
+                </div>
+                <button class="btn btn-outline btn-sm" onclick="carregarMapaEstoque()">🔄</button>
+              </div>
             </div>
-          </div>
-          <div style="padding:10px 0">
-            <div style="display:flex;gap:14px;margin-bottom:12px;font-size:11px;flex-wrap:wrap">
-              <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:50%;background:#DC2626;display:inline-block"></span>Muito ativo (≥10 itens)</span>
-              <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:50%;background:#F59E0B;display:inline-block"></span>Ativo (5–9 itens)</span>
-              <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:50%;background:#3B82F6;display:inline-block"></span>Baixo (1–4 itens)</span>
-              <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:50%;background:#E2E8F0;display:inline-block"></span>Sem atividade</span>
+            <div style="padding:12px 0 4px">
+              <!-- Legenda -->
+              <div style="display:flex;gap:16px;margin-bottom:14px;font-size:11px;color:var(--text2);flex-wrap:wrap;align-items:center">
+                <span style="display:flex;align-items:center;gap:5px">
+                  <span style="width:10px;height:10px;border-radius:50%;background:#DC2626;display:inline-block"></span>Alta demanda (≥10)
+                </span>
+                <span style="display:flex;align-items:center;gap:5px">
+                  <span style="width:10px;height:10px;border-radius:50%;background:#F59E0B;display:inline-block"></span>Média (5–9)
+                </span>
+                <span style="display:flex;align-items:center;gap:5px">
+                  <span style="width:10px;height:10px;border-radius:50%;background:#2563EB;display:inline-block"></span>Baixa (1–4)
+                </span>
+                <span style="display:flex;align-items:center;gap:5px">
+                  <span style="width:10px;height:10px;border-radius:50%;background:var(--border);display:inline-block"></span>Sem atividade
+                </span>
+                <span style="margin-left:auto;font-size:11px;color:var(--text3)" id="mapa-info-pedido"></span>
+              </div>
+              <!-- SVG do mapa -->
+              <div id="mapa-estoque-svg" style="width:100%;overflow-x:auto;min-height:280px"></div>
             </div>
-            <div id="mapa-estoque-svg" style="width:100%;overflow-x:auto"></div>
           </div>
         </div>
       </div>
@@ -1904,176 +1938,253 @@ function trocarCadastroTab(tab) {
 ══════════════════════════════════════════ */
 
 /* ══════════════════════════════════════════
-   MAPA DO ESTOQUE — DASHBOARD
+   MAPA DO ESTOQUE — DASHBOARD (redesign)
 ══════════════════════════════════════════ */
+
+function mudarDashTab(tab) {
+  ['visao','mapa'].forEach(t => {
+    const panel = document.getElementById(`dtab-${t}`);
+    const btn   = document.getElementById(`dtab-btn-${t}`);
+    if (panel) panel.style.display = t === tab ? 'block' : 'none';
+    if (btn) {
+      btn.style.color = t === tab ? 'var(--accent)' : 'var(--text3)';
+      btn.style.borderBottomColor = t === tab ? 'var(--accent)' : 'transparent';
+    }
+  });
+  if (tab === 'mapa') carregarMapaEstoque();
+}
+
 async function carregarMapaEstoque() {
   const el = document.getElementById('mapa-estoque-svg');
   if (!el) return;
-
-  // Popula select de separadores
-  const selMapa = document.getElementById('mapa-filtro-sep');
-  if (selMapa && selMapa.options.length <= 1) {
-    todosSeparadores.forEach(s => {
-      const opt = document.createElement('option');
-      opt.value = s.id; opt.textContent = s.nome;
-      selMapa.appendChild(opt);
-    });
-  }
-  const sepId = selMapa?.value || '';
+  el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:40px;font-size:13px">Carregando mapa...</div>';
 
   try {
-    // Busca todos os itens verificados hoje
-    const res = await fetch(`${API}/pedidos?status=concluido`, { credentials:'include' });
-    const pedidos = await res.json();
     const hoje = hojeLocal();
-    const pedHoje = pedidos.filter(p => p.data_pedido === hoje && (!sepId || String(p.separador_id) === sepId));
+    const res = await fetch(`${API}/pedidos?data=${hoje}`, { credentials:'include' });
+    const pedidos = await res.json();
+
+    // Popular select de pedidos
+    const sel = document.getElementById('mapa-filtro-pedido');
+    if (sel) {
+      const oldVal = sel.value;
+      sel.innerHTML = '<option value="">Todos os pedidos de hoje</option>';
+      pedidos.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = `#${p.numero_pedido} — ${p.cliente||'—'} (${p.itens||0} itens)`;
+        sel.appendChild(opt);
+      });
+      sel.value = oldVal;
+    }
+    const selPedidoId = sel?.value || '';
 
     // Conta itens por rua
     const contRua = {};
-    for (const ped of pedHoje) {
-      const resItens = await fetch(`${API}/pedidos/${ped.id}/itens`, { credentials:'include' });
-      const itens = await resItens.json();
+    let pedidoInfo = null;
+    const pedsFiltrados = selPedidoId ? pedidos.filter(p => String(p.id) === selPedidoId) : pedidos;
+
+    for (const ped of pedsFiltrados) {
+      const rItens = await fetch(`${API}/pedidos/${ped.id}/itens`, { credentials:'include' });
+      const itens = await rItens.json();
       itens.forEach(it => {
-        const end = String(it.endereco||'').split(',')[0].trim();
-        const m = end.match(/^([A-Z]+)/);
-        if (!m) return;
-        const rua = m[1];
-        if (!contRua[rua]) contRua[rua] = 0;
-        contRua[rua] += (it.quantidade || 1);
+        const ends = String(it.endereco||'').split(',');
+        ends.forEach(e => {
+          const endClean = e.trim();
+          if (!endClean || endClean.startsWith('VERT') || endClean.startsWith('AMZ')) return;
+          const m = endClean.match(/^([A-Z]+)/);
+          if (!m) return;
+          const rua = m[1];
+          const validRuas = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+          if (rua.length > 2) return;
+          if (!contRua[rua]) contRua[rua] = { total:0, encontrado:0, falta:0, pendente:0 };
+          contRua[rua].total += (it.quantidade||1);
+          if (it.status === 'encontrado') contRua[rua].encontrado += (it.quantidade||1);
+          else if (it.status === 'falta')  contRua[rua].falta     += (it.quantidade||1);
+          else                             contRua[rua].pendente  += (it.quantidade||1);
+        });
       });
+      if (selPedidoId && ped) pedidoInfo = ped;
     }
 
-    // Também conta pedidos pendentes/separando
-    const resPend = await fetch(`${API}/pedidos`, { credentials:'include' });
-    const todosPed = await resPend.json();
-    const ativos = todosPed.filter(p => ['separando','pendente'].includes(p.status) && p.data_pedido === hoje && (!sepId || String(p.separador_id) === sepId));
-    for (const ped of ativos) {
-      const resItens = await fetch(`${API}/pedidos/${ped.id}/itens`, { credentials:'include' });
-      const itens = await resItens.json();
-      itens.forEach(it => {
-        const end = String(it.endereco||'').split(',')[0].trim();
-        const m = end.match(/^([A-Z]+)/);
-        if (!m) return;
-        const rua = m[1];
-        if (!contRua[rua]) contRua[rua] = 0;
-        contRua[rua] += (it.quantidade || 1);
-      });
+    // Atualiza info
+    const infoEl = document.getElementById('mapa-info-pedido');
+    if (infoEl) {
+      if (pedidoInfo) {
+        infoEl.textContent = `Pedido #${pedidoInfo.numero_pedido} · ${pedidoInfo.cliente||'—'} · ${pedidoInfo.itens||0} itens`;
+      } else {
+        const totalRuas = Object.keys(contRua).length;
+        infoEl.textContent = `${pedsFiltrados.length} pedido(s) · ${totalRuas} rua(s) ativas`;
+      }
     }
 
-    renderMapaEstoque(contRua);
+    renderMapaEstoque(contRua, !!selPedidoId);
   } catch(e) {
-    el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:20px;font-size:13px">Erro ao carregar mapa</div>';
+    const el2 = document.getElementById('mapa-estoque-svg');
+    if (el2) el2.innerHTML = '<div style="color:var(--red);text-align:center;padding:20px">Erro ao carregar</div>';
   }
 }
 
-function renderMapaEstoque(contRua) {
+function renderMapaEstoque(contRua, isPedidoUnico) {
   const el = document.getElementById('mapa-estoque-svg');
   if (!el) return;
 
-  // Layout do estoque baseado nas planilhas
-  // Corredor FUNDO (horizontal): F→Z na linha 12
-  // Corredor FRENTE (vertical): A→E na coluna 13
-  // Checkout fica em frente ao A (entrada)
-  // ZA e Arara no topo
-
-  const dificuldade = {
-    'A':'facil','B':'facil','C':'facil','D':'facil','E':'facil',
-    'F':'dificil','G':'dificil','H':'dificil','I':'dificil','J':'dificil','K':'dificil','L':'dificil',
-    'M':'medio','N':'medio','O':'medio',
-    'P':'facil','Q':'facil','R':'facil','S':'facil','T':'facil','U':'facil',
-    'V':'medio','W':'medio','X':'medio','Y':'medio','Z':'medio',
-    'ZA':'especial','ARARA':'especial'
+  const DIFIC = {
+    A:'facil',B:'facil',C:'facil',D:'facil',E:'facil',
+    F:'dificil',G:'dificil',H:'dificil',I:'dificil',J:'dificil',K:'dificil',L:'dificil',
+    M:'medio',N:'medio',O:'medio',
+    P:'facil',Q:'facil',R:'facil',S:'facil',T:'facil',U:'facil',
+    V:'medio',W:'medio',X:'medio',Y:'medio',Z:'medio',
+    ZA:'especial',ARARA:'especial'
   };
-  const corDif = { facil:'#86EFAC', medio:'#FDE68A', dificil:'#FCA5A5', especial:'#C4B5FD' };
-  const textDif = { facil:'#15803D', medio:'#92400E', dificil:'#B91C1C', especial:'#5B21B6' };
+  const CORES = {
+    facil:   { bg:'#DCFCE7', bord:'#4ADE80', txt:'#166534', bord2:'#16A34A' },
+    medio:   { bg:'#FEF9C3', bord:'#FACC15', txt:'#854D0E', bord2:'#CA8A04' },
+    dificil: { bg:'#FEE2E2', bord:'#F87171', txt:'#991B1B', bord2:'#DC2626' },
+    especial:{ bg:'#EDE9FE', bord:'#A78BFA', txt:'#5B21B6', bord2:'#7C3AED' },
+  };
 
-  function corPonto(qtd) {
-    if (!qtd || qtd === 0) return null;
-    if (qtd >= 10) return '#DC2626';
-    if (qtd >= 5)  return '#F59E0B';
-    return '#3B82F6';
+  function corPonto(total) {
+    if (!total) return null;
+    if (total >= 10) return '#DC2626';
+    if (total >= 5)  return '#F59E0B';
+    return '#2563EB';
   }
 
-  const W = 720, cellW = 26, cellH = 32;
-  // Ruas fundo: F..Z = 21 ruas, mais espaço para labels
-  const ruasFundo = ['F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'];
-  const ruasFrente = ['E','D','C','B','A'];
+  const BW = 42, BH = 36, HGAP = 5, VGAP = 8;
+  const FUNDO  = ['F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'];
+  const FRENTE = ['E','D','C','B','A'];
+  const qIdx   = FUNDO.indexOf('Q');
 
-  // Posições SVG
-  const fundoY = 60, fundoStartX = 50;
-  const frenteX = fundoStartX + ruasFundo.indexOf('Q') * cellW + cellW/2;
-  const frenteStartY = fundoY + cellH + 16;
+  const PAD_L  = 64;
+  const PAD_T  = 56;
+  const fundoY = PAD_T;
+  const fundoX = i => PAD_L + i * (BW + HGAP);
+  const qCX    = fundoX(qIdx) + BW / 2;
+  const frenteX= qCX - BW / 2;
+  const frenteStartY = fundoY + BH + 28;
+  const svgW   = PAD_L + FUNDO.length * (BW + HGAP) + 20;
+  const svgH   = frenteStartY + FRENTE.length * (BH + VGAP) + 54;
 
-  let svg = `<svg viewBox="0 0 ${W} 260" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:${W}px;font-family:'DM Sans',sans-serif">`;
+  let s = `<svg viewBox="0 0 ${svgW} ${svgH}" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:${svgW}px;font-family:'DM Sans',system-ui,sans-serif">`;
 
-  // ZA e Arara (topo esquerdo)
-  svg += `<rect x="10" y="10" width="38" height="24" rx="4" fill="${corDif.especial}" stroke="${textDif.especial}" stroke-width="0.5"/>`;
-  svg += `<text x="29" y="24" text-anchor="middle" font-size="10" font-weight="600" fill="${textDif.especial}">ZA</text>`;
-  if (contRua['ZA']) {
-    const c = corPonto(contRua['ZA']);
-    svg += `<circle cx="42" cy="10" r="6" fill="${c}"/>`;
-    svg += `<text x="42" y="14" text-anchor="middle" font-size="7" fill="#fff" font-weight="700">${contRua['ZA']}</text>`;
+  // ── Faixa de fundo (corredor) ──
+  s += `<rect x="${PAD_L-4}" y="${fundoY-4}" width="${FUNDO.length*(BW+HGAP)+2}" height="${BH+8}" rx="8" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1"/>`;
+
+  // ── Faixa de frente (corredor vertical) ──
+  s += `<rect x="${frenteX-4}" y="${frenteStartY-4}" width="${BW+8}" height="${FRENTE.length*(BH+VGAP)+4}" rx="8" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1"/>`;
+
+  // ── Conector vertical entre fundo e frente ──
+  s += `<line x1="${qCX}" y1="${fundoY+BH+4}" x2="${qCX}" y2="${frenteStartY-4}" stroke="#CBD5E1" stroke-width="2" stroke-dasharray="4,3"/>`;
+
+  // ── Labels ──
+  s += `<text x="${PAD_L-2}" y="${fundoY-10}" font-size="9" fill="#94A3B8" font-weight="700" letter-spacing="1.5">FUNDO</text>`;
+  s += `<text x="${frenteX+BW+10}" y="${frenteStartY+BH/2+4}" font-size="9" fill="#94A3B8" font-weight="700" letter-spacing="1.5">FRENTE</text>`;
+
+  // ── ZA (canto superior esquerdo) ──
+  {
+    const zC = CORES.especial;
+    const zD = contRua['ZA']?.total || 0;
+    s += `<rect x="4" y="8" width="${BW}" height="${BH}" rx="6" fill="${zC.bg}" stroke="${zC.bord2}" stroke-width="1.5"/>`;
+    s += `<text x="${4+BW/2}" y="${8+BH/2+4}" text-anchor="middle" font-size="11" font-weight="700" fill="${zC.txt}">ZA</text>`;
+    if (zD > 0) {
+      const c = corPonto(zD), r = zD>=10?11:9;
+      s += `<circle cx="${4+BW}" cy="8" r="${r}" fill="${c}" stroke="#fff" stroke-width="2"/>`;
+      s += `<text x="${4+BW}" y="${8+4}" text-anchor="middle" font-size="8" fill="#fff" font-weight="700">${zD}</text>`;
+    }
   }
 
-  svg += `<rect x="${W-70}" y="10" width="60" height="24" rx="4" fill="${corDif.especial}" stroke="${textDif.especial}" stroke-width="0.5"/>`;
-  svg += `<text x="${W-40}" y="24" text-anchor="middle" font-size="10" font-weight="600" fill="${textDif.especial}">ARARA</text>`;
+  // ── ARARA (canto superior direito) ──
+  {
+    const aC = CORES.especial;
+    const aD = contRua['ARARA']?.total || 0;
+    const ax = svgW - BW - 8;
+    s += `<rect x="${ax}" y="8" width="${BW}" height="${BH}" rx="6" fill="${aC.bg}" stroke="${aC.bord2}" stroke-width="1.5"/>`;
+    s += `<text x="${ax+BW/2}" y="${8+BH/2+4}" text-anchor="middle" font-size="9" font-weight="700" fill="${aC.txt}">ARARA</text>`;
+    if (aD > 0) {
+      const c = corPonto(aD), r = aD>=10?11:9;
+      s += `<circle cx="${ax+BW}" cy="8" r="${r}" fill="${c}" stroke="#fff" stroke-width="2"/>`;
+      s += `<text x="${ax+BW}" y="${8+4}" text-anchor="middle" font-size="8" fill="#fff" font-weight="700">${aD}</text>`;
+    }
+  }
 
-  // Label FUNDO
-  svg += `<text x="10" y="${fundoY - 8}" font-size="9" fill="#94A3B8" font-weight="600" letter-spacing="1">FUNDO</text>`;
+  // ── Ruas FUNDO ──
+  FUNDO.forEach((rua, i) => {
+    const x = fundoX(i), y = fundoY;
+    const d = contRua[rua];
+    const total = d?.total || 0;
+    const cor = CORES[DIFIC[rua]||'facil'];
+    const atv = total > 0;
+    const strokeW = atv ? '2' : '1';
+    const strokeC = atv ? cor.bord2 : cor.bord;
 
-  // Linha conectora FUNDO
-  svg += `<line x1="${fundoStartX}" y1="${fundoY + cellH/2}" x2="${fundoStartX + ruasFundo.length * cellW}" y2="${fundoY + cellH/2}" stroke="#E2E8F0" stroke-width="1.5"/>`;
+    s += `<rect x="${x}" y="${y}" width="${BW}" height="${BH}" rx="6" `
+       + `fill="${cor.bg}" stroke="${strokeC}" stroke-width="${strokeW}" `
+       + `opacity="${atv?'1':'0.35'}"><title>Rua ${rua}: ${total} itens</title></rect>`;
+    s += `<text x="${x+BW/2}" y="${y+BH/2+4}" text-anchor="middle" `
+       + `font-size="12" font-weight="700" fill="${cor.txt}" opacity="${atv?'1':'0.45'}">${rua}</text>`;
 
-  // Ruas do FUNDO
-  ruasFundo.forEach((rua, i) => {
-    const x = fundoStartX + i * cellW;
-    const qtd = contRua[rua] || 0;
-    const bgColor = corDif[dificuldade[rua]] || '#E2E8F0';
-    const txtColor = textDif[dificuldade[rua]] || '#475569';
+    if (total > 0) {
+      const c = corPonto(total);
+      const r = total >= 10 ? 12 : 10;
+      // Ponto ACIMA do bloco, centralizado
+      const cx = x + BW/2, cy = y - r - 4;
+      s += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${c}" stroke="#fff" stroke-width="2"/>`;
+      s += `<text x="${cx}" y="${cy+4}" text-anchor="middle" `
+         + `font-size="${total >= 100?7:total>=10?8:9}" fill="#fff" font-weight="700">${total}</text>`;
 
-    svg += `<rect x="${x+1}" y="${fundoY}" width="${cellW-2}" height="${cellH}" rx="3" fill="${bgColor}" stroke="${txtColor}" stroke-width="0.5" opacity="0.85"/>`;
-    svg += `<text x="${x+cellW/2}" y="${fundoY+cellH/2+4}" text-anchor="middle" font-size="10" font-weight="600" fill="${txtColor}">${rua}</text>`;
-
-    const c = corPonto(qtd);
-    if (c) {
-      const r = qtd >= 10 ? 9 : qtd >= 5 ? 8 : 7;
-      svg += `<circle cx="${x+cellW/2}" cy="${fundoY-10}" r="${r}" fill="${c}"/>`;
-      svg += `<text x="${x+cellW/2}" y="${fundoY-6}" text-anchor="middle" font-size="${qtd >= 10 ? 8 : 7}" fill="#fff" font-weight="700">${qtd}</text>`;
+      if (isPedidoUnico && (d.encontrado||0) > 0) {
+        const pct = Math.min(1, d.encontrado / total);
+        s += `<rect x="${x+3}" y="${y+BH-5}" width="${BW-6}" height="3" rx="1.5" fill="#CBD5E1"/>`;
+        s += `<rect x="${x+3}" y="${y+BH-5}" width="${Math.round((BW-6)*pct)}" height="3" rx="1.5" fill="#16A34A"/>`;
+      }
     }
   });
 
-  // Linha conectora FRENTE (vertical)
-  svg += `<line x1="${frenteX}" y1="${fundoY+cellH}" x2="${frenteX}" y2="${frenteStartY + ruasFrente.length * (cellH+4)}" stroke="#E2E8F0" stroke-width="1.5"/>`;
+  // ── Ruas FRENTE ──
+  FRENTE.forEach((rua, i) => {
+    const x = frenteX, y = frenteStartY + i * (BH + VGAP);
+    const d = contRua[rua];
+    const total = d?.total || 0;
+    const cor = CORES[DIFIC[rua]||'facil'];
+    const atv = total > 0;
+    const strokeC = atv ? cor.bord2 : cor.bord;
 
-  // Label FRENTE
-  svg += `<text x="${frenteX - 12}" y="${frenteStartY - 6}" font-size="9" fill="#94A3B8" font-weight="600" letter-spacing="1">FRENTE</text>`;
+    s += `<rect x="${x}" y="${y}" width="${BW}" height="${BH}" rx="6" `
+       + `fill="${cor.bg}" stroke="${strokeC}" stroke-width="${atv?'2':'1'}" `
+       + `opacity="${atv?'1':'0.35'}"><title>Rua ${rua}: ${total} itens</title></rect>`;
+    s += `<text x="${x+BW/2}" y="${y+BH/2+4}" text-anchor="middle" `
+       + `font-size="12" font-weight="700" fill="${cor.txt}" opacity="${atv?'1':'0.45'}">${rua}</text>`;
 
-  // Ruas da FRENTE
-  ruasFrente.forEach((rua, i) => {
-    const y = frenteStartY + i * (cellH + 4);
-    const qtd = contRua[rua] || 0;
-    const bgColor = corDif[dificuldade[rua]] || '#E2E8F0';
-    const txtColor = textDif[dificuldade[rua]] || '#475569';
+    if (total > 0) {
+      const c = corPonto(total);
+      const r = total >= 10 ? 12 : 10;
+      // Ponto à DIREITA do bloco
+      const cx = x + BW + r + 6, cy = y + BH/2;
+      s += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${c}" stroke="#fff" stroke-width="2"/>`;
+      s += `<text x="${cx}" y="${cy+4}" text-anchor="middle" `
+         + `font-size="${total >= 100?7:total>=10?8:9}" fill="#fff" font-weight="700">${total}</text>`;
 
-    svg += `<rect x="${frenteX - cellW/2 + 1}" y="${y}" width="${cellW-2}" height="${cellH}" rx="3" fill="${bgColor}" stroke="${txtColor}" stroke-width="0.5" opacity="0.85"/>`;
-    svg += `<text x="${frenteX}" y="${y+cellH/2+4}" text-anchor="middle" font-size="10" font-weight="600" fill="${txtColor}">${rua}</text>`;
-
-    const c = corPonto(qtd);
-    if (c) {
-      const r = qtd >= 10 ? 9 : qtd >= 5 ? 8 : 7;
-      svg += `<circle cx="${frenteX + cellW/2 + 4}" cy="${y + cellH/2}" r="${r}" fill="${c}"/>`;
-      svg += `<text x="${frenteX + cellW/2 + 4}" y="${y + cellH/2 + 4}" text-anchor="middle" font-size="${qtd >= 10 ? 8 : 7}" fill="#fff" font-weight="700">${qtd}</text>`;
+      if (isPedidoUnico && (d.encontrado||0) > 0) {
+        const pct = Math.min(1, d.encontrado / total);
+        s += `<rect x="${x+3}" y="${y+BH-5}" width="${BW-6}" height="3" rx="1.5" fill="#CBD5E1"/>`;
+        s += `<rect x="${x+3}" y="${y+BH-5}" width="${Math.round((BW-6)*pct)}" height="3" rx="1.5" fill="#16A34A"/>`;
+      }
     }
   });
 
-  // Checkout (entrada/saída)
-  const checkoutY = frenteStartY + ruasFrente.length * (cellH + 4) + 8;
-  svg += `<rect x="${frenteX - 36}" y="${checkoutY}" width="72" height="22" rx="4" fill="#1E40AF" opacity="0.9"/>`;
-  svg += `<text x="${frenteX}" y="${checkoutY + 15}" text-anchor="middle" font-size="10" font-weight="700" fill="#fff">CHECKOUT / ENTRADA</text>`;
+  // ── Seta + CHECKOUT ──
+  const ckY = frenteStartY + FRENTE.length * (BH + VGAP) + 12;
+  const ckW = 100, ckH = 28;
+  const ckX = qCX - ckW/2;
+  s += `<polygon points="${qCX-5},${ckY} ${qCX+5},${ckY} ${qCX},${ckY-9}" fill="#64748B"/>`;
+  s += `<rect x="${ckX}" y="${ckY}" width="${ckW}" height="${ckH}" rx="6" fill="#1E3A5F"/>`;
+  s += `<text x="${qCX}" y="${ckY+ckH/2+5}" text-anchor="middle" font-size="10" font-weight="700" fill="#fff" letter-spacing="0.5">CHECKOUT / ENTRADA</text>`;
 
-  svg += `</svg>`;
-  el.innerHTML = svg;
+  s += '</svg>';
+  el.innerHTML = s;
 }
+
 
 async function carregarDashboard() {
   await popularSelects();
@@ -3373,11 +3484,29 @@ async function _confirmarPedidoCore(num, inputId, statusId, clWrapId, fnChecklis
     }
 
     if (data.caixa_vinculada) {
-      // Pedido já tinha caixa — libera direto
+      // Pedido já tinha caixa — libera direto e mostra caixa vinculada
       caixaJaVinculada = true;
       mostrarCampoCaixa(true);
       ph.style.display = 'none';
       if (clWrap) clWrap.style.display = 'block';
+      // Busca e exibe o número da caixa já vinculada
+      try {
+        const rCaixa = await fetch(`${API}/pedidos/info/${encodeURIComponent(num)}`, { credentials:'include' });
+        if (rCaixa.ok) {
+          const dCaixa = await rCaixa.json();
+          if (dCaixa.numero_caixa) {
+            const inpMob = document.getElementById('m-input-caixa');
+            const inpDesk = document.getElementById('cl-input-caixa');
+            const stMob  = document.getElementById('m-caixa-status');
+            const stDesk = document.getElementById('cl-caixa-status');
+            if (inpMob)  inpMob.value  = dCaixa.numero_caixa;
+            if (inpDesk) inpDesk.value = dCaixa.numero_caixa;
+            const msg = `<span style="color:var(--green);font-weight:600">✅ Caixa <b>${dCaixa.numero_caixa}</b> já vinculada</span>`;
+            if (stMob)  { stMob.style.display='block';  stMob.innerHTML = msg; }
+            if (stDesk) { stDesk.style.display='block'; stDesk.innerHTML = msg; }
+          }
+        }
+      } catch(e) {}
       await fnChecklist();
     } else {
       // Exige caixa antes de mostrar itens
@@ -4302,8 +4431,7 @@ async function vincularCaixaCore(caixa, inputStatusId) {
     const statusEl = document.getElementById(inputStatusId);
     if (statusEl) {
       statusEl.style.display = 'block';
-      statusEl.innerHTML = `✅ Caixa <b>${caixa}</b> vinculada — Pedido #${pedidoAtualNum}`;
-      statusEl.style.color = 'var(--green)';
+      statusEl.innerHTML = `<span style="color:var(--green);font-weight:600">✅ Caixa <b>${caixa}</b> vinculada — Pedido #${pedidoAtualNum}</span>`;
     }
     // Esconde placeholder e mostra checklist real
     caixaJaVinculada = true;
@@ -4441,12 +4569,31 @@ function processarArquivoModalFile(file) {
           const iAg = tCab.findIndex(c=>c.includes('aguardando')||c.includes('desde')) >= 0 
             ? tCab.findIndex(c=>c.includes('aguardando')||c.includes('desde')) : 1;
           let agVal = '';
-          if (r[iAg]) {
-            // Pode vir como Date object ou string "dd/MM/yyyy HH:mm"
+          if (r[iAg] !== undefined && r[iAg] !== null && r[iAg] !== '') {
             const raw = r[iAg];
-            if (raw instanceof Date || (typeof raw === 'object' && raw !== null)) {
-              const d = new Date(raw);
-              agVal = d.toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+            const pad = n => String(n).padStart(2,'0');
+            if (typeof raw === 'number') {
+              // Serial Excel: parte inteira = dias desde 1899-12-30
+              // parte decimal = fração do dia (0.5 = 12:00)
+              // Converte para ms: (serial - 25569) * 86400000 → UTC
+              // Ajusta para horário de Brasília (UTC-3)
+              try {
+                const d = XLSX.SSF.parse_date_code(raw, {date1904: false});
+                if (d && d.y > 2000) {
+                  agVal = `${pad(d.d)}/${pad(d.m)}/${d.y} ${pad(d.H)}:${pad(d.M)}`;
+                } else {
+                  // Fallback: conversão manual
+                  const ms = Math.round((raw - 25569) * 86400 * 1000);
+                  const dt = new Date(ms);
+                  // Ajusta UTC-3 (Brasília)
+                  const brMs = ms - 3 * 3600 * 1000;
+                  const brDt = new Date(brMs);
+                  agVal = `${pad(brDt.getUTCDate())}/${pad(brDt.getUTCMonth()+1)}/${brDt.getUTCFullYear()} ${pad(brDt.getUTCHours())}:${pad(brDt.getUTCMinutes())}`;
+                }
+              } catch(ex) { agVal = String(raw); }
+            } else if (raw instanceof Date) {
+              // Date JS — usar horário local do browser
+              agVal = `${pad(raw.getDate())}/${pad(raw.getMonth()+1)}/${raw.getFullYear()} ${pad(raw.getHours())}:${pad(raw.getMinutes())}`;
             } else {
               agVal = String(raw).trim();
             }
