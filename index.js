@@ -461,7 +461,7 @@ app.post('/pedidos/bipar', (req, res) => {
       return res.status(400).json({ erro:'Pedido ja concluido!', status:'concluido' });
 
     if (separador_id && pedido.separador_id && String(pedido.separador_id) === String(separador_id))
-      return res.json({ mensagem:'Pedido ja atribuido.', pedido_id:pedido.id, status:pedido.status, ja_atribuido:true });
+      return res.json({ mensagem:'Pedido ja atribuido.', pedido_id:pedido.id, status:pedido.status, ja_atribuido:true, caixa_vinculada: !!(pedido.numero_caixa) });
 
     if (separador_id && pedido.separador_id && String(pedido.separador_id) !== String(separador_id) && pedido.status === 'separando')
       return res.status(409).json({ erro:'Pedido sendo separado por outro operador!' });
@@ -471,7 +471,7 @@ app.post('/pedidos/bipar', (req, res) => {
     db.run(`UPDATE pedidos SET separador_id=?, status='separando' WHERE id=?`,
       [sepId, pedido.id], function(err2) {
         if (err2) return res.status(500).json({ erro: err2.message });
-        res.json({ mensagem:'Pedido atribuido!', pedido_id:pedido.id, status:'separando' });
+        res.json({ mensagem:'Pedido atribuido!', pedido_id:pedido.id, status:'separando', caixa_vinculada: !!(pedido.numero_caixa) });
       });
   });
 });
@@ -823,16 +823,7 @@ app.post('/importar', async (req, res) => {
     const itens = pedidosMap[numero];
     try {
       // Pontuação por peso de corredor + ruas únicas
-      function _pesoCorredor(end) {
-        if (!end) return 1.0;
-        const e = String(end).trim().toUpperCase();
-        if (e.startsWith('ZA') || e.toLowerCase().includes('arara')) return 2.0;
-        const l = e.charAt(0);
-        if ('ABCDEPQRSTU'.includes(l)) return 1.0;
-        if ('MNOUVWXYZ'.includes(l)) return 1.5;
-        if ('FGHIJKL'.includes(l)) return 2.0;
-        return 1.0;
-      }
+      const _pesoCorredor = calcularPesoCorredor;
       const ruasUnicas = new Set(itens.map(i => String(i.endereco||'').split(',')[0].trim().replace(/\d+/g,'').trim())).size;
       const somaItens = itens.reduce((s,i) => s + _pesoCorredor(i.endereco) * (parseInt(i.quantidade)||1), 0);
       const pontuacao = Math.round(somaItens + ruasUnicas * 2);
@@ -1039,18 +1030,73 @@ app.get('/pedidos/info/:numero_pedido', (req, res) => {
 // Ordenação: mais antigo primeiro (hora_pedido ASC) dentro de cada grupo
 // Algoritmo: greedy — atribui sempre ao separador com menor carga total
 //
+// Tabela de dificuldade do estoque — lookup exato por colméia
+// Pesos: Fácil+Frente=1.0, Fácil+Fundo=1.3, Médio+Frente=1.8
+//        Médio+Fundo=2.2, Difícil+Frente=2.8, Difícil+Fundo=3.5
+//        ZA/Arara/VERT=3.5
+const SEGMENTOS_ESTOQUE = [
+  ['A',1,84,'Frente','Facil'],['B',1,168,'Frente','Facil'],
+  ['C',1,168,'Frente','Facil'],['D',1,168,'Frente','Facil'],['E',1,77,'Frente','Facil'],
+  ['F',1,40,'Fundo','Dificil'],['G',41,96,'Fundo','Dificil'],
+  ['H',1,112,'Fundo','Dificil'],
+  ['I',1,112,'Fundo','Dificil'],['I',113,203,'Frente','Dificil'],
+  ['J',1,91,'Frente','Dificil'],['J',204,287,'Frente','Dificil'],
+  ['J',92,147,'Fundo','Dificil'],['J',148,203,'Fundo','Dificil'],
+  ['K',1,84,'Frente','Dificil'],['K',197,287,'Frente','Dificil'],
+  ['K',85,140,'Fundo','Dificil'],['K',141,196,'Fundo','Dificil'],
+  ['L',1,91,'Frente','Dificil'],['L',204,294,'Frente','Dificil'],
+  ['L',148,203,'Fundo','Dificil'],['L',92,147,'Fundo','Dificil'],
+  ['M',1,91,'Frente','Medio'],['M',204,287,'Frente','Medio'],
+  ['M',92,147,'Fundo','Medio'],['M',148,203,'Fundo','Medio'],
+  ['N',1,84,'Frente','Medio'],['N',197,287,'Frente','Medio'],
+  ['N',141,196,'Fundo','Medio'],['N',85,140,'Fundo','Medio'],
+  ['O',1,91,'Frente','Medio'],['O',204,294,'Frente','Medio'],
+  ['O',92,147,'Fundo','Medio'],['O',148,203,'Fundo','Medio'],
+  ['P',1,91,'Frente','Facil'],['P',204,287,'Frente','Facil'],
+  ['P',92,147,'Fundo','Facil'],['P',148,203,'Fundo','Facil'],
+  ['Q',1,84,'Frente','Facil'],['Q',197,287,'Frente','Facil'],
+  ['Q',85,140,'Fundo','Facil'],['Q',141,196,'Fundo','Facil'],
+  ['R',1,91,'Frente','Facil'],['R',204,294,'Frente','Facil'],
+  ['R',92,147,'Fundo','Facil'],['R',148,203,'Fundo','Facil'],
+  ['S',1,91,'Frente','Facil'],['S',204,294,'Frente','Facil'],
+  ['S',92,147,'Fundo','Facil'],['S',148,203,'Fundo','Facil'],
+  ['T',1,84,'Frente','Facil'],['T',197,287,'Frente','Facil'],
+  ['T',85,140,'Fundo','Facil'],['T',141,196,'Fundo','Facil'],
+  ['U',1,91,'Frente','Facil'],['U',204,347,'Frente','Facil'],
+  ['U',92,147,'Fundo','Facil'],['U',148,203,'Fundo','Facil'],
+  ['V',1,144,'Frente','Medio'],['V',257,360,'Frente','Medio'],
+  ['V',145,200,'Fundo','Medio'],['V',201,256,'Fundo','Medio'],
+  ['W',1,104,'Frente','Medio'],['W',241,352,'Frente','Medio'],
+  ['W',105,160,'Fundo','Medio'],['W',161,240,'Fundo','Medio'],
+  ['X',1,112,'Frente','Medio'],['X',233,352,'Frente','Medio'],
+  ['X',113,192,'Fundo','Medio'],['X',193,232,'Fundo','Medio'],
+  ['Y',1,120,'Frente','Medio'],['Y',201,320,'Frente','Medio'],
+  ['Y',121,160,'Fundo','Medio'],['Y',161,200,'Fundo','Medio'],
+  ['Z',1,120,'Frente','Medio'],['Z',121,160,'Fundo','Medio'],
+];
+const PESOS_NIVEL_LOCAL = {
+  'Facil_Frente':1.0,'Facil_Fundo':1.3,
+  'Medio_Frente':1.8,'Medio_Fundo':2.2,
+  'Dificil_Frente':2.8,'Dificil_Fundo':3.5,
+};
+
 function calcularPesoCorredor(endereco) {
   if (!endereco) return 1.0;
-  const end = String(endereco).trim().toUpperCase();
-  // ZA e Arara — difícil
-  if (end.startsWith('ZA') || end.toLowerCase().includes('arara')) return 2.0;
-  const letra = end.charAt(0);
-  // Fácil: A,B,C,D,E,P,Q,R,S,T,U
-  if ('ABCDEPQRSTU'.includes(letra)) return 1.0;
-  // Médio: M,N,O,V,W,X,Y,Z
-  if ('MNOUVWXYZ'.includes(letra)) return 1.5;
-  // Difícil: F,G,H,I,J,K,L
-  if ('FGHIJKL'.includes(letra)) return 2.0;
+  const end = String(endereco).split(',')[0].trim().toUpperCase();
+  if (end.startsWith('ZA') || end.includes('ARARA') || end.includes('VERT')) return 3.5;
+  const m = end.match(/^([A-Z]+)(\d+)/);
+  if (!m) return 1.0;
+  const rua = m[1], num = parseInt(m[2]);
+  // Lookup exato por colméia
+  for (const [sRua,de,ate,local,nivel] of SEGMENTOS_ESTOQUE) {
+    if (sRua === rua && de <= num && num <= ate) {
+      return PESOS_NIVEL_LOCAL[nivel+'_'+local] || 1.0;
+    }
+  }
+  // Fallback: qualquer segmento da rua
+  for (const [sRua,,,,local,nivel] of SEGMENTOS_ESTOQUE) {
+    if (sRua === rua) return PESOS_NIVEL_LOCAL[(nivel||'Facil')+'_'+(local||'Frente')] || 1.0;
+  }
   return 1.0;
 }
 

@@ -868,6 +868,25 @@ body.dark .aviso-duplicata{background:#2D1A05;border-color:#78350F;color:#FCD34D
             <div class="tl-wrap" id="tl-lista"><div style="color:var(--text3);text-align:center;padding:24px;font-size:13px">Carregando...</div></div>
           </div>
         </div>
+
+        <!-- MAPA DO ESTOQUE -->
+        <div class="card" style="margin-top:4px">
+          <div class="card-hd">MAPA DO ESTOQUE — ATIVIDADE DE HOJE
+            <div style="display:flex;gap:8px;align-items:center">
+              <div class="fg"><label style="font-size:9px">SEPARADOR</label><select id="mapa-filtro-sep" class="sel-sm" onchange="carregarMapaEstoque()" style="min-width:130px"><option value="">Todos</option></select></div>
+              <button class="btn btn-outline btn-sm" onclick="carregarMapaEstoque()">🔄</button>
+            </div>
+          </div>
+          <div style="padding:10px 0">
+            <div style="display:flex;gap:14px;margin-bottom:12px;font-size:11px;flex-wrap:wrap">
+              <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:50%;background:#DC2626;display:inline-block"></span>Muito ativo (≥10 itens)</span>
+              <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:50%;background:#F59E0B;display:inline-block"></span>Ativo (5–9 itens)</span>
+              <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:50%;background:#3B82F6;display:inline-block"></span>Baixo (1–4 itens)</span>
+              <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:50%;background:#E2E8F0;display:inline-block"></span>Sem atividade</span>
+            </div>
+            <div id="mapa-estoque-svg" style="width:100%;overflow-x:auto"></div>
+          </div>
+        </div>
       </div>
 
 
@@ -1883,12 +1902,186 @@ function trocarCadastroTab(tab) {
 /* ══════════════════════════════════════════
    DASHBOARD
 ══════════════════════════════════════════ */
+
+/* ══════════════════════════════════════════
+   MAPA DO ESTOQUE — DASHBOARD
+══════════════════════════════════════════ */
+async function carregarMapaEstoque() {
+  const el = document.getElementById('mapa-estoque-svg');
+  if (!el) return;
+
+  // Popula select de separadores
+  const selMapa = document.getElementById('mapa-filtro-sep');
+  if (selMapa && selMapa.options.length <= 1) {
+    todosSeparadores.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s.id; opt.textContent = s.nome;
+      selMapa.appendChild(opt);
+    });
+  }
+  const sepId = selMapa?.value || '';
+
+  try {
+    // Busca todos os itens verificados hoje
+    const res = await fetch(`${API}/pedidos?status=concluido`, { credentials:'include' });
+    const pedidos = await res.json();
+    const hoje = hojeLocal();
+    const pedHoje = pedidos.filter(p => p.data_pedido === hoje && (!sepId || String(p.separador_id) === sepId));
+
+    // Conta itens por rua
+    const contRua = {};
+    for (const ped of pedHoje) {
+      const resItens = await fetch(`${API}/pedidos/${ped.id}/itens`, { credentials:'include' });
+      const itens = await resItens.json();
+      itens.forEach(it => {
+        const end = String(it.endereco||'').split(',')[0].trim();
+        const m = end.match(/^([A-Z]+)/);
+        if (!m) return;
+        const rua = m[1];
+        if (!contRua[rua]) contRua[rua] = 0;
+        contRua[rua] += (it.quantidade || 1);
+      });
+    }
+
+    // Também conta pedidos pendentes/separando
+    const resPend = await fetch(`${API}/pedidos`, { credentials:'include' });
+    const todosPed = await resPend.json();
+    const ativos = todosPed.filter(p => ['separando','pendente'].includes(p.status) && p.data_pedido === hoje && (!sepId || String(p.separador_id) === sepId));
+    for (const ped of ativos) {
+      const resItens = await fetch(`${API}/pedidos/${ped.id}/itens`, { credentials:'include' });
+      const itens = await resItens.json();
+      itens.forEach(it => {
+        const end = String(it.endereco||'').split(',')[0].trim();
+        const m = end.match(/^([A-Z]+)/);
+        if (!m) return;
+        const rua = m[1];
+        if (!contRua[rua]) contRua[rua] = 0;
+        contRua[rua] += (it.quantidade || 1);
+      });
+    }
+
+    renderMapaEstoque(contRua);
+  } catch(e) {
+    el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:20px;font-size:13px">Erro ao carregar mapa</div>';
+  }
+}
+
+function renderMapaEstoque(contRua) {
+  const el = document.getElementById('mapa-estoque-svg');
+  if (!el) return;
+
+  // Layout do estoque baseado nas planilhas
+  // Corredor FUNDO (horizontal): F→Z na linha 12
+  // Corredor FRENTE (vertical): A→E na coluna 13
+  // Checkout fica em frente ao A (entrada)
+  // ZA e Arara no topo
+
+  const dificuldade = {
+    'A':'facil','B':'facil','C':'facil','D':'facil','E':'facil',
+    'F':'dificil','G':'dificil','H':'dificil','I':'dificil','J':'dificil','K':'dificil','L':'dificil',
+    'M':'medio','N':'medio','O':'medio',
+    'P':'facil','Q':'facil','R':'facil','S':'facil','T':'facil','U':'facil',
+    'V':'medio','W':'medio','X':'medio','Y':'medio','Z':'medio',
+    'ZA':'especial','ARARA':'especial'
+  };
+  const corDif = { facil:'#86EFAC', medio:'#FDE68A', dificil:'#FCA5A5', especial:'#C4B5FD' };
+  const textDif = { facil:'#15803D', medio:'#92400E', dificil:'#B91C1C', especial:'#5B21B6' };
+
+  function corPonto(qtd) {
+    if (!qtd || qtd === 0) return null;
+    if (qtd >= 10) return '#DC2626';
+    if (qtd >= 5)  return '#F59E0B';
+    return '#3B82F6';
+  }
+
+  const W = 720, cellW = 26, cellH = 32;
+  // Ruas fundo: F..Z = 21 ruas, mais espaço para labels
+  const ruasFundo = ['F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'];
+  const ruasFrente = ['E','D','C','B','A'];
+
+  // Posições SVG
+  const fundoY = 60, fundoStartX = 50;
+  const frenteX = fundoStartX + ruasFundo.indexOf('Q') * cellW + cellW/2;
+  const frenteStartY = fundoY + cellH + 16;
+
+  let svg = `<svg viewBox="0 0 ${W} 260" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:${W}px;font-family:'DM Sans',sans-serif">`;
+
+  // ZA e Arara (topo esquerdo)
+  svg += `<rect x="10" y="10" width="38" height="24" rx="4" fill="${corDif.especial}" stroke="${textDif.especial}" stroke-width="0.5"/>`;
+  svg += `<text x="29" y="24" text-anchor="middle" font-size="10" font-weight="600" fill="${textDif.especial}">ZA</text>`;
+  if (contRua['ZA']) {
+    const c = corPonto(contRua['ZA']);
+    svg += `<circle cx="42" cy="10" r="6" fill="${c}"/>`;
+    svg += `<text x="42" y="14" text-anchor="middle" font-size="7" fill="#fff" font-weight="700">${contRua['ZA']}</text>`;
+  }
+
+  svg += `<rect x="${W-70}" y="10" width="60" height="24" rx="4" fill="${corDif.especial}" stroke="${textDif.especial}" stroke-width="0.5"/>`;
+  svg += `<text x="${W-40}" y="24" text-anchor="middle" font-size="10" font-weight="600" fill="${textDif.especial}">ARARA</text>`;
+
+  // Label FUNDO
+  svg += `<text x="10" y="${fundoY - 8}" font-size="9" fill="#94A3B8" font-weight="600" letter-spacing="1">FUNDO</text>`;
+
+  // Linha conectora FUNDO
+  svg += `<line x1="${fundoStartX}" y1="${fundoY + cellH/2}" x2="${fundoStartX + ruasFundo.length * cellW}" y2="${fundoY + cellH/2}" stroke="#E2E8F0" stroke-width="1.5"/>`;
+
+  // Ruas do FUNDO
+  ruasFundo.forEach((rua, i) => {
+    const x = fundoStartX + i * cellW;
+    const qtd = contRua[rua] || 0;
+    const bgColor = corDif[dificuldade[rua]] || '#E2E8F0';
+    const txtColor = textDif[dificuldade[rua]] || '#475569';
+
+    svg += `<rect x="${x+1}" y="${fundoY}" width="${cellW-2}" height="${cellH}" rx="3" fill="${bgColor}" stroke="${txtColor}" stroke-width="0.5" opacity="0.85"/>`;
+    svg += `<text x="${x+cellW/2}" y="${fundoY+cellH/2+4}" text-anchor="middle" font-size="10" font-weight="600" fill="${txtColor}">${rua}</text>`;
+
+    const c = corPonto(qtd);
+    if (c) {
+      const r = qtd >= 10 ? 9 : qtd >= 5 ? 8 : 7;
+      svg += `<circle cx="${x+cellW/2}" cy="${fundoY-10}" r="${r}" fill="${c}"/>`;
+      svg += `<text x="${x+cellW/2}" y="${fundoY-6}" text-anchor="middle" font-size="${qtd >= 10 ? 8 : 7}" fill="#fff" font-weight="700">${qtd}</text>`;
+    }
+  });
+
+  // Linha conectora FRENTE (vertical)
+  svg += `<line x1="${frenteX}" y1="${fundoY+cellH}" x2="${frenteX}" y2="${frenteStartY + ruasFrente.length * (cellH+4)}" stroke="#E2E8F0" stroke-width="1.5"/>`;
+
+  // Label FRENTE
+  svg += `<text x="${frenteX - 12}" y="${frenteStartY - 6}" font-size="9" fill="#94A3B8" font-weight="600" letter-spacing="1">FRENTE</text>`;
+
+  // Ruas da FRENTE
+  ruasFrente.forEach((rua, i) => {
+    const y = frenteStartY + i * (cellH + 4);
+    const qtd = contRua[rua] || 0;
+    const bgColor = corDif[dificuldade[rua]] || '#E2E8F0';
+    const txtColor = textDif[dificuldade[rua]] || '#475569';
+
+    svg += `<rect x="${frenteX - cellW/2 + 1}" y="${y}" width="${cellW-2}" height="${cellH}" rx="3" fill="${bgColor}" stroke="${txtColor}" stroke-width="0.5" opacity="0.85"/>`;
+    svg += `<text x="${frenteX}" y="${y+cellH/2+4}" text-anchor="middle" font-size="10" font-weight="600" fill="${txtColor}">${rua}</text>`;
+
+    const c = corPonto(qtd);
+    if (c) {
+      const r = qtd >= 10 ? 9 : qtd >= 5 ? 8 : 7;
+      svg += `<circle cx="${frenteX + cellW/2 + 4}" cy="${y + cellH/2}" r="${r}" fill="${c}"/>`;
+      svg += `<text x="${frenteX + cellW/2 + 4}" y="${y + cellH/2 + 4}" text-anchor="middle" font-size="${qtd >= 10 ? 8 : 7}" fill="#fff" font-weight="700">${qtd}</text>`;
+    }
+  });
+
+  // Checkout (entrada/saída)
+  const checkoutY = frenteStartY + ruasFrente.length * (cellH + 4) + 8;
+  svg += `<rect x="${frenteX - 36}" y="${checkoutY}" width="72" height="22" rx="4" fill="#1E40AF" opacity="0.9"/>`;
+  svg += `<text x="${frenteX}" y="${checkoutY + 15}" text-anchor="middle" font-size="10" font-weight="700" fill="#fff">CHECKOUT / ENTRADA</text>`;
+
+  svg += `</svg>`;
+  el.innerHTML = svg;
+}
+
 async function carregarDashboard() {
   await popularSelects();
   await carregarKPIs();
   await carregarProdutividade();
   await carregarTimeline();
   await atualizarBadgeRep();
+  await carregarMapaEstoque();
   const el = document.getElementById('dash-ultima-atualizacao');
   if (el) el.textContent = '— atualizado ' + new Date().toLocaleTimeString('pt-BR', {timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit'});
 }
@@ -3169,12 +3362,8 @@ async function _confirmarPedidoCore(num, inputId, statusId, clWrapId, fnChecklis
       statusEl.style.borderLeftColor = 'var(--red)';
     }
     toast(data.ja_atribuido ? `Pedido ${num} carregado` : `Pedido ${num} iniciado`, 'info');
-    caixaJaVinculada = false; // reset — exige nova vinculação
-    mostrarCampoCaixa(true);
-    // Esconde o cl-wrap e mostra placeholder separado
+
     const clWrap = document.getElementById(clWrapId);
-    if (clWrap) clWrap.style.display = 'none';
-    // Mostra ou cria placeholder (não destrói estrutura do wrap)
     let phId = clWrapId + '-placeholder';
     let ph = document.getElementById(phId);
     if (!ph) {
@@ -3182,12 +3371,26 @@ async function _confirmarPedidoCore(num, inputId, statusId, clWrapId, fnChecklis
       ph.id = phId;
       clWrap?.parentNode?.insertBefore(ph, clWrap?.nextSibling || clWrap);
     }
-    ph.style.display = 'block';
-    ph.innerHTML = `<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;text-align:center;padding:32px 20px">
-      <div style="font-size:30px;margin-bottom:10px">📦</div>
-      <div style="font-size:13px;font-weight:700;color:#475569;margin-bottom:4px">Vincule o número da caixa</div>
-      <div style="font-size:11px;color:#94A3B8">A lista de itens será liberada após vincular a caixa ao pedido</div>
-    </div>`;
+
+    if (data.caixa_vinculada) {
+      // Pedido já tinha caixa — libera direto
+      caixaJaVinculada = true;
+      mostrarCampoCaixa(true);
+      ph.style.display = 'none';
+      if (clWrap) clWrap.style.display = 'block';
+      await fnChecklist();
+    } else {
+      // Exige caixa antes de mostrar itens
+      caixaJaVinculada = false;
+      mostrarCampoCaixa(true);
+      if (clWrap) clWrap.style.display = 'none';
+      ph.style.display = 'block';
+      ph.innerHTML = `<div style="background:var(--surface);border:1.5px solid #FECACA;border-radius:10px;text-align:center;padding:28px 20px;">
+        <div style="width:44px;height:44px;border-radius:50%;background:#FEF2F2;border:1.5px solid #FECACA;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;font-size:20px;">📦</div>
+        <div style="font-size:13px;font-weight:700;color:#B91C1C;margin-bottom:4px;">Vincule a caixa para iniciar</div>
+        <div style="font-size:11px;color:#94A3B8;">A lista de itens só aparece após vincular o número da caixa</div>
+      </div>`;
+    }
     fnFila();
   } catch(e) { toast('Erro ao conectar!','erro'); }
 }
