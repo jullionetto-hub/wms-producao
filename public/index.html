@@ -857,9 +857,13 @@ body.dark .aviso-duplicata{background:#2D1A05;border-color:#78350F;color:#FCD34D
 
         <!-- ABAS DO DASHBOARD -->
         <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:16px">
-          <button id="dtab-btn-visao" onclick="mudarDashTab('visao')"
+          <button id="dtab-btn-operacao" onclick="mudarDashTab('operacao')"
             style="padding:10px 18px;border:none;background:transparent;font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.5px;cursor:pointer;border-bottom:2px solid var(--accent);margin-bottom:-2px;font-family:'DM Sans',sans-serif">
-            VISÃO GERAL
+            OPERAÇÃO
+          </button>
+          <button id="dtab-btn-visao" onclick="mudarDashTab('visao')"
+            style="padding:10px 18px;border:none;background:transparent;font-size:12px;font-weight:700;color:var(--text3);letter-spacing:.5px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;font-family:'DM Sans',sans-serif">
+            HISTÓRICO
           </button>
           <button id="dtab-btn-mapa" onclick="mudarDashTab('mapa')"
             style="padding:10px 18px;border:none;background:transparent;font-size:12px;font-weight:700;color:var(--text3);letter-spacing:.5px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;font-family:'DM Sans',sans-serif">
@@ -867,8 +871,72 @@ body.dark .aviso-duplicata{background:#2D1A05;border-color:#78350F;color:#FCD34D
           </button>
         </div>
 
-        <!-- ABA 1: VISÃO GERAL -->
-        <div id="dtab-visao">
+        <!-- ABA 0: OPERAÇÃO (tempo real) -->
+        <div id="dtab-operacao">
+          <!-- Andamento do lote -->
+          <div class="card" style="margin-bottom:14px">
+            <div class="card-hd">ANDAMENTO DO LOTE DE HOJE
+              <button class="btn btn-outline btn-sm" onclick="carregarOperacao()">🔄</button>
+            </div>
+            <div style="padding:4px 0 8px">
+              <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:8px">
+                <div>
+                  <span style="font-size:36px;font-weight:700;color:var(--green)" id="op-concluidos">0</span>
+                  <span style="font-size:16px;color:var(--text3)"> / </span>
+                  <span style="font-size:24px;font-weight:500;color:var(--text2)" id="op-total">0</span>
+                  <span style="font-size:13px;color:var(--text3);margin-left:6px">pedidos</span>
+                </div>
+                <div style="text-align:right">
+                  <div style="font-size:28px;font-weight:700;color:var(--accent)" id="op-pct">0%</div>
+                  <div style="font-size:11px;color:var(--text3)">concluído</div>
+                </div>
+              </div>
+              <div style="height:16px;background:var(--surface2);border-radius:8px;overflow:hidden;margin-bottom:10px">
+                <div id="op-barra" style="height:100%;background:linear-gradient(90deg,#16A34A,#4ADE80);border-radius:8px;transition:width .5s;width:0%"></div>
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
+                <div style="text-align:center;padding:8px;background:#F0FDF4;border-radius:8px;border:1px solid #C6F6D5">
+                  <div style="font-size:18px;font-weight:700;color:#15803D" id="op-n-concluidos">0</div>
+                  <div style="font-size:10px;color:#15803D;letter-spacing:.5px">CONCLUÍDOS</div>
+                </div>
+                <div style="text-align:center;padding:8px;background:#FFF7ED;border-radius:8px;border:1px solid #FED7AA">
+                  <div style="font-size:18px;font-weight:700;color:#C2410C" id="op-n-separando">0</div>
+                  <div style="font-size:10px;color:#C2410C;letter-spacing:.5px">SEPARANDO</div>
+                </div>
+                <div style="text-align:center;padding:8px;background:#EFF6FF;border-radius:8px;border:1px solid #BFDBFE">
+                  <div style="font-size:18px;font-weight:700;color:#1D4ED8" id="op-n-pendentes">0</div>
+                  <div style="font-size:10px;color:#1D4ED8;letter-spacing:.5px">PENDENTES</div>
+                </div>
+                <div style="text-align:center;padding:8px;background:#FEF2F2;border-radius:8px;border:1px solid #FECACA">
+                  <div style="font-size:18px;font-weight:700;color:#B91C1C" id="op-n-faltas">0</div>
+                  <div style="font-size:10px;color:#B91C1C;letter-spacing:.5px">FALTAS</div>
+                </div>
+              </div>
+              <div id="op-previsao" style="margin-top:10px;padding:8px 12px;background:var(--surface2);border-radius:8px;font-size:12px;color:var(--text2);display:none">
+                ⏱ <span id="op-previsao-txt"></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Grid: ranking + separadores tempo real -->
+          <div class="grid-2">
+            <div class="card">
+              <div class="card-hd">RANKING — SEPARADORES MAIS RÁPIDOS HOJE</div>
+              <div id="op-ranking" style="padding:4px 0">
+                <div style="color:var(--text3);text-align:center;padding:20px;font-size:13px">Carregando...</div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-hd">SEPARADORES EM TEMPO REAL</div>
+              <div id="op-tempo-real" style="padding:4px 0">
+                <div style="color:var(--text3);text-align:center;padding:20px;font-size:13px">Carregando...</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ABA 1: HISTÓRICO -->
+        <div id="dtab-visao" style="display:none">
           <div class="grid-2">
             <div class="card">
               <div class="card-hd">PRODUTIVIDADE
@@ -1126,22 +1194,58 @@ body.dark .aviso-duplicata{background:#2D1A05;border-color:#78350F;color:#FCD34D
       <!-- REPOSIÇÃO -->
       <div class="pagina" id="pag-reposicao">
         <div class="pg-title">Reposição</div>
-        <div class="card">
-          <div class="card-hd">AVISOS DE FALTA
-            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-              <span style="font-size:12px;color:var(--red);font-weight:700">🔴 <span id="rep-pend">0</span> pendentes</span>
-              <span style="font-size:12px;color:var(--green);font-weight:600">✅ <span id="rep-rep">0</span> repostos</span>
-              <select id="filtro-rep-status" class="sel-sm" onchange="carregarAvisos()" style="min-width:120px">
-                <option value="">Todos</option>
-                <option value="pendente">Pendente</option>
-                <option value="reposto">Reposto</option>
-                <option value="nao_encontrado">Não encontrado</option>
-              </select>
-              <button class="btn btn-outline btn-sm" onclick="carregarAvisos()">🔄</button>
-              <button class="excel-btn" onclick="exportarAvisosExcel()">📊 Excel</button>
+
+        <!-- Abas da reposição -->
+        <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:14px">
+          <button id="reptab-btn-avisos" onclick="mudarRepTab('avisos')"
+            style="padding:9px 16px;border:none;background:transparent;font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.5px;cursor:pointer;border-bottom:2px solid var(--accent);margin-bottom:-2px;font-family:'DM Sans',sans-serif">
+            AVISOS DE FALTA
+          </button>
+          <button id="reptab-btn-analise" onclick="mudarRepTab('analise')"
+            style="padding:9px 16px;border:none;background:transparent;font-size:12px;font-weight:700;color:var(--text3);letter-spacing:.5px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;font-family:'DM Sans',sans-serif">
+            ANÁLISE DE FALTAS
+          </button>
+        </div>
+
+        <!-- Aba 1: Avisos -->
+        <div id="reptab-avisos">
+          <div class="card">
+            <div class="card-hd">AVISOS DE FALTA
+              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                <span style="font-size:12px;color:var(--red);font-weight:700">🔴 <span id="rep-pend">0</span> pendentes</span>
+                <span style="font-size:12px;color:var(--green);font-weight:600">✅ <span id="rep-rep">0</span> repostos</span>
+                <select id="filtro-rep-status" class="sel-sm" onchange="carregarAvisos()" style="min-width:120px">
+                  <option value="">Todos</option>
+                  <option value="pendente">Pendente</option>
+                  <option value="reposto">Reposto</option>
+                  <option value="nao_encontrado">Não encontrado</option>
+                </select>
+                <button class="btn btn-outline btn-sm" onclick="carregarAvisos()">🔄</button>
+                <button class="excel-btn" onclick="exportarAvisosExcel()">📊 Excel</button>
+              </div>
+            </div>
+            <div id="lista-avisos"><div style="color:var(--text3);text-align:center;padding:40px;font-size:13px">✅ Nenhum item em falta</div></div>
+          </div>
+        </div>
+
+        <!-- Aba 2: Análise de Faltas -->
+        <div id="reptab-analise" style="display:none">
+          <div class="grid-2" style="margin-bottom:14px">
+            <div class="card">
+              <div class="card-hd">PRODUTOS QUE MAIS FALTAM
+                <button class="btn btn-outline btn-sm" onclick="carregarAnaliseFaltas()">🔄</button>
+              </div>
+              <div id="analise-produtos">
+                <div style="color:var(--text3);text-align:center;padding:20px;font-size:13px">Carregando...</div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-hd">RUAS COM MAIS FALTAS</div>
+              <div id="analise-ruas">
+                <div style="color:var(--text3);text-align:center;padding:20px;font-size:13px">Carregando...</div>
+              </div>
             </div>
           </div>
-          <div id="lista-avisos"><div style="color:var(--text3);text-align:center;padding:40px;font-size:13px">✅ Nenhum item em falta</div></div>
         </div>
       </div>
 
@@ -1879,7 +1983,7 @@ function irPara(pag, el) {
   const pg = document.getElementById(`pag-${pag}`);
   if (pg) pg.classList.add('ativa');
   if (el) el.classList.add('ativo');
-  if (pag === 'dashboard')       carregarDashboard();
+  if (pag === 'dashboard')       { carregarDashboard(); mudarDashTab('operacao'); }
   if (pag === 'pedidos')         { popularSelects(); carregarPedidos(); carregarPedidosBloqueados(); }
   if (pag === 'cadastros')       { trocarCadastroTab('usuarios'); carregarUsuarios(); }
   if (pag === 'separacao')       { carregarFila(); if (separadorAtual) carregarContadoresSep(); }
@@ -1967,7 +2071,7 @@ function trocarCadastroTab(tab) {
 ══════════════════════════════════════════ */
 
 function mudarDashTab(tab) {
-  ['visao','mapa'].forEach(t => {
+  ['operacao','visao','mapa'].forEach(t => {
     const panel = document.getElementById(`dtab-${t}`);
     const btn   = document.getElementById(`dtab-btn-${t}`);
     if (panel) panel.style.display = t === tab ? 'block' : 'none';
@@ -1977,6 +2081,7 @@ function mudarDashTab(tab) {
     }
   });
   if (tab === 'mapa') carregarMapaEstoque();
+  if (tab === 'operacao') carregarOperacao();
 }
 
 async function carregarMapaEstoque() {
@@ -2211,13 +2316,143 @@ function renderMapaEstoque(contRua, isPedidoUnico) {
 }
 
 
+async function carregarOperacao() {
+  try {
+    const hoje = hojeLocal();
+    // Busca todos os pedidos de hoje
+    const res = await fetch(`${API}/pedidos?data=${hoje}`, { credentials:'include' });
+    const pedidos = await res.json();
+
+    const total      = pedidos.length;
+    const concluidos = pedidos.filter(p=>p.status==='concluido').length;
+    const separando  = pedidos.filter(p=>p.status==='separando').length;
+    const pendentes  = pedidos.filter(p=>p.status==='pendente').length;
+    const pct        = total > 0 ? Math.round((concluidos/total)*100) : 0;
+
+    // Busca faltas abertas
+    const resF = await fetch(`${API}/repositor/avisos?status=pendente`, { credentials:'include' });
+    const faltas = resF.ok ? await resF.json() : [];
+
+    // Atualiza barra de progresso
+    document.getElementById('op-concluidos').textContent = concluidos;
+    document.getElementById('op-total').textContent = total;
+    document.getElementById('op-pct').textContent = pct + '%';
+    document.getElementById('op-barra').style.width = pct + '%';
+    document.getElementById('op-n-concluidos').textContent = concluidos;
+    document.getElementById('op-n-separando').textContent = separando;
+    document.getElementById('op-n-pendentes').textContent = pendentes;
+    document.getElementById('op-n-faltas').textContent = faltas.length;
+
+    // Previsão de conclusão
+    const prevEl = document.getElementById('op-previsao');
+    const prevTxt = document.getElementById('op-previsao-txt');
+    if (concluidos > 0 && pendentes > 0) {
+      // Calcula velocidade: pedidos/hora com base nos concluídos
+      // Pega hora do primeiro e do ultimo concluído
+      const conclPeds = pedidos.filter(p=>p.status==='concluido' && p.hora_pedido);
+      if (conclPeds.length >= 2) {
+        const horas = conclPeds.map(p=>p.hora_pedido).sort();
+        const [h1,m1] = horas[0].split(':').map(Number);
+        const [h2,m2] = horas[horas.length-1].split(':').map(Number);
+        const minDecorridos = (h2*60+m2) - (h1*60+m1);
+        if (minDecorridos > 0) {
+          const velPorMin = concluidos / minDecorridos;
+          const minRestantes = Math.round(pendentes / velPorMin);
+          const hRestantes = Math.floor(minRestantes / 60);
+          const mRestantes = minRestantes % 60;
+          const agora = new Date();
+          agora.setMinutes(agora.getMinutes() + minRestantes);
+          const hFim = agora.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',timeZone:'America/Sao_Paulo'});
+          prevTxt.textContent = `Velocidade atual: ${(velPorMin*60).toFixed(1)} pedidos/hora · Previsão de conclusão: ${hFim} (em ~${hRestantes}h ${mRestantes}min)`;
+          prevEl.style.display = 'block';
+        }
+      }
+    } else if (pct === 100) {
+      prevTxt.textContent = 'Todos os pedidos do lote foram concluídos!';
+      prevEl.style.display = 'block';
+      document.getElementById('op-barra').style.background = 'linear-gradient(90deg,#16A34A,#4ADE80)';
+    } else {
+      prevEl.style.display = 'none';
+    }
+
+    // Ranking por separador
+    const porSep = {};
+    pedidos.forEach(p => {
+      if (!p.separador_nome) return;
+      if (!porSep[p.separador_nome]) porSep[p.separador_nome] = { nome:p.separador_nome, concluidos:0, separando:0, pendentes:0, pontuacao:0 };
+      if (p.status==='concluido')  { porSep[p.separador_nome].concluidos++; porSep[p.separador_nome].pontuacao += (p.pontuacao||0); }
+      if (p.status==='separando')  porSep[p.separador_nome].separando++;
+      if (p.status==='pendente')   porSep[p.separador_nome].pendentes++;
+    });
+    const seps = Object.values(porSep).sort((a,b)=>b.concluidos-a.concluidos);
+    const maxConc = Math.max(...seps.map(s=>s.concluidos), 1);
+    const medalhas = ['🥇','🥈','🥉'];
+
+    // Ranking
+    const rankEl = document.getElementById('op-ranking');
+    if (rankEl) {
+      if (!seps.length) {
+        rankEl.innerHTML = '<div style="color:var(--text3);text-align:center;padding:20px;font-size:13px">Nenhum pedido concluído ainda</div>';
+      } else {
+        rankEl.innerHTML = seps.map((s,i) => `
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:0.5px solid var(--border)">
+            <div style="font-size:20px;width:28px;text-align:center">${medalhas[i]||'#'+(i+1)}</div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13px;font-weight:600;color:var(--text)">${s.nome}</div>
+              <div style="height:6px;background:var(--surface2);border-radius:3px;margin-top:4px;overflow:hidden">
+                <div style="height:100%;background:${i===0?'linear-gradient(90deg,#F59E0B,#FCD34D)':i===1?'linear-gradient(90deg,#94A3B8,#CBD5E1)':i===2?'linear-gradient(90deg,#C2410C,#FB923C)':'linear-gradient(90deg,#2563EB,#60A5FA)'};width:${Math.round((s.concluidos/maxConc)*100)}%;border-radius:3px"></div>
+              </div>
+            </div>
+            <div style="text-align:right;flex-shrink:0">
+              <div style="font-size:18px;font-weight:700;color:var(--green)">${s.concluidos}</div>
+              <div style="font-size:10px;color:var(--text3)">pedidos</div>
+            </div>
+          </div>`).join('');
+      }
+    }
+
+    // Tempo real
+    const trEl = document.getElementById('op-tempo-real');
+    if (trEl) {
+      if (!seps.length) {
+        trEl.innerHTML = '<div style="color:var(--text3);text-align:center;padding:20px;font-size:13px">Nenhum separador ativo</div>';
+      } else {
+        trEl.innerHTML = seps.map(s => {
+          const total_sep = s.concluidos + s.separando + s.pendentes;
+          const pct_sep   = total_sep > 0 ? Math.round((s.concluidos/total_sep)*100) : 0;
+          const statusColor = s.separando > 0 ? '#D97706' : s.concluidos > 0 ? '#15803D' : '#94A3B8';
+          const statusTxt   = s.separando > 0 ? 'Separando' : s.concluidos > 0 ? 'Disponível' : 'Aguardando';
+          return `<div style="padding:10px 4px;border-bottom:0.5px solid var(--border)">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+              <div style="display:flex;align-items:center;gap:8px">
+                <div style="width:8px;height:8px;border-radius:50%;background:${statusColor};flex-shrink:0"></div>
+                <span style="font-size:13px;font-weight:600;color:var(--text)">${s.nome}</span>
+                <span style="font-size:10px;color:${statusColor};font-weight:600">${statusTxt}</span>
+              </div>
+              <span style="font-size:11px;color:var(--text3)">${pct_sep}%</span>
+            </div>
+            <div style="display:flex;gap:12px;font-size:11px;color:var(--text3);margin-bottom:5px">
+              <span style="color:var(--green)">✓ ${s.concluidos} concluídos</span>
+              ${s.separando>0?`<span style="color:var(--amber)">⟳ ${s.separando} em andamento</span>`:''}
+              ${s.pendentes>0?`<span>⏳ ${s.pendentes} na fila</span>`:''}
+            </div>
+            <div style="height:5px;background:var(--surface2);border-radius:3px;overflow:hidden">
+              <div style="height:100%;background:linear-gradient(90deg,#16A34A,#4ADE80);width:${pct_sep}%;border-radius:3px;transition:width .4s"></div>
+            </div>
+          </div>`;
+        }).join('');
+      }
+    }
+  } catch(e) { console.error(e); }
+}
+
 async function carregarDashboard() {
   await popularSelects();
   await carregarKPIs();
   await carregarProdutividade();
   await carregarTimeline();
   await atualizarBadgeRep();
-  await carregarMapaEstoque();
+  await carregarOperacao();
   const el = document.getElementById('dash-ultima-atualizacao');
   if (el) el.textContent = '— atualizado ' + new Date().toLocaleTimeString('pt-BR', {timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit'});
 }
@@ -3951,6 +4186,110 @@ async function buscarProdutoRepositor() {
 
 
 
+
+
+/* ══════════════════════════════════════════
+   ABAS DA REPOSIÇÃO
+══════════════════════════════════════════ */
+function mudarRepTab(tab) {
+  ['avisos','analise'].forEach(t => {
+    const panel = document.getElementById(`reptab-${t}`);
+    const btn   = document.getElementById(`reptab-btn-${t}`);
+    if (panel) panel.style.display = t === tab ? 'block' : 'none';
+    if (btn) {
+      btn.style.color = t === tab ? 'var(--accent)' : 'var(--text3)';
+      btn.style.borderBottomColor = t === tab ? 'var(--accent)' : 'transparent';
+    }
+  });
+  if (tab === 'analise') carregarAnaliseFaltas();
+}
+
+async function carregarAnaliseFaltas() {
+  try {
+    const res = await fetch(`${API}/repositor/avisos`, { credentials:'include' });
+    const avisos = await res.json();
+
+    // Agrupa por produto
+    const porProd = {};
+    const porRua  = {};
+    avisos.forEach(a => {
+      // Por produto
+      const key = a.codigo || a.descricao || 'Desconhecido';
+      const desc = a.descricao || a.codigo || '—';
+      if (!porProd[key]) porProd[key] = { desc, total:0, pendentes:0, repostos:0 };
+      porProd[key].total++;
+      if (a.status === 'pendente')    porProd[key].pendentes++;
+      if (a.status === 'reposto')     porProd[key].repostos++;
+
+      // Por rua
+      const end = String(a.endereco||'').split(',')[0].trim();
+      const m = end.match(/^([A-Z]+)/);
+      if (m) {
+        const rua = m[1];
+        if (!porRua[rua]) porRua[rua] = { total:0, pendentes:0 };
+        porRua[rua].total++;
+        if (a.status === 'pendente') porRua[rua].pendentes++;
+      }
+    });
+
+    // Produtos — top 10 por total de ocorrências
+    const prods = Object.values(porProd).sort((a,b)=>b.total-a.total).slice(0,10);
+    const maxP  = Math.max(...prods.map(p=>p.total), 1);
+    const prodEl = document.getElementById('analise-produtos');
+    if (prodEl) {
+      if (!prods.length) {
+        prodEl.innerHTML = '<div style="color:var(--text3);text-align:center;padding:20px;font-size:13px">Nenhuma falta registrada</div>';
+      } else {
+        prodEl.innerHTML = prods.map((p,i) => `
+          <div style="padding:8px 4px;border-bottom:0.5px solid var(--border)">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+              <div style="flex:1;min-width:0;font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${p.desc}">${p.desc}</div>
+              <div style="display:flex;gap:8px;flex-shrink:0;margin-left:8px;font-size:11px">
+                ${p.pendentes>0?`<span style="color:var(--red);font-weight:600">${p.pendentes} pend.</span>`:''}
+                ${p.repostos>0?`<span style="color:var(--green)">${p.repostos} repos.</span>`:''}
+                <span style="color:var(--text3)">${p.total}x</span>
+              </div>
+            </div>
+            <div style="height:5px;background:var(--surface2);border-radius:3px;overflow:hidden">
+              <div style="height:100%;background:${p.pendentes>0?'linear-gradient(90deg,#DC2626,#F87171)':'linear-gradient(90deg,#16A34A,#4ADE80)'};width:${Math.round((p.total/maxP)*100)}%;border-radius:3px"></div>
+            </div>
+          </div>`).join('');
+      }
+    }
+
+    // Ruas — ordenadas por total
+    const ruas = Object.entries(porRua).sort((a,b)=>b[1].total-a[1].total);
+    const maxR = Math.max(...ruas.map(r=>r[1].total), 1);
+    const dificuldadeRua = r => {
+      if ('ABCDEPQRSTU'.includes(r)) return {cor:'#15803D',bg:'#F0FDF4'};
+      if ('MNOUVWXYZ'.includes(r))   return {cor:'#92400E',bg:'#FFFBEB'};
+      return {cor:'#991B1B',bg:'#FEF2F2'};
+    };
+    const ruaEl = document.getElementById('analise-ruas');
+    if (ruaEl) {
+      if (!ruas.length) {
+        ruaEl.innerHTML = '<div style="color:var(--text3);text-align:center;padding:20px;font-size:13px">Nenhuma falta registrada</div>';
+      } else {
+        ruaEl.innerHTML = ruas.map(([rua, d]) => {
+          const dif = dificuldadeRua(rua);
+          return `<div style="display:flex;align-items:center;gap:10px;padding:8px 4px;border-bottom:0.5px solid var(--border)">
+            <div style="width:32px;height:32px;border-radius:50%;background:${dif.bg};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:${dif.cor};flex-shrink:0">${rua}</div>
+            <div style="flex:1;min-width:0">
+              <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+                <span style="font-size:12px;color:var(--text2)">${d.total} ocorrência${d.total>1?'s':''}</span>
+                ${d.pendentes>0?`<span style="font-size:11px;color:var(--red);font-weight:600">${d.pendentes} pendente${d.pendentes>1?'s':''}</span>`:'<span style="font-size:11px;color:var(--green)">resolvido</span>'}
+              </div>
+              <div style="height:5px;background:var(--surface2);border-radius:3px;overflow:hidden">
+                <div style="height:100%;background:${d.pendentes>0?'linear-gradient(90deg,#DC2626,#F87171)':'linear-gradient(90deg,#16A34A,#4ADE80)'};width:${Math.round((d.total/maxR)*100)}%;border-radius:3px"></div>
+              </div>
+            </div>
+            <div style="text-align:right;flex-shrink:0;font-size:18px;font-weight:700;color:${d.pendentes>0?'var(--red)':'var(--green)'}">${d.total}</div>
+          </div>`;
+        }).join('');
+      }
+    }
+  } catch(e) { console.error(e); }
+}
 
 async function carregarAvisos() {
   try {
