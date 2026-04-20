@@ -8,33 +8,135 @@ const pgSession = require('connect-pg-simple')(session);
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
+const isProd = process.env.NODE_ENV === 'production';
 
-app.use(cors({ credentials:true, origin:(o,cb)=>cb(null,o||'http://localhost:3000') }));
-app.use(express.json({ limit:'50mb' }));
-app.use(express.urlencoded({ limit:'50mb', extended:true }));
+// ── Segurança: SESSION_SECRET obrigatório em produção ─────────────────────────
+if (isProd && !process.env.SESSION_SECRET) {
+  console.error('ERRO CRÍTICO: SESSION_SECRET não definido em produção!');
+  process.exit(1);
+}
+const SESSION_SECRET = process.env.SESSION_SECRET || 'dev_secret_local_apenas';
+
+// ── CORS — origens permitidas ─────────────────────────────────────────────────
+const ORIGENS_PERMITIDAS = (process.env.ALLOWED_ORIGINS || '')
+  .split(',').map(o => o.trim()).filter(Boolean);
+
+app.use(cors({
+  credentials: true,
+  origin: (origin, cb) => {
+    // Em desenvolvimento, aceita qualquer origem
+    if (!isProd) return cb(null, origin || 'http://localhost:3000');
+    // Em produção, aceita apenas origens cadastradas ou sem origin (mobile apps)
+    if (!origin || ORIGENS_PERMITIDAS.includes(origin)) return cb(null, origin);
+    cb(new Error('Origem não permitida pelo CORS'));
+  }
+}));
+
+// ── Headers de segurança HTTP ─────────────────────────────────────────────────
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  next();
+});
+
+app.use(express.json({ limit:'10mb' }));
+app.use(express.urlencoded({ limit:'10mb', extended:true }));
 app.use(express.static(path.join(__dirname,'public')));
 
 // ── PostgreSQL ────────────────────────────────────────────────────────────────
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: (process.env.DATABASE_URL||'').includes('railway') || process.env.NODE_ENV==='production'
-    ? { rejectUnauthorized:false } : false
+  ssl: (process.env.DATABASE_URL||'').includes('railway') || isProd
+    ? { rejectUnauthorized:false } : false,
+  max: 10,                // máximo de conexões simultâneas
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 5000,
 });
 
-// Helpers — mesma interface que o SQLite anterior
+pool.on('error', (err) => {
+  console.error('Erro inesperado no pool do PostgreSQL:', err.message);
+});
+
+// Helpers
 const db = {
   run: (sql,p=[]) => pool.query(sql,p),
   get: async (sql,p=[]) => { const r=await pool.query(sql,p); return r.rows[0]||null; },
   all: async (sql,p=[]) => { const r=await pool.query(sql,p); return r.rows; }
 };
 
-// Sessions no PostgreSQL
+// ── Sessions ──────────────────────────────────────────────────────────────────
 app.use(session({
   store: new pgSession({ pool, tableName:'session', createTableIfMissing:true }),
-  secret: process.env.SESSION_SECRET||'wms_session_secret_2026',
-  resave:false, saveUninitialized:false,
-  cookie:{ maxAge:8*60*60*1000, httpOnly:true, secure:false, sameSite:'lax' }
+  secret: SESSION_SECRET,
+  resave: false,
+  saveUninitialized: false,
+  name: 'wms.sid',  // nome discreto (não revela que usa express-session)
+  cookie: {
+    maxAge: 8 * 60 * 60 * 1000,  // 8 horas
+    httpOnly: true,               // JS do browser não acessa o cookie
+    secure: isProd,               // HTTPS obrigatório em produção
+    sameSite: 'lax'
+  }
 }));
+
+// ── Rate limiting manual para login ──────────────────────────────────────────
+const loginAttempts = new Map();
+function checkRateLimit(ip) {
+  const now = Date.now();
+  const windowMs = 15 * 60 * 1000; // 15 minutos
+  const maxAttempts = 10;
+  const entry = loginAttempts.get(ip) || { count:0, resetAt: now + windowMs };
+  if (now > entry.resetAt) {
+    entry.count = 0;
+    entry.resetAt = now + windowMs;
+  }
+  entry.count++;
+  loginAttempts.set(ip, entry);
+  return entry.count <= maxAttempts;
+}
+// Limpa o Map a cada hora para não acumular memória
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, entry] of loginAttempts) {
+    if (now > entry.resetAt) loginAttempts.delete(ip);
+  }
+}, 60 * 60 * 1000);
+
+// ── Middlewares de autenticação e autorização ─────────────────────────────────
+function requerAuth(req, res, next) {
+  if (!req.session?.usuario) {
+    return res.status(401).json({ erro: 'Não autenticado. Faça login.' });
+  }
+  next();
+}
+
+function requerPerfil(...perfis) {
+  return (req, res, next) => {
+    if (!req.session?.usuario) {
+      return res.status(401).json({ erro: 'Não autenticado.' });
+    }
+    const user = req.session.usuario;
+    const perfisUser = [user.perfil, ...String(user.perfis_acesso||'').split(',').map(s=>s.trim()).filter(Boolean)];
+    const temPermissao = perfis.some(p => perfisUser.includes(p));
+    if (!temPermissao) {
+      return res.status(403).json({ erro: `Acesso negado. Perfil necessário: ${perfis.join(' ou ')}` });
+    }
+    next();
+  };
+}
+
+// ── Validação de inputs ───────────────────────────────────────────────────────
+function sanitizeStr(val, maxLen = 255) {
+  if (val === null || val === undefined) return '';
+  return String(val).trim().slice(0, maxLen);
+}
+
+function validarId(id) {
+  const n = parseInt(id);
+  return !isNaN(n) && n > 0 ? n : null;
+}
 
 app.get('/', (req,res) => res.sendFile(path.join(__dirname,'public','index.html')));
 
@@ -130,29 +232,73 @@ function formatarAguardandoDesde(val) {
 
 // ─── AUTH ─────────────────────────────────────────────────────────────────────
 app.post('/auth/login', async (req,res) => {
-  const {login,senha,perfil}=req.body;
-  if (!login||!senha||!perfil) return res.status(400).json({erro:'Dados incompletos!'});
+  // Rate limiting por IP
+  const ip = req.ip || req.connection.remoteAddress || 'unknown';
+  if (!checkRateLimit(ip)) {
+    return res.status(429).json({ erro: 'Muitas tentativas. Aguarde 15 minutos.' });
+  }
+
+  const login  = sanitizeStr(req.body.login, 100);
+  const senha  = sanitizeStr(req.body.senha, 200);
+  const perfil = sanitizeStr(req.body.perfil, 50);
+
+  if (!login || !senha || !perfil) return res.status(400).json({erro:'Dados incompletos!'});
   if (!['supervisor','separador','repositor','checkout'].includes(perfil))
     return res.status(400).json({erro:'Perfil inválido!'});
+
   try {
-    const user = await db.get(`SELECT * FROM usuarios WHERE login=$1 AND senha_hash=$2 AND status='ativo'`,[login,hashSenha(senha)]);
-    if (!user) return res.status(401).json({erro:'Login ou senha incorretos!'});
-    if (!perfisPermitidos(user).includes(perfil)) return res.status(403).json({erro:'Este colaborador nao pode acessar este perfil!'});
-    req.session.usuario={id:user.id,nome:user.nome,login:user.login,perfil,subtipo_repositor:user.subtipo_repositor||'geral',turno:user.turno};
-    if (perfil==='separador') {
-      req.session.separador = await db.get(`SELECT * FROM separadores WHERE usuario_id=$1 AND status='ativo'`,[user.id]);
-    } else { req.session.separador=null; }
-    res.json({usuario:req.session.usuario,separador:req.session.separador});
-  } catch(e){res.status(500).json({erro:e.message});}
+    // Seleciona apenas campos necessários — nunca retorna senha_hash ao frontend
+    const user = await db.get(
+      `SELECT id,nome,login,perfil,subtipo_repositor,perfis_acesso,turno,senha_hash
+       FROM usuarios WHERE login=$1 AND status='ativo'`,
+      [login]
+    );
+
+    // Compara hash de forma segura (tempo constante para evitar timing attacks)
+    const hashFornecido = hashSenha(senha);
+    const hashCorreto   = user?.senha_hash || '';
+    const senhaCorreta  = crypto.timingSafeEqual(
+      Buffer.from(hashFornecido.padEnd(64,'0').slice(0,64)),
+      Buffer.from(hashCorreto.padEnd(64,'0').slice(0,64))
+    );
+
+    if (!user || !senhaCorreta) return res.status(401).json({erro:'Login ou senha incorretos!'});
+    if (!perfisPermitidos(user).includes(perfil))
+      return res.status(403).json({erro:'Este colaborador não pode acessar este perfil!'});
+
+    // Salva na sessão SEM senha_hash
+    req.session.usuario = {
+      id: user.id, nome: user.nome, login: user.login, perfil,
+      subtipo_repositor: user.subtipo_repositor || 'geral',
+      turno: user.turno,
+      perfis_acesso: user.perfis_acesso || ''
+    };
+
+    if (perfil === 'separador') {
+      req.session.separador = await db.get(
+        `SELECT id,nome,matricula,turno,status FROM separadores WHERE usuario_id=$1 AND status='ativo'`,
+        [user.id]
+      );
+    } else {
+      req.session.separador = null;
+    }
+
+    res.json({ usuario: req.session.usuario, separador: req.session.separador });
+  } catch(e) { res.status(500).json({erro:'Erro interno ao autenticar.'}); }
 });
-app.post('/auth/logout',(req,res)=>req.session.destroy(()=>res.json({mensagem:'Logout!'})));
+app.post('/auth/logout', (req,res) => {
+  req.session.destroy(err => {
+    res.clearCookie('wms.sid');
+    res.json({ mensagem: 'Logout realizado!' });
+  });
+});
 app.get('/auth/me',(req,res)=>{
   if (!req.session.usuario) return res.status(401).json({erro:'Nao autenticado'});
   res.json({usuario:req.session.usuario,separador:req.session.separador||null});
 });
 
 // ─── USUÁRIOS ─────────────────────────────────────────────────────────────────
-app.get('/usuarios', async (req,res) => {
+app.get('/usuarios', requerAuth, requerPerfil('supervisor'), async (req,res) => {
   try {
     let sql='SELECT id,nome,login,perfil,subtipo_repositor,perfis_acesso,turno,status,data_cadastro FROM usuarios WHERE 1=1';
     const p=[];
@@ -160,7 +306,7 @@ app.get('/usuarios', async (req,res) => {
     res.json(await db.all(sql+' ORDER BY nome',p));
   } catch(e){res.status(500).json({erro:e.message});}
 });
-app.post('/usuarios', async (req,res) => {
+app.post('/usuarios', requerAuth, requerPerfil('supervisor'), async (req,res) => {
   const {nome,login,senha,perfil,subtipo_repositor,turno,perfis_acesso}=req.body;
   if (!nome||!login||!senha||!perfil) return res.status(400).json({erro:'Preencha todos os campos!'});
   const extras=Array.isArray(perfis_acesso)?perfis_acesso.filter(Boolean).filter(p=>p!==perfil).join(','):String(perfis_acesso||'');
@@ -176,7 +322,7 @@ app.post('/usuarios', async (req,res) => {
     res.status(500).json({erro:e.message});
   }
 });
-app.put('/usuarios/:id', async (req,res) => {
+app.put('/usuarios/:id', requerAuth, requerPerfil('supervisor'), async (req,res) => {
   const {nome,login,senha,perfil,subtipo_repositor,turno,status,perfis_acesso}=req.body;
   const subtipo=perfil==='repositor'?(subtipo_repositor||'geral'):'geral';
   const extras=Array.isArray(perfis_acesso)?perfis_acesso.filter(Boolean).filter(p=>p!==perfil).join(','):String(perfis_acesso||'');
@@ -191,21 +337,21 @@ app.put('/usuarios/:id', async (req,res) => {
     res.json({mensagem:'Atualizado!'});
   } catch(e){res.status(500).json({erro:e.message});}
 });
-app.delete('/usuarios/:id', async (req,res) => {
+app.delete('/usuarios/:id', requerAuth, requerPerfil('supervisor'), async (req,res) => {
   try { await pool.query('DELETE FROM usuarios WHERE id=$1',[req.params.id]); res.json({mensagem:'Excluido!'}); }
   catch(e){res.status(500).json({erro:e.message});}
 });
 
 // ─── SEPARADORES ──────────────────────────────────────────────────────────────
-app.get('/separadores', async (req,res) => {
+app.get('/separadores', requerAuth, async (req,res) => {
   try { res.json(await db.all(`SELECT s.*,u.nome as usuario_nome FROM separadores s LEFT JOIN usuarios u ON s.usuario_id=u.id ORDER BY s.nome`)); }
   catch(e){res.status(500).json({erro:e.message});}
 });
-app.get('/separadores/:id', async (req,res) => {
+app.get('/separadores/:id', requerAuth, async (req,res) => {
   try { res.json(await db.get('SELECT * FROM separadores WHERE id=$1',[req.params.id])); }
   catch(e){res.status(500).json({erro:e.message});}
 });
-app.post('/separadores', async (req,res) => {
+app.post('/separadores', requerAuth, requerPerfil('supervisor'), async (req,res) => {
   const {nome,matricula,turno,usuario_id}=req.body;
   try {
     const r=await pool.query(`INSERT INTO separadores (nome,matricula,turno,usuario_id) VALUES ($1,$2,$3,$4) ON CONFLICT(matricula) DO NOTHING RETURNING id`,
@@ -214,18 +360,18 @@ app.post('/separadores', async (req,res) => {
     res.json({id:r.rows[0].id,mensagem:'Separador cadastrado!'});
   } catch(e){res.status(500).json({erro:e.message});}
 });
-app.put('/separadores/:id', async (req,res) => {
+app.put('/separadores/:id', requerAuth, requerPerfil('supervisor'), async (req,res) => {
   const {nome,matricula,turno,status,usuario_id}=req.body;
   try { await pool.query('UPDATE separadores SET nome=$1,matricula=$2,turno=$3,status=$4,usuario_id=$5 WHERE id=$6',[nome,matricula,turno,status,usuario_id||null,req.params.id]); res.json({mensagem:'Atualizado!'}); }
   catch(e){res.status(500).json({erro:e.message});}
 });
-app.delete('/separadores/:id', async (req,res) => {
+app.delete('/separadores/:id', requerAuth, requerPerfil('supervisor'), async (req,res) => {
   try { await pool.query('DELETE FROM separadores WHERE id=$1',[req.params.id]); res.json({mensagem:'Excluido!'}); }
   catch(e){res.status(500).json({erro:e.message});}
 });
 
 // ─── PEDIDOS ──────────────────────────────────────────────────────────────────
-app.get('/pedidos', async (req,res) => {
+app.get('/pedidos', requerAuth, async (req,res) => {
   const {separador_id,status,data,data_ini,data_fim,numero_pedido}=req.query;
   try {
     let q=`SELECT p.*,s.nome as separador_nome FROM pedidos p LEFT JOIN separadores s ON p.separador_id=s.id WHERE 1=1`;
@@ -243,7 +389,7 @@ app.get('/pedidos', async (req,res) => {
   } catch(e){res.status(500).json({erro:e.message});}
 });
 
-app.post('/pedidos', async (req,res) => {
+app.post('/pedidos', requerAuth, requerPerfil('supervisor'), async (req,res) => {
   const {numero_pedido,separador_id,status,itens,rua,data_pedido,hora_pedido}=req.body;
   const {data:dl,hora:hl}=dataHoraLocal();
   try {
@@ -257,7 +403,7 @@ app.post('/pedidos', async (req,res) => {
 });
 
 // Info do pedido
-app.get('/pedidos/info/:numero_pedido', async (req,res) => {
+app.get('/pedidos/info/:numero_pedido', requerAuth, async (req,res) => {
   try {
     const row=await db.get('SELECT numero_pedido,cliente,transportadora,numero_caixa FROM pedidos WHERE numero_pedido=$1',[req.params.numero_pedido]);
     if (!row) return res.status(404).json({erro:'Pedido não encontrado'});
@@ -266,7 +412,7 @@ app.get('/pedidos/info/:numero_pedido', async (req,res) => {
 });
 
 // Vincular caixa
-app.put('/pedidos/:id/caixa', async (req,res) => {
+app.put('/pedidos/:id/caixa', requerAuth, async (req,res) => {
   const {numero_caixa}=req.body;
   if (!numero_caixa) return res.status(400).json({erro:'Numero da caixa nao informado!'});
   const caixa=String(numero_caixa).trim();
@@ -284,7 +430,7 @@ app.put('/pedidos/:id/caixa', async (req,res) => {
 });
 
 // Liberar caixa
-app.put('/pedidos/:id/liberar-caixa', async (req,res) => {
+app.put('/pedidos/:id/liberar-caixa', requerAuth, requerPerfil('supervisor'), async (req,res) => {
   try {
     await pool.query(`UPDATE pedidos SET numero_caixa='' WHERE id=$1`,[req.params.id]);
     await pool.query(`DELETE FROM checkout WHERE pedido_id=$1 AND status='pendente'`,[req.params.id]);
@@ -293,7 +439,7 @@ app.put('/pedidos/:id/liberar-caixa', async (req,res) => {
 });
 
 // Bipar pedido
-app.post('/pedidos/bipar', async (req,res) => {
+app.post('/pedidos/bipar', requerAuth, async (req,res) => {
   const {numero_pedido,separador_id}=req.body;
   if (!numero_pedido) return res.status(400).json({erro:'Numero do pedido nao informado!'});
   try {
@@ -311,7 +457,7 @@ app.post('/pedidos/bipar', async (req,res) => {
 });
 
 // Itens do pedido
-app.get('/pedidos/:id/itens', async (req,res) => {
+app.get('/pedidos/:id/itens', requerAuth, async (req,res) => {
   try {
     res.json(await db.all(
       `SELECT i.*,COALESCE((SELECT a.status FROM avisos_repositor a WHERE a.item_id=i.id ORDER BY a.id DESC LIMIT 1),'') as aviso_status FROM itens_pedido i WHERE i.pedido_id=$1 ORDER BY i.id`,
@@ -321,7 +467,7 @@ app.get('/pedidos/:id/itens', async (req,res) => {
 });
 
 // Verificar item
-app.put('/itens/:id/verificar', async (req,res) => {
+app.put('/itens/:id/verificar', requerAuth, async (req,res) => {
   const {status,obs,qtd_falta,separador_id,separador_nome}=req.body;
   const {hora,data}=dataHoraLocal();
   try {
@@ -341,7 +487,7 @@ app.put('/itens/:id/verificar', async (req,res) => {
 });
 
 // Concluir pedido
-app.put('/pedidos/:id/concluir', async (req,res) => {
+app.put('/pedidos/:id/concluir', requerAuth, async (req,res) => {
   try {
     const pend=await db.all(`SELECT id FROM itens_pedido WHERE pedido_id=$1 AND status='pendente'`,[req.params.id]);
     if (pend.length) return res.status(400).json({erro:`Ainda ha ${pend.length} item(s) nao verificado(s)!`});
@@ -355,11 +501,11 @@ app.put('/pedidos/:id/concluir', async (req,res) => {
 });
 
 // Redefinir / Excluir pedido
-app.put('/pedidos/:id/redefinir', async (req,res) => {
+app.put('/pedidos/:id/redefinir', requerAuth, requerPerfil('supervisor'), async (req,res) => {
   try { await pool.query(`UPDATE pedidos SET status='pendente',separador_id=NULL WHERE id=$1`,[req.params.id]); res.json({mensagem:'Redefinido!'}); }
   catch(e){res.status(500).json({erro:e.message});}
 });
-app.delete('/pedidos/:id', async (req,res) => {
+app.delete('/pedidos/:id', requerAuth, requerPerfil('supervisor'), async (req,res) => {
   try {
     await pool.query('DELETE FROM avisos_repositor WHERE pedido_id=$1',[req.params.id]);
     await pool.query('DELETE FROM checkout WHERE pedido_id=$1',[req.params.id]);
@@ -368,7 +514,7 @@ app.delete('/pedidos/:id', async (req,res) => {
     res.json({mensagem:'Pedido excluido!'});
   } catch(e){res.status(500).json({erro:e.message});}
 });
-app.delete('/pedidos', async (req,res) => {
+app.delete('/pedidos', requerAuth, requerPerfil('supervisor'), async (req,res) => {
   const {data}=req.query;
   if (!data) return res.status(400).json({erro:'Data nao informada!'});
   try {
@@ -384,7 +530,7 @@ app.delete('/pedidos', async (req,res) => {
 });
 
 // ─── REPOSITOR ────────────────────────────────────────────────────────────────
-app.get('/repositor/avisos', async (req,res) => {
+app.get('/repositor/avisos', requerAuth, async (req,res) => {
   const {status,data}=req.query;
   try {
     let sql='SELECT * FROM avisos_repositor WHERE 1=1'; const p=[];
@@ -393,7 +539,7 @@ app.get('/repositor/avisos', async (req,res) => {
     res.json(await db.all(sql+' ORDER BY id DESC',p));
   } catch(e){res.status(500).json({erro:e.message});}
 });
-app.put('/repositor/avisos/:id', async (req,res) => {
+app.put('/repositor/avisos/:id', requerAuth, async (req,res) => {
   const {status,obs,qtd_encontrada,repositor_nome}=req.body;
   const {hora}=dataHoraLocal();
   try {
@@ -408,7 +554,7 @@ app.put('/repositor/avisos/:id', async (req,res) => {
 });
 
 // ─── CHECKOUT ─────────────────────────────────────────────────────────────────
-app.get('/checkout', async (req,res) => {
+app.get('/checkout', requerAuth, async (req,res) => {
   const {status,numero_caixa}=req.query;
   try {
     let sql=`SELECT c.*,p.status as ped_status,p.itens as ped_itens,p.numero_caixa as ped_caixa,p.cliente,p.transportadora,p.separador_id,s.nome as separador_nome_join FROM checkout c LEFT JOIN pedidos p ON c.pedido_id=p.id LEFT JOIN separadores s ON p.separador_id=s.id WHERE 1=1`;
@@ -418,7 +564,7 @@ app.get('/checkout', async (req,res) => {
     res.json(await db.all(sql+' ORDER BY c.id DESC',pr));
   } catch(e){res.status(500).json({erro:e.message});}
 });
-app.get('/checkout/buscar', async (req,res) => {
+app.get('/checkout/buscar', requerAuth, async (req,res) => {
   const {numero}=req.query;
   if (!numero) return res.status(400).json({erro:'Número não informado'});
   try {
@@ -431,7 +577,7 @@ app.get('/checkout/buscar', async (req,res) => {
     res.json(row);
   } catch(e){res.status(500).json({erro:e.message});}
 });
-app.put('/checkout/:id/concluir', async (req,res) => {
+app.put('/checkout/:id/concluir', requerAuth, async (req,res) => {
   const {hora_checkout,data_checkout}=req.body;
   const {data,hora}=dataHoraLocal();
   try {
@@ -441,7 +587,7 @@ app.put('/checkout/:id/concluir', async (req,res) => {
 });
 
 // ─── KPIs ─────────────────────────────────────────────────────────────────────
-app.get('/kpis', async (req,res) => {
+app.get('/kpis', requerAuth, async (req,res) => {
   const {data:hoje}=dataHoraLocal(); const mes=hoje.substring(0,7);
   try {
     const r=await db.get(`SELECT
@@ -462,7 +608,7 @@ app.get('/kpis', async (req,res) => {
 });
 
 // ─── PRODUTIVIDADE ────────────────────────────────────────────────────────────
-app.get('/produtividade', async (req,res) => {
+app.get('/produtividade', requerAuth, async (req,res) => {
   const {separador_id}=req.query;
   const {data:hoje}=dataHoraLocal(); const mes=hoje.substring(0,7);
   try {
@@ -479,7 +625,7 @@ app.get('/produtividade', async (req,res) => {
 });
 
 // ─── ESTATÍSTICAS ─────────────────────────────────────────────────────────────
-app.get('/estatisticas/pedidos', async (req,res) => {
+app.get('/estatisticas/pedidos', requerAuth, async (req,res) => {
   const {data_ini,data_fim}=req.query;
   const {data:hoje}=dataHoraLocal(); const mes=hoje.substring(0,7); const ano=hoje.substring(0,4);
   try {
@@ -498,7 +644,7 @@ app.get('/estatisticas/pedidos', async (req,res) => {
     res.json(row);
   } catch(e){res.status(500).json({erro:e.message});}
 });
-app.get('/estatisticas/repositor', async (req,res) => {
+app.get('/estatisticas/repositor', requerAuth, async (req,res) => {
   const {repositor_nome}=req.query;
   const {data:hoje}=dataHoraLocal(); const mes=hoje.substring(0,7); const ano=hoje.substring(0,4);
   try {
@@ -520,7 +666,7 @@ app.get('/estatisticas/repositor', async (req,res) => {
     res.json({...row,produtividade:prod});
   } catch(e){res.status(500).json({erro:e.message});}
 });
-app.get('/estatisticas/checkout', async (req,res) => {
+app.get('/estatisticas/checkout', requerAuth, async (req,res) => {
   const {data:hoje}=dataHoraLocal(); const mes=hoje.substring(0,7); const ano=hoje.substring(0,4);
   try {
     res.json(await db.get(`SELECT
@@ -536,7 +682,7 @@ app.get('/estatisticas/checkout', async (req,res) => {
 });
 
 // ─── TIMELINE ─────────────────────────────────────────────────────────────────
-app.get('/timeline', async (req,res) => {
+app.get('/timeline', requerAuth, async (req,res) => {
   const {data}=req.query; const {data:hoje}=dataHoraLocal();
   try {
     const rows=await db.all(`SELECT p.numero_pedido,p.cliente,p.transportadora,p.hora_pedido,p.status,p.itens,s.nome as separador_nome,p.data_pedido,p.aguardando_desde FROM pedidos p LEFT JOIN separadores s ON p.separador_id=s.id WHERE p.data_pedido=$1 ORDER BY p.hora_pedido ASC NULLS LAST`,[data||hoje]);
@@ -585,7 +731,7 @@ function calcularPontuacaoPedido(itens) {
   const ruas=new Set(itens.map(i=>String(i.endereco||'').split(',')[0].trim().replace(/\d+/g,'').trim())).size;
   return Math.round(soma+ruas*2);
 }
-app.post('/pedidos/importar', async (req,res) => {
+app.post('/pedidos/importar', requerAuth, requerPerfil('supervisor'), async (req,res) => {
   const {pedidos:dados}=req.body;
   if (!dados?.length) return res.status(400).json({erro:'Nenhum pedido informado!'});
   const {data:hoje,hora}=dataHoraLocal();
@@ -613,7 +759,7 @@ app.post('/pedidos/importar', async (req,res) => {
 });
 
 // ─── DISTRIBUIÇÃO ─────────────────────────────────────────────────────────────
-app.post('/pedidos/distribuicao', async (req,res) => {
+app.post('/pedidos/distribuicao', requerAuth, requerPerfil('supervisor'), async (req,res) => {
   const {separadores,quantidade,apenas_sem_sep,respeitar_hora}=req.body;
   if (!separadores?.length) return res.status(400).json({erro:'Informe os separadores!'});
   try {
@@ -650,7 +796,7 @@ app.post('/pedidos/distribuicao', async (req,res) => {
     res.json({plano:filas.map(f=>({separador_id:f.separador_id,sep_db_id:f.sep_db_id,separador_nome:f.separador_nome,pedidos:f.pedidos,pontuacao_total:f.pontuacao_total})),total_pedidos:pedidos.length});
   } catch(err){res.status(500).json({erro:err.message});}
 });
-app.post('/pedidos/distribuicao/confirmar', async (req,res) => {
+app.post('/pedidos/distribuicao/confirmar', requerAuth, requerPerfil('supervisor'), async (req,res) => {
   const {plano}=req.body;
   if (!plano?.length) return res.status(400).json({erro:'Plano não informado!'});
   let dist=0;
@@ -663,7 +809,7 @@ app.post('/pedidos/distribuicao/confirmar', async (req,res) => {
     res.json({mensagem:'Distribuição confirmada!',distribuidos:dist});
   } catch(err){res.status(500).json({erro:err.message});}
 });
-app.post('/pedidos/recalcular-pontuacao', async (req,res) => {
+app.post('/pedidos/recalcular-pontuacao', requerAuth, requerPerfil('supervisor'), async (req,res) => {
   try {
     const peds=await db.all("SELECT id FROM pedidos WHERE pontuacao=0 OR pontuacao IS NULL");
     let at=0;
@@ -673,15 +819,33 @@ app.post('/pedidos/recalcular-pontuacao', async (req,res) => {
 });
 
 // ─── START ────────────────────────────────────────────────────────────────────
+// ── Handler global de erros ───────────────────────────────────────────────────
+app.use((err, req, res, next) => {
+  console.error('Erro não tratado:', err.message);
+  const msg = isProd ? 'Erro interno do servidor.' : err.message;
+  res.status(500).json({ erro: msg });
+});
+
+// ── 404 para rotas não encontradas ────────────────────────────────────────────
+app.use((req, res) => {
+  res.status(404).json({ erro: 'Rota não encontrada.' });
+});
+
 async function iniciar() {
   try {
+    if (!process.env.DATABASE_URL) {
+      throw new Error('DATABASE_URL não definida! Configure a variável de ambiente.');
+    }
     await criarTabelas();
     await criarUsuarioPadrao();
-    app.listen(PORT,()=>{
-      console.log(`Servidor WMS rodando na porta ${PORT}`);
-      const {data,hora}=dataHoraLocal();
-      console.log(`Data/hora: ${data} ${hora}`);
+    app.listen(PORT, () => {
+      const {data,hora} = dataHoraLocal();
+      console.log(`Servidor WMS rodando na porta ${PORT} — ${data} ${hora}`);
+      if (!isProd) console.log('Modo: DESENVOLVIMENTO');
     });
-  } catch(e){console.error('Erro ao iniciar:',e.message);process.exit(1);}
+  } catch(e) {
+    console.error('Erro fatal ao iniciar:', e.message);
+    process.exit(1);
+  }
 }
 iniciar();
