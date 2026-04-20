@@ -4,7 +4,7 @@
   "description": "WMS Miess - Sistema de Separacao de Pedidos",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
+    "start": "node index.js",
     "dev": "nodemon server.js"
   },
   "engines": {
