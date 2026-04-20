@@ -781,13 +781,23 @@ body.dark .aviso-duplicata{background:#2D1A05;border-color:#78350F;color:#FCD34D
     <div class="login-titulo">WMS — Miess</div>
     <div class="login-sub">Controle de Separação</div>
     <div class="perfil-grid" style="grid-template-columns:repeat(2,1fr)">
-      <button class="perfil-btn" onclick="selecionarPerfil('supervisor',this)"><span class="pi">👔</span>SUPERVISOR</button>
-      <button class="perfil-btn" onclick="selecionarPerfil('separador',this)"><span class="pi">📦</span>SEPARADOR</button>
-      <button class="perfil-btn" onclick="selecionarPerfil('repositor',this)"><span class="pi">🔧</span>REPOSITOR</button>
+      <button class="perfil-btn" onclick="selecionarPerfil('supervisor',this)"><span class="pi">👔</span>SUPERVISÃO</button>
+      <button class="perfil-btn" onclick="selecionarPerfil('separador',this)"><span class="pi">📦</span>SEPARAÇÃO</button>
+      <button class="perfil-btn" onclick="selecionarPerfil('repositor',this)"><span class="pi">🔧</span>REPOSIÇÃO</button>
       <button class="perfil-btn" onclick="selecionarPerfil('checkout',this)"><span class="pi">🏷️</span>CHECKOUT</button>
     </div>
     <div class="login-campo"><label>USUÁRIO</label><input type="text" id="login-usuario" placeholder="Ex: joao.silva" autocomplete="username"/></div>
-    <div class="login-campo"><label>SENHA</label><input type="password" id="login-senha" placeholder="••••••••" onkeydown="if(event.key==='Enter')fazerLogin()" autocomplete="current-password"/></div>
+    <div class="login-campo">
+      <label>SENHA</label>
+      <div style="position:relative;display:flex;align-items:center">
+        <input type="password" id="login-senha" placeholder="••••••••" onkeydown="if(event.key==='Enter')fazerLogin()" autocomplete="current-password" style="flex:1;padding-right:44px"/>
+        <button type="button" onclick="toggleSenha()" id="btn-toggle-senha"
+          style="position:absolute;right:10px;background:none;border:none;cursor:pointer;padding:4px;color:var(--text3);font-size:18px;line-height:1;display:flex;align-items:center">
+          <svg id="ico-olho-aberto" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          <svg id="ico-olho-fechado" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+        </button>
+      </div>
+    </div>
     <div class="login-erro" id="login-erro"></div>
     <button class="btn-login" onclick="fazerLogin()">▶ ENTRAR</button>
   </div>
@@ -1650,6 +1660,21 @@ function selecionarPerfil(p, btn) {
 
 
 
+
+function toggleSenha() {
+  const inp = document.getElementById('login-senha');
+  const aberto = document.getElementById('ico-olho-aberto');
+  const fechado = document.getElementById('ico-olho-fechado');
+  if (inp.type === 'password') {
+    inp.type = 'text';
+    aberto.style.display = 'none';
+    fechado.style.display = 'block';
+  } else {
+    inp.type = 'password';
+    aberto.style.display = 'block';
+    fechado.style.display = 'none';
+  }
+}
 
 async function fazerLogin() {
   const login  = document.getElementById('login-usuario').value.trim();
