@@ -10,6 +10,9 @@ const app  = express();
 const PORT = process.env.PORT || 3000;
 const isProd = process.env.NODE_ENV === 'production';
 
+// Railway usa proxy reverso — necessário para sessions e HTTPS funcionarem
+app.set('trust proxy', 1);
+
 // ── Segurança: SESSION_SECRET obrigatório em produção ─────────────────────────
 if (isProd && !process.env.SESSION_SECRET) {
   console.error('ERRO CRÍTICO: SESSION_SECRET não definido em produção!');
@@ -67,16 +70,24 @@ const db = {
 };
 
 // ── Sessions ──────────────────────────────────────────────────────────────────
+const pgStore = new pgSession({
+  pool,
+  tableName: 'session',
+  createTableIfMissing: true,
+  errorLog: (msg) => console.error('[SESSION STORE]', msg)
+});
+
 app.use(session({
-  store: new pgSession({ pool, tableName:'session', createTableIfMissing:true }),
+  store: pgStore,
   secret: SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
-  name: 'wms.sid',  // nome discreto (não revela que usa express-session)
+  rolling: true,        // renova cookie a cada requisição
+  name: 'wms.sid',
   cookie: {
-    maxAge: 8 * 60 * 60 * 1000,  // 8 horas
-    httpOnly: true,               // JS do browser não acessa o cookie
-    secure: isProd,               // HTTPS obrigatório em produção
+    maxAge: 8 * 60 * 60 * 1000,
+    httpOnly: true,
+    secure: false,      // Railway gerencia HTTPS no proxy — manter false
     sameSite: 'lax'
   }
 }));
@@ -107,6 +118,7 @@ setInterval(() => {
 // ── Middlewares de autenticação e autorização ─────────────────────────────────
 function requerAuth(req, res, next) {
   if (!req.session?.usuario) {
+    console.log(`[AUTH] 401 em ${req.method} ${req.path} — sem sessão. Session ID: ${req.sessionID}`);
     return res.status(401).json({ erro: 'Não autenticado. Faça login.' });
   }
   next();
@@ -118,9 +130,14 @@ function requerPerfil(...perfis) {
       return res.status(401).json({ erro: 'Não autenticado.' });
     }
     const user = req.session.usuario;
-    const perfisUser = [user.perfil, ...String(user.perfis_acesso||'').split(',').map(s=>s.trim()).filter(Boolean)];
+    // Aceita o perfil principal e qualquer perfil extra que o usuário tenha acesso
+    const perfisUser = [
+      user.perfil,
+      ...String(user.perfis_acesso||'').split(',').map(s=>s.trim()).filter(Boolean)
+    ];
     const temPermissao = perfis.some(p => perfisUser.includes(p));
     if (!temPermissao) {
+      console.log(`[AUTH] Acesso negado: usuário ${user.login} (${user.perfil}) tentou acessar rota que requer ${perfis.join('/')}`);
       return res.status(403).json({ erro: `Acesso negado. Perfil necessário: ${perfis.join(' ou ')}` });
     }
     next();
