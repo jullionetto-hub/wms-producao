@@ -256,11 +256,14 @@ app.post('/auth/login', async (req,res) => {
 
     // Compara hash de forma segura (tempo constante para evitar timing attacks)
     const hashFornecido = hashSenha(senha);
-    const hashCorreto   = user?.senha_hash || '';
-    const senhaCorreta  = crypto.timingSafeEqual(
-      Buffer.from(hashFornecido.padEnd(64,'0').slice(0,64)),
-      Buffer.from(hashCorreto.padEnd(64,'0').slice(0,64))
-    );
+    const hashCorreto   = user?.senha_hash || '0'.repeat(64);
+    // Compara em tempo constante para evitar timing attacks
+    let senhaCorreta = false;
+    try {
+      const a = Buffer.from(hashFornecido.padEnd(64,'0').slice(0,64));
+      const b = Buffer.from(hashCorreto.padEnd(64,'0').slice(0,64));
+      senhaCorreta = a.length === b.length && crypto.timingSafeEqual(a, b);
+    } catch(e) { senhaCorreta = false; }
 
     if (!user || !senhaCorreta) return res.status(401).json({erro:'Login ou senha incorretos!'});
     if (!perfisPermitidos(user).includes(perfil))
@@ -530,7 +533,9 @@ app.delete('/pedidos', requerAuth, requerPerfil('supervisor'), async (req,res) =
 });
 
 // ─── REPOSITOR ────────────────────────────────────────────────────────────────
-app.get('/repositor/avisos', requerAuth, async (req,res) => {
+app.get('/repositor/avisos', async (req,res) => {
+  // Se não autenticado, retorna lista vazia (não quebra a UI)
+  if (!req.session?.usuario) return res.json([]);
   const {status,data}=req.query;
   try {
     let sql='SELECT * FROM avisos_repositor WHERE 1=1'; const p=[];
@@ -819,6 +824,118 @@ app.post('/pedidos/recalcular-pontuacao', requerAuth, requerPerfil('supervisor')
 });
 
 // ─── START ────────────────────────────────────────────────────────────────────
+
+// ─── ENDPOINTS FALTANDO — adicionados na correção ────────────────────────────
+
+// Pedidos bloqueados por nao_encontrado/protocolo
+app.get('/pedidos/bloqueados', requerAuth, requerPerfil('supervisor'), async (req,res) => {
+  try {
+    const rows = await db.all(`
+      SELECT DISTINCT p.id, p.numero_pedido, p.status, p.separador_id,
+        s.nome as separador_nome,
+        COUNT(DISTINCT a.id) as total_bloqueios,
+        STRING_AGG(DISTINCT a.codigo, ', ') as codigos_bloqueados
+      FROM pedidos p
+      JOIN avisos_repositor a ON a.pedido_id=p.id
+      LEFT JOIN separadores s ON p.separador_id=s.id
+      WHERE a.status IN ('nao_encontrado','protocolo')
+        AND p.status IN ('separando','concluido')
+        AND NOT EXISTS (
+          SELECT 1 FROM avisos_repositor a2
+          WHERE a2.pedido_id=p.id AND a2.status='pendente'
+        )
+      GROUP BY p.id, p.numero_pedido, p.status, p.separador_id, s.nome
+      ORDER BY p.id DESC`
+    );
+    res.json(rows);
+  } catch(e) { res.status(500).json({erro:e.message}); }
+});
+
+// Desbloquear pedido
+app.put('/pedidos/:id/desbloquear', requerAuth, requerPerfil('supervisor'), async (req,res) => {
+  try {
+    await pool.query(`UPDATE pedidos SET status='concluido' WHERE id=$1`,[req.params.id]);
+    res.json({mensagem:'Pedido desbloqueado!'});
+  } catch(e) { res.status(500).json({erro:e.message}); }
+});
+
+// Duplicatas geral — mesmo código com aviso pendente em mais de 1 pedido
+app.get('/repositor/duplicatas', requerAuth, async (req,res) => {
+  try {
+    const rows = await db.all(`
+      SELECT i.codigo, i.descricao,
+        COUNT(DISTINCT i.pedido_id) as total_pedidos,
+        STRING_AGG(DISTINCT p.numero_pedido::text, ', ') as pedidos
+      FROM itens_pedido i
+      JOIN pedidos p ON i.pedido_id=p.id
+      JOIN avisos_repositor a ON a.item_id=i.id
+      WHERE a.status='pendente'
+      GROUP BY i.codigo, i.descricao
+      HAVING COUNT(DISTINCT i.pedido_id) > 1`
+    );
+    res.json(rows);
+  } catch(e) { res.status(500).json({erro:e.message}); }
+});
+
+// Duplicatas do dia
+app.get('/repositor/duplicatas-dia', requerAuth, async (req,res) => {
+  const {data:hoje} = dataHoraLocal();
+  try {
+    const rows = await db.all(`
+      SELECT a.codigo, a.descricao,
+        COUNT(DISTINCT a.pedido_id) as total_pedidos,
+        STRING_AGG(DISTINCT a.numero_pedido, ', ') as pedidos,
+        MIN(a.hora_aviso) as primeira_hora
+      FROM avisos_repositor a
+      WHERE a.data_aviso=$1
+        AND a.status IN ('pendente','encontrado','subiu','abastecido')
+      GROUP BY a.codigo, a.descricao
+      HAVING COUNT(DISTINCT a.pedido_id) > 1
+      ORDER BY total_pedidos DESC`,
+      [hoje]
+    );
+    res.json(rows);
+  } catch(e) { res.status(500).json({erro:e.message}); }
+});
+
+// Avisos para separador específico
+app.get('/repositor/avisos/separador/:separador_id', requerAuth, async (req,res) => {
+  const {data:hoje} = dataHoraLocal();
+  try {
+    const rows = await db.all(
+      `SELECT a.* FROM avisos_repositor a
+       WHERE a.separador_id=$1 AND a.status IN ('subiu','abastecido') AND a.data_aviso=$2
+       ORDER BY a.id DESC`,
+      [req.params.separador_id, hoje]
+    );
+    res.json(rows);
+  } catch(e) { res.status(500).json({erro:e.message}); }
+});
+
+// Ações específicas do repositor
+async function atualizarAviso(req, res, status, extra={}) {
+  const {hora} = dataHoraLocal();
+  const {qtd_encontrada, repositor_nome} = req.body || {};
+  try {
+    const campos = { status, hora_reposto:hora, repositor_nome: repositor_nome||'', ...extra };
+    if (qtd_encontrada !== undefined) campos.qtd_encontrada = parseInt(qtd_encontrada)||0;
+
+    const sets = Object.keys(campos).map((k,i) => `${k}=$${i+1}`).join(',');
+    await pool.query(
+      `UPDATE avisos_repositor SET ${sets} WHERE id=$${Object.keys(campos).length+1}`,
+      [...Object.values(campos), req.params.id]
+    );
+    res.json({mensagem:'Aviso atualizado!'});
+  } catch(e) { res.status(500).json({erro:e.message}); }
+}
+
+app.put('/repositor/avisos/:id/reposto',       requerAuth, (req,res) => atualizarAviso(req,res,'reposto'));
+app.put('/repositor/avisos/:id/encontrado',    requerAuth, (req,res) => atualizarAviso(req,res,'reposto'));
+app.put('/repositor/avisos/:id/subiu',         requerAuth, (req,res) => atualizarAviso(req,res,'subiu'));
+app.put('/repositor/avisos/:id/abastecido',    requerAuth, (req,res) => atualizarAviso(req,res,'abastecido'));
+app.put('/repositor/avisos/:id/nao_encontrado',requerAuth, (req,res) => atualizarAviso(req,res,'nao_encontrado'));
+app.put('/repositor/avisos/:id/protocolo',     requerAuth, (req,res) => atualizarAviso(req,res,'protocolo'));
+
 // ── Handler global de erros ───────────────────────────────────────────────────
 app.use((err, req, res, next) => {
   console.error('Erro não tratado:', err.message);
