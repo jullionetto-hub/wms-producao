@@ -1031,6 +1031,11 @@ body.dark .aviso-duplicata{background:#2D1A05;border-color:#78350F;color:#FCD34D
           <div class="date-filter-bar">
             <div class="fg"><label>DE</label><input type="date" id="filtro-ped-ini"/></div>
             <div class="fg"><label>ATÉ</label><input type="date" id="filtro-ped-fim"/></div>
+            <div class="fg" style="display:flex;gap:6px;align-items:flex-end">
+              <button class="btn btn-outline btn-sm" onclick="filtrarPedidosHoje()" title="Ver pedidos de hoje">Hoje</button>
+              <button class="btn btn-outline btn-sm" onclick="filtrarPedidosSemana()" title="Ver últimos 7 dias">7 dias</button>
+              <button class="btn btn-outline btn-sm" onclick="filtrarPedidosTodos()" title="Ver todos sem filtro de data">Todos</button>
+            </div>
             <div class="fg"><label>USUÁRIO</label><select id="filtro-ped-sep"><option value="">Todos</option></select></div>
             <div class="fg"><label>STATUS</label>
               <select id="filtro-ped-status">
@@ -2002,7 +2007,7 @@ function iniciarPorPerfil() {
     document.getElementById('pag-dashboard').classList.add('ativa');
     const setVal = (id, v) => { const e = document.getElementById(id); if(e) e.value = v; };
     setVal('filtro-data-ini', hoje); setVal('filtro-data-fim', hoje);
-    setVal('filtro-ped-ini',  hoje); setVal('filtro-ped-fim',  hoje);
+    setVal('filtro-ped-ini',  hoje); setVal('filtro-ped-fim',  hoje); // padrão: hoje
     setVal('filtro-tl-data',  hoje);
     carregarDashboard();
     setInterval(atualizarBadgeRep, 15000);
@@ -2573,6 +2578,28 @@ function formatarData(iso) {
 /* ══════════════════════════════════════════
    PEDIDOS
 ══════════════════════════════════════════ */
+
+function filtrarPedidosHoje() {
+  const h = hojeLocal();
+  document.getElementById('filtro-ped-ini').value = h;
+  document.getElementById('filtro-ped-fim').value = h;
+  carregarPedidos();
+}
+function filtrarPedidosSemana() {
+  const fim = hojeLocal();
+  const ini = new Date(); ini.setDate(ini.getDate()-6);
+  const p = n=>String(n).padStart(2,'0');
+  const iniStr = `${ini.getFullYear()}-${p(ini.getMonth()+1)}-${p(ini.getDate())}`;
+  document.getElementById('filtro-ped-ini').value = iniStr;
+  document.getElementById('filtro-ped-fim').value = fim;
+  carregarPedidos();
+}
+function filtrarPedidosTodos() {
+  document.getElementById('filtro-ped-ini').value = '';
+  document.getElementById('filtro-ped-fim').value = '';
+  carregarPedidos();
+}
+
 async function carregarPedidos() {
   try {
     const ini     = document.getElementById('filtro-ped-ini').value;
@@ -2813,7 +2840,7 @@ function processarArquivoFile(file) {
 
 
 
-      const res  = await fetch(`${API}/importar`, {
+      const res  = await fetch(`${API}/pedidos/importar`, {
         method:'POST', credentials:'include',
         headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ linhas: linhasLote })
@@ -5010,7 +5037,7 @@ async function confirmarImportacaoModal() {
       const linhasLote = [];
       loteNums.forEach(n => linhasLote.push(...pedMapLocal[n]));
       mostrarStatusModal(`⏳ Importando... ${Math.round(((i+loteNums.length)/numeros.length)*100)}%`, 'carregando');
-      const res  = await fetch(`${API}/importar`, { method:'POST', credentials:'include', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ linhas: linhasLote }) });
+      const res  = await fetch(`${API}/pedidos/importar`, { method:'POST', credentials:'include', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ linhas: linhasLote }) });
       const data = await res.json();
       if (data.erro) { mostrarStatusModal(`❌ ${data.erro}`, 'erro'); return; }
       totalImportados += data.importados || 0;

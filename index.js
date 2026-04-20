@@ -953,6 +953,12 @@ app.put('/repositor/avisos/:id/abastecido',    requerAuth, (req,res) => atualiza
 app.put('/repositor/avisos/:id/nao_encontrado',requerAuth, (req,res) => atualizarAviso(req,res,'nao_encontrado'));
 app.put('/repositor/avisos/:id/protocolo',     requerAuth, (req,res) => atualizarAviso(req,res,'protocolo'));
 
+// Alias retrocompatível — frontend antigo usava /importar
+app.post('/importar', requerAuth, requerPerfil('supervisor'), async (req,res) => {
+  req.url = '/pedidos/importar';
+  res.redirect(307, '/pedidos/importar');
+});
+
 // ── Handler global de erros ───────────────────────────────────────────────────
 app.use((err, req, res, next) => {
   console.error('Erro não tratado:', err.message);
