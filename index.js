@@ -754,7 +754,8 @@ function calcularPontuacaoPedido(itens) {
   return Math.round(soma+ruas*2);
 }
 app.post('/pedidos/importar', requerAuth, requerPerfil('supervisor'), async (req,res) => {
-  const {pedidos:dados}=req.body;
+  // Aceita {pedidos:[...]} ou {linhas:[...]} (compatibilidade com versões anteriores)
+  const dados = req.body.pedidos || req.body.linhas || [];
   if (!dados?.length) return res.status(400).json({erro:'Nenhum pedido informado!'});
   const {data:hoje,hora}=dataHoraLocal();
   let importados=0,ignorados=0,erros=0;
@@ -841,6 +842,77 @@ app.post('/pedidos/recalcular-pontuacao', requerAuth, requerPerfil('supervisor')
 });
 
 // ─── START ────────────────────────────────────────────────────────────────────
+
+
+// ─── ENDPOINTS FALTANDO — correção completa ──────────────────────────────────
+
+// Checkout confirmar (alias de concluir)
+app.put('/checkout/:id/confirmar', requerAuth, async (req,res) => {
+  const {hora_checkout,data_checkout}=req.body;
+  const {data,hora}=dataHoraLocal();
+  try {
+    await pool.query(`UPDATE checkout SET status='concluido',hora_checkout=$1,data_checkout=$2 WHERE id=$3`,
+      [hora_checkout||hora, data_checkout||data, req.params.id]);
+    res.json({mensagem:'Checkout concluido!'});
+  } catch(e){res.status(500).json({erro:e.message});}
+});
+
+// Liberar caixa do checkout
+app.put('/checkout/:id/liberar', requerAuth, requerPerfil('supervisor'), async (req,res) => {
+  try {
+    const ck = await db.get('SELECT pedido_id FROM checkout WHERE id=$1',[req.params.id]);
+    if (ck) {
+      await pool.query(`UPDATE pedidos SET numero_caixa='' WHERE id=$1`,[ck.pedido_id]);
+      await pool.query(`DELETE FROM checkout WHERE id=$1`,[req.params.id]);
+    }
+    res.json({mensagem:'Caixa liberada!'});
+  } catch(e){res.status(500).json({erro:e.message});}
+});
+
+// Buscar checkout por número de caixa
+app.get('/checkout/caixa/:numero', requerAuth, async (req,res) => {
+  const numero = String(req.params.numero).trim();
+  try {
+    const rows = await db.all(
+      `SELECT c.*, p.status as ped_status, p.itens as ped_itens,
+              p.numero_caixa, p.cliente, p.transportadora, s.nome as separador_nome
+       FROM checkout c
+       JOIN pedidos p ON c.pedido_id=p.id
+       LEFT JOIN separadores s ON p.separador_id=s.id
+       WHERE c.numero_caixa=$1 ORDER BY c.id DESC`,
+      [numero]
+    );
+    res.json(rows);
+  } catch(e){res.status(500).json({erro:e.message});}
+});
+
+// Atribuir separador a pedido
+app.put('/pedidos/:id/separador', requerAuth, requerPerfil('supervisor'), async (req,res) => {
+  const {separador_id}=req.body;
+  try {
+    await pool.query('UPDATE pedidos SET separador_id=$1 WHERE id=$2',[separador_id||null,req.params.id]);
+    res.json({mensagem:'Separador atribuido!'});
+  } catch(e){res.status(500).json({erro:e.message});}
+});
+
+// Buscar produto no repositor por código
+app.get('/repositor/buscar-produto', requerAuth, async (req,res) => {
+  const {codigo}=req.query;
+  if (!codigo) return res.status(400).json({erro:'Código não informado'});
+  try {
+    const rows = await db.all(
+      `SELECT i.codigo, i.descricao, i.endereco, i.quantidade,
+              p.numero_pedido, a.status as aviso_status
+       FROM itens_pedido i
+       JOIN pedidos p ON i.pedido_id=p.id
+       LEFT JOIN avisos_repositor a ON a.item_id=i.id AND a.status='pendente'
+       WHERE i.codigo ILIKE $1
+       ORDER BY p.id DESC LIMIT 20`,
+      [`%${codigo}%`]
+    );
+    res.json(rows);
+  } catch(e){res.status(500).json({erro:e.message});}
+});
 
 // ─── ENDPOINTS FALTANDO — adicionados na correção ────────────────────────────
 
