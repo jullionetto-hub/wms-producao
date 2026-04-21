@@ -1,4 +1,4 @@
-﻿/* LOGIN */
+/* LOGIN */
 let perfilSelecionado = '';
 function selecionarPerfil(p, btn) {
   perfilSelecionado = p;
@@ -245,7 +245,7 @@ function iniciarPorPerfil() {
     document.getElementById('pag-dashboard').classList.add('ativa');
     const setVal = (id, v) => { const e = document.getElementById(id); if(e) e.value = v; };
     setVal('filtro-data-ini', hoje); setVal('filtro-data-fim', hoje);
-    setVal('filtro-ped-ini',  hoje); setVal('filtro-ped-fim',  hoje); // padrão: hoje
+    // pedidos: sem filtro de data forçado — mostra todos
     setVal('filtro-tl-ini',   hoje); setVal('filtro-tl-fim',   hoje);
     setVal('perf-ini', hoje); setVal('perf-fim', hoje);
     setVal('filtro-tl-data',  hoje);

@@ -1,4 +1,22 @@
-﻿/* DASHBOARD */
+
+/* FILTRO DE TURNO — SEPARADORES ATIVOS */
+async function filtrarSepsAtivos(turno) {
+  // Atualiza visual dos botões
+  const map = {todos:'', manha:'Manhã', tarde:'Tarde', noite:'Noite'};
+  Object.entries(map).forEach(([key, val]) => {
+    const btn = document.getElementById(`btn-turno-${key}`);
+    if (!btn) return;
+    const active = val === turno;
+    btn.style.background = active ? 'var(--amber)' : 'transparent';
+    btn.style.color       = active ? '#fff' : 'var(--text2)';
+    btn.style.borderColor = active ? 'var(--amber)' : 'var(--border)';
+  });
+  // Salva no estado global e recarrega
+  if (typeof window !== 'undefined') window._turnoFiltro = turno;
+  await carregarOperacao();
+}
+
+/* DASHBOARD */
 
 /* MAPA DO ESTOQUE — DASHBOARD (redesign) */
 
@@ -251,9 +269,15 @@ function renderMapaEstoque(contRua, isPedidoUnico) {
 async function carregarOperacao() {
   try {
     const hoje = hojeLocal();
-    // Busca todos os pedidos de hoje
-    const res = await fetch(`${API}/pedidos?data=${hoje}`, { credentials:'include' });
-    const pedidos = await res.json();
+    // Busca pedidos de hoje + todos os pendentes (de qualquer data)
+    const [resHoje, resPend] = await Promise.all([
+      fetch(`${API}/pedidos?data=${hoje}`, { credentials:'include' }),
+      fetch(`${API}/pedidos?status=pendente`, { credentials:'include' })
+    ]);
+    const pedidosHoje = resHoje.ok ? await resHoje.json() : [];
+    const pedidosPend = resPend.ok ? await resPend.json() : [];
+    const idsHoje = new Set(pedidosHoje.map(p=>p.id));
+    const pedidos = [...pedidosHoje, ...pedidosPend.filter(p=>!idsHoje.has(p.id))];
 
     const total      = pedidos.length;
     const concluidos = pedidos.filter(p=>p.status==='concluido').length;
@@ -316,7 +340,20 @@ async function carregarOperacao() {
       if (p.status==='separando')  porSep[p.separador_nome].separando++;
       if (p.status==='pendente')   porSep[p.separador_nome].pendentes++;
     });
-    const seps = Object.values(porSep).sort((a,b)=>b.concluidos-a.concluidos);
+    let seps = Object.values(porSep).sort((a,b)=>b.concluidos-a.concluidos);
+    const turnoAtivo = window._turnoFiltro || '';
+    if (turnoAtivo) {
+      try {
+        const resAllSeps = await fetch(`${API}/separadores`, { credentials:'include' });
+        const allSeps = resAllSeps.ok ? await resAllSeps.json() : [];
+        const nomesDoTurno = new Set(allSeps.filter(s=>s.turno===turnoAtivo).map(s=>s.nome));
+        // Também inclui usuários com perfil checkout/repositor do turno
+        const resUsers = await fetch(`${API}/usuarios`, { credentials:'include' });
+        const allUsers = resUsers.ok ? await resUsers.json() : [];
+        allUsers.filter(u=>u.turno===turnoAtivo).forEach(u=>nomesDoTurno.add(u.nome));
+        seps = seps.filter(s => nomesDoTurno.has(s.nome));
+      } catch(e) {}
+    }
     const maxConc = Math.max(...seps.map(s=>s.concluidos), 1);
     const medalhas = ['🥇','🥈','🥉'];
 
