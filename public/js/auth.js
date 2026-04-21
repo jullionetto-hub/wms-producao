@@ -1,4 +1,4 @@
-// Middlewares de autenticação e autorização
+﻿// Middlewares de autenticação e autorização
 
 function requerAuth(req, res, next) {
   if (!req.session?.usuario) {
