@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { pool, db } = require('../lib/db');
-const { requerAuth, requerPerfil } = require('../lib/auth');
+const { requerAuth, requerPerfil, checkRateLimit } = require('../lib/auth');
 const { dataHoraLocal, formatarAguardandoDesde } = require('../lib/helpers');
 const { calcularPesoCorredor, calcularPontuacaoPedido } = require('../lib/pontuacao');
 const crypto = require('crypto');
