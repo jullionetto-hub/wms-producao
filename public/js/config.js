@@ -1,4 +1,4 @@
-const API = window.location.origin;
+﻿const API = window.location.origin;
 let usuarioAtual     = null;
 let separadorAtual   = null;
 let pedidoAtualId    = null;
