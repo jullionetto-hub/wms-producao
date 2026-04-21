@@ -1,10 +1,6 @@
-﻿﻿/* ══════════════════════════════════════════
-   DASHBOARD
-══════════════════════════════════════════ */
+﻿/* DASHBOARD */
 
-/* ══════════════════════════════════════════
-   MAPA DO ESTOQUE — DASHBOARD (redesign)
-══════════════════════════════════════════ */
+/* MAPA DO ESTOQUE — DASHBOARD (redesign) */
 
 function mudarDashTab(tab) {
   ['operacao','visao','mapa'].forEach(t => {
@@ -497,9 +493,7 @@ async function popularSelects() {
 
 
 
-/* ══════════════════════════════════════════
-   ESTATÍSTICAS REPOSITOR (desktop)
-══════════════════════════════════════════ */
+/* ESTATÍSTICAS REPOSITOR (desktop) */
 async function carregarStatsRepositor() {
   try {
     const ini = document.getElementById('srep-ini')?.value || '';
@@ -531,9 +525,7 @@ async function carregarStatsRepositor() {
 
 
 
-/* ══════════════════════════════════════════
-   ESTATÍSTICAS CHECKOUT (desktop)
-══════════════════════════════════════════ */
+/* ESTATÍSTICAS CHECKOUT (desktop) */
 async function carregarStatsCheckout() {
   try {
     const res  = await fetch(`${API}/estatisticas/checkout`, { credentials:'include' });
@@ -566,9 +558,7 @@ async function carregarStatsCheckout() {
 
 
 
-/* ══════════════════════════════════════════
-   PERFORMANCE DOS COLABORADORES
-══════════════════════════════════════════ */
+/* PERFORMANCE DOS COLABORADORES */
 async function carregarPerformance() {
   const ini    = document.getElementById('perf-ini')?.value || '';
   const fim    = document.getElementById('perf-fim')?.value || '';
@@ -877,9 +867,7 @@ async function marcarProtocolo(id){ await marcarAviso(id,0,'protocolo'); }
 
 
 
-/* ══════════════════════════════════════════
-   ESTATÍSTICAS
-══════════════════════════════════════════ */
+/* ESTATÍSTICAS */
 async function carregarEstatisticas() {
   try {
     const ini = document.getElementById('est-ini')?.value || '';
