@@ -324,14 +324,19 @@ router.delete('/pedidos', requerAuth, requerPerfil('supervisor'), async (req,res
 
 // ── REPOSITOR ─────────────────────────────────────────────────────────────────
 router.get('/repositor/avisos', requerAuth, async (req,res) => {
-  // Se não autenticado, retorna lista vazia (não quebra a UI)
   if (!req.session?.usuario) return res.json([]);
   const {status,data}=req.query;
   try {
-    let sql='SELECT * FROM avisos_repositor WHERE 1=1'; const p=[];
-    if (status){p.push(status);sql+=` AND status=$${p.length}`;}
-    if (data){p.push(data);sql+=` AND data_aviso=$${p.length}`;}
-    res.json(await db.all(sql+' ORDER BY id DESC',p));
+    let sql=`SELECT a.*, COALESCE(a.forma_envio, p.transportadora, '') as forma_envio_real
+             FROM avisos_repositor a
+             LEFT JOIN pedidos p ON a.pedido_id = p.id
+             WHERE 1=1`;
+    const params=[];
+    if (status){params.push(status);sql+=` AND a.status=$${params.length}`;}
+    if (data){params.push(data);sql+=` AND a.data_aviso=$${params.length}`;}
+    const rows = await db.all(sql+' ORDER BY a.id DESC', params);
+    // Normaliza forma_envio
+    res.json(rows.map(r=>({...r, forma_envio: r.forma_envio_real||r.forma_envio||''})));
   } catch(e){res.status(500).json({erro:e.message});}
 });
 router.put('/repositor/avisos/:id', requerAuth, async (req,res) => {
