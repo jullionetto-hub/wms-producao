@@ -269,15 +269,22 @@ function renderMapaEstoque(contRua, isPedidoUnico) {
 async function carregarOperacao() {
   try {
     const hoje = hojeLocal();
-    // Busca pedidos de hoje + todos os pendentes (de qualquer data)
-    const [resHoje, resPend] = await Promise.all([
-      fetch(`${API}/pedidos?data=${hoje}`, { credentials:'include' }),
-      fetch(`${API}/pedidos?status=pendente`, { credentials:'include' })
+    // Busca TODOS os pedidos ativos (pendente + separando + concluido de hoje)
+    // independente da data do arquivo importado
+    const [resPend, resSep, resConc] = await Promise.all([
+      fetch(`${API}/pedidos?status=pendente`, { credentials:'include' }),
+      fetch(`${API}/pedidos?status=separando`, { credentials:'include' }),
+      fetch(`${API}/pedidos?status=concluido&data=${hoje}`, { credentials:'include' })
     ]);
-    const pedidosHoje = resHoje.ok ? await resHoje.json() : [];
-    const pedidosPend = resPend.ok ? await resPend.json() : [];
-    const idsHoje = new Set(pedidosHoje.map(p=>p.id));
-    const pedidos = [...pedidosHoje, ...pedidosPend.filter(p=>!idsHoje.has(p.id))];
+    const pPend = resPend.ok ? await resPend.json() : [];
+    const pSep  = resSep.ok  ? await resSep.json()  : [];
+    const pConc = resConc.ok ? await resConc.json() : [];
+    // Merge sem duplicatas
+    const allIds = new Set();
+    const pedidos = [...pPend, ...pSep, ...pConc].filter(p => {
+      if (allIds.has(p.id)) return false;
+      allIds.add(p.id); return true;
+    });
 
     const total      = pedidos.length;
     const concluidos = pedidos.filter(p=>p.status==='concluido').length;
