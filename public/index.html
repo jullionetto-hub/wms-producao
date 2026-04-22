@@ -449,11 +449,15 @@
         <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:14px">
           <button id="rep-ababtn-avisos" onclick="mudarAbaRep('avisos')"
             style="padding:9px 16px;border:none;background:transparent;font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.5px;cursor:pointer;border-bottom:2px solid var(--accent);margin-bottom:-2px">
-            CONTROLE DE REPOSIÇÃO
+            CONTROLE
           </button>
           <button id="rep-ababtn-stats" onclick="mudarAbaRep('stats')"
             style="padding:9px 16px;border:none;background:transparent;font-size:12px;font-weight:700;color:var(--text3);letter-spacing:.5px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px">
             INDICADORES
+          </button>
+          <button id="rep-ababtn-ranking" onclick="mudarAbaRep('ranking')"
+            style="padding:9px 16px;border:none;background:transparent;font-size:12px;font-weight:700;color:var(--text3);letter-spacing:.5px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px">
+            RANKING PRODUTOS
           </button>
         </div>
 
@@ -463,26 +467,40 @@
             <div class="card-hd">CONTROLE DE REPOSIÇÃO
               <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
                 <span style="font-size:12px;color:var(--text3)"><span id="rep-total">0</span> itens</span>
-                <button data-sit="" class="btn btn-primary btn-sm rep-filtro-btn" onclick="filtrarReposicao('')">Todos</button>
-                <button data-sit="pendente" class="btn btn-outline btn-sm rep-filtro-btn" onclick="filtrarReposicao('pendente')">⏳ Pendentes</button>
-                <button data-sit="abastecido" class="btn btn-outline btn-sm rep-filtro-btn" onclick="filtrarReposicao('abastecido')">✅ Abastecidos</button>
-                <button data-sit="subiu" class="btn btn-outline btn-sm rep-filtro-btn" onclick="filtrarReposicao('subiu')">⬆ Subiu</button>
-                <button data-sit="nao_encontrado" class="btn btn-outline btn-sm rep-filtro-btn" onclick="filtrarReposicao('nao_encontrado')">❌ Não enc.</button>
+                <span style="font-size:11px;color:var(--text3)" id="rep-ultima-atualizacao"></span>
+                <button class="btn btn-outline btn-sm" onclick="abrirEntradaManual()" style="background:var(--accent);color:#fff;border-color:var(--accent)">+ Entrada Manual</button>
                 <button class="btn btn-outline btn-sm" onclick="carregarTabelaReposicao()">🔄</button>
               </div>
+            </div>
+            <!-- Filtros -->
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:10px 0 14px;border-bottom:1px solid var(--border);margin-bottom:4px">
+              <div style="display:flex;gap:4px;align-items:center">
+                <label style="font-size:11px;color:var(--text3);white-space:nowrap">DE</label>
+                <input type="date" id="rep-filtro-ini" style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)" onchange="carregarTabelaReposicao()">
+              </div>
+              <div style="display:flex;gap:4px;align-items:center">
+                <label style="font-size:11px;color:var(--text3);white-space:nowrap">ATÉ</label>
+                <input type="date" id="rep-filtro-fim" style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)" onchange="carregarTabelaReposicao()">
+              </div>
+              <input type="text" id="rep-filtro-codigo" placeholder="Buscar código..." style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);min-width:140px" oninput="carregarTabelaReposicao()">
+              <button data-sit="" class="btn btn-primary btn-sm rep-filtro-btn" onclick="filtrarReposicao('')">Todos</button>
+              <button data-sit="pendente" class="btn btn-outline btn-sm rep-filtro-btn" onclick="filtrarReposicao('pendente')">⏳ Pendentes</button>
+              <button data-sit="aguardando_abastecer" class="btn btn-outline btn-sm rep-filtro-btn" onclick="filtrarReposicao('aguardando_abastecer')">🕐 Aguard.</button>
+              <button data-sit="abastecido" class="btn btn-outline btn-sm rep-filtro-btn" onclick="filtrarReposicao('abastecido')">✅ Abastecidos</button>
+              <button data-sit="nao_encontrado" class="btn btn-outline btn-sm rep-filtro-btn" onclick="filtrarReposicao('nao_encontrado')">❌ Não enc.</button>
             </div>
             <div style="overflow-x:auto">
               <table style="width:100%;border-collapse:collapse;min-width:900px">
                 <thead>
                   <tr style="background:var(--surface2);border-bottom:2px solid var(--border)">
-                    <th style="padding:10px 12px;text-align:left;font-size:11px;color:var(--text3);white-space:nowrap">CÓDIGO</th>
-                    <th style="padding:10px 12px;text-align:left;font-size:11px;color:var(--text3);white-space:nowrap">FORMA DE ENVIO</th>
+                    <th style="padding:10px 12px;text-align:left;font-size:11px;color:var(--text3);white-space:nowrap">CÓDIGO / PRODUTO</th>
+                    <th style="padding:10px 12px;text-align:left;font-size:11px;color:var(--text3);white-space:nowrap">ENVIO</th>
                     <th style="padding:10px 12px;text-align:left;font-size:11px;color:var(--text3);white-space:nowrap">SEPARADOR</th>
                     <th style="padding:10px 12px;text-align:left;font-size:11px;color:var(--text3);white-space:nowrap">QUEM PEGOU</th>
                     <th style="padding:10px 12px;text-align:left;font-size:11px;color:var(--text3);white-space:nowrap">QUEM GUARDOU</th>
                     <th style="padding:10px 12px;text-align:left;font-size:11px;color:var(--text3);white-space:nowrap">SITUAÇÃO</th>
                     <th style="padding:10px 12px;text-align:left;font-size:11px;color:var(--text3);white-space:nowrap">OBS</th>
-                    <th style="padding:10px 12px;text-align:left;font-size:11px;color:var(--text3);white-space:nowrap">HORÁRIO</th>
+                    <th style="padding:10px 12px;text-align:left;font-size:11px;color:var(--text3);white-space:nowrap">DATA/HORA</th>
                   </tr>
                 </thead>
                 <tbody id="tbody-reposicao">
@@ -497,10 +515,70 @@
         <div id="rep-aba-stats" style="display:none">
           <div class="card">
             <div class="card-hd">INDICADORES POR COLABORADOR
-              <button class="btn btn-outline btn-sm" onclick="carregarEstatisticasRep()">🔄</button>
+              <div style="display:flex;gap:8px;align-items:center">
+                <input type="date" id="rep-stats-ini" style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)">
+                <span style="font-size:11px;color:var(--text3)">até</span>
+                <input type="date" id="rep-stats-fim" style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)">
+                <button class="btn btn-primary btn-sm" onclick="carregarEstatisticasRep()">Filtrar</button>
+                <button class="btn btn-outline btn-sm" onclick="carregarEstatisticasRep()">🔄</button>
+              </div>
             </div>
             <div id="rep-stats-desktop">
               <div style="color:var(--text3);text-align:center;padding:32px">Carregando...</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Aba 3: Ranking de Produtos -->
+        <div id="rep-aba-ranking" style="display:none">
+          <div class="card">
+            <div class="card-hd">PRODUTOS QUE MAIS GERAM REPOSIÇÃO
+              <div style="display:flex;gap:8px;align-items:center">
+                <input type="date" id="rep-rank-ini" style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)">
+                <span style="font-size:11px;color:var(--text3)">até</span>
+                <input type="date" id="rep-rank-fim" style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)">
+                <button class="btn btn-primary btn-sm" onclick="carregarRankingProdutos()">Filtrar</button>
+              </div>
+            </div>
+            <div id="rep-ranking-lista">
+              <div style="color:var(--text3);text-align:center;padding:32px">Carregando...</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Modal Entrada Manual -->
+        <div id="modal-entrada-manual" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center">
+          <div style="background:var(--surface);border-radius:16px;padding:24px;width:90%;max-width:480px;max-height:90vh;overflow-y:auto">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+              <h3 style="font-size:16px;font-weight:700;color:var(--text)">+ Entrada Manual de Produto</h3>
+              <button onclick="fecharEntradaManual()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text3)">×</button>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:14px">
+              <div>
+                <label style="font-size:11px;font-weight:700;color:var(--text3);display:block;margin-bottom:4px">CÓDIGO DO PRODUTO *</label>
+                <input type="text" id="em-codigo" placeholder="Ex: PB521-Lollipop" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-size:14px;box-sizing:border-box">
+              </div>
+              <div>
+                <label style="font-size:11px;font-weight:700;color:var(--text3);display:block;margin-bottom:4px">DESCRIÇÃO DO PRODUTO</label>
+                <input type="text" id="em-descricao" placeholder="Nome do produto..." style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-size:14px;box-sizing:border-box">
+              </div>
+              <div>
+                <label style="font-size:11px;font-weight:700;color:var(--text3);display:block;margin-bottom:4px">QUANTIDADE</label>
+                <input type="number" id="em-quantidade" value="1" min="1" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-size:14px;box-sizing:border-box">
+              </div>
+              <div>
+                <label style="font-size:11px;font-weight:700;color:var(--text3);display:block;margin-bottom:4px">QUEM GUARDOU *</label>
+                <select id="em-repositor" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-size:14px;box-sizing:border-box">
+                  <option value="">— Selecionar —</option>
+                </select>
+              </div>
+              <div>
+                <label style="font-size:11px;font-weight:700;color:var(--text3);display:block;margin-bottom:4px">OBSERVAÇÃO</label>
+                <input type="text" id="em-obs" placeholder="Ex: chegou do fornecedor..." style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-size:14px;box-sizing:border-box">
+              </div>
+              <button onclick="salvarEntradaManual()" style="width:100%;padding:14px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;margin-top:4px">
+                ✅ REGISTRAR ENTRADA
+              </button>
             </div>
           </div>
         </div>

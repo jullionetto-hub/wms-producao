@@ -325,17 +325,23 @@ router.delete('/pedidos', requerAuth, requerPerfil('supervisor'), async (req,res
 // ── REPOSITOR ─────────────────────────────────────────────────────────────────
 router.get('/repositor/avisos', requerAuth, async (req,res) => {
   if (!req.session?.usuario) return res.json([]);
-  const {status,data}=req.query;
+  const {status, data, data_ini, data_fim, codigo} = req.query;
   try {
-    let sql=`SELECT a.*, COALESCE(a.forma_envio, p.transportadora, '') as forma_envio_real
+    let sql=`SELECT a.*,
+             COALESCE(a.forma_envio, p.transportadora, '') as forma_envio_real,
+             CASE WHEN UPPER(COALESCE(a.forma_envio, p.transportadora,'')) LIKE '%DRIVE%'
+                    OR UPPER(COALESCE(a.forma_envio, p.transportadora,'')) LIKE '%RETIRADA%'
+                  THEN 0 ELSE 1 END as prioridade
              FROM avisos_repositor a
              LEFT JOIN pedidos p ON a.pedido_id = p.id
              WHERE 1=1`;
     const params=[];
     if (status){params.push(status);sql+=` AND a.status=$${params.length}`;}
     if (data){params.push(data);sql+=` AND a.data_aviso=$${params.length}`;}
-    const rows = await db.all(sql+' ORDER BY a.id DESC', params);
-    // Normaliza forma_envio
+    if (data_ini){params.push(data_ini);sql+=` AND a.data_aviso>=$${params.length}`;}
+    if (data_fim){params.push(data_fim);sql+=` AND a.data_aviso<=$${params.length}`;}
+    if (codigo){params.push('%'+codigo+'%');sql+=` AND UPPER(a.codigo) LIKE UPPER($${params.length})`;}
+    const rows = await db.all(sql+' ORDER BY prioridade ASC, a.id DESC', params);
     res.json(rows.map(r=>({...r, forma_envio: r.forma_envio_real||r.forma_envio||''})));
   } catch(e){res.status(500).json({erro:e.message});}
 });
@@ -366,6 +372,39 @@ router.put('/repositor/avisos/:id', requerAuth, async (req,res) => {
       if (av) await pool.query(`UPDATE itens_pedido SET status='encontrado' WHERE id=$1`,[av.item_id]);
     }
     res.json({mensagem:'Aviso atualizado!'});
+  } catch(e){res.status(500).json({erro:e.message});}
+});
+
+
+// Entrada manual de reposição por código de pedido (produto de fornecedor)
+router.post('/repositor/entrada-manual', requerAuth, requerPerfil('supervisor','repositor'), async (req,res) => {
+  const {codigo, descricao, quantidade, obs, repositor_nome, situacao} = req.body;
+  const {data, hora} = dataHoraLocal();
+  try {
+    await pool.query(`ALTER TABLE avisos_repositor ADD COLUMN IF NOT EXISTS entrada_manual BOOLEAN DEFAULT false`).catch(()=>{});
+    const result = await pool.query(
+      `INSERT INTO avisos_repositor (item_id, pedido_id, numero_pedido, separador_nome, codigo, descricao, quantidade, obs, status, situacao, hora_aviso, data_aviso, repositor_nome, quem_pegou, entrada_manual)
+       VALUES (0, 0, 'ENTRADA-MANUAL', 'Entrada Manual', $1, $2, $3, $4, $5, $5, $6, $7, $8, $8, true) RETURNING id`,
+      [codigo||'', descricao||'', quantidade||1, obs||'', situacao||'abastecido', hora, data, repositor_nome||'']
+    );
+    res.json({id: result.rows[0].id, mensagem: 'Entrada registrada!'});
+  } catch(e) { res.status(500).json({erro: e.message}); }
+});
+
+// Ranking de produtos mais solicitados
+router.get('/repositor/ranking-produtos', requerAuth, async (req,res) => {
+  const {data_ini, data_fim} = req.query;
+  try {
+    let sql = `SELECT codigo, descricao, COUNT(*) as total,
+               SUM(CASE WHEN status='abastecido' THEN 1 ELSE 0 END) as abastecidos,
+               SUM(CASE WHEN status='nao_encontrado' THEN 1 ELSE 0 END) as nao_encontrados,
+               MAX(data_aviso) as ultima_vez
+               FROM avisos_repositor WHERE codigo != '' AND codigo IS NOT NULL`;
+    const params = [];
+    if (data_ini){params.push(data_ini);sql+=` AND data_aviso>=$${params.length}`;}
+    if (data_fim){params.push(data_fim);sql+=` AND data_aviso<=$${params.length}`;}
+    sql += ` GROUP BY codigo, descricao ORDER BY total DESC LIMIT 50`;
+    res.json(await db.all(sql, params));
   } catch(e){res.status(500).json({erro:e.message});}
 });
 

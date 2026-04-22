@@ -225,6 +225,14 @@ async function carregarStatsRepMobile() {
 /* ══════════════════════════════════════════════════════════════════
    DESKTOP — TABELA DE REPOSIÇÃO
 ══════════════════════════════════════════════════════════════════ */
+
+function atualizarUltimaAtualizacaoRep() {
+  const el = document.getElementById('rep-ultima-atualizacao');
+  if (!el) return;
+  const agora = new Date().toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'});
+  el.textContent = `— atualizado ${agora}`;
+}
+
 async function carregarReposicaoDesktop() {
   await carregarUsuariosParaRep();
   await carregarTabelaReposicao();
@@ -243,7 +251,15 @@ async function carregarTabelaReposicao() {
 
   tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text3)">⏳ Carregando...</td></tr>`;
   try {
-    const url = `${API}/repositor/avisos${_filtroSituacaoRep?'?status='+_filtroSituacaoRep:''}`;
+    const ini    = document.getElementById('rep-filtro-ini')?.value || '';
+    const fim    = document.getElementById('rep-filtro-fim')?.value || '';
+    const codigo = document.getElementById('rep-filtro-codigo')?.value || '';
+    const params = new URLSearchParams();
+    if (_filtroSituacaoRep) params.set('status', _filtroSituacaoRep);
+    if (ini) params.set('data_ini', ini);
+    if (fim) params.set('data_fim', fim);
+    if (codigo) params.set('codigo', codigo);
+    const url = `${API}/repositor/avisos${params.toString()?'?'+params.toString():''}`;
     const res = await fetch(url, { credentials:'include' });
     const avisos = res.ok ? await res.json() : [];
     if (totalEl) totalEl.textContent = avisos.length;
@@ -254,26 +270,24 @@ async function carregarTabelaReposicao() {
       return;
     }
 
+    atualizarUltimaAtualizacaoRep();
     tbody.innerHTML = avisos.map(a => {
       const sit = a.situacao || a.status || 'pendente';
       const cor = corSituacao(sit);
       const lbl = labelSituacao(sit);
       return `<tr id="rep-row-${a.id}" style="border-bottom:1px solid var(--border)" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
-        <td style="padding:10px 12px;font-weight:600;font-size:13px">${a.codigo||'—'}</td>
-        <td style="padding:10px 12px;font-size:12px;color:var(--text2)">${a.forma_envio||'—'}</td>
-        <td style="padding:10px 12px;font-size:12px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.separador_nome||'—'}</td>
-        <td style="padding:8px 10px;min-width:150px">
-          <select onchange="salvarCampoAviso(${a.id},'quem_pegou',this.value)"
-            style="width:100%;font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)">
-            ${optionsUsuarios(a.quem_pegou||'')}
-          </select>
+        <td style="padding:10px 12px;min-width:140px">
+          <div style="font-weight:700;font-size:13px;color:var(--text)">${a.codigo||'—'}</div>
+          ${a.descricao?`<div style="font-size:11px;color:var(--text3);margin-top:2px;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${a.descricao}</div>`:''}
         </td>
-        <td style="padding:8px 10px;min-width:150px">
-          <select onchange="salvarCampoAviso(${a.id},'quem_guardou',this.value)"
-            style="width:100%;font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)">
-            ${optionsUsuarios(a.quem_guardou||'')}
-          </select>
+        <td style="padding:10px 12px;font-size:12px;white-space:nowrap">
+          ${a.forma_envio && a.forma_envio.toUpperCase().includes('DRIVE')
+            ? `<span style="background:#ef444418;color:#ef4444;font-weight:700;font-size:11px;padding:2px 8px;border-radius:20px">🚗 ${a.forma_envio}</span>`
+            : `<span style="color:var(--text2)">${a.forma_envio||'—'}</span>`}
         </td>
+        <td style="padding:10px 12px;font-size:12px;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.separador_nome||'—'}</td>
+        <td style="padding:10px 12px;font-size:12px;color:var(--text2)">${a.quem_pegou||'—'}</td>
+        <td style="padding:10px 12px;font-size:12px;color:var(--text2)">${a.quem_guardou||'—'}</td>
         <td style="padding:8px 10px;min-width:160px">
           <select onchange="salvarCampoAviso(${a.id},'situacao',this.value)"
             style="width:100%;font-size:12px;padding:5px 8px;border:1px solid ${cor};border-radius:6px;background:var(--surface);color:${cor};font-weight:600">
@@ -330,7 +344,7 @@ function filtrarReposicao(situacao) {
 }
 
 function mudarAbaRep(aba) {
-  ['avisos','stats'].forEach(t => {
+  ['avisos','stats','ranking'].forEach(t => {
     const el  = document.getElementById(`rep-aba-${t}`);
     const btn = document.getElementById(`rep-ababtn-${t}`);
     if (el)  el.style.display    = t===aba ? 'block' : 'none';
@@ -339,8 +353,9 @@ function mudarAbaRep(aba) {
       btn.style.color        = t===aba ? 'var(--accent)' : 'var(--text3)';
     }
   });
-  if (aba==='avisos') carregarTabelaReposicao();
-  if (aba==='stats')  carregarEstatisticasRep();
+  if (aba==='avisos')  carregarTabelaReposicao();
+  if (aba==='stats')   carregarEstatisticasRep();
+  if (aba==='ranking') carregarRankingProdutos();
 }
 
 /* ── Indicadores ────────────────────────────────────────────────── */
@@ -349,7 +364,12 @@ async function carregarEstatisticasRep() {
   if (!el) return;
   el.innerHTML = `<div style="text-align:center;padding:32px;color:var(--text3)">⏳ Carregando...</div>`;
   try {
-    const res = await fetch(`${API}/repositor/avisos`, { credentials:'include' });
+    const sIni = document.getElementById('rep-stats-ini')?.value || '';
+    const sFim = document.getElementById('rep-stats-fim')?.value || '';
+    const sParams = new URLSearchParams();
+    if (sIni) sParams.set('data_ini', sIni);
+    if (sFim) sParams.set('data_fim', sFim);
+    const res = await fetch(`${API}/repositor/avisos${sParams.toString()?'?'+sParams.toString():''}`, { credentials:'include' });
     const avisos = res.ok ? await res.json() : [];
     const stats = {};
     const inc = (nome, campo) => {
@@ -409,4 +429,107 @@ async function carregarStatsRepositor() {
     set('rep-hoje',data.reposto_hoje); set('rep-mes',data.reposto_mes);
     set('rep-ano',data.reposto_ano);   set('rep-nao-enc',data.nao_encontrado_hoje);
   } catch(e) {}
+}
+
+/* RANKING DE PRODUTOS */
+async function carregarRankingProdutos() {
+  const el = document.getElementById('rep-ranking-lista');
+  if (!el) return;
+  el.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text3)">⏳ Carregando...</div>';
+  try {
+    const ini = document.getElementById('rep-rank-ini')?.value || '';
+    const fim = document.getElementById('rep-rank-fim')?.value || '';
+    const params = new URLSearchParams();
+    if (ini) params.set('data_ini', ini);
+    if (fim) params.set('data_fim', fim);
+    const res = await fetch(`${API}/repositor/ranking-produtos${params.toString()?'?'+params.toString():''}`, { credentials:'include' });
+    const produtos = res.ok ? await res.json() : [];
+    if (!produtos.length) {
+      el.innerHTML = '<div style="text-align:center;padding:48px;color:var(--text3)">Nenhum dado</div>';
+      return;
+    }
+    const maxTotal = produtos[0]?.total || 1;
+    el.innerHTML = `
+      <table style="width:100%;border-collapse:collapse">
+        <thead>
+          <tr style="background:var(--surface2)">
+            <th style="padding:10px 12px;text-align:left;font-size:11px;color:var(--text3)">#</th>
+            <th style="padding:10px 12px;text-align:left;font-size:11px;color:var(--text3)">CÓDIGO / PRODUTO</th>
+            <th style="padding:10px 12px;text-align:center;font-size:11px;color:var(--text3)">TOTAL</th>
+            <th style="padding:10px 12px;text-align:center;font-size:11px;color:var(--text3)">ABASTECIDOS</th>
+            <th style="padding:10px 12px;text-align:center;font-size:11px;color:var(--text3)">NÃO ENC.</th>
+            <th style="padding:10px 12px;text-align:left;font-size:11px;color:var(--text3)">FREQUÊNCIA</th>
+            <th style="padding:10px 12px;text-align:left;font-size:11px;color:var(--text3)">ÚLTIMA VEZ</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${produtos.map((p,i) => `
+            <tr style="border-bottom:1px solid var(--border)" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+              <td style="padding:10px 12px;font-size:13px;font-weight:700;color:var(--text3)">${i+1}</td>
+              <td style="padding:10px 12px">
+                <div style="font-weight:700;font-size:13px">${p.codigo}</div>
+                ${p.descricao?`<div style="font-size:11px;color:var(--text3)">${p.descricao}</div>`:''}
+              </td>
+              <td style="padding:10px 12px;text-align:center;font-size:15px;font-weight:700;color:#ef4444">${p.total}</td>
+              <td style="padding:10px 12px;text-align:center;font-size:14px;font-weight:600;color:#10b981">${p.abastecidos}</td>
+              <td style="padding:10px 12px;text-align:center;font-size:14px;font-weight:600;color:#ef4444">${p.nao_encontrados}</td>
+              <td style="padding:10px 12px;min-width:120px">
+                <div style="background:var(--surface2);border-radius:4px;height:8px;overflow:hidden">
+                  <div style="background:#ef4444;height:100%;width:${Math.round((p.total/maxTotal)*100)}%;border-radius:4px"></div>
+                </div>
+              </td>
+              <td style="padding:10px 12px;font-size:12px;color:var(--text3)">${p.ultima_vez||'—'}</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>`;
+  } catch(e) { el.innerHTML = `<div style="color:#ef4444;padding:16px">Erro: ${e.message}</div>`; }
+}
+
+/* ENTRADA MANUAL */
+function abrirEntradaManual() {
+  const modal = document.getElementById('modal-entrada-manual');
+  if (!modal) return;
+  // Popula dropdown de repositores
+  const sel = document.getElementById('em-repositor');
+  if (sel) {
+    sel.innerHTML = '<option value="">— Selecionar —</option>' +
+      _todosUsuarios.filter(u=>u.status==='ativo').sort((a,b)=>a.nome.localeCompare(b.nome))
+        .map(u=>`<option value="${u.nome}">${u.nome}</option>`).join('');
+  }
+  modal.style.display = 'flex';
+}
+
+function fecharEntradaManual() {
+  const modal = document.getElementById('modal-entrada-manual');
+  if (modal) modal.style.display = 'none';
+}
+
+async function salvarEntradaManual() {
+  const codigo    = document.getElementById('em-codigo')?.value?.trim();
+  const descricao = document.getElementById('em-descricao')?.value?.trim();
+  const quantidade= parseInt(document.getElementById('em-quantidade')?.value) || 1;
+  const repositor = document.getElementById('em-repositor')?.value;
+  const obs       = document.getElementById('em-obs')?.value?.trim();
+
+  if (!codigo) { toast('Informe o código do produto', 'danger'); return; }
+  if (!repositor) { toast('Selecione quem guardou', 'danger'); return; }
+
+  try {
+    const res = await fetch(`${API}/repositor/entrada-manual`, {
+      credentials:'include', method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ codigo, descricao, quantidade, repositor_nome: repositor, quem_guardou: repositor, obs, situacao:'abastecido' })
+    });
+    if (res.ok) {
+      toast('Entrada registrada!', 'success');
+      fecharEntradaManual();
+      // Limpa campos
+      ['em-codigo','em-descricao','em-obs'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+      const q=document.getElementById('em-quantidade'); if(q) q.value='1';
+      carregarTabelaReposicao();
+    } else {
+      const err = await res.json();
+      toast(err.erro || 'Erro ao salvar', 'danger');
+    }
+  } catch(e) { toast('Sem conexão', 'danger'); }
 }
