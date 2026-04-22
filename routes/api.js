@@ -349,12 +349,20 @@ router.put('/repositor/avisos/:id', requerAuth, async (req,res) => {
     await pool.query(`ALTER TABLE avisos_repositor ADD COLUMN IF NOT EXISTS forma_envio TEXT DEFAULT ''`).catch(()=>{});
     await pool.query(`ALTER TABLE avisos_repositor ADD COLUMN IF NOT EXISTS situacao TEXT DEFAULT ''`).catch(()=>{});
     const st = situacao || status || 'pendente';
+    // Busca registro atual para não sobrescrever campos já preenchidos
+    const atual = await db.get('SELECT * FROM avisos_repositor WHERE id=$1',[req.params.id]);
+    const qPegou   = quem_pegou   || atual?.quem_pegou   || '';
+    const qGuardou = quem_guardou || atual?.quem_guardou || '';
+    const fEnvio   = forma_envio  || atual?.forma_envio  || '';
+    const qtdEnc   = qtd_encontrada !== undefined ? qtd_encontrada : (atual?.qtd_encontrada || 0);
+    const obsVal   = obs !== undefined ? obs : (atual?.obs || '');
     await pool.query(
       `UPDATE avisos_repositor SET status=$1,obs=$2,qtd_encontrada=$3,repositor_nome=$4,hora_reposto=$5,quem_pegou=$6,quem_guardou=$7,forma_envio=$8,situacao=$9 WHERE id=$10`,
-      [st,obs||'',qtd_encontrada||0,repositor_nome||'',hora,quem_pegou||'',quem_guardou||'',forma_envio||'',st,req.params.id]
+      [st, obsVal, qtdEnc, repositor_nome||qPegou||'', hora, qPegou, qGuardou, fEnvio, st, req.params.id]
     );
-    if (st==='reposto'||st==='abastecido') {
-      const av=await db.get('SELECT item_id FROM avisos_repositor WHERE id=$1',[req.params.id]);
+    // Marca item como encontrado quando abastecido
+    if (['abastecido','reposto','encontrado'].includes(st)) {
+      const av = await db.get('SELECT item_id FROM avisos_repositor WHERE id=$1',[req.params.id]);
       if (av) await pool.query(`UPDATE itens_pedido SET status='encontrado' WHERE id=$1`,[av.item_id]);
     }
     res.json({mensagem:'Aviso atualizado!'});

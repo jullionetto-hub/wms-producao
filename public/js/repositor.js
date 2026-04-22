@@ -1,13 +1,9 @@
-/* ═══════════════════════════════════════
-   ESTADO GLOBAL REPOSITOR
-═══════════════════════════════════════ */
+/* REPOSITOR — fluxo em 3 etapas */
+
 let _todosUsuarios = [];
 let _filtroSituacaoRep = '';
-let _avisosCache = [];
 
-/* ═══════════════════════════════════════
-   INICIALIZAÇÃO MOBILE
-═══════════════════════════════════════ */
+/* ── Inicialização ─────────────────────────────────────────────────── */
 function ativarMobileRep() {
   document.body.classList.add('rep-mobile');
   document.getElementById('rep-mobile-root').style.display = 'flex';
@@ -19,20 +15,16 @@ function ativarMobileRep() {
 
 function mudarTabRep(tab) {
   ['avisos','stats'].forEach(t => {
-    const tabEl = document.getElementById(`rep-tab-${t}`);
-    const btnEl = document.getElementById(`rep-tab-${t}`);
-    if (document.getElementById(`rtab-${t}`)) {
-      document.getElementById(`rtab-${t}`).classList.toggle('ativo', t === tab);
-    }
-    if (tabEl) tabEl.classList.toggle('ativa', t === tab);
+    const pg = document.getElementById(`rep-tab-${t}`);
+    const bt = document.getElementById(`rtab-${t}`);
+    if (pg) pg.classList.toggle('ativa', t === tab);
+    if (bt) bt.classList.toggle('ativo', t === tab);
   });
   if (tab === 'avisos') carregarAvisosMobile();
   if (tab === 'stats')  carregarStatsRepMobile();
 }
 
-/* ═══════════════════════════════════════
-   CARREGAR USUÁRIOS (compartilhado)
-═══════════════════════════════════════ */
+/* ── Usuários ──────────────────────────────────────────────────────── */
 async function carregarUsuariosParaRep() {
   try {
     const res = await fetch(`${API}/usuarios`, { credentials:'include' });
@@ -45,128 +37,165 @@ function optionsUsuarios(selecionado='') {
     .filter(u => u.status === 'ativo')
     .sort((a,b) => a.nome.localeCompare(b.nome));
   return `<option value="">— Selecionar —</option>` +
-    lista.map(u => `<option value="${u.nome}" ${u.nome===selecionado?'selected':''}>${u.nome}</option>`).join('');
-}
-
-function optionsSituacao(selecionado='') {
-  const opts = [
-    {v:'pendente',       l:'⏳ Pendente',        c:'#f59e0b'},
-    {v:'verificando',    l:'🔍 Verificando',      c:'#8b5cf6'},
-    {v:'subiu',          l:'⬆️ Subiu',            c:'#3b82f6'},
-    {v:'abastecido',     l:'✅ Abastecido',       c:'#10b981'},
-    {v:'protocolo',      l:'📋 Protocolo',        c:'#6b7280'},
-    {v:'nao_encontrado', l:'❌ Não encontrado',   c:'#ef4444'},
-  ];
-  return opts.map(o => `<option value="${o.v}" ${o.v===selecionado?'selected':''}>${o.l}</option>`).join('');
+    lista.map(u =>
+      `<option value="${u.nome}" ${u.nome===selecionado?'selected':''}>${u.nome}</option>`
+    ).join('');
 }
 
 function corSituacao(sit) {
-  const cores = {
-    pendente:'#f59e0b', verificando:'#8b5cf6', subiu:'#3b82f6',
-    abastecido:'#10b981', protocolo:'#6b7280', nao_encontrado:'#ef4444'
-  };
-  return cores[sit] || '#6b7280';
+  return {
+    pendente:'#f59e0b', verificando:'#8b5cf6', buscado:'#3b82f6',
+    aguardando_abastecer:'#f97316', abastecido:'#10b981',
+    protocolo:'#6b7280', nao_encontrado:'#ef4444'
+  }[sit] || '#6b7280';
 }
 
-/* ═══════════════════════════════════════
+function labelSituacao(sit) {
+  return {
+    pendente:'⏳ Pendente', verificando:'🔍 Verificando',
+    buscado:'📦 Buscado', aguardando_abastecer:'🕐 Aguard. Abastecer',
+    abastecido:'✅ Abastecido', protocolo:'📋 Protocolo',
+    nao_encontrado:'❌ Não encontrado'
+  }[sit] || sit;
+}
+
+/* ══════════════════════════════════════════════════════════════════
    MOBILE — LISTA DE AVISOS
-═══════════════════════════════════════ */
+══════════════════════════════════════════════════════════════════ */
 async function carregarAvisosMobile() {
-  const el = document.getElementById('m-lista-avisos');
-  const cntEl = document.getElementById('m-rep-pend');
+  const el  = document.getElementById('m-lista-avisos');
+  const cnt = document.getElementById('m-rep-pend');
   if (!el) return;
   try {
     const filtro = document.getElementById('m-filtro-rep-status')?.value || '';
-    let url = `${API}/repositor/avisos`;
-    if (filtro) url += `?status=${filtro}`;
+    const url = `${API}/repositor/avisos${filtro?'?status='+filtro:''}`;
     const res = await fetch(url, { credentials:'include' });
     const avisos = res.ok ? await res.json() : [];
-    _avisosCache = avisos;
-    const pendentes = avisos.filter(a => a.status === 'pendente' || a.situacao === 'pendente');
-    if (cntEl) cntEl.textContent = pendentes.length;
+    const pend = avisos.filter(a => ['pendente','verificando','buscado','aguardando_abastecer'].includes(a.situacao||a.status)).length;
+    if (cnt) cnt.textContent = pend;
+
     if (!avisos.length) {
-      el.innerHTML = `<div style="text-align:center;padding:48px 16px">
-        <div style="font-size:40px;margin-bottom:8px">✅</div>
-        <div style="color:var(--text3);font-size:14px">Nenhum item em falta</div>
+      el.innerHTML = `<div style="text-align:center;padding:60px 16px">
+        <div style="font-size:48px;margin-bottom:12px">✅</div>
+        <div style="color:var(--text3);font-size:15px;font-weight:500">Nenhum item em falta</div>
       </div>`;
       return;
     }
-    el.innerHTML = avisos.map(a => {
-      const sit = a.situacao || a.status || 'pendente';
-      const cor = corSituacao(sit);
-      const sitLabel = {
-        pendente:'⏳ Pendente', verificando:'🔍 Verificando', subiu:'⬆️ Subiu',
-        abastecido:'✅ Abastecido', protocolo:'📋 Protocolo', nao_encontrado:'❌ Não encontrado'
-      }[sit] || sit;
-      return `
-      <div style="background:var(--surface);border:1px solid var(--border);border-left:4px solid ${cor};border-radius:12px;padding:16px;margin-bottom:12px">
-        <!-- Header do card -->
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
-          <div>
-            <div style="font-weight:700;font-size:15px;color:var(--text)">${a.codigo||'—'}</div>
-            <div style="font-size:11px;color:var(--text3);margin-top:2px">${a.descricao||''}</div>
-          </div>
-          <span style="font-size:11px;font-weight:600;color:${cor};background:${cor}18;padding:3px 8px;border-radius:20px;white-space:nowrap">${sitLabel}</span>
-        </div>
-        <!-- Infos -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px;font-size:12px">
-          <div style="color:var(--text3)">📦 Separador</div>
-          <div style="color:var(--text);font-weight:500">${a.separador_nome||'—'}</div>
-          <div style="color:var(--text3)">🚚 Forma de envio</div>
-          <div style="color:var(--text);font-weight:500">${a.forma_envio||'—'}</div>
-          <div style="color:var(--text3)">📍 Endereço</div>
-          <div style="color:var(--text);font-weight:500">${a.endereco||'—'}</div>
-          <div style="color:var(--text3)">🕐 Horário</div>
-          <div style="color:var(--text);font-weight:500">${a.hora_aviso||'—'}</div>
-        </div>
-        <!-- Campos editáveis -->
-        <div style="display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--border);padding-top:12px">
-          <div>
-            <label style="font-size:11px;font-weight:600;color:var(--text3);display:block;margin-bottom:4px">QUEM PEGOU</label>
-            <select onchange="salvarCampoAvisoMobile(${a.id},'quem_pegou',this.value)"
-              style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-size:13px">
-              ${optionsUsuarios(a.quem_pegou||'')}
-            </select>
-          </div>
-          <div>
-            <label style="font-size:11px;font-weight:600;color:var(--text3);display:block;margin-bottom:4px">QUEM GUARDOU</label>
-            <select onchange="salvarCampoAvisoMobile(${a.id},'quem_guardou',this.value)"
-              style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-size:13px">
-              ${optionsUsuarios(a.quem_guardou||'')}
-            </select>
-          </div>
-          <div>
-            <label style="font-size:11px;font-weight:600;color:var(--text3);display:block;margin-bottom:4px">SITUAÇÃO</label>
-            <select onchange="salvarCampoAvisoMobile(${a.id},'situacao',this.value)"
-              style="width:100%;padding:8px 10px;border:1px solid ${cor};border-radius:8px;background:var(--surface2);color:${cor};font-size:13px;font-weight:600">
-              ${optionsSituacao(sit)}
-            </select>
-          </div>
-          <div>
-            <label style="font-size:11px;font-weight:600;color:var(--text3);display:block;margin-bottom:4px">OBSERVAÇÃO</label>
-            <input type="text" value="${(a.obs||'').replace(/"/g,'&quot;')}" placeholder="Escreva uma obs..."
-              onblur="salvarCampoAvisoMobile(${a.id},'obs',this.value)"
-              style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-size:13px;box-sizing:border-box">
-          </div>
-        </div>
-      </div>`;
-    }).join('');
+
+    el.innerHTML = avisos.map(a => renderCardMobile(a)).join('');
   } catch(e) {
-    el.innerHTML = `<div style="color:var(--danger);text-align:center;padding:24px">Erro ao carregar. Tente novamente.</div>`;
+    el.innerHTML = `<div style="color:#ef4444;text-align:center;padding:24px">Erro ao carregar</div>`;
   }
 }
 
-async function salvarCampoAvisoMobile(id, campo, valor) {
+function renderCardMobile(a) {
+  const sit = a.situacao || a.status || 'pendente';
+  const cor = corSituacao(sit);
+  const lbl = labelSituacao(sit);
+  const nomeLogado = usuarioAtual?.nome || '';
+  const jaTemPegou   = !!a.quem_pegou;
+  const jaTemGuardou = !!a.quem_guardou;
+
+  // Botões de ação baseados na etapa atual
+  let botoesEtapa = '';
+
+  if (sit === 'pendente' || sit === 'verificando') {
+    // ETAPA 2: Repositor vai buscar
+    botoesEtapa = `
+      <div style="margin-top:14px;border-top:1px solid var(--border);padding-top:14px">
+        <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:8px;letter-spacing:.5px">O QUE VOCÊ FEZ?</div>
+        <div style="margin-bottom:10px">
+          <label style="font-size:11px;color:var(--text3);font-weight:600;display:block;margin-bottom:4px">QUANTIDADE ENCONTRADA</label>
+          <input type="number" id="qtd-${a.id}" min="0" max="${a.quantidade||99}" value="${a.qtd_encontrada||0}"
+            style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-size:16px;box-sizing:border-box">
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <button onclick="acaoRepositor(${a.id},'busquei_e_abasteci','${nomeLogado}')"
+            style="width:100%;padding:12px;background:#10b981;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.3px">
+            ✅ BUSQUEI E ABASTECI
+          </button>
+          <button onclick="acaoRepositor(${a.id},'so_busquei','${nomeLogado}')"
+            style="width:100%;padding:12px;background:#3b82f6;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.3px">
+            📦 SÓ BUSQUEI — outro vai guardar
+          </button>
+          <button onclick="acaoRepositor(${a.id},'nao_encontrei','${nomeLogado}')"
+            style="width:100%;padding:12px;background:transparent;color:#ef4444;border:1.5px solid #ef4444;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">
+            ❌ NÃO ENCONTREI
+          </button>
+        </div>
+      </div>`;
+  } else if (sit === 'buscado' || sit === 'aguardando_abastecer') {
+    // ETAPA 3: Repositor vai abastecer
+    botoesEtapa = `
+      <div style="margin-top:14px;border-top:1px solid var(--border);padding-top:14px">
+        <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:8px;letter-spacing:.5px">
+          📦 Buscado por: <span style="color:var(--text)">${a.quem_pegou||'—'}</span>
+        </div>
+        <button onclick="acaoRepositor(${a.id},'abasteci','${nomeLogado}')"
+          style="width:100%;padding:12px;background:#10b981;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.3px">
+          ✅ ABASTECI O PRODUTO
+        </button>
+      </div>`;
+  } else if (sit === 'abastecido') {
+    botoesEtapa = `
+      <div style="margin-top:10px;border-top:1px solid var(--border);padding-top:10px;font-size:12px;color:var(--text3)">
+        📦 Pegou: <strong>${a.quem_pegou||'—'}</strong> &nbsp;·&nbsp; 🏠 Guardou: <strong>${a.quem_guardou||'—'}</strong>
+      </div>`;
+  }
+
+  return `
+    <div style="background:var(--surface);border:1px solid var(--border);border-left:4px solid ${cor};border-radius:14px;padding:16px;margin-bottom:14px">
+      <!-- Header -->
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+        <div>
+          <div style="font-weight:700;font-size:16px;color:var(--text)">${a.codigo||'—'}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px;line-height:1.4">${a.descricao||''}</div>
+        </div>
+        <span style="font-size:11px;font-weight:700;color:${cor};background:${cor}18;padding:4px 10px;border-radius:20px;white-space:nowrap;margin-left:8px">${lbl}</span>
+      </div>
+      <!-- Infos -->
+      <div style="display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:12px;margin-bottom:4px">
+        <span style="color:var(--text3)">📦 Separador</span>
+        <span style="color:var(--text);font-weight:500">${a.separador_nome||'—'}</span>
+        ${a.forma_envio ? `<span style="color:var(--text3)">🚚 Envio</span><span style="color:var(--text)">${a.forma_envio}</span>` : ''}
+        <span style="color:var(--text3)">📍 Endereço</span>
+        <span style="color:var(--text)">${a.endereco||'—'}</span>
+        <span style="color:var(--text3)">📦 Qtd falta</span>
+        <span style="color:#ef4444;font-weight:700">${a.quantidade||0} un</span>
+        <span style="color:var(--text3)">🕐 Horário</span>
+        <span style="color:var(--text)">${a.hora_aviso||'—'}</span>
+      </div>
+      ${a.obs ? `<div style="font-size:11px;color:var(--text3);background:var(--surface2);border-radius:6px;padding:6px 8px;margin-top:6px">💬 ${a.obs}</div>` : ''}
+      <!-- Botões de ação -->
+      ${botoesEtapa}
+    </div>`;
+}
+
+async function acaoRepositor(id, acao, nomeLogado) {
+  const qtdInput = document.getElementById(`qtd-${id}`);
+  const qtd = qtdInput ? parseInt(qtdInput.value) || 0 : 0;
+
+  let body = {};
+  if (acao === 'busquei_e_abasteci') {
+    body = { situacao:'abastecido', status:'abastecido', quem_pegou: nomeLogado, quem_guardou: nomeLogado, qtd_encontrada: qtd };
+  } else if (acao === 'so_busquei') {
+    body = { situacao:'aguardando_abastecer', status:'aguardando_abastecer', quem_pegou: nomeLogado, qtd_encontrada: qtd };
+  } else if (acao === 'nao_encontrei') {
+    body = { situacao:'nao_encontrado', status:'nao_encontrado', quem_pegou: nomeLogado, qtd_encontrada: 0 };
+  } else if (acao === 'abasteci') {
+    body = { situacao:'abastecido', status:'abastecido', quem_guardou: nomeLogado };
+  }
+
   try {
-    const body = { [campo]: valor };
-    if (campo === 'situacao') body.status = valor;
     const res = await fetch(`${API}/repositor/avisos/${id}`, {
       credentials:'include', method:'PUT',
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify(body)
     });
-    if (res.ok) toast('Salvo!', 'success');
-    else toast('Erro ao salvar', 'danger');
+    if (res.ok) {
+      toast(acao === 'nao_encontrei' ? 'Registrado!' : 'Salvo!', 'success');
+      await carregarAvisosMobile();
+    } else { toast('Erro ao salvar', 'danger'); }
   } catch(e) { toast('Sem conexão', 'danger'); }
 }
 
@@ -177,77 +206,79 @@ async function carregarStatsRepMobile() {
     const res = await fetch(`${API}/estatisticas/repositor`, { credentials:'include' });
     const data = res.ok ? await res.json() : {};
     el.innerHTML = `
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:4px 0">
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center">
-          <div style="font-size:32px;font-weight:700;color:#10b981">${data.reposto_hoje||0}</div>
-          <div style="font-size:11px;color:var(--text3);margin-top:4px">Abastecidos hoje</div>
-        </div>
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center">
-          <div style="font-size:32px;font-weight:700;color:#ef4444">${data.nao_encontrado_hoje||0}</div>
-          <div style="font-size:11px;color:var(--text3);margin-top:4px">Não encontrados</div>
-        </div>
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center">
-          <div style="font-size:32px;font-weight:700;color:#3b82f6">${data.reposto_mes||0}</div>
-          <div style="font-size:11px;color:var(--text3);margin-top:4px">Este mês</div>
-        </div>
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center">
-          <div style="font-size:32px;font-weight:700;color:#f59e0b">${data.reposto_ano||0}</div>
-          <div style="font-size:11px;color:var(--text3);margin-top:4px">Este ano</div>
-        </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:4px 0">
+        ${[
+          ['✅','#10b981','Abastecidos hoje', data.reposto_hoje||0],
+          ['❌','#ef4444','Não encontrados',  data.nao_encontrado_hoje||0],
+          ['📦','#3b82f6','Este mês',         data.reposto_mes||0],
+          ['📅','#f59e0b','Este ano',          data.reposto_ano||0],
+        ].map(([ico,cor,lbl,val]) => `
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center">
+            <div style="font-size:28px;margin-bottom:4px">${ico}</div>
+            <div style="font-size:28px;font-weight:700;color:${cor}">${val}</div>
+            <div style="font-size:11px;color:var(--text3);margin-top:4px">${lbl}</div>
+          </div>`).join('')}
       </div>`;
   } catch(e) {}
 }
 
-/* ═══════════════════════════════════════
+/* ══════════════════════════════════════════════════════════════════
    DESKTOP — TABELA DE REPOSIÇÃO
-═══════════════════════════════════════ */
+══════════════════════════════════════════════════════════════════ */
 async function carregarReposicaoDesktop() {
   await carregarUsuariosParaRep();
   await carregarTabelaReposicao();
 }
 
+async function carregarAvisos() {
+  await carregarReposicaoDesktop();
+}
+
+function verificarDuplicatas() {}
+
 async function carregarTabelaReposicao() {
-  const tbody = document.getElementById('tbody-reposicao');
+  const tbody   = document.getElementById('tbody-reposicao');
   const totalEl = document.getElementById('rep-total');
   if (!tbody) return;
-  tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--text3)">
-    <div style="font-size:20px;margin-bottom:8px">⏳</div>Carregando...</td></tr>`;
+
+  tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text3)">⏳ Carregando...</td></tr>`;
   try {
-    let url = `${API}/repositor/avisos`;
-    if (_filtroSituacaoRep) url += `?status=${_filtroSituacaoRep}`;
+    const url = `${API}/repositor/avisos${_filtroSituacaoRep?'?status='+_filtroSituacaoRep:''}`;
     const res = await fetch(url, { credentials:'include' });
     const avisos = res.ok ? await res.json() : [];
-    _avisosCache = avisos;
     if (totalEl) totalEl.textContent = avisos.length;
+
     if (!avisos.length) {
       tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:48px;color:var(--text3)">
-        <div style="font-size:32px;margin-bottom:8px">✅</div>
-        Nenhum item encontrado</td></tr>`;
+        <div style="font-size:32px;margin-bottom:8px">✅</div>Nenhum item</td></tr>`;
       return;
     }
+
     tbody.innerHTML = avisos.map(a => {
       const sit = a.situacao || a.status || 'pendente';
       const cor = corSituacao(sit);
-      return `<tr id="rep-row-${a.id}" style="border-bottom:1px solid var(--border);transition:background .15s" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
-        <td style="padding:10px 12px;font-weight:600;font-size:13px;white-space:nowrap">${a.codigo||'—'}</td>
-        <td style="padding:10px 12px;font-size:12px;color:var(--text2);white-space:nowrap">${a.forma_envio||'—'}</td>
-        <td style="padding:10px 12px;font-size:12px;white-space:nowrap;max-width:150px;overflow:hidden;text-overflow:ellipsis">${a.separador_nome||'—'}</td>
-        <td style="padding:8px 10px;min-width:140px">
+      const lbl = labelSituacao(sit);
+      return `<tr id="rep-row-${a.id}" style="border-bottom:1px solid var(--border)" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+        <td style="padding:10px 12px;font-weight:600;font-size:13px">${a.codigo||'—'}</td>
+        <td style="padding:10px 12px;font-size:12px;color:var(--text2)">${a.forma_envio||'—'}</td>
+        <td style="padding:10px 12px;font-size:12px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.separador_nome||'—'}</td>
+        <td style="padding:8px 10px;min-width:150px">
           <select onchange="salvarCampoAviso(${a.id},'quem_pegou',this.value)"
             style="width:100%;font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)">
             ${optionsUsuarios(a.quem_pegou||'')}
           </select>
         </td>
-        <td style="padding:8px 10px;min-width:140px">
+        <td style="padding:8px 10px;min-width:150px">
           <select onchange="salvarCampoAviso(${a.id},'quem_guardou',this.value)"
             style="width:100%;font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)">
             ${optionsUsuarios(a.quem_guardou||'')}
           </select>
         </td>
-        <td style="padding:8px 10px;min-width:150px">
+        <td style="padding:8px 10px;min-width:160px">
           <select onchange="salvarCampoAviso(${a.id},'situacao',this.value)"
             style="width:100%;font-size:12px;padding:5px 8px;border:1px solid ${cor};border-radius:6px;background:var(--surface);color:${cor};font-weight:600">
-            ${optionsSituacao(sit)}
+            ${['pendente','verificando','buscado','aguardando_abastecer','abastecido','protocolo','nao_encontrado']
+              .map(s=>`<option value="${s}" ${s===sit?'selected':''}>${labelSituacao(s)}</option>`).join('')}
           </select>
         </td>
         <td style="padding:8px 10px;min-width:160px">
@@ -259,7 +290,7 @@ async function carregarTabelaReposicao() {
       </tr>`;
     }).join('');
   } catch(e) {
-    tbody.innerHTML = `<tr><td colspan="8" style="color:var(--danger);text-align:center;padding:24px">Erro: ${e.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" style="color:#ef4444;padding:24px">Erro: ${e.message}</td></tr>`;
   }
 }
 
@@ -274,12 +305,12 @@ async function salvarCampoAviso(id, campo, valor) {
     });
     if (res.ok) {
       toast('Salvo!', 'success');
-      // Atualiza cor do select de situação inline
       if (campo === 'situacao') {
         const row = document.getElementById(`rep-row-${id}`);
         if (row) {
           const sel = row.querySelectorAll('select')[2];
-          if (sel) { sel.style.color = corSituacao(valor); sel.style.borderColor = corSituacao(valor); }
+          const cor = corSituacao(valor);
+          if (sel) { sel.style.color = cor; sel.style.borderColor = cor; }
         }
       }
     } else { toast('Erro ao salvar', 'danger'); }
@@ -289,96 +320,93 @@ async function salvarCampoAviso(id, campo, valor) {
 function filtrarReposicao(situacao) {
   _filtroSituacaoRep = situacao;
   document.querySelectorAll('.rep-filtro-btn').forEach(btn => {
-    const isActive = btn.dataset.sit === situacao;
-    btn.style.background = isActive ? 'var(--accent)' : 'transparent';
-    btn.style.color = isActive ? '#fff' : 'var(--text2)';
-    btn.style.borderColor = isActive ? 'var(--accent)' : 'var(--border)';
-    btn.style.fontWeight = isActive ? '700' : '500';
+    const active = btn.dataset.sit === situacao;
+    btn.style.background   = active ? 'var(--accent)' : 'transparent';
+    btn.style.color        = active ? '#fff' : 'var(--text2)';
+    btn.style.borderColor  = active ? 'var(--accent)' : 'var(--border)';
+    btn.style.fontWeight   = active ? '700' : '500';
   });
   carregarTabelaReposicao();
 }
 
 function mudarAbaRep(aba) {
   ['avisos','stats'].forEach(t => {
-    const el = document.getElementById(`rep-aba-${t}`);
+    const el  = document.getElementById(`rep-aba-${t}`);
     const btn = document.getElementById(`rep-ababtn-${t}`);
-    if (el) el.style.display = t===aba ? 'block' : 'none';
+    if (el)  el.style.display    = t===aba ? 'block' : 'none';
     if (btn) {
       btn.style.borderBottom = t===aba ? '2px solid var(--accent)' : '2px solid transparent';
-      btn.style.color = t===aba ? 'var(--accent)' : 'var(--text3)';
+      btn.style.color        = t===aba ? 'var(--accent)' : 'var(--text3)';
     }
   });
   if (aba==='avisos') carregarTabelaReposicao();
   if (aba==='stats')  carregarEstatisticasRep();
 }
 
+/* ── Indicadores ────────────────────────────────────────────────── */
 async function carregarEstatisticasRep() {
   const el = document.getElementById('rep-stats-desktop');
   if (!el) return;
-  el.innerHTML = `<div style="text-align:center;padding:32px;color:var(--text3)">Carregando...</div>`;
+  el.innerHTML = `<div style="text-align:center;padding:32px;color:var(--text3)">⏳ Carregando...</div>`;
   try {
-    const resAv = await fetch(`${API}/repositor/avisos`, { credentials:'include' });
-    const avisos = resAv.ok ? await resAv.json() : [];
+    const res = await fetch(`${API}/repositor/avisos`, { credentials:'include' });
+    const avisos = res.ok ? await res.json() : [];
     const stats = {};
+    const inc = (nome, campo) => {
+      if (!nome) return;
+      if (!stats[nome]) stats[nome] = {pegou:0,guardou:0,abastecido:0,nao_enc:0};
+      stats[nome][campo]++;
+    };
     avisos.forEach(a => {
-      [['quem_pegou','pegou'],['quem_guardou','guardou']].forEach(([campo,key]) => {
-        if (a[campo]) {
-          if (!stats[a[campo]]) stats[a[campo]] = {pegou:0,guardou:0,abastecido:0,nao_enc:0};
-          stats[a[campo]][key]++;
-          if ((a.situacao||a.status)==='abastecido') stats[a[campo]].abastecido++;
-          if ((a.situacao||a.status)==='nao_encontrado') stats[a[campo]].nao_enc++;
-        }
-      });
+      const sit = a.situacao || a.status;
+      inc(a.quem_pegou,   'pegou');
+      inc(a.quem_guardou, 'guardou');
+      if (sit==='abastecido')     inc(a.quem_guardou||a.quem_pegou, 'abastecido');
+      if (sit==='nao_encontrado') inc(a.quem_pegou, 'nao_enc');
     });
     const rows = Object.entries(stats).sort((a,b)=>(b[1].pegou+b[1].guardou)-(a[1].pegou+a[1].guardou));
     if (!rows.length) {
       el.innerHTML = `<div style="text-align:center;padding:48px;color:var(--text3)">
-        <div style="font-size:32px;margin-bottom:8px">📊</div>
-        Nenhum dado ainda. Registre "Quem Pegou" e "Quem Guardou" nos itens.</div>`;
+        Nenhum dado ainda. Registre as ações no mobile.</div>`;
       return;
     }
     el.innerHTML = `
       <table style="width:100%;border-collapse:collapse">
         <thead>
           <tr style="background:var(--surface2)">
-            <th style="padding:12px 16px;text-align:left;font-size:11px;color:var(--text3);letter-spacing:.5px">COLABORADOR</th>
-            <th style="padding:12px 16px;text-align:center;font-size:11px;color:var(--text3);letter-spacing:.5px">PEGOU</th>
-            <th style="padding:12px 16px;text-align:center;font-size:11px;color:var(--text3);letter-spacing:.5px">GUARDOU</th>
-            <th style="padding:12px 16px;text-align:center;font-size:11px;color:var(--text3);letter-spacing:.5px">ABASTECIDOS</th>
-            <th style="padding:12px 16px;text-align:center;font-size:11px;color:var(--text3);letter-spacing:.5px">NÃO ENC.</th>
+            <th style="padding:12px 16px;text-align:left;font-size:11px;color:var(--text3)">COLABORADOR</th>
+            <th style="padding:12px 16px;text-align:center;font-size:11px;color:var(--text3)">PEGOU</th>
+            <th style="padding:12px 16px;text-align:center;font-size:11px;color:var(--text3)">GUARDOU</th>
+            <th style="padding:12px 16px;text-align:center;font-size:11px;color:var(--text3)">ABASTECIDOS</th>
+            <th style="padding:12px 16px;text-align:center;font-size:11px;color:var(--text3)">NÃO ENC.</th>
           </tr>
         </thead>
         <tbody>
-          ${rows.map(([nome,s],i) => `
+          ${rows.map(([nome,s]) => `
             <tr style="border-bottom:1px solid var(--border)">
-              <td style="padding:12px 16px;font-size:13px;font-weight:600">
+              <td style="padding:12px 16px">
                 <div style="display:flex;align-items:center;gap:10px">
-                  <div style="width:32px;height:32px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:700;flex-shrink:0">${nome.charAt(0).toUpperCase()}</div>
-                  ${nome}
+                  <div style="width:34px;height:34px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:700;flex-shrink:0">${nome.charAt(0).toUpperCase()}</div>
+                  <span style="font-size:13px;font-weight:600">${nome}</span>
                 </div>
               </td>
-              <td style="padding:12px 16px;text-align:center;font-size:14px;font-weight:700;color:var(--accent)">${s.pegou}</td>
-              <td style="padding:12px 16px;text-align:center;font-size:14px;font-weight:700;color:#3b82f6">${s.guardou}</td>
-              <td style="padding:12px 16px;text-align:center;font-size:14px;font-weight:700;color:#10b981">${s.abastecido}</td>
-              <td style="padding:12px 16px;text-align:center;font-size:14px;font-weight:700;color:#ef4444">${s.nao_enc}</td>
+              <td style="text-align:center;font-size:15px;font-weight:700;color:var(--accent)">${s.pegou}</td>
+              <td style="text-align:center;font-size:15px;font-weight:700;color:#3b82f6">${s.guardou}</td>
+              <td style="text-align:center;font-size:15px;font-weight:700;color:#10b981">${s.abastecido}</td>
+              <td style="text-align:center;font-size:15px;font-weight:700;color:#ef4444">${s.nao_enc}</td>
             </tr>`).join('')}
         </tbody>
       </table>`;
-  } catch(e) { el.innerHTML = `<div style="color:var(--danger);padding:16px">Erro: ${e.message}</div>`; }
+  } catch(e) { el.innerHTML = `<div style="color:#ef4444;padding:16px">Erro: ${e.message}</div>`; }
 }
 
-/* ═══════════════════════════════════════
-   ESTATISTICAS REPOSITOR
-═══════════════════════════════════════ */
 async function carregarStatsRepositor() {
   try {
-    const res = await fetch(`${API}/estatisticas/repositor`, { credentials: 'include' });
+    const res = await fetch(`${API}/estatisticas/repositor`, { credentials:'include' });
     if (!res.ok) return;
     const data = await res.json();
-    const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v ?? 0; };
-    set('rep-hoje',    data.reposto_hoje);
-    set('rep-mes',     data.reposto_mes);
-    set('rep-ano',     data.reposto_ano);
-    set('rep-nao-enc', data.nao_encontrado_hoje);
+    const set = (id,v) => { const el=document.getElementById(id); if(el) el.textContent=v??0; };
+    set('rep-hoje',data.reposto_hoje); set('rep-mes',data.reposto_mes);
+    set('rep-ano',data.reposto_ano);   set('rep-nao-enc',data.nao_encontrado_hoje);
   } catch(e) {}
 }
