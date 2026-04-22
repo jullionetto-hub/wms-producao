@@ -108,7 +108,16 @@ async function criarTabelas() {
     codigo TEXT, descricao TEXT, endereco TEXT, quantidade INTEGER,
     obs TEXT DEFAULT '', status TEXT DEFAULT 'pendente',
     hora_aviso TEXT, hora_reposto TEXT, data_aviso TEXT,
-    qtd_encontrada INTEGER DEFAULT 0, repositor_nome TEXT DEFAULT '')`);
+    qtd_encontrada INTEGER DEFAULT 0, repositor_nome TEXT DEFAULT '',
+    quem_pegou TEXT DEFAULT '', quem_guardou TEXT DEFAULT '',
+    forma_envio TEXT DEFAULT '', situacao TEXT DEFAULT '')`);
+  // Migra colunas novas para tabelas existentes
+  for (const col of [
+    "ALTER TABLE avisos_repositor ADD COLUMN IF NOT EXISTS quem_pegou TEXT DEFAULT ''",
+    "ALTER TABLE avisos_repositor ADD COLUMN IF NOT EXISTS quem_guardou TEXT DEFAULT ''",
+    "ALTER TABLE avisos_repositor ADD COLUMN IF NOT EXISTS forma_envio TEXT DEFAULT ''",
+    "ALTER TABLE avisos_repositor ADD COLUMN IF NOT EXISTS situacao TEXT DEFAULT ''"
+  ]) { await Q(col).catch(()=>{}); }
   await Q(`CREATE TABLE IF NOT EXISTS checkout (
     id SERIAL PRIMARY KEY, numero_caixa TEXT NOT NULL,
     pedido_id INTEGER NOT NULL REFERENCES pedidos(id),

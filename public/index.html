@@ -445,55 +445,62 @@
       <div class="pagina" id="pag-reposicao">
         <div class="pg-title">Reposição</div>
 
-        <!-- Abas da reposição -->
+        <!-- Abas -->
         <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:14px">
-          <button id="reptab-btn-avisos" onclick="mudarRepTab('avisos')"
-            style="padding:9px 16px;border:none;background:transparent;font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.5px;cursor:pointer;border-bottom:2px solid var(--accent);margin-bottom:-2px;font-family:'DM Sans',sans-serif">
-            AVISOS DE FALTA
+          <button id="rep-ababtn-avisos" onclick="mudarAbaRep('avisos')"
+            style="padding:9px 16px;border:none;background:transparent;font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.5px;cursor:pointer;border-bottom:2px solid var(--accent);margin-bottom:-2px">
+            CONTROLE DE REPOSIÇÃO
           </button>
-          <button id="reptab-btn-analise" onclick="mudarRepTab('analise')"
-            style="padding:9px 16px;border:none;background:transparent;font-size:12px;font-weight:700;color:var(--text3);letter-spacing:.5px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;font-family:'DM Sans',sans-serif">
-            ANÁLISE DE FALTAS
+          <button id="rep-ababtn-stats" onclick="mudarAbaRep('stats')"
+            style="padding:9px 16px;border:none;background:transparent;font-size:12px;font-weight:700;color:var(--text3);letter-spacing:.5px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px">
+            INDICADORES
           </button>
         </div>
 
-        <!-- Aba 1: Avisos -->
-        <div id="reptab-avisos">
+        <!-- Aba 1: Tabela de Reposição -->
+        <div id="rep-aba-avisos">
           <div class="card">
-            <div class="card-hd">AVISOS DE FALTA
-              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-                <span style="font-size:12px;color:var(--red);font-weight:700">🔴 <span id="rep-pend">0</span> pendentes</span>
-                <span style="font-size:12px;color:var(--green);font-weight:600">✅ <span id="rep-rep">0</span> repostos</span>
-                <select id="filtro-rep-status" class="sel-sm" onchange="carregarAvisos()" style="min-width:120px">
-                  <option value="">Todos</option>
-                  <option value="pendente">Pendente</option>
-                  <option value="reposto">Reposto</option>
-                  <option value="nao_encontrado">Não encontrado</option>
-                </select>
-                <button class="btn btn-outline btn-sm" onclick="carregarAvisos()">🔄</button>
-                <button class="excel-btn" onclick="exportarAvisosExcel()">📊 Excel</button>
+            <div class="card-hd">CONTROLE DE REPOSIÇÃO
+              <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+                <span style="font-size:12px;color:var(--text3)"><span id="rep-total">0</span> itens</span>
+                <button data-sit="" class="btn btn-primary btn-sm rep-filtro-btn" onclick="filtrarReposicao('')">Todos</button>
+                <button data-sit="pendente" class="btn btn-outline btn-sm rep-filtro-btn" onclick="filtrarReposicao('pendente')">⏳ Pendentes</button>
+                <button data-sit="abastecido" class="btn btn-outline btn-sm rep-filtro-btn" onclick="filtrarReposicao('abastecido')">✅ Abastecidos</button>
+                <button data-sit="subiu" class="btn btn-outline btn-sm rep-filtro-btn" onclick="filtrarReposicao('subiu')">⬆ Subiu</button>
+                <button data-sit="nao_encontrado" class="btn btn-outline btn-sm rep-filtro-btn" onclick="filtrarReposicao('nao_encontrado')">❌ Não enc.</button>
+                <button class="btn btn-outline btn-sm" onclick="carregarTabelaReposicao()">🔄</button>
               </div>
             </div>
-            <div id="lista-avisos"><div style="color:var(--text3);text-align:center;padding:40px;font-size:13px">✅ Nenhum item em falta</div></div>
+            <div style="overflow-x:auto">
+              <table style="width:100%;border-collapse:collapse;min-width:900px">
+                <thead>
+                  <tr style="background:var(--surface2);border-bottom:2px solid var(--border)">
+                    <th style="padding:10px 12px;text-align:left;font-size:11px;color:var(--text3);white-space:nowrap">CÓDIGO</th>
+                    <th style="padding:10px 12px;text-align:left;font-size:11px;color:var(--text3);white-space:nowrap">FORMA DE ENVIO</th>
+                    <th style="padding:10px 12px;text-align:left;font-size:11px;color:var(--text3);white-space:nowrap">SEPARADOR</th>
+                    <th style="padding:10px 12px;text-align:left;font-size:11px;color:var(--text3);white-space:nowrap">QUEM PEGOU</th>
+                    <th style="padding:10px 12px;text-align:left;font-size:11px;color:var(--text3);white-space:nowrap">QUEM GUARDOU</th>
+                    <th style="padding:10px 12px;text-align:left;font-size:11px;color:var(--text3);white-space:nowrap">SITUAÇÃO</th>
+                    <th style="padding:10px 12px;text-align:left;font-size:11px;color:var(--text3);white-space:nowrap">OBS</th>
+                    <th style="padding:10px 12px;text-align:left;font-size:11px;color:var(--text3);white-space:nowrap">HORÁRIO</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody-reposicao">
+                  <tr><td colspan="8" style="text-align:center;padding:32px;color:var(--text3)">Carregando...</td></tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
 
-        <!-- Aba 2: Análise de Faltas -->
-        <div id="reptab-analise" style="display:none">
-          <div class="grid-2" style="margin-bottom:14px">
-            <div class="card">
-              <div class="card-hd">PRODUTOS QUE MAIS FALTAM
-                <button class="btn btn-outline btn-sm" onclick="carregarAnaliseFaltas()">🔄</button>
-              </div>
-              <div id="analise-produtos">
-                <div style="color:var(--text3);text-align:center;padding:20px;font-size:13px">Carregando...</div>
-              </div>
+        <!-- Aba 2: Indicadores -->
+        <div id="rep-aba-stats" style="display:none">
+          <div class="card">
+            <div class="card-hd">INDICADORES POR COLABORADOR
+              <button class="btn btn-outline btn-sm" onclick="carregarEstatisticasRep()">🔄</button>
             </div>
-            <div class="card">
-              <div class="card-hd">RUAS COM MAIS FALTAS</div>
-              <div id="analise-ruas">
-                <div style="color:var(--text3);text-align:center;padding:20px;font-size:13px">Carregando...</div>
-              </div>
+            <div id="rep-stats-desktop">
+              <div style="color:var(--text3);text-align:center;padding:32px">Carregando...</div>
             </div>
           </div>
         </div>

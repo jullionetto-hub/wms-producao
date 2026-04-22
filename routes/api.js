@@ -323,7 +323,7 @@ router.delete('/pedidos', requerAuth, requerPerfil('supervisor'), async (req,res
 });
 
 // ── REPOSITOR ─────────────────────────────────────────────────────────────────
-router.get('/repositor/avisos', async (req,res) => {
+router.get('/repositor/avisos', requerAuth, async (req,res) => {
   // Se não autenticado, retorna lista vazia (não quebra a UI)
   if (!req.session?.usuario) return res.json([]);
   const {status,data}=req.query;
@@ -335,12 +335,20 @@ router.get('/repositor/avisos', async (req,res) => {
   } catch(e){res.status(500).json({erro:e.message});}
 });
 router.put('/repositor/avisos/:id', requerAuth, async (req,res) => {
-  const {status,obs,qtd_encontrada,repositor_nome}=req.body;
+  const {status,obs,qtd_encontrada,repositor_nome,quem_pegou,quem_guardou,forma_envio,situacao}=req.body;
   const {hora}=dataHoraLocal();
   try {
-    await pool.query(`UPDATE avisos_repositor SET status=$1,obs=$2,qtd_encontrada=$3,repositor_nome=$4,hora_reposto=$5 WHERE id=$6`,
-      [status,obs||'',qtd_encontrada||0,repositor_nome||'',hora,req.params.id]);
-    if (status==='reposto') {
+    // Migra colunas novas se não existirem
+    await pool.query(`ALTER TABLE avisos_repositor ADD COLUMN IF NOT EXISTS quem_pegou TEXT DEFAULT ''`).catch(()=>{});
+    await pool.query(`ALTER TABLE avisos_repositor ADD COLUMN IF NOT EXISTS quem_guardou TEXT DEFAULT ''`).catch(()=>{});
+    await pool.query(`ALTER TABLE avisos_repositor ADD COLUMN IF NOT EXISTS forma_envio TEXT DEFAULT ''`).catch(()=>{});
+    await pool.query(`ALTER TABLE avisos_repositor ADD COLUMN IF NOT EXISTS situacao TEXT DEFAULT ''`).catch(()=>{});
+    const st = situacao || status || 'pendente';
+    await pool.query(
+      `UPDATE avisos_repositor SET status=$1,obs=$2,qtd_encontrada=$3,repositor_nome=$4,hora_reposto=$5,quem_pegou=$6,quem_guardou=$7,forma_envio=$8,situacao=$9 WHERE id=$10`,
+      [st,obs||'',qtd_encontrada||0,repositor_nome||'',hora,quem_pegou||'',quem_guardou||'',forma_envio||'',st,req.params.id]
+    );
+    if (st==='reposto'||st==='abastecido') {
       const av=await db.get('SELECT item_id FROM avisos_repositor WHERE id=$1',[req.params.id]);
       if (av) await pool.query(`UPDATE itens_pedido SET status='encontrado' WHERE id=$1`,[av.item_id]);
     }
