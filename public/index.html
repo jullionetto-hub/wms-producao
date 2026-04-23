@@ -255,7 +255,12 @@
 
       <!-- PEDIDOS -->
       <div class="pagina" id="pag-pedidos">
-        <div class="pg-title">Pedidos</div>
+        <div class="pg-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+          Pedidos
+          <button onclick="confirmarZerarDados()" style="padding:6px 16px;background:#ef4444;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">
+            🗑️ Zerar Dados de Teste
+          </button>
+        </div>
 
 
 
@@ -303,27 +308,7 @@
       <!-- CADASTROS -->
       <div class="pagina" id="pag-cadastros">
         <div class="pg-title">Cadastros</div>
-        <!-- Zona de perigo -->
-        <div class="card" style="border:1.5px solid #ef4444;margin-bottom:14px">
-          <div class="card-hd" style="color:#ef4444">⚠️ ZONA DE PERIGO
-          </div>
-          <div style="padding:4px 0 8px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
-            <div style="display:flex;flex-direction:column;gap:12px">
-              <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
-                <div style="font-size:13px;color:var(--text2)">Apaga <strong>todos os pedidos</strong>, reposições e checkouts. Usuários e separadores <strong>não</strong> são apagados.</div>
-                <button onclick="confirmarZerarDados()" style="padding:8px 20px;background:#ef4444;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">
-                  🗑️ Zerar Dados de Teste
-                </button>
-              </div>
-              <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;border-top:1px solid var(--border);padding-top:12px">
-                <div style="font-size:13px;color:var(--text2)">Preenche <strong>Forma de Envio</strong> nos avisos de reposição que estão sem essa informação, usando a transportadora do pedido.</div>
-                <button onclick="sincronizarFormaEnvio()" style="padding:8px 20px;background:#3b82f6;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">
-                  🔄 Sincronizar Forma de Envio
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+
         <div style="display:flex;gap:8px;margin-bottom:16px">
           <button class="btn btn-primary btn-sm" id="ctab-usuarios" onclick="trocarCadastroTab('usuarios')">👥 Usuários</button>
         </div>

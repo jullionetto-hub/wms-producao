@@ -265,6 +265,8 @@ function irPara(pag, el) {
   if (pag === 'separacao')       { carregarFila(); if (separadorAtual) carregarContadoresSep(); }
   if (pag === 'estatisticas')    { carregarEstatisticas(); carregarCheckoutLista(); }
   if (pag === 'reposicao') {
+    // Sincroniza forma_envio automaticamente ao abrir
+    fetch(`${API}/admin/sincronizar-forma-envio`, { method:'POST', credentials:'include', headers:{'Content-Type':'application/json'} }).catch(()=>{});
     carregarUsuariosParaRep().then(() => carregarTabelaReposicao());
     // Inicia auto-refresh a cada 30s
     if (window._repInterval) clearInterval(window._repInterval);

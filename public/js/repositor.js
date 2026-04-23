@@ -287,17 +287,12 @@ async function carregarTabelaReposicao() {
           <div style="font-weight:700;font-size:13px;color:var(--text)">${a.codigo||'—'}</div>
           ${a.descricao?`<div style="font-size:11px;color:var(--text3);margin-top:2px;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${a.descricao}</div>`:''}
         </td>
-        <td style="padding:8px 10px;min-width:130px">
-          ${a.forma_envio && a.forma_envio.toUpperCase().includes('DRIVE')
-            ? `<span style="background:#ef444418;color:#ef4444;font-weight:700;font-size:11px;padding:2px 8px;border-radius:20px;cursor:pointer" onclick="editarFormaEnvio(${a.id},'${(a.forma_envio||'').replace(/'/g,"\'")}')">🚗 ${a.forma_envio}</span>`
-            : `<select onchange="salvarCampoAviso(${a.id},'forma_envio',this.value)"
-                style="width:100%;font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)">
-                <option value="">— Selecionar —</option>
-                <option value="Miess Prime" ${a.forma_envio==='Miess Prime'?'selected':''}>Miess Prime</option>
-                <option value="Correios" ${a.forma_envio==='Correios'?'selected':''}>Correios</option>
-                <option value="Retirada Drive Thru" ${a.forma_envio==='Retirada Drive Thru'?'selected':''}>🚗 Retirada Drive Thru</option>
-                <option value="Retira" ${a.forma_envio==='Retira'?'selected':''}>Retira</option>
-              </select>`}
+        <td style="padding:10px 12px;font-size:12px;white-space:nowrap">
+          ${a.forma_envio
+            ? (a.forma_envio.toUpperCase().includes('DRIVE') || a.forma_envio.toUpperCase().includes('RETIRADA')
+              ? `<span style="background:#ef444418;color:#ef4444;font-weight:700;font-size:11px;padding:2px 8px;border-radius:20px">🚗 ${a.forma_envio}</span>`
+              : `<span style="color:var(--text2)">${a.forma_envio}</span>`)
+            : `<span style="color:var(--text3)">—</span>`}
         </td>
         <td style="padding:10px 12px;font-size:12px;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.separador_nome||'—'}</td>
         <td style="padding:10px 12px;font-size:12px;color:var(--text2)">${a.quem_pegou||'—'}</td>
