@@ -1,4 +1,17 @@
 
+async function sincronizarFormaEnvio() {
+  try {
+    const res = await fetch(`${API}/admin/sincronizar-forma-envio`, {
+      method:'POST', credentials:'include',
+      headers:{'Content-Type':'application/json'}
+    });
+    const data = await res.json();
+    if (res.ok) toast(`✅ ${data.mensagem}`, 'success');
+    else toast('Erro: ' + data.erro, 'danger');
+  } catch(e) { toast('Erro ao sincronizar', 'danger'); }
+}
+
+
 async function confirmarZerarDados() {
   const conf = confirm('⚠️ ATENÇÃO\n\nIsso vai apagar TODOS os pedidos, reposições e checkouts.\n\nUsuários e separadores NÃO serão apagados.\n\nTem certeza?');
   if (!conf) return;

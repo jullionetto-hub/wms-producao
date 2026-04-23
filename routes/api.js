@@ -850,4 +850,22 @@ router.post('/admin/zerar-dados', requerAuth, requerPerfil('supervisor'), async 
   } catch(e) { res.status(500).json({ erro: e.message }); }
 });
 
+
+// Sincroniza forma_envio dos avisos existentes com transportadora dos pedidos
+router.post('/admin/sincronizar-forma-envio', requerAuth, requerPerfil('supervisor'), async (req,res) => {
+  try {
+    const result = await pool.query(`
+      UPDATE avisos_repositor a
+      SET forma_envio = p.transportadora
+      FROM pedidos p
+      WHERE a.pedido_id = p.id
+        AND (a.forma_envio IS NULL OR a.forma_envio = '')
+        AND p.transportadora IS NOT NULL
+        AND p.transportadora != ''
+      RETURNING a.id
+    `);
+    res.json({ atualizados: result.rows.length, mensagem: `${result.rows.length} avisos atualizados com a transportadora do pedido.` });
+  } catch(e) { res.status(500).json({ erro: e.message }); }
+});
+
 module.exports = router;
