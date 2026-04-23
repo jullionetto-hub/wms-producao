@@ -270,10 +270,13 @@ router.put('/itens/:id/verificar', requerAuth, async (req,res) => {
     if (status==='falta'||status==='parcial') {
       const qtdA=status==='falta'?item.quantidade:(qtd_falta||0);
       const obsA=status==='parcial'?(obs||''):`Falta total - ${item.quantidade} unidade(s)`;
+      // Busca transportadora do pedido para preencher forma_envio automaticamente
+      const pedidoInfo = await db.get(`SELECT transportadora FROM pedidos WHERE id=$1`,[item.pedido_id]);
+      const formaEnvio = pedidoInfo?.transportadora || '';
       const ja=await db.get(`SELECT id FROM avisos_repositor WHERE item_id=$1 AND status='pendente'`,[item.id]);
-      if (ja) { await pool.query(`UPDATE avisos_repositor SET quantidade=$1,obs=$2,hora_aviso=$3 WHERE id=$4`,[qtdA,obsA,hora,ja.id]); }
-      else { await pool.query(`INSERT INTO avisos_repositor (item_id,pedido_id,numero_pedido,separador_id,separador_nome,codigo,descricao,endereco,quantidade,obs,status,hora_aviso,data_aviso) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'pendente',$11,$12)`,
-        [item.id,item.pedido_id,item.numero_pedido,separador_id,separador_nome,item.codigo,item.descricao,item.endereco,qtdA,obsA,hora,data]); }
+      if (ja) { await pool.query(`UPDATE avisos_repositor SET quantidade=$1,obs=$2,hora_aviso=$3,forma_envio=$4 WHERE id=$5`,[qtdA,obsA,hora,formaEnvio,ja.id]); }
+      else { await pool.query(`INSERT INTO avisos_repositor (item_id,pedido_id,numero_pedido,separador_id,separador_nome,codigo,descricao,endereco,quantidade,obs,status,hora_aviso,data_aviso,forma_envio) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'pendente',$11,$12,$13)`,
+        [item.id,item.pedido_id,item.numero_pedido,separador_id,separador_nome,item.codigo,item.descricao,item.endereco,qtdA,obsA,hora,data,formaEnvio]); }
       res.json({mensagem:'Repositor avisado!',aviso:true});
     } else { res.json({mensagem:'Item verificado!',aviso:false}); }
   } catch(e){res.status(500).json({erro:e.message});}
