@@ -1,3 +1,24 @@
+
+async function confirmarZerarDados() {
+  const conf = confirm('⚠️ ATENÇÃO\n\nIsso vai apagar TODOS os pedidos, reposições e checkouts.\n\nUsuários e separadores NÃO serão apagados.\n\nTem certeza?');
+  if (!conf) return;
+  const conf2 = confirm('Tem ABSOLUTA certeza? Esta ação não pode ser desfeita.');
+  if (!conf2) return;
+  try {
+    const res = await fetch(`${API}/admin/zerar-dados`, {
+      method:'POST', credentials:'include',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({confirmar:'ZERAR_TUDO_CONFIRMO'})
+    });
+    const data = await res.json();
+    if (res.ok) {
+      toast('✅ Dados zerados com sucesso!', 'success');
+    } else {
+      toast('Erro: ' + data.erro, 'danger');
+    }
+  } catch(e) { toast('Erro ao zerar dados', 'danger'); }
+}
+
 /* LOGIN */
 let perfilSelecionado = '';
 function selecionarPerfil(p, btn) {
@@ -230,7 +251,15 @@ function irPara(pag, el) {
   if (pag === 'cadastros')       { trocarCadastroTab('usuarios'); carregarUsuarios(); }
   if (pag === 'separacao')       { carregarFila(); if (separadorAtual) carregarContadoresSep(); }
   if (pag === 'estatisticas')    { carregarEstatisticas(); carregarCheckoutLista(); }
-  if (pag === 'reposicao')       { carregarAvisos(); verificarDuplicatas(); }
+  if (pag === 'reposicao') {
+    carregarUsuariosParaRep().then(() => carregarTabelaReposicao());
+    // Inicia auto-refresh a cada 30s
+    if (window._repInterval) clearInterval(window._repInterval);
+    window._repInterval = setInterval(() => {
+      carregarTabelaReposicao();
+      atualizarUltimaAtualizacaoRep();
+    }, 30000);
+  }
   if (pag === 'checkout')        { const el2 = document.getElementById('ck-input-caixa'); if(el2) setTimeout(()=>el2.focus(),200); }
   if (pag === 'stats-repositor') carregarStatsRepositor();
   if (pag === 'stats-checkout')  carregarStatsCheckout();

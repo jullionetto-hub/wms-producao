@@ -303,6 +303,17 @@
       <!-- CADASTROS -->
       <div class="pagina" id="pag-cadastros">
         <div class="pg-title">Cadastros</div>
+        <!-- Zona de perigo -->
+        <div class="card" style="border:1.5px solid #ef4444;margin-bottom:14px">
+          <div class="card-hd" style="color:#ef4444">⚠️ ZONA DE PERIGO
+          </div>
+          <div style="padding:4px 0 8px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+            <div style="font-size:13px;color:var(--text2)">Apaga <strong>todos os pedidos</strong>, reposições e checkouts. Usuários e separadores <strong>não</strong> são apagados.</div>
+            <button onclick="confirmarZerarDados()" style="padding:8px 20px;background:#ef4444;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">
+              🗑️ Zerar Dados de Teste
+            </button>
+          </div>
+        </div>
         <div style="display:flex;gap:8px;margin-bottom:16px">
           <button class="btn btn-primary btn-sm" id="ctab-usuarios" onclick="trocarCadastroTab('usuarios')">👥 Usuários</button>
         </div>
