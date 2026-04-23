@@ -1028,7 +1028,7 @@
   </div><!-- /layout -->
 
       <!-- RELATÓRIOS -->
-      <div class="pagina" id="pag-relatorios">
+      <div class="pagina" id="pag-relatorios" style="min-height:calc(100vh - 60px)">
         <div class="pg-title">Relatórios Diários</div>
         <div class="card" style="margin-bottom:14px">
           <div class="card-hd">HISTÓRICO DE RELATÓRIOS
@@ -1045,7 +1045,7 @@
       </div>
 
       <!-- AUDITORIA -->
-      <div class="pagina" id="pag-auditoria">
+      <div class="pagina" id="pag-auditoria" style="min-height:calc(100vh - 60px)">
         <div class="pg-title">Log de Auditoria</div>
         <div class="card">
           <div class="card-hd">REGISTRO DE AÇÕES
@@ -1065,7 +1065,7 @@
               <button class="btn btn-primary btn-sm" onclick="carregarAuditoria()">Filtrar</button>
             </div>
           </div>
-          <div style="overflow-x:auto">
+          <div style="overflow-x:auto;max-height:calc(100vh - 280px);overflow-y:auto">
             <table style="width:100%;border-collapse:collapse">
               <thead>
                 <tr style="background:var(--surface2)">
