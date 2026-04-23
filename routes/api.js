@@ -826,4 +826,25 @@ router.post('/importar', requerAuth, requerPerfil('supervisor'), async (req,res)
   res.redirect(307, '/pedidos/importar');
 });
 
+
+// ── ZERAR DADOS (apenas supervisor) ──────────────────────────────────────────
+router.post('/admin/zerar-dados', requerAuth, requerPerfil('supervisor'), async (req,res) => {
+  const { confirmar } = req.body;
+  if (confirmar !== 'ZERAR_TUDO_CONFIRMO') {
+    return res.status(400).json({ erro: 'Confirmação inválida.' });
+  }
+  try {
+    await pool.query('DELETE FROM avisos_repositor');
+    await pool.query('DELETE FROM checkout');
+    await pool.query('DELETE FROM itens_pedido');
+    await pool.query('DELETE FROM pedidos');
+    await pool.query('ALTER SEQUENCE pedidos_id_seq RESTART WITH 1').catch(()=>{});
+    await pool.query('ALTER SEQUENCE itens_pedido_id_seq RESTART WITH 1').catch(()=>{});
+    await pool.query('ALTER SEQUENCE avisos_repositor_id_seq RESTART WITH 1').catch(()=>{});
+    await pool.query('ALTER SEQUENCE checkout_id_seq RESTART WITH 1').catch(()=>{});
+    console.log(`[ADMIN] Dados zerados por ${req.session.usuario.login}`);
+    res.json({ mensagem: 'Todos os pedidos, itens, avisos e checkouts foram apagados com sucesso.' });
+  } catch(e) { res.status(500).json({ erro: e.message }); }
+});
+
 module.exports = router;
