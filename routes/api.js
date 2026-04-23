@@ -620,11 +620,23 @@ router.post('/pedidos/distribuicao', requerAuth, requerPerfil('supervisor'), asy
     if (respeitar_hora!==false) {
       const gMin=p=>{const s=String(p.aguardando_desde||p.hora_pedido||'');const m=s.match(/(\d{2}:\d{2})/);return m?m[1]:s;};
       outros.sort((a,b)=>gMin(a).localeCompare(gMin(b)));
-      const grp={};
-      for (const p of outros){const k=gMin(p);if(!grp[k])grp[k]=[];grp[k].push(p);}
-      outros=Object.keys(grp).sort().flatMap(k=>grp[k].sort((a,b)=>b._p-a._p)).slice(0,rest);
-    } else { outros=outros.sort((a,b)=>b._p-a._p).slice(0,rest); }
-    const ord=[...drive,...outros];
+    }
+    outros=outros.slice(0,rest);
+    // Intercalacao justa: divide em 3 faixas e intercala pesado/medio/leve
+    const ptMax=Math.max(...outros.map(p=>p._p),1);
+    const ptMin=Math.min(...outros.map(p=>p._p),0);
+    const faixa=(ptMax-ptMin)/3||1;
+    const pesados=outros.filter(p=>p._p>=(ptMin+faixa*2)).sort((a,b)=>b._p-a._p);
+    const medios =outros.filter(p=>p._p>=(ptMin+faixa)&&p._p<(ptMin+faixa*2)).sort((a,b)=>b._p-a._p);
+    const leves  =outros.filter(p=>p._p<(ptMin+faixa)).sort((a,b)=>b._p-a._p);
+    const intercalados=[];
+    const maxLen=Math.max(pesados.length,medios.length,leves.length);
+    for(let i=0;i<maxLen;i++){
+      if(i<pesados.length) intercalados.push(pesados[i]);
+      if(i<medios.length)  intercalados.push(medios[i]);
+      if(i<leves.length)   intercalados.push(leves[i]);
+    }
+    const ord=[...drive,...intercalados];
     const sepMap={};
     for (const sid of separadores) {
       let row=await db.get('SELECT s.id,s.nome FROM separadores s WHERE s.usuario_id=$1 LIMIT 1',[sid]);
@@ -632,8 +644,12 @@ router.post('/pedidos/distribuicao', requerAuth, requerPerfil('supervisor'), asy
       if (row) sepMap[sid]=row;
     }
     const filas=separadores.map(sid=>({separador_id:sid,separador_nome:sepMap[sid]?.nome||`Sep ${sid}`,pedidos:[],pontuacao_total:0,sep_db_id:sepMap[sid]?.id||null}));
-    for (const ped of ord){filas.sort((a,b)=>a.pontuacao_total-b.pontuacao_total);filas[0].pedidos.push(ped.numero_pedido);filas[0].pontuacao_total+=ped._p;}
-    res.json({plano:filas.map(f=>({separador_id:f.separador_id,sep_db_id:f.sep_db_id,separador_nome:f.separador_nome,pedidos:f.pedidos,pontuacao_total:f.pontuacao_total})),total_pedidos:pedidos.length});
+    for (const ped of ord){
+      filas.sort((a,b)=>a.pontuacao_total-b.pontuacao_total);
+      filas[0].pedidos.push(ped.numero_pedido);
+      filas[0].pontuacao_total+=ped._p;
+    }
+    res.json({plano:filas.map(f=>({separador_id:f.separador_id,sep_db_id:f.sep_db_id,separador_nome:f.separador_nome,pedidos:f.pedidos,pontuacao_total:Math.round(f.pontuacao_total)})),total_pedidos:pedidos.length});
   } catch(err){res.status(500).json({erro:err.message});}
 });
 router.post('/pedidos/distribuicao/confirmar', requerAuth, requerPerfil('supervisor'), async (req,res) => {
