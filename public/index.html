@@ -8,6 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/app.css">
+<style>.usr-btn.edit{background:var(--accent);color:#fff;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;font-weight:700}</style>
 </head>
 <body>
 
@@ -1262,5 +1263,51 @@
   </div>
 </div>
 
+
+<div id="modal-editar-usuario" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;align-items:center;justify-content:center;padding:16px">
+  <div style="background:var(--surface);border-radius:var(--r);width:100%;max-width:500px;max-height:90vh;overflow-y:auto">
+    <div style="background:var(--surface2);padding:14px 18px;border-bottom:1px solid var(--border);border-radius:var(--r) var(--r) 0 0;display:flex;align-items:center;justify-content:space-between">
+      <div style="font-size:15px;font-weight:700;color:var(--text)">Editar Usuario</div>
+      <button onclick="fecharEditarUsuario()" style="background:transparent;border:none;font-size:22px;cursor:pointer;color:var(--text3)">x</button>
+    </div>
+    <div style="padding:20px;display:flex;flex-direction:column;gap:14px">
+      <input type="hidden" id="edit-usr-id">
+      <div class="form-grp"><label>NOME COMPLETO</label><input type="text" id="edit-usr-nome" placeholder="Nome do colaborador"/></div>
+      <div class="form-grp"><label>LOGIN</label><input type="text" id="edit-usr-login" placeholder="Ex: joao.silva"/></div>
+      <div class="form-grp"><label>NOVA SENHA (deixe em branco para manter)</label><input type="password" id="edit-usr-senha" placeholder="Minimo 6 caracteres"/></div>
+      <div class="form-grp"><label>PERFIL PRINCIPAL</label>
+        <select id="edit-usr-perfil" onchange="toggleSubtipoRepositorEdit()">
+          <option value="separador">Separador</option>
+          <option value="supervisor">Supervisor</option>
+          <option value="repositor">Repositor</option>
+          <option value="checkout">Checkout</option>
+        </select>
+      </div>
+      <div class="form-grp" id="edit-usr-subtipo-wrap" style="display:none"><label>FUNCAO DO REPOSITOR</label>
+        <select id="edit-usr-subtipo-repositor">
+          <option value="geral">Geral</option>
+          <option value="busca">Busca no armazem</option>
+          <option value="abastecimento">Abastecimento</option>
+        </select>
+      </div>
+      <div class="form-grp"><label>PODE ACESSAR TAMBEM</label>
+        <div class="perm-grid">
+          <label class="perm-item"><input type="checkbox" class="edit-usr-perm" value="supervisor"><div class="perm-label"><span class="perm-icon">S</span><span>Supervisor</span><span class="perm-check"></span></div></label>
+          <label class="perm-item"><input type="checkbox" class="edit-usr-perm" value="separador"><div class="perm-label"><span class="perm-icon">P</span><span>Separador</span><span class="perm-check"></span></div></label>
+          <label class="perm-item"><input type="checkbox" class="edit-usr-perm" value="repositor"><div class="perm-label"><span class="perm-icon">R</span><span>Repositor</span><span class="perm-check"></span></div></label>
+          <label class="perm-item"><input type="checkbox" class="edit-usr-perm" value="checkout"><div class="perm-label"><span class="perm-icon">C</span><span>Checkout</span><span class="perm-check"></span></div></label>
+        </div>
+      </div>
+      <div class="form-grp"><label>TURNO</label>
+        <select id="edit-usr-turno">
+          <option value="Manha">Manha</option>
+          <option value="Tarde">Tarde</option>
+          <option value="Noite">Noite</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" style="width:100%;margin-top:4px" onclick="salvarEdicaoUsuario()">Salvar Alteracoes</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>

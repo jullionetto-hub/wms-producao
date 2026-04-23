@@ -1,4 +1,4 @@
-/* PEDIDOS */
+﻿/* PEDIDOS */
 
 function filtrarPedidosHoje() {
   const h = hojeLocal();
@@ -110,7 +110,7 @@ async function carregarUsuarios() {
             onclick="alterarStatusUsuario(${u.id},'${u.status==='ativo'?'inativo':'ativo'}','${u.nome}','${u.login}','${u.perfil}','${u.turno||''}')">
             ${u.status==='ativo'?'⏸':'▶'}
           </button>
-          <button class="usr-btn del" title="Excluir" onclick="excluirUsuario(${u.id},'${u.nome}')">🗑</button>
+          <button class="usr-btn edit" title="Editar" onclick="abrirEditarUsuario(          <button {u.id`})">&nbsp;Ed&nbsp;</button>`n          <button class="usr-btn del" title="Excluir" onclick="excluirUsuario(${u.id},'${u.nome}')">🗑</button>
         </div>
       </div>`;
     }).join('');
@@ -983,3 +983,61 @@ window.addEventListener('click', e => {
   if (e.target.id === 'modal-importar') fecharModalImportar();
   if (e.target.id === 'modal-distribuicao') fecharModalDistribuicao();
 });
+/* EDITAR USUARIO */
+async function abrirEditarUsuario(id) {
+  try {
+    const res = await fetch(`${API}/usuarios`, { credentials:'include' });
+    const users = await res.json();
+    const u = users.find(x => x.id === id);
+    if (!u) { toast('Usuario nao encontrado!','erro'); return; }
+    document.getElementById('edit-usr-id').value     = u.id;
+    document.getElementById('edit-usr-nome').value   = u.nome;
+    document.getElementById('edit-usr-login').value  = u.login;
+    document.getElementById('edit-usr-senha').value  = '';
+    document.getElementById('edit-usr-perfil').value = u.perfil;
+    document.getElementById('edit-usr-turno').value  = u.turno || 'Manha';
+    document.querySelectorAll('.edit-usr-perm').forEach(cb => {
+      cb.checked = (u.perfis_acesso||'').split(',').includes(cb.value) || cb.value === u.perfil;
+    });
+    const stWrap = document.getElementById('edit-usr-subtipo-wrap');
+    if (stWrap) stWrap.style.display = u.perfil === 'repositor' ? 'block' : 'none';
+    const stSel = document.getElementById('edit-usr-subtipo-repositor');
+    if (stSel) stSel.value = u.subtipo_repositor || 'geral';
+    document.getElementById('modal-editar-usuario').style.display = 'flex';
+  } catch(e) { toast('Erro ao carregar!','erro'); }
+}
+function fecharEditarUsuario() {
+  document.getElementById('modal-editar-usuario').style.display = 'none';
+}
+function toggleSubtipoRepositorEdit() {
+  const perf = document.getElementById('edit-usr-perfil');
+  const wrap = document.getElementById('edit-usr-subtipo-wrap');
+  if (wrap) wrap.style.display = perf.value === 'repositor' ? 'block' : 'none';
+}
+async function salvarEdicaoUsuario() {
+  const id     = document.getElementById('edit-usr-id').value;
+  const nome   = document.getElementById('edit-usr-nome').value.trim();
+  const login  = document.getElementById('edit-usr-login').value.trim();
+  const senha  = document.getElementById('edit-usr-senha').value;
+  const perfil = document.getElementById('edit-usr-perfil').value;
+  const turno  = document.getElementById('edit-usr-turno').value;
+  const subtipo = document.getElementById('edit-usr-subtipo-repositor')?.value || 'geral';
+  const perfis_acesso = Array.from(document.querySelectorAll('.edit-usr-perm:checked'))
+    .map(cb => cb.value).filter(p => p !== perfil);
+  if (!nome || !login) { toast('Preencha nome e login!','aviso'); return; }
+  if (senha && senha.length < 6) { toast('Senha minimo 6 caracteres!','aviso'); return; }
+  try {
+    const body = { nome, login, perfil, turno, status:'ativo', perfis_acesso, subtipo_repositor: subtipo };
+    if (senha) body.senha = senha;
+    const res = await fetch(`${API}/usuarios/${id}`, {
+      credentials:'include', method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (!res.ok) { toast(data.erro||'Erro ao salvar!','erro'); return; }
+    toast('Usuario atualizado!','sucesso');
+    fecharEditarUsuario();
+    carregarUsuarios();
+  } catch(e) { toast('Erro ao salvar!','erro'); }
+}
