@@ -274,7 +274,7 @@ function irPara(pag, el) {
   }
   if (el) el.classList.add('ativo');
   if (pag === 'dashboard')       { carregarDashboard(); mudarDashTab('operacao'); }
-  if (pag === 'pedidos')         { popularSelects(); carregarPedidos(); carregarPedidosBloqueados(); }
+  if (pag === 'pedidos') { popularSelects(); const pi=document.getElementById('filtro-ped-ini'),pf=document.getElementById('filtro-ped-fim'); if(pi&&!pi.value)pi.value=hojeLocal(); if(pf&&!pf.value)pf.value=hojeLocal(); carregarPedidos(); carregarPedidosBloqueados(); }
   if (pag === 'cadastros')       { trocarCadastroTab('usuarios'); carregarUsuarios(); }
   if (pag === 'separacao')       { carregarFila(); if (separadorAtual) carregarContadoresSep(); }
   if (pag === 'estatisticas')    { carregarEstatisticas(); carregarCheckoutLista(); }
