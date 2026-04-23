@@ -1,4 +1,4 @@
-const express    = require('express');
+﻿const express    = require('express');
 const session    = require('express-session');
 const pgSession  = require('connect-pg-simple')(session);
 const cors       = require('cors');
@@ -248,7 +248,19 @@ async function iniciar() {
     if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL não definida!');
     await criarTabelas();
     await criarUsuarioPadrao();
-    app.listen(PORT, () => {
+    
+// Migration automatica â€” cria colunas se nao existirem
+async function runMigrations() {
+  try {
+    await pool.query("ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS iniciado_em TEXT DEFAULT ''");
+    await pool.query("ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS concluido_em TEXT DEFAULT ''");
+    console.log('Migrations OK');
+  } catch(e) {
+    console.error('Migration erro:', e.message);
+  }
+}
+runMigrations();
+app.listen(PORT, () => {
       const {data,hora} = dataHoraLocal();
       console.log(`Servidor WMS rodando na porta ${PORT} — ${data} ${hora}`);
       // Inicia scheduler em produção
