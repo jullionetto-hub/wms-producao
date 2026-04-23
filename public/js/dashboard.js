@@ -1,4 +1,4 @@
-
+﻿
 /* FILTRO DE TURNO — SEPARADORES ATIVOS */
 async function filtrarSepsAtivos(turno) {
   // Atualiza visual dos botões
@@ -630,10 +630,22 @@ async function carregarPerformance() {
     const pedPorSep = {};
     pedidos.forEach(p => {
       const nome = p.separador_nome || '';
-      if (!pedPorSep[nome]) pedPorSep[nome] = { pedidos:0, itens:0, pontuacao:0 };
+      if (!pedPorSep[nome]) pedPorSep[nome] = { pedidos:0, itens:0, pontuacao:0, tempo_total_min:0, tempo_count:0 };
       pedPorSep[nome].pedidos++;
       pedPorSep[nome].itens += (p.itens || 0);
       pedPorSep[nome].pontuacao += (p.pontuacao || 0);
+      if (p.iniciado_em && p.concluido_em) {
+        const tIni = new Date(p.iniciado_em), tFim = new Date(p.concluido_em);
+        const mins = Math.round((tFim - tIni) / 60000);
+        if (mins > 0 && mins < 600) { pedPorSep[nome].tempo_total_min += mins; pedPorSep[nome].tempo_count++; }
+      }
+    });
+    Object.values(pedPorSep).forEach(function(sp) {
+      if (sp.tempo_count > 0) {
+        const med = Math.round(sp.tempo_total_min / sp.tempo_count);
+        const hh = Math.floor(med / 60), mm = med % 60;
+        sp.tempo_medio = hh > 0 ? hh + 'h ' + String(mm).padStart(2,'0') + 'min' : mm + 'min';
+      } else { sp.tempo_medio = '-'; }
     });
 
     // Faltas por separador
@@ -662,6 +674,7 @@ async function carregarPerformance() {
             <td style="color:var(--indigo);font-weight:600">${sp.pedidos}</td>
             <td>${sp.itens}</td>
             <td style="color:${faltas>0?'var(--red)':'var(--green)'}">${faltas}</td>
+            <td style="color:var(--indigo);font-weight:600">${sp.tempo_medio||"-"}</td>
             <td style="color:var(--text3)">${s.pontuacao_total||0}</td>
             <td><span class="pill ${s.status}">${s.status}</span></td>
           </tr>`;
@@ -670,7 +683,7 @@ async function carregarPerformance() {
     }
 
     // Totais resumo
-    const totPed  = seps.reduce((s,r)=>s+(r.total_ano||0),0);
+    const totPed  = Object.values(pedPorSep).reduce((s,r)=>s+(r.pedidos||0),0);
     const totItens = Object.values(pedPorSep).reduce((s,r)=>s+r.itens,0);
     const totFalt = Object.values(faltasPorSep).reduce((s,r)=>s+r,0);
     const el = id => document.getElementById(id);

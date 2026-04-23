@@ -1,4 +1,4 @@
-
+﻿
 // ── Função de auditoria ───────────────────────────────────────────────────────
 async function registrarAuditoria(req, acao, entidade='', entidadeId=null, dadosAntes=null, dadosDepois=null) {
   try {
@@ -987,4 +987,13 @@ async function gerarRelatorio(data) {
   } catch(e) { console.error('Erro ao gerar relatório:', e.message); return null; }
 }
 
+
+// Migration tempo separacao
+router.post('/admin/migration-tempo', requerAuth, requerPerfil('supervisor'), async (req,res) => {
+  try {
+    await pool.query("ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS iniciado_em TEXT DEFAULT ''");
+    await pool.query("ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS concluido_em TEXT DEFAULT ''");
+    res.json({mensagem:'Colunas criadas!'});
+  } catch(e) { res.status(500).json({erro:e.message}); }
+});
 module.exports = router;
