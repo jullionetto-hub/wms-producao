@@ -256,10 +256,22 @@ function montarSidebar() {
 
 
 function irPara(pag, el) {
+  // Para auto-refresh da reposição ao navegar para outra página
+  if (pag !== 'reposicao' && window._repInterval) {
+    clearInterval(window._repInterval);
+    window._repInterval = null;
+  }
   document.querySelectorAll('.pagina').forEach(p => p.classList.remove('ativa'));
   document.querySelectorAll('.mi').forEach(m => m.classList.remove('ativo'));
   const pg = document.getElementById(`pag-${pag}`);
-  if (pg) pg.classList.add('ativa');
+  if (pg) {
+    pg.classList.add('ativa');
+  } else {
+    // Página não encontrada — volta para dashboard
+    console.warn(`Página pag-${pag} não encontrada`);
+    document.getElementById('pag-dashboard')?.classList.add('ativa');
+    return;
+  }
   if (el) el.classList.add('ativo');
   if (pag === 'dashboard')       { carregarDashboard(); mudarDashTab('operacao'); }
   if (pag === 'pedidos')         { popularSelects(); carregarPedidos(); carregarPedidosBloqueados(); }
