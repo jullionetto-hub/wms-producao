@@ -1,3 +1,10 @@
+
+function toggleItensColaborador(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.style.display = el.style.display === 'none' ? 'table-row' : 'none';
+}
+
 /* REPOSITOR — fluxo em 3 etapas */
 
 let _todosUsuarios = [];
@@ -280,10 +287,17 @@ async function carregarTabelaReposicao() {
           <div style="font-weight:700;font-size:13px;color:var(--text)">${a.codigo||'—'}</div>
           ${a.descricao?`<div style="font-size:11px;color:var(--text3);margin-top:2px;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${a.descricao}</div>`:''}
         </td>
-        <td style="padding:10px 12px;font-size:12px;white-space:nowrap">
+        <td style="padding:8px 10px;min-width:130px">
           ${a.forma_envio && a.forma_envio.toUpperCase().includes('DRIVE')
-            ? `<span style="background:#ef444418;color:#ef4444;font-weight:700;font-size:11px;padding:2px 8px;border-radius:20px">🚗 ${a.forma_envio}</span>`
-            : `<span style="color:var(--text2)">${a.forma_envio||'—'}</span>`}
+            ? `<span style="background:#ef444418;color:#ef4444;font-weight:700;font-size:11px;padding:2px 8px;border-radius:20px;cursor:pointer" onclick="editarFormaEnvio(${a.id},'${(a.forma_envio||'').replace(/'/g,"\'")}')">🚗 ${a.forma_envio}</span>`
+            : `<select onchange="salvarCampoAviso(${a.id},'forma_envio',this.value)"
+                style="width:100%;font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)">
+                <option value="">— Selecionar —</option>
+                <option value="Miess Prime" ${a.forma_envio==='Miess Prime'?'selected':''}>Miess Prime</option>
+                <option value="Correios" ${a.forma_envio==='Correios'?'selected':''}>Correios</option>
+                <option value="Retirada Drive Thru" ${a.forma_envio==='Retirada Drive Thru'?'selected':''}>🚗 Retirada Drive Thru</option>
+                <option value="Retira" ${a.forma_envio==='Retira'?'selected':''}>Retira</option>
+              </select>`}
         </td>
         <td style="padding:10px 12px;font-size:12px;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.separador_nome||'—'}</td>
         <td style="padding:10px 12px;font-size:12px;color:var(--text2)">${a.quem_pegou||'—'}</td>
@@ -359,6 +373,89 @@ function mudarAbaRep(aba) {
 }
 
 /* ── Indicadores ────────────────────────────────────────────────── */
+async function exportarIndicadoresExcel() {
+  try {
+    const sIni = document.getElementById('rep-stats-ini')?.value || '';
+    const sFim = document.getElementById('rep-stats-fim')?.value || '';
+    const sParams = new URLSearchParams();
+    if (sIni) sParams.set('data_ini', sIni);
+    if (sFim) sParams.set('data_fim', sFim);
+    const res = await fetch(`${API}/repositor/avisos${sParams.toString()?'?'+sParams.toString():''}`, { credentials:'include' });
+    const avisos = res.ok ? await res.json() : [];
+
+    // Aba 1: Resumo por colaborador
+    const stats = {};
+    const itensPorPessoa = {};
+    avisos.forEach(a => {
+      const sit = a.situacao || a.status;
+      ['quem_pegou','quem_guardou'].forEach(campo => {
+        if (!a[campo]) return;
+        const nome = a[campo];
+        if (!stats[nome]) stats[nome] = {pegou:0,guardou:0,abastecido:0,nao_enc:0};
+        if (!itensPorPessoa[nome]) itensPorPessoa[nome] = [];
+        if (campo==='quem_pegou') stats[nome].pegou++;
+        if (campo==='quem_guardou') stats[nome].guardou++;
+        if (sit==='abastecido' && campo==='quem_guardou') stats[nome].abastecido++;
+        if (sit==='nao_encontrado' && campo==='quem_pegou') stats[nome].nao_enc++;
+        if (!itensPorPessoa[nome].find(x=>x.id===a.id&&x.campo===campo)) {
+          itensPorPessoa[nome].push({...a, campo, sit});
+        }
+      });
+    });
+
+    const wb = XLSX.utils.book_new();
+
+    // Aba RESUMO
+    const resumoRows = [
+      ['COLABORADOR','PEGOU','GUARDOU','ABASTECIDOS','NÃO ENCONTRADO','TOTAL AÇÕES']
+    ];
+    Object.entries(stats).sort((a,b)=>(b[1].pegou+b[1].guardou)-(a[1].pegou+a[1].guardou)).forEach(([nome,s]) => {
+      resumoRows.push([nome, s.pegou, s.guardou, s.abastecido, s.nao_enc, s.pegou+s.guardou]);
+    });
+    const wsResumo = XLSX.utils.aoa_to_sheet(resumoRows);
+    wsResumo['!cols'] = [{wch:35},{wch:10},{wch:10},{wch:14},{wch:16},{wch:14}];
+    XLSX.utils.book_append_sheet(wb, wsResumo, 'Resumo');
+
+    // Aba DETALHADO — todos os itens com quem fez o quê
+    const detRows = [
+      ['DATA','HORÁRIO','CÓDIGO','PRODUTO','SEPARADOR','QUEM PEGOU','QUEM GUARDOU','SITUAÇÃO','FORMA ENVIO','OBS']
+    ];
+    avisos.forEach(a => {
+      const sit = labelSituacao(a.situacao||a.status||'pendente');
+      detRows.push([
+        a.data_aviso||'', a.hora_aviso||'', a.codigo||'', a.descricao||'',
+        a.separador_nome||'', a.quem_pegou||'', a.quem_guardou||'',
+        sit, a.forma_envio||'', a.obs||''
+      ]);
+    });
+    const wsDet = XLSX.utils.aoa_to_sheet(detRows);
+    wsDet['!cols'] = [{wch:12},{wch:8},{wch:18},{wch:35},{wch:25},{wch:25},{wch:25},{wch:18},{wch:18},{wch:30}];
+    XLSX.utils.book_append_sheet(wb, wsDet, 'Detalhado');
+
+    // Aba por colaborador
+    Object.entries(itensPorPessoa).forEach(([nome, itens]) => {
+      const rows = [['PAPEL','DATA','HORÁRIO','CÓDIGO','PRODUTO','SITUAÇÃO','OBS']];
+      itens.forEach(it => {
+        rows.push([
+          it.campo==='quem_pegou'?'Pegou':'Guardou',
+          it.data_aviso||'', it.hora_aviso||'',
+          it.codigo||'', it.descricao||'',
+          labelSituacao(it.situacao||it.status||''), it.obs||''
+        ]);
+      });
+      const ws = XLSX.utils.aoa_to_sheet(rows);
+      ws['!cols'] = [{wch:10},{wch:12},{wch:8},{wch:18},{wch:35},{wch:18},{wch:30}];
+      // Nome da aba: máx 31 chars (limite do Excel)
+      const nomeAba = nome.split(' ')[0] + ' ' + (nome.split(' ')[1]||'').charAt(0);
+      XLSX.utils.book_append_sheet(wb, ws, nomeAba.substring(0,31));
+    });
+
+    const periodo = sIni&&sFim ? `_${sIni}_ate_${sFim}` : `_${new Date().toISOString().slice(0,10)}`;
+    XLSX.writeFile(wb, `indicadores_reposicao${periodo}.xlsx`);
+    toast('Excel exportado!', 'success');
+  } catch(e) { toast('Erro ao exportar: '+e.message, 'danger'); }
+}
+
 async function carregarEstatisticasRep() {
   const el = document.getElementById('rep-stats-desktop');
   if (!el) return;
@@ -390,6 +487,21 @@ async function carregarEstatisticasRep() {
         Nenhum dado ainda. Registre as ações no mobile.</div>`;
       return;
     }
+    // Monta mapa de itens por colaborador
+    const itensPorPessoa = {};
+    avisos.forEach(a => {
+      const sit = a.situacao || a.status;
+      ['quem_pegou','quem_guardou'].forEach(campo => {
+        if (!a[campo]) return;
+        const nome = a[campo];
+        if (!itensPorPessoa[nome]) itensPorPessoa[nome] = [];
+        // Evita duplicatas (mesmo aviso pode ter mesma pessoa nos 2 campos)
+        if (!itensPorPessoa[nome].find(x => x.id === a.id && x.campo === campo)) {
+          itensPorPessoa[nome].push({...a, campo, sit});
+        }
+      });
+    });
+
     el.innerHTML = `
       <table style="width:100%;border-collapse:collapse">
         <thead>
@@ -399,22 +511,53 @@ async function carregarEstatisticasRep() {
             <th style="padding:12px 16px;text-align:center;font-size:11px;color:var(--text3)">GUARDOU</th>
             <th style="padding:12px 16px;text-align:center;font-size:11px;color:var(--text3)">ABASTECIDOS</th>
             <th style="padding:12px 16px;text-align:center;font-size:11px;color:var(--text3)">NÃO ENC.</th>
+            <th style="padding:12px 16px;text-align:center;font-size:11px;color:var(--text3)">ITENS</th>
           </tr>
         </thead>
         <tbody>
-          ${rows.map(([nome,s]) => `
-            <tr style="border-bottom:1px solid var(--border)">
+          ${rows.map(([nome,s]) => {
+            const itens = itensPorPessoa[nome] || [];
+            const itensHtml = itens.map(it => {
+              const sit = it.situacao || it.status;
+              const cor = corSituacao(sit);
+              const lbl = labelSituacao(sit);
+              const papel = it.campo === 'quem_pegou' ? '📦 Pegou' : '🏠 Guardou';
+              return `<tr style="background:var(--surface2);border-bottom:1px solid var(--border)">
+                <td colspan="6" style="padding:6px 16px 6px 64px">
+                  <div style="display:flex;align-items:center;gap:12px;font-size:12px">
+                    <span style="color:var(--text3);min-width:70px">${papel}</span>
+                    <span style="font-weight:700;color:var(--text)">${it.codigo||'—'}</span>
+                    <span style="color:var(--text2);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${it.descricao||''}</span>
+                    <span style="font-size:11px;font-weight:600;color:${cor};background:${cor}18;padding:2px 8px;border-radius:20px;white-space:nowrap">${lbl}</span>
+                    <span style="color:var(--text3);white-space:nowrap">${it.data_aviso||''} ${it.hora_aviso||''}</span>
+                  </div>
+                </td>
+              </tr>`;
+            }).join('');
+
+            return `
+            <tr style="border-bottom:1px solid var(--border);cursor:pointer" onclick="toggleItensColaborador('rep-itens-${nome.replace(/\s/g,'_')}')">
               <td style="padding:12px 16px">
                 <div style="display:flex;align-items:center;gap:10px">
                   <div style="width:34px;height:34px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:700;flex-shrink:0">${nome.charAt(0).toUpperCase()}</div>
                   <span style="font-size:13px;font-weight:600">${nome}</span>
+                  <span style="font-size:11px;color:var(--text3)">▼</span>
                 </div>
               </td>
               <td style="text-align:center;font-size:15px;font-weight:700;color:var(--accent)">${s.pegou}</td>
               <td style="text-align:center;font-size:15px;font-weight:700;color:#3b82f6">${s.guardou}</td>
               <td style="text-align:center;font-size:15px;font-weight:700;color:#10b981">${s.abastecido}</td>
               <td style="text-align:center;font-size:15px;font-weight:700;color:#ef4444">${s.nao_enc}</td>
-            </tr>`).join('')}
+              <td style="text-align:center;font-size:12px;color:var(--text3)">${itens.length} itens</td>
+            </tr>
+            <tr id="rep-itens-${nome.replace(/\s/g,'_')}" style="display:none">
+              <td colspan="6" style="padding:0">
+                <table style="width:100%;border-collapse:collapse">
+                  ${itensHtml || '<tr><td colspan="6" style="padding:12px 64px;color:var(--text3);font-size:12px">Nenhum item registrado</td></tr>'}
+                </table>
+              </td>
+            </tr>`;
+          }).join('')}
         </tbody>
       </table>`;
   } catch(e) { el.innerHTML = `<div style="color:#ef4444;padding:16px">Erro: ${e.message}</div>`; }

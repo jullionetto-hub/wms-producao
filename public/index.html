@@ -515,12 +515,13 @@
         <div id="rep-aba-stats" style="display:none">
           <div class="card">
             <div class="card-hd">INDICADORES POR COLABORADOR
-              <div style="display:flex;gap:8px;align-items:center">
+              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
                 <input type="date" id="rep-stats-ini" style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)">
                 <span style="font-size:11px;color:var(--text3)">até</span>
                 <input type="date" id="rep-stats-fim" style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)">
                 <button class="btn btn-primary btn-sm" onclick="carregarEstatisticasRep()">Filtrar</button>
                 <button class="btn btn-outline btn-sm" onclick="carregarEstatisticasRep()">🔄</button>
+                <button class="excel-btn" onclick="exportarIndicadoresExcel()">📊 Excel</button>
               </div>
             </div>
             <div id="rep-stats-desktop">
