@@ -1,3 +1,21 @@
+
+// ── Função de auditoria ───────────────────────────────────────────────────────
+async function registrarAuditoria(req, acao, entidade='', entidadeId=null, dadosAntes=null, dadosDepois=null) {
+  try {
+    const u = req.session?.usuario;
+    const {data, hora} = dataHoraLocal();
+    const ip = req.ip || req.connection?.remoteAddress || 'unknown';
+    await pool.query(
+      `INSERT INTO auditoria (usuario_id, usuario_login, usuario_nome, acao, entidade, entidade_id, dados_antes, dados_depois, ip, data, hora)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+      [u?.id||null, u?.login||'sistema', u?.nome||'sistema', acao, entidade, entidadeId,
+       dadosAntes?JSON.stringify(dadosAntes):null,
+       dadosDepois?JSON.stringify(dadosDepois):null,
+       ip, data, hora]
+    ).catch(()=>{}); // Nunca quebra a rota principal
+  } catch(e) {}
+}
+
 const express = require('express');
 const router = express.Router();
 const { pool, db } = require('../lib/db');
@@ -446,6 +464,11 @@ router.put('/checkout/:id/concluir', requerAuth, async (req,res) => {
 
 // ── KPIs / ESTATÍSTICAS ───────────────────────────────────────────────────────
 router.get('/kpis', requerAuth, async (req,res) => {
+  // Cache de 60 segundos para reduzir queries
+  const cache = req.app.get('kpiCache');
+  if (cache && cache.data && (Date.now() - cache.ts) < cache.ttl) {
+    return res.json(cache.data);
+  }
   const {data:hoje}=dataHoraLocal(); const mes=hoje.substring(0,7);
   try {
     const r=await db.get(`SELECT
@@ -845,6 +868,7 @@ router.post('/admin/zerar-dados', requerAuth, requerPerfil('supervisor'), async 
     await pool.query('ALTER SEQUENCE itens_pedido_id_seq RESTART WITH 1').catch(()=>{});
     await pool.query('ALTER SEQUENCE avisos_repositor_id_seq RESTART WITH 1').catch(()=>{});
     await pool.query('ALTER SEQUENCE checkout_id_seq RESTART WITH 1').catch(()=>{});
+    registrarAuditoria(req, 'zerar_dados', 'sistema', null, null, { acao: 'zerar_todos_pedidos' });
     console.log(`[ADMIN] Dados zerados por ${req.session.usuario.login}`);
     res.json({ mensagem: 'Todos os pedidos, itens, avisos e checkouts foram apagados com sucesso.' });
   } catch(e) { res.status(500).json({ erro: e.message }); }
@@ -867,5 +891,100 @@ router.post('/admin/sincronizar-forma-envio', requerAuth, requerPerfil('supervis
     res.json({ atualizados: result.rows.length, mensagem: `${result.rows.length} avisos atualizados com a transportadora do pedido.` });
   } catch(e) { res.status(500).json({ erro: e.message }); }
 });
+
+
+// ── AUDITORIA ─────────────────────────────────────────────────────────────────
+router.get('/auditoria', requerAuth, requerPerfil('supervisor'), async (req,res) => {
+  const { data_ini, data_fim, usuario, acao, limit=100 } = req.query;
+  try {
+    let sql = `SELECT * FROM auditoria WHERE 1=1`;
+    const p = [];
+    if (data_ini) { p.push(data_ini); sql += ` AND data>=$${p.length}`; }
+    if (data_fim) { p.push(data_fim); sql += ` AND data<=$${p.length}`; }
+    if (usuario)  { p.push('%'+usuario+'%'); sql += ` AND LOWER(usuario_login) LIKE LOWER($${p.length})`; }
+    if (acao)     { p.push(acao); sql += ` AND acao=$${p.length}`; }
+    p.push(parseInt(limit)||100);
+    sql += ` ORDER BY id DESC LIMIT $${p.length}`;
+    res.json(await db.all(sql, p));
+  } catch(e) { res.status(500).json({erro:e.message}); }
+});
+
+// ── RELATÓRIO DIÁRIO ──────────────────────────────────────────────────────────
+router.get('/relatorio/diario', requerAuth, requerPerfil('supervisor'), async (req,res) => {
+  const {data} = req.query;
+  const {data:hoje} = dataHoraLocal();
+  const d = data || hoje;
+  try {
+    // Busca relatório salvo ou gera on-demand
+    let rel = await db.get(`SELECT * FROM relatorios_diarios WHERE data=$1`, [d]);
+    if (!rel) rel = await gerarRelatorio(d);
+    res.json(rel);
+  } catch(e) { res.status(500).json({erro:e.message}); }
+});
+
+router.get('/relatorio/lista', requerAuth, requerPerfil('supervisor'), async (req,res) => {
+  try {
+    res.json(await db.all(`SELECT id, data, total_pedidos, pedidos_concluidos, total_faltas, gerado_em FROM relatorios_diarios ORDER BY data DESC LIMIT 30`));
+  } catch(e) { res.status(500).json({erro:e.message}); }
+});
+
+router.post('/relatorio/gerar', requerAuth, requerPerfil('supervisor'), async (req,res) => {
+  const {data} = req.body;
+  const {data:hoje} = dataHoraLocal();
+  try {
+    const rel = await gerarRelatorio(data||hoje);
+    registrarAuditoria(req, 'relatorio_gerado', 'relatorio', null, null, { data: data||hoje });
+    res.json(rel);
+  } catch(e) { res.status(500).json({erro:e.message}); }
+});
+
+async function gerarRelatorio(data) {
+  try {
+    const [pedidos, faltas, checkouts, seps] = await Promise.all([
+      db.all(`SELECT p.*, s.nome as sep_nome FROM pedidos p LEFT JOIN separadores s ON p.separador_id=s.id WHERE p.data_pedido=$1`, [data]),
+      db.all(`SELECT * FROM avisos_repositor WHERE data_aviso=$1`, [data]),
+      db.all(`SELECT * FROM checkout WHERE data_checkout=$1`, [data]),
+      db.all(`SELECT DISTINCT s.nome FROM separadores s INNER JOIN pedidos p ON p.separador_id=s.id WHERE p.data_pedido=$1`, [data]),
+    ]);
+
+    // Estatísticas por separador
+    const porSep = {};
+    pedidos.forEach(p => {
+      if (!p.sep_nome) return;
+      if (!porSep[p.sep_nome]) porSep[p.sep_nome] = { concluidos:0, pendentes:0, itens:0 };
+      if (p.status==='concluido') porSep[p.sep_nome].concluidos++;
+      else porSep[p.sep_nome].pendentes++;
+      porSep[p.sep_nome].itens += p.itens||0;
+    });
+
+    const rel = {
+      data,
+      total_pedidos: pedidos.length,
+      pedidos_concluidos: pedidos.filter(p=>p.status==='concluido').length,
+      pedidos_pendentes: pedidos.filter(p=>p.status==='pendente').length,
+      total_itens: pedidos.reduce((s,p)=>s+(p.itens||0),0),
+      total_faltas: faltas.length,
+      faltas_abastecidas: faltas.filter(f=>f.status==='abastecido').length,
+      faltas_nao_encontradas: faltas.filter(f=>f.status==='nao_encontrado').length,
+      total_checkouts: checkouts.filter(c=>c.status==='concluido').length,
+      separadores_ativos: seps.length,
+      dados_json: JSON.stringify({ porSep, faltas: faltas.slice(0,100), checkouts: checkouts.slice(0,50) }),
+    };
+
+    // Salva ou atualiza
+    await pool.query(
+      `INSERT INTO relatorios_diarios (data,total_pedidos,pedidos_concluidos,pedidos_pendentes,total_itens,total_faltas,faltas_abastecidas,faltas_nao_encontradas,total_checkouts,separadores_ativos,dados_json)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+       ON CONFLICT(data) DO UPDATE SET
+         total_pedidos=$2, pedidos_concluidos=$3, pedidos_pendentes=$4, total_itens=$5,
+         total_faltas=$6, faltas_abastecidas=$7, faltas_nao_encontradas=$8,
+         total_checkouts=$9, separadores_ativos=$10, dados_json=$11, gerado_em=NOW()`,
+      [rel.data, rel.total_pedidos, rel.pedidos_concluidos, rel.pedidos_pendentes,
+       rel.total_itens, rel.total_faltas, rel.faltas_abastecidas, rel.faltas_nao_encontradas,
+       rel.total_checkouts, rel.separadores_ativos, rel.dados_json]
+    );
+    return rel;
+  } catch(e) { console.error('Erro ao gerar relatório:', e.message); return null; }
+}
 
 module.exports = router;

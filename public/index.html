@@ -1026,6 +1026,64 @@
 
 
   </div><!-- /layout -->
+
+      <!-- RELATÓRIOS -->
+      <div class="pagina" id="pag-relatorios">
+        <div class="pg-title">Relatórios Diários</div>
+        <div class="card" style="margin-bottom:14px">
+          <div class="card-hd">HISTÓRICO DE RELATÓRIOS
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <input type="date" id="rel-data" style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)">
+              <button class="btn btn-primary btn-sm" onclick="verRelatorio()">Ver</button>
+              <button class="btn btn-outline btn-sm" onclick="gerarRelatorioHoje()">🔄 Gerar Hoje</button>
+              <button class="excel-btn" onclick="exportarRelatorioExcel()">📊 Excel</button>
+            </div>
+          </div>
+          <div id="rel-lista" style="margin-bottom:14px"></div>
+          <div id="rel-detalhe"></div>
+        </div>
+      </div>
+
+      <!-- AUDITORIA -->
+      <div class="pagina" id="pag-auditoria">
+        <div class="pg-title">Log de Auditoria</div>
+        <div class="card">
+          <div class="card-hd">REGISTRO DE AÇÕES
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <input type="date" id="aud-ini" style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)">
+              <span style="font-size:11px;color:var(--text3)">até</span>
+              <input type="date" id="aud-fim" style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)">
+              <input type="text" id="aud-usuario" placeholder="Usuário..." style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);width:120px">
+              <select id="aud-acao" style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)">
+                <option value="">Todas as ações</option>
+                <option value="login">Login</option>
+                <option value="logout">Logout</option>
+                <option value="distribuicao_confirmada">Distribuição</option>
+                <option value="zerar_dados">Zerar dados</option>
+                <option value="relatorio_gerado">Relatório gerado</option>
+              </select>
+              <button class="btn btn-primary btn-sm" onclick="carregarAuditoria()">Filtrar</button>
+            </div>
+          </div>
+          <div style="overflow-x:auto">
+            <table style="width:100%;border-collapse:collapse">
+              <thead>
+                <tr style="background:var(--surface2)">
+                  <th style="padding:10px 12px;text-align:left;font-size:11px;color:var(--text3)">DATA/HORA</th>
+                  <th style="padding:10px 12px;text-align:left;font-size:11px;color:var(--text3)">USUÁRIO</th>
+                  <th style="padding:10px 12px;text-align:left;font-size:11px;color:var(--text3)">AÇÃO</th>
+                  <th style="padding:10px 12px;text-align:left;font-size:11px;color:var(--text3)">ENTIDADE</th>
+                  <th style="padding:10px 12px;text-align:left;font-size:11px;color:var(--text3)">IP</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-auditoria">
+                <tr><td colspan="5" style="text-align:center;padding:32px;color:var(--text3)">Selecione um filtro e clique em Filtrar</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
 </div><!-- /app -->
 
 

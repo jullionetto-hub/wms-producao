@@ -124,6 +124,31 @@ async function criarTabelas() {
     numero_pedido TEXT NOT NULL, separador_nome TEXT DEFAULT '',
     status TEXT DEFAULT 'pendente', hora_criacao TEXT,
     hora_checkout TEXT, data_checkout TEXT)`);
+  // Tabela de auditoria
+  await Q(`CREATE TABLE IF NOT EXISTS auditoria (
+    id SERIAL PRIMARY KEY,
+    usuario_id INTEGER, usuario_login TEXT, usuario_nome TEXT,
+    acao TEXT NOT NULL, entidade TEXT, entidade_id INTEGER,
+    dados_antes JSONB, dados_depois JSONB,
+    ip TEXT, data TEXT, hora TEXT,
+    created_at TIMESTAMP DEFAULT NOW())`);
+
+  // Tabela de relatórios diários
+  await Q(`CREATE TABLE IF NOT EXISTS relatorios_diarios (
+    id SERIAL PRIMARY KEY,
+    data TEXT UNIQUE NOT NULL,
+    total_pedidos INTEGER DEFAULT 0,
+    pedidos_concluidos INTEGER DEFAULT 0,
+    pedidos_pendentes INTEGER DEFAULT 0,
+    total_itens INTEGER DEFAULT 0,
+    total_faltas INTEGER DEFAULT 0,
+    faltas_abastecidas INTEGER DEFAULT 0,
+    faltas_nao_encontradas INTEGER DEFAULT 0,
+    total_checkouts INTEGER DEFAULT 0,
+    separadores_ativos INTEGER DEFAULT 0,
+    dados_json JSONB,
+    gerado_em TIMESTAMP DEFAULT NOW())`);
+
   // Índices
   for (const idx of [
     'CREATE INDEX IF NOT EXISTS idx_pedidos_sep ON pedidos(separador_id,status)',
@@ -132,6 +157,13 @@ async function criarTabelas() {
     'CREATE INDEX IF NOT EXISTS idx_avisos_status ON avisos_repositor(status)',
     'CREATE INDEX IF NOT EXISTS idx_avisos_data ON avisos_repositor(data_aviso)',
     'CREATE INDEX IF NOT EXISTS idx_usuarios_login ON usuarios(login)',
+    'CREATE INDEX IF NOT EXISTS idx_pedidos_data_status ON pedidos(data_pedido, status)',
+    'CREATE INDEX IF NOT EXISTS idx_pedidos_status_sep ON pedidos(status, separador_id)',
+    'CREATE INDEX IF NOT EXISTS idx_avisos_data_status ON avisos_repositor(data_aviso, status)',
+    'CREATE INDEX IF NOT EXISTS idx_avisos_codigo ON avisos_repositor(codigo)',
+    'CREATE INDEX IF NOT EXISTS idx_checkout_data ON checkout(data_checkout)',
+    'CREATE INDEX IF NOT EXISTS idx_auditoria_data ON auditoria(data)',
+    'CREATE INDEX IF NOT EXISTS idx_auditoria_usuario ON auditoria(usuario_login)',
     'CREATE INDEX IF NOT EXISTS idx_checkout_caixa ON checkout(numero_caixa)',
   ]) await Q(idx);
   console.log('Tabelas OK');
@@ -145,6 +177,72 @@ async function criarUsuarioPadrao() {
   );
 }
 
+// ── Cache de KPIs ────────────────────────────────────────────────────────────
+const kpiCache = { data: null, ts: 0, ttl: 60000 }; // 60s TTL
+app.set('kpiCache', kpiCache);
+
+// ── Scheduler de relatório diário ────────────────────────────────────────────
+function agendarRelatoriosDiarios() {
+  const agora = new Date();
+  // Calcula ms até 23:55 de hoje (Brasília)
+  const alvo = new Date(agora);
+  alvo.setHours(23, 55, 0, 0);
+  if (alvo <= agora) alvo.setDate(alvo.getDate() + 1);
+  const delay = alvo - agora;
+
+  setTimeout(async () => {
+    try {
+      const { dataHoraLocal } = require('./lib/helpers');
+      const { db, pool } = require('./lib/db');
+      const { data } = dataHoraLocal();
+      console.log(`[SCHEDULER] Gerando relatório diário de ${data}...`);
+
+      // Busca dados do dia
+      const [pedidos, faltas, checkouts, seps] = await Promise.all([
+        db.all(`SELECT p.*, s.nome as sep_nome FROM pedidos p LEFT JOIN separadores s ON p.separador_id=s.id WHERE p.data_pedido=$1`, [data]),
+        db.all(`SELECT * FROM avisos_repositor WHERE data_aviso=$1`, [data]),
+        db.all(`SELECT * FROM checkout WHERE data_checkout=$1`, [data]),
+        db.all(`SELECT DISTINCT s.nome FROM separadores s INNER JOIN pedidos p ON p.separador_id=s.id WHERE p.data_pedido=$1`, [data]),
+      ]);
+
+      const porSep = {};
+      pedidos.forEach(p => {
+        if (!p.sep_nome) return;
+        if (!porSep[p.sep_nome]) porSep[p.sep_nome] = { concluidos:0, pendentes:0, itens:0 };
+        if (p.status==='concluido') porSep[p.sep_nome].concluidos++;
+        else porSep[p.sep_nome].pendentes++;
+        porSep[p.sep_nome].itens += p.itens||0;
+      });
+
+      await pool.query(
+        `INSERT INTO relatorios_diarios (data,total_pedidos,pedidos_concluidos,pedidos_pendentes,total_itens,total_faltas,faltas_abastecidas,faltas_nao_encontradas,total_checkouts,separadores_ativos,dados_json)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+         ON CONFLICT(data) DO UPDATE SET
+           total_pedidos=$2,pedidos_concluidos=$3,pedidos_pendentes=$4,total_itens=$5,
+           total_faltas=$6,faltas_abastecidas=$7,faltas_nao_encontradas=$8,
+           total_checkouts=$9,separadores_ativos=$10,dados_json=$11,gerado_em=NOW()`,
+        [data, pedidos.length,
+         pedidos.filter(p=>p.status==='concluido').length,
+         pedidos.filter(p=>p.status==='pendente').length,
+         pedidos.reduce((s,p)=>s+(p.itens||0),0),
+         faltas.length,
+         faltas.filter(f=>f.status==='abastecido').length,
+         faltas.filter(f=>f.status==='nao_encontrado').length,
+         checkouts.filter(c=>c.status==='concluido').length,
+         seps.length,
+         JSON.stringify({ porSep })]
+      );
+      console.log(`[SCHEDULER] Relatório de ${data} gerado com sucesso.`);
+    } catch(e) {
+      console.error('[SCHEDULER] Erro ao gerar relatório:', e.message);
+    }
+    // Agenda próximo dia
+    agendarRelatoriosDiarios();
+  }, delay);
+
+  console.log(`[SCHEDULER] Relatório diário agendado para ${new Date(Date.now()+delay).toLocaleString('pt-BR')}`);
+}
+
 async function iniciar() {
   try {
     if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL não definida!');
@@ -153,6 +251,8 @@ async function iniciar() {
     app.listen(PORT, () => {
       const {data,hora} = dataHoraLocal();
       console.log(`Servidor WMS rodando na porta ${PORT} — ${data} ${hora}`);
+      // Inicia scheduler em produção
+      if (isProd) agendarRelatoriosDiarios();
     });
   } catch(e) {
     console.error('Erro fatal ao iniciar:', e.message);

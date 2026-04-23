@@ -226,6 +226,8 @@ function montarSidebar() {
       <a class="mi ativo" onclick="irPara('dashboard',this)"><span class="mi-ic">📊</span>Dashboard</a>
       <a class="mi" onclick="irPara('pedidos',this)"><span class="mi-ic">📋</span>Pedidos <span class="mbadge" id="menu-badge-bloq" style="display:none;background:var(--red)">!</span></a>
       <a class="mi" onclick="irPara('performance',this)"><span class="mi-ic">🏆</span>Performance</a>
+      <a class="mi" onclick="irPara('relatorios',this)"><span class="mi-ic">📅</span>Relatórios</a>
+      <a class="mi" onclick="irPara('auditoria',this)"><span class="mi-ic">🔍</span>Auditoria</a>
       <a class="mi" onclick="irPara('cadastros',this)"><span class="mi-ic">⚙️</span>Cadastros</a>
       <div class="mg">OPERAÇÃO</div>
       <a class="mi" onclick="irPara('separacao',this)"><span class="mi-ic">📦</span>Separação</a>
@@ -279,6 +281,8 @@ function irPara(pag, el) {
   if (pag === 'stats-repositor') carregarStatsRepositor();
   if (pag === 'stats-checkout')  carregarStatsCheckout();
   if (pag === 'performance')      carregarPerformance();
+  if (pag === 'relatorios')       carregarListaRelatorios();
+  if (pag === 'auditoria')        { const hoje = hojeLocal(); const el=document.getElementById('aud-ini'); if(el&&!el.value) el.value=hoje; carregarAuditoria(); }
 }
 
 
@@ -346,4 +350,173 @@ function trocarCadastroTab(tab) {
     if (btn) btn.className = t===tab ? 'btn btn-primary btn-sm' : 'btn btn-outline btn-sm';
   });
   if (tab === 'usuarios') carregarUsuarios();
+}
+/* RELATÓRIOS */
+async function carregarListaRelatorios() {
+  const el = document.getElementById('rel-lista');
+  if (!el) return;
+  try {
+    const res = await fetch(`${API}/relatorio/lista`, { credentials:'include' });
+    const lista = res.ok ? await res.json() : [];
+    if (!lista.length) {
+      el.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:8px 0">Nenhum relatório gerado ainda. Clique em "Gerar Hoje" para criar o primeiro.</div>';
+      return;
+    }
+    el.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">
+      ${lista.map(r => `
+        <button onclick="verRelatorioData('${r.data}')"
+          style="padding:8px 14px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);cursor:pointer;font-size:12px;text-align:left">
+          <div style="font-weight:700">${r.data}</div>
+          <div style="font-size:11px;color:var(--text3)">${r.total_pedidos} pedidos · ${r.pedidos_concluidos} concluídos</div>
+        </button>`).join('')}
+    </div>`;
+  } catch(e) {}
+}
+
+async function verRelatorio() {
+  const data = document.getElementById('rel-data')?.value;
+  if (!data) { toast('Selecione uma data', 'danger'); return; }
+  await verRelatorioData(data);
+}
+
+async function verRelatorioData(data) {
+  const el = document.getElementById('rel-detalhe');
+  if (!el) return;
+  el.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text3)">⏳ Carregando...</div>';
+  try {
+    const res = await fetch(`${API}/relatorio/diario?data=${data}`, { credentials:'include' });
+    const r = res.ok ? await res.json() : null;
+    if (!r) { el.innerHTML = '<div style="color:var(--text3);padding:16px">Nenhum relatório para esta data. Clique em "Gerar Hoje".</div>'; return; }
+    const pct = r.total_pedidos > 0 ? Math.round((r.pedidos_concluidos/r.total_pedidos)*100) : 0;
+    el.innerHTML = `
+      <div style="border-top:1px solid var(--border);padding-top:16px;margin-top:8px">
+        <div style="font-weight:700;font-size:14px;margin-bottom:12px">📊 Relatório de ${data}</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:16px">
+          ${[
+            ['📦','Pedidos',r.total_pedidos,'var(--text)'],
+            ['✅','Concluídos',r.pedidos_concluidos,'#10b981'],
+            ['⏳','Pendentes',r.pedidos_pendentes,'#f59e0b'],
+            ['🔧','Faltas',r.total_faltas,'#ef4444'],
+            ['✅','Abastecidas',r.faltas_abastecidas,'#10b981'],
+            ['❌','Não enc.',r.faltas_nao_encontradas,'#ef4444'],
+            ['📦','Checkouts',r.total_checkouts,'#3b82f6'],
+            ['👤','Separadores',r.separadores_ativos,'var(--accent)'],
+          ].map(([ic,lb,vl,cr])=>`
+            <div style="background:var(--surface2);border-radius:8px;padding:12px;text-align:center">
+              <div style="font-size:20px">${ic}</div>
+              <div style="font-size:22px;font-weight:700;color:${cr}">${vl}</div>
+              <div style="font-size:11px;color:var(--text3)">${lb}</div>
+            </div>`).join('')}
+        </div>
+        <div style="background:var(--surface2);border-radius:8px;padding:8px;margin-bottom:8px">
+          <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Conclusão do dia</div>
+          <div style="background:var(--border);border-radius:4px;height:8px;overflow:hidden">
+            <div style="background:#10b981;height:100%;width:${pct}%;border-radius:4px;transition:width .5s"></div>
+          </div>
+          <div style="font-size:12px;font-weight:700;color:#10b981;margin-top:4px">${pct}%</div>
+        </div>
+      </div>`;
+  } catch(e) { el.innerHTML = `<div style="color:#ef4444;padding:16px">Erro: ${e.message}</div>`; }
+}
+
+async function gerarRelatorioHoje() {
+  try {
+    const hoje = hojeLocal();
+    const res = await fetch(`${API}/relatorio/gerar`, {
+      method:'POST', credentials:'include',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ data: hoje })
+    });
+    if (res.ok) {
+      toast('Relatório gerado!', 'success');
+      carregarListaRelatorios();
+      verRelatorioData(hoje);
+    }
+  } catch(e) { toast('Erro ao gerar', 'danger'); }
+}
+
+async function exportarRelatorioExcel() {
+  const data = document.getElementById('rel-data')?.value || hojeLocal();
+  try {
+    const res = await fetch(`${API}/relatorio/diario?data=${data}`, { credentials:'include' });
+    const r = res.ok ? await res.json() : null;
+    if (!r) { toast('Gere o relatório primeiro', 'danger'); return; }
+    const wb = XLSX.utils.book_new();
+    const resumo = [
+      ['RELATÓRIO DIÁRIO WMS MIESS'],
+      ['Data:', data],
+      [''],
+      ['PEDIDOS',''],
+      ['Total', r.total_pedidos],
+      ['Concluídos', r.pedidos_concluidos],
+      ['Pendentes', r.pedidos_pendentes],
+      [''],
+      ['REPOSIÇÃO',''],
+      ['Total de faltas', r.total_faltas],
+      ['Abastecidas', r.faltas_abastecidas],
+      ['Não encontradas', r.faltas_nao_encontradas],
+      [''],
+      ['CHECKOUT',''],
+      ['Concluídos', r.total_checkouts],
+      [''],
+      ['SEPARADORES ATIVOS', r.separadores_ativos],
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(resumo);
+    ws['!cols'] = [{wch:25},{wch:15}];
+    XLSX.utils.book_append_sheet(wb, ws, 'Resumo');
+    // Por separador
+    if (r.dados_json) {
+      const dados = JSON.parse(r.dados_json);
+      if (dados.porSep) {
+        const sepRows = [['SEPARADOR','CONCLUÍDOS','PENDENTES','ITENS']];
+        Object.entries(dados.porSep).forEach(([nome,s])=>sepRows.push([nome,s.concluidos,s.pendentes,s.itens]));
+        const wsSep = XLSX.utils.aoa_to_sheet(sepRows);
+        wsSep['!cols'] = [{wch:30},{wch:12},{wch:12},{wch:10}];
+        XLSX.utils.book_append_sheet(wb, wsSep, 'Por Separador');
+      }
+    }
+    XLSX.writeFile(wb, `relatorio_${data}.xlsx`);
+    toast('Excel exportado!', 'success');
+  } catch(e) { toast('Erro ao exportar', 'danger'); }
+}
+
+/* AUDITORIA */
+async function carregarAuditoria() {
+  const tbody = document.getElementById('tbody-auditoria');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--text3)">⏳ Carregando...</td></tr>';
+  try {
+    const ini     = document.getElementById('aud-ini')?.value || '';
+    const fim     = document.getElementById('aud-fim')?.value || '';
+    const usuario = document.getElementById('aud-usuario')?.value || '';
+    const acao    = document.getElementById('aud-acao')?.value || '';
+    const params  = new URLSearchParams();
+    if (ini)     params.set('data_ini', ini);
+    if (fim)     params.set('data_fim', fim);
+    if (usuario) params.set('usuario', usuario);
+    if (acao)    params.set('acao', acao);
+    params.set('limit', '200');
+    const res = await fetch(`${API}/auditoria?${params}`, { credentials:'include' });
+    const logs = res.ok ? await res.json() : [];
+    if (!logs.length) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:32px;color:var(--text3)">Nenhum registro encontrado</td></tr>';
+      return;
+    }
+    const acaoCor = {
+      login:'#10b981', logout:'#6b7280', zerar_dados:'#ef4444',
+      distribuicao_confirmada:'#3b82f6', relatorio_gerado:'#8b5cf6'
+    };
+    tbody.innerHTML = logs.map(l => {
+      const cor = acaoCor[l.acao] || 'var(--text2)';
+      return `<tr style="border-bottom:1px solid var(--border)" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+        <td style="padding:10px 12px;font-size:12px;white-space:nowrap">${l.data||''} ${l.hora||''}</td>
+        <td style="padding:10px 12px;font-size:13px;font-weight:600">${l.usuario_nome||l.usuario_login||'—'}</td>
+        <td style="padding:10px 12px"><span style="font-size:11px;font-weight:700;color:${cor};background:${cor}18;padding:3px 8px;border-radius:20px">${l.acao}</span></td>
+        <td style="padding:10px 12px;font-size:12px;color:var(--text2)">${l.entidade||'—'}${l.entidade_id?' #'+l.entidade_id:''}</td>
+        <td style="padding:10px 12px;font-size:11px;color:var(--text3)">${l.ip||'—'}</td>
+      </tr>`;
+    }).join('');
+  } catch(e) {
+    tbody.innerHTML = `<tr><td colspan="5" style="color:#ef4444;padding:16px">Erro: ${e.message}</td></tr>`;
+  }
 }
