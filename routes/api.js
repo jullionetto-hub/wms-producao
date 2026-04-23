@@ -185,7 +185,7 @@ router.delete('/separadores/:id', requerAuth, requerPerfil('supervisor'), async 
 router.get('/pedidos', requerAuth, async (req,res) => {
   const {separador_id,status,data,data_ini,data_fim,numero_pedido}=req.query;
   try {
-    let q=`SELECT p.*,s.nome as separador_nome,p.iniciado_em,p.concluido_em,p.tempo_aguardando_min FROM pedidos p LEFT JOIN separadores s ON p.separador_id=s.id WHERE 1=1`;
+    let q=`SELECT p.*,s.nome as separador_nome FROM pedidos p LEFT JOIN separadores s ON p.separador_id=s.id WHERE 1=1`;
     const p=[];
     const add=(c,v)=>{p.push(v);q+=` AND ${c}$${p.length}`;};
     if (separador_id)  add('p.separador_id=',separador_id);
