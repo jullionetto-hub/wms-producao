@@ -636,7 +636,9 @@ async function carregarPerformance() {
       pedPorSep[nome].pontuacao += (p.pontuacao || 0);
       if (p.iniciado_em && p.concluido_em) {
         const tIni = new Date(p.iniciado_em), tFim = new Date(p.concluido_em);
-        const mins = Math.round((tFim - tIni) / 60000);
+        const minsBruto = Math.round((tFim - tIni) / 60000);
+        const minsAguard = parseInt(p.tempo_aguardando_min) || 0;
+        const mins = Math.max(0, minsBruto - minsAguard);
         if (mins > 0 && mins < 600) { pedPorSep[nome].tempo_total_min += mins; pedPorSep[nome].tempo_count++; }
       }
     });

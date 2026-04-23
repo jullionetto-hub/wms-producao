@@ -185,7 +185,7 @@ router.delete('/separadores/:id', requerAuth, requerPerfil('supervisor'), async 
 router.get('/pedidos', requerAuth, async (req,res) => {
   const {separador_id,status,data,data_ini,data_fim,numero_pedido}=req.query;
   try {
-    let q=`SELECT p.*,s.nome as separador_nome FROM pedidos p LEFT JOIN separadores s ON p.separador_id=s.id WHERE 1=1`;
+    let q=`SELECT p.*,s.nome as separador_nome,p.iniciado_em,p.concluido_em,p.tempo_aguardando_min FROM pedidos p LEFT JOIN separadores s ON p.separador_id=s.id WHERE 1=1`;
     const p=[];
     const add=(c,v)=>{p.push(v);q+=` AND ${c}$${p.length}`;};
     if (separador_id)  add('p.separador_id=',separador_id);
@@ -839,10 +839,28 @@ async function atualizarAviso(req, res, status, extra={}) {
   } catch(e) { res.status(500).json({erro:e.message}); }
 }
 
-router.put('/repositor/avisos/:id/reposto',       requerAuth, (req,res) => atualizarAviso(req,res,'reposto'));
-router.put('/repositor/avisos/:id/encontrado',    requerAuth, (req,res) => atualizarAviso(req,res,'reposto'));
-router.put('/repositor/avisos/:id/subiu',         requerAuth, (req,res) => atualizarAviso(req,res,'subiu'));
-router.put('/repositor/avisos/:id/abastecido',    requerAuth, (req,res) => atualizarAviso(req,res,'abastecido'));
+// Ao resolver aviso, acumula tempo aguardado no pedido
+async function resolverAvisoEAcumularTempo(req, res, status, extra={}) {
+  await atualizarAviso(req, res, status, extra);
+  try {
+    const av = await db.get('SELECT pedido_id FROM avisos_repositor WHERE id=$1',[req.params.id]);
+    if (!av) return;
+    const ped = await db.get('SELECT aguardando_repositor_desde, tempo_aguardando_min FROM pedidos WHERE id=$1',[av.pedido_id]);
+    if (!ped || !ped.aguardando_repositor_desde) return;
+    const ainda = await db.all("SELECT id FROM avisos_repositor WHERE pedido_id=$1 AND status='pendente'",[av.pedido_id]);
+    if (ainda.length > 0) return;
+    const inicio = new Date(ped.aguardando_repositor_desde);
+    const agora  = new Date();
+    const mins   = Math.round((agora - inicio) / 60000);
+    const total  = (ped.tempo_aguardando_min || 0) + (mins > 0 ? mins : 0);
+    await pool.query("UPDATE pedidos SET tempo_aguardando_min=$1, aguardando_repositor_desde='' WHERE id=$2",[total, av.pedido_id]);
+  } catch(e) { console.error('Erro ao acumular tempo:', e.message); }
+}
+
+router.put('/repositor/avisos/:id/reposto',       requerAuth, (req,res) => resolverAvisoEAcumularTempo(req,res,'reposto'));
+router.put('/repositor/avisos/:id/encontrado',    requerAuth, (req,res) => resolverAvisoEAcumularTempo(req,res,'reposto'));
+router.put('/repositor/avisos/:id/subiu',         requerAuth, (req,res) => resolverAvisoEAcumularTempo(req,res,'subiu'));
+router.put('/repositor/avisos/:id/abastecido',    requerAuth, (req,res) => resolverAvisoEAcumularTempo(req,res,'abastecido'));
 router.put('/repositor/avisos/:id/nao_encontrado',requerAuth, (req,res) => atualizarAviso(req,res,'nao_encontrado'));
 router.put('/repositor/avisos/:id/protocolo',     requerAuth, (req,res) => atualizarAviso(req,res,'protocolo'));
 
@@ -993,6 +1011,17 @@ router.post('/admin/migration-tempo', requerAuth, requerPerfil('supervisor'), as
   try {
     await pool.query("ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS iniciado_em TEXT DEFAULT ''");
     await pool.query("ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS concluido_em TEXT DEFAULT ''");
+    res.json({mensagem:'Colunas criadas!'});
+  } catch(e) { res.status(500).json({erro:e.message}); }
+});
+
+// Migration tempo justo
+router.post('/admin/migration-tempo-justo', requerAuth, requerPerfil('supervisor'), async (req,res) => {
+  try {
+    await pool.query("ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS iniciado_em TEXT DEFAULT ''");
+    await pool.query("ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS concluido_em TEXT DEFAULT ''");
+    await pool.query("ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS tempo_aguardando_min INTEGER DEFAULT 0");
+    await pool.query("ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS aguardando_repositor_desde TEXT DEFAULT ''");
     res.json({mensagem:'Colunas criadas!'});
   } catch(e) { res.status(500).json({erro:e.message}); }
 });
