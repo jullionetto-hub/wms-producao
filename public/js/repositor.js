@@ -1,4 +1,18 @@
 
+async function marcarProtocolo(id) {
+  if (!confirm('Marcar este item como Protocolo?')) return;
+  try {
+    const res = await fetch(`${API}/repositor/avisos/${id}`, {
+      credentials:'include', method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ situacao:'protocolo', status:'protocolo' })
+    });
+    if (res.ok) { toast('Marcado como Protocolo', 'success'); carregarTabelaReposicao(); }
+    else toast('Erro ao salvar', 'danger');
+  } catch(e) { toast('Sem conexão', 'danger'); }
+}
+
+
 function toggleItensColaborador(id) {
   const el = document.getElementById(id);
   if (!el) return;
@@ -297,12 +311,17 @@ async function carregarTabelaReposicao() {
         <td style="padding:10px 12px;font-size:12px;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.separador_nome||'—'}</td>
         <td style="padding:10px 12px;font-size:12px;color:var(--text2)">${a.quem_pegou||'—'}</td>
         <td style="padding:10px 12px;font-size:12px;color:var(--text2)">${a.quem_guardou||'—'}</td>
-        <td style="padding:8px 10px;min-width:160px">
-          <select onchange="salvarCampoAviso(${a.id},'situacao',this.value)"
-            style="width:100%;font-size:12px;padding:5px 8px;border:1px solid ${cor};border-radius:6px;background:var(--surface);color:${cor};font-weight:600">
-            ${['pendente','verificando','buscado','aguardando_abastecer','abastecido','protocolo','nao_encontrado']
-              .map(s=>`<option value="${s}" ${s===sit?'selected':''}>${labelSituacao(s)}</option>`).join('')}
-          </select>
+        <td style="padding:10px 12px">
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+            <span style="font-size:12px;font-weight:700;color:${cor};background:${cor}18;padding:4px 10px;border-radius:20px;white-space:nowrap">${lbl}</span>
+            ${sit !== 'protocolo' && sit !== 'abastecido' && sit !== 'nao_encontrado'
+              ? `<button onclick="marcarProtocolo(${a.id})"
+                  title="Marcar como Protocolo"
+                  style="font-size:10px;padding:3px 8px;border:1px solid #6b7280;border-radius:20px;background:transparent;color:#6b7280;cursor:pointer;white-space:nowrap">
+                  📋 Protocolo
+                </button>`
+              : ''}
+          </div>
         </td>
         <td style="padding:8px 10px;min-width:160px">
           <input type="text" value="${(a.obs||'').replace(/"/g,'&quot;')}" placeholder="Observação..."

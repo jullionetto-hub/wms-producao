@@ -1174,7 +1174,15 @@
         </label>
       </div>
       <div style="margin-bottom:14px">
-        <div style="font-size:10px;font-weight:700;color:var(--accent);letter-spacing:1px;margin-bottom:8px">SEPARADORES ATIVOS</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div style="font-size:10px;font-weight:700;color:var(--accent);letter-spacing:1px">SEPARADORES ATIVOS</div>
+          <div style="display:flex;gap:4px">
+            <button onclick="filtrarTurnoDistribuicao('')"     id="dist-turno-todos"  style="padding:3px 10px;font-size:10px;font-weight:700;border:1.5px solid var(--accent);border-radius:20px;background:var(--accent);color:#fff;cursor:pointer">Todos</button>
+            <button onclick="filtrarTurnoDistribuicao('Manhã')" id="dist-turno-manha" style="padding:3px 10px;font-size:10px;font-weight:700;border:1.5px solid var(--border);border-radius:20px;background:transparent;color:var(--text2);cursor:pointer">Manhã</button>
+            <button onclick="filtrarTurnoDistribuicao('Tarde')" id="dist-turno-tarde" style="padding:3px 10px;font-size:10px;font-weight:700;border:1.5px solid var(--border);border-radius:20px;background:transparent;color:var(--text2);cursor:pointer">Tarde</button>
+            <button onclick="filtrarTurnoDistribuicao('Noite')" id="dist-turno-noite" style="padding:3px 10px;font-size:10px;font-weight:700;border:1.5px solid var(--border);border-radius:20px;background:transparent;color:var(--text2);cursor:pointer">Noite</button>
+          </div>
+        </div>
         <div id="dist-separadores-lista" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">
           <div style="color:var(--text3);font-size:12px">Carregando...</div>
         </div>
