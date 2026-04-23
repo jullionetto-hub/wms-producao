@@ -228,7 +228,7 @@ router.put('/pedidos/:id/caixa', requerAuth, async (req,res) => {
   if (!numero_caixa) return res.status(400).json({erro:'Numero da caixa nao informado!'});
   const caixa=String(numero_caixa).trim();
   try {
-    const usada=await db.get(`SELECT numero_pedido FROM pedidos WHERE numero_caixa=$1 AND id<>$2 AND status<>'concluido'`,[caixa,req.params.id]);
+    const concDHL=dataHoraLocal(); await pool.query(`UPDATE pedidos SET status='concluido',concluido_em=$2 WHERE id=$1`,[req.params.id,concDHL.data+'T'+concDHL.hora]);
     if (usada) return res.status(409).json({erro:`Caixa ${caixa} em uso no pedido ${usada.numero_pedido}!`});
     await pool.query('UPDATE pedidos SET numero_caixa=$1 WHERE id=$2',[caixa,req.params.id]);
     const ped=await db.get('SELECT numero_pedido FROM pedidos WHERE id=$1',[req.params.id]);
@@ -262,7 +262,7 @@ router.post('/pedidos/bipar', requerAuth, async (req,res) => {
     if (separador_id && ped.separador_id && String(ped.separador_id)!==String(separador_id) && ped.status==='separando')
       return res.status(409).json({erro:'Pedido sendo separado por outro operador!'});
     const sepId=separador_id||ped.separador_id||null;
-    await pool.query(`UPDATE pedidos SET separador_id=$1,status='separando' WHERE id=$2`,[sepId,ped.id]);
+    const bipDHL=dataHoraLocal(); await pool.query(`UPDATE pedidos SET separador_id=$1,status='separando',iniciado_em=COALESCE(NULLIF(iniciado_em,''),$3) WHERE id=$2`,[sepId,ped.id,bipDHL.data+'T'+bipDHL.hora]);
     res.json({mensagem:'Pedido atribuido!',pedido_id:ped.id,status:'separando',caixa_vinculada:!!(ped.numero_caixa)});
   } catch(e){res.status(500).json({erro:e.message});}
 });
