@@ -295,7 +295,6 @@ function irPara(pag, el) {
   if (pag === 'performance')      carregarPerformance();
   if (pag === 'relatorios')        { carregarListaRelatorios(); }
   if (pag === 'auditoria')         { const hj=hojeLocal(); const ea=document.getElementById('aud-ini'); if(ea&&!ea.value)ea.value=hj; carregarAuditoria(); }
-  if (pag === 'relatorios')       carregarListaRelatorios();
   if (pag === 'auditoria')        { const hoje = hojeLocal(); const el=document.getElementById('aud-ini'); if(el&&!el.value) el.value=hoje; carregarAuditoria(); }
 }
 

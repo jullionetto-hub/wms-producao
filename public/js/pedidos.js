@@ -1,4 +1,4 @@
-/* PEDIDOS */
+﻿/* PEDIDOS */
 
 function filtrarPedidosHoje() {
   const h = hojeLocal();
@@ -110,6 +110,7 @@ async function carregarUsuarios() {
             onclick="alterarStatusUsuario(${u.id},'${u.status==='ativo'?'inativo':'ativo'}','${u.nome}','${u.login}','${u.perfil}','${u.turno||''}')">
             ${u.status==='ativo'?'⏸':'▶'}
           </button>
+          <button class="usr-btn" style="background:#3b82f6;color:#fff;border:none;border-radius:6px;padding:5px 10px;cursor:pointer;font-size:12px;margin-right:4px" title="Editar" onclick="abrirEditarUsuario(${u.id})">Editar</button>
           <button class="usr-btn del" title="Excluir" onclick="excluirUsuario(${u.id},'${u.nome}')">🗑</button>
         </div>
       </div>`;
