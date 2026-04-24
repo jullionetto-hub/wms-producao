@@ -148,17 +148,22 @@ async function cadastrarUsuario() {
 
 
 
-async function alterarStatusUsuario(id, novoStatus, nome, login, perfil, turno) {
+async function alterarStatusUsuario(id, novoStatus) {
   try {
-    await fetch(`${API}/usuarios/${id}`, { credentials:'include', method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({nome,login,perfil,turno:turno||'Manhã',status:novoStatus}) });
-    toast(`Usuário ${novoStatus==='ativo'?'ativado':'desativado'}!`,'sucesso');
+    const res = await fetch(`${API}/usuarios/${id}/status`, {
+      credentials:'include',
+      method:'PATCH',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({status:novoStatus})
+    });
+    const data = await res.json();
+    if (!res.ok) { toast(data.erro||'Erro!','erro'); return; }
+    toast(`Usuario ${novoStatus==='ativo'?'ativado':'desativado'}!`,'sucesso');
     carregarUsuarios();
-  } catch(e) { toast('Erro!','erro'); }
+  } catch(e) {
+    toast('Erro!','erro');
+  }
 }
-
-
-
-
 async function excluirUsuario(id, nome) {
   if (!confirm(`Excluir "${nome}"?`)) return;
   try {

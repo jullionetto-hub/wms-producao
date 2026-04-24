@@ -148,6 +148,19 @@ router.put('/usuarios/:id', requerAuth, requerPerfil('supervisor'), async (req,r
     res.json({mensagem:'Atualizado!'});
   } catch(e){res.status(500).json({erro:e.message});}
 });
+
+router.patch('/usuarios/:id/status', requerAuth, requerPerfil('supervisor'), async (req,res) => {
+  const id = validarId(req.params.id);
+  if (!id) return res.status(400).json({erro:'ID invalido'});
+  const {status} = req.body;
+  if (!['ativo','inativo'].includes(status)) return res.status(400).json({erro:'Status invalido'});
+  try {
+    await pool.query('UPDATE usuarios SET status=$1 WHERE id=$2', [status, id]);
+    res.json({mensagem:'Status atualizado!'});
+  } catch(err) {
+    res.status(500).json({erro:err.message});
+  }
+});
 router.delete('/usuarios/:id', requerAuth, requerPerfil('supervisor'), async (req,res) => {
   try { await pool.query('DELETE FROM usuarios WHERE id=$1',[req.params.id]); res.json({mensagem:'Excluido!'}); }
   catch(e){res.status(500).json({erro:e.message});}
