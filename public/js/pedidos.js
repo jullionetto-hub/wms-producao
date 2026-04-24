@@ -1,4 +1,6 @@
-﻿/* PEDIDOS */
+/* ══════════════════════════════════════════
+   PEDIDOS
+══════════════════════════════════════════ */
 
 function filtrarPedidosHoje() {
   const h = hojeLocal();
@@ -69,7 +71,9 @@ async function atribuirSeparador(pid, sid) {
 
 
 
-/* USUÁRIOS */
+/* ══════════════════════════════════════════
+   USUÁRIOS
+══════════════════════════════════════════ */
 function coletarPerfisMarcados() {
   return Array.from(document.querySelectorAll('.usr-perm:checked')).map(el => el.value);
 }
@@ -110,7 +114,7 @@ async function carregarUsuarios() {
             onclick="alterarStatusUsuario(${u.id},'${u.status==='ativo'?'inativo':'ativo'}','${u.nome}','${u.login}','${u.perfil}','${u.turno||''}')">
             ${u.status==='ativo'?'⏸':'▶'}
           </button>
-          <button class="usr-btn" style="background:#3b82f6;color:#fff;border:none;border-radius:6px;padding:5px 10px;cursor:pointer;font-size:12px;margin-right:4px" title="Editar" onclick="abrirEditarUsuario(${u.id})">Editar</button>
+          <button class="usr-btn" style="background:#3b82f6;color:#fff;border:none;border-radius:6px;padding:5px 10px;cursor:pointer;font-size:12px;margin-right:4px" onclick="abrirEditarUsuario(${u.id})">Editar</button>
           <button class="usr-btn del" title="Excluir" onclick="excluirUsuario(${u.id},'${u.nome}')">🗑</button>
         </div>
       </div>`;
@@ -171,7 +175,9 @@ async function excluirUsuario(id, nome) {
 
 
 
-/* IMPORTAÇÃO */
+/* ══════════════════════════════════════════
+   IMPORTAÇÃO
+══════════════════════════════════════════ */
 function handleDrop(e) {
   e.preventDefault(); document.getElementById('upload-area').classList.remove('drag');
   const f = e.dataTransfer.files[0]; if (f) processarArquivoFile(f);
@@ -326,7 +332,9 @@ function mostrarStatus(msg, tipo) {
 
 
 
-/* PEDIDOS BLOQUEADOS (supervisor) */
+/* ══════════════════════════════════════════
+   PEDIDOS BLOQUEADOS (supervisor)
+══════════════════════════════════════════ */
 async function carregarPedidosBloqueados() {
   try {
     const res  = await fetch(`${API}/pedidos/bloqueados`, { credentials:'include' });
@@ -565,7 +573,9 @@ function selecionarPedidoFila(num) {
 
 
 
-/* PEDIDOS PENDENTES DE REPOSIÇÃO (separador) */
+/* ══════════════════════════════════════════
+   PEDIDOS PENDENTES DE REPOSIÇÃO (separador)
+══════════════════════════════════════════ */
 async function carregarPedidosPendentesReposicao() {
   if (!separadorAtual) return;
   const el = document.getElementById('sep-pedidos-reposicao');
@@ -695,7 +705,9 @@ window.addEventListener('resize', () => {
 
 
 
-/* MODAL IMPORTAR (na tela de Pedidos) */
+/* ══════════════════════════════════════════
+   MODAL IMPORTAR (na tela de Pedidos)
+══════════════════════════════════════════ */
 let pedidosImportarModal = [];
 
 function abrirModalImportar() {
@@ -871,7 +883,9 @@ function mostrarStatusModal(msg, tipo) {
   el.textContent = msg;
 }
 
-/* MODAL DISTRIBUIÇÃO JUSTA */
+/* ══════════════════════════════════════════
+   MODAL DISTRIBUIÇÃO JUSTA
+══════════════════════════════════════════ */
 let distribuicaoPlano = null;
 
 async function abrirModalDistribuicao() {
@@ -889,47 +903,15 @@ function fecharModalDistribuicao() {
   document.getElementById('modal-distribuicao').style.display = 'none';
   distribuicaoPlano = null;
 }
-let _todosSepsDistribuicao = [];
-
 async function carregarSeparadoresDistribuicao() {
   try {
     const res = await fetch(`${API}/usuarios`, { credentials:'include' });
     const users = await res.json();
-    _todosSepsDistribuicao = users.filter(u => u.perfil === 'separador' && u.status === 'ativo');
-    renderSepsDistribuicao(_todosSepsDistribuicao);
+    const seps = users.filter(u => u.perfil === 'separador' && u.status === 'ativo');
+    const el = document.getElementById('dist-separadores-lista');
+    if (!seps.length) { el.innerHTML = '<div style="color:var(--text3);font-size:12px">Nenhum separador ativo</div>'; return; }
+    el.innerHTML = seps.map(s=>`<label style="display:flex;align-items:center;gap:6px;padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface2);cursor:pointer;font-size:12px;font-weight:600"><input type="checkbox" class="dist-sep-check" value="${s.id}" data-nome="${s.nome}" checked style="accent-color:var(--accent)">👤 ${s.nome}</label>`).join('');
   } catch(e) {}
-}
-
-function renderSepsDistribuicao(seps) {
-  const el = document.getElementById('dist-separadores-lista');
-  if (!el) return;
-  if (!seps.length) { el.innerHTML = '<div style="color:var(--text3);font-size:12px">Nenhum separador neste turno</div>'; return; }
-  el.innerHTML = seps.map(s => {
-    const turnoColor = {Manhã:'#f59e0b', Tarde:'#3b82f6', Noite:'#8b5cf6'}[s.turno] || 'var(--text3)';
-    const turnoLabel = s.turno ? `<span style="font-size:10px;color:${turnoColor};margin-left:4px">${s.turno}</span>` : '';
-    return `<label style="display:flex;align-items:center;gap:6px;padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface2);cursor:pointer;font-size:12px;font-weight:600">
-      <input type="checkbox" class="dist-sep-check" value="${s.id}" data-nome="${s.nome}" data-turno="${s.turno||''}" checked style="accent-color:var(--accent)">
-      👤 ${s.nome}${turnoLabel}
-    </label>`;
-  }).join('');
-}
-
-function filtrarTurnoDistribuicao(turno) {
-  // Atualiza visual dos botões
-  const map = {todos:'', manha:'Manhã', tarde:'Tarde', noite:'Noite'};
-  ['todos','manha','tarde','noite'].forEach(t => {
-    const btn = document.getElementById(`dist-turno-${t}`);
-    if (!btn) return;
-    const active = (map[t]||'') === turno;
-    btn.style.background   = active ? 'var(--accent)' : 'transparent';
-    btn.style.color        = active ? '#fff' : 'var(--text2)';
-    btn.style.borderColor  = active ? 'var(--accent)' : 'var(--border)';
-  });
-  // Filtra separadores
-  const filtrados = turno
-    ? _todosSepsDistribuicao.filter(s => s.turno === turno)
-    : _todosSepsDistribuicao;
-  renderSepsDistribuicao(filtrados);
 }
 async function carregarPedidosDistribuicao() {
   try {
