@@ -114,6 +114,7 @@ async function carregarUsuarios() {
             onclick="alterarStatusUsuario(${u.id},'${u.status==='ativo'?'inativo':'ativo'}','${u.nome}','${u.login}','${u.perfil}','${u.turno||''}')">
             ${u.status==='ativo'?'⏸':'▶'}
           </button>
+          <button class="usr-btn" style="background:#3b82f6;color:#fff;border:none;border-radius:6px;padding:5px 10px;cursor:pointer;font-size:12px;margin-right:4px" onclick="abrirEditarUsuario(${u.id})">Editar</button>
           <button class="usr-btn del" title="Excluir" onclick="excluirUsuario(${u.id},'${u.nome}')">🗑</button>
         </div>
       </div>`;
@@ -963,7 +964,6 @@ window.addEventListener('click', e => {
   if (e.target.id === 'modal-importar') fecharModalImportar();
   if (e.target.id === 'modal-distribuicao') fecharModalDistribuicao();
 });
-
 let _todosSepsDistribuicao = [];
 function filtrarTurnoDistribuicao(turno) {
   var el = document.getElementById('dist-separadores-lista');
@@ -981,11 +981,10 @@ function filtrarTurnoDistribuicao(turno) {
     return t === turno.toLowerCase() || (turno === 'Manha' && t.startsWith('manh'));
   }) : _todosSepsDistribuicao;
   if (!seps.length) {
-    el.innerHTML = '<div style="color:var(--text3);font-size:12px">Nenhum separador ativo neste turno</div>';
+    el.innerHTML = '<div style="color:var(--text3);font-size:12px">Nenhum separador neste turno</div>';
     return;
   }
   el.innerHTML = seps.map(function(s) {
-    return '<label style="display:flex;align-items:center;gap:6px;padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface2);cursor:pointer;font-size:12px;font-weight:600">' +
-      '<input type="checkbox" class="dist-sep-check" value="' + s.id + '" data-nome="' + s.nome + '" checked style="accent-color:var(--accent)"> ' + s.nome + '</label>';
+    return '<label style="display:flex;align-items:center;gap:6px;padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface2);cursor:pointer;font-size:12px;font-weight:600"><input type="checkbox" class="dist-sep-check" value="' + s.id + '" data-nome="' + s.nome + '" checked style="accent-color:var(--accent)"> ' + s.nome + '</label>';
   }).join('');
 }
