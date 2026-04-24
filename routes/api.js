@@ -633,49 +633,64 @@ router.post('/pedidos/distribuicao', requerAuth, requerPerfil('supervisor'), asy
     if (apenas_sem_sep!==false) w+=' AND p.separador_id IS NULL';
     const pedidos=await db.all(`SELECT p.* FROM pedidos p WHERE ${w} ORDER BY p.hora_pedido ASC,p.id ASC`);
     if (!pedidos.length) return res.json({plano:[],total_pedidos:0});
+
+    // Calcula pontuacao de cada pedido
     for (const ped of pedidos) {
       const itens=await db.all('SELECT endereco,quantidade FROM itens_pedido WHERE pedido_id=$1',[ped.id]);
       ped._p=ped.pontuacao>0?ped.pontuacao:calcularPontuacaoPedido(itens);
       if (!ped.pontuacao) await pool.query('UPDATE pedidos SET pontuacao=$1 WHERE id=$2',[ped._p,ped.id]);
     }
+
     const lim=(quantidade>0)?quantidade:pedidos.length;
     const isDrive=p=>String(p.transportadora||'').toUpperCase().includes('DRIVE');
     const drive=pedidos.filter(isDrive).slice(0,lim);
-    let outros=pedidos.filter(p=>!isDrive(p));
-    const rest=Math.max(0,lim-drive.length);
+    let outros=pedidos.filter(p=>!isDrive(p)).slice(0,Math.max(0,lim-drive.length));
+
+    // Respeita horario se necessario (mais antigo primeiro)
     if (respeitar_hora!==false) {
       const gMin=p=>{const s=String(p.aguardando_desde||p.hora_pedido||'');const m=s.match(/(\d{2}:\d{2})/);return m?m[1]:s;};
       outros.sort((a,b)=>gMin(a).localeCompare(gMin(b)));
     }
-    outros=outros.slice(0,rest);
-    // Intercalacao justa: divide em 3 faixas e intercala pesado/medio/leve
-    const ptMax=Math.max(...outros.map(p=>p._p),1);
-    const ptMin=Math.min(...outros.map(p=>p._p),0);
-    const faixa=(ptMax-ptMin)/3||1;
-    const pesados=outros.filter(p=>p._p>=(ptMin+faixa*2)).sort((a,b)=>b._p-a._p);
-    const medios =outros.filter(p=>p._p>=(ptMin+faixa)&&p._p<(ptMin+faixa*2)).sort((a,b)=>b._p-a._p);
-    const leves  =outros.filter(p=>p._p<(ptMin+faixa)).sort((a,b)=>b._p-a._p);
-    const intercalados=[];
-    const maxLen=Math.max(pesados.length,medios.length,leves.length);
-    for(let i=0;i<maxLen;i++){
-      if(i<pesados.length) intercalados.push(pesados[i]);
-      if(i<medios.length)  intercalados.push(medios[i]);
-      if(i<leves.length)   intercalados.push(leves[i]);
-    }
-    const ord=[...drive,...intercalados];
+
+    // DRAFT PURO: ordena todos por pontuacao DESC
+    // Isso garante que o draft sempre alterna entre pedidos pesados e leves
+    // e resulta na distribuicao mais equilibrada possivel
+    const ordenados = [...drive, ...outros].sort((a,b)=>b._p-a._p);
+
+    // Monta mapa de separadores
     const sepMap={};
     for (const sid of separadores) {
       let row=await db.get('SELECT s.id,s.nome FROM separadores s WHERE s.usuario_id=$1 LIMIT 1',[sid]);
       if (!row) row=await db.get('SELECT id,nome FROM usuarios WHERE id=$1',[sid]);
       if (row) sepMap[sid]=row;
     }
-    const filas=separadores.map(sid=>({separador_id:sid,separador_nome:sepMap[sid]?.nome||`Sep ${sid}`,pedidos:[],pontuacao_total:0,sep_db_id:sepMap[sid]?.id||null}));
-    for (const ped of ord){
+
+    // Draft: sempre da o proximo pedido para quem tem MENOS pontuacao acumulada
+    // Isso e matematicamente otimo para minimizar a diferenca entre separadores
+    const filas=separadores.map(sid=>({
+      separador_id:sid,
+      separador_nome:sepMap[sid]?.nome||`Sep ${sid}`,
+      pedidos:[],
+      pontuacao_total:0,
+      sep_db_id:sepMap[sid]?.id||null
+    }));
+
+    for (const ped of ordenados) {
       filas.sort((a,b)=>a.pontuacao_total-b.pontuacao_total);
       filas[0].pedidos.push(ped.numero_pedido);
       filas[0].pontuacao_total+=ped._p;
     }
-    res.json({plano:filas.map(f=>({separador_id:f.separador_id,sep_db_id:f.sep_db_id,separador_nome:f.separador_nome,pedidos:f.pedidos,pontuacao_total:Math.round(f.pontuacao_total)})),total_pedidos:pedidos.length});
+
+    res.json({
+      plano:filas.map(f=>({
+        separador_id:f.separador_id,
+        sep_db_id:f.sep_db_id,
+        separador_nome:f.separador_nome,
+        pedidos:f.pedidos,
+        pontuacao_total:Math.round(f.pontuacao_total)
+      })),
+      total_pedidos:pedidos.length
+    });
   } catch(err){res.status(500).json({erro:err.message});}
 });
 router.post('/pedidos/distribuicao/confirmar', requerAuth, requerPerfil('supervisor'), async (req,res) => {
