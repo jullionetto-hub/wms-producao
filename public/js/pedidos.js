@@ -978,7 +978,7 @@ function filtrarTurnoDistribuicao(turno) {
   });
   var seps = turno ? _todosSepsDistribuicao.filter(function(s) {
     var t = (s.turno || '').toLowerCase();
-    return t === turno.toLowerCase() || (turno === 'Manha' && t.startsWith('manh'));
+    var tb = turno.toLowerCase().replace('\u00e3','a').replace('\u00e2','a'); var tc = t.replace('\u00e3','a').replace('\u00e2','a'); return tc.startsWith(tb.substring(0,4));
   }) : _todosSepsDistribuicao;
   if (!seps.length) {
     el.innerHTML = '<div style="color:var(--text3);font-size:12px">Nenhum separador neste turno</div>';
