@@ -242,6 +242,7 @@ router.put('/pedidos/:id/caixa', requerAuth, async (req,res) => {
   const caixa=String(numero_caixa).trim();
   try {
     const concDHL=dataHoraLocal(); await pool.query(`UPDATE pedidos SET status='concluido',concluido_em=$2 WHERE id=$1`,[req.params.id,concDHL.data+'T'+concDHL.hora]);
+    const usada = await db.get(`SELECT numero_pedido FROM pedidos WHERE numero_caixa=$1 AND id<>$2 AND status<>'concluido'`,[caixa,req.params.id]);
     if (usada) return res.status(409).json({erro:`Caixa ${caixa} em uso no pedido ${usada.numero_pedido}!`});
     await pool.query('UPDATE pedidos SET numero_caixa=$1 WHERE id=$2',[caixa,req.params.id]);
     const ped=await db.get('SELECT numero_pedido FROM pedidos WHERE id=$1',[req.params.id]);
