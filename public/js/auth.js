@@ -234,22 +234,17 @@ function irPara(pag, el) {
   if (pg) pg.classList.add('ativa');
   if (el) el.classList.add('ativo');
   if (pag === 'dashboard')       { carregarDashboard(); mudarDashTab('operacao'); }
-  if (pag === 'pedidos') { popularSelects(); const _pi=document.getElementById('filtro-ped-ini'),_pf=document.getElementById('filtro-ped-fim'); if(_pi&&!_pi.value)_pi.value=hojeLocal(); if(_pf&&!_pf.value)_pf.value=hojeLocal(); carregarPedidos(); carregarPedidosBloqueados(); }
+  if (pag === 'pedidos') { popularSelects(); var _pi=document.getElementById('filtro-ped-ini'),_pf=document.getElementById('filtro-ped-fim'); if(_pi&&!_pi.value)_pi.value=hojeLocal(); if(_pf&&!_pf.value)_pf.value=hojeLocal(); carregarPedidos(); carregarPedidosBloqueados(); }
   if (pag === 'cadastros')       { trocarCadastroTab('usuarios'); carregarUsuarios(); }
   if (pag === 'separacao')       { carregarFila(); if (separadorAtual) carregarContadoresSep(); }
   if (pag === 'estatisticas')    { carregarEstatisticas(); carregarCheckoutLista(); }
-  if (pag === 'reposicao') {
-    fetch(`${API}/admin/sincronizar-forma-envio`, { method:'POST', credentials:'include', headers:{'Content-Type':'application/json'} }).catch(()=>{});
-    carregarUsuariosParaRep().then(() => carregarTabelaReposicao());
-    if (window._repInterval) clearInterval(window._repInterval);
-    window._repInterval = setInterval(() => { carregarTabelaReposicao(); }, 30000);
-  }
+  if (pag === 'reposicao')       { carregarAvisos(); verificarDuplicatas(); }
   if (pag === 'checkout')        { const el2 = document.getElementById('ck-input-caixa'); if(el2) setTimeout(()=>el2.focus(),200); }
   if (pag === 'stats-repositor') carregarStatsRepositor();
   if (pag === 'stats-checkout')  carregarStatsCheckout();
   if (pag === 'performance')  carregarPerformance();
   if (pag === 'relatorios')   { carregarListaRelatorios(); }
-  if (pag === 'auditoria')    { const hj=hojeLocal(); const ea=document.getElementById('aud-ini'); if(ea&&!ea.value)ea.value=hj; carregarAuditoria(); }
+  if (pag === 'auditoria')    { var hj=hojeLocal(); var ea=document.getElementById('aud-ini'); if(ea&&!ea.value)ea.value=hj; carregarAuditoria(); }
 }
 
 
@@ -318,144 +313,108 @@ function trocarCadastroTab(tab) {
   });
   if (tab === 'usuarios') carregarUsuarios();
 }
-/* ══ RELATÓRIOS ══ */
+/* RELATORIOS */
 async function carregarListaRelatorios() {
-  const el = document.getElementById('rel-lista');
+  var el = document.getElementById('rel-lista');
   if (!el) return;
   try {
-    const res = await fetch(`${API}/relatorio/lista`, { credentials:'include' });
-    const lista = res.ok ? await res.json() : [];
-    if (!lista.length) {
-      el.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:8px 0">Nenhum relatorio gerado. Clique em "Gerar Hoje".</div>';
-      return;
-    }
+    var res = await fetch(API + '/relatorio/lista', { credentials:'include' });
+    var lista = res.ok ? await res.json() : [];
+    if (!lista.length) { el.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:8px 0">Nenhum relatorio gerado. Clique em Gerar Hoje.</div>'; return; }
     el.innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">' +
-      lista.map(r => '<button onclick="verRelatorioData(\'' + r.data + '\')" style="padding:8px 14px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);cursor:pointer;font-size:12px;text-align:left"><div style="font-weight:700">' + r.data + '</div><div style="font-size:11px;color:var(--text3)">' + r.total_pedidos + ' pedidos - ' + r.pedidos_concluidos + ' concluidos</div></button>').join('') +
-      '</div>';
+      lista.map(function(r) { return '<button onclick="verRelatorioData(\'' + r.data + '\')" style="padding:8px 14px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);cursor:pointer;font-size:12px;text-align:left"><div style="font-weight:700">' + r.data + '</div><div style="font-size:11px;color:var(--text3)">' + r.total_pedidos + ' pedidos</div></button>'; }).join('') + '</div>';
   } catch(e) {}
 }
 async function verRelatorio() {
-  const data = document.getElementById('rel-data')?.value;
+  var data = document.getElementById('rel-data') ? document.getElementById('rel-data').value : '';
   if (!data) { toast('Selecione uma data','aviso'); return; }
   await verRelatorioData(data);
 }
 async function verRelatorioData(data) {
-  const el = document.getElementById('rel-detalhe');
+  var el = document.getElementById('rel-detalhe');
   if (!el) return;
   el.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text3)">Carregando...</div>';
   try {
-    const res = await fetch(`${API}/relatorio/diario?data=${data}`, { credentials:'include' });
-    const r = res.ok ? await res.json() : null;
+    var res = await fetch(API + '/relatorio/diario?data=' + data, { credentials:'include' });
+    var r = res.ok ? await res.json() : null;
     if (!r) { el.innerHTML = '<div style="color:var(--text3);padding:16px">Nenhum relatorio para esta data.</div>'; return; }
-    const pct = r.total_pedidos > 0 ? Math.round((r.pedidos_concluidos/r.total_pedidos)*100) : 0;
-    el.innerHTML = `
-      <div style="border-top:1px solid var(--border);padding-top:16px;margin-top:8px">
-        <div style="font-weight:700;font-size:14px;margin-bottom:12px">Relatorio de ${data}</div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-bottom:16px">
-          ${[['Pedidos',r.total_pedidos,'var(--text)'],['Concluidos',r.pedidos_concluidos,'#10b981'],
-             ['Pendentes',r.pedidos_pendentes,'#f59e0b'],['Faltas',r.total_faltas,'#ef4444'],
-             ['Checkouts',r.total_checkouts,'#3b82f6'],['Separadores',r.separadores_ativos,'var(--accent)']
-            ].map(([lb,vl,cr])=>`<div style="background:var(--surface2);border-radius:8px;padding:12px;text-align:center"><div style="font-size:22px;font-weight:700;color:${cr}">${vl}</div><div style="font-size:11px;color:var(--text3)">${lb}</div></div>`).join('')}
-        </div>
-        <div style="background:var(--surface2);border-radius:8px;padding:8px">
-          <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Conclusao</div>
-          <div style="background:var(--border);border-radius:4px;height:8px;overflow:hidden"><div style="background:#10b981;height:100%;width:${pct}%;border-radius:4px"></div></div>
-          <div style="font-size:12px;font-weight:700;color:#10b981;margin-top:4px">${pct}%</div>
-        </div>
-      </div>`;
-  } catch(e) { el.innerHTML = `<div style="color:#ef4444;padding:16px">Erro: ${e.message}</div>`; }
+    var pct = r.total_pedidos > 0 ? Math.round((r.pedidos_concluidos/r.total_pedidos)*100) : 0;
+    el.innerHTML = '<div style="border-top:1px solid var(--border);padding-top:16px;margin-top:8px"><div style="font-weight:700;margin-bottom:12px">Relatorio de ' + data + '</div>' +
+      '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-bottom:16px">' +
+      [['Pedidos',r.total_pedidos],['Concluidos',r.pedidos_concluidos],['Pendentes',r.pedidos_pendentes],['Faltas',r.total_faltas],['Checkouts',r.total_checkouts]].map(function(x){
+        return '<div style="background:var(--surface2);border-radius:8px;padding:12px;text-align:center"><div style="font-size:22px;font-weight:700">' + x[1] + '</div><div style="font-size:11px;color:var(--text3)">' + x[0] + '</div></div>';
+      }).join('') + '</div>' +
+      '<div style="background:var(--surface2);border-radius:8px;padding:8px"><div style="font-size:11px;color:var(--text3);margin-bottom:4px">Conclusao</div><div style="background:var(--border);border-radius:4px;height:8px;overflow:hidden"><div style="background:#10b981;height:100%;width:' + pct + '%;border-radius:4px"></div></div><div style="font-size:12px;font-weight:700;color:#10b981;margin-top:4px">' + pct + '%</div></div></div>';
+  } catch(e) { el.innerHTML = '<div style="color:#ef4444;padding:16px">Erro: ' + e.message + '</div>'; }
 }
 async function gerarRelatorioHoje() {
   try {
-    const hj = hojeLocal();
-    const res = await fetch(`${API}/relatorio/gerar`, { method:'POST', credentials:'include', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ data: hj }) });
+    var hj = hojeLocal();
+    var res = await fetch(API + '/relatorio/gerar', { method:'POST', credentials:'include', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ data: hj }) });
     if (res.ok) { toast('Relatorio gerado!','sucesso'); carregarListaRelatorios(); verRelatorioData(hj); }
   } catch(e) { toast('Erro ao gerar','erro'); }
 }
 async function exportarRelatorioExcel() {
-  const data = document.getElementById('rel-data')?.value || hojeLocal();
+  var data = (document.getElementById('rel-data') ? document.getElementById('rel-data').value : '') || hojeLocal();
   try {
-    const res = await fetch(`${API}/relatorio/diario?data=${data}`, { credentials:'include' });
-    const r = res.ok ? await res.json() : null;
+    var res = await fetch(API + '/relatorio/diario?data=' + data, { credentials:'include' });
+    var r = res.ok ? await res.json() : null;
     if (!r) { toast('Gere o relatorio primeiro','aviso'); return; }
-    const wb = XLSX.utils.book_new();
-    const resumo = [['RELATORIO DIARIO WMS MIESS'],['Data:',data],[''],
-      ['PEDIDOS',''],['Total',r.total_pedidos],['Concluidos',r.pedidos_concluidos],['Pendentes',r.pedidos_pendentes],[''],
-      ['REPOSICAO',''],['Total faltas',r.total_faltas],['Abastecidas',r.faltas_abastecidas||0],[''],
-      ['CHECKOUT',''],['Concluidos',r.total_checkouts],[''],['SEPARADORES ATIVOS',r.separadores_ativos]];
-    const ws = XLSX.utils.aoa_to_sheet(resumo);
-    ws['!cols'] = [{wch:25},{wch:15}];
+    var wb = XLSX.utils.book_new();
+    var resumo = [['RELATORIO WMS MIESS'],['Data:',data],[''],['Total Pedidos',r.total_pedidos],['Concluidos',r.pedidos_concluidos],['Pendentes',r.pedidos_pendentes],[''],['Faltas',r.total_faltas],['Checkouts',r.total_checkouts],['Separadores',r.separadores_ativos]];
+    var ws = XLSX.utils.aoa_to_sheet(resumo);
     XLSX.utils.book_append_sheet(wb, ws, 'Resumo');
-    if (r.dados_json) {
-      try {
-        const dados = JSON.parse(r.dados_json);
-        if (dados.porSep) {
-          const rows = [['SEPARADOR','CONCLUIDOS','PENDENTES','ITENS']];
-          Object.entries(dados.porSep).forEach(([n,s])=>rows.push([n,s.concluidos,s.pendentes,s.itens]));
-          const ws2 = XLSX.utils.aoa_to_sheet(rows);
-          XLSX.utils.book_append_sheet(wb, ws2, 'Por Separador');
-        }
-      } catch(e) {}
-    }
-    XLSX.writeFile(wb, `relatorio_${data}.xlsx`);
+    XLSX.writeFile(wb, 'relatorio_' + data + '.xlsx');
     toast('Excel exportado!','sucesso');
   } catch(e) { toast('Erro ao exportar','erro'); }
 }
 
-/* ══ AUDITORIA ══ */
+/* AUDITORIA */
 async function carregarAuditoria() {
-  const tbody = document.getElementById('tbody-auditoria');
+  var tbody = document.getElementById('tbody-auditoria');
   if (!tbody) return;
   tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--text3)">Carregando...</td></tr>';
   try {
-    const ini = document.getElementById('aud-ini')?.value || '';
-    const fim = document.getElementById('aud-fim')?.value || '';
-    const usuario = document.getElementById('aud-usuario')?.value || '';
-    const acao = document.getElementById('aud-acao')?.value || '';
-    const params = new URLSearchParams();
+    var ini = document.getElementById('aud-ini') ? document.getElementById('aud-ini').value : '';
+    var fim = document.getElementById('aud-fim') ? document.getElementById('aud-fim').value : '';
+    var usuario = document.getElementById('aud-usuario') ? document.getElementById('aud-usuario').value : '';
+    var acao = document.getElementById('aud-acao') ? document.getElementById('aud-acao').value : '';
+    var params = new URLSearchParams();
     if (ini) params.set('data_ini', ini);
     if (fim) params.set('data_fim', fim);
     if (usuario) params.set('usuario', usuario);
     if (acao) params.set('acao', acao);
     params.set('limit', '200');
-    const res = await fetch(`${API}/auditoria?${params}`, { credentials:'include' });
-    const logs = res.ok ? await res.json() : [];
+    var res = await fetch(API + '/auditoria?' + params, { credentials:'include' });
+    var logs = res.ok ? await res.json() : [];
     if (!logs.length) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:32px;color:var(--text3)">Nenhum registro encontrado</td></tr>'; return; }
-    const acaoCor = { login:'#10b981', logout:'#6b7280', zerar_dados:'#ef4444', distribuicao_confirmada:'#3b82f6', relatorio_gerado:'#8b5cf6' };
-    tbody.innerHTML = logs.map(l => {
-      const cor = acaoCor[l.acao] || 'var(--text2)';
-      return `<tr style="border-bottom:1px solid var(--border)" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
-        <td style="padding:10px 12px;font-size:12px;white-space:nowrap">${l.data||''} ${l.hora||''}</td>
-        <td style="padding:10px 12px;font-size:13px;font-weight:600">${l.usuario_nome||l.usuario_login||'—'}</td>
-        <td style="padding:10px 12px"><span style="font-size:11px;font-weight:700;color:${cor};background:${cor}18;padding:3px 8px;border-radius:20px">${l.acao}</span></td>
-        <td style="padding:10px 12px;font-size:12px;color:var(--text2)">${l.entidade||'—'}${l.entidade_id?' #'+l.entidade_id:''}</td>
-        <td style="padding:10px 12px;font-size:11px;color:var(--text3)">${l.ip||'—'}</td>
-      </tr>`;
+    tbody.innerHTML = logs.map(function(l) {
+      return '<tr style="border-bottom:1px solid var(--border)"><td style="padding:10px 12px;font-size:12px">' + (l.data||'') + ' ' + (l.hora||'') + '</td><td style="padding:10px 12px;font-size:13px;font-weight:600">' + (l.usuario_nome||l.usuario_login||'&mdash;') + '</td><td style="padding:10px 12px"><span style="font-size:11px;font-weight:700;color:var(--accent);background:rgba(99,102,241,.1);padding:3px 8px;border-radius:20px">' + l.acao + '</span></td><td style="padding:10px 12px;font-size:12px;color:var(--text2)">' + (l.entidade||'&mdash;') + (l.entidade_id?' #'+l.entidade_id:'') + '</td><td style="padding:10px 12px;font-size:11px;color:var(--text3)">' + (l.ip||'&mdash;') + '</td></tr>';
     }).join('');
-  } catch(e) { tbody.innerHTML = `<tr><td colspan="5" style="color:#ef4444;padding:16px">Erro: ${e.message}</td></tr>`; }
+  } catch(e) { tbody.innerHTML = '<tr><td colspan="5" style="color:#ef4444;padding:16px">Erro: ' + e.message + '</td></tr>'; }
 }
 
-/* ══ EDITAR USUARIO ══ */
+/* EDITAR USUARIO */
 async function abrirEditarUsuario(id) {
   try {
-    const res = await fetch(`${API}/usuarios`, { credentials:'include' });
-    const users = await res.json();
-    const u = users.find(x => x.id === id);
+    var res = await fetch(API + '/usuarios', { credentials:'include' });
+    var users = await res.json();
+    var u = users.find(function(x) { return x.id === id; });
     if (!u) { toast('Usuario nao encontrado!','erro'); return; }
     document.getElementById('edit-usr-id').value     = u.id;
     document.getElementById('edit-usr-nome').value   = u.nome;
     document.getElementById('edit-usr-login').value  = u.login;
     document.getElementById('edit-usr-senha').value  = '';
     document.getElementById('edit-usr-perfil').value = u.perfil;
-    const turnoEl = document.getElementById('edit-usr-turno');
-    if (turnoEl) { const tv = (u.turno||'Manha').replace('ã','a').replace('Manhã','Manha'); turnoEl.value = tv; }
-    document.querySelectorAll('.edit-usr-perm').forEach(cb => {
-      const ac = (u.perfis_acesso||'').split(',').map(s=>s.trim());
+    var turnoEl = document.getElementById('edit-usr-turno');
+    if (turnoEl) { var tv = (u.turno||'Manha').replace('\u00e3','a').replace('Manh\u00e3','Manha'); turnoEl.value = tv; }
+    document.querySelectorAll('.edit-usr-perm').forEach(function(cb) {
+      var ac = (u.perfis_acesso||'').split(',').map(function(s){return s.trim();});
       cb.checked = ac.includes(cb.value) || cb.value === u.perfil;
     });
-    const sw = document.getElementById('edit-usr-subtipo-wrap');
+    var sw = document.getElementById('edit-usr-subtipo-wrap');
     if (sw) sw.style.display = u.perfil === 'repositor' ? 'block' : 'none';
-    const ss = document.getElementById('edit-usr-subtipo-repositor');
+    var ss = document.getElementById('edit-usr-subtipo-repositor');
     if (ss) ss.value = u.subtipo_repositor || 'geral';
     document.getElementById('modal-editar-usuario').style.display = 'flex';
   } catch(e) { toast('Erro ao carregar!','erro'); }
@@ -464,42 +423,40 @@ function fecharEditarUsuario() {
   document.getElementById('modal-editar-usuario').style.display = 'none';
 }
 function toggleSubtipoRepositorEdit() {
-  const perf = document.getElementById('edit-usr-perfil');
-  const wrap = document.getElementById('edit-usr-subtipo-wrap');
+  var perf = document.getElementById('edit-usr-perfil');
+  var wrap = document.getElementById('edit-usr-subtipo-wrap');
   if (wrap) wrap.style.display = perf && perf.value === 'repositor' ? 'block' : 'none';
 }
 async function salvarEdicaoUsuario() {
-  const id      = document.getElementById('edit-usr-id').value;
-  const nome    = document.getElementById('edit-usr-nome').value.trim();
-  const login   = document.getElementById('edit-usr-login').value.trim();
-  const senha   = document.getElementById('edit-usr-senha').value;
-  const perfil  = document.getElementById('edit-usr-perfil').value;
-  const turno   = document.getElementById('edit-usr-turno')?.value || 'Manha';
-  const subtipo = document.getElementById('edit-usr-subtipo-repositor')?.value || 'geral';
-  const perfis_acesso = Array.from(document.querySelectorAll('.edit-usr-perm:checked')).map(cb=>cb.value).filter(p=>p!==perfil);
+  var id      = document.getElementById('edit-usr-id').value;
+  var nome    = document.getElementById('edit-usr-nome').value.trim();
+  var login   = document.getElementById('edit-usr-login').value.trim();
+  var senha   = document.getElementById('edit-usr-senha').value;
+  var perfil  = document.getElementById('edit-usr-perfil').value;
+  var turno   = document.getElementById('edit-usr-turno') ? document.getElementById('edit-usr-turno').value : 'Manha';
+  var subtipo = document.getElementById('edit-usr-subtipo-repositor') ? document.getElementById('edit-usr-subtipo-repositor').value : 'geral';
+  var perfis_acesso = Array.from(document.querySelectorAll('.edit-usr-perm:checked')).map(function(cb){return cb.value;}).filter(function(p){return p!==perfil;});
   if (!nome || !login) { toast('Preencha nome e login!','aviso'); return; }
   if (senha && senha.length < 6) { toast('Senha minimo 6 caracteres!','aviso'); return; }
   try {
-    const body = { nome, login, perfil, turno, status:'ativo', perfis_acesso, subtipo_repositor: subtipo };
+    var body = { nome: nome, login: login, perfil: perfil, turno: turno, status:'ativo', perfis_acesso: perfis_acesso, subtipo_repositor: subtipo };
     if (senha) body.senha = senha;
-    const res = await fetch(`${API}/usuarios/${id}`, { credentials:'include', method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
-    const data = await res.json();
+    var res = await fetch(API + '/usuarios/' + id, { credentials:'include', method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    var data = await res.json();
     if (!res.ok) { toast(data.erro||'Erro ao salvar!','erro'); return; }
     toast('Usuario atualizado!','sucesso');
     fecharEditarUsuario();
     carregarUsuarios();
   } catch(e) { toast('Erro ao salvar!','erro'); }
 }
-
-/* ══ ZERAR DADOS ══ */
 async function confirmarZerarDados() {
-  const conf = confirm('ATENCAO - Isso vai apagar TODOS os pedidos, reposicoes e checkouts.\nUsuarios NAO serao apagados.\nTem certeza?');
+  var conf = confirm('ATENCAO - Isso vai apagar TODOS os pedidos, reposicoes e checkouts. Usuarios NAO serao apagados. Tem certeza?');
   if (!conf) return;
-  const conf2 = confirm('Tem ABSOLUTA certeza? Esta acao nao pode ser desfeita.');
+  var conf2 = confirm('Tem ABSOLUTA certeza? Esta acao nao pode ser desfeita.');
   if (!conf2) return;
   try {
-    const res = await fetch(`${API}/admin/zerar-dados`, { method:'POST', credentials:'include', headers:{'Content-Type':'application/json'}, body: JSON.stringify({confirmar:'ZERAR_TUDO_CONFIRMO'}) });
-    const data = await res.json();
+    var res = await fetch(API + '/admin/zerar-dados', { method:'POST', credentials:'include', headers:{'Content-Type':'application/json'}, body: JSON.stringify({confirmar:'ZERAR_TUDO_CONFIRMO'}) });
+    var data = await res.json();
     if (res.ok) { toast('Dados zerados!','sucesso'); } else { toast('Erro: '+data.erro,'erro'); }
   } catch(e) { toast('Erro ao zerar','erro'); }
 }

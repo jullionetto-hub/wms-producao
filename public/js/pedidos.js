@@ -1,4 +1,4 @@
-﻿/* ══════════════════════════════════════════
+/* ══════════════════════════════════════════
    PEDIDOS
 ══════════════════════════════════════════ */
 
@@ -114,7 +114,6 @@ async function carregarUsuarios() {
             onclick="alterarStatusUsuario(${u.id},'${u.status==='ativo'?'inativo':'ativo'}','${u.nome}','${u.login}','${u.perfil}','${u.turno||''}')">
             ${u.status==='ativo'?'⏸':'▶'}
           </button>
-          <button class="usr-btn" style="background:#3b82f6;color:#fff;border:none;border-radius:6px;padding:5px 10px;cursor:pointer;font-size:12px;margin-right:4px" onclick="abrirEditarUsuario(${u.id})">Editar</button>
           <button class="usr-btn del" title="Excluir" onclick="excluirUsuario(${u.id},'${u.nome}')">🗑</button>
         </div>
       </div>`;
@@ -903,32 +902,13 @@ function fecharModalDistribuicao() {
   document.getElementById('modal-distribuicao').style.display = 'none';
   distribuicaoPlano = null;
 }
-let _todosSepsDistribuicao = [];
 async function carregarSeparadoresDistribuicao() {
   try {
-    const res = await fetch(${API}/usuarios, { credentials:'include' });
+    const res = await fetch(`${API}/usuarios`, { credentials:'include' });
     const users = await res.json();
     _todosSepsDistribuicao = users.filter(u => u.perfil === 'separador' && u.status === 'ativo');
     filtrarTurnoDistribuicao('');
   } catch(e) {}
-}
-function filtrarTurnoDistribuicao(turno) {
-  const el = document.getElementById('dist-separadores-lista');
-  if (!el) return;
-  ['todos','manha','tarde','noite'].forEach(t => {
-    const btn = document.getElementById(dist-turno-${t});
-    if (!btn) return;
-    const ativo = (turno === '' && t === 'todos') || turno.toLowerCase() === t;
-    btn.style.background = ativo ? 'var(--accent)' : 'transparent';
-    btn.style.color = ativo ? '#fff' : 'var(--text2)';
-    btn.style.border = ativo ? '1.5px solid var(--accent)' : '1.5px solid var(--border)';
-  });
-  const seps = turno ? _todosSepsDistribuicao.filter(s => {
-    const t = (s.turno||'').toLowerCase();
-    return t === turno.toLowerCase() || (turno === 'Manha' && t.startsWith('manh'));
-  }) : _todosSepsDistribuicao;
-  if (!seps.length) { el.innerHTML = '<div style="color:var(--text3);font-size:12px">Nenhum separador ativo neste turno</div>'; return; }
-  el.innerHTML = seps.map(s=><label style="display:flex;align-items:center;gap:6px;padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface2);cursor:pointer;font-size:12px;font-weight:600"><input type="checkbox" class="dist-sep-check" value="${s.id}" data-nome="${s.nome}" checked style="accent-color:var(--accent)">ðŸ‘¤ ${s.nome}</label>).join('');
 }
 async function carregarPedidosDistribuicao() {
   try {
@@ -983,3 +963,29 @@ window.addEventListener('click', e => {
   if (e.target.id === 'modal-importar') fecharModalImportar();
   if (e.target.id === 'modal-distribuicao') fecharModalDistribuicao();
 });
+
+let _todosSepsDistribuicao = [];
+function filtrarTurnoDistribuicao(turno) {
+  var el = document.getElementById('dist-separadores-lista');
+  if (!el) return;
+  ['todos','manha','tarde','noite'].forEach(function(t) {
+    var btn = document.getElementById('dist-turno-' + t);
+    if (!btn) return;
+    var ativo = (turno === '' && t === 'todos') || turno.toLowerCase() === t;
+    btn.style.background = ativo ? 'var(--accent)' : 'transparent';
+    btn.style.color = ativo ? '#fff' : 'var(--text2)';
+    btn.style.border = ativo ? '1.5px solid var(--accent)' : '1.5px solid var(--border)';
+  });
+  var seps = turno ? _todosSepsDistribuicao.filter(function(s) {
+    var t = (s.turno || '').toLowerCase();
+    return t === turno.toLowerCase() || (turno === 'Manha' && t.startsWith('manh'));
+  }) : _todosSepsDistribuicao;
+  if (!seps.length) {
+    el.innerHTML = '<div style="color:var(--text3);font-size:12px">Nenhum separador ativo neste turno</div>';
+    return;
+  }
+  el.innerHTML = seps.map(function(s) {
+    return '<label style="display:flex;align-items:center;gap:6px;padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface2);cursor:pointer;font-size:12px;font-weight:600">' +
+      '<input type="checkbox" class="dist-sep-check" value="' + s.id + '" data-nome="' + s.nome + '" checked style="accent-color:var(--accent)"> ' + s.nome + '</label>';
+  }).join('');
+}
