@@ -249,7 +249,7 @@ async function iniciar() {
     await criarTabelas();
     await criarUsuarioPadrao();
     
-// Migration automatica â€” cria colunas se nao existirem
+// Migration automatica - rebuild 2026-04-24 08:51:37 â€” cria colunas se nao existirem
 async function runMigrations() {
   try {
     await pool.query("ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS iniciado_em TEXT DEFAULT ''");
