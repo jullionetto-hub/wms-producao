@@ -1,4 +1,4 @@
-﻿
+
 // ── Função de auditoria ───────────────────────────────────────────────────────
 async function registrarAuditoria(req, acao, entidade='', entidadeId=null, dadosAntes=null, dadosDepois=null) {
   try {
