@@ -241,9 +241,20 @@ router.put('/pedidos/:id/caixa', requerAuth, async (req,res) => {
   if (!numero_caixa) return res.status(400).json({erro:'Numero da caixa nao informado!'});
   const caixa=String(numero_caixa).trim();
   try {
-    // Verifica se caixa ja esta em uso em outro pedido ativo
-    const usada = await db.get(`SELECT numero_pedido FROM pedidos WHERE numero_caixa=$1 AND id<>$2 AND status<>'concluido'`,[caixa,req.params.id]);
-    if (usada) return res.status(409).json({erro:`Caixa ${caixa} ja esta em uso no pedido ${usada.numero_pedido}!`});
+    // Verifica se caixa ja esta em uso em outro pedido ativo (nao concluido)
+    const usadaPed = await db.get(
+      `SELECT numero_pedido FROM pedidos WHERE numero_caixa=$1 AND id<>$2 AND status NOT IN ('concluido','cancelado')`,
+      [caixa, req.params.id]
+    );
+    if (usadaPed) return res.status(409).json({erro:`Caixa ${caixa} ja esta em uso no pedido ${usadaPed.numero_pedido}!`});
+
+    // Verifica tambem na tabela checkout (pedido pendente de checkout)
+    const usadaCk = await db.get(
+      `SELECT c.numero_pedido FROM checkout c JOIN pedidos p ON c.pedido_id=p.id WHERE c.numero_caixa=$1 AND c.pedido_id<>$2 AND c.status='pendente'`,
+      [caixa, req.params.id]
+    );
+    if (usadaCk) return res.status(409).json({erro:`Caixa ${caixa} ja esta aguardando checkout no pedido ${usadaCk.numero_pedido}!`});
+
     // Vincula caixa ao pedido
     await pool.query('UPDATE pedidos SET numero_caixa=$1 WHERE id=$2',[caixa,req.params.id]);
     const ped=await db.get('SELECT numero_pedido FROM pedidos WHERE id=$1',[req.params.id]);
