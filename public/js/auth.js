@@ -1,6 +1,6 @@
-/* ══════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    LOGIN
-══════════════════════════════════════════ */
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 let perfilSelecionado = '';
 function selecionarPerfil(p, btn) {
   perfilSelecionado = p;
@@ -123,9 +123,9 @@ function sair() {
 
 
 
-/* ══════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    TABS MOBILE DO SEPARADOR
-══════════════════════════════════════════ */
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 function mudarTabSep(tab) {
   ['separar','fila','avisos-sep','stats'].forEach(t => {
     const pg = document.getElementById(`sep-tab-${t}`);
@@ -153,7 +153,7 @@ async function carregarAvisosSeparador() {
     const badge = document.getElementById('stab-avisos-sep-badge');
     if (badge) { badge.textContent = avisos.length; badge.style.display = avisos.length > 0 ? 'inline' : 'none'; }
     if (!avisos.length) {
-      lista.innerHTML = '<div style="color:var(--text3);text-align:center;padding:40px;font-size:13px">✅ Nenhum aviso do repositor hoje</div>';
+      lista.innerHTML = '<div style="color:var(--text3);text-align:center;padding:40px;font-size:13px">âœ… Nenhum aviso do repositor hoje</div>';
       return;
     }
     lista.innerHTML = avisos.map(a => {
@@ -161,7 +161,7 @@ async function carregarAvisosSeparador() {
       const isAbast = a.status === 'abastecido';
       const bg    = isSubiu ? '#F0FDF4' : '#EFF6FF';
       const bord  = isSubiu ? '#BBF7D0' : '#BFDBFE';
-      const icon  = isSubiu ? '⬆️' : '📦';
+      const icon  = isSubiu ? 'â¬†ï¸' : 'ðŸ“¦';
       const label = isSubiu ? 'SUBIU' : 'ABASTECIDO';
       const cor   = isSubiu ? 'var(--green)' : 'var(--accent)';
       return `
@@ -170,13 +170,13 @@ async function carregarAvisosSeparador() {
           <div style="font-size:30px">${icon}</div>
           <div>
             <div style="font-size:12px;font-weight:800;color:${cor};letter-spacing:1px">${label}</div>
-            <div style="font-size:11px;color:var(--text3)">Pedido <b style="color:var(--text)">#${a.numero_pedido}</b> &nbsp;•&nbsp; ${a.hora_reposto||'—'}</div>
+            <div style="font-size:11px;color:var(--text3)">Pedido <b style="color:var(--text)">#${a.numero_pedido}</b> &nbsp;â€¢&nbsp; ${a.hora_reposto||'â€”'}</div>
           </div>
         </div>
-        <div style="font-size:16px;font-weight:800;color:var(--accent);font-family:'Space Mono',monospace">${a.codigo||'—'}</div>
-        <div style="font-size:13px;font-weight:600;color:var(--text);margin:4px 0">${a.descricao||'—'}</div>
-        <div style="font-size:12px;color:var(--text2)">📍 <b>${a.endereco||'—'}</b> &nbsp;•&nbsp; Qtde: <b>${a.qtd_encontrada||a.quantidade||1}</b></div>
-        ${a.repositor_nome ? `<div style="font-size:11px;color:var(--text3);margin-top:4px">👷 ${a.repositor_nome}</div>` : ''}
+        <div style="font-size:16px;font-weight:800;color:var(--accent);font-family:'Space Mono',monospace">${a.codigo||'â€”'}</div>
+        <div style="font-size:13px;font-weight:600;color:var(--text);margin:4px 0">${a.descricao||'â€”'}</div>
+        <div style="font-size:12px;color:var(--text2)">ðŸ“ <b>${a.endereco||'â€”'}</b> &nbsp;â€¢&nbsp; Qtde: <b>${a.qtd_encontrada||a.quantidade||1}</b></div>
+        ${a.repositor_nome ? `<div style="font-size:11px;color:var(--text3);margin-top:4px">ðŸ‘· ${a.repositor_nome}</div>` : ''}
       </div>`;
     }).join('');
   } catch(e) {
@@ -187,39 +187,38 @@ async function carregarAvisosSeparador() {
 
 
 
-/* ══════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    SIDEBAR (supervisor / desktop)
-══════════════════════════════════════════ */
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 function montarSidebar() {
   const sb = document.getElementById('sidebar');
   const menus = {
     supervisor: `
-      <div class="mg">SUPERVISÃO</div>
-      <a class="mi ativo" onclick="irPara('dashboard',this)"><span class="mi-ic">📊</span>Dashboard</a>
-      <a class="mi" onclick="irPara('pedidos',this)"><span class="mi-ic">📋</span>Pedidos <span class="mbadge" id="menu-badge-bloq" style="display:none;background:var(--red)">!</span></a>
-      <a class="mi" onclick="irPara('performance',this)"><span class="mi-ic">🏆</span>Performance</a>
-      <a class="mi" onclick="irPara('relatorios',this)"><span class="mi-ic">📅</span>Relatórios</a>
-      <a class="mi" onclick="irPara('auditoria',this)"><span class="mi-ic">🔍</span>Auditoria</a>
-      <a class="mi" onclick="irPara('cadastros',this)"><span class="mi-ic">⚙️</span>Cadastros</a>
-      <div class="mg">OPERAÇÃO</div>
-      <a class="mi" onclick="irPara('separacao',this)"><span class="mi-ic">📦</span>Separação</a>
-      <a class="mi" onclick="irPara('estatisticas',this)"><span class="mi-ic">📈</span>Estatísticas</a>
-      <a class="mi" onclick="irPara('reposicao',this)"><span class="mi-ic">🔧</span>Reposição <span class="mbadge" id="menu-badge-rep" style="display:none">0</span></a>
-      <a class="mi" onclick="irPara('checkout',this)"><span class="mi-ic">🏷️</span>Checkout</a>`,
+      <div class="mg">SUPERVISÃƒO</div>
+      <a class="mi ativo" onclick="irPara('dashboard',this)"><span class="mi-ic">ðŸ“Š</span>Dashboard</a>
+      <a class="mi" onclick="irPara('pedidos',this)"><span class="mi-ic">ðŸ“‹</span>Pedidos <span class="mbadge" id="menu-badge-bloq" style="display:none;background:var(--red)">!</span></a>
+      <a class="mi" onclick="irPara('performance',this)"><span class="mi-ic">ðŸ†</span>Performance</a>
+      <a class="mi" onclick="irPara('relatorios',this)"><span class="mi-ic">ðŸ“…</span>RelatÃ³rios</a>
+      <a class="mi" onclick="irPara('auditoria',this)"><span class="mi-ic">ðŸ”</span>Auditoria</a>
+      <a class="mi" onclick="irPara('cadastros',this)"><span class="mi-ic">âš™ï¸</span>Cadastros</a>
+      <div class="mg">OPERAÃ‡ÃƒO</div>
+      <a class="mi" onclick="irPara('separacao',this)"><span class="mi-ic">ðŸ“¦</span>SeparaÃ§Ã£o</a>
+      <a class="mi" onclick="irPara('reposicao',this)"><span class="mi-ic">ðŸ”§</span>ReposiÃ§Ã£o <span class="mbadge" id="menu-badge-rep" style="display:none">0</span></a>
+      <a class="mi" onclick="irPara('checkout',this)"><span class="mi-ic">ðŸ·ï¸</span>Checkout</a>`,
     separador: `
-      <div class="mg">SEPARAÇÃO</div>
-      <a class="mi ativo" onclick="irPara('separacao',this)"><span class="mi-ic">📦</span>Pedidos</a>`,
+      <div class="mg">SEPARAÃ‡ÃƒO</div>
+      <a class="mi ativo" onclick="irPara('separacao',this)"><span class="mi-ic">ðŸ“¦</span>Pedidos</a>`,
     repositor: `
-      <div class="mg">REPOSIÇÃO</div>
-      <a class="mi ativo" onclick="irPara('reposicao',this)"><span class="mi-ic">🔧</span>Solicitações <span class="mbadge" id="menu-badge-rep" style="display:none">0</span></a>
-      <a class="mi" onclick="irPara('checkout',this)"><span class="mi-ic">🏷️</span>Checkout</a>
+      <div class="mg">REPOSIÃ‡ÃƒO</div>
+      <a class="mi ativo" onclick="irPara('reposicao',this)"><span class="mi-ic">ðŸ”§</span>SolicitaÃ§Ãµes <span class="mbadge" id="menu-badge-rep" style="display:none">0</span></a>
+      <a class="mi" onclick="irPara('checkout',this)"><span class="mi-ic">ðŸ·ï¸</span>Checkout</a>
       <div class="mg">ANÁLISE</div>
-      <a class="mi" onclick="irPara('stats-repositor',this)"><span class="mi-ic">📈</span>Estatísticas</a>`,
+      <a class="mi" onclick="irPara('stats-repositor',this)"><span class="mi-ic">ðŸ“ˆ</span>EstatÃ­sticas</a>`,
     checkout: `
       <div class="mg">CHECKOUT</div>
-      <a class="mi ativo" onclick="irPara('checkout',this)"><span class="mi-ic">🏷️</span>Checkout</a>
+      <a class="mi ativo" onclick="irPara('checkout',this)"><span class="mi-ic">ðŸ·ï¸</span>Checkout</a>
       <div class="mg">ANÁLISE</div>
-      <a class="mi" onclick="irPara('stats-checkout',this)"><span class="mi-ic">📈</span>Estatísticas</a>`,
+      <a class="mi" onclick="irPara('stats-checkout',this)"><span class="mi-ic">ðŸ“ˆ</span>EstatÃ­sticas</a>`,
   };
   sb.innerHTML = menus[usuarioAtual.perfil] || '';
 }

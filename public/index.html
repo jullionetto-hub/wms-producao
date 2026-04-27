@@ -85,6 +85,14 @@
       <div class="pagina" id="pag-dashboard">
         <div class="pg-title">Dashboard
           <span style="font-size:12px;color:var(--text3);font-weight:400;font-family:'DM Sans',sans-serif" id="dash-ultima-atualizacao"></span>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px">
+            <label style="font-size:11px;color:var(--text3)">DE</label>
+            <input type="date" id="filtro-data-ini" style="border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:12px;background:var(--surface2);color:var(--text)">
+            <label style="font-size:11px;color:var(--text3)">ATÉ</label>
+            <input type="date" id="filtro-data-fim" style="border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:12px;background:var(--surface2);color:var(--text)">
+            <button onclick="carregarDashboard()" class="btn btn-primary btn-sm">Filtrar</button>
+            <button onclick="exportarDashboardExcel()" style="padding:4px 12px;background:#10b981;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600">📊 Excel</button>
+          </div>
         </div>
 
         <!-- KPIs Principais -->
@@ -1292,10 +1300,10 @@
       </div>
       <div class="form-grp"><label>PODE ACESSAR TAMBEM</label>
         <div class="perm-grid">
-          <label class="perm-item"><input type="checkbox" class="edit-usr-perm" value="supervisor"><div class="perm-label"><span class="perm-icon">S</span><span>Supervisor</span><span class="perm-check"></span></div></label>
-          <label class="perm-item"><input type="checkbox" class="edit-usr-perm" value="separador"><div class="perm-label"><span class="perm-icon">P</span><span>Separador</span><span class="perm-check"></span></div></label>
-          <label class="perm-item"><input type="checkbox" class="edit-usr-perm" value="repositor"><div class="perm-label"><span class="perm-icon">R</span><span>Repositor</span><span class="perm-check"></span></div></label>
-          <label class="perm-item"><input type="checkbox" class="edit-usr-perm" value="checkout"><div class="perm-label"><span class="perm-icon">C</span><span>Checkout</span><span class="perm-check"></span></div></label>
+          <label class="perm-item"><input type="checkbox" class="edit-usr-perm" value="supervisor"><div class="perm-label"><span class="perm-icon">👔</span><span>Supervisor</span><span class="perm-check"></span></div></label>
+          <label class="perm-item"><input type="checkbox" class="edit-usr-perm" value="separador"><div class="perm-label"><span class="perm-icon">📦</span><span>Separador</span><span class="perm-check"></span></div></label>
+          <label class="perm-item"><input type="checkbox" class="edit-usr-perm" value="repositor"><div class="perm-label"><span class="perm-icon">🔧</span><span>Repositor</span><span class="perm-check"></span></div></label>
+          <label class="perm-item"><input type="checkbox" class="edit-usr-perm" value="checkout"><div class="perm-label"><span class="perm-icon">🏷️</span><span>Checkout</span><span class="perm-check"></span></div></label>
         </div>
       </div>
       <div class="form-grp"><label>TURNO</label>

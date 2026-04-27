@@ -422,15 +422,6 @@ async function carregarOperacao() {
   } catch(e) { console.error(e); }
 }
 
-// Auto-refresh dashboard a cada 60s
-if (!window._dashInterval) {
-  window._dashInterval = setInterval(() => {
-    if (document.getElementById('pag-dashboard') && document.getElementById('pag-dashboard').classList.contains('ativa')) {
-      carregarDashboard();
-    }
-  }, 60000);
-}
-
 async function carregarDashboard() {
   await popularSelects();
   await carregarKPIs();
@@ -986,4 +977,24 @@ async function carregarEstatisticas() {
       </tr>`).join('');
     }
   } catch(e) { toast('Erro ao carregar estatísticas!','erro'); }
+}
+
+async function exportarDashboardExcel() {
+  try {
+    const ini = document.getElementById('filtro-data-ini')?.value || hoje;
+    const fim = document.getElementById('filtro-data-fim')?.value || hoje;
+    const res = await fetch(`${API}/pedidos?data_ini=${ini}&data_fim=${fim}`, { credentials:'include' });
+    const pedidos = await res.json();
+    const wb = XLSX.utils.book_new();
+    const rows = [['Nr Pedido','Cliente','Transportadora','Separador','Status','Itens','Data']];
+    pedidos.forEach(p => rows.push([
+      p.numero_pedido, p.cliente||'', p.transportadora||'',
+      p.separador_nome||'', p.status, p.itens||0, p.data_pedido||''
+    ]));
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [{wch:12},{wch:25},{wch:15},{wch:25},{wch:12},{wch:8},{wch:12}];
+    XLSX.utils.book_append_sheet(wb, ws, 'Pedidos');
+    XLSX.writeFile(wb, `dashboard_${ini}_${fim}.xlsx`);
+    toast('Excel exportado!','sucesso');
+  } catch(e) { toast('Erro ao exportar!','erro'); }
 }
