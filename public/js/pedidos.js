@@ -392,7 +392,7 @@ function exportarExcel(tipo) {
   let nomeArq = 'exportacao';
   try {
     if (tipo === 'pedidos') {
-      rows = [['NÂº Pedido','UsuÃ¡rio','Status','Itens','Data','Hora']];
+      rows = [['Nr Pedido','Cliente','Transportadora','Separador','Status','Itens']];
       document.querySelectorAll('#tbody-ped tr').forEach(tr => {
         const tds = tr.querySelectorAll('td');
         if (tds.length > 1) rows.push([tds[0].textContent.trim(), tds[1].textContent.trim(), tds[2].textContent.trim(), tds[4].textContent.trim(), tds[5].textContent.trim(), tds[6].textContent.trim()]);
@@ -413,14 +413,14 @@ function exportarExcel(tipo) {
       });
       nomeArq = `estatisticas_repositor_${hoje}`;
     } else if (tipo === 'checkout-lista') {
-      rows = [['Caixa','NÂº Pedido','Separador','Status','Hora']];
+      rows = [['Caixa','Nr Pedido','Separador','Status','Hora']];
       document.querySelectorAll('#tbody-checkout tr').forEach(tr => {
         const tds = tr.querySelectorAll('td');
         if (tds.length > 1) rows.push([tds[0].textContent.trim(), tds[1].textContent.trim(), tds[2].textContent.trim(), tds[3].textContent.trim(), tds[4].textContent.trim()]);
       });
       nomeArq = `checkouts_${hoje}`;
     } else if (tipo === 'stats-checkout') {
-      rows = [['Caixa','NÂº Pedido','Separador','Status','Data','Hora']];
+      rows = [['Caixa','Nr Pedido','Separador','Status','Data','Hora']];
       document.querySelectorAll('#tbody-sck-lista tr').forEach(tr => {
         const tds = tr.querySelectorAll('td');
         if (tds.length > 1) rows.push([tds[0].textContent.trim(), tds[1].textContent.trim(), tds[2].textContent.trim(), tds[4].textContent.trim(), tds[5].textContent.trim(), tds[6].textContent.trim()]);
@@ -447,7 +447,7 @@ function exportarExcel(tipo) {
 function exportarAvisosExcel() {
   try {
     // Collect from current avisos state via the carregarAvisos data
-    const rows = [['CÃ³digo','DescriÃ§Ã£o','EndereÃ§o','Pedido','Qtde','Status','Hora Aviso']];
+    const rows = [['Codigo','Descricao','Endereco','Pedido','Qtde','Status','Hora Aviso']];
     document.querySelectorAll('#lista-avisos .aviso-card').forEach(card => {
       const cod    = card.querySelector('.aviso-cod')?.textContent?.trim().split('\n')[0]?.split(' ')[0] || 'â€”';
       const pedido = card.querySelector('.aviso-cod span')?.textContent?.replace('Pedido #','').trim() || 'â€”';
