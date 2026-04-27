@@ -1,4 +1,4 @@
-
+﻿
 // ── Função de auditoria ───────────────────────────────────────────────────────
 async function registrarAuditoria(req, acao, entidade='', entidadeId=null, dadosAntes=null, dadosDepois=null) {
   try {
@@ -134,8 +134,7 @@ router.post('/usuarios', requerAuth, requerPerfil('supervisor'), async (req,res)
   }
 });
 router.put('/usuarios/:id', requerAuth, requerPerfil('supervisor'), async (req,res) => {
-  const {nome,login,senha,perfil,subtipo_repositor,status,perfis_acesso}=req.body;
-  const turno = (req.body.turno||'Manha').replace('Manh\u00e3','Manha').replace('Manh\u00e2','Manha');
+  const {nome,login,senha,perfil,subtipo_repositor,turno,status,perfis_acesso}=req.body;
   const subtipo=perfil==='repositor'?(subtipo_repositor||'geral'):'geral';
   const extras=Array.isArray(perfis_acesso)?perfis_acesso.filter(Boolean).filter(p=>p!==perfil).join(','):String(perfis_acesso||'');
   try {
