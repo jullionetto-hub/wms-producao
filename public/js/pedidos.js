@@ -1,4 +1,4 @@
-﻿/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    PEDIDOS
 â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
@@ -97,7 +97,7 @@ async function carregarUsuarios() {
       const perfisExtra = (u.perfis_acesso || '').split(',').filter(Boolean).filter(p => p !== u.perfil);
       const todosAcessos = [u.perfil, ...perfisExtra];
       const iniciais = u.nome.split(' ').slice(0,2).map(n=>n[0]).join('').toUpperCase();
-      const perfIcons = {supervisor:'ðŸ‘”',separador:'ðŸ“¦',repositor:'ðŸ”§',checkout:'ðŸ·ï¸'};
+      const perfIcons = {supervisor:'👔',separador:'📦',repositor:'🔧',checkout:'🏷'};
       return `<div class="usr-card ${u.status}">
         <div class="usr-avatar">${iniciais}</div>
         <div class="usr-info">
@@ -105,7 +105,7 @@ async function carregarUsuarios() {
           <div class="usr-login">@${u.login}</div>
           <div class="usr-pills">
             ${todosAcessos.map(p=>`<span class="usr-pill ${p}">${perfIcons[p]||''} ${p}</span>`).join('')}
-            <span class="usr-pill turno">â° ${u.turno||'â€”'}</span>
+            <span class="usr-pill turno">⏰ ${u.turno||'—'}</span>
             <span class="pill ${u.status}" style="font-size:9px;padding:2px 7px">${u.status}</span>
           </div>
         </div>
@@ -113,9 +113,9 @@ async function carregarUsuarios() {
           <button class="usr-btn ${u.status==='ativo'?'toggle-on':'toggle-off'}" title="${u.status==='ativo'?'Desativar':'Ativar'}"
             onclick="alterarStatusUsuario(${u.id},'${u.status==='ativo'?'inativo':'ativo'}','${u.nome}','${u.login}','${u.perfil}','${u.turno||''}')">
             ${u.status==='ativo'?'â¸':'â–¶'}
-          </button>
+            ${u.status==='ativo'?'⏸':'▶'}
           <button class="usr-btn" style="background:#3b82f6;color:#fff;border:none;border-radius:6px;padding:5px 10px;cursor:pointer;font-size:12px;margin-right:4px" onclick="abrirEditarUsuario(${u.id})">Editar</button>
-          <button class="usr-btn del" title="Excluir" onclick="excluirUsuario(${u.id},'${u.nome}')">ðŸ—‘</button>
+          <button class="usr-btn del" title="Excluir" onclick="excluirUsuario(${u.id},'${u.nome}')">🗑</button>
         </div>
       </div>`;
     }).join('');
@@ -392,17 +392,17 @@ function exportarExcel(tipo) {
   let nomeArq = 'exportacao';
   try {
     if (tipo === 'pedidos') {
-      rows = [['Nr Pedido','Cliente','Transportadora','Aguardando Desde','Separador','Status','Itens']];
+      rows = [['NÂº Pedido','UsuÃ¡rio','Status','Itens','Data','Hora']];
       document.querySelectorAll('#tbody-ped tr').forEach(tr => {
         const tds = tr.querySelectorAll('td');
-        if (tds.length > 1) rows.push([tds[0].textContent.trim(), tds[1].textContent.trim(), tds[2].textContent.trim(), tds[3].textContent.trim(), tds[4].textContent.trim(), tds[5].textContent.trim(), tds[6].textContent.trim()]);
+        if (tds.length > 1) rows.push([tds[0].textContent.trim(), tds[1].textContent.trim(), tds[2].textContent.trim(), tds[3].textContent.trim(), tds[4].textContent.trim(), tds[5].textContent.trim()]);
       });
       nomeArq = `pedidos_${hoje}`;
     } else if (tipo === 'estatisticas') {
       rows = [['Separador','Hoje','MÃªs','Ano','Status']];
       document.querySelectorAll('#tbody-est-sep tr').forEach(tr => {
         const tds = tr.querySelectorAll('td');
-        if (tds.length > 1) rows.push([tds[0].textContent.trim(), tds[1].textContent.trim(), tds[2].textContent.trim(), tds[3].textContent.trim(), tds[4].textContent.trim(), tds[5].textContent.trim(), tds[6].textContent.trim()]);
+        if (tds.length > 1) rows.push([tds[0].textContent.trim(), tds[1].textContent.trim(), tds[2].textContent.trim(), tds[3].textContent.trim(), tds[4].textContent.trim()]);
       });
       nomeArq = `estatisticas_separadores_${hoje}`;
     } else if (tipo === 'stats-repositor') {
@@ -413,17 +413,17 @@ function exportarExcel(tipo) {
       });
       nomeArq = `estatisticas_repositor_${hoje}`;
     } else if (tipo === 'checkout-lista') {
-      rows = [['Caixa','Nr Pedido','Separador','Status','Hora']];
+      rows = [['Caixa','NÂº Pedido','Separador','Status','Hora']];
       document.querySelectorAll('#tbody-checkout tr').forEach(tr => {
         const tds = tr.querySelectorAll('td');
         if (tds.length > 1) rows.push([tds[0].textContent.trim(), tds[1].textContent.trim(), tds[2].textContent.trim(), tds[3].textContent.trim(), tds[4].textContent.trim()]);
       });
       nomeArq = `checkouts_${hoje}`;
     } else if (tipo === 'stats-checkout') {
-      rows = [['Caixa','Nr Pedido','Separador','Status','Data','Hora']];
+      rows = [['Caixa','NÂº Pedido','Separador','Status','Data','Hora']];
       document.querySelectorAll('#tbody-sck-lista tr').forEach(tr => {
         const tds = tr.querySelectorAll('td');
-        if (tds.length > 1) rows.push([tds[0].textContent.trim(), tds[1].textContent.trim(), tds[2].textContent.trim(), tds[4].textContent.trim(), tds[5].textContent.trim(), tds[6].textContent.trim()]);
+        if (tds.length > 1) rows.push([tds[0].textContent.trim(), tds[1].textContent.trim(), tds[2].textContent.trim(), tds[3].textContent.trim(), tds[4].textContent.trim(), tds[5].textContent.trim()]);
       });
       nomeArq = `stats_checkout_${hoje}`;
     }
@@ -447,7 +447,7 @@ function exportarExcel(tipo) {
 function exportarAvisosExcel() {
   try {
     // Collect from current avisos state via the carregarAvisos data
-    const rows = [['Codigo','Descricao','Endereco','Pedido','Qtde','Status','Hora Aviso']];
+    const rows = [['CÃ³digo','DescriÃ§Ã£o','EndereÃ§o','Pedido','Qtde','Status','Hora Aviso']];
     document.querySelectorAll('#lista-avisos .aviso-card').forEach(card => {
       const cod    = card.querySelector('.aviso-cod')?.textContent?.trim().split('\n')[0]?.split(' ')[0] || 'â€”';
       const pedido = card.querySelector('.aviso-cod span')?.textContent?.replace('Pedido #','').trim() || 'â€”';
