@@ -1,4 +1,4 @@
-/* ══════════════════════════════════════════
+﻿/* ══════════════════════════════════════════
    LOGIN
 ══════════════════════════════════════════ */
 let perfilSelecionado = '';
@@ -188,7 +188,7 @@ async function carregarAvisosSeparador() {
 
 
 /* ══════════════════════════════════════════
-   SIDEBAR (supervisor / desktop)
+   /* SIDEBAR (supervisor / desktop) */
 ══════════════════════════════════════════ */
 function montarSidebar() {
   const sb = document.getElementById('sidebar');
