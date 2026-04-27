@@ -1,4 +1,4 @@
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+﻿/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    PEDIDOS
 â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
@@ -395,7 +395,7 @@ function exportarExcel(tipo) {
       rows = [['NÂº Pedido','UsuÃ¡rio','Status','Itens','Data','Hora']];
       document.querySelectorAll('#tbody-ped tr').forEach(tr => {
         const tds = tr.querySelectorAll('td');
-        if (tds.length > 1) rows.push([tds[0].textContent.trim(), tds[1].textContent.trim(), tds[2].textContent.trim(), tds[3].textContent.trim(), tds[4].textContent.trim(), tds[5].textContent.trim()]);
+        if (tds.length > 1) rows.push([tds[0].textContent.trim(), tds[1].textContent.trim(), tds[2].textContent.trim(), tds[4].textContent.trim(), tds[5].textContent.trim(), tds[6].textContent.trim()]);
       });
       nomeArq = `pedidos_${hoje}`;
     } else if (tipo === 'estatisticas') {
@@ -423,7 +423,7 @@ function exportarExcel(tipo) {
       rows = [['Caixa','NÂº Pedido','Separador','Status','Data','Hora']];
       document.querySelectorAll('#tbody-sck-lista tr').forEach(tr => {
         const tds = tr.querySelectorAll('td');
-        if (tds.length > 1) rows.push([tds[0].textContent.trim(), tds[1].textContent.trim(), tds[2].textContent.trim(), tds[3].textContent.trim(), tds[4].textContent.trim(), tds[5].textContent.trim()]);
+        if (tds.length > 1) rows.push([tds[0].textContent.trim(), tds[1].textContent.trim(), tds[2].textContent.trim(), tds[4].textContent.trim(), tds[5].textContent.trim(), tds[6].textContent.trim()]);
       });
       nomeArq = `stats_checkout_${hoje}`;
     }
