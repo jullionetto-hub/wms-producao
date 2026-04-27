@@ -392,17 +392,17 @@ function exportarExcel(tipo) {
   let nomeArq = 'exportacao';
   try {
     if (tipo === 'pedidos') {
-      rows = [['Nr Pedido','Cliente','Transportadora','Separador','Status','Itens']];
+      rows = [['Nr Pedido','Cliente','Transportadora','Aguardando Desde','Separador','Status','Itens']];
       document.querySelectorAll('#tbody-ped tr').forEach(tr => {
         const tds = tr.querySelectorAll('td');
-        if (tds.length > 1) rows.push([tds[0].textContent.trim(), tds[1].textContent.trim(), tds[2].textContent.trim(), tds[4].textContent.trim(), tds[5].textContent.trim(), tds[6].textContent.trim()]);
+        if (tds.length > 1) rows.push([tds[0].textContent.trim(), tds[1].textContent.trim(), tds[2].textContent.trim(), tds[3].textContent.trim(), tds[4].textContent.trim(), tds[5].textContent.trim(), tds[6].textContent.trim()]);
       });
       nomeArq = `pedidos_${hoje}`;
     } else if (tipo === 'estatisticas') {
       rows = [['Separador','Hoje','MÃªs','Ano','Status']];
       document.querySelectorAll('#tbody-est-sep tr').forEach(tr => {
         const tds = tr.querySelectorAll('td');
-        if (tds.length > 1) rows.push([tds[0].textContent.trim(), tds[1].textContent.trim(), tds[2].textContent.trim(), tds[3].textContent.trim(), tds[4].textContent.trim()]);
+        if (tds.length > 1) rows.push([tds[0].textContent.trim(), tds[1].textContent.trim(), tds[2].textContent.trim(), tds[3].textContent.trim(), tds[4].textContent.trim(), tds[5].textContent.trim(), tds[6].textContent.trim()]);
       });
       nomeArq = `estatisticas_separadores_${hoje}`;
     } else if (tipo === 'stats-repositor') {
