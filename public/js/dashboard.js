@@ -1,4 +1,4 @@
-﻿
+
 /* FILTRO DE TURNO — SEPARADORES ATIVOS */
 async function filtrarSepsAtivos(turno) {
   // Atualiza visual dos botões
@@ -420,6 +420,15 @@ async function carregarOperacao() {
       }
     }
   } catch(e) { console.error(e); }
+}
+
+// Auto-refresh dashboard a cada 60s
+if (!window._dashInterval) {
+  window._dashInterval = setInterval(() => {
+    if (document.getElementById('pag-dashboard') && document.getElementById('pag-dashboard').classList.contains('ativa')) {
+      carregarDashboard();
+    }
+  }, 60000);
 }
 
 async function carregarDashboard() {
