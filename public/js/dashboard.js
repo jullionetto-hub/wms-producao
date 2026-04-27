@@ -987,10 +987,7 @@ async function exportarDashboardExcel() {
     const pedidos = await res.json();
     const wb = XLSX.utils.book_new();
     const rows = [['Nr Pedido','Cliente','Transportadora','Separador','Status','Itens','Data']];
-    pedidos.forEach(p => rows.push([
-      p.numero_pedido, p.cliente||'', p.transportadora||'',
-      p.separador_nome||'', p.status, p.itens||0, p.data_pedido||''
-    ]));
+    pedidos.forEach(p => rows.push([p.numero_pedido,p.cliente||'',p.transportadora||'',p.separador_nome||'',p.status,p.itens||0,p.data_pedido||'']));
     const ws = XLSX.utils.aoa_to_sheet(rows);
     ws['!cols'] = [{wch:12},{wch:25},{wch:15},{wch:25},{wch:12},{wch:8},{wch:12}];
     XLSX.utils.book_append_sheet(wb, ws, 'Pedidos');

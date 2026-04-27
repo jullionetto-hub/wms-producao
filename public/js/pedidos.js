@@ -47,12 +47,12 @@ async function carregarPedidos() {
     if (!ps.length) { tbody.innerHTML = '<tr><td colspan="7" style="color:var(--text3);text-align:center;padding:28px">Nenhum pedido</td></tr>'; return; }
     tbody.innerHTML = ps.map(p=>`<tr>
       <td style="font-weight:700;font-family:'Space Mono',monospace;font-size:12px"><span style="color:${String(p.transportadora||'').toUpperCase().includes('DRIVE')?'var(--red)':'var(--accent)'}">${p.numero_pedido}</span></td>
-      <td style="font-size:11px;color:var(--text2);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.cliente||''}">${p.cliente||'â€”'}</td>
-      <td style="font-size:11px;font-weight:700;color:${String(p.transportadora||'').toUpperCase().includes('DRIVE')?'var(--red)':'var(--indigo)'}">${p.transportadora||'â€”'}</td>
-      <td style="font-size:11px;color:var(--amber);font-weight:600;white-space:nowrap">${p.aguardando_desde||'â€”'}</td>
-      <td style="font-size:12px;color:var(--text2)">${p.separador_nome||'â€”'}</td>
+      <td style="font-size:11px;color:var(--text2);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.cliente||''}">${p.cliente||'''}</td>
+      <td style="font-size:11px;font-weight:700;color:${String(p.transportadora||'').toUpperCase().includes('DRIVE')?'var(--red)':'var(--indigo)'}">${p.transportadora||'''}</td>
+      <td style="font-size:11px;color:var(--amber);font-weight:600;white-space:nowrap">${p.aguardando_desde||'''}</td>
+      <td style="font-size:12px;color:var(--text2)">${p.separador_nome||'''}</td>
       <td><span class="pill ${(p.status||'').replace(' ','-')}">${p.status}</span></td>
-      <td style="font-weight:600;color:${(p.itens||0)>20?'var(--red)':(p.itens||0)>10?'var(--amber)':'var(--text)'}">${p.itens||'â€”'}</td>
+      <td style="font-weight:600;color:${(p.itens||0)>20?'var(--red)':(p.itens||0)>10?'var(--amber)':'var(--text)'}">${p.itens||'''}</td>
     </tr>`).join('');
   } catch(e) {}
 }
@@ -92,7 +92,7 @@ async function carregarUsuarios() {
       return;
     }
     const countEl = document.getElementById('usr-count');
-    if (countEl) countEl.textContent = `â€¢ ${users.length} usuario(s)`;
+    if (countEl) countEl.textContent = `• ${users.length} usuario(s)`;
     el.innerHTML = users.map(u => {
       const perfisExtra = (u.perfis_acesso || '').split(',').filter(Boolean).filter(p => p !== u.perfil);
       const todosAcessos = [u.perfil, ...perfisExtra];
@@ -112,7 +112,7 @@ async function carregarUsuarios() {
         <div class="usr-actions">
           <button class="usr-btn ${u.status==='ativo'?'toggle-on':'toggle-off'}" title="${u.status==='ativo'?'Desativar':'Ativar'}"
             onclick="alterarStatusUsuario(${u.id},'${u.status==='ativo'?'inativo':'ativo'}','${u.nome}','${u.login}','${u.perfil}','${u.turno||''}')">
-            ${u.status==='ativo'?'⏸':'|>'}
+            ${u.status==='ativo'?'⏸':'▶'}
           </button>
           <button class="usr-btn" style="background:#3b82f6;color:#fff;border:none;border-radius:6px;padding:5px 10px;cursor:pointer;font-size:12px;margin-right:4px" onclick="abrirEditarUsuario(${u.id})">Editar</button>
           <button class="usr-btn del" title="Excluir" onclick="excluirUsuario(${u.id},'${u.nome}')">🗑</button>
@@ -216,11 +216,11 @@ function processarArquivoFile(file) {
       if (!dados.length) { mostrarStatus('âŒ Nenhuma linha encontrada!','erro'); return; }
       pedidosImportar = dados;
       const totalP = new Set(dadosUsar.map(d=>d.numero_pedido)).size;
-      mostrarStatus(`âœ… ${dados.length} linha(s) em ${totalP} pedido(s) â€” clique Importar`,'sucesso');
+      mostrarStatus(`âœ… ${dados.length} linha(s) em ${totalP} pedido(s) ' clique Importar`,'sucesso');
       document.getElementById('tbody-prev').innerHTML =
         dados.slice(0,10).map(d=>`<tr><td>${d.numero_pedido}</td><td style="color:var(--accent)">${d.codigo}</td><td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.descricao}</td><td style="color:var(--amber)">${d.endereco}</td><td style="color:var(--green)">${d.quantidade}</td></tr>`).join('') +
         (dados.length>10?`<tr><td colspan="5" style="color:var(--text3);text-align:center;padding:8px">... +${dados.length-10} linhas</td></tr>`:'');
-      document.getElementById('txt-total-import').textContent = `${totalP} pedido(s) â€¢ ${dados.length} itens`;
+      document.getElementById('txt-total-import').textContent = `${totalP} pedido(s) • ${dados.length} itens`;
       document.getElementById('preview-importacao').style.display = 'block';
     } catch(err) { mostrarStatus(`âŒ ${err.message}`,'erro'); }
   };
@@ -238,7 +238,7 @@ function processarArquivoFile(file) {
 
 
 
-  // Agrupa por pedido antes de enviar â€” garante que todos os itens ficam juntos
+  // Agrupa por pedido antes de enviar ' garante que todos os itens ficam juntos
   const pedMapLocal = {};
   pedidosImportar.forEach(l => {
     const n = String(l.numero_pedido||'').trim();
@@ -352,8 +352,8 @@ async function carregarPedidosBloqueados() {
         <div>
           <div style="font-weight:700;color:var(--red);font-size:14px">â›” Pedido #${r.numero_pedido}</div>
           <div style="font-size:11px;color:var(--text3);margin-top:2px">
-            ðŸ‘¤ ${r.separador_nome||'â€”'} &nbsp;â€¢&nbsp; 
-            Itens bloqueados: <b style="color:var(--text)">${r.codigos_bloqueados||'â€”'}</b>
+            👤 ${r.separador_nome||'''} &nbsp;•&nbsp; 
+            Itens bloqueados: <b style="color:var(--text)">${r.codigos_bloqueados||'''}</b>
           </div>
         </div>
         <button class="btn btn-success btn-sm" onclick="desbloquearPedido(${r.id},'${r.numero_pedido}')">âœ… Liberar Pedido</button>
@@ -383,7 +383,7 @@ async function liberarCaixaDesktop(id) {
     const res = await fetch(`${API}/checkout/${id}/liberar`, { credentials:'include', method:'PUT' });
     const data = await res.json();
     if (data.erro) { toast(data.erro,'erro'); return; }
-    toast('ðŸ”“ Caixa liberada!','sucesso');
+    toast('🔓 Caixa liberada!','sucesso');
     carregarCheckoutLista();
   } catch(e) { toast('Erro!','erro'); }
 }
@@ -449,12 +449,12 @@ function exportarAvisosExcel() {
     // Collect from current avisos state via the carregarAvisos data
     const rows = [['Código','Descrição','Endereço','Pedido','Qtde','Status','Hora Aviso']];
     document.querySelectorAll('#lista-avisos .aviso-card').forEach(card => {
-      const cod    = card.querySelector('.aviso-cod')?.textContent?.trim().split('\n')[0]?.split(' ')[0] || 'â€”';
-      const pedido = card.querySelector('.aviso-cod span')?.textContent?.replace('Pedido #','').trim() || 'â€”';
-      const desc   = card.querySelector('.aviso-desc')?.textContent?.trim() || 'â€”';
+      const cod    = card.querySelector('.aviso-cod')?.textContent?.trim().split('\n')[0]?.split(' ')[0] || ''';
+      const pedido = card.querySelector('.aviso-cod span')?.textContent?.replace('Pedido #','').trim() || ''';
+      const desc   = card.querySelector('.aviso-desc')?.textContent?.trim() || ''';
       const det    = card.querySelector('.aviso-det')?.textContent?.trim() || '';
-      const cls    = [...card.classList].find(c => ['pendente','reposto','nao_encontrado','protocolo'].includes(c)) || 'â€”';
-      const hora   = card.querySelector('[style*="hora_aviso"], [style*="hora_reposto"]')?.textContent?.trim() || 'â€”';
+      const cls    = [...card.classList].find(c => ['pendente','reposto','nao_encontrado','protocolo'].includes(c)) || ''';
+      const hora   = card.querySelector('[style*="hora_aviso"], [style*="hora_reposto"]')?.textContent?.trim() || ''';
       rows.push([cod, desc, det, pedido, '', cls, hora]);
     });
     if (rows.length <= 1) { toast('Nenhum aviso para exportar!','aviso'); return; }
@@ -546,7 +546,7 @@ async function carregarFila() {
       : ordenadosFila.map(p => {
           return `<tr class="meu" onclick="selecionarPedidoFila('${p.numero_pedido}')" style="cursor:pointer">
             <td style="font-weight:700;color:var(--accent)">${p.numero_pedido}</td>
-            <td style="color:var(--green);font-weight:600">${p.itens||'â€”'}</td>
+            <td style="color:var(--green);font-weight:600">${p.itens||'''}</td>
             <td><span class="pill ${(p.status||'').replace(' ','-')}">${p.status}</span></td>
             <td><span class="pill separando">Meu</span></td>
           </tr>`;
@@ -628,7 +628,7 @@ async function carregarPedidosPendentesReposicao() {
         <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#FFF8F8;">
           <div>
             <span style="font-family:'Space Mono',monospace;font-size:14px;font-weight:500;color:#0F172A;">#${numPed}</span>
-            <span style="font-size:10px;color:#94A3B8;margin-left:8px;">desde ${tempoMaisAntigo||'â€”'}</span>
+            <span style="font-size:10px;color:#94A3B8;margin-left:8px;">desde ${tempoMaisAntigo||'''}</span>
           </div>
           <span style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;background:#FEF2F2;color:#B91C1C;border:1px solid #FECACA;">${itensAviso.length} item${itensAviso.length>1?'s':''}</span>
         </div>`;
@@ -638,11 +638,11 @@ async function carregarPedidosPendentesReposicao() {
           <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
             <div style="flex:1;min-width:0;">
               <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;">
-                <span style="font-family:'Space Mono',monospace;font-size:12px;font-weight:500;color:#0F172A;">${a.endereco||'â€”'}</span>
+                <span style="font-family:'Space Mono',monospace;font-size:12px;font-weight:500;color:#0F172A;">${a.endereco||'''}</span>
                 <span style="font-size:10px;font-weight:500;padding:1px 6px;border-radius:4px;background:#FEF2F2;color:#B91C1C;">aguardando</span>
               </div>
-              <div style="font-size:10px;color:#64748B;font-family:monospace;">${a.codigo||'â€”'}</div>
-              <div style="font-size:12px;color:#0F172A;line-height:1.3;margin-top:1px;">${a.descricao||'â€”'}</div>
+              <div style="font-size:10px;color:#64748B;font-family:monospace;">${a.codigo||'''}</div>
+              <div style="font-size:12px;color:#0F172A;line-height:1.3;margin-top:1px;">${a.descricao||'''}</div>
             </div>
             <div style="font-size:20px;font-weight:500;color:#0F172A;flex-shrink:0;">Ã—${a.quantidade||1}</div>
           </div>
@@ -795,7 +795,7 @@ function processarArquivoModalFile(file) {
                 }
               } catch(ex) { agVal = String(raw); }
             } else if (raw instanceof Date) {
-              // Date JS â€” usar horÃ¡rio local do browser
+              // Date JS ' usar horÃ¡rio local do browser
               agVal = `${pad(raw.getDate())}/${pad(raw.getMonth()+1)}/${raw.getFullYear()} ${pad(raw.getHours())}:${pad(raw.getMinutes())}`;
             } else {
               agVal = String(raw).trim();
@@ -825,11 +825,11 @@ function processarArquivoModalFile(file) {
       if (!dadosUsar.length) { mostrarStatusModal('âŒ Nenhuma linha encontrada!','erro'); return; }
       pedidosImportarModal = dadosUsar;
       const totalP = new Set(dadosUsar.map(d=>d.numero_pedido)).size;
-      mostrarStatusModal(`âœ… ${dados.length} linha(s) em ${totalP} pedido(s)${transpSheet?' â€” Transportadora OK':''}`, 'sucesso');
+      mostrarStatusModal(`âœ… ${dados.length} linha(s) em ${totalP} pedido(s)${transpSheet?' ' Transportadora OK':''}`, 'sucesso');
       document.getElementById('modal-tbody-prev').innerHTML =
         dadosUsar.slice(0,10).map(d=>`<tr><td>${d.numero_pedido}</td><td style="color:var(--accent)">${d.codigo}</td><td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.descricao}</td><td style="color:var(--amber)">${d.endereco}</td><td style="color:var(--green)">${d.quantidade}</td></tr>`).join('') +
         (dados.length>10?`<tr><td colspan="5" style="color:var(--text3);text-align:center;padding:8px">... +${dados.length-10} linhas</td></tr>`:'');
-      document.getElementById('modal-txt-total-import').textContent = `${totalP} pedido(s) â€¢ ${dados.length} itens${transpSheet?' â€¢ Transportadora OK':''}`;
+      document.getElementById('modal-txt-total-import').textContent = `${totalP} pedido(s) • ${dados.length} itens${transpSheet?' • Transportadora OK':''}`;
       document.getElementById('modal-preview-importacao').style.display = 'block';
     } catch(err) { mostrarStatusModal(`âŒ ${err.message}`,'erro'); }
   };
@@ -923,7 +923,7 @@ async function carregarPedidosDistribuicao() {
     let lista = apenasSemCheck ? pedidos.filter(p=>!p.separador_id) : pedidos;
     if (respHora) lista.sort((a,b)=>(a.aguardando_desde||a.hora_pedido||'').localeCompare(b.aguardando_desde||b.hora_pedido||''));
     if (qtdInput > 0) lista = lista.slice(0, qtdInput);
-    el.innerHTML = `<div style="font-size:11px;color:var(--text3);margin-bottom:8px">${lista.length} de ${pedidos.length} pedido(s) serÃ£o distribuÃ­dos</div><div class="tabela-wrap" style="max-height:240px;overflow-y:auto"><table><thead><tr><th>PEDIDO</th><th>CLIENTE</th><th>HORÃRIO</th><th>ITENS</th><th>PONTUAÃ‡ÃƒO</th><th>STATUS</th></tr></thead><tbody>${lista.map(p=>`<tr><td style="font-weight:700;color:var(--text);font-family:'Space Mono',monospace;font-size:11px">${p.numero_pedido}</td><td style="font-size:11px;color:var(--text2);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.cliente||'â€”'}</td><td style="font-size:11px;color:var(--amber);font-weight:600;white-space:nowrap">${(p.aguardando_desde||p.hora_pedido||'â€”').replace('15/04/2026 ','').replace('16/04/2026 ','')}</td><td style="font-weight:600">${p.itens||0}</td><td><span style="font-family:'Space Mono',monospace;color:var(--indigo);font-weight:700">${p.pontuacao||'â€”'}</span></td><td><span class="pill ${(p.status||'pendente')}">${p.status||'pendente'}</span></td></tr>`).join('')}</tbody></table></div>`;
+    el.innerHTML = `<div style="font-size:11px;color:var(--text3);margin-bottom:8px">${lista.length} de ${pedidos.length} pedido(s) serÃ£o distribuÃ­dos</div><div class="tabela-wrap" style="max-height:240px;overflow-y:auto"><table><thead><tr><th>PEDIDO</th><th>CLIENTE</th><th>HORÃRIO</th><th>ITENS</th><th>PONTUAÃ‡ÃƒO</th><th>STATUS</th></tr></thead><tbody>${lista.map(p=>`<tr><td style="font-weight:700;color:var(--text);font-family:'Space Mono',monospace;font-size:11px">${p.numero_pedido}</td><td style="font-size:11px;color:var(--text2);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.cliente||'''}</td><td style="font-size:11px;color:var(--amber);font-weight:600;white-space:nowrap">${(p.aguardando_desde||p.hora_pedido||''').replace('15/04/2026 ','').replace('16/04/2026 ','')}</td><td style="font-weight:600">${p.itens||0}</td><td><span style="font-family:'Space Mono',monospace;color:var(--indigo);font-weight:700">${p.pontuacao||'''}</span></td><td><span class="pill ${(p.status||'pendente')}">${p.status||'pendente'}</span></td></tr>`).join('')}</tbody></table></div>`;
   } catch(e) {}
 }
 async function calcularDistribuicao() {
@@ -941,7 +941,7 @@ async function calcularDistribuicao() {
     const resEl = document.getElementById('dist-resultado');
     resEl.style.display = 'block';
     let html = '<div style="font-size:11px;font-weight:700;color:var(--accent);letter-spacing:1px;margin-bottom:10px">RESULTADO DA DISTRIBUIÃ‡ÃƒO</div><div class="tabela-wrap"><table><thead><tr><th>SEPARADOR</th><th>PEDIDOS</th><th>PONTUAÃ‡ÃƒO</th><th>LISTA</th></tr></thead><tbody>';
-    data.plano.forEach(item => { html += `<tr><td style="font-weight:700;color:var(--text)">ðŸ‘¤ ${item.separador_nome}</td><td style="color:var(--green);font-weight:700">${item.pedidos.length}</td><td><span style="font-family:'Space Mono',monospace;color:var(--indigo)">${item.pontuacao_total}</span></td><td style="font-size:11px;color:var(--text3)">${item.pedidos.join(', ')}</td></tr>`; });
+    data.plano.forEach(item => { html += `<tr><td style="font-weight:700;color:var(--text)">👤 ${item.separador_nome}</td><td style="color:var(--green);font-weight:700">${item.pedidos.length}</td><td><span style="font-family:'Space Mono',monospace;color:var(--indigo)">${item.pontuacao_total}</span></td><td style="font-size:11px;color:var(--text3)">${item.pedidos.join(', ')}</td></tr>`; });
     html += `</tbody></table></div><div style="margin-top:8px;font-size:12px;color:var(--text3)">Total: ${data.total_pedidos} pedido(s) para ${seps.length} separador(es)</div>`;
     resEl.innerHTML = html;
     document.getElementById('btn-calcular-dist').style.display = 'none';
