@@ -38,7 +38,7 @@ async function carregarPedidos() {
     if (ini) ps = ps.filter(p => p.data_pedido >= ini);
     if (fim) ps = ps.filter(p => p.data_pedido <= fim);
 
-    // Filtra por usuÃ¡rio usando separador_nome (evita confusÃ£o entre usuario_id e separador_id)
+    // Filtra por usuario usando separador_nome (evita confusÃ£o entre usuario_id e separador_id)
     if (usrId) {
       // usrId agora Ã© o nome do separador diretamente
       ps = ps.filter(p => p.separador_nome === usrId);
@@ -64,7 +64,7 @@ async function atribuirSeparador(pid, sid) {
   if (!sid) return;
   try {
     await fetch(`${API}/pedidos/${pid}/separador`, { credentials:'include', method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({separador_id:sid}) });
-    toast('UsuÃ¡rio atribuÃ­do!', 'sucesso');
+    toast('Usuario atribuÃ­do!', 'sucesso');
   } catch(e) { toast('Erro ao atribuir!', 'erro'); }
 }
 
@@ -88,16 +88,16 @@ async function carregarUsuarios() {
     const el = document.getElementById('lista-usuarios');
     if (!el) return;
     if (!users.length) {
-      el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:24px;font-size:13px">Nenhum usuÃ¡rio cadastrado</div>';
+      el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:24px;font-size:13px">Nenhum usuario cadastrado</div>';
       return;
     }
     const countEl = document.getElementById('usr-count');
-    if (countEl) countEl.textContent = `â€¢ ${users.length} usuÃ¡rio(s)`;
+    if (countEl) countEl.textContent = `â€¢ ${users.length} usuario(s)`;
     el.innerHTML = users.map(u => {
       const perfisExtra = (u.perfis_acesso || '').split(',').filter(Boolean).filter(p => p !== u.perfil);
       const todosAcessos = [u.perfil, ...perfisExtra];
       const iniciais = u.nome.split(' ').slice(0,2).map(n=>n[0]).join('').toUpperCase();
-      const perfIcons = {supervisor:'👔',separador:'📦',repositor:'🔧',checkout:'🏷'};
+      const perfIcons = {supervisor:'ðŸ‘”',separador:'ðŸ“¦',repositor:'ðŸ”§',checkout:'ðŸ·ï¸'};
       return `<div class="usr-card ${u.status}">
         <div class="usr-avatar">${iniciais}</div>
         <div class="usr-info">
@@ -105,17 +105,17 @@ async function carregarUsuarios() {
           <div class="usr-login">@${u.login}</div>
           <div class="usr-pills">
             ${todosAcessos.map(p=>`<span class="usr-pill ${p}">${perfIcons[p]||''} ${p}</span>`).join('')}
-            <span class="usr-pill turno">⏰ ${u.turno||'—'}</span>
+            <span class="usr-pill turno">â° ${u.turno||'â€”'}</span>
             <span class="pill ${u.status}" style="font-size:9px;padding:2px 7px">${u.status}</span>
           </div>
         </div>
         <div class="usr-actions">
           <button class="usr-btn ${u.status==='ativo'?'toggle-on':'toggle-off'}" title="${u.status==='ativo'?'Desativar':'Ativar'}"
             onclick="alterarStatusUsuario(${u.id},'${u.status==='ativo'?'inativo':'ativo'}','${u.nome}','${u.login}','${u.perfil}','${u.turno||''}')">
-            ${u.status==='ativo'?'â¸':'â–¶'}
-            ${u.status==='ativo'?'⏸':'▶'}
+            ${u.status==='ativo'?'â¸':'|>'}
+          </button>
           <button class="usr-btn" style="background:#3b82f6;color:#fff;border:none;border-radius:6px;padding:5px 10px;cursor:pointer;font-size:12px;margin-right:4px" onclick="abrirEditarUsuario(${u.id})">Editar</button>
-          <button class="usr-btn del" title="Excluir" onclick="excluirUsuario(${u.id},'${u.nome}')">🗑</button>
+          <button class="usr-btn del" title="Excluir" onclick="excluirUsuario(${u.id},'${u.nome}')">ðŸ—‘</button>
         </div>
       </div>`;
     }).join('');
@@ -139,7 +139,7 @@ async function cadastrarUsuario() {
     const res = await fetch(`${API}/usuarios`, { credentials:'include', method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ nome, login, senha, perfil, subtipo_repositor, turno, perfis_acesso }) });
     const data = await res.json();
     if (!res.ok) { toast(data.erro || 'Erro ao cadastrar!','erro'); return; }
-    toast('UsuÃ¡rio cadastrado!','sucesso');
+    toast('Usuario cadastrado!','sucesso');
     document.getElementById('usr-nome').value = '';
     document.getElementById('usr-login').value = '';
     document.getElementById('usr-senha').value = '';
@@ -156,7 +156,7 @@ async function cadastrarUsuario() {
 async function alterarStatusUsuario(id, novoStatus, nome, login, perfil, turno) {
   try {
     await fetch(`${API}/usuarios/${id}`, { credentials:'include', method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({nome,login,perfil,turno:turno||'ManhÃ£',status:novoStatus}) });
-    toast(`UsuÃ¡rio ${novoStatus==='ativo'?'ativado':'desativado'}!`,'sucesso');
+    toast(`Usuario ${novoStatus==='ativo'?'ativado':'desativado'}!`,'sucesso');
     carregarUsuarios();
   } catch(e) { toast('Erro!','erro'); }
 }
@@ -392,7 +392,7 @@ function exportarExcel(tipo) {
   let nomeArq = 'exportacao';
   try {
     if (tipo === 'pedidos') {
-      rows = [['NÂº Pedido','UsuÃ¡rio','Status','Itens','Data','Hora']];
+      rows = [['NÂº Pedido','Usuario','Status','Itens','Data','Hora']];
       document.querySelectorAll('#tbody-ped tr').forEach(tr => {
         const tds = tr.querySelectorAll('td');
         if (tds.length > 1) rows.push([tds[0].textContent.trim(), tds[1].textContent.trim(), tds[2].textContent.trim(), tds[3].textContent.trim(), tds[4].textContent.trim(), tds[5].textContent.trim()]);
