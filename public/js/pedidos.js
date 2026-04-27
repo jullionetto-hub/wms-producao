@@ -1,4 +1,4 @@
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+﻿/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    PEDIDOS
 â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
@@ -47,12 +47,12 @@ async function carregarPedidos() {
     if (!ps.length) { tbody.innerHTML = '<tr><td colspan="7" style="color:var(--text3);text-align:center;padding:28px">Nenhum pedido</td></tr>'; return; }
     tbody.innerHTML = ps.map(p=>`<tr>
       <td style="font-weight:700;font-family:'Space Mono',monospace;font-size:12px"><span style="color:${String(p.transportadora||'').toUpperCase().includes('DRIVE')?'var(--red)':'var(--accent)'}">${p.numero_pedido}</span></td>
-      <td style="font-size:11px;color:var(--text2);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.cliente||''}">${p.cliente||'''}</td>
-      <td style="font-size:11px;font-weight:700;color:${String(p.transportadora||'').toUpperCase().includes('DRIVE')?'var(--red)':'var(--indigo)'}">${p.transportadora||'''}</td>
-      <td style="font-size:11px;color:var(--amber);font-weight:600;white-space:nowrap">${p.aguardando_desde||'''}</td>
-      <td style="font-size:12px;color:var(--text2)">${p.separador_nome||'''}</td>
+      <td style="font-size:11px;color:var(--text2);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.cliente||''}">${p.cliente||'-'}</td>
+      <td style="font-size:11px;font-weight:700;color:${String(p.transportadora||'').toUpperCase().includes('DRIVE')?'var(--red)':'var(--indigo)'}">${p.transportadora||'-'}</td>
+      <td style="font-size:11px;color:var(--amber);font-weight:600;white-space:nowrap">${p.aguardando_desde||'-'}</td>
+      <td style="font-size:12px;color:var(--text2)">${p.separador_nome||'-'}</td>
       <td><span class="pill ${(p.status||'').replace(' ','-')}">${p.status}</span></td>
-      <td style="font-weight:600;color:${(p.itens||0)>20?'var(--red)':(p.itens||0)>10?'var(--amber)':'var(--text)'}">${p.itens||'''}</td>
+      <td style="font-weight:600;color:${(p.itens||0)>20?'var(--red)':(p.itens||0)>10?'var(--amber)':'var(--text)'}">${p.itens||'-'}</td>
     </tr>`).join('');
   } catch(e) {}
 }
@@ -352,8 +352,8 @@ async function carregarPedidosBloqueados() {
         <div>
           <div style="font-weight:700;color:var(--red);font-size:14px">â›” Pedido #${r.numero_pedido}</div>
           <div style="font-size:11px;color:var(--text3);margin-top:2px">
-            👤 ${r.separador_nome||'''} &nbsp;•&nbsp; 
-            Itens bloqueados: <b style="color:var(--text)">${r.codigos_bloqueados||'''}</b>
+            👤 ${r.separador_nome||'-'} &nbsp;•&nbsp; 
+            Itens bloqueados: <b style="color:var(--text)">${r.codigos_bloqueados||'-'}</b>
           </div>
         </div>
         <button class="btn btn-success btn-sm" onclick="desbloquearPedido(${r.id},'${r.numero_pedido}')">âœ… Liberar Pedido</button>
@@ -546,7 +546,7 @@ async function carregarFila() {
       : ordenadosFila.map(p => {
           return `<tr class="meu" onclick="selecionarPedidoFila('${p.numero_pedido}')" style="cursor:pointer">
             <td style="font-weight:700;color:var(--accent)">${p.numero_pedido}</td>
-            <td style="color:var(--green);font-weight:600">${p.itens||'''}</td>
+            <td style="color:var(--green);font-weight:600">${p.itens||'-'}</td>
             <td><span class="pill ${(p.status||'').replace(' ','-')}">${p.status}</span></td>
             <td><span class="pill separando">Meu</span></td>
           </tr>`;
@@ -628,7 +628,7 @@ async function carregarPedidosPendentesReposicao() {
         <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#FFF8F8;">
           <div>
             <span style="font-family:'Space Mono',monospace;font-size:14px;font-weight:500;color:#0F172A;">#${numPed}</span>
-            <span style="font-size:10px;color:#94A3B8;margin-left:8px;">desde ${tempoMaisAntigo||'''}</span>
+            <span style="font-size:10px;color:#94A3B8;margin-left:8px;">desde ${tempoMaisAntigo||'-'}</span>
           </div>
           <span style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;background:#FEF2F2;color:#B91C1C;border:1px solid #FECACA;">${itensAviso.length} item${itensAviso.length>1?'s':''}</span>
         </div>`;
@@ -638,11 +638,11 @@ async function carregarPedidosPendentesReposicao() {
           <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
             <div style="flex:1;min-width:0;">
               <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;">
-                <span style="font-family:'Space Mono',monospace;font-size:12px;font-weight:500;color:#0F172A;">${a.endereco||'''}</span>
+                <span style="font-family:'Space Mono',monospace;font-size:12px;font-weight:500;color:#0F172A;">${a.endereco||'-'}</span>
                 <span style="font-size:10px;font-weight:500;padding:1px 6px;border-radius:4px;background:#FEF2F2;color:#B91C1C;">aguardando</span>
               </div>
-              <div style="font-size:10px;color:#64748B;font-family:monospace;">${a.codigo||'''}</div>
-              <div style="font-size:12px;color:#0F172A;line-height:1.3;margin-top:1px;">${a.descricao||'''}</div>
+              <div style="font-size:10px;color:#64748B;font-family:monospace;">${a.codigo||'-'}</div>
+              <div style="font-size:12px;color:#0F172A;line-height:1.3;margin-top:1px;">${a.descricao||'-'}</div>
             </div>
             <div style="font-size:20px;font-weight:500;color:#0F172A;flex-shrink:0;">Ã—${a.quantidade||1}</div>
           </div>
@@ -923,7 +923,7 @@ async function carregarPedidosDistribuicao() {
     let lista = apenasSemCheck ? pedidos.filter(p=>!p.separador_id) : pedidos;
     if (respHora) lista.sort((a,b)=>(a.aguardando_desde||a.hora_pedido||'').localeCompare(b.aguardando_desde||b.hora_pedido||''));
     if (qtdInput > 0) lista = lista.slice(0, qtdInput);
-    el.innerHTML = `<div style="font-size:11px;color:var(--text3);margin-bottom:8px">${lista.length} de ${pedidos.length} pedido(s) serÃ£o distribuÃ­dos</div><div class="tabela-wrap" style="max-height:240px;overflow-y:auto"><table><thead><tr><th>PEDIDO</th><th>CLIENTE</th><th>HORÃRIO</th><th>ITENS</th><th>PONTUAÃ‡ÃƒO</th><th>STATUS</th></tr></thead><tbody>${lista.map(p=>`<tr><td style="font-weight:700;color:var(--text);font-family:'Space Mono',monospace;font-size:11px">${p.numero_pedido}</td><td style="font-size:11px;color:var(--text2);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.cliente||'''}</td><td style="font-size:11px;color:var(--amber);font-weight:600;white-space:nowrap">${(p.aguardando_desde||p.hora_pedido||''').replace('15/04/2026 ','').replace('16/04/2026 ','')}</td><td style="font-weight:600">${p.itens||0}</td><td><span style="font-family:'Space Mono',monospace;color:var(--indigo);font-weight:700">${p.pontuacao||'''}</span></td><td><span class="pill ${(p.status||'pendente')}">${p.status||'pendente'}</span></td></tr>`).join('')}</tbody></table></div>`;
+    el.innerHTML = `<div style="font-size:11px;color:var(--text3);margin-bottom:8px">${lista.length} de ${pedidos.length} pedido(s) serÃ£o distribuÃ­dos</div><div class="tabela-wrap" style="max-height:240px;overflow-y:auto"><table><thead><tr><th>PEDIDO</th><th>CLIENTE</th><th>HORÃRIO</th><th>ITENS</th><th>PONTUAÃ‡ÃƒO</th><th>STATUS</th></tr></thead><tbody>${lista.map(p=>`<tr><td style="font-weight:700;color:var(--text);font-family:'Space Mono',monospace;font-size:11px">${p.numero_pedido}</td><td style="font-size:11px;color:var(--text2);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.cliente||'-'}</td><td style="font-size:11px;color:var(--amber);font-weight:600;white-space:nowrap">${(p.aguardando_desde||p.hora_pedido||'-').replace('15/04/2026 ','').replace('16/04/2026 ','')}</td><td style="font-weight:600">${p.itens||0}</td><td><span style="font-family:'Space Mono',monospace;color:var(--indigo);font-weight:700">${p.pontuacao||'-'}</span></td><td><span class="pill ${(p.status||'pendente')}">${p.status||'pendente'}</span></td></tr>`).join('')}</tbody></table></div>`;
   } catch(e) {}
 }
 async function calcularDistribuicao() {
