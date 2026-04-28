@@ -1,4 +1,4 @@
-/* ══════════════════════════════════════════
+﻿/* ══════════════════════════════════════════
    LOGIN
 ══════════════════════════════════════════ */
 let perfilSelecionado = '';
@@ -203,7 +203,6 @@ function montarSidebar() {
       <a class="mi" onclick="irPara('cadastros',this)"><span class="mi-ic">⚙️</span>Cadastros</a>
       <div class="mg">OPERAÇÃO</div>
       <a class="mi" onclick="irPara('separacao',this)"><span class="mi-ic">📦</span>Separação</a>
-      <a class="mi" onclick="irPara('estatisticas',this)"><span class="mi-ic">📈</span>Estatísticas</a>
       <a class="mi" onclick="irPara('reposicao',this)"><span class="mi-ic">🔧</span>Reposição <span class="mbadge" id="menu-badge-rep" style="display:none">0</span></a>
       <a class="mi" onclick="irPara('checkout',this)"><span class="mi-ic">🏷️</span>Checkout</a>`,
     separador: `
