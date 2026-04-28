@@ -214,7 +214,7 @@ async function _confirmarPedidoCore(num, inputId, statusId, clWrapId, fnChecklis
       caixaJaVinculada = true;
       mostrarCampoCaixa(true);
       ph.style.display = 'none';
-      if (clWrap) clWrap.style.display = 'block';
+      // REMOVIDO: nao abre checklist automaticamente quando caixa ja vinculada
       // Busca e exibe o número da caixa já vinculada
       try {
         const rCaixa = await fetch(`${API}/pedidos/info/${encodeURIComponent(num)}`, { credentials:'include' });
