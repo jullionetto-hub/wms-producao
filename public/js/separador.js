@@ -85,6 +85,7 @@ async function carregarFilaMobile() {
     lista.innerHTML = ordenadosMob.map(p => {
       const transp   = String(p.transportadora||'').toUpperCase();
       const isDrive  = transp.includes('DRIVE');
+      const isPrime  = p.tem_prime === true;
       const qtdFalta = pedidosComFalta[String(p.numero_pedido)] || 0;
       const temFalta = qtdFalta > 0;
 
@@ -103,6 +104,7 @@ async function carregarFilaMobile() {
               ${isDrive ? `<span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:4px;background:#FEF2F2;color:#DC2626;border:1px solid #FECACA">DRIVE THRU</span>` : ''}
             </div>
             <div style="font-size:11px;color:#64748B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:${temFalta?'5px':'0'}">${p.cliente||'—'}</div>
+            ${p.transportadora ? `<div style="font-size:10px;font-weight:600;color:#6366f1;margin-top:2px">${p.transportadora}</div>` : ""}
             ${temFalta ? `<div style="display:inline-flex;align-items:center;gap:5px;background:#FEF3C7;border:1px solid #FDE68A;border-radius:6px;padding:4px 9px;">
               <div style="width:6px;height:6px;border-radius:50%;background:#D97706;flex-shrink:0;"></div>
               <span style="font-size:11px;font-weight:500;color:#92400E;">${qtdFalta} item${qtdFalta>1?'s':''} aguardando repositor</span>

@@ -198,7 +198,7 @@ router.delete('/separadores/:id', requerAuth, requerPerfil('supervisor'), async 
 router.get('/pedidos', requerAuth, async (req,res) => {
   const {separador_id,status,data,data_ini,data_fim,numero_pedido}=req.query;
   try {
-    let q=`SELECT p.*,s.nome as separador_nome FROM pedidos p LEFT JOIN separadores s ON p.separador_id=s.id WHERE 1=1`;
+    let q=`SELECT p.*,s.nome as separador_nome,p.tem_prime FROM pedidos p LEFT JOIN separadores s ON p.separador_id=s.id WHERE 1=1`;
     const p=[];
     const add=(c,v)=>{p.push(v);q+=` AND ${c}$${p.length}`;};
     if (separador_id)  add('p.separador_id=',separador_id);
@@ -610,8 +610,8 @@ router.post('/pedidos/importar', requerAuth, requerPerfil('supervisor'), async (
     try {
       const ruasU=new Set(itens.map(i=>String(i.endereco||'').split(',')[0].trim().replace(/\d+/g,'').trim())).size;
       const pts=Math.round(itens.reduce((s,i)=>s+calcularPesoCorredor(i.endereco)*(parseInt(i.quantidade)||1),0)+ruasU*2);
-      const r=await pool.query(`INSERT INTO pedidos (numero_pedido,status,itens,rua,cliente,transportadora,aguardando_desde,pontuacao,data_pedido,hora_pedido) VALUES ($1,'pendente',$2,$3,$4,$5,$6,$7,$8,$9) ON CONFLICT(numero_pedido) DO NOTHING RETURNING id`,
-        [numero,itens.length,itens[0]?.endereco||'',itens[0]?.cliente||'',itens[0]?.transportadora||'',itens[0]?.aguardando_desde||'',pts,hoje,hora]);
+      const r=await pool.query(`INSERT INTO pedidos (numero_pedido,status,itens,rua,cliente,transportadora,aguardando_desde,pontuacao,data_pedido,hora_pedido,tem_prime) VALUES ($1,'pendente',$2,$3,$4,$5,$6,$7,$8,$9,$10) ON CONFLICT(numero_pedido) DO NOTHING RETURNING id`,
+        [numero,itens.length,itens[0]?.endereco||'',itens[0]?.cliente||'',itens[0]?.transportadora||'',itens[0]?.aguardando_desde||'',pts,hoje,hora,itens.some(i=>String(i.codigo||'').toUpperCase()==='PRIME')]);
       if (!r.rows[0]){ignorados++;continue;}
       const pid=r.rows[0].id;
       const client=await pool.connect();
