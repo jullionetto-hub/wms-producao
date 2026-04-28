@@ -1,6 +1,6 @@
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ══════════════════════════════════════════
    PEDIDOS
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+══════════════════════════════════════════ */
 
 function filtrarPedidosHoje() {
   const h = hojeLocal();
@@ -47,12 +47,12 @@ async function carregarPedidos() {
     if (!ps.length) { tbody.innerHTML = '<tr><td colspan="7" style="color:var(--text3);text-align:center;padding:28px">Nenhum pedido</td></tr>'; return; }
     tbody.innerHTML = ps.map(p=>`<tr>
       <td style="font-weight:700;font-family:'Space Mono',monospace;font-size:12px"><span style="color:${String(p.transportadora||'').toUpperCase().includes('DRIVE')?'var(--red)':'var(--accent)'}">${p.numero_pedido}</span></td>
-      <td style="font-size:11px;color:var(--text2);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.cliente||''}">${p.cliente||'-'}</td>
-      <td style="font-size:11px;font-weight:700;color:${String(p.transportadora||'').toUpperCase().includes('DRIVE')?'var(--red)':'var(--indigo)'}">${p.transportadora||'-'}</td>
-      <td style="font-size:11px;color:var(--amber);font-weight:600;white-space:nowrap">${p.aguardando_desde||'-'}</td>
-      <td style="font-size:12px;color:var(--text2)">${p.separador_nome||'-'}</td>
+      <td style="font-size:11px;color:var(--text2);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.cliente||''}">${p.cliente||'—'}</td>
+      <td style="font-size:11px;font-weight:700;color:${String(p.transportadora||'').toUpperCase().includes('DRIVE')?'var(--red)':'var(--indigo)'}">${p.transportadora||'—'}</td>
+      <td style="font-size:11px;color:var(--amber);font-weight:600;white-space:nowrap">${p.aguardando_desde||'—'}</td>
+      <td style="font-size:12px;color:var(--text2)">${p.separador_nome||'—'}</td>
       <td><span class="pill ${(p.status||'').replace(' ','-')}">${p.status}</span></td>
-      <td style="font-weight:600;color:${(p.itens||0)>20?'var(--red)':(p.itens||0)>10?'var(--amber)':'var(--text)'}">${p.itens||'-'}</td>
+      <td style="font-weight:600;color:${(p.itens||0)>20?'var(--red)':(p.itens||0)>10?'var(--amber)':'var(--text)'}">${p.itens||'—'}</td>
     </tr>`).join('');
   } catch(e) {}
 }
@@ -71,9 +71,9 @@ async function atribuirSeparador(pid, sid) {
 
 
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ══════════════════════════════════════════
    USUÁRIOS
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+══════════════════════════════════════════ */
 function coletarPerfisMarcados() {
   return Array.from(document.querySelectorAll('.usr-perm:checked')).map(el => el.value);
 }
@@ -92,12 +92,12 @@ async function carregarUsuarios() {
       return;
     }
     const countEl = document.getElementById('usr-count');
-    if (countEl) countEl.textContent = `• ${users.length} usuÃ¡rio(s)`;
+    if (countEl) countEl.textContent = `• ${users.length} usuário(s)`;
     el.innerHTML = users.map(u => {
       const perfisExtra = (u.perfis_acesso || '').split(',').filter(Boolean).filter(p => p !== u.perfil);
       const todosAcessos = [u.perfil, ...perfisExtra];
       const iniciais = u.nome.split(' ').slice(0,2).map(n=>n[0]).join('').toUpperCase();
-      const perfIcons = {supervisor:'👔',separador:'📦',repositor:'🔧',checkout:'🏷'};
+      const perfIcons = {supervisor:'👔',separador:'📦',repositor:'🔧',checkout:'🏷️'};
       return `<div class="usr-card ${u.status}">
         <div class="usr-avatar">${iniciais}</div>
         <div class="usr-info">
@@ -105,7 +105,7 @@ async function carregarUsuarios() {
           <div class="usr-login">@${u.login}</div>
           <div class="usr-pills">
             ${todosAcessos.map(p=>`<span class="usr-pill ${p}">${perfIcons[p]||''} ${p}</span>`).join('')}
-            <span class="usr-pill turno">⏰ ${u.turno||'-'}</span>
+            <span class="usr-pill turno">⏰ ${u.turno||'—'}</span>
             <span class="pill ${u.status}" style="font-size:9px;padding:2px 7px">${u.status}</span>
           </div>
         </div>
@@ -175,9 +175,9 @@ async function excluirUsuario(id, nome) {
 
 
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   IMPORTAÃ‡ÃƒO
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ══════════════════════════════════════════
+   IMPORTAÇÃO
+══════════════════════════════════════════ */
 function handleDrop(e) {
   e.preventDefault(); document.getElementById('upload-area').classList.remove('drag');
   const f = e.dataTransfer.files[0]; if (f) processarArquivoFile(f);
@@ -213,18 +213,18 @@ function processarArquivoFile(file) {
         if (!num) continue;
         dados.push({ numero_pedido:num, codigo:String(r[iCod]||'').trim(), descricao:String(r[iDesc]||'').trim(), quantidade:parseInt(r[iQtd])||1, endereco:String(r[iEnd]||'').trim() });
       }
-      if (!dados.length) { mostrarStatus('âŒ Nenhuma linha encontrada!','erro'); return; }
+      if (!dados.length) { mostrarStatus('❌ Nenhuma linha encontrada!','erro'); return; }
       pedidosImportar = dados;
       const totalP = new Set(dadosUsar.map(d=>d.numero_pedido)).size;
-      mostrarStatus(`âœ… ${dados.length} linha(s) em ${totalP} pedido(s) ' clique Importar`,'sucesso');
+      mostrarStatus(`✅ ${dados.length} linha(s) em ${totalP} pedido(s) — clique Importar`,'sucesso');
       document.getElementById('tbody-prev').innerHTML =
         dados.slice(0,10).map(d=>`<tr><td>${d.numero_pedido}</td><td style="color:var(--accent)">${d.codigo}</td><td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.descricao}</td><td style="color:var(--amber)">${d.endereco}</td><td style="color:var(--green)">${d.quantidade}</td></tr>`).join('') +
         (dados.length>10?`<tr><td colspan="5" style="color:var(--text3);text-align:center;padding:8px">... +${dados.length-10} linhas</td></tr>`:'');
       document.getElementById('txt-total-import').textContent = `${totalP} pedido(s) • ${dados.length} itens`;
       document.getElementById('preview-importacao').style.display = 'block';
-    } catch(err) { mostrarStatus(`âŒ ${err.message}`,'erro'); }
+    } catch(err) { mostrarStatus(`❌ ${err.message}`,'erro'); }
   };
-  reader.onerror = () => mostrarStatus('âŒ Erro ao abrir arquivo!','erro');
+  reader.onerror = () => mostrarStatus('❌ Erro ao abrir arquivo!','erro');
   reader.readAsArrayBuffer(file);
 }
 
@@ -238,7 +238,7 @@ function processarArquivoFile(file) {
 
 
 
-  // Agrupa por pedido antes de enviar ' garante que todos os itens ficam juntos
+  // Agrupa por pedido antes de enviar — garante que todos os itens ficam juntos
   const pedMapLocal = {};
   pedidosImportar.forEach(l => {
     const n = String(l.numero_pedido||'').trim();
@@ -270,7 +270,7 @@ function processarArquivoFile(file) {
         body: JSON.stringify({ linhas: linhasLote })
       });
       const data = await res.json();
-      if (data.erro) { mostrarStatus(`âŒ ${data.erro}`, 'erro'); return; }
+      if (data.erro) { mostrarStatus(`❌ ${data.erro}`, 'erro'); return; }
       totalImportados += data.importados || 0;
       totalIgnorados  += data.ignorados  || 0;
     }
@@ -287,13 +287,13 @@ function processarArquivoFile(file) {
     if (historicoImportacoes.length > 20) historicoImportacoes = historicoImportacoes.slice(0, 20);
     localStorage.setItem('historico_importacoes', JSON.stringify(historicoImportacoes));
     renderHistorico();
-    mostrarStatus(`âœ… ${totalImportados} pedido(s) importado(s)!${totalIgnorados > 0 ? ` âš ï¸ ${totalIgnorados} jÃ¡ existiam.` : ''}`, 'sucesso');
+    mostrarStatus(`✅ ${totalImportados} pedido(s) importado(s)!${totalIgnorados > 0 ? ` ⚠️ ${totalIgnorados} já existiam.` : ''}`, 'sucesso');
     document.getElementById('preview-importacao').style.display = 'none';
     pedidosImportar = [];
     document.getElementById('input-arquivo').value = '';
     toast(`${totalImportados} pedidos na fila!`, 'sucesso');
   } catch(e) {
-    mostrarStatus('âŒ Erro na importaÃ§Ã£o!', 'erro');
+    mostrarStatus('❌ Erro na importação!', 'erro');
   }
 }
 
@@ -305,7 +305,7 @@ function renderHistorico() {
   if (!historicoImportacoes.length) { el.innerHTML = '<div style="color:var(--text3);font-size:11px;text-align:center;padding:14px">Nenhuma importação</div>'; return; }
   el.innerHTML = historicoImportacoes.map(h=>`
     <div class="hist-item">
-      <div><div style="color:var(--green);font-weight:700">âœ… ${h.ok} pedido(s)</div>${h.erro>0?`<div style="color:var(--amber);font-size:10px">âš ï¸ ${h.erro} jÃ¡ existiam</div>`:''}</div>
+      <div><div style="color:var(--green);font-weight:700">✅ ${h.ok} pedido(s)</div>${h.erro>0?`<div style="color:var(--amber);font-size:10px">⚠️ ${h.erro} já existiam</div>`:''}</div>
       <div style="color:var(--text3);font-size:10px">${h.data} às ${h.hora}</div>
     </div>`).join('');
 }
@@ -332,9 +332,9 @@ function mostrarStatus(msg, tipo) {
 
 
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ══════════════════════════════════════════
    PEDIDOS BLOQUEADOS (supervisor)
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+══════════════════════════════════════════ */
 async function carregarPedidosBloqueados() {
   try {
     const res  = await fetch(`${API}/pedidos/bloqueados`, { credentials:'include' });
@@ -350,13 +350,13 @@ async function carregarPedidosBloqueados() {
     lista.innerHTML = rows.map(r => `
       <div style="display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border-bottom:1px solid #FECACA;flex-wrap:wrap;gap:8px">
         <div>
-          <div style="font-weight:700;color:var(--red);font-size:14px">â›” Pedido #${r.numero_pedido}</div>
+          <div style="font-weight:700;color:var(--red);font-size:14px">⛔ Pedido #${r.numero_pedido}</div>
           <div style="font-size:11px;color:var(--text3);margin-top:2px">
-            👤 ${r.separador_nome||'-'} &nbsp;•&nbsp; 
-            Itens bloqueados: <b style="color:var(--text)">${r.codigos_bloqueados||'-'}</b>
+            👤 ${r.separador_nome||'—'} &nbsp;•&nbsp; 
+            Itens bloqueados: <b style="color:var(--text)">${r.codigos_bloqueados||'—'}</b>
           </div>
         </div>
-        <button class="btn btn-success btn-sm" onclick="desbloquearPedido(${r.id},'${r.numero_pedido}')">âœ… Liberar Pedido</button>
+        <button class="btn btn-success btn-sm" onclick="desbloquearPedido(${r.id},'${r.numero_pedido}')">✅ Liberar Pedido</button>
       </div>`).join('');
   } catch(e) {}
 }
@@ -368,7 +368,7 @@ async function desbloquearPedido(id, num) {
   if (!confirm(`Liberar pedido #${num}? Ele será marcado como concluído.`)) return;
   try {
     await fetch(`${API}/pedidos/${id}/desbloquear`, { credentials:'include', method:'PUT' });
-    toast(`âœ… Pedido #${num} liberado!`,'sucesso');
+    toast(`✅ Pedido #${num} liberado!`,'sucesso');
     carregarPedidosBloqueados();
     carregarKPIs();
   } catch(e) { toast('Erro!','erro'); }
@@ -449,12 +449,12 @@ function exportarAvisosExcel() {
     // Collect from current avisos state via the carregarAvisos data
     const rows = [['Código','Descrição','Endereço','Pedido','Qtde','Status','Hora Aviso']];
     document.querySelectorAll('#lista-avisos .aviso-card').forEach(card => {
-      const cod    = card.querySelector('.aviso-cod')?.textContent?.trim().split('\n')[0]?.split(' ')[0] || '-';
-      const pedido = card.querySelector('.aviso-cod span')?.textContent?.replace('Pedido #','').trim() || '-';
-      const desc   = card.querySelector('.aviso-desc')?.textContent?.trim() || '-';
+      const cod    = card.querySelector('.aviso-cod')?.textContent?.trim().split('\n')[0]?.split(' ')[0] || '—';
+      const pedido = card.querySelector('.aviso-cod span')?.textContent?.replace('Pedido #','').trim() || '—';
+      const desc   = card.querySelector('.aviso-desc')?.textContent?.trim() || '—';
       const det    = card.querySelector('.aviso-det')?.textContent?.trim() || '';
-      const cls    = [...card.classList].find(c => ['pendente','reposto','nao_encontrado','protocolo'].includes(c)) || '-';
-      const hora   = card.querySelector('[style*="hora_aviso"], [style*="hora_reposto"]')?.textContent?.trim() || '-';
+      const cls    = [...card.classList].find(c => ['pendente','reposto','nao_encontrado','protocolo'].includes(c)) || '—';
+      const hora   = card.querySelector('[style*="hora_aviso"], [style*="hora_reposto"]')?.textContent?.trim() || '—';
       rows.push([cod, desc, det, pedido, '', cls, hora]);
     });
     if (rows.length <= 1) { toast('Nenhum aviso para exportar!','aviso'); return; }
@@ -462,7 +462,7 @@ function exportarAvisosExcel() {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Avisos');
     XLSX.writeFile(wb, `avisos_reposicao_${hoje}.xlsx`);
-    toast('âœ… Excel exportado!','sucesso');
+    toast('✅ Excel exportado!','sucesso');
   } catch(e) { toast('Erro ao exportar!','erro'); }
 }
 
@@ -546,7 +546,7 @@ async function carregarFila() {
       : ordenadosFila.map(p => {
           return `<tr class="meu" onclick="selecionarPedidoFila('${p.numero_pedido}')" style="cursor:pointer">
             <td style="font-weight:700;color:var(--accent)">${p.numero_pedido}</td>
-            <td style="color:var(--green);font-weight:600">${p.itens||'-'}</td>
+            <td style="color:var(--green);font-weight:600">${p.itens||'—'}</td>
             <td><span class="pill ${(p.status||'').replace(' ','-')}">${p.status}</span></td>
             <td><span class="pill separando">Meu</span></td>
           </tr>`;
@@ -573,9 +573,9 @@ function selecionarPedidoFila(num) {
 
 
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   PEDIDOS PENDENTES DE REPOSIÃ‡ÃƒO (separador)
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ══════════════════════════════════════════
+   PEDIDOS PENDENTES DE REPOSIÇÃO (separador)
+══════════════════════════════════════════ */
 async function carregarPedidosPendentesReposicao() {
   if (!separadorAtual) return;
   const el = document.getElementById('sep-pedidos-reposicao');
@@ -628,7 +628,7 @@ async function carregarPedidosPendentesReposicao() {
         <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#FFF8F8;">
           <div>
             <span style="font-family:'Space Mono',monospace;font-size:14px;font-weight:500;color:#0F172A;">#${numPed}</span>
-            <span style="font-size:10px;color:#94A3B8;margin-left:8px;">desde ${tempoMaisAntigo||'-'}</span>
+            <span style="font-size:10px;color:#94A3B8;margin-left:8px;">desde ${tempoMaisAntigo||'—'}</span>
           </div>
           <span style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;background:#FEF2F2;color:#B91C1C;border:1px solid #FECACA;">${itensAviso.length} item${itensAviso.length>1?'s':''}</span>
         </div>`;
@@ -638,13 +638,13 @@ async function carregarPedidosPendentesReposicao() {
           <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
             <div style="flex:1;min-width:0;">
               <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;">
-                <span style="font-family:'Space Mono',monospace;font-size:12px;font-weight:500;color:#0F172A;">${a.endereco||'-'}</span>
+                <span style="font-family:'Space Mono',monospace;font-size:12px;font-weight:500;color:#0F172A;">${a.endereco||'—'}</span>
                 <span style="font-size:10px;font-weight:500;padding:1px 6px;border-radius:4px;background:#FEF2F2;color:#B91C1C;">aguardando</span>
               </div>
-              <div style="font-size:10px;color:#64748B;font-family:monospace;">${a.codigo||'-'}</div>
-              <div style="font-size:12px;color:#0F172A;line-height:1.3;margin-top:1px;">${a.descricao||'-'}</div>
+              <div style="font-size:10px;color:#64748B;font-family:monospace;">${a.codigo||'—'}</div>
+              <div style="font-size:12px;color:#0F172A;line-height:1.3;margin-top:1px;">${a.descricao||'—'}</div>
             </div>
-            <div style="font-size:20px;font-weight:500;color:#0F172A;flex-shrink:0;">Ã—${a.quantidade||1}</div>
+            <div style="font-size:20px;font-weight:500;color:#0F172A;flex-shrink:0;">×${a.quantidade||1}</div>
           </div>
         </div>`;
       });
@@ -705,9 +705,9 @@ window.addEventListener('resize', () => {
 
 
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ══════════════════════════════════════════
    MODAL IMPORTAR (na tela de Pedidos)
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+══════════════════════════════════════════ */
 let pedidosImportarModal = [];
 
 function abrirModalImportar() {
@@ -778,7 +778,7 @@ function processarArquivoModalFile(file) {
             if (typeof raw === 'number') {
               // Serial Excel: parte inteira = dias desde 1899-12-30
               // parte decimal = fração do dia (0.5 = 12:00)
-              // Converte para ms: (serial - 25569) * 86400000 â†’ UTC
+              // Converte para ms: (serial - 25569) * 86400000 → UTC
               // Ajusta para horário de Brasília (UTC-3)
               try {
                 const d = XLSX.SSF.parse_date_code(raw, {date1904: false});
@@ -795,7 +795,7 @@ function processarArquivoModalFile(file) {
                 }
               } catch(ex) { agVal = String(raw); }
             } else if (raw instanceof Date) {
-              // Date JS ' usar horÃ¡rio local do browser
+              // Date JS — usar horário local do browser
               agVal = `${pad(raw.getDate())}/${pad(raw.getMonth()+1)}/${raw.getFullYear()} ${pad(raw.getHours())}:${pad(raw.getMinutes())}`;
             } else {
               agVal = String(raw).trim();
@@ -814,7 +814,7 @@ function processarArquivoModalFile(file) {
         const depois = new Set(dadosFiltrados.map(d=>d.numero_pedido)).size;
         const ignorados = antes - depois;
         if (ignorados > 0) {
-          mostrarStatusModal(`âš ï¸ ${ignorados} pedido(s) da aba Itens nÃ£o encontrados na aba Transportadora foram ignorados.`, 'aviso');
+          mostrarStatusModal(`⚠️ ${ignorados} pedido(s) da aba Itens não encontrados na aba Transportadora foram ignorados.`, 'aviso');
           setTimeout(() => mostrarStatusModal('', ''), 4000);
         }
       } else {
@@ -822,18 +822,18 @@ function processarArquivoModalFile(file) {
       }
       const dados_final = dadosFiltrados;
       const dadosUsar = (typeof dados_final !== 'undefined') ? dados_final : dados;
-      if (!dadosUsar.length) { mostrarStatusModal('âŒ Nenhuma linha encontrada!','erro'); return; }
+      if (!dadosUsar.length) { mostrarStatusModal('❌ Nenhuma linha encontrada!','erro'); return; }
       pedidosImportarModal = dadosUsar;
       const totalP = new Set(dadosUsar.map(d=>d.numero_pedido)).size;
-      mostrarStatusModal(`âœ… ${dados.length} linha(s) em ${totalP} pedido(s)${transpSheet?' ' Transportadora OK':''}`, 'sucesso');
+      mostrarStatusModal(`✅ ${dados.length} linha(s) em ${totalP} pedido(s)${transpSheet?' — Transportadora OK':''}`, 'sucesso');
       document.getElementById('modal-tbody-prev').innerHTML =
         dadosUsar.slice(0,10).map(d=>`<tr><td>${d.numero_pedido}</td><td style="color:var(--accent)">${d.codigo}</td><td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.descricao}</td><td style="color:var(--amber)">${d.endereco}</td><td style="color:var(--green)">${d.quantidade}</td></tr>`).join('') +
         (dados.length>10?`<tr><td colspan="5" style="color:var(--text3);text-align:center;padding:8px">... +${dados.length-10} linhas</td></tr>`:'');
       document.getElementById('modal-txt-total-import').textContent = `${totalP} pedido(s) • ${dados.length} itens${transpSheet?' • Transportadora OK':''}`;
       document.getElementById('modal-preview-importacao').style.display = 'block';
-    } catch(err) { mostrarStatusModal(`âŒ ${err.message}`,'erro'); }
+    } catch(err) { mostrarStatusModal(`❌ ${err.message}`,'erro'); }
   };
-  reader.onerror = () => mostrarStatusModal('âŒ Erro ao abrir arquivo!','erro');
+  reader.onerror = () => mostrarStatusModal('❌ Erro ao abrir arquivo!','erro');
   reader.readAsArrayBuffer(file);
 }
 async function confirmarImportacaoModal() {
@@ -851,7 +851,7 @@ async function confirmarImportacaoModal() {
       mostrarStatusModal(`⏳ Importando... ${Math.round(((i+loteNums.length)/numeros.length)*100)}%`, 'carregando');
       const res  = await fetch(`${API}/pedidos/importar`, { method:'POST', credentials:'include', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ linhas: linhasLote }) });
       const data = await res.json();
-      if (data.erro) { mostrarStatusModal(`âŒ ${data.erro}`, 'erro'); return; }
+      if (data.erro) { mostrarStatusModal(`❌ ${data.erro}`, 'erro'); return; }
       totalImportados += data.importados || 0;
       totalIgnorados  += data.ignorados  || 0;
     }
@@ -860,19 +860,19 @@ async function confirmarImportacaoModal() {
     if (historicoImportacoes.length > 20) historicoImportacoes = historicoImportacoes.slice(0,20);
     localStorage.setItem('historico_importacoes', JSON.stringify(historicoImportacoes));
     renderHistoricoModal();
-    mostrarStatusModal(`âœ… ${totalImportados} pedido(s) importado(s)!${totalIgnorados>0?` âš ï¸ ${totalIgnorados} jÃ¡ existiam.`:''}`, 'sucesso');
+    mostrarStatusModal(`✅ ${totalImportados} pedido(s) importado(s)!${totalIgnorados>0?` ⚠️ ${totalIgnorados} já existiam.`:''}`, 'sucesso');
     document.getElementById('modal-preview-importacao').style.display = 'none';
     pedidosImportarModal = [];
     document.getElementById('modal-input-arquivo').value = '';
     toast(`${totalImportados} pedidos na fila!`, 'sucesso');
     carregarPedidos();
-  } catch(e) { mostrarStatusModal('âŒ Erro na importaÃ§Ã£o!', 'erro'); }
+  } catch(e) { mostrarStatusModal('❌ Erro na importação!', 'erro'); }
 }
 function renderHistoricoModal() {
   const el = document.getElementById('modal-hist-importacoes');
   if (!el) return;
   if (!historicoImportacoes.length) { el.innerHTML = '<div style="color:var(--text3);font-size:11px;text-align:center;padding:14px">Nenhuma importação</div>'; return; }
-  el.innerHTML = historicoImportacoes.map(h=>`<div class="hist-item"><div><div style="color:var(--green);font-weight:700">âœ… ${h.ok} pedido(s)</div>${h.erro>0?`<div style="color:var(--amber);font-size:10px">âš ï¸ ${h.erro} jÃ¡ existiam</div>`:''}</div><div style="color:var(--text3);font-size:10px">${h.data} Ã s ${h.hora}</div></div>`).join('');
+  el.innerHTML = historicoImportacoes.map(h=>`<div class="hist-item"><div><div style="color:var(--green);font-weight:700">✅ ${h.ok} pedido(s)</div>${h.erro>0?`<div style="color:var(--amber);font-size:10px">⚠️ ${h.erro} já existiam</div>`:''}</div><div style="color:var(--text3);font-size:10px">${h.data} às ${h.hora}</div></div>`).join('');
 }
 function mostrarStatusModal(msg, tipo) {
   const cores = { carregando:'background:#EFF6FF;border:1px solid #BFDBFE;color:#1D4ED8', sucesso:'background:#F0FDF4;border:1px solid #BBF7D0;color:#15803D', erro:'background:#FEF2F2;border:1px solid #FECACA;color:#DC2626', aviso:'background:#FFFBEB;border:1px solid #FDE68A;color:#D97706' };
@@ -883,9 +883,9 @@ function mostrarStatusModal(msg, tipo) {
   el.textContent = msg;
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   MODAL DISTRIBUIÃ‡ÃƒO JUSTA
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ══════════════════════════════════════════
+   MODAL DISTRIBUIÇÃO JUSTA
+══════════════════════════════════════════ */
 let distribuicaoPlano = null;
 
 async function abrirModalDistribuicao() {
@@ -923,7 +923,7 @@ async function carregarPedidosDistribuicao() {
     let lista = apenasSemCheck ? pedidos.filter(p=>!p.separador_id) : pedidos;
     if (respHora) lista.sort((a,b)=>(a.aguardando_desde||a.hora_pedido||'').localeCompare(b.aguardando_desde||b.hora_pedido||''));
     if (qtdInput > 0) lista = lista.slice(0, qtdInput);
-    el.innerHTML = `<div style="font-size:11px;color:var(--text3);margin-bottom:8px">${lista.length} de ${pedidos.length} pedido(s) serÃ£o distribuÃ­dos</div><div class="tabela-wrap" style="max-height:240px;overflow-y:auto"><table><thead><tr><th>PEDIDO</th><th>CLIENTE</th><th>HORÃRIO</th><th>ITENS</th><th>PONTUAÃ‡ÃƒO</th><th>STATUS</th></tr></thead><tbody>${lista.map(p=>`<tr><td style="font-weight:700;color:var(--text);font-family:'Space Mono',monospace;font-size:11px">${p.numero_pedido}</td><td style="font-size:11px;color:var(--text2);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.cliente||'-'}</td><td style="font-size:11px;color:var(--amber);font-weight:600;white-space:nowrap">${(p.aguardando_desde||p.hora_pedido||'-').replace('15/04/2026 ','').replace('16/04/2026 ','')}</td><td style="font-weight:600">${p.itens||0}</td><td><span style="font-family:'Space Mono',monospace;color:var(--indigo);font-weight:700">${p.pontuacao||'-'}</span></td><td><span class="pill ${(p.status||'pendente')}">${p.status||'pendente'}</span></td></tr>`).join('')}</tbody></table></div>`;
+    el.innerHTML = `<div style="font-size:11px;color:var(--text3);margin-bottom:8px">${lista.length} de ${pedidos.length} pedido(s) serão distribuídos</div><div class="tabela-wrap" style="max-height:240px;overflow-y:auto"><table><thead><tr><th>PEDIDO</th><th>CLIENTE</th><th>HORÁRIO</th><th>ITENS</th><th>PONTUAÇÃO</th><th>STATUS</th></tr></thead><tbody>${lista.map(p=>`<tr><td style="font-weight:700;color:var(--text);font-family:'Space Mono',monospace;font-size:11px">${p.numero_pedido}</td><td style="font-size:11px;color:var(--text2);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.cliente||'—'}</td><td style="font-size:11px;color:var(--amber);font-weight:600;white-space:nowrap">${(p.aguardando_desde||p.hora_pedido||'—').replace('15/04/2026 ','').replace('16/04/2026 ','')}</td><td style="font-weight:600">${p.itens||0}</td><td><span style="font-family:'Space Mono',monospace;color:var(--indigo);font-weight:700">${p.pontuacao||'—'}</span></td><td><span class="pill ${(p.status||'pendente')}">${p.status||'pendente'}</span></td></tr>`).join('')}</tbody></table></div>`;
   } catch(e) {}
 }
 async function calcularDistribuicao() {
@@ -940,7 +940,7 @@ async function calcularDistribuicao() {
     distribuicaoPlano = data.plano;
     const resEl = document.getElementById('dist-resultado');
     resEl.style.display = 'block';
-    let html = '<div style="font-size:11px;font-weight:700;color:var(--accent);letter-spacing:1px;margin-bottom:10px">RESULTADO DA DISTRIBUIÃ‡ÃƒO</div><div class="tabela-wrap"><table><thead><tr><th>SEPARADOR</th><th>PEDIDOS</th><th>PONTUAÃ‡ÃƒO</th><th>LISTA</th></tr></thead><tbody>';
+    let html = '<div style="font-size:11px;font-weight:700;color:var(--accent);letter-spacing:1px;margin-bottom:10px">RESULTADO DA DISTRIBUIÇÃO</div><div class="tabela-wrap"><table><thead><tr><th>SEPARADOR</th><th>PEDIDOS</th><th>PONTUAÇÃO</th><th>LISTA</th></tr></thead><tbody>';
     data.plano.forEach(item => { html += `<tr><td style="font-weight:700;color:var(--text)">👤 ${item.separador_nome}</td><td style="color:var(--green);font-weight:700">${item.pedidos.length}</td><td><span style="font-family:'Space Mono',monospace;color:var(--indigo)">${item.pontuacao_total}</span></td><td style="font-size:11px;color:var(--text3)">${item.pedidos.join(', ')}</td></tr>`; });
     html += `</tbody></table></div><div style="margin-top:8px;font-size:12px;color:var(--text3)">Total: ${data.total_pedidos} pedido(s) para ${seps.length} separador(es)</div>`;
     resEl.innerHTML = html;
@@ -954,7 +954,7 @@ async function confirmarDistribuicao() {
     const res = await fetch(`${API}/pedidos/distribuicao/confirmar`, { credentials:'include', method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ plano:distribuicaoPlano }) });
     const data = await res.json();
     if (data.erro) { toast(data.erro, 'erro'); return; }
-    toast(`âœ… ${data.distribuidos} pedidos distribuÃ­dos!`, 'sucesso');
+    toast(`✅ ${data.distribuidos} pedidos distribuídos!`, 'sucesso');
     fecharModalDistribuicao();
     carregarPedidos();
   } catch(e) { toast('Erro ao confirmar distribuição!', 'erro'); }
