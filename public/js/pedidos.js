@@ -449,12 +449,12 @@ function exportarAvisosExcel() {
     // Collect from current avisos state via the carregarAvisos data
     const rows = [['Código','Descrição','Endereço','Pedido','Qtde','Status','Hora Aviso']];
     document.querySelectorAll('#lista-avisos .aviso-card').forEach(card => {
-      const cod    = card.querySelector('.aviso-cod')?.textContent?.trim().split('\n')[0]?.split(' ')[0] || ''';
-      const pedido = card.querySelector('.aviso-cod span')?.textContent?.replace('Pedido #','').trim() || ''';
-      const desc   = card.querySelector('.aviso-desc')?.textContent?.trim() || ''';
+      const cod    = card.querySelector('.aviso-cod')?.textContent?.trim().split('\n')[0]?.split(' ')[0] || '-';
+      const pedido = card.querySelector('.aviso-cod span')?.textContent?.replace('Pedido #','').trim() || '-';
+      const desc   = card.querySelector('.aviso-desc')?.textContent?.trim() || '-';
       const det    = card.querySelector('.aviso-det')?.textContent?.trim() || '';
-      const cls    = [...card.classList].find(c => ['pendente','reposto','nao_encontrado','protocolo'].includes(c)) || ''';
-      const hora   = card.querySelector('[style*="hora_aviso"], [style*="hora_reposto"]')?.textContent?.trim() || ''';
+      const cls    = [...card.classList].find(c => ['pendente','reposto','nao_encontrado','protocolo'].includes(c)) || '-';
+      const hora   = card.querySelector('[style*="hora_aviso"], [style*="hora_reposto"]')?.textContent?.trim() || '-';
       rows.push([cod, desc, det, pedido, '', cls, hora]);
     });
     if (rows.length <= 1) { toast('Nenhum aviso para exportar!','aviso'); return; }
