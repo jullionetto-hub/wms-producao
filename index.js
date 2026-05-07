@@ -7,6 +7,7 @@ const { pool, db } = require('./lib/db');
 const { requerAuth } = require('./lib/auth');
 const { hashSenha, perfisPermitidos, dataHoraLocal } = require('./lib/helpers');
 const apiRouter  = require('./routes/api');
+const helmet     = require('helmet');
 
 const app    = express();
 const PORT   = process.env.PORT || 3000;
@@ -24,6 +25,12 @@ app.set('trust proxy', 1);
 
 // ── CORS ──────────────────────────────────────────────────────────────────────
 const ORIGENS_PERMITIDAS = (process.env.ALLOWED_ORIGINS || '').split(',').map(o=>o.trim()).filter(Boolean);
+// ── Helmet (security headers) ───────────────────────────────────────────────
+app.use(helmet({
+  contentSecurityPolicy: false, // desabilitado para nao quebrar scripts inline
+  crossOriginEmbedderPolicy: false,
+}));
+
 app.use(cors({
   credentials: true,
   origin: (origin, cb) => {
@@ -43,6 +50,24 @@ app.use((req, res, next) => {
 });
 
 // ── Body parsers ──────────────────────────────────────────────────────────────
+// ── Rate limiting simples (sem dependencia extra) ───────────────────────────
+const _loginAttempts = new Map();
+function checkLoginRateLimit(ip) {
+  const now = Date.now();
+  const key = ip;
+  const entry = _loginAttempts.get(key) || { count: 0, first: now };
+  if (now - entry.first > 15 * 60 * 1000) {
+    _loginAttempts.set(key, { count: 1, first: now });
+    return true;
+  }
+  if (entry.count >= 10) return false;
+  entry.count++;
+  _loginAttempts.set(key, entry);
+  return true;
+}
+// Limpa map a cada hora
+setInterval(() => _loginAttempts.clear(), 60 * 60 * 1000);
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
@@ -59,13 +84,14 @@ app.use(session({
   saveUninitialized: false,
   rolling: true,
   name: 'wms.sid',
-  cookie: { maxAge: 8*60*60*1000, httpOnly: true, secure: false, sameSite: 'lax' }
+  cookie: { maxAge: 8*60*60*1000, httpOnly: true, secure: isProd, sameSite: 'lax' }
 }));
 
 // ── Rota principal ────────────────────────────────────────────────────────────
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
 // ── Rotas da API ──────────────────────────────────────────────────────────────
+app.locals.checkLoginRateLimit = checkLoginRateLimit;
 app.use('/', apiRouter);
 
 // ── Handler 404 e 500 ────────────────────────────────────────────────────────

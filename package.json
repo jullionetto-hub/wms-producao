@@ -8,21 +8,26 @@
     "dev": "nodemon index.js",
     "test": "jest --forceExit --detectOpenHandles --passWithNoTests"
   },
-  "engines": { "node": ">=18.0.0" },
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "dependencies": {
     "connect-pg-simple": "^9.0.1",
     "cors": "^2.8.5",
     "express": "^4.18.2",
     "express-session": "^1.17.3",
+    "helmet": "^8.0.0",
     "pg": "^8.11.3"
   },
   "devDependencies": {
     "jest": "^29.7.0",
-    "supertest": "^6.3.4",
-    "nodemon": "^3.0.2"
+    "nodemon": "^3.0.2",
+    "supertest": "^6.3.4"
   },
   "jest": {
     "testEnvironment": "node",
-    "testMatch": ["**/tests/**/*.test.js"]
+    "testMatch": [
+      "**/tests/**/*.test.js"
+    ]
   }
 }
