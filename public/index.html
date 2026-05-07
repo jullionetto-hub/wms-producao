@@ -719,257 +719,258 @@
             </div>
           </div>
 
-        <!-- DIARIO DE BORDO -->
-        <div class="pagina" id="pag-diario">
-          <div class="pg-title">📋 Diário de Bordo</div>
-          <div style="display:grid;grid-template-columns:1fr 300px;gap:16px;align-items:start">
-            <div>
-              <!-- Filtros -->
-              <div class="card" style="margin-bottom:12px">
-                <div class="card-hd">TURNO
-                  <div style="display:flex;gap:8px;margin-left:auto;align-items:center">
-                    <input type="date" id="diario-data" onchange="iniciarDiario()" style="border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;background:var(--surface2);color:var(--text)">
-                    <select id="diario-turno" onchange="iniciarDiario()" style="border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;background:var(--surface2);color:var(--text)">
-                      <option value="Manha">☀️ Manhã</option>
-                      <option value="Tarde">🌅 Tarde</option>
-                      <option value="Noite">🌙 Noite</option>
-                    </select>
-                    <button onclick="carregarDadosDiario()" class="btn btn-primary btn-sm">🔄 Atualizar dados</button>
-                  </div>
-                </div>
-              </div>
+      </div>
 
-              <!-- Aviso turno anterior -->
-              <div id="diario-aviso-anterior"></div>
-
-              <!-- Separação -->
-              <div class="card" style="margin-bottom:12px">
-                <div class="card-hd">📦 SEPARAÇÃO</div>
-                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:12px 0">
-                  <div style="text-align:center;background:var(--surface2);border-radius:8px;padding:10px">
-                    <div style="font-size:22px;font-weight:800;color:var(--text)" id="diario-sep-total">0</div>
-                    <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px">Total</div>
-                  </div>
-                  <div style="text-align:center;background:#f0fdf4;border-radius:8px;padding:10px">
-                    <div style="font-size:22px;font-weight:800;color:#16a34a" id="diario-sep-conc">0</div>
-                    <div style="font-size:9px;color:#16a34a;text-transform:uppercase;letter-spacing:1px">Concluídos</div>
-                  </div>
-                  <div style="text-align:center;background:#eff6ff;border-radius:8px;padding:10px">
-                    <div style="font-size:22px;font-weight:800;color:#2563eb" id="diario-sep-sep">0</div>
-                    <div style="font-size:9px;color:#2563eb;text-transform:uppercase;letter-spacing:1px">Separando</div>
-                  </div>
-                  <div style="text-align:center;background:#fefce8;border-radius:8px;padding:10px">
-                    <div style="font-size:22px;font-weight:800;color:#ca8a04" id="diario-sep-pend">0</div>
-                    <div style="font-size:9px;color:#ca8a04;text-transform:uppercase;letter-spacing:1px">Pendentes</div>
-                  </div>
-                </div>
-                <div style="margin-top:8px">
-                  <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:4px">Observações da separação:</div>
-                  <textarea id="diario-obs-sep" placeholder="Ocorrências na separação..." style="width:100%;min-height:70px;border:1px solid var(--border);border-radius:8px;padding:8px;font-size:12px;font-family:inherit;background:var(--surface2);color:var(--text);resize:vertical;box-sizing:border-box"></textarea>
-                </div>
-              </div>
-
-              <!-- Checkout -->
-              <div class="card" style="margin-bottom:12px">
-                <div class="card-hd">🏷️ CHECKOUT</div>
-                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:12px 0">
-                  <div style="text-align:center;background:var(--surface2);border-radius:8px;padding:10px">
-                    <div style="font-size:22px;font-weight:800;color:var(--text)" id="diario-ck-total">0</div>
-                    <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px">Total</div>
-                  </div>
-                  <div style="text-align:center;background:#f0fdf4;border-radius:8px;padding:10px">
-                    <div style="font-size:22px;font-weight:800;color:#16a34a" id="diario-ck-conc">0</div>
-                    <div style="font-size:9px;color:#16a34a;text-transform:uppercase;letter-spacing:1px">Concluídos</div>
-                  </div>
-                  <div style="text-align:center;background:#fefce8;border-radius:8px;padding:10px">
-                    <div style="font-size:22px;font-weight:800;color:#ca8a04" id="diario-ck-pend">0</div>
-                    <div style="font-size:9px;color:#ca8a04;text-transform:uppercase;letter-spacing:1px">Pendentes</div>
-                  </div>
-                </div>
-                <div style="margin-top:8px">
-                  <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:4px">Observações do checkout:</div>
-                  <textarea id="diario-obs-ck" placeholder="Ocorrências no checkout..." style="width:100%;min-height:70px;border:1px solid var(--border);border-radius:8px;padding:8px;font-size:12px;font-family:inherit;background:var(--surface2);color:var(--text);resize:vertical;box-sizing:border-box"></textarea>
-                </div>
-              </div>
-
-              <!-- Reposição -->
-              <div class="card" style="margin-bottom:12px">
-                <div class="card-hd">🔧 REPOSIÇÃO</div>
-                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:12px 0">
-                  <div style="text-align:center;background:var(--surface2);border-radius:8px;padding:10px">
-                    <div style="font-size:22px;font-weight:800;color:var(--text)" id="diario-rep-total">0</div>
-                    <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px">Total</div>
-                  </div>
-                  <div style="text-align:center;background:#f0fdf4;border-radius:8px;padding:10px">
-                    <div style="font-size:22px;font-weight:800;color:#16a34a" id="diario-rep-res">0</div>
-                    <div style="font-size:9px;color:#16a34a;text-transform:uppercase;letter-spacing:1px">Resolvidas</div>
-                  </div>
-                  <div style="text-align:center;background:#fefce8;border-radius:8px;padding:10px">
-                    <div style="font-size:22px;font-weight:800;color:#ca8a04" id="diario-rep-pend">0</div>
-                    <div style="font-size:9px;color:#ca8a04;text-transform:uppercase;letter-spacing:1px">Pendentes</div>
-                  </div>
-                  <div style="text-align:center;background:#fef2f2;border-radius:8px;padding:10px">
-                    <div style="font-size:22px;font-weight:800;color:#dc2626" id="diario-rep-nao">0</div>
-                    <div style="font-size:9px;color:#dc2626;text-transform:uppercase;letter-spacing:1px">Não encontr.</div>
-                  </div>
-                </div>
-                <div style="margin-top:8px">
-                  <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:4px">Observações da reposição:</div>
-                  <textarea id="diario-obs-rep" placeholder="Ocorrências na reposição..." style="width:100%;min-height:70px;border:1px solid var(--border);border-radius:8px;padding:8px;font-size:12px;font-family:inherit;background:var(--surface2);color:var(--text);resize:vertical;box-sizing:border-box"></textarea>
-                </div>
-              </div>
-
-              <!-- Pedidos com problema -->
-              <div class="card" style="margin-bottom:12px">
-                <div class="card-hd">⚠️ PEDIDOS COM PROBLEMA</div>
-                <div class="tabela-wrap" style="margin-top:8px">
-                  <table><thead><tr><th>Nº Pedido</th><th>Cliente</th><th>Item não encontrado</th></tr></thead>
-                  <tbody id="tbody-diario-prob"><tr><td colspan="3" style="text-align:center;color:var(--text3);padding:16px">Carregando...</td></tr></tbody>
-                  </table>
-                </div>
-              </div>
-
-              <!-- Observações gerais -->
-              <div class="card" style="margin-bottom:12px">
-                <div class="card-hd">📝 OBSERVAÇÕES GERAIS DO TURNO</div>
-                <textarea id="diario-obs-geral" placeholder="Registre ocorrências gerais, problemas de equipamento, funcionários ausentes, intercorrências..." style="width:100%;min-height:100px;border:1px solid var(--border);border-radius:8px;padding:10px;font-size:13px;font-family:inherit;background:var(--surface2);color:var(--text);resize:vertical;margin-top:8px;box-sizing:border-box"></textarea>
-              </div>
-
-              <button onclick="salvarDiario()" style="width:100%;padding:14px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer">
-                💾 Salvar Diário do Turno
-              </button>
-            </div>
-
-            <!-- Histórico lateral -->
-            <div class="card" style="position:sticky;top:80px">
-              <div class="card-hd">📚 HISTÓRICO</div>
-              <div id="lista-diarios" style="margin-top:8px">
-                <div style="color:var(--text3);font-size:13px">Carregando...</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-
-        <!-- EMBALAGEM -->
-        <div class="pagina" id="pag-embalagem">
-          <div class="pg-title">📫 Embalagem
-            <div style="display:flex;gap:8px;margin-left:auto;align-items:center">
-              <input type="date" id="emb-data" onchange="carregarEmbalagem()" style="border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;background:var(--surface2);color:var(--text)">
-              <select id="emb-status" onchange="carregarEmbalagem()" style="border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;background:var(--surface2);color:var(--text)">
-                <option value="">Todos</option>
-                <option value="pendente">Pendentes</option>
-                <option value="embalado">Embalados</option>
-              </select>
-              <button onclick="carregarEmbalagem()" class="btn btn-primary btn-sm">🔄 Atualizar</button>
-              <button onclick="exportarEmbalagemExcel()" class="btn btn-success btn-sm">📊 Excel</button>
-            </div>
-          </div>
+      <!-- DIARIO DE BORDO -->
+      <div class="pagina" id="pag-diario">
+        <div class="pg-title">📋 Diário de Bordo</div>
+        <div style="display:grid;grid-template-columns:1fr 300px;gap:16px;align-items:start">
+        <div>
+          <!-- Filtros -->
           <div class="card" style="margin-bottom:12px">
-            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
-              <div style="text-align:center;background:var(--surface2);border-radius:8px;padding:12px">
-                <div style="font-size:28px;font-weight:800;color:var(--text)" id="emb-total">0</div>
-                <div style="font-size:10px;color:var(--text3);text-transform:uppercase">Total</div>
-              </div>
-              <div style="text-align:center;background:#fefce8;border-radius:8px;padding:12px">
-                <div style="font-size:28px;font-weight:800;color:#ca8a04" id="emb-pendentes">0</div>
-                <div style="font-size:10px;color:#ca8a04;text-transform:uppercase">Pendentes</div>
-              </div>
-              <div style="text-align:center;background:#f0fdf4;border-radius:8px;padding:12px">
-                <div style="font-size:28px;font-weight:800;color:#16a34a" id="emb-embalados">0</div>
-                <div style="font-size:10px;color:#16a34a;text-transform:uppercase">Embalados</div>
+            <div class="card-hd">TURNO
+              <div style="display:flex;gap:8px;margin-left:auto;align-items:center">
+                <input type="date" id="diario-data" onchange="iniciarDiario()" style="border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;background:var(--surface2);color:var(--text)">
+                <select id="diario-turno" onchange="iniciarDiario()" style="border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;background:var(--surface2);color:var(--text)">
+                  <option value="Manha">☀️ Manhã</option>
+                  <option value="Tarde">🌅 Tarde</option>
+                  <option value="Noite">🌙 Noite</option>
+                </select>
+                <button onclick="carregarDadosDiario()" class="btn btn-primary btn-sm">🔄 Atualizar dados</button>
               </div>
             </div>
           </div>
-          <div class="card">
-            <div class="tabela-wrap">
-              <table style="width:100%"><thead><tr>
-                <th>Nr Pedido</th><th>Cliente</th><th>Transportadora</th><th>Checkout</th><th>Status</th><th>Embalado Por</th><th>Ação</th>
-              </tr></thead>
-              <tbody id="tbody-embalagem"><tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text3)">Carregando...</td></tr></tbody>
+
+          <!-- Aviso turno anterior -->
+          <div id="diario-aviso-anterior"></div>
+
+          <!-- Separação -->
+          <div class="card" style="margin-bottom:12px">
+            <div class="card-hd">📦 SEPARAÇÃO</div>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:12px 0">
+              <div style="text-align:center;background:var(--surface2);border-radius:8px;padding:10px">
+                <div style="font-size:22px;font-weight:800;color:var(--text)" id="diario-sep-total">0</div>
+                <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px">Total</div>
+              </div>
+              <div style="text-align:center;background:#f0fdf4;border-radius:8px;padding:10px">
+                <div style="font-size:22px;font-weight:800;color:#16a34a" id="diario-sep-conc">0</div>
+                <div style="font-size:9px;color:#16a34a;text-transform:uppercase;letter-spacing:1px">Concluídos</div>
+              </div>
+              <div style="text-align:center;background:#eff6ff;border-radius:8px;padding:10px">
+                <div style="font-size:22px;font-weight:800;color:#2563eb" id="diario-sep-sep">0</div>
+                <div style="font-size:9px;color:#2563eb;text-transform:uppercase;letter-spacing:1px">Separando</div>
+              </div>
+              <div style="text-align:center;background:#fefce8;border-radius:8px;padding:10px">
+                <div style="font-size:22px;font-weight:800;color:#ca8a04" id="diario-sep-pend">0</div>
+                <div style="font-size:9px;color:#ca8a04;text-transform:uppercase;letter-spacing:1px">Pendentes</div>
+              </div>
+            </div>
+            <div style="margin-top:8px">
+              <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:4px">Observações da separação:</div>
+              <textarea id="diario-obs-sep" placeholder="Ocorrências na separação..." style="width:100%;min-height:70px;border:1px solid var(--border);border-radius:8px;padding:8px;font-size:12px;font-family:inherit;background:var(--surface2);color:var(--text);resize:vertical;box-sizing:border-box"></textarea>
+            </div>
+          </div>
+
+          <!-- Checkout -->
+          <div class="card" style="margin-bottom:12px">
+            <div class="card-hd">🏷️ CHECKOUT</div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:12px 0">
+              <div style="text-align:center;background:var(--surface2);border-radius:8px;padding:10px">
+                <div style="font-size:22px;font-weight:800;color:var(--text)" id="diario-ck-total">0</div>
+                <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px">Total</div>
+              </div>
+              <div style="text-align:center;background:#f0fdf4;border-radius:8px;padding:10px">
+                <div style="font-size:22px;font-weight:800;color:#16a34a" id="diario-ck-conc">0</div>
+                <div style="font-size:9px;color:#16a34a;text-transform:uppercase;letter-spacing:1px">Concluídos</div>
+              </div>
+              <div style="text-align:center;background:#fefce8;border-radius:8px;padding:10px">
+                <div style="font-size:22px;font-weight:800;color:#ca8a04" id="diario-ck-pend">0</div>
+                <div style="font-size:9px;color:#ca8a04;text-transform:uppercase;letter-spacing:1px">Pendentes</div>
+              </div>
+            </div>
+            <div style="margin-top:8px">
+              <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:4px">Observações do checkout:</div>
+              <textarea id="diario-obs-ck" placeholder="Ocorrências no checkout..." style="width:100%;min-height:70px;border:1px solid var(--border);border-radius:8px;padding:8px;font-size:12px;font-family:inherit;background:var(--surface2);color:var(--text);resize:vertical;box-sizing:border-box"></textarea>
+            </div>
+          </div>
+
+          <!-- Reposição -->
+          <div class="card" style="margin-bottom:12px">
+            <div class="card-hd">🔧 REPOSIÇÃO</div>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:12px 0">
+              <div style="text-align:center;background:var(--surface2);border-radius:8px;padding:10px">
+                <div style="font-size:22px;font-weight:800;color:var(--text)" id="diario-rep-total">0</div>
+                <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px">Total</div>
+              </div>
+              <div style="text-align:center;background:#f0fdf4;border-radius:8px;padding:10px">
+                <div style="font-size:22px;font-weight:800;color:#16a34a" id="diario-rep-res">0</div>
+                <div style="font-size:9px;color:#16a34a;text-transform:uppercase;letter-spacing:1px">Resolvidas</div>
+              </div>
+              <div style="text-align:center;background:#fefce8;border-radius:8px;padding:10px">
+                <div style="font-size:22px;font-weight:800;color:#ca8a04" id="diario-rep-pend">0</div>
+                <div style="font-size:9px;color:#ca8a04;text-transform:uppercase;letter-spacing:1px">Pendentes</div>
+              </div>
+              <div style="text-align:center;background:#fef2f2;border-radius:8px;padding:10px">
+                <div style="font-size:22px;font-weight:800;color:#dc2626" id="diario-rep-nao">0</div>
+                <div style="font-size:9px;color:#dc2626;text-transform:uppercase;letter-spacing:1px">Não encontr.</div>
+              </div>
+            </div>
+            <div style="margin-top:8px">
+              <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:4px">Observações da reposição:</div>
+              <textarea id="diario-obs-rep" placeholder="Ocorrências na reposição..." style="width:100%;min-height:70px;border:1px solid var(--border);border-radius:8px;padding:8px;font-size:12px;font-family:inherit;background:var(--surface2);color:var(--text);resize:vertical;box-sizing:border-box"></textarea>
+            </div>
+          </div>
+
+          <!-- Pedidos com problema -->
+          <div class="card" style="margin-bottom:12px">
+            <div class="card-hd">⚠️ PEDIDOS COM PROBLEMA</div>
+            <div class="tabela-wrap" style="margin-top:8px">
+              <table><thead><tr><th>Nº Pedido</th><th>Cliente</th><th>Item não encontrado</th></tr></thead>
+              <tbody id="tbody-diario-prob"><tr><td colspan="3" style="text-align:center;color:var(--text3);padding:16px">Carregando...</td></tr></tbody>
               </table>
             </div>
           </div>
+
+          <!-- Observações gerais -->
+          <div class="card" style="margin-bottom:12px">
+            <div class="card-hd">📝 OBSERVAÇÕES GERAIS DO TURNO</div>
+            <textarea id="diario-obs-geral" placeholder="Registre ocorrências gerais, problemas de equipamento, funcionários ausentes, intercorrências..." style="width:100%;min-height:100px;border:1px solid var(--border);border-radius:8px;padding:10px;font-size:13px;font-family:inherit;background:var(--surface2);color:var(--text);resize:vertical;margin-top:8px;box-sizing:border-box"></textarea>
+          </div>
+
+          <button onclick="salvarDiario()" style="width:100%;padding:14px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer">
+            💾 Salvar Diário do Turno
+          </button>
         </div>
 
-        <div class="pagina" id="pag-estatisticas">
+        <!-- Histórico lateral -->
+        <div class="card" style="position:sticky;top:80px">
+          <div class="card-hd">📚 HISTÓRICO</div>
+          <div id="lista-diarios" style="margin-top:8px">
+            <div style="color:var(--text3);font-size:13px">Carregando...</div>
+          </div>
+        </div>
+        </div>
+      </div>
+
+      <!-- EMBALAGEM -->
+      <div class="pagina" id="pag-embalagem">
+        <div class="pg-title">📫 Embalagem
+          <div style="display:flex;gap:8px;margin-left:auto;align-items:center">
+          <input type="date" id="emb-data" onchange="carregarEmbalagem()" style="border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;background:var(--surface2);color:var(--text)">
+          <select id="emb-status" onchange="carregarEmbalagem()" style="border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;background:var(--surface2);color:var(--text)">
+            <option value="">Todos</option>
+            <option value="pendente">Pendentes</option>
+            <option value="embalado">Embalados</option>
+          </select>
+          <button onclick="carregarEmbalagem()" class="btn btn-primary btn-sm">🔄 Atualizar</button>
+          <button onclick="exportarEmbalagemExcel()" class="btn btn-success btn-sm">📊 Excel</button>
+          </div>
+        </div>
+        <div class="card" style="margin-bottom:12px">
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+          <div style="text-align:center;background:var(--surface2);border-radius:8px;padding:12px">
+            <div style="font-size:28px;font-weight:800;color:var(--text)" id="emb-total">0</div>
+            <div style="font-size:10px;color:var(--text3);text-transform:uppercase">Total</div>
+          </div>
+          <div style="text-align:center;background:#fefce8;border-radius:8px;padding:12px">
+            <div style="font-size:28px;font-weight:800;color:#ca8a04" id="emb-pendentes">0</div>
+            <div style="font-size:10px;color:#ca8a04;text-transform:uppercase">Pendentes</div>
+          </div>
+          <div style="text-align:center;background:#f0fdf4;border-radius:8px;padding:12px">
+            <div style="font-size:28px;font-weight:800;color:#16a34a" id="emb-embalados">0</div>
+            <div style="font-size:10px;color:#16a34a;text-transform:uppercase">Embalados</div>
+          </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="tabela-wrap">
+          <table style="width:100%"><thead><tr>
+            <th>Nr Pedido</th><th>Cliente</th><th>Transportadora</th><th>Checkout</th><th>Status</th><th>Embalado Por</th><th>Ação</th>
+          </tr></thead>
+          <tbody id="tbody-embalagem"><tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text3)">Carregando...</td></tr></tbody>
+          </table>
+          </div>
+        </div>
+        </div>
+
+      <div class="pagina" id="pag-estatisticas">
         <div class="pg-title">Estatísticas</div>
         <div class="card" style="margin-bottom:16px">
-          <div class="card-hd">📅 FILTRO DE PERÍODO
-            <div style="display:flex;gap:8px">
-              <button class="btn btn-outline btn-sm" onclick="carregarEstatisticas()">🔄</button>
-              <button class="excel-btn" onclick="exportarExcel('estatisticas')">📊 Excel</button>
-            </div>
+        <div class="card-hd">📅 FILTRO DE PERÍODO
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-outline btn-sm" onclick="carregarEstatisticas()">🔄</button>
+            <button class="excel-btn" onclick="exportarExcel('estatisticas')">📊 Excel</button>
           </div>
-          <div class="date-filter-bar">
-            <div class="fg"><label>DE</label><input type="date" id="est-ini"/></div>
-            <div class="fg"><label>ATÉ</label><input type="date" id="est-fim"/></div>
-            <button class="btn btn-primary btn-sm" onclick="carregarEstatisticas()">🔍 Filtrar</button>
-          </div>
+        </div>
+        <div class="date-filter-bar">
+          <div class="fg"><label>DE</label><input type="date" id="est-ini"/></div>
+          <div class="fg"><label>ATÉ</label><input type="date" id="est-fim"/></div>
+          <button class="btn btn-primary btn-sm" onclick="carregarEstatisticas()">🔍 Filtrar</button>
+        </div>
         </div>
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px">
-          <div class="cnt-card verde">
-            <div class="cnt-lbl">PEDIDOS HOJE</div>
-            <div class="cnt-val" id="est-hoje-c" style="font-size:36px">0</div>
-            <div class="cnt-sub">concluídos</div>
-            <div style="font-size:12px;color:var(--text3);margin-top:4px">Total: <b id="est-hoje-t">0</b></div>
-          </div>
-          <div class="cnt-card azul">
-            <div class="cnt-lbl">PEDIDOS NO MÊS</div>
-            <div class="cnt-val" id="est-mes-c" style="font-size:36px">0</div>
-            <div class="cnt-sub">concluídos</div>
-            <div style="font-size:12px;color:var(--text3);margin-top:4px">Total: <b id="est-mes-t">0</b></div>
-          </div>
-          <div class="cnt-card roxo">
-            <div class="cnt-lbl">PEDIDOS NO ANO</div>
-            <div class="cnt-val" id="est-ano-c" style="font-size:36px">0</div>
-            <div class="cnt-sub">concluídos</div>
-            <div style="font-size:12px;color:var(--text3);margin-top:4px">Total: <b id="est-ano-t">0</b></div>
-          </div>
+        <div class="cnt-card verde">
+          <div class="cnt-lbl">PEDIDOS HOJE</div>
+          <div class="cnt-val" id="est-hoje-c" style="font-size:36px">0</div>
+          <div class="cnt-sub">concluídos</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:4px">Total: <b id="est-hoje-t">0</b></div>
+        </div>
+        <div class="cnt-card azul">
+          <div class="cnt-lbl">PEDIDOS NO MÊS</div>
+          <div class="cnt-val" id="est-mes-c" style="font-size:36px">0</div>
+          <div class="cnt-sub">concluídos</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:4px">Total: <b id="est-mes-t">0</b></div>
+        </div>
+        <div class="cnt-card roxo">
+          <div class="cnt-lbl">PEDIDOS NO ANO</div>
+          <div class="cnt-val" id="est-ano-c" style="font-size:36px">0</div>
+          <div class="cnt-sub">concluídos</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:4px">Total: <b id="est-ano-t">0</b></div>
+        </div>
         </div>
         <div id="est-periodo-wrap" style="display:none" class="card">
-          <div class="card-hd">📊 RESULTADO DO PERÍODO</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:10px 0">
-            <div class="cnt-card verde">
-              <div class="cnt-lbl">CONCLUÍDOS</div>
-              <div class="cnt-val" id="est-per-c" style="font-size:32px">0</div>
-              <div class="cnt-sub">no período</div>
-            </div>
-            <div class="cnt-card azul">
-              <div class="cnt-lbl">TOTAL IMPORTADOS</div>
-              <div class="cnt-val" id="est-per-t" style="font-size:32px">0</div>
-              <div class="cnt-sub">no período</div>
-            </div>
+        <div class="card-hd">📊 RESULTADO DO PERÍODO</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:10px 0">
+          <div class="cnt-card verde">
+            <div class="cnt-lbl">CONCLUÍDOS</div>
+            <div class="cnt-val" id="est-per-c" style="font-size:32px">0</div>
+            <div class="cnt-sub">no período</div>
+          </div>
+          <div class="cnt-card azul">
+            <div class="cnt-lbl">TOTAL IMPORTADOS</div>
+            <div class="cnt-val" id="est-per-t" style="font-size:32px">0</div>
+            <div class="cnt-sub">no período</div>
           </div>
         </div>
+        </div>
         <div class="card" style="margin-bottom:16px">
-          <div class="card-hd">👥 PRODUTIVIDADE POR SEPARADOR
-            <button class="btn btn-outline btn-sm" onclick="carregarEstatisticas()">🔄</button>
-          </div>
-          <div class="tabela-wrap">
-            <table><thead><tr><th>SEPARADOR</th><th>HOJE</th><th>MÊS</th><th>ANO</th><th>STATUS</th></tr></thead>
-            <tbody id="tbody-est-sep"></tbody></table>
-          </div>
+        <div class="card-hd">👥 PRODUTIVIDADE POR SEPARADOR
+          <button class="btn btn-outline btn-sm" onclick="carregarEstatisticas()">🔄</button>
+        </div>
+        <div class="tabela-wrap">
+          <table><thead><tr><th>SEPARADOR</th><th>HOJE</th><th>MÊS</th><th>ANO</th><th>STATUS</th></tr></thead>
+          <tbody id="tbody-est-sep"></tbody></table>
+        </div>
         </div>
         <!-- Lista de checkouts fica aqui embaixo das estatísticas -->
         <div class="card">
-          <div class="card-hd">📦 TODOS OS CHECKOUTS
-            <div style="display:flex;gap:8px;align-items:center">
-              <select id="filtro-ck-status" class="sel-sm" onchange="carregarCheckoutLista()">
-                <option value="">Todos</option>
-                <option value="pendente">Pendente</option>
-                <option value="concluido">Concluído</option>
-              </select>
-              <button class="btn btn-outline btn-sm" onclick="carregarCheckoutLista()">🔄</button>
-              <button class="excel-btn" onclick="exportarExcel('checkout-lista')">📊 Excel</button>
-            </div>
+        <div class="card-hd">📦 TODOS OS CHECKOUTS
+          <div style="display:flex;gap:8px;align-items:center">
+            <select id="filtro-ck-status" class="sel-sm" onchange="carregarCheckoutLista()">
+              <option value="">Todos</option>
+              <option value="pendente">Pendente</option>
+              <option value="concluido">Concluído</option>
+            </select>
+            <button class="btn btn-outline btn-sm" onclick="carregarCheckoutLista()">🔄</button>
+            <button class="excel-btn" onclick="exportarExcel('checkout-lista')">📊 Excel</button>
           </div>
-          <div class="tabela-wrap">
-            <table>
-              <thead><tr><th>CAIXA</th><th>Nº PEDIDO</th><th>SEPARADOR</th><th>STATUS</th><th>HORA</th><th>AÇÃO</th></tr></thead>
-              <tbody id="tbody-checkout"></tbody>
-            </table>
-          </div>
+        </div>
+        <div class="tabela-wrap">
+          <table>
+            <thead><tr><th>CAIXA</th><th>Nº PEDIDO</th><th>SEPARADOR</th><th>STATUS</th><th>HORA</th><th>AÇÃO</th></tr></thead>
+            <tbody id="tbody-checkout"></tbody>
+          </table>
+        </div>
         </div>
       </div>
 
