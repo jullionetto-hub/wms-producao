@@ -111,84 +111,96 @@ async function carregarAvisosMobile() {
 
 function renderCardMobile(a) {
   const sit = a.situacao || a.status || 'pendente';
-  const cor = corSituacao(sit);
-  const lbl = labelSituacao(sit);
   const nomeLogado = usuarioAtual?.nome || '';
-  const jaTemPegou   = !!a.quem_pegou;
-  const jaTemGuardou = !!a.quem_guardou;
 
-  // Botões de ação baseados na etapa atual
+  const corBorda = {
+    pendente: '#f59e0b',
+    verificando: '#8b5cf6',
+    buscado: '#3b82f6',
+    aguardando_abastecer: '#f97316',
+    abastecido: '#10b981',
+    protocolo: '#6b7280',
+    nao_encontrado: '#ef4444'
+  }[sit] || '#6b7280';
+
+  const badge = {
+    pendente: '<span style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px">⏳ Pendente</span>',
+    verificando: '<span style="background:#ede9fe;color:#5b21b6;border:1px solid #ddd6fe;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px">🔍 Verificando</span>',
+    buscado: '<span style="background:#dbeafe;color:#1e40af;border:1px solid #bfdbfe;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px">📦 Buscado</span>',
+    aguardando_abastecer: '<span style="background:#ffedd5;color:#9a3412;border:1px solid #fed7aa;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px">🕐 Aguard. abastecer</span>',
+    abastecido: '<span style="background:#dcfce7;color:#166534;border:1px solid #86efac;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px">✅ Abastecido</span>',
+    protocolo: '<span style="background:#f3f4f6;color:#374151;border:1px solid #e5e7eb;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px">📋 Protocolo</span>',
+    nao_encontrado: '<span style="background:#fee2e2;color:#991b1b;border:1px solid #fecaca;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px">❌ Não encontrado</span>',
+  }[sit] || sit;
+
   let botoesEtapa = '';
 
   if (sit === 'pendente' || sit === 'verificando') {
-    // ETAPA 2: Repositor vai buscar
     botoesEtapa = `
-      <div style="margin-top:14px;border-top:1px solid var(--border);padding-top:14px">
-        <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:8px;letter-spacing:.5px">O QUE VOCÊ FEZ?</div>
-        <div style="margin-bottom:10px">
-          <label style="font-size:11px;color:var(--text3);font-weight:600;display:block;margin-bottom:4px">QUANTIDADE ENCONTRADA</label>
-          <input type="number" id="qtd-${a.id}" min="0" max="${a.quantidade||99}" value="${a.qtd_encontrada||0}"
-            style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-size:16px;box-sizing:border-box">
-        </div>
+      <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
+        <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.8px;margin-bottom:10px">QUANTIDADE ENCONTRADA</div>
+        <input type="number" id="qtd-${a.id}" min="0" max="${a.quantidade||99}" value="${a.qtd_encontrada||0}"
+          style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;background:var(--surface2);color:var(--text);font-size:18px;font-weight:700;box-sizing:border-box;text-align:center;margin-bottom:12px">
         <div style="display:flex;flex-direction:column;gap:8px">
           <button onclick="acaoRepositor(${a.id},'busquei_e_abasteci','${nomeLogado}')"
-            style="width:100%;padding:12px;background:#10b981;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.3px">
-            ✅ BUSQUEI E ABASTECI
+            style="width:100%;padding:14px;background:#10b981;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:.3px">
+            ✅ Busquei e abasteci
           </button>
           <button onclick="acaoRepositor(${a.id},'so_busquei','${nomeLogado}')"
-            style="width:100%;padding:12px;background:#3b82f6;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.3px">
-            📦 SÓ BUSQUEI — outro vai guardar
+            style="width:100%;padding:14px;background:#3b82f6;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:.3px">
+            📦 Só busquei
           </button>
           <button onclick="acaoRepositor(${a.id},'nao_encontrei','${nomeLogado}')"
-            style="width:100%;padding:12px;background:transparent;color:#ef4444;border:1.5px solid #ef4444;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">
-            ❌ NÃO ENCONTREI
+            style="width:100%;padding:14px;background:transparent;color:#ef4444;border:1.5px solid #ef4444;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer">
+            ❌ Não encontrei
           </button>
         </div>
       </div>`;
   } else if (sit === 'buscado' || sit === 'aguardando_abastecer') {
-    // ETAPA 3: Repositor vai abastecer
     botoesEtapa = `
-      <div style="margin-top:14px;border-top:1px solid var(--border);padding-top:14px">
-        <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:8px;letter-spacing:.5px">
-          📦 Buscado por: <span style="color:var(--text)">${a.quem_pegou||'—'}</span>
+      <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
+        <div style="font-size:12px;color:var(--text2);margin-bottom:10px">
+          📦 Buscado por: <strong>${a.quem_pegou||'—'}</strong>
         </div>
         <button onclick="acaoRepositor(${a.id},'abasteci','${nomeLogado}')"
-          style="width:100%;padding:12px;background:#10b981;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.3px">
-          ✅ ABASTECI O PRODUTO
+          style="width:100%;padding:14px;background:#10b981;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer">
+          ✅ Abasteci o produto
         </button>
       </div>`;
   } else if (sit === 'abastecido') {
     botoesEtapa = `
-      <div style="margin-top:10px;border-top:1px solid var(--border);padding-top:10px;font-size:12px;color:var(--text3)">
-        📦 Pegou: <strong>${a.quem_pegou||'—'}</strong> &nbsp;·&nbsp; 🏠 Guardou: <strong>${a.quem_guardou||'—'}</strong>
+      <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:flex;gap:12px;font-size:12px;color:var(--text3)">
+        <span>📦 <strong style="color:var(--text)">${a.quem_pegou||'—'}</strong></span>
+        <span>🏠 <strong style="color:var(--text)">${a.quem_guardou||'—'}</strong></span>
       </div>`;
   }
 
   return `
-    <div style="background:var(--surface);border:1px solid var(--border);border-left:4px solid ${cor};border-radius:14px;padding:16px;margin-bottom:14px">
-      <!-- Header -->
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
-        <div>
-          <div style="font-weight:700;font-size:16px;color:var(--text)">${a.codigo||'—'}</div>
-          <div style="font-size:11px;color:var(--text3);margin-top:2px;line-height:1.4">${a.descricao||''}</div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-left:4px solid ${corBorda};border-radius:14px;margin-bottom:12px;overflow:hidden">
+      <!-- Cabeçalho do card -->
+      <div style="padding:14px 16px 10px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+          <div style="flex:1;min-width:0;margin-right:10px">
+            <div style="font-family:'Space Mono',monospace;font-size:15px;font-weight:700;color:var(--text)">${a.codigo||'—'}</div>
+            <div style="font-size:12px;color:var(--text2);margin-top:3px;line-height:1.4">${a.descricao||''}</div>
+          </div>
+          ${badge}
         </div>
-        <span style="font-size:11px;font-weight:700;color:${cor};background:${cor}18;padding:4px 10px;border-radius:20px;white-space:nowrap;margin-left:8px">${lbl}</span>
+        <!-- Infos em linha -->
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">
+          <span style="background:var(--surface2);border-radius:8px;padding:5px 10px;font-size:11px;color:var(--text2)">
+            📍 ${a.endereco||'—'}
+          </span>
+          <span style="background:#fee2e2;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:700;color:#dc2626">
+            ${a.quantidade||0} un em falta
+          </span>
+          ${a.separador_nome ? `<span style="background:var(--surface2);border-radius:8px;padding:5px 10px;font-size:11px;color:var(--text2)">👤 ${a.separador_nome}</span>` : ''}
+          ${a.hora_aviso ? `<span style="background:var(--surface2);border-radius:8px;padding:5px 10px;font-size:11px;color:var(--text3)">🕐 ${a.hora_aviso}</span>` : ''}
+        </div>
+        ${a.obs ? `<div style="margin-top:8px;font-size:11px;color:var(--text3);background:var(--surface2);border-radius:8px;padding:6px 10px">💬 ${a.obs}</div>` : ''}
       </div>
-      <!-- Infos -->
-      <div style="display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:12px;margin-bottom:4px">
-        <span style="color:var(--text3)">📦 Separador</span>
-        <span style="color:var(--text);font-weight:500">${a.separador_nome||'—'}</span>
-        ${a.forma_envio ? `<span style="color:var(--text3)">🚚 Envio</span><span style="color:var(--text)">${a.forma_envio}</span>` : ''}
-        <span style="color:var(--text3)">📍 Endereço</span>
-        <span style="color:var(--text)">${a.endereco||'—'}</span>
-        <span style="color:var(--text3)">📦 Qtd falta</span>
-        <span style="color:#ef4444;font-weight:700">${a.quantidade||0} un</span>
-        <span style="color:var(--text3)">🕐 Horário</span>
-        <span style="color:var(--text)">${a.hora_aviso||'—'}</span>
-      </div>
-      ${a.obs ? `<div style="font-size:11px;color:var(--text3);background:var(--surface2);border-radius:6px;padding:6px 8px;margin-top:6px">💬 ${a.obs}</div>` : ''}
-      <!-- Botões de ação -->
-      ${botoesEtapa}
+      <!-- Ações -->
+      ${botoesEtapa ? `<div style="padding:0 16px 16px">${botoesEtapa}</div>` : ''}
     </div>`;
 }
 

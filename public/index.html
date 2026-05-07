@@ -1128,14 +1128,27 @@
       <!-- ABA 2 — ESTATÍSTICAS REPOSITOR MOBILE -->
       <div class="rep-tab-page" id="rep-tab-stats">
         <div class="rep-scroll">
-          <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text);margin-bottom:14px">📈 Meu Desempenho</div>
-          <div class="stat-nome" id="m-rep-nome">—</div>
-          <div class="stats-grid">
-            <div class="stat-big verde"><div class="s-lbl">REPOSTOS HOJE</div><div class="s-val" id="m-rep-hoje">0</div><div class="s-sub">itens repostos</div></div>
-            <div class="stat-big azul"><div class="s-lbl">MÊS</div><div class="s-val" id="m-rep-mes">0</div><div class="s-sub">reposições</div></div>
-            <div class="stat-big vermelho span2"><div class="s-lbl">PENDENTES AGORA</div><div class="s-val" id="m-rep-pendentes" style="font-size:38px">0</div><div class="s-sub">aguardando resolução</div></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+            <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">📈 Meu Desempenho</div>
+            <button onclick="carregarStatsRepMobile()" style="padding:6px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer;color:var(--text)">🔄</button>
           </div>
-          <button class="btn btn-outline" style="width:100%;margin-top:4px" onclick="carregarStatsRepMobile()">🔄 Atualizar</button>
+          <div class="stat-nome" id="m-rep-nome" style="font-size:16px;font-weight:700;margin-bottom:14px;color:var(--text)">—</div>
+          <!-- Cards de stats -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+            <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:14px;padding:16px;text-align:center">
+              <div style="font-size:32px;font-weight:800;color:#16a34a" id="m-rep-hoje">0</div>
+              <div style="font-size:10px;color:#16a34a;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-top:4px">Repostos hoje</div>
+            </div>
+            <div style="background:#eff6ff;border:1px solid #93c5fd;border-radius:14px;padding:16px;text-align:center">
+              <div style="font-size:32px;font-weight:800;color:#2563eb" id="m-rep-mes">0</div>
+              <div style="font-size:10px;color:#2563eb;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-top:4px">No mês</div>
+            </div>
+          </div>
+          <div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:14px;padding:16px;text-align:center;margin-bottom:10px">
+            <div style="font-size:42px;font-weight:800;color:#dc2626" id="m-rep-pendentes">0</div>
+            <div style="font-size:10px;color:#dc2626;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-top:4px">Pendentes agora</div>
+          </div>
+          <div id="m-meus-stats" style="margin-top:4px"></div>
         </div>
       </div>
     </div><!-- /rep-mobile-root -->
