@@ -668,6 +668,56 @@
       
         
 
+        
+          <!-- Colaboradores do dia -->
+          <div class="card" style="margin-top:16px">
+            <div class="card-hd">👥 COLABORADORES DO DIA
+              <span id="colab-atualizado" style="font-size:11px;color:var(--text3);font-weight:400;margin-left:8px"></span>
+              <button onclick="carregarColaboradores()" style="margin-left:auto;padding:4px 12px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--text);font-size:11px;cursor:pointer">↺ Atualizar</button>
+            </div>
+            <div style="margin-bottom:16px">
+              <div style="font-size:11px;font-weight:700;color:var(--accent);letter-spacing:1px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border)">📦 SEPARADORES</div>
+              <div class="tabela-wrap">
+                <table style="width:100%"><thead><tr>
+                  <th style="text-align:left;padding:8px 12px;font-size:11px">Nome</th>
+                  <th style="text-align:left;padding:8px 12px;font-size:11px">Turno</th>
+                  <th style="text-align:center;padding:8px 12px;font-size:11px">Hoje</th>
+                  <th style="text-align:center;padding:8px 12px;font-size:11px">Total</th>
+                </tr></thead>
+                <tbody id="tbody-colab-sep"><tr><td colspan="4" style="text-align:center;padding:24px;color:var(--text3)">Carregando...</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+            <div style="margin-bottom:16px">
+              <div style="font-size:11px;font-weight:700;color:#10b981;letter-spacing:1px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border)">🔧 REPOSITORES</div>
+              <div class="tabela-wrap">
+                <table style="width:100%"><thead><tr>
+                  <th style="text-align:left;padding:8px 12px;font-size:11px">Nome</th>
+                  <th style="text-align:left;padding:8px 12px;font-size:11px">Turno</th>
+                  <th style="text-align:center;padding:8px 12px;font-size:11px">Resolvidas hoje</th>
+                  <th style="text-align:center;padding:8px 12px;font-size:11px">Nao encontr.</th>
+                  <th style="text-align:center;padding:8px 12px;font-size:11px">Total avisos</th>
+                </tr></thead>
+                <tbody id="tbody-colab-rep"><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--text3)">Carregando...</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+            <div>
+              <div style="font-size:11px;font-weight:700;color:#8b5cf6;letter-spacing:1px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border)">🏷️ CHECKOUT</div>
+              <div class="tabela-wrap">
+                <table style="width:100%"><thead><tr>
+                  <th style="text-align:left;padding:8px 12px;font-size:11px">Nome</th>
+                  <th style="text-align:left;padding:8px 12px;font-size:11px">Turno</th>
+                  <th style="text-align:center;padding:8px 12px;font-size:11px">Expedidas hoje</th>
+                  <th style="text-align:center;padding:8px 12px;font-size:11px">Total hoje</th>
+                  <th style="text-align:center;padding:8px 12px;font-size:11px">Embalagem</th>
+                </tr></thead>
+                <tbody id="tbody-colab-ck"><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--text3)">Carregando...</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
         <!-- DIARIO DE BORDO -->
         <div class="pagina" id="pag-diario">
           <div class="pg-title">📋 Diário de Bordo</div>
@@ -1208,6 +1258,7 @@
         <div class="sep-scroll">
           <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text);margin-bottom:14px">📈 Meu Desempenho</div>
           <div class="stat-nome" id="m-stat-nome">—</div>
+          <div id="m-meus-stats"></div>
           <div class="stats-grid">
             <div class="stat-big azul"><div class="s-lbl">HOJE</div><div class="s-val" id="m-stat-hoje">0</div><div class="s-sub">pedidos separados</div></div>
             <div class="stat-big verde"><div class="s-lbl">MÊS</div><div class="s-val" id="m-stat-mes">0</div><div class="s-sub">pedidos separados</div></div>

@@ -1186,4 +1186,94 @@ router.get('/diario/dados/turno', requerAuth, requerPerfil('supervisor'), async 
   } catch(e) { res.status(500).json({erro:e.message}); }
 });
 
+
+// ── Stats por colaborador (supervisor) ────────────────────────────────────────
+router.get('/stats/colaboradores', requerAuth, requerPerfil('supervisor'), async (req,res) => {
+  const {data:hoje} = dataHoraLocal();
+  try {
+    // Separadores
+    const seps = await db.all(`
+      SELECT u.nome, u.login, u.turno,
+        COALESCE(SUM(CASE WHEN p.data_pedido=$1 AND p.status='concluido' THEN 1 ELSE 0 END),0) as sep_hoje,
+        COALESCE(SUM(CASE WHEN p.status='concluido' THEN 1 ELSE 0 END),0) as sep_total
+      FROM usuarios u
+      LEFT JOIN separadores s ON s.usuario_id = u.id
+      LEFT JOIN pedidos p ON p.separador_id = s.id
+      WHERE u.perfil='separador'
+      GROUP BY u.id, u.nome, u.login, u.turno
+      ORDER BY u.nome
+    `, [hoje]);
+
+    // Repositores
+    const reps = await db.all(`
+      SELECT u.nome, u.login, u.turno,
+        COALESCE(SUM(CASE WHEN ar.data_aviso=$1 THEN 1 ELSE 0 END),0) as rep_hoje,
+        COALESCE(SUM(CASE WHEN ar.data_aviso=$1 AND ar.status IN ('reposto','abastecido','subiu') THEN 1 ELSE 0 END),0) as rep_resolvidas_hoje,
+        COALESCE(SUM(CASE WHEN ar.data_aviso=$1 AND ar.status='nao_encontrado' THEN 1 ELSE 0 END),0) as rep_nao_encontrados_hoje
+      FROM usuarios u
+      LEFT JOIN avisos_repositor ar ON ar.repositor_nome = u.nome
+      WHERE u.perfil='repositor'
+      GROUP BY u.id, u.nome, u.login, u.turno
+      ORDER BY u.nome
+    `, [hoje]);
+
+    // Checkout
+    const cks = await db.all(`
+      SELECT u.nome, u.login, u.turno,
+        COALESCE(SUM(CASE WHEN ck.data_checkout=$1 AND ck.status='concluido' THEN 1 ELSE 0 END),0) as ck_hoje,
+        COALESCE(SUM(CASE WHEN ck.data_checkout=$1 THEN 1 ELSE 0 END),0) as ck_total_hoje
+      FROM usuarios u
+      LEFT JOIN checkout ck ON ck.usuario_id = (SELECT id FROM separadores WHERE usuario_id=u.id LIMIT 1)
+      WHERE u.perfil='checkout'
+      GROUP BY u.id, u.nome, u.login, u.turno
+      ORDER BY u.nome
+    `, [hoje]);
+
+    res.json({ data: hoje, separadores: seps, repositores: reps, checkouts: cks });
+  } catch(e) { res.status(500).json({erro:e.message}); }
+});
+
+// ── Stats pessoais do colaborador logado ──────────────────────────────────────
+router.get('/stats/meus', requerAuth, async (req,res) => {
+  const {data:hoje} = dataHoraLocal();
+  const usuario = req.session?.usuario;
+  if (!usuario) return res.status(401).json({erro:'Nao autenticado'});
+  try {
+    const result = { perfil: usuario.perfil, nome: usuario.nome, hoje };
+
+    if (usuario.perfil === 'separador') {
+      const sep = await db.get('SELECT id FROM separadores WHERE usuario_id=$1', [usuario.id]);
+      if (sep) {
+        const dados = await db.get(`SELECT
+          SUM(CASE WHEN data_pedido=$1 AND status='concluido' THEN 1 ELSE 0 END) as separados_hoje,
+          SUM(CASE WHEN data_pedido=$1 THEN 1 ELSE 0 END) as total_hoje,
+          SUM(CASE WHEN status='concluido' THEN 1 ELSE 0 END) as separados_total
+          FROM pedidos WHERE separador_id=$2`, [hoje, sep.id]);
+        result.separacao = dados;
+      }
+    }
+
+    if (usuario.perfil === 'repositor') {
+      const dados = await db.get(`SELECT
+        SUM(CASE WHEN data_aviso=$1 THEN 1 ELSE 0 END) as avisos_hoje,
+        SUM(CASE WHEN data_aviso=$1 AND status IN ('reposto','abastecido','subiu') THEN 1 ELSE 0 END) as resolvidos_hoje,
+        SUM(CASE WHEN data_aviso=$1 AND status='nao_encontrado' THEN 1 ELSE 0 END) as nao_encontrados_hoje,
+        SUM(CASE WHEN data_aviso=$1 AND status='pendente' THEN 1 ELSE 0 END) as pendentes_hoje
+        FROM avisos_repositor WHERE repositor_nome=$2`, [hoje, usuario.nome]);
+      result.reposicao = dados;
+    }
+
+    if (usuario.perfil === 'checkout') {
+      const dados = await db.get(`SELECT
+        SUM(CASE WHEN data_checkout=$1 AND status='concluido' THEN 1 ELSE 0 END) as expedidos_hoje,
+        SUM(CASE WHEN data_checkout=$1 THEN 1 ELSE 0 END) as total_hoje,
+        SUM(CASE WHEN status='pendente' THEN 1 ELSE 0 END) as pendentes
+        FROM checkout`, [hoje]);
+      result.checkout = dados;
+    }
+
+    res.json(result);
+  } catch(e) { res.status(500).json({erro:e.message}); }
+});
+
 module.exports = router;

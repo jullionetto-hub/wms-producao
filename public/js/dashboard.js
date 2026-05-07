@@ -995,3 +995,57 @@ async function exportarDashboardExcel() {
     toast('Excel exportado!','sucesso');
   } catch(e) { toast('Erro ao exportar!','erro'); }
 }
+
+async function carregarColaboradores() {
+  try {
+    const res = await fetch(`${API}/stats/colaboradores`, { credentials:'include' });
+    if (!res.ok) return;
+    const d = await res.json();
+
+    // Separadores
+    const tbSep = document.getElementById('tbody-colab-sep');
+    if (tbSep) {
+      tbSep.innerHTML = d.separadores.length ? d.separadores.map(s =>
+        `<tr>
+          <td style="padding:10px 12px;font-weight:600">${s.nome}</td>
+          <td style="padding:10px 12px;color:var(--text2);font-size:12px">${s.turno||'—'}</td>
+          <td style="padding:10px 12px;text-align:center;font-size:18px;font-weight:700;color:var(--accent)">${s.sep_hoje}</td>
+          <td style="padding:10px 12px;text-align:center;font-size:13px;color:var(--text3)">${s.sep_total}</td>
+        </tr>`
+      ).join('') : '<tr><td colspan="4" style="text-align:center;padding:24px;color:var(--text3)">Nenhum separador ativo</td></tr>';
+    }
+
+    // Repositores
+    const tbRep = document.getElementById('tbody-colab-rep');
+    if (tbRep) {
+      tbRep.innerHTML = d.repositores.length ? d.repositores.map(r =>
+        `<tr>
+          <td style="padding:10px 12px;font-weight:600">${r.nome}</td>
+          <td style="padding:10px 12px;color:var(--text2);font-size:12px">${r.turno||'—'}</td>
+          <td style="padding:10px 12px;text-align:center;font-size:18px;font-weight:700;color:#10b981">${r.rep_resolvidas_hoje}</td>
+          <td style="padding:10px 12px;text-align:center;font-size:18px;font-weight:700;color:#ef4444">${r.rep_nao_encontrados_hoje}</td>
+          <td style="padding:10px 12px;text-align:center;font-size:13px;color:var(--text3)">${r.rep_hoje}</td>
+        </tr>`
+      ).join('') : '<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--text3)">Nenhum repositor ativo</td></tr>';
+    }
+
+    // Checkout
+    const tbCk = document.getElementById('tbody-colab-ck');
+    if (tbCk) {
+      tbCk.innerHTML = d.checkouts.length ? d.checkouts.map(c =>
+        `<tr>
+          <td style="padding:10px 12px;font-weight:600">${c.nome}</td>
+          <td style="padding:10px 12px;color:var(--text2);font-size:12px">${c.turno||'—'}</td>
+          <td style="padding:10px 12px;text-align:center;font-size:18px;font-weight:700;color:#8b5cf6">${c.ck_hoje}</td>
+          <td style="padding:10px 12px;text-align:center;font-size:13px;color:var(--text3)">${c.ck_total_hoje}</td>
+          <td style="padding:10px 12px;text-align:center;font-size:13px;color:var(--text3)">—</td>
+        </tr>`
+      ).join('') : '<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--text3)">Nenhum operador de checkout</td></tr>';
+    }
+
+    // Atualiza timestamp
+    const ts = document.getElementById('colab-atualizado');
+    if (ts) ts.textContent = 'Atualizado ' + new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+
+  } catch(e) { console.error('carregarColaboradores:', e); }
+}

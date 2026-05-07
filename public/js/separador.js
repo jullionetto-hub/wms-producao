@@ -680,3 +680,67 @@ document.getElementById('ck-input-caixa')?.addEventListener('keypress', e => { i
     ativarApp();
   } catch(e) {}
 })();
+
+async function carregarMeusStats() {
+  try {
+    const res = await fetch(`${API}/stats/meus`, { credentials:'include' });
+    if (!res.ok) return;
+    const d = await res.json();
+    const el = document.getElementById('m-meus-stats');
+    if (!el) return;
+
+    if (d.perfil === 'separador' && d.separacao) {
+      el.innerHTML = `
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding:12px 0">
+          <div style="text-align:center;background:#eff6ff;border-radius:10px;padding:12px 8px">
+            <div style="font-size:26px;font-weight:800;color:#2563eb">${d.separacao.separados_hoje||0}</div>
+            <div style="font-size:9px;color:#2563eb;text-transform:uppercase;letter-spacing:1px">Hoje</div>
+          </div>
+          <div style="text-align:center;background:#f0fdf4;border-radius:10px;padding:12px 8px">
+            <div style="font-size:26px;font-weight:800;color:#16a34a">${d.separacao.total_hoje||0}</div>
+            <div style="font-size:9px;color:#16a34a;text-transform:uppercase;letter-spacing:1px">Recebidos</div>
+          </div>
+          <div style="text-align:center;background:var(--surface2);border-radius:10px;padding:12px 8px">
+            <div style="font-size:26px;font-weight:800;color:var(--text)">${d.separacao.separados_total||0}</div>
+            <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px">Total</div>
+          </div>
+        </div>`;
+    } else if (d.perfil === 'repositor' && d.reposicao) {
+      el.innerHTML = `
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;padding:12px 0">
+          <div style="text-align:center;background:#f0fdf4;border-radius:10px;padding:10px 6px">
+            <div style="font-size:22px;font-weight:800;color:#16a34a">${d.reposicao.resolvidos_hoje||0}</div>
+            <div style="font-size:9px;color:#16a34a;text-transform:uppercase;letter-spacing:.5px">Resolvidas</div>
+          </div>
+          <div style="text-align:center;background:#fef2f2;border-radius:10px;padding:10px 6px">
+            <div style="font-size:22px;font-weight:800;color:#dc2626">${d.reposicao.nao_encontrados_hoje||0}</div>
+            <div style="font-size:9px;color:#dc2626;text-transform:uppercase;letter-spacing:.5px">Nao encon.</div>
+          </div>
+          <div style="text-align:center;background:#fefce8;border-radius:10px;padding:10px 6px">
+            <div style="font-size:22px;font-weight:800;color:#ca8a04">${d.reposicao.pendentes_hoje||0}</div>
+            <div style="font-size:9px;color:#ca8a04;text-transform:uppercase;letter-spacing:.5px">Pendentes</div>
+          </div>
+          <div style="text-align:center;background:var(--surface2);border-radius:10px;padding:10px 6px">
+            <div style="font-size:22px;font-weight:800;color:var(--text)">${d.reposicao.avisos_hoje||0}</div>
+            <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px">Total</div>
+          </div>
+        </div>`;
+    } else if (d.perfil === 'checkout' && d.checkout) {
+      el.innerHTML = `
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding:12px 0">
+          <div style="text-align:center;background:#f5f3ff;border-radius:10px;padding:12px 8px">
+            <div style="font-size:26px;font-weight:800;color:#7c3aed">${d.checkout.expedidos_hoje||0}</div>
+            <div style="font-size:9px;color:#7c3aed;text-transform:uppercase;letter-spacing:1px">Expedidas</div>
+          </div>
+          <div style="text-align:center;background:var(--surface2);border-radius:10px;padding:12px 8px">
+            <div style="font-size:26px;font-weight:800;color:var(--text)">${d.checkout.total_hoje||0}</div>
+            <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px">Recebidas</div>
+          </div>
+          <div style="text-align:center;background:#fefce8;border-radius:10px;padding:12px 8px">
+            <div style="font-size:26px;font-weight:800;color:#ca8a04">${d.checkout.pendentes||0}</div>
+            <div style="font-size:9px;color:#ca8a04;text-transform:uppercase;letter-spacing:1px">Pendentes</div>
+          </div>
+        </div>`;
+    }
+  } catch(e) {}
+}

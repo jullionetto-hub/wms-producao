@@ -239,10 +239,11 @@ function irPara(pag, el) {
   if (pag === 'separacao')       { carregarFila(); if (separadorAtual) carregarContadoresSep(); }
   if (pag === 'estatisticas')    { carregarEstatisticas(); carregarCheckoutLista(); }
   if (pag === 'reposicao')       { carregarAvisos(); verificarDuplicatas(); }
+  if (pag === 'reposicao' || pag === 'checkout' || pag === 'separacao') { setTimeout(carregarMeusStats, 500); }
   if (pag === 'checkout')        { const el2 = document.getElementById('ck-input-caixa'); if(el2) setTimeout(()=>el2.focus(),200); }
   if (pag === 'stats-repositor') carregarStatsRepositor();
   if (pag === 'stats-checkout')  carregarStatsCheckout();
-  if (pag === 'performance')  carregarPerformance();
+  if (pag === 'performance')  { carregarPerformance(); carregarColaboradores(); }
   if (pag === 'relatorios')   { carregarListaRelatorios(); }
   if (pag === 'auditoria')    { var hj=hojeLocal(); var ea=document.getElementById('aud-ini'); if(ea&&!ea.value)ea.value=hj; carregarAuditoria(); }
   if (pag === 'diario')       { iniciarDiario(); }
