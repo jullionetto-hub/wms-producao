@@ -622,6 +622,11 @@
                 <option value="checkout">Checkout</option>
               </select>
             </div>
+            <div class="fg"><label>COLABORADOR</label>
+              <select id="perf-colaborador" class="sel-sm" onchange="filtrarColaborador()">
+                <option value="">Todos</option>
+              </select>
+            </div>
             <button class="btn btn-primary btn-sm" onclick="carregarPerformance()">🔍 Filtrar</button>
             <button class="excel-btn" onclick="exportarPerformanceExcel()">📊 Excel</button>
           </div>
@@ -663,6 +668,89 @@
             </table>
           </div>
         </div>
+
+        <!-- Cards individuais do colaborador -->
+        <div id="perf-individual" style="display:none;margin-top:16px">
+          <div class="card-hd" style="margin-bottom:12px">
+            👤 <span id="perf-ind-nome">—</span>
+            <button onclick="limparFiltroColaborador()" style="margin-left:auto;padding:4px 12px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--text);font-size:11px;cursor:pointer">✕ Limpar filtro</button>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px">
+            <!-- Separação -->
+            <div class="card" id="perf-ind-sep" style="display:none">
+              <div class="card-hd">📦 SEPARAÇÃO</div>
+              <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:10px">
+                <div style="text-align:center;background:#eff6ff;border-radius:10px;padding:14px">
+                  <div style="font-size:32px;font-weight:800;color:#2563eb" id="pi-sep-periodo">0</div>
+                  <div style="font-size:10px;color:#2563eb;text-transform:uppercase;letter-spacing:.5px">No período</div>
+                </div>
+                <div style="text-align:center;background:#f0fdf4;border-radius:10px;padding:14px">
+                  <div style="font-size:32px;font-weight:800;color:#16a34a" id="pi-sep-hoje">0</div>
+                  <div style="font-size:10px;color:#16a34a;text-transform:uppercase;letter-spacing:.5px">Hoje</div>
+                </div>
+                <div style="text-align:center;background:var(--surface2);border-radius:10px;padding:14px">
+                  <div style="font-size:32px;font-weight:800;color:var(--text)" id="pi-sep-itens">0</div>
+                  <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px">Itens coletados</div>
+                </div>
+                <div style="text-align:center;background:#fef2f2;border-radius:10px;padding:14px">
+                  <div style="font-size:32px;font-weight:800;color:#dc2626" id="pi-sep-faltas">0</div>
+                  <div style="font-size:10px;color:#dc2626;text-transform:uppercase;letter-spacing:.5px">Faltas geradas</div>
+                </div>
+              </div>
+            </div>
+            <!-- Reposição -->
+            <div class="card" id="perf-ind-rep" style="display:none">
+              <div class="card-hd">🔧 REPOSIÇÃO</div>
+              <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:10px">
+                <div style="text-align:center;background:#f0fdf4;border-radius:10px;padding:14px">
+                  <div style="font-size:32px;font-weight:800;color:#16a34a" id="pi-rep-repostos">0</div>
+                  <div style="font-size:10px;color:#16a34a;text-transform:uppercase;letter-spacing:.5px">Repostos</div>
+                </div>
+                <div style="text-align:center;background:#fef2f2;border-radius:10px;padding:14px">
+                  <div style="font-size:32px;font-weight:800;color:#dc2626" id="pi-rep-nao">0</div>
+                  <div style="font-size:10px;color:#dc2626;text-transform:uppercase;letter-spacing:.5px">Não encontrados</div>
+                </div>
+                <div style="text-align:center;background:#fefce8;border-radius:10px;padding:14px">
+                  <div style="font-size:32px;font-weight:800;color:#ca8a04" id="pi-rep-pendentes">0</div>
+                  <div style="font-size:10px;color:#ca8a04;text-transform:uppercase;letter-spacing:.5px">Pendentes</div>
+                </div>
+                <div style="text-align:center;background:var(--surface2);border-radius:10px;padding:14px">
+                  <div style="font-size:32px;font-weight:800;color:var(--text)" id="pi-rep-total">0</div>
+                  <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px">Total avisos</div>
+                </div>
+              </div>
+            </div>
+            <!-- Checkout -->
+            <div class="card" id="perf-ind-ck" style="display:none">
+              <div class="card-hd">🏷️ CHECKOUT</div>
+              <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:10px">
+                <div style="text-align:center;background:#f5f3ff;border-radius:10px;padding:14px">
+                  <div style="font-size:32px;font-weight:800;color:#7c3aed" id="pi-ck-periodo">0</div>
+                  <div style="font-size:10px;color:#7c3aed;text-transform:uppercase;letter-spacing:.5px">No período</div>
+                </div>
+                <div style="text-align:center;background:var(--surface2);border-radius:10px;padding:14px">
+                  <div style="font-size:32px;font-weight:800;color:var(--text)" id="pi-ck-hoje">0</div>
+                  <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px">Hoje</div>
+                </div>
+              </div>
+            </div>
+            <!-- Embalagem -->
+            <div class="card" id="perf-ind-emb" style="display:none">
+              <div class="card-hd">📫 EMBALAGEM</div>
+              <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:10px">
+                <div style="text-align:center;background:#ecfdf5;border-radius:10px;padding:14px">
+                  <div style="font-size:32px;font-weight:800;color:#059669" id="pi-emb-periodo">0</div>
+                  <div style="font-size:10px;color:#059669;text-transform:uppercase;letter-spacing:.5px">No período</div>
+                </div>
+                <div style="text-align:center;background:var(--surface2);border-radius:10px;padding:14px">
+                  <div style="font-size:32px;font-weight:800;color:var(--text)" id="pi-emb-hoje">0</div>
+                  <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px">Hoje</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
       </div>
 
       <!-- ESTATÍSTICAS -->

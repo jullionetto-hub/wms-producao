@@ -604,6 +604,21 @@ async function carregarStatsCheckout() {
 
 /* PERFORMANCE DOS COLABORADORES */
 async function carregarPerformance() {
+  // Populate colaborador select
+  try {
+    const res = await fetch(`${API}/usuarios`, { credentials:'include' });
+    const users = await res.json();
+    const sel = document.getElementById('perf-colaborador');
+    if (sel && Array.isArray(users)) {
+      const current = sel.value;
+      sel.innerHTML = '<option value="">Todos</option>' +
+        users.filter(u => u.status === 'ativo')
+             .sort((a,b) => a.nome.localeCompare(b.nome))
+             .map(u => `<option value="${u.nome}" ${u.nome===current?'selected':''}>${u.nome} (${u.perfil})</option>`)
+             .join('');
+      if (current) sel.value = current;
+    }
+  } catch(e) {}
   const ini    = document.getElementById('perf-ini')?.value || '';
   const fim    = document.getElementById('perf-fim')?.value || '';
   const perfil = document.getElementById('perf-perfil')?.value || '';
@@ -1048,4 +1063,87 @@ async function carregarColaboradores() {
     if (ts) ts.textContent = 'Atualizado ' + new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
 
   } catch(e) { console.error('carregarColaboradores:', e); }
+}
+
+async function filtrarColaborador() {
+  const nome = document.getElementById('perf-colaborador')?.value || '';
+  const ind = document.getElementById('perf-individual');
+  if (!nome) {
+    if (ind) ind.style.display = 'none';
+    return;
+  }
+
+  const ini = document.getElementById('perf-ini')?.value || hojeLocal();
+  const fim = document.getElementById('perf-fim')?.value || hojeLocal();
+
+  if (ind) ind.style.display = 'block';
+  const nomeEl = document.getElementById('perf-ind-nome');
+  if (nomeEl) nomeEl.textContent = nome;
+
+  try {
+    // Get user profile
+    const resU = await fetch(`${API}/usuarios`, { credentials:'include' });
+    const users = await resU.json();
+    const user = users.find(u => u.nome === nome);
+    if (!user) return;
+
+    const perfil = user.perfil;
+
+    // Separacao
+    const sepCard = document.getElementById('perf-ind-sep');
+    if (perfil === 'separador' || user.perfis_acesso?.includes('separador')) {
+      if (sepCard) sepCard.style.display = 'block';
+      const res = await fetch(`${API}/produtividade?nome=${encodeURIComponent(nome)}&data_ini=${ini}&data_fim=${fim}`, { credentials:'include' });
+      const data = await res.json();
+      const d = Array.isArray(data) ? data[0] : data;
+      if (d) {
+        document.getElementById('pi-sep-periodo').textContent = d.periodo || d.mes || 0;
+        document.getElementById('pi-sep-hoje').textContent = d.hoje || 0;
+        document.getElementById('pi-sep-itens').textContent = d.itens_coletados || 0;
+        document.getElementById('pi-sep-faltas').textContent = d.faltas || 0;
+      }
+    } else if (sepCard) sepCard.style.display = 'none';
+
+    // Reposicao
+    const repCard = document.getElementById('perf-ind-rep');
+    if (perfil === 'repositor' || user.perfis_acesso?.includes('repositor')) {
+      if (repCard) repCard.style.display = 'block';
+      const res = await fetch(`${API}/estatisticas/repositor?repositor_nome=${encodeURIComponent(nome)}`, { credentials:'include' });
+      const data = await res.json();
+      document.getElementById('pi-rep-repostos').textContent = data.repostos_hoje || 0;
+      document.getElementById('pi-rep-nao').textContent = data.nao_encontrados || 0;
+      document.getElementById('pi-rep-pendentes').textContent = data.pendentes_total || 0;
+      document.getElementById('pi-rep-total').textContent = data.avisos_hoje || 0;
+    } else if (repCard) repCard.style.display = 'none';
+
+    // Checkout
+    const ckCard = document.getElementById('perf-ind-ck');
+    if (perfil === 'checkout' || user.perfis_acesso?.includes('checkout')) {
+      if (ckCard) ckCard.style.display = 'block';
+      const res = await fetch(`${API}/estatisticas/checkout`, { credentials:'include' });
+      const data = await res.json();
+      document.getElementById('pi-ck-periodo').textContent = data.concluidos_mes || 0;
+      document.getElementById('pi-ck-hoje').textContent = data.concluidos_hoje || 0;
+    } else if (ckCard) ckCard.style.display = 'none';
+
+    // Embalagem
+    const embCard = document.getElementById('perf-ind-emb');
+    if (perfil === 'embalador' || user.perfis_acesso?.includes('embalador')) {
+      if (embCard) embCard.style.display = 'block';
+      const hoje = hojeLocal();
+      const res = await fetch(`${API}/embalagem/stats?data=${hoje}`, { credentials:'include' });
+      const data = await res.json();
+      const meus = data.stats?.find(s => s.embalado_por === nome);
+      document.getElementById('pi-emb-hoje').textContent = meus?.total || 0;
+      document.getElementById('pi-emb-periodo').textContent = meus?.total || 0;
+    } else if (embCard) embCard.style.display = 'none';
+
+  } catch(e) { console.error('filtrarColaborador:', e); }
+}
+
+function limparFiltroColaborador() {
+  const sel = document.getElementById('perf-colaborador');
+  if (sel) sel.value = '';
+  const ind = document.getElementById('perf-individual');
+  if (ind) ind.style.display = 'none';
 }
