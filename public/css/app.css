@@ -147,12 +147,13 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
 /* ══════════════════════════════════════════
    BUTTONS
 ══════════════════════════════════════════ */
-.btn{padding:8px 16px;border:none;border-radius:var(--r-sm);font-size:12px;font-weight:600;cursor:pointer;transition:all .18s;font-family:'DM Sans',sans-serif;letter-spacing:.2px}
+.btn{padding:7px 14px;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;transition:all .18s;font-family:'DM Sans',sans-serif;letter-spacing:.2px;display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
 .btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{background:var(--accent2)}
-.btn-success{background:var(--green);color:#fff}.btn-success:hover{filter:brightness(1.1)}
-.btn-danger {background:var(--red);color:#fff}  .btn-danger:hover {filter:brightness(1.1)}
+.btn-success{background:#16a34a;color:#fff}.btn-success:hover{filter:brightness(1.1)}
+.btn-danger{background:var(--red);color:#fff}.btn-danger:hover{filter:brightness(1.1)}
 .btn-outline{background:transparent;border:1.5px solid var(--border);color:var(--text2)}.btn-outline:hover{border-color:var(--accent);color:var(--accent);background:var(--bg)}
-.btn-sm{padding:5px 11px;font-size:11px}
+.btn-sm{padding:6px 12px;font-size:11px}
+.btn:active{transform:scale(.97);opacity:.9}
 
 
 
@@ -700,7 +701,7 @@ body.dark .item-card.parcial    .item-ic{background:#78350F}
 .date-filter-bar{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px;padding:12px 14px;background:var(--surface2);border-radius:var(--r-sm);border:1px solid var(--border)}
 .date-filter-bar .fg label{color:var(--accent);font-size:10px;font-weight:700;letter-spacing:1px}
 .date-filter-bar input[type=date]{min-width:140px}
-.excel-btn{display:flex;align-items:center;gap:6px;padding:8px 14px;background:#16A34A;color:#fff;border:none;border-radius:var(--r-sm);font-size:12px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .18s;white-space:nowrap}
+.excel-btn{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .18s;white-space:nowrap}
 .excel-btn:hover{filter:brightness(1.1);transform:translateY(-1px)}
 
 

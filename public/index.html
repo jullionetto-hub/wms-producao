@@ -93,7 +93,7 @@
           <label style="font-size:11px;color:var(--text3);font-weight:600">ATÉ</label>
           <input type="date" id="filtro-data-fim" style="border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;background:var(--surface2);color:var(--text)">
           <button onclick="carregarDashboard()" class="btn btn-primary btn-sm">Filtrar</button>
-          <button onclick="exportarDashboardExcel()" style="padding:5px 14px;background:#10b981;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600">📊 Excel</button>
+          <button onclick="exportarDashboardExcel()" class="excel-btn">📊 Excel</button>
         </div>
 
         <!-- KPIs Principais -->
@@ -288,7 +288,7 @@
             <div style="display:flex;gap:8px">
               <button class="btn btn-outline btn-sm" onclick="carregarPedidos()">🔄 Atualizar</button>
               <button class="btn btn-primary btn-sm" onclick="abrirModalImportar()" style="background:var(--indigo)">📥 Importar</button>
-              <button class="btn btn-success btn-sm" onclick="abrirModalDistribuicao()" style="font-size:11px">⚖️ Distribuir</button>
+              <button class="btn btn-success btn-sm" onclick="abrirModalDistribuicao()">⚖️ Distribuir</button>
               <button class="excel-btn" onclick="exportarExcel('pedidos')">📊 Excel</button>
             </div>
           </div>
