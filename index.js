@@ -293,6 +293,22 @@ async function runMigrations() {
       criado_em TIMESTAMPTZ DEFAULT NOW()
     )`);
     await pool.query("ALTER TABLE diario_bordo ADD COLUMN IF NOT EXISTS leu_anterior BOOLEAN DEFAULT false");
+    await pool.query("ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS status_embalagem TEXT DEFAULT 'pendente'");
+    await pool.query("ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS embalado_em TEXT DEFAULT ''");
+    await pool.query("ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS embalado_por TEXT DEFAULT ''");
+    await pool.query(`CREATE TABLE IF NOT EXISTS embalagem (
+      id SERIAL PRIMARY KEY,
+      pedido_id INTEGER REFERENCES pedidos(id),
+      numero_pedido TEXT NOT NULL,
+      embalado_por TEXT NOT NULL,
+      embalado_em TEXT NOT NULL,
+      data_embalagem TEXT NOT NULL,
+      cliente TEXT DEFAULT '',
+      transportadora TEXT DEFAULT '',
+      is_drive BOOLEAN DEFAULT false,
+      is_prime BOOLEAN DEFAULT false,
+      criado_em TIMESTAMPTZ DEFAULT NOW()
+    )`);
     console.log('Migrations OK');
   } catch(e) {
     console.error('Migration erro:', e.message);

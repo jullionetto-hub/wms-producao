@@ -68,6 +68,8 @@ function ativarApp() {
     ativarMobileRep();
   } else if (perfil === 'checkout' && mob) {
     ativarMobileCk();
+  } else if (perfil === 'embalador' && mob) {
+    ativarMobileEmb();
   } else {
     montarSidebar();
     iniciarPorPerfil();
@@ -201,6 +203,7 @@ function montarSidebar() {
       <a class="mi" onclick="irPara('relatorios',this)"><span class="mi-ic">📅</span>Relatórios</a>
       <a class="mi" onclick="irPara('auditoria',this)"><span class="mi-ic">🔍</span>Auditoria</a>
       <a class="mi" onclick="irPara('diario',this)"><span class="mi-ic">📋</span>Diário de Bordo</a>
+      <a class="mi" onclick="irPara('embalagem',this)"><span class="mi-ic">📫</span>Embalagem</a>
       <a class="mi" onclick="irPara('cadastros',this)"><span class="mi-ic">⚙️</span>Cadastros</a>
       <div class="mg">OPERAÇÃO</div>
       <a class="mi" onclick="irPara('separacao',this)"><span class="mi-ic">📦</span>Separação</a>
@@ -220,6 +223,9 @@ function montarSidebar() {
       <a class="mi ativo" onclick="irPara('checkout',this)"><span class="mi-ic">🏷️</span>Checkout</a>
       <div class="mg">ANÁLISE</div>
       <a class="mi" onclick="irPara('stats-checkout',this)"><span class="mi-ic">📈</span>Estatísticas</a>`,
+    embalador: `
+      <div class="mg">EMBALAGEM</div>
+      <a class="mi ativo" onclick="irPara('embalagem',this)"><span class="mi-ic">📫</span>Embalar</a>`,
   };
   sb.innerHTML = menus[usuarioAtual.perfil] || '';
 }
@@ -247,6 +253,7 @@ function irPara(pag, el) {
   if (pag === 'relatorios')   { carregarListaRelatorios(); }
   if (pag === 'auditoria')    { var hj=hojeLocal(); var ea=document.getElementById('aud-ini'); if(ea&&!ea.value)ea.value=hj; carregarAuditoria(); }
   if (pag === 'diario')       { iniciarDiario(); }
+  if (pag === 'embalagem')    { var ed=document.getElementById('emb-data'); if(ed&&!ed.value)ed.value=hojeLocal(); carregarEmbalagem(); }
 }
 
 
@@ -695,4 +702,142 @@ async function exportarDiarioExcel(id) {
     XLSX.writeFile(wb, `diario_${d.data}_${d.turno}.xlsx`);
     toast('Excel exportado!','sucesso');
   } catch(e) { toast('Erro ao exportar','erro'); }
+}
+
+/* EMBALAGEM */
+async function carregarEmbalagem() {
+  const tbody = document.getElementById('tbody-embalagem');
+  const el = document.getElementById('emb-total');
+  const elPend = document.getElementById('emb-pendentes');
+  const elEmb = document.getElementById('emb-embalados');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text3)">Carregando...</td></tr>';
+  try {
+    const data = document.getElementById('emb-data')?.value || hojeLocal();
+    const status = document.getElementById('emb-status')?.value || '';
+    const res = await fetch(`${API}/embalagem?data=${data}&status=${status}`, { credentials:'include' });
+    const pedidos = await res.json();
+    if (el) el.textContent = pedidos.length;
+    const pend = pedidos.filter(p => p.status_embalagem !== 'embalado').length;
+    const emb = pedidos.filter(p => p.status_embalagem === 'embalado').length;
+    if (elPend) elPend.textContent = pend;
+    if (elEmb) elEmb.textContent = emb;
+    if (!pedidos.length) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text3)">Nenhum pedido para embalar</td></tr>';
+      return;
+    }
+    tbody.innerHTML = pedidos.map(p => {
+      const isDrive = String(p.transportadora||'').toUpperCase().includes('DRIVE');
+      const isPrime = p.tem_prime;
+      const embalado = p.status_embalagem === 'embalado';
+      return `<tr style="border-bottom:1px solid var(--border);${embalado?'opacity:0.6':''}">
+        <td style="padding:10px 12px;font-weight:700;font-family:'Space Mono',monospace">${p.numero_pedido}</td>
+        <td style="padding:10px 12px;font-size:12px">${p.cliente||'—'}
+          ${isDrive?'<span style="font-size:9px;background:#fee2e2;color:#dc2626;padding:2px 6px;border-radius:4px;margin-left:4px">DRIVE</span>':''}
+          ${isPrime?'<span style="font-size:9px;background:#ede9fe;color:#4338ca;padding:2px 6px;border-radius:4px;margin-left:4px">PRIME</span>':''}
+        </td>
+        <td style="padding:10px 12px;font-size:12px">${p.transportadora||'—'}</td>
+        <td style="padding:10px 12px;font-size:12px">${p.ck_hora||p.hora_checkout||'—'}</td>
+        <td style="padding:10px 12px">
+          <span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;${embalado?'background:#dcfce7;color:#166534':'background:#fefce8;color:#92400e'}">
+            ${embalado?'✅ Embalado':'⏳ Pendente'}
+          </span>
+        </td>
+        <td style="padding:10px 12px;font-size:12px;color:var(--text3)">${p.embalado_por||'—'}</td>
+        <td style="padding:10px 12px">
+          ${!embalado?`<button onclick="confirmarEmbalagem(${p.id})" style="padding:6px 14px;background:#4f46e5;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">✅ Embalar</button>`:''}
+        </td>
+      </tr>`;
+    }).join('');
+  } catch(e) { tbody.innerHTML = '<tr><td colspan="7" style="color:#ef4444;padding:16px">Erro ao carregar</td></tr>'; }
+}
+
+async function confirmarEmbalagem(id) {
+  try {
+    const res = await fetch(`${API}/embalagem/${id}/confirmar`, { method:'PUT', credentials:'include' });
+    const r = await res.json();
+    if (!res.ok) { toast(r.erro||'Erro','erro'); return; }
+    toast('Embalagem confirmada!','sucesso');
+    carregarEmbalagem();
+  } catch(e) { toast('Erro ao confirmar','erro'); }
+}
+
+async function exportarEmbalagemExcel() {
+  try {
+    const data = document.getElementById('emb-data')?.value || hojeLocal();
+    const res = await fetch(`${API}/embalagem?data=${data}`, { credentials:'include' });
+    const pedidos = await res.json();
+    const wb = XLSX.utils.book_new();
+    const rows = [['Nr Pedido','Cliente','Transportadora','Status','Embalado Por','Hora','Drive','Prime']];
+    pedidos.forEach(p => rows.push([
+      p.numero_pedido, p.cliente||'', p.transportadora||'',
+      p.status_embalagem||'pendente', p.embalado_por||'', p.embalado_em||'',
+      String(p.transportadora||'').toUpperCase().includes('DRIVE')?'Sim':'Nao',
+      p.tem_prime?'Sim':'Nao'
+    ]));
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [{wch:12},{wch:25},{wch:18},{wch:12},{wch:20},{wch:8},{wch:8},{wch:8}];
+    XLSX.utils.book_append_sheet(wb, ws, 'Embalagem');
+    XLSX.writeFile(wb, `embalagem_${data}.xlsx`);
+    toast('Excel exportado!','sucesso');
+  } catch(e) { toast('Erro ao exportar','erro'); }
+}
+
+/* EMBALAGEM MOBILE */
+async function ativarMobileEmb() {
+  document.body.classList.add('emb-mobile');
+  const root = document.getElementById('emb-mobile-root');
+  if (root) root.style.display = 'flex';
+  carregarEmbalagemMobile();
+  setInterval(carregarEmbalagemMobile, 30000);
+}
+
+async function carregarEmbalagemMobile() {
+  const el = document.getElementById('m-emb-lista');
+  const cnt = document.getElementById('m-emb-pend');
+  if (!el) return;
+  try {
+    const res = await fetch(`${API}/embalagem?status=pendente`, { credentials:'include' });
+    const pedidos = await res.json();
+    if (cnt) cnt.textContent = pedidos.length;
+    if (!pedidos.length) {
+      el.innerHTML = '<div style="text-align:center;padding:60px 16px"><div style="font-size:48px;margin-bottom:12px">✅</div><div style="color:var(--text3);font-size:15px">Nenhum pedido pendente</div></div>';
+      return;
+    }
+    el.innerHTML = pedidos.map(p => {
+      const isDrive = String(p.transportadora||'').toUpperCase().includes('DRIVE');
+      const isPrime = p.tem_prime;
+      const corBorda = isDrive ? '#dc2626' : isPrime ? '#4338ca' : '#4f46e5';
+      return `<div style="background:var(--surface);border:1px solid var(--border);border-left:4px solid ${corBorda};border-radius:14px;padding:16px;margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+          <div>
+            <div style="font-family:'Space Mono',monospace;font-size:16px;font-weight:700;color:var(--text)">${p.numero_pedido}</div>
+            <div style="font-size:13px;color:var(--text2);margin-top:3px">${p.cliente||'—'}</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
+            ${isDrive?'<span style="font-size:9px;font-weight:700;padding:2px 8px;border-radius:4px;background:#fee2e2;color:#dc2626">DRIVE THRU</span>':''}
+            ${isPrime?'<span style="font-size:9px;font-weight:700;padding:2px 8px;border-radius:4px;background:#ede9fe;color:#4338ca">PRIME</span>':''}
+          </div>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">
+          <span style="background:var(--surface2);border-radius:8px;padding:4px 10px;font-size:11px">🚚 ${p.transportadora||'—'}</span>
+          <span style="background:var(--surface2);border-radius:8px;padding:4px 10px;font-size:11px">📦 ${p.itens||0} itens</span>
+        </div>
+        <button onclick="confirmarEmbalagemMobile(${p.id})"
+          style="width:100%;padding:14px;background:#4f46e5;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer">
+          ✅ Confirmar Embalagem
+        </button>
+      </div>`;
+    }).join('');
+  } catch(e) { if(el) el.innerHTML = '<div style="color:#ef4444;text-align:center;padding:24px">Erro ao carregar</div>'; }
+}
+
+async function confirmarEmbalagemMobile(id) {
+  try {
+    const res = await fetch(`${API}/embalagem/${id}/confirmar`, { method:'PUT', credentials:'include' });
+    const r = await res.json();
+    if (!res.ok) { toast(r.erro||'Erro','erro'); return; }
+    toast('Embalagem confirmada!','sucesso');
+    carregarEmbalagemMobile();
+  } catch(e) { toast('Erro','erro'); }
 }
