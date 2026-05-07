@@ -331,10 +331,11 @@
               <div class="form-grp"><label>SENHA</label><input type="password" id="usr-senha" placeholder="Mínimo 6 caracteres"/></div>
               <div class="form-grp"><label>PERFIL PRINCIPAL</label>
                 <select id="usr-perfil" onchange="toggleSubtipoRepositor()">
-                  <option value="separador">Separador</option>
-                  <option value="supervisor">Supervisor</option>
-                  <option value="repositor">Repositor</option>
+                  <option value="separador">Separação</option>
+                  <option value="supervisor">Supervisão</option>
+                  <option value="repositor">Reposição</option>
                   <option value="checkout">Checkout</option>
+                  <option value="embalador">Embalagem</option>
                 </select>
               </div>
               <div class="form-grp" id="usr-subtipo-wrap" style="display:none"><label>FUNÇÃO DO REPOSITOR</label>
@@ -344,10 +345,11 @@
                   <option value="abastecimento">Abastecimento</option>
                 </select></div>
               <div class="form-grp"><label>PODE ACESSAR TAMBÉM</label><div class="perm-grid">
-  <label class="perm-item"><input type="checkbox" class="usr-perm" value="supervisor"><div class="perm-label"><span class="perm-icon">👔</span><span>Supervisor</span><span class="perm-check"></span></div></label>
-  <label class="perm-item"><input type="checkbox" class="usr-perm" value="separador"><div class="perm-label"><span class="perm-icon">📦</span><span>Separador</span><span class="perm-check"></span></div></label>
-  <label class="perm-item"><input type="checkbox" class="usr-perm" value="repositor"><div class="perm-label"><span class="perm-icon">🔧</span><span>Repositor</span><span class="perm-check"></span></div></label>
+  <label class="perm-item"><input type="checkbox" class="usr-perm" value="supervisor"><div class="perm-label"><span class="perm-icon">👔</span><span>Supervisão</span><span class="perm-check"></span></div></label>
+  <label class="perm-item"><input type="checkbox" class="usr-perm" value="separador"><div class="perm-label"><span class="perm-icon">📦</span><span>Separação</span><span class="perm-check"></span></div></label>
+  <label class="perm-item"><input type="checkbox" class="usr-perm" value="repositor"><div class="perm-label"><span class="perm-icon">🔧</span><span>Reposição</span><span class="perm-check"></span></div></label>
   <label class="perm-item"><input type="checkbox" class="usr-perm" value="checkout"><div class="perm-label"><span class="perm-icon">🏷️</span><span>Checkout</span><span class="perm-check"></span></div></label>
+  <label class="perm-item"><input type="checkbox" class="usr-perm" value="embalador"><div class="perm-label"><span class="perm-icon">📫</span><span>Embalagem</span><span class="perm-check"></span></div></label>
 </div></div>
               <div class="form-grp"><label>TURNO</label>
                 <select id="usr-turno"><option value="Manhã">Manhã</option><option value="Tarde">Tarde</option><option value="Noite">Noite</option></select>
