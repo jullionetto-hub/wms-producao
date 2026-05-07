@@ -1082,4 +1082,108 @@ router.post('/admin/migration-tempo-justo', requerAuth, requerPerfil('supervisor
     res.json({mensagem:'Colunas criadas!'});
   } catch(e) { res.status(500).json({erro:e.message}); }
 });
+
+// ── Diário de Bordo ──────────────────────────────────────────────────────────
+router.get('/diario', requerAuth, requerPerfil('supervisor'), async (req,res) => {
+  try {
+    const lista = await db.all('SELECT id,data,turno,supervisor,observacoes,criado_em FROM diario_bordo ORDER BY criado_em DESC LIMIT 30');
+    res.json(lista);
+  } catch(e) { res.status(500).json({erro:e.message}); }
+});
+
+router.get('/diario/:id', requerAuth, requerPerfil('supervisor'), async (req,res) => {
+  try {
+    const d = await db.get('SELECT * FROM diario_bordo WHERE id=$1', [req.params.id]);
+    if (!d) return res.status(404).json({erro:'Nao encontrado'});
+    if (typeof d.dados === 'string') d.dados = JSON.parse(d.dados);
+    res.json(d);
+  } catch(e) { res.status(500).json({erro:e.message}); }
+});
+
+router.post('/diario', requerAuth, requerPerfil('supervisor'), async (req,res) => {
+  try {
+    const {data, turno, dados, observacoes, leu_anterior} = req.body;
+    if (!data || !turno) return res.status(400).json({erro:'Data e turno obrigatorios'});
+    const supervisor = req.session?.usuario?.nome || 'Supervisor';
+    // Verifica se ja existe diario para esta data/turno
+    const existe = await db.get('SELECT id FROM diario_bordo WHERE data=$1 AND turno=$2', [data, turno]);
+    if (existe) {
+      await pool.query('UPDATE diario_bordo SET dados=$1,observacoes=$2,supervisor=$3,leu_anterior=$4 WHERE id=$5',
+        [JSON.stringify(dados||{}), JSON.stringify(observacoes||{}), supervisor, leu_anterior||false, existe.id]);
+      res.json({mensagem:'Diario atualizado!', id: existe.id});
+    } else {
+      const r = await pool.query('INSERT INTO diario_bordo (data,turno,supervisor,dados,observacoes,leu_anterior) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id',
+        [data, turno, supervisor, JSON.stringify(dados||{}), JSON.stringify(observacoes||{}), leu_anterior||false]);
+      res.json({mensagem:'Diario salvo!', id: r.rows[0].id});
+    }
+  } catch(e) { res.status(500).json({erro:e.message}); }
+});
+
+router.get('/diario/anterior', requerAuth, requerPerfil('supervisor'), async (req,res) => {
+  try {
+    const { data, turno } = req.query;
+    const turnos = ['Manha','Tarde','Noite'];
+    const idxT = turnos.indexOf(turno);
+    let dataAnterior = data;
+    let turnoAnterior;
+    if (idxT === 0) {
+      const dt = new Date(data + 'T12:00:00');
+      dt.setDate(dt.getDate() - 1);
+      dataAnterior = dt.toISOString().split('T')[0];
+      turnoAnterior = 'Noite';
+    } else {
+      turnoAnterior = turnos[idxT - 1];
+    }
+    const anterior = await db.get('SELECT * FROM diario_bordo WHERE data=$1 AND turno=$2', [dataAnterior, turnoAnterior]);
+    if (!anterior) return res.json(null);
+    if (typeof anterior.dados === 'string') anterior.dados = JSON.parse(anterior.dados);
+    if (typeof anterior.observacoes === 'string') {
+      try { anterior.observacoes = JSON.parse(anterior.observacoes); } catch(e) { anterior.observacoes = {geral: anterior.observacoes}; }
+    }
+    res.json(anterior);
+  } catch(e) { res.status(500).json({erro:e.message}); }
+});
+
+router.get('/diario/dados/turno', requerAuth, requerPerfil('supervisor'), async (req,res) => {
+  try {
+    const { data, turno } = req.query;
+    const dt = data || require('./lib/helpers').dataHoraLocal().data;
+    
+    // Pedidos do dia
+    const pedidos = await db.all('SELECT * FROM pedidos WHERE data_pedido=$1', [dt]);
+    const total = pedidos.length;
+    const concluidos = pedidos.filter(p => p.status === 'concluido').length;
+    const pendentes = pedidos.filter(p => p.status === 'pendente').length;
+    const separando = pedidos.filter(p => p.status === 'separando').length;
+    
+    // Pedidos com problema
+    const faltas = await db.all(`
+      SELECT ar.*, p.numero_pedido, p.cliente 
+      FROM avisos_repositor ar 
+      LEFT JOIN pedidos p ON ar.pedido_id = p.id 
+      WHERE ar.data_aviso=$1 AND ar.status='nao_encontrado'
+    `, [dt]);
+    
+    // Checkout
+    const checkouts = await db.all('SELECT * FROM checkout WHERE data_checkout=$1', [dt]);
+    const ckConcluidos = checkouts.filter(c => c.status === 'concluido').length;
+    const ckPendentes = checkouts.filter(c => c.status !== 'concluido').length;
+    
+    // Reposicao
+    const reposicoes = await db.all('SELECT * FROM avisos_repositor WHERE data_aviso=$1', [dt]);
+    const repResolvidas = reposicoes.filter(r => ['reposto','abastecido','subiu'].includes(r.status)).length;
+    const repPendentes = reposicoes.filter(r => r.status === 'pendente' || r.status === 'aberto').length;
+    const repNaoEncontrados = reposicoes.filter(r => r.status === 'nao_encontrado').length;
+    
+    res.json({
+      data: dt,
+      turno: turno || 'Todos',
+      separacao: { total, concluidos, pendentes, separando },
+      checkout: { concluidos: ckConcluidos, pendentes: ckPendentes, total: checkouts.length },
+      reposicao: { resolvidas: repResolvidas, pendentes: repPendentes, nao_encontrados: repNaoEncontrados, total: reposicoes.length },
+      problemas: faltas.map(f => ({ pedido: f.numero_pedido, cliente: f.cliente, item: f.descricao, codigo: f.codigo }))
+    });
+  } catch(e) { res.status(500).json({erro:e.message}); }
+});
+
 module.exports = router;

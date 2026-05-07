@@ -200,6 +200,7 @@ function montarSidebar() {
       <a class="mi" onclick="irPara('performance',this)"><span class="mi-ic">🏆</span>Performance</a>
       <a class="mi" onclick="irPara('relatorios',this)"><span class="mi-ic">📅</span>Relatórios</a>
       <a class="mi" onclick="irPara('auditoria',this)"><span class="mi-ic">🔍</span>Auditoria</a>
+      <a class="mi" onclick="irPara('diario',this)"><span class="mi-ic">📋</span>Diário de Bordo</a>
       <a class="mi" onclick="irPara('cadastros',this)"><span class="mi-ic">⚙️</span>Cadastros</a>
       <div class="mg">OPERAÇÃO</div>
       <a class="mi" onclick="irPara('separacao',this)"><span class="mi-ic">📦</span>Separação</a>
@@ -244,6 +245,7 @@ function irPara(pag, el) {
   if (pag === 'performance')  carregarPerformance();
   if (pag === 'relatorios')   { carregarListaRelatorios(); }
   if (pag === 'auditoria')    { var hj=hojeLocal(); var ea=document.getElementById('aud-ini'); if(ea&&!ea.value)ea.value=hj; carregarAuditoria(); }
+  if (pag === 'diario')       { iniciarDiario(); }
 }
 
 
@@ -458,4 +460,238 @@ async function confirmarZerarDados() {
     var data = await res.json();
     if (res.ok) { toast('Dados zerados!','sucesso'); } else { toast('Erro: '+data.erro,'erro'); }
   } catch(e) { toast('Erro ao zerar','erro'); }
+}
+
+
+/* DIARIO DE BORDO */
+let _diarioAnterior = null;
+let _leuAnterior = false;
+
+async function iniciarDiario() {
+  const hj = hojeLocal();
+  const dataEl = document.getElementById('diario-data');
+  if (dataEl && !dataEl.value) dataEl.value = hj;
+  await verificarTurnoAnterior();
+  await carregarDadosDiario();
+  await carregarListaDiarios();
+}
+
+async function verificarTurnoAnterior() {
+  const data = document.getElementById('diario-data')?.value || hojeLocal();
+  const turno = document.getElementById('diario-turno')?.value || 'Manha';
+  const aviso = document.getElementById('diario-aviso-anterior');
+  _leuAnterior = false;
+  try {
+    const res = await fetch(`${API}/diario/anterior?data=${data}&turno=${turno}`, { credentials:'include' });
+    _diarioAnterior = res.ok ? await res.json() : null;
+    if (!aviso) return;
+    if (!_diarioAnterior) { aviso.style.display = 'none'; return; }
+    const d = _diarioAnterior;
+    const obs = d.observacoes || {};
+    const turnoIcon = d.turno === 'Manha' ? '☀️' : d.turno === 'Tarde' ? '🌅' : '🌙';
+    aviso.style.display = 'block';
+    aviso.innerHTML = `
+      <div style="background:#fefce8;border:1.5px solid #fde68a;border-radius:10px;padding:16px;margin-bottom:16px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+          <span style="font-size:20px">${turnoIcon}</span>
+          <div>
+            <div style="font-weight:700;font-size:14px;color:#92400e">Leitura obrigatória — Turno anterior</div>
+            <div style="font-size:12px;color:#b45309">${d.data} · ${d.turno} · ${d.supervisor}</div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px">
+          <div style="background:#fff;border-radius:8px;padding:10px;text-align:center">
+            <div style="font-size:18px;font-weight:700;color:#0f172a">${d.dados?.separacao?.concluidos||0}/${d.dados?.separacao?.total||0}</div>
+            <div style="font-size:10px;color:#64748b;text-transform:uppercase">Separação</div>
+          </div>
+          <div style="background:#fff;border-radius:8px;padding:10px;text-align:center">
+            <div style="font-size:18px;font-weight:700;color:#0f172a">${d.dados?.checkout?.concluidos||0}/${d.dados?.checkout?.total||0}</div>
+            <div style="font-size:10px;color:#64748b;text-transform:uppercase">Checkout</div>
+          </div>
+          <div style="background:#fff;border-radius:8px;padding:10px;text-align:center">
+            <div style="font-size:18px;font-weight:700;color:#dc2626">${d.dados?.reposicao?.nao_encontrados||0}</div>
+            <div style="font-size:10px;color:#64748b;text-transform:uppercase">Não encontr.</div>
+          </div>
+        </div>
+        ${obs.separacao ? `<div style="margin-bottom:6px"><b style="font-size:11px;color:#92400e">Obs. Separação:</b> <span style="font-size:12px">${obs.separacao}</span></div>` : ''}
+        ${obs.checkout ? `<div style="margin-bottom:6px"><b style="font-size:11px;color:#92400e">Obs. Checkout:</b> <span style="font-size:12px">${obs.checkout}</span></div>` : ''}
+        ${obs.reposicao ? `<div style="margin-bottom:6px"><b style="font-size:11px;color:#92400e">Obs. Reposição:</b> <span style="font-size:12px">${obs.reposicao}</span></div>` : ''}
+        ${obs.geral ? `<div style="margin-bottom:6px"><b style="font-size:11px;color:#92400e">Obs. Geral:</b> <span style="font-size:12px">${obs.geral}</span></div>` : ''}
+        <button onclick="confirmarLeitura()" style="width:100%;padding:10px;background:#d97706;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;margin-top:8px">
+          ✓ Confirmo que li o relatório do turno anterior
+        </button>
+      </div>`;
+  } catch(e) { if (aviso) aviso.style.display = 'none'; }
+}
+
+function confirmarLeitura() {
+  _leuAnterior = true;
+  const aviso = document.getElementById('diario-aviso-anterior');
+  if (aviso) aviso.innerHTML = `
+    <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;gap:10px">
+      <span style="font-size:20px">✅</span>
+      <div style="font-size:13px;font-weight:600;color:#166534">Turno anterior lido e confirmado</div>
+    </div>`;
+  toast('Leitura confirmada!','sucesso');
+}
+
+async function carregarDadosDiario() {
+  const data = document.getElementById('diario-data')?.value || hojeLocal();
+  const turno = document.getElementById('diario-turno')?.value || 'Manha';
+  try {
+    const res = await fetch(`${API}/diario/dados/turno?data=${data}&turno=${turno}`, { credentials:'include' });
+    const d = await res.json();
+    if (!res.ok) { toast('Erro ao carregar dados','erro'); return; }
+    document.getElementById('diario-sep-total').textContent = d.separacao.total;
+    document.getElementById('diario-sep-conc').textContent = d.separacao.concluidos;
+    document.getElementById('diario-sep-pend').textContent = d.separacao.pendentes;
+    document.getElementById('diario-sep-sep').textContent = d.separacao.separando;
+    document.getElementById('diario-ck-total').textContent = d.checkout.total;
+    document.getElementById('diario-ck-conc').textContent = d.checkout.concluidos;
+    document.getElementById('diario-ck-pend').textContent = d.checkout.pendentes;
+    document.getElementById('diario-rep-total').textContent = d.reposicao.total;
+    document.getElementById('diario-rep-res').textContent = d.reposicao.resolvidas;
+    document.getElementById('diario-rep-pend').textContent = d.reposicao.pendentes;
+    document.getElementById('diario-rep-nao').textContent = d.reposicao.nao_encontrados;
+    const tbProb = document.getElementById('tbody-diario-prob');
+    if (tbProb) {
+      if (!d.problemas.length) {
+        tbProb.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--text3);padding:16px">Nenhum problema registrado</td></tr>';
+      } else {
+        tbProb.innerHTML = d.problemas.map(p =>
+          `<tr><td style="padding:8px 12px;font-size:12px;font-weight:700">${p.pedido||'-'}</td>
+           <td style="padding:8px 12px;font-size:12px">${p.cliente||'-'}</td>
+           <td style="padding:8px 12px;font-size:12px">${p.codigo||'-'} — ${p.item||'-'}</td></tr>`
+        ).join('');
+      }
+    }
+    window._dadosDiario = d;
+    toast('Dados atualizados!','sucesso');
+  } catch(e) { toast('Erro ao carregar dados','erro'); }
+}
+
+async function salvarDiario() {
+  const data = document.getElementById('diario-data')?.value;
+  const turno = document.getElementById('diario-turno')?.value;
+  if (!data || !turno) { toast('Selecione data e turno','aviso'); return; }
+  if (_diarioAnterior && !_leuAnterior) {
+    toast('Confirme a leitura do turno anterior antes de salvar!','aviso');
+    document.getElementById('diario-aviso-anterior')?.scrollIntoView({behavior:'smooth'});
+    return;
+  }
+  const observacoes = {
+    separacao: document.getElementById('diario-obs-sep')?.value || '',
+    checkout: document.getElementById('diario-obs-ck')?.value || '',
+    reposicao: document.getElementById('diario-obs-rep')?.value || '',
+    geral: document.getElementById('diario-obs-geral')?.value || '',
+  };
+  try {
+    const res = await fetch(`${API}/diario`, {
+      method: 'POST', credentials: 'include',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ data, turno, dados: window._dadosDiario||{}, observacoes, leu_anterior: _leuAnterior })
+    });
+    const r = await res.json();
+    if (!res.ok) { toast(r.erro||'Erro ao salvar','erro'); return; }
+    toast('Diário salvo!','sucesso');
+    await carregarListaDiarios();
+  } catch(e) { toast('Erro ao salvar','erro'); }
+}
+
+async function carregarListaDiarios() {
+  const el = document.getElementById('lista-diarios');
+  if (!el) return;
+  try {
+    const res = await fetch(`${API}/diario`, { credentials:'include' });
+    const lista = await res.json();
+    if (!lista.length) { el.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:8px">Nenhum diário salvo ainda</div>'; return; }
+    el.innerHTML = lista.map(d => {
+      const turnoIcon = d.turno === 'Manha' ? '☀️' : d.turno === 'Tarde' ? '🌅' : '🌙';
+      const leuBadge = d.leu_anterior ? '<span style="font-size:9px;background:#f0fdf4;color:#166534;border:1px solid #86efac;border-radius:10px;padding:1px 6px">✓ leu</span>' : '';
+      return `<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);cursor:pointer;margin-bottom:6px" onclick="verDiario(${d.id})">
+        <div style="font-size:18px">${turnoIcon}</div>
+        <div style="flex:1">
+          <div style="font-weight:700;font-size:13px">${d.data} — ${d.turno} ${leuBadge}</div>
+          <div style="font-size:11px;color:var(--text3)">${d.supervisor}</div>
+        </div>
+        <button onclick="event.stopPropagation();exportarDiarioExcel(${d.id})" style="padding:4px 10px;background:#10b981;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:11px">Excel</button>
+      </div>`;
+    }).join('');
+  } catch(e) {}
+}
+
+async function verDiario(id) {
+  try {
+    const res = await fetch(`${API}/diario/${id}`, { credentials:'include' });
+    const d = await res.json();
+    if (!res.ok) return;
+    if (document.getElementById('diario-data')) document.getElementById('diario-data').value = d.data;
+    if (document.getElementById('diario-turno')) document.getElementById('diario-turno').value = d.turno;
+    const obs = typeof d.observacoes === 'string' ? JSON.parse(d.observacoes||'{}') : (d.observacoes||{});
+    if (document.getElementById('diario-obs-sep')) document.getElementById('diario-obs-sep').value = obs.separacao||'';
+    if (document.getElementById('diario-obs-ck')) document.getElementById('diario-obs-ck').value = obs.checkout||'';
+    if (document.getElementById('diario-obs-rep')) document.getElementById('diario-obs-rep').value = obs.reposicao||'';
+    if (document.getElementById('diario-obs-geral')) document.getElementById('diario-obs-geral').value = obs.geral||'';
+    window._dadosDiario = d.dados;
+    const dd = d.dados||{};
+    if (dd.separacao) {
+      document.getElementById('diario-sep-total').textContent = dd.separacao.total||0;
+      document.getElementById('diario-sep-conc').textContent = dd.separacao.concluidos||0;
+      document.getElementById('diario-sep-pend').textContent = dd.separacao.pendentes||0;
+      document.getElementById('diario-sep-sep').textContent = dd.separacao.separando||0;
+    }
+    if (dd.checkout) {
+      document.getElementById('diario-ck-total').textContent = dd.checkout.total||0;
+      document.getElementById('diario-ck-conc').textContent = dd.checkout.concluidos||0;
+      document.getElementById('diario-ck-pend').textContent = dd.checkout.pendentes||0;
+    }
+    if (dd.reposicao) {
+      document.getElementById('diario-rep-total').textContent = dd.reposicao.total||0;
+      document.getElementById('diario-rep-res').textContent = dd.reposicao.resolvidas||0;
+      document.getElementById('diario-rep-pend').textContent = dd.reposicao.pendentes||0;
+      document.getElementById('diario-rep-nao').textContent = dd.reposicao.nao_encontrados||0;
+    }
+  } catch(e) {}
+}
+
+async function exportarDiarioExcel(id) {
+  try {
+    const res = await fetch(`${API}/diario/${id}`, { credentials:'include' });
+    const d = await res.json();
+    if (!res.ok) return;
+    const dd = d.dados||{};
+    const obs = typeof d.observacoes === 'string' ? JSON.parse(d.observacoes||'{}') : (d.observacoes||{});
+    const wb = XLSX.utils.book_new();
+    const rows = [
+      ['DIARIO DE BORDO — WMS MIESS'],
+      ['Data:', d.data, 'Turno:', d.turno, 'Supervisor:', d.supervisor, 'Leu anterior:', d.leu_anterior ? 'Sim' : 'Nao'],
+      [''],
+      ['SEPARACAO'],
+      ['Total', 'Concluidos', 'Pendentes', 'Separando'],
+      [dd.separacao?.total||0, dd.separacao?.concluidos||0, dd.separacao?.pendentes||0, dd.separacao?.separando||0],
+      ['Observacoes:', obs.separacao||''],
+      [''],
+      ['CHECKOUT'],
+      ['Total', 'Concluidos', 'Pendentes'],
+      [dd.checkout?.total||0, dd.checkout?.concluidos||0, dd.checkout?.pendentes||0],
+      ['Observacoes:', obs.checkout||''],
+      [''],
+      ['REPOSICAO'],
+      ['Total', 'Resolvidas', 'Pendentes', 'Nao Encontrados'],
+      [dd.reposicao?.total||0, dd.reposicao?.resolvidas||0, dd.reposicao?.pendentes||0, dd.reposicao?.nao_encontrados||0],
+      ['Observacoes:', obs.reposicao||''],
+      [''],
+      ['PEDIDOS COM PROBLEMA'],
+      ['Pedido', 'Cliente', 'Item'],
+    ];
+    if (dd.problemas?.length) {
+      dd.problemas.forEach(p => rows.push([p.pedido||'-', p.cliente||'-', `${p.codigo||''} ${p.item||''}`]));
+    } else { rows.push(['Nenhum problema']); }
+    rows.push([''], ['OBSERVACOES GERAIS'], [obs.geral||'']);
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [{wch:20},{wch:25},{wch:20},{wch:20}];
+    XLSX.utils.book_append_sheet(wb, ws, 'Diario');
+    XLSX.writeFile(wb, `diario_${d.data}_${d.turno}.xlsx`);
+    toast('Excel exportado!','sucesso');
+  } catch(e) { toast('Erro ao exportar','erro'); }
 }

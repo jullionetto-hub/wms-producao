@@ -257,6 +257,16 @@ async function runMigrations() {
     await pool.query("ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS tem_prime BOOLEAN DEFAULT false");
     await pool.query("ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS tempo_aguardando_min INTEGER DEFAULT 0");
     await pool.query("ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS aguardando_repositor_desde TEXT DEFAULT ''");
+    await pool.query(`CREATE TABLE IF NOT EXISTS diario_bordo (
+      id SERIAL PRIMARY KEY,
+      data TEXT NOT NULL,
+      turno TEXT NOT NULL,
+      supervisor TEXT NOT NULL,
+      dados JSONB NOT NULL DEFAULT '{}',
+      observacoes TEXT DEFAULT '',
+      criado_em TIMESTAMPTZ DEFAULT NOW()
+    )`);
+    await pool.query("ALTER TABLE diario_bordo ADD COLUMN IF NOT EXISTS leu_anterior BOOLEAN DEFAULT false");
     console.log('Migrations OK');
   } catch(e) {
     console.error('Migration erro:', e.message);
