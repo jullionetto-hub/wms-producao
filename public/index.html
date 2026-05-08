@@ -356,9 +356,9 @@
               </div>
               <button class="btn btn-primary" style="width:100%;margin-top:4px" onclick="cadastrarUsuario()">✅ Cadastrar Usuário</button>
             </div>
-            <div class="card" style="max-height:calc(100vh - 140px);overflow-y:auto;position:relative">
-              <div class="card-hd" style="position:sticky;top:0;background:var(--surface);z-index:2;border-radius:var(--r-md) var(--r-md) 0 0;margin:-14px -16px 10px;padding:14px 16px;border-bottom:1px solid var(--border)">👥 USUÁRIOS CADASTRADOS <span id="usr-count" style="font-size:11px;color:var(--text3);font-weight:500"></span><button class="btn btn-outline btn-sm" onclick="carregarUsuarios()" style="margin-left:auto">🔄</button></div>
-              <div id="lista-usuarios" style="padding:4px 0"></div>
+            <div class="card">
+              <div class="card-hd">👥 USUÁRIOS CADASTRADOS <span id="usr-count" style="font-size:11px;color:var(--text3);font-weight:500"></span><button class="btn btn-outline btn-sm" onclick="carregarUsuarios()" style="margin-left:auto">🔄</button></div>
+              <div id="lista-usuarios" style="padding:4px 0;max-height:calc(100vh - 220px);overflow-y:auto"></div>
             </div>
           </div>
         </div>
