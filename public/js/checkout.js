@@ -25,65 +25,64 @@ function mudarTabCk(tab) {
 
 
 async function buscarCaixaMobile() {
-  const num = document.getElementById('m-ck-input-caixa')?.value?.trim();
-  if (!num) { toast('Digite o número da caixa!','aviso'); return; }
-  const cont = document.getElementById('m-ck-resultado');
-  if (cont) cont.innerHTML = '<div style="color:var(--text3);padding:16px;text-align:center">🔍 Buscando...</div>';
+  const input = document.getElementById('m-ck-input-caixa');
+  const res_el = document.getElementById('m-ck-resultado');
+  const caixa = input?.value?.trim();
+  if (!caixa) return;
+  res_el.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text3)">⏳ Buscando...</div>';
   try {
-    const res  = await fetch(`${API}/checkout/caixa/${encodeURIComponent(num)}`, { credentials:'include' });
-    const rows = await res.json();
+    const res = await fetch(`${API}/checkout/caixa/${encodeURIComponent(caixa)}`, { credentials:'include' });
+    const rows = res.ok ? await res.json() : [];
     if (!rows.length) {
-      if (cont) cont.innerHTML = `<div style="color:var(--text3);padding:20px;text-align:center;font-size:14px;background:var(--surface);border-radius:12px;border:1px solid var(--border)">📦 Nenhum pedido vinculado à caixa <b>${num}</b></div>`;
+      res_el.innerHTML = `<div style="background:#fef2f2;border:1.5px solid #fca5a5;border-radius:12px;padding:20px;text-align:center;margin-top:12px">
+        <div style="font-size:32px;margin-bottom:8px">📭</div>
+        <div style="font-weight:700;color:#dc2626">Caixa não encontrada</div>
+        <div style="font-size:12px;color:#ef4444;margin-top:4px">${caixa}</div>
+      </div>`;
       return;
     }
-    if (cont) cont.innerHTML = rows.map(r => {
+    res_el.innerHTML = rows.map(r => {
       const concluido = r.status === 'concluido';
-      const liberado  = r.status === 'liberado';
-      const itensHtml = (r.itens_lista||[]).length > 0
-        ? `<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px">
-            <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1px;margin-bottom:8px">ITENS DO PEDIDO</div>
-            ${r.itens_lista.map(it => `
-              <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--surface);border-radius:8px;margin-bottom:5px;border:1.5px solid ${it.status==='encontrado'?'#BBF7D0':it.status==='falta'?'#FECACA':'var(--border)'}">
-                <div style="flex:1;min-width:0">
-                  <div style="font-size:12px;font-weight:700;color:var(--accent)">${it.codigo||'—'}</div>
-                  <div style="font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${it.descricao||'—'}</div>
-                  <div style="font-size:11px;color:var(--text3)">📍 ${it.endereco||'—'}</div>
-                </div>
-                <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0;margin-left:8px">
-                  <span style="font-size:15px;font-weight:800;color:var(--text)">x${it.quantidade||1}</span>
-                  <span class="pill ${it.status||'pendente'}" style="font-size:9px">${it.status||'pendente'}</span>
-                </div>
-              </div>`).join('')}
-          </div>` : '';
+      const isDrive = String(r.transportadora||'').toUpperCase().includes('DRIVE');
+      const isPrime = r.tem_prime;
+      const corBorda = concluido ? '#16a34a' : isDrive ? '#dc2626' : isPrime ? '#7c3aed' : '#4f46e5';
       return `
-      <div style="border:1.5px solid ${concluido?'#BBF7D0':liberado?'#DDD6FE':'var(--accent)'};border-radius:12px;padding:14px;margin-bottom:10px;background:${concluido?'#F0FDF4':liberado?'#F5F3FF':'var(--surface)'}">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-          <div>
-            <div style="font-size:22px;font-weight:800;color:var(--accent);font-family:'Space Mono',monospace">#${r.numero_pedido}</div>
-            <div style="font-size:12px;color:var(--text3);margin-top:2px">
-              📦 <b style="color:var(--text)">${r.ped_itens||0} itens</b> &nbsp;•&nbsp; 👤 ${r.sep_nome||r.separador_nome||'—'}
+      <div style="background:var(--surface);border-radius:16px;overflow:hidden;margin-top:12px;box-shadow:0 2px 8px rgba(0,0,0,.08)">
+        <div style="background:${concluido?'#f0fdf4':isDrive?'#fef2f2':isPrime?'#f5f3ff':'#eff6ff'};border-left:5px solid ${corBorda};padding:16px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start">
+            <div>
+              <div style="font-size:13px;color:var(--text3);font-weight:600">PEDIDO</div>
+              <div style="font-family:'Space Mono',monospace;font-size:20px;font-weight:700;color:var(--text)">${r.numero_pedido||'—'}</div>
+              <div style="font-size:13px;color:var(--text2);margin-top:2px">${r.cliente||'—'}</div>
             </div>
-            ${r.hora_criacao?`<div style="font-size:11px;color:var(--text3)">🕐 Vinculado às ${r.hora_criacao}</div>`:''}
+            <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
+              ${concluido?'<span style="font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;background:#16a34a;color:#fff">✅ Concluído</span>':''}
+              ${isDrive?'<span style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;background:#dc2626;color:#fff">DRIVE</span>':''}
+              ${isPrime?'<span style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;background:#7c3aed;color:#fff">PRIME</span>':''}
+            </div>
           </div>
-          <div style="font-size:28px">${concluido?'✅':liberado?'🔓':'📦'}</div>
         </div>
-        <div style="margin-bottom:10px">
-          ${!concluido && !liberado
-            ? `<button class="btn btn-success" style="width:100%;padding:14px;font-size:15px;font-weight:700;border-radius:10px;margin-bottom:8px" onclick="confirmarCheckoutMobile(${r.id})">✅ CONFIRMAR CHECKOUT</button>
-               <button class="btn" style="width:100%;padding:11px;font-size:13px;background:var(--surface2);border:1.5px solid var(--border);color:var(--text2);border-radius:10px" onclick="liberarCaixaMobile(${r.id})">🔓 Liberar Caixa Sem Checkout</button>`
-            : concluido
-              ? `<div style="text-align:center;padding:10px;background:#F0FDF4;border-radius:10px;color:var(--green);font-weight:700;font-size:14px">✅ Checkout realizado às ${r.hora_checkout||'—'}</div>
-                 <button class="btn" style="width:100%;padding:11px;font-size:13px;background:var(--surface2);border:1.5px solid var(--border);color:var(--text2);border-radius:10px;margin-top:8px" onclick="liberarCaixaMobile(${r.id})">🔓 Liberar Caixa</button>`
-              : `<div style="text-align:center;padding:10px;background:#F5F3FF;border-radius:10px;color:var(--indigo);font-weight:700;font-size:14px">🔓 Caixa Liberada</div>`}
+        <div style="padding:12px 16px;display:flex;gap:8px;flex-wrap:wrap;border-bottom:1px solid var(--border)">
+          <span style="background:var(--surface2);border-radius:8px;padding:5px 10px;font-size:11px">🚚 ${r.transportadora||'—'}</span>
+          <span style="background:var(--surface2);border-radius:8px;padding:5px 10px;font-size:11px">📦 ${r.itens||0} itens</span>
+          <span style="background:var(--surface2);border-radius:8px;padding:5px 10px;font-size:11px">📦 Caixa ${r.numero_caixa||caixa}</span>
         </div>
-        ${gerarCodigoBarrasSVG(r.numero_pedido)}
-        ${itensHtml}
+        ${!concluido ? `
+        <div style="padding:14px 16px">
+          <button onclick="confirmarCheckoutMobile(${r.id})"
+            style="width:100%;padding:15px;background:#4f46e5;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer">
+            ✅ Confirmar Checkout
+          </button>
+        </div>` : `
+        <div style="padding:12px 16px;text-align:center;color:#16a34a;font-size:13px;font-weight:600">
+          Checkout concluído às ${r.hora_checkout||'—'}
+        </div>`}
       </div>`;
     }).join('');
-  } catch(e) { if(cont) cont.innerHTML='<div style="color:var(--red);padding:10px;text-align:center">Erro ao buscar!</div>'; }
+  } catch(e) {
+    res_el.innerHTML = '<div style="color:#ef4444;text-align:center;padding:24px">Erro ao buscar</div>';
+  }
 }
-
-
 
 
 async function confirmarCheckoutMobile(id) {

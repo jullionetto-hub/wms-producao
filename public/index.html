@@ -1310,13 +1310,17 @@
       <!-- ABA 1 — CHECKOUT -->
       <div class="ck-tab-page ativa" id="ck-tab-busca">
         <div class="ck-scroll">
-          <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text);margin-bottom:12px">🏷️ Checkout</div>
-          <div class="bip-wrap">
-            <input type="text" class="bip-input" id="m-ck-input-caixa"
-              placeholder="Bipe ou número da caixa..."
-              autocomplete="off" inputmode="numeric"
-              style="font-size:20px;letter-spacing:3px"/>
-            <button class="btn-bip" onclick="buscarCaixaMobile()">▶</button>
+          <div style="font-family:'Space Mono',monospace;font-size:15px;font-weight:700;color:var(--text);margin-bottom:14px">🏷️ Checkout</div>
+          <div style="background:var(--surface2);border-radius:14px;padding:14px;margin-bottom:4px">
+            <div style="font-size:11px;color:var(--text3);font-weight:600;margin-bottom:8px;letter-spacing:.5px">NÚMERO DA CAIXA</div>
+            <div class="bip-wrap">
+              <input type="text" class="bip-input" id="m-ck-input-caixa"
+                placeholder="Bipe ou digite..."
+                autocomplete="off" inputmode="numeric"
+                style="font-size:22px;letter-spacing:3px;background:var(--surface);border-radius:10px"
+                onkeydown="if(event.key==='Enter')buscarCaixaMobile()"/>
+              <button class="btn-bip" onclick="buscarCaixaMobile()">▶</button>
+            </div>
           </div>
           <div id="m-ck-resultado"></div>
         </div>
