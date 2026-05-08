@@ -51,7 +51,7 @@ router.post('/auth/login', async (req,res) => {
   const perfil = sanitizeStr(req.body.perfil, 50);
 
   if (!login || !senha || !perfil) return res.status(400).json({erro:'Dados incompletos!'});
-  if (!['supervisor','separador','repositor','checkout'].includes(perfil))
+  if (!['supervisor','separador','repositor','checkout','embalador'].includes(perfil))
     return res.status(400).json({erro:'Perfil inválido!'});
 
   try {
@@ -77,6 +77,8 @@ router.post('/auth/login', async (req,res) => {
     if (!perfisPermitidos(user).includes(perfil))
       return res.status(403).json({erro:'Este colaborador não pode acessar este perfil!'});
 
+    // Verifica senha temporaria
+    const senhaTemp = user.senha_temporaria === true || user.senha_temporaria === 't';
     // Salva na sessão SEM senha_hash
     req.session.usuario = {
       id: user.id, nome: user.nome, login: user.login, perfil,
@@ -94,7 +96,7 @@ router.post('/auth/login', async (req,res) => {
       req.session.separador = null;
     }
 
-    res.json({ usuario: req.session.usuario, separador: req.session.separador });
+    res.json({ usuario: req.session.usuario, separador: req.session.separador, senha_temporaria: senhaTemp });
   } catch(e) { res.status(500).json({erro:'Erro interno ao autenticar.'}); }
 });
 router.post('/auth/logout', (req,res) => {
@@ -138,9 +140,10 @@ router.put('/usuarios/:id', requerAuth, requerPerfil('supervisor'), async (req,r
   const subtipo=perfil==='repositor'?(subtipo_repositor||'geral'):'geral';
   const extras=Array.isArray(perfis_acesso)?perfis_acesso.filter(Boolean).filter(p=>p!==perfil).join(','):String(perfis_acesso||'');
   try {
+    const senhaTemp = req.body.senha_temporaria === true;
     if (senha) {
-      await pool.query(`UPDATE usuarios SET nome=$1,login=$2,senha_hash=$3,perfil=$4,subtipo_repositor=$5,turno=$6,status=$7,perfis_acesso=$8 WHERE id=$9`,
-        [nome,login,hashSenha(senha),perfil,subtipo,turno||'Manha',status,extras,req.params.id]);
+      await pool.query(`UPDATE usuarios SET nome=$1,login=$2,senha_hash=$3,perfil=$4,subtipo_repositor=$5,turno=$6,status=$7,perfis_acesso=$8,senha_temporaria=$9 WHERE id=$10`,
+        [nome,login,hashSenha(senha),perfil,subtipo,turno||'Manha',status,extras,senhaTemp,req.params.id]);
     } else {
       await pool.query(`UPDATE usuarios SET nome=$1,login=$2,perfil=$3,subtipo_repositor=$4,turno=$5,status=$6,perfis_acesso=$7 WHERE id=$8`,
         [nome,login,perfil,subtipo,turno||'Manha',status,extras,req.params.id]);
@@ -1359,6 +1362,20 @@ router.post('/auth/redefinir-senha', requerAuth, async (req,res) => {
     await pool.query('UPDATE usuarios SET senha_hash=$1 WHERE id=$2', [hashSenha(senha_nova), usuario.id]);
     await registrarAuditoria(req, 'REDEFINIR_SENHA', 'usuario', usuario.id, null, null);
     res.json({mensagem:'Senha redefinida!'});
+  } catch(e) { res.status(500).json({erro:e.message}); }
+});
+
+
+router.post('/auth/trocar-senha-temp', async (req,res) => {
+  try {
+    const { login, senha_nova, senha_conf } = req.body;
+    if (!login || !senha_nova || !senha_conf) return res.status(400).json({erro:'Preencha todos os campos'});
+    if (senha_nova.length < 6) return res.status(400).json({erro:'Senha minima 6 caracteres'});
+    if (senha_nova !== senha_conf) return res.status(400).json({erro:'Senhas nao conferem'});
+    const u = await db.get('SELECT id FROM usuarios WHERE login=$1 AND senha_temporaria=true', [login]);
+    if (!u) return res.status(400).json({erro:'Nao autorizado'});
+    await pool.query('UPDATE usuarios SET senha_hash=$1, senha_temporaria=false WHERE id=$2', [hashSenha(senha_nova), u.id]);
+    res.json({mensagem:'Senha alterada! Faca o login.'});
   } catch(e) { res.status(500).json({erro:e.message}); }
 });
 

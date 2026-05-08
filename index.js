@@ -309,6 +309,7 @@ async function runMigrations() {
       is_prime BOOLEAN DEFAULT false,
       criado_em TIMESTAMPTZ DEFAULT NOW()
     )`);
+    await pool.query("ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS senha_temporaria BOOLEAN DEFAULT false");
     console.log('Migrations OK');
   } catch(e) {
     console.error('Migration erro:', e.message);

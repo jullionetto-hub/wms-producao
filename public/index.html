@@ -22,7 +22,27 @@
 
 <!-- ══ LOGIN ══ -->
 <div id="tela-login">
-  <div class="login-box">
+  <div id="trocar-senha-box" style="display:none;position:fixed;inset:0;background:var(--bg);align-items:center;justify-content:center;z-index:999;flex-direction:column">
+    <div style="background:var(--surface);border-radius:20px;padding:32px;max-width:380px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.15)">
+      <div style="text-align:center;margin-bottom:24px">
+        <div style="font-size:44px">🔑</div>
+        <div style="font-size:18px;font-weight:700;color:var(--text);margin-top:10px">Troca de Senha Obrigatória</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:6px;line-height:1.5">Sua senha foi redefinida pelo supervisor.<br>Crie uma nova senha para continuar.</div>
+      </div>
+      <input type="hidden" id="trocar-login-hidden">
+      <div class="form-grp">
+        <label>NOVA SENHA</label>
+        <input type="password" id="trocar-senha-nova" placeholder="Mínimo 6 caracteres">
+      </div>
+      <div class="form-grp" style="margin-top:12px">
+        <label>CONFIRMAR NOVA SENHA</label>
+        <input type="password" id="trocar-senha-conf" placeholder="Digite novamente">
+      </div>
+      <div id="trocar-erro" style="color:#ef4444;font-size:12px;margin:8px 0;min-height:16px"></div>
+      <button onclick="trocarSenhaTemp()" class="btn-login" style="margin-top:4px">✅ Salvar nova senha</button>
+    </div>
+  </div>
+    <div class="login-box" id="login-box">
     <div class="login-logo">📦</div>
     <div class="login-titulo">WMS — Miess</div>
     <div class="login-sub">Controle de Separação</div>

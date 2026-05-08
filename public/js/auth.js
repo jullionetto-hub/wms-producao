@@ -37,6 +37,14 @@ async function fazerLogin() {
     const res  = await fetch(`${API}/auth/login`, { credentials:'include', method:'POST', credentials:'include', headers:{'Content-Type':'application/json'}, body:JSON.stringify({login,senha,perfil:perfilSelecionado}) });
     const data = await res.json();
     if (!res.ok) { erroEl.textContent = data.erro || 'Erro ao entrar!'; erroEl.style.display = 'block'; return; }
+    if (data.senha_temporaria) {
+      document.getElementById('login-box').style.display = 'none';
+      const tBox = document.getElementById('trocar-senha-box');
+      if (tBox) tBox.style.display = 'flex';
+      const hid = document.getElementById('trocar-login-hidden');
+      if (hid) hid.value = login;
+      return;
+    }
     usuarioAtual   = data.usuario;
     separadorAtual = data.separador;
     erroEl.style.display = 'none';
@@ -419,6 +427,9 @@ async function abrirEditarUsuario(id) {
     document.getElementById('edit-usr-nome').value   = u.nome;
     document.getElementById('edit-usr-login').value  = u.login;
     document.getElementById('edit-usr-senha').value  = '';
+    var cbTemp = document.getElementById('edit-usr-senha-temp'); if (cbTemp) cbTemp.checked = false;
+    var cbTemp = document.getElementById('edit-usr-senha-temp');
+    if (cbTemp) cbTemp.checked = false;
     document.getElementById('edit-usr-perfil').value = u.perfil;
     var turnoEl = document.getElementById('edit-usr-turno');
     if (turnoEl) { var tv = (u.turno||'Manha').replace('\u00e3','a').replace('Manh\u00e3','Manha'); turnoEl.value = tv; }
@@ -454,7 +465,7 @@ async function salvarEdicaoUsuario() {
   if (senha && senha.length < 6) { toast('Senha minimo 6 caracteres!','aviso'); return; }
   try {
     var body = { nome: nome, login: login, perfil: perfil, turno: turno, status:'ativo', perfis_acesso: perfis_acesso, subtipo_repositor: subtipo };
-    if (senha) body.senha = senha;
+    if (senha) { body.senha = senha; body.senha_temporaria = document.getElementById('edit-usr-senha-temp')?.checked || false; }
     var res = await fetch(API + '/usuarios/' + id, { credentials:'include', method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
     var data = await res.json();
     if (!res.ok) { toast(data.erro||'Erro ao salvar!','erro'); return; }
@@ -878,4 +889,27 @@ async function salvarRedefinirSenha() {
     toast('Senha redefinida com sucesso!','sucesso');
     fecharRedefinirSenha();
   } catch(e) { toast('Erro ao redefinir senha','erro'); }
+}
+
+async function trocarSenhaTemp() {
+  const login = document.getElementById('trocar-login-hidden')?.value || '';
+  const nova  = document.getElementById('trocar-senha-nova')?.value  || '';
+  const conf  = document.getElementById('trocar-senha-conf')?.value  || '';
+  const erroEl = document.getElementById('trocar-erro');
+  if (!nova || !conf) { if(erroEl) erroEl.textContent='Preencha todos os campos'; return; }
+  if (nova.length < 6) { if(erroEl) erroEl.textContent='Minimo 6 caracteres'; return; }
+  if (nova !== conf) { if(erroEl) erroEl.textContent='Senhas nao conferem'; return; }
+  try {
+    const res = await fetch(`${API}/auth/trocar-senha-temp`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ login, senha_nova: nova, senha_conf: conf })
+    });
+    const r = await res.json();
+    if (!res.ok) { if(erroEl) erroEl.textContent = r.erro||'Erro'; return; }
+    // Volta para login com mensagem
+    document.getElementById('trocar-senha-box').style.display = 'none';
+    document.getElementById('login-box').style.display = 'flex';
+    const erroLogin = document.getElementById('login-erro');
+    if (erroLogin) { erroLogin.textContent = '✅ Senha alterada! Faça o login.'; erroLogin.style.display='block'; erroLogin.style.color='#16a34a'; }
+  } catch(e) { if(erroEl) erroEl.textContent='Erro ao salvar'; }
 }
