@@ -1178,12 +1178,18 @@ router.get('/diario/dados/turno', requerAuth, requerPerfil('supervisor'), async 
     const repPendentes = reposicoes.filter(r => r.status === 'pendente' || r.status === 'aberto').length;
     const repNaoEncontrados = reposicoes.filter(r => r.status === 'nao_encontrado').length;
     
+    // Embalagem
+    const embTotal = await db.get('SELECT COUNT(*) as total, SUM(CASE WHEN status_embalagem=$2 THEN 1 ELSE 0 END) as embalados FROM pedidos WHERE data_pedido=$1 AND status=$3', [dt, 'embalado', 'concluido']);
+    const embEmbalados = parseInt(embTotal?.embalados || 0);
+    const embPendentes = parseInt(embTotal?.total || 0) - embEmbalados;
+
     res.json({
       data: dt,
       turno: turno || 'Todos',
       separacao: { total, concluidos, pendentes, separando },
       checkout: { concluidos: ckConcluidos, pendentes: ckPendentes, total: checkouts.length },
       reposicao: { resolvidas: repResolvidas, pendentes: repPendentes, nao_encontrados: repNaoEncontrados, total: reposicoes.length },
+      embalagem: { total: parseInt(embTotal?.total || 0), embalados: embEmbalados, pendentes: embPendentes },
       problemas: faltas.map(f => ({ pedido: f.numero_pedido, cliente: f.cliente, item: f.descricao, codigo: f.codigo }))
     });
   } catch(e) { res.status(500).json({erro:e.message}); }

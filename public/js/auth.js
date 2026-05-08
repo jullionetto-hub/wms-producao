@@ -577,6 +577,14 @@ async function carregarDadosDiario() {
     document.getElementById('diario-rep-res').textContent = d.reposicao.resolvidas;
     document.getElementById('diario-rep-pend').textContent = d.reposicao.pendentes;
     document.getElementById('diario-rep-nao').textContent = d.reposicao.nao_encontrados;
+    if (d.embalagem) {
+      const embTotal = document.getElementById('diario-emb-total');
+      const embEmb   = document.getElementById('diario-emb-emb');
+      const embPend  = document.getElementById('diario-emb-pend');
+      if (embTotal) embTotal.textContent = d.embalagem.total;
+      if (embEmb)   embEmb.textContent   = d.embalagem.embalados;
+      if (embPend)  embPend.textContent  = d.embalagem.pendentes;
+    }
     const tbProb = document.getElementById('tbody-diario-prob');
     if (tbProb) {
       if (!d.problemas.length) {
@@ -607,6 +615,7 @@ async function salvarDiario() {
     separacao: document.getElementById('diario-obs-sep')?.value || '',
     checkout: document.getElementById('diario-obs-ck')?.value || '',
     reposicao: document.getElementById('diario-obs-rep')?.value || '',
+    embalagem: document.getElementById('diario-obs-emb')?.value || '',
     geral: document.getElementById('diario-obs-geral')?.value || '',
   };
   try {
