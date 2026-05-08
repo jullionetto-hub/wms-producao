@@ -729,17 +729,23 @@ router.post('/pedidos/recalcular-pontuacao', requerAuth, requerPerfil('superviso
 router.put('/checkout/:id/confirmar', requerAuth, async (req,res) => {
   const {hora_checkout,data_checkout}=req.body;
   const {data,hora}=dataHoraLocal();
+  const operador_nome = req.session?.usuario?.nome || '';
   try {
-    // Busca pedido_id ANTES de atualizar
     const ck = await db.get('SELECT pedido_id FROM checkout WHERE id=$1',[req.params.id]);
-    await pool.query(`UPDATE checkout SET status='concluido',hora_checkout=$1,data_checkout=$2 WHERE id=$3`,
-      [hora_checkout||hora, data_checkout||data, req.params.id]);
-    // Usando pedido_id diretamente - mesma logica de quando separacao vai para checkout
-    if (ck?.pedido_id) {
-      await pool.query(`UPDATE pedidos SET status_embalagem='pendente' WHERE id=$1`,[ck.pedido_id]);
-    }
+    if (!ck) return res.status(404).json({erro:'Checkout nao encontrado'});
+    await pool.query(
+      `UPDATE checkout SET status='concluido',hora_checkout=$1,data_checkout=$2,operador_nome=$3 WHERE id=$4`,
+      [hora_checkout||hora, data_checkout||data, operador_nome, req.params.id]
+    );
+    await pool.query(
+      `UPDATE pedidos SET status_embalagem='pendente' WHERE id=$1`,
+      [ck.pedido_id]
+    );
     res.json({mensagem:'Checkout concluido!'});
-  } catch(e){res.status(500).json({erro:e.message});}
+  } catch(e){
+    console.error('ERRO /checkout/confirmar:', e.message);
+    res.status(500).json({erro:e.message});
+  }
 });
 
 // Liberar caixa do checkout
@@ -1285,10 +1291,10 @@ router.get('/stats/meus', requerAuth, async (req,res) => {
 
     if (usuario.perfil === 'checkout') {
       const dados = await db.get(`SELECT
-        SUM(CASE WHEN data_checkout=$1 AND status='concluido' THEN 1 ELSE 0 END) as expedidos_hoje,
-        SUM(CASE WHEN data_checkout=$1 THEN 1 ELSE 0 END) as total_hoje,
+        SUM(CASE WHEN data_checkout=$1 AND status='concluido' AND operador_nome=$2 THEN 1 ELSE 0 END) as expedidos_hoje,
+        SUM(CASE WHEN data_checkout=$1 AND operador_nome=$2 THEN 1 ELSE 0 END) as total_hoje,
         SUM(CASE WHEN status='pendente' THEN 1 ELSE 0 END) as pendentes
-        FROM checkout`, [hoje]);
+        FROM checkout`, [hoje, usuario.nome]);
       result.checkout = dados;
     }
 
@@ -1303,15 +1309,19 @@ router.get('/embalagem', requerAuth, async (req,res) => {
     const {data:hoje} = dataHoraLocal();
     const {data, status} = req.query;
     const dt = data || hoje;
-    let sql = `SELECT p.*, ck.hora_checkout, ck.usuario_id as ck_usuario_id
+    // INNER JOIN - so aparece se tem checkout concluido
+    let sql = `SELECT p.*, ck.hora_checkout, ck.operador_nome
       FROM pedidos p
-      LEFT JOIN checkout ck ON ck.numero_pedido = p.numero_pedido AND ck.status = 'concluido'
+      INNER JOIN checkout ck ON ck.pedido_id = p.id AND ck.status = 'concluido'
       WHERE p.status = 'concluido' AND p.data_pedido = $1`;
     const params = [dt];
     if (status === 'pendente') {
-      sql += ` AND (p.status_embalagem = 'pendente' OR p.status_embalagem IS NULL)`;
+      sql += ` AND (p.status_embalagem IS NULL OR p.status_embalagem = 'pendente')`;
     } else if (status === 'embalado') {
       sql += ` AND p.status_embalagem = 'embalado'`;
+    } else {
+      // todos: pendentes + embalados (so os que passaram pelo checkout)
+      sql += ` AND p.status_embalagem != 'nao_iniciado'`;
     }
     sql += ` ORDER BY ck.hora_checkout ASC NULLS LAST`;
     const pedidos = await db.all(sql, params);

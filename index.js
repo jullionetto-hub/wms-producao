@@ -310,6 +310,7 @@ async function runMigrations() {
       criado_em TIMESTAMPTZ DEFAULT NOW()
     )`);
     await pool.query("ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS senha_temporaria BOOLEAN DEFAULT false");
+    await pool.query("ALTER TABLE checkout ADD COLUMN IF NOT EXISTS operador_nome TEXT DEFAULT ''");
     console.log('Migrations OK');
   } catch(e) {
     console.error('Migration erro:', e.message);
