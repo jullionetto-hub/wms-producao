@@ -821,38 +821,53 @@ async function carregarEmbalagemMobile() {
   const el = document.getElementById('m-emb-lista');
   const cnt = document.getElementById('m-emb-pend');
   if (!el) return;
+  el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3)">Carregando...</div>';
   try {
     const res = await fetch(`${API}/embalagem?status=pendente`, { credentials:'include' });
     const pedidos = await res.json();
     if (cnt) cnt.textContent = pedidos.length;
     if (!pedidos.length) {
-      el.innerHTML = '<div style="text-align:center;padding:60px 16px"><div style="font-size:48px;margin-bottom:12px">✅</div><div style="color:var(--text3);font-size:15px">Nenhum pedido pendente</div></div>';
+      el.innerHTML = `<div style="text-align:center;padding:60px 16px">
+        <div style="font-size:56px;margin-bottom:16px">✅</div>
+        <div style="font-weight:700;font-size:16px;color:var(--text);margin-bottom:6px">Tudo embalado!</div>
+        <div style="color:var(--text3);font-size:13px">Nenhum pedido pendente</div>
+      </div>`;
       return;
     }
     el.innerHTML = pedidos.map(p => {
       const isDrive = String(p.transportadora||'').toUpperCase().includes('DRIVE');
       const isPrime = p.tem_prime;
-      const corBorda = isDrive ? '#dc2626' : isPrime ? '#4338ca' : '#4f46e5';
-      return `<div style="background:var(--surface);border:1px solid var(--border);border-left:4px solid ${corBorda};border-radius:14px;padding:16px;margin-bottom:12px">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
-          <div>
-            <div style="font-family:'Space Mono',monospace;font-size:16px;font-weight:700;color:var(--text)">${p.numero_pedido}</div>
-            <div style="font-size:13px;color:var(--text2);margin-top:3px">${p.cliente||'—'}</div>
+      const corBorda = isDrive ? '#dc2626' : isPrime ? '#7c3aed' : '#4f46e5';
+      const corFundo = isDrive ? '#fef2f2' : isPrime ? '#f5f3ff' : '#eff6ff';
+      return `
+        <div style="background:var(--surface);border-radius:16px;margin-bottom:14px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08)">
+          <!-- Header colorido -->
+          <div style="background:${corFundo};border-left:5px solid ${corBorda};padding:14px 16px">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div>
+                <div style="font-family:'Space Mono',monospace;font-size:17px;font-weight:700;color:var(--text)">${p.numero_pedido}</div>
+                <div style="font-size:13px;color:var(--text2);margin-top:2px;font-weight:500">${p.cliente||'—'}</div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
+                ${isDrive?'<span style="font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;background:#dc2626;color:#fff;letter-spacing:.3px">DRIVE</span>':''}
+                ${isPrime?'<span style="font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;background:#7c3aed;color:#fff;letter-spacing:.3px">PRIME</span>':''}
+              </div>
+            </div>
           </div>
-          <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
-            ${isDrive?'<span style="font-size:9px;font-weight:700;padding:2px 8px;border-radius:4px;background:#fee2e2;color:#dc2626">DRIVE THRU</span>':''}
-            ${isPrime?'<span style="font-size:9px;font-weight:700;padding:2px 8px;border-radius:4px;background:#ede9fe;color:#4338ca">PRIME</span>':''}
+          <!-- Info -->
+          <div style="padding:12px 16px;display:flex;gap:8px;flex-wrap:wrap;border-bottom:1px solid var(--border)">
+            <span style="background:var(--surface2);border-radius:8px;padding:5px 10px;font-size:11px;color:var(--text2)">🚚 ${p.transportadora||'—'}</span>
+            <span style="background:var(--surface2);border-radius:8px;padding:5px 10px;font-size:11px;color:var(--text2)">📦 ${p.itens||0} itens</span>
+            ${p.hora_checkout?`<span style="background:var(--surface2);border-radius:8px;padding:5px 10px;font-size:11px;color:var(--text2)">🕐 ${p.hora_checkout}</span>`:''}
           </div>
-        </div>
-        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">
-          <span style="background:var(--surface2);border-radius:8px;padding:4px 10px;font-size:11px">🚚 ${p.transportadora||'—'}</span>
-          <span style="background:var(--surface2);border-radius:8px;padding:4px 10px;font-size:11px">📦 ${p.itens||0} itens</span>
-        </div>
-        <button onclick="confirmarEmbalagemMobile(${p.id})"
-          style="width:100%;padding:14px;background:#4f46e5;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer">
-          ✅ Confirmar Embalagem
-        </button>
-      </div>`;
+          <!-- Botao -->
+          <div style="padding:14px 16px">
+            <button onclick="confirmarEmbalagemMobile(${p.id})"
+              style="width:100%;padding:15px;background:#4f46e5;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;letter-spacing:.3px">
+              ✅ Confirmar embalagem
+            </button>
+          </div>
+        </div>`;
     }).join('');
   } catch(e) { if(el) el.innerHTML = '<div style="color:#ef4444;text-align:center;padding:24px">Erro ao carregar</div>'; }
 }

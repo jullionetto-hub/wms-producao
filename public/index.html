@@ -1286,14 +1286,20 @@
 
     <!-- ══ EMBALAGEM MOBILE ══ -->
     <div id="emb-mobile-root" style="display:none;flex-direction:column;height:100vh;background:var(--bg)">
-      <div style="background:var(--surface);border-bottom:1px solid var(--border);padding:14px 16px;display:flex;align-items:center;justify-content:space-between">
-        <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">📫 Embalagem</div>
-        <div style="display:flex;align-items:center;gap:10px">
-          <span style="font-size:12px;color:var(--amber);font-weight:700">⏳ <span id="m-emb-pend">0</span></span>
-          <button onclick="carregarEmbalagemMobile()" style="padding:6px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer">🔄</button>
-          <button onclick="sair()" style="padding:6px 12px;background:#fee2e2;color:#dc2626;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">Sair</button>
+      <!-- Header -->
+      <div style="background:var(--surface);border-bottom:1.5px solid var(--border);padding:14px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10">
+        <div>
+          <div style="font-family:'Space Mono',monospace;font-size:15px;font-weight:700;color:var(--text)">📫 Embalagem</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:1px">
+            <span id="m-emb-pend" style="font-weight:700;color:#ca8a04">0</span> pendentes
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <button onclick="carregarEmbalagemMobile()" style="padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;font-size:13px;cursor:pointer">🔄</button>
+          <button onclick="sair()" style="padding:8px 14px;background:#fee2e2;color:#dc2626;border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer">Sair</button>
         </div>
       </div>
+      <!-- Lista -->
       <div style="flex:1;overflow-y:auto;padding:14px" id="m-emb-lista">
         <div style="text-align:center;padding:60px;color:var(--text3)">Carregando...</div>
       </div>

@@ -487,6 +487,11 @@ router.put('/checkout/:id/concluir', requerAuth, async (req,res) => {
   const {data,hora}=dataHoraLocal();
   try {
     await pool.query(`UPDATE checkout SET status='concluido',hora_checkout=$1,data_checkout=$2 WHERE id=$3`,[hora_checkout||hora,data_checkout||data,req.params.id]);
+    // Marcar pedido como pendente na embalagem
+    const ck = await db.get('SELECT numero_pedido FROM checkout WHERE id=$1',[req.params.id]);
+    if (ck?.numero_pedido) {
+      await pool.query(`UPDATE pedidos SET status_embalagem='pendente' WHERE numero_pedido=$1 AND (status_embalagem IS NULL OR status_embalagem='pendente')`,[ck.numero_pedido]);
+    }
     res.json({mensagem:'Checkout concluido!'});
   } catch(e){res.status(500).json({erro:e.message});}
 });
@@ -728,6 +733,13 @@ router.put('/checkout/:id/confirmar', requerAuth, async (req,res) => {
     await pool.query(`UPDATE checkout SET status='concluido',hora_checkout=$1,data_checkout=$2 WHERE id=$3`,
       [hora_checkout||hora, data_checkout||data, req.params.id]);
     res.json({mensagem:'Checkout concluido!'});
+    // Marcar pedido como pendente na embalagem
+    try {
+      const ck2 = await db.get('SELECT numero_pedido FROM checkout WHERE id=$1',[req.params.id]);
+      if (ck2?.numero_pedido) {
+        await pool.query(`UPDATE pedidos SET status_embalagem='pendente' WHERE numero_pedido=$1 AND (status_embalagem IS NULL OR status_embalagem='pendente')`,[ck2.numero_pedido]);
+      }
+    } catch(e2) { console.error('embalagem update:', e2.message); }
   } catch(e){res.status(500).json({erro:e.message});}
 });
 
