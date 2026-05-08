@@ -323,8 +323,8 @@
           <button class="btn btn-primary btn-sm" id="ctab-usuarios" onclick="trocarCadastroTab('usuarios')">👥 Usuários</button>
         </div>
         <div id="cad-usuarios">
-          <div class="grid-2">
-            <div class="card">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start">
+            <div class="card" style="position:sticky;top:70px">
               <div class="card-hd">➕ NOVO USUÁRIO</div>
               <div class="form-grp"><label>NOME COMPLETO</label><input type="text" id="usr-nome" placeholder="Nome do colaborador"/></div>
               <div class="form-grp"><label>LOGIN</label><input type="text" id="usr-login" placeholder="Ex: joao.silva"/></div>
@@ -356,8 +356,8 @@
               </div>
               <button class="btn btn-primary" style="width:100%;margin-top:4px" onclick="cadastrarUsuario()">✅ Cadastrar Usuário</button>
             </div>
-            <div class="card">
-              <div class="card-hd">👥 USUÁRIOS CADASTRADOS <span id="usr-count" style="font-size:11px;color:var(--text3);font-weight:500"></span><button class="btn btn-outline btn-sm" onclick="carregarUsuarios()" style="margin-left:auto">🔄</button></div>
+            <div class="card" style="max-height:calc(100vh - 140px);overflow-y:auto">
+              <div class="card-hd" style="position:sticky;top:0;background:var(--surface);z-index:1">👥 USUÁRIOS CADASTRADOS <span id="usr-count" style="font-size:11px;color:var(--text3);font-weight:500"></span><button class="btn btn-outline btn-sm" onclick="carregarUsuarios()" style="margin-left:auto">🔄</button></div>
               <div id="lista-usuarios" style="padding:4px 0"></div>
             </div>
           </div>
