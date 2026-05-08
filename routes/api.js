@@ -1346,4 +1346,20 @@ router.get('/embalagem/stats', requerAuth, async (req,res) => {
   } catch(e) { res.status(500).json({erro:e.message}); }
 });
 
+
+router.post('/auth/redefinir-senha', requerAuth, async (req,res) => {
+  try {
+    const { senha_atual, senha_nova } = req.body;
+    if (!senha_atual || !senha_nova) return res.status(400).json({erro:'Campos obrigatorios'});
+    if (senha_nova.length < 6) return res.status(400).json({erro:'Senha minima 6 caracteres'});
+    const usuario = req.session?.usuario;
+    const u = await db.get('SELECT * FROM usuarios WHERE id=$1', [usuario.id]);
+    if (!u) return res.status(404).json({erro:'Usuario nao encontrado'});
+    if (u.senha_hash !== hashSenha(senha_atual)) return res.status(400).json({erro:'Senha atual incorreta'});
+    await pool.query('UPDATE usuarios SET senha_hash=$1 WHERE id=$2', [hashSenha(senha_nova), usuario.id]);
+    await registrarAuditoria(req, 'REDEFINIR_SENHA', 'usuario', usuario.id, null, null);
+    res.json({mensagem:'Senha redefinida!'});
+  } catch(e) { res.status(500).json({erro:e.message}); }
+});
+
 module.exports = router;

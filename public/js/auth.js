@@ -100,7 +100,12 @@ function ativarMobileSep() {
 
 
 function sair() {
-  if (!confirm('Deseja sair do sistema?')) return;
+  // Mostra modal bonito de confirmacao
+  const modal = document.getElementById('modal-sair');
+  if (modal) { modal.style.display = 'flex'; return; }
+  _confirmarSair();
+}
+function _confirmarSair() {
   fetch(`${API}/auth/logout`, { method:'POST', credentials:'include' }).catch(()=>{});
   usuarioAtual = null; separadorAtual = null; pedidoAtualId = null; pedidoAtualNum = null; itensAtuais = [];
   document.body.classList.remove('sep-mobile','rep-mobile','ck-mobile');
@@ -574,7 +579,7 @@ async function carregarDadosDiario() {
       }
     }
     window._dadosDiario = d;
-    toast('Dados atualizados!','sucesso');
+    // toast removido - nao mostrar ao carregar automaticamente
   } catch(e) { toast('Erro ao carregar dados','erro'); }
 }
 
@@ -840,4 +845,37 @@ async function confirmarEmbalagemMobile(id) {
     toast('Embalagem confirmada!','sucesso');
     carregarEmbalagemMobile();
   } catch(e) { toast('Erro','erro'); }
+}
+
+/* REDEFINIR SENHA PRÓPRIA */
+function abrirRedefinirSenha() {
+  const modal = document.getElementById('modal-redef-senha');
+  if (modal) modal.style.display = 'flex';
+}
+function fecharRedefinirSenha() {
+  const modal = document.getElementById('modal-redef-senha');
+  if (modal) modal.style.display = 'none';
+  ['redef-senha-atual','redef-senha-nova','redef-senha-conf'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+}
+async function salvarRedefinirSenha() {
+  const atual = document.getElementById('redef-senha-atual')?.value || '';
+  const nova  = document.getElementById('redef-senha-nova')?.value  || '';
+  const conf  = document.getElementById('redef-senha-conf')?.value  || '';
+  if (!atual || !nova || !conf) { toast('Preencha todos os campos','aviso'); return; }
+  if (nova.length < 6) { toast('Nova senha minimo 6 caracteres','aviso'); return; }
+  if (nova !== conf) { toast('Nova senha e confirmacao nao conferem','aviso'); return; }
+  try {
+    const res = await fetch(`${API}/auth/redefinir-senha`, {
+      method: 'POST', credentials: 'include',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ senha_atual: atual, senha_nova: nova })
+    });
+    const r = await res.json();
+    if (!res.ok) { toast(r.erro || 'Erro ao redefinir','erro'); return; }
+    toast('Senha redefinida com sucesso!','sucesso');
+    fecharRedefinirSenha();
+  } catch(e) { toast('Erro ao redefinir senha','erro'); }
 }

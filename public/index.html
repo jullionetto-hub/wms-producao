@@ -63,7 +63,7 @@
     <div class="hdir">
       <span id="data-hora"></span>
       <div class="uinfo"><b id="hdr-nome">—</b><small id="hdr-perfil">—</small></div>
-      <button class="btn-sair" onclick="sair()">✖ Sair</button>
+      <button onclick="abrirRedefinirSenha()" style="padding:5px 10px;background:transparent;border:1px solid var(--border);border-radius:8px;font-size:11px;cursor:pointer;color:var(--text2);margin-right:6px">🔑 Senha</button><button class="btn-sair" onclick="sair()">✖ Sair</button>
     </div>
   </header>
 
@@ -1615,5 +1615,46 @@
     </div>
   </div>
 </div>
+
+    <!-- Modal Sair -->
+    <div id="modal-sair" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center">
+      <div style="background:var(--surface);border-radius:16px;padding:32px;max-width:360px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+        <div style="font-size:48px;margin-bottom:16px">👋</div>
+        <div style="font-size:18px;font-weight:700;color:var(--text);margin-bottom:8px">Sair do sistema?</div>
+        <div style="font-size:13px;color:var(--text3);margin-bottom:24px">Você será redirecionado para a tela de login.</div>
+        <div style="display:flex;gap:10px;justify-content:center">
+          <button onclick="document.getElementById('modal-sair').style.display='none'" 
+            class="btn btn-outline" style="flex:1;padding:12px">Cancelar</button>
+          <button onclick="document.getElementById('modal-sair').style.display='none';_confirmarSair()" 
+            class="btn btn-danger" style="flex:1;padding:12px">Sair</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Redefinir Senha -->
+    <div id="modal-redef-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center">
+      <div style="background:var(--surface);border-radius:16px;padding:28px;max-width:380px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+          <div style="font-size:16px;font-weight:700;color:var(--text)">🔑 Redefinir Senha</div>
+          <button onclick="fecharRedefinirSenha()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text3)">✕</button>
+        </div>
+        <div class="form-grp">
+          <label>SENHA ATUAL</label>
+          <input type="password" id="redef-senha-atual" placeholder="Digite sua senha atual">
+        </div>
+        <div class="form-grp">
+          <label>NOVA SENHA</label>
+          <input type="password" id="redef-senha-nova" placeholder="Mínimo 6 caracteres">
+        </div>
+        <div class="form-grp">
+          <label>CONFIRMAR NOVA SENHA</label>
+          <input type="password" id="redef-senha-conf" placeholder="Digite novamente a nova senha">
+        </div>
+        <div style="display:flex;gap:10px;margin-top:16px">
+          <button onclick="fecharRedefinirSenha()" class="btn btn-outline" style="flex:1;padding:12px">Cancelar</button>
+          <button onclick="salvarRedefinirSenha()" class="btn btn-primary" style="flex:1;padding:12px">Salvar</button>
+        </div>
+      </div>
+    </div>
 </body>
 </html>
