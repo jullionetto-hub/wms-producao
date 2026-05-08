@@ -730,17 +730,13 @@ router.put('/checkout/:id/confirmar', requerAuth, async (req,res) => {
   const {hora_checkout,data_checkout}=req.body;
   const {data,hora}=dataHoraLocal();
   try {
+    // Busca pedido_id ANTES de atualizar
+    const ck = await db.get('SELECT pedido_id FROM checkout WHERE id=$1',[req.params.id]);
     await pool.query(`UPDATE checkout SET status='concluido',hora_checkout=$1,data_checkout=$2 WHERE id=$3`,
       [hora_checkout||hora, data_checkout||data, req.params.id]);
-    const ck2 = await db.get('SELECT numero_pedido, pedido_id FROM checkout WHERE id=$1',[req.params.id]);
-    if (ck2) {
-      // Atualiza por numero_pedido E por pedido_id para garantir
-      if (ck2.numero_pedido) {
-        await pool.query(`UPDATE pedidos SET status_embalagem='pendente' WHERE numero_pedido=$1`,[ck2.numero_pedido]);
-      }
-      if (ck2.pedido_id) {
-        await pool.query(`UPDATE pedidos SET status_embalagem='pendente' WHERE id=$1 AND (status_embalagem IS NULL OR status_embalagem='pendente')`,[ck2.pedido_id]);
-      }
+    // Usando pedido_id diretamente - mesma logica de quando separacao vai para checkout
+    if (ck?.pedido_id) {
+      await pool.query(`UPDATE pedidos SET status_embalagem='pendente' WHERE id=$1`,[ck.pedido_id]);
     }
     res.json({mensagem:'Checkout concluido!'});
   } catch(e){res.status(500).json({erro:e.message});}
