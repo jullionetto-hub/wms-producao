@@ -34,8 +34,11 @@
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 html,body{height:100%;overflow:hidden}
 body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);font-size:14px;transition:background .25s,color .25s}
-::-webkit-scrollbar{width:4px;height:4px}
-::-webkit-scrollbar-thumb{background:var(--border);border-radius:10px}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:var(--surface2);border-radius:10px}
+::-webkit-scrollbar-thumb{background:#94a3b8;border-radius:10px;border:2px solid var(--surface2)}
+::-webkit-scrollbar-thumb:hover{background:#64748b}
+::-webkit-scrollbar-corner{background:var(--surface2)}
 
 
 
