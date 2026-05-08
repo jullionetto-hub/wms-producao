@@ -145,14 +145,28 @@ async function carregarStatsMobile() {
   try {
     const nomeEl = document.getElementById('m-stat-nome');
     if (nomeEl) nomeEl.textContent = `👤 ${usuarioAtual?.nome || '—'}`;
-    if (!separadorAtual) return;
-    const res   = await fetch(`${API}/produtividade?separador_id=${separadorAtual.id}`, { credentials:'include' });
+    // Tenta com separadorAtual, senão usa /stats/meus
+    let dados = [];
+    if (separadorAtual) {
+      const res = await fetch(`${API}/produtividade?separador_id=${separadorAtual.id}`, { credentials:'include' });
+      dados = await res.json();
+    } else {
+      const res = await fetch(`${API}/stats/meus`, { credentials:'include' });
+      const d = await res.json();
+      if (d.separacao) dados = [{
+        hoje: d.separacao.separados_hoje||0,
+        mes: d.separacao.separados_hoje||0,
+        total_ano: d.separacao.separados_total||0
+      }];
+    }
+    if (false) { const res = null;
     const dados = await res.json();
     if (nomeEl) nomeEl.textContent = `👤 ${separadorAtual.nome||usuarioAtual.nome}`;
     if (dados.length) {
       document.getElementById('m-stat-hoje').textContent = dados[0].hoje||0;
       document.getElementById('m-stat-mes').textContent  = dados[0].mes||0;
       document.getElementById('m-stat-ano').textContent  = dados[0].total_ano||0;
+    }
     }
   } catch(e) {}
 }

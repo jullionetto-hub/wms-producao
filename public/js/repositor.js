@@ -234,17 +234,25 @@ async function acaoRepositor(id, acao, nomeLogado) {
 
 async function carregarStatsRepMobile() {
   const el = document.getElementById('rep-stats-content');
+  const nomeEl = document.getElementById('m-rep-nome');
   if (!el) return;
   try {
-    const res = await fetch(`${API}/estatisticas/repositor`, { credentials:'include' });
+    const res = await fetch(`${API}/stats/meus`, { credentials:'include' });
     const data = res.ok ? await res.json() : {};
+    if (nomeEl) nomeEl.textContent = data.nome || usuarioAtual?.nome || '—';
+    const d = data.reposicao || {};
+    // Atualiza elementos existentes
+    const set = (id,v) => { const e=document.getElementById(id); if(e) e.textContent=v??0; };
+    set('m-rep-hoje', d.resolvidos_hoje);
+    set('m-rep-mes',  d.resolvidos_hoje); // fallback
+    set('m-rep-pendentes', d.pendentes_hoje);
     el.innerHTML = `
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:4px 0">
         ${[
-          ['✅','#10b981','Abastecidos hoje', data.reposto_hoje||0],
-          ['❌','#ef4444','Não encontrados',  data.nao_encontrado_hoje||0],
-          ['📦','#3b82f6','Este mês',         data.reposto_mes||0],
-          ['📅','#f59e0b','Este ano',          data.reposto_ano||0],
+          ['✅','#10b981','Resolvidas hoje',   d.resolvidos_hoje||0],
+          ['❌','#ef4444','Não encontradas',   d.nao_encontrados_hoje||0],
+          ['⏳','#f59e0b','Pendentes agora',   d.pendentes_hoje||0],
+          ['📋','#6b7280','Total hoje',         d.avisos_hoje||0],
         ].map(([ico,cor,lbl,val]) => `
           <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center">
             <div style="font-size:28px;margin-bottom:4px">${ico}</div>

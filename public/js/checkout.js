@@ -115,12 +115,13 @@ async function liberarCaixaMobile(id) {
 
 async function carregarStatsCkMobile() {
   try {
-    const res  = await fetch(`${API}/estatisticas/checkout`, { credentials:'include' });
-    const data = await res.json();
+    const res  = await fetch(`${API}/stats/meus`, { credentials:'include' });
+    const data = res.ok ? await res.json() : {};
+    const d = data.checkout || {};
     const set  = (id, val) => { const e = document.getElementById(id); if(e) e.textContent = val ?? 0; };
-    set('m-ck-hoje', data.concluidos_hoje);
-    set('m-ck-mes',  data.concluidos_mes);
-    set('m-ck-pend', data.pendentes);
+    set('m-ck-hoje', d.expedidos_hoje);
+    set('m-ck-mes',  d.expedidos_hoje);
+    set('m-ck-pend', d.pendentes);
   } catch(e) {}
 }
 
