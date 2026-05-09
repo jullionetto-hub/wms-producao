@@ -710,3 +710,4 @@ async function salvarEntradaManual() {
     }
   } catch(e) { toast('Sem conexão', 'danger'); }
 }
+

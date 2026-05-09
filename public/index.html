@@ -278,6 +278,24 @@
             </div>
           </div>
         </div>
+
+        <div class="card" style="margin-top:16px">
+          <div class="card-header"><h3>🏆 Ranking Separadores — Hoje</h3><button class="btn btn-outline btn-sm" onclick="carregarRanking()">🔄</button></div>
+          <table style="width:100%;border-collapse:collapse;font-size:13px">
+            <thead><tr style="color:var(--text3);font-size:11px;border-bottom:1px solid var(--border)">
+              <th style="padding:6px 4px;text-align:left">#</th>
+              <th style="padding:6px 4px;text-align:left">Separador</th>
+              <th style="padding:6px 4px;text-align:center">Hoje</th>
+              <th style="padding:6px 4px;text-align:center">Itens</th>
+              <th style="padding:6px 4px;text-align:center">Mês</th>
+            </tr></thead>
+            <tbody id="dash-ranking-tbody"></tbody>
+          </table>
+        </div>
+        <div class="card" style="margin-top:16px">
+          <div class="card-header"><h3>📈 Pedidos por Hora</h3><button class="btn btn-outline btn-sm" onclick="carregarGraficoHoras()">🔄</button></div>
+          <div id="dash-grafico-horas" style="padding:8px"></div>
+        </div>
       </div>
 
 
@@ -1225,6 +1243,43 @@
           </div>
         </div>
       </div>
+
+<!-- ══ PROTOCOLO ══ -->
+<div class="pagina" id="pag-protocolo">
+  <div class="pag-header"><h2>📋 Protocolo</h2></div>
+  <div style="padding:16px">
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:16px;flex-wrap:wrap">
+      <label style="font-size:12px;font-weight:600;color:var(--text3)">DATA:</label>
+      <input type="date" id="proto-filtro-data" style="border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:13px;background:var(--surface);color:var(--text)">
+      <button class="btn btn-primary btn-sm" onclick="carregarProtocolo()">Filtrar</button>
+      <button class="btn btn-outline btn-sm" onclick="document.getElementById('proto-filtro-data').value='';carregarProtocolo()">🔄</button>
+    </div>
+    <div id="proto-lista"></div>
+  </div>
+</div>
+
+<!-- ══ ESTATÍSTICAS SEPARADOR ══ -->
+<div class="pagina" id="pag-estatisticas-sep">
+  <div class="pag-header"><h2>📊 Minhas Estatísticas</h2></div>
+  <div style="padding:16px">
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:16px;flex-wrap:wrap">
+      <label style="font-size:12px;font-weight:600;color:var(--text3)">DATA:</label>
+      <input type="date" id="stats-sep-data" style="border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:13px;background:var(--surface);color:var(--text)">
+      <button class="btn btn-primary btn-sm" onclick="carregarEstatisticasSep()">Filtrar</button>
+      <button class="btn btn-outline btn-sm" onclick="document.getElementById('stats-sep-data').value='';carregarEstatisticasSep()">🔄</button>
+    </div>
+    <div id="stats-sep-cards" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px"></div>
+    <div id="stats-sep-lista"></div>
+  </div>
+</div>
+
+<!-- ══ ESTATÍSTICAS CHECKOUT ══ -->
+<div class="pagina" id="pag-estatisticas-ck">
+  <div class="pag-header"><h2>📊 Estatísticas Checkout</h2></div>
+  <div style="padding:16px">
+    <div id="stats-ck-cards" style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px"></div>
+  </div>
+</div>
 
     </div><!-- /conteudo -->
 

@@ -1,4 +1,4 @@
-﻿const express    = require('express');
+const express    = require('express');
 const session    = require('express-session');
 const pgSession  = require('connect-pg-simple')(session);
 const cors       = require('cors');
@@ -27,7 +27,18 @@ app.set('trust proxy', 1);
 const ORIGENS_PERMITIDAS = (process.env.ALLOWED_ORIGINS || '').split(',').map(o=>o.trim()).filter(Boolean);
 // ── Helmet (security headers) ───────────────────────────────────────────────
 app.use(helmet({
-  contentSecurityPolicy: false, // desabilitado para nao quebrar scripts inline
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc:  ["'self'", "'unsafe-inline'"], // inline necessário para scripts existentes
+      styleSrc:   ["'self'", "'unsafe-inline'"],
+      imgSrc:     ["'self'", "data:"],
+      connectSrc: ["'self'"],
+      fontSrc:    ["'self'"],
+      objectSrc:  ["'none'"],
+      frameAncestors: ["'none'"],
+    },
+  },
   crossOriginEmbedderPolicy: false,
 }));
 
@@ -50,35 +61,16 @@ app.use((req, res, next) => {
 });
 
 // ── Body parsers ──────────────────────────────────────────────────────────────
-// ── Rate limiting simples (sem dependencia extra) ───────────────────────────
-const _loginAttempts = new Map();
-function checkLoginRateLimit(ip) {
-  const now = Date.now();
-  const key = ip;
-  const entry = _loginAttempts.get(key) || { count: 0, first: now };
-  if (now - entry.first > 15 * 60 * 1000) {
-    _loginAttempts.set(key, { count: 1, first: now });
-    return true;
-  }
-  if (entry.count >= 10) return false;
-  entry.count++;
-  _loginAttempts.set(key, entry);
-  return true;
-}
-// Limpa map a cada hora
-setInterval(() => _loginAttempts.clear(), 60 * 60 * 1000);
-
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ── Sessão ────────────────────────────────────────────────────────────────────
-const pgStore = new pgSession({
-  pool, tableName: 'session', createTableIfMissing: true,
-  errorLog: (msg) => console.error('[SESSION STORE]', msg)
-});
+const sessionStore = isProd || process.env.NODE_ENV !== 'test'
+  ? new pgSession({ pool, tableName: 'session', createTableIfMissing: true, errorLog: (msg) => console.error('[SESSION STORE]', msg) })
+  : new session.MemoryStore();
 app.use(session({
-  store: pgStore,
+  store: sessionStore,
   secret: SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
@@ -91,7 +83,6 @@ app.use(session({
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
 // ── Rotas da API ──────────────────────────────────────────────────────────────
-app.locals.checkLoginRateLimit = checkLoginRateLimit;
 app.use('/', apiRouter);
 
 // ── Handler 404 e 500 ────────────────────────────────────────────────────────
@@ -269,13 +260,6 @@ function agendarRelatoriosDiarios() {
   console.log(`[SCHEDULER] Relatório diário agendado para ${new Date(Date.now()+delay).toLocaleString('pt-BR')}`);
 }
 
-async function iniciar() {
-  try {
-    if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL não definida!');
-    await criarTabelas();
-    await criarUsuarioPadrao();
-    
-// Migration automatica - rebuild 2026-04-24 08:51:37 â€” cria colunas se nao existirem
 async function runMigrations() {
   try {
     await pool.query("ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS iniciado_em TEXT DEFAULT ''");
@@ -316,11 +300,16 @@ async function runMigrations() {
     console.error('Migration erro:', e.message);
   }
 }
-runMigrations();
-app.listen(PORT, () => {
+
+async function iniciar() {
+  try {
+    if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL não definida!');
+    await criarTabelas();
+    await criarUsuarioPadrao();
+    await runMigrations();
+    app.listen(PORT, () => {
       const {data,hora} = dataHoraLocal();
       console.log(`Servidor WMS rodando na porta ${PORT} — ${data} ${hora}`);
-      // Inicia scheduler em produção
       if (isProd) agendarRelatoriosDiarios();
     });
   } catch(e) {
@@ -328,4 +317,9 @@ app.listen(PORT, () => {
     process.exit(1);
   }
 }
-iniciar();
+
+if (process.env.NODE_ENV !== 'test') {
+  iniciar();
+}
+
+module.exports = app;

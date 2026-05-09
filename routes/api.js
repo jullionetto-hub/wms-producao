@@ -20,10 +20,9 @@ const express = require('express');
 const router = express.Router();
 const { pool, db } = require('../lib/db');
 const { requerAuth, requerPerfil, checkRateLimit } = require('../lib/auth');
-const { dataHoraLocal, formatarAguardandoDesde } = require('../lib/helpers');
+const { dataHoraLocal, formatarAguardandoDesde, hashSenha, verificarSenha, hashNeedsMigration, perfisPermitidos } = require('../lib/helpers');
 const { calcularPesoCorredor, calcularPontuacaoPedido } = require('../lib/pontuacao');
 const crypto = require('crypto');
-const { hashSenha, perfisPermitidos } = require('../lib/helpers');
 
 
 // Validação de inputs
@@ -62,18 +61,15 @@ router.post('/auth/login', async (req,res) => {
       [login]
     );
 
-    // Compara hash de forma segura (tempo constante para evitar timing attacks)
-    const hashFornecido = hashSenha(senha);
-    const hashCorreto   = user?.senha_hash || '0'.repeat(64);
-    // Compara em tempo constante para evitar timing attacks
-    let senhaCorreta = false;
-    try {
-      const a = Buffer.from(hashFornecido.padEnd(64,'0').slice(0,64));
-      const b = Buffer.from(hashCorreto.padEnd(64,'0').slice(0,64));
-      senhaCorreta = a.length === b.length && crypto.timingSafeEqual(a, b);
-    } catch(e) { senhaCorreta = false; }
+    // Verifica senha (suporta bcrypt e SHA-256 legado)
+    const senhaCorreta = user ? verificarSenha(senha, user.senha_hash || '') : false;
 
     if (!user || !senhaCorreta) return res.status(401).json({erro:'Login ou senha incorretos!'});
+
+    // Migração automática: rehash SHA-256 → bcrypt no primeiro login bem-sucedido
+    if (user && hashNeedsMigration(user.senha_hash)) {
+      pool.query('UPDATE usuarios SET senha_hash=$1 WHERE id=$2', [hashSenha(senha), user.id]).catch(()=>{});
+    }
     if (!perfisPermitidos(user).includes(perfil))
       return res.status(403).json({erro:'Este colaborador não pode acessar este perfil!'});
 
@@ -1385,7 +1381,7 @@ router.post('/auth/redefinir-senha', requerAuth, async (req,res) => {
     const usuario = req.session?.usuario;
     const u = await db.get('SELECT * FROM usuarios WHERE id=$1', [usuario.id]);
     if (!u) return res.status(404).json({erro:'Usuario nao encontrado'});
-    if (u.senha_hash !== hashSenha(senha_atual)) return res.status(400).json({erro:'Senha atual incorreta'});
+    if (!verificarSenha(senha_atual, u.senha_hash)) return res.status(400).json({erro:'Senha atual incorreta'});
     await pool.query('UPDATE usuarios SET senha_hash=$1 WHERE id=$2', [hashSenha(senha_nova), usuario.id]);
     await registrarAuditoria(req, 'REDEFINIR_SENHA', 'usuario', usuario.id, null, null);
     res.json({mensagem:'Senha redefinida!'});
@@ -1404,6 +1400,104 @@ router.post('/auth/trocar-senha-temp', async (req,res) => {
     await pool.query('UPDATE usuarios SET senha_hash=$1, senha_temporaria=false WHERE id=$2', [hashSenha(senha_nova), u.id]);
     res.json({mensagem:'Senha alterada! Faca o login.'});
   } catch(e) { res.status(500).json({erro:e.message}); }
+});
+
+router.get('/estatisticas/separador', requerAuth, async (req,res) => {
+  try {
+    const {data, separador_id} = req.query;
+    const hoje = data || (await db.get(`SELECT TO_CHAR(NOW() AT TIME ZONE 'America/Sao_Paulo','YYYY-MM-DD') as d`)).d;
+    const sepId = separador_id || (req.session.separador_id);
+
+    // Busca o separador_id do usuario logado se nao fornecido
+    let sid = sepId;
+    if (!sid) {
+      const usr = await db.get(`SELECT s.id FROM separadores s JOIN usuarios u ON s.usuario_id=u.id WHERE u.id=$1`, [req.session.usuario_id]);
+      sid = usr?.id;
+    }
+
+    const [totais, pedidosHoje] = await Promise.all([
+      db.get(`SELECT
+        COUNT(*) FILTER (WHERE data_pedido=$1) as hoje,
+        COUNT(*) FILTER (WHERE data_pedido=$1 AND status='concluido') as concluidos_hoje,
+        COUNT(*) FILTER (WHERE data_pedido=$1 AND status='separando') as separando_hoje,
+        COUNT(*) FILTER (WHERE status='concluido') as total_concluidos,
+        COUNT(*) as total_pedidos
+        FROM pedidos WHERE separador_id=$2`, [hoje, sid]),
+      db.all(`SELECT id, numero_pedido, status, itens, cliente, hora_pedido, numero_caixa
+              FROM pedidos WHERE data_pedido=$1 AND separador_id=$2 ORDER BY id DESC`, [hoje, sid])
+    ]);
+
+    res.json({ hoje, totais: totais||{}, pedidos: pedidosHoje||[] });
+  } catch(e) {
+    console.error('GET /estatisticas/separador:', e.message);
+    res.status(500).json({erro: e.message});
+  }
+});
+
+router.get('/protocolo', requerAuth, async (req,res) => {
+  try {
+    const {data} = req.query;
+    let sql = `SELECT a.*, p.numero_pedido, p.cliente
+               FROM avisos_repositor a
+               LEFT JOIN pedidos p ON a.pedido_id=p.id
+               WHERE a.status='protocolo'`;
+    const params = [];
+    if (data) { params.push(data); sql += ` AND a.data_aviso=$${params.length}`; }
+    sql += ` ORDER BY a.id DESC`;
+    const rows = await db.all(sql, params);
+    res.json(rows||[]);
+  } catch(e) {
+    res.status(500).json({erro: e.message});
+  }
+});
+
+router.put('/repositor/avisos/:id/liberar', requerAuth, requerPerfil('supervisor'), async (req,res) => {
+  try {
+    await pool.query(`UPDATE avisos_repositor SET status='nao_encontrado', hora_reposto=$1 WHERE id=$2`,
+      [(await db.get(`SELECT TO_CHAR(NOW() AT TIME ZONE 'America/Sao_Paulo','HH24:MI') as h`)).h, req.params.id]);
+    res.json({mensagem:'Item liberado como não encontrado.'});
+  } catch(e) {
+    res.status(500).json({erro: e.message});
+  }
+});
+
+router.get('/dashboard/ranking', requerAuth, requerPerfil('supervisor'), async (req,res) => {
+  try {
+    const hoje = (await db.get(`SELECT TO_CHAR(NOW() AT TIME ZONE 'America/Sao_Paulo','YYYY-MM-DD') as d`)).d;
+    const mes = hoje.substring(0,7);
+    const rows = await db.all(`
+      SELECT s.nome,
+        COUNT(*) FILTER (WHERE p.data_pedido=$1 AND p.status='concluido') as hoje_concluidos,
+        COUNT(*) FILTER (WHERE p.data_pedido=$1) as hoje_total,
+        COUNT(*) FILTER (WHERE p.data_pedido LIKE $2 AND p.status='concluido') as mes_concluidos,
+        COUNT(*) FILTER (WHERE p.status='concluido') as total_concluidos,
+        COALESCE(SUM(p.itens) FILTER (WHERE p.data_pedido=$1),0) as hoje_itens
+      FROM separadores s
+      LEFT JOIN pedidos p ON p.separador_id=s.id
+      WHERE s.status='ativo'
+      GROUP BY s.nome
+      ORDER BY hoje_concluidos DESC, mes_concluidos DESC
+    `, [hoje, mes+'%']);
+    res.json(rows||[]);
+  } catch(e) {
+    res.status(500).json({erro: e.message});
+  }
+});
+
+router.get('/dashboard/por-hora', requerAuth, requerPerfil('supervisor'), async (req,res) => {
+  try {
+    const hoje = (await db.get(`SELECT TO_CHAR(NOW() AT TIME ZONE 'America/Sao_Paulo','YYYY-MM-DD') as d`)).d;
+    const rows = await db.all(`
+      SELECT SUBSTRING(hora_pedido,1,2) as hora, COUNT(*) as total
+      FROM pedidos
+      WHERE data_pedido=$1 AND hora_pedido IS NOT NULL AND hora_pedido <> ''
+      GROUP BY SUBSTRING(hora_pedido,1,2)
+      ORDER BY hora
+    `, [hoje]);
+    res.json(rows||[]);
+  } catch(e) {
+    res.status(500).json({erro: e.message});
+  }
 });
 
 module.exports = router;

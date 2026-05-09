@@ -1,5 +1,8 @@
 node_modules
 npm-debug.log
-wms.db
-.wms.db
+*.db
+*.db-shm
+*.db-wal
 .env
+.env.*
+!.env.example

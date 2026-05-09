@@ -217,6 +217,7 @@ function montarSidebar() {
       <a class="mi" onclick="irPara('auditoria',this)"><span class="mi-ic">🔍</span>Auditoria</a>
       <a class="mi" onclick="irPara('diario',this)"><span class="mi-ic">📋</span>Diário de Bordo</a>
       <a class="mi" onclick="irPara('cadastros',this)"><span class="mi-ic">⚙️</span>Cadastros</a>
+      <a class="mi" onclick="irPara('protocolo',this);carregarProtocolo()"><span class="mi-ic">📋</span>Protocolo<span class="mbadge" id="menu-badge-proto" style="display:none">0</span></a>
       <div class="mg">OPERAÇÃO</div>
       <a class="mi" onclick="irPara('separacao',this)"><span class="mi-ic">📦</span>Separação</a>
       <a class="mi" onclick="irPara('reposicao',this)"><span class="mi-ic">🔧</span>Reposição <span class="mbadge" id="menu-badge-rep" style="display:none">0</span></a>
@@ -224,18 +225,19 @@ function montarSidebar() {
       <a class="mi" onclick="irPara('embalagem',this)"><span class="mi-ic">📫</span>Embalagem</a>`,
     separador: `
       <div class="mg">SEPARAÇÃO</div>
-      <a class="mi ativo" onclick="irPara('separacao',this)"><span class="mi-ic">📦</span>Pedidos</a>`,
+      <a class="mi ativo" onclick="irPara('separacao',this)"><span class="mi-ic">📦</span>Pedidos</a>
+      <a class="mi" onclick="irPara('estatisticas-sep',this);carregarEstatisticasSep()"><span class="mi-ic">📊</span>Estatísticas</a>`,
     repositor: `
       <div class="mg">REPOSIÇÃO</div>
       <a class="mi ativo" onclick="irPara('reposicao',this)"><span class="mi-ic">🔧</span>Solicitações <span class="mbadge" id="menu-badge-rep" style="display:none">0</span></a>
-      <a class="mi" onclick="irPara('checkout',this)"><span class="mi-ic">🏷️</span>Checkout</a>
+      <a class="mi" onclick="irPara('protocolo-rep',this)"><span class="mi-ic">📋</span>Protocolo</a>
       <div class="mg">ANÁLISE</div>
       <a class="mi" onclick="irPara('stats-repositor',this)"><span class="mi-ic">📈</span>Estatísticas</a>`,
     checkout: `
       <div class="mg">CHECKOUT</div>
       <a class="mi ativo" onclick="irPara('checkout',this)"><span class="mi-ic">🏷️</span>Checkout</a>
       <div class="mg">ANÁLISE</div>
-      <a class="mi" onclick="irPara('stats-checkout',this)"><span class="mi-ic">📈</span>Estatísticas</a>`,
+      <a class="mi" onclick="irPara('estatisticas-ck',this)"><span class="mi-ic">📈</span>Estatísticas</a>`,
     embalador: `
       <div class="mg">EMBALAGEM</div>
       <a class="mi ativo" onclick="irPara('embalagem',this)"><span class="mi-ic">📫</span>Embalar</a>`,
@@ -267,6 +269,16 @@ function irPara(pag, el) {
   if (pag === 'auditoria')    { var hj=hojeLocal(); var ea=document.getElementById('aud-ini'); if(ea&&!ea.value)ea.value=hj; carregarAuditoria(); }
   if (pag === 'diario')       { iniciarDiario(); }
   if (pag === 'embalagem')    { var ed=document.getElementById('emb-data'); if(ed&&!ed.value)ed.value=hojeLocal(); carregarEmbalagem(); }
+  if (pag === 'protocolo')    { carregarProtocolo(); }
+  if (pag === 'protocolo-rep') {
+    // reusa pag-protocolo (mesmo conteúdo, papel diferente)
+    document.querySelectorAll('.pagina').forEach(p => p.classList.remove('ativa'));
+    const pgProto = document.getElementById('pag-protocolo');
+    if (pgProto) pgProto.classList.add('ativa');
+    carregarProtocolo();
+  }
+  if (pag === 'estatisticas-sep') { carregarEstatisticasSep(); }
+  if (pag === 'estatisticas-ck')  { carregarEstatisticasCk(); }
 }
 
 
