@@ -270,7 +270,13 @@ function irPara(pag, el) {
   if (pag === 'diario')       { iniciarDiario(); }
   if (pag === 'embalagem')    { var ed=document.getElementById('emb-data'); if(ed&&!ed.value)ed.value=hojeLocal(); carregarEmbalagem(); }
   if (pag === 'protocolo')    { carregarProtocolo(); }
-  if (pag === 'protocolo-rep') { carregarProtocolo(); }
+  if (pag === 'protocolo-rep') {
+    // reusa pag-protocolo (mesmo conteúdo, papel diferente)
+    document.querySelectorAll('.pagina').forEach(p => p.classList.remove('ativa'));
+    const pgProto = document.getElementById('pag-protocolo');
+    if (pgProto) pgProto.classList.add('ativa');
+    carregarProtocolo();
+  }
   if (pag === 'estatisticas-sep') { carregarEstatisticasSep(); }
   if (pag === 'estatisticas-ck')  { carregarEstatisticasCk(); }
 }

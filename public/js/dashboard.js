@@ -461,6 +461,8 @@ async function carregarDashboard() {
   await carregarTimeline();
   await atualizarBadgeRep();
   await carregarOperacao();
+  carregarRanking();
+  carregarGraficoHoras();
   const el = document.getElementById('dash-ultima-atualizacao');
   if (el) el.textContent = '— atualizado ' + new Date().toLocaleTimeString('pt-BR', {timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit'});
 }
