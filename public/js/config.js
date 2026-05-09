@@ -50,6 +50,16 @@ function toast(msg, tipo='info') {
   setTimeout(() => el.remove(), 3500);
 }
 
+function fmtData(iso){if(!iso)return'';const[y,m,d]=iso.split('-');return d+'/'+m+'/'+y;}
+
+async function apiFetch(path, opts={}) {
+  try {
+    const res = await fetch(`${API}${path}`, { credentials:'include', ...opts });
+    if (!res.ok) { const e = await res.json().catch(()=>({erro:'Erro'})); toast(e.erro||'Erro na requisição','erro'); return null; }
+    return await res.json();
+  } catch(e) { toast('Erro ao conectar com o servidor','erro'); return null; }
+}
+
 function formatarData(iso) {
   if (!iso) return '-';
   const p = iso.split('-');

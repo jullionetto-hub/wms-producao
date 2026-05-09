@@ -1406,4 +1406,102 @@ router.post('/auth/trocar-senha-temp', async (req,res) => {
   } catch(e) { res.status(500).json({erro:e.message}); }
 });
 
+router.get('/estatisticas/separador', requerAuth, async (req,res) => {
+  try {
+    const {data, separador_id} = req.query;
+    const hoje = data || (await db.get(`SELECT TO_CHAR(NOW() AT TIME ZONE 'America/Sao_Paulo','YYYY-MM-DD') as d`)).d;
+    const sepId = separador_id || (req.session.separador_id);
+
+    // Busca o separador_id do usuario logado se nao fornecido
+    let sid = sepId;
+    if (!sid) {
+      const usr = await db.get(`SELECT s.id FROM separadores s JOIN usuarios u ON s.usuario_id=u.id WHERE u.id=$1`, [req.session.usuario_id]);
+      sid = usr?.id;
+    }
+
+    const [totais, pedidosHoje] = await Promise.all([
+      db.get(`SELECT
+        COUNT(*) FILTER (WHERE data_pedido=$1) as hoje,
+        COUNT(*) FILTER (WHERE data_pedido=$1 AND status='concluido') as concluidos_hoje,
+        COUNT(*) FILTER (WHERE data_pedido=$1 AND status='separando') as separando_hoje,
+        COUNT(*) FILTER (WHERE status='concluido') as total_concluidos,
+        COUNT(*) as total_pedidos
+        FROM pedidos WHERE separador_id=$2`, [hoje, sid]),
+      db.all(`SELECT id, numero_pedido, status, itens, cliente, hora_pedido, numero_caixa
+              FROM pedidos WHERE data_pedido=$1 AND separador_id=$2 ORDER BY id DESC`, [hoje, sid])
+    ]);
+
+    res.json({ hoje, totais: totais||{}, pedidos: pedidosHoje||[] });
+  } catch(e) {
+    console.error('GET /estatisticas/separador:', e.message);
+    res.status(500).json({erro: e.message});
+  }
+});
+
+router.get('/protocolo', requerAuth, async (req,res) => {
+  try {
+    const {data} = req.query;
+    let sql = `SELECT a.*, p.numero_pedido, p.cliente
+               FROM avisos_repositor a
+               LEFT JOIN pedidos p ON a.pedido_id=p.id
+               WHERE a.status='protocolo'`;
+    const params = [];
+    if (data) { params.push(data); sql += ` AND a.data_aviso=$${params.length}`; }
+    sql += ` ORDER BY a.id DESC`;
+    const rows = await db.all(sql, params);
+    res.json(rows||[]);
+  } catch(e) {
+    res.status(500).json({erro: e.message});
+  }
+});
+
+router.put('/repositor/avisos/:id/liberar', requerAuth, requerPerfil('supervisor'), async (req,res) => {
+  try {
+    await pool.query(`UPDATE avisos_repositor SET status='nao_encontrado', hora_reposto=$1 WHERE id=$2`,
+      [(await db.get(`SELECT TO_CHAR(NOW() AT TIME ZONE 'America/Sao_Paulo','HH24:MI') as h`)).h, req.params.id]);
+    res.json({mensagem:'Item liberado como não encontrado.'});
+  } catch(e) {
+    res.status(500).json({erro: e.message});
+  }
+});
+
+router.get('/dashboard/ranking', requerAuth, requerPerfil('supervisor'), async (req,res) => {
+  try {
+    const hoje = (await db.get(`SELECT TO_CHAR(NOW() AT TIME ZONE 'America/Sao_Paulo','YYYY-MM-DD') as d`)).d;
+    const mes = hoje.substring(0,7);
+    const rows = await db.all(`
+      SELECT s.nome,
+        COUNT(*) FILTER (WHERE p.data_pedido=$1 AND p.status='concluido') as hoje_concluidos,
+        COUNT(*) FILTER (WHERE p.data_pedido=$1) as hoje_total,
+        COUNT(*) FILTER (WHERE p.data_pedido LIKE $2 AND p.status='concluido') as mes_concluidos,
+        COUNT(*) FILTER (WHERE p.status='concluido') as total_concluidos,
+        COALESCE(SUM(p.itens) FILTER (WHERE p.data_pedido=$1),0) as hoje_itens
+      FROM separadores s
+      LEFT JOIN pedidos p ON p.separador_id=s.id
+      WHERE s.status='ativo'
+      GROUP BY s.nome
+      ORDER BY hoje_concluidos DESC, mes_concluidos DESC
+    `, [hoje, mes+'%']);
+    res.json(rows||[]);
+  } catch(e) {
+    res.status(500).json({erro: e.message});
+  }
+});
+
+router.get('/dashboard/por-hora', requerAuth, requerPerfil('supervisor'), async (req,res) => {
+  try {
+    const hoje = (await db.get(`SELECT TO_CHAR(NOW() AT TIME ZONE 'America/Sao_Paulo','YYYY-MM-DD') as d`)).d;
+    const rows = await db.all(`
+      SELECT SUBSTRING(hora_pedido,1,2) as hora, COUNT(*) as total
+      FROM pedidos
+      WHERE data_pedido=$1 AND hora_pedido IS NOT NULL AND hora_pedido <> ''
+      GROUP BY SUBSTRING(hora_pedido,1,2)
+      ORDER BY hora
+    `, [hoje]);
+    res.json(rows||[]);
+  } catch(e) {
+    res.status(500).json({erro: e.message});
+  }
+});
+
 module.exports = router;
