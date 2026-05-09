@@ -1,4 +1,36 @@
 
+// ── Dashboard Ranking ────────────────────────────────────────────────────────
+async function carregarRanking() {
+  const rows = await apiFetch('/dashboard/ranking');
+  const el = document.getElementById('dash-ranking-tbody');
+  if (!el || !rows) return;
+  el.innerHTML = rows.map((r,i)=>`
+    <tr>
+      <td style="font-weight:700">${i+1}º</td>
+      <td>${r.nome}</td>
+      <td style="text-align:center">${r.hoje_concluidos||0}</td>
+      <td style="text-align:center">${r.hoje_itens||0}</td>
+      <td style="text-align:center">${r.mes_concluidos||0}</td>
+    </tr>
+  `).join('');
+}
+
+async function carregarGraficoHoras() {
+  const rows = await apiFetch('/dashboard/por-hora');
+  const el = document.getElementById('dash-grafico-horas');
+  if (!el || !rows || !rows.length) return;
+  const max = Math.max(...rows.map(r=>Number(r.total)));
+  el.innerHTML = rows.map(r=>`
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+      <div style="width:32px;font-size:11px;color:var(--text3);text-align:right">${r.hora}h</div>
+      <div style="flex:1;background:var(--border);border-radius:4px;height:18px;overflow:hidden">
+        <div style="width:${Math.round(Number(r.total)/max*100)}%;height:100%;background:var(--accent);border-radius:4px"></div>
+      </div>
+      <div style="width:24px;font-size:11px;font-weight:700">${r.total}</div>
+    </div>
+  `).join('');
+}
+
 /* FILTRO DE TURNO — SEPARADORES ATIVOS */
 async function filtrarSepsAtivos(turno) {
   // Atualiza visual dos botões
