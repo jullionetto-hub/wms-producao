@@ -20,10 +20,9 @@ const express = require('express');
 const router = express.Router();
 const { pool, db } = require('../lib/db');
 const { requerAuth, requerPerfil, checkRateLimit } = require('../lib/auth');
-const { dataHoraLocal, formatarAguardandoDesde } = require('../lib/helpers');
+const { dataHoraLocal, formatarAguardandoDesde, hashSenha, verificarSenha, hashNeedsMigration, perfisPermitidos } = require('../lib/helpers');
 const { calcularPesoCorredor, calcularPontuacaoPedido } = require('../lib/pontuacao');
 const crypto = require('crypto');
-const { hashSenha, perfisPermitidos } = require('../lib/helpers');
 
 
 // Validação de inputs
@@ -62,18 +61,15 @@ router.post('/auth/login', async (req,res) => {
       [login]
     );
 
-    // Compara hash de forma segura (tempo constante para evitar timing attacks)
-    const hashFornecido = hashSenha(senha);
-    const hashCorreto   = user?.senha_hash || '0'.repeat(64);
-    // Compara em tempo constante para evitar timing attacks
-    let senhaCorreta = false;
-    try {
-      const a = Buffer.from(hashFornecido.padEnd(64,'0').slice(0,64));
-      const b = Buffer.from(hashCorreto.padEnd(64,'0').slice(0,64));
-      senhaCorreta = a.length === b.length && crypto.timingSafeEqual(a, b);
-    } catch(e) { senhaCorreta = false; }
+    // Verifica senha (suporta bcrypt e SHA-256 legado)
+    const senhaCorreta = user ? verificarSenha(senha, user.senha_hash || '') : false;
 
     if (!user || !senhaCorreta) return res.status(401).json({erro:'Login ou senha incorretos!'});
+
+    // Migração automática: rehash SHA-256 → bcrypt no primeiro login bem-sucedido
+    if (user && hashNeedsMigration(user.senha_hash)) {
+      pool.query('UPDATE usuarios SET senha_hash=$1 WHERE id=$2', [hashSenha(senha), user.id]).catch(()=>{});
+    }
     if (!perfisPermitidos(user).includes(perfil))
       return res.status(403).json({erro:'Este colaborador não pode acessar este perfil!'});
 
@@ -1385,7 +1381,7 @@ router.post('/auth/redefinir-senha', requerAuth, async (req,res) => {
     const usuario = req.session?.usuario;
     const u = await db.get('SELECT * FROM usuarios WHERE id=$1', [usuario.id]);
     if (!u) return res.status(404).json({erro:'Usuario nao encontrado'});
-    if (u.senha_hash !== hashSenha(senha_atual)) return res.status(400).json({erro:'Senha atual incorreta'});
+    if (!verificarSenha(senha_atual, u.senha_hash)) return res.status(400).json({erro:'Senha atual incorreta'});
     await pool.query('UPDATE usuarios SET senha_hash=$1 WHERE id=$2', [hashSenha(senha_nova), usuario.id]);
     await registrarAuditoria(req, 'REDEFINIR_SENHA', 'usuario', usuario.id, null, null);
     res.json({mensagem:'Senha redefinida!'});
