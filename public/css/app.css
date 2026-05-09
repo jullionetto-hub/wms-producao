@@ -710,6 +710,24 @@ body.dark .item-card.parcial    .item-ic{background:#78350F}
 
 
 
+/* ── Botões de filtro por turno ─────────────────────────────────────────────── */
+.btn-turno{
+  flex:1;padding:3px 6px;font-size:9px;font-weight:700;
+  border:1px solid var(--border);border-radius:4px;
+  background:transparent;color:var(--text2);
+  cursor:pointer;letter-spacing:.3px;font-family:'DM Sans',sans-serif;
+  transition:all .18s;white-space:nowrap
+}
+.btn-turno.ativo{background:var(--amber);color:#fff;border-color:var(--amber)}
+.btn-turno-dist{
+  padding:3px 10px;font-size:10px;font-weight:700;
+  border:1.5px solid var(--border);border-radius:20px;
+  background:transparent;color:var(--text2);
+  cursor:pointer;letter-spacing:.3px;font-family:'DM Sans',sans-serif;
+  transition:all .18s;white-space:nowrap
+}
+.btn-turno-dist.ativo{background:var(--accent);color:#fff;border-color:var(--accent)}
+
 /* Tabela de pedidos — hora formato BR */
 .hora-br{font-variant-numeric:tabular-nums;white-space:nowrap}
 .data-br{white-space:nowrap}

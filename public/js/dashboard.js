@@ -39,9 +39,8 @@ async function filtrarSepsAtivos(turno) {
     const btn = document.getElementById(`btn-turno-${key}`);
     if (!btn) return;
     const active = val === turno;
-    btn.style.background = active ? 'var(--amber)' : 'transparent';
-    btn.style.color       = active ? '#fff' : 'var(--text2)';
-    btn.style.borderColor = active ? 'var(--amber)' : 'var(--border)';
+    btn.classList.toggle('ativo', active);
+    btn.style.background = btn.style.color = btn.style.borderColor = '';
   });
   // Salva no estado global e recarrega
   if (typeof window !== 'undefined') window._turnoFiltro = turno;

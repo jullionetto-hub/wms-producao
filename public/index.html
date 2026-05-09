@@ -83,7 +83,7 @@
     <div class="hdir">
       <span id="data-hora"></span>
       <div class="uinfo"><b id="hdr-nome">—</b><small id="hdr-perfil">—</small></div>
-      <button onclick="abrirRedefinirSenha()" style="padding:5px 10px;background:transparent;border:1px solid var(--border);border-radius:8px;font-size:11px;cursor:pointer;color:var(--text2);margin-right:6px">🔑 Senha</button><button class="btn-sair" onclick="sair()">✖ Sair</button>
+      <button onclick="abrirRedefinirSenha()" class="btn btn-outline btn-sm" style="margin-right:6px">🔑 Senha</button><button class="btn-sair" onclick="sair()">✖ Sair</button>
     </div>
   </header>
 
@@ -131,10 +131,10 @@
   <div class="kpi-val" id="kpi-seps-ativos">0</div>
   <div class="kpi-sub" id="kpi-seps-sub">trabalhando agora</div>
   <div style="display:flex;gap:3px;margin-top:6px">
-    <button onclick="filtrarSepsAtivos('')"      id="btn-turno-todos"  style="flex:1;padding:3px 4px;font-size:9px;font-weight:700;border:1px solid var(--amber);border-radius:4px;background:var(--amber);color:#fff;cursor:pointer;letter-spacing:.3px">TODOS</button>
-    <button onclick="filtrarSepsAtivos('Manhã')" id="btn-turno-manha"  style="flex:1;padding:3px 4px;font-size:9px;font-weight:700;border:1px solid var(--border);border-radius:4px;background:transparent;color:var(--text2);cursor:pointer;letter-spacing:.3px">MANHÃ</button>
-    <button onclick="filtrarSepsAtivos('Tarde')" id="btn-turno-tarde"  style="flex:1;padding:3px 4px;font-size:9px;font-weight:700;border:1px solid var(--border);border-radius:4px;background:transparent;color:var(--text2);cursor:pointer;letter-spacing:.3px">TARDE</button>
-    <button onclick="filtrarSepsAtivos('Noite')" id="btn-turno-noite"  style="flex:1;padding:3px 4px;font-size:9px;font-weight:700;border:1px solid var(--border);border-radius:4px;background:transparent;color:var(--text2);cursor:pointer;letter-spacing:.3px">NOITE</button>
+    <button onclick="filtrarSepsAtivos('')"      id="btn-turno-todos"  class="btn-turno ativo">TODOS</button>
+    <button onclick="filtrarSepsAtivos('Manhã')" id="btn-turno-manha"  class="btn-turno">MANHÃ</button>
+    <button onclick="filtrarSepsAtivos('Tarde')" id="btn-turno-tarde"  class="btn-turno">TARDE</button>
+    <button onclick="filtrarSepsAtivos('Noite')" id="btn-turno-noite"  class="btn-turno">NOITE</button>
   </div>
 </div>
           <div class="kpi-card rosa"><div class="kpi-lbl">NÃO ENCONTR. HOJE</div><div class="kpi-val" id="kpi-nao-enc">0</div><div class="kpi-sub">itens não localizados</div></div>
@@ -305,7 +305,7 @@
       <div class="pagina" id="pag-pedidos">
         <div class="pg-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
           Pedidos
-          <button onclick="confirmarZerarDados()" style="padding:6px 16px;background:#ef4444;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">
+          <button onclick="confirmarZerarDados()" class="btn btn-danger btn-sm">
             🗑️ Zerar Dados de Teste
           </button>
         </div>
@@ -524,7 +524,7 @@
               <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
                 <span style="font-size:12px;color:var(--text3)"><span id="rep-total">0</span> itens</span>
                 <span style="font-size:11px;color:var(--text3)" id="rep-ultima-atualizacao"></span>
-                <button class="btn btn-outline btn-sm" onclick="abrirEntradaManual()" style="background:var(--accent);color:#fff;border-color:var(--accent)">+ Entrada Manual</button>
+                <button class="btn btn-primary btn-sm" onclick="abrirEntradaManual()">+ Entrada Manual</button>
                 <button class="btn btn-outline btn-sm" onclick="carregarTabelaReposicao()">🔄</button>
               </div>
             </div>
@@ -1646,10 +1646,10 @@
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
           <div style="font-size:10px;font-weight:700;color:var(--accent);letter-spacing:1px">SEPARADORES ATIVOS</div>
           <div style="display:flex;gap:4px">
-            <button onclick="filtrarTurnoDistribuicao('')"     id="dist-turno-todos"  style="padding:3px 10px;font-size:10px;font-weight:700;border:1.5px solid var(--accent);border-radius:20px;background:var(--accent);color:#fff;cursor:pointer">Todos</button>
-            <button onclick="filtrarTurnoDistribuicao('Manhã')" id="dist-turno-manha" style="padding:3px 10px;font-size:10px;font-weight:700;border:1.5px solid var(--border);border-radius:20px;background:transparent;color:var(--text2);cursor:pointer">Manhã</button>
-            <button onclick="filtrarTurnoDistribuicao('Tarde')" id="dist-turno-tarde" style="padding:3px 10px;font-size:10px;font-weight:700;border:1.5px solid var(--border);border-radius:20px;background:transparent;color:var(--text2);cursor:pointer">Tarde</button>
-            <button onclick="filtrarTurnoDistribuicao('Noite')" id="dist-turno-noite" style="padding:3px 10px;font-size:10px;font-weight:700;border:1.5px solid var(--border);border-radius:20px;background:transparent;color:var(--text2);cursor:pointer">Noite</button>
+            <button onclick="filtrarTurnoDistribuicao('')"      id="dist-turno-todos"  class="btn-turno-dist ativo">Todos</button>
+            <button onclick="filtrarTurnoDistribuicao('Manhã')" id="dist-turno-manha"  class="btn-turno-dist">Manhã</button>
+            <button onclick="filtrarTurnoDistribuicao('Tarde')" id="dist-turno-tarde"  class="btn-turno-dist">Tarde</button>
+            <button onclick="filtrarTurnoDistribuicao('Noite')" id="dist-turno-noite"  class="btn-turno-dist">Noite</button>
           </div>
         </div>
         <div id="dist-separadores-lista" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">
@@ -1677,14 +1677,14 @@
 <div id="modal-editar-usuario" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;align-items:center;justify-content:center;padding:16px">
   <div style="background:var(--surface);border-radius:var(--r);width:100%;max-width:500px;max-height:90vh;overflow-y:auto">
     <div style="background:var(--surface2);padding:14px 18px;border-bottom:1px solid var(--border);border-radius:var(--r) var(--r) 0 0;display:flex;align-items:center;justify-content:space-between">
-      <div style="font-size:15px;font-weight:700;color:var(--text)">Editar Usuario</div>
+      <div style="font-size:15px;font-weight:700;color:var(--text)">Editar Usuário</div>
       <button onclick="fecharEditarUsuario()" style="background:transparent;border:none;font-size:22px;cursor:pointer;color:var(--text3)">x</button>
     </div>
     <div style="padding:20px;display:flex;flex-direction:column;gap:14px">
       <input type="hidden" id="edit-usr-id">
       <div class="form-grp"><label>NOME COMPLETO</label><input type="text" id="edit-usr-nome" placeholder="Nome do colaborador"/></div>
       <div class="form-grp"><label>LOGIN</label><input type="text" id="edit-usr-login" placeholder="Ex: joao.silva"/></div>
-      <div class="form-grp"><label>NOVA SENHA (deixe em branco para manter)</label><input type="password" id="edit-usr-senha" placeholder="Minimo 6 caracteres"/></div>
+      <div class="form-grp"><label>NOVA SENHA (deixe em branco para manter)</label><input type="password" id="edit-usr-senha" placeholder="Mínimo 6 caracteres"/></div>
       <div class="form-grp"><label>PERFIL PRINCIPAL</label>
         <select id="edit-usr-perfil" onchange="toggleSubtipoRepositorEdit()">
           <option value="separador">Separador</option>
@@ -1693,14 +1693,14 @@
           <option value="checkout">Checkout</option>
         </select>
       </div>
-      <div class="form-grp" id="edit-usr-subtipo-wrap" style="display:none"><label>FUNCAO DO REPOSITOR</label>
+      <div class="form-grp" id="edit-usr-subtipo-wrap" style="display:none"><label>FUNÇÃO DO REPOSITOR</label>
         <select id="edit-usr-subtipo-repositor">
           <option value="geral">Geral</option>
-          <option value="busca">Busca no armazem</option>
+          <option value="busca">Busca no armazém</option>
           <option value="abastecimento">Abastecimento</option>
         </select>
       </div>
-      <div class="form-grp"><label>PODE ACESSAR TAMBEM</label>
+      <div class="form-grp"><label>PODE ACESSAR TAMBÉM</label>
         <div class="perm-grid">
           <label class="perm-item"><input type="checkbox" class="edit-usr-perm" value="supervisor"><div class="perm-label"><span class="perm-icon">👔</span><span>Supervisor</span><span class="perm-check"></span></div></label>
           <label class="perm-item"><input type="checkbox" class="edit-usr-perm" value="separador"><div class="perm-label"><span class="perm-icon">📦</span><span>Separador</span><span class="perm-check"></span></div></label>
@@ -1710,12 +1710,12 @@
       </div>
       <div class="form-grp"><label>TURNO</label>
         <select id="edit-usr-turno">
-          <option value="Manha">Manh&atilde;</option>
+          <option value="Manha">Manhã</option>
           <option value="Tarde">Tarde</option>
           <option value="Noite">Noite</option>
         </select>
       </div>
-      <button class="btn btn-primary" style="width:100%;margin-top:4px" onclick="salvarEdicaoUsuario()">Salvar Alteracoes</button>
+      <button class="btn btn-primary" style="width:100%;margin-top:4px" onclick="salvarEdicaoUsuario()">Salvar Alterações</button>
     </div>
   </div>
 </div>

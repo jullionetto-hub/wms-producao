@@ -972,9 +972,8 @@ function filtrarTurnoDistribuicao(turno) {
     var btn = document.getElementById('dist-turno-' + t);
     if (!btn) return;
     var ativo = (turno === '' && t === 'todos') || turno.toLowerCase() === t;
-    btn.style.background = ativo ? 'var(--accent)' : 'transparent';
-    btn.style.color = ativo ? '#fff' : 'var(--text2)';
-    btn.style.border = ativo ? '1.5px solid var(--accent)' : '1.5px solid var(--border)';
+    btn.classList.toggle('ativo', ativo);
+    btn.style.background = btn.style.color = btn.style.border = '';
   });
   var seps = turno ? _todosSepsDistribuicao.filter(function(s) {
     var t = (s.turno || '').toLowerCase();
