@@ -8,6 +8,7 @@ const { requerAuth } = require('./lib/auth');
 const { hashSenha, perfisPermitidos, dataHoraLocal } = require('./lib/helpers');
 const apiRouter  = require('./routes/api');
 const helmet     = require('helmet');
+const log        = require('./lib/logger');
 
 const app    = express();
 const PORT   = process.env.PORT || 3000;
@@ -15,13 +16,21 @@ const isProd = process.env.NODE_ENV === 'production';
 
 // ── Segurança ─────────────────────────────────────────────────────────────────
 if (isProd && !process.env.SESSION_SECRET) {
-  console.error('ERRO CRÍTICO: SESSION_SECRET não definido em produção!');
+  log.fatal('SESSION_SECRET não definido em produção — abortando');
   process.exit(1);
 }
 const SESSION_SECRET = process.env.SESSION_SECRET || 'dev_secret_local_apenas';
 
 // ── Trust proxy (Railway) ─────────────────────────────────────────────────────
 app.set('trust proxy', 1);
+
+// ── Força HTTPS em produção ───────────────────────────────────────────────────
+if (isProd) {
+  app.use((req, res, next) => {
+    if (req.secure || req.headers['x-forwarded-proto'] === 'https') return next();
+    res.redirect(301, `https://${req.hostname}${req.url}`);
+  });
+}
 
 // ── CORS ──────────────────────────────────────────────────────────────────────
 const ORIGENS_PERMITIDAS = (process.env.ALLOWED_ORIGINS || '').split(',').map(o=>o.trim()).filter(Boolean);
@@ -30,8 +39,8 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc:  ["'self'", "'unsafe-inline'"], // inline necessário para scripts existentes
-      styleSrc:   ["'self'", "'unsafe-inline'"],
+      scriptSrc:  ["'self'", "'unsafe-inline'"], // inline necessário para event handlers existentes
+      styleSrc:   ["'self'"],
       imgSrc:     ["'self'", "data:"],
       connectSrc: ["'self'"],
       fontSrc:    ["'self'"],
@@ -66,9 +75,9 @@ app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ── Sessão ────────────────────────────────────────────────────────────────────
-const sessionStore = isProd || process.env.NODE_ENV !== 'test'
-  ? new pgSession({ pool, tableName: 'session', createTableIfMissing: true, errorLog: (msg) => console.error('[SESSION STORE]', msg) })
-  : new session.MemoryStore();
+const sessionStore = process.env.NODE_ENV === 'test'
+  ? new session.MemoryStore()
+  : new pgSession({ pool, tableName: 'session', createTableIfMissing: true, errorLog: (msg) => log.error({ msg }, 'session-store') });
 app.use(session({
   store: sessionStore,
   secret: SESSION_SECRET,
@@ -88,7 +97,7 @@ app.use('/', apiRouter);
 // ── Handler 404 e 500 ────────────────────────────────────────────────────────
 app.use((req, res) => res.status(404).json({ erro: 'Rota não encontrada.' }));
 app.use((err, req, res, next) => {
-  console.error('Erro não tratado:', err.message);
+  log.error({ err, url: req.url, method: req.method }, 'unhandled-error');
   res.status(500).json({ erro: isProd ? 'Erro interno do servidor.' : err.message });
 });
 
@@ -183,7 +192,7 @@ async function criarTabelas() {
     'CREATE INDEX IF NOT EXISTS idx_auditoria_usuario ON auditoria(usuario_login)',
     'CREATE INDEX IF NOT EXISTS idx_checkout_caixa ON checkout(numero_caixa)',
   ]) await Q(idx);
-  console.log('Tabelas OK');
+  log.info('tabelas OK');
 }
 
 async function criarUsuarioPadrao() {
@@ -198,10 +207,26 @@ async function criarUsuarioPadrao() {
 const kpiCache = { data: null, ts: 0, ttl: 60000 }; // 60s TTL
 app.set('kpiCache', kpiCache);
 
-// ── Scheduler de relatório diário ────────────────────────────────────────────
+// ── Scheduler de relatório diário (DB-backed) ────────────────────────────────
+const { gerarRelatorio } = require('./lib/relatorio');
+
+async function verificarRelatoriosPerdidos() {
+  // Ao iniciar, verifica se o relatório de ontem foi gerado
+  try {
+    const { db: dbLib } = require('./lib/db');
+    const ontem = new Date(); ontem.setDate(ontem.getDate() - 1);
+    const dataOntem = ontem.toISOString().split('T')[0];
+    const existe = await dbLib.get('SELECT id FROM relatorios_diarios WHERE data=$1', [dataOntem]);
+    if (!existe) {
+      log.info({ data: dataOntem }, 'scheduler gerando relatório perdido de ontem');
+      await gerarRelatorio(dataOntem);
+    }
+  } catch(e) { log.error({ err: e }, 'scheduler erro ao verificar relatórios perdidos'); }
+}
+
 function agendarRelatoriosDiarios() {
   const agora = new Date();
-  // Calcula ms até 23:55 de hoje (Brasília)
+  // Calcula ms até 23:55 hora local (Brasília via offset fixo -3h)
   const alvo = new Date(agora);
   alvo.setHours(23, 55, 0, 0);
   if (alvo <= agora) alvo.setDate(alvo.getDate() + 1);
@@ -209,55 +234,22 @@ function agendarRelatoriosDiarios() {
 
   setTimeout(async () => {
     try {
-      const { dataHoraLocal } = require('./lib/helpers');
-      const { db, pool } = require('./lib/db');
       const { data } = dataHoraLocal();
-      console.log(`[SCHEDULER] Gerando relatório diário de ${data}...`);
-
-      // Busca dados do dia
-      const [pedidos, faltas, checkouts, seps] = await Promise.all([
-        db.all(`SELECT p.*, s.nome as sep_nome FROM pedidos p LEFT JOIN separadores s ON p.separador_id=s.id WHERE p.data_pedido=$1`, [data]),
-        db.all(`SELECT * FROM avisos_repositor WHERE data_aviso=$1`, [data]),
-        db.all(`SELECT * FROM checkout WHERE data_checkout=$1`, [data]),
-        db.all(`SELECT DISTINCT s.nome FROM separadores s INNER JOIN pedidos p ON p.separador_id=s.id WHERE p.data_pedido=$1`, [data]),
-      ]);
-
-      const porSep = {};
-      pedidos.forEach(p => {
-        if (!p.sep_nome) return;
-        if (!porSep[p.sep_nome]) porSep[p.sep_nome] = { concluidos:0, pendentes:0, itens:0 };
-        if (p.status==='concluido') porSep[p.sep_nome].concluidos++;
-        else porSep[p.sep_nome].pendentes++;
-        porSep[p.sep_nome].itens += p.itens||0;
-      });
-
-      await pool.query(
-        `INSERT INTO relatorios_diarios (data,total_pedidos,pedidos_concluidos,pedidos_pendentes,total_itens,total_faltas,faltas_abastecidas,faltas_nao_encontradas,total_checkouts,separadores_ativos,dados_json)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
-         ON CONFLICT(data) DO UPDATE SET
-           total_pedidos=$2,pedidos_concluidos=$3,pedidos_pendentes=$4,total_itens=$5,
-           total_faltas=$6,faltas_abastecidas=$7,faltas_nao_encontradas=$8,
-           total_checkouts=$9,separadores_ativos=$10,dados_json=$11,gerado_em=NOW()`,
-        [data, pedidos.length,
-         pedidos.filter(p=>p.status==='concluido').length,
-         pedidos.filter(p=>p.status==='pendente').length,
-         pedidos.reduce((s,p)=>s+(p.itens||0),0),
-         faltas.length,
-         faltas.filter(f=>f.status==='abastecido').length,
-         faltas.filter(f=>f.status==='nao_encontrado').length,
-         checkouts.filter(c=>c.status==='concluido').length,
-         seps.length,
-         JSON.stringify({ porSep })]
-      );
-      console.log(`[SCHEDULER] Relatório de ${data} gerado com sucesso.`);
+      // Idempotente: pula se já foi gerado hoje
+      const { db: dbLib } = require('./lib/db');
+      const existe = await dbLib.get('SELECT id FROM relatorios_diarios WHERE data=$1', [data]);
+      if (!existe) {
+        log.info({ data }, 'scheduler gerando relatório diário');
+        await gerarRelatorio(data);
+        log.info({ data }, 'scheduler relatório diário gerado');
+      }
     } catch(e) {
-      console.error('[SCHEDULER] Erro ao gerar relatório:', e.message);
+      log.error({ err: e }, 'scheduler erro ao gerar relatório');
     }
-    // Agenda próximo dia
     agendarRelatoriosDiarios();
   }, delay);
 
-  console.log(`[SCHEDULER] Relatório diário agendado para ${new Date(Date.now()+delay).toLocaleString('pt-BR')}`);
+  log.info({ agendadoPara: new Date(Date.now()+delay).toISOString() }, 'scheduler relatório diário agendado');
 }
 
 async function runMigrations() {
@@ -294,10 +286,11 @@ async function runMigrations() {
       criado_em TIMESTAMPTZ DEFAULT NOW()
     )`);
     await pool.query("ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS senha_temporaria BOOLEAN DEFAULT false");
+    await pool.query("ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS senha_temporaria_expira TIMESTAMPTZ");
     await pool.query("ALTER TABLE checkout ADD COLUMN IF NOT EXISTS operador_nome TEXT DEFAULT ''");
-    console.log('Migrations OK');
+    log.info('migrations OK');
   } catch(e) {
-    console.error('Migration erro:', e.message);
+    log.error({ err: e }, 'migration erro');
   }
 }
 
@@ -309,11 +302,14 @@ async function iniciar() {
     await runMigrations();
     app.listen(PORT, () => {
       const {data,hora} = dataHoraLocal();
-      console.log(`Servidor WMS rodando na porta ${PORT} — ${data} ${hora}`);
-      if (isProd) agendarRelatoriosDiarios();
+      log.info({ port: PORT, data, hora }, 'servidor WMS iniciado');
+      if (isProd) {
+        verificarRelatoriosPerdidos();
+        agendarRelatoriosDiarios();
+      }
     });
   } catch(e) {
-    console.error('Erro fatal ao iniciar:', e.message);
+    log.fatal({ err: e }, 'erro fatal ao iniciar');
     process.exit(1);
   }
 }

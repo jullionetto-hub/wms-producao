@@ -774,3 +774,4 @@ body.dark .item-card.parcial    .item-ic{background:#78350F}
 ══════════════════════════════════════════ */
 .aviso-duplicata{background:#FEF3C7;border:1.5px solid #FCD34D;border-radius:10px;padding:12px 15px;margin-bottom:12px;display:flex;align-items:center;gap:10px;font-size:13px;font-weight:700;color:#92400E}
 body.dark .aviso-duplicata{background:#2D1A05;border-color:#78350F;color:#FCD34D}
+.usr-btn.edit{background:var(--accent);color:#fff;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;font-weight:700}

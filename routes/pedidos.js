@@ -1,0 +1,311 @@
+const express = require('express');
+const router = express.Router();
+const { db, pool } = require('../lib/db');
+const { requerAuth, requerPerfil } = require('../lib/auth');
+const { dataHoraLocal, formatarAguardandoDesde, validarId } = require('../lib/helpers');
+const { calcularPesoCorredor, calcularPontuacaoPedido } = require('../lib/pontuacao');
+
+router.get('/pedidos', requerAuth, async (req,res) => {
+  const {separador_id,status,data,data_ini,data_fim,numero_pedido,page,pageSize}=req.query;
+  try {
+    let q=`SELECT p.*,s.nome as separador_nome,p.tem_prime FROM pedidos p LEFT JOIN separadores s ON p.separador_id=s.id WHERE 1=1`;
+    const p=[];
+    const add=(c,v)=>{p.push(v);q+=` AND ${c}$${p.length}`;};
+    if (separador_id)  add('p.separador_id=',separador_id);
+    if (status)        add('p.status=',status);
+    if (data)          add('p.data_pedido=',data);
+    if (data_ini)      add('p.data_pedido>=',data_ini);
+    if (data_fim)      add('p.data_pedido<=',data_fim);
+    if (numero_pedido) add('p.numero_pedido=',numero_pedido);
+    const order=` ORDER BY CASE WHEN p.aguardando_desde IS NOT NULL AND p.aguardando_desde!='' THEN p.aguardando_desde ELSE COALESCE(p.data_pedido,'')||' '||COALESCE(p.hora_pedido,'') END ASC`;
+    if (page) {
+      const size = Math.min(parseInt(pageSize)||50, 200);
+      const pg   = Math.max(parseInt(page)||1, 1);
+      const countRow = await db.get(`SELECT COUNT(*) as total FROM pedidos p LEFT JOIN separadores s ON p.separador_id=s.id WHERE 1=1${q.split('WHERE 1=1')[1].split('ORDER')[0]}`, p);
+      const total = parseInt(countRow.total)||0;
+      p.push(size); q+=order+` LIMIT $${p.length}`;
+      p.push((pg-1)*size); q+=` OFFSET $${p.length}`;
+      const rows=await db.all(q,p);
+      return res.json({ total, pagina:pg, totalPaginas:Math.ceil(total/size), dados:rows.map(r=>({...r,aguardando_desde:formatarAguardandoDesde(r.aguardando_desde)})) });
+    }
+    q+=order;
+    const rows=await db.all(q,p);
+    res.json(rows.map(r=>({...r,aguardando_desde:formatarAguardandoDesde(r.aguardando_desde)})));
+  } catch(e){res.status(500).json({erro:e.message});}
+});
+
+router.post('/pedidos', requerAuth, requerPerfil('supervisor'), async (req,res) => {
+  const {numero_pedido,separador_id,status,itens,rua,data_pedido,hora_pedido}=req.body;
+  const {data:dl,hora:hl}=dataHoraLocal();
+  try {
+    const r=await pool.query(`INSERT INTO pedidos (numero_pedido,separador_id,status,itens,rua,data_pedido,hora_pedido) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
+      [numero_pedido,separador_id||null,status||'pendente',itens||0,rua||'',data_pedido||dl,hora_pedido||hl]);
+    res.json({id:r.rows[0].id,mensagem:'Pedido criado!'});
+  } catch(e){
+    if (e.code==='23505') return res.status(409).json({erro:'Pedido ja cadastrado!'});
+    res.status(500).json({erro:e.message});
+  }
+});
+
+router.get('/pedidos/bloqueados', requerAuth, requerPerfil('supervisor'), async (req,res) => {
+  try {
+    const rows = await db.all(`
+      SELECT DISTINCT p.id, p.numero_pedido, p.status, p.separador_id,
+        s.nome as separador_nome,
+        COUNT(DISTINCT a.id) as total_bloqueios,
+        STRING_AGG(DISTINCT a.codigo, ', ') as codigos_bloqueados
+      FROM pedidos p
+      JOIN avisos_repositor a ON a.pedido_id=p.id
+      LEFT JOIN separadores s ON p.separador_id=s.id
+      WHERE a.status IN ('nao_encontrado','protocolo')
+        AND p.status IN ('separando','concluido')
+        AND NOT EXISTS (
+          SELECT 1 FROM avisos_repositor a2
+          WHERE a2.pedido_id=p.id AND a2.status='pendente'
+        )
+      GROUP BY p.id, p.numero_pedido, p.status, p.separador_id, s.nome
+      ORDER BY p.id DESC`
+    );
+    res.json(rows);
+  } catch(e) { res.status(500).json({erro:e.message}); }
+});
+
+router.get('/pedidos/info/:numero_pedido', requerAuth, async (req,res) => {
+  try {
+    const row=await db.get('SELECT numero_pedido,cliente,transportadora,numero_caixa FROM pedidos WHERE numero_pedido=$1',[req.params.numero_pedido]);
+    if (!row) return res.status(404).json({erro:'Pedido não encontrado'});
+    res.json({cliente:row.cliente||'',transportadora:row.transportadora||'',numero_caixa:row.numero_caixa||''});
+  } catch(e){res.status(500).json({erro:e.message});}
+});
+
+router.put('/pedidos/:id/caixa', requerAuth, async (req,res) => {
+  const id = validarId(req.params.id);
+  if (!id) return res.status(400).json({erro:'ID invalido'});
+  const {numero_caixa}=req.body;
+  if (!numero_caixa) return res.status(400).json({erro:'Numero da caixa nao informado!'});
+  const caixa=String(numero_caixa).trim();
+  try {
+    const usadaPed = await db.get(
+      `SELECT numero_pedido FROM pedidos WHERE numero_caixa=$1 AND id<>$2 AND status NOT IN ('concluido','cancelado')`,
+      [caixa, req.params.id]
+    );
+    if (usadaPed) return res.status(409).json({erro:`Caixa ${caixa} ja esta em uso no pedido ${usadaPed.numero_pedido}!`});
+    const usadaCk = await db.get(
+      `SELECT c.numero_pedido FROM checkout c JOIN pedidos p ON c.pedido_id=p.id WHERE c.numero_caixa=$1 AND c.pedido_id<>$2 AND c.status='pendente'`,
+      [caixa, req.params.id]
+    );
+    if (usadaCk) return res.status(409).json({erro:`Caixa ${caixa} ja esta aguardando checkout no pedido ${usadaCk.numero_pedido}!`});
+    await pool.query('UPDATE pedidos SET numero_caixa=$1 WHERE id=$2',[caixa,req.params.id]);
+    res.json({mensagem:'Caixa vinculada!'});
+  } catch(e){res.status(500).json({erro:e.message});}
+});
+
+router.put('/pedidos/:id/liberar-caixa', requerAuth, requerPerfil('supervisor'), async (req,res) => {
+  try {
+    await pool.query("UPDATE pedidos SET numero_caixa='' WHERE id=$1",[req.params.id]);
+    res.json({mensagem:'Caixa liberada!'});
+  } catch(e){res.status(500).json({erro:e.message});}
+});
+
+router.post('/pedidos/bipar', requerAuth, async (req,res) => {
+  const {numero_pedido,separador_id}=req.body;
+  if (!numero_pedido) return res.status(400).json({erro:'Numero do pedido nao informado!'});
+  try {
+    const ped=await db.get('SELECT * FROM pedidos WHERE numero_pedido=$1',[numero_pedido]);
+    if (!ped) return res.status(404).json({erro:'Pedido nao encontrado!'});
+    if (ped.status==='concluido') return res.status(400).json({erro:'Pedido ja concluido!',status:'concluido'});
+    if (separador_id && ped.separador_id && String(ped.separador_id)===String(separador_id))
+      return res.json({mensagem:'Pedido ja atribuido.',pedido_id:ped.id,status:ped.status,ja_atribuido:true,caixa_vinculada:!!(ped.numero_caixa)});
+    if (separador_id && ped.separador_id && String(ped.separador_id)!==String(separador_id) && ped.status==='separando')
+      return res.status(409).json({erro:'Pedido sendo separado por outro operador!'});
+    const sepId=separador_id||ped.separador_id||null;
+    const bipDHL=dataHoraLocal();
+    await pool.query(`UPDATE pedidos SET separador_id=$1,status='separando',iniciado_em=COALESCE(NULLIF(iniciado_em,''),$3) WHERE id=$2`,[sepId,ped.id,bipDHL.data+'T'+bipDHL.hora]);
+    res.json({mensagem:'Pedido atribuido!',pedido_id:ped.id,status:'separando',caixa_vinculada:!!(ped.numero_caixa)});
+  } catch(e){res.status(500).json({erro:e.message});}
+});
+
+router.get('/pedidos/:id/itens', requerAuth, async (req,res) => {
+  try {
+    res.json(await db.all(
+      `SELECT i.*,COALESCE((SELECT a.status FROM avisos_repositor a WHERE a.item_id=i.id ORDER BY a.id DESC LIMIT 1),'') as aviso_status FROM itens_pedido i WHERE i.pedido_id=$1 ORDER BY i.id`,
+      [req.params.id]
+    ));
+  } catch(e){res.status(500).json({erro:e.message});}
+});
+
+router.put('/itens/:id/verificar', requerAuth, async (req,res) => {
+  const {status,obs,qtd_falta,separador_id,separador_nome}=req.body;
+  const {hora,data}=dataHoraLocal();
+  try {
+    const item=await db.get(`SELECT i.*,p.numero_pedido FROM itens_pedido i JOIN pedidos p ON i.pedido_id=p.id WHERE i.id=$1`,[req.params.id]);
+    if (!item) return res.status(404).json({erro:'Item nao encontrado'});
+    await pool.query('UPDATE itens_pedido SET status=$1,obs=$2,qtd_falta=$3,hora_verificado=$4 WHERE id=$5',[status,obs||'',qtd_falta||0,hora,req.params.id]);
+    if (status==='falta'||status==='parcial') {
+      const qtdA=status==='falta'?item.quantidade:(qtd_falta||0);
+      const obsA=status==='parcial'?(obs||''):`Falta total - ${item.quantidade} unidade(s)`;
+      const pedidoInfo = await db.get(`SELECT transportadora FROM pedidos WHERE id=$1`,[item.pedido_id]);
+      const formaEnvio = pedidoInfo?.transportadora || '';
+      const ja=await db.get(`SELECT id FROM avisos_repositor WHERE item_id=$1 AND status='pendente'`,[item.id]);
+      if (ja) { await pool.query(`UPDATE avisos_repositor SET quantidade=$1,obs=$2,hora_aviso=$3,forma_envio=$4 WHERE id=$5`,[qtdA,obsA,hora,formaEnvio,ja.id]); }
+      else { await pool.query(`INSERT INTO avisos_repositor (item_id,pedido_id,numero_pedido,separador_id,separador_nome,codigo,descricao,endereco,quantidade,obs,status,hora_aviso,data_aviso,forma_envio) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'pendente',$11,$12,$13)`,
+        [item.id,item.pedido_id,item.numero_pedido,separador_id,separador_nome,item.codigo,item.descricao,item.endereco,qtdA,obsA,hora,data,formaEnvio]); }
+      res.json({mensagem:'Repositor avisado!',aviso:true});
+    } else { res.json({mensagem:'Item verificado!',aviso:false}); }
+  } catch(e){res.status(500).json({erro:e.message});}
+});
+
+router.put('/pedidos/:id/concluir', requerAuth, async (req,res) => {
+  try {
+    const pend=await db.all(`SELECT id FROM itens_pedido WHERE pedido_id=$1 AND status='pendente'`,[req.params.id]);
+    if (pend.length) return res.status(400).json({erro:`Ainda ha ${pend.length} item(s) nao verificado(s)!`});
+    const avisos=await db.all(`SELECT id FROM avisos_repositor WHERE pedido_id=$1 AND status='pendente'`,[req.params.id]);
+    if (avisos.length) return res.json({aguardando:true,mensagem:`Aguardando repositor (${avisos.length})`});
+    const {data,hora}=dataHoraLocal();
+    await pool.query(`UPDATE pedidos SET status='concluido' WHERE id=$1`,[req.params.id]);
+    await pool.query(`UPDATE checkout SET status='pendente',hora_criacao=$1,data_checkout=$2 WHERE pedido_id=$3`,[hora,data,req.params.id]);
+    res.json({mensagem:'Pedido concluido!'});
+  } catch(e){res.status(500).json({erro:e.message});}
+});
+
+router.put('/pedidos/:id/redefinir', requerAuth, requerPerfil('supervisor'), async (req,res) => {
+  try { await pool.query(`UPDATE pedidos SET status='pendente',separador_id=NULL WHERE id=$1`,[req.params.id]); res.json({mensagem:'Redefinido!'}); }
+  catch(e){res.status(500).json({erro:e.message});}
+});
+
+router.put('/pedidos/:id/desbloquear', requerAuth, requerPerfil('supervisor'), async (req,res) => {
+  try {
+    await pool.query(`UPDATE pedidos SET status='concluido' WHERE id=$1`,[req.params.id]);
+    res.json({mensagem:'Pedido desbloqueado!'});
+  } catch(e) { res.status(500).json({erro:e.message}); }
+});
+
+router.put('/pedidos/:id/separador', requerAuth, requerPerfil('supervisor'), async (req,res) => {
+  const {separador_id}=req.body;
+  try {
+    await pool.query('UPDATE pedidos SET separador_id=$1 WHERE id=$2',[separador_id||null,req.params.id]);
+    res.json({mensagem:'Separador atribuido!'});
+  } catch(e){res.status(500).json({erro:e.message});}
+});
+
+router.delete('/pedidos/:id', requerAuth, requerPerfil('supervisor'), async (req,res) => {
+  const id = validarId(req.params.id);
+  if (!id) return res.status(400).json({erro:'ID invalido'});
+  try {
+    await pool.query('DELETE FROM avisos_repositor WHERE pedido_id=$1',[id]);
+    await pool.query('DELETE FROM checkout WHERE pedido_id=$1',[id]);
+    await pool.query('DELETE FROM itens_pedido WHERE pedido_id=$1',[id]);
+    await pool.query('DELETE FROM pedidos WHERE id=$1',[id]);
+    res.json({mensagem:'Pedido excluido!'});
+  } catch(e){res.status(500).json({erro:e.message});}
+});
+
+router.delete('/pedidos', requerAuth, requerPerfil('supervisor'), async (req,res) => {
+  const {data}=req.query;
+  if (!data) return res.status(400).json({erro:'Data nao informada!'});
+  try {
+    const peds=await db.all(`SELECT id FROM pedidos WHERE data_pedido=$1`,[data]);
+    for (const p of peds) {
+      await pool.query('DELETE FROM avisos_repositor WHERE pedido_id=$1',[p.id]);
+      await pool.query('DELETE FROM checkout WHERE pedido_id=$1',[p.id]);
+      await pool.query('DELETE FROM itens_pedido WHERE pedido_id=$1',[p.id]);
+    }
+    const r=await pool.query(`DELETE FROM pedidos WHERE data_pedido=$1`,[data]);
+    res.json({mensagem:`${r.rowCount} pedidos excluidos!`});
+  } catch(e){res.status(500).json({erro:e.message});}
+});
+
+router.post('/pedidos/importar', requerAuth, requerPerfil('supervisor'), async (req,res) => {
+  const dados = req.body.pedidos || req.body.linhas || [];
+  if (!dados?.length) return res.status(400).json({erro:'Nenhum pedido informado!'});
+  const {data:hoje,hora}=dataHoraLocal();
+  let importados=0,ignorados=0,erros=0;
+  const numeros=[...new Set(dados.map(d=>String(d.numero_pedido)))];
+  for (const numero of numeros) {
+    const itens=dados.filter(d=>String(d.numero_pedido)===numero);
+    try {
+      const ruasU=new Set(itens.map(i=>String(i.endereco||'').split(',')[0].trim().replace(/\d+/g,'').trim())).size;
+      const pts=Math.round(itens.reduce((s,i)=>s+calcularPesoCorredor(i.endereco)*(parseInt(i.quantidade)||1),0)+ruasU*2);
+      const r=await pool.query(`INSERT INTO pedidos (numero_pedido,status,itens,rua,cliente,transportadora,aguardando_desde,pontuacao,data_pedido,hora_pedido,tem_prime) VALUES ($1,'pendente',$2,$3,$4,$5,$6,$7,$8,$9,$10) ON CONFLICT(numero_pedido) DO NOTHING RETURNING id`,
+        [numero,itens.length,itens[0]?.endereco||'',itens[0]?.cliente||'',itens[0]?.transportadora||'',itens[0]?.aguardando_desde||'',pts,hoje,hora,itens.some(i=>String(i.codigo||'').toUpperCase()==='PRIME')]);
+      if (!r.rows[0]){ignorados++;continue;}
+      const pid=r.rows[0].id;
+      const client=await pool.connect();
+      try {
+        await client.query('BEGIN');
+        for (const it of itens) await client.query(`INSERT INTO itens_pedido (pedido_id,codigo,descricao,endereco,quantidade) VALUES ($1,$2,$3,$4,$5)`,[pid,String(it.codigo||'').trim(),String(it.descricao||'').trim(),String(it.endereco||'').trim(),parseInt(it.quantidade)||1]);
+        await client.query('COMMIT'); importados++;
+      } catch(ei){await client.query('ROLLBACK');await pool.query('DELETE FROM pedidos WHERE id=$1',[pid]);erros++;}
+      finally{client.release();}
+    } catch(err){erros++;}
+  }
+  res.json({mensagem:'Importacao concluida!',importados,ignorados,erros,total:numeros.length});
+});
+
+router.post('/pedidos/distribuicao', requerAuth, requerPerfil('supervisor'), async (req,res) => {
+  const {separadores,quantidade,apenas_sem_sep,respeitar_hora}=req.body;
+  if (!separadores?.length) return res.status(400).json({erro:'Informe os separadores!'});
+  try {
+    let w="p.status='pendente'";
+    if (apenas_sem_sep!==false) w+=' AND p.separador_id IS NULL';
+    const pedidos=await db.all(`SELECT p.* FROM pedidos p WHERE ${w} ORDER BY p.hora_pedido ASC,p.id ASC`);
+    if (!pedidos.length) return res.json({plano:[],total_pedidos:0});
+    for (const ped of pedidos) {
+      const itens=await db.all('SELECT endereco,quantidade FROM itens_pedido WHERE pedido_id=$1',[ped.id]);
+      ped._p=ped.pontuacao>0?ped.pontuacao:calcularPontuacaoPedido(itens);
+      if (!ped.pontuacao) await pool.query('UPDATE pedidos SET pontuacao=$1 WHERE id=$2',[ped._p,ped.id]);
+    }
+    const lim=(quantidade>0)?quantidade:pedidos.length;
+    const isDrive=p=>String(p.transportadora||'').toUpperCase().includes('DRIVE');
+    const drive=pedidos.filter(isDrive).slice(0,lim);
+    let outros=pedidos.filter(p=>!isDrive(p)).slice(0,Math.max(0,lim-drive.length));
+    if (respeitar_hora!==false) {
+      const gMin=p=>{const s=String(p.aguardando_desde||p.hora_pedido||'');const m=s.match(/(\d{2}:\d{2})/);return m?m[1]:s;};
+      outros.sort((a,b)=>gMin(a).localeCompare(gMin(b)));
+    }
+    const ordenados = [...drive, ...outros].sort((a,b)=>b._p-a._p);
+    const sepMap={};
+    for (const sid of separadores) {
+      let row=await db.get('SELECT s.id,s.nome FROM separadores s WHERE s.usuario_id=$1 LIMIT 1',[sid]);
+      if (!row) row=await db.get('SELECT id,nome FROM usuarios WHERE id=$1',[sid]);
+      if (row) sepMap[sid]=row;
+    }
+    const filas=separadores.map(sid=>({separador_id:sid,separador_nome:sepMap[sid]?.nome||`Sep ${sid}`,pedidos:[],pontuacao_total:0,sep_db_id:sepMap[sid]?.id||null}));
+    for (const ped of ordenados) {
+      filas.sort((a,b)=>a.pontuacao_total-b.pontuacao_total);
+      filas[0].pedidos.push(ped.numero_pedido);
+      filas[0].pontuacao_total+=ped._p;
+    }
+    res.json({plano:filas.map(f=>({separador_id:f.separador_id,sep_db_id:f.sep_db_id,separador_nome:f.separador_nome,pedidos:f.pedidos,pontuacao_total:Math.round(f.pontuacao_total)})),total_pedidos:pedidos.length});
+  } catch(err){res.status(500).json({erro:err.message});}
+});
+
+router.post('/pedidos/distribuicao/confirmar', requerAuth, requerPerfil('supervisor'), async (req,res) => {
+  const {plano}=req.body;
+  if (!plano?.length) return res.status(400).json({erro:'Plano não informado!'});
+  let dist=0;
+  try {
+    for (const item of plano) for (const np of item.pedidos) {
+      let sep=await db.get('SELECT id FROM separadores WHERE usuario_id=$1 OR id=$2 LIMIT 1',[item.separador_id,item.separador_id]);
+      const dbId=item.sep_db_id||sep?.id;
+      if (dbId){const r=await pool.query(`UPDATE pedidos SET separador_id=$1 WHERE numero_pedido=$2 AND status='pendente'`,[dbId,np]);if(r.rowCount>0)dist++;}
+    }
+    res.json({mensagem:'Distribuição confirmada!',distribuidos:dist});
+  } catch(err){res.status(500).json({erro:err.message});}
+});
+
+router.post('/pedidos/recalcular-pontuacao', requerAuth, requerPerfil('supervisor'), async (req,res) => {
+  try {
+    const peds=await db.all("SELECT id FROM pedidos WHERE pontuacao=0 OR pontuacao IS NULL");
+    let at=0;
+    for (const p of peds){const itens=await db.all('SELECT endereco,quantidade FROM itens_pedido WHERE pedido_id=$1',[p.id]);const pts=calcularPontuacaoPedido(itens);if(pts>0){await pool.query('UPDATE pedidos SET pontuacao=$1 WHERE id=$2',[pts,p.id]);at++;}}
+    res.json({mensagem:`${at} pedidos recalculados`,atualizados:at});
+  } catch(err){res.status(500).json({erro:err.message});}
+});
+
+// Alias retrocompatível — frontend antigo usava /importar
+router.post('/importar', requerAuth, requerPerfil('supervisor'), (req,res) => {
+  res.redirect(307, '/pedidos/importar');
+});
+
+module.exports = router;
