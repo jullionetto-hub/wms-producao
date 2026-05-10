@@ -40,7 +40,7 @@ app.use(helmet({
     directives: {
       defaultSrc: ["'self'"],
       scriptSrc:  ["'self'", "'unsafe-inline'"], // inline necessário para event handlers existentes
-      styleSrc:   ["'self'"],
+      styleSrc:   ["'self'", "'unsafe-inline'"], // inline necessário para estilos dinâmicos em JS
       imgSrc:     ["'self'", "data:"],
       connectSrc: ["'self'"],
       fontSrc:    ["'self'"],
