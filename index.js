@@ -36,18 +36,7 @@ if (isProd) {
 const ORIGENS_PERMITIDAS = (process.env.ALLOWED_ORIGINS || '').split(',').map(o=>o.trim()).filter(Boolean);
 // ── Helmet (security headers) ───────────────────────────────────────────────
 app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc:  ["'self'", "'unsafe-inline'"], // inline necessário para event handlers existentes
-      styleSrc:   ["'self'", "'unsafe-inline'"], // inline necessário para estilos dinâmicos em JS
-      imgSrc:     ["'self'", "data:"],
-      connectSrc: ["'self'"],
-      fontSrc:    ["'self'"],
-      objectSrc:  ["'none'"],
-      frameAncestors: ["'none'"],
-    },
-  },
+  contentSecurityPolicy: false,
   crossOriginEmbedderPolicy: false,
 }));
 
