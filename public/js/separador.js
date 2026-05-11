@@ -51,27 +51,23 @@ async function concluirPedidoMobile() {
 
 async function carregarFilaMobile() {
   try {
-    // Busca pedidos e avisos ativos em paralelo (pendente + aguardando_abastecer)
-    const [resPed, resAvPend, resAvAguard] = await Promise.all([
+    // Busca pedidos e avisos ativos em paralelo (uma só chamada com múltiplos status)
+    const [resPed, resAv] = await Promise.all([
       fetch(`${API}/pedidos`, { credentials:'include' }),
-      fetch(`${API}/repositor/avisos?status=pendente`, { credentials:'include' }),
-      fetch(`${API}/repositor/avisos?status=aguardando_abastecer`, { credentials:'include' })
+      fetch(`${API}/repositor/avisos?status=pendente,aguardando_abastecer`, { credentials:'include' })
     ]);
     const todos  = await resPed.json();
-    const avisos = [
-      ...(resAvPend.ok   ? await resAvPend.json()   : []),
-      ...(resAvAguard.ok ? await resAvAguard.json() : [])
-    ];
+    const avisos = resAv.ok ? await resAv.json() : [];
 
-    // Pedidos com itens aguardando repositor (deste separador)
+    // Pedidos com itens aguardando repositor
+    // Não filtra por separador_id pois pode ser nulo em avisos antigos;
+    // a correspondência com meusMob já garante o escopo correto
     const pedidosComFalta = {};
-    avisos
-      .filter(a => !separadorAtual || String(a.separador_id) === String(separadorAtual.id))
-      .forEach(a => {
-        const n = String(a.numero_pedido);
-        if (!pedidosComFalta[n]) pedidosComFalta[n] = 0;
-        pedidosComFalta[n]++;
-      });
+    avisos.forEach(a => {
+      const n = String(a.numero_pedido);
+      if (!pedidosComFalta[n]) pedidosComFalta[n] = 0;
+      pedidosComFalta[n]++;
+    });
 
     const ativos = todos.filter(p=>p.status!=='concluido');
     const meusMob = separadorAtual ? ativos.filter(p=>p.separador_id===separadorAtual.id) : ativos;

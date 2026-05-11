@@ -17,7 +17,11 @@ router.get('/repositor/avisos', requerAuth, async (req,res) => {
              LEFT JOIN pedidos p ON a.pedido_id = p.id
              WHERE 1=1`;
     const params=[];
-    if (status){params.push(status);sql+=` AND a.status=$${params.length}`;}
+    if (status) {
+      const list = status.split(',').map(s=>s.trim()).filter(Boolean);
+      if (list.length === 1) { params.push(list[0]); sql+=` AND a.status=$${params.length}`; }
+      else if (list.length > 1) { const ph=list.map((_,i)=>`$${params.length+i+1}`).join(','); params.push(...list); sql+=` AND a.status IN (${ph})`; }
+    }
     if (data){params.push(data);sql+=` AND a.data_aviso=$${params.length}`;}
     if (data_ini){params.push(data_ini);sql+=` AND a.data_aviso>=$${params.length}`;}
     if (data_fim){params.push(data_fim);sql+=` AND a.data_aviso<=$${params.length}`;}
