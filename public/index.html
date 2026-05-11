@@ -412,7 +412,7 @@
                 <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:6px">Arraste o arquivo aqui</div>
                 <div style="font-size:11px;color:var(--text3);margin-bottom:14px">ou clique para selecionar<br><b style="color:var(--text2)">Colunas: Pedido, Codigo, Descricao, Qtde, Endereço</b></div>
                 <input type="file" id="input-arquivo" accept=".xlsx,.xls,.csv" onchange="processarArquivo(event)"/>
-                <button class="btn btn-outline btn-sm" onclick="event.stopPropagation()">📂 Selecionar Arquivo</button>
+                <button class="btn btn-outline btn-sm" onclick="event.stopPropagation();document.getElementById('input-arquivo').click()">📂 Selecionar Arquivo</button>
               </div>
               <div class="status-box" id="status-leitura"></div>
               <div id="preview-importacao" style="display:none;margin-top:14px">
@@ -1584,7 +1584,7 @@
             <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">Arraste o arquivo aqui</div>
             <div style="font-size:11px;color:var(--text3);margin-bottom:12px">ou clique para selecionar<br><b style="color:var(--text2)">Aba "Itens": Codigo, Pedido, Descricao, Quantidade, Endereço<br>Aba "Transportadora": Pedido, Razão social, Serviço de entrega</b></div>
             <input type="file" id="modal-input-arquivo" accept=".xlsx,.xls,.csv" onchange="processarArquivoModal(event)" style="display:none"/>
-            <button class="btn btn-outline btn-sm" onclick="event.stopPropagation()">📂 Selecionar Arquivo</button>
+            <button class="btn btn-outline btn-sm" onclick="event.stopPropagation();document.getElementById('modal-input-arquivo').click()">📂 Selecionar Arquivo</button>
           </div>
           <div class="status-box" id="modal-status-leitura"></div>
           <div id="modal-preview-importacao" style="display:none;margin-top:14px">
