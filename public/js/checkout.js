@@ -122,7 +122,7 @@ async function carregarStatsCkMobile() {
     set('m-ck-hoje', d.expedidos_hoje);
     set('m-ck-mes',  d.expedidos_hoje);
     set('m-ck-pend', d.pendentes);
-  } catch(e) {}
+  } catch(e) { console.warn(e); }
 }
 
 
@@ -271,5 +271,5 @@ async function carregarCheckoutLista() {
           : `<span style="color:var(--text3);font-size:11px">Liberado</span>`}
       </td>
     </tr>`).join('');
-  } catch(e) {}
+  } catch(e) { console.warn(e); }
 }

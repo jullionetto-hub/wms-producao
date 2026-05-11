@@ -54,7 +54,7 @@ async function carregarPedidos() {
       <td><span class="pill ${(p.status||'').replace(' ','-')}">${p.status}</span></td>
       <td style="font-weight:600;color:${(p.itens||0)>20?'var(--red)':(p.itens||0)>10?'var(--amber)':'var(--text)'}">${p.itens||'—'}</td>
     </tr>`).join('');
-  } catch(e) {}
+  } catch(e) { console.warn(e); }
 }
 
 
@@ -119,7 +119,7 @@ async function carregarUsuarios() {
         </div>
       </div>`;
     }).join('');
-  } catch(e) {}
+  } catch(e) { console.warn(e); }
 }
 
 
@@ -358,7 +358,7 @@ async function carregarPedidosBloqueados() {
         </div>
         <button class="btn btn-success btn-sm" onclick="desbloquearPedido(${r.id},'${r.numero_pedido}')">✅ Liberar Pedido</button>
       </div>`).join('');
-  } catch(e) {}
+  } catch(e) { console.warn(e); }
 }
 
 
@@ -521,7 +521,7 @@ async function carregarContadoresSep() {
       document.getElementById('sep-cnt-mes').textContent  = dados[0].mes||0;
       document.getElementById('sep-cnt-ano').textContent  = dados[0].total_ano||0;
     }
-  } catch(e) {}
+  } catch(e) { console.warn(e); }
 }
 
 
@@ -553,7 +553,7 @@ async function carregarFila() {
         }).join('');
     const el = document.getElementById('tbody-fila-d');
     if (el) el.innerHTML = html;
-  } catch(e) {}
+  } catch(e) { console.warn(e); }
 }
 
 
@@ -909,7 +909,7 @@ async function carregarSeparadoresDistribuicao() {
     const users = await res.json();
     _todosSepsDistribuicao = users.filter(u => u.perfil === 'separador' && u.status === 'ativo');
     filtrarTurnoDistribuicao('');
-  } catch(e) {}
+  } catch(e) { console.warn(e); }
 }
 async function carregarPedidosDistribuicao() {
   try {
@@ -924,7 +924,7 @@ async function carregarPedidosDistribuicao() {
     if (respHora) lista.sort((a,b)=>(a.aguardando_desde||a.hora_pedido||'').localeCompare(b.aguardando_desde||b.hora_pedido||''));
     if (qtdInput > 0) lista = lista.slice(0, qtdInput);
     el.innerHTML = `<div style="font-size:11px;color:var(--text3);margin-bottom:8px">${lista.length} de ${pedidos.length} pedido(s) serão distribuídos</div><div class="tabela-wrap" style="max-height:240px;overflow-y:auto"><table><thead><tr><th>PEDIDO</th><th>CLIENTE</th><th>HORÁRIO</th><th>ITENS</th><th>PONTUAÇÃO</th><th>STATUS</th></tr></thead><tbody>${lista.map(p=>`<tr><td style="font-weight:700;color:var(--text);font-family:'Space Mono',monospace;font-size:11px">${p.numero_pedido}</td><td style="font-size:11px;color:var(--text2);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.cliente||'—'}</td><td style="font-size:11px;color:var(--amber);font-weight:600;white-space:nowrap">${(p.aguardando_desde||p.hora_pedido||'—').replace('15/04/2026 ','').replace('16/04/2026 ','')}</td><td style="font-weight:600">${p.itens||0}</td><td><span style="font-family:'Space Mono',monospace;color:var(--indigo);font-weight:700">${p.pontuacao||'—'}</span></td><td><span class="pill ${(p.status||'pendente')}">${p.status||'pendente'}</span></td></tr>`).join('')}</tbody></table></div>`;
-  } catch(e) {}
+  } catch(e) { console.warn(e); }
 }
 async function calcularDistribuicao() {
   const checks = document.querySelectorAll('.dist-sep-check:checked');

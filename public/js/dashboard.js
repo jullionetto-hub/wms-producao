@@ -390,7 +390,7 @@ async function carregarOperacao() {
         const allUsers = resUsers.ok ? await resUsers.json() : [];
         allUsers.filter(u=>u.turno===turnoAtivo).forEach(u=>nomesDoTurno.add(u.nome));
         seps = seps.filter(s => nomesDoTurno.has(s.nome));
-      } catch(e) {}
+      } catch(e) { console.warn(e); }
     }
     const maxConc = Math.max(...seps.map(s=>s.concluidos), 1);
     const medalhas = ['🥇','🥈','🥉'];
@@ -482,7 +482,7 @@ async function carregarKPIs() {
     set('kpi-ck-pend',     data.checkout_pendente);
     set('kpi-seps-ativos', data.seps_ativos);
     set('kpi-nao-enc',     data.nao_encontrados_hoje);
-  } catch(e) {}
+  } catch(e) { console.warn(e); }
 }
 
 
@@ -514,7 +514,7 @@ async function carregarProdutividade() {
       </td>
       <td><span class="pill ${d.status}">${d.status}</span></td>
     </tr>`).join('');
-  } catch(e) {}
+  } catch(e) { console.warn(e); }
 }
 
 
@@ -541,7 +541,7 @@ async function carregarTimeline() {
           <div class="tl-sub">${p.separador_nome||'Sem usuário'} &nbsp;•&nbsp; <span class="pill ${p.status}" style="font-size:9px;padding:2px 7px">${p.status}</span> &nbsp;•&nbsp; ${p.itens||0} itens &nbsp;•&nbsp; ${formatarData(p.data_pedido)}</div>
         </div>
       </div>`).join('');
-  } catch(e) {}
+  } catch(e) { console.warn(e); }
 }
 
 
@@ -564,7 +564,7 @@ async function popularSelects() {
       }
       sel.value = val;
     });
-  } catch(e) {}
+  } catch(e) { console.warn(e); }
 }
 
 
@@ -651,7 +651,7 @@ async function carregarPerformance() {
              .join('');
       if (current) sel.value = current;
     }
-  } catch(e) {}
+  } catch(e) { console.warn(e); }
   const ini    = document.getElementById('perf-ini')?.value || '';
   const fim    = document.getElementById('perf-fim')?.value || '';
   const perfil = document.getElementById('perf-perfil')?.value || '';

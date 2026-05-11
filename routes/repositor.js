@@ -174,6 +174,7 @@ async function atualizarAviso(req, res, status, extra={}) {
       `UPDATE avisos_repositor SET ${sets} WHERE id=$${Object.keys(campos).length+1}`,
       [...Object.values(campos), req.params.id]
     );
+    req.app.get('io')?.emit('aviso:atualizado', { id: req.params.id, status });
     res.json({mensagem:'Aviso atualizado!'});
   } catch(e) { res.status(500).json({erro:e.message}); }
 }
@@ -192,7 +193,7 @@ async function resolverAvisoEAcumularTempo(req, res, status, extra={}) {
     const mins   = Math.round((agora - inicio) / 60000);
     const total  = (ped.tempo_aguardando_min || 0) + (mins > 0 ? mins : 0);
     await pool.query("UPDATE pedidos SET tempo_aguardando_min=$1, aguardando_repositor_desde='' WHERE id=$2",[total, av.pedido_id]);
-  } catch(e) {}
+  } catch(e) { console.warn(e); }
 }
 
 router.put('/repositor/avisos/:id/reposto',       requerAuth, (req,res) => resolverAvisoEAcumularTempo(req,res,'reposto'));

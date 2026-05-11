@@ -3,6 +3,8 @@ const session    = require('express-session');
 const pgSession  = require('connect-pg-simple')(session);
 const cors       = require('cors');
 const path       = require('path');
+const http       = require('http');
+const { Server } = require('socket.io');
 const { pool, db } = require('./lib/db');
 const { requerAuth } = require('./lib/auth');
 const { hashSenha, perfisPermitidos, dataHoraLocal } = require('./lib/helpers');
@@ -11,8 +13,13 @@ const helmet     = require('helmet');
 const log        = require('./lib/logger');
 
 const app    = express();
+const server = http.createServer(app);
+const io     = new Server(server, { cors: { credentials: true, origin: (o,cb) => cb(null,o) } });
 const PORT   = process.env.PORT || 3000;
 const isProd = process.env.NODE_ENV === 'production';
+
+// Expõe io para as rotas emitirem eventos
+app.set('io', io);
 
 // ── Segurança ─────────────────────────────────────────────────────────────────
 if (isProd && !process.env.SESSION_SECRET) {
@@ -290,7 +297,7 @@ async function iniciar() {
     await criarTabelas();
     await criarUsuarioPadrao();
     await runMigrations();
-    app.listen(PORT, () => {
+    server.listen(PORT, () => {
       const {data,hora} = dataHoraLocal();
       log.info({ port: PORT, data, hora }, 'servidor WMS iniciado');
       if (isProd) {

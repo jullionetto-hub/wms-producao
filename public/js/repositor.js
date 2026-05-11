@@ -266,7 +266,7 @@ async function carregarStatsRepMobile() {
             <div style="font-size:11px;color:var(--text3);margin-top:4px">${lbl}</div>
           </div>`).join('')}
       </div>`;
-  } catch(e) {}
+  } catch(e) { console.warn(e); }
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -662,7 +662,7 @@ async function carregarStatsRepositor() {
     const set = (id,v) => { const el=document.getElementById(id); if(el) el.textContent=v??0; };
     set('rep-hoje',data.reposto_hoje); set('rep-mes',data.reposto_mes);
     set('rep-ano',data.reposto_ano);   set('rep-nao-enc',data.nao_encontrado_hoje);
-  } catch(e) {}
+  } catch(e) { console.warn(e); }
 }
 
 /* RANKING DE PRODUTOS */

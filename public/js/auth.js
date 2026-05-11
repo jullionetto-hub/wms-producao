@@ -380,7 +380,7 @@ async function atualizarBadgeRep() {
       if (id.includes('badge')) { el.textContent=n; el.style.display=n>0?'inline':'none'; }
       else el.textContent = n;
     });
-  } catch(e) {}
+  } catch(e) { console.warn(e); }
 }
 
 
@@ -405,7 +405,7 @@ async function carregarListaRelatorios() {
     if (!lista.length) { el.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:8px 0">Nenhum relatorio gerado. Clique em Gerar Hoje.</div>'; return; }
     el.innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">' +
       lista.map(function(r) { return '<button onclick="verRelatorioData(\'' + r.data + '\')" style="padding:8px 14px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);cursor:pointer;font-size:12px;text-align:left"><div style="font-weight:700">' + r.data + '</div><div style="font-size:11px;color:var(--text3)">' + r.total_pedidos + ' pedidos</div></button>'; }).join('') + '</div>';
-  } catch(e) {}
+  } catch(e) { console.warn(e); }
 }
 async function verRelatorio() {
   var data = document.getElementById('rel-data') ? document.getElementById('rel-data').value : '';
@@ -710,7 +710,7 @@ async function carregarListaDiarios() {
         <button onclick="event.stopPropagation();exportarDiarioExcel(${d.id})" style="padding:4px 10px;background:#10b981;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:11px">Excel</button>
       </div>`;
     }).join('');
-  } catch(e) {}
+  } catch(e) { console.warn(e); }
 }
 
 async function verDiario(id) {
@@ -744,7 +744,7 @@ async function verDiario(id) {
       document.getElementById('diario-rep-pend').textContent = dd.reposicao.pendentes||0;
       document.getElementById('diario-rep-nao').textContent = dd.reposicao.nao_encontrados||0;
     }
-  } catch(e) {}
+  } catch(e) { console.warn(e); }
 }
 
 async function exportarDiarioExcel(id) {

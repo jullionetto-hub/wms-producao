@@ -117,7 +117,7 @@ async function carregarFilaMobile() {
         </div>
       </div>`;
     }).join('');
-  } catch(e) {}
+  } catch(e) { console.warn(e); }
 }
 
 
@@ -156,7 +156,7 @@ async function carregarStatsMobile() {
       document.getElementById('m-stat-mes').textContent  = d.mes  || 0;
       document.getElementById('m-stat-ano').textContent  = d.total_ano || 0;
     }
-  } catch(e) {}
+  } catch(e) { console.warn(e); }
 }
 
 
@@ -190,7 +190,7 @@ async function _confirmarPedidoCore(num, inputId, statusId, clWrapId, fnChecklis
           </div>`;
         }
       }
-    } catch(e) {}
+    } catch(e) { console.warn(e); }
     if (statusEl) { 
       statusEl.innerHTML = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:${infoTransp?'8px':'0'}"><span style="width:8px;height:8px;background:var(--accent);border-radius:50%;flex-shrink:0;display:inline-block"></span><span style="font-size:13px;color:#475569">Pedido <b style="color:#0F172A;font-family:'Space Mono',monospace">${num}</b> — <span style="font-weight:700;color:var(--accent)">Em separação</span></span></div>${infoTransp}`; 
       statusEl.style.display = 'block'; 
@@ -234,7 +234,7 @@ async function _confirmarPedidoCore(num, inputId, statusId, clWrapId, fnChecklis
             if (stDesk) { stDesk.style.display='block'; stDesk.innerHTML = msg; }
           }
         }
-      } catch(e) {}
+      } catch(e) { console.warn(e); }
       await fnChecklist();
     } else {
       // Exige caixa antes de mostrar itens
@@ -680,7 +680,7 @@ document.getElementById('ck-input-caixa')?.addEventListener('keypress', e => { i
     separadorAtual    = data.separador;
     perfilSelecionado = data.usuario.perfil;
     ativarApp();
-  } catch(e) {}
+  } catch(e) { console.warn(e); }
 })();
 
 async function carregarMeusStats() {
@@ -744,5 +744,5 @@ async function carregarMeusStats() {
           </div>
         </div>`;
     }
-  } catch(e) {}
+  } catch(e) { console.warn(e); }
 }

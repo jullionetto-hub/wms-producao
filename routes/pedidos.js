@@ -150,6 +150,7 @@ router.put('/itens/:id/verificar', requerAuth, async (req,res) => {
       if (ja) { await pool.query(`UPDATE avisos_repositor SET quantidade=$1,obs=$2,hora_aviso=$3,forma_envio=$4 WHERE id=$5`,[qtdA,obsA,hora,formaEnvio,ja.id]); }
       else { await pool.query(`INSERT INTO avisos_repositor (item_id,pedido_id,numero_pedido,separador_id,separador_nome,codigo,descricao,endereco,quantidade,obs,status,hora_aviso,data_aviso,forma_envio) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'pendente',$11,$12,$13)`,
         [item.id,item.pedido_id,item.numero_pedido,separador_id,separador_nome,item.codigo,item.descricao,item.endereco,qtdA,obsA,hora,data,formaEnvio]); }
+      req.app.get('io')?.emit('aviso:novo', { pedido_id: item.pedido_id, numero_pedido: item.numero_pedido, codigo: item.codigo });
       res.json({mensagem:'Repositor avisado!',aviso:true});
     } else { res.json({mensagem:'Item verificado!',aviso:false}); }
   } catch(e){res.status(500).json({erro:e.message});}
@@ -164,6 +165,7 @@ router.put('/pedidos/:id/concluir', requerAuth, async (req,res) => {
     const {data,hora}=dataHoraLocal();
     await pool.query(`UPDATE pedidos SET status='concluido' WHERE id=$1`,[req.params.id]);
     await pool.query(`UPDATE checkout SET status='pendente',hora_criacao=$1,data_checkout=$2 WHERE pedido_id=$3`,[hora,data,req.params.id]);
+    req.app.get('io')?.emit('pedido:concluido', { pedido_id: req.params.id });
     res.json({mensagem:'Pedido concluido!'});
   } catch(e){res.status(500).json({erro:e.message});}
 });
