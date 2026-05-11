@@ -1,14 +1,8 @@
 /* ══ WMS Miess — Service Worker ══ */
-const CACHE_NAME = 'wms-v1';
+const CACHE_NAME = 'wms-v2';
+// Só cacheia o CSS — JS muda com frequência, vai sempre buscar da rede
 const STATIC_ASSETS = [
-  '/',
   '/css/app.css',
-  '/js/auth.js',
-  '/js/separador.js',
-  '/js/repositor.js',
-  '/js/checkout.js',
-  '/js/pedidos.js',
-  '/js/dashboard.js',
 ];
 
 // Instala e faz cache dos assets estáticos
@@ -34,6 +28,14 @@ self.addEventListener('fetch', e => {
   // Ignora extensões do Chrome, requisições de terceiros e não-GET
   if (e.request.method !== 'GET') return;
   if (!url.origin.includes(self.location.origin)) return;
+
+  // Arquivos JS — sempre network-first para não cachear versões antigas
+  if (url.pathname.startsWith('/js/') || url.pathname.endsWith('.js')) {
+    e.respondWith(
+      fetch(e.request).catch(() => caches.match(e.request))
+    );
+    return;
+  }
 
   // API — network-first: tenta rede, fallback silencioso se offline
   if (url.pathname.startsWith('/auth') || url.pathname.startsWith('/pedidos') ||
