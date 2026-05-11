@@ -13,6 +13,7 @@ router.post('/admin/zerar-dados', requerAuth, requerPerfil('supervisor'), async 
   }
   try {
     await pool.query('DELETE FROM avisos_repositor');
+    await pool.query('DELETE FROM embalagem');
     await pool.query('DELETE FROM checkout');
     await pool.query('DELETE FROM itens_pedido');
     await pool.query('DELETE FROM pedidos');
