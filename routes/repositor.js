@@ -141,7 +141,7 @@ router.get('/repositor/avisos/separador/:separador_id', requerAuth, async (req,r
   try {
     const rows = await db.all(
       `SELECT a.* FROM avisos_repositor a
-       WHERE a.separador_id=$1 AND a.status IN ('subiu','abastecido') AND a.data_aviso=$2
+       WHERE a.separador_id=$1 AND a.status IN ('subiu','abastecido','aguardando_abastecer') AND a.data_aviso=$2
        ORDER BY a.id DESC`,
       [req.params.separador_id, hoje]
     );

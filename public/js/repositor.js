@@ -144,11 +144,11 @@ function renderCardMobile(a) {
         <div style="display:flex;flex-direction:column;gap:8px">
           <button onclick="acaoRepositor(${a.id},'busquei_e_abasteci','${nomeLogado}')"
             style="width:100%;padding:14px;background:#10b981;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:.3px">
-            ✅ Busquei e abasteci
+            ✅ Busquei e guardei eu mesmo
           </button>
           <button onclick="acaoRepositor(${a.id},'so_busquei','${nomeLogado}')"
             style="width:100%;padding:14px;background:#3b82f6;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:.3px">
-            📦 Só busquei
+            📦 Busquei — outro vai guardar
           </button>
           <button onclick="acaoRepositor(${a.id},'nao_encontrei','${nomeLogado}')"
             style="width:100%;padding:14px;background:transparent;color:#ef4444;border:1.5px solid #ef4444;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer">
@@ -164,7 +164,7 @@ function renderCardMobile(a) {
         </div>
         <button onclick="acaoRepositor(${a.id},'abasteci','${nomeLogado}')"
           style="width:100%;padding:14px;background:#10b981;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer">
-          ✅ Abasteci o produto
+          🏠 Guardei / Entreguei ao separador
         </button>
       </div>`;
   } else if (sit === 'abastecido') {
@@ -329,8 +329,30 @@ async function carregarTabelaReposicao() {
             : `<span style="color:var(--text3)">—</span>`}
         </td>
         <td style="padding:10px 12px;font-size:12px;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.separador_nome||'—'}</td>
-        <td style="padding:10px 12px;font-size:12px;color:var(--text2)">${a.quem_pegou||'—'}</td>
-        <td style="padding:10px 12px;font-size:12px;color:var(--text2)">${a.quem_guardou||'—'}</td>
+        <td style="padding:8px 10px;min-width:130px">
+          ${a.quem_pegou
+            ? `<div style="display:flex;align-items:center;gap:4px">
+                 <span style="font-size:12px;color:var(--text2)">📦 ${a.quem_pegou}</span>
+                 <button onclick="limparCampoPessoa(${a.id},'quem_pegou')" title="Limpar" style="font-size:10px;padding:1px 5px;background:transparent;border:1px solid var(--border);border-radius:4px;cursor:pointer;color:var(--text3)">✕</button>
+               </div>`
+            : `<select onchange="salvarCampoPessoa(${a.id},'quem_pegou',this.value)"
+                 style="font-size:11px;padding:4px 6px;border:1.5px dashed var(--border);border-radius:6px;background:var(--surface);color:var(--text);max-width:130px">
+                 ${optionsUsuarios('')}
+               </select>`}
+        </td>
+        <td style="padding:8px 10px;min-width:130px">
+          ${a.quem_guardou
+            ? `<div style="display:flex;align-items:center;gap:4px">
+                 <span style="font-size:12px;color:var(--text2)">🏠 ${a.quem_guardou}</span>
+                 <button onclick="limparCampoPessoa(${a.id},'quem_guardou')" title="Limpar" style="font-size:10px;padding:1px 5px;background:transparent;border:1px solid var(--border);border-radius:4px;cursor:pointer;color:var(--text3)">✕</button>
+               </div>`
+            : (sit !== 'nao_encontrado' && sit !== 'protocolo'
+              ? `<select onchange="salvarCampoPessoa(${a.id},'quem_guardou',this.value,true)"
+                   style="font-size:11px;padding:4px 6px;border:1.5px dashed ${a.quem_pegou?'#10b981':'var(--border)'};border-radius:6px;background:var(--surface);color:var(--text);max-width:130px">
+                   ${optionsUsuarios('')}
+                 </select>`
+              : `<span style="color:var(--text3)">—</span>`)}
+        </td>
         <td style="padding:10px 12px">
           <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
             <span style="font-size:12px;font-weight:700;color:${cor};background:${cor}18;padding:4px 10px;border-radius:20px;white-space:nowrap">${lbl}</span>
@@ -376,6 +398,35 @@ async function salvarCampoAviso(id, campo, valor) {
         }
       }
     } else { toast('Erro ao salvar', 'danger'); }
+  } catch(e) { toast('Sem conexão', 'danger'); }
+}
+
+async function salvarCampoPessoa(id, campo, valor, marcarAbastecido=false) {
+  if (!valor) return;
+  const body = { [campo]: valor };
+  if (marcarAbastecido) { body.situacao = 'abastecido'; body.status = 'abastecido'; }
+  try {
+    const res = await fetch(`${API}/repositor/avisos/${id}`, {
+      credentials:'include', method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(body)
+    });
+    if (res.ok) { toast('Salvo!', 'success'); carregarTabelaReposicao(); }
+    else toast('Erro ao salvar', 'danger');
+  } catch(e) { toast('Sem conexão', 'danger'); }
+}
+
+async function limparCampoPessoa(id, campo) {
+  try {
+    const body = { [campo]: '' };
+    if (campo === 'quem_guardou') { body.situacao = 'aguardando_abastecer'; body.status = 'aguardando_abastecer'; }
+    const res = await fetch(`${API}/repositor/avisos/${id}`, {
+      credentials:'include', method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(body)
+    });
+    if (res.ok) { carregarTabelaReposicao(); }
+    else toast('Erro ao limpar', 'danger');
   } catch(e) { toast('Sem conexão', 'danger'); }
 }
 

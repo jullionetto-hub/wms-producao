@@ -172,30 +172,63 @@ async function carregarAvisosSeparador() {
       return;
     }
     lista.innerHTML = avisos.map(a => {
-      const isSubiu = a.status === 'subiu';
-      const isAbast = a.status === 'abastecido';
-      const bg    = isSubiu ? '#F0FDF4' : '#EFF6FF';
-      const bord  = isSubiu ? '#BBF7D0' : '#BFDBFE';
-      const icon  = isSubiu ? '⬆️' : '📦';
-      const label = isSubiu ? 'SUBIU' : 'ABASTECIDO';
-      const cor   = isSubiu ? 'var(--green)' : 'var(--accent)';
+      const isSubiu    = a.status === 'subiu';
+      const isAbast    = a.status === 'abastecido';
+      const isAguard   = a.status === 'aguardando_abastecer';
+      const bg    = isSubiu ? '#F0FDF4' : isAguard ? '#FFFBEB' : '#EFF6FF';
+      const bord  = isSubiu ? '#BBF7D0' : isAguard ? '#FDE68A' : '#BFDBFE';
+      const icon  = isSubiu ? '⬆️' : isAguard ? '🕐' : '📦';
+      const label = isSubiu ? 'SUBIU' : isAguard ? 'AGUARD. GUARDAR' : 'ABASTECIDO';
+      const cor   = isSubiu ? 'var(--green)' : isAguard ? '#92400e' : 'var(--accent)';
+      const nomeLogado = usuarioAtual?.nome || '';
+      const btnGuardei = isAguard ? `
+        <button onclick="sepGuardeiItem(${a.id},'${nomeLogado.replace(/'/g,"\\'")}',this)"
+          style="width:100%;margin-top:12px;padding:13px;background:#10b981;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer">
+          🏠 Guardei este item eu mesmo
+        </button>` : '';
       return `
       <div style="background:${bg};border:2px solid ${bord};border-radius:14px;padding:14px;margin-bottom:10px">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
           <div style="font-size:30px">${icon}</div>
           <div>
             <div style="font-size:12px;font-weight:800;color:${cor};letter-spacing:1px">${label}</div>
-            <div style="font-size:11px;color:var(--text3)">Pedido <b style="color:var(--text)">#${a.numero_pedido}</b> &nbsp;•&nbsp; ${a.hora_reposto||'—'}</div>
+            <div style="font-size:11px;color:var(--text3)">Pedido <b style="color:var(--text)">#${a.numero_pedido}</b> &nbsp;•&nbsp; ${a.hora_reposto||a.hora_aviso||'—'}</div>
           </div>
         </div>
         <div style="font-size:16px;font-weight:800;color:var(--accent);font-family:'Space Mono',monospace">${a.codigo||'—'}</div>
         <div style="font-size:13px;font-weight:600;color:var(--text);margin:4px 0">${a.descricao||'—'}</div>
         <div style="font-size:12px;color:var(--text2)">📍 <b>${a.endereco||'—'}</b> &nbsp;•&nbsp; Qtde: <b>${a.qtd_encontrada||a.quantidade||1}</b></div>
-        ${a.repositor_nome ? `<div style="font-size:11px;color:var(--text3);margin-top:4px">👷 ${a.repositor_nome}</div>` : ''}
+        ${a.quem_pegou ? `<div style="font-size:11px;color:var(--text3);margin-top:4px">📦 Buscado por: <b>${a.quem_pegou}</b></div>` : ''}
+        ${a.repositor_nome && !a.quem_pegou ? `<div style="font-size:11px;color:var(--text3);margin-top:4px">👷 ${a.repositor_nome}</div>` : ''}
+        ${btnGuardei}
       </div>`;
     }).join('');
   } catch(e) {
     lista.innerHTML = '<div style="color:var(--red);text-align:center;padding:20px">Erro ao carregar avisos</div>';
+  }
+}
+
+async function sepGuardeiItem(id, nome, btn) {
+  btn.disabled = true;
+  btn.textContent = 'Salvando...';
+  try {
+    const res = await fetch(`${API}/repositor/avisos/${id}`, {
+      credentials:'include', method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ quem_guardou: nome, situacao:'abastecido', status:'abastecido' })
+    });
+    if (res.ok) {
+      toast('Registrado! ✅', 'sucesso');
+      carregarAvisosSeparador();
+    } else {
+      btn.disabled = false;
+      btn.textContent = '🏠 Guardei este item eu mesmo';
+      toast('Erro ao salvar', 'erro');
+    }
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = '🏠 Guardei este item eu mesmo';
+    toast('Sem conexão', 'erro');
   }
 }
 
