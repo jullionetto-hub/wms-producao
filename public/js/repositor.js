@@ -87,11 +87,13 @@ async function carregarAvisosMobile() {
   const el  = document.getElementById('m-lista-avisos');
   const cnt = document.getElementById('m-rep-pend');
   if (!el) return;
+  const primeiraVez = el.children.length === 0 || el.innerHTML.includes('Nenhum item') || el.innerHTML.includes('Erro');
   try {
     const filtro = document.getElementById('m-filtro-rep-status')?.value || '';
     const url = `${API}/repositor/avisos${filtro?'?status='+filtro:''}`;
     const res = await fetch(url, { credentials:'include' });
-    const avisos = res.ok ? await res.json() : [];
+    if (!res.ok) throw new Error('Servidor retornou ' + res.status);
+    const avisos = await res.json();
     const pend = avisos.filter(a => ['pendente','verificando','buscado','aguardando_abastecer'].includes(a.situacao||a.status)).length;
     if (cnt) cnt.textContent = pend;
 
@@ -105,7 +107,10 @@ async function carregarAvisosMobile() {
 
     el.innerHTML = avisos.map(a => renderCardMobile(a)).join('');
   } catch(e) {
-    el.innerHTML = `<div style="color:#ef4444;text-align:center;padding:24px">Erro ao carregar</div>`;
+    if (primeiraVez) {
+      el.innerHTML = `<div style="color:#ef4444;text-align:center;padding:24px">Erro ao carregar — toque 🔄 para tentar novamente</div>`;
+    }
+    // se já havia conteúdo, mantém o que estava e ignora o erro silenciosamente
   }
 }
 
