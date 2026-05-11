@@ -264,6 +264,7 @@ function montarSidebar() {
       <a class="mi" onclick="irPara('relatorios',this)"><span class="mi-ic">📅</span>Relatórios</a>
       <a class="mi" onclick="irPara('auditoria',this)"><span class="mi-ic">🔍</span>Auditoria</a>
       <a class="mi" onclick="irPara('diario',this)"><span class="mi-ic">📋</span>Diário de Bordo</a>
+      <a class="mi" onclick="irPara('passagem',this)"><span class="mi-ic">🔄</span>Passagem de Turno <span class="mbadge" id="menu-badge-passagem" style="display:none;background:#F59E0B">!</span></a>
       <a class="mi" onclick="irPara('cadastros',this)"><span class="mi-ic">⚙️</span>Cadastros</a>
       <a class="mi" onclick="irPara('protocolo',this);carregarProtocolo()"><span class="mi-ic">📋</span>Protocolo<span class="mbadge" id="menu-badge-proto" style="display:none">0</span></a>
       <div class="mg">OPERAÇÃO</div>
@@ -316,6 +317,7 @@ function irPara(pag, el) {
   if (pag === 'relatorios')   { carregarListaRelatorios(); }
   if (pag === 'auditoria')    { var hj=hojeLocal(); var ea=document.getElementById('aud-ini'); if(ea&&!ea.value)ea.value=hj; carregarAuditoria(); }
   if (pag === 'diario')       { iniciarDiario(); }
+  if (pag === 'passagem')     { iniciarPassagem(); }
   if (pag === 'embalagem')    { var ed=document.getElementById('emb-data'); if(ed&&!ed.value)ed.value=hojeLocal(); carregarEmbalagem(); }
   if (pag === 'protocolo')    { carregarProtocolo(); }
   if (pag === 'protocolo-rep') {
@@ -996,4 +998,230 @@ async function trocarSenhaTemp() {
     const erroLogin = document.getElementById('login-erro');
     if (erroLogin) { erroLogin.textContent = '✅ Senha alterada! Faça o login.'; erroLogin.style.display='block'; erroLogin.style.color='#16a34a'; }
   } catch(e) { if(erroEl) erroEl.textContent='Erro ao salvar'; }
+}
+
+/* ══════════════════════════════════════════
+   PASSAGEM DE TURNO
+══════════════════════════════════════════ */
+let _passagemPendente = null;
+
+function mudarPassagemTab(tab, btn) {
+  ['preencher','validar','historico'].forEach(t => {
+    document.getElementById(`pass-tab-${t}`)?.style && (document.getElementById(`pass-tab-${t}`).style.display = t===tab?'block':'none');
+    const b = document.getElementById(`ptab-${t}`);
+    if (b) { b.style.color = t===tab ? 'var(--accent)' : 'var(--text3)'; b.style.borderBottom = t===tab ? '2px solid var(--accent)' : 'none'; }
+  });
+  if (tab === 'historico') carregarHistoricoPassagens();
+}
+
+async function iniciarPassagem() {
+  await Promise.all([carregarPlacar(), carregarHistoricoPassagens(), verificarPassagemPendente()]);
+  const dtEl = document.getElementById('pass-data');
+  if (dtEl && !dtEl.value) dtEl.value = hojeLocal();
+}
+
+async function carregarPlacar() {
+  try {
+    const res = await fetch(`${API}/passagem/placar`, { credentials:'include' });
+    if (!res.ok) return;
+    const { placar, historico } = await res.json();
+    const wrap = document.getElementById('pass-placar-wrap');
+    if (!wrap) return;
+    const CORES = { Manha:'#2563EB', Tarde:'#F59E0B', Noite:'#7C3AED' };
+    const NOMES = { Manha:'☀️ Manhã', Tarde:'🌤️ Tarde', Noite:'🌙 Noite' };
+    wrap.innerHTML = placar.map(p => {
+      const pct = Math.min(100, Math.max(0, Math.round((p.pontos/1000)*100)));
+      const cor = CORES[p.turno] || '#64748B';
+      return `<div style="background:#fff;border:1px solid #E2E8F0;border-top:3px solid ${cor};border-radius:10px;padding:16px;flex:1;min-width:130px;text-align:center">
+        <div style="font-size:13px;font-weight:700;color:${cor};margin-bottom:6px">${NOMES[p.turno]||p.turno}</div>
+        <div style="font-size:28px;font-weight:800;color:${p.pontos<500?'#DC2626':p.pontos<800?'#F59E0B':'#16a34a'}">${p.pontos}</div>
+        <div style="font-size:10px;color:#94A3B8;margin-top:2px">/ 1000 pts</div>
+        <div style="height:4px;background:#F1F5F9;border-radius:2px;margin-top:8px">
+          <div style="height:4px;background:${cor};border-radius:2px;width:${pct}%"></div>
+        </div>
+        <button onclick="resetarPlacar('${p.turno}')" style="margin-top:10px;font-size:10px;padding:3px 8px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:4px;cursor:pointer;color:#64748B">Resetar</button>
+      </div>`;
+    }).join('');
+  } catch(e) { console.warn(e); }
+}
+
+async function resetarPlacar(turno) {
+  if (!confirm(`Resetar placar do turno ${turno} para 1000 pontos?`)) return;
+  try {
+    const res = await fetch(`${API}/passagem/placar/resetar`, {
+      method:'POST', credentials:'include', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ turno })
+    });
+    const r = await res.json();
+    if (!res.ok) { toast(r.erro||'Erro','erro'); return; }
+    toast(r.mensagem,'info');
+    carregarPlacar();
+  } catch(e) { console.warn(e); }
+}
+
+async function verificarPassagemPendente() {
+  try {
+    const res = await fetch(`${API}/passagem/pendente`, { credentials:'include' });
+    if (!res.ok) return;
+    _passagemPendente = await res.json();
+    const badge    = document.getElementById('menu-badge-passagem');
+    const badgeTab = document.getElementById('menu-badge-passagem-tab');
+    const secValEl = document.getElementById('pass-sec-validar');
+    if (_passagemPendente) {
+      if (badge)    badge.style.display    = 'inline';
+      if (badgeTab) badgeTab.style.display = 'inline';
+      if (secValEl) renderFormValidacao(_passagemPendente);
+    } else {
+      if (badge)    badge.style.display    = 'none';
+      if (badgeTab) badgeTab.style.display = 'none';
+      if (secValEl) secValEl.innerHTML = '<div style="color:var(--text3);text-align:center;padding:30px;font-size:13px">Nenhuma passagem aguardando validação.</div>';
+    }
+  } catch(e) { console.warn(e); }
+}
+
+function renderFormValidacao(p) {
+  const sec = document.getElementById('pass-sec-validar');
+  if (!sec) return;
+  const CAMPOS = [
+    { key:'pedidos_separados', label:'Pedidos Separados', val: p.pedidos_separados, pts: 100 },
+    { key:'checkouts_feitos',  label:'Checkouts Feitos',  val: p.checkouts_feitos,  pts: 100 },
+    { key:'faltas_abertas',    label:'Faltas Abertas',    val: p.faltas_abertas,    pts: 100 },
+    { key:'faltas_resolvidas', label:'Faltas Resolvidas', val: p.faltas_resolvidas, pts: 100 },
+    { key:'embalagem',         label:'Embalagem',         val: p.embalagem,         pts: 100 },
+    { key:'separadores_presentes', label:'Separadores Presentes', val: p.separadores_presentes, pts: 50 },
+    { key:'ocorrencias',       label:'Ocorrências',       val: p.ocorrencias,       pts: 50 },
+  ];
+  sec.innerHTML = `
+    <div style="background:#FEF3C7;border:1px solid #FDE68A;border-radius:10px;padding:14px 16px;margin-bottom:16px">
+      <div style="font-size:12px;font-weight:700;color:#92400E">📋 Passagem pendente de validação</div>
+      <div style="font-size:11px;color:#78350F;margin-top:4px">Turno: <b>${p.turno}</b> | Data: <b>${p.data}</b> | Supervisor: <b>${p.supervisor}</b></div>
+    </div>
+    ${CAMPOS.map(c => `
+      <div style="background:#fff;border:1px solid #E2E8F0;border-radius:10px;padding:14px;margin-bottom:10px" id="val-card-${c.key}">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
+          <div style="flex:1">
+            <div style="font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.5px">${c.label}</div>
+            <div style="font-size:16px;font-weight:700;color:#0F172A;margin-top:2px">${c.val || '—'}</div>
+          </div>
+          <div style="display:flex;gap:8px;flex-shrink:0">
+            <button onclick="marcarCampo('${c.key}',true)" id="btn-ok-${c.key}"
+              style="padding:7px 14px;border-radius:8px;border:1.5px solid #BBF7D0;background:#F0FDF4;color:#15803D;font-size:12px;font-weight:600;cursor:pointer">
+              ✓ Correto
+            </button>
+            <button onclick="marcarCampo('${c.key}',false)" id="btn-no-${c.key}"
+              style="padding:7px 14px;border-radius:8px;border:1.5px solid #FECACA;background:#FEF2F2;color:#DC2626;font-size:12px;font-weight:600;cursor:pointer">
+              ✗ Incorreto <span style="font-size:10px">(-${c.pts}pts)</span>
+            </button>
+          </div>
+        </div>
+      </div>`).join('')}
+    <div style="margin-top:6px">
+      <label style="font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase">Observação geral</label>
+      <textarea id="val-obs-geral" rows="2" placeholder="Comentário sobre a passagem (opcional)"
+        style="width:100%;margin-top:4px;padding:10px;border:1px solid #E2E8F0;border-radius:8px;font-size:13px;resize:none;box-sizing:border-box"></textarea>
+    </div>
+    <div style="margin-top:6px">
+      <label style="font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase">Turno que está ENTRANDO</label>
+      <select id="val-turno-entrando" style="width:100%;margin-top:4px;padding:10px;border:1px solid #E2E8F0;border-radius:8px;font-size:13px;box-sizing:border-box">
+        <option value="Manha">☀️ Manhã</option>
+        <option value="Tarde">🌤️ Tarde</option>
+        <option value="Noite">🌙 Noite</option>
+      </select>
+    </div>
+    <button onclick="confirmarValidacao(${p.id})"
+      style="width:100%;margin-top:14px;padding:14px;background:#2563EB;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">
+      Confirmar Validação
+    </button>`;
+}
+
+const _valResultados = {};
+function marcarCampo(campo, ok) {
+  _valResultados[campo] = ok;
+  const card = document.getElementById(`val-card-${campo}`);
+  const btnOk = document.getElementById(`btn-ok-${campo}`);
+  const btnNo = document.getElementById(`btn-no-${campo}`);
+  if (card) card.style.borderColor = ok ? '#86EFAC' : '#FCA5A5';
+  if (card) card.style.background  = ok ? '#F0FDF4' : '#FEF2F2';
+  if (btnOk) btnOk.style.background = ok ? '#16a34a' : '#F0FDF4';
+  if (btnOk) btnOk.style.color = ok ? '#fff' : '#15803D';
+  if (btnNo) btnNo.style.background = !ok ? '#DC2626' : '#FEF2F2';
+  if (btnNo) btnNo.style.color = !ok ? '#fff' : '#DC2626';
+}
+
+async function confirmarValidacao(passagem_id) {
+  const CAMPOS = ['pedidos_separados','checkouts_feitos','faltas_abertas','faltas_resolvidas','embalagem','separadores_presentes','ocorrencias'];
+  const naoMarcados = CAMPOS.filter(c => _valResultados[c] === undefined);
+  if (naoMarcados.length) { toast(`Marque todos os ${naoMarcados.length} campo(s) antes de confirmar.`,'aviso'); return; }
+  const turno_entrando = document.getElementById('val-turno-entrando')?.value;
+  const obs_geral = document.getElementById('val-obs-geral')?.value || '';
+  try {
+    const res = await fetch(`${API}/passagem/${passagem_id}/validar`, {
+      method:'POST', credentials:'include', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ turno_entrando, resultados: _valResultados, obs_geral })
+    });
+    const r = await res.json();
+    if (!res.ok) { toast(r.erro||'Erro','erro'); return; }
+    const status = r.status === 'contestado' ? '⚠️ Passagem contestada' : '✅ Passagem validada';
+    const msg = r.pontos_perdidos > 0 ? `${status} — ${r.pontos_perdidos} pontos descontados!` : `${status} sem penalidades.`;
+    toast(msg, r.pontos_perdidos > 0 ? 'aviso' : 'info');
+    // Limpa resultados e recarrega
+    Object.keys(_valResultados).forEach(k => delete _valResultados[k]);
+    await iniciarPassagem();
+  } catch(e) { console.warn(e); toast('Erro ao validar','erro'); }
+}
+
+async function salvarPassagem() {
+  const data  = document.getElementById('pass-data')?.value;
+  const turno = document.getElementById('pass-turno')?.value;
+  if (!data || !turno) { toast('Preencha data e turno','aviso'); return; }
+  const body = {
+    data, turno,
+    pedidos_separados: parseInt(document.getElementById('pass-ped')?.value)||0,
+    checkouts_feitos:  parseInt(document.getElementById('pass-ck')?.value)||0,
+    faltas_abertas:    parseInt(document.getElementById('pass-falt-ab')?.value)||0,
+    faltas_resolvidas: parseInt(document.getElementById('pass-falt-res')?.value)||0,
+    embalagem:         parseInt(document.getElementById('pass-emb')?.value)||0,
+    separadores_presentes: document.getElementById('pass-seps')?.value||'',
+    ocorrencias:       document.getElementById('pass-ocorr')?.value||'',
+  };
+  try {
+    const res = await fetch(`${API}/passagem`, {
+      method:'POST', credentials:'include', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(body)
+    });
+    const r = await res.json();
+    if (!res.ok) { toast(r.erro||'Erro','erro'); return; }
+    toast(r.mensagem, 'info');
+    carregarHistoricoPassagens();
+    verificarPassagemPendente();
+  } catch(e) { console.warn(e); toast('Erro ao salvar','erro'); }
+}
+
+async function carregarHistoricoPassagens() {
+  try {
+    const res = await fetch(`${API}/passagem`, { credentials:'include' });
+    if (!res.ok) return;
+    const lista = await res.json();
+    const el = document.getElementById('pass-historico');
+    if (!el) return;
+    const STATUS_COR = { pendente:'#F59E0B', validado:'#16a34a', contestado:'#DC2626' };
+    const STATUS_NOME = { pendente:'⏳ Pendente', validado:'✅ Validado', contestado:'⚠️ Contestado' };
+    el.innerHTML = lista.length ? lista.map(p => `
+      <div style="background:#fff;border:1px solid #E2E8F0;border-left:3px solid ${STATUS_COR[p.status]||'#CBD5E1'};border-radius:8px;padding:12px 14px;margin-bottom:8px">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">
+          <div>
+            <span style="font-size:13px;font-weight:700;color:#0F172A">${p.data} — ${p.turno}</span>
+            <span style="margin-left:8px;font-size:11px;font-weight:600;color:${STATUS_COR[p.status]||'#64748B'}">${STATUS_NOME[p.status]||p.status}</span>
+          </div>
+          <div style="font-size:11px;color:#64748B">${p.supervisor}</div>
+        </div>
+        <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:6px;font-size:11px;color:#475569">
+          <span>📦 ${p.pedidos_separados} pedidos</span>
+          <span>🏷️ ${p.checkouts_feitos} checkouts</span>
+          <span>🔄 ${p.faltas_abertas}/${p.faltas_resolvidas} faltas</span>
+          <span>📫 ${p.embalagem} emb.</span>
+          ${p.pontos_perdidos ? `<span style="color:#DC2626;font-weight:700">-${p.pontos_perdidos} pts</span>` : ''}
+        </div>
+      </div>`) .join('') : '<div style="color:var(--text3);text-align:center;padding:20px;font-size:13px">Nenhuma passagem registrada</div>';
+  } catch(e) { console.warn(e); }
 }

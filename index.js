@@ -285,6 +285,40 @@ async function runMigrations() {
     await pool.query("ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS senha_temporaria_expira TIMESTAMPTZ");
     await pool.query("ALTER TABLE checkout ADD COLUMN IF NOT EXISTS operador_nome TEXT DEFAULT ''");
     await pool.query("ALTER TABLE avisos_repositor ADD COLUMN IF NOT EXISTS lido_separador BOOLEAN DEFAULT false");
+    // Passagem de turno
+    await pool.query(`CREATE TABLE IF NOT EXISTS passagem_turno (
+      id SERIAL PRIMARY KEY,
+      data TEXT NOT NULL,
+      turno TEXT NOT NULL,
+      supervisor TEXT NOT NULL,
+      supervisor_id INTEGER,
+      pedidos_separados INTEGER DEFAULT 0,
+      checkouts_feitos INTEGER DEFAULT 0,
+      faltas_abertas INTEGER DEFAULT 0,
+      faltas_resolvidas INTEGER DEFAULT 0,
+      embalagem INTEGER DEFAULT 0,
+      separadores_presentes TEXT DEFAULT '',
+      ocorrencias TEXT DEFAULT '',
+      status TEXT DEFAULT 'pendente',
+      criado_em TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE(data, turno)
+    )`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS validacao_passagem (
+      id SERIAL PRIMARY KEY,
+      passagem_id INTEGER REFERENCES passagem_turno(id),
+      turno_entrando TEXT NOT NULL,
+      supervisor_entrando TEXT NOT NULL,
+      supervisor_id INTEGER,
+      resultados JSONB DEFAULT '{}',
+      obs_geral TEXT DEFAULT '',
+      pontos_perdidos INTEGER DEFAULT 0,
+      validado_em TIMESTAMPTZ DEFAULT NOW()
+    )`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS placar_turno (
+      id SERIAL PRIMARY KEY,
+      turno TEXT NOT NULL UNIQUE,
+      pontos INTEGER DEFAULT 1000
+    )`);
     log.info('migrations OK');
   } catch(e) {
     log.error({ err: e }, 'migration erro');
