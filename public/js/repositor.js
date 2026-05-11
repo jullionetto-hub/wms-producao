@@ -112,96 +112,98 @@ async function carregarAvisosMobile() {
 function renderCardMobile(a) {
   const sit = a.situacao || a.status || 'pendente';
   const nomeLogado = usuarioAtual?.nome || '';
+  const qtdSolicitada = a.quantidade || 1;
 
   const corBorda = {
-    pendente: '#f59e0b',
-    verificando: '#8b5cf6',
-    buscado: '#3b82f6',
-    aguardando_abastecer: '#f97316',
-    abastecido: '#10b981',
-    protocolo: '#6b7280',
-    nao_encontrado: '#ef4444'
+    pendente: '#f59e0b', verificando: '#8b5cf6', buscado: '#3b82f6',
+    aguardando_abastecer: '#f97316', abastecido: '#10b981',
+    protocolo: '#6b7280', nao_encontrado: '#ef4444'
   }[sit] || '#6b7280';
 
   const badge = {
-    pendente: '<span style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px">⏳ Pendente</span>',
-    verificando: '<span style="background:#ede9fe;color:#5b21b6;border:1px solid #ddd6fe;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px">🔍 Verificando</span>',
-    buscado: '<span style="background:#dbeafe;color:#1e40af;border:1px solid #bfdbfe;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px">📦 Buscado</span>',
-    aguardando_abastecer: '<span style="background:#ffedd5;color:#9a3412;border:1px solid #fed7aa;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px">🕐 Aguard. abastecer</span>',
-    abastecido: '<span style="background:#dcfce7;color:#166534;border:1px solid #86efac;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px">✅ Abastecido</span>',
-    protocolo: '<span style="background:#f3f4f6;color:#374151;border:1px solid #e5e7eb;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px">📋 Protocolo</span>',
-    nao_encontrado: '<span style="background:#fee2e2;color:#991b1b;border:1px solid #fecaca;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px">❌ Não encontrado</span>',
-  }[sit] || sit;
+    pendente:            '<span style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px">⏳ Pendente</span>',
+    aguardando_abastecer:'<span style="background:#ffedd5;color:#9a3412;border:1px solid #fed7aa;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px">🕐 Aguard. entregar</span>',
+    abastecido:          '<span style="background:#dcfce7;color:#166534;border:1px solid #86efac;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px">✅ Abastecido</span>',
+    protocolo:           '<span style="background:#f3f4f6;color:#374151;border:1px solid #e5e7eb;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px">📋 Protocolo</span>',
+    nao_encontrado:      '<span style="background:#fee2e2;color:#991b1b;border:1px solid #fecaca;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px">❌ Não encontrado</span>',
+  }[sit] || `<span style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;background:${corBorda}22;color:${corBorda}">${sit}</span>`;
+
+  // Obs só mostra se não for redundante com a quantidade
+  const obsRedundante = (a.obs||'').startsWith('Falta total');
+  const obsExtra = !obsRedundante && a.obs ? `<div style="margin-top:6px;font-size:11px;color:var(--text3);background:var(--surface2);border-radius:8px;padding:5px 10px">💬 ${a.obs}</div>` : '';
 
   let botoesEtapa = '';
 
-  if (sit === 'pendente' || sit === 'verificando') {
+  if (sit === 'pendente' || sit === 'verificando' || sit === 'buscado') {
     botoesEtapa = `
-      <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
-        <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.8px;margin-bottom:10px">QUANTIDADE ENCONTRADA</div>
-        <input type="number" id="qtd-${a.id}" min="0" max="${a.quantidade||99}" value="${a.qtd_encontrada||0}"
-          style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;background:var(--surface2);color:var(--text);font-size:18px;font-weight:700;box-sizing:border-box;text-align:center;margin-bottom:12px">
+      <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+          <span style="font-size:12px;color:var(--text3);white-space:nowrap">Qtd encontrada:</span>
+          <div style="display:flex;align-items:center;gap:6px">
+            <button onclick="this.nextElementSibling.value=Math.max(0,+this.nextElementSibling.value-1)"
+              style="width:32px;height:32px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface2);font-size:18px;cursor:pointer;color:var(--text);line-height:1">−</button>
+            <input type="number" id="qtd-${a.id}" min="0" max="${qtdSolicitada}" value="${a.qtd_encontrada||qtdSolicitada}"
+              style="width:56px;padding:4px 8px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-size:18px;font-weight:700;text-align:center">
+            <button onclick="this.previousElementSibling.value=Math.min(${qtdSolicitada},+this.previousElementSibling.value+1)"
+              style="width:32px;height:32px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface2);font-size:18px;cursor:pointer;color:var(--text);line-height:1">+</button>
+            <span style="font-size:12px;color:var(--text3)">de ${qtdSolicitada}</span>
+          </div>
+        </div>
         <div style="display:flex;flex-direction:column;gap:8px">
           <button onclick="acaoRepositor(${a.id},'busquei_e_abasteci','${nomeLogado}')"
-            style="width:100%;padding:14px;background:#10b981;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:.3px">
-            ✅ Busquei e guardei eu mesmo
+            style="width:100%;padding:13px;background:#10b981;color:#fff;border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer">
+            ✅ Encontrei e entreguei ao separador
           </button>
           <button onclick="acaoRepositor(${a.id},'so_busquei','${nomeLogado}')"
-            style="width:100%;padding:14px;background:#3b82f6;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:.3px">
-            📦 Busquei — outro vai guardar
+            style="width:100%;padding:13px;background:#3b82f6;color:#fff;border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer">
+            📦 Encontrei — outro vai entregar
           </button>
           <button onclick="acaoRepositor(${a.id},'nao_encontrei','${nomeLogado}')"
-            style="width:100%;padding:14px;background:transparent;color:#ef4444;border:1.5px solid #ef4444;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer">
+            style="width:100%;padding:13px;background:transparent;color:#ef4444;border:1.5px solid #ef4444;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer">
             ❌ Não encontrei
           </button>
         </div>
       </div>`;
-  } else if (sit === 'buscado' || sit === 'aguardando_abastecer') {
+  } else if (sit === 'aguardando_abastecer') {
     botoesEtapa = `
-      <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
-        <div style="font-size:12px;color:var(--text2);margin-bottom:10px">
-          📦 Buscado por: <strong>${a.quem_pegou||'—'}</strong>
+      <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+        <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:12px;color:#92400e">
+          📦 <strong>${a.quem_pegou||'—'}</strong> buscou ${a.qtd_encontrada||qtdSolicitada} de ${qtdSolicitada} un. Aguardando entrega ao separador.
         </div>
         <button onclick="acaoRepositor(${a.id},'abasteci','${nomeLogado}')"
-          style="width:100%;padding:14px;background:#10b981;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer">
-          🏠 Guardei / Entreguei ao separador
+          style="width:100%;padding:13px;background:#10b981;color:#fff;border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer">
+          🏠 Entreguei ao separador
         </button>
       </div>`;
   } else if (sit === 'abastecido') {
     botoesEtapa = `
-      <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:flex;gap:12px;font-size:12px;color:var(--text3)">
-        <span>📦 <strong style="color:var(--text)">${a.quem_pegou||'—'}</strong></span>
-        <span>🏠 <strong style="color:var(--text)">${a.quem_guardou||'—'}</strong></span>
+      <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);display:flex;gap:14px;font-size:12px;color:var(--text3)">
+        ${a.quem_pegou ? `<span>📦 <strong style="color:var(--text)">${a.quem_pegou}</strong></span>` : ''}
+        ${a.quem_guardou ? `<span>🏠 <strong style="color:var(--text)">${a.quem_guardou}</strong></span>` : ''}
       </div>`;
   }
 
   return `
-    <div style="background:var(--surface);border:1px solid var(--border);border-left:4px solid ${corBorda};border-radius:14px;margin-bottom:12px;overflow:hidden">
-      <!-- Cabeçalho do card -->
-      <div style="padding:14px 16px 10px">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
-          <div style="flex:1;min-width:0;margin-right:10px">
+    <div style="background:var(--surface);border:1px solid var(--border);border-left:4px solid ${corBorda};border-radius:14px;margin-bottom:10px;overflow:hidden">
+      <div style="padding:12px 14px 10px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+          <div style="flex:1;min-width:0;margin-right:8px">
             <div style="font-family:'Space Mono',monospace;font-size:15px;font-weight:700;color:var(--text)">${a.codigo||'—'}</div>
-            <div style="font-size:12px;color:var(--text2);margin-top:3px;line-height:1.4">${a.descricao||''}</div>
+            <div style="font-size:12px;color:var(--text2);margin-top:2px;line-height:1.4">${a.descricao||''}</div>
           </div>
           ${badge}
         </div>
-        <!-- Infos em linha -->
-        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">
-          <span style="background:var(--surface2);border-radius:8px;padding:5px 10px;font-size:11px;color:var(--text2)">
-            📍 ${a.endereco||'—'}
-          </span>
-          <span style="background:#fee2e2;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:700;color:#dc2626">
-            ${a.quantidade||0} un em falta
-          </span>
-          ${a.separador_nome ? `<span style="background:var(--surface2);border-radius:8px;padding:5px 10px;font-size:11px;color:var(--text2)">👤 ${a.separador_nome}</span>` : ''}
-          ${a.hora_aviso ? `<span style="background:var(--surface2);border-radius:8px;padding:5px 10px;font-size:11px;color:var(--text3)">🕐 ${a.hora_aviso}</span>` : ''}
+        <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;align-items:center">
+          <span style="background:var(--surface2);border-radius:8px;padding:4px 10px;font-size:11px;color:var(--text2)">📍 ${a.endereco||'—'}</span>
+          <span style="background:#fee2e2;border-radius:8px;padding:4px 10px;font-size:13px;font-weight:800;color:#dc2626">${qtdSolicitada} un em falta</span>
+          ${a.separador_nome ? `<span style="background:var(--surface2);border-radius:8px;padding:4px 10px;font-size:11px;color:var(--text2)">👤 ${a.separador_nome}</span>` : ''}
+          ${a.hora_aviso ? `<span style="font-size:11px;color:var(--text3)">🕐 ${a.hora_aviso}</span>` : ''}
         </div>
-        ${a.obs ? `<div style="margin-top:8px;font-size:11px;color:var(--text3);background:var(--surface2);border-radius:8px;padding:6px 10px">💬 ${a.obs}</div>` : ''}
+        ${obsExtra}
       </div>
-      <!-- Ações -->
-      ${botoesEtapa ? `<div style="padding:0 16px 16px">${botoesEtapa}</div>` : ''}
+      ${botoesEtapa ? `<div style="padding:0 14px 14px">${botoesEtapa}</div>` : ''}
     </div>`;
+}
 }
 
 async function acaoRepositor(id, acao, nomeLogado) {
