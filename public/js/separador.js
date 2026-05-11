@@ -51,13 +51,17 @@ async function concluirPedidoMobile() {
 
 async function carregarFilaMobile() {
   try {
-    // Busca pedidos e avisos pendentes em paralelo
-    const [resPed, resAv] = await Promise.all([
+    // Busca pedidos e avisos ativos em paralelo (pendente + aguardando_abastecer)
+    const [resPed, resAvPend, resAvAguard] = await Promise.all([
       fetch(`${API}/pedidos`, { credentials:'include' }),
-      fetch(`${API}/repositor/avisos?status=pendente`, { credentials:'include' })
+      fetch(`${API}/repositor/avisos?status=pendente`, { credentials:'include' }),
+      fetch(`${API}/repositor/avisos?status=aguardando_abastecer`, { credentials:'include' })
     ]);
     const todos  = await resPed.json();
-    const avisos = resAv.ok ? await resAv.json() : [];
+    const avisos = [
+      ...(resAvPend.ok   ? await resAvPend.json()   : []),
+      ...(resAvAguard.ok ? await resAvAguard.json() : [])
+    ];
 
     // Pedidos com itens aguardando repositor (deste separador)
     const pedidosComFalta = {};
@@ -144,29 +148,17 @@ function selecionarPedidoFilaMobile(num) {
 async function carregarStatsMobile() {
   try {
     const nomeEl = document.getElementById('m-stat-nome');
-    if (nomeEl) nomeEl.textContent = `👤 ${usuarioAtual?.nome || '—'}`;
-    // Tenta com separadorAtual, senão usa /stats/meus
+    if (nomeEl) nomeEl.textContent = `👤 ${separadorAtual?.nome || usuarioAtual?.nome || '—'}`;
     let dados = [];
     if (separadorAtual) {
       const res = await fetch(`${API}/produtividade?separador_id=${separadorAtual.id}`, { credentials:'include' });
-      dados = await res.json();
-    } else {
-      const res = await fetch(`${API}/stats/meus`, { credentials:'include' });
-      const d = await res.json();
-      if (d.separacao) dados = [{
-        hoje: d.separacao.separados_hoje||0,
-        mes: d.separacao.separados_hoje||0,
-        total_ano: d.separacao.separados_total||0
-      }];
+      if (res.ok) dados = await res.json();
     }
-    if (false) { const res = null;
-    const dados = await res.json();
-    if (nomeEl) nomeEl.textContent = `👤 ${separadorAtual.nome||usuarioAtual.nome}`;
     if (dados.length) {
-      document.getElementById('m-stat-hoje').textContent = dados[0].hoje||0;
-      document.getElementById('m-stat-mes').textContent  = dados[0].mes||0;
-      document.getElementById('m-stat-ano').textContent  = dados[0].total_ano||0;
-    }
+      const d = dados[0];
+      document.getElementById('m-stat-hoje').textContent = d.hoje || 0;
+      document.getElementById('m-stat-mes').textContent  = d.mes  || 0;
+      document.getElementById('m-stat-ano').textContent  = d.total_ano || 0;
     }
   } catch(e) {}
 }
