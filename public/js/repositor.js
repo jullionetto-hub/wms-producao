@@ -204,7 +204,6 @@ function renderCardMobile(a) {
       ${botoesEtapa ? `<div style="padding:0 14px 14px">${botoesEtapa}</div>` : ''}
     </div>`;
 }
-}
 
 async function acaoRepositor(id, acao, nomeLogado) {
   const qtdInput = document.getElementById(`qtd-${id}`);
