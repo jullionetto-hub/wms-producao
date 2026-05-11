@@ -65,6 +65,15 @@ router.post('/repositor/entrada-manual', requerAuth, requerPerfil('supervisor','
   } catch(e) { res.status(500).json({erro: e.message}); }
 });
 
+router.put('/repositor/avisos/:id/lido-separador', requerAuth, async (req,res) => {
+  const id = validarId(req.params.id);
+  if (!id) return res.status(400).json({erro:'ID invalido'});
+  try {
+    await pool.query('UPDATE avisos_repositor SET lido_separador=true WHERE id=$1', [id]);
+    res.json({mensagem:'Aviso confirmado!'});
+  } catch(e) { res.status(500).json({erro:e.message}); }
+});
+
 router.get('/repositor/ranking-produtos', requerAuth, async (req,res) => {
   const {data_ini, data_fim} = req.query;
   try {
@@ -141,7 +150,8 @@ router.get('/repositor/avisos/separador/:separador_id', requerAuth, async (req,r
   try {
     const rows = await db.all(
       `SELECT a.* FROM avisos_repositor a
-       WHERE a.separador_id=$1 AND a.status IN ('subiu','abastecido','aguardando_abastecer') AND a.data_aviso=$2
+       WHERE a.separador_id=$1 AND a.status IN ('subiu','abastecido','aguardando_abastecer')
+         AND a.data_aviso=$2 AND (a.lido_separador IS NULL OR a.lido_separador = false)
        ORDER BY a.id DESC`,
       [req.params.separador_id, hoje]
     );

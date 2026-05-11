@@ -277,6 +277,7 @@ async function runMigrations() {
     await pool.query("ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS senha_temporaria BOOLEAN DEFAULT false");
     await pool.query("ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS senha_temporaria_expira TIMESTAMPTZ");
     await pool.query("ALTER TABLE checkout ADD COLUMN IF NOT EXISTS operador_nome TEXT DEFAULT ''");
+    await pool.query("ALTER TABLE avisos_repositor ADD COLUMN IF NOT EXISTS lido_separador BOOLEAN DEFAULT false");
     log.info('migrations OK');
   } catch(e) {
     log.error({ err: e }, 'migration erro');

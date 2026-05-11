@@ -181,11 +181,15 @@ async function carregarAvisosSeparador() {
       const label = isSubiu ? 'SUBIU' : isAguard ? 'AGUARD. GUARDAR' : 'ABASTECIDO';
       const cor   = isSubiu ? 'var(--green)' : isAguard ? '#92400e' : 'var(--accent)';
       const nomeLogado = usuarioAtual?.nome || '';
-      const btnGuardei = isAguard ? `
-        <button onclick="sepGuardeiItem(${a.id},'${nomeLogado.replace(/'/g,"\\'")}',this)"
-          style="width:100%;margin-top:12px;padding:13px;background:#10b981;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer">
-          🏠 Guardei este item eu mesmo
-        </button>` : '';
+      const btnGuardei = isAguard
+        ? `<button onclick="sepGuardeiItem(${a.id},'${nomeLogado.replace(/'/g,"\\'")}',this)"
+            style="width:100%;margin-top:12px;padding:13px;background:#10b981;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer">
+            🏠 Guardei este item eu mesmo
+           </button>`
+        : `<button onclick="sepCienteAviso(${a.id},this)"
+            style="width:100%;margin-top:12px;padding:10px;background:transparent;color:var(--text3);border:1.5px solid var(--border);border-radius:12px;font-size:13px;font-weight:700;cursor:pointer">
+            ✓ Ciente — remover notificação
+           </button>`;
       return `
       <div style="background:${bg};border:2px solid ${bord};border-radius:14px;padding:14px;margin-bottom:10px">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
@@ -206,6 +210,17 @@ async function carregarAvisosSeparador() {
   } catch(e) {
     lista.innerHTML = '<div style="color:var(--red);text-align:center;padding:20px">Erro ao carregar avisos</div>';
   }
+}
+
+async function sepCienteAviso(id, btn) {
+  btn.disabled = true;
+  try {
+    await fetch(`${API}/repositor/avisos/${id}/lido-separador`, {
+      credentials:'include', method:'PUT',
+      headers:{'Content-Type':'application/json'}
+    });
+    carregarAvisosSeparador();
+  } catch(e) { btn.disabled = false; }
 }
 
 async function sepGuardeiItem(id, nome, btn) {
