@@ -1,0 +1,30 @@
+name: Fix package-lock.json
+
+on:
+  workflow_dispatch:
+
+jobs:
+  fix-lockfile:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/organizacao-codigo
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Regenerar package-lock.json
+        run: npm install --package-lock-only
+
+      - name: Commit e push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json
+          git diff --staged --quiet || git commit -m "fix: regenera package-lock.json com node-cron@3.0.3"
+          git push
