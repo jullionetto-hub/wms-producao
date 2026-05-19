@@ -56,11 +56,14 @@ app.use(corsMiddleware);
 app.use(extraHeaders);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), { etag: true, lastModified: true }));
 app.use(sessionMiddleware);
 
 // ── Rotas ─────────────────────────────────────────────────────────────────────
-app.get('/', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+app.get('/', (_req, res) => {
+  res.set('Cache-Control', 'no-cache, must-revalidate');
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 app.use('/', apiRouter);
 
 // ── Handlers de erro ──────────────────────────────────────────────────────────
