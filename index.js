@@ -36,7 +36,7 @@ const log               = require('./lib/logger');
 const { dataHoraLocal } = require('./lib/helpers');
 
 // ── KPI Cache (em memória — considere Redis para escala futura) ───────────────
-const kpiCache = { data: null, ts: 0, ttl: 60_000 };
+const kpiCache = { data: null, ts: 0, ttl: 20_000 };
 
 // ─────────────────────────────────────────────────────────────────────────────
 const app    = express();

@@ -22,8 +22,10 @@ router.get('/kpis', requerAuth, async (req,res) => {
       (SELECT COUNT(*) FROM pedidos WHERE data_pedido=$4) as importados_hoje,
       (SELECT COUNT(DISTINCT separador_id) FROM pedidos WHERE status='separando') as seps_ativos,
       (SELECT COUNT(*) FROM avisos_repositor WHERE status='nao_encontrado' AND data_aviso=$5) as nao_encontrados_hoje,
-      (SELECT COUNT(*) FROM avisos_repositor WHERE data_aviso=$6) as total_faltas_hoje`,
-      [hoje,hoje,mes+'%',hoje,hoje,hoje]);
+      (SELECT COUNT(*) FROM avisos_repositor WHERE data_aviso=$6) as total_faltas_hoje,
+      (SELECT COUNT(*) FROM embalagem WHERE data_embalagem=$7) as embalagem_hoje,
+      (SELECT COUNT(*) FROM pedidos WHERE status='concluido' AND status_embalagem='pendente') as embalagem_pendente`,
+      [hoje,hoje,mes+'%',hoje,hoje,hoje,hoje]);
     res.json(r||{});
   } catch(e){res.status(500).json({erro:e.message});}
 });

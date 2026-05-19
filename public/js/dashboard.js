@@ -480,6 +480,8 @@ async function carregarKPIs() {
     set('dash-pendentes',  data.pendentes);
     set('kpi-ck-hoje',     data.checkout_hoje);
     set('kpi-ck-pend',     data.checkout_pendente);
+    set('kpi-emb-hoje',    data.embalagem_hoje);
+    set('kpi-emb-pend',    data.embalagem_pendente);
     set('kpi-seps-ativos', data.seps_ativos);
     set('kpi-nao-enc',     data.nao_encontrados_hoje);
   } catch(e) { console.warn(e); }
@@ -679,13 +681,7 @@ async function carregarPerformance() {
     if (!res.ok) { toast('Erro ao carregar performance','erro'); return; }
     const { resultado, resumo } = await res.json();
 
-    // Cards de resumo totais
     const el = id => document.getElementById(id);
-    if (el('perf-c-ped'))    el('perf-c-ped').textContent    = resumo.total_pedidos    || 0;
-    if (el('perf-c-itens'))  el('perf-c-itens').textContent  = resumo.total_itens      || 0;
-    if (el('perf-c-faltas')) el('perf-c-faltas').textContent = resumo.total_faltas     || 0;
-    if (el('perf-c-ck'))     el('perf-c-ck').textContent     = resumo.total_checkouts  || 0;
-    if (el('perf-c-emb'))    el('perf-c-emb').textContent    = resumo.total_embalagens || 0;
 
     // Popula dropdown de colaboradores (sempre, sem filtro de nome ativo)
     const colabSel = el('perf-colab');
