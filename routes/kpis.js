@@ -293,12 +293,12 @@ router.get('/stats/performance', requerAuth, requerPerfil('supervisor'), async (
 
     // Atividades do período
     const pedidos = await db.all(`
-      SELECT u.id as uid, u.nome as nome, COUNT(*) as total, SUM(p.itens) as itens
+      SELECT u.id as uid, COALESCE(u.nome, sep.nome) as nome, COUNT(*) as total, SUM(p.itens) as itens
       FROM pedidos p
       JOIN separadores sep ON p.separador_id = sep.id
-      JOIN usuarios u ON sep.usuario_id = u.id
+      LEFT JOIN usuarios u ON sep.usuario_id = u.id
       WHERE p.status='concluido' AND p.data_pedido>=$1 AND p.data_pedido<=$2
-      GROUP BY u.id, u.nome`, [dataIni, dataFim]);
+      GROUP BY u.id, COALESCE(u.nome, sep.nome)`, [dataIni, dataFim]);
 
     const faltas = await db.all(`
       SELECT separador_nome as nome, COUNT(*) as total

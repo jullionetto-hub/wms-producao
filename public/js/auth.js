@@ -264,7 +264,6 @@ function montarSidebar() {
       <a class="mi" onclick="irPara('relatorios',this)"><span class="mi-ic">📅</span>Relatórios</a>
       <a class="mi" onclick="irPara('auditoria',this)"><span class="mi-ic">🔍</span>Auditoria</a>
       <a class="mi" onclick="irPara('diario',this)"><span class="mi-ic">📋</span>Diário de Bordo</a>
-      <a class="mi" onclick="irPara('passagem',this)"><span class="mi-ic">🔄</span>Passagem de Turno <span class="mbadge" id="menu-badge-passagem" style="display:none;background:#F59E0B">!</span></a>
       <a class="mi" onclick="irPara('cadastros',this)"><span class="mi-ic">⚙️</span>Cadastros</a>
       <a class="mi" onclick="irPara('protocolo',this);carregarProtocolo()"><span class="mi-ic">📋</span>Protocolo<span class="mbadge" id="menu-badge-proto" style="display:none">0</span></a>
       <a class="mi" onclick="irPara('passagem',this)"><span class="mi-ic">🔄</span>Passagem de Turno<span class="mbadge" id="menu-badge-passagem" style="display:none;background:var(--red)">!</span></a>
