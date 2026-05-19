@@ -254,7 +254,7 @@ router.put('/configuracoes/:chave', requerAuth, requerPerfil('supervisor'), asyn
 
 // ── Performance com sessões de trabalho ────────────────────────────────────────
 router.get('/stats/performance', requerAuth, requerPerfil('supervisor'), async (req, res) => {
-  const { ini, fim, perfil: filtPerfil } = req.query;
+  const { ini, fim, perfil: filtPerfil, colaborador: filtColab } = req.query;
   const { data: hoje } = dataHoraLocal();
   const dataIni = ini || hoje;
   const dataFim = fim || hoje;
@@ -275,6 +275,7 @@ router.get('/stats/performance', requerAuth, requerPerfil('supervisor'), async (
     let sParams = [dataIni, dataFim, hoje];
     let sFilter = " AND s.perfil NOT IN ('supervisor','admin')";
     if (filtPerfil) { sParams.push(filtPerfil); sFilter = ` AND s.perfil=$${sParams.length}`; }
+    if (filtColab)  { sParams.push(filtColab);  sFilter += ` AND s.usuario_nome=$${sParams.length}`; }
 
     const sessoes = await db.all(`
       SELECT s.usuario_id, s.usuario_nome, s.perfil,
@@ -371,6 +372,7 @@ router.get('/stats/performance', requerAuth, requerPerfil('supervisor'), async (
     let uFilter = `perfil = ANY($1)`;
     uParams.push(perfisOp);
     if (filtPerfil) { uParams = [filtPerfil]; uFilter = `perfil=$1`; }
+    if (filtColab)  { uParams.push(filtColab); uFilter += ` AND nome=$${uParams.length}`; }
 
     const todosAtivos = await db.all(
       `SELECT id, nome, perfil, turno FROM usuarios WHERE status='ativo' AND ${uFilter} ORDER BY nome`,

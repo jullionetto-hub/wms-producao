@@ -668,9 +668,11 @@ async function carregarPerformance() {
   const ini    = document.getElementById('perf-ini')?.value  || hojeLocal();
   const fim    = document.getElementById('perf-fim')?.value  || hojeLocal();
   const perfil = document.getElementById('perf-perfil')?.value || '';
+  const colab  = document.getElementById('perf-colab')?.value  || '';
 
   let url = `${API}/stats/performance?ini=${ini}&fim=${fim}`;
   if (perfil) url += `&perfil=${perfil}`;
+  if (colab)  url += `&colaborador=${encodeURIComponent(colab)}`;
 
   try {
     const res = await fetch(url, { credentials:'include' });
@@ -684,6 +686,15 @@ async function carregarPerformance() {
     if (el('perf-c-faltas'))el('perf-c-faltas').textContent= resumo.total_faltas     || 0;
     if (el('perf-c-ck'))    el('perf-c-ck').textContent    = resumo.total_checkouts  || 0;
     if (el('perf-c-emb'))   el('perf-c-emb').textContent   = resumo.total_embalagens || 0;
+
+    // Popula dropdown de colaboradores (apenas quando carregou sem filtro de nome)
+    const colabSel = el('perf-colab');
+    if (colabSel && !colab) {
+      const nomes = [...new Set(resultado.map(r => r.usuario_nome))].sort();
+      const valorAtual = colabSel.value;
+      colabSel.innerHTML = '<option value="">Todos</option>' +
+        nomes.map(n => `<option value="${n}"${n===valorAtual?' selected':''}>${n}</option>`).join('');
+    }
 
     // Tabela
     const tb = document.getElementById('perf-tbody-main');

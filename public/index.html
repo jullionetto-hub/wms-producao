@@ -310,9 +310,10 @@
       <div class="pagina" id="pag-pedidos">
         <div class="pg-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
           Pedidos
-          <button onclick="confirmarZerarDados()" class="btn btn-danger btn-sm">
-            🗑️ Zerar Dados de Teste
-          </button>
+          <div style="display:flex;gap:8px;align-items:center">
+            <button onclick="abrirConfigMetas()" class="btn btn-outline btn-sm" title="Configurar metas de performance">⚙️ Metas</button>
+            <button onclick="confirmarZerarDados()" class="btn btn-danger btn-sm">🗑️ Zerar Dados de Teste</button>
+          </div>
         </div>
 
 
@@ -667,9 +668,13 @@
                 <option value="repositor">🔧 Reposição</option>
               </select>
             </div>
+            <div class="fg"><label>COLABORADOR</label>
+              <select id="perf-colab" class="sel-sm" onchange="carregarPerformance()">
+                <option value="">Todos</option>
+              </select>
+            </div>
             <button class="btn btn-primary btn-sm" onclick="carregarPerformance()">🔍 Filtrar</button>
             <button class="excel-btn" onclick="exportarPerformanceExcel()">📊 Excel</button>
-            <button class="btn btn-outline btn-sm" onclick="abrirConfigMetas()" title="Configurar metas">⚙️ Metas</button>
           </div>
         </div>
 
