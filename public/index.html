@@ -1280,6 +1280,147 @@
   </div>
 </div>
 
+
+      <!-- ══ PASSAGEM DE TURNO ══ -->
+      <div class="pagina" id="pag-passagem">
+        <div class="pag-header"><h2>🔄 Passagem de Turno</h2></div>
+        <div style="padding:16px;max-width:600px;margin:0 auto">
+
+          <!-- TABS -->
+          <div style="display:flex;gap:8px;margin-bottom:16px">
+            <button id="ptab-registrar" onclick="mudarPassagemTab('registrar',this)"
+              style="flex:1;padding:10px;border-radius:8px;border:none;background:#2563EB;color:#fff;font-size:13px;font-weight:700;cursor:pointer">
+              📝 Registrar
+            </button>
+            <button id="ptab-validar" onclick="mudarPassagemTab('validar',this)"
+              style="flex:1;padding:10px;border-radius:8px;border:1.5px solid #E2E8F0;background:#fff;color:#64748B;font-size:13px;font-weight:600;cursor:pointer">
+              ✅ Validar <span id="menu-badge-passagem-tab" style="display:none;background:#DC2626;color:#fff;border-radius:50%;padding:1px 5px;font-size:10px;margin-left:4px">!</span>
+            </button>
+            <button id="ptab-placar" onclick="mudarPassagemTab('placar',this)"
+              style="flex:1;padding:10px;border-radius:8px;border:1.5px solid #E2E8F0;background:#fff;color:#64748B;font-size:13px;font-weight:600;cursor:pointer">
+              🏆 Placar
+            </button>
+            <button id="ptab-historico" onclick="mudarPassagemTab('historico',this)"
+              style="flex:1;padding:10px;border-radius:8px;border:1.5px solid #E2E8F0;background:#fff;color:#64748B;font-size:13px;font-weight:600;cursor:pointer">
+              📋 Histórico
+            </button>
+          </div>
+
+          <!-- REGISTRAR -->
+          <div id="pass-sec-registrar">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+              <div>
+                <label style="font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase">Data</label>
+                <input type="date" id="pass-data" style="width:100%;margin-top:4px;padding:10px;border:1px solid #E2E8F0;border-radius:8px;font-size:13px;box-sizing:border-box">
+              </div>
+              <div>
+                <label style="font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase">Turno saindo</label>
+                <select id="pass-turno" style="width:100%;margin-top:4px;padding:10px;border:1px solid #E2E8F0;border-radius:8px;font-size:13px;box-sizing:border-box">
+                  <option value="Manha">☀️ Manhã</option>
+                  <option value="Tarde">🌤️ Tarde</option>
+                  <option value="Noite">🌙 Noite</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Separação -->
+            <div style="border:1.5px solid #BFDBFE;border-radius:10px;padding:12px 14px;margin-bottom:12px;background:#EFF6FF">
+              <div style="font-size:12px;font-weight:700;color:#2563EB;margin-bottom:10px">📦 Separação</div>
+              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+                <div>
+                  <label style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase">Separados</label>
+                  <input type="number" id="pass-sep-sep" min="0" value="0" style="width:100%;margin-top:3px;padding:8px;border:1px solid #BFDBFE;border-radius:7px;font-size:14px;font-weight:700;text-align:center;box-sizing:border-box">
+                </div>
+                <div>
+                  <label style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase">Pendentes</label>
+                  <input type="number" id="pass-sep-pend" min="0" value="0" style="width:100%;margin-top:3px;padding:8px;border:1px solid #BFDBFE;border-radius:7px;font-size:14px;font-weight:700;text-align:center;box-sizing:border-box">
+                </div>
+                <div>
+                  <label style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase">Em Separação</label>
+                  <input type="number" id="pass-sep-em" min="0" value="0" style="width:100%;margin-top:3px;padding:8px;border:1px solid #BFDBFE;border-radius:7px;font-size:14px;font-weight:700;text-align:center;box-sizing:border-box">
+                </div>
+              </div>
+            </div>
+
+            <!-- Checkout -->
+            <div style="border:1.5px solid #BBF7D0;border-radius:10px;padding:12px 14px;margin-bottom:12px;background:#F0FDF4">
+              <div style="font-size:12px;font-weight:700;color:#16a34a;margin-bottom:10px">✅ Checkout</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                <div>
+                  <label style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase">Realizados</label>
+                  <input type="number" id="pass-ck-feitos" min="0" value="0" style="width:100%;margin-top:3px;padding:8px;border:1px solid #BBF7D0;border-radius:7px;font-size:14px;font-weight:700;text-align:center;box-sizing:border-box">
+                </div>
+                <div>
+                  <label style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase">Pendentes</label>
+                  <input type="number" id="pass-ck-pend" min="0" value="0" style="width:100%;margin-top:3px;padding:8px;border:1px solid #BBF7D0;border-radius:7px;font-size:14px;font-weight:700;text-align:center;box-sizing:border-box">
+                </div>
+              </div>
+            </div>
+
+            <!-- Embalagem -->
+            <div style="border:1.5px solid #DDD6FE;border-radius:10px;padding:12px 14px;margin-bottom:12px;background:#F5F3FF">
+              <div style="font-size:12px;font-weight:700;color:#7C3AED;margin-bottom:10px">📫 Embalagem</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                <div>
+                  <label style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase">Embalados</label>
+                  <input type="number" id="pass-emb-emb" min="0" value="0" style="width:100%;margin-top:3px;padding:8px;border:1px solid #DDD6FE;border-radius:7px;font-size:14px;font-weight:700;text-align:center;box-sizing:border-box">
+                </div>
+                <div>
+                  <label style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase">Pendentes</label>
+                  <input type="number" id="pass-emb-pend" min="0" value="0" style="width:100%;margin-top:3px;padding:8px;border:1px solid #DDD6FE;border-radius:7px;font-size:14px;font-weight:700;text-align:center;box-sizing:border-box">
+                </div>
+              </div>
+            </div>
+
+            <!-- Reposição Pendências -->
+            <div style="border:1.5px solid #FECACA;border-radius:10px;padding:12px 14px;margin-bottom:12px;background:#FEF2F2">
+              <div style="font-size:12px;font-weight:700;color:#DC2626;margin-bottom:10px">⚠️ Reposição — Pendências</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                <div>
+                  <label style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase">Procurando Itens</label>
+                  <input type="number" id="pass-rep-proc" min="0" value="0" style="width:100%;margin-top:3px;padding:8px;border:1px solid #FECACA;border-radius:7px;font-size:14px;font-weight:700;text-align:center;box-sizing:border-box">
+                </div>
+                <div>
+                  <label style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase">Caixas na Rua</label>
+                  <input type="number" id="pass-rep-rua" min="0" value="0" style="width:100%;margin-top:3px;padding:8px;border:1px solid #FECACA;border-radius:7px;font-size:14px;font-weight:700;text-align:center;box-sizing:border-box">
+                </div>
+              </div>
+            </div>
+
+            <!-- Separadores e Ocorrências -->
+            <div style="margin-bottom:10px">
+              <label style="font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase">Separadores presentes</label>
+              <textarea id="pass-seps" rows="2" placeholder="Ex: João, Maria, Pedro..."
+                style="width:100%;margin-top:4px;padding:10px;border:1px solid #E2E8F0;border-radius:8px;font-size:13px;resize:none;box-sizing:border-box"></textarea>
+            </div>
+            <div style="margin-bottom:14px">
+              <label style="font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase">Ocorrências do turno</label>
+              <textarea id="pass-ocorr" rows="3" placeholder="Registre ocorrências, problemas ou observações do turno..."
+                style="width:100%;margin-top:4px;padding:10px;border:1px solid #E2E8F0;border-radius:8px;font-size:13px;resize:none;box-sizing:border-box"></textarea>
+            </div>
+
+            <button onclick="salvarPassagem()"
+              style="width:100%;padding:14px;background:#2563EB;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">
+              💾 Salvar Passagem
+            </button>
+          </div>
+
+          <!-- VALIDAR -->
+          <div id="pass-sec-validar" style="display:none"></div>
+
+          <!-- PLACAR -->
+          <div id="pass-sec-placar" style="display:none">
+            <div id="pass-placar-content"></div>
+          </div>
+
+          <!-- HISTÓRICO -->
+          <div id="pass-sec-historico" style="display:none">
+            <div id="pass-historico"></div>
+          </div>
+
+        </div>
+      </div>
+
     </div><!-- /conteudo -->
 
 

@@ -9,5 +9,6 @@ router.use(require('./checkout'));
 router.use(require('./kpis'));
 router.use(require('./admin'));
 router.use(require('./embalagem'));
+router.use(require('./passagem'));
 
 module.exports = router;

@@ -288,6 +288,43 @@ async function runMigrations() {
     await pool.query("ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS senha_temporaria BOOLEAN DEFAULT false");
     await pool.query("ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS senha_temporaria_expira TIMESTAMPTZ");
     await pool.query("ALTER TABLE checkout ADD COLUMN IF NOT EXISTS operador_nome TEXT DEFAULT ''");
+    await pool.query(`CREATE TABLE IF NOT EXISTS passagem_turno (
+      id                    SERIAL PRIMARY KEY,
+      data                  TEXT NOT NULL,
+      turno                 TEXT NOT NULL,
+      supervisor            TEXT NOT NULL,
+      supervisor_id         INTEGER,
+      sep_separados         INTEGER DEFAULT 0,
+      sep_pendentes         INTEGER DEFAULT 0,
+      sep_em_separacao      INTEGER DEFAULT 0,
+      ck_feitos             INTEGER DEFAULT 0,
+      ck_pendentes          INTEGER DEFAULT 0,
+      emb_embalados         INTEGER DEFAULT 0,
+      emb_pendentes         INTEGER DEFAULT 0,
+      rep_procurando        INTEGER DEFAULT 0,
+      rep_na_rua            INTEGER DEFAULT 0,
+      separadores_presentes TEXT DEFAULT '',
+      ocorrencias           TEXT DEFAULT '',
+      status                TEXT DEFAULT 'pendente',
+      criado_em             TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE(data, turno)
+    )`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS validacao_passagem (
+      id                  SERIAL PRIMARY KEY,
+      passagem_id         INTEGER REFERENCES passagem_turno(id),
+      turno_entrando      TEXT NOT NULL,
+      supervisor_entrando TEXT NOT NULL,
+      supervisor_id       INTEGER,
+      resultados          JSONB DEFAULT '{}',
+      obs_geral           TEXT DEFAULT '',
+      pontos_perdidos     INTEGER DEFAULT 0,
+      validado_em         TIMESTAMPTZ DEFAULT NOW()
+    )`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS placar_turno (
+      id     SERIAL PRIMARY KEY,
+      turno  TEXT NOT NULL UNIQUE,
+      pontos INTEGER DEFAULT 1000
+    )`);
     log.info('migrations OK');
   } catch(e) {
     log.error({ err: e }, 'migration erro');
