@@ -411,6 +411,7 @@ router.get('/stats/performance', requerAuth, requerPerfil('supervisor'), async (
     // Adiciona separadores antigos (sem login) que não estão no resultado
     const presente2 = jaNoResultado();
     sepSemUsuario.forEach(sep => {
+      if (filtColab && sep.nome !== filtColab) return;
       if (presente2.has(`${sep.nome}:separador`)) return;
       const ped = pedNome[sep.nome] || {};
       resultado.push({
@@ -425,6 +426,7 @@ router.get('/stats/performance', requerAuth, requerPerfil('supervisor'), async (
     // Colaboradores com atividade no período mas não cadastrados (legado por nome)
     const presente3 = jaNoResultado();
     checkouts.forEach(c => {
+      if (filtColab && c.nome !== filtColab) return;
       if (!presente3.has(`${c.nome}:checkout`))
         resultado.push({ usuario_nome: c.nome, perfil: 'checkout', turno: null,
           horas: null, minutos: null, atividades: parseInt(c.total)||0, detalhe: {},
@@ -432,6 +434,7 @@ router.get('/stats/performance', requerAuth, requerPerfil('supervisor'), async (
     });
     const presente4 = jaNoResultado();
     reposicoes.forEach(r => {
+      if (filtColab && r.nome !== filtColab) return;
       if (!presente4.has(`${r.nome}:repositor`))
         resultado.push({ usuario_nome: r.nome, perfil: 'repositor', turno: null,
           horas: null, minutos: null, atividades: parseInt(r.total)||0,

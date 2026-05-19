@@ -702,12 +702,12 @@
           </div>
         </div>
 
-        <!-- Tabela principal — renderizada pelo JS -->
-        <div class="card">
-          <div class="card-hd" style="display:flex;align-items:center;gap:8px">
-            👥 COLABORADORES
-            <span style="font-size:10px;color:var(--text3);font-weight:400">* meta proporcional ao tempo trabalhado no período</span>
-          </div>
+        <!-- Vista por colaborador: cards por área -->
+        <div id="perf-cards-colab" style="display:none;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px"></div>
+
+        <!-- Vista geral: tabela de todos os colaboradores -->
+        <div class="card" id="perf-tabela-wrap">
+          <div class="card-hd">👥 COLABORADORES</div>
           <div class="tabela-wrap">
             <table>
               <thead>
@@ -715,11 +715,7 @@
                   <th>COLABORADOR</th>
                   <th>ÁREA</th>
                   <th>TURNO</th>
-                  <th title="Tempo logado no sistema nessa área">⏱ TEMPO LOGADO</th>
-                  <th title="Sep: pedidos separados | CK: checkouts | Emb: pedidos embalados | Rep: itens atendidos">ATIVIDADES</th>
-                  <th title="Meta calculada proporcionalmente ao tempo logado">META PROP.</th>
-                  <th style="min-width:130px">% ATINGIMENTO</th>
-                  <th>DETALHE</th>
+                  <th style="text-align:center">ATIVIDADES</th>
                 </tr>
               </thead>
               <tbody id="perf-tbody-main"></tbody>
