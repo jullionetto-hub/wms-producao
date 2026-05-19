@@ -643,8 +643,11 @@ const AREA_INFO = {
   repositor: { icon:'🔧', label:'Reposição',  cor:'#EA580C'       },
 };
 
-function _pctBar(pct) {
-  if (pct === null || pct === undefined) return '<span style="color:var(--text3);font-size:11px">sem sessão</span>';
+function _pctBar(pct, temSessao) {
+  if (pct === null || pct === undefined) {
+    const txt = temSessao ? 'sem dados' : 'sem sessão';
+    return `<span style="color:var(--text3);font-size:11px">${txt}</span>`;
+  }
   const p = Math.min(100, pct);
   const cor = pct >= 100 ? '#16a34a' : pct >= 70 ? '#2563EB' : pct >= 40 ? '#D97706' : '#DC2626';
   return `<div style="display:flex;align-items:center;gap:6px">
@@ -706,7 +709,7 @@ async function carregarPerformance() {
         <td style="font-weight:600;color:var(--accent)">${_horasStr(r.minutos)}</td>
         <td style="font-size:15px;font-weight:800;color:var(--text)">${r.atividades}</td>
         <td style="font-size:13px;color:var(--text3)">${r.meta_proporcional !== null ? r.meta_proporcional : '—'}</td>
-        <td>${_pctBar(r.pct_atingimento)}</td>
+        <td>${_pctBar(r.pct_atingimento, r.minutos !== null)}</td>
         <td>${detalheHTML}</td>
       </tr>`;
     }).join('');

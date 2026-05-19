@@ -273,7 +273,7 @@ router.get('/stats/performance', requerAuth, requerPerfil('supervisor'), async (
 
     // Sessões agrupadas por (usuario, perfil)
     let sParams = [dataIni, dataFim, hoje];
-    let sFilter = '';
+    let sFilter = " AND s.perfil NOT IN ('supervisor','admin')";
     if (filtPerfil) { sParams.push(filtPerfil); sFilter = ` AND s.perfil=$${sParams.length}`; }
 
     const sessoes = await db.all(`
