@@ -365,40 +365,77 @@ router.get('/stats/performance', requerAuth, requerPerfil('supervisor'), async (
       };
     });
 
-    // Usuários legados (com atividades mas sem sessão no período)
-    if (!filtPerfil) {
-      const naSessao = new Set(resultado.map(r => `${r.usuario_nome}:${r.perfil}`));
-      pedidos.forEach(p => {
-        if (!naSessao.has(`${p.nome}:separador`)) {
-          resultado.push({ usuario_nome: p.nome, perfil: 'separador', turno: null,
-            horas: null, minutos: null, atividades: parseInt(p.total) || 0,
-            detalhe: { itens: parseInt(p.itens) || 0, faltas: parseInt((faltIdx[p.nome]||{}).total) || 0 },
-            meta_base: METAS.separador, meta_proporcional: null, pct_atingimento: null });
-        }
+    // Todos os colaboradores ativos — garante que apareçam mesmo sem atividade/sessão
+    const perfisOp = ['separador','checkout','embalador','repositor'];
+    let uParams = [];
+    let uFilter = `perfil = ANY($1)`;
+    uParams.push(perfisOp);
+    if (filtPerfil) { uParams = [filtPerfil]; uFilter = `perfil=$1`; }
+
+    const todosAtivos = await db.all(
+      `SELECT id, nome, perfil, turno FROM usuarios WHERE status='ativo' AND ${uFilter} ORDER BY nome`,
+      uParams
+    );
+
+    // Separadores sem usuario_id (cadastros antigos sem login)
+    const sepSemUsuario = await db.all(
+      `SELECT sep.nome, sep.turno FROM separadores sep
+       WHERE sep.status='ativo' AND sep.usuario_id IS NULL ORDER BY sep.nome`
+    );
+
+    // Monta set de quem já está no resultado (por nome+perfil)
+    const jaNoResultado = () => new Set(resultado.map(r => `${r.usuario_nome}:${r.perfil}`));
+
+    // Adiciona usuários ativos que não estão no resultado
+    const presente1 = jaNoResultado();
+    todosAtivos.forEach(u => {
+      if (presente1.has(`${u.nome}:${u.perfil}`)) return;
+      const atividades = u.perfil === 'separador' ? parseInt((pedNome[u.nome]||{}).total)||0
+        : u.perfil === 'checkout'  ? parseInt((ckIdx[u.nome]||{}).total)||0
+        : u.perfil === 'embalador' ? parseInt((embIdx[u.nome]||{}).total)||0
+        : u.perfil === 'repositor' ? parseInt((repIdx[u.nome]||{}).total)||0 : 0;
+      const detalhe = u.perfil === 'separador'
+        ? { itens: parseInt((pedNome[u.nome]||{}).itens)||0, faltas: parseInt((faltIdx[u.nome]||{}).total)||0 }
+        : u.perfil === 'repositor'
+        ? { repostos: parseInt((repIdx[u.nome]||{}).repostos)||0, nao_encontrados: parseInt((repIdx[u.nome]||{}).nao_encontrados)||0 }
+        : {};
+      resultado.push({
+        usuario_id: u.id, usuario_nome: u.nome, perfil: u.perfil, turno: u.turno || 'Manha',
+        horas: null, minutos: null, atividades, detalhe,
+        meta_base: METAS[u.perfil] || 0, meta_proporcional: null, pct_atingimento: null,
       });
-      checkouts.forEach(c => {
-        if (!naSessao.has(`${c.nome}:checkout`)) {
-          resultado.push({ usuario_nome: c.nome, perfil: 'checkout', turno: null,
-            horas: null, minutos: null, atividades: parseInt(c.total) || 0, detalhe: {},
-            meta_base: METAS.checkout, meta_proporcional: null, pct_atingimento: null });
-        }
+    });
+
+    // Adiciona separadores antigos (sem login) que não estão no resultado
+    const presente2 = jaNoResultado();
+    sepSemUsuario.forEach(sep => {
+      if (presente2.has(`${sep.nome}:separador`)) return;
+      const ped = pedNome[sep.nome] || {};
+      resultado.push({
+        usuario_id: null, usuario_nome: sep.nome, perfil: 'separador', turno: sep.turno || 'Manha',
+        horas: null, minutos: null,
+        atividades: parseInt(ped.total)||0,
+        detalhe: { itens: parseInt(ped.itens)||0, faltas: parseInt((faltIdx[sep.nome]||{}).total)||0 },
+        meta_base: METAS.separador, meta_proporcional: null, pct_atingimento: null,
       });
-      embalagens.forEach(e => {
-        if (!naSessao.has(`${e.nome}:embalador`)) {
-          resultado.push({ usuario_nome: e.nome, perfil: 'embalador', turno: null,
-            horas: null, minutos: null, atividades: parseInt(e.total) || 0, detalhe: {},
-            meta_base: METAS.embalador, meta_proporcional: null, pct_atingimento: null });
-        }
-      });
-      reposicoes.forEach(r => {
-        if (!naSessao.has(`${r.nome}:repositor`)) {
-          resultado.push({ usuario_nome: r.nome, perfil: 'repositor', turno: null,
-            horas: null, minutos: null, atividades: parseInt(r.total) || 0,
-            detalhe: { repostos: parseInt(r.repostos) || 0, nao_encontrados: parseInt(r.nao_encontrados) || 0 },
-            meta_base: METAS.repositor, meta_proporcional: null, pct_atingimento: null });
-        }
-      });
-    }
+    });
+
+    // Colaboradores com atividade no período mas não cadastrados (legado por nome)
+    const presente3 = jaNoResultado();
+    checkouts.forEach(c => {
+      if (!presente3.has(`${c.nome}:checkout`))
+        resultado.push({ usuario_nome: c.nome, perfil: 'checkout', turno: null,
+          horas: null, minutos: null, atividades: parseInt(c.total)||0, detalhe: {},
+          meta_base: METAS.checkout, meta_proporcional: null, pct_atingimento: null });
+    });
+    const presente4 = jaNoResultado();
+    reposicoes.forEach(r => {
+      if (!presente4.has(`${r.nome}:repositor`))
+        resultado.push({ usuario_nome: r.nome, perfil: 'repositor', turno: null,
+          horas: null, minutos: null, atividades: parseInt(r.total)||0,
+          detalhe: { repostos: parseInt(r.repostos)||0, nao_encontrados: parseInt(r.nao_encontrados)||0 },
+          meta_base: METAS.repositor, meta_proporcional: null, pct_atingimento: null });
+    });
 
     resultado.sort((a,b) => a.usuario_nome.localeCompare(b.usuario_nome) || a.perfil.localeCompare(b.perfil));
 
