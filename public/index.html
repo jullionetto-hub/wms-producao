@@ -654,13 +654,13 @@
       <div class="pagina" id="pag-performance">
         <div class="pg-title">Performance dos Colaboradores</div>
 
-        <!-- Filtros — sempre visíveis -->
+        <!-- Filtros — só filtra ao clicar em Filtrar -->
         <div class="card" style="margin-bottom:14px">
           <div class="filtros" style="align-items:flex-end">
             <div class="fg"><label>DE</label><input type="date" id="perf-ini"/></div>
             <div class="fg"><label>ATÉ</label><input type="date" id="perf-fim"/></div>
             <div class="fg"><label>ÁREA</label>
-              <select id="perf-perfil" class="sel-sm" onchange="carregarPerformance()">
+              <select id="perf-perfil" class="sel-sm">
                 <option value="">Todas</option>
                 <option value="separador">📦 Separação</option>
                 <option value="checkout">✅ Checkout</option>
@@ -669,7 +669,7 @@
               </select>
             </div>
             <div class="fg"><label>COLABORADOR</label>
-              <select id="perf-colab" class="sel-sm" onchange="carregarPerformance()">
+              <select id="perf-colab" class="sel-sm">
                 <option value="">Todos</option>
               </select>
             </div>
@@ -678,7 +678,7 @@
           </div>
         </div>
 
-        <!-- Cards resumo — SEMPRE NO TOPO, nunca se movem -->
+        <!-- Cards resumo totais -->
         <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px">
           <div class="cnt-card verde" style="padding:12px">
             <div class="cnt-lbl">PEDIDOS</div>
@@ -702,39 +702,21 @@
           </div>
         </div>
 
-        <!-- Vista por colaborador: cards por área -->
-        <div id="perf-cards-colab" style="display:none;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px"></div>
+        <!-- Cards por área (sempre visíveis) -->
+        <div id="perf-cards-colab" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px"></div>
 
-        <!-- Vista geral: tabela de todos os colaboradores -->
-        <div class="card" id="perf-tabela-wrap">
-          <div class="card-hd">👥 COLABORADORES</div>
-          <div class="tabela-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>COLABORADOR</th>
-                  <th>ÁREA</th>
-                  <th>TURNO</th>
-                  <th style="text-align:center">ATIVIDADES</th>
-                </tr>
-              </thead>
-              <tbody id="perf-tbody-main"></tbody>
-            </table>
+      </div>
+
+      <!-- Modal de configuração de metas — fora das paginas para funcionar em qualquer tela -->
+      <div id="modal-config-metas" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;align-items:center;justify-content:center">
+        <div style="background:var(--surface);border-radius:16px;padding:24px;width:360px;max-width:95vw;box-shadow:0 8px 32px rgba(0,0,0,.3)">
+          <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:16px">⚙️ Configurar Metas e Horas de Turno</div>
+          <div id="config-metas-form"></div>
+          <div style="display:flex;gap:10px;margin-top:16px">
+            <button onclick="fecharConfigMetas()" class="btn btn-outline" style="flex:1;padding:10px">Cancelar</button>
+            <button onclick="salvarConfigMetas()" class="btn btn-primary" style="flex:1;padding:10px">💾 Salvar</button>
           </div>
         </div>
-
-        <!-- Modal de configuração de metas -->
-        <div id="modal-config-metas" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;align-items:center;justify-content:center">
-          <div style="background:var(--surface);border-radius:16px;padding:24px;width:360px;max-width:95vw;box-shadow:0 8px 32px rgba(0,0,0,.3)">
-            <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:16px">⚙️ Configurar Metas e Horas de Turno</div>
-            <div id="config-metas-form"></div>
-            <div style="display:flex;gap:10px;margin-top:16px">
-              <button onclick="fecharConfigMetas()" class="btn btn-outline" style="flex:1;padding:10px">Cancelar</button>
-              <button onclick="salvarConfigMetas()" class="btn btn-primary" style="flex:1;padding:10px">💾 Salvar</button>
-            </div>
-          </div>
-        </div>
-
       </div>
 
       <!-- ESTATÍSTICAS -->

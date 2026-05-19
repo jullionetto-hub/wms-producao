@@ -679,73 +679,61 @@ async function carregarPerformance() {
     if (!res.ok) { toast('Erro ao carregar performance','erro'); return; }
     const { resultado, resumo } = await res.json();
 
-    // Cards de resumo
+    // Cards de resumo totais
     const el = id => document.getElementById(id);
-    if (el('perf-c-ped'))   el('perf-c-ped').textContent   = resumo.total_pedidos    || 0;
-    if (el('perf-c-itens')) el('perf-c-itens').textContent = resumo.total_itens      || 0;
-    if (el('perf-c-faltas'))el('perf-c-faltas').textContent= resumo.total_faltas     || 0;
-    if (el('perf-c-ck'))    el('perf-c-ck').textContent    = resumo.total_checkouts  || 0;
-    if (el('perf-c-emb'))   el('perf-c-emb').textContent   = resumo.total_embalagens || 0;
+    if (el('perf-c-ped'))    el('perf-c-ped').textContent    = resumo.total_pedidos    || 0;
+    if (el('perf-c-itens'))  el('perf-c-itens').textContent  = resumo.total_itens      || 0;
+    if (el('perf-c-faltas')) el('perf-c-faltas').textContent = resumo.total_faltas     || 0;
+    if (el('perf-c-ck'))     el('perf-c-ck').textContent     = resumo.total_checkouts  || 0;
+    if (el('perf-c-emb'))    el('perf-c-emb').textContent    = resumo.total_embalagens || 0;
 
-    // Popula dropdown de colaboradores (apenas quando carregou sem filtro de nome)
+    // Popula dropdown de colaboradores (sempre, sem filtro de nome ativo)
     const colabSel = el('perf-colab');
     if (colabSel && !colab) {
       const nomes = [...new Set(resultado.map(r => r.usuario_nome))].sort();
-      const valorAtual = colabSel.value;
       colabSel.innerHTML = '<option value="">Todos</option>' +
-        nomes.map(n => `<option value="${n}"${n===valorAtual?' selected':''}>${n}</option>`).join('');
+        nomes.map(n => `<option value="${n}">${n}</option>`).join('');
     }
 
-    const cardsWrap  = el('perf-cards-colab');
-    const tabelaWrap = el('perf-tabela-wrap');
-    const tb         = el('perf-tbody-main');
+    // Agrega resultado por área
+    const AREAS_ORDEM = ['separador','checkout','embalador','repositor'];
+    const porArea = {};
+    AREAS_ORDEM.forEach(p => { porArea[p] = { atividades: 0, minutos: 0, temSessao: false, colaboradores: 0 }; });
+    resultado.forEach(r => {
+      if (!porArea[r.perfil]) return;
+      porArea[r.perfil].atividades   += r.atividades || 0;
+      porArea[r.perfil].minutos      += r.minutos    || 0;
+      porArea[r.perfil].temSessao    = porArea[r.perfil].temSessao || r.minutos !== null;
+      porArea[r.perfil].colaboradores++;
+    });
 
-    if (colab) {
-      // ── Vista individual: cards por área ──────────────────────────────────
-      if (tabelaWrap) tabelaWrap.style.display = 'none';
-      if (cardsWrap)  cardsWrap.style.display  = 'grid';
+    // Define quais áreas mostrar (todas ou filtrada)
+    const areasVisiveis = perfil ? [perfil] : AREAS_ORDEM;
+    const cols = areasVisiveis.length;
+    const LABELS = { separador:'pedidos', checkout:'checkouts', embalador:'embalagens', repositor:'reposições' };
 
-      const AREAS_ORDEM = ['separador','checkout','embalador','repositor'];
-      const idx = Object.fromEntries(resultado.map(r => [r.perfil, r]));
+    const cardsWrap = el('perf-cards-colab');
+    if (!cardsWrap) return;
+    cardsWrap.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
 
-      cardsWrap.innerHTML = AREAS_ORDEM.map(perf => {
-        const area = AREA_INFO[perf] || { icon:'👤', label: perf, cor:'var(--text)' };
-        const r    = idx[perf];
-        const qtd  = r ? r.atividades : 0;
-        const tempo = r && r.minutos !== null ? _horasStr(r.minutos) : '—';
-        const label = perf === 'separador' ? 'pedidos' : perf === 'checkout' ? 'checkouts'
-                    : perf === 'embalador' ? 'embalagens' : 'reposições';
-        return `<div class="card" style="padding:20px;text-align:center">
-          <div style="font-size:28px">${area.icon}</div>
-          <div style="font-size:13px;font-weight:700;color:${area.cor};margin:4px 0 12px">${area.label.toUpperCase()}</div>
-          <div style="font-size:40px;font-weight:900;color:var(--text);line-height:1">${qtd}</div>
-          <div style="font-size:11px;color:var(--text3);margin:4px 0 12px">${label}</div>
-          <div style="border-top:1px solid var(--border);padding-top:10px;font-size:13px;color:var(--accent);font-weight:700">⏱ ${tempo}</div>
+    cardsWrap.innerHTML = areasVisiveis.map(p => {
+      const area  = AREA_INFO[p] || { icon:'👤', label: p, cor:'var(--text)' };
+      const ag    = porArea[p];
+      const tempo = ag.temSessao ? _horasStr(ag.minutos) : '—';
+      const subInfo = colab ? '' :
+        `<div style="font-size:11px;color:var(--text3);margin-top:4px">${ag.colaboradores} colaborador${ag.colaboradores!==1?'es':''}</div>`;
+      return `<div class="card" style="padding:20px;text-align:center">
+        <div style="font-size:32px">${area.icon}</div>
+        <div style="font-size:13px;font-weight:700;color:${area.cor};margin:4px 0 12px;letter-spacing:.5px">${area.label.toUpperCase()}</div>
+        <div style="font-size:48px;font-weight:900;color:var(--text);line-height:1">${ag.atividades}</div>
+        <div style="font-size:11px;color:var(--text3);margin:4px 0">${LABELS[p]}</div>
+        ${subInfo}
+        <div style="border-top:1px solid var(--border);margin-top:12px;padding-top:10px">
+          <span style="font-size:14px;color:var(--accent);font-weight:700">⏱ ${tempo}</span>
           <div style="font-size:10px;color:var(--text3)">tempo logado</div>
-        </div>`;
-      }).join('');
-
-    } else {
-      // ── Vista geral: tabela simples ────────────────────────────────────────
-      if (cardsWrap)  cardsWrap.style.display  = 'none';
-      if (tabelaWrap) tabelaWrap.style.display = '';
-      if (!tb) return;
-
-      if (!resultado.length) {
-        tb.innerHTML = `<tr><td colspan="4" style="color:var(--text3);text-align:center;padding:24px">Nenhum colaborador no período</td></tr>`;
-        return;
-      }
-      tb.innerHTML = resultado.map(r => {
-        const area = AREA_INFO[r.perfil] || { icon:'👤', label:r.perfil, cor:'var(--text)' };
-        const turnoLabel = { Manha:'☀️ Manhã', Tarde:'🌤️ Tarde', Noite:'🌙 Noite' }[r.turno] || (r.turno || '—');
-        return `<tr>
-          <td style="font-weight:700;color:var(--text)">${r.usuario_nome}</td>
-          <td><span style="font-size:12px;font-weight:700;color:${area.cor}">${area.icon} ${area.label}</span></td>
-          <td style="font-size:12px;color:var(--text3)">${turnoLabel}</td>
-          <td style="text-align:center;font-size:16px;font-weight:800;color:var(--text)">${r.atividades}</td>
-        </tr>`;
-      }).join('');
-    }
+        </div>
+      </div>`;
+    }).join('');
 
   } catch(e) { console.error('Erro performance:', e); toast('Erro ao carregar performance','erro'); }
 }
