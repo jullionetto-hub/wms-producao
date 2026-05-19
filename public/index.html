@@ -118,6 +118,12 @@
           <label style="font-size:11px;color:var(--text3);font-weight:600">ATÉ</label>
           <input type="date" id="filtro-data-fim" style="border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;background:var(--surface2);color:var(--text)">
           <button onclick="carregarDashboard()" class="btn btn-primary btn-sm">Filtrar</button>
+          <!-- Filtro de turno (multi-select) -->
+          <div style="display:flex;gap:3px;margin-left:4px">
+            <button id="dash-turno-manha"     class="btn-turno" onclick="toggleTurnoDash('Manha')">MANHÃ</button>
+            <button id="dash-turno-tarde"     class="btn-turno" onclick="toggleTurnoDash('Tarde')">TARDE</button>
+            <button id="dash-turno-madrugada" class="btn-turno" onclick="toggleTurnoDash('Noite')">MADRUGADA</button>
+          </div>
           <button onclick="exportarDashboardExcel()" class="excel-btn">📊 Excel</button>
         </div>
 
@@ -130,21 +136,10 @@
           <div class="kpi-card laranja"><div class="kpi-lbl">EMB. FINALIZADA</div><div class="kpi-val" id="kpi-emb-hoje">0</div><div class="kpi-sub">embalados hoje</div></div>
           <div class="kpi-card rosa"><div class="kpi-lbl">EMB. PENDENTE</div><div class="kpi-val" id="kpi-emb-pend">0</div><div class="kpi-sub">aguardando embalagem</div></div>
         </div>
-        <!-- KPIs — Linha 2: Status operacional -->
-        <div class="kpi-grid" style="margin-bottom:16px">
-          <div class="kpi-card vermelho"><div class="kpi-lbl">FALTAS ABERTAS</div><div class="kpi-val" id="dash-repositor">0</div><div class="kpi-sub">aguardando repositor</div></div>
-          <div class="kpi-card azul"><div class="kpi-lbl">PENDENTES</div><div class="kpi-val" id="dash-pendentes">0</div><div class="kpi-sub">na fila</div></div>
-          <div class="kpi-card laranja">
-            <div class="kpi-lbl">SEPARADORES ATIVOS</div>
-            <div class="kpi-val" id="kpi-seps-ativos">0</div>
-            <div class="kpi-sub" id="kpi-seps-sub">trabalhando agora</div>
-            <div style="display:flex;gap:3px;margin-top:6px">
-              <button onclick="filtrarSepsAtivos('')"      id="btn-turno-todos"  class="btn-turno ativo">TODOS</button>
-              <button onclick="filtrarSepsAtivos('Manhã')" id="btn-turno-manha"  class="btn-turno">MANHÃ</button>
-              <button onclick="filtrarSepsAtivos('Tarde')" id="btn-turno-tarde"  class="btn-turno">TARDE</button>
-              <button onclick="filtrarSepsAtivos('Noite')" id="btn-turno-noite"  class="btn-turno">NOITE</button>
-            </div>
-          </div>
+        <!-- KPIs — Linha 2: Reposição e itens -->
+        <div class="kpi-grid" style="margin-bottom:16px;grid-template-columns:repeat(3,1fr)">
+          <div class="kpi-card verde"><div class="kpi-lbl">REPOSIÇÃO CONCLUÍDA</div><div class="kpi-val" id="kpi-rep-conc">0</div><div class="kpi-sub">itens repostos hoje</div></div>
+          <div class="kpi-card vermelho"><div class="kpi-lbl">REPOSIÇÃO PENDENTE</div><div class="kpi-val" id="kpi-rep-pend">0</div><div class="kpi-sub">aguardando reposição</div></div>
           <div class="kpi-card rosa"><div class="kpi-lbl">AGUARDANDO ITEM</div><div class="kpi-val" id="kpi-nao-enc">0</div><div class="kpi-sub">itens não localizados</div></div>
         </div>
 

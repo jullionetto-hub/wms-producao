@@ -469,20 +469,35 @@ async function carregarDashboard() {
 
 
 
+// Turnos selecionados para filtro do dashboard (multi-select)
+const _turnosDash = new Set();
+
+function toggleTurnoDash(turno) {
+  if (_turnosDash.has(turno)) _turnosDash.delete(turno);
+  else _turnosDash.add(turno);
+  const map = { Manha:'manha', Tarde:'tarde', Noite:'madrugada' };
+  Object.entries(map).forEach(([t, id]) => {
+    const btn = document.getElementById(`dash-turno-${id}`);
+    if (btn) btn.classList.toggle('ativo', _turnosDash.has(t));
+  });
+  carregarKPIs();
+}
+
 async function carregarKPIs() {
   try {
-    const res  = await fetch(`${API}/kpis`, { credentials:'include' });
+    let url = `${API}/kpis`;
+    if (_turnosDash.size > 0) url += `?turnos=${[..._turnosDash].join(',')}`;
+    const res  = await fetch(url, { credentials:'include' });
     const data = await res.json();
     const set  = (id, val) => { const e = document.getElementById(id); if(e) e.textContent = val ?? 0; };
     set('dash-hoje',       data.concluidos_hoje);
     set('dash-separando',  data.em_separacao);
-    set('dash-repositor',  data.faltas_abertas);
-    set('dash-pendentes',  data.pendentes);
     set('kpi-ck-hoje',     data.checkout_hoje);
     set('kpi-ck-pend',     data.checkout_pendente);
     set('kpi-emb-hoje',    data.embalagem_hoje);
     set('kpi-emb-pend',    data.embalagem_pendente);
-    set('kpi-seps-ativos', data.seps_ativos);
+    set('kpi-rep-conc',    data.reposicao_concluida);
+    set('kpi-rep-pend',    data.reposicao_pendente);
     set('kpi-nao-enc',     data.nao_encontrados_hoje);
   } catch(e) { console.warn(e); }
 }
