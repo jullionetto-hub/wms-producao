@@ -636,201 +636,152 @@ async function carregarStatsCheckout() {
 
 
 /* PERFORMANCE DOS COLABORADORES */
+const AREA_INFO = {
+  separador: { icon:'📦', label:'Separação',  cor:'var(--accent)' },
+  checkout:  { icon:'✅', label:'Checkout',   cor:'var(--indigo)' },
+  embalador: { icon:'📫', label:'Embalagem',  cor:'#7C3AED'       },
+  repositor: { icon:'🔧', label:'Reposição',  cor:'#EA580C'       },
+};
+
+function _pctBar(pct) {
+  if (pct === null || pct === undefined) return '<span style="color:var(--text3);font-size:11px">sem sessão</span>';
+  const p = Math.min(100, pct);
+  const cor = pct >= 100 ? '#16a34a' : pct >= 70 ? '#2563EB' : pct >= 40 ? '#D97706' : '#DC2626';
+  return `<div style="display:flex;align-items:center;gap:6px">
+    <div style="flex:1;height:8px;background:#E2E8F0;border-radius:4px;overflow:hidden;min-width:60px">
+      <div style="height:100%;width:${p}%;background:${cor};border-radius:4px;transition:width .3s"></div>
+    </div>
+    <span style="font-size:11px;font-weight:700;color:${cor};min-width:34px">${pct}%</span>
+  </div>`;
+}
+
+function _horasStr(min) {
+  if (min === null || min === undefined) return '—';
+  const h = Math.floor(min / 60), m = min % 60;
+  return h > 0 ? `${h}h ${String(m).padStart(2,'0')}min` : `${m}min`;
+}
+
 async function carregarPerformance() {
-  // Populate colaborador select
-  try {
-    const res = await fetch(`${API}/usuarios`, { credentials:'include' });
-    const users = await res.json();
-    const sel = document.getElementById('perf-colaborador');
-    if (sel && Array.isArray(users)) {
-      const current = sel.value;
-      sel.innerHTML = '<option value="">Todos</option>' +
-        users.filter(u => u.status === 'ativo')
-             .sort((a,b) => a.nome.localeCompare(b.nome))
-             .map(u => `<option value="${u.nome}" ${u.nome===current?'selected':''}>${u.nome} (${u.perfil})</option>`)
-             .join('');
-      if (current) sel.value = current;
-    }
-  } catch(e) { console.warn(e); }
-  const ini    = document.getElementById('perf-ini')?.value || '';
-  const fim    = document.getElementById('perf-fim')?.value || '';
+  const ini    = document.getElementById('perf-ini')?.value  || hojeLocal();
+  const fim    = document.getElementById('perf-fim')?.value  || hojeLocal();
   const perfil = document.getElementById('perf-perfil')?.value || '';
-  const hoje   = hojeLocal();
-  const mes    = hoje.substring(0,7);
-  const ano    = hoje.substring(0,4);
+
+  let url = `${API}/stats/performance?ini=${ini}&fim=${fim}`;
+  if (perfil) url += `&perfil=${perfil}`;
 
   try {
-    // ── Separadores ──────────────────────────────────────────
-    const resSep = await fetch(`${API}/produtividade`, { credentials:'include' });
-    const seps   = resSep.ok ? await resSep.json() : [];
+    const res = await fetch(url, { credentials:'include' });
+    if (!res.ok) { toast('Erro ao carregar performance','erro'); return; }
+    const { resultado, resumo } = await res.json();
 
-    // Pedidos do período para calcular itens e faltas
-    let urlPed = `${API}/pedidos?status=concluido`;
-    if (ini && fim) urlPed += `&data_ini=${ini}&data_fim=${fim}`;
-    const resPed = await fetch(urlPed, { credentials:'include' });
-    const pedidos = resPed.ok ? await resPed.json() : [];
-
-    // Faltas por separador
-    const resAv = await fetch(`${API}/repositor/avisos`, { credentials:'include' });
-    const avisos = resAv.ok ? await resAv.json() : [];
-
-    // Agrupa pedidos por separador
-    const pedPorSep = {};
-    pedidos.forEach(p => {
-      const nome = p.separador_nome || '';
-      if (!pedPorSep[nome]) pedPorSep[nome] = { pedidos:0, itens:0, pontuacao:0, tempo_total_min:0, tempo_count:0 };
-      pedPorSep[nome].pedidos++;
-      pedPorSep[nome].itens += (p.itens || 0);
-      pedPorSep[nome].pontuacao += (p.pontuacao || 0);
-      if (p.iniciado_em && p.concluido_em) {
-        const tIni = new Date(p.iniciado_em), tFim = new Date(p.concluido_em);
-        const minsBruto = Math.round((tFim - tIni) / 60000);
-        const minsAguard = parseInt(p.tempo_aguardando_min) || 0;
-        const mins = Math.max(0, minsBruto - minsAguard);
-        if (mins > 0 && mins < 600) { pedPorSep[nome].tempo_total_min += mins; pedPorSep[nome].tempo_count++; }
-      }
-    });
-    Object.values(pedPorSep).forEach(function(sp) {
-      if (sp.tempo_count > 0) {
-        const med = Math.round(sp.tempo_total_min / sp.tempo_count);
-        const hh = Math.floor(med / 60), mm = med % 60;
-        sp.tempo_medio = hh > 0 ? hh + 'h ' + String(mm).padStart(2,'0') + 'min' : mm + 'min';
-      } else { sp.tempo_medio = '-'; }
-    });
-
-    // Faltas por separador
-    const faltasPorSep = {};
-    let filtroAv = avisos;
-    if (ini && fim) filtroAv = avisos.filter(a => a.data_aviso >= ini && a.data_aviso <= fim);
-    filtroAv.forEach(a => {
-      const nome = a.separador_nome || '';
-      if (!faltasPorSep[nome]) faltasPorSep[nome] = 0;
-      faltasPorSep[nome]++;
-    });
-
-    const tbSep = document.getElementById('perf-tbody-sep');
-    if (tbSep) {
-      if (!seps.length) {
-        tbSep.innerHTML = '<tr><td colspan="9" style="color:var(--text3);text-align:center;padding:16px">Nenhum separador cadastrado</td></tr>';
-      } else {
-        tbSep.innerHTML = seps.map(s => {
-          const sp = pedPorSep[s.nome] || { pedidos:0, itens:0, pontuacao:0 };
-          const faltas = faltasPorSep[s.nome] || 0;
-          return `<tr>
-            <td style="font-weight:700">${s.nome}</td>
-            <td style="color:var(--green);font-weight:700">${s.hoje||0}</td>
-            <td style="color:var(--amber)">${s.mes||0}</td>
-            <td style="color:var(--accent)">${s.total_ano||0}</td>
-            <td style="color:var(--indigo);font-weight:600">${sp.pedidos}</td>
-            <td>${sp.itens}</td>
-            <td style="color:${faltas>0?'var(--red)':'var(--green)'}">${faltas}</td>
-            <td style="color:var(--indigo);font-weight:600">${sp.tempo_medio||"-"}</td>
-            <td style="color:var(--text3)">${s.pontuacao_total||0}</td>
-            <td><span class="pill ${s.status}">${s.status}</span></td>
-          </tr>`;
-        }).join('');
-      }
-    }
-
-    // Totais resumo
-    const totPed  = Object.values(pedPorSep).reduce((s,r)=>s+(r.pedidos||0),0);
-    const totItens = Object.values(pedPorSep).reduce((s,r)=>s+r.itens,0);
-    const totFalt = Object.values(faltasPorSep).reduce((s,r)=>s+r,0);
+    // Cards de resumo
     const el = id => document.getElementById(id);
-    if(el('perf-total-pedidos')) el('perf-total-pedidos').textContent = totPed;
-    if(el('perf-total-itens'))   el('perf-total-itens').textContent   = totItens;
-    if(el('perf-total-faltas'))  el('perf-total-faltas').textContent  = totFalt;
+    if (el('perf-c-ped'))   el('perf-c-ped').textContent   = resumo.total_pedidos    || 0;
+    if (el('perf-c-itens')) el('perf-c-itens').textContent = resumo.total_itens      || 0;
+    if (el('perf-c-faltas'))el('perf-c-faltas').textContent= resumo.total_faltas     || 0;
+    if (el('perf-c-ck'))    el('perf-c-ck').textContent    = resumo.total_checkouts  || 0;
+    if (el('perf-c-emb'))   el('perf-c-emb').textContent   = resumo.total_embalagens || 0;
 
-    // ── Repositores ──────────────────────────────────────────
-    const resRepEst = await fetch(`${API}/estatisticas/repositor`, { credentials:'include' });
-    const repEst = resRepEst.ok ? await resRepEst.json() : {};
-    const prod   = repEst.produtividade || [];
-
-    // Repositores do período
-    const repPeriodo = {};
-    if (ini && fim) {
-      avisos.filter(a=>a.repositor_nome && a.data_aviso>=ini && a.data_aviso<=fim).forEach(a=>{
-        if(!repPeriodo[a.repositor_nome]) repPeriodo[a.repositor_nome]={total:0,repostos:0,nao:0};
-        repPeriodo[a.repositor_nome].total++;
-        if(a.status==='reposto') repPeriodo[a.repositor_nome].repostos++;
-        if(a.status==='nao_encontrado') repPeriodo[a.repositor_nome].nao++;
-      });
+    // Tabela
+    const tb = document.getElementById('perf-tbody-main');
+    if (!tb) return;
+    if (!resultado.length) {
+      tb.innerHTML = `<tr><td colspan="8" style="color:var(--text3);text-align:center;padding:24px">Nenhuma atividade no período</td></tr>`;
+      return;
     }
 
-    const tbRep = document.getElementById('perf-tbody-rep');
-    if (tbRep) {
-      if (!prod.length) {
-        tbRep.innerHTML = '<tr><td colspan="8" style="color:var(--text3);text-align:center;padding:16px">Nenhuma atividade de reposição</td></tr>';
-      } else {
-        tbRep.innerHTML = prod.map(r => {
-          const per = repPeriodo[r.nome] || {total:0,repostos:0,nao:0};
-          return `<tr>
-            <td style="font-weight:700">${r.nome}</td>
-            <td style="color:var(--green);font-weight:700">${r.hoje||0}</td>
-            <td style="color:var(--amber)">${repEst.repostos_mes||0}</td>
-            <td style="color:var(--accent)">${r.total||0}</td>
-            <td style="color:var(--indigo)">${per.total}</td>
-            <td style="color:var(--green)">${r.repostos||0}</td>
-            <td style="color:var(--red)">${r.nao_encontrados||0}</td>
-            <td><span class="pill ativo">ativo</span></td>
-          </tr>`;
-        }).join('');
+    tb.innerHTML = resultado.map(r => {
+      const area = AREA_INFO[r.perfil] || { icon:'👤', label:r.perfil, cor:'var(--text)' };
+      const turnoLabel = { Manha:'☀️ Manhã', Tarde:'🌤️ Tarde', Noite:'🌙 Noite' }[r.turno] || (r.turno || '—');
+      let detalheHTML = '';
+      if (r.perfil === 'separador' && r.detalhe) {
+        detalheHTML = `<span style="font-size:11px;color:var(--text3)">${r.detalhe.itens||0} itens • <span style="color:${(r.detalhe.faltas||0)>0?'var(--red)':'var(--text3)'}">${r.detalhe.faltas||0} faltas</span></span>`;
+      } else if (r.perfil === 'repositor' && r.detalhe) {
+        detalheHTML = `<span style="font-size:11px;color:var(--text3)"><span style="color:var(--green)">${r.detalhe.repostos||0} rep</span> • <span style="color:var(--red)">${r.detalhe.nao_encontrados||0} não enc</span></span>`;
       }
-    }
+      return `<tr>
+        <td style="font-weight:700;color:var(--text)">${r.usuario_nome}</td>
+        <td><span style="font-size:12px;font-weight:700;color:${area.cor}">${area.icon} ${area.label}</span></td>
+        <td style="font-size:12px;color:var(--text3)">${turnoLabel}</td>
+        <td style="font-weight:600;color:var(--accent)">${_horasStr(r.minutos)}</td>
+        <td style="font-size:15px;font-weight:800;color:var(--text)">${r.atividades}</td>
+        <td style="font-size:13px;color:var(--text3)">${r.meta_proporcional !== null ? r.meta_proporcional : '—'}</td>
+        <td>${_pctBar(r.pct_atingimento)}</td>
+        <td>${detalheHTML}</td>
+      </tr>`;
+    }).join('');
 
-    // ── Checkout ──────────────────────────────────────────────
-    const resCkEst = await fetch(`${API}/estatisticas/checkout`, { credentials:'include' });
-    const ckEst = resCkEst.ok ? await resCkEst.json() : {};
-    if(el('perf-total-ck')) el('perf-total-ck').textContent = ckEst.concluidos_hoje||0;
-
-    const resCkLst = await fetch(`${API}/checkout?status=concluido`, { credentials:'include' });
-    const ckLst = resCkLst.ok ? await resCkLst.json() : [];
-
-    // Agrupa checkout por operador (separador_nome que fez o checkout)
-    const ckPorOp = {};
-    ckLst.forEach(ck => {
-      const nome = ck.separador_nome_join || ck.separador_nome || 'Desconhecido';
-      if(!ckPorOp[nome]) ckPorOp[nome]={hoje:0,mes:0,ano:0,periodo:0};
-      if(ck.data_checkout===hoje) ckPorOp[nome].hoje++;
-      if(ck.data_checkout?.startsWith(mes)) ckPorOp[nome].mes++;
-      if(ck.data_checkout?.startsWith(ano)) ckPorOp[nome].ano++;
-      if(ini&&fim&&ck.data_checkout>=ini&&ck.data_checkout<=fim) ckPorOp[nome].periodo++;
-    });
-
-    const tbCk = document.getElementById('perf-tbody-ck');
-    if (tbCk) {
-      const ops = Object.entries(ckPorOp).sort((a,b)=>b[1].ano-a[1].ano);
-      if (!ops.length) {
-        tbCk.innerHTML = '<tr><td colspan="5" style="color:var(--text3);text-align:center;padding:16px">Nenhum checkout registrado</td></tr>';
-      } else {
-        tbCk.innerHTML = ops.map(([nome,d]) => `<tr>
-          <td style="font-weight:700">${nome}</td>
-          <td style="color:var(--green);font-weight:700">${d.hoje}</td>
-          <td style="color:var(--amber)">${d.mes}</td>
-          <td style="color:var(--accent)">${d.ano}</td>
-          <td style="color:var(--indigo)">${d.periodo}</td>
-        </tr>`).join('');
-      }
-    }
-
-  } catch(e) { console.error('Erro performance:', e); }
+  } catch(e) { console.error('Erro performance:', e); toast('Erro ao carregar performance','erro'); }
 }
 
 function exportarPerformanceExcel() {
   try {
-    const rows = [['COLABORADOR','HOJE','MÊS','ANO','PERÍODO','ITENS','FALTAS','PONTUAÇÃO','STATUS']];
-    document.querySelectorAll('#perf-tbody-sep tr').forEach(tr => {
+    const rows = [['COLABORADOR','ÁREA','TURNO','TEMPO','ATIVIDADES','META PROP.','% ATINGIMENTO']];
+    document.querySelectorAll('#perf-tbody-main tr').forEach(tr => {
       const tds = tr.querySelectorAll('td');
-      if(tds.length>1) rows.push(Array.from(tds).map(td=>td.textContent.trim()));
+      if(tds.length > 1) rows.push(Array.from(tds).map(td => td.textContent.trim()));
     });
-    if(rows.length<=1){toast('Nenhum dado!','aviso');return;}
+    if(rows.length <= 1) { toast('Nenhum dado!','aviso'); return; }
     const ws = XLSX.utils.aoa_to_sheet(rows);
-    ws['!cols'] = rows[0].map((_,ci)=>({wch:Math.max(...rows.map(r=>String(r[ci]||'').length))+2}));
+    ws['!cols'] = rows[0].map((_,ci) => ({ wch: Math.max(...rows.map(r => String(r[ci]||'').length))+2 }));
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb,ws,'Separadores');
+    XLSX.utils.book_append_sheet(wb, ws, 'Performance');
     XLSX.writeFile(wb, `performance_${hojeLocal()}.xlsx`);
     toast('Excel exportado!','sucesso');
-  } catch(e){toast('Erro ao exportar!','erro');}
+  } catch(e) { toast('Erro ao exportar!','erro'); }
+}
+
+let _configMetasData = {};
+async function abrirConfigMetas() {
+  try {
+    const res = await fetch(`${API}/configuracoes`, { credentials:'include' });
+    if (!res.ok) return;
+    const configs = await res.json();
+    _configMetasData = Object.fromEntries(configs.map(c => [c.chave, c]));
+    const LABELS = {
+      meta_separacao: '📦 Meta Separação (pedidos/turno)',
+      meta_checkout:  '✅ Meta Checkout (checkouts/turno)',
+      meta_embalagem: '📫 Meta Embalagem (pedidos/turno)',
+      meta_reposicao: '🔧 Meta Reposição (itens/turno)',
+      horas_turno_manha: '☀️ Horas turno Manhã',
+      horas_turno_tarde: '🌤️ Horas turno Tarde',
+      horas_turno_noite: '🌙 Horas turno Noite',
+    };
+    const form = document.getElementById('config-metas-form');
+    if (form) {
+      form.innerHTML = Object.entries(LABELS).map(([k, label]) => `
+        <div style="margin-bottom:10px">
+          <label style="font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase;display:block;margin-bottom:3px">${label}</label>
+          <input type="number" id="cfg-${k}" value="${_configMetasData[k]?.valor || ''}" min="0" step="1"
+            style="width:100%;padding:8px 10px;border:1px solid #E2E8F0;border-radius:7px;font-size:14px;font-weight:600;box-sizing:border-box">
+        </div>`).join('');
+    }
+    const modal = document.getElementById('modal-config-metas');
+    if (modal) modal.style.display = 'flex';
+  } catch(e) { console.warn(e); }
+}
+
+function fecharConfigMetas() {
+  const modal = document.getElementById('modal-config-metas');
+  if (modal) modal.style.display = 'none';
+}
+
+async function salvarConfigMetas() {
+  const CHAVES = ['meta_separacao','meta_checkout','meta_embalagem','meta_reposicao','horas_turno_manha','horas_turno_tarde','horas_turno_noite'];
+  try {
+    for (const k of CHAVES) {
+      const v = document.getElementById(`cfg-${k}`)?.value;
+      if (v !== undefined && v !== '') {
+        await fetch(`${API}/configuracoes/${k}`, {
+          method:'PUT', credentials:'include', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ valor: v })
+        });
+      }
+    }
+    toast('Configurações salvas!','info');
+    fecharConfigMetas();
+    carregarPerformance();
+  } catch(e) { toast('Erro ao salvar','erro'); }
 }
 
 async function carregarAvisos() {
@@ -1098,85 +1049,6 @@ async function carregarColaboradores() {
   } catch(e) { console.error('carregarColaboradores:', e); }
 }
 
-async function filtrarColaborador() {
-  const nome = document.getElementById('perf-colaborador')?.value || '';
-  const ind = document.getElementById('perf-individual');
-  if (!nome) {
-    if (ind) ind.style.display = 'none';
-    return;
-  }
-
-  const ini = document.getElementById('perf-ini')?.value || hojeLocal();
-  const fim = document.getElementById('perf-fim')?.value || hojeLocal();
-
-  if (ind) ind.style.display = 'block';
-  const nomeEl = document.getElementById('perf-ind-nome');
-  if (nomeEl) nomeEl.textContent = nome;
-
-  try {
-    // Get user profile
-    const resU = await fetch(`${API}/usuarios`, { credentials:'include' });
-    const users = await resU.json();
-    const user = users.find(u => u.nome === nome);
-    if (!user) return;
-
-    const perfil = user.perfil;
-
-    // Separacao
-    const sepCard = document.getElementById('perf-ind-sep');
-    if (perfil === 'separador' || user.perfis_acesso?.includes('separador')) {
-      if (sepCard) sepCard.style.display = 'block';
-      const res = await fetch(`${API}/produtividade?nome=${encodeURIComponent(nome)}&data_ini=${ini}&data_fim=${fim}`, { credentials:'include' });
-      const data = await res.json();
-      const d = Array.isArray(data) ? data[0] : data;
-      if (d) {
-        document.getElementById('pi-sep-periodo').textContent = d.periodo || d.mes || 0;
-        document.getElementById('pi-sep-hoje').textContent = d.hoje || 0;
-        document.getElementById('pi-sep-itens').textContent = d.itens_coletados || 0;
-        document.getElementById('pi-sep-faltas').textContent = d.faltas || 0;
-      }
-    } else if (sepCard) sepCard.style.display = 'none';
-
-    // Reposicao
-    const repCard = document.getElementById('perf-ind-rep');
-    if (perfil === 'repositor' || user.perfis_acesso?.includes('repositor')) {
-      if (repCard) repCard.style.display = 'block';
-      const res = await fetch(`${API}/estatisticas/repositor?repositor_nome=${encodeURIComponent(nome)}`, { credentials:'include' });
-      const data = await res.json();
-      document.getElementById('pi-rep-repostos').textContent = data.repostos_hoje || 0;
-      document.getElementById('pi-rep-nao').textContent = data.nao_encontrados || 0;
-      document.getElementById('pi-rep-pendentes').textContent = data.pendentes_total || 0;
-      document.getElementById('pi-rep-total').textContent = data.avisos_hoje || 0;
-    } else if (repCard) repCard.style.display = 'none';
-
-    // Checkout
-    const ckCard = document.getElementById('perf-ind-ck');
-    if (perfil === 'checkout' || user.perfis_acesso?.includes('checkout')) {
-      if (ckCard) ckCard.style.display = 'block';
-      const res = await fetch(`${API}/estatisticas/checkout`, { credentials:'include' });
-      const data = await res.json();
-      document.getElementById('pi-ck-periodo').textContent = data.concluidos_mes || 0;
-      document.getElementById('pi-ck-hoje').textContent = data.concluidos_hoje || 0;
-    } else if (ckCard) ckCard.style.display = 'none';
-
-    // Embalagem
-    const embCard = document.getElementById('perf-ind-emb');
-    if (perfil === 'embalador' || user.perfis_acesso?.includes('embalador')) {
-      if (embCard) embCard.style.display = 'block';
-      const hoje = hojeLocal();
-      const res = await fetch(`${API}/embalagem/stats?data=${hoje}`, { credentials:'include' });
-      const data = await res.json();
-      const meus = data.stats?.find(s => s.embalado_por === nome);
-      document.getElementById('pi-emb-hoje').textContent = meus?.total || 0;
-      document.getElementById('pi-emb-periodo').textContent = meus?.total || 0;
-    } else if (embCard) embCard.style.display = 'none';
-
-  } catch(e) { console.error('filtrarColaborador:', e); }
-}
-
 function limparFiltroColaborador() {
-  const sel = document.getElementById('perf-colaborador');
-  if (sel) sel.value = '';
-  const ind = document.getElementById('perf-individual');
-  if (ind) ind.style.display = 'none';
+  // Mantido para compatibilidade — não usado no novo layout
 }

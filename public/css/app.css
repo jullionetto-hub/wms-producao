@@ -134,7 +134,8 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
 .cnt-card.amarelo::after{background:linear-gradient(90deg,#D97706,#FCD34D)}
 .cnt-card.vermelho::after{background:linear-gradient(90deg,#DC2626,#F87171)}
 .cnt-card.azul::after  {background:linear-gradient(90deg,#2563EB,#60A5FA)}
-.cnt-card.roxo::after  {background:linear-gradient(90deg,#6366F1,#A78BFA)}
+.cnt-card.roxo::after   {background:linear-gradient(90deg,#6366F1,#A78BFA)}
+.cnt-card.laranja::after{background:linear-gradient(90deg,#EA580C,#FB923C)}
 .cnt-lbl{font-size:9px;font-weight:700;letter-spacing:2px;color:var(--text3);margin-bottom:5px;text-transform:uppercase}
 .cnt-val{font-family:'Space Mono',monospace;font-size:30px;font-weight:700;line-height:1}
 .cnt-card.verde  .cnt-val{color:var(--green)}
@@ -142,6 +143,7 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
 .cnt-card.vermelho .cnt-val{color:var(--red)}
 .cnt-card.azul   .cnt-val{color:var(--accent)}
 .cnt-card.roxo   .cnt-val{color:var(--indigo)}
+.cnt-card.laranja .cnt-val{color:#EA580C}
 .cnt-sub{font-size:11px;color:var(--text3);margin-top:3px}
 
 

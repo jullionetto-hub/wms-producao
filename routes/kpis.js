@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { db } = require('../lib/db');
+const { db, pool } = require('../lib/db');
 const { requerAuth, requerPerfil } = require('../lib/auth');
 const { dataHoraLocal, formatarAguardandoDesde } = require('../lib/helpers');
 
@@ -232,6 +232,186 @@ router.get('/dashboard/por-hora', requerAuth, requerPerfil('supervisor'), async 
       GROUP BY SUBSTRING(hora_pedido,1,2) ORDER BY hora`, [hoje]);
     res.json(rows||[]);
   } catch(e) { res.status(500).json({erro: e.message}); }
+});
+
+// ── Configurações (metas e horas de turno) ─────────────────────────────────────
+router.get('/configuracoes', requerAuth, requerPerfil('supervisor'), async (req, res) => {
+  try { res.json(await db.all('SELECT * FROM configuracoes ORDER BY chave')); }
+  catch(e) { res.status(500).json({ erro: e.message }); }
+});
+
+router.put('/configuracoes/:chave', requerAuth, requerPerfil('supervisor'), async (req, res) => {
+  const { valor } = req.body;
+  if (valor === undefined) return res.status(400).json({ erro: 'Valor obrigatório' });
+  try {
+    await pool.query(
+      `INSERT INTO configuracoes (chave,valor) VALUES ($1,$2) ON CONFLICT (chave) DO UPDATE SET valor=$2`,
+      [req.params.chave, String(valor)]
+    );
+    res.json({ mensagem: 'Salvo!' });
+  } catch(e) { res.status(500).json({ erro: e.message }); }
+});
+
+// ── Performance com sessões de trabalho ────────────────────────────────────────
+router.get('/stats/performance', requerAuth, requerPerfil('supervisor'), async (req, res) => {
+  const { ini, fim, perfil: filtPerfil } = req.query;
+  const { data: hoje } = dataHoraLocal();
+  const dataIni = ini || hoje;
+  const dataFim = fim || hoje;
+
+  try {
+    // Configurações de metas e carga horária
+    const configs = await db.all('SELECT chave, valor FROM configuracoes');
+    const cfg = Object.fromEntries(configs.map(c => [c.chave, parseFloat(c.valor) || 0]));
+    const METAS = {
+      separador: cfg.meta_separacao || 75,
+      embalador: cfg.meta_embalagem || 120,
+      checkout:  cfg.meta_checkout  || 90,
+      repositor: cfg.meta_reposicao || 90,
+    };
+    const HORAS = { Manha: cfg.horas_turno_manha || 8, Tarde: cfg.horas_turno_tarde || 8, Noite: cfg.horas_turno_noite || 6 };
+
+    // Sessões agrupadas por (usuario, perfil)
+    let sParams = [dataIni, dataFim, hoje];
+    let sFilter = '';
+    if (filtPerfil) { sParams.push(filtPerfil); sFilter = ` AND s.perfil=$${sParams.length}`; }
+
+    const sessoes = await db.all(`
+      SELECT s.usuario_id, s.usuario_nome, s.perfil,
+        COALESCE(u.turno, MAX(s.turno), 'Manha') as turno,
+        SUM(COALESCE(s.duracao_min, 0)) +
+        SUM(CASE WHEN s.logout_em IS NULL AND s.data=$3
+          THEN GREATEST(0, ROUND(EXTRACT(EPOCH FROM (NOW()-s.login_em))/60)::int)
+          ELSE 0 END) as minutos_total,
+        COUNT(*) as num_sessoes
+      FROM sessoes_trabalho s
+      LEFT JOIN usuarios u ON u.id = s.usuario_id
+      WHERE s.data >= $1 AND s.data <= $2 ${sFilter}
+      GROUP BY s.usuario_id, s.usuario_nome, s.perfil, u.turno
+      ORDER BY s.usuario_nome, s.perfil
+    `, sParams);
+
+    // Atividades do período
+    const pedidos = await db.all(`
+      SELECT u.id as uid, u.nome as nome, COUNT(*) as total, SUM(p.itens) as itens
+      FROM pedidos p
+      JOIN separadores sep ON p.separador_id = sep.id
+      JOIN usuarios u ON sep.usuario_id = u.id
+      WHERE p.status='concluido' AND p.data_pedido>=$1 AND p.data_pedido<=$2
+      GROUP BY u.id, u.nome`, [dataIni, dataFim]);
+
+    const faltas = await db.all(`
+      SELECT separador_nome as nome, COUNT(*) as total
+      FROM avisos_repositor WHERE data_aviso>=$1 AND data_aviso<=$2
+      GROUP BY separador_nome`, [dataIni, dataFim]);
+
+    const checkouts = await db.all(`
+      SELECT operador_nome as nome, COUNT(*) as total
+      FROM checkout
+      WHERE status='concluido' AND data_checkout>=$1 AND data_checkout<=$2 AND operador_nome!=''
+      GROUP BY operador_nome`, [dataIni, dataFim]);
+
+    const embalagens = await db.all(`
+      SELECT embalado_por as nome, COUNT(*) as total
+      FROM embalagem WHERE data_embalagem>=$1 AND data_embalagem<=$2
+      GROUP BY embalado_por`, [dataIni, dataFim]);
+
+    const reposicoes = await db.all(`
+      SELECT repositor_nome as nome, COUNT(*) as total,
+        SUM(CASE WHEN status IN ('reposto','abastecido','subiu') THEN 1 ELSE 0 END) as repostos,
+        SUM(CASE WHEN status='nao_encontrado' THEN 1 ELSE 0 END) as nao_encontrados
+      FROM avisos_repositor
+      WHERE data_aviso>=$1 AND data_aviso<=$2 AND repositor_nome!=''
+      GROUP BY repositor_nome`, [dataIni, dataFim]);
+
+    // Índices por nome
+    const pedIdx  = Object.fromEntries(pedidos.map(p => [p.uid, p]));
+    const pedNome = Object.fromEntries(pedidos.map(p => [p.nome, p]));
+    const faltIdx = Object.fromEntries(faltas.map(f => [f.nome, f]));
+    const ckIdx   = Object.fromEntries(checkouts.map(c => [c.nome, c]));
+    const embIdx  = Object.fromEntries(embalagens.map(e => [e.nome, e]));
+    const repIdx  = Object.fromEntries(reposicoes.map(r => [r.nome, r]));
+
+    // Monta resultado por sessão
+    const resultado = sessoes.map(s => {
+      const min   = parseInt(s.minutos_total) || 0;
+      const horas = Math.round(min / 6) / 10;
+      const horasTurno = HORAS[s.turno] || 8;
+      const metaBase   = METAS[s.perfil] || 0;
+      const metaProp   = horasTurno > 0 ? Math.round((horas / horasTurno) * metaBase) : 0;
+
+      let atividades = 0, detalhe = {};
+      if (s.perfil === 'separador') {
+        const ped = pedIdx[s.usuario_id] || pedNome[s.usuario_nome] || {};
+        atividades = parseInt(ped.total) || 0;
+        detalhe = { itens: parseInt(ped.itens) || 0, faltas: parseInt((faltIdx[s.usuario_nome] || {}).total) || 0 };
+      } else if (s.perfil === 'checkout') {
+        atividades = parseInt((ckIdx[s.usuario_nome] || {}).total) || 0;
+      } else if (s.perfil === 'embalador') {
+        atividades = parseInt((embIdx[s.usuario_nome] || {}).total) || 0;
+      } else if (s.perfil === 'repositor') {
+        const rep = repIdx[s.usuario_nome] || {};
+        atividades = parseInt(rep.total) || 0;
+        detalhe = { repostos: parseInt(rep.repostos) || 0, nao_encontrados: parseInt(rep.nao_encontrados) || 0 };
+      }
+
+      const pct = metaProp > 0 ? Math.min(999, Math.round((atividades / metaProp) * 100)) : null;
+
+      return {
+        usuario_id: s.usuario_id, usuario_nome: s.usuario_nome,
+        perfil: s.perfil, turno: s.turno,
+        horas, minutos: min, atividades, detalhe,
+        meta_base: metaBase, meta_proporcional: metaProp, pct_atingimento: pct,
+      };
+    });
+
+    // Usuários legados (com atividades mas sem sessão no período)
+    if (!filtPerfil) {
+      const naSessao = new Set(resultado.map(r => `${r.usuario_nome}:${r.perfil}`));
+      pedidos.forEach(p => {
+        if (!naSessao.has(`${p.nome}:separador`)) {
+          resultado.push({ usuario_nome: p.nome, perfil: 'separador', turno: null,
+            horas: null, minutos: null, atividades: parseInt(p.total) || 0,
+            detalhe: { itens: parseInt(p.itens) || 0, faltas: parseInt((faltIdx[p.nome]||{}).total) || 0 },
+            meta_base: METAS.separador, meta_proporcional: null, pct_atingimento: null });
+        }
+      });
+      checkouts.forEach(c => {
+        if (!naSessao.has(`${c.nome}:checkout`)) {
+          resultado.push({ usuario_nome: c.nome, perfil: 'checkout', turno: null,
+            horas: null, minutos: null, atividades: parseInt(c.total) || 0, detalhe: {},
+            meta_base: METAS.checkout, meta_proporcional: null, pct_atingimento: null });
+        }
+      });
+      embalagens.forEach(e => {
+        if (!naSessao.has(`${e.nome}:embalador`)) {
+          resultado.push({ usuario_nome: e.nome, perfil: 'embalador', turno: null,
+            horas: null, minutos: null, atividades: parseInt(e.total) || 0, detalhe: {},
+            meta_base: METAS.embalador, meta_proporcional: null, pct_atingimento: null });
+        }
+      });
+      reposicoes.forEach(r => {
+        if (!naSessao.has(`${r.nome}:repositor`)) {
+          resultado.push({ usuario_nome: r.nome, perfil: 'repositor', turno: null,
+            horas: null, minutos: null, atividades: parseInt(r.total) || 0,
+            detalhe: { repostos: parseInt(r.repostos) || 0, nao_encontrados: parseInt(r.nao_encontrados) || 0 },
+            meta_base: METAS.repositor, meta_proporcional: null, pct_atingimento: null });
+        }
+      });
+    }
+
+    resultado.sort((a,b) => a.usuario_nome.localeCompare(b.usuario_nome) || a.perfil.localeCompare(b.perfil));
+
+    const resumo = {
+      total_pedidos:    pedidos.reduce((s,p) => s + (parseInt(p.total)||0), 0),
+      total_itens:      pedidos.reduce((s,p) => s + (parseInt(p.itens)||0), 0),
+      total_faltas:     faltas.reduce((s,f) => s + (parseInt(f.total)||0), 0),
+      total_checkouts:  checkouts.reduce((s,c) => s + (parseInt(c.total)||0), 0),
+      total_embalagens: embalagens.reduce((s,e) => s + (parseInt(e.total)||0), 0),
+    };
+
+    res.json({ resultado, resumo, metas: METAS, horas_turno: HORAS });
+  } catch(e) { res.status(500).json({ erro: e.message }); }
 });
 
 module.exports = router;

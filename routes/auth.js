@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { db, pool } = require('../lib/db');
 const { requerAuth, checkRateLimit } = require('../lib/auth');
-const { hashSenha, verificarSenha, hashNeedsMigration, perfisPermitidos, sanitizeStr } = require('../lib/helpers');
+const { hashSenha, verificarSenha, hashNeedsMigration, perfisPermitidos, sanitizeStr, dataHoraLocal } = require('../lib/helpers');
 const { registrarAuditoria } = require('../lib/auditoria');
 
 router.post('/auth/login', async (req,res) => {
@@ -48,6 +48,13 @@ router.post('/auth/login', async (req,res) => {
       perfis_acesso: user.perfis_acesso || ''
     };
 
+    // Registra início de sessão de trabalho
+    const { data: dataHoje } = dataHoraLocal();
+    pool.query(
+      `INSERT INTO sessoes_trabalho (usuario_id,usuario_nome,usuario_login,perfil,turno,data,ip) VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+      [user.id, user.nome, user.login, perfil, user.turno || 'Manha', dataHoje, ip]
+    ).catch(() => {});
+
     if (perfil === 'separador') {
       req.session.separador = await db.get(
         `SELECT id,nome,matricula,turno,status FROM separadores WHERE usuario_id=$1 AND status='ativo'`,
@@ -61,7 +68,17 @@ router.post('/auth/login', async (req,res) => {
   } catch(e) { res.status(500).json({erro:'Erro interno ao autenticar.'}); }
 });
 
-router.post('/auth/logout', (req,res) => {
+router.post('/auth/logout', (req, res) => {
+  const usuario = req.session?.usuario;
+  if (usuario?.id) {
+    const { data: hoje } = dataHoraLocal();
+    pool.query(
+      `UPDATE sessoes_trabalho SET logout_em=NOW(),
+        duracao_min=GREATEST(0,ROUND(EXTRACT(EPOCH FROM (NOW()-login_em))/60)::int)
+       WHERE id=(SELECT id FROM sessoes_trabalho WHERE usuario_id=$1 AND data=$2 AND logout_em IS NULL ORDER BY login_em DESC LIMIT 1)`,
+      [usuario.id, hoje]
+    ).catch(() => {});
+  }
   req.session.destroy(() => {
     res.clearCookie('wms.sid');
     res.json({ mensagem: 'Logout realizado!' });

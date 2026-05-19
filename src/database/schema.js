@@ -195,6 +195,26 @@ const TABLES = [
     turno  TEXT NOT NULL UNIQUE,
     pontos INTEGER DEFAULT 1000
   )`,
+
+  `CREATE TABLE IF NOT EXISTS sessoes_trabalho (
+    id            SERIAL PRIMARY KEY,
+    usuario_id    INTEGER REFERENCES usuarios(id),
+    usuario_nome  TEXT,
+    usuario_login TEXT,
+    perfil        TEXT NOT NULL,
+    turno         TEXT DEFAULT 'Manha',
+    login_em      TIMESTAMPTZ DEFAULT NOW(),
+    logout_em     TIMESTAMPTZ,
+    duracao_min   INTEGER,
+    data          TEXT,
+    ip            TEXT
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS configuracoes (
+    chave     TEXT PRIMARY KEY,
+    valor     TEXT NOT NULL,
+    descricao TEXT DEFAULT ''
+  )`,
 ];
 
 const INDEXES = [
@@ -212,6 +232,9 @@ const INDEXES = [
   'CREATE INDEX IF NOT EXISTS idx_usuarios_login      ON usuarios(login)',
   'CREATE INDEX IF NOT EXISTS idx_auditoria_data      ON auditoria(data)',
   'CREATE INDEX IF NOT EXISTS idx_auditoria_usuario   ON auditoria(usuario_login)',
+  'CREATE INDEX IF NOT EXISTS idx_sessoes_data        ON sessoes_trabalho(data)',
+  'CREATE INDEX IF NOT EXISTS idx_sessoes_usuario     ON sessoes_trabalho(usuario_id)',
+  'CREATE INDEX IF NOT EXISTS idx_sessoes_perfil      ON sessoes_trabalho(perfil, data)',
 ];
 
 module.exports = { TABLES, INDEXES };

@@ -652,146 +652,84 @@
       <!-- PERFORMANCE -->
       <div class="pagina" id="pag-performance">
         <div class="pg-title">Performance dos Colaboradores</div>
+
+        <!-- Filtros — sempre visíveis -->
         <div class="card" style="margin-bottom:14px">
-          <div class="card-hd">🔍 FILTROS
-            <button class="btn btn-outline btn-sm" onclick="carregarPerformance()">🔄</button>
-          </div>
-          <div class="filtros">
+          <div class="filtros" style="align-items:flex-end">
             <div class="fg"><label>DE</label><input type="date" id="perf-ini"/></div>
             <div class="fg"><label>ATÉ</label><input type="date" id="perf-fim"/></div>
-            <div class="fg"><label>PERFIL</label>
-              <select id="perf-perfil" class="sel-sm">
-                <option value="">Todos</option>
-                <option value="separador">Separadores</option>
-                <option value="repositor">Repositores</option>
-                <option value="checkout">Checkout</option>
-              </select>
-            </div>
-            <div class="fg"><label>COLABORADOR</label>
-              <select id="perf-colaborador" class="sel-sm" onchange="filtrarColaborador()">
-                <option value="">Todos</option>
+            <div class="fg"><label>ÁREA</label>
+              <select id="perf-perfil" class="sel-sm" onchange="carregarPerformance()">
+                <option value="">Todas</option>
+                <option value="separador">📦 Separação</option>
+                <option value="checkout">✅ Checkout</option>
+                <option value="embalador">📫 Embalagem</option>
+                <option value="repositor">🔧 Reposição</option>
               </select>
             </div>
             <button class="btn btn-primary btn-sm" onclick="carregarPerformance()">🔍 Filtrar</button>
             <button class="excel-btn" onclick="exportarPerformanceExcel()">📊 Excel</button>
+            <button class="btn btn-outline btn-sm" onclick="abrirConfigMetas()" title="Configurar metas">⚙️ Metas</button>
           </div>
         </div>
-        <!-- Cards resumo -->
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
-          <div class="cnt-card verde"><div class="cnt-lbl">PEDIDOS PERÍODO</div><div class="cnt-val" id="perf-total-pedidos" style="font-size:28px">0</div></div>
-          <div class="cnt-card azul"><div class="cnt-lbl">ITENS COLETADOS</div><div class="cnt-val" id="perf-total-itens" style="font-size:28px">0</div></div>
-          <div class="cnt-card vermelho"><div class="cnt-lbl">FALTAS GERADAS</div><div class="cnt-val" id="perf-total-faltas" style="font-size:28px">0</div></div>
-          <div class="cnt-card roxo"><div class="cnt-lbl">CHECKOUTS</div><div class="cnt-val" id="perf-total-ck" style="font-size:28px">0</div></div>
-        </div>
-        <!-- Tabela separadores -->
-        <div class="card" style="margin-bottom:14px">
-          <div class="card-hd">📦 SEPARADORES</div>
-          <div class="tabela-wrap">
-            <table>
-              <thead><tr><th>COLABORADOR</th><th>HOJE</th><th>MÊS</th><th>ANO</th><th>PERÍODO</th><th>ITENS COLETADOS</th><th>FALTAS</th><th>TEMPO MÉDIO</th><th>PONTUAÇÃO</th><th>STATUS</th></tr></thead>
-              <tbody id="perf-tbody-sep"></tbody>
-            </table>
+
+        <!-- Cards resumo — SEMPRE NO TOPO, nunca se movem -->
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px">
+          <div class="cnt-card verde" style="padding:12px">
+            <div class="cnt-lbl">PEDIDOS</div>
+            <div class="cnt-val" id="perf-c-ped" style="font-size:26px">0</div>
+          </div>
+          <div class="cnt-card azul" style="padding:12px">
+            <div class="cnt-lbl">ITENS</div>
+            <div class="cnt-val" id="perf-c-itens" style="font-size:26px">0</div>
+          </div>
+          <div class="cnt-card vermelho" style="padding:12px">
+            <div class="cnt-lbl">FALTAS</div>
+            <div class="cnt-val" id="perf-c-faltas" style="font-size:26px">0</div>
+          </div>
+          <div class="cnt-card roxo" style="padding:12px">
+            <div class="cnt-lbl">CHECKOUTS</div>
+            <div class="cnt-val" id="perf-c-ck" style="font-size:26px">0</div>
+          </div>
+          <div class="cnt-card laranja" style="padding:12px">
+            <div class="cnt-lbl">EMBALAGENS</div>
+            <div class="cnt-val" id="perf-c-emb" style="font-size:26px">0</div>
           </div>
         </div>
-        <!-- Tabela repositores -->
-        <div class="card" style="margin-bottom:14px">
-          <div class="card-hd">🔧 REPOSITORES</div>
-          <div class="tabela-wrap">
-            <table>
-              <thead><tr><th>COLABORADOR</th><th>HOJE</th><th>MÊS</th><th>ANO</th><th>PERÍODO</th><th>REPOSTOS</th><th>NÃO ENCONTRADOS</th><th>STATUS</th></tr></thead>
-              <tbody id="perf-tbody-rep"></tbody>
-            </table>
-          </div>
-        </div>
-        <!-- Tabela checkout -->
+
+        <!-- Tabela principal — renderizada pelo JS -->
         <div class="card">
-          <div class="card-hd">🏷️ CHECKOUT</div>
+          <div class="card-hd" style="display:flex;align-items:center;gap:8px">
+            👥 COLABORADORES
+            <span style="font-size:10px;color:var(--text3);font-weight:400">* meta proporcional ao tempo trabalhado no período</span>
+          </div>
           <div class="tabela-wrap">
             <table>
-              <thead><tr><th>COLABORADOR</th><th>HOJE</th><th>MÊS</th><th>ANO</th><th>PERÍODO</th></tr></thead>
-              <tbody id="perf-tbody-ck"></tbody>
+              <thead>
+                <tr>
+                  <th>COLABORADOR</th>
+                  <th>ÁREA</th>
+                  <th>TURNO</th>
+                  <th>⏱ TEMPO</th>
+                  <th>ATIVIDADES</th>
+                  <th>META PROP.</th>
+                  <th style="min-width:130px">% ATINGIMENTO</th>
+                  <th>DETALHE</th>
+                </tr>
+              </thead>
+              <tbody id="perf-tbody-main"></tbody>
             </table>
           </div>
         </div>
 
-        <!-- Cards individuais do colaborador -->
-        <div id="perf-individual" style="display:none;margin-top:16px">
-          <div class="card-hd" style="margin-bottom:12px">
-            👤 <span id="perf-ind-nome">—</span>
-            <button onclick="limparFiltroColaborador()" style="margin-left:auto;padding:4px 12px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--text);font-size:11px;cursor:pointer">✕ Limpar filtro</button>
-          </div>
-          <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px">
-            <!-- Separação -->
-            <div class="card" id="perf-ind-sep" style="display:none">
-              <div class="card-hd">📦 SEPARAÇÃO</div>
-              <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:10px">
-                <div style="text-align:center;background:#eff6ff;border-radius:10px;padding:14px">
-                  <div style="font-size:32px;font-weight:800;color:#2563eb" id="pi-sep-periodo">0</div>
-                  <div style="font-size:10px;color:#2563eb;text-transform:uppercase;letter-spacing:.5px">No período</div>
-                </div>
-                <div style="text-align:center;background:#f0fdf4;border-radius:10px;padding:14px">
-                  <div style="font-size:32px;font-weight:800;color:#16a34a" id="pi-sep-hoje">0</div>
-                  <div style="font-size:10px;color:#16a34a;text-transform:uppercase;letter-spacing:.5px">Hoje</div>
-                </div>
-                <div style="text-align:center;background:var(--surface2);border-radius:10px;padding:14px">
-                  <div style="font-size:32px;font-weight:800;color:var(--text)" id="pi-sep-itens">0</div>
-                  <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px">Itens coletados</div>
-                </div>
-                <div style="text-align:center;background:#fef2f2;border-radius:10px;padding:14px">
-                  <div style="font-size:32px;font-weight:800;color:#dc2626" id="pi-sep-faltas">0</div>
-                  <div style="font-size:10px;color:#dc2626;text-transform:uppercase;letter-spacing:.5px">Faltas geradas</div>
-                </div>
-              </div>
-            </div>
-            <!-- Reposição -->
-            <div class="card" id="perf-ind-rep" style="display:none">
-              <div class="card-hd">🔧 REPOSIÇÃO</div>
-              <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:10px">
-                <div style="text-align:center;background:#f0fdf4;border-radius:10px;padding:14px">
-                  <div style="font-size:32px;font-weight:800;color:#16a34a" id="pi-rep-repostos">0</div>
-                  <div style="font-size:10px;color:#16a34a;text-transform:uppercase;letter-spacing:.5px">Repostos</div>
-                </div>
-                <div style="text-align:center;background:#fef2f2;border-radius:10px;padding:14px">
-                  <div style="font-size:32px;font-weight:800;color:#dc2626" id="pi-rep-nao">0</div>
-                  <div style="font-size:10px;color:#dc2626;text-transform:uppercase;letter-spacing:.5px">Não encontrados</div>
-                </div>
-                <div style="text-align:center;background:#fefce8;border-radius:10px;padding:14px">
-                  <div style="font-size:32px;font-weight:800;color:#ca8a04" id="pi-rep-pendentes">0</div>
-                  <div style="font-size:10px;color:#ca8a04;text-transform:uppercase;letter-spacing:.5px">Pendentes</div>
-                </div>
-                <div style="text-align:center;background:var(--surface2);border-radius:10px;padding:14px">
-                  <div style="font-size:32px;font-weight:800;color:var(--text)" id="pi-rep-total">0</div>
-                  <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px">Total avisos</div>
-                </div>
-              </div>
-            </div>
-            <!-- Checkout -->
-            <div class="card" id="perf-ind-ck" style="display:none">
-              <div class="card-hd">🏷️ CHECKOUT</div>
-              <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:10px">
-                <div style="text-align:center;background:#f5f3ff;border-radius:10px;padding:14px">
-                  <div style="font-size:32px;font-weight:800;color:#7c3aed" id="pi-ck-periodo">0</div>
-                  <div style="font-size:10px;color:#7c3aed;text-transform:uppercase;letter-spacing:.5px">No período</div>
-                </div>
-                <div style="text-align:center;background:var(--surface2);border-radius:10px;padding:14px">
-                  <div style="font-size:32px;font-weight:800;color:var(--text)" id="pi-ck-hoje">0</div>
-                  <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px">Hoje</div>
-                </div>
-              </div>
-            </div>
-            <!-- Embalagem -->
-            <div class="card" id="perf-ind-emb" style="display:none">
-              <div class="card-hd">📫 EMBALAGEM</div>
-              <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:10px">
-                <div style="text-align:center;background:#ecfdf5;border-radius:10px;padding:14px">
-                  <div style="font-size:32px;font-weight:800;color:#059669" id="pi-emb-periodo">0</div>
-                  <div style="font-size:10px;color:#059669;text-transform:uppercase;letter-spacing:.5px">No período</div>
-                </div>
-                <div style="text-align:center;background:var(--surface2);border-radius:10px;padding:14px">
-                  <div style="font-size:32px;font-weight:800;color:var(--text)" id="pi-emb-hoje">0</div>
-                  <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px">Hoje</div>
-                </div>
-              </div>
+        <!-- Modal de configuração de metas -->
+        <div id="modal-config-metas" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;align-items:center;justify-content:center">
+          <div style="background:var(--surface);border-radius:16px;padding:24px;width:360px;max-width:95vw;box-shadow:0 8px 32px rgba(0,0,0,.3)">
+            <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:16px">⚙️ Configurar Metas e Horas de Turno</div>
+            <div id="config-metas-form"></div>
+            <div style="display:flex;gap:10px;margin-top:16px">
+              <button onclick="fecharConfigMetas()" class="btn btn-outline" style="flex:1;padding:10px">Cancelar</button>
+              <button onclick="salvarConfigMetas()" class="btn btn-primary" style="flex:1;padding:10px">💾 Salvar</button>
             </div>
           </div>
         </div>
