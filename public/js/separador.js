@@ -597,7 +597,7 @@ async function verificarItem(itemId, status, obs='', qtdFalta=0, prefix, renderP
 /* ══════════════════════════════════════════
    VINCULAR CAIXA — SEPARADOR
 ══════════════════════════════════════════ */
-async function vincularCaixaCore(caixa, inputStatusId) {
+async function vincularCaixaCore(caixa, inputStatusId, isMobile) {
   if (!pedidoAtualId) { toast('Nenhum pedido ativo!','aviso'); return; }
   if (!caixa) { toast('Digite o número da caixa!','aviso'); return; }
   try {
@@ -614,15 +614,12 @@ async function vincularCaixaCore(caixa, inputStatusId) {
       statusEl.style.display = 'block';
       statusEl.innerHTML = `<span style="color:var(--green);font-weight:600">✅ Caixa <b>${caixa}</b> vinculada — Pedido #${pedidoAtualNum}</span>`;
     }
-    // Esconde placeholder e mostra checklist real
     caixaJaVinculada = true;
-    // Esconde placeholder se existir
     ['m-cl-wrap-placeholder','cl-wrap-placeholder'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.style.display = 'none';
     });
-    const isMobileNow = window.innerWidth <= 768;
-    if (isMobileNow) {
+    if (isMobile) {
       const wrap = document.getElementById('m-cl-wrap');
       if (wrap) wrap.style.display = 'block';
       await carregarChecklistMobile();
@@ -635,11 +632,11 @@ async function vincularCaixaCore(caixa, inputStatusId) {
 }
 function vincularCaixaDesktop() {
   const caixa = document.getElementById('cl-input-caixa')?.value?.trim();
-  vincularCaixaCore(caixa, 'cl-caixa-status');
+  vincularCaixaCore(caixa, 'cl-caixa-status', false);
 }
 function vincularCaixaMobile() {
   const caixa = document.getElementById('m-input-caixa')?.value?.trim();
-  vincularCaixaCore(caixa, 'm-caixa-status');
+  vincularCaixaCore(caixa, 'm-caixa-status', true);
 }
 
 

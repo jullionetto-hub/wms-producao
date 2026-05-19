@@ -267,6 +267,7 @@ function montarSidebar() {
       <a class="mi" onclick="irPara('passagem',this)"><span class="mi-ic">🔄</span>Passagem de Turno <span class="mbadge" id="menu-badge-passagem" style="display:none;background:#F59E0B">!</span></a>
       <a class="mi" onclick="irPara('cadastros',this)"><span class="mi-ic">⚙️</span>Cadastros</a>
       <a class="mi" onclick="irPara('protocolo',this);carregarProtocolo()"><span class="mi-ic">📋</span>Protocolo<span class="mbadge" id="menu-badge-proto" style="display:none">0</span></a>
+      <a class="mi" onclick="irPara('passagem',this)"><span class="mi-ic">🔄</span>Passagem de Turno<span class="mbadge" id="menu-badge-passagem" style="display:none;background:var(--red)">!</span></a>
       <div class="mg">OPERAÇÃO</div>
       <a class="mi" onclick="irPara('separacao',this)"><span class="mi-ic">📦</span>Separação</a>
       <a class="mi" onclick="irPara('reposicao',this)"><span class="mi-ic">🔧</span>Reposição <span class="mbadge" id="menu-badge-rep" style="display:none">0</span></a>
@@ -329,6 +330,7 @@ function irPara(pag, el) {
   }
   if (pag === 'estatisticas-sep') { carregarEstatisticasSep(); }
   if (pag === 'estatisticas-ck')  { carregarEstatisticasCk(); }
+  if (pag === 'passagem')         { iniciarPassagem(); }
 }
 
 
@@ -1006,47 +1008,59 @@ async function trocarSenhaTemp() {
 let _passagemPendente = null;
 
 function mudarPassagemTab(tab, btn) {
-  ['preencher','validar','historico'].forEach(t => {
-    document.getElementById(`pass-tab-${t}`)?.style && (document.getElementById(`pass-tab-${t}`).style.display = t===tab?'block':'none');
-    const b = document.getElementById(`ptab-${t}`);
-    if (b) { b.style.color = t===tab ? 'var(--accent)' : 'var(--text3)'; b.style.borderBottom = t===tab ? '2px solid var(--accent)' : 'none'; }
+  ['registrar','validar','placar','historico'].forEach(t => {
+    const sec = document.getElementById(`pass-sec-${t}`);
+    const bt  = document.getElementById(`ptab-${t}`);
+    if (sec) sec.style.display = t === tab ? '' : 'none';
+    if (bt) {
+      bt.style.background = t === tab ? '#2563EB' : '#fff';
+      bt.style.color = t === tab ? '#fff' : '#64748B';
+      bt.style.border = t === tab ? 'none' : '1.5px solid #E2E8F0';
+    }
   });
   if (tab === 'historico') carregarHistoricoPassagens();
+  if (tab === 'placar')    carregarPlacar();
 }
 
 async function iniciarPassagem() {
-  await Promise.all([carregarPlacar(), carregarHistoricoPassagens(), verificarPassagemPendente()]);
+  // Set today's date
   const dtEl = document.getElementById('pass-data');
   if (dtEl && !dtEl.value) dtEl.value = hojeLocal();
+  mudarPassagemTab('registrar', document.getElementById('ptab-registrar'));
+  await Promise.all([carregarPlacar(), carregarHistoricoPassagens(), verificarPassagemPendente()]);
 }
 
 async function carregarPlacar() {
   try {
     const res = await fetch(`${API}/passagem/placar`, { credentials:'include' });
     if (!res.ok) return;
-    const { placar, historico } = await res.json();
-    const wrap = document.getElementById('pass-placar-wrap');
-    if (!wrap) return;
-    const CORES = { Manha:'#2563EB', Tarde:'#F59E0B', Noite:'#7C3AED' };
-    const NOMES = { Manha:'☀️ Manhã', Tarde:'🌤️ Tarde', Noite:'🌙 Noite' };
-    wrap.innerHTML = placar.map(p => {
-      const pct = Math.min(100, Math.max(0, Math.round((p.pontos/1000)*100)));
-      const cor = CORES[p.turno] || '#64748B';
-      return `<div style="background:#fff;border:1px solid #E2E8F0;border-top:3px solid ${cor};border-radius:10px;padding:16px;flex:1;min-width:130px;text-align:center">
-        <div style="font-size:13px;font-weight:700;color:${cor};margin-bottom:6px">${NOMES[p.turno]||p.turno}</div>
-        <div style="font-size:28px;font-weight:800;color:${p.pontos<500?'#DC2626':p.pontos<800?'#F59E0B':'#16a34a'}">${p.pontos}</div>
-        <div style="font-size:10px;color:#94A3B8;margin-top:2px">/ 1000 pts</div>
-        <div style="height:4px;background:#F1F5F9;border-radius:2px;margin-top:8px">
-          <div style="height:4px;background:${cor};border-radius:2px;width:${pct}%"></div>
-        </div>
-        <button onclick="resetarPlacar('${p.turno}')" style="margin-top:10px;font-size:10px;padding:3px 8px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:4px;cursor:pointer;color:#64748B">Resetar</button>
-      </div>`;
-    }).join('');
+    const { placar } = await res.json();
+    const el = document.getElementById('pass-placar-content');
+    if (!el) return;
+    const COR = { Manha:'#F59E0B', Tarde:'#3B82F6', Noite:'#8B5CF6' };
+    const EMO = { Manha:'☀️', Tarde:'🌤️', Noite:'🌙' };
+    el.innerHTML = `
+      <div style="margin-bottom:16px">
+        ${placar.map((p,i) => `
+          <div style="background:#fff;border:1px solid #E2E8F0;border-left:4px solid ${COR[p.turno]||'#CBD5E1'};border-radius:10px;padding:14px 16px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <div style="font-size:12px;font-weight:700;color:#0F172A">${i===0?'🥇':i===1?'🥈':'🥉'} ${EMO[p.turno]||''} ${p.turno}</div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-size:22px;font-weight:800;color:${COR[p.turno]||'#334155'}">${p.pontos}</div>
+              <div style="font-size:10px;color:#94A3B8">pontos</div>
+            </div>
+          </div>`).join('')}
+      </div>
+      <button onclick="resetarPlacar(prompt('Turno para resetar (Manha/Tarde/Noite):'))"
+        style="width:100%;padding:10px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;font-size:12px;color:#64748B;cursor:pointer">
+        🔄 Resetar pontuação de turno
+      </button>`;
   } catch(e) { console.warn(e); }
 }
 
 async function resetarPlacar(turno) {
-  if (!confirm(`Resetar placar do turno ${turno} para 1000 pontos?`)) return;
+  if (!turno || !['Manha','Tarde','Noite'].includes(turno)) { toast('Turno inválido','aviso'); return; }
   try {
     const res = await fetch(`${API}/passagem/placar/resetar`, {
       method:'POST', credentials:'include', headers:{'Content-Type':'application/json'},
@@ -1054,9 +1068,9 @@ async function resetarPlacar(turno) {
     });
     const r = await res.json();
     if (!res.ok) { toast(r.erro||'Erro','erro'); return; }
-    toast(r.mensagem,'info');
+    toast(r.mensagem, 'info');
     carregarPlacar();
-  } catch(e) { console.warn(e); }
+  } catch(e) { console.warn(e); toast('Erro ao resetar','erro'); }
 }
 
 async function verificarPassagemPendente() {
@@ -1082,38 +1096,72 @@ async function verificarPassagemPendente() {
 function renderFormValidacao(p) {
   const sec = document.getElementById('pass-sec-validar');
   if (!sec) return;
-  const CAMPOS = [
-    { key:'pedidos_separados', label:'Pedidos Separados', val: p.pedidos_separados, pts: 100 },
-    { key:'checkouts_feitos',  label:'Checkouts Feitos',  val: p.checkouts_feitos,  pts: 100 },
-    { key:'faltas_abertas',    label:'Faltas Abertas',    val: p.faltas_abertas,    pts: 100 },
-    { key:'faltas_resolvidas', label:'Faltas Resolvidas', val: p.faltas_resolvidas, pts: 100 },
-    { key:'embalagem',         label:'Embalagem',         val: p.embalagem,         pts: 100 },
-    { key:'separadores_presentes', label:'Separadores Presentes', val: p.separadores_presentes, pts: 50 },
-    { key:'ocorrencias',       label:'Ocorrências',       val: p.ocorrencias,       pts: 50 },
+  const SECOES = [
+    {
+      titulo: '📦 Separação', cor: '#2563EB', fundo: '#EFF6FF', borda: '#BFDBFE',
+      campos: [
+        { key:'sep_separados',    label:'Separados',      val: p.sep_separados,    pts: 75 },
+        { key:'sep_pendentes',    label:'Pendentes',      val: p.sep_pendentes,    pts: 75 },
+        { key:'sep_em_separacao', label:'Em Separação',   val: p.sep_em_separacao, pts: 50 },
+      ]
+    },
+    {
+      titulo: '✅ Checkout', cor: '#16a34a', fundo: '#F0FDF4', borda: '#BBF7D0',
+      campos: [
+        { key:'ck_feitos',    label:'Realizados', val: p.ck_feitos,    pts: 75 },
+        { key:'ck_pendentes', label:'Pendentes',  val: p.ck_pendentes, pts: 75 },
+      ]
+    },
+    {
+      titulo: '📫 Embalagem', cor: '#7C3AED', fundo: '#F5F3FF', borda: '#DDD6FE',
+      campos: [
+        { key:'emb_embalados', label:'Embalados', val: p.emb_embalados, pts: 75 },
+        { key:'emb_pendentes', label:'Pendentes', val: p.emb_pendentes, pts: 75 },
+      ]
+    },
+    {
+      titulo: '⚠️ Reposição — Pendências', cor: '#DC2626', fundo: '#FEF2F2', borda: '#FECACA',
+      campos: [
+        { key:'rep_procurando', label:'Procurando Itens', val: p.rep_procurando, pts: 75 },
+        { key:'rep_na_rua',     label:'Caixas na Rua',    val: p.rep_na_rua,     pts: 75 },
+      ]
+    },
+    {
+      titulo: '📝 Informações Gerais', cor: '#475569', fundo: '#F8FAFC', borda: '#E2E8F0',
+      campos: [
+        { key:'separadores_presentes', label:'Separadores Presentes', val: p.separadores_presentes, pts: 25 },
+        { key:'ocorrencias',           label:'Ocorrências',           val: p.ocorrencias,           pts: 25 },
+      ]
+    },
   ];
+  const campoHTML = (c) => `
+    <div style="background:#fff;border:1px solid #E2E8F0;border-radius:8px;padding:12px;margin-bottom:8px" id="val-card-${c.key}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
+        <div style="flex:1">
+          <div style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.5px">${c.label}</div>
+          <div style="font-size:15px;font-weight:700;color:#0F172A;margin-top:2px">${c.val !== null && c.val !== undefined && c.val !== '' ? c.val : '—'}</div>
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0">
+          <button onclick="marcarCampo('${c.key}',true)" id="btn-ok-${c.key}"
+            style="padding:6px 12px;border-radius:7px;border:1.5px solid #BBF7D0;background:#F0FDF4;color:#15803D;font-size:11px;font-weight:600;cursor:pointer">
+            ✓ Correto
+          </button>
+          <button onclick="marcarCampo('${c.key}',false)" id="btn-no-${c.key}"
+            style="padding:6px 12px;border-radius:7px;border:1.5px solid #FECACA;background:#FEF2F2;color:#DC2626;font-size:11px;font-weight:600;cursor:pointer">
+            ✗ Incorreto <span style="font-size:9px">(-${c.pts}pts)</span>
+          </button>
+        </div>
+      </div>
+    </div>`;
   sec.innerHTML = `
     <div style="background:#FEF3C7;border:1px solid #FDE68A;border-radius:10px;padding:14px 16px;margin-bottom:16px">
       <div style="font-size:12px;font-weight:700;color:#92400E">📋 Passagem pendente de validação</div>
       <div style="font-size:11px;color:#78350F;margin-top:4px">Turno: <b>${p.turno}</b> | Data: <b>${p.data}</b> | Supervisor: <b>${p.supervisor}</b></div>
     </div>
-    ${CAMPOS.map(c => `
-      <div style="background:#fff;border:1px solid #E2E8F0;border-radius:10px;padding:14px;margin-bottom:10px" id="val-card-${c.key}">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
-          <div style="flex:1">
-            <div style="font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.5px">${c.label}</div>
-            <div style="font-size:16px;font-weight:700;color:#0F172A;margin-top:2px">${c.val || '—'}</div>
-          </div>
-          <div style="display:flex;gap:8px;flex-shrink:0">
-            <button onclick="marcarCampo('${c.key}',true)" id="btn-ok-${c.key}"
-              style="padding:7px 14px;border-radius:8px;border:1.5px solid #BBF7D0;background:#F0FDF4;color:#15803D;font-size:12px;font-weight:600;cursor:pointer">
-              ✓ Correto
-            </button>
-            <button onclick="marcarCampo('${c.key}',false)" id="btn-no-${c.key}"
-              style="padding:7px 14px;border-radius:8px;border:1.5px solid #FECACA;background:#FEF2F2;color:#DC2626;font-size:12px;font-weight:600;cursor:pointer">
-              ✗ Incorreto <span style="font-size:10px">(-${c.pts}pts)</span>
-            </button>
-          </div>
-        </div>
+    ${SECOES.map(s => `
+      <div style="border:1.5px solid ${s.borda};border-radius:10px;padding:12px 14px;margin-bottom:12px;background:${s.fundo}">
+        <div style="font-size:12px;font-weight:700;color:${s.cor};margin-bottom:10px">${s.titulo}</div>
+        ${s.campos.map(campoHTML).join('')}
       </div>`).join('')}
     <div style="margin-top:6px">
       <label style="font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase">Observação geral</label>
@@ -1137,19 +1185,16 @@ function renderFormValidacao(p) {
 const _valResultados = {};
 function marcarCampo(campo, ok) {
   _valResultados[campo] = ok;
-  const card = document.getElementById(`val-card-${campo}`);
+  const card  = document.getElementById(`val-card-${campo}`);
   const btnOk = document.getElementById(`btn-ok-${campo}`);
   const btnNo = document.getElementById(`btn-no-${campo}`);
-  if (card) card.style.borderColor = ok ? '#86EFAC' : '#FCA5A5';
-  if (card) card.style.background  = ok ? '#F0FDF4' : '#FEF2F2';
-  if (btnOk) btnOk.style.background = ok ? '#16a34a' : '#F0FDF4';
-  if (btnOk) btnOk.style.color = ok ? '#fff' : '#15803D';
-  if (btnNo) btnNo.style.background = !ok ? '#DC2626' : '#FEF2F2';
-  if (btnNo) btnNo.style.color = !ok ? '#fff' : '#DC2626';
+  if (card) { card.style.borderColor = ok ? '#86EFAC' : '#FCA5A5'; card.style.background = ok ? '#F0FDF4' : '#FEF2F2'; }
+  if (btnOk) { btnOk.style.background = ok ? '#16a34a' : '#F0FDF4'; btnOk.style.color = ok ? '#fff' : '#15803D'; }
+  if (btnNo) { btnNo.style.background = !ok ? '#DC2626' : '#FEF2F2'; btnNo.style.color = !ok ? '#fff' : '#DC2626'; }
 }
 
 async function confirmarValidacao(passagem_id) {
-  const CAMPOS = ['pedidos_separados','checkouts_feitos','faltas_abertas','faltas_resolvidas','embalagem','separadores_presentes','ocorrencias'];
+  const CAMPOS = ['sep_separados','sep_pendentes','sep_em_separacao','ck_feitos','ck_pendentes','emb_embalados','emb_pendentes','rep_procurando','rep_na_rua','separadores_presentes','ocorrencias'];
   const naoMarcados = CAMPOS.filter(c => _valResultados[c] === undefined);
   if (naoMarcados.length) { toast(`Marque todos os ${naoMarcados.length} campo(s) antes de confirmar.`,'aviso'); return; }
   const turno_entrando = document.getElementById('val-turno-entrando')?.value;
@@ -1164,7 +1209,6 @@ async function confirmarValidacao(passagem_id) {
     const status = r.status === 'contestado' ? '⚠️ Passagem contestada' : '✅ Passagem validada';
     const msg = r.pontos_perdidos > 0 ? `${status} — ${r.pontos_perdidos} pontos descontados!` : `${status} sem penalidades.`;
     toast(msg, r.pontos_perdidos > 0 ? 'aviso' : 'info');
-    // Limpa resultados e recarrega
     Object.keys(_valResultados).forEach(k => delete _valResultados[k]);
     await iniciarPassagem();
   } catch(e) { console.warn(e); toast('Erro ao validar','erro'); }
@@ -1174,13 +1218,18 @@ async function salvarPassagem() {
   const data  = document.getElementById('pass-data')?.value;
   const turno = document.getElementById('pass-turno')?.value;
   if (!data || !turno) { toast('Preencha data e turno','aviso'); return; }
+  const n = id => parseInt(document.getElementById(id)?.value)||0;
   const body = {
     data, turno,
-    pedidos_separados: parseInt(document.getElementById('pass-ped')?.value)||0,
-    checkouts_feitos:  parseInt(document.getElementById('pass-ck')?.value)||0,
-    faltas_abertas:    parseInt(document.getElementById('pass-falt-ab')?.value)||0,
-    faltas_resolvidas: parseInt(document.getElementById('pass-falt-res')?.value)||0,
-    embalagem:         parseInt(document.getElementById('pass-emb')?.value)||0,
+    sep_separados:    n('pass-sep-sep'),
+    sep_pendentes:    n('pass-sep-pend'),
+    sep_em_separacao: n('pass-sep-em'),
+    ck_feitos:        n('pass-ck-feitos'),
+    ck_pendentes:     n('pass-ck-pend'),
+    emb_embalados:    n('pass-emb-emb'),
+    emb_pendentes:    n('pass-emb-pend'),
+    rep_procurando:   n('pass-rep-proc'),
+    rep_na_rua:       n('pass-rep-rua'),
     separadores_presentes: document.getElementById('pass-seps')?.value||'',
     ocorrencias:       document.getElementById('pass-ocorr')?.value||'',
   };
@@ -1204,7 +1253,7 @@ async function carregarHistoricoPassagens() {
     const lista = await res.json();
     const el = document.getElementById('pass-historico');
     if (!el) return;
-    const STATUS_COR = { pendente:'#F59E0B', validado:'#16a34a', contestado:'#DC2626' };
+    const STATUS_COR  = { pendente:'#F59E0B', validado:'#16a34a', contestado:'#DC2626' };
     const STATUS_NOME = { pendente:'⏳ Pendente', validado:'✅ Validado', contestado:'⚠️ Contestado' };
     el.innerHTML = lista.length ? lista.map(p => `
       <div style="background:#fff;border:1px solid #E2E8F0;border-left:3px solid ${STATUS_COR[p.status]||'#CBD5E1'};border-radius:8px;padding:12px 14px;margin-bottom:8px">
@@ -1215,13 +1264,13 @@ async function carregarHistoricoPassagens() {
           </div>
           <div style="font-size:11px;color:#64748B">${p.supervisor}</div>
         </div>
-        <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:6px;font-size:11px;color:#475569">
-          <span>📦 ${p.pedidos_separados} pedidos</span>
-          <span>🏷️ ${p.checkouts_feitos} checkouts</span>
-          <span>🔄 ${p.faltas_abertas}/${p.faltas_resolvidas} faltas</span>
-          <span>📫 ${p.embalagem} emb.</span>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;font-size:11px;color:#475569">
+          <span>📦 ${p.sep_separados||0} sep / ${p.sep_pendentes||0} pend</span>
+          <span>✅ ${p.ck_feitos||0} ck / ${p.ck_pendentes||0} pend</span>
+          <span>📫 ${p.emb_embalados||0} emb / ${p.emb_pendentes||0} pend</span>
+          <span>⚠️ ${p.rep_procurando||0} proc / ${p.rep_na_rua||0} rua</span>
           ${p.pontos_perdidos ? `<span style="color:#DC2626;font-weight:700">-${p.pontos_perdidos} pts</span>` : ''}
         </div>
-      </div>`) .join('') : '<div style="color:var(--text3);text-align:center;padding:20px;font-size:13px">Nenhuma passagem registrada</div>';
+      </div>`).join('') : '<div style="color:var(--text3);text-align:center;padding:20px;font-size:13px">Nenhuma passagem registrada</div>';
   } catch(e) { console.warn(e); }
 }
