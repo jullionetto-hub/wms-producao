@@ -755,7 +755,118 @@ async function carregarPerformance() {
       </div>`;
     }).join('');
 
+    // Carrega detalhamento após os cards
+    carregarPerformanceDetalhe(ini, fim, perfil, colab);
+
   } catch(e) { console.error('Erro performance:', e); toast('Erro ao carregar performance','erro'); }
+}
+
+/* ─── Detalhamento por pedido ─────────────────────────────────────── */
+async function carregarPerformanceDetalhe(ini, fim, filtPerfil, filtColab) {
+  const wrap    = document.getElementById('perf-detalhe-wrap');
+  const content = document.getElementById('perf-detalhe-content');
+  const badge   = document.getElementById('perf-det-badge');
+  if (!wrap || !content) return;
+
+  // Só mostra para separador e checkout (têm dados de tempo por pedido)
+  const perfilOk = !filtPerfil || filtPerfil === 'separador' || filtPerfil === 'checkout';
+  if (!perfilOk) { wrap.style.display = 'none'; return; }
+
+  try {
+    let url = `${API}/stats/performance/detalhe?ini=${ini||hojeLocal()}&fim=${fim||hojeLocal()}`;
+    if (filtPerfil) url += `&perfil=${filtPerfil}`;
+    if (filtColab)  url += `&colaborador=${encodeURIComponent(filtColab)}`;
+
+    const res = await fetch(url, { credentials:'include' });
+    if (!res.ok) return;
+    const { detalhe } = await res.json();
+
+    if (!detalhe || !detalhe.length) { wrap.style.display = 'none'; return; }
+
+    const totalPedidos = detalhe.reduce((s, d) => s + d.pedidos.length, 0);
+    if (totalPedidos === 0) { wrap.style.display = 'none'; return; }
+
+    wrap.style.display = 'block';
+    if (badge) badge.textContent = `${totalPedidos} registros`;
+
+    content.innerHTML = detalhe.map(colab => {
+      const isSep = colab.perfil === 'separador';
+      const AREA_COR = { separador: 'var(--accent)', checkout: 'var(--green)' };
+      const AREA_LABEL = { separador: '📦 Separação', checkout: '✅ Checkout' };
+      const cor = AREA_COR[colab.perfil] || 'var(--text)';
+
+      const header = `
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--surface2);border-bottom:1px solid var(--border)">
+          <span style="font-size:13px;font-weight:800;color:${cor}">${AREA_LABEL[colab.perfil]||colab.perfil}</span>
+          <span style="font-size:14px;font-weight:700;color:var(--text)">${colab.nome}</span>
+          <span style="margin-left:auto;font-size:11px;color:var(--text3);font-weight:600">${colab.pedidos.length} pedido${colab.pedidos.length!==1?'s':''}</span>
+        </div>`;
+
+      let tabela = '';
+      if (isSep) {
+        const linhas = colab.pedidos.map(p => {
+          const ini = p.iniciado_em ? p.iniciado_em.split('T')[1]||p.iniciado_em.slice(-5) : '—';
+          const fim = p.concluido_em ? p.concluido_em.split('T')[1]||p.concluido_em.slice(-5) : '—';
+          const total = p.tempo_total_min !== null ? _horasStr(Math.round(p.tempo_total_min)) : '—';
+          const espera = p.tempo_espera_min > 0 ? `<span style="color:var(--amber);font-weight:700">${_horasStr(Math.round(p.tempo_espera_min))}</span>` : '<span style="color:var(--text3)">—</span>';
+          const real = p.tempo_real_min !== null
+            ? `<span style="color:${p.tempo_real_min<=30?'var(--green)':p.tempo_real_min<=60?'var(--amber)':'var(--red)'};font-weight:700">${_horasStr(Math.round(p.tempo_real_min))}</span>`
+            : '—';
+          const reps = p.qtd_reposicoes > 0
+            ? `<span style="color:var(--amber);font-weight:700">${p.qtd_reposicoes}</span>`
+            : '<span style="color:var(--text3)">0</span>';
+          return `<tr>
+            <td style="font-weight:700">${p.numero_pedido||'—'}</td>
+            <td style="color:var(--text2)">${p.data_pedido||'—'}</td>
+            <td style="color:var(--text2)">${ini}</td>
+            <td style="color:var(--text2)">${fim}</td>
+            <td style="color:var(--text2)">${total}</td>
+            <td>${espera}</td>
+            <td>${real}</td>
+            <td style="font-weight:700;color:var(--accent)">${p.total_itens||0}</td>
+            <td>${reps}</td>
+          </tr>`;
+        }).join('');
+        tabela = `
+          <div class="tabela-wrap">
+            <table>
+              <thead><tr>
+                <th>Nº PEDIDO</th><th>DATA</th><th>INÍCIO</th><th>CONCLUSÃO</th>
+                <th>TEMPO TOTAL</th><th>⏸ ESPERA REP.</th><th>✅ TEMPO REAL</th>
+                <th>ITENS</th><th>REPOSIÇÕES</th>
+              </tr></thead>
+              <tbody>${linhas}</tbody>
+            </table>
+          </div>`;
+      } else {
+        // Checkout
+        const linhas = colab.pedidos.map(p => {
+          const tempo = p.tempo_checkout_min !== null
+            ? `<span style="color:${p.tempo_checkout_min<=5?'var(--green)':p.tempo_checkout_min<=15?'var(--amber)':'var(--red)'};font-weight:700">${_horasStr(p.tempo_checkout_min)}</span>`
+            : '—';
+          return `<tr>
+            <td style="font-weight:700">${p.numero_pedido||'—'}</td>
+            <td style="color:var(--text2)">${p.data_pedido||'—'}</td>
+            <td style="color:var(--text2)">${p.hora_abertura||'—'}</td>
+            <td style="color:var(--text2)">${p.hora_confirmacao||'—'}</td>
+            <td>${tempo}</td>
+          </tr>`;
+        }).join('');
+        tabela = `
+          <div class="tabela-wrap">
+            <table>
+              <thead><tr>
+                <th>Nº PEDIDO</th><th>DATA</th><th>ABERTURA</th><th>CONFIRMAÇÃO</th><th>⏱ TEMPO CHECKOUT</th>
+              </tr></thead>
+              <tbody>${linhas}</tbody>
+            </table>
+          </div>`;
+      }
+
+      return `<div style="border-bottom:2px solid var(--border);margin-bottom:0">${header}${tabela}</div>`;
+    }).join('');
+
+  } catch(e) { console.error('carregarPerformanceDetalhe:', e); }
 }
 
 function exportarPerformanceExcel() {

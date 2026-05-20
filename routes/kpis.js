@@ -484,4 +484,124 @@ router.get('/stats/performance', requerAuth, requerPerfil('supervisor'), async (
   } catch(e) { res.status(500).json({ erro: e.message }); }
 });
 
+/* ─── DETALHE POR PEDIDO (Performance) ─────────────────────────────── */
+router.get('/stats/performance/detalhe', requerAuth, requerPerfil('supervisor'), async (req, res) => {
+  const { ini, fim, colaborador: filtColab, perfil: filtPerfil } = req.query;
+  const { data: hoje } = dataHoraLocal();
+  const dataIni = ini || hoje;
+  const dataFim = fim || hoje;
+
+  try {
+    const resultado = {};
+
+    /* ── Separadores: pedido a pedido ── */
+    if (!filtPerfil || filtPerfil === 'separador') {
+      let w = `p.status='concluido' AND p.iniciado_em IS NOT NULL AND p.iniciado_em!=''
+               AND p.data_pedido>=$1 AND p.data_pedido<=$2`;
+      const params = [dataIni, dataFim];
+      if (filtColab) { params.push(filtColab); w += ` AND COALESCE(u.nome, s.nome)=$${params.length}`; }
+
+      const pedidos = await db.all(`
+        SELECT
+          COALESCE(u.nome, s.nome, '—') AS separador_nome,
+          p.numero_pedido, p.data_pedido, p.iniciado_em,
+          COALESCE(NULLIF(p.concluido_em,''),
+            CASE WHEN ck.data_checkout IS NOT NULL AND ck.hora_criacao IS NOT NULL
+                 THEN ck.data_checkout||'T'||ck.hora_criacao ELSE NULL END
+          ) AS concluido_em,
+          p.itens AS total_itens,
+          CASE WHEN p.iniciado_em!='' AND COALESCE(NULLIF(p.concluido_em,''),
+                   CASE WHEN ck.data_checkout IS NOT NULL AND ck.hora_criacao IS NOT NULL
+                        THEN ck.data_checkout||'T'||ck.hora_criacao ELSE NULL END) IS NOT NULL
+            THEN ROUND(EXTRACT(EPOCH FROM (
+              COALESCE(NULLIF(p.concluido_em,''), ck.data_checkout||'T'||ck.hora_criacao)::timestamp
+              - p.iniciado_em::timestamp
+            ))/60.0, 1)
+            ELSE NULL
+          END AS tempo_total_min,
+          COALESCE((
+            SELECT ROUND(SUM(
+              CASE WHEN a.hora_reposto IS NOT NULL AND a.hora_reposto!=''
+                            AND a.hora_aviso IS NOT NULL AND a.hora_aviso!=''
+                            AND a.data_aviso IS NOT NULL AND a.data_aviso!=''
+                THEN GREATEST(0, EXTRACT(EPOCH FROM (
+                  (a.data_aviso::date + a.hora_reposto::time)
+                  - (a.data_aviso::date + a.hora_aviso::time)
+                ))/60.0)
+                ELSE 0 END
+            )::numeric, 1)
+            FROM avisos_repositor a
+            WHERE a.pedido_id=p.id AND a.status IN ('abastecido','reposto','encontrado','subiu')
+          ), 0) AS tempo_espera_min,
+          (SELECT COUNT(*) FROM avisos_repositor a WHERE a.pedido_id=p.id) AS qtd_reposicoes
+        FROM pedidos p
+        LEFT JOIN separadores s   ON s.id = p.separador_id
+        LEFT JOIN usuarios u      ON u.id = s.usuario_id
+        LEFT JOIN checkout ck     ON ck.pedido_id = p.id
+        WHERE ${w}
+        ORDER BY COALESCE(u.nome, s.nome), p.data_pedido, p.iniciado_em
+        LIMIT 3000
+      `, params);
+
+      pedidos.forEach(p => {
+        const key = p.separador_nome;
+        if (!resultado[key]) resultado[key] = { nome: key, perfil: 'separador', pedidos: [] };
+        const tempoReal = p.tempo_total_min !== null
+          ? Math.max(0, parseFloat(p.tempo_total_min) - parseFloat(p.tempo_espera_min || 0))
+          : null;
+        resultado[key].pedidos.push({
+          numero_pedido:   p.numero_pedido,
+          data_pedido:     p.data_pedido,
+          iniciado_em:     p.iniciado_em,
+          concluido_em:    p.concluido_em,
+          total_itens:     p.total_itens,
+          tempo_total_min: p.tempo_total_min !== null ? parseFloat(p.tempo_total_min) : null,
+          tempo_espera_min:parseFloat(p.tempo_espera_min || 0),
+          tempo_real_min:  tempoReal !== null ? Math.round(tempoReal * 10) / 10 : null,
+          qtd_reposicoes:  parseInt(p.qtd_reposicoes) || 0,
+        });
+      });
+    }
+
+    /* ── Checkout: pedido a pedido ── */
+    if (!filtPerfil || filtPerfil === 'checkout') {
+      let w = `c.status='concluido' AND c.data_checkout>=$1 AND c.data_checkout<=$2`;
+      const params = [dataIni, dataFim];
+      if (filtColab) { params.push(filtColab); w += ` AND c.operador_nome=$${params.length}`; }
+
+      const ckList = await db.all(`
+        SELECT c.operador_nome, c.numero_pedido, c.data_checkout,
+          c.hora_criacao, c.hora_checkout,
+          CASE WHEN c.hora_criacao IS NOT NULL AND c.hora_criacao!=''
+                    AND c.hora_checkout IS NOT NULL AND c.hora_checkout!=''
+            THEN GREATEST(0,
+              ROUND(EXTRACT(EPOCH FROM (c.hora_checkout::time - c.hora_criacao::time))/60.0)::int
+            )
+            ELSE NULL END AS tempo_checkout_min
+        FROM checkout c
+        WHERE ${w} AND c.operador_nome IS NOT NULL AND c.operador_nome!=''
+        ORDER BY c.operador_nome, c.data_checkout, c.hora_checkout
+        LIMIT 3000
+      `, params);
+
+      ckList.forEach(c => {
+        const key = `${c.operador_nome}:checkout`;
+        if (!resultado[key]) resultado[key] = { nome: c.operador_nome, perfil: 'checkout', pedidos: [] };
+        resultado[key].pedidos.push({
+          numero_pedido:      c.numero_pedido,
+          data_pedido:        c.data_checkout,
+          hora_abertura:      c.hora_criacao,
+          hora_confirmacao:   c.hora_checkout,
+          tempo_checkout_min: c.tempo_checkout_min !== null ? parseInt(c.tempo_checkout_min) : null,
+        });
+      });
+    }
+
+    res.json({ detalhe: Object.values(resultado) });
+  } catch(e) {
+    console.error('Erro detalhe performance:', e);
+    res.status(500).json({ erro: e.message });
+  }
+});
+
 module.exports = router;
