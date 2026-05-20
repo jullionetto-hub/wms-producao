@@ -686,6 +686,8 @@ function _horasStr(min) {
   return h > 0 ? `${h}h ${String(m).padStart(2,'0')}min` : `${m}min`;
 }
 
+let _performanceDados = [];
+
 async function carregarPerformance() {
   const ini    = document.getElementById('perf-ini')?.value  || hojeLocal();
   const fim    = document.getElementById('perf-fim')?.value  || hojeLocal();
@@ -700,6 +702,8 @@ async function carregarPerformance() {
     const res = await fetch(url, { credentials:'include' });
     if (!res.ok) { toast('Erro ao carregar performance','erro'); return; }
     const { resultado, resumo } = await res.json();
+
+    _performanceDados = resultado;
 
     const el = id => document.getElementById(id);
 
@@ -756,19 +760,46 @@ async function carregarPerformance() {
 
 function exportarPerformanceExcel() {
   try {
-    const rows = [['COLABORADOR','ÁREA','TURNO','TEMPO','ATIVIDADES','META PROP.','% ATINGIMENTO']];
-    document.querySelectorAll('#perf-tbody-main tr').forEach(tr => {
-      const tds = tr.querySelectorAll('td');
-      if(tds.length > 1) rows.push(Array.from(tds).map(td => td.textContent.trim()));
+    if (!_performanceDados || !_performanceDados.length) {
+      toast('Carregue os dados antes de exportar!', 'aviso');
+      return;
+    }
+    const AREA_LABEL = { separador:'Separação', checkout:'Checkout', embalador:'Embalagem', repositor:'Reposição' };
+    const rows = [['COLABORADOR','ÁREA','TURNO','TEMPO LOGADO','ATIVIDADES','META PROP.','% ATINGIMENTO','DETALHE']];
+    _performanceDados.forEach(r => {
+      const tempoStr = r.minutos > 0 ? _horasStr(r.minutos) : '—';
+      const pctStr   = r.pct_atingimento !== null ? `${r.pct_atingimento}%` : '—';
+      const metaStr  = r.meta_proporcional > 0 ? r.meta_proporcional : '—';
+      let detalhe = '';
+      if (r.perfil === 'separador' && r.detalhe) {
+        const partes = [];
+        if (r.detalhe.itens)  partes.push(`${r.detalhe.itens} itens`);
+        if (r.detalhe.faltas) partes.push(`${r.detalhe.faltas} avisos rep.`);
+        detalhe = partes.join(' | ');
+      } else if (r.perfil === 'repositor' && r.detalhe) {
+        const partes = [];
+        if (r.detalhe.repostos)         partes.push(`${r.detalhe.repostos} resolvidos`);
+        if (r.detalhe.nao_encontrados)  partes.push(`${r.detalhe.nao_encontrados} não enc.`);
+        detalhe = partes.join(' | ');
+      }
+      rows.push([
+        r.usuario_nome,
+        AREA_LABEL[r.perfil] || r.perfil,
+        r.turno || '—',
+        tempoStr,
+        r.atividades,
+        metaStr,
+        pctStr,
+        detalhe,
+      ]);
     });
-    if(rows.length <= 1) { toast('Nenhum dado!','aviso'); return; }
     const ws = XLSX.utils.aoa_to_sheet(rows);
     ws['!cols'] = rows[0].map((_,ci) => ({ wch: Math.max(...rows.map(r => String(r[ci]||'').length))+2 }));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Performance');
     XLSX.writeFile(wb, `performance_${hojeLocal()}.xlsx`);
     toast('Excel exportado!','sucesso');
-  } catch(e) { toast('Erro ao exportar!','erro'); }
+  } catch(e) { console.error('exportarPerformanceExcel:', e); toast('Erro ao exportar!','erro'); }
 }
 
 let _configMetasData = {};
