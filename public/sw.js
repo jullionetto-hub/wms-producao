@@ -1,18 +1,16 @@
 /* ══ WMS Miess — Service Worker ══ */
-const CACHE_NAME = 'wms-v3';
-// Só cacheia o CSS — JS muda com frequência, vai sempre buscar da rede
+const CACHE_NAME = 'wms-v4';
+// Só cacheia o CSS — JS e HTML sempre vão buscar da rede
 const STATIC_ASSETS = [
   '/css/app.css',
 ];
 
-// Instala e faz cache dos assets estáticos
 self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(CACHE_NAME).then(cache => cache.addAll(STATIC_ASSETS)).then(() => self.skipWaiting())
   );
 });
 
-// Ativa e remove caches antigos
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys().then(keys =>
@@ -21,15 +19,21 @@ self.addEventListener('activate', e => {
   );
 });
 
-// Estratégia: network-first para API, cache-first para estáticos
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
 
-  // Ignora extensões do Chrome, requisições de terceiros e não-GET
   if (e.request.method !== 'GET') return;
   if (!url.origin.includes(self.location.origin)) return;
 
-  // Arquivos JS — sempre network-first para não cachear versões antigas
+  // HTML — sempre network-first para nunca cachear versão antiga
+  if (url.pathname === '/' || url.pathname.endsWith('.html')) {
+    e.respondWith(
+      fetch(e.request).catch(() => caches.match(e.request))
+    );
+    return;
+  }
+
+  // Arquivos JS — sempre network-first
   if (url.pathname.startsWith('/js/') || url.pathname.endsWith('.js')) {
     e.respondWith(
       fetch(e.request).catch(() => caches.match(e.request))
@@ -37,13 +41,14 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // API — network-first: tenta rede, fallback silencioso se offline
+  // API — network-first
   if (url.pathname.startsWith('/auth') || url.pathname.startsWith('/pedidos') ||
       url.pathname.startsWith('/repositor') || url.pathname.startsWith('/checkout') ||
       url.pathname.startsWith('/kpis') || url.pathname.startsWith('/estatisticas') ||
       url.pathname.startsWith('/usuarios') || url.pathname.startsWith('/dashboard') ||
       url.pathname.startsWith('/produtividade') || url.pathname.startsWith('/admin') ||
-      url.pathname.startsWith('/embalagem') || url.pathname.startsWith('/auditoria')) {
+      url.pathname.startsWith('/embalagem') || url.pathname.startsWith('/auditoria') ||
+      url.pathname.startsWith('/stats')) {
     e.respondWith(
       fetch(e.request).catch(() => new Response(JSON.stringify({ erro: 'Sem conexão' }), {
         status: 503,
@@ -53,7 +58,7 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // Assets estáticos — cache-first
+  // Apenas CSS — cache-first
   e.respondWith(
     caches.match(e.request).then(cached => {
       if (cached) return cached;
