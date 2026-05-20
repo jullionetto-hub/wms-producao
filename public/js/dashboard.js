@@ -573,7 +573,8 @@ let _liberacaoInterval = null;
 function iniciarAutoRefreshLiberacao() {
   if (_liberacaoInterval) clearInterval(_liberacaoInterval);
   _liberacaoInterval = setInterval(() => {
-    if (document.getElementById('pag-liberacao')?.style.display !== 'none') carregarLiberacao();
+    if (document.getElementById('pag-liberacao')?.classList.contains('ativa')) carregarLiberacao();
+    atualizarBadgeLiberacao();
   }, 20000);
 }
 

@@ -323,10 +323,16 @@ router.get('/stats/performance', requerAuth, requerPerfil('supervisor'), async (
     const sessoes = await db.all(`
       SELECT s.usuario_id, s.usuario_nome, s.perfil,
         COALESCE(u.turno, MAX(s.turno), 'Manha') as turno,
-        SUM(COALESCE(s.duracao_min, 0)) +
-        SUM(CASE WHEN s.logout_em IS NULL AND s.data=$3
-          THEN GREATEST(0, ROUND(EXTRACT(EPOCH FROM (NOW()-s.login_em))/60)::int)
-          ELSE 0 END) as minutos_total,
+        SUM(
+          CASE
+            WHEN s.duracao_min IS NOT NULL THEN s.duracao_min
+            WHEN s.logout_em IS NOT NULL
+              THEN GREATEST(0, ROUND(EXTRACT(EPOCH FROM (s.logout_em - s.login_em))/60)::int)
+            WHEN s.logout_em IS NULL AND s.data=$3
+              THEN GREATEST(0, LEAST(960, ROUND(EXTRACT(EPOCH FROM (NOW() - s.login_em))/60)::int))
+            ELSE 0
+          END
+        ) as minutos_total,
         COUNT(*) as num_sessoes
       FROM sessoes_trabalho s
       LEFT JOIN usuarios u ON u.id = s.usuario_id

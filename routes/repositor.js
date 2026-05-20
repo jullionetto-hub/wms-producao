@@ -44,14 +44,18 @@ router.put('/repositor/avisos/:id', requerAuth, async (req,res) => {
     const fEnvio   = forma_envio  || atual?.forma_envio  || '';
     const qtdEnc   = qtd_encontrada !== undefined ? qtd_encontrada : (atual?.qtd_encontrada || 0);
     const obsVal   = obs !== undefined ? obs : (atual?.obs || '');
-    await pool.query(
+    const upd = await pool.query(
       `UPDATE avisos_repositor SET status=$1,obs=$2,qtd_encontrada=$3,repositor_nome=$4,hora_reposto=$5,quem_pegou=$6,quem_guardou=$7,forma_envio=$8,situacao=$9 WHERE id=$10`,
       [st, obsVal, qtdEnc, repositor_nome||qPegou||'', hora, qPegou, qGuardou, fEnvio, st, id]
     );
+    if (upd.rowCount === 0) return res.status(404).json({erro:'Aviso não encontrado'});
     if (['abastecido','reposto','encontrado'].includes(st)) {
       const av = await db.get('SELECT item_id FROM avisos_repositor WHERE id=$1',[id]);
       if (av) await pool.query(`UPDATE itens_pedido SET status='encontrado' WHERE id=$1`,[av.item_id]);
     }
+    const io = req.app.get('io');
+    io?.emit('aviso:atualizado', { id, status: st });
+    if (st === 'nao_encontrado') io?.emit('liberacao:novo', { id });
     res.json({mensagem:'Aviso atualizado!'});
   } catch(e){res.status(500).json({erro:e.message});}
 });

@@ -23,8 +23,16 @@
     // Aviso atualizado (abastecido, reposto, etc.) → mesmas telas
     socket.on('aviso:atualizado', () => {
       if (typeof carregarAvisos === 'function') carregarAvisos();
+      if (typeof carregarAvisosMobile === 'function') carregarAvisosMobile();
       if (typeof carregarFilaMobile === 'function') carregarFilaMobile();
       if (typeof carregarAvisosSeparador === 'function') carregarAvisosSeparador();
+      if (typeof atualizarBadgeLiberacao === 'function') atualizarBadgeLiberacao();
+    });
+
+    // Item marcado como não encontrado → atualiza liberação do supervisor em tempo real
+    socket.on('liberacao:novo', () => {
+      if (typeof carregarLiberacao === 'function') carregarLiberacao();
+      if (typeof atualizarBadgeLiberacao === 'function') atualizarBadgeLiberacao();
     });
 
     // Pedido concluído → atualiza dashboard e fila
