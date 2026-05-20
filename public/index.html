@@ -129,12 +129,12 @@
 
         <!-- KPIs — Linha 1: Finalizados e Pendentes por área -->
         <div class="kpi-grid" style="margin-bottom:8px;grid-template-columns:repeat(6,1fr)">
-          <div class="kpi-card verde"><div class="kpi-lbl">SEP. FINALIZADA</div><div class="kpi-val" id="dash-hoje">0</div><div class="kpi-sub">pedidos separados</div></div>
-          <div class="kpi-card amarelo"><div class="kpi-lbl">SEP. PENDENTE</div><div class="kpi-val" id="dash-separando">0</div><div class="kpi-sub">em andamento agora</div></div>
+          <div class="kpi-card verde"><div class="kpi-lbl">SEPARAÇÃO FINALIZADA</div><div class="kpi-val" id="dash-hoje">0</div><div class="kpi-sub">pedidos separados</div></div>
+          <div class="kpi-card amarelo"><div class="kpi-lbl">SEPARAÇÃO PENDENTE</div><div class="kpi-val" id="dash-separando">0</div><div class="kpi-sub">em andamento agora</div></div>
           <div class="kpi-card roxo"><div class="kpi-lbl">CHECKOUT FINALIZADO</div><div class="kpi-val" id="kpi-ck-hoje">0</div><div class="kpi-sub">caixas expedidas</div></div>
           <div class="kpi-card ciano"><div class="kpi-lbl">CHECKOUT PENDENTE</div><div class="kpi-val" id="kpi-ck-pend">0</div><div class="kpi-sub">aguardando checkout</div></div>
-          <div class="kpi-card laranja"><div class="kpi-lbl">EMB. FINALIZADA</div><div class="kpi-val" id="kpi-emb-hoje">0</div><div class="kpi-sub">embalados hoje</div></div>
-          <div class="kpi-card rosa"><div class="kpi-lbl">EMB. PENDENTE</div><div class="kpi-val" id="kpi-emb-pend">0</div><div class="kpi-sub">aguardando embalagem</div></div>
+          <div class="kpi-card laranja"><div class="kpi-lbl">EMBALAGEM FINALIZADO</div><div class="kpi-val" id="kpi-emb-hoje">0</div><div class="kpi-sub">embalados hoje</div></div>
+          <div class="kpi-card rosa"><div class="kpi-lbl">EMBALAGEM PENDENTE</div><div class="kpi-val" id="kpi-emb-pend">0</div><div class="kpi-sub">aguardando embalagem</div></div>
         </div>
         <!-- KPIs — Linha 2: Reposição e itens -->
         <div class="kpi-grid" style="margin-bottom:16px;grid-template-columns:repeat(3,1fr)">
@@ -190,7 +190,7 @@
                 </div>
                 <div style="text-align:center;padding:8px;background:#FEF2F2;border-radius:8px;border:1px solid #FECACA">
                   <div style="font-size:18px;font-weight:700;color:#B91C1C" id="op-n-faltas">0</div>
-                  <div style="font-size:10px;color:#B91C1C;letter-spacing:.5px">FALTAS</div>
+                  <div style="font-size:10px;color:#B91C1C;letter-spacing:.5px">FALTAS ABERTAS</div>
                 </div>
               </div>
               <div id="op-previsao" style="margin-top:10px;padding:8px 12px;background:var(--surface2);border-radius:8px;font-size:12px;color:var(--text2);display:none">
@@ -208,7 +208,7 @@
               </div>
             </div>
             <div class="card">
-              <div class="card-hd">SEPARADORES EM TEMPO REAL</div>
+              <div class="card-hd">SEPARADORES ATIVOS</div>
               <div id="op-tempo-real" style="padding:4px 0">
                 <div style="color:var(--text3);text-align:center;padding:20px;font-size:13px">Carregando...</div>
               </div>
@@ -1186,35 +1186,6 @@
               <option value="Tarde">🌤️ Tarde</option>
               <option value="Noite">🌙 Noite</option>
             </select>
-          </div>
-        </div>
-
-        <div style="font-size:12px;font-weight:700;color:var(--text3);margin-bottom:8px;text-transform:uppercase">📊 Números do Turno</div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:14px">
-          <div>
-            <label style="font-size:11px;color:var(--text3);font-weight:600">📦 Pedidos Separados</label>
-            <input type="number" id="pass-ped" min="0" placeholder="0"
-              style="width:100%;margin-top:4px;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:14px;font-weight:700;box-sizing:border-box;background:var(--surface);color:var(--text)">
-          </div>
-          <div>
-            <label style="font-size:11px;color:var(--text3);font-weight:600">🏷️ Checkouts</label>
-            <input type="number" id="pass-ck" min="0" placeholder="0"
-              style="width:100%;margin-top:4px;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:14px;font-weight:700;box-sizing:border-box;background:var(--surface);color:var(--text)">
-          </div>
-          <div>
-            <label style="font-size:11px;color:var(--text3);font-weight:600">⚠️ Faltas Abertas</label>
-            <input type="number" id="pass-falt-ab" min="0" placeholder="0"
-              style="width:100%;margin-top:4px;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:14px;font-weight:700;box-sizing:border-box;background:var(--surface);color:var(--text)">
-          </div>
-          <div>
-            <label style="font-size:11px;color:var(--text3);font-weight:600">✅ Faltas Resolvidas</label>
-            <input type="number" id="pass-falt-res" min="0" placeholder="0"
-              style="width:100%;margin-top:4px;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:14px;font-weight:700;box-sizing:border-box;background:var(--surface);color:var(--text)">
-          </div>
-          <div>
-            <label style="font-size:11px;color:var(--text3);font-weight:600">📫 Embalagem</label>
-            <input type="number" id="pass-emb" min="0" placeholder="0"
-              style="width:100%;margin-top:4px;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:14px;font-weight:700;box-sizing:border-box;background:var(--surface);color:var(--text)">
           </div>
         </div>
 

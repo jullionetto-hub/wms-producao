@@ -336,6 +336,11 @@ async function carregarOperacao() {
     document.getElementById('op-n-separando').textContent = separando;
     document.getElementById('op-n-pendentes').textContent = pendentes;
     document.getElementById('op-n-faltas').textContent = faltas.length;
+    // Mantém KPIs do topo sincronizados com os dados de operação
+    const _dh = document.getElementById('dash-hoje');
+    const _ds = document.getElementById('dash-separando');
+    if (_dh) _dh.textContent = concluidos;
+    if (_ds) _ds.textContent = separando;
 
     // Previsão de conclusão
     const prevEl = document.getElementById('op-previsao');
