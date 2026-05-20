@@ -517,6 +517,7 @@ async function carregarDashboard() {
   carregarGraficoBarrasHoras();
   carregarGraficoFunil();
   atualizarBadgeLiberacao();
+  iniciarAutoRefreshLiberacao();
   const el = document.getElementById('dash-ultima-atualizacao');
   if (el) el.textContent = '— atualizado ' + new Date().toLocaleTimeString('pt-BR', {timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit'});
 }
@@ -568,6 +569,14 @@ async function carregarRankingGeral() {
 }
 
 /* ─── LIBERAÇÃO DE ITENS ────────────────────────────────────────────── */
+let _liberacaoInterval = null;
+function iniciarAutoRefreshLiberacao() {
+  if (_liberacaoInterval) clearInterval(_liberacaoInterval);
+  _liberacaoInterval = setInterval(() => {
+    if (document.getElementById('pag-liberacao')?.style.display !== 'none') carregarLiberacao();
+  }, 20000);
+}
+
 async function carregarLiberacao() {
   const tbody    = document.getElementById('tbody-liberacao');
   const badge    = document.getElementById('lib-total-badge');
@@ -895,24 +904,46 @@ async function carregarPerformance() {
     if (!cardsWrap) return;
     cardsWrap.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
 
+    // Monta mapa de tempo individual por colaborador/perfil para exibir no card
+    const tempoIndividual = {};
+    resultado.forEach(r => {
+      const k = r.perfil;
+      if (!tempoIndividual[k]) tempoIndividual[k] = [];
+      if (r.minutos > 0) tempoIndividual[k].push({ nome: r.usuario_nome, min: r.minutos });
+    });
+
     cardsWrap.innerHTML = areasVisiveis.map(p => {
       const area  = AREA_INFO[p] || { icon:'👤', label: p, cor:'var(--text)' };
       const ag    = porArea[p];
-      const tempo = ag.temSessao ? _horasStr(ag.minutos) : '—';
-      const subInfo = colab ? '' :
-        `<div style="font-size:10px;color:var(--text3);margin-top:2px">${ag.colaboradores} colaborador${ag.colaboradores!==1?'es':''}</div>`;
+      const individuais = tempoIndividual[p] || [];
+
+      let tempoHtml = '';
+      if (colab) {
+        // colaborador único — mostra tempo dele
+        const min = individuais[0]?.min || ag.minutos;
+        tempoHtml = min > 0
+          ? `<div style="font-size:13px;color:var(--accent);font-weight:700">⏱ ${_horasStr(min)}</div><div style="font-size:9px;color:var(--text3)">logado</div>`
+          : `<div style="font-size:11px;color:var(--text3)">—</div>`;
+      } else {
+        // todos — lista individual compacta
+        tempoHtml = individuais.length
+          ? individuais.slice(0,4).map(i =>
+              `<div style="font-size:10px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+                <span style="color:var(--accent);font-weight:700">${_horasStr(i.min)}</span>
+                <span style="color:var(--text3)"> ${i.nome.split(' ')[0]}</span>
+              </div>`).join('')
+            + (individuais.length > 4 ? `<div style="font-size:10px;color:var(--text3)">+${individuais.length-4} outros</div>` : '')
+          : `<div style="font-size:10px;color:var(--text3)">Sem sessão</div>`;
+      }
+
       return `<div class="card" style="padding:10px 14px;display:flex;align-items:center;gap:12px">
         <div style="font-size:22px;line-height:1">${area.icon}</div>
         <div style="flex:1;min-width:0">
           <div style="font-size:10px;font-weight:700;color:${area.cor};letter-spacing:.5px">${area.label.toUpperCase()}</div>
           <div style="font-size:26px;font-weight:900;color:var(--text);line-height:1.1">${ag.atividades}</div>
-          <div style="font-size:10px;color:var(--text3)">${LABELS[p]}</div>
-          ${subInfo}
+          <div style="font-size:10px;color:var(--text3)">${LABELS[p]}${!colab ? ` · ${ag.colaboradores} colaborador${ag.colaboradores!==1?'es':''}` : ''}</div>
         </div>
-        <div style="text-align:right;border-left:1px solid var(--border);padding-left:12px">
-          <div style="font-size:13px;color:var(--accent);font-weight:700">⏱ ${tempo}</div>
-          <div style="font-size:9px;color:var(--text3)">logado</div>
-        </div>
+        <div style="border-left:1px solid var(--border);padding-left:10px;min-width:80px">${tempoHtml}</div>
       </div>`;
     }).join('');
 

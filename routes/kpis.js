@@ -254,10 +254,25 @@ router.get('/dashboard/por-hora', requerAuth, requerPerfil('supervisor'), async 
   try {
     const hoje = (await db.get(`SELECT TO_CHAR(NOW() AT TIME ZONE 'America/Sao_Paulo','YYYY-MM-DD') as d`)).d;
     const rows = await db.all(`
-      SELECT SUBSTRING(hora_pedido,1,2) as hora, COUNT(*) as total
+      SELECT
+        CASE
+          WHEN concluido_em LIKE '%T%' THEN LPAD(SPLIT_PART(SPLIT_PART(concluido_em,'T',2),':',1),2,'0')
+          WHEN concluido_em LIKE '% %' THEN LPAD(SPLIT_PART(SPLIT_PART(concluido_em,' ',2),':',1),2,'0')
+          ELSE NULL
+        END AS hora,
+        COUNT(*) AS total
       FROM pedidos
-      WHERE data_pedido=$1 AND hora_pedido IS NOT NULL AND hora_pedido <> ''
-      GROUP BY SUBSTRING(hora_pedido,1,2) ORDER BY hora`, [hoje]);
+      WHERE data_pedido=$1 AND status='concluido'
+        AND concluido_em IS NOT NULL AND concluido_em <> ''
+      GROUP BY hora
+      HAVING (
+        CASE
+          WHEN concluido_em LIKE '%T%' THEN LPAD(SPLIT_PART(SPLIT_PART(concluido_em,'T',2),':',1),2,'0')
+          WHEN concluido_em LIKE '% %' THEN LPAD(SPLIT_PART(SPLIT_PART(concluido_em,' ',2),':',1),2,'0')
+          ELSE NULL
+        END
+      ) IS NOT NULL
+      ORDER BY hora`, [hoje]);
     res.json(rows||[]);
   } catch(e) { res.status(500).json({erro: e.message}); }
 });
@@ -559,8 +574,7 @@ router.get('/stats/performance/detalhe', requerAuth, requerPerfil('supervisor'),
 
     /* ── Separadores: pedido a pedido ── */
     if (!filtPerfil || filtPerfil === 'separador') {
-      let w = `p.status='concluido' AND p.iniciado_em IS NOT NULL AND p.iniciado_em!=''
-               AND p.data_pedido>=$1 AND p.data_pedido<=$2`;
+      let w = `p.status='concluido' AND p.data_pedido>=$1 AND p.data_pedido<=$2`;
       const params = [dataIni, dataFim];
       if (filtColab) { params.push(filtColab); w += ` AND COALESCE(u.nome, s.nome)=$${params.length}`; }
 
@@ -568,14 +582,16 @@ router.get('/stats/performance/detalhe', requerAuth, requerPerfil('supervisor'),
         SELECT
           COALESCE(u.nome, s.nome, '—') AS separador_nome,
           p.numero_pedido, p.data_pedido, p.iniciado_em,
-          COALESCE(NULLIF(p.concluido_em,''),
+          COALESCE(
+            NULLIF(p.concluido_em,''),
             CASE WHEN ck.data_checkout IS NOT NULL AND ck.hora_criacao IS NOT NULL
                  THEN ck.data_checkout||'T'||ck.hora_criacao ELSE NULL END
           ) AS concluido_em,
           p.itens AS total_itens,
-          CASE WHEN p.iniciado_em!='' AND COALESCE(NULLIF(p.concluido_em,''),
-                   CASE WHEN ck.data_checkout IS NOT NULL AND ck.hora_criacao IS NOT NULL
-                        THEN ck.data_checkout||'T'||ck.hora_criacao ELSE NULL END) IS NOT NULL
+          CASE WHEN NULLIF(p.iniciado_em,'') IS NOT NULL
+                    AND COALESCE(NULLIF(p.concluido_em,''),
+                        CASE WHEN ck.data_checkout IS NOT NULL AND ck.hora_criacao IS NOT NULL
+                             THEN ck.data_checkout||'T'||ck.hora_criacao ELSE NULL END) IS NOT NULL
             THEN ROUND(EXTRACT(EPOCH FROM (
               COALESCE(NULLIF(p.concluido_em,''), ck.data_checkout||'T'||ck.hora_criacao)::timestamp
               - p.iniciado_em::timestamp
@@ -598,18 +614,17 @@ router.get('/stats/performance/detalhe', requerAuth, requerPerfil('supervisor'),
           ), 0) AS tempo_espera_min,
           (SELECT COUNT(*) FROM avisos_repositor a WHERE a.pedido_id=p.id) AS qtd_reposicoes,
           (SELECT COUNT(DISTINCT ip.codigo) FROM itens_pedido ip WHERE ip.pedido_id=p.id AND ip.codigo IS NOT NULL AND ip.codigo!='') AS qtd_produtos,
-          ck.hora_criacao AS ck_abertura, ck.hora_checkout AS ck_conclusao, ck.data_checkout AS ck_data,
           CASE WHEN ck.hora_criacao IS NOT NULL AND ck.hora_criacao!='' AND ck.hora_checkout IS NOT NULL AND ck.hora_checkout!=''
             THEN GREATEST(0, ROUND(EXTRACT(EPOCH FROM (ck.hora_checkout::time - ck.hora_criacao::time))/60.0)::int)
             ELSE NULL END AS tempo_checkout_min,
-          e.embalado_em AS emb_horario, e.embalado_por AS emb_operador
+          (SELECT em.embalado_em FROM embalagem em WHERE em.pedido_id=p.id ORDER BY em.id DESC LIMIT 1) AS emb_horario,
+          (SELECT em.embalado_por FROM embalagem em WHERE em.pedido_id=p.id ORDER BY em.id DESC LIMIT 1) AS emb_operador
         FROM pedidos p
-        LEFT JOIN separadores s   ON s.id = p.separador_id
-        LEFT JOIN usuarios u      ON u.id = s.usuario_id
-        LEFT JOIN checkout ck     ON ck.pedido_id = p.id
-        LEFT JOIN embalagem e     ON e.pedido_id = p.id
+        LEFT JOIN separadores s ON s.id = p.separador_id
+        LEFT JOIN usuarios u    ON u.id = s.usuario_id
+        LEFT JOIN LATERAL (SELECT * FROM checkout WHERE pedido_id=p.id ORDER BY id DESC LIMIT 1) ck ON true
         WHERE ${w}
-        ORDER BY COALESCE(u.nome, s.nome), p.data_pedido, p.iniciado_em
+        ORDER BY COALESCE(u.nome, s.nome), p.data_pedido, NULLIF(p.iniciado_em,'')
         LIMIT 3000
       `, params);
 
