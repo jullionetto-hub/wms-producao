@@ -112,19 +112,20 @@
         <div class="pg-title">Dashboard
           <span style="font-size:12px;color:var(--text3);font-weight:400;font-family:'DM Sans',sans-serif" id="dash-ultima-atualizacao"></span>
         </div>
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px;margin-bottom:8px">
-          <label style="font-size:11px;color:var(--text3);font-weight:600">DE</label>
-          <input type="date" id="filtro-data-ini" style="border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;background:var(--surface2);color:var(--text)">
-          <label style="font-size:11px;color:var(--text3);font-weight:600">ATÉ</label>
-          <input type="date" id="filtro-data-fim" style="border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;background:var(--surface2);color:var(--text)">
-          <button onclick="carregarDashboard()" class="btn btn-primary btn-sm">Filtrar</button>
-          <!-- Filtro de turno (multi-select) -->
-          <div style="display:flex;gap:3px;margin-left:4px">
-            <button id="dash-turno-manha"     class="btn-turno" onclick="toggleTurnoDash('Manha')">MANHÃ</button>
-            <button id="dash-turno-tarde"     class="btn-turno" onclick="toggleTurnoDash('Tarde')">TARDE</button>
-            <button id="dash-turno-madrugada" class="btn-turno" onclick="toggleTurnoDash('Noite')">MADRUGADA</button>
+        <div class="card" style="margin-bottom:14px">
+          <div class="card-hd">FILTROS
+            <button onclick="exportarDashboardExcel()" class="excel-btn">📊 Excel</button>
           </div>
-          <button onclick="exportarDashboardExcel()" class="excel-btn">📊 Excel</button>
+          <div class="date-filter-bar">
+            <div class="fg"><label>DE</label><input type="date" id="filtro-data-ini"/></div>
+            <div class="fg"><label>ATÉ</label><input type="date" id="filtro-data-fim"/></div>
+            <button onclick="carregarDashboard()" class="btn btn-primary btn-sm">Filtrar</button>
+            <div style="display:flex;gap:3px">
+              <button id="dash-turno-manha"     class="btn-turno" onclick="toggleTurnoDash('Manha')">MANHÃ</button>
+              <button id="dash-turno-tarde"     class="btn-turno" onclick="toggleTurnoDash('Tarde')">TARDE</button>
+              <button id="dash-turno-madrugada" class="btn-turno" onclick="toggleTurnoDash('Noite')">MADRUGADA</button>
+            </div>
+          </div>
         </div>
 
         <!-- KPIs — Linha 1: Finalizados e Pendentes por área -->
@@ -652,13 +653,15 @@
       <div class="pagina" id="pag-performance">
         <div class="pg-title">Performance dos Colaboradores</div>
 
-        <!-- Filtros — só filtra ao clicar em Filtrar -->
         <div class="card" style="margin-bottom:14px">
-          <div class="filtros" style="align-items:flex-end">
+          <div class="card-hd">FILTROS
+            <button class="excel-btn" onclick="exportarPerformanceExcel()">📊 Excel</button>
+          </div>
+          <div class="date-filter-bar">
             <div class="fg"><label>DE</label><input type="date" id="perf-ini"/></div>
             <div class="fg"><label>ATÉ</label><input type="date" id="perf-fim"/></div>
             <div class="fg"><label>ÁREA</label>
-              <select id="perf-perfil" class="sel-sm">
+              <select id="perf-perfil" class="fg">
                 <option value="">Todas</option>
                 <option value="separador">📦 Separação</option>
                 <option value="checkout">✅ Checkout</option>
@@ -667,12 +670,11 @@
               </select>
             </div>
             <div class="fg"><label>COLABORADOR</label>
-              <select id="perf-colab" class="sel-sm">
+              <select id="perf-colab">
                 <option value="">Todos</option>
               </select>
             </div>
-            <button class="btn btn-primary btn-sm" onclick="carregarPerformance()">🔍 Filtrar</button>
-            <button class="excel-btn" onclick="exportarPerformanceExcel()">📊 Excel</button>
+            <button class="btn btn-primary btn-sm" onclick="carregarPerformance()">Filtrar</button>
           </div>
         </div>
 
@@ -706,16 +708,15 @@
         <div>
           <!-- Filtros -->
           <div class="card" style="margin-bottom:12px">
-            <div class="card-hd">TURNO
-              <div style="display:flex;gap:8px;margin-left:auto;align-items:center">
-                <input type="date" id="diario-data" onchange="iniciarDiario()" style="border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;background:var(--surface2);color:var(--text)">
-                <select id="diario-turno" onchange="iniciarDiario()" style="border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;background:var(--surface2);color:var(--text)">
-                  <option value="Manha">☀️ Manhã</option>
-                  <option value="Tarde">🌅 Tarde</option>
-                  <option value="Noite">🌙 Noite</option>
-                </select>
-                <button onclick="carregarDadosDiario()" class="btn btn-primary btn-sm">🔄 Atualizar dados</button>
-              </div>
+            <div class="card-hd">FILTROS</div>
+            <div class="date-filter-bar">
+              <div class="fg"><label>DATA</label><input type="date" id="diario-data" onchange="iniciarDiario()"/></div>
+              <div class="fg"><label>TURNO</label><select id="diario-turno" onchange="iniciarDiario()">
+                <option value="Manha">☀️ Manhã</option>
+                <option value="Tarde">🌅 Tarde</option>
+                <option value="Noite">🌙 Noite</option>
+              </select></div>
+              <button onclick="carregarDadosDiario()" class="btn btn-primary btn-sm">🔄 Atualizar</button>
             </div>
           </div>
 
@@ -855,16 +856,19 @@
 
       <!-- EMBALAGEM -->
       <div class="pagina" id="pag-embalagem">
-        <div class="pg-title">📫 Embalagem
-          <div style="display:flex;gap:8px;margin-left:auto;align-items:center">
-          <input type="date" id="emb-data" onchange="carregarEmbalagem()" style="border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;background:var(--surface2);color:var(--text)">
-          <select id="emb-status" onchange="carregarEmbalagem()" style="border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;background:var(--surface2);color:var(--text)">
-            <option value="">Todos</option>
-            <option value="pendente">Pendentes</option>
-            <option value="embalado">Embalados</option>
-          </select>
-          <button onclick="carregarEmbalagem()" class="btn btn-primary btn-sm">🔄 Atualizar</button>
-          <button onclick="exportarEmbalagemExcel()" class="btn btn-success btn-sm">📊 Excel</button>
+        <div class="pg-title">📫 Embalagem</div>
+        <div class="card" style="margin-bottom:12px">
+          <div class="card-hd">FILTROS
+            <button onclick="exportarEmbalagemExcel()" class="excel-btn">📊 Excel</button>
+          </div>
+          <div class="date-filter-bar">
+            <div class="fg"><label>DATA</label><input type="date" id="emb-data" onchange="carregarEmbalagem()"/></div>
+            <div class="fg"><label>STATUS</label><select id="emb-status" onchange="carregarEmbalagem()">
+              <option value="">Todos</option>
+              <option value="pendente">Pendentes</option>
+              <option value="embalado">Embalados</option>
+            </select></div>
+            <button onclick="carregarEmbalagem()" class="btn btn-primary btn-sm">Filtrar</button>
           </div>
         </div>
         <div class="card" style="margin-bottom:12px">
@@ -1091,14 +1095,17 @@
       <div class="pagina" id="pag-relatorios" style="min-height:calc(100vh - 60px)">
         <div class="pg-title">Relatórios Diários</div>
         <div class="card" style="margin-bottom:14px">
-          <div class="card-hd">HISTÓRICO DE RELATÓRIOS
-            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-              <input type="date" id="rel-data" style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)">
-              <button class="btn btn-primary btn-sm" onclick="verRelatorio()">Ver</button>
-              <button class="btn btn-outline btn-sm" onclick="gerarRelatorioHoje()">🔄 Gerar Hoje</button>
-              <button class="excel-btn" onclick="exportarRelatorioExcel()">📊 Excel</button>
-            </div>
+          <div class="card-hd">FILTROS
+            <button class="excel-btn" onclick="exportarRelatorioExcel()">📊 Excel</button>
           </div>
+          <div class="date-filter-bar">
+            <div class="fg"><label>DATA</label><input type="date" id="rel-data"/></div>
+            <button class="btn btn-primary btn-sm" onclick="verRelatorio()">Ver</button>
+            <button class="btn btn-outline btn-sm" onclick="gerarRelatorioHoje()">🔄 Gerar Hoje</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-hd">HISTÓRICO DE RELATÓRIOS</div>
           <div id="rel-lista" style="margin-bottom:14px"></div>
           <div id="rel-detalhe"></div>
         </div>
@@ -1107,24 +1114,25 @@
       <!-- AUDITORIA -->
       <div class="pagina" id="pag-auditoria" style="min-height:calc(100vh - 60px)">
         <div class="pg-title">Log de Auditoria</div>
-        <div class="card">
-          <div class="card-hd">REGISTRO DE AÇÕES
-            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-              <input type="date" id="aud-ini" style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)">
-              <span style="font-size:11px;color:var(--text3)">até</span>
-              <input type="date" id="aud-fim" style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)">
-              <input type="text" id="aud-usuario" placeholder="Usuário..." style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);width:120px">
-              <select id="aud-acao" style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)">
-                <option value="">Todas as ações</option>
-                <option value="login">Login</option>
-                <option value="logout">Logout</option>
-                <option value="distribuicao_confirmada">Distribuição</option>
-                <option value="zerar_dados">Zerar dados</option>
-                <option value="relatorio_gerado">Relatório gerado</option>
-              </select>
-              <button class="btn btn-primary btn-sm" onclick="carregarAuditoria()">Filtrar</button>
-            </div>
+        <div class="card" style="margin-bottom:14px">
+          <div class="card-hd">FILTROS</div>
+          <div class="date-filter-bar">
+            <div class="fg"><label>DE</label><input type="date" id="aud-ini"/></div>
+            <div class="fg"><label>ATÉ</label><input type="date" id="aud-fim"/></div>
+            <div class="fg"><label>USUÁRIO</label><input type="text" id="aud-usuario" placeholder="Usuário..."/></div>
+            <div class="fg"><label>AÇÃO</label><select id="aud-acao">
+              <option value="">Todas as ações</option>
+              <option value="login">Login</option>
+              <option value="logout">Logout</option>
+              <option value="distribuicao_confirmada">Distribuição</option>
+              <option value="zerar_dados">Zerar dados</option>
+              <option value="relatorio_gerado">Relatório gerado</option>
+            </select></div>
+            <button class="btn btn-primary btn-sm" onclick="carregarAuditoria()">Filtrar</button>
           </div>
+        </div>
+        <div class="card">
+          <div class="card-hd">REGISTRO DE AÇÕES</div>
           <div style="overflow-x:auto;max-height:calc(100vh - 280px);overflow-y:auto">
             <table style="width:100%;border-collapse:collapse">
               <thead>
@@ -1146,7 +1154,7 @@
 
 <!-- ══ PASSAGEM DE TURNO ══ -->
 <div class="pagina" id="pag-passagem">
-  <div class="pag-header"><h2>🔄 Passagem de Turno</h2></div>
+  <div class="pg-title">🔄 Passagem de Turno</div>
   <div style="padding:16px;max-width:900px">
 
     <!-- Placar dos Turnos -->
@@ -1226,16 +1234,16 @@
 
 <!-- ══ PROTOCOLO ══ -->
 <div class="pagina" id="pag-protocolo">
-  <div class="pag-header"><h2>📋 Protocolo</h2></div>
-  <div style="padding:16px">
-    <div style="display:flex;gap:8px;align-items:center;margin-bottom:16px;flex-wrap:wrap">
-      <label style="font-size:12px;font-weight:600;color:var(--text3)">DATA:</label>
-      <input type="date" id="proto-filtro-data" style="border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:13px;background:var(--surface);color:var(--text)">
+  <div class="pg-title">📋 Protocolo</div>
+  <div class="card" style="margin-bottom:14px">
+    <div class="card-hd">FILTROS</div>
+    <div class="date-filter-bar">
+      <div class="fg"><label>DATA</label><input type="date" id="proto-filtro-data"/></div>
       <button class="btn btn-primary btn-sm" onclick="carregarProtocolo()">Filtrar</button>
       <button class="btn btn-outline btn-sm" onclick="document.getElementById('proto-filtro-data').value='';carregarProtocolo()">🔄</button>
     </div>
-    <div id="proto-lista"></div>
   </div>
+  <div id="proto-lista"></div>
 </div>
 
 <!-- ══ ESTATÍSTICAS SEPARADOR ══ -->
