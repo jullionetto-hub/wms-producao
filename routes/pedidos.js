@@ -320,10 +320,46 @@ router.post('/pedidos/distribuicao/confirmar', requerAuth, requerPerfil('supervi
   if (!plano?.length) return res.status(400).json({erro:'Plano não informado!'});
   let dist=0;
   try {
-    for (const item of plano) for (const np of item.pedidos) {
-      let sep=await db.get('SELECT id FROM separadores WHERE usuario_id=$1 OR id=$2 LIMIT 1',[item.separador_id,item.separador_id]);
-      const dbId=item.sep_db_id||sep?.id;
-      if (dbId){const r=await pool.query(`UPDATE pedidos SET separador_id=$1 WHERE numero_pedido=$2 AND status='pendente'`,[dbId,np]);if(r.rowCount>0)dist++;}
+    for (const item of plano) {
+      // 1. Busca separadores.id pelo usuario_id (caso mais comum)
+      let dbId = null;
+      const porUsuario = await db.get('SELECT id FROM separadores WHERE usuario_id=$1 LIMIT 1',[item.separador_id]);
+      if (porUsuario) {
+        dbId = porUsuario.id;
+      } else {
+        // 2. Tenta sep_db_id como separadores.id direto (separadores antigos sem usuario_id)
+        if (item.sep_db_id) {
+          const direto = await db.get('SELECT id FROM separadores WHERE id=$1 LIMIT 1',[item.sep_db_id]);
+          if (direto) dbId = direto.id;
+        }
+        // 3. Colaborador não tem registro em separadores (checkout/embalagem/repositor):
+        //    cria automaticamente para poder receber pedidos
+        if (!dbId) {
+          const user = await db.get('SELECT nome, turno FROM usuarios WHERE id=$1',[item.separador_id]);
+          if (user) {
+            try {
+              const ins = await pool.query(
+                `INSERT INTO separadores (nome, usuario_id, status, turno)
+                 VALUES ($1,$2,'ativo',$3)
+                 ON CONFLICT (usuario_id) DO UPDATE SET nome=EXCLUDED.nome
+                 RETURNING id`,
+                [user.nome, item.separador_id, user.turno||'Manha']
+              );
+              dbId = ins.rows[0]?.id;
+            } catch(e) {
+              // Se não tiver unique em usuario_id, só busca pelo nome
+              const found = await db.get('SELECT id FROM separadores WHERE nome=$1 LIMIT 1',[user.nome]);
+              dbId = found?.id;
+            }
+          }
+        }
+      }
+      if (dbId) {
+        for (const np of item.pedidos) {
+          const r=await pool.query(`UPDATE pedidos SET separador_id=$1 WHERE numero_pedido=$2 AND status='pendente'`,[dbId,np]);
+          if(r.rowCount>0) dist++;
+        }
+      }
     }
     res.json({mensagem:'Distribuição confirmada!',distribuidos:dist});
   } catch(err){res.status(500).json({erro:err.message});}
