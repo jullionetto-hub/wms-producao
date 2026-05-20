@@ -904,36 +904,20 @@ async function carregarPerformance() {
     if (!cardsWrap) return;
     cardsWrap.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
 
-    // Monta mapa de tempo individual por colaborador/perfil para exibir no card
-    const tempoIndividual = {};
-    resultado.forEach(r => {
-      const k = r.perfil;
-      if (!tempoIndividual[k]) tempoIndividual[k] = [];
-      if (r.minutos > 0) tempoIndividual[k].push({ nome: r.usuario_nome, min: r.minutos });
-    });
-
     cardsWrap.innerHTML = areasVisiveis.map(p => {
-      const area  = AREA_INFO[p] || { icon:'👤', label: p, cor:'var(--text)' };
-      const ag    = porArea[p];
-      const individuais = tempoIndividual[p] || [];
+      const area = AREA_INFO[p] || { icon:'👤', label: p, cor:'var(--text)' };
+      const ag   = porArea[p];
 
       let tempoHtml = '';
       if (colab) {
-        // colaborador único — mostra tempo dele
-        const min = individuais[0]?.min || ag.minutos;
+        const r = resultado.find(r => r.perfil === p);
+        const min = r?.minutos || 0;
         tempoHtml = min > 0
-          ? `<div style="font-size:13px;color:var(--accent);font-weight:700">⏱ ${_horasStr(min)}</div><div style="font-size:9px;color:var(--text3)">logado</div>`
-          : `<div style="font-size:11px;color:var(--text3)">—</div>`;
-      } else {
-        // todos — lista individual compacta
-        tempoHtml = individuais.length
-          ? individuais.slice(0,4).map(i =>
-              `<div style="font-size:10px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
-                <span style="color:var(--accent);font-weight:700">${_horasStr(i.min)}</span>
-                <span style="color:var(--text3)"> ${i.nome.split(' ')[0]}</span>
-              </div>`).join('')
-            + (individuais.length > 4 ? `<div style="font-size:10px;color:var(--text3)">+${individuais.length-4} outros</div>` : '')
-          : `<div style="font-size:10px;color:var(--text3)">Sem sessão</div>`;
+          ? `<div style="border-left:1px solid var(--border);padding-left:10px;text-align:right">
+               <div style="font-size:13px;color:var(--accent);font-weight:700">⏱ ${_horasStr(min)}</div>
+               <div style="font-size:9px;color:var(--text3)">logado</div>
+             </div>`
+          : `<div style="border-left:1px solid var(--border);padding-left:10px"><div style="font-size:11px;color:var(--text3)">—</div></div>`;
       }
 
       return `<div class="card" style="padding:10px 14px;display:flex;align-items:center;gap:12px">
@@ -943,7 +927,7 @@ async function carregarPerformance() {
           <div style="font-size:26px;font-weight:900;color:var(--text);line-height:1.1">${ag.atividades}</div>
           <div style="font-size:10px;color:var(--text3)">${LABELS[p]}${!colab ? ` · ${ag.colaboradores} colaborador${ag.colaboradores!==1?'es':''}` : ''}</div>
         </div>
-        <div style="border-left:1px solid var(--border);padding-left:10px;min-width:80px">${tempoHtml}</div>
+        ${tempoHtml}
       </div>`;
     }).join('');
 
@@ -960,8 +944,8 @@ async function carregarPerformanceDetalhe(ini, fim, filtPerfil, filtColab) {
   const badge   = document.getElementById('perf-det-badge');
   if (!wrap || !content) return;
 
-  // Só mostra para separador e checkout (têm dados de tempo por pedido)
-  const perfilOk = !filtPerfil || filtPerfil === 'separador' || filtPerfil === 'checkout';
+  // Mostra para todos os perfis operacionais
+  const perfilOk = !filtPerfil || ['separador','checkout','embalador','repositor'].includes(filtPerfil);
   if (!perfilOk) { wrap.style.display = 'none'; return; }
 
   try {
@@ -975,16 +959,25 @@ async function carregarPerformanceDetalhe(ini, fim, filtPerfil, filtColab) {
 
     if (!detalhe || !detalhe.length) { wrap.style.display = 'none'; return; }
 
-    const totalPedidos = detalhe.reduce((s, d) => s + d.pedidos.length, 0);
-    if (totalPedidos === 0) { wrap.style.display = 'none'; return; }
+    const totalRegistros = detalhe.reduce((s, d) => s + d.pedidos.length, 0);
+    if (totalRegistros === 0) { wrap.style.display = 'none'; return; }
 
     wrap.style.display = 'block';
-    if (badge) badge.textContent = `${totalPedidos} registros`;
+    if (badge) badge.textContent = `${totalRegistros} registros`;
+
+    const ORDEM_PERFIS = ['separador','checkout','embalador','repositor'];
+    detalhe.sort((a,b) => {
+      const ia = ORDEM_PERFIS.indexOf(a.perfil); const ib = ORDEM_PERFIS.indexOf(b.perfil);
+      if (ia !== ib) return ia - ib;
+      return a.nome.localeCompare(b.nome);
+    });
 
     content.innerHTML = detalhe.map(colab => {
-      const isSep = colab.perfil === 'separador';
-      const AREA_COR = { separador: 'var(--accent)', checkout: 'var(--green)' };
-      const AREA_LABEL = { separador: '📦 Separação', checkout: '✅ Checkout' };
+      const isSep  = colab.perfil === 'separador';
+      const isEmb  = colab.perfil === 'embalador';
+      const isRep  = colab.perfil === 'repositor';
+      const AREA_COR   = { separador:'var(--accent)', checkout:'var(--green)', embalador:'#8B5CF6', repositor:'#F97316' };
+      const AREA_LABEL = { separador:'📦 Separação', checkout:'✅ Checkout', embalador:'📫 Embalagem', repositor:'🔧 Reposição' };
       const cor = AREA_COR[colab.perfil] || 'var(--text)';
 
       const nomeSafe = colab.nome.replace(/'/g, "\\'");
@@ -1017,7 +1010,7 @@ async function carregarPerformanceDetalhe(ini, fim, filtPerfil, filtColab) {
             : '<span style="color:var(--text3)">—</span>';
           return `<tr>
             <td style="font-weight:700">${p.numero_pedido||'—'}</td>
-            <td style="color:var(--text2)">${p.data_pedido||'—'}</td>
+            <td style="color:var(--text2)">${fmtData(p.data_pedido)||'—'}</td>
             <td style="color:var(--text2)">${ini}</td>
             <td style="color:var(--text2)">${fim}</td>
             <td style="color:var(--text2)">${total}</td>
@@ -1061,6 +1054,60 @@ async function carregarPerformanceDetalhe(ini, fim, filtPerfil, filtColab) {
             <table>
               <thead><tr>
                 <th>Nº PEDIDO</th><th>DATA</th><th>ABERTURA</th><th>CONFIRMAÇÃO</th><th>⏱ TEMPO CHECKOUT</th>
+              </tr></thead>
+              <tbody>${linhas}</tbody>
+            </table>
+          </div>`;
+      } else if (isEmb) {
+        const linhas = colab.pedidos.map(p => {
+          const horario = p.embalado_em ? p.embalado_em.slice(0,5) : '—';
+          return `<tr>
+            <td style="font-weight:700">${p.numero_pedido||'—'}</td>
+            <td style="color:var(--text2)">${fmtData(p.data_pedido)||'—'}</td>
+            <td style="color:var(--text2)">${horario}</td>
+            <td style="color:var(--text2)">${p.cliente||'—'}</td>
+            <td style="color:var(--text2)">${p.transportadora||'—'}</td>
+            <td style="font-weight:700;color:#8B5CF6">${p.total_itens||0}</td>
+          </tr>`;
+        }).join('');
+        tabela = `
+          <div class="tabela-wrap">
+            <table>
+              <thead><tr>
+                <th>Nº PEDIDO</th><th>DATA</th><th>HORÁRIO</th><th>CLIENTE</th><th>TRANSP.</th><th>ITENS</th>
+              </tr></thead>
+              <tbody>${linhas}</tbody>
+            </table>
+          </div>`;
+      } else if (isRep) {
+        const STcor = { abastecido:'var(--green)', reposto:'var(--green)', encontrado:'var(--green)', subiu:'var(--green)',
+                        nao_encontrado:'var(--red)', protocolo:'var(--text3)', pendente:'var(--amber)' };
+        const STlabel = { abastecido:'✅ Abastecido', reposto:'✅ Reposto', encontrado:'✅ Encontrado', subiu:'✅ Subiu',
+                          nao_encontrado:'❌ Não encontrado', protocolo:'📋 Protocolo', pendente:'⏳ Pendente' };
+        const linhas = colab.pedidos.map(p => {
+          const cor = STcor[p.status] || 'var(--text3)';
+          const label = STlabel[p.status] || p.status;
+          const tempo = p.tempo_resolucao_min !== null
+            ? `<span style="color:${p.tempo_resolucao_min<=10?'var(--green)':p.tempo_resolucao_min<=30?'var(--amber)':'var(--red)'};font-weight:700">${_horasStr(p.tempo_resolucao_min)}</span>`
+            : '—';
+          return `<tr>
+            <td style="font-weight:700">${p.numero_pedido||'—'}</td>
+            <td style="color:var(--text2)">${fmtData(p.data_pedido)||'—'}</td>
+            <td style="color:var(--text2)">${p.hora_aviso||'—'}</td>
+            <td style="color:var(--text2)">${p.hora_reposto||'—'}</td>
+            <td>${tempo}</td>
+            <td style="color:var(--text2);font-size:11px">${p.codigo||'—'}</td>
+            <td style="color:var(--text2);font-size:11px;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.descricao||'—'}</td>
+            <td style="text-align:center">${p.quantidade||0}</td>
+            <td><span style="color:${cor};font-weight:700;font-size:11px">${label}</span></td>
+          </tr>`;
+        }).join('');
+        tabela = `
+          <div class="tabela-wrap">
+            <table>
+              <thead><tr>
+                <th>Nº PEDIDO</th><th>DATA</th><th>AVISO</th><th>REPOSTO</th><th>⏱ TEMPO</th>
+                <th>CÓDIGO</th><th>DESCRIÇÃO</th><th>QTD</th><th>STATUS</th>
               </tr></thead>
               <tbody>${linhas}</tbody>
             </table>

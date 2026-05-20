@@ -686,6 +686,74 @@ router.get('/stats/performance/detalhe', requerAuth, requerPerfil('supervisor'),
       });
     }
 
+    /* ── Embalagem: pedido a pedido ── */
+    if (!filtPerfil || filtPerfil === 'embalador') {
+      const params = [dataIni, dataFim];
+      let w = `e.data_embalagem>=$1 AND e.data_embalagem<=$2 AND e.embalado_por IS NOT NULL AND e.embalado_por!=''`;
+      if (filtColab) { params.push(filtColab); w += ` AND e.embalado_por=$${params.length}`; }
+
+      const embList = await db.all(`
+        SELECT e.embalado_por, e.numero_pedido, e.data_embalagem, e.embalado_em,
+               e.cliente, e.transportadora, p.itens
+        FROM embalagem e
+        LEFT JOIN pedidos p ON e.pedido_id = p.id
+        WHERE ${w}
+        ORDER BY e.embalado_por, e.data_embalagem, e.embalado_em
+        LIMIT 3000`, params);
+
+      embList.forEach(e => {
+        const key = `${e.embalado_por}:embalador`;
+        if (!resultado[key]) resultado[key] = { nome: e.embalado_por, perfil: 'embalador', pedidos: [] };
+        resultado[key].pedidos.push({
+          numero_pedido: e.numero_pedido,
+          data_pedido:   e.data_embalagem,
+          embalado_em:   e.embalado_em,
+          cliente:       e.cliente || '—',
+          transportadora:e.transportadora || '—',
+          total_itens:   parseInt(e.itens) || 0,
+        });
+      });
+    }
+
+    /* ── Reposição: aviso a aviso ── */
+    if (!filtPerfil || filtPerfil === 'repositor') {
+      const params = [dataIni, dataFim];
+      let w = `a.data_aviso>=$1 AND a.data_aviso<=$2 AND a.repositor_nome IS NOT NULL AND a.repositor_nome!=''`;
+      if (filtColab) { params.push(filtColab); w += ` AND a.repositor_nome=$${params.length}`; }
+
+      const repList = await db.all(`
+        SELECT a.repositor_nome, a.numero_pedido, a.data_aviso, a.hora_aviso, a.hora_reposto,
+               a.codigo, a.descricao, a.quantidade, a.status, a.situacao, a.obs,
+               CASE WHEN a.hora_aviso IS NOT NULL AND a.hora_aviso!=''
+                         AND a.hora_reposto IS NOT NULL AND a.hora_reposto!=''
+                 THEN GREATEST(0, ROUND(EXTRACT(EPOCH FROM (
+                   (a.data_aviso::date + a.hora_reposto::time)
+                   - (a.data_aviso::date + a.hora_aviso::time)
+                 ))/60.0)::int)
+                 ELSE NULL END AS tempo_resolucao_min
+        FROM avisos_repositor a
+        WHERE ${w}
+        ORDER BY a.repositor_nome, a.data_aviso, a.hora_aviso
+        LIMIT 3000`, params);
+
+      repList.forEach(a => {
+        const key = `${a.repositor_nome}:repositor`;
+        if (!resultado[key]) resultado[key] = { nome: a.repositor_nome, perfil: 'repositor', pedidos: [] };
+        resultado[key].pedidos.push({
+          numero_pedido:       a.numero_pedido,
+          data_pedido:         a.data_aviso,
+          hora_aviso:          a.hora_aviso,
+          hora_reposto:        a.hora_reposto,
+          codigo:              a.codigo,
+          descricao:           a.descricao,
+          quantidade:          a.quantidade,
+          status:              a.situacao || a.status,
+          obs:                 a.obs,
+          tempo_resolucao_min: a.tempo_resolucao_min,
+        });
+      });
+    }
+
     res.json({ detalhe: Object.values(resultado) });
   } catch(e) {
     console.error('Erro detalhe performance:', e);
