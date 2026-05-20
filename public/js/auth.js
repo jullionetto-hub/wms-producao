@@ -260,6 +260,7 @@ function montarSidebar() {
       <div class="mg">SUPERVISÃO</div>
       <a class="mi ativo" onclick="irPara('dashboard',this)"><span class="mi-ic">📊</span>Dashboard</a>
       <a class="mi" onclick="irPara('pedidos',this)"><span class="mi-ic">📋</span>Pedidos <span class="mbadge" id="menu-badge-bloq" style="display:none;background:var(--red)">!</span></a>
+      <a class="mi" onclick="irPara('liberacao',this)"><span class="mi-ic">🔓</span>Liberação <span class="mbadge" id="menu-badge-lib" style="display:none;background:var(--red)">0</span></a>
       <a class="mi" onclick="irPara('performance',this)"><span class="mi-ic">🏆</span>Performance</a>
       <a class="mi" onclick="irPara('relatorios',this)"><span class="mi-ic">📅</span>Relatórios</a>
       <a class="mi" onclick="irPara('tempo-sep',this)"><span class="mi-ic">⏱️</span>Tempo de Separação</a>
@@ -314,6 +315,7 @@ function irPara(pag, el) {
   if (pag === 'checkout')        { const el2 = document.getElementById('ck-input-caixa'); if(el2) setTimeout(()=>el2.focus(),200); }
   if (pag === 'stats-repositor') carregarStatsRepositor();
   if (pag === 'stats-checkout')  carregarStatsCheckout();
+  if (pag === 'liberacao')    { carregarLiberacao(); }
   if (pag === 'performance')  { carregarPerformance(); carregarColaboradores(); }
   if (pag === 'relatorios')   { carregarListaRelatorios(); }
   if (pag === 'tempo-sep')   { iniciarTempoSep(); }

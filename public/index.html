@@ -200,19 +200,19 @@
             </div>
           </div>
 
-          <!-- Grid: ranking + separadores tempo real -->
-          <div class="grid-2">
-            <div class="card">
-              <div class="card-hd">RANKING — SEPARADORES MAIS RÁPIDOS HOJE</div>
-              <div id="op-ranking" style="padding:4px 0">
-                <div style="color:var(--text3);text-align:center;padding:20px;font-size:13px">Carregando...</div>
-              </div>
+          <!-- Ranking Geral — todas as áreas -->
+          <div class="card" style="margin-bottom:14px">
+            <div class="card-hd">🏆 RANKING GERAL — HOJE</div>
+            <div id="op-ranking-geral" style="display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--border)">
+              <div style="color:var(--text3);text-align:center;padding:20px;font-size:13px;grid-column:span 4">Carregando...</div>
             </div>
-            <div class="card">
-              <div class="card-hd">SEPARADORES ATIVOS</div>
-              <div id="op-tempo-real" style="padding:4px 0">
-                <div style="color:var(--text3);text-align:center;padding:20px;font-size:13px">Carregando...</div>
-              </div>
+          </div>
+
+          <!-- Separadores ativos -->
+          <div class="card">
+            <div class="card-hd">SEPARADORES ATIVOS</div>
+            <div id="op-tempo-real" style="padding:4px 0">
+              <div style="color:var(--text3);text-align:center;padding:20px;font-size:13px">Carregando...</div>
             </div>
           </div>
         </div>
@@ -648,6 +648,44 @@
 
 
 
+
+      <!-- LIBERAÇÃO DE ITENS -->
+      <div class="pagina" id="pag-liberacao">
+        <div class="pg-title">🔓 Liberação de Itens</div>
+
+        <div class="card" style="margin-bottom:14px;border-left:4px solid var(--red)">
+          <div class="card-hd">
+            AGUARDANDO LIBERAÇÃO DO SUPERVISOR
+            <span id="lib-total-badge" style="background:var(--red);color:#fff;border-radius:20px;padding:2px 12px;font-size:12px;font-weight:700;margin-left:8px">0</span>
+          </div>
+          <div style="padding:10px 16px;font-size:13px;color:var(--text2)">
+            Itens marcados como <b style="color:var(--red)">Não Encontrado</b> pelo repositor que precisam de liberação do supervisor.<br>
+            Ao liberar, o item vai para <b>Protocolo</b> e o separador pode continuar o pedido.
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-hd">ITENS PENDENTES</div>
+          <div class="tabela-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Nº PEDIDO</th>
+                  <th>ITEM</th>
+                  <th>QTDE</th>
+                  <th>SEPARADOR</th>
+                  <th>REPOSITOR</th>
+                  <th>DATA / HORA</th>
+                  <th>AÇÃO</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-liberacao">
+                <tr><td colspan="7" style="text-align:center;color:var(--text3);padding:24px">Carregando...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
 
       <!-- PERFORMANCE -->
       <div class="pagina" id="pag-performance">

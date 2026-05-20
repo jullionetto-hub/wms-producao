@@ -397,32 +397,6 @@ async function carregarOperacao() {
         seps = seps.filter(s => nomesDoTurno.has(s.nome));
       } catch(e) { console.warn(e); }
     }
-    const maxConc = Math.max(...seps.map(s=>s.concluidos), 1);
-    const medalhas = ['🥇','🥈','🥉'];
-
-    // Ranking
-    const rankEl = document.getElementById('op-ranking');
-    if (rankEl) {
-      if (!seps.length) {
-        rankEl.innerHTML = '<div style="color:var(--text3);text-align:center;padding:20px;font-size:13px">Nenhum pedido concluído ainda</div>';
-      } else {
-        rankEl.innerHTML = seps.map((s,i) => `
-          <div style="display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:0.5px solid var(--border)">
-            <div style="font-size:20px;width:28px;text-align:center">${medalhas[i]||'#'+(i+1)}</div>
-            <div style="flex:1;min-width:0">
-              <div style="font-size:13px;font-weight:600;color:var(--text)">${s.nome}</div>
-              <div style="height:6px;background:var(--surface2);border-radius:3px;margin-top:4px;overflow:hidden">
-                <div style="height:100%;background:${i===0?'linear-gradient(90deg,#F59E0B,#FCD34D)':i===1?'linear-gradient(90deg,#94A3B8,#CBD5E1)':i===2?'linear-gradient(90deg,#C2410C,#FB923C)':'linear-gradient(90deg,#2563EB,#60A5FA)'};width:${Math.round((s.concluidos/maxConc)*100)}%;border-radius:3px"></div>
-              </div>
-            </div>
-            <div style="text-align:right;flex-shrink:0">
-              <div style="font-size:18px;font-weight:700;color:var(--green)">${s.concluidos}</div>
-              <div style="font-size:10px;color:var(--text3)">pedidos</div>
-            </div>
-          </div>`).join('');
-      }
-    }
-
     // Tempo real
     const trEl = document.getElementById('op-tempo-real');
     if (trEl) {
@@ -465,10 +439,121 @@ async function carregarDashboard() {
   await carregarTimeline();
   await atualizarBadgeRep();
   await carregarOperacao();
+  carregarRankingGeral();
   carregarRanking();
   carregarGraficoHoras();
+  atualizarBadgeLiberacao();
   const el = document.getElementById('dash-ultima-atualizacao');
   if (el) el.textContent = '— atualizado ' + new Date().toLocaleTimeString('pt-BR', {timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit'});
+}
+
+/* ─── RANKING GERAL ─────────────────────────────────────────────────── */
+async function carregarRankingGeral() {
+  const el = document.getElementById('op-ranking-geral');
+  if (!el) return;
+  try {
+    const res = await fetch(`${API}/dashboard/ranking-geral`, { credentials:'include' });
+    if (!res.ok) return;
+    const data = await res.json();
+
+    const areas = [
+      { key:'separadores', icon:'📦', label:'Separação', cor:'var(--accent)',  metrica:'pedidos'    },
+      { key:'checkout',    icon:'✅', label:'Checkout',  cor:'var(--green)',   metrica:'checkouts'  },
+      { key:'embalagem',   icon:'📫', label:'Embalagem', cor:'var(--indigo)',  metrica:'embalagens' },
+      { key:'repositores', icon:'🔧', label:'Reposição', cor:'var(--amber)',   metrica:'repostos'   },
+    ];
+    const medalhas = ['🥇','🥈','🥉'];
+
+    el.innerHTML = areas.map(area => {
+      const lista = (data[area.key] || []).map(r => ({ ...r, total: parseInt(r.total)||0 }));
+      const max = Math.max(...lista.map(r => r.total), 1);
+      const linhas = lista.length > 0
+        ? lista.map((r,i) => `
+            <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:0.5px solid var(--border)">
+              <span style="font-size:15px;width:22px;text-align:center;flex-shrink:0">${medalhas[i]||''}</span>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.nome}</div>
+                <div style="height:4px;background:var(--surface2);border-radius:2px;margin-top:3px">
+                  <div style="height:100%;background:${area.cor};width:${Math.round(r.total/max*100)}%;border-radius:2px"></div>
+                </div>
+              </div>
+              <div style="text-align:right;flex-shrink:0">
+                <div style="font-size:16px;font-weight:800;color:${area.cor}">${r.total}</div>
+                ${area.key==='separadores'&&r.itens?`<div style="font-size:9px;color:var(--text3)">${r.itens} itens</div>`:''}
+              </div>
+            </div>`).join('')
+        : `<div style="color:var(--text3);text-align:center;padding:16px 8px;font-size:12px">Sem dados hoje</div>`;
+
+      return `<div style="padding:12px 14px;border-right:1px solid var(--border)">
+        <div style="font-size:11px;font-weight:800;color:${area.cor};letter-spacing:.5px;margin-bottom:8px">${area.icon} ${area.label.toUpperCase()}</div>
+        ${linhas}
+      </div>`;
+    }).join('');
+
+  } catch(e) { console.error('carregarRankingGeral:', e); }
+}
+
+/* ─── LIBERAÇÃO DE ITENS ────────────────────────────────────────────── */
+async function carregarLiberacao() {
+  const tbody    = document.getElementById('tbody-liberacao');
+  const badge    = document.getElementById('lib-total-badge');
+  const menuBadge = document.getElementById('menu-badge-lib');
+  if (!tbody) return;
+
+  try {
+    const res  = await fetch(`${API}/liberacao/pendentes`, { credentials:'include' });
+    const rows = await res.json();
+
+    const total = rows.length;
+    if (badge)     badge.textContent = total;
+    if (menuBadge) { menuBadge.textContent = total; menuBadge.style.display = total > 0 ? 'inline' : 'none'; }
+
+    if (!total) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:32px;font-size:13px">✅ Nenhum item aguardando liberação</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = rows.map(r => `
+      <tr>
+        <td style="font-weight:700">${r.numero_pedido||'—'}</td>
+        <td>
+          <div style="font-weight:700;color:var(--text)">${r.codigo||'—'}</div>
+          <div style="font-size:11px;color:var(--text2)">${r.descricao||''}</div>
+        </td>
+        <td style="text-align:center;font-weight:700">${r.quantidade||'—'}</td>
+        <td style="color:var(--text2)">${r.separador_nome||'—'}</td>
+        <td style="color:var(--text2)">${r.repositor_nome||'—'}</td>
+        <td style="color:var(--text3);font-size:12px">${r.data_aviso||''} ${r.hora_reposto||r.hora_aviso||''}</td>
+        <td>
+          <button class="btn btn-sm" style="background:var(--accent);color:#fff;white-space:nowrap"
+            onclick="liberarItem(${r.id})">🔓 Liberar para Protocolo</button>
+        </td>
+      </tr>`).join('');
+  } catch(e) { console.error('carregarLiberacao:', e); toast('Erro ao carregar liberações','erro'); }
+}
+
+async function liberarItem(id) {
+  if (!confirm('Liberar este item para Protocolo? O separador será notificado.')) return;
+  try {
+    const res  = await fetch(`${API}/repositor/avisos/${id}/protocolo`, {
+      method:'PUT', credentials:'include',
+      headers:{'Content-Type':'application/json'}, body:JSON.stringify({})
+    });
+    const data = await res.json();
+    if (data.erro) { toast(data.erro,'erro'); return; }
+    toast('✅ Item liberado para Protocolo!','sucesso');
+    carregarLiberacao();
+  } catch(e) { toast('Erro ao liberar!','erro'); }
+}
+
+async function atualizarBadgeLiberacao() {
+  try {
+    const res  = await fetch(`${API}/liberacao/pendentes`, { credentials:'include' });
+    if (!res.ok) return;
+    const rows = await res.json();
+    const badge = document.getElementById('menu-badge-lib');
+    if (badge) { badge.textContent = rows.length; badge.style.display = rows.length > 0 ? 'inline' : 'none'; }
+  } catch(e) {}
 }
 
 

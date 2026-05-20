@@ -484,6 +484,69 @@ router.get('/stats/performance', requerAuth, requerPerfil('supervisor'), async (
   } catch(e) { res.status(500).json({ erro: e.message }); }
 });
 
+/* ─── RANKING GERAL — TODAS AS ÁREAS ──────────────────────────────── */
+router.get('/dashboard/ranking-geral', requerAuth, requerPerfil('supervisor'), async (req, res) => {
+  try {
+    const { d: hoje } = await db.get(`SELECT TO_CHAR(NOW() AT TIME ZONE 'America/Sao_Paulo','YYYY-MM-DD') as d`);
+
+    const separadores = await db.all(`
+      SELECT COALESCE(u.nome, s.nome) as nome,
+        COUNT(*) FILTER (WHERE p.status='concluido') as total,
+        COALESCE(SUM(p.itens) FILTER (WHERE p.status='concluido'), 0) as itens
+      FROM separadores s
+      LEFT JOIN usuarios u ON u.id = s.usuario_id
+      LEFT JOIN pedidos p ON p.separador_id = s.id AND p.data_pedido = $1
+      WHERE s.status = 'ativo'
+      GROUP BY COALESCE(u.nome, s.nome)
+      HAVING COUNT(*) FILTER (WHERE p.status='concluido') > 0
+      ORDER BY total DESC LIMIT 10
+    `, [hoje]);
+
+    const checkout = await db.all(`
+      SELECT operador_nome as nome, COUNT(*) as total
+      FROM checkout
+      WHERE status='concluido' AND data_checkout=$1 AND operador_nome!=''
+      GROUP BY operador_nome ORDER BY total DESC LIMIT 10
+    `, [hoje]);
+
+    const embalagem = await db.all(`
+      SELECT embalado_por as nome, COUNT(*) as total
+      FROM embalagem
+      WHERE data_embalagem=$1 AND embalado_por IS NOT NULL AND embalado_por!=''
+      GROUP BY embalado_por ORDER BY total DESC LIMIT 10
+    `, [hoje]);
+
+    const repositores = await db.all(`
+      SELECT repositor_nome as nome,
+        COUNT(*) FILTER (WHERE status IN ('reposto','abastecido','subiu','encontrado')) as total
+      FROM avisos_repositor
+      WHERE data_aviso=$1 AND repositor_nome IS NOT NULL AND repositor_nome!=''
+        AND status IN ('reposto','abastecido','subiu','encontrado')
+      GROUP BY repositor_nome
+      HAVING COUNT(*) FILTER (WHERE status IN ('reposto','abastecido','subiu','encontrado')) > 0
+      ORDER BY total DESC LIMIT 10
+    `, [hoje]);
+
+    res.json({ separadores, checkout, embalagem, repositores });
+  } catch(e) { res.status(500).json({ erro: e.message }); }
+});
+
+/* ─── LIBERAÇÃO DE ITENS (nao_encontrado → aguardando supervisor) ─── */
+router.get('/liberacao/pendentes', requerAuth, requerPerfil('supervisor'), async (req, res) => {
+  try {
+    const rows = await db.all(`
+      SELECT a.id, a.numero_pedido, a.codigo, a.descricao, a.quantidade,
+        a.separador_nome, a.repositor_nome, a.hora_aviso, a.hora_reposto, a.data_aviso, a.obs,
+        p.cliente
+      FROM avisos_repositor a
+      LEFT JOIN pedidos p ON a.pedido_id = p.id
+      WHERE a.status = 'nao_encontrado'
+      ORDER BY a.data_aviso DESC, a.id DESC
+    `);
+    res.json(rows || []);
+  } catch(e) { res.status(500).json({ erro: e.message }); }
+});
+
 /* ─── DETALHE POR PEDIDO (Performance) ─────────────────────────────── */
 router.get('/stats/performance/detalhe', requerAuth, requerPerfil('supervisor'), async (req, res) => {
   const { ini, fim, colaborador: filtColab, perfil: filtPerfil } = req.query;
