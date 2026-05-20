@@ -1760,14 +1760,17 @@
       <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px;align-items:flex-end">
         <div class="fg">
           <label>QUANTIDADE DE PEDIDOS A DISTRIBUIR</label>
-          <input type="number" id="dist-quantidade" placeholder="Todos" min="1" style="min-width:180px;font-size:15px;font-weight:700"/>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input type="number" id="dist-quantidade" placeholder="Todos" min="1" style="min-width:140px;font-size:15px;font-weight:700" oninput="clearTimeout(window._distTimer);window._distTimer=setTimeout(carregarPedidosDistribuicao,400)"/>
+            <button class="btn btn-primary btn-sm" onclick="carregarPedidosDistribuicao()" title="Atualizar prévia com a quantidade informada" style="height:36px;white-space:nowrap">🔍 Filtrar</button>
+          </div>
         </div>
         <label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;cursor:pointer;margin-bottom:4px">
-          <input type="checkbox" id="dist-apenas-sem-sep" checked style="accent-color:var(--accent)">
+          <input type="checkbox" id="dist-apenas-sem-sep" checked style="accent-color:var(--accent)" onchange="carregarPedidosDistribuicao()">
           Apenas sem separador atribuído
         </label>
         <label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;cursor:pointer;margin-bottom:4px">
-          <input type="checkbox" id="dist-respeitar-hora" checked style="accent-color:var(--accent)">
+          <input type="checkbox" id="dist-respeitar-hora" checked style="accent-color:var(--accent)" onchange="carregarPedidosDistribuicao()">
           Respeitar horário do pedido (mais antigo primeiro)
         </label>
       </div>
