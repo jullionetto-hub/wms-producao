@@ -1246,6 +1246,55 @@
   <div id="proto-lista"></div>
 </div>
 
+<!-- ══ TEMPO DE SEPARAÇÃO ══ -->
+<div class="pagina" id="pag-tempo-sep">
+  <div class="pg-title">⏱️ Tempo de Separação</div>
+
+  <!-- Filtros -->
+  <div class="card" style="margin-bottom:14px">
+    <div class="card-hd">FILTROS
+      <button class="excel-btn" onclick="exportarTempoSepExcel()">📊 Excel</button>
+    </div>
+    <div class="date-filter-bar">
+      <div class="fg"><label>DE</label><input type="date" id="tsep-ini"/></div>
+      <div class="fg"><label>ATÉ</label><input type="date" id="tsep-fim"/></div>
+      <div class="fg"><label>SEPARADOR</label><select id="tsep-sep"><option value="">Todos</option></select></div>
+      <button class="btn btn-primary btn-sm" onclick="carregarTempoSeparacao()">Filtrar</button>
+    </div>
+  </div>
+
+  <!-- KPIs resumo -->
+  <div id="tsep-kpis" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px"></div>
+
+  <!-- Tabela -->
+  <div class="card">
+    <div class="card-hd">DETALHAMENTO POR PEDIDO
+      <span id="tsep-total" style="font-size:11px;color:var(--text3);font-weight:500"></span>
+    </div>
+    <div class="tabela-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Nº PEDIDO</th>
+            <th>SEPARADOR</th>
+            <th>DATA</th>
+            <th>INÍCIO</th>
+            <th>CONCLUSÃO</th>
+            <th title="Tempo total do início até a conclusão">TEMPO TOTAL</th>
+            <th title="Tempo parado aguardando repositor">⏸ AGUARDOU REP.</th>
+            <th title="Tempo real trabalhando na separação">✅ TEMPO REAL</th>
+            <th>ITENS</th>
+            <th>REPOSIÇÕES</th>
+          </tr>
+        </thead>
+        <tbody id="tbody-tempo-sep">
+          <tr><td colspan="10" style="text-align:center;padding:32px;color:var(--text3)">Selecione o período e clique em Filtrar</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
 <!-- ══ ESTATÍSTICAS SEPARADOR ══ -->
 <div class="pagina" id="pag-estatisticas-sep">
   <div class="pag-header"><h2>📊 Minhas Estatísticas</h2></div>

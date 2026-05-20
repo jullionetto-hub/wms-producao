@@ -163,7 +163,18 @@ router.put('/pedidos/:id/concluir', requerAuth, async (req,res) => {
     const avisos=await db.all(`SELECT id FROM avisos_repositor WHERE pedido_id=$1 AND status='pendente'`,[req.params.id]);
     if (avisos.length) return res.json({aguardando:true,mensagem:`Aguardando repositor (${avisos.length})`});
     const {data,hora}=dataHoraLocal();
-    await pool.query(`UPDATE pedidos SET status='concluido' WHERE id=$1`,[req.params.id]);
+    // Calcula tempo total aguardando repositor (soma de hora_reposto - hora_aviso dos avisos resolvidos)
+    const espera = await db.get(
+      `SELECT COALESCE(SUM(CASE WHEN a.hora_reposto IS NOT NULL AND a.hora_reposto!='' AND a.hora_aviso IS NOT NULL AND a.hora_aviso!='' AND a.data_aviso IS NOT NULL
+         THEN GREATEST(0, EXTRACT(EPOCH FROM ((a.data_aviso::date+a.hora_reposto::time)-(a.data_aviso::date+a.hora_aviso::time)))/60.0)
+         ELSE 0 END),0) AS minutos
+       FROM avisos_repositor a WHERE a.pedido_id=$1 AND a.status IN ('abastecido','reposto','encontrado','subiu')`,
+      [req.params.id]
+    );
+    await pool.query(
+      `UPDATE pedidos SET status='concluido', concluido_em=$1, tempo_aguardando_min=$2 WHERE id=$3`,
+      [data+'T'+hora, Math.round(parseFloat(espera?.minutos||0)), req.params.id]
+    );
     await pool.query(`UPDATE checkout SET status='pendente',hora_criacao=$1,data_checkout=$2 WHERE pedido_id=$3`,[hora,data,req.params.id]);
     req.app.get('io')?.emit('pedido:concluido', { pedido_id: req.params.id });
     res.json({mensagem:'Pedido concluido!'});
@@ -316,6 +327,80 @@ router.post('/pedidos/recalcular-pontuacao', requerAuth, requerPerfil('superviso
 // Alias retrocompatível — frontend antigo usava /importar
 router.post('/importar', requerAuth, requerPerfil('supervisor'), (req,res) => {
   res.redirect(307, '/pedidos/importar');
+});
+
+/* ══════════════════════════════════════════
+   RELATÓRIO: TEMPO REAL DE SEPARAÇÃO
+   Desconsidera o tempo aguardando repositor.
+══════════════════════════════════════════ */
+router.get('/pedidos/relatorio/tempo-separacao', requerAuth, requerPerfil('supervisor'), async (req,res) => {
+  const {data_ini, data_fim, separador_id} = req.query;
+  try {
+    let w = `p.status='concluido' AND p.iniciado_em IS NOT NULL AND p.iniciado_em!=''`;
+    const params = [];
+    if (data_ini) { params.push(data_ini); w += ` AND p.data_pedido>=$${params.length}`; }
+    if (data_fim)  { params.push(data_fim);  w += ` AND p.data_pedido<=$${params.length}`; }
+    if (separador_id) { params.push(parseInt(separador_id)); w += ` AND s.usuario_id=$${params.length}`; }
+
+    const rows = await db.all(`
+      SELECT
+        p.numero_pedido,
+        COALESCE(u.nome, s.nome, '—') AS separador_nome,
+        p.data_pedido,
+        p.iniciado_em,
+        COALESCE(NULLIF(p.concluido_em,''),
+          CASE WHEN ck.data_checkout IS NOT NULL AND ck.hora_criacao IS NOT NULL
+               THEN ck.data_checkout||'T'||ck.hora_criacao ELSE NULL END
+        ) AS concluido_em,
+        p.itens AS total_itens,
+        p.cliente,
+        p.transportadora,
+        -- Tempo total (minutos)
+        CASE WHEN p.iniciado_em!='' AND COALESCE(NULLIF(p.concluido_em,''),
+               CASE WHEN ck.data_checkout IS NOT NULL AND ck.hora_criacao IS NOT NULL
+                    THEN ck.data_checkout||'T'||ck.hora_criacao ELSE NULL END) IS NOT NULL
+          THEN ROUND(EXTRACT(EPOCH FROM (
+            COALESCE(NULLIF(p.concluido_em,''),ck.data_checkout||'T'||ck.hora_criacao)::timestamp
+            - p.iniciado_em::timestamp
+          ))/60.0, 1)
+          ELSE NULL
+        END AS tempo_total_min,
+        -- Tempo aguardando repositor (soma dos avisos resolvidos)
+        COALESCE((
+          SELECT ROUND(SUM(
+            CASE WHEN a.hora_reposto IS NOT NULL AND a.hora_reposto!=''
+                      AND a.hora_aviso IS NOT NULL AND a.hora_aviso!=''
+                      AND a.data_aviso IS NOT NULL AND a.data_aviso!=''
+              THEN GREATEST(0,EXTRACT(EPOCH FROM (
+                (a.data_aviso::date+a.hora_reposto::time)-(a.data_aviso::date+a.hora_aviso::time)
+              ))/60.0)
+              ELSE 0 END
+          )::numeric,1)
+          FROM avisos_repositor a
+          WHERE a.pedido_id=p.id AND a.status IN ('abastecido','reposto','encontrado','subiu')
+        ),0) AS tempo_espera_min,
+        -- Contagem de reposições e não encontrados
+        (SELECT COUNT(*) FROM avisos_repositor a WHERE a.pedido_id=p.id) AS qtd_reposicoes,
+        (SELECT COUNT(*) FROM avisos_repositor a WHERE a.pedido_id=p.id AND a.status='nao_encontrado') AS qtd_nao_encontrados
+      FROM pedidos p
+      LEFT JOIN separadores s ON s.id=p.separador_id
+      LEFT JOIN usuarios u ON u.id=s.usuario_id
+      LEFT JOIN checkout ck ON ck.pedido_id=p.id
+      WHERE ${w}
+      ORDER BY p.data_pedido DESC, p.iniciado_em DESC
+      LIMIT 1000
+    `, params);
+
+    // Tempo real = total - espera (calculado em JS para evitar NULL)
+    const result = rows.map(r => {
+      const total = r.tempo_total_min !== null ? parseFloat(r.tempo_total_min) : null;
+      const espera = parseFloat(r.tempo_espera_min || 0);
+      const real = total !== null ? Math.max(0, total - espera) : null;
+      return { ...r, tempo_real_min: real !== null ? Math.round(real * 10) / 10 : null };
+    });
+
+    res.json(result);
+  } catch(e) { res.status(500).json({erro: e.message}); }
 });
 
 module.exports = router;
