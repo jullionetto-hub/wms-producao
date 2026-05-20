@@ -1,34 +1,106 @@
 
-// ── Dashboard Ranking ────────────────────────────────────────────────────────
-async function carregarRanking() {
-  const rows = await apiFetch('/dashboard/ranking');
-  const el = document.getElementById('dash-ranking-tbody');
-  if (!el || !rows) return;
-  el.innerHTML = rows.map((r,i)=>`
-    <tr>
-      <td style="font-weight:700">${i+1}º</td>
-      <td>${r.nome}</td>
-      <td style="text-align:center">${r.hoje_concluidos||0}</td>
-      <td style="text-align:center">${r.hoje_itens||0}</td>
-      <td style="text-align:center">${r.mes_concluidos||0}</td>
-    </tr>
-  `).join('');
+// ── Gráficos Operacionais ─────────────────────────────────────────────────────
+const _charts = {};
+
+function _destroyChart(id) {
+  if (_charts[id]) { _charts[id].destroy(); delete _charts[id]; }
 }
 
-async function carregarGraficoHoras() {
+async function carregarGraficoPizzaStatus() {
+  const kpi = await apiFetch('/kpis');
+  const canvas = document.getElementById('grafico-pizza-status');
+  if (!canvas || !kpi) return;
+  _destroyChart('pizza-status');
+  const pendentes  = parseInt(kpi.pendentes)    || 0;
+  const separando  = parseInt(kpi.em_separacao) || 0;
+  const concluidos = parseInt(kpi.concluidos_hoje) || 0;
+  _charts['pizza-status'] = new Chart(canvas, {
+    type: 'doughnut',
+    data: {
+      labels: ['Pendentes', 'Separando', 'Concluídos'],
+      datasets: [{ data: [pendentes, separando, concluidos],
+        backgroundColor: ['#3B82F6','#F59E0B','#22C55E'],
+        borderWidth: 2, borderColor: '#fff' }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: true,
+      plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, padding: 10 } } }
+    }
+  });
+}
+
+async function carregarGraficoPizzaReposicao() {
+  const kpi = await apiFetch('/kpis');
+  const canvas = document.getElementById('grafico-pizza-reposicao');
+  if (!canvas || !kpi) return;
+  _destroyChart('pizza-reposicao');
+  const pendente   = parseInt(kpi.reposicao_pendente)  || 0;
+  const concluida  = parseInt(kpi.reposicao_concluida) || 0;
+  const naoEnc     = parseInt(kpi.nao_encontrados_hoje)|| 0;
+  _charts['pizza-reposicao'] = new Chart(canvas, {
+    type: 'doughnut',
+    data: {
+      labels: ['Pendente', 'Concluída', 'Não encontrado'],
+      datasets: [{ data: [pendente, concluida, naoEnc],
+        backgroundColor: ['#F59E0B','#22C55E','#EF4444'],
+        borderWidth: 2, borderColor: '#fff' }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: true,
+      plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, padding: 10 } } }
+    }
+  });
+}
+
+async function carregarGraficoBarrasHoras() {
   const rows = await apiFetch('/dashboard/por-hora');
-  const el = document.getElementById('dash-grafico-horas');
-  if (!el || !rows || !rows.length) return;
-  const max = Math.max(...rows.map(r=>Number(r.total)));
-  el.innerHTML = rows.map(r=>`
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-      <div style="width:32px;font-size:11px;color:var(--text3);text-align:right">${r.hora}h</div>
-      <div style="flex:1;background:var(--border);border-radius:4px;height:18px;overflow:hidden">
-        <div style="width:${Math.round(Number(r.total)/max*100)}%;height:100%;background:var(--accent);border-radius:4px"></div>
-      </div>
-      <div style="width:24px;font-size:11px;font-weight:700">${r.total}</div>
-    </div>
-  `).join('');
+  const canvas = document.getElementById('grafico-barras-horas');
+  if (!canvas || !rows || !rows.length) return;
+  _destroyChart('barras-horas');
+  _charts['barras-horas'] = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels: rows.map(r => `${r.hora}h`),
+      datasets: [{ label: 'Pedidos concluídos', data: rows.map(r => Number(r.total)),
+        backgroundColor: '#3B82F6', borderRadius: 6, borderSkipped: false }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: true,
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 11 } } },
+                x: { ticks: { font: { size: 11 } } } }
+    }
+  });
+}
+
+async function carregarGraficoFunil() {
+  const kpi = await apiFetch('/kpis');
+  const canvas = document.getElementById('grafico-funil');
+  if (!canvas || !kpi) return;
+  _destroyChart('funil');
+  const labels = ['Importados', 'Separados', 'Embalados', 'Checkout'];
+  const valores = [
+    parseInt(kpi.importados_hoje)   || 0,
+    parseInt(kpi.concluidos_hoje)   || 0,
+    parseInt(kpi.embalagem_hoje)    || 0,
+    parseInt(kpi.checkout_hoje)     || 0,
+  ];
+  _charts['funil'] = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{ label: 'Pedidos', data: valores,
+        backgroundColor: ['#6366F1','#22C55E','#F59E0B','#3B82F6'],
+        borderRadius: 6, borderSkipped: false }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: true,
+      plugins: { legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.raw} pedidos` } } },
+      scales: { y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 11 } } },
+                x: { ticks: { font: { size: 12, weight: '600' } } } }
+    }
+  });
 }
 
 /* FILTRO DE TURNO — SEPARADORES ATIVOS */
@@ -440,8 +512,10 @@ async function carregarDashboard() {
   await atualizarBadgeRep();
   await carregarOperacao();
   carregarRankingGeral();
-  carregarRanking();
-  carregarGraficoHoras();
+  carregarGraficoPizzaStatus();
+  carregarGraficoPizzaReposicao();
+  carregarGraficoBarrasHoras();
+  carregarGraficoFunil();
   atualizarBadgeLiberacao();
   const el = document.getElementById('dash-ultima-atualizacao');
   if (el) el.textContent = '— atualizado ' + new Date().toLocaleTimeString('pt-BR', {timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit'});

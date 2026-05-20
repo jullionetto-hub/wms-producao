@@ -11,6 +11,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="WMS Miess">
   <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/app.css">
@@ -208,11 +209,31 @@
             </div>
           </div>
 
-          <!-- Separadores ativos -->
-          <div class="card">
-            <div class="card-hd">SEPARADORES ATIVOS</div>
-            <div id="op-tempo-real" style="padding:4px 0">
-              <div style="color:var(--text3);text-align:center;padding:20px;font-size:13px">Carregando...</div>
+          <!-- Gráficos operacionais -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:2px">
+            <div class="card">
+              <div class="card-hd">STATUS DOS PEDIDOS — HOJE <button class="btn btn-outline btn-sm" style="margin-left:auto" onclick="carregarGraficoPizzaStatus()">🔄</button></div>
+              <div style="padding:12px;display:flex;align-items:center;justify-content:center;min-height:200px">
+                <canvas id="grafico-pizza-status" style="max-height:200px"></canvas>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-hd">SITUAÇÃO DA REPOSIÇÃO <button class="btn btn-outline btn-sm" style="margin-left:auto" onclick="carregarGraficoPizzaReposicao()">🔄</button></div>
+              <div style="padding:12px;display:flex;align-items:center;justify-content:center;min-height:200px">
+                <canvas id="grafico-pizza-reposicao" style="max-height:200px"></canvas>
+              </div>
+            </div>
+          </div>
+          <div class="card" style="margin-top:14px">
+            <div class="card-hd">PRODUÇÃO POR HORA <button class="btn btn-outline btn-sm" style="margin-left:auto" onclick="carregarGraficoBarrasHoras()">🔄</button></div>
+            <div style="padding:12px;min-height:180px">
+              <canvas id="grafico-barras-horas" style="max-height:200px"></canvas>
+            </div>
+          </div>
+          <div class="card" style="margin-top:14px">
+            <div class="card-hd">FUNIL OPERACIONAL — HOJE <button class="btn btn-outline btn-sm" style="margin-left:auto" onclick="carregarGraficoFunil()">🔄</button></div>
+            <div style="padding:12px;min-height:180px">
+              <canvas id="grafico-funil" style="max-height:200px"></canvas>
             </div>
           </div>
         </div>
@@ -283,23 +304,6 @@
           </div>
         </div>
 
-        <div class="card" style="margin-top:16px">
-          <div class="card-header"><h3>🏆 Ranking Separadores — Hoje</h3><button class="btn btn-outline btn-sm" onclick="carregarRanking()">🔄</button></div>
-          <table style="width:100%;border-collapse:collapse;font-size:13px">
-            <thead><tr style="color:var(--text3);font-size:11px;border-bottom:1px solid var(--border)">
-              <th style="padding:6px 4px;text-align:left">#</th>
-              <th style="padding:6px 4px;text-align:left">Separador</th>
-              <th style="padding:6px 4px;text-align:center">Hoje</th>
-              <th style="padding:6px 4px;text-align:center">Itens</th>
-              <th style="padding:6px 4px;text-align:center">Mês</th>
-            </tr></thead>
-            <tbody id="dash-ranking-tbody"></tbody>
-          </table>
-        </div>
-        <div class="card" style="margin-top:16px">
-          <div class="card-header"><h3>📈 Pedidos por Hora</h3><button class="btn btn-outline btn-sm" onclick="carregarGraficoHoras()">🔄</button></div>
-          <div id="dash-grafico-horas" style="padding:8px"></div>
-        </div>
       </div>
 
 
