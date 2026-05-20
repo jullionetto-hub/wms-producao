@@ -1035,15 +1035,14 @@ async function carregarPerformanceDetalhe(ini, fim, filtPerfil, filtColab) {
               <tbody>${linhas}</tbody>
             </table>
           </div>`;
-      } else {
-        // Checkout
+      } else if (colab.perfil === 'checkout') {
         const linhas = colab.pedidos.map(p => {
           const tempo = p.tempo_checkout_min !== null
             ? `<span style="color:${p.tempo_checkout_min<=5?'var(--green)':p.tempo_checkout_min<=15?'var(--amber)':'var(--red)'};font-weight:700">${_horasStr(p.tempo_checkout_min)}</span>`
             : '—';
           return `<tr>
             <td style="font-weight:700">${p.numero_pedido||'—'}</td>
-            <td style="color:var(--text2)">${p.data_pedido||'—'}</td>
+            <td style="color:var(--text2)">${fmtData(p.data_pedido)||'—'}</td>
             <td style="color:var(--text2)">${p.hora_abertura||'—'}</td>
             <td style="color:var(--text2)">${p.hora_confirmacao||'—'}</td>
             <td>${tempo}</td>
