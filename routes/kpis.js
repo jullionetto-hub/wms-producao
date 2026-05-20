@@ -561,7 +561,8 @@ router.get('/liberacao/pendentes', requerAuth, requerPerfil('supervisor'), async
         p.cliente
       FROM avisos_repositor a
       LEFT JOIN pedidos p ON a.pedido_id = p.id
-      WHERE a.status = 'nao_encontrado'
+      WHERE (a.status = 'nao_encontrado' OR a.situacao = 'nao_encontrado')
+        AND COALESCE(a.status,'') NOT IN ('protocolo','abastecido','reposto','encontrado','subiu')
       ORDER BY a.data_aviso DESC, a.id DESC
     `);
     res.json(rows || []);

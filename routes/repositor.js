@@ -208,9 +208,13 @@ router.put('/repositor/avisos/:id/nao_encontrado',requerAuth, (req,res) => atual
 router.put('/repositor/avisos/:id/protocolo',     requerAuth, (req,res) => atualizarAviso(req,res,'protocolo'));
 router.put('/repositor/avisos/:id/liberar', requerAuth, requerPerfil('supervisor'), async (req,res) => {
   try {
-    await pool.query(`UPDATE avisos_repositor SET status='nao_encontrado', hora_reposto=$1 WHERE id=$2`,
-      [(await db.get(`SELECT TO_CHAR(NOW() AT TIME ZONE 'America/Sao_Paulo','HH24:MI') as h`)).h, req.params.id]);
-    res.json({mensagem:'Item liberado como não encontrado.'});
+    const { h } = await db.get(`SELECT TO_CHAR(NOW() AT TIME ZONE 'America/Sao_Paulo','HH24:MI') as h`);
+    await pool.query(
+      `UPDATE avisos_repositor SET status='protocolo', situacao='protocolo', hora_reposto=$1 WHERE id=$2`,
+      [h, req.params.id]
+    );
+    req.app.get('io')?.emit('aviso:atualizado', { id: req.params.id, status: 'protocolo' });
+    res.json({mensagem:'Item liberado para Protocolo.'});
   } catch(e) { res.status(500).json({erro: e.message}); }
 });
 
