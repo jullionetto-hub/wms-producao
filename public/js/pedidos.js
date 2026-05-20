@@ -941,13 +941,27 @@ async function calcularDistribuicao() {
     const resEl = document.getElementById('dist-resultado');
     resEl.style.display = 'block';
     const totalDist = data.total_distribuidos ?? data.plano.reduce((s,p)=>s+p.pedidos.length,0);
+    const totalItens = data.plano.reduce((s,p)=>s+(p.itens_total||0),0);
     const restantes = data.total_pedidos - totalDist;
-    let html = '<div style="font-size:11px;font-weight:700;color:var(--accent);letter-spacing:1px;margin-bottom:10px">RESULTADO DA DISTRIBUIÇÃO</div><div class="tabela-wrap"><table><thead><tr><th>SEPARADOR</th><th>PEDIDOS</th><th>PONTUAÇÃO</th><th>LISTA</th></tr></thead><tbody>';
-    data.plano.forEach(item => { html += `<tr><td style="font-weight:700;color:var(--text)">👤 ${item.separador_nome}</td><td style="color:var(--green);font-weight:700">${item.pedidos.length}</td><td><span style="font-family:'Space Mono',monospace;color:var(--indigo)">${item.pontuacao_total}</span></td><td style="font-size:11px;color:var(--text3)">${item.pedidos.join(', ')}</td></tr>`; });
+    // Calcula desvio de itens para colorir a coluna (fairness visual)
+    const avgItens = data.plano.length ? totalItens / data.plano.length : 0;
+    let html = '<div style="font-size:11px;font-weight:700;color:var(--accent);letter-spacing:1px;margin-bottom:10px">RESULTADO DA DISTRIBUIÇÃO</div>';
+    html += '<div class="tabela-wrap"><table><thead><tr><th>COLABORADOR</th><th>PEDIDOS</th><th>ITENS</th><th>PONTUAÇÃO</th><th>LISTA</th></tr></thead><tbody>';
+    data.plano.forEach(item => {
+      const desvio = avgItens > 0 ? Math.abs((item.itens_total||0) - avgItens) / avgItens : 0;
+      const corItens = desvio < 0.1 ? 'var(--green)' : desvio < 0.25 ? 'var(--amber)' : 'var(--red)';
+      html += `<tr>
+        <td style="font-weight:700;color:var(--text)">👤 ${item.separador_nome}</td>
+        <td style="color:var(--green);font-weight:700">${item.pedidos.length}</td>
+        <td style="font-weight:800;font-size:14px;color:${corItens}">${item.itens_total||0} itens</td>
+        <td><span style="font-family:'Space Mono',monospace;color:var(--indigo);font-size:11px">${item.pontuacao_total} pts</span></td>
+        <td style="font-size:11px;color:var(--text3)">${item.pedidos.join(', ')}</td>
+      </tr>`;
+    });
     html += `</tbody></table></div>`;
     html += `<div style="margin-top:10px;display:flex;gap:16px;flex-wrap:wrap;align-items:center">`;
-    html += `<span style="font-size:13px;font-weight:700;color:var(--green)">✅ ${totalDist} pedido(s) serão distribuídos para ${seps.length} colaborador(es)</span>`;
-    if (restantes > 0) html += `<span style="font-size:12px;color:var(--amber)">⏳ ${restantes} pedido(s) ficam na fila — abra esta tela novamente para distribuir o restante</span>`;
+    html += `<span style="font-size:13px;font-weight:700;color:var(--green)">✅ ${totalDist} pedido(s) · ${totalItens} itens distribuídos para ${seps.length} colaborador(es)</span>`;
+    if (restantes > 0) html += `<span style="font-size:12px;color:var(--amber)">⏳ ${restantes} pedido(s) ficam na fila</span>`;
     html += `</div>`;
     resEl.innerHTML = html;
     document.getElementById('btn-calcular-dist').style.display = 'none';

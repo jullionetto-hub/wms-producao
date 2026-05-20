@@ -291,13 +291,16 @@ router.post('/pedidos/distribuicao', requerAuth, requerPerfil('supervisor'), asy
       if (!row) row=await db.get('SELECT id,nome FROM usuarios WHERE id=$1',[sid]);
       if (row) sepMap[sid]=row;
     }
-    const filas=separadores.map(sid=>({separador_id:sid,separador_nome:sepMap[sid]?.nome||`Sep ${sid}`,pedidos:[],pontuacao_total:0,sep_db_id:sepMap[sid]?.id||null}));
+    const filas=separadores.map(sid=>({separador_id:sid,separador_nome:sepMap[sid]?.nome||`Sep ${sid}`,pedidos:[],pontuacao_total:0,itens_total:0,sep_db_id:sepMap[sid]?.id||null}));
     for (const ped of ordenados) {
-      filas.sort((a,b)=>a.pontuacao_total-b.pontuacao_total);
+      // Balanceia primariamente por itens (quantidade real a separar),
+      // desempate por pontuação (complexidade de corredor)
+      filas.sort((a,b)=>a.itens_total!==b.itens_total ? a.itens_total-b.itens_total : a.pontuacao_total-b.pontuacao_total);
       filas[0].pedidos.push(ped.numero_pedido);
       filas[0].pontuacao_total+=ped._p;
+      filas[0].itens_total+=(ped.itens||0);
     }
-    res.json({plano:filas.map(f=>({separador_id:f.separador_id,sep_db_id:f.sep_db_id,separador_nome:f.separador_nome,pedidos:f.pedidos,pontuacao_total:Math.round(f.pontuacao_total)})),total_pedidos:pedidos.length,total_distribuidos:ordenados.length});
+    res.json({plano:filas.map(f=>({separador_id:f.separador_id,sep_db_id:f.sep_db_id,separador_nome:f.separador_nome,pedidos:f.pedidos,pontuacao_total:Math.round(f.pontuacao_total),itens_total:f.itens_total})),total_pedidos:pedidos.length,total_distribuidos:ordenados.length});
   } catch(err){res.status(500).json({erro:err.message});}
 });
 
