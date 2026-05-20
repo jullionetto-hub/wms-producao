@@ -907,7 +907,7 @@ async function carregarSeparadoresDistribuicao() {
   try {
     const res = await fetch(`${API}/usuarios`, { credentials:'include' });
     const users = await res.json();
-    _todosSepsDistribuicao = users.filter(u => u.perfil === 'separador' && u.status === 'ativo');
+    _todosSepsDistribuicao = users.filter(u => u.status === 'ativo');
     filtrarTurnoDistribuicao('');
   } catch(e) { console.warn(e); }
 }
@@ -940,9 +940,15 @@ async function calcularDistribuicao() {
     distribuicaoPlano = data.plano;
     const resEl = document.getElementById('dist-resultado');
     resEl.style.display = 'block';
+    const totalDist = data.total_distribuidos ?? data.plano.reduce((s,p)=>s+p.pedidos.length,0);
+    const restantes = data.total_pedidos - totalDist;
     let html = '<div style="font-size:11px;font-weight:700;color:var(--accent);letter-spacing:1px;margin-bottom:10px">RESULTADO DA DISTRIBUIÇÃO</div><div class="tabela-wrap"><table><thead><tr><th>SEPARADOR</th><th>PEDIDOS</th><th>PONTUAÇÃO</th><th>LISTA</th></tr></thead><tbody>';
     data.plano.forEach(item => { html += `<tr><td style="font-weight:700;color:var(--text)">👤 ${item.separador_nome}</td><td style="color:var(--green);font-weight:700">${item.pedidos.length}</td><td><span style="font-family:'Space Mono',monospace;color:var(--indigo)">${item.pontuacao_total}</span></td><td style="font-size:11px;color:var(--text3)">${item.pedidos.join(', ')}</td></tr>`; });
-    html += `</tbody></table></div><div style="margin-top:8px;font-size:12px;color:var(--text3)">Total: ${data.total_pedidos} pedido(s) para ${seps.length} separador(es)</div>`;
+    html += `</tbody></table></div>`;
+    html += `<div style="margin-top:10px;display:flex;gap:16px;flex-wrap:wrap;align-items:center">`;
+    html += `<span style="font-size:13px;font-weight:700;color:var(--green)">✅ ${totalDist} pedido(s) serão distribuídos para ${seps.length} colaborador(es)</span>`;
+    if (restantes > 0) html += `<span style="font-size:12px;color:var(--amber)">⏳ ${restantes} pedido(s) ficam na fila — abra esta tela novamente para distribuir o restante</span>`;
+    html += `</div>`;
     resEl.innerHTML = html;
     document.getElementById('btn-calcular-dist').style.display = 'none';
     document.getElementById('btn-confirmar-dist').style.display = 'inline-flex';
@@ -980,7 +986,7 @@ function filtrarTurnoDistribuicao(turno) {
     var tb = turno.toLowerCase().replace('\u00e3','a').replace('\u00e2','a'); var tc = t.replace('\u00e3','a').replace('\u00e2','a'); return tc.startsWith(tb.substring(0,4));
   }) : _todosSepsDistribuicao;
   if (!seps.length) {
-    el.innerHTML = '<div style="color:var(--text3);font-size:12px">Nenhum separador neste turno</div>';
+    el.innerHTML = '<div style="color:var(--text3);font-size:12px">Nenhum colaborador neste turno</div>';
     return;
   }
   el.innerHTML = seps.map(function(s) {
