@@ -900,16 +900,18 @@ async function carregarPerformance() {
       const ag    = porArea[p];
       const tempo = ag.temSessao ? _horasStr(ag.minutos) : '—';
       const subInfo = colab ? '' :
-        `<div style="font-size:11px;color:var(--text3);margin-top:4px">${ag.colaboradores} colaborador${ag.colaboradores!==1?'es':''}</div>`;
-      return `<div class="card" style="padding:20px;text-align:center">
-        <div style="font-size:32px">${area.icon}</div>
-        <div style="font-size:13px;font-weight:700;color:${area.cor};margin:4px 0 12px;letter-spacing:.5px">${area.label.toUpperCase()}</div>
-        <div style="font-size:48px;font-weight:900;color:var(--text);line-height:1">${ag.atividades}</div>
-        <div style="font-size:11px;color:var(--text3);margin:4px 0">${LABELS[p]}</div>
-        ${subInfo}
-        <div style="border-top:1px solid var(--border);margin-top:12px;padding-top:10px">
-          <span style="font-size:14px;color:var(--accent);font-weight:700">⏱ ${tempo}</span>
-          <div style="font-size:10px;color:var(--text3)">tempo logado</div>
+        `<div style="font-size:10px;color:var(--text3);margin-top:2px">${ag.colaboradores} colaborador${ag.colaboradores!==1?'es':''}</div>`;
+      return `<div class="card" style="padding:10px 14px;display:flex;align-items:center;gap:12px">
+        <div style="font-size:22px;line-height:1">${area.icon}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:10px;font-weight:700;color:${area.cor};letter-spacing:.5px">${area.label.toUpperCase()}</div>
+          <div style="font-size:26px;font-weight:900;color:var(--text);line-height:1.1">${ag.atividades}</div>
+          <div style="font-size:10px;color:var(--text3)">${LABELS[p]}</div>
+          ${subInfo}
+        </div>
+        <div style="text-align:right;border-left:1px solid var(--border);padding-left:12px">
+          <div style="font-size:13px;color:var(--accent);font-weight:700">⏱ ${tempo}</div>
+          <div style="font-size:9px;color:var(--text3)">logado</div>
         </div>
       </div>`;
     }).join('');
@@ -954,11 +956,13 @@ async function carregarPerformanceDetalhe(ini, fim, filtPerfil, filtColab) {
       const AREA_LABEL = { separador: '📦 Separação', checkout: '✅ Checkout' };
       const cor = AREA_COR[colab.perfil] || 'var(--text)';
 
+      const nomeSafe = colab.nome.replace(/'/g, "\\'");
       const header = `
-        <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--surface2);border-bottom:1px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--surface2);border-bottom:1px solid var(--border);flex-wrap:wrap">
           <span style="font-size:13px;font-weight:800;color:${cor}">${AREA_LABEL[colab.perfil]||colab.perfil}</span>
           <span style="font-size:14px;font-weight:700;color:var(--text)">${colab.nome}</span>
-          <span style="margin-left:auto;font-size:11px;color:var(--text3);font-weight:600">${colab.pedidos.length} pedido${colab.pedidos.length!==1?'s':''}</span>
+          <span style="font-size:11px;color:var(--text3);font-weight:600">${colab.pedidos.length} pedido${colab.pedidos.length!==1?'s':''}</span>
+          <button class="btn btn-outline btn-sm" style="margin-left:auto" onclick="gerarRelatorioColaborador('${nomeSafe}')">📄 Relatório do Mês</button>
         </div>`;
 
       let tabela = '';
@@ -974,6 +978,12 @@ async function carregarPerformanceDetalhe(ini, fim, filtPerfil, filtColab) {
           const reps = p.qtd_reposicoes > 0
             ? `<span style="color:var(--amber);font-weight:700">${p.qtd_reposicoes}</span>`
             : '<span style="color:var(--text3)">0</span>';
+          const ck = p.tempo_checkout_min !== null
+            ? `<span style="color:${p.tempo_checkout_min<=5?'var(--green)':p.tempo_checkout_min<=15?'var(--amber)':'var(--red)'};font-weight:700">${_horasStr(p.tempo_checkout_min)}</span>`
+            : '<span style="color:var(--text3)">—</span>';
+          const emb = p.emb_horario
+            ? `<span style="color:var(--green);font-weight:700">${p.emb_horario.slice(0,5)}</span>`
+            : '<span style="color:var(--text3)">—</span>';
           return `<tr>
             <td style="font-weight:700">${p.numero_pedido||'—'}</td>
             <td style="color:var(--text2)">${p.data_pedido||'—'}</td>
@@ -982,7 +992,10 @@ async function carregarPerformanceDetalhe(ini, fim, filtPerfil, filtColab) {
             <td style="color:var(--text2)">${total}</td>
             <td>${espera}</td>
             <td>${real}</td>
+            <td>${ck}</td>
+            <td>${emb}</td>
             <td style="font-weight:700;color:var(--accent)">${p.total_itens||0}</td>
+            <td style="font-weight:700;color:var(--text2)">${p.qtd_produtos||0}</td>
             <td>${reps}</td>
           </tr>`;
         }).join('');
@@ -991,8 +1004,9 @@ async function carregarPerformanceDetalhe(ini, fim, filtPerfil, filtColab) {
             <table>
               <thead><tr>
                 <th>Nº PEDIDO</th><th>DATA</th><th>INÍCIO</th><th>CONCLUSÃO</th>
-                <th>TEMPO TOTAL</th><th>⏸ ESPERA REP.</th><th>✅ TEMPO REAL</th>
-                <th>ITENS</th><th>REPOSIÇÕES</th>
+                <th>T. TOTAL</th><th>⏸ ESPERA</th><th>✅ T. REAL</th>
+                <th>⏱ CHECKOUT</th><th>📦 EMBALAGEM</th>
+                <th>ITENS</th><th>PRODUTOS</th><th>REPOS.</th>
               </tr></thead>
               <tbody>${linhas}</tbody>
             </table>
@@ -1123,6 +1137,114 @@ async function salvarConfigMetas() {
     fecharConfigMetas();
     carregarPerformance();
   } catch(e) { toast('Erro ao salvar','erro'); }
+}
+
+/* ─── RELATÓRIO MENSAL DO COLABORADOR ──────────────────────────────── */
+async function gerarRelatorioColaborador(nomeColab) {
+  const hoje = hojeLocal();
+  const anoMes = hoje.substring(0, 7);
+  const ini = anoMes + '-01';
+  const fim = hoje;
+
+  try {
+    let url = `${API}/stats/performance/detalhe?ini=${ini}&fim=${fim}&colaborador=${encodeURIComponent(nomeColab)}`;
+    const res = await fetch(url, { credentials:'include' });
+    if (!res.ok) { toast('Erro ao gerar relatório','erro'); return; }
+    const { detalhe } = await res.json();
+
+    const colabData = detalhe && detalhe.length ? detalhe[0] : null;
+    const pedidos = colabData ? colabData.pedidos : [];
+
+    const totalPedidos = pedidos.length;
+    const totalItens   = pedidos.reduce((s,p) => s + (parseInt(p.total_itens)||0), 0);
+    const temposReais  = pedidos.filter(p => p.tempo_real_min !== null).map(p => p.tempo_real_min);
+    const mediaTempoReal = temposReais.length ? (temposReais.reduce((a,b)=>a+b,0)/temposReais.length).toFixed(1) : null;
+    const tempoMin = temposReais.length ? Math.min(...temposReais).toFixed(1) : null;
+    const tempoMax = temposReais.length ? Math.max(...temposReais).toFixed(1) : null;
+    const totalReps = pedidos.reduce((s,p) => s + (parseInt(p.qtd_reposicoes)||0), 0);
+    const pedidosComRep = pedidos.filter(p => p.qtd_reposicoes > 0).length;
+    const ckTempos = pedidos.filter(p => p.tempo_checkout_min !== null).map(p => p.tempo_checkout_min);
+    const mediaCk = ckTempos.length ? (ckTempos.reduce((a,b)=>a+b,0)/ckTempos.length).toFixed(1) : null;
+
+    // Análise de desempenho
+    const pontosBons = [];
+    const melhorar   = [];
+
+    if (mediaTempoReal !== null) {
+      if (parseFloat(mediaTempoReal) <= 25) pontosBons.push(`Tempo médio de separação excelente: ${mediaTempoReal} min/pedido`);
+      else if (parseFloat(mediaTempoReal) <= 40) pontosBons.push(`Tempo médio de separação dentro do esperado: ${mediaTempoReal} min/pedido`);
+      else melhorar.push(`Tempo médio de separação acima do ideal: ${mediaTempoReal} min/pedido (meta: até 40 min)`);
+    }
+    if (totalReps > 0) {
+      const pctRep = ((pedidosComRep / totalPedidos) * 100).toFixed(0);
+      if (parseInt(pctRep) <= 15) pontosBons.push(`Baixa incidência de reposição: ${pctRep}% dos pedidos (${totalReps} avisos)`);
+      else melhorar.push(`Alta incidência de reposição: ${pctRep}% dos pedidos geraram avisos (${totalReps} no total)`);
+    } else {
+      pontosBons.push('Nenhum aviso de reposição no período — excelente!');
+    }
+    if (totalPedidos >= 20) pontosBons.push(`Volume expressivo de pedidos no mês: ${totalPedidos} pedidos / ${totalItens} itens`);
+    else if (totalPedidos > 0) melhorar.push(`Volume abaixo do esperado para o período: ${totalPedidos} pedidos`);
+    if (mediaCk !== null && parseFloat(mediaCk) <= 5) pontosBons.push(`Checkout ágil: média de ${mediaCk} min por pedido`);
+    else if (mediaCk !== null && parseFloat(mediaCk) > 10) melhorar.push(`Tempo de checkout elevado: média de ${mediaCk} min por pedido`);
+
+    const [ano, mes] = anoMes.split('-');
+    const nomesMes = ['','Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+    const html = `
+      <div style="font-family:'DM Sans',sans-serif;max-width:680px;margin:0 auto;padding:0 4px">
+        <div style="background:var(--accent);color:#fff;border-radius:12px 12px 0 0;padding:18px 20px">
+          <div style="font-size:11px;font-weight:700;letter-spacing:1px;opacity:.8">RELATÓRIO DE DESEMPENHO</div>
+          <div style="font-size:20px;font-weight:900;margin-top:2px">${nomeColab}</div>
+          <div style="font-size:12px;opacity:.8;margin-top:2px">${nomesMes[parseInt(mes)]} de ${ano}</div>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-top:none;border-radius:0 0 12px 12px;padding:18px 20px">
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px">
+            ${[
+              ['Pedidos', totalPedidos],
+              ['Itens', totalItens],
+              ['Tempo Médio', mediaTempoReal !== null ? mediaTempoReal+'min' : '—'],
+              ['Reposições', totalReps],
+            ].map(([l,v]) => `
+              <div style="background:var(--surface2);border-radius:8px;padding:10px;text-align:center">
+                <div style="font-size:18px;font-weight:900;color:var(--text)">${v}</div>
+                <div style="font-size:10px;color:var(--text3);font-weight:600">${l}</div>
+              </div>`).join('')}
+          </div>
+          ${tempoMin!==null?`<div style="font-size:12px;color:var(--text2);margin-bottom:14px">Tempo de separação: mínimo <b>${tempoMin}min</b> · máximo <b>${tempoMax}min</b>${mediaCk?` · checkout médio <b>${mediaCk}min</b>`:''}</div>`:''}
+          ${pontosBons.length ? `
+            <div style="margin-bottom:12px">
+              <div style="font-size:11px;font-weight:800;color:#15803D;letter-spacing:.5px;margin-bottom:6px">✅ PONTOS POSITIVOS</div>
+              ${pontosBons.map(p=>`<div style="font-size:13px;color:var(--text);padding:5px 10px;background:#F0FDF4;border-radius:6px;margin-bottom:4px;border-left:3px solid #22C55E">• ${p}</div>`).join('')}
+            </div>` : ''}
+          ${melhorar.length ? `
+            <div>
+              <div style="font-size:11px;font-weight:800;color:#B45309;letter-spacing:.5px;margin-bottom:6px">⚠️ PONTOS A MELHORAR</div>
+              ${melhorar.map(p=>`<div style="font-size:13px;color:var(--text);padding:5px 10px;background:#FFFBEB;border-radius:6px;margin-bottom:4px;border-left:3px solid #F59E0B">• ${p}</div>`).join('')}
+            </div>` : ''}
+          ${!pontosBons.length && !melhorar.length ? `<div style="color:var(--text3);font-size:13px;text-align:center;padding:20px">Dados insuficientes para análise. Filtre um período com mais atividade.</div>` : ''}
+        </div>
+      </div>`;
+
+    // Exibe em modal
+    let modal = document.getElementById('modal-relatorio-colab');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = 'modal-relatorio-colab';
+      modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+      modal.innerHTML = `
+        <div style="background:var(--bg);border-radius:14px;width:100%;max-width:700px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border)">
+            <span style="font-size:13px;font-weight:700;color:var(--text)">Relatório Mensal</span>
+            <button onclick="document.getElementById('modal-relatorio-colab').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text3)">✕</button>
+          </div>
+          <div id="relatorio-colab-body" style="padding:16px"></div>
+        </div>`;
+      document.body.appendChild(modal);
+    }
+    document.getElementById('relatorio-colab-body').innerHTML = html;
+    modal.style.display = 'flex';
+
+  } catch(e) { console.error(e); toast('Erro ao gerar relatório','erro'); }
 }
 
 async function carregarAvisos() {

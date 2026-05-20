@@ -596,11 +596,18 @@ router.get('/stats/performance/detalhe', requerAuth, requerPerfil('supervisor'),
             FROM avisos_repositor a
             WHERE a.pedido_id=p.id AND a.status IN ('abastecido','reposto','encontrado','subiu')
           ), 0) AS tempo_espera_min,
-          (SELECT COUNT(*) FROM avisos_repositor a WHERE a.pedido_id=p.id) AS qtd_reposicoes
+          (SELECT COUNT(*) FROM avisos_repositor a WHERE a.pedido_id=p.id) AS qtd_reposicoes,
+          (SELECT COUNT(DISTINCT ip.codigo) FROM itens_pedido ip WHERE ip.pedido_id=p.id AND ip.codigo IS NOT NULL AND ip.codigo!='') AS qtd_produtos,
+          ck.hora_criacao AS ck_abertura, ck.hora_checkout AS ck_conclusao, ck.data_checkout AS ck_data,
+          CASE WHEN ck.hora_criacao IS NOT NULL AND ck.hora_criacao!='' AND ck.hora_checkout IS NOT NULL AND ck.hora_checkout!=''
+            THEN GREATEST(0, ROUND(EXTRACT(EPOCH FROM (ck.hora_checkout::time - ck.hora_criacao::time))/60.0)::int)
+            ELSE NULL END AS tempo_checkout_min,
+          e.embalado_em AS emb_horario, e.embalado_por AS emb_operador
         FROM pedidos p
         LEFT JOIN separadores s   ON s.id = p.separador_id
         LEFT JOIN usuarios u      ON u.id = s.usuario_id
         LEFT JOIN checkout ck     ON ck.pedido_id = p.id
+        LEFT JOIN embalagem e     ON e.pedido_id = p.id
         WHERE ${w}
         ORDER BY COALESCE(u.nome, s.nome), p.data_pedido, p.iniciado_em
         LIMIT 3000
@@ -613,15 +620,19 @@ router.get('/stats/performance/detalhe', requerAuth, requerPerfil('supervisor'),
           ? Math.max(0, parseFloat(p.tempo_total_min) - parseFloat(p.tempo_espera_min || 0))
           : null;
         resultado[key].pedidos.push({
-          numero_pedido:   p.numero_pedido,
-          data_pedido:     p.data_pedido,
-          iniciado_em:     p.iniciado_em,
-          concluido_em:    p.concluido_em,
-          total_itens:     p.total_itens,
-          tempo_total_min: p.tempo_total_min !== null ? parseFloat(p.tempo_total_min) : null,
-          tempo_espera_min:parseFloat(p.tempo_espera_min || 0),
-          tempo_real_min:  tempoReal !== null ? Math.round(tempoReal * 10) / 10 : null,
-          qtd_reposicoes:  parseInt(p.qtd_reposicoes) || 0,
+          numero_pedido:    p.numero_pedido,
+          data_pedido:      p.data_pedido,
+          iniciado_em:      p.iniciado_em,
+          concluido_em:     p.concluido_em,
+          total_itens:      p.total_itens,
+          qtd_produtos:     parseInt(p.qtd_produtos) || 0,
+          tempo_total_min:  p.tempo_total_min !== null ? parseFloat(p.tempo_total_min) : null,
+          tempo_espera_min: parseFloat(p.tempo_espera_min || 0),
+          tempo_real_min:   tempoReal !== null ? Math.round(tempoReal * 10) / 10 : null,
+          qtd_reposicoes:   parseInt(p.qtd_reposicoes) || 0,
+          tempo_checkout_min: p.tempo_checkout_min !== null ? parseInt(p.tempo_checkout_min) : null,
+          ck_operador:      p.emb_operador || null,
+          emb_horario:      p.emb_horario  || null,
         });
       });
     }
