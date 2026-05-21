@@ -609,17 +609,29 @@ router.get('/stats/performance/detalhe', requerAuth, requerPerfil('supervisor'),
           END AS tempo_total_min,
           COALESCE((
             SELECT ROUND(SUM(
-              CASE WHEN a.hora_reposto IS NOT NULL AND a.hora_reposto!=''
-                            AND a.hora_aviso IS NOT NULL AND a.hora_aviso!=''
-                            AND a.data_aviso IS NOT NULL AND a.data_aviso!=''
-                THEN GREATEST(0, EXTRACT(EPOCH FROM (
-                  (a.data_aviso::date + a.hora_reposto::time)
-                  - (a.data_aviso::date + a.hora_aviso::time)
-                ))/60.0)
-                ELSE 0 END
+              GREATEST(0, EXTRACT(EPOCH FROM (
+                LEAST(
+                  a.data_aviso::date + a.hora_reposto::time,
+                  COALESCE(
+                    NULLIF(p.concluido_em,'')::timestamp,
+                    CASE WHEN ck.data_checkout IS NOT NULL AND ck.hora_criacao IS NOT NULL
+                         THEN (ck.data_checkout||'T'||ck.hora_criacao)::timestamp
+                         ELSE p.iniciado_em::timestamp END
+                  )
+                )
+                - GREATEST(
+                  a.data_aviso::date + a.hora_aviso::time,
+                  p.iniciado_em::timestamp
+                )
+              ))/60.0)
             )::numeric, 1)
             FROM avisos_repositor a
-            WHERE a.pedido_id=p.id AND a.status IN ('abastecido','reposto','encontrado','subiu')
+            WHERE a.pedido_id=p.id
+              AND a.status IN ('abastecido','reposto','encontrado','subiu')
+              AND a.hora_reposto IS NOT NULL AND a.hora_reposto!=''
+              AND a.hora_aviso IS NOT NULL AND a.hora_aviso!=''
+              AND a.data_aviso IS NOT NULL AND a.data_aviso!=''
+              AND NULLIF(p.iniciado_em,'') IS NOT NULL
           ), 0) AS tempo_espera_min,
           (SELECT COUNT(*) FROM avisos_repositor a WHERE a.pedido_id=p.id) AS qtd_reposicoes,
           CASE WHEN ck.hora_criacao IS NOT NULL AND ck.hora_criacao!='' AND ck.hora_checkout IS NOT NULL AND ck.hora_checkout!=''
