@@ -9,21 +9,31 @@ router.get('/embalagem', requerAuth, async (req,res) => {
   try {
     const {data:hoje} = dataHoraLocal();
     const {data, status} = req.query;
-    const dt = data || hoje;
+
     let sql = `SELECT p.*, ck.hora_checkout, ck.operador_nome
       FROM pedidos p
-      INNER JOIN checkout ck ON ck.pedido_id = p.id AND ck.status = 'concluido'
-      WHERE p.status = 'concluido' AND p.data_pedido = $1`;
-    const params = [dt];
+      LEFT JOIN checkout ck ON ck.pedido_id = p.id AND ck.status = 'concluido'
+      WHERE p.status = 'concluido'`;
+    const params = [];
+
     if (status === 'pendente') {
-      // inclui 'embalando' para manter o card visível durante o processo
+      // Mobile/embalador: mostra TODOS os pedidos pendentes de embalagem
+      // sem filtro de data (pedidos de qualquer dia que ainda não foram embalados)
       sql += ` AND (p.status_embalagem IS NULL OR p.status_embalagem IN ('pendente','embalando'))`;
     } else if (status === 'embalado') {
-      sql += ` AND p.status_embalagem = 'embalado'`;
+      // Só embalados — usa data para filtrar
+      const dt = data || hoje;
+      params.push(dt);
+      sql += ` AND p.status_embalagem = 'embalado' AND p.data_pedido = $${params.length}`;
     } else {
-      sql += ` AND p.status_embalagem != 'nao_iniciado'`;
+      // Desktop supervisor: filtra por data
+      const dt = data || hoje;
+      params.push(dt);
+      sql += ` AND p.data_pedido = $${params.length}`;
+      sql += ` AND (p.status_embalagem IS NULL OR p.status_embalagem != 'nao_iniciado')`;
     }
-    sql += ` ORDER BY ck.hora_checkout ASC NULLS LAST`;
+
+    sql += ` ORDER BY ck.hora_checkout ASC NULLS LAST, p.concluido_em ASC NULLS LAST`;
     res.json(await db.all(sql, params));
   } catch(e) { res.status(500).json({erro:e.message}); }
 });
