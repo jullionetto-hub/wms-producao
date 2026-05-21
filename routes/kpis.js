@@ -594,7 +594,9 @@ router.get('/stats/performance/detalhe', requerAuth, requerPerfil('supervisor'),
             CASE WHEN ck.data_checkout IS NOT NULL AND ck.hora_criacao IS NOT NULL
                  THEN ck.data_checkout||'T'||ck.hora_criacao ELSE NULL END
           ) AS concluido_em,
-          p.itens AS total_itens,
+          p.itens AS qtd_produtos,
+          (SELECT COALESCE(SUM(ip.quantidade), p.itens) FROM itens_pedido ip WHERE ip.pedido_id=p.id) AS total_itens,
+          p.pontuacao,
           CASE WHEN NULLIF(p.iniciado_em,'') IS NOT NULL
                     AND COALESCE(NULLIF(p.concluido_em,''),
                         CASE WHEN ck.data_checkout IS NOT NULL AND ck.hora_criacao IS NOT NULL
@@ -620,7 +622,6 @@ router.get('/stats/performance/detalhe', requerAuth, requerPerfil('supervisor'),
             WHERE a.pedido_id=p.id AND a.status IN ('abastecido','reposto','encontrado','subiu')
           ), 0) AS tempo_espera_min,
           (SELECT COUNT(*) FROM avisos_repositor a WHERE a.pedido_id=p.id) AS qtd_reposicoes,
-          (SELECT COUNT(DISTINCT ip.codigo) FROM itens_pedido ip WHERE ip.pedido_id=p.id AND ip.codigo IS NOT NULL AND ip.codigo!='') AS qtd_produtos,
           CASE WHEN ck.hora_criacao IS NOT NULL AND ck.hora_criacao!='' AND ck.hora_checkout IS NOT NULL AND ck.hora_checkout!=''
             THEN GREATEST(0, ROUND(EXTRACT(EPOCH FROM (ck.hora_checkout::time - ck.hora_criacao::time))/60.0)::int)
             ELSE NULL END AS tempo_checkout_min,
@@ -646,15 +647,13 @@ router.get('/stats/performance/detalhe', requerAuth, requerPerfil('supervisor'),
           data_pedido:      p.data_pedido,
           iniciado_em:      p.iniciado_em,
           concluido_em:     p.concluido_em,
-          total_itens:      p.total_itens,
+          total_itens:      parseInt(p.total_itens) || 0,
           qtd_produtos:     parseInt(p.qtd_produtos) || 0,
+          pontuacao:        parseInt(p.pontuacao) || 0,
           tempo_total_min:  p.tempo_total_min !== null ? parseFloat(p.tempo_total_min) : null,
           tempo_espera_min: parseFloat(p.tempo_espera_min || 0),
           tempo_real_min:   tempoReal !== null ? Math.round(tempoReal * 10) / 10 : null,
           qtd_reposicoes:   parseInt(p.qtd_reposicoes) || 0,
-          tempo_checkout_min: p.tempo_checkout_min !== null ? parseInt(p.tempo_checkout_min) : null,
-          ck_operador:      p.emb_operador || null,
-          emb_horario:      p.emb_horario  || null,
         });
       });
     }

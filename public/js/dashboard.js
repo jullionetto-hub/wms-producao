@@ -1216,6 +1216,8 @@ async function gerarRelatorioColaborador(nomeColab) {
   const anoMes = hoje.substring(0, 7);
   const ini = anoMes + '-01';
   const fim = hoje;
+  const [ano, mes] = anoMes.split('-');
+  const nomesMes = ['','Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
   try {
     let url = `${API}/stats/performance/detalhe?ini=${ini}&fim=${fim}&colaborador=${encodeURIComponent(nomeColab)}`;
@@ -1225,76 +1227,232 @@ async function gerarRelatorioColaborador(nomeColab) {
 
     const colabData = detalhe && detalhe.length ? detalhe[0] : null;
     const pedidos = colabData ? colabData.pedidos : [];
+    const perfil = colabData?.perfil || 'separador';
 
-    const totalPedidos = pedidos.length;
-    const totalItens   = pedidos.reduce((s,p) => s + (parseInt(p.total_itens)||0), 0);
-    const temposReais  = pedidos.filter(p => p.tempo_real_min !== null).map(p => p.tempo_real_min);
-    const mediaTempoReal = temposReais.length ? (temposReais.reduce((a,b)=>a+b,0)/temposReais.length).toFixed(1) : null;
-    const tempoMin = temposReais.length ? Math.min(...temposReais).toFixed(1) : null;
-    const tempoMax = temposReais.length ? Math.max(...temposReais).toFixed(1) : null;
-    const totalReps = pedidos.reduce((s,p) => s + (parseInt(p.qtd_reposicoes)||0), 0);
-    const pedidosComRep = pedidos.filter(p => p.qtd_reposicoes > 0).length;
-    const ckTempos = pedidos.filter(p => p.tempo_checkout_min !== null).map(p => p.tempo_checkout_min);
-    const mediaCk = ckTempos.length ? (ckTempos.reduce((a,b)=>a+b,0)/ckTempos.length).toFixed(1) : null;
-
-    // Análise de desempenho
-    const pontosBons = [];
-    const melhorar   = [];
-
-    if (mediaTempoReal !== null) {
-      if (parseFloat(mediaTempoReal) <= 25) pontosBons.push(`Tempo médio de separação excelente: ${mediaTempoReal} min/pedido`);
-      else if (parseFloat(mediaTempoReal) <= 40) pontosBons.push(`Tempo médio de separação dentro do esperado: ${mediaTempoReal} min/pedido`);
-      else melhorar.push(`Tempo médio de separação acima do ideal: ${mediaTempoReal} min/pedido (meta: até 40 min)`);
+    if (!pedidos.length) {
+      toast('Sem dados no período para gerar relatório','aviso');
+      return;
     }
-    if (totalReps > 0) {
-      const pctRep = ((pedidosComRep / totalPedidos) * 100).toFixed(0);
-      if (parseInt(pctRep) <= 15) pontosBons.push(`Baixa incidência de reposição: ${pctRep}% dos pedidos (${totalReps} avisos)`);
-      else melhorar.push(`Alta incidência de reposição: ${pctRep}% dos pedidos geraram avisos (${totalReps} no total)`);
-    } else {
-      pontosBons.push('Nenhum aviso de reposição no período — excelente!');
-    }
-    if (totalPedidos >= 20) pontosBons.push(`Volume expressivo de pedidos no mês: ${totalPedidos} pedidos / ${totalItens} itens`);
-    else if (totalPedidos > 0) melhorar.push(`Volume abaixo do esperado para o período: ${totalPedidos} pedidos`);
-    if (mediaCk !== null && parseFloat(mediaCk) <= 5) pontosBons.push(`Checkout ágil: média de ${mediaCk} min por pedido`);
-    else if (mediaCk !== null && parseFloat(mediaCk) > 10) melhorar.push(`Tempo de checkout elevado: média de ${mediaCk} min por pedido`);
 
-    const [ano, mes] = anoMes.split('-');
-    const nomesMes = ['','Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+    let html = '';
 
-    const html = `
-      <div style="font-family:'DM Sans',sans-serif;max-width:680px;margin:0 auto;padding:0 4px">
-        <div style="background:var(--accent);color:#fff;border-radius:12px 12px 0 0;padding:18px 20px">
-          <div style="font-size:11px;font-weight:700;letter-spacing:1px;opacity:.8">RELATÓRIO DE DESEMPENHO</div>
-          <div style="font-size:20px;font-weight:900;margin-top:2px">${nomeColab}</div>
-          <div style="font-size:12px;opacity:.8;margin-top:2px">${nomesMes[parseInt(mes)]} de ${ano}</div>
-        </div>
-        <div style="background:var(--surface);border:1px solid var(--border);border-top:none;border-radius:0 0 12px 12px;padding:18px 20px">
-          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px">
-            ${[
-              ['Pedidos', totalPedidos],
-              ['Itens', totalItens],
-              ['Tempo Médio', mediaTempoReal !== null ? mediaTempoReal+'min' : '—'],
-              ['Reposições', totalReps],
-            ].map(([l,v]) => `
-              <div style="background:var(--surface2);border-radius:8px;padding:10px;text-align:center">
-                <div style="font-size:18px;font-weight:900;color:var(--text)">${v}</div>
-                <div style="font-size:10px;color:var(--text3);font-weight:600">${l}</div>
-              </div>`).join('')}
+    // ── SEPARADOR ──
+    if (perfil === 'separador') {
+      const totalPedidos   = pedidos.length;
+      const totalItens     = pedidos.reduce((s,p) => s + (p.total_itens||0), 0);
+      const totalProdutos  = pedidos.reduce((s,p) => s + (p.qtd_produtos||0), 0);
+      const totalPontuacao = pedidos.reduce((s,p) => s + (p.pontuacao||0), 0);
+      const mediaPontuacao = totalPedidos ? Math.round(totalPontuacao / totalPedidos) : 0;
+      const totalReps      = pedidos.reduce((s,p) => s + (p.qtd_reposicoes||0), 0);
+      const pedidosComRep  = pedidos.filter(p => p.qtd_reposicoes > 0).length;
+      const pctRep         = totalPedidos ? Math.round((pedidosComRep / totalPedidos) * 100) : 0;
+
+      const temposReais = pedidos.filter(p => p.tempo_real_min !== null).map(p => parseFloat(p.tempo_real_min));
+      const comTempo    = temposReais.length;
+      const somaTempos  = temposReais.reduce((a,b) => a+b, 0);
+      const mediaTempoReal = comTempo ? (somaTempos / comTempo) : null;
+      const tempoMin    = comTempo ? Math.min(...temposReais) : null;
+      const tempoMax    = comTempo ? Math.max(...temposReais) : null;
+      const totalHorasTrabalhadas = somaTempos / 60;
+      const itensHora   = totalHorasTrabalhadas > 0 ? Math.round(totalItens / totalHorasTrabalhadas) : null;
+
+      // Distribuição de tempo
+      const rapido = temposReais.filter(t => t < 15).length;
+      const normal = temposReais.filter(t => t >= 15 && t <= 30).length;
+      const lento  = temposReais.filter(t => t > 30).length;
+      const pctR   = comTempo ? Math.round((rapido/comTempo)*100) : 0;
+      const pctN   = comTempo ? Math.round((normal/comTempo)*100) : 0;
+      const pctL   = comTempo ? Math.round((lento/comTempo)*100) : 0;
+
+      // Dificuldade pela pontuação
+      const diffLabel = mediaPontuacao < 30 ? 'Simples' : mediaPontuacao < 60 ? 'Moderado' : 'Complexo';
+      const diffColor = mediaPontuacao < 30 ? '#22C55E' : mediaPontuacao < 60 ? '#F59E0B' : '#EF4444';
+      const diffBar   = Math.min(100, Math.round((mediaPontuacao / 100) * 100));
+
+      // Análise
+      const pontosBons = [], melhorar = [];
+      if (mediaTempoReal !== null) {
+        if (mediaTempoReal <= 20) pontosBons.push(`Velocidade excelente: média de ${mediaTempoReal.toFixed(1)}min por pedido`);
+        else if (mediaTempoReal <= 35) pontosBons.push(`Ritmo dentro do esperado: ${mediaTempoReal.toFixed(1)}min/pedido`);
+        else melhorar.push(`Tempo médio elevado: ${mediaTempoReal.toFixed(1)}min/pedido (meta ≤ 35min)`);
+      }
+      if (pctRep <= 10) pontosBons.push(`Excelente qualidade de conferência: apenas ${pctRep}% dos pedidos geraram reposição`);
+      else if (pctRep <= 20) pontosBons.push(`Incidência de reposição razoável: ${pctRep}% (${pedidosComRep} pedidos)`);
+      else melhorar.push(`Alta incidência de reposição: ${pctRep}% dos pedidos (${totalReps} avisos) — verificar conferência de itens`);
+      if (totalPedidos >= 25) pontosBons.push(`Volume expressivo no período: ${totalPedidos} pedidos / ${totalItens} itens`);
+      else if (totalPedidos < 10) melhorar.push(`Volume baixo no período: ${totalPedidos} pedidos`);
+      if (itensHora !== null && itensHora >= 30) pontosBons.push(`Alta produtividade: ${itensHora} itens separados por hora`);
+      else if (itensHora !== null && itensHora < 15) melhorar.push(`Produtividade abaixo do esperado: ${itensHora} itens/hora`);
+
+      // Tabela de pedidos
+      const linhasPed = pedidos.map(p => {
+        const ini2  = p.iniciado_em ? p.iniciado_em.replace(/.*T/,'').slice(0,5) : '—';
+        const fim2  = p.concluido_em ? p.concluido_em.replace(/.*T/,'').slice(0,5) : '—';
+        const tr    = p.tempo_real_min;
+        const trStr = tr !== null ? `${Math.round(tr)}min` : '—';
+        const trCor = tr === null ? '#94A3B8' : tr <= 15 ? '#22C55E' : tr <= 30 ? '#F59E0B' : '#EF4444';
+        const pts   = p.pontuacao || 0;
+        const ptsCor= pts < 30 ? '#22C55E' : pts < 60 ? '#F59E0B' : '#EF4444';
+        return `<tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:5px 8px;font-family:monospace;font-size:11px;font-weight:700">${p.numero_pedido}</td>
+          <td style="padding:5px 8px;font-size:11px;color:var(--text3)">${fmtData(p.data_pedido)}</td>
+          <td style="padding:5px 8px;font-size:11px;text-align:center">${ini2}</td>
+          <td style="padding:5px 8px;font-size:11px;text-align:center">${fim2}</td>
+          <td style="padding:5px 8px;text-align:center;font-weight:700;color:${trCor}">${trStr}</td>
+          <td style="padding:5px 8px;text-align:center;font-size:12px;color:var(--accent)">${p.total_itens||0}</td>
+          <td style="padding:5px 8px;text-align:center;font-size:12px;color:var(--text2)">${p.qtd_produtos||0}</td>
+          <td style="padding:5px 8px;text-align:center;font-weight:700;color:${ptsCor}">${pts}</td>
+          <td style="padding:5px 8px;text-align:center;color:${p.qtd_reposicoes>0?'#F59E0B':'var(--text3)'}">${p.qtd_reposicoes||0}</td>
+        </tr>`;
+      }).join('');
+
+      html = `<div style="font-family:'DM Sans',sans-serif;max-width:780px;margin:0 auto">
+
+        <!-- HEADER -->
+        <div style="background:linear-gradient(135deg,#2563EB,#1D4ED8);color:#fff;border-radius:12px 12px 0 0;padding:20px 24px">
+          <div style="font-size:10px;font-weight:700;letter-spacing:2px;opacity:.75">RELATÓRIO DE DESEMPENHO · SEPARAÇÃO</div>
+          <div style="font-size:22px;font-weight:900;margin-top:4px">${nomeColab}</div>
+          <div style="display:flex;gap:16px;margin-top:6px;font-size:12px;opacity:.85">
+            <span>📅 ${nomesMes[parseInt(mes)]} de ${ano}</span>
+            <span>📊 ${totalPedidos} pedidos · ${totalItens} itens · ${totalProdutos} prod.</span>
+            ${itensHora ? `<span>⚡ ${itensHora} itens/h</span>` : ''}
           </div>
-          ${tempoMin!==null?`<div style="font-size:12px;color:var(--text2);margin-bottom:14px">Tempo de separação: mínimo <b>${tempoMin}min</b> · máximo <b>${tempoMax}min</b>${mediaCk?` · checkout médio <b>${mediaCk}min</b>`:''}</div>`:''}
-          ${pontosBons.length ? `
-            <div style="margin-bottom:12px">
-              <div style="font-size:11px;font-weight:800;color:#15803D;letter-spacing:.5px;margin-bottom:6px">✅ PONTOS POSITIVOS</div>
-              ${pontosBons.map(p=>`<div style="font-size:13px;color:var(--text);padding:5px 10px;background:#F0FDF4;border-radius:6px;margin-bottom:4px;border-left:3px solid #22C55E">• ${p}</div>`).join('')}
-            </div>` : ''}
-          ${melhorar.length ? `
-            <div>
-              <div style="font-size:11px;font-weight:800;color:#B45309;letter-spacing:.5px;margin-bottom:6px">⚠️ PONTOS A MELHORAR</div>
-              ${melhorar.map(p=>`<div style="font-size:13px;color:var(--text);padding:5px 10px;background:#FFFBEB;border-radius:6px;margin-bottom:4px;border-left:3px solid #F59E0B">• ${p}</div>`).join('')}
-            </div>` : ''}
-          ${!pontosBons.length && !melhorar.length ? `<div style="color:var(--text3);font-size:13px;text-align:center;padding:20px">Dados insuficientes para análise. Filtre um período com mais atividade.</div>` : ''}
+        </div>
+
+        <div style="background:var(--surface);border:1px solid var(--border);border-top:none;border-radius:0 0 12px 12px;padding:20px 24px">
+
+          <!-- CARDS RESUMO -->
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:18px">
+            ${[
+              ['📦 PEDIDOS', totalPedidos, 'var(--accent)'],
+              ['🔢 ITENS TOTAIS', totalItens, 'var(--accent)'],
+              ['🏷️ PRODUTOS', totalProdutos, 'var(--text2)'],
+              ['⭐ PONTUAÇÃO TOTAL', totalPontuacao, '#8B5CF6'],
+              ['⏱ TEMPO MÉDIO', mediaTempoReal ? Math.round(mediaTempoReal)+'min' : '—', mediaTempoReal && mediaTempoReal<=30 ? '#22C55E' : '#F59E0B'],
+              ['🔄 REPOSIÇÕES', `${totalReps} (${pctRep}%)`, pctRep<=15 ? '#22C55E' : pctRep<=30 ? '#F59E0B' : '#EF4444'],
+            ].map(([l,v,c]) => `<div style="background:var(--surface2);border-radius:10px;padding:12px;text-align:center;border:1px solid var(--border)">
+              <div style="font-size:20px;font-weight:900;color:${c}">${v}</div>
+              <div style="font-size:9px;color:var(--text3);font-weight:700;letter-spacing:.5px;margin-top:2px">${l}</div>
+            </div>`).join('')}
+          </div>
+
+          <!-- DIFICULDADE -->
+          <div style="background:var(--surface2);border-radius:10px;padding:14px;margin-bottom:14px;border:1px solid var(--border)">
+            <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:1px;margin-bottom:10px">📍 DIFICULDADE DOS PEDIDOS (PONTUAÇÃO POR CORREDOR)</div>
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+              <div style="flex:1">
+                <div style="height:10px;background:var(--border);border-radius:5px;overflow:hidden">
+                  <div style="height:100%;width:${diffBar}%;background:${diffColor};border-radius:5px;transition:.3s"></div>
+                </div>
+              </div>
+              <div style="font-size:16px;font-weight:900;color:${diffColor};min-width:80px">${mediaPontuacao} pts</div>
+              <div style="font-size:12px;font-weight:700;color:${diffColor};border:1.5px solid ${diffColor};border-radius:6px;padding:2px 8px">${diffLabel}</div>
+            </div>
+            <div style="display:flex;gap:16px;font-size:11px;color:var(--text3)">
+              <span>Média por pedido: <b style="color:var(--text)">${mediaPontuacao} pts</b></span>
+              <span>Total: <b style="color:var(--text)">${totalPontuacao} pts</b></span>
+              ${tempoMin!==null?`<span>T.min: <b style="color:#22C55E">${Math.round(tempoMin)}min</b></span><span>T.max: <b style="color:#EF4444">${Math.round(tempoMax)}min</b></span>`:''}
+            </div>
+            <div style="font-size:10px;color:var(--text3);margin-top:6px">Pontuação considera peso dos corredores (longe do início = mais pontos) e volume de itens.</div>
+          </div>
+
+          <!-- DISTRIBUIÇÃO DE TEMPO -->
+          ${comTempo > 0 ? `<div style="background:var(--surface2);border-radius:10px;padding:14px;margin-bottom:14px;border:1px solid var(--border)">
+            <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:1px;margin-bottom:10px">⏱ DISTRIBUIÇÃO DE VELOCIDADE (${comTempo} pedidos com tempo calculado)</div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+              ${[
+                ['⚡ RÁPIDO','< 15min', rapido, pctR, '#22C55E'],
+                ['✅ NORMAL','15–30min', normal, pctN, '#3B82F6'],
+                ['🐢 LENTO','> 30min', lento, pctL, '#EF4444'],
+              ].map(([l,r,n,pct,c]) => `<div style="text-align:center;background:var(--surface);border-radius:8px;padding:10px;border:1px solid var(--border)">
+                <div style="font-size:18px;font-weight:900;color:${c}">${n}</div>
+                <div style="font-size:9px;font-weight:700;color:${c}">${pct}%</div>
+                <div style="font-size:10px;color:var(--text3);font-weight:600;margin-top:2px">${l}</div>
+                <div style="font-size:9px;color:var(--text3)">${r}</div>
+              </div>`).join('')}
+            </div>
+          </div>` : ''}
+
+          <!-- TABELA DE PEDIDOS -->
+          <div style="margin-bottom:14px">
+            <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:1px;margin-bottom:8px">📋 DETALHAMENTO POR PEDIDO</div>
+            <div style="overflow-x:auto;border-radius:8px;border:1px solid var(--border)">
+              <table style="width:100%;border-collapse:collapse;font-size:12px">
+                <thead><tr style="background:var(--surface2);font-size:10px;font-weight:700;color:var(--text3)">
+                  <th style="padding:7px 8px;text-align:left">PEDIDO</th>
+                  <th style="padding:7px 8px">DATA</th>
+                  <th style="padding:7px 8px">INÍCIO</th>
+                  <th style="padding:7px 8px">FIM</th>
+                  <th style="padding:7px 8px">T.REAL</th>
+                  <th style="padding:7px 8px">ITENS</th>
+                  <th style="padding:7px 8px">PROD.</th>
+                  <th style="padding:7px 8px">PONTS.</th>
+                  <th style="padding:7px 8px">REPOS.</th>
+                </tr></thead>
+                <tbody>${linhasPed}</tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- ANÁLISE -->
+          ${pontosBons.length ? `<div style="margin-bottom:10px">
+            <div style="font-size:10px;font-weight:800;color:#15803D;letter-spacing:1px;margin-bottom:6px">✅ PONTOS POSITIVOS</div>
+            ${pontosBons.map(p=>`<div style="font-size:12px;color:var(--text);padding:6px 10px;background:#F0FDF4;border-radius:6px;margin-bottom:4px;border-left:3px solid #22C55E">• ${p}</div>`).join('')}
+          </div>` : ''}
+          ${melhorar.length ? `<div>
+            <div style="font-size:10px;font-weight:800;color:#B45309;letter-spacing:1px;margin-bottom:6px">⚠️ PONTOS A MELHORAR</div>
+            ${melhorar.map(p=>`<div style="font-size:12px;color:var(--text);padding:6px 10px;background:#FFFBEB;border-radius:6px;margin-bottom:4px;border-left:3px solid #F59E0B">• ${p}</div>`).join('')}
+          </div>` : ''}
+
         </div>
       </div>`;
+
+    // ── CHECKOUT ──
+    } else if (perfil === 'checkout') {
+      const totalCk   = pedidos.length;
+      const tempos    = pedidos.filter(p => p.tempo_checkout_min !== null).map(p => p.tempo_checkout_min);
+      const mediaCk   = tempos.length ? (tempos.reduce((a,b)=>a+b,0)/tempos.length).toFixed(1) : null;
+      const linhas    = pedidos.map(p => `<tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:5px 8px;font-family:monospace;font-size:11px;font-weight:700">${p.numero_pedido}</td>
+        <td style="padding:5px 8px;font-size:11px;color:var(--text3)">${fmtData(p.data_pedido)}</td>
+        <td style="padding:5px 8px;text-align:center;font-size:11px">${p.hora_abertura||'—'}</td>
+        <td style="padding:5px 8px;text-align:center;font-size:11px">${p.hora_confirmacao||'—'}</td>
+        <td style="padding:5px 8px;text-align:center;font-weight:700;color:${p.tempo_checkout_min<=5?'#22C55E':p.tempo_checkout_min<=15?'#F59E0B':'#EF4444'}">${p.tempo_checkout_min!==null?p.tempo_checkout_min+'min':'—'}</td>
+      </tr>`).join('');
+      html = `<div style="font-family:'DM Sans',sans-serif;max-width:700px;margin:0 auto">
+        <div style="background:linear-gradient(135deg,#16A34A,#15803D);color:#fff;border-radius:12px 12px 0 0;padding:20px 24px">
+          <div style="font-size:10px;font-weight:700;letter-spacing:2px;opacity:.75">RELATÓRIO DE DESEMPENHO · CHECKOUT</div>
+          <div style="font-size:22px;font-weight:900;margin-top:4px">${nomeColab}</div>
+          <div style="font-size:12px;opacity:.85;margin-top:4px">📅 ${nomesMes[parseInt(mes)]} de ${ano} · ${totalCk} checkouts${mediaCk ? ` · média ${mediaCk}min` : ''}</div>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-top:none;border-radius:0 0 12px 12px;padding:20px 24px">
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px">
+            ${[['✅ CHECKOUTS',totalCk,'#22C55E'],['⏱ TEMPO MÉDIO',mediaCk?mediaCk+'min':'—','#3B82F6'],['⚡ MAIS RÁPIDO',tempos.length?Math.min(...tempos)+'min':'—','#22C55E']].map(([l,v,c])=>`<div style="background:var(--surface2);border-radius:10px;padding:12px;text-align:center;border:1px solid var(--border)"><div style="font-size:20px;font-weight:900;color:${c}">${v}</div><div style="font-size:9px;color:var(--text3);font-weight:700;letter-spacing:.5px">${l}</div></div>`).join('')}
+          </div>
+          <div style="overflow-x:auto;border-radius:8px;border:1px solid var(--border)">
+            <table style="width:100%;border-collapse:collapse;font-size:12px">
+              <thead><tr style="background:var(--surface2);font-size:10px;font-weight:700;color:var(--text3)">
+                <th style="padding:7px 8px;text-align:left">PEDIDO</th><th style="padding:7px 8px">DATA</th><th style="padding:7px 8px">ABERTURA</th><th style="padding:7px 8px">CONFIRMAÇÃO</th><th style="padding:7px 8px">TEMPO</th>
+              </tr></thead><tbody>${linhas}</tbody>
+            </table>
+          </div>
+        </div>
+      </div>`;
+
+    // ── OUTROS PERFIS ──
+    } else {
+      const total = pedidos.length;
+      html = `<div style="font-family:'DM Sans',sans-serif;max-width:600px;margin:0 auto">
+        <div style="background:var(--accent);color:#fff;border-radius:12px 12px 0 0;padding:20px 24px">
+          <div style="font-size:10px;font-weight:700;letter-spacing:2px;opacity:.75">RELATÓRIO · ${(perfil||'').toUpperCase()}</div>
+          <div style="font-size:22px;font-weight:900;margin-top:4px">${nomeColab}</div>
+          <div style="font-size:12px;opacity:.85;margin-top:4px">📅 ${nomesMes[parseInt(mes)]} de ${ano} · ${total} registros</div>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-top:none;border-radius:0 0 12px 12px;padding:20px 24px;color:var(--text3);font-size:13px;text-align:center">
+          ${total} registro(s) encontrado(s) no período.
+        </div>
+      </div>`;
+    }
 
     // Exibe em modal
     let modal = document.getElementById('modal-relatorio-colab');
@@ -1303,9 +1461,9 @@ async function gerarRelatorioColaborador(nomeColab) {
       modal.id = 'modal-relatorio-colab';
       modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
       modal.innerHTML = `
-        <div style="background:var(--bg);border-radius:14px;width:100%;max-width:700px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)">
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border)">
-            <span style="font-size:13px;font-weight:700;color:var(--text)">Relatório Mensal</span>
+        <div style="background:var(--bg);border-radius:14px;width:100%;max-width:820px;max-height:92vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:1">
+            <span style="font-size:13px;font-weight:700;color:var(--text)">📄 Relatório do Mês — ${nomeColab}</span>
             <button onclick="document.getElementById('modal-relatorio-colab').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text3)">✕</button>
           </div>
           <div id="relatorio-colab-body" style="padding:16px"></div>
