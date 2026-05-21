@@ -697,7 +697,21 @@ body.dark .item-card.parcial    .item-ic{background:#78350F}
   .ck-tabbar{display:none!important}
 }
 
-
+/* Mobile embalagem root */
+#emb-mobile-root{display:none}
+@media(max-width:768px){
+  body.emb-mobile #app{overflow:hidden}
+  body.emb-mobile header{display:none}
+  body.emb-mobile .sidebar{display:none}
+  body.emb-mobile .conteudo{display:none}
+  body.emb-mobile .layout{overflow:hidden}
+  body.emb-mobile #emb-mobile-root{display:flex!important;flex-direction:column;position:fixed;inset:0;z-index:999;overflow:hidden}
+}
+@media(min-width:769px){
+  #emb-mobile-root{display:none!important}
+  body.emb-mobile .conteudo{display:block!important}
+  body.emb-mobile .sidebar{display:flex!important}
+}
 
 
 /* ══════════════════════════════════════════
