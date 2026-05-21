@@ -890,6 +890,8 @@ async function carregarEmbalagemMobile() {
   try {
     const res = await fetch(`${API}/embalagem?status=pendente`, { credentials:'include' });
     const pedidos = await res.json();
+    const pendentes = pedidos.filter(p => !p.status_embalagem || p.status_embalagem === 'pendente');
+    const embalando = pedidos.filter(p => p.status_embalagem === 'embalando');
     if (cnt) cnt.textContent = pedidos.length;
     if (!pedidos.length) {
       el.innerHTML = `<div style="text-align:center;padding:60px 16px">
@@ -899,52 +901,114 @@ async function carregarEmbalagemMobile() {
       </div>`;
       return;
     }
-    el.innerHTML = pedidos.map(p => {
+
+    // Função para formatar data DD/MM/YYYY
+    const fmtDt = d => { if (!d) return '—'; const [y,m,dd] = d.split('-'); return `${dd}/${m}/${y}`; };
+
+    const renderCard = (p, emAndamento) => {
       const isDrive = String(p.transportadora||'').toUpperCase().includes('DRIVE');
       const isPrime = p.tem_prime;
-      const corBorda = isDrive ? '#dc2626' : isPrime ? '#7c3aed' : '#4f46e5';
-      const corFundo = isDrive ? '#fef2f2' : isPrime ? '#f5f3ff' : '#eff6ff';
+      const corBorda = emAndamento ? '#16a34a' : isDrive ? '#dc2626' : isPrime ? '#7c3aed' : '#64748b';
+      const corFundo = emAndamento ? '#f0fdf4' : isDrive ? '#fef2f2' : isPrime ? '#f5f3ff' : '#f8fafc';
+      const statusBadge = emAndamento
+        ? `<span style="font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;background:#16a34a;color:#fff;animation:pulse 1.5s infinite">⏱ EM ANDAMENTO</span>`
+        : '';
       return `
-        <div style="background:var(--surface);border-radius:16px;margin-bottom:14px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08)">
-          <!-- Header colorido -->
+        <div style="background:var(--surface);border-radius:16px;margin-bottom:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.1)">
+          <!-- Header -->
           <div style="background:${corFundo};border-left:5px solid ${corBorda};padding:14px 16px">
-            <div style="display:flex;justify-content:space-between;align-items:center">
-              <div>
-                <div style="font-family:'Space Mono',monospace;font-size:17px;font-weight:700;color:var(--text)">${p.numero_pedido}</div>
-                <div style="font-size:13px;color:var(--text2);margin-top:2px;font-weight:500">${p.cliente||'—'}</div>
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+              <div style="flex:1;min-width:0">
+                <div style="font-family:'Space Mono',monospace;font-size:19px;font-weight:700;color:var(--text)">${p.numero_pedido}</div>
+                <div style="font-size:12px;color:var(--text2);margin-top:3px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.cliente||'—'}</div>
               </div>
-              <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
-                ${isDrive?'<span style="font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;background:#dc2626;color:#fff;letter-spacing:.3px">DRIVE</span>':''}
-                ${isPrime?'<span style="font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;background:#7c3aed;color:#fff;letter-spacing:.3px">PRIME</span>':''}
+              <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0">
+                ${statusBadge}
+                ${isDrive?'<span style="font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;background:#dc2626;color:#fff">DRIVE</span>':''}
+                ${isPrime?'<span style="font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;background:#7c3aed;color:#fff">PRIME</span>':''}
               </div>
             </div>
           </div>
-          <!-- Info -->
-          <div style="padding:12px 16px;display:flex;gap:8px;flex-wrap:wrap;border-bottom:1px solid var(--border)">
-            <span style="background:var(--surface2);border-radius:8px;padding:5px 10px;font-size:11px;color:var(--text2)">🚚 ${p.transportadora||'—'}</span>
-            <span style="background:var(--surface2);border-radius:8px;padding:5px 10px;font-size:11px;color:var(--text2)">📦 ${p.itens||0} itens</span>
-            ${p.hora_checkout?`<span style="background:var(--surface2);border-radius:8px;padding:5px 10px;font-size:11px;color:var(--text2)">🕐 ${p.hora_checkout}</span>`:''}
+          <!-- Dados -->
+          <div style="padding:12px 16px;display:grid;grid-template-columns:1fr 1fr;gap:8px;border-bottom:1px solid var(--border)">
+            <div style="background:var(--surface2);border-radius:10px;padding:8px 10px;text-align:center">
+              <div style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.5px;margin-bottom:2px">DATA</div>
+              <div style="font-size:13px;font-weight:700;color:var(--text)">${fmtDt(p.data_pedido)}</div>
+            </div>
+            <div style="background:var(--surface2);border-radius:10px;padding:8px 10px;text-align:center">
+              <div style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.5px;margin-bottom:2px">ITENS</div>
+              <div style="font-size:16px;font-weight:800;color:#4f46e5">${p.itens||0}</div>
+            </div>
+            <div style="background:var(--surface2);border-radius:10px;padding:8px 10px;text-align:center">
+              <div style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.5px;margin-bottom:2px">SAIU CHECKOUT</div>
+              <div style="font-size:13px;font-weight:700;color:var(--text)">${p.hora_checkout||'—'}</div>
+            </div>
+            <div style="background:var(--surface2);border-radius:10px;padding:8px 10px;text-align:center">
+              <div style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.5px;margin-bottom:2px">INÍCIO EMB.</div>
+              <div style="font-size:13px;font-weight:700;color:${emAndamento?'#16a34a':'var(--text3)'}">${p.embalagem_iniciado_em||'—'}</div>
+            </div>
           </div>
-          <!-- Botao -->
-          <div style="padding:14px 16px">
-            <button onclick="confirmarEmbalagemMobile(${p.id})"
-              style="width:100%;padding:15px;background:#4f46e5;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;letter-spacing:.3px">
-              ✅ Confirmar embalagem
-            </button>
+          <!-- Transportadora -->
+          <div style="padding:8px 16px;border-bottom:1px solid var(--border)">
+            <span style="font-size:11px;color:var(--text2)">🚚 ${p.transportadora||'—'}</span>
+          </div>
+          <!-- Botões -->
+          <div style="padding:14px 16px;display:grid;grid-template-columns:${emAndamento?'1fr 1fr':'1fr'};gap:10px">
+            ${emAndamento ? `
+              <button onclick="iniciarEmbalagemMobile(${p.id})"
+                style="padding:14px;background:#f1f5f9;color:#64748b;border:2px solid #cbd5e1;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer">
+                🔄 Reiniciar
+              </button>
+              <button onclick="encerrarEmbalagemMobile(${p.id})"
+                style="padding:14px;background:#16a34a;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(22,163,74,.3)">
+                ✅ Encerrar
+              </button>
+            ` : `
+              <button onclick="iniciarEmbalagemMobile(${p.id})"
+                style="padding:16px;background:#4f46e5;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(79,70,229,.3)">
+                ▶️ Iniciar Embalagem
+              </button>
+            `}
           </div>
         </div>`;
-    }).join('');
+    };
+
+    // Mostra em andamento primeiro
+    el.innerHTML = [
+      ...embalando.map(p => renderCard(p, true)),
+      ...pendentes.map(p => renderCard(p, false)),
+    ].join('');
+
   } catch(e) { if(el) el.innerHTML = '<div style="color:#ef4444;text-align:center;padding:24px">Erro ao carregar</div>'; }
 }
 
-async function confirmarEmbalagemMobile(id) {
+async function iniciarEmbalagemMobile(id) {
   try {
+    const btn = event?.currentTarget;
+    if (btn) { btn.disabled = true; btn.textContent = 'Iniciando...'; }
+    const res = await fetch(`${API}/embalagem/${id}/iniciar`, { method:'PUT', credentials:'include' });
+    const r = await res.json();
+    if (!res.ok) { toast(r.erro||'Erro','erro'); if(btn){btn.disabled=false;btn.textContent='▶️ Iniciar Embalagem';} return; }
+    toast(`Embalagem iniciada às ${r.hora_inicio}!`, 'sucesso');
+    carregarEmbalagemMobile();
+  } catch(e) { toast('Erro ao iniciar','erro'); }
+}
+
+async function encerrarEmbalagemMobile(id) {
+  try {
+    const btn = event?.currentTarget;
+    if (btn) { btn.disabled = true; btn.textContent = 'Encerrando...'; }
     const res = await fetch(`${API}/embalagem/${id}/confirmar`, { method:'PUT', credentials:'include' });
     const r = await res.json();
-    if (!res.ok) { toast(r.erro||'Erro','erro'); return; }
-    toast('Embalagem confirmada!','sucesso');
+    if (!res.ok) { toast(r.erro||'Erro','erro'); if(btn){btn.disabled=false;btn.textContent='✅ Encerrar';} return; }
+    toast('Embalagem concluída! 📦', 'sucesso');
     carregarEmbalagemMobile();
-  } catch(e) { toast('Erro','erro'); }
+  } catch(e) { toast('Erro ao encerrar','erro'); }
+}
+
+// Mantém compatibilidade com o botão antigo
+async function confirmarEmbalagemMobile(id) {
+  await encerrarEmbalagemMobile(id);
 }
 
 /* REDEFINIR SENHA PRÓPRIA */

@@ -16,7 +16,8 @@ router.get('/embalagem', requerAuth, async (req,res) => {
       WHERE p.status = 'concluido' AND p.data_pedido = $1`;
     const params = [dt];
     if (status === 'pendente') {
-      sql += ` AND (p.status_embalagem IS NULL OR p.status_embalagem = 'pendente')`;
+      // inclui 'embalando' para manter o card visível durante o processo
+      sql += ` AND (p.status_embalagem IS NULL OR p.status_embalagem IN ('pendente','embalando'))`;
     } else if (status === 'embalado') {
       sql += ` AND p.status_embalagem = 'embalado'`;
     } else {
@@ -27,6 +28,25 @@ router.get('/embalagem', requerAuth, async (req,res) => {
   } catch(e) { res.status(500).json({erro:e.message}); }
 });
 
+/* ── Iniciar embalagem (registra hora de início) ── */
+router.put('/embalagem/:id/iniciar', requerAuth, async (req,res) => {
+  const id = validarId(req.params.id);
+  if (!id) return res.status(400).json({erro:'ID invalido'});
+  try {
+    const {hora} = dataHoraLocal();
+    const embalado_por = req.session?.usuario?.nome || 'Embalador';
+    const ped = await db.get('SELECT * FROM pedidos WHERE id=$1', [id]);
+    if (!ped) return res.status(404).json({erro:'Pedido nao encontrado'});
+    if (ped.status_embalagem === 'embalado') return res.status(400).json({erro:'Pedido ja embalado!'});
+    await pool.query(
+      `UPDATE pedidos SET status_embalagem='embalando', embalado_por=$1, embalagem_iniciado_em=$2 WHERE id=$3`,
+      [embalado_por, hora, id]
+    );
+    res.json({mensagem:'Embalagem iniciada!', numero_pedido: ped.numero_pedido, hora_inicio: hora});
+  } catch(e) { res.status(500).json({erro:e.message}); }
+});
+
+/* ── Encerrar / confirmar embalagem ── */
 router.put('/embalagem/:id/confirmar', requerAuth, async (req,res) => {
   const id = validarId(req.params.id);
   if (!id) return res.status(400).json({erro:'ID invalido'});
@@ -36,20 +56,21 @@ router.put('/embalagem/:id/confirmar', requerAuth, async (req,res) => {
     const ped = await db.get('SELECT * FROM pedidos WHERE id=$1', [id]);
     if (!ped) return res.status(404).json({erro:'Pedido nao encontrado'});
     if (ped.status_embalagem === 'embalado') return res.status(400).json({erro:'Pedido ja embalado!'});
+    const inicio = ped.embalagem_iniciado_em || ped.embalado_em || '';
     await pool.query(
       `UPDATE pedidos SET status_embalagem='embalado', embalado_por=$1, embalado_em=$2 WHERE id=$3`,
       [embalado_por, hora, id]
     );
     await pool.query(
-      `INSERT INTO embalagem (pedido_id,numero_pedido,embalado_por,embalado_em,data_embalagem,cliente,transportadora,is_drive,is_prime)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+      `INSERT INTO embalagem (pedido_id,numero_pedido,embalado_por,embalado_em,data_embalagem,cliente,transportadora,is_drive,is_prime,embalagem_inicio)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
       [ped.id, ped.numero_pedido, embalado_por, hora, hoje,
        ped.cliente||'', ped.transportadora||'',
        String(ped.transportadora||'').toUpperCase().includes('DRIVE'),
-       ped.tem_prime||false]
+       ped.tem_prime||false, inicio]
     );
-    await registrarAuditoria(req, 'EMBALAR', 'pedido', id, null, {embalado_por});
-    res.json({mensagem:'Embalagem confirmada!', numero_pedido: ped.numero_pedido});
+    await registrarAuditoria(req, 'EMBALAR', 'pedido', id, null, {embalado_por, inicio, fim: hora});
+    res.json({mensagem:'Embalagem concluída!', numero_pedido: ped.numero_pedido});
   } catch(e) { res.status(500).json({erro:e.message}); }
 });
 

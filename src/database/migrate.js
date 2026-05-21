@@ -24,6 +24,8 @@ const ALTERATIONS = [
   "ALTER TABLE passagem_turno ADD COLUMN IF NOT EXISTS emb_pendentes INTEGER DEFAULT 0",
   "ALTER TABLE passagem_turno ADD COLUMN IF NOT EXISTS rep_procurando INTEGER DEFAULT 0",
   "ALTER TABLE passagem_turno ADD COLUMN IF NOT EXISTS rep_na_rua INTEGER DEFAULT 0",
+  "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS embalagem_iniciado_em VARCHAR(20) DEFAULT ''",
+  "ALTER TABLE embalagem ADD COLUMN IF NOT EXISTS embalagem_inicio VARCHAR(20) DEFAULT ''",
 ];
 
 async function runSchema() {
