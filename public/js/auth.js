@@ -130,6 +130,13 @@ function _confirmarSair() {
   if (ckRoot)   ckRoot.style.display   = 'none';
   if (ckBar)    ckBar.style.display    = 'none';
   if (embRoot)  embRoot.style.display  = 'none';
+  // Restaura elementos que ativarMobileEmb pode ter escondido via inline style
+  const hdr = document.querySelector('#app header');
+  if (hdr) hdr.style.display = '';
+  const sb  = document.getElementById('sidebar');
+  if (sb)  sb.style.display  = '';
+  const ct  = document.getElementById('conteudo');
+  if (ct)  ct.style.display  = '';
   document.getElementById('tela-login').style.display      = 'flex';
   document.getElementById('login-usuario').value = '';
   document.getElementById('login-senha').value   = '';
@@ -879,8 +886,24 @@ async function exportarEmbalagemExcel() {
 let _embPedidos = [];
 
 async function ativarMobileEmb() {
-  document.body.classList.add('emb-mobile');
-  document.getElementById('emb-mobile-root').style.display = 'flex';
+  // Esconde individualmente cada elemento desnecessário (sem depender de CSS cacheado)
+  const header = document.querySelector('#app header');
+  if (header) header.style.display = 'none';
+  const sidebar = document.getElementById('sidebar');
+  if (sidebar) sidebar.style.display = 'none';
+  const conteudo = document.getElementById('conteudo');
+  if (conteudo) conteudo.style.display = 'none';
+
+  // Mostra o root com as propriedades de layout corretas via JS
+  const root = document.getElementById('emb-mobile-root');
+  if (root) {
+    root.style.display       = 'flex';
+    root.style.flexDirection = 'column';
+    root.style.flex          = '1';
+    root.style.overflow      = 'hidden';
+    root.style.minHeight     = '0';
+  }
+
   carregarEmbalagemMobile();
   setInterval(carregarEmbalagemMobile, 30000);
 }
