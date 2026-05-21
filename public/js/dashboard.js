@@ -1005,12 +1005,6 @@ async function carregarPerformanceDetalhe(ini, fim, filtPerfil, filtColab) {
           const reps = p.qtd_reposicoes > 0
             ? `<span style="color:var(--amber);font-weight:700">${p.qtd_reposicoes}</span>`
             : '<span style="color:var(--text3)">0</span>';
-          const ck = p.tempo_checkout_min !== null
-            ? `<span style="color:${p.tempo_checkout_min<=5?'var(--green)':p.tempo_checkout_min<=15?'var(--amber)':'var(--red)'};font-weight:700">${_horasStr(p.tempo_checkout_min)}</span>`
-            : '<span style="color:var(--text3)">—</span>';
-          const emb = p.emb_horario
-            ? `<span style="color:var(--green);font-weight:700">${p.emb_horario.slice(0,5)}</span>`
-            : '<span style="color:var(--text3)">—</span>';
           return `<tr>
             <td style="font-weight:700">${p.numero_pedido||'—'}</td>
             <td style="color:var(--text2)">${fmtData(p.data_pedido)||'—'}</td>
@@ -1019,8 +1013,6 @@ async function carregarPerformanceDetalhe(ini, fim, filtPerfil, filtColab) {
             <td style="color:var(--text2)">${total}</td>
             <td>${espera}</td>
             <td>${real}</td>
-            <td>${ck}</td>
-            <td>${emb}</td>
             <td style="font-weight:700;color:var(--accent)">${p.total_itens||0}</td>
             <td style="font-weight:700;color:var(--text2)">${p.qtd_produtos||0}</td>
             <td>${reps}</td>
@@ -1032,7 +1024,6 @@ async function carregarPerformanceDetalhe(ini, fim, filtPerfil, filtColab) {
               <thead><tr>
                 <th>Nº PEDIDO</th><th>DATA</th><th>INÍCIO</th><th>CONCLUSÃO</th>
                 <th>T. TOTAL</th><th>⏸ ESPERA</th><th>✅ T. REAL</th>
-                <th>⏱ CHECKOUT</th><th>📦 EMBALAGEM</th>
                 <th>ITENS</th><th>PRODUTOS</th><th>REPOS.</th>
               </tr></thead>
               <tbody>${linhas}</tbody>
@@ -1603,129 +1594,23 @@ function limparFiltroColaborador() {
 }
 
 /* ══════════════════════════════════════════
-   TEMPO REAL DE SEPARAÇÃO
+   ZERAR SESSÕES DE TESTE
 ══════════════════════════════════════════ */
-let _tempoSepDados = [];
 
-async function iniciarTempoSep() {
-  // Preenche o select de separadores
-  try {
-    const users = await apiFetch('/usuarios');
-    const ativos = (users || []).filter(u => u.status === 'ativo');
-    const sel = document.getElementById('tsep-sep');
-    if (sel) {
-      sel.innerHTML = '<option value="">Todos</option>' +
-        ativos.map(u => `<option value="${u.id}">${u.nome}</option>`).join('');
-    }
-  } catch(e) { console.warn(e); }
-  // Filtro padrão: último 7 dias
-  const ini = document.getElementById('tsep-ini');
-  const fim = document.getElementById('tsep-fim');
-  if (ini && !ini.value) {
-    const d = new Date(); d.setDate(d.getDate() - 6);
-    ini.value = d.toISOString().slice(0,10);
-  }
-  if (fim && !fim.value) fim.value = hojeLocal();
-  carregarTempoSeparacao();
+async function zerarSessoesHoje() {
+  const ini = document.getElementById('perf-ini')?.value || hojeLocal();
+  wmsConfirm(`Zerar todas as sessões de ${fmtData(ini)}? Os tempos nos cards voltarão a zero.`, async () => {
+    try {
+      const res = await fetch(`${API}/admin/zerar-sessoes`, {
+        method: 'POST', credentials: 'include',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ data: ini })
+      });
+      const data = await res.json();
+      if (data.erro) { toast(data.erro, 'erro'); return; }
+      toast(`✅ ${data.mensagem}`, 'sucesso');
+      carregarPerformance();
+    } catch(e) { toast('Erro ao zerar sessões!', 'erro'); }
+  });
 }
 
-function fmtMin(min) {
-  if (min === null || min === undefined) return '—';
-  const m = Math.round(min);
-  if (m < 60) return `${m}min`;
-  return `${Math.floor(m/60)}h${String(m%60).padStart(2,'0')}`;
-}
-
-async function carregarTempoSeparacao() {
-  const ini = document.getElementById('tsep-ini')?.value || '';
-  const fim = document.getElementById('tsep-fim')?.value || '';
-  const sep = document.getElementById('tsep-sep')?.value || '';
-  const tbody = document.getElementById('tbody-tempo-sep');
-  if (tbody) tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:24px;color:var(--text3)">Carregando...</td></tr>';
-  try {
-    let url = `${API}/pedidos/relatorio/tempo-separacao?`;
-    if (ini) url += `data_ini=${ini}&`;
-    if (fim) url += `data_fim=${fim}&`;
-    if (sep) url += `separador_id=${sep}&`;
-    const res = await fetch(url, { credentials:'include' });
-    const data = await res.json();
-    if (data.erro) { if(tbody) tbody.innerHTML=`<tr><td colspan="10" style="text-align:center;color:var(--red);padding:24px">${data.erro}</td></tr>`; return; }
-    _tempoSepDados = data;
-
-    // KPIs
-    const kpiEl = document.getElementById('tsep-kpis');
-    if (kpiEl && data.length) {
-      const comTempo = data.filter(r => r.tempo_real_min !== null);
-      const avgReal = comTempo.length ? comTempo.reduce((s,r)=>s+r.tempo_real_min,0)/comTempo.length : 0;
-      const avgEspera = comTempo.length ? comTempo.reduce((s,r)=>s+(r.tempo_espera_min||0),0)/comTempo.length : 0;
-      const avgItens = data.length ? data.reduce((s,r)=>s+(r.total_itens||0),0)/data.length : 0;
-      const comRep = data.filter(r => r.qtd_reposicoes > 0).length;
-      kpiEl.innerHTML = `
-        <div class="cnt-card verde"><div class="cnt-lbl">PEDIDOS ANALISADOS</div><div class="cnt-val" style="font-size:28px">${data.length}</div><div class="cnt-sub">${comTempo.length} com tempo calculado</div></div>
-        <div class="cnt-card azul"><div class="cnt-lbl">TEMPO REAL MÉDIO</div><div class="cnt-val" style="font-size:28px">${fmtMin(avgReal)}</div><div class="cnt-sub">por pedido</div></div>
-        <div class="cnt-card amarelo"><div class="cnt-lbl">ESPERA MÉDIA REP.</div><div class="cnt-val" style="font-size:28px">${fmtMin(avgEspera)}</div><div class="cnt-sub">por pedido</div></div>
-        <div class="cnt-card roxo"><div class="cnt-lbl">MÉDIA DE ITENS</div><div class="cnt-val" style="font-size:28px">${Math.round(avgItens)}</div><div class="cnt-sub">${comRep} pedidos com reposição</div></div>`;
-    } else if (kpiEl) { kpiEl.innerHTML = ''; }
-
-    // Total label
-    const tot = document.getElementById('tsep-total');
-    if (tot) tot.textContent = `${data.length} pedido(s)`;
-
-    // Tabela
-    if (!tbody) return;
-    if (!data.length) {
-      tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:32px;color:var(--text3)">Nenhum pedido encontrado no período</td></tr>';
-      return;
-    }
-    tbody.innerHTML = data.map(r => {
-      const horaIni = (r.iniciado_em||'').replace(/.*T/,'');
-      const horaFim = (r.concluido_em||'').replace(/.*T/,'');
-      const temRep = r.qtd_reposicoes > 0;
-      const realClass = r.tempo_real_min !== null && r.tempo_real_min < 10 ? 'color:var(--green);font-weight:700' :
-                        r.tempo_real_min !== null && r.tempo_real_min > 45 ? 'color:var(--red);font-weight:700' : 'font-weight:600';
-      return `<tr>
-        <td style="font-family:'Space Mono',monospace;font-size:11px;font-weight:700">${r.numero_pedido}</td>
-        <td style="font-size:12px">${r.separador_nome}</td>
-        <td style="font-size:11px;color:var(--text3)">${r.data_pedido||'—'}</td>
-        <td style="font-size:11px;font-family:'Space Mono',monospace">${horaIni||'—'}</td>
-        <td style="font-size:11px;font-family:'Space Mono',monospace">${horaFim||'—'}</td>
-        <td style="font-size:12px;color:var(--text2)">${fmtMin(r.tempo_total_min)}</td>
-        <td style="font-size:12px;color:${temRep?'var(--amber)':'var(--text3)'}">${temRep?fmtMin(r.tempo_espera_min):'—'}</td>
-        <td style="${realClass}">${fmtMin(r.tempo_real_min)}</td>
-        <td style="text-align:center;font-weight:600">${r.total_itens||0}</td>
-        <td style="text-align:center">${r.qtd_reposicoes>0?`<span style="color:var(--amber);font-weight:700">${r.qtd_reposicoes}</span>`:'<span style="color:var(--text3)">—</span>'}</td>
-      </tr>`;
-    }).join('');
-  } catch(e) {
-    console.error('carregarTempoSeparacao:', e);
-    if(tbody) tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;color:var(--red);padding:24px">Erro ao carregar dados</td></tr>`;
-  }
-}
-
-function exportarTempoSepExcel() {
-  if (!_tempoSepDados.length) { toast('Nenhum dado para exportar!','aviso'); return; }
-  try {
-    const rows = [['Nº Pedido','Separador','Data','Hora Início','Hora Conclusão','Tempo Total (min)','Aguardou Repositor (min)','Tempo Real Sep. (min)','Total Itens','Reposições','Não Encontrados','Cliente','Transportadora']];
-    _tempoSepDados.forEach(r => rows.push([
-      r.numero_pedido,
-      r.separador_nome,
-      r.data_pedido||'',
-      (r.iniciado_em||'').replace(/.*T/,''),
-      (r.concluido_em||'').replace(/.*T/,''),
-      r.tempo_total_min !== null ? parseFloat(r.tempo_total_min) : '',
-      parseFloat(r.tempo_espera_min||0),
-      r.tempo_real_min !== null ? r.tempo_real_min : '',
-      r.total_itens||0,
-      r.qtd_reposicoes||0,
-      r.qtd_nao_encontrados||0,
-      r.cliente||'',
-      r.transportadora||''
-    ]));
-    const ws = XLSX.utils.aoa_to_sheet(rows);
-    ws['!cols'] = rows[0].map((_,ci) => ({ wch: Math.max(...rows.map(r => String(r[ci]||'').length))+2 }));
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Tempo Separação');
-    XLSX.writeFile(wb, `tempo_separacao_${hojeLocal()}.xlsx`);
-    toast('Excel exportado!','sucesso');
-  } catch(e) { toast('Erro ao exportar!','erro'); }
-}

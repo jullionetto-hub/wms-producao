@@ -6,6 +6,15 @@ const { dataHoraLocal } = require('../lib/helpers');
 const { registrarAuditoria } = require('../lib/auditoria');
 const { gerarRelatorio } = require('../lib/relatorio');
 
+router.post('/admin/zerar-sessoes', requerAuth, requerPerfil('supervisor'), async (req, res) => {
+  const { data } = req.body;
+  const { data: hoje } = dataHoraLocal();
+  try {
+    const r = await pool.query('DELETE FROM sessoes_trabalho WHERE data=$1', [data || hoje]);
+    res.json({ mensagem: `${r.rowCount} sessão(ões) removida(s).` });
+  } catch(e) { res.status(500).json({ erro: e.message }); }
+});
+
 router.post('/admin/zerar-dados', requerAuth, requerPerfil('supervisor'), async (req,res) => {
   const { confirmar } = req.body;
   if (confirmar !== 'ZERAR_TUDO_CONFIRMO') {

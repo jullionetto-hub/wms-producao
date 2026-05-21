@@ -31,6 +31,7 @@ router.get('/checkout/buscar', requerAuth, async (req,res) => {
 
 router.get('/checkout/caixa/:numero', requerAuth, async (req,res) => {
   const numero = String(req.params.numero).trim();
+  const { hora, data } = dataHoraLocal();
   try {
     const rows = await db.all(
       `SELECT c.*, p.status as ped_status, p.itens as ped_itens,
@@ -42,6 +43,15 @@ router.get('/checkout/caixa/:numero', requerAuth, async (req,res) => {
       [numero]
     );
     for (const row of rows) {
+      // Marca o momento em que o operador de checkout abre o pedido (primeira vez)
+      if (row.status === 'pendente' && !row.operador_nome) {
+        await pool.query(
+          `UPDATE checkout SET hora_criacao=$1, data_checkout=$2 WHERE id=$3`,
+          [hora, data, row.id]
+        );
+        row.hora_criacao = hora;
+        row.data_checkout = data;
+      }
       row.itens_lista = await db.all(
         `SELECT codigo, descricao, endereco, quantidade, status, obs FROM itens_pedido WHERE pedido_id=$1 ORDER BY id`,
         [row.pedido_id]
