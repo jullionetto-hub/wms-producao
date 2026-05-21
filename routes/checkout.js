@@ -19,10 +19,16 @@ router.get('/checkout/buscar', requerAuth, async (req,res) => {
   const {numero}=req.query;
   if (!numero) return res.status(400).json({erro:'Número não informado'});
   try {
+    // 1. Tenta pelo numero_caixa no checkout
     let row=await db.get(`SELECT c.*,p.numero_caixa FROM checkout c JOIN pedidos p ON c.pedido_id=p.id WHERE c.numero_caixa=$1 ORDER BY c.id DESC LIMIT 1`,[numero]);
+    // 2. Tenta pelo numero_pedido no checkout (pedidos sem caixa vinculada)
+    if (!row) {
+      row=await db.get(`SELECT c.*,p.numero_caixa FROM checkout c JOIN pedidos p ON c.pedido_id=p.id WHERE c.numero_pedido=$1 ORDER BY c.id DESC LIMIT 1`,[numero]);
+    }
+    // 3. Fallback: busca diretamente na tabela pedidos
     if (!row) {
       const ped=await db.get('SELECT id,numero_pedido,numero_caixa,status FROM pedidos WHERE numero_pedido=$1',[numero]);
-      if (ped&&ped.numero_caixa) row={numero_pedido:ped.numero_pedido,numero_caixa:ped.numero_caixa,status:'pendente',pedido_status:ped.status};
+      if (ped) row={numero_pedido:ped.numero_pedido,numero_caixa:ped.numero_caixa||'',status:'pendente',pedido_status:ped.status};
     }
     if (!row) return res.status(404).json({erro:'Não encontrado'});
     res.json(row);
@@ -33,7 +39,9 @@ router.get('/checkout/caixa/:numero', requerAuth, async (req,res) => {
   const numero = String(req.params.numero).trim();
   const { hora, data } = dataHoraLocal();
   try {
-    const rows = await db.all(
+    // Tenta primeiro pelo numero_caixa; se não achar, tenta pelo numero_pedido
+    // (pedidos separados sem caixa vinculada têm numero_caixa vazio no checkout)
+    let rows = await db.all(
       `SELECT c.*, p.status as ped_status, p.itens as ped_itens,
               p.numero_caixa, p.cliente, p.transportadora, s.nome as separador_nome
        FROM checkout c
@@ -42,6 +50,17 @@ router.get('/checkout/caixa/:numero', requerAuth, async (req,res) => {
        WHERE c.numero_caixa=$1 ORDER BY c.id DESC`,
       [numero]
     );
+    if (!rows.length) {
+      rows = await db.all(
+        `SELECT c.*, p.status as ped_status, p.itens as ped_itens,
+                p.numero_caixa, p.cliente, p.transportadora, s.nome as separador_nome
+         FROM checkout c
+         JOIN pedidos p ON c.pedido_id=p.id
+         LEFT JOIN separadores s ON p.separador_id=s.id
+         WHERE c.numero_pedido=$1 ORDER BY c.id DESC`,
+        [numero]
+      );
+    }
     for (const row of rows) {
       // Marca o momento em que o operador de checkout abre o pedido (primeira vez)
       if (row.status === 'pendente' && !row.operador_nome) {
