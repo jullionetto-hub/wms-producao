@@ -10,27 +10,37 @@ router.get('/embalagem', requerAuth, async (req,res) => {
     const {data:hoje} = dataHoraLocal();
     const {data, status} = req.query;
 
-    let sql = `SELECT p.*, ck.hora_checkout, ck.operador_nome
-      FROM pedidos p
-      LEFT JOIN checkout ck ON ck.pedido_id = p.id AND ck.status = 'concluido'
-      WHERE p.status = 'concluido'`;
     const params = [];
 
+    let sql;
     if (status === 'pendente') {
-      // Mobile/embalador: mostra TODOS os pedidos pendentes de embalagem
-      // sem filtro de data (pedidos de qualquer dia que ainda não foram embalados)
-      sql += ` AND (p.status_embalagem IS NULL OR p.status_embalagem IN ('pendente','embalando'))`;
+      // Mobile/embalador: pedidos que já passaram pelo checkout mas ainda não foram embalados.
+      // SEM filtro de data — mostra de qualquer dia que ainda esteja pendente.
+      sql = `SELECT p.*, ck.hora_checkout, ck.operador_nome, ck.data_checkout
+        FROM pedidos p
+        INNER JOIN checkout ck ON ck.pedido_id = p.id AND ck.status = 'concluido'
+        WHERE p.status = 'concluido'
+          AND (p.status_embalagem IS NULL OR p.status_embalagem IN ('pendente','embalando'))`;
     } else if (status === 'embalado') {
-      // Só embalados — usa data para filtrar
+      // Embalados — filtra por data
       const dt = data || hoje;
       params.push(dt);
-      sql += ` AND p.status_embalagem = 'embalado' AND p.data_pedido = $${params.length}`;
+      sql = `SELECT p.*, ck.hora_checkout, ck.operador_nome
+        FROM pedidos p
+        LEFT JOIN checkout ck ON ck.pedido_id = p.id AND ck.status = 'concluido'
+        WHERE p.status = 'concluido'
+          AND p.status_embalagem = 'embalado'
+          AND p.data_pedido = $${params.length}`;
     } else {
-      // Desktop supervisor: filtra por data
+      // Desktop supervisor: todos os status filtrados por data
       const dt = data || hoje;
       params.push(dt);
-      sql += ` AND p.data_pedido = $${params.length}`;
-      sql += ` AND (p.status_embalagem IS NULL OR p.status_embalagem != 'nao_iniciado')`;
+      sql = `SELECT p.*, ck.hora_checkout, ck.operador_nome
+        FROM pedidos p
+        LEFT JOIN checkout ck ON ck.pedido_id = p.id AND ck.status = 'concluido'
+        WHERE p.status = 'concluido'
+          AND p.data_pedido = $${params.length}
+          AND (p.status_embalagem IS NULL OR p.status_embalagem != 'nao_iniciado')`;
     }
 
     sql += ` ORDER BY ck.hora_checkout ASC NULLS LAST, p.concluido_em ASC NULLS LAST`;
