@@ -5,21 +5,6 @@ const { requerAuth } = require('../lib/auth');
 const { dataHoraLocal, validarId } = require('../lib/helpers');
 const { registrarAuditoria } = require('../lib/auditoria');
 
-// DIAGNÓSTICO TEMPORÁRIO — remover depois
-router.get('/embalagem/debug', async (req,res) => {
-  try {
-    const pedidos = await db.all(`SELECT id, numero_pedido, status, status_embalagem FROM pedidos WHERE status='concluido' ORDER BY id DESC LIMIT 20`);
-    const checkouts = await db.all(`SELECT id, pedido_id, numero_pedido, status, hora_checkout FROM checkout ORDER BY id DESC LIMIT 20`);
-    const prontos = await db.all(`
-      SELECT p.id, p.numero_pedido, p.status, p.status_embalagem, ck.status as ck_status
-      FROM pedidos p
-      INNER JOIN checkout ck ON ck.pedido_id = p.id AND ck.status = 'concluido'
-      WHERE p.status = 'concluido'
-        AND (p.status_embalagem IS NULL OR p.status_embalagem IN ('pendente','embalando'))
-    `);
-    res.json({ pedidos_concluidos: pedidos, checkouts_recentes: checkouts, prontos_para_embalagem: prontos });
-  } catch(e) { res.status(500).json({erro: e.message}); }
-});
 
 router.get('/embalagem', requerAuth, async (req,res) => {
   try {
@@ -30,13 +15,14 @@ router.get('/embalagem', requerAuth, async (req,res) => {
 
     let sql;
     if (status === 'pendente') {
-      // Mobile/embalador: pedidos que já passaram pelo checkout mas ainda não foram embalados.
-      // SEM filtro de data — mostra de qualquer dia que ainda esteja pendente.
+      // Mobile/embalador: pedidos prontos para embalar.
+      // LEFT JOIN — aparece mesmo sem checkout (ex: caixa liberada, status_embalagem='pendente')
+      // SEM filtro de data — mostra qualquer dia que ainda esteja pendente.
       sql = `SELECT p.*, ck.hora_checkout, ck.operador_nome, ck.data_checkout
         FROM pedidos p
-        INNER JOIN checkout ck ON ck.pedido_id = p.id AND ck.status = 'concluido'
+        LEFT JOIN checkout ck ON ck.pedido_id = p.id AND ck.status = 'concluido'
         WHERE p.status = 'concluido'
-          AND (p.status_embalagem IS NULL OR p.status_embalagem IN ('pendente','embalando'))`;
+          AND p.status_embalagem IN ('pendente','embalando')`;
     } else if (status === 'embalado') {
       // Embalados — filtra por data
       const dt = data || hoje;
