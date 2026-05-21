@@ -116,7 +116,7 @@ function sair() {
 function _confirmarSair() {
   fetch(`${API}/auth/logout`, { method:'POST', credentials:'include' }).catch(()=>{});
   usuarioAtual = null; separadorAtual = null; pedidoAtualId = null; pedidoAtualNum = null; itensAtuais = [];
-  document.body.classList.remove('sep-mobile','rep-mobile','ck-mobile');
+  document.body.classList.remove('sep-mobile','rep-mobile','ck-mobile','emb-mobile');
   document.getElementById('app').style.display     = 'none';
   document.getElementById('sep-mobile-root').style.display = 'none';
   document.getElementById('sep-tabbar').style.display      = 'none';
@@ -124,10 +124,12 @@ function _confirmarSair() {
   const repBar  = document.getElementById('rep-tabbar');
   const ckRoot  = document.getElementById('ck-mobile-root');
   const ckBar   = document.getElementById('ck-tabbar');
-  if (repRoot) repRoot.style.display = 'none';
-  if (repBar)  repBar.style.display  = 'none';
-  if (ckRoot)  ckRoot.style.display  = 'none';
-  if (ckBar)   ckBar.style.display   = 'none';
+  const embRoot = document.getElementById('emb-mobile-root');
+  if (repRoot)  repRoot.style.display  = 'none';
+  if (repBar)   repBar.style.display   = 'none';
+  if (ckRoot)   ckRoot.style.display   = 'none';
+  if (ckBar)    ckBar.style.display    = 'none';
+  if (embRoot)  embRoot.style.display  = 'none';
   document.getElementById('tela-login').style.display      = 'flex';
   document.getElementById('login-usuario').value = '';
   document.getElementById('login-senha').value   = '';
@@ -877,26 +879,8 @@ async function exportarEmbalagemExcel() {
 let _embPedidos = [];
 
 async function ativarMobileEmb() {
-  // Esconde todo o app principal (header + sidebar + conteudo)
-  const app = document.getElementById('app');
-  if (app) app.style.display = 'none';
-
-  // Exibe o root de embalagem como overlay fullscreen via JS
-  // (não depende de CSS/cache — mais confiável no mobile)
-  const root = document.getElementById('emb-mobile-root');
-  if (root) {
-    root.style.display        = 'flex';
-    root.style.flexDirection  = 'column';
-    root.style.position       = 'fixed';
-    root.style.top            = '0';
-    root.style.left           = '0';
-    root.style.right          = '0';
-    root.style.bottom         = '0';
-    root.style.zIndex         = '9999';
-    root.style.overflow       = 'hidden';
-    root.style.background     = 'var(--bg, #f1f5f9)';
-  }
-
+  document.body.classList.add('emb-mobile');
+  document.getElementById('emb-mobile-root').style.display = 'flex';
   carregarEmbalagemMobile();
   setInterval(carregarEmbalagemMobile, 30000);
 }
