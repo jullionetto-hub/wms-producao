@@ -877,9 +877,26 @@ async function exportarEmbalagemExcel() {
 let _embPedidos = [];
 
 async function ativarMobileEmb() {
-  document.body.classList.add('emb-mobile');
+  // Esconde todo o app principal (header + sidebar + conteudo)
+  const app = document.getElementById('app');
+  if (app) app.style.display = 'none';
+
+  // Exibe o root de embalagem como overlay fullscreen via JS
+  // (não depende de CSS/cache — mais confiável no mobile)
   const root = document.getElementById('emb-mobile-root');
-  if (root) root.style.display = 'flex';
+  if (root) {
+    root.style.display        = 'flex';
+    root.style.flexDirection  = 'column';
+    root.style.position       = 'fixed';
+    root.style.top            = '0';
+    root.style.left           = '0';
+    root.style.right          = '0';
+    root.style.bottom         = '0';
+    root.style.zIndex         = '9999';
+    root.style.overflow       = 'hidden';
+    root.style.background     = 'var(--bg, #f1f5f9)';
+  }
+
   carregarEmbalagemMobile();
   setInterval(carregarEmbalagemMobile, 30000);
 }
