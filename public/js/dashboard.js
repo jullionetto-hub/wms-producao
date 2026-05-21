@@ -518,6 +518,7 @@ async function carregarDashboard() {
   carregarGraficoFunil();
   atualizarBadgeLiberacao();
   iniciarAutoRefreshLiberacao();
+  iniciarAutoRefreshOperacao();
   const el = document.getElementById('dash-ultima-atualizacao');
   if (el) el.textContent = '— atualizado ' + new Date().toLocaleTimeString('pt-BR', {timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit'});
 }
@@ -566,6 +567,24 @@ async function carregarRankingGeral() {
     }).join('');
 
   } catch(e) { console.error('carregarRankingGeral:', e); }
+}
+
+/* ─── AUTO-REFRESH OPERACIONAL ──────────────────────────────────────── */
+let _opRefreshInterval = null;
+function iniciarAutoRefreshOperacao() {
+  if (_opRefreshInterval) clearInterval(_opRefreshInterval);
+  _opRefreshInterval = setInterval(async () => {
+    // Só atualiza se o dashboard estiver na página ativa
+    const pagDash = document.getElementById('pag-dashboard');
+    if (!pagDash?.classList.contains('ativa')) return;
+    // Sempre atualiza KPIs (ficam no topo, visíveis em todas as abas)
+    carregarKPIs();
+    // Atualiza dados de operação (contadores separando/pendente/concluído)
+    const tabOpPanel = document.getElementById('dtab-operacao');
+    if (!tabOpPanel || tabOpPanel.style.display !== 'none') {
+      carregarOperacao();
+    }
+  }, 30000); // a cada 30 segundos
 }
 
 /* ─── LIBERAÇÃO DE ITENS ────────────────────────────────────────────── */
