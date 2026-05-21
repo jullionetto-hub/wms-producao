@@ -858,6 +858,7 @@ function _horasStr(min) {
 }
 
 let _performanceDados = [];
+let _performanceDetalheDados = [];
 
 async function carregarPerformance() {
   const ini    = document.getElementById('perf-ini')?.value  || hojeLocal();
@@ -959,6 +960,8 @@ async function carregarPerformanceDetalhe(ini, fim, filtPerfil, filtColab) {
     const res = await fetch(url, { credentials:'include' });
     if (!res.ok) return;
     const { detalhe } = await res.json();
+
+    _performanceDetalheDados = detalhe || [];
 
     if (!detalhe || !detalhe.length) { wrap.style.display = 'none'; return; }
 
@@ -1115,46 +1118,96 @@ async function carregarPerformanceDetalhe(ini, fim, filtPerfil, filtColab) {
 
 function exportarPerformanceExcel() {
   try {
-    if (!_performanceDados || !_performanceDados.length) {
-      toast('Carregue os dados antes de exportar!', 'aviso');
-      return;
-    }
-    const AREA_LABEL = { separador:'Separação', checkout:'Checkout', embalador:'Embalagem', repositor:'Reposição' };
-    const rows = [['COLABORADOR','ÁREA','TURNO','TEMPO LOGADO','ATIVIDADES','META PROP.','% ATINGIMENTO','DETALHE']];
-    _performanceDados.forEach(r => {
-      const tempoStr = r.minutos > 0 ? _horasStr(r.minutos) : '—';
-      const pctStr   = r.pct_atingimento !== null ? `${r.pct_atingimento}%` : '—';
-      const metaStr  = r.meta_proporcional > 0 ? r.meta_proporcional : '—';
-      let detalhe = '';
-      if (r.perfil === 'separador' && r.detalhe) {
-        const partes = [];
-        if (r.detalhe.itens)  partes.push(`${r.detalhe.itens} itens`);
-        if (r.detalhe.faltas) partes.push(`${r.detalhe.faltas} avisos rep.`);
-        detalhe = partes.join(' | ');
-      } else if (r.perfil === 'repositor' && r.detalhe) {
-        const partes = [];
-        if (r.detalhe.repostos)         partes.push(`${r.detalhe.repostos} resolvidos`);
-        if (r.detalhe.nao_encontrados)  partes.push(`${r.detalhe.nao_encontrados} não enc.`);
-        detalhe = partes.join(' | ');
-      }
-      rows.push([
-        r.usuario_nome,
-        AREA_LABEL[r.perfil] || r.perfil,
-        r.turno || '—',
-        tempoStr,
-        r.atividades,
-        metaStr,
-        pctStr,
-        detalhe,
-      ]);
-    });
-    const ws = XLSX.utils.aoa_to_sheet(rows);
-    ws['!cols'] = rows[0].map((_,ci) => ({ wch: Math.max(...rows.map(r => String(r[ci]||'').length))+2 }));
+    const temDados = (_performanceDados && _performanceDados.length) ||
+                     (_performanceDetalheDados && _performanceDetalheDados.length);
+    if (!temDados) { toast('Carregue os dados antes de exportar!', 'aviso'); return; }
+
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Performance');
+    const mkSheet = (rows) => {
+      const ws = XLSX.utils.aoa_to_sheet(rows);
+      ws['!cols'] = rows[0].map((_,ci) => ({ wch: Math.max(...rows.map(r => String(r[ci]||'').length), String(rows[0][ci]).length) + 2 }));
+      return ws;
+    };
+
+    /* ── Aba Separação ── */
+    const sepRows = [['COLABORADOR','DATA','Nº PEDIDO','INÍCIO','CONCLUSÃO','T. TOTAL','ESPERA REP.','T. REAL','ITENS','PRODUTOS','REPOSIÇÕES']];
+    (_performanceDetalheDados || []).filter(c => c.perfil === 'separador').forEach(c => {
+      c.pedidos.forEach(p => {
+        const ini  = p.iniciado_em  ? (p.iniciado_em.split('T')[1]  || p.iniciado_em.slice(-5))  : '—';
+        const fim  = p.concluido_em ? (p.concluido_em.split('T')[1] || p.concluido_em.slice(-5)) : '—';
+        const total  = p.tempo_total_min  !== null ? _horasStr(Math.round(p.tempo_total_min))  : '—';
+        const espera = p.tempo_espera_min > 0      ? _horasStr(Math.round(p.tempo_espera_min)) : '—';
+        const real   = p.tempo_real_min   !== null ? _horasStr(Math.round(p.tempo_real_min))   : '—';
+        sepRows.push([c.nome, p.data_pedido||'—', p.numero_pedido||'—', ini, fim, total, espera, real,
+          p.total_itens||0, p.qtd_produtos||0, p.qtd_reposicoes||0]);
+      });
+    });
+    if (sepRows.length > 1) XLSX.utils.book_append_sheet(wb, mkSheet(sepRows), 'Separação');
+
+    /* ── Aba Checkout ── */
+    const ckRows = [['COLABORADOR','DATA','Nº PEDIDO','ABERTURA','CONFIRMAÇÃO','T. CHECKOUT']];
+    (_performanceDetalheDados || []).filter(c => c.perfil === 'checkout').forEach(c => {
+      c.pedidos.forEach(p => {
+        const tempo = p.tempo_checkout_min !== null ? _horasStr(p.tempo_checkout_min) : '—';
+        ckRows.push([c.nome, p.data_pedido||'—', p.numero_pedido||'—',
+          p.hora_abertura||'—', p.hora_confirmacao||'—', tempo]);
+      });
+    });
+    if (ckRows.length > 1) XLSX.utils.book_append_sheet(wb, mkSheet(ckRows), 'Checkout');
+
+    /* ── Aba Embalagem ── */
+    const embRows = [['COLABORADOR','DATA','Nº PEDIDO','EMBALADO ÀS','ITENS','CLIENTE','TRANSPORTADORA']];
+    (_performanceDetalheDados || []).filter(c => c.perfil === 'embalador').forEach(c => {
+      c.pedidos.forEach(p => {
+        const hora = p.embalado_em ? p.embalado_em.slice(0,5) : '—';
+        embRows.push([c.nome, p.data_pedido||'—', p.numero_pedido||'—',
+          hora, p.total_itens||0, p.cliente||'—', p.transportadora||'—']);
+      });
+    });
+    if (embRows.length > 1) XLSX.utils.book_append_sheet(wb, mkSheet(embRows), 'Embalagem');
+
+    /* ── Aba Reposição ── */
+    const repRows = [['COLABORADOR','DATA','Nº PEDIDO','AVISO','REPOSTO','T. RESOLUÇÃO','CÓDIGO','DESCRIÇÃO','QTD','STATUS']];
+    (_performanceDetalheDados || []).filter(c => c.perfil === 'repositor').forEach(c => {
+      c.pedidos.forEach(p => {
+        const tempo = p.tempo_resolucao_min !== null ? _horasStr(p.tempo_resolucao_min) : '—';
+        repRows.push([c.nome, p.data_pedido||'—', p.numero_pedido||'—',
+          p.hora_aviso||'—', p.hora_reposto||'—', tempo,
+          p.codigo||'—', p.descricao||'—', p.quantidade||0, p.status||'—']);
+      });
+    });
+    if (repRows.length > 1) XLSX.utils.book_append_sheet(wb, mkSheet(repRows), 'Reposição');
+
+    /* ── Aba Resumo (cards de performance) ── */
+    if (_performanceDados && _performanceDados.length) {
+      const AREA_LABEL = { separador:'Separação', checkout:'Checkout', embalador:'Embalagem', repositor:'Reposição' };
+      const resRows = [['COLABORADOR','ÁREA','TURNO','TEMPO LOGADO','ATIVIDADES','META PROP.','% ATINGIMENTO','DETALHE']];
+      _performanceDados.forEach(r => {
+        const tempoStr = r.minutos > 0 ? _horasStr(r.minutos) : '—';
+        const pctStr   = r.pct_atingimento !== null ? `${r.pct_atingimento}%` : '—';
+        const metaStr  = r.meta_proporcional > 0 ? r.meta_proporcional : '—';
+        let detalhe = '';
+        if (r.perfil === 'separador' && r.detalhe) {
+          const partes = [];
+          if (r.detalhe.itens)  partes.push(`${r.detalhe.itens} itens`);
+          if (r.detalhe.faltas) partes.push(`${r.detalhe.faltas} avisos rep.`);
+          detalhe = partes.join(' | ');
+        } else if (r.perfil === 'repositor' && r.detalhe) {
+          const partes = [];
+          if (r.detalhe.repostos)        partes.push(`${r.detalhe.repostos} resolvidos`);
+          if (r.detalhe.nao_encontrados) partes.push(`${r.detalhe.nao_encontrados} não enc.`);
+          detalhe = partes.join(' | ');
+        }
+        resRows.push([r.usuario_nome, AREA_LABEL[r.perfil]||r.perfil, r.turno||'—',
+          tempoStr, r.atividades, metaStr, pctStr, detalhe]);
+      });
+      XLSX.utils.book_append_sheet(wb, mkSheet(resRows), 'Resumo');
+    }
+
+    if (wb.SheetNames.length === 0) { toast('Nenhum dado para exportar!', 'aviso'); return; }
     XLSX.writeFile(wb, `performance_${hojeLocal()}.xlsx`);
-    toast('Excel exportado!','sucesso');
-  } catch(e) { console.error('exportarPerformanceExcel:', e); toast('Erro ao exportar!','erro'); }
+    toast('Excel exportado!', 'sucesso');
+  } catch(e) { console.error('exportarPerformanceExcel:', e); toast('Erro ao exportar!', 'erro'); }
 }
 
 let _configMetasData = {};
