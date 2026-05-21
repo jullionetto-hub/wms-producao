@@ -67,11 +67,30 @@ function formatarData(iso) {
   return iso;
 }
 
+// ── Modal confirmação genérico ────────────────────────────────────────────────
+let _wmsConfirmCb = null;
+function wmsConfirm(msg, onYes) {
+  _wmsConfirmCb = onYes;
+  const el = document.getElementById('modal-confirm-msg');
+  if (el) el.textContent = msg;
+  document.getElementById('modal-confirm').style.display = 'flex';
+}
+function _confirmarWms() {
+  document.getElementById('modal-confirm').style.display = 'none';
+  if (_wmsConfirmCb) { const cb = _wmsConfirmCb; _wmsConfirmCb = null; cb(); }
+}
+function _cancelarWms() {
+  document.getElementById('modal-confirm').style.display = 'none';
+  _wmsConfirmCb = null;
+}
+
 // ── Protocolo ─────────────────────────────────────────────────────────────────
+let _protocoloRows = [];
 async function carregarProtocolo() {
   const data = document.getElementById('proto-filtro-data')?.value || '';
   const q = data ? `?data=${data}` : '';
   const rows = await apiFetch(`/protocolo${q}`);
+  _protocoloRows = rows || [];
   const el = document.getElementById('proto-lista');
   if (!el) return;
   if (!rows || !rows.length) { el.innerHTML = '<div style="text-align:center;color:var(--text3);padding:32px">Nenhum item em protocolo</div>'; return; }
@@ -93,9 +112,25 @@ async function carregarProtocolo() {
 }
 
 async function liberarProtocolo(id) {
-  if (!confirm('Confirmar liberação como Não Encontrado?')) return;
-  const r = await apiFetch(`/repositor/avisos/${id}/liberar`, {method:'PUT'});
-  if (r?.mensagem) { toast('✅ Item liberado!', 'ok'); carregarProtocolo(); }
+  wmsConfirm('Confirmar liberação como Não Encontrado?', async () => {
+    const r = await apiFetch(`/repositor/avisos/${id}/liberar`, {method:'PUT'});
+    if (r?.mensagem) { toast('✅ Item liberado!', 'sucesso'); carregarProtocolo(); }
+  });
+}
+
+function exportarProtocolo() {
+  if (!_protocoloRows.length) { toast('Nenhum item para exportar','aviso'); return; }
+  const header = ['Código','Descrição','Pedido','Cliente','Separador','Data','Hora','Endereço','Qtd'];
+  const csvRows = [header, ..._protocoloRows.map(r => [
+    r.codigo||'', r.descricao||'', r.numero_pedido||r.pedido_id||'', r.cliente||'',
+    r.separador_nome||'', fmtData(r.data_aviso), r.hora_aviso||'', r.endereco||'', r.quantidade||0
+  ])];
+  const csv = csvRows.map(row => row.map(v => `"${String(v).replace(/"/g,'""')}"`).join(';')).join('\n');
+  const blob = new Blob(['﻿'+csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `protocolo_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click(); URL.revokeObjectURL(url);
 }
 
 // ── Estatísticas Separador ───────────────────────────────────────────────────

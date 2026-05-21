@@ -610,24 +610,26 @@ async function carregarLiberacao() {
         <td style="color:var(--text3);font-size:12px">${r.data_aviso||''} ${r.hora_reposto||r.hora_aviso||''}</td>
         <td>
           <button class="btn btn-sm" style="background:var(--accent);color:#fff;white-space:nowrap"
-            onclick="liberarItem(${r.id})">🔓 Liberar para Protocolo</button>
+            onclick="liberarItem(${r.id}, this)">🔓 Liberar para Protocolo</button>
         </td>
       </tr>`).join('');
   } catch(e) { console.error('carregarLiberacao:', e); toast('Erro ao carregar liberações','erro'); }
 }
 
-async function liberarItem(id) {
-  if (!confirm('Liberar este item para Protocolo? O separador será notificado.')) return;
-  try {
-    const res  = await fetch(`${API}/repositor/avisos/${id}/protocolo`, {
-      method:'PUT', credentials:'include',
-      headers:{'Content-Type':'application/json'}, body:JSON.stringify({})
-    });
-    const data = await res.json();
-    if (data.erro) { toast(data.erro,'erro'); return; }
-    toast('✅ Item liberado para Protocolo!','sucesso');
-    carregarLiberacao();
-  } catch(e) { toast('Erro ao liberar!','erro'); }
+async function liberarItem(id, btn) {
+  wmsConfirm('Liberar este item para Protocolo? O separador será notificado.', async () => {
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Liberando...'; }
+    try {
+      const res  = await fetch(`${API}/repositor/avisos/${id}/liberar`, {
+        method:'PUT', credentials:'include',
+        headers:{'Content-Type':'application/json'}, body:JSON.stringify({})
+      });
+      const data = await res.json();
+      if (data.erro) { toast(data.erro,'erro'); if (btn) { btn.disabled = false; btn.textContent = '🔓 Liberar para Protocolo'; } return; }
+      toast('✅ Item liberado para Protocolo!','sucesso');
+      carregarLiberacao();
+    } catch(e) { toast('Erro ao liberar!','erro'); if (btn) { btn.disabled = false; btn.textContent = '🔓 Liberar para Protocolo'; } }
+  });
 }
 
 async function atualizarBadgeLiberacao() {
@@ -1440,23 +1442,29 @@ async function carregarAvisos() {
 
 
 async function marcarAviso(id, qtdTotal, acao) {
-  if ((acao==='nao_encontrado'||acao==='protocolo') && !confirm(`Confirmar: ${acao==='nao_encontrado'?'Não encontrado':'Protocolo'}? O supervisor será notificado.`)) return;
-  const input  = document.getElementById(`qtd-enc-${id}`);
-  const qtdEnc = (acao==='nao_encontrado'||acao==='protocolo') ? 0 : (parseInt(input?.value) || qtdTotal || 0);
-  const nome   = usuarioAtual?.nome || '';
-  try {
-    const res = await fetch(`${API}/repositor/avisos/${id}/${acao}`, {
-      credentials:'include', method:'PUT',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ qtd_encontrada: qtdEnc, repositor_nome: nome })
-    });
-    const data = await res.json();
-    if (data.erro) { toast(data.erro,'erro'); return; }
-    const msgs = { encontrado:'✅ Encontrado!', subiu:'⬆️ Subiu!', abastecido:'📦 Abastecido!', nao_encontrado:'🚫 Não encontrado!', protocolo:'📋 Protocolo!' };
-    const tipos = { encontrado:'sucesso', subiu:'sucesso', abastecido:'sucesso', nao_encontrado:'aviso', protocolo:'aviso' };
-    toast(msgs[acao]||'OK', tipos[acao]||'info');
-    carregarAvisos();
-  } catch(e) { toast('Erro!','erro'); }
+  const doAcao = async () => {
+    const input  = document.getElementById(`qtd-enc-${id}`);
+    const qtdEnc = (acao==='nao_encontrado'||acao==='protocolo') ? 0 : (parseInt(input?.value) || qtdTotal || 0);
+    const nome   = usuarioAtual?.nome || '';
+    try {
+      const res = await fetch(`${API}/repositor/avisos/${id}/${acao}`, {
+        credentials:'include', method:'PUT',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ qtd_encontrada: qtdEnc, repositor_nome: nome })
+      });
+      const data = await res.json();
+      if (data.erro) { toast(data.erro,'erro'); return; }
+      const msgs = { encontrado:'✅ Encontrado!', subiu:'⬆️ Subiu!', abastecido:'📦 Abastecido!', nao_encontrado:'🚫 Não encontrado!', protocolo:'📋 Protocolo!' };
+      const tipos = { encontrado:'sucesso', subiu:'sucesso', abastecido:'sucesso', nao_encontrado:'aviso', protocolo:'aviso' };
+      toast(msgs[acao]||'OK', tipos[acao]||'info');
+      carregarAvisos();
+    } catch(e) { toast('Erro!','erro'); }
+  };
+  if (acao==='nao_encontrado'||acao==='protocolo') {
+    wmsConfirm(`Confirmar: ${acao==='nao_encontrado'?'Não encontrado':'Protocolo'}? O supervisor será notificado.`, doAcao);
+  } else {
+    await doAcao();
+  }
 }
 // Compatibilidade
 async function marcarReposto(id,q){ await marcarAviso(id,q,'encontrado'); }

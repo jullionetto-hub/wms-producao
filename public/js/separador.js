@@ -369,8 +369,8 @@ function renderChecklist(prefix) {
   } else if (temProblema) {
     const itensP = itensAtuais.filter(i=>i.status==='falta'||i.status==='parcial');
     // Status que liberam o concluir: encontrado, subiu, abastecido
-    const statusOk = ['encontrado','reposto','subiu','abastecido'];
-    const statusBloq = ['nao_encontrado','protocolo'];
+    const statusOk = ['encontrado','reposto','subiu','abastecido','protocolo'];
+    const statusBloq = ['nao_encontrado'];
     const todosResolvidos = itensP.every(i => statusOk.includes(i.aviso_status) || statusBloq.includes(i.aviso_status));
     const temBloqueio = itensP.some(i => statusBloq.includes(i.aviso_status));
     const temPendente = itensP.some(i => !statusOk.includes(i.aviso_status) && !statusBloq.includes(i.aviso_status));

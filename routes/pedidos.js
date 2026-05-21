@@ -57,7 +57,7 @@ router.get('/pedidos/bloqueados', requerAuth, requerPerfil('supervisor'), async 
       FROM pedidos p
       JOIN avisos_repositor a ON a.pedido_id=p.id
       LEFT JOIN separadores s ON p.separador_id=s.id
-      WHERE a.status IN ('nao_encontrado','protocolo')
+      WHERE a.status = 'nao_encontrado'
         AND p.status IN ('separando','concluido')
         AND NOT EXISTS (
           SELECT 1 FROM avisos_repositor a2
@@ -114,8 +114,13 @@ router.post('/pedidos/bipar', requerAuth, async (req,res) => {
     const ped=await db.get('SELECT * FROM pedidos WHERE numero_pedido=$1',[numero_pedido]);
     if (!ped) return res.status(404).json({erro:'Pedido nao encontrado!'});
     if (ped.status==='concluido') return res.status(400).json({erro:'Pedido ja concluido!',status:'concluido'});
-    if (separador_id && ped.separador_id && String(ped.separador_id)===String(separador_id))
+    if (separador_id && ped.separador_id && String(ped.separador_id)===String(separador_id)) {
+      if (!ped.iniciado_em || ped.iniciado_em === '') {
+        const bipDHL = dataHoraLocal();
+        await pool.query(`UPDATE pedidos SET iniciado_em=$1 WHERE id=$2`, [bipDHL.data+'T'+bipDHL.hora, ped.id]);
+      }
       return res.json({mensagem:'Pedido ja atribuido.',pedido_id:ped.id,status:ped.status,ja_atribuido:true,caixa_vinculada:!!(ped.numero_caixa)});
+    }
     if (separador_id && ped.separador_id && String(ped.separador_id)!==String(separador_id) && ped.status==='separando')
       return res.status(409).json({erro:'Pedido sendo separado por outro operador!'});
     const sepId=separador_id||ped.separador_id||null;
