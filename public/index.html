@@ -28,8 +28,8 @@
 
 <!-- ══ LOGIN ══ -->
 <div id="tela-login">
-  <div id="trocar-senha-box" style="display:none;position:fixed;inset:0;background:var(--bg);align-items:center;justify-content:center;z-index:999;flex-direction:column">
-    <div style="background:var(--surface);border-radius:20px;padding:32px;max-width:380px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.15)">
+  <div id="trocar-senha-box" style="display:none;position:fixed;inset:0;background:linear-gradient(145deg,#1A0008 0%,#3B0B20 55%,#4D1230 100%);align-items:center;justify-content:center;z-index:999;flex-direction:column">
+    <div style="background:#fff;border-radius:20px;padding:32px;max-width:380px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.5)">
       <div style="text-align:center;margin-bottom:24px">
         <div style="font-size:44px">🔑</div>
         <div style="font-size:18px;font-weight:700;color:var(--text);margin-top:10px">Troca de Senha Obrigatória</div>
@@ -50,14 +50,18 @@
   </div>
     <div class="login-box" id="login-box">
     <div class="login-logo">📦</div>
-    <div class="login-titulo">WMS — Miess</div>
-    <div class="login-sub">Controle de Separação</div>
-    <div class="perfil-grid" style="grid-template-columns:repeat(2,1fr)">
-      <button class="perfil-btn" onclick="selecionarPerfil('supervisor',this)"><span class="pi">👔</span>SUPERVISÃO</button>
-      <button class="perfil-btn" onclick="selecionarPerfil('separador',this)"><span class="pi">📦</span>SEPARAÇÃO</button>
-      <button class="perfil-btn" onclick="selecionarPerfil('repositor',this)"><span class="pi">🔧</span>REPOSIÇÃO</button>
-      <button class="perfil-btn" onclick="selecionarPerfil('checkout',this)"><span class="pi">🏷️</span>CHECKOUT</button>
-      <button class="perfil-btn" onclick="selecionarPerfil('embalador',this)" style="grid-column:1/-1;width:calc(50% - 4px);margin:0 auto"><span class="pi">📫</span>EMBALAGEM</button>
+    <div class="login-titulo">WMS — <span>Miess</span></div>
+    <div class="login-sub">Gestão de Pedidos</div>
+    <div class="login-campo">
+      <label>PERFIL DE ACESSO</label>
+      <select id="login-perfil" onchange="selecionarPerfilSelect()">
+        <option value="" disabled selected>— Selecione seu perfil —</option>
+        <option value="supervisor">👔  Supervisão</option>
+        <option value="separador">📦  Separação</option>
+        <option value="repositor">🔧  Reposição</option>
+        <option value="checkout">🏷️  Checkout</option>
+        <option value="embalador">📫  Embalagem</option>
+      </select>
     </div>
     <div class="login-campo"><label>USUÁRIO</label><input type="text" id="login-usuario" placeholder="Ex: joao.silva" autocomplete="username"/></div>
     <div class="login-campo">

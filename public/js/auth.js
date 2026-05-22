@@ -5,8 +5,19 @@ let perfilSelecionado = '';
 function selecionarPerfil(p, btn) {
   perfilSelecionado = p;
   document.querySelectorAll('.perfil-btn').forEach(b => b.classList.remove('ativo'));
-  btn.classList.add('ativo');
-  document.getElementById('login-erro').style.display = 'none';
+  if (btn) btn.classList.add('ativo');
+  const erroEl = document.getElementById('login-erro');
+  if (erroEl) erroEl.style.display = 'none';
+}
+function selecionarPerfilSelect() {
+  const sel = document.getElementById('login-perfil');
+  if (sel && sel.value) {
+    perfilSelecionado = sel.value;
+    const erroEl = document.getElementById('login-erro');
+    if (erroEl) erroEl.style.display = 'none';
+    // Foca no campo usuário após selecionar
+    setTimeout(() => { const u = document.getElementById('login-usuario'); if(u) u.focus(); }, 50);
+  }
 }
 
 
@@ -28,6 +39,9 @@ function toggleSenha() {
 }
 
 async function fazerLogin() {
+  // Lê do select caso onchange não tenha sido disparado
+  const sel = document.getElementById('login-perfil');
+  if (sel && sel.value) perfilSelecionado = sel.value;
   const login  = document.getElementById('login-usuario').value.trim();
   const senha  = document.getElementById('login-senha').value;
   const erroEl = document.getElementById('login-erro');
