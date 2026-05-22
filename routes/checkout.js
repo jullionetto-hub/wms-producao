@@ -4,15 +4,6 @@ const { db, pool } = require('../lib/db');
 const { requerAuth, requerPerfil } = require('../lib/auth');
 const { dataHoraLocal } = require('../lib/helpers');
 
-// DEBUG TEMPORÁRIO — remover depois
-router.get('/checkout/debug-ck', async (req,res) => {
-  try {
-    const {data:hoje} = dataHoraLocal();
-    const cks = await db.all(`SELECT id,pedido_id,numero_pedido,status,data_checkout,hora_checkout,operador_nome FROM checkout ORDER BY id DESC LIMIT 20`);
-    const peds = await db.all(`SELECT id,numero_pedido,status,status_embalagem,data_pedido FROM pedidos WHERE status='concluido' ORDER BY id DESC LIMIT 10`);
-    res.json({hoje, checkouts:cks, pedidos_concluidos:peds});
-  } catch(e){res.status(500).json({erro:e.message});}
-});
 
 router.get('/checkout', requerAuth, async (req,res) => {
   const {status,numero_caixa}=req.query;
