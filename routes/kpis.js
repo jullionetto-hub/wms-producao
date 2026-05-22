@@ -356,10 +356,10 @@ router.get('/stats/performance', requerAuth, requerPerfil('supervisor'), async (
       GROUP BY separador_nome`, [dataIni, dataFim]);
 
     const checkouts = await db.all(`
-      SELECT operador_nome as nome, COUNT(*) as total
+      SELECT COALESCE(NULLIF(operador_nome,''), 'Não identificado') as nome, COUNT(*) as total
       FROM checkout
-      WHERE status='concluido' AND data_checkout>=$1 AND data_checkout<=$2 AND operador_nome!=''
-      GROUP BY operador_nome`, [dataIni, dataFim]);
+      WHERE status='concluido' AND data_checkout>=$1 AND data_checkout<=$2
+      GROUP BY COALESCE(NULLIF(operador_nome,''), 'Não identificado')`, [dataIni, dataFim]);
 
     const embalagens = await db.all(`
       SELECT embalado_por as nome, COUNT(*) as total
@@ -524,10 +524,10 @@ router.get('/dashboard/ranking-geral', requerAuth, requerPerfil('supervisor'), a
     `, [hoje]);
 
     const checkout = await db.all(`
-      SELECT operador_nome as nome, COUNT(*) as total
+      SELECT COALESCE(NULLIF(operador_nome,''), 'Não identificado') as nome, COUNT(*) as total
       FROM checkout
-      WHERE status='concluido' AND data_checkout=$1 AND operador_nome!=''
-      GROUP BY operador_nome ORDER BY total DESC LIMIT 10
+      WHERE status='concluido' AND data_checkout=$1
+      GROUP BY COALESCE(NULLIF(operador_nome,''), 'Não identificado') ORDER BY total DESC LIMIT 10
     `, [hoje]);
 
     const embalagem = await db.all(`

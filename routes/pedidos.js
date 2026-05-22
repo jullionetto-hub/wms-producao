@@ -219,6 +219,7 @@ router.put('/pedidos/:id/desbloquear', requerAuth, requerPerfil('supervisor'), a
         [ped?.numero_caixa||'',req.params.id,ped?.numero_pedido||'',sep?.nome||'',hora,data]
       );
     }
+    const cache = req.app.get('kpiCache'); if (cache) cache.ts = 0;
     res.json({mensagem:'Pedido desbloqueado!'});
   } catch(e) { res.status(500).json({erro:e.message}); }
 });
@@ -269,7 +270,7 @@ router.post('/pedidos/importar', requerAuth, requerPerfil('supervisor'), async (
     try {
       const ruasU=new Set(itens.map(i=>String(i.endereco||'').split(',')[0].trim().replace(/\d+/g,'').trim())).size;
       const pts=Math.round(itens.reduce((s,i)=>s+calcularPesoCorredor(i.endereco)*(parseInt(i.quantidade)||1),0)+ruasU*2);
-      const r=await pool.query(`INSERT INTO pedidos (numero_pedido,status,itens,rua,cliente,transportadora,aguardando_desde,pontuacao,data_pedido,hora_pedido,tem_prime) VALUES ($1,'pendente',$2,$3,$4,$5,$6,$7,$8,$9,$10) ON CONFLICT(numero_pedido) DO NOTHING RETURNING id`,
+      const r=await pool.query(`INSERT INTO pedidos (numero_pedido,status,itens,rua,cliente,transportadora,aguardando_desde,pontuacao,data_pedido,hora_pedido,tem_prime,status_embalagem) VALUES ($1,'pendente',$2,$3,$4,$5,$6,$7,$8,$9,$10,'nao_iniciado') ON CONFLICT(numero_pedido) DO NOTHING RETURNING id`,
         [numero,itens.length,itens[0]?.endereco||'',itens[0]?.cliente||'',itens[0]?.transportadora||'',itens[0]?.aguardando_desde||'',pts,hoje,hora,itens.some(i=>String(i.codigo||'').toUpperCase()==='PRIME')]);
       if (!r.rows[0]){ignorados++;continue;}
       const pid=r.rows[0].id;

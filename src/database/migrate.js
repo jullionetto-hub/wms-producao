@@ -26,6 +26,14 @@ const ALTERATIONS = [
   "ALTER TABLE passagem_turno ADD COLUMN IF NOT EXISTS rep_na_rua INTEGER DEFAULT 0",
   "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS embalagem_iniciado_em VARCHAR(20) DEFAULT ''",
   "ALTER TABLE embalagem ADD COLUMN IF NOT EXISTS embalagem_inicio VARCHAR(20) DEFAULT ''",
+  // Corrige o DEFAULT da coluna — novos pedidos devem começar como 'nao_iniciado', não 'pendente'
+  "ALTER TABLE pedidos ALTER COLUMN status_embalagem SET DEFAULT 'nao_iniciado'",
+  // Corrige pedidos existentes que nunca passaram pelo checkout nem pela embalagem
+  `UPDATE pedidos SET status_embalagem='nao_iniciado'
+   WHERE status='concluido'
+     AND status_embalagem='pendente'
+     AND NOT EXISTS (SELECT 1 FROM checkout c WHERE c.pedido_id=pedidos.id AND c.status='concluido')
+     AND NOT EXISTS (SELECT 1 FROM embalagem e WHERE e.pedido_id=pedidos.id)`,
 ];
 
 async function runSchema() {

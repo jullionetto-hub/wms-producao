@@ -44,7 +44,7 @@ const TABLES = [
     tem_prime                  BOOLEAN DEFAULT false,
     tempo_aguardando_min       INTEGER DEFAULT 0,
     aguardando_repositor_desde TEXT DEFAULT '',
-    status_embalagem           TEXT DEFAULT 'pendente',
+    status_embalagem           TEXT DEFAULT 'nao_iniciado',
     embalado_em                TEXT DEFAULT '',
     embalado_por               TEXT DEFAULT '',
     data_pedido                TEXT,
