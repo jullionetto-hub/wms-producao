@@ -804,13 +804,61 @@ async function exportarDiarioExcel(id) {
 }
 
 /* EMBALAGEM DESKTOP */
+function rowEmb(p) {
+  const isDrive    = String(p.transportadora||'').toUpperCase().includes('DRIVE');
+  const isPrime    = p.tem_prime;
+  const st         = p.status_embalagem || 'pendente';
+  const isEmbalado  = st === 'embalado';
+  const isEmbalando = st === 'embalando';
+
+  // Status pill
+  let pillClass, pillText;
+  if (isEmbalado)       { pillClass = 'concluido'; pillText = '✅ Embalado'; }
+  else if (isEmbalando) { pillClass = 'separando'; pillText = '⏱ Embalando'; }
+  else                  { pillClass = 'pendente';  pillText = '⏳ Pendente'; }
+
+  // Transportadora + badges
+  const transp     = p.transportadora || '—';
+  const driveBadge = isDrive ? '<span style="font-size:10px;font-weight:800;padding:2px 7px;border-radius:20px;background:#dc2626;color:#fff;margin-left:5px">DRIVE</span>' : '';
+  const primeBadge = isPrime ? '<span style="font-size:10px;font-weight:800;padding:2px 7px;border-radius:20px;background:#7c3aed;color:#fff;margin-left:5px">PRIME</span>' : '';
+
+  // Botão de ação
+  let acao;
+  if (isEmbalado) {
+    acao = '<span style="font-size:11px;color:var(--text3)">—</span>';
+  } else if (isEmbalando) {
+    acao = `<div style="display:flex;gap:5px;flex-wrap:nowrap">
+      <button onclick="iniciarEmbalagemDesk(${p.id})" class="btn btn-outline btn-sm" title="Reiniciar">🔄</button>
+      <button onclick="encerrarEmbalagemDesk(${p.id})" class="btn btn-success btn-sm">✅ Encerrar</button>
+    </div>`;
+  } else {
+    acao = `<button onclick="iniciarEmbalagemDesk(${p.id})" class="btn btn-primary btn-sm">▶️ Iniciar</button>`;
+  }
+
+  return `<tr style="${isEmbalando ? 'background:rgba(37,99,235,.04)' : isEmbalado ? 'opacity:.65' : ''}">
+    <td style="font-weight:700;font-family:'Space Mono',monospace;font-size:12px">
+      <span style="color:${isDrive ? 'var(--red)' : 'var(--accent)'}">${p.numero_pedido}</span>
+    </td>
+    <td style="font-size:11px;color:var(--text2);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.cliente||''}">${p.cliente||'—'}</td>
+    <td style="font-size:11px;font-weight:700;color:${isDrive ? 'var(--red)' : 'var(--indigo)'}">
+      ${transp}${driveBadge}${primeBadge}
+    </td>
+    <td style="font-size:11px;color:var(--text2);white-space:nowrap">${p.hora_checkout||'—'}</td>
+    <td style="font-size:11px;color:${isEmbalando ? '#2563eb' : 'var(--text2)'};font-weight:${isEmbalando ? 700 : 400};white-space:nowrap">${p.embalagem_iniciado_em||'—'}</td>
+    <td><span class="pill ${pillClass}">${pillText}</span></td>
+    <td style="font-size:11px;color:var(--text2)">${p.embalado_por||'—'}</td>
+    <td style="font-weight:600;color:${(p.itens||0)>20 ? 'var(--red)' : (p.itens||0)>10 ? 'var(--amber)' : 'var(--text)'}">${p.itens||'—'}</td>
+    <td style="white-space:nowrap">${acao}</td>
+  </tr>`;
+}
+
 async function carregarEmbalagem() {
-  const el     = document.getElementById('emb-lista-cards');
+  const el      = document.getElementById('tbody-embalagem');
   const elTotal = document.getElementById('emb-total');
   const elPend  = document.getElementById('emb-pendentes');
   const elEmb   = document.getElementById('emb-embalados');
   if (!el) return;
-  el.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text3)">Carregando...</div>';
+  el.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:40px;color:var(--text3)">Carregando...</td></tr>';
   try {
     const data   = document.getElementById('emb-data')?.value   || hojeLocal();
     const status = document.getElementById('emb-status')?.value || '';
@@ -822,22 +870,22 @@ async function carregarEmbalagem() {
     if (elPend) elPend.textContent = pend;
     if (elEmb)  elEmb.textContent  = emb;
     if (!pedidos.length) {
-      el.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:60px;color:var(--text3);font-size:15px">✅ Nenhum pedido para embalar</div>';
+      el.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:60px;color:var(--text3);font-size:15px">✅ Nenhum pedido para embalar</td></tr>';
       return;
     }
     const embalando = pedidos.filter(p => p.status_embalagem === 'embalando');
-    const pendentes = pedidos.filter(p => !p.status_embalagem || p.status_embalagem === 'pendente');
+    const pendentes = pedidos.filter(p => !p.status_embalagem || p.status_embalagem === 'pendente' || p.status_embalagem === 'nao_iniciado');
     const embalados = pedidos.filter(p => p.status_embalagem === 'embalado');
     el.innerHTML = [
-      ...embalando.map(p => renderCardEmb(p, true,  'desk')),
-      ...pendentes.map(p => renderCardEmb(p, false, 'desk')),
-      ...embalados.map(p => renderCardEmb(p, false, 'desk')),
+      ...embalando.map(p => rowEmb(p)),
+      ...pendentes.map(p => rowEmb(p)),
+      ...embalados.map(p => rowEmb(p)),
     ].join('');
     // Limpa resultado do scan ao recarregar
     const cont = document.getElementById('emb-desk-scan-resultado');
     if (cont && !document.getElementById('emb-desk-scan')?.value) cont.innerHTML = '';
   } catch(e) {
-    if (el) el.innerHTML = '<div style="grid-column:1/-1;color:#ef4444;text-align:center;padding:24px">Erro ao carregar</div>';
+    if (el) el.innerHTML = '<tr><td colspan="9" style="color:#ef4444;text-align:center;padding:24px">Erro ao carregar</td></tr>';
   }
 }
 

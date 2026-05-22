@@ -953,9 +953,28 @@
           </div>
         </div>
 
-        <!-- Cards -->
-        <div id="emb-lista-cards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:14px">
-          <div style="text-align:center;padding:40px;color:var(--text3)">Carregando...</div>
+        <!-- Tabela de embalagem -->
+        <div class="card">
+          <div class="tabela-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Nº PEDIDO</th>
+                  <th>CLIENTE</th>
+                  <th>TRANSPORTADORA</th>
+                  <th>CHECKOUT</th>
+                  <th>INÍCIO EMB.</th>
+                  <th>STATUS</th>
+                  <th>EMBALADO POR</th>
+                  <th>ITENS</th>
+                  <th>AÇÃO</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-embalagem">
+                <tr><td colspan="9" style="text-align:center;padding:40px;color:var(--text3)">Carregando...</td></tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
