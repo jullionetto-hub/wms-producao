@@ -59,9 +59,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
 .login-campo input,.login-campo select{width:100%;padding:12px 14px;background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.12);border-radius:10px;color:#fff;font-size:15px;outline:none;font-family:'DM Sans',sans-serif;transition:border-color .2s,background .2s;box-sizing:border-box}
 .login-campo input::placeholder{color:rgba(255,255,255,.22)}
 .login-campo input:focus,.login-campo select:focus{border-color:rgba(224,120,16,.75);background:rgba(255,255,255,.1)}
-.login-campo select{cursor:pointer;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='rgba(255,200,100,.6)' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:40px}
-.login-campo select option{background:#3B0B20;color:#fff}
-.login-campo select option[value=""]{color:rgba(255,255,255,.4)}
+.perfil-lista{display:flex;flex-direction:column;gap:5px}
+.perfil-item{display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.1);border-radius:10px;cursor:pointer;transition:all .18s;color:rgba(255,255,255,.6);font-size:14px;font-weight:500;font-family:'DM Sans',sans-serif;user-select:none}
+.perfil-item:hover{background:rgba(224,120,16,.12);border-color:rgba(224,120,16,.45);color:#fff}
+.perfil-item.ativo{background:rgba(224,120,16,.18);border-color:#E07810;color:#fff;font-weight:700}
+.perfil-item .pi2{font-size:17px;flex-shrink:0}
+.perfil-item .pck{margin-left:auto;color:#E07810;font-weight:900;font-size:15px;display:none}
+.perfil-item.ativo .pck{display:block}
 .btn-login{width:100%;padding:13px;background:linear-gradient(135deg,#E07810,#C05A05);border:none;border-radius:10px;color:#fff;font-size:15px;font-weight:800;cursor:pointer;transition:all .2s;font-family:'DM Sans',sans-serif;margin-top:4px;letter-spacing:.3px;box-shadow:0 4px 16px rgba(224,120,16,.3)}
 .btn-login:hover{filter:brightness(1.12);transform:translateY(-1px);box-shadow:0 6px 22px rgba(224,120,16,.45)}
 .btn-login:active{transform:translateY(0)}

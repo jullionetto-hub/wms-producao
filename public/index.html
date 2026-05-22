@@ -14,7 +14,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/app.css">
+  <link rel="stylesheet" href="/css/app.css?v=4">
 </head>
 <body>
 
@@ -52,16 +52,15 @@
     <div class="login-logo">📦</div>
     <div class="login-titulo">WMS — <span>Miess</span></div>
     <div class="login-sub">Gestão de Pedidos</div>
-    <div class="login-campo">
-      <label>PERFIL DE ACESSO</label>
-      <select id="login-perfil" onchange="selecionarPerfilSelect()">
-        <option value="" disabled selected>— Selecione seu perfil —</option>
-        <option value="supervisor">👔  Supervisão</option>
-        <option value="separador">📦  Separação</option>
-        <option value="repositor">🔧  Reposição</option>
-        <option value="checkout">🏷️  Checkout</option>
-        <option value="embalador">📫  Embalagem</option>
-      </select>
+    <div style="margin-bottom:16px;text-align:left">
+      <div style="font-size:10px;color:rgba(255,200,100,.7);font-weight:700;letter-spacing:1.2px;margin-bottom:8px">PERFIL DE ACESSO</div>
+      <div class="perfil-lista">
+        <div class="perfil-item" onclick="selecionarPerfilItem('supervisor',this)"><span class="pi2">👔</span><span>Supervisão</span><span class="pck">✓</span></div>
+        <div class="perfil-item" onclick="selecionarPerfilItem('separador',this)"><span class="pi2">📦</span><span>Separação</span><span class="pck">✓</span></div>
+        <div class="perfil-item" onclick="selecionarPerfilItem('repositor',this)"><span class="pi2">🔧</span><span>Reposição</span><span class="pck">✓</span></div>
+        <div class="perfil-item" onclick="selecionarPerfilItem('checkout',this)"><span class="pi2">🏷️</span><span>Checkout</span><span class="pck">✓</span></div>
+        <div class="perfil-item" onclick="selecionarPerfilItem('embalador',this)"><span class="pi2">📫</span><span>Embalagem</span><span class="pck">✓</span></div>
+      </div>
     </div>
     <div class="login-campo"><label>USUÁRIO</label><input type="text" id="login-usuario" placeholder="Ex: joao.silva" autocomplete="username"/></div>
     <div class="login-campo">

@@ -15,9 +15,16 @@ function selecionarPerfilSelect() {
     perfilSelecionado = sel.value;
     const erroEl = document.getElementById('login-erro');
     if (erroEl) erroEl.style.display = 'none';
-    // Foca no campo usuário após selecionar
     setTimeout(() => { const u = document.getElementById('login-usuario'); if(u) u.focus(); }, 50);
   }
+}
+function selecionarPerfilItem(p, el) {
+  perfilSelecionado = p;
+  document.querySelectorAll('.perfil-item').forEach(i => i.classList.remove('ativo'));
+  el.classList.add('ativo');
+  const erroEl = document.getElementById('login-erro');
+  if (erroEl) erroEl.style.display = 'none';
+  setTimeout(() => { const u = document.getElementById('login-usuario'); if(u) u.focus(); }, 50);
 }
 
 
