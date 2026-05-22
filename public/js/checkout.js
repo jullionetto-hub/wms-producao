@@ -88,10 +88,12 @@ async function buscarCaixaMobile() {
 
 async function confirmarCheckoutMobile(id) {
   try {
-    await fetch(`${API}/checkout/${id}/confirmar`, { credentials:'include', method:'PUT' });
+    const res  = await fetch(`${API}/checkout/${id}/confirmar`, { credentials:'include', method:'PUT' });
+    const data = await res.json().catch(()=>({}));
+    if (!res.ok) { toast(data.erro || 'Erro ao confirmar checkout!','erro'); buscarCaixaMobile(); return; }
     toast('✅ Checkout confirmado!','sucesso');
     buscarCaixaMobile();
-  } catch(e) { toast('Erro ao confirmar!','erro'); }
+  } catch(e) { toast('Erro de rede ao confirmar!','erro'); }
 }
 
 
@@ -236,11 +238,13 @@ async function buscarCaixa() {
 
 async function confirmarCheckout(id) {
   try {
-    await fetch(`${API}/checkout/${id}/confirmar`, { credentials:'include', method:'PUT' });
+    const res  = await fetch(`${API}/checkout/${id}/confirmar`, { credentials:'include', method:'PUT' });
+    const data = await res.json().catch(()=>({}));
+    if (!res.ok) { toast(data.erro || 'Erro ao confirmar checkout!','erro'); buscarCaixa(); return; }
     toast('✅ Checkout confirmado!','sucesso');
     buscarCaixa();
     carregarCheckoutLista();
-  } catch(e) { toast('Erro ao confirmar!','erro'); }
+  } catch(e) { toast('Erro de rede ao confirmar!','erro'); }
 }
 
 
