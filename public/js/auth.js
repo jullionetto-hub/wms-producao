@@ -316,11 +316,11 @@ function irPara(pag, el) {
   if (pag === 'dashboard')       { carregarDashboard(); mudarDashTab('operacao'); }
   if (pag === 'pedidos') { popularSelects(); var _pi=document.getElementById('filtro-ped-ini'),_pf=document.getElementById('filtro-ped-fim'); if(_pi&&!_pi.value)_pi.value=hojeLocal(); if(_pf&&!_pf.value)_pf.value=hojeLocal(); carregarPedidos(); carregarPedidosBloqueados(); }
   if (pag === 'cadastros')       { trocarCadastroTab('usuarios'); carregarUsuarios(); }
-  if (pag === 'separacao')       { carregarFila(); if (separadorAtual) carregarContadoresSep(); }
+  if (pag === 'separacao')       { var _si=document.getElementById('sep-ini'),_sf=document.getElementById('sep-fim'); if(_si&&!_si.value)_si.value=hojeLocal(); if(_sf&&!_sf.value)_sf.value=hojeLocal(); carregarFila(); carregarContadoresSep(); }
   if (pag === 'estatisticas')    { carregarEstatisticas(); carregarCheckoutLista(); }
   if (pag === 'reposicao')       { carregarAvisos(); verificarDuplicatas(); }
 
-  if (pag === 'checkout')        { const el2 = document.getElementById('ck-input-caixa'); if(el2) setTimeout(()=>el2.focus(),200); }
+  if (pag === 'checkout')        { var _ci=document.getElementById('ck-ini'),_cf=document.getElementById('ck-fim'); if(_ci&&!_ci.value)_ci.value=hojeLocal(); if(_cf&&!_cf.value)_cf.value=hojeLocal(); carregarContadoresCk(); setTimeout(()=>{ const el2=document.getElementById('ck-input-caixa'); if(el2)el2.focus(); },200); }
   if (pag === 'stats-repositor') carregarStatsRepositor();
   if (pag === 'stats-checkout')  carregarStatsCheckout();
   if (pag === 'liberacao')    { carregarLiberacao(); }
@@ -329,7 +329,7 @@ function irPara(pag, el) {
   if (pag === 'auditoria')    { var hj=hojeLocal(); var ea=document.getElementById('aud-ini'); if(ea&&!ea.value)ea.value=hj; carregarAuditoria(); }
   if (pag === 'diario')       { iniciarDiario(); }
   if (pag === 'passagem')     { iniciarPassagem(); }
-  if (pag === 'embalagem')    { var ed=document.getElementById('emb-data'); if(ed&&!ed.value)ed.value=hojeLocal(); carregarEmbalagem(); }
+  if (pag === 'embalagem')    { var _ei=document.getElementById('emb-ini'),_ef=document.getElementById('emb-fim'); if(_ei&&!_ei.value)_ei.value=hojeLocal(); if(_ef&&!_ef.value)_ef.value=hojeLocal(); carregarEmbalagem(); }
   if (pag === 'protocolo')    { carregarProtocolo(); }
   if (pag === 'protocolo-rep') {
     // reusa pag-protocolo (mesmo conteúdo, papel diferente)
@@ -364,8 +364,10 @@ function iniciarPorPerfil() {
   }
   if (usuarioAtual.perfil === 'separador') {
     document.getElementById('pag-separacao').classList.add('ativa');
+    var _si=document.getElementById('sep-ini'),_sf=document.getElementById('sep-fim');
+    if(_si&&!_si.value)_si.value=hojeLocal(); if(_sf&&!_sf.value)_sf.value=hojeLocal();
     carregarFila();
-    if (separadorAtual) carregarContadoresSep();
+    carregarContadoresSep();
     setInterval(() => { carregarFila(); if(pedidoAtualId) carregarChecklist(); }, 30000);
     setTimeout(() => { const el = document.getElementById('input-pedido'); if (el) el.focus(); }, 300);
   }
@@ -860,9 +862,10 @@ async function carregarEmbalagem() {
   if (!el) return;
   el.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:40px;color:var(--text3)">Carregando...</td></tr>';
   try {
-    const data   = document.getElementById('emb-data')?.value   || hojeLocal();
+    const ini    = document.getElementById('emb-ini')?.value    || hojeLocal();
+    const fim    = document.getElementById('emb-fim')?.value    || ini;
     const status = document.getElementById('emb-status')?.value || '';
-    const res = await fetch(`${API}/embalagem?data=${data}&status=${status}`, { credentials:'include' });
+    const res = await fetch(`${API}/embalagem?ini=${ini}&fim=${fim}&status=${status}`, { credentials:'include' });
     const pedidos = await res.json();
     if (elTotal) elTotal.textContent = pedidos.length;
     const pend = pedidos.filter(p => p.status_embalagem !== 'embalado').length;
@@ -923,8 +926,9 @@ async function buscarEmbalagemDesk() {
   if (!num) { toast('Digite o número do pedido!','aviso'); return; }
   if (cont) cont.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:8px">🔍 Buscando...</div>';
   try {
-    const data = document.getElementById('emb-data')?.value || hojeLocal();
-    const res  = await fetch(`${API}/embalagem?data=${data}`, { credentials:'include' });
+    const ini  = document.getElementById('emb-ini')?.value || hojeLocal();
+    const fim  = document.getElementById('emb-fim')?.value || ini;
+    const res  = await fetch(`${API}/embalagem?ini=${ini}&fim=${fim}`, { credentials:'include' });
     if (!res.ok) throw new Error();
     const pedidos = await res.json();
     const p = pedidos.find(x => String(x.numero_pedido) === num);
@@ -945,8 +949,9 @@ async function confirmarEmbalagem(id) {
 
 async function exportarEmbalagemExcel() {
   try {
-    const data = document.getElementById('emb-data')?.value || hojeLocal();
-    const res = await fetch(`${API}/embalagem?data=${data}`, { credentials:'include' });
+    const ini = document.getElementById('emb-ini')?.value || hojeLocal();
+    const fim = document.getElementById('emb-fim')?.value || ini;
+    const res = await fetch(`${API}/embalagem?ini=${ini}&fim=${fim}`, { credentials:'include' });
     const pedidos = await res.json();
     const wb = XLSX.utils.book_new();
     const rows = [['Nr Pedido','Cliente','Transportadora','Status','Embalado Por','Hora','Drive','Prime']];
@@ -959,9 +964,28 @@ async function exportarEmbalagemExcel() {
     const ws = XLSX.utils.aoa_to_sheet(rows);
     ws['!cols'] = [{wch:12},{wch:25},{wch:18},{wch:12},{wch:20},{wch:8},{wch:8},{wch:8}];
     XLSX.utils.book_append_sheet(wb, ws, 'Embalagem');
-    XLSX.writeFile(wb, `embalagem_${data}.xlsx`);
+    XLSX.writeFile(wb, `embalagem_${ini}_${fim}.xlsx`);
     toast('Excel exportado!','sucesso');
   } catch(e) { toast('Erro ao exportar','erro'); }
+}
+
+/* CHECKOUT COUNTERS */
+async function carregarContadoresCk() {
+  try {
+    const ini = document.getElementById('ck-ini')?.value || '';
+    const fim = document.getElementById('ck-fim')?.value || '';
+    const res = await fetch(`${API}/checkout`, { credentials:'include' });
+    let rows = await res.json();
+    if (ini) rows = rows.filter(r => (r.data_checkout||'') >= ini);
+    if (fim) rows = rows.filter(r => (r.data_checkout||'') <= fim);
+    const total     = rows.length;
+    const checkouts = rows.filter(r => r.status === 'concluido').length;
+    const pendentes = rows.filter(r => r.status !== 'concluido').length;
+    const setEl = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+    setEl('ck-cnt-total',     total);
+    setEl('ck-cnt-pendentes', pendentes);
+    setEl('ck-cnt-checkouts', checkouts);
+  } catch(e) { console.warn(e); }
 }
 
 /* EMBALAGEM MOBILE */

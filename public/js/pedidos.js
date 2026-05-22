@@ -512,15 +512,20 @@ async function concluirPedido() {
 
 
 async function carregarContadoresSep() {
-  if (!separadorAtual) return;
   try {
-    const res   = await fetch(`${API}/produtividade?separador_id=${separadorAtual.id}`, { credentials:'include' });
-    const dados = await res.json();
-    if (dados.length) {
-      document.getElementById('sep-cnt-hoje').textContent = dados[0].hoje||0;
-      document.getElementById('sep-cnt-mes').textContent  = dados[0].mes||0;
-      document.getElementById('sep-cnt-ano').textContent  = dados[0].total_ano||0;
-    }
+    const ini = document.getElementById('sep-ini')?.value || '';
+    const fim = document.getElementById('sep-fim')?.value || '';
+    const res = await fetch(`${API}/pedidos`, { credentials:'include' });
+    let ps = await res.json();
+    if (ini) ps = ps.filter(p => (p.data_pedido||'') >= ini);
+    if (fim) ps = ps.filter(p => (p.data_pedido||'') <= fim);
+    const total     = ps.length;
+    const separados = ps.filter(p => p.status === 'concluido').length;
+    const pendentes = total - separados;
+    const setEl = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+    setEl('sep-cnt-total',     total);
+    setEl('sep-cnt-pendentes', pendentes);
+    setEl('sep-cnt-separados', separados);
   } catch(e) { console.warn(e); }
 }
 

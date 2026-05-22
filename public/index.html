@@ -450,11 +450,19 @@
       <!-- SEPARAÇÃO (desktop) -->
       <div class="pagina" id="pag-separacao">
         <div class="pg-title">Separação</div>
-        <!-- Contadores -->
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px">
-          <div class="cnt-card azul"><div class="cnt-lbl">HOJE</div><div class="cnt-val" id="sep-cnt-hoje" style="font-size:26px">0</div><div class="cnt-sub">pedidos</div></div>
-          <div class="cnt-card verde"><div class="cnt-lbl">MÊS</div><div class="cnt-val" id="sep-cnt-mes" style="font-size:26px">0</div><div class="cnt-sub">pedidos</div></div>
-          <div class="cnt-card roxo"><div class="cnt-lbl">ANO</div><div class="cnt-val" id="sep-cnt-ano" style="font-size:26px">0</div><div class="cnt-sub">pedidos</div></div>
+        <!-- Filtro de data + Contadores -->
+        <div class="card" style="margin-bottom:14px">
+          <div class="card-hd">PERÍODO</div>
+          <div class="date-filter-bar" style="margin-bottom:14px">
+            <div class="fg"><label>DE</label><input type="date" id="sep-ini" onchange="carregarContadoresSep()"/></div>
+            <div class="fg"><label>ATÉ</label><input type="date" id="sep-fim" onchange="carregarContadoresSep()"/></div>
+            <button onclick="carregarContadoresSep()" class="btn btn-primary btn-sm">🔄 Atualizar</button>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+            <div class="cnt-card azul"><div class="cnt-lbl">TOTAL</div><div class="cnt-val" id="sep-cnt-total">0</div><div class="cnt-sub">pedidos</div></div>
+            <div class="cnt-card amarelo"><div class="cnt-lbl">PENDENTES</div><div class="cnt-val" id="sep-cnt-pendentes">0</div><div class="cnt-sub">aguardando</div></div>
+            <div class="cnt-card verde"><div class="cnt-lbl">SEPARADOS</div><div class="cnt-val" id="sep-cnt-separados">0</div><div class="cnt-sub">concluídos</div></div>
+          </div>
         </div>
         <!-- Leitura -->
         <div class="card" style="margin-bottom:13px">
@@ -901,31 +909,14 @@
       <div class="pagina" id="pag-embalagem">
         <div class="pg-title">📫 Embalagem</div>
 
-        <!-- Contadores -->
-        <div class="card" style="margin-bottom:12px">
-          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
-            <div style="text-align:center;background:var(--surface2);border-radius:10px;padding:14px">
-              <div style="font-size:32px;font-weight:800;color:var(--text)" id="emb-total">0</div>
-              <div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:700;margin-top:2px">Total</div>
-            </div>
-            <div style="text-align:center;background:#fefce8;border-radius:10px;padding:14px">
-              <div style="font-size:32px;font-weight:800;color:#ca8a04" id="emb-pendentes">0</div>
-              <div style="font-size:10px;color:#ca8a04;text-transform:uppercase;font-weight:700;margin-top:2px">Pendentes</div>
-            </div>
-            <div style="text-align:center;background:#f0fdf4;border-radius:10px;padding:14px">
-              <div style="font-size:32px;font-weight:800;color:#16a34a" id="emb-embalados">0</div>
-              <div style="font-size:10px;color:#16a34a;text-transform:uppercase;font-weight:700;margin-top:2px">Embalados</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Filtros + Busca rápida -->
+        <!-- Contadores + Filtros -->
         <div class="card" style="margin-bottom:14px">
-          <div class="card-hd">FILTROS &amp; BUSCA
+          <div class="card-hd">PERÍODO &amp; BUSCA
             <button onclick="exportarEmbalagemExcel()" class="excel-btn">📊 Excel</button>
           </div>
-          <div class="date-filter-bar" style="flex-wrap:wrap;gap:10px">
-            <div class="fg"><label>DATA</label><input type="date" id="emb-data" onchange="carregarEmbalagem()"/></div>
+          <div class="date-filter-bar" style="flex-wrap:wrap;gap:10px;margin-bottom:14px">
+            <div class="fg"><label>DE</label><input type="date" id="emb-ini" onchange="carregarEmbalagem()"/></div>
+            <div class="fg"><label>ATÉ</label><input type="date" id="emb-fim" onchange="carregarEmbalagem()"/></div>
             <div class="fg"><label>STATUS</label>
               <select id="emb-status" onchange="carregarEmbalagem()">
                 <option value="">Todos</option>
@@ -934,6 +925,11 @@
               </select>
             </div>
             <button onclick="carregarEmbalagem()" class="btn btn-primary btn-sm">🔄 Filtrar</button>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px">
+            <div class="cnt-card azul"><div class="cnt-lbl">TOTAL</div><div class="cnt-val" id="emb-total">0</div><div class="cnt-sub">pedidos</div></div>
+            <div class="cnt-card amarelo"><div class="cnt-lbl">PENDENTES</div><div class="cnt-val" id="emb-pendentes">0</div><div class="cnt-sub">aguardando</div></div>
+            <div class="cnt-card verde"><div class="cnt-lbl">EMBALADOS</div><div class="cnt-val" id="emb-embalados">0</div><div class="cnt-sub">embalados</div></div>
           </div>
           <!-- Scan desktop -->
           <div style="border-top:1px solid var(--border);margin-top:12px;padding-top:12px">
@@ -1065,6 +1061,20 @@
       <!-- CHECKOUT -->
       <div class="pagina" id="pag-checkout">
         <div class="pg-title">Checkout</div>
+        <!-- Contadores + filtro de período -->
+        <div class="card" style="margin-bottom:14px">
+          <div class="card-hd">PERÍODO</div>
+          <div class="date-filter-bar" style="margin-bottom:14px">
+            <div class="fg"><label>DE</label><input type="date" id="ck-ini" onchange="carregarContadoresCk()"/></div>
+            <div class="fg"><label>ATÉ</label><input type="date" id="ck-fim" onchange="carregarContadoresCk()"/></div>
+            <button onclick="carregarContadoresCk()" class="btn btn-primary btn-sm">🔄 Atualizar</button>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+            <div class="cnt-card azul"><div class="cnt-lbl">TOTAL</div><div class="cnt-val" id="ck-cnt-total">0</div><div class="cnt-sub">pedidos</div></div>
+            <div class="cnt-card amarelo"><div class="cnt-lbl">PENDENTES</div><div class="cnt-val" id="ck-cnt-pendentes">0</div><div class="cnt-sub">aguardando</div></div>
+            <div class="cnt-card verde"><div class="cnt-lbl">CHECKOUTS</div><div class="cnt-val" id="ck-cnt-checkouts">0</div><div class="cnt-sub">concluídos</div></div>
+          </div>
+        </div>
         <!-- Busca por caixa -->
         <div class="card" style="margin-bottom:16px">
           <div class="card-hd">🔍 BUSCAR POR NÚMERO DE CAIXA</div>

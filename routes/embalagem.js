@@ -9,7 +9,7 @@ const { registrarAuditoria } = require('../lib/auditoria');
 router.get('/embalagem', requerAuth, async (req,res) => {
   try {
     const {data:hoje} = dataHoraLocal();
-    const {data, status} = req.query;
+    const {data, status, ini, fim} = req.query;
 
     const params = [];
 
@@ -24,24 +24,26 @@ router.get('/embalagem', requerAuth, async (req,res) => {
         WHERE p.status = 'concluido'
           AND p.status_embalagem IN ('pendente','embalando')`;
     } else if (status === 'embalado') {
-      // Embalados — filtra por data
-      const dt = data || hoje;
-      params.push(dt);
+      // Embalados — suporta data única ou range ini/fim
+      const ini_v = ini || data || hoje;
+      const fim_v = fim || data || ini_v;
+      params.push(ini_v, fim_v);
       sql = `SELECT p.*, ck.hora_checkout, ck.operador_nome
         FROM pedidos p
         LEFT JOIN checkout ck ON ck.pedido_id = p.id AND ck.status = 'concluido'
         WHERE p.status = 'concluido'
           AND p.status_embalagem = 'embalado'
-          AND p.data_pedido = $${params.length}`;
+          AND p.data_pedido >= $1 AND p.data_pedido <= $2`;
     } else {
-      // Desktop supervisor: todos os status filtrados por data
-      const dt = data || hoje;
-      params.push(dt);
+      // Desktop supervisor: todos os status filtrados por data ou range ini/fim
+      const ini_v = ini || data || hoje;
+      const fim_v = fim || data || ini_v;
+      params.push(ini_v, fim_v);
       sql = `SELECT p.*, ck.hora_checkout, ck.operador_nome
         FROM pedidos p
         LEFT JOIN checkout ck ON ck.pedido_id = p.id AND ck.status = 'concluido'
         WHERE p.status = 'concluido'
-          AND p.data_pedido = $${params.length}
+          AND p.data_pedido >= $1 AND p.data_pedido <= $2
           AND (p.status_embalagem IS NULL OR p.status_embalagem != 'nao_iniciado')`;
     }
 
