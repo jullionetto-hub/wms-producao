@@ -14,7 +14,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/app.css?v=5">
+  <link rel="stylesheet" href="/css/app.css?v=6">
 </head>
 <body>
 
@@ -555,34 +555,37 @@
               </div>
             </div>
             <!-- Filtros -->
-            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:10px 0 14px;border-bottom:1px solid var(--border);margin-bottom:4px">
-              <div style="display:flex;gap:4px;align-items:center">
-                <label style="font-size:11px;color:var(--text3);white-space:nowrap">DE</label>
-                <input type="date" id="rep-filtro-ini" style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)" onchange="carregarTabelaReposicao()">
+            <div class="date-filter-bar" style="margin-bottom:14px">
+              <div class="fg"><label>DE</label><input type="date" id="rep-filtro-ini" onchange="carregarTabelaReposicao()"/></div>
+              <div class="fg"><label>ATÉ</label><input type="date" id="rep-filtro-fim" onchange="carregarTabelaReposicao()"/></div>
+              <div class="fg"><label>BUSCAR</label><input type="text" id="rep-filtro-codigo" placeholder="Código do produto..." oninput="carregarTabelaReposicao()"/></div>
+              <div style="display:flex;gap:6px;align-items:flex-end;flex-wrap:wrap">
+                <button data-sit="" class="btn btn-primary btn-sm rep-filtro-btn" onclick="filtrarReposicao('')">Todos</button>
+                <button data-sit="pendente" class="btn btn-outline btn-sm rep-filtro-btn" onclick="filtrarReposicao('pendente')">⏳ Pendentes</button>
+                <button data-sit="aguardando_abastecer" class="btn btn-outline btn-sm rep-filtro-btn" onclick="filtrarReposicao('aguardando_abastecer')">🕐 Em Andamento</button>
+                <button data-sit="abastecido" class="btn btn-outline btn-sm rep-filtro-btn" onclick="filtrarReposicao('abastecido')">✅ Abastecidos</button>
+                <button data-sit="nao_encontrado" class="btn btn-outline btn-sm rep-filtro-btn" onclick="filtrarReposicao('nao_encontrado')">❌ Não enc.</button>
               </div>
-              <div style="display:flex;gap:4px;align-items:center">
-                <label style="font-size:11px;color:var(--text3);white-space:nowrap">ATÉ</label>
-                <input type="date" id="rep-filtro-fim" style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)" onchange="carregarTabelaReposicao()">
-              </div>
-              <input type="text" id="rep-filtro-codigo" placeholder="Buscar código..." style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);min-width:140px" oninput="carregarTabelaReposicao()">
-              <button data-sit="" class="btn btn-primary btn-sm rep-filtro-btn" onclick="filtrarReposicao('')">Todos</button>
-              <button data-sit="pendente" class="btn btn-outline btn-sm rep-filtro-btn" onclick="filtrarReposicao('pendente')">⏳ Pendentes</button>
-              <button data-sit="aguardando_abastecer" class="btn btn-outline btn-sm rep-filtro-btn" onclick="filtrarReposicao('aguardando_abastecer')">🕐 Aguard.</button>
-              <button data-sit="abastecido" class="btn btn-outline btn-sm rep-filtro-btn" onclick="filtrarReposicao('abastecido')">✅ Abastecidos</button>
-              <button data-sit="nao_encontrado" class="btn btn-outline btn-sm rep-filtro-btn" onclick="filtrarReposicao('nao_encontrado')">❌ Não enc.</button>
             </div>
-            <div style="overflow-x:auto">
-              <table style="width:100%;border-collapse:collapse;min-width:900px">
+            <!-- Contadores -->
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
+              <div class="cnt-card azul"><div class="cnt-lbl">TOTAL</div><div class="cnt-val" id="rep-cnt-total">0</div><div class="cnt-sub">avisos</div></div>
+              <div class="cnt-card amarelo"><div class="cnt-lbl">PENDENTES</div><div class="cnt-val" id="rep-cnt-pendentes">0</div><div class="cnt-sub">aguardando</div></div>
+              <div class="cnt-card laranja"><div class="cnt-lbl">EM ANDAMENTO</div><div class="cnt-val" id="rep-cnt-andamento">0</div><div class="cnt-sub">buscando</div></div>
+              <div class="cnt-card verde"><div class="cnt-lbl">ABASTECIDOS</div><div class="cnt-val" id="rep-cnt-abastecidos">0</div><div class="cnt-sub">concluídos</div></div>
+            </div>
+            <div class="tabela-wrap">
+              <table>
                 <thead>
-                  <tr style="background:var(--surface2);border-bottom:2px solid var(--border)">
-                    <th style="padding:10px 12px;text-align:left;font-size:11px;color:var(--text3);white-space:nowrap">CÓDIGO / PRODUTO</th>
-                    <th style="padding:10px 12px;text-align:left;font-size:11px;color:var(--text3);white-space:nowrap">ENVIO</th>
-                    <th style="padding:10px 12px;text-align:left;font-size:11px;color:var(--text3);white-space:nowrap">SEPARADOR</th>
-                    <th style="padding:10px 12px;text-align:left;font-size:11px;color:var(--text3);white-space:nowrap">QUEM PEGOU</th>
-                    <th style="padding:10px 12px;text-align:left;font-size:11px;color:var(--text3);white-space:nowrap">QUEM GUARDOU</th>
-                    <th style="padding:10px 12px;text-align:left;font-size:11px;color:var(--text3);white-space:nowrap">SITUAÇÃO</th>
-                    <th style="padding:10px 12px;text-align:left;font-size:11px;color:var(--text3);white-space:nowrap">OBS</th>
-                    <th style="padding:10px 12px;text-align:left;font-size:11px;color:var(--text3);white-space:nowrap">DATA/HORA</th>
+                  <tr>
+                    <th>CÓDIGO / PRODUTO</th>
+                    <th>ENVIO</th>
+                    <th>SEPARADOR</th>
+                    <th>QUEM PEGOU</th>
+                    <th>QUEM GUARDOU</th>
+                    <th>SITUAÇÃO</th>
+                    <th>OBS</th>
+                    <th>DATA/HORA</th>
                   </tr>
                 </thead>
                 <tbody id="tbody-reposicao">
@@ -1525,11 +1528,12 @@
             <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">🔧 Solicitações</div>
             <div style="display:flex;gap:8px;align-items:center">
               <span style="font-size:12px;color:var(--red);font-weight:700">🔴 <span id="m-rep-pend">0</span></span>
-              <select id="m-filtro-rep-status" class="sel-sm" onchange="carregarAvisosMobile()" style="min-width:110px">
+              <select id="m-filtro-rep-status" class="sel-sm" onchange="carregarAvisosMobile()" style="min-width:120px">
                 <option value="">Todos</option>
-                <option value="pendente">Pendente</option>
-                <option value="reposto">Reposto</option>
-                <option value="nao_encontrado">Não encontrado</option>
+                <option value="pendente">⏳ Pendente</option>
+                <option value="aguardando_abastecer">🕐 Em andamento</option>
+                <option value="abastecido">✅ Abastecido</option>
+                <option value="nao_encontrado">❌ Não encontrado</option>
               </select>
               <button class="btn btn-outline btn-sm" onclick="carregarAvisosMobile()">🔄</button>
             </div>

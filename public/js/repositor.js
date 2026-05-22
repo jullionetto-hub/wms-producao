@@ -311,6 +311,13 @@ async function carregarTabelaReposicao() {
     const avisos = res.ok ? await res.json() : [];
     if (totalEl) totalEl.textContent = avisos.length;
 
+    // Actualiza cnt-cards de reposição
+    const setC = (id,v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
+    setC('rep-cnt-total',      avisos.length);
+    setC('rep-cnt-pendentes',  avisos.filter(a=>['pendente','verificando','buscado'].includes(a.situacao||a.status)).length);
+    setC('rep-cnt-andamento',  avisos.filter(a=>(a.situacao||a.status)==='aguardando_abastecer').length);
+    setC('rep-cnt-abastecidos',avisos.filter(a=>(a.situacao||a.status)==='abastecido').length);
+
     if (!avisos.length) {
       tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:48px;color:var(--text3)">
         <div style="font-size:32px;margin-bottom:8px">✅</div>Nenhum item</td></tr>`;
