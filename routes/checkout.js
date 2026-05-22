@@ -81,7 +81,7 @@ router.get('/checkout/caixa/:numero', requerAuth, async (req,res) => {
 });
 
 router.put('/checkout/:id/concluir', requerAuth, async (req,res) => {
-  const {hora_checkout,data_checkout}=req.body;
+  const {hora_checkout,data_checkout}=req.body||{};
   const {data,hora}=dataHoraLocal();
   try {
     await pool.query(`UPDATE checkout SET status='concluido',hora_checkout=$1,data_checkout=$2 WHERE id=$3`,[hora_checkout||hora,data_checkout||data,req.params.id]);
@@ -92,12 +92,13 @@ router.put('/checkout/:id/concluir', requerAuth, async (req,res) => {
     if (ck?.pedido_id) {
       await pool.query(`UPDATE pedidos SET numero_caixa='' WHERE id=$1`,[ck.pedido_id]);
     }
+    const cache = req.app.get('kpiCache'); if (cache) cache.ts = 0;
     res.json({mensagem:'Checkout concluido!', numero_pedido: ck?.numero_pedido});
   } catch(e){res.status(500).json({erro:e.message});}
 });
 
 router.put('/checkout/:id/confirmar', requerAuth, async (req,res) => {
-  const {hora_checkout,data_checkout}=req.body;
+  const {hora_checkout,data_checkout}=req.body||{};
   const {data,hora}=dataHoraLocal();
   const operador_nome = req.session?.usuario?.nome || '';
   try {
@@ -108,6 +109,7 @@ router.put('/checkout/:id/confirmar', requerAuth, async (req,res) => {
       [hora_checkout||hora, data_checkout||data, operador_nome, req.params.id]
     );
     await pool.query(`UPDATE pedidos SET status_embalagem='pendente', numero_caixa='' WHERE id=$1`,[ck.pedido_id]);
+    const cache = req.app.get('kpiCache'); if (cache) cache.ts = 0;
     res.json({mensagem:'Checkout concluido!'});
   } catch(e){res.status(500).json({erro:e.message});}
 });

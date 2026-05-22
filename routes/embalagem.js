@@ -15,12 +15,11 @@ router.get('/embalagem', requerAuth, async (req,res) => {
 
     let sql;
     if (status === 'pendente') {
-      // Mobile/embalador: pedidos prontos para embalar.
-      // LEFT JOIN — aparece mesmo sem checkout (ex: caixa liberada, status_embalagem='pendente')
+      // Mobile/embalador: apenas pedidos que passaram pelo checkout concluído.
       // SEM filtro de data — mostra qualquer dia que ainda esteja pendente.
       sql = `SELECT p.*, ck.hora_checkout, ck.operador_nome, ck.data_checkout
         FROM pedidos p
-        LEFT JOIN checkout ck ON ck.pedido_id = p.id AND ck.status = 'concluido'
+        JOIN checkout ck ON ck.pedido_id = p.id AND ck.status = 'concluido'
         WHERE p.status = 'concluido'
           AND p.status_embalagem IN ('pendente','embalando')`;
     } else if (status === 'embalado') {
