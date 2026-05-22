@@ -46,7 +46,7 @@ router.get('/kpis', requerAuth, async (req,res) => {
       (SELECT COUNT(*) FROM avisos_repositor r WHERE r.status='nao_encontrado' AND r.data_aviso=$5${repFilt}) as nao_encontrados_hoje,
       (SELECT COUNT(*) FROM avisos_repositor WHERE data_aviso=$6) as total_faltas_hoje,
       (SELECT COUNT(*) FROM embalagem e WHERE e.data_embalagem=$7${embFilt}) as embalagem_hoje,
-      (SELECT COUNT(*) FROM pedidos p WHERE p.status='concluido' AND p.status_embalagem IN ('pendente','embalando') AND EXISTS (SELECT 1 FROM checkout ck WHERE ck.pedido_id=p.id AND ck.status='concluido')${sepFilt}) as embalagem_pendente,
+      (SELECT COUNT(*) FROM pedidos p WHERE p.status='concluido' AND p.status_embalagem IN ('pendente','embalando')${sepFilt}) as embalagem_pendente,
       (SELECT COUNT(*) FROM avisos_repositor r WHERE r.status IN ('reposto','abastecido','subiu') AND r.data_aviso=$5${repFilt}) as reposicao_concluida,
       (SELECT COUNT(*) FROM avisos_repositor r WHERE r.status='pendente' AND r.data_aviso=$6${repFilt}) as reposicao_pendente`,
       p);

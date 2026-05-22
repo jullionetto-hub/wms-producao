@@ -206,7 +206,19 @@ router.put('/pedidos/:id/redefinir', requerAuth, requerPerfil('supervisor'), asy
 
 router.put('/pedidos/:id/desbloquear', requerAuth, requerPerfil('supervisor'), async (req,res) => {
   try {
-    await pool.query(`UPDATE pedidos SET status='concluido' WHERE id=$1`,[req.params.id]);
+    const {data, hora} = dataHoraLocal();
+    await pool.query(`UPDATE pedidos SET status='concluido', status_embalagem='pendente' WHERE id=$1`,[req.params.id]);
+    const ped = await db.get('SELECT numero_pedido, numero_caixa, separador_id FROM pedidos WHERE id=$1',[req.params.id]);
+    const sep = ped?.separador_id ? await db.get('SELECT nome FROM separadores WHERE id=$1',[ped.separador_id]) : null;
+    const ckExist = await db.get('SELECT id FROM checkout WHERE pedido_id=$1',[req.params.id]);
+    if (ckExist) {
+      await pool.query(`UPDATE checkout SET status='concluido',hora_checkout=$1,data_checkout=$2 WHERE pedido_id=$3`,[hora,data,req.params.id]);
+    } else {
+      await pool.query(
+        `INSERT INTO checkout (numero_caixa,pedido_id,numero_pedido,separador_nome,status,hora_criacao,hora_checkout,data_checkout) VALUES ($1,$2,$3,$4,'concluido',$5,$5,$6)`,
+        [ped?.numero_caixa||'',req.params.id,ped?.numero_pedido||'',sep?.nome||'',hora,data]
+      );
+    }
     res.json({mensagem:'Pedido desbloqueado!'});
   } catch(e) { res.status(500).json({erro:e.message}); }
 });
