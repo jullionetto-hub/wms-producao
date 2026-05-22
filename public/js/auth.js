@@ -886,26 +886,60 @@ async function exportarEmbalagemExcel() {
 let _embPedidos = [];
 
 async function ativarMobileEmb() {
-  // Esconde individualmente cada elemento desnecessário (sem depender de CSS cacheado)
-  const header = document.querySelector('#app header');
-  if (header) header.style.display = 'none';
-  const sidebar = document.getElementById('sidebar');
-  if (sidebar) sidebar.style.display = 'none';
-  const conteudo = document.getElementById('conteudo');
-  if (conteudo) conteudo.style.display = 'none';
-
-  // Mostra o root com as propriedades de layout corretas via JS
   const root = document.getElementById('emb-mobile-root');
-  if (root) {
-    root.style.display       = 'flex';
-    root.style.flexDirection = 'column';
-    root.style.flex          = '1';
-    root.style.overflow      = 'hidden';
-    root.style.minHeight     = '0';
-  }
-
+  if (root) root.style.display = 'flex';
+  mudarTabEmb('fila');
   carregarEmbalagemMobile();
   setInterval(carregarEmbalagemMobile, 30000);
+}
+
+function mudarTabEmb(tab) {
+  ['fila','scan'].forEach(t => {
+    const el  = document.getElementById(`emb-tab-${t}`);
+    const btn = document.getElementById(`emb-tab-${t}-btn`);
+    const ativo = t === tab;
+    if (el)  { el.style.display = ativo ? 'flex' : 'none'; el.style.flexDirection = 'column'; }
+    if (btn) {
+      btn.style.color            = ativo ? '#4f46e5' : 'var(--text3,#94a3b8)';
+      btn.style.borderBottomColor= ativo ? '#4f46e5' : 'transparent';
+    }
+  });
+  if (tab === 'scan') setTimeout(() => document.getElementById('m-emb-scan-input')?.focus(), 200);
+}
+
+async function buscarPedidoEmbMobile() {
+  const num  = (document.getElementById('m-emb-scan-input')?.value || '').trim();
+  const cont = document.getElementById('m-emb-scan-resultado');
+  if (!num) { toast('Digite o número do pedido!','aviso'); return; }
+  if (cont) cont.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3)">🔍 Buscando...</div>';
+
+  // Garante lista atualizada
+  if (!_embPedidos.length) {
+    try {
+      const res = await fetch(`${API}/embalagem?status=pendente`, { credentials:'include' });
+      if (res.ok) _embPedidos = await res.json();
+    } catch(e) {}
+  }
+
+  const pedido = _embPedidos.find(p => String(p.numero_pedido) === num);
+  if (!pedido) {
+    // Tenta recarregar e busca novamente
+    try {
+      const res = await fetch(`${API}/embalagem?status=pendente`, { credentials:'include' });
+      if (res.ok) {
+        _embPedidos = await res.json();
+        const p2 = _embPedidos.find(p => String(p.numero_pedido) === num);
+        if (p2) { if (cont) cont.innerHTML = renderCardEmb(p2, p2.status_embalagem==='embalando'); return; }
+      }
+    } catch(e) {}
+    if (cont) cont.innerHTML = `<div style="text-align:center;padding:50px 20px">
+      <div style="font-size:40px;margin-bottom:12px">🔍</div>
+      <div style="font-weight:700;color:var(--text)">Pedido ${num} não encontrado</div>
+      <div style="color:var(--text3);font-size:13px;margin-top:6px">Não está na fila de embalagem</div>
+    </div>`;
+    return;
+  }
+  if (cont) cont.innerHTML = renderCardEmb(pedido, pedido.status_embalagem === 'embalando');
 }
 
 function filtrarEmbalagemMobile() {
@@ -1032,7 +1066,10 @@ async function iniciarEmbalagemMobile(id) {
     const r = await res.json();
     if (!res.ok) { toast(r.erro||'Erro','erro'); if(btn){btn.disabled=false;btn.textContent='▶️ Iniciar Embalagem';} return; }
     toast(`Embalagem iniciada às ${r.hora_inicio}!`, 'sucesso');
-    carregarEmbalagemMobile();
+    await carregarEmbalagemMobile();
+    // Atualiza card na aba scan se estiver visível
+    const scanInput = document.getElementById('m-emb-scan-input');
+    if (scanInput?.value.trim() && document.getElementById('emb-tab-scan')?.style.display !== 'none') buscarPedidoEmbMobile();
   } catch(e) { toast('Erro ao iniciar','erro'); }
 }
 
@@ -1044,7 +1081,16 @@ async function encerrarEmbalagemMobile(id) {
     const r = await res.json();
     if (!res.ok) { toast(r.erro||'Erro','erro'); if(btn){btn.disabled=false;btn.textContent='✅ Encerrar';} return; }
     toast('Embalagem concluída! 📦', 'sucesso');
-    carregarEmbalagemMobile();
+    // Limpa input e resultado na aba scan
+    const scanInput = document.getElementById('m-emb-scan-input');
+    if (scanInput) scanInput.value = '';
+    const cont = document.getElementById('m-emb-scan-resultado');
+    if (cont) cont.innerHTML = `<div style="text-align:center;padding:50px 20px;color:var(--text3)">
+      <div style="font-size:48px;margin-bottom:12px">✅</div>
+      <div style="font-size:14px;font-weight:700;color:#16a34a">Embalagem concluída!</div>
+      <div style="font-size:12px;margin-top:6px">Bipe o próximo pedido</div>
+    </div>`;
+    await carregarEmbalagemMobile();
   } catch(e) { toast('Erro ao encerrar','erro'); }
 }
 
