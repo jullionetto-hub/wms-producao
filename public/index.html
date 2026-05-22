@@ -900,46 +900,64 @@
       <!-- EMBALAGEM -->
       <div class="pagina" id="pag-embalagem">
         <div class="pg-title">📫 Embalagem</div>
-        <div class="card" style="margin-bottom:12px">
-          <div class="card-hd">FILTROS
-            <button onclick="exportarEmbalagemExcel()" class="excel-btn">📊 Excel</button>
-          </div>
-          <div class="date-filter-bar">
-            <div class="fg"><label>DATA</label><input type="date" id="emb-data" onchange="carregarEmbalagem()"/></div>
-            <div class="fg"><label>STATUS</label><select id="emb-status" onchange="carregarEmbalagem()">
-              <option value="">Todos</option>
-              <option value="pendente">Pendentes</option>
-              <option value="embalado">Embalados</option>
-            </select></div>
-            <button onclick="carregarEmbalagem()" class="btn btn-primary btn-sm">Filtrar</button>
-          </div>
-        </div>
+
+        <!-- Contadores -->
         <div class="card" style="margin-bottom:12px">
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
-          <div style="text-align:center;background:var(--surface2);border-radius:8px;padding:12px">
-            <div style="font-size:28px;font-weight:800;color:var(--text)" id="emb-total">0</div>
-            <div style="font-size:10px;color:var(--text3);text-transform:uppercase">Total</div>
-          </div>
-          <div style="text-align:center;background:#fefce8;border-radius:8px;padding:12px">
-            <div style="font-size:28px;font-weight:800;color:#ca8a04" id="emb-pendentes">0</div>
-            <div style="font-size:10px;color:#ca8a04;text-transform:uppercase">Pendentes</div>
-          </div>
-          <div style="text-align:center;background:#f0fdf4;border-radius:8px;padding:12px">
-            <div style="font-size:28px;font-weight:800;color:#16a34a" id="emb-embalados">0</div>
-            <div style="font-size:10px;color:#16a34a;text-transform:uppercase">Embalados</div>
-          </div>
-          </div>
-        </div>
-        <div class="card">
-          <div class="tabela-wrap">
-          <table style="width:100%"><thead><tr>
-            <th>Nr Pedido</th><th>Cliente</th><th>Transportadora</th><th>Checkout</th><th>Status</th><th>Embalado Por</th><th>Ação</th>
-          </tr></thead>
-          <tbody id="tbody-embalagem"><tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text3)">Carregando...</td></tr></tbody>
-          </table>
+            <div style="text-align:center;background:var(--surface2);border-radius:10px;padding:14px">
+              <div style="font-size:32px;font-weight:800;color:var(--text)" id="emb-total">0</div>
+              <div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:700;margin-top:2px">Total</div>
+            </div>
+            <div style="text-align:center;background:#fefce8;border-radius:10px;padding:14px">
+              <div style="font-size:32px;font-weight:800;color:#ca8a04" id="emb-pendentes">0</div>
+              <div style="font-size:10px;color:#ca8a04;text-transform:uppercase;font-weight:700;margin-top:2px">Pendentes</div>
+            </div>
+            <div style="text-align:center;background:#f0fdf4;border-radius:10px;padding:14px">
+              <div style="font-size:32px;font-weight:800;color:#16a34a" id="emb-embalados">0</div>
+              <div style="font-size:10px;color:#16a34a;text-transform:uppercase;font-weight:700;margin-top:2px">Embalados</div>
+            </div>
           </div>
         </div>
+
+        <!-- Filtros + Busca rápida -->
+        <div class="card" style="margin-bottom:14px">
+          <div class="card-hd">FILTROS &amp; BUSCA
+            <button onclick="exportarEmbalagemExcel()" class="excel-btn">📊 Excel</button>
+          </div>
+          <div class="date-filter-bar" style="flex-wrap:wrap;gap:10px">
+            <div class="fg"><label>DATA</label><input type="date" id="emb-data" onchange="carregarEmbalagem()"/></div>
+            <div class="fg"><label>STATUS</label>
+              <select id="emb-status" onchange="carregarEmbalagem()">
+                <option value="">Todos</option>
+                <option value="pendente">Pendentes</option>
+                <option value="embalado">Embalados</option>
+              </select>
+            </div>
+            <button onclick="carregarEmbalagem()" class="btn btn-primary btn-sm">🔄 Filtrar</button>
+          </div>
+          <!-- Scan desktop -->
+          <div style="border-top:1px solid var(--border);margin-top:12px;padding-top:12px">
+            <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.5px;text-transform:uppercase;margin-bottom:8px">📦 Buscar Pedido</div>
+            <div style="display:flex;gap:10px;max-width:520px">
+              <input type="text" id="emb-desk-scan"
+                placeholder="Digite ou bipe o número do pedido..."
+                onkeydown="if(event.key==='Enter')buscarEmbalagemDesk()"
+                autocomplete="off"
+                style="flex:1;padding:11px 16px;border:2px solid #4f46e5;border-radius:10px;font-size:15px;font-weight:700;font-family:'Space Mono',monospace;color:var(--text);background:var(--surface2);outline:none;letter-spacing:1px;box-sizing:border-box">
+              <button onclick="buscarEmbalagemDesk()"
+                style="padding:11px 20px;background:#4f46e5;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(79,70,229,.3)">
+                🔍 Buscar
+              </button>
+            </div>
+            <div id="emb-desk-scan-resultado" style="margin-top:12px"></div>
+          </div>
         </div>
+
+        <!-- Cards -->
+        <div id="emb-lista-cards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:14px">
+          <div style="text-align:center;padding:40px;color:var(--text3)">Carregando...</div>
+        </div>
+      </div>
 
       <div class="pagina" id="pag-estatisticas">
         <div class="pg-title">Estatísticas</div>
@@ -1968,12 +1986,13 @@ if ('serviceWorker' in navigator) {
 
   <!-- Aba: Fila -->
   <div id="emb-tab-fila" style="flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden">
-    <div style="padding:10px 14px;background:var(--surface,#fff);border-bottom:1px solid var(--border,#e2e8f0);flex-shrink:0">
+    <div style="padding:14px;background:var(--surface,#fff);border-bottom:1px solid var(--border,#e2e8f0);flex-shrink:0">
+      <div style="font-size:11px;color:var(--text3,#94a3b8);font-weight:700;margin-bottom:8px;letter-spacing:.5px;text-transform:uppercase">Filtrar Fila</div>
       <input type="text" id="m-emb-busca"
-        placeholder="🔍 Filtrar número do pedido..."
+        placeholder="🔍 Digite o número do pedido..."
         oninput="filtrarEmbalagemMobile()"
         autocomplete="off" inputmode="numeric"
-        style="width:100%;padding:10px 14px;border:1.5px solid var(--border,#e2e8f0);border-radius:10px;font-size:16px;background:var(--surface2,#f8fafc);color:var(--text,#1e293b);box-sizing:border-box;outline:none;letter-spacing:1px">
+        style="width:100%;padding:14px 16px;border:2px solid var(--border,#e2e8f0);border-radius:12px;font-size:16px;font-weight:700;font-family:'Space Mono',monospace;background:var(--surface2,#f8fafc);color:var(--text,#1e293b);box-sizing:border-box;outline:none;letter-spacing:1px">
     </div>
     <div style="flex:1;overflow-y:auto;padding:14px;min-height:0" id="m-emb-lista">
       <div style="text-align:center;padding:60px;color:var(--text3,#94a3b8)">Carregando...</div>
@@ -1983,15 +2002,15 @@ if ('serviceWorker' in navigator) {
   <!-- Aba: Escanear -->
   <div id="emb-tab-scan" style="flex:1;display:none;flex-direction:column;min-height:0;overflow:hidden">
     <div style="padding:14px;background:var(--surface,#fff);border-bottom:1px solid var(--border,#e2e8f0);flex-shrink:0">
-      <div style="font-size:12px;color:var(--text3);font-weight:600;margin-bottom:8px;letter-spacing:.5px">NÚMERO DO PEDIDO</div>
+      <div style="font-size:11px;color:var(--text3,#94a3b8);font-weight:700;margin-bottom:8px;letter-spacing:.5px;text-transform:uppercase">Número do Pedido</div>
       <div style="display:flex;gap:10px">
         <input type="text" id="m-emb-scan-input"
           placeholder="📦 Digite ou bipe o pedido..."
           onkeydown="if(event.key==='Enter')buscarPedidoEmbMobile()"
           autocomplete="off" inputmode="numeric"
-          style="flex:1;padding:14px 16px;border:2px solid #4f46e5;border-radius:12px;font-size:18px;font-weight:700;font-family:'Space Mono',monospace;background:var(--surface2,#f8fafc);color:var(--text,#1e293b);outline:none;letter-spacing:2px;box-sizing:border-box">
+          style="flex:1;padding:14px 16px;border:2px solid #4f46e5;border-radius:12px;font-size:16px;font-weight:700;font-family:'Space Mono',monospace;background:var(--surface2,#f8fafc);color:var(--text,#1e293b);outline:none;letter-spacing:1px;box-sizing:border-box">
         <button onclick="buscarPedidoEmbMobile()"
-          style="padding:14px 18px;background:#4f46e5;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap">
+          style="padding:14px 20px;background:#4f46e5;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;box-shadow:0 2px 8px rgba(79,70,229,.3)">
           Buscar
         </button>
       </div>
@@ -1999,7 +2018,7 @@ if ('serviceWorker' in navigator) {
     <div style="flex:1;overflow-y:auto;padding:14px;min-height:0" id="m-emb-scan-resultado">
       <div style="text-align:center;padding:60px 20px;color:var(--text3,#94a3b8)">
         <div style="font-size:48px;margin-bottom:12px">📦</div>
-        <div style="font-size:14px;font-weight:600">Digite o número do pedido</div>
+        <div style="font-size:14px;font-weight:700;color:var(--text2)">Digite o número do pedido</div>
         <div style="font-size:12px;margin-top:4px">ou bipe o código de barras</div>
       </div>
     </div>

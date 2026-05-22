@@ -803,62 +803,96 @@ async function exportarDiarioExcel(id) {
   } catch(e) { toast('Erro ao exportar','erro'); }
 }
 
-/* EMBALAGEM */
+/* EMBALAGEM DESKTOP */
 async function carregarEmbalagem() {
-  const tbody = document.getElementById('tbody-embalagem');
-  const el = document.getElementById('emb-total');
-  const elPend = document.getElementById('emb-pendentes');
-  const elEmb = document.getElementById('emb-embalados');
-  if (!tbody) return;
-  tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text3)">Carregando...</td></tr>';
+  const el     = document.getElementById('emb-lista-cards');
+  const elTotal = document.getElementById('emb-total');
+  const elPend  = document.getElementById('emb-pendentes');
+  const elEmb   = document.getElementById('emb-embalados');
+  if (!el) return;
+  el.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text3)">Carregando...</div>';
   try {
-    const data = document.getElementById('emb-data')?.value || hojeLocal();
+    const data   = document.getElementById('emb-data')?.value   || hojeLocal();
     const status = document.getElementById('emb-status')?.value || '';
     const res = await fetch(`${API}/embalagem?data=${data}&status=${status}`, { credentials:'include' });
     const pedidos = await res.json();
-    if (el) el.textContent = pedidos.length;
+    if (elTotal) elTotal.textContent = pedidos.length;
     const pend = pedidos.filter(p => p.status_embalagem !== 'embalado').length;
-    const emb = pedidos.filter(p => p.status_embalagem === 'embalado').length;
+    const emb  = pedidos.filter(p => p.status_embalagem === 'embalado').length;
     if (elPend) elPend.textContent = pend;
-    if (elEmb) elEmb.textContent = emb;
+    if (elEmb)  elEmb.textContent  = emb;
     if (!pedidos.length) {
-      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text3)">Nenhum pedido para embalar</td></tr>';
+      el.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:60px;color:var(--text3);font-size:15px">✅ Nenhum pedido para embalar</div>';
       return;
     }
-    tbody.innerHTML = pedidos.map(p => {
-      const isDrive = String(p.transportadora||'').toUpperCase().includes('DRIVE');
-      const isPrime = p.tem_prime;
-      const embalado = p.status_embalagem === 'embalado';
-      return `<tr style="border-bottom:1px solid var(--border);${embalado?'opacity:0.6':''}">
-        <td style="padding:10px 12px;font-weight:700;font-family:'Space Mono',monospace">${p.numero_pedido}</td>
-        <td style="padding:10px 12px;font-size:12px">${p.cliente||'—'}
-          ${isDrive?'<span style="font-size:9px;background:#fee2e2;color:#dc2626;padding:2px 6px;border-radius:4px;margin-left:4px">DRIVE</span>':''}
-          ${isPrime?'<span style="font-size:9px;background:#ede9fe;color:#4338ca;padding:2px 6px;border-radius:4px;margin-left:4px">PRIME</span>':''}
-        </td>
-        <td style="padding:10px 12px;font-size:12px">${p.transportadora||'—'}</td>
-        <td style="padding:10px 12px;font-size:12px">${p.ck_hora||p.hora_checkout||'—'}</td>
-        <td style="padding:10px 12px">
-          <span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;${embalado?'background:#dcfce7;color:#166534':'background:#fefce8;color:#92400e'}">
-            ${embalado?'✅ Embalado':'⏳ Pendente'}
-          </span>
-        </td>
-        <td style="padding:10px 12px;font-size:12px;color:var(--text3)">${p.embalado_por||'—'}</td>
-        <td style="padding:10px 12px">
-          ${!embalado?`<button onclick="confirmarEmbalagem(${p.id})" style="padding:6px 14px;background:#4f46e5;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">✅ Embalar</button>`:''}
-        </td>
-      </tr>`;
-    }).join('');
-  } catch(e) { tbody.innerHTML = '<tr><td colspan="7" style="color:#ef4444;padding:16px">Erro ao carregar</td></tr>'; }
+    const embalando = pedidos.filter(p => p.status_embalagem === 'embalando');
+    const pendentes = pedidos.filter(p => !p.status_embalagem || p.status_embalagem === 'pendente');
+    const embalados = pedidos.filter(p => p.status_embalagem === 'embalado');
+    el.innerHTML = [
+      ...embalando.map(p => renderCardEmb(p, true,  'desk')),
+      ...pendentes.map(p => renderCardEmb(p, false, 'desk')),
+      ...embalados.map(p => renderCardEmb(p, false, 'desk')),
+    ].join('');
+    // Limpa resultado do scan ao recarregar
+    const cont = document.getElementById('emb-desk-scan-resultado');
+    if (cont && !document.getElementById('emb-desk-scan')?.value) cont.innerHTML = '';
+  } catch(e) {
+    if (el) el.innerHTML = '<div style="grid-column:1/-1;color:#ef4444;text-align:center;padding:24px">Erro ao carregar</div>';
+  }
 }
 
-async function confirmarEmbalagem(id) {
+async function iniciarEmbalagemDesk(id) {
+  try {
+    const res = await fetch(`${API}/embalagem/${id}/iniciar`, { method:'PUT', credentials:'include' });
+    const r = await res.json();
+    if (!res.ok) { toast(r.erro||'Erro','erro'); return; }
+    toast(`Embalagem iniciada às ${r.hora_inicio}!`, 'sucesso');
+    carregarEmbalagem();
+    const scanVal = document.getElementById('emb-desk-scan')?.value?.trim();
+    if (scanVal) buscarEmbalagemDesk();
+  } catch(e) { toast('Erro ao iniciar','erro'); }
+}
+
+async function encerrarEmbalagemDesk(id) {
   try {
     const res = await fetch(`${API}/embalagem/${id}/confirmar`, { method:'PUT', credentials:'include' });
     const r = await res.json();
     if (!res.ok) { toast(r.erro||'Erro','erro'); return; }
-    toast('Embalagem confirmada!','sucesso');
+    toast('Embalagem concluída! 📦', 'sucesso');
+    const scanInput = document.getElementById('emb-desk-scan');
+    if (scanInput) scanInput.value = '';
+    const cont = document.getElementById('emb-desk-scan-resultado');
+    if (cont) cont.innerHTML = `<div style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px;color:#16a34a;font-weight:700;font-size:13px">
+      ✅ Embalagem concluída! Bipe o próximo pedido.
+    </div>`;
     carregarEmbalagem();
-  } catch(e) { toast('Erro ao confirmar','erro'); }
+  } catch(e) { toast('Erro ao encerrar','erro'); }
+}
+
+async function buscarEmbalagemDesk() {
+  const num  = (document.getElementById('emb-desk-scan')?.value || '').trim();
+  const cont = document.getElementById('emb-desk-scan-resultado');
+  if (!num) { toast('Digite o número do pedido!','aviso'); return; }
+  if (cont) cont.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:8px">🔍 Buscando...</div>';
+  try {
+    const data = document.getElementById('emb-data')?.value || hojeLocal();
+    const res  = await fetch(`${API}/embalagem?data=${data}`, { credentials:'include' });
+    if (!res.ok) throw new Error();
+    const pedidos = await res.json();
+    const p = pedidos.find(x => String(x.numero_pedido) === num);
+    if (!p) {
+      if (cont) cont.innerHTML = `<div style="padding:12px 16px;background:#fef2f2;border:1.5px solid #fecaca;border-radius:10px;color:#dc2626;font-weight:700;font-size:13px">
+        ❌ Pedido <b>${num}</b> não encontrado na fila de embalagem
+      </div>`;
+      return;
+    }
+    if (cont) cont.innerHTML = renderCardEmb(p, p.status_embalagem === 'embalando', 'desk');
+  } catch(e) { if (cont) cont.innerHTML = '<div style="color:#ef4444;font-size:13px;padding:8px">Erro ao buscar</div>'; }
+}
+
+// Mantém compatibilidade com código antigo
+async function confirmarEmbalagem(id) {
+  await encerrarEmbalagemDesk(id);
 }
 
 async function exportarEmbalagemExcel() {
@@ -929,7 +963,7 @@ async function buscarPedidoEmbMobile() {
       if (res.ok) {
         _embPedidos = await res.json();
         const p2 = _embPedidos.find(p => String(p.numero_pedido) === num);
-        if (p2) { if (cont) cont.innerHTML = renderCardEmb(p2, p2.status_embalagem==='embalando'); return; }
+        if (p2) { if (cont) cont.innerHTML = renderCardEmb(p2, p2.status_embalagem==='embalando', 'mobile'); return; }
       }
     } catch(e) {}
     if (cont) cont.innerHTML = `<div style="text-align:center;padding:50px 20px">
@@ -939,7 +973,7 @@ async function buscarPedidoEmbMobile() {
     </div>`;
     return;
   }
-  if (cont) cont.innerHTML = renderCardEmb(pedido, pedido.status_embalagem === 'embalando');
+  if (cont) cont.innerHTML = renderCardEmb(pedido, pedido.status_embalagem === 'embalando', 'mobile');
 }
 
 function filtrarEmbalagemMobile() {
@@ -960,20 +994,48 @@ function filtrarEmbalagemMobile() {
   }
   const embalando = filtrados.filter(p => p.status_embalagem === 'embalando');
   const pendentes = filtrados.filter(p => !p.status_embalagem || p.status_embalagem === 'pendente');
-  el.innerHTML = [...embalando.map(p => renderCardEmb(p, true)), ...pendentes.map(p => renderCardEmb(p, false))].join('');
+  el.innerHTML = [...embalando.map(p => renderCardEmb(p, true, 'mobile')), ...pendentes.map(p => renderCardEmb(p, false, 'mobile'))].join('');
 }
 
-function renderCardEmb(p, emAndamento) {
+function renderCardEmb(p, emAndamento, mode) {
+  // mode: 'mobile' (default) | 'desk'
+  const isDesk   = mode === 'desk';
+  const initFn   = isDesk ? 'iniciarEmbalagemDesk'   : 'iniciarEmbalagemMobile';
+  const endFn    = isDesk ? 'encerrarEmbalagemDesk'  : 'encerrarEmbalagemMobile';
   const fmtDt = d => { if (!d) return '—'; const [y,m,dd] = d.split('-'); return `${dd}/${m}/${y}`; };
-  const isDrive = String(p.transportadora||'').toUpperCase().includes('DRIVE');
-  const isPrime = p.tem_prime;
-  const corBorda = emAndamento ? '#16a34a' : isDrive ? '#dc2626' : isPrime ? '#7c3aed' : '#64748b';
-  const corFundo = emAndamento ? '#f0fdf4' : isDrive ? '#fef2f2' : isPrime ? '#f5f3ff' : '#f8fafc';
-  const statusBadge = emAndamento
-    ? `<span style="font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;background:#16a34a;color:#fff;animation:pulse 1.5s infinite">⏱ EM ANDAMENTO</span>`
-    : '';
+  const isDrive  = String(p.transportadora||'').toUpperCase().includes('DRIVE');
+  const isPrime  = p.tem_prime;
+  const isEmbalado = p.status_embalagem === 'embalado';
+  const corBorda = isEmbalado ? '#16a34a' : emAndamento ? '#2563eb' : isDrive ? '#dc2626' : isPrime ? '#7c3aed' : '#64748b';
+  const corFundo = isEmbalado ? '#f0fdf4' : emAndamento ? '#eff6ff' : isDrive ? '#fef2f2' : isPrime ? '#f5f3ff' : '#f8fafc';
+  const statusBadge = isEmbalado
+    ? `<span style="font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;background:#16a34a;color:#fff">✅ EMBALADO</span>`
+    : emAndamento
+      ? `<span style="font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;background:#2563eb;color:#fff;animation:pulse 1.5s infinite">⏱ EM ANDAMENTO</span>`
+      : '';
+  const botoes = isEmbalado
+    ? `<div style="padding:12px 16px;background:#f0fdf4;border-top:1px solid #bbf7d0">
+         <div style="font-size:12px;color:#16a34a;font-weight:700">✅ Embalado por <b>${p.embalado_por||'—'}</b></div>
+       </div>`
+    : `<div style="padding:14px 16px;display:grid;grid-template-columns:${emAndamento?'1fr 1fr':'1fr'};gap:10px">
+        ${emAndamento ? `
+          <button onclick="${initFn}(${p.id})"
+            style="padding:14px;background:#f1f5f9;color:#64748b;border:2px solid #cbd5e1;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer">
+            🔄 Reiniciar
+          </button>
+          <button onclick="${endFn}(${p.id})"
+            style="padding:14px;background:#16a34a;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(22,163,74,.3)">
+            ✅ Encerrar
+          </button>
+        ` : `
+          <button onclick="${initFn}(${p.id})"
+            style="padding:16px;background:#4f46e5;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(79,70,229,.3)">
+            ▶️ Iniciar Embalagem
+          </button>
+        `}
+       </div>`;
   return `
-    <div style="background:var(--surface);border-radius:16px;margin-bottom:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.1)">
+    <div style="background:var(--surface);border-radius:16px;${!isDesk?'margin-bottom:14px;':''}overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.1);${isEmbalado?'opacity:.7':''}">
       <div style="background:${corFundo};border-left:5px solid ${corBorda};padding:14px 16px">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
           <div style="flex:1;min-width:0">
@@ -1002,29 +1064,13 @@ function renderCardEmb(p, emAndamento) {
         </div>
         <div style="background:var(--surface2);border-radius:10px;padding:8px 10px;text-align:center">
           <div style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.5px;margin-bottom:2px">INÍCIO EMB.</div>
-          <div style="font-size:13px;font-weight:700;color:${emAndamento?'#16a34a':'var(--text3)'}">${p.embalagem_iniciado_em||'—'}</div>
+          <div style="font-size:13px;font-weight:700;color:${emAndamento?'#2563eb':'var(--text3)'}">${p.embalagem_iniciado_em||'—'}</div>
         </div>
       </div>
       <div style="padding:8px 16px;border-bottom:1px solid var(--border)">
         <span style="font-size:11px;color:var(--text2)">🚚 ${p.transportadora||'—'}</span>
       </div>
-      <div style="padding:14px 16px;display:grid;grid-template-columns:${emAndamento?'1fr 1fr':'1fr'};gap:10px">
-        ${emAndamento ? `
-          <button onclick="iniciarEmbalagemMobile(${p.id})"
-            style="padding:14px;background:#f1f5f9;color:#64748b;border:2px solid #cbd5e1;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer">
-            🔄 Reiniciar
-          </button>
-          <button onclick="encerrarEmbalagemMobile(${p.id})"
-            style="padding:14px;background:#16a34a;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(22,163,74,.3)">
-            ✅ Encerrar
-          </button>
-        ` : `
-          <button onclick="iniciarEmbalagemMobile(${p.id})"
-            style="padding:16px;background:#4f46e5;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(79,70,229,.3)">
-            ▶️ Iniciar Embalagem
-          </button>
-        `}
-      </div>
+      ${botoes}
     </div>`;
 }
 
@@ -1052,8 +1098,8 @@ async function carregarEmbalagemMobile() {
     const embalando = pedidos.filter(p => p.status_embalagem === 'embalando');
     const pendentes = pedidos.filter(p => !p.status_embalagem || p.status_embalagem === 'pendente');
     el.innerHTML = [
-      ...embalando.map(p => renderCardEmb(p, true)),
-      ...pendentes.map(p => renderCardEmb(p, false)),
+      ...embalando.map(p => renderCardEmb(p, true,  'mobile')),
+      ...pendentes.map(p => renderCardEmb(p, false, 'mobile')),
     ].join('');
   } catch(e) { if(el) el.innerHTML = '<div style="color:#ef4444;text-align:center;padding:24px">Erro ao carregar</div>'; }
 }
