@@ -34,6 +34,9 @@ const ALTERATIONS = [
      AND status_embalagem='pendente'
      AND NOT EXISTS (SELECT 1 FROM checkout c WHERE c.pedido_id=pedidos.id AND c.status='concluido')
      AND NOT EXISTS (SELECT 1 FROM embalagem e WHERE e.pedido_id=pedidos.id)`,
+  // Normaliza valores de turno — remove acentos para consistência com o filtro do dashboard
+  "UPDATE usuarios SET turno='Manha' WHERE turno='Manhã'",
+  "UPDATE separadores SET turno='Manha' WHERE turno='Manhã'",
 ];
 
 async function runSchema() {

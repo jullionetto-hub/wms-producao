@@ -16,11 +16,12 @@ router.get('/kpis', requerAuth, async (req,res) => {
   const {data:hoje}=dataHoraLocal(); const mes=hoje.substring(0,7);
   try {
     // Turno filter helpers — joins usuarios via separadores ou por nome
+    // REPLACE normaliza 'Manhã' → 'Manha' para caso algum registro ainda tenha acento
     const tSep = hasTurno
-      ? ` AND (SELECT u2.turno FROM separadores s2 JOIN usuarios u2 ON u2.id=s2.usuario_id WHERE s2.id=p.separador_id LIMIT 1)=ANY($T::text[])`
+      ? ` AND REPLACE(COALESCE((SELECT u2.turno FROM separadores s2 JOIN usuarios u2 ON u2.id=s2.usuario_id WHERE s2.id=p.separador_id LIMIT 1),''),'ã','a')=ANY($T::text[])`
       : '';
     const tNome = (col) => hasTurno
-      ? ` AND (SELECT u2.turno FROM usuarios u2 WHERE u2.nome=${col} LIMIT 1)=ANY($T::text[])`
+      ? ` AND REPLACE(COALESCE((SELECT u2.turno FROM usuarios u2 WHERE u2.nome=${col} LIMIT 1),''),'ã','a')=ANY($T::text[])`
       : '';
 
     // Build params array: $1=hoje, $2=hoje, $3=mes%, $4=hoje, $5=hoje, $6=hoje, $7=hoje, [$8=turnos]
