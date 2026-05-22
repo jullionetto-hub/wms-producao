@@ -1,4 +1,18 @@
 
+async function marcarSituacaoDesk(id, situacao) {
+  const labels = { subiu:'⬆️ Subiu', devolucao:'↩️ Devolução', protocolo:'📋 Protocolo' };
+  if (!confirm(`Marcar como ${labels[situacao]||situacao}?`)) return;
+  try {
+    const res = await fetch(`${API}/repositor/avisos/${id}`, {
+      credentials:'include', method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ situacao, status: situacao })
+    });
+    if (res.ok) { toast(`Marcado como ${labels[situacao]||situacao}`, 'success'); carregarTabelaReposicao(); }
+    else toast('Erro ao salvar', 'danger');
+  } catch(e) { toast('Sem conexão', 'danger'); }
+}
+
 async function marcarProtocolo(id) {
   if (!confirm('Marcar este item como Protocolo?')) return;
   try {
@@ -66,16 +80,19 @@ function optionsUsuarios(selecionado='') {
 function corSituacao(sit) {
   return {
     pendente:'#f59e0b', verificando:'#8b5cf6', buscado:'#3b82f6',
-    aguardando_abastecer:'#f97316', abastecido:'#10b981',
-    protocolo:'#6b7280', nao_encontrado:'#ef4444'
+    separado:'#3b82f6', aguardando_abastecer:'#f97316',
+    subiu:'#0ea5e9', abastecido:'#10b981',
+    protocolo:'#6b7280', devolucao:'#a855f7', nao_encontrado:'#ef4444'
   }[sit] || '#6b7280';
 }
 
 function labelSituacao(sit) {
   return {
-    pendente:'⏳ Pendente', verificando:'🔍 Verificando',
-    buscado:'📦 Buscado', aguardando_abastecer:'🕐 Aguard. Abastecer',
-    abastecido:'✅ Abastecido', protocolo:'📋 Protocolo',
+    pendente:'⏳ Separar', verificando:'🔍 Verificando',
+    buscado:'📦 Separado', separado:'📦 Separado',
+    aguardando_abastecer:'🕐 Aguard. Entregar',
+    subiu:'⬆️ Subiu', abastecido:'✅ Abastecido',
+    protocolo:'📋 Protocolo', devolucao:'↩️ Devolução',
     nao_encontrado:'❌ Não encontrado'
   }[sit] || sit;
 }
@@ -126,10 +143,15 @@ function renderCardMobile(a) {
   }[sit] || '#6b7280';
 
   const badge = {
-    pendente:            '<span style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px">⏳ Pendente</span>',
+    pendente:            '<span style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px">⏳ Separar</span>',
+    verificando:         '<span style="background:#f3e8ff;color:#6b21a8;border:1px solid #d8b4fe;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px">🔍 Verificando</span>',
+    buscado:             '<span style="background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px">📦 Separado</span>',
+    separado:            '<span style="background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px">📦 Separado</span>',
     aguardando_abastecer:'<span style="background:#ffedd5;color:#9a3412;border:1px solid #fed7aa;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px">🕐 Aguard. entregar</span>',
+    subiu:               '<span style="background:#e0f2fe;color:#0369a1;border:1px solid #7dd3fc;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px">⬆️ Subiu</span>',
     abastecido:          '<span style="background:#dcfce7;color:#166534;border:1px solid #86efac;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px">✅ Abastecido</span>',
     protocolo:           '<span style="background:#f3f4f6;color:#374151;border:1px solid #e5e7eb;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px">📋 Protocolo</span>',
+    devolucao:           '<span style="background:#faf5ff;color:#7e22ce;border:1px solid #d8b4fe;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px">↩️ Devolução</span>',
     nao_encontrado:      '<span style="background:#fee2e2;color:#991b1b;border:1px solid #fecaca;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px">❌ Não encontrado</span>',
   }[sit] || `<span style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;background:${corBorda}22;color:${corBorda}">${sit}</span>`;
 
@@ -139,7 +161,7 @@ function renderCardMobile(a) {
 
   let botoesEtapa = '';
 
-  if (sit === 'pendente' || sit === 'verificando' || sit === 'buscado') {
+  if (sit === 'pendente' || sit === 'verificando' || sit === 'buscado' || sit === 'separado') {
     botoesEtapa = `
       <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
@@ -157,11 +179,19 @@ function renderCardMobile(a) {
         <div style="display:flex;flex-direction:column;gap:8px">
           <button onclick="acaoRepositor(${a.id},'busquei_e_abasteci','${nomeLogado}')"
             style="width:100%;padding:13px;background:#10b981;color:#fff;border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer">
-            ✅ Encontrei e entreguei ao separador
+            ✅ Encontrei e entreguei (Abastecido)
+          </button>
+          <button onclick="acaoRepositor(${a.id},'subiu','${nomeLogado}')"
+            style="width:100%;padding:13px;background:#0ea5e9;color:#fff;border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer">
+            ⬆️ Subiu — levei para o separador
           </button>
           <button onclick="acaoRepositor(${a.id},'so_busquei','${nomeLogado}')"
             style="width:100%;padding:13px;background:#3b82f6;color:#fff;border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer">
-            📦 Encontrei — outro vai entregar
+            📦 Separado — outro vai entregar
+          </button>
+          <button onclick="acaoRepositor(${a.id},'devolucao','${nomeLogado}')"
+            style="width:100%;padding:13px;background:transparent;color:#a855f7;border:1.5px solid #a855f7;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer">
+            ↩️ Devolução
           </button>
           <button onclick="acaoRepositor(${a.id},'nao_encontrei','${nomeLogado}')"
             style="width:100%;padding:13px;background:transparent;color:#ef4444;border:1.5px solid #ef4444;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer">
@@ -173,14 +203,20 @@ function renderCardMobile(a) {
     botoesEtapa = `
       <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
         <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:12px;color:#92400e">
-          📦 <strong>${a.quem_pegou||'—'}</strong> buscou ${a.qtd_encontrada||qtdSolicitada} de ${qtdSolicitada} un. Aguardando entrega ao separador.
+          📦 <strong>${a.quem_pegou||'—'}</strong> separou ${a.qtd_encontrada||qtdSolicitada} de ${qtdSolicitada} un. Aguardando entrega ao separador.
         </div>
-        <button onclick="acaoRepositor(${a.id},'abasteci','${nomeLogado}')"
-          style="width:100%;padding:13px;background:#10b981;color:#fff;border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer">
-          🏠 Entreguei ao separador
-        </button>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <button onclick="acaoRepositor(${a.id},'abasteci','${nomeLogado}')"
+            style="width:100%;padding:13px;background:#10b981;color:#fff;border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer">
+            ✅ Entreguei — Abastecido
+          </button>
+          <button onclick="acaoRepositor(${a.id},'subiu_entrega','${nomeLogado}')"
+            style="width:100%;padding:13px;background:#0ea5e9;color:#fff;border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer">
+            ⬆️ Subiu
+          </button>
+        </div>
       </div>`;
-  } else if (sit === 'abastecido') {
+  } else if (sit === 'abastecido' || sit === 'subiu') {
     botoesEtapa = `
       <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);display:flex;gap:14px;font-size:12px;color:var(--text3)">
         ${a.quem_pegou ? `<span>📦 <strong style="color:var(--text)">${a.quem_pegou}</strong></span>` : ''}
@@ -217,12 +253,18 @@ async function acaoRepositor(id, acao, nomeLogado) {
   let body = {};
   if (acao === 'busquei_e_abasteci') {
     body = { situacao:'abastecido', status:'abastecido', quem_pegou: nomeLogado, quem_guardou: nomeLogado, qtd_encontrada: qtd };
+  } else if (acao === 'subiu') {
+    body = { situacao:'subiu', status:'subiu', quem_pegou: nomeLogado, qtd_encontrada: qtd };
   } else if (acao === 'so_busquei') {
     body = { situacao:'aguardando_abastecer', status:'aguardando_abastecer', quem_pegou: nomeLogado, qtd_encontrada: qtd };
+  } else if (acao === 'devolucao') {
+    body = { situacao:'devolucao', status:'devolucao', quem_pegou: nomeLogado, qtd_encontrada: qtd };
   } else if (acao === 'nao_encontrei') {
     body = { situacao:'nao_encontrado', status:'nao_encontrado', quem_pegou: nomeLogado, qtd_encontrada: 0 };
   } else if (acao === 'abasteci') {
     body = { situacao:'abastecido', status:'abastecido', quem_guardou: nomeLogado };
+  } else if (acao === 'subiu_entrega') {
+    body = { situacao:'subiu', status:'subiu', quem_guardou: nomeLogado };
   }
 
   try {
@@ -314,9 +356,9 @@ async function carregarTabelaReposicao() {
     // Actualiza cnt-cards de reposição
     const setC = (id,v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
     setC('rep-cnt-total',      avisos.length);
-    setC('rep-cnt-pendentes',  avisos.filter(a=>['pendente','verificando','buscado'].includes(a.situacao||a.status)).length);
-    setC('rep-cnt-andamento',  avisos.filter(a=>(a.situacao||a.status)==='aguardando_abastecer').length);
-    setC('rep-cnt-abastecidos',avisos.filter(a=>(a.situacao||a.status)==='abastecido').length);
+    setC('rep-cnt-pendentes',  avisos.filter(a=>['pendente','verificando'].includes(a.situacao||a.status)).length);
+    setC('rep-cnt-andamento',  avisos.filter(a=>['buscado','separado','aguardando_abastecer','subiu'].includes(a.situacao||a.status)).length);
+    setC('rep-cnt-abastecidos',avisos.filter(a=>['abastecido'].includes(a.situacao||a.status)).length);
 
     if (!avisos.length) {
       tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:48px;color:var(--text3)">
@@ -369,11 +411,21 @@ async function carregarTabelaReposicao() {
         <td style="padding:10px 12px">
           <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
             <span style="font-size:12px;font-weight:700;color:${cor};background:${cor}18;padding:4px 10px;border-radius:20px;white-space:nowrap">${lbl}</span>
-            ${sit !== 'protocolo' && sit !== 'abastecido' && sit !== 'nao_encontrado'
-              ? `<button onclick="marcarProtocolo(${a.id})"
+            ${!['protocolo','abastecido','nao_encontrado','devolucao'].includes(sit)
+              ? `<button onclick="marcarSituacaoDesk(${a.id},'subiu')"
+                  title="Marcar como Subiu"
+                  style="font-size:10px;padding:3px 8px;border:1px solid #0ea5e9;border-radius:20px;background:transparent;color:#0ea5e9;cursor:pointer;white-space:nowrap">
+                  ⬆️ Subiu
+                </button>
+                <button onclick="marcarProtocolo(${a.id})"
                   title="Marcar como Protocolo"
                   style="font-size:10px;padding:3px 8px;border:1px solid #6b7280;border-radius:20px;background:transparent;color:#6b7280;cursor:pointer;white-space:nowrap">
                   📋 Protocolo
+                </button>
+                <button onclick="marcarSituacaoDesk(${a.id},'devolucao')"
+                  title="Marcar como Devolução"
+                  style="font-size:10px;padding:3px 8px;border:1px solid #a855f7;border-radius:20px;background:transparent;color:#a855f7;cursor:pointer;white-space:nowrap">
+                  ↩️ Dev.
                 </button>`
               : ''}
           </div>

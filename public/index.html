@@ -14,7 +14,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/app.css?v=6">
+  <link rel="stylesheet" href="/css/app.css?v=7">
 </head>
 <body>
 
@@ -561,9 +561,13 @@
               <div class="fg"><label>BUSCAR</label><input type="text" id="rep-filtro-codigo" placeholder="Código do produto..." oninput="carregarTabelaReposicao()"/></div>
               <div style="display:flex;gap:6px;align-items:flex-end;flex-wrap:wrap">
                 <button data-sit="" class="btn btn-primary btn-sm rep-filtro-btn" onclick="filtrarReposicao('')">Todos</button>
-                <button data-sit="pendente" class="btn btn-outline btn-sm rep-filtro-btn" onclick="filtrarReposicao('pendente')">⏳ Pendentes</button>
-                <button data-sit="aguardando_abastecer" class="btn btn-outline btn-sm rep-filtro-btn" onclick="filtrarReposicao('aguardando_abastecer')">🕐 Em Andamento</button>
-                <button data-sit="abastecido" class="btn btn-outline btn-sm rep-filtro-btn" onclick="filtrarReposicao('abastecido')">✅ Abastecidos</button>
+                <button data-sit="pendente" class="btn btn-outline btn-sm rep-filtro-btn" onclick="filtrarReposicao('pendente')">⏳ Separar</button>
+                <button data-sit="verificando" class="btn btn-outline btn-sm rep-filtro-btn" onclick="filtrarReposicao('verificando')">🔍 Verificando</button>
+                <button data-sit="buscado" class="btn btn-outline btn-sm rep-filtro-btn" onclick="filtrarReposicao('buscado')">📦 Separado</button>
+                <button data-sit="aguardando_abastecer" class="btn btn-outline btn-sm rep-filtro-btn" onclick="filtrarReposicao('aguardando_abastecer')">🕐 Aguard.</button>
+                <button data-sit="subiu" class="btn btn-outline btn-sm rep-filtro-btn" onclick="filtrarReposicao('subiu')">⬆️ Subiu</button>
+                <button data-sit="abastecido" class="btn btn-outline btn-sm rep-filtro-btn" onclick="filtrarReposicao('abastecido')">✅ Abastecido</button>
+                <button data-sit="devolucao" class="btn btn-outline btn-sm rep-filtro-btn" onclick="filtrarReposicao('devolucao')">↩️ Devolução</button>
                 <button data-sit="nao_encontrado" class="btn btn-outline btn-sm rep-filtro-btn" onclick="filtrarReposicao('nao_encontrado')">❌ Não enc.</button>
               </div>
             </div>
@@ -1528,11 +1532,15 @@
             <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">🔧 Solicitações</div>
             <div style="display:flex;gap:8px;align-items:center">
               <span style="font-size:12px;color:var(--red);font-weight:700">🔴 <span id="m-rep-pend">0</span></span>
-              <select id="m-filtro-rep-status" class="sel-sm" onchange="carregarAvisosMobile()" style="min-width:120px">
+              <select id="m-filtro-rep-status" class="sel-sm" onchange="carregarAvisosMobile()" style="min-width:130px">
                 <option value="">Todos</option>
-                <option value="pendente">⏳ Pendente</option>
-                <option value="aguardando_abastecer">🕐 Em andamento</option>
+                <option value="pendente">⏳ Separar</option>
+                <option value="verificando">🔍 Verificando</option>
+                <option value="buscado">📦 Separado</option>
+                <option value="aguardando_abastecer">🕐 Aguard. entregar</option>
+                <option value="subiu">⬆️ Subiu</option>
                 <option value="abastecido">✅ Abastecido</option>
+                <option value="devolucao">↩️ Devolução</option>
                 <option value="nao_encontrado">❌ Não encontrado</option>
               </select>
               <button class="btn btn-outline btn-sm" onclick="carregarAvisosMobile()">🔄</button>

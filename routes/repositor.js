@@ -206,6 +206,7 @@ router.put('/repositor/avisos/:id/subiu',         requerAuth, (req,res) => resol
 router.put('/repositor/avisos/:id/abastecido',    requerAuth, (req,res) => resolverAvisoEAcumularTempo(req,res,'abastecido'));
 router.put('/repositor/avisos/:id/nao_encontrado',requerAuth, (req,res) => atualizarAviso(req,res,'nao_encontrado'));
 router.put('/repositor/avisos/:id/protocolo',     requerAuth, (req,res) => atualizarAviso(req,res,'protocolo'));
+router.put('/repositor/avisos/:id/devolucao',     requerAuth, (req,res) => atualizarAviso(req,res,'devolucao'));
 router.put('/repositor/avisos/:id/liberar', requerAuth, requerPerfil('supervisor'), async (req,res) => {
   try {
     const { h } = await db.get(`SELECT TO_CHAR(NOW() AT TIME ZONE 'America/Sao_Paulo','HH24:MI') as h`);
