@@ -14,7 +14,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/app.css?v=4">
+  <link rel="stylesheet" href="/css/app.css?v=5">
 </head>
 <body>
 
@@ -52,14 +52,20 @@
     <div class="login-logo">📦</div>
     <div class="login-titulo">WMS — <span>Miess</span></div>
     <div class="login-sub">Gestão de Pedidos</div>
-    <div style="margin-bottom:16px;text-align:left">
-      <div style="font-size:10px;color:rgba(255,200,100,.7);font-weight:700;letter-spacing:1.2px;margin-bottom:8px">PERFIL DE ACESSO</div>
-      <div class="perfil-lista">
-        <div class="perfil-item" onclick="selecionarPerfilItem('supervisor',this)"><span class="pi2">👔</span><span>Supervisão</span><span class="pck">✓</span></div>
-        <div class="perfil-item" onclick="selecionarPerfilItem('separador',this)"><span class="pi2">📦</span><span>Separação</span><span class="pck">✓</span></div>
-        <div class="perfil-item" onclick="selecionarPerfilItem('repositor',this)"><span class="pi2">🔧</span><span>Reposição</span><span class="pck">✓</span></div>
-        <div class="perfil-item" onclick="selecionarPerfilItem('checkout',this)"><span class="pi2">🏷️</span><span>Checkout</span><span class="pck">✓</span></div>
-        <div class="perfil-item" onclick="selecionarPerfilItem('embalador',this)"><span class="pi2">📫</span><span>Embalagem</span><span class="pck">✓</span></div>
+    <div class="login-campo" style="position:relative">
+      <label>PERFIL DE ACESSO</label>
+      <!-- Caixa de seleção (aparência de select) -->
+      <div class="csel-box" id="csel-box" onclick="toggleCsel(event)">
+        <span class="csel-valor" id="csel-valor">Selecione seu perfil</span>
+        <svg class="csel-seta" id="csel-seta" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <!-- Dropdown flutuante -->
+      <div class="csel-drop" id="csel-drop">
+        <div class="csel-opt" onclick="escolherPerfil('supervisor','👔 Supervisão',this,event)"><span class="csel-ic">👔</span><span class="csel-nm">Supervisão</span><span class="csel-chk">✓</span></div>
+        <div class="csel-opt" onclick="escolherPerfil('separador','📦 Separação',this,event)"><span class="csel-ic">📦</span><span class="csel-nm">Separação</span><span class="csel-chk">✓</span></div>
+        <div class="csel-opt" onclick="escolherPerfil('repositor','🔧 Reposição',this,event)"><span class="csel-ic">🔧</span><span class="csel-nm">Reposição</span><span class="csel-chk">✓</span></div>
+        <div class="csel-opt" onclick="escolherPerfil('checkout','🏷️ Checkout',this,event)"><span class="csel-ic">🏷️</span><span class="csel-nm">Checkout</span><span class="csel-chk">✓</span></div>
+        <div class="csel-opt" onclick="escolherPerfil('embalador','📫 Embalagem',this,event)"><span class="csel-ic">📫</span><span class="csel-nm">Embalagem</span><span class="csel-chk">✓</span></div>
       </div>
     </div>
     <div class="login-campo"><label>USUÁRIO</label><input type="text" id="login-usuario" placeholder="Ex: joao.silva" autocomplete="username"/></div>
