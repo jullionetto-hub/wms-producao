@@ -1,4 +1,4 @@
-﻿﻿/* ══════════════════════════════════════════
+/* ══════════════════════════════════════════
    SEPARAÇÃO — MOBILE (tabs)
 ══════════════════════════════════════════ */
 async function confirmarPedidoMobile() {
@@ -60,13 +60,23 @@ async function carregarFilaMobile() {
     const avisos = resAv.ok ? await resAv.json() : [];
 
     // Pedidos com itens aguardando repositor
-    // Não filtra por separador_id pois pode ser nulo em avisos antigos;
-    // a correspondência com meusMob já garante o escopo correto
     const pedidosComFalta = {};
     avisos.forEach(a => {
       const n = String(a.numero_pedido);
       if (!pedidosComFalta[n]) pedidosComFalta[n] = 0;
       pedidosComFalta[n]++;
+    });
+
+    // Pedidos com itens aguardando liberação do supervisor (nao_encontrado)
+    const [resAguard] = await Promise.all([
+      fetch(`${API}/repositor/avisos?status=nao_encontrado`, { credentials:'include' })
+    ]);
+    const aguardSup = resAguard.ok ? await resAguard.json() : [];
+    const pedidosAguardSup = {};
+    aguardSup.forEach(a => {
+      const n = String(a.numero_pedido);
+      if (!pedidosAguardSup[n]) pedidosAguardSup[n] = 0;
+      pedidosAguardSup[n]++;
     });
 
     const ativos = todos.filter(p=>p.status!=='concluido');
@@ -88,12 +98,15 @@ async function carregarFilaMobile() {
       const isPrime  = p.tem_prime === true;
       const qtdFalta = pedidosComFalta[String(p.numero_pedido)] || 0;
       const temFalta = qtdFalta > 0;
+      // ── NOVO: pedido aguardando supervisor ──
+      const qtdSup   = pedidosAguardSup[String(p.numero_pedido)] || 0;
+      const temSup   = qtdSup > 0;
 
-      // Hierarquia visual: falta > drive thru > normal
-      const bordLeft  = temFalta ? '3px solid #F59E0B' : isDrive ? '3px solid #DC2626' : '3px solid #2563EB';
-      const cardBg    = temFalta ? '#FFFBEB' : '#fff';
-      const bordColor = temFalta ? '#FDE68A' : '#E2E8F0';
-      const numColor  = isDrive  ? '#DC2626' : '#2563EB';
+      // Hierarquia visual: aguardSup > falta > drive thru > normal
+      const bordLeft  = temSup ? '3px solid #7c3aed' : temFalta ? '3px solid #F59E0B' : isDrive ? '3px solid #DC2626' : '3px solid #2563EB';
+      const cardBg    = temSup ? '#faf5ff' : temFalta ? '#FFFBEB' : '#fff';
+      const bordColor = temSup ? '#ddd6fe' : temFalta ? '#FDE68A' : '#E2E8F0';
+      const numColor  = isDrive ? '#DC2626' : temSup ? '#7c3aed' : '#2563EB';
 
       return `<div style="background:${cardBg};border:1px solid ${bordColor};border-left:${bordLeft};border-radius:10px;padding:14px 16px;margin-bottom:7px;cursor:pointer"
         onclick="selecionarPedidoFilaMobile('${p.numero_pedido}')">
@@ -102,9 +115,14 @@ async function carregarFilaMobile() {
             <div style="display:flex;align-items:center;gap:7px;margin-bottom:3px;flex-wrap:wrap">
               <span style="font-family:'Space Mono',monospace;font-size:15px;font-weight:700;color:${numColor}">${p.numero_pedido}</span>
               ${isDrive ? `<span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:4px;background:#FEF2F2;color:#DC2626;border:1px solid #FECACA">DRIVE THRU</span>` : ''}
+              ${temSup ? `<span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:4px;background:#f5f3ff;color:#7c3aed;border:1px solid #ddd6fe">⛔ SUPERVISOR</span>` : ''}
             </div>
-            <div style="font-size:11px;color:#64748B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:${temFalta?'5px':'0'}">${p.cliente||'—'}</div>
+            <div style="font-size:11px;color:#64748B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:${(temFalta||temSup)?'5px':'0'}">${p.cliente||'—'}</div>
             ${p.transportadora ? `<div style="font-size:10px;font-weight:600;color:#6366f1;margin-top:2px">${p.transportadora}</div>` : ""}
+            ${temSup ? `<div style="display:inline-flex;align-items:center;gap:5px;background:#f5f3ff;border:1px solid #ddd6fe;border-radius:6px;padding:4px 9px;margin-bottom:${temFalta?'4px':'0'}">
+              <div style="width:6px;height:6px;border-radius:50%;background:#7c3aed;flex-shrink:0;"></div>
+              <span style="font-size:11px;font-weight:500;color:#5b21b6;">${qtdSup} item${qtdSup>1?'s':''} aguardando supervisor</span>
+            </div>` : ''}
             ${temFalta ? `<div style="display:inline-flex;align-items:center;gap:5px;background:#FEF3C7;border:1px solid #FDE68A;border-radius:6px;padding:4px 9px;">
               <div style="width:6px;height:6px;border-radius:50%;background:#D97706;flex-shrink:0;"></div>
               <span style="font-size:11px;font-weight:500;color:#92400E;">${qtdFalta} item${qtdFalta>1?'s':''} aguardando repositor</span>
@@ -133,6 +151,7 @@ function selecionarPedidoFilaMobile(num) {
   // Esconde placeholder se existir
   const ph = document.getElementById('m-cl-wrap-placeholder');
   if (ph) ph.style.display = 'none';
+  // ── ALTERADO: vai para aba 'separar' (2ª aba) ao selecionar pedido ──
   mudarTabSep('separar');
   document.getElementById('m-input-pedido').value = num;
   confirmarPedidoMobile();
@@ -271,7 +290,6 @@ async function _confirmarPedidoCore(num, inputId, statusId, clWrapId, fnChecklis
       caixaJaVinculada = true;
       mostrarCampoCaixa(true);
       ph.style.display = 'none';
-      // REMOVIDO: nao abre checklist automaticamente quando caixa ja vinculada
       // Busca e exibe o número da caixa já vinculada
       try {
         const rCaixa = await fetch(`${API}/pedidos/info/${encodeURIComponent(num)}`, { credentials:'include' });
@@ -423,8 +441,9 @@ function renderChecklist(prefix) {
     if(ba) ba.style.display='none';
   } else if (temProblema) {
     const itensP = itensAtuais.filter(i=>i.status==='falta'||i.status==='parcial');
-    // Status que liberam o concluir: encontrado, subiu, abastecido
-    const statusOk = ['encontrado','reposto','subiu','abastecido','protocolo'];
+    // Status que liberam o concluir: encontrado, subiu, abastecido, protocolo
+    // ── ALTERADO: 'nao_encontrado' agora é BLOQUEANTE — só supervisor pode liberar ──
+    const statusOk   = ['encontrado','reposto','subiu','abastecido','protocolo'];
     const statusBloq = ['nao_encontrado'];
     const todosResolvidos = itensP.every(i => statusOk.includes(i.aviso_status) || statusBloq.includes(i.aviso_status));
     const temBloqueio = itensP.some(i => statusBloq.includes(i.aviso_status));
@@ -439,17 +458,41 @@ function renderChecklist(prefix) {
       if(bc) bc.style.display='none';
       if(ba){ba.style.display='block';ba.textContent=`⏳ AGUARDANDO REPOSITOR (${qtdP})`;}
     } else if (temBloqueio) {
-      // Bloqueado — aguarda supervisor
+      // ── ALTERADO: Bloqueado — só o supervisor pode liberar (botão concluir desabilitado) ──
       const qtdBloq = itensP.filter(i => statusBloq.includes(i.aviso_status)).length;
-      if(bc) bc.style.display='none';
-      if(ba){ba.style.display='block';ba.textContent=`⛔ BLOQUEADO — AGUARDA SUPERVISOR (${qtdBloq})`;}
+      if(bc){
+        bc.style.display='block';
+        bc.disabled=true;
+        bc.textContent=`⛔ AGUARDANDO SUPERVISOR (${qtdBloq})`;
+        bc.style.background='#f5f3ff';
+        bc.style.color='#7c3aed';
+        bc.style.border='2px solid #ddd6fe';
+        bc.style.cursor='not-allowed';
+      }
+      if(ba) ba.style.display='none';
     } else {
       // Todos resolvidos pelo repositor
-      if(bc){bc.style.display='block';bc.disabled=false;bc.textContent='✅ CONCLUIR PEDIDO';}
+      if(bc){
+        bc.style.display='block';
+        bc.disabled=false;
+        bc.textContent='✅ CONCLUIR PEDIDO';
+        bc.style.background='';
+        bc.style.color='';
+        bc.style.border='';
+        bc.style.cursor='';
+      }
       if(ba) ba.style.display='none';
     }
   } else {
-    if(bc){bc.style.display='block';bc.disabled=false;bc.textContent='✅ CONCLUIR PEDIDO';}
+    if(bc){
+      bc.style.display='block';
+      bc.disabled=false;
+      bc.textContent='✅ CONCLUIR PEDIDO';
+      bc.style.background='';
+      bc.style.color='';
+      bc.style.border='';
+      bc.style.cursor='';
+    }
     if(ba) ba.style.display='none';
   }
 
@@ -520,7 +563,7 @@ function renderChecklist(prefix) {
         ${item.status==='falta'?`<div style="font-size:11px;font-weight:600;color:var(--red);margin-bottom:8px;padding:5px 8px;background:#FEF2F2;border-radius:5px">Repositor notificado — aguardando reposição</div>`:``}
         ${item.status==='parcial'?`<div style="font-size:11px;font-weight:600;color:var(--amber);margin-bottom:8px;padding:5px 8px;background:#FFFBEB;border-radius:5px">${item.obs||'Parcial'} — repositor notificado</div>`:``}
         ${(item.status==='falta'||item.status==='parcial')&&avisoStatus==='reposto'?`<div style="font-size:11px;font-weight:600;color:var(--green);margin-bottom:8px;padding:5px 8px;background:#F0FDF4;border-radius:5px">Repositor confirmou reposição</div>`:``}
-        ${(item.status==='falta'||item.status==='parcial')&&avisoStatus==='nao_encontrado'?`<div style="font-size:11px;font-weight:600;color:var(--indigo);margin-bottom:8px;padding:5px 8px;background:#F5F3FF;border-radius:5px">Repositor: item não localizado</div>`:``}
+        ${(item.status==='falta'||item.status==='parcial')&&avisoStatus==='nao_encontrado'?`<div style="font-size:11px;font-weight:600;color:#7c3aed;margin-bottom:8px;padding:5px 8px;background:#f5f3ff;border-radius:5px">⛔ Não localizado — aguardando supervisor liberar</div>`:``}
         ${item.hora_verificado?`<div style="font-size:10px;color:#94A3B8;margin-bottom:8px">Verificado às ${item.hora_verificado}</div>`:''}
         <!-- Campo parcial -->
         <div class="parcial-wrap" id="${prefix}-pw-${item.id}" style="margin-bottom:8px">
@@ -568,7 +611,7 @@ function renderChecklist(prefix) {
         ${item.status==='falta'?`<div style="font-size:11px;color:var(--red);font-weight:600;margin-top:4px">Repositor notificado — aguardando reposição</div>`:''}
         ${item.status==='parcial'?`<div style="font-size:11px;color:var(--amber);font-weight:600;margin-top:4px">${item.obs||'Parcial'} — repositor notificado</div>`:''}
         ${(item.status==='falta'||item.status==='parcial')&&avisoSt==='reposto'?`<div style="font-size:11px;color:var(--green);font-weight:600;margin-top:4px">Repositor confirmou reposição</div>`:''}
-        ${(item.status==='falta'||item.status==='parcial')&&avisoSt==='nao_encontrado'?`<div style="font-size:11px;color:var(--indigo);font-weight:600;margin-top:4px">Repositor: item não localizado</div>`:''}
+        ${(item.status==='falta'||item.status==='parcial')&&avisoSt==='nao_encontrado'?`<div style="font-size:11px;color:#7c3aed;font-weight:600;margin-top:4px">⛔ Não localizado — aguardando supervisor liberar</div>`:''}
         <div class="parcial-wrap" id="${prefix}-pw-${item.id}" style="margin-top:8px">
           <label>Qtde encontrada (de ${item.quantidade||1}):</label>
           <div class="parcial-row">
@@ -622,7 +665,6 @@ async function confirmarParcial(id, qtdTotal, prefix, renderPrefix) {
 
 
 async function verificarItem(itemId, status, obs='', qtdFalta=0, prefix, renderPrefix) {
-  // Usa separadorAtual se disponível, senão usa dados do usuário logado
   const sepId   = separadorAtual ? separadorAtual.id   : (usuarioAtual?.id   || 0);
   const sepNome = separadorAtual ? separadorAtual.nome  : (usuarioAtual?.nome || '');
   try {
@@ -641,7 +683,6 @@ async function verificarItem(itemId, status, obs='', qtdFalta=0, prefix, renderP
     if (item) { item.status=status; item.obs=obs; item.aviso_status=''; }
     if (status==='falta')     toast('❌ Falta — repositor avisado!','aviso');
     if (status==='parcial')   toast('🟡 Parcial — repositor avisado!','aviso');
-    // sem toast para encontrado — evita poluição visual
     renderChecklist(renderPrefix);
   } catch(e) { toast('Erro ao verificar item!','erro'); }
 }
