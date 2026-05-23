@@ -1103,11 +1103,12 @@ function filtrarEmbalagemMobile() {
   }
   const embalando = filtrados.filter(p => p.status_embalagem === 'embalando');
   const pendentes = filtrados.filter(p => !p.status_embalagem || p.status_embalagem === 'pendente');
-  el.innerHTML = [...embalando.map(p => renderCardEmb(p, true, 'mobile')), ...pendentes.map(p => renderCardEmb(p, false, 'mobile'))].join('');
+  // Fila tab = read-only (sem botões de ação)
+  el.innerHTML = [...embalando.map(p => renderCardEmb(p, true, 'mobile', true)), ...pendentes.map(p => renderCardEmb(p, false, 'mobile', true))].join('');
 }
 
-function renderCardEmb(p, emAndamento, mode) {
-  // mode: 'mobile' (default) | 'desk'
+function renderCardEmb(p, emAndamento, mode, readOnly) {
+  // mode: 'mobile' (default) | 'desk'   readOnly: true = Fila tab (no action buttons)
   const isDesk   = mode === 'desk';
   const initFn   = isDesk ? 'iniciarEmbalagemDesk'   : 'iniciarEmbalagemMobile';
   const endFn    = isDesk ? 'encerrarEmbalagemDesk'  : 'encerrarEmbalagemMobile';
@@ -1122,27 +1123,47 @@ function renderCardEmb(p, emAndamento, mode) {
     : emAndamento
       ? `<span style="font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;background:#2563eb;color:#fff;animation:pulse 1.5s infinite">⏱ EM ANDAMENTO</span>`
       : '';
-  const botoes = isEmbalado
-    ? `<div style="padding:12px 16px;background:#f0fdf4;border-top:1px solid #bbf7d0">
-         <div style="font-size:12px;color:#16a34a;font-weight:700">✅ Embalado por <b>${p.embalado_por||'—'}</b></div>
-       </div>`
-    : `<div style="padding:14px 16px;display:grid;grid-template-columns:${emAndamento?'1fr 1fr':'1fr'};gap:10px">
-        ${emAndamento ? `
-          <button onclick="${initFn}(${p.id})"
-            style="padding:14px;background:#f1f5f9;color:#64748b;border:2px solid #cbd5e1;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer">
-            🔄 Reiniciar
-          </button>
-          <button onclick="${endFn}(${p.id})"
-            style="padding:14px;background:#16a34a;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(22,163,74,.3)">
-            ✅ Encerrar
-          </button>
-        ` : `
-          <button onclick="${initFn}(${p.id})"
-            style="padding:16px;background:#4f46e5;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(79,70,229,.3)">
-            ▶️ Iniciar Embalagem
-          </button>
-        `}
-       </div>`;
+  let botoes;
+  if (readOnly) {
+    // Fila tab — exibe apenas o status, sem botões de ação
+    const statusInfo = isEmbalado
+      ? `<div style="display:flex;align-items:center;gap:8px;padding:10px 16px;background:#f0fdf4;border-top:1px solid #bbf7d0">
+           <span style="font-size:14px">✅</span>
+           <span style="font-size:12px;color:#16a34a;font-weight:700">Embalado por <b>${p.embalado_por||'—'}</b></span>
+         </div>`
+      : emAndamento
+        ? `<div style="display:flex;align-items:center;gap:8px;padding:10px 16px;background:#eff6ff;border-top:1px solid #bfdbfe">
+             <span style="font-size:14px">⏱</span>
+             <span style="font-size:12px;color:#2563eb;font-weight:700">Em andamento</span>
+           </div>`
+        : `<div style="display:flex;align-items:center;gap:8px;padding:10px 16px;background:var(--surface2);border-top:1px solid var(--border)">
+             <span style="font-size:14px">⏳</span>
+             <span style="font-size:12px;color:var(--text3);font-weight:600">Aguardando embalagem</span>
+           </div>`;
+    botoes = statusInfo;
+  } else {
+    botoes = isEmbalado
+      ? `<div style="padding:12px 16px;background:#f0fdf4;border-top:1px solid #bbf7d0">
+           <div style="font-size:12px;color:#16a34a;font-weight:700">✅ Embalado por <b>${p.embalado_por||'—'}</b></div>
+         </div>`
+      : `<div style="padding:14px 16px;display:grid;grid-template-columns:${emAndamento?'1fr 1fr':'1fr'};gap:10px">
+          ${emAndamento ? `
+            <button onclick="${initFn}(${p.id})"
+              style="padding:14px;background:#f1f5f9;color:#64748b;border:2px solid #cbd5e1;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer">
+              🔄 Reiniciar
+            </button>
+            <button onclick="${endFn}(${p.id})"
+              style="padding:14px;background:#16a34a;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(22,163,74,.3)">
+              ✅ Encerrar
+            </button>
+          ` : `
+            <button onclick="${initFn}(${p.id})"
+              style="padding:16px;background:#4f46e5;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(79,70,229,.3)">
+              ▶️ Iniciar Embalagem
+            </button>
+          `}
+         </div>`;
+  }
   return `
     <div style="background:var(--surface);border-radius:16px;${!isDesk?'margin-bottom:14px;':''}overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.1);${isEmbalado?'opacity:.7':''}">
       <div style="background:${corFundo};border-left:5px solid ${corBorda};padding:14px 16px">
@@ -1206,9 +1227,10 @@ async function carregarEmbalagemMobile() {
     }
     const embalando = pedidos.filter(p => p.status_embalagem === 'embalando');
     const pendentes = pedidos.filter(p => !p.status_embalagem || p.status_embalagem === 'pendente');
+    // Fila tab = read-only (sem botões de ação)
     el.innerHTML = [
-      ...embalando.map(p => renderCardEmb(p, true,  'mobile')),
-      ...pendentes.map(p => renderCardEmb(p, false, 'mobile')),
+      ...embalando.map(p => renderCardEmb(p, true,  'mobile', true)),
+      ...pendentes.map(p => renderCardEmb(p, false, 'mobile', true)),
     ].join('');
   } catch(e) { if(el) el.innerHTML = '<div style="color:#ef4444;text-align:center;padding:24px">Erro ao carregar</div>'; }
 }

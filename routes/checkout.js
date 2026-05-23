@@ -144,13 +144,19 @@ router.put('/checkout/:id/confirmar', requerAuth, async (req,res) => {
   } catch(e){res.status(500).json({erro:e.message});}
 });
 
-router.put('/checkout/:id/liberar', requerAuth, requerPerfil('supervisor'), async (req,res) => {
+router.put('/checkout/:id/liberar', requerAuth, async (req,res) => {
   try {
-    const ck = await db.get('SELECT pedido_id FROM checkout WHERE id=$1',[req.params.id]);
+    const ck = await db.get('SELECT pedido_id, status FROM checkout WHERE id=$1',[req.params.id]);
     if (ck) {
+      // Libera o número da caixa do pedido para reutilização
       await pool.query(`UPDATE pedidos SET numero_caixa='' WHERE id=$1`,[ck.pedido_id]);
-      await pool.query(`DELETE FROM checkout WHERE id=$1`,[req.params.id]);
+      if (ck.status !== 'concluido') {
+        // Só exclui se nunca foi confirmado (liberar sem fazer checkout)
+        await pool.query(`DELETE FROM checkout WHERE id=$1`,[req.params.id]);
+      }
+      // Se já estava concluído, mantém o registro para os KPIs
     }
+    const cache = req.app.get('kpiCache'); if (cache) cache.ts = 0;
     res.json({mensagem:'Caixa liberada!'});
   } catch(e){res.status(500).json({erro:e.message});}
 });
