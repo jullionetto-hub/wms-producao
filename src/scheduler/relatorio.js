@@ -1,46 +1,35 @@
-'use strict';
-// Agendador de relatórios diários usando node-cron.
-// Substitui o setTimeout frágil do index.js original.
-// Instale a dependência: npm install node-cron
+/**
+ * src/scheduler/relatorio.js
+ * Agenda a geração automática do relatório diário via node-cron.
+ *
+ * Dependência: npm install node-cron
+ */
 
-const cron               = require('node-cron');
-const { gerarRelatorio }  = require('../../lib/relatorio');
-const { db }             = require('../../lib/db');
-const { dataHoraLocal }  = require('../../lib/helpers');
-const log                = require('../../lib/logger');
+const cron = require('node-cron');
+const env  = require('../config/env');
 
-async function verificarRelatoriosPerdidos() {
-  try {
-    const ontem = new Date();
-    ontem.setDate(ontem.getDate() - 1);
-    const dataOntem = ontem.toISOString().split('T')[0];
-    const existe = await db.get('SELECT id FROM relatorios_diarios WHERE data=$1', [dataOntem]);
-    if (!existe) {
-      log.info({ data: dataOntem }, 'gerando relatório perdido de ontem');
-      await gerarRelatorio(dataOntem);
-    }
-  } catch (e) {
-    log.error({ err: e }, 'erro ao verificar relatórios perdidos');
+/**
+ * @param {() => Promise<void>} gerarFn  Função que gera o relatório do dia
+ */
+function agendarRelatorio(gerarFn) {
+  if (!cron.validate(env.RELATORIO_CRON)) {
+    console.error(`[scheduler] Expressão cron inválida: ${env.RELATORIO_CRON}`);
+    return;
   }
-}
 
-function iniciarScheduler() {
-  // Roda todo dia às 23:55 no fuso de Brasília
-  cron.schedule('55 23 * * *', async () => {
+  cron.schedule(env.RELATORIO_CRON, async () => {
+    console.log(`[scheduler] Gerando relatório diário — ${new Date().toLocaleString('pt-BR')}`);
     try {
-      const { data } = dataHoraLocal();
-      const existe = await db.get('SELECT id FROM relatorios_diarios WHERE data=$1', [data]);
-      if (!existe) {
-        log.info({ data }, 'gerando relatório diário agendado');
-        await gerarRelatorio(data);
-        log.info({ data }, 'relatório diário gerado com sucesso');
-      }
-    } catch (e) {
-      log.error({ err: e }, 'erro ao gerar relatório diário');
+      await gerarFn();
+      console.log('[scheduler] Relatório gerado com sucesso.');
+    } catch (err) {
+      console.error('[scheduler] Erro ao gerar relatório:', err.message);
     }
-  }, { timezone: 'America/Sao_Paulo' });
+  }, {
+    timezone: env.TZ,
+  });
 
-  log.info('scheduler de relatório diário iniciado (23:55 BRT)');
+  console.log(`[scheduler] Relatório agendado: "${env.RELATORIO_CRON}" (${env.TZ})`);
 }
 
-module.exports = { iniciarScheduler, verificarRelatoriosPerdidos };
+module.exports = { agendarRelatorio };

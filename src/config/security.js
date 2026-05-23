@@ -1,37 +1,43 @@
-'use strict';
-const cors   = require('cors');
+/**
+ * src/config/security.js
+ * Configura headers de segurança: Helmet, CORS e redirect HTTPS.
+ */
+
 const helmet = require('helmet');
-const { isProd, ALLOWED_ORIGINS } = require('./env');
+const env    = require('./env');
 
-// Força HTTPS em produção
-function httpsRedirect(req, res, next) {
-  if (!isProd) return next();
-  if (req.secure || req.headers['x-forwarded-proto'] === 'https') return next();
-  return res.redirect(301, `https://${req.hostname}${req.url}`);
+/**
+ * Aplica todas as configurações de segurança no app Express.
+ * @param {import('express').Application} app
+ */
+function applySecurity(app) {
+  // Trust proxy reverso (Railway, Render, Heroku, etc.)
+  if (env.TRUST_PROXY) {
+    app.set('trust proxy', 1);
+  }
+
+  // Helmet — headers de segurança padrão
+  app.use(helmet({
+    contentSecurityPolicy: false, // CSP manual abaixo se necessário
+    crossOriginEmbedderPolicy: false,
+  }));
+
+  // Headers manuais adicionais
+  app.use((_req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    next();
+  });
+
+  // Redirect HTTP → HTTPS em produção
+  if (env.FORCE_HTTPS) {
+    app.use((req, res, next) => {
+      if (req.headers['x-forwarded-proto'] !== 'https') {
+        return res.redirect(301, `https://${req.headers.host}${req.url}`);
+      }
+      next();
+    });
+  }
 }
 
-// Configuração do CORS
-const corsMiddleware = cors({
-  credentials: true,
-  origin: (origin, cb) => {
-    if (!isProd) return cb(null, origin || 'http://localhost:3000');
-    if (!origin || ALLOWED_ORIGINS.includes(origin)) return cb(null, origin);
-    cb(new Error('Origem não permitida pelo CORS'));
-  },
-});
-
-// Headers extras de segurança
-function extraHeaders(req, res, next) {
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'DENY');
-  res.setHeader('X-XSS-Protection', '1; mode=block');
-  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-  next();
-}
-
-const helmetMiddleware = helmet({
-  contentSecurityPolicy: false,
-  crossOriginEmbedderPolicy: false,
-});
-
-module.exports = { httpsRedirect, corsMiddleware, extraHeaders, helmetMiddleware };
+module.exports = { applySecurity };

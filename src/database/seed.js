@@ -1,19 +1,24 @@
-'use strict';
-// Cria o usuário administrador padrão se ainda não existir.
-// ATENÇÃO: A senha padrão '123456' deve ser trocada no primeiro login.
-// O campo senha_temporaria=true força a troca de senha ao entrar.
+/**
+ * src/database/seed.js
+ * Cria dados iniciais (admin padrão) se o banco estiver vazio.
+ */
 
-const { pool }      = require('../../lib/db');
-const { hashSenha } = require('../../lib/helpers');
+const bcrypt = require('bcrypt');
 
-async function criarUsuarioPadrao() {
-  await pool.query(
-    `INSERT INTO usuarios (nome, login, senha_hash, perfil, perfis_acesso, status, senha_temporaria)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)
-     ON CONFLICT (login) DO NOTHING`,
-    ['Supervisor Master', 'admin', hashSenha('123456'),
-     'supervisor', 'separador,repositor,checkout', 'ativo', true]
-  );
+/**
+ * @param {import('better-sqlite3').Database} db
+ */
+async function seedAdmin(db) {
+  const existe = db.prepare('SELECT id FROM usuarios WHERE login = ?').get('admin');
+  if (existe) return;
+
+  const hash = await bcrypt.hash('admin123', 10);
+  db.prepare(`
+    INSERT INTO usuarios (nome, login, senha_hash, perfil, turno, senha_temporaria)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `).run('Administrador', 'admin', hash, 'supervisor', 'Manha', 1);
+
+  console.log('[seed] Usuário admin criado (login: admin | senha: admin123 — TROQUE AO PRIMEIRO ACESSO)');
 }
 
-module.exports = { criarUsuarioPadrao };
+module.exports = { seedAdmin };

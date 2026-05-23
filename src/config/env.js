@@ -1,21 +1,29 @@
-'use strict';
-// Centraliza e valida todas as variáveis de ambiente.
-// Importe este módulo onde precisar de configs; nunca use process.env diretamente.
+/**
+ * src/config/env.js
+ * Centraliza todas as variáveis de ambiente.
+ * Nenhuma outra parte do código deve ler process.env diretamente.
+ */
 
-function required(name) {
-  const v = process.env[name];
-  if (!v) throw new Error(`Variável de ambiente obrigatória não definida: ${name}`);
-  return v;
+const env = {
+  PORT:        process.env.PORT        || 3000,
+  NODE_ENV:    process.env.NODE_ENV    || 'development',
+  DATABASE_URL: process.env.DATABASE_URL,
+
+  // Sessão
+  SESSION_SECRET: process.env.SESSION_SECRET || 'wms-secret-dev-change-in-prod',
+  SESSION_MAX_AGE: parseInt(process.env.SESSION_MAX_AGE || '86400000'), // 24h
+
+  // HTTPS / proxy reverso
+  TRUST_PROXY: process.env.TRUST_PROXY === 'true' || process.env.NODE_ENV === 'production',
+  FORCE_HTTPS: process.env.FORCE_HTTPS === 'true',
+
+  // Relatório diário (cron)
+  RELATORIO_CRON: process.env.RELATORIO_CRON || '0 23 * * *', // 23:00 todo dia
+  TZ: process.env.TZ || 'America/Sao_Paulo',
+};
+
+if (!env.DATABASE_URL) {
+  console.warn('[env] DATABASE_URL não definida — usando SQLite local (dev)');
 }
 
-const isProd = process.env.NODE_ENV === 'production';
-const isTest = process.env.NODE_ENV === 'test';
-
-module.exports = {
-  isProd,
-  isTest,
-  PORT: process.env.PORT || 3000,
-  DATABASE_URL: isProd || !isTest ? required('DATABASE_URL') : process.env.DATABASE_URL,
-  SESSION_SECRET: isProd ? required('SESSION_SECRET') : (process.env.SESSION_SECRET || 'dev_secret_local_apenas'),
-  ALLOWED_ORIGINS: (process.env.ALLOWED_ORIGINS || '').split(',').map(o => o.trim()).filter(Boolean),
-};
+module.exports = env;

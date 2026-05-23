@@ -1,49 +1,39 @@
-'use strict';
-// Executa o schema completo (tabelas + índices).
-// Todas as tabelas usam CREATE IF NOT EXISTS, então é seguro rodar múltiplas vezes.
+/**
+ * src/database/migrate.js
+ * Aplica o schema no banco e executa migrations incrementais.
+ * Seguro para executar múltiplas vezes (idempotente).
+ */
 
-const { pool }            = require('../../lib/db');
-const { TABLES, INDEXES } = require('./schema');
-const log                 = require('../../lib/logger');
+const { applySchema } = require('./schema');
 
-// Seed de configurações padrão e alterações de colunas aplicadas após criação inicial
-const ALTERATIONS = [
-  "INSERT INTO configuracoes (chave,valor,descricao) VALUES ('meta_separacao','75','Meta pedidos separação/turno') ON CONFLICT (chave) DO NOTHING",
-  "INSERT INTO configuracoes (chave,valor,descricao) VALUES ('meta_embalagem','120','Meta embalagem/turno') ON CONFLICT (chave) DO NOTHING",
-  "INSERT INTO configuracoes (chave,valor,descricao) VALUES ('meta_checkout','90','Meta checkout/turno') ON CONFLICT (chave) DO NOTHING",
-  "INSERT INTO configuracoes (chave,valor,descricao) VALUES ('meta_reposicao','90','Meta reposição/turno') ON CONFLICT (chave) DO NOTHING",
-  "INSERT INTO configuracoes (chave,valor,descricao) VALUES ('horas_turno_manha','8','Horas turno Manhã') ON CONFLICT (chave) DO NOTHING",
-  "INSERT INTO configuracoes (chave,valor,descricao) VALUES ('horas_turno_tarde','8','Horas turno Tarde') ON CONFLICT (chave) DO NOTHING",
-  "INSERT INTO configuracoes (chave,valor,descricao) VALUES ('horas_turno_noite','6','Horas turno Noite') ON CONFLICT (chave) DO NOTHING",
-  "ALTER TABLE passagem_turno ADD COLUMN IF NOT EXISTS sep_separados INTEGER DEFAULT 0",
-  "ALTER TABLE passagem_turno ADD COLUMN IF NOT EXISTS sep_pendentes INTEGER DEFAULT 0",
-  "ALTER TABLE passagem_turno ADD COLUMN IF NOT EXISTS sep_em_separacao INTEGER DEFAULT 0",
-  "ALTER TABLE passagem_turno ADD COLUMN IF NOT EXISTS ck_feitos INTEGER DEFAULT 0",
-  "ALTER TABLE passagem_turno ADD COLUMN IF NOT EXISTS ck_pendentes INTEGER DEFAULT 0",
-  "ALTER TABLE passagem_turno ADD COLUMN IF NOT EXISTS emb_embalados INTEGER DEFAULT 0",
-  "ALTER TABLE passagem_turno ADD COLUMN IF NOT EXISTS emb_pendentes INTEGER DEFAULT 0",
-  "ALTER TABLE passagem_turno ADD COLUMN IF NOT EXISTS rep_procurando INTEGER DEFAULT 0",
-  "ALTER TABLE passagem_turno ADD COLUMN IF NOT EXISTS rep_na_rua INTEGER DEFAULT 0",
-  "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS embalagem_iniciado_em VARCHAR(20) DEFAULT ''",
-  "ALTER TABLE embalagem ADD COLUMN IF NOT EXISTS embalagem_inicio VARCHAR(20) DEFAULT ''",
-  // Corrige o DEFAULT da coluna — novos pedidos devem começar como 'nao_iniciado', não 'pendente'
-  "ALTER TABLE pedidos ALTER COLUMN status_embalagem SET DEFAULT 'nao_iniciado'",
-  // Corrige pedidos existentes que nunca passaram pelo checkout nem pela embalagem
-  `UPDATE pedidos SET status_embalagem='nao_iniciado'
-   WHERE status='concluido'
-     AND status_embalagem='pendente'
-     AND NOT EXISTS (SELECT 1 FROM checkout c WHERE c.pedido_id=pedidos.id AND c.status='concluido')
-     AND NOT EXISTS (SELECT 1 FROM embalagem e WHERE e.pedido_id=pedidos.id)`,
-  // Normaliza valores de turno — remove acentos para consistência com o filtro do dashboard
-  "UPDATE usuarios SET turno='Manha' WHERE turno='Manhã'",
-  "UPDATE separadores SET turno='Manha' WHERE turno='Manhã'",
-];
+/**
+ * @param {import('better-sqlite3').Database} db
+ */
+function runMigrations(db) {
+  // 1. Garante que as tabelas existem
+  applySchema(db);
 
-async function runSchema() {
-  for (const sql of TABLES)      await pool.query(sql);
-  for (const sql of INDEXES)     await pool.query(sql);
-  for (const sql of ALTERATIONS) await pool.query(sql).catch(() => {});
-  log.info('schema, índices e migrações aplicados com sucesso');
+  // 2. Migrations incrementais — ADD COLUMN é seguro de repetir com try/catch
+  const alterColumns = [
+    // pedidos
+    `ALTER TABLE pedidos ADD COLUMN tem_prime INTEGER DEFAULT 0`,
+    `ALTER TABLE pedidos ADD COLUMN numero_caixa TEXT`,
+    // usuarios
+    `ALTER TABLE usuarios ADD COLUMN senha_temporaria INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE usuarios ADD COLUMN subtipo_repositor TEXT`,
+    `ALTER TABLE usuarios ADD COLUMN permissoes TEXT`,
+    // repositor_avisos
+    `ALTER TABLE repositor_avisos ADD COLUMN supervisor_liberou INTEGER DEFAULT 0`,
+    `ALTER TABLE repositor_avisos ADD COLUMN supervisor_nome TEXT`,
+    `ALTER TABLE repositor_avisos ADD COLUMN decisao_supervisor TEXT`,
+    `ALTER TABLE repositor_avisos ADD COLUMN atualizado_em DATETIME DEFAULT CURRENT_TIMESTAMP`,
+  ];
+
+  for (const sql of alterColumns) {
+    try { db.exec(sql); } catch (_e) { /* coluna já existe — ignora */ }
+  }
+
+  console.log('[migrate] Schema atualizado com sucesso.');
 }
 
-module.exports = { runSchema };
+module.exports = { runMigrations };
