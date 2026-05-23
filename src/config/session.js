@@ -1,21 +1,30 @@
 'use strict';
-/**
- * src/config/session.js
- * Configuração da sessão Express.
- * Troque o store por connect-pg-simple ou connect-sqlite3 se precisar persistência.
- */
+const session   = require('express-session');
+const pgSession = require('connect-pg-simple')(session);
+const { pool }  = require('../../lib/db');
+const { SESSION_SECRET, isProd, isTest } = require('./env');
+const log = require('../../lib/logger');
 
-const session = require('express-session');
-const env     = require('./env');
+const store = isTest
+  ? new session.MemoryStore()
+  : new pgSession({
+      pool,
+      tableName: 'session',
+      createTableIfMissing: true,
+      errorLog: (msg) => log.error({ msg }, 'session-store'),
+    });
 
 const sessionMiddleware = session({
-  secret:            env.SESSION_SECRET,
-  resave:            false,
+  store,
+  secret: SESSION_SECRET,
+  resave: false,
   saveUninitialized: false,
+  rolling: true,
+  name: 'wms.sid',
   cookie: {
-    secure:   env.isProd,
+    maxAge: 8 * 60 * 60 * 1000,
     httpOnly: true,
-    maxAge:   env.SESSION_MAX_AGE,
+    secure: isProd,
     sameSite: 'lax',
   },
 });

@@ -1,24 +1,19 @@
 'use strict';
-/**
- * src/database/seed.js
- * Cria o usuário administrador padrão se não existir.
- */
+// Cria o usuário administrador padrão se ainda não existir.
+// ATENÇÃO: A senha padrão '123456' deve ser trocada no primeiro login.
+// O campo senha_temporaria=true força a troca de senha ao entrar.
 
-const bcrypt    = require('bcrypt');
-const { pool }  = require('../../lib/db');
+const { pool }      = require('../../lib/db');
+const { hashSenha } = require('../../lib/helpers');
 
 async function criarUsuarioPadrao() {
-  const { rows } = await pool.query('SELECT id FROM usuarios WHERE login = $1', ['admin']);
-  if (rows.length > 0) return;
-
-  const hash = await bcrypt.hash('admin123', 10);
   await pool.query(
-    `INSERT INTO usuarios (nome, login, senha_hash, perfil, turno, senha_temporaria)
-     VALUES ($1, $2, $3, $4, $5, $6)`,
-    ['Administrador', 'admin', hash, 'supervisor', 'Manha', 1]
+    `INSERT INTO usuarios (nome, login, senha_hash, perfil, perfis_acesso, status, senha_temporaria)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
+     ON CONFLICT (login) DO NOTHING`,
+    ['Supervisor Master', 'admin', hashSenha('123456'),
+     'supervisor', 'separador,repositor,checkout', 'ativo', true]
   );
-
-  console.log('[seed] Admin criado — login: admin | senha: admin123 (TROQUE NO PRIMEIRO ACESSO)');
 }
 
 module.exports = { criarUsuarioPadrao };
