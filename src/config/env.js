@@ -1,29 +1,36 @@
+'use strict';
 /**
  * src/config/env.js
- * Centraliza todas as variáveis de ambiente.
- * Nenhuma outra parte do código deve ler process.env diretamente.
+ * Único lugar que lê process.env.
+ * Exporte somente constantes tipadas — nunca strings brutas espalhadas pelo código.
  */
 
+const PORT    = parseInt(process.env.PORT  || '3000', 10);
+const isProd  = process.env.NODE_ENV === 'production';
+
 const env = {
-  PORT:        process.env.PORT        || 3000,
-  NODE_ENV:    process.env.NODE_ENV    || 'development',
-  DATABASE_URL: process.env.DATABASE_URL,
+  PORT,
+  isProd,
+  NODE_ENV:       process.env.NODE_ENV    || 'development',
+  DATABASE_URL:   process.env.DATABASE_URL,
 
   // Sessão
-  SESSION_SECRET: process.env.SESSION_SECRET || 'wms-secret-dev-change-in-prod',
-  SESSION_MAX_AGE: parseInt(process.env.SESSION_MAX_AGE || '86400000'), // 24h
+  SESSION_SECRET:  process.env.SESSION_SECRET  || 'wms-secret-dev-troque-em-prod',
+  SESSION_MAX_AGE: parseInt(process.env.SESSION_MAX_AGE || String(24 * 60 * 60 * 1000), 10), // 24 h
 
-  // HTTPS / proxy reverso
-  TRUST_PROXY: process.env.TRUST_PROXY === 'true' || process.env.NODE_ENV === 'production',
-  FORCE_HTTPS: process.env.FORCE_HTTPS === 'true',
+  // Segurança
+  FORCE_HTTPS:  process.env.FORCE_HTTPS  === 'true',
+  CORS_ORIGIN:  process.env.CORS_ORIGIN  || '*',
 
-  // Relatório diário (cron)
-  RELATORIO_CRON: process.env.RELATORIO_CRON || '0 23 * * *', // 23:00 todo dia
-  TZ: process.env.TZ || 'America/Sao_Paulo',
+  // Scheduler
+  RELATORIO_CRON: process.env.RELATORIO_CRON || '0 23 * * *',
+  TZ:             process.env.TZ             || 'America/Sao_Paulo',
 };
 
-if (!env.DATABASE_URL) {
-  console.warn('[env] DATABASE_URL não definida — usando SQLite local (dev)');
+if (!env.DATABASE_URL && isProd) {
+  console.warn('[env] DATABASE_URL não definida em produção!');
 }
 
 module.exports = env;
+module.exports.PORT   = PORT;
+module.exports.isProd = isProd;

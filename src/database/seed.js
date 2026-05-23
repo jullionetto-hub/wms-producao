@@ -1,14 +1,13 @@
+'use strict';
 /**
  * src/database/seed.js
- * Cria dados iniciais (admin padrão) se o banco estiver vazio.
+ * Cria o usuário administrador padrão se o banco estiver vazio.
  */
 
 const bcrypt = require('bcrypt');
+const db     = require('../../lib/db');
 
-/**
- * @param {import('better-sqlite3').Database} db
- */
-async function seedAdmin(db) {
+async function criarUsuarioPadrao() {
   const existe = db.prepare('SELECT id FROM usuarios WHERE login = ?').get('admin');
   if (existe) return;
 
@@ -18,7 +17,7 @@ async function seedAdmin(db) {
     VALUES (?, ?, ?, ?, ?, ?)
   `).run('Administrador', 'admin', hash, 'supervisor', 'Manha', 1);
 
-  console.log('[seed] Usuário admin criado (login: admin | senha: admin123 — TROQUE AO PRIMEIRO ACESSO)');
+  console.log('[seed] Admin criado — login: admin | senha: admin123 (TROQUE AO PRIMEIRO ACESSO)');
 }
 
-module.exports = { seedAdmin };
+module.exports = { criarUsuarioPadrao };

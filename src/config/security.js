@@ -1,43 +1,44 @@
+'use strict';
 /**
  * src/config/security.js
- * Configura headers de segurança: Helmet, CORS e redirect HTTPS.
+ * Middlewares de segurança: Helmet, CORS, headers extras e redirect HTTPS.
+ *
+ * Exporta funções/middlewares prontos para usar no app.use().
  */
 
 const helmet = require('helmet');
 const env    = require('./env');
 
-/**
- * Aplica todas as configurações de segurança no app Express.
- * @param {import('express').Application} app
- */
-function applySecurity(app) {
-  // Trust proxy reverso (Railway, Render, Heroku, etc.)
-  if (env.TRUST_PROXY) {
-    app.set('trust proxy', 1);
+// ── Redirect HTTP → HTTPS ────────────────────────────────────────────────────
+const httpsRedirect = (req, res, next) => {
+  if (env.FORCE_HTTPS && req.headers['x-forwarded-proto'] !== 'https') {
+    return res.redirect(301, `https://${req.headers.host}${req.url}`);
   }
+  next();
+};
 
-  // Helmet — headers de segurança padrão
-  app.use(helmet({
-    contentSecurityPolicy: false, // CSP manual abaixo se necessário
-    crossOriginEmbedderPolicy: false,
-  }));
+// ── Helmet — headers de segurança padrão ─────────────────────────────────────
+const helmetMiddleware = helmet({
+  contentSecurityPolicy:    false,
+  crossOriginEmbedderPolicy: false,
+});
 
-  // Headers manuais adicionais
-  app.use((_req, res, next) => {
-    res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-    next();
-  });
+// ── CORS simples (origin dinâmica para suportar credenciais) ──────────────────
+const corsMiddleware = (req, res, next) => {
+  const origin = req.headers.origin || '*';
+  res.setHeader('Access-Control-Allow-Origin',      origin);
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Methods',     'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers',     'Content-Type, Authorization');
+  if (req.method === 'OPTIONS') return res.sendStatus(204);
+  next();
+};
 
-  // Redirect HTTP → HTTPS em produção
-  if (env.FORCE_HTTPS) {
-    app.use((req, res, next) => {
-      if (req.headers['x-forwarded-proto'] !== 'https') {
-        return res.redirect(301, `https://${req.headers.host}${req.url}`);
-      }
-      next();
-    });
-  }
-}
+// ── Headers adicionais ────────────────────────────────────────────────────────
+const extraHeaders = (_req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Referrer-Policy',        'strict-origin-when-cross-origin');
+  next();
+};
 
-module.exports = { applySecurity };
+module.exports = { httpsRedirect, helmetMiddleware, corsMiddleware, extraHeaders };
