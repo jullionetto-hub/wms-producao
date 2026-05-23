@@ -354,7 +354,7 @@ function irPara(pag, el) {
   if (pg) pg.classList.add('ativa');
   if (el) el.classList.add('ativo');
   if (pag === 'dashboard')       { carregarDashboard(); mudarDashTab('operacao'); }
-  if (pag === 'pedidos') { popularSelects(); var _pi=document.getElementById('filtro-ped-ini'),_pf=document.getElementById('filtro-ped-fim'); if(_pi&&!_pi.value)_pi.value=hojeLocal(); if(_pf&&!_pf.value)_pf.value=hojeLocal(); carregarPedidos(); carregarPedidosBloqueados(); }
+  if (pag === 'pedidos') { popularSelects(); var _pi=document.getElementById('filtro-ped-ini'),_pf=document.getElementById('filtro-ped-fim'); if(_pi&&!_pi.value)_pi.value=hojeLocal(); if(_pf&&!_pf.value)_pf.value=hojeLocal(); carregarPedidos(); }
   if (pag === 'cadastros')       { trocarCadastroTab('usuarios'); carregarUsuarios(); }
   if (pag === 'separacao')       { var _si=document.getElementById('sep-ini'),_sf=document.getElementById('sep-fim'); if(_si&&!_si.value)_si.value=hojeLocal(); if(_sf&&!_sf.value)_sf.value=hojeLocal(); carregarFila(); carregarContadoresSep(); }
   if (pag === 'estatisticas')    { carregarEstatisticas(); carregarCheckoutLista(); }
@@ -398,9 +398,9 @@ function iniciarPorPerfil() {
     carregarDashboard();
     setInterval(atualizarBadgeRep, 15000);
     atualizarBadgeRep();
-    // Verifica bloqueados periodicamente para manter badge atualizado
+    // Atualiza badge de bloqueados periodicamente (só o badge — banner removido da tela Pedidos)
     setInterval(carregarPedidosBloqueados, 20000);
-    carregarPedidosBloqueados();
+    carregarPedidosBloqueados(); // mantém o badge do menu atualizado
   }
   if (usuarioAtual.perfil === 'separador') {
     document.getElementById('pag-separacao').classList.add('ativa');
