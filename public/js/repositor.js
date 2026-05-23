@@ -44,20 +44,31 @@ function ativarMobileRep() {
   document.body.classList.add('rep-mobile');
   document.getElementById('rep-mobile-root').style.display = 'flex';
   document.getElementById('rep-tabbar').style.display = 'flex';
-  mudarTabRep('avisos');
-  carregarUsuariosParaRep().then(() => carregarAvisosMobile());
-  setInterval(() => carregarAvisosMobile(), 30000);
+  carregarUsuariosParaRep();
+  mudarTabRep('separar');
+  setInterval(() => {
+    const aba = document.querySelector('.rep-tab.ativo')?.id?.replace('rtab-','') || 'separar';
+    if      (aba === 'separar')   carregarRepSeparar(true);
+    else if (aba === 'separado')  carregarRepSeparado(true);
+    else if (aba === 'subiu')     carregarRepSubiu(true);
+    else if (aba === 'protocolo') carregarRepProtocolo(true);
+  }, 30000);
 }
 
+const _REP_TABS_LIST = ['separar','separado','subiu','protocolo','stats'];
+
 function mudarTabRep(tab) {
-  ['avisos','stats'].forEach(t => {
+  _REP_TABS_LIST.forEach(t => {
     const pg = document.getElementById(`rep-tab-${t}`);
     const bt = document.getElementById(`rtab-${t}`);
     if (pg) pg.classList.toggle('ativa', t === tab);
     if (bt) bt.classList.toggle('ativo', t === tab);
   });
-  if (tab === 'avisos') carregarAvisosMobile();
-  if (tab === 'stats')  carregarStatsRepMobile();
+  if      (tab === 'separar')   carregarRepSeparar();
+  else if (tab === 'separado')  carregarRepSeparado();
+  else if (tab === 'subiu')     carregarRepSubiu();
+  else if (tab === 'protocolo') carregarRepProtocolo();
+  else if (tab === 'stats')     carregarStatsRepMobile();
 }
 
 /* ── Usuários ──────────────────────────────────────────────────────── */
@@ -99,9 +110,224 @@ function labelSituacao(sit) {
 }
 
 /* ══════════════════════════════════════════════════════════════════
-   MOBILE — LISTA DE AVISOS
+   MOBILE — ABAS (Separar / Separado / Subiu / Protocolo / Stats)
 ══════════════════════════════════════════════════════════════════ */
-/* ── Mobile filter dropdown ─────────────────────────────────────── */
+
+/* ── Compatibilidade socket-client.js ─────────────────────────────── */
+function carregarAvisosMobile() {
+  const aba = document.querySelector('.rep-tab.ativo')?.id?.replace('rtab-','') || 'separar';
+  if      (aba === 'separar')   carregarRepSeparar(true);
+  else if (aba === 'separado')  carregarRepSeparado(true);
+  else if (aba === 'subiu')     carregarRepSubiu(true);
+  else if (aba === 'protocolo') carregarRepProtocolo(true);
+  _atualizarBadgesRep();
+}
+
+async function _atualizarBadgesRep() {
+  try {
+    const res = await fetch(`${API}/repositor/avisos`, { credentials:'include' });
+    if (!res.ok) return;
+    const av = await res.json();
+    const setBdg = (id, n) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.textContent = n;
+      el.style.display = n ? 'inline-flex' : 'none';
+    };
+    const cnt = (sits) => av.filter(a => sits.includes(a.situacao||a.status)).length;
+    setBdg('rtab-separar-badge',   cnt(['pendente']));
+    setBdg('rtab-separado-badge',  cnt(['verificando','buscado','separado','aguardando_abastecer']));
+    setBdg('rtab-subiu-badge',     cnt(['subiu']));
+    setBdg('rtab-protocolo-badge', cnt(['nao_encontrado']));
+    const setC = (id, n) => { const e=document.getElementById(id); if(e) e.textContent=n; };
+    setC('rep-cnt-separar',   cnt(['pendente']));
+    setC('rep-cnt-separado',  cnt(['verificando','buscado','separado','aguardando_abastecer']));
+    setC('rep-cnt-subiu',     cnt(['subiu']));
+    setC('rep-cnt-protocolo', cnt(['nao_encontrado']));
+  } catch(e) {}
+}
+
+/* ── Carregamento por aba ─────────────────────────────────────────── */
+async function carregarRepSeparar(silent=false) {
+  const el = document.getElementById('rep-lista-separar');
+  if (!el) return;
+  try {
+    const res = await fetch(`${API}/repositor/avisos?status=pendente`, { credentials:'include' });
+    if (!res.ok) throw new Error();
+    const av = await res.json();
+    const n = av.length;
+    const cntEl = document.getElementById('rep-cnt-separar');
+    const bdgEl = document.getElementById('rtab-separar-badge');
+    if (cntEl) cntEl.textContent = n;
+    if (bdgEl) { bdgEl.textContent = n; bdgEl.style.display = n ? 'inline-flex' : 'none'; }
+    el.innerHTML = n
+      ? av.map(a => renderCardRepSimples(a, 'separar')).join('')
+      : `<div style="text-align:center;padding:60px 16px"><div style="font-size:48px;margin-bottom:12px">✅</div><div style="color:var(--text3);font-size:15px;font-weight:500">Nenhum item para separar</div></div>`;
+  } catch(e) {
+    if (!silent) el.innerHTML = `<div style="color:#ef4444;text-align:center;padding:24px;font-size:13px">Erro ao carregar — toque 🔄</div>`;
+  }
+}
+
+async function carregarRepSeparado(silent=false) {
+  const el = document.getElementById('rep-lista-separado');
+  if (!el) return;
+  try {
+    const res = await fetch(`${API}/repositor/avisos?status=verificando,buscado,separado,aguardando_abastecer`, { credentials:'include' });
+    if (!res.ok) throw new Error();
+    const av = await res.json();
+    const n = av.length;
+    const cntEl = document.getElementById('rep-cnt-separado');
+    const bdgEl = document.getElementById('rtab-separado-badge');
+    if (cntEl) cntEl.textContent = n;
+    if (bdgEl) { bdgEl.textContent = n; bdgEl.style.display = n ? 'inline-flex' : 'none'; }
+    el.innerHTML = n
+      ? av.map(a => renderCardRepSimples(a, 'separado')).join('')
+      : `<div style="text-align:center;padding:60px 16px"><div style="font-size:48px;margin-bottom:12px">📦</div><div style="color:var(--text3);font-size:15px;font-weight:500">Nenhum item separado</div></div>`;
+  } catch(e) {
+    if (!silent) el.innerHTML = `<div style="color:#ef4444;text-align:center;padding:24px;font-size:13px">Erro ao carregar — toque 🔄</div>`;
+  }
+}
+
+async function carregarRepSubiu(silent=false) {
+  const el = document.getElementById('rep-lista-subiu');
+  if (!el) return;
+  try {
+    const res = await fetch(`${API}/repositor/avisos?status=subiu`, { credentials:'include' });
+    if (!res.ok) throw new Error();
+    const av = await res.json();
+    const n = av.length;
+    const cntEl = document.getElementById('rep-cnt-subiu');
+    const bdgEl = document.getElementById('rtab-subiu-badge');
+    if (cntEl) cntEl.textContent = n;
+    if (bdgEl) { bdgEl.textContent = n; bdgEl.style.display = n ? 'inline-flex' : 'none'; }
+    el.innerHTML = n
+      ? av.map(a => renderCardRepSimples(a, 'subiu')).join('')
+      : `<div style="text-align:center;padding:60px 16px"><div style="font-size:48px;margin-bottom:12px">⬆️</div><div style="color:var(--text3);font-size:15px;font-weight:500">Nenhum item subiu</div></div>`;
+  } catch(e) {
+    if (!silent) el.innerHTML = `<div style="color:#ef4444;text-align:center;padding:24px;font-size:13px">Erro ao carregar — toque 🔄</div>`;
+  }
+}
+
+async function carregarRepProtocolo(silent=false) {
+  const el = document.getElementById('rep-lista-protocolo');
+  if (!el) return;
+  try {
+    const res = await fetch(`${API}/repositor/avisos?status=nao_encontrado`, { credentials:'include' });
+    if (!res.ok) throw new Error();
+    const av = await res.json();
+    const n = av.length;
+    const cntEl = document.getElementById('rep-cnt-protocolo');
+    const bdgEl = document.getElementById('rtab-protocolo-badge');
+    if (cntEl) cntEl.textContent = n;
+    if (bdgEl) { bdgEl.textContent = n; bdgEl.style.display = n ? 'inline-flex' : 'none'; }
+    el.innerHTML = n
+      ? av.map(a => renderCardRepSimples(a, 'protocolo')).join('')
+      : `<div style="text-align:center;padding:60px 16px"><div style="font-size:48px;margin-bottom:12px">📋</div><div style="color:var(--text3);font-size:15px;font-weight:500">Nenhum item em protocolo</div></div>`;
+  } catch(e) {
+    if (!silent) el.innerHTML = `<div style="color:#ef4444;text-align:center;padding:24px;font-size:13px">Erro ao carregar — toque 🔄</div>`;
+  }
+}
+
+/* ── Card simplificado por aba ────────────────────────────────────── */
+function renderCardRepSimples(a, modo) {
+  const sit        = a.situacao || a.status || 'pendente';
+  const cor        = corSituacao(sit);
+  const nomeLogado = (usuarioAtual?.nome || '').replace(/'/g, "\\'");
+  const qtd        = a.quantidade || 1;
+
+  const envio    = (a.forma_envio || '').trim();
+  const isDrive  = /drive|retirada/i.test(envio);
+  const envioBdg = envio
+    ? `<span style="background:${isDrive?'#fee2e2':'var(--surface2)'};color:${isDrive?'#dc2626':'var(--text2)'};border:1px solid ${isDrive?'#fca5a5':'var(--border)'};font-size:10px;font-weight:700;padding:2px 9px;border-radius:20px">${isDrive?'🚗':'📦'} ${envio}</span>`
+    : '';
+
+  let botoes = '';
+  if (modo === 'separar') {
+    botoes = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:12px 14px;border-top:1px solid var(--border)">
+        <button onclick="acaoRepTab(${a.id},'e_separado','${nomeLogado}','separado')"
+          style="padding:12px;background:#eff6ff;border:2px solid #3b82f6;border-radius:10px;color:#1d4ed8;font-weight:700;font-size:13px;cursor:pointer;touch-action:manipulation">
+          📦 Separado
+        </button>
+        <button onclick="acaoRepTab(${a.id},'e_nao_enc','${nomeLogado}','protocolo')"
+          style="padding:12px;background:#fee2e2;border:2px solid #ef4444;border-radius:10px;color:#dc2626;font-weight:700;font-size:13px;cursor:pointer;touch-action:manipulation">
+          ❌ Não enc.
+        </button>
+      </div>`;
+  } else if (modo === 'separado') {
+    botoes = `
+      <div style="padding:12px 14px;border-top:1px solid var(--border)">
+        <button onclick="acaoRepTab(${a.id},'e_subiu','${nomeLogado}','subiu')"
+          style="width:100%;padding:14px;background:#e0f2fe;border:2px solid #0ea5e9;border-radius:10px;color:#0369a1;font-weight:700;font-size:14px;cursor:pointer;touch-action:manipulation">
+          ⬆️ Subiu
+        </button>
+      </div>`;
+  } else if (modo === 'subiu') {
+    botoes = `
+      <div style="padding:12px 14px;border-top:1px solid var(--border)">
+        <button onclick="acaoRepTab(${a.id},'e_abastecido','${nomeLogado}','done')"
+          style="width:100%;padding:14px;background:#dcfce7;border:2px solid #10b981;border-radius:10px;color:#065f46;font-weight:700;font-size:14px;cursor:pointer;touch-action:manipulation">
+          ✅ Abastecido
+        </button>
+      </div>`;
+  } else if (modo === 'protocolo') {
+    botoes = `
+      <div style="padding:10px 14px;border-top:1px solid var(--border);background:#fff1f2;border-radius:0 0 14px 14px">
+        <div style="font-size:12px;color:#be123c;font-weight:600;text-align:center">⏳ Aguardando liberação do supervisor</div>
+        ${a.quem_pegou?`<div style="font-size:11px;color:#9f1239;text-align:center;margin-top:3px">Registrado por: ${a.quem_pegou}</div>`:''}
+      </div>`;
+  }
+
+  return `
+    <div style="background:var(--surface);border:1px solid var(--border);border-left:4px solid ${cor};border-radius:14px;margin-bottom:10px;overflow:hidden">
+      <div style="padding:14px 14px ${botoes?'8':'14'}px">
+        <div style="font-family:'Space Mono',monospace;font-size:16px;font-weight:700;color:var(--text);margin-bottom:2px">${a.codigo||'—'}</div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:8px;line-height:1.4">${a.descricao||''}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:5px;align-items:center">
+          ${a.numero_pedido?`<span style="background:var(--surface2);border-radius:8px;padding:3px 9px;font-size:11px;color:var(--text2);font-weight:600">📋 ${a.numero_pedido}</span>`:''}
+          ${a.separador_nome?`<span style="background:var(--surface2);border-radius:8px;padding:3px 9px;font-size:11px;color:var(--text2)">👤 ${a.separador_nome}</span>`:''}
+          <span style="background:#fee2e2;border-radius:8px;padding:3px 9px;font-size:11px;font-weight:800;color:#dc2626">${qtd} un</span>
+          ${envioBdg}
+          ${a.endereco?`<span style="background:var(--surface2);border-radius:8px;padding:3px 9px;font-size:10px;color:var(--text3)">📍 ${a.endereco}</span>`:''}
+        </div>
+        ${a.quem_pegou && modo !== 'separar' ? `<div style="margin-top:6px;font-size:11px;color:var(--text3)">📦 <strong style="color:var(--text2)">${a.quem_pegou}</strong></div>` : ''}
+        ${a.hora_aviso?`<div style="margin-top:4px;font-size:10px;color:var(--text3)">🕐 ${a.hora_aviso}${a.data_aviso?' · '+a.data_aviso:''}</div>`:''}
+      </div>
+      ${botoes}
+    </div>`;
+}
+
+/* ── Ação rápida por aba ──────────────────────────────────────────── */
+async function acaoRepTab(id, acao, nomeLogado, proximaTab) {
+  const body = {};
+  if (acao === 'e_separado') {
+    body.situacao = 'buscado';        body.status = 'buscado';
+    body.quem_pegou = nomeLogado;     body.qtd_encontrada = 0;
+  } else if (acao === 'e_nao_enc') {
+    body.situacao = 'nao_encontrado'; body.status = 'nao_encontrado';
+    body.quem_pegou = nomeLogado;     body.qtd_encontrada = 0;
+  } else if (acao === 'e_subiu') {
+    body.situacao = 'subiu';  body.status = 'subiu';
+    body.quem_pegou = nomeLogado;
+  } else if (acao === 'e_abastecido') {
+    body.situacao = 'abastecido'; body.status = 'abastecido';
+    body.quem_pegou = nomeLogado; body.quem_guardou = nomeLogado;
+  }
+  try {
+    const res = await fetch(`${API}/repositor/avisos/${id}`, {
+      credentials:'include', method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(body)
+    });
+    if (res.ok) {
+      toast('Salvo!', 'success');
+      if (proximaTab === 'done') { carregarRepSubiu(); _atualizarBadgesRep(); }
+      else if (proximaTab)       { mudarTabRep(proximaTab); _atualizarBadgesRep(); }
+    } else { toast('Erro ao salvar', 'danger'); }
+  } catch(e) { toast('Sem conexão', 'danger'); }
+}
+
+/* ── Funções legadas (dropdown) mantidas para compatibilidade ─────── */
 function toggleFiltroRepMobile(e) {
   e && e.stopPropagation();
   const drop = document.getElementById('m-rep-fdrop');
@@ -725,13 +951,18 @@ async function exportarIndicadoresExcel() {
     XLSX.utils.book_append_sheet(wb, wsResumo, 'Resumo');
 
     // Aba DETALHADO — todos os itens com quem fez o quê
+    const fmtData = d => {
+      if (!d) return '';
+      const m = String(d).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      return m ? `${m[3]}/${m[2]}/${m[1]}` : d;
+    };
     const detRows = [
       ['DATA','HORÁRIO','CÓDIGO','PRODUTO','SEPARADOR','QUEM PEGOU','QUEM GUARDOU','SITUAÇÃO','FORMA ENVIO','OBS']
     ];
     avisos.forEach(a => {
       const sit = labelSituacao(a.situacao||a.status||'pendente');
       detRows.push([
-        a.data_aviso||'', a.hora_aviso||'', a.codigo||'', a.descricao||'',
+        fmtData(a.data_aviso), a.hora_aviso||'', a.codigo||'', a.descricao||'',
         a.separador_nome||'', a.quem_pegou||'', a.quem_guardou||'',
         sit, a.forma_envio||'', a.obs||''
       ]);
@@ -746,7 +977,7 @@ async function exportarIndicadoresExcel() {
       itens.forEach(it => {
         rows.push([
           it.campo==='quem_pegou'?'Pegou':'Guardou',
-          it.data_aviso||'', it.hora_aviso||'',
+          fmtData(it.data_aviso), it.hora_aviso||'',
           it.codigo||'', it.descricao||'',
           labelSituacao(it.situacao||it.status||''), it.obs||''
         ]);
@@ -758,7 +989,8 @@ async function exportarIndicadoresExcel() {
       XLSX.utils.book_append_sheet(wb, ws, nomeAba.substring(0,31));
     });
 
-    const periodo = sIni&&sFim ? `_${sIni}_ate_${sFim}` : `_${new Date().toISOString().slice(0,10)}`;
+    const fmtFile = d => { const m=String(d||'').match(/^(\d{4})-(\d{2})-(\d{2})$/); return m?`${m[3]}-${m[2]}-${m[1]}`:d||new Date().toLocaleDateString('pt-BR').replace(/\//g,'-'); };
+    const periodo = sIni&&sFim ? `_${fmtFile(sIni)}_ate_${fmtFile(sFim)}` : `_${new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')}`;
     XLSX.writeFile(wb, `indicadores_reposicao${periodo}.xlsx`);
     toast('Excel exportado!', 'success');
   } catch(e) { toast('Erro ao exportar: '+e.message, 'danger'); }

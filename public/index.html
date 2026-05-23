@@ -562,13 +562,12 @@
               <div style="display:flex;gap:6px;align-items:flex-end;flex-wrap:wrap">
                 <button data-sit="" class="btn btn-primary btn-sm rep-filtro-btn" onclick="filtrarReposicao('')">Todos</button>
                 <button data-sit="pendente" class="btn btn-outline btn-sm rep-filtro-btn" onclick="filtrarReposicao('pendente')">⏳ Separar</button>
-                <button data-sit="verificando" class="btn btn-outline btn-sm rep-filtro-btn" onclick="filtrarReposicao('verificando')">🔍 Verificando</button>
-                <button data-sit="buscado" class="btn btn-outline btn-sm rep-filtro-btn" onclick="filtrarReposicao('buscado')">📦 Separado</button>
-                <button data-sit="aguardando_abastecer" class="btn btn-outline btn-sm rep-filtro-btn" onclick="filtrarReposicao('aguardando_abastecer')">🕐 Aguard.</button>
+                <button data-sit="verificando,buscado,separado,aguardando_abastecer" class="btn btn-outline btn-sm rep-filtro-btn" onclick="filtrarReposicao('verificando,buscado,separado,aguardando_abastecer')">📦 Separado</button>
                 <button data-sit="subiu" class="btn btn-outline btn-sm rep-filtro-btn" onclick="filtrarReposicao('subiu')">⬆️ Subiu</button>
+                <button data-sit="nao_encontrado" class="btn btn-outline btn-sm rep-filtro-btn" onclick="filtrarReposicao('nao_encontrado')">📋 Protocolo</button>
                 <button data-sit="abastecido" class="btn btn-outline btn-sm rep-filtro-btn" onclick="filtrarReposicao('abastecido')">✅ Abastecido</button>
                 <button data-sit="devolucao" class="btn btn-outline btn-sm rep-filtro-btn" onclick="filtrarReposicao('devolucao')">↩️ Devolução</button>
-                <button data-sit="nao_encontrado" class="btn btn-outline btn-sm rep-filtro-btn" onclick="filtrarReposicao('nao_encontrado')">❌ Não enc.</button>
+                <button class="btn btn-outline btn-sm" onclick="exportarIndicadoresExcel()" style="border-color:#10b981;color:#10b981;font-weight:700">📊 Excel</button>
               </div>
             </div>
             <!-- Contadores -->
@@ -1523,42 +1522,66 @@
 
 
 
-    <!-- ══ REPOSITOR MOBILE — 2 ABAS ══ -->
+    <!-- ══ REPOSITOR MOBILE — 5 ABAS ══ -->
     <div id="rep-mobile-root">
-      <!-- ABA 1 — SOLICITAÇÕES -->
-      <div class="rep-tab-page ativa" id="rep-tab-avisos">
+
+      <!-- ABA 1 — SEPARAR -->
+      <div class="rep-tab-page ativa" id="rep-tab-separar">
         <div class="rep-scroll">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-            <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">🔧 Solicitações</div>
+            <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">⏳ Para Separar</div>
             <div style="display:flex;gap:8px;align-items:center">
-              <span style="font-size:12px;color:var(--red);font-weight:700">🔴 <span id="m-rep-pend">0</span></span>
-              <!-- Custom dropdown filtro -->
-              <div style="position:relative">
-                <div id="m-rep-fbox" onclick="toggleFiltroRepMobile(event)"
-                  style="display:flex;align-items:center;gap:6px;padding:7px 11px;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;cursor:pointer;min-width:120px">
-                  <span id="m-rep-fval" style="font-size:12px;font-weight:600;color:var(--text);flex:1">Todos</span>
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" id="m-rep-fseta" style="color:var(--text3);flex-shrink:0;transition:transform .2s"><polyline points="6 9 12 15 18 9"/></svg>
-                </div>
-                <div id="m-rep-fdrop"
-                  style="display:none;position:absolute;top:calc(100% + 4px);right:0;min-width:170px;background:var(--surface);border:1.5px solid var(--accent);border-radius:12px;box-shadow:0 8px 28px rgba(0,0,0,.18);z-index:200;overflow:hidden">
-                  <div class="m-rfopt ativo" data-val="" onclick="escolherFiltroRepMobile('','Todos',this)">Todos</div>
-                  <div class="m-rfopt" data-val="pendente" onclick="escolherFiltroRepMobile('pendente','⏳ Separar',this)">⏳ Separar</div>
-                  <div class="m-rfopt" data-val="verificando" onclick="escolherFiltroRepMobile('verificando','🔍 Verificando',this)">🔍 Verificando</div>
-                  <div class="m-rfopt" data-val="buscado" onclick="escolherFiltroRepMobile('buscado','📦 Separado',this)">📦 Separado</div>
-                  <div class="m-rfopt" data-val="aguardando_abastecer" onclick="escolherFiltroRepMobile('aguardando_abastecer','🕐 Aguardando',this)">🕐 Aguardando</div>
-                  <div class="m-rfopt" data-val="subiu" onclick="escolherFiltroRepMobile('subiu','⬆️ Subiu',this)">⬆️ Subiu</div>
-                  <div class="m-rfopt" data-val="abastecido" onclick="escolherFiltroRepMobile('abastecido','✅ Abastecido',this)">✅ Abastecido</div>
-                  <div class="m-rfopt" data-val="devolucao" onclick="escolherFiltroRepMobile('devolucao','↩️ Devolução',this)">↩️ Devolução</div>
-                  <div class="m-rfopt" data-val="nao_encontrado" onclick="escolherFiltroRepMobile('nao_encontrado','❌ Não encontrado',this)">❌ Não encontrado</div>
-                </div>
-              </div>
-              <button class="btn btn-outline btn-sm" onclick="carregarAvisosMobile()">🔄</button>
+              <span style="font-size:12px;color:#f59e0b;font-weight:700">⏳ <span id="rep-cnt-separar">0</span></span>
+              <button class="btn btn-outline btn-sm" onclick="carregarRepSeparar()">🔄</button>
             </div>
           </div>
-          <div id="m-lista-avisos"><div style="color:var(--text3);text-align:center;padding:40px;font-size:13px">✅ Nenhum item em falta</div></div>
+          <div id="rep-lista-separar"><div style="color:var(--text3);text-align:center;padding:40px;font-size:13px">✅ Nenhum item</div></div>
         </div>
       </div>
-      <!-- ABA 2 — ESTATÍSTICAS REPOSITOR MOBILE -->
+
+      <!-- ABA 2 — SEPARADO -->
+      <div class="rep-tab-page" id="rep-tab-separado">
+        <div class="rep-scroll">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">📦 Separado</div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <span style="font-size:12px;color:#3b82f6;font-weight:700">📦 <span id="rep-cnt-separado">0</span></span>
+              <button class="btn btn-outline btn-sm" onclick="carregarRepSeparado()">🔄</button>
+            </div>
+          </div>
+          <div id="rep-lista-separado"><div style="color:var(--text3);text-align:center;padding:40px;font-size:13px">Nenhum item separado</div></div>
+        </div>
+      </div>
+
+      <!-- ABA 3 — SUBIU -->
+      <div class="rep-tab-page" id="rep-tab-subiu">
+        <div class="rep-scroll">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">⬆️ Subiu</div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <span style="font-size:12px;color:#0ea5e9;font-weight:700">⬆️ <span id="rep-cnt-subiu">0</span></span>
+              <button class="btn btn-outline btn-sm" onclick="carregarRepSubiu()">🔄</button>
+            </div>
+          </div>
+          <div id="rep-lista-subiu"><div style="color:var(--text3);text-align:center;padding:40px;font-size:13px">Nenhum item subiu</div></div>
+        </div>
+      </div>
+
+      <!-- ABA 4 — PROTOCOLO -->
+      <div class="rep-tab-page" id="rep-tab-protocolo">
+        <div class="rep-scroll">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">📋 Protocolo</div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <span style="font-size:12px;color:#ef4444;font-weight:700">❌ <span id="rep-cnt-protocolo">0</span></span>
+              <button class="btn btn-outline btn-sm" onclick="carregarRepProtocolo()">🔄</button>
+            </div>
+          </div>
+          <div id="rep-lista-protocolo"><div style="color:var(--text3);text-align:center;padding:40px;font-size:13px">Nenhum item em protocolo</div></div>
+        </div>
+      </div>
+
+      <!-- ABA 5 — ESTATÍSTICAS REPOSITOR MOBILE -->
       <div class="rep-tab-page" id="rep-tab-stats">
         <div class="rep-scroll">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
@@ -1566,7 +1589,6 @@
             <button onclick="carregarStatsRepMobile()" style="padding:6px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer;color:var(--text)">🔄</button>
           </div>
           <div class="stat-nome" id="m-rep-nome" style="font-size:16px;font-weight:700;margin-bottom:14px;color:var(--text)">—</div>
-          <!-- Cards de stats -->
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
             <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:14px;padding:16px;text-align:center">
               <div style="font-size:32px;font-weight:800;color:#16a34a" id="m-rep-hoje">0</div>
@@ -1581,9 +1603,10 @@
             <div style="font-size:42px;font-weight:800;color:#dc2626" id="m-rep-pendentes">0</div>
             <div style="font-size:10px;color:#dc2626;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-top:4px">Pendentes agora</div>
           </div>
-          <div id="m-meus-stats" style="margin-top:4px"></div>
+          <div id="rep-stats-content" style="margin-top:4px"></div>
         </div>
       </div>
+
     </div><!-- /rep-mobile-root -->
 
 
@@ -1758,14 +1781,29 @@
 
 <!-- Tab bar Repositor -->
 <div class="rep-tabbar" id="rep-tabbar">
-  <button class="rep-tab ativo" id="rtab-avisos" onclick="mudarTabRep('avisos')">
-    <span class="rep-tab-ic">🔧</span>
-    SOLICITAÇÕES
-    <span class="rep-tab-badge" id="rtab-badge" style="display:none">0</span>
+  <button class="rep-tab ativo" id="rtab-separar" onclick="mudarTabRep('separar')">
+    <span class="rep-tab-ic">⏳</span>
+    SEPARAR
+    <span class="rep-tab-badge" id="rtab-separar-badge" style="display:none">0</span>
+  </button>
+  <button class="rep-tab" id="rtab-separado" onclick="mudarTabRep('separado')">
+    <span class="rep-tab-ic">📦</span>
+    SEPARADO
+    <span class="rep-tab-badge" id="rtab-separado-badge" style="display:none">0</span>
+  </button>
+  <button class="rep-tab" id="rtab-subiu" onclick="mudarTabRep('subiu')">
+    <span class="rep-tab-ic">⬆️</span>
+    SUBIU
+    <span class="rep-tab-badge" id="rtab-subiu-badge" style="display:none">0</span>
+  </button>
+  <button class="rep-tab" id="rtab-protocolo" onclick="mudarTabRep('protocolo')">
+    <span class="rep-tab-ic">📋</span>
+    PROTOCOLO
+    <span class="rep-tab-badge" id="rtab-protocolo-badge" style="display:none">0</span>
   </button>
   <button class="rep-tab" id="rtab-stats" onclick="mudarTabRep('stats')">
     <span class="rep-tab-ic">📈</span>
-    ESTATÍSTICAS
+    STATS
   </button>
 </div>
 
@@ -1790,7 +1828,7 @@
 <script src="/js/config.js"></script>
   <script src="/js/pedidos.js"></script>
   <script src="/js/separador.js"></script>
-  <script src="/js/repositor.js?v=10"></script>
+  <script src="/js/repositor.js?v=11"></script>
   <script src="/js/checkout.js"></script>
   <script src="/js/dashboard.js"></script>
   <script src="/js/auth.js?v=2"></script>
