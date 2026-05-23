@@ -305,7 +305,7 @@ function renderCardMobile(a) {
   }
 
   return `
-    <div style="background:var(--surface);border:1px solid var(--border);border-left:4px solid ${cor};border-radius:14px;margin-bottom:10px;overflow:hidden">
+    <div style="background:var(--surface);border:1px solid var(--border);border-left:4px solid ${cor};border-radius:14px;margin-bottom:10px;overflow:visible">
       <div style="padding:14px">
         <!-- Linha 1: código + badge -->
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
