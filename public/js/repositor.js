@@ -273,9 +273,19 @@ function renderCardMobile(a) {
     </div>`;
 
   let botoesEtapa = '';
-  const finalStates = ['abastecido','subiu','protocolo','devolucao','nao_encontrado'];
+  // 'subiu' foi removido do finalStates para permitir que outro colaborador registre 'abastecido'
+  const finalStates = ['abastecido','protocolo','devolucao','nao_encontrado'];
 
-  if (!finalStates.includes(sit)) {
+  if (sit === 'subiu') {
+    // Etapa intermediária: alguém trouxe o item, outro precisa guardar
+    botoesEtapa = `
+      <div style="border-top:1px solid var(--border);padding:12px 0 0">
+        <div style="background:#e0f2fe;border:1px solid #bae6fd;border-radius:10px;padding:9px 12px;margin-bottom:10px;font-size:12px;color:#0369a1">
+          ⬆️ <strong>${a.quem_pegou||'—'}</strong> trouxe o item — quem vai guardar no estoque?
+        </div>
+        ${dropEtapas}
+      </div>`;
+  } else if (!finalStates.includes(sit)) {
     // Quantidade + dropdown para todos os estados ativos
     botoesEtapa = `
       <div style="border-top:1px solid var(--border);padding:12px 0 0">
@@ -295,7 +305,7 @@ function renderCardMobile(a) {
         ${dropEtapas}
       </div>`;
   } else {
-    // Estado final — mostra quem fez o quê
+    // Estado final (abastecido, protocolo, devolucao, nao_encontrado) — mostra quem fez o quê
     const tem = a.quem_guardou || a.quem_pegou;
     botoesEtapa = tem ? `
       <div style="border-top:1px solid var(--border);padding-top:8px;display:flex;gap:14px;font-size:12px;color:var(--text3)">

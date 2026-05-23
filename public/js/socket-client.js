@@ -33,6 +33,16 @@
     socket.on('liberacao:novo', () => {
       if (typeof carregarLiberacao === 'function') carregarLiberacao();
       if (typeof atualizarBadgeLiberacao === 'function') atualizarBadgeLiberacao();
+      // Notificação sonora/visual somente para supervisores logados no desktop
+      if (typeof usuarioAtual !== 'undefined' && usuarioAtual?.perfil === 'supervisor') {
+        if (typeof toast === 'function') toast('⚠️ Repositor marcou item como NÃO ENCONTRADO — aguardando liberação!', 'aviso');
+        // Pulsa o badge do menu Liberação por 3 segundos
+        const badge = document.getElementById('menu-badge-lib');
+        if (badge) {
+          badge.style.animation = 'pulse 0.6s ease infinite';
+          setTimeout(() => { if (badge) badge.style.animation = ''; }, 3000);
+        }
+      }
     });
 
     // Pedido concluído → atualiza dashboard e fila
