@@ -14,7 +14,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/app.css?v=7">
+  <link rel="stylesheet" href="/css/app.css?v=8">
 </head>
 <body>
 
@@ -1532,17 +1532,26 @@
             <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">🔧 Solicitações</div>
             <div style="display:flex;gap:8px;align-items:center">
               <span style="font-size:12px;color:var(--red);font-weight:700">🔴 <span id="m-rep-pend">0</span></span>
-              <select id="m-filtro-rep-status" class="sel-sm" onchange="carregarAvisosMobile()" style="min-width:130px">
-                <option value="">Todos</option>
-                <option value="pendente">⏳ Separar</option>
-                <option value="verificando">🔍 Verificando</option>
-                <option value="buscado">📦 Separado</option>
-                <option value="aguardando_abastecer">🕐 Aguard. entregar</option>
-                <option value="subiu">⬆️ Subiu</option>
-                <option value="abastecido">✅ Abastecido</option>
-                <option value="devolucao">↩️ Devolução</option>
-                <option value="nao_encontrado">❌ Não encontrado</option>
-              </select>
+              <!-- Custom dropdown filtro -->
+              <div style="position:relative">
+                <div id="m-rep-fbox" onclick="toggleFiltroRepMobile(event)"
+                  style="display:flex;align-items:center;gap:6px;padding:7px 11px;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;cursor:pointer;min-width:120px">
+                  <span id="m-rep-fval" style="font-size:12px;font-weight:600;color:var(--text);flex:1">Todos</span>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" id="m-rep-fseta" style="color:var(--text3);flex-shrink:0;transition:transform .2s"><polyline points="6 9 12 15 18 9"/></svg>
+                </div>
+                <div id="m-rep-fdrop"
+                  style="display:none;position:absolute;top:calc(100% + 4px);right:0;min-width:170px;background:var(--surface);border:1.5px solid var(--accent);border-radius:12px;box-shadow:0 8px 28px rgba(0,0,0,.18);z-index:200;overflow:hidden">
+                  <div class="m-rfopt ativo" data-val="" onclick="escolherFiltroRepMobile('','Todos',this)">Todos</div>
+                  <div class="m-rfopt" data-val="pendente" onclick="escolherFiltroRepMobile('pendente','⏳ Separar',this)">⏳ Separar</div>
+                  <div class="m-rfopt" data-val="verificando" onclick="escolherFiltroRepMobile('verificando','🔍 Verificando',this)">🔍 Verificando</div>
+                  <div class="m-rfopt" data-val="buscado" onclick="escolherFiltroRepMobile('buscado','📦 Separado',this)">📦 Separado</div>
+                  <div class="m-rfopt" data-val="aguardando_abastecer" onclick="escolherFiltroRepMobile('aguardando_abastecer','🕐 Aguardando',this)">🕐 Aguardando</div>
+                  <div class="m-rfopt" data-val="subiu" onclick="escolherFiltroRepMobile('subiu','⬆️ Subiu',this)">⬆️ Subiu</div>
+                  <div class="m-rfopt" data-val="abastecido" onclick="escolherFiltroRepMobile('abastecido','✅ Abastecido',this)">✅ Abastecido</div>
+                  <div class="m-rfopt" data-val="devolucao" onclick="escolherFiltroRepMobile('devolucao','↩️ Devolução',this)">↩️ Devolução</div>
+                  <div class="m-rfopt" data-val="nao_encontrado" onclick="escolherFiltroRepMobile('nao_encontrado','❌ Não encontrado',this)">❌ Não encontrado</div>
+                </div>
+              </div>
               <button class="btn btn-outline btn-sm" onclick="carregarAvisosMobile()">🔄</button>
             </div>
           </div>

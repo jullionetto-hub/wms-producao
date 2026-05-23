@@ -164,6 +164,12 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
 .cnt-card.laranja .cnt-val{color:#EA580C}
 .cnt-sub{font-size:11px;color:var(--text3);margin-top:3px}
 
+/* Mobile repositor custom filter dropdown */
+.m-rfopt{padding:11px 16px;cursor:pointer;font-size:13px;font-weight:500;color:var(--text);transition:background .12s;border-bottom:1px solid var(--border)}
+.m-rfopt:last-child{border-bottom:none}
+.m-rfopt:hover{background:var(--surface2)}
+.m-rfopt.ativo{background:var(--surface2);font-weight:700;color:var(--accent)}
+
 
 
 

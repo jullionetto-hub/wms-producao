@@ -37,6 +37,7 @@ function toggleItensColaborador(id) {
 
 let _todosUsuarios = [];
 let _filtroSituacaoRep = '';
+let _filtroMobileRep   = '';   // valor do filtro customizado mobile
 
 /* ── Inicialização ─────────────────────────────────────────────────── */
 function ativarMobileRep() {
@@ -100,20 +101,44 @@ function labelSituacao(sit) {
 /* ══════════════════════════════════════════════════════════════════
    MOBILE — LISTA DE AVISOS
 ══════════════════════════════════════════════════════════════════ */
+/* ── Mobile filter dropdown ─────────────────────────────────────── */
+function toggleFiltroRepMobile(e) {
+  e && e.stopPropagation();
+  const drop = document.getElementById('m-rep-fdrop');
+  const seta = document.getElementById('m-rep-fseta');
+  const box  = document.getElementById('m-rep-fbox');
+  const open = drop?.style.display !== 'none';
+  if (drop) drop.style.display = open ? 'none' : 'block';
+  if (seta) seta.style.transform = open ? '' : 'rotate(180deg)';
+  if (box)  box.style.borderColor = open ? 'var(--border)' : 'var(--accent)';
+}
+function escolherFiltroRepMobile(val, label, el) {
+  _filtroMobileRep = val;
+  const valEl = document.getElementById('m-rep-fval');
+  const drop  = document.getElementById('m-rep-fdrop');
+  const seta  = document.getElementById('m-rep-fseta');
+  const box   = document.getElementById('m-rep-fbox');
+  if (valEl) valEl.textContent = label;
+  if (drop)  drop.style.display = 'none';
+  if (seta)  seta.style.transform = '';
+  if (box)   box.style.borderColor = 'var(--border)';
+  document.querySelectorAll('.m-rfopt').forEach(o => o.classList.remove('ativo'));
+  if (el) el.classList.add('ativo');
+  carregarAvisosMobile();
+}
+
 async function carregarAvisosMobile() {
   const el  = document.getElementById('m-lista-avisos');
   const cnt = document.getElementById('m-rep-pend');
   if (!el) return;
   const primeiraVez = el.children.length === 0 || el.innerHTML.includes('Nenhum item') || el.innerHTML.includes('Erro');
   try {
-    const filtro = document.getElementById('m-filtro-rep-status')?.value || '';
-    const url = `${API}/repositor/avisos${filtro?'?status='+filtro:''}`;
+    const url = `${API}/repositor/avisos${_filtroMobileRep ? '?status=' + _filtroMobileRep : ''}`;
     const res = await fetch(url, { credentials:'include' });
     if (!res.ok) throw new Error('Servidor retornou ' + res.status);
     const avisos = await res.json();
     const pend = avisos.filter(a => ['pendente','verificando','buscado','aguardando_abastecer'].includes(a.situacao||a.status)).length;
     if (cnt) cnt.textContent = pend;
-
     if (!avisos.length) {
       el.innerHTML = `<div style="text-align:center;padding:60px 16px">
         <div style="font-size:48px;margin-bottom:12px">✅</div>
@@ -121,128 +146,173 @@ async function carregarAvisosMobile() {
       </div>`;
       return;
     }
-
     el.innerHTML = avisos.map(a => renderCardMobile(a)).join('');
   } catch(e) {
     if (primeiraVez) {
       el.innerHTML = `<div style="color:#ef4444;text-align:center;padding:24px">Erro ao carregar — toque 🔄 para tentar novamente</div>`;
     }
-    // se já havia conteúdo, mantém o que estava e ignora o erro silenciosamente
   }
 }
 
 function renderCardMobile(a) {
-  const sit = a.situacao || a.status || 'pendente';
-  const nomeLogado = usuarioAtual?.nome || '';
-  const qtdSolicitada = a.quantidade || 1;
+  const sit          = a.situacao || a.status || 'pendente';
+  const nomeLogado   = usuarioAtual?.nome || '';
+  const qtdSolic     = a.quantidade || 1;
+  const cor          = corSituacao(sit);
 
-  const corBorda = {
-    pendente: '#f59e0b', verificando: '#8b5cf6', buscado: '#3b82f6',
-    aguardando_abastecer: '#f97316', abastecido: '#10b981',
-    protocolo: '#6b7280', nao_encontrado: '#ef4444'
-  }[sit] || '#6b7280';
+  // Parse historico com segurança
+  let hist = [];
+  try { hist = Array.isArray(a.historico) ? a.historico : (a.historico ? JSON.parse(a.historico) : []); } catch{}
 
-  const badge = {
-    pendente:            '<span style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px">⏳ Separar</span>',
-    verificando:         '<span style="background:#f3e8ff;color:#6b21a8;border:1px solid #d8b4fe;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px">🔍 Verificando</span>',
-    buscado:             '<span style="background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px">📦 Separado</span>',
-    separado:            '<span style="background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px">📦 Separado</span>',
-    aguardando_abastecer:'<span style="background:#ffedd5;color:#9a3412;border:1px solid #fed7aa;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px">🕐 Aguard. entregar</span>',
-    subiu:               '<span style="background:#e0f2fe;color:#0369a1;border:1px solid #7dd3fc;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px">⬆️ Subiu</span>',
-    abastecido:          '<span style="background:#dcfce7;color:#166534;border:1px solid #86efac;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px">✅ Abastecido</span>',
-    protocolo:           '<span style="background:#f3f4f6;color:#374151;border:1px solid #e5e7eb;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px">📋 Protocolo</span>',
-    devolucao:           '<span style="background:#faf5ff;color:#7e22ce;border:1px solid #d8b4fe;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px">↩️ Devolução</span>',
-    nao_encontrado:      '<span style="background:#fee2e2;color:#991b1b;border:1px solid #fecaca;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px">❌ Não encontrado</span>',
-  }[sit] || `<span style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;background:${corBorda}22;color:${corBorda}">${sit}</span>`;
+  // ── Badge de status ──
+  const BADGES = {
+    pendente:            `<span style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px">⏳ Separar</span>`,
+    verificando:         `<span style="background:#f3e8ff;color:#6b21a8;border:1px solid #d8b4fe;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px">🔍 Verificando</span>`,
+    buscado:             `<span style="background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px">📦 Separado</span>`,
+    separado:            `<span style="background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px">📦 Separado</span>`,
+    aguardando_abastecer:`<span style="background:#ffedd5;color:#9a3412;border:1px solid #fed7aa;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px">🕐 Aguardando</span>`,
+    subiu:               `<span style="background:#e0f2fe;color:#0369a1;border:1px solid #7dd3fc;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px">⬆️ Subiu</span>`,
+    abastecido:          `<span style="background:#dcfce7;color:#166534;border:1px solid #86efac;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px">✅ Abastecido</span>`,
+    protocolo:           `<span style="background:#f3f4f6;color:#374151;border:1px solid #d1d5db;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px">📋 Protocolo</span>`,
+    devolucao:           `<span style="background:#faf5ff;color:#7e22ce;border:1px solid #d8b4fe;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px">↩️ Devolução</span>`,
+    nao_encontrado:      `<span style="background:#fee2e2;color:#991b1b;border:1px solid #fecaca;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px">❌ Não encontrado</span>`,
+  };
+  const badge = BADGES[sit] || `<span style="font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;background:${cor}22;color:${cor}">${labelSituacao(sit)}</span>`;
 
-  // Obs só mostra se não for redundante com a quantidade
+  // ── ENVIO badge ──
+  const envio    = (a.forma_envio || '').trim();
+  const isDrive  = /drive|retirada/i.test(envio);
+  const envioBdg = envio
+    ? `<span style="background:${isDrive?'#fee2e2':'var(--surface2)'};color:${isDrive?'#dc2626':'var(--text2)'};border:1px solid ${isDrive?'#fca5a5':'var(--border)'};font-size:10px;font-weight:700;padding:2px 9px;border-radius:20px">${isDrive?'🚗':'📦'} ${envio}</span>`
+    : '';
+
+  // ── Progress stepper ──
+  const STEPS = [
+    {k:'pendente',label:'Separar'},
+    {k:'verificando',label:'Verificando'},
+    {k:'buscado',label:'Separado'},
+    {k:'aguardando_abastecer',label:'Aguard.'},
+    {k:'subiu',label:'Subiu'},
+    {k:'abastecido',label:'Abast.'},
+  ];
+  const STEP_IDX = {pendente:0,verificando:1,buscado:2,separado:2,aguardando_abastecer:3,subiu:4,abastecido:5};
+  const isFinal  = ['protocolo','devolucao','nao_encontrado'].includes(sit);
+  const curStep  = isFinal ? STEPS.length : (STEP_IDX[sit] ?? 0);
+
+  const stepperHtml = `
+    <div style="display:flex;align-items:flex-end;margin:10px 0 4px;overflow-x:auto;padding-bottom:2px">
+      ${STEPS.map((st, i) => {
+        const done   = i < curStep;
+        const active = i === curStep;
+        const dc = done ? '#10b981' : active ? cor : 'var(--border)';
+        const tc = done ? '#10b981' : active ? cor : 'var(--text3)';
+        return `<div style="display:flex;align-items:flex-end;flex-shrink:0">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+            <span style="font-size:9px;color:${tc};font-weight:${active?'800':'500'};white-space:nowrap;line-height:1">${st.label}</span>
+            <div style="width:${active?11:7}px;height:${active?11:7}px;border-radius:50%;background:${dc};${active?`outline:3px solid ${cor}44`:''};transition:all .2s"></div>
+          </div>
+          ${i<STEPS.length-1?`<div style="width:22px;height:1.5px;background:${done?'#10b981':'var(--border)'};margin-bottom:5px;flex-shrink:0"></div>`:''}
+        </div>`;
+      }).join('')}
+      ${isFinal ? `<div style="display:flex;align-items:flex-end;flex-shrink:0">
+        <div style="width:22px;height:1.5px;background:${cor};margin-bottom:5px"></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+          <span style="font-size:9px;color:${cor};font-weight:800;white-space:nowrap">${labelSituacao(sit).replace(/^[^\s]+\s/,'')}</span>
+          <div style="width:11px;height:11px;border-radius:50%;background:${cor};outline:3px solid ${cor}44"></div>
+        </div>
+      </div>` : ''}
+    </div>`;
+
+  // ── Histórico ──
+  const histHtml = hist.length ? `
+    <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
+      <div style="font-size:9px;font-weight:700;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:5px">Histórico</div>
+      ${hist.map(h => `
+        <div style="display:flex;align-items:center;gap:7px;padding:3px 0;font-size:11px">
+          <span style="font-family:'Space Mono',monospace;font-size:10px;color:var(--text3);white-space:nowrap">${h.hora||'—'}</span>
+          <span style="font-weight:600;color:var(--text);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${h.usuario||'—'}</span>
+          <span style="font-size:10px;font-weight:700;color:${corSituacao(h.acao)};background:${corSituacao(h.acao)}18;padding:1px 8px;border-radius:20px;white-space:nowrap">${labelSituacao(h.acao)}</span>
+        </div>`).join('')}
+    </div>` : '';
+
+  // ── Obs ──
   const obsRedundante = (a.obs||'').startsWith('Falta total');
-  const obsExtra = !obsRedundante && a.obs ? `<div style="margin-top:6px;font-size:11px;color:var(--text3);background:var(--surface2);border-radius:8px;padding:5px 10px">💬 ${a.obs}</div>` : '';
+  const obsExtra = !obsRedundante && a.obs
+    ? `<div style="margin-top:6px;font-size:11px;color:var(--text3);background:var(--surface2);border-radius:8px;padding:5px 10px">💬 ${a.obs}</div>`
+    : '';
 
+  // ── Botões de ação ──
   let botoesEtapa = '';
-
-  if (sit === 'pendente' || sit === 'verificando' || sit === 'buscado' || sit === 'separado') {
+  if (['pendente','verificando','buscado','separado'].includes(sit)) {
     botoesEtapa = `
-      <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+      <div style="border-top:1px solid var(--border);padding:12px 0 0">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
           <span style="font-size:12px;color:var(--text3);white-space:nowrap">Qtd encontrada:</span>
           <div style="display:flex;align-items:center;gap:6px">
-            <button onclick="this.nextElementSibling.value=Math.max(0,+this.nextElementSibling.value-1)"
-              style="width:32px;height:32px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface2);font-size:18px;cursor:pointer;color:var(--text);line-height:1">−</button>
-            <input type="number" id="qtd-${a.id}" min="0" max="${qtdSolicitada}" value="${a.qtd_encontrada||qtdSolicitada}"
-              style="width:56px;padding:4px 8px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-size:18px;font-weight:700;text-align:center">
-            <button onclick="this.previousElementSibling.value=Math.min(${qtdSolicitada},+this.previousElementSibling.value+1)"
-              style="width:32px;height:32px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface2);font-size:18px;cursor:pointer;color:var(--text);line-height:1">+</button>
-            <span style="font-size:12px;color:var(--text3)">de ${qtdSolicitada}</span>
+            <button onclick="this.nextElementSibling.value=Math.max(0,+this.nextElementSibling.value-1)" style="width:32px;height:32px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface2);font-size:18px;cursor:pointer;color:var(--text);line-height:1">−</button>
+            <input type="number" id="qtd-${a.id}" min="0" max="${qtdSolic}" value="${a.qtd_encontrada||qtdSolic}" style="width:56px;padding:4px 8px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-size:18px;font-weight:700;text-align:center">
+            <button onclick="this.previousElementSibling.value=Math.min(${qtdSolic},+this.previousElementSibling.value+1)" style="width:32px;height:32px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface2);font-size:18px;cursor:pointer;color:var(--text);line-height:1">+</button>
+            <span style="font-size:12px;color:var(--text3)">de ${qtdSolic}</span>
           </div>
         </div>
         <div style="display:flex;flex-direction:column;gap:8px">
-          <button onclick="acaoRepositor(${a.id},'busquei_e_abasteci','${nomeLogado}')"
-            style="width:100%;padding:13px;background:#10b981;color:#fff;border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer">
-            ✅ Encontrei e entreguei (Abastecido)
-          </button>
-          <button onclick="acaoRepositor(${a.id},'subiu','${nomeLogado}')"
-            style="width:100%;padding:13px;background:#0ea5e9;color:#fff;border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer">
-            ⬆️ Subiu — levei para o separador
-          </button>
-          <button onclick="acaoRepositor(${a.id},'so_busquei','${nomeLogado}')"
-            style="width:100%;padding:13px;background:#3b82f6;color:#fff;border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer">
-            📦 Separado — outro vai entregar
-          </button>
-          <button onclick="acaoRepositor(${a.id},'devolucao','${nomeLogado}')"
-            style="width:100%;padding:13px;background:transparent;color:#a855f7;border:1.5px solid #a855f7;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer">
-            ↩️ Devolução
-          </button>
-          <button onclick="acaoRepositor(${a.id},'nao_encontrei','${nomeLogado}')"
-            style="width:100%;padding:13px;background:transparent;color:#ef4444;border:1.5px solid #ef4444;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer">
-            ❌ Não encontrei
-          </button>
+          <button onclick="acaoRepositor(${a.id},'busquei_e_abasteci','${nomeLogado}')" style="width:100%;padding:13px;background:#10b981;color:#fff;border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer">✅ Encontrei e entreguei — Abastecido</button>
+          <button onclick="acaoRepositor(${a.id},'subiu','${nomeLogado}')" style="width:100%;padding:13px;background:#0ea5e9;color:#fff;border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer">⬆️ Subiu — levei para o separador</button>
+          <button onclick="acaoRepositor(${a.id},'so_busquei','${nomeLogado}')" style="width:100%;padding:13px;background:#3b82f6;color:#fff;border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer">📦 Separado — outro vai entregar</button>
+          <button onclick="acaoRepositor(${a.id},'devolucao','${nomeLogado}')" style="width:100%;padding:13px;background:transparent;color:#a855f7;border:1.5px solid #a855f7;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer">↩️ Devolução</button>
+          <button onclick="acaoRepositor(${a.id},'nao_encontrei','${nomeLogado}')" style="width:100%;padding:13px;background:transparent;color:#ef4444;border:1.5px solid #ef4444;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer">❌ Não encontrei</button>
         </div>
       </div>`;
   } else if (sit === 'aguardando_abastecer') {
     botoesEtapa = `
-      <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+      <div style="border-top:1px solid var(--border);padding:12px 0 0">
         <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:12px;color:#92400e">
-          📦 <strong>${a.quem_pegou||'—'}</strong> separou ${a.qtd_encontrada||qtdSolicitada} de ${qtdSolicitada} un. Aguardando entrega ao separador.
+          📦 <strong>${a.quem_pegou||'—'}</strong> separou ${a.qtd_encontrada||qtdSolic} de ${qtdSolic} un. Aguardando entrega.
         </div>
         <div style="display:flex;flex-direction:column;gap:8px">
-          <button onclick="acaoRepositor(${a.id},'abasteci','${nomeLogado}')"
-            style="width:100%;padding:13px;background:#10b981;color:#fff;border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer">
-            ✅ Entreguei — Abastecido
-          </button>
-          <button onclick="acaoRepositor(${a.id},'subiu_entrega','${nomeLogado}')"
-            style="width:100%;padding:13px;background:#0ea5e9;color:#fff;border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer">
-            ⬆️ Subiu
-          </button>
+          <button onclick="acaoRepositor(${a.id},'abasteci','${nomeLogado}')" style="width:100%;padding:13px;background:#10b981;color:#fff;border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer">✅ Entreguei — Abastecido</button>
+          <button onclick="acaoRepositor(${a.id},'subiu_entrega','${nomeLogado}')" style="width:100%;padding:13px;background:#0ea5e9;color:#fff;border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer">⬆️ Subiu</button>
         </div>
       </div>`;
-  } else if (sit === 'abastecido' || sit === 'subiu') {
-    botoesEtapa = `
-      <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);display:flex;gap:14px;font-size:12px;color:var(--text3)">
-        ${a.quem_pegou ? `<span>📦 <strong style="color:var(--text)">${a.quem_pegou}</strong></span>` : ''}
-        ${a.quem_guardou ? `<span>🏠 <strong style="color:var(--text)">${a.quem_guardou}</strong></span>` : ''}
-      </div>`;
+  } else if (['abastecido','subiu','protocolo','devolucao','nao_encontrado'].includes(sit)) {
+    const conclusao = a.quem_guardou || a.quem_pegou;
+    botoesEtapa = conclusao ? `
+      <div style="border-top:1px solid var(--border);padding-top:8px;display:flex;gap:14px;font-size:12px;color:var(--text3)">
+        ${a.quem_pegou  ? `<span>📦 <strong style="color:var(--text)">${a.quem_pegou}</strong></span>` : ''}
+        ${a.quem_guardou? `<span>🏠 <strong style="color:var(--text)">${a.quem_guardou}</strong></span>` : ''}
+      </div>` : '';
   }
 
   return `
-    <div style="background:var(--surface);border:1px solid var(--border);border-left:4px solid ${corBorda};border-radius:14px;margin-bottom:10px;overflow:hidden">
-      <div style="padding:12px 14px 10px">
+    <div style="background:var(--surface);border:1px solid var(--border);border-left:4px solid ${cor};border-radius:14px;margin-bottom:10px;overflow:hidden">
+      <div style="padding:14px">
+        <!-- Linha 1: código + badge -->
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
           <div style="flex:1;min-width:0;margin-right:8px">
-            <div style="font-family:'Space Mono',monospace;font-size:15px;font-weight:700;color:var(--text)">${a.codigo||'—'}</div>
+            <div style="font-family:'Space Mono',monospace;font-size:16px;font-weight:700;color:var(--text);line-height:1.2">${a.codigo||'—'}</div>
             <div style="font-size:12px;color:var(--text2);margin-top:2px;line-height:1.4">${a.descricao||''}</div>
           </div>
           ${badge}
         </div>
-        <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;align-items:center">
-          <span style="background:var(--surface2);border-radius:8px;padding:4px 10px;font-size:11px;color:var(--text2)">📍 ${a.endereco||'—'}</span>
-          <span style="background:#fee2e2;border-radius:8px;padding:4px 10px;font-size:13px;font-weight:800;color:#dc2626">${qtdSolicitada} un em falta</span>
-          ${a.separador_nome ? `<span style="background:var(--surface2);border-radius:8px;padding:4px 10px;font-size:11px;color:var(--text2)">👤 ${a.separador_nome}</span>` : ''}
-          ${a.hora_aviso ? `<span style="font-size:11px;color:var(--text3)">🕐 ${a.hora_aviso}</span>` : ''}
+        <!-- Linha 2: tags (envio, qtd, endereço) -->
+        <div style="display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin-bottom:6px">
+          ${envioBdg}
+          <span style="background:#fee2e2;border-radius:8px;padding:3px 10px;font-size:12px;font-weight:800;color:#dc2626">${qtdSolic} un em falta</span>
+          <span style="background:var(--surface2);border-radius:8px;padding:3px 10px;font-size:11px;color:var(--text2)">📍 ${a.endereco||'—'}</span>
         </div>
+        <!-- Linha 3: separador + hora -->
+        <div style="display:flex;gap:10px;font-size:11px;color:var(--text3);align-items:center">
+          ${a.separador_nome?`<span>👤 <strong style="color:var(--text2)">${a.separador_nome}</strong></span>`:''}
+          ${a.hora_aviso?`<span>🕐 ${a.hora_aviso}</span>`:''}
+          ${a.data_aviso?`<span style="font-size:10px">${a.data_aviso}</span>`:''}
+        </div>
+        <!-- Stepper de etapas -->
+        ${stepperHtml}
         ${obsExtra}
+        <!-- Histórico de ações -->
+        ${histHtml}
       </div>
-      ${botoesEtapa ? `<div style="padding:0 14px 14px">${botoesEtapa}</div>` : ''}
+      ${botoesEtapa?`<div style="padding:0 14px 14px">${botoesEtapa}</div>`:''}
     </div>`;
 }
 
@@ -371,23 +441,36 @@ async function carregarTabelaReposicao() {
       const sit = a.situacao || a.status || 'pendente';
       const cor = corSituacao(sit);
       const lbl = labelSituacao(sit);
-      return `<tr id="rep-row-${a.id}" style="border-bottom:1px solid var(--border)" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
-        <td style="padding:10px 12px;min-width:140px">
-          <div style="font-weight:700;font-size:13px;color:var(--text)">${a.codigo||'—'}</div>
-          ${a.descricao?`<div style="font-size:11px;color:var(--text3);margin-top:2px;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${a.descricao}</div>`:''}
+      const isDrive = /drive|retirada/i.test(a.forma_envio||'');
+
+      // Parse historico
+      let hist = [];
+      try { hist = Array.isArray(a.historico) ? a.historico : (a.historico ? JSON.parse(a.historico) : []); } catch{}
+      const histHtml = hist.length ? `
+        <div style="margin-top:6px;padding-top:6px;border-top:1px dashed var(--border)">
+          <div style="font-size:9px;font-weight:700;letter-spacing:1px;color:var(--text3);text-transform:uppercase;margin-bottom:3px">Histórico</div>
+          ${hist.map(h=>`<div style="display:flex;align-items:center;gap:5px;font-size:10px;margin-bottom:2px">
+            <span style="font-family:'Space Mono',monospace;color:var(--text3)">${h.hora||''}</span>
+            <span style="font-weight:600;color:var(--text2)">${h.usuario||'—'}</span>
+            <span style="color:${corSituacao(h.acao)};font-weight:700;background:${corSituacao(h.acao)}18;padding:0px 6px;border-radius:20px">${labelSituacao(h.acao)}</span>
+          </div>`).join('')}
+        </div>` : '';
+
+      return `<tr id="rep-row-${a.id}" style="border-bottom:1px solid var(--border);border-left:3px solid ${cor}" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+        <td style="padding:10px 12px;min-width:160px">
+          <div style="font-weight:700;font-size:13px;color:var(--text);font-family:'Space Mono',monospace">${a.codigo||'—'}</div>
+          ${a.descricao?`<div style="font-size:11px;color:var(--text3);margin-top:2px;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${a.descricao}">${a.descricao}</div>`:''}
         </td>
-        <td style="padding:10px 12px;font-size:12px;white-space:nowrap">
+        <td style="padding:10px 12px;white-space:nowrap">
           ${a.forma_envio
-            ? (a.forma_envio.toUpperCase().includes('DRIVE') || a.forma_envio.toUpperCase().includes('RETIRADA')
-              ? `<span style="background:#ef444418;color:#ef4444;font-weight:700;font-size:11px;padding:2px 8px;border-radius:20px">🚗 ${a.forma_envio}</span>`
-              : `<span style="color:var(--text2)">${a.forma_envio}</span>`)
+            ? `<span style="background:${isDrive?'#fee2e2':'var(--surface2)'};color:${isDrive?'#dc2626':'var(--text2)'};border:1px solid ${isDrive?'#fca5a5':'var(--border)'};font-weight:700;font-size:11px;padding:3px 8px;border-radius:20px">${isDrive?'🚗':'📦'} ${a.forma_envio}</span>`
             : `<span style="color:var(--text3)">—</span>`}
         </td>
-        <td style="padding:10px 12px;font-size:12px;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.separador_nome||'—'}</td>
+        <td style="padding:10px 12px;font-size:12px;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;color:var(--text2)">${a.separador_nome||'—'}</td>
         <td style="padding:8px 10px;min-width:130px">
           ${a.quem_pegou
             ? `<div style="display:flex;align-items:center;gap:4px">
-                 <span style="font-size:12px;color:var(--text2)">📦 ${a.quem_pegou}</span>
+                 <span style="font-size:12px;color:var(--text2);font-weight:600">📦 ${a.quem_pegou}</span>
                  <button onclick="limparCampoPessoa(${a.id},'quem_pegou')" title="Limpar" style="font-size:10px;padding:1px 5px;background:transparent;border:1px solid var(--border);border-radius:4px;cursor:pointer;color:var(--text3)">✕</button>
                </div>`
             : `<select onchange="salvarCampoPessoa(${a.id},'quem_pegou',this.value)"
@@ -398,44 +481,33 @@ async function carregarTabelaReposicao() {
         <td style="padding:8px 10px;min-width:130px">
           ${a.quem_guardou
             ? `<div style="display:flex;align-items:center;gap:4px">
-                 <span style="font-size:12px;color:var(--text2)">🏠 ${a.quem_guardou}</span>
+                 <span style="font-size:12px;color:var(--text2);font-weight:600">🏠 ${a.quem_guardou}</span>
                  <button onclick="limparCampoPessoa(${a.id},'quem_guardou')" title="Limpar" style="font-size:10px;padding:1px 5px;background:transparent;border:1px solid var(--border);border-radius:4px;cursor:pointer;color:var(--text3)">✕</button>
                </div>`
-            : (sit !== 'nao_encontrado' && sit !== 'protocolo'
+            : (!['nao_encontrado','protocolo','devolucao'].includes(sit)
               ? `<select onchange="salvarCampoPessoa(${a.id},'quem_guardou',this.value,true)"
                    style="font-size:11px;padding:4px 6px;border:1.5px dashed ${a.quem_pegou?'#10b981':'var(--border)'};border-radius:6px;background:var(--surface);color:var(--text);max-width:130px">
                    ${optionsUsuarios('')}
                  </select>`
               : `<span style="color:var(--text3)">—</span>`)}
         </td>
-        <td style="padding:10px 12px">
-          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+        <td style="padding:10px 12px;min-width:180px">
+          <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:${hist.length?'4':'0'}px">
             <span style="font-size:12px;font-weight:700;color:${cor};background:${cor}18;padding:4px 10px;border-radius:20px;white-space:nowrap">${lbl}</span>
-            ${!['protocolo','abastecido','nao_encontrado','devolucao'].includes(sit)
-              ? `<button onclick="marcarSituacaoDesk(${a.id},'subiu')"
-                  title="Marcar como Subiu"
-                  style="font-size:10px;padding:3px 8px;border:1px solid #0ea5e9;border-radius:20px;background:transparent;color:#0ea5e9;cursor:pointer;white-space:nowrap">
-                  ⬆️ Subiu
-                </button>
-                <button onclick="marcarProtocolo(${a.id})"
-                  title="Marcar como Protocolo"
-                  style="font-size:10px;padding:3px 8px;border:1px solid #6b7280;border-radius:20px;background:transparent;color:#6b7280;cursor:pointer;white-space:nowrap">
-                  📋 Protocolo
-                </button>
-                <button onclick="marcarSituacaoDesk(${a.id},'devolucao')"
-                  title="Marcar como Devolução"
-                  style="font-size:10px;padding:3px 8px;border:1px solid #a855f7;border-radius:20px;background:transparent;color:#a855f7;cursor:pointer;white-space:nowrap">
-                  ↩️ Dev.
-                </button>`
+            ${!['protocolo','abastecido','nao_encontrado','devolucao','subiu'].includes(sit)
+              ? `<button onclick="marcarSituacaoDesk(${a.id},'subiu')" title="Subiu" style="font-size:10px;padding:3px 8px;border:1px solid #0ea5e9;border-radius:20px;background:transparent;color:#0ea5e9;cursor:pointer">⬆️ Subiu</button>
+                 <button onclick="marcarProtocolo(${a.id})" title="Protocolo" style="font-size:10px;padding:3px 8px;border:1px solid #6b7280;border-radius:20px;background:transparent;color:#6b7280;cursor:pointer">📋</button>
+                 <button onclick="marcarSituacaoDesk(${a.id},'devolucao')" title="Devolução" style="font-size:10px;padding:3px 8px;border:1px solid #a855f7;border-radius:20px;background:transparent;color:#a855f7;cursor:pointer">↩️</button>`
               : ''}
           </div>
+          ${histHtml}
         </td>
         <td style="padding:8px 10px;min-width:160px">
           <input type="text" value="${(a.obs||'').replace(/"/g,'&quot;')}" placeholder="Observação..."
             onblur="salvarCampoAviso(${a.id},'obs',this.value)"
             style="width:100%;font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);box-sizing:border-box">
         </td>
-        <td style="padding:10px 12px;font-size:11px;color:var(--text3);white-space:nowrap">${a.hora_aviso||'—'}</td>
+        <td style="padding:10px 12px;font-size:11px;color:var(--text3);white-space:nowrap">${a.hora_aviso||'—'}<br><span style="font-size:10px">${a.data_aviso||''}</span></td>
       </tr>`;
     }).join('');
   } catch(e) {

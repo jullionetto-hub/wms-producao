@@ -4,6 +4,9 @@ const { db, pool } = require('../lib/db');
 const { requerAuth, requerPerfil } = require('../lib/auth');
 const { dataHoraLocal, validarId } = require('../lib/helpers');
 
+// Garante coluna historico (roda uma vez na inicialização)
+pool.query(`ALTER TABLE avisos_repositor ADD COLUMN IF NOT EXISTS historico JSONB DEFAULT '[]'::jsonb`).catch(()=>{});
+
 router.get('/repositor/avisos', requerAuth, async (req,res) => {
   if (!req.session?.usuario) return res.json([]);
   const {status, data, data_ini, data_fim, codigo} = req.query;
@@ -36,6 +39,7 @@ router.put('/repositor/avisos/:id', requerAuth, async (req,res) => {
   if (!id) return res.status(400).json({erro:'ID invalido'});
   const {status,obs,qtd_encontrada,repositor_nome,quem_pegou,quem_guardou,forma_envio,situacao}=req.body;
   const {hora}=dataHoraLocal();
+  const usuario = req.session?.usuario?.nome || repositor_nome || 'Sistema';
   try {
     const st = situacao || status || 'pendente';
     const atual = await db.get('SELECT * FROM avisos_repositor WHERE id=$1',[id]);
@@ -44,9 +48,17 @@ router.put('/repositor/avisos/:id', requerAuth, async (req,res) => {
     const fEnvio   = forma_envio  || atual?.forma_envio  || '';
     const qtdEnc   = qtd_encontrada !== undefined ? qtd_encontrada : (atual?.qtd_encontrada || 0);
     const obsVal   = obs !== undefined ? obs : (atual?.obs || '');
+
+    // Registra histórico por etapa (só loga se o status mudou)
+    let histAtual = [];
+    try { histAtual = Array.isArray(atual?.historico) ? atual.historico : (atual?.historico ? JSON.parse(atual.historico) : []); } catch{}
+    const histNovo = (st !== (atual?.status||'pendente'))
+      ? [...histAtual, { usuario, acao: st, hora }]
+      : histAtual;
+
     const upd = await pool.query(
-      `UPDATE avisos_repositor SET status=$1,obs=$2,qtd_encontrada=$3,repositor_nome=$4,hora_reposto=$5,quem_pegou=$6,quem_guardou=$7,forma_envio=$8,situacao=$9 WHERE id=$10`,
-      [st, obsVal, qtdEnc, repositor_nome||qPegou||'', hora, qPegou, qGuardou, fEnvio, st, id]
+      `UPDATE avisos_repositor SET status=$1,obs=$2,qtd_encontrada=$3,repositor_nome=$4,hora_reposto=$5,quem_pegou=$6,quem_guardou=$7,forma_envio=$8,situacao=$9,historico=$10 WHERE id=$11`,
+      [st, obsVal, qtdEnc, repositor_nome||qPegou||'', hora, qPegou, qGuardou, fEnvio, st, JSON.stringify(histNovo), id]
     );
     if (upd.rowCount === 0) return res.status(404).json({erro:'Aviso não encontrado'});
     if (['abastecido','reposto','encontrado'].includes(st)) {
