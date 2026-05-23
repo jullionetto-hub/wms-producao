@@ -43,6 +43,12 @@ router.put('/repositor/avisos/:id', requerAuth, async (req,res) => {
   try {
     const st = situacao || status || 'pendente';
     const atual = await db.get('SELECT * FROM avisos_repositor WHERE id=$1',[id]);
+    // Impede reverter um item já finalizado (protocolo/abastecido) para etapa anterior
+    const estadosFinais = ['abastecido','protocolo','devolucao'];
+    const estadosNaoFinal = ['pendente','verificando','buscado','separado','aguardando_abastecer','subiu'];
+    if (estadosFinais.includes(atual?.status) && estadosNaoFinal.includes(st)) {
+      return res.status(409).json({erro:`Item já está em estado final: ${atual.status}. Não pode ser revertido.`});
+    }
     const qPegou   = quem_pegou   || atual?.quem_pegou   || '';
     const qGuardou = quem_guardou || atual?.quem_guardou || '';
     const fEnvio   = forma_envio  || atual?.forma_envio  || '';
@@ -66,7 +72,7 @@ router.put('/repositor/avisos/:id', requerAuth, async (req,res) => {
       if (av) await pool.query(`UPDATE itens_pedido SET status='encontrado' WHERE id=$1`,[av.item_id]);
     }
     const io = req.app.get('io');
-    io?.emit('aviso:atualizado', { id, status: st });
+    io?.emit('aviso:atualizado', { id, status: st, numero_pedido: atual?.numero_pedido });
     if (st === 'nao_encontrado') io?.emit('liberacao:novo', { id });
     res.json({mensagem:'Aviso atualizado!'});
   } catch(e){res.status(500).json({erro:e.message});}
@@ -221,10 +227,15 @@ router.put('/repositor/avisos/:id/protocolo',     requerAuth, (req,res) => atual
 router.put('/repositor/avisos/:id/devolucao',     requerAuth, (req,res) => atualizarAviso(req,res,'devolucao'));
 router.put('/repositor/avisos/:id/liberar', requerAuth, requerPerfil('supervisor'), async (req,res) => {
   try {
-    const { h } = await db.get(`SELECT TO_CHAR(NOW() AT TIME ZONE 'America/Sao_Paulo','HH24:MI') as h`);
+    const { hora } = dataHoraLocal();
+    const supervisorNome = req.session?.usuario?.nome || 'Supervisor';
+    const atual = await db.get('SELECT historico FROM avisos_repositor WHERE id=$1', [req.params.id]);
+    let hist = [];
+    try { hist = Array.isArray(atual?.historico) ? atual.historico : (atual?.historico ? JSON.parse(atual.historico) : []); } catch{}
+    const histNovo = [...hist, { usuario: supervisorNome, acao: 'liberado_supervisor', hora }];
     await pool.query(
-      `UPDATE avisos_repositor SET status='protocolo', situacao='protocolo', hora_reposto=$1 WHERE id=$2`,
-      [h, req.params.id]
+      `UPDATE avisos_repositor SET status='protocolo', situacao='protocolo', hora_reposto=$1, historico=$2, quem_guardou=$3 WHERE id=$4`,
+      [hora, JSON.stringify(histNovo), supervisorNome, req.params.id]
     );
     req.app.get('io')?.emit('aviso:atualizado', { id: req.params.id, status: 'protocolo' });
     res.json({mensagem:'Item liberado para Protocolo.'});

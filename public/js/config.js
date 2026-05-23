@@ -103,7 +103,7 @@ async function carregarProtocolo() {
       <div style="font-size:12px;color:var(--text3);margin-bottom:4px">Pedido: <b>#${r.numero_pedido||r.pedido_id}</b> | Cliente: ${r.cliente||'—'}</div>
       <div style="font-size:12px;color:var(--text3);margin-bottom:4px">Separador: ${r.separador_nome||'—'} | Data: ${fmtData(r.data_aviso)} ${r.hora_aviso||''}</div>
       <div style="font-size:12px;color:var(--text3);margin-bottom:8px">Endereço: ${r.endereco||'—'} | Qtd: ${r.quantidade||0}</div>
-      ${usuarioAtual?.perfil==='supervisor' ? `<button class="btn btn-outline btn-sm" onclick="liberarProtocolo(${r.id})" style="color:#ef4444;border-color:#ef4444">✅ Liberar como Não Encontrado</button>` : ''}
+      ${usuarioAtual?.perfil==='supervisor' ? `<button id="proto-btn-${r.id}" class="btn btn-outline btn-sm" onclick="liberarProtocolo(${r.id},this)" style="color:#ef4444;border-color:#ef4444">✅ Liberar como Não Encontrado</button>` : ''}
     </div>
   `).join('');
   // Badge
@@ -111,10 +111,20 @@ async function carregarProtocolo() {
   if (badge) { badge.style.display = rows.length ? '' : 'none'; badge.textContent = rows.length; }
 }
 
-async function liberarProtocolo(id) {
+async function liberarProtocolo(id, btn) {
+  if (btn?.disabled) return;
   wmsConfirm('Confirmar liberação como Não Encontrado?', async () => {
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Liberando...'; }
     const r = await apiFetch(`/repositor/avisos/${id}/liberar`, {method:'PUT'});
-    if (r?.mensagem) { toast('✅ Item liberado!', 'sucesso'); carregarProtocolo(); }
+    if (r?.mensagem) {
+      toast('✅ Item liberado!', 'sucesso');
+      // Substituir botão por badge sem recarregar toda a lista
+      if (btn?.parentElement) {
+        btn.parentElement.innerHTML = '<span style="display:inline-block;padding:6px 14px;background:#dcfce7;color:#16a34a;border-radius:8px;font-size:12px;font-weight:700;border:1px solid #86efac">✅ Liberado</span>';
+      }
+    } else {
+      if (btn) { btn.disabled = false; btn.textContent = '✅ Liberar como Não Encontrado'; }
+    }
   });
 }
 

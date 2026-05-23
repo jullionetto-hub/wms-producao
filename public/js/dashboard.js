@@ -598,25 +598,31 @@ function iniciarAutoRefreshLiberacao() {
 }
 
 async function carregarLiberacao() {
-  const tbody    = document.getElementById('tbody-liberacao');
-  const badge    = document.getElementById('lib-total-badge');
+  const tbody     = document.getElementById('tbody-liberacao');
+  const tbodyLib  = document.getElementById('tbody-liberados');
+  const badge     = document.getElementById('lib-total-badge');
+  const histBadge = document.getElementById('lib-hist-badge');
   const menuBadge = document.getElementById('menu-badge-lib');
   if (!tbody) return;
 
-  try {
-    const res  = await fetch(`${API}/liberacao/pendentes`, { credentials:'include' });
-    const rows = await res.json();
+  const ini = document.getElementById('lib-filtro-ini')?.value || '';
+  const fim = document.getElementById('lib-filtro-fim')?.value || '';
+  const p   = new URLSearchParams();
+  if (ini) p.set('data_ini', ini);
+  if (fim) p.set('data_fim', fim);
+  const q = p.toString() ? '?'+p.toString() : '';
 
+  const fmtD = d => { const m=String(d||'').match(/^(\d{4})-(\d{2})-(\d{2})$/); return m?`${m[3]}/${m[2]}/${m[1]}`:d||''; };
+
+  try {
+    // ── Pendentes ─────────────────────────────────────────────────────
+    const res  = await fetch(`${API}/liberacao/pendentes${q}`, { credentials:'include' });
+    const rows = await res.json();
     const total = rows.length;
     if (badge)     badge.textContent = total;
     if (menuBadge) { menuBadge.textContent = total; menuBadge.style.display = total > 0 ? 'inline' : 'none'; }
 
-    if (!total) {
-      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:32px;font-size:13px">✅ Nenhum item aguardando liberação</td></tr>';
-      return;
-    }
-
-    tbody.innerHTML = rows.map(r => `
+    tbody.innerHTML = total ? rows.map(r => `
       <tr>
         <td style="font-weight:700">${r.numero_pedido||'—'}</td>
         <td>
@@ -626,16 +632,44 @@ async function carregarLiberacao() {
         <td style="text-align:center;font-weight:700">${r.quantidade||'—'}</td>
         <td style="color:var(--text2)">${r.separador_nome||'—'}</td>
         <td style="color:var(--text2)">${r.repositor_nome||'—'}</td>
-        <td style="color:var(--text3);font-size:12px">${r.data_aviso||''} ${r.hora_reposto||r.hora_aviso||''}</td>
-        <td>
+        <td style="color:var(--text3);font-size:12px">${fmtD(r.data_aviso)} ${r.hora_reposto||r.hora_aviso||''}</td>
+        <td id="lib-btn-${r.id}">
           <button class="btn btn-sm" style="background:var(--accent);color:#fff;white-space:nowrap"
-            onclick="liberarItem(${r.id}, this)">🔓 Liberar para Protocolo</button>
+            onclick="liberarItem(${r.id},this)">🔓 Liberar para Protocolo</button>
         </td>
-      </tr>`).join('');
+      </tr>`).join('')
+    : '<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:32px;font-size:13px">✅ Nenhum item aguardando liberação</td></tr>';
+
+    // ── Histórico de liberados ────────────────────────────────────────
+    if (tbodyLib) {
+      const resH  = await fetch(`${API}/liberacao/historico${q}`, { credentials:'include' });
+      const rowsH = resH.ok ? await resH.json() : [];
+      if (histBadge) histBadge.textContent = rowsH.length;
+      tbodyLib.innerHTML = rowsH.length ? rowsH.map(r => {
+        let hist = [];
+        try { hist = Array.isArray(r.historico)?r.historico:(r.historico?JSON.parse(r.historico):[]); } catch{}
+        const libEntry   = hist.find(h => h.acao === 'liberado_supervisor');
+        const liberadoPor = r.liberado_por || libEntry?.usuario || '—';
+        const horaLib     = libEntry?.hora || r.hora_reposto || '—';
+        return `<tr>
+          <td style="font-weight:700">${r.numero_pedido||'—'}</td>
+          <td>
+            <div style="font-weight:700;color:var(--text)">${r.codigo||'—'}</div>
+            <div style="font-size:11px;color:var(--text2)">${r.descricao||''}</div>
+          </td>
+          <td style="color:var(--text2)">${r.separador_nome||'—'}</td>
+          <td style="color:var(--text2)">${r.repositor_nome||'—'}</td>
+          <td style="font-weight:600;color:#10b981">✅ ${liberadoPor}</td>
+          <td style="color:var(--text3);font-size:12px">${fmtD(r.data_aviso)} ${horaLib}</td>
+        </tr>`;
+      }).join('')
+      : '<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:32px;font-size:13px">Nenhum item liberado no período</td></tr>';
+    }
   } catch(e) { console.error('carregarLiberacao:', e); toast('Erro ao carregar liberações','erro'); }
 }
 
 async function liberarItem(id, btn) {
+  if (btn?.disabled) return;
   wmsConfirm('Liberar este item para Protocolo? O separador será notificado.', async () => {
     if (btn) { btn.disabled = true; btn.textContent = '⏳ Liberando...'; }
     try {
@@ -644,8 +678,16 @@ async function liberarItem(id, btn) {
         headers:{'Content-Type':'application/json'}, body:JSON.stringify({})
       });
       const data = await res.json();
-      if (data.erro) { toast(data.erro,'erro'); if (btn) { btn.disabled = false; btn.textContent = '🔓 Liberar para Protocolo'; } return; }
+      if (data.erro) {
+        toast(data.erro,'erro');
+        if (btn) { btn.disabled = false; btn.textContent = '🔓 Liberar para Protocolo'; }
+        return;
+      }
       toast('✅ Item liberado para Protocolo!','sucesso');
+      // Substitui botão por badge "Liberado" sem recarregar toda a lista
+      const cell = document.getElementById(`lib-btn-${id}`);
+      if (cell) cell.innerHTML = '<span style="color:#10b981;font-weight:700;font-size:12px">✅ Liberado</span>';
+      // Recarrega histórico de forma silenciosa
       carregarLiberacao();
     } catch(e) { toast('Erro ao liberar!','erro'); if (btn) { btn.disabled = false; btn.textContent = '🔓 Liberar para Protocolo'; } }
   });

@@ -533,10 +533,6 @@
             style="padding:9px 16px;border:none;background:transparent;font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.5px;cursor:pointer;border-bottom:2px solid var(--accent);margin-bottom:-2px">
             CONTROLE
           </button>
-          <button id="rep-ababtn-stats" onclick="mudarAbaRep('stats')"
-            style="padding:9px 16px;border:none;background:transparent;font-size:12px;font-weight:700;color:var(--text3);letter-spacing:.5px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px">
-            INDICADORES
-          </button>
           <button id="rep-ababtn-ranking" onclick="mudarAbaRep('ranking')"
             style="padding:9px 16px;border:none;background:transparent;font-size:12px;font-weight:700;color:var(--text3);letter-spacing:.5px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px">
             RANKING PRODUTOS
@@ -680,6 +676,18 @@
       <div class="pagina" id="pag-liberacao">
         <div class="pg-title">🔓 Liberação de Itens</div>
 
+        <!-- Filtros de data -->
+        <div class="card" style="margin-bottom:14px">
+          <div class="card-hd">FILTROS</div>
+          <div class="date-filter-bar">
+            <div class="fg"><label>DE</label><input type="date" id="lib-filtro-ini"/></div>
+            <div class="fg"><label>ATÉ</label><input type="date" id="lib-filtro-fim"/></div>
+            <button class="btn btn-primary btn-sm" onclick="carregarLiberacao()">Filtrar</button>
+            <button class="btn btn-outline btn-sm" onclick="document.getElementById('lib-filtro-ini').value='';document.getElementById('lib-filtro-fim').value='';carregarLiberacao()">🔄 Todos</button>
+          </div>
+        </div>
+
+        <!-- Aguardando liberação -->
         <div class="card" style="margin-bottom:14px;border-left:4px solid var(--red)">
           <div class="card-hd">
             AGUARDANDO LIBERAÇÃO DO SUPERVISOR
@@ -689,25 +697,36 @@
             Itens marcados como <b style="color:var(--red)">Não Encontrado</b> pelo repositor que precisam de liberação do supervisor.<br>
             Ao liberar, o item vai para <b>Protocolo</b> e o separador pode continuar o pedido.
           </div>
-        </div>
-
-        <div class="card">
-          <div class="card-hd">ITENS PENDENTES</div>
           <div class="tabela-wrap">
             <table>
               <thead>
                 <tr>
-                  <th>Nº PEDIDO</th>
-                  <th>ITEM</th>
-                  <th>QTDE</th>
-                  <th>SEPARADOR</th>
-                  <th>REPOSITOR</th>
-                  <th>DATA / HORA</th>
-                  <th>AÇÃO</th>
+                  <th>Nº PEDIDO</th><th>ITEM</th><th>QTDE</th>
+                  <th>SEPARADOR</th><th>REPOSITOR</th><th>DATA / HORA</th><th>AÇÃO</th>
                 </tr>
               </thead>
               <tbody id="tbody-liberacao">
                 <tr><td colspan="7" style="text-align:center;color:var(--text3);padding:24px">Carregando...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Histórico de liberados -->
+        <div class="card">
+          <div class="card-hd">LIBERADOS — HISTÓRICO
+            <span id="lib-hist-badge" style="background:#10b981;color:#fff;border-radius:20px;padding:2px 12px;font-size:12px;font-weight:700;margin-left:8px">0</span>
+          </div>
+          <div class="tabela-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Nº PEDIDO</th><th>ITEM</th><th>SEPARADOR</th>
+                  <th>REPOSITOR</th><th>LIBERADO POR</th><th>DATA / HORA</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-liberados">
+                <tr><td colspan="6" style="text-align:center;color:var(--text3);padding:24px">Nenhum item liberado no período</td></tr>
               </tbody>
             </table>
           </div>
@@ -1710,13 +1729,32 @@
 
       <!-- ABA 3 — AVISOS DO REPOSITOR -->
       <div class="sep-tab-page" id="sep-tab-avisos-sep">
-        <div class="sep-scroll">
+        <div class="rep-scroll">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
             <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">🔔 Avisos do Repositor</div>
             <button class="btn btn-outline btn-sm" onclick="carregarAvisosSeparador()">🔄</button>
           </div>
           <div id="sep-avisos-lista">
             <div style="color:var(--text3);text-align:center;padding:40px;font-size:13px">✅ Nenhum aviso</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ABA 4 — AGUARDANDO (itens em protocolo) -->
+      <div class="sep-tab-page" id="sep-tab-aguardando">
+        <div class="rep-scroll">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">⏸️ Aguardando</div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <span style="font-size:12px;color:#f59e0b;font-weight:700">⏸️ <span id="sep-cnt-aguardando">0</span></span>
+              <button class="btn btn-outline btn-sm" onclick="carregarAguardandoMobile()">🔄</button>
+            </div>
+          </div>
+          <div style="font-size:12px;color:var(--text3);margin-bottom:12px;padding:8px 12px;background:#fffbeb;border-radius:8px;border:1px solid #fde68a">
+            ⏸️ Pedidos com itens em <b style="color:#92400e">Protocolo</b> — aguardando definição do supervisor.
+          </div>
+          <div id="sep-lista-aguardando">
+            <div style="color:var(--text3);text-align:center;padding:40px;font-size:13px">Nenhum item aguardando</div>
           </div>
         </div>
       </div>
@@ -1769,6 +1807,11 @@
     <span class="sep-tab-ic">🔔</span>
     AVISOS
     <span class="sep-tab-badge" id="stab-avisos-sep-badge" style="display:none">0</span>
+  </button>
+  <button class="sep-tab" id="stab-aguardando" onclick="mudarTabSep('aguardando')">
+    <span class="sep-tab-ic">⏸️</span>
+    AGUARD.
+    <span class="sep-tab-badge" id="stab-aguardando-badge" style="display:none">0</span>
   </button>
   <button class="sep-tab" id="stab-stats" onclick="mudarTabSep('stats')">
     <span class="sep-tab-ic">📈</span>
@@ -1827,10 +1870,10 @@
 
 <script src="/js/config.js"></script>
   <script src="/js/pedidos.js"></script>
-  <script src="/js/separador.js"></script>
+  <script src="/js/separador.js?v=2"></script>
   <script src="/js/repositor.js?v=11"></script>
   <script src="/js/checkout.js"></script>
-  <script src="/js/dashboard.js"></script>
+  <script src="/js/dashboard.js?v=2"></script>
   <script src="/js/auth.js?v=2"></script>
 
 
@@ -2052,7 +2095,7 @@ if ('serviceWorker' in navigator) {
   });
 }
 </script>
-<script src="/js/socket-client.js?v=2" defer></script>
+<script src="/js/socket-client.js?v=3" defer></script>
 
 <!-- ══ EMBALAGEM MOBILE — fora do #app, overlay fixo ══ -->
 <div id="emb-mobile-root" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;z-index:9999;flex-direction:column;background:var(--bg,#f1f5f9)">

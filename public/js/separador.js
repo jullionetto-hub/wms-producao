@@ -141,6 +141,61 @@ function selecionarPedidoFilaMobile(num) {
 
 
 
+async function carregarAguardandoMobile() {
+  const el      = document.getElementById('sep-lista-aguardando');
+  const cntEl   = document.getElementById('sep-cnt-aguardando');
+  const badgeEl = document.getElementById('stab-aguardando-badge');
+  if (!el) return;
+  try {
+    const res = await fetch(`${API}/repositor/avisos?status=nao_encontrado,protocolo`, { credentials:'include' });
+    if (!res.ok) throw new Error();
+    const av = await res.json();
+    // Filtra apenas avisos do separador logado
+    const meus = separadorAtual
+      ? av.filter(a => a.separador_nome === separadorAtual.nome || String(a.separador_id) === String(separadorAtual.id))
+      : av;
+    const n = meus.length;
+    if (cntEl)   cntEl.textContent = n;
+    if (badgeEl) { badgeEl.textContent = n; badgeEl.style.display = n ? 'inline-flex' : 'none'; }
+    if (!n) {
+      el.innerHTML = '<div style="text-align:center;color:var(--text3);padding:40px;font-size:13px">Nenhum item aguardando</div>';
+      return;
+    }
+    // Agrupa por numero_pedido
+    const porPedido = {};
+    meus.forEach(a => {
+      const key = a.numero_pedido || '—';
+      if (!porPedido[key]) porPedido[key] = [];
+      porPedido[key].push(a);
+    });
+    el.innerHTML = Object.entries(porPedido).map(([ped, itens]) => {
+      const temProtocolo = itens.some(a => a.status === 'protocolo');
+      const borderColor  = temProtocolo ? '#6366f1' : '#f59e0b';
+      const bgColor      = temProtocolo ? '#f5f3ff' : '#fffbeb';
+      const labelTxt     = temProtocolo ? 'PROTOCOLO' : 'NÃO ENCONTRADO';
+      const labelColor   = temProtocolo ? '#7c3aed'   : '#d97706';
+      return `<div style="background:${bgColor};border:1px solid ${borderColor}44;border-left:3px solid ${borderColor};border-radius:10px;padding:14px;margin-bottom:10px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <span style="font-family:'Space Mono',monospace;font-size:15px;font-weight:700;color:#0f172a">Pedido #${ped}</span>
+          <span style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:12px;background:${borderColor}22;color:${labelColor};border:1px solid ${borderColor}66">${labelTxt}</span>
+        </div>
+        ${itens.map(a => `
+          <div style="background:rgba(255,255,255,.75);border:1px solid #e2e8f0;border-radius:7px;padding:10px;margin-bottom:6px">
+            <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:2px">${a.codigo||'—'}</div>
+            <div style="font-size:11px;color:#475569;margin-bottom:3px">${a.descricao||'—'}</div>
+            <div style="font-size:11px;color:#64748b">Qtd: <b>${a.quantidade||1}</b>${a.endereco?' | End: '+a.endereco:''}${a.hora_aviso?' | '+a.hora_aviso:''}</div>
+          </div>
+        `).join('')}
+      </div>`;
+    }).join('');
+  } catch(e) {
+    el.innerHTML = '<div style="text-align:center;color:var(--red);padding:24px;font-size:13px">Erro ao carregar</div>';
+  }
+}
+
+
+
+
 async function carregarStatsMobile() {
   try {
     const nomeEl = document.getElementById('m-stat-nome');

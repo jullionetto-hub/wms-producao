@@ -21,12 +21,27 @@
     });
 
     // Aviso atualizado (abastecido, reposto, etc.) → mesmas telas
-    socket.on('aviso:atualizado', () => {
+    socket.on('aviso:atualizado', (data) => {
       if (typeof carregarAvisos === 'function') carregarAvisos();
       if (typeof carregarAvisosMobile === 'function') carregarAvisosMobile();
       if (typeof carregarFilaMobile === 'function') carregarFilaMobile();
       if (typeof carregarAvisosSeparador === 'function') carregarAvisosSeparador();
       if (typeof atualizarBadgeLiberacao === 'function') atualizarBadgeLiberacao();
+      // Atualiza aba Aguardando quando item vai para protocolo
+      if (typeof carregarAguardandoMobile === 'function' &&
+          (data?.status === 'nao_encontrado' || data?.status === 'protocolo')) {
+        carregarAguardandoMobile();
+      }
+      // Notifica separador no mobile quando repositor marca Subiu ou Abastecido
+      if (typeof usuarioAtual !== 'undefined' && usuarioAtual?.perfil === 'separador') {
+        if (data?.status === 'subiu') {
+          const ped = data?.numero_pedido ? ` — Pedido #${data.numero_pedido}` : '';
+          if (typeof toast === 'function') toast(`📦 Repositor subiu item ao estoque${ped}!`, 'info');
+        } else if (data?.status === 'abastecido') {
+          const ped = data?.numero_pedido ? ` — Pedido #${data.numero_pedido}` : '';
+          if (typeof toast === 'function') toast(`✅ Item abastecido pelo repositor${ped}!`, 'sucesso');
+        }
+      }
     });
 
     // Item marcado como não encontrado → atualiza liberação do supervisor em tempo real

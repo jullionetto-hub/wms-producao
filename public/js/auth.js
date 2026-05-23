@@ -133,10 +133,12 @@ function ativarMobileSep() {
   carregarStatsMobile();
   carregarFilaMobile();
   carregarAvisosSeparador();
+  carregarAguardandoMobile();
   carregarPedidosPendentesReposicao();
   setInterval(() => {
     carregarFilaMobile();
     carregarAvisosSeparador();
+    carregarAguardandoMobile();
     if (pedidoAtualId) carregarChecklistMobile();
   }, 30000);
 }
@@ -188,15 +190,16 @@ function _confirmarSair() {
    TABS MOBILE DO SEPARADOR
 ══════════════════════════════════════════ */
 function mudarTabSep(tab) {
-  ['separar','fila','avisos-sep','stats'].forEach(t => {
+  ['separar','fila','avisos-sep','aguardando','stats'].forEach(t => {
     const pg = document.getElementById(`sep-tab-${t}`);
     const bt = document.getElementById(`stab-${t}`);
     if (pg) pg.classList.toggle('ativa', t === tab);
     if (bt) bt.classList.toggle('ativo', t === tab);
   });
-  if (tab === 'fila')       carregarFilaMobile();
-  if (tab === 'stats')      carregarStatsMobile();
-  if (tab === 'avisos-sep') carregarAvisosSeparador();
+  if (tab === 'fila')        carregarFilaMobile();
+  if (tab === 'stats')       carregarStatsMobile();
+  if (tab === 'avisos-sep')  carregarAvisosSeparador();
+  if (tab === 'aguardando')  carregarAguardandoMobile();
   if (tab === 'separar' && pedidoAtualId) renderChecklistMobile();
 }
 
