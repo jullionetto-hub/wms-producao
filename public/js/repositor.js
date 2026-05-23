@@ -242,41 +242,62 @@ function renderCardMobile(a) {
     : '';
 
   // ── Botões de ação ──
+  // ── Dropdown de etapas ──
+  const ETAPAS_DROP = [
+    { acao:'e_verificando', ico:'🔍', lbl:'Verificando',    cor:'#8b5cf6' },
+    { acao:'e_separado',    ico:'📦', lbl:'Separado',        cor:'#3b82f6' },
+    { acao:'e_subiu',       ico:'⬆️', lbl:'Subiu',           cor:'#0ea5e9' },
+    { acao:'e_abastecido',  ico:'✅', lbl:'Abastecido',      cor:'#10b981' },
+    { acao:'e_protocolo',   ico:'📋', lbl:'Protocolo',       cor:'#6b7280' },
+    { acao:'e_devolucao',   ico:'↩️', lbl:'Devolução',       cor:'#a855f7' },
+    { acao:'e_nao_enc',     ico:'❌', lbl:'Não encontrado',  cor:'#ef4444' },
+  ];
+
+  const dropEtapas = `
+    <div style="position:relative" id="rep-ewrap-${a.id}">
+      <div onclick="toggleEtapaDrop(${a.id},event)"
+        style="display:flex;align-items:center;justify-content:space-between;padding:13px 16px;background:var(--surface2);border:2px solid var(--accent);border-radius:12px;cursor:pointer;transition:border-color .2s" id="rep-ebox-${a.id}">
+        <span style="font-size:14px;font-weight:600;color:var(--text)" id="rep-eval-${a.id}">Registrar etapa...</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" id="rep-eseta-${a.id}" style="color:var(--accent);transition:transform .2s;flex-shrink:0"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div id="rep-edrop-${a.id}"
+        style="display:none;position:absolute;left:0;right:0;top:calc(100% + 2px);background:var(--surface);border:2px solid var(--accent);border-radius:12px;z-index:300;overflow:hidden;box-shadow:0 8px 28px rgba(0,0,0,.15)">
+        ${ETAPAS_DROP.map(et => `
+          <div onclick="selecionarEtapaRep(${a.id},'${et.acao}','${nomeLogado}',this,event)"
+            style="display:flex;align-items:center;gap:12px;padding:13px 16px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .12s"
+            onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+            <span style="font-size:18px;width:22px;text-align:center;flex-shrink:0">${et.ico}</span>
+            <span style="font-size:14px;font-weight:600;color:${et.cor};flex:1">${et.lbl}</span>
+          </div>`).join('')}
+      </div>
+    </div>`;
+
   let botoesEtapa = '';
-  if (['pendente','verificando','buscado','separado'].includes(sit)) {
+  const finalStates = ['abastecido','subiu','protocolo','devolucao','nao_encontrado'];
+
+  if (!finalStates.includes(sit)) {
+    // Quantidade + dropdown para todos os estados ativos
     botoesEtapa = `
       <div style="border-top:1px solid var(--border);padding:12px 0 0">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-          <span style="font-size:12px;color:var(--text3);white-space:nowrap">Qtd encontrada:</span>
-          <div style="display:flex;align-items:center;gap:6px">
-            <button onclick="this.nextElementSibling.value=Math.max(0,+this.nextElementSibling.value-1)" style="width:32px;height:32px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface2);font-size:18px;cursor:pointer;color:var(--text);line-height:1">−</button>
-            <input type="number" id="qtd-${a.id}" min="0" max="${qtdSolic}" value="${a.qtd_encontrada||qtdSolic}" style="width:56px;padding:4px 8px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-size:18px;font-weight:700;text-align:center">
-            <button onclick="this.previousElementSibling.value=Math.min(${qtdSolic},+this.previousElementSibling.value+1)" style="width:32px;height:32px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface2);font-size:18px;cursor:pointer;color:var(--text);line-height:1">+</button>
-            <span style="font-size:12px;color:var(--text3)">de ${qtdSolic}</span>
-          </div>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:8px">
-          <button onclick="acaoRepositor(${a.id},'busquei_e_abasteci','${nomeLogado}')" style="width:100%;padding:13px;background:#10b981;color:#fff;border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer">✅ Encontrei e entreguei — Abastecido</button>
-          <button onclick="acaoRepositor(${a.id},'subiu','${nomeLogado}')" style="width:100%;padding:13px;background:#0ea5e9;color:#fff;border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer">⬆️ Subiu — levei para o separador</button>
-          <button onclick="acaoRepositor(${a.id},'so_busquei','${nomeLogado}')" style="width:100%;padding:13px;background:#3b82f6;color:#fff;border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer">📦 Separado — outro vai entregar</button>
-          <button onclick="acaoRepositor(${a.id},'devolucao','${nomeLogado}')" style="width:100%;padding:13px;background:transparent;color:#a855f7;border:1.5px solid #a855f7;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer">↩️ Devolução</button>
-          <button onclick="acaoRepositor(${a.id},'nao_encontrei','${nomeLogado}')" style="width:100%;padding:13px;background:transparent;color:#ef4444;border:1.5px solid #ef4444;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer">❌ Não encontrei</button>
-        </div>
+        ${sit === 'aguardando_abastecer' ? `
+          <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:9px 12px;margin-bottom:10px;font-size:12px;color:#92400e">
+            📦 <strong>${a.quem_pegou||'—'}</strong> separou ${a.qtd_encontrada||qtdSolic} de ${qtdSolic} un. Aguardando entrega.
+          </div>` : `
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+            <span style="font-size:12px;color:var(--text3);white-space:nowrap">Qtd encontrada:</span>
+            <div style="display:flex;align-items:center;gap:6px">
+              <button onclick="this.nextElementSibling.value=Math.max(0,+this.nextElementSibling.value-1)" style="width:32px;height:32px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface2);font-size:18px;cursor:pointer;color:var(--text);line-height:1">−</button>
+              <input type="number" id="qtd-${a.id}" min="0" max="${qtdSolic}" value="${a.qtd_encontrada||qtdSolic}" style="width:56px;padding:4px 8px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-size:18px;font-weight:700;text-align:center">
+              <button onclick="this.previousElementSibling.value=Math.min(${qtdSolic},+this.previousElementSibling.value+1)" style="width:32px;height:32px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface2);font-size:18px;cursor:pointer;color:var(--text);line-height:1">+</button>
+              <span style="font-size:12px;color:var(--text3)">de ${qtdSolic}</span>
+            </div>
+          </div>`}
+        ${dropEtapas}
       </div>`;
-  } else if (sit === 'aguardando_abastecer') {
-    botoesEtapa = `
-      <div style="border-top:1px solid var(--border);padding:12px 0 0">
-        <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:12px;color:#92400e">
-          📦 <strong>${a.quem_pegou||'—'}</strong> separou ${a.qtd_encontrada||qtdSolic} de ${qtdSolic} un. Aguardando entrega.
-        </div>
-        <div style="display:flex;flex-direction:column;gap:8px">
-          <button onclick="acaoRepositor(${a.id},'abasteci','${nomeLogado}')" style="width:100%;padding:13px;background:#10b981;color:#fff;border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer">✅ Entreguei — Abastecido</button>
-          <button onclick="acaoRepositor(${a.id},'subiu_entrega','${nomeLogado}')" style="width:100%;padding:13px;background:#0ea5e9;color:#fff;border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer">⬆️ Subiu</button>
-        </div>
-      </div>`;
-  } else if (['abastecido','subiu','protocolo','devolucao','nao_encontrado'].includes(sit)) {
-    const conclusao = a.quem_guardou || a.quem_pegou;
-    botoesEtapa = conclusao ? `
+  } else {
+    // Estado final — mostra quem fez o quê
+    const tem = a.quem_guardou || a.quem_pegou;
+    botoesEtapa = tem ? `
       <div style="border-top:1px solid var(--border);padding-top:8px;display:flex;gap:14px;font-size:12px;color:var(--text3)">
         ${a.quem_pegou  ? `<span>📦 <strong style="color:var(--text)">${a.quem_pegou}</strong></span>` : ''}
         ${a.quem_guardou? `<span>🏠 <strong style="color:var(--text)">${a.quem_guardou}</strong></span>` : ''}
@@ -316,6 +337,47 @@ function renderCardMobile(a) {
     </div>`;
 }
 
+/* ── Dropdown de etapas — toggle / seleção ──────────────────────── */
+function toggleEtapaDrop(id, e) {
+  e && e.stopPropagation();
+  const drop = document.getElementById(`rep-edrop-${id}`);
+  const seta = document.getElementById(`rep-eseta-${id}`);
+  const box  = document.getElementById(`rep-ebox-${id}`);
+  const open = drop?.style.display !== 'none';
+  // fecha todos os outros abertos
+  document.querySelectorAll('[id^="rep-edrop-"]').forEach(d => { d.style.display = 'none'; });
+  document.querySelectorAll('[id^="rep-eseta-"]').forEach(s => { s.style.transform = ''; });
+  document.querySelectorAll('[id^="rep-ebox-"]').forEach(b => { b.style.borderColor = 'var(--accent)'; });
+  if (!open) {
+    if (drop) drop.style.display = 'block';
+    if (seta) seta.style.transform = 'rotate(180deg)';
+    if (box)  box.style.borderColor = 'var(--accent)';
+  }
+}
+
+function selecionarEtapaRep(id, acao, nomeLogado, el, e) {
+  e && e.stopPropagation();
+  const drop = document.getElementById(`rep-edrop-${id}`);
+  const seta = document.getElementById(`rep-eseta-${id}`);
+  const val  = document.getElementById(`rep-eval-${id}`);
+  if (drop) drop.style.display = 'none';
+  if (seta) seta.style.transform = '';
+  // Feedback visual imediato no label
+  const labels = {
+    e_verificando:'🔍 Verificando', e_separado:'📦 Separado', e_subiu:'⬆️ Subiu',
+    e_abastecido:'✅ Abastecido',  e_protocolo:'📋 Protocolo', e_devolucao:'↩️ Devolução',
+    e_nao_enc:'❌ Não encontrado'
+  };
+  if (val) val.textContent = labels[acao] || 'Registrando...';
+  acaoRepositor(id, acao, nomeLogado);
+}
+
+// Fecha dropdowns ao clicar fora
+document.addEventListener('click', () => {
+  document.querySelectorAll('[id^="rep-edrop-"]').forEach(d => { d.style.display = 'none'; });
+  document.querySelectorAll('[id^="rep-eseta-"]').forEach(s => { s.style.transform = ''; });
+});
+
 async function acaoRepositor(id, acao, nomeLogado) {
   const qtdInput = document.getElementById(`qtd-${id}`);
   const qtd = qtdInput ? parseInt(qtdInput.value) || 0 : 0;
@@ -335,6 +397,20 @@ async function acaoRepositor(id, acao, nomeLogado) {
     body = { situacao:'abastecido', status:'abastecido', quem_guardou: nomeLogado };
   } else if (acao === 'subiu_entrega') {
     body = { situacao:'subiu', status:'subiu', quem_guardou: nomeLogado };
+  } else if (acao === 'e_verificando') {
+    body = { situacao:'verificando', status:'verificando', quem_pegou: nomeLogado };
+  } else if (acao === 'e_separado') {
+    body = { situacao:'buscado', status:'buscado', quem_pegou: nomeLogado, qtd_encontrada: qtd };
+  } else if (acao === 'e_subiu') {
+    body = { situacao:'subiu', status:'subiu', quem_pegou: nomeLogado, qtd_encontrada: qtd };
+  } else if (acao === 'e_abastecido') {
+    body = { situacao:'abastecido', status:'abastecido', quem_pegou: nomeLogado, quem_guardou: nomeLogado, qtd_encontrada: qtd };
+  } else if (acao === 'e_protocolo') {
+    body = { situacao:'protocolo', status:'protocolo', quem_pegou: nomeLogado };
+  } else if (acao === 'e_devolucao') {
+    body = { situacao:'devolucao', status:'devolucao', quem_pegou: nomeLogado };
+  } else if (acao === 'e_nao_enc') {
+    body = { situacao:'nao_encontrado', status:'nao_encontrado', quem_pegou: nomeLogado, qtd_encontrada: 0 };
   }
 
   try {
