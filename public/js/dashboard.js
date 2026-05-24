@@ -674,16 +674,31 @@ async function carregarLiberacao() {
   } catch(e) { console.error('carregarLiberacao:', e); toast('Erro ao carregar liberações','erro'); }
 }
 
+// IDs de itens atualmente em processo de liberação — impede duplo clique e re-render
+const _liberandoIds = new Set();
+function _btnsLiberacao(id) {
+  return `<button class="btn btn-sm" style="background:#10b981;color:#fff;margin-right:4px;white-space:nowrap" onclick="liberarItem(${id},'encontrado',this)">✅ Encontrado</button>`+
+         `<button class="btn btn-sm" style="background:#ef4444;color:#fff;white-space:nowrap" onclick="liberarItem(${id},'nao_encontrado',this)">❌ Não Encontrado</button>`;
+}
+
 async function liberarItem(id, decisao, btn) {
-  if (btn?.disabled) return;
-  // Desabilita AMBOS os botões da célula imediatamente (proteção contra clique múltiplo)
-  const cellNow = document.getElementById(`lib-btn-${id}`);
-  const btnsNow = cellNow ? Array.from(cellNow.querySelectorAll('button')) : [btn];
-  btnsNow.forEach(b => { b.disabled = true; });
+  // Se já está em processamento (qualquer decisão), ignora — mesmo que a tabela tenha
+  // sido re-renderizada pelo auto-refresh e os botões apareçam "novos"
+  if (_liberandoIds.has(id)) return;
+  _liberandoIds.add(id);
+
+  // Desabilita ambos os botões imediatamente
+  const cell = document.getElementById(`lib-btn-${id}`);
+  if (cell) cell.querySelectorAll('button').forEach(b => b.disabled = true);
+
   const msg = decisao === 'encontrado'
     ? 'Liberar como ENCONTRADO? O separador será desbloqueado.'
     : 'Liberar como NÃO ENCONTRADO? O item ficará em Protocolo.';
+
   wmsConfirm(msg, async () => {
+    // Mostra estado de processamento na célula
+    const cellProc = document.getElementById(`lib-btn-${id}`);
+    if (cellProc) cellProc.innerHTML = '<span style="color:var(--text3);font-size:12px">⏳ Processando...</span>';
     try {
       const res  = await fetch(`${API}/repositor/avisos/${id}/liberar`, {
         method:'PUT', credentials:'include',
@@ -692,32 +707,30 @@ async function liberarItem(id, decisao, btn) {
       const data = await res.json();
       if (data.erro) {
         toast(data.erro,'erro');
-        // Re-busca célula (pode ter sido re-renderizada pelo intervalo)
+        _liberandoIds.delete(id);
         const c = document.getElementById(`lib-btn-${id}`);
-        if (c) c.innerHTML = `
-          <button class="btn btn-sm" style="background:#10b981;color:#fff;margin-right:4px" onclick="liberarItem(${id},'encontrado',this)">✅ Encontrado</button>
-          <button class="btn btn-sm" style="background:#ef4444;color:#fff" onclick="liberarItem(${id},'nao_encontrado',this)">❌ Não Encontrado</button>`;
+        if (c) c.innerHTML = _btnsLiberacao(id);
         return;
       }
+      toast(data.mensagem || '✅ Item liberado!','sucesso');
       const badge = decisao === 'encontrado'
         ? '<span style="color:#10b981;font-weight:700;font-size:12px">✅ Liberado (Encontrado)</span>'
         : '<span style="color:#7c3aed;font-weight:700;font-size:12px">📋 Em Protocolo</span>';
-      toast(data.mensagem || '✅ Item liberado!','sucesso');
-      // Re-busca célula após async (pode ter sido re-renderizada)
       const cellFresh = document.getElementById(`lib-btn-${id}`);
       if (cellFresh) cellFresh.innerHTML = badge;
+      _liberandoIds.delete(id);
       carregarLiberacao();
     } catch(e) {
       toast('Erro ao liberar!','erro');
+      _liberandoIds.delete(id);
       const c = document.getElementById(`lib-btn-${id}`);
-      if (c) c.innerHTML = `
-        <button class="btn btn-sm" style="background:#10b981;color:#fff;margin-right:4px" onclick="liberarItem(${id},'encontrado',this)">✅ Encontrado</button>
-        <button class="btn btn-sm" style="background:#ef4444;color:#fff" onclick="liberarItem(${id},'nao_encontrado',this)">❌ Não Encontrado</button>`;
+      if (c) c.innerHTML = _btnsLiberacao(id);
     }
   }, () => {
-    // Cancelou — re-busca e reabilita
+    // Cancelou — libera o lock e reabilita botões
+    _liberandoIds.delete(id);
     const c = document.getElementById(`lib-btn-${id}`);
-    if (c) { const bs = c.querySelectorAll('button'); bs.forEach(b => b.disabled = false); }
+    if (c) c.querySelectorAll('button').forEach(b => b.disabled = false);
   });
 }
 
