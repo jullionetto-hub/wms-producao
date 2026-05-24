@@ -103,21 +103,72 @@ async function carregarProtocolo() {
   const badge = document.getElementById('menu-badge-proto');
   if (badge) { badge.style.display = (rows||[]).length ? '' : 'none'; badge.textContent = (rows||[]).length; }
   if (!el) return;
-  if (!rows || !rows.length) { el.innerHTML = '<div style="text-align:center;color:var(--text3);padding:32px">Nenhum item em protocolo</div>'; return; }
+  if (!rows || !rows.length) { el.innerHTML = '<div style="text-align:center;color:var(--text3);padding:48px;font-size:14px">✅ Nenhum item em protocolo</div>'; return; }
   el.innerHTML = rows.map(r => `
-    <div style="background:var(--surface);border-radius:12px;padding:16px;margin-bottom:12px;border:1px solid var(--border)">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <span style="font-weight:700;font-size:15px">${r.codigo||''} — ${r.descricao||''}</span>
-        <span class="pill protocolo">Protocolo</span>
+    <div style="background:var(--surface);border-radius:16px;overflow:hidden;margin-bottom:16px;border:1.5px solid #e2e8f0;box-shadow:0 2px 12px rgba(0,0,0,.07)">
+
+      <!-- Cabeçalho roxo -->
+      <div style="background:linear-gradient(135deg,#7c3aed,#6d28d9);padding:14px 18px;display:flex;align-items:center;justify-content:space-between">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:22px">📋</span>
+          <div>
+            <div style="color:#fff;font-weight:800;font-size:16px;font-family:'Space Mono',monospace">#${r.numero_pedido||r.pedido_id}</div>
+            <div style="color:rgba(255,255,255,.7);font-size:11px">${fmtData(r.data_aviso)} às ${r.hora_aviso||'—'}</div>
+          </div>
+        </div>
+        <span style="background:rgba(255,255,255,.22);color:#fff;padding:5px 14px;border-radius:20px;font-size:11px;font-weight:800;letter-spacing:.8px">PROTOCOLO</span>
       </div>
-      <div style="font-size:12px;color:var(--text3);margin-bottom:4px">Pedido: <b>#${r.numero_pedido||r.pedido_id}</b> | Cliente: ${r.cliente||'—'}</div>
-      <div style="font-size:12px;color:var(--text3);margin-bottom:4px">Separador: ${r.separador_nome||'—'} | Data: ${fmtData(r.data_aviso)} ${r.hora_aviso||''}</div>
-      <div style="font-size:12px;color:var(--text3);margin-bottom:8px">Endereço: ${r.endereco||'—'} | Qtd: ${r.quantidade||0}</div>
-      ${usuarioAtual?.perfil==='supervisor' ? `
-        <div id="proto-btn-wrap-${r.id}" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
-          <button id="proto-btn-enc-${r.id}" class="btn btn-sm" style="background:#10b981;color:#fff"
-            onclick="liberarProtocolo(${r.id},this)">✅ Liberar como Encontrado</button>
+
+      <!-- Corpo -->
+      <div style="padding:16px 18px">
+        <!-- Item -->
+        <div style="font-family:'Space Mono',monospace;font-size:17px;font-weight:800;color:#dc2626;letter-spacing:.5px;margin-bottom:3px">${r.codigo||'—'}</div>
+        <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:16px;line-height:1.4">${r.descricao||'—'}</div>
+
+        <!-- Grid de dados -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+
+          <div style="background:#eff6ff;border-radius:10px;padding:11px 13px;border-left:3px solid #3b82f6">
+            <div style="font-size:9px;font-weight:800;color:#2563eb;letter-spacing:.8px;margin-bottom:3px;text-transform:uppercase">Cliente</div>
+            <div style="font-size:13px;font-weight:700;color:#1e3a5f">${r.cliente||'—'}</div>
+          </div>
+
+          <div style="background:#fef3c7;border-radius:10px;padding:11px 13px;border-left:3px solid #f59e0b">
+            <div style="font-size:9px;font-weight:800;color:#d97706;letter-spacing:.8px;margin-bottom:3px;text-transform:uppercase">Quantidade</div>
+            <div style="font-size:22px;font-weight:900;color:#92400e;line-height:1">${r.quantidade||0}</div>
+          </div>
+
+          <div style="background:#f0fdf4;border-radius:10px;padding:11px 13px;border-left:3px solid #10b981">
+            <div style="font-size:9px;font-weight:800;color:#059669;letter-spacing:.8px;margin-bottom:3px;text-transform:uppercase">Separador</div>
+            <div style="font-size:12px;font-weight:700;color:#064e3b">${r.separador_nome||'—'}</div>
+          </div>
+
+          <div style="background:#fdf4ff;border-radius:10px;padding:11px 13px;border-left:3px solid #a855f7">
+            <div style="font-size:9px;font-weight:800;color:#9333ea;letter-spacing:.8px;margin-bottom:3px;text-transform:uppercase">Forma de Envio</div>
+            <div style="font-size:12px;font-weight:700;color:#4a044e">${r.transportadora||'—'}</div>
+          </div>
+
+        </div>
+
+        <!-- Endereço -->
+        <div style="background:#f8fafc;border-radius:10px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:8px;border:1px solid #e2e8f0">
+          <span style="font-size:16px">📍</span>
+          <div>
+            <div style="font-size:9px;font-weight:800;color:var(--text3);letter-spacing:.8px;text-transform:uppercase;margin-bottom:1px">Endereço</div>
+            <div style="font-size:13px;font-weight:700;color:var(--text);font-family:'Space Mono',monospace">${r.endereco||'—'}</div>
+          </div>
+        </div>
+
+        <!-- Botão -->
+        ${usuarioAtual?.perfil==='supervisor' ? `
+        <div id="proto-btn-wrap-${r.id}">
+          <button id="proto-btn-enc-${r.id}"
+            onclick="liberarProtocolo(${r.id},this)"
+            style="width:100%;padding:14px;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;letter-spacing:.3px;display:flex;align-items:center;justify-content:center;gap:8px">
+            📋 Enviar para Protocolo
+          </button>
         </div>` : ''}
+      </div>
     </div>
   `).join('');
 }
@@ -126,7 +177,7 @@ async function liberarProtocolo(id, btn) {
   if (btn?.disabled) return;
   // Desabilita o botão imediatamente (proteção contra clique múltiplo)
   btn.disabled = true;
-  wmsConfirm('Liberar como ENCONTRADO? O separador será desbloqueado e o item removido do Protocolo.', async () => {
+  wmsConfirm('Enviar para Protocolo? O item será registrado e o separador será desbloqueado.', async () => {
     try {
       const r = await apiFetch(`/repositor/avisos/${id}/liberar`, {
         method:'PUT', body: JSON.stringify({ decisao: 'encontrado' }),
@@ -137,7 +188,7 @@ async function liberarProtocolo(id, btn) {
         // Re-busca o wrap após async (pode ter sido re-renderizado)
         const wrapFresh = document.getElementById(`proto-btn-wrap-${id}`);
         if (wrapFresh) wrapFresh.innerHTML =
-          '<span style="display:inline-block;padding:6px 14px;background:#dcfce7;color:#16a34a;border-radius:8px;font-size:12px;font-weight:700;border:1px solid #86efac">✅ Liberado</span>';
+          '<span style="display:flex;align-items:center;justify-content:center;gap:6px;padding:14px;background:#f3e8ff;color:#7c3aed;border-radius:10px;font-size:14px;font-weight:800;border:1.5px solid #c4b5fd">✅ Enviado para Protocolo</span>';
         carregarProtocolo(); // sempre recarrega para refletir o estado real
       } else {
         const btnFresh = document.getElementById(`proto-btn-enc-${id}`);

@@ -250,7 +250,7 @@ router.put('/repositor/avisos/:id/liberar', requerAuth, requerPerfil('supervisor
 router.get('/protocolo', requerAuth, async (req,res) => {
   try {
     const { data, data_ini, data_fim } = req.query;
-    let sql = `SELECT a.*, p.numero_pedido, p.cliente FROM avisos_repositor a LEFT JOIN pedidos p ON a.pedido_id=p.id WHERE a.status='protocolo'`;
+    let sql = `SELECT a.*, p.numero_pedido, p.cliente, p.transportadora FROM avisos_repositor a LEFT JOIN pedidos p ON a.pedido_id=p.id WHERE a.status='protocolo'`;
     const params = [];
     // suporta filtro legado (data única) e novo (data_ini/data_fim)
     if (data)     { params.push(data);     sql += ` AND a.data_aviso=$${params.length}`; }
