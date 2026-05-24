@@ -579,16 +579,15 @@ body.dark .item-card.parcial    .item-ic{background:#78350F}
   body.sep-mobile .sidebar{display:flex!important}
   .sep-tabbar{display:none!important}
 }
-  .perm-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:8px}
+  .perm-grid{display:flex;flex-direction:column;gap:7px;margin-top:8px}
 .perm-item{position:relative;display:flex;align-items:center;gap:0;border-radius:12px;overflow:hidden;cursor:pointer;transition:all .2s}
 .perm-item input[type=checkbox]{position:absolute;opacity:0;width:0;height:0}
-.perm-item .perm-label{flex:1;display:flex;align-items:center;gap:10px;padding:11px 14px;border:2px solid var(--border);border-radius:12px;background:var(--surface2);font-size:12px;font-weight:700;color:var(--text3);cursor:pointer;transition:all .2s;letter-spacing:.3px}
+.perm-item .perm-label{flex:1;display:flex;align-items:center;gap:10px;padding:11px 14px;border:2px solid var(--border);border-radius:12px;background:var(--surface2);font-size:13px;font-weight:700;color:var(--text3);cursor:pointer;transition:all .2s;letter-spacing:.3px}
 .perm-item input:checked + .perm-label{border-color:var(--accent);background:rgba(37,99,235,.07);color:var(--accent)}
-.perm-item .perm-label .perm-icon{font-size:18px;flex-shrink:0}
-.perm-item .perm-check{width:18px;height:18px;border-radius:5px;border:2px solid var(--border);background:var(--surface);flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .2s;margin-left:auto}
+.perm-item .perm-label .perm-icon{font-size:20px;flex-shrink:0}
+.perm-item .perm-check{width:20px;height:20px;border-radius:5px;border:2px solid var(--border);background:var(--surface);flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .2s;margin-left:auto}
 .perm-item input:checked + .perm-label .perm-check{background:var(--accent);border-color:var(--accent)}
-.perm-item input:checked + .perm-label .perm-check::after{content:"✓";color:#fff;font-size:12px;font-weight:800}
-@media(max-width:768px){.perm-grid{grid-template-columns:1fr}}
+.perm-item input:checked + .perm-label .perm-check::after{content:"✓";color:#fff;font-size:13px;font-weight:800}
 
 /* User cards */
 .usr-card{background:var(--surface);border:1.5px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:14px;transition:all .2s;position:relative;overflow:hidden}
