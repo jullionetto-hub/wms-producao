@@ -97,7 +97,7 @@ async function carregarUsuarios() {
       const perfisExtra = (u.perfis_acesso || '').split(',').filter(Boolean).filter(p => p !== u.perfil);
       const todosAcessos = [u.perfil, ...perfisExtra];
       const iniciais = u.nome.split(' ').slice(0,2).map(n=>n[0]).join('').toUpperCase();
-      const perfIcons = {supervisor:'👔',separador:'📦',repositor:'🔧',checkout:'🏷️'};
+      const perfIcons = {supervisor:'👔',separador:'📦',repositor:'🔧',checkout:'🏷️',embalador:'📫'};
       return `<div class="usr-card ${u.status}">
         <div class="usr-avatar">${iniciais}</div>
         <div class="usr-info">
