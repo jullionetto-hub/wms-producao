@@ -583,11 +583,8 @@ router.get('/liberacao/historico', requerAuth, requerPerfil('supervisor'), async
         a.quem_guardou as liberado_por, a.historico, p.cliente
       FROM avisos_repositor a
       LEFT JOIN pedidos p ON a.pedido_id = p.id
-      WHERE (
-        a.status = 'protocolo'
-        OR (a.status IN ('reposto','abastecido','encontrado')
-            AND a.historico::text LIKE '%liberado_supervisor%')
-      )
+      WHERE a.status IN ('protocolo', 'reposto')
+        AND COALESCE(a.quem_guardou, '') != ''
     `;
     const params = [];
     if (data_ini) { params.push(data_ini); sql += ` AND a.data_aviso >= $${params.length}`; }

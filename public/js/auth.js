@@ -364,7 +364,7 @@ function irPara(pag, el) {
   if (pag === 'checkout')        { var _ci=document.getElementById('ck-ini'),_cf=document.getElementById('ck-fim'); if(_ci&&!_ci.value)_ci.value=hojeLocal(); if(_cf&&!_cf.value)_cf.value=hojeLocal(); carregarContadoresCk(); setTimeout(()=>{ const el2=document.getElementById('ck-input-caixa'); if(el2)el2.focus(); },200); }
   if (pag === 'stats-repositor') carregarStatsRepositor();
   if (pag === 'stats-checkout')  carregarStatsCheckout();
-  if (pag === 'liberacao')    { carregarLiberacao(); }
+  if (pag === 'liberacao')    { var hj=hojeLocal(); var libi=document.getElementById('lib-filtro-ini'),libf=document.getElementById('lib-filtro-fim'); if(libi&&!libi.value)libi.value=hj; if(libf&&!libf.value)libf.value=hj; carregarLiberacao(); }
   if (pag === 'performance')  { carregarPerformance(); carregarColaboradores(); }
   if (pag === 'relatorios')   { carregarListaRelatorios(); }
   if (pag === 'auditoria')    { var hj=hojeLocal(); var ea=document.getElementById('aud-ini'); if(ea&&!ea.value)ea.value=hj; carregarAuditoria(); }
