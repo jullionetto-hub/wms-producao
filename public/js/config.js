@@ -103,7 +103,42 @@ async function carregarProtocolo() {
   const badge = document.getElementById('menu-badge-proto');
   if (badge) { badge.style.display = (rows||[]).length ? '' : 'none'; badge.textContent = (rows||[]).length; }
   if (!el) return;
-  if (!rows || !rows.length) { el.innerHTML = '<div style="text-align:center;color:var(--text3);padding:48px;font-size:14px">✅ Nenhum item em protocolo</div>'; return; }
+  // ── Histórico (status=protocolado) ───────────────────────────────────────
+  const elHist  = document.getElementById('proto-historico');
+  const histBdg = document.getElementById('proto-hist-badge');
+  const rowsH   = await apiFetch(`/protocolo/historico${q}`) || [];
+  if (histBdg) histBdg.textContent = rowsH.length;
+  if (elHist) {
+    elHist.innerHTML = rowsH.length ? rowsH.map(h => `
+      <div style="background:var(--surface);border-radius:14px;overflow:hidden;margin-bottom:12px;border:1.5px solid #d1fae5;box-shadow:0 1px 6px rgba(0,0,0,.04)">
+        <div style="background:linear-gradient(135deg,#059669,#047857);padding:11px 16px;display:flex;align-items:center;justify-content:space-between">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:16px">✅</span>
+            <div>
+              <div style="color:#fff;font-weight:800;font-size:14px;font-family:'Space Mono',monospace">#${h.numero_pedido||h.pedido_id}</div>
+              <div style="color:rgba(255,255,255,.7);font-size:11px">${fmtData(h.data_aviso)} às ${h.hora_aviso||'—'}</div>
+            </div>
+          </div>
+          <span style="background:rgba(255,255,255,.22);color:#fff;padding:3px 12px;border-radius:20px;font-size:10px;font-weight:800;letter-spacing:.5px">PROTOCOLADO</span>
+        </div>
+        <div style="padding:12px 16px">
+          <div style="font-family:'Space Mono',monospace;font-size:14px;font-weight:700;color:#dc2626;margin-bottom:2px">${h.codigo||'—'}</div>
+          <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:10px">${h.descricao||'—'}</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px">
+            <div><div style="font-size:9px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">Cliente</div><div style="font-size:12px;font-weight:700;color:var(--text)">${h.cliente||'—'}</div></div>
+            <div><div style="font-size:9px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">Qtde</div><div style="font-size:16px;font-weight:900;color:#92400e">${h.quantidade||0}</div></div>
+            <div><div style="font-size:9px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">Separador</div><div style="font-size:12px;font-weight:600;color:var(--text2)">${h.separador_nome||'—'}</div></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div><div style="font-size:9px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">Forma de Envio</div><div style="font-size:12px;font-weight:600;color:var(--text2)">${h.transportadora||'—'}</div></div>
+            <div><div style="font-size:9px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">Enviado por</div><div style="font-size:12px;font-weight:700;color:#059669">${h.quem_guardou||'—'}</div></div>
+          </div>
+        </div>
+      </div>`).join('')
+    : '<div style="text-align:center;color:var(--text3);padding:32px;font-size:13px">Nenhum item protocolado no período</div>';
+  }
+
+  if (!rows || !rows.length) { el.innerHTML = '<div style="text-align:center;color:var(--text3);padding:48px;font-size:14px">Nenhum item aguardando envio para protocolo</div>'; return; }
   el.innerHTML = rows.map(r => `
     <div style="background:var(--surface);border-radius:16px;overflow:hidden;margin-bottom:16px;border:1.5px solid #e2e8f0;box-shadow:0 2px 12px rgba(0,0,0,.07)">
 
@@ -177,10 +212,12 @@ async function liberarProtocolo(id, btn) {
   if (btn?.disabled) return;
   // Desabilita o botão imediatamente (proteção contra clique múltiplo)
   btn.disabled = true;
-  wmsConfirm('Enviar para Protocolo? O item será registrado e o separador será desbloqueado.', async () => {
+  wmsConfirm('Confirmar envio para Protocolo? O item será registrado oficialmente.', async () => {
     try {
-      const r = await apiFetch(`/repositor/avisos/${id}/liberar`, {
-        method:'PUT', body: JSON.stringify({ decisao: 'encontrado' }),
+      const supervisorNome = usuarioAtual?.nome || 'Supervisor';
+      const r = await apiFetch(`/repositor/avisos/${id}`, {
+        method:'PUT',
+        body: JSON.stringify({ status:'protocolado', situacao:'protocolado', quem_guardou: supervisorNome }),
         headers: {'Content-Type':'application/json'}
       });
       if (r?.mensagem) {
