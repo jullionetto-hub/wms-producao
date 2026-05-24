@@ -673,12 +673,10 @@ async function carregarLiberacao() {
 async function liberarItem(id, decisao, btn) {
   if (btn?.disabled) return;
   // Desabilita AMBOS os botões da célula imediatamente (proteção contra clique múltiplo)
-  const cell = document.getElementById(`lib-btn-${id}`);
-  const btns = cell ? Array.from(cell.querySelectorAll('button')) : [btn];
-  const textoOriginal = btns.map(b => b.textContent);
-  btns.forEach(b => { b.disabled = true; });
-  const label = decisao === 'encontrado' ? '✅ Encontrado' : '❌ Não Encontrado';
-  const msg   = decisao === 'encontrado'
+  const cellNow = document.getElementById(`lib-btn-${id}`);
+  const btnsNow = cellNow ? Array.from(cellNow.querySelectorAll('button')) : [btn];
+  btnsNow.forEach(b => { b.disabled = true; });
+  const msg = decisao === 'encontrado'
     ? 'Liberar como ENCONTRADO? O separador será desbloqueado.'
     : 'Liberar como NÃO ENCONTRADO? O item ficará em Protocolo.';
   wmsConfirm(msg, async () => {
@@ -690,22 +688,32 @@ async function liberarItem(id, decisao, btn) {
       const data = await res.json();
       if (data.erro) {
         toast(data.erro,'erro');
-        btns.forEach((b,i) => { b.disabled = false; b.textContent = textoOriginal[i]; });
+        // Re-busca célula (pode ter sido re-renderizada pelo intervalo)
+        const c = document.getElementById(`lib-btn-${id}`);
+        if (c) c.innerHTML = `
+          <button class="btn btn-sm" style="background:#10b981;color:#fff;margin-right:4px" onclick="liberarItem(${id},'encontrado',this)">✅ Encontrado</button>
+          <button class="btn btn-sm" style="background:#ef4444;color:#fff" onclick="liberarItem(${id},'nao_encontrado',this)">❌ Não Encontrado</button>`;
         return;
       }
       const badge = decisao === 'encontrado'
         ? '<span style="color:#10b981;font-weight:700;font-size:12px">✅ Liberado (Encontrado)</span>'
-        : '<span style="color:#7c3aed;font-weight:700;font-size:12px">📋 Liberado (Protocolo)</span>';
+        : '<span style="color:#7c3aed;font-weight:700;font-size:12px">📋 Em Protocolo</span>';
       toast(data.mensagem || '✅ Item liberado!','sucesso');
-      if (cell) cell.innerHTML = badge;
+      // Re-busca célula após async (pode ter sido re-renderizada)
+      const cellFresh = document.getElementById(`lib-btn-${id}`);
+      if (cellFresh) cellFresh.innerHTML = badge;
       carregarLiberacao();
     } catch(e) {
       toast('Erro ao liberar!','erro');
-      btns.forEach((b,i) => { b.disabled = false; b.textContent = textoOriginal[i]; });
+      const c = document.getElementById(`lib-btn-${id}`);
+      if (c) c.innerHTML = `
+        <button class="btn btn-sm" style="background:#10b981;color:#fff;margin-right:4px" onclick="liberarItem(${id},'encontrado',this)">✅ Encontrado</button>
+        <button class="btn btn-sm" style="background:#ef4444;color:#fff" onclick="liberarItem(${id},'nao_encontrado',this)">❌ Não Encontrado</button>`;
     }
   }, () => {
-    // Cancelou — reabilita os botões
-    btns.forEach((b,i) => { b.disabled = false; b.textContent = textoOriginal[i]; });
+    // Cancelou — re-busca e reabilita
+    const c = document.getElementById(`lib-btn-${id}`);
+    if (c) { const bs = c.querySelectorAll('button'); bs.forEach(b => b.disabled = false); }
   });
 }
 

@@ -90,11 +90,18 @@ function _cancelarWms() {
 // ── Protocolo ─────────────────────────────────────────────────────────────────
 let _protocoloRows = [];
 async function carregarProtocolo() {
-  const data = document.getElementById('proto-filtro-data')?.value || '';
-  const q = data ? `?data=${data}` : '';
+  const ini = document.getElementById('proto-filtro-ini')?.value || '';
+  const fim = document.getElementById('proto-filtro-fim')?.value || '';
+  const p = new URLSearchParams();
+  if (ini) p.set('data_ini', ini);
+  if (fim) p.set('data_fim', fim);
+  const q = p.toString() ? '?' + p.toString() : '';
   const rows = await apiFetch(`/protocolo${q}`);
   _protocoloRows = rows || [];
   const el = document.getElementById('proto-lista');
+  // Sempre atualiza o badge — mesmo quando a lista está vazia
+  const badge = document.getElementById('menu-badge-proto');
+  if (badge) { badge.style.display = (rows||[]).length ? '' : 'none'; badge.textContent = (rows||[]).length; }
   if (!el) return;
   if (!rows || !rows.length) { el.innerHTML = '<div style="text-align:center;color:var(--text3);padding:32px">Nenhum item em protocolo</div>'; return; }
   el.innerHTML = rows.map(r => `
@@ -109,52 +116,45 @@ async function carregarProtocolo() {
       ${usuarioAtual?.perfil==='supervisor' ? `
         <div id="proto-btn-wrap-${r.id}" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
           <button id="proto-btn-enc-${r.id}" class="btn btn-sm" style="background:#10b981;color:#fff"
-            onclick="liberarProtocolo(${r.id},'encontrado',this)">✅ Liberar como Encontrado</button>
-          <button id="proto-btn-nao-${r.id}" class="btn btn-sm" style="background:#ef4444;color:#fff"
-            onclick="liberarProtocolo(${r.id},'nao_encontrado',this)">❌ Confirmar Não Encontrado</button>
+            onclick="liberarProtocolo(${r.id},this)">✅ Liberar como Encontrado</button>
         </div>` : ''}
     </div>
   `).join('');
-  // Badge
-  const badge = document.getElementById('menu-badge-proto');
-  if (badge) { badge.style.display = rows.length ? '' : 'none'; badge.textContent = rows.length; }
 }
 
-async function liberarProtocolo(id, decisao, btn) {
+async function liberarProtocolo(id, btn) {
   if (btn?.disabled) return;
-  // Desabilita AMBOS os botões do card imediatamente (proteção contra clique múltiplo)
-  const wrap = document.getElementById(`proto-btn-wrap-${id}`);
-  const btns = wrap ? Array.from(wrap.querySelectorAll('button')) : [btn];
-  const textos = btns.map(b => b.textContent);
-  btns.forEach(b => { b.disabled = true; });
-  const msg = decisao === 'encontrado'
-    ? 'Liberar como ENCONTRADO? O separador será desbloqueado.'
-    : 'Confirmar como NÃO ENCONTRADO? O item ficará registrado em Protocolo.';
-  wmsConfirm(msg, async () => {
+  // Desabilita o botão imediatamente (proteção contra clique múltiplo)
+  btn.disabled = true;
+  wmsConfirm('Liberar como ENCONTRADO? O separador será desbloqueado e o item removido do Protocolo.', async () => {
     try {
       const r = await apiFetch(`/repositor/avisos/${id}/liberar`, {
-        method:'PUT', body: JSON.stringify({ decisao }),
+        method:'PUT', body: JSON.stringify({ decisao: 'encontrado' }),
         headers: {'Content-Type':'application/json'}
       });
       if (r?.mensagem) {
         toast(r.mensagem, 'sucesso');
-        const badge = decisao === 'encontrado'
-          ? '<span style="display:inline-block;padding:6px 14px;background:#dcfce7;color:#16a34a;border-radius:8px;font-size:12px;font-weight:700;border:1px solid #86efac">✅ Liberado (Encontrado)</span>'
-          : '<span style="display:inline-block;padding:6px 14px;background:#f5f3ff;color:#7c3aed;border-radius:8px;font-size:12px;font-weight:700;border:1px solid #ddd6fe">📋 Confirmado (Não Encontrado)</span>';
-        if (wrap) wrap.innerHTML = badge;
-        // Reload protocolo to remove item if it changed status
-        if (decisao === 'encontrado') carregarProtocolo();
+        // Re-busca o wrap após async (pode ter sido re-renderizado)
+        const wrapFresh = document.getElementById(`proto-btn-wrap-${id}`);
+        if (wrapFresh) wrapFresh.innerHTML =
+          '<span style="display:inline-block;padding:6px 14px;background:#dcfce7;color:#16a34a;border-radius:8px;font-size:12px;font-weight:700;border:1px solid #86efac">✅ Liberado</span>';
+        carregarProtocolo(); // sempre recarrega para refletir o estado real
       } else {
-        btns.forEach((b,i) => { b.disabled = false; b.textContent = textos[i]; });
-        toast('Erro ao liberar','erro');
+        const btnFresh = document.getElementById(`proto-btn-enc-${id}`);
+        if (btnFresh) btnFresh.disabled = false;
+        else if (btn) btn.disabled = false;
       }
     } catch(e) {
-      btns.forEach((b,i) => { b.disabled = false; b.textContent = textos[i]; });
+      const btnFresh = document.getElementById(`proto-btn-enc-${id}`);
+      if (btnFresh) btnFresh.disabled = false;
+      else if (btn) btn.disabled = false;
       toast('Erro ao liberar','erro');
     }
   }, () => {
-    // Cancelou — reabilita os botões
-    btns.forEach((b,i) => { b.disabled = false; b.textContent = textos[i]; });
+    // Cancelou — reabilita o botão
+    const btnFresh = document.getElementById(`proto-btn-enc-${id}`);
+    if (btnFresh) btnFresh.disabled = false;
+    else if (btn) btn.disabled = false;
   });
 }
 

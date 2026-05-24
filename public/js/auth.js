@@ -308,7 +308,7 @@ function montarSidebar() {
     supervisor: `
       <div class="mg">SUPERVISÃO</div>
       <a class="mi ativo" onclick="irPara('dashboard',this)"><span class="mi-ic">📊</span>Dashboard</a>
-      <a class="mi" onclick="irPara('pedidos',this)"><span class="mi-ic">📋</span>Pedidos <span class="mbadge" id="menu-badge-bloq" style="display:none;background:var(--red)">!</span></a>
+      <a class="mi" onclick="irPara('pedidos',this)"><span class="mi-ic">📋</span>Pedidos</a>
       <a class="mi" onclick="irPara('liberacao',this)"><span class="mi-ic">🔓</span>Liberação <span class="mbadge" id="menu-badge-lib" style="display:none;background:var(--red)">0</span></a>
       <a class="mi" onclick="irPara('performance',this)"><span class="mi-ic">🏆</span>Performance</a>
       <a class="mi" onclick="irPara('relatorios',this)"><span class="mi-ic">📅</span>Relatórios</a>
@@ -398,9 +398,11 @@ function iniciarPorPerfil() {
     carregarDashboard();
     setInterval(atualizarBadgeRep, 15000);
     atualizarBadgeRep();
-    // Atualiza badge de bloqueados periodicamente (só o badge — banner removido da tela Pedidos)
-    setInterval(carregarPedidosBloqueados, 20000);
-    carregarPedidosBloqueados(); // mantém o badge do menu atualizado
+    // Badge Liberação — atualiza periodicamente
+    if (typeof atualizarBadgeLiberacao === 'function') {
+      atualizarBadgeLiberacao();
+      setInterval(atualizarBadgeLiberacao, 20000);
+    }
   }
   if (usuarioAtual.perfil === 'separador') {
     document.getElementById('pag-separacao').classList.add('ativa');
