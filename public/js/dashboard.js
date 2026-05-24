@@ -650,9 +650,13 @@ async function carregarLiberacao() {
       tbodyLib.innerHTML = rowsH.length ? rowsH.map(r => {
         let hist = [];
         try { hist = Array.isArray(r.historico)?r.historico:(r.historico?JSON.parse(r.historico):[]); } catch{}
-        const libEntry   = hist.find(h => h.acao === 'liberado_supervisor');
+        const libEntry    = hist.find(h => h.acao === 'liberado_supervisor');
         const liberadoPor = r.liberado_por || libEntry?.usuario || '—';
         const horaLib     = libEntry?.hora || r.hora_reposto || '—';
+        const decisao     = libEntry?.decisao || (r.status === 'protocolo' ? 'nao_encontrado' : 'encontrado');
+        const decLabel    = decisao === 'encontrado'
+          ? '<span style="color:#10b981;font-weight:700">✅ Encontrado</span>'
+          : '<span style="color:#7c3aed;font-weight:700">📋 Não Encontrado</span>';
         return `<tr>
           <td style="font-weight:700">${r.numero_pedido||'—'}</td>
           <td>
@@ -661,7 +665,7 @@ async function carregarLiberacao() {
           </td>
           <td style="color:var(--text2)">${r.separador_nome||'—'}</td>
           <td style="color:var(--text2)">${r.repositor_nome||'—'}</td>
-          <td style="font-weight:600;color:#10b981">✅ ${liberadoPor}</td>
+          <td>${decLabel}<div style="font-size:11px;color:var(--text3)">${liberadoPor}</div></td>
           <td style="color:var(--text3);font-size:12px">${fmtD(r.data_aviso)} ${horaLib}</td>
         </tr>`;
       }).join('')

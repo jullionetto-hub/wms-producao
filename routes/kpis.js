@@ -578,12 +578,16 @@ router.get('/liberacao/historico', requerAuth, requerPerfil('supervisor'), async
   const { data_ini, data_fim } = req.query;
   try {
     let sql = `
-      SELECT a.id, a.numero_pedido, a.codigo, a.descricao, a.quantidade,
+      SELECT a.id, a.numero_pedido, a.codigo, a.descricao, a.quantidade, a.status,
         a.separador_nome, a.repositor_nome, a.hora_aviso, a.hora_reposto, a.data_aviso,
         a.quem_guardou as liberado_por, a.historico, p.cliente
       FROM avisos_repositor a
       LEFT JOIN pedidos p ON a.pedido_id = p.id
-      WHERE a.status = 'protocolo'
+      WHERE (
+        a.status = 'protocolo'
+        OR (a.status IN ('reposto','abastecido','encontrado')
+            AND a.historico::text LIKE '%liberado_supervisor%')
+      )
     `;
     const params = [];
     if (data_ini) { params.push(data_ini); sql += ` AND a.data_aviso >= $${params.length}`; }
