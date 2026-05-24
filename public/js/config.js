@@ -69,19 +69,22 @@ function formatarData(iso) {
 
 // ── Modal confirmação genérico ────────────────────────────────────────────────
 let _wmsConfirmCb = null;
-function wmsConfirm(msg, onYes) {
+let _wmsConfirmCancelCb = null;
+function wmsConfirm(msg, onYes, onNo) {
   _wmsConfirmCb = onYes;
+  _wmsConfirmCancelCb = onNo || null;
   const el = document.getElementById('modal-confirm-msg');
   if (el) el.textContent = msg;
   document.getElementById('modal-confirm').style.display = 'flex';
 }
 function _confirmarWms() {
   document.getElementById('modal-confirm').style.display = 'none';
-  if (_wmsConfirmCb) { const cb = _wmsConfirmCb; _wmsConfirmCb = null; cb(); }
+  if (_wmsConfirmCb) { const cb = _wmsConfirmCb; _wmsConfirmCb = null; _wmsConfirmCancelCb = null; cb(); }
 }
 function _cancelarWms() {
   document.getElementById('modal-confirm').style.display = 'none';
   _wmsConfirmCb = null;
+  if (_wmsConfirmCancelCb) { const cb = _wmsConfirmCancelCb; _wmsConfirmCancelCb = null; cb(); }
 }
 
 // ── Protocolo ─────────────────────────────────────────────────────────────────
@@ -103,7 +106,13 @@ async function carregarProtocolo() {
       <div style="font-size:12px;color:var(--text3);margin-bottom:4px">Pedido: <b>#${r.numero_pedido||r.pedido_id}</b> | Cliente: ${r.cliente||'—'}</div>
       <div style="font-size:12px;color:var(--text3);margin-bottom:4px">Separador: ${r.separador_nome||'—'} | Data: ${fmtData(r.data_aviso)} ${r.hora_aviso||''}</div>
       <div style="font-size:12px;color:var(--text3);margin-bottom:8px">Endereço: ${r.endereco||'—'} | Qtd: ${r.quantidade||0}</div>
-      ${usuarioAtual?.perfil==='supervisor' ? `<button id="proto-btn-${r.id}" class="btn btn-outline btn-sm" onclick="liberarProtocolo(${r.id},this)" style="color:#ef4444;border-color:#ef4444">✅ Liberar como Não Encontrado</button>` : ''}
+      ${usuarioAtual?.perfil==='supervisor' ? `
+        <div id="proto-btn-wrap-${r.id}" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
+          <button id="proto-btn-enc-${r.id}" class="btn btn-sm" style="background:#10b981;color:#fff"
+            onclick="liberarProtocolo(${r.id},'encontrado',this)">✅ Liberar como Encontrado</button>
+          <button id="proto-btn-nao-${r.id}" class="btn btn-sm" style="background:#ef4444;color:#fff"
+            onclick="liberarProtocolo(${r.id},'nao_encontrado',this)">❌ Confirmar Não Encontrado</button>
+        </div>` : ''}
     </div>
   `).join('');
   // Badge
@@ -111,20 +120,41 @@ async function carregarProtocolo() {
   if (badge) { badge.style.display = rows.length ? '' : 'none'; badge.textContent = rows.length; }
 }
 
-async function liberarProtocolo(id, btn) {
+async function liberarProtocolo(id, decisao, btn) {
   if (btn?.disabled) return;
-  wmsConfirm('Confirmar liberação como Não Encontrado?', async () => {
-    if (btn) { btn.disabled = true; btn.textContent = '⏳ Liberando...'; }
-    const r = await apiFetch(`/repositor/avisos/${id}/liberar`, {method:'PUT'});
-    if (r?.mensagem) {
-      toast('✅ Item liberado!', 'sucesso');
-      // Substituir botão por badge sem recarregar toda a lista
-      if (btn?.parentElement) {
-        btn.parentElement.innerHTML = '<span style="display:inline-block;padding:6px 14px;background:#dcfce7;color:#16a34a;border-radius:8px;font-size:12px;font-weight:700;border:1px solid #86efac">✅ Liberado</span>';
+  // Desabilita AMBOS os botões do card imediatamente (proteção contra clique múltiplo)
+  const wrap = document.getElementById(`proto-btn-wrap-${id}`);
+  const btns = wrap ? Array.from(wrap.querySelectorAll('button')) : [btn];
+  const textos = btns.map(b => b.textContent);
+  btns.forEach(b => { b.disabled = true; });
+  const msg = decisao === 'encontrado'
+    ? 'Liberar como ENCONTRADO? O separador será desbloqueado.'
+    : 'Confirmar como NÃO ENCONTRADO? O item ficará registrado em Protocolo.';
+  wmsConfirm(msg, async () => {
+    try {
+      const r = await apiFetch(`/repositor/avisos/${id}/liberar`, {
+        method:'PUT', body: JSON.stringify({ decisao }),
+        headers: {'Content-Type':'application/json'}
+      });
+      if (r?.mensagem) {
+        toast(r.mensagem, 'sucesso');
+        const badge = decisao === 'encontrado'
+          ? '<span style="display:inline-block;padding:6px 14px;background:#dcfce7;color:#16a34a;border-radius:8px;font-size:12px;font-weight:700;border:1px solid #86efac">✅ Liberado (Encontrado)</span>'
+          : '<span style="display:inline-block;padding:6px 14px;background:#f5f3ff;color:#7c3aed;border-radius:8px;font-size:12px;font-weight:700;border:1px solid #ddd6fe">📋 Confirmado (Não Encontrado)</span>';
+        if (wrap) wrap.innerHTML = badge;
+        // Reload protocolo to remove item if it changed status
+        if (decisao === 'encontrado') carregarProtocolo();
+      } else {
+        btns.forEach((b,i) => { b.disabled = false; b.textContent = textos[i]; });
+        toast('Erro ao liberar','erro');
       }
-    } else {
-      if (btn) { btn.disabled = false; btn.textContent = '✅ Liberar como Não Encontrado'; }
+    } catch(e) {
+      btns.forEach((b,i) => { b.disabled = false; b.textContent = textos[i]; });
+      toast('Erro ao liberar','erro');
     }
+  }, () => {
+    // Cancelou — reabilita os botões
+    btns.forEach((b,i) => { b.disabled = false; b.textContent = textos[i]; });
   });
 }
 

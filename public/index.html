@@ -1661,7 +1661,7 @@
 
 
       <!-- ABA 1 — SEPARAR -->
-      <div class="sep-tab-page ativa" id="sep-tab-separar">
+      <div class="sep-tab-page" id="sep-tab-separar">
         <div class="sep-scroll">
           <div class="bip-wrap">
             <input type="text" class="bip-input" id="m-input-pedido" placeholder="Bipe ou número do pedido..." autocomplete="off" inputmode="numeric"/>
@@ -1701,7 +1701,7 @@
 
 
       <!-- ABA 2 — FILA -->
-      <div class="sep-tab-page" id="sep-tab-fila">
+      <div class="sep-tab-page ativa" id="sep-tab-fila">
         <div class="sep-scroll">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
             <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">📋 Fila</div>
@@ -1787,14 +1787,14 @@
 
 <!-- Tab bar -->
 <div class="sep-tabbar" id="sep-tabbar">
-  <button class="sep-tab ativo" id="stab-separar" onclick="mudarTabSep('separar')">
-    <span class="sep-tab-ic">📦</span>
-    SEPARAR
-  </button>
-  <button class="sep-tab" id="stab-fila" onclick="mudarTabSep('fila')">
+  <button class="sep-tab ativo" id="stab-fila" onclick="mudarTabSep('fila')">
     <span class="sep-tab-ic">📋</span>
     FILA
     <span class="sep-tab-badge" id="stab-fila-badge" style="display:none">0</span>
+  </button>
+  <button class="sep-tab" id="stab-separar" onclick="mudarTabSep('separar')">
+    <span class="sep-tab-ic">📦</span>
+    SEPARAR
   </button>
   <button class="sep-tab" id="stab-avisos-sep" onclick="mudarTabSep('avisos-sep')">
     <span class="sep-tab-ic">🔔</span>
@@ -1861,13 +1861,13 @@
 
 
 
-<script src="/js/config.js"></script>
+<script src="/js/config.js?v=2"></script>
   <script src="/js/pedidos.js"></script>
   <script src="/js/separador.js?v=2"></script>
   <script src="/js/repositor.js?v=11"></script>
   <script src="/js/checkout.js"></script>
-  <script src="/js/dashboard.js?v=2"></script>
-  <script src="/js/auth.js?v=2"></script>
+  <script src="/js/dashboard.js?v=3"></script>
+  <script src="/js/auth.js?v=3"></script>
 
 
 <!-- ══ MODAL IMPORTAR ══ -->

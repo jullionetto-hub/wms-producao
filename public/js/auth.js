@@ -128,7 +128,7 @@ function ativarMobileSep() {
   document.body.classList.add('sep-mobile');
   document.getElementById('sep-mobile-root').style.display = 'flex';
   document.getElementById('sep-tabbar').style.display = 'flex';
-  mudarTabSep('separar');
+  mudarTabSep('fila');
   setTimeout(() => document.getElementById('m-input-pedido').focus(), 400);
   carregarStatsMobile();
   carregarFilaMobile();

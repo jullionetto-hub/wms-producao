@@ -633,9 +633,11 @@ async function carregarLiberacao() {
         <td style="color:var(--text2)">${r.separador_nome||'—'}</td>
         <td style="color:var(--text2)">${r.repositor_nome||'—'}</td>
         <td style="color:var(--text3);font-size:12px">${fmtD(r.data_aviso)} ${r.hora_reposto||r.hora_aviso||''}</td>
-        <td id="lib-btn-${r.id}">
-          <button class="btn btn-sm" style="background:var(--accent);color:#fff;white-space:nowrap"
-            onclick="liberarItem(${r.id},this)">🔓 Liberar para Protocolo</button>
+        <td id="lib-btn-${r.id}" style="white-space:nowrap">
+          <button class="btn btn-sm" style="background:#10b981;color:#fff;margin-right:4px;white-space:nowrap"
+            onclick="liberarItem(${r.id},'encontrado',this)">✅ Encontrado</button>
+          <button class="btn btn-sm" style="background:#ef4444;color:#fff;white-space:nowrap"
+            onclick="liberarItem(${r.id},'nao_encontrado',this)">❌ Não Encontrado</button>
         </td>
       </tr>`).join('')
     : '<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:32px;font-size:13px">✅ Nenhum item aguardando liberação</td></tr>';
@@ -668,28 +670,42 @@ async function carregarLiberacao() {
   } catch(e) { console.error('carregarLiberacao:', e); toast('Erro ao carregar liberações','erro'); }
 }
 
-async function liberarItem(id, btn) {
+async function liberarItem(id, decisao, btn) {
   if (btn?.disabled) return;
-  wmsConfirm('Liberar este item para Protocolo? O separador será notificado.', async () => {
-    if (btn) { btn.disabled = true; btn.textContent = '⏳ Liberando...'; }
+  // Desabilita AMBOS os botões da célula imediatamente (proteção contra clique múltiplo)
+  const cell = document.getElementById(`lib-btn-${id}`);
+  const btns = cell ? Array.from(cell.querySelectorAll('button')) : [btn];
+  const textoOriginal = btns.map(b => b.textContent);
+  btns.forEach(b => { b.disabled = true; });
+  const label = decisao === 'encontrado' ? '✅ Encontrado' : '❌ Não Encontrado';
+  const msg   = decisao === 'encontrado'
+    ? 'Liberar como ENCONTRADO? O separador será desbloqueado.'
+    : 'Liberar como NÃO ENCONTRADO? O item ficará em Protocolo.';
+  wmsConfirm(msg, async () => {
     try {
       const res  = await fetch(`${API}/repositor/avisos/${id}/liberar`, {
         method:'PUT', credentials:'include',
-        headers:{'Content-Type':'application/json'}, body:JSON.stringify({})
+        headers:{'Content-Type':'application/json'}, body:JSON.stringify({ decisao })
       });
       const data = await res.json();
       if (data.erro) {
         toast(data.erro,'erro');
-        if (btn) { btn.disabled = false; btn.textContent = '🔓 Liberar para Protocolo'; }
+        btns.forEach((b,i) => { b.disabled = false; b.textContent = textoOriginal[i]; });
         return;
       }
-      toast('✅ Item liberado para Protocolo!','sucesso');
-      // Substitui botão por badge "Liberado" sem recarregar toda a lista
-      const cell = document.getElementById(`lib-btn-${id}`);
-      if (cell) cell.innerHTML = '<span style="color:#10b981;font-weight:700;font-size:12px">✅ Liberado</span>';
-      // Recarrega histórico de forma silenciosa
+      const badge = decisao === 'encontrado'
+        ? '<span style="color:#10b981;font-weight:700;font-size:12px">✅ Liberado (Encontrado)</span>'
+        : '<span style="color:#7c3aed;font-weight:700;font-size:12px">📋 Liberado (Protocolo)</span>';
+      toast(data.mensagem || '✅ Item liberado!','sucesso');
+      if (cell) cell.innerHTML = badge;
       carregarLiberacao();
-    } catch(e) { toast('Erro ao liberar!','erro'); if (btn) { btn.disabled = false; btn.textContent = '🔓 Liberar para Protocolo'; } }
+    } catch(e) {
+      toast('Erro ao liberar!','erro');
+      btns.forEach((b,i) => { b.disabled = false; b.textContent = textoOriginal[i]; });
+    }
+  }, () => {
+    // Cancelou — reabilita os botões
+    btns.forEach((b,i) => { b.disabled = false; b.textContent = textoOriginal[i]; });
   });
 }
 

@@ -229,16 +229,21 @@ router.put('/repositor/avisos/:id/liberar', requerAuth, requerPerfil('supervisor
   try {
     const { hora } = dataHoraLocal();
     const supervisorNome = req.session?.usuario?.nome || 'Supervisor';
+    // decisao: 'encontrado' → reposto (item foi localizado)
+    //          'nao_encontrado' ou padrão → protocolo (registra falta)
+    const decisao = req.body?.decisao || 'nao_encontrado';
+    const novoStatus = decisao === 'encontrado' ? 'reposto' : 'protocolo';
     const atual = await db.get('SELECT historico FROM avisos_repositor WHERE id=$1', [req.params.id]);
     let hist = [];
     try { hist = Array.isArray(atual?.historico) ? atual.historico : (atual?.historico ? JSON.parse(atual.historico) : []); } catch{}
-    const histNovo = [...hist, { usuario: supervisorNome, acao: 'liberado_supervisor', hora }];
+    const histNovo = [...hist, { usuario: supervisorNome, acao: 'liberado_supervisor', decisao, hora }];
     await pool.query(
-      `UPDATE avisos_repositor SET status='protocolo', situacao='protocolo', hora_reposto=$1, historico=$2, quem_guardou=$3 WHERE id=$4`,
-      [hora, JSON.stringify(histNovo), supervisorNome, req.params.id]
+      `UPDATE avisos_repositor SET status=$1, situacao=$1, hora_reposto=$2, historico=$3, quem_guardou=$4 WHERE id=$5`,
+      [novoStatus, hora, JSON.stringify(histNovo), supervisorNome, req.params.id]
     );
-    req.app.get('io')?.emit('aviso:atualizado', { id: req.params.id, status: 'protocolo' });
-    res.json({mensagem:'Item liberado para Protocolo.'});
+    const atual2 = await db.get('SELECT numero_pedido FROM avisos_repositor WHERE id=$1', [req.params.id]);
+    req.app.get('io')?.emit('aviso:atualizado', { id: req.params.id, status: novoStatus, numero_pedido: atual2?.numero_pedido });
+    res.json({mensagem: decisao === 'encontrado' ? 'Item liberado como Encontrado.' : 'Item liberado para Protocolo.'});
   } catch(e) { res.status(500).json({erro: e.message}); }
 });
 
