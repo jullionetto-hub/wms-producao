@@ -306,8 +306,9 @@ router.post('/pedidos/distribuicao', requerAuth, requerPerfil('supervisor'), asy
     if (!pedidos.length) return res.json({plano:[],total_pedidos:0,total_distribuidos:0});
     for (const ped of pedidos) {
       const itens=await db.all('SELECT endereco,quantidade FROM itens_pedido WHERE pedido_id=$1',[ped.id]);
-      ped._p=ped.pontuacao>0?ped.pontuacao:calcularPontuacaoPedido(itens);
-      if (!ped.pontuacao) await pool.query('UPDATE pedidos SET pontuacao=$1 WHERE id=$2',[ped._p,ped.id]);
+      // Sempre recalcula com a fórmula atual (ignora valor em cache para garantir consistência)
+      ped._p = calcularPontuacaoPedido(itens);
+      await pool.query('UPDATE pedidos SET pontuacao=$1 WHERE id=$2',[ped._p,ped.id]);
     }
     const lim=(quantidade>0)?quantidade:pedidos.length;
     const isDrive=p=>String(p.transportadora||'').toUpperCase().includes('DRIVE');
@@ -324,12 +325,13 @@ router.post('/pedidos/distribuicao', requerAuth, requerPerfil('supervisor'), asy
     }
     const filas=separadores.map(sid=>({separador_id:sid,separador_nome:sepMap[sid]?.nome||`Sep ${sid}`,pedidos:[],pontuacao_total:0,itens_total:0,sep_db_id:sepMap[sid]?.id||null}));
     for (const ped of ordenados) {
-      // Balanceia primariamente por itens (quantidade real a separar),
-      // desempate por pontuação (complexidade de corredor)
-      filas.sort((a,b)=>a.itens_total!==b.itens_total ? a.itens_total-b.itens_total : a.pontuacao_total-b.pontuacao_total);
+      // Balanceia por pontuação total (complexidade real = corredor + localizações + quantidade).
+      // A pontuação já captura tanto o número de produtos/locais quanto a quantidade de itens
+      // e a dificuldade do corredor, por isso é o critério mais justo de equilíbrio.
+      filas.sort((a,b) => a.pontuacao_total - b.pontuacao_total);
       filas[0].pedidos.push(ped.numero_pedido);
-      filas[0].pontuacao_total+=ped._p;
-      filas[0].itens_total+=(ped.itens||0);
+      filas[0].pontuacao_total += ped._p;
+      filas[0].itens_total += (ped.itens || 0);
     }
     res.json({plano:filas.map(f=>({separador_id:f.separador_id,sep_db_id:f.sep_db_id,separador_nome:f.separador_nome,pedidos:f.pedidos,pontuacao_total:Math.round(f.pontuacao_total),itens_total:f.itens_total})),total_pedidos:pedidos.length,total_distribuidos:ordenados.length});
   } catch(err){res.status(500).json({erro:err.message});}
