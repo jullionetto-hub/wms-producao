@@ -98,8 +98,9 @@ function ativarApp() {
   document.getElementById('hdr-nome').textContent   = usuarioAtual.nome;
   document.getElementById('hdr-perfil').textContent = usuarioAtual.perfil === 'repositor' ? labelSubtipoRepositor(usuarioAtual.subtipo_repositor) : usuarioAtual.perfil.toUpperCase();
 
-
-
+  // Botão Senha: apenas Supervisão tem acesso
+  const btnSenha = document.getElementById('btn-senha-hdr');
+  if (btnSenha) btnSenha.style.display = usuarioAtual.perfil === 'supervisor' ? '' : 'none';
 
   const perfil = usuarioAtual.perfil;
   const mob = isMobile();

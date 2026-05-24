@@ -14,7 +14,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/app.css?v=11">
+  <link rel="stylesheet" href="/css/app.css?v=12">
 </head>
 <body>
 
@@ -98,7 +98,7 @@
     <div class="hdir">
       <span id="data-hora"></span>
       <div class="uinfo"><b id="hdr-nome">—</b><small id="hdr-perfil">—</small></div>
-      <button onclick="abrirRedefinirSenha()" class="btn btn-outline btn-sm" style="margin-right:6px">🔑 Senha</button><button class="btn-sair" onclick="sair()">✖ Sair</button>
+      <button id="btn-senha-hdr" onclick="abrirRedefinirSenha()" class="btn btn-outline btn-sm" style="margin-right:6px">🔑 Senha</button><button class="btn-sair" onclick="sair()">✕ Sair</button>
     </div>
   </header>
 
@@ -1876,7 +1876,7 @@
   <script src="/js/repositor.js?v=11"></script>
   <script src="/js/checkout.js"></script>
   <script src="/js/dashboard.js?v=5"></script>
-  <script src="/js/auth.js?v=4"></script>
+  <script src="/js/auth.js?v=5"></script>
 
 
 <!-- ══ MODAL IMPORTAR ══ -->
