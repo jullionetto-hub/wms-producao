@@ -765,15 +765,16 @@ document.getElementById('ck-input-caixa')?.addEventListener('keypress', e => { i
   if (fim) fim.value = hoje;
 })();
 (async function verificarSessao() {
+  const mostrarLogin = () => { const el = document.getElementById('tela-login'); if (el) el.style.display = 'flex'; };
   try {
     const res  = await fetch(`${API}/auth/me`, { credentials:'include' });
-    if (!res.ok) return;
+    if (!res.ok) { mostrarLogin(); return; }
     const data = await res.json();
     usuarioAtual      = data.usuario;
     separadorAtual    = data.separador;
     perfilSelecionado = data.usuario.perfil;
     ativarApp();
-  } catch(e) { console.warn(e); }
+  } catch(e) { console.warn(e); mostrarLogin(); }
 })();
 
 async function carregarMeusStats() {

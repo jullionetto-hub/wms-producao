@@ -46,7 +46,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
 /* ══════════════════════════════════════════
    LOGIN
 ══════════════════════════════════════════ */
-#tela-login{position:fixed;inset:0;background:linear-gradient(145deg,#1A0008 0%,#3B0B20 55%,#4D1230 100%);display:flex;align-items:center;justify-content:center;z-index:9999;padding:16px}
+#tela-login{position:fixed;inset:0;background:linear-gradient(145deg,#1A0008 0%,#3B0B20 55%,#4D1230 100%);display:none;align-items:center;justify-content:center;z-index:9999;padding:16px}
 .login-box{background:rgba(255,255,255,.05);backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,.1);border-radius:24px;padding:32px 36px;width:100%;max-width:420px;text-align:center}
 .login-logo{font-size:40px;margin-bottom:8px;filter:drop-shadow(0 0 24px rgba(224,120,16,.5))}
 .login-titulo{font-family:'Space Mono',monospace;font-size:20px;color:#fff;margin-bottom:4px}
