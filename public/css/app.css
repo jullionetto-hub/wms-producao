@@ -579,15 +579,24 @@ body.dark .item-card.parcial    .item-ic{background:#78350F}
   body.sep-mobile .sidebar{display:flex!important}
   .sep-tabbar{display:none!important}
 }
-  .perm-grid{display:flex;flex-direction:column;gap:7px;margin-top:8px}
-.perm-item{position:relative;display:flex;align-items:center;gap:0;border-radius:12px;overflow:hidden;cursor:pointer;transition:all .2s}
-.perm-item input[type=checkbox]{position:absolute;opacity:0;width:0;height:0}
-.perm-item .perm-label{flex:1;display:flex;align-items:center;gap:10px;padding:11px 14px;border:2px solid var(--border);border-radius:12px;background:var(--surface2);font-size:13px;font-weight:700;color:var(--text3);cursor:pointer;transition:all .2s;letter-spacing:.3px}
-.perm-item input:checked + .perm-label{border-color:var(--accent);background:rgba(37,99,235,.07);color:var(--accent)}
-.perm-item .perm-label .perm-icon{font-size:20px;flex-shrink:0}
-.perm-item .perm-check{width:20px;height:20px;border-radius:5px;border:2px solid var(--border);background:var(--surface);flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .2s;margin-left:auto}
-.perm-item input:checked + .perm-label .perm-check{background:var(--accent);border-color:var(--accent)}
-.perm-item input:checked + .perm-label .perm-check::after{content:"✓";color:#fff;font-size:13px;font-weight:800}
+/* Seletor multi-permissão (dropdown com checkboxes) */
+.perm-sel-wrap{position:relative;user-select:none}
+.perm-sel-box{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface2);cursor:pointer;font-size:13px;color:var(--text3);transition:border-color .2s,border-radius .15s}
+.perm-sel-box.aberto{border-color:var(--accent);border-radius:8px 8px 0 0}
+.perm-sel-seta{transition:transform .2s;flex-shrink:0;color:var(--text3)}
+.perm-sel-box.aberto .perm-sel-seta{transform:rotate(180deg)}
+.perm-sel-valor{flex:1;font-size:13px;font-weight:500}
+.perm-sel-drop{display:none;position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1.5px solid var(--accent);border-top:none;border-radius:0 0 10px 10px;box-shadow:0 8px 24px rgba(0,0,0,.14);z-index:300;overflow:hidden}
+.perm-sel-drop.visivel{display:block}
+.perm-sel-opt{display:flex;align-items:center;gap:12px;padding:11px 14px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text2);border-top:1px solid var(--border);transition:background .12s}
+.perm-sel-opt:hover{background:var(--surface2)}
+.perm-sel-opt input[type=checkbox]{display:none}
+.perm-sel-ic{font-size:20px;flex-shrink:0}
+.perm-sel-nm{flex:1}
+.perm-sel-chk{width:18px;height:18px;border-radius:4px;border:2px solid var(--border);background:var(--surface);flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.perm-sel-opt.selecionado{color:var(--accent);background:rgba(37,99,235,.05)}
+.perm-sel-opt.selecionado .perm-sel-chk{background:var(--accent);border-color:var(--accent)}
+.perm-sel-opt.selecionado .perm-sel-chk::after{content:"✓";color:#fff;font-size:11px;font-weight:800}
 
 /* User cards */
 .usr-card{background:var(--surface);border:1.5px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:14px;transition:all .2s;position:relative;overflow:hidden}

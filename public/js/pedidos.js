@@ -143,7 +143,13 @@ async function cadastrarUsuario() {
     document.getElementById('usr-nome').value = '';
     document.getElementById('usr-login').value = '';
     document.getElementById('usr-senha').value = '';
-    document.querySelectorAll('.usr-perm').forEach(el => el.checked = false);
+    document.querySelectorAll('.usr-perm').forEach(el => {
+      el.checked = false;
+      const opt = el.closest('.perm-sel-opt');
+      if (opt) opt.classList.remove('selecionado');
+    });
+    var addWrap = document.querySelector('#cad-usuarios .perm-sel-wrap');
+    if (addWrap && typeof _atualizarPermSelValor === 'function') _atualizarPermSelValor(addWrap);
     carregarUsuarios();
   } catch(e) {
     toast('Erro ao cadastrar!','erro');

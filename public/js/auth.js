@@ -554,7 +554,11 @@ async function abrirEditarUsuario(id) {
     document.querySelectorAll('.edit-usr-perm').forEach(function(cb) {
       var ac = (u.perfis_acesso||'').split(',').map(function(s){return s.trim();});
       cb.checked = ac.includes(cb.value) || cb.value === u.perfil;
+      var opt = cb.closest('.perm-sel-opt');
+      if (opt) opt.classList.toggle('selecionado', cb.checked);
     });
+    var editWrap = document.querySelector('#modal-editar-usuario .perm-sel-wrap');
+    if (editWrap && typeof _atualizarPermSelValor === 'function') _atualizarPermSelValor(editWrap);
     var sw = document.getElementById('edit-usr-subtipo-wrap');
     if (sw) sw.style.display = u.perfil === 'repositor' ? 'block' : 'none';
     var ss = document.getElementById('edit-usr-subtipo-repositor');

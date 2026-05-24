@@ -215,6 +215,39 @@ async function carregarEstatisticasCk() {
   `;
 }
 
+// ── Seletor multi-permissão (dropdown com checkboxes) ────────────────────────
+function togglePermSel(box, e) {
+  if (e) e.stopPropagation();
+  const wrap = box.closest('.perm-sel-wrap');
+  const drop = wrap.querySelector('.perm-sel-drop');
+  const isOpen = drop.classList.contains('visivel');
+  _fecharPermSels();
+  if (!isOpen) { drop.classList.add('visivel'); box.classList.add('aberto'); }
+}
+function _fecharPermSels() {
+  document.querySelectorAll('.perm-sel-drop.visivel').forEach(d => {
+    d.classList.remove('visivel');
+    const b = d.closest('.perm-sel-wrap')?.querySelector('.perm-sel-box');
+    if (b) b.classList.remove('aberto');
+  });
+}
+function togglePermOpt(el, e) {
+  if (e) e.stopPropagation();
+  const cb = el.querySelector('input[type=checkbox]');
+  cb.checked = !cb.checked;
+  el.classList.toggle('selecionado', cb.checked);
+  _atualizarPermSelValor(el.closest('.perm-sel-wrap'));
+}
+function _atualizarPermSelValor(wrap) {
+  if (!wrap) return;
+  const nomes = Array.from(wrap.querySelectorAll('.perm-sel-opt.selecionado .perm-sel-nm')).map(s => s.textContent);
+  const val = wrap.querySelector('.perm-sel-valor');
+  if (val) { val.textContent = nomes.length ? nomes.join(', ') : 'Selecione os acessos'; val.style.color = nomes.length ? 'var(--text)' : ''; }
+}
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.perm-sel-wrap')) _fecharPermSels();
+});
+
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('input-pedido')?.addEventListener('keypress', e => { if(e.key==='Enter') confirmarPedido(); });
   document.getElementById('m-input-pedido')?.addEventListener('keypress', e => { if(e.key==='Enter') confirmarPedidoMobile(); });

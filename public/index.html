@@ -14,7 +14,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/app.css?v=9">
+  <link rel="stylesheet" href="/css/app.css?v=10">
 </head>
 <body>
 
@@ -393,13 +393,21 @@
                   <option value="busca">Busca no armazém</option>
                   <option value="abastecimento">Abastecimento</option>
                 </select></div>
-              <div class="form-grp"><label>PODE ACESSAR TAMBÉM</label><div class="perm-grid">
-  <label class="perm-item"><input type="checkbox" class="usr-perm" value="supervisor"><div class="perm-label"><span class="perm-icon">👔</span><span>Supervisão</span><span class="perm-check"></span></div></label>
-  <label class="perm-item"><input type="checkbox" class="usr-perm" value="separador"><div class="perm-label"><span class="perm-icon">📦</span><span>Separação</span><span class="perm-check"></span></div></label>
-  <label class="perm-item"><input type="checkbox" class="usr-perm" value="repositor"><div class="perm-label"><span class="perm-icon">🔧</span><span>Reposição</span><span class="perm-check"></span></div></label>
-  <label class="perm-item"><input type="checkbox" class="usr-perm" value="checkout"><div class="perm-label"><span class="perm-icon">🏷️</span><span>Checkout</span><span class="perm-check"></span></div></label>
-  <label class="perm-item"><input type="checkbox" class="usr-perm" value="embalador"><div class="perm-label"><span class="perm-icon">📫</span><span>Embalagem</span><span class="perm-check"></span></div></label>
-</div></div>
+              <div class="form-grp"><label>PODE ACESSAR TAMBÉM</label>
+                <div class="perm-sel-wrap">
+                  <div class="perm-sel-box" onclick="togglePermSel(this,event)">
+                    <span class="perm-sel-valor">Selecione os acessos</span>
+                    <svg class="perm-sel-seta" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                  </div>
+                  <div class="perm-sel-drop">
+                    <div class="perm-sel-opt" onclick="togglePermOpt(this,event)"><input type="checkbox" class="usr-perm" value="supervisor"><span class="perm-sel-ic">👔</span><span class="perm-sel-nm">Supervisão</span><span class="perm-sel-chk"></span></div>
+                    <div class="perm-sel-opt" onclick="togglePermOpt(this,event)"><input type="checkbox" class="usr-perm" value="separador"><span class="perm-sel-ic">📦</span><span class="perm-sel-nm">Separação</span><span class="perm-sel-chk"></span></div>
+                    <div class="perm-sel-opt" onclick="togglePermOpt(this,event)"><input type="checkbox" class="usr-perm" value="repositor"><span class="perm-sel-ic">🔧</span><span class="perm-sel-nm">Reposição</span><span class="perm-sel-chk"></span></div>
+                    <div class="perm-sel-opt" onclick="togglePermOpt(this,event)"><input type="checkbox" class="usr-perm" value="checkout"><span class="perm-sel-ic">🏷️</span><span class="perm-sel-nm">Checkout</span><span class="perm-sel-chk"></span></div>
+                    <div class="perm-sel-opt" onclick="togglePermOpt(this,event)"><input type="checkbox" class="usr-perm" value="embalador"><span class="perm-sel-ic">📫</span><span class="perm-sel-nm">Embalagem</span><span class="perm-sel-chk"></span></div>
+                  </div>
+                </div>
+              </div>
               <div class="form-grp"><label>TURNO</label>
                 <select id="usr-turno"><option value="Manha">Manhã</option><option value="Tarde">Tarde</option><option value="Noite">Noite</option></select>
               </div>
@@ -1862,7 +1870,7 @@
 
 
 
-<script src="/js/config.js?v=3"></script>
+<script src="/js/config.js?v=4"></script>
   <script src="/js/pedidos.js"></script>
   <script src="/js/separador.js?v=2"></script>
   <script src="/js/repositor.js?v=11"></script>
@@ -2011,12 +2019,18 @@
         </select>
       </div>
       <div class="form-grp"><label>PODE ACESSAR TAMBÉM</label>
-        <div class="perm-grid">
-          <label class="perm-item"><input type="checkbox" class="edit-usr-perm" value="supervisor"><div class="perm-label"><span class="perm-icon">👔</span><span>Supervisão</span><span class="perm-check"></span></div></label>
-          <label class="perm-item"><input type="checkbox" class="edit-usr-perm" value="separador"><div class="perm-label"><span class="perm-icon">📦</span><span>Separação</span><span class="perm-check"></span></div></label>
-          <label class="perm-item"><input type="checkbox" class="edit-usr-perm" value="repositor"><div class="perm-label"><span class="perm-icon">🔧</span><span>Reposição</span><span class="perm-check"></span></div></label>
-          <label class="perm-item"><input type="checkbox" class="edit-usr-perm" value="checkout"><div class="perm-label"><span class="perm-icon">🏷️</span><span>Checkout</span><span class="perm-check"></span></div></label>
-          <label class="perm-item"><input type="checkbox" class="edit-usr-perm" value="embalador"><div class="perm-label"><span class="perm-icon">📫</span><span>Embalagem</span><span class="perm-check"></span></div></label>
+        <div class="perm-sel-wrap">
+          <div class="perm-sel-box" onclick="togglePermSel(this,event)">
+            <span class="perm-sel-valor">Selecione os acessos</span>
+            <svg class="perm-sel-seta" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+          <div class="perm-sel-drop">
+            <div class="perm-sel-opt" onclick="togglePermOpt(this,event)"><input type="checkbox" class="edit-usr-perm" value="supervisor"><span class="perm-sel-ic">👔</span><span class="perm-sel-nm">Supervisão</span><span class="perm-sel-chk"></span></div>
+            <div class="perm-sel-opt" onclick="togglePermOpt(this,event)"><input type="checkbox" class="edit-usr-perm" value="separador"><span class="perm-sel-ic">📦</span><span class="perm-sel-nm">Separação</span><span class="perm-sel-chk"></span></div>
+            <div class="perm-sel-opt" onclick="togglePermOpt(this,event)"><input type="checkbox" class="edit-usr-perm" value="repositor"><span class="perm-sel-ic">🔧</span><span class="perm-sel-nm">Reposição</span><span class="perm-sel-chk"></span></div>
+            <div class="perm-sel-opt" onclick="togglePermOpt(this,event)"><input type="checkbox" class="edit-usr-perm" value="checkout"><span class="perm-sel-ic">🏷️</span><span class="perm-sel-nm">Checkout</span><span class="perm-sel-chk"></span></div>
+            <div class="perm-sel-opt" onclick="togglePermOpt(this,event)"><input type="checkbox" class="edit-usr-perm" value="embalador"><span class="perm-sel-ic">📫</span><span class="perm-sel-nm">Embalagem</span><span class="perm-sel-chk"></span></div>
+          </div>
         </div>
       </div>
       <div class="form-grp"><label>TURNO</label>
