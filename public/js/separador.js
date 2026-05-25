@@ -104,36 +104,31 @@ async function carregarFilaMobile() {
       const temSup   = qtdSup > 0;
 
       // Hierarquia visual: aguardSup > falta > drive thru > normal
-      const bordLeft  = temSup ? '3px solid #7c3aed' : temFalta ? '3px solid #F59E0B' : isDrive ? '3px solid #DC2626' : '3px solid #2563EB';
-      const cardBg    = temSup ? '#faf5ff' : temFalta ? '#FFFBEB' : '#fff';
-      const bordColor = temSup ? '#ddd6fe' : temFalta ? '#FDE68A' : '#E2E8F0';
-      const numColor  = isDrive ? '#DC2626' : temSup ? '#7c3aed' : '#2563EB';
+      const bordColor = temSup ? '#ddd6fe' : temFalta ? '#FDE68A' : isDrive ? '#FECACA' : 'var(--border)';
+      const numColor  = isDrive ? '#DC2626' : temSup ? '#7c3aed' : 'var(--accent)';
+      const pillTxt   = temSup ? '⛔ supervisor' : temFalta ? '⚠️ repositor' : isDrive ? '🚗 drive thru' : 'aguardando sep';
+      const pillCls   = temSup ? 'separando' : temFalta ? 'pendente' : 'pendente';
 
-      return `<div style="background:${cardBg};border:1px solid ${bordColor};border-left:${bordLeft};border-radius:10px;padding:14px 16px;margin-bottom:7px;cursor:pointer"
-        onclick="selecionarPedidoFilaMobile('${p.numero_pedido}')">
-        <div style="display:flex;align-items:center;gap:12px">
-          <div style="flex:1;min-width:0">
-            <div style="display:flex;align-items:center;gap:7px;margin-bottom:3px;flex-wrap:wrap">
-              <span style="font-family:'Space Mono',monospace;font-size:15px;font-weight:700;color:${numColor}">${p.numero_pedido}</span>
-              ${isDrive ? `<span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:4px;background:#FEF2F2;color:#DC2626;border:1px solid #FECACA">DRIVE THRU</span>` : ''}
-              ${temSup ? `<span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:4px;background:#f5f3ff;color:#7c3aed;border:1px solid #ddd6fe">⛔ SUPERVISOR</span>` : ''}
-            </div>
-            <div style="font-size:11px;color:#64748B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:${(temFalta||temSup)?'5px':'0'}">${p.cliente||'—'}</div>
-            ${p.transportadora ? `<div style="font-size:10px;font-weight:600;color:#6366f1;margin-top:2px">${p.transportadora}</div>` : ""}
-            ${temSup ? `<div style="display:inline-flex;align-items:center;gap:5px;background:#f5f3ff;border:1px solid #ddd6fe;border-radius:6px;padding:4px 9px;margin-bottom:${temFalta?'4px':'0'}">
-              <div style="width:6px;height:6px;border-radius:50%;background:#7c3aed;flex-shrink:0;"></div>
-              <span style="font-size:11px;font-weight:500;color:#5b21b6;">${qtdSup} item${qtdSup>1?'s':''} aguardando supervisor</span>
-            </div>` : ''}
-            ${temFalta ? `<div style="display:inline-flex;align-items:center;gap:5px;background:#FEF3C7;border:1px solid #FDE68A;border-radius:6px;padding:4px 9px;">
-              <div style="width:6px;height:6px;border-radius:50%;background:#D97706;flex-shrink:0;"></div>
-              <span style="font-size:11px;font-weight:500;color:#92400E;">${qtdFalta} item${qtdFalta>1?'s':''} aguardando repositor</span>
-            </div>` : ''}
-          </div>
-          <div style="text-align:right;flex-shrink:0">
-            <div style="font-size:14px;font-weight:700;color:#0F172A">${p.itens||0}</div>
-            <div style="font-size:9px;color:#94A3B8;letter-spacing:1px;text-transform:uppercase">itens</div>
-          </div>
+      return `<div style="border:1.5px solid ${bordColor};border-radius:12px;padding:12px 14px;margin-bottom:8px;background:var(--surface)">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <div style="font-size:20px;font-weight:800;color:${numColor};font-family:'Space Mono',monospace">#${p.numero_pedido}</div>
+          <span class="pill ${pillCls}" style="font-size:10px">${pillTxt}</span>
         </div>
+        <div style="display:flex;gap:10px;font-size:12px;color:var(--text2);flex-wrap:wrap;margin-bottom:4px">
+          <span>📦 <b style="color:var(--text)">${p.itens||0} itens</b></span>
+          ${p.cliente ? `<span>👤 ${p.cliente}</span>` : ''}
+          ${p.transportadora ? `<span>🚚 ${p.transportadora}</span>` : ''}
+        </div>
+        ${temSup ? `<div style="display:flex;align-items:center;gap:5px;background:#f5f3ff;border:1px solid #ddd6fe;border-radius:6px;padding:5px 9px;margin-bottom:5px">
+          <span style="font-size:11px;font-weight:600;color:#5b21b6">⛔ ${qtdSup} item${qtdSup>1?'s':''} aguardando supervisor</span>
+        </div>` : ''}
+        ${temFalta ? `<div style="display:flex;align-items:center;gap:5px;background:#FEF3C7;border:1px solid #FDE68A;border-radius:6px;padding:5px 9px;margin-bottom:5px">
+          <span style="font-size:11px;font-weight:600;color:#92400E">⚠️ ${qtdFalta} item${qtdFalta>1?'s':''} aguardando repositor</span>
+        </div>` : ''}
+        <button class="btn btn-primary btn-sm" style="width:100%;margin-top:8px;padding:10px;font-size:14px;font-weight:700"
+          onclick="selecionarPedidoFilaMobile('${p.numero_pedido}')">
+          📦 Iniciar Separação
+        </button>
       </div>`;
     }).join('');
   } catch(e) { console.warn(e); }

@@ -1134,60 +1134,33 @@ function filtrarEmbalagemMobile() {
   el.innerHTML = [...embalando.map(p => renderCardEmbFila(p, true)), ...pendentes.map(p => renderCardEmbFila(p, false))].join('');
 }
 
-// Card clicável para a aba Fila — abre em Embalar ao clicar
+// Card da fila de embalagem — mesmo estilo do checkout mobile
 function renderCardEmbFila(p, emAndamento) {
-  const fmtDt = d => { if (!d) return '—'; const [y,m,dd] = d.split('-'); return `${dd}/${m}/${y}`; };
   const isDrive = String(p.transportadora||'').toUpperCase().includes('DRIVE');
   const isPrime = p.tem_prime;
-  const corBorda = emAndamento ? '#2563eb' : isDrive ? '#dc2626' : isPrime ? '#7c3aed' : '#64748b';
-  const corFundo = emAndamento ? '#eff6ff' : isDrive ? '#fef2f2' : isPrime ? '#f5f3ff' : '#f8fafc';
-  const statusBottom = emAndamento
-    ? `<div style="display:flex;align-items:center;gap:8px;padding:10px 16px;background:#eff6ff;border-top:1px solid #bfdbfe">
-         <span style="font-size:14px">⏱</span>
-         <span style="font-size:12px;color:#2563eb;font-weight:700">Em andamento — toque para continuar</span>
-       </div>`
-    : `<div style="display:flex;align-items:center;gap:8px;padding:10px 16px;background:var(--surface2);border-top:1px solid var(--border)">
-         <span style="font-size:14px">⏳</span>
-         <span style="font-size:12px;color:var(--text3);font-weight:600">Aguardando embalagem — toque para iniciar</span>
-       </div>`;
+  const bordColor = emAndamento ? '#bfdbfe' : isDrive ? '#FECACA' : isPrime ? '#ddd6fe' : 'var(--border)';
+  const numColor  = emAndamento ? '#2563eb' : isDrive ? '#DC2626' : isPrime ? '#7c3aed' : 'var(--accent)';
+  const pillTxt   = emAndamento ? '⏱ embalando' : isDrive ? '🚗 drive thru' : isPrime ? '⭐ prime' : 'aguardando emb';
+  const pillCls   = emAndamento ? 'separando' : 'pendente';
+  const btnTxt    = emAndamento ? '📦 Continuar Embalagem' : '📦 Iniciar Embalagem';
+
   return `
-    <div onclick="selecionarPedidoEmbFila(${p.id})"
-      style="background:var(--surface);border-radius:16px;margin-bottom:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.1);cursor:pointer;active:opacity:.8;-webkit-tap-highlight-color:rgba(0,0,0,.05)">
-      <div style="background:${corFundo};border-left:5px solid ${corBorda};padding:14px 16px">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
-          <div style="flex:1;min-width:0">
-            <div style="font-family:'Space Mono',monospace;font-size:19px;font-weight:700;color:var(--text)">${p.numero_pedido}</div>
-            <div style="font-size:12px;color:var(--text2);margin-top:3px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.cliente||'—'}</div>
-          </div>
-          <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0">
-            ${emAndamento?'<span style="font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;background:#2563eb;color:#fff">⏱ EM ANDAMENTO</span>':''}
-            ${isDrive?'<span style="font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;background:#dc2626;color:#fff">DRIVE</span>':''}
-            ${isPrime?'<span style="font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;background:#7c3aed;color:#fff">PRIME</span>':''}
-          </div>
-        </div>
+    <div style="border:1.5px solid ${bordColor};border-radius:12px;padding:12px 14px;margin-bottom:8px;background:var(--surface)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <div style="font-size:20px;font-weight:800;color:${numColor};font-family:'Space Mono',monospace">#${p.numero_pedido}</div>
+        <span class="pill ${pillCls}" style="font-size:10px">${pillTxt}</span>
       </div>
-      <div style="padding:12px 16px;display:grid;grid-template-columns:1fr 1fr;gap:8px;border-bottom:1px solid var(--border)">
-        <div style="background:var(--surface2);border-radius:10px;padding:8px 10px;text-align:center">
-          <div style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.5px;margin-bottom:2px">DATA</div>
-          <div style="font-size:13px;font-weight:700;color:var(--text)">${fmtDt(p.data_pedido)}</div>
-        </div>
-        <div style="background:var(--surface2);border-radius:10px;padding:8px 10px;text-align:center">
-          <div style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.5px;margin-bottom:2px">ITENS</div>
-          <div style="font-size:16px;font-weight:800;color:#4f46e5">${p.itens||0}</div>
-        </div>
-        <div style="background:var(--surface2);border-radius:10px;padding:8px 10px;text-align:center">
-          <div style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.5px;margin-bottom:2px">SAIU CHECKOUT</div>
-          <div style="font-size:13px;font-weight:700;color:var(--text)">${p.hora_checkout||'—'}</div>
-        </div>
-        <div style="background:var(--surface2);border-radius:10px;padding:8px 10px;text-align:center">
-          <div style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.5px;margin-bottom:2px">INÍCIO EMB.</div>
-          <div style="font-size:13px;font-weight:700;color:${emAndamento?'#2563eb':'var(--text3)'}">${p.embalagem_iniciado_em||'—'}</div>
-        </div>
+      <div style="display:flex;gap:10px;font-size:12px;color:var(--text2);flex-wrap:wrap;margin-bottom:4px">
+        <span>📦 <b style="color:var(--text)">${p.itens||0} itens</b></span>
+        ${p.cliente ? `<span>👤 ${p.cliente}</span>` : ''}
+        ${p.transportadora ? `<span>🚚 ${p.transportadora}</span>` : ''}
       </div>
-      <div style="padding:8px 16px;border-bottom:1px solid var(--border)">
-        <span style="font-size:11px;color:var(--text2)">🚚 ${p.transportadora||'—'}</span>
-      </div>
-      ${statusBottom}
+      ${p.hora_checkout ? `<div style="font-size:11px;color:var(--text3);margin-top:2px">✓ Checkout às ${p.hora_checkout}</div>` : ''}
+      ${emAndamento && p.embalagem_iniciado_em ? `<div style="font-size:11px;color:#2563eb;margin-top:2px">⏱ Embalagem iniciada às ${p.embalagem_iniciado_em}</div>` : ''}
+      <button class="btn btn-primary btn-sm" style="width:100%;margin-top:8px;padding:10px;font-size:14px;font-weight:700"
+        onclick="selecionarPedidoEmbFila(${p.id})">
+        ${btnTxt}
+      </button>
     </div>`;
 }
 
