@@ -414,8 +414,10 @@ router.get('/relatorio/analitico', requerAuth, requerPerfil('supervisor'), async
       periodo:{ de:dataIni, ate:dataFim },
       turno_filtro: turnoFiltro,
       separacao:{
-        total: pedidos.length,               // total importado do dia (todos os turnos)
-        distribuidos: pedidosDistribuidos.length, // lote do turno selecionado
+        // Todos → total geral do dia; turno específico → só os desse turno
+        total: turnoFiltro === 'Todos' ? pedidos.length : pedidosDistribuidos.length,
+        total_geral: pedidos.length,         // sempre o grand total (para contexto)
+        distribuidos: pedidosDistribuidos.length,
         concluidos: sepConcluidos.length,
         pendentes: pedidosDistribuidos.filter(p=>p.status==='pendente').length,
         separando: pedidosDistribuidos.filter(p=>p.status==='separando').length,
@@ -450,6 +452,49 @@ router.get('/relatorio/analitico', requerAuth, requerPerfil('supervisor'), async
       sla:{ meta_horas:SLA_H, dentro:slaDentro, fora:slaFora, pct: slaDentro+slaFora>0?Math.round((slaDentro/(slaDentro+slaFora))*100):null },
     });
   } catch(e) { res.status(500).json({erro:e.message}); }
+});
+
+/* ══════════════════════════════════════════════════════════════
+   ZERAR DADOS DE TESTE
+   Limpa todas as tabelas operacionais do dia informado (ou hoje).
+   Requer perfil supervisor + confirmação via body { confirmar: true }.
+══════════════════════════════════════════════════════════════ */
+router.post('/admin/zerar-dados-teste', requerAuth, requerPerfil('supervisor'), async (req, res) => {
+  const { confirmar, data } = req.body;
+  if (!confirmar) return res.status(400).json({ erro: 'Envie { confirmar: true } para confirmar a operação.' });
+
+  const { data: hoje } = dataHoraLocal();
+  const dia = data || hoje;
+
+  try {
+    const resultados = {};
+
+    // Pedidos do dia
+    const rPed = await pool.query('DELETE FROM pedidos WHERE data_pedido = $1', [dia]);
+    resultados.pedidos = rPed.rowCount;
+
+    // Checkout do dia
+    const rCk = await pool.query('DELETE FROM checkout WHERE data_checkout = $1', [dia]);
+    resultados.checkout = rCk.rowCount;
+
+    // Embalagem do dia
+    const rEmb = await pool.query('DELETE FROM embalagem WHERE data_embalagem = $1', [dia]);
+    resultados.embalagem = rEmb.rowCount;
+
+    // Avisos de reposição do dia
+    const rRep = await pool.query('DELETE FROM avisos_repositor WHERE data_aviso = $1', [dia]);
+    resultados.reposicao = rRep.rowCount;
+
+    // Sessões de trabalho do dia
+    const rSess = await pool.query('DELETE FROM sessoes_trabalho WHERE data = $1', [dia]);
+    resultados.sessoes = rSess.rowCount;
+
+    console.log(`[ZERAR-TESTE] ${req.session?.usuario?.nome} zerou dados de ${dia}:`, resultados);
+    res.json({ mensagem: `Dados de ${dia} removidos com sucesso.`, removidos: resultados });
+  } catch(e) {
+    console.error('[ZERAR-TESTE]', e);
+    res.status(500).json({ erro: e.message });
+  }
 });
 
 module.exports = router;

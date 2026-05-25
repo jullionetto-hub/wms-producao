@@ -491,6 +491,30 @@ async function carregarOperacao() {
   } catch(e) { console.error(e); }
 }
 
+/* ── Zerar Dados de Teste ─────────────────────────────────────────────────── */
+async function confirmarZerarDados() {
+  const hoje = hojeLocal();
+  const data = prompt(`Zerar TODOS os dados operacionais de qual data?\n(deixe em branco para hoje: ${hoje})`, hoje);
+  if (data === null) return; // cancelou
+  const dia = data.trim() || hoje;
+  const ok = confirm(`⚠️ ATENÇÃO\n\nIsso vai apagar PERMANENTEMENTE:\n• Pedidos\n• Checkout\n• Embalagem\n• Reposições\n• Sessões de trabalho\n\nda data ${dia}.\n\nConfirmar?`);
+  if (!ok) return;
+
+  try {
+    const res = await fetch(`${API}/admin/zerar-dados-teste`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ confirmar: true, data: dia }),
+      credentials: 'include'
+    });
+    const d = await res.json();
+    if (!res.ok) { alert('Erro: ' + (d.erro || 'falha')); return; }
+    const r = d.removidos;
+    alert(`✅ Dados de ${dia} removidos!\n\nPedidos: ${r.pedidos}\nCheckout: ${r.checkout}\nEmbalagem: ${r.embalagem}\nReposição: ${r.reposicao}\nSessões: ${r.sessoes}`);
+    carregarDashboard();
+  } catch(e) { alert('Erro de conexão: ' + e.message); }
+}
+
 async function carregarDashboard() {
   await popularSelects();
   // KPIs e Operação em paralelo — garante que renderDashPipeline
