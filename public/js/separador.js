@@ -703,7 +703,30 @@ async function vincularCaixaCore(caixa, inputStatusId, isMobile) {
       body: JSON.stringify({ numero_caixa: caixa })
     });
     const data = await res.json();
-    if (data.erro) { toast(data.erro,'erro'); return; }
+    if (data.erro) {
+      toast(data.erro, 'erro');
+      // Garantir que checklist fique oculto e placeholder mostre erro
+      caixaJaVinculada = false;
+      const wrapId = isMobile ? 'm-cl-wrap' : 'cl-wrap';
+      const phId   = isMobile ? 'm-cl-wrap-placeholder' : 'cl-wrap-placeholder';
+      const wrap = document.getElementById(wrapId);
+      const ph   = document.getElementById(phId);
+      if (wrap) wrap.style.display = 'none';
+      if (ph) {
+        ph.style.display = 'block';
+        ph.innerHTML = `<div style="background:var(--surface);border:1.5px solid #FECACA;border-radius:10px;text-align:center;padding:28px 20px;">
+          <div style="width:44px;height:44px;border-radius:50%;background:#FEF2F2;border:1.5px solid #FECACA;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;font-size:20px;">⛔</div>
+          <div style="font-size:13px;font-weight:700;color:#B91C1C;margin-bottom:4px;">Caixa indisponível</div>
+          <div style="font-size:11px;color:#94A3B8;">${data.erro}</div>
+        </div>`;
+      }
+      const statusEl = document.getElementById(inputStatusId);
+      if (statusEl) {
+        statusEl.style.display = 'block';
+        statusEl.innerHTML = `<span style="color:#B91C1C;font-weight:700">⛔ ${data.erro}</span>`;
+      }
+      return;
+    }
     toast(`Caixa ${caixa} vinculada`, 'sucesso');
     const statusEl = document.getElementById(inputStatusId);
     if (statusEl) {
