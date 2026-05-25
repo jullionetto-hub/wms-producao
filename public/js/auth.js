@@ -1039,30 +1039,35 @@ async function carregarContadoresCk() {
 let _embPedidos = [];
 
 async function ativarMobileEmb() {
+  document.body.classList.add('emb-mobile');
   const root = document.getElementById('emb-mobile-root');
   if (root) root.style.display = 'flex';
+  const bar = document.getElementById('emb-tabbar');
+  if (bar) bar.style.display = 'flex';
   mudarTabEmb('fila');
   carregarEmbalagemMobile();
-  setInterval(carregarEmbalagemMobile, 30000);
+  setInterval(() => {
+    const tabAtiva = document.querySelector('.emb-tab-btn.ativo')?.id?.replace('etab-','');
+    if (tabAtiva === 'fila') carregarEmbalagemMobile();
+    if (tabAtiva === 'embalados') carregarEmbalagemEmbalados();
+  }, 30000);
 }
 
 function mudarTabEmb(tab) {
-  ['fila','scan'].forEach(t => {
+  ['fila','embalar','embalados'].forEach(t => {
     const el  = document.getElementById(`emb-tab-${t}`);
-    const btn = document.getElementById(`emb-tab-${t}-btn`);
+    const btn = document.getElementById(`etab-${t}`);
     const ativo = t === tab;
-    if (el)  { el.style.display = ativo ? 'flex' : 'none'; el.style.flexDirection = 'column'; }
-    if (btn) {
-      btn.style.color            = ativo ? '#4f46e5' : 'var(--text3,#94a3b8)';
-      btn.style.borderBottomColor= ativo ? '#4f46e5' : 'transparent';
-    }
+    if (el)  { el.style.display = ativo ? 'flex' : 'none'; if (ativo) el.style.flexDirection = 'column'; }
+    if (btn) btn.classList.toggle('ativo', ativo);
   });
-  if (tab === 'scan') setTimeout(() => document.getElementById('m-emb-scan-input')?.focus(), 200);
+  if (tab === 'embalar') setTimeout(() => document.getElementById('m-emb-embalar-input')?.focus(), 200);
+  if (tab === 'embalados') carregarEmbalagemEmbalados();
 }
 
 async function buscarPedidoEmbMobile() {
-  const num  = (document.getElementById('m-emb-scan-input')?.value || '').trim();
-  const cont = document.getElementById('m-emb-scan-resultado');
+  const num  = (document.getElementById('m-emb-embalar-input')?.value || '').trim();
+  const cont = document.getElementById('m-emb-embalar-resultado');
   if (!num) { toast('Digite o número do pedido!','aviso'); return; }
   if (cont) cont.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3)">🔍 Buscando...</div>';
 
@@ -1095,6 +1100,17 @@ async function buscarPedidoEmbMobile() {
   if (cont) cont.innerHTML = renderCardEmb(pedido, pedido.status_embalagem === 'embalando', 'mobile');
 }
 
+// Seleciona pedido da Fila e abre na aba Embalar
+function selecionarPedidoEmbFila(id) {
+  const pedido = _embPedidos.find(p => p.id === id);
+  if (!pedido) return;
+  mudarTabEmb('embalar');
+  const input = document.getElementById('m-emb-embalar-input');
+  if (input) input.value = pedido.numero_pedido;
+  const cont = document.getElementById('m-emb-embalar-resultado');
+  if (cont) cont.innerHTML = renderCardEmb(pedido, pedido.status_embalagem === 'embalando', 'mobile');
+}
+
 function filtrarEmbalagemMobile() {
   const busca = (document.getElementById('m-emb-busca')?.value || '').trim().toLowerCase();
   const el = document.getElementById('m-emb-lista');
@@ -1113,8 +1129,64 @@ function filtrarEmbalagemMobile() {
   }
   const embalando = filtrados.filter(p => p.status_embalagem === 'embalando');
   const pendentes = filtrados.filter(p => !p.status_embalagem || p.status_embalagem === 'pendente');
-  // Fila tab = read-only (sem botões de ação)
-  el.innerHTML = [...embalando.map(p => renderCardEmb(p, true, 'mobile', true)), ...pendentes.map(p => renderCardEmb(p, false, 'mobile', true))].join('');
+  el.innerHTML = [...embalando.map(p => renderCardEmbFila(p, true)), ...pendentes.map(p => renderCardEmbFila(p, false))].join('');
+}
+
+// Card clicável para a aba Fila — abre em Embalar ao clicar
+function renderCardEmbFila(p, emAndamento) {
+  const fmtDt = d => { if (!d) return '—'; const [y,m,dd] = d.split('-'); return `${dd}/${m}/${y}`; };
+  const isDrive = String(p.transportadora||'').toUpperCase().includes('DRIVE');
+  const isPrime = p.tem_prime;
+  const corBorda = emAndamento ? '#2563eb' : isDrive ? '#dc2626' : isPrime ? '#7c3aed' : '#64748b';
+  const corFundo = emAndamento ? '#eff6ff' : isDrive ? '#fef2f2' : isPrime ? '#f5f3ff' : '#f8fafc';
+  const statusBottom = emAndamento
+    ? `<div style="display:flex;align-items:center;gap:8px;padding:10px 16px;background:#eff6ff;border-top:1px solid #bfdbfe">
+         <span style="font-size:14px">⏱</span>
+         <span style="font-size:12px;color:#2563eb;font-weight:700">Em andamento — toque para continuar</span>
+       </div>`
+    : `<div style="display:flex;align-items:center;gap:8px;padding:10px 16px;background:var(--surface2);border-top:1px solid var(--border)">
+         <span style="font-size:14px">⏳</span>
+         <span style="font-size:12px;color:var(--text3);font-weight:600">Aguardando embalagem — toque para iniciar</span>
+       </div>`;
+  return `
+    <div onclick="selecionarPedidoEmbFila(${p.id})"
+      style="background:var(--surface);border-radius:16px;margin-bottom:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.1);cursor:pointer;active:opacity:.8;-webkit-tap-highlight-color:rgba(0,0,0,.05)">
+      <div style="background:${corFundo};border-left:5px solid ${corBorda};padding:14px 16px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+          <div style="flex:1;min-width:0">
+            <div style="font-family:'Space Mono',monospace;font-size:19px;font-weight:700;color:var(--text)">${p.numero_pedido}</div>
+            <div style="font-size:12px;color:var(--text2);margin-top:3px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.cliente||'—'}</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0">
+            ${emAndamento?'<span style="font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;background:#2563eb;color:#fff">⏱ EM ANDAMENTO</span>':''}
+            ${isDrive?'<span style="font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;background:#dc2626;color:#fff">DRIVE</span>':''}
+            ${isPrime?'<span style="font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;background:#7c3aed;color:#fff">PRIME</span>':''}
+          </div>
+        </div>
+      </div>
+      <div style="padding:12px 16px;display:grid;grid-template-columns:1fr 1fr;gap:8px;border-bottom:1px solid var(--border)">
+        <div style="background:var(--surface2);border-radius:10px;padding:8px 10px;text-align:center">
+          <div style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.5px;margin-bottom:2px">DATA</div>
+          <div style="font-size:13px;font-weight:700;color:var(--text)">${fmtDt(p.data_pedido)}</div>
+        </div>
+        <div style="background:var(--surface2);border-radius:10px;padding:8px 10px;text-align:center">
+          <div style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.5px;margin-bottom:2px">ITENS</div>
+          <div style="font-size:16px;font-weight:800;color:#4f46e5">${p.itens||0}</div>
+        </div>
+        <div style="background:var(--surface2);border-radius:10px;padding:8px 10px;text-align:center">
+          <div style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.5px;margin-bottom:2px">SAIU CHECKOUT</div>
+          <div style="font-size:13px;font-weight:700;color:var(--text)">${p.hora_checkout||'—'}</div>
+        </div>
+        <div style="background:var(--surface2);border-radius:10px;padding:8px 10px;text-align:center">
+          <div style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.5px;margin-bottom:2px">INÍCIO EMB.</div>
+          <div style="font-size:13px;font-weight:700;color:${emAndamento?'#2563eb':'var(--text3)'}">${p.embalagem_iniciado_em||'—'}</div>
+        </div>
+      </div>
+      <div style="padding:8px 16px;border-bottom:1px solid var(--border)">
+        <span style="font-size:11px;color:var(--text2)">🚚 ${p.transportadora||'—'}</span>
+      </div>
+      ${statusBottom}
+    </div>`;
 }
 
 function renderCardEmb(p, emAndamento, mode, readOnly) {
@@ -1237,11 +1309,70 @@ async function carregarEmbalagemMobile() {
     }
     const embalando = pedidos.filter(p => p.status_embalagem === 'embalando');
     const pendentes = pedidos.filter(p => !p.status_embalagem || p.status_embalagem === 'pendente');
-    // Fila tab = read-only (sem botões de ação)
+    // Fila tab — cards clicáveis abrem a aba Embalar
     el.innerHTML = [
-      ...embalando.map(p => renderCardEmb(p, true,  'mobile', true)),
-      ...pendentes.map(p => renderCardEmb(p, false, 'mobile', true)),
+      ...embalando.map(p => renderCardEmbFila(p, true)),
+      ...pendentes.map(p => renderCardEmbFila(p, false)),
     ].join('');
+    // Atualiza badge da aba Fila
+    const badge = document.getElementById('etab-fila-badge');
+    if (badge) { badge.textContent = pedidos.length; badge.style.display = pedidos.length ? 'block' : 'none'; }
+    // Atualiza contador no header
+    const pend = document.getElementById('m-emb-pend');
+    if (pend) pend.textContent = pedidos.length;
+  } catch(e) { if(el) el.innerHTML = '<div style="color:#ef4444;text-align:center;padding:24px">Erro ao carregar</div>'; }
+}
+
+async function carregarEmbalagemEmbalados() {
+  const el = document.getElementById('m-emb-embalados-lista');
+  if (!el) return;
+  el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3)">Carregando...</div>';
+  try {
+    const res = await fetch(`${API}/embalagem?status=embalado`, { credentials:'include' });
+    const pedidos = await res.json();
+    if (!pedidos.length) {
+      el.innerHTML = `<div style="text-align:center;padding:60px 16px">
+        <div style="font-size:48px;margin-bottom:12px">📦</div>
+        <div style="font-weight:700;font-size:15px;color:var(--text);margin-bottom:6px">Nenhum pedido embalado</div>
+        <div style="color:var(--text3);font-size:12px">no período de hoje</div>
+      </div>`;
+      return;
+    }
+    const fmtDt = d => { if (!d) return '—'; const [y,m,dd] = d.split('-'); return `${dd}/${m}/${y}`; };
+    el.innerHTML = pedidos.map(p => `
+      <div style="background:var(--surface);border-radius:16px;margin-bottom:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.08)">
+        <div style="background:#f0fdf4;border-left:5px solid #16a34a;padding:14px 16px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+            <div>
+              <div style="font-family:'Space Mono',monospace;font-size:19px;font-weight:700;color:var(--text)">${p.numero_pedido}</div>
+              <div style="font-size:12px;color:var(--text2);margin-top:3px;font-weight:500">${p.cliente||'—'}</div>
+            </div>
+            <span style="font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;background:#16a34a;color:#fff;flex-shrink:0">✅ EMBALADO</span>
+          </div>
+        </div>
+        <div style="padding:12px 16px;display:grid;grid-template-columns:1fr 1fr;gap:8px;border-bottom:1px solid var(--border)">
+          <div style="background:var(--surface2);border-radius:10px;padding:8px 10px;text-align:center">
+            <div style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.5px;margin-bottom:2px">DATA</div>
+            <div style="font-size:13px;font-weight:700;color:var(--text)">${fmtDt(p.data_pedido)}</div>
+          </div>
+          <div style="background:var(--surface2);border-radius:10px;padding:8px 10px;text-align:center">
+            <div style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.5px;margin-bottom:2px">ITENS</div>
+            <div style="font-size:16px;font-weight:800;color:#16a34a">${p.itens||0}</div>
+          </div>
+          <div style="background:var(--surface2);border-radius:10px;padding:8px 10px;text-align:center">
+            <div style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.5px;margin-bottom:2px">INICIO EMB.</div>
+            <div style="font-size:13px;font-weight:700;color:var(--text)">${p.embalagem_iniciado_em||'—'}</div>
+          </div>
+          <div style="background:var(--surface2);border-radius:10px;padding:8px 10px;text-align:center">
+            <div style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.5px;margin-bottom:2px">EMBALADO POR</div>
+            <div style="font-size:12px;font-weight:700;color:#16a34a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.embalado_por||'—'}</div>
+          </div>
+        </div>
+        <div style="padding:8px 16px">
+          <span style="font-size:11px;color:var(--text2)">🚚 ${p.transportadora||'—'}</span>
+        </div>
+      </div>
+    `).join('');
   } catch(e) { if(el) el.innerHTML = '<div style="color:#ef4444;text-align:center;padding:24px">Erro ao carregar</div>'; }
 }
 
@@ -1254,9 +1385,9 @@ async function iniciarEmbalagemMobile(id) {
     if (!res.ok) { toast(r.erro||'Erro','erro'); if(btn){btn.disabled=false;btn.textContent='▶️ Iniciar Embalagem';} return; }
     toast(`Embalagem iniciada às ${r.hora_inicio}!`, 'sucesso');
     await carregarEmbalagemMobile();
-    // Atualiza card na aba scan se estiver visível
-    const scanInput = document.getElementById('m-emb-scan-input');
-    if (scanInput?.value.trim() && document.getElementById('emb-tab-scan')?.style.display !== 'none') buscarPedidoEmbMobile();
+    // Atualiza card na aba embalar se estiver visível
+    const embInput = document.getElementById('m-emb-embalar-input');
+    if (embInput?.value.trim() && document.getElementById('emb-tab-embalar')?.style.display !== 'none') buscarPedidoEmbMobile();
   } catch(e) { toast('Erro ao iniciar','erro'); }
 }
 
@@ -1268,16 +1399,18 @@ async function encerrarEmbalagemMobile(id) {
     const r = await res.json();
     if (!res.ok) { toast(r.erro||'Erro','erro'); if(btn){btn.disabled=false;btn.textContent='✅ Encerrar';} return; }
     toast('Embalagem concluída! 📦', 'sucesso');
-    // Limpa input e resultado na aba scan
-    const scanInput = document.getElementById('m-emb-scan-input');
-    if (scanInput) scanInput.value = '';
-    const cont = document.getElementById('m-emb-scan-resultado');
+    // Limpa input e resultado na aba embalar
+    const embInput = document.getElementById('m-emb-embalar-input');
+    if (embInput) embInput.value = '';
+    const cont = document.getElementById('m-emb-embalar-resultado');
     if (cont) cont.innerHTML = `<div style="text-align:center;padding:50px 20px;color:var(--text3)">
       <div style="font-size:48px;margin-bottom:12px">✅</div>
       <div style="font-size:14px;font-weight:700;color:#16a34a">Embalagem concluída!</div>
-      <div style="font-size:12px;margin-top:6px">Bipe o próximo pedido</div>
+      <div style="font-size:12px;margin-top:6px">Selecione o próximo pedido na Fila</div>
     </div>`;
     await carregarEmbalagemMobile();
+    // Volta para a fila após concluir
+    mudarTabEmb('fila');
   } catch(e) { toast('Erro ao encerrar','erro'); }
 }
 
