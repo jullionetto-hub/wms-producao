@@ -398,24 +398,9 @@ async function carregarOperacao() {
     const pendentes  = distribuidos.filter(p=>p.status==='pendente').length;
     const pct        = total > 0 ? Math.round((concluidos/total)*100) : 0;
 
-    // Busca faltas abertas
-    const resF = await fetch(`${API}/repositor/avisos?status=pendente`, { credentials:'include' });
-    const faltas = resF.ok ? await resF.json() : [];
-
-    // Atualiza barra de progresso
-    document.getElementById('op-concluidos').textContent = concluidos;
-    document.getElementById('op-total').textContent = total;
-    document.getElementById('op-pct').textContent = pct + '%';
-    document.getElementById('op-barra').style.width = pct + '%';
-    document.getElementById('op-n-concluidos').textContent = concluidos;
-    document.getElementById('op-n-separando').textContent = separando;
-    document.getElementById('op-n-pendentes').textContent = pendentes;
-    document.getElementById('op-n-faltas').textContent = faltas.length;
-    // Mantém KPIs do topo sincronizados com os dados de operação
-    const _dh = document.getElementById('dash-hoje');
-    const _ds = document.getElementById('dash-separando');
-    if (_dh) _dh.textContent = concluidos;
-    if (_ds) _ds.textContent = separando;
+    // Atualiza pipeline cards com dados de separação
+    _pedidosOperacao = pedidos;
+    renderDashPipeline();
 
     // Previsão de conclusão
     const prevEl = document.getElementById('op-previsao');
@@ -444,7 +429,6 @@ async function carregarOperacao() {
     } else if (pct === 100) {
       prevTxt.textContent = 'Todos os pedidos do lote foram concluídos!';
       prevEl.style.display = 'block';
-      document.getElementById('op-barra').style.background = 'linear-gradient(90deg,#16A34A,#4ADE80)';
     } else {
       prevEl.style.display = 'none';
     }
@@ -764,22 +748,110 @@ function toggleTurnoDash(turno) {
   carregarKPIs();
 }
 
+// ── Globals para pipeline cards ──────────────────────────────────────────────
+let _kpiData          = null;
+let _pedidosOperacao  = null;
+
+function renderDashPipeline() {
+  const wrap = document.getElementById('dash-pipeline');
+  if (!wrap) return;
+  const kpi    = _kpiData || {};
+  const pedidos = _pedidosOperacao || [];
+  const fmtN = n => (n != null && !isNaN(n)) ? Number(n).toLocaleString('pt-BR') : '0';
+
+  // ── Separação
+  const distribuidos  = pedidos.filter(p => p.separador_nome || p.separador_id);
+  const sepTotal      = distribuidos.length;
+  const sepSeparando  = distribuidos.filter(p => p.status === 'separando').length;
+  const sepPendente   = distribuidos.filter(p => p.status === 'pendente').length;
+  const sepConcluido  = distribuidos.filter(p => p.status === 'concluido').length;
+  const sepItens      = distribuidos.reduce((s, p) => s + (parseInt(p.itens) || 0), 0);
+
+  // ── Checkout (pipeline: sep concluída → checkout)
+  const ckConc  = parseInt(kpi.checkout_hoje      || 0);
+  const ckEmCk  = parseInt(kpi.checkout_pendente  || 0);
+  const ckTotal = ckConc + ckEmCk;
+  // pedidos separados que ainda não têm registro de checkout
+  const ckFila  = Math.max(0, sepConcluido - ckTotal);
+  const ckItens = distribuidos.filter(p => p.status === 'concluido')
+                               .reduce((s, p) => s + (parseInt(p.itens) || 0), 0);
+
+  // ── Embalagem (via status_embalagem dos pedidos concluídos)
+  const concPed   = distribuidos.filter(p => p.status === 'concluido');
+  const embalando = concPed.filter(p => p.status_embalagem === 'embalando').length;
+  const embPend   = concPed.filter(p => p.status_embalagem === 'pendente').length;
+  const embConc   = concPed.filter(p => p.status_embalagem === 'concluido').length;
+  const embTotal  = embalando + embPend + embConc;
+  const embItens  = concPed.filter(p => p.status_embalagem && p.status_embalagem !== 'nao_iniciado')
+                            .reduce((s, p) => s + (parseInt(p.itens) || 0), 0);
+
+  // ── Reposição
+  const repConc   = parseInt(kpi.reposicao_concluida  || 0);
+  const repPend   = parseInt(kpi.faltas_abertas        || 0);
+  const repNaoEnc = parseInt(kpi.nao_encontrados_hoje  || 0);
+  const repTotal  = parseInt(kpi.total_faltas_hoje     || 0);
+
+  const cards = [
+    { icon: '📦', label: 'SEPARAÇÃO', cor: '#4f46e5',
+      main: fmtN(sepTotal), sub: 'pedidos distribuídos',
+      kpis: [
+        { lbl: 'Total Pedidos',     val: fmtN(sepTotal) },
+        { lbl: 'Em Separação',      val: fmtN(sepSeparando) },
+        { lbl: 'Pedidos Pendentes', val: fmtN(sepPendente) },
+        { lbl: 'Total Itens',       val: fmtN(sepItens) },
+      ]},
+    { icon: '🔖', label: 'CHECKOUT', cor: '#0891b2',
+      main: fmtN(ckTotal), sub: 'pedidos no checkout',
+      kpis: [
+        { lbl: 'Total Checkout',    val: fmtN(ckTotal) },
+        { lbl: 'Em Checkout',       val: fmtN(ckEmCk) },
+        { lbl: 'Checkout Pendente', val: fmtN(ckFila) },
+        { lbl: 'Total Itens',       val: fmtN(ckItens) },
+      ]},
+    { icon: '📫', label: 'EMBALAGEM', cor: '#7c3aed',
+      main: fmtN(embTotal), sub: 'pedidos na embalagem',
+      kpis: [
+        { lbl: 'Total Embalagem',   val: fmtN(embTotal) },
+        { lbl: 'Embalando',         val: fmtN(embalando) },
+        { lbl: 'Emb. Pendente',     val: fmtN(embPend) },
+        { lbl: 'Total Itens',       val: fmtN(embItens) },
+      ]},
+    { icon: '🔧', label: 'REPOSIÇÃO', cor: '#d97706',
+      main: fmtN(repTotal), sub: 'reposições hoje',
+      kpis: [
+        { lbl: 'Total Reposição',   val: fmtN(repTotal) },
+        { lbl: 'Pendentes',         val: fmtN(repPend) },
+        { lbl: 'Não Encontrados',   val: fmtN(repNaoEnc) },
+        { lbl: 'Encontrados',       val: fmtN(repConc) },
+      ]},
+  ];
+
+  wrap.innerHTML = cards.map(c => `
+    <div style="background:var(--surface);border-radius:16px;padding:18px 20px;border-left:4px solid ${c.cor};box-shadow:0 1px 6px rgba(0,0,0,.06)">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <span style="font-size:22px">${c.icon}</span>
+        <span style="font-size:11px;font-weight:800;color:var(--text3);letter-spacing:.8px">${c.label}</span>
+      </div>
+      <div style="font-size:36px;font-weight:800;color:${c.cor};line-height:1">${c.main}</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:12px">${c.sub}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+        ${c.kpis.map(k => `
+          <div style="background:var(--surface2);border-radius:8px;padding:6px 8px">
+            <div style="font-size:9px;color:var(--text3);font-weight:700;letter-spacing:.5px">${k.lbl.toUpperCase()}</div>
+            <div style="font-size:14px;font-weight:700;color:var(--text);margin-top:2px">${k.val}</div>
+          </div>`).join('')}
+      </div>
+    </div>`).join('');
+}
+
 async function carregarKPIs() {
   try {
     let url = `${API}/kpis`;
     if (_turnosDash.size > 0) url += `?turnos=${[..._turnosDash].join(',')}`;
     const res  = await fetch(url, { credentials:'include' });
     const data = await res.json();
-    const set  = (id, val) => { const e = document.getElementById(id); if(e) e.textContent = val ?? 0; };
-    set('dash-hoje',       data.concluidos_hoje);
-    set('dash-separando',  data.em_separacao);
-    set('kpi-ck-hoje',     data.checkout_hoje);
-    set('kpi-ck-pend',     data.checkout_pendente);
-    set('kpi-emb-hoje',    data.embalagem_hoje);
-    set('kpi-emb-pend',    data.embalagem_pendente);
-    set('kpi-rep-conc',    data.reposicao_concluida);
-    set('kpi-rep-pend',    data.reposicao_pendente);
-    set('kpi-nao-enc',     data.nao_encontrados_hoje);
+    _kpiData = data;
+    renderDashPipeline();
   } catch(e) { console.warn(e); }
 }
 

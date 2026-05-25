@@ -138,20 +138,12 @@
           </div>
         </div>
 
-        <!-- KPIs — Linha 1: Finalizados e Pendentes por área -->
-        <div class="kpi-grid" style="margin-bottom:8px;grid-template-columns:repeat(6,1fr)">
-          <div class="kpi-card verde"><div class="kpi-lbl">SEPARAÇÃO FINALIZADA</div><div class="kpi-val" id="dash-hoje">0</div><div class="kpi-sub">pedidos separados</div></div>
-          <div class="kpi-card amarelo"><div class="kpi-lbl">SEPARAÇÃO PENDENTE</div><div class="kpi-val" id="dash-separando">0</div><div class="kpi-sub">em andamento agora</div></div>
-          <div class="kpi-card roxo"><div class="kpi-lbl">CHECKOUT FINALIZADO</div><div class="kpi-val" id="kpi-ck-hoje">0</div><div class="kpi-sub">caixas expedidas</div></div>
-          <div class="kpi-card ciano"><div class="kpi-lbl">CHECKOUT PENDENTE</div><div class="kpi-val" id="kpi-ck-pend">0</div><div class="kpi-sub">aguardando checkout</div></div>
-          <div class="kpi-card laranja"><div class="kpi-lbl">EMBALAGEM FINALIZADO</div><div class="kpi-val" id="kpi-emb-hoje">0</div><div class="kpi-sub">embalados hoje</div></div>
-          <div class="kpi-card rosa"><div class="kpi-lbl">EMBALAGEM PENDENTE</div><div class="kpi-val" id="kpi-emb-pend">0</div><div class="kpi-sub">aguardando embalagem</div></div>
+        <!-- Pipeline Cards — 4 etapas do processo -->
+        <div id="dash-pipeline" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin-bottom:10px">
+          <!-- renderizado por renderDashPipeline() -->
         </div>
-        <!-- KPIs — Linha 2: Reposição e itens -->
-        <div class="kpi-grid" style="margin-bottom:16px;grid-template-columns:repeat(3,1fr)">
-          <div class="kpi-card verde"><div class="kpi-lbl">REPOSIÇÃO CONCLUÍDA</div><div class="kpi-val" id="kpi-rep-conc">0</div><div class="kpi-sub">itens repostos hoje</div></div>
-          <div class="kpi-card vermelho"><div class="kpi-lbl">REPOSIÇÃO PENDENTE</div><div class="kpi-val" id="kpi-rep-pend">0</div><div class="kpi-sub">aguardando reposição</div></div>
-          <div class="kpi-card rosa"><div class="kpi-lbl">AGUARDANDO ITEM</div><div class="kpi-val" id="kpi-nao-enc">0</div><div class="kpi-sub">itens não localizados</div></div>
+        <div id="op-previsao" style="margin-bottom:14px;padding:8px 14px;background:var(--surface2);border-radius:10px;font-size:12px;color:var(--text2);display:none">
+          ⏱ <span id="op-previsao-txt"></span>
         </div>
 
         <!-- ABAS DO DASHBOARD -->
@@ -165,50 +157,6 @@
 
         <!-- ABA 0: OPERAÇÃO (tempo real) -->
         <div id="dtab-operacao">
-          <!-- Andamento do lote -->
-          <div class="card" style="margin-bottom:14px">
-            <div class="card-hd">ANDAMENTO DO LOTE DE HOJE
-              <button class="btn btn-outline btn-sm" onclick="carregarOperacao()">🔄</button>
-            </div>
-            <div style="padding:4px 0 8px">
-              <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:8px">
-                <div>
-                  <span style="font-size:36px;font-weight:700;color:var(--green)" id="op-concluidos">0</span>
-                  <span style="font-size:16px;color:var(--text3)"> / </span>
-                  <span style="font-size:24px;font-weight:500;color:var(--text2)" id="op-total">0</span>
-                  <span style="font-size:13px;color:var(--text3);margin-left:6px">pedidos</span>
-                </div>
-                <div style="text-align:right">
-                  <div style="font-size:28px;font-weight:700;color:var(--accent)" id="op-pct">0%</div>
-                  <div style="font-size:11px;color:var(--text3)">concluído</div>
-                </div>
-              </div>
-              <div style="height:16px;background:var(--surface2);border-radius:8px;overflow:hidden;margin-bottom:10px">
-                <div id="op-barra" style="height:100%;background:linear-gradient(90deg,#16A34A,#4ADE80);border-radius:8px;transition:width .5s;width:0%"></div>
-              </div>
-              <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
-                <div style="text-align:center;padding:8px;background:#F0FDF4;border-radius:8px;border:1px solid #C6F6D5">
-                  <div style="font-size:18px;font-weight:700;color:#15803D" id="op-n-concluidos">0</div>
-                  <div style="font-size:10px;color:#15803D;letter-spacing:.5px">CONCLUÍDOS</div>
-                </div>
-                <div style="text-align:center;padding:8px;background:#FFF7ED;border-radius:8px;border:1px solid #FED7AA">
-                  <div style="font-size:18px;font-weight:700;color:#C2410C" id="op-n-separando">0</div>
-                  <div style="font-size:10px;color:#C2410C;letter-spacing:.5px">SEPARANDO</div>
-                </div>
-                <div style="text-align:center;padding:8px;background:#EFF6FF;border-radius:8px;border:1px solid #BFDBFE">
-                  <div style="font-size:18px;font-weight:700;color:#1D4ED8" id="op-n-pendentes">0</div>
-                  <div style="font-size:10px;color:#1D4ED8;letter-spacing:.5px">PENDENTES</div>
-                </div>
-                <div style="text-align:center;padding:8px;background:#FEF2F2;border-radius:8px;border:1px solid #FECACA">
-                  <div style="font-size:18px;font-weight:700;color:#B91C1C" id="op-n-faltas">0</div>
-                  <div style="font-size:10px;color:#B91C1C;letter-spacing:.5px">FALTAS ABERTAS</div>
-                </div>
-              </div>
-              <div id="op-previsao" style="margin-top:10px;padding:8px 12px;background:var(--surface2);border-radius:8px;font-size:12px;color:var(--text2);display:none">
-                ⏱ <span id="op-previsao-txt"></span>
-              </div>
-            </div>
-          </div>
 
           <!-- Ranking Geral — todas as áreas -->
           <div class="card" style="margin-bottom:14px">
@@ -1898,7 +1846,7 @@
   <script src="/js/separador.js?v=5"></script>
   <script src="/js/repositor.js?v=11"></script>
   <script src="/js/checkout.js"></script>
-  <script src="/js/dashboard.js?v=7"></script>
+  <script src="/js/dashboard.js?v=8"></script>
   <script src="/js/auth.js?v=9"></script>
 
 
