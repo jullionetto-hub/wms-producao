@@ -1606,10 +1606,24 @@
 
 
 
-    <!-- ══ CHECKOUT MOBILE — 2 ABAS ══ -->
+    <!-- ══ CHECKOUT MOBILE — 3 ABAS ══ -->
     <div id="ck-mobile-root">
-      <!-- ABA 1 — CHECKOUT -->
-      <div class="ck-tab-page ativa" id="ck-tab-busca">
+
+      <!-- ABA 1 — FILA (pedidos aguardando checkout) -->
+      <div class="ck-tab-page ativa" id="ck-tab-fila">
+        <div class="ck-scroll">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">📋 Fila de Checkout</div>
+            <button class="btn btn-outline btn-sm" onclick="carregarFilaCkMobile()">🔄</button>
+          </div>
+          <div id="m-ck-fila-lista">
+            <div style="color:var(--text3);text-align:center;padding:32px;font-size:13px">Carregando...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ABA 2 — CHECKOUT (scan + resultado) -->
+      <div class="ck-tab-page" id="ck-tab-busca">
         <div class="ck-scroll">
           <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text);margin-bottom:12px">🏷️ Checkout</div>
           <div class="bip-wrap">
@@ -1622,18 +1636,23 @@
           <div id="m-ck-resultado"></div>
         </div>
       </div>
-      <!-- ABA 2 — ESTATÍSTICAS CHECKOUT MOBILE -->
-      <div class="ck-tab-page" id="ck-tab-stats">
+
+      <!-- ABA 3 — FEITOS (checkouts concluídos hoje) -->
+      <div class="ck-tab-page" id="ck-tab-feitos">
         <div class="ck-scroll">
-          <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text);margin-bottom:14px">📈 Estatísticas Checkout</div>
-          <div class="stats-grid">
-            <div class="stat-big verde"><div class="s-lbl">HOJE</div><div class="s-val" id="m-ck-hoje">0</div><div class="s-sub">expedidos</div></div>
-            <div class="stat-big azul"><div class="s-lbl">MÊS</div><div class="s-val" id="m-ck-mes">0</div><div class="s-sub">expedidos</div></div>
-            <div class="stat-big amarelo span2"><div class="s-lbl">PENDENTES</div><div class="s-val" id="m-ck-pend" style="font-size:38px">0</div><div class="s-sub">aguardando checkout</div></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">✅ Feitos Hoje</div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <span id="m-ck-feitos-cnt" style="font-size:12px;font-weight:700;color:var(--green)">0</span>
+              <button class="btn btn-outline btn-sm" onclick="carregarFeitosCkMobile()">🔄</button>
+            </div>
           </div>
-          <button class="btn btn-outline" style="width:100%;margin-top:4px" onclick="carregarStatsCkMobile()">🔄 Atualizar</button>
+          <div id="m-ck-feitos-lista">
+            <div style="color:var(--text3);text-align:center;padding:32px;font-size:13px">Carregando...</div>
+          </div>
         </div>
       </div>
+
     </div><!-- /ck-mobile-root -->
     <div id="sep-mobile-root">
 
@@ -1828,13 +1847,18 @@
 
 <!-- Tab bar Checkout -->
 <div class="ck-tabbar" id="ck-tabbar">
-  <button class="ck-tab ativo" id="cktab-busca" onclick="mudarTabCk('busca')">
+  <button class="ck-tab ativo" id="cktab-fila" onclick="mudarTabCk('fila')">
+    <span class="ck-tab-ic">📋</span>
+    FILA
+    <span class="rep-tab-badge" id="cktab-fila-badge" style="display:none">0</span>
+  </button>
+  <button class="ck-tab" id="cktab-busca" onclick="mudarTabCk('busca')">
     <span class="ck-tab-ic">🏷️</span>
     CHECKOUT
   </button>
-  <button class="ck-tab" id="cktab-stats" onclick="mudarTabCk('stats')">
-    <span class="ck-tab-ic">📈</span>
-    ESTATÍSTICAS
+  <button class="ck-tab" id="cktab-feitos" onclick="mudarTabCk('feitos')">
+    <span class="ck-tab-ic">✅</span>
+    FEITOS
   </button>
 </div>
 
@@ -1845,7 +1869,7 @@
   <script src="/js/pedidos.js?v=3"></script>
   <script src="/js/separador.js?v=5"></script>
   <script src="/js/repositor.js?v=11"></script>
-  <script src="/js/checkout.js"></script>
+  <script src="/js/checkout.js?v=2"></script>
   <script src="/js/dashboard.js?v=12"></script>
   <script src="/js/auth.js?v=9"></script>
 

@@ -5,20 +5,92 @@ function ativarMobileCk() {
   document.body.classList.add('ck-mobile');
   document.getElementById('ck-mobile-root').style.display = 'flex';
   document.getElementById('ck-tabbar').style.display = 'flex';
-  mudarTabCk('busca');
-  setTimeout(() => document.getElementById('m-ck-input-caixa')?.focus(), 400);
+  mudarTabCk('fila');
 }
 
-
-
-
 function mudarTabCk(tab) {
-  ['busca','stats'].forEach(t => {
-    document.getElementById(`ck-tab-${t}`).classList.toggle('ativa', t === tab);
-    document.getElementById(`cktab-${t}`).classList.toggle('ativo', t === tab);
+  ['fila','busca','feitos'].forEach(t => {
+    const page = document.getElementById(`ck-tab-${t}`);
+    const btn  = document.getElementById(`cktab-${t}`);
+    if (page) page.classList.toggle('ativa', t === tab);
+    if (btn)  btn.classList.toggle('ativo', t === tab);
   });
+  if (tab === 'fila')   carregarFilaCkMobile();
   if (tab === 'busca')  setTimeout(() => document.getElementById('m-ck-input-caixa')?.focus(), 200);
-  if (tab === 'stats')  carregarStatsCkMobile();
+  if (tab === 'feitos') carregarFeitosCkMobile();
+}
+
+async function carregarFilaCkMobile() {
+  const el = document.getElementById('m-ck-fila-lista');
+  const badge = document.getElementById('cktab-fila-badge');
+  if (!el) return;
+  el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:24px;font-size:13px">🔄 Carregando...</div>';
+  try {
+    const hoje = new Date().toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo'}).split('/').reverse().join('-');
+    const res = await fetch(`${API}/pedidos?status=concluido&data=${hoje}`, { credentials:'include' });
+    const pedidos = res.ok ? await res.json() : [];
+    // Fila = sep concluído mas ainda não passou pelo checkout (status_embalagem nao_iniciado)
+    const fila = pedidos.filter(p => !p.status_embalagem || p.status_embalagem === 'nao_iniciado');
+    // Atualiza badge
+    if (badge) {
+      badge.textContent = fila.length;
+      badge.style.display = fila.length > 0 ? 'inline' : 'none';
+    }
+    if (!fila.length) {
+      el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:32px;font-size:13px">✅ Nenhum pedido aguardando checkout</div>';
+      return;
+    }
+    el.innerHTML = fila.map(p => `
+      <div style="border:1.5px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:8px;background:var(--surface)">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <div style="font-size:20px;font-weight:800;color:var(--accent);font-family:'Space Mono',monospace">#${p.numero_pedido}</div>
+          <span class="pill pendente" style="font-size:10px">aguardando ck</span>
+        </div>
+        <div style="display:flex;gap:12px;font-size:12px;color:var(--text2)">
+          <span>📦 <b style="color:var(--text)">${p.itens||0} itens</b></span>
+          <span>👤 ${p.separador_nome||'—'}</span>
+          ${p.numero_caixa ? `<span>📦 Cx: <b style="color:var(--indigo)">${p.numero_caixa}</b></span>` : ''}
+        </div>
+        ${p.concluido_em ? `<div style="font-size:11px;color:var(--text3);margin-top:4px">✓ Sep às ${(p.concluido_em||'').substring(11,16)}</div>` : ''}
+        <button class="btn btn-primary btn-sm" style="width:100%;margin-top:8px;padding:10px"
+          onclick="mudarTabCk('busca');setTimeout(()=>{const el=document.getElementById('m-ck-input-caixa');if(el){el.value='${p.numero_caixa||p.numero_pedido||''}';el.focus();}},300)">
+          🏷️ Iniciar Checkout
+        </button>
+      </div>`).join('');
+  } catch(e) {
+    if (el) el.innerHTML = '<div style="color:var(--red);padding:20px;text-align:center">Erro ao carregar fila</div>';
+  }
+}
+
+async function carregarFeitosCkMobile() {
+  const el  = document.getElementById('m-ck-feitos-lista');
+  const cnt = document.getElementById('m-ck-feitos-cnt');
+  if (!el) return;
+  el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:24px;font-size:13px">🔄 Carregando...</div>';
+  try {
+    const hoje = new Date().toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo'}).split('/').reverse().join('-');
+    const res  = await fetch(`${API}/checkout?status=concluido&data=${hoje}`, { credentials:'include' });
+    const rows = res.ok ? await res.json() : [];
+    if (cnt) cnt.textContent = rows.length + ' feitos';
+    if (!rows.length) {
+      el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:32px;font-size:13px">Nenhum checkout concluído hoje</div>';
+      return;
+    }
+    el.innerHTML = rows.map(r => `
+      <div style="border:1.5px solid #BBF7D0;border-radius:12px;padding:12px 14px;margin-bottom:8px;background:#F0FDF4">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <div style="font-size:20px;font-weight:800;color:var(--green);font-family:'Space Mono',monospace">#${r.numero_pedido||'—'}</div>
+          <span style="font-size:11px;color:var(--green);font-weight:700">✅ ${r.hora_checkout||'—'}</span>
+        </div>
+        <div style="display:flex;gap:12px;font-size:12px;color:var(--text2)">
+          <span>📦 <b style="color:var(--text)">${r.ped_itens||0} itens</b></span>
+          <span>👤 ${r.separador_nome_join||r.separador_nome||'—'}</span>
+          ${r.operador_nome ? `<span>🏷️ ${r.operador_nome}</span>` : ''}
+        </div>
+      </div>`).join('');
+  } catch(e) {
+    if (el) el.innerHTML = '<div style="color:var(--red);padding:20px;text-align:center">Erro ao carregar</div>';
+  }
 }
 
 
@@ -92,7 +164,10 @@ async function confirmarCheckoutMobile(id) {
     const data = await res.json().catch(()=>({}));
     if (!res.ok) { toast(data.erro || 'Erro ao confirmar checkout!','erro'); buscarCaixaMobile(); return; }
     toast('✅ Checkout confirmado!','sucesso');
-    buscarCaixaMobile();
+    // Limpa resultado e vai para aba FEITOS para mostrar o registro
+    document.getElementById('m-ck-input-caixa').value = '';
+    document.getElementById('m-ck-resultado').innerHTML = '';
+    mudarTabCk('feitos');
   } catch(e) { toast('Erro de rede ao confirmar!','erro'); }
 }
 
@@ -115,16 +190,9 @@ async function liberarCaixaMobile(id) {
 
 
 
+// Mantida por compatibilidade com chamadas antigas, redireciona para a nova fila
 async function carregarStatsCkMobile() {
-  try {
-    const res  = await fetch(`${API}/stats/meus`, { credentials:'include' });
-    const data = res.ok ? await res.json() : {};
-    const d = data.checkout || {};
-    const set  = (id, val) => { const e = document.getElementById(id); if(e) e.textContent = val ?? 0; };
-    set('m-ck-hoje', d.expedidos_hoje);
-    set('m-ck-mes',  d.expedidos_hoje);
-    set('m-ck-pend', d.pendentes);
-  } catch(e) { console.warn(e); }
+  carregarFilaCkMobile();
 }
 
 

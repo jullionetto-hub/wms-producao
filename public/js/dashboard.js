@@ -853,9 +853,9 @@ function renderDashPipeline() {
     { icon: '🔖', label: 'CHECKOUT', cor: '#0891b2',
       main: fmtN(ckConc), sub: 'checkouts concluídos',
       kpis: [
-        { lbl: 'Ck. Pendente',   val: fmtN(ckFila),  note: 'aguardando' },
+        { lbl: 'Total Checkout', val: fmtN(ckFila + ckEmCk + ckConc) },
         { lbl: 'Em Checkout',    val: fmtN(ckEmCk) },
-        { lbl: 'Concluídos',     val: fmtN(ckConc) },
+        { lbl: 'Pendentes',      val: fmtN(ckFila) },
         { lbl: 'Total Itens',    val: fmtN(ckItens) },
       ]},
     { icon: '📫', label: 'EMBALAGEM', cor: '#7c3aed',
