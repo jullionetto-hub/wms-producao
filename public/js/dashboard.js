@@ -155,7 +155,7 @@ async function carregarMapaEstoque() {
       pedidos.forEach(p => {
         const opt = document.createElement('option');
         opt.value = p.id;
-        opt.textContent = `#${p.numero_pedido} — ${p.cliente||'—'} (${p.itens||0} itens)`;
+        opt.textContent = `#${p.numero_pedido} — ${p.cliente||'—'} (${p.total_itens||p.itens||0} itens)`;
         sel.appendChild(opt);
       });
       sel.value = oldVal;
@@ -809,7 +809,7 @@ function renderDashPipeline() {
   const sepSeparando = distribuidos.filter(p => p.status === 'separando').length;
   const sepPendente  = distribuidos.filter(p => p.status === 'pendente').length;
   const sepConcluido = distribuidos.filter(p => p.status === 'concluido').length;
-  const sepItens     = distribuidos.reduce((s, p) => s + (parseInt(p.itens) || 0), 0);
+  const sepItens     = distribuidos.reduce((s, p) => s + (parseInt(p.total_itens || p.itens) || 0), 0);
 
   // ── CHECKOUT (fluxo: sep concluído → Ck Pendente → Em Checkout → Ck Concluído) ──
   // "Ck. Pendente" = sep concluído mas status_embalagem ainda 'nao_iniciado' (não chegou ao checkout)
@@ -827,7 +827,7 @@ function renderDashPipeline() {
   // Total itens = todos os sep-concluídos (escopo completo do checkout)
   const ckItens = distribuidos
     .filter(p => p.status === 'concluido')
-    .reduce((s, p) => s + (parseInt(p.itens) || 0), 0);
+    .reduce((s, p) => s + (parseInt(p.total_itens || p.itens) || 0), 0);
 
   // ── EMBALAGEM (fluxo: ck concluído → Emb. Pendente → Embalando → Embalado) ──
   const embPend   = distribuidos.filter(p => p.status_embalagem === 'pendente').length;
@@ -837,7 +837,7 @@ function renderDashPipeline() {
   // Total itens = todos que entraram na embalagem (pendente + embalando + embalado)
   const embItens = distribuidos
     .filter(p => ['pendente','embalando','embalado'].includes(p.status_embalagem))
-    .reduce((s, p) => s + (parseInt(p.itens) || 0), 0);
+    .reduce((s, p) => s + (parseInt(p.total_itens || p.itens) || 0), 0);
 
   // ── REPOSIÇÃO ─────────────────────────────────────────────────────────────
   const repConc   = parseInt(kpi.reposicao_concluida || 0);
@@ -962,7 +962,7 @@ async function carregarTimeline() {
         <div class="tl-dot ${p.status}"></div>
         <div style="flex:1">
           <div class="tl-titulo">Pedido #${p.numero_pedido}</div>
-          <div class="tl-sub">${p.separador_nome||'Sem usuário'} &nbsp;•&nbsp; <span class="pill ${p.status}" style="font-size:9px;padding:2px 7px">${p.status}</span> &nbsp;•&nbsp; ${p.itens||0} itens &nbsp;•&nbsp; ${formatarData(p.data_pedido)}</div>
+          <div class="tl-sub">${p.separador_nome||'Sem usuário'} &nbsp;•&nbsp; <span class="pill ${p.status}" style="font-size:9px;padding:2px 7px">${p.status}</span> &nbsp;•&nbsp; ${p.total_itens||p.itens||0} itens &nbsp;•&nbsp; ${formatarData(p.data_pedido)}</div>
         </div>
       </div>`).join('');
   } catch(e) { console.warn(e); }

@@ -52,7 +52,7 @@ async function carregarPedidos() {
       <td style="font-size:11px;color:var(--amber);font-weight:600;white-space:nowrap">${p.aguardando_desde||'—'}</td>
       <td style="font-size:12px;color:var(--text2)">${p.separador_nome||'—'}</td>
       <td><span class="pill ${(p.status||'').replace(' ','-')}">${p.status}</span></td>
-      <td style="font-weight:600;color:${(p.itens||0)>20?'var(--red)':(p.itens||0)>10?'var(--amber)':'var(--text)'}">${p.itens||'—'}</td>
+      <td style="font-weight:600;color:${(p.total_itens||p.itens||0)>50?'var(--red)':(p.total_itens||p.itens||0)>20?'var(--amber)':'var(--text)'}"><span title="${p.itens||0} produtos distintos">${p.total_itens||p.itens||'—'} itens</span>${p.total_itens&&p.itens&&p.total_itens!==p.itens?`<br><small style="font-weight:400;color:var(--text3);font-size:10px">${p.itens} prod.</small>`:''}</td>
     </tr>`).join('');
   } catch(e) { console.warn(e); }
 }

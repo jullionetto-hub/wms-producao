@@ -49,6 +49,10 @@ const ALTERATIONS = [
   "UPDATE usuarios SET turno='Noite' WHERE turno='Madrugada'",
   "UPDATE separadores SET turno='Noite' WHERE turno='Madrugada'",
   "UPDATE pedidos SET turno_distribuicao='Noite' WHERE turno_distribuicao='Madrugada'",
+  // Total de itens (soma de quantidades) — separado de 'itens' que é contagem de produtos distintos
+  "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS total_itens INTEGER DEFAULT 0",
+  // Backfill: preenche total_itens para pedidos já existentes a partir de itens_pedido
+  `UPDATE pedidos SET total_itens = (SELECT COALESCE(SUM(ip.quantidade), 0) FROM itens_pedido ip WHERE ip.pedido_id = pedidos.id) WHERE total_itens = 0`,
 ];
 
 async function runSchema() {
