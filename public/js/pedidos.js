@@ -921,6 +921,7 @@ async function abrirModalDistribuicao() {
   document.getElementById('btn-confirmar-dist').style.display = 'none';
   document.getElementById('btn-calcular-dist').style.display = 'inline-flex';
   distribuicaoPlano = null;
+  _turnoAtivoDistribuicao = '';
   // Recalcula pontuação de pedidos antigos em background
   fetch(`${API}/pedidos/recalcular-pontuacao`, { method:'POST', credentials:'include' }).catch(()=>{});
   await carregarSeparadoresDistribuicao();
@@ -929,13 +930,17 @@ async function abrirModalDistribuicao() {
 function fecharModalDistribuicao() {
   document.getElementById('modal-distribuicao').style.display = 'none';
   distribuicaoPlano = null;
+  _turnoAtivoDistribuicao = '';
 }
 async function carregarSeparadoresDistribuicao() {
   try {
     const res = await fetch(`${API}/usuarios`, { credentials:'include' });
     const users = await res.json();
     _todosSepsDistribuicao = users.filter(u => u.status === 'ativo');
-    filtrarTurnoDistribuicao('');
+    // Mostra contagem por turno nos botões
+    _atualizarBadgesTurnoDistribuicao();
+    // Auto-seleciona o turno atual pelo horário
+    filtrarTurnoDistribuicao(_turnoAtualParaDistribuicao());
   } catch(e) { console.warn(e); }
 }
 async function carregarPedidosDistribuicao() {
@@ -999,10 +1004,13 @@ async function calcularDistribuicao() {
 async function confirmarDistribuicao() {
   if (!distribuicaoPlano) return;
   try {
-    const res = await fetch(`${API}/pedidos/distribuicao/confirmar`, { credentials:'include', method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ plano:distribuicaoPlano }) });
+    // Passa o turno do botão ativo para que os pedidos entrem no lote correto
+    const turnoLote = _turnoAtivoDistribuicao || null;
+    const res = await fetch(`${API}/pedidos/distribuicao/confirmar`, { credentials:'include', method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ plano:distribuicaoPlano, turno_lote: turnoLote }) });
     const data = await res.json();
     if (data.erro) { toast(data.erro, 'erro'); return; }
-    toast(`✅ ${data.distribuidos} pedidos distribuídos!`, 'sucesso');
+    const turnoLabel = turnoLote ? ` · Lote ${turnoLote}` : '';
+    toast(`✅ ${data.distribuidos} pedidos distribuídos!${turnoLabel}`, 'sucesso');
     fecharModalDistribuicao();
     carregarPedidos();
   } catch(e) { toast('Erro ao confirmar distribuição!', 'erro'); }
@@ -1013,7 +1021,39 @@ window.addEventListener('click', e => {
   if (e.target.id === 'modal-distribuicao') fecharModalDistribuicao();
 });
 let _todosSepsDistribuicao = [];
+let _turnoAtivoDistribuicao = ''; // '' = Todos
+
+// Retorna o turno atual com base no hor\u00e1rio do rel\u00f3gio
+function _turnoAtualParaDistribuicao() {
+  var h = new Date().getHours();
+  if (h >= 6 && h < 14) return 'Manha';
+  if (h >= 14 && h < 22) return 'Tarde';
+  return 'Noite';
+}
+
+// Atualiza os badges de contagem nos bot\u00f5es de turno
+function _atualizarBadgesTurnoDistribuicao() {
+  var counts = { '': 0, Manha: 0, Tarde: 0, Noite: 0 };
+  _todosSepsDistribuicao.forEach(function(s) {
+    counts['']++;
+    var t = s.turno || 'Manha';
+    if (counts[t] !== undefined) counts[t]++;
+    else counts[t] = 1;
+  });
+  var map = {
+    todos: 'Todos (' + counts[''] + ')',
+    manha: 'Manh\u00e3 (' + (counts['Manha'] || 0) + ')',
+    tarde: 'Tarde (' + (counts['Tarde'] || 0) + ')',
+    noite: 'Noite (' + (counts['Noite'] || 0) + ')'
+  };
+  Object.keys(map).forEach(function(k) {
+    var btn = document.getElementById('dist-turno-' + k);
+    if (btn) btn.textContent = map[k];
+  });
+}
+
 function filtrarTurnoDistribuicao(turno) {
+  _turnoAtivoDistribuicao = turno; // '' = Todos, 'Manha'/'Tarde'/'Noite' = turno espec\u00edfico
   var el = document.getElementById('dist-separadores-lista');
   if (!el) return;
   ['todos','manha','tarde','noite'].forEach(function(t) {
@@ -1025,7 +1065,9 @@ function filtrarTurnoDistribuicao(turno) {
   });
   var seps = turno ? _todosSepsDistribuicao.filter(function(s) {
     var t = (s.turno || '').toLowerCase();
-    var tb = turno.toLowerCase().replace('\u00e3','a').replace('\u00e2','a'); var tc = t.replace('\u00e3','a').replace('\u00e2','a'); return tc.startsWith(tb.substring(0,4));
+    var tb = turno.toLowerCase().replace('\u00e3','a').replace('\u00e2','a');
+    var tc = t.replace('\u00e3','a').replace('\u00e2','a');
+    return tc.startsWith(tb.substring(0,4));
   }) : _todosSepsDistribuicao;
   if (!seps.length) {
     el.innerHTML = '<div style="color:var(--text3);font-size:12px">Nenhum colaborador neste turno</div>';

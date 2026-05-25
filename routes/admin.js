@@ -223,16 +223,16 @@ router.get('/relatorio/analitico', requerAuth, requerPerfil('supervisor'), async
     const params = [dataIni, dataFim];
 
     // ── Pedidos — busca TODOS no período (sem filtro de hora no SQL)
-    // O turno do lote é determinado pelo sep_turno (turno do separador que recebeu o pedido).
-    // Quando a distribuição usa o botão "Tarde", os pedidos vão para separadores da Tarde
-    // → sep_turno='Tarde' → aparecem no lote Tarde no relatório.
+    // O turno do lote é determinado por (em ordem de prioridade):
+    //   1. turno_distribuicao — gravado quando supervisor usa botão de turno na distribuição
+    //   2. turno do separador (u.turno / sep.turno) — fallback para distribuições antigas
     const pedidos = await db.all(`
       SELECT p.id, p.status, p.itens, p.pontuacao, p.hora_pedido, p.data_pedido,
              p.iniciado_em, p.concluido_em, p.aguardando_desde,
              p.transportadora, p.rua, p.status_embalagem,
              p.embalagem_iniciado_em, p.embalado_em, p.embalado_por, p.tem_prime,
              COALESCE(u.nome, sep.nome, '') as sep_nome,
-             COALESCE(u.turno, sep.turno, 'Manha') as sep_turno
+             COALESCE(p.turno_distribuicao, u.turno, sep.turno, 'Manha') as sep_turno
       FROM pedidos p
       LEFT JOIN separadores sep ON p.separador_id = sep.id
       LEFT JOIN usuarios u ON sep.usuario_id = u.id

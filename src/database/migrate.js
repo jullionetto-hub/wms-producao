@@ -43,6 +43,8 @@ const ALTERATIONS = [
   "ALTER TABLE passagem_turno ADD COLUMN IF NOT EXISTS criado_em TIMESTAMPTZ DEFAULT NOW()",
   // Garante coluna historico em avisos_repositor
   "ALTER TABLE avisos_repositor ADD COLUMN IF NOT EXISTS historico JSONB DEFAULT '[]'::jsonb",
+  // Turno do lote — definido pelo botão ativo na tela de distribuição
+  "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS turno_distribuicao TEXT DEFAULT NULL",
 ];
 
 async function runSchema() {

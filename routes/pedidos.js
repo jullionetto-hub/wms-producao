@@ -343,8 +343,10 @@ router.post('/pedidos/distribuicao', requerAuth, requerPerfil('supervisor'), asy
 });
 
 router.post('/pedidos/distribuicao/confirmar', requerAuth, requerPerfil('supervisor'), async (req,res) => {
-  const {plano}=req.body;
+  const {plano, turno_lote}=req.body;
   if (!plano?.length) return res.status(400).json({erro:'Plano não informado!'});
+  // turno_lote = botão ativo na tela de distribuição ('Manha','Tarde','Noite') ou null/'' = Todos
+  const turnoLote = turno_lote || null;
   let dist=0;
   try {
     for (const item of plano) {
@@ -383,7 +385,19 @@ router.post('/pedidos/distribuicao/confirmar', requerAuth, requerPerfil('supervi
       }
       if (dbId) {
         for (const np of item.pedidos) {
-          const r=await pool.query(`UPDATE pedidos SET separador_id=$1 WHERE numero_pedido=$2 AND status='pendente'`,[dbId,np]);
+          let r;
+          if (turnoLote) {
+            // Grava o turno do lote junto com o separador
+            r = await pool.query(
+              `UPDATE pedidos SET separador_id=$1, turno_distribuicao=$2 WHERE numero_pedido=$3 AND status='pendente'`,
+              [dbId, turnoLote, np]
+            );
+          } else {
+            r = await pool.query(
+              `UPDATE pedidos SET separador_id=$1 WHERE numero_pedido=$2 AND status='pendente'`,
+              [dbId, np]
+            );
+          }
           if(r.rowCount>0) dist++;
         }
       }
