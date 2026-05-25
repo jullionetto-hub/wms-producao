@@ -1359,9 +1359,26 @@ function exportarPerformanceExcel() {
     if (!temDados) { toast('Carregue os dados antes de exportar!', 'aviso'); return; }
 
     const wb = XLSX.utils.book_new();
+
+    // Converte string YYYY-MM-DD em Date real para Excel reconhecer como data
+    // (T12:00:00 evita problema de fuso horário UTC que adiantaria 1 dia)
+    const mkDate = s => s && /^\d{4}-\d{2}-\d{2}/.test(s) ? new Date(s.slice(0,10) + 'T12:00:00') : (s || '—');
+
     const mkSheet = (rows) => {
-      const ws = XLSX.utils.aoa_to_sheet(rows);
-      ws['!cols'] = rows[0].map((_,ci) => ({ wch: Math.max(...rows.map(r => String(r[ci]||'').length), String(rows[0][ci]).length) + 2 }));
+      const ws = XLSX.utils.aoa_to_sheet(rows, { cellDates: true });
+      // Calcula largura de coluna (Date = 10 chars)
+      const cellW = v => v instanceof Date ? 10 : String(v||'').length;
+      ws['!cols'] = rows[0].map((_,ci) => ({
+        wch: Math.max(...rows.map(r => cellW(r[ci])), String(rows[0][ci]).length) + 2
+      }));
+      // Aplica formato DD/MM/YYYY em todas as células de data
+      const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
+      for (let R = range.s.r + 1; R <= range.e.r; R++) {
+        for (let C = range.s.c; C <= range.e.c; C++) {
+          const cell = ws[XLSX.utils.encode_cell({r: R, c: C})];
+          if (cell && cell.t === 'd') cell.z = 'DD/MM/YYYY';
+        }
+      }
       return ws;
     };
 
@@ -1374,7 +1391,7 @@ function exportarPerformanceExcel() {
         const total  = p.tempo_total_min  !== null ? _horasStr(Math.round(p.tempo_total_min))  : '—';
         const espera = p.tempo_espera_min > 0      ? _horasStr(Math.round(p.tempo_espera_min)) : '—';
         const real   = p.tempo_real_min   !== null ? _horasStr(Math.round(p.tempo_real_min))   : '—';
-        sepRows.push([c.nome, p.data_pedido||'—', p.numero_pedido||'—', ini, fim, total, espera, real,
+        sepRows.push([c.nome, mkDate(p.data_pedido), p.numero_pedido||'—', ini, fim, total, espera, real,
           p.total_itens||0, p.qtd_produtos||0, p.qtd_reposicoes||0]);
       });
     });
@@ -1385,7 +1402,7 @@ function exportarPerformanceExcel() {
     (_performanceDetalheDados || []).filter(c => c.perfil === 'checkout').forEach(c => {
       c.pedidos.forEach(p => {
         const tempo = p.tempo_checkout_min !== null ? _horasStr(p.tempo_checkout_min) : '—';
-        ckRows.push([c.nome, p.data_pedido||'—', p.numero_pedido||'—',
+        ckRows.push([c.nome, mkDate(p.data_pedido), p.numero_pedido||'—',
           p.hora_abertura||'—', p.hora_confirmacao||'—', tempo]);
       });
     });
@@ -1396,7 +1413,7 @@ function exportarPerformanceExcel() {
     (_performanceDetalheDados || []).filter(c => c.perfil === 'embalador').forEach(c => {
       c.pedidos.forEach(p => {
         const hora = p.embalado_em ? p.embalado_em.slice(0,5) : '—';
-        embRows.push([c.nome, p.data_pedido||'—', p.numero_pedido||'—',
+        embRows.push([c.nome, mkDate(p.data_pedido), p.numero_pedido||'—',
           hora, p.total_itens||0, p.cliente||'—', p.transportadora||'—']);
       });
     });
@@ -1407,7 +1424,7 @@ function exportarPerformanceExcel() {
     (_performanceDetalheDados || []).filter(c => c.perfil === 'repositor').forEach(c => {
       c.pedidos.forEach(p => {
         const tempo = p.tempo_resolucao_min !== null ? _horasStr(p.tempo_resolucao_min) : '—';
-        repRows.push([c.nome, p.data_pedido||'—', p.numero_pedido||'—',
+        repRows.push([c.nome, mkDate(p.data_pedido), p.numero_pedido||'—',
           p.hora_aviso||'—', p.hora_reposto||'—', tempo,
           p.codigo||'—', p.descricao||'—', p.quantidade||0, p.status||'—']);
       });
