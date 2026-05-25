@@ -44,7 +44,7 @@ async function carregarPedidos() {
       ps = ps.filter(p => p.separador_nome === usrId);
     }
     const tbody = document.getElementById('tbody-ped');
-    if (!ps.length) { tbody.innerHTML = '<tr><td colspan="7" style="color:var(--text3);text-align:center;padding:28px">Nenhum pedido</td></tr>'; return; }
+    if (!ps.length) { tbody.innerHTML = '<tr><td colspan="8" style="color:var(--text3);text-align:center;padding:28px">Nenhum pedido</td></tr>'; return; }
     tbody.innerHTML = ps.map(p=>`<tr>
       <td style="font-weight:700;font-family:'Space Mono',monospace;font-size:12px"><span style="color:${String(p.transportadora||'').toUpperCase().includes('DRIVE')?'var(--red)':'var(--accent)'}">${p.numero_pedido}</span></td>
       <td style="font-size:11px;color:var(--text2);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.cliente||''}">${p.cliente||'—'}</td>
@@ -52,7 +52,8 @@ async function carregarPedidos() {
       <td style="font-size:11px;color:var(--amber);font-weight:600;white-space:nowrap">${p.aguardando_desde||'—'}</td>
       <td style="font-size:12px;color:var(--text2)">${p.separador_nome||'—'}</td>
       <td><span class="pill ${(p.status||'').replace(' ','-')}">${p.status}</span></td>
-      <td style="font-weight:600;color:${(p.total_itens||p.itens||0)>50?'var(--red)':(p.total_itens||p.itens||0)>20?'var(--amber)':'var(--text)'}"><span title="${p.itens||0} produtos distintos">${p.total_itens||p.itens||'—'} itens</span>${p.total_itens&&p.itens&&p.total_itens!==p.itens?`<br><small style="font-weight:400;color:var(--text3);font-size:10px">${p.itens} prod.</small>`:''}</td>
+      <td style="font-weight:600;text-align:center;color:var(--text2)">${p.itens||'—'}</td>
+      <td style="font-weight:700;text-align:center;color:${(p.total_itens||p.itens||0)>100?'var(--red)':(p.total_itens||p.itens||0)>30?'var(--amber)':'var(--text)'}">${p.total_itens||p.itens||'—'}</td>
     </tr>`).join('');
   } catch(e) { console.warn(e); }
 }
