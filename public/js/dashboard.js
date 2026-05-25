@@ -820,8 +820,9 @@ function renderDashPipeline() {
   const ckEmCk = parseInt(kpi.checkout_pendente || 0); // no checkout desk agora
   const ckFila = Math.max(0, ckNaoIniciado - ckEmCk);  // aguardando (fila)
   // "Ck. Concluído" = passou pelo checkout (status_embalagem saiu de nao_iniciado)
+  // Nota: o valor correto no banco é 'embalado' (não 'concluido')
   const ckConc  = distribuidos.filter(p =>
-    p.status === 'concluido' && ['pendente','embalando','concluido'].includes(p.status_embalagem)
+    p.status === 'concluido' && ['pendente','embalando','embalado'].includes(p.status_embalagem)
   ).length;
   // Total itens = todos os sep-concluídos (escopo completo do checkout)
   const ckItens = distribuidos
@@ -831,10 +832,11 @@ function renderDashPipeline() {
   // ── EMBALAGEM (fluxo: ck concluído → Emb. Pendente → Embalando → Embalado) ──
   const embPend   = distribuidos.filter(p => p.status_embalagem === 'pendente').length;
   const embalando = distribuidos.filter(p => p.status_embalagem === 'embalando').length;
-  const embConc   = distribuidos.filter(p => p.status_embalagem === 'concluido').length;
-  // Total itens = todos que entraram na embalagem (pendente + embalando + concluído)
+  // Nota: o valor correto no banco é 'embalado' (não 'concluido')
+  const embConc   = distribuidos.filter(p => p.status_embalagem === 'embalado').length;
+  // Total itens = todos que entraram na embalagem (pendente + embalando + embalado)
   const embItens = distribuidos
-    .filter(p => ['pendente','embalando','concluido'].includes(p.status_embalagem))
+    .filter(p => ['pendente','embalando','embalado'].includes(p.status_embalagem))
     .reduce((s, p) => s + (parseInt(p.itens) || 0), 0);
 
   // ── REPOSIÇÃO ─────────────────────────────────────────────────────────────

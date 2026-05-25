@@ -39,7 +39,7 @@ router.get('/kpis', requerAuth, async (req,res) => {
       (SELECT COUNT(*) FROM pedidos p WHERE p.status='separando'${sepFilt}) as em_separacao,
       (SELECT COUNT(*) FROM pedidos WHERE status='pendente') as pendentes,
       (SELECT COUNT(*) FROM avisos_repositor WHERE status='pendente') as faltas_abertas,
-      (SELECT COUNT(*) FROM checkout c WHERE c.status='pendente'${ckFilt}) as checkout_pendente,
+      (SELECT COUNT(*) FROM checkout c WHERE c.status='pendente' AND c.data_checkout=$1${ckFilt}) as checkout_pendente,
       (SELECT COUNT(*) FROM checkout c WHERE c.status='concluido' AND c.data_checkout=$2${ckFilt}) as checkout_hoje,
       (SELECT COUNT(*) FROM pedidos WHERE status='concluido' AND data_pedido LIKE $3) as concluidos_mes,
       (SELECT COUNT(*) FROM pedidos WHERE data_pedido=$4) as importados_hoje,
