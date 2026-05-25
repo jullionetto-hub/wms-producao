@@ -12,6 +12,7 @@ async function confirmarPedidoMobile() {
 
 async function carregarChecklistMobile() {
   if (!pedidoAtualId) return;
+  if (!caixaJaVinculada) return; // não mostra itens sem caixa vinculada
   try {
     const res = await fetch(`${API}/pedidos/${pedidoAtualId}/itens`, { credentials:'include' });
     itensAtuais = await res.json();

@@ -486,6 +486,7 @@ async function confirmarPedido() {
 
 async function carregarChecklist() {
   if (!pedidoAtualId) return;
+  if (!caixaJaVinculada) return; // não mostra itens sem caixa vinculada
   try {
     const res = await fetch(`${API}/pedidos/${pedidoAtualId}/itens`, { credentials:'include' });
     itensAtuais = await res.json();
