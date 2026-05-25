@@ -165,11 +165,13 @@ function _confirmarSair() {
   const ckRoot  = document.getElementById('ck-mobile-root');
   const ckBar   = document.getElementById('ck-tabbar');
   const embRoot = document.getElementById('emb-mobile-root');
+  const embBar  = document.getElementById('emb-tabbar');
   if (repRoot)  repRoot.style.display  = 'none';
   if (repBar)   repBar.style.display   = 'none';
   if (ckRoot)   ckRoot.style.display   = 'none';
   if (ckBar)    ckBar.style.display    = 'none';
   if (embRoot)  embRoot.style.display  = 'none';
+  if (embBar)   embBar.style.display   = 'none';
   // Restaura elementos que ativarMobileEmb pode ter escondido via inline style
   const hdr = document.querySelector('#app header');
   if (hdr) hdr.style.display = '';
