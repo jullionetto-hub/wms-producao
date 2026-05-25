@@ -764,14 +764,22 @@ async function atualizarBadgeLiberacao() {
 const _turnosDash = new Set();
 
 function toggleTurnoDash(turno) {
-  if (_turnosDash.has(turno)) _turnosDash.delete(turno);
-  else _turnosDash.add(turno);
+  // comportamento exclusivo: um turno por vez (clica de novo para voltar a Todos)
+  if (_turnosDash.has(turno)) {
+    _turnosDash.clear(); // desativa = volta para Todos
+  } else {
+    _turnosDash.clear();
+    _turnosDash.add(turno);
+  }
   const map = { Manha:'manha', Tarde:'tarde', Noite:'madrugada' };
   Object.entries(map).forEach(([t, id]) => {
     const btn = document.getElementById(`dash-turno-${id}`);
     if (btn) btn.classList.toggle('ativo', _turnosDash.has(t));
   });
+  // KPIs filtrados por turno + pipeline re-renderizado com pedidos filtrados
   carregarKPIs();
+  // Pipeline re-renderiza imediatamente com pedidos já em cache (filtragem client-side)
+  renderDashPipeline();
 }
 
 // ── Globals para pipeline cards ──────────────────────────────────────────────
@@ -781,74 +789,90 @@ let _pedidosOperacao  = null;
 function renderDashPipeline() {
   const wrap = document.getElementById('dash-pipeline');
   if (!wrap) return;
-  const kpi    = _kpiData || {};
-  const pedidos = _pedidosOperacao || [];
+  const kpi  = _kpiData || {};
   const fmtN = n => (n != null && !isNaN(n)) ? Number(n).toLocaleString('pt-BR') : '0';
 
-  // ── Separação
-  const distribuidos  = pedidos.filter(p => p.separador_nome || p.separador_id);
-  const sepTotal      = distribuidos.length;
-  const sepSeparando  = distribuidos.filter(p => p.status === 'separando').length;
-  const sepPendente   = distribuidos.filter(p => p.status === 'pendente').length;
-  const sepConcluido  = distribuidos.filter(p => p.status === 'concluido').length;
-  const sepItens      = distribuidos.reduce((s, p) => s + (parseInt(p.itens) || 0), 0);
+  // ── Turno filter: filtra _pedidosOperacao pelo turno ativo ────────────────
+  let pedidos = _pedidosOperacao || [];
+  if (_turnosDash.size > 0) {
+    const filtro = [..._turnosDash];
+    pedidos = pedidos.filter(p => {
+      // sep_turno é retornado pelo /pedidos endpoint (COALESCE turno_distribuicao, sep.turno)
+      const t = p.sep_turno || p.turno_distribuicao || 'Manha';
+      return filtro.includes(t);
+    });
+  }
 
-  // ── Checkout (pipeline: sep concluída → checkout)
-  const ckConc  = parseInt(kpi.checkout_hoje      || 0);
-  const ckEmCk  = parseInt(kpi.checkout_pendente  || 0);
-  const ckTotal = ckConc + ckEmCk;
-  // pedidos separados que ainda não têm registro de checkout
-  const ckFila  = Math.max(0, sepConcluido - ckTotal);
-  const ckItens = distribuidos.filter(p => p.status === 'concluido')
-                               .reduce((s, p) => s + (parseInt(p.itens) || 0), 0);
+  // ── SEPARAÇÃO ─────────────────────────────────────────────────────────────
+  const distribuidos = pedidos.filter(p => p.separador_nome || p.separador_id);
+  const sepTotal     = distribuidos.length;
+  const sepSeparando = distribuidos.filter(p => p.status === 'separando').length;
+  const sepPendente  = distribuidos.filter(p => p.status === 'pendente').length;
+  const sepConcluido = distribuidos.filter(p => p.status === 'concluido').length;
+  const sepItens     = distribuidos.reduce((s, p) => s + (parseInt(p.itens) || 0), 0);
 
-  // ── Embalagem (via status_embalagem dos pedidos concluídos)
-  const concPed   = distribuidos.filter(p => p.status === 'concluido');
-  const embalando = concPed.filter(p => p.status_embalagem === 'embalando').length;
-  const embPend   = concPed.filter(p => p.status_embalagem === 'pendente').length;
-  const embConc   = concPed.filter(p => p.status_embalagem === 'concluido').length;
-  const embTotal  = embalando + embPend + embConc;
-  const embItens  = concPed.filter(p => p.status_embalagem && p.status_embalagem !== 'nao_iniciado')
-                            .reduce((s, p) => s + (parseInt(p.itens) || 0), 0);
+  // ── CHECKOUT (fluxo: sep concluído → Ck Pendente → Em Checkout → Ck Concluído) ──
+  // "Ck. Pendente" = sep concluído mas status_embalagem ainda 'nao_iniciado' (não chegou ao checkout)
+  // inclui os que estão "Em Checkout" agora, então subtraímos ckEmCk
+  const ckNaoIniciado = distribuidos.filter(p =>
+    p.status === 'concluido' && (!p.status_embalagem || p.status_embalagem === 'nao_iniciado')
+  ).length;
+  const ckEmCk = parseInt(kpi.checkout_pendente || 0); // no checkout desk agora
+  const ckFila = Math.max(0, ckNaoIniciado - ckEmCk);  // aguardando (fila)
+  // "Ck. Concluído" = passou pelo checkout (status_embalagem saiu de nao_iniciado)
+  const ckConc  = distribuidos.filter(p =>
+    p.status === 'concluido' && ['pendente','embalando','concluido'].includes(p.status_embalagem)
+  ).length;
+  const ckItens = distribuidos
+    .filter(p => p.status === 'concluido' && ['pendente','embalando','concluido'].includes(p.status_embalagem))
+    .reduce((s, p) => s + (parseInt(p.itens) || 0), 0);
 
-  // ── Reposição
-  const repConc   = parseInt(kpi.reposicao_concluida  || 0);
-  const repPend   = parseInt(kpi.faltas_abertas        || 0);
-  const repNaoEnc = parseInt(kpi.nao_encontrados_hoje  || 0);
-  const repTotal  = parseInt(kpi.total_faltas_hoje     || 0);
+  // ── EMBALAGEM (fluxo: ck concluído → Emb. Pendente → Embalando → Embalado) ──
+  const embPend   = distribuidos.filter(p => p.status_embalagem === 'pendente').length;
+  const embalando = distribuidos.filter(p => p.status_embalagem === 'embalando').length;
+  const embConc   = distribuidos.filter(p => p.status_embalagem === 'concluido').length;
+  const embItens  = distribuidos
+    .filter(p => p.status_embalagem === 'concluido')
+    .reduce((s, p) => s + (parseInt(p.itens) || 0), 0);
+
+  // ── REPOSIÇÃO ─────────────────────────────────────────────────────────────
+  const repConc   = parseInt(kpi.reposicao_concluida || 0);
+  const repPend   = parseInt(kpi.faltas_abertas       || 0);
+  const repNaoEnc = parseInt(kpi.nao_encontrados_hoje || 0);
+  const repTotal  = parseInt(kpi.total_faltas_hoje    || 0);
 
   const cards = [
     { icon: '📦', label: 'SEPARAÇÃO', cor: '#4f46e5',
       main: fmtN(sepConcluido), sub: 'pedidos concluídos',
       kpis: [
-        { lbl: 'Total Pedidos',     val: fmtN(sepTotal) },
-        { lbl: 'Em Separação',      val: fmtN(sepSeparando) },
-        { lbl: 'Pedidos Pendentes', val: fmtN(sepPendente) },
-        { lbl: 'Total Itens',       val: fmtN(sepItens) },
+        { lbl: 'Total Pedidos',  val: fmtN(sepTotal) },
+        { lbl: 'Em Separação',   val: fmtN(sepSeparando) },
+        { lbl: 'Pendentes',      val: fmtN(sepPendente) },
+        { lbl: 'Total Itens',    val: fmtN(sepItens) },
       ]},
     { icon: '🔖', label: 'CHECKOUT', cor: '#0891b2',
       main: fmtN(ckConc), sub: 'checkouts concluídos',
       kpis: [
-        { lbl: 'Total Checkout',    val: fmtN(ckTotal) },
-        { lbl: 'Em Checkout',       val: fmtN(ckEmCk) },
-        { lbl: 'Checkout Pendente', val: fmtN(ckFila) },
-        { lbl: 'Total Itens',       val: fmtN(ckItens) },
+        { lbl: 'Ck. Pendente',   val: fmtN(ckFila),  note: 'aguardando' },
+        { lbl: 'Em Checkout',    val: fmtN(ckEmCk) },
+        { lbl: 'Concluídos',     val: fmtN(ckConc) },
+        { lbl: 'Total Itens',    val: fmtN(ckItens) },
       ]},
     { icon: '📫', label: 'EMBALAGEM', cor: '#7c3aed',
       main: fmtN(embConc), sub: 'pedidos embalados',
       kpis: [
-        { lbl: 'Total Embalagem',   val: fmtN(embTotal) },
-        { lbl: 'Embalando',         val: fmtN(embalando) },
-        { lbl: 'Emb. Pendente',     val: fmtN(embPend) },
-        { lbl: 'Total Itens',       val: fmtN(embItens) },
+        { lbl: 'Emb. Pendente',  val: fmtN(embPend),  note: 'pós-checkout' },
+        { lbl: 'Embalando',      val: fmtN(embalando) },
+        { lbl: 'Embalados',      val: fmtN(embConc) },
+        { lbl: 'Total Itens',    val: fmtN(embItens) },
       ]},
     { icon: '🔧', label: 'REPOSIÇÃO', cor: '#d97706',
       main: fmtN(repConc), sub: 'reposições resolvidas',
       kpis: [
-        { lbl: 'Total Reposição',   val: fmtN(repTotal) },
-        { lbl: 'Pendentes',         val: fmtN(repPend) },
-        { lbl: 'Não Encontrados',   val: fmtN(repNaoEnc) },
-        { lbl: 'Encontrados',       val: fmtN(repConc) },
+        { lbl: 'Total Reposição', val: fmtN(repTotal) },
+        { lbl: 'Pendentes',       val: fmtN(repPend) },
+        { lbl: 'Não Encontrados', val: fmtN(repNaoEnc) },
+        { lbl: 'Encontrados',     val: fmtN(repConc) },
       ]},
   ];
 

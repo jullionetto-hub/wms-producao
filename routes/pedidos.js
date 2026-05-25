@@ -8,7 +8,7 @@ const { calcularPesoCorredor, calcularPontuacaoPedido } = require('../lib/pontua
 router.get('/pedidos', requerAuth, async (req,res) => {
   const {separador_id,status,data,data_ini,data_fim,numero_pedido,page,pageSize}=req.query;
   try {
-    let q=`SELECT p.*,s.nome as separador_nome,p.tem_prime FROM pedidos p LEFT JOIN separadores s ON p.separador_id=s.id WHERE 1=1`;
+    let q=`SELECT p.*,s.nome as separador_nome,COALESCE(p.turno_distribuicao,s.turno,'Manha') as sep_turno FROM pedidos p LEFT JOIN separadores s ON p.separador_id=s.id WHERE 1=1`;
     const p=[];
     const add=(c,v)=>{p.push(v);q+=` AND ${c}$${p.length}`;};
     if (separador_id)  add('p.separador_id=',separador_id);
