@@ -267,20 +267,25 @@ router.post('/pedidos/importar', requerAuth, requerPerfil('supervisor'), async (
   const numeros=[...new Set(dados.map(d=>String(d.numero_pedido)))];
   for (const numero of numeros) {
     const itens=dados.filter(d=>String(d.numero_pedido)===numero);
+    // itensReais: exclui linhas placeholder (pedidos sem itens têm codigo vazio)
+    const itensReais=itens.filter(i=>String(i.codigo||'').trim());
     try {
-      const ruasU=new Set(itens.map(i=>String(i.endereco||'').split(',')[0].trim().replace(/\d+/g,'').trim())).size;
-      const pts=Math.round(itens.reduce((s,i)=>s+calcularPesoCorredor(i.endereco)*(parseInt(i.quantidade)||1),0)+ruasU*2);
+      const ruasU=new Set(itensReais.map(i=>String(i.endereco||'').split(',')[0].trim().replace(/\d+/g,'').trim())).size;
+      const pts=Math.round(itensReais.reduce((s,i)=>s+calcularPesoCorredor(i.endereco)*(parseInt(i.quantidade)||1),0)+ruasU*2);
       const r=await pool.query(`INSERT INTO pedidos (numero_pedido,status,itens,rua,cliente,transportadora,aguardando_desde,pontuacao,data_pedido,hora_pedido,tem_prime,status_embalagem) VALUES ($1,'pendente',$2,$3,$4,$5,$6,$7,$8,$9,$10,'nao_iniciado') ON CONFLICT(numero_pedido) DO NOTHING RETURNING id`,
-        [numero,itens.length,itens[0]?.endereco||'',itens[0]?.cliente||'',itens[0]?.transportadora||'',itens[0]?.aguardando_desde||'',pts,hoje,hora,itens.some(i=>String(i.codigo||'').toUpperCase()==='PRIME')]);
+        [numero,itensReais.length,itens[0]?.endereco||'',itens[0]?.cliente||'',itens[0]?.transportadora||'',itens[0]?.aguardando_desde||'',pts,hoje,hora,itensReais.some(i=>String(i.codigo||'').toUpperCase()==='PRIME')]);
       if (!r.rows[0]){ignorados++;continue;}
       const pid=r.rows[0].id;
-      const client=await pool.connect();
-      try {
-        await client.query('BEGIN');
-        for (const it of itens) await client.query(`INSERT INTO itens_pedido (pedido_id,codigo,descricao,endereco,quantidade) VALUES ($1,$2,$3,$4,$5)`,[pid,String(it.codigo||'').trim(),String(it.descricao||'').trim(),String(it.endereco||'').trim(),parseInt(it.quantidade)||1]);
-        await client.query('COMMIT'); importados++;
-      } catch(ei){await client.query('ROLLBACK');await pool.query('DELETE FROM pedidos WHERE id=$1',[pid]);erros++;}
-      finally{client.release();}
+      if (itensReais.length > 0) {
+        const client=await pool.connect();
+        try {
+          await client.query('BEGIN');
+          for (const it of itensReais) await client.query(`INSERT INTO itens_pedido (pedido_id,codigo,descricao,endereco,quantidade) VALUES ($1,$2,$3,$4,$5)`,[pid,String(it.codigo||'').trim(),String(it.descricao||'').trim(),String(it.endereco||'').trim(),parseInt(it.quantidade)||1]);
+          await client.query('COMMIT');
+        } catch(ei){await client.query('ROLLBACK');await pool.query('DELETE FROM pedidos WHERE id=$1',[pid]);erros++;continue;}
+        finally{client.release();}
+      }
+      importados++;
     } catch(err){erros++;}
   }
   res.json({mensagem:'Importacao concluida!',importados,ignorados,erros,total:numeros.length});

@@ -828,6 +828,21 @@ function processarArquivoModalFile(file) {
           mostrarStatusModal(`⚠️ ${ignorados} pedido(s) da aba Itens não encontrados na aba Transportadora foram ignorados.`, 'aviso');
           setTimeout(() => mostrarStatusModal('', ''), 4000);
         }
+        // Inclui pedidos da Transportadora que não têm itens na aba Itens
+        // (serão importados com 0 itens para constar na fila)
+        const pedidosComItens = new Set(dadosFiltrados.map(d => d.numero_pedido));
+        let semItens = 0;
+        Object.keys(transpData).forEach(num => {
+          if (!pedidosComItens.has(num)) {
+            const t = transpData[num];
+            dadosFiltrados.push({ numero_pedido:num, codigo:'', descricao:'', quantidade:0, endereco:'', cliente:t.cliente, transportadora:t.transportadora, aguardando_desde:t.aguardando_desde||'' });
+            semItens++;
+          }
+        });
+        if (semItens > 0) {
+          mostrarStatusModal(`⚠️ ${semItens} pedido(s) da Transportadora sem itens — serão importados com 0 itens.`, 'aviso');
+          setTimeout(() => mostrarStatusModal('', ''), 5000);
+        }
       } else {
         dadosFiltrados.forEach(d => { const t = transpData[d.numero_pedido]; if (t) { d.cliente = t.cliente; d.transportadora = t.transportadora; d.aguardando_desde = t.aguardando_desde||''; } });
       }
@@ -933,8 +948,9 @@ async function carregarPedidosDistribuicao() {
     const respHora = document.getElementById('dist-respeitar-hora')?.checked !== false;
     let lista = apenasSemCheck ? pedidos.filter(p=>!p.separador_id) : pedidos;
     if (respHora) lista.sort((a,b)=>(a.aguardando_desde||a.hora_pedido||'').localeCompare(b.aguardando_desde||b.hora_pedido||''));
+    const totalDisponivel = lista.length; // total sem separador, antes do slice
     if (qtdInput > 0) lista = lista.slice(0, qtdInput);
-    el.innerHTML = `<div style="font-size:11px;color:var(--text3);margin-bottom:8px">${lista.length} de ${pedidos.length} pedido(s) serão distribuídos</div><div class="tabela-wrap" style="max-height:240px;overflow-y:auto"><table><thead><tr><th>PEDIDO</th><th>CLIENTE</th><th>HORÁRIO</th><th>ITENS</th><th>PONTUAÇÃO</th><th>STATUS</th></tr></thead><tbody>${lista.map(p=>`<tr><td style="font-weight:700;color:var(--text);font-family:'Space Mono',monospace;font-size:11px">${p.numero_pedido}</td><td style="font-size:11px;color:var(--text2);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.cliente||'—'}</td><td style="font-size:11px;color:var(--amber);font-weight:600;white-space:nowrap">${(p.aguardando_desde||p.hora_pedido||'—').replace('15/04/2026 ','').replace('16/04/2026 ','')}</td><td style="font-weight:600">${p.itens||0}</td><td><span style="font-family:'Space Mono',monospace;color:var(--indigo);font-weight:700">${p.pontuacao||'—'}</span></td><td><span class="pill ${(p.status||'pendente')}">${p.status||'pendente'}</span></td></tr>`).join('')}</tbody></table></div>`;
+    el.innerHTML = `<div style="font-size:11px;color:var(--text3);margin-bottom:8px">${lista.length} de ${totalDisponivel} pedido(s) serão distribuídos</div><div class="tabela-wrap" style="max-height:240px;overflow-y:auto"><table><thead><tr><th>PEDIDO</th><th>CLIENTE</th><th>HORÁRIO</th><th>ITENS</th><th>PONTUAÇÃO</th><th>STATUS</th></tr></thead><tbody>${lista.map(p=>`<tr><td style="font-weight:700;color:var(--text);font-family:'Space Mono',monospace;font-size:11px">${p.numero_pedido}</td><td style="font-size:11px;color:var(--text2);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.cliente||'—'}</td><td style="font-size:11px;color:var(--amber);font-weight:600;white-space:nowrap">${(p.aguardando_desde||p.hora_pedido||'—').replace('15/04/2026 ','').replace('16/04/2026 ','')}</td><td style="font-weight:600">${p.itens||0}</td><td><span style="font-family:'Space Mono',monospace;color:var(--indigo);font-weight:700">${p.pontuacao||'—'}</span></td><td><span class="pill ${(p.status||'pendente')}">${p.status||'pendente'}</span></td></tr>`).join('')}</tbody></table></div>`;
   } catch(e) { console.warn(e); }
 }
 async function calcularDistribuicao() {
