@@ -45,6 +45,10 @@ const ALTERATIONS = [
   "ALTER TABLE avisos_repositor ADD COLUMN IF NOT EXISTS historico JSONB DEFAULT '[]'::jsonb",
   // Turno do lote — definido pelo botão ativo na tela de distribuição
   "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS turno_distribuicao TEXT DEFAULT NULL",
+  // Normaliza 'Madrugada' → 'Noite' em todos os registros (padronização do nome do turno)
+  "UPDATE usuarios SET turno='Noite' WHERE turno='Madrugada'",
+  "UPDATE separadores SET turno='Noite' WHERE turno='Madrugada'",
+  "UPDATE pedidos SET turno_distribuicao='Noite' WHERE turno_distribuicao='Madrugada'",
 ];
 
 async function runSchema() {

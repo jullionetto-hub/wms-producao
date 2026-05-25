@@ -355,7 +355,7 @@ router.get('/relatorio/analitico', requerAuth, requerPerfil('supervisor'), async
     }).sort((a,b) => a.nome.localeCompare(b.nome));
 
     // ── Ranking de turnos — usa sep_turno (turno do separador que trabalhou o pedido)
-    const tMap = { Manha:{label:'Manhã',pedidos:0,itens:0,pontuacao:0,tempos:[]}, Tarde:{label:'Tarde',pedidos:0,itens:0,pontuacao:0,tempos:[]}, Madrugada:{label:'Madrugada',pedidos:0,itens:0,pontuacao:0,tempos:[]} };
+    const tMap = { Manha:{label:'Manhã',pedidos:0,itens:0,pontuacao:0,tempos:[]}, Tarde:{label:'Tarde',pedidos:0,itens:0,pontuacao:0,tempos:[]}, Noite:{label:'Noite',pedidos:0,itens:0,pontuacao:0,tempos:[]} };
     // Para o ranking usa TODOS os concluídos do dia (não só o turno filtrado)
     pedidos.filter(p => p.status === 'concluido' && p.sep_nome).forEach(p => {
       const t = p.sep_turno || 'Manha';

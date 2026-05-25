@@ -771,7 +771,7 @@ function toggleTurnoDash(turno) {
     _turnosDash.clear();
     _turnosDash.add(turno);
   }
-  const map = { Manha:'manha', Tarde:'tarde', Noite:'madrugada' };
+  const map = { Manha:'manha', Tarde:'tarde', Noite:'noite' };
   Object.entries(map).forEach(([t, id]) => {
     const btn = document.getElementById(`dash-turno-${id}`);
     if (btn) btn.classList.toggle('ativo', _turnosDash.has(t));
@@ -2220,7 +2220,7 @@ function renderRelAnalitico(d) {
   // ── 7. Tabela de colaboradores ────────────────────────────────
   const perfil_labels = { separador:'📦 Sep.', embalador:'📫 Emb.', checkout:'🔖 CK', repositor:'🔧 Rep.' };
   const perfil_colors = { separador:'#4f46e5', embalador:'#7c3aed', checkout:'#0891b2', repositor:'#d97706' };
-  const turno_labels  = { Manha:'🌅', Tarde:'☀️', Madrugada:'🌙', Noite:'🌙' };
+  const turno_labels  = { Manha:'🌅', Tarde:'☀️', Noite:'🌙' };
 
   const colabRows = d.colaboradores.map(c => {
     const cor = perfil_colors[c.perfil] || '#64748b';
