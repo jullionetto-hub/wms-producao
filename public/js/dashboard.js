@@ -493,11 +493,13 @@ async function carregarOperacao() {
 
 async function carregarDashboard() {
   await popularSelects();
-  await carregarKPIs();
+  // KPIs e Operação em paralelo — garante que renderDashPipeline
+  // receba os dois datasets antes do render final
+  await Promise.all([carregarKPIs(), carregarOperacao()]);
+  renderDashPipeline(); // render final com _kpiData + _pedidosOperacao completos
   await carregarProdutividade();
   await carregarTimeline();
   await atualizarBadgeRep();
-  await carregarOperacao();
   carregarRankingGeral();
   carregarGraficoPizzaStatus();
   carregarGraficoPizzaReposicao();
