@@ -99,150 +99,156 @@ async function carregarProtocolo() {
   const rows = await apiFetch(`/protocolo${q}`);
   _protocoloRows = rows || [];
   const el = document.getElementById('proto-lista');
-  // Sempre atualiza o badge — mesmo quando a lista está vazia
   const badge = document.getElementById('menu-badge-proto');
-  if (badge) { badge.style.display = (rows||[]).length ? '' : 'none'; badge.textContent = (rows||[]).length; }
+
+  // ── Agrupa por pedido ──────────────────────────────────────────────────────
+  const pedMap = {};
+  (_protocoloRows).forEach(r => {
+    const key = r.pedido_id || r.numero_pedido;
+    if (!pedMap[key]) pedMap[key] = { pedido_id: r.pedido_id, numero_pedido: r.numero_pedido || r.pedido_id, cliente: r.cliente || '—', transportadora: r.transportadora || '—', itens: [] };
+    pedMap[key].itens.push(r);
+  });
+  const pedList = Object.values(pedMap);
+
+  if (badge) { badge.style.display = pedList.length ? '' : 'none'; badge.textContent = pedList.length; }
   if (!el) return;
-  // ── Histórico (status=protocolado) ───────────────────────────────────────
+
+  if (!pedList.length) {
+    el.innerHTML = '<div style="text-align:center;color:var(--text3);padding:48px;font-size:14px">Nenhum pedido aguardando protocolo</div>';
+  } else {
+    el.innerHTML = pedList.map(ped => `
+      <div style="background:var(--surface);border-radius:16px;overflow:hidden;margin-bottom:16px;border:1.5px solid #e2e8f0;box-shadow:0 2px 12px rgba(0,0,0,.07)">
+        <!-- Cabeçalho -->
+        <div style="background:linear-gradient(135deg,#7c3aed,#6d28d9);padding:14px 18px;display:flex;align-items:center;justify-content:space-between">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="font-size:22px">📋</span>
+            <div>
+              <div style="color:#fff;font-weight:800;font-size:16px;font-family:'Space Mono',monospace">#${ped.numero_pedido}</div>
+              <div style="color:rgba(255,255,255,.75);font-size:12px">${ped.cliente}</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end">
+            <span style="background:rgba(255,255,255,.22);color:#fff;padding:3px 12px;border-radius:20px;font-size:11px;font-weight:700">${ped.transportadora}</span>
+            <span style="background:rgba(255,255,255,.3);color:#fff;padding:3px 12px;border-radius:20px;font-size:11px;font-weight:800">${ped.itens.length} ${ped.itens.length===1?'item':'itens'} em falta</span>
+          </div>
+        </div>
+        <!-- Tabela de itens -->
+        <div style="padding:14px 16px">
+          <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:14px">
+            <thead>
+              <tr style="background:#f8fafc">
+                <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid #e2e8f0">Código</th>
+                <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid #e2e8f0">Descrição</th>
+                <th style="padding:8px 10px;text-align:center;font-size:10px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid #e2e8f0">Qtde</th>
+                <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid #e2e8f0">Endereço</th>
+                <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid #e2e8f0">Separador</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${ped.itens.map(r => `
+                <tr style="border-bottom:1px solid #f1f5f9">
+                  <td style="padding:8px 10px;font-family:'Space Mono',monospace;font-weight:700;color:#dc2626;font-size:12px">${r.codigo||'—'}</td>
+                  <td style="padding:8px 10px;font-weight:600;color:var(--text)">${r.descricao||'—'}</td>
+                  <td style="padding:8px 10px;text-align:center;font-weight:900;font-size:15px;color:#92400e">${r.quantidade||0}</td>
+                  <td style="padding:8px 10px;font-family:'Space Mono',monospace;color:var(--text2);font-size:11px">${r.endereco||'—'}</td>
+                  <td style="padding:8px 10px;color:var(--text2);font-size:12px">${r.separador_nome||'—'}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          ${usuarioAtual?.perfil==='supervisor' ? `
+          <div id="proto-pedido-wrap-${ped.pedido_id}">
+            <button onclick="encerrarProtocoloPedido(${ped.pedido_id}, ${ped.itens.length}, this)"
+              style="width:100%;padding:14px;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;letter-spacing:.3px">
+              📋 Encerrar Protocolo deste Pedido (${ped.itens.length} ${ped.itens.length===1?'item':'itens'})
+            </button>
+          </div>` : ''}
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // ── Histórico (status=protocolado) agrupado por pedido ─────────────────────
   const elHist  = document.getElementById('proto-historico');
   const histBdg = document.getElementById('proto-hist-badge');
   const rowsH   = await apiFetch(`/protocolo/historico${q}`) || [];
-  if (histBdg) histBdg.textContent = rowsH.length;
+
+  const pedMapH = {};
+  rowsH.forEach(r => {
+    const key = r.pedido_id || r.numero_pedido;
+    if (!pedMapH[key]) pedMapH[key] = { pedido_id: r.pedido_id, numero_pedido: r.numero_pedido || r.pedido_id, cliente: r.cliente || '—', transportadora: r.transportadora || '—', itens: [] };
+    pedMapH[key].itens.push(r);
+  });
+  const pedListH = Object.values(pedMapH);
+  if (histBdg) histBdg.textContent = pedListH.length;
+
   if (elHist) {
-    elHist.innerHTML = rowsH.length ? rowsH.map(h => `
+    elHist.innerHTML = pedListH.length ? pedListH.map(ped => `
       <div style="background:var(--surface);border-radius:14px;overflow:hidden;margin-bottom:12px;border:1.5px solid #d1fae5;box-shadow:0 1px 6px rgba(0,0,0,.04)">
         <div style="background:linear-gradient(135deg,#059669,#047857);padding:11px 16px;display:flex;align-items:center;justify-content:space-between">
           <div style="display:flex;align-items:center;gap:8px">
             <span style="font-size:16px">✅</span>
             <div>
-              <div style="color:#fff;font-weight:800;font-size:14px;font-family:'Space Mono',monospace">#${h.numero_pedido||h.pedido_id}</div>
-              <div style="color:rgba(255,255,255,.7);font-size:11px">${fmtData(h.data_aviso)} às ${h.hora_aviso||'—'}</div>
+              <div style="color:#fff;font-weight:800;font-size:14px;font-family:'Space Mono',monospace">#${ped.numero_pedido}</div>
+              <div style="color:rgba(255,255,255,.7);font-size:11px">${ped.cliente}</div>
             </div>
           </div>
-          <span style="background:rgba(255,255,255,.22);color:#fff;padding:3px 12px;border-radius:20px;font-size:10px;font-weight:800;letter-spacing:.5px">PROTOCOLADO</span>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span style="background:rgba(255,255,255,.22);color:#fff;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:800;letter-spacing:.5px">PROTOCOLADO</span>
+            <span style="background:rgba(255,255,255,.22);color:#fff;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:800">${ped.itens.length} ${ped.itens.length===1?'item':'itens'}</span>
+          </div>
         </div>
         <div style="padding:12px 16px">
-          <div style="font-family:'Space Mono',monospace;font-size:14px;font-weight:700;color:#dc2626;margin-bottom:2px">${h.codigo||'—'}</div>
-          <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:10px">${h.descricao||'—'}</div>
-          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px">
-            <div><div style="font-size:9px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">Cliente</div><div style="font-size:12px;font-weight:700;color:var(--text)">${h.cliente||'—'}</div></div>
-            <div><div style="font-size:9px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">Qtde</div><div style="font-size:16px;font-weight:900;color:#92400e">${h.quantidade||0}</div></div>
-            <div><div style="font-size:9px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">Separador</div><div style="font-size:12px;font-weight:600;color:var(--text2)">${h.separador_nome||'—'}</div></div>
-          </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-            <div><div style="font-size:9px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">Forma de Envio</div><div style="font-size:12px;font-weight:600;color:var(--text2)">${h.transportadora||'—'}</div></div>
-            <div><div style="font-size:9px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">Enviado por</div><div style="font-size:12px;font-weight:700;color:#059669">${h.quem_guardou||'—'}</div></div>
-          </div>
+          <table style="width:100%;border-collapse:collapse;font-size:12px">
+            <thead>
+              <tr style="background:#f8fafc">
+                <th style="padding:6px 8px;text-align:left;font-size:10px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #e2e8f0">Código</th>
+                <th style="padding:6px 8px;text-align:left;font-size:10px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #e2e8f0">Descrição</th>
+                <th style="padding:6px 8px;text-align:center;font-size:10px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #e2e8f0">Qtde</th>
+                <th style="padding:6px 8px;text-align:left;font-size:10px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #e2e8f0">Endereço</th>
+                <th style="padding:6px 8px;text-align:left;font-size:10px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #e2e8f0">Enviado por</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${ped.itens.map(r => `
+                <tr style="border-bottom:1px solid #f1f5f9">
+                  <td style="padding:6px 8px;font-family:'Space Mono',monospace;font-weight:700;color:#dc2626">${r.codigo||'—'}</td>
+                  <td style="padding:6px 8px;font-weight:600;color:var(--text)">${r.descricao||'—'}</td>
+                  <td style="padding:6px 8px;text-align:center;font-weight:700;color:#92400e">${r.quantidade||0}</td>
+                  <td style="padding:6px 8px;font-family:'Space Mono',monospace;color:var(--text2);font-size:11px">${r.endereco||'—'}</td>
+                  <td style="padding:6px 8px;color:#059669;font-weight:700">${r.quem_guardou||'—'}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
         </div>
-      </div>`).join('')
-    : '<div style="text-align:center;color:var(--text3);padding:32px;font-size:13px">Nenhum item protocolado no período</div>';
+      </div>
+    `).join('')
+    : '<div style="text-align:center;color:var(--text3);padding:32px;font-size:13px">Nenhum pedido protocolado no período</div>';
   }
-
-  if (!rows || !rows.length) { el.innerHTML = '<div style="text-align:center;color:var(--text3);padding:48px;font-size:14px">Nenhum item aguardando envio para protocolo</div>'; return; }
-  el.innerHTML = rows.map(r => `
-    <div style="background:var(--surface);border-radius:16px;overflow:hidden;margin-bottom:16px;border:1.5px solid #e2e8f0;box-shadow:0 2px 12px rgba(0,0,0,.07)">
-
-      <!-- Cabeçalho roxo -->
-      <div style="background:linear-gradient(135deg,#7c3aed,#6d28d9);padding:14px 18px;display:flex;align-items:center;justify-content:space-between">
-        <div style="display:flex;align-items:center;gap:10px">
-          <span style="font-size:22px">📋</span>
-          <div>
-            <div style="color:#fff;font-weight:800;font-size:16px;font-family:'Space Mono',monospace">#${r.numero_pedido||r.pedido_id}</div>
-            <div style="color:rgba(255,255,255,.7);font-size:11px">${fmtData(r.data_aviso)} às ${r.hora_aviso||'—'}</div>
-          </div>
-        </div>
-        <span style="background:rgba(255,255,255,.22);color:#fff;padding:5px 14px;border-radius:20px;font-size:11px;font-weight:800;letter-spacing:.8px">PROTOCOLO</span>
-      </div>
-
-      <!-- Corpo -->
-      <div style="padding:16px 18px">
-        <!-- Item -->
-        <div style="font-family:'Space Mono',monospace;font-size:17px;font-weight:800;color:#dc2626;letter-spacing:.5px;margin-bottom:3px">${r.codigo||'—'}</div>
-        <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:16px;line-height:1.4">${r.descricao||'—'}</div>
-
-        <!-- Grid de dados -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
-
-          <div style="background:#eff6ff;border-radius:10px;padding:11px 13px;border-left:3px solid #3b82f6">
-            <div style="font-size:9px;font-weight:800;color:#2563eb;letter-spacing:.8px;margin-bottom:3px;text-transform:uppercase">Cliente</div>
-            <div style="font-size:13px;font-weight:700;color:#1e3a5f">${r.cliente||'—'}</div>
-          </div>
-
-          <div style="background:#fef3c7;border-radius:10px;padding:11px 13px;border-left:3px solid #f59e0b">
-            <div style="font-size:9px;font-weight:800;color:#d97706;letter-spacing:.8px;margin-bottom:3px;text-transform:uppercase">Quantidade</div>
-            <div style="font-size:22px;font-weight:900;color:#92400e;line-height:1">${r.quantidade||0}</div>
-          </div>
-
-          <div style="background:#f0fdf4;border-radius:10px;padding:11px 13px;border-left:3px solid #10b981">
-            <div style="font-size:9px;font-weight:800;color:#059669;letter-spacing:.8px;margin-bottom:3px;text-transform:uppercase">Separador</div>
-            <div style="font-size:12px;font-weight:700;color:#064e3b">${r.separador_nome||'—'}</div>
-          </div>
-
-          <div style="background:#fdf4ff;border-radius:10px;padding:11px 13px;border-left:3px solid #a855f7">
-            <div style="font-size:9px;font-weight:800;color:#9333ea;letter-spacing:.8px;margin-bottom:3px;text-transform:uppercase">Forma de Envio</div>
-            <div style="font-size:12px;font-weight:700;color:#4a044e">${r.transportadora||'—'}</div>
-          </div>
-
-        </div>
-
-        <!-- Endereço -->
-        <div style="background:#f8fafc;border-radius:10px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:8px;border:1px solid #e2e8f0">
-          <span style="font-size:16px">📍</span>
-          <div>
-            <div style="font-size:9px;font-weight:800;color:var(--text3);letter-spacing:.8px;text-transform:uppercase;margin-bottom:1px">Endereço</div>
-            <div style="font-size:13px;font-weight:700;color:var(--text);font-family:'Space Mono',monospace">${r.endereco||'—'}</div>
-          </div>
-        </div>
-
-        <!-- Botão -->
-        ${usuarioAtual?.perfil==='supervisor' ? `
-        <div id="proto-btn-wrap-${r.id}">
-          <button id="proto-btn-enc-${r.id}"
-            onclick="liberarProtocolo(${r.id},this)"
-            style="width:100%;padding:14px;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;letter-spacing:.3px;display:flex;align-items:center;justify-content:center;gap:8px">
-            📋 Enviar para Protocolo
-          </button>
-        </div>` : ''}
-      </div>
-    </div>
-  `).join('');
 }
 
-async function liberarProtocolo(id, btn) {
+async function encerrarProtocoloPedido(pedido_id, qtdItens, btn) {
   if (btn?.disabled) return;
-  // Desabilita o botão imediatamente (proteção contra clique múltiplo)
-  btn.disabled = true;
-  wmsConfirm('Confirmar envio para Protocolo? O item será registrado oficialmente.', async () => {
+  wmsConfirm(`Encerrar o protocolo deste pedido?\n${qtdItens} item(ns) serão marcados como protocolados oficialmente.`, async () => {
+    if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Encerrando...'; }
     try {
-      const supervisorNome = usuarioAtual?.nome || 'Supervisor';
-      const r = await apiFetch(`/repositor/avisos/${id}`, {
-        method:'PUT',
-        body: JSON.stringify({ status:'protocolado', situacao:'protocolado', quem_guardou: supervisorNome }),
-        headers: {'Content-Type':'application/json'}
+      const r = await apiFetch(`/protocolo/pedido/${pedido_id}/encerrar`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({})
       });
       if (r?.mensagem) {
         toast(r.mensagem, 'sucesso');
-        // Re-busca o wrap após async (pode ter sido re-renderizado)
-        const wrapFresh = document.getElementById(`proto-btn-wrap-${id}`);
-        if (wrapFresh) wrapFresh.innerHTML =
-          '<span style="display:flex;align-items:center;justify-content:center;gap:6px;padding:14px;background:#f3e8ff;color:#7c3aed;border-radius:10px;font-size:14px;font-weight:800;border:1.5px solid #c4b5fd">✅ Enviado para Protocolo</span>';
-        carregarProtocolo(); // sempre recarrega para refletir o estado real
+        carregarProtocolo();
       } else {
-        const btnFresh = document.getElementById(`proto-btn-enc-${id}`);
-        if (btnFresh) btnFresh.disabled = false;
-        else if (btn) btn.disabled = false;
+        if (btn) { btn.disabled = false; btn.innerHTML = `📋 Encerrar Protocolo deste Pedido`; }
+        toast(r?.erro || 'Erro ao encerrar protocolo', 'erro');
       }
     } catch(e) {
-      const btnFresh = document.getElementById(`proto-btn-enc-${id}`);
-      if (btnFresh) btnFresh.disabled = false;
-      else if (btn) btn.disabled = false;
-      toast('Erro ao liberar','erro');
+      if (btn) { btn.disabled = false; btn.innerHTML = `📋 Encerrar Protocolo deste Pedido`; }
+      toast('Erro ao encerrar protocolo', 'erro');
     }
-  }, () => {
-    // Cancelou — reabilita o botão
-    const btnFresh = document.getElementById(`proto-btn-enc-${id}`);
-    if (btnFresh) btnFresh.disabled = false;
-    else if (btn) btn.disabled = false;
   });
 }
 

@@ -276,4 +276,37 @@ router.get('/protocolo', requerAuth, async (req,res) => {
   } catch(e) { res.status(500).json({erro: e.message}); }
 });
 
+// Encerra o protocolo de todos os itens de um pedido de uma vez
+router.post('/protocolo/pedido/:pedido_id/encerrar', requerAuth, requerPerfil('supervisor'), async (req, res) => {
+  try {
+    const { pedido_id } = req.params;
+    const supervisorNome = req.session?.usuario?.nome || 'Supervisor';
+    const { hora } = dataHoraLocal();
+
+    const itens = await db.all(
+      `SELECT id, historico FROM avisos_repositor WHERE pedido_id=$1 AND status='protocolo'`,
+      [pedido_id]
+    );
+    if (!itens.length) return res.status(400).json({ erro: 'Nenhum item em protocolo para este pedido.' });
+
+    for (const item of itens) {
+      let hist = [];
+      try { hist = Array.isArray(item.historico) ? item.historico : (item.historico ? JSON.parse(item.historico) : []); } catch{}
+      const histNovo = [...hist, { usuario: supervisorNome, acao: 'protocolado', hora }];
+      await pool.query(
+        `UPDATE avisos_repositor SET status='protocolado', situacao='protocolado', quem_guardou=$1, hora_reposto=$2, historico=$3 WHERE id=$4`,
+        [supervisorNome, hora, JSON.stringify(histNovo), item.id]
+      );
+    }
+
+    const ped = await db.get('SELECT numero_pedido FROM pedidos WHERE id=$1', [pedido_id]);
+    req.app.get('io')?.emit('protocolo:encerrado', { pedido_id, numero_pedido: ped?.numero_pedido });
+
+    res.json({
+      mensagem: `✅ Protocolo do pedido #${ped?.numero_pedido || pedido_id} encerrado! ${itens.length} item(ns) protocolado(s).`,
+      itens_encerrados: itens.length
+    });
+  } catch(e) { res.status(500).json({ erro: e.message }); }
+});
+
 module.exports = router;
