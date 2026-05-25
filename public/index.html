@@ -14,7 +14,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/app.css?v=12">
+  <link rel="stylesheet" href="/css/app.css?v=13">
 </head>
 <body>
 
@@ -1217,23 +1217,36 @@
 
 
       <!-- RELATÓRIOS -->
-      <div class="pagina" id="pag-relatorios" style="min-height:calc(100vh - 60px)">
-        <div class="pg-title">Relatórios Diários</div>
-        <div class="card" style="margin-bottom:14px">
-          <div class="card-hd">FILTROS
-            <button class="excel-btn" onclick="exportarRelatorioExcel()">📊 Excel</button>
-          </div>
-          <div class="date-filter-bar">
-            <div class="fg"><label>DATA</label><input type="date" id="rel-data"/></div>
-            <button class="btn btn-primary btn-sm" onclick="verRelatorio()">Ver</button>
-            <button class="btn btn-outline btn-sm" onclick="gerarRelatorioHoje()">🔄 Gerar Hoje</button>
+      <div class="pagina" id="pag-relatorios" style="min-height:calc(100vh - 60px);padding:0 0 32px 0">
+        <div class="pg-title" style="padding:20px 20px 8px">📊 Relatórios</div>
+
+        <!-- Barra de filtros -->
+        <div class="card" style="margin:0 0 18px 0;border-radius:0 0 var(--r) var(--r);border-left:none;border-right:none">
+          <div style="display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px">
+            <!-- Turno -->
+            <div>
+              <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">TURNO</div>
+              <div style="display:flex;gap:4px" id="rel-turno-btns">
+                <button onclick="setTurnoRel('Todos')" class="rel-turno-btn ativo" data-t="Todos">Todos</button>
+                <button onclick="setTurnoRel('Manha')" class="rel-turno-btn" data-t="Manha">🌅 Manhã</button>
+                <button onclick="setTurnoRel('Tarde')" class="rel-turno-btn" data-t="Tarde">☀️ Tarde</button>
+                <button onclick="setTurnoRel('Madrugada')" class="rel-turno-btn" data-t="Madrugada">🌙 Madrugada</button>
+              </div>
+            </div>
+            <!-- Datas -->
+            <div class="fg"><label>DE</label><input type="date" id="rel-de"/></div>
+            <div class="fg"><label>ATÉ</label><input type="date" id="rel-ate"/></div>
+            <button class="btn btn-primary btn-sm" onclick="carregarRelatorioAnalitico()">🔍 Gerar Relatório</button>
+            <!-- Exports -->
+            <div style="margin-left:auto;display:flex;gap:8px">
+              <button onclick="exportarRelAnaliticoExcel()" class="excel-btn" id="btn-rel-excel" style="display:none">📊 Excel</button>
+              <button onclick="exportarRelAnaliticoPDF()" class="btn btn-outline btn-sm" id="btn-rel-pdf" style="display:none;color:#dc2626;border-color:#dc2626">🖨️ PDF</button>
+            </div>
           </div>
         </div>
-        <div class="card">
-          <div class="card-hd">HISTÓRICO DE RELATÓRIOS</div>
-          <div id="rel-lista" style="margin-bottom:14px"></div>
-          <div id="rel-detalhe"></div>
-        </div>
+
+        <!-- Conteúdo gerado pelo JS -->
+        <div id="rel-analitico-wrap" style="padding:0 16px"></div>
       </div>
 
       <!-- AUDITORIA -->
@@ -1885,8 +1898,8 @@
   <script src="/js/separador.js?v=5"></script>
   <script src="/js/repositor.js?v=11"></script>
   <script src="/js/checkout.js"></script>
-  <script src="/js/dashboard.js?v=6"></script>
-  <script src="/js/auth.js?v=8"></script>
+  <script src="/js/dashboard.js?v=7"></script>
+  <script src="/js/auth.js?v=9"></script>
 
 
 <!-- ══ MODAL IMPORTAR ══ -->

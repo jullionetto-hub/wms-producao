@@ -1910,6 +1910,402 @@ function limparFiltroColaborador() {
    ZERAR SESSÕES DE TESTE
 ══════════════════════════════════════════ */
 
+/* ══════════════════════════════════════════════════════════════════
+   RELATÓRIO ANALÍTICO — novo módulo completo
+══════════════════════════════════════════════════════════════════ */
+let _relAnaliticoDados = null;
+
+function setTurnoRel(t) {
+  document.querySelectorAll('.rel-turno-btn').forEach(b => b.classList.toggle('ativo', b.dataset.t === t));
+}
+
+function getTurnoRel() {
+  return document.querySelector('.rel-turno-btn.ativo')?.dataset.t || 'Todos';
+}
+
+async function carregarRelatorioAnalitico() {
+  const wrap = document.getElementById('rel-analitico-wrap');
+  if (!wrap) return;
+  const de  = document.getElementById('rel-de')?.value  || hojeLocal();
+  const ate = document.getElementById('rel-ate')?.value || hojeLocal();
+  const turno = getTurnoRel();
+  wrap.innerHTML = `<div style="text-align:center;padding:60px;color:var(--text3)"><div style="font-size:40px;margin-bottom:12px">⏳</div><div style="font-weight:600">Gerando relatório...</div></div>`;
+  try {
+    const r = await fetch(`${API}/relatorio/analitico?de=${de}&ate=${ate}&turno=${turno}`, { credentials:'include' });
+    if (!r.ok) throw new Error((await r.json()).erro || 'Erro');
+    _relAnaliticoDados = await r.json();
+    renderRelAnalitico(_relAnaliticoDados);
+    ['btn-rel-excel','btn-rel-pdf'].forEach(id => { const el=document.getElementById(id); if(el) el.style.display=''; });
+  } catch(e) {
+    wrap.innerHTML = `<div style="text-align:center;padding:40px;color:#ef4444"><b>Erro:</b> ${e.message}</div>`;
+  }
+}
+
+function renderRelAnalitico(d) {
+  const wrap = document.getElementById('rel-analitico-wrap');
+  if (!wrap) return;
+  const fmtD = s => s ? s.split('-').reverse().join('/') : '—';
+  const fmtN = n => n != null ? Number(n).toLocaleString('pt-BR') : '—';
+  const fmtT = m => m != null ? (m >= 60 ? `${Math.floor(m/60)}h ${Math.round(m%60)}min` : `${Math.round(m)}min`) : '—';
+  const pct  = (n,d) => d > 0 ? Math.round((n/d)*100) : 0;
+
+  const periodo = d.periodo.de === d.periodo.ate
+    ? fmtD(d.periodo.de)
+    : `${fmtD(d.periodo.de)} → ${fmtD(d.periodo.ate)}`;
+
+  // ── 1. Cards de resumo operacional ──────────────────────────
+  const cards = [
+    { icon:'📦', label:'SEPARAÇÃO', cor:'#4f46e5',
+      main: fmtN(d.separacao.concluidos), sub:'pedidos concluídos',
+      kpis:[
+        { lbl:'Total importado', val: fmtN(d.separacao.total) },
+        { lbl:'Pendentes',       val: fmtN(d.separacao.pendentes) },
+        { lbl:'Separando',       val: fmtN(d.separacao.separando) },
+        { lbl:'Total itens',     val: fmtN(d.separacao.total_itens) },
+        { lbl:'Pontuação total', val: fmtN(d.separacao.pontuacao_total) },
+        { lbl:'Tempo médio',     val: fmtT(d.separacao.media_tempo_min) },
+      ]},
+    { icon:'🔖', label:'CHECKOUT', cor:'#0891b2',
+      main: fmtN(d.checkout.concluidos), sub:'checkouts realizados',
+      kpis:[
+        { lbl:'Total criados',   val: fmtN(d.checkout.total) },
+        { lbl:'Pendentes',       val: fmtN(d.checkout.pendentes) },
+        { lbl:'Tempo médio',     val: fmtT(d.checkout.media_tempo_min) },
+      ]},
+    { icon:'📫', label:'EMBALAGEM', cor:'#7c3aed',
+      main: fmtN(d.embalagem.total_embalados), sub:'pedidos embalados',
+      kpis:[
+        { lbl:'Pendentes emb.',  val: fmtN(d.embalagem.pendentes) },
+        { lbl:'Tempo médio',     val: fmtT(d.embalagem.media_tempo_min) },
+      ]},
+    { icon:'🔧', label:'REPOSIÇÃO', cor:'#d97706',
+      main: fmtN(d.reposicao.resolvidas), sub:'reposições resolvidas',
+      kpis:[
+        { lbl:'Total abertos',    val: fmtN(d.reposicao.total) },
+        { lbl:'Pendentes',        val: fmtN(d.reposicao.pendentes) },
+        { lbl:'Não encontrados',  val: fmtN(d.reposicao.nao_encontrados) },
+        { lbl:'Taxa resolução',   val: d.reposicao.total>0 ? `${pct(d.reposicao.resolvidas,d.reposicao.total)}%` : '—' },
+      ]},
+  ];
+
+  const cardsHTML = cards.map(c => `
+    <div style="background:var(--surface);border-radius:16px;padding:18px 20px;border-left:4px solid ${c.cor};box-shadow:0 1px 6px rgba(0,0,0,.06)">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <span style="font-size:22px">${c.icon}</span>
+        <span style="font-size:11px;font-weight:800;color:var(--text3);letter-spacing:.8px">${c.label}</span>
+      </div>
+      <div style="font-size:36px;font-weight:800;color:${c.cor};line-height:1">${c.main}</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:12px">${c.sub}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+        ${c.kpis.map(k=>`
+          <div style="background:var(--surface2);border-radius:8px;padding:6px 8px">
+            <div style="font-size:9px;color:var(--text3);font-weight:700;letter-spacing:.5px">${k.lbl.toUpperCase()}</div>
+            <div style="font-size:13px;font-weight:700;color:var(--text);margin-top:2px">${k.val}</div>
+          </div>`).join('')}
+      </div>
+    </div>`).join('');
+
+  // ── 2. Complexidade ──────────────────────────────────────────
+  const cx = d.complexidade;
+  const cxTotal = cx.facil + cx.medio + cx.dificil || 1;
+  const cxBars = [
+    { lbl:'Fácil', cor:'#16a34a', val:cx.facil, bg:'#dcfce7' },
+    { lbl:'Médio', cor:'#d97706', val:cx.medio, bg:'#fef3c7' },
+    { lbl:'Difícil', cor:'#dc2626', val:cx.dificil, bg:'#fee2e2' },
+  ].map(b => `
+    <div style="flex:1;background:${b.bg};border-radius:12px;padding:14px 12px;text-align:center">
+      <div style="font-size:24px;font-weight:800;color:${b.cor}">${pct(b.val,cxTotal)}%</div>
+      <div style="font-size:11px;font-weight:700;color:${b.cor};margin:2px 0">${b.lbl}</div>
+      <div style="font-size:12px;color:var(--text2)">${fmtN(b.val)} pedidos</div>
+      <div style="margin-top:8px;height:6px;background:rgba(0,0,0,.08);border-radius:3px;overflow:hidden">
+        <div style="height:100%;width:${pct(b.val,cxTotal)}%;background:${b.cor};border-radius:3px;transition:width .6s"></div>
+      </div>
+    </div>`).join('');
+
+  // ── 3. Ranking de turnos ─────────────────────────────────────
+  const rankColors = ['#f59e0b','#94a3b8','#cd7c37'];
+  const rankHTML = d.ranking_turnos.map((t,i) => `
+    <div style="display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid var(--border);${i===0?'':''}">
+      <div style="width:28px;height:28px;border-radius:50%;background:${rankColors[i]||'#94a3b8'};color:${i===0?'#1e293b':'#fff'};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0">${i+1}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:700;font-size:14px;color:var(--text)">${t.turno}</div>
+        <div style="font-size:12px;color:var(--text3)">${fmtN(t.itens)} itens · Tempo médio: ${fmtT(t.media_tempo)}</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-size:20px;font-weight:800;color:${rankColors[i]||'#94a3b8'}">${fmtN(t.pedidos)}</div>
+        <div style="font-size:10px;color:var(--text3)">pedidos</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-size:14px;font-weight:700;color:var(--text2)">${fmtN(t.pontuacao)}</div>
+        <div style="font-size:10px;color:var(--text3)">pontos</div>
+      </div>
+    </div>`).join('');
+
+  // ── 4. SLA ────────────────────────────────────────────────────
+  const slaColor = d.sla.pct == null ? '#94a3b8' : d.sla.pct >= 85 ? '#16a34a' : d.sla.pct >= 70 ? '#d97706' : '#dc2626';
+  const slaHTML = `
+    <div style="text-align:center;padding:12px 0">
+      <div style="font-size:40px;font-weight:800;color:${slaColor}">${d.sla.pct != null ? d.sla.pct+'%' : '—'}</div>
+      <div style="font-size:12px;color:var(--text2);margin:4px 0">pedidos separados em até ${d.sla.meta_horas}h</div>
+      <div style="display:flex;gap:12px;justify-content:center;margin-top:10px">
+        <div style="background:#dcfce7;border-radius:8px;padding:6px 14px;text-align:center">
+          <div style="font-size:16px;font-weight:700;color:#16a34a">${fmtN(d.sla.dentro)}</div>
+          <div style="font-size:10px;color:#16a34a">Dentro do SLA</div>
+        </div>
+        <div style="background:#fee2e2;border-radius:8px;padding:6px 14px;text-align:center">
+          <div style="font-size:16px;font-weight:700;color:#dc2626">${fmtN(d.sla.fora)}</div>
+          <div style="font-size:10px;color:#dc2626">Fora do SLA</div>
+        </div>
+      </div>
+    </div>`;
+
+  // ── 5. Por hora (mini gráfico de barras) ─────────────────────
+  const maxH = Math.max(...d.por_hora.map(h=>h.total), 1);
+  const porHoraHTML = d.por_hora.length
+    ? `<div style="display:flex;align-items:flex-end;gap:3px;height:60px;padding-bottom:4px">
+        ${d.por_hora.map(h=>`
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px">
+            <div style="width:100%;background:#4f46e5;border-radius:3px 3px 0 0;height:${Math.round((h.total/maxH)*50)+4}px;min-height:4px" title="${h.hora}h: ${h.total}"></div>
+            <div style="font-size:8px;color:var(--text3)">${h.hora}</div>
+          </div>`).join('')}
+       </div>`
+    : '<div style="color:var(--text3);font-size:13px;text-align:center;padding:20px">Sem dados</div>';
+
+  // ── 6. Por transportadora ─────────────────────────────────────
+  const trTotal = d.por_transportadora.reduce((s,t)=>s+t.total,0)||1;
+  const trHTML = d.por_transportadora.slice(0,7).map(t=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border)">
+      <div style="flex:1;font-size:13px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.transportadora}</div>
+      <div style="width:80px;height:6px;background:var(--surface2);border-radius:3px;overflow:hidden;flex-shrink:0">
+        <div style="height:100%;width:${pct(t.total,trTotal)}%;background:#4f46e5;border-radius:3px"></div>
+      </div>
+      <div style="font-size:13px;font-weight:700;color:var(--text);min-width:30px;text-align:right;flex-shrink:0">${fmtN(t.total)}</div>
+    </div>`).join('');
+
+  // ── 7. Tabela de colaboradores ────────────────────────────────
+  const perfil_labels = { separador:'📦 Sep.', embalador:'📫 Emb.', checkout:'🔖 CK', repositor:'🔧 Rep.' };
+  const perfil_colors = { separador:'#4f46e5', embalador:'#7c3aed', checkout:'#0891b2', repositor:'#d97706' };
+  const turno_labels  = { Manha:'🌅', Tarde:'☀️', Madrugada:'🌙', Noite:'🌙' };
+
+  const colabRows = d.colaboradores.map(c => {
+    const cor = perfil_colors[c.perfil] || '#64748b';
+    const pLabel = perfil_labels[c.perfil] || c.perfil;
+    const tLabel = turno_labels[c.turno] || '';
+    const pedLabel = c.perfil === 'repositor' ? fmtN(c.total) : fmtN(c.pedidos);
+    const extra = c.perfil === 'separador'
+      ? `<td style="padding:8px 12px;font-size:12px;color:var(--text2)">${fmtN(c.itens)}</td>
+         <td style="padding:8px 12px;font-size:12px;color:var(--text2)">${fmtN(c.pontuacao)}</td>`
+      : c.perfil === 'repositor'
+      ? `<td style="padding:8px 12px;font-size:12px;color:#16a34a">${fmtN(c.repostos)}</td>
+         <td style="padding:8px 12px;font-size:12px;color:#dc2626">${fmtN(c.nao_enc)}</td>`
+      : `<td colspan="2" style="padding:8px 12px"></td>`;
+    return `
+      <tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:8px 12px">
+          <div style="font-weight:700;font-size:13px;color:var(--text)">${c.nome}</div>
+          <div style="display:flex;gap:4px;margin-top:2px">
+            <span style="font-size:10px;font-weight:700;color:#fff;background:${cor};padding:1px 7px;border-radius:10px">${pLabel}</span>
+            ${c.turno ? `<span style="font-size:10px;color:var(--text3)">${tLabel} ${c.turno}</span>` : ''}
+          </div>
+        </td>
+        <td style="padding:8px 12px;font-size:15px;font-weight:700;color:${cor}">${pedLabel}</td>
+        ${extra}
+        <td style="padding:8px 12px;font-size:12px;color:var(--text2)">${fmtT(c.tempo_medio)}</td>
+      </tr>`;
+  }).join('');
+
+  const colabHeader = `
+    <tr style="background:var(--surface2)">
+      <th style="padding:10px 12px;text-align:left;font-size:11px;color:var(--text3)">COLABORADOR</th>
+      <th style="padding:10px 12px;text-align:left;font-size:11px;color:var(--text3)">PEDIDOS</th>
+      <th style="padding:10px 12px;text-align:left;font-size:11px;color:var(--text3)">ITENS / REPOS.</th>
+      <th style="padding:10px 12px;text-align:left;font-size:11px;color:var(--text3)">PONTUAÇÃO / N/E</th>
+      <th style="padding:10px 12px;text-align:left;font-size:11px;color:var(--text3)">TEMPO MÉDIO</th>
+    </tr>`;
+
+  // ── 8. Por dia (se range > 1 dia) ────────────────────────────
+  let porDiaHTML = '';
+  if (d.por_dia.length > 1) {
+    const maxD = Math.max(...d.por_dia.map(x=>x.total),1);
+    porDiaHTML = `
+      <div class="card" style="margin-bottom:18px">
+        <div class="card-hd">📅 PEDIDOS POR DIA</div>
+        <div style="display:flex;align-items:flex-end;gap:4px;height:80px;padding:8px 0 4px">
+          ${d.por_dia.map(x=>`
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px">
+              <div style="font-size:9px;font-weight:700;color:var(--text2)">${x.total}</div>
+              <div style="width:100%;background:#4f46e5;border-radius:3px 3px 0 0;height:${Math.round((x.total/maxD)*55)+4}px;min-height:4px"></div>
+              <div style="font-size:8px;color:var(--text3)">${x.data.slice(8)+'/'+(x.data.slice(5,7))}</div>
+            </div>`).join('')}
+        </div>
+      </div>`;
+  }
+
+  // ── Sugestões ─────────────────────────────────────────────────
+  const sugestoes = [];
+  if (d.sla.pct != null && d.sla.pct < 85) sugestoes.push(`⚠️ SLA de separação em ${d.sla.pct}% — meta: 85%. Considere redistribuir pedidos entre turnos.`);
+  if (d.reposicao.nao_encontrados > 0) sugestoes.push(`🔍 ${fmtN(d.reposicao.nao_encontrados)} itens não encontrados na reposição — revisar localização no estoque.`);
+  const melhorTurno = d.ranking_turnos[0];
+  if (melhorTurno && melhorTurno.pedidos > 0) sugestoes.push(`🏆 Melhor turno: ${melhorTurno.turno} com ${fmtN(melhorTurno.pedidos)} pedidos concluídos.`);
+  if (d.separacao.pendentes > 20) sugestoes.push(`🚨 ${fmtN(d.separacao.pendentes)} pedidos ainda pendentes — verificar distribuição.`);
+  if (d.complexidade.dificil > d.complexidade.facil) sugestoes.push(`📍 Mais pedidos difíceis (${fmtN(d.complexidade.dificil)}) do que fáceis (${fmtN(d.complexidade.facil)}) — considere priorizar corredores F-L.`);
+  if (d.embalagem.pendentes > 50) sugestoes.push(`📫 ${fmtN(d.embalagem.pendentes)} pedidos separados aguardando embalagem.`);
+  const topTransp = d.por_transportadora[0];
+  if (topTransp) sugestoes.push(`🚚 Transportadora mais comum: ${topTransp.transportadora} (${fmtN(topTransp.total)} pedidos).`);
+  sugestoes.push(`📊 Índice de produtividade: ${fmtN(d.separacao.pontuacao_total)} pontos totais distribuídos entre ${d.colaboradores.filter(c=>c.perfil==='separador').length} separadores.`);
+
+  // ── Montar HTML ───────────────────────────────────────────────
+  wrap.innerHTML = `
+    <!-- Título do período -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+      <div>
+        <div style="font-size:16px;font-weight:800;color:var(--text)">📋 ${periodo}</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:2px">Turno: <b>${d.turno_filtro === 'Todos' ? 'Todos os turnos' : d.turno_filtro}</b></div>
+      </div>
+    </div>
+
+    <!-- 4 Cards operacionais -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-bottom:18px">
+      ${cardsHTML}
+    </div>
+
+    <!-- Complexidade + SLA -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px">
+      <div class="card">
+        <div class="card-hd">📍 COMPLEXIDADE DOS PEDIDOS</div>
+        <div style="display:flex;gap:10px">${cxBars}</div>
+      </div>
+      <div class="card">
+        <div class="card-hd">⏱ SLA DE SEPARAÇÃO</div>
+        ${slaHTML}
+      </div>
+    </div>
+
+    <!-- Ranking de turnos + Por hora -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px">
+      <div class="card">
+        <div class="card-hd">🏆 RANKING POR TURNO</div>
+        ${rankHTML || '<div style="color:var(--text3);font-size:13px;padding:12px">Sem dados</div>'}
+      </div>
+      <div class="card">
+        <div class="card-hd">📈 PEDIDOS POR HORA DO DIA</div>
+        ${porHoraHTML}
+      </div>
+    </div>
+
+    ${porDiaHTML}
+
+    <!-- Colaboradores -->
+    <div class="card" style="margin-bottom:18px">
+      <div class="card-hd">👥 DESEMPENHO INDIVIDUAL</div>
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse">
+          <thead>${colabHeader}</thead>
+          <tbody>
+            ${colabRows || '<tr><td colspan="5" style="text-align:center;padding:32px;color:var(--text3)">Sem dados de colaboradores</td></tr>'}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Transportadoras -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px">
+      <div class="card">
+        <div class="card-hd">🚚 TOP TRANSPORTADORAS</div>
+        ${trHTML || '<div style="color:var(--text3);font-size:13px;padding:12px">Sem dados</div>'}
+      </div>
+      <div class="card">
+        <div class="card-hd">💡 ANÁLISE AUTOMÁTICA</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          ${sugestoes.map(s=>`<div style="font-size:12px;color:var(--text2);padding:8px 10px;background:var(--surface2);border-radius:8px;line-height:1.4">${s}</div>`).join('')}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+/* ── Excel export ──────────────────────────────────────────────── */
+function exportarRelAnaliticoExcel() {
+  const d = _relAnaliticoDados;
+  if (!d) { toast('Gere o relatório primeiro!','aviso'); return; }
+  try {
+    const wb = XLSX.utils.book_new();
+    const fmtD = s => s ? s.split('-').reverse().join('/') : '';
+    const fmtT = m => m != null ? (m>=60?`${Math.floor(m/60)}h ${Math.round(m%60)}min`:`${Math.round(m)}min`) : '';
+
+    // Aba Resumo
+    const resumoRows = [
+      ['RELATÓRIO ANALÍTICO WMS MIESS'],
+      [`Período: ${fmtD(d.periodo.de)} → ${fmtD(d.periodo.ate)}   |   Turno: ${d.turno_filtro}`],
+      [],
+      ['ÁREA','MÉTRICA','VALOR'],
+      ['Separação','Total importado', d.separacao.total],
+      ['Separação','Concluídos', d.separacao.concluidos],
+      ['Separação','Pendentes', d.separacao.pendentes],
+      ['Separação','Total itens', d.separacao.total_itens],
+      ['Separação','Pontuação total', d.separacao.pontuacao_total],
+      ['Separação','Tempo médio', fmtT(d.separacao.media_tempo_min)],
+      ['Checkout','Concluídos', d.checkout.concluidos],
+      ['Checkout','Pendentes', d.checkout.pendentes],
+      ['Checkout','Tempo médio', fmtT(d.checkout.media_tempo_min)],
+      ['Embalagem','Embalados', d.embalagem.total_embalados],
+      ['Embalagem','Pendentes', d.embalagem.pendentes],
+      ['Embalagem','Tempo médio', fmtT(d.embalagem.media_tempo_min)],
+      ['Reposição','Total', d.reposicao.total],
+      ['Reposição','Resolvidas', d.reposicao.resolvidas],
+      ['Reposição','Não encontrados', d.reposicao.nao_encontrados],
+      [],
+      ['COMPLEXIDADE','PEDIDOS','%'],
+      ['Fácil', d.complexidade.facil, d.complexidade.facil+d.complexidade.medio+d.complexidade.dificil>0?Math.round(d.complexidade.facil/(d.complexidade.facil+d.complexidade.medio+d.complexidade.dificil)*100)+'%':''],
+      ['Médio', d.complexidade.medio, d.complexidade.facil+d.complexidade.medio+d.complexidade.dificil>0?Math.round(d.complexidade.medio/(d.complexidade.facil+d.complexidade.medio+d.complexidade.dificil)*100)+'%':''],
+      ['Difícil', d.complexidade.dificil, d.complexidade.facil+d.complexidade.medio+d.complexidade.dificil>0?Math.round(d.complexidade.dificil/(d.complexidade.facil+d.complexidade.medio+d.complexidade.dificil)*100)+'%':''],
+      [],
+      ['SLA','Meta (horas)', d.sla.meta_horas],
+      ['SLA','Dentro do SLA', d.sla.dentro],
+      ['SLA','Fora do SLA', d.sla.fora],
+      ['SLA','% Atingimento', d.sla.pct != null ? d.sla.pct+'%' : ''],
+    ];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(resumoRows), 'Resumo');
+
+    // Aba Colaboradores
+    const colabRows = [['COLABORADOR','PERFIL','TURNO','PEDIDOS','ITENS','PONTUAÇÃO','REPOSTOS','NÃO ENCONTRADOS','TEMPO MÉDIO']];
+    d.colaboradores.forEach(c => colabRows.push([
+      c.nome, c.perfil, c.turno||'',
+      c.perfil==='repositor' ? c.total||0 : c.pedidos||0,
+      c.itens||'', c.pontuacao||'',
+      c.repostos||'', c.nao_enc||'',
+      fmtT(c.tempo_medio),
+    ]));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(colabRows), 'Colaboradores');
+
+    // Aba Ranking Turnos
+    const rankRows = [['TURNO','PEDIDOS','ITENS','PONTUAÇÃO','TEMPO MÉDIO']];
+    d.ranking_turnos.forEach(t => rankRows.push([t.turno, t.pedidos, t.itens, t.pontuacao, fmtT(t.media_tempo)]));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rankRows), 'Ranking Turnos');
+
+    // Aba Transportadoras
+    const trRows = [['TRANSPORTADORA','TOTAL']];
+    d.por_transportadora.forEach(t => trRows.push([t.transportadora, t.total]));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(trRows), 'Transportadoras');
+
+    // Aba Por Hora
+    const hRows = [['HORA','PEDIDOS CONCLUÍDOS']];
+    d.por_hora.forEach(h => hRows.push([h.hora+'h', h.total]));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(hRows), 'Por Hora');
+
+    const de = d.periodo.de.replace(/-/g,''), ate = d.periodo.ate.replace(/-/g,'');
+    XLSX.writeFile(wb, `relatorio_analitico_${de}_${ate}.xlsx`);
+  } catch(e) { toast('Erro ao exportar Excel!','erro'); console.error(e); }
+}
+
+/* ── PDF export via impressão ──────────────────────────────────── */
+function exportarRelAnaliticoPDF() {
+  if (!_relAnaliticoDados) { toast('Gere o relatório primeiro!','aviso'); return; }
+  document.body.classList.add('print-relatorio');
+  window.print();
+  setTimeout(() => document.body.classList.remove('print-relatorio'), 1000);
+}
+
 async function zerarSessoesHoje() {
   const ini = document.getElementById('perf-ini')?.value || hojeLocal();
   wmsConfirm(`Zerar todas as sessões de ${fmtData(ini)}? Os tempos nos cards voltarão a zero.`, async () => {

@@ -786,6 +786,41 @@ body.dark .item-card.parcial    .item-ic{background:#78350F}
 .excel-btn{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .18s;white-space:nowrap}
 .excel-btn:hover{filter:brightness(1.1);transform:translateY(-1px)}
 
+/* ══════════════════════════════════════════
+   RELATÓRIO ANALÍTICO — botões turno
+══════════════════════════════════════════ */
+.rel-turno-btn{
+  padding:6px 14px;border:1.5px solid var(--border);border-radius:8px;
+  font-size:12px;font-weight:600;cursor:pointer;
+  background:var(--surface2);color:var(--text2);
+  font-family:'DM Sans',sans-serif;transition:all .15s;
+  white-space:nowrap;
+}
+.rel-turno-btn.ativo{
+  background:#0F172A;color:#fff;border-color:#0F172A;
+}
+.rel-turno-btn:hover:not(.ativo){background:var(--border);}
+
+/* ══════════════════════════════════════════
+   PRINT — Relatório Analítico
+══════════════════════════════════════════ */
+@media print {
+  body.print-relatorio .sidebar,
+  body.print-relatorio header,
+  body.print-relatorio .layout > *:not(.conteudo),
+  body.print-relatorio .pg-title,
+  body.print-relatorio .card:has(#rel-turno-btns),
+  body.print-relatorio #btn-rel-excel,
+  body.print-relatorio #btn-rel-pdf {
+    display: none !important;
+  }
+  body.print-relatorio #pag-relatorios { padding: 0 !important; }
+  body.print-relatorio #rel-analitico-wrap { padding: 0 !important; }
+  body.print-relatorio .card { break-inside: avoid; box-shadow: none !important; border: 1px solid #e2e8f0 !important; }
+  body.print-relatorio { background: white !important; }
+  @page { margin: 1cm; size: A4 landscape; }
+}
+
 
 
 

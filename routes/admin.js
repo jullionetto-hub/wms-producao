@@ -209,4 +209,235 @@ router.post('/diario', requerAuth, requerPerfil('supervisor'), async (req,res) =
   } catch(e) { res.status(500).json({erro:e.message}); }
 });
 
+/* ══════════════════════════════════════════════════════════════
+   RELATÓRIO ANALÍTICO — DE/ATÉ + TURNO
+══════════════════════════════════════════════════════════════ */
+router.get('/relatorio/analitico', requerAuth, requerPerfil('supervisor'), async (req, res) => {
+  const { de, ate, turno } = req.query;
+  const { data: hoje } = dataHoraLocal();
+  const dataIni = de || hoje;
+  const dataFim = ate || hoje;
+  const turnoFiltro = turno || 'Todos';
+
+  // Filtro de turno por hora_pedido
+  let tSQL = '';
+  if (turnoFiltro === 'Manha')     tSQL = " AND hora_pedido >= '06:00' AND hora_pedido < '14:00'";
+  else if (turnoFiltro === 'Tarde') tSQL = " AND hora_pedido >= '14:00' AND hora_pedido < '22:00'";
+  else if (turnoFiltro === 'Madrugada') tSQL = " AND (hora_pedido >= '22:00' OR hora_pedido < '06:00')";
+
+  try {
+    const params = [dataIni, dataFim];
+
+    // ── Pedidos ──────────────────────────────────────────────────
+    const pedidos = await db.all(`
+      SELECT p.id, p.status, p.itens, p.pontuacao, p.hora_pedido, p.data_pedido,
+             p.iniciado_em, p.concluido_em, p.aguardando_desde,
+             p.transportadora, p.rua, p.status_embalagem,
+             p.embalagem_iniciado_em, p.embalado_em, p.embalado_por, p.tem_prime,
+             COALESCE(u.nome, sep.nome, '') as sep_nome,
+             COALESCE(u.turno, sep.turno, 'Manha') as sep_turno
+      FROM pedidos p
+      LEFT JOIN separadores sep ON p.separador_id = sep.id
+      LEFT JOIN usuarios u ON sep.usuario_id = u.id
+      WHERE p.data_pedido >= $1 AND p.data_pedido <= $2 ${tSQL}
+      ORDER BY p.data_pedido, p.hora_pedido
+    `, params);
+
+    // ── Checkout ─────────────────────────────────────────────────
+    const checkouts = await db.all(`
+      SELECT ck.status, ck.data_checkout, ck.hora_checkout, ck.hora_criacao,
+             ck.operador_nome, ck.pedido_id
+      FROM checkout ck
+      WHERE ck.data_checkout >= $1 AND ck.data_checkout <= $2
+    `, params);
+
+    // ── Embalagem ─────────────────────────────────────────────────
+    const embalagens = await db.all(`
+      SELECT em.embalado_por, em.data_embalagem, em.embalagem_inicio, em.embalado_em
+      FROM embalagem em
+      WHERE em.data_embalagem >= $1 AND em.data_embalagem <= $2
+    `, params);
+
+    // ── Reposição ─────────────────────────────────────────────────
+    const reposicoes = await db.all(`
+      SELECT ar.status, ar.data_aviso, ar.repositor_nome, ar.separador_nome, ar.descricao
+      FROM avisos_repositor ar
+      WHERE ar.data_aviso >= $1 AND ar.data_aviso <= $2
+    `, params);
+
+    // ── Helpers ───────────────────────────────────────────────────
+    const minutesBetween = (s, e) => {
+      try { const m = (new Date(e) - new Date(s)) / 60000; return (m > 0 && m < 600) ? m : null; } catch { return null; }
+    };
+    const minutesTime = (s, e) => {
+      try {
+        let m = (new Date(`2000-01-01T${e}`) - new Date(`2000-01-01T${s}`)) / 60000;
+        if (m < 0) m += 1440;
+        return (m > 0 && m < 300) ? m : null;
+      } catch { return null; }
+    };
+    const avgArr = a => a.length ? Math.round((a.reduce((s,v)=>s+v,0)/a.length)*10)/10 : null;
+
+    // ── Separação ─────────────────────────────────────────────────
+    const sepConcluidos = pedidos.filter(p => p.status === 'concluido');
+    const temposSep = sepConcluidos.map(p => minutesBetween(p.iniciado_em, p.concluido_em)).filter(Boolean);
+
+    // ── Complexidade ──────────────────────────────────────────────
+    const facil_set    = new Set(['A','B','C','D','E','P','Q','R','S','T','U']);
+    const medio_set    = new Set(['M','N','O','V','W','X','Y','Z']);
+    const complexidade = { facil: 0, medio: 0, dificil: 0 };
+    pedidos.forEach(p => {
+      const letters = String(p.rua||'').toUpperCase().split('/')[0].replace(/[^A-Z]/g,'');
+      if (!letters) { complexidade.facil++; return; }
+      if (letters.startsWith('ZA') || letters.includes('ARARA') || letters.includes('VERT')) complexidade.dificil++;
+      else if (!facil_set.has(letters[0]) && !medio_set.has(letters[0])) complexidade.dificil++;
+      else if (medio_set.has(letters[0])) complexidade.medio++;
+      else complexidade.facil++;
+    });
+
+    // ── Checkout métricas ─────────────────────────────────────────
+    const ckConcluidos  = checkouts.filter(c => c.status === 'concluido');
+    const temposCk      = ckConcluidos.map(c => minutesTime(c.hora_criacao, c.hora_checkout)).filter(Boolean);
+
+    // ── Embalagem métricas ────────────────────────────────────────
+    const temposEmb = embalagens.map(e => minutesTime(e.embalagem_inicio, e.embalado_em)).filter(Boolean);
+
+    // ── Colaboradores ─────────────────────────────────────────────
+    const colabs = {};
+    pedidos.forEach(p => {
+      if (!p.sep_nome) return;
+      const k = `${p.sep_nome}:separador`;
+      if (!colabs[k]) colabs[k] = { nome:p.sep_nome, perfil:'separador', turno:p.sep_turno, pedidos:0, itens:0, pontuacao:0, tempos:[] };
+      if (p.status === 'concluido') {
+        colabs[k].pedidos++;
+        colabs[k].itens   += parseInt(p.itens) || 0;
+        colabs[k].pontuacao += parseFloat(p.pontuacao) || 0;
+        const t = minutesBetween(p.iniciado_em, p.concluido_em);
+        if (t) colabs[k].tempos.push(t);
+      }
+    });
+    embalagens.forEach(e => {
+      if (!e.embalado_por) return;
+      const k = `${e.embalado_por}:embalador`;
+      if (!colabs[k]) colabs[k] = { nome:e.embalado_por, perfil:'embalador', turno:null, pedidos:0, tempos:[] };
+      colabs[k].pedidos++;
+      const t = minutesTime(e.embalagem_inicio, e.embalado_em);
+      if (t) colabs[k].tempos.push(t);
+    });
+    ckConcluidos.forEach(ck => {
+      if (!ck.operador_nome) return;
+      const k = `${ck.operador_nome}:checkout`;
+      if (!colabs[k]) colabs[k] = { nome:ck.operador_nome, perfil:'checkout', turno:null, pedidos:0, tempos:[] };
+      colabs[k].pedidos++;
+    });
+    reposicoes.forEach(r => {
+      if (!r.repositor_nome) return;
+      const k = `${r.repositor_nome}:repositor`;
+      if (!colabs[k]) colabs[k] = { nome:r.repositor_nome, perfil:'repositor', turno:null, total:0, repostos:0, nao_enc:0, tempos:[] };
+      colabs[k].total = (colabs[k].total||0)+1;
+      if (['reposto','abastecido','subiu'].includes(r.status)) colabs[k].repostos = (colabs[k].repostos||0)+1;
+      if (r.status === 'nao_encontrado') colabs[k].nao_enc = (colabs[k].nao_enc||0)+1;
+    });
+    const colaboradores = Object.values(colabs).map(c => {
+      const tempo_medio = avgArr(c.tempos);
+      const { tempos, ...rest } = c;
+      return { ...rest, tempo_medio, pontuacao: Math.round(rest.pontuacao||0) };
+    }).sort((a,b) => a.nome.localeCompare(b.nome));
+
+    // ── Ranking de turnos ─────────────────────────────────────────
+    const tMap = { Manha:{label:'Manhã',pedidos:0,itens:0,pontuacao:0,tempos:[]}, Tarde:{label:'Tarde',pedidos:0,itens:0,pontuacao:0,tempos:[]}, Madrugada:{label:'Madrugada',pedidos:0,itens:0,pontuacao:0,tempos:[]} };
+    sepConcluidos.forEach(p => {
+      const h = p.hora_pedido || '';
+      const t = h >= '06:00' && h < '14:00' ? 'Manha' : h >= '14:00' && h < '22:00' ? 'Tarde' : 'Madrugada';
+      tMap[t].pedidos++;
+      tMap[t].itens     += parseInt(p.itens)||0;
+      tMap[t].pontuacao += parseFloat(p.pontuacao)||0;
+      const tm = minutesBetween(p.iniciado_em, p.concluido_em);
+      if (tm) tMap[t].tempos.push(tm);
+    });
+    const ranking_turnos = Object.values(tMap).map(t => ({
+      turno: t.label, pedidos: t.pedidos, itens: t.itens, pontuacao: Math.round(t.pontuacao),
+      media_tempo: avgArr(t.tempos),
+    })).sort((a,b) => b.pedidos - a.pedidos);
+
+    // ── Por hora ──────────────────────────────────────────────────
+    const hMap = {};
+    sepConcluidos.forEach(p => {
+      if (!p.hora_pedido) return;
+      const h = p.hora_pedido.substring(0,2);
+      hMap[h] = (hMap[h]||0)+1;
+    });
+    const por_hora = Object.entries(hMap).sort().map(([h,t])=>({hora:h,total:t}));
+
+    // ── Por transportadora ────────────────────────────────────────
+    const trMap = {};
+    sepConcluidos.forEach(p => {
+      const t = String(p.transportadora||'Outros').trim()||'Outros';
+      trMap[t] = (trMap[t]||0)+1;
+    });
+    const por_transportadora = Object.entries(trMap).sort((a,b)=>b[1]-a[1]).slice(0,10).map(([t,n])=>({transportadora:t,total:n}));
+
+    // ── Por dia (para ranges) ─────────────────────────────────────
+    const dMap = {};
+    sepConcluidos.forEach(p => { if (p.data_pedido) dMap[p.data_pedido]=(dMap[p.data_pedido]||0)+1; });
+    const por_dia = Object.entries(dMap).sort().map(([d,t])=>({data:d,total:t}));
+
+    // ── SLA (separação em até 6h após aguardando_desde) ──────────
+    const SLA_H = 6;
+    let slaDentro=0, slaFora=0;
+    sepConcluidos.filter(p=>p.aguardando_desde&&p.concluido_em).forEach(p=>{
+      try {
+        const desde = p.aguardando_desde.includes('T')||p.aguardando_desde.includes(' ')
+          ? new Date(p.aguardando_desde)
+          : new Date(`${p.data_pedido}T${p.aguardando_desde}`);
+        const horas = (new Date(p.concluido_em)-desde)/3600000;
+        if (!isNaN(horas)) horas<=SLA_H ? slaDentro++ : slaFora++;
+      } catch {}
+    });
+
+    // ── Por dia — total importado ─────────────────────────────────
+    const por_dia_total = {};
+    pedidos.forEach(p=>{ if(p.data_pedido) por_dia_total[p.data_pedido]=(por_dia_total[p.data_pedido]||0)+1; });
+
+    res.json({
+      periodo:{ de:dataIni, ate:dataFim },
+      turno_filtro: turnoFiltro,
+      separacao:{
+        total: pedidos.length,
+        concluidos: sepConcluidos.length,
+        pendentes: pedidos.filter(p=>p.status==='pendente').length,
+        separando: pedidos.filter(p=>p.status==='separando').length,
+        total_itens: sepConcluidos.reduce((s,p)=>s+(parseInt(p.itens)||0),0),
+        pontuacao_total: Math.round(sepConcluidos.reduce((s,p)=>s+(parseFloat(p.pontuacao)||0),0)),
+        media_tempo_min: avgArr(temposSep),
+      },
+      checkout:{
+        total: checkouts.length,
+        concluidos: ckConcluidos.length,
+        pendentes: checkouts.filter(c=>c.status!=='concluido').length,
+        media_tempo_min: avgArr(temposCk),
+      },
+      embalagem:{
+        total_embalados: embalagens.length,
+        pendentes: pedidos.filter(p=>p.status==='concluido'&&['pendente','embalando','nao_iniciado'].includes(p.status_embalagem||'nao_iniciado')).length,
+        media_tempo_min: avgArr(temposEmb),
+      },
+      reposicao:{
+        total: reposicoes.length,
+        resolvidas: reposicoes.filter(r=>['reposto','abastecido','subiu'].includes(r.status)).length,
+        pendentes: reposicoes.filter(r=>['pendente','aberto'].includes(r.status)).length,
+        nao_encontrados: reposicoes.filter(r=>r.status==='nao_encontrado').length,
+      },
+      complexidade,
+      colaboradores,
+      ranking_turnos,
+      por_hora,
+      por_transportadora,
+      por_dia,
+      por_dia_total: Object.entries(por_dia_total).sort().map(([d,t])=>({data:d,total:t})),
+      sla:{ meta_horas:SLA_H, dentro:slaDentro, fora:slaFora, pct: slaDentro+slaFora>0?Math.round((slaDentro/(slaDentro+slaFora))*100):null },
+    });
+  } catch(e) { res.status(500).json({erro:e.message}); }
+});
+
 module.exports = router;
