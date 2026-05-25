@@ -793,7 +793,7 @@ function renderDashPipeline() {
 
   const cards = [
     { icon: '📦', label: 'SEPARAÇÃO', cor: '#4f46e5',
-      main: fmtN(sepTotal), sub: 'pedidos distribuídos',
+      main: fmtN(sepConcluido), sub: 'pedidos concluídos',
       kpis: [
         { lbl: 'Total Pedidos',     val: fmtN(sepTotal) },
         { lbl: 'Em Separação',      val: fmtN(sepSeparando) },
@@ -801,7 +801,7 @@ function renderDashPipeline() {
         { lbl: 'Total Itens',       val: fmtN(sepItens) },
       ]},
     { icon: '🔖', label: 'CHECKOUT', cor: '#0891b2',
-      main: fmtN(ckTotal), sub: 'pedidos no checkout',
+      main: fmtN(ckConc), sub: 'checkouts concluídos',
       kpis: [
         { lbl: 'Total Checkout',    val: fmtN(ckTotal) },
         { lbl: 'Em Checkout',       val: fmtN(ckEmCk) },
@@ -809,7 +809,7 @@ function renderDashPipeline() {
         { lbl: 'Total Itens',       val: fmtN(ckItens) },
       ]},
     { icon: '📫', label: 'EMBALAGEM', cor: '#7c3aed',
-      main: fmtN(embTotal), sub: 'pedidos na embalagem',
+      main: fmtN(embConc), sub: 'pedidos embalados',
       kpis: [
         { lbl: 'Total Embalagem',   val: fmtN(embTotal) },
         { lbl: 'Embalando',         val: fmtN(embalando) },
@@ -817,7 +817,7 @@ function renderDashPipeline() {
         { lbl: 'Total Itens',       val: fmtN(embItens) },
       ]},
     { icon: '🔧', label: 'REPOSIÇÃO', cor: '#d97706',
-      main: fmtN(repTotal), sub: 'reposições hoje',
+      main: fmtN(repConc), sub: 'reposições resolvidas',
       kpis: [
         { lbl: 'Total Reposição',   val: fmtN(repTotal) },
         { lbl: 'Pendentes',         val: fmtN(repPend) },
