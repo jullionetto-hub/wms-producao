@@ -823,16 +823,18 @@ function renderDashPipeline() {
   const ckConc  = distribuidos.filter(p =>
     p.status === 'concluido' && ['pendente','embalando','concluido'].includes(p.status_embalagem)
   ).length;
+  // Total itens = todos os sep-concluídos (escopo completo do checkout)
   const ckItens = distribuidos
-    .filter(p => p.status === 'concluido' && ['pendente','embalando','concluido'].includes(p.status_embalagem))
+    .filter(p => p.status === 'concluido')
     .reduce((s, p) => s + (parseInt(p.itens) || 0), 0);
 
   // ── EMBALAGEM (fluxo: ck concluído → Emb. Pendente → Embalando → Embalado) ──
   const embPend   = distribuidos.filter(p => p.status_embalagem === 'pendente').length;
   const embalando = distribuidos.filter(p => p.status_embalagem === 'embalando').length;
   const embConc   = distribuidos.filter(p => p.status_embalagem === 'concluido').length;
-  const embItens  = distribuidos
-    .filter(p => p.status_embalagem === 'concluido')
+  // Total itens = todos que entraram na embalagem (pendente + embalando + concluído)
+  const embItens = distribuidos
+    .filter(p => ['pendente','embalando','concluido'].includes(p.status_embalagem))
     .reduce((s, p) => s + (parseInt(p.itens) || 0), 0);
 
   // ── REPOSIÇÃO ─────────────────────────────────────────────────────────────
@@ -1270,13 +1272,16 @@ async function carregarPerformanceDetalhe(ini, fim, filtPerfil, filtColab) {
             <td style="color:var(--text2)">${p.hora_abertura||'—'}</td>
             <td style="color:var(--text2)">${p.hora_confirmacao||'—'}</td>
             <td>${tempo}</td>
+            <td style="font-weight:700;color:var(--accent)">${p.total_itens||0}</td>
+            <td style="font-weight:700;color:var(--text2)">${p.qtd_produtos||0}</td>
           </tr>`;
         }).join('');
         tabela = `
           <div class="tabela-wrap">
             <table>
               <thead><tr>
-                <th>Nº PEDIDO</th><th>DATA</th><th>ABERTURA</th><th>CONFIRMAÇÃO</th><th>⏱ TEMPO CHECKOUT</th>
+                <th>Nº PEDIDO</th><th>DATA</th><th>ABERTURA</th><th>CONFIRMAÇÃO</th>
+                <th>⏱ TEMPO</th><th>ITENS</th><th>PRODUTOS</th>
               </tr></thead>
               <tbody>${linhas}</tbody>
             </table>
@@ -1291,13 +1296,15 @@ async function carregarPerformanceDetalhe(ini, fim, filtPerfil, filtColab) {
             <td style="color:var(--text2)">${p.cliente||'—'}</td>
             <td style="color:var(--text2)">${p.transportadora||'—'}</td>
             <td style="font-weight:700;color:#8B5CF6">${p.total_itens||0}</td>
+            <td style="font-weight:700;color:var(--text2)">${p.qtd_produtos||0}</td>
           </tr>`;
         }).join('');
         tabela = `
           <div class="tabela-wrap">
             <table>
               <thead><tr>
-                <th>Nº PEDIDO</th><th>DATA</th><th>HORÁRIO</th><th>CLIENTE</th><th>TRANSP.</th><th>ITENS</th>
+                <th>Nº PEDIDO</th><th>DATA</th><th>HORÁRIO</th><th>CLIENTE</th>
+                <th>TRANSP.</th><th>ITENS</th><th>PRODUTOS</th>
               </tr></thead>
               <tbody>${linhas}</tbody>
             </table>
@@ -2096,12 +2103,14 @@ function renderRelAnalitico(d) {
       kpis:[
         { lbl:'Total criados',   val: fmtN(d.checkout.total) },
         { lbl:'Pendentes',       val: fmtN(d.checkout.pendentes) },
+        { lbl:'Total itens',     val: fmtN(d.checkout.total_itens) },
         { lbl:'Tempo médio',     val: fmtT(d.checkout.media_tempo_min) },
       ]},
     { icon:'📫', label:'EMBALAGEM', cor:'#7c3aed',
       main: fmtN(d.embalagem.total_embalados), sub:'pedidos embalados',
       kpis:[
         { lbl:'Pendentes emb.',  val: fmtN(d.embalagem.pendentes) },
+        { lbl:'Total itens',     val: fmtN(d.embalagem.total_itens) },
         { lbl:'Tempo médio',     val: fmtT(d.embalagem.media_tempo_min) },
       ]},
     { icon:'🔧', label:'REPOSIÇÃO', cor:'#d97706',

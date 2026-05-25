@@ -704,6 +704,8 @@ router.get('/stats/performance/detalhe', requerAuth, requerPerfil('supervisor'),
       const ckList = await db.all(`
         SELECT c.operador_nome, c.numero_pedido, c.data_checkout,
           c.hora_criacao, c.hora_checkout,
+          p.itens AS qtd_produtos,
+          (SELECT COALESCE(SUM(ip.quantidade), p.itens) FROM itens_pedido ip WHERE ip.pedido_id=p.id) AS total_itens,
           CASE WHEN c.hora_criacao IS NOT NULL AND c.hora_criacao!=''
                     AND c.hora_checkout IS NOT NULL AND c.hora_checkout!=''
             THEN GREATEST(0,
@@ -711,6 +713,7 @@ router.get('/stats/performance/detalhe', requerAuth, requerPerfil('supervisor'),
             )
             ELSE NULL END AS tempo_checkout_min
         FROM checkout c
+        LEFT JOIN pedidos p ON c.pedido_id = p.id
         WHERE ${w} AND c.operador_nome IS NOT NULL AND c.operador_nome!=''
         ORDER BY c.operador_nome, c.data_checkout, c.hora_checkout
         LIMIT 3000
@@ -725,6 +728,8 @@ router.get('/stats/performance/detalhe', requerAuth, requerPerfil('supervisor'),
           hora_abertura:      c.hora_criacao,
           hora_confirmacao:   c.hora_checkout,
           tempo_checkout_min: c.tempo_checkout_min !== null ? parseInt(c.tempo_checkout_min) : null,
+          total_itens:        parseInt(c.total_itens) || 0,
+          qtd_produtos:       parseInt(c.qtd_produtos) || 0,
         });
       });
     }
@@ -737,7 +742,9 @@ router.get('/stats/performance/detalhe', requerAuth, requerPerfil('supervisor'),
 
       const embList = await db.all(`
         SELECT e.embalado_por, e.numero_pedido, e.data_embalagem, e.embalado_em,
-               e.cliente, e.transportadora, p.itens
+               e.cliente, e.transportadora,
+               p.itens AS qtd_produtos,
+               (SELECT COALESCE(SUM(ip.quantidade), p.itens) FROM itens_pedido ip WHERE ip.pedido_id=p.id) AS total_itens
         FROM embalagem e
         LEFT JOIN pedidos p ON e.pedido_id = p.id
         WHERE ${w}
@@ -748,12 +755,13 @@ router.get('/stats/performance/detalhe', requerAuth, requerPerfil('supervisor'),
         const key = `${e.embalado_por}:embalador`;
         if (!resultado[key]) resultado[key] = { nome: e.embalado_por, perfil: 'embalador', pedidos: [] };
         resultado[key].pedidos.push({
-          numero_pedido: e.numero_pedido,
-          data_pedido:   e.data_embalagem,
-          embalado_em:   e.embalado_em,
-          cliente:       e.cliente || '—',
-          transportadora:e.transportadora || '—',
-          total_itens:   parseInt(e.itens) || 0,
+          numero_pedido:  e.numero_pedido,
+          data_pedido:    e.data_embalagem,
+          embalado_em:    e.embalado_em,
+          cliente:        e.cliente || '—',
+          transportadora: e.transportadora || '—',
+          total_itens:    parseInt(e.total_itens) || parseInt(e.qtd_produtos) || 0,
+          qtd_produtos:   parseInt(e.qtd_produtos) || 0,
         });
       });
     }

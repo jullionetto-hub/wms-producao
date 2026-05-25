@@ -249,15 +249,17 @@ router.get('/relatorio/analitico', requerAuth, requerPerfil('supervisor'), async
     // ── Checkout ─────────────────────────────────────────────────
     const checkouts = await db.all(`
       SELECT ck.status, ck.data_checkout, ck.hora_checkout, ck.hora_criacao,
-             ck.operador_nome, ck.pedido_id
+             ck.operador_nome, ck.pedido_id, p.itens
       FROM checkout ck
+      LEFT JOIN pedidos p ON ck.pedido_id = p.id
       WHERE ck.data_checkout >= $1 AND ck.data_checkout <= $2
     `, params);
 
     // ── Embalagem ─────────────────────────────────────────────────
     const embalagens = await db.all(`
-      SELECT em.embalado_por, em.data_embalagem, em.embalagem_inicio, em.embalado_em
+      SELECT em.embalado_por, em.data_embalagem, em.embalagem_inicio, em.embalado_em, p.itens
       FROM embalagem em
+      LEFT JOIN pedidos p ON em.pedido_id = p.id
       WHERE em.data_embalagem >= $1 AND em.data_embalagem <= $2
     `, params);
 
@@ -429,11 +431,13 @@ router.get('/relatorio/analitico', requerAuth, requerPerfil('supervisor'), async
         total: checkouts.length,
         concluidos: ckConcluidos.length,
         pendentes: checkouts.filter(c=>c.status!=='concluido').length,
+        total_itens: ckConcluidos.reduce((s,c)=>s+(parseInt(c.itens)||0),0),
         media_tempo_min: avgArr(temposCk),
       },
       embalagem:{
         total_embalados: embalagens.length,
         pendentes: pedidosDistribuidos.filter(p=>p.status==='concluido'&&['pendente','embalando','nao_iniciado'].includes(p.status_embalagem||'nao_iniciado')).length,
+        total_itens: embalagens.reduce((s,e)=>s+(parseInt(e.itens)||0),0),
         media_tempo_min: avgArr(temposEmb),
       },
       reposicao:{
