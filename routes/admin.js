@@ -219,16 +219,12 @@ router.get('/relatorio/analitico', requerAuth, requerPerfil('supervisor'), async
   const dataFim = ate || hoje;
   const turnoFiltro = turno || 'Todos';
 
-  // Filtro de turno por hora_pedido
-  let tSQL = '';
-  if (turnoFiltro === 'Manha')     tSQL = " AND hora_pedido >= '06:00' AND hora_pedido < '14:00'";
-  else if (turnoFiltro === 'Tarde') tSQL = " AND hora_pedido >= '14:00' AND hora_pedido < '22:00'";
-  else if (turnoFiltro === 'Madrugada') tSQL = " AND (hora_pedido >= '22:00' OR hora_pedido < '06:00')";
-
   try {
     const params = [dataIni, dataFim];
 
-    // ── Pedidos ──────────────────────────────────────────────────
+    // ── Pedidos — busca TODOS os importados no período (sem filtro de turno no SQL)
+    // O filtro de turno é aplicado em JS sobre sep_turno (turno do separador),
+    // para que "distribuídos" reflita o lote de cada turno, não a hora de importação.
     const pedidos = await db.all(`
       SELECT p.id, p.status, p.itens, p.pontuacao, p.hora_pedido, p.data_pedido,
              p.iniciado_em, p.concluido_em, p.aguardando_desde,
@@ -239,9 +235,16 @@ router.get('/relatorio/analitico', requerAuth, requerPerfil('supervisor'), async
       FROM pedidos p
       LEFT JOIN separadores sep ON p.separador_id = sep.id
       LEFT JOIN usuarios u ON sep.usuario_id = u.id
-      WHERE p.data_pedido >= $1 AND p.data_pedido <= $2 ${tSQL}
+      WHERE p.data_pedido >= $1 AND p.data_pedido <= $2
       ORDER BY p.data_pedido, p.hora_pedido
     `, params);
+
+    // Pedidos do lote do turno selecionado:
+    // - "Todos"     → todos os distribuídos
+    // - turno X     → apenas pedidos atribuídos a separadores do turno X
+    const pedidosDistribuidos = pedidos.filter(p =>
+      p.sep_nome && (turnoFiltro === 'Todos' || p.sep_turno === turnoFiltro)
+    );
 
     // ── Checkout ─────────────────────────────────────────────────
     const checkouts = await db.all(`
@@ -278,11 +281,11 @@ router.get('/relatorio/analitico', requerAuth, requerPerfil('supervisor'), async
     };
     const avgArr = a => a.length ? Math.round((a.reduce((s,v)=>s+v,0)/a.length)*10)/10 : null;
 
-    // ── Separação ─────────────────────────────────────────────────
-    const sepConcluidos = pedidos.filter(p => p.status === 'concluido');
+    // ── Separação — baseado no lote do turno ─────────────────────
+    const sepConcluidos = pedidosDistribuidos.filter(p => p.status === 'concluido');
     const temposSep = sepConcluidos.map(p => minutesBetween(p.iniciado_em, p.concluido_em)).filter(Boolean);
 
-    // ── Complexidade ──────────────────────────────────────────────
+    // ── Complexidade — baseada no lote do turno ───────────────────
     const facil_set = new Set(['A','B','C','D','E','P','Q','R','S','T','U']);
     const medio_set = new Set(['M','N','O','V','W','X','Y','Z']);
     const complexidade = {
@@ -290,7 +293,7 @@ router.get('/relatorio/analitico', requerAuth, requerPerfil('supervisor'), async
       medio:   { pedidos: 0, itens: 0 },
       dificil: { pedidos: 0, itens: 0 },
     };
-    pedidos.forEach(p => {
+    pedidosDistribuidos.forEach(p => {
       const letters = String(p.rua||'').toUpperCase().split('/')[0].replace(/[^A-Z]/g,'');
       let nivel;
       if (!letters) nivel = 'facil';
@@ -309,9 +312,9 @@ router.get('/relatorio/analitico', requerAuth, requerPerfil('supervisor'), async
     // ── Embalagem métricas ────────────────────────────────────────
     const temposEmb = embalagens.map(e => minutesTime(e.embalagem_inicio, e.embalado_em)).filter(Boolean);
 
-    // ── Colaboradores ─────────────────────────────────────────────
+    // ── Colaboradores — separadores filtrados pelo turno ─────────
     const colabs = {};
-    pedidos.forEach(p => {
+    pedidosDistribuidos.forEach(p => {
       if (!p.sep_nome) return;
       const k = `${p.sep_nome}:separador`;
       if (!colabs[k]) colabs[k] = { nome:p.sep_nome, perfil:'separador', turno:p.sep_turno, pedidos:0, itens:0, pontuacao:0, tempos:[] };
@@ -351,11 +354,12 @@ router.get('/relatorio/analitico', requerAuth, requerPerfil('supervisor'), async
       return { ...rest, tempo_medio, pontuacao: Math.round(rest.pontuacao||0) };
     }).sort((a,b) => a.nome.localeCompare(b.nome));
 
-    // ── Ranking de turnos ─────────────────────────────────────────
+    // ── Ranking de turnos — sempre exibe os 3 turnos (usa todos os pedidos)
+    // Classifica pelo sep_turno para mostrar o desempenho real de cada turno.
     const tMap = { Manha:{label:'Manhã',pedidos:0,itens:0,pontuacao:0,tempos:[]}, Tarde:{label:'Tarde',pedidos:0,itens:0,pontuacao:0,tempos:[]}, Madrugada:{label:'Madrugada',pedidos:0,itens:0,pontuacao:0,tempos:[]} };
-    sepConcluidos.forEach(p => {
-      const h = p.hora_pedido || '';
-      const t = h >= '06:00' && h < '14:00' ? 'Manha' : h >= '14:00' && h < '22:00' ? 'Tarde' : 'Madrugada';
+    pedidos.filter(p => p.status === 'concluido' && p.sep_nome).forEach(p => {
+      const t = p.sep_turno || 'Manha';
+      if (!tMap[t]) return;
       tMap[t].pedidos++;
       tMap[t].itens     += parseInt(p.itens)||0;
       tMap[t].pontuacao += parseFloat(p.pontuacao)||0;
@@ -366,9 +370,6 @@ router.get('/relatorio/analitico', requerAuth, requerPerfil('supervisor'), async
       turno: t.label, pedidos: t.pedidos, itens: t.itens, pontuacao: Math.round(t.pontuacao),
       media_tempo: avgArr(t.tempos),
     })).sort((a,b) => b.pedidos - a.pedidos);
-
-    // ── Distribuídos (com separador atribuído) ────────────────────
-    const pedidosDistribuidos = pedidos.filter(p => p.sep_nome);
 
     // ── Por hora ──────────────────────────────────────────────────
     const hMap = {};
@@ -413,8 +414,8 @@ router.get('/relatorio/analitico', requerAuth, requerPerfil('supervisor'), async
       periodo:{ de:dataIni, ate:dataFim },
       turno_filtro: turnoFiltro,
       separacao:{
-        total: pedidos.length,
-        distribuidos: pedidosDistribuidos.length,
+        total: pedidos.length,               // sempre o total importado (todos os turnos)
+        distribuidos: pedidosDistribuidos.length, // lote do turno selecionado
         concluidos: sepConcluidos.length,
         pendentes: pedidosDistribuidos.filter(p=>p.status==='pendente').length,
         separando: pedidosDistribuidos.filter(p=>p.status==='separando').length,
@@ -430,7 +431,7 @@ router.get('/relatorio/analitico', requerAuth, requerPerfil('supervisor'), async
       },
       embalagem:{
         total_embalados: embalagens.length,
-        pendentes: pedidos.filter(p=>p.status==='concluido'&&['pendente','embalando','nao_iniciado'].includes(p.status_embalagem||'nao_iniciado')).length,
+        pendentes: pedidosDistribuidos.filter(p=>p.status==='concluido'&&['pendente','embalando','nao_iniciado'].includes(p.status_embalagem||'nao_iniciado')).length,
         media_tempo_min: avgArr(temposEmb),
       },
       reposicao:{
