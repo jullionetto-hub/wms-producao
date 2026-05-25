@@ -389,10 +389,13 @@ async function carregarOperacao() {
       allIds.add(p.id); return true;
     });
 
-    const total      = pedidos.length;
-    const concluidos = pedidos.filter(p=>p.status==='concluido').length;
-    const separando  = pedidos.filter(p=>p.status==='separando').length;
-    const pendentes  = pedidos.filter(p=>p.status==='pendente').length;
+    // Apenas pedidos DISTRIBUÍDOS (com separador atribuído).
+    // Pedidos importados mas ainda não distribuídos (separador_id nulo) não entram no lote ativo.
+    const distribuidos = pedidos.filter(p => p.separador_nome || p.separador_id);
+    const total      = distribuidos.length;
+    const concluidos = distribuidos.filter(p=>p.status==='concluido').length;
+    const separando  = distribuidos.filter(p=>p.status==='separando').length;
+    const pendentes  = distribuidos.filter(p=>p.status==='pendente').length;
     const pct        = total > 0 ? Math.round((concluidos/total)*100) : 0;
 
     // Busca faltas abertas
@@ -420,7 +423,7 @@ async function carregarOperacao() {
     if (concluidos > 0 && pendentes > 0) {
       // Calcula velocidade: pedidos/hora com base nos concluídos
       // Pega hora do primeiro e do ultimo concluído
-      const conclPeds = pedidos.filter(p=>p.status==='concluido' && p.hora_pedido);
+      const conclPeds = distribuidos.filter(p=>p.status==='concluido' && p.hora_pedido);
       if (conclPeds.length >= 2) {
         const horas = conclPeds.map(p=>p.hora_pedido).sort();
         const [h1,m1] = horas[0].split(':').map(Number);
@@ -1956,9 +1959,10 @@ function renderRelAnalitico(d) {
   // ── 1. Cards de resumo operacional ──────────────────────────
   const cards = [
     { icon:'📦', label:'SEPARAÇÃO', cor:'#4f46e5',
-      main: fmtN(d.separacao.concluidos), sub:'pedidos concluídos',
+      main: `${fmtN(d.separacao.concluidos)} / ${fmtN(d.separacao.distribuidos||d.separacao.total)}`, sub:'concluídos do lote distribuído',
       kpis:[
-        { lbl:'Total importado', val: fmtN(d.separacao.total) },
+        { lbl:'Importados',      val: fmtN(d.separacao.total) },
+        { lbl:'Distribuídos',    val: fmtN(d.separacao.distribuidos||0) },
         { lbl:'Pendentes',       val: fmtN(d.separacao.pendentes) },
         { lbl:'Separando',       val: fmtN(d.separacao.separando) },
         { lbl:'Total itens',     val: fmtN(d.separacao.total_itens) },
@@ -2007,18 +2011,27 @@ function renderRelAnalitico(d) {
 
   // ── 2. Complexidade ──────────────────────────────────────────
   const cx = d.complexidade;
-  const cxTotal = cx.facil + cx.medio + cx.dificil || 1;
+  const cxTotalPed = (cx.facil?.pedidos||0) + (cx.medio?.pedidos||0) + (cx.dificil?.pedidos||0) || 1;
   const cxBars = [
-    { lbl:'Fácil', cor:'#16a34a', val:cx.facil, bg:'#dcfce7' },
-    { lbl:'Médio', cor:'#d97706', val:cx.medio, bg:'#fef3c7' },
-    { lbl:'Difícil', cor:'#dc2626', val:cx.dificil, bg:'#fee2e2' },
+    { lbl:'Fácil',   cor:'#16a34a', bg:'#dcfce7', ped: cx.facil?.pedidos||0,   itens: cx.facil?.itens||0 },
+    { lbl:'Médio',   cor:'#d97706', bg:'#fef3c7', ped: cx.medio?.pedidos||0,   itens: cx.medio?.itens||0 },
+    { lbl:'Difícil', cor:'#dc2626', bg:'#fee2e2', ped: cx.dificil?.pedidos||0, itens: cx.dificil?.itens||0 },
   ].map(b => `
     <div style="flex:1;background:${b.bg};border-radius:12px;padding:14px 12px;text-align:center">
-      <div style="font-size:24px;font-weight:800;color:${b.cor}">${pct(b.val,cxTotal)}%</div>
-      <div style="font-size:11px;font-weight:700;color:${b.cor};margin:2px 0">${b.lbl}</div>
-      <div style="font-size:12px;color:var(--text2)">${fmtN(b.val)} pedidos</div>
-      <div style="margin-top:8px;height:6px;background:rgba(0,0,0,.08);border-radius:3px;overflow:hidden">
-        <div style="height:100%;width:${pct(b.val,cxTotal)}%;background:${b.cor};border-radius:3px;transition:width .6s"></div>
+      <div style="font-size:28px;font-weight:800;color:${b.cor};line-height:1">${pct(b.ped,cxTotalPed)}%</div>
+      <div style="font-size:12px;font-weight:800;color:${b.cor};margin:4px 0">${b.lbl}</div>
+      <div style="margin:8px 0;height:5px;background:rgba(0,0,0,.1);border-radius:3px;overflow:hidden">
+        <div style="height:100%;width:${pct(b.ped,cxTotalPed)}%;background:${b.cor};border-radius:3px"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:8px">
+        <div style="background:rgba(255,255,255,.6);border-radius:8px;padding:5px 6px">
+          <div style="font-size:9px;color:${b.cor};font-weight:700;letter-spacing:.3px">PEDIDOS</div>
+          <div style="font-size:15px;font-weight:800;color:${b.cor}">${fmtN(b.ped)}</div>
+        </div>
+        <div style="background:rgba(255,255,255,.6);border-radius:8px;padding:5px 6px">
+          <div style="font-size:9px;color:${b.cor};font-weight:700;letter-spacing:.3px">ITENS</div>
+          <div style="font-size:15px;font-weight:800;color:${b.cor}">${fmtN(b.itens)}</div>
+        </div>
       </div>
     </div>`).join('');
 

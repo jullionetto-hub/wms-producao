@@ -283,16 +283,23 @@ router.get('/relatorio/analitico', requerAuth, requerPerfil('supervisor'), async
     const temposSep = sepConcluidos.map(p => minutesBetween(p.iniciado_em, p.concluido_em)).filter(Boolean);
 
     // ── Complexidade ──────────────────────────────────────────────
-    const facil_set    = new Set(['A','B','C','D','E','P','Q','R','S','T','U']);
-    const medio_set    = new Set(['M','N','O','V','W','X','Y','Z']);
-    const complexidade = { facil: 0, medio: 0, dificil: 0 };
+    const facil_set = new Set(['A','B','C','D','E','P','Q','R','S','T','U']);
+    const medio_set = new Set(['M','N','O','V','W','X','Y','Z']);
+    const complexidade = {
+      facil:   { pedidos: 0, itens: 0 },
+      medio:   { pedidos: 0, itens: 0 },
+      dificil: { pedidos: 0, itens: 0 },
+    };
     pedidos.forEach(p => {
       const letters = String(p.rua||'').toUpperCase().split('/')[0].replace(/[^A-Z]/g,'');
-      if (!letters) { complexidade.facil++; return; }
-      if (letters.startsWith('ZA') || letters.includes('ARARA') || letters.includes('VERT')) complexidade.dificil++;
-      else if (!facil_set.has(letters[0]) && !medio_set.has(letters[0])) complexidade.dificil++;
-      else if (medio_set.has(letters[0])) complexidade.medio++;
-      else complexidade.facil++;
+      let nivel;
+      if (!letters) nivel = 'facil';
+      else if (letters.startsWith('ZA') || letters.includes('ARARA') || letters.includes('VERT')) nivel = 'dificil';
+      else if (!facil_set.has(letters[0]) && !medio_set.has(letters[0])) nivel = 'dificil';
+      else if (medio_set.has(letters[0])) nivel = 'medio';
+      else nivel = 'facil';
+      complexidade[nivel].pedidos++;
+      complexidade[nivel].itens += parseInt(p.itens) || 0;
     });
 
     // ── Checkout métricas ─────────────────────────────────────────
@@ -360,6 +367,9 @@ router.get('/relatorio/analitico', requerAuth, requerPerfil('supervisor'), async
       media_tempo: avgArr(t.tempos),
     })).sort((a,b) => b.pedidos - a.pedidos);
 
+    // ── Distribuídos (com separador atribuído) ────────────────────
+    const pedidosDistribuidos = pedidos.filter(p => p.sep_nome);
+
     // ── Por hora ──────────────────────────────────────────────────
     const hMap = {};
     sepConcluidos.forEach(p => {
@@ -404,9 +414,10 @@ router.get('/relatorio/analitico', requerAuth, requerPerfil('supervisor'), async
       turno_filtro: turnoFiltro,
       separacao:{
         total: pedidos.length,
+        distribuidos: pedidosDistribuidos.length,
         concluidos: sepConcluidos.length,
-        pendentes: pedidos.filter(p=>p.status==='pendente').length,
-        separando: pedidos.filter(p=>p.status==='separando').length,
+        pendentes: pedidosDistribuidos.filter(p=>p.status==='pendente').length,
+        separando: pedidosDistribuidos.filter(p=>p.status==='separando').length,
         total_itens: sepConcluidos.reduce((s,p)=>s+(parseInt(p.itens)||0),0),
         pontuacao_total: Math.round(sepConcluidos.reduce((s,p)=>s+(parseFloat(p.pontuacao)||0),0)),
         media_tempo_min: avgArr(temposSep),
