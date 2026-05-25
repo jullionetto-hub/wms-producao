@@ -219,17 +219,13 @@ router.get('/relatorio/analitico', requerAuth, requerPerfil('supervisor'), async
   const dataFim = ate || hoje;
   const turnoFiltro = turno || 'Todos';
 
-  // Filtro de turno pela hora em que o pedido foi IMPORTADO (hora_pedido)
-  // Manhã importa 20, Tarde importa 40, Madrugada importa 40 → cada turno vê só o que importou
-  let tSQL = '';
-  if (turnoFiltro === 'Manha')         tSQL = " AND p.hora_pedido >= '06:00' AND p.hora_pedido < '14:00'";
-  else if (turnoFiltro === 'Tarde')     tSQL = " AND p.hora_pedido >= '14:00' AND p.hora_pedido < '22:00'";
-  else if (turnoFiltro === 'Madrugada') tSQL = " AND (p.hora_pedido >= '22:00' OR p.hora_pedido < '06:00')";
-
   try {
     const params = [dataIni, dataFim];
 
-    // ── Pedidos ──────────────────────────────────────────────────
+    // ── Pedidos — busca TODOS no período (sem filtro de hora no SQL)
+    // O turno do lote é determinado pelo sep_turno (turno do separador que recebeu o pedido).
+    // Quando a distribuição usa o botão "Tarde", os pedidos vão para separadores da Tarde
+    // → sep_turno='Tarde' → aparecem no lote Tarde no relatório.
     const pedidos = await db.all(`
       SELECT p.id, p.status, p.itens, p.pontuacao, p.hora_pedido, p.data_pedido,
              p.iniciado_em, p.concluido_em, p.aguardando_desde,
@@ -240,12 +236,15 @@ router.get('/relatorio/analitico', requerAuth, requerPerfil('supervisor'), async
       FROM pedidos p
       LEFT JOIN separadores sep ON p.separador_id = sep.id
       LEFT JOIN usuarios u ON sep.usuario_id = u.id
-      WHERE p.data_pedido >= $1 AND p.data_pedido <= $2 ${tSQL}
+      WHERE p.data_pedido >= $1 AND p.data_pedido <= $2
       ORDER BY p.data_pedido, p.hora_pedido
     `, params);
 
-    // Distribuídos = pedidos do turno que têm separador atribuído
-    const pedidosDistribuidos = pedidos.filter(p => p.sep_nome);
+    // Lote do turno = pedidos distribuídos para separadores DESSE turno
+    // "Todos" → todos os distribuídos, qualquer turno
+    const pedidosDistribuidos = pedidos.filter(p =>
+      p.sep_nome && (turnoFiltro === 'Todos' || p.sep_turno === turnoFiltro)
+    );
 
     // ── Checkout ─────────────────────────────────────────────────
     const checkouts = await db.all(`
@@ -355,11 +354,12 @@ router.get('/relatorio/analitico', requerAuth, requerPerfil('supervisor'), async
       return { ...rest, tempo_medio, pontuacao: Math.round(rest.pontuacao||0) };
     }).sort((a,b) => a.nome.localeCompare(b.nome));
 
-    // ── Ranking de turnos — classifica pelo horário de importação do pedido
+    // ── Ranking de turnos — usa sep_turno (turno do separador que trabalhou o pedido)
     const tMap = { Manha:{label:'Manhã',pedidos:0,itens:0,pontuacao:0,tempos:[]}, Tarde:{label:'Tarde',pedidos:0,itens:0,pontuacao:0,tempos:[]}, Madrugada:{label:'Madrugada',pedidos:0,itens:0,pontuacao:0,tempos:[]} };
-    sepConcluidos.forEach(p => {
-      const h = p.hora_pedido || '';
-      const t = h >= '06:00' && h < '14:00' ? 'Manha' : h >= '14:00' && h < '22:00' ? 'Tarde' : 'Madrugada';
+    // Para o ranking usa TODOS os concluídos do dia (não só o turno filtrado)
+    pedidos.filter(p => p.status === 'concluido' && p.sep_nome).forEach(p => {
+      const t = p.sep_turno || 'Manha';
+      if (!tMap[t]) return;
       tMap[t].pedidos++;
       tMap[t].itens     += parseInt(p.itens)||0;
       tMap[t].pontuacao += parseFloat(p.pontuacao)||0;
@@ -414,8 +414,8 @@ router.get('/relatorio/analitico', requerAuth, requerPerfil('supervisor'), async
       periodo:{ de:dataIni, ate:dataFim },
       turno_filtro: turnoFiltro,
       separacao:{
-        total: pedidos.length,               // importados do turno selecionado (ou todos)
-        distribuidos: pedidosDistribuidos.length,
+        total: pedidos.length,               // total importado do dia (todos os turnos)
+        distribuidos: pedidosDistribuidos.length, // lote do turno selecionado
         concluidos: sepConcluidos.length,
         pendentes: pedidosDistribuidos.filter(p=>p.status==='pendente').length,
         separando: pedidosDistribuidos.filter(p=>p.status==='separando').length,
