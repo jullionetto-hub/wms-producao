@@ -93,12 +93,15 @@ router.get('/checkout/caixa/:numero', requerAuth, async (req,res) => {
       }
     }
     for (const row of rows) {
-      // Marca o momento em que o operador de checkout abre o pedido (primeira vez)
-      if (row.status === 'pendente' && !row.operador_nome) {
+      // 'fila' = criado pelo separador ao concluir (ainda não aberto pelo operador)
+      // 'pendente' sem operador_nome = aberto mas não confirmado ainda
+      // Ao operador escanear: muda 'fila' → 'pendente' e registra hora_criacao real
+      if (row.status === 'fila' || (row.status === 'pendente' && !row.operador_nome)) {
         await pool.query(
-          `UPDATE checkout SET hora_criacao=$1, data_checkout=$2 WHERE id=$3`,
+          `UPDATE checkout SET status='pendente', hora_criacao=$1, data_checkout=$2 WHERE id=$3`,
           [hora, data, row.id]
         );
+        row.status = 'pendente';
         row.hora_criacao = hora;
         row.data_checkout = data;
       }
