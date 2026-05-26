@@ -25,6 +25,27 @@ function filtrarPedidosTodos() {
 
 let _pedidosLista  = [];
 let _filtroTransp  = '';
+let _filtroTurno   = '';
+
+function _turnoHora(p) {
+  // Determina turno pelo horário do pedido (hora_pedido ou aguardando_desde)
+  const raw = p.hora_pedido || (p.aguardando_desde||'').split(' ')[1] || '';
+  const h   = parseInt((raw||'').split(':')[0]);
+  if (isNaN(h)) return 'Manha';
+  if (h >= 6  && h < 14) return 'Manha';
+  if (h >= 14 && h < 22) return 'Tarde';
+  return 'Noite';
+}
+
+function filtrarPedidosTurno(turno) {
+  _filtroTurno = turno;
+  document.querySelectorAll('#fturno-todos,#fturno-manha,#fturno-tarde,#fturno-noite')
+    .forEach(b => b.classList.remove('ativo'));
+  const mapa = { '':'fturno-todos', 'Manha':'fturno-manha', 'Tarde':'fturno-tarde', 'Noite':'fturno-noite' };
+  const el = document.getElementById(mapa[turno] || 'fturno-todos');
+  if (el) el.classList.add('ativo');
+  _renderTabelaPedidos();
+}
 
 async function carregarPedidos() {
   try {
@@ -42,6 +63,11 @@ async function carregarPedidos() {
     if (fim) ps = ps.filter(p => p.data_pedido <= fim);
     if (usrId) ps = ps.filter(p => p.separador_nome === usrId);
     _pedidosLista = ps;
+    _filtroTurno  = '';
+    _filtroTransp = '';
+    document.querySelectorAll('.btn-transp').forEach(b => b.classList.remove('ativo'));
+    const t1 = document.getElementById('fturno-todos');  if (t1) t1.classList.add('ativo');
+    const t2 = document.getElementById('ftransp-todos'); if (t2) t2.classList.add('ativo');
     _atualizarBadgesFiltroTransp(ps);
     _renderTabelaPedidos();
   } catch(e) { console.warn(e); }
@@ -59,14 +85,21 @@ function filtrarPedidosTransp(tipo) {
 }
 
 function _atualizarBadgesFiltroTransp(lista) {
-  const contar = (fn) => lista.filter(fn).length;
+  const c = (fn) => lista.filter(fn).length;
+  const transp = (k) => String(k||'').toUpperCase();
   const badges = {
+    // turno
+    'fturno-todos':    `Todos (${lista.length})`,
+    'fturno-manha':    `☀️ Manhã (${c(p=>_turnoHora(p)==='Manha')})`,
+    'fturno-tarde':    `🌤️ Tarde (${c(p=>_turnoHora(p)==='Tarde')})`,
+    'fturno-noite':    `🌙 Noite (${c(p=>_turnoHora(p)==='Noite')})`,
+    // transportadora
     'ftransp-todos':   `Todos (${lista.length})`,
-    'ftransp-drive':   `🚗 Drive Thru (${contar(p=>String(p.transportadora||'').toUpperCase().includes('DRIVE'))})`,
-    'ftransp-prime':   `⭐ Prime (${contar(p=>p.tem_prime)})`,
-    'ftransp-sedex':   `SEDEX (${contar(p=>String(p.transportadora||'').toUpperCase().includes('SEDEX'))})`,
-    'ftransp-pac':     `PAC (${contar(p=>String(p.transportadora||'').toUpperCase().includes('PAC'))})`,
-    'ftransp-motoboy': `MOTOBOY (${contar(p=>String(p.transportadora||'').toUpperCase().includes('MOTOBOY'))})`,
+    'ftransp-drive':   `🚗 Drive Thru (${c(p=>transp(p.transportadora).includes('DRIVE'))})`,
+    'ftransp-prime':   `⭐ Prime (${c(p=>p.tem_prime)})`,
+    'ftransp-sedex':   `SEDEX (${c(p=>transp(p.transportadora).includes('SEDEX'))})`,
+    'ftransp-pac':     `PAC (${c(p=>transp(p.transportadora).includes('PAC'))})`,
+    'ftransp-motoboy': `MOTOBOY (${c(p=>transp(p.transportadora).includes('MOTOBOY'))})`,
   };
   Object.entries(badges).forEach(([id, txt]) => {
     const el = document.getElementById(id); if (el) el.textContent = txt;
@@ -77,6 +110,9 @@ function _renderTabelaPedidos() {
   const tbody = document.getElementById('tbody-ped');
   if (!tbody) return;
   let lista = _pedidosLista;
+  // Filtro de turno (pelo horário do pedido)
+  if (_filtroTurno) lista = lista.filter(p => _turnoHora(p) === _filtroTurno);
+  // Filtro de transportadora / tipo
   if (_filtroTransp === 'PRIME') {
     lista = lista.filter(p => p.tem_prime);
   } else if (_filtroTransp === 'DRIVE') {

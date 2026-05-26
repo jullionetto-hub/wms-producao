@@ -851,6 +851,9 @@ body.dark .item-card.parcial    .item-ic{background:#78350F}
 .btn-transp.ativo{background:var(--accent);color:#fff;border-color:var(--accent)}
 .btn-transp[id="ftransp-drive"].ativo{background:#DC2626;border-color:#DC2626}
 .btn-transp[id="ftransp-prime"].ativo{background:#D97706;border-color:#D97706}
+.btn-transp[id="fturno-manha"].ativo{background:#F59E0B;border-color:#F59E0B}
+.btn-transp[id="fturno-tarde"].ativo{background:#3B82F6;border-color:#3B82F6}
+.btn-transp[id="fturno-noite"].ativo{background:#8B5CF6;border-color:#8B5CF6}
 
 /* Tabela de pedidos — hora formato BR */
 .hora-br{font-variant-numeric:tabular-nums;white-space:nowrap}
