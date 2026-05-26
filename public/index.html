@@ -1976,20 +1976,18 @@
           <input type="checkbox" id="dist-apenas-sem-sep" checked style="accent-color:var(--accent)" onchange="carregarPedidosDistribuicao()">
           Apenas sem separador atribuído
         </label>
-        <label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;cursor:pointer;margin-bottom:4px">
-          <input type="checkbox" id="dist-respeitar-hora" checked style="accent-color:var(--accent)" onchange="carregarPedidosDistribuicao()">
-          Respeitar horário do pedido (mais antigo primeiro)
-        </label>
-      </div>
-
-      <!-- TOGGLE PRIME -->
-      <div id="dist-prime-bloco" style="margin-bottom:14px">
-        <button id="btn-prime-dist" onclick="togglePrimeDistribuicao()"
-          style="display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:8px;border:2px solid #D97706;background:transparent;color:#D97706;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s">
-          ⭐ Incluir Prime
-        </button>
-        <div id="dist-prime-aviso" style="display:none;margin-top:8px;padding:10px 14px;border-radius:8px;background:#FFFBEB;border:1.5px solid #FCD34D;font-size:12px;font-weight:700;color:#92400E">
-          ⭐ MODO PRIME ATIVO — Serão distribuídos apenas pedidos com <em>Postagem Ágil Miess Prime</em>. Pedidos normais não serão incluídos.
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:4px">
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;cursor:pointer">
+            <input type="checkbox" id="dist-respeitar-hora" checked style="accent-color:var(--accent)" onchange="carregarPedidosDistribuicao()">
+            Respeitar horário do pedido (mais antigo primeiro)
+          </label>
+          <button id="btn-prime-dist" onclick="togglePrimeDistribuicao()"
+            style="padding:4px 10px;border-radius:6px;border:1.5px solid #D97706;background:transparent;color:#D97706;font-size:11px;font-weight:700;cursor:pointer;transition:all .15s;white-space:nowrap">
+            ⭐ Incluir Prime
+          </button>
+        </div>
+        <div id="dist-prime-aviso" style="display:none;margin-top:6px;padding:7px 11px;border-radius:7px;background:#FFFBEB;border:1.5px solid #FCD34D;font-size:11px;font-weight:600;color:#92400E">
+          ⭐ MODO PRIME ATIVO — Apenas pedidos <em>Postagem Ágil Miess Prime</em> serão distribuídos.
         </div>
       </div>
 
