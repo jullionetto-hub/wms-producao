@@ -55,7 +55,7 @@ function ativarMobileRep() {
   }, 30000);
 }
 
-const _REP_TABS_LIST = ['separar','separado','subiu','protocolo','stats'];
+const _REP_TABS_LIST = ['separar','separado','subiu','protocolo'];
 
 function mudarTabRep(tab) {
   _REP_TABS_LIST.forEach(t => {

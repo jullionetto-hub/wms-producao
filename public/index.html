@@ -516,17 +516,21 @@
         <!-- Tab STATS -->
         <div id="d-sep-tab-stats" style="display:none">
           <div class="card">
-            <div class="card-hd">📈 MEU DESEMPENHO
-              <button class="btn btn-outline btn-sm" onclick="carregarStatsMobile()">🔄</button>
-            </div>
-            <div style="padding:12px 0">
-              <div class="stat-nome" id="m-stat-nome" style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:12px">—</div>
-              <div id="m-meus-stats"></div>
-              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:8px">
-                <div class="cnt-card azul"><div class="cnt-lbl">HOJE</div><div class="cnt-val" id="m-stat-hoje">0</div><div class="cnt-sub">separados</div></div>
-                <div class="cnt-card verde"><div class="cnt-lbl">MÊS</div><div class="cnt-val" id="m-stat-mes">0</div><div class="cnt-sub">separados</div></div>
-                <div class="cnt-card roxo"><div class="cnt-lbl">ANO</div><div class="cnt-val" id="m-stat-ano">0</div><div class="cnt-sub">separados</div></div>
+            <div class="card-hd">📈 PEDIDOS — SEPARAÇÃO
+              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                <div style="display:flex;align-items:center;gap:5px"><label style="font-size:11px;font-weight:700;color:var(--text3)">DE</label><input type="date" id="sep-stats-ini" style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)"></div>
+                <div style="display:flex;align-items:center;gap:5px"><label style="font-size:11px;font-weight:700;color:var(--text3)">ATÉ</label><input type="date" id="sep-stats-fim" style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)"></div>
+                <button class="btn btn-primary btn-sm" onclick="carregarStatsPedidosDesk('sep')">Filtrar</button>
+                <button class="btn btn-outline btn-sm" onclick="carregarStatsPedidosDesk('sep')">🔄</button>
               </div>
+            </div>
+            <div class="tabela-wrap">
+              <table>
+                <thead><tr><th>PEDIDO</th><th>ITENS</th><th>FORMA DE ENVIO</th><th>CLIENTE</th></tr></thead>
+                <tbody id="sep-stats-tbody">
+                  <tr><td colspan="4" style="text-align:center;padding:32px;color:var(--text3)">Selecione um período e filtre</td></tr>
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
@@ -989,6 +993,7 @@
           <button class="rel-turno-btn ativo" id="dembtab-fila"      onclick="mudarTabEmbDesk('fila')">📋 FILA <span id="d-emb-fila-badge" style="display:none;background:#2563EB;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:3px">0</span></button>
           <button class="rel-turno-btn"       id="dembtab-embalar"   onclick="mudarTabEmbDesk('embalar')">📦 EMBALAR</button>
           <button class="rel-turno-btn"       id="dembtab-embalados" onclick="mudarTabEmbDesk('embalados')">✅ EMBALADOS</button>
+          <button class="rel-turno-btn"       id="dembtab-stats"     onclick="mudarTabEmbDesk('stats')">📈 STATS</button>
         </div>
 
         <!-- Tab FILA -->
@@ -1045,6 +1050,28 @@
             </div>
             <div id="d-emb-embalados" style="padding:4px 0">
               <div style="color:var(--text3);text-align:center;padding:30px;font-size:13px">Carregando...</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab STATS -->
+        <div id="d-emb-tab-stats" style="display:none">
+          <div class="card">
+            <div class="card-hd">📈 PEDIDOS — EMBALAGEM
+              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                <div style="display:flex;align-items:center;gap:5px"><label style="font-size:11px;font-weight:700;color:var(--text3)">DE</label><input type="date" id="emb-stats-ini" style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)"></div>
+                <div style="display:flex;align-items:center;gap:5px"><label style="font-size:11px;font-weight:700;color:var(--text3)">ATÉ</label><input type="date" id="emb-stats-fim" style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)"></div>
+                <button class="btn btn-primary btn-sm" onclick="carregarStatsPedidosDesk('emb')">Filtrar</button>
+                <button class="btn btn-outline btn-sm" onclick="carregarStatsPedidosDesk('emb')">🔄</button>
+              </div>
+            </div>
+            <div class="tabela-wrap">
+              <table>
+                <thead><tr><th>PEDIDO</th><th>ITENS</th><th>FORMA DE ENVIO</th><th>CLIENTE</th></tr></thead>
+                <tbody id="emb-stats-tbody">
+                  <tr><td colspan="4" style="text-align:center;padding:32px;color:var(--text3)">Selecione um período e filtre</td></tr>
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
@@ -1164,6 +1191,7 @@
           <button class="rel-turno-btn ativo" id="dcktab-fila"     onclick="mudarTabCkDesk('fila')">📋 FILA <span id="d-cktab-fila-badge" style="display:none;background:#2563EB;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:3px">0</span></button>
           <button class="rel-turno-btn"       id="dcktab-checkout" onclick="mudarTabCkDesk('checkout')">🏷️ CHECKOUT</button>
           <button class="rel-turno-btn"       id="dcktab-feitos"   onclick="mudarTabCkDesk('feitos')">✅ FEITOS <span id="d-ck-feitos-cnt" style="display:none;background:#10b981;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:3px">0</span></button>
+          <button class="rel-turno-btn"       id="dcktab-stats"    onclick="mudarTabCkDesk('stats')">📈 STATS</button>
         </div>
 
         <!-- Tab FILA -->
@@ -1210,6 +1238,28 @@
             </div>
             <div id="d-ck-feitos" style="padding:4px 0">
               <div style="color:var(--text3);text-align:center;padding:30px;font-size:13px">Carregando...</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab STATS -->
+        <div id="d-ck-tab-stats" style="display:none">
+          <div class="card">
+            <div class="card-hd">📈 PEDIDOS — CHECKOUT
+              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                <div style="display:flex;align-items:center;gap:5px"><label style="font-size:11px;font-weight:700;color:var(--text3)">DE</label><input type="date" id="ck-stats-ini" style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)"></div>
+                <div style="display:flex;align-items:center;gap:5px"><label style="font-size:11px;font-weight:700;color:var(--text3)">ATÉ</label><input type="date" id="ck-stats-fim" style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)"></div>
+                <button class="btn btn-primary btn-sm" onclick="carregarStatsPedidosDesk('ck')">Filtrar</button>
+                <button class="btn btn-outline btn-sm" onclick="carregarStatsPedidosDesk('ck')">🔄</button>
+              </div>
+            </div>
+            <div class="tabela-wrap">
+              <table>
+                <thead><tr><th>PEDIDO</th><th>ITENS</th><th>FORMA DE ENVIO</th><th>CLIENTE</th></tr></thead>
+                <tbody id="ck-stats-tbody">
+                  <tr><td colspan="4" style="text-align:center;padding:32px;color:var(--text3)">Selecione um período e filtre</td></tr>
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
@@ -1710,31 +1760,6 @@
         </div>
       </div>
 
-      <!-- ABA 5 — ESTATÍSTICAS REPOSITOR MOBILE -->
-      <div class="rep-tab-page" id="rep-tab-stats">
-        <div class="rep-scroll">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-            <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">📈 Meu Desempenho</div>
-            <button onclick="carregarStatsRepMobile()" style="padding:6px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer;color:var(--text)">🔄</button>
-          </div>
-          <div class="stat-nome" id="m-rep-nome" style="font-size:16px;font-weight:700;margin-bottom:14px;color:var(--text)">—</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
-            <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:14px;padding:16px;text-align:center">
-              <div style="font-size:32px;font-weight:800;color:#16a34a" id="m-rep-hoje">0</div>
-              <div style="font-size:10px;color:#16a34a;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-top:4px">Repostos hoje</div>
-            </div>
-            <div style="background:#eff6ff;border:1px solid #93c5fd;border-radius:14px;padding:16px;text-align:center">
-              <div style="font-size:32px;font-weight:800;color:#2563eb" id="m-rep-mes">0</div>
-              <div style="font-size:10px;color:#2563eb;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-top:4px">No mês</div>
-            </div>
-          </div>
-          <div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:14px;padding:16px;text-align:center;margin-bottom:10px">
-            <div style="font-size:42px;font-weight:800;color:#dc2626" id="m-rep-pendentes">0</div>
-            <div style="font-size:10px;color:#dc2626;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-top:4px">Pendentes agora</div>
-          </div>
-          <div id="rep-stats-content" style="margin-top:4px"></div>
-        </div>
-      </div>
 
     </div><!-- /rep-mobile-root -->
 
@@ -1890,20 +1915,6 @@
 
 
 
-      <!-- ABA 4 — STATS -->
-      <div class="sep-tab-page" id="sep-tab-stats">
-        <div class="sep-scroll">
-          <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text);margin-bottom:14px">📈 Meu Desempenho</div>
-          <div class="stat-nome" id="m-stat-nome">—</div>
-          <div id="m-meus-stats"></div>
-          <div class="stats-grid">
-            <div class="stat-big azul"><div class="s-lbl">HOJE</div><div class="s-val" id="m-stat-hoje">0</div><div class="s-sub">pedidos separados</div></div>
-            <div class="stat-big verde"><div class="s-lbl">MÊS</div><div class="s-val" id="m-stat-mes">0</div><div class="s-sub">pedidos separados</div></div>
-            <div class="stat-big roxo span2"><div class="s-lbl">ANO</div><div class="s-val" id="m-stat-ano">0</div><div class="s-sub">pedidos separados no ano</div></div>
-          </div>
-          <button class="btn btn-outline" style="width:100%;margin-top:4px" onclick="carregarStatsMobile()">🔄 Atualizar</button>
-        </div>
-      </div>
 
 
 
@@ -1941,10 +1952,6 @@
     AGUARD.
     <span class="sep-tab-badge" id="stab-aguardando-badge" style="display:none">0</span>
   </button>
-  <button class="sep-tab" id="stab-stats" onclick="mudarTabSep('stats')">
-    <span class="sep-tab-ic">📈</span>
-    STATS
-  </button>
 </div>
 
 
@@ -1971,10 +1978,6 @@
     <span class="rep-tab-ic">📋</span>
     PROTOCOLO
     <span class="rep-tab-badge" id="rtab-protocolo-badge" style="display:none">0</span>
-  </button>
-  <button class="rep-tab" id="rtab-stats" onclick="mudarTabRep('stats')">
-    <span class="rep-tab-ic">📈</span>
-    STATS
   </button>
 </div>
 
@@ -2004,10 +2007,10 @@
 <script src="/js/config.js?v=6"></script>
   <script src="/js/pedidos.js?v=5"></script>
   <script src="/js/separador.js?v=6"></script>
-  <script src="/js/repositor.js?v=12"></script>
+  <script src="/js/repositor.js?v=13"></script>
   <script src="/js/checkout.js?v=3"></script>
   <script src="/js/dashboard.js?v=16"></script>
-  <script src="/js/auth.js?v=10"></script>
+  <script src="/js/auth.js?v=11"></script>
 
 
 <!-- ══ MODAL IMPORTAR ══ -->
