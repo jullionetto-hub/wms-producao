@@ -310,18 +310,15 @@
           </div>
           <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:10px;padding-top:4px">
             <!-- TURNO -->
-            <div class="fg" style="min-width:0">
-              <label style="font-size:9px;font-weight:800;letter-spacing:1px;color:var(--text3)">TURNO</label>
-              <select id="sel-fturno" onchange="filtrarPedidosTurno(this.value)"
-                style="padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-weight:700;background:var(--surface);color:var(--text);cursor:pointer;min-width:150px">
-                <option value="">Todos</option>
-                <option value="Manha">☀️ Manhã</option>
-                <option value="Tarde">🌤️ Tarde</option>
-                <option value="Noite">🌙 Noite</option>
-              </select>
-            </div>
+            <select id="sel-fturno" onchange="filtrarPedidosTurno(this.value)"
+              style="padding:5px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-weight:700;background:var(--surface);color:var(--text);cursor:pointer;min-width:148px;height:30px">
+              <option value="">Todos</option>
+              <option value="Manha">☀️ Manhã</option>
+              <option value="Tarde">🌤️ Tarde</option>
+              <option value="Noite">🌙 Noite</option>
+            </select>
             <!-- separador visual -->
-            <span style="width:1px;height:32px;background:var(--border);margin:0 4px;align-self:flex-end"></span>
+            <span style="width:1px;height:22px;background:var(--border);margin:0 2px"></span>
             <!-- TRANSPORTADORA -->
             <button onclick="filtrarPedidosTransp('')"        id="ftransp-todos"   class="btn-transp ativo">Todos</button>
             <button onclick="filtrarPedidosTransp('DRIVE')"   id="ftransp-drive"   class="btn-transp">🚗 Drive Thru</button>
@@ -1915,7 +1912,7 @@
 
 
 <script src="/js/config.js?v=7"></script>
-  <script src="/js/pedidos.js?v=9"></script>
+  <script src="/js/pedidos.js?v=10"></script>
   <script src="/js/separador.js?v=6"></script>
   <script src="/js/repositor.js?v=13"></script>
   <script src="/js/checkout.js?v=3"></script>

@@ -28,8 +28,8 @@ let _filtroTransp  = '';
 let _filtroTurno   = '';
 
 function _turnoHora(p) {
-  // Determina turno pelo horário do pedido (hora_pedido ou aguardando_desde)
-  const raw = p.hora_pedido || (p.aguardando_desde||'').split(' ')[1] || '';
+  // Usa aguardando_desde (horário real do pedido: "DD/MM/YYYY HH:MM") como fonte principal
+  const raw = ((p.aguardando_desde||'').split(' ')[1]) || p.hora_pedido || '';
   const h   = parseInt((raw||'').split(':')[0]);
   if (isNaN(h)) return 'Manha';
   if (h >= 6  && h < 14) return 'Manha';
