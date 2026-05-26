@@ -145,13 +145,21 @@ router.put('/repositor/avisos/:id/iniciar-busca', requerAuth, async (req, res) =
   try {
     const atual = await db.get('SELECT * FROM avisos_repositor WHERE id=$1', [id]);
     if (!atual) return res.status(404).json({erro:'Aviso não encontrado'});
-    // Só pode iniciar busca em itens pendentes
-    if (atual.status !== 'pendente') {
-      return res.status(409).json({erro:`Item não está pendente (status atual: ${atual.status})`});
-    }
 
     let tentativas = [];
     try { tentativas = Array.isArray(atual.tentativas) ? atual.tentativas : (atual.tentativas ? JSON.parse(atual.tentativas) : []); } catch{}
+
+    // Se status já é 'verificando' (situacao desincronizada ou app reaberto),
+    // apenas sincroniza situacao para restaurar os botões corretos no frontend
+    if (atual.status === 'verificando') {
+      await pool.query(`UPDATE avisos_repositor SET situacao='verificando' WHERE id=$1`, [id]);
+      req.app.get('io')?.emit('aviso:atualizado', { id, status: 'verificando', numero_pedido: atual.numero_pedido });
+      return res.json({ mensagem: 'Busca já em andamento!', tentativa: atual.total_tentativas || tentativas.length });
+    }
+
+    if (atual.status !== 'pendente') {
+      return res.status(409).json({erro:`Item não pode iniciar busca (status atual: ${atual.status})`});
+    }
 
     const novaNum = tentativas.length + 1;
     tentativas.push({ numero: novaNum, repositor: usuario, turno, hora_inicio: hora, hora_fim: null, resultado: null });
@@ -162,7 +170,7 @@ router.put('/repositor/avisos/:id/iniciar-busca', requerAuth, async (req, res) =
 
     await pool.query(
       `UPDATE avisos_repositor
-         SET status='verificando', hora_inicio_busca=$1,
+         SET status='verificando', situacao='verificando', hora_inicio_busca=$1,
              tentativas=$2, total_tentativas=$3,
              historico=$4, quem_pegou=$5
        WHERE id=$6`,

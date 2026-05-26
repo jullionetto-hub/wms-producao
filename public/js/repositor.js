@@ -318,7 +318,7 @@ function renderCardRepSimples(a, modo) {
             🔍 <strong>${_quemBusca}</strong> está buscando${_isUltima?' · <span style="color:#dc2626;font-weight:800">⚠️ ÚLTIMA TENTATIVA</span>':''}
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-            <button onclick="acaoRepTab(${a.id},'e_separado','${nomeLogado}','separado')"
+            <button onclick="mostrarQtdEncontrada(${a.id},'${nomeLogado}',${a.quantidade||1})"
               style="padding:12px;background:#dcfce7;border:2px solid #10b981;border-radius:10px;color:#065f46;font-weight:700;font-size:13px;cursor:pointer;touch-action:manipulation">
               ✅ Encontrei
             </button>
@@ -387,11 +387,11 @@ function renderCardRepSimples(a, modo) {
 }
 
 /* ── Ação rápida por aba ──────────────────────────────────────────── */
-async function acaoRepTab(id, acao, nomeLogado, proximaTab) {
+async function acaoRepTab(id, acao, nomeLogado, proximaTab, qtd = 0) {
   const body = {};
   if (acao === 'e_separado') {
     body.situacao = 'buscado';        body.status = 'buscado';
-    body.quem_pegou = nomeLogado;     body.qtd_encontrada = 0;
+    body.quem_pegou = nomeLogado;     body.qtd_encontrada = qtd;
   } else if (acao === 'e_nao_enc') {
     body.situacao = 'nao_encontrado'; body.status = 'nao_encontrado';
     body.quem_pegou = nomeLogado;     body.qtd_encontrada = 0;
@@ -431,6 +431,37 @@ async function acaoRepTab(id, acao, nomeLogado, proximaTab) {
       }
     } else { toast('Erro ao salvar', 'danger'); }
   } catch(e) { toast('Sem conexão', 'danger'); }
+}
+
+/* ── Modal: Quantidade encontrada ───────────────────────────────── */
+let _qtdEncId = null, _qtdEncNome = null;
+
+function mostrarQtdEncontrada(id, nomeLogado, qtdNecessaria) {
+  _qtdEncId = id; _qtdEncNome = nomeLogado;
+  const sub = document.getElementById('modal-qtd-enc-sub');
+  if (sub) sub.textContent = `Pedido precisa de ${qtdNecessaria} un.`;
+  const inp = document.getElementById('modal-qtd-enc-val');
+  if (inp) { inp.value = qtdNecessaria; inp.setAttribute('data-necessaria', qtdNecessaria); }
+  const modal = document.getElementById('modal-qtd-enc');
+  if (modal) modal.style.display = 'flex';
+  setTimeout(() => inp?.select(), 120);
+}
+
+function _cancelarQtdEnc() {
+  const modal = document.getElementById('modal-qtd-enc');
+  if (modal) modal.style.display = 'none';
+  _qtdEncId = null; _qtdEncNome = null;
+}
+
+async function _confirmarQtdEnc() {
+  const inp = document.getElementById('modal-qtd-enc-val');
+  const qtd = Math.max(1, parseInt(inp?.value) || 1);
+  const modal = document.getElementById('modal-qtd-enc');
+  if (modal) modal.style.display = 'none';
+  if (_qtdEncId !== null) {
+    await acaoRepTab(_qtdEncId, 'e_separado', _qtdEncNome, 'separado', qtd);
+  }
+  _qtdEncId = null; _qtdEncNome = null;
 }
 
 /* ── Iniciar Busca (nova tentativa) ──────────────────────────────── */
