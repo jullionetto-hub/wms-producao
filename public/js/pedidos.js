@@ -217,17 +217,19 @@ function processarArquivoFile(file) {
       for (let i = ini; i < rows.length; i++) {
         const r   = rows[i];
         const num = String(r[iNum] || '').trim();
-        if (!num) continue;
+        // Ignora linhas vazias, cabeçalhos repetidos e linhas sem dígitos no número do pedido
+        if (!num || !/\d/.test(num)) continue;
         dados.push({ numero_pedido:num, codigo:String(r[iCod]||'').trim(), descricao:String(r[iDesc]||'').trim(), quantidade:parseInt(r[iQtd])||1, endereco:String(r[iEnd]||'').trim() });
       }
       if (!dados.length) { mostrarStatus('❌ Nenhuma linha encontrada!','erro'); return; }
       pedidosImportar = dados;
-      const totalP = new Set(dadosUsar.map(d=>d.numero_pedido)).size;
-      mostrarStatus(`✅ ${dados.length} linha(s) em ${totalP} pedido(s) — clique Importar`,'sucesso');
+      const totalP   = new Set(dados.map(d=>d.numero_pedido)).size;
+      const totalQtd = dados.reduce((s,d)=>s+(d.quantidade||1),0);
+      mostrarStatus(`✅ ${dados.length} SKU(s) em ${totalP} pedido(s) — clique Importar`,'sucesso');
       document.getElementById('tbody-prev').innerHTML =
         dados.slice(0,10).map(d=>`<tr><td>${d.numero_pedido}</td><td style="color:var(--accent)">${d.codigo}</td><td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.descricao}</td><td style="color:var(--amber)">${d.endereco}</td><td style="color:var(--green)">${d.quantidade}</td></tr>`).join('') +
         (dados.length>10?`<tr><td colspan="5" style="color:var(--text3);text-align:center;padding:8px">... +${dados.length-10} linhas</td></tr>`:'');
-      document.getElementById('txt-total-import').textContent = `${totalP} pedido(s) • ${dados.length} itens`;
+      document.getElementById('txt-total-import').textContent = `${totalP} pedido(s) • ${dados.length} SKUs • ${totalQtd} itens`;
       document.getElementById('preview-importacao').style.display = 'block';
     } catch(err) { mostrarStatus(`❌ ${err.message}`,'erro'); }
   };
@@ -767,7 +769,8 @@ function processarArquivoModalFile(file) {
       for (let i = ini; i < rows.length; i++) {
         const r = rows[i];
         const num = String(r[iNum] || '').trim();
-        if (!num) continue;
+        // Ignora linhas vazias, cabeçalhos repetidos e linhas sem dígitos no número do pedido
+        if (!num || !/\d/.test(num)) continue;
         dados.push({ numero_pedido:num, codigo:String(r[iCod]||'').trim(), descricao:String(r[iDesc]||'').trim(), quantidade:parseInt(r[iQtd])||1, endereco:String(r[iEnd]||'').trim() });
       }
       let transpData = {};
@@ -852,12 +855,13 @@ function processarArquivoModalFile(file) {
       const dadosUsar = (typeof dados_final !== 'undefined') ? dados_final : dados;
       if (!dadosUsar.length) { mostrarStatusModal('❌ Nenhuma linha encontrada!','erro'); return; }
       pedidosImportarModal = dadosUsar;
-      const totalP = new Set(dadosUsar.map(d=>d.numero_pedido)).size;
-      mostrarStatusModal(`✅ ${dados.length} linha(s) em ${totalP} pedido(s)${transpSheet?' — Transportadora OK':''}`, 'sucesso');
+      const totalP    = new Set(dadosUsar.map(d=>d.numero_pedido)).size;
+      const totalQtd  = dadosUsar.reduce((s,d)=>s+(d.quantidade||1),0);
+      mostrarStatusModal(`✅ ${dadosUsar.length} SKU(s) em ${totalP} pedido(s)${transpSheet?' — Transportadora OK':''}`, 'sucesso');
       document.getElementById('modal-tbody-prev').innerHTML =
         dadosUsar.slice(0,10).map(d=>`<tr><td>${d.numero_pedido}</td><td style="color:var(--accent)">${d.codigo}</td><td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.descricao}</td><td style="color:var(--amber)">${d.endereco}</td><td style="color:var(--green)">${d.quantidade}</td></tr>`).join('') +
-        (dados.length>10?`<tr><td colspan="5" style="color:var(--text3);text-align:center;padding:8px">... +${dados.length-10} linhas</td></tr>`:'');
-      document.getElementById('modal-txt-total-import').textContent = `${totalP} pedido(s) • ${dados.length} itens${transpSheet?' • Transportadora OK':''}`;
+        (dadosUsar.length>10?`<tr><td colspan="5" style="color:var(--text3);text-align:center;padding:8px">... +${dadosUsar.length-10} linhas</td></tr>`:'');
+      document.getElementById('modal-txt-total-import').textContent = `${totalP} pedido(s) • ${dadosUsar.length} SKUs • ${totalQtd} itens${transpSheet?' • Transportadora OK':''}`;
       document.getElementById('modal-preview-importacao').style.display = 'block';
     } catch(err) { mostrarStatusModal(`❌ ${err.message}`,'erro'); }
   };
