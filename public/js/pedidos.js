@@ -34,9 +34,14 @@ function _turnoHora(p) {
 }
 
 function filtrarPedidosTurno(turno) {
-  _filtroTurno = turno;
+  _filtroTurno  = turno;
+  _filtroTransp = '';  // reseta filtro de transportadora ao trocar turno
+  document.querySelectorAll('.btn-transp').forEach(b => b.classList.remove('ativo'));
   const sel = document.getElementById('sel-fturno');
   if (sel) sel.value = turno;
+  // Recalcula badges de transportadora apenas com os pedidos do turno selecionado
+  const base = turno ? _pedidosLista.filter(p => p.turno_distribuicao === turno) : _pedidosLista;
+  _atualizarBadgesTransp(base);
   _renderTabelaPedidos();
 }
 
@@ -79,20 +84,23 @@ function filtrarPedidosTransp(tipo) {
 }
 
 function _atualizarBadgesFiltroTransp(lista) {
-  const c = (fn) => lista.filter(fn).length;
-  const t = (k)  => String(k||'').toUpperCase();
-  // Atualiza opções do select de turno com contagem individual
+  // Atualiza select de turno — sempre com a lista completa
+  const c = fn => lista.filter(fn).length;
   const sel = document.getElementById('sel-fturno');
   if (sel) {
-    const nM = c(p => p.turno_distribuicao === 'Manha');
-    const nT = c(p => p.turno_distribuicao === 'Tarde');
-    const nN = c(p => p.turno_distribuicao === 'Noite');
     sel.options[0].text = `Todos (${lista.length})`;
-    sel.options[1].text = `☀️ Manhã (${nM})`;
-    sel.options[2].text = `🌤️ Tarde (${nT})`;
-    sel.options[3].text = `🌙 Noite (${nN})`;
+    sel.options[1].text = `☀️ Manhã (${c(p => p.turno_distribuicao === 'Manha')})`;
+    sel.options[2].text = `🌤️ Tarde (${c(p => p.turno_distribuicao === 'Tarde')})`;
+    sel.options[3].text = `🌙 Noite (${c(p => p.turno_distribuicao === 'Noite')})`;
   }
-  // Botões de transportadora
+  // Botões de transportadora — também parte da lista completa no carregamento inicial
+  _atualizarBadgesTransp(lista);
+}
+
+function _atualizarBadgesTransp(lista) {
+  // Atualiza contadores de transportadora com base na lista passada (pode ser filtrada por turno)
+  const c = fn => lista.filter(fn).length;
+  const t = k  => String(k||'').toUpperCase();
   const badges = {
     'ftransp-drive':   `🚗 Drive Thru (${c(p=>t(p.transportadora).includes('DRIVE'))})`,
     'ftransp-prime':   `⭐ Prime (${c(p=>p.tem_prime)})`,
