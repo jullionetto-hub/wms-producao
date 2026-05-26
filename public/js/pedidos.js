@@ -28,13 +28,9 @@ let _filtroTransp  = '';
 let _filtroTurno   = '';
 
 function _turnoHora(p) {
-  // Usa aguardando_desde (horário real do pedido: "DD/MM/YYYY HH:MM") como fonte principal
-  const raw = ((p.aguardando_desde||'').split(' ')[1]) || p.hora_pedido || '';
-  const h   = parseInt((raw||'').split(':')[0]);
-  if (isNaN(h)) return 'Manha';
-  if (h >= 6  && h < 14) return 'Manha';
-  if (h >= 14 && h < 22) return 'Tarde';
-  return 'Noite';
+  // Usa turno_distribuicao — definido pelo supervisor na hora de distribuir
+  // Retorna null se o pedido ainda não foi distribuído com turno
+  return p.turno_distribuicao || null;
 }
 
 function filtrarPedidosTurno(turno) {
@@ -87,9 +83,9 @@ function _atualizarBadgesFiltroTransp(lista) {
   // Atualiza opções do select de turno com contagem individual
   const sel = document.getElementById('sel-fturno');
   if (sel) {
-    const nM = c(p=>_turnoHora(p)==='Manha');
-    const nT = c(p=>_turnoHora(p)==='Tarde');
-    const nN = c(p=>_turnoHora(p)==='Noite');
+    const nM = c(p => p.turno_distribuicao === 'Manha');
+    const nT = c(p => p.turno_distribuicao === 'Tarde');
+    const nN = c(p => p.turno_distribuicao === 'Noite');
     sel.options[0].text = `Todos (${lista.length})`;
     sel.options[1].text = `☀️ Manhã (${nM})`;
     sel.options[2].text = `🌤️ Tarde (${nT})`;
@@ -113,8 +109,8 @@ function _renderTabelaPedidos() {
   const tbody = document.getElementById('tbody-ped');
   if (!tbody) return;
   let lista = _pedidosLista;
-  // Filtro de turno (pelo horário do pedido)
-  if (_filtroTurno) lista = lista.filter(p => _turnoHora(p) === _filtroTurno);
+  // Filtro de turno (pelo turno_distribuicao — definido na distribuição)
+  if (_filtroTurno) lista = lista.filter(p => p.turno_distribuicao === _filtroTurno);
   // Filtro de transportadora / tipo
   if (_filtroTransp === 'PRIME') {
     lista = lista.filter(p => p.tem_prime);
