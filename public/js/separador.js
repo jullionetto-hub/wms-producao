@@ -233,6 +233,102 @@ async function carregarStatsMobile() {
 
 
 /* ══════════════════════════════════════════
+   SEPARAÇÃO DESKTOP — FILA
+══════════════════════════════════════════ */
+async function carregarFilaDesk() {
+  const lista    = document.getElementById('d-sep-fila');
+  const badgeBd  = document.getElementById('badge-fila-d');
+  const badgeTab = document.getElementById('d-sep-fila-badge');
+  if (!lista) return;
+  lista.innerHTML = '<div style="color:var(--text3);text-align:center;padding:30px;font-size:13px">Carregando fila...</div>';
+  try {
+    const [resPed, resAv] = await Promise.all([
+      fetch(`${API}/pedidos`, { credentials:'include' }),
+      fetch(`${API}/repositor/avisos?status=pendente,aguardando_abastecer`, { credentials:'include' })
+    ]);
+    const todos  = await resPed.json();
+    const avisos = resAv.ok ? await resAv.json() : [];
+
+    const pedidosComFalta = {};
+    avisos.forEach(a => {
+      const n = String(a.numero_pedido);
+      if (!pedidosComFalta[n]) pedidosComFalta[n] = 0;
+      pedidosComFalta[n]++;
+    });
+
+    const resAguard = await fetch(`${API}/repositor/avisos?status=nao_encontrado`, { credentials:'include' });
+    const aguardSup = resAguard.ok ? await resAguard.json() : [];
+    const pedidosAguardSup = {};
+    aguardSup.forEach(a => {
+      const n = String(a.numero_pedido);
+      if (!pedidosAguardSup[n]) pedidosAguardSup[n] = 0;
+      pedidosAguardSup[n]++;
+    });
+
+    const ativos     = todos.filter(p => p.status !== 'concluido');
+    const meusDsk    = separadorAtual ? ativos.filter(p => p.separador_id === separadorAtual.id) : ativos;
+    const ordenados  = [...meusDsk].sort((a,b) => (a.itens||0)-(b.itens||0));
+
+    if (badgeBd)  badgeBd.textContent  = `${ordenados.length} pedidos`;
+    if (badgeTab) { badgeTab.textContent = ordenados.length; badgeTab.style.display = ordenados.length > 0 ? 'inline' : 'none'; }
+
+    if (!ordenados.length) {
+      lista.innerHTML = '<div style="color:var(--text3);text-align:center;padding:30px;font-size:13px">Nenhum pedido na fila</div>';
+      return;
+    }
+
+    lista.innerHTML = ordenados.map(p => {
+      const transp   = String(p.transportadora||'').toUpperCase();
+      const isDrive  = transp.includes('DRIVE');
+      const qtdFalta = pedidosComFalta[String(p.numero_pedido)] || 0;
+      const temFalta = qtdFalta > 0;
+      const qtdSup   = pedidosAguardSup[String(p.numero_pedido)] || 0;
+      const temSup   = qtdSup > 0;
+
+      const bordColor = temSup ? '#ddd6fe' : temFalta ? '#FDE68A' : isDrive ? '#FECACA' : 'var(--border)';
+      const numColor  = isDrive ? '#DC2626' : temSup ? '#7c3aed' : 'var(--accent)';
+      const pillTxt   = temSup ? '⛔ supervisor' : temFalta ? '⚠️ repositor' : isDrive ? '🚗 drive thru' : 'aguardando sep';
+      const pillCls   = temSup ? 'separando' : 'pendente';
+
+      return `<div style="border:1.5px solid ${bordColor};border-radius:12px;padding:12px 14px;margin-bottom:8px;background:var(--surface)">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <div style="font-size:20px;font-weight:800;color:${numColor};font-family:'Space Mono',monospace">#${p.numero_pedido}</div>
+          <span class="pill ${pillCls}" style="font-size:10px">${pillTxt}</span>
+        </div>
+        <div style="display:flex;gap:10px;font-size:12px;color:var(--text2);flex-wrap:wrap;margin-bottom:4px">
+          <span>📦 <b style="color:var(--text)">${p.itens||0} itens</b></span>
+          ${p.cliente ? `<span>👤 ${p.cliente}</span>` : ''}
+          ${p.transportadora ? `<span>🚚 ${p.transportadora}</span>` : ''}
+        </div>
+        ${temSup ? `<div style="display:flex;align-items:center;gap:5px;background:#f5f3ff;border:1px solid #ddd6fe;border-radius:6px;padding:5px 9px;margin-bottom:5px">
+          <span style="font-size:11px;font-weight:600;color:#5b21b6">⛔ ${qtdSup} item${qtdSup>1?'s':''} aguardando supervisor</span>
+        </div>` : ''}
+        ${temFalta ? `<div style="display:flex;align-items:center;gap:5px;background:#FEF3C7;border:1px solid #FDE68A;border-radius:6px;padding:5px 9px;margin-bottom:5px">
+          <span style="font-size:11px;font-weight:600;color:#92400E">⚠️ ${qtdFalta} item${qtdFalta>1?'s':''} aguardando repositor</span>
+        </div>` : ''}
+        <button class="btn btn-primary btn-sm" style="width:100%;margin-top:8px;padding:10px;font-size:14px;font-weight:700"
+          onclick="selecionarPedidoFilaDesk('${p.numero_pedido}')">
+          📦 Iniciar Separação
+        </button>
+      </div>`;
+    }).join('');
+  } catch(e) { console.warn(e); }
+}
+
+function selecionarPedidoFilaDesk(num) {
+  caixaJaVinculada = false;
+  const caixaInp = document.getElementById('cl-input-caixa');
+  const caixaSt  = document.getElementById('cl-caixa-status');
+  if (caixaInp) caixaInp.value = '';
+  if (caixaSt)  { caixaSt.style.display = 'none'; caixaSt.innerHTML = ''; }
+  const ph = document.getElementById('cl-wrap-placeholder');
+  if (ph) ph.style.display = 'none';
+  mudarTabSepDesk('separar');
+  document.getElementById('input-pedido').value = num;
+  confirmarPedido();
+}
+
+/* ══════════════════════════════════════════
    CORE COMPARTILHADO (desktop + mobile)
 ══════════════════════════════════════════ */
 async function _confirmarPedidoCore(num, inputId, statusId, clWrapId, fnChecklist, fnFila) {

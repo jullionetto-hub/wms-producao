@@ -411,7 +411,7 @@
       <!-- SEPARAÇÃO (desktop) -->
       <div class="pagina" id="pag-separacao">
         <div class="pg-title">Separação</div>
-        <!-- Filtro de data + Contadores -->
+        <!-- Filtro de data + Contadores (mantidos para carregarContadoresSep()) -->
         <div class="card" style="margin-bottom:14px">
           <div class="card-hd">PERÍODO</div>
           <div class="date-filter-bar" style="margin-bottom:14px">
@@ -425,49 +425,109 @@
             <div class="cnt-card verde"><div class="cnt-lbl">SEPARADOS</div><div class="cnt-val" id="sep-cnt-separados">0</div><div class="cnt-sub">concluídos</div></div>
           </div>
         </div>
-        <!-- Leitura -->
-        <div class="card" style="margin-bottom:13px">
-          <div class="card-hd">🔍 LEITURA DE PEDIDO</div>
-          <div class="bip-wrap">
-            <input type="text" class="bip-input" id="input-pedido" placeholder="Bipe ou digite o número do pedido..." autocomplete="off" inputmode="numeric"/>
-            <button class="btn-bip" onclick="confirmarPedido()">▶</button>
-          </div>
-          <div class="status-pedido" id="status-atual"></div>
-          <!-- Campo caixa desktop -->
-          <div id="cl-caixa-wrap" style="display:none;margin-top:10px;padding:12px;background:#FFF8F8;border:1.5px solid #FECACA;border-radius:9px">
-            <div style="font-size:11px;font-weight:800;color:#B91C1C;letter-spacing:1px;margin-bottom:8px;display:flex;align-items:center;gap:6px"><span style="width:6px;height:6px;background:#DC2626;border-radius:50%;flex-shrink:0"></span>VINCULAR CAIXA ANTES DE INICIAR</div>
-            <div class="bip-wrap" style="margin-bottom:0">
-              <input type="text" class="bip-input" id="cl-input-caixa"
-                placeholder="Número da caixa..."
-                autocomplete="off" inputmode="numeric"
-                style="font-size:20px;letter-spacing:3px;border-color:#DC2626;border-width:2px"/>
-              <button class="btn-bip" style="background:#DC2626;color:#fff;border:none" onclick="vincularCaixaDesktop()">📦</button>
+        <!-- Tabs desktop separação -->
+        <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap" id="sep-desk-tabbar">
+          <button class="rel-turno-btn ativo" id="dstab-fila"     onclick="mudarTabSepDesk('fila')">📋 FILA <span id="d-sep-fila-badge" style="display:none;background:#2563EB;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:3px">0</span></button>
+          <button class="rel-turno-btn"       id="dstab-separar"  onclick="mudarTabSepDesk('separar')">📦 SEPARAR</button>
+          <button class="rel-turno-btn"       id="dstab-avisos"   onclick="mudarTabSepDesk('avisos')">🔔 AVISOS <span id="d-sep-avisos-badge" style="display:none;background:#f59e0b;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:3px">0</span></button>
+          <button class="rel-turno-btn"       id="dstab-aguardando" onclick="mudarTabSepDesk('aguardando')">⏸️ AGUARD. <span id="d-sep-aguard-badge" style="display:none;background:#f59e0b;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:3px">0</span></button>
+          <button class="rel-turno-btn"       id="dstab-stats"    onclick="mudarTabSepDesk('stats')">📈 STATS</button>
+        </div>
+
+        <!-- Tab FILA -->
+        <div id="d-sep-tab-fila">
+          <div class="card">
+            <div class="card-hd">📋 FILA DE PEDIDOS
+              <div style="display:flex;gap:8px;align-items:center">
+                <span id="badge-fila-d" style="font-size:11px;color:var(--text3);font-weight:600"></span>
+                <button class="btn btn-outline btn-sm" onclick="carregarFilaDesk()">🔄</button>
+              </div>
             </div>
-            <div id="cl-caixa-status" style="font-size:12px;color:var(--text3);margin-top:6px;padding:6px 10px;background:var(--surface2);border-radius:6px;display:none"></div>
-          </div>
-        </div>
-        <!-- Checklist desktop -->
-        <div class="cl-wrap" id="cl-wrap">
-          <div class="cl-header"><span id="cl-titulo">📋 PEDIDO</span><span id="cl-contador" style="color:var(--accent);font-weight:700">0/0</span></div>
-          <div class="cl-prog"><div class="cl-prog-fill" id="cl-barra" style="width:0%"></div></div>
-          <div class="cl-resumo" id="cl-resumo"></div>
-          <div class="cl-lista" id="cl-lista" style="max-height:380px"></div>
-          <div class="cl-footer">
-            <button class="btn-acao concluir" id="btn-concluir" onclick="concluirPedido()" disabled>🔒 CONCLUIR</button>
-            <button class="btn-acao aguardar" id="btn-aguardar" style="display:none">⏳ AGUARDANDO</button>
-          </div>
-        </div>
-        <!-- Fila desktop -->
-        <div class="card" style="margin-top:13px">
-          <div class="card-hd">📋 FILA DE PEDIDOS
-            <div style="display:flex;gap:8px;align-items:center">
-              <span id="badge-fila-d" style="font-size:11px;color:var(--text3);font-weight:600"></span>
-              <span id="badge-meus-d" style="font-size:11px;color:var(--accent);font-weight:700"></span>
-              <button class="btn btn-outline btn-sm" onclick="carregarFila()">🔄</button>
+            <div id="d-sep-fila" style="padding:4px 0">
+              <div style="color:var(--text3);text-align:center;padding:30px;font-size:13px">Carregando fila...</div>
             </div>
           </div>
-          <div style="max-height:220px;overflow-y:auto">
-            <div class="tabela-wrap"><table><thead><tr><th>Nº PEDIDO</th><th>ITENS</th><th>STATUS</th><th>SITUAÇÃO</th></tr></thead><tbody id="tbody-fila-d"></tbody></table></div>
+        </div>
+
+        <!-- Tab SEPARAR -->
+        <div id="d-sep-tab-separar" style="display:none">
+          <!-- Leitura -->
+          <div class="card" style="margin-bottom:13px">
+            <div class="card-hd">🔍 LEITURA DE PEDIDO</div>
+            <div class="bip-wrap">
+              <input type="text" class="bip-input" id="input-pedido" placeholder="Bipe ou digite o número do pedido..." autocomplete="off" inputmode="numeric"/>
+              <button class="btn-bip" onclick="confirmarPedido()">▶</button>
+            </div>
+            <div class="status-pedido" id="status-atual"></div>
+            <!-- Campo caixa desktop -->
+            <div id="cl-caixa-wrap" style="display:none;margin-top:10px;padding:12px;background:#FFF8F8;border:1.5px solid #FECACA;border-radius:9px">
+              <div style="font-size:11px;font-weight:800;color:#B91C1C;letter-spacing:1px;margin-bottom:8px;display:flex;align-items:center;gap:6px"><span style="width:6px;height:6px;background:#DC2626;border-radius:50%;flex-shrink:0"></span>VINCULAR CAIXA ANTES DE INICIAR</div>
+              <div class="bip-wrap" style="margin-bottom:0">
+                <input type="text" class="bip-input" id="cl-input-caixa"
+                  placeholder="Número da caixa..."
+                  autocomplete="off" inputmode="numeric"
+                  style="font-size:20px;letter-spacing:3px;border-color:#DC2626;border-width:2px"/>
+                <button class="btn-bip" style="background:#DC2626;color:#fff;border:none" onclick="vincularCaixaDesktop()">📦</button>
+              </div>
+              <div id="cl-caixa-status" style="font-size:12px;color:var(--text3);margin-top:6px;padding:6px 10px;background:var(--surface2);border-radius:6px;display:none"></div>
+            </div>
+          </div>
+          <!-- Checklist desktop -->
+          <div class="cl-wrap" id="cl-wrap">
+            <div class="cl-header"><span id="cl-titulo">📋 PEDIDO</span><span id="cl-contador" style="color:var(--accent);font-weight:700">0/0</span></div>
+            <div class="cl-prog"><div class="cl-prog-fill" id="cl-barra" style="width:0%"></div></div>
+            <div class="cl-resumo" id="cl-resumo"></div>
+            <div class="cl-lista" id="cl-lista" style="max-height:380px"></div>
+            <div class="cl-footer">
+              <button class="btn-acao concluir" id="btn-concluir" onclick="concluirPedido()" disabled>🔒 CONCLUIR</button>
+              <button class="btn-acao aguardar" id="btn-aguardar" style="display:none">⏳ AGUARDANDO</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab AVISOS -->
+        <div id="d-sep-tab-avisos" style="display:none">
+          <div class="card">
+            <div class="card-hd">🔔 AVISOS DO REPOSITOR
+              <button class="btn btn-outline btn-sm" onclick="carregarAvisosSeparador()">🔄</button>
+            </div>
+            <div id="d-sep-avisos" style="padding:4px 0">
+              <div style="color:var(--text3);text-align:center;padding:30px;font-size:13px">Carregando...</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab AGUARDANDO -->
+        <div id="d-sep-tab-aguardando" style="display:none">
+          <div class="card">
+            <div class="card-hd">⏸️ AGUARDANDO
+              <span style="font-size:11px;color:var(--text3);font-weight:600;margin-left:6px"><span id="d-sep-cnt-aguardando">0</span> itens</span>
+              <button class="btn btn-outline btn-sm" onclick="carregarAguardandoDesk()">🔄</button>
+            </div>
+            <div style="font-size:12px;color:var(--text3);margin:8px 16px 10px;padding:8px 12px;background:#fffbeb;border-radius:8px;border:1px solid #fde68a">
+              ⏸️ Pedidos com itens em <b style="color:#92400e">Protocolo</b> — aguardando definição do supervisor.
+            </div>
+            <div id="d-sep-aguardando" style="padding:4px 0">
+              <div style="color:var(--text3);text-align:center;padding:30px;font-size:13px">Carregando...</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab STATS -->
+        <div id="d-sep-tab-stats" style="display:none">
+          <div class="card">
+            <div class="card-hd">📈 MEU DESEMPENHO
+              <button class="btn btn-outline btn-sm" onclick="carregarStatsMobile()">🔄</button>
+            </div>
+            <div style="padding:12px 0">
+              <div class="stat-nome" id="m-stat-nome" style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:12px">—</div>
+              <div id="m-meus-stats"></div>
+              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:8px">
+                <div class="cnt-card azul"><div class="cnt-lbl">HOJE</div><div class="cnt-val" id="m-stat-hoje">0</div><div class="cnt-sub">separados</div></div>
+                <div class="cnt-card verde"><div class="cnt-lbl">MÊS</div><div class="cnt-val" id="m-stat-mes">0</div><div class="cnt-sub">separados</div></div>
+                <div class="cnt-card roxo"><div class="cnt-lbl">ANO</div><div class="cnt-val" id="m-stat-ano">0</div><div class="cnt-sub">separados</div></div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -897,31 +957,55 @@
 
         <!-- Contadores + Filtros -->
         <div class="card" style="margin-bottom:14px">
-          <div class="card-hd">PERÍODO &amp; BUSCA
+          <div class="card-hd">PERÍODO
             <button onclick="exportarEmbalagemExcel()" class="excel-btn">📊 Excel</button>
           </div>
           <div class="date-filter-bar" style="flex-wrap:wrap;gap:10px;margin-bottom:14px">
-            <div class="fg"><label>DE</label><input type="date" id="emb-ini" onchange="carregarEmbalagem()"/></div>
-            <div class="fg"><label>ATÉ</label><input type="date" id="emb-fim" onchange="carregarEmbalagem()"/></div>
-            <div class="fg"><label>STATUS</label>
-              <select id="emb-status" onchange="carregarEmbalagem()">
-                <option value="">Todos</option>
-                <option value="pendente">Pendentes</option>
-                <option value="embalado">Embalados</option>
-              </select>
-            </div>
-            <button onclick="carregarEmbalagem()" class="btn btn-primary btn-sm">🔄 Filtrar</button>
+            <div class="fg"><label>DE</label><input type="date" id="emb-ini" onchange="carregarEmbalagemDesk()"/></div>
+            <div class="fg"><label>ATÉ</label><input type="date" id="emb-fim" onchange="carregarEmbalagemDesk()"/></div>
+            <button onclick="carregarEmbalagemDesk()" class="btn btn-primary btn-sm">🔄 Filtrar</button>
           </div>
-          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px">
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
             <div class="cnt-card azul"><div class="cnt-lbl">TOTAL</div><div class="cnt-val" id="emb-total">0</div><div class="cnt-sub">pedidos</div></div>
             <div class="cnt-card amarelo"><div class="cnt-lbl">PENDENTES</div><div class="cnt-val" id="emb-pendentes">0</div><div class="cnt-sub">aguardando</div></div>
             <div class="cnt-card verde"><div class="cnt-lbl">EMBALADOS</div><div class="cnt-val" id="emb-embalados">0</div><div class="cnt-sub">embalados</div></div>
           </div>
-          <!-- Scan desktop -->
-          <div style="border-top:1px solid var(--border);margin-top:12px;padding-top:12px">
-            <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.5px;text-transform:uppercase;margin-bottom:8px">📦 Buscar Pedido</div>
-            <div style="display:flex;gap:10px;max-width:520px">
-              <input type="text" id="emb-desk-scan"
+        </div>
+
+        <!-- Tabs desktop embalagem -->
+        <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap" id="emb-desk-tabbar">
+          <button class="rel-turno-btn ativo" id="dembtab-fila"      onclick="mudarTabEmbDesk('fila')">📋 FILA <span id="d-emb-fila-badge" style="display:none;background:#2563EB;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:3px">0</span></button>
+          <button class="rel-turno-btn"       id="dembtab-embalar"   onclick="mudarTabEmbDesk('embalar')">📦 EMBALAR</button>
+          <button class="rel-turno-btn"       id="dembtab-embalados" onclick="mudarTabEmbDesk('embalados')">✅ EMBALADOS</button>
+        </div>
+
+        <!-- Tab FILA -->
+        <div id="d-emb-tab-fila">
+          <div class="card">
+            <div class="card-hd">📋 FILA DE EMBALAGEM
+              <div style="display:flex;gap:8px;align-items:center">
+                <div style="display:flex;gap:10px;max-width:380px">
+                  <input type="text" id="d-emb-busca"
+                    placeholder="Filtrar por número..."
+                    oninput="filtrarEmbalagemDesk()"
+                    autocomplete="off"
+                    style="flex:1;padding:6px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Space Mono',monospace;color:var(--text);background:var(--surface2);outline:none;box-sizing:border-box">
+                </div>
+                <button class="btn btn-outline btn-sm" onclick="carregarEmbalagemDesk()">🔄</button>
+              </div>
+            </div>
+            <div id="d-emb-lista" style="padding:4px 0">
+              <div style="color:var(--text3);text-align:center;padding:30px;font-size:13px">Carregando...</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab EMBALAR (scan) -->
+        <div id="d-emb-tab-embalar" style="display:none">
+          <div class="card">
+            <div class="card-hd">📦 EMBALAR — BUSCAR PEDIDO</div>
+            <div style="display:flex;gap:10px;max-width:520px;margin-bottom:14px">
+              <input type="text" id="d-emb-embalar-input"
                 placeholder="Digite ou bipe o número do pedido..."
                 onkeydown="if(event.key==='Enter')buscarEmbalagemDesk()"
                 autocomplete="off"
@@ -931,32 +1015,34 @@
                 🔍 Buscar
               </button>
             </div>
-            <div id="emb-desk-scan-resultado" style="margin-top:12px"></div>
+            <div id="d-emb-resultado">
+              <div style="text-align:center;padding:40px 20px;color:var(--text3)">
+                <div style="font-size:48px;margin-bottom:12px">📦</div>
+                <div style="font-size:14px;font-weight:700;color:var(--text2)">Selecione um pedido da Fila</div>
+                <div style="font-size:12px;margin-top:4px">ou digite o número acima</div>
+              </div>
+            </div>
           </div>
         </div>
 
-        <!-- Tabela de embalagem -->
-        <div class="card">
-          <div class="tabela-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Nº PEDIDO</th>
-                  <th>CLIENTE</th>
-                  <th>TRANSPORTADORA</th>
-                  <th>CHECKOUT</th>
-                  <th>INÍCIO EMB.</th>
-                  <th>STATUS</th>
-                  <th>EMBALADO POR</th>
-                  <th>ITENS</th>
-                  <th>AÇÃO</th>
-                </tr>
-              </thead>
-              <tbody id="tbody-embalagem">
-                <tr><td colspan="9" style="text-align:center;padding:40px;color:var(--text3)">Carregando...</td></tr>
-              </tbody>
-            </table>
+        <!-- Tab EMBALADOS -->
+        <div id="d-emb-tab-embalados" style="display:none">
+          <div class="card">
+            <div class="card-hd">✅ EMBALADOS
+              <button class="btn btn-outline btn-sm" onclick="carregarEmbalagemEmbaladesDesk()">🔄</button>
+            </div>
+            <div id="d-emb-embalados" style="padding:4px 0">
+              <div style="color:var(--text3);text-align:center;padding:30px;font-size:13px">Carregando...</div>
+            </div>
           </div>
+        </div>
+
+        <!-- Hidden legacy elements kept for compatibility with carregarEmbalagem() -->
+        <div style="display:none">
+          <tbody id="tbody-embalagem"></tbody>
+          <input id="emb-status" type="hidden" value="">
+          <div id="emb-desk-scan-resultado"></div>
+          <input id="emb-desk-scan" type="hidden" value="">
         </div>
       </div>
 
@@ -1047,7 +1133,7 @@
       <!-- CHECKOUT -->
       <div class="pagina" id="pag-checkout">
         <div class="pg-title">Checkout</div>
-        <!-- Contadores + filtro de período -->
+        <!-- Contadores + filtro de período (mantidos para carregarContadoresCk()) -->
         <div class="card" style="margin-bottom:14px">
           <div class="card-hd">PERÍODO</div>
           <div class="date-filter-bar" style="margin-bottom:14px">
@@ -1061,22 +1147,58 @@
             <div class="cnt-card verde"><div class="cnt-lbl">CHECKOUTS</div><div class="cnt-val" id="ck-cnt-checkouts">0</div><div class="cnt-sub">concluídos</div></div>
           </div>
         </div>
-        <!-- Busca por caixa -->
-        <div class="card" style="margin-bottom:16px">
-          <div class="card-hd">🔍 BUSCAR POR NÚMERO DE CAIXA</div>
-          <div class="bip-wrap" style="margin-bottom:0">
-            <input type="text" class="bip-input" id="ck-input-caixa"
-              placeholder="Digite ou bipe o número da caixa..."
-              autocomplete="off" inputmode="numeric"
-              style="font-size:20px;letter-spacing:3px"/>
-            <button class="btn-bip" onclick="buscarCaixa()">▶</button>
+        <!-- Tabs desktop checkout -->
+        <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap" id="ck-desk-tabbar">
+          <button class="rel-turno-btn ativo" id="dcktab-fila"     onclick="mudarTabCkDesk('fila')">📋 FILA <span id="d-cktab-fila-badge" style="display:none;background:#2563EB;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:3px">0</span></button>
+          <button class="rel-turno-btn"       id="dcktab-checkout" onclick="mudarTabCkDesk('checkout')">🏷️ CHECKOUT</button>
+          <button class="rel-turno-btn"       id="dcktab-feitos"   onclick="mudarTabCkDesk('feitos')">✅ FEITOS <span id="d-ck-feitos-cnt" style="display:none;background:#10b981;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:3px">0</span></button>
+        </div>
+
+        <!-- Tab FILA -->
+        <div id="d-ck-tab-fila">
+          <div class="card">
+            <div class="card-hd">📋 FILA DE CHECKOUT
+              <button class="btn btn-outline btn-sm" onclick="carregarFilaCkDesk()">🔄</button>
+            </div>
+            <div id="d-ck-fila" style="padding:4px 0">
+              <div style="color:var(--text3);text-align:center;padding:30px;font-size:13px">Carregando...</div>
+            </div>
           </div>
         </div>
-        <!-- Resultado da busca -->
-        <div id="ck-resultado" style="display:none">
-          <div class="card" style="margin-bottom:16px">
-            <div class="card-hd" id="ck-res-titulo">RESULTADO</div>
-            <div id="ck-res-conteudo"></div>
+
+        <!-- Tab CHECKOUT (scan) -->
+        <div id="d-ck-tab-checkout" style="display:none">
+          <div class="card">
+            <div class="card-hd">🔍 BUSCAR POR NÚMERO DE CAIXA</div>
+            <div class="bip-wrap" style="margin-bottom:0">
+              <input type="text" class="bip-input" id="ck-input-caixa"
+                placeholder="Digite ou bipe o número da caixa..."
+                autocomplete="off" inputmode="numeric"
+                style="font-size:20px;letter-spacing:3px"/>
+              <button class="btn-bip" onclick="buscarCaixa()">▶</button>
+            </div>
+          </div>
+          <!-- Resultado da busca -->
+          <div id="ck-resultado" style="display:none;margin-top:14px">
+            <div class="card">
+              <div class="card-hd" id="ck-res-titulo">RESULTADO</div>
+              <div id="ck-res-conteudo"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab FEITOS -->
+        <div id="d-ck-tab-feitos" style="display:none">
+          <div class="card">
+            <div class="card-hd">✅ FEITOS HOJE
+              <div style="display:flex;gap:8px;align-items:center">
+                <span id="d-ck-feitos-cnt-label" style="font-size:12px;font-weight:700;color:var(--green)">0 feitos</span>
+                <button class="btn btn-outline btn-sm" onclick="carregarFeitosCkDesk()">🔄</button>
+              </div>
+            </div>
+            <div id="d-ck-feitos" style="padding:4px 0">
+              <div style="color:var(--text3);text-align:center;padding:30px;font-size:13px">Carregando...</div>
+            </div>
           </div>
         </div>
       </div>
@@ -1869,11 +1991,11 @@
 
 <script src="/js/config.js?v=6"></script>
   <script src="/js/pedidos.js?v=5"></script>
-  <script src="/js/separador.js?v=5"></script>
+  <script src="/js/separador.js?v=6"></script>
   <script src="/js/repositor.js?v=11"></script>
-  <script src="/js/checkout.js?v=2"></script>
+  <script src="/js/checkout.js?v=3"></script>
   <script src="/js/dashboard.js?v=16"></script>
-  <script src="/js/auth.js?v=9"></script>
+  <script src="/js/auth.js?v=10"></script>
 
 
 <!-- ══ MODAL IMPORTAR ══ -->

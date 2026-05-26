@@ -359,11 +359,11 @@ function irPara(pag, el) {
   if (pag === 'dashboard')       { carregarDashboard(); mudarDashTab('operacao'); }
   if (pag === 'pedidos') { popularSelects(); var _pi=document.getElementById('filtro-ped-ini'),_pf=document.getElementById('filtro-ped-fim'); if(_pi&&!_pi.value)_pi.value=hojeLocal(); if(_pf&&!_pf.value)_pf.value=hojeLocal(); carregarPedidos(); }
   if (pag === 'cadastros')       { trocarCadastroTab('usuarios'); carregarUsuarios(); }
-  if (pag === 'separacao')       { var _si=document.getElementById('sep-ini'),_sf=document.getElementById('sep-fim'); if(_si&&!_si.value)_si.value=hojeLocal(); if(_sf&&!_sf.value)_sf.value=hojeLocal(); carregarFila(); carregarContadoresSep(); }
+  if (pag === 'separacao')       { var _si=document.getElementById('sep-ini'),_sf=document.getElementById('sep-fim'); if(_si&&!_si.value)_si.value=hojeLocal(); if(_sf&&!_sf.value)_sf.value=hojeLocal(); carregarContadoresSep(); mudarTabSepDesk('fila'); }
   if (pag === 'estatisticas')    { carregarEstatisticas(); carregarCheckoutLista(); }
   if (pag === 'reposicao')       { carregarAvisos(); verificarDuplicatas(); }
 
-  if (pag === 'checkout')        { var _ci=document.getElementById('ck-ini'),_cf=document.getElementById('ck-fim'); if(_ci&&!_ci.value)_ci.value=hojeLocal(); if(_cf&&!_cf.value)_cf.value=hojeLocal(); carregarContadoresCk(); setTimeout(()=>{ const el2=document.getElementById('ck-input-caixa'); if(el2)el2.focus(); },200); }
+  if (pag === 'checkout')        { var _ci=document.getElementById('ck-ini'),_cf=document.getElementById('ck-fim'); if(_ci&&!_ci.value)_ci.value=hojeLocal(); if(_cf&&!_cf.value)_cf.value=hojeLocal(); carregarContadoresCk(); mudarTabCkDesk('fila'); }
   if (pag === 'stats-repositor') carregarStatsRepositor();
   if (pag === 'stats-checkout')  carregarStatsCheckout();
   if (pag === 'liberacao')    { var hj=hojeLocal(); var libi=document.getElementById('lib-filtro-ini'),libf=document.getElementById('lib-filtro-fim'); if(libi&&!libi.value)libi.value=hj; if(libf&&!libf.value)libf.value=hj; carregarLiberacao(); }
@@ -372,7 +372,7 @@ function irPara(pag, el) {
   if (pag === 'auditoria')    { var hj=hojeLocal(); var ea=document.getElementById('aud-ini'); if(ea&&!ea.value)ea.value=hj; carregarAuditoria(); }
   if (pag === 'diario')       { iniciarDiario(); }
   if (pag === 'passagem')     { iniciarPassagem(); }
-  if (pag === 'embalagem')    { var _ei=document.getElementById('emb-ini'),_ef=document.getElementById('emb-fim'); if(_ei&&!_ei.value)_ei.value=hojeLocal(); if(_ef&&!_ef.value)_ef.value=hojeLocal(); carregarEmbalagem(); }
+  if (pag === 'embalagem')    { var _ei=document.getElementById('emb-ini'),_ef=document.getElementById('emb-fim'); if(_ei&&!_ei.value)_ei.value=hojeLocal(); if(_ef&&!_ef.value)_ef.value=hojeLocal(); mudarTabEmbDesk('fila'); }
   if (pag === 'protocolo')    { carregarProtocolo(); }
   if (pag === 'protocolo-rep') {
     // reusa pag-protocolo (mesmo conteúdo, papel diferente)
@@ -411,10 +411,9 @@ function iniciarPorPerfil() {
     document.getElementById('pag-separacao').classList.add('ativa');
     var _si=document.getElementById('sep-ini'),_sf=document.getElementById('sep-fim');
     if(_si&&!_si.value)_si.value=hojeLocal(); if(_sf&&!_sf.value)_sf.value=hojeLocal();
-    carregarFila();
     carregarContadoresSep();
-    setInterval(() => { carregarFila(); if(pedidoAtualId) carregarChecklist(); }, 30000);
-    setTimeout(() => { const el = document.getElementById('input-pedido'); if (el) el.focus(); }, 300);
+    mudarTabSepDesk('fila');
+    setInterval(() => { carregarFilaDesk(); if(pedidoAtualId) carregarChecklist(); }, 30000);
   }
   if (usuarioAtual.perfil === 'repositor') {
     document.getElementById('pag-reposicao').classList.add('ativa');
@@ -424,7 +423,10 @@ function iniciarPorPerfil() {
   }
   if (usuarioAtual.perfil === 'checkout') {
     document.getElementById('pag-checkout').classList.add('ativa');
-    setTimeout(() => { const el = document.getElementById('ck-input-caixa'); if(el) el.focus(); }, 300);
+    var _ci=document.getElementById('ck-ini'),_cf=document.getElementById('ck-fim');
+    if(_ci&&!_ci.value)_ci.value=hojeLocal(); if(_cf&&!_cf.value)_cf.value=hojeLocal();
+    carregarContadoresCk();
+    mudarTabCkDesk('fila');
   }
 }
 
@@ -941,35 +943,10 @@ async function carregarEmbalagem() {
   }
 }
 
-async function iniciarEmbalagemDesk(id) {
-  try {
-    const res = await fetch(`${API}/embalagem/${id}/iniciar`, { method:'PUT', credentials:'include' });
-    const r = await res.json();
-    if (!res.ok) { toast(r.erro||'Erro','erro'); return; }
-    toast(`Embalagem iniciada às ${r.hora_inicio}!`, 'sucesso');
-    carregarEmbalagem();
-    const scanVal = document.getElementById('emb-desk-scan')?.value?.trim();
-    if (scanVal) buscarEmbalagemDesk();
-  } catch(e) { toast('Erro ao iniciar','erro'); }
-}
+// iniciarEmbalagemDesk, encerrarEmbalagemDesk, buscarEmbalagemDesk are defined later in this file
+// (desktop tab versions that update d-emb-* elements)
 
-async function encerrarEmbalagemDesk(id) {
-  try {
-    const res = await fetch(`${API}/embalagem/${id}/confirmar`, { method:'PUT', credentials:'include' });
-    const r = await res.json();
-    if (!res.ok) { toast(r.erro||'Erro','erro'); return; }
-    toast('Embalagem concluída! 📦', 'sucesso');
-    const scanInput = document.getElementById('emb-desk-scan');
-    if (scanInput) scanInput.value = '';
-    const cont = document.getElementById('emb-desk-scan-resultado');
-    if (cont) cont.innerHTML = `<div style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px;color:#16a34a;font-weight:700;font-size:13px">
-      ✅ Embalagem concluída! Bipe o próximo pedido.
-    </div>`;
-    carregarEmbalagem();
-  } catch(e) { toast('Erro ao encerrar','erro'); }
-}
-
-async function buscarEmbalagemDesk() {
+async function _buscarEmbalagemDeskLegacy() {
   const num  = (document.getElementById('emb-desk-scan')?.value || '').trim();
   const cont = document.getElementById('emb-desk-scan-resultado');
   if (!num) { toast('Digite o número do pedido!','aviso'); return; }
@@ -1692,6 +1669,415 @@ async function salvarPassagem() {
     carregarHistoricoPassagens();
     verificarPassagemPendente();
   } catch(e) { console.warn(e); toast('Erro ao salvar','erro'); }
+}
+
+/* ══════════════════════════════════════════
+   EMBALAGEM DESKTOP — TABS
+══════════════════════════════════════════ */
+let _embPedidosDesk = [];
+
+function mudarTabEmbDesk(tab) {
+  ['fila','embalar','embalados'].forEach(t => {
+    const el  = document.getElementById(`d-emb-tab-${t}`);
+    const btn = document.getElementById(`dembtab-${t}`);
+    if (el)  el.style.display = t === tab ? '' : 'none';
+    if (btn) btn.classList.toggle('ativo', t === tab);
+  });
+  if (tab === 'fila')      carregarEmbalagemDesk();
+  if (tab === 'embalar')   setTimeout(() => document.getElementById('d-emb-embalar-input')?.focus(), 200);
+  if (tab === 'embalados') carregarEmbalagemEmbaladesDesk();
+}
+
+async function carregarEmbalagemDesk() {
+  const el      = document.getElementById('d-emb-lista');
+  const elTotal = document.getElementById('emb-total');
+  const elPend  = document.getElementById('emb-pendentes');
+  const elEmb   = document.getElementById('emb-embalados');
+  const badge   = document.getElementById('d-emb-fila-badge');
+  if (!el) return;
+  el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:30px;font-size:13px">Carregando...</div>';
+  try {
+    const ini = document.getElementById('emb-ini')?.value || hojeLocal();
+    const fim = document.getElementById('emb-fim')?.value || ini;
+    const res = await fetch(`${API}/embalagem?ini=${ini}&fim=${fim}&status=pendente`, { credentials:'include' });
+    const pedidos = res.ok ? await res.json() : [];
+    _embPedidosDesk = pedidos;
+    // Also fetch totals for counter
+    const resAll = await fetch(`${API}/embalagem?ini=${ini}&fim=${fim}`, { credentials:'include' });
+    const todos  = resAll.ok ? await resAll.json() : pedidos;
+    if (elTotal) elTotal.textContent = todos.length;
+    const pend = todos.filter(p => p.status_embalagem !== 'embalado').length;
+    const emb  = todos.filter(p => p.status_embalagem === 'embalado').length;
+    if (elPend) elPend.textContent = pend;
+    if (elEmb)  elEmb.textContent  = emb;
+    if (badge) { badge.textContent = pedidos.length; badge.style.display = pedidos.length ? 'inline' : 'none'; }
+    if (!pedidos.length) {
+      el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:40px;font-size:13px">✅ Nenhum pedido pendente para embalar</div>';
+      return;
+    }
+    // Render as cards (same as mobile fila)
+    const embalando = pedidos.filter(p => p.status_embalagem === 'embalando');
+    const pendentes = pedidos.filter(p => !p.status_embalagem || p.status_embalagem === 'pendente');
+    el.innerHTML = [
+      ...embalando.map(p => renderCardEmbFilaDesk(p, true)),
+      ...pendentes.map(p => renderCardEmbFilaDesk(p, false))
+    ].join('');
+  } catch(e) { if (el) el.innerHTML = '<div style="color:var(--red);text-align:center;padding:24px">Erro ao carregar</div>'; }
+}
+
+function filtrarEmbalagemDesk() {
+  const busca = (document.getElementById('d-emb-busca')?.value || '').trim().toLowerCase();
+  const el = document.getElementById('d-emb-lista');
+  if (!el || !_embPedidosDesk.length) return;
+  const filtrados = busca
+    ? _embPedidosDesk.filter(p => String(p.numero_pedido).toLowerCase().includes(busca))
+    : _embPedidosDesk;
+  if (!filtrados.length) {
+    el.innerHTML = `<div style="text-align:center;padding:30px;color:var(--text3)">Nenhum pedido encontrado para "${busca}"</div>`;
+    return;
+  }
+  const embalando = filtrados.filter(p => p.status_embalagem === 'embalando');
+  const pendentes = filtrados.filter(p => !p.status_embalagem || p.status_embalagem === 'pendente');
+  el.innerHTML = [
+    ...embalando.map(p => renderCardEmbFilaDesk(p, true)),
+    ...pendentes.map(p => renderCardEmbFilaDesk(p, false))
+  ].join('');
+}
+
+function renderCardEmbFilaDesk(p, emAndamento) {
+  const isDrive  = String(p.transportadora||'').toUpperCase().includes('DRIVE');
+  const isPrime  = p.tem_prime;
+  const bordColor = emAndamento ? '#bfdbfe' : isDrive ? '#FECACA' : isPrime ? '#ddd6fe' : 'var(--border)';
+  const numColor  = emAndamento ? '#2563eb' : isDrive ? '#DC2626' : isPrime ? '#7c3aed' : 'var(--accent)';
+  const pillTxt   = emAndamento ? '⏱ embalando' : isDrive ? '🚗 drive thru' : isPrime ? '⭐ prime' : 'aguardando emb';
+  const pillCls   = emAndamento ? 'separando' : 'pendente';
+  const btnTxt    = emAndamento ? '📦 Continuar Embalagem' : '📦 Iniciar Embalagem';
+  return `
+    <div style="border:1.5px solid ${bordColor};border-radius:12px;padding:12px 14px;margin-bottom:8px;background:var(--surface)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <div style="font-size:20px;font-weight:800;color:${numColor};font-family:'Space Mono',monospace">#${p.numero_pedido}</div>
+        <span class="pill ${pillCls}" style="font-size:10px">${pillTxt}</span>
+      </div>
+      <div style="display:flex;gap:10px;font-size:12px;color:var(--text2);flex-wrap:wrap;margin-bottom:4px">
+        <span>📦 <b style="color:var(--text)">${p.itens||0} itens</b></span>
+        ${p.cliente ? `<span>👤 ${p.cliente}</span>` : ''}
+        ${p.transportadora ? `<span>🚚 ${p.transportadora}</span>` : ''}
+      </div>
+      ${p.hora_checkout ? `<div style="font-size:11px;color:var(--text3);margin-top:2px">✓ Checkout às ${p.hora_checkout}</div>` : ''}
+      ${emAndamento && p.embalagem_iniciado_em ? `<div style="font-size:11px;color:#2563eb;margin-top:2px">⏱ Embalagem iniciada às ${p.embalagem_iniciado_em}</div>` : ''}
+      <button class="btn btn-primary btn-sm" style="width:100%;margin-top:8px;padding:10px;font-size:14px;font-weight:700"
+        onclick="selecionarPedidoEmbFilaDesk(${p.id})">
+        ${btnTxt}
+      </button>
+    </div>`;
+}
+
+function selecionarPedidoEmbFilaDesk(id) {
+  const pedido = _embPedidosDesk.find(p => p.id === id);
+  if (!pedido) return;
+  mudarTabEmbDesk('embalar');
+  const input = document.getElementById('d-emb-embalar-input');
+  if (input) input.value = pedido.numero_pedido;
+  const cont = document.getElementById('d-emb-resultado');
+  if (cont) cont.innerHTML = renderCardEmb(pedido, pedido.status_embalagem === 'embalando', 'desk');
+}
+
+async function carregarEmbalagemEmbaladesDesk() {
+  const el = document.getElementById('d-emb-embalados');
+  if (!el) return;
+  el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:30px;font-size:13px">Carregando...</div>';
+  try {
+    const ini = document.getElementById('emb-ini')?.value || hojeLocal();
+    const fim = document.getElementById('emb-fim')?.value || ini;
+    const res = await fetch(`${API}/embalagem?ini=${ini}&fim=${fim}&status=embalado`, { credentials:'include' });
+    const pedidos = res.ok ? await res.json() : [];
+    if (!pedidos.length) {
+      el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:40px;font-size:13px">📦 Nenhum pedido embalado no período</div>';
+      return;
+    }
+    const fmtDt = d => { if (!d) return '—'; const [y,m,dd] = d.split('-'); return `${dd}/${m}/${y}`; };
+    el.innerHTML = pedidos.map(p => `
+      <div style="border:1.5px solid #BBF7D0;border-radius:12px;padding:12px 14px;margin-bottom:8px;background:#F0FDF4">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <div style="font-size:20px;font-weight:800;color:var(--green);font-family:'Space Mono',monospace">#${p.numero_pedido}</div>
+          <span style="font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;background:#16a34a;color:#fff">✅ EMBALADO</span>
+        </div>
+        <div style="display:flex;gap:12px;font-size:12px;color:var(--text2);flex-wrap:wrap">
+          <span>📦 <b style="color:var(--text)">${p.itens||0} itens</b></span>
+          ${p.cliente ? `<span>👤 ${p.cliente}</span>` : ''}
+          ${p.transportadora ? `<span>🚚 ${p.transportadora}</span>` : ''}
+          ${p.embalado_por ? `<span>👷 ${p.embalado_por}</span>` : ''}
+        </div>
+        ${p.hora_checkout ? `<div style="font-size:11px;color:var(--text3);margin-top:4px">Checkout: ${p.hora_checkout}</div>` : ''}
+        ${p.embalagem_iniciado_em ? `<div style="font-size:11px;color:#16a34a;margin-top:2px">Início emb.: ${p.embalagem_iniciado_em}</div>` : ''}
+      </div>`).join('');
+  } catch(e) { if (el) el.innerHTML = '<div style="color:var(--red);text-align:center;padding:24px">Erro ao carregar</div>'; }
+}
+
+// Override buscarEmbalagemDesk to use new desktop IDs when on desktop tab
+const _buscarEmbalagemDeskOrig = typeof buscarEmbalagemDesk !== 'undefined' ? buscarEmbalagemDesk : null;
+
+async function buscarEmbalagemDesk() {
+  // Use d-emb-embalar-input if available (desktop tab), fallback to emb-desk-scan
+  const inputEl = document.getElementById('d-emb-embalar-input') || document.getElementById('emb-desk-scan');
+  const num  = (inputEl?.value || '').trim();
+  const cont = document.getElementById('d-emb-resultado') || document.getElementById('emb-desk-scan-resultado');
+  if (!num) { toast('Digite o número do pedido!','aviso'); return; }
+  if (cont) cont.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:8px">🔍 Buscando...</div>';
+  try {
+    const ini  = document.getElementById('emb-ini')?.value || hojeLocal();
+    const fim  = document.getElementById('emb-fim')?.value || ini;
+    const res  = await fetch(`${API}/embalagem?ini=${ini}&fim=${fim}`, { credentials:'include' });
+    if (!res.ok) throw new Error();
+    const pedidos = await res.json();
+    const p = pedidos.find(x => String(x.numero_pedido) === num);
+    if (!p) {
+      if (cont) cont.innerHTML = `<div style="padding:12px 16px;background:#fef2f2;border:1.5px solid #fecaca;border-radius:10px;color:#dc2626;font-weight:700;font-size:13px">
+        ❌ Pedido <b>${num}</b> não encontrado na fila de embalagem
+      </div>`;
+      return;
+    }
+    if (cont) cont.innerHTML = renderCardEmb(p, p.status_embalagem === 'embalando', 'desk');
+  } catch(e) { if (cont) cont.innerHTML = '<div style="color:#ef4444;font-size:13px;padding:8px">Erro ao buscar</div>'; }
+}
+
+// iniciarEmbalagemDesk and encerrarEmbalagemDesk are defined above (lines ~946/958)
+// They already call carregarEmbalagem() — we just need them to also refresh the desktop tab.
+// We override here as named function expressions so they still work as onclick targets.
+async function iniciarEmbalagemDesk(id) {
+  try {
+    const res = await fetch(`${API}/embalagem/${id}/iniciar`, { method:'PUT', credentials:'include' });
+    const r = await res.json();
+    if (!res.ok) { toast(r.erro||'Erro','erro'); return; }
+    toast(`Embalagem iniciada às ${r.hora_inicio}!`, 'sucesso');
+    if (document.getElementById('d-emb-tab-fila')?.style.display !== 'none') carregarEmbalagemDesk();
+    const scanVal = document.getElementById('d-emb-embalar-input')?.value?.trim();
+    if (scanVal) buscarEmbalagemDesk();
+  } catch(e) { toast('Erro ao iniciar','erro'); }
+}
+async function encerrarEmbalagemDesk(id) {
+  try {
+    const res = await fetch(`${API}/embalagem/${id}/confirmar`, { method:'PUT', credentials:'include' });
+    const r = await res.json();
+    if (!res.ok) { toast(r.erro||'Erro','erro'); return; }
+    toast('Embalagem concluída! 📦', 'sucesso');
+    const dInput = document.getElementById('d-emb-embalar-input');
+    if (dInput) dInput.value = '';
+    const dCont = document.getElementById('d-emb-resultado');
+    if (dCont) dCont.innerHTML = `<div style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px;color:#16a34a;font-weight:700;font-size:13px">
+      ✅ Embalagem concluída! Bipe o próximo pedido.
+    </div>`;
+    if (document.getElementById('d-emb-tab-fila')?.style.display !== 'none') carregarEmbalagemDesk();
+  } catch(e) { toast('Erro ao encerrar','erro'); }
+}
+
+/* ══════════════════════════════════════════
+   CHECKOUT DESKTOP — TABS
+══════════════════════════════════════════ */
+function mudarTabCkDesk(tab) {
+  ['fila','checkout','feitos'].forEach(t => {
+    const el  = document.getElementById(`d-ck-tab-${t}`);
+    const btn = document.getElementById(`dcktab-${t}`);
+    if (el)  el.style.display = t === tab ? '' : 'none';
+    if (btn) btn.classList.toggle('ativo', t === tab);
+  });
+  if (tab === 'fila')     carregarFilaCkDesk();
+  if (tab === 'checkout') setTimeout(() => document.getElementById('ck-input-caixa')?.focus(), 200);
+  if (tab === 'feitos')   carregarFeitosCkDesk();
+}
+
+async function carregarFilaCkDesk() {
+  const el    = document.getElementById('d-ck-fila');
+  const badge = document.getElementById('d-cktab-fila-badge');
+  if (!el) return;
+  el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:24px;font-size:13px">🔄 Carregando...</div>';
+  try {
+    const hoje = new Date().toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo'}).split('/').reverse().join('-');
+    const res  = await fetch(`${API}/pedidos?status=concluido&data=${hoje}`, { credentials:'include' });
+    const pedidos = res.ok ? await res.json() : [];
+    const fila = pedidos.filter(p => !p.status_embalagem || p.status_embalagem === 'nao_iniciado');
+    if (badge) { badge.textContent = fila.length; badge.style.display = fila.length > 0 ? 'inline' : 'none'; }
+    if (!fila.length) {
+      el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:32px;font-size:13px">✅ Nenhum pedido aguardando checkout</div>';
+      return;
+    }
+    el.innerHTML = fila.map(p => `
+      <div style="border:1.5px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:8px;background:var(--surface)">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <div style="font-size:20px;font-weight:800;color:var(--accent);font-family:'Space Mono',monospace">#${p.numero_pedido}</div>
+          <span class="pill pendente" style="font-size:10px">aguardando ck</span>
+        </div>
+        <div style="display:flex;gap:12px;font-size:12px;color:var(--text2)">
+          <span>📦 <b style="color:var(--text)">${p.itens||0} itens</b></span>
+          <span>👤 ${p.separador_nome||'—'}</span>
+          ${p.numero_caixa ? `<span>📦 Cx: <b style="color:var(--indigo)">${p.numero_caixa}</b></span>` : ''}
+        </div>
+        ${p.concluido_em ? `<div style="font-size:11px;color:var(--text3);margin-top:4px">✓ Sep às ${(p.concluido_em||'').substring(11,16)}</div>` : ''}
+        <button class="btn btn-primary btn-sm" style="width:100%;margin-top:8px;padding:10px"
+          onclick="mudarTabCkDesk('checkout');setTimeout(()=>{const el=document.getElementById('ck-input-caixa');if(el){el.value='${p.numero_caixa||p.numero_pedido||''}';el.focus();}},300)">
+          🏷️ Iniciar Checkout
+        </button>
+      </div>`).join('');
+  } catch(e) {
+    if (el) el.innerHTML = '<div style="color:var(--red);padding:20px;text-align:center">Erro ao carregar fila</div>';
+  }
+}
+
+async function carregarFeitosCkDesk() {
+  const el  = document.getElementById('d-ck-feitos');
+  const cnt = document.getElementById('d-ck-feitos-cnt-label');
+  if (!el) return;
+  el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:24px;font-size:13px">🔄 Carregando...</div>';
+  try {
+    const hoje = new Date().toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo'}).split('/').reverse().join('-');
+    const res  = await fetch(`${API}/checkout?status=concluido&data=${hoje}`, { credentials:'include' });
+    const rows = res.ok ? await res.json() : [];
+    if (cnt) cnt.textContent = rows.length + ' feitos';
+    if (!rows.length) {
+      el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:32px;font-size:13px">Nenhum checkout concluído hoje</div>';
+      return;
+    }
+    el.innerHTML = rows.map(r => `
+      <div style="border:1.5px solid #BBF7D0;border-radius:12px;padding:12px 14px;margin-bottom:8px;background:#F0FDF4">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <div style="font-size:20px;font-weight:800;color:var(--green);font-family:'Space Mono',monospace">#${r.numero_pedido||'—'}</div>
+          <span style="font-size:11px;color:var(--green);font-weight:700">✅ ${r.hora_checkout||'—'}</span>
+        </div>
+        <div style="display:flex;gap:12px;font-size:12px;color:var(--text2)">
+          <span>📦 <b style="color:var(--text)">${r.ped_itens||0} itens</b></span>
+          <span>👤 ${r.separador_nome_join||r.separador_nome||'—'}</span>
+          ${r.operador_nome ? `<span>🏷️ ${r.operador_nome}</span>` : ''}
+        </div>
+      </div>`).join('');
+  } catch(e) {
+    if (el) el.innerHTML = '<div style="color:var(--red);padding:20px;text-align:center">Erro ao carregar</div>';
+  }
+}
+
+/* ══════════════════════════════════════════
+   SEPARAÇÃO DESKTOP — TABS
+══════════════════════════════════════════ */
+function mudarTabSepDesk(tab) {
+  ['fila','separar','avisos','aguardando','stats'].forEach(t => {
+    const el  = document.getElementById(`d-sep-tab-${t}`);
+    const btn = document.getElementById(`dstab-${t}`);
+    if (el)  el.style.display = t === tab ? '' : 'none';
+    if (btn) btn.classList.toggle('ativo', t === tab);
+  });
+  if (tab === 'fila')       carregarFilaDesk();
+  if (tab === 'separar') {
+    setTimeout(() => document.getElementById('input-pedido')?.focus(), 200);
+    if (pedidoAtualId) renderChecklist('cl');
+  }
+  if (tab === 'avisos')     carregarAvisosSeparadorDesk();
+  if (tab === 'aguardando') carregarAguardandoDesk();
+  if (tab === 'stats')      carregarStatsMobile();
+}
+
+async function carregarAvisosSeparadorDesk() {
+  // Re-use carregarAvisosSeparador but render into desktop container too
+  // The avisos content goes in sep-avisos-lista (mobile) — we mirror to d-sep-avisos (desktop)
+  const destEl = document.getElementById('d-sep-avisos');
+  if (!destEl) { carregarAvisosSeparador(); return; }
+  if (!separadorAtual) { destEl.innerHTML = '<div style="color:var(--text3);text-align:center;padding:24px">Faça login como separador para ver avisos</div>'; return; }
+  destEl.innerHTML = '<div style="color:var(--text3);text-align:center;padding:24px">🔄 Carregando...</div>';
+  try {
+    const res   = await fetch(`${API}/repositor/avisos/separador/${separadorAtual.id}`, { credentials:'include' });
+    const avisos = await res.json();
+    const badge  = document.getElementById('d-sep-avisos-badge');
+    if (badge) { badge.textContent = avisos.length; badge.style.display = avisos.length > 0 ? 'inline' : 'none'; }
+    if (!avisos.length) {
+      destEl.innerHTML = '<div style="color:var(--text3);text-align:center;padding:40px;font-size:13px">✅ Nenhum aviso do repositor hoje</div>';
+      return;
+    }
+    destEl.innerHTML = avisos.map(a => {
+      const isSubiu  = a.status === 'subiu';
+      const isAguard = a.status === 'aguardando_abastecer';
+      const bg    = isSubiu ? '#F0FDF4' : isAguard ? '#FFFBEB' : '#EFF6FF';
+      const bord  = isSubiu ? '#BBF7D0' : isAguard ? '#FDE68A' : '#BFDBFE';
+      const icon  = isSubiu ? '⬆️' : isAguard ? '🕐' : '📦';
+      const label = isSubiu ? 'SUBIU' : isAguard ? 'AGUARD. GUARDAR' : 'ABASTECIDO';
+      const cor   = isSubiu ? 'var(--green)' : isAguard ? '#92400e' : 'var(--accent)';
+      const nomeLogado = usuarioAtual?.nome || '';
+      const btnGuardei = isAguard
+        ? `<button onclick="sepGuardeiItem(${a.id},'${nomeLogado.replace(/'/g,"\\'")}',this)"
+            style="margin-top:10px;padding:10px 18px;background:#10b981;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">
+            🏠 Guardei este item eu mesmo
+           </button>`
+        : `<button onclick="sepCienteAviso(${a.id},this)"
+            style="margin-top:10px;padding:8px 16px;background:transparent;color:var(--text3);border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">
+            ✓ Ciente
+           </button>`;
+      return `
+      <div style="background:${bg};border:2px solid ${bord};border-radius:12px;padding:14px;margin-bottom:10px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <div style="font-size:28px">${icon}</div>
+          <div>
+            <div style="font-size:12px;font-weight:800;color:${cor};letter-spacing:1px">${label}</div>
+            <div style="font-size:11px;color:var(--text3)">Pedido <b style="color:var(--text)">#${a.numero_pedido}</b> &nbsp;•&nbsp; ${a.hora_reposto||a.hora_aviso||'—'}</div>
+          </div>
+        </div>
+        <div style="font-size:15px;font-weight:800;color:var(--accent);font-family:'Space Mono',monospace">${a.codigo||'—'}</div>
+        <div style="font-size:13px;font-weight:600;color:var(--text);margin:4px 0">${a.descricao||'—'}</div>
+        <div style="font-size:12px;color:var(--text2)">📍 <b>${a.endereco||'—'}</b> &nbsp;•&nbsp; Qtde: <b>${a.qtd_encontrada||a.quantidade||1}</b></div>
+        ${a.quem_pegou ? `<div style="font-size:11px;color:var(--text3);margin-top:4px">📦 Buscado por: <b>${a.quem_pegou}</b></div>` : ''}
+        ${btnGuardei}
+      </div>`;
+    }).join('');
+  } catch(e) {
+    destEl.innerHTML = '<div style="color:var(--red);text-align:center;padding:20px">Erro ao carregar avisos</div>';
+  }
+}
+
+async function carregarAguardandoDesk() {
+  const el      = document.getElementById('d-sep-aguardando');
+  const cntEl   = document.getElementById('d-sep-cnt-aguardando');
+  const badgeEl = document.getElementById('d-sep-aguard-badge');
+  if (!el) return;
+  el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:24px">🔄 Carregando...</div>';
+  try {
+    const res = await fetch(`${API}/repositor/avisos?status=nao_encontrado,protocolo`, { credentials:'include' });
+    if (!res.ok) throw new Error();
+    const av = await res.json();
+    const meus = separadorAtual
+      ? av.filter(a => a.separador_nome === separadorAtual.nome || String(a.separador_id) === String(separadorAtual.id))
+      : av;
+    const n = meus.length;
+    if (cntEl)   cntEl.textContent = n;
+    if (badgeEl) { badgeEl.textContent = n; badgeEl.style.display = n ? 'inline' : 'none'; }
+    if (!n) {
+      el.innerHTML = '<div style="text-align:center;color:var(--text3);padding:40px;font-size:13px">Nenhum item aguardando</div>';
+      return;
+    }
+    const porPedido = {};
+    meus.forEach(a => {
+      const key = a.numero_pedido || '—';
+      if (!porPedido[key]) porPedido[key] = [];
+      porPedido[key].push(a);
+    });
+    el.innerHTML = Object.entries(porPedido).map(([ped, itens]) => {
+      const temProtocolo = itens.some(a => a.status === 'protocolo');
+      const borderColor  = temProtocolo ? '#6366f1' : '#f59e0b';
+      const bgColor      = temProtocolo ? '#f5f3ff' : '#fffbeb';
+      const labelTxt     = temProtocolo ? 'PROTOCOLO' : 'NÃO ENCONTRADO';
+      const labelColor   = temProtocolo ? '#7c3aed'   : '#d97706';
+      return `<div style="background:${bgColor};border:1px solid ${borderColor}44;border-left:3px solid ${borderColor};border-radius:10px;padding:14px;margin-bottom:10px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <span style="font-family:'Space Mono',monospace;font-size:15px;font-weight:700;color:#0f172a">Pedido #${ped}</span>
+          <span style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:12px;background:${borderColor}22;color:${labelColor};border:1px solid ${borderColor}66">${labelTxt}</span>
+        </div>
+        ${itens.map(a => `
+          <div style="background:rgba(255,255,255,.75);border:1px solid #e2e8f0;border-radius:7px;padding:10px;margin-bottom:6px">
+            <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:2px">${a.codigo||'—'}</div>
+            <div style="font-size:11px;color:#475569;margin-bottom:3px">${a.descricao||'—'}</div>
+            <div style="font-size:11px;color:#64748b">Qtd: <b>${a.quantidade||1}</b>${a.endereco?' | End: '+a.endereco:''}${a.hora_aviso?' | '+a.hora_aviso:''}</div>
+          </div>
+        `).join('')}
+      </div>`;
+    }).join('');
+  } catch(e) {
+    el.innerHTML = '<div style="text-align:center;color:var(--red);padding:24px;font-size:13px">Erro ao carregar</div>';
+  }
 }
 
 async function carregarHistoricoPassagens() {
