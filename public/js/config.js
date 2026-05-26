@@ -286,20 +286,69 @@ async function _carregarEstatisticasPage(page) {
   if (lista) lista.innerHTML = '<div style="text-align:center;padding:48px;color:var(--text3);font-size:14px">⏳ Carregando...</div>';
   try {
     const params = new URLSearchParams();
-    if (ini) params.set('data_ini', ini);
-    if (fim) params.set('data_fim', fim);
-    const res  = await fetch(`${API}/pedidos${params.toString() ? '?' + params.toString() : ''}`, { credentials: 'include' });
+
+    let url, iniField, fimField, skuField, itemField, dataField;
+
+    if (page === 'sep') {
+      // ── Separação: pedidos separados por este usuário ──────────────────────
+      if (ini) params.set('data_ini', ini);
+      if (fim) params.set('data_fim', fim);
+      if (typeof separadorAtual !== 'undefined' && separadorAtual?.id)
+        params.set('separador_id', separadorAtual.id);
+      url = `${API}/pedidos?${params}`;
+      iniField = 'iniciado_em'; fimField = 'concluido_em';
+      skuField = 'itens'; itemField = 'total_itens'; dataField = 'data_pedido';
+
+    } else if (page === 'ck') {
+      // ── Checkout: pedidos confirmados por este operador ────────────────────
+      if (ini) params.set('data_ini', ini);
+      if (fim) params.set('data_fim', fim);
+      params.set('status', 'concluido');
+      if (typeof usuarioAtual !== 'undefined' && usuarioAtual?.nome)
+        params.set('operador_nome', usuarioAtual.nome);
+      url = `${API}/checkout?${params}`;
+      iniField = '_ck_ini'; fimField = '_ck_fim';
+      skuField = 'ped_itens'; itemField = 'ped_total_itens'; dataField = 'data_checkout';
+
+    } else {
+      // ── Embalagem: pedidos embalados por este colaborador ──────────────────
+      if (ini) params.set('ini', ini);
+      if (fim) params.set('fim', fim);
+      params.set('status', 'embalado');
+      if (typeof usuarioAtual !== 'undefined' && usuarioAtual?.nome)
+        params.set('embalado_por', usuarioAtual.nome);
+      url = `${API}/embalagem?${params}`;
+      iniField = '_emb_ini'; fimField = '_emb_fim';
+      skuField = 'itens'; itemField = 'total_itens'; dataField = 'data_pedido';
+    }
+
+    const res  = await fetch(url, { credentials: 'include' });
     const data = res.ok ? await res.json() : [];
     const pedidos = Array.isArray(data) ? data : (data.dados || []);
 
-    // ── Calcular resumo ──────────────────────────────────────────────────────
+    // ── Normalizar campos de tempo por tipo de página ──────────────────────
+    pedidos.forEach(p => {
+      if (page === 'ck') {
+        // hora_criacao + hora_checkout são "HH:MM" no mesmo dia data_checkout
+        const base = p.data_checkout || '';
+        p._ck_ini = base && p.hora_criacao  ? `${base}T${p.hora_criacao}:00`  : null;
+        p._ck_fim = base && p.hora_checkout ? `${base}T${p.hora_checkout}:00` : null;
+      } else if (page === 'emb') {
+        // embalagem_iniciado_em + embalado_em são "HH:MM" com data_pedido como base
+        const base = p.data_pedido || '';
+        p._emb_ini = base && p.embalagem_iniciado_em ? `${base}T${p.embalagem_iniciado_em}:00` : null;
+        p._emb_fim = base && p.embalado_em           ? `${base}T${p.embalado_em}:00`           : null;
+      }
+    });
+
+    // ── Calcular resumo usando campos dinâmicos ──────────────────────────────
     const tempos = pedidos
-      .filter(p => p.iniciado_em && p.concluido_em)
-      .map(p => (new Date(p.concluido_em) - new Date(p.iniciado_em)) / 60000);
-    const tempoTotal = tempos.reduce((a, b) => a + b, 0);
-    const tempoMed   = tempos.length ? tempoTotal / tempos.length : 0;
-    const totalSkus  = pedidos.reduce((s, p) => s + (parseInt(p.itens)      || 0), 0);
-    const totalItens = pedidos.reduce((s, p) => s + (parseInt(p.total_itens)|| 0), 0);
+      .filter(p => p[iniField] && p[fimField])
+      .map(p => (new Date(p[fimField]) - new Date(p[iniField])) / 60000)
+      .filter(t => t > 0 && t < 1440); // ignora negativos e > 24h (dados ruins)
+    const tempoMed   = tempos.length ? tempos.reduce((a, b) => a + b, 0) / tempos.length : 0;
+    const totalSkus  = pedidos.reduce((s, p) => s + (parseInt(p[skuField])  || 0), 0);
+    const totalItens = pedidos.reduce((s, p) => s + (parseInt(p[itemField]) || 0), 0);
 
     // ── Cards de resumo ──────────────────────────────────────────────────────
     if (cards) cards.innerHTML = `
@@ -332,20 +381,23 @@ async function _carregarEstatisticasPage(page) {
 
     // ── Tabela detalhada ─────────────────────────────────────────────────────
     const linhas = pedidos.map(p => {
-      const dtIni  = p.iniciado_em  ? new Date(p.iniciado_em)  : null;
-      const dtFim  = p.concluido_em ? new Date(p.concluido_em) : null;
-      const tempo  = (dtIni && dtFim) ? _fmtTempo((dtFim - dtIni) / 60000) : '—';
+      const dtIni  = p[iniField]  ? new Date(p[iniField])  : null;
+      const dtFim  = p[fimField]  ? new Date(p[fimField])  : null;
+      const diff   = (dtIni && dtFim) ? (dtFim - dtIni) / 60000 : null;
+      const tempo  = (diff && diff > 0 && diff < 1440) ? _fmtTempo(diff) : '—';
       const hIni   = dtIni ? dtIni.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '—';
       const hFim   = dtFim ? dtFim.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '—';
-      const dtStr  = p.data_pedido || (dtIni ? dtIni.toLocaleDateString('pt-BR') : '—');
+      const dtStr  = p[dataField] || (dtIni ? dtIni.toLocaleDateString('pt-BR') : '—');
       const envio  = p.forma_envio || p.transportadora || '—';
+      const skus   = parseInt(p[skuField])  || 0;
+      const itens  = parseInt(p[itemField]) || 0;
       return `<tr>
         <td style="white-space:nowrap">${dtStr}</td>
         <td style="font-weight:700;font-family:'Space Mono',monospace;white-space:nowrap">${p.numero_pedido || '—'}</td>
         <td>${p.cliente || '—'}</td>
         <td><span style="background:var(--surface2);padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap">${envio}</span></td>
-        <td style="text-align:center;font-weight:600">${p.itens || 0}</td>
-        <td style="text-align:center;font-weight:600">${p.total_itens || 0}</td>
+        <td style="text-align:center;font-weight:600">${skus}</td>
+        <td style="text-align:center;font-weight:600">${itens}</td>
         <td style="text-align:center;font-family:'Space Mono',monospace;font-size:12px">${hIni}</td>
         <td style="text-align:center;font-family:'Space Mono',monospace;font-size:12px">${hFim}</td>
         <td style="text-align:center;font-weight:700;color:var(--accent);white-space:nowrap">${tempo}</td>

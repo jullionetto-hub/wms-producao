@@ -6,15 +6,18 @@ const { dataHoraLocal } = require('../lib/helpers');
 
 
 router.get('/checkout', requerAuth, async (req,res) => {
-  const {status,numero_caixa,data}=req.query;
+  const {status, numero_caixa, data, data_ini, data_fim, operador_nome} = req.query;
   try {
-    let sql=`SELECT c.*,p.status as ped_status,p.itens as ped_itens,p.numero_caixa as ped_caixa,p.cliente,p.transportadora,p.separador_id,s.nome as separador_nome_join FROM checkout c LEFT JOIN pedidos p ON c.pedido_id=p.id LEFT JOIN separadores s ON p.separador_id=s.id WHERE 1=1`;
-    const pr=[];
-    if (status){pr.push(status);sql+=` AND c.status=$${pr.length}`;}
-    if (numero_caixa){pr.push(numero_caixa);sql+=` AND c.numero_caixa=$${pr.length}`;}
-    if (data){pr.push(data);sql+=` AND c.data_checkout=$${pr.length}`;}
-    res.json(await db.all(sql+' ORDER BY c.id DESC LIMIT 200',pr));
-  } catch(e){res.status(500).json({erro:e.message});}
+    let sql = `SELECT c.*, p.status as ped_status, p.itens as ped_itens, p.total_itens as ped_total_itens, p.numero_caixa as ped_caixa, p.cliente, p.transportadora, p.forma_envio, p.separador_id, s.nome as separador_nome_join FROM checkout c LEFT JOIN pedidos p ON c.pedido_id=p.id LEFT JOIN separadores s ON p.separador_id=s.id WHERE 1=1`;
+    const pr = [];
+    if (status)        { pr.push(status);        sql += ` AND c.status=$${pr.length}`; }
+    if (numero_caixa)  { pr.push(numero_caixa);  sql += ` AND c.numero_caixa=$${pr.length}`; }
+    if (data)          { pr.push(data);           sql += ` AND c.data_checkout=$${pr.length}`; }
+    if (data_ini)      { pr.push(data_ini);       sql += ` AND c.data_checkout>=$${pr.length}`; }
+    if (data_fim)      { pr.push(data_fim);       sql += ` AND c.data_checkout<=$${pr.length}`; }
+    if (operador_nome) { pr.push(operador_nome);  sql += ` AND c.operador_nome=$${pr.length}`; }
+    res.json(await db.all(sql + ' ORDER BY c.id DESC LIMIT 500', pr));
+  } catch(e) { res.status(500).json({erro: e.message}); }
 });
 
 router.get('/checkout/buscar', requerAuth, async (req,res) => {

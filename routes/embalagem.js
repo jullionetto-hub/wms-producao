@@ -9,7 +9,7 @@ const { registrarAuditoria } = require('../lib/auditoria');
 router.get('/embalagem', requerAuth, async (req,res) => {
   try {
     const {data:hoje} = dataHoraLocal();
-    const {data, status, ini, fim} = req.query;
+    const {data, status, ini, fim, embalado_por} = req.query;
 
     const params = [];
 
@@ -47,6 +47,10 @@ router.get('/embalagem', requerAuth, async (req,res) => {
           AND (p.status_embalagem IS NULL OR p.status_embalagem != 'nao_iniciado')`;
     }
 
+    if (embalado_por && status !== 'pendente') {
+      params.push(embalado_por);
+      sql += ` AND p.embalado_por=$${params.length}`;
+    }
     sql += ` ORDER BY ck.hora_checkout ASC NULLS LAST, p.concluido_em ASC NULLS LAST`;
     res.json(await db.all(sql, params));
   } catch(e) { res.status(500).json({erro:e.message}); }
