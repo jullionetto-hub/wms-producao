@@ -60,20 +60,21 @@ async function carregarPedidos() {
     _filtroTransp = '';
     const selT = document.getElementById('sel-fturno'); if (selT) selT.value = '';
     document.querySelectorAll('.btn-transp').forEach(b => b.classList.remove('ativo'));
-    const t2 = document.getElementById('ftransp-todos'); if (t2) t2.classList.add('ativo');
     _atualizarBadgesFiltroTransp(ps);
     _renderTabelaPedidos();
   } catch(e) { console.warn(e); }
 }
 
 function filtrarPedidosTransp(tipo) {
-  _filtroTransp = tipo;
+  // Toggle: clicar no botão ativo desativa o filtro
+  _filtroTransp = (_filtroTransp === tipo) ? '' : tipo;
   document.querySelectorAll('.btn-transp').forEach(b => b.classList.remove('ativo'));
-  const mapa = { '':'ftransp-todos', 'DRIVE':'ftransp-drive', 'PRIME':'ftransp-prime',
+  const mapa = { 'DRIVE':'ftransp-drive', 'PRIME':'ftransp-prime',
                  'SEDEX':'ftransp-sedex', 'PAC':'ftransp-pac', 'MOTOBOY':'ftransp-motoboy' };
-  const btnId = mapa[tipo] || 'ftransp-todos';
-  const btnEl = document.getElementById(btnId);
-  if (btnEl) btnEl.classList.add('ativo');
+  if (_filtroTransp) {
+    const btnEl = document.getElementById(mapa[_filtroTransp]);
+    if (btnEl) btnEl.classList.add('ativo');
+  }
   _renderTabelaPedidos();
 }
 
@@ -93,7 +94,6 @@ function _atualizarBadgesFiltroTransp(lista) {
   }
   // Botões de transportadora
   const badges = {
-    'ftransp-todos':   `Todos (${lista.length})`,
     'ftransp-drive':   `🚗 Drive Thru (${c(p=>t(p.transportadora).includes('DRIVE'))})`,
     'ftransp-prime':   `⭐ Prime (${c(p=>p.tem_prime)})`,
     'ftransp-sedex':   `SEDEX (${c(p=>t(p.transportadora).includes('SEDEX'))})`,

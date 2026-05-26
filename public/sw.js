@@ -1,5 +1,5 @@
 /* ══ WMS Miess — Service Worker ══ */
-const CACHE_NAME = 'wms-v24';
+const CACHE_NAME = 'wms-v25';
 // Só cacheia o CSS — JS e HTML sempre vão buscar da rede
 const STATIC_ASSETS = [
   '/css/app.css',
