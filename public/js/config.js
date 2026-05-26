@@ -267,46 +267,148 @@ function exportarProtocolo() {
   a.click(); URL.revokeObjectURL(url);
 }
 
-// ── Estatísticas Separador ───────────────────────────────────────────────────
-async function carregarEstatisticasSep() {
-  const data = document.getElementById('stats-sep-data')?.value || '';
-  const q = data ? `?data=${data}` : '';
-  const d = await apiFetch(`/estatisticas/separador${q}`);
-  if (!d) return;
-  const cards = document.getElementById('stats-sep-cards');
-  if (cards) cards.innerHTML = `
-    <div class="stat-card"><div class="stat-val">${d.totais?.hoje||0}</div><div class="stat-lbl">Hoje</div></div>
-    <div class="stat-card"><div class="stat-val">${d.totais?.concluidos_hoje||0}</div><div class="stat-lbl">Concluídos</div></div>
-    <div class="stat-card"><div class="stat-val">${d.totais?.separando_hoje||0}</div><div class="stat-lbl">Em Separação</div></div>
-  `;
-  const lista = document.getElementById('stats-sep-lista');
-  if (lista) {
-    const pedidos = d.pedidos||[];
-    if (!pedidos.length) { lista.innerHTML='<div style="text-align:center;color:var(--text3);padding:24px">Nenhum pedido no período</div>'; return; }
-    lista.innerHTML = `<div style="font-weight:700;font-size:13px;margin-bottom:8px">Pedidos do Dia</div>` +
-      pedidos.map(p=>`
-        <div style="background:var(--surface);border-radius:10px;padding:12px;margin-bottom:8px;border:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
-          <div>
-            <div style="font-weight:700">#${p.numero_pedido}</div>
-            <div style="font-size:12px;color:var(--text3)">${p.cliente||'—'} | ${p.itens||0} itens</div>
-          </div>
-          <span class="pill ${p.status}">${p.status}</span>
+// ══ ESTATÍSTICAS — MINHAS ESTATÍSTICAS (SEP / CK / EMB) ══════════════════════
+
+function _fmtTempo(minutos) {
+  if (!minutos || minutos < 0) return '—';
+  const m = Math.round(minutos);
+  if (m < 60) return `${m} min`;
+  const h = Math.floor(m / 60), rm = m % 60;
+  return `${h}h ${rm.toString().padStart(2,'0')}min`;
+}
+
+async function _carregarEstatisticasPage(page) {
+  const ini   = document.getElementById(`stats-${page}-ini`)?.value || '';
+  const fim   = document.getElementById(`stats-${page}-fim`)?.value || '';
+  const cards = document.getElementById(`stats-${page}-cards`);
+  const lista = document.getElementById(`stats-${page}-lista`);
+  if (!cards && !lista) return;
+  if (lista) lista.innerHTML = '<div style="text-align:center;padding:48px;color:var(--text3);font-size:14px">⏳ Carregando...</div>';
+  try {
+    const params = new URLSearchParams();
+    if (ini) params.set('data_ini', ini);
+    if (fim) params.set('data_fim', fim);
+    const res  = await fetch(`${API}/pedidos${params.toString() ? '?' + params.toString() : ''}`, { credentials: 'include' });
+    const data = res.ok ? await res.json() : [];
+    const pedidos = Array.isArray(data) ? data : (data.dados || []);
+
+    // ── Calcular resumo ──────────────────────────────────────────────────────
+    const tempos = pedidos
+      .filter(p => p.iniciado_em && p.concluido_em)
+      .map(p => (new Date(p.concluido_em) - new Date(p.iniciado_em)) / 60000);
+    const tempoTotal = tempos.reduce((a, b) => a + b, 0);
+    const tempoMed   = tempos.length ? tempoTotal / tempos.length : 0;
+    const totalSkus  = pedidos.reduce((s, p) => s + (parseInt(p.itens)      || 0), 0);
+    const totalItens = pedidos.reduce((s, p) => s + (parseInt(p.total_itens)|| 0), 0);
+
+    // ── Cards de resumo ──────────────────────────────────────────────────────
+    if (cards) cards.innerHTML = `
+      <div class="cnt-card azul">
+        <div class="cnt-lbl">PEDIDOS</div>
+        <div class="cnt-val">${pedidos.length}</div>
+        <div class="cnt-sub">no período</div>
+      </div>
+      <div class="cnt-card verde">
+        <div class="cnt-lbl">SKUs</div>
+        <div class="cnt-val">${totalSkus}</div>
+        <div class="cnt-sub">tipos de produto</div>
+      </div>
+      <div class="cnt-card amarelo">
+        <div class="cnt-lbl">ITENS</div>
+        <div class="cnt-val">${totalItens}</div>
+        <div class="cnt-sub">quantidade total</div>
+      </div>
+      <div class="cnt-card roxo">
+        <div class="cnt-lbl">TEMPO MÉDIO</div>
+        <div class="cnt-val" style="font-size:22px;line-height:1.2">${_fmtTempo(tempoMed)}</div>
+        <div class="cnt-sub">por pedido</div>
+      </div>
+    `;
+
+    if (!pedidos.length) {
+      if (lista) lista.innerHTML = '<div style="text-align:center;color:var(--text3);padding:48px;font-size:14px">📭 Nenhum pedido encontrado no período</div>';
+      return;
+    }
+
+    // ── Tabela detalhada ─────────────────────────────────────────────────────
+    const linhas = pedidos.map(p => {
+      const dtIni  = p.iniciado_em  ? new Date(p.iniciado_em)  : null;
+      const dtFim  = p.concluido_em ? new Date(p.concluido_em) : null;
+      const tempo  = (dtIni && dtFim) ? _fmtTempo((dtFim - dtIni) / 60000) : '—';
+      const hIni   = dtIni ? dtIni.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '—';
+      const hFim   = dtFim ? dtFim.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '—';
+      const dtStr  = p.data_pedido || (dtIni ? dtIni.toLocaleDateString('pt-BR') : '—');
+      const envio  = p.forma_envio || p.transportadora || '—';
+      return `<tr>
+        <td style="white-space:nowrap">${dtStr}</td>
+        <td style="font-weight:700;font-family:'Space Mono',monospace;white-space:nowrap">${p.numero_pedido || '—'}</td>
+        <td>${p.cliente || '—'}</td>
+        <td><span style="background:var(--surface2);padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap">${envio}</span></td>
+        <td style="text-align:center;font-weight:600">${p.itens || 0}</td>
+        <td style="text-align:center;font-weight:600">${p.total_itens || 0}</td>
+        <td style="text-align:center;font-family:'Space Mono',monospace;font-size:12px">${hIni}</td>
+        <td style="text-align:center;font-family:'Space Mono',monospace;font-size:12px">${hFim}</td>
+        <td style="text-align:center;font-weight:700;color:var(--accent);white-space:nowrap">${tempo}</td>
+      </tr>`;
+    }).join('');
+
+    if (lista) lista.innerHTML = `
+      <div class="card">
+        <div class="card-hd">
+          📋 DETALHAMENTO DE PEDIDOS
+          <span style="font-size:12px;font-weight:600;color:var(--text3)">${pedidos.length} registro${pedidos.length !== 1 ? 's' : ''}</span>
         </div>
-      `).join('');
+        <div class="tabela-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>DATA</th>
+                <th>PEDIDO</th>
+                <th>CLIENTE</th>
+                <th>ENVIO</th>
+                <th style="text-align:center">SKUs</th>
+                <th style="text-align:center">ITENS</th>
+                <th style="text-align:center">INÍCIO</th>
+                <th style="text-align:center">FIM</th>
+                <th style="text-align:center">TEMPO</th>
+              </tr>
+            </thead>
+            <tbody>${linhas}</tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  } catch (e) {
+    console.error('Erro estatísticas:', e);
+    if (lista) lista.innerHTML = '<div style="text-align:center;color:var(--red);padding:32px;font-size:13px">⚠️ Erro ao carregar estatísticas</div>';
   }
 }
 
-// ── Estatísticas Checkout ────────────────────────────────────────────────────
+// ── Separador ────────────────────────────────────────────────────────────────
+async function carregarEstatisticasSep() {
+  const ini = document.getElementById('stats-sep-ini');
+  const fim = document.getElementById('stats-sep-fim');
+  if (ini && !ini.value) ini.value = hojeLocal();
+  if (fim && !fim.value) fim.value = hojeLocal();
+  await _carregarEstatisticasPage('sep');
+}
+
+// ── Checkout ─────────────────────────────────────────────────────────────────
 async function carregarEstatisticasCk() {
-  const d = await apiFetch('/estatisticas/checkout');
-  if (!d) return;
-  const cards = document.getElementById('stats-ck-cards');
-  if (cards) cards.innerHTML = `
-    <div class="stat-card"><div class="stat-val">${d.hoje_concluidos||0}</div><div class="stat-lbl">Checkouts Hoje</div></div>
-    <div class="stat-card"><div class="stat-val">${d.hoje_pendentes||0}</div><div class="stat-lbl">Pendentes Hoje</div></div>
-    <div class="stat-card"><div class="stat-val">${d.mes_concluidos||0}</div><div class="stat-lbl">No Mês</div></div>
-    <div class="stat-card"><div class="stat-val">${d.total_concluidos||0}</div><div class="stat-lbl">Total</div></div>
-  `;
+  const ini = document.getElementById('stats-ck-ini');
+  const fim = document.getElementById('stats-ck-fim');
+  if (ini && !ini.value) ini.value = hojeLocal();
+  if (fim && !fim.value) fim.value = hojeLocal();
+  await _carregarEstatisticasPage('ck');
+}
+
+// ── Embalagem ────────────────────────────────────────────────────────────────
+async function carregarEstatisticasEmb() {
+  const ini = document.getElementById('stats-emb-ini');
+  const fim = document.getElementById('stats-emb-fim');
+  if (ini && !ini.value) ini.value = hojeLocal();
+  if (fim && !fim.value) fim.value = hojeLocal();
+  await _carregarEstatisticasPage('emb');
 }
 
 // ── Seletor multi-permissão (dropdown com checkboxes) ────────────────────────

@@ -431,7 +431,6 @@
           <button class="rel-turno-btn"       id="dstab-separar"  onclick="mudarTabSepDesk('separar')">📦 SEPARAR</button>
           <button class="rel-turno-btn"       id="dstab-avisos"   onclick="mudarTabSepDesk('avisos')">🔔 AVISOS <span id="d-sep-avisos-badge" style="display:none;background:#f59e0b;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:3px">0</span></button>
           <button class="rel-turno-btn"       id="dstab-aguardando" onclick="mudarTabSepDesk('aguardando')">⏸️ AGUARD. <span id="d-sep-aguard-badge" style="display:none;background:#f59e0b;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:3px">0</span></button>
-          <button class="rel-turno-btn"       id="dstab-stats"    onclick="mudarTabSepDesk('stats')">📈 STATS</button>
         </div>
 
         <!-- Tab FILA -->
@@ -513,27 +512,6 @@
           </div>
         </div>
 
-        <!-- Tab STATS -->
-        <div id="d-sep-tab-stats" style="display:none">
-          <div class="card">
-            <div class="card-hd">📈 PEDIDOS — SEPARAÇÃO
-              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-                <div style="display:flex;align-items:center;gap:5px"><label style="font-size:11px;font-weight:700;color:var(--text3)">DE</label><input type="date" id="sep-stats-ini" style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)"></div>
-                <div style="display:flex;align-items:center;gap:5px"><label style="font-size:11px;font-weight:700;color:var(--text3)">ATÉ</label><input type="date" id="sep-stats-fim" style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)"></div>
-                <button class="btn btn-primary btn-sm" onclick="carregarStatsPedidosDesk('sep')">Filtrar</button>
-                <button class="btn btn-outline btn-sm" onclick="carregarStatsPedidosDesk('sep')">🔄</button>
-              </div>
-            </div>
-            <div class="tabela-wrap">
-              <table>
-                <thead><tr><th>PEDIDO</th><th>ITENS</th><th>FORMA DE ENVIO</th><th>CLIENTE</th></tr></thead>
-                <tbody id="sep-stats-tbody">
-                  <tr><td colspan="4" style="text-align:center;padding:32px;color:var(--text3)">Selecione um período e filtre</td></tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
       </div>
 
 
@@ -993,7 +971,6 @@
           <button class="rel-turno-btn ativo" id="dembtab-fila"      onclick="mudarTabEmbDesk('fila')">📋 FILA <span id="d-emb-fila-badge" style="display:none;background:#2563EB;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:3px">0</span></button>
           <button class="rel-turno-btn"       id="dembtab-embalar"   onclick="mudarTabEmbDesk('embalar')">📦 EMBALAR</button>
           <button class="rel-turno-btn"       id="dembtab-embalados" onclick="mudarTabEmbDesk('embalados')">✅ EMBALADOS</button>
-          <button class="rel-turno-btn"       id="dembtab-stats"     onclick="mudarTabEmbDesk('stats')">📈 STATS</button>
         </div>
 
         <!-- Tab FILA -->
@@ -1054,27 +1031,6 @@
           </div>
         </div>
 
-        <!-- Tab STATS -->
-        <div id="d-emb-tab-stats" style="display:none">
-          <div class="card">
-            <div class="card-hd">📈 PEDIDOS — EMBALAGEM
-              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-                <div style="display:flex;align-items:center;gap:5px"><label style="font-size:11px;font-weight:700;color:var(--text3)">DE</label><input type="date" id="emb-stats-ini" style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)"></div>
-                <div style="display:flex;align-items:center;gap:5px"><label style="font-size:11px;font-weight:700;color:var(--text3)">ATÉ</label><input type="date" id="emb-stats-fim" style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)"></div>
-                <button class="btn btn-primary btn-sm" onclick="carregarStatsPedidosDesk('emb')">Filtrar</button>
-                <button class="btn btn-outline btn-sm" onclick="carregarStatsPedidosDesk('emb')">🔄</button>
-              </div>
-            </div>
-            <div class="tabela-wrap">
-              <table>
-                <thead><tr><th>PEDIDO</th><th>ITENS</th><th>FORMA DE ENVIO</th><th>CLIENTE</th></tr></thead>
-                <tbody id="emb-stats-tbody">
-                  <tr><td colspan="4" style="text-align:center;padding:32px;color:var(--text3)">Selecione um período e filtre</td></tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
 
         <!-- Hidden legacy elements kept for compatibility with carregarEmbalagem() -->
         <div style="display:none">
@@ -1191,7 +1147,6 @@
           <button class="rel-turno-btn ativo" id="dcktab-fila"     onclick="mudarTabCkDesk('fila')">📋 FILA <span id="d-cktab-fila-badge" style="display:none;background:#2563EB;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:3px">0</span></button>
           <button class="rel-turno-btn"       id="dcktab-checkout" onclick="mudarTabCkDesk('checkout')">🏷️ CHECKOUT</button>
           <button class="rel-turno-btn"       id="dcktab-feitos"   onclick="mudarTabCkDesk('feitos')">✅ FEITOS <span id="d-ck-feitos-cnt" style="display:none;background:#10b981;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:3px">0</span></button>
-          <button class="rel-turno-btn"       id="dcktab-stats"    onclick="mudarTabCkDesk('stats')">📈 STATS</button>
         </div>
 
         <!-- Tab FILA -->
@@ -1242,27 +1197,6 @@
           </div>
         </div>
 
-        <!-- Tab STATS -->
-        <div id="d-ck-tab-stats" style="display:none">
-          <div class="card">
-            <div class="card-hd">📈 PEDIDOS — CHECKOUT
-              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-                <div style="display:flex;align-items:center;gap:5px"><label style="font-size:11px;font-weight:700;color:var(--text3)">DE</label><input type="date" id="ck-stats-ini" style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)"></div>
-                <div style="display:flex;align-items:center;gap:5px"><label style="font-size:11px;font-weight:700;color:var(--text3)">ATÉ</label><input type="date" id="ck-stats-fim" style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)"></div>
-                <button class="btn btn-primary btn-sm" onclick="carregarStatsPedidosDesk('ck')">Filtrar</button>
-                <button class="btn btn-outline btn-sm" onclick="carregarStatsPedidosDesk('ck')">🔄</button>
-              </div>
-            </div>
-            <div class="tabela-wrap">
-              <table>
-                <thead><tr><th>PEDIDO</th><th>ITENS</th><th>FORMA DE ENVIO</th><th>CLIENTE</th></tr></thead>
-                <tbody id="ck-stats-tbody">
-                  <tr><td colspan="4" style="text-align:center;padding:32px;color:var(--text3)">Selecione um período e filtre</td></tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
       </div>
 
 
@@ -1535,23 +1469,57 @@
 <!-- ══ ESTATÍSTICAS SEPARADOR ══ -->
 <div class="pagina" id="pag-estatisticas-sep">
   <div class="pag-header"><h2>📊 Minhas Estatísticas</h2></div>
-  <div style="padding:16px">
-    <div style="display:flex;gap:8px;align-items:center;margin-bottom:16px;flex-wrap:wrap">
-      <label style="font-size:12px;font-weight:600;color:var(--text3)">DATA:</label>
-      <input type="date" id="stats-sep-data" style="border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:13px;background:var(--surface);color:var(--text)">
-      <button class="btn btn-primary btn-sm" onclick="carregarEstatisticasSep()">Filtrar</button>
-      <button class="btn btn-outline btn-sm" onclick="document.getElementById('stats-sep-data').value='';carregarEstatisticasSep()">🔄</button>
+  <div style="padding:16px;max-width:1400px">
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-hd">📅 FILTRO DE PERÍODO
+        <button class="btn btn-outline btn-sm" onclick="carregarEstatisticasSep()">🔄</button>
+      </div>
+      <div class="date-filter-bar">
+        <div class="fg"><label>DE</label><input type="date" id="stats-sep-ini"></div>
+        <div class="fg"><label>ATÉ</label><input type="date" id="stats-sep-fim"></div>
+        <button class="btn btn-primary btn-sm" onclick="carregarEstatisticasSep()">🔍 Filtrar</button>
+      </div>
     </div>
-    <div id="stats-sep-cards" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px"></div>
+    <div id="stats-sep-cards" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px"></div>
     <div id="stats-sep-lista"></div>
   </div>
 </div>
 
 <!-- ══ ESTATÍSTICAS CHECKOUT ══ -->
 <div class="pagina" id="pag-estatisticas-ck">
-  <div class="pag-header"><h2>📊 Estatísticas Checkout</h2></div>
-  <div style="padding:16px">
-    <div id="stats-ck-cards" style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px"></div>
+  <div class="pag-header"><h2>📊 Minhas Estatísticas</h2></div>
+  <div style="padding:16px;max-width:1400px">
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-hd">📅 FILTRO DE PERÍODO
+        <button class="btn btn-outline btn-sm" onclick="carregarEstatisticasCk()">🔄</button>
+      </div>
+      <div class="date-filter-bar">
+        <div class="fg"><label>DE</label><input type="date" id="stats-ck-ini"></div>
+        <div class="fg"><label>ATÉ</label><input type="date" id="stats-ck-fim"></div>
+        <button class="btn btn-primary btn-sm" onclick="carregarEstatisticasCk()">🔍 Filtrar</button>
+      </div>
+    </div>
+    <div id="stats-ck-cards" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px"></div>
+    <div id="stats-ck-lista"></div>
+  </div>
+</div>
+
+<!-- ══ ESTATÍSTICAS EMBALAGEM ══ -->
+<div class="pagina" id="pag-estatisticas-emb">
+  <div class="pag-header"><h2>📊 Minhas Estatísticas</h2></div>
+  <div style="padding:16px;max-width:1400px">
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-hd">📅 FILTRO DE PERÍODO
+        <button class="btn btn-outline btn-sm" onclick="carregarEstatisticasEmb()">🔄</button>
+      </div>
+      <div class="date-filter-bar">
+        <div class="fg"><label>DE</label><input type="date" id="stats-emb-ini"></div>
+        <div class="fg"><label>ATÉ</label><input type="date" id="stats-emb-fim"></div>
+        <button class="btn btn-primary btn-sm" onclick="carregarEstatisticasEmb()">🔍 Filtrar</button>
+      </div>
+    </div>
+    <div id="stats-emb-cards" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px"></div>
+    <div id="stats-emb-lista"></div>
   </div>
 </div>
 
@@ -2010,7 +1978,7 @@
   <script src="/js/repositor.js?v=13"></script>
   <script src="/js/checkout.js?v=3"></script>
   <script src="/js/dashboard.js?v=16"></script>
-  <script src="/js/auth.js?v=11"></script>
+  <script src="/js/auth.js?v=12"></script>
 
 
 <!-- ══ MODAL IMPORTAR ══ -->

@@ -342,7 +342,9 @@ function montarSidebar() {
       <a class="mi" onclick="irPara('estatisticas-ck',this)"><span class="mi-ic">📈</span>Estatísticas</a>`,
     embalador: `
       <div class="mg">EMBALAGEM</div>
-      <a class="mi ativo" onclick="irPara('embalagem',this)"><span class="mi-ic">📫</span>Embalar</a>`,
+      <a class="mi ativo" onclick="irPara('embalagem',this)"><span class="mi-ic">📫</span>Embalar</a>
+      <div class="mg">ANÁLISE</div>
+      <a class="mi" onclick="irPara('estatisticas-emb',this);carregarEstatisticasEmb()"><span class="mi-ic">📊</span>Estatísticas</a>`,
   };
   sb.innerHTML = menus[usuarioAtual.perfil] || '';
 }
@@ -383,6 +385,7 @@ function irPara(pag, el) {
   }
   if (pag === 'estatisticas-sep') { carregarEstatisticasSep(); }
   if (pag === 'estatisticas-ck')  { carregarEstatisticasCk(); }
+  if (pag === 'estatisticas-emb') { carregarEstatisticasEmb(); }
   if (pag === 'passagem')         { iniciarPassagem(); }
 }
 
@@ -1677,7 +1680,7 @@ async function salvarPassagem() {
 let _embPedidosDesk = [];
 
 function mudarTabEmbDesk(tab) {
-  ['fila','embalar','embalados','stats'].forEach(t => {
+  ['fila','embalar','embalados'].forEach(t => {
     const el  = document.getElementById(`d-emb-tab-${t}`);
     const btn = document.getElementById(`dembtab-${t}`);
     if (el)  el.style.display = t === tab ? '' : 'none';
@@ -1686,13 +1689,6 @@ function mudarTabEmbDesk(tab) {
   if (tab === 'fila')      carregarEmbalagemDesk();
   if (tab === 'embalar')   setTimeout(() => document.getElementById('d-emb-embalar-input')?.focus(), 200);
   if (tab === 'embalados') carregarEmbalagemEmbaladesDesk();
-  if (tab === 'stats') {
-    const ini = document.getElementById('emb-stats-ini');
-    const fim = document.getElementById('emb-stats-fim');
-    if (ini && !ini.value) ini.value = hojeLocal();
-    if (fim && !fim.value) fim.value = hojeLocal();
-    carregarStatsPedidosDesk('emb');
-  }
 }
 
 async function carregarEmbalagemDesk() {
@@ -1882,7 +1878,7 @@ async function encerrarEmbalagemDesk(id) {
    CHECKOUT DESKTOP — TABS
 ══════════════════════════════════════════ */
 function mudarTabCkDesk(tab) {
-  ['fila','checkout','feitos','stats'].forEach(t => {
+  ['fila','checkout','feitos'].forEach(t => {
     const el  = document.getElementById(`d-ck-tab-${t}`);
     const btn = document.getElementById(`dcktab-${t}`);
     if (el)  el.style.display = t === tab ? '' : 'none';
@@ -1891,13 +1887,6 @@ function mudarTabCkDesk(tab) {
   if (tab === 'fila')     carregarFilaCkDesk();
   if (tab === 'checkout') setTimeout(() => document.getElementById('ck-input-caixa')?.focus(), 200);
   if (tab === 'feitos')   carregarFeitosCkDesk();
-  if (tab === 'stats') {
-    const ini = document.getElementById('ck-stats-ini');
-    const fim = document.getElementById('ck-stats-fim');
-    if (ini && !ini.value) ini.value = hojeLocal();
-    if (fim && !fim.value) fim.value = hojeLocal();
-    carregarStatsPedidosDesk('ck');
-  }
 }
 
 async function carregarFilaCkDesk() {
@@ -2005,7 +1994,7 @@ async function carregarStatsPedidosDesk(page) {
    SEPARAÇÃO DESKTOP — TABS
 ══════════════════════════════════════════ */
 function mudarTabSepDesk(tab) {
-  ['fila','separar','avisos','aguardando','stats'].forEach(t => {
+  ['fila','separar','avisos','aguardando'].forEach(t => {
     const el  = document.getElementById(`d-sep-tab-${t}`);
     const btn = document.getElementById(`dstab-${t}`);
     if (el)  el.style.display = t === tab ? '' : 'none';
@@ -2018,13 +2007,6 @@ function mudarTabSepDesk(tab) {
   }
   if (tab === 'avisos')     carregarAvisosSeparadorDesk();
   if (tab === 'aguardando') carregarAguardandoDesk();
-  if (tab === 'stats') {
-    const ini = document.getElementById('sep-stats-ini');
-    const fim = document.getElementById('sep-stats-fim');
-    if (ini && !ini.value) ini.value = hojeLocal();
-    if (fim && !fim.value) fim.value = hojeLocal();
-    carregarStatsPedidosDesk('sep');
-  }
 }
 
 async function carregarAvisosSeparadorDesk() {
