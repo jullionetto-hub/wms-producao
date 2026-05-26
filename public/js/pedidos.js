@@ -39,11 +39,8 @@ function _turnoHora(p) {
 
 function filtrarPedidosTurno(turno) {
   _filtroTurno = turno;
-  document.querySelectorAll('#fturno-todos,#fturno-manha,#fturno-tarde,#fturno-noite')
-    .forEach(b => b.classList.remove('ativo'));
-  const mapa = { '':'fturno-todos', 'Manha':'fturno-manha', 'Tarde':'fturno-tarde', 'Noite':'fturno-noite' };
-  const el = document.getElementById(mapa[turno] || 'fturno-todos');
-  if (el) el.classList.add('ativo');
+  const sel = document.getElementById('sel-fturno');
+  if (sel) sel.value = turno;
   _renderTabelaPedidos();
 }
 
@@ -65,8 +62,8 @@ async function carregarPedidos() {
     _pedidosLista = ps;
     _filtroTurno  = '';
     _filtroTransp = '';
+    const selT = document.getElementById('sel-fturno'); if (selT) selT.value = '';
     document.querySelectorAll('.btn-transp').forEach(b => b.classList.remove('ativo'));
-    const t1 = document.getElementById('fturno-todos');  if (t1) t1.classList.add('ativo');
     const t2 = document.getElementById('ftransp-todos'); if (t2) t2.classList.add('ativo');
     _atualizarBadgesFiltroTransp(ps);
     _renderTabelaPedidos();
@@ -86,20 +83,26 @@ function filtrarPedidosTransp(tipo) {
 
 function _atualizarBadgesFiltroTransp(lista) {
   const c = (fn) => lista.filter(fn).length;
-  const transp = (k) => String(k||'').toUpperCase();
+  const t = (k)  => String(k||'').toUpperCase();
+  // Atualiza opções do select de turno com contagem individual
+  const sel = document.getElementById('sel-fturno');
+  if (sel) {
+    const nM = c(p=>_turnoHora(p)==='Manha');
+    const nT = c(p=>_turnoHora(p)==='Tarde');
+    const nN = c(p=>_turnoHora(p)==='Noite');
+    sel.options[0].text = `Todos (${lista.length})`;
+    sel.options[1].text = `☀️ Manhã (${nM})`;
+    sel.options[2].text = `🌤️ Tarde (${nT})`;
+    sel.options[3].text = `🌙 Noite (${nN})`;
+  }
+  // Botões de transportadora
   const badges = {
-    // turno
-    'fturno-todos':    `Todos (${lista.length})`,
-    'fturno-manha':    `☀️ Manhã (${c(p=>_turnoHora(p)==='Manha')})`,
-    'fturno-tarde':    `🌤️ Tarde (${c(p=>_turnoHora(p)==='Tarde')})`,
-    'fturno-noite':    `🌙 Noite (${c(p=>_turnoHora(p)==='Noite')})`,
-    // transportadora
     'ftransp-todos':   `Todos (${lista.length})`,
-    'ftransp-drive':   `🚗 Drive Thru (${c(p=>transp(p.transportadora).includes('DRIVE'))})`,
+    'ftransp-drive':   `🚗 Drive Thru (${c(p=>t(p.transportadora).includes('DRIVE'))})`,
     'ftransp-prime':   `⭐ Prime (${c(p=>p.tem_prime)})`,
-    'ftransp-sedex':   `SEDEX (${c(p=>transp(p.transportadora).includes('SEDEX'))})`,
-    'ftransp-pac':     `PAC (${c(p=>transp(p.transportadora).includes('PAC'))})`,
-    'ftransp-motoboy': `MOTOBOY (${c(p=>transp(p.transportadora).includes('MOTOBOY'))})`,
+    'ftransp-sedex':   `SEDEX (${c(p=>t(p.transportadora).includes('SEDEX'))})`,
+    'ftransp-pac':     `PAC (${c(p=>t(p.transportadora).includes('PAC'))})`,
+    'ftransp-motoboy': `MOTOBOY (${c(p=>t(p.transportadora).includes('MOTOBOY'))})`,
   };
   Object.entries(badges).forEach(([id, txt]) => {
     const el = document.getElementById(id); if (el) el.textContent = txt;
