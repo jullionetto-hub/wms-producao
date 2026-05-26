@@ -56,6 +56,9 @@ app.use(corsMiddleware);
 app.use(extraHeaders);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
+// JS e HTML sempre buscados frescos — só CSS é cacheado pelo SW
+app.use('/js',  (_req, res, next) => { res.set('Cache-Control', 'no-cache, must-revalidate'); next(); });
+app.use('/css', (_req, res, next) => { res.set('Cache-Control', 'public, max-age=86400');      next(); });
 app.use(express.static(path.join(__dirname, 'public'), { etag: true, lastModified: true }));
 app.use(sessionMiddleware);
 
