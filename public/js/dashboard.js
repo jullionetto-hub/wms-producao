@@ -1266,10 +1266,11 @@ async function carregarPerformanceDetalhe(ini, fim, filtPerfil, filtColab) {
         const linhas = colab.pedidos.map(p => {
           const tempo = p.tempo_checkout_min !== null
             ? `<span style="color:${p.tempo_checkout_min<=5?'var(--green)':p.tempo_checkout_min<=15?'var(--amber)':'var(--red)'};font-weight:700">${_horasStr(p.tempo_checkout_min)}</span>`
-            : '—';
+            : '<span style="color:var(--text3)">—</span>';
           return `<tr>
             <td style="font-weight:700">${p.numero_pedido||'—'}</td>
             <td style="color:var(--text2)">${fmtData(p.data_pedido)||'—'}</td>
+            <td style="color:var(--text3);font-size:12px">${p.hora_fila||'—'}</td>
             <td style="color:var(--text2)">${p.hora_abertura||'—'}</td>
             <td style="color:var(--text2)">${p.hora_confirmacao||'—'}</td>
             <td>${tempo}</td>
@@ -1281,21 +1282,28 @@ async function carregarPerformanceDetalhe(ini, fim, filtPerfil, filtColab) {
           <div class="tabela-wrap">
             <table>
               <thead><tr>
-                <th>Nº PEDIDO</th><th>DATA</th><th>ABERTURA</th><th>CONFIRMAÇÃO</th>
-                <th>⏱ TEMPO</th><th>ITENS</th><th>PRODUTOS</th>
+                <th>Nº PEDIDO</th><th>DATA</th>
+                <th title="Hora em que o pedido ficou disponível para checkout">📥 ENTRADA FILA</th>
+                <th>🔓 ABERTURA</th><th>✅ CONFIRMAÇÃO</th>
+                <th>⏱ T. REAL</th><th>ITENS</th><th>PRODUTOS</th>
               </tr></thead>
               <tbody>${linhas}</tbody>
             </table>
           </div>`;
       } else if (isEmb) {
         const linhas = colab.pedidos.map(p => {
-          const horario = p.embalado_em ? p.embalado_em.slice(0,5) : '—';
+          const tempo = p.tempo_embalagem_min !== null
+            ? `<span style="color:${p.tempo_embalagem_min<=5?'var(--green)':p.tempo_embalagem_min<=15?'var(--amber)':'var(--red)'};font-weight:700">${_horasStr(p.tempo_embalagem_min)}</span>`
+            : '<span style="color:var(--text3)">—</span>';
           return `<tr>
             <td style="font-weight:700">${p.numero_pedido||'—'}</td>
             <td style="color:var(--text2)">${fmtData(p.data_pedido)||'—'}</td>
-            <td style="color:var(--text2)">${horario}</td>
-            <td style="color:var(--text2)">${p.cliente||'—'}</td>
-            <td style="color:var(--text2)">${p.transportadora||'—'}</td>
+            <td style="color:var(--text3);font-size:12px">${p.hora_fila||'—'}</td>
+            <td style="color:var(--text2)">${p.embalagem_inicio||'—'}</td>
+            <td style="color:var(--text2)">${p.embalado_em||'—'}</td>
+            <td>${tempo}</td>
+            <td style="color:var(--text2);font-size:12px;max-width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.cliente||'—'}</td>
+            <td style="color:var(--text2);font-size:12px">${p.transportadora||'—'}</td>
             <td style="font-weight:700;color:#8B5CF6">${p.total_itens||0}</td>
             <td style="font-weight:700;color:var(--text2)">${p.qtd_produtos||0}</td>
           </tr>`;
@@ -1304,8 +1312,10 @@ async function carregarPerformanceDetalhe(ini, fim, filtPerfil, filtColab) {
           <div class="tabela-wrap">
             <table>
               <thead><tr>
-                <th>Nº PEDIDO</th><th>DATA</th><th>HORÁRIO</th><th>CLIENTE</th>
-                <th>TRANSP.</th><th>ITENS</th><th>PRODUTOS</th>
+                <th>Nº PEDIDO</th><th>DATA</th>
+                <th title="Hora em que o checkout foi concluído e o pedido entrou para embalagem">📥 ENTRADA FILA</th>
+                <th>🔓 INÍCIO</th><th>✅ FIM</th>
+                <th>⏱ T. REAL</th><th>CLIENTE</th><th>TRANSP.</th><th>ITENS</th><th>PRODUTOS</th>
               </tr></thead>
               <tbody>${linhas}</tbody>
             </table>
@@ -1397,23 +1407,25 @@ function exportarPerformanceExcel() {
     if (sepRows.length > 1) XLSX.utils.book_append_sheet(wb, mkSheet(sepRows), 'Separação');
 
     /* ── Aba Checkout ── */
-    const ckRows = [['COLABORADOR','DATA','Nº PEDIDO','ABERTURA','CONFIRMAÇÃO','T. CHECKOUT']];
+    const ckRows = [['COLABORADOR','DATA','Nº PEDIDO','ENTRADA FILA','ABERTURA','CONFIRMAÇÃO','T. REAL','ITENS','PRODUTOS']];
     (_performanceDetalheDados || []).filter(c => c.perfil === 'checkout').forEach(c => {
       c.pedidos.forEach(p => {
         const tempo = p.tempo_checkout_min !== null ? _horasStr(p.tempo_checkout_min) : '—';
         ckRows.push([c.nome, mkDate(p.data_pedido), p.numero_pedido||'—',
-          p.hora_abertura||'—', p.hora_confirmacao||'—', tempo]);
+          p.hora_fila||'—', p.hora_abertura||'—', p.hora_confirmacao||'—', tempo,
+          p.total_itens||0, p.qtd_produtos||0]);
       });
     });
     if (ckRows.length > 1) XLSX.utils.book_append_sheet(wb, mkSheet(ckRows), 'Checkout');
 
     /* ── Aba Embalagem ── */
-    const embRows = [['COLABORADOR','DATA','Nº PEDIDO','EMBALADO ÀS','ITENS','CLIENTE','TRANSPORTADORA']];
+    const embRows = [['COLABORADOR','DATA','Nº PEDIDO','ENTRADA FILA','INÍCIO','FIM','T. REAL','ITENS','PRODUTOS','CLIENTE','TRANSPORTADORA']];
     (_performanceDetalheDados || []).filter(c => c.perfil === 'embalador').forEach(c => {
       c.pedidos.forEach(p => {
-        const hora = p.embalado_em ? p.embalado_em.slice(0,5) : '—';
+        const tempo = p.tempo_embalagem_min !== null ? _horasStr(p.tempo_embalagem_min) : '—';
         embRows.push([c.nome, mkDate(p.data_pedido), p.numero_pedido||'—',
-          hora, p.total_itens||0, p.cliente||'—', p.transportadora||'—']);
+          p.hora_fila||'—', p.embalagem_inicio||'—', p.embalado_em||'—', tempo,
+          p.total_itens||0, p.qtd_produtos||0, p.cliente||'—', p.transportadora||'—']);
       });
     });
     if (embRows.length > 1) XLSX.utils.book_append_sheet(wb, mkSheet(embRows), 'Embalagem');

@@ -704,6 +704,7 @@ router.get('/stats/performance/detalhe', requerAuth, requerPerfil('supervisor'),
       const ckList = await db.all(`
         SELECT c.operador_nome, c.numero_pedido, c.data_checkout,
           c.hora_criacao, c.hora_checkout,
+          NULLIF(p.concluido_em,'') AS sep_concluido_em,
           p.itens AS qtd_produtos,
           (SELECT COALESCE(SUM(ip.quantidade), p.itens) FROM itens_pedido ip WHERE ip.pedido_id=p.id) AS total_itens,
           CASE WHEN c.hora_criacao IS NOT NULL AND c.hora_criacao!=''
@@ -722,11 +723,16 @@ router.get('/stats/performance/detalhe', requerAuth, requerPerfil('supervisor'),
       ckList.forEach(c => {
         const key = `${c.operador_nome}:checkout`;
         if (!resultado[key]) resultado[key] = { nome: c.operador_nome, perfil: 'checkout', pedidos: [] };
+        // Extrair hora da separação concluída (ex: "2026-05-26T07:29" → "07:29")
+        const sepHora = c.sep_concluido_em
+          ? (c.sep_concluido_em.includes('T') ? c.sep_concluido_em.split('T')[1].slice(0,5) : c.sep_concluido_em.slice(0,5))
+          : null;
         resultado[key].pedidos.push({
           numero_pedido:      c.numero_pedido,
           data_pedido:        c.data_checkout,
-          hora_abertura:      c.hora_criacao,
-          hora_confirmacao:   c.hora_checkout,
+          hora_fila:          sepHora,
+          hora_abertura:      c.hora_criacao  ? c.hora_criacao.slice(0,5)  : null,
+          hora_confirmacao:   c.hora_checkout ? c.hora_checkout.slice(0,5) : null,
           tempo_checkout_min: c.tempo_checkout_min !== null ? parseInt(c.tempo_checkout_min) : null,
           total_itens:        parseInt(c.total_itens) || 0,
           qtd_produtos:       parseInt(c.qtd_produtos) || 0,
@@ -742,11 +748,20 @@ router.get('/stats/performance/detalhe', requerAuth, requerPerfil('supervisor'),
 
       const embList = await db.all(`
         SELECT e.embalado_por, e.numero_pedido, e.data_embalagem, e.embalado_em,
+               e.embalagem_inicio,
                e.cliente, e.transportadora,
+               ck.hora_checkout AS ck_hora_checkout,
                p.itens AS qtd_produtos,
-               (SELECT COALESCE(SUM(ip.quantidade), p.itens) FROM itens_pedido ip WHERE ip.pedido_id=p.id) AS total_itens
+               (SELECT COALESCE(SUM(ip.quantidade), p.itens) FROM itens_pedido ip WHERE ip.pedido_id=p.id) AS total_itens,
+               CASE WHEN e.embalagem_inicio IS NOT NULL AND e.embalagem_inicio!=''
+                         AND e.embalado_em IS NOT NULL AND e.embalado_em!=''
+                 THEN GREATEST(0,
+                   ROUND(EXTRACT(EPOCH FROM (e.embalado_em::time - e.embalagem_inicio::time))/60.0)::int
+                 )
+                 ELSE NULL END AS tempo_embalagem_min
         FROM embalagem e
         LEFT JOIN pedidos p ON e.pedido_id = p.id
+        LEFT JOIN checkout ck ON ck.pedido_id = e.pedido_id AND ck.status = 'concluido'
         WHERE ${w}
         ORDER BY e.embalado_por, e.data_embalagem, e.embalado_em
         LIMIT 3000`, params);
@@ -755,13 +770,16 @@ router.get('/stats/performance/detalhe', requerAuth, requerPerfil('supervisor'),
         const key = `${e.embalado_por}:embalador`;
         if (!resultado[key]) resultado[key] = { nome: e.embalado_por, perfil: 'embalador', pedidos: [] };
         resultado[key].pedidos.push({
-          numero_pedido:  e.numero_pedido,
-          data_pedido:    e.data_embalagem,
-          embalado_em:    e.embalado_em,
-          cliente:        e.cliente || '—',
-          transportadora: e.transportadora || '—',
-          total_itens:    parseInt(e.total_itens) || parseInt(e.qtd_produtos) || 0,
-          qtd_produtos:   parseInt(e.qtd_produtos) || 0,
+          numero_pedido:       e.numero_pedido,
+          data_pedido:         e.data_embalagem,
+          hora_fila:           e.ck_hora_checkout  ? e.ck_hora_checkout.slice(0,5)  : null,
+          embalagem_inicio:    e.embalagem_inicio  ? e.embalagem_inicio.slice(0,5)  : null,
+          embalado_em:         e.embalado_em       ? e.embalado_em.slice(0,5)       : null,
+          tempo_embalagem_min: e.tempo_embalagem_min !== null ? parseInt(e.tempo_embalagem_min) : null,
+          cliente:             e.cliente || '—',
+          transportadora:      e.transportadora || '—',
+          total_itens:         parseInt(e.total_itens) || parseInt(e.qtd_produtos) || 0,
+          qtd_produtos:        parseInt(e.qtd_produtos) || 0,
         });
       });
     }
