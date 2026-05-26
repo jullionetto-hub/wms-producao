@@ -135,8 +135,8 @@ async function _atualizarBadgesRep() {
       el.style.display = n ? 'inline-flex' : 'none';
     };
     const cnt = (sits) => av.filter(a => sits.includes(a.situacao||a.status)).length;
-    const nSeparar   = cnt(['pendente']);
-    const nSeparado  = cnt(['verificando','buscado','separado','aguardando_abastecer']);
+    const nSeparar   = cnt(['pendente','verificando']);
+    const nSeparado  = cnt(['buscado','separado','aguardando_abastecer']);
     const nSubiu     = cnt(['subiu']);
     const nProtocolo = cnt(['nao_encontrado']);
     // Mobile badges
@@ -169,7 +169,7 @@ async function carregarRepSeparar(silent=false) {
   const elD = document.getElementById('d-rep-lista-separar');
   if (!el && !elD) return;
   try {
-    const res = await fetch(`${API}/repositor/avisos?status=pendente`, { credentials:'include' });
+    const res = await fetch(`${API}/repositor/avisos?status=pendente,verificando`, { credentials:'include' });
     if (!res.ok) throw new Error();
     const av = await res.json();
     const n = av.length;
@@ -196,7 +196,7 @@ async function carregarRepSeparado(silent=false) {
   const elD = document.getElementById('d-rep-lista-separado');
   if (!el && !elD) return;
   try {
-    const res = await fetch(`${API}/repositor/avisos?status=verificando,buscado,separado,aguardando_abastecer`, { credentials:'include' });
+    const res = await fetch(`${API}/repositor/avisos?status=buscado,separado,aguardando_abastecer`, { credentials:'include' });
     if (!res.ok) throw new Error();
     const av = await res.json();
     const n = av.length;
@@ -285,19 +285,63 @@ function renderCardRepSimples(a, modo) {
     ? `<span style="background:${isDrive?'#fee2e2':'var(--surface2)'};color:${isDrive?'#dc2626':'var(--text2)'};border:1px solid ${isDrive?'#fca5a5':'var(--border)'};font-size:10px;font-weight:700;padding:2px 9px;border-radius:20px">${isDrive?'🚗':'📦'} ${envio}</span>`
     : '';
 
+  // ── Parse tentativas ────────────────────────────────────────────────
+  let _tentArr = [];
+  try { _tentArr = Array.isArray(a.tentativas) ? a.tentativas : (a.tentativas ? JSON.parse(a.tentativas) : []); } catch{}
+  const _totalTent = a.total_tentativas || 0;
+
+  // ── Badge de tentativas (aparece no topo do card quando há tentativas prévias) ──
+  const _tentLabelMap = ['', '2ª tentativa', '2ª tentativa', 'ÚLTIMA tentativa'];
+  const _tentBadge = _totalTent > 0 && sit === 'pendente'
+    ? `<span style="background:${_totalTent >= 2?'#fef2f2':'#eff6ff'};color:${_totalTent >= 2?'#dc2626':'#1d4ed8'};border:1px solid ${_totalTent >= 2?'#fca5a5':'#bfdbfe'};font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;white-space:nowrap">${_totalTent >= 2?'⚠️ ÚLTIMA tentativa':'🔄 '+_tentLabelMap[_totalTent]||'🔄 2ª tentativa'}</span>`
+    : '';
+
+  // ── Histórico compacto de tentativas anteriores ──────────────────────
+  const _prevFailed = _tentArr.filter(t => t.resultado === 'nao_encontrado');
+  const _histTentHtml = _prevFailed.length
+    ? `<div style="margin-top:5px;padding:6px 9px;background:#fff1f2;border-radius:7px;border:1px solid #fecaca">
+        <div style="font-size:9px;font-weight:700;color:#be123c;letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px">Tentativas anteriores</div>
+        ${_prevFailed.map(t => `<div style="font-size:10px;color:#9f1239;margin-bottom:2px">❌ ${t.turno||'?'} · <strong>${t.repositor||'?'}</strong> · ${t.hora_inicio||'?'}${t.hora_fim?' → '+t.hora_fim:''}</div>`).join('')}
+      </div>`
+    : '';
+
   let botoes = '';
   if (modo === 'separar') {
-    botoes = `
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:12px 14px;border-top:1px solid var(--border)">
-        <button onclick="acaoRepTab(${a.id},'e_separado','${nomeLogado}','separado')"
-          style="padding:12px;background:#eff6ff;border:2px solid #3b82f6;border-radius:10px;color:#1d4ed8;font-weight:700;font-size:13px;cursor:pointer;touch-action:manipulation">
-          📦 Separado
-        </button>
-        <button onclick="acaoRepTab(${a.id},'e_nao_enc','${nomeLogado}','protocolo')"
-          style="padding:12px;background:#fee2e2;border:2px solid #ef4444;border-radius:10px;color:#dc2626;font-weight:700;font-size:13px;cursor:pointer;touch-action:manipulation">
-          ❌ Não enc.
-        </button>
-      </div>`;
+    if (sit === 'verificando') {
+      // ── Card em busca ativa — mostrar Encontrei / Não encontrei ──────
+      const _ultimaTent  = _tentArr[_tentArr.length - 1] || {};
+      const _quemBusca   = _ultimaTent.repositor || a.quem_pegou || '?';
+      const _isUltima    = _totalTent >= 3;
+      botoes = `
+        <div style="padding:10px 14px 12px;border-top:1px solid var(--border)">
+          <div style="background:${_isUltima?'#fef2f2':'#eff6ff'};border:1px solid ${_isUltima?'#fca5a5':'#bfdbfe'};border-radius:8px;padding:8px 11px;margin-bottom:9px;font-size:11px;color:${_isUltima?'#9f1239':'#1e40af'}">
+            🔍 <strong>${_quemBusca}</strong> está buscando${_isUltima?' · <span style="color:#dc2626;font-weight:800">⚠️ ÚLTIMA TENTATIVA</span>':''}
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <button onclick="acaoRepTab(${a.id},'e_separado','${nomeLogado}','separado')"
+              style="padding:12px;background:#dcfce7;border:2px solid #10b981;border-radius:10px;color:#065f46;font-weight:700;font-size:13px;cursor:pointer;touch-action:manipulation">
+              ✅ Encontrei
+            </button>
+            <button onclick="acaoRepTab(${a.id},'e_nao_enc','${nomeLogado}','_smart')"
+              style="padding:12px;background:#fee2e2;border:2px solid #ef4444;border-radius:10px;color:#dc2626;font-weight:700;font-size:13px;cursor:pointer;touch-action:manipulation">
+              ❌ Não encontrei
+            </button>
+          </div>
+        </div>`;
+    } else {
+      // ── Card pendente — mostrar Iniciar Busca ─────────────────────────
+      const _labels = ['1ª tentativa', '2ª tentativa', 'ÚLTIMA tentativa'];
+      const _tentLabel = _labels[Math.min(_totalTent, 2)];
+      const _isUltima  = _totalTent >= 2;
+      botoes = `
+        <div style="padding:12px 14px;border-top:1px solid var(--border)">
+          <button onclick="iniciarBuscaRep(${a.id},'${nomeLogado}')"
+            style="width:100%;padding:13px 14px;background:${_isUltima?'#fef2f2':'#eff6ff'};border:2px solid ${_isUltima?'#ef4444':'#3b82f6'};border-radius:10px;color:${_isUltima?'#dc2626':'#1d4ed8'};font-weight:700;font-size:13px;cursor:pointer;touch-action:manipulation;display:flex;align-items:center;justify-content:center;gap:8px">
+            🔍 Iniciar Busca <span style="font-size:11px;opacity:.8;font-weight:600">${_tentLabel}</span>
+          </button>
+          ${_histTentHtml}
+        </div>`;
+    }
   } else if (modo === 'separado') {
     botoes = `
       <div style="padding:12px 14px;border-top:1px solid var(--border)">
@@ -333,6 +377,7 @@ function renderCardRepSimples(a, modo) {
           <span style="background:#fee2e2;border-radius:8px;padding:3px 9px;font-size:11px;font-weight:800;color:#dc2626">${qtd} un</span>
           ${envioBdg}
           ${a.endereco?`<span style="background:var(--surface2);border-radius:8px;padding:3px 9px;font-size:10px;color:var(--text3)">📍 ${a.endereco}</span>`:''}
+          ${_tentBadge}
         </div>
         ${a.quem_pegou && modo !== 'separar' ? `<div style="margin-top:6px;font-size:11px;color:var(--text3)">📦 <strong style="color:var(--text2)">${a.quem_pegou}</strong></div>` : ''}
         ${a.hora_aviso?`<div style="margin-top:4px;font-size:10px;color:var(--text3)">🕐 ${a.hora_aviso}${a.data_aviso?' · '+a.data_aviso:''}</div>`:''}
@@ -364,15 +409,175 @@ async function acaoRepTab(id, acao, nomeLogado, proximaTab) {
       body: JSON.stringify(body)
     });
     if (res.ok) {
-      toast('Salvo!', 'success');
-      if (proximaTab === 'done') { carregarRepSubiu(); _atualizarBadgesRep(); }
-      else if (proximaTab) {
-        mudarTabRep(proximaTab);
-        mudarTabRepDesk(proximaTab);
-        _atualizarBadgesRep();
+      const data = await res.json().catch(() => ({}));
+      // _smart: backend decide se volta pra fila ou vai pro protocolo
+      if (proximaTab === '_smart') {
+        const finalStatus = data?.stFinal || 'nao_encontrado';
+        if (finalStatus === 'pendente') {
+          toast('Voltou para a fila — próximo turno vai buscar.', 'success');
+          carregarRepSeparar(); _atualizarBadgesRep();
+        } else {
+          toast('3ª tentativa — item enviado para protocolo.', 'success');
+          mudarTabRep('protocolo'); mudarTabRepDesk('protocolo'); _atualizarBadgesRep();
+        }
+      } else {
+        toast('Salvo!', 'success');
+        if (proximaTab === 'done') { carregarRepSubiu(); _atualizarBadgesRep(); }
+        else if (proximaTab) {
+          mudarTabRep(proximaTab);
+          mudarTabRepDesk(proximaTab);
+          _atualizarBadgesRep();
+        }
       }
     } else { toast('Erro ao salvar', 'danger'); }
   } catch(e) { toast('Sem conexão', 'danger'); }
+}
+
+/* ── Iniciar Busca (nova tentativa) ──────────────────────────────── */
+async function iniciarBuscaRep(id, nomeLogado) {
+  try {
+    const res = await fetch(`${API}/repositor/avisos/${id}/iniciar-busca`, {
+      credentials:'include', method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ repositor_nome: nomeLogado })
+    });
+    if (res.ok) {
+      const data = await res.json().catch(() => ({}));
+      toast(`Busca iniciada! (tentativa ${data.tentativa||'?'})`, 'success');
+      carregarRepSeparar();
+      _atualizarBadgesRep();
+    } else { toast('Erro ao iniciar busca', 'danger'); }
+  } catch(e) { toast('Sem conexão', 'danger'); }
+}
+
+/* ── Exportar Excel de Tentativas (análise estratégica) ─────────── */
+async function exportarTentativasExcel() {
+  try {
+    const sIni = document.getElementById('rep-stats-ini')?.value || '';
+    const sFim = document.getElementById('rep-stats-fim')?.value || '';
+    const sParams = new URLSearchParams();
+    if (sIni) sParams.set('data_ini', sIni);
+    if (sFim)  sParams.set('data_fim', sFim);
+    const res = await fetch(`${API}/repositor/avisos${sParams.toString()?'?'+sParams.toString():''}`, { credentials:'include' });
+    const avisos = res.ok ? await res.json() : [];
+
+    // Filtra apenas itens com pelo menos 1 tentativa registrada
+    const comTent = avisos.filter(a => {
+      try {
+        const t = Array.isArray(a.tentativas) ? a.tentativas : JSON.parse(a.tentativas||'[]');
+        return t.length > 0;
+      } catch{ return false; }
+    });
+
+    if (!comTent.length) { toast('Nenhum item com tentativas registradas no período', 'danger'); return; }
+
+    const fmtData = d => { const m=String(d||'').match(/^(\d{4})-(\d{2})-(\d{2})$/); return m?`${m[3]}/${m[2]}/${m[1]}`:d||''; };
+    const calcMin = (t1, t2) => {
+      if (!t1 || !t2) return '';
+      try {
+        const [h1,m1] = t1.split(':').map(Number);
+        const [h2,m2] = t2.split(':').map(Number);
+        let mins = (h2*60+m2) - (h1*60+m1);
+        if (mins < 0) mins += 1440; // cruzou meia-noite
+        return mins;
+      } catch{ return ''; }
+    };
+
+    const wb = XLSX.utils.book_new();
+
+    /* ── Aba 1: Timeline por item ──────────────────────────────────── */
+    const timelineRows = [[
+      'DATA','CÓDIGO','PRODUTO','PEDIDO','SEPARADOR','HORA AVISO',
+      'T1 REPOSITOR','T1 TURNO','T1 INÍCIO','T1 FIM','T1 MIN','T1 RESULTADO',
+      'T2 REPOSITOR','T2 TURNO','T2 INÍCIO','T2 FIM','T2 MIN','T2 RESULTADO',
+      'T3 REPOSITOR','T3 TURNO','T3 INÍCIO','T3 FIM','T3 MIN','T3 RESULTADO',
+      'HORA PROTOCOLO','STATUS FINAL','ESPERA TOTAL (min)'
+    ]];
+
+    comTent.forEach(a => {
+      const t = (() => { try { return Array.isArray(a.tentativas) ? a.tentativas : JSON.parse(a.tentativas||'[]'); } catch{ return []; } })();
+      const t1=t[0]||{}, t2=t[1]||{}, t3=t[2]||{};
+      const espera = calcMin(a.hora_aviso, a.hora_protocolo||a.hora_reposto);
+      timelineRows.push([
+        fmtData(a.data_aviso), a.codigo||'', a.descricao||'', a.numero_pedido||'', a.separador_nome||'', a.hora_aviso||'',
+        t1.repositor||'', t1.turno||'', t1.hora_inicio||'', t1.hora_fim||'', t1.hora_inicio&&t1.hora_fim?calcMin(t1.hora_inicio,t1.hora_fim):'', t1.resultado||'',
+        t2.repositor||'', t2.turno||'', t2.hora_inicio||'', t2.hora_fim||'', t2.hora_inicio&&t2.hora_fim?calcMin(t2.hora_inicio,t2.hora_fim):'', t2.resultado||'',
+        t3.repositor||'', t3.turno||'', t3.hora_inicio||'', t3.hora_fim||'', t3.hora_inicio&&t3.hora_fim?calcMin(t3.hora_inicio,t3.hora_fim):'', t3.resultado||'',
+        a.hora_protocolo||'', a.situacao||a.status||'', typeof espera==='number'?espera:''
+      ]);
+    });
+
+    const wsTimeline = XLSX.utils.aoa_to_sheet(timelineRows);
+    wsTimeline['!cols'] = [
+      {wch:12},{wch:18},{wch:35},{wch:12},{wch:22},{wch:9},
+      {wch:22},{wch:8},{wch:8},{wch:8},{wch:8},{wch:14},
+      {wch:22},{wch:8},{wch:8},{wch:8},{wch:8},{wch:14},
+      {wch:22},{wch:8},{wch:8},{wch:8},{wch:8},{wch:14},
+      {wch:10},{wch:16},{wch:18}
+    ];
+    XLSX.utils.book_append_sheet(wb, wsTimeline, 'Timeline Tentativas');
+
+    /* ── Aba 2: Por Turno ──────────────────────────────────────────── */
+    const turnoStats = {};
+    comTent.forEach(a => {
+      const t = (() => { try { return Array.isArray(a.tentativas) ? a.tentativas : JSON.parse(a.tentativas||'[]'); } catch{ return []; } })();
+      t.forEach(tent => {
+        const trn = tent.turno || 'Desconhecido';
+        if (!turnoStats[trn]) turnoStats[trn] = {tentativas:0,encontrados:0,nao_enc:0,total_min:0,cnt_tempo:0};
+        turnoStats[trn].tentativas++;
+        if (tent.resultado==='encontrado')    turnoStats[trn].encontrados++;
+        if (tent.resultado==='nao_encontrado') turnoStats[trn].nao_enc++;
+        if (tent.hora_inicio && tent.hora_fim) {
+          const m = calcMin(tent.hora_inicio, tent.hora_fim);
+          if (typeof m==='number' && m>=0) { turnoStats[trn].total_min+=m; turnoStats[trn].cnt_tempo++; }
+        }
+      });
+    });
+    const turnoRows = [['TURNO','TOTAL TENTATIVAS','ENCONTRADOS','NÃO ENCONTRADO','TAXA SUCESSO (%)','TEMPO MÉDIO BUSCA (min)']];
+    ['Manha','Tarde','Noite','Desconhecido'].forEach(trn => {
+      const s = turnoStats[trn];
+      if (!s) return;
+      const taxa = s.tentativas>0 ? Math.round((s.encontrados/s.tentativas)*100) : 0;
+      const media = s.cnt_tempo>0 ? Math.round(s.total_min/s.cnt_tempo) : '';
+      turnoRows.push([trn, s.tentativas, s.encontrados, s.nao_enc, taxa, media]);
+    });
+    const wsTurno = XLSX.utils.aoa_to_sheet(turnoRows);
+    wsTurno['!cols'] = [{wch:14},{wch:18},{wch:14},{wch:18},{wch:18},{wch:22}];
+    XLSX.utils.book_append_sheet(wb, wsTurno, 'Por Turno');
+
+    /* ── Aba 3: Por Repositor ────────────────────────────────────── */
+    const repStats = {};
+    comTent.forEach(a => {
+      const t = (() => { try { return Array.isArray(a.tentativas) ? a.tentativas : JSON.parse(a.tentativas||'[]'); } catch{ return []; } })();
+      t.forEach(tent => {
+        const nome = tent.repositor || 'Desconhecido';
+        if (!repStats[nome]) repStats[nome] = {tentativas:0,encontrados:0,nao_enc:0,total_min:0,cnt_tempo:0};
+        repStats[nome].tentativas++;
+        if (tent.resultado==='encontrado')     repStats[nome].encontrados++;
+        if (tent.resultado==='nao_encontrado') repStats[nome].nao_enc++;
+        if (tent.hora_inicio && tent.hora_fim) {
+          const m = calcMin(tent.hora_inicio, tent.hora_fim);
+          if (typeof m==='number' && m>=0) { repStats[nome].total_min+=m; repStats[nome].cnt_tempo++; }
+        }
+      });
+    });
+    const repRows = [['REPOSITOR','TOTAL TENTATIVAS','ENCONTRADOS','NÃO ENCONTRADO','TAXA SUCESSO (%)','TEMPO MÉDIO BUSCA (min)']];
+    Object.entries(repStats)
+      .sort((a,b)=>b[1].tentativas-a[1].tentativas)
+      .forEach(([nome,s]) => {
+        const taxa = s.tentativas>0 ? Math.round((s.encontrados/s.tentativas)*100) : 0;
+        const media = s.cnt_tempo>0 ? Math.round(s.total_min/s.cnt_tempo) : '';
+        repRows.push([nome, s.tentativas, s.encontrados, s.nao_enc, taxa, media]);
+      });
+    const wsRep = XLSX.utils.aoa_to_sheet(repRows);
+    wsRep['!cols'] = [{wch:28},{wch:18},{wch:14},{wch:18},{wch:18},{wch:22}];
+    XLSX.utils.book_append_sheet(wb, wsRep, 'Por Repositor');
+
+    const fmtFile = d => { const m=String(d||'').match(/^(\d{4})-(\d{2})-(\d{2})$/); return m?`${m[3]}-${m[2]}-${m[1]}`:d||new Date().toLocaleDateString('pt-BR').replace(/\//g,'-'); };
+    const periodo = sIni&&sFim ? `_${fmtFile(sIni)}_ate_${fmtFile(sFim)}` : `_${new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')}`;
+    XLSX.writeFile(wb, `analise_tentativas${periodo}.xlsx`);
+    toast('Excel exportado!', 'success');
+  } catch(e) { toast('Erro ao exportar: '+e.message, 'danger'); }
 }
 
 /* ── Funções legadas (dropdown) mantidas para compatibilidade ─────── */

@@ -4,8 +4,12 @@ const { db, pool } = require('../lib/db');
 const { requerAuth, requerPerfil } = require('../lib/auth');
 const { dataHoraLocal, validarId } = require('../lib/helpers');
 
-// Garante coluna historico (roda uma vez na inicialização)
-pool.query(`ALTER TABLE avisos_repositor ADD COLUMN IF NOT EXISTS historico JSONB DEFAULT '[]'::jsonb`).catch(()=>{});
+// Garante colunas novas (roda uma vez na inicialização)
+pool.query(`ALTER TABLE avisos_repositor ADD COLUMN IF NOT EXISTS historico     JSONB   DEFAULT '[]'::jsonb`).catch(()=>{});
+pool.query(`ALTER TABLE avisos_repositor ADD COLUMN IF NOT EXISTS tentativas    JSONB   DEFAULT '[]'::jsonb`).catch(()=>{});
+pool.query(`ALTER TABLE avisos_repositor ADD COLUMN IF NOT EXISTS total_tentativas INTEGER DEFAULT 0`).catch(()=>{});
+pool.query(`ALTER TABLE avisos_repositor ADD COLUMN IF NOT EXISTS hora_inicio_busca TEXT  DEFAULT ''`).catch(()=>{});
+pool.query(`ALTER TABLE avisos_repositor ADD COLUMN IF NOT EXISTS hora_protocolo    TEXT  DEFAULT ''`).catch(()=>{});
 
 router.get('/repositor/avisos', requerAuth, async (req,res) => {
   if (!req.session?.usuario) return res.json([]);
@@ -55,26 +59,62 @@ router.put('/repositor/avisos/:id', requerAuth, async (req,res) => {
     const qtdEnc   = qtd_encontrada !== undefined ? qtd_encontrada : (atual?.qtd_encontrada || 0);
     const obsVal   = obs !== undefined ? obs : (atual?.obs || '');
 
+    // ── Lógica de tentativas ────────────────────────────────────────────
+    let tentativas = [];
+    try { tentativas = Array.isArray(atual?.tentativas) ? atual.tentativas : (atual?.tentativas ? JSON.parse(atual.tentativas) : []); } catch{}
+    const totalTent    = atual?.total_tentativas || 0;
+    let hora_protocolo = atual?.hora_protocolo   || '';
+
+    // Se estamos saindo de 'verificando' → fecha a tentativa aberta
+    if (atual?.status === 'verificando' && tentativas.length > 0) {
+      const ultima = tentativas[tentativas.length - 1];
+      if (!ultima.hora_fim) {
+        ultima.hora_fim  = hora;
+        // encontrado se o status destino é qualquer estado de "achou"
+        ultima.resultado = ['buscado','separado','abastecido','reposto','encontrado'].includes(st)
+          ? 'encontrado' : 'nao_encontrado';
+      }
+    }
+
+    // Para nao_encontrado vindo de verificando: roteamento por tentativas
+    let stFinal = st;
+    if (st === 'nao_encontrado' && atual?.status === 'verificando') {
+      if (totalTent < 3) {
+        // Não esgotou as 3 tentativas — volta para a fila
+        stFinal = 'pendente';
+      } else {
+        // 3ª tentativa falhou — vai para protocolo
+        stFinal = 'nao_encontrado';
+        hora_protocolo = hora;
+      }
+    }
+
     // Registra histórico por etapa (só loga se o status mudou)
     let histAtual = [];
     try { histAtual = Array.isArray(atual?.historico) ? atual.historico : (atual?.historico ? JSON.parse(atual.historico) : []); } catch{}
-    const histNovo = (st !== (atual?.status||'pendente'))
-      ? [...histAtual, { usuario, acao: st, hora }]
+    const histNovo = (stFinal !== (atual?.status||'pendente'))
+      ? [...histAtual, { usuario, acao: stFinal, hora }]
       : histAtual;
 
     const upd = await pool.query(
-      `UPDATE avisos_repositor SET status=$1,obs=$2,qtd_encontrada=$3,repositor_nome=$4,hora_reposto=$5,quem_pegou=$6,quem_guardou=$7,forma_envio=$8,situacao=$9,historico=$10 WHERE id=$11`,
-      [st, obsVal, qtdEnc, repositor_nome||qPegou||'', hora, qPegou, qGuardou, fEnvio, st, JSON.stringify(histNovo), id]
+      `UPDATE avisos_repositor
+         SET status=$1, obs=$2, qtd_encontrada=$3, repositor_nome=$4, hora_reposto=$5,
+             quem_pegou=$6, quem_guardou=$7, forma_envio=$8, situacao=$9,
+             historico=$10, tentativas=$11, hora_protocolo=$12
+       WHERE id=$13`,
+      [stFinal, obsVal, qtdEnc, repositor_nome||qPegou||'', hora,
+       qPegou, qGuardou, fEnvio, stFinal,
+       JSON.stringify(histNovo), JSON.stringify(tentativas), hora_protocolo, id]
     );
     if (upd.rowCount === 0) return res.status(404).json({erro:'Aviso não encontrado'});
-    if (['abastecido','reposto','encontrado'].includes(st)) {
+    if (['abastecido','reposto','encontrado'].includes(stFinal)) {
       const av = await db.get('SELECT item_id FROM avisos_repositor WHERE id=$1',[id]);
       if (av) await pool.query(`UPDATE itens_pedido SET status='encontrado' WHERE id=$1`,[av.item_id]);
     }
     const io = req.app.get('io');
-    io?.emit('aviso:atualizado', { id, status: st, numero_pedido: atual?.numero_pedido });
-    if (st === 'nao_encontrado') io?.emit('liberacao:novo', { id });
-    res.json({mensagem:'Aviso atualizado!'});
+    io?.emit('aviso:atualizado', { id, status: stFinal, numero_pedido: atual?.numero_pedido });
+    if (stFinal === 'nao_encontrado') io?.emit('liberacao:novo', { id });
+    res.json({ mensagem: 'Aviso atualizado!', stFinal });
   } catch(e){res.status(500).json({erro:e.message});}
 });
 
@@ -88,6 +128,49 @@ router.post('/repositor/entrada-manual', requerAuth, requerPerfil('supervisor','
       [codigo||'', descricao||'', quantidade||1, obs||'', situacao||'abastecido', hora, data, repositor_nome||'']
     );
     res.json({id: result.rows[0].id, mensagem: 'Entrada registrada!'});
+  } catch(e) { res.status(500).json({erro: e.message}); }
+});
+
+/* ── Iniciar busca: cria uma nova tentativa e muda status para 'verificando' ── */
+router.put('/repositor/avisos/:id/iniciar-busca', requerAuth, async (req, res) => {
+  const id = validarId(req.params.id);
+  if (!id) return res.status(400).json({erro:'ID invalido'});
+  const { hora } = dataHoraLocal();
+  const usuario  = req.session?.usuario?.nome || req.body?.repositor_nome || 'Sistema';
+
+  // Determina turno pela hora atual
+  const h = new Date().getHours();
+  const turno = h >= 6 && h < 14 ? 'Manha' : h >= 14 && h < 22 ? 'Tarde' : 'Noite';
+
+  try {
+    const atual = await db.get('SELECT * FROM avisos_repositor WHERE id=$1', [id]);
+    if (!atual) return res.status(404).json({erro:'Aviso não encontrado'});
+    // Só pode iniciar busca em itens pendentes
+    if (atual.status !== 'pendente') {
+      return res.status(409).json({erro:`Item não está pendente (status atual: ${atual.status})`});
+    }
+
+    let tentativas = [];
+    try { tentativas = Array.isArray(atual.tentativas) ? atual.tentativas : (atual.tentativas ? JSON.parse(atual.tentativas) : []); } catch{}
+
+    const novaNum = tentativas.length + 1;
+    tentativas.push({ numero: novaNum, repositor: usuario, turno, hora_inicio: hora, hora_fim: null, resultado: null });
+
+    let histAtual = [];
+    try { histAtual = Array.isArray(atual.historico) ? atual.historico : (atual.historico ? JSON.parse(atual.historico) : []); } catch{}
+    const histNovo = [...histAtual, { usuario, acao: 'verificando', hora }];
+
+    await pool.query(
+      `UPDATE avisos_repositor
+         SET status='verificando', hora_inicio_busca=$1,
+             tentativas=$2, total_tentativas=$3,
+             historico=$4, quem_pegou=$5
+       WHERE id=$6`,
+      [hora, JSON.stringify(tentativas), novaNum, JSON.stringify(histNovo), usuario, id]
+    );
+
+    req.app.get('io')?.emit('aviso:atualizado', { id, status: 'verificando', numero_pedido: atual.numero_pedido });
+    res.json({ mensagem: 'Busca iniciada!', tentativa: novaNum });
   } catch(e) { res.status(500).json({erro: e.message}); }
 });
 

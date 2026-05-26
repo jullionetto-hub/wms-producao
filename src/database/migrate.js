@@ -53,6 +53,11 @@ const ALTERATIONS = [
   "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS total_itens INTEGER DEFAULT 0",
   // Backfill: preenche total_itens para pedidos já existentes a partir de itens_pedido
   `UPDATE pedidos SET total_itens = (SELECT COALESCE(SUM(ip.quantidade), 0) FROM itens_pedido ip WHERE ip.pedido_id = pedidos.id) WHERE total_itens = 0`,
+  // Rastreio de tentativas de busca do repositor (máx 3 por item — uma por turno)
+  "ALTER TABLE avisos_repositor ADD COLUMN IF NOT EXISTS tentativas JSONB DEFAULT '[]'::jsonb",
+  "ALTER TABLE avisos_repositor ADD COLUMN IF NOT EXISTS total_tentativas INTEGER DEFAULT 0",
+  "ALTER TABLE avisos_repositor ADD COLUMN IF NOT EXISTS hora_inicio_busca TEXT DEFAULT ''",
+  "ALTER TABLE avisos_repositor ADD COLUMN IF NOT EXISTS hora_protocolo TEXT DEFAULT ''",
 ];
 
 async function runSchema() {
