@@ -23,39 +23,89 @@ function filtrarPedidosTodos() {
   carregarPedidos();
 }
 
+let _pedidosLista  = [];
+let _filtroTransp  = '';
+
 async function carregarPedidos() {
   try {
-    const ini     = document.getElementById('filtro-ped-ini').value;
-    const fim     = document.getElementById('filtro-ped-fim').value;
-    const usrId   = document.getElementById('filtro-ped-sep').value; // agora é o nome do separador
-    const status  = document.getElementById('filtro-ped-status').value;
-    const numPed  = document.getElementById('filtro-ped-num').value.trim();
+    const ini    = document.getElementById('filtro-ped-ini').value;
+    const fim    = document.getElementById('filtro-ped-fim').value;
+    const usrId  = document.getElementById('filtro-ped-sep').value;
+    const status = document.getElementById('filtro-ped-status').value;
+    const numPed = document.getElementById('filtro-ped-num').value.trim();
     let url = `${API}/pedidos?`;
     if (status) url += `status=${encodeURIComponent(status)}&`;
     if (numPed) url += `numero_pedido=${encodeURIComponent(numPed)}&`;
     const res = await fetch(url, { credentials:'include' });
-    let ps    = await res.json();
+    let ps = await res.json();
     if (ini) ps = ps.filter(p => p.data_pedido >= ini);
     if (fim) ps = ps.filter(p => p.data_pedido <= fim);
+    if (usrId) ps = ps.filter(p => p.separador_nome === usrId);
+    _pedidosLista = ps;
+    _atualizarBadgesFiltroTransp(ps);
+    _renderTabelaPedidos();
+  } catch(e) { console.warn(e); }
+}
 
-    // Filtra por usuário usando separador_nome (evita confusão entre usuario_id e separador_id)
-    if (usrId) {
-      // usrId agora é o nome do separador diretamente
-      ps = ps.filter(p => p.separador_nome === usrId);
-    }
-    const tbody = document.getElementById('tbody-ped');
-    if (!ps.length) { tbody.innerHTML = '<tr><td colspan="8" style="color:var(--text3);text-align:center;padding:28px">Nenhum pedido</td></tr>'; return; }
-    tbody.innerHTML = ps.map(p=>`<tr>
-      <td style="font-weight:700;font-family:'Space Mono',monospace;font-size:12px"><span style="color:${String(p.transportadora||'').toUpperCase().includes('DRIVE')?'var(--red)':'var(--accent)'}">${p.numero_pedido}</span>${p.tem_prime?'<span style="margin-left:5px;font-size:9px;font-family:sans-serif;background:#D97706;color:#fff;border-radius:4px;padding:2px 5px;font-weight:700;vertical-align:middle">⭐ PRIME</span>':''}</td>
+function filtrarPedidosTransp(tipo) {
+  _filtroTransp = tipo;
+  document.querySelectorAll('.btn-transp').forEach(b => b.classList.remove('ativo'));
+  const mapa = { '':'ftransp-todos', 'DRIVE':'ftransp-drive', 'PRIME':'ftransp-prime',
+                 'SEDEX':'ftransp-sedex', 'PAC':'ftransp-pac', 'MOTOBOY':'ftransp-motoboy' };
+  const btnId = mapa[tipo] || 'ftransp-todos';
+  const btnEl = document.getElementById(btnId);
+  if (btnEl) btnEl.classList.add('ativo');
+  _renderTabelaPedidos();
+}
+
+function _atualizarBadgesFiltroTransp(lista) {
+  const contar = (fn) => lista.filter(fn).length;
+  const badges = {
+    'ftransp-todos':   `Todos (${lista.length})`,
+    'ftransp-drive':   `🚗 Drive Thru (${contar(p=>String(p.transportadora||'').toUpperCase().includes('DRIVE'))})`,
+    'ftransp-prime':   `⭐ Prime (${contar(p=>p.tem_prime)})`,
+    'ftransp-sedex':   `SEDEX (${contar(p=>String(p.transportadora||'').toUpperCase().includes('SEDEX'))})`,
+    'ftransp-pac':     `PAC (${contar(p=>String(p.transportadora||'').toUpperCase().includes('PAC'))})`,
+    'ftransp-motoboy': `MOTOBOY (${contar(p=>String(p.transportadora||'').toUpperCase().includes('MOTOBOY'))})`,
+  };
+  Object.entries(badges).forEach(([id, txt]) => {
+    const el = document.getElementById(id); if (el) el.textContent = txt;
+  });
+}
+
+function _renderTabelaPedidos() {
+  const tbody = document.getElementById('tbody-ped');
+  if (!tbody) return;
+  let lista = _pedidosLista;
+  if (_filtroTransp === 'PRIME') {
+    lista = lista.filter(p => p.tem_prime);
+  } else if (_filtroTransp === 'DRIVE') {
+    lista = lista.filter(p => String(p.transportadora||'').toUpperCase().includes('DRIVE'));
+  } else if (_filtroTransp) {
+    lista = lista.filter(p => String(p.transportadora||'').toUpperCase().includes(_filtroTransp));
+  }
+  if (!lista.length) {
+    tbody.innerHTML = '<tr><td colspan="8" style="color:var(--text3);text-align:center;padding:28px">Nenhum pedido</td></tr>';
+    return;
+  }
+  const isDrive = p => String(p.transportadora||'').toUpperCase().includes('DRIVE');
+  tbody.innerHTML = lista.map(p => {
+    const corNum   = isDrive(p) ? 'var(--red)' : 'var(--accent)';
+    const corTransp = isDrive(p) ? 'var(--red)' : 'var(--indigo)';
+    const primeBadge = p.tem_prime
+      ? '<span style="margin-left:5px;font-size:9px;background:#D97706;color:#fff;border-radius:4px;padding:2px 5px;font-weight:700;vertical-align:middle">⭐ PRIME</span>'
+      : '';
+    return `<tr>
+      <td style="font-weight:700;font-family:'Space Mono',monospace;font-size:12px"><span style="color:${corNum}">${p.numero_pedido}</span></td>
       <td style="font-size:11px;color:var(--text2);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.cliente||''}">${p.cliente||'—'}</td>
-      <td style="font-size:11px;font-weight:700;color:${String(p.transportadora||'').toUpperCase().includes('DRIVE')?'var(--red)':'var(--indigo)'}">${p.transportadora||'—'}</td>
+      <td style="font-size:11px;font-weight:700;color:${corTransp}">${p.transportadora||'—'}${primeBadge}</td>
       <td style="font-size:11px;color:var(--amber);font-weight:600;white-space:nowrap">${p.aguardando_desde||'—'}</td>
       <td style="font-size:12px;color:var(--text2)">${p.separador_nome||'—'}</td>
       <td><span class="pill ${(p.status||'').replace(' ','-')}">${p.status}</span></td>
       <td style="font-weight:600;text-align:center;color:var(--text2)">${p.itens||'—'}</td>
       <td style="font-weight:700;text-align:center;color:${(p.total_itens||p.itens||0)>100?'var(--red)':(p.total_itens||p.itens||0)>30?'var(--amber)':'var(--text)'}">${p.total_itens||p.itens||'—'}</td>
-    </tr>`).join('');
-  } catch(e) { console.warn(e); }
+    </tr>`;
+  }).join('');
 }
 
 

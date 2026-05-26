@@ -308,6 +308,14 @@
             <div class="fg"><label>Nº PEDIDO</label><input type="text" id="filtro-ped-num" placeholder="Buscar..."/></div>
             <button class="btn btn-primary btn-sm" onclick="carregarPedidos()">🔍 Filtrar</button>
           </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;padding-top:4px" id="filtros-transp-wrap">
+            <button onclick="filtrarPedidosTransp('')"        id="ftransp-todos"   class="btn-transp ativo">Todos</button>
+            <button onclick="filtrarPedidosTransp('DRIVE')"   id="ftransp-drive"   class="btn-transp">🚗 Drive Thru</button>
+            <button onclick="filtrarPedidosTransp('PRIME')"   id="ftransp-prime"   class="btn-transp">⭐ Prime</button>
+            <button onclick="filtrarPedidosTransp('SEDEX')"   id="ftransp-sedex"   class="btn-transp">SEDEX</button>
+            <button onclick="filtrarPedidosTransp('PAC')"     id="ftransp-pac"     class="btn-transp">PAC</button>
+            <button onclick="filtrarPedidosTransp('MOTOBOY')" id="ftransp-motoboy" class="btn-transp">MOTOBOY</button>
+          </div>
           <div class="tabela-wrap"><table><thead><tr><th>Nº PEDIDO</th><th>CLIENTE</th><th>TRANSPORTADORA</th><th>AGUARDANDO DESDE</th><th>USUÁRIO</th><th>STATUS</th><th>SKUs</th><th>ITENS</th></tr></thead><tbody id="tbody-ped"></tbody></table></div>
         </div>
       </div>
@@ -1893,7 +1901,7 @@
 
 
 <script src="/js/config.js?v=7"></script>
-  <script src="/js/pedidos.js?v=6"></script>
+  <script src="/js/pedidos.js?v=7"></script>
   <script src="/js/separador.js?v=6"></script>
   <script src="/js/repositor.js?v=13"></script>
   <script src="/js/checkout.js?v=3"></script>
