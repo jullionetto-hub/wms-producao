@@ -46,7 +46,7 @@ async function carregarPedidos() {
     const tbody = document.getElementById('tbody-ped');
     if (!ps.length) { tbody.innerHTML = '<tr><td colspan="8" style="color:var(--text3);text-align:center;padding:28px">Nenhum pedido</td></tr>'; return; }
     tbody.innerHTML = ps.map(p=>`<tr>
-      <td style="font-weight:700;font-family:'Space Mono',monospace;font-size:12px"><span style="color:${String(p.transportadora||'').toUpperCase().includes('DRIVE')?'var(--red)':'var(--accent)'}">${p.numero_pedido}</span></td>
+      <td style="font-weight:700;font-family:'Space Mono',monospace;font-size:12px"><span style="color:${String(p.transportadora||'').toUpperCase().includes('DRIVE')?'var(--red)':'var(--accent)'}">${p.numero_pedido}</span>${p.tem_prime?'<span style="margin-left:5px;font-size:9px;font-family:sans-serif;background:#D97706;color:#fff;border-radius:4px;padding:2px 5px;font-weight:700;vertical-align:middle">⭐ PRIME</span>':''}</td>
       <td style="font-size:11px;color:var(--text2);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.cliente||''}">${p.cliente||'—'}</td>
       <td style="font-size:11px;font-weight:700;color:${String(p.transportadora||'').toUpperCase().includes('DRIVE')?'var(--red)':'var(--indigo)'}">${p.transportadora||'—'}</td>
       <td style="font-size:11px;color:var(--amber);font-weight:600;white-space:nowrap">${p.aguardando_desde||'—'}</td>
