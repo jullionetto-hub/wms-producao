@@ -537,80 +537,91 @@
 
       <!-- REPOSIÇÃO -->
       <div class="pagina" id="pag-reposicao">
-        <div class="pg-title">Reposição</div>
 
-        <!-- Abas -->
-        <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:14px">
-          <button id="rep-ababtn-avisos" onclick="mudarAbaRep('avisos')"
-            style="padding:9px 16px;border:none;background:transparent;font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.5px;cursor:pointer;border-bottom:2px solid var(--accent);margin-bottom:-2px">
-            CONTROLE
-          </button>
-          <button id="rep-ababtn-ranking" onclick="mudarAbaRep('ranking')"
-            style="padding:9px 16px;border:none;background:transparent;font-size:12px;font-weight:700;color:var(--text3);letter-spacing:.5px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px">
-            RANKING PRODUTOS
-          </button>
+        <!-- Header -->
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+          <div class="pg-title" style="margin:0">Reposição</div>
+          <button class="btn btn-primary btn-sm" onclick="abrirEntradaManual()">+ Entrada Manual</button>
         </div>
 
-        <!-- Aba 1: Tabela de Reposição -->
-        <div id="rep-aba-avisos">
+        <!-- Contadores -->
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
+          <div class="cnt-card azul"><div class="cnt-lbl">SEPARAR</div><div class="cnt-val" id="d-rep-cnt-separar">0</div><div class="cnt-sub">pendentes</div></div>
+          <div class="cnt-card amarelo"><div class="cnt-lbl">SEPARADO</div><div class="cnt-val" id="d-rep-cnt-separado">0</div><div class="cnt-sub">em andamento</div></div>
+          <div class="cnt-card laranja"><div class="cnt-lbl">SUBIU</div><div class="cnt-val" id="d-rep-cnt-subiu">0</div><div class="cnt-sub">para guardar</div></div>
+          <div class="cnt-card amarelo"><div class="cnt-lbl">PROTOCOLO</div><div class="cnt-val" id="d-rep-cnt-protocolo">0</div><div class="cnt-sub">aguardando</div></div>
+        </div>
+
+        <!-- Abas -->
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px">
+          <button id="d-rtab-separar" onclick="mudarTabRepDesk('separar')" class="rel-turno-btn ativo" data-t="separar">
+            ⏳ Separar <span id="d-rtab-separar-badge" style="display:none;background:#ef4444;color:#fff;border-radius:20px;padding:1px 7px;font-size:10px;font-weight:700;margin-left:4px">0</span>
+          </button>
+          <button id="d-rtab-separado" onclick="mudarTabRepDesk('separado')" class="rel-turno-btn" data-t="separado">
+            📦 Separado <span id="d-rtab-separado-badge" style="display:none;background:#3b82f6;color:#fff;border-radius:20px;padding:1px 7px;font-size:10px;font-weight:700;margin-left:4px">0</span>
+          </button>
+          <button id="d-rtab-subiu" onclick="mudarTabRepDesk('subiu')" class="rel-turno-btn" data-t="subiu">
+            ⬆️ Subiu <span id="d-rtab-subiu-badge" style="display:none;background:#0ea5e9;color:#fff;border-radius:20px;padding:1px 7px;font-size:10px;font-weight:700;margin-left:4px">0</span>
+          </button>
+          <button id="d-rtab-protocolo" onclick="mudarTabRepDesk('protocolo')" class="rel-turno-btn" data-t="protocolo">
+            📋 Protocolo <span id="d-rtab-protocolo-badge" style="display:none;background:#6b7280;color:#fff;border-radius:20px;padding:1px 7px;font-size:10px;font-weight:700;margin-left:4px">0</span>
+          </button>
+          <button id="d-rtab-stats" onclick="mudarTabRepDesk('stats')" class="rel-turno-btn" data-t="stats">📊 Indicadores</button>
+          <button id="d-rtab-ranking" onclick="mudarTabRepDesk('ranking')" class="rel-turno-btn" data-t="ranking">🏆 Ranking</button>
+        </div>
+
+        <!-- Tab: SEPARAR -->
+        <div id="d-rep-tab-separar">
           <div class="card">
-            <div class="card-hd">CONTROLE DE REPOSIÇÃO
-              <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-                <span style="font-size:12px;color:var(--text3)"><span id="rep-total">0</span> itens</span>
-                <span style="font-size:11px;color:var(--text3)" id="rep-ultima-atualizacao"></span>
-                <button class="btn btn-primary btn-sm" onclick="abrirEntradaManual()">+ Entrada Manual</button>
-                <button class="btn btn-outline btn-sm" onclick="carregarTabelaReposicao()">🔄</button>
-              </div>
+            <div class="card-hd">⏳ PARA SEPARAR
+              <button class="btn btn-outline btn-sm" onclick="carregarRepSeparar()">🔄 Atualizar</button>
             </div>
-            <!-- Filtros -->
-            <div class="date-filter-bar" style="margin-bottom:14px">
-              <div class="fg"><label>DE</label><input type="date" id="rep-filtro-ini" onchange="carregarTabelaReposicao()"/></div>
-              <div class="fg"><label>ATÉ</label><input type="date" id="rep-filtro-fim" onchange="carregarTabelaReposicao()"/></div>
-              <div class="fg"><label>BUSCAR</label><input type="text" id="rep-filtro-codigo" placeholder="Código do produto..." oninput="carregarTabelaReposicao()"/></div>
-              <div style="display:flex;gap:6px;align-items:flex-end;flex-wrap:wrap">
-                <button data-sit="" class="btn btn-primary btn-sm rep-filtro-btn" onclick="filtrarReposicao('')">Todos</button>
-                <button data-sit="pendente" class="btn btn-outline btn-sm rep-filtro-btn" onclick="filtrarReposicao('pendente')">⏳ Separar</button>
-                <button data-sit="verificando,buscado,separado,aguardando_abastecer" class="btn btn-outline btn-sm rep-filtro-btn" onclick="filtrarReposicao('verificando,buscado,separado,aguardando_abastecer')">📦 Separado</button>
-                <button data-sit="subiu" class="btn btn-outline btn-sm rep-filtro-btn" onclick="filtrarReposicao('subiu')">⬆️ Subiu</button>
-                <button data-sit="nao_encontrado" class="btn btn-outline btn-sm rep-filtro-btn" onclick="filtrarReposicao('nao_encontrado')">📋 Protocolo</button>
-                <button data-sit="abastecido" class="btn btn-outline btn-sm rep-filtro-btn" onclick="filtrarReposicao('abastecido')">✅ Abastecido</button>
-                <button data-sit="devolucao" class="btn btn-outline btn-sm rep-filtro-btn" onclick="filtrarReposicao('devolucao')">↩️ Devolução</button>
-                <button class="btn btn-outline btn-sm" onclick="exportarIndicadoresExcel()" style="border-color:#10b981;color:#10b981;font-weight:700">📊 Excel</button>
-              </div>
-            </div>
-            <!-- Contadores -->
-            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
-              <div class="cnt-card azul"><div class="cnt-lbl">TOTAL</div><div class="cnt-val" id="rep-cnt-total">0</div><div class="cnt-sub">avisos</div></div>
-              <div class="cnt-card amarelo"><div class="cnt-lbl">PENDENTES</div><div class="cnt-val" id="rep-cnt-pendentes">0</div><div class="cnt-sub">aguardando</div></div>
-              <div class="cnt-card laranja"><div class="cnt-lbl">EM ANDAMENTO</div><div class="cnt-val" id="rep-cnt-andamento">0</div><div class="cnt-sub">buscando</div></div>
-              <div class="cnt-card verde"><div class="cnt-lbl">ABASTECIDOS</div><div class="cnt-val" id="rep-cnt-abastecidos">0</div><div class="cnt-sub">concluídos</div></div>
-            </div>
-            <div class="tabela-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>CÓDIGO / PRODUTO</th>
-                    <th>ENVIO</th>
-                    <th>SEPARADOR</th>
-                    <th>QUEM PEGOU</th>
-                    <th>QUEM GUARDOU</th>
-                    <th>SITUAÇÃO</th>
-                    <th>OBS</th>
-                    <th>DATA/HORA</th>
-                  </tr>
-                </thead>
-                <tbody id="tbody-reposicao">
-                  <tr><td colspan="8" style="text-align:center;padding:32px;color:var(--text3)">Carregando...</td></tr>
-                </tbody>
-              </table>
+            <div id="d-rep-lista-separar" style="padding:8px 4px">
+              <div style="text-align:center;padding:32px;color:var(--text3)">Carregando...</div>
             </div>
           </div>
         </div>
 
-        <!-- Aba 2: Indicadores -->
-        <div id="rep-aba-stats" style="display:none">
+        <!-- Tab: SEPARADO -->
+        <div id="d-rep-tab-separado" style="display:none">
           <div class="card">
-            <div class="card-hd">INDICADORES POR COLABORADOR
+            <div class="card-hd">📦 SEPARADO — AGUARDANDO GUARDAR
+              <button class="btn btn-outline btn-sm" onclick="carregarRepSeparado()">🔄 Atualizar</button>
+            </div>
+            <div id="d-rep-lista-separado" style="padding:8px 4px">
+              <div style="text-align:center;padding:32px;color:var(--text3)">Carregando...</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: SUBIU -->
+        <div id="d-rep-tab-subiu" style="display:none">
+          <div class="card">
+            <div class="card-hd">⬆️ SUBIU — AGUARDANDO ABASTECER
+              <button class="btn btn-outline btn-sm" onclick="carregarRepSubiu()">🔄 Atualizar</button>
+            </div>
+            <div id="d-rep-lista-subiu" style="padding:8px 4px">
+              <div style="text-align:center;padding:32px;color:var(--text3)">Carregando...</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: PROTOCOLO -->
+        <div id="d-rep-tab-protocolo" style="display:none">
+          <div class="card">
+            <div class="card-hd">📋 PROTOCOLO — NÃO ENCONTRADO
+              <button class="btn btn-outline btn-sm" onclick="carregarRepProtocolo()">🔄 Atualizar</button>
+            </div>
+            <div id="d-rep-lista-protocolo" style="padding:8px 4px">
+              <div style="text-align:center;padding:32px;color:var(--text3)">Carregando...</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: INDICADORES -->
+        <div id="d-rep-tab-stats" style="display:none">
+          <div class="card">
+            <div class="card-hd">📊 INDICADORES POR COLABORADOR
               <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
                 <input type="date" id="rep-stats-ini" style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)">
                 <span style="font-size:11px;color:var(--text3)">até</span>
@@ -626,15 +637,16 @@
           </div>
         </div>
 
-        <!-- Aba 3: Ranking de Produtos -->
-        <div id="rep-aba-ranking" style="display:none">
+        <!-- Tab: RANKING -->
+        <div id="d-rep-tab-ranking" style="display:none">
           <div class="card">
-            <div class="card-hd">PRODUTOS QUE MAIS GERAM REPOSIÇÃO
-              <div style="display:flex;gap:8px;align-items:center">
+            <div class="card-hd">🏆 PRODUTOS QUE MAIS GERAM REPOSIÇÃO
+              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
                 <input type="date" id="rep-rank-ini" style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)">
                 <span style="font-size:11px;color:var(--text3)">até</span>
                 <input type="date" id="rep-rank-fim" style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)">
                 <button class="btn btn-primary btn-sm" onclick="carregarRankingProdutos()">Filtrar</button>
+                <button class="excel-btn" onclick="exportarRankingExcel()">📥 Excel</button>
               </div>
             </div>
             <div id="rep-ranking-lista">
@@ -1992,7 +2004,7 @@
 <script src="/js/config.js?v=6"></script>
   <script src="/js/pedidos.js?v=5"></script>
   <script src="/js/separador.js?v=6"></script>
-  <script src="/js/repositor.js?v=11"></script>
+  <script src="/js/repositor.js?v=12"></script>
   <script src="/js/checkout.js?v=3"></script>
   <script src="/js/dashboard.js?v=16"></script>
   <script src="/js/auth.js?v=10"></script>

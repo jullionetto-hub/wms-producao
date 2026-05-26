@@ -135,22 +135,39 @@ async function _atualizarBadgesRep() {
       el.style.display = n ? 'inline-flex' : 'none';
     };
     const cnt = (sits) => av.filter(a => sits.includes(a.situacao||a.status)).length;
-    setBdg('rtab-separar-badge',   cnt(['pendente']));
-    setBdg('rtab-separado-badge',  cnt(['verificando','buscado','separado','aguardando_abastecer']));
-    setBdg('rtab-subiu-badge',     cnt(['subiu']));
-    setBdg('rtab-protocolo-badge', cnt(['nao_encontrado']));
+    const nSeparar   = cnt(['pendente']);
+    const nSeparado  = cnt(['verificando','buscado','separado','aguardando_abastecer']);
+    const nSubiu     = cnt(['subiu']);
+    const nProtocolo = cnt(['nao_encontrado']);
+    // Mobile badges
+    setBdg('rtab-separar-badge',   nSeparar);
+    setBdg('rtab-separado-badge',  nSeparado);
+    setBdg('rtab-subiu-badge',     nSubiu);
+    setBdg('rtab-protocolo-badge', nProtocolo);
+    // Desktop badges
+    setBdg('d-rtab-separar-badge',   nSeparar);
+    setBdg('d-rtab-separado-badge',  nSeparado);
+    setBdg('d-rtab-subiu-badge',     nSubiu);
+    setBdg('d-rtab-protocolo-badge', nProtocolo);
     const setC = (id, n) => { const e=document.getElementById(id); if(e) e.textContent=n; };
-    setC('rep-cnt-separar',   cnt(['pendente']));
-    setC('rep-cnt-separado',  cnt(['verificando','buscado','separado','aguardando_abastecer']));
-    setC('rep-cnt-subiu',     cnt(['subiu']));
-    setC('rep-cnt-protocolo', cnt(['nao_encontrado']));
+    // Mobile counters
+    setC('rep-cnt-separar',   nSeparar);
+    setC('rep-cnt-separado',  nSeparado);
+    setC('rep-cnt-subiu',     nSubiu);
+    setC('rep-cnt-protocolo', nProtocolo);
+    // Desktop counters
+    setC('d-rep-cnt-separar',   nSeparar);
+    setC('d-rep-cnt-separado',  nSeparado);
+    setC('d-rep-cnt-subiu',     nSubiu);
+    setC('d-rep-cnt-protocolo', nProtocolo);
   } catch(e) {}
 }
 
 /* ── Carregamento por aba ─────────────────────────────────────────── */
 async function carregarRepSeparar(silent=false) {
-  const el = document.getElementById('rep-lista-separar');
-  if (!el) return;
+  const el  = document.getElementById('rep-lista-separar');
+  const elD = document.getElementById('d-rep-lista-separar');
+  if (!el && !elD) return;
   try {
     const res = await fetch(`${API}/repositor/avisos?status=pendente`, { credentials:'include' });
     if (!res.ok) throw new Error();
@@ -160,17 +177,24 @@ async function carregarRepSeparar(silent=false) {
     const bdgEl = document.getElementById('rtab-separar-badge');
     if (cntEl) cntEl.textContent = n;
     if (bdgEl) { bdgEl.textContent = n; bdgEl.style.display = n ? 'inline-flex' : 'none'; }
-    el.innerHTML = n
+    const html = n
       ? av.map(a => renderCardRepSimples(a, 'separar')).join('')
       : `<div style="text-align:center;padding:60px 16px"><div style="font-size:48px;margin-bottom:12px">✅</div><div style="color:var(--text3);font-size:15px;font-weight:500">Nenhum item para separar</div></div>`;
+    if (el)  el.innerHTML  = html;
+    if (elD) elD.innerHTML = html;
   } catch(e) {
-    if (!silent) el.innerHTML = `<div style="color:#ef4444;text-align:center;padding:24px;font-size:13px">Erro ao carregar — toque 🔄</div>`;
+    const errHtml = `<div style="color:#ef4444;text-align:center;padding:24px;font-size:13px">Erro ao carregar — toque 🔄</div>`;
+    if (!silent) {
+      if (el)  el.innerHTML  = errHtml;
+      if (elD) elD.innerHTML = errHtml;
+    }
   }
 }
 
 async function carregarRepSeparado(silent=false) {
-  const el = document.getElementById('rep-lista-separado');
-  if (!el) return;
+  const el  = document.getElementById('rep-lista-separado');
+  const elD = document.getElementById('d-rep-lista-separado');
+  if (!el && !elD) return;
   try {
     const res = await fetch(`${API}/repositor/avisos?status=verificando,buscado,separado,aguardando_abastecer`, { credentials:'include' });
     if (!res.ok) throw new Error();
@@ -180,17 +204,24 @@ async function carregarRepSeparado(silent=false) {
     const bdgEl = document.getElementById('rtab-separado-badge');
     if (cntEl) cntEl.textContent = n;
     if (bdgEl) { bdgEl.textContent = n; bdgEl.style.display = n ? 'inline-flex' : 'none'; }
-    el.innerHTML = n
+    const html = n
       ? av.map(a => renderCardRepSimples(a, 'separado')).join('')
       : `<div style="text-align:center;padding:60px 16px"><div style="font-size:48px;margin-bottom:12px">📦</div><div style="color:var(--text3);font-size:15px;font-weight:500">Nenhum item separado</div></div>`;
+    if (el)  el.innerHTML  = html;
+    if (elD) elD.innerHTML = html;
   } catch(e) {
-    if (!silent) el.innerHTML = `<div style="color:#ef4444;text-align:center;padding:24px;font-size:13px">Erro ao carregar — toque 🔄</div>`;
+    const errHtml = `<div style="color:#ef4444;text-align:center;padding:24px;font-size:13px">Erro ao carregar — toque 🔄</div>`;
+    if (!silent) {
+      if (el)  el.innerHTML  = errHtml;
+      if (elD) elD.innerHTML = errHtml;
+    }
   }
 }
 
 async function carregarRepSubiu(silent=false) {
-  const el = document.getElementById('rep-lista-subiu');
-  if (!el) return;
+  const el  = document.getElementById('rep-lista-subiu');
+  const elD = document.getElementById('d-rep-lista-subiu');
+  if (!el && !elD) return;
   try {
     const res = await fetch(`${API}/repositor/avisos?status=subiu`, { credentials:'include' });
     if (!res.ok) throw new Error();
@@ -200,17 +231,24 @@ async function carregarRepSubiu(silent=false) {
     const bdgEl = document.getElementById('rtab-subiu-badge');
     if (cntEl) cntEl.textContent = n;
     if (bdgEl) { bdgEl.textContent = n; bdgEl.style.display = n ? 'inline-flex' : 'none'; }
-    el.innerHTML = n
+    const html = n
       ? av.map(a => renderCardRepSimples(a, 'subiu')).join('')
       : `<div style="text-align:center;padding:60px 16px"><div style="font-size:48px;margin-bottom:12px">⬆️</div><div style="color:var(--text3);font-size:15px;font-weight:500">Nenhum item subiu</div></div>`;
+    if (el)  el.innerHTML  = html;
+    if (elD) elD.innerHTML = html;
   } catch(e) {
-    if (!silent) el.innerHTML = `<div style="color:#ef4444;text-align:center;padding:24px;font-size:13px">Erro ao carregar — toque 🔄</div>`;
+    const errHtml = `<div style="color:#ef4444;text-align:center;padding:24px;font-size:13px">Erro ao carregar — toque 🔄</div>`;
+    if (!silent) {
+      if (el)  el.innerHTML  = errHtml;
+      if (elD) elD.innerHTML = errHtml;
+    }
   }
 }
 
 async function carregarRepProtocolo(silent=false) {
-  const el = document.getElementById('rep-lista-protocolo');
-  if (!el) return;
+  const el  = document.getElementById('rep-lista-protocolo');
+  const elD = document.getElementById('d-rep-lista-protocolo');
+  if (!el && !elD) return;
   try {
     const res = await fetch(`${API}/repositor/avisos?status=nao_encontrado`, { credentials:'include' });
     if (!res.ok) throw new Error();
@@ -220,11 +258,17 @@ async function carregarRepProtocolo(silent=false) {
     const bdgEl = document.getElementById('rtab-protocolo-badge');
     if (cntEl) cntEl.textContent = n;
     if (bdgEl) { bdgEl.textContent = n; bdgEl.style.display = n ? 'inline-flex' : 'none'; }
-    el.innerHTML = n
+    const html = n
       ? av.map(a => renderCardRepSimples(a, 'protocolo')).join('')
       : `<div style="text-align:center;padding:60px 16px"><div style="font-size:48px;margin-bottom:12px">📋</div><div style="color:var(--text3);font-size:15px;font-weight:500">Nenhum item em protocolo</div></div>`;
+    if (el)  el.innerHTML  = html;
+    if (elD) elD.innerHTML = html;
   } catch(e) {
-    if (!silent) el.innerHTML = `<div style="color:#ef4444;text-align:center;padding:24px;font-size:13px">Erro ao carregar — toque 🔄</div>`;
+    const errHtml = `<div style="color:#ef4444;text-align:center;padding:24px;font-size:13px">Erro ao carregar — toque 🔄</div>`;
+    if (!silent) {
+      if (el)  el.innerHTML  = errHtml;
+      if (elD) elD.innerHTML = errHtml;
+    }
   }
 }
 
@@ -322,7 +366,11 @@ async function acaoRepTab(id, acao, nomeLogado, proximaTab) {
     if (res.ok) {
       toast('Salvo!', 'success');
       if (proximaTab === 'done') { carregarRepSubiu(); _atualizarBadgesRep(); }
-      else if (proximaTab)       { mudarTabRep(proximaTab); _atualizarBadgesRep(); }
+      else if (proximaTab) {
+        mudarTabRep(proximaTab);
+        mudarTabRepDesk(proximaTab);
+        _atualizarBadgesRep();
+      }
     } else { toast('Erro ao salvar', 'danger'); }
   } catch(e) { toast('Sem conexão', 'danger'); }
 }
@@ -704,9 +752,30 @@ function atualizarUltimaAtualizacaoRep() {
   el.textContent = `— atualizado ${agora}`;
 }
 
+const _REP_DESK_TABS = ['separar','separado','subiu','protocolo','stats','ranking'];
+
+function mudarTabRepDesk(tab) {
+  _REP_DESK_TABS.forEach(t => {
+    const pg = document.getElementById(`d-rep-tab-${t}`);
+    const bt = document.getElementById(`d-rtab-${t}`);
+    if (pg) pg.style.display = t === tab ? '' : 'none';
+    if (bt) bt.classList.toggle('ativo', t === tab);
+  });
+  if      (tab === 'separar')   carregarRepSeparar();
+  else if (tab === 'separado')  carregarRepSeparado();
+  else if (tab === 'subiu')     carregarRepSubiu();
+  else if (tab === 'protocolo') carregarRepProtocolo();
+  else if (tab === 'stats')     carregarEstatisticasRep();
+  else if (tab === 'ranking')   carregarRankingProdutos();
+}
+
 async function carregarReposicaoDesktop() {
   await carregarUsuariosParaRep();
-  await carregarTabelaReposicao();
+  // Mantém a aba ativa se já iniciada, senão começa em separar
+  const activeBtn = document.querySelector('#pag-reposicao [id^="d-rtab-"].ativo');
+  const tab = activeBtn?.id?.replace('d-rtab-','') || 'separar';
+  mudarTabRepDesk(tab);
+  _atualizarBadgesRep();
 }
 
 async function carregarAvisos() {
@@ -1166,6 +1235,42 @@ async function carregarRankingProdutos() {
         </tbody>
       </table>`;
   } catch(e) { el.innerHTML = `<div style="color:#ef4444;padding:16px">Erro: ${e.message}</div>`; }
+}
+
+/* EXPORTAR RANKING — Excel */
+async function exportarRankingExcel() {
+  try {
+    const ini = document.getElementById('rep-rank-ini')?.value || '';
+    const fim = document.getElementById('rep-rank-fim')?.value || '';
+    const params = new URLSearchParams();
+    if (ini) params.set('data_ini', ini);
+    if (fim) params.set('data_fim', fim);
+    const res = await fetch(`${API}/repositor/ranking-produtos${params.toString()?'?'+params.toString():''}`, { credentials:'include' });
+    const produtos = res.ok ? await res.json() : [];
+    if (!produtos.length) { toast('Nenhum dado para exportar', 'danger'); return; }
+
+    const wb = XLSX.utils.book_new();
+    const rows = [['#','CÓDIGO','PRODUTO','TOTAL REPOSIÇÕES','ABASTECIDOS','NÃO ENCONTRADO','ÚLTIMA VEZ']];
+    produtos.forEach((p, i) => {
+      rows.push([
+        i + 1,
+        p.codigo  || '',
+        p.descricao || '',
+        p.total   || 0,
+        p.abastecidos || 0,
+        p.nao_encontrados || 0,
+        p.ultima_vez || ''
+      ]);
+    });
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [{wch:5},{wch:22},{wch:42},{wch:16},{wch:14},{wch:16},{wch:16}];
+    XLSX.utils.book_append_sheet(wb, ws, 'Ranking Produtos');
+
+    const fmtFile = d => { const m=String(d||'').match(/^(\d{4})-(\d{2})-(\d{2})$/); return m?`${m[3]}-${m[2]}-${m[1]}`:d||new Date().toLocaleDateString('pt-BR').replace(/\//g,'-'); };
+    const periodo = ini&&fim ? `_${fmtFile(ini)}_ate_${fmtFile(fim)}` : `_${new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')}`;
+    XLSX.writeFile(wb, `ranking_reposicao${periodo}.xlsx`);
+    toast('Excel exportado!', 'success');
+  } catch(e) { toast('Erro ao exportar: '+e.message, 'danger'); }
 }
 
 /* ENTRADA MANUAL */
