@@ -1359,86 +1359,6 @@
         </div>
       </div>
 
-<!-- ══ PASSAGEM DE TURNO ══ -->
-<div class="pagina" id="pag-passagem">
-  <div class="pg-title">🔄 Passagem de Turno</div>
-  <div style="padding:16px;max-width:900px">
-
-    <!-- Placar dos Turnos -->
-    <div style="margin-bottom:20px">
-      <div style="font-size:13px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">🏆 Placar dos Turnos</div>
-      <div id="pass-placar-wrap" style="display:flex;gap:12px;flex-wrap:wrap"></div>
-    </div>
-
-    <!-- Abas -->
-    <div style="display:flex;border-bottom:2px solid var(--border);margin-bottom:16px;gap:4px">
-      <button onclick="mudarPassagemTab('preencher',this)" id="ptab-preencher"
-        style="padding:8px 18px;border:none;background:none;font-size:13px;font-weight:600;color:var(--accent);border-bottom:2px solid var(--accent);margin-bottom:-2px;cursor:pointer">
-        📝 Preencher (Saída)
-      </button>
-      <button onclick="mudarPassagemTab('validar',this)" id="ptab-validar"
-        style="padding:8px 18px;border:none;background:none;font-size:13px;font-weight:600;color:var(--text3);cursor:pointer">
-        ✅ Validar (Entrada) <span id="menu-badge-passagem-tab" style="display:none;background:#F59E0B;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700">!</span>
-      </button>
-      <button onclick="mudarPassagemTab('historico',this)" id="ptab-historico"
-        style="padding:8px 18px;border:none;background:none;font-size:13px;font-weight:600;color:var(--text3);cursor:pointer">
-        📋 Histórico
-      </button>
-    </div>
-
-    <!-- TAB: PREENCHER -->
-    <div id="pass-tab-preencher">
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
-          <div>
-            <label style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase">Data</label>
-            <input type="date" id="pass-data" style="width:100%;margin-top:4px;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;box-sizing:border-box;background:var(--surface);color:var(--text)">
-          </div>
-          <div>
-            <label style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase">Turno que SAI</label>
-            <select id="pass-turno" style="width:100%;margin-top:4px;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;box-sizing:border-box;background:var(--surface);color:var(--text)">
-              <option value="Manha">☀️ Manhã</option>
-              <option value="Tarde">🌤️ Tarde</option>
-              <option value="Noite">🌙 Noite</option>
-            </select>
-          </div>
-        </div>
-
-        <div style="margin-bottom:12px">
-          <label style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase">👥 Separadores Presentes</label>
-          <textarea id="pass-seps" rows="2" placeholder="Nome dos separadores que trabalharam no turno..."
-            style="width:100%;margin-top:4px;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;resize:none;box-sizing:border-box;background:var(--surface);color:var(--text)"></textarea>
-        </div>
-        <div style="margin-bottom:16px">
-          <label style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase">⚠️ Ocorrências / Problemas</label>
-          <textarea id="pass-ocorr" rows="3" placeholder="Descreva ocorrências, problemas ou pendências do turno..."
-            style="width:100%;margin-top:4px;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;resize:none;box-sizing:border-box;background:var(--surface);color:var(--text)"></textarea>
-        </div>
-
-        <button onclick="salvarPassagem()"
-          style="width:100%;padding:14px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">
-          💾 Registrar Passagem de Turno
-        </button>
-      </div>
-    </div>
-
-    <!-- TAB: VALIDAR -->
-    <div id="pass-tab-validar" style="display:none">
-      <div id="pass-sec-validar">
-        <div style="color:var(--text3);text-align:center;padding:30px;font-size:13px">Nenhuma passagem aguardando validação.</div>
-      </div>
-    </div>
-
-    <!-- TAB: HISTÓRICO -->
-    <div id="pass-tab-historico" style="display:none">
-      <div id="pass-historico">
-        <div style="color:var(--text3);text-align:center;padding:30px;font-size:13px">Carregando...</div>
-      </div>
-    </div>
-
-  </div>
-</div>
-
 <!-- ══ PROTOCOLO ══ -->
 <div class="pagina" id="pag-protocolo">
   <div class="pg-title">📋 Protocolo</div>
@@ -1978,7 +1898,7 @@
   <script src="/js/repositor.js?v=13"></script>
   <script src="/js/checkout.js?v=3"></script>
   <script src="/js/dashboard.js?v=17"></script>
-  <script src="/js/auth.js?v=12"></script>
+  <script src="/js/auth.js?v=13"></script>
 
 
 <!-- ══ MODAL IMPORTAR ══ -->
