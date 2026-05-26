@@ -764,21 +764,20 @@ async function atualizarBadgeLiberacao() {
 const _turnosDash = new Set();
 
 function toggleTurnoDash(turno) {
-  // comportamento exclusivo: um turno por vez (clica de novo para voltar a Todos)
-  if (_turnosDash.has(turno)) {
-    _turnosDash.clear(); // desativa = volta para Todos
+  // 'Todos' ou clicar no turno ativo → limpa filtro
+  if (turno === 'Todos' || _turnosDash.has(turno)) {
+    _turnosDash.clear();
   } else {
     _turnosDash.clear();
     _turnosDash.add(turno);
   }
-  const map = { Manha:'manha', Tarde:'tarde', Noite:'noite' };
-  Object.entries(map).forEach(([t, id]) => {
-    const btn = document.getElementById(`dash-turno-${id}`);
-    if (btn) btn.classList.toggle('ativo', _turnosDash.has(t));
+  // Atualiza visual dos botões (mesmo padrão do Relatório Analítico)
+  document.querySelectorAll('#dash-turno-btns .rel-turno-btn').forEach(btn => {
+    const t = btn.dataset.t;
+    btn.classList.toggle('ativo', t === 'Todos' ? _turnosDash.size === 0 : _turnosDash.has(t));
   });
   // KPIs filtrados por turno + pipeline re-renderizado com pedidos filtrados
   carregarKPIs();
-  // Pipeline re-renderiza imediatamente com pedidos já em cache (filtragem client-side)
   renderDashPipeline();
 }
 
