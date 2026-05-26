@@ -919,6 +919,7 @@ function mostrarStatusModal(msg, tipo) {
    MODAL DISTRIBUIÇÃO JUSTA
 ══════════════════════════════════════════ */
 let distribuicaoPlano = null;
+let _modoPrime = false;
 
 async function abrirModalDistribuicao() {
   document.getElementById('modal-distribuicao').style.display = 'flex';
@@ -927,10 +928,41 @@ async function abrirModalDistribuicao() {
   document.getElementById('btn-calcular-dist').style.display = 'inline-flex';
   distribuicaoPlano = null;
   _turnoAtivoDistribuicao = '';
+  // Reseta modo Prime
+  _modoPrime = false;
+  _aplicarEstadoPrime();
   // Recalcula pontuação de pedidos antigos em background
   fetch(`${API}/pedidos/recalcular-pontuacao`, { method:'POST', credentials:'include' }).catch(()=>{});
   await carregarSeparadoresDistribuicao();
   await carregarPedidosDistribuicao();
+}
+
+function togglePrimeDistribuicao() {
+  _modoPrime = !_modoPrime;
+  _aplicarEstadoPrime();
+  // Reseta cálculo anterior ao trocar de modo
+  document.getElementById('dist-resultado').style.display = 'none';
+  document.getElementById('btn-confirmar-dist').style.display = 'none';
+  document.getElementById('btn-calcular-dist').style.display = 'inline-flex';
+  distribuicaoPlano = null;
+  carregarPedidosDistribuicao();
+}
+
+function _aplicarEstadoPrime() {
+  const btn   = document.getElementById('btn-prime-dist');
+  const aviso = document.getElementById('dist-prime-aviso');
+  if (!btn) return;
+  if (_modoPrime) {
+    btn.style.background = '#D97706';
+    btn.style.color      = '#fff';
+    btn.textContent      = '⭐ Modo Prime ATIVO';
+    if (aviso) aviso.style.display = 'block';
+  } else {
+    btn.style.background = 'transparent';
+    btn.style.color      = '#D97706';
+    btn.textContent      = '⭐ Incluir Prime';
+    if (aviso) aviso.style.display = 'none';
+  }
 }
 function fecharModalDistribuicao() {
   document.getElementById('modal-distribuicao').style.display = 'none';
@@ -954,14 +986,27 @@ async function carregarPedidosDistribuicao() {
     const pedidos = await res.json();
     const el = document.getElementById('dist-preview');
     if (!pedidos.length) { el.innerHTML = '<div style="color:var(--text3);font-size:12px;text-align:center;padding:20px">Nenhum pedido pendente para distribuir</div>'; return; }
-    const qtdInput = parseInt(document.getElementById('dist-quantidade')?.value)||0;
+    const qtdInput       = parseInt(document.getElementById('dist-quantidade')?.value)||0;
     const apenasSemCheck = document.getElementById('dist-apenas-sem-sep')?.checked !== false;
-    const respHora = document.getElementById('dist-respeitar-hora')?.checked !== false;
+    const respHora       = document.getElementById('dist-respeitar-hora')?.checked !== false;
     let lista = apenasSemCheck ? pedidos.filter(p=>!p.separador_id) : pedidos;
+    // Filtro Prime obrigatório — nunca mistura
+    if (_modoPrime) {
+      lista = lista.filter(p => p.tem_prime);
+    } else {
+      lista = lista.filter(p => !p.tem_prime);
+    }
     if (respHora) lista.sort((a,b)=>(a.aguardando_desde||a.hora_pedido||'').localeCompare(b.aguardando_desde||b.hora_pedido||''));
-    const totalDisponivel = lista.length; // total sem separador, antes do slice
+    const totalDisponivel = lista.length;
     if (qtdInput > 0) lista = lista.slice(0, qtdInput);
-    el.innerHTML = `<div style="font-size:11px;color:var(--text3);margin-bottom:8px">${lista.length} de ${totalDisponivel} pedido(s) serão distribuídos</div><div class="tabela-wrap" style="max-height:240px;overflow-y:auto"><table><thead><tr><th>PEDIDO</th><th>CLIENTE</th><th>HORÁRIO</th><th>ITENS</th><th>PONTUAÇÃO</th><th>STATUS</th></tr></thead><tbody>${lista.map(p=>`<tr><td style="font-weight:700;color:var(--text);font-family:'Space Mono',monospace;font-size:11px">${p.numero_pedido}</td><td style="font-size:11px;color:var(--text2);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.cliente||'—'}</td><td style="font-size:11px;color:var(--amber);font-weight:600;white-space:nowrap">${(p.aguardando_desde||p.hora_pedido||'—').replace('15/04/2026 ','').replace('16/04/2026 ','')}</td><td style="font-weight:600">${p.itens||0}</td><td><span style="font-family:'Space Mono',monospace;color:var(--indigo);font-weight:700">${p.pontuacao||'—'}</span></td><td><span class="pill ${(p.status||'pendente')}">${p.status||'pendente'}</span></td></tr>`).join('')}</tbody></table></div>`;
+    const labelModo = _modoPrime
+      ? `<span style="color:#D97706;font-weight:800">⭐ ${lista.length} pedido(s) Prime</span> de ${totalDisponivel} disponíveis`
+      : `${lista.length} de ${totalDisponivel} pedido(s) serão distribuídos`;
+    if (!lista.length) {
+      el.innerHTML = `<div style="font-size:11px;color:var(--text3);margin-bottom:8px">${labelModo}</div><div style="color:var(--text3);font-size:12px;text-align:center;padding:20px">${_modoPrime ? 'Nenhum pedido Prime pendente' : 'Nenhum pedido normal pendente'}</div>`;
+      return;
+    }
+    el.innerHTML = `<div style="font-size:11px;color:var(--text3);margin-bottom:8px">${labelModo}</div><div class="tabela-wrap" style="max-height:240px;overflow-y:auto"><table><thead><tr><th>PEDIDO</th><th>CLIENTE</th><th>HORÁRIO</th><th>ITENS</th><th>PONTUAÇÃO</th><th>STATUS</th></tr></thead><tbody>${lista.map(p=>`<tr${p.tem_prime?' style="background:rgba(217,119,6,.06)"':''}><td style="font-weight:700;color:var(--text);font-family:'Space Mono',monospace;font-size:11px">${p.numero_pedido}${p.tem_prime?' <span style="font-size:9px;background:#D97706;color:#fff;border-radius:4px;padding:1px 4px;vertical-align:middle">PRIME</span>':''}</td><td style="font-size:11px;color:var(--text2);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.cliente||'—'}</td><td style="font-size:11px;color:var(--amber);font-weight:600;white-space:nowrap">${p.aguardando_desde||p.hora_pedido||'—'}</td><td style="font-weight:600">${p.itens||0}</td><td><span style="font-family:'Space Mono',monospace;color:var(--indigo);font-weight:700">${p.pontuacao||'—'}</span></td><td><span class="pill ${(p.status||'pendente')}">${p.status||'pendente'}</span></td></tr>`).join('')}</tbody></table></div>`;
   } catch(e) { console.warn(e); }
 }
 async function calcularDistribuicao() {
@@ -972,7 +1017,7 @@ async function calcularDistribuicao() {
     const quantidade = parseInt(document.getElementById('dist-quantidade')?.value) || 0;
     const apenasSem = document.getElementById('dist-apenas-sem-sep')?.checked !== false;
     const respeitarHora = document.getElementById('dist-respeitar-hora')?.checked !== false;
-    const res = await fetch(`${API}/pedidos/distribuicao`, { credentials:'include', method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ separadores:seps.map(s=>s.id), quantidade: quantidade||null, apenas_sem_sep:apenasSem, respeitar_hora:respeitarHora }) });
+    const res = await fetch(`${API}/pedidos/distribuicao`, { credentials:'include', method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ separadores:seps.map(s=>s.id), quantidade: quantidade||null, apenas_sem_sep:apenasSem, respeitar_hora:respeitarHora, apenas_prime:_modoPrime }) });
     const data = await res.json();
     if (data.erro) { toast(data.erro, 'erro'); return; }
     distribuicaoPlano = data.plano;
@@ -983,7 +1028,7 @@ async function calcularDistribuicao() {
     const restantes = data.total_pedidos - totalDist;
     // Calcula desvio de itens para colorir a coluna (fairness visual)
     const avgItens = data.plano.length ? totalItens / data.plano.length : 0;
-    let html = '<div style="font-size:11px;font-weight:700;color:var(--accent);letter-spacing:1px;margin-bottom:10px">RESULTADO DA DISTRIBUIÇÃO</div>';
+    let html = `<div style="font-size:11px;font-weight:700;color:${_modoPrime?'#D97706':'var(--accent)'};letter-spacing:1px;margin-bottom:10px">${_modoPrime?'⭐ RESULTADO DA DISTRIBUIÇÃO PRIME':'RESULTADO DA DISTRIBUIÇÃO'}</div>`;
     html += '<div class="tabela-wrap"><table><thead><tr><th>COLABORADOR</th><th>PEDIDOS</th><th>ITENS</th><th>PONTUAÇÃO</th><th>LISTA</th></tr></thead><tbody>';
     data.plano.forEach(item => {
       const desvio = avgItens > 0 ? Math.abs((item.itens_total||0) - avgItens) / avgItens : 0;

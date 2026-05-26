@@ -1893,7 +1893,7 @@
 
 
 <script src="/js/config.js?v=7"></script>
-  <script src="/js/pedidos.js?v=5"></script>
+  <script src="/js/pedidos.js?v=6"></script>
   <script src="/js/separador.js?v=6"></script>
   <script src="/js/repositor.js?v=13"></script>
   <script src="/js/checkout.js?v=3"></script>
@@ -1981,6 +1981,18 @@
           Respeitar horário do pedido (mais antigo primeiro)
         </label>
       </div>
+
+      <!-- TOGGLE PRIME -->
+      <div id="dist-prime-bloco" style="margin-bottom:14px">
+        <button id="btn-prime-dist" onclick="togglePrimeDistribuicao()"
+          style="display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:8px;border:2px solid #D97706;background:transparent;color:#D97706;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s">
+          ⭐ Incluir Prime
+        </button>
+        <div id="dist-prime-aviso" style="display:none;margin-top:8px;padding:10px 14px;border-radius:8px;background:#FFFBEB;border:1.5px solid #FCD34D;font-size:12px;font-weight:700;color:#92400E">
+          ⭐ MODO PRIME ATIVO — Serão distribuídos apenas pedidos com <em>Postagem Ágil Miess Prime</em>. Pedidos normais não serão incluídos.
+        </div>
+      </div>
+
       <div style="margin-bottom:14px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
           <div style="font-size:10px;font-weight:700;color:var(--accent);letter-spacing:1px">COLABORADORES ATIVOS</div>

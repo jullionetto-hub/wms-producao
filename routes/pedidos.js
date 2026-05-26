@@ -297,11 +297,17 @@ router.post('/pedidos/importar', requerAuth, requerPerfil('supervisor'), async (
 });
 
 router.post('/pedidos/distribuicao', requerAuth, requerPerfil('supervisor'), async (req,res) => {
-  const {separadores,quantidade,apenas_sem_sep,respeitar_hora}=req.body;
+  const {separadores,quantidade,apenas_sem_sep,respeitar_hora,apenas_prime}=req.body;
   if (!separadores?.length) return res.status(400).json({erro:'Informe os separadores!'});
   try {
     let w="p.status='pendente'";
     if (apenas_sem_sep!==false) w+=' AND p.separador_id IS NULL';
+    // Filtro Prime: isolação obrigatória — Prime nunca mistura com pedidos normais
+    if (apenas_prime===true) {
+      w+=' AND p.tem_prime=true';
+    } else {
+      w+=' AND (p.tem_prime=false OR p.tem_prime IS NULL)';
+    }
     // Ordena pelo momento real do pedido (aguardando_desde) usando TO_TIMESTAMP para
     // garantir ordenação correta mesmo entre datas diferentes (formato DD/MM/YYYY HH:MM).
     // Fallback para data_pedido + hora_pedido quando aguardando_desde está vazio.
