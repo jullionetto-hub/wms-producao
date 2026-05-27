@@ -2296,46 +2296,79 @@ function renderRelAnalitico(d) {
       <div style="font-size:13px;font-weight:700;color:var(--text);min-width:30px;text-align:right;flex-shrink:0">${fmtN(t.total)}</div>
     </div>`).join('');
 
-  // ── 7. Tabela de colaboradores ────────────────────────────────
-  const perfil_labels = { separador:'📦 Sep.', embalador:'📫 Emb.', checkout:'🔖 CK', repositor:'🔧 Rep.' };
-  const perfil_colors = { separador:'#4f46e5', embalador:'#7c3aed', checkout:'#0891b2', repositor:'#d97706' };
-  const turno_labels  = { Manha:'🌅', Tarde:'☀️', Noite:'🌙' };
+  // ── 7. Seções de colaboradores por área ──────────────────────
+  const turno_icn = { Manha:'🌅', Tarde:'☀️', Noite:'🌙' };
+  const mkCell = (content, extraStyle='') => `<td style="padding:8px 12px${extraStyle?';'+extraStyle:''}">${content}</td>`;
+  const mkRow  = cells => `<tr style="border-bottom:1px solid var(--border)">${cells.join('')}</tr>`;
+  const mkArea = (icon, label, grad, headers, rows) => `
+    <div class="card" style="margin-bottom:18px;overflow:hidden">
+      <div style="background:${grad};padding:14px 16px;display:flex;align-items:center;gap:10px">
+        <span style="font-size:20px">${icon}</span>
+        <span style="font-size:13px;font-weight:800;color:#fff;letter-spacing:.8px">${label}</span>
+        <span style="margin-left:auto;font-size:11px;font-weight:600;color:rgba(255,255,255,.8)">${rows.length} colaborador${rows.length!==1?'es':''}</span>
+      </div>
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse">
+          <thead><tr style="background:var(--surface2)">${headers.map(h=>`<th style="padding:9px 12px;text-align:left;font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.5px;white-space:nowrap">${h}</th>`).join('')}</tr></thead>
+          <tbody>${rows.length?rows.join(''):`<tr><td colspan="${headers.length}" style="text-align:center;padding:24px;color:var(--text3);font-size:13px">Sem colaboradores neste período</td></tr>`}</tbody>
+        </table>
+      </div>
+    </div>`;
 
-  const colabRows = d.colaboradores.map(c => {
-    const cor = perfil_colors[c.perfil] || '#64748b';
-    const pLabel = perfil_labels[c.perfil] || c.perfil;
-    const tLabel = turno_labels[c.turno] || '';
-    const pedLabel = c.perfil === 'repositor' ? fmtN(c.total) : fmtN(c.pedidos);
-    const extra = c.perfil === 'separador'
-      ? `<td style="padding:8px 12px;font-size:12px;color:var(--text2)">${fmtN(c.itens)}</td>
-         <td style="padding:8px 12px;font-size:12px;color:var(--text2)">${fmtN(c.pontuacao)}</td>`
-      : c.perfil === 'repositor'
-      ? `<td style="padding:8px 12px;font-size:12px;color:#16a34a">${fmtN(c.repostos)}</td>
-         <td style="padding:8px 12px;font-size:12px;color:#dc2626">${fmtN(c.nao_enc)}</td>`
-      : `<td colspan="2" style="padding:8px 12px"></td>`;
-    return `
-      <tr style="border-bottom:1px solid var(--border)">
-        <td style="padding:8px 12px">
-          <div style="font-weight:700;font-size:13px;color:var(--text)">${c.nome}</div>
-          <div style="display:flex;gap:4px;margin-top:2px">
-            <span style="font-size:10px;font-weight:700;color:#fff;background:${cor};padding:1px 7px;border-radius:10px">${pLabel}</span>
-            ${c.turno ? `<span style="font-size:10px;color:var(--text3)">${tLabel} ${c.turno}</span>` : ''}
-          </div>
-        </td>
-        <td style="padding:8px 12px;font-size:15px;font-weight:700;color:${cor}">${pedLabel}</td>
-        ${extra}
-        <td style="padding:8px 12px;font-size:12px;color:var(--text2)">${fmtT(c.tempo_medio)}</td>
-      </tr>`;
-  }).join('');
+  // ─ Separação ─
+  const sepColabs = d.colaboradores.filter(c=>c.perfil==='separador').sort((a,b)=>(b.pedidos||0)-(a.pedidos||0));
+  const sepAreaRows = sepColabs.map(c => {
+    const ritmo = c.tempo_medio>0 ? `~${Math.round(60/c.tempo_medio)}/h` : '—';
+    return mkRow([
+      mkCell(`<div style="font-weight:700;font-size:13px;color:var(--text)">${c.nome}</div>${c.turno?`<div style="font-size:10px;color:var(--text3)">${turno_icn[c.turno]||''} ${c.turno}</div>`:''}`),
+      mkCell(`<span style="font-size:15px;font-weight:800;color:#4f46e5">${fmtN(c.pedidos)}</span>`),
+      mkCell(`<span style="font-size:13px;color:var(--text2)">${fmtN(c.itens)}</span>`),
+      mkCell(`<span style="font-size:13px;color:var(--text2)">${fmtN(c.pontuacao)}</span>`),
+      mkCell(`<span style="font-size:13px;color:var(--text2)">${fmtT(c.tempo_medio)}</span>`),
+      mkCell(`<span style="font-size:12px;font-weight:700;color:#16a34a">${ritmo}</span>`),
+    ]);
+  });
 
-  const colabHeader = `
-    <tr style="background:var(--surface2)">
-      <th style="padding:10px 12px;text-align:left;font-size:11px;color:var(--text3)">COLABORADOR</th>
-      <th style="padding:10px 12px;text-align:left;font-size:11px;color:var(--text3)">PEDIDOS</th>
-      <th style="padding:10px 12px;text-align:left;font-size:11px;color:var(--text3)">ITENS / REPOS.</th>
-      <th style="padding:10px 12px;text-align:left;font-size:11px;color:var(--text3)">PONTUAÇÃO / N/E</th>
-      <th style="padding:10px 12px;text-align:left;font-size:11px;color:var(--text3)">TEMPO MÉDIO</th>
-    </tr>`;
+  // ─ Checkout ─
+  const ckColabs = d.colaboradores.filter(c=>c.perfil==='checkout').sort((a,b)=>(b.pedidos||0)-(a.pedidos||0));
+  const ckAreaRows = ckColabs.map(c => {
+    const ritmo = c.tempo_medio>0 ? `~${Math.round(60/c.tempo_medio)}/h` : '—';
+    return mkRow([
+      mkCell(`<span style="font-weight:700;font-size:13px;color:var(--text)">${c.nome}</span>`),
+      mkCell(`<span style="font-size:15px;font-weight:800;color:#0891b2">${fmtN(c.pedidos)}</span>`),
+      mkCell(`<span style="font-size:13px;color:var(--text2)">${fmtN(c.itens)}</span>`),
+      mkCell(`<span style="font-size:13px;color:var(--text2)">${fmtT(c.tempo_medio)}</span>`),
+      mkCell(`<span style="font-size:12px;font-weight:700;color:#16a34a">${ritmo}</span>`),
+    ]);
+  });
+
+  // ─ Embalagem ─
+  const embColabs = d.colaboradores.filter(c=>c.perfil==='embalador').sort((a,b)=>(b.pedidos||0)-(a.pedidos||0));
+  const embAreaRows = embColabs.map(c => {
+    const ritmo = c.tempo_medio>0 ? `~${Math.round(60/c.tempo_medio)}/h` : '—';
+    return mkRow([
+      mkCell(`<span style="font-weight:700;font-size:13px;color:var(--text)">${c.nome}</span>`),
+      mkCell(`<span style="font-size:15px;font-weight:800;color:#7c3aed">${fmtN(c.pedidos)}</span>`),
+      mkCell(`<span style="font-size:13px;color:var(--text2)">${fmtN(c.itens)}</span>`),
+      mkCell(`<span style="font-size:13px;color:var(--text2)">${fmtT(c.tempo_medio)}</span>`),
+      mkCell(`<span style="font-size:12px;font-weight:700;color:#16a34a">${ritmo}</span>`),
+    ]);
+  });
+
+  // ─ Reposição ─
+  const repColabs = d.colaboradores.filter(c=>c.perfil==='repositor').sort((a,b)=>(b.total||0)-(a.total||0));
+  const repAreaRows = repColabs.map(c => {
+    const taxa = (c.total||0)>0 ? Math.round(((c.repostos||0)/(c.total||0))*100) : null;
+    const taxaClr = taxa==null?'var(--text3)':taxa>=80?'#16a34a':taxa>=60?'#d97706':'#dc2626';
+    return mkRow([
+      mkCell(`<span style="font-weight:700;font-size:13px;color:var(--text)">${c.nome}</span>`),
+      mkCell(`<span style="font-size:15px;font-weight:800;color:#d97706">${fmtN(c.total)}</span>`),
+      mkCell(`<span style="font-size:13px;font-weight:600;color:#16a34a">${fmtN(c.repostos)}</span>`),
+      mkCell(`<span style="font-size:13px;font-weight:600;color:#dc2626">${fmtN(c.nao_enc)}</span>`),
+      mkCell(`<span style="font-size:13px;font-weight:700;color:${taxaClr}">${taxa!=null?taxa+'%':'—'}</span>`),
+      mkCell(`<span style="font-size:13px;color:var(--text2)">${fmtT(c.tempo_medio)}</span>`),
+    ]);
+  });
 
   // ── 8. Por dia (se range > 1 dia) ────────────────────────────
   let porDiaHTML = '';
@@ -2409,18 +2442,19 @@ function renderRelAnalitico(d) {
 
     ${porDiaHTML}
 
-    <!-- Colaboradores -->
-    <div class="card" style="margin-bottom:18px">
-      <div class="card-hd">👥 DESEMPENHO INDIVIDUAL</div>
-      <div style="overflow-x:auto">
-        <table style="width:100%;border-collapse:collapse">
-          <thead>${colabHeader}</thead>
-          <tbody>
-            ${colabRows || '<tr><td colspan="5" style="text-align:center;padding:32px;color:var(--text3)">Sem dados de colaboradores</td></tr>'}
-          </tbody>
-        </table>
-      </div>
-    </div>
+    <!-- Seções de colaboradores por área -->
+    ${mkArea('📦','SEPARAÇÃO — DESEMPENHO INDIVIDUAL','linear-gradient(135deg,#6366f1,#4338ca)',
+      ['COLABORADOR / TURNO','PEDIDOS','ITENS','PONTUAÇÃO','TEMPO MÉD.','RITMO'],
+      sepAreaRows)}
+    ${mkArea('🔖','CHECKOUT — DESEMPENHO INDIVIDUAL','linear-gradient(135deg,#22d3ee,#0369a1)',
+      ['OPERADOR','EXPEDIÇÕES','ITENS','TEMPO MÉD.','RITMO'],
+      ckAreaRows)}
+    ${mkArea('📫','EMBALAGEM — DESEMPENHO INDIVIDUAL','linear-gradient(135deg,#a855f7,#6d28d9)',
+      ['EMBALADOR','EMBALADOS','ITENS','TEMPO MÉD.','RITMO'],
+      embAreaRows)}
+    ${mkArea('🔧','REPOSIÇÃO — DESEMPENHO INDIVIDUAL','linear-gradient(135deg,#f59e0b,#b45309)',
+      ['REPOSITOR','TOTAL AVISOS','REPOSTOS','NÃO ENCONTR.','TAXA RESOLUÇÃO','T. MÉDIO'],
+      repAreaRows)}
 
     <!-- Transportadoras -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px">
