@@ -1760,49 +1760,305 @@ async function gerarRelatorioColaborador(nomeColab) {
 
     // ── CHECKOUT ──
     } else if (perfil === 'checkout') {
-      const totalCk   = pedidos.length;
-      const tempos    = pedidos.filter(p => p.tempo_checkout_min !== null).map(p => p.tempo_checkout_min);
-      const mediaCk   = tempos.length ? (tempos.reduce((a,b)=>a+b,0)/tempos.length).toFixed(1) : null;
-      const linhas    = pedidos.map(p => `<tr style="border-bottom:1px solid var(--border)">
-        <td style="padding:5px 8px;font-family:monospace;font-size:11px;font-weight:700">${p.numero_pedido}</td>
-        <td style="padding:5px 8px;font-size:11px;color:var(--text3)">${fmtData(p.data_pedido)}</td>
-        <td style="padding:5px 8px;text-align:center;font-size:11px">${p.hora_abertura||'—'}</td>
-        <td style="padding:5px 8px;text-align:center;font-size:11px">${p.hora_confirmacao||'—'}</td>
-        <td style="padding:5px 8px;text-align:center;font-weight:700;color:${p.tempo_checkout_min<=5?'#22C55E':p.tempo_checkout_min<=15?'#F59E0B':'#EF4444'}">${p.tempo_checkout_min!==null?p.tempo_checkout_min+'min':'—'}</td>
-      </tr>`).join('');
-      html = `<div style="font-family:'DM Sans',sans-serif;max-width:700px;margin:0 auto">
-        <div style="background:linear-gradient(135deg,#16A34A,#15803D);color:#fff;border-radius:12px 12px 0 0;padding:20px 24px">
+      const totalCk    = pedidos.length;
+      const totalItens = pedidos.reduce((s,p) => s + (p.total_itens||0), 0);
+      const tempos     = pedidos.map(p => p.tempo_checkout_min).filter(t => t !== null);
+      const comTempo   = tempos.length;
+      const mediaCk    = comTempo ? tempos.reduce((a,b)=>a+b,0)/comTempo : null;
+      const tempoMin   = comTempo ? Math.min(...tempos) : null;
+      const tempoMax   = comTempo ? Math.max(...tempos) : null;
+      const somaT      = tempos.reduce((a,b)=>a+b,0);
+      const ckHora     = somaT > 0 ? Math.round(totalCk / (somaT/60)) : null;
+
+      const rapido = tempos.filter(t => t <= 3).length;
+      const normal = tempos.filter(t => t > 3 && t <= 10).length;
+      const lento  = tempos.filter(t => t > 10).length;
+      const pctR   = comTempo ? Math.round((rapido/comTempo)*100) : 0;
+      const pctN   = comTempo ? Math.round((normal/comTempo)*100) : 0;
+      const pctL   = comTempo ? Math.round((lento/comTempo)*100) : 0;
+
+      const pontosBons = [], melhorar = [];
+      if (mediaCk !== null) {
+        if (mediaCk <= 5) pontosBons.push(`Velocidade excelente: média de ${mediaCk.toFixed(1)}min por checkout`);
+        else if (mediaCk <= 10) pontosBons.push(`Ritmo dentro do esperado: ${mediaCk.toFixed(1)}min/checkout`);
+        else melhorar.push(`Tempo médio elevado: ${mediaCk.toFixed(1)}min/checkout (meta ≤ 10min)`);
+      }
+      if (ckHora !== null && ckHora >= 10) pontosBons.push(`Alta produtividade: ${ckHora} checkouts/hora`);
+      if (totalCk >= 20) pontosBons.push(`Volume expressivo: ${totalCk} checkouts no período`);
+      else if (totalCk < 5) melhorar.push(`Volume baixo no período: ${totalCk} checkouts`);
+      if (pctL > 30) melhorar.push(`${pctL}% dos checkouts acima de 10min — revisar processo`);
+
+      const fmtTck = t => t === null ? '—' : t === 0 ? '<1min' : t+'min';
+      const linhasCk = pedidos.map(p => {
+        const tCol = p.tempo_checkout_min;
+        const tClr = tCol === null ? '#94A3B8' : tCol <= 3 ? '#22C55E' : tCol <= 10 ? '#F59E0B' : '#EF4444';
+        return `<tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:5px 8px;font-family:monospace;font-size:11px;font-weight:700">${p.numero_pedido}</td>
+          <td style="padding:5px 8px;font-size:11px;color:var(--text3)">${fmtData(p.data_pedido)}</td>
+          <td style="padding:5px 8px;text-align:center;font-size:11px;color:var(--text3)">${p.hora_fila||'—'}</td>
+          <td style="padding:5px 8px;text-align:center;font-size:11px">${p.hora_abertura||'—'}</td>
+          <td style="padding:5px 8px;text-align:center;font-size:11px">${p.hora_confirmacao||'—'}</td>
+          <td style="padding:5px 8px;text-align:center;font-weight:700;color:${tClr}">${fmtTck(tCol)}</td>
+          <td style="padding:5px 8px;text-align:center;font-size:12px;color:var(--accent)">${p.total_itens||0}</td>
+        </tr>`;
+      }).join('');
+
+      html = `<div style="font-family:'DM Sans',sans-serif;max-width:780px;margin:0 auto">
+        <div style="background:linear-gradient(135deg,#0891b2,#0369a1);color:#fff;border-radius:12px 12px 0 0;padding:20px 24px">
           <div style="font-size:10px;font-weight:700;letter-spacing:2px;opacity:.75">RELATÓRIO DE DESEMPENHO · CHECKOUT</div>
           <div style="font-size:22px;font-weight:900;margin-top:4px">${nomeColab}</div>
-          <div style="font-size:12px;opacity:.85;margin-top:4px">📅 ${nomesMes[parseInt(mes)]} de ${ano} · ${totalCk} checkouts${mediaCk ? ` · média ${mediaCk}min` : ''}</div>
+          <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:6px;font-size:12px;opacity:.85">
+            <span>📅 ${nomesMes[parseInt(mes)]} de ${ano}</span>
+            <span>✅ ${totalCk} checkouts · ${totalItens} itens</span>
+            ${ckHora ? `<span>⚡ ${ckHora} CK/h</span>` : ''}
+          </div>
         </div>
         <div style="background:var(--surface);border:1px solid var(--border);border-top:none;border-radius:0 0 12px 12px;padding:20px 24px">
-          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px">
-            ${[['✅ CHECKOUTS',totalCk,'#22C55E'],['⏱ TEMPO MÉDIO',mediaCk?mediaCk+'min':'—','#3B82F6'],['⚡ MAIS RÁPIDO',tempos.length?Math.min(...tempos)+'min':'—','#22C55E']].map(([l,v,c])=>`<div style="background:var(--surface2);border-radius:10px;padding:12px;text-align:center;border:1px solid var(--border)"><div style="font-size:20px;font-weight:900;color:${c}">${v}</div><div style="font-size:9px;color:var(--text3);font-weight:700;letter-spacing:.5px">${l}</div></div>`).join('')}
+
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:18px">
+            ${[
+              ['✅ CHECKOUTS', totalCk, '#0891b2'],
+              ['🔢 ITENS PROCESSADOS', totalItens, 'var(--accent)'],
+              ['⏱ TEMPO MÉDIO', mediaCk !== null ? mediaCk.toFixed(1)+'min' : '—', mediaCk !== null && mediaCk <= 10 ? '#22C55E' : '#F59E0B'],
+              ['⚡ MAIS RÁPIDO', tempoMin !== null ? fmtTck(tempoMin) : '—', '#22C55E'],
+              ['🐢 MAIS LENTO', tempoMax !== null ? fmtTck(tempoMax) : '—', tempoMax > 10 ? '#EF4444' : '#F59E0B'],
+              ['🏃 RITMO', ckHora ? ckHora+' CK/h' : '—', '#8B5CF6'],
+            ].map(([l,v,c])=>`<div style="background:var(--surface2);border-radius:10px;padding:12px;text-align:center;border:1px solid var(--border)"><div style="font-size:20px;font-weight:900;color:${c}">${v}</div><div style="font-size:9px;color:var(--text3);font-weight:700;letter-spacing:.5px;margin-top:2px">${l}</div></div>`).join('')}
           </div>
-          <div style="overflow-x:auto;border-radius:8px;border:1px solid var(--border)">
-            <table style="width:100%;border-collapse:collapse;font-size:12px">
-              <thead><tr style="background:var(--surface2);font-size:10px;font-weight:700;color:var(--text3)">
-                <th style="padding:7px 8px;text-align:left">PEDIDO</th><th style="padding:7px 8px">DATA</th><th style="padding:7px 8px">ABERTURA</th><th style="padding:7px 8px">CONFIRMAÇÃO</th><th style="padding:7px 8px">TEMPO</th>
-              </tr></thead><tbody>${linhas}</tbody>
-            </table>
+
+          ${comTempo > 0 ? `<div style="background:var(--surface2);border-radius:10px;padding:14px;margin-bottom:14px;border:1px solid var(--border)">
+            <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:1px;margin-bottom:10px">⏱ DISTRIBUIÇÃO DE VELOCIDADE (${comTempo} checkouts com tempo)</div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+              ${[['⚡ RÁPIDO','≤ 3min',rapido,pctR,'#22C55E'],['✅ NORMAL','3–10min',normal,pctN,'#3B82F6'],['🐢 LENTO','> 10min',lento,pctL,'#EF4444']].map(([l,r,n,p2,c])=>`<div style="text-align:center;background:var(--surface);border-radius:8px;padding:10px;border:1px solid var(--border)"><div style="font-size:18px;font-weight:900;color:${c}">${n}</div><div style="font-size:9px;font-weight:700;color:${c}">${p2}%</div><div style="font-size:10px;color:var(--text3);font-weight:600;margin-top:2px">${l}</div><div style="font-size:9px;color:var(--text3)">${r}</div></div>`).join('')}
+            </div>
+          </div>` : ''}
+
+          <div style="margin-bottom:14px">
+            <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:1px;margin-bottom:8px">📋 DETALHAMENTO POR PEDIDO</div>
+            <div style="overflow-x:auto;border-radius:8px;border:1px solid var(--border)">
+              <table style="width:100%;border-collapse:collapse;font-size:12px">
+                <thead><tr style="background:var(--surface2);font-size:10px;font-weight:700;color:var(--text3)">
+                  <th style="padding:7px 8px;text-align:left">PEDIDO</th><th style="padding:7px 8px">DATA</th>
+                  <th style="padding:7px 8px">ENTRADA FILA</th><th style="padding:7px 8px">INÍCIO</th>
+                  <th style="padding:7px 8px">FIM</th><th style="padding:7px 8px">T. REAL</th><th style="padding:7px 8px">ITENS</th>
+                </tr></thead><tbody>${linhasCk}</tbody>
+              </table>
+            </div>
           </div>
+
+          ${pontosBons.length?`<div style="margin-bottom:10px"><div style="font-size:10px;font-weight:800;color:#15803D;letter-spacing:1px;margin-bottom:6px">✅ PONTOS POSITIVOS</div>${pontosBons.map(p=>`<div style="font-size:12px;color:var(--text);padding:6px 10px;background:#F0FDF4;border-radius:6px;margin-bottom:4px;border-left:3px solid #22C55E">• ${p}</div>`).join('')}</div>`:''}
+          ${melhorar.length?`<div><div style="font-size:10px;font-weight:800;color:#B45309;letter-spacing:1px;margin-bottom:6px">⚠️ PONTOS A MELHORAR</div>${melhorar.map(p=>`<div style="font-size:12px;color:var(--text);padding:6px 10px;background:#FFFBEB;border-radius:6px;margin-bottom:4px;border-left:3px solid #F59E0B">• ${p}</div>`).join('')}</div>`:''}
         </div>
       </div>`;
 
-    // ── OUTROS PERFIS ──
-    } else {
-      const total = pedidos.length;
-      html = `<div style="font-family:'DM Sans',sans-serif;max-width:600px;margin:0 auto">
-        <div style="background:var(--accent);color:#fff;border-radius:12px 12px 0 0;padding:20px 24px">
-          <div style="font-size:10px;font-weight:700;letter-spacing:2px;opacity:.75">RELATÓRIO · ${(perfil||'').toUpperCase()}</div>
+    // ── EMBALAGEM ──
+    } else if (perfil === 'embalador') {
+      const totalEmb   = pedidos.length;
+      const totalItens = pedidos.reduce((s,p) => s + (p.total_itens||0), 0);
+      const tempos     = pedidos.map(p => p.tempo_embalagem_min).filter(t => t !== null && t > 0);
+      const comTempo   = tempos.length;
+      const mediaEmb   = comTempo ? tempos.reduce((a,b)=>a+b,0)/comTempo : null;
+      const tempoMin   = comTempo ? Math.min(...tempos) : null;
+      const tempoMax   = comTempo ? Math.max(...tempos) : null;
+      const somaTE     = tempos.reduce((a,b)=>a+b,0);
+      const embHora    = somaTE > 0 ? Math.round(totalEmb / (somaTE/60)) : null;
+
+      const trMap = {};
+      pedidos.forEach(p => { const t = p.transportadora||'Outros'; trMap[t]=(trMap[t]||0)+1; });
+      const topTransp = Object.entries(trMap).sort((a,b)=>b[1]-a[1]).slice(0,4);
+
+      const rapido = tempos.filter(t => t <= 5).length;
+      const normal = tempos.filter(t => t > 5 && t <= 15).length;
+      const lento  = tempos.filter(t => t > 15).length;
+      const pctR   = comTempo ? Math.round((rapido/comTempo)*100) : 0;
+      const pctN   = comTempo ? Math.round((normal/comTempo)*100) : 0;
+      const pctL   = comTempo ? Math.round((lento/comTempo)*100) : 0;
+
+      const pontosBons = [], melhorar = [];
+      if (mediaEmb !== null) {
+        if (mediaEmb <= 8) pontosBons.push(`Velocidade excelente: média de ${mediaEmb.toFixed(1)}min por embalagem`);
+        else if (mediaEmb <= 15) pontosBons.push(`Ritmo dentro do esperado: ${mediaEmb.toFixed(1)}min/embalagem`);
+        else melhorar.push(`Tempo médio elevado: ${mediaEmb.toFixed(1)}min/embalagem (meta ≤ 15min)`);
+      }
+      if (embHora !== null && embHora >= 8) pontosBons.push(`Alta produtividade: ${embHora} embalagens/hora`);
+      if (totalEmb >= 20) pontosBons.push(`Volume expressivo: ${totalEmb} embalagens no período`);
+      else if (totalEmb < 5) melhorar.push(`Volume baixo no período: ${totalEmb} embalagens`);
+      if (pctL > 30) melhorar.push(`${pctL}% das embalagens acima de 15min — revisar processo`);
+
+      const fmtTe = t => t === null ? '—' : t === 0 ? '<1min' : t+'min';
+      const linhasEmb = pedidos.map(p => {
+        const tCol = p.tempo_embalagem_min;
+        const tClr = tCol === null ? '#94A3B8' : tCol <= 5 ? '#22C55E' : tCol <= 15 ? '#F59E0B' : '#EF4444';
+        return `<tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:5px 8px;font-family:monospace;font-size:11px;font-weight:700">${p.numero_pedido}</td>
+          <td style="padding:5px 8px;font-size:11px;color:var(--text3)">${fmtData(p.data_pedido)}</td>
+          <td style="padding:5px 8px;text-align:center;font-size:11px;color:var(--text3)">${p.hora_fila||'—'}</td>
+          <td style="padding:5px 8px;text-align:center;font-size:11px">${p.embalagem_inicio||'—'}</td>
+          <td style="padding:5px 8px;text-align:center;font-size:11px">${p.embalado_em||'—'}</td>
+          <td style="padding:5px 8px;text-align:center;font-weight:700;color:${tClr}">${fmtTe(tCol)}</td>
+          <td style="padding:5px 8px;text-align:center;font-size:12px;color:var(--accent)">${p.total_itens||0}</td>
+          <td style="padding:5px 8px;font-size:10px;color:var(--text3);max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.transportadora||''}">${p.transportadora||'—'}</td>
+        </tr>`;
+      }).join('');
+
+      html = `<div style="font-family:'DM Sans',sans-serif;max-width:780px;margin:0 auto">
+        <div style="background:linear-gradient(135deg,#a855f7,#6d28d9);color:#fff;border-radius:12px 12px 0 0;padding:20px 24px">
+          <div style="font-size:10px;font-weight:700;letter-spacing:2px;opacity:.75">RELATÓRIO DE DESEMPENHO · EMBALAGEM</div>
           <div style="font-size:22px;font-weight:900;margin-top:4px">${nomeColab}</div>
-          <div style="font-size:12px;opacity:.85;margin-top:4px">📅 ${nomesMes[parseInt(mes)]} de ${ano} · ${total} registros</div>
+          <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:6px;font-size:12px;opacity:.85">
+            <span>📅 ${nomesMes[parseInt(mes)]} de ${ano}</span>
+            <span>📫 ${totalEmb} embalagens · ${totalItens} itens</span>
+            ${embHora ? `<span>⚡ ${embHora} emb/h</span>` : ''}
+          </div>
         </div>
-        <div style="background:var(--surface);border:1px solid var(--border);border-top:none;border-radius:0 0 12px 12px;padding:20px 24px;color:var(--text3);font-size:13px;text-align:center">
-          ${total} registro(s) encontrado(s) no período.
+        <div style="background:var(--surface);border:1px solid var(--border);border-top:none;border-radius:0 0 12px 12px;padding:20px 24px">
+
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:18px">
+            ${[
+              ['📫 EMBALADOS', totalEmb, '#7c3aed'],
+              ['🔢 ITENS', totalItens, 'var(--accent)'],
+              ['⏱ TEMPO MÉDIO', mediaEmb !== null ? mediaEmb.toFixed(1)+'min' : '—', mediaEmb !== null && mediaEmb <= 15 ? '#22C55E' : '#F59E0B'],
+              ['⚡ MAIS RÁPIDO', tempoMin !== null ? fmtTe(tempoMin) : '—', '#22C55E'],
+              ['🐢 MAIS LENTO', tempoMax !== null ? fmtTe(tempoMax) : '—', tempoMax > 15 ? '#EF4444' : '#F59E0B'],
+              ['🏃 RITMO', embHora ? embHora+' emb/h' : '—', '#8B5CF6'],
+            ].map(([l,v,c])=>`<div style="background:var(--surface2);border-radius:10px;padding:12px;text-align:center;border:1px solid var(--border)"><div style="font-size:20px;font-weight:900;color:${c}">${v}</div><div style="font-size:9px;color:var(--text3);font-weight:700;letter-spacing:.5px;margin-top:2px">${l}</div></div>`).join('')}
+          </div>
+
+          ${comTempo > 0 ? `<div style="background:var(--surface2);border-radius:10px;padding:14px;margin-bottom:14px;border:1px solid var(--border)">
+            <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:1px;margin-bottom:10px">⏱ DISTRIBUIÇÃO DE VELOCIDADE (${comTempo} embalagens com tempo)</div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+              ${[['⚡ RÁPIDO','≤ 5min',rapido,pctR,'#22C55E'],['✅ NORMAL','5–15min',normal,pctN,'#3B82F6'],['🐢 LENTO','> 15min',lento,pctL,'#EF4444']].map(([l,r,n,p2,c])=>`<div style="text-align:center;background:var(--surface);border-radius:8px;padding:10px;border:1px solid var(--border)"><div style="font-size:18px;font-weight:900;color:${c}">${n}</div><div style="font-size:9px;font-weight:700;color:${c}">${p2}%</div><div style="font-size:10px;color:var(--text3);font-weight:600;margin-top:2px">${l}</div><div style="font-size:9px;color:var(--text3)">${r}</div></div>`).join('')}
+            </div>
+          </div>` : ''}
+
+          ${topTransp.length ? `<div style="background:var(--surface2);border-radius:10px;padding:14px;margin-bottom:14px;border:1px solid var(--border)">
+            <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:1px;margin-bottom:8px">🚚 TOP TRANSPORTADORAS</div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px">
+              ${topTransp.map(([t,n])=>`<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px 14px;text-align:center"><div style="font-size:16px;font-weight:900;color:var(--accent)">${n}</div><div style="font-size:9px;color:var(--text3);font-weight:700;margin-top:1px">${t}</div></div>`).join('')}
+            </div>
+          </div>` : ''}
+
+          <div style="margin-bottom:14px">
+            <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:1px;margin-bottom:8px">📋 DETALHAMENTO POR PEDIDO</div>
+            <div style="overflow-x:auto;border-radius:8px;border:1px solid var(--border)">
+              <table style="width:100%;border-collapse:collapse;font-size:12px">
+                <thead><tr style="background:var(--surface2);font-size:10px;font-weight:700;color:var(--text3)">
+                  <th style="padding:7px 8px;text-align:left">PEDIDO</th><th style="padding:7px 8px">DATA</th>
+                  <th style="padding:7px 8px">FILA (CK)</th><th style="padding:7px 8px">INÍCIO EMB.</th>
+                  <th style="padding:7px 8px">FIM</th><th style="padding:7px 8px">TEMPO</th>
+                  <th style="padding:7px 8px">ITENS</th><th style="padding:7px 8px">TRANSP.</th>
+                </tr></thead><tbody>${linhasEmb}</tbody>
+              </table>
+            </div>
+          </div>
+
+          ${pontosBons.length?`<div style="margin-bottom:10px"><div style="font-size:10px;font-weight:800;color:#15803D;letter-spacing:1px;margin-bottom:6px">✅ PONTOS POSITIVOS</div>${pontosBons.map(p=>`<div style="font-size:12px;color:var(--text);padding:6px 10px;background:#F0FDF4;border-radius:6px;margin-bottom:4px;border-left:3px solid #22C55E">• ${p}</div>`).join('')}</div>`:''}
+          ${melhorar.length?`<div><div style="font-size:10px;font-weight:800;color:#B45309;letter-spacing:1px;margin-bottom:6px">⚠️ PONTOS A MELHORAR</div>${melhorar.map(p=>`<div style="font-size:12px;color:var(--text);padding:6px 10px;background:#FFFBEB;border-radius:6px;margin-bottom:4px;border-left:3px solid #F59E0B">• ${p}</div>`).join('')}</div>`:''}
         </div>
       </div>`;
+
+    // ── REPOSITOR ──
+    } else if (perfil === 'repositor') {
+      const totalAv  = pedidos.length;
+      const repostos = pedidos.filter(p => p.resultado_tentativa === 'encontrado').length;
+      const naoEnc   = pedidos.filter(p => p.resultado_tentativa === 'nao_encontrado').length;
+      const tempos   = pedidos.map(p => p.tempo_resolucao_min).filter(t => t !== null && t > 0);
+      const comTempo = tempos.length;
+      const mediaRep = comTempo ? tempos.reduce((a,b)=>a+b,0)/comTempo : null;
+      const taxa     = totalAv > 0 ? Math.round((repostos/totalAv)*100) : null;
+      const taxaClr  = taxa === null ? '#94A3B8' : taxa >= 80 ? '#22C55E' : taxa >= 60 ? '#F59E0B' : '#EF4444';
+      const diasMap  = {};
+      pedidos.forEach(p => { diasMap[p.data_pedido]=(diasMap[p.data_pedido]||0)+1; });
+
+      const pontosBons = [], melhorar = [];
+      if (taxa !== null) {
+        if (taxa >= 85) pontosBons.push(`Excelente taxa de resolução: ${taxa}% dos avisos resolvidos`);
+        else if (taxa >= 70) pontosBons.push(`Boa taxa de resolução: ${taxa}%`);
+        else melhorar.push(`Taxa de resolução baixa: ${taxa}% (meta ≥ 85%) — ${naoEnc} não encontrados`);
+      }
+      if (mediaRep !== null && mediaRep <= 15) pontosBons.push(`Bom tempo de resposta: média de ${mediaRep.toFixed(1)}min por aviso`);
+      else if (mediaRep !== null && mediaRep > 25) melhorar.push(`Tempo médio alto: ${mediaRep.toFixed(1)}min (meta ≤ 20min)`);
+      if (totalAv >= 30) pontosBons.push(`Alto volume de avisos atendidos: ${totalAv} no período`);
+
+      const linhasRep = pedidos.map(p => {
+        const tCol = p.tempo_resolucao_min;
+        const tClr = tCol === null ? '#94A3B8' : tCol <= 10 ? '#22C55E' : tCol <= 25 ? '#F59E0B' : '#EF4444';
+        const resClr = p.resultado_tentativa === 'encontrado' ? '#22C55E' : '#EF4444';
+        const resLbl = p.resultado_tentativa === 'encontrado' ? '✅' : '❌';
+        return `<tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:5px 8px;font-family:monospace;font-size:11px;font-weight:700">${p.numero_pedido}</td>
+          <td style="padding:5px 8px;font-size:11px;color:var(--text3)">${fmtData(p.data_pedido)}</td>
+          <td style="padding:5px 8px;text-align:center;font-size:11px;color:var(--text3)">${p.hora_aviso||'—'}</td>
+          <td style="padding:5px 8px;text-align:center;font-size:10px">${p.numero_tentativa||'—'}</td>
+          <td style="padding:5px 8px;text-align:center;font-size:12px;font-weight:700;color:${resClr}">${resLbl}</td>
+          <td style="padding:5px 8px;font-family:monospace;font-size:10px;color:#EF4444">${p.codigo||'—'}</td>
+          <td style="padding:5px 8px;font-size:10px;color:var(--text);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.descricao||''}">${p.descricao||'—'}</td>
+          <td style="padding:5px 8px;text-align:center">${p.quantidade||0}</td>
+          <td style="padding:5px 8px;text-align:center;font-weight:700;color:${tClr}">${tCol !== null ? tCol+'min' : '—'}</td>
+        </tr>`;
+      }).join('');
+
+      html = `<div style="font-family:'DM Sans',sans-serif;max-width:820px;margin:0 auto">
+        <div style="background:linear-gradient(135deg,#f59e0b,#b45309);color:#fff;border-radius:12px 12px 0 0;padding:20px 24px">
+          <div style="font-size:10px;font-weight:700;letter-spacing:2px;opacity:.75">RELATÓRIO DE DESEMPENHO · REPOSIÇÃO</div>
+          <div style="font-size:22px;font-weight:900;margin-top:4px">${nomeColab}</div>
+          <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:6px;font-size:12px;opacity:.85">
+            <span>📅 ${nomesMes[parseInt(mes)]} de ${ano}</span>
+            <span>🔧 ${totalAv} avisos · ${repostos} repostos · ${naoEnc} não enc.</span>
+            ${taxa !== null ? `<span>✅ ${taxa}% resolvidos</span>` : ''}
+          </div>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-top:none;border-radius:0 0 12px 12px;padding:20px 24px">
+
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:18px">
+            ${[
+              ['🔔 TOTAL AVISOS', totalAv, '#d97706'],
+              ['✅ REPOSTOS', repostos, '#22C55E'],
+              ['❌ NÃO ENCONTR.', naoEnc, '#EF4444'],
+              ['📊 TAXA RESOLUÇÃO', taxa !== null ? taxa+'%' : '—', taxaClr],
+              ['⏱ TEMPO MÉDIO', mediaRep !== null ? mediaRep.toFixed(1)+'min' : '—', mediaRep !== null && mediaRep <= 20 ? '#22C55E' : '#F59E0B'],
+              ['📅 DIAS ATIVOS', Object.keys(diasMap).length, 'var(--accent)'],
+            ].map(([l,v,c])=>`<div style="background:var(--surface2);border-radius:10px;padding:12px;text-align:center;border:1px solid var(--border)"><div style="font-size:20px;font-weight:900;color:${c}">${v}</div><div style="font-size:9px;color:var(--text3);font-weight:700;letter-spacing:.5px;margin-top:2px">${l}</div></div>`).join('')}
+          </div>
+
+          ${taxa !== null ? `<div style="background:var(--surface2);border-radius:10px;padding:14px;margin-bottom:14px;border:1px solid var(--border)">
+            <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:1px;margin-bottom:8px">📊 TAXA DE RESOLUÇÃO</div>
+            <div style="display:flex;align-items:center;gap:12px">
+              <div style="flex:1;height:12px;background:var(--border);border-radius:6px;overflow:hidden">
+                <div style="height:100%;width:${taxa}%;background:${taxaClr};border-radius:6px"></div>
+              </div>
+              <div style="font-size:18px;font-weight:900;color:${taxaClr};min-width:50px">${taxa}%</div>
+            </div>
+            <div style="display:flex;gap:16px;font-size:11px;color:var(--text3);margin-top:8px">
+              <span>Repostos: <b style="color:#22C55E">${repostos}</b></span>
+              <span>Não encontrados: <b style="color:#EF4444">${naoEnc}</b></span>
+              <span>Total: <b>${totalAv}</b></span>
+            </div>
+          </div>` : ''}
+
+          <div style="margin-bottom:14px">
+            <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:1px;margin-bottom:8px">📋 DETALHAMENTO POR AVISO</div>
+            <div style="overflow-x:auto;border-radius:8px;border:1px solid var(--border)">
+              <table style="width:100%;border-collapse:collapse;font-size:12px">
+                <thead><tr style="background:var(--surface2);font-size:10px;font-weight:700;color:var(--text3)">
+                  <th style="padding:7px 8px;text-align:left">PEDIDO</th><th style="padding:7px 8px">DATA</th>
+                  <th style="padding:7px 8px">AVISO</th><th style="padding:7px 8px">TENT.</th><th style="padding:7px 8px">RESULT.</th>
+                  <th style="padding:7px 8px;text-align:left">CÓDIGO</th><th style="padding:7px 8px;text-align:left">DESCRIÇÃO</th>
+                  <th style="padding:7px 8px">QTD</th><th style="padding:7px 8px">TEMPO</th>
+                </tr></thead><tbody>${linhasRep}</tbody>
+              </table>
+            </div>
+          </div>
+
+          ${pontosBons.length?`<div style="margin-bottom:10px"><div style="font-size:10px;font-weight:800;color:#15803D;letter-spacing:1px;margin-bottom:6px">✅ PONTOS POSITIVOS</div>${pontosBons.map(p=>`<div style="font-size:12px;color:var(--text);padding:6px 10px;background:#F0FDF4;border-radius:6px;margin-bottom:4px;border-left:3px solid #22C55E">• ${p}</div>`).join('')}</div>`:''}
+          ${melhorar.length?`<div><div style="font-size:10px;font-weight:800;color:#B45309;letter-spacing:1px;margin-bottom:6px">⚠️ PONTOS A MELHORAR</div>${melhorar.map(p=>`<div style="font-size:12px;color:var(--text);padding:6px 10px;background:#FFFBEB;border-radius:6px;margin-bottom:4px;border-left:3px solid #F59E0B">• ${p}</div>`).join('')}</div>`:''}
+        </div>
+      </div>`;
+
+    // ── FALLBACK ──
+    } else {
+      const total = pedidos.length;
+      html = `<div style="text-align:center;padding:32px;color:var(--text3);font-size:13px">${total} registro(s) no período.</div>`;
     }
 
     // Exibe em modal
