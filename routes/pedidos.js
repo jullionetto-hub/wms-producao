@@ -170,7 +170,13 @@ router.put('/pedidos/:id/concluir', requerAuth, async (req,res) => {
     const pend=await db.all(`SELECT id FROM itens_pedido WHERE pedido_id=$1 AND status='pendente'`,[req.params.id]);
     if (pend.length) return res.status(400).json({erro:`Ainda ha ${pend.length} item(s) nao verificado(s)!`});
     const {data,hora}=dataHoraLocal();
-    const avisos=await db.all(`SELECT id FROM avisos_repositor WHERE pedido_id=$1 AND status='pendente'`,[req.params.id]);
+    // Bloqueia se houver avisos 'pendente' (repositor ainda não iniciou busca)
+    // OU 'verificando' (repositor está ativamente buscando o item agora).
+    // Sem esse bloqueio, o pedido some da fila do separador enquanto o repositor busca.
+    const avisos=await db.all(
+      `SELECT id FROM avisos_repositor WHERE pedido_id=$1 AND status IN ('pendente','verificando')`,
+      [req.params.id]
+    );
     if (avisos.length) {
       // Separador terminou de escanear todos os SKUs mas está aguardando repositor.
       // Grava skus_concluido_em APENAS se ainda não foi gravado (1ª tentativa de concluir).
