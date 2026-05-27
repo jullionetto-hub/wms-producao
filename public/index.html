@@ -1706,6 +1706,17 @@
             <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">📋 Fila de Checkout</div>
             <button class="btn btn-outline btn-sm" onclick="carregarFilaCkMobile()">🔄</button>
           </div>
+          <div style="display:flex;gap:10px;margin-bottom:12px">
+            <input type="text" id="m-ck-fila-busca"
+              placeholder="🔍 Buscar pedido..."
+              onkeydown="if(event.key==='Enter')filtrarFilaCkMobile()"
+              autocomplete="off" inputmode="numeric"
+              style="flex:1;padding:12px 14px;border:2px solid var(--border);border-radius:12px;font-size:15px;font-weight:700;font-family:'Space Mono',monospace;background:var(--surface2);color:var(--text);outline:none;letter-spacing:1px;box-sizing:border-box">
+            <button onclick="filtrarFilaCkMobile()"
+              style="padding:12px 20px;background:#4f46e5;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;box-shadow:0 2px 8px rgba(79,70,229,.3)">
+              Buscar
+            </button>
+          </div>
           <div id="m-ck-fila-lista">
             <div style="color:var(--text3);text-align:center;padding:32px;font-size:13px">Carregando...</div>
           </div>
@@ -1936,9 +1947,9 @@
   <script src="/js/pedidos.js?v=13"></script>
   <script src="/js/separador.js?v=6"></script>
   <script src="/js/repositor.js?v=15"></script>
-  <script src="/js/checkout.js?v=3"></script>
+  <script src="/js/checkout.js?v=4"></script>
   <script src="/js/dashboard.js?v=22"></script>
-  <script src="/js/auth.js?v=13"></script>
+  <script src="/js/auth.js?v=14"></script>
 
 
 <!-- ══ MODAL IMPORTAR ══ -->
@@ -2217,12 +2228,18 @@ if ('serviceWorker' in navigator) {
   <!-- Aba: Fila -->
   <div id="emb-tab-fila" style="flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden">
     <div style="padding:14px;background:var(--surface,#fff);border-bottom:1px solid var(--border,#e2e8f0);flex-shrink:0">
-      <div style="font-size:11px;color:var(--text3,#94a3b8);font-weight:700;margin-bottom:8px;letter-spacing:.5px;text-transform:uppercase">Filtrar Fila</div>
-      <input type="text" id="m-emb-busca"
-        placeholder="🔍 Digite o número do pedido..."
-        oninput="filtrarEmbalagemMobile()"
-        autocomplete="off" inputmode="numeric"
-        style="width:100%;padding:14px 16px;border:2px solid var(--border,#e2e8f0);border-radius:12px;font-size:16px;font-weight:700;font-family:'Space Mono',monospace;background:var(--surface2,#f8fafc);color:var(--text,#1e293b);box-sizing:border-box;outline:none;letter-spacing:1px">
+      <div style="font-size:11px;color:var(--text3,#94a3b8);font-weight:700;margin-bottom:8px;letter-spacing:.5px;text-transform:uppercase">Buscar Pedido</div>
+      <div style="display:flex;gap:10px">
+        <input type="text" id="m-emb-busca"
+          placeholder="🔍 Número do pedido..."
+          onkeydown="if(event.key==='Enter')filtrarEmbalagemMobile()"
+          autocomplete="off" inputmode="numeric"
+          style="flex:1;padding:14px 16px;border:2px solid var(--border,#e2e8f0);border-radius:12px;font-size:16px;font-weight:700;font-family:'Space Mono',monospace;background:var(--surface2,#f8fafc);color:var(--text,#1e293b);box-sizing:border-box;outline:none;letter-spacing:1px">
+        <button onclick="filtrarEmbalagemMobile()"
+          style="padding:14px 20px;background:#4f46e5;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;box-shadow:0 2px 8px rgba(79,70,229,.3)">
+          Buscar
+        </button>
+      </div>
     </div>
     <div style="flex:1;overflow-y:auto;padding:14px;min-height:0" id="m-emb-lista">
       <div style="text-align:center;padding:60px;color:var(--text3,#94a3b8)">Carregando...</div>
@@ -2231,20 +2248,7 @@ if ('serviceWorker' in navigator) {
 
   <!-- Aba: Embalar -->
   <div id="emb-tab-embalar" style="flex:1;display:none;flex-direction:column;min-height:0;overflow:hidden">
-    <div style="padding:14px;background:var(--surface,#fff);border-bottom:1px solid var(--border,#e2e8f0);flex-shrink:0">
-      <div style="font-size:11px;color:var(--text3,#94a3b8);font-weight:700;margin-bottom:8px;letter-spacing:.5px;text-transform:uppercase">Número do Pedido</div>
-      <div style="display:flex;gap:10px">
-        <input type="text" id="m-emb-embalar-input"
-          placeholder="📦 Digite ou bipe o pedido..."
-          onkeydown="if(event.key==='Enter')buscarPedidoEmbMobile()"
-          autocomplete="off" inputmode="numeric"
-          style="flex:1;padding:14px 16px;border:2px solid #4f46e5;border-radius:12px;font-size:16px;font-weight:700;font-family:'Space Mono',monospace;background:var(--surface2,#f8fafc);color:var(--text,#1e293b);outline:none;letter-spacing:1px;box-sizing:border-box">
-        <button onclick="buscarPedidoEmbMobile()"
-          style="padding:14px 20px;background:#4f46e5;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;box-shadow:0 2px 8px rgba(79,70,229,.3)">
-          Buscar
-        </button>
-      </div>
-    </div>
+    <input type="hidden" id="m-emb-embalar-input">
     <div style="flex:1;overflow-y:auto;padding:14px;min-height:0" id="m-emb-embalar-resultado">
       <div style="text-align:center;padding:60px 20px;color:var(--text3,#94a3b8)">
         <div style="font-size:48px;margin-bottom:12px">📦</div>

@@ -20,6 +20,8 @@ function mudarTabCk(tab) {
   if (tab === 'feitos') carregarFeitosCkMobile();
 }
 
+let _ckFilaPedidos = [];
+
 async function carregarFilaCkMobile() {
   const el = document.getElementById('m-ck-fila-lista');
   const badge = document.getElementById('cktab-fila-badge');
@@ -31,35 +33,61 @@ async function carregarFilaCkMobile() {
     const pedidos = res.ok ? await res.json() : [];
     // Fila = sep concluído mas ainda não passou pelo checkout (status_embalagem nao_iniciado)
     const fila = pedidos.filter(p => !p.status_embalagem || p.status_embalagem === 'nao_iniciado');
+    _ckFilaPedidos = fila;
+    // Limpa busca ao recarregar
+    const buscaEl = document.getElementById('m-ck-fila-busca');
+    if (buscaEl) buscaEl.value = '';
     // Atualiza badge
     if (badge) {
       badge.textContent = fila.length;
       badge.style.display = fila.length > 0 ? 'inline' : 'none';
     }
-    if (!fila.length) {
-      el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:32px;font-size:13px">✅ Nenhum pedido aguardando checkout</div>';
-      return;
-    }
-    el.innerHTML = fila.map(p => `
-      <div style="border:1.5px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:8px;background:var(--surface)">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-          <div style="font-size:20px;font-weight:800;color:var(--accent);font-family:'Space Mono',monospace">#${p.numero_pedido}</div>
-          <span class="pill pendente" style="font-size:10px">aguardando ck</span>
-        </div>
-        <div style="display:flex;gap:12px;font-size:12px;color:var(--text2)">
-          <span>📦 <b style="color:var(--text)">${p.itens||0} itens</b></span>
-          <span>👤 ${p.separador_nome||'—'}</span>
-          ${p.numero_caixa ? `<span>📦 Cx: <b style="color:var(--indigo)">${p.numero_caixa}</b></span>` : ''}
-        </div>
-        ${p.concluido_em ? `<div style="font-size:11px;color:var(--text3);margin-top:4px">✓ Sep às ${(p.concluido_em||'').substring(11,16)}</div>` : ''}
-        <button class="btn btn-primary btn-sm" style="width:100%;margin-top:8px;padding:10px"
-          onclick="mudarTabCk('busca');setTimeout(()=>{const el=document.getElementById('m-ck-input-caixa');if(el){el.value='${p.numero_caixa||p.numero_pedido||''}';el.focus();}},300)">
-          🏷️ Iniciar Checkout
-        </button>
-      </div>`).join('');
+    _renderFilaCkMobile(fila);
   } catch(e) {
     if (el) el.innerHTML = '<div style="color:var(--red);padding:20px;text-align:center">Erro ao carregar fila</div>';
   }
+}
+
+function _renderFilaCkMobile(fila) {
+  const el = document.getElementById('m-ck-fila-lista');
+  if (!el) return;
+  if (!fila.length) {
+    el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:32px;font-size:13px">✅ Nenhum pedido aguardando checkout</div>';
+    return;
+  }
+  el.innerHTML = fila.map(p => `
+    <div data-pedido="${p.numero_pedido}" style="border:1.5px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:8px;background:var(--surface)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <div style="font-size:20px;font-weight:800;color:var(--accent);font-family:'Space Mono',monospace">#${p.numero_pedido}</div>
+        <span class="pill pendente" style="font-size:10px">aguardando ck</span>
+      </div>
+      <div style="display:flex;gap:12px;font-size:12px;color:var(--text2)">
+        <span>📦 <b style="color:var(--text)">${p.itens||0} itens</b></span>
+        <span>👤 ${p.separador_nome||'—'}</span>
+        ${p.numero_caixa ? `<span>📦 Cx: <b style="color:var(--indigo)">${p.numero_caixa}</b></span>` : ''}
+      </div>
+      ${p.concluido_em ? `<div style="font-size:11px;color:var(--text3);margin-top:4px">✓ Sep às ${(p.concluido_em||'').substring(11,16)}</div>` : ''}
+      <button class="btn btn-primary btn-sm" style="width:100%;margin-top:8px;padding:10px"
+        onclick="mudarTabCk('busca');setTimeout(()=>{const el=document.getElementById('m-ck-input-caixa');if(el){el.value='${p.numero_caixa||p.numero_pedido||''}';el.focus();}},300)">
+        🏷️ Iniciar Checkout
+      </button>
+    </div>`).join('');
+}
+
+function filtrarFilaCkMobile() {
+  const busca = (document.getElementById('m-ck-fila-busca')?.value || '').trim();
+  if (!busca) { _renderFilaCkMobile(_ckFilaPedidos); return; }
+  const filtrados = _ckFilaPedidos.filter(p => String(p.numero_pedido).includes(busca));
+  if (!filtrados.length) {
+    const el = document.getElementById('m-ck-fila-lista');
+    if (el) el.innerHTML = `<div style="text-align:center;padding:40px 16px">
+      <div style="font-size:40px;margin-bottom:12px">🔍</div>
+      <div style="font-weight:700;color:var(--text)">Pedido ${busca} não encontrado</div>
+      <div style="color:var(--text3);font-size:13px;margin-top:4px">Não está na fila de checkout</div>
+    </div>`;
+    return;
+  }
+  _renderFilaCkMobile(filtrados);
 }
 
 async function carregarFeitosCkMobile() {
