@@ -1081,10 +1081,10 @@ async function carregarStatsCheckout() {
 
 /* PERFORMANCE DOS COLABORADORES */
 const AREA_INFO = {
-  separador: { icon:'📦', label:'Separação',  cor:'var(--accent)' },
-  checkout:  { icon:'✅', label:'Checkout',   cor:'var(--indigo)' },
-  embalador: { icon:'📫', label:'Embalagem',  cor:'#7C3AED'       },
-  repositor: { icon:'🔧', label:'Reposição',  cor:'#EA580C'       },
+  separador: { icon:'📦', label:'Separação',  cor:'var(--accent)', grad:'linear-gradient(135deg,#6366f1,#4338ca)' },
+  checkout:  { icon:'✅', label:'Checkout',   cor:'var(--indigo)', grad:'linear-gradient(135deg,#22d3ee,#0369a1)' },
+  embalador: { icon:'📫', label:'Embalagem',  cor:'#7C3AED',       grad:'linear-gradient(135deg,#a855f7,#6d28d9)' },
+  repositor: { icon:'🔧', label:'Reposição',  cor:'#EA580C',       grad:'linear-gradient(135deg,#f59e0b,#b45309)' },
 };
 
 function _pctBar(pct, temSessao) {
@@ -1163,26 +1163,37 @@ async function carregarPerformance() {
       const area = AREA_INFO[p] || { icon:'👤', label: p, cor:'var(--text)' };
       const ag   = porArea[p];
 
-      let tempoHtml = '';
+      let tempoBody = '';
       if (colab) {
         const r = resultado.find(r => r.perfil === p);
         const min = r?.minutos || 0;
-        tempoHtml = min > 0
-          ? `<div style="border-left:1px solid var(--border);padding-left:10px;text-align:right">
-               <div style="font-size:13px;color:var(--accent);font-weight:700">⏱ ${_horasStr(min)}</div>
-               <div style="font-size:9px;color:var(--text3)">logado</div>
-             </div>`
-          : `<div style="border-left:1px solid var(--border);padding-left:10px"><div style="font-size:11px;color:var(--text3)">—</div></div>`;
+        tempoBody = `<div style="padding:12px 14px">
+          <div style="background:var(--surface2);border-radius:8px;padding:7px 10px;display:flex;align-items:center;gap:10px">
+            <span style="font-size:20px">⏱</span>
+            <div>
+              <div style="font-size:9px;color:var(--text3);font-weight:700;letter-spacing:.5px">TEMPO LOGADO</div>
+              <div style="font-size:15px;font-weight:800;color:var(--text)">${min > 0 ? _horasStr(min) : '—'}</div>
+            </div>
+          </div>
+        </div>`;
       }
 
-      return `<div class="card" style="padding:10px 14px;display:flex;align-items:center;gap:12px">
-        <div style="font-size:22px;line-height:1">${area.icon}</div>
-        <div style="flex:1;min-width:0">
-          <div style="font-size:10px;font-weight:700;color:${area.cor};letter-spacing:.5px">${area.label.toUpperCase()}</div>
-          <div style="font-size:26px;font-weight:900;color:var(--text);line-height:1.1">${ag.atividades}</div>
-          <div style="font-size:10px;color:var(--text3)">${LABELS[p]}${!colab ? ` · ${ag.colaboradores} colaborador${ag.colaboradores!==1?'es':''}` : ''}</div>
+      const grad = area.grad || 'linear-gradient(135deg,#64748b,#334155)';
+      const colabInfo = !colab ? `<div style="font-size:11px;color:rgba(255,255,255,.65);margin-top:2px">${ag.colaboradores} colaborador${ag.colaboradores!==1?'es':''}</div>` : '';
+
+      return `<div style="background:var(--surface);border-radius:18px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.10)">
+        <div style="background:${grad};padding:18px 18px 16px;position:relative;overflow:hidden">
+          <div style="position:absolute;right:-14px;top:-14px;width:80px;height:80px;border-radius:50%;background:rgba(255,255,255,.10);pointer-events:none"></div>
+          <div style="position:absolute;right:-18px;bottom:-18px;width:65px;height:65px;border-radius:50%;background:rgba(255,255,255,.07);pointer-events:none"></div>
+          <div style="position:relative">
+            <div style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,.2);font-size:20px;margin-bottom:8px">${area.icon}</div>
+            <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,.8);letter-spacing:1.2px;margin-bottom:4px">${area.label.toUpperCase()}</div>
+            <div style="font-size:44px;font-weight:800;color:#fff;line-height:1;letter-spacing:-1px">${ag.atividades}</div>
+            <div style="font-size:11px;color:rgba(255,255,255,.7);margin-top:4px">${LABELS[p]}</div>
+            ${colabInfo}
+          </div>
         </div>
-        ${tempoHtml}
+        ${tempoBody}
       </div>`;
     }).join('');
 
