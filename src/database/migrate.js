@@ -58,6 +58,10 @@ const ALTERATIONS = [
   "ALTER TABLE avisos_repositor ADD COLUMN IF NOT EXISTS total_tentativas INTEGER DEFAULT 0",
   "ALTER TABLE avisos_repositor ADD COLUMN IF NOT EXISTS hora_inicio_busca TEXT DEFAULT ''",
   "ALTER TABLE avisos_repositor ADD COLUMN IF NOT EXISTS hora_protocolo TEXT DEFAULT ''",
+  // Tempo real de separação: gravado quando o separador termina de escanear todos os SKUs.
+  // Para pedidos sem falta = concluido_em. Para pedidos com falta = 1ª tentativa de concluir
+  // (antes de aguardar repositor). Garante que espera por reposição não penaliza o separador.
+  "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS skus_concluido_em TEXT DEFAULT ''",
 ];
 
 async function runSchema() {

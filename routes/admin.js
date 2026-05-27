@@ -64,6 +64,7 @@ router.post('/admin/migration-tempo-justo', requerAuth, requerPerfil('supervisor
     await pool.query("ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS concluido_em TEXT DEFAULT ''");
     await pool.query("ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS tempo_aguardando_min INTEGER DEFAULT 0");
     await pool.query("ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS aguardando_repositor_desde TEXT DEFAULT ''");
+    await pool.query("ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS skus_concluido_em TEXT DEFAULT ''");
     res.json({mensagem:'Colunas criadas!'});
   } catch(e) { res.status(500).json({erro:e.message}); }
 });
@@ -228,7 +229,7 @@ router.get('/relatorio/analitico', requerAuth, requerPerfil('supervisor'), async
     //   2. turno do separador (u.turno / sep.turno) — fallback para distribuições antigas
     const pedidos = await db.all(`
       SELECT p.id, p.status, p.itens, p.pontuacao, p.hora_pedido, p.data_pedido,
-             p.iniciado_em, p.concluido_em, p.aguardando_desde,
+             p.iniciado_em, p.concluido_em, p.skus_concluido_em, p.aguardando_desde,
              p.transportadora, p.rua, p.status_embalagem,
              p.embalagem_iniciado_em, p.embalado_em, p.embalado_por, p.tem_prime,
              COALESCE(u.nome, sep.nome, '') as sep_nome,
@@ -285,7 +286,10 @@ router.get('/relatorio/analitico', requerAuth, requerPerfil('supervisor'), async
 
     // ── Separação — baseado no lote do turno ─────────────────────
     const sepConcluidos = pedidosDistribuidos.filter(p => p.status === 'concluido');
-    const temposSep = sepConcluidos.map(p => minutesBetween(p.iniciado_em, p.concluido_em)).filter(Boolean);
+    // Usa skus_concluido_em (quando separador terminou de escanear) como fim real.
+    // Para pedidos sem falta skus_concluido_em = concluido_em; para pedidos com falta
+    // skus_concluido_em é anterior ao concluido_em (não inclui espera pelo repositor).
+    const temposSep = sepConcluidos.map(p => minutesBetween(p.iniciado_em, p.skus_concluido_em || p.concluido_em)).filter(Boolean);
 
     // ── Complexidade — baseada no lote do turno ───────────────────
     const facil_set = new Set(['A','B','C','D','E','P','Q','R','S','T','U']);
@@ -324,7 +328,7 @@ router.get('/relatorio/analitico', requerAuth, requerPerfil('supervisor'), async
         colabs[k].pedidos++;
         colabs[k].itens   += parseInt(p.itens) || 0;
         colabs[k].pontuacao += parseFloat(p.pontuacao) || 0;
-        const t = minutesBetween(p.iniciado_em, p.concluido_em);
+        const t = minutesBetween(p.iniciado_em, p.skus_concluido_em || p.concluido_em);
         if (t) colabs[k].tempos.push(t);
       }
     });
@@ -365,7 +369,7 @@ router.get('/relatorio/analitico', requerAuth, requerPerfil('supervisor'), async
       tMap[t].pedidos++;
       tMap[t].itens     += parseInt(p.itens)||0;
       tMap[t].pontuacao += parseFloat(p.pontuacao)||0;
-      const tm = minutesBetween(p.iniciado_em, p.concluido_em);
+      const tm = minutesBetween(p.iniciado_em, p.skus_concluido_em || p.concluido_em);
       if (tm) tMap[t].tempos.push(tm);
     });
     const ranking_turnos = Object.values(tMap).map(t => ({

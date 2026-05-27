@@ -167,20 +167,25 @@ router.put('/pedidos/:id/concluir', requerAuth, async (req,res) => {
   try {
     const pend=await db.all(`SELECT id FROM itens_pedido WHERE pedido_id=$1 AND status='pendente'`,[req.params.id]);
     if (pend.length) return res.status(400).json({erro:`Ainda ha ${pend.length} item(s) nao verificado(s)!`});
-    const avisos=await db.all(`SELECT id FROM avisos_repositor WHERE pedido_id=$1 AND status='pendente'`,[req.params.id]);
-    if (avisos.length) return res.json({aguardando:true,mensagem:`Aguardando repositor (${avisos.length})`});
     const {data,hora}=dataHoraLocal();
-    // Calcula tempo total aguardando repositor (soma de hora_reposto - hora_aviso dos avisos resolvidos)
-    const espera = await db.get(
-      `SELECT COALESCE(SUM(CASE WHEN a.hora_reposto IS NOT NULL AND a.hora_reposto!='' AND a.hora_aviso IS NOT NULL AND a.hora_aviso!='' AND a.data_aviso IS NOT NULL
-         THEN GREATEST(0, EXTRACT(EPOCH FROM ((a.data_aviso::date+a.hora_reposto::time)-(a.data_aviso::date+a.hora_aviso::time)))/60.0)
-         ELSE 0 END),0) AS minutos
-       FROM avisos_repositor a WHERE a.pedido_id=$1 AND a.status IN ('abastecido','reposto','encontrado','subiu')`,
-      [req.params.id]
-    );
+    const avisos=await db.all(`SELECT id FROM avisos_repositor WHERE pedido_id=$1 AND status='pendente'`,[req.params.id]);
+    if (avisos.length) {
+      // Separador terminou de escanear todos os SKUs mas está aguardando repositor.
+      // Grava skus_concluido_em APENAS se ainda não foi gravado (1ª tentativa de concluir).
+      // Esse campo representa o FIM REAL do trabalho do separador.
+      await pool.query(
+        `UPDATE pedidos SET skus_concluido_em=COALESCE(NULLIF(skus_concluido_em,''),$1) WHERE id=$2`,
+        [data+'T'+hora, req.params.id]
+      );
+      return res.json({aguardando:true,mensagem:`Aguardando repositor (${avisos.length})`});
+    }
+    // Nenhum aviso pendente — conclui normalmente.
+    // Se skus_concluido_em ainda não foi gravado (pedido sem faltas), usa este momento.
     await pool.query(
-      `UPDATE pedidos SET status='concluido', concluido_em=$1, tempo_aguardando_min=$2 WHERE id=$3`,
-      [data+'T'+hora, Math.round(parseFloat(espera?.minutos||0)), req.params.id]
+      `UPDATE pedidos SET status='concluido', concluido_em=$1,
+         skus_concluido_em=COALESCE(NULLIF(skus_concluido_em,''),$1)
+       WHERE id=$2`,
+      [data+'T'+hora, req.params.id]
     );
     // Garante registro de checkout com status 'fila' (aguardando operador escanear)
     // Só muda para 'pendente' quando o operador de checkout abre o pedido (GET /checkout/caixa/:numero)
@@ -450,6 +455,7 @@ router.get('/pedidos/relatorio/tempo-separacao', requerAuth, requerPerfil('super
         COALESCE(u.nome, s.nome, '—') AS separador_nome,
         p.data_pedido,
         p.iniciado_em,
+        p.skus_concluido_em,
         COALESCE(NULLIF(p.concluido_em,''),
           CASE WHEN ck.data_checkout IS NOT NULL AND ck.hora_criacao IS NOT NULL
                THEN ck.data_checkout||'T'||ck.hora_criacao ELSE NULL END
@@ -457,48 +463,46 @@ router.get('/pedidos/relatorio/tempo-separacao', requerAuth, requerPerfil('super
         p.itens AS total_itens,
         p.cliente,
         p.transportadora,
-        -- Tempo total (minutos)
-        CASE WHEN p.iniciado_em!='' AND COALESCE(NULLIF(p.concluido_em,''),
-               CASE WHEN ck.data_checkout IS NOT NULL AND ck.hora_criacao IS NOT NULL
-                    THEN ck.data_checkout||'T'||ck.hora_criacao ELSE NULL END) IS NOT NULL
+        -- Tempo real do separador: usa skus_concluido_em (quando terminou de escanear)
+        -- Pedidos sem falta: skus_concluido_em = concluido_em (mesmo momento)
+        -- Pedidos com falta: skus_concluido_em = momento que tentou concluir pela 1ª vez
+        CASE WHEN NULLIF(p.iniciado_em,'') IS NOT NULL
+                  AND NULLIF(COALESCE(NULLIF(p.skus_concluido_em,''), NULLIF(p.concluido_em,'')), '') IS NOT NULL
           THEN ROUND(EXTRACT(EPOCH FROM (
-            COALESCE(NULLIF(p.concluido_em,''),ck.data_checkout||'T'||ck.hora_criacao)::timestamp
+            COALESCE(NULLIF(p.skus_concluido_em,''), NULLIF(p.concluido_em,''))::timestamp
+            - p.iniciado_em::timestamp
+          ))/60.0, 1)
+          ELSE NULL
+        END AS tempo_real_min,
+        -- Tempo total bruto (iniciado → concluido, inclui espera repositor)
+        CASE WHEN NULLIF(p.iniciado_em,'') IS NOT NULL
+                  AND COALESCE(NULLIF(p.concluido_em,''),
+                        CASE WHEN ck.data_checkout IS NOT NULL AND ck.hora_criacao IS NOT NULL
+                             THEN ck.data_checkout||'T'||ck.hora_criacao ELSE NULL END) IS NOT NULL
+          THEN ROUND(EXTRACT(EPOCH FROM (
+            COALESCE(NULLIF(p.concluido_em,''), ck.data_checkout||'T'||ck.hora_criacao)::timestamp
             - p.iniciado_em::timestamp
           ))/60.0, 1)
           ELSE NULL
         END AS tempo_total_min,
-        -- Tempo aguardando repositor (soma dos avisos resolvidos)
-        COALESCE((
-          SELECT ROUND(SUM(
-            CASE WHEN a.hora_reposto IS NOT NULL AND a.hora_reposto!=''
-                      AND a.hora_aviso IS NOT NULL AND a.hora_aviso!=''
-                      AND a.data_aviso IS NOT NULL AND a.data_aviso!=''
-              THEN GREATEST(0,EXTRACT(EPOCH FROM (
-                (a.data_aviso::date+a.hora_reposto::time)-(a.data_aviso::date+a.hora_aviso::time)
-              ))/60.0)
-              ELSE 0 END
-          )::numeric,1)
-          FROM avisos_repositor a
-          WHERE a.pedido_id=p.id AND a.status IN ('abastecido','reposto','encontrado','subiu')
-        ),0) AS tempo_espera_min,
         -- Contagem de reposições e não encontrados
         (SELECT COUNT(*) FROM avisos_repositor a WHERE a.pedido_id=p.id) AS qtd_reposicoes,
         (SELECT COUNT(*) FROM avisos_repositor a WHERE a.pedido_id=p.id AND a.status='nao_encontrado') AS qtd_nao_encontrados
       FROM pedidos p
       LEFT JOIN separadores s ON s.id=p.separador_id
       LEFT JOIN usuarios u ON u.id=s.usuario_id
-      LEFT JOIN checkout ck ON ck.pedido_id=p.id
+      LEFT JOIN LATERAL (SELECT * FROM checkout WHERE pedido_id=p.id ORDER BY id DESC LIMIT 1) ck ON true
       WHERE ${w}
       ORDER BY p.data_pedido DESC, p.iniciado_em DESC
       LIMIT 1000
     `, params);
 
-    // Tempo real = total - espera (calculado em JS para evitar NULL)
+    // tempo_espera_min = tempo_total - tempo_real (quanto ficou esperando repositor)
     const result = rows.map(r => {
+      const real  = r.tempo_real_min  !== null ? parseFloat(r.tempo_real_min)  : null;
       const total = r.tempo_total_min !== null ? parseFloat(r.tempo_total_min) : null;
-      const espera = parseFloat(r.tempo_espera_min || 0);
-      const real = total !== null ? Math.max(0, total - espera) : null;
-      return { ...r, tempo_real_min: real !== null ? Math.round(real * 10) / 10 : null };
+      const espera = (total !== null && real !== null) ? Math.max(0, total - real) : 0;
+      return { ...r, tempo_espera_min: Math.round(espera * 10) / 10 };
     });
 
     res.json(result);

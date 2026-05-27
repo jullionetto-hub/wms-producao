@@ -614,6 +614,7 @@ router.get('/stats/performance/detalhe', requerAuth, requerPerfil('supervisor'),
         SELECT
           COALESCE(u.nome, s.nome, '—') AS separador_nome,
           p.numero_pedido, p.data_pedido, p.iniciado_em,
+          p.skus_concluido_em,
           COALESCE(
             NULLIF(p.concluido_em,''),
             CASE WHEN ck.data_checkout IS NOT NULL AND ck.hora_criacao IS NOT NULL
@@ -622,6 +623,18 @@ router.get('/stats/performance/detalhe', requerAuth, requerPerfil('supervisor'),
           p.itens AS qtd_produtos,
           (SELECT COALESCE(SUM(ip.quantidade), p.itens) FROM itens_pedido ip WHERE ip.pedido_id=p.id) AS total_itens,
           p.pontuacao,
+          -- Tempo REAL do separador: usa skus_concluido_em (quando ele terminou de escanear).
+          -- Para pedidos sem falta, skus_concluido_em = concluido_em (mesmo momento).
+          -- Para pedidos com falta, skus_concluido_em = 1ª tentativa de concluir (antes de esperar repositor).
+          CASE WHEN NULLIF(p.iniciado_em,'') IS NOT NULL
+                    AND NULLIF(COALESCE(NULLIF(p.skus_concluido_em,''), NULLIF(p.concluido_em,'')), '') IS NOT NULL
+            THEN ROUND(EXTRACT(EPOCH FROM (
+              COALESCE(NULLIF(p.skus_concluido_em,''), NULLIF(p.concluido_em,''))::timestamp
+              - p.iniciado_em::timestamp
+            ))/60.0, 1)
+            ELSE NULL
+          END AS tempo_real_min,
+          -- Tempo total bruto (inclui espera pelo repositor)
           CASE WHEN NULLIF(p.iniciado_em,'') IS NOT NULL
                     AND COALESCE(NULLIF(p.concluido_em,''),
                         CASE WHEN ck.data_checkout IS NOT NULL AND ck.hora_criacao IS NOT NULL
@@ -632,32 +645,6 @@ router.get('/stats/performance/detalhe', requerAuth, requerPerfil('supervisor'),
             ))/60.0, 1)
             ELSE NULL
           END AS tempo_total_min,
-          COALESCE((
-            SELECT ROUND(SUM(
-              GREATEST(0, EXTRACT(EPOCH FROM (
-                LEAST(
-                  a.data_aviso::date + a.hora_reposto::time,
-                  COALESCE(
-                    NULLIF(p.concluido_em,'')::timestamp,
-                    CASE WHEN ck.data_checkout IS NOT NULL AND ck.hora_criacao IS NOT NULL
-                         THEN (ck.data_checkout||'T'||ck.hora_criacao)::timestamp
-                         ELSE p.iniciado_em::timestamp END
-                  )
-                )
-                - GREATEST(
-                  a.data_aviso::date + a.hora_aviso::time,
-                  p.iniciado_em::timestamp
-                )
-              ))/60.0)
-            )::numeric, 1)
-            FROM avisos_repositor a
-            WHERE a.pedido_id=p.id
-              AND a.status IN ('abastecido','reposto','encontrado','subiu')
-              AND a.hora_reposto IS NOT NULL AND a.hora_reposto!=''
-              AND a.hora_aviso IS NOT NULL AND a.hora_aviso!=''
-              AND a.data_aviso IS NOT NULL AND a.data_aviso!=''
-              AND NULLIF(p.iniciado_em,'') IS NOT NULL
-          ), 0) AS tempo_espera_min,
           (SELECT COUNT(*) FROM avisos_repositor a WHERE a.pedido_id=p.id) AS qtd_reposicoes,
           CASE WHEN ck.hora_criacao IS NOT NULL AND ck.hora_criacao!='' AND ck.hora_checkout IS NOT NULL AND ck.hora_checkout!=''
             THEN GREATEST(0, ROUND(EXTRACT(EPOCH FROM (ck.hora_checkout::time - ck.hora_criacao::time))/60.0)::int)
@@ -676,20 +663,22 @@ router.get('/stats/performance/detalhe', requerAuth, requerPerfil('supervisor'),
       pedidos.forEach(p => {
         const key = p.separador_nome;
         if (!resultado[key]) resultado[key] = { nome: key, perfil: 'separador', pedidos: [] };
-        const tempoReal = p.tempo_total_min !== null
-          ? Math.max(0, parseFloat(p.tempo_total_min) - parseFloat(p.tempo_espera_min || 0))
-          : null;
+        const tempoReal  = p.tempo_real_min  !== null ? parseFloat(p.tempo_real_min)  : null;
+        const tempoTotal = p.tempo_total_min !== null ? parseFloat(p.tempo_total_min) : null;
+        const tempoEspera = (tempoTotal !== null && tempoReal !== null)
+          ? Math.max(0, tempoTotal - tempoReal) : 0;
         resultado[key].pedidos.push({
           numero_pedido:    p.numero_pedido,
           data_pedido:      p.data_pedido,
           iniciado_em:      p.iniciado_em,
           concluido_em:     p.concluido_em,
+          skus_concluido_em: p.skus_concluido_em,
           total_itens:      parseInt(p.total_itens) || 0,
           qtd_produtos:     parseInt(p.qtd_produtos) || 0,
           pontuacao:        parseInt(p.pontuacao) || 0,
-          tempo_total_min:  p.tempo_total_min !== null ? parseFloat(p.tempo_total_min) : null,
-          tempo_espera_min: parseFloat(p.tempo_espera_min || 0),
-          tempo_real_min:   tempoReal !== null ? Math.round(tempoReal * 10) / 10 : null,
+          tempo_real_min:   tempoReal  !== null ? Math.round(tempoReal  * 10) / 10 : null,
+          tempo_total_min:  tempoTotal !== null ? Math.round(tempoTotal * 10) / 10 : null,
+          tempo_espera_min: Math.round(tempoEspera * 10) / 10,
           qtd_reposicoes:   parseInt(p.qtd_reposicoes) || 0,
         });
       });
