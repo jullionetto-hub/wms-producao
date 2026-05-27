@@ -20,6 +20,14 @@ function mudarTabCk(tab) {
   if (tab === 'feitos') carregarFeitosCkMobile();
 }
 
+/* Inicia checkout a partir da fila mobile: preenche input + busca automaticamente */
+function iniciarCkMobile(numero) {
+  const inp = document.getElementById('m-ck-input-caixa');
+  if (inp) inp.value = numero;
+  mudarTabCk('busca');
+  setTimeout(() => buscarCaixaMobile(), 250);
+}
+
 async function carregarFilaCkMobile() {
   const el = document.getElementById('m-ck-fila-lista');
   const badge = document.getElementById('cktab-fila-badge');
@@ -36,11 +44,20 @@ async function carregarFilaCkMobile() {
       badge.textContent = fila.length;
       badge.style.display = fila.length > 0 ? 'inline' : 'none';
     }
+    // Barra de busca rápida no topo da fila (escanear caixa sem sair da aba)
+    const scanBar = `
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <input type="number" id="m-ck-fila-scan" inputmode="numeric" placeholder="📦 Escanear nº da caixa..."
+          style="flex:1;font-size:17px;padding:11px 14px;border-radius:10px;border:2px solid var(--border);background:var(--surface);color:var(--text)"
+          onkeydown="if(event.key==='Enter'||event.keyCode===13){const v=this.value.trim();if(v)iniciarCkMobile(v);}">
+        <button onclick="const v=document.getElementById('m-ck-fila-scan')?.value?.trim();if(v)iniciarCkMobile(v);else toast('Digite o número da caixa','aviso');"
+          style="padding:11px 16px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-size:18px;cursor:pointer;touch-action:manipulation">▶</button>
+      </div>`;
     if (!fila.length) {
-      el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:32px;font-size:13px">✅ Nenhum pedido aguardando checkout</div>';
+      el.innerHTML = scanBar + '<div style="color:var(--text3);text-align:center;padding:32px;font-size:13px">✅ Nenhum pedido aguardando checkout</div>';
       return;
     }
-    el.innerHTML = fila.map(p => `
+    el.innerHTML = scanBar + fila.map(p => `
       <div style="border:1.5px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:8px;background:var(--surface)">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
           <div style="font-size:20px;font-weight:800;color:var(--accent);font-family:'Space Mono',monospace">#${p.numero_pedido}</div>
@@ -49,11 +66,11 @@ async function carregarFilaCkMobile() {
         <div style="display:flex;gap:12px;font-size:12px;color:var(--text2)">
           <span>📦 <b style="color:var(--text)">${p.itens||0} itens</b></span>
           <span>👤 ${p.separador_nome||'—'}</span>
-          ${p.numero_caixa ? `<span>📦 Cx: <b style="color:var(--indigo)">${p.numero_caixa}</b></span>` : ''}
+          ${p.numero_caixa ? `<span>🏷️ Cx: <b style="color:var(--indigo)">${p.numero_caixa}</b></span>` : ''}
         </div>
         ${p.concluido_em ? `<div style="font-size:11px;color:var(--text3);margin-top:4px">✓ Sep às ${(p.concluido_em||'').substring(11,16)}</div>` : ''}
         <button class="btn btn-primary btn-sm" style="width:100%;margin-top:8px;padding:10px"
-          onclick="mudarTabCk('busca');setTimeout(()=>{const el=document.getElementById('m-ck-input-caixa');if(el){el.value='${p.numero_caixa||p.numero_pedido||''}';el.focus();}},300)">
+          onclick="iniciarCkMobile('${p.numero_caixa||p.numero_pedido||''}')">
           🏷️ Iniciar Checkout
         </button>
       </div>`).join('');
@@ -144,8 +161,7 @@ async function buscarCaixaMobile() {
             ? `<button class="btn btn-success" style="width:100%;padding:14px;font-size:15px;font-weight:700;border-radius:10px;margin-bottom:8px" onclick="confirmarCheckoutMobile(${r.id})">✅ CONFIRMAR CHECKOUT</button>
                <button class="btn" style="width:100%;padding:11px;font-size:13px;background:var(--surface2);border:1.5px solid var(--border);color:var(--text2);border-radius:10px" onclick="liberarCaixaMobile(${r.id})">🔓 Liberar Caixa Sem Checkout</button>`
             : concluido
-              ? `<div style="text-align:center;padding:10px;background:#F0FDF4;border-radius:10px;color:var(--green);font-weight:700;font-size:14px">✅ Checkout realizado às ${r.hora_checkout||'—'}</div>
-                 <button class="btn" style="width:100%;padding:11px;font-size:13px;background:var(--surface2);border:1.5px solid var(--border);color:var(--text2);border-radius:10px;margin-top:8px" onclick="liberarCaixaMobile(${r.id})">🔓 Liberar Caixa</button>`
+              ? `<div style="text-align:center;padding:10px;background:#F0FDF4;border-radius:10px;color:var(--green);font-weight:700;font-size:14px">✅ Checkout realizado às ${r.hora_checkout||'—'}</div>`
               : `<div style="text-align:center;padding:10px;background:#F5F3FF;border-radius:10px;color:var(--indigo);font-weight:700;font-size:14px">🔓 Caixa Liberada</div>`}
         </div>
         ${gerarCodigoBarrasSVG(r.numero_pedido)}
@@ -163,11 +179,11 @@ async function confirmarCheckoutMobile(id) {
     const res  = await fetch(`${API}/checkout/${id}/confirmar`, { credentials:'include', method:'PUT' });
     const data = await res.json().catch(()=>({}));
     if (!res.ok) { toast(data.erro || 'Erro ao confirmar checkout!','erro'); buscarCaixaMobile(); return; }
-    toast('✅ Checkout confirmado!','sucesso');
-    // Limpa resultado e vai para aba FEITOS para mostrar o registro
+    toast('✅ Checkout confirmado! Caixa liberada automaticamente.','sucesso');
+    // Limpa resultado, volta para FILA (atualizada) e notifica a contagem
     document.getElementById('m-ck-input-caixa').value = '';
     document.getElementById('m-ck-resultado').innerHTML = '';
-    mudarTabCk('feitos');
+    mudarTabCk('fila');   // vai para FILA já atualizada (pedido sumiu)
   } catch(e) { toast('Erro de rede ao confirmar!','erro'); }
 }
 
@@ -284,8 +300,7 @@ async function buscarCaixa() {
               ? `<button class="btn btn-success" onclick="confirmarCheckout(${r.id})">✅ Confirmar Checkout</button>
                  <button class="btn btn-outline" onclick="liberarCaixaDesktop(${r.id})">🔓 Liberar Caixa</button>`
               : concluido
-                ? `<span class="pill concluido" style="font-size:12px">✅ Checkout às ${r.hora_checkout||'—'}</span>
-                   <button class="btn btn-outline btn-sm" onclick="liberarCaixaDesktop(${r.id})">🔓 Liberar Caixa</button>`
+                ? `<span class="pill concluido" style="font-size:12px">✅ Checkout às ${r.hora_checkout||'—'}</span>`
                 : `<span class="pill" style="background:#F5F3FF;color:var(--indigo);border:1px solid #DDD6FE;font-size:12px">🔓 Caixa Liberada</span>`}
           </div>
         </div>
@@ -309,9 +324,13 @@ async function confirmarCheckout(id) {
     const res  = await fetch(`${API}/checkout/${id}/confirmar`, { credentials:'include', method:'PUT' });
     const data = await res.json().catch(()=>({}));
     if (!res.ok) { toast(data.erro || 'Erro ao confirmar checkout!','erro'); buscarCaixa(); return; }
-    toast('✅ Checkout confirmado!','sucesso');
-    buscarCaixa();
-    carregarCheckoutLista();
+    toast('✅ Checkout confirmado! Caixa liberada automaticamente.','sucesso');
+    // Limpa a busca e vai para FILA (atualizada — pedido confirmado some da lista)
+    const inp = document.getElementById('ck-input-caixa');
+    if (inp) inp.value = '';
+    const wrap = document.getElementById('ck-resultado');
+    if (wrap) wrap.style.display = 'none';
+    mudarTabCkDesk('fila');
   } catch(e) { toast('Erro de rede ao confirmar!','erro'); }
 }
 
@@ -339,7 +358,7 @@ async function carregarCheckoutLista() {
       <td>${r.status==='pendente'
         ? `<button class="btn btn-success btn-sm" onclick="confirmarCheckout(${r.id})">✅ OK</button>`
         : r.status==='concluido'
-          ? `<span style="display:flex;gap:5px;align-items:center"><span style="color:var(--green);font-size:11px">✓ Feito</span><button class="btn btn-sm btn-outline" onclick="liberarCaixaDesktop(${r.id})" title="Liberar caixa">🔓</button></span>`
+          ? `<span style="color:var(--green);font-size:11px">✓ Feito</span>`
           : `<span style="color:var(--text3);font-size:11px">Liberado</span>`}
       </td>
     </tr>`).join('');

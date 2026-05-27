@@ -44,15 +44,15 @@ router.get('/checkout/caixa/:numero', requerAuth, async (req,res) => {
   const numero = String(req.params.numero).trim();
   const { hora, data } = dataHoraLocal();
   try {
-    // Tenta primeiro pelo numero_caixa; se não achar, tenta pelo numero_pedido
-    // (pedidos separados sem caixa vinculada têm numero_caixa vazio no checkout)
+    // Busca apenas registros ATIVOS (não concluídos).
+    // Concluídos ficam no histórico (aba FEITOS) — não devem aparecer na busca por caixa.
     let rows = await db.all(
       `SELECT c.*, p.status as ped_status, p.itens as ped_itens,
               p.numero_caixa, p.cliente, p.transportadora, s.nome as separador_nome
        FROM checkout c
        JOIN pedidos p ON c.pedido_id=p.id
        LEFT JOIN separadores s ON p.separador_id=s.id
-       WHERE c.numero_caixa=$1 ORDER BY c.id DESC`,
+       WHERE c.numero_caixa=$1 AND c.status != 'concluido' ORDER BY c.id DESC`,
       [numero]
     );
     if (!rows.length) {
@@ -62,7 +62,7 @@ router.get('/checkout/caixa/:numero', requerAuth, async (req,res) => {
          FROM checkout c
          JOIN pedidos p ON c.pedido_id=p.id
          LEFT JOIN separadores s ON p.separador_id=s.id
-         WHERE c.numero_pedido=$1 ORDER BY c.id DESC`,
+         WHERE c.numero_pedido=$1 AND c.status != 'concluido' ORDER BY c.id DESC`,
         [numero]
       );
     }

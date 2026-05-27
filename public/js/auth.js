@@ -1894,6 +1894,14 @@ function mudarTabCkDesk(tab) {
   if (tab === 'feitos')   carregarFeitosCkDesk();
 }
 
+/* Inicia checkout a partir da fila desktop: preenche input + busca automaticamente */
+function iniciarCkDesk(numero) {
+  const inp = document.getElementById('ck-input-caixa');
+  if (inp) inp.value = numero;
+  mudarTabCkDesk('checkout');
+  setTimeout(() => buscarCaixa(), 250);
+}
+
 async function carregarFilaCkDesk() {
   const el    = document.getElementById('d-ck-fila');
   const badge = document.getElementById('d-cktab-fila-badge');
@@ -1905,11 +1913,20 @@ async function carregarFilaCkDesk() {
     const pedidos = res.ok ? await res.json() : [];
     const fila = pedidos.filter(p => !p.status_embalagem || p.status_embalagem === 'nao_iniciado');
     if (badge) { badge.textContent = fila.length; badge.style.display = fila.length > 0 ? 'inline' : 'none'; }
+    // Barra de busca rápida no topo da fila desktop
+    const scanBar = `
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <input type="number" id="d-ck-fila-scan" inputmode="numeric" placeholder="📦 Escanear ou digitar nº da caixa..."
+          style="flex:1;font-size:16px;padding:10px 14px;border-radius:10px;border:2px solid var(--border);background:var(--surface);color:var(--text)"
+          onkeydown="if(event.key==='Enter'){const v=this.value.trim();if(v)iniciarCkDesk(v);}">
+        <button onclick="const v=document.getElementById('d-ck-fila-scan')?.value?.trim();if(v)iniciarCkDesk(v);else toast('Digite o número da caixa','aviso');"
+          class="btn btn-primary" style="padding:10px 18px;font-size:15px">▶ Buscar</button>
+      </div>`;
     if (!fila.length) {
-      el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:32px;font-size:13px">✅ Nenhum pedido aguardando checkout</div>';
+      el.innerHTML = scanBar + '<div style="color:var(--text3);text-align:center;padding:32px;font-size:13px">✅ Nenhum pedido aguardando checkout</div>';
       return;
     }
-    el.innerHTML = fila.map(p => `
+    el.innerHTML = scanBar + fila.map(p => `
       <div style="border:1.5px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:8px;background:var(--surface)">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
           <div style="font-size:20px;font-weight:800;color:var(--accent);font-family:'Space Mono',monospace">#${p.numero_pedido}</div>
@@ -1918,11 +1935,11 @@ async function carregarFilaCkDesk() {
         <div style="display:flex;gap:12px;font-size:12px;color:var(--text2)">
           <span>📦 <b style="color:var(--text)">${p.itens||0} itens</b></span>
           <span>👤 ${p.separador_nome||'—'}</span>
-          ${p.numero_caixa ? `<span>📦 Cx: <b style="color:var(--indigo)">${p.numero_caixa}</b></span>` : ''}
+          ${p.numero_caixa ? `<span>🏷️ Cx: <b style="color:var(--indigo)">${p.numero_caixa}</b></span>` : ''}
         </div>
         ${p.concluido_em ? `<div style="font-size:11px;color:var(--text3);margin-top:4px">✓ Sep às ${(p.concluido_em||'').substring(11,16)}</div>` : ''}
         <button class="btn btn-primary btn-sm" style="width:100%;margin-top:8px;padding:10px"
-          onclick="mudarTabCkDesk('checkout');setTimeout(()=>{const el=document.getElementById('ck-input-caixa');if(el){el.value='${p.numero_caixa||p.numero_pedido||''}';el.focus();}},300)">
+          onclick="iniciarCkDesk('${p.numero_caixa||p.numero_pedido||''}')">
           🏷️ Iniciar Checkout
         </button>
       </div>`).join('');
