@@ -52,10 +52,10 @@ async function concluirPedidoMobile() {
 
 async function carregarFilaMobile() {
   try {
-    // Busca pedidos e avisos ativos em paralelo (uma só chamada com múltiplos status)
+    // Inclui 'verificando' para manter destaque amarelo enquanto repositor busca ativamente
     const [resPed, resAv] = await Promise.all([
       fetch(`${API}/pedidos`, { credentials:'include' }),
-      fetch(`${API}/repositor/avisos?status=pendente,aguardando_abastecer`, { credentials:'include' })
+      fetch(`${API}/repositor/avisos?status=pendente,aguardando_abastecer,verificando`, { credentials:'include' })
     ]);
     const todos  = await resPed.json();
     const avisos = resAv.ok ? await resAv.json() : [];
