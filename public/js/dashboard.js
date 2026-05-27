@@ -372,22 +372,31 @@ function renderMapaEstoque(contRua, isPedidoUnico) {
 async function carregarOperacao() {
   try {
     const hoje = hojeLocal();
-    // Busca TODOS os pedidos ativos (pendente + separando + concluido de hoje)
-    // independente da data do arquivo importado
-    const [resPend, resSep, resConc] = await Promise.all([
-      fetch(`${API}/pedidos?status=pendente`, { credentials:'include' }),
-      fetch(`${API}/pedidos?status=separando`, { credentials:'include' }),
-      fetch(`${API}/pedidos?status=concluido&data=${hoje}`, { credentials:'include' })
-    ]);
-    const pPend = resPend.ok ? await resPend.json() : [];
-    const pSep  = resSep.ok  ? await resSep.json()  : [];
-    const pConc = resConc.ok ? await resConc.json() : [];
-    // Merge sem duplicatas
-    const allIds = new Set();
-    const pedidos = [...pPend, ...pSep, ...pConc].filter(p => {
-      if (allIds.has(p.id)) return false;
-      allIds.add(p.id); return true;
-    });
+    const dIni = document.getElementById('filtro-data-ini')?.value || hoje;
+    const dFim = document.getElementById('filtro-data-fim')?.value || hoje;
+    const isHoje = (dIni === hoje && dFim === hoje);
+
+    let pedidos;
+    if (isHoje) {
+      // Modo ao-vivo: busca por status + conclídos de hoje
+      const [resPend, resSep, resConc] = await Promise.all([
+        fetch(`${API}/pedidos?status=pendente`, { credentials:'include' }),
+        fetch(`${API}/pedidos?status=separando`, { credentials:'include' }),
+        fetch(`${API}/pedidos?status=concluido&data=${hoje}`, { credentials:'include' })
+      ]);
+      const pPend = resPend.ok ? await resPend.json() : [];
+      const pSep  = resSep.ok  ? await resSep.json()  : [];
+      const pConc = resConc.ok ? await resConc.json() : [];
+      const allIds = new Set();
+      pedidos = [...pPend, ...pSep, ...pConc].filter(p => {
+        if (allIds.has(p.id)) return false;
+        allIds.add(p.id); return true;
+      });
+    } else {
+      // Modo histórico: busca pedidos pelo intervalo de datas (todos os status)
+      const res = await fetch(`${API}/pedidos?data_ini=${dIni}&data_fim=${dFim}`, { credentials:'include' });
+      pedidos = res.ok ? await res.json() : [];
+    }
 
     // Apenas pedidos DISTRIBUÍDOS (com separador atribuído).
     // Pedidos importados mas ainda não distribuídos (separador_id nulo) não entram no lote ativo.
@@ -905,8 +914,14 @@ function renderDashPipeline() {
 
 async function carregarKPIs() {
   try {
-    let url = `${API}/kpis`;
-    if (_turnosDash.size > 0) url += `?turnos=${[..._turnosDash].join(',')}`;
+    const params = new URLSearchParams();
+    if (_turnosDash.size > 0) params.set('turnos', [..._turnosDash].join(','));
+    const ini = document.getElementById('filtro-data-ini')?.value;
+    const fim = document.getElementById('filtro-data-fim')?.value;
+    if (ini) params.set('data_ini', ini);
+    if (fim) params.set('data_fim', fim);
+    const qs = params.toString();
+    const url = `${API}/kpis${qs ? '?' + qs : ''}`;
     const res  = await fetch(url, { credentials:'include' });
     const data = await res.json();
     _kpiData = data;

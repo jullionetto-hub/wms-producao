@@ -5,15 +5,19 @@ const { requerAuth, requerPerfil } = require('../lib/auth');
 const { dataHoraLocal, formatarAguardandoDesde } = require('../lib/helpers');
 
 router.get('/kpis', requerAuth, async (req,res) => {
-  const { turnos } = req.query;
+  const { turnos, data_ini, data_fim } = req.query;
   const turnosArr = turnos ? turnos.split(',').filter(Boolean) : null;
-  const hasTurno = turnosArr && turnosArr.length > 0;
+  const hasTurno  = turnosArr && turnosArr.length > 0;
+
+  const {data:hoje}=dataHoraLocal();
+  const dIni = data_ini || hoje;
+  const dFim = data_fim || hoje;
+  const isFiltrado = (dIni !== hoje || dFim !== hoje || hasTurno);
 
   const cache = req.app.get('kpiCache');
-  if (!hasTurno && cache && cache.data && (Date.now() - cache.ts) < cache.ttl) {
+  if (!isFiltrado && cache && cache.data && (Date.now() - cache.ts) < cache.ttl) {
     return res.json(cache.data);
   }
-  const {data:hoje}=dataHoraLocal(); const mes=hoje.substring(0,7);
   try {
     // Turno filter helpers — joins usuarios via separadores ou por nome
     // REPLACE normaliza 'Manhã' → 'Manha' para caso algum registro ainda tenha acento
@@ -24,35 +28,35 @@ router.get('/kpis', requerAuth, async (req,res) => {
       ? ` AND REPLACE(COALESCE((SELECT u2.turno FROM usuarios u2 WHERE u2.nome=${col} LIMIT 1),''),'ã','a')=ANY($T::text[])`
       : '';
 
-    // Build params array: $1=hoje, $2=hoje, $3=mes%, $4=hoje, $5=hoje, $6=hoje, $7=hoje, [$8=turnos]
-    const p = [hoje,hoje,mes+'%',hoje,hoje,hoje,hoje];
+    // Build params: $1=dIni, $2=dFim, $3=mes%, [$4=turnos se hasTurno]
+    const p = [dIni, dFim, dIni.substring(0,7)+'%'];
     if (hasTurno) p.push(turnosArr);
     const T = hasTurno ? `$${p.length}` : null;
 
-    const sepFilt   = hasTurno ? tSep.replace('$T', T) : '';
-    const ckFilt    = hasTurno ? tNome('c.operador_nome').replace('$T', T) : '';
-    const embFilt   = hasTurno ? tNome('e.embalado_por').replace('$T', T) : '';
-    const repFilt   = hasTurno ? tNome('r.repositor_nome').replace('$T', T) : '';
+    const sepFilt = hasTurno ? tSep.replace('$T', T) : '';
+    const ckFilt  = hasTurno ? tNome('c.operador_nome').replace('$T', T) : '';
+    const embFilt = hasTurno ? tNome('e.embalado_por').replace('$T', T) : '';
+    const repFilt = hasTurno ? tNome('r.repositor_nome').replace('$T', T) : '';
 
     const r = await db.get(`SELECT
-      (SELECT COUNT(*) FROM pedidos p WHERE p.status='concluido' AND p.data_pedido=$1${sepFilt}) as concluidos_hoje,
+      (SELECT COUNT(*) FROM pedidos p WHERE p.status='concluido' AND p.data_pedido>=$1 AND p.data_pedido<=$2${sepFilt}) as concluidos_hoje,
       (SELECT COUNT(*) FROM pedidos p WHERE p.status='separando'${sepFilt}) as em_separacao,
       (SELECT COUNT(*) FROM pedidos WHERE status='pendente') as pendentes,
-      (SELECT COUNT(*) FROM avisos_repositor WHERE status='pendente') as faltas_abertas,
-      (SELECT COUNT(*) FROM checkout c WHERE c.status='pendente' AND c.data_checkout=$1${ckFilt}) as checkout_pendente,
-      (SELECT COUNT(*) FROM checkout c WHERE c.status='concluido' AND c.data_checkout=$2${ckFilt}) as checkout_hoje,
+      (SELECT COUNT(*) FROM avisos_repositor WHERE status='pendente' AND data_aviso>=$1 AND data_aviso<=$2) as faltas_abertas,
+      (SELECT COUNT(*) FROM checkout c WHERE c.status='pendente' AND c.data_checkout>=$1 AND c.data_checkout<=$2${ckFilt}) as checkout_pendente,
+      (SELECT COUNT(*) FROM checkout c WHERE c.status='concluido' AND c.data_checkout>=$1 AND c.data_checkout<=$2${ckFilt}) as checkout_hoje,
       (SELECT COUNT(*) FROM pedidos WHERE status='concluido' AND data_pedido LIKE $3) as concluidos_mes,
-      (SELECT COUNT(*) FROM pedidos WHERE data_pedido=$4) as importados_hoje,
+      (SELECT COUNT(*) FROM pedidos WHERE data_pedido>=$1 AND data_pedido<=$2) as importados_hoje,
       (SELECT COUNT(DISTINCT separador_id) FROM pedidos WHERE status='separando') as seps_ativos,
-      (SELECT COUNT(*) FROM avisos_repositor r WHERE r.status='nao_encontrado' AND r.data_aviso=$5${repFilt}) as nao_encontrados_hoje,
-      (SELECT COUNT(*) FROM avisos_repositor WHERE data_aviso=$6) as total_faltas_hoje,
-      (SELECT COUNT(*) FROM embalagem e WHERE e.data_embalagem=$7${embFilt}) as embalagem_hoje,
+      (SELECT COUNT(*) FROM avisos_repositor r WHERE r.status='nao_encontrado' AND r.data_aviso>=$1 AND r.data_aviso<=$2${repFilt}) as nao_encontrados_hoje,
+      (SELECT COUNT(*) FROM avisos_repositor WHERE data_aviso>=$1 AND data_aviso<=$2) as total_faltas_hoje,
+      (SELECT COUNT(*) FROM embalagem e WHERE e.data_embalagem>=$1 AND e.data_embalagem<=$2${embFilt}) as embalagem_hoje,
       (SELECT COUNT(*) FROM pedidos p WHERE p.status='concluido' AND p.status_embalagem IN ('pendente','embalando')${sepFilt}) as embalagem_pendente,
-      (SELECT COUNT(*) FROM avisos_repositor r WHERE r.status IN ('reposto','abastecido','subiu') AND r.data_aviso=$5${repFilt}) as reposicao_concluida,
-      (SELECT COUNT(*) FROM avisos_repositor r WHERE r.status='pendente' AND r.data_aviso=$6${repFilt}) as reposicao_pendente`,
+      (SELECT COUNT(*) FROM avisos_repositor r WHERE r.status IN ('reposto','abastecido','subiu') AND r.data_aviso>=$1 AND r.data_aviso<=$2${repFilt}) as reposicao_concluida,
+      (SELECT COUNT(*) FROM avisos_repositor r WHERE r.status='pendente' AND r.data_aviso>=$1 AND r.data_aviso<=$2${repFilt}) as reposicao_pendente`,
       p);
 
-    if (!hasTurno) { cache.data = r; cache.ts = Date.now(); }
+    if (!isFiltrado) { cache.data = r; cache.ts = Date.now(); }
     res.json(r||{});
   } catch(e){res.status(500).json({erro:e.message});}
 });
