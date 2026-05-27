@@ -245,7 +245,7 @@ router.get('/dashboard/ranking', requerAuth, requerPerfil('supervisor'), async (
         COUNT(*) FILTER (WHERE p.data_pedido=$1) as hoje_total,
         COUNT(*) FILTER (WHERE p.data_pedido LIKE $2 AND p.status='concluido') as mes_concluidos,
         COUNT(*) FILTER (WHERE p.status='concluido') as total_concluidos,
-        COALESCE(SUM(p.itens) FILTER (WHERE p.data_pedido=$1),0) as hoje_itens
+        COALESCE(SUM(COALESCE(NULLIF(p.total_itens,0),p.itens)) FILTER (WHERE p.data_pedido=$1),0) as hoje_itens
       FROM separadores s
       LEFT JOIN pedidos p ON p.separador_id=s.id
       WHERE s.status='ativo'
@@ -348,7 +348,8 @@ router.get('/stats/performance', requerAuth, requerPerfil('supervisor'), async (
 
     // Atividades do período
     const pedidos = await db.all(`
-      SELECT u.id as uid, COALESCE(u.nome, sep.nome) as nome, COUNT(*) as total, SUM(p.itens) as itens
+      SELECT u.id as uid, COALESCE(u.nome, sep.nome) as nome, COUNT(*) as total,
+        SUM(COALESCE(NULLIF(p.total_itens,0),p.itens)) as itens
       FROM pedidos p
       JOIN separadores sep ON p.separador_id = sep.id
       LEFT JOIN usuarios u ON sep.usuario_id = u.id
@@ -518,7 +519,7 @@ router.get('/dashboard/ranking-geral', requerAuth, requerPerfil('supervisor'), a
     const separadores = await db.all(`
       SELECT COALESCE(u.nome, s.nome) as nome,
         COUNT(*) FILTER (WHERE p.status='concluido') as total,
-        COALESCE(SUM(p.itens) FILTER (WHERE p.status='concluido'), 0) as itens
+        COALESCE(SUM(COALESCE(NULLIF(p.total_itens,0),p.itens)) FILTER (WHERE p.status='concluido'), 0) as itens
       FROM separadores s
       LEFT JOIN usuarios u ON u.id = s.usuario_id
       LEFT JOIN pedidos p ON p.separador_id = s.id AND p.data_pedido = $1
