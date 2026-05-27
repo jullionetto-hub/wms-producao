@@ -104,12 +104,14 @@ async function carregarFilaMobile() {
       const temSup   = qtdSup > 0;
 
       // Hierarquia visual: aguardSup > falta > drive thru > normal
-      const bordColor = temSup ? '#ddd6fe' : temFalta ? '#FDE68A' : isDrive ? '#FECACA' : 'var(--border)';
-      const numColor  = isDrive ? '#DC2626' : temSup ? '#7c3aed' : 'var(--accent)';
-      const pillTxt   = temSup ? '⛔ supervisor' : temFalta ? '⚠️ repositor' : isDrive ? '🚗 drive thru' : 'aguardando sep';
+      const bordColor = temSup ? '#a78bfa' : temFalta ? '#F59E0B' : isDrive ? '#FCA5A5' : 'var(--border)';
+      const bgColor   = temSup ? '#f5f3ff'  : temFalta ? '#FFFBEB' : isDrive ? '#FFF5F5' : 'var(--surface)';
+      const numColor  = isDrive ? '#DC2626' : temSup ? '#7c3aed' : temFalta ? '#92400E' : 'var(--accent)';
+      const pillTxt   = temSup ? '⛔ supervisor' : temFalta ? '⏳ aguard. repositor' : isDrive ? '🚗 drive thru' : 'aguardando sep';
       const pillCls   = temSup ? 'separando' : temFalta ? 'pendente' : 'pendente';
+      const bordWidth = (temSup || temFalta) ? '2.5px' : '1.5px';
 
-      return `<div style="border:1.5px solid ${bordColor};border-radius:12px;padding:12px 14px;margin-bottom:8px;background:var(--surface)">
+      return `<div style="border:${bordWidth} solid ${bordColor};border-radius:12px;padding:12px 14px;margin-bottom:8px;background:${bgColor}">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
           <div style="font-size:20px;font-weight:800;color:${numColor};font-family:'Space Mono',monospace">#${p.numero_pedido}</div>
           <span class="pill ${pillCls}" style="font-size:10px">${pillTxt}</span>
@@ -119,11 +121,11 @@ async function carregarFilaMobile() {
           ${p.cliente ? `<span>👤 ${p.cliente}</span>` : ''}
           ${p.transportadora ? `<span>🚚 ${p.transportadora}</span>` : ''}
         </div>
-        ${temSup ? `<div style="display:flex;align-items:center;gap:5px;background:#f5f3ff;border:1px solid #ddd6fe;border-radius:6px;padding:5px 9px;margin-bottom:5px">
-          <span style="font-size:11px;font-weight:600;color:#5b21b6">⛔ ${qtdSup} item${qtdSup>1?'s':''} aguardando supervisor</span>
+        ${temSup ? `<div style="display:flex;align-items:center;gap:5px;background:#ede9fe;border:1px solid #c4b5fd;border-radius:6px;padding:5px 9px;margin-bottom:5px">
+          <span style="font-size:11px;font-weight:700;color:#5b21b6">⛔ ${qtdSup} item${qtdSup>1?'s':''} aguardando supervisor</span>
         </div>` : ''}
-        ${temFalta ? `<div style="display:flex;align-items:center;gap:5px;background:#FEF3C7;border:1px solid #FDE68A;border-radius:6px;padding:5px 9px;margin-bottom:5px">
-          <span style="font-size:11px;font-weight:600;color:#92400E">⚠️ ${qtdFalta} item${qtdFalta>1?'s':''} aguardando repositor</span>
+        ${temFalta ? `<div style="display:flex;align-items:center;gap:5px;background:#FEF3C7;border:1px solid #F59E0B;border-radius:6px;padding:5px 9px;margin-bottom:5px">
+          <span style="font-size:11px;font-weight:700;color:#92400E">⏳ ${qtdFalta} item${qtdFalta>1?'s':''} aguardando repositor — não pegue ainda!</span>
         </div>` : ''}
         <button class="btn btn-primary btn-sm" style="width:100%;margin-top:8px;padding:10px;font-size:14px;font-weight:700"
           onclick="selecionarPedidoFilaMobile('${p.numero_pedido}')">
