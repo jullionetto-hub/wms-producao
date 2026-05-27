@@ -90,6 +90,83 @@ function _cancelarWms() {
 // ── Protocolo ─────────────────────────────────────────────────────────────────
 let _protocoloRows = [];
 
+function mudarProtoTab(tab) {
+  ['aguardando','protocolados'].forEach(t => {
+    const btn = document.getElementById(`proto-tab-btn-${t}`);
+    const pnl = document.getElementById(`proto-tab-${t}`);
+    const active = t === tab;
+    if (btn) {
+      btn.style.color        = active ? 'var(--accent)' : 'var(--text3)';
+      btn.style.borderBottom = active ? '2px solid var(--accent)' : '2px solid transparent';
+    }
+    if (pnl) pnl.style.display = active ? '' : 'none';
+  });
+}
+
+function _renderProtoKpis(pedList, pedListH) {
+  const wrap = document.getElementById('proto-kpi-cards');
+  if (!wrap) return;
+  const itensPend  = pedList.reduce((s, p) => s + p.itens.length, 0);
+  const itensProto = pedListH.reduce((s, p) => s + p.itens.length, 0);
+  const totalItens = itensPend + itensProto;
+  const totalPeds  = pedList.length + pedListH.length;
+
+  // Breakdowns por tipo de entrega no aguardando
+  const tipos = {};
+  pedList.forEach(ped => {
+    const t = (ped.transportadora || '').toUpperCase();
+    const tipo = /DRIVE|RETIRADA/i.test(t) ? '🚗 Drive Thru'
+               : /PRIME/i.test(t)           ? '⭐ Prime'
+               : /SEDEX/i.test(t)           ? '📮 SEDEX'
+               : /^PAC/i.test(t)            ? '📦 PAC'
+               : /MOTOBOY|MOTO/i.test(t)    ? '🏍️ Motoboy'
+               : '📦 Outros';
+    tipos[tipo] = (tipos[tipo] || 0) + 1;
+  });
+  const tiposKpis = Object.entries(tipos).map(([k,v]) => `<div style="background:var(--surface2);border-radius:8px;padding:7px 10px"><div style="font-size:9px;color:var(--text3);font-weight:700;letter-spacing:.5px">${k.toUpperCase()}</div><div style="font-size:15px;font-weight:800;color:var(--text);margin-top:2px">${v} ped.</div></div>`).join('');
+
+  const cards = [
+    { icon:'📋', label:'AGUARDANDO', grad:'linear-gradient(135deg,#7c3aed,#6d28d9)',
+      main: itensPend,
+      sub: `${pedList.length} pedido${pedList.length!==1?'s':''}`,
+      kpis: tiposKpis || `<div style="background:var(--surface2);border-radius:8px;padding:7px 10px"><div style="font-size:11px;color:var(--text3)">Nenhum aguardando</div></div>` },
+    { icon:'✅', label:'PROTOCOLADOS', grad:'linear-gradient(135deg,#10b981,#047857)',
+      main: itensProto,
+      sub: `${pedListH.length} pedido${pedListH.length!==1?'s':''}`,
+      kpis: [
+        { lbl:'Total Itens',   val: itensProto },
+        { lbl:'Total Pedidos', val: pedListH.length },
+      ]},
+    { icon:'📊', label:'TOTAL PERÍODO', grad:'linear-gradient(135deg,#3b82f6,#1d4ed8)',
+      main: totalItens,
+      sub: `${totalPeds} pedido${totalPeds!==1?'s':''}`,
+      kpis: [
+        { lbl:'Aguardando', val: itensPend  },
+        { lbl:'Resolvidos', val: itensProto },
+      ]},
+  ];
+
+  wrap.innerHTML = cards.map((c, i) => {
+    const kpisHtml = i === 0
+      ? `<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">${c.kpis}</div>`
+      : `<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">${c.kpis.map(k=>`<div style="background:var(--surface2);border-radius:8px;padding:7px 10px"><div style="font-size:9px;color:var(--text3);font-weight:700;letter-spacing:.5px">${k.lbl.toUpperCase()}</div><div style="font-size:15px;font-weight:800;color:var(--text);margin-top:2px">${k.val}</div></div>`).join('')}</div>`;
+    return `
+    <div style="background:var(--surface);border-radius:18px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.10)">
+      <div style="background:${c.grad};padding:18px 18px 16px;position:relative;overflow:hidden">
+        <div style="position:absolute;right:-14px;top:-14px;width:80px;height:80px;border-radius:50%;background:rgba(255,255,255,.10);pointer-events:none"></div>
+        <div style="position:absolute;right:-18px;bottom:-18px;width:65px;height:65px;border-radius:50%;background:rgba(255,255,255,.07);pointer-events:none"></div>
+        <div style="position:relative">
+          <div style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,.2);font-size:20px;margin-bottom:8px">${c.icon}</div>
+          <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,.8);letter-spacing:1.2px;margin-bottom:4px">${c.label}</div>
+          <div style="font-size:44px;font-weight:800;color:#fff;line-height:1;letter-spacing:-1px">${c.main}</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.7);margin-top:4px">${c.sub}</div>
+        </div>
+      </div>
+      <div style="padding:12px 14px">${kpisHtml}</div>
+    </div>`;
+  }).join('');
+}
+
 // Badge colorido por tipo de entrega (reutilizado no protocolo)
 function _transpBadgeProto(transp) {
   const t = (transp||'').trim();
@@ -127,6 +204,8 @@ async function carregarProtocolo() {
   });
   const pedList = Object.values(pedMap);
   if (badge) { badge.style.display = pedList.length ? '' : 'none'; badge.textContent = pedList.length; }
+  const tabBdgAg = document.getElementById('proto-tab-badge-aguardando');
+  if (tabBdgAg) tabBdgAg.textContent = pedList.length;
   if (!el) return;
 
   // ── Tabela unificada de aguardando protocolo ───────────────────────────────
@@ -226,7 +305,9 @@ async function carregarProtocolo() {
     pedMapH[key].itens.push(r);
   });
   const pedListH = Object.values(pedMapH);
-  if (histBdg) histBdg.textContent = pedListH.length;
+  const tabBdgPr = document.getElementById('proto-tab-badge-protocolados');
+  if (tabBdgPr) tabBdgPr.textContent = pedListH.length;
+  _renderProtoKpis(pedList, pedListH);
 
   if (elHist) {
     if (!pedListH.length) {
