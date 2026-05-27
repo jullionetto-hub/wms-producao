@@ -845,7 +845,7 @@ function renderDashPipeline() {
   const repTotal  = parseInt(kpi.total_faltas_hoje    || 0);
 
   const cards = [
-    { icon: '📦', label: 'SEPARAÇÃO', cor: '#4f46e5',
+    { icon: '📦', label: 'SEPARAÇÃO', cor: '#4f46e5', grad: 'linear-gradient(135deg,#6366f1,#4338ca)',
       main: fmtN(sepConcluido), sub: 'pedidos concluídos',
       kpis: [
         { lbl: 'Total Pedidos',  val: fmtN(sepTotal) },
@@ -853,7 +853,7 @@ function renderDashPipeline() {
         { lbl: 'Pendentes',      val: fmtN(sepPendente) },
         { lbl: 'Total Itens',    val: fmtN(sepItens) },
       ]},
-    { icon: '🔖', label: 'CHECKOUT', cor: '#0891b2',
+    { icon: '🔖', label: 'CHECKOUT', cor: '#0891b2', grad: 'linear-gradient(135deg,#22d3ee,#0369a1)',
       main: fmtN(ckConc), sub: 'checkouts concluídos',
       kpis: [
         { lbl: 'Total Checkout', val: fmtN(ckFila + ckEmCk + ckConc) },
@@ -861,7 +861,7 @@ function renderDashPipeline() {
         { lbl: 'Pendentes',      val: fmtN(ckFila) },
         { lbl: 'Total Itens',    val: fmtN(ckItens) },
       ]},
-    { icon: '📫', label: 'EMBALAGEM', cor: '#7c3aed',
+    { icon: '📫', label: 'EMBALAGEM', cor: '#7c3aed', grad: 'linear-gradient(135deg,#a855f7,#6d28d9)',
       main: fmtN(embConc), sub: 'pedidos embalados',
       kpis: [
         { lbl: 'Emb. Pendente',  val: fmtN(embPend),  note: 'pós-checkout' },
@@ -869,7 +869,7 @@ function renderDashPipeline() {
         { lbl: 'Embalados',      val: fmtN(embConc) },
         { lbl: 'Total Itens',    val: fmtN(embItens) },
       ]},
-    { icon: '🔧', label: 'REPOSIÇÃO', cor: '#d97706',
+    { icon: '🔧', label: 'REPOSIÇÃO', cor: '#d97706', grad: 'linear-gradient(135deg,#f59e0b,#b45309)',
       main: fmtN(repConc), sub: 'reposições resolvidas',
       kpis: [
         { lbl: 'Total Reposição', val: fmtN(repTotal) },
@@ -880,19 +880,25 @@ function renderDashPipeline() {
   ];
 
   wrap.innerHTML = cards.map(c => `
-    <div style="background:var(--surface);border-radius:16px;padding:18px 20px;border-left:4px solid ${c.cor};box-shadow:0 1px 6px rgba(0,0,0,.06)">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-        <span style="font-size:22px">${c.icon}</span>
-        <span style="font-size:11px;font-weight:800;color:var(--text3);letter-spacing:.8px">${c.label}</span>
+    <div style="background:var(--surface);border-radius:18px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.10)">
+      <div style="background:${c.grad};padding:20px 20px 18px;position:relative;overflow:hidden">
+        <div style="position:absolute;right:-14px;top:-14px;width:90px;height:90px;border-radius:50%;background:rgba(255,255,255,.10);pointer-events:none"></div>
+        <div style="position:absolute;right:-20px;bottom:-18px;width:70px;height:70px;border-radius:50%;background:rgba(255,255,255,.07);pointer-events:none"></div>
+        <div style="position:relative">
+          <div style="display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,.2);font-size:22px;margin-bottom:10px">${c.icon}</div>
+          <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,.8);letter-spacing:1.2px;margin-bottom:4px">${c.label}</div>
+          <div style="font-size:44px;font-weight:800;color:#fff;line-height:1;letter-spacing:-1px">${c.main}</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.7);margin-top:6px">${c.sub}</div>
+        </div>
       </div>
-      <div style="font-size:36px;font-weight:800;color:${c.cor};line-height:1">${c.main}</div>
-      <div style="font-size:12px;color:var(--text2);margin-bottom:12px">${c.sub}</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-        ${c.kpis.map(k => `
-          <div style="background:var(--surface2);border-radius:8px;padding:6px 8px">
-            <div style="font-size:9px;color:var(--text3);font-weight:700;letter-spacing:.5px">${k.lbl.toUpperCase()}</div>
-            <div style="font-size:14px;font-weight:700;color:var(--text);margin-top:2px">${k.val}</div>
-          </div>`).join('')}
+      <div style="padding:14px 16px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+          ${c.kpis.map(k => `
+            <div style="background:var(--surface2);border-radius:8px;padding:7px 10px">
+              <div style="font-size:9px;color:var(--text3);font-weight:700;letter-spacing:.5px">${k.lbl.toUpperCase()}</div>
+              <div style="font-size:15px;font-weight:800;color:var(--text);margin-top:2px">${k.val}</div>
+            </div>`).join('')}
+        </div>
       </div>
     </div>`).join('');
 }
@@ -2136,7 +2142,7 @@ function renderRelAnalitico(d) {
 
   // ── 1. Cards de resumo operacional ──────────────────────────
   const cards = [
-    { icon:'📦', label:'SEPARAÇÃO', cor:'#4f46e5',
+    { icon:'📦', label:'SEPARAÇÃO', cor:'#4f46e5', grad:'linear-gradient(135deg,#6366f1,#4338ca)',
       main: `${fmtN(d.separacao.concluidos)} / ${fmtN(d.separacao.distribuidos||d.separacao.total)}`, sub:'concluídos do lote distribuído',
       kpis:[
         { lbl:'Importados',      val: fmtN(d.separacao.total) },
@@ -2147,7 +2153,7 @@ function renderRelAnalitico(d) {
         { lbl:'Pontuação total', val: fmtN(d.separacao.pontuacao_total) },
         { lbl:'Tempo médio',     val: fmtT(d.separacao.media_tempo_min) },
       ]},
-    { icon:'🔖', label:'CHECKOUT', cor:'#0891b2',
+    { icon:'🔖', label:'CHECKOUT', cor:'#0891b2', grad:'linear-gradient(135deg,#22d3ee,#0369a1)',
       main: fmtN(d.checkout.concluidos), sub:'checkouts realizados',
       kpis:[
         { lbl:'Total criados',   val: fmtN(d.checkout.total) },
@@ -2155,14 +2161,14 @@ function renderRelAnalitico(d) {
         { lbl:'Total itens',     val: fmtN(d.checkout.total_itens) },
         { lbl:'Tempo médio',     val: fmtT(d.checkout.media_tempo_min) },
       ]},
-    { icon:'📫', label:'EMBALAGEM', cor:'#7c3aed',
+    { icon:'📫', label:'EMBALAGEM', cor:'#7c3aed', grad:'linear-gradient(135deg,#a855f7,#6d28d9)',
       main: fmtN(d.embalagem.total_embalados), sub:'pedidos embalados',
       kpis:[
         { lbl:'Pendentes emb.',  val: fmtN(d.embalagem.pendentes) },
         { lbl:'Total itens',     val: fmtN(d.embalagem.total_itens) },
         { lbl:'Tempo médio',     val: fmtT(d.embalagem.media_tempo_min) },
       ]},
-    { icon:'🔧', label:'REPOSIÇÃO', cor:'#d97706',
+    { icon:'🔧', label:'REPOSIÇÃO', cor:'#d97706', grad:'linear-gradient(135deg,#f59e0b,#b45309)',
       main: fmtN(d.reposicao.resolvidas), sub:'reposições resolvidas',
       kpis:[
         { lbl:'Total abertos',    val: fmtN(d.reposicao.total) },
@@ -2173,19 +2179,25 @@ function renderRelAnalitico(d) {
   ];
 
   const cardsHTML = cards.map(c => `
-    <div style="background:var(--surface);border-radius:16px;padding:18px 20px;border-left:4px solid ${c.cor};box-shadow:0 1px 6px rgba(0,0,0,.06)">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-        <span style="font-size:22px">${c.icon}</span>
-        <span style="font-size:11px;font-weight:800;color:var(--text3);letter-spacing:.8px">${c.label}</span>
+    <div style="background:var(--surface);border-radius:18px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.10)">
+      <div style="background:${c.grad};padding:20px 20px 18px;position:relative;overflow:hidden">
+        <div style="position:absolute;right:-14px;top:-14px;width:90px;height:90px;border-radius:50%;background:rgba(255,255,255,.10);pointer-events:none"></div>
+        <div style="position:absolute;right:-20px;bottom:-18px;width:70px;height:70px;border-radius:50%;background:rgba(255,255,255,.07);pointer-events:none"></div>
+        <div style="position:relative">
+          <div style="display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,.2);font-size:22px;margin-bottom:10px">${c.icon}</div>
+          <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,.8);letter-spacing:1.2px;margin-bottom:4px">${c.label}</div>
+          <div style="font-size:38px;font-weight:800;color:#fff;line-height:1;letter-spacing:-1px">${c.main}</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.7);margin-top:6px">${c.sub}</div>
+        </div>
       </div>
-      <div style="font-size:36px;font-weight:800;color:${c.cor};line-height:1">${c.main}</div>
-      <div style="font-size:12px;color:var(--text2);margin-bottom:12px">${c.sub}</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-        ${c.kpis.map(k=>`
-          <div style="background:var(--surface2);border-radius:8px;padding:6px 8px">
-            <div style="font-size:9px;color:var(--text3);font-weight:700;letter-spacing:.5px">${k.lbl.toUpperCase()}</div>
-            <div style="font-size:13px;font-weight:700;color:var(--text);margin-top:2px">${k.val}</div>
-          </div>`).join('')}
+      <div style="padding:14px 16px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+          ${c.kpis.map(k=>`
+            <div style="background:var(--surface2);border-radius:8px;padding:7px 10px">
+              <div style="font-size:9px;color:var(--text3);font-weight:700;letter-spacing:.5px">${k.lbl.toUpperCase()}</div>
+              <div style="font-size:14px;font-weight:800;color:var(--text);margin-top:2px">${k.val}</div>
+            </div>`).join('')}
+        </div>
       </div>
     </div>`).join('');
 
