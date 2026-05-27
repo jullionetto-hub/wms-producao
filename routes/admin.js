@@ -266,7 +266,8 @@ router.get('/relatorio/analitico', requerAuth, requerPerfil('supervisor'), async
 
     // ── Reposição ─────────────────────────────────────────────────
     const reposicoes = await db.all(`
-      SELECT ar.status, ar.data_aviso, ar.repositor_nome, ar.separador_nome, ar.descricao
+      SELECT ar.status, ar.data_aviso, ar.repositor_nome, ar.separador_nome, ar.descricao,
+             ar.hora_aviso, ar.hora_reposto
       FROM avisos_repositor ar
       WHERE ar.data_aviso >= $1 AND ar.data_aviso <= $2
     `, params);
@@ -335,24 +336,32 @@ router.get('/relatorio/analitico', requerAuth, requerPerfil('supervisor'), async
     embalagens.forEach(e => {
       if (!e.embalado_por) return;
       const k = `${e.embalado_por}:embalador`;
-      if (!colabs[k]) colabs[k] = { nome:e.embalado_por, perfil:'embalador', turno:null, pedidos:0, tempos:[] };
+      if (!colabs[k]) colabs[k] = { nome:e.embalado_por, perfil:'embalador', turno:null, pedidos:0, itens:0, tempos:[] };
       colabs[k].pedidos++;
+      colabs[k].itens += parseInt(e.itens) || 0;
       const t = minutesTime(e.embalagem_inicio, e.embalado_em);
       if (t) colabs[k].tempos.push(t);
     });
     ckConcluidos.forEach(ck => {
       if (!ck.operador_nome) return;
       const k = `${ck.operador_nome}:checkout`;
-      if (!colabs[k]) colabs[k] = { nome:ck.operador_nome, perfil:'checkout', turno:null, pedidos:0, tempos:[] };
+      if (!colabs[k]) colabs[k] = { nome:ck.operador_nome, perfil:'checkout', turno:null, pedidos:0, itens:0, tempos:[] };
       colabs[k].pedidos++;
+      colabs[k].itens += parseInt(ck.itens) || 0;
+      const t = minutesTime(ck.hora_criacao, ck.hora_checkout);
+      if (t) colabs[k].tempos.push(t);
     });
     reposicoes.forEach(r => {
       if (!r.repositor_nome) return;
       const k = `${r.repositor_nome}:repositor`;
       if (!colabs[k]) colabs[k] = { nome:r.repositor_nome, perfil:'repositor', turno:null, total:0, repostos:0, nao_enc:0, tempos:[] };
-      colabs[k].total = (colabs[k].total||0)+1;
-      if (['reposto','abastecido','subiu'].includes(r.status)) colabs[k].repostos = (colabs[k].repostos||0)+1;
-      if (r.status === 'nao_encontrado') colabs[k].nao_enc = (colabs[k].nao_enc||0)+1;
+      colabs[k].total++;
+      if (['reposto','abastecido','subiu'].includes(r.status)) {
+        colabs[k].repostos++;
+        const t = minutesTime(r.hora_aviso, r.hora_reposto);
+        if (t) colabs[k].tempos.push(t);
+      }
+      if (r.status === 'nao_encontrado') colabs[k].nao_enc++;
     });
     const colaboradores = Object.values(colabs).map(c => {
       const tempo_medio = avgArr(c.tempos);

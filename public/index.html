@@ -136,8 +136,10 @@
                 <button onclick="toggleTurnoDash('Noite')" class="rel-turno-btn" data-t="Noite">🌙 Noite</button>
               </div>
             </div>
-            <div class="fg"><label>DE</label><input type="date" id="filtro-data-ini" onchange="carregarDashboard()"/></div>
-            <div class="fg"><label>ATÉ</label><input type="date" id="filtro-data-fim" onchange="carregarDashboard()"/></div>
+            <div class="fg"><label>DE</label><input type="date" id="filtro-data-ini"/></div>
+            <div class="fg"><label>ATÉ</label><input type="date" id="filtro-data-fim"/></div>
+            <button class="btn btn-primary btn-sm" onclick="carregarDashboard()">Filtrar</button>
+            <button class="btn btn-outline btn-sm" onclick="document.getElementById('filtro-data-ini').value='';document.getElementById('filtro-data-fim').value='';carregarDashboard()">🔄</button>
           </div>
         </div>
 
@@ -1381,25 +1383,44 @@
 <!-- ══ PROTOCOLO ══ -->
 <div class="pagina" id="pag-protocolo">
   <div class="pg-title">📋 Protocolo</div>
+
+  <!-- Filtros -->
   <div class="card" style="margin-bottom:14px">
-    <div class="card-hd">FILTROS</div>
+    <div class="card-hd">FILTROS
+      <button class="btn btn-outline btn-sm" onclick="exportarProtocolo()" title="Exportar lista em CSV">📥 Excel</button>
+    </div>
     <div class="date-filter-bar">
       <div class="fg"><label>DE</label><input type="date" id="proto-filtro-ini"/></div>
       <div class="fg"><label>ATÉ</label><input type="date" id="proto-filtro-fim"/></div>
       <button class="btn btn-primary btn-sm" onclick="carregarProtocolo()">Filtrar</button>
       <button class="btn btn-outline btn-sm" onclick="document.getElementById('proto-filtro-ini').value='';document.getElementById('proto-filtro-fim').value='';carregarProtocolo()">🔄</button>
-      <button class="btn btn-outline btn-sm" onclick="exportarProtocolo()" title="Exportar lista em CSV">📥 Excel</button>
     </div>
   </div>
-  <div id="proto-lista"></div>
 
-  <!-- Histórico -->
-  <div style="margin-top:28px">
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;padding:0 2px">
-      <span style="font-size:16px">✅</span>
-      <span style="font-size:13px;font-weight:800;color:var(--text2);text-transform:uppercase;letter-spacing:.6px">Histórico — Enviados para Protocolo</span>
-      <span id="proto-hist-badge" style="background:#059669;color:#fff;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700;min-width:22px;text-align:center">0</span>
-    </div>
+  <!-- KPI Cards -->
+  <div id="proto-kpi-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:18px"></div>
+
+  <!-- Abas -->
+  <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:16px">
+    <button id="proto-tab-btn-aguardando" onclick="mudarProtoTab('aguardando')"
+      style="padding:10px 18px;border:none;background:transparent;font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.5px;cursor:pointer;border-bottom:2px solid var(--accent);margin-bottom:-2px;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:7px">
+      📋 AGUARDANDO
+      <span id="proto-tab-badge-aguardando" style="background:var(--accent);color:#fff;padding:1px 8px;border-radius:20px;font-size:10px;font-weight:700">0</span>
+    </button>
+    <button id="proto-tab-btn-protocolados" onclick="mudarProtoTab('protocolados')"
+      style="padding:10px 18px;border:none;background:transparent;font-size:12px;font-weight:700;color:var(--text3);letter-spacing:.5px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:7px">
+      ✅ PROTOCOLADOS
+      <span id="proto-tab-badge-protocolados" style="background:#059669;color:#fff;padding:1px 8px;border-radius:20px;font-size:10px;font-weight:700">0</span>
+    </button>
+  </div>
+
+  <!-- Aba: Aguardando -->
+  <div id="proto-tab-aguardando">
+    <div id="proto-lista"></div>
+  </div>
+
+  <!-- Aba: Protocolados -->
+  <div id="proto-tab-protocolados" style="display:none">
     <div id="proto-historico"></div>
   </div>
 </div>
@@ -1685,6 +1706,17 @@
             <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">📋 Fila de Checkout</div>
             <button class="btn btn-outline btn-sm" onclick="carregarFilaCkMobile()">🔄</button>
           </div>
+          <div style="display:flex;gap:10px;margin-bottom:12px">
+            <input type="text" id="m-ck-fila-busca"
+              placeholder="🔍 Buscar pedido..."
+              onkeydown="if(event.key==='Enter')filtrarFilaCkMobile()"
+              autocomplete="off" inputmode="numeric"
+              style="flex:1;padding:12px 14px;border:2px solid var(--border);border-radius:12px;font-size:15px;font-weight:700;font-family:'Space Mono',monospace;background:var(--surface2);color:var(--text);outline:none;letter-spacing:1px;box-sizing:border-box">
+            <button onclick="filtrarFilaCkMobile()"
+              style="padding:12px 20px;background:#4f46e5;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;box-shadow:0 2px 8px rgba(79,70,229,.3)">
+              Buscar
+            </button>
+          </div>
           <div id="m-ck-fila-lista">
             <div style="color:var(--text3);text-align:center;padding:32px;font-size:13px">Carregando...</div>
           </div>
@@ -1911,13 +1943,13 @@
 
 
 
-<script src="/js/config.js?v=7"></script>
+<script src="/js/config.js?v=10"></script>
   <script src="/js/pedidos.js?v=13"></script>
   <script src="/js/separador.js?v=6"></script>
-  <script src="/js/repositor.js?v=14"></script>
-  <script src="/js/checkout.js?v=3"></script>
-  <script src="/js/dashboard.js?v=17"></script>
-  <script src="/js/auth.js?v=13"></script>
+  <script src="/js/repositor.js?v=15"></script>
+  <script src="/js/checkout.js?v=4"></script>
+  <script src="/js/dashboard.js?v=24"></script>
+  <script src="/js/auth.js?v=14"></script>
 
 
 <!-- ══ MODAL IMPORTAR ══ -->
@@ -2196,12 +2228,18 @@ if ('serviceWorker' in navigator) {
   <!-- Aba: Fila -->
   <div id="emb-tab-fila" style="flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden">
     <div style="padding:14px;background:var(--surface,#fff);border-bottom:1px solid var(--border,#e2e8f0);flex-shrink:0">
-      <div style="font-size:11px;color:var(--text3,#94a3b8);font-weight:700;margin-bottom:8px;letter-spacing:.5px;text-transform:uppercase">Filtrar Fila</div>
-      <input type="text" id="m-emb-busca"
-        placeholder="🔍 Digite o número do pedido..."
-        oninput="filtrarEmbalagemMobile()"
-        autocomplete="off" inputmode="numeric"
-        style="width:100%;padding:14px 16px;border:2px solid var(--border,#e2e8f0);border-radius:12px;font-size:16px;font-weight:700;font-family:'Space Mono',monospace;background:var(--surface2,#f8fafc);color:var(--text,#1e293b);box-sizing:border-box;outline:none;letter-spacing:1px">
+      <div style="font-size:11px;color:var(--text3,#94a3b8);font-weight:700;margin-bottom:8px;letter-spacing:.5px;text-transform:uppercase">Buscar Pedido</div>
+      <div style="display:flex;gap:10px">
+        <input type="text" id="m-emb-busca"
+          placeholder="🔍 Número do pedido..."
+          onkeydown="if(event.key==='Enter')filtrarEmbalagemMobile()"
+          autocomplete="off" inputmode="numeric"
+          style="flex:1;padding:14px 16px;border:2px solid var(--border,#e2e8f0);border-radius:12px;font-size:16px;font-weight:700;font-family:'Space Mono',monospace;background:var(--surface2,#f8fafc);color:var(--text,#1e293b);box-sizing:border-box;outline:none;letter-spacing:1px">
+        <button onclick="filtrarEmbalagemMobile()"
+          style="padding:14px 20px;background:#4f46e5;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;box-shadow:0 2px 8px rgba(79,70,229,.3)">
+          Buscar
+        </button>
+      </div>
     </div>
     <div style="flex:1;overflow-y:auto;padding:14px;min-height:0" id="m-emb-lista">
       <div style="text-align:center;padding:60px;color:var(--text3,#94a3b8)">Carregando...</div>
@@ -2210,20 +2248,7 @@ if ('serviceWorker' in navigator) {
 
   <!-- Aba: Embalar -->
   <div id="emb-tab-embalar" style="flex:1;display:none;flex-direction:column;min-height:0;overflow:hidden">
-    <div style="padding:14px;background:var(--surface,#fff);border-bottom:1px solid var(--border,#e2e8f0);flex-shrink:0">
-      <div style="font-size:11px;color:var(--text3,#94a3b8);font-weight:700;margin-bottom:8px;letter-spacing:.5px;text-transform:uppercase">Número do Pedido</div>
-      <div style="display:flex;gap:10px">
-        <input type="text" id="m-emb-embalar-input"
-          placeholder="📦 Digite ou bipe o pedido..."
-          onkeydown="if(event.key==='Enter')buscarPedidoEmbMobile()"
-          autocomplete="off" inputmode="numeric"
-          style="flex:1;padding:14px 16px;border:2px solid #4f46e5;border-radius:12px;font-size:16px;font-weight:700;font-family:'Space Mono',monospace;background:var(--surface2,#f8fafc);color:var(--text,#1e293b);outline:none;letter-spacing:1px;box-sizing:border-box">
-        <button onclick="buscarPedidoEmbMobile()"
-          style="padding:14px 20px;background:#4f46e5;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;box-shadow:0 2px 8px rgba(79,70,229,.3)">
-          Buscar
-        </button>
-      </div>
-    </div>
+    <input type="hidden" id="m-emb-embalar-input">
     <div style="flex:1;overflow-y:auto;padding:14px;min-height:0" id="m-emb-embalar-resultado">
       <div style="text-align:center;padding:60px 20px;color:var(--text3,#94a3b8)">
         <div style="font-size:48px;margin-bottom:12px">📦</div>

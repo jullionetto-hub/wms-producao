@@ -372,22 +372,14 @@ function renderMapaEstoque(contRua, isPedidoUnico) {
 async function carregarOperacao() {
   try {
     const hoje = hojeLocal();
-    // Busca TODOS os pedidos ativos (pendente + separando + concluido de hoje)
-    // independente da data do arquivo importado
-    const [resPend, resSep, resConc] = await Promise.all([
-      fetch(`${API}/pedidos?status=pendente`, { credentials:'include' }),
-      fetch(`${API}/pedidos?status=separando`, { credentials:'include' }),
-      fetch(`${API}/pedidos?status=concluido&data=${hoje}`, { credentials:'include' })
-    ]);
-    const pPend = resPend.ok ? await resPend.json() : [];
-    const pSep  = resSep.ok  ? await resSep.json()  : [];
-    const pConc = resConc.ok ? await resConc.json() : [];
-    // Merge sem duplicatas
-    const allIds = new Set();
-    const pedidos = [...pPend, ...pSep, ...pConc].filter(p => {
-      if (allIds.has(p.id)) return false;
-      allIds.add(p.id); return true;
-    });
+    const dIni = document.getElementById('filtro-data-ini')?.value || hoje;
+    const dFim = document.getElementById('filtro-data-fim')?.value || hoje;
+
+    // Busca pedidos sempre pelo intervalo de datas selecionado.
+    // Isso garante que o filtro DE/ATÉ sempre funcione — inclusive para "hoje",
+    // evitando que pedidos pendentes de dias anteriores apareçam no dia atual.
+    const res = await fetch(`${API}/pedidos?data_ini=${dIni}&data_fim=${dFim}`, { credentials:'include' });
+    let pedidos = res.ok ? await res.json() : [];
 
     // Apenas pedidos DISTRIBUÍDOS (com separador atribuído).
     // Pedidos importados mas ainda não distribuídos (separador_id nulo) não entram no lote ativo.
@@ -845,7 +837,7 @@ function renderDashPipeline() {
   const repTotal  = parseInt(kpi.total_faltas_hoje    || 0);
 
   const cards = [
-    { icon: '📦', label: 'SEPARAÇÃO', cor: '#4f46e5',
+    { icon: '📦', label: 'SEPARAÇÃO', cor: '#4f46e5', grad: 'linear-gradient(135deg,#6366f1,#4338ca)',
       main: fmtN(sepConcluido), sub: 'pedidos concluídos',
       kpis: [
         { lbl: 'Total Pedidos',  val: fmtN(sepTotal) },
@@ -853,7 +845,7 @@ function renderDashPipeline() {
         { lbl: 'Pendentes',      val: fmtN(sepPendente) },
         { lbl: 'Total Itens',    val: fmtN(sepItens) },
       ]},
-    { icon: '🔖', label: 'CHECKOUT', cor: '#0891b2',
+    { icon: '🔖', label: 'CHECKOUT', cor: '#0891b2', grad: 'linear-gradient(135deg,#22d3ee,#0369a1)',
       main: fmtN(ckConc), sub: 'checkouts concluídos',
       kpis: [
         { lbl: 'Total Checkout', val: fmtN(ckFila + ckEmCk + ckConc) },
@@ -861,7 +853,7 @@ function renderDashPipeline() {
         { lbl: 'Pendentes',      val: fmtN(ckFila) },
         { lbl: 'Total Itens',    val: fmtN(ckItens) },
       ]},
-    { icon: '📫', label: 'EMBALAGEM', cor: '#7c3aed',
+    { icon: '📫', label: 'EMBALAGEM', cor: '#7c3aed', grad: 'linear-gradient(135deg,#a855f7,#6d28d9)',
       main: fmtN(embConc), sub: 'pedidos embalados',
       kpis: [
         { lbl: 'Emb. Pendente',  val: fmtN(embPend),  note: 'pós-checkout' },
@@ -869,7 +861,7 @@ function renderDashPipeline() {
         { lbl: 'Embalados',      val: fmtN(embConc) },
         { lbl: 'Total Itens',    val: fmtN(embItens) },
       ]},
-    { icon: '🔧', label: 'REPOSIÇÃO', cor: '#d97706',
+    { icon: '🔧', label: 'REPOSIÇÃO', cor: '#d97706', grad: 'linear-gradient(135deg,#f59e0b,#b45309)',
       main: fmtN(repConc), sub: 'reposições resolvidas',
       kpis: [
         { lbl: 'Total Reposição', val: fmtN(repTotal) },
@@ -880,27 +872,39 @@ function renderDashPipeline() {
   ];
 
   wrap.innerHTML = cards.map(c => `
-    <div style="background:var(--surface);border-radius:16px;padding:18px 20px;border-left:4px solid ${c.cor};box-shadow:0 1px 6px rgba(0,0,0,.06)">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-        <span style="font-size:22px">${c.icon}</span>
-        <span style="font-size:11px;font-weight:800;color:var(--text3);letter-spacing:.8px">${c.label}</span>
+    <div style="background:var(--surface);border-radius:18px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.10)">
+      <div style="background:${c.grad};padding:20px 20px 18px;position:relative;overflow:hidden">
+        <div style="position:absolute;right:-14px;top:-14px;width:90px;height:90px;border-radius:50%;background:rgba(255,255,255,.10);pointer-events:none"></div>
+        <div style="position:absolute;right:-20px;bottom:-18px;width:70px;height:70px;border-radius:50%;background:rgba(255,255,255,.07);pointer-events:none"></div>
+        <div style="position:relative">
+          <div style="display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,.2);font-size:22px;margin-bottom:10px">${c.icon}</div>
+          <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,.8);letter-spacing:1.2px;margin-bottom:4px">${c.label}</div>
+          <div style="font-size:44px;font-weight:800;color:#fff;line-height:1;letter-spacing:-1px">${c.main}</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.7);margin-top:6px">${c.sub}</div>
+        </div>
       </div>
-      <div style="font-size:36px;font-weight:800;color:${c.cor};line-height:1">${c.main}</div>
-      <div style="font-size:12px;color:var(--text2);margin-bottom:12px">${c.sub}</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-        ${c.kpis.map(k => `
-          <div style="background:var(--surface2);border-radius:8px;padding:6px 8px">
-            <div style="font-size:9px;color:var(--text3);font-weight:700;letter-spacing:.5px">${k.lbl.toUpperCase()}</div>
-            <div style="font-size:14px;font-weight:700;color:var(--text);margin-top:2px">${k.val}</div>
-          </div>`).join('')}
+      <div style="padding:14px 16px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+          ${c.kpis.map(k => `
+            <div style="background:var(--surface2);border-radius:8px;padding:7px 10px">
+              <div style="font-size:9px;color:var(--text3);font-weight:700;letter-spacing:.5px">${k.lbl.toUpperCase()}</div>
+              <div style="font-size:15px;font-weight:800;color:var(--text);margin-top:2px">${k.val}</div>
+            </div>`).join('')}
+        </div>
       </div>
     </div>`).join('');
 }
 
 async function carregarKPIs() {
   try {
-    let url = `${API}/kpis`;
-    if (_turnosDash.size > 0) url += `?turnos=${[..._turnosDash].join(',')}`;
+    const params = new URLSearchParams();
+    if (_turnosDash.size > 0) params.set('turnos', [..._turnosDash].join(','));
+    const ini = document.getElementById('filtro-data-ini')?.value;
+    const fim = document.getElementById('filtro-data-fim')?.value;
+    if (ini) params.set('data_ini', ini);
+    if (fim) params.set('data_fim', fim);
+    const qs = params.toString();
+    const url = `${API}/kpis${qs ? '?' + qs : ''}`;
     const res  = await fetch(url, { credentials:'include' });
     const data = await res.json();
     _kpiData = data;
@@ -1060,10 +1064,10 @@ async function carregarStatsCheckout() {
 
 /* PERFORMANCE DOS COLABORADORES */
 const AREA_INFO = {
-  separador: { icon:'📦', label:'Separação',  cor:'var(--accent)' },
-  checkout:  { icon:'✅', label:'Checkout',   cor:'var(--indigo)' },
-  embalador: { icon:'📫', label:'Embalagem',  cor:'#7C3AED'       },
-  repositor: { icon:'🔧', label:'Reposição',  cor:'#EA580C'       },
+  separador: { icon:'📦', label:'Separação',  cor:'var(--accent)', grad:'linear-gradient(135deg,#6366f1,#4338ca)' },
+  checkout:  { icon:'✅', label:'Checkout',   cor:'var(--indigo)', grad:'linear-gradient(135deg,#22d3ee,#0369a1)' },
+  embalador: { icon:'📫', label:'Embalagem',  cor:'#7C3AED',       grad:'linear-gradient(135deg,#a855f7,#6d28d9)' },
+  repositor: { icon:'🔧', label:'Reposição',  cor:'#EA580C',       grad:'linear-gradient(135deg,#f59e0b,#b45309)' },
 };
 
 function _pctBar(pct, temSessao) {
@@ -1142,26 +1146,37 @@ async function carregarPerformance() {
       const area = AREA_INFO[p] || { icon:'👤', label: p, cor:'var(--text)' };
       const ag   = porArea[p];
 
-      let tempoHtml = '';
+      let tempoBody = '';
       if (colab) {
         const r = resultado.find(r => r.perfil === p);
         const min = r?.minutos || 0;
-        tempoHtml = min > 0
-          ? `<div style="border-left:1px solid var(--border);padding-left:10px;text-align:right">
-               <div style="font-size:13px;color:var(--accent);font-weight:700">⏱ ${_horasStr(min)}</div>
-               <div style="font-size:9px;color:var(--text3)">logado</div>
-             </div>`
-          : `<div style="border-left:1px solid var(--border);padding-left:10px"><div style="font-size:11px;color:var(--text3)">—</div></div>`;
+        tempoBody = `<div style="padding:12px 14px">
+          <div style="background:var(--surface2);border-radius:8px;padding:7px 10px;display:flex;align-items:center;gap:10px">
+            <span style="font-size:20px">⏱</span>
+            <div>
+              <div style="font-size:9px;color:var(--text3);font-weight:700;letter-spacing:.5px">TEMPO LOGADO</div>
+              <div style="font-size:15px;font-weight:800;color:var(--text)">${min > 0 ? _horasStr(min) : '—'}</div>
+            </div>
+          </div>
+        </div>`;
       }
 
-      return `<div class="card" style="padding:10px 14px;display:flex;align-items:center;gap:12px">
-        <div style="font-size:22px;line-height:1">${area.icon}</div>
-        <div style="flex:1;min-width:0">
-          <div style="font-size:10px;font-weight:700;color:${area.cor};letter-spacing:.5px">${area.label.toUpperCase()}</div>
-          <div style="font-size:26px;font-weight:900;color:var(--text);line-height:1.1">${ag.atividades}</div>
-          <div style="font-size:10px;color:var(--text3)">${LABELS[p]}${!colab ? ` · ${ag.colaboradores} colaborador${ag.colaboradores!==1?'es':''}` : ''}</div>
+      const grad = area.grad || 'linear-gradient(135deg,#64748b,#334155)';
+      const colabInfo = !colab ? `<div style="font-size:11px;color:rgba(255,255,255,.65);margin-top:2px">${ag.colaboradores} colaborador${ag.colaboradores!==1?'es':''}</div>` : '';
+
+      return `<div style="background:var(--surface);border-radius:18px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.10)">
+        <div style="background:${grad};padding:18px 18px 16px;position:relative;overflow:hidden">
+          <div style="position:absolute;right:-14px;top:-14px;width:80px;height:80px;border-radius:50%;background:rgba(255,255,255,.10);pointer-events:none"></div>
+          <div style="position:absolute;right:-18px;bottom:-18px;width:65px;height:65px;border-radius:50%;background:rgba(255,255,255,.07);pointer-events:none"></div>
+          <div style="position:relative">
+            <div style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,.2);font-size:20px;margin-bottom:8px">${area.icon}</div>
+            <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,.8);letter-spacing:1.2px;margin-bottom:4px">${area.label.toUpperCase()}</div>
+            <div style="font-size:44px;font-weight:800;color:#fff;line-height:1;letter-spacing:-1px">${ag.atividades}</div>
+            <div style="font-size:11px;color:rgba(255,255,255,.7);margin-top:4px">${LABELS[p]}</div>
+            ${colabInfo}
+          </div>
         </div>
-        ${tempoHtml}
+        ${tempoBody}
       </div>`;
     }).join('');
 
@@ -1321,34 +1336,42 @@ async function carregarPerformanceDetalhe(ini, fim, filtPerfil, filtColab) {
             </table>
           </div>`;
       } else if (isRep) {
-        const STcor = { abastecido:'var(--green)', reposto:'var(--green)', encontrado:'var(--green)', subiu:'var(--green)',
-                        nao_encontrado:'var(--red)', protocolo:'var(--text3)', pendente:'var(--amber)' };
-        const STlabel = { abastecido:'✅ Abastecido', reposto:'✅ Reposto', encontrado:'✅ Encontrado', subiu:'✅ Subiu',
-                          nao_encontrado:'❌ Não encontrado', protocolo:'📋 Protocolo', pendente:'⏳ Pendente' };
+        const RESCor   = { encontrado:'var(--green)', nao_encontrado:'var(--red)' };
+        const RESLabel = { encontrado:'✅ Encontrou', nao_encontrado:'❌ Não encontrou' };
+        const TENTCor  = { '1ª':'var(--accent)', '2ª':'var(--amber)', '3ª':'var(--red)', 'ÚLTIMA tentativa':'var(--red)' };
         const linhas = colab.pedidos.map(p => {
-          const cor = STcor[p.status] || 'var(--text3)';
-          const label = STlabel[p.status] || p.status;
+          // ── tempo individual da busca ──
           const tempo = p.tempo_resolucao_min !== null
-            ? `<span style="color:${p.tempo_resolucao_min<=10?'var(--green)':p.tempo_resolucao_min<=30?'var(--amber)':'var(--red)'};font-weight:700">${_horasStr(p.tempo_resolucao_min)}</span>`
+            ? `<span style="color:${p.tempo_resolucao_min<=5?'var(--green)':p.tempo_resolucao_min<=15?'var(--amber)':'var(--red)'};font-weight:700">${p.tempo_resolucao_min===0?'<1min':_horasStr(p.tempo_resolucao_min)}</span>`
+            : '<span style="color:var(--text3)">—</span>';
+          // ── badge de tentativa ──
+          const tentCor = TENTCor[p.numero_tentativa] || 'var(--text3)';
+          const tentBadge = p.numero_tentativa
+            ? `<span style="background:${tentCor}22;color:${tentCor};border:1px solid ${tentCor}55;font-size:10px;font-weight:700;padding:1px 7px;border-radius:20px;white-space:nowrap">${p.numero_tentativa}</span>`
             : '—';
+          // ── resultado ──
+          const resCor   = RESCor[p.resultado_tentativa]   || 'var(--text3)';
+          const resLabel = RESLabel[p.resultado_tentativa]  || (p.resultado_tentativa || '⏳ Em busca');
           return `<tr>
             <td style="font-weight:700">${p.numero_pedido||'—'}</td>
             <td style="color:var(--text2)">${fmtData(p.data_pedido)||'—'}</td>
-            <td style="color:var(--text2)">${p.hora_aviso||'—'}</td>
-            <td style="color:var(--text2)">${p.hora_reposto||'—'}</td>
+            <td style="color:var(--text3);font-size:11px">${p.hora_aviso||'—'}</td>
+            <td style="color:var(--text2)">${p.hora_inicio_busca||'—'}</td>
+            <td style="color:var(--text2)">${p.hora_fim_busca||'—'}</td>
             <td>${tempo}</td>
+            <td style="text-align:center">${tentBadge}</td>
             <td style="color:var(--text2);font-size:11px">${p.codigo||'—'}</td>
-            <td style="color:var(--text2);font-size:11px;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.descricao||'—'}</td>
+            <td style="color:var(--text2);font-size:11px;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${p.descricao||''}">${p.descricao||'—'}</td>
             <td style="text-align:center">${p.quantidade||0}</td>
-            <td><span style="color:${cor};font-weight:700;font-size:11px">${label}</span></td>
+            <td><span style="color:${resCor};font-weight:700;font-size:11px">${resLabel}</span></td>
           </tr>`;
         }).join('');
         tabela = `
           <div class="tabela-wrap">
             <table>
               <thead><tr>
-                <th>Nº PEDIDO</th><th>DATA</th><th>AVISO</th><th>REPOSTO</th><th>⏱ TEMPO</th>
-                <th>CÓDIGO</th><th>DESCRIÇÃO</th><th>QTD</th><th>STATUS</th>
+                <th>Nº PEDIDO</th><th>DATA</th><th>AVISO</th><th>INÍCIO BUSCA</th><th>FIM BUSCA</th>
+                <th>⏱ T. BUSCA</th><th>TENTATIVA</th><th>CÓDIGO</th><th>DESCRIÇÃO</th><th>QTD</th><th>RESULTADO</th>
               </tr></thead>
               <tbody>${linhas}</tbody>
             </table>
@@ -1431,13 +1454,24 @@ function exportarPerformanceExcel() {
     if (embRows.length > 1) XLSX.utils.book_append_sheet(wb, mkSheet(embRows), 'Embalagem');
 
     /* ── Aba Reposição ── */
-    const repRows = [['COLABORADOR','DATA','Nº PEDIDO','AVISO','REPOSTO','T. RESOLUÇÃO','CÓDIGO','DESCRIÇÃO','QTD','STATUS']];
+    const repRows = [['COLABORADOR','DATA','Nº PEDIDO','AVISO','INÍCIO BUSCA','FIM BUSCA','T. BUSCA (min)','TENTATIVA','CÓDIGO','DESCRIÇÃO','QTD','RESULTADO']];
     (_performanceDetalheDados || []).filter(c => c.perfil === 'repositor').forEach(c => {
       c.pedidos.forEach(p => {
-        const tempo = p.tempo_resolucao_min !== null ? _horasStr(p.tempo_resolucao_min) : '—';
-        repRows.push([c.nome, mkDate(p.data_pedido), p.numero_pedido||'—',
-          p.hora_aviso||'—', p.hora_reposto||'—', tempo,
-          p.codigo||'—', p.descricao||'—', p.quantidade||0, p.status||'—']);
+        repRows.push([
+          c.nome,
+          mkDate(p.data_pedido),
+          p.numero_pedido          || '—',
+          p.hora_aviso             || '—',
+          p.hora_inicio_busca      || '—',
+          p.hora_fim_busca         || '—',
+          p.tempo_resolucao_min !== null ? p.tempo_resolucao_min : '—',
+          p.numero_tentativa       || '—',
+          p.codigo                 || '—',
+          p.descricao              || '—',
+          p.quantidade             || 0,
+          p.resultado_tentativa === 'encontrado'    ? 'Encontrou'      :
+          p.resultado_tentativa === 'nao_encontrado'? 'Não encontrou'  : (p.resultado_tentativa || p.status || '—'),
+        ]);
       });
     });
     if (repRows.length > 1) XLSX.utils.book_append_sheet(wb, mkSheet(repRows), 'Reposição');
@@ -1726,49 +1760,305 @@ async function gerarRelatorioColaborador(nomeColab) {
 
     // ── CHECKOUT ──
     } else if (perfil === 'checkout') {
-      const totalCk   = pedidos.length;
-      const tempos    = pedidos.filter(p => p.tempo_checkout_min !== null).map(p => p.tempo_checkout_min);
-      const mediaCk   = tempos.length ? (tempos.reduce((a,b)=>a+b,0)/tempos.length).toFixed(1) : null;
-      const linhas    = pedidos.map(p => `<tr style="border-bottom:1px solid var(--border)">
-        <td style="padding:5px 8px;font-family:monospace;font-size:11px;font-weight:700">${p.numero_pedido}</td>
-        <td style="padding:5px 8px;font-size:11px;color:var(--text3)">${fmtData(p.data_pedido)}</td>
-        <td style="padding:5px 8px;text-align:center;font-size:11px">${p.hora_abertura||'—'}</td>
-        <td style="padding:5px 8px;text-align:center;font-size:11px">${p.hora_confirmacao||'—'}</td>
-        <td style="padding:5px 8px;text-align:center;font-weight:700;color:${p.tempo_checkout_min<=5?'#22C55E':p.tempo_checkout_min<=15?'#F59E0B':'#EF4444'}">${p.tempo_checkout_min!==null?p.tempo_checkout_min+'min':'—'}</td>
-      </tr>`).join('');
-      html = `<div style="font-family:'DM Sans',sans-serif;max-width:700px;margin:0 auto">
-        <div style="background:linear-gradient(135deg,#16A34A,#15803D);color:#fff;border-radius:12px 12px 0 0;padding:20px 24px">
+      const totalCk    = pedidos.length;
+      const totalItens = pedidos.reduce((s,p) => s + (p.total_itens||0), 0);
+      const tempos     = pedidos.map(p => p.tempo_checkout_min).filter(t => t !== null);
+      const comTempo   = tempos.length;
+      const mediaCk    = comTempo ? tempos.reduce((a,b)=>a+b,0)/comTempo : null;
+      const tempoMin   = comTempo ? Math.min(...tempos) : null;
+      const tempoMax   = comTempo ? Math.max(...tempos) : null;
+      const somaT      = tempos.reduce((a,b)=>a+b,0);
+      const ckHora     = somaT > 0 ? Math.round(totalCk / (somaT/60)) : null;
+
+      const rapido = tempos.filter(t => t <= 3).length;
+      const normal = tempos.filter(t => t > 3 && t <= 10).length;
+      const lento  = tempos.filter(t => t > 10).length;
+      const pctR   = comTempo ? Math.round((rapido/comTempo)*100) : 0;
+      const pctN   = comTempo ? Math.round((normal/comTempo)*100) : 0;
+      const pctL   = comTempo ? Math.round((lento/comTempo)*100) : 0;
+
+      const pontosBons = [], melhorar = [];
+      if (mediaCk !== null) {
+        if (mediaCk <= 5) pontosBons.push(`Velocidade excelente: média de ${mediaCk.toFixed(1)}min por checkout`);
+        else if (mediaCk <= 10) pontosBons.push(`Ritmo dentro do esperado: ${mediaCk.toFixed(1)}min/checkout`);
+        else melhorar.push(`Tempo médio elevado: ${mediaCk.toFixed(1)}min/checkout (meta ≤ 10min)`);
+      }
+      if (ckHora !== null && ckHora >= 10) pontosBons.push(`Alta produtividade: ${ckHora} checkouts/hora`);
+      if (totalCk >= 20) pontosBons.push(`Volume expressivo: ${totalCk} checkouts no período`);
+      else if (totalCk < 5) melhorar.push(`Volume baixo no período: ${totalCk} checkouts`);
+      if (pctL > 30) melhorar.push(`${pctL}% dos checkouts acima de 10min — revisar processo`);
+
+      const fmtTck = t => t === null ? '—' : t === 0 ? '<1min' : t+'min';
+      const linhasCk = pedidos.map(p => {
+        const tCol = p.tempo_checkout_min;
+        const tClr = tCol === null ? '#94A3B8' : tCol <= 3 ? '#22C55E' : tCol <= 10 ? '#F59E0B' : '#EF4444';
+        return `<tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:5px 8px;font-family:monospace;font-size:11px;font-weight:700">${p.numero_pedido}</td>
+          <td style="padding:5px 8px;font-size:11px;color:var(--text3)">${fmtData(p.data_pedido)}</td>
+          <td style="padding:5px 8px;text-align:center;font-size:11px;color:var(--text3)">${p.hora_fila||'—'}</td>
+          <td style="padding:5px 8px;text-align:center;font-size:11px">${p.hora_abertura||'—'}</td>
+          <td style="padding:5px 8px;text-align:center;font-size:11px">${p.hora_confirmacao||'—'}</td>
+          <td style="padding:5px 8px;text-align:center;font-weight:700;color:${tClr}">${fmtTck(tCol)}</td>
+          <td style="padding:5px 8px;text-align:center;font-size:12px;color:var(--accent)">${p.total_itens||0}</td>
+        </tr>`;
+      }).join('');
+
+      html = `<div style="font-family:'DM Sans',sans-serif;max-width:780px;margin:0 auto">
+        <div style="background:linear-gradient(135deg,#0891b2,#0369a1);color:#fff;border-radius:12px 12px 0 0;padding:20px 24px">
           <div style="font-size:10px;font-weight:700;letter-spacing:2px;opacity:.75">RELATÓRIO DE DESEMPENHO · CHECKOUT</div>
           <div style="font-size:22px;font-weight:900;margin-top:4px">${nomeColab}</div>
-          <div style="font-size:12px;opacity:.85;margin-top:4px">📅 ${nomesMes[parseInt(mes)]} de ${ano} · ${totalCk} checkouts${mediaCk ? ` · média ${mediaCk}min` : ''}</div>
+          <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:6px;font-size:12px;opacity:.85">
+            <span>📅 ${nomesMes[parseInt(mes)]} de ${ano}</span>
+            <span>✅ ${totalCk} checkouts · ${totalItens} itens</span>
+            ${ckHora ? `<span>⚡ ${ckHora} CK/h</span>` : ''}
+          </div>
         </div>
         <div style="background:var(--surface);border:1px solid var(--border);border-top:none;border-radius:0 0 12px 12px;padding:20px 24px">
-          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px">
-            ${[['✅ CHECKOUTS',totalCk,'#22C55E'],['⏱ TEMPO MÉDIO',mediaCk?mediaCk+'min':'—','#3B82F6'],['⚡ MAIS RÁPIDO',tempos.length?Math.min(...tempos)+'min':'—','#22C55E']].map(([l,v,c])=>`<div style="background:var(--surface2);border-radius:10px;padding:12px;text-align:center;border:1px solid var(--border)"><div style="font-size:20px;font-weight:900;color:${c}">${v}</div><div style="font-size:9px;color:var(--text3);font-weight:700;letter-spacing:.5px">${l}</div></div>`).join('')}
+
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:18px">
+            ${[
+              ['✅ CHECKOUTS', totalCk, '#0891b2'],
+              ['🔢 ITENS PROCESSADOS', totalItens, 'var(--accent)'],
+              ['⏱ TEMPO MÉDIO', mediaCk !== null ? mediaCk.toFixed(1)+'min' : '—', mediaCk !== null && mediaCk <= 10 ? '#22C55E' : '#F59E0B'],
+              ['⚡ MAIS RÁPIDO', tempoMin !== null ? fmtTck(tempoMin) : '—', '#22C55E'],
+              ['🐢 MAIS LENTO', tempoMax !== null ? fmtTck(tempoMax) : '—', tempoMax > 10 ? '#EF4444' : '#F59E0B'],
+              ['🏃 RITMO', ckHora ? ckHora+' CK/h' : '—', '#8B5CF6'],
+            ].map(([l,v,c])=>`<div style="background:var(--surface2);border-radius:10px;padding:12px;text-align:center;border:1px solid var(--border)"><div style="font-size:20px;font-weight:900;color:${c}">${v}</div><div style="font-size:9px;color:var(--text3);font-weight:700;letter-spacing:.5px;margin-top:2px">${l}</div></div>`).join('')}
           </div>
-          <div style="overflow-x:auto;border-radius:8px;border:1px solid var(--border)">
-            <table style="width:100%;border-collapse:collapse;font-size:12px">
-              <thead><tr style="background:var(--surface2);font-size:10px;font-weight:700;color:var(--text3)">
-                <th style="padding:7px 8px;text-align:left">PEDIDO</th><th style="padding:7px 8px">DATA</th><th style="padding:7px 8px">ABERTURA</th><th style="padding:7px 8px">CONFIRMAÇÃO</th><th style="padding:7px 8px">TEMPO</th>
-              </tr></thead><tbody>${linhas}</tbody>
-            </table>
+
+          ${comTempo > 0 ? `<div style="background:var(--surface2);border-radius:10px;padding:14px;margin-bottom:14px;border:1px solid var(--border)">
+            <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:1px;margin-bottom:10px">⏱ DISTRIBUIÇÃO DE VELOCIDADE (${comTempo} checkouts com tempo)</div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+              ${[['⚡ RÁPIDO','≤ 3min',rapido,pctR,'#22C55E'],['✅ NORMAL','3–10min',normal,pctN,'#3B82F6'],['🐢 LENTO','> 10min',lento,pctL,'#EF4444']].map(([l,r,n,p2,c])=>`<div style="text-align:center;background:var(--surface);border-radius:8px;padding:10px;border:1px solid var(--border)"><div style="font-size:18px;font-weight:900;color:${c}">${n}</div><div style="font-size:9px;font-weight:700;color:${c}">${p2}%</div><div style="font-size:10px;color:var(--text3);font-weight:600;margin-top:2px">${l}</div><div style="font-size:9px;color:var(--text3)">${r}</div></div>`).join('')}
+            </div>
+          </div>` : ''}
+
+          <div style="margin-bottom:14px">
+            <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:1px;margin-bottom:8px">📋 DETALHAMENTO POR PEDIDO</div>
+            <div style="overflow-x:auto;border-radius:8px;border:1px solid var(--border)">
+              <table style="width:100%;border-collapse:collapse;font-size:12px">
+                <thead><tr style="background:var(--surface2);font-size:10px;font-weight:700;color:var(--text3)">
+                  <th style="padding:7px 8px;text-align:left">PEDIDO</th><th style="padding:7px 8px">DATA</th>
+                  <th style="padding:7px 8px">ENTRADA FILA</th><th style="padding:7px 8px">INÍCIO</th>
+                  <th style="padding:7px 8px">FIM</th><th style="padding:7px 8px">T. REAL</th><th style="padding:7px 8px">ITENS</th>
+                </tr></thead><tbody>${linhasCk}</tbody>
+              </table>
+            </div>
           </div>
+
+          ${pontosBons.length?`<div style="margin-bottom:10px"><div style="font-size:10px;font-weight:800;color:#15803D;letter-spacing:1px;margin-bottom:6px">✅ PONTOS POSITIVOS</div>${pontosBons.map(p=>`<div style="font-size:12px;color:var(--text);padding:6px 10px;background:#F0FDF4;border-radius:6px;margin-bottom:4px;border-left:3px solid #22C55E">• ${p}</div>`).join('')}</div>`:''}
+          ${melhorar.length?`<div><div style="font-size:10px;font-weight:800;color:#B45309;letter-spacing:1px;margin-bottom:6px">⚠️ PONTOS A MELHORAR</div>${melhorar.map(p=>`<div style="font-size:12px;color:var(--text);padding:6px 10px;background:#FFFBEB;border-radius:6px;margin-bottom:4px;border-left:3px solid #F59E0B">• ${p}</div>`).join('')}</div>`:''}
         </div>
       </div>`;
 
-    // ── OUTROS PERFIS ──
-    } else {
-      const total = pedidos.length;
-      html = `<div style="font-family:'DM Sans',sans-serif;max-width:600px;margin:0 auto">
-        <div style="background:var(--accent);color:#fff;border-radius:12px 12px 0 0;padding:20px 24px">
-          <div style="font-size:10px;font-weight:700;letter-spacing:2px;opacity:.75">RELATÓRIO · ${(perfil||'').toUpperCase()}</div>
+    // ── EMBALAGEM ──
+    } else if (perfil === 'embalador') {
+      const totalEmb   = pedidos.length;
+      const totalItens = pedidos.reduce((s,p) => s + (p.total_itens||0), 0);
+      const tempos     = pedidos.map(p => p.tempo_embalagem_min).filter(t => t !== null && t > 0);
+      const comTempo   = tempos.length;
+      const mediaEmb   = comTempo ? tempos.reduce((a,b)=>a+b,0)/comTempo : null;
+      const tempoMin   = comTempo ? Math.min(...tempos) : null;
+      const tempoMax   = comTempo ? Math.max(...tempos) : null;
+      const somaTE     = tempos.reduce((a,b)=>a+b,0);
+      const embHora    = somaTE > 0 ? Math.round(totalEmb / (somaTE/60)) : null;
+
+      const trMap = {};
+      pedidos.forEach(p => { const t = p.transportadora||'Outros'; trMap[t]=(trMap[t]||0)+1; });
+      const topTransp = Object.entries(trMap).sort((a,b)=>b[1]-a[1]).slice(0,4);
+
+      const rapido = tempos.filter(t => t <= 5).length;
+      const normal = tempos.filter(t => t > 5 && t <= 15).length;
+      const lento  = tempos.filter(t => t > 15).length;
+      const pctR   = comTempo ? Math.round((rapido/comTempo)*100) : 0;
+      const pctN   = comTempo ? Math.round((normal/comTempo)*100) : 0;
+      const pctL   = comTempo ? Math.round((lento/comTempo)*100) : 0;
+
+      const pontosBons = [], melhorar = [];
+      if (mediaEmb !== null) {
+        if (mediaEmb <= 8) pontosBons.push(`Velocidade excelente: média de ${mediaEmb.toFixed(1)}min por embalagem`);
+        else if (mediaEmb <= 15) pontosBons.push(`Ritmo dentro do esperado: ${mediaEmb.toFixed(1)}min/embalagem`);
+        else melhorar.push(`Tempo médio elevado: ${mediaEmb.toFixed(1)}min/embalagem (meta ≤ 15min)`);
+      }
+      if (embHora !== null && embHora >= 8) pontosBons.push(`Alta produtividade: ${embHora} embalagens/hora`);
+      if (totalEmb >= 20) pontosBons.push(`Volume expressivo: ${totalEmb} embalagens no período`);
+      else if (totalEmb < 5) melhorar.push(`Volume baixo no período: ${totalEmb} embalagens`);
+      if (pctL > 30) melhorar.push(`${pctL}% das embalagens acima de 15min — revisar processo`);
+
+      const fmtTe = t => t === null ? '—' : t === 0 ? '<1min' : t+'min';
+      const linhasEmb = pedidos.map(p => {
+        const tCol = p.tempo_embalagem_min;
+        const tClr = tCol === null ? '#94A3B8' : tCol <= 5 ? '#22C55E' : tCol <= 15 ? '#F59E0B' : '#EF4444';
+        return `<tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:5px 8px;font-family:monospace;font-size:11px;font-weight:700">${p.numero_pedido}</td>
+          <td style="padding:5px 8px;font-size:11px;color:var(--text3)">${fmtData(p.data_pedido)}</td>
+          <td style="padding:5px 8px;text-align:center;font-size:11px;color:var(--text3)">${p.hora_fila||'—'}</td>
+          <td style="padding:5px 8px;text-align:center;font-size:11px">${p.embalagem_inicio||'—'}</td>
+          <td style="padding:5px 8px;text-align:center;font-size:11px">${p.embalado_em||'—'}</td>
+          <td style="padding:5px 8px;text-align:center;font-weight:700;color:${tClr}">${fmtTe(tCol)}</td>
+          <td style="padding:5px 8px;text-align:center;font-size:12px;color:var(--accent)">${p.total_itens||0}</td>
+          <td style="padding:5px 8px;font-size:10px;color:var(--text3);max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.transportadora||''}">${p.transportadora||'—'}</td>
+        </tr>`;
+      }).join('');
+
+      html = `<div style="font-family:'DM Sans',sans-serif;max-width:780px;margin:0 auto">
+        <div style="background:linear-gradient(135deg,#a855f7,#6d28d9);color:#fff;border-radius:12px 12px 0 0;padding:20px 24px">
+          <div style="font-size:10px;font-weight:700;letter-spacing:2px;opacity:.75">RELATÓRIO DE DESEMPENHO · EMBALAGEM</div>
           <div style="font-size:22px;font-weight:900;margin-top:4px">${nomeColab}</div>
-          <div style="font-size:12px;opacity:.85;margin-top:4px">📅 ${nomesMes[parseInt(mes)]} de ${ano} · ${total} registros</div>
+          <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:6px;font-size:12px;opacity:.85">
+            <span>📅 ${nomesMes[parseInt(mes)]} de ${ano}</span>
+            <span>📫 ${totalEmb} embalagens · ${totalItens} itens</span>
+            ${embHora ? `<span>⚡ ${embHora} emb/h</span>` : ''}
+          </div>
         </div>
-        <div style="background:var(--surface);border:1px solid var(--border);border-top:none;border-radius:0 0 12px 12px;padding:20px 24px;color:var(--text3);font-size:13px;text-align:center">
-          ${total} registro(s) encontrado(s) no período.
+        <div style="background:var(--surface);border:1px solid var(--border);border-top:none;border-radius:0 0 12px 12px;padding:20px 24px">
+
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:18px">
+            ${[
+              ['📫 EMBALADOS', totalEmb, '#7c3aed'],
+              ['🔢 ITENS', totalItens, 'var(--accent)'],
+              ['⏱ TEMPO MÉDIO', mediaEmb !== null ? mediaEmb.toFixed(1)+'min' : '—', mediaEmb !== null && mediaEmb <= 15 ? '#22C55E' : '#F59E0B'],
+              ['⚡ MAIS RÁPIDO', tempoMin !== null ? fmtTe(tempoMin) : '—', '#22C55E'],
+              ['🐢 MAIS LENTO', tempoMax !== null ? fmtTe(tempoMax) : '—', tempoMax > 15 ? '#EF4444' : '#F59E0B'],
+              ['🏃 RITMO', embHora ? embHora+' emb/h' : '—', '#8B5CF6'],
+            ].map(([l,v,c])=>`<div style="background:var(--surface2);border-radius:10px;padding:12px;text-align:center;border:1px solid var(--border)"><div style="font-size:20px;font-weight:900;color:${c}">${v}</div><div style="font-size:9px;color:var(--text3);font-weight:700;letter-spacing:.5px;margin-top:2px">${l}</div></div>`).join('')}
+          </div>
+
+          ${comTempo > 0 ? `<div style="background:var(--surface2);border-radius:10px;padding:14px;margin-bottom:14px;border:1px solid var(--border)">
+            <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:1px;margin-bottom:10px">⏱ DISTRIBUIÇÃO DE VELOCIDADE (${comTempo} embalagens com tempo)</div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+              ${[['⚡ RÁPIDO','≤ 5min',rapido,pctR,'#22C55E'],['✅ NORMAL','5–15min',normal,pctN,'#3B82F6'],['🐢 LENTO','> 15min',lento,pctL,'#EF4444']].map(([l,r,n,p2,c])=>`<div style="text-align:center;background:var(--surface);border-radius:8px;padding:10px;border:1px solid var(--border)"><div style="font-size:18px;font-weight:900;color:${c}">${n}</div><div style="font-size:9px;font-weight:700;color:${c}">${p2}%</div><div style="font-size:10px;color:var(--text3);font-weight:600;margin-top:2px">${l}</div><div style="font-size:9px;color:var(--text3)">${r}</div></div>`).join('')}
+            </div>
+          </div>` : ''}
+
+          ${topTransp.length ? `<div style="background:var(--surface2);border-radius:10px;padding:14px;margin-bottom:14px;border:1px solid var(--border)">
+            <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:1px;margin-bottom:8px">🚚 TOP TRANSPORTADORAS</div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px">
+              ${topTransp.map(([t,n])=>`<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px 14px;text-align:center"><div style="font-size:16px;font-weight:900;color:var(--accent)">${n}</div><div style="font-size:9px;color:var(--text3);font-weight:700;margin-top:1px">${t}</div></div>`).join('')}
+            </div>
+          </div>` : ''}
+
+          <div style="margin-bottom:14px">
+            <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:1px;margin-bottom:8px">📋 DETALHAMENTO POR PEDIDO</div>
+            <div style="overflow-x:auto;border-radius:8px;border:1px solid var(--border)">
+              <table style="width:100%;border-collapse:collapse;font-size:12px">
+                <thead><tr style="background:var(--surface2);font-size:10px;font-weight:700;color:var(--text3)">
+                  <th style="padding:7px 8px;text-align:left">PEDIDO</th><th style="padding:7px 8px">DATA</th>
+                  <th style="padding:7px 8px">FILA (CK)</th><th style="padding:7px 8px">INÍCIO EMB.</th>
+                  <th style="padding:7px 8px">FIM</th><th style="padding:7px 8px">TEMPO</th>
+                  <th style="padding:7px 8px">ITENS</th><th style="padding:7px 8px">TRANSP.</th>
+                </tr></thead><tbody>${linhasEmb}</tbody>
+              </table>
+            </div>
+          </div>
+
+          ${pontosBons.length?`<div style="margin-bottom:10px"><div style="font-size:10px;font-weight:800;color:#15803D;letter-spacing:1px;margin-bottom:6px">✅ PONTOS POSITIVOS</div>${pontosBons.map(p=>`<div style="font-size:12px;color:var(--text);padding:6px 10px;background:#F0FDF4;border-radius:6px;margin-bottom:4px;border-left:3px solid #22C55E">• ${p}</div>`).join('')}</div>`:''}
+          ${melhorar.length?`<div><div style="font-size:10px;font-weight:800;color:#B45309;letter-spacing:1px;margin-bottom:6px">⚠️ PONTOS A MELHORAR</div>${melhorar.map(p=>`<div style="font-size:12px;color:var(--text);padding:6px 10px;background:#FFFBEB;border-radius:6px;margin-bottom:4px;border-left:3px solid #F59E0B">• ${p}</div>`).join('')}</div>`:''}
         </div>
       </div>`;
+
+    // ── REPOSITOR ──
+    } else if (perfil === 'repositor') {
+      const totalAv  = pedidos.length;
+      const repostos = pedidos.filter(p => p.resultado_tentativa === 'encontrado').length;
+      const naoEnc   = pedidos.filter(p => p.resultado_tentativa === 'nao_encontrado').length;
+      const tempos   = pedidos.map(p => p.tempo_resolucao_min).filter(t => t !== null && t > 0);
+      const comTempo = tempos.length;
+      const mediaRep = comTempo ? tempos.reduce((a,b)=>a+b,0)/comTempo : null;
+      const taxa     = totalAv > 0 ? Math.round((repostos/totalAv)*100) : null;
+      const taxaClr  = taxa === null ? '#94A3B8' : taxa >= 80 ? '#22C55E' : taxa >= 60 ? '#F59E0B' : '#EF4444';
+      const diasMap  = {};
+      pedidos.forEach(p => { diasMap[p.data_pedido]=(diasMap[p.data_pedido]||0)+1; });
+
+      const pontosBons = [], melhorar = [];
+      if (taxa !== null) {
+        if (taxa >= 85) pontosBons.push(`Excelente taxa de resolução: ${taxa}% dos avisos resolvidos`);
+        else if (taxa >= 70) pontosBons.push(`Boa taxa de resolução: ${taxa}%`);
+        else melhorar.push(`Taxa de resolução baixa: ${taxa}% (meta ≥ 85%) — ${naoEnc} não encontrados`);
+      }
+      if (mediaRep !== null && mediaRep <= 15) pontosBons.push(`Bom tempo de resposta: média de ${mediaRep.toFixed(1)}min por aviso`);
+      else if (mediaRep !== null && mediaRep > 25) melhorar.push(`Tempo médio alto: ${mediaRep.toFixed(1)}min (meta ≤ 20min)`);
+      if (totalAv >= 30) pontosBons.push(`Alto volume de avisos atendidos: ${totalAv} no período`);
+
+      const linhasRep = pedidos.map(p => {
+        const tCol = p.tempo_resolucao_min;
+        const tClr = tCol === null ? '#94A3B8' : tCol <= 10 ? '#22C55E' : tCol <= 25 ? '#F59E0B' : '#EF4444';
+        const resClr = p.resultado_tentativa === 'encontrado' ? '#22C55E' : '#EF4444';
+        const resLbl = p.resultado_tentativa === 'encontrado' ? '✅' : '❌';
+        return `<tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:5px 8px;font-family:monospace;font-size:11px;font-weight:700">${p.numero_pedido}</td>
+          <td style="padding:5px 8px;font-size:11px;color:var(--text3)">${fmtData(p.data_pedido)}</td>
+          <td style="padding:5px 8px;text-align:center;font-size:11px;color:var(--text3)">${p.hora_aviso||'—'}</td>
+          <td style="padding:5px 8px;text-align:center;font-size:10px">${p.numero_tentativa||'—'}</td>
+          <td style="padding:5px 8px;text-align:center;font-size:12px;font-weight:700;color:${resClr}">${resLbl}</td>
+          <td style="padding:5px 8px;font-family:monospace;font-size:10px;color:#EF4444">${p.codigo||'—'}</td>
+          <td style="padding:5px 8px;font-size:10px;color:var(--text);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.descricao||''}">${p.descricao||'—'}</td>
+          <td style="padding:5px 8px;text-align:center">${p.quantidade||0}</td>
+          <td style="padding:5px 8px;text-align:center;font-weight:700;color:${tClr}">${tCol !== null ? tCol+'min' : '—'}</td>
+        </tr>`;
+      }).join('');
+
+      html = `<div style="font-family:'DM Sans',sans-serif;max-width:820px;margin:0 auto">
+        <div style="background:linear-gradient(135deg,#f59e0b,#b45309);color:#fff;border-radius:12px 12px 0 0;padding:20px 24px">
+          <div style="font-size:10px;font-weight:700;letter-spacing:2px;opacity:.75">RELATÓRIO DE DESEMPENHO · REPOSIÇÃO</div>
+          <div style="font-size:22px;font-weight:900;margin-top:4px">${nomeColab}</div>
+          <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:6px;font-size:12px;opacity:.85">
+            <span>📅 ${nomesMes[parseInt(mes)]} de ${ano}</span>
+            <span>🔧 ${totalAv} avisos · ${repostos} repostos · ${naoEnc} não enc.</span>
+            ${taxa !== null ? `<span>✅ ${taxa}% resolvidos</span>` : ''}
+          </div>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-top:none;border-radius:0 0 12px 12px;padding:20px 24px">
+
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:18px">
+            ${[
+              ['🔔 TOTAL AVISOS', totalAv, '#d97706'],
+              ['✅ REPOSTOS', repostos, '#22C55E'],
+              ['❌ NÃO ENCONTR.', naoEnc, '#EF4444'],
+              ['📊 TAXA RESOLUÇÃO', taxa !== null ? taxa+'%' : '—', taxaClr],
+              ['⏱ TEMPO MÉDIO', mediaRep !== null ? mediaRep.toFixed(1)+'min' : '—', mediaRep !== null && mediaRep <= 20 ? '#22C55E' : '#F59E0B'],
+              ['📅 DIAS ATIVOS', Object.keys(diasMap).length, 'var(--accent)'],
+            ].map(([l,v,c])=>`<div style="background:var(--surface2);border-radius:10px;padding:12px;text-align:center;border:1px solid var(--border)"><div style="font-size:20px;font-weight:900;color:${c}">${v}</div><div style="font-size:9px;color:var(--text3);font-weight:700;letter-spacing:.5px;margin-top:2px">${l}</div></div>`).join('')}
+          </div>
+
+          ${taxa !== null ? `<div style="background:var(--surface2);border-radius:10px;padding:14px;margin-bottom:14px;border:1px solid var(--border)">
+            <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:1px;margin-bottom:8px">📊 TAXA DE RESOLUÇÃO</div>
+            <div style="display:flex;align-items:center;gap:12px">
+              <div style="flex:1;height:12px;background:var(--border);border-radius:6px;overflow:hidden">
+                <div style="height:100%;width:${taxa}%;background:${taxaClr};border-radius:6px"></div>
+              </div>
+              <div style="font-size:18px;font-weight:900;color:${taxaClr};min-width:50px">${taxa}%</div>
+            </div>
+            <div style="display:flex;gap:16px;font-size:11px;color:var(--text3);margin-top:8px">
+              <span>Repostos: <b style="color:#22C55E">${repostos}</b></span>
+              <span>Não encontrados: <b style="color:#EF4444">${naoEnc}</b></span>
+              <span>Total: <b>${totalAv}</b></span>
+            </div>
+          </div>` : ''}
+
+          <div style="margin-bottom:14px">
+            <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:1px;margin-bottom:8px">📋 DETALHAMENTO POR AVISO</div>
+            <div style="overflow-x:auto;border-radius:8px;border:1px solid var(--border)">
+              <table style="width:100%;border-collapse:collapse;font-size:12px">
+                <thead><tr style="background:var(--surface2);font-size:10px;font-weight:700;color:var(--text3)">
+                  <th style="padding:7px 8px;text-align:left">PEDIDO</th><th style="padding:7px 8px">DATA</th>
+                  <th style="padding:7px 8px">AVISO</th><th style="padding:7px 8px">TENT.</th><th style="padding:7px 8px">RESULT.</th>
+                  <th style="padding:7px 8px;text-align:left">CÓDIGO</th><th style="padding:7px 8px;text-align:left">DESCRIÇÃO</th>
+                  <th style="padding:7px 8px">QTD</th><th style="padding:7px 8px">TEMPO</th>
+                </tr></thead><tbody>${linhasRep}</tbody>
+              </table>
+            </div>
+          </div>
+
+          ${pontosBons.length?`<div style="margin-bottom:10px"><div style="font-size:10px;font-weight:800;color:#15803D;letter-spacing:1px;margin-bottom:6px">✅ PONTOS POSITIVOS</div>${pontosBons.map(p=>`<div style="font-size:12px;color:var(--text);padding:6px 10px;background:#F0FDF4;border-radius:6px;margin-bottom:4px;border-left:3px solid #22C55E">• ${p}</div>`).join('')}</div>`:''}
+          ${melhorar.length?`<div><div style="font-size:10px;font-weight:800;color:#B45309;letter-spacing:1px;margin-bottom:6px">⚠️ PONTOS A MELHORAR</div>${melhorar.map(p=>`<div style="font-size:12px;color:var(--text);padding:6px 10px;background:#FFFBEB;border-radius:6px;margin-bottom:4px;border-left:3px solid #F59E0B">• ${p}</div>`).join('')}</div>`:''}
+        </div>
+      </div>`;
+
+    // ── FALLBACK ──
+    } else {
+      const total = pedidos.length;
+      html = `<div style="text-align:center;padding:32px;color:var(--text3);font-size:13px">${total} registro(s) no período.</div>`;
     }
 
     // Exibe em modal
@@ -2117,7 +2407,7 @@ function renderRelAnalitico(d) {
 
   // ── 1. Cards de resumo operacional ──────────────────────────
   const cards = [
-    { icon:'📦', label:'SEPARAÇÃO', cor:'#4f46e5',
+    { icon:'📦', label:'SEPARAÇÃO', cor:'#4f46e5', grad:'linear-gradient(135deg,#6366f1,#4338ca)',
       main: `${fmtN(d.separacao.concluidos)} / ${fmtN(d.separacao.distribuidos||d.separacao.total)}`, sub:'concluídos do lote distribuído',
       kpis:[
         { lbl:'Importados',      val: fmtN(d.separacao.total) },
@@ -2128,7 +2418,7 @@ function renderRelAnalitico(d) {
         { lbl:'Pontuação total', val: fmtN(d.separacao.pontuacao_total) },
         { lbl:'Tempo médio',     val: fmtT(d.separacao.media_tempo_min) },
       ]},
-    { icon:'🔖', label:'CHECKOUT', cor:'#0891b2',
+    { icon:'🔖', label:'CHECKOUT', cor:'#0891b2', grad:'linear-gradient(135deg,#22d3ee,#0369a1)',
       main: fmtN(d.checkout.concluidos), sub:'checkouts realizados',
       kpis:[
         { lbl:'Total criados',   val: fmtN(d.checkout.total) },
@@ -2136,14 +2426,14 @@ function renderRelAnalitico(d) {
         { lbl:'Total itens',     val: fmtN(d.checkout.total_itens) },
         { lbl:'Tempo médio',     val: fmtT(d.checkout.media_tempo_min) },
       ]},
-    { icon:'📫', label:'EMBALAGEM', cor:'#7c3aed',
+    { icon:'📫', label:'EMBALAGEM', cor:'#7c3aed', grad:'linear-gradient(135deg,#a855f7,#6d28d9)',
       main: fmtN(d.embalagem.total_embalados), sub:'pedidos embalados',
       kpis:[
         { lbl:'Pendentes emb.',  val: fmtN(d.embalagem.pendentes) },
         { lbl:'Total itens',     val: fmtN(d.embalagem.total_itens) },
         { lbl:'Tempo médio',     val: fmtT(d.embalagem.media_tempo_min) },
       ]},
-    { icon:'🔧', label:'REPOSIÇÃO', cor:'#d97706',
+    { icon:'🔧', label:'REPOSIÇÃO', cor:'#d97706', grad:'linear-gradient(135deg,#f59e0b,#b45309)',
       main: fmtN(d.reposicao.resolvidas), sub:'reposições resolvidas',
       kpis:[
         { lbl:'Total abertos',    val: fmtN(d.reposicao.total) },
@@ -2154,19 +2444,25 @@ function renderRelAnalitico(d) {
   ];
 
   const cardsHTML = cards.map(c => `
-    <div style="background:var(--surface);border-radius:16px;padding:18px 20px;border-left:4px solid ${c.cor};box-shadow:0 1px 6px rgba(0,0,0,.06)">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-        <span style="font-size:22px">${c.icon}</span>
-        <span style="font-size:11px;font-weight:800;color:var(--text3);letter-spacing:.8px">${c.label}</span>
+    <div style="background:var(--surface);border-radius:18px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.10)">
+      <div style="background:${c.grad};padding:20px 20px 18px;position:relative;overflow:hidden">
+        <div style="position:absolute;right:-14px;top:-14px;width:90px;height:90px;border-radius:50%;background:rgba(255,255,255,.10);pointer-events:none"></div>
+        <div style="position:absolute;right:-20px;bottom:-18px;width:70px;height:70px;border-radius:50%;background:rgba(255,255,255,.07);pointer-events:none"></div>
+        <div style="position:relative">
+          <div style="display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,.2);font-size:22px;margin-bottom:10px">${c.icon}</div>
+          <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,.8);letter-spacing:1.2px;margin-bottom:4px">${c.label}</div>
+          <div style="font-size:38px;font-weight:800;color:#fff;line-height:1;letter-spacing:-1px">${c.main}</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.7);margin-top:6px">${c.sub}</div>
+        </div>
       </div>
-      <div style="font-size:36px;font-weight:800;color:${c.cor};line-height:1">${c.main}</div>
-      <div style="font-size:12px;color:var(--text2);margin-bottom:12px">${c.sub}</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-        ${c.kpis.map(k=>`
-          <div style="background:var(--surface2);border-radius:8px;padding:6px 8px">
-            <div style="font-size:9px;color:var(--text3);font-weight:700;letter-spacing:.5px">${k.lbl.toUpperCase()}</div>
-            <div style="font-size:13px;font-weight:700;color:var(--text);margin-top:2px">${k.val}</div>
-          </div>`).join('')}
+      <div style="padding:14px 16px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+          ${c.kpis.map(k=>`
+            <div style="background:var(--surface2);border-radius:8px;padding:7px 10px">
+              <div style="font-size:9px;color:var(--text3);font-weight:700;letter-spacing:.5px">${k.lbl.toUpperCase()}</div>
+              <div style="font-size:14px;font-weight:800;color:var(--text);margin-top:2px">${k.val}</div>
+            </div>`).join('')}
+        </div>
       </div>
     </div>`).join('');
 
@@ -2256,46 +2552,79 @@ function renderRelAnalitico(d) {
       <div style="font-size:13px;font-weight:700;color:var(--text);min-width:30px;text-align:right;flex-shrink:0">${fmtN(t.total)}</div>
     </div>`).join('');
 
-  // ── 7. Tabela de colaboradores ────────────────────────────────
-  const perfil_labels = { separador:'📦 Sep.', embalador:'📫 Emb.', checkout:'🔖 CK', repositor:'🔧 Rep.' };
-  const perfil_colors = { separador:'#4f46e5', embalador:'#7c3aed', checkout:'#0891b2', repositor:'#d97706' };
-  const turno_labels  = { Manha:'🌅', Tarde:'☀️', Noite:'🌙' };
+  // ── 7. Seções de colaboradores por área ──────────────────────
+  const turno_icn = { Manha:'🌅', Tarde:'☀️', Noite:'🌙' };
+  const mkCell = (content, extraStyle='') => `<td style="padding:8px 12px${extraStyle?';'+extraStyle:''}">${content}</td>`;
+  const mkRow  = cells => `<tr style="border-bottom:1px solid var(--border)">${cells.join('')}</tr>`;
+  const mkArea = (icon, label, grad, headers, rows) => `
+    <div class="card" style="margin-bottom:18px;overflow:hidden">
+      <div style="background:${grad};padding:14px 16px;display:flex;align-items:center;gap:10px">
+        <span style="font-size:20px">${icon}</span>
+        <span style="font-size:13px;font-weight:800;color:#fff;letter-spacing:.8px">${label}</span>
+        <span style="margin-left:auto;font-size:11px;font-weight:600;color:rgba(255,255,255,.8)">${rows.length} colaborador${rows.length!==1?'es':''}</span>
+      </div>
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse">
+          <thead><tr style="background:var(--surface2)">${headers.map(h=>`<th style="padding:9px 12px;text-align:left;font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.5px;white-space:nowrap">${h}</th>`).join('')}</tr></thead>
+          <tbody>${rows.length?rows.join(''):`<tr><td colspan="${headers.length}" style="text-align:center;padding:24px;color:var(--text3);font-size:13px">Sem colaboradores neste período</td></tr>`}</tbody>
+        </table>
+      </div>
+    </div>`;
 
-  const colabRows = d.colaboradores.map(c => {
-    const cor = perfil_colors[c.perfil] || '#64748b';
-    const pLabel = perfil_labels[c.perfil] || c.perfil;
-    const tLabel = turno_labels[c.turno] || '';
-    const pedLabel = c.perfil === 'repositor' ? fmtN(c.total) : fmtN(c.pedidos);
-    const extra = c.perfil === 'separador'
-      ? `<td style="padding:8px 12px;font-size:12px;color:var(--text2)">${fmtN(c.itens)}</td>
-         <td style="padding:8px 12px;font-size:12px;color:var(--text2)">${fmtN(c.pontuacao)}</td>`
-      : c.perfil === 'repositor'
-      ? `<td style="padding:8px 12px;font-size:12px;color:#16a34a">${fmtN(c.repostos)}</td>
-         <td style="padding:8px 12px;font-size:12px;color:#dc2626">${fmtN(c.nao_enc)}</td>`
-      : `<td colspan="2" style="padding:8px 12px"></td>`;
-    return `
-      <tr style="border-bottom:1px solid var(--border)">
-        <td style="padding:8px 12px">
-          <div style="font-weight:700;font-size:13px;color:var(--text)">${c.nome}</div>
-          <div style="display:flex;gap:4px;margin-top:2px">
-            <span style="font-size:10px;font-weight:700;color:#fff;background:${cor};padding:1px 7px;border-radius:10px">${pLabel}</span>
-            ${c.turno ? `<span style="font-size:10px;color:var(--text3)">${tLabel} ${c.turno}</span>` : ''}
-          </div>
-        </td>
-        <td style="padding:8px 12px;font-size:15px;font-weight:700;color:${cor}">${pedLabel}</td>
-        ${extra}
-        <td style="padding:8px 12px;font-size:12px;color:var(--text2)">${fmtT(c.tempo_medio)}</td>
-      </tr>`;
-  }).join('');
+  // ─ Separação ─
+  const sepColabs = d.colaboradores.filter(c=>c.perfil==='separador').sort((a,b)=>(b.pedidos||0)-(a.pedidos||0));
+  const sepAreaRows = sepColabs.map(c => {
+    const ritmo = c.tempo_medio>0 ? `~${Math.round(60/c.tempo_medio)}/h` : '—';
+    return mkRow([
+      mkCell(`<div style="font-weight:700;font-size:13px;color:var(--text)">${c.nome}</div>${c.turno?`<div style="font-size:10px;color:var(--text3)">${turno_icn[c.turno]||''} ${c.turno}</div>`:''}`),
+      mkCell(`<span style="font-size:15px;font-weight:800;color:#4f46e5">${fmtN(c.pedidos)}</span>`),
+      mkCell(`<span style="font-size:13px;color:var(--text2)">${fmtN(c.itens)}</span>`),
+      mkCell(`<span style="font-size:13px;color:var(--text2)">${fmtN(c.pontuacao)}</span>`),
+      mkCell(`<span style="font-size:13px;color:var(--text2)">${fmtT(c.tempo_medio)}</span>`),
+      mkCell(`<span style="font-size:12px;font-weight:700;color:#16a34a">${ritmo}</span>`),
+    ]);
+  });
 
-  const colabHeader = `
-    <tr style="background:var(--surface2)">
-      <th style="padding:10px 12px;text-align:left;font-size:11px;color:var(--text3)">COLABORADOR</th>
-      <th style="padding:10px 12px;text-align:left;font-size:11px;color:var(--text3)">PEDIDOS</th>
-      <th style="padding:10px 12px;text-align:left;font-size:11px;color:var(--text3)">ITENS / REPOS.</th>
-      <th style="padding:10px 12px;text-align:left;font-size:11px;color:var(--text3)">PONTUAÇÃO / N/E</th>
-      <th style="padding:10px 12px;text-align:left;font-size:11px;color:var(--text3)">TEMPO MÉDIO</th>
-    </tr>`;
+  // ─ Checkout ─
+  const ckColabs = d.colaboradores.filter(c=>c.perfil==='checkout').sort((a,b)=>(b.pedidos||0)-(a.pedidos||0));
+  const ckAreaRows = ckColabs.map(c => {
+    const ritmo = c.tempo_medio>0 ? `~${Math.round(60/c.tempo_medio)}/h` : '—';
+    return mkRow([
+      mkCell(`<span style="font-weight:700;font-size:13px;color:var(--text)">${c.nome}</span>`),
+      mkCell(`<span style="font-size:15px;font-weight:800;color:#0891b2">${fmtN(c.pedidos)}</span>`),
+      mkCell(`<span style="font-size:13px;color:var(--text2)">${fmtN(c.itens)}</span>`),
+      mkCell(`<span style="font-size:13px;color:var(--text2)">${fmtT(c.tempo_medio)}</span>`),
+      mkCell(`<span style="font-size:12px;font-weight:700;color:#16a34a">${ritmo}</span>`),
+    ]);
+  });
+
+  // ─ Embalagem ─
+  const embColabs = d.colaboradores.filter(c=>c.perfil==='embalador').sort((a,b)=>(b.pedidos||0)-(a.pedidos||0));
+  const embAreaRows = embColabs.map(c => {
+    const ritmo = c.tempo_medio>0 ? `~${Math.round(60/c.tempo_medio)}/h` : '—';
+    return mkRow([
+      mkCell(`<span style="font-weight:700;font-size:13px;color:var(--text)">${c.nome}</span>`),
+      mkCell(`<span style="font-size:15px;font-weight:800;color:#7c3aed">${fmtN(c.pedidos)}</span>`),
+      mkCell(`<span style="font-size:13px;color:var(--text2)">${fmtN(c.itens)}</span>`),
+      mkCell(`<span style="font-size:13px;color:var(--text2)">${fmtT(c.tempo_medio)}</span>`),
+      mkCell(`<span style="font-size:12px;font-weight:700;color:#16a34a">${ritmo}</span>`),
+    ]);
+  });
+
+  // ─ Reposição ─
+  const repColabs = d.colaboradores.filter(c=>c.perfil==='repositor').sort((a,b)=>(b.total||0)-(a.total||0));
+  const repAreaRows = repColabs.map(c => {
+    const taxa = (c.total||0)>0 ? Math.round(((c.repostos||0)/(c.total||0))*100) : null;
+    const taxaClr = taxa==null?'var(--text3)':taxa>=80?'#16a34a':taxa>=60?'#d97706':'#dc2626';
+    return mkRow([
+      mkCell(`<span style="font-weight:700;font-size:13px;color:var(--text)">${c.nome}</span>`),
+      mkCell(`<span style="font-size:15px;font-weight:800;color:#d97706">${fmtN(c.total)}</span>`),
+      mkCell(`<span style="font-size:13px;font-weight:600;color:#16a34a">${fmtN(c.repostos)}</span>`),
+      mkCell(`<span style="font-size:13px;font-weight:600;color:#dc2626">${fmtN(c.nao_enc)}</span>`),
+      mkCell(`<span style="font-size:13px;font-weight:700;color:${taxaClr}">${taxa!=null?taxa+'%':'—'}</span>`),
+      mkCell(`<span style="font-size:13px;color:var(--text2)">${fmtT(c.tempo_medio)}</span>`),
+    ]);
+  });
 
   // ── 8. Por dia (se range > 1 dia) ────────────────────────────
   let porDiaHTML = '';
@@ -2369,18 +2698,19 @@ function renderRelAnalitico(d) {
 
     ${porDiaHTML}
 
-    <!-- Colaboradores -->
-    <div class="card" style="margin-bottom:18px">
-      <div class="card-hd">👥 DESEMPENHO INDIVIDUAL</div>
-      <div style="overflow-x:auto">
-        <table style="width:100%;border-collapse:collapse">
-          <thead>${colabHeader}</thead>
-          <tbody>
-            ${colabRows || '<tr><td colspan="5" style="text-align:center;padding:32px;color:var(--text3)">Sem dados de colaboradores</td></tr>'}
-          </tbody>
-        </table>
-      </div>
-    </div>
+    <!-- Seções de colaboradores por área -->
+    ${mkArea('📦','SEPARAÇÃO — DESEMPENHO INDIVIDUAL','linear-gradient(135deg,#6366f1,#4338ca)',
+      ['COLABORADOR / TURNO','PEDIDOS','ITENS','PONTUAÇÃO','TEMPO MÉD.','RITMO'],
+      sepAreaRows)}
+    ${mkArea('🔖','CHECKOUT — DESEMPENHO INDIVIDUAL','linear-gradient(135deg,#22d3ee,#0369a1)',
+      ['OPERADOR','EXPEDIÇÕES','ITENS','TEMPO MÉD.','RITMO'],
+      ckAreaRows)}
+    ${mkArea('📫','EMBALAGEM — DESEMPENHO INDIVIDUAL','linear-gradient(135deg,#a855f7,#6d28d9)',
+      ['EMBALADOR','EMBALADOS','ITENS','TEMPO MÉD.','RITMO'],
+      embAreaRows)}
+    ${mkArea('🔧','REPOSIÇÃO — DESEMPENHO INDIVIDUAL','linear-gradient(135deg,#f59e0b,#b45309)',
+      ['REPOSITOR','TOTAL AVISOS','REPOSTOS','NÃO ENCONTR.','TAXA RESOLUÇÃO','T. MÉDIO'],
+      repAreaRows)}
 
     <!-- Transportadoras -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px">

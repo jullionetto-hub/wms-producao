@@ -1256,6 +1256,9 @@ async function carregarEmbalagemMobile() {
     const pedidos = await res.json();
     _embPedidos = pedidos;
     if (cnt) cnt.textContent = pedidos.length;
+    // Atualiza badge da aba Fila ANTES do early return
+    const badge = document.getElementById('etab-fila-badge');
+    if (badge) { badge.textContent = pedidos.length; badge.style.display = pedidos.length ? 'block' : 'none'; }
     // Limpa busca ao recarregar lista completa
     const busca = document.getElementById('m-emb-busca');
     if (busca) busca.value = '';
@@ -1274,12 +1277,6 @@ async function carregarEmbalagemMobile() {
       ...embalando.map(p => renderCardEmbFila(p, true)),
       ...pendentes.map(p => renderCardEmbFila(p, false)),
     ].join('');
-    // Atualiza badge da aba Fila
-    const badge = document.getElementById('etab-fila-badge');
-    if (badge) { badge.textContent = pedidos.length; badge.style.display = pedidos.length ? 'block' : 'none'; }
-    // Atualiza contador no header
-    const pend = document.getElementById('m-emb-pend');
-    if (pend) pend.textContent = pedidos.length;
   } catch(e) { if(el) el.innerHTML = '<div style="color:#ef4444;text-align:center;padding:24px">Erro ao carregar</div>'; }
 }
 

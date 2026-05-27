@@ -5,15 +5,19 @@ const { requerAuth, requerPerfil } = require('../lib/auth');
 const { dataHoraLocal, formatarAguardandoDesde } = require('../lib/helpers');
 
 router.get('/kpis', requerAuth, async (req,res) => {
-  const { turnos } = req.query;
+  const { turnos, data_ini, data_fim } = req.query;
   const turnosArr = turnos ? turnos.split(',').filter(Boolean) : null;
-  const hasTurno = turnosArr && turnosArr.length > 0;
+  const hasTurno  = turnosArr && turnosArr.length > 0;
+
+  const {data:hoje}=dataHoraLocal();
+  const dIni = data_ini || hoje;
+  const dFim = data_fim || hoje;
+  const isFiltrado = (dIni !== hoje || dFim !== hoje || hasTurno);
 
   const cache = req.app.get('kpiCache');
-  if (!hasTurno && cache && cache.data && (Date.now() - cache.ts) < cache.ttl) {
+  if (!isFiltrado && cache && cache.data && (Date.now() - cache.ts) < cache.ttl) {
     return res.json(cache.data);
   }
-  const {data:hoje}=dataHoraLocal(); const mes=hoje.substring(0,7);
   try {
     // Turno filter helpers — joins usuarios via separadores ou por nome
     // REPLACE normaliza 'Manhã' → 'Manha' para caso algum registro ainda tenha acento
@@ -24,35 +28,35 @@ router.get('/kpis', requerAuth, async (req,res) => {
       ? ` AND REPLACE(COALESCE((SELECT u2.turno FROM usuarios u2 WHERE u2.nome=${col} LIMIT 1),''),'ã','a')=ANY($T::text[])`
       : '';
 
-    // Build params array: $1=hoje, $2=hoje, $3=mes%, $4=hoje, $5=hoje, $6=hoje, $7=hoje, [$8=turnos]
-    const p = [hoje,hoje,mes+'%',hoje,hoje,hoje,hoje];
+    // Build params: $1=dIni, $2=dFim, $3=mes%, [$4=turnos se hasTurno]
+    const p = [dIni, dFim, dIni.substring(0,7)+'%'];
     if (hasTurno) p.push(turnosArr);
     const T = hasTurno ? `$${p.length}` : null;
 
-    const sepFilt   = hasTurno ? tSep.replace('$T', T) : '';
-    const ckFilt    = hasTurno ? tNome('c.operador_nome').replace('$T', T) : '';
-    const embFilt   = hasTurno ? tNome('e.embalado_por').replace('$T', T) : '';
-    const repFilt   = hasTurno ? tNome('r.repositor_nome').replace('$T', T) : '';
+    const sepFilt = hasTurno ? tSep.replace('$T', T) : '';
+    const ckFilt  = hasTurno ? tNome('c.operador_nome').replace('$T', T) : '';
+    const embFilt = hasTurno ? tNome('e.embalado_por').replace('$T', T) : '';
+    const repFilt = hasTurno ? tNome('r.repositor_nome').replace('$T', T) : '';
 
     const r = await db.get(`SELECT
-      (SELECT COUNT(*) FROM pedidos p WHERE p.status='concluido' AND p.data_pedido=$1${sepFilt}) as concluidos_hoje,
+      (SELECT COUNT(*) FROM pedidos p WHERE p.status='concluido' AND p.data_pedido>=$1 AND p.data_pedido<=$2${sepFilt}) as concluidos_hoje,
       (SELECT COUNT(*) FROM pedidos p WHERE p.status='separando'${sepFilt}) as em_separacao,
       (SELECT COUNT(*) FROM pedidos WHERE status='pendente') as pendentes,
-      (SELECT COUNT(*) FROM avisos_repositor WHERE status='pendente') as faltas_abertas,
-      (SELECT COUNT(*) FROM checkout c WHERE c.status='pendente' AND c.data_checkout=$1${ckFilt}) as checkout_pendente,
-      (SELECT COUNT(*) FROM checkout c WHERE c.status='concluido' AND c.data_checkout=$2${ckFilt}) as checkout_hoje,
+      (SELECT COUNT(*) FROM avisos_repositor WHERE status='pendente' AND data_aviso>=$1 AND data_aviso<=$2) as faltas_abertas,
+      (SELECT COUNT(*) FROM checkout c WHERE c.status='pendente' AND c.data_checkout>=$1 AND c.data_checkout<=$2${ckFilt}) as checkout_pendente,
+      (SELECT COUNT(*) FROM checkout c WHERE c.status='concluido' AND c.data_checkout>=$1 AND c.data_checkout<=$2${ckFilt}) as checkout_hoje,
       (SELECT COUNT(*) FROM pedidos WHERE status='concluido' AND data_pedido LIKE $3) as concluidos_mes,
-      (SELECT COUNT(*) FROM pedidos WHERE data_pedido=$4) as importados_hoje,
+      (SELECT COUNT(*) FROM pedidos WHERE data_pedido>=$1 AND data_pedido<=$2) as importados_hoje,
       (SELECT COUNT(DISTINCT separador_id) FROM pedidos WHERE status='separando') as seps_ativos,
-      (SELECT COUNT(*) FROM avisos_repositor r WHERE r.status='nao_encontrado' AND r.data_aviso=$5${repFilt}) as nao_encontrados_hoje,
-      (SELECT COUNT(*) FROM avisos_repositor WHERE data_aviso=$6) as total_faltas_hoje,
-      (SELECT COUNT(*) FROM embalagem e WHERE e.data_embalagem=$7${embFilt}) as embalagem_hoje,
+      (SELECT COUNT(*) FROM avisos_repositor r WHERE r.status='nao_encontrado' AND r.data_aviso>=$1 AND r.data_aviso<=$2${repFilt}) as nao_encontrados_hoje,
+      (SELECT COUNT(*) FROM avisos_repositor WHERE data_aviso>=$1 AND data_aviso<=$2) as total_faltas_hoje,
+      (SELECT COUNT(*) FROM embalagem e WHERE e.data_embalagem>=$1 AND e.data_embalagem<=$2${embFilt}) as embalagem_hoje,
       (SELECT COUNT(*) FROM pedidos p WHERE p.status='concluido' AND p.status_embalagem IN ('pendente','embalando')${sepFilt}) as embalagem_pendente,
-      (SELECT COUNT(*) FROM avisos_repositor r WHERE r.status IN ('reposto','abastecido','subiu') AND r.data_aviso=$5${repFilt}) as reposicao_concluida,
-      (SELECT COUNT(*) FROM avisos_repositor r WHERE r.status='pendente' AND r.data_aviso=$6${repFilt}) as reposicao_pendente`,
+      (SELECT COUNT(*) FROM avisos_repositor r WHERE r.status IN ('reposto','abastecido','subiu') AND r.data_aviso>=$1 AND r.data_aviso<=$2${repFilt}) as reposicao_concluida,
+      (SELECT COUNT(*) FROM avisos_repositor r WHERE r.status='pendente' AND r.data_aviso>=$1 AND r.data_aviso<=$2${repFilt}) as reposicao_pendente`,
       p);
 
-    if (!hasTurno) { cache.data = r; cache.ts = Date.now(); }
+    if (!isFiltrado) { cache.data = r; cache.ts = Date.now(); }
     res.json(r||{});
   } catch(e){res.status(500).json({erro:e.message});}
 });
@@ -241,7 +245,7 @@ router.get('/dashboard/ranking', requerAuth, requerPerfil('supervisor'), async (
         COUNT(*) FILTER (WHERE p.data_pedido=$1) as hoje_total,
         COUNT(*) FILTER (WHERE p.data_pedido LIKE $2 AND p.status='concluido') as mes_concluidos,
         COUNT(*) FILTER (WHERE p.status='concluido') as total_concluidos,
-        COALESCE(SUM(p.itens) FILTER (WHERE p.data_pedido=$1),0) as hoje_itens
+        COALESCE(SUM(COALESCE(NULLIF(p.total_itens,0),p.itens)) FILTER (WHERE p.data_pedido=$1),0) as hoje_itens
       FROM separadores s
       LEFT JOIN pedidos p ON p.separador_id=s.id
       WHERE s.status='ativo'
@@ -344,7 +348,8 @@ router.get('/stats/performance', requerAuth, requerPerfil('supervisor'), async (
 
     // Atividades do período
     const pedidos = await db.all(`
-      SELECT u.id as uid, COALESCE(u.nome, sep.nome) as nome, COUNT(*) as total, SUM(p.itens) as itens
+      SELECT u.id as uid, COALESCE(u.nome, sep.nome) as nome, COUNT(*) as total,
+        SUM(COALESCE(NULLIF(p.total_itens,0),p.itens)) as itens
       FROM pedidos p
       JOIN separadores sep ON p.separador_id = sep.id
       LEFT JOIN usuarios u ON sep.usuario_id = u.id
@@ -514,7 +519,7 @@ router.get('/dashboard/ranking-geral', requerAuth, requerPerfil('supervisor'), a
     const separadores = await db.all(`
       SELECT COALESCE(u.nome, s.nome) as nome,
         COUNT(*) FILTER (WHERE p.status='concluido') as total,
-        COALESCE(SUM(p.itens) FILTER (WHERE p.status='concluido'), 0) as itens
+        COALESCE(SUM(COALESCE(NULLIF(p.total_itens,0),p.itens)) FILTER (WHERE p.status='concluido'), 0) as itens
       FROM separadores s
       LEFT JOIN usuarios u ON u.id = s.usuario_id
       LEFT JOIN pedidos p ON p.separador_id = s.id AND p.data_pedido = $1
@@ -773,42 +778,82 @@ router.get('/stats/performance/detalhe', requerAuth, requerPerfil('supervisor'),
       });
     }
 
-    /* ── Reposição: aviso a aviso ── */
+    /* ── Reposição: por tentativa individual ── */
     if (!filtPerfil || filtPerfil === 'repositor') {
-      const params = [dataIni, dataFim];
-      let w = `a.data_aviso>=$1 AND a.data_aviso<=$2 AND a.repositor_nome IS NOT NULL AND a.repositor_nome!=''`;
-      if (filtColab) { params.push(filtColab); w += ` AND a.repositor_nome=$${params.length}`; }
+      const repParams = [dataIni, dataFim];
+      const repW = `a.data_aviso>=$1 AND a.data_aviso<=$2
+        AND (a.total_tentativas > 0 OR (a.repositor_nome IS NOT NULL AND a.repositor_nome!=''))`;
 
       const repList = await db.all(`
-        SELECT a.repositor_nome, a.numero_pedido, a.data_aviso, a.hora_aviso, a.hora_reposto,
+        SELECT a.numero_pedido, a.data_aviso, a.hora_aviso, a.hora_reposto,
                a.codigo, a.descricao, a.quantidade, a.status, a.situacao, a.obs,
-               CASE WHEN a.hora_aviso IS NOT NULL AND a.hora_aviso!=''
-                         AND a.hora_reposto IS NOT NULL AND a.hora_reposto!=''
-                 THEN GREATEST(0, ROUND(EXTRACT(EPOCH FROM (
-                   (a.data_aviso::date + a.hora_reposto::time)
-                   - (a.data_aviso::date + a.hora_aviso::time)
-                 ))/60.0)::int)
-                 ELSE NULL END AS tempo_resolucao_min
+               a.repositor_nome, a.tentativas, a.total_tentativas
         FROM avisos_repositor a
-        WHERE ${w}
-        ORDER BY a.repositor_nome, a.data_aviso, a.hora_aviso
-        LIMIT 3000`, params);
+        WHERE ${repW}
+        ORDER BY a.data_aviso, a.hora_aviso
+        LIMIT 3000`, repParams);
+
+      // Helper: calcula minutos entre dois HH:MM
+      const diffMin = (ini, fim) => {
+        if (!ini || !fim) return null;
+        const [hi, mi] = ini.split(':').map(Number);
+        const [hf, mf] = fim.split(':').map(Number);
+        return Math.max(0, (hf * 60 + mf) - (hi * 60 + mi));
+      };
 
       repList.forEach(a => {
-        const key = `${a.repositor_nome}:repositor`;
-        if (!resultado[key]) resultado[key] = { nome: a.repositor_nome, perfil: 'repositor', pedidos: [] };
-        resultado[key].pedidos.push({
-          numero_pedido:       a.numero_pedido,
-          data_pedido:         a.data_aviso,
-          hora_aviso:          a.hora_aviso,
-          hora_reposto:        a.hora_reposto,
-          codigo:              a.codigo,
-          descricao:           a.descricao,
-          quantidade:          a.quantidade,
-          status:              a.situacao || a.status,
-          obs:                 a.obs,
-          tempo_resolucao_min: a.tempo_resolucao_min,
-        });
+        let tentativas = [];
+        try { tentativas = Array.isArray(a.tentativas) ? a.tentativas : (a.tentativas ? JSON.parse(a.tentativas) : []); } catch{}
+
+        if (tentativas.length > 0) {
+          // Novo sistema — uma linha por tentativa, tempo individual de cada repositor
+          tentativas.forEach(t => {
+            const rep = t.repositor;
+            if (!rep) return;
+            if (filtColab && rep !== filtColab) return;
+            const key = `${rep}:repositor`;
+            if (!resultado[key]) resultado[key] = { nome: rep, perfil: 'repositor', pedidos: [] };
+            const tentLabel = ['','1ª','2ª','3ª'][t.numero] || `${t.numero}ª`;
+            resultado[key].pedidos.push({
+              numero_pedido:       a.numero_pedido,
+              data_pedido:         a.data_aviso,
+              hora_aviso:          a.hora_aviso,
+              hora_inicio_busca:   t.hora_inicio || null,
+              hora_fim_busca:      t.hora_fim    || null,
+              numero_tentativa:    tentLabel,
+              resultado_tentativa: t.resultado,   // 'encontrado' | 'nao_encontrado' | null
+              codigo:              a.codigo,
+              descricao:           a.descricao,
+              quantidade:          a.quantidade,
+              status:              a.situacao || a.status,
+              obs:                 a.obs,
+              tempo_resolucao_min: diffMin(t.hora_inicio, t.hora_fim),
+            });
+          });
+        } else {
+          // Legado (sem tentativas): mantém comportamento anterior
+          const rep = a.repositor_nome;
+          if (!rep) return;
+          if (filtColab && rep !== filtColab) return;
+          const key = `${rep}:repositor`;
+          if (!resultado[key]) resultado[key] = { nome: rep, perfil: 'repositor', pedidos: [] };
+          const stFinal = a.situacao || a.status;
+          resultado[key].pedidos.push({
+            numero_pedido:       a.numero_pedido,
+            data_pedido:         a.data_aviso,
+            hora_aviso:          a.hora_aviso,
+            hora_inicio_busca:   a.hora_aviso   || null,
+            hora_fim_busca:      a.hora_reposto || null,
+            numero_tentativa:    '1ª',
+            resultado_tentativa: ['nao_encontrado','protocolo','protocolado'].includes(stFinal) ? 'nao_encontrado' : 'encontrado',
+            codigo:              a.codigo,
+            descricao:           a.descricao,
+            quantidade:          a.quantidade,
+            status:              stFinal,
+            obs:                 a.obs,
+            tempo_resolucao_min: diffMin(a.hora_aviso, a.hora_reposto),
+          });
+        }
       });
     }
 

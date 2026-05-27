@@ -8,7 +8,9 @@ const { calcularPesoCorredor, calcularPontuacaoPedido } = require('../lib/pontua
 router.get('/pedidos', requerAuth, async (req,res) => {
   const {separador_id,status,data,data_ini,data_fim,numero_pedido,page,pageSize}=req.query;
   try {
-    let q=`SELECT p.*,s.nome as separador_nome,COALESCE(p.turno_distribuicao,s.turno,'Manha') as sep_turno FROM pedidos p LEFT JOIN separadores s ON p.separador_id=s.id WHERE 1=1`;
+    // total_itens sobrescreve p.total_itens com o valor calculado da tabela itens_pedido
+    // (fallback para pedidos antigos onde total_itens pode ser NULL ou 0)
+    let q=`SELECT p.*, COALESCE(NULLIF(p.total_itens,0),(SELECT COALESCE(SUM(ip.quantidade),p.itens) FROM itens_pedido ip WHERE ip.pedido_id=p.id),p.itens) AS total_itens, s.nome as separador_nome,COALESCE(p.turno_distribuicao,s.turno,'Manha') as sep_turno FROM pedidos p LEFT JOIN separadores s ON p.separador_id=s.id WHERE 1=1`;
     const p=[];
     const add=(c,v)=>{p.push(v);q+=` AND ${c}$${p.length}`;};
     if (separador_id)  add('p.separador_id=',separador_id);
