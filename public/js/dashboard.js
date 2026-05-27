@@ -1321,34 +1321,42 @@ async function carregarPerformanceDetalhe(ini, fim, filtPerfil, filtColab) {
             </table>
           </div>`;
       } else if (isRep) {
-        const STcor = { abastecido:'var(--green)', reposto:'var(--green)', encontrado:'var(--green)', subiu:'var(--green)',
-                        nao_encontrado:'var(--red)', protocolo:'var(--text3)', pendente:'var(--amber)' };
-        const STlabel = { abastecido:'✅ Abastecido', reposto:'✅ Reposto', encontrado:'✅ Encontrado', subiu:'✅ Subiu',
-                          nao_encontrado:'❌ Não encontrado', protocolo:'📋 Protocolo', pendente:'⏳ Pendente' };
+        const RESCor   = { encontrado:'var(--green)', nao_encontrado:'var(--red)' };
+        const RESLabel = { encontrado:'✅ Encontrou', nao_encontrado:'❌ Não encontrou' };
+        const TENTCor  = { '1ª':'var(--accent)', '2ª':'var(--amber)', '3ª':'var(--red)', 'ÚLTIMA tentativa':'var(--red)' };
         const linhas = colab.pedidos.map(p => {
-          const cor = STcor[p.status] || 'var(--text3)';
-          const label = STlabel[p.status] || p.status;
+          // ── tempo individual da busca ──
           const tempo = p.tempo_resolucao_min !== null
-            ? `<span style="color:${p.tempo_resolucao_min<=10?'var(--green)':p.tempo_resolucao_min<=30?'var(--amber)':'var(--red)'};font-weight:700">${_horasStr(p.tempo_resolucao_min)}</span>`
+            ? `<span style="color:${p.tempo_resolucao_min<=5?'var(--green)':p.tempo_resolucao_min<=15?'var(--amber)':'var(--red)'};font-weight:700">${p.tempo_resolucao_min===0?'<1min':_horasStr(p.tempo_resolucao_min)}</span>`
+            : '<span style="color:var(--text3)">—</span>';
+          // ── badge de tentativa ──
+          const tentCor = TENTCor[p.numero_tentativa] || 'var(--text3)';
+          const tentBadge = p.numero_tentativa
+            ? `<span style="background:${tentCor}22;color:${tentCor};border:1px solid ${tentCor}55;font-size:10px;font-weight:700;padding:1px 7px;border-radius:20px;white-space:nowrap">${p.numero_tentativa}</span>`
             : '—';
+          // ── resultado ──
+          const resCor   = RESCor[p.resultado_tentativa]   || 'var(--text3)';
+          const resLabel = RESLabel[p.resultado_tentativa]  || (p.resultado_tentativa || '⏳ Em busca');
           return `<tr>
             <td style="font-weight:700">${p.numero_pedido||'—'}</td>
             <td style="color:var(--text2)">${fmtData(p.data_pedido)||'—'}</td>
-            <td style="color:var(--text2)">${p.hora_aviso||'—'}</td>
-            <td style="color:var(--text2)">${p.hora_reposto||'—'}</td>
+            <td style="color:var(--text3);font-size:11px">${p.hora_aviso||'—'}</td>
+            <td style="color:var(--text2)">${p.hora_inicio_busca||'—'}</td>
+            <td style="color:var(--text2)">${p.hora_fim_busca||'—'}</td>
             <td>${tempo}</td>
+            <td style="text-align:center">${tentBadge}</td>
             <td style="color:var(--text2);font-size:11px">${p.codigo||'—'}</td>
-            <td style="color:var(--text2);font-size:11px;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.descricao||'—'}</td>
+            <td style="color:var(--text2);font-size:11px;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${p.descricao||''}">${p.descricao||'—'}</td>
             <td style="text-align:center">${p.quantidade||0}</td>
-            <td><span style="color:${cor};font-weight:700;font-size:11px">${label}</span></td>
+            <td><span style="color:${resCor};font-weight:700;font-size:11px">${resLabel}</span></td>
           </tr>`;
         }).join('');
         tabela = `
           <div class="tabela-wrap">
             <table>
               <thead><tr>
-                <th>Nº PEDIDO</th><th>DATA</th><th>AVISO</th><th>REPOSTO</th><th>⏱ TEMPO</th>
-                <th>CÓDIGO</th><th>DESCRIÇÃO</th><th>QTD</th><th>STATUS</th>
+                <th>Nº PEDIDO</th><th>DATA</th><th>AVISO</th><th>INÍCIO BUSCA</th><th>FIM BUSCA</th>
+                <th>⏱ T. BUSCA</th><th>TENTATIVA</th><th>CÓDIGO</th><th>DESCRIÇÃO</th><th>QTD</th><th>RESULTADO</th>
               </tr></thead>
               <tbody>${linhas}</tbody>
             </table>
@@ -1431,13 +1439,24 @@ function exportarPerformanceExcel() {
     if (embRows.length > 1) XLSX.utils.book_append_sheet(wb, mkSheet(embRows), 'Embalagem');
 
     /* ── Aba Reposição ── */
-    const repRows = [['COLABORADOR','DATA','Nº PEDIDO','AVISO','REPOSTO','T. RESOLUÇÃO','CÓDIGO','DESCRIÇÃO','QTD','STATUS']];
+    const repRows = [['COLABORADOR','DATA','Nº PEDIDO','AVISO','INÍCIO BUSCA','FIM BUSCA','T. BUSCA (min)','TENTATIVA','CÓDIGO','DESCRIÇÃO','QTD','RESULTADO']];
     (_performanceDetalheDados || []).filter(c => c.perfil === 'repositor').forEach(c => {
       c.pedidos.forEach(p => {
-        const tempo = p.tempo_resolucao_min !== null ? _horasStr(p.tempo_resolucao_min) : '—';
-        repRows.push([c.nome, mkDate(p.data_pedido), p.numero_pedido||'—',
-          p.hora_aviso||'—', p.hora_reposto||'—', tempo,
-          p.codigo||'—', p.descricao||'—', p.quantidade||0, p.status||'—']);
+        repRows.push([
+          c.nome,
+          mkDate(p.data_pedido),
+          p.numero_pedido          || '—',
+          p.hora_aviso             || '—',
+          p.hora_inicio_busca      || '—',
+          p.hora_fim_busca         || '—',
+          p.tempo_resolucao_min !== null ? p.tempo_resolucao_min : '—',
+          p.numero_tentativa       || '—',
+          p.codigo                 || '—',
+          p.descricao              || '—',
+          p.quantidade             || 0,
+          p.resultado_tentativa === 'encontrado'    ? 'Encontrou'      :
+          p.resultado_tentativa === 'nao_encontrado'? 'Não encontrou'  : (p.resultado_tentativa || p.status || '—'),
+        ]);
       });
     });
     if (repRows.length > 1) XLSX.utils.book_append_sheet(wb, mkSheet(repRows), 'Reposição');

@@ -773,42 +773,82 @@ router.get('/stats/performance/detalhe', requerAuth, requerPerfil('supervisor'),
       });
     }
 
-    /* ── Reposição: aviso a aviso ── */
+    /* ── Reposição: por tentativa individual ── */
     if (!filtPerfil || filtPerfil === 'repositor') {
-      const params = [dataIni, dataFim];
-      let w = `a.data_aviso>=$1 AND a.data_aviso<=$2 AND a.repositor_nome IS NOT NULL AND a.repositor_nome!=''`;
-      if (filtColab) { params.push(filtColab); w += ` AND a.repositor_nome=$${params.length}`; }
+      const repParams = [dataIni, dataFim];
+      const repW = `a.data_aviso>=$1 AND a.data_aviso<=$2
+        AND (a.total_tentativas > 0 OR (a.repositor_nome IS NOT NULL AND a.repositor_nome!=''))`;
 
       const repList = await db.all(`
-        SELECT a.repositor_nome, a.numero_pedido, a.data_aviso, a.hora_aviso, a.hora_reposto,
+        SELECT a.numero_pedido, a.data_aviso, a.hora_aviso, a.hora_reposto,
                a.codigo, a.descricao, a.quantidade, a.status, a.situacao, a.obs,
-               CASE WHEN a.hora_aviso IS NOT NULL AND a.hora_aviso!=''
-                         AND a.hora_reposto IS NOT NULL AND a.hora_reposto!=''
-                 THEN GREATEST(0, ROUND(EXTRACT(EPOCH FROM (
-                   (a.data_aviso::date + a.hora_reposto::time)
-                   - (a.data_aviso::date + a.hora_aviso::time)
-                 ))/60.0)::int)
-                 ELSE NULL END AS tempo_resolucao_min
+               a.repositor_nome, a.tentativas, a.total_tentativas
         FROM avisos_repositor a
-        WHERE ${w}
-        ORDER BY a.repositor_nome, a.data_aviso, a.hora_aviso
-        LIMIT 3000`, params);
+        WHERE ${repW}
+        ORDER BY a.data_aviso, a.hora_aviso
+        LIMIT 3000`, repParams);
+
+      // Helper: calcula minutos entre dois HH:MM
+      const diffMin = (ini, fim) => {
+        if (!ini || !fim) return null;
+        const [hi, mi] = ini.split(':').map(Number);
+        const [hf, mf] = fim.split(':').map(Number);
+        return Math.max(0, (hf * 60 + mf) - (hi * 60 + mi));
+      };
 
       repList.forEach(a => {
-        const key = `${a.repositor_nome}:repositor`;
-        if (!resultado[key]) resultado[key] = { nome: a.repositor_nome, perfil: 'repositor', pedidos: [] };
-        resultado[key].pedidos.push({
-          numero_pedido:       a.numero_pedido,
-          data_pedido:         a.data_aviso,
-          hora_aviso:          a.hora_aviso,
-          hora_reposto:        a.hora_reposto,
-          codigo:              a.codigo,
-          descricao:           a.descricao,
-          quantidade:          a.quantidade,
-          status:              a.situacao || a.status,
-          obs:                 a.obs,
-          tempo_resolucao_min: a.tempo_resolucao_min,
-        });
+        let tentativas = [];
+        try { tentativas = Array.isArray(a.tentativas) ? a.tentativas : (a.tentativas ? JSON.parse(a.tentativas) : []); } catch{}
+
+        if (tentativas.length > 0) {
+          // Novo sistema — uma linha por tentativa, tempo individual de cada repositor
+          tentativas.forEach(t => {
+            const rep = t.repositor;
+            if (!rep) return;
+            if (filtColab && rep !== filtColab) return;
+            const key = `${rep}:repositor`;
+            if (!resultado[key]) resultado[key] = { nome: rep, perfil: 'repositor', pedidos: [] };
+            const tentLabel = ['','1ª','2ª','3ª'][t.numero] || `${t.numero}ª`;
+            resultado[key].pedidos.push({
+              numero_pedido:       a.numero_pedido,
+              data_pedido:         a.data_aviso,
+              hora_aviso:          a.hora_aviso,
+              hora_inicio_busca:   t.hora_inicio || null,
+              hora_fim_busca:      t.hora_fim    || null,
+              numero_tentativa:    tentLabel,
+              resultado_tentativa: t.resultado,   // 'encontrado' | 'nao_encontrado' | null
+              codigo:              a.codigo,
+              descricao:           a.descricao,
+              quantidade:          a.quantidade,
+              status:              a.situacao || a.status,
+              obs:                 a.obs,
+              tempo_resolucao_min: diffMin(t.hora_inicio, t.hora_fim),
+            });
+          });
+        } else {
+          // Legado (sem tentativas): mantém comportamento anterior
+          const rep = a.repositor_nome;
+          if (!rep) return;
+          if (filtColab && rep !== filtColab) return;
+          const key = `${rep}:repositor`;
+          if (!resultado[key]) resultado[key] = { nome: rep, perfil: 'repositor', pedidos: [] };
+          const stFinal = a.situacao || a.status;
+          resultado[key].pedidos.push({
+            numero_pedido:       a.numero_pedido,
+            data_pedido:         a.data_aviso,
+            hora_aviso:          a.hora_aviso,
+            hora_inicio_busca:   a.hora_aviso   || null,
+            hora_fim_busca:      a.hora_reposto || null,
+            numero_tentativa:    '1ª',
+            resultado_tentativa: ['nao_encontrado','protocolo','protocolado'].includes(stFinal) ? 'nao_encontrado' : 'encontrado',
+            codigo:              a.codigo,
+            descricao:           a.descricao,
+            quantidade:          a.quantidade,
+            status:              stFinal,
+            obs:                 a.obs,
+            tempo_resolucao_min: diffMin(a.hora_aviso, a.hora_reposto),
+          });
+        }
       });
     }
 
