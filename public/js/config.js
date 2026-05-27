@@ -282,7 +282,7 @@ async function carregarProtocolo() {
         ${usuarioAtual?.perfil==='supervisor' ? `
         <div style="padding:14px 16px;border-top:1px solid var(--border);display:flex;gap:10px;flex-wrap:wrap">
           ${pedList.map(ped => `
-            <button onclick="encerrarProtocoloPedido(${ped.pedido_id},${ped.itens.length},this)" id="proto-enc-${ped.pedido_id}"
+            <button onclick="encerrarProtocoloPedido('${ped.numero_pedido}','${ped.itens.map(i=>i.id).join(',')}',${ped.itens.length},this)" id="proto-enc-${ped.numero_pedido}"
               style="padding:9px 16px;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff;border:none;border-radius:10px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap">
               📋 Encerrar Pedido #${ped.numero_pedido} (${ped.itens.length} ${ped.itens.length===1?'item':'itens'})
             </button>`).join('')}
@@ -373,7 +373,7 @@ async function encerrarItemProtocolo(id, btn) {
   try {
     const r = await apiFetch(`/repositor/avisos/${id}`, {
       method:'PUT', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ status:'protocolado', situacao:'protocolado' })
+      body: JSON.stringify({ status:'protocolado', situacao:'protocolado', quem_guardou: usuarioAtual?.nome || '' })
     });
     if (!r?.erro) {
       // Remove a linha da tabela imediatamente
@@ -387,22 +387,27 @@ async function encerrarItemProtocolo(id, btn) {
   } catch(e) { if (btn) { btn.disabled=false; btn.innerHTML=orig; } toast('Erro','erro'); }
 }
 
-async function encerrarProtocoloPedido(pedido_id, qtdItens, btn) {
+async function encerrarProtocoloPedido(numero_pedido, idsStr, qtdItens, btn) {
   if (btn?.disabled) return;
-  wmsConfirm(`Encerrar protocolo do pedido?\n${qtdItens} item(ns) serão marcados como protocolados.`, async () => {
+  wmsConfirm(`Encerrar protocolo do pedido #${numero_pedido}?\n${qtdItens} item(ns) serão marcados como protocolados.`, async () => {
     const orig = btn?.innerHTML;
     if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Encerrando...'; }
     try {
-      const r = await apiFetch(`/protocolo/pedido/${pedido_id}/encerrar`, {
-        method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({})
-      });
-      if (r?.mensagem) {
-        toast(r.mensagem, 'success');
-        carregarProtocolo();
-      } else {
-        if (btn) { btn.disabled=false; btn.innerHTML=orig; }
-        toast(r?.erro || 'Erro ao encerrar protocolo', 'erro');
+      const ids = String(idsStr).split(',').map(Number).filter(Boolean);
+      let ok = 0, erros = 0;
+      for (const id of ids) {
+        const r = await apiFetch(`/repositor/avisos/${id}`, {
+          method:'PUT', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ status:'protocolado', situacao:'protocolado', quem_guardou: usuarioAtual?.nome || '' })
+        });
+        r?.erro ? erros++ : ok++;
       }
+      if (erros === 0) {
+        toast(`✅ Pedido #${numero_pedido}: ${ok} item(ns) protocolado(s)`, 'sucesso');
+      } else {
+        toast(`⚠️ ${ok} ok · ${erros} com erro — recarregando...`, 'aviso');
+      }
+      carregarProtocolo();
     } catch(e) {
       if (btn) { btn.disabled=false; btn.innerHTML=orig; }
       toast('Erro ao encerrar protocolo', 'erro');
