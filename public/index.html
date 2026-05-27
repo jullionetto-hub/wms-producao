@@ -1707,14 +1707,14 @@
             <button class="btn btn-outline btn-sm" onclick="carregarFilaCkMobile()">🔄</button>
           </div>
           <div style="display:flex;gap:10px;margin-bottom:12px">
-            <input type="text" id="m-ck-fila-busca"
-              placeholder="🔍 Buscar pedido..."
-              onkeydown="if(event.key==='Enter')filtrarFilaCkMobile()"
+            <input type="number" id="m-ck-fila-busca"
+              placeholder="📦 Escanear nº da caixa..."
+              onkeydown="if(event.key==='Enter'){const v=this.value.trim();if(v)iniciarCkMobile(v);}"
               autocomplete="off" inputmode="numeric"
               style="flex:1;padding:12px 14px;border:2px solid var(--border);border-radius:12px;font-size:15px;font-weight:700;font-family:'Space Mono',monospace;background:var(--surface2);color:var(--text);outline:none;letter-spacing:1px;box-sizing:border-box">
-            <button onclick="filtrarFilaCkMobile()"
-              style="padding:12px 20px;background:#4f46e5;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;box-shadow:0 2px 8px rgba(79,70,229,.3)">
-              Buscar
+            <button onclick="const v=document.getElementById('m-ck-fila-busca')?.value?.trim();if(v)iniciarCkMobile(v);else toast('Digite o número da caixa','aviso');"
+              style="padding:12px 20px;background:#4f46e5;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;box-shadow:0 2px 8px rgba(79,70,229,.3);touch-action:manipulation">
+              📦 Buscar
             </button>
           </div>
           <div id="m-ck-fila-lista">

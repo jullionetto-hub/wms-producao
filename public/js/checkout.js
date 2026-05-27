@@ -82,21 +82,12 @@ function _renderFilaCkMobile(fila) {
     </div>`).join('');
 }
 
+/* Mantida por compatibilidade — o campo m-ck-fila-busca agora chama iniciarCkMobile diretamente */
 function filtrarFilaCkMobile() {
   const busca = (document.getElementById('m-ck-fila-busca')?.value || '').trim();
   if (!busca) { _renderFilaCkMobile(_ckFilaPedidos); return; }
-  // Tenta filtrar por numero_pedido ou numero_caixa na lista já carregada
-  const filtrados = _ckFilaPedidos.filter(p =>
-    String(p.numero_pedido).includes(busca) ||
-    (p.numero_caixa && String(p.numero_caixa).includes(busca))
-  );
-  if (!filtrados.length) {
-    // Nenhum pedido na lista — tenta iniciar checkout diretamente pelo número escaneado
-    // (pode ser número de caixa de um pedido que ainda não carregou na lista)
-    iniciarCkMobile(busca);
-    return;
-  }
-  _renderFilaCkMobile(filtrados);
+  // O campo é para buscar por número de CAIXA — inicia checkout direto
+  iniciarCkMobile(busca);
 }
 
 async function carregarFeitosCkMobile() {
