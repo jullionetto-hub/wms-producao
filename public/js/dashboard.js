@@ -374,29 +374,12 @@ async function carregarOperacao() {
     const hoje = hojeLocal();
     const dIni = document.getElementById('filtro-data-ini')?.value || hoje;
     const dFim = document.getElementById('filtro-data-fim')?.value || hoje;
-    const isHoje = (dIni === hoje && dFim === hoje);
 
-    let pedidos;
-    if (isHoje) {
-      // Modo ao-vivo: busca por status + conclídos de hoje
-      const [resPend, resSep, resConc] = await Promise.all([
-        fetch(`${API}/pedidos?status=pendente`, { credentials:'include' }),
-        fetch(`${API}/pedidos?status=separando`, { credentials:'include' }),
-        fetch(`${API}/pedidos?status=concluido&data=${hoje}`, { credentials:'include' })
-      ]);
-      const pPend = resPend.ok ? await resPend.json() : [];
-      const pSep  = resSep.ok  ? await resSep.json()  : [];
-      const pConc = resConc.ok ? await resConc.json() : [];
-      const allIds = new Set();
-      pedidos = [...pPend, ...pSep, ...pConc].filter(p => {
-        if (allIds.has(p.id)) return false;
-        allIds.add(p.id); return true;
-      });
-    } else {
-      // Modo histórico: busca pedidos pelo intervalo de datas (todos os status)
-      const res = await fetch(`${API}/pedidos?data_ini=${dIni}&data_fim=${dFim}`, { credentials:'include' });
-      pedidos = res.ok ? await res.json() : [];
-    }
+    // Busca pedidos sempre pelo intervalo de datas selecionado.
+    // Isso garante que o filtro DE/ATÉ sempre funcione — inclusive para "hoje",
+    // evitando que pedidos pendentes de dias anteriores apareçam no dia atual.
+    const res = await fetch(`${API}/pedidos?data_ini=${dIni}&data_fim=${dFim}`, { credentials:'include' });
+    let pedidos = res.ok ? await res.json() : [];
 
     // Apenas pedidos DISTRIBUÍDOS (com separador atribuído).
     // Pedidos importados mas ainda não distribuídos (separador_id nulo) não entram no lote ativo.
