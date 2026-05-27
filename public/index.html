@@ -136,8 +136,10 @@
                 <button onclick="toggleTurnoDash('Noite')" class="rel-turno-btn" data-t="Noite">🌙 Noite</button>
               </div>
             </div>
-            <div class="fg"><label>DE</label><input type="date" id="filtro-data-ini" onchange="carregarDashboard()"/></div>
-            <div class="fg"><label>ATÉ</label><input type="date" id="filtro-data-fim" onchange="carregarDashboard()"/></div>
+            <div class="fg"><label>DE</label><input type="date" id="filtro-data-ini"/></div>
+            <div class="fg"><label>ATÉ</label><input type="date" id="filtro-data-fim"/></div>
+            <button class="btn btn-primary btn-sm" onclick="carregarDashboard()">Filtrar</button>
+            <button class="btn btn-outline btn-sm" onclick="document.getElementById('filtro-data-ini').value='';document.getElementById('filtro-data-fim').value='';carregarDashboard()">🔄</button>
           </div>
         </div>
 
