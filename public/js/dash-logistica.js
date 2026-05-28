@@ -1,5 +1,5 @@
 /* ══ WMS — Dash Logística ══
-   Versão 3 — histórico de importações + fix zona upload
+   Versão 4 — exportação Excel e PDF
    Upload salva no BD; ao abrir, carrega histórico automaticamente.
    Filtra Usuário Faturado com 1, 2 ou 3 na frente.
 ══════════════════════════════════════════════════════════════════════ */
@@ -47,9 +47,13 @@ function renderizarDashLogistica() {
   pag.innerHTML = `
   <div style="padding:0 0 40px">
 
-    <div class="pg-title" style="margin-bottom:18px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+    <div class="pg-title" style="margin-bottom:18px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
       📊 Dash Logística
-      <button onclick="dlAbrirImport()" style="margin-left:auto;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:7px 16px;font-size:12px;font-weight:700;cursor:pointer">📂 Importar Planilha</button>
+      <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <button onclick="dlExportarExcel()" style="background:#16a34a;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">📊 Excel</button>
+        <button onclick="dlExportarPDF()" style="background:#dc2626;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">📄 PDF</button>
+        <button onclick="dlAbrirImport()" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:7px 16px;font-size:12px;font-weight:700;cursor:pointer">📂 Importar Planilha</button>
+      </div>
     </div>
 
     <!-- UPLOAD ZONA (oculta, aparece ao clicar) -->
@@ -678,4 +682,201 @@ function dlRenderTabela(ranking, totalFat) {
       <td style="padding:10px 14px;text-align:right;color:#f59e0b;font-size:12px">${ipd.toFixed(1)}</td>
     </tr>`;
   }).join('');
+}
+
+// ── Exportar Excel ─────────────────────────────────────────────────────────
+function dlExportarExcel() {
+  if (!_dlDados || !_dlDados.length) { dlToast('Importe uma planilha antes de exportar.','aviso'); return; }
+
+  // Agrega dados por usuário
+  const byUser = {};
+  let totalFat = 0;
+  _dlDados.forEach(r => {
+    const u = r.usuario;
+    if (!byUser[u]) byUser[u] = { nome: r.nome_usuario||dlNome(u), turno: r.turno, fat:0, ped:0, itens:0 };
+    byUser[u].fat   += parseFloat(r.faturado)||0;
+    byUser[u].ped   += 1;
+    byUser[u].itens += parseInt(r.itens)||0;
+    totalFat += parseFloat(r.faturado)||0;
+  });
+  const ranking = Object.entries(byUser).sort((a,b) => b[1].fat - a[1].fat);
+
+  // Agrega por dia
+  const byDia = {};
+  _dlDados.forEach(r => {
+    const k = r.data_fat;
+    if (!byDia[k]) byDia[k] = { total:0, '1':0, '2':0, '3':0 };
+    byDia[k].total += parseFloat(r.faturado)||0;
+    if (byDia[k][r.turno] !== undefined) byDia[k][r.turno] += parseFloat(r.faturado)||0;
+  });
+
+  // ── Aba 1: Ranking ────────────────────────────────────────────────────────
+  const abaRanking = [
+    ['#', 'Colaborador', 'Turno', 'Faturamento (R$)', '% Total', 'Pedidos', 'Itens', 'Ticket Médio (R$)', 'Itens/Ped'],
+    ...ranking.map(([,v], i) => [
+      i + 1,
+      v.nome,
+      `Turno ${v.turno}`,
+      parseFloat(v.fat.toFixed(2)),
+      totalFat > 0 ? parseFloat((v.fat/totalFat*100).toFixed(2)) : 0,
+      v.ped,
+      v.itens,
+      parseFloat((v.ped > 0 ? v.fat/v.ped : 0).toFixed(2)),
+      parseFloat((v.ped > 0 ? v.itens/v.ped : 0).toFixed(1)),
+    ])
+  ];
+
+  // ── Aba 2: Por Dia ────────────────────────────────────────────────────────
+  const abaDia = [
+    ['Data', 'Total (R$)', 'Turno 1 (R$)', 'Turno 2 (R$)', 'Turno 3 (R$)'],
+    ...Object.keys(byDia).sort().map(k => {
+      const [y,m,d] = k.split('-');
+      return [
+        `${d}/${m}/${y}`,
+        parseFloat(byDia[k].total.toFixed(2)),
+        parseFloat(byDia[k]['1'].toFixed(2)),
+        parseFloat(byDia[k]['2'].toFixed(2)),
+        parseFloat(byDia[k]['3'].toFixed(2)),
+      ];
+    })
+  ];
+
+  // ── Aba 3: Dados Brutos ───────────────────────────────────────────────────
+  const abaDados = [
+    ['Nº Pedido', 'Data', 'Hora', 'Colaborador', 'Turno', 'Faturamento (R$)', 'Itens', 'Status'],
+    ..._dlDados.map(r => {
+      const [y,m,d] = (r.data_fat||'').split('-');
+      return [
+        r.numero_pedido,
+        (d && m && y) ? `${d}/${m}/${y}` : r.data_fat,
+        r.hora_fat,
+        r.nome_usuario || dlNome(r.usuario),
+        `Turno ${r.turno}`,
+        parseFloat(r.faturado) || 0,
+        parseInt(r.itens) || 0,
+        r.status_ped,
+      ];
+    })
+  ];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(abaRanking), 'Ranking');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(abaDia),     'Por Dia');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(abaDados),   'Dados');
+
+  const ini = document.getElementById('dl-ini')?.value || '';
+  const fim = document.getElementById('dl-fim')?.value || '';
+  const nomeArq = `dash-logistica_${(ini||'').replace(/-/g,'')}${fim?'-'+(fim||'').replace(/-/g,''):''}.xlsx`;
+  XLSX.writeFile(wb, nomeArq);
+  dlToast('✅ Excel exportado com sucesso!', 'sucesso');
+}
+
+// ── Exportar PDF (abre janela de impressão formatada) ──────────────────────
+function dlExportarPDF() {
+  if (!_dlDados || !_dlDados.length) { dlToast('Importe uma planilha antes de exportar.','aviso'); return; }
+
+  const byUser = {};
+  let totalFat = 0, totalPed = 0, totalItens = 0;
+  const byTurno = { '1':{fat:0,ped:0}, '2':{fat:0,ped:0}, '3':{fat:0,ped:0} };
+
+  _dlDados.forEach(r => {
+    const u = r.usuario;
+    if (!byUser[u]) byUser[u] = { nome: r.nome_usuario||dlNome(u), turno: r.turno, fat:0, ped:0, itens:0 };
+    byUser[u].fat   += parseFloat(r.faturado)||0;
+    byUser[u].ped   += 1;
+    byUser[u].itens += parseInt(r.itens)||0;
+    totalFat   += parseFloat(r.faturado)||0;
+    totalPed   += 1;
+    totalItens += parseInt(r.itens)||0;
+    if (byTurno[r.turno]) { byTurno[r.turno].fat += parseFloat(r.faturado)||0; byTurno[r.turno].ped += 1; }
+  });
+  const ranking = Object.entries(byUser).sort((a,b) => b[1].fat - a[1].fat);
+
+  const ini = document.getElementById('dl-ini')?.value || '';
+  const fim = document.getElementById('dl-fim')?.value || '';
+  const ICONS = ['🥇','🥈','🥉'];
+  const T_COR = { '1':'#38bdf8','2':'#a78bfa','3':'#2dd4bf' };
+
+  const linhas = ranking.map(([,v], i) => {
+    const pct    = totalFat > 0 ? (v.fat/totalFat*100).toFixed(1) : '0.0';
+    const ticket = v.ped > 0 ? v.fat/v.ped : 0;
+    const ipd    = v.ped > 0 ? v.itens/v.ped : 0;
+    const cor    = T_COR[v.turno] || '#6366f1';
+    return `<tr>
+      <td style="text-align:center;font-size:15px">${ICONS[i] || (i+1)}</td>
+      <td><b>${escHtml(v.nome)}</b></td>
+      <td style="text-align:center"><span style="color:${cor};font-weight:700">T${v.turno}</span></td>
+      <td style="text-align:right;font-weight:700;color:#16a34a">R$ ${dlFmt(v.fat)}</td>
+      <td style="text-align:right">${pct}%</td>
+      <td style="text-align:right">${dlFmtN(v.ped)}</td>
+      <td style="text-align:right">${dlFmtN(v.itens)}</td>
+      <td style="text-align:right">R$ ${dlFmt(ticket)}</td>
+      <td style="text-align:right">${ipd.toFixed(1)}</td>
+    </tr>`;
+  }).join('');
+
+  const html = `<!DOCTYPE html>
+<html lang="pt-BR"><head>
+<meta charset="utf-8">
+<title>Dash Logística — ${dlFmtBR(ini)} a ${dlFmtBR(fim)}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, Helvetica, sans-serif; font-size: 11px; color: #1e293b; padding: 24px; }
+  h1 { font-size: 18px; font-weight: 900; margin-bottom: 2px; }
+  .sub { font-size: 11px; color: #64748b; margin-bottom: 18px; }
+  .kpis { display: flex; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; }
+  .kpi { border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; min-width: 120px; flex: 1; }
+  .kpi-lb { font-size: 8px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: .6px; margin-bottom: 4px; }
+  .kpi-val { font-size: 16px; font-weight: 900; color: #0f172a; }
+  .kpi-sub { font-size: 9px; color: #94a3b8; margin-top: 2px; }
+  .secao { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .8px; color: #64748b; margin-bottom: 8px; border-bottom: 2px solid #e2e8f0; padding-bottom: 4px; }
+  table { width: 100%; border-collapse: collapse; }
+  thead tr { background: #f8fafc; }
+  th { padding: 8px 10px; text-align: left; font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; color: #64748b; border-bottom: 1px solid #e2e8f0; }
+  td { padding: 8px 10px; border-bottom: 1px solid #f1f5f9; font-size: 11px; }
+  tr:hover td { background: #f8fafc; }
+  .rodape { margin-top: 16px; font-size: 9px; color: #94a3b8; text-align: right; }
+  @media print {
+    body { padding: 12px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    tr { break-inside: avoid; }
+  }
+</style>
+</head><body>
+<h1>📊 Dash Logística</h1>
+<div class="sub">Período: <b>${dlFmtBR(ini)}</b> a <b>${dlFmtBR(fim)}</b> &nbsp;·&nbsp; Gerado em ${new Date().toLocaleString('pt-BR')} &nbsp;·&nbsp; WMS Miess</div>
+
+<div class="kpis">
+  <div class="kpi"><div class="kpi-lb">💰 Faturamento Total</div><div class="kpi-val">R$ ${dlFmt(totalFat)}</div><div class="kpi-sub">${dlFmtN(totalPed)} pedidos</div></div>
+  <div class="kpi"><div class="kpi-lb">📋 Total de Pedidos</div><div class="kpi-val">${dlFmtN(totalPed)}</div><div class="kpi-sub">${ranking.length} colaboradores</div></div>
+  <div class="kpi"><div class="kpi-lb">📦 Total de Itens</div><div class="kpi-val">${dlFmtN(totalItens)}</div><div class="kpi-sub">${totalPed>0?(totalItens/totalPed).toFixed(1):0} itens/ped.</div></div>
+  <div class="kpi"><div class="kpi-lb">🎯 Ticket Médio</div><div class="kpi-val">R$ ${dlFmt(totalPed>0?totalFat/totalPed:0)}</div><div class="kpi-sub">por pedido</div></div>
+  <div class="kpi"><div class="kpi-lb" style="color:#38bdf8">☀️ Turno 1</div><div class="kpi-val" style="color:#38bdf8">R$ ${dlFmt(byTurno['1'].fat)}</div><div class="kpi-sub">${dlFmtN(byTurno['1'].ped)} ped.</div></div>
+  <div class="kpi"><div class="kpi-lb" style="color:#a78bfa">🌅 Turno 2</div><div class="kpi-val" style="color:#a78bfa">R$ ${dlFmt(byTurno['2'].fat)}</div><div class="kpi-sub">${dlFmtN(byTurno['2'].ped)} ped.</div></div>
+  <div class="kpi"><div class="kpi-lb" style="color:#2dd4bf">🌙 Turno 3</div><div class="kpi-val" style="color:#2dd4bf">R$ ${dlFmt(byTurno['3'].fat)}</div><div class="kpi-sub">${dlFmtN(byTurno['3'].ped)} ped.</div></div>
+</div>
+
+<div class="secao">🏆 Ranking Detalhado por Colaborador</div>
+<table>
+  <thead><tr>
+    <th>#</th>
+    <th>Colaborador</th>
+    <th style="text-align:center">Turno</th>
+    <th style="text-align:right">Faturamento</th>
+    <th style="text-align:right">% Total</th>
+    <th style="text-align:right">Pedidos</th>
+    <th style="text-align:right">Itens</th>
+    <th style="text-align:right">Ticket Médio</th>
+    <th style="text-align:right">Itens/Ped</th>
+  </tr></thead>
+  <tbody>${linhas}</tbody>
+</table>
+
+<div class="rodape">Relatório gerado automaticamente pelo WMS Miess — Dash Logística</div>
+<script>setTimeout(()=>window.print(),400);<\/script>
+</body></html>`;
+
+  const w = window.open('', '_blank', 'width=1000,height=700');
+  if (!w) { dlToast('Pop-up bloqueado. Permita pop-ups para este site.', 'aviso'); return; }
+  w.document.write(html);
+  w.document.close();
 }
