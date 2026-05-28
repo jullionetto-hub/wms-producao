@@ -1,5 +1,5 @@
 /* ══ WMS — Dash Logística ══
-   Versão 4 — exportação Excel e PDF
+   Versão 5 — ranking ordenado por nº de pedidos
    Upload salva no BD; ao abrir, carrega histórico automaticamente.
    Filtra Usuário Faturado com 1, 2 ou 3 na frente.
 ══════════════════════════════════════════════════════════════════════ */
@@ -530,7 +530,7 @@ function dlRenderizarDados(data) {
     }
   });
 
-  const ranking = Object.entries(byUser).sort((a,b) => b[1].fat - a[1].fat);
+  const ranking = Object.entries(byUser).sort((a,b) => b[1].ped - a[1].ped);
 
   dlRenderKPIs(totalFat, totalPed, totalItens, ranking.length, byTurno);
   dlRenderChartFat(ranking);
@@ -699,7 +699,7 @@ function dlExportarExcel() {
     byUser[u].itens += parseInt(r.itens)||0;
     totalFat += parseFloat(r.faturado)||0;
   });
-  const ranking = Object.entries(byUser).sort((a,b) => b[1].fat - a[1].fat);
+  const ranking = Object.entries(byUser).sort((a,b) => b[1].ped - a[1].ped);
 
   // Agrega por dia
   const byDia = {};
@@ -790,7 +790,7 @@ function dlExportarPDF() {
     totalItens += parseInt(r.itens)||0;
     if (byTurno[r.turno]) { byTurno[r.turno].fat += parseFloat(r.faturado)||0; byTurno[r.turno].ped += 1; }
   });
-  const ranking = Object.entries(byUser).sort((a,b) => b[1].fat - a[1].fat);
+  const ranking = Object.entries(byUser).sort((a,b) => b[1].ped - a[1].ped);
 
   const ini = document.getElementById('dl-ini')?.value || '';
   const fim = document.getElementById('dl-fim')?.value || '';
