@@ -215,6 +215,34 @@ const TABLES = [
     valor     TEXT NOT NULL,
     descricao TEXT DEFAULT ''
   )`,
+
+  /* ── Entrada Manual de Estoque ────────────────────────────────────────── */
+  `CREATE TABLE IF NOT EXISTS entrada_manual_lotes (
+    id               SERIAL PRIMARY KEY,
+    nome             TEXT    DEFAULT '',
+    data_entrada     DATE    NOT NULL,
+    criado_por       TEXT    DEFAULT '',
+    responsavel      TEXT    DEFAULT '',
+    total_itens      INTEGER DEFAULT 0,
+    itens_concluidos INTEGER DEFAULT 0,
+    status           TEXT    DEFAULT 'aberto',
+    criado_em        TIMESTAMPTZ DEFAULT NOW()
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS entrada_manual_itens (
+    id                   SERIAL PRIMARY KEY,
+    lote_id              INTEGER REFERENCES entrada_manual_lotes(id) ON DELETE CASCADE,
+    codigo               TEXT    NOT NULL,
+    descricao            TEXT    DEFAULT '',
+    quantidade_esperada  INTEGER NOT NULL DEFAULT 1,
+    quantidade_abastecida INTEGER DEFAULT 0,
+    endereco             TEXT    DEFAULT '',
+    status               TEXT    DEFAULT 'pendente',
+    responsavel          TEXT    DEFAULT '',
+    confirmado_em        TIMESTAMPTZ,
+    obs                  TEXT    DEFAULT '',
+    criado_em            TIMESTAMPTZ DEFAULT NOW()
+  )`,
 ];
 
 const INDEXES = [
@@ -235,6 +263,10 @@ const INDEXES = [
   'CREATE INDEX IF NOT EXISTS idx_sessoes_data        ON sessoes_trabalho(data)',
   'CREATE INDEX IF NOT EXISTS idx_sessoes_usuario     ON sessoes_trabalho(usuario_id)',
   'CREATE INDEX IF NOT EXISTS idx_sessoes_perfil      ON sessoes_trabalho(perfil, data)',
+  'CREATE INDEX IF NOT EXISTS idx_em_lotes_data       ON entrada_manual_lotes(data_entrada)',
+  'CREATE INDEX IF NOT EXISTS idx_em_itens_lote       ON entrada_manual_itens(lote_id)',
+  'CREATE INDEX IF NOT EXISTS idx_em_itens_codigo     ON entrada_manual_itens(codigo)',
+  'CREATE INDEX IF NOT EXISTS idx_em_itens_status     ON entrada_manual_itens(status)',
 ];
 
 module.exports = { TABLES, INDEXES };

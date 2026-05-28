@@ -1,5 +1,5 @@
 /* ══ WMS Miess — Service Worker ══ */
-const CACHE_NAME = 'wms-v29';
+const CACHE_NAME = 'wms-v30';
 // Só cacheia o CSS — JS e HTML sempre vão buscar da rede
 const STATIC_ASSETS = [
   '/css/app.css',
@@ -48,7 +48,7 @@ self.addEventListener('fetch', e => {
       url.pathname.startsWith('/usuarios') || url.pathname.startsWith('/dashboard') ||
       url.pathname.startsWith('/produtividade') || url.pathname.startsWith('/admin') ||
       url.pathname.startsWith('/embalagem') || url.pathname.startsWith('/auditoria') ||
-      url.pathname.startsWith('/stats')) {
+      url.pathname.startsWith('/stats') || url.pathname.startsWith('/entrada-manual')) {
     e.respondWith(
       fetch(e.request).catch(() => new Response(JSON.stringify({ erro: 'Sem conexão' }), {
         status: 503,

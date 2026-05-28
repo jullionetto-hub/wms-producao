@@ -323,6 +323,7 @@ function montarSidebar() {
       <div class="mg">OPERAÇÃO</div>
       <a class="mi" onclick="irPara('separacao',this)"><span class="mi-ic">📦</span>Separação</a>
       <a class="mi" onclick="irPara('reposicao',this)"><span class="mi-ic">🔧</span>Reposição <span class="mbadge" id="menu-badge-rep" style="display:none">0</span></a>
+      <a class="mi" onclick="irPara('entrada-manual',this)"><span class="mi-ic">📥</span>Entrada Manual</a>
       <a class="mi" onclick="irPara('checkout',this)"><span class="mi-ic">🏷️</span>Checkout</a>
       <a class="mi" onclick="irPara('embalagem',this)"><span class="mi-ic">📫</span>Embalagem</a>`,
     separador: `
@@ -333,6 +334,7 @@ function montarSidebar() {
       <div class="mg">REPOSIÇÃO</div>
       <a class="mi ativo" onclick="irPara('reposicao',this)"><span class="mi-ic">🔧</span>Solicitações <span class="mbadge" id="menu-badge-rep" style="display:none">0</span></a>
       <a class="mi" onclick="irPara('protocolo-rep',this)"><span class="mi-ic">📋</span>Protocolo</a>
+      <a class="mi" onclick="irPara('entrada-manual',this)"><span class="mi-ic">📥</span>Entrada Manual</a>
       <div class="mg">ANÁLISE</div>
       <a class="mi" onclick="irPara('stats-repositor',this)"><span class="mi-ic">📈</span>Estatísticas</a>`,
     checkout: `
@@ -386,6 +388,7 @@ function irPara(pag, el) {
   if (pag === 'estatisticas-ck')  { carregarEstatisticasCk(); }
   if (pag === 'estatisticas-emb') { carregarEstatisticasEmb(); }
   if (pag === 'passagem')         { iniciarPassagem(); }
+  if (pag === 'entrada-manual')   { renderizarPagEntradaManual(); }
 }
 
 
