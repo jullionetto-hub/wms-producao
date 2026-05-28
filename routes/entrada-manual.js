@@ -205,7 +205,8 @@ router.get('/entrada-manual/exportar', requerAuth, async (req, res) => {
     }
 
     const rows = await db.all(`
-      SELECT l.nome AS lote, l.data_entrada, l.criado_por,
+      SELECT TO_CHAR(l.data_entrada, 'DD/MM/YYYY') AS data_fmt,
+             l.criado_por,
              i.codigo, i.descricao, i.quantidade_esperada, i.quantidade_abastecida,
              i.endereco, i.status, i.responsavel, i.obs,
              TO_CHAR(i.confirmado_em AT TIME ZONE 'America/Sao_Paulo','DD/MM/YYYY HH24:MI') AS confirmado_em
@@ -215,14 +216,15 @@ router.get('/entrada-manual/exportar', requerAuth, async (req, res) => {
       ORDER BY l.data_entrada DESC, l.id, i.id
     `, params);
 
+    const SEP = ';';
     const statusPT = { abastecido:'Abastecido', parcial:'Parcial', pendente:'Pendente', nao_encontrado:'Não encontrado' };
-    const esc = v => { const s = String(v??''); return /[,"\n]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s; };
-    const hdrs = ['Lote','Data','Responsável','Código','Descrição','Qtd Esperada','Qtd Abastecida','Endereço','Status','Confirmado Em','Obs'];
-    const lines = [hdrs.join(',')];
+    const esc = v => { const s = String(v??''); return /[;\n"]/g.test(s) ? `"${s.replace(/"/g,'""')}"` : s; };
+    const hdrs = ['Data','Responsável','Código','Descrição','Qtd Esperada','Qtd Abastecida','Endereço','Status','Confirmado Em','Obs'];
+    const lines = [hdrs.join(SEP)];
     for (const r of rows) {
-      lines.push([r.lote, r.data_entrada, r.criado_por, r.codigo, r.descricao,
+      lines.push([r.data_fmt, r.criado_por, r.codigo, r.descricao,
         r.quantidade_esperada, r.quantidade_abastecida||0, r.endereco,
-        statusPT[r.status]||r.status, r.confirmado_em||'', r.obs||''].map(esc).join(','));
+        statusPT[r.status]||r.status, r.confirmado_em||'', r.obs||''].map(esc).join(SEP));
     }
     const csv = '﻿' + lines.join('\r\n');
     res.setHeader('Content-Type','text/csv; charset=utf-8');
