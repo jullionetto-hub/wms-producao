@@ -243,6 +243,22 @@ const TABLES = [
     obs                  TEXT    DEFAULT '',
     criado_em            TIMESTAMPTZ DEFAULT NOW()
   )`,
+
+  /* ── Dash Logística ───────────────────────────────────────────────────── */
+  `CREATE TABLE IF NOT EXISTS faturamento_pedidos (
+    id            SERIAL PRIMARY KEY,
+    numero_pedido TEXT    DEFAULT '',
+    faturado      NUMERIC(14,2) DEFAULT 0,
+    itens         INTEGER DEFAULT 0,
+    data_fat      DATE    NOT NULL,
+    hora_fat      TEXT    DEFAULT '',
+    usuario       TEXT    NOT NULL,
+    turno         TEXT    NOT NULL DEFAULT '?',
+    nome_usuario  TEXT    DEFAULT '',
+    status_ped    TEXT    DEFAULT '',
+    importado_em  TIMESTAMPTZ DEFAULT NOW(),
+    importado_por TEXT    DEFAULT ''
+  )`,
 ];
 
 const INDEXES = [
@@ -267,6 +283,10 @@ const INDEXES = [
   'CREATE INDEX IF NOT EXISTS idx_em_itens_lote       ON entrada_manual_itens(lote_id)',
   'CREATE INDEX IF NOT EXISTS idx_em_itens_codigo     ON entrada_manual_itens(codigo)',
   'CREATE INDEX IF NOT EXISTS idx_em_itens_status     ON entrada_manual_itens(status)',
+  'CREATE INDEX IF NOT EXISTS idx_fat_data            ON faturamento_pedidos(data_fat)',
+  'CREATE INDEX IF NOT EXISTS idx_fat_turno           ON faturamento_pedidos(turno)',
+  'CREATE INDEX IF NOT EXISTS idx_fat_usuario         ON faturamento_pedidos(usuario)',
+  'CREATE INDEX IF NOT EXISTS idx_fat_data_turno      ON faturamento_pedidos(data_fat, turno)',
 ];
 
 module.exports = { TABLES, INDEXES };

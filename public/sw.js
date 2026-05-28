@@ -48,7 +48,8 @@ self.addEventListener('fetch', e => {
       url.pathname.startsWith('/usuarios') || url.pathname.startsWith('/dashboard') ||
       url.pathname.startsWith('/produtividade') || url.pathname.startsWith('/admin') ||
       url.pathname.startsWith('/embalagem') || url.pathname.startsWith('/auditoria') ||
-      url.pathname.startsWith('/stats') || url.pathname.startsWith('/entrada-manual')) {
+      url.pathname.startsWith('/stats') || url.pathname.startsWith('/entrada-manual') ||
+      url.pathname.startsWith('/dash-logistica')) {
     e.respondWith(
       fetch(e.request).catch(() => new Response(JSON.stringify({ erro: 'Sem conexão' }), {
         status: 503,
