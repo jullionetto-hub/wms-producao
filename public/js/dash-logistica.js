@@ -1,12 +1,12 @@
 /* ══ WMS — Dash Logística ══
-   Versão 2 — persistência no banco de dados
+   Versão 3 — histórico de importações + fix zona upload
    Upload salva no BD; ao abrir, carrega histórico automaticamente.
    Filtra Usuário Faturado com 1, 2 ou 3 na frente.
 ══════════════════════════════════════════════════════════════════════ */
 'use strict';
 
 // ── Estado ────────────────────────────────────────────────────────────────
-let _dlDados     = [];   // dados do backend já filtrados
+let _dlDados     = [];
 let _dlFiltrados = [];
 const _dlCharts  = {};
 let _dlCarregando = false;
@@ -16,12 +16,6 @@ const dlFmt  = n => Number(n||0).toLocaleString('pt-BR', { minimumFractionDigits
 const dlFmtN = n => Number(n||0).toLocaleString('pt-BR');
 const dlToast = (m, t) => typeof toast === 'function' ? toast(m, t) : console.log(m);
 
-function dlToInput(d) {
-  if (!d) return '';
-  if (typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
-  const dt = new Date(d);
-  return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
-}
 function dlTurno(u)   { const m = String(u||'').match(/^([123])/); return m ? m[1] : '?'; }
 function dlNome(u)    { return String(u||'').replace(/^[123]\s*/,'').trim() || u; }
 function dlFindCol(row, ...aliases) {
@@ -34,6 +28,11 @@ function dlFindCol(row, ...aliases) {
 }
 function dlDestroyChart(id) {
   if (_dlCharts[id]) { _dlCharts[id].destroy(); delete _dlCharts[id]; }
+}
+function dlFmtBR(iso) {
+  if (!iso) return '';
+  const [y,m,d] = iso.split('-');
+  return `${d}/${m}/${y}`;
 }
 
 const DL_COR_TURNO = { '1':'#38bdf8', '2':'#a78bfa', '3':'#2dd4bf' };
@@ -170,7 +169,7 @@ function renderizarDashLogistica() {
       </div>
 
       <!-- Tabela ranking -->
-      <div class="card" style="padding:0;overflow:hidden">
+      <div class="card" style="padding:0;overflow:hidden;margin-bottom:24px">
         <div style="padding:12px 18px;background:var(--surface2);border-bottom:1px solid var(--border);font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px;display:flex;align-items:center;gap:8px">
           🏆 RANKING DETALHADO POR COLABORADOR
           <span style="margin-left:auto;font-size:10px;font-weight:600;color:var(--text3)" id="dl-table-count"></span>
@@ -196,6 +195,19 @@ function renderizarDashLogistica() {
       </div>
 
     </div><!-- /dl-conteudo -->
+
+    <!-- ══ HISTÓRICO DE IMPORTAÇÕES ══ -->
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="padding:12px 18px;background:var(--surface2);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px">
+        <span style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px">📁 ARQUIVOS IMPORTADOS</span>
+        <button onclick="dlCarregarImportacoes()" title="Atualizar lista"
+          style="margin-left:auto;background:none;border:1px solid var(--border);border-radius:6px;color:var(--text3);padding:3px 9px;font-size:11px;cursor:pointer">🔄 Atualizar</button>
+      </div>
+      <div id="dl-importacoes-lista" style="padding:8px 0">
+        <div style="text-align:center;padding:24px;color:var(--text3);font-size:12px">Carregando...</div>
+      </div>
+    </div>
+
   </div>`;
 
   // CSS responsivo
@@ -206,8 +218,9 @@ function renderizarDashLogistica() {
     document.head.appendChild(s);
   }
 
-  // Carrega dados do banco automaticamente
+  // Carrega dados do banco e histórico de importações
   dlInicializar();
+  dlCarregarImportacoes();
 }
 
 // ── Inicializar — carrega range disponível e dados ────────────────────────
@@ -237,12 +250,6 @@ async function dlInicializar() {
   }
 
   await dlBuscarDados();
-}
-
-function dlFmtBR(iso) {
-  if (!iso) return '';
-  const [y,m,d] = iso.split('-');
-  return `${d}/${m}/${y}`;
 }
 
 // ── Busca dados do backend com os filtros atuais ──────────────────────────
@@ -289,9 +296,98 @@ function dlResetarFiltros() {
   dlInicializar();
 }
 
+// ── Histórico de importações ──────────────────────────────────────────────
+async function dlCarregarImportacoes() {
+  const lista = document.getElementById('dl-importacoes-lista');
+  if (!lista) return;
+
+  lista.innerHTML = `<div style="text-align:center;padding:24px;color:var(--text3);font-size:12px">⏳ Carregando...</div>`;
+
+  const rows = await apiFetch('/dash-logistica/importacoes');
+
+  if (!rows || rows.erro || !rows.length) {
+    lista.innerHTML = `<div style="text-align:center;padding:28px;color:var(--text3);font-size:12px">Nenhum arquivo importado ainda.</div>`;
+    return;
+  }
+
+  lista.innerHTML = `
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse">
+        <thead>
+          <tr style="background:var(--surface2)">
+            <th style="padding:8px 14px;text-align:left;font-size:9px;font-weight:800;color:var(--text3);letter-spacing:.5px">ARQUIVO</th>
+            <th style="padding:8px 12px;text-align:center;font-size:9px;font-weight:800;color:var(--text3);letter-spacing:.5px">PERÍODO</th>
+            <th style="padding:8px 12px;text-align:right;font-size:9px;font-weight:800;color:var(--text3);letter-spacing:.5px">REGISTROS</th>
+            <th style="padding:8px 12px;text-align:left;font-size:9px;font-weight:800;color:var(--text3);letter-spacing:.5px">IMPORTADO POR</th>
+            <th style="padding:8px 12px;text-align:left;font-size:9px;font-weight:800;color:var(--text3);letter-spacing:.5px">QUANDO</th>
+            <th style="padding:8px 12px;text-align:center;font-size:9px;font-weight:800;color:var(--text3);letter-spacing:.5px">AÇÃO</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map(r => `
+            <tr style="border-bottom:1px solid rgba(51,65,85,.3)">
+              <td style="padding:10px 14px">
+                <div style="font-size:12px;font-weight:700;color:var(--text)">${escHtml(r.nome_arquivo||'arquivo.xlsx')}</div>
+              </td>
+              <td style="padding:10px 12px;text-align:center">
+                <span style="font-size:11px;color:var(--text);background:var(--surface2);border-radius:6px;padding:3px 10px;white-space:nowrap">
+                  ${escHtml(r.ini_fmt)} — ${escHtml(r.fim_fmt)}
+                </span>
+              </td>
+              <td style="padding:10px 12px;text-align:right;font-size:12px;font-weight:700;color:#38bdf8">
+                ${dlFmtN(r.total_registros)}
+              </td>
+              <td style="padding:10px 12px;font-size:11px;color:var(--text3)">${escHtml(r.importado_por||'—')}</td>
+              <td style="padding:10px 12px;font-size:11px;color:var(--text3);white-space:nowrap">${escHtml(r.importado_em_fmt||'')}</td>
+              <td style="padding:10px 12px;text-align:center">
+                <button onclick="dlExcluirImportacao(${r.id},'${escHtml(r.nome_arquivo||'arquivo.xlsx').replace(/'/g,"\\'")}')"
+                  title="Excluir este período do banco"
+                  style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#ef4444;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer">
+                  🗑️ Excluir
+                </button>
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+async function dlExcluirImportacao(id, nome) {
+  if (!confirm(`Excluir a importação "${nome}" e todos os seus pedidos do banco?\n\nEssa ação não pode ser desfeita.`)) return;
+
+  const r = await apiFetch(`/dash-logistica/importacoes/${id}`, { method:'DELETE' });
+  if (r?.erro) { dlToast('Erro ao excluir: '+r.erro, 'erro'); return; }
+
+  dlToast('✅ Importação excluída com sucesso.', 'sucesso');
+  dlCarregarImportacoes();
+  dlInicializar();
+}
+
 // ── Upload de arquivo ─────────────────────────────────────────────────────
-function dlAbrirImport()  { const z = document.getElementById('dl-upload-zona'); if (z) z.style.display = ''; }
-function dlFecharImport() { const z = document.getElementById('dl-upload-zona'); if (z) z.style.display = 'none'; }
+function dlAbrirImport() {
+  const z = document.getElementById('dl-upload-zona');
+  if (z) z.style.display = '';
+}
+
+function dlFecharImport() {
+  // Oculta a zona
+  const z = document.getElementById('dl-upload-zona');
+  if (z) z.style.display = 'none';
+
+  // Reseta o drop zone para o HTML original
+  const drop = document.getElementById('dl-drop');
+  if (drop) drop.innerHTML = `
+    <div style="font-size:32px;margin-bottom:8px">📂</div>
+    <div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:5px">Clique ou arraste a planilha aqui</div>
+    <div style="font-size:11px;color:var(--text3)">Suporte: <b>.xlsx · .xls</b> &nbsp;·&nbsp; Abas: <b>Pedidos-turno</b> + <b>Itens</b></div>
+    <div style="font-size:11px;color:#f59e0b;margin-top:6px">⚠️ Os dados do período da planilha serão substituídos no banco</div>
+    <input type="file" id="dl-input" accept=".xlsx,.xls" style="display:none" onchange="dlProcessarArquivo(this.files[0])">
+    <div style="display:flex;justify-content:center;gap:10px;margin-top:12px">
+      <div style="background:var(--accent);color:#fff;border-radius:8px;padding:7px 18px;font-size:12px;font-weight:700">Selecionar arquivo</div>
+      <button onclick="event.stopPropagation();dlFecharImport()" style="background:var(--surface2);color:var(--text3);border:1px solid var(--border);border-radius:8px;padding:7px 14px;font-size:12px;cursor:pointer">Cancelar</button>
+    </div>`;
+}
 
 function dlHandleDrop(e) {
   e.preventDefault();
@@ -303,17 +399,19 @@ function dlHandleDrop(e) {
 async function dlProcessarArquivo(file) {
   if (!file) return;
   const drop = document.getElementById('dl-drop');
-  if (drop) drop.innerHTML = `<div style="padding:24px;text-align:center;color:var(--text3)">⏳ Lendo <b>${file.name}</b>...</div>`;
+
+  // Mostra estado de leitura
+  if (drop) drop.innerHTML = `<div style="padding:24px;text-align:center;color:var(--text3)">⏳ Lendo <b>${escHtml(file.name)}</b>...</div>`;
 
   try {
-    const buf  = await file.arrayBuffer();
-    const wb   = XLSX.read(buf, { type:'array', cellDates:false });
+    const buf = await file.arrayBuffer();
+    const wb  = XLSX.read(buf, { type:'array', cellDates:false });
 
     const idx1 = wb.SheetNames.findIndex(n => /pedido|turno/i.test(n));
     const ws1  = wb.Sheets[wb.SheetNames[idx1 !== -1 ? idx1 : 0]];
     const raw1 = XLSX.utils.sheet_to_json(ws1, { defval:'', raw:true });
 
-    if (!raw1.length) { dlToast('Aba Pedidos-turno vazia!','erro'); dlFecharImport(); return; }
+    if (!raw1.length) { dlToast('Aba Pedidos-turno vazia!','erro'); return; }
 
     const s     = raw1[0];
     const cFat  = dlFindCol(s, 'total faturado', 'faturado') || dlFindCol(s, 'valor');
@@ -335,7 +433,7 @@ async function dlProcessarArquivo(file) {
       const m = dataStr.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
       if (!m) continue;
 
-      const dataFat = `${m[3]}-${m[2]}-${m[1]}`; // YYYY-MM-DD
+      const dataFat = `${m[3]}-${m[2]}-${m[1]}`;
       const horaFat = dataStr.split(' ')[1] || '';
 
       if (!ini || dataFat < ini) ini = dataFat;
@@ -354,33 +452,45 @@ async function dlProcessarArquivo(file) {
       });
     }
 
-    if (!pedidos.length) { dlToast('Nenhum pedido com turno 1/2/3 encontrado.','aviso'); dlFecharImport(); return; }
+    if (!pedidos.length) { dlToast('Nenhum pedido com turno 1/2/3 encontrado.','aviso'); return; }
 
-    // Envia ao backend
-    if (drop) drop.innerHTML = `<div style="padding:24px;text-align:center;color:var(--text3)">⏳ Salvando ${pedidos.length} pedidos no banco...</div>`;
+    // Mostra estado de envio
+    if (drop) drop.innerHTML = `<div style="padding:24px;text-align:center;color:var(--text3)">⏳ Salvando <b>${dlFmtN(pedidos.length)}</b> pedidos no banco...</div>`;
 
     const r = await apiFetch('/dash-logistica/importar', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ pedidos, ini, fim })
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ pedidos, ini, fim, nome_arquivo: file.name })
     });
 
-    if (r?.erro) { dlToast('Erro ao salvar: '+r.erro,'erro'); dlFecharImport(); return; }
+    if (r?.erro) {
+      dlToast('Erro ao salvar: '+r.erro, 'erro');
+      return;
+    }
 
     dlToast(`✅ ${r.total} pedidos importados! (${dlFmtBR(ini)} a ${dlFmtBR(fim)})`, 'sucesso');
-    dlFecharImport();
 
-    // Atualiza banco-info e recarrega
-    document.getElementById('dl-ini').value = ini;
-    document.getElementById('dl-fim').value = fim;
+    // Atualiza filtros e recarrega
+    const iniEl = document.getElementById('dl-ini');
+    const fimEl = document.getElementById('dl-fim');
+    if (iniEl) iniEl.value = ini;
+    if (fimEl) fimEl.value = fim;
 
-    // Recarrega range e dados
-    await dlInicializar();
+    dlInicializar();
+    dlCarregarImportacoes();
 
   } catch(e) {
     console.error(e);
-    dlToast('Erro ao processar arquivo: '+e.message,'erro');
+    dlToast('Erro ao processar arquivo: '+e.message, 'erro');
+  } finally {
+    // Garante que a zona sempre feche, independente de sucesso ou erro
     dlFecharImport();
   }
+}
+
+// ── Utilidade HTML escape ─────────────────────────────────────────────────
+function escHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 // ── Render principal ───────────────────────────────────────────────────────
@@ -389,7 +499,7 @@ function dlRenderizarDados(data) {
   const byDia   = {};
   const byHora  = new Array(24).fill(0);
   const byTurno = { '1':{fat:0,ped:0,itens:0}, '2':{fat:0,ped:0,itens:0}, '3':{fat:0,ped:0,itens:0} };
-  const byDiaTurno = {}; // { 'YYYY-MM-DD': { '1':fat, '2':fat, '3':fat } }
+  const byDiaTurno = {};
   let   totalFat = 0, totalPed = 0, totalItens = 0;
 
   data.forEach(r => {
@@ -402,14 +512,18 @@ function dlRenderizarDados(data) {
     totalPed   += 1;
     totalItens += parseInt(r.itens)||0;
     if (r.data_fat) {
-      const k = r.data_fat; // já em YYYY-MM-DD
+      const k = r.data_fat;
       byDia[k] = (byDia[k]||0) + (parseFloat(r.faturado)||0);
       if (!byDiaTurno[k]) byDiaTurno[k] = {'1':0,'2':0,'3':0};
       if (byDiaTurno[k][r.turno] !== undefined) byDiaTurno[k][r.turno] += parseFloat(r.faturado)||0;
     }
     const h = parseInt(String(r.hora_fat||'').split(':')[0]);
     if (!isNaN(h) && h >= 0 && h < 24) byHora[h] += parseFloat(r.faturado)||0;
-    if (byTurno[r.turno]) { byTurno[r.turno].fat += parseFloat(r.faturado)||0; byTurno[r.turno].ped += 1; byTurno[r.turno].itens += parseInt(r.itens)||0; }
+    if (byTurno[r.turno]) {
+      byTurno[r.turno].fat   += parseFloat(r.faturado)||0;
+      byTurno[r.turno].ped   += 1;
+      byTurno[r.turno].itens += parseInt(r.itens)||0;
+    }
   });
 
   const ranking = Object.entries(byUser).sort((a,b) => b[1].fat - a[1].fat);
@@ -550,7 +664,7 @@ function dlRenderTabela(ranking, totalFat) {
     return `<tr style="border-bottom:1px solid rgba(51,65,85,.4)">
       <td style="padding:10px 12px;text-align:center;font-size:14px">${ICONS[i]||`<span style="font-size:10px;color:var(--text3);font-weight:700">${i+1}</span>`}</td>
       <td style="padding:10px 14px">
-        <div style="font-weight:700;color:var(--text);font-size:13px">${v.nome}</div>
+        <div style="font-weight:700;color:var(--text);font-size:13px">${escHtml(v.nome)}</div>
         <div style="background:var(--surface2);border-radius:3px;height:4px;margin-top:5px;overflow:hidden">
           <div style="height:100%;width:${(v.fat/maxFat*100).toFixed(1)}%;background:${cor};border-radius:3px"></div>
         </div>

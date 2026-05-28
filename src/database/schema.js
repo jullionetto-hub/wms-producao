@@ -259,6 +259,16 @@ const TABLES = [
     importado_em  TIMESTAMPTZ DEFAULT NOW(),
     importado_por TEXT    DEFAULT ''
   )`,
+
+  `CREATE TABLE IF NOT EXISTS fat_importacoes (
+    id             SERIAL PRIMARY KEY,
+    nome_arquivo   TEXT    DEFAULT '',
+    ini            DATE    NOT NULL,
+    fim            DATE    NOT NULL,
+    total_registros INTEGER DEFAULT 0,
+    importado_por  TEXT    DEFAULT '',
+    importado_em   TIMESTAMPTZ DEFAULT NOW()
+  )`,
 ];
 
 const INDEXES = [
