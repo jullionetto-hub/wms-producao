@@ -315,6 +315,7 @@ function montarSidebar() {
       <a class="mi" onclick="irPara('liberacao',this)"><span class="mi-ic">🔓</span>Liberação <span class="mbadge" id="menu-badge-lib" style="display:none;background:var(--red)">0</span></a>
       <a class="mi" onclick="irPara('performance',this)"><span class="mi-ic">🏆</span>Performance</a>
       <a class="mi" onclick="irPara('relatorios',this)"><span class="mi-ic">📅</span>Relatórios</a>
+      <a class="mi" onclick="irPara('dash-logistica',this)"><span class="mi-ic">🚚</span>Dash Logística</a>
       <a class="mi" onclick="irPara('auditoria',this)"><span class="mi-ic">🔍</span>Auditoria</a>
       <a class="mi" onclick="irPara('diario',this)"><span class="mi-ic">📋</span>Diário de Bordo</a>
       <a class="mi" onclick="irPara('cadastros',this)"><span class="mi-ic">⚙️</span>Cadastros</a>
@@ -389,6 +390,7 @@ function irPara(pag, el) {
   if (pag === 'estatisticas-emb') { carregarEstatisticasEmb(); }
   if (pag === 'passagem')         { iniciarPassagem(); }
   if (pag === 'entrada-manual')   { renderizarPagEntradaManual(); }
+  if (pag === 'dash-logistica')  { renderizarDashLogistica(); }
 }
 
 
