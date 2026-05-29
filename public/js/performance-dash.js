@@ -254,11 +254,29 @@ async function pfBuscarDados() {
 
   _pfDados = dados;
 
+  console.log('[Performance] colaboradores:', dados.colaboradores?.length, '| por_dia:', dados.por_dia?.length);
+  if (dados.colaboradores?.length) {
+    console.log('[Performance] Exemplo:', JSON.stringify(dados.colaboradores[0]));
+  }
+
   // Popula dropdown de colaboradores
   pfPopularDropdownColab(dados.colaboradores);
 
   // Aplica filtro de colaborador se já estiver selecionado
   pfAplicarFiltroColab();
+
+  // Diagnóstico: se pf-kpis ainda estiver vazio após render, mostra dados brutos
+  setTimeout(() => {
+    const kpisEl = document.getElementById('pf-kpis');
+    if (kpisEl && !kpisEl.children.length && dados.colaboradores?.length) {
+      kpisEl.innerHTML = `<div style="grid-column:1/-1;background:#fef3c7;border:1px solid #f59e0b;border-radius:12px;padding:16px;color:#92400e;font-size:12px">
+        ⚠️ Dados recebidos mas cards não renderizaram.<br>
+        <b>${dados.colaboradores.length} colaborador(es):</b>
+        ${dados.colaboradores.map(c=>`${pfEsc(c.nome||'?')} (${c.pedidos} ped)`).join(', ')}<br>
+        <small>Abra o console do navegador (F12 → Console) para ver o erro.</small>
+      </div>`;
+    }
+  }, 500);
 }
 
 // ── Popula dropdown de colaboradores ──────────────────────────────────────
@@ -313,6 +331,7 @@ function pfAplicarFiltroColab() {
 
 // ── Render principal ───────────────────────────────────────────────────────
 function pfRenderizarDados(colab, porDia) {
+  try {
   let totPed = 0, totItens = 0, totSkus = 0, totRep = 0;
   const tempos = [];
   colab.forEach(c => {
@@ -320,13 +339,13 @@ function pfRenderizarDados(colab, porDia) {
     totItens += c.itens      || 0;
     totSkus  += c.skus       || 0;
     totRep   += c.reposicoes || 0;
-    if (c.tempo_medio_min != null) tempos.push({ nome: c.nome, t: c.tempo_medio_min });
+    if (c.tempo_medio_min != null) tempos.push({ nome: c.nome || '?', t: +c.tempo_medio_min });
   });
   const tempoMed = tempos.length ? tempos.reduce((a,b) => a + b.t, 0) / tempos.length : null;
   const tempoMin = tempos.length ? tempos.reduce((a,b) => a.t < b.t ? a : b) : null;
   const tempoMax = tempos.length ? tempos.reduce((a,b) => a.t > b.t ? a : b) : null;
-  const liderPed = [...colab].sort((a,b) => b.pedidos - a.pedidos)[0];
-  const liderRep = [...colab].sort((a,b) => b.reposicoes - a.reposicoes)[0];
+  const liderPed = [...colab].sort((a,b) => (b.pedidos||0) - (a.pedidos||0))[0];
+  const liderRep = [...colab].sort((a,b) => (b.reposicoes||0) - (a.reposicoes||0))[0];
 
   pfRenderKPIs({ totPed, totItens, totSkus, totRep, tempoMed, tempoMin, tempoMax, liderPed, liderRep, nColab: colab.length });
   pfRenderChartPedidos(colab);
@@ -336,6 +355,14 @@ function pfRenderizarDados(colab, porDia) {
   pfRenderChartTempo(colab);
   pfRenderChartDia(porDia);
   pfRenderTabela(colab, totPed);
+  } catch(err) {
+    console.error('[Performance] Erro ao renderizar:', err);
+    const kpisEl = document.getElementById('pf-kpis');
+    if (kpisEl) kpisEl.innerHTML = `<div style="grid-column:1/-1;background:#fee2e2;border:1px solid #ef4444;border-radius:12px;padding:16px;color:#b91c1c;font-size:13px">
+      ⚠️ Erro ao renderizar os dados: <b>${pfEsc(err.message)}</b><br>
+      <small>Verifique o console do navegador (F12) para mais detalhes.</small>
+    </div>`;
+  }
 }
 
 // ── KPI Cards com gradiente ────────────────────────────────────────────────
@@ -376,7 +403,7 @@ function pfRenderKPIs({ totPed, totItens, totSkus, totRep, tempoMed, tempoMin, t
       '📦', 'ITENS', pfFmtN(totItens), 'itens separados',
       mini('TOTAL SKUs', pfFmtN(totSkus)) +
       mini('SKUs/PED', skusPed) +
-      mini('MAIS ITENS', liderPed ? liderPed.nome.split(' ')[0] : '—') +
+      mini('MAIS ITENS', liderPed ? (liderPed.nome||'?').split(' ')[0] : '—') +
       mini('MÉDIA/DIA', _pfDados?.por_dia?.length ? pfFmtN(Math.round(totItens / _pfDados.por_dia.length)) : '—')
     ) +
     card(
@@ -384,14 +411,14 @@ function pfRenderKPIs({ totPed, totItens, totSkus, totRep, tempoMed, tempoMin, t
       '🔁', 'REPOSIÇÃO', pfFmtN(totRep), 'reposições geradas',
       mini('% DOS PEDIDOS', repPct + '%') +
       mini('PEDIDOS SEM REP.', pfFmtN(totPed - Math.min(totRep, totPed))) +
-      mini('MAIS REPOS.', liderRep?.reposicoes ? liderRep.nome.split(' ')[0] : '—') +
+      mini('MAIS REPOS.', liderRep?.reposicoes ? (liderRep.nome||'?').split(' ')[0] : '—') +
       mini('MÉD/COLAB', nColab > 0 ? (totRep / nColab).toFixed(1) : '0')
     ) +
     card(
       'linear-gradient(135deg,#7c3aed 0%,#a855f7 100%)',
       '⏱️', 'TEMPO MÉDIO', tempoMed != null ? tempoMed.toFixed(1)+' min' : '—', 'por pedido (separação)',
-      mini('MAIS RÁPIDO', tempoMin ? tempoMin.nome.split(' ')[0]+' ('+tempoMin.t.toFixed(1)+'m)' : '—') +
-      mini('MAIS LENTO', tempoMax ? tempoMax.nome.split(' ')[0]+' ('+tempoMax.t.toFixed(1)+'m)' : '—') +
+      mini('MAIS RÁPIDO', tempoMin ? (tempoMin.nome||'?').split(' ')[0]+' ('+tempoMin.t.toFixed(1)+'m)' : '—') +
+      mini('MAIS LENTO', tempoMax ? (tempoMax.nome||'?').split(' ')[0]+' ('+tempoMax.t.toFixed(1)+'m)' : '—') +
       mini('COM TEMPO', pfFmtN(tempos.length)) +
       mini('SEM TEMPO', pfFmtN(nColab - tempos.length))
     );
