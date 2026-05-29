@@ -44,6 +44,15 @@ function renderizarPerformanceDash() {
   const pag = document.getElementById('pag-performance');
   if (!pag) return;
 
+  // Força atualização do Service Worker para garantir que rotas /performance
+  // não sejam servidas de cache antigo
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.update()));
+  }
+
+  // Reseta estado para evitar race conditions se o usuário navegar durante carregamento
+  _pfCarregando = false;
+
   pag.innerHTML = `
   <div style="padding:0 0 40px">
 
@@ -196,7 +205,7 @@ async function pfInicializar() {
 
   if (!iniEl.value || !fimEl.value) {
     document.getElementById('pf-loading').style.display = '';
-    const range = await apiFetch('/performance/range');
+    const range = await apiFetch(`/performance/range?_=${Date.now()}`);
     document.getElementById('pf-loading').style.display = 'none';
     if (range && !range.erro && range.ini) {
       const fim = range.fim;
@@ -230,6 +239,7 @@ async function pfBuscarDados() {
 
   const qs = new URLSearchParams({ ini, fim });
   if (turno) qs.set('turno', turno);
+  qs.set('_', Date.now()); // evita cache do SW
 
   const dados = await apiFetch(`/performance/separadores?${qs}`);
   _pfCarregando = false;
