@@ -347,7 +347,7 @@ function pfRenderizarDados(colab, porDia) {
   const liderPed = [...colab].sort((a,b) => (b.pedidos||0) - (a.pedidos||0))[0];
   const liderRep = [...colab].sort((a,b) => (b.reposicoes||0) - (a.reposicoes||0))[0];
 
-  pfRenderKPIs({ totPed, totItens, totSkus, totRep, tempoMed, tempoMin, tempoMax, liderPed, liderRep, nColab: colab.length });
+  pfRenderKPIs({ totPed, totItens, totSkus, totRep, tempoMed, tempoMin, tempoMax, liderPed, liderRep, nColab: colab.length, nComTempo: tempos.length });
   pfRenderChartPedidos(colab);
   pfRenderChartHoriz('itens',  colab, 'itens',      'itens');
   pfRenderChartHoriz('skus',   colab, 'skus',       'SKUs');
@@ -366,7 +366,7 @@ function pfRenderizarDados(colab, porDia) {
 }
 
 // ── KPI Cards com gradiente ────────────────────────────────────────────────
-function pfRenderKPIs({ totPed, totItens, totSkus, totRep, tempoMed, tempoMin, tempoMax, liderPed, liderRep, nColab }) {
+function pfRenderKPIs({ totPed, totItens, totSkus, totRep, tempoMed, tempoMin, tempoMax, liderPed, liderRep, nColab, nComTempo }) {
   const itensPed = totPed > 0 ? (totItens / totPed).toFixed(1) : '0';
   const skusPed  = totPed > 0 ? (totSkus  / totPed).toFixed(1) : '0';
   const repPct   = totPed > 0 ? (totRep   / totPed * 100).toFixed(1) : '0';
@@ -419,8 +419,8 @@ function pfRenderKPIs({ totPed, totItens, totSkus, totRep, tempoMed, tempoMin, t
       '⏱️', 'TEMPO MÉDIO', tempoMed != null ? tempoMed.toFixed(1)+' min' : '—', 'por pedido (separação)',
       mini('MAIS RÁPIDO', tempoMin ? (tempoMin.nome||'?').split(' ')[0]+' ('+tempoMin.t.toFixed(1)+'m)' : '—') +
       mini('MAIS LENTO', tempoMax ? (tempoMax.nome||'?').split(' ')[0]+' ('+tempoMax.t.toFixed(1)+'m)' : '—') +
-      mini('COM TEMPO', pfFmtN(tempos.length)) +
-      mini('SEM TEMPO', pfFmtN(nColab - tempos.length))
+      mini('COM TEMPO', pfFmtN(nComTempo)) +
+      mini('SEM TEMPO', pfFmtN(nColab - nComTempo))
     );
 }
 
