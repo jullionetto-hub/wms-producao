@@ -66,7 +66,7 @@ router.get('/performance/separadores', requerAuth, requerPerfil('supervisor'), a
     // ── Pedidos por dia (para gráfico de linha) ───────────────────────────
     const porDia = await db.all(`
       SELECT
-        TO_CHAR(p.data_pedido::date, 'YYYY-MM-DD') AS data,
+        p.data_pedido                              AS data,
         COUNT(DISTINCT p.id)::int                   AS pedidos,
         COALESCE(SUM(p.itens), 0)::int              AS itens
       FROM pedidos p
@@ -75,7 +75,7 @@ router.get('/performance/separadores', requerAuth, requerPerfil('supervisor'), a
         AND p.data_pedido >= $1
         AND p.data_pedido <= $2
         AND s.status = 'ativo'
-      GROUP BY TO_CHAR(p.data_pedido::date, 'YYYY-MM-DD')
+      GROUP BY p.data_pedido
       ORDER BY data
     `, [ini, fim]);
 
@@ -97,8 +97,8 @@ router.get('/performance/range', requerAuth, requerPerfil('supervisor'), async (
   try {
     const row = await db.get(`
       SELECT
-        TO_CHAR(MIN(data_pedido::date), 'YYYY-MM-DD') AS ini,
-        TO_CHAR(MAX(data_pedido::date), 'YYYY-MM-DD') AS fim
+        MIN(data_pedido) AS ini,
+        MAX(data_pedido) AS fim
       FROM pedidos
       WHERE status = 'concluido'
         AND separador_id IS NOT NULL
