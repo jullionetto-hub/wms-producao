@@ -1,18 +1,18 @@
 /* ══ WMS — Performance dos Separadores ══
-   Versão 1 — dashboard visual com filtro de período
+   Versão 2 — cards gradiente + dropdown de colaboradores
    Pedidos, itens, SKUs, reposições, tempo médio por colaborador.
 ══════════════════════════════════════════════════════════════════════ */
 'use strict';
 
 // ── Estado ────────────────────────────────────────────────────────────────
-let _pfDados       = null;
-const _pfCharts    = {};
-let _pfCarregando  = false;
+let _pfDados      = null;   // resposta completa da API
+let _pfFiltrados  = [];     // colaboradores após filtro de nome
+const _pfCharts   = {};
+let _pfCarregando = false;
 
 // ── Helpers ───────────────────────────────────────────────────────────────
-const pfFmtN = n  => Number(n||0).toLocaleString('pt-BR');
-const pfFmtT = n  => n != null ? `${Number(n).toFixed(1)} min` : '—';
-const pfToast = (m, t) => typeof toast === 'function' ? toast(m, t) : console.log(m);
+const pfFmtN  = n => Number(n||0).toLocaleString('pt-BR');
+const pfToast = (m,t) => typeof toast === 'function' ? toast(m,t) : console.log(m);
 
 function pfFmtBR(iso) {
   if (!iso) return '';
@@ -23,22 +23,20 @@ function pfDestroyChart(id) {
   if (_pfCharts[id]) { _pfCharts[id].destroy(); delete _pfCharts[id]; }
 }
 function pfEsc(s) {
-  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  return String(s||'')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-const PF_COR_TURNO = { Manha:'#38bdf8', Tarde:'#f59e0b', Noite:'#a78bfa' };
+const PF_COR_TURNO   = { Manha:'#38bdf8', Tarde:'#f59e0b', Noite:'#a78bfa' };
 const PF_LABEL_TURNO = { Manha:'☀️ Manhã', Tarde:'🌅 Tarde', Noite:'🌙 Noite' };
 const PF_GRID = { color:'rgba(51,65,85,.25)' };
 const PF_TICK = { color:'#64748b', font:{ size:10 } };
 
 function pfCor(turno) { return PF_COR_TURNO[turno] || '#6366f1'; }
-
-function pfChartOpts(extra = {}) {
-  return Object.assign({
-    responsive: true, maintainAspectRatio: false,
-    plugins: { legend: { display: false } },
-    animation: { duration: 250 }
-  }, extra);
+function pfChartOpts(extra={}) {
+  return Object.assign({ responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{display:false} }, animation:{duration:250} }, extra);
 }
 
 // ── Renderiza a página ─────────────────────────────────────────────────────
@@ -78,6 +76,13 @@ function renderizarPerformanceDash() {
           <option value="Noite">🌙 Noite</option>
         </select>
       </div>
+      <div>
+        <div style="font-size:9px;font-weight:700;color:var(--text3);letter-spacing:.8px;margin-bottom:3px">COLABORADOR</div>
+        <select id="pf-colab" onchange="pfAplicarFiltroColab()"
+          style="padding:7px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;outline:none;min-width:160px">
+          <option value="">Todos os colaboradores</option>
+        </select>
+      </div>
       <button onclick="pfBuscarDados()" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer">🔍 Filtrar</button>
       <button onclick="pfInicializar()" style="background:var(--surface2);color:var(--text3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:12px;cursor:pointer">✕ Limpar</button>
       <span id="pf-filtro-info" style="margin-left:auto;font-size:11px;color:var(--text3);align-self:center"></span>
@@ -99,8 +104,8 @@ function renderizarPerformanceDash() {
     <!-- CONTEÚDO -->
     <div id="pf-conteudo" style="display:none">
 
-      <!-- KPI CARDS -->
-      <div id="pf-kpis" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:20px"></div>
+      <!-- KPI CARDS GRADIENTE -->
+      <div id="pf-kpis" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:16px;margin-bottom:24px"></div>
 
       <!-- Pedidos por colaborador (full width) -->
       <div class="card" style="padding:16px 18px;margin-bottom:16px">
@@ -123,7 +128,7 @@ function renderizarPerformanceDash() {
       <!-- Reposições + Tempo médio -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px" class="pf-grid-2">
         <div class="card" style="padding:16px 18px">
-          <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px;margin-bottom:14px">🔁 REPOSIÇÕES GERADAS POR COLABORADOR</div>
+          <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px;margin-bottom:14px">🔁 REPOSIÇÕES POR COLABORADOR</div>
           <div style="position:relative;height:260px"><canvas id="pf-chart-repos"></canvas></div>
         </div>
         <div class="card" style="padding:16px 18px">
@@ -132,8 +137,8 @@ function renderizarPerformanceDash() {
         </div>
       </div>
 
-      <!-- Evolução diária -->
-      <div class="card" style="padding:16px 18px;margin-bottom:20px">
+      <!-- Evolução diária (só aparece sem filtro de colaborador) -->
+      <div id="pf-dia-wrap" class="card" style="padding:16px 18px;margin-bottom:20px">
         <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px;margin-bottom:14px">📅 EVOLUÇÃO DIÁRIA DE PEDIDOS</div>
         <div style="position:relative;height:220px"><canvas id="pf-chart-dia"></canvas></div>
       </div>
@@ -167,7 +172,6 @@ function renderizarPerformanceDash() {
     </div><!-- /pf-conteudo -->
   </div>`;
 
-  // CSS responsivo
   if (!document.getElementById('pf-grid-style')) {
     const s = document.createElement('style');
     s.id = 'pf-grid-style';
@@ -180,19 +184,21 @@ function renderizarPerformanceDash() {
 
 // ── Inicializar ────────────────────────────────────────────────────────────
 async function pfInicializar() {
-  // Tenta carregar o range disponível para pré-preencher datas
   const iniEl = document.getElementById('pf-ini');
   const fimEl = document.getElementById('pf-fim');
-  const turnoEl = document.getElementById('pf-turno');
   if (!iniEl) return;
+
+  // Reset colaborador dropdown para "Todos"
+  const colabEl = document.getElementById('pf-colab');
+  if (colabEl) colabEl.value = '';
+  const turnoEl = document.getElementById('pf-turno');
+  if (turnoEl) turnoEl.value = '';
 
   if (!iniEl.value || !fimEl.value) {
     document.getElementById('pf-loading').style.display = '';
     const range = await apiFetch('/performance/range');
     document.getElementById('pf-loading').style.display = 'none';
-
     if (range && !range.erro && range.ini) {
-      // Usa os últimos 7 dias disponíveis por padrão
       const fim = range.fim;
       const dt  = new Date(range.fim + 'T12:00:00');
       dt.setDate(dt.getDate() - 6);
@@ -200,25 +206,23 @@ async function pfInicializar() {
       iniEl.value = ini < range.ini ? range.ini : ini;
       fimEl.value = fim;
     } else {
-      // Sem dados — usa semana atual
       const hoje = new Date();
       fimEl.value = hoje.toISOString().slice(0,10);
       hoje.setDate(hoje.getDate() - 6);
       iniEl.value = hoje.toISOString().slice(0,10);
     }
   }
-  if (turnoEl) turnoEl.value = '';
   await pfBuscarDados();
 }
 
-// ── Busca e renderiza ──────────────────────────────────────────────────────
+// ── Busca dados da API ─────────────────────────────────────────────────────
 async function pfBuscarDados() {
   if (_pfCarregando) return;
   _pfCarregando = true;
 
-  const ini   = document.getElementById('pf-ini')?.value  || '';
-  const fim   = document.getElementById('pf-fim')?.value  || '';
-  const turno = document.getElementById('pf-turno')?.value|| '';
+  const ini   = document.getElementById('pf-ini')?.value   || '';
+  const fim   = document.getElementById('pf-fim')?.value   || '';
+  const turno = document.getElementById('pf-turno')?.value || '';
 
   document.getElementById('pf-loading').style.display  = '';
   document.getElementById('pf-conteudo').style.display = 'none';
@@ -239,55 +243,148 @@ async function pfBuscarDados() {
   }
 
   _pfDados = dados;
+
+  // Popula dropdown de colaboradores
+  pfPopularDropdownColab(dados.colaboradores);
+
+  // Aplica filtro de colaborador se já estiver selecionado
+  pfAplicarFiltroColab();
+}
+
+// ── Popula dropdown de colaboradores ──────────────────────────────────────
+function pfPopularDropdownColab(colaboradores) {
+  const sel = document.getElementById('pf-colab');
+  if (!sel) return;
+  const valorAtual = sel.value;
+  sel.innerHTML = '<option value="">Todos os colaboradores</option>' +
+    [...colaboradores]
+      .sort((a,b) => a.nome.localeCompare(b.nome))
+      .map(c => `<option value="${pfEsc(c.nome)}">${pfEsc(c.nome)}</option>`)
+      .join('');
+  // Mantém seleção se o nome ainda existe
+  if (valorAtual && [...sel.options].some(o => o.value === valorAtual)) {
+    sel.value = valorAtual;
+  }
+}
+
+// ── Filtra por colaborador e renderiza ────────────────────────────────────
+function pfAplicarFiltroColab() {
+  if (!_pfDados) return;
+  const nome = document.getElementById('pf-colab')?.value || '';
+  const ini  = document.getElementById('pf-ini')?.value   || '';
+  const fim  = document.getElementById('pf-fim')?.value   || '';
+
+  _pfFiltrados = nome
+    ? _pfDados.colaboradores.filter(c => c.nome === nome)
+    : _pfDados.colaboradores;
+
+  if (!_pfFiltrados.length) {
+    document.getElementById('pf-conteudo').style.display = 'none';
+    document.getElementById('pf-vazio').style.display    = '';
+    return;
+  }
+
   document.getElementById('pf-conteudo').style.display = '';
+  document.getElementById('pf-vazio').style.display    = 'none';
+
+  // Mostra/oculta evolução diária (só faz sentido sem filtro de colaborador)
+  const diaWrap = document.getElementById('pf-dia-wrap');
+  if (diaWrap) diaWrap.style.display = nome ? 'none' : '';
 
   const inf = document.getElementById('pf-filtro-info');
-  if (inf) inf.textContent = `${dados.colaboradores.length} colaboradores · ${pfFmtBR(ini)} a ${pfFmtBR(fim)}`;
+  if (inf) {
+    inf.textContent = nome
+      ? `${pfFmtBR(ini)} a ${pfFmtBR(fim)} · ${nome}`
+      : `${_pfFiltrados.length} colaboradores · ${pfFmtBR(ini)} a ${pfFmtBR(fim)}`;
+  }
 
-  pfRenderizarDados(dados);
+  pfRenderizarDados(_pfFiltrados, _pfDados.por_dia || []);
 }
 
 // ── Render principal ───────────────────────────────────────────────────────
-function pfRenderizarDados({ colaboradores, por_dia }) {
-  // Totais
+function pfRenderizarDados(colab, porDia) {
   let totPed = 0, totItens = 0, totSkus = 0, totRep = 0;
   const tempos = [];
-  colaboradores.forEach(c => {
-    totPed   += c.pedidos   || 0;
-    totItens += c.itens     || 0;
-    totSkus  += c.skus      || 0;
-    totRep   += c.reposicoes|| 0;
-    if (c.tempo_medio_min != null) tempos.push(c.tempo_medio_min);
+  colab.forEach(c => {
+    totPed   += c.pedidos    || 0;
+    totItens += c.itens      || 0;
+    totSkus  += c.skus       || 0;
+    totRep   += c.reposicoes || 0;
+    if (c.tempo_medio_min != null) tempos.push({ nome: c.nome, t: c.tempo_medio_min });
   });
-  const tempoMed = tempos.length ? tempos.reduce((a,b) => a+b, 0) / tempos.length : null;
+  const tempoMed = tempos.length ? tempos.reduce((a,b) => a + b.t, 0) / tempos.length : null;
+  const tempoMin = tempos.length ? tempos.reduce((a,b) => a.t < b.t ? a : b) : null;
+  const tempoMax = tempos.length ? tempos.reduce((a,b) => a.t > b.t ? a : b) : null;
+  const liderPed = [...colab].sort((a,b) => b.pedidos - a.pedidos)[0];
+  const liderRep = [...colab].sort((a,b) => b.reposicoes - a.reposicoes)[0];
 
-  pfRenderKPIs(totPed, totItens, totSkus, totRep, tempoMed, colaboradores.length);
-  pfRenderChartPedidos(colaboradores);
-  pfRenderChartItens(colaboradores);
-  pfRenderChartSkus(colaboradores);
-  pfRenderChartRepos(colaboradores);
-  pfRenderChartTempo(colaboradores);
-  pfRenderChartDia(por_dia || []);
-  pfRenderTabela(colaboradores, totPed);
+  pfRenderKPIs({ totPed, totItens, totSkus, totRep, tempoMed, tempoMin, tempoMax, liderPed, liderRep, nColab: colab.length });
+  pfRenderChartPedidos(colab);
+  pfRenderChartHoriz('itens',  colab, 'itens',      'itens');
+  pfRenderChartHoriz('skus',   colab, 'skus',       'SKUs');
+  pfRenderChartHoriz('repos',  colab, 'reposicoes', 'reposições');
+  pfRenderChartTempo(colab);
+  pfRenderChartDia(porDia);
+  pfRenderTabela(colab, totPed);
 }
 
-// ── KPIs ───────────────────────────────────────────────────────────────────
-function pfRenderKPIs(ped, itens, skus, rep, tempo, nColab) {
-  const COR = { green:'#22c55e', blue:'#38bdf8', amber:'#f59e0b', purple:'#a78bfa', red:'#ef4444', teal:'#2dd4bf' };
-  const itensPed = ped > 0 ? itens / ped : 0;
-  document.getElementById('pf-kpis').innerHTML = [
-    ['blue',   '📋 Total de Pedidos',     pfFmtN(ped),              `${nColab} colaboradores`],
-    ['green',  '📦 Total de Itens',       pfFmtN(itens),            `${itensPed.toFixed(1)} itens/ped`],
-    ['amber',  '🏷️ Total de SKUs',         pfFmtN(skus),             `${ped > 0 ? (skus/ped).toFixed(1) : 0} SKUs/ped`],
-    ['red',    '🔁 Total Reposições',     pfFmtN(rep),              `${ped > 0 ? (rep/ped*100).toFixed(1) : 0}% dos pedidos`],
-    ['purple', '⏱️ Tempo Médio/Ped',      tempo != null ? `${tempo.toFixed(1)} min` : '—', 'separação real'],
-    ['teal',   '👥 Colaboradores',        pfFmtN(nColab),           'no período'],
-  ].map(([cor,lb,val,sub]) => `
-    <div class="card" style="padding:14px 16px;border-top:3px solid ${COR[cor]};overflow:hidden">
-      <div style="font-size:9px;font-weight:800;color:var(--text3);letter-spacing:.8px;margin-bottom:5px">${lb}</div>
-      <div style="font-size:20px;font-weight:900;color:var(--text);line-height:1.1">${val}</div>
-      <div style="font-size:10px;color:var(--text3);margin-top:3px">${sub}</div>
-    </div>`).join('');
+// ── KPI Cards com gradiente ────────────────────────────────────────────────
+function pfRenderKPIs({ totPed, totItens, totSkus, totRep, tempoMed, tempoMin, tempoMax, liderPed, liderRep, nColab }) {
+  const itensPed = totPed > 0 ? (totItens / totPed).toFixed(1) : '0';
+  const skusPed  = totPed > 0 ? (totSkus  / totPed).toFixed(1) : '0';
+  const repPct   = totPed > 0 ? (totRep   / totPed * 100).toFixed(1) : '0';
+
+  const mini = (label, val) => `
+    <div>
+      <div style="font-size:8px;font-weight:700;opacity:.65;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">${label}</div>
+      <div style="font-size:15px;font-weight:800;line-height:1">${val}</div>
+    </div>`;
+
+  const card = (grad, icon, label, num, desc, stats) => `
+    <div style="background:${grad};border-radius:16px;padding:20px;color:#fff;position:relative;overflow:hidden">
+      <div style="position:absolute;right:-18px;top:-18px;width:90px;height:90px;background:rgba(255,255,255,.12);border-radius:50%"></div>
+      <div style="position:absolute;right:22px;top:28px;width:52px;height:52px;background:rgba(255,255,255,.08);border-radius:50%"></div>
+      <div style="font-size:26px;margin-bottom:4px;position:relative">${icon}</div>
+      <div style="font-size:10px;font-weight:800;letter-spacing:.8px;opacity:.85;text-transform:uppercase">${label}</div>
+      <div style="font-size:44px;font-weight:900;line-height:1.05;margin:6px 0 2px;position:relative">${num}</div>
+      <div style="font-size:11px;opacity:.75">${desc}</div>
+      <div style="border-top:1px solid rgba(255,255,255,.2);margin:12px 0 10px"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">${stats}</div>
+    </div>`;
+
+  document.getElementById('pf-kpis').innerHTML =
+    card(
+      'linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%)',
+      '📋', 'SEPARAÇÃO', pfFmtN(totPed), 'pedidos concluídos',
+      mini('COLABORADORES', nColab) +
+      mini('ITENS/PED', itensPed) +
+      mini('TOTAL ITENS', pfFmtN(totItens)) +
+      mini('TOTAL SKUs', pfFmtN(totSkus))
+    ) +
+    card(
+      'linear-gradient(135deg,#0891b2 0%,#0d9488 100%)',
+      '📦', 'ITENS', pfFmtN(totItens), 'itens separados',
+      mini('TOTAL SKUs', pfFmtN(totSkus)) +
+      mini('SKUs/PED', skusPed) +
+      mini('MAIS ITENS', liderPed ? liderPed.nome.split(' ')[0] : '—') +
+      mini('MÉDIA/DIA', _pfDados?.por_dia?.length ? pfFmtN(Math.round(totItens / _pfDados.por_dia.length)) : '—')
+    ) +
+    card(
+      'linear-gradient(135deg,#ea580c 0%,#f59e0b 100%)',
+      '🔁', 'REPOSIÇÃO', pfFmtN(totRep), 'reposições geradas',
+      mini('% DOS PEDIDOS', repPct + '%') +
+      mini('PEDIDOS SEM REP.', pfFmtN(totPed - Math.min(totRep, totPed))) +
+      mini('MAIS REPOS.', liderRep?.reposicoes ? liderRep.nome.split(' ')[0] : '—') +
+      mini('MÉD/COLAB', nColab > 0 ? (totRep / nColab).toFixed(1) : '0')
+    ) +
+    card(
+      'linear-gradient(135deg,#7c3aed 0%,#a855f7 100%)',
+      '⏱️', 'TEMPO MÉDIO', tempoMed != null ? tempoMed.toFixed(1)+' min' : '—', 'por pedido (separação)',
+      mini('MAIS RÁPIDO', tempoMin ? tempoMin.nome.split(' ')[0]+' ('+tempoMin.t.toFixed(1)+'m)' : '—') +
+      mini('MAIS LENTO', tempoMax ? tempoMax.nome.split(' ')[0]+' ('+tempoMax.t.toFixed(1)+'m)' : '—') +
+      mini('COM TEMPO', pfFmtN(tempos.length)) +
+      mini('SEM TEMPO', pfFmtN(nColab - tempos.length))
+    );
 }
 
 // ── Charts ─────────────────────────────────────────────────────────────────
@@ -298,111 +395,78 @@ function pfRenderChartPedidos(colab) {
     type: 'bar',
     data: {
       labels: colab.map(c => c.nome),
-      datasets: [{
-        data: colab.map(c => c.pedidos),
-        backgroundColor: colors.map(c => c + '99'),
-        borderColor: colors, borderWidth: 1.5, borderRadius: 6
-      }]
+      datasets: [{ data: colab.map(c => c.pedidos),
+        backgroundColor: colors.map(c => c+'99'), borderColor: colors, borderWidth:1.5, borderRadius:6 }]
     },
     options: pfChartOpts({
-      plugins: { legend: { display: false }, tooltip: { callbacks: {
+      plugins: { legend:{display:false}, tooltip:{ callbacks:{
         label: c => ` ${pfFmtN(c.parsed.y)} pedidos`,
-        afterLabel: c => `${PF_LABEL_TURNO[colab[c.dataIndex].turno] || colab[c.dataIndex].turno}`
+        afterLabel: c => PF_LABEL_TURNO[colab[c.dataIndex].turno] || colab[c.dataIndex].turno
       }}},
-      scales: {
-        x: { ticks: { ...PF_TICK, maxRotation: 40 }, grid: PF_GRID },
-        y: { ticks: { ...PF_TICK }, grid: PF_GRID }
-      }
+      scales: { x:{ ticks:{...PF_TICK,maxRotation:40}, grid:PF_GRID }, y:{ ticks:PF_TICK, grid:PF_GRID } }
     })
   });
 }
 
-function pfRenderChartHoriz(id, colab, key, label, color) {
+function pfRenderChartHoriz(id, colab, key, label) {
   pfDestroyChart(id);
   const colors = colab.map(c => pfCor(c.turno));
   _pfCharts[id] = new Chart(document.getElementById(`pf-chart-${id}`), {
     type: 'bar',
     data: {
       labels: colab.map(c => c.nome),
-      datasets: [{
-        data: colab.map(c => c[key] || 0),
-        backgroundColor: colors.map(c => c + '99'),
-        borderColor: colors, borderWidth: 1.5, borderRadius: 5
-      }]
+      datasets: [{ data: colab.map(c => c[key]||0),
+        backgroundColor: colors.map(c => c+'99'), borderColor: colors, borderWidth:1.5, borderRadius:5 }]
     },
     options: pfChartOpts({
       indexAxis: 'y',
-      plugins: { legend: { display: false }, tooltip: { callbacks: {
-        label: c => ` ${pfFmtN(c.parsed.x)} ${label}`
-      }}},
-      scales: {
-        x: { ticks: PF_TICK, grid: PF_GRID },
-        y: { ticks: { ...PF_TICK, font: { size: 11 } }, grid: PF_GRID }
-      }
+      plugins: { legend:{display:false}, tooltip:{ callbacks:{ label:c => ` ${pfFmtN(c.parsed.x)} ${label}` }}},
+      scales: { x:{ ticks:PF_TICK, grid:PF_GRID }, y:{ ticks:{...PF_TICK,font:{size:11}}, grid:PF_GRID } }
     })
   });
 }
 
-function pfRenderChartItens(c)  { pfRenderChartHoriz('itens',  c, 'itens',      'itens',      '#22c55e'); }
-function pfRenderChartSkus(c)   { pfRenderChartHoriz('skus',   c, 'skus',       'SKUs',       '#f59e0b'); }
-function pfRenderChartRepos(c)  { pfRenderChartHoriz('repos',  c, 'reposicoes', 'reposições', '#ef4444'); }
-
 function pfRenderChartTempo(colab) {
   pfDestroyChart('tempo');
-  // Ordena por tempo médio decrescente (mais rápido primeiro na exibição)
   const sorted = [...colab].filter(c => c.tempo_medio_min != null)
                            .sort((a,b) => b.tempo_medio_min - a.tempo_medio_min);
+  if (!sorted.length) return;
   const colors = sorted.map(c => pfCor(c.turno));
   _pfCharts['tempo'] = new Chart(document.getElementById('pf-chart-tempo'), {
     type: 'bar',
     data: {
       labels: sorted.map(c => c.nome),
-      datasets: [{
-        data: sorted.map(c => c.tempo_medio_min),
-        backgroundColor: colors.map(c => c + '99'),
-        borderColor: colors, borderWidth: 1.5, borderRadius: 5
-      }]
+      datasets: [{ data: sorted.map(c => c.tempo_medio_min),
+        backgroundColor: colors.map(c => c+'99'), borderColor: colors, borderWidth:1.5, borderRadius:5 }]
     },
     options: pfChartOpts({
       indexAxis: 'y',
-      plugins: { legend: { display: false }, tooltip: { callbacks: {
-        label: c => ` ${c.parsed.x.toFixed(1)} min/pedido`
-      }}},
-      scales: {
-        x: { ticks: { ...PF_TICK, callback: v => `${v}min` }, grid: PF_GRID },
-        y: { ticks: { ...PF_TICK, font: { size: 11 } }, grid: PF_GRID }
-      }
+      plugins: { legend:{display:false}, tooltip:{ callbacks:{ label:c => ` ${c.parsed.x.toFixed(1)} min/pedido` }}},
+      scales: { x:{ ticks:{...PF_TICK, callback:v=>`${v}min`}, grid:PF_GRID }, y:{ ticks:{...PF_TICK,font:{size:11}}, grid:PF_GRID } }
     })
   });
 }
 
 function pfRenderChartDia(porDia) {
   pfDestroyChart('dia');
-  const labels = porDia.map(r => { const [y,m,d] = r.data.split('-'); return `${d}/${m}`; });
+  if (!porDia?.length) return;
+  const labels = porDia.map(r => { const [y,m,d]=r.data.split('-'); return `${d}/${m}`; });
   _pfCharts['dia'] = new Chart(document.getElementById('pf-chart-dia'), {
     type: 'line',
     data: {
       labels,
-      datasets: [{
-        data: porDia.map(r => r.pedidos),
-        borderColor: '#38bdf8', backgroundColor: 'rgba(56,189,248,.1)',
-        borderWidth: 2, pointBackgroundColor: '#38bdf8', pointRadius: 4,
-        fill: true, tension: .3
-      }]
+      datasets: [{ data: porDia.map(r => r.pedidos),
+        borderColor:'#38bdf8', backgroundColor:'rgba(56,189,248,.1)',
+        borderWidth:2, pointBackgroundColor:'#38bdf8', pointRadius:4, fill:true, tension:.3 }]
     },
     options: pfChartOpts({
-      plugins: { legend: { display: false }, tooltip: { callbacks: {
-        label: c => ` ${pfFmtN(c.parsed.y)} pedidos`
-      }}},
-      scales: {
-        x: { ticks: PF_TICK, grid: PF_GRID },
-        y: { ticks: PF_TICK, grid: PF_GRID }
-      }
+      plugins: { legend:{display:false}, tooltip:{ callbacks:{ label:c=>` ${pfFmtN(c.parsed.y)} pedidos` }}},
+      scales: { x:{ ticks:PF_TICK, grid:PF_GRID }, y:{ ticks:PF_TICK, grid:PF_GRID } }
     })
   });
 }
 
-// ── Tabela ranking ─────────────────────────────────────────────────────────
+// ── Ranking ────────────────────────────────────────────────────────────────
 function pfRenderTabela(colab, totPed) {
   document.getElementById('pf-table-count').textContent = `${colab.length} colaboradores`;
   const ICONS = ['🥇','🥈','🥉'];
@@ -410,15 +474,11 @@ function pfRenderTabela(colab, totPed) {
   const T_TXT = { Manha:'#38bdf8', Tarde:'#f59e0b', Noite:'#a78bfa' };
   const maxPed = colab[0]?.pedidos || 1;
 
-  document.getElementById('pf-tbody').innerHTML = colab.map((c, i) => {
-    const pct     = totPed > 0 ? (c.pedidos / totPed * 100).toFixed(1) : '0.0';
-    const ipd     = c.pedidos > 0 ? (c.itens / c.pedidos).toFixed(1) : '—';
-    const cor     = pfCor(c.turno);
-    const tBG     = T_BG[c.turno]  || 'rgba(99,102,241,.12)';
-    const tTXT    = T_TXT[c.turno] || '#6366f1';
-    const tlbl    = PF_LABEL_TURNO[c.turno] || c.turno;
+  document.getElementById('pf-tbody').innerHTML = colab.map((c,i) => {
+    const ipd  = c.pedidos > 0 ? (c.itens/c.pedidos).toFixed(1) : '—';
+    const cor  = pfCor(c.turno);
     return `<tr style="border-bottom:1px solid rgba(51,65,85,.4)">
-      <td style="padding:10px 12px;text-align:center;font-size:14px">${ICONS[i] || `<span style="font-size:10px;color:var(--text3);font-weight:700">${i+1}</span>`}</td>
+      <td style="padding:10px 12px;text-align:center;font-size:14px">${ICONS[i]||`<span style="font-size:10px;color:var(--text3);font-weight:700">${i+1}</span>`}</td>
       <td style="padding:10px 14px">
         <div style="font-weight:700;color:var(--text);font-size:13px">${pfEsc(c.nome)}</div>
         <div style="background:var(--surface2);border-radius:3px;height:4px;margin-top:5px;overflow:hidden">
@@ -426,46 +486,42 @@ function pfRenderTabela(colab, totPed) {
         </div>
       </td>
       <td style="padding:10px 12px;text-align:center">
-        <span style="background:${tBG};color:${tTXT};border-radius:20px;padding:2px 10px;font-size:10px;font-weight:800">${tlbl}</span>
+        <span style="background:${T_BG[c.turno]||'rgba(99,102,241,.12)'};color:${T_TXT[c.turno]||'#6366f1'};border-radius:20px;padding:2px 10px;font-size:10px;font-weight:800">
+          ${PF_LABEL_TURNO[c.turno]||c.turno}
+        </span>
       </td>
       <td style="padding:10px 14px;text-align:right;font-weight:700;color:#38bdf8;font-size:13px">${pfFmtN(c.pedidos)}</td>
       <td style="padding:10px 14px;text-align:right;font-weight:600;font-size:13px">${pfFmtN(c.itens)}</td>
       <td style="padding:10px 14px;text-align:right;font-size:12px;color:#f59e0b">${pfFmtN(c.skus)}</td>
       <td style="padding:10px 14px;text-align:right;font-size:12px;color:#ef4444">${pfFmtN(c.reposicoes)}</td>
       <td style="padding:10px 14px;text-align:right;font-size:12px;color:var(--text3)">${ipd}</td>
-      <td style="padding:10px 14px;text-align:right;font-size:12px;color:#a78bfa">${c.tempo_medio_min != null ? c.tempo_medio_min.toFixed(1)+' min' : '—'}</td>
+      <td style="padding:10px 14px;text-align:right;font-size:12px;color:#a78bfa">${c.tempo_medio_min!=null?c.tempo_medio_min.toFixed(1)+' min':'—'}</td>
     </tr>`;
   }).join('');
 }
 
 // ── Exportar Excel ─────────────────────────────────────────────────────────
 function pfExportarExcel() {
-  if (!_pfDados?.colaboradores?.length) { pfToast('Sem dados para exportar.', 'aviso'); return; }
+  const colab = _pfFiltrados?.length ? _pfFiltrados : _pfDados?.colaboradores;
+  if (!colab?.length) { pfToast('Sem dados para exportar.','aviso'); return; }
 
-  const { colaboradores, por_dia } = _pfDados;
   const ini = document.getElementById('pf-ini')?.value || '';
   const fim = document.getElementById('pf-fim')?.value || '';
 
-  // ── Aba 1: Resumo por colaborador ────────────────────────────────────────
   const abaResumo = [
-    ['#', 'Colaborador', 'Turno', 'Pedidos', 'Itens', 'SKUs', 'Reposições', 'Itens/Ped', 'Tempo Médio (min)'],
-    ...colaboradores.map((c, i) => [
-      i + 1,
-      c.nome,
+    ['#','Colaborador','Turno','Pedidos','Itens','SKUs','Reposições','Itens/Ped','Tempo Médio (min)'],
+    ...colab.map((c,i) => [
+      i+1, c.nome,
       c.turno === 'Manha' ? 'Manhã' : c.turno,
-      c.pedidos,
-      c.itens,
-      c.skus,
-      c.reposicoes,
-      c.pedidos > 0 ? parseFloat((c.itens / c.pedidos).toFixed(1)) : 0,
+      c.pedidos, c.itens, c.skus, c.reposicoes,
+      c.pedidos > 0 ? parseFloat((c.itens/c.pedidos).toFixed(1)) : 0,
       c.tempo_medio_min != null ? parseFloat(c.tempo_medio_min.toFixed(1)) : '',
     ])
   ];
 
-  // ── Aba 2: Por dia ────────────────────────────────────────────────────────
   const abaDia = [
-    ['Data', 'Pedidos', 'Itens'],
-    ...(por_dia || []).map(r => {
+    ['Data','Pedidos','Itens'],
+    ...(_pfDados?.por_dia||[]).map(r => {
       const [y,m,d] = r.data.split('-');
       return [`${d}/${m}/${y}`, r.pedidos, r.itens];
     })
@@ -475,9 +531,7 @@ function pfExportarExcel() {
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(abaResumo), 'Resumo');
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(abaDia),    'Por Dia');
 
-  const iniStr = (ini||'').replace(/-/g,'');
-  const fimStr = (fim||'').replace(/-/g,'');
-  const nome   = `performance-separadores_${iniStr}${fimStr ? '-'+fimStr : ''}.xlsx`;
+  const nome = `performance-separadores_${(ini||'').replace(/-/g,'')}${fim?'-'+(fim||'').replace(/-/g,''):''}.xlsx`;
   XLSX.writeFile(wb, nome);
-  pfToast('✅ Excel exportado!', 'sucesso');
+  pfToast('✅ Excel exportado!','sucesso');
 }
