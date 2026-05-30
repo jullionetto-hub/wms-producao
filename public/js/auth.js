@@ -1028,7 +1028,9 @@ function marcarItem(itemId, passou, btnEl) {
 }
 
 // ── Submete a validação ───────────────────────────────────────────────────────
+let _submetendoValidacao = false;
 async function submeterValidacao() {
+  if (_submetendoValidacao) return;           // bloqueia duplo clique
   if (!_validacaoId) { toast('Nenhuma validação ativa','aviso'); return; }
   const itens = CHECKLIST_VAL.map(item => {
     let passou = null;
@@ -1050,19 +1052,33 @@ async function submeterValidacao() {
     toast(`Preencha a ocorrência para: "${semObs[0].label}"`, 'aviso'); return;
   }
   const obs_geral = document.getElementById('modal-val-obs')?.value || '';
+  const btnConfirmar = document.querySelector('#modal-diario-validacao button[onclick="submeterValidacao()"]');
+  _submetendoValidacao = true;
+  if (btnConfirmar) { btnConfirmar.disabled = true; btnConfirmar.textContent = '⏳ Salvando...'; }
   try {
     const r = await apiFetch(`/diario/validacao/${_validacaoId}/validar`, {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ itens, obs_geral })
     });
-    if (!r) return;
-    toast(`✅ Validação concluída! Pontuação: ${r.pontuacao}/100`, 'sucesso');
-    fecharModalValidacao();
-    _validacaoId = null;
-    const vp = document.getElementById('diario-validacao-pendente');
-    if (vp) vp.style.display = 'none';
-    await carregarListaDiarios();
-  } catch(e) { toast('Erro ao submeter validação','erro'); }
+    // Trata "já validado" como sucesso (double-click ou inconsistência de estado)
+    const pts = r?.pontuacao ?? r?.pontuacao;
+    if (r && (r.mensagem || r.erro === 'Este diário já foi validado')) {
+      const pontuacao = r.pontuacao ?? pts ?? '?';
+      toast(`✅ Validação concluída! Pontuação: ${pontuacao}/100`, 'sucesso');
+      fecharModalValidacao();
+      _validacaoId = null;
+      const vp = document.getElementById('diario-validacao-pendente');
+      if (vp) vp.style.display = 'none';
+      const badge = document.getElementById('menu-badge-diario');
+      if (badge) badge.style.display = 'none';
+      await carregarListaDiarios();
+    }
+  } catch(e) {
+    toast('Erro ao submeter validação','erro');
+  } finally {
+    _submetendoValidacao = false;
+    if (btnConfirmar) { btnConfirmar.disabled = false; btnConfirmar.textContent = '✅ Confirmar Validação'; }
+  }
 }
 
 function fecharModalValidacao() {

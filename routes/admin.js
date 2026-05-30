@@ -326,16 +326,29 @@ router.get('/diario/:id/validacao', requerAuth, requerPerfil('supervisor'), asyn
 
 // ── POST /diario/validacao/:id/validar — Submete a validação ─────────────────
 router.post('/diario/validacao/:id/validar', requerAuth, requerPerfil('supervisor'), async (req, res) => {
+  const client = await pool.connect();
   try {
     const id = validarId(req.params.id);
     if (!id) return res.status(400).json({ erro: 'ID inválido' });
-    const val = await db.get('SELECT * FROM diario_validacoes WHERE id=$1', [id]);
-    if (!val) return res.status(404).json({ erro: 'Validação não encontrada' });
-    const agora = new Date();
-    // Permite validação mesmo expirada (retroativa). Bloqueia apenas se já validado.
-    if (val.status === 'validado') return res.status(400).json({ erro: 'Este diário já foi validado' });
+
+    await client.query('BEGIN');
+
+    // Usa FOR UPDATE para evitar race condition em duplo clique
+    const { rows } = await client.query(
+      'SELECT * FROM diario_validacoes WHERE id=$1 FOR UPDATE', [id]
+    );
+    const val = rows[0];
+    if (!val) { await client.query('ROLLBACK'); return res.status(404).json({ erro: 'Validação não encontrada' }); }
+
+    // Bloqueia apenas se já concluída
+    if (val.status === 'validado') {
+      await client.query('ROLLBACK');
+      // Garante que diario_bordo também está correto (corrige inconsistência)
+      await pool.query(`UPDATE diario_bordo SET status='validado' WHERE id=$1 AND status != 'validado'`, [val.diario_id]);
+      return res.status(400).json({ erro: 'Este diário já foi validado', pontuacao: val.pontuacao });
+    }
+
     const { itens, obs_geral } = req.body;
-    // Calcula pontuação
     let pontuacao = 100;
     if (Array.isArray(itens)) {
       for (const item of itens) {
@@ -346,22 +359,32 @@ router.post('/diario/validacao/:id/validar', requerAuth, requerPerfil('superviso
       }
     }
     pontuacao = Math.max(0, pontuacao);
+    const agora    = new Date();
     const validador = req.session?.usuario?.nome || 'Supervisor';
     const turnoVal  = req.session?.usuario?.turno || '';
-    await pool.query(
+
+    await client.query(
       `UPDATE diario_validacoes
        SET status='validado', itens=$1, pontuacao=$2, obs_geral=$3,
            validador=$4, turno_validador=$5, validado_em=$6
        WHERE id=$7`,
       [JSON.stringify(itens||[]), pontuacao, obs_geral||'', validador, turnoVal, agora, id]
     );
-    await pool.query(`UPDATE diario_bordo SET status='validado' WHERE id=$1`, [val.diario_id]);
+    await client.query(`UPDATE diario_bordo SET status='validado' WHERE id=$1`, [val.diario_id]);
+
+    await client.query('COMMIT');
+
     const io = req.app.get('io');
     if (io) io.emit('diario:validado', { diario_id: val.diario_id, pontuacao, validador });
     await registrarAuditoria(req, 'DIARIO_VALIDADO', 'diario_bordo', val.diario_id, null,
       { pontuacao, validador });
     res.json({ mensagem: 'Validação concluída!', pontuacao });
-  } catch(e) { res.status(500).json({ erro: e.message }); }
+  } catch(e) {
+    await client.query('ROLLBACK').catch(()=>{});
+    res.status(500).json({ erro: e.message });
+  } finally {
+    client.release();
+  }
 });
 
 /* ══════════════════════════════════════════════════════════════
