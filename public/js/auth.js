@@ -638,13 +638,12 @@ let _valTimer       = null;   // interval do countdown
 
 // Checklist espelhada do backend
 const CHECKLIST_VAL = [
-  { id: 'meta_sep',    peso: 20, label: 'Meta de separação foi atingida' },
-  { id: 'rep_ok',      peso: 15, label: 'Reposições foram todas resolvidas' },
-  { id: 'ck_ok',       peso: 15, label: 'Fila de checkout foi zerada' },
-  { id: 'emb_ok',      peso: 15, label: 'Embalagem foi realizada em dia' },
-  { id: 'area_ok',     peso: 15, label: 'Área limpa e organizada na entrega' },
-  { id: 'obs_ok',      peso: 10, label: 'Observações do turno foram preenchidas' },
-  { id: 'passagem_ok', peso: 10, label: 'Passagem de turno foi realizada' },
+  { id: 'sep_ok',     peso: 20, label: 'As informações da Separação estão corretas' },
+  { id: 'emb_ok',     peso: 15, label: 'As informações da Embalagem estão corretas' },
+  { id: 'ck_ok',      peso: 15, label: 'As informações do Checkout estão corretas' },
+  { id: 'rep_ok',     peso: 15, label: 'As informações da Reposição estão corretas' },
+  { id: 'caixas_ok',  peso: 20, label: 'Há caixas para abastecimento pelas ruas' },
+  { id: 'estoque_ok', peso: 15, label: 'O estoque está organizado' },
 ];
 
 async function iniciarDiario() {
@@ -796,9 +795,10 @@ function atualizarStatusBanner(status, extra) {
   if (!el) return;
   const cfg = {
     rascunho: { bg:'#f1f5f9', borda:'#cbd5e1', txt:'#475569', icone:'💾', msg:'Rascunho salvo — clique em "Finalizar e Enviar" para enviar ao próximo turno' },
-    enviado:  { bg:'#eff6ff', borda:'#93c5fd', txt:'#1d4ed8', icone:'📤', msg:`Enviado para validação — prazo: ${extra||'10 min'}` },
+    enviado:  { bg:'#eff6ff', borda:'#93c5fd', txt:'#1d4ed8', icone:'📤', msg:`Enviado para validação — prazo: ${extra||'2h'}` },
     validado: { bg:'#f0fdf4', borda:'#86efac', txt:'#166534', icone:'✅', msg:`Validado pelo próximo turno — Pontuação: <b>${extra||'?'}/100</b>` },
     expirado: { bg:'#fef2f2', borda:'#fca5a5', txt:'#991b1b', icone:'⏰', msg:'Prazo de validação expirou sem resposta do próximo turno' },
+    outro:    { bg:'#fefce8', borda:'#fde68a', txt:'#92400e', icone:'👁️', msg:extra || 'Visualizando diário de outro turno — somente leitura' },
   };
   const c = cfg[status] || cfg.rascunho;
   el.style.display = '';
@@ -813,7 +813,7 @@ async function enviarDiario() {
   if (!_diarioAtualId) {
     toast('Salve o diário primeiro antes de enviar!','aviso'); return;
   }
-  if (!confirm('Confirmar envio do Diário de Bordo para validação do próximo turno?\n\nO próximo supervisor terá 10 minutos para validar.')) return;
+  if (!confirm('Confirmar envio do Diário de Bordo para validação do próximo turno?\n\nO próximo supervisor terá 2 horas para validar.')) return;
   try {
     const res = await apiFetch(`/diario/${_diarioAtualId}/enviar`, { method:'POST' });
     if (!res) return;
@@ -927,18 +927,31 @@ async function abrirModalValidacao() {
       </div>
       ${obs.geral ? `<div style="font-size:12px;color:var(--text2)"><b>Obs. geral:</b> ${escHtml(obs.geral)}</div>` : ''}`;
 
-    // Checklist
+    // Checklist com campo de observação para cada "Não"
     document.getElementById('modal-val-checklist').innerHTML = CHECKLIST_VAL.map(item => `
-      <div style="display:flex;align-items:center;gap:10px;padding:10px;border:1px solid var(--border);border-radius:8px;margin-bottom:6px;background:var(--surface2)">
-        <div style="flex:1">
-          <div style="font-size:13px;font-weight:600">${item.label}</div>
-          <div style="font-size:10px;color:var(--text3)">Peso: ${item.peso} pts</div>
+      <div id="item-wrap-${item.id}" style="border:1px solid var(--border);border-radius:10px;margin-bottom:8px;overflow:hidden">
+        <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--surface2)">
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:700;color:var(--text)">${item.label}</div>
+            <div style="font-size:10px;color:var(--text3);margin-top:2px">Penalidade se Não: −${item.peso} pts</div>
+          </div>
+          <div style="display:flex;gap:6px">
+            <button onclick="marcarItem('${item.id}',true,this)" data-item="${item.id}" data-val="true"
+              style="padding:7px 16px;border-radius:7px;border:2px solid #86efac;background:transparent;color:#16a34a;font-weight:800;font-size:13px;cursor:pointer;transition:.15s">
+              ✅ Sim
+            </button>
+            <button onclick="marcarItem('${item.id}',false,this)" data-item="${item.id}" data-val="false"
+              style="padding:7px 16px;border-radius:7px;border:2px solid #fca5a5;background:transparent;color:#dc2626;font-weight:800;font-size:13px;cursor:pointer;transition:.15s">
+              ❌ Não
+            </button>
+          </div>
         </div>
-        <div style="display:flex;gap:6px">
-          <button onclick="marcarItem('${item.id}',true,this)" data-item="${item.id}" data-val="true"
-            style="padding:6px 14px;border-radius:6px;border:2px solid #86efac;background:transparent;color:#16a34a;font-weight:700;font-size:12px;cursor:pointer">✅ Ok</button>
-          <button onclick="marcarItem('${item.id}',false,this)" data-item="${item.id}" data-val="false"
-            style="padding:6px 14px;border-radius:6px;border:2px solid #fca5a5;background:transparent;color:#dc2626;font-weight:700;font-size:12px;cursor:pointer">❌ Não</button>
+        <div id="obs-wrap-${item.id}" style="display:none;padding:10px 14px;border-top:1px solid var(--border);background:#fef2f2">
+          <label style="font-size:11px;font-weight:700;color:#991b1b;text-transform:uppercase;letter-spacing:.5px">
+            Registre o que foi encontrado / ocorrência:
+          </label>
+          <textarea id="obs-${item.id}" placeholder="Descreva a ocorrência encontrada..."
+            style="width:100%;min-height:60px;margin-top:6px;border:1px solid #fca5a5;border-radius:7px;padding:8px;font-size:12px;font-family:inherit;background:#fff;color:#1e293b;resize:vertical;box-sizing:border-box"></textarea>
         </div>
       </div>`).join('');
 
@@ -966,25 +979,36 @@ async function abrirModalValidacao() {
   } catch(e) { toast('Erro ao abrir validação','erro'); }
 }
 
-// ── Marca item do checklist como ok ou não ok ─────────────────────────────────
+// ── Marca item do checklist como Sim/Não e mostra campo de observação se Não ──
 function marcarItem(itemId, passou, btnEl) {
-  const parent = btnEl.closest('div[style*="padding:10px"]');
-  parent.querySelectorAll('button').forEach(b => {
+  // Destaca botão selecionado
+  const row = btnEl.closest(`#item-wrap-${itemId} div`);
+  if (row) row.querySelectorAll('button').forEach(b => {
     b.style.background = 'transparent';
-    b.style.fontWeight = '700';
+    b.style.boxShadow  = 'none';
   });
-  btnEl.style.background = passou ? '#dcfce7' : '#fee2e2';
+  btnEl.style.background  = passou ? '#dcfce7' : '#fee2e2';
+  btnEl.style.boxShadow   = passou ? '0 0 0 2px #16a34a' : '0 0 0 2px #dc2626';
+
+  // Mostra/oculta campo de observação
+  const obsWrap = document.getElementById(`obs-wrap-${itemId}`);
+  if (obsWrap) obsWrap.style.display = passou ? 'none' : '';
+
+  // Limpa texto se voltou para Sim
+  if (passou) {
+    const obsEl = document.getElementById(`obs-${itemId}`);
+    if (obsEl) obsEl.value = '';
+  }
+
   // Recalcula score
   let pts = 100;
   CHECKLIST_VAL.forEach(item => {
     const btns = document.querySelectorAll(`button[data-item="${item.id}"]`);
-    let marcado = null;
     btns.forEach(b => {
       if (b.style.background && b.style.background !== 'transparent') {
-        marcado = b.dataset.val === 'true';
+        if (b.dataset.val === 'false') pts -= item.peso;
       }
     });
-    if (marcado === false) pts -= item.peso;
   });
   const scoreEl = document.getElementById('modal-val-score');
   if (scoreEl) {
@@ -1003,11 +1027,17 @@ async function submeterValidacao() {
         passou = b.dataset.val === 'true';
       }
     });
-    return { id: item.id, label: item.label, peso: item.peso, passou };
+    const obs = (!passou && document.getElementById(`obs-${item.id}`)?.value) || '';
+    return { id: item.id, label: item.label, peso: item.peso, passou, obs };
   });
   const naoMarcados = itens.filter(i => i.passou === null);
   if (naoMarcados.length > 0) {
-    toast(`Marque todos os itens antes de confirmar (${naoMarcados.length} pendentes)`, 'aviso'); return;
+    toast(`Responda todos os itens antes de confirmar (${naoMarcados.length} pendentes)`, 'aviso'); return;
+  }
+  // Verifica se itens marcados como "Não" têm observação preenchida
+  const semObs = itens.filter(i => i.passou === false && !i.obs.trim());
+  if (semObs.length > 0) {
+    toast(`Preencha a ocorrência para: "${semObs[0].label}"`, 'aviso'); return;
   }
   const obs_geral = document.getElementById('modal-val-obs')?.value || '';
   try {
@@ -1073,6 +1103,26 @@ async function verDiario(id) {
     if (document.getElementById('diario-obs-rep')) document.getElementById('diario-obs-rep').value = obs.reposicao||'';
     if (document.getElementById('diario-obs-geral')) document.getElementById('diario-obs-geral').value = obs.geral||'';
     window._dadosDiario = d.dados;
+    _diarioAtualId = d.id;
+
+    // Bloqueia edição se pertence a outro supervisor ou já foi enviado/validado
+    const meuNome  = usuarioAtual?.nome || '';
+    const ehMeu    = !d.supervisor || d.supervisor === meuNome;
+    const bloqueado = !ehMeu || d.status === 'enviado' || d.status === 'validado';
+    document.querySelectorAll('#pag-diario textarea').forEach(el => {
+      el.readOnly = bloqueado;
+      el.style.opacity = bloqueado ? '.65' : '1';
+      el.style.cursor  = bloqueado ? 'not-allowed' : '';
+    });
+    const btnSalvar = document.querySelector('#pag-diario button[onclick="salvarDiario()"]');
+    const btnEnviar = document.getElementById('btn-enviar-diario');
+    if (btnSalvar) btnSalvar.disabled = bloqueado;
+    if (btnEnviar) btnEnviar.disabled = bloqueado || d.status === 'enviado' || d.status === 'validado';
+    if (!ehMeu) {
+      atualizarStatusBanner('outro', `Diário de ${d.supervisor} — somente leitura`);
+    } else {
+      atualizarStatusBanner(d.status || 'rascunho');
+    }
     const dd = d.dados||{};
     if (dd.separacao) {
       document.getElementById('diario-sep-total').textContent = dd.separacao.total||0;

@@ -203,8 +203,20 @@ router.post('/diario', requerAuth, requerPerfil('supervisor'), async (req,res) =
     const {data, turno, dados, observacoes, leu_anterior} = req.body;
     if (!data || !turno) return res.status(400).json({erro:'Data e turno obrigatorios'});
     const supervisor = req.session?.usuario?.nome || 'Supervisor';
-    const existe = await db.get('SELECT id FROM diario_bordo WHERE data=$1 AND turno=$2', [data, turno]);
+    const existe = await db.get('SELECT id, supervisor, status FROM diario_bordo WHERE data=$1 AND turno=$2', [data, turno]);
     if (existe) {
+      // Bloqueia edição se o diário foi criado por outro supervisor (não o atual)
+      if (existe.supervisor && existe.supervisor !== supervisor) {
+        return res.status(403).json({
+          erro: `Este diário já foi criado pelo supervisor "${existe.supervisor}". Você não pode alterá-lo.`
+        });
+      }
+      // Bloqueia edição se já foi enviado/validado
+      if (existe.status === 'enviado' || existe.status === 'validado') {
+        return res.status(403).json({
+          erro: `Este diário já foi ${existe.status === 'enviado' ? 'enviado para validação' : 'validado'} e não pode ser alterado.`
+        });
+      }
       await pool.query('UPDATE diario_bordo SET dados=$1,observacoes=$2,supervisor=$3,leu_anterior=$4 WHERE id=$5',
         [JSON.stringify(dados||{}), JSON.stringify(observacoes||{}), supervisor, leu_anterior||false, existe.id]);
       res.json({mensagem:'Diario atualizado!', id: existe.id});
@@ -216,15 +228,14 @@ router.post('/diario', requerAuth, requerPerfil('supervisor'), async (req,res) =
   } catch(e) { res.status(500).json({erro:e.message}); }
 });
 
-// ── Checklist de validação (ordem e pesos fixos — 100 pts total) ──────────────
+// ── Checklist de validação (pesos somam 100) ──────────────────────────────────
 const CHECKLIST_ITENS = [
-  { id: 'meta_sep',    peso: 20, label: 'Meta de separação foi atingida' },
-  { id: 'rep_ok',      peso: 15, label: 'Reposições foram todas resolvidas' },
-  { id: 'ck_ok',       peso: 15, label: 'Fila de checkout foi zerada' },
-  { id: 'emb_ok',      peso: 15, label: 'Embalagem foi realizada em dia' },
-  { id: 'area_ok',     peso: 15, label: 'Área limpa e organizada na entrega' },
-  { id: 'obs_ok',      peso: 10, label: 'Observações do turno foram preenchidas' },
-  { id: 'passagem_ok', peso: 10, label: 'Passagem de turno foi realizada' },
+  { id: 'sep_ok',     peso: 20, label: 'As informações da Separação estão corretas' },
+  { id: 'emb_ok',     peso: 15, label: 'As informações da Embalagem estão corretas' },
+  { id: 'ck_ok',      peso: 15, label: 'As informações do Checkout estão corretas' },
+  { id: 'rep_ok',     peso: 15, label: 'As informações da Reposição estão corretas' },
+  { id: 'caixas_ok',  peso: 20, label: 'Há caixas para abastecimento pelas ruas' },
+  { id: 'estoque_ok', peso: 15, label: 'O estoque está organizado' },
 ];
 
 // ── POST /diario/:id/enviar — Finaliza e envia para validação ─────────────────
