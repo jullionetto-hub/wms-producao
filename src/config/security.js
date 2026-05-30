@@ -57,8 +57,10 @@ const cspDirectives = {
 };
 
 const helmetMiddleware = helmet({
+  // reportOnly: false → modo enforcing: CSP ativamente bloqueia violações.
+  // Validado em report-only — sem violações legítimas detectadas.
   contentSecurityPolicy: isProd
-    ? { reportOnly: true, directives: cspDirectives }  // observa violações sem bloquear
+    ? { reportOnly: false, directives: cspDirectives }
     : false,
   crossOriginEmbedderPolicy: false,
 });
