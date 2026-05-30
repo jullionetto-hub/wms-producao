@@ -249,7 +249,7 @@ router.post('/diario/:id/enviar', requerAuth, requerPerfil('supervisor'), async 
       return res.status(400).json({ erro: 'Este diário já foi enviado ou validado' });
     }
     const agora = new Date();
-    const prazo  = new Date(agora.getTime() + 2 * 60 * 60 * 1000); // +2 horas
+    const prazo  = new Date(agora.getTime() + 30 * 60 * 1000); // +30 minutos
     await pool.query(
       `UPDATE diario_bordo SET status='enviado', enviado_em=$1, prazo_validacao=$2 WHERE id=$3`,
       [agora, prazo, id]
@@ -290,7 +290,21 @@ router.get('/diario/validacao/pendente', requerAuth, requerPerfil('supervisor'),
       `UPDATE diario_bordo SET status='expirado'
        WHERE status='enviado' AND prazo_validacao < $1`, [agora]
     );
-    // Busca pendente OU expirado não validado (até 24h para retroativa)
+    // Turno do supervisor logado → determina qual turno anterior deve validar
+    const supervisorAtual = req.session?.usuario?.nome || '';
+    const turnoAtual = (req.session?.usuario?.turno || '').replace('ã','a').replace('Manh','Manha');
+    // Manhã valida Noite, Tarde valida Manhã, Noite valida Tarde
+    const PREV_TURNO = { Tarde: 'Manha', Noite: 'Tarde', Manha: 'Noite' };
+    const turnoParaValidar = PREV_TURNO[turnoAtual] || null;
+
+    // Busca pendente OU expirado (até 24h retroativo)
+    // Exclui: (1) diários criados pelo próprio supervisor, (2) turno errado
+    const params = [supervisorAtual];
+    let extraFiltro = '';
+    if (turnoParaValidar) {
+      params.push(turnoParaValidar);
+      extraFiltro = `AND d.turno = $${params.length}`;
+    }
     const val = await db.get(`
       SELECT v.id AS validacao_id, v.prazo, v.status AS val_status,
              d.id AS diario_id, d.data, d.turno, d.supervisor, d.dados, d.observacoes
@@ -298,9 +312,11 @@ router.get('/diario/validacao/pendente', requerAuth, requerPerfil('supervisor'),
       JOIN diario_bordo d ON d.id = v.diario_id
       WHERE v.status IN ('pendente','expirado')
         AND d.criado_em > NOW() - INTERVAL '24 hours'
+        AND d.supervisor != $1
+        ${extraFiltro}
       ORDER BY v.prazo ASC
       LIMIT 1
-    `);
+    `, params);
     if (!val) return res.json(null);
     if (typeof val.dados === 'string') val.dados = JSON.parse(val.dados || '{}');
     if (typeof val.observacoes === 'string') val.observacoes = JSON.parse(val.observacoes || '{}');

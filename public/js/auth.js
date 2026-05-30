@@ -795,7 +795,7 @@ function atualizarStatusBanner(status, extra) {
   if (!el) return;
   const cfg = {
     rascunho: { bg:'#f1f5f9', borda:'#cbd5e1', txt:'#475569', icone:'💾', msg:'Rascunho salvo — clique em "Finalizar e Enviar" para enviar ao próximo turno' },
-    enviado:  { bg:'#eff6ff', borda:'#93c5fd', txt:'#1d4ed8', icone:'📤', msg:`Enviado para validação — prazo: ${extra||'2h'}` },
+    enviado:  { bg:'#eff6ff', borda:'#93c5fd', txt:'#1d4ed8', icone:'📤', msg:`Enviado para validação — prazo: ${extra||'30 min'}` },
     validado: { bg:'#f0fdf4', borda:'#86efac', txt:'#166534', icone:'✅', msg:`Validado pelo próximo turno — Pontuação: <b>${extra||'?'}/100</b>` },
     expirado: { bg:'#fef2f2', borda:'#fca5a5', txt:'#991b1b', icone:'⏰', msg:'Prazo de validação expirou sem resposta do próximo turno' },
     outro:    { bg:'#fefce8', borda:'#fde68a', txt:'#92400e', icone:'👁️', msg:extra || 'Visualizando diário de outro turno — somente leitura' },
@@ -813,7 +813,7 @@ async function enviarDiario() {
   if (!_diarioAtualId) {
     toast('Salve o diário primeiro antes de enviar!','aviso'); return;
   }
-  if (!confirm('Confirmar envio do Diário de Bordo para validação do próximo turno?\n\nO próximo supervisor terá 2 horas para validar.')) return;
+  if (!confirm('Confirmar envio do Diário de Bordo para validação do próximo turno?\n\nO próximo supervisor terá 30 minutos para validar.')) return;
   try {
     const res = await apiFetch(`/diario/${_diarioAtualId}/enviar`, { method:'POST' });
     if (!res) return;
