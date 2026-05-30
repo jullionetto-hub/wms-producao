@@ -881,9 +881,9 @@ function iniciarCountdown(segundos) {
     restante--;
     if (restante <= 0) {
       clearInterval(_valTimer);
-      const vp = document.getElementById('diario-validacao-pendente');
-      if (vp) vp.style.display = 'none';
-      toast('Prazo de validação expirou!','aviso');
+      // Mantém o banner visível mas muda para indicar que está atrasada
+      // (não oculta — validação retroativa ainda é possível)
+      if (el) { el.textContent = '⚠️ Atrasada'; el.style.color='#fcd34d'; }
       return;
     }
     if (el) {
@@ -968,7 +968,17 @@ async function abrirModalValidacao() {
     _valTimer = setInterval(() => {
       restante--;
       const timerEl = document.getElementById('modal-val-timer');
-      if (restante <= 0) { clearInterval(_valTimer); fecharModalValidacao(); toast('Prazo expirado!','aviso'); return; }
+      if (restante <= 0) {
+        clearInterval(_valTimer);
+        // NÃO fecha o modal — apenas indica que expirou e permite validação retroativa
+        if (timerEl) { timerEl.textContent = 'Expirado'; timerEl.style.color='#f97316'; timerEl.style.fontSize='13px'; }
+        const subtitulo = document.getElementById('modal-val-subtitulo');
+        if (subtitulo && !subtitulo.dataset.exp) {
+          subtitulo.dataset.exp = '1';
+          subtitulo.innerHTML += ' <span style="background:#fef3c7;color:#92400e;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:700">⚠️ Atrasada — validação ainda possível</span>';
+        }
+        return;
+      }
       if (timerEl) {
         const mm = Math.floor(restante/60).toString().padStart(2,'0');
         const ss = (restante%60).toString().padStart(2,'0');
