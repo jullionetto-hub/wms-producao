@@ -238,7 +238,7 @@ router.post('/diario/:id/enviar', requerAuth, requerPerfil('supervisor'), async 
       return res.status(400).json({ erro: 'Este diário já foi enviado ou validado' });
     }
     const agora = new Date();
-    const prazo  = new Date(agora.getTime() + 10 * 60 * 1000); // +10 min
+    const prazo  = new Date(agora.getTime() + 2 * 60 * 60 * 1000); // +2 horas
     await pool.query(
       `UPDATE diario_bordo SET status='enviado', enviado_em=$1, prazo_validacao=$2 WHERE id=$3`,
       [agora, prazo, id]
@@ -265,11 +265,12 @@ router.post('/diario/:id/enviar', requerAuth, requerPerfil('supervisor'), async 
   } catch(e) { res.status(500).json({ erro: e.message }); }
 });
 
-// ── GET /diario/validacao/pendente — Validações aguardando o turno atual ──────
+// ── GET /diario/validacao/pendente — Validações pendentes OU expiradas aguardando ──
+// Retorna também expiradas para permitir validação retroativa
 router.get('/diario/validacao/pendente', requerAuth, requerPerfil('supervisor'), async (req, res) => {
   try {
     const agora = new Date();
-    // Expira registros vencidos
+    // Marca expiradas (só muda status, não impede validação retroativa)
     await pool.query(
       `UPDATE diario_validacoes SET status='expirado'
        WHERE status='pendente' AND prazo < $1`, [agora]
@@ -278,12 +279,14 @@ router.get('/diario/validacao/pendente', requerAuth, requerPerfil('supervisor'),
       `UPDATE diario_bordo SET status='expirado'
        WHERE status='enviado' AND prazo_validacao < $1`, [agora]
     );
+    // Busca pendente OU expirado não validado (até 24h para retroativa)
     const val = await db.get(`
       SELECT v.id AS validacao_id, v.prazo, v.status AS val_status,
              d.id AS diario_id, d.data, d.turno, d.supervisor, d.dados, d.observacoes
       FROM diario_validacoes v
       JOIN diario_bordo d ON d.id = v.diario_id
-      WHERE v.status = 'pendente'
+      WHERE v.status IN ('pendente','expirado')
+        AND d.criado_em > NOW() - INTERVAL '24 hours'
       ORDER BY v.prazo ASC
       LIMIT 1
     `);
@@ -291,7 +294,8 @@ router.get('/diario/validacao/pendente', requerAuth, requerPerfil('supervisor'),
     if (typeof val.dados === 'string') val.dados = JSON.parse(val.dados || '{}');
     if (typeof val.observacoes === 'string') val.observacoes = JSON.parse(val.observacoes || '{}');
     const restante = Math.max(0, Math.floor((new Date(val.prazo) - agora) / 1000));
-    res.json({ ...val, restante_segundos: restante, checklist: CHECKLIST_ITENS });
+    const atrasada = val.val_status === 'expirado';
+    res.json({ ...val, restante_segundos: restante, atrasada, checklist: CHECKLIST_ITENS });
   } catch(e) { res.status(500).json({ erro: e.message }); }
 });
 
@@ -317,12 +321,8 @@ router.post('/diario/validacao/:id/validar', requerAuth, requerPerfil('superviso
     const val = await db.get('SELECT * FROM diario_validacoes WHERE id=$1', [id]);
     if (!val) return res.status(404).json({ erro: 'Validação não encontrada' });
     const agora = new Date();
-    if (val.status !== 'pendente') return res.status(400).json({ erro: 'Esta validação não está mais pendente' });
-    if (new Date(val.prazo) < agora) {
-      await pool.query(`UPDATE diario_validacoes SET status='expirado' WHERE id=$1`, [id]);
-      await pool.query(`UPDATE diario_bordo SET status='expirado' WHERE id=$1`, [val.diario_id]);
-      return res.status(400).json({ erro: 'O prazo de validação de 10 minutos expirou' });
-    }
+    // Permite validação mesmo expirada (retroativa). Bloqueia apenas se já validado.
+    if (val.status === 'validado') return res.status(400).json({ erro: 'Este diário já foi validado' });
     const { itens, obs_geral } = req.body;
     // Calcula pontuação
     let pontuacao = 100;
