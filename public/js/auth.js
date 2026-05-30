@@ -630,8 +630,6 @@ async function confirmarZerarDados() {
 /* ══════════════════════════════════════════
    DIÁRIO DE BORDO + SISTEMA DE VALIDAÇÃO
 ══════════════════════════════════════════ */
-let _diarioAnterior = null;
-let _leuAnterior    = false;
 let _diarioAtualId  = null;   // id do diário salvo/carregado
 let _validacaoId    = null;   // id da diario_validacoes pendente
 let _valTimer       = null;   // interval do countdown
@@ -650,70 +648,11 @@ async function iniciarDiario() {
   const hj = hojeLocal();
   const dataEl = document.getElementById('diario-data');
   if (dataEl && !dataEl.value) dataEl.value = hj;
-  await verificarTurnoAnterior();
   await carregarDadosDiario();
   await carregarListaDiarios();
   await verificarValidacaoPendente();
 }
 
-async function verificarTurnoAnterior() {
-  const data = document.getElementById('diario-data')?.value || hojeLocal();
-  const turno = document.getElementById('diario-turno')?.value || 'Manha';
-  const aviso = document.getElementById('diario-aviso-anterior');
-  _leuAnterior = false;
-  try {
-    const res = await fetch(`${API}/diario/anterior?data=${data}&turno=${turno}`, { credentials:'include' });
-    _diarioAnterior = res.ok ? await res.json() : null;
-    if (!aviso) return;
-    if (!_diarioAnterior) { aviso.style.display = 'none'; return; }
-    const d = _diarioAnterior;
-    const obs = d.observacoes || {};
-    const turnoIcon = d.turno === 'Manha' ? '☀️' : d.turno === 'Tarde' ? '🌅' : '🌙';
-    aviso.style.display = 'block';
-    aviso.innerHTML = `
-      <div style="background:#fefce8;border:1.5px solid #fde68a;border-radius:10px;padding:16px;margin-bottom:16px">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-          <span style="font-size:20px">${turnoIcon}</span>
-          <div>
-            <div style="font-weight:700;font-size:14px;color:#92400e">Leitura obrigatória — Turno anterior</div>
-            <div style="font-size:12px;color:#b45309">${d.data} · ${d.turno} · ${d.supervisor}</div>
-          </div>
-        </div>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px">
-          <div style="background:#fff;border-radius:8px;padding:10px;text-align:center">
-            <div style="font-size:18px;font-weight:700;color:#0f172a">${d.dados?.separacao?.concluidos||0}/${d.dados?.separacao?.total||0}</div>
-            <div style="font-size:10px;color:#64748b;text-transform:uppercase">Separação</div>
-          </div>
-          <div style="background:#fff;border-radius:8px;padding:10px;text-align:center">
-            <div style="font-size:18px;font-weight:700;color:#0f172a">${d.dados?.checkout?.concluidos||0}/${d.dados?.checkout?.total||0}</div>
-            <div style="font-size:10px;color:#64748b;text-transform:uppercase">Checkout</div>
-          </div>
-          <div style="background:#fff;border-radius:8px;padding:10px;text-align:center">
-            <div style="font-size:18px;font-weight:700;color:#dc2626">${d.dados?.reposicao?.nao_encontrados||0}</div>
-            <div style="font-size:10px;color:#64748b;text-transform:uppercase">Não encontr.</div>
-          </div>
-        </div>
-        ${obs.separacao ? `<div style="margin-bottom:6px"><b style="font-size:11px;color:#92400e">Obs. Separação:</b> <span style="font-size:12px">${obs.separacao}</span></div>` : ''}
-        ${obs.checkout ? `<div style="margin-bottom:6px"><b style="font-size:11px;color:#92400e">Obs. Checkout:</b> <span style="font-size:12px">${obs.checkout}</span></div>` : ''}
-        ${obs.reposicao ? `<div style="margin-bottom:6px"><b style="font-size:11px;color:#92400e">Obs. Reposição:</b> <span style="font-size:12px">${obs.reposicao}</span></div>` : ''}
-        ${obs.geral ? `<div style="margin-bottom:6px"><b style="font-size:11px;color:#92400e">Obs. Geral:</b> <span style="font-size:12px">${obs.geral}</span></div>` : ''}
-        <button onclick="confirmarLeitura()" style="width:100%;padding:10px;background:#d97706;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;margin-top:8px">
-          ✓ Confirmo que li o relatório do turno anterior
-        </button>
-      </div>`;
-  } catch(e) { if (aviso) aviso.style.display = 'none'; }
-}
-
-function confirmarLeitura() {
-  _leuAnterior = true;
-  const aviso = document.getElementById('diario-aviso-anterior');
-  if (aviso) aviso.innerHTML = `
-    <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;gap:10px">
-      <span style="font-size:20px">✅</span>
-      <div style="font-size:13px;font-weight:600;color:#166534">Turno anterior lido e confirmado</div>
-    </div>`;
-  toast('Leitura confirmada!','sucesso');
-}
 
 async function carregarDadosDiario() {
   const data = document.getElementById('diario-data')?.value || hojeLocal();
@@ -762,11 +701,6 @@ async function salvarDiario() {
   const data = document.getElementById('diario-data')?.value;
   const turno = document.getElementById('diario-turno')?.value;
   if (!data || !turno) { toast('Selecione data e turno','aviso'); return; }
-  if (_diarioAnterior && !_leuAnterior) {
-    toast('Confirme a leitura do turno anterior antes de salvar!','aviso');
-    document.getElementById('diario-aviso-anterior')?.scrollIntoView({behavior:'smooth'});
-    return;
-  }
   const observacoes = {
     separacao: document.getElementById('diario-obs-sep')?.value || '',
     checkout: document.getElementById('diario-obs-ck')?.value || '',
