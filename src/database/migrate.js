@@ -2,6 +2,8 @@
 // Executa o schema completo (tabelas + índices).
 // Todas as tabelas usam CREATE IF NOT EXISTS, então é seguro rodar múltiplas vezes.
 
+const crypto              = require('crypto');
+const bcrypt              = require('bcrypt');
 const { pool }            = require('../../lib/db');
 const { TABLES, INDEXES } = require('./schema');
 const log                 = require('../../lib/logger');
@@ -80,6 +82,58 @@ async function runSchema() {
     await pool.query(sql).catch(e => log.warn({ err: e }, 'índice (2ª tentativa): ignorado'));
   }
   log.info('schema, índices e migrações aplicados com sucesso');
+
+  // Migração de segurança: força troca de senha para usuários com hash SHA-256 legado.
+  // SHA-256 com salt fixo é muito mais fraco que bcrypt — crackável em minutos com GPU.
+  // Esses usuários nunca fizeram login desde a implementação do bcrypt.
+  await migrarHashesLegados();
+}
+
+/**
+ * Identifica usuários ativos com hash SHA-256 legado (não começa com $2) e força
+ * redefinição de senha na próxima entrada. Gera uma senha temporária aleatória,
+ * faz o hash com bcrypt e registra no log para o admin comunicar aos usuários.
+ */
+async function migrarHashesLegados() {
+  try {
+    const { rows } = await pool.query(
+      `SELECT id, login, nome FROM usuarios
+       WHERE status = 'ativo'
+         AND senha_hash IS NOT NULL
+         AND senha_hash != ''
+         AND senha_hash NOT LIKE '$2%'
+         AND senha_temporaria = false`
+    );
+
+    if (rows.length === 0) return;
+
+    log.warn({ total: rows.length }, '⚠️  Usuários com hash SHA-256 legado detectados — forçando redefinição de senha');
+
+    for (const u of rows) {
+      // Senha temporária: 8 caracteres aleatórios (maiúsculas + dígitos)
+      const tempPlain = crypto.randomBytes(4).toString('hex').toUpperCase(); // ex: "A3F8B1C2"
+      const tempHash  = await bcrypt.hash(tempPlain, 12);
+      const expira    = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 dias
+
+      await pool.query(
+        `UPDATE usuarios
+            SET senha_hash = $1,
+                senha_temporaria = true,
+                senha_temporaria_expira = $2
+          WHERE id = $3`,
+        [tempHash, expira, u.id]
+      );
+
+      // Loga a senha temporária para o admin comunicar ao usuário
+      // IMPORTANTE: esse log fica visível nos logs do Railway — informe e delete após uso
+      log.warn({ login: u.login, nome: u.nome, senha_temporaria: tempPlain, expira_em: expira.toISOString() },
+        `⚠️  Hash legado migrado — informe a senha temporária ao usuário e oriente a trocar`);
+    }
+
+    log.warn({ total: rows.length }, '✅  Migração de hashes legados concluída — verifique os logs acima para senhas temporárias');
+  } catch (e) {
+    log.error({ err: e }, 'Erro na migração de hashes legados (não fatal)');
+  }
 }
 
 module.exports = { runSchema };

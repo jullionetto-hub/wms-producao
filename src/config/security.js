@@ -30,7 +30,37 @@ function extraHeaders(req, res, next) {
 }
 
 const helmetMiddleware = helmet({
-  contentSecurityPolicy: false,
+  // CSP habilitado: bloqueia scripts de domínios não autorizados e eval().
+  // 'unsafe-inline' é necessário pois o app usa onclick= e style= inline extensivamente.
+  // O principal ganho é impedir carregamento de scripts externos não listados.
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc:  ["'self'"],
+      scriptSrc: [
+        "'self'",
+        "'unsafe-inline'",           // onclick= e blocos <script> inline
+        "cdn.jsdelivr.net",          // Chart.js
+        "cdn.sheetjs.com",           // SheetJS / xlsx
+      ],
+      styleSrc: [
+        "'self'",
+        "'unsafe-inline'",           // style= inline extensivo no app
+        "fonts.googleapis.com",
+      ],
+      fontSrc:    ["'self'", "fonts.gstatic.com"],
+      imgSrc:     ["'self'", "data:", "blob:"],
+      connectSrc: ["'self'", "wss:", "ws:"],  // socket.io
+      workerSrc:  ["'self'"],                  // service worker
+      frameSrc:   ["'none'"],
+      objectSrc:  ["'none'"],
+      baseUri:    ["'self'"],
+      formAction: ["'self'"],
+      // Impede que o app seja embarcado em iframes de outros domínios
+      frameAncestors: ["'none'"],
+      // Bloqueia upgrade de requisições (reforço HTTPS)
+      upgradeInsecureRequests: [],
+    },
+  },
   crossOriginEmbedderPolicy: false,
 });
 
