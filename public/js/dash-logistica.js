@@ -357,15 +357,20 @@ async function dlCarregarImportacoes() {
     </div>`;
 }
 
-async function dlExcluirImportacao(id, nome) {
-  if (!confirm(`Excluir a importação "${nome}" e todos os seus pedidos do banco?\n\nEssa ação não pode ser desfeita.`)) return;
-
-  const r = await apiFetch(`/dash-logistica/importacoes/${id}`, { method:'DELETE' });
-  if (r?.erro) { dlToast('Erro ao excluir: '+r.erro, 'erro'); return; }
-
-  dlToast('✅ Importação excluída com sucesso.', 'sucesso');
-  dlCarregarImportacoes();
-  dlInicializar();
+function dlExcluirImportacao(id, nome) {
+  wmsConfirm({
+    icone:      '🗑️',
+    titulo:     'Excluir importação?',
+    sub:        `"${nome}" e todos os seus pedidos serão removidos do banco. Esta ação não pode ser desfeita.`,
+    btnOk:      'Excluir',
+    btnOkClass: 'btn-danger',
+  }, async () => {
+    const r = await apiFetch(`/dash-logistica/importacoes/${id}`, { method:'DELETE' });
+    if (r?.erro) { dlToast('Erro ao excluir: '+r.erro, 'erro'); return; }
+    dlToast('✅ Importação excluída com sucesso.', 'sucesso');
+    dlCarregarImportacoes();
+    dlInicializar();
+  });
 }
 
 // ── Upload de arquivo ─────────────────────────────────────────────────────

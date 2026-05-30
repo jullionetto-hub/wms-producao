@@ -489,8 +489,13 @@ async function confirmarZerarDados() {
   const data = prompt(`Zerar TODOS os dados operacionais de qual data?\n(deixe em branco para hoje: ${hoje})`, hoje);
   if (data === null) return; // cancelou
   const dia = data.trim() || hoje;
-  const ok = confirm(`⚠️ ATENÇÃO\n\nIsso vai apagar PERMANENTEMENTE:\n• Pedidos\n• Checkout\n• Embalagem\n• Reposições\n• Sessões de trabalho\n\nda data ${dia}.\n\nConfirmar?`);
-  if (!ok) return;
+  wmsConfirm({
+    icone:      '⚠️',
+    titulo:     `Zerar dados de ${dia}?`,
+    sub:        'Serão apagados PERMANENTEMENTE: Pedidos, Checkout, Embalagem, Reposições e Sessões de trabalho desta data.',
+    btnOk:      'Zerar dados',
+    btnOkClass: 'btn-danger',
+  }, async () => {
 
   try {
     const res = await fetch(`${API}/admin/zerar-dados-teste`, {
@@ -504,7 +509,8 @@ async function confirmarZerarDados() {
     const r = d.removidos;
     alert(`✅ Dados de ${dia} removidos!\n\nPedidos: ${r.pedidos}\nCheckout: ${r.checkout}\nEmbalagem: ${r.embalagem}\nReposição: ${r.reposicao}\nSessões: ${r.sessoes}`);
     carregarDashboard();
-  } catch(e) { alert('Erro de conexão: ' + e.message); }
+  } catch(e) { toast('Erro de conexão: ' + e.message, 'erro'); }
+  });
 }
 
 async function carregarDashboard() {

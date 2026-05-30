@@ -2164,12 +2164,13 @@
 
     <!-- Modal Confirmação Genérico -->
     <div id="modal-confirm" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center">
-      <div style="background:var(--surface);border-radius:16px;padding:32px;max-width:360px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3)">
-        <div style="font-size:48px;margin-bottom:16px">❗</div>
-        <div id="modal-confirm-msg" style="font-size:16px;font-weight:600;color:var(--text);margin-bottom:24px">Confirmar ação?</div>
-        <div style="display:flex;gap:10px;justify-content:center">
-          <button onclick="_cancelarWms()" class="btn btn-outline" style="flex:1;padding:12px">Cancelar</button>
-          <button onclick="_confirmarWms()" class="btn btn-danger" style="flex:1;padding:12px">Confirmar</button>
+      <div style="background:var(--surface);border-radius:20px;padding:32px 28px;max-width:380px;width:92%;text-align:center;box-shadow:0 24px 64px rgba(0,0,0,.3)">
+        <div id="modal-confirm-icon" style="font-size:52px;margin-bottom:14px">❓</div>
+        <div id="modal-confirm-titulo" style="font-size:19px;font-weight:800;color:var(--text);margin-bottom:8px">Confirmar ação?</div>
+        <div id="modal-confirm-sub" style="font-size:13px;color:var(--text3);margin-bottom:26px;line-height:1.5"></div>
+        <div style="display:flex;gap:10px">
+          <button onclick="_cancelarWms()" class="btn btn-outline" style="flex:1;padding:13px;font-size:14px">Cancelar</button>
+          <button id="modal-confirm-btn-ok" onclick="_confirmarWms()" class="btn btn-primary" style="flex:1;padding:13px;font-size:14px;font-weight:700">Confirmar</button>
         </div>
       </div>
     </div>

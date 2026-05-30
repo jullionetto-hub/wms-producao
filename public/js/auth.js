@@ -614,16 +614,28 @@ async function salvarEdicaoUsuario() {
     carregarUsuarios();
   } catch(e) { toast('Erro ao salvar!','erro'); }
 }
-async function confirmarZerarDados() {
-  var conf = confirm('ATENCAO - Isso vai apagar TODOS os pedidos, reposicoes e checkouts. Usuarios NAO serao apagados. Tem certeza?');
-  if (!conf) return;
-  var conf2 = confirm('Tem ABSOLUTA certeza? Esta acao nao pode ser desfeita.');
-  if (!conf2) return;
-  try {
-    var res = await fetch(API + '/admin/zerar-dados', { method:'POST', credentials:'include', headers:{'Content-Type':'application/json'}, body: JSON.stringify({confirmar:'ZERAR_TUDO_CONFIRMO'}) });
-    var data = await res.json();
-    if (res.ok) { toast('Dados zerados!','sucesso'); } else { toast('Erro: '+data.erro,'erro'); }
-  } catch(e) { toast('Erro ao zerar','erro'); }
+function confirmarZerarDados() {
+  wmsConfirm({
+    icone: '⚠️',
+    titulo: 'Zerar todos os dados?',
+    sub: 'Apaga TODOS os pedidos, reposições e checkouts. Usuários NÃO serão apagados. Esta ação não pode ser desfeita.',
+    btnOk: 'Sim, zerar tudo',
+    btnOkClass: 'btn-danger',
+  }, () => {
+    wmsConfirm({
+      icone: '🔴',
+      titulo: 'Tem ABSOLUTA certeza?',
+      sub: 'Não há como recuperar os dados após esta ação.',
+      btnOk: 'Confirmo — zerar agora',
+      btnOkClass: 'btn-danger',
+    }, async () => {
+      try {
+        var res = await fetch(API + '/admin/zerar-dados', { method:'POST', credentials:'include', headers:{'Content-Type':'application/json'}, body: JSON.stringify({confirmar:'ZERAR_TUDO_CONFIRMO'}) });
+        var data = await res.json();
+        if (res.ok) { toast('Dados zerados!','sucesso'); } else { toast('Erro: '+data.erro,'erro'); }
+      } catch(e) { toast('Erro ao zerar','erro'); }
+    });
+  });
 }
 
 
@@ -743,20 +755,27 @@ function atualizarStatusBanner(status, extra) {
 }
 
 // ── Finaliza e envia para validação ───────────────────────────────────────────
-async function enviarDiario() {
+function enviarDiario() {
   if (!_diarioAtualId) {
     toast('Salve o diário primeiro antes de enviar!','aviso'); return;
   }
-  if (!confirm('Confirmar envio do Diário de Bordo para validação do próximo turno?\n\nO próximo supervisor terá 30 minutos para validar.')) return;
-  try {
-    const res = await apiFetch(`/diario/${_diarioAtualId}/enviar`, { method:'POST' });
-    if (!res) return;
-    const prazoFmt = new Date(res.prazo).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-    toast('Diário enviado! Aguardando validação do próximo turno.','sucesso');
-    atualizarStatusBanner('enviado', `até ${prazoFmt}`);
-    document.getElementById('btn-enviar-diario').disabled = true;
-    await carregarListaDiarios();
-  } catch(e) { toast('Erro ao enviar','erro'); }
+  wmsConfirm({
+    icone:      '📤',
+    titulo:     'Enviar Diário de Bordo?',
+    sub:        'O próximo supervisor terá 30 minutos para validar as informações do turno.',
+    btnOk:      'Sim, enviar',
+    btnOkClass: 'btn-primary',
+  }, async () => {
+    try {
+      const res = await apiFetch(`/diario/${_diarioAtualId}/enviar`, { method:'POST' });
+      if (!res) return;
+      const prazoFmt = new Date(res.prazo).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+      toast('Diário enviado! Aguardando validação do próximo turno.','sucesso');
+      atualizarStatusBanner('enviado', `até ${prazoFmt}`);
+      document.getElementById('btn-enviar-diario').disabled = true;
+      await carregarListaDiarios();
+    } catch(e) { toast('Erro ao enviar','erro'); }
+  });
 }
 
 // ── Verifica se há validação pendente ou atrasada esperando este supervisor ────

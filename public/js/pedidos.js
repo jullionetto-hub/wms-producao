@@ -264,12 +264,19 @@ async function alterarStatusUsuario(id, novoStatus, nome, login, perfil, turno) 
 
 
 
-async function excluirUsuario(id, nome) {
-  if (!confirm(`Excluir "${nome}"?`)) return;
-  try {
-    await fetch(`${API}/usuarios/${id}`, { credentials:'include', method:'DELETE' });
-    toast('Excluído!','sucesso'); carregarUsuarios();
-  } catch(e) { toast('Erro!','erro'); }
+function excluirUsuario(id, nome) {
+  wmsConfirm({
+    icone:      '👤',
+    titulo:     `Excluir "${nome}"?`,
+    sub:        'O usuário será removido permanentemente do sistema.',
+    btnOk:      'Excluir',
+    btnOkClass: 'btn-danger',
+  }, async () => {
+    try {
+      await fetch(`${API}/usuarios/${id}`, { credentials:'include', method:'DELETE' });
+      toast('Excluído!','sucesso'); carregarUsuarios();
+    } catch(e) { toast('Erro!','erro'); }
+  });
 }
 
 

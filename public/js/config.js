@@ -67,16 +67,39 @@ function formatarData(iso) {
   return iso;
 }
 
-// ── Modal confirmação genérico ────────────────────────────────────────────────
+// ── Modal confirmação genérico — mesmo design do "Sair do sistema" ───────────
+// Uso: wmsConfirm({ icone, titulo, sub, btnOk, btnOkClass }, onYes, onNo)
+//      wmsConfirm("mensagem simples", onYes)   ← compatibilidade legado
 let _wmsConfirmCb = null;
 let _wmsConfirmCancelCb = null;
-function wmsConfirm(msg, onYes, onNo) {
-  _wmsConfirmCb = onYes;
-  _wmsConfirmCancelCb = onNo || null;
-  const el = document.getElementById('modal-confirm-msg');
-  if (el) el.textContent = msg;
+
+function wmsConfirm(opts, onYes, onNo) {
+  _wmsConfirmCb       = onYes || null;
+  _wmsConfirmCancelCb = onNo  || null;
+
+  if (typeof opts === 'string') opts = { titulo: opts };
+
+  const icone  = opts.icone      || '❓';
+  const titulo = opts.titulo     || 'Confirmar ação?';
+  const sub    = opts.sub        || '';
+  const btnOk  = opts.btnOk      || 'Confirmar';
+  const btnCls = opts.btnOkClass || 'btn-primary';
+
+  const s = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val; };
+  s('modal-confirm-icon',   icone);
+  s('modal-confirm-titulo', titulo);
+  s('modal-confirm-sub',    sub);
+
+  const btnEl = document.getElementById('modal-confirm-btn-ok');
+  if (btnEl) {
+    btnEl.textContent = btnOk;
+    btnEl.className = `btn ${btnCls}`;
+    btnEl.style.cssText = 'flex:1;padding:13px;font-size:14px;font-weight:700';
+  }
+
   document.getElementById('modal-confirm').style.display = 'flex';
 }
+
 function _confirmarWms() {
   document.getElementById('modal-confirm').style.display = 'none';
   if (_wmsConfirmCb) { const cb = _wmsConfirmCb; _wmsConfirmCb = null; _wmsConfirmCancelCb = null; cb(); }

@@ -201,8 +201,14 @@ async function confirmarCheckoutMobile(id) {
 
 
 
-async function liberarCaixaMobile(id) {
-  if (!confirm('Liberar esta caixa? Ela ficará disponível para uso.')) return;
+function liberarCaixaMobile(id) {
+  wmsConfirm({
+    icone: '🔓',
+    titulo: 'Liberar esta caixa?',
+    sub: 'Ela ficará disponível para uso.',
+    btnOk: 'Liberar',
+    btnOkClass: 'btn-primary',
+  }, async () => {
   try {
     const res = await fetch(`${API}/checkout/${id}/liberar`, { credentials:'include', method:'PUT' });
     const data = await res.json();
@@ -212,6 +218,7 @@ async function liberarCaixaMobile(id) {
     document.getElementById('m-ck-resultado').innerHTML = '';
     carregarStatsCkMobile();
   } catch(e) { toast('Erro ao liberar!','erro'); }
+  });
 }
 
 
