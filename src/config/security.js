@@ -34,13 +34,17 @@ function extraHeaders(req, res, next) {
 // Em desenvolvimento (não isProd) o CSP fica totalmente desabilitado.
 const cspDirectives = {
   defaultSrc:  ["'self'"],
+  // script-src controla <script src=...> e blocos <script> inline
   scriptSrc: [
     "'self'",
-    "'unsafe-inline'",       // onclick= e blocos <script> inline
-    "'unsafe-eval'",         // socket.io / outras libs podem usar eval internamente
+    "'unsafe-inline'",       // blocos <script> inline
+    "'unsafe-eval'",         // socket.io e libs internas podem usar eval
     "cdn.jsdelivr.net",      // Chart.js
     "cdn.sheetjs.com",       // SheetJS / xlsx
   ],
+  // script-src-attr controla onclick=, onchange= e outros handlers inline
+  // O app usa onclick= extensivamente em menus, botões e filtros
+  scriptSrcAttr: ["'unsafe-inline'"],
   styleSrc: [
     "'self'",
     "'unsafe-inline'",       // style= inline extensivo no app
@@ -48,11 +52,15 @@ const cspDirectives = {
   ],
   fontSrc:    ["'self'", "fonts.gstatic.com"],
   imgSrc:     ["'self'", "data:", "blob:"],
-  connectSrc: ["'self'", "wss:", "ws:"],  // socket.io WebSocket
-  workerSrc:  ["'self'"],                  // service worker
+  connectSrc: [
+    "'self'",
+    "wss:", "ws:",            // socket.io WebSocket
+    "cdn.jsdelivr.net",       // chart.js sourcemaps (DevTools)
+  ],
+  workerSrc:  ["'self'"],     // service worker
   frameSrc:   ["'none'"],
   objectSrc:  ["'none'"],
-  // frameAncestors impede embed em iframes de outros domínios (equivalente a X-Frame-Options: DENY)
+  // frameAncestors impede embed em iframes de outros domínios
   frameAncestors: ["'none'"],
 };
 
