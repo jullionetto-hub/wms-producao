@@ -29,38 +29,37 @@ function extraHeaders(req, res, next) {
   next();
 }
 
+// ── CSP: modo report-only em produção enquanto mapeamos violações reais.
+// Muda para enforceMode = true após confirmar que nada legítimo é bloqueado.
+// Em desenvolvimento (não isProd) o CSP fica totalmente desabilitado.
+const cspDirectives = {
+  defaultSrc:  ["'self'"],
+  scriptSrc: [
+    "'self'",
+    "'unsafe-inline'",       // onclick= e blocos <script> inline
+    "'unsafe-eval'",         // socket.io / outras libs podem usar eval internamente
+    "cdn.jsdelivr.net",      // Chart.js
+    "cdn.sheetjs.com",       // SheetJS / xlsx
+  ],
+  styleSrc: [
+    "'self'",
+    "'unsafe-inline'",       // style= inline extensivo no app
+    "fonts.googleapis.com",
+  ],
+  fontSrc:    ["'self'", "fonts.gstatic.com"],
+  imgSrc:     ["'self'", "data:", "blob:"],
+  connectSrc: ["'self'", "wss:", "ws:"],  // socket.io WebSocket
+  workerSrc:  ["'self'"],                  // service worker
+  frameSrc:   ["'none'"],
+  objectSrc:  ["'none'"],
+  // frameAncestors impede embed em iframes de outros domínios (equivalente a X-Frame-Options: DENY)
+  frameAncestors: ["'none'"],
+};
+
 const helmetMiddleware = helmet({
-  // CSP habilitado: bloqueia scripts de domínios não autorizados e eval().
-  // 'unsafe-inline' é necessário pois o app usa onclick= e style= inline extensivamente.
-  // O principal ganho é impedir carregamento de scripts externos não listados.
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc:  ["'self'"],
-      scriptSrc: [
-        "'self'",
-        "'unsafe-inline'",           // onclick= e blocos <script> inline
-        "cdn.jsdelivr.net",          // Chart.js
-        "cdn.sheetjs.com",           // SheetJS / xlsx
-      ],
-      styleSrc: [
-        "'self'",
-        "'unsafe-inline'",           // style= inline extensivo no app
-        "fonts.googleapis.com",
-      ],
-      fontSrc:    ["'self'", "fonts.gstatic.com"],
-      imgSrc:     ["'self'", "data:", "blob:"],
-      connectSrc: ["'self'", "wss:", "ws:"],  // socket.io
-      workerSrc:  ["'self'"],                  // service worker
-      frameSrc:   ["'none'"],
-      objectSrc:  ["'none'"],
-      baseUri:    ["'self'"],
-      formAction: ["'self'"],
-      // Impede que o app seja embarcado em iframes de outros domínios
-      frameAncestors: ["'none'"],
-      // Bloqueia upgrade de requisições (reforço HTTPS)
-      upgradeInsecureRequests: [],
-    },
-  },
+  contentSecurityPolicy: isProd
+    ? { reportOnly: true, directives: cspDirectives }  // observa violações sem bloquear
+    : false,
   crossOriginEmbedderPolicy: false,
 });
 
