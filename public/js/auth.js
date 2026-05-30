@@ -317,7 +317,7 @@ function montarSidebar() {
       <a class="mi" onclick="irPara('relatorios',this)"><span class="mi-ic">📅</span>Relatórios</a>
       <a class="mi" onclick="irPara('dash-logistica',this)"><span class="mi-ic">🚚</span>Dash Logística</a>
       <a class="mi" onclick="irPara('auditoria',this)"><span class="mi-ic">🔍</span>Auditoria</a>
-      <a class="mi" onclick="irPara('diario',this)"><span class="mi-ic">📋</span>Diário de Bordo</a>
+      <a class="mi" onclick="irPara('diario',this)"><span class="mi-ic">📋</span>Diário de Bordo<span class="mbadge" id="menu-badge-diario" style="display:none;background:#7c3aed">!</span></a>
       <a class="mi" onclick="irPara('cadastros',this)"><span class="mi-ic">⚙️</span>Cadastros</a>
       <a class="mi" onclick="irPara('protocolo',this);carregarProtocolo()"><span class="mi-ic">📋</span>Protocolo<span class="mbadge" id="menu-badge-proto" style="display:none">0</span></a>
       <a class="mi" onclick="irPara('passagem',this)"><span class="mi-ic">🔄</span>Passagem de Turno<span class="mbadge" id="menu-badge-passagem" style="display:none;background:var(--red)">!</span></a>
@@ -627,9 +627,25 @@ async function confirmarZerarDados() {
 }
 
 
-/* DIARIO DE BORDO */
+/* ══════════════════════════════════════════
+   DIÁRIO DE BORDO + SISTEMA DE VALIDAÇÃO
+══════════════════════════════════════════ */
 let _diarioAnterior = null;
-let _leuAnterior = false;
+let _leuAnterior    = false;
+let _diarioAtualId  = null;   // id do diário salvo/carregado
+let _validacaoId    = null;   // id da diario_validacoes pendente
+let _valTimer       = null;   // interval do countdown
+
+// Checklist espelhada do backend
+const CHECKLIST_VAL = [
+  { id: 'meta_sep',    peso: 20, label: 'Meta de separação foi atingida' },
+  { id: 'rep_ok',      peso: 15, label: 'Reposições foram todas resolvidas' },
+  { id: 'ck_ok',       peso: 15, label: 'Fila de checkout foi zerada' },
+  { id: 'emb_ok',      peso: 15, label: 'Embalagem foi realizada em dia' },
+  { id: 'area_ok',     peso: 15, label: 'Área limpa e organizada na entrega' },
+  { id: 'obs_ok',      peso: 10, label: 'Observações do turno foram preenchidas' },
+  { id: 'passagem_ok', peso: 10, label: 'Passagem de turno foi realizada' },
+];
 
 async function iniciarDiario() {
   const hj = hojeLocal();
@@ -638,6 +654,7 @@ async function iniciarDiario() {
   await verificarTurnoAnterior();
   await carregarDadosDiario();
   await carregarListaDiarios();
+  await verificarValidacaoPendente();
 }
 
 async function verificarTurnoAnterior() {
@@ -766,9 +783,237 @@ async function salvarDiario() {
     });
     const r = await res.json();
     if (!res.ok) { toast(r.erro||'Erro ao salvar','erro'); return; }
-    toast('Diário salvo!','sucesso');
+    _diarioAtualId = r.id;
+    toast('Diário salvo como rascunho!','sucesso');
+    atualizarStatusBanner('rascunho');
     await carregarListaDiarios();
   } catch(e) { toast('Erro ao salvar','erro'); }
+}
+
+// ── Mostra banner de status do diário atual ────────────────────────────────────
+function atualizarStatusBanner(status, extra) {
+  const el = document.getElementById('diario-status-banner');
+  if (!el) return;
+  const cfg = {
+    rascunho: { bg:'#f1f5f9', borda:'#cbd5e1', txt:'#475569', icone:'💾', msg:'Rascunho salvo — clique em "Finalizar e Enviar" para enviar ao próximo turno' },
+    enviado:  { bg:'#eff6ff', borda:'#93c5fd', txt:'#1d4ed8', icone:'📤', msg:`Enviado para validação — prazo: ${extra||'10 min'}` },
+    validado: { bg:'#f0fdf4', borda:'#86efac', txt:'#166534', icone:'✅', msg:`Validado pelo próximo turno — Pontuação: <b>${extra||'?'}/100</b>` },
+    expirado: { bg:'#fef2f2', borda:'#fca5a5', txt:'#991b1b', icone:'⏰', msg:'Prazo de validação expirou sem resposta do próximo turno' },
+  };
+  const c = cfg[status] || cfg.rascunho;
+  el.style.display = '';
+  el.innerHTML = `<div style="background:${c.bg};border:1.5px solid ${c.borda};border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:10px">
+    <span style="font-size:20px">${c.icone}</span>
+    <div style="font-size:13px;color:${c.txt}">${c.msg}</div>
+  </div>`;
+}
+
+// ── Finaliza e envia para validação ───────────────────────────────────────────
+async function enviarDiario() {
+  if (!_diarioAtualId) {
+    toast('Salve o diário primeiro antes de enviar!','aviso'); return;
+  }
+  if (!confirm('Confirmar envio do Diário de Bordo para validação do próximo turno?\n\nO próximo supervisor terá 10 minutos para validar.')) return;
+  try {
+    const res = await apiFetch(`/diario/${_diarioAtualId}/enviar`, { method:'POST' });
+    if (!res) return;
+    const prazoFmt = new Date(res.prazo).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    toast('Diário enviado! Aguardando validação do próximo turno.','sucesso');
+    atualizarStatusBanner('enviado', `até ${prazoFmt}`);
+    document.getElementById('btn-enviar-diario').disabled = true;
+    await carregarListaDiarios();
+  } catch(e) { toast('Erro ao enviar','erro'); }
+}
+
+// ── Verifica se há validação pendente esperando este supervisor ───────────────
+async function verificarValidacaoPendente() {
+  try {
+    const val = await apiFetch('/diario/validacao/pendente');
+    const el = document.getElementById('diario-validacao-pendente');
+    if (!el) return;
+    if (!val) { el.style.display='none'; return; }
+    _validacaoId = val.validacao_id;
+    const turnoIcon = val.turno==='Manha'?'☀️':val.turno==='Tarde'?'🌅':'🌙';
+    const mins = Math.ceil(val.restante_segundos / 60);
+    el.style.display = '';
+    el.innerHTML = `
+      <div style="background:linear-gradient(135deg,#7c3aed,#4f46e5);border-radius:12px;padding:16px;color:#fff">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+          <span style="font-size:22px">🔔</span>
+          <div style="flex:1">
+            <div style="font-weight:800;font-size:14px">Validação Pendente!</div>
+            <div style="font-size:12px;opacity:.85">${turnoIcon} Turno ${val.turno} · ${val.data} · ${val.supervisor}</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:9px;opacity:.75;text-transform:uppercase">Expira em</div>
+            <div id="val-countdown" style="font-size:20px;font-weight:900">${mins}:00</div>
+          </div>
+        </div>
+        <button onclick="abrirModalValidacao()" style="width:100%;padding:10px;background:rgba(255,255,255,.2);color:#fff;border:2px solid rgba(255,255,255,.4);border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">
+          ✅ Validar Diário do Turno Anterior
+        </button>
+      </div>`;
+    // Inicia countdown
+    iniciarCountdown(val.restante_segundos);
+  } catch(e) { console.warn('verificarValidacaoPendente:', e); }
+}
+
+function iniciarCountdown(segundos) {
+  if (_valTimer) clearInterval(_valTimer);
+  let restante = segundos;
+  const el = document.getElementById('val-countdown');
+  _valTimer = setInterval(() => {
+    restante--;
+    if (restante <= 0) {
+      clearInterval(_valTimer);
+      const vp = document.getElementById('diario-validacao-pendente');
+      if (vp) vp.style.display = 'none';
+      toast('Prazo de validação expirou!','aviso');
+      return;
+    }
+    if (el) {
+      const m = Math.floor(restante/60).toString().padStart(2,'0');
+      const s = (restante%60).toString().padStart(2,'0');
+      el.textContent = `${m}:${s}`;
+      if (restante <= 60) el.style.color = '#fca5a5';
+    }
+  }, 1000);
+}
+
+// ── Abre modal de validação ────────────────────────────────────────────────────
+async function abrirModalValidacao() {
+  if (!_validacaoId) { toast('Nenhuma validação pendente','aviso'); return; }
+  try {
+    const val = await apiFetch('/diario/validacao/pendente');
+    if (!val) { toast('Validação não encontrada ou expirada','aviso'); return; }
+
+    const modal = document.getElementById('modal-diario-validacao');
+    const turnoIcon = val.turno==='Manha'?'☀️':val.turno==='Tarde'?'🌅':'🌙';
+    document.getElementById('modal-val-subtitulo').textContent =
+      `${turnoIcon} ${val.turno} · ${val.data} · ${val.supervisor}`;
+
+    // Resumo
+    const d = val.dados || {};
+    const obs = val.observacoes || {};
+    document.getElementById('modal-val-resumo').innerHTML = `
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px">
+        <div style="text-align:center;background:var(--surface);border-radius:8px;padding:8px">
+          <div style="font-size:18px;font-weight:800">${d.separacao?.concluidos||0}/${d.separacao?.total||0}</div>
+          <div style="font-size:9px;color:var(--text3);text-transform:uppercase">Separação</div>
+        </div>
+        <div style="text-align:center;background:var(--surface);border-radius:8px;padding:8px">
+          <div style="font-size:18px;font-weight:800">${d.checkout?.concluidos||0}/${d.checkout?.total||0}</div>
+          <div style="font-size:9px;color:var(--text3);text-transform:uppercase">Checkout</div>
+        </div>
+        <div style="text-align:center;background:var(--surface);border-radius:8px;padding:8px">
+          <div style="font-size:18px;font-weight:800;color:#dc2626">${d.reposicao?.nao_encontrados||0}</div>
+          <div style="font-size:9px;color:#dc2626;text-transform:uppercase">Não encontr.</div>
+        </div>
+      </div>
+      ${obs.geral ? `<div style="font-size:12px;color:var(--text2)"><b>Obs. geral:</b> ${escHtml(obs.geral)}</div>` : ''}`;
+
+    // Checklist
+    document.getElementById('modal-val-checklist').innerHTML = CHECKLIST_VAL.map(item => `
+      <div style="display:flex;align-items:center;gap:10px;padding:10px;border:1px solid var(--border);border-radius:8px;margin-bottom:6px;background:var(--surface2)">
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:600">${item.label}</div>
+          <div style="font-size:10px;color:var(--text3)">Peso: ${item.peso} pts</div>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button onclick="marcarItem('${item.id}',true,this)" data-item="${item.id}" data-val="true"
+            style="padding:6px 14px;border-radius:6px;border:2px solid #86efac;background:transparent;color:#16a34a;font-weight:700;font-size:12px;cursor:pointer">✅ Ok</button>
+          <button onclick="marcarItem('${item.id}',false,this)" data-item="${item.id}" data-val="false"
+            style="padding:6px 14px;border-radius:6px;border:2px solid #fca5a5;background:transparent;color:#dc2626;font-weight:700;font-size:12px;cursor:pointer">❌ Não</button>
+        </div>
+      </div>`).join('');
+
+    // Timer no modal
+    const m = Math.floor(val.restante_segundos/60).toString().padStart(2,'0');
+    const s = (val.restante_segundos%60).toString().padStart(2,'0');
+    document.getElementById('modal-val-timer').textContent = `${m}:${s}`;
+    document.getElementById('modal-val-score').textContent = '100';
+    document.getElementById('modal-val-obs').value = '';
+    modal.style.display = 'flex';
+    // Sincroniza timer do modal com o countdown
+    _valTimer && clearInterval(_valTimer);
+    let restante = val.restante_segundos;
+    _valTimer = setInterval(() => {
+      restante--;
+      const timerEl = document.getElementById('modal-val-timer');
+      if (restante <= 0) { clearInterval(_valTimer); fecharModalValidacao(); toast('Prazo expirado!','aviso'); return; }
+      if (timerEl) {
+        const mm = Math.floor(restante/60).toString().padStart(2,'0');
+        const ss = (restante%60).toString().padStart(2,'0');
+        timerEl.textContent = `${mm}:${ss}`;
+        if (restante<=60) timerEl.style.color='#ef4444';
+      }
+    }, 1000);
+  } catch(e) { toast('Erro ao abrir validação','erro'); }
+}
+
+// ── Marca item do checklist como ok ou não ok ─────────────────────────────────
+function marcarItem(itemId, passou, btnEl) {
+  const parent = btnEl.closest('div[style*="padding:10px"]');
+  parent.querySelectorAll('button').forEach(b => {
+    b.style.background = 'transparent';
+    b.style.fontWeight = '700';
+  });
+  btnEl.style.background = passou ? '#dcfce7' : '#fee2e2';
+  // Recalcula score
+  let pts = 100;
+  CHECKLIST_VAL.forEach(item => {
+    const btns = document.querySelectorAll(`button[data-item="${item.id}"]`);
+    let marcado = null;
+    btns.forEach(b => {
+      if (b.style.background && b.style.background !== 'transparent') {
+        marcado = b.dataset.val === 'true';
+      }
+    });
+    if (marcado === false) pts -= item.peso;
+  });
+  const scoreEl = document.getElementById('modal-val-score');
+  if (scoreEl) {
+    scoreEl.textContent = Math.max(0, pts);
+    scoreEl.style.color = pts>=80 ? '#16a34a' : pts>=60 ? '#d97706' : '#dc2626';
+  }
+}
+
+// ── Submete a validação ───────────────────────────────────────────────────────
+async function submeterValidacao() {
+  if (!_validacaoId) { toast('Nenhuma validação ativa','aviso'); return; }
+  const itens = CHECKLIST_VAL.map(item => {
+    let passou = null;
+    document.querySelectorAll(`button[data-item="${item.id}"]`).forEach(b => {
+      if (b.style.background && b.style.background !== 'transparent') {
+        passou = b.dataset.val === 'true';
+      }
+    });
+    return { id: item.id, label: item.label, peso: item.peso, passou };
+  });
+  const naoMarcados = itens.filter(i => i.passou === null);
+  if (naoMarcados.length > 0) {
+    toast(`Marque todos os itens antes de confirmar (${naoMarcados.length} pendentes)`, 'aviso'); return;
+  }
+  const obs_geral = document.getElementById('modal-val-obs')?.value || '';
+  try {
+    const r = await apiFetch(`/diario/validacao/${_validacaoId}/validar`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ itens, obs_geral })
+    });
+    if (!r) return;
+    toast(`✅ Validação concluída! Pontuação: ${r.pontuacao}/100`, 'sucesso');
+    fecharModalValidacao();
+    _validacaoId = null;
+    const vp = document.getElementById('diario-validacao-pendente');
+    if (vp) vp.style.display = 'none';
+    await carregarListaDiarios();
+  } catch(e) { toast('Erro ao submeter validação','erro'); }
+}
+
+function fecharModalValidacao() {
+  const m = document.getElementById('modal-diario-validacao');
+  if (m) m.style.display = 'none';
+  if (_valTimer) { clearInterval(_valTimer); _valTimer = null; }
 }
 
 async function carregarListaDiarios() {
@@ -781,10 +1026,17 @@ async function carregarListaDiarios() {
     el.innerHTML = lista.map(d => {
       const turnoIcon = d.turno === 'Manha' ? '☀️' : d.turno === 'Tarde' ? '🌅' : '🌙';
       const leuBadge = d.leu_anterior ? '<span style="font-size:9px;background:#f0fdf4;color:#166534;border:1px solid #86efac;border-radius:10px;padding:1px 6px">✓ leu</span>' : '';
+      const statusMap = {
+        rascunho: '<span style="font-size:9px;background:#f1f5f9;color:#64748b;border:1px solid #cbd5e1;border-radius:10px;padding:1px 6px">Rascunho</span>',
+        enviado:  '<span style="font-size:9px;background:#eff6ff;color:#1d4ed8;border:1px solid #93c5fd;border-radius:10px;padding:1px 6px">📤 Enviado</span>',
+        validado: `<span style="font-size:9px;background:#f0fdf4;color:#166534;border:1px solid #86efac;border-radius:10px;padding:1px 6px">✅ ${d.pontuacao!=null?d.pontuacao+'/100':''}</span>`,
+        expirado: '<span style="font-size:9px;background:#fef2f2;color:#991b1b;border:1px solid #fca5a5;border-radius:10px;padding:1px 6px">⏰ Expirado</span>',
+      };
+      const stBadge = statusMap[d.status] || statusMap.rascunho;
       return `<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);cursor:pointer;margin-bottom:6px" onclick="verDiario(${d.id})">
         <div style="font-size:18px">${turnoIcon}</div>
         <div style="flex:1">
-          <div style="font-weight:700;font-size:13px">${d.data} — ${d.turno} ${leuBadge}</div>
+          <div style="font-weight:700;font-size:13px">${d.data} — ${d.turno} ${leuBadge} ${stBadge}</div>
           <div style="font-size:11px;color:var(--text3)">${d.supervisor}</div>
         </div>
         <button onclick="event.stopPropagation();exportarDiarioExcel(${d.id})" style="padding:4px 10px;background:#10b981;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:11px">Excel</button>

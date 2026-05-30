@@ -66,5 +66,35 @@
       if (typeof carregarPedidos === 'function') carregarPedidos();
       if (typeof atualizarKPIs === 'function') atualizarKPIs();
     });
+
+    // Diário enviado → notifica supervisores do próximo turno
+    socket.on('diario:pendente', (data) => {
+      if (typeof usuarioAtual === 'undefined' || usuarioAtual?.perfil !== 'supervisor') return;
+      const turnoIcon = data.turno==='Manha'?'☀️':data.turno==='Tarde'?'🌅':'🌙';
+      if (typeof toast === 'function') {
+        toast(`📋 Diário do turno ${turnoIcon} ${data.turno} (${data.supervisor}) aguarda validação! Você tem 10 minutos.`, 'aviso');
+      }
+      // Atualiza o banner de validação pendente se estiver na tela de diário
+      if (typeof verificarValidacaoPendente === 'function') {
+        setTimeout(verificarValidacaoPendente, 800);
+      }
+      // Badge no menu
+      const badge = document.getElementById('menu-badge-diario');
+      if (badge) { badge.style.display=''; badge.textContent='!'; }
+    });
+
+    // Diário validado
+    socket.on('diario:validado', (data) => {
+      if (typeof usuarioAtual === 'undefined' || usuarioAtual?.perfil !== 'supervisor') return;
+      if (typeof toast === 'function') {
+        const cor = data.pontuacao>=80?'sucesso':data.pontuacao>=60?'aviso':'erro';
+        toast(`✅ Diário validado! Pontuação: ${data.pontuacao}/100`, cor);
+      }
+      // Atualiza o banner de status se for o autor do diário
+      if (typeof atualizarStatusBanner === 'function') {
+        atualizarStatusBanner('validado', data.pontuacao);
+      }
+      if (typeof carregarListaDiarios === 'function') carregarListaDiarios();
+    });
   }
 })();

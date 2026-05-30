@@ -150,14 +150,31 @@ const TABLES = [
   )`,
 
   `CREATE TABLE IF NOT EXISTS diario_bordo (
-    id           SERIAL PRIMARY KEY,
-    data         TEXT NOT NULL,
-    turno        TEXT NOT NULL,
-    supervisor   TEXT NOT NULL,
-    dados        JSONB NOT NULL DEFAULT '{}',
-    observacoes  TEXT DEFAULT '',
-    leu_anterior BOOLEAN DEFAULT false,
-    criado_em    TIMESTAMPTZ DEFAULT NOW()
+    id               SERIAL PRIMARY KEY,
+    data             TEXT NOT NULL,
+    turno            TEXT NOT NULL,
+    supervisor       TEXT NOT NULL,
+    dados            JSONB NOT NULL DEFAULT '{}',
+    observacoes      TEXT DEFAULT '',
+    leu_anterior     BOOLEAN DEFAULT false,
+    status           TEXT DEFAULT 'rascunho',
+    enviado_em       TIMESTAMPTZ,
+    prazo_validacao  TIMESTAMPTZ,
+    criado_em        TIMESTAMPTZ DEFAULT NOW()
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS diario_validacoes (
+    id               SERIAL PRIMARY KEY,
+    diario_id        INTEGER NOT NULL UNIQUE REFERENCES diario_bordo(id) ON DELETE CASCADE,
+    validador        TEXT DEFAULT '',
+    turno_validador  TEXT DEFAULT '',
+    status           TEXT DEFAULT 'pendente',
+    itens            JSONB DEFAULT '[]'::jsonb,
+    pontuacao        INTEGER,
+    obs_geral        TEXT DEFAULT '',
+    prazo            TIMESTAMPTZ NOT NULL,
+    validado_em      TIMESTAMPTZ,
+    criado_em        TIMESTAMPTZ DEFAULT NOW()
   )`,
 
   `CREATE TABLE IF NOT EXISTS passagem_turno (

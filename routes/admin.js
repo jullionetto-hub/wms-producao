@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { db, pool } = require('../lib/db');
 const { requerAuth, requerPerfil } = require('../lib/auth');
-const { dataHoraLocal } = require('../lib/helpers');
+const { dataHoraLocal, validarId } = require('../lib/helpers');
 const { registrarAuditoria } = require('../lib/auditoria');
 const { gerarRelatorio } = require('../lib/relatorio');
 
@@ -122,7 +122,13 @@ router.post('/relatorio/gerar', requerAuth, requerPerfil('supervisor'), async (r
 
 router.get('/diario', requerAuth, requerPerfil('supervisor'), async (req,res) => {
   try {
-    res.json(await db.all('SELECT id,data,turno,supervisor,observacoes,criado_em FROM diario_bordo ORDER BY criado_em DESC LIMIT 30'));
+    res.json(await db.all(`
+      SELECT d.id, d.data, d.turno, d.supervisor, d.leu_anterior, d.status, d.criado_em,
+             v.pontuacao
+      FROM diario_bordo d
+      LEFT JOIN diario_validacoes v ON v.diario_id = d.id
+      ORDER BY d.criado_em DESC LIMIT 30
+    `));
   } catch(e) { res.status(500).json({erro:e.message}); }
 });
 
@@ -208,6 +214,143 @@ router.post('/diario', requerAuth, requerPerfil('supervisor'), async (req,res) =
       res.json({mensagem:'Diario criado!', id: r.rows[0].id});
     }
   } catch(e) { res.status(500).json({erro:e.message}); }
+});
+
+// ── Checklist de validação (ordem e pesos fixos — 100 pts total) ──────────────
+const CHECKLIST_ITENS = [
+  { id: 'meta_sep',    peso: 20, label: 'Meta de separação foi atingida' },
+  { id: 'rep_ok',      peso: 15, label: 'Reposições foram todas resolvidas' },
+  { id: 'ck_ok',       peso: 15, label: 'Fila de checkout foi zerada' },
+  { id: 'emb_ok',      peso: 15, label: 'Embalagem foi realizada em dia' },
+  { id: 'area_ok',     peso: 15, label: 'Área limpa e organizada na entrega' },
+  { id: 'obs_ok',      peso: 10, label: 'Observações do turno foram preenchidas' },
+  { id: 'passagem_ok', peso: 10, label: 'Passagem de turno foi realizada' },
+];
+
+// ── POST /diario/:id/enviar — Finaliza e envia para validação ─────────────────
+router.post('/diario/:id/enviar', requerAuth, requerPerfil('supervisor'), async (req, res) => {
+  try {
+    const id = validarId(req.params.id);
+    if (!id) return res.status(400).json({ erro: 'ID inválido' });
+    const diario = await db.get('SELECT * FROM diario_bordo WHERE id=$1', [id]);
+    if (!diario) return res.status(404).json({ erro: 'Diário não encontrado' });
+    if (diario.status === 'enviado' || diario.status === 'validado') {
+      return res.status(400).json({ erro: 'Este diário já foi enviado ou validado' });
+    }
+    const agora = new Date();
+    const prazo  = new Date(agora.getTime() + 10 * 60 * 1000); // +10 min
+    await pool.query(
+      `UPDATE diario_bordo SET status='enviado', enviado_em=$1, prazo_validacao=$2 WHERE id=$3`,
+      [agora, prazo, id]
+    );
+    // Cria/recria registro de validação pendente
+    await pool.query(
+      `INSERT INTO diario_validacoes (diario_id, prazo)
+       VALUES ($1, $2)
+       ON CONFLICT (diario_id) DO UPDATE SET status='pendente', prazo=$2, validado_em=NULL,
+         validador='', pontuacao=NULL, itens='[]'::jsonb, obs_geral=''`,
+      [id, prazo]
+    );
+    const io = req.app.get('io');
+    if (io) io.emit('diario:pendente', {
+      diario_id: id,
+      data: diario.data,
+      turno: diario.turno,
+      supervisor: diario.supervisor,
+      prazo: prazo.toISOString(),
+    });
+    await registrarAuditoria(req, 'DIARIO_ENVIADO', 'diario_bordo', id, null,
+      { data: diario.data, turno: diario.turno });
+    res.json({ mensagem: 'Diário enviado para validação!', prazo: prazo.toISOString() });
+  } catch(e) { res.status(500).json({ erro: e.message }); }
+});
+
+// ── GET /diario/validacao/pendente — Validações aguardando o turno atual ──────
+router.get('/diario/validacao/pendente', requerAuth, requerPerfil('supervisor'), async (req, res) => {
+  try {
+    const agora = new Date();
+    // Expira registros vencidos
+    await pool.query(
+      `UPDATE diario_validacoes SET status='expirado'
+       WHERE status='pendente' AND prazo < $1`, [agora]
+    );
+    await pool.query(
+      `UPDATE diario_bordo SET status='expirado'
+       WHERE status='enviado' AND prazo_validacao < $1`, [agora]
+    );
+    const val = await db.get(`
+      SELECT v.id AS validacao_id, v.prazo, v.status AS val_status,
+             d.id AS diario_id, d.data, d.turno, d.supervisor, d.dados, d.observacoes
+      FROM diario_validacoes v
+      JOIN diario_bordo d ON d.id = v.diario_id
+      WHERE v.status = 'pendente'
+      ORDER BY v.prazo ASC
+      LIMIT 1
+    `);
+    if (!val) return res.json(null);
+    if (typeof val.dados === 'string') val.dados = JSON.parse(val.dados || '{}');
+    if (typeof val.observacoes === 'string') val.observacoes = JSON.parse(val.observacoes || '{}');
+    const restante = Math.max(0, Math.floor((new Date(val.prazo) - agora) / 1000));
+    res.json({ ...val, restante_segundos: restante, checklist: CHECKLIST_ITENS });
+  } catch(e) { res.status(500).json({ erro: e.message }); }
+});
+
+// ── GET /diario/:id/validacao — Validação de um diário específico ─────────────
+router.get('/diario/:id/validacao', requerAuth, requerPerfil('supervisor'), async (req, res) => {
+  try {
+    const id = validarId(req.params.id);
+    if (!id) return res.status(400).json({ erro: 'ID inválido' });
+    const val = await db.get(
+      `SELECT * FROM diario_validacoes WHERE diario_id=$1 ORDER BY id DESC LIMIT 1`, [id]
+    );
+    if (!val) return res.json(null);
+    if (typeof val.itens === 'string') val.itens = JSON.parse(val.itens || '[]');
+    res.json(val);
+  } catch(e) { res.status(500).json({ erro: e.message }); }
+});
+
+// ── POST /diario/validacao/:id/validar — Submete a validação ─────────────────
+router.post('/diario/validacao/:id/validar', requerAuth, requerPerfil('supervisor'), async (req, res) => {
+  try {
+    const id = validarId(req.params.id);
+    if (!id) return res.status(400).json({ erro: 'ID inválido' });
+    const val = await db.get('SELECT * FROM diario_validacoes WHERE id=$1', [id]);
+    if (!val) return res.status(404).json({ erro: 'Validação não encontrada' });
+    const agora = new Date();
+    if (val.status !== 'pendente') return res.status(400).json({ erro: 'Esta validação não está mais pendente' });
+    if (new Date(val.prazo) < agora) {
+      await pool.query(`UPDATE diario_validacoes SET status='expirado' WHERE id=$1`, [id]);
+      await pool.query(`UPDATE diario_bordo SET status='expirado' WHERE id=$1`, [val.diario_id]);
+      return res.status(400).json({ erro: 'O prazo de validação de 10 minutos expirou' });
+    }
+    const { itens, obs_geral } = req.body;
+    // Calcula pontuação
+    let pontuacao = 100;
+    if (Array.isArray(itens)) {
+      for (const item of itens) {
+        if (item.passou === false) {
+          const def = CHECKLIST_ITENS.find(c => c.id === item.id);
+          if (def) pontuacao -= def.peso;
+        }
+      }
+    }
+    pontuacao = Math.max(0, pontuacao);
+    const validador = req.session?.usuario?.nome || 'Supervisor';
+    const turnoVal  = req.session?.usuario?.turno || '';
+    await pool.query(
+      `UPDATE diario_validacoes
+       SET status='validado', itens=$1, pontuacao=$2, obs_geral=$3,
+           validador=$4, turno_validador=$5, validado_em=$6
+       WHERE id=$7`,
+      [JSON.stringify(itens||[]), pontuacao, obs_geral||'', validador, turnoVal, agora, id]
+    );
+    await pool.query(`UPDATE diario_bordo SET status='validado' WHERE id=$1`, [val.diario_id]);
+    const io = req.app.get('io');
+    if (io) io.emit('diario:validado', { diario_id: val.diario_id, pontuacao, validador });
+    await registrarAuditoria(req, 'DIARIO_VALIDADO', 'diario_bordo', val.diario_id, null,
+      { pontuacao, validador });
+    res.json({ mensagem: 'Validação concluída!', pontuacao });
+  } catch(e) { res.status(500).json({ erro: e.message }); }
 });
 
 /* ══════════════════════════════════════════════════════════════

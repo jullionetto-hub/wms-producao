@@ -64,6 +64,10 @@ const ALTERATIONS = [
   // Para pedidos sem falta = concluido_em. Para pedidos com falta = 1ª tentativa de concluir
   // (antes de aguardar repositor). Garante que espera por reposição não penaliza o separador.
   "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS skus_concluido_em TEXT DEFAULT ''",
+  // Validação do Diário de Bordo por turno seguinte
+  "ALTER TABLE diario_bordo ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'rascunho'",
+  "ALTER TABLE diario_bordo ADD COLUMN IF NOT EXISTS enviado_em TIMESTAMPTZ",
+  "ALTER TABLE diario_bordo ADD COLUMN IF NOT EXISTS prazo_validacao TIMESTAMPTZ",
 ];
 
 async function runSchema() {
