@@ -724,7 +724,7 @@ async function salvarDiario() {
     const res = await fetch(`${API}/diario`, {
       method: 'POST', credentials: 'include',
       headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ data, turno, dados: window._dadosDiario||{}, observacoes, leu_anterior: _leuAnterior })
+      body: JSON.stringify({ data, turno, dados: window._dadosDiario||{}, observacoes, leu_anterior: false })
     });
     const r = await res.json();
     if (!res.ok) { toast(r.erro||'Erro ao salvar','erro'); return; }

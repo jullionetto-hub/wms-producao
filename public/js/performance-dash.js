@@ -178,6 +178,19 @@ function renderizarPerformanceDash() {
         </div>
       </div>
 
+      <!-- TEMPOS DETALHADOS POR PEDIDO -->
+      <div class="card" style="padding:16px 18px;margin-top:16px">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap">
+          <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px">⏱️ TEMPOS POR PEDIDO / COLABORADOR</div>
+          <button id="pf-btn-timing" onclick="pfCarregarTiming()"
+            style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">
+            🔍 Carregar tempos
+          </button>
+          <span style="font-size:11px;color:var(--text3)">Separação · Reposição · Checkout · Embalagem — início e fim de cada operação</span>
+        </div>
+        <div id="pf-timing-wrap" style="display:none"></div>
+      </div>
+
     </div><!-- /pf-conteudo -->
   </div>`;
 
@@ -236,6 +249,12 @@ async function pfBuscarDados() {
   document.getElementById('pf-loading').style.display  = '';
   document.getElementById('pf-conteudo').style.display = 'none';
   document.getElementById('pf-vazio').style.display    = 'none';
+  // Reset timing ao buscar novos dados
+  _pfTiming = null;
+  const timingWrap = document.getElementById('pf-timing-wrap');
+  const timingBtn  = document.getElementById('pf-btn-timing');
+  if (timingWrap) timingWrap.style.display = 'none';
+  if (timingBtn)  timingBtn.textContent = '🔍 Carregar tempos';
 
   const qs = new URLSearchParams({ ini, fim });
   if (turno) qs.set('turno', turno);
@@ -535,6 +554,175 @@ function pfRenderTabela(colab, totPed) {
       <td style="padding:10px 14px;text-align:right;font-size:12px;color:#a78bfa">${c.tempo_medio_min!=null?c.tempo_medio_min.toFixed(1)+' min':'—'}</td>
     </tr>`;
   }).join('');
+}
+
+// ── Tempos Detalhados por Pedido ───────────────────────────────────────────
+let _pfTiming     = null;
+let _pfTimingAba  = 'separacao';
+
+async function pfCarregarTiming() {
+  const ini   = document.getElementById('pf-ini')?.value   || '';
+  const fim   = document.getElementById('pf-fim')?.value   || '';
+  const turno = document.getElementById('pf-turno')?.value || '';
+  const wrap  = document.getElementById('pf-timing-wrap');
+  const btn   = document.getElementById('pf-btn-timing');
+  if (!wrap || !ini || !fim) return;
+
+  btn.disabled = true;
+  btn.textContent = '⏳ Carregando...';
+  wrap.style.display = '';
+  wrap.innerHTML = `<div style="padding:32px;text-align:center;color:var(--text3)">⏳ Buscando dados...</div>`;
+
+  const qs = new URLSearchParams({ ini, fim });
+  if (turno) qs.set('turno', turno);
+  qs.set('_', Date.now());
+
+  const dados = await apiFetch(`/performance/timing?${qs}`);
+  btn.disabled = false;
+  btn.textContent = '🔄 Atualizar';
+
+  if (!dados || dados.erro) {
+    wrap.innerHTML = `<div style="padding:16px;color:#ef4444">${pfEsc(dados?.erro || 'Erro ao carregar')}</div>`;
+    return;
+  }
+  _pfTiming = dados;
+  pfRenderTiming();
+}
+
+function pfRenderTiming() {
+  const wrap = document.getElementById('pf-timing-wrap');
+  if (!wrap || !_pfTiming) return;
+
+  const abas = [
+    { id:'separacao', label:'✂️ Separação',  cor:'#6366f1' },
+    { id:'reposicao', label:'🔁 Reposição',   cor:'#f59e0b' },
+    { id:'checkout',  label:'📦 Checkout',    cor:'#0891b2' },
+    { id:'embalagem', label:'🎁 Embalagem',   cor:'#16a34a' },
+  ];
+
+  const abaHtml = abas.map(a => `
+    <button onclick="pfSwitchAba('${a.id}')" id="pf-aba-${a.id}"
+      style="padding:8px 16px;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s;
+             background:${_pfTimingAba===a.id ? a.cor : 'var(--surface2)'};
+             color:${_pfTimingAba===a.id ? '#fff' : 'var(--text3)'}">
+      ${a.label} <span style="opacity:.75;font-weight:400">(${(_pfTiming[a.id]||[]).length})</span>
+    </button>`).join('');
+
+  const dados = _pfTiming[_pfTimingAba] || [];
+  const abaAtual = abas.find(a => a.id === _pfTimingAba);
+
+  // Agrupar por colaborador
+  const grupos = {};
+  dados.forEach(r => {
+    const nome = r.colaborador || '—';
+    if (!grupos[nome]) grupos[nome] = [];
+    grupos[nome].push(r);
+  });
+
+  const fmtHora = (v) => {
+    if (!v) return '—';
+    // ISO timestamp: pega só HH:MM
+    if (v.includes('T')) return v.slice(11, 16);
+    // HH:MM ou HH:MM:SS
+    return v.slice(0, 5);
+  };
+
+  const fmtDur = (min) => {
+    if (min == null) return '—';
+    if (min < 1) return `${Math.round(min * 60)}s`;
+    return `${min.toFixed(1)} min`;
+  };
+
+  const corDur = (min) => {
+    if (min == null) return 'var(--text3)';
+    if (min <= 5)  return '#22c55e';
+    if (min <= 15) return '#f59e0b';
+    return '#ef4444';
+  };
+
+  let tabelasHtml = '';
+  if (!Object.keys(grupos).length) {
+    tabelasHtml = `<div style="padding:32px;text-align:center;color:var(--text3);font-size:13px">
+      Nenhum dado encontrado para o período selecionado.
+    </div>`;
+  } else {
+    Object.entries(grupos).sort(([a],[b]) => a.localeCompare(b)).forEach(([nome, rows]) => {
+      const totalCom = rows.filter(r => r.duracao_min != null).length;
+      const mediaMin = totalCom ? rows.reduce((s,r) => s + (r.duracao_min||0), 0) / totalCom : null;
+
+      let headerExtra = '';
+      if (_pfTimingAba === 'reposicao') {
+        const enc    = rows.filter(r => r.resultado === 'encontrado' || r.resultado === 'buscado' || r.resultado === 'abastecido').length;
+        const naoEnc = rows.filter(r => r.resultado === 'nao_encontrado' || r.resultado === 'protocolo').length;
+        headerExtra = `· <span style="color:#22c55e">${enc} encontrado(s)</span> · <span style="color:#ef4444">${naoEnc} não encontrado(s)</span>`;
+      }
+
+      const linhas = rows.map(r => {
+        let extra = '';
+        if (_pfTimingAba === 'reposicao') {
+          const resMap = { encontrado:'✅', buscado:'✅', abastecido:'✅', nao_encontrado:'❌', protocolo:'📋' };
+          const resIcon = resMap[r.resultado] || '?';
+          extra = `<td style="padding:7px 12px;text-align:center;font-size:13px" title="${pfEsc(r.resultado||'')}">${resIcon}</td>
+                   <td style="padding:7px 12px;font-size:11px;color:var(--text3);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${pfEsc(r.descricao||'')}">
+                     <div style="font-size:10px;color:var(--text3)">${pfEsc(r.codigo||'')}</div>
+                     ${pfEsc((r.descricao||'').slice(0,40))}
+                   </td>`;
+        }
+
+        const dataFmt = r.data ? (() => { const [y,m,d]=r.data.split('-'); return `${d}/${m}`; })() : '';
+
+        return `<tr style="border-bottom:1px solid rgba(51,65,85,.2)">
+          <td style="padding:7px 12px;font-size:12px;font-weight:600;color:var(--text)">${pfEsc(r.numero_pedido||'—')}</td>
+          <td style="padding:7px 12px;font-size:11px;color:var(--text3)">${dataFmt}</td>
+          <td style="padding:7px 12px;font-size:12px;color:var(--text)">${fmtHora(r.iniciado_em)}</td>
+          <td style="padding:7px 12px;font-size:12px;color:var(--text)">${fmtHora(r.concluido_em)}</td>
+          ${extra}
+          <td style="padding:7px 12px;text-align:right;font-size:12px;font-weight:700;color:${corDur(r.duracao_min)}">${fmtDur(r.duracao_min)}</td>
+        </tr>`;
+      }).join('');
+
+      const TH = 'padding:7px 12px;font-size:9px;font-weight:800;color:var(--text3);letter-spacing:.5px;';
+      const extraTh = _pfTimingAba === 'reposicao'
+        ? `<th style="${TH}text-align:center">RESULTADO</th><th style="${TH}">ITEM</th>`
+        : '';
+      tabelasHtml += `
+        <div style="margin-bottom:20px">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap">
+            <div style="font-size:13px;font-weight:800;color:var(--text)">${pfEsc(nome)}</div>
+            <div style="font-size:11px;color:var(--text3)">${rows.length} registro(s) ${headerExtra}</div>
+            ${mediaMin!=null ? `<div style="margin-left:auto;font-size:12px;font-weight:700;color:${corDur(mediaMin)}">⌀ ${fmtDur(mediaMin)}</div>` : ''}
+          </div>
+          <div style="overflow-x:auto;border-radius:8px;border:1px solid var(--border)">
+            <table style="width:100%;border-collapse:collapse">
+              <thead style="background:var(--surface2)">
+                <tr>
+                  <th style="${TH}text-align:left">PEDIDO</th>
+                  <th style="${TH}">DATA</th>
+                  <th style="${TH}">INÍCIO</th>
+                  <th style="${TH}">FIM</th>
+                  ${extraTh}
+                  <th style="${TH}text-align:right">DURAÇÃO</th>
+                </tr>
+              </thead>
+              <tbody>${linhas}</tbody>
+            </table>
+          </div>
+        </div>`;
+    });
+  }
+
+  wrap.innerHTML = `
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">${abaHtml}</div>
+    <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.5px;margin-bottom:14px;text-transform:uppercase">
+      ${abaAtual?.label || ''} — ${dados.length} registro(s) no período
+      ${_pfTimingAba==='separacao' ? ' · ⚠️ Tempo sem contar espera por reposição' : ''}
+    </div>
+    ${tabelasHtml}`;
+}
+
+function pfSwitchAba(id) {
+  _pfTimingAba = id;
+  pfRenderTiming();
 }
 
 // ── Exportar Excel ─────────────────────────────────────────────────────────

@@ -92,6 +92,132 @@ router.get('/performance/separadores', requerAuth, requerPerfil('supervisor'), a
   }
 });
 
+// ── GET /performance/timing?ini=YYYY-MM-DD&fim=YYYY-MM-DD&turno= ─────────
+router.get('/performance/timing', requerAuth, requerPerfil('supervisor'), async (req, res) => {
+  const { ini, fim, turno } = req.query;
+  if (!ini || !fim) return res.status(400).json({ erro: 'Informe ini e fim.' });
+
+  try {
+    const turnoFiltroSep = turno
+      ? ` AND REPLACE(COALESCE(u.turno, s.turno, 'Manha'), 'ã', 'a') = $3`
+      : '';
+    const paramsSep = turno ? [ini, fim, turno] : [ini, fim];
+
+    // Separação — pedido a pedido (skus_concluido_em exclui espera de reposição)
+    const separacao = await db.all(`
+      SELECT
+        p.numero_pedido,
+        COALESCE(u.nome, s.nome)                                         AS colaborador,
+        REPLACE(COALESCE(u.turno, s.turno, 'Manha'), 'ã', 'a')          AS turno,
+        p.data_pedido                                                     AS data,
+        p.iniciado_em,
+        COALESCE(NULLIF(p.skus_concluido_em,''), NULLIF(p.concluido_em,'')) AS concluido_em,
+        CASE
+          WHEN NULLIF(p.iniciado_em,'') IS NOT NULL
+           AND NULLIF(COALESCE(NULLIF(p.skus_concluido_em,''), NULLIF(p.concluido_em,'')), '') IS NOT NULL
+          THEN ROUND(EXTRACT(EPOCH FROM (
+            COALESCE(NULLIF(p.skus_concluido_em,''), NULLIF(p.concluido_em,''))::timestamp
+            - p.iniciado_em::timestamp
+          )) / 60.0, 1)::float
+          ELSE NULL
+        END AS duracao_min
+      FROM pedidos p
+      JOIN separadores s ON s.id = p.separador_id
+      LEFT JOIN usuarios u ON u.id = s.usuario_id
+      WHERE p.status = 'concluido'
+        AND p.data_pedido >= $1
+        AND p.data_pedido <= $2
+        AND s.status = 'ativo'
+        ${turnoFiltroSep}
+      ORDER BY COALESCE(u.nome, s.nome), p.iniciado_em
+    `, paramsSep);
+
+    // Reposição — tentativa a tentativa (unnest JSONB de tentativas)
+    const reposicao = await db.all(`
+      SELECT
+        ar.numero_pedido,
+        ar.codigo,
+        ar.descricao,
+        ar.data_aviso                    AS data,
+        t.value->>'repositor'            AS colaborador,
+        t.value->>'hora_inicio'          AS iniciado_em,
+        t.value->>'hora_fim'             AS concluido_em,
+        t.value->>'resultado'            AS resultado,
+        CASE
+          WHEN (t.value->>'hora_inicio') IS NOT NULL AND (t.value->>'hora_inicio') != ''
+           AND (t.value->>'hora_fim')    IS NOT NULL AND (t.value->>'hora_fim')    != ''
+          THEN ROUND(EXTRACT(EPOCH FROM (
+            (ar.data_aviso || ' ' || (t.value->>'hora_fim'))::timestamp
+            - (ar.data_aviso || ' ' || (t.value->>'hora_inicio'))::timestamp
+          )) / 60.0, 1)::float
+          ELSE NULL
+        END AS duracao_min
+      FROM avisos_repositor ar,
+           jsonb_array_elements(COALESCE(ar.tentativas, '[]'::jsonb)) AS t(value)
+      WHERE ar.data_aviso >= $1
+        AND ar.data_aviso <= $2
+        AND ar.tentativas IS NOT NULL
+        AND ar.tentativas != '[]'::jsonb
+        AND (t.value->>'hora_inicio') IS NOT NULL
+        AND (t.value->>'hora_inicio') != ''
+      ORDER BY t.value->>'repositor', ar.data_aviso, t.value->>'hora_inicio'
+    `, [ini, fim]);
+
+    // Checkout — operador a operador
+    const checkout = await db.all(`
+      SELECT
+        c.numero_pedido,
+        COALESCE(NULLIF(c.operador_nome,''), 'Operador') AS colaborador,
+        c.data_checkout                                   AS data,
+        c.hora_criacao                                    AS iniciado_em,
+        c.hora_checkout                                   AS concluido_em,
+        CASE
+          WHEN NULLIF(c.hora_criacao,'') IS NOT NULL AND NULLIF(c.hora_checkout,'') IS NOT NULL
+          THEN ROUND(EXTRACT(EPOCH FROM (
+            (c.data_checkout || ' ' || c.hora_checkout)::timestamp
+            - (c.data_checkout || ' ' || c.hora_criacao)::timestamp
+          )) / 60.0, 1)::float
+          ELSE NULL
+        END AS duracao_min
+      FROM checkout c
+      WHERE c.status = 'concluido'
+        AND NULLIF(c.hora_checkout,'') IS NOT NULL
+        AND c.data_checkout >= $1
+        AND c.data_checkout <= $2
+      ORDER BY COALESCE(NULLIF(c.operador_nome,''), 'Operador'), c.data_checkout, c.hora_checkout
+    `, [ini, fim]);
+
+    // Embalagem — embalador a embalador
+    const embalagem = await db.all(`
+      SELECT
+        p.numero_pedido,
+        NULLIF(p.embalado_por,'')     AS colaborador,
+        p.data_pedido                  AS data,
+        p.embalagem_iniciado_em        AS iniciado_em,
+        p.embalado_em                  AS concluido_em,
+        CASE
+          WHEN NULLIF(p.embalagem_iniciado_em,'') IS NOT NULL AND NULLIF(p.embalado_em,'') IS NOT NULL
+          THEN ROUND(EXTRACT(EPOCH FROM (
+            (p.data_pedido || ' ' || p.embalado_em)::timestamp
+            - (p.data_pedido || ' ' || p.embalagem_iniciado_em)::timestamp
+          )) / 60.0, 1)::float
+          ELSE NULL
+        END AS duracao_min
+      FROM pedidos p
+      WHERE p.status_embalagem = 'embalado'
+        AND NULLIF(p.embalado_por,'') IS NOT NULL
+        AND p.data_pedido >= $1
+        AND p.data_pedido <= $2
+      ORDER BY p.embalado_por, p.data_pedido, p.embalado_em
+    `, [ini, fim]);
+
+    res.json({ separacao, reposicao, checkout, embalagem });
+  } catch(e) {
+    console.error('performance/timing:', e.message);
+    res.status(500).json({ erro: e.message });
+  }
+});
+
 // ── GET /performance/range ────────────────────────────────────────────────
 router.get('/performance/range', requerAuth, requerPerfil('supervisor'), async (req, res) => {
   try {

@@ -67,12 +67,19 @@
       if (typeof atualizarKPIs === 'function') atualizarKPIs();
     });
 
-    // Diário enviado → notifica supervisores do próximo turno
+    // Diário enviado → notifica APENAS o supervisor do próximo turno
     socket.on('diario:pendente', (data) => {
       if (typeof usuarioAtual === 'undefined' || usuarioAtual?.perfil !== 'supervisor') return;
+      // Exclui o próprio criador do diário
+      if (usuarioAtual?.nome === data.supervisor) return;
+      // Determina qual turno deve validar (próximo ao turno que criou)
+      const NEXT_TURNO = { Manha: 'Tarde', Tarde: 'Noite', Noite: 'Manha' };
+      const meuTurno = (usuarioAtual?.turno || '').replace('ã','a').replace('Manh','Manha');
+      const turnoQueValida = NEXT_TURNO[data.turno];
+      if (turnoQueValida && meuTurno && meuTurno !== turnoQueValida) return;
       const turnoIcon = data.turno==='Manha'?'☀️':data.turno==='Tarde'?'🌅':'🌙';
       if (typeof toast === 'function') {
-        toast(`📋 Diário do turno ${turnoIcon} ${data.turno} (${data.supervisor}) aguarda validação! Você tem 10 minutos.`, 'aviso');
+        toast(`📋 Diário do turno ${turnoIcon} ${data.turno} (${data.supervisor}) aguarda validação! Você tem 30 minutos.`, 'aviso');
       }
       // Atualiza o banner de validação pendente se estiver na tela de diário
       if (typeof verificarValidacaoPendente === 'function') {
