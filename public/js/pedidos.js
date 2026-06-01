@@ -1123,21 +1123,31 @@ async function calcularDistribuicao() {
     distribuicaoPlano = data.plano;
     const resEl = document.getElementById('dist-resultado');
     resEl.style.display = 'block';
-    const totalDist = data.total_distribuidos ?? data.plano.reduce((s,p)=>s+p.pedidos.length,0);
+    const totalDist  = data.total_distribuidos ?? data.plano.reduce((s,p)=>s+p.pedidos.length,0);
     const totalItens = data.plano.reduce((s,p)=>s+(p.itens_total||0),0);
-    const restantes = data.total_pedidos - totalDist;
-    // Calcula desvio de itens para colorir a coluna (fairness visual)
-    const avgItens = data.plano.length ? totalItens / data.plano.length : 0;
+    const restantes  = data.total_pedidos - totalDist;
+    const temCargaPrevia = data.plano.some(p => (p.pontuacao_ja||0) > 0);
+    // Calcula desvio de pontuação total (carga real = já tinha + novo)
+    const avgPts = data.plano.length ? data.plano.reduce((s,p)=>s+(p.pontuacao_total||0),0) / data.plano.length : 0;
     let html = `<div style="font-size:11px;font-weight:700;color:${_modoPrime?'#D97706':'var(--accent)'};letter-spacing:1px;margin-bottom:10px">${_modoPrime?'⭐ RESULTADO DA DISTRIBUIÇÃO PRIME':'RESULTADO DA DISTRIBUIÇÃO'}</div>`;
-    html += '<div class="tabela-wrap"><table><thead><tr><th>COLABORADOR</th><th>PEDIDOS</th><th>ITENS</th><th>PONTUAÇÃO</th><th>LISTA</th></tr></thead><tbody>';
+    if (temCargaPrevia) {
+      html += `<div style="background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.2);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:11px;color:#6366f1">
+        ⚖️ Carga anterior considerada — novos pedidos nivelam o que cada colaborador já tem.
+      </div>`;
+    }
+    html += `<div class="tabela-wrap"><table><thead><tr><th>COLABORADOR</th><th>PEDIDOS AGORA</th><th>ITENS AGORA</th><th>CARGA TOTAL</th><th>LISTA</th></tr></thead><tbody>`;
     data.plano.forEach(item => {
-      const desvio = avgItens > 0 ? Math.abs((item.itens_total||0) - avgItens) / avgItens : 0;
-      const corItens = desvio < 0.1 ? 'var(--green)' : desvio < 0.25 ? 'var(--amber)' : 'var(--red)';
+      const ptsTotais = item.pontuacao_total || 0;
+      const ptsNovos  = ptsTotais - (item.pontuacao_ja || 0);
+      const desvio    = avgPts > 0 ? Math.abs(ptsTotais - avgPts) / avgPts : 0;
+      const corCarga  = desvio < 0.08 ? 'var(--green)' : desvio < 0.2 ? 'var(--amber)' : 'var(--red)';
+      const infoPrevia = (item.pontuacao_ja||0) > 0
+        ? `<div style="font-size:10px;color:var(--text3);margin-top:2px">+${Math.round(ptsNovos)} pts novos · já tinha ${Math.round(item.pontuacao_ja)} pts</div>` : '';
       html += `<tr>
         <td style="font-weight:700;color:var(--text)">👤 ${item.separador_nome}</td>
         <td style="color:var(--green);font-weight:700">${item.pedidos.length}</td>
-        <td style="font-weight:800;font-size:14px;color:${corItens}">${item.itens_total||0} itens</td>
-        <td><span style="font-family:'Space Mono',monospace;color:var(--indigo);font-size:11px">${item.pontuacao_total} pts</span></td>
+        <td style="font-weight:800;font-size:14px;color:var(--green)">${item.itens_total||0} itens</td>
+        <td><span style="font-family:'Space Mono',monospace;color:${corCarga};font-size:11px;font-weight:700">${ptsTotais} pts</span>${infoPrevia}</td>
         <td style="font-size:11px;color:var(--text3)">${item.pedidos.join(', ')}</td>
       </tr>`;
     });

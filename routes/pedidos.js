@@ -352,17 +352,41 @@ router.post('/pedidos/distribuicao', requerAuth, requerPerfil('supervisor'), asy
       if (!row) row=await db.get('SELECT id,nome FROM usuarios WHERE id=$1',[sid]);
       if (row) sepMap[sid]=row;
     }
-    const filas=separadores.map(sid=>({separador_id:sid,separador_nome:sepMap[sid]?.nome||`Sep ${sid}`,pedidos:[],pontuacao_total:0,itens_total:0,sep_db_id:sepMap[sid]?.id||null}));
+    // Carrega carga atual de cada colaborador (pedidos já atribuídos ainda pendentes/em separação)
+    // para que redistribuições no mesmo dia não ignorem o que já foi distribuído antes.
+    const filas=[];
+    for (const sid of separadores) {
+      const dbId = sepMap[sid]?.id || null;
+      let cargaAtual = { pontuacao: 0, itens: 0 };
+      if (dbId) {
+        const ja = await db.get(
+          `SELECT COALESCE(SUM(COALESCE(p.pontuacao,0)),0) AS pts,
+                  COALESCE(SUM(COALESCE(p.itens,0)),0) AS itens
+           FROM pedidos p
+           WHERE p.separador_id = $1
+             AND p.status IN ('pendente','separando')`, [dbId]);
+        if (ja) { cargaAtual.pontuacao = parseFloat(ja.pts)||0; cargaAtual.itens = parseInt(ja.itens)||0; }
+      }
+      filas.push({
+        separador_id: sid,
+        separador_nome: sepMap[sid]?.nome || `Sep ${sid}`,
+        pedidos: [],
+        pontuacao_total: cargaAtual.pontuacao,   // começa com o que já tem
+        itens_total:     cargaAtual.itens,
+        pontuacao_ja:    cargaAtual.pontuacao,    // guarda para mostrar no resultado
+        itens_ja:        cargaAtual.itens,
+        sep_db_id: dbId,
+      });
+    }
     for (const ped of ordenados) {
-      // Balanceia por pontuação total (complexidade real = corredor + localizações + quantidade).
-      // A pontuação já captura tanto o número de produtos/locais quanto a quantidade de itens
-      // e a dificuldade do corredor, por isso é o critério mais justo de equilíbrio.
+      // Balanceia pela carga total real (já atribuído + sendo distribuído agora).
+      // Assim redistribuições no mesmo dia nivelam a carga corretamente.
       filas.sort((a,b) => a.pontuacao_total - b.pontuacao_total);
       filas[0].pedidos.push(ped.numero_pedido);
       filas[0].pontuacao_total += ped._p;
       filas[0].itens_total += (ped.itens || 0);
     }
-    res.json({plano:filas.map(f=>({separador_id:f.separador_id,sep_db_id:f.sep_db_id,separador_nome:f.separador_nome,pedidos:f.pedidos,pontuacao_total:Math.round(f.pontuacao_total),itens_total:f.itens_total})),total_pedidos:pedidos.length,total_distribuidos:ordenados.length});
+    res.json({plano:filas.map(f=>({separador_id:f.separador_id,sep_db_id:f.sep_db_id,separador_nome:f.separador_nome,pedidos:f.pedidos,pontuacao_total:Math.round(f.pontuacao_total),itens_total:f.itens_total,pontuacao_ja:Math.round(f.pontuacao_ja||0),itens_ja:f.itens_ja||0})),total_pedidos:pedidos.length,total_distribuidos:ordenados.length});
   } catch(err){res.status(500).json({erro:err.message});}
 });
 
