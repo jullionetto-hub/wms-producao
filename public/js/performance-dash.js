@@ -56,14 +56,21 @@ function renderizarPerformanceDash() {
   pag.innerHTML = `
   <div style="padding:0 0 40px">
 
-    <div class="pg-title" style="margin-bottom:18px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-      🏆 Performance dos Separadores
-      <div style="margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <button onclick="pfExportarExcel()" style="background:#16a34a;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">📊 Excel</button>
-      </div>
+    <div class="pg-title" style="margin-bottom:14px">🏆 Performance dos Separadores</div>
+
+    <!-- ABAS PRINCIPAIS -->
+    <div style="display:flex;gap:4px;margin-bottom:16px;background:var(--surface2);border-radius:12px;padding:4px;width:fit-content">
+      <button id="pf-tab-resumo" onclick="pfSwitchTab('resumo')"
+        style="padding:8px 20px;border:none;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;background:#6366f1;color:#fff">
+        📊 Resumo
+      </button>
+      <button id="pf-tab-tempos" onclick="pfSwitchTab('tempos')"
+        style="padding:8px 20px;border:none;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;background:transparent;color:var(--text3)">
+        ⏱️ Tempos por Pedido
+      </button>
     </div>
 
-    <!-- FILTROS -->
+    <!-- FILTROS (compartilhado entre abas) -->
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px 16px;margin-bottom:18px;display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap">
       <div>
         <div style="font-size:9px;font-weight:700;color:var(--text3);letter-spacing:.8px;margin-bottom:3px">DE</div>
@@ -85,15 +92,16 @@ function renderizarPerformanceDash() {
           <option value="Noite">🌙 Noite</option>
         </select>
       </div>
-      <div>
+      <div id="pf-colab-wrap">
         <div style="font-size:9px;font-weight:700;color:var(--text3);letter-spacing:.8px;margin-bottom:3px">COLABORADOR</div>
         <select id="pf-colab" onchange="pfAplicarFiltroColab()"
           style="padding:7px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;outline:none;min-width:160px">
           <option value="">Todos os colaboradores</option>
         </select>
       </div>
-      <button onclick="pfBuscarDados()" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer">🔍 Filtrar</button>
+      <button id="pf-btn-filtrar" onclick="pfFiltrarAtivo()" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer">🔍 Filtrar</button>
       <button onclick="pfInicializar()" style="background:var(--surface2);color:var(--text3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:12px;cursor:pointer">✕ Limpar</button>
+      <button onclick="pfExportarExcel()" style="background:#16a34a;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer">📊 Excel</button>
       <span id="pf-filtro-info" style="margin-left:auto;font-size:11px;color:var(--text3);align-self:center"></span>
     </div>
 
@@ -110,7 +118,7 @@ function renderizarPerformanceDash() {
       <div style="font-size:12px">Ajuste o período e tente novamente</div>
     </div>
 
-    <!-- CONTEÚDO -->
+    <!-- ABA RESUMO -->
     <div id="pf-conteudo" style="display:none">
 
       <!-- KPI CARDS GRADIENTE -->
@@ -146,7 +154,7 @@ function renderizarPerformanceDash() {
         </div>
       </div>
 
-      <!-- Evolução diária (só aparece sem filtro de colaborador) -->
+      <!-- Evolução diária -->
       <div id="pf-dia-wrap" class="card" style="padding:16px 18px;margin-bottom:20px">
         <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px;margin-bottom:14px">📅 EVOLUÇÃO DIÁRIA DE PEDIDOS</div>
         <div style="position:relative;height:220px"><canvas id="pf-chart-dia"></canvas></div>
@@ -178,20 +186,19 @@ function renderizarPerformanceDash() {
         </div>
       </div>
 
-      <!-- TEMPOS DETALHADOS POR PEDIDO -->
-      <div class="card" style="padding:16px 18px;margin-top:16px">
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap">
-          <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px">⏱️ TEMPOS POR PEDIDO / COLABORADOR</div>
-          <button id="pf-btn-timing" onclick="pfCarregarTiming()"
-            style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">
-            🔍 Carregar tempos
-          </button>
-          <span style="font-size:11px;color:var(--text3)">Separação · Reposição · Checkout · Embalagem — início e fim de cada operação</span>
-        </div>
-        <div id="pf-timing-wrap" style="display:none"></div>
-      </div>
+    </div><!-- /pf-conteudo (resumo) -->
 
-    </div><!-- /pf-conteudo -->
+    <!-- ABA TEMPOS -->
+    <div id="pf-tempos-conteudo" style="display:none">
+      <div id="pf-timing-wrap">
+        <div style="text-align:center;padding:64px 24px;color:var(--text3)">
+          <div style="font-size:36px;margin-bottom:12px">⏱️</div>
+          <div style="font-size:14px;font-weight:700;margin-bottom:6px">Selecione o período e clique em Filtrar</div>
+          <div style="font-size:12px">Verá o início e fim de cada operação por colaborador</div>
+        </div>
+      </div>
+    </div>
+
   </div>`;
 
   if (!document.getElementById('pf-grid-style')) {
@@ -202,6 +209,43 @@ function renderizarPerformanceDash() {
   }
 
   pfInicializar();
+}
+
+// ── Controle de abas principais ───────────────────────────────────────────
+let _pfAbaAtiva = 'resumo';
+
+function pfSwitchTab(aba) {
+  _pfAbaAtiva = aba;
+  const resumoBtn  = document.getElementById('pf-tab-resumo');
+  const temposBtn  = document.getElementById('pf-tab-tempos');
+  const resumoDiv  = document.getElementById('pf-conteudo');
+  const temposDiv  = document.getElementById('pf-tempos-conteudo');
+  const colabWrap  = document.getElementById('pf-colab-wrap');
+
+  if (aba === 'resumo') {
+    if (resumoBtn) { resumoBtn.style.background='#6366f1'; resumoBtn.style.color='#fff'; }
+    if (temposBtn) { temposBtn.style.background='transparent'; temposBtn.style.color='var(--text3)'; }
+    if (resumoDiv) resumoDiv.style.display = _pfDados ? '' : 'none';
+    if (temposDiv) temposDiv.style.display = 'none';
+    if (colabWrap) colabWrap.style.display = '';
+  } else {
+    if (temposBtn) { temposBtn.style.background='#6366f1'; temposBtn.style.color='#fff'; }
+    if (resumoBtn) { resumoBtn.style.background='transparent'; resumoBtn.style.color='var(--text3)'; }
+    if (resumoDiv) resumoDiv.style.display = 'none';
+    if (temposDiv) temposDiv.style.display = '';
+    if (colabWrap) colabWrap.style.display = 'none';
+    // Auto-carrega timing se ainda não carregou para este período
+    if (!_pfTiming) pfCarregarTiming();
+  }
+}
+
+function pfFiltrarAtivo() {
+  if (_pfAbaAtiva === 'tempos') {
+    _pfTiming = null;
+    pfCarregarTiming();
+  } else {
+    pfBuscarDados();
+  }
 }
 
 // ── Inicializar ────────────────────────────────────────────────────────────
@@ -246,15 +290,11 @@ async function pfBuscarDados() {
   const fim   = document.getElementById('pf-fim')?.value   || '';
   const turno = document.getElementById('pf-turno')?.value || '';
 
-  document.getElementById('pf-loading').style.display  = '';
-  document.getElementById('pf-conteudo').style.display = 'none';
-  document.getElementById('pf-vazio').style.display    = 'none';
-  // Reset timing ao buscar novos dados
+  document.getElementById('pf-loading').style.display        = '';
+  document.getElementById('pf-conteudo').style.display       = 'none';
+  document.getElementById('pf-tempos-conteudo').style.display = 'none';
+  document.getElementById('pf-vazio').style.display          = 'none';
   _pfTiming = null;
-  const timingWrap = document.getElementById('pf-timing-wrap');
-  const timingBtn  = document.getElementById('pf-btn-timing');
-  if (timingWrap) timingWrap.style.display = 'none';
-  if (timingBtn)  timingBtn.textContent = '🔍 Carregar tempos';
 
   const qs = new URLSearchParams({ ini, fim });
   if (turno) qs.set('turno', turno);
@@ -565,24 +605,22 @@ async function pfCarregarTiming() {
   const fim   = document.getElementById('pf-fim')?.value   || '';
   const turno = document.getElementById('pf-turno')?.value || '';
   const wrap  = document.getElementById('pf-timing-wrap');
-  const btn   = document.getElementById('pf-btn-timing');
   if (!wrap || !ini || !fim) return;
 
-  btn.disabled = true;
-  btn.textContent = '⏳ Carregando...';
-  wrap.style.display = '';
-  wrap.innerHTML = `<div style="padding:32px;text-align:center;color:var(--text3)">⏳ Buscando dados...</div>`;
+  wrap.innerHTML = `
+    <div style="text-align:center;padding:48px;color:var(--text3)">
+      <div style="font-size:28px;margin-bottom:10px">⏳</div>
+      <div style="font-size:13px">Buscando tempos...</div>
+    </div>`;
 
   const qs = new URLSearchParams({ ini, fim });
   if (turno) qs.set('turno', turno);
   qs.set('_', Date.now());
 
   const dados = await apiFetch(`/performance/timing?${qs}`);
-  btn.disabled = false;
-  btn.textContent = '🔄 Atualizar';
 
   if (!dados || dados.erro) {
-    wrap.innerHTML = `<div style="padding:16px;color:#ef4444">${pfEsc(dados?.erro || 'Erro ao carregar')}</div>`;
+    wrap.innerHTML = `<div style="padding:20px;color:#ef4444;font-size:13px">⚠️ ${pfEsc(dados?.erro || 'Erro ao carregar')}</div>`;
     return;
   }
   _pfTiming = dados;
@@ -593,108 +631,150 @@ function pfRenderTiming() {
   const wrap = document.getElementById('pf-timing-wrap');
   if (!wrap || !_pfTiming) return;
 
-  const abas = [
-    { id:'separacao', label:'✂️ Separação',  cor:'#6366f1' },
-    { id:'reposicao', label:'🔁 Reposição',   cor:'#f59e0b' },
-    { id:'checkout',  label:'📦 Checkout',    cor:'#0891b2' },
-    { id:'embalagem', label:'🎁 Embalagem',   cor:'#16a34a' },
+  const ABAS = [
+    { id:'separacao', label:'Separação',  icon:'✂️', cor:'#6366f1', grad:'linear-gradient(135deg,#4f46e5,#7c3aed)' },
+    { id:'reposicao', label:'Reposição',  icon:'🔁', cor:'#f59e0b', grad:'linear-gradient(135deg,#d97706,#f59e0b)' },
+    { id:'checkout',  label:'Checkout',   icon:'📦', cor:'#0891b2', grad:'linear-gradient(135deg,#0891b2,#0d9488)' },
+    { id:'embalagem', label:'Embalagem',  icon:'🎁', cor:'#16a34a', grad:'linear-gradient(135deg,#16a34a,#0d9488)' },
   ];
+  const abaAtual = ABAS.find(a => a.id === _pfTimingAba) || ABAS[0];
 
-  const abaHtml = abas.map(a => `
-    <button onclick="pfSwitchAba('${a.id}')" id="pf-aba-${a.id}"
-      style="padding:8px 16px;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s;
-             background:${_pfTimingAba===a.id ? a.cor : 'var(--surface2)'};
-             color:${_pfTimingAba===a.id ? '#fff' : 'var(--text3)'}">
-      ${a.label} <span style="opacity:.75;font-weight:400">(${(_pfTiming[a.id]||[]).length})</span>
-    </button>`).join('');
+  const fmtHora = v => {
+    if (!v) return '—';
+    return v.includes('T') ? v.slice(11,16) : v.slice(0,5);
+  };
+  const fmtDur = min => {
+    if (min == null) return '—';
+    if (min < 1) return `${Math.round(min*60)}s`;
+    return `${min.toFixed(1)} min`;
+  };
+  const badgeDur = (min) => {
+    if (min == null) return `<span style="color:var(--text3);font-size:11px">—</span>`;
+    const cor  = min <= 5 ? '#16a34a' : min <= 15 ? '#d97706' : '#dc2626';
+    const bg   = min <= 5 ? 'rgba(22,163,74,.12)' : min <= 15 ? 'rgba(217,119,6,.12)' : 'rgba(220,38,38,.12)';
+    return `<span style="background:${bg};color:${cor};border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;white-space:nowrap">${fmtDur(min)}</span>`;
+  };
 
+  // Sub-abas
+  const subAbas = ABAS.map(a => {
+    const n = (_pfTiming[a.id]||[]).length;
+    const ativo = a.id === _pfTimingAba;
+    return `<button onclick="pfSwitchAba('${a.id}')"
+      style="display:flex;align-items:center;gap:6px;padding:9px 16px;border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;
+             background:${ativo ? a.grad : 'var(--surface2)'};color:${ativo ? '#fff' : 'var(--text3)'}">
+      <span>${a.icon}</span>
+      <span>${a.label}</span>
+      <span style="background:${ativo ? 'rgba(255,255,255,.25)' : 'var(--border)'};color:${ativo ? '#fff' : 'var(--text3)'};border-radius:20px;padding:1px 7px;font-size:10px;font-weight:800">${n}</span>
+    </button>`;
+  }).join('');
+
+  // Dados da aba ativa
   const dados = _pfTiming[_pfTimingAba] || [];
-  const abaAtual = abas.find(a => a.id === _pfTimingAba);
+
+  // KPI rápido da aba
+  const totalCom  = dados.filter(r => r.duracao_min != null).length;
+  const mediaGeral= totalCom ? dados.reduce((s,r)=>s+(r.duracao_min||0),0)/totalCom : null;
+  const minDur    = totalCom ? Math.min(...dados.filter(r=>r.duracao_min!=null).map(r=>r.duracao_min)) : null;
+  const maxDur    = totalCom ? Math.max(...dados.filter(r=>r.duracao_min!=null).map(r=>r.duracao_min)) : null;
+  const nColab    = new Set(dados.map(r=>r.colaborador).filter(Boolean)).size;
+
+  const kpiBar = `
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-bottom:20px">
+      ${[
+        ['REGISTROS', dados.length, ''],
+        ['COLABORADORES', nColab, ''],
+        ['TEMPO MÉDIO', mediaGeral!=null?fmtDur(mediaGeral):'—', ''],
+        ['MAIS RÁPIDO', minDur!=null?fmtDur(minDur):'—', 'color:#16a34a'],
+        ['MAIS LENTO',  maxDur!=null?fmtDur(maxDur):'—', 'color:#dc2626'],
+        _pfTimingAba==='reposicao' ? ['ENCONTRADOS',
+          dados.filter(r=>['encontrado','buscado','abastecido'].includes(r.resultado)).length,'color:#16a34a'] : null,
+        _pfTimingAba==='reposicao' ? ['NÃO ENCONTR.',
+          dados.filter(r=>['nao_encontrado','protocolo'].includes(r.resultado)).length,'color:#dc2626'] : null,
+      ].filter(Boolean).map(([lbl,val,sty])=>`
+        <div style="background:var(--surface2);border-radius:10px;padding:12px 14px">
+          <div style="font-size:9px;font-weight:800;color:var(--text3);letter-spacing:.6px;margin-bottom:4px">${lbl}</div>
+          <div style="font-size:20px;font-weight:900;${sty}">${val}</div>
+        </div>`).join('')}
+    </div>`;
+
+  // Nota informativa
+  const nota = _pfTimingAba==='separacao'
+    ? `<div style="display:flex;align-items:center;gap:8px;background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.2);border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:#6366f1">
+        ℹ️ Tempo de separação <strong>não inclui</strong> o tempo aguardando reposição de item.
+       </div>` : '';
 
   // Agrupar por colaborador
   const grupos = {};
   dados.forEach(r => {
-    const nome = r.colaborador || '—';
-    if (!grupos[nome]) grupos[nome] = [];
-    grupos[nome].push(r);
+    const k = r.colaborador || '—';
+    if (!grupos[k]) grupos[k] = [];
+    grupos[k].push(r);
   });
-
-  const fmtHora = (v) => {
-    if (!v) return '—';
-    // ISO timestamp: pega só HH:MM
-    if (v.includes('T')) return v.slice(11, 16);
-    // HH:MM ou HH:MM:SS
-    return v.slice(0, 5);
-  };
-
-  const fmtDur = (min) => {
-    if (min == null) return '—';
-    if (min < 1) return `${Math.round(min * 60)}s`;
-    return `${min.toFixed(1)} min`;
-  };
-
-  const corDur = (min) => {
-    if (min == null) return 'var(--text3)';
-    if (min <= 5)  return '#22c55e';
-    if (min <= 15) return '#f59e0b';
-    return '#ef4444';
-  };
 
   let tabelasHtml = '';
   if (!Object.keys(grupos).length) {
-    tabelasHtml = `<div style="padding:32px;text-align:center;color:var(--text3);font-size:13px">
-      Nenhum dado encontrado para o período selecionado.
+    tabelasHtml = `<div style="text-align:center;padding:48px 24px;color:var(--text3)">
+      <div style="font-size:32px;margin-bottom:10px">${abaAtual.icon}</div>
+      <div style="font-size:13px;font-weight:700">Nenhum registro de ${abaAtual.label} no período</div>
     </div>`;
   } else {
-    Object.entries(grupos).sort(([a],[b]) => a.localeCompare(b)).forEach(([nome, rows]) => {
-      const totalCom = rows.filter(r => r.duracao_min != null).length;
-      const mediaMin = totalCom ? rows.reduce((s,r) => s + (r.duracao_min||0), 0) / totalCom : null;
+    const TH = `padding:8px 14px;font-size:9px;font-weight:800;color:var(--text3);letter-spacing:.6px;text-transform:uppercase;`;
 
-      let headerExtra = '';
+    Object.entries(grupos).sort(([a],[b])=>a.localeCompare(b)).forEach(([nome, rows]) => {
+      const nCom  = rows.filter(r=>r.duracao_min!=null).length;
+      const media = nCom ? rows.reduce((s,r)=>s+(r.duracao_min||0),0)/nCom : null;
+
+      // cabeçalho do colaborador — card com gradiente sutil
+      let statsExtra = '';
       if (_pfTimingAba === 'reposicao') {
-        const enc    = rows.filter(r => r.resultado === 'encontrado' || r.resultado === 'buscado' || r.resultado === 'abastecido').length;
-        const naoEnc = rows.filter(r => r.resultado === 'nao_encontrado' || r.resultado === 'protocolo').length;
-        headerExtra = `· <span style="color:#22c55e">${enc} encontrado(s)</span> · <span style="color:#ef4444">${naoEnc} não encontrado(s)</span>`;
+        const enc    = rows.filter(r=>['encontrado','buscado','abastecido'].includes(r.resultado)).length;
+        const naoEnc = rows.filter(r=>['nao_encontrado','protocolo'].includes(r.resultado)).length;
+        statsExtra = `
+          <div style="font-size:11px">✅ <b style="color:#16a34a">${enc}</b> encontrado(s)</div>
+          <div style="font-size:11px">❌ <b style="color:#dc2626">${naoEnc}</b> não encontrado(s)</div>`;
       }
 
-      const linhas = rows.map(r => {
-        let extra = '';
+      const linhas = rows.map((r,i) => {
+        const dataFmt = r.data ? (()=>{const[y,m,d]=r.data.split('-');return`${d}/${m}`;})() : '';
+        let extraCells = '';
         if (_pfTimingAba === 'reposicao') {
-          const resMap = { encontrado:'✅', buscado:'✅', abastecido:'✅', nao_encontrado:'❌', protocolo:'📋' };
-          const resIcon = resMap[r.resultado] || '?';
-          extra = `<td style="padding:7px 12px;text-align:center;font-size:13px" title="${pfEsc(r.resultado||'')}">${resIcon}</td>
-                   <td style="padding:7px 12px;font-size:11px;color:var(--text3);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${pfEsc(r.descricao||'')}">
-                     <div style="font-size:10px;color:var(--text3)">${pfEsc(r.codigo||'')}</div>
-                     ${pfEsc((r.descricao||'').slice(0,40))}
-                   </td>`;
+          const resMap = {encontrado:'✅',buscado:'✅',abastecido:'✅',nao_encontrado:'❌',protocolo:'📋'};
+          extraCells = `
+            <td style="padding:8px 14px;text-align:center;font-size:13px">${resMap[r.resultado]||'?'}</td>
+            <td style="padding:8px 14px;max-width:200px">
+              <div style="font-size:10px;font-weight:700;color:var(--text3)">${pfEsc(r.codigo||'')}</div>
+              <div style="font-size:11px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${pfEsc(r.descricao||'')}">${pfEsc((r.descricao||'').slice(0,35))}</div>
+            </td>`;
         }
-
-        const dataFmt = r.data ? (() => { const [y,m,d]=r.data.split('-'); return `${d}/${m}`; })() : '';
-
-        return `<tr style="border-bottom:1px solid rgba(51,65,85,.2)">
-          <td style="padding:7px 12px;font-size:12px;font-weight:600;color:var(--text)">${pfEsc(r.numero_pedido||'—')}</td>
-          <td style="padding:7px 12px;font-size:11px;color:var(--text3)">${dataFmt}</td>
-          <td style="padding:7px 12px;font-size:12px;color:var(--text)">${fmtHora(r.iniciado_em)}</td>
-          <td style="padding:7px 12px;font-size:12px;color:var(--text)">${fmtHora(r.concluido_em)}</td>
-          ${extra}
-          <td style="padding:7px 12px;text-align:right;font-size:12px;font-weight:700;color:${corDur(r.duracao_min)}">${fmtDur(r.duracao_min)}</td>
+        const bg = i%2===0 ? 'transparent' : 'rgba(51,65,85,.04)';
+        return `<tr style="background:${bg}">
+          <td style="padding:8px 14px;font-size:12px;font-weight:700;color:var(--text)">${pfEsc(r.numero_pedido||'—')}</td>
+          <td style="padding:8px 14px;font-size:11px;color:var(--text3)">${dataFmt}</td>
+          <td style="padding:8px 14px;font-size:12px;color:var(--text);font-weight:600">${fmtHora(r.iniciado_em)}</td>
+          <td style="padding:8px 14px;font-size:12px;color:var(--text);font-weight:600">${fmtHora(r.concluido_em)}</td>
+          ${extraCells}
+          <td style="padding:8px 14px;text-align:right">${badgeDur(r.duracao_min)}</td>
         </tr>`;
       }).join('');
 
-      const TH = 'padding:7px 12px;font-size:9px;font-weight:800;color:var(--text3);letter-spacing:.5px;';
-      const extraTh = _pfTimingAba === 'reposicao'
-        ? `<th style="${TH}text-align:center">RESULTADO</th><th style="${TH}">ITEM</th>`
-        : '';
+      const extraTh = _pfTimingAba==='reposicao'
+        ? `<th style="${TH}text-align:center">RESULT.</th><th style="${TH}">ITEM</th>` : '';
+
       tabelasHtml += `
-        <div style="margin-bottom:20px">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap">
-            <div style="font-size:13px;font-weight:800;color:var(--text)">${pfEsc(nome)}</div>
-            <div style="font-size:11px;color:var(--text3)">${rows.length} registro(s) ${headerExtra}</div>
-            ${mediaMin!=null ? `<div style="margin-left:auto;font-size:12px;font-weight:700;color:${corDur(mediaMin)}">⌀ ${fmtDur(mediaMin)}</div>` : ''}
+        <div class="card" style="padding:0;overflow:hidden;margin-bottom:16px">
+          <div style="background:${abaAtual.grad};padding:14px 18px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+            <div>
+              <div style="font-size:14px;font-weight:800;color:#fff">${pfEsc(nome)}</div>
+              <div style="font-size:11px;color:rgba(255,255,255,.75);margin-top:2px">${rows.length} registro(s)</div>
+            </div>
+            <div style="display:flex;gap:16px;margin-left:auto;flex-wrap:wrap;align-items:center">
+              ${statsExtra}
+              ${media!=null ? `<div style="background:rgba(255,255,255,.15);border-radius:20px;padding:4px 14px;color:#fff;font-size:12px;font-weight:700">⌀ ${fmtDur(media)}</div>` : ''}
+            </div>
           </div>
-          <div style="overflow-x:auto;border-radius:8px;border:1px solid var(--border)">
+          <div style="overflow-x:auto">
             <table style="width:100%;border-collapse:collapse">
-              <thead style="background:var(--surface2)">
+              <thead style="background:var(--surface2);border-bottom:1px solid var(--border)">
                 <tr>
                   <th style="${TH}text-align:left">PEDIDO</th>
                   <th style="${TH}">DATA</th>
@@ -712,11 +792,9 @@ function pfRenderTiming() {
   }
 
   wrap.innerHTML = `
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">${abaHtml}</div>
-    <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.5px;margin-bottom:14px;text-transform:uppercase">
-      ${abaAtual?.label || ''} — ${dados.length} registro(s) no período
-      ${_pfTimingAba==='separacao' ? ' · ⚠️ Tempo sem contar espera por reposição' : ''}
-    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px">${subAbas}</div>
+    ${nota}
+    ${kpiBar}
     ${tabelasHtml}`;
 }
 
