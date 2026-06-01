@@ -763,6 +763,10 @@ function pfRenderTiming(filtroNome) {
               <div style="font-size:10px;font-weight:700;color:var(--text3)">${pfEsc(r.codigo||'')}</div>
               <div style="font-size:11px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${pfEsc(r.descricao||'')}">${pfEsc((r.descricao||'').slice(0,35))}</div>
             </td>`;
+        } else if (_pfTimingAba === 'separacao') {
+          extraCells = `
+            <td style="padding:8px 14px;text-align:right;font-size:12px;font-weight:700;color:#38bdf8">${r.total_itens ?? '—'}</td>
+            <td style="padding:8px 14px;text-align:right;font-size:12px;color:#f59e0b">${r.skus ?? '—'}</td>`;
         }
         const bg = i%2===0 ? 'transparent' : 'rgba(51,65,85,.04)';
         return `<tr style="background:${bg}">
@@ -776,7 +780,10 @@ function pfRenderTiming(filtroNome) {
       }).join('');
 
       const extraTh = _pfTimingAba==='reposicao'
-        ? `<th style="${TH}text-align:center">RESULT.</th><th style="${TH}">ITEM</th>` : '';
+        ? `<th style="${TH}text-align:center">RESULT.</th><th style="${TH}">ITEM</th>`
+        : _pfTimingAba==='separacao'
+        ? `<th style="${TH}text-align:right">ITENS</th><th style="${TH}text-align:right">SKUs</th>`
+        : '';
 
       tabelasHtml += `
         <div class="card" style="padding:0;overflow:hidden;margin-bottom:16px">
@@ -832,8 +839,8 @@ function pfExportarExcel() {
   if (_pfAbaAtiva === 'tempos' && _pfTiming) {
     const ABAS_EXP = [
       { id:'separacao', label:'Separação',
-        cols:['Colaborador','Pedido','Data','Início','Fim','Duração (min)'],
-        row: r => [r.colaborador||'', r.numero_pedido||'', fmtData(r.data), fmtHora(r.iniciado_em), fmtHora(r.concluido_em), r.duracao_min??''] },
+        cols:['Colaborador','Pedido','Data','Início','Fim','Duração (min)','Total Itens','SKUs'],
+        row: r => [r.colaborador||'', r.numero_pedido||'', fmtData(r.data), fmtHora(r.iniciado_em), fmtHora(r.concluido_em), r.duracao_min??'', r.total_itens??'', r.skus??''] },
       { id:'reposicao', label:'Reposição',
         cols:['Colaborador','Pedido','Data','Início','Fim','Duração (min)','Resultado','Código','Descrição'],
         row: r => [r.colaborador||'', r.numero_pedido||'', fmtData(r.data), fmtHora(r.iniciado_em), fmtHora(r.concluido_em), r.duracao_min??'', r.resultado||'', r.codigo||'', r.descricao||''] },

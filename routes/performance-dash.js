@@ -112,6 +112,11 @@ router.get('/performance/timing', requerAuth, requerPerfil('supervisor'), async 
         p.data_pedido                                                     AS data,
         p.iniciado_em,
         COALESCE(NULLIF(p.skus_concluido_em,''), NULLIF(p.concluido_em,'')) AS concluido_em,
+        COALESCE(NULLIF(p.total_itens,0), p.itens, 0)                    AS total_itens,
+        (SELECT COUNT(DISTINCT ip.codigo)
+           FROM itens_pedido ip
+           WHERE ip.pedido_id = p.id
+             AND ip.codigo IS NOT NULL AND ip.codigo != '')::int          AS skus,
         CASE
           WHEN NULLIF(p.iniciado_em,'') IS NOT NULL
            AND NULLIF(COALESCE(NULLIF(p.skus_concluido_em,''), NULLIF(p.concluido_em,'')), '') IS NOT NULL
