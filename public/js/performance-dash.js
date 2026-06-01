@@ -805,11 +805,44 @@ function pfSwitchAba(id) {
 
 // ── Exportar Excel ─────────────────────────────────────────────────────────
 function pfExportarExcel() {
-  const colab = _pfFiltrados?.length ? _pfFiltrados : _pfDados?.colaboradores;
-  if (!colab?.length) { pfToast('Sem dados para exportar.','aviso'); return; }
-
   const ini = document.getElementById('pf-ini')?.value || '';
   const fim = document.getElementById('pf-fim')?.value || '';
+  const fmtHora = v => { if (!v) return ''; return v.includes('T') ? v.slice(11,16) : v.slice(0,5); };
+  const fmtData = d => { if (!d) return ''; const [y,m,dd]=d.split('-'); return `${dd}/${m}/${y}`; };
+
+  // Na aba Tempos → exporta pedido a pedido
+  if (_pfAbaAtiva === 'tempos' && _pfTiming) {
+    const ABAS_EXP = [
+      { id:'separacao', label:'Separação',
+        cols:['Colaborador','Pedido','Data','Início','Fim','Duração (min)'],
+        row: r => [r.colaborador||'', r.numero_pedido||'', fmtData(r.data), fmtHora(r.iniciado_em), fmtHora(r.concluido_em), r.duracao_min??''] },
+      { id:'reposicao', label:'Reposição',
+        cols:['Colaborador','Pedido','Data','Início','Fim','Duração (min)','Resultado','Código','Descrição'],
+        row: r => [r.colaborador||'', r.numero_pedido||'', fmtData(r.data), fmtHora(r.iniciado_em), fmtHora(r.concluido_em), r.duracao_min??'', r.resultado||'', r.codigo||'', r.descricao||''] },
+      { id:'checkout', label:'Checkout',
+        cols:['Colaborador','Pedido','Data','Início','Fim','Duração (min)'],
+        row: r => [r.colaborador||'', r.numero_pedido||'', fmtData(r.data), fmtHora(r.iniciado_em), fmtHora(r.concluido_em), r.duracao_min??''] },
+      { id:'embalagem', label:'Embalagem',
+        cols:['Colaborador','Pedido','Data','Início','Fim','Duração (min)'],
+        row: r => [r.colaborador||'', r.numero_pedido||'', fmtData(r.data), fmtHora(r.iniciado_em), fmtHora(r.concluido_em), r.duracao_min??''] },
+    ];
+    const wb = XLSX.utils.book_new();
+    let temDados = false;
+    ABAS_EXP.forEach(({ id, label, cols, row }) => {
+      const rows = _pfTiming[id] || [];
+      if (!rows.length) return;
+      temDados = true;
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([cols, ...rows.map(row)]), label);
+    });
+    if (!temDados) { pfToast('Nenhum dado de tempo para exportar.','aviso'); return; }
+    XLSX.writeFile(wb, `tempos-por-pedido_${(ini||'').replace(/-/g,'')}${fim?'-'+(fim).replace(/-/g,''):''}.xlsx`);
+    pfToast('✅ Excel exportado!','sucesso');
+    return;
+  }
+
+  // Aba Resumo → exporta agregado por colaborador
+  const colab = _pfFiltrados?.length ? _pfFiltrados : _pfDados?.colaboradores;
+  if (!colab?.length) { pfToast('Sem dados para exportar.','aviso'); return; }
 
   const abaResumo = [
     ['#','Colaborador','Turno','Pedidos','Itens','SKUs','Reposições','Itens/Ped','Tempo Médio (min)'],
@@ -821,20 +854,13 @@ function pfExportarExcel() {
       c.tempo_medio_min != null ? parseFloat(c.tempo_medio_min.toFixed(1)) : '',
     ])
   ];
-
   const abaDia = [
     ['Data','Pedidos','Itens'],
-    ...(_pfDados?.por_dia||[]).map(r => {
-      const [y,m,d] = r.data.split('-');
-      return [`${d}/${m}/${y}`, r.pedidos, r.itens];
-    })
+    ...(_pfDados?.por_dia||[]).map(r => [fmtData(r.data), r.pedidos, r.itens])
   ];
-
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(abaResumo), 'Resumo');
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(abaDia),    'Por Dia');
-
-  const nome = `performance-separadores_${(ini||'').replace(/-/g,'')}${fim?'-'+(fim||'').replace(/-/g,''):''}.xlsx`;
-  XLSX.writeFile(wb, nome);
+  XLSX.writeFile(wb, `performance-separadores_${(ini||'').replace(/-/g,'')}${fim?'-'+(fim).replace(/-/g,''):''}.xlsx`);
   pfToast('✅ Excel exportado!','sucesso');
 }
