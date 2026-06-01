@@ -7,6 +7,7 @@
 // ── Estado ────────────────────────────────────────────────────────────────
 let _pfDados      = null;   // resposta completa da API
 let _pfFiltrados  = [];     // colaboradores após filtro de nome
+let _pfUsuarios   = [];     // todos os usuários ativos (para o dropdown)
 const _pfCharts   = {};
 let _pfCarregando = false;
 
@@ -56,7 +57,7 @@ function renderizarPerformanceDash() {
   pag.innerHTML = `
   <div style="padding:0 0 40px">
 
-    <div class="pg-title" style="margin-bottom:14px">🏆 Performance dos Separadores</div>
+    <div class="pg-title" style="margin-bottom:14px">🏆 Performance Logística</div>
 
     <!-- ABAS PRINCIPAIS -->
     <div style="display:flex;gap:4px;margin-bottom:16px;background:var(--surface2);border-radius:12px;padding:4px;width:fit-content">
@@ -227,13 +228,11 @@ function pfSwitchTab(aba) {
     if (temposBtn) { temposBtn.style.background='transparent'; temposBtn.style.color='var(--text3)'; }
     if (resumoDiv) resumoDiv.style.display = _pfDados ? '' : 'none';
     if (temposDiv) temposDiv.style.display = 'none';
-    if (colabWrap) colabWrap.style.display = '';
   } else {
     if (temposBtn) { temposBtn.style.background='#6366f1'; temposBtn.style.color='#fff'; }
     if (resumoBtn) { resumoBtn.style.background='transparent'; resumoBtn.style.color='var(--text3)'; }
     if (resumoDiv) resumoDiv.style.display = 'none';
     if (temposDiv) temposDiv.style.display = '';
-    if (colabWrap) colabWrap.style.display = 'none';
     // Auto-carrega timing se ainda não carregou para este período
     if (!_pfTiming) pfCarregarTiming();
   }
@@ -259,6 +258,15 @@ async function pfInicializar() {
   if (colabEl) colabEl.value = '';
   const turnoEl = document.getElementById('pf-turno');
   if (turnoEl) turnoEl.value = '';
+
+  // Carrega todos os usuários ativos para o dropdown (só na primeira vez)
+  if (!_pfUsuarios.length) {
+    const usuarios = await apiFetch('/usuarios?status=ativo&_=' + Date.now());
+    if (Array.isArray(usuarios)) {
+      _pfUsuarios = usuarios.sort((a,b) => (a.nome||'').localeCompare(b.nome||''));
+    }
+  }
+  pfPopularDropdownTodos();
 
   if (!iniEl.value || !fimEl.value) {
     document.getElementById('pf-loading').style.display = '';
@@ -338,28 +346,36 @@ async function pfBuscarDados() {
   }, 500);
 }
 
-// ── Popula dropdown de colaboradores ──────────────────────────────────────
-function pfPopularDropdownColab(colaboradores) {
+// ── Popula dropdown com TODOS os usuários ativos ──────────────────────────
+function pfPopularDropdownTodos() {
   const sel = document.getElementById('pf-colab');
   if (!sel) return;
   const valorAtual = sel.value;
   sel.innerHTML = '<option value="">Todos os colaboradores</option>' +
-    [...colaboradores]
-      .sort((a,b) => a.nome.localeCompare(b.nome))
-      .map(c => `<option value="${pfEsc(c.nome)}">${pfEsc(c.nome)}</option>`)
-      .join('');
-  // Mantém seleção se o nome ainda existe
-  if (valorAtual && [...sel.options].some(o => o.value === valorAtual)) {
-    sel.value = valorAtual;
-  }
+    _pfUsuarios.map(u => `<option value="${pfEsc(u.nome)}">${pfEsc(u.nome)}</option>`).join('');
+  if (valorAtual && [...sel.options].some(o => o.value === valorAtual)) sel.value = valorAtual;
 }
 
-// ── Filtra por colaborador e renderiza ────────────────────────────────────
+// mantém compatibilidade com chamadas antigas
+function pfPopularDropdownColab() { pfPopularDropdownTodos(); }
+
+// ── Filtra por colaborador e renderiza (ambas as abas) ────────────────────
 function pfAplicarFiltroColab() {
-  if (!_pfDados) return;
   const nome = document.getElementById('pf-colab')?.value || '';
   const ini  = document.getElementById('pf-ini')?.value   || '';
   const fim  = document.getElementById('pf-fim')?.value   || '';
+
+  const inf = document.getElementById('pf-filtro-info');
+
+  // ── Aba Tempos: re-renderiza com filtro ──────────────────────────────────
+  if (_pfAbaAtiva === 'tempos') {
+    if (_pfTiming) pfRenderTiming(nome);
+    if (inf) inf.textContent = nome ? `${pfFmtBR(ini)} a ${pfFmtBR(fim)} · ${nome}` : `${pfFmtBR(ini)} a ${pfFmtBR(fim)}`;
+    return;
+  }
+
+  // ── Aba Resumo ───────────────────────────────────────────────────────────
+  if (!_pfDados) return;
 
   _pfFiltrados = nome
     ? _pfDados.colaboradores.filter(c => c.nome === nome)
@@ -374,11 +390,9 @@ function pfAplicarFiltroColab() {
   document.getElementById('pf-conteudo').style.display = '';
   document.getElementById('pf-vazio').style.display    = 'none';
 
-  // Mostra/oculta evolução diária (só faz sentido sem filtro de colaborador)
   const diaWrap = document.getElementById('pf-dia-wrap');
   if (diaWrap) diaWrap.style.display = nome ? 'none' : '';
 
-  const inf = document.getElementById('pf-filtro-info');
   if (inf) {
     inf.textContent = nome
       ? `${pfFmtBR(ini)} a ${pfFmtBR(fim)} · ${nome}`
@@ -627,9 +641,10 @@ async function pfCarregarTiming() {
   pfRenderTiming();
 }
 
-function pfRenderTiming() {
+function pfRenderTiming(filtroNome) {
   const wrap = document.getElementById('pf-timing-wrap');
   if (!wrap || !_pfTiming) return;
+  if (filtroNome === undefined) filtroNome = document.getElementById('pf-colab')?.value || '';
 
   const ABAS = [
     { id:'separacao', label:'Separação',  icon:'✂️', cor:'#6366f1', grad:'linear-gradient(135deg,#4f46e5,#7c3aed)' },
@@ -668,8 +683,11 @@ function pfRenderTiming() {
     </button>`;
   }).join('');
 
-  // Dados da aba ativa
-  const dados = _pfTiming[_pfTimingAba] || [];
+  // Dados da aba ativa — aplica filtro de colaborador se selecionado
+  const dadosBrutos = _pfTiming[_pfTimingAba] || [];
+  const dados = filtroNome
+    ? dadosBrutos.filter(r => (r.colaborador||'') === filtroNome)
+    : dadosBrutos;
 
   // KPI rápido da aba
   const totalCom  = dados.filter(r => r.duracao_min != null).length;
@@ -800,7 +818,7 @@ function pfRenderTiming() {
 
 function pfSwitchAba(id) {
   _pfTimingAba = id;
-  pfRenderTiming();
+  pfRenderTiming();  // filtroNome vem do dropdown automaticamente
 }
 
 // ── Exportar Excel ─────────────────────────────────────────────────────────
