@@ -5,15 +5,31 @@ const { requerAuth, requerPerfil } = require('../lib/auth');
 const { dataHoraLocal, validarId } = require('../lib/helpers');
 
 // Garante colunas novas (roda uma vez na inicialização)
-pool.query(`ALTER TABLE avisos_repositor ADD COLUMN IF NOT EXISTS historico     JSONB   DEFAULT '[]'::jsonb`).catch(()=>{});
-pool.query(`ALTER TABLE avisos_repositor ADD COLUMN IF NOT EXISTS tentativas    JSONB   DEFAULT '[]'::jsonb`).catch(()=>{});
+pool.query(`ALTER TABLE avisos_repositor ADD COLUMN IF NOT EXISTS historico        JSONB   DEFAULT '[]'::jsonb`).catch(()=>{});
+pool.query(`ALTER TABLE avisos_repositor ADD COLUMN IF NOT EXISTS tentativas       JSONB   DEFAULT '[]'::jsonb`).catch(()=>{});
 pool.query(`ALTER TABLE avisos_repositor ADD COLUMN IF NOT EXISTS total_tentativas INTEGER DEFAULT 0`).catch(()=>{});
 pool.query(`ALTER TABLE avisos_repositor ADD COLUMN IF NOT EXISTS hora_inicio_busca TEXT  DEFAULT ''`).catch(()=>{});
 pool.query(`ALTER TABLE avisos_repositor ADD COLUMN IF NOT EXISTS hora_protocolo    TEXT  DEFAULT ''`).catch(()=>{});
+pool.query(`ALTER TABLE avisos_repositor ADD COLUMN IF NOT EXISTS turno_pendente    TEXT  DEFAULT ''`).catch(()=>{});
+
+// Sequência de turnos para passagem de item entre turnos
+const SEQ_TURNO = ['Manha', 'Tarde', 'Noite'];
+function proximoTurno(turnoAtual) {
+  const i = SEQ_TURNO.indexOf(turnoAtual);
+  return i >= 0 && i < SEQ_TURNO.length - 1 ? SEQ_TURNO[i + 1] : null;
+}
+function turnoAtualHora() {
+  const h = new Date().getHours();
+  return h >= 6 && h < 14 ? 'Manha' : h >= 14 && h < 22 ? 'Tarde' : 'Noite';
+}
 
 router.get('/repositor/avisos', requerAuth, async (req,res) => {
   if (!req.session?.usuario) return res.json([]);
   const {status, data, data_ini, data_fim, codigo} = req.query;
+  const usuario = req.session.usuario;
+  const perfil  = usuario.perfil || '';
+  const meuTurno = (usuario.turno || '').replace('ã','a').replace('Manh','Manha');
+
   try {
     let sql=`SELECT a.*,
              COALESCE(a.forma_envio, p.transportadora, '') as forma_envio_real,
@@ -25,6 +41,29 @@ router.get('/repositor/avisos', requerAuth, async (req,res) => {
              WHERE 1=1`;
     const params=[];
     if (status) {
+      const list = status.split(',').map(s=>s.trim()).filter(Boolean);
+      // Para repositores (não supervisores) filtrando itens pendentes/verificando:
+      // só mostra itens cujo turno_pendente bate com o turno do repositor,
+      // OU itens sem turno_pendente (0 tentativas = qualquer turno),
+      // OU itens que este próprio repositor está verificando agora
+      const temPendente = list.includes('pendente') || list.includes('verificando');
+      if (temPendente && perfil === 'repositor' && meuTurno) {
+        if (list.length === 1) { params.push(list[0]); sql+=` AND a.status=$${params.length}`; }
+        else { const ph=list.map((_,i)=>`$${params.length+i+1}`).join(','); params.push(...list); sql+=` AND a.status IN (${ph})`; }
+        // Filtro de turno: mostra se sem turno_pendente (1ª tentativa) OU turno_pendente = meu turno
+        // OU estou verificando este item agora (quem_pegou = eu)
+        params.push(meuTurno);
+        params.push(usuario.nome || '');
+        sql += ` AND (
+          COALESCE(a.turno_pendente,'') = ''
+          OR a.turno_pendente = $${params.length-1}
+          OR (a.status = 'verificando' AND a.quem_pegou = $${params.length})
+        )`;
+      } else {
+        if (list.length === 1) { params.push(list[0]); sql+=` AND a.status=$${params.length}`; }
+        else if (list.length > 1) { const ph=list.map((_,i)=>`$${params.length+i+1}`).join(','); params.push(...list); sql+=` AND a.status IN (${ph})`; }
+      }
+    } else if (status) {
       const list = status.split(',').map(s=>s.trim()).filter(Boolean);
       if (list.length === 1) { params.push(list[0]); sql+=` AND a.status=$${params.length}`; }
       else if (list.length > 1) { const ph=list.map((_,i)=>`$${params.length+i+1}`).join(','); params.push(...list); sql+=` AND a.status IN (${ph})`; }
@@ -76,15 +115,22 @@ router.put('/repositor/avisos/:id', requerAuth, async (req,res) => {
       }
     }
 
-    // Para nao_encontrado vindo de verificando: roteamento por tentativas
+    // Para nao_encontrado vindo de verificando: roteamento por turnos
     let stFinal = st;
+    let turno_pendente = atual?.turno_pendente || '';
     if (st === 'nao_encontrado' && atual?.status === 'verificando') {
-      if (totalTent < 3) {
-        // Não esgotou as 3 tentativas — volta para a fila
+      // Determina o turno da tentativa que acabou de falhar
+      const ultimaTentativa = tentativas[tentativas.length - 1];
+      const turnoFalhou = ultimaTentativa?.turno || turnoAtualHora();
+      const proximo = proximoTurno(turnoFalhou);
+      if (proximo) {
+        // Ainda há turno seguinte — volta para fila direcionada
         stFinal = 'pendente';
+        turno_pendente = proximo;
       } else {
-        // 3ª tentativa falhou — vai para protocolo
+        // Último turno (Noite) também falhou — protocolo
         stFinal = 'nao_encontrado';
+        turno_pendente = '';
         hora_protocolo = hora;
       }
     }
@@ -100,11 +146,11 @@ router.put('/repositor/avisos/:id', requerAuth, async (req,res) => {
       `UPDATE avisos_repositor
          SET status=$1, obs=$2, qtd_encontrada=$3, repositor_nome=$4, hora_reposto=$5,
              quem_pegou=$6, quem_guardou=$7, forma_envio=$8, situacao=$9,
-             historico=$10, tentativas=$11, hora_protocolo=$12
-       WHERE id=$13`,
+             historico=$10, tentativas=$11, hora_protocolo=$12, turno_pendente=$13
+       WHERE id=$14`,
       [stFinal, obsVal, qtdEnc, repositor_nome||qPegou||'', hora,
        qPegou, qGuardou, fEnvio, stFinal,
-       JSON.stringify(histNovo), JSON.stringify(tentativas), hora_protocolo, id]
+       JSON.stringify(histNovo), JSON.stringify(tentativas), hora_protocolo, turno_pendente, id]
     );
     if (upd.rowCount === 0) return res.status(404).json({erro:'Aviso não encontrado'});
     if (['abastecido','reposto','encontrado'].includes(stFinal)) {
@@ -172,7 +218,7 @@ router.put('/repositor/avisos/:id/iniciar-busca', requerAuth, async (req, res) =
       `UPDATE avisos_repositor
          SET status='verificando', situacao='verificando', hora_inicio_busca=$1,
              tentativas=$2, total_tentativas=$3,
-             historico=$4, quem_pegou=$5
+             historico=$4, quem_pegou=$5, turno_pendente=''
        WHERE id=$6`,
       [hora, JSON.stringify(tentativas), novaNum, JSON.stringify(histNovo), usuario, id]
     );

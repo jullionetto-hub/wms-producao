@@ -302,9 +302,13 @@ function renderCardRepSimples(a, modo) {
   const _totalTent = a.total_tentativas || 0;
 
   // ── Badge de tentativas (aparece no topo do card quando há tentativas prévias) ──
-  const _tentLabelMap = ['', '2ª tentativa', '2ª tentativa', 'ÚLTIMA tentativa'];
+  const _turnoIcon = { Manha:'☀️', Tarde:'🌅', Noite:'🌙' };
+  const _tentOrdinal = ['', '2ª', '3ª'];
+  const _isUltima = _totalTent >= 2; // Noite = última chance
   const _tentBadge = _totalTent > 0 && sit === 'pendente'
-    ? `<span style="background:${_totalTent >= 2?'#fef2f2':'#eff6ff'};color:${_totalTent >= 2?'#dc2626':'#1d4ed8'};border:1px solid ${_totalTent >= 2?'#fca5a5':'#bfdbfe'};font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;white-space:nowrap">${_totalTent >= 2?'⚠️ ÚLTIMA tentativa':'🔄 '+_tentLabelMap[_totalTent]||'🔄 2ª tentativa'}</span>`
+    ? `<span style="background:${_isUltima?'#fef2f2':'#eff6ff'};color:${_isUltima?'#dc2626':'#1d4ed8'};border:1px solid ${_isUltima?'#fca5a5':'#bfdbfe'};font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;white-space:nowrap">
+        ${_isUltima?'⚠️ ÚLTIMA tentativa':'🔄 '+(_tentOrdinal[_totalTent]||(_totalTent+1)+'ª')+' tentativa'}
+       </span>`
     : '';
 
   // ── Histórico compacto de tentativas anteriores ──────────────────────
