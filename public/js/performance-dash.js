@@ -892,51 +892,63 @@ function pfRenderOcorrenciasUI(lista, carregando) {
   const gravsOpts = Object.entries(OC_GRAVIDADE).map(([v,{label}])=>`<option value="${v}">${label}</option>`).join('');
   const usuariosOpts = _pfUsuarios.map(u=>`<option value="${pfEsc(u.nome)}">${pfEsc(u.nome)}</option>`).join('');
 
+  const INP = 'width:100%;padding:10px 12px;background:var(--surface);border:1.5px solid var(--border);border-radius:10px;color:var(--text);font-size:14px;outline:none;box-sizing:border-box';
+  const LBL = 'display:block;font-size:12px;font-weight:700;color:var(--text);margin-bottom:6px';
+
   // Formulário de registro
   const form = `
-    <div class="card" style="padding:20px;margin-bottom:20px">
-      <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px;margin-bottom:16px">➕ REGISTRAR OCORRÊNCIA</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px" class="pf-grid-2">
+    <div class="card" style="padding:24px;margin-bottom:24px;border:1.5px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">
+        <span style="font-size:20px">⚠️</span>
         <div>
-          <div style="font-size:9px;font-weight:700;color:var(--text3);letter-spacing:.6px;margin-bottom:4px">COLABORADOR *</div>
-          <select id="oc-colab" style="width:100%;padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;outline:none">
-            <option value="">Selecione...</option>${usuariosOpts}
+          <div style="font-size:15px;font-weight:800;color:var(--text)">Registrar Ocorrência</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:2px">Registre faltas, processos errados, condutas ou ausências de colaboradores</div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px" class="pf-grid-2">
+        <div>
+          <label style="${LBL}">👤 Colaborador <span style="color:#ef4444">*</span></label>
+          <select id="oc-colab" style="${INP}">
+            <option value="">— Selecione o colaborador —</option>${usuariosOpts}
           </select>
         </div>
         <div>
-          <div style="font-size:9px;font-weight:700;color:var(--text3);letter-spacing:.6px;margin-bottom:4px">TIPO *</div>
-          <select id="oc-tipo" style="width:100%;padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;outline:none">
-            <option value="">Selecione...</option>${tiposOpts}
+          <label style="${LBL}">📋 Tipo de Ocorrência <span style="color:#ef4444">*</span></label>
+          <select id="oc-tipo" style="${INP}">
+            <option value="">— Selecione o tipo —</option>${tiposOpts}
           </select>
         </div>
         <div>
-          <div style="font-size:9px;font-weight:700;color:var(--text3);letter-spacing:.6px;margin-bottom:4px">GRAVIDADE</div>
-          <select id="oc-grav" style="width:100%;padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;outline:none">
+          <label style="${LBL}">🔴 Gravidade</label>
+          <select id="oc-grav" style="${INP}">
             ${gravsOpts}
           </select>
         </div>
         <div>
-          <div style="font-size:9px;font-weight:700;color:var(--text3);letter-spacing:.6px;margin-bottom:4px">DATA *</div>
-          <input type="date" id="oc-data" value="${new Date().toISOString().slice(0,10)}"
-            style="width:100%;padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;outline:none;box-sizing:border-box">
+          <label style="${LBL}">📅 Data da ocorrência <span style="color:#ef4444">*</span></label>
+          <input type="date" id="oc-data" value="${new Date().toISOString().slice(0,10)}" style="${INP}">
         </div>
         <div>
-          <div style="font-size:9px;font-weight:700;color:var(--text3);letter-spacing:.6px;margin-bottom:4px">TURNO</div>
-          <select id="oc-turno" style="width:100%;padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;outline:none">
-            <option value="">—</option>
+          <label style="${LBL}">🕐 Turno</label>
+          <select id="oc-turno" style="${INP}">
+            <option value="">— Selecione o turno —</option>
             <option value="Manha">☀️ Manhã</option>
             <option value="Tarde">🌅 Tarde</option>
             <option value="Noite">🌙 Noite</option>
           </select>
         </div>
       </div>
-      <div style="margin-bottom:12px">
-        <div style="font-size:9px;font-weight:700;color:var(--text3);letter-spacing:.6px;margin-bottom:4px">DESCRIÇÃO / DETALHES *</div>
-        <textarea id="oc-desc" rows="3" placeholder="Descreva detalhadamente o ocorrido..."
-          style="width:100%;padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;outline:none;resize:vertical;font-family:inherit;box-sizing:border-box"></textarea>
+
+      <div style="margin-bottom:20px">
+        <label style="${LBL}">📝 Descrição / O que aconteceu <span style="color:#ef4444">*</span></label>
+        <textarea id="oc-desc" rows="4"
+          placeholder="Descreva com detalhes o que ocorreu: local, horário, o que foi feito de errado, impacto na operação..."
+          style="${INP}resize:vertical;font-family:inherit;line-height:1.5"></textarea>
       </div>
+
       <button onclick="pfSalvarOcorrencia()"
-        style="background:linear-gradient(135deg,#dc2626,#b91c1c);color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:12px;font-weight:700;cursor:pointer">
+        style="background:linear-gradient(135deg,#dc2626,#b91c1c);color:#fff;border:none;border-radius:10px;padding:12px 24px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px">
         ⚠️ Registrar Ocorrência
       </button>
     </div>`;
@@ -955,15 +967,15 @@ function pfRenderOcorrenciasUI(lista, carregando) {
   });
 
   const kpis = lista.length === 0 ? '' : `
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-bottom:20px">
-      <div style="background:var(--surface2);border-radius:10px;padding:12px 14px">
-        <div style="font-size:9px;font-weight:800;color:var(--text3);letter-spacing:.6px;margin-bottom:4px">TOTAL</div>
-        <div style="font-size:24px;font-weight:900">${lista.length}</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px;margin-bottom:24px">
+      <div style="background:var(--surface2);border-radius:12px;padding:16px 18px">
+        <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:6px">Total de Ocorrências</div>
+        <div style="font-size:32px;font-weight:900;color:var(--text)">${lista.length}</div>
       </div>
-      ${Object.entries(contGrav).map(([g,n])=>{const gc=OC_GRAVIDADE[g]||{cor:'#6b7280',label:g};return`
-      <div style="background:${gc.bg||'var(--surface2)'};border-radius:10px;padding:12px 14px">
-        <div style="font-size:9px;font-weight:800;color:${gc.cor};letter-spacing:.6px;margin-bottom:4px">${gc.label.toUpperCase()}</div>
-        <div style="font-size:24px;font-weight:900;color:${gc.cor}">${n}</div>
+      ${Object.entries(contGrav).map(([g,n])=>{const gc=OC_GRAVIDADE[g]||{cor:'#6b7280',bg:'var(--surface2)',label:g};return`
+      <div style="background:${gc.bg||'var(--surface2)'};border-radius:12px;padding:16px 18px">
+        <div style="font-size:11px;font-weight:700;color:${gc.cor};margin-bottom:6px">${gc.label}</div>
+        <div style="font-size:32px;font-weight:900;color:${gc.cor}">${n}</div>
       </div>`;}).join('')}
     </div>`;
 
@@ -976,29 +988,33 @@ function pfRenderOcorrenciasUI(lista, carregando) {
         const t  = OC_TIPOS[o.tipo]    || { icon:'📝', label: o.tipo,      cor:'#6b7280' };
         const g  = OC_GRAVIDADE[o.gravidade] || { label: o.gravidade, bg:'var(--surface2)', cor:'#6b7280' };
         const tu = { Manha:'☀️ Manhã', Tarde:'🌅 Tarde', Noite:'🌙 Noite' }[o.turno] || o.turno || '—';
+        // Borda esquerda colorida pela gravidade
+        const bordaGrav = { leve:'#22c55e', moderada:'#f59e0b', grave:'#dc2626' }[o.gravidade] || '#6b7280';
         return `
-          <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:12px">
-            <div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap">
+          <div style="background:var(--surface);border:1.5px solid var(--border);border-left:4px solid ${bordaGrav};border-radius:12px;padding:18px 20px;margin-bottom:14px">
+            <div style="display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap">
               <div style="flex:1;min-width:200px">
-                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
-                  <span style="font-size:16px">${t.icon}</span>
-                  <span style="font-size:13px;font-weight:800;color:var(--text)">${pfEsc(o.colaborador_nome)}</span>
-                  <span style="background:${g.bg};color:${g.cor};border-radius:20px;padding:2px 10px;font-size:10px;font-weight:700">${g.label}</span>
-                  <span style="background:rgba(0,0,0,.06);color:${t.cor};border-radius:20px;padding:2px 10px;font-size:10px;font-weight:700">${t.label}</span>
+                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px">
+                  <span style="font-size:20px">${t.icon}</span>
+                  <span style="font-size:15px;font-weight:800;color:var(--text)">${pfEsc(o.colaborador_nome)}</span>
+                  <span style="background:${g.bg};color:${g.cor};border-radius:20px;padding:3px 12px;font-size:12px;font-weight:700">${g.label}</span>
+                  <span style="background:rgba(0,0,0,.07);color:${t.cor};border-radius:20px;padding:3px 12px;font-size:12px;font-weight:700">${t.label}</span>
                 </div>
-                <div style="font-size:12px;color:var(--text2);margin-bottom:4px">${pfEsc(o.descricao)}</div>
-                <div style="font-size:10px;color:var(--text3)">${fmtDt(o.data)} · ${tu} · Registrado por: <b>${pfEsc(o.supervisor_nome)}</b></div>
+                <div style="font-size:14px;color:var(--text);line-height:1.5;margin-bottom:8px">${pfEsc(o.descricao)}</div>
+                <div style="font-size:12px;color:var(--text3)">
+                  📅 ${fmtDt(o.data)} &nbsp;·&nbsp; ${tu} &nbsp;·&nbsp; Registrado por: <b style="color:var(--text2)">${pfEsc(o.supervisor_nome)}</b>
+                </div>
               </div>
               <button onclick="pfExcluirOcorrencia(${o.id})"
-                style="background:none;border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--text3);font-size:11px;cursor:pointer;flex-shrink:0"
-                title="Excluir ocorrência">🗑️</button>
+                style="background:none;border:1.5px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text3);font-size:14px;cursor:pointer;flex-shrink:0"
+                title="Excluir ocorrência">🗑️ Excluir</button>
             </div>
           </div>`;
       }).join('');
 
   return form + kpis + `
-    <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px;margin-bottom:12px">
-      📋 OCORRÊNCIAS REGISTRADAS${lista.length ? ` — ${lista.length} no período` : ''}
+    <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:14px">
+      📋 Ocorrências Registradas${lista.length ? ` — ${lista.length} no período` : ''}
     </div>
     ${rows}`;
 }
