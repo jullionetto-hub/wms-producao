@@ -1096,7 +1096,14 @@ async function carregarPedidosDistribuicao() {
     } else {
       lista = lista.filter(p => !p.tem_prime);
     }
-    if (respHora) lista.sort((a,b)=>(a.aguardando_desde||a.hora_pedido||'').localeCompare(b.aguardando_desde||b.hora_pedido||''));
+    // Converte DD/MM/YYYY HH:MM → YYYY-MM-DD HH:MM para comparação cronológica correta
+    const toISO = v => {
+      if (!v) return '';
+      const m = v.match(/^(\d{2})\/(\d{2})\/(\d{4})[\s,T]?(\d{2}:\d{2})?/);
+      if (m) return `${m[3]}-${m[2]}-${m[1]} ${m[4]||'00:00'}`;
+      return v; // já está em outro formato (YYYY-MM-DD), usa direto
+    };
+    if (respHora) lista.sort((a,b) => toISO(a.aguardando_desde||a.data_pedido||'').localeCompare(toISO(b.aguardando_desde||b.data_pedido||'')));
     const totalDisponivel = lista.length;
     if (qtdInput > 0) lista = lista.slice(0, qtdInput);
     const labelModo = _modoPrime
