@@ -1069,6 +1069,138 @@ function fecharModalDistribuicao() {
   distribuicaoPlano = null;
   _turnoAtivoDistribuicao = '';
 }
+
+/* ══ DISTRIBUIÇÃO MANUAL ══════════════════════════════════════════════ */
+let _distModoAtual = 'auto';
+
+function distSetModo(modo) {
+  _distModoAtual = modo;
+  const btnAuto   = document.getElementById('btn-modo-auto');
+  const btnManual = document.getElementById('btn-modo-manual');
+  const painelAuto   = document.querySelectorAll('#dist-painel-manual, #dist-botoes-auto, #dist-resultado');
+  const painelManual = document.getElementById('dist-painel-manual');
+  const botoesAuto   = document.getElementById('dist-botoes-auto');
+  const resultado    = document.getElementById('dist-resultado');
+
+  if (modo === 'auto') {
+    if (btnAuto)   { btnAuto.style.background='#6366f1'; btnAuto.style.color='#fff'; }
+    if (btnManual) { btnManual.style.background='transparent'; btnManual.style.color='var(--text3)'; }
+    if (painelManual) painelManual.style.display = 'none';
+    if (botoesAuto)   botoesAuto.style.display   = 'flex';
+    if (resultado)    resultado.style.display     = distribuicaoPlano ? '' : 'none';
+  } else {
+    if (btnManual) { btnManual.style.background='#6366f1'; btnManual.style.color='#fff'; }
+    if (btnAuto)   { btnAuto.style.background='transparent'; btnAuto.style.color='var(--text3)'; }
+    if (painelManual) painelManual.style.display = '';
+    if (botoesAuto)   botoesAuto.style.display   = 'none';
+    if (resultado)    resultado.style.display     = 'none';
+    // Limpa resultado de busca anterior
+    const r = document.getElementById('dist-manual-resultado');
+    const inp = document.getElementById('dist-manual-busca');
+    if (inp) inp.value = '';
+    if (r) r.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text3);font-size:13px">Digite o número do pedido ou nome do cliente para buscar</div>';
+  }
+}
+
+async function distManualBuscar() {
+  const termo = document.getElementById('dist-manual-busca')?.value?.trim() || '';
+  const el    = document.getElementById('dist-manual-resultado');
+  if (!el) return;
+  if (!termo) {
+    el.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text3);font-size:13px">Digite o número do pedido ou nome do cliente para buscar</div>';
+    return;
+  }
+  el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text3)">⏳ Buscando...</div>';
+
+  try {
+    const res  = await fetch(`${API}/pedidos?status=pendente`, { credentials:'include' });
+    const todos = await res.json();
+    const t = termo.toLowerCase();
+    const filtrados = todos.filter(p =>
+      String(p.numero_pedido||'').toLowerCase().includes(t) ||
+      String(p.cliente||'').toLowerCase().includes(t)
+    ).slice(0, 30);
+
+    if (!filtrados.length) {
+      el.innerHTML = `<div style="text-align:center;padding:32px;color:var(--text3);font-size:13px">
+        Nenhum pedido pendente encontrado para "<b>${termo}</b>"</div>`;
+      return;
+    }
+
+    // Lista de separadores para o select
+    const seps = (_todosSepsDistribuicao || []).filter(u => u.status === 'ativo' && u.perfil !== 'supervisor');
+    const sepsOpts = seps.map(s => `<option value="${s.id}">${s.nome}</option>`).join('');
+
+    const toISO = v => {
+      if (!v) return '';
+      const m = v.match(/^(\d{2})\/(\d{2})\/(\d{4})[\s,T]?(\d{2}:\d{2})?/);
+      if (m) return `${m[3]}-${m[2]}-${m[1]} ${m[4]||'00:00'}`;
+      return v;
+    };
+
+    el.innerHTML = `
+      <div style="font-size:11px;color:var(--text3);margin-bottom:10px">${filtrados.length} pedido(s) encontrado(s)</div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead>
+          <tr style="background:var(--surface2)">
+            <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:800;color:var(--text3)">PEDIDO</th>
+            <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:800;color:var(--text3)">CLIENTE</th>
+            <th style="padding:8px 10px;text-align:center;font-size:10px;font-weight:800;color:var(--text3)">ITENS</th>
+            <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:800;color:var(--text3)">HORÁRIO</th>
+            <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:800;color:var(--text3)">ATRIBUIR PARA</th>
+            <th style="padding:8px 4px"></th>
+          </tr>
+        </thead>
+        <tbody>
+          ${filtrados.map(p => `
+            <tr style="border-bottom:1px solid rgba(51,65,85,.2)">
+              <td style="padding:8px 10px;font-weight:700;color:var(--accent);font-family:'Space Mono',monospace">${p.numero_pedido}</td>
+              <td style="padding:8px 10px;color:var(--text2);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.cliente||'—'}</td>
+              <td style="padding:8px 10px;text-align:center;font-weight:700">${p.itens||0}</td>
+              <td style="padding:8px 10px;color:var(--amber);font-size:11px;white-space:nowrap">${toISO(p.aguardando_desde||p.hora_pedido||'').slice(0,16)}</td>
+              <td style="padding:8px 10px">
+                <select id="sep-sel-${p.id}" style="padding:5px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:11px;outline:none;min-width:140px">
+                  <option value="">— Selecione —</option>${sepsOpts}
+                </select>
+              </td>
+              <td style="padding:8px 4px">
+                <button onclick="distManualAtribuir(${p.id},'${p.numero_pedido}')"
+                  style="background:#6366f1;color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">
+                  ✅ Atribuir
+                </button>
+              </td>
+            </tr>`).join('')}
+        </tbody>
+      </table>`;
+  } catch(e) {
+    el.innerHTML = '<div style="padding:16px;color:#ef4444">Erro ao buscar pedidos.</div>';
+  }
+}
+
+async function distManualAtribuir(pedidoId, numeroPedido) {
+  const sepId = document.getElementById(`sep-sel-${pedidoId}`)?.value;
+  if (!sepId) { toast('Selecione um colaborador para atribuir.', 'aviso'); return; }
+  try {
+    const res = await fetch(`${API}/pedidos/distribuicao/confirmar`, {
+      credentials:'include', method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        plano: [{ separador_id: parseInt(sepId), pedidos: [numeroPedido] }],
+        turno_lote: null
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) { toast(data.erro || 'Erro ao atribuir pedido.', 'erro'); return; }
+    toast(`✅ Pedido ${numeroPedido} atribuído com sucesso!`, 'sucesso');
+    // Remove a linha da tabela
+    const tr = document.getElementById(`sep-sel-${pedidoId}`)?.closest('tr');
+    if (tr) tr.remove();
+    // Atualiza lista de pedidos no fundo
+    if (typeof carregarPedidos === 'function') carregarPedidos();
+  } catch(e) {
+    toast('Erro ao atribuir pedido.', 'erro');
+  }
+}
 async function carregarSeparadoresDistribuicao() {
   try {
     const res = await fetch(`${API}/usuarios`, { credentials:'include' });

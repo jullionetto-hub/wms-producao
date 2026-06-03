@@ -2032,8 +2032,18 @@
 <!-- ══ MODAL DISTRIBUIÇÃO ══ -->
 <div id="modal-distribuicao" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9998;align-items:center;justify-content:center;padding:16px">
   <div style="background:var(--surface);border-radius:var(--r);box-shadow:var(--sh-lg);width:100%;max-width:700px;max-height:90vh;overflow-y:auto">
-    <div style="background:var(--surface2);padding:14px 18px;border-bottom:1px solid var(--border);border-radius:var(--r) var(--r) 0 0;display:flex;align-items:center;justify-content:space-between">
+    <div style="background:var(--surface2);padding:14px 18px;border-bottom:1px solid var(--border);border-radius:var(--r) var(--r) 0 0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
       <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">⚖️ Distribuição de Pedidos</div>
+      <div style="display:flex;gap:4px;background:var(--surface);border-radius:8px;padding:3px">
+        <button id="btn-modo-auto" onclick="distSetModo('auto')"
+          style="padding:5px 14px;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;background:#6366f1;color:#fff;transition:all .2s">
+          ⚖️ Automática
+        </button>
+        <button id="btn-modo-manual" onclick="distSetModo('manual')"
+          style="padding:5px 14px;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;background:transparent;color:var(--text3);transition:all .2s">
+          ✋ Manual
+        </button>
+      </div>
       <button onclick="fecharModalDistribuicao()" style="background:transparent;border:none;font-size:22px;cursor:pointer;color:var(--text3);padding:0 4px">✕</button>
     </div>
     <div style="padding:18px">
@@ -2098,10 +2108,31 @@
       </div>
       <div id="dist-resultado" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px;margin-bottom:14px">
       </div>
-      <div style="display:flex;gap:8px;justify-content:flex-end">
+      <div style="display:flex;gap:8px;justify-content:flex-end" id="dist-botoes-auto">
         <button class="btn btn-outline" onclick="fecharModalDistribuicao()">Cancelar</button>
         <button class="btn btn-primary" onclick="calcularDistribuicao()" id="btn-calcular-dist">🔍 Calcular Distribuição</button>
         <button class="btn btn-success" onclick="confirmarDistribuicao()" id="btn-confirmar-dist" style="display:none">✅ Confirmar Distribuição</button>
+      </div>
+
+      <!-- PAINEL MANUAL -->
+      <div id="dist-painel-manual" style="display:none">
+        <div style="background:rgba(99,102,241,.06);border:1px solid rgba(99,102,241,.2);border-radius:10px;padding:14px 16px;margin-bottom:14px;font-size:12px;color:var(--text2)">
+          ✋ <b>Distribuição Manual:</b> busque um pedido pelo número ou cliente e atribua diretamente a um colaborador.
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:14px">
+          <input id="dist-manual-busca" type="text" placeholder="🔍  Número do pedido ou nome do cliente..."
+            style="flex:1;padding:10px 14px;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;color:var(--text);font-size:13px;outline:none"
+            oninput="clearTimeout(window._dmTimer);window._dmTimer=setTimeout(distManualBuscar,350)">
+          <button class="btn btn-primary" onclick="distManualBuscar()">Buscar</button>
+        </div>
+        <div id="dist-manual-resultado" style="max-height:340px;overflow-y:auto">
+          <div style="text-align:center;padding:32px;color:var(--text3);font-size:13px">
+            Digite o número do pedido ou nome do cliente para buscar
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+          <button class="btn btn-outline" onclick="fecharModalDistribuicao()">Cancelar</button>
+        </div>
       </div>
     </div>
   </div>
