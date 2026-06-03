@@ -117,7 +117,8 @@ async function carregarFilaMobile() {
           <span class="pill ${pillCls}" style="font-size:10px">${pillTxt}</span>
         </div>
         <div style="display:flex;gap:10px;font-size:12px;color:var(--text2);flex-wrap:wrap;margin-bottom:4px">
-          <span>📦 <b style="color:var(--text)">${p.itens||0} itens</b></span>
+          <span>📦 <b style="color:var(--text)">${p.total_itens||p.itens||0} itens</b></span>
+          <span>🏷️ <b style="color:var(--text)">${p.itens||0} SKUs</b></span>
           ${p.cliente ? `<span>👤 ${p.cliente}</span>` : ''}
           ${p.transportadora ? `<span>🚚 ${p.transportadora}</span>` : ''}
         </div>
@@ -298,7 +299,8 @@ async function carregarFilaDesk() {
           <span class="pill ${pillCls}" style="font-size:10px">${pillTxt}</span>
         </div>
         <div style="display:flex;gap:10px;font-size:12px;color:var(--text2);flex-wrap:wrap;margin-bottom:4px">
-          <span>📦 <b style="color:var(--text)">${p.itens||0} itens</b></span>
+          <span>📦 <b style="color:var(--text)">${p.total_itens||p.itens||0} itens</b></span>
+          <span>🏷️ <b style="color:var(--text)">${p.itens||0} SKUs</b></span>
           ${p.cliente ? `<span>👤 ${p.cliente}</span>` : ''}
           ${p.transportadora ? `<span>🚚 ${p.transportadora}</span>` : ''}
         </div>

@@ -1449,7 +1449,8 @@ function renderCardEmbFila(p, emAndamento) {
         <span class="pill ${pillCls}" style="font-size:10px">${pillTxt}</span>
       </div>
       <div style="display:flex;gap:10px;font-size:12px;color:var(--text2);flex-wrap:wrap;margin-bottom:4px">
-        <span>📦 <b style="color:var(--text)">${p.itens||0} itens</b></span>
+        <span>📦 <b style="color:var(--text)">${p.total_itens||p.itens||0} itens</b></span>
+        <span>🏷️ <b style="color:var(--text)">${p.itens||0} SKUs</b></span>
         ${p.cliente ? `<span>👤 ${p.cliente}</span>` : ''}
         ${p.transportadora ? `<span>🚚 ${p.transportadora}</span>` : ''}
       </div>
@@ -2077,7 +2078,8 @@ function renderCardEmbFilaDesk(p, emAndamento) {
         <span class="pill ${pillCls}" style="font-size:10px">${pillTxt}</span>
       </div>
       <div style="display:flex;gap:10px;font-size:12px;color:var(--text2);flex-wrap:wrap;margin-bottom:4px">
-        <span>📦 <b style="color:var(--text)">${p.itens||0} itens</b></span>
+        <span>📦 <b style="color:var(--text)">${p.total_itens||p.itens||0} itens</b></span>
+        <span>🏷️ <b style="color:var(--text)">${p.itens||0} SKUs</b></span>
         ${p.cliente ? `<span>👤 ${p.cliente}</span>` : ''}
         ${p.transportadora ? `<span>🚚 ${p.transportadora}</span>` : ''}
       </div>
@@ -2121,7 +2123,8 @@ async function carregarEmbalagemEmbaladesDesk() {
           <span style="font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;background:#16a34a;color:#fff">✅ EMBALADO</span>
         </div>
         <div style="display:flex;gap:12px;font-size:12px;color:var(--text2);flex-wrap:wrap">
-          <span>📦 <b style="color:var(--text)">${p.itens||0} itens</b></span>
+          <span>📦 <b style="color:var(--text)">${p.total_itens||p.itens||0} itens</b></span>
+        <span>🏷️ <b style="color:var(--text)">${p.itens||0} SKUs</b></span>
           ${p.cliente ? `<span>👤 ${p.cliente}</span>` : ''}
           ${p.transportadora ? `<span>🚚 ${p.transportadora}</span>` : ''}
           ${p.embalado_por ? `<span>👷 ${p.embalado_por}</span>` : ''}
@@ -2243,7 +2246,8 @@ async function carregarFilaCkDesk() {
           <span class="pill pendente" style="font-size:10px">aguardando ck</span>
         </div>
         <div style="display:flex;gap:12px;font-size:12px;color:var(--text2)">
-          <span>📦 <b style="color:var(--text)">${p.itens||0} itens</b></span>
+          <span>📦 <b style="color:var(--text)">${p.total_itens||p.itens||0} itens</b></span>
+        <span>🏷️ <b style="color:var(--text)">${p.itens||0} SKUs</b></span>
           <span>👤 ${p.separador_nome||'—'}</span>
           ${p.numero_caixa ? `<span>🏷️ Cx: <b style="color:var(--indigo)">${p.numero_caixa}</b></span>` : ''}
         </div>
@@ -2279,7 +2283,8 @@ async function carregarFeitosCkDesk() {
           <span style="font-size:11px;color:var(--green);font-weight:700">✅ ${r.hora_checkout||'—'}</span>
         </div>
         <div style="display:flex;gap:12px;font-size:12px;color:var(--text2)">
-          <span>📦 <b style="color:var(--text)">${r.ped_itens||0} itens</b></span>
+          <span>📦 <b style="color:var(--text)">${r.ped_total_itens||r.ped_itens||0} itens</b></span>
+          <span>🏷️ <b style="color:var(--text)">${r.ped_itens||0} SKUs</b></span>
           <span>👤 ${r.separador_nome_join||r.separador_nome||'—'}</span>
           ${r.operador_nome ? `<span>🏷️ ${r.operador_nome}</span>` : ''}
         </div>
