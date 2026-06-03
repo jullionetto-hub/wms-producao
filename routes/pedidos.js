@@ -326,11 +326,19 @@ router.post('/pedidos/distribuicao', requerAuth, requerPerfil('supervisor'), asy
     // Fallback para data_pedido + hora_pedido quando aguardando_desde está vazio.
     const pedidos=await db.all(
       `SELECT p.* FROM pedidos p WHERE ${w}
-       ORDER BY CASE
-         WHEN p.aguardando_desde IS NOT NULL AND p.aguardando_desde!=''
-           THEN TO_TIMESTAMP(p.aguardando_desde, 'DD/MM/YYYY HH24:MI')
-         ELSE (COALESCE(p.data_pedido,'1970-01-01')||' '||COALESCE(p.hora_pedido,'00:00'))::TIMESTAMP
-       END ASC, p.id ASC`
+       ORDER BY
+         -- 1º critério: aguardando_desde no formato DD/MM/YYYY HH:MM
+         CASE WHEN p.aguardando_desde ~ '^[0-9]{2}/[0-9]{2}/[0-9]{4}'
+              THEN TO_TIMESTAMP(p.aguardando_desde, 'DD/MM/YYYY HH24:MI')
+              ELSE NULL
+         END ASC NULLS LAST,
+         -- 2º critério: data_pedido (YYYY-MM-DD) + hora_pedido
+         CASE WHEN p.data_pedido IS NOT NULL AND p.data_pedido != ''
+              THEN (p.data_pedido||' '||COALESCE(p.hora_pedido,'00:00'))::TIMESTAMP
+              ELSE NULL
+         END ASC NULLS LAST,
+         -- 3º critério: ID crescente (mais antigo primeiro)
+         p.id ASC`
     );
     if (!pedidos.length) return res.json({plano:[],total_pedidos:0,total_distribuidos:0});
     for (const ped of pedidos) {
@@ -341,11 +349,12 @@ router.post('/pedidos/distribuicao', requerAuth, requerPerfil('supervisor'), asy
     }
     const lim=(quantidade>0)?quantidade:pedidos.length;
     const isDrive=p=>String(p.transportadora||'').toUpperCase().includes('DRIVE');
-    // DRIVE THRU tem prioridade; os demais mantêm a ordem da query (aguardando_desde ASC)
+    // DRIVE THRU tem prioridade; os demais mantêm a ordem da query (aguardando_desde ASC = mais antigo primeiro)
     const drive=pedidos.filter(isDrive).slice(0,lim);
     const outros=pedidos.filter(p=>!isDrive(p)).slice(0,Math.max(0,lim-drive.length));
-    // Distribui começando pelos pedidos de maior pontuação para equilibrar as filas
-    const ordenados = [...drive, ...outros].sort((a,b)=>b._p-a._p);
+    // MANTÉM ordem cronológica: Drive primeiro, depois demais por data de chegada (Maio antes de Junho).
+    // O balanceamento por pontuação ocorre na escolha do separador (filas.sort abaixo), não aqui.
+    const ordenados = [...drive, ...outros];
     const sepMap={};
     for (const sid of separadores) {
       let row=await db.get('SELECT s.id,s.nome FROM separadores s WHERE s.usuario_id=$1 LIMIT 1',[sid]);
