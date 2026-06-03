@@ -387,10 +387,26 @@ router.post('/pedidos/distribuicao', requerAuth, requerPerfil('supervisor'), asy
         sep_db_id: dbId,
       });
     }
+    // Pré-calcula os totais a distribuir para normalização estável
+    const totalPtsLote  = ordenados.reduce((s,p)=>s+p._p,0) || 1;
+    const totalItensLote= ordenados.reduce((s,p)=>s+(p.itens||0),0) || 1;
+    const n = filas.length || 1;
+    // Carga alvo por separador (carga já existente + lote atual dividido igualmente)
+    const alvoPts  = (filas.reduce((s,f)=>s+f.pontuacao_ja,0) + totalPtsLote)  / n;
+    const alvoItens= (filas.reduce((s,f)=>s+f.itens_ja,0)    + totalItensLote) / n;
+
     for (const ped of ordenados) {
-      // Balanceia pela carga total real (já atribuído + sendo distribuído agora).
-      // Assim redistribuições no mesmo dia nivelam a carga corretamente.
-      filas.sort((a,b) => a.pontuacao_total - b.pontuacao_total);
+      // Score combinado normalizado:
+      //   pontuação/alvo  = captura endereço (corredor) + dificuldade + quantidade
+      //   itens/alvo      = captura volume físico bruto
+      // Quem está mais longe do alvo (score menor) recebe o próximo pedido.
+      // Peso igual para ambas as dimensões → nem uma pedido grande nem muitos pequenos
+      // sobrecarregam o mesmo separador.
+      filas.sort((a,b) => {
+        const scoreA = (a.pontuacao_total / alvoPts) + (a.itens_total / alvoItens);
+        const scoreB = (b.pontuacao_total / alvoPts) + (b.itens_total / alvoItens);
+        return scoreA - scoreB;
+      });
       filas[0].pedidos.push(ped.numero_pedido);
       filas[0].pontuacao_total += ped._p;
       filas[0].itens_total += (ped.itens || 0);
