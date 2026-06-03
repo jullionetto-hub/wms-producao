@@ -1146,6 +1146,7 @@ async function distManualBuscar() {
             <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:800;color:var(--text3)">PEDIDO</th>
             <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:800;color:var(--text3)">CLIENTE</th>
             <th style="padding:8px 10px;text-align:center;font-size:10px;font-weight:800;color:var(--text3)">ITENS</th>
+            <th style="padding:8px 10px;text-align:center;font-size:10px;font-weight:800;color:var(--text3)">SKUs</th>
             <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:800;color:var(--text3)">HORÁRIO</th>
             <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:800;color:var(--text3)">ATRIBUIR PARA</th>
             <th style="padding:8px 4px"></th>
@@ -1156,7 +1157,8 @@ async function distManualBuscar() {
             <tr style="border-bottom:1px solid rgba(51,65,85,.2)">
               <td style="padding:8px 10px;font-weight:700;color:var(--accent);font-family:'Space Mono',monospace">${p.numero_pedido}</td>
               <td style="padding:8px 10px;color:var(--text2);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.cliente||'—'}</td>
-              <td style="padding:8px 10px;text-align:center;font-weight:700">${p.itens||0}</td>
+              <td style="padding:8px 10px;text-align:center;font-weight:700;color:#38bdf8">${p.total_itens||p.itens||0}</td>
+              <td style="padding:8px 10px;text-align:center;font-size:11px;color:#f59e0b">${p.itens||0}</td>
               <td style="padding:8px 10px;color:var(--amber);font-size:11px;white-space:nowrap">${toISO(p.aguardando_desde||p.hora_pedido||'').slice(0,16)}</td>
               <td style="padding:8px 10px">
                 <select id="sep-sel-${p.id}" style="padding:5px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:11px;outline:none;min-width:140px">
