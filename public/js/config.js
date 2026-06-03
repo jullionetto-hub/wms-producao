@@ -449,7 +449,8 @@ function exportarProtocolo() {
   const blob = new Blob(['﻿'+csv], {type:'text/csv;charset=utf-8;'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = `protocolo_${new Date().toISOString().slice(0,10)}.csv`;
+  const _hoje = new Date().toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo'}).replace(/\//g,'-');
+  a.href = url; a.download = `protocolo_${_hoje}.csv`;
   a.click(); URL.revokeObjectURL(url);
 }
 
@@ -573,7 +574,7 @@ async function _carregarEstatisticasPage(page) {
       const tempo  = (diff && diff > 0 && diff < 1440) ? _fmtTempo(diff) : '—';
       const hIni   = dtIni ? dtIni.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '—';
       const hFim   = dtFim ? dtFim.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '—';
-      const dtStr  = p[dataField] || (dtIni ? dtIni.toLocaleDateString('pt-BR') : '—');
+      const dtStr  = (p[dataField] ? fmtData(p[dataField]) : null) || (dtIni ? dtIni.toLocaleDateString('pt-BR') : '—');
       const envio  = p.forma_envio || p.transportadora || '—';
       const skus   = parseInt(p[skuField])  || 0;
       const itens  = parseInt(p[itemField]) || 0;

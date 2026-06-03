@@ -871,7 +871,7 @@ function renderCardMobile(a) {
         <div style="display:flex;gap:10px;font-size:11px;color:var(--text3);align-items:center">
           ${a.separador_nome?`<span>👤 <strong style="color:var(--text2)">${a.separador_nome}</strong></span>`:''}
           ${a.hora_aviso?`<span>🕐 ${a.hora_aviso}</span>`:''}
-          ${a.data_aviso?`<span style="font-size:10px">${a.data_aviso}</span>`:''}
+          ${a.data_aviso?`<span style="font-size:10px">${fmtData(a.data_aviso)}</span>`:''}
         </div>
         <!-- Stepper de etapas -->
         ${stepperHtml}

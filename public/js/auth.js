@@ -813,7 +813,7 @@ async function verificarValidacaoPendente() {
           <span style="font-size:28px">${atrasada ? '⚠️' : '🔔'}</span>
           <div style="flex:1">
             <div style="font-weight:800;font-size:16px">${atrasada ? 'Validação Pendente (Atrasada)' : 'Validação Pendente!'}</div>
-            <div style="font-size:13px;opacity:.9;margin-top:2px">${turnoIcon} Turno ${val.turno} · ${val.data} · <b>${val.supervisor}</b></div>
+            <div style="font-size:13px;opacity:.9;margin-top:2px">${turnoIcon} Turno ${val.turno} · ${fmtData(val.data)} · <b>${val.supervisor}</b></div>
             ${atrasada ? '<div style="font-size:11px;opacity:.75;margin-top:2px">O prazo expirou, mas você ainda pode validar.</div>' : ''}
           </div>
           ${timerHtml}
@@ -858,7 +858,7 @@ async function abrirModalValidacao() {
     const modal = document.getElementById('modal-diario-validacao');
     const turnoIcon = val.turno==='Manha'?'☀️':val.turno==='Tarde'?'🌅':'🌙';
     document.getElementById('modal-val-subtitulo').textContent =
-      `${turnoIcon} ${val.turno} · ${val.data} · ${val.supervisor}`;
+      `${turnoIcon} ${val.turno} · ${fmtData(val.data)} · ${val.supervisor}`;
 
     // Resumo
     const d = val.dados || {};
@@ -1072,7 +1072,7 @@ async function carregarListaDiarios() {
       return `<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);cursor:pointer;margin-bottom:6px" onclick="verDiario(${d.id})">
         <div style="font-size:18px">${turnoIcon}</div>
         <div style="flex:1">
-          <div style="font-weight:700;font-size:13px">${d.data} — ${d.turno} ${leuBadge} ${stBadge}</div>
+          <div style="font-weight:700;font-size:13px">${fmtData(d.data)} — ${d.turno} ${leuBadge} ${stBadge}</div>
           <div style="font-size:11px;color:var(--text3)">${d.supervisor}</div>
         </div>
         <button onclick="event.stopPropagation();exportarDiarioExcel(${d.id})" style="padding:4px 10px;background:#10b981;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:11px">Excel</button>
@@ -1145,7 +1145,7 @@ async function exportarDiarioExcel(id) {
     const wb = XLSX.utils.book_new();
     const rows = [
       ['DIARIO DE BORDO — WMS MIESS'],
-      ['Data:', d.data, 'Turno:', d.turno, 'Supervisor:', d.supervisor, 'Leu anterior:', d.leu_anterior ? 'Sim' : 'Nao'],
+      ['Data:', fmtData(d.data), 'Turno:', d.turno, 'Supervisor:', d.supervisor, 'Leu anterior:', d.leu_anterior ? 'Sim' : 'Nao'],
       [''],
       ['SEPARACAO'],
       ['Total', 'Concluidos', 'Pendentes', 'Separando'],
@@ -1172,7 +1172,7 @@ async function exportarDiarioExcel(id) {
     const ws = XLSX.utils.aoa_to_sheet(rows);
     ws['!cols'] = [{wch:20},{wch:25},{wch:20},{wch:20}];
     XLSX.utils.book_append_sheet(wb, ws, 'Diario');
-    XLSX.writeFile(wb, `diario_${d.data}_${d.turno}.xlsx`);
+    XLSX.writeFile(wb, `diario_${fmtData(d.data).replace(/\//g,'-')}_${d.turno}.xlsx`);
     toast('Excel exportado!','sucesso');
   } catch(e) { toast('Erro ao exportar','erro'); }
 }
@@ -1899,7 +1899,7 @@ function renderFormValidacao(p) {
   sec.innerHTML = `
     <div style="background:#FEF3C7;border:1px solid #FDE68A;border-radius:10px;padding:14px 16px;margin-bottom:16px">
       <div style="font-size:12px;font-weight:700;color:#92400E">📋 Passagem pendente de validação</div>
-      <div style="font-size:11px;color:#78350F;margin-top:4px">Turno: <b>${p.turno}</b> | Data: <b>${p.data}</b> | Supervisor: <b>${p.supervisor}</b></div>
+      <div style="font-size:11px;color:#78350F;margin-top:4px">Turno: <b>${p.turno}</b> | Data: <b>${fmtData(p.data)}</b> | Supervisor: <b>${p.supervisor}</b></div>
     </div>
     ${SECOES.map(s => `
       <div style="border:1.5px solid ${s.borda};border-radius:10px;padding:12px 14px;margin-bottom:12px;background:${s.fundo}">
@@ -2460,7 +2460,7 @@ async function carregarHistoricoPassagens() {
       <div style="background:#fff;border:1px solid #E2E8F0;border-left:3px solid ${STATUS_COR[p.status]||'#CBD5E1'};border-radius:8px;padding:12px 14px;margin-bottom:8px">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">
           <div>
-            <span style="font-size:13px;font-weight:700;color:#0F172A">${p.data} — ${p.turno}</span>
+            <span style="font-size:13px;font-weight:700;color:#0F172A">${fmtData(p.data)} — ${p.turno}</span>
             <span style="margin-left:8px;font-size:11px;font-weight:600;color:${STATUS_COR[p.status]||'#64748B'}">${STATUS_NOME[p.status]||p.status}</span>
           </div>
           <div style="font-size:11px;color:#64748B">${p.supervisor}</div>
