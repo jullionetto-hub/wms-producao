@@ -1,8 +1,9 @@
 'use strict';
 const express = require('express');
 const router  = express.Router();
-const { db } = require('../lib/db');
+const { db, pool } = require('../lib/db');
 const { requerAuth, requerPerfil } = require('../lib/auth');
+const { dataHoraLocal } = require('../lib/helpers');
 
 // ── GET /performance/separadores?ini=YYYY-MM-DD&fim=YYYY-MM-DD ───────────
 router.get('/performance/separadores', requerAuth, requerPerfil('supervisor'), async (req, res) => {
@@ -237,6 +238,49 @@ router.get('/performance/range', requerAuth, requerPerfil('supervisor'), async (
         AND data_pedido != ''
     `);
     res.json(row || { ini: null, fim: null });
+  } catch(e) { res.status(500).json({ erro: e.message }); }
+});
+
+// ── GET /performance/ocorrencias ─────────────────────────────────────────
+router.get('/performance/ocorrencias', requerAuth, requerPerfil('supervisor'), async (req, res) => {
+  const { ini, fim, colaborador, tipo } = req.query;
+  try {
+    const params = [];
+    let w = 'WHERE 1=1';
+    if (ini)        { params.push(ini);         w += ` AND o.data >= $${params.length}`; }
+    if (fim)        { params.push(fim);         w += ` AND o.data <= $${params.length}`; }
+    if (colaborador){ params.push(colaborador); w += ` AND o.colaborador_nome = $${params.length}`; }
+    if (tipo)       { params.push(tipo);        w += ` AND o.tipo = $${params.length}`; }
+    const rows = await db.all(
+      `SELECT * FROM ocorrencias o ${w} ORDER BY o.data DESC, o.criado_em DESC`,
+      params
+    );
+    res.json(rows);
+  } catch(e) { res.status(500).json({ erro: e.message }); }
+});
+
+// ── POST /performance/ocorrencias ────────────────────────────────────────
+router.post('/performance/ocorrencias', requerAuth, requerPerfil('supervisor'), async (req, res) => {
+  const { colaborador_nome, tipo, gravidade, descricao, data, turno } = req.body;
+  if (!colaborador_nome || !tipo || !descricao || !data) {
+    return res.status(400).json({ erro: 'Preencha colaborador, tipo, data e descrição.' });
+  }
+  const supervisor_nome = req.session?.usuario?.nome || '';
+  try {
+    const r = await pool.query(
+      `INSERT INTO ocorrencias (colaborador_nome, tipo, gravidade, descricao, data, turno, supervisor_nome)
+       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
+      [colaborador_nome, tipo, gravidade||'leve', descricao, data, turno||'', supervisor_nome]
+    );
+    res.json(r.rows[0]);
+  } catch(e) { res.status(500).json({ erro: e.message }); }
+});
+
+// ── DELETE /performance/ocorrencias/:id ──────────────────────────────────
+router.delete('/performance/ocorrencias/:id', requerAuth, requerPerfil('supervisor'), async (req, res) => {
+  try {
+    await pool.query('DELETE FROM ocorrencias WHERE id=$1', [req.params.id]);
+    res.json({ mensagem: 'Ocorrência excluída!' });
   } catch(e) { res.status(500).json({ erro: e.message }); }
 });
 

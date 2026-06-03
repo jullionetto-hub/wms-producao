@@ -60,7 +60,7 @@ function renderizarPerformanceDash() {
     <div class="pg-title" style="margin-bottom:14px">🏆 Performance Logística</div>
 
     <!-- ABAS PRINCIPAIS -->
-    <div style="display:flex;gap:4px;margin-bottom:16px;background:var(--surface2);border-radius:12px;padding:4px;width:fit-content">
+    <div style="display:flex;gap:4px;margin-bottom:16px;background:var(--surface2);border-radius:12px;padding:4px;width:fit-content;flex-wrap:wrap">
       <button id="pf-tab-resumo" onclick="pfSwitchTab('resumo')"
         style="padding:8px 20px;border:none;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;background:#6366f1;color:#fff">
         📊 Resumo
@@ -68,6 +68,10 @@ function renderizarPerformanceDash() {
       <button id="pf-tab-tempos" onclick="pfSwitchTab('tempos')"
         style="padding:8px 20px;border:none;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;background:transparent;color:var(--text3)">
         ⏱️ Tempos por Pedido
+      </button>
+      <button id="pf-tab-ocorrencias" onclick="pfSwitchTab('ocorrencias')"
+        style="padding:8px 20px;border:none;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;background:transparent;color:var(--text3)">
+        ⚠️ Ocorrências
       </button>
     </div>
 
@@ -200,6 +204,11 @@ function renderizarPerformanceDash() {
       </div>
     </div>
 
+    <!-- ABA OCORRÊNCIAS -->
+    <div id="pf-ocorrencias-conteudo" style="display:none">
+      <div id="pf-ocorrencias-wrap"></div>
+    </div>
+
   </div>`;
 
   if (!document.getElementById('pf-grid-style')) {
@@ -217,24 +226,29 @@ let _pfAbaAtiva = 'resumo';
 
 function pfSwitchTab(aba) {
   _pfAbaAtiva = aba;
-  const resumoBtn  = document.getElementById('pf-tab-resumo');
-  const temposBtn  = document.getElementById('pf-tab-tempos');
-  const resumoDiv  = document.getElementById('pf-conteudo');
-  const temposDiv  = document.getElementById('pf-tempos-conteudo');
-  const colabWrap  = document.getElementById('pf-colab-wrap');
-
+  const tabs = { resumo:'pf-tab-resumo', tempos:'pf-tab-tempos', ocorrencias:'pf-tab-ocorrencias' };
+  const divs = { resumo:'pf-conteudo', tempos:'pf-tempos-conteudo', ocorrencias:'pf-ocorrencias-conteudo' };
+  // Reset todos os botões
+  Object.values(tabs).forEach(id => {
+    const b = document.getElementById(id);
+    if (b) { b.style.background='transparent'; b.style.color='var(--text3)'; }
+  });
+  // Ativa o botão atual
+  const btn = document.getElementById(tabs[aba]);
+  if (btn) { btn.style.background='#6366f1'; btn.style.color='#fff'; }
+  // Mostra só o div correto
+  Object.entries(divs).forEach(([k,id]) => {
+    const d = document.getElementById(id);
+    if (d) d.style.display = (k === aba) ? '' : 'none';
+  });
+  // Lógica específica por aba
   if (aba === 'resumo') {
-    if (resumoBtn) { resumoBtn.style.background='#6366f1'; resumoBtn.style.color='#fff'; }
-    if (temposBtn) { temposBtn.style.background='transparent'; temposBtn.style.color='var(--text3)'; }
-    if (resumoDiv) resumoDiv.style.display = _pfDados ? '' : 'none';
-    if (temposDiv) temposDiv.style.display = 'none';
-  } else {
-    if (temposBtn) { temposBtn.style.background='#6366f1'; temposBtn.style.color='#fff'; }
-    if (resumoBtn) { resumoBtn.style.background='transparent'; resumoBtn.style.color='var(--text3)'; }
-    if (resumoDiv) resumoDiv.style.display = 'none';
-    if (temposDiv) temposDiv.style.display = '';
-    // Auto-carrega timing se ainda não carregou para este período
+    const d = document.getElementById('pf-conteudo');
+    if (d) d.style.display = _pfDados ? '' : 'none';
+  } else if (aba === 'tempos') {
     if (!_pfTiming) pfCarregarTiming();
+  } else if (aba === 'ocorrencias') {
+    pfCarregarOcorrencias();
   }
 }
 
@@ -242,6 +256,8 @@ function pfFiltrarAtivo() {
   if (_pfAbaAtiva === 'tempos') {
     _pfTiming = null;
     pfCarregarTiming();
+  } else if (_pfAbaAtiva === 'ocorrencias') {
+    pfCarregarOcorrencias();
   } else {
     pfBuscarDados();
   }
@@ -826,6 +842,194 @@ function pfRenderTiming(filtroNome) {
 function pfSwitchAba(id) {
   _pfTimingAba = id;
   pfRenderTiming();  // filtroNome vem do dropdown automaticamente
+}
+
+// ── Aba Ocorrências ────────────────────────────────────────────────────────
+let _pfOcorrencias = [];
+
+const OC_TIPOS = {
+  processo_errado:      { label: 'Processo Errado',          icon: '⚠️',  cor: '#f59e0b' },
+  absenteismo:          { label: 'Absenteísmo',              icon: '🚫',  cor: '#ef4444' },
+  conduta_inapropriada: { label: 'Conduta Inapropriada',     icon: '🚨',  cor: '#dc2626' },
+  atraso:               { label: 'Atraso',                   icon: '⏰',  cor: '#f97316' },
+  descumprimento_norma: { label: 'Descumprimento de Norma',  icon: '📋',  cor: '#8b5cf6' },
+  qualidade:            { label: 'Problema de Qualidade',    icon: '📉',  cor: '#0891b2' },
+  outro:                { label: 'Outro',                    icon: '📝',  cor: '#6b7280' },
+};
+
+const OC_GRAVIDADE = {
+  leve:     { label: 'Leve',     bg: 'rgba(34,197,94,.12)',   cor: '#16a34a' },
+  moderada: { label: 'Moderada', bg: 'rgba(245,158,11,.12)',  cor: '#d97706' },
+  grave:    { label: 'Grave',    bg: 'rgba(220,38,38,.12)',   cor: '#dc2626' },
+};
+
+async function pfCarregarOcorrencias() {
+  const wrap = document.getElementById('pf-ocorrencias-wrap');
+  if (!wrap) return;
+  const ini   = document.getElementById('pf-ini')?.value   || '';
+  const fim   = document.getElementById('pf-fim')?.value   || '';
+  const colab = document.getElementById('pf-colab')?.value || '';
+
+  wrap.innerHTML = pfRenderOcorrenciasUI([], true);
+
+  const qs = new URLSearchParams();
+  if (ini)   qs.set('ini', ini);
+  if (fim)   qs.set('fim', fim);
+  if (colab) qs.set('colaborador', colab);
+  qs.set('_', Date.now());
+
+  const dados = await apiFetch(`/performance/ocorrencias?${qs}`);
+  _pfOcorrencias = Array.isArray(dados) ? dados : [];
+  wrap.innerHTML = pfRenderOcorrenciasUI(_pfOcorrencias, false);
+}
+
+function pfRenderOcorrenciasUI(lista, carregando) {
+  const ini   = document.getElementById('pf-ini')?.value   || '';
+  const fim   = document.getElementById('pf-fim')?.value   || '';
+  const fmtDt = d => { if (!d) return ''; const [y,m,dd]=d.split('-'); return `${dd}/${m}/${y}`; };
+
+  const tiposOpts = Object.entries(OC_TIPOS).map(([v,{label}])=>`<option value="${v}">${label}</option>`).join('');
+  const gravsOpts = Object.entries(OC_GRAVIDADE).map(([v,{label}])=>`<option value="${v}">${label}</option>`).join('');
+  const usuariosOpts = _pfUsuarios.map(u=>`<option value="${pfEsc(u.nome)}">${pfEsc(u.nome)}</option>`).join('');
+
+  // Formulário de registro
+  const form = `
+    <div class="card" style="padding:20px;margin-bottom:20px">
+      <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px;margin-bottom:16px">➕ REGISTRAR OCORRÊNCIA</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px" class="pf-grid-2">
+        <div>
+          <div style="font-size:9px;font-weight:700;color:var(--text3);letter-spacing:.6px;margin-bottom:4px">COLABORADOR *</div>
+          <select id="oc-colab" style="width:100%;padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;outline:none">
+            <option value="">Selecione...</option>${usuariosOpts}
+          </select>
+        </div>
+        <div>
+          <div style="font-size:9px;font-weight:700;color:var(--text3);letter-spacing:.6px;margin-bottom:4px">TIPO *</div>
+          <select id="oc-tipo" style="width:100%;padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;outline:none">
+            <option value="">Selecione...</option>${tiposOpts}
+          </select>
+        </div>
+        <div>
+          <div style="font-size:9px;font-weight:700;color:var(--text3);letter-spacing:.6px;margin-bottom:4px">GRAVIDADE</div>
+          <select id="oc-grav" style="width:100%;padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;outline:none">
+            ${gravsOpts}
+          </select>
+        </div>
+        <div>
+          <div style="font-size:9px;font-weight:700;color:var(--text3);letter-spacing:.6px;margin-bottom:4px">DATA *</div>
+          <input type="date" id="oc-data" value="${new Date().toISOString().slice(0,10)}"
+            style="width:100%;padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;outline:none;box-sizing:border-box">
+        </div>
+        <div>
+          <div style="font-size:9px;font-weight:700;color:var(--text3);letter-spacing:.6px;margin-bottom:4px">TURNO</div>
+          <select id="oc-turno" style="width:100%;padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;outline:none">
+            <option value="">—</option>
+            <option value="Manha">☀️ Manhã</option>
+            <option value="Tarde">🌅 Tarde</option>
+            <option value="Noite">🌙 Noite</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-bottom:12px">
+        <div style="font-size:9px;font-weight:700;color:var(--text3);letter-spacing:.6px;margin-bottom:4px">DESCRIÇÃO / DETALHES *</div>
+        <textarea id="oc-desc" rows="3" placeholder="Descreva detalhadamente o ocorrido..."
+          style="width:100%;padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;outline:none;resize:vertical;font-family:inherit;box-sizing:border-box"></textarea>
+      </div>
+      <button onclick="pfSalvarOcorrencia()"
+        style="background:linear-gradient(135deg,#dc2626,#b91c1c);color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:12px;font-weight:700;cursor:pointer">
+        ⚠️ Registrar Ocorrência
+      </button>
+    </div>`;
+
+  // Lista de ocorrências
+  if (carregando) {
+    return form + `<div style="text-align:center;padding:32px;color:var(--text3)">⏳ Carregando...</div>`;
+  }
+
+  // Totais por tipo
+  const contTipo = {};
+  const contGrav = {};
+  lista.forEach(o => {
+    contTipo[o.tipo] = (contTipo[o.tipo]||0) + 1;
+    contGrav[o.gravidade] = (contGrav[o.gravidade]||0) + 1;
+  });
+
+  const kpis = lista.length === 0 ? '' : `
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-bottom:20px">
+      <div style="background:var(--surface2);border-radius:10px;padding:12px 14px">
+        <div style="font-size:9px;font-weight:800;color:var(--text3);letter-spacing:.6px;margin-bottom:4px">TOTAL</div>
+        <div style="font-size:24px;font-weight:900">${lista.length}</div>
+      </div>
+      ${Object.entries(contGrav).map(([g,n])=>{const gc=OC_GRAVIDADE[g]||{cor:'#6b7280',label:g};return`
+      <div style="background:${gc.bg||'var(--surface2)'};border-radius:10px;padding:12px 14px">
+        <div style="font-size:9px;font-weight:800;color:${gc.cor};letter-spacing:.6px;margin-bottom:4px">${gc.label.toUpperCase()}</div>
+        <div style="font-size:24px;font-weight:900;color:${gc.cor}">${n}</div>
+      </div>`;}).join('')}
+    </div>`;
+
+  const rows = lista.length === 0
+    ? `<div style="text-align:center;padding:48px;color:var(--text3)">
+        <div style="font-size:32px;margin-bottom:10px">✅</div>
+        <div style="font-size:13px;font-weight:700">Nenhuma ocorrência no período</div>
+       </div>`
+    : lista.map(o => {
+        const t  = OC_TIPOS[o.tipo]    || { icon:'📝', label: o.tipo,      cor:'#6b7280' };
+        const g  = OC_GRAVIDADE[o.gravidade] || { label: o.gravidade, bg:'var(--surface2)', cor:'#6b7280' };
+        const tu = { Manha:'☀️ Manhã', Tarde:'🌅 Tarde', Noite:'🌙 Noite' }[o.turno] || o.turno || '—';
+        return `
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:12px">
+            <div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap">
+              <div style="flex:1;min-width:200px">
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+                  <span style="font-size:16px">${t.icon}</span>
+                  <span style="font-size:13px;font-weight:800;color:var(--text)">${pfEsc(o.colaborador_nome)}</span>
+                  <span style="background:${g.bg};color:${g.cor};border-radius:20px;padding:2px 10px;font-size:10px;font-weight:700">${g.label}</span>
+                  <span style="background:rgba(0,0,0,.06);color:${t.cor};border-radius:20px;padding:2px 10px;font-size:10px;font-weight:700">${t.label}</span>
+                </div>
+                <div style="font-size:12px;color:var(--text2);margin-bottom:4px">${pfEsc(o.descricao)}</div>
+                <div style="font-size:10px;color:var(--text3)">${fmtDt(o.data)} · ${tu} · Registrado por: <b>${pfEsc(o.supervisor_nome)}</b></div>
+              </div>
+              <button onclick="pfExcluirOcorrencia(${o.id})"
+                style="background:none;border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--text3);font-size:11px;cursor:pointer;flex-shrink:0"
+                title="Excluir ocorrência">🗑️</button>
+            </div>
+          </div>`;
+      }).join('');
+
+  return form + kpis + `
+    <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px;margin-bottom:12px">
+      📋 OCORRÊNCIAS REGISTRADAS${lista.length ? ` — ${lista.length} no período` : ''}
+    </div>
+    ${rows}`;
+}
+
+async function pfSalvarOcorrencia() {
+  const colaborador_nome = document.getElementById('oc-colab')?.value;
+  const tipo             = document.getElementById('oc-tipo')?.value;
+  const gravidade        = document.getElementById('oc-grav')?.value || 'leve';
+  const descricao        = document.getElementById('oc-desc')?.value?.trim();
+  const data             = document.getElementById('oc-data')?.value;
+  const turno            = document.getElementById('oc-turno')?.value || '';
+
+  if (!colaborador_nome) { pfToast('Selecione o colaborador.','aviso'); return; }
+  if (!tipo)             { pfToast('Selecione o tipo de ocorrência.','aviso'); return; }
+  if (!descricao)        { pfToast('Preencha a descrição.','aviso'); return; }
+  if (!data)             { pfToast('Informe a data.','aviso'); return; }
+
+  const r = await apiFetch('/performance/ocorrencias', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ colaborador_nome, tipo, gravidade, descricao, data, turno })
+  });
+  if (r) {
+    pfToast('✅ Ocorrência registrada!','sucesso');
+    pfCarregarOcorrencias();
+  }
+}
+
+async function pfExcluirOcorrencia(id) {
+  if (!confirm('Excluir esta ocorrência? Ação não pode ser desfeita.')) return;
+  const r = await apiFetch(`/performance/ocorrencias/${id}`, { method:'DELETE' });
+  if (r) { pfToast('Ocorrência excluída.','sucesso'); pfCarregarOcorrencias(); }
 }
 
 // ── Exportar Excel ─────────────────────────────────────────────────────────

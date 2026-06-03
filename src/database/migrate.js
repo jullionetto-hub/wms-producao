@@ -68,6 +68,19 @@ const ALTERATIONS = [
   "ALTER TABLE diario_bordo ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'rascunho'",
   "ALTER TABLE diario_bordo ADD COLUMN IF NOT EXISTS enviado_em TIMESTAMPTZ",
   "ALTER TABLE diario_bordo ADD COLUMN IF NOT EXISTS prazo_validacao TIMESTAMPTZ",
+  // Tabela de ocorrências de colaboradores (Performance → aba Ocorrências)
+  `CREATE TABLE IF NOT EXISTS ocorrencias (
+    id               SERIAL PRIMARY KEY,
+    colaborador_nome TEXT NOT NULL,
+    tipo             TEXT NOT NULL,
+    gravidade        TEXT NOT NULL DEFAULT 'leve',
+    descricao        TEXT NOT NULL DEFAULT '',
+    data             TEXT NOT NULL,
+    turno            TEXT NOT NULL DEFAULT '',
+    supervisor_nome  TEXT NOT NULL DEFAULT '',
+    criado_em        TIMESTAMPTZ DEFAULT NOW()
+  )`,
+  "ALTER TABLE ocorrencias ADD COLUMN IF NOT EXISTS colaborador_nome TEXT NOT NULL DEFAULT ''",
 ];
 
 async function runSchema() {
