@@ -1008,23 +1008,35 @@ async function submeterValidacao() {
   const btnConfirmar = document.querySelector('#modal-diario-validacao button[onclick="submeterValidacao()"]');
   _submetendoValidacao = true;
   if (btnConfirmar) { btnConfirmar.disabled = true; btnConfirmar.textContent = '⏳ Salvando...'; }
+  // Usa fetch diretamente para capturar a resposta mesmo em erros 400
+  const _limparBanner = () => {
+    fecharModalValidacao();
+    _validacaoId = null;
+    const vp = document.getElementById('diario-validacao-pendente');
+    if (vp) vp.style.display = 'none';
+    const badge = document.getElementById('menu-badge-diario');
+    if (badge) badge.style.display = 'none';
+    carregarListaDiarios();
+    verificarValidacaoPendente();
+  };
   try {
-    const r = await apiFetch(`/diario/validacao/${_validacaoId}/validar`, {
-      method:'POST', headers:{'Content-Type':'application/json'},
+    const res = await fetch(`${API}/diario/validacao/${_validacaoId}/validar`, {
+      method:'POST', credentials:'include',
+      headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ itens, obs_geral })
     });
-    // Trata "já validado" como sucesso (double-click ou inconsistência de estado)
-    const pts = r?.pontuacao ?? r?.pontuacao;
-    if (r && (r.mensagem || r.erro === 'Este diário já foi validado')) {
-      const pontuacao = r.pontuacao ?? pts ?? '?';
-      toast(`✅ Validação concluída! Pontuação: ${pontuacao}/100`, 'sucesso');
-      fecharModalValidacao();
-      _validacaoId = null;
-      const vp = document.getElementById('diario-validacao-pendente');
-      if (vp) vp.style.display = 'none';
-      const badge = document.getElementById('menu-badge-diario');
-      if (badge) badge.style.display = 'none';
-      await carregarListaDiarios();
+    const r = await res.json().catch(() => ({}));
+
+    if (res.ok && r.mensagem) {
+      // Sucesso normal
+      toast(`✅ Validação concluída! Pontuação: ${r.pontuacao ?? '?'}/100`, 'sucesso');
+      _limparBanner();
+    } else if (r.erro === 'Este diário já foi validado') {
+      // Já foi validado por outro supervisor — limpa o banner normalmente
+      toast('ℹ️ Este diário já foi validado por outro supervisor.', 'aviso');
+      _limparBanner();
+    } else {
+      toast(r.erro || 'Erro ao validar diário', 'erro');
     }
   } catch(e) {
     toast('Erro ao submeter validação','erro');

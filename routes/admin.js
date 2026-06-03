@@ -297,9 +297,12 @@ router.get('/diario/validacao/pendente', requerAuth, requerPerfil('supervisor'),
     const PREV_TURNO = { Tarde: 'Manha', Noite: 'Tarde', Manha: 'Noite' };
     const turnoParaValidar = PREV_TURNO[turnoAtual] || null;
 
-    // Busca pendente OU expirado (até 24h retroativo)
+    // Busca pendente OU expirado — janela de 2 dias (cobre turno que cruza meia-noite)
+    // Filtra pela data do diário (campo TEXT 'YYYY-MM-DD') — mais confiável que criado_em
     // Exclui: (1) diários criados pelo próprio supervisor, (2) turno errado
-    const params = [supervisorAtual];
+    const hoje = agora.toLocaleDateString('pt-BR', { timeZone:'America/Sao_Paulo', year:'numeric', month:'2-digit', day:'2-digit' }).split('/').reverse().join('-');
+    const ontem = new Date(agora.getTime() - 48*60*60*1000).toLocaleDateString('pt-BR', { timeZone:'America/Sao_Paulo', year:'numeric', month:'2-digit', day:'2-digit' }).split('/').reverse().join('-');
+    const params = [supervisorAtual, ontem];
     let extraFiltro = '';
     if (turnoParaValidar) {
       params.push(turnoParaValidar);
@@ -311,8 +314,9 @@ router.get('/diario/validacao/pendente', requerAuth, requerPerfil('supervisor'),
       FROM diario_validacoes v
       JOIN diario_bordo d ON d.id = v.diario_id
       WHERE v.status IN ('pendente','expirado')
-        AND d.criado_em > NOW() - INTERVAL '24 hours'
+        AND d.data >= $2
         AND d.supervisor != $1
+        AND d.status != 'validado'
         ${extraFiltro}
       ORDER BY v.prazo ASC
       LIMIT 1
