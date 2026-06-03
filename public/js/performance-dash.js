@@ -241,14 +241,23 @@ function pfSwitchTab(aba) {
     const d = document.getElementById(id);
     if (d) d.style.display = (k === aba) ? '' : 'none';
   });
-  // Lógica específica por aba
+  // Esconde sempre os estados de loading/vazio do Resumo ao trocar de aba
+  const vaziEl   = document.getElementById('pf-vazio');
+  const loadEl   = document.getElementById('pf-loading');
+
   if (aba === 'resumo') {
     const d = document.getElementById('pf-conteudo');
     if (d) d.style.display = _pfDados ? '' : 'none';
-  } else if (aba === 'tempos') {
-    if (!_pfTiming) pfCarregarTiming();
-  } else if (aba === 'ocorrencias') {
-    pfCarregarOcorrencias();
+    if (!_pfDados && vaziEl) vaziEl.style.display = '';
+  } else {
+    // Nas abas Tempos e Ocorrências, o loading/vazio do Resumo não deve aparecer
+    if (vaziEl)  vaziEl.style.display  = 'none';
+    if (loadEl)  loadEl.style.display  = 'none';
+    if (aba === 'tempos') {
+      if (!_pfTiming) pfCarregarTiming();
+    } else if (aba === 'ocorrencias') {
+      pfCarregarOcorrencias();
+    }
   }
 }
 
@@ -1054,6 +1063,24 @@ function pfExportarExcel() {
   const fim = document.getElementById('pf-fim')?.value || '';
   const fmtHora = v => { if (!v) return ''; return v.includes('T') ? v.slice(11,16) : v.slice(0,5); };
   const fmtData = d => { if (!d) return ''; const [y,m,dd]=d.split('-'); return `${dd}/${m}/${y}`; };
+
+  // Na aba Ocorrências → exporta lista de ocorrências
+  if (_pfAbaAtiva === 'ocorrencias') {
+    if (!_pfOcorrencias.length) { pfToast('Nenhuma ocorrência para exportar.','aviso'); return; }
+    const cols = ['Data','Colaborador','Tipo','Gravidade','Turno','Descrição','Registrado por'];
+    const tipoLabel = v => OC_TIPOS[v]?.label || v;
+    const gravLabel = v => OC_GRAVIDADE[v]?.label || v;
+    const turnoLabel = v => ({ Manha:'Manhã', Tarde:'Tarde', Noite:'Noite' }[v] || v || '—');
+    const rows = _pfOcorrencias.map(o => [
+      fmtData(o.data), o.colaborador_nome, tipoLabel(o.tipo), gravLabel(o.gravidade),
+      turnoLabel(o.turno), o.descricao, o.supervisor_nome
+    ]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([cols, ...rows]), 'Ocorrências');
+    XLSX.writeFile(wb, `ocorrencias_${(ini||'').replace(/-/g,'')}${fim?'-'+(fim).replace(/-/g,''):''}.xlsx`);
+    pfToast('✅ Excel exportado!','sucesso');
+    return;
+  }
 
   // Na aba Tempos → exporta pedido a pedido
   if (_pfAbaAtiva === 'tempos' && _pfTiming) {
