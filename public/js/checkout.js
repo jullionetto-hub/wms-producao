@@ -235,32 +235,29 @@ async function carregarStatsCkMobile() {
 /* ══════════════════════════════════════════
    CHECKOUT
 ══════════════════════════════════════════ */
-// Gera SVG de código de barras Code-128 — tamanho grande para leitura por coletor
+// Gera SVG de código de barras Code 128 real (legível por qualquer coletor)
 function gerarCodigoBarrasSVG(texto) {
-  const chars   = String(texto).split('');
-  const barLarg = 4;   // largura de cada módulo (maior = mais legível pelo coletor)
-  const altura  = 120; // altura das barras
-  let barras = '';
-  let x = 30;
-  // Barra inicial
-  barras += `<rect x="${x}" y="10" width="${barLarg*2}" height="${altura}" fill="#000"/>`; x += barLarg*3;
-  chars.forEach(c => {
-    const code  = c.charCodeAt(0);
-    const w1    = barLarg * (1 + (code % 4));
-    const w2    = barLarg * (1 + ((code >> 3) % 3));
-    const w3    = barLarg * (1 + ((code >> 5) % 2));
-    barras += `<rect x="${x}" y="10" width="${w1}" height="${altura}" fill="#000"/>`; x += w1 + barLarg;
-    barras += `<rect x="${x}" y="10" width="${w2}" height="${altura}" fill="#000"/>`; x += w2 + barLarg*2;
-    barras += `<rect x="${x}" y="10" width="${w3}" height="${altura}" fill="#000"/>`; x += w3 + barLarg;
+  const svgId = 'ck-barcode-svg-' + Math.random().toString(36).slice(2);
+  // Retorna placeholder com id; o SVG é preenchido por renderizarBarcode() após inserção no DOM
+  return `<svg id="${svgId}" data-barcode="${texto}" style="max-width:100%;min-width:300px;display:block;margin:0 auto"></svg>`;
+}
+
+function renderizarBarcodes() {
+  document.querySelectorAll('svg[data-barcode]').forEach(el => {
+    try {
+      JsBarcode(el, el.dataset.barcode, {
+        format: 'CODE128',
+        width: 3,
+        height: 100,
+        displayValue: true,
+        fontSize: 18,
+        margin: 16,
+        background: '#ffffff',
+        lineColor: '#000000'
+      });
+      el.removeAttribute('data-barcode');
+    } catch(e) { console.warn('Barcode error:', e); }
   });
-  // Barra final
-  barras += `<rect x="${x}" y="10" width="${barLarg*2}" height="${altura}" fill="#000"/>`; x += barLarg*3;
-  const totalLarg = x + 30;
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${totalLarg}" height="${altura+40}" style="max-width:100%;min-width:300px">
-    <rect width="${totalLarg}" height="${altura+40}" fill="#fff"/>
-    ${barras}
-    <text x="${totalLarg/2}" y="${altura+32}" text-anchor="middle" font-family="monospace" font-size="18" font-weight="bold" fill="#000">${texto}</text>
-  </svg>`;
 }
 
 
@@ -329,6 +326,7 @@ async function buscarCaixa() {
         ${itensHtml}
       </div>`;
     }).join('');
+    setTimeout(renderizarBarcodes, 50);
   } catch(e) {
     if (cont) cont.innerHTML = '<div style="color:var(--red);padding:20px;text-align:center">Erro ao buscar!</div>';
   }
