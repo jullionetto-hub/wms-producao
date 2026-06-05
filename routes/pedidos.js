@@ -112,11 +112,16 @@ router.put('/pedidos/:id/caixa', requerAuth, async (req,res) => {
   if (!numero_caixa) return res.status(400).json({erro:'Numero da caixa nao informado!'});
   const caixa=String(numero_caixa).trim();
   try {
+    // Caixa está ocupada se: existe outro pedido com ela E não foi cancelado E o checkout ainda não foi concluído
     const usadaPed = await db.get(
-      `SELECT numero_pedido FROM pedidos WHERE numero_caixa=$1 AND id<>$2 AND status NOT IN ('concluido','cancelado')`,
+      `SELECT numero_pedido FROM pedidos
+       WHERE numero_caixa=$1 AND id<>$2 AND status != 'cancelado'
+         AND NOT EXISTS (
+           SELECT 1 FROM checkout c WHERE c.pedido_id=pedidos.id AND c.status='concluido'
+         )`,
       [caixa, req.params.id]
     );
-    if (usadaPed) return res.status(409).json({erro:`Caixa ${caixa} ja esta em uso no pedido ${usadaPed.numero_pedido}!`});
+    if (usadaPed) return res.status(409).json({erro:`Caixa ${caixa} ja esta em uso no pedido #${usadaPed.numero_pedido}!`});
     const usadaCk = await db.get(
       `SELECT c.numero_pedido FROM checkout c JOIN pedidos p ON c.pedido_id=p.id WHERE c.numero_caixa=$1 AND c.pedido_id<>$2 AND c.status='pendente'`,
       [caixa, req.params.id]
