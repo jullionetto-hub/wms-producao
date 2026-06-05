@@ -52,7 +52,8 @@ router.get('/performance/separadores', requerAuth, requerPerfil('supervisor'), a
        AND p.data_pedido <= $2
       LEFT JOIN itens_pedido ip ON ip.pedido_id = p.id
       WHERE s.status = 'ativo' ${turnoFiltro}
-      GROUP BY COALESCE(u.nome, s.nome),
+      GROUP BY s.id,
+               COALESCE(u.nome, s.nome),
                REPLACE(COALESCE(u.turno, s.turno, 'Manha'), 'ã', 'a')
       ORDER BY pedidos DESC
     `, params);
