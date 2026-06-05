@@ -26,17 +26,23 @@ router.get('/performance/separadores', requerAuth, requerPerfil('supervisor'), a
         COALESCE(SUM(ip.quantidade), 0)::int                                  AS itens,
         COUNT(DISTINCT CASE WHEN ip.codigo IS NOT NULL AND ip.codigo != ''
                             THEN ip.codigo END)::int                          AS skus,
-        ROUND(AVG(
-          CASE
-            WHEN NULLIF(p.iniciado_em, '') IS NOT NULL
-             AND NULLIF(COALESCE(NULLIF(p.skus_concluido_em,''), NULLIF(p.concluido_em,'')), '') IS NOT NULL
-            THEN EXTRACT(EPOCH FROM (
-              COALESCE(NULLIF(p.skus_concluido_em,''), NULLIF(p.concluido_em,''))::timestamp
-              - p.iniciado_em::timestamp
-            )) / 60.0
-            ELSE NULL
-          END
-        )::numeric, 1)                                                        AS tempo_medio_min
+        (SELECT ROUND(AVG(
+            CASE
+              WHEN NULLIF(p2.iniciado_em,'') IS NOT NULL
+               AND NULLIF(COALESCE(NULLIF(p2.skus_concluido_em,''), NULLIF(p2.concluido_em,'')), '') IS NOT NULL
+              THEN EXTRACT(EPOCH FROM (
+                COALESCE(NULLIF(p2.skus_concluido_em,''), NULLIF(p2.concluido_em,''))::timestamp
+                - p2.iniciado_em::timestamp
+              )) / 60.0
+              ELSE NULL
+            END
+          )::numeric, 1)
+          FROM pedidos p2
+          WHERE p2.separador_id = s.id
+            AND p2.status       = 'concluido'
+            AND p2.data_pedido >= $1
+            AND p2.data_pedido <= $2
+        )                                                                     AS tempo_medio_min
       FROM separadores s
       LEFT JOIN usuarios u ON u.id = s.usuario_id
       JOIN pedidos p
