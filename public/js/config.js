@@ -1,34 +1,66 @@
 ﻿const API = window.location.origin;
 let usuarioAtual     = null;
 
-// ── Taxa de separação (min/ponto) — fórmula fixa baseada nos pesos ────────
-// Corredor fácil  = 1.0 pt/item → ~20s/item
-// Corredor médio  = 1.5 pt/item → ~30s/item
-// Corredor difícil= 2.0 pt/item → ~40s/item
-// Rua única       = 2 pts       → ~30s extra
-// Resulta em ~0.33 min por ponto de pontuação
-const _taxaSepMinPorPonto = 0.33;
+// ── Estimativa de tempo de separação ──────────────────────────────────────
+// Fórmula baseada em itens reais (não pontuação que pode estar desatualizada):
+//   Ritmo base: 2.5 itens/minuto
+//   Ajuste de dificuldade via pontuação/item:
+//     ratio 1.0 (fácil) → 2.5 itens/min → 24s/item
+//     ratio 1.5 (médio) → 2.0 itens/min → 30s/item
+//     ratio 2.0 (difícil) → 1.5 itens/min → 40s/item
+//   Fórmula: min = total_itens / ritmo_ajustado
 
 function carregarTaxaSeparacao() {
-  return Promise.resolve(_taxaSepMinPorPonto); // sem chamada ao servidor
+  return Promise.resolve(null); // sem chamada ao servidor
 }
 
-function estimarTempoSep(pontuacao) {
-  if (!pontuacao || pontuacao <= 0) return null;
-  const min = Math.max(1, Math.round(pontuacao * _taxaSepMinPorPonto));
+function _ritmoItens(totalItens, pontuacao) {
+  if (!totalItens || totalItens <= 0) return 2.5;
+  const ratio = pontuacao > 0 ? pontuacao / totalItens : 1.0;
+  // interpolação linear entre 1.0 (2.5 itens/min) e 2.0 (1.5 itens/min)
+  const ritmo = Math.max(1.5, 2.5 - (ratio - 1.0));
+  return ritmo;
+}
+
+function estimarTempoSep(totalItens, pontuacao) {
+  const itens = parseInt(totalItens) || 0;
+  if (itens <= 0) return null;
+  const ritmo = _ritmoItens(itens, pontuacao||0);
+  const min   = Math.max(1, Math.ceil(itens / ritmo));
   if (min < 60) return `~${min} min`;
   const h = Math.floor(min / 60);
   const m = min % 60;
   return m > 0 ? `~${h}h ${m}min` : `~${h}h`;
 }
 
-function badgeTempoSep(pontuacao) {
-  const t = estimarTempoSep(pontuacao);
+function badgeTempoSep(totalItens, pontuacao) {
+  const t = estimarTempoSep(totalItens, pontuacao);
   if (!t) return '';
-  const min = Math.max(1, Math.round((pontuacao||0) * _taxaSepMinPorPonto));
-  const cor = min <= 10 ? '#16a34a' : min <= 25 ? '#d97706' : '#dc2626';
-  const bg  = min <= 10 ? 'rgba(22,163,74,.1)' : min <= 25 ? 'rgba(217,119,6,.1)' : 'rgba(220,38,38,.1)';
+  const itens = parseInt(totalItens) || 0;
+  const min   = Math.max(1, Math.ceil(itens / _ritmoItens(itens, pontuacao||0)));
+  const cor = min <= 15 ? '#16a34a' : min <= 30 ? '#d97706' : '#dc2626';
+  const bg  = min <= 15 ? 'rgba(22,163,74,.1)' : min <= 30 ? 'rgba(217,119,6,.1)' : 'rgba(220,38,38,.1)';
   return `<span style="background:${bg};color:${cor};border-radius:20px;padding:2px 8px;font-size:11px;font-weight:700;white-space:nowrap">⏱ ${t}</span>`;
+}
+
+// Timer ao vivo: mostra tempo decorrido desde iniciado_em
+function badgeTimerAoVivo(iniciadoEm, totalItens, pontuacao) {
+  if (!iniciadoEm) return '';
+  const inicio = new Date(iniciadoEm);
+  if (isNaN(inicio)) return '';
+  const agora    = new Date();
+  const decorMin = Math.floor((agora - inicio) / 60000);
+  const estimMin = Math.max(1, Math.ceil((parseInt(totalItens)||0) / _ritmoItens(parseInt(totalItens)||0, pontuacao||0)));
+  const restante = Math.max(0, estimMin - decorMin);
+  const atrasado = decorMin > estimMin;
+  const corDecor = atrasado ? '#dc2626' : '#6366f1';
+  const bgDecor  = atrasado ? 'rgba(220,38,38,.1)' : 'rgba(99,102,241,.1)';
+  const decorTxt = decorMin < 60 ? `${decorMin}min` : `${Math.floor(decorMin/60)}h${decorMin%60>0?decorMin%60+'m':''}`;
+  const estimTxt = estimMin < 60 ? `${estimMin}min` : `${Math.floor(estimMin/60)}h${estimMin%60>0?estimMin%60+'m':''}`;
+  if (atrasado) {
+    return `<span style="background:rgba(220,38,38,.1);color:#dc2626;border-radius:20px;padding:2px 8px;font-size:11px;font-weight:700;white-space:nowrap">⏱ ${decorTxt} ⚠️ +${decorMin-estimMin}min</span>`;
+  }
+  return `<span style="background:${bgDecor};color:${corDecor};border-radius:20px;padding:2px 8px;font-size:11px;font-weight:700;white-space:nowrap">⏱ ${decorTxt} / ${estimTxt} est.</span>`;
 }
 let separadorAtual   = null;
 let pedidoAtualId    = null;

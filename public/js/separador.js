@@ -116,7 +116,7 @@ async function carregarFilaMobile() {
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
           <div style="font-size:20px;font-weight:800;color:${numColor};font-family:'Space Mono',monospace">#${p.numero_pedido}</div>
           <div style="display:flex;gap:6px;align-items:center">
-            ${badgeTempoSep(p.pontuacao)}
+            ${badgeTempoSep(p.total_itens||p.itens, p.pontuacao)}
             <span class="pill ${pillCls}" style="font-size:10px">${pillTxt}</span>
           </div>
         </div>

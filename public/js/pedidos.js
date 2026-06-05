@@ -147,9 +147,20 @@ function _renderTabelaPedidos() {
       <td><span class="pill ${(p.status||'').replace(' ','-')}">${p.status}</span></td>
       <td style="font-weight:600;text-align:center;color:var(--text2)">${p.itens||'—'}</td>
       <td style="font-weight:700;text-align:center;color:${(p.total_itens||p.itens||0)>100?'var(--red)':(p.total_itens||p.itens||0)>30?'var(--amber)':'var(--text)'}">${p.total_itens||p.itens||'—'}</td>
-      <td style="text-align:center">${badgeTempoSep(p.pontuacao)}</td>
+      <td style="text-align:center" id="timer-ped-${p.id}">${p.status==='separando' && p.iniciado_em ? badgeTimerAoVivo(p.iniciado_em, p.total_itens||p.itens, p.pontuacao) : badgeTempoSep(p.total_itens||p.itens, p.pontuacao)}</td>
     </tr>`;
   }).join('');
+  // Atualiza timers ao vivo a cada 60 segundos para pedidos em separação
+  clearInterval(window._timerPedidos);
+  const pedidosSeparando = lista.filter(p => p.status === 'separando' && p.iniciado_em);
+  if (pedidosSeparando.length) {
+    window._timerPedidos = setInterval(() => {
+      pedidosSeparando.forEach(p => {
+        const cel = document.getElementById(`timer-ped-${p.id}`);
+        if (cel) cel.innerHTML = badgeTimerAoVivo(p.iniciado_em, p.total_itens||p.itens, p.pontuacao);
+      });
+    }, 60000);
+  }
 }
 
 
@@ -1161,7 +1172,7 @@ async function distManualBuscar() {
               <td style="padding:8px 10px;color:var(--text2);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.cliente||'—'}</td>
               <td style="padding:8px 10px;text-align:center;font-weight:700;color:#38bdf8">${p.total_itens||p.itens||0}</td>
               <td style="padding:8px 10px;text-align:center;font-size:11px;color:#f59e0b">${p.itens||0}</td>
-              <td style="padding:8px 10px;text-align:center">${badgeTempoSep(p.pontuacao)}</td>
+              <td style="padding:8px 10px;text-align:center">${badgeTempoSep(p.total_itens||p.itens, p.pontuacao)}</td>
               <td style="padding:8px 10px;color:var(--amber);font-size:11px;white-space:nowrap">${toISO(p.aguardando_desde||p.hora_pedido||'').slice(0,16)}</td>
               <td style="padding:8px 10px">
                 <select id="sep-sel-${p.id}" style="padding:5px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:11px;outline:none;min-width:140px">
@@ -1250,7 +1261,7 @@ async function carregarPedidosDistribuicao() {
       el.innerHTML = `<div style="font-size:11px;color:var(--text3);margin-bottom:8px">${labelModo}</div><div style="color:var(--text3);font-size:12px;text-align:center;padding:20px">${_modoPrime ? 'Nenhum pedido Prime pendente' : 'Nenhum pedido normal pendente'}</div>`;
       return;
     }
-    el.innerHTML = `<div style="font-size:11px;color:var(--text3);margin-bottom:8px">${labelModo}</div><div class="tabela-wrap" style="max-height:240px;overflow-y:auto"><table><thead><tr><th>PEDIDO</th><th>CLIENTE</th><th>HORÁRIO</th><th>ITENS</th><th>PONTUAÇÃO</th><th>⏱ TEMPO EST.</th><th>STATUS</th></tr></thead><tbody>${lista.map(p=>`<tr${p.tem_prime?' style="background:rgba(217,119,6,.06)"':''}><td style="font-weight:700;color:var(--text);font-family:'Space Mono',monospace;font-size:11px">${p.numero_pedido}${p.tem_prime?' <span style="font-size:9px;background:#D97706;color:#fff;border-radius:4px;padding:1px 4px;vertical-align:middle">PRIME</span>':''}</td><td style="font-size:11px;color:var(--text2);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.cliente||'—'}</td><td style="font-size:11px;color:var(--amber);font-weight:600;white-space:nowrap">${p.aguardando_desde||p.hora_pedido||'—'}</td><td style="font-weight:600">${p.itens||0}</td><td><span style="font-family:'Space Mono',monospace;color:var(--indigo);font-weight:700">${p.pontuacao||'—'}</span></td><td>${badgeTempoSep(p.pontuacao)}</td><td><span class="pill ${(p.status||'pendente')}">${p.status||'pendente'}</span></td></tr>`).join('')}</tbody></table></div>`;
+    el.innerHTML = `<div style="font-size:11px;color:var(--text3);margin-bottom:8px">${labelModo}</div><div class="tabela-wrap" style="max-height:240px;overflow-y:auto"><table><thead><tr><th>PEDIDO</th><th>CLIENTE</th><th>HORÁRIO</th><th>ITENS</th><th>PONTUAÇÃO</th><th>⏱ TEMPO EST.</th><th>STATUS</th></tr></thead><tbody>${lista.map(p=>`<tr${p.tem_prime?' style="background:rgba(217,119,6,.06)"':''}><td style="font-weight:700;color:var(--text);font-family:'Space Mono',monospace;font-size:11px">${p.numero_pedido}${p.tem_prime?' <span style="font-size:9px;background:#D97706;color:#fff;border-radius:4px;padding:1px 4px;vertical-align:middle">PRIME</span>':''}</td><td style="font-size:11px;color:var(--text2);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.cliente||'—'}</td><td style="font-size:11px;color:var(--amber);font-weight:600;white-space:nowrap">${p.aguardando_desde||p.hora_pedido||'—'}</td><td style="font-weight:600">${p.itens||0}</td><td><span style="font-family:'Space Mono',monospace;color:var(--indigo);font-weight:700">${p.pontuacao||'—'}</span></td><td>${badgeTempoSep(p.total_itens||p.itens, p.pontuacao)}</td><td><span class="pill ${(p.status||'pendente')}">${p.status||'pendente'}</span></td></tr>`).join('')}</tbody></table></div>`;
   } catch(e) { console.warn(e); }
 }
 async function calcularDistribuicao() {
