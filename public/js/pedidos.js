@@ -147,19 +147,21 @@ function _renderTabelaPedidos() {
       <td><span class="pill ${(p.status||'').replace(' ','-')}">${p.status}</span></td>
       <td style="font-weight:600;text-align:center;color:var(--text2)">${p.itens||'—'}</td>
       <td style="font-weight:700;text-align:center;color:${(p.total_itens||p.itens||0)>100?'var(--red)':(p.total_itens||p.itens||0)>30?'var(--amber)':'var(--text)'}">${p.total_itens||p.itens||'—'}</td>
-      <td style="text-align:center" id="timer-ped-${p.id}">${p.status==='separando' && p.iniciado_em ? badgeTimerAoVivo(p.iniciado_em, p.total_itens||p.itens, p.pontuacao) : badgeTempoSep(p.total_itens||p.itens, p.pontuacao)}</td>
+      <td style="text-align:center" id="timer-ped-${p.id}">${p.status==='separando' && p.iniciado_em
+        ? badgeTimerAoVivo(p.iniciado_em, p.total_itens||p.itens, p.pontuacao, p.tempo_aguardando_min, p.aguardando_repositor_desde)
+        : badgeTempoSep(p.total_itens||p.itens, p.pontuacao)}</td>
     </tr>`;
   }).join('');
-  // Atualiza timers ao vivo a cada 60 segundos para pedidos em separação
+  // Atualiza timers ao vivo a cada 30 segundos para pedidos em separação
   clearInterval(window._timerPedidos);
   const pedidosSeparando = lista.filter(p => p.status === 'separando' && p.iniciado_em);
   if (pedidosSeparando.length) {
     window._timerPedidos = setInterval(() => {
       pedidosSeparando.forEach(p => {
         const cel = document.getElementById(`timer-ped-${p.id}`);
-        if (cel) cel.innerHTML = badgeTimerAoVivo(p.iniciado_em, p.total_itens||p.itens, p.pontuacao);
+        if (cel) cel.innerHTML = badgeTimerAoVivo(p.iniciado_em, p.total_itens||p.itens, p.pontuacao, p.tempo_aguardando_min, p.aguardando_repositor_desde);
       });
-    }, 60000);
+    }, 30000);
   }
 }
 

@@ -46,24 +46,49 @@ function badgeTempoSep(totalItens, pontuacao) {
   return `<span style="background:${bg};color:${cor};border-radius:20px;padding:2px 8px;font-size:11px;font-weight:700;white-space:nowrap">⏱ ${t}</span>`;
 }
 
-// Timer ao vivo: mostra tempo decorrido desde iniciado_em
-function badgeTimerAoVivo(iniciadoEm, totalItens, pontuacao) {
+// Timer ao vivo: mostra tempo REAL de separação (exclui espera por repositor)
+// - Para quando entra em aguardando_repositor (exibe badge pausado)
+// - Subtrai tempo já acumulado de espera (tempo_aguardando_min)
+// - Subtrai espera atual se aguardando_repositor_desde estiver preenchido
+function badgeTimerAoVivo(iniciadoEm, totalItens, pontuacao, tempoAguardandoMin, aguardandoRepositorDesde) {
   if (!iniciadoEm) return '';
   const inicio = new Date(iniciadoEm);
   if (isNaN(inicio)) return '';
-  const agora    = new Date();
-  const decorMin = Math.floor((agora - inicio) / 60000);
+  const agora = new Date();
+
+  // Tempo total decorrido desde início
+  const totalDecorMin = Math.floor((agora - inicio) / 60000);
+
+  // Subtrai tempo acumulado de espera por repositores já resolvidos
+  const jaAguardou = parseInt(tempoAguardandoMin) || 0;
+
+  // Subtrai espera atual (se ainda aguardando repositor agora)
+  let aguardandoAgoraMin = 0;
+  const aguardandoDesde = aguardandoRepositorDesde && String(aguardandoRepositorDesde).trim();
+  if (aguardandoDesde) {
+    const dAguard = new Date(aguardandoDesde);
+    if (!isNaN(dAguard)) {
+      aguardandoAgoraMin = Math.floor((agora - dAguard) / 60000);
+    }
+  }
+
+  // Se está aguardando repositor agora: mostra badge pausado
+  if (aguardandoDesde && aguardandoAgoraMin >= 0) {
+    const decorReal = Math.max(0, totalDecorMin - jaAguardou - aguardandoAgoraMin);
+    const decorTxt  = decorReal < 60 ? `${decorReal}min` : `${Math.floor(decorReal/60)}h${decorReal%60>0?decorReal%60+'m':''}`;
+    return `<span style="background:rgba(245,158,11,.12);color:#d97706;border-radius:20px;padding:2px 8px;font-size:11px;font-weight:700;white-space:nowrap">⏸ ${decorTxt} (aguard. rep.)</span>`;
+  }
+
+  // Tempo real de separação (sem espera)
+  const decorMin = Math.max(0, totalDecorMin - jaAguardou);
   const estimMin = Math.max(1, Math.ceil((parseInt(totalItens)||0) / _ritmoItens(parseInt(totalItens)||0, pontuacao||0)));
-  const restante = Math.max(0, estimMin - decorMin);
   const atrasado = decorMin > estimMin;
-  const corDecor = atrasado ? '#dc2626' : '#6366f1';
-  const bgDecor  = atrasado ? 'rgba(220,38,38,.1)' : 'rgba(99,102,241,.1)';
   const decorTxt = decorMin < 60 ? `${decorMin}min` : `${Math.floor(decorMin/60)}h${decorMin%60>0?decorMin%60+'m':''}`;
   const estimTxt = estimMin < 60 ? `${estimMin}min` : `${Math.floor(estimMin/60)}h${estimMin%60>0?estimMin%60+'m':''}`;
   if (atrasado) {
     return `<span style="background:rgba(220,38,38,.1);color:#dc2626;border-radius:20px;padding:2px 8px;font-size:11px;font-weight:700;white-space:nowrap">⏱ ${decorTxt} ⚠️ +${decorMin-estimMin}min</span>`;
   }
-  return `<span style="background:${bgDecor};color:${corDecor};border-radius:20px;padding:2px 8px;font-size:11px;font-weight:700;white-space:nowrap">⏱ ${decorTxt} / ${estimTxt} est.</span>`;
+  return `<span style="background:rgba(99,102,241,.1);color:#6366f1;border-radius:20px;padding:2px 8px;font-size:11px;font-weight:700;white-space:nowrap">⏱ ${decorTxt} / ${estimTxt} est.</span>`;
 }
 let separadorAtual   = null;
 let pedidoAtualId    = null;
