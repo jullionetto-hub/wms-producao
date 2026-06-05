@@ -43,7 +43,7 @@ async function carregarChecklistMobile() {
       const num_a = parseInt(ra.match(/\d+/)?.[0]||0);
       const num_b = parseInt(rb.match(/\d+/)?.[0]||0);
       const ri = (ROTA_FISICA.indexOf(rua_a) - ROTA_FISICA.indexOf(rua_b)) * _checklistSortDir;
-      return ri !== 0 ? ri : (num_a - num_b) * _dir;
+      return ri !== 0 ? ri : (num_a - num_b) * _checklistSortDir;
     });
     wrap.style.display = 'block';
     renderChecklist('m-cl');
