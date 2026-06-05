@@ -1,3 +1,7 @@
+// Rota física do estoque: ZA (entrada) → corredor principal F–Q → ramal A–E (coluna Q) → R–Z
+const ROTA_FISICA = ['ZA','F','G','H','I','J','K','L','M','N','O','P','Q','E','D','C','B','A','R','S','T','U','V','W','X','Y','Z'];
+let _checklistSortDir = 1; // 1 = crescente (F→Z), -1 = decrescente (Z→F)
+
 /* ══════════════════════════════════════════
    SEPARAÇÃO — MOBILE (tabs)
 ══════════════════════════════════════════ */
@@ -18,17 +22,28 @@ async function carregarChecklistMobile() {
     itensAtuais = await res.json();
     const wrap = document.getElementById('m-cl-wrap');
     if (!itensAtuais.length) { wrap.style.display = 'none'; return; }
-    // Ordena por rota: rua (ordem do corredor) + número da colméia
-    const RUAS_ORD = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'];
+    // Ordena por rota em zigue-zague: começa pela rua mais próxima da última posição do separador
+    const _sepId = separadorAtual?.id || usuarioAtual?.id || 0;
+    const _ultimaRua = localStorage.getItem(`wms_ultima_rua_${_sepId}`);
+    const _ultimaIdx = _ultimaRua ? ROTA_FISICA.indexOf(_ultimaRua) : -1;
+    _checklistSortDir = 1;
+    if (_ultimaIdx >= 0) {
+      const _idxs = itensAtuais.map(i => ROTA_FISICA.indexOf(String(i.endereco||'').split(',')[0].trim().match(/^([A-Z]+)/)?.[1]||'')).filter(x=>x>=0);
+      if (_idxs.length) {
+        const _distMin = Math.abs(_ultimaIdx - Math.min(..._idxs));
+        const _distMax = Math.abs(_ultimaIdx - Math.max(..._idxs));
+        if (_distMax < _distMin) _checklistSortDir = -1;
+      }
+    }
     itensAtuais.sort((a,b) => {
       const ra = String(a.endereco||'').split(',')[0].trim();
       const rb = String(b.endereco||'').split(',')[0].trim();
-      const rua_a = ra.match(/^([A-Z]+)/)?.[1] || 'Z';
-      const rua_b = rb.match(/^([A-Z]+)/)?.[1] || 'Z';
+      const rua_a = ra.match(/^([A-Z]+)/)?.[1] || '';
+      const rua_b = rb.match(/^([A-Z]+)/)?.[1] || '';
       const num_a = parseInt(ra.match(/\d+/)?.[0]||0);
       const num_b = parseInt(rb.match(/\d+/)?.[0]||0);
-      const ri = (RUAS_ORD.indexOf(rua_a) - RUAS_ORD.indexOf(rua_b));
-      return ri !== 0 ? ri : num_a - num_b;
+      const ri = (ROTA_FISICA.indexOf(rua_a) - ROTA_FISICA.indexOf(rua_b)) * _checklistSortDir;
+      return ri !== 0 ? ri : (num_a - num_b) * _dir;
     });
     wrap.style.display = 'block';
     renderChecklist('m-cl');
@@ -472,7 +487,6 @@ async function _concluirCore(prefix, fnChecklist, fnFila, fnStats, inputId, stat
    RENDER CHECKLIST (compartilhado)
 ══════════════════════════════════════════ */
 function renderChecklist(prefix) {
-  const RUAS_ORD = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'];
   const total       = itensAtuais.length;
   const verificados = itensAtuais.filter(i=>i.status!=='pendente').length;
   const encontrados = itensAtuais.filter(i=>i.status==='encontrado').length;
@@ -485,9 +499,9 @@ function renderChecklist(prefix) {
   // Extrai rua do endereço
   const getRua = (end) => String(end||'').split(',')[0].trim().match(/^([A-Z]+)/)?.[1] || '?';
 
-  // Ruas únicas neste pedido, na ordem do corredor
+  // Ruas únicas neste pedido, na ordem do corredor (respeitando direção do zigue-zague)
   const ruasNoPedido = [...new Set(itensAtuais.map(i=>getRua(i.endereco)))]
-    .sort((a,b)=>RUAS_ORD.indexOf(a)-RUAS_ORD.indexOf(b));
+    .sort((a,b)=>(ROTA_FISICA.indexOf(a)-ROTA_FISICA.indexOf(b))*_checklistSortDir);
 
   // Rua atual = primeira rua com itens pendentes
   const primeirosPendentes = itensAtuais.filter(i=>i.status==='pendente');
@@ -779,7 +793,11 @@ async function verificarItem(itemId, status, obs='', qtdFalta=0, prefix, renderP
       })
     });
     if (!resp.ok) { toast('Erro ao verificar item!','erro'); return; }
-    if (item) { item.status=status; item.obs=obs; item.aviso_status=''; }
+    if (item) {
+      item.status=status; item.obs=obs; item.aviso_status='';
+      const ruaAtual = String(item.endereco||'').split(',')[0].trim().match(/^([A-Z]+)/)?.[1];
+      if (ruaAtual) localStorage.setItem(`wms_ultima_rua_${sepId}`, ruaAtual);
+    }
     if (status==='falta')     toast('❌ Falta — repositor avisado!','aviso');
     if (status==='parcial')   toast('🟡 Parcial — repositor avisado!','aviso');
     renderChecklist(renderPrefix);

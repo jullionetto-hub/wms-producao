@@ -324,9 +324,12 @@ function processarArquivoFile(file) {
       const ini  = temCab ? 1 : 0;
       const iNum  = temCab ? Math.max(cab.findIndex(c=>c.includes('pedido')||c.includes('numero')), 0) : 0;
       const iCod  = temCab ? (cab.findIndex(c=>c.includes('cod')) >= 0 ? cab.findIndex(c=>c.includes('cod')) : 1) : 1;
-      const iDesc = temCab ? (cab.findIndex(c=>c.includes('desc')) >= 0 ? cab.findIndex(c=>c.includes('desc')) : 2) : 2;
       const iQtd  = temCab ? (cab.findIndex(c=>c.includes('qtd')||c.includes('quant')) >= 0 ? cab.findIndex(c=>c.includes('qtd')||c.includes('quant')) : 4) : 4;
       const iEnd  = temCab ? (cab.findIndex(c=>c.includes('end')||c.includes('rua')||c.includes('ender')) >= 0 ? cab.findIndex(c=>c.includes('end')||c.includes('rua')||c.includes('ender')) : 3) : 3;
+      // Busca coluna de descricao/nome — nunca usa o mesmo indice que qtd ou cod
+      const iDescRaw = temCab ? cab.findIndex(c=>c.includes('desc')||c.includes('nome')||c.includes(' - n')) : -1;
+      const iDesc = (iDescRaw >= 0 && iDescRaw !== iQtd && iDescRaw !== iCod) ? iDescRaw
+        : [2,3,4,5].find(i => i !== iCod && i !== iNum && i !== iQtd && i !== iEnd) ?? 2;
       const dados = [];
       for (let i = ini; i < rows.length; i++) {
         const r   = rows[i];
