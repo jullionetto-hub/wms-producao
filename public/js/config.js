@@ -15,10 +15,13 @@ function carregarTaxaSeparacao() {
 }
 
 function _ritmoItens(totalItens, pontuacao) {
-  if (!totalItens || totalItens <= 0) return 2.5;
+  if (!totalItens || totalItens <= 0) return 7.0;
   const ratio = pontuacao > 0 ? pontuacao / totalItens : 1.0;
-  // interpolação linear entre 1.0 (2.5 itens/min) e 2.0 (1.5 itens/min)
-  const ritmo = Math.max(1.5, 2.5 - (ratio - 1.0));
+  // Calibrado: 53 itens faceis (ratio~1.0) = ~8 min → 6.6 itens/min
+  // Corredor facil  (ratio 1.0) → 7 itens/min (~9s/item)
+  // Corredor medio  (ratio 1.5) → 5 itens/min (~12s/item)
+  // Corredor dificil(ratio 2.0) → 3.5 itens/min (~17s/item)
+  const ritmo = Math.max(3.5, 7.0 - (ratio - 1.0) * 3.5);
   return ritmo;
 }
 
@@ -38,8 +41,8 @@ function badgeTempoSep(totalItens, pontuacao) {
   if (!t) return '';
   const itens = parseInt(totalItens) || 0;
   const min   = Math.max(1, Math.ceil(itens / _ritmoItens(itens, pontuacao||0)));
-  const cor = min <= 15 ? '#16a34a' : min <= 30 ? '#d97706' : '#dc2626';
-  const bg  = min <= 15 ? 'rgba(22,163,74,.1)' : min <= 30 ? 'rgba(217,119,6,.1)' : 'rgba(220,38,38,.1)';
+  const cor = min <= 10 ? '#16a34a' : min <= 20 ? '#d97706' : '#dc2626';
+  const bg  = min <= 10 ? 'rgba(22,163,74,.1)' : min <= 20 ? 'rgba(217,119,6,.1)' : 'rgba(220,38,38,.1)';
   return `<span style="background:${bg};color:${cor};border-radius:20px;padding:2px 8px;font-size:11px;font-weight:700;white-space:nowrap">⏱ ${t}</span>`;
 }
 
