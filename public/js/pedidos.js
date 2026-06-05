@@ -874,7 +874,7 @@ function processarArquivoModalFile(file) {
       const ini  = temCab ? 1 : 0;
       const iCod  = Math.max(cab.findIndex(c=>c.includes('cod')), 0);
       const iNum  = cab.findIndex(c=>c.includes('pedido')||c.includes('numero')) >= 0 ? cab.findIndex(c=>c.includes('pedido')||c.includes('numero')) : 1;
-      const iDesc = cab.findIndex(c=>c.includes('desc')) >= 0 ? cab.findIndex(c=>c.includes('desc')) : 2;
+      const iDesc = cab.findIndex(c=>c.includes('desc')||c.includes('nome')||c.includes('item - n')) >= 0 ? cab.findIndex(c=>c.includes('desc')||c.includes('nome')||c.includes('item - n')) : 2;
       const iQtd  = cab.findIndex(c=>c.includes('qtd')||c.includes('quant')) >= 0 ? cab.findIndex(c=>c.includes('qtd')||c.includes('quant')) : 3;
       const iEnd  = cab.findIndex(c=>c.includes('end')||c.includes('rua')||c.includes('ender')||c.includes('estoque')) >= 0 ? cab.findIndex(c=>c.includes('end')||c.includes('rua')||c.includes('ender')||c.includes('estoque')) : 4;
       const dados = [];

@@ -646,19 +646,18 @@ function renderChecklist(prefix) {
       const statusLabel = item.status==='encontrado'?'COLETADO':item.status==='falta'?'FALTA':item.status==='parcial'?'PARCIAL':'PENDENTE';
       const avisoStatus = item.aviso_status||'';
       return headerHtml + `<div id="${prefix}-ic-${item.id}" style="background:${cardBg};border:1px solid ${cardBord};border-left:4px solid ${cardAccent};border-radius:10px;padding:14px;margin-bottom:6px;margin-left:8px">
-        <!-- Linha 1: Código + Endereço + Status badge -->
-        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px">
+        <!-- Linha 1: Código + Status badge + Quantidade -->
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px">
           <div style="flex:1;min-width:0">
-            <div style="font-family:'Space Mono',monospace;font-size:16px;font-weight:700;color:#0F172A;letter-spacing:-.3px;margin-bottom:3px">${item.codigo||'—'}</div>
-            <div style="font-size:15px;font-weight:700;color:#0F172A;letter-spacing:.5px">${item.endereco||'—'}</div>
+            <div style="font-family:'Space Mono',monospace;font-size:14px;font-weight:700;color:#64748b;letter-spacing:-.3px;margin-bottom:2px">${item.codigo||'—'}</div>
+            <div style="font-size:16px;font-weight:800;color:#0F172A;line-height:1.3;margin-bottom:4px">${item.descricao||'<span style="color:#94a3b8;font-style:italic">Sem descrição</span>'}</div>
+            <div style="font-size:15px;font-weight:700;color:#1e40af;letter-spacing:.5px">📍 ${item.endereco||'—'}</div>
           </div>
           <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;margin-left:10px">
             ${item.status!=='pendente'?`<span style="font-size:9px;font-weight:800;letter-spacing:1.5px;padding:3px 8px;border-radius:4px;background:${cardAccent};color:#fff">${statusLabel}</span>`:''}
             <span style="font-family:'Space Mono',monospace;font-size:28px;font-weight:800;color:#0F172A;line-height:1">×${item.quantidade||1}</span>
           </div>
         </div>
-        <!-- Linha 2: Descrição -->
-        <div style="font-size:12px;color:#475569;line-height:1.4;margin-bottom:10px">${item.descricao||'—'}</div>
         <!-- Avisos repositor -->
         ${item.status==='falta'?`<div style="font-size:11px;font-weight:600;color:var(--red);margin-bottom:8px;padding:5px 8px;background:#FEF2F2;border-radius:5px">Repositor notificado — aguardando reposição</div>`:``}
         ${item.status==='parcial'?`<div style="font-size:11px;font-weight:600;color:var(--amber);margin-bottom:8px;padding:5px 8px;background:#FFFBEB;border-radius:5px">${item.obs||'Parcial'} — repositor notificado</div>`:``}
