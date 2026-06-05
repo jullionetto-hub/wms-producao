@@ -32,6 +32,31 @@ router.get('/pedidos', requerAuth, async (req,res) => {
     }
     q+=order;
     const rows=await db.all(q,p);
+
+    // Backfill: preenche aguardando_repositor_desde para pedidos em separação
+    // que têm avisos pendentes mas o campo estava vazio (dados anteriores ao fix).
+    const semAguardando = rows.filter(r =>
+      r.status === 'separando' &&
+      !r.aguardando_repositor_desde &&
+      !r.skus_concluido_em  // só se ainda não terminou de escanear
+    );
+    for (const ped of semAguardando) {
+      const primeiroAviso = await db.get(
+        `SELECT hora_aviso, data_aviso FROM avisos_repositor
+         WHERE pedido_id=$1 AND status IN ('pendente','verificando')
+         ORDER BY id ASC LIMIT 1`, [ped.id]
+      );
+      if (primeiroAviso?.hora_aviso && primeiroAviso?.data_aviso) {
+        // Converte data_aviso (YYYY-MM-DD) + hora_aviso (HH:MM) para ISO
+        const iso = `${primeiroAviso.data_aviso}T${primeiroAviso.hora_aviso}:00`;
+        await pool.query(
+          `UPDATE pedidos SET aguardando_repositor_desde=$1 WHERE id=$2`,
+          [iso, ped.id]
+        );
+        ped.aguardando_repositor_desde = iso; // atualiza o objeto para o response
+      }
+    }
+
     res.json(rows.map(r=>({...r,aguardando_desde:formatarAguardandoDesde(r.aguardando_desde)})));
   } catch(e){res.status(500).json({erro:e.message});}
 });
@@ -159,6 +184,13 @@ router.put('/itens/:id/verificar', requerAuth, async (req,res) => {
       if (ja) { await pool.query(`UPDATE avisos_repositor SET quantidade=$1,obs=$2,hora_aviso=$3,forma_envio=$4 WHERE id=$5`,[qtdA,obsA,hora,formaEnvio,ja.id]); }
       else { await pool.query(`INSERT INTO avisos_repositor (item_id,pedido_id,numero_pedido,separador_id,separador_nome,codigo,descricao,endereco,quantidade,obs,status,hora_aviso,data_aviso,forma_envio) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'pendente',$11,$12,$13)`,
         [item.id,item.pedido_id,item.numero_pedido,separador_id,separador_nome,item.codigo,item.descricao,item.endereco,qtdA,obsA,hora,data,formaEnvio]); }
+      // Define o início da espera pelo repositor (para cálculo de tempo real de separação).
+      // Só marca se ainda não tiver aguardando (não sobrescreve se já havia outro item em falta).
+      const pedAtual = await db.get(`SELECT aguardando_repositor_desde FROM pedidos WHERE id=$1`,[item.pedido_id]);
+      if (!pedAtual?.aguardando_repositor_desde) {
+        const agoraISO = new Date().toISOString();
+        await pool.query(`UPDATE pedidos SET aguardando_repositor_desde=$1 WHERE id=$2`,[agoraISO, item.pedido_id]);
+      }
       req.app.get('io')?.emit('aviso:novo', { pedido_id: item.pedido_id, numero_pedido: item.numero_pedido, codigo: item.codigo });
       res.json({mensagem:'Repositor avisado!',aviso:true});
     } else { res.json({mensagem:'Item verificado!',aviso:false}); }
