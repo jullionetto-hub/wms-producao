@@ -93,6 +93,7 @@ async function carregarFilaMobile() {
     if (!lista) return;
     if (!ordenadosMob.length) { lista.innerHTML = '<div style="color:var(--text3);text-align:center;padding:30px;font-size:13px">Nenhum pedido na fila</div>'; return; }
 
+    await carregarTaxaSeparacao();
     lista.innerHTML = ordenadosMob.map(p => {
       const transp   = String(p.transportadora||'').toUpperCase();
       const isDrive  = transp.includes('DRIVE');
@@ -114,7 +115,10 @@ async function carregarFilaMobile() {
       return `<div style="border:${bordWidth} solid ${bordColor};border-radius:12px;padding:12px 14px;margin-bottom:8px;background:${bgColor}">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
           <div style="font-size:20px;font-weight:800;color:${numColor};font-family:'Space Mono',monospace">#${p.numero_pedido}</div>
-          <span class="pill ${pillCls}" style="font-size:10px">${pillTxt}</span>
+          <div style="display:flex;gap:6px;align-items:center">
+            ${badgeTempoSep(p.pontuacao)}
+            <span class="pill ${pillCls}" style="font-size:10px">${pillTxt}</span>
+          </div>
         </div>
         <div style="display:flex;gap:10px;font-size:12px;color:var(--text2);flex-wrap:wrap;margin-bottom:4px">
           <span>📦 <b style="color:var(--text)">${p.total_itens||p.itens||0} itens</b></span>

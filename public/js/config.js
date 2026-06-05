@@ -1,5 +1,35 @@
 ﻿const API = window.location.origin;
 let usuarioAtual     = null;
+
+// ── Taxa de separação (min/ponto) — fórmula fixa baseada nos pesos ────────
+// Corredor fácil  = 1.0 pt/item → ~20s/item
+// Corredor médio  = 1.5 pt/item → ~30s/item
+// Corredor difícil= 2.0 pt/item → ~40s/item
+// Rua única       = 2 pts       → ~30s extra
+// Resulta em ~0.33 min por ponto de pontuação
+const _taxaSepMinPorPonto = 0.33;
+
+function carregarTaxaSeparacao() {
+  return Promise.resolve(_taxaSepMinPorPonto); // sem chamada ao servidor
+}
+
+function estimarTempoSep(pontuacao) {
+  if (!pontuacao || pontuacao <= 0) return null;
+  const min = Math.max(1, Math.round(pontuacao * _taxaSepMinPorPonto));
+  if (min < 60) return `~${min} min`;
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return m > 0 ? `~${h}h ${m}min` : `~${h}h`;
+}
+
+function badgeTempoSep(pontuacao) {
+  const t = estimarTempoSep(pontuacao);
+  if (!t) return '';
+  const min = Math.max(1, Math.round((pontuacao||0) * _taxaSepMinPorPonto));
+  const cor = min <= 10 ? '#16a34a' : min <= 25 ? '#d97706' : '#dc2626';
+  const bg  = min <= 10 ? 'rgba(22,163,74,.1)' : min <= 25 ? 'rgba(217,119,6,.1)' : 'rgba(220,38,38,.1)';
+  return `<span style="background:${bg};color:${cor};border-radius:20px;padding:2px 8px;font-size:11px;font-weight:700;white-space:nowrap">⏱ ${t}</span>`;
+}
 let separadorAtual   = null;
 let pedidoAtualId    = null;
 let pedidoAtualNum   = null;
