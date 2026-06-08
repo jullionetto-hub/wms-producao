@@ -1,8 +1,8 @@
-// Rota física do estoque — separadores partem de E (abaixo de Q)
-// 1. Desce ramal A-D: D → C → B → A
+// Rota física do estoque — separadores partem de E (corredor + ponto de acúmulo)
+// 1. Começa em E, desce ramal: E → D → C → B → A
 // 2. Sobe ao corredor principal, varre esquerda até F: Q → P → O → N → M → L → K → J → I → H → Arara → G → F → ZA
 // 3. Varre direita até Z: R → S → T → U → V → W → X → Y → Z
-const ROTA_FISICA = ['D','C','B','A','Q','P','O','N','M','L','K','J','I','H','Arara','G','F','ZA','R','S','T','U','V','W','X','Y','Z'];
+const ROTA_FISICA = ['E','D','C','B','A','Q','P','O','N','M','L','K','J','I','H','Arara','G','F','ZA','R','S','T','U','V','W','X','Y','Z'];
 const _checklistSortDir = 1;
 
 /* ══════════════════════════════════════════
