@@ -1,6 +1,7 @@
-// Rota física do estoque: ZA (entrada) → corredor principal F–Q → ramal A–E (coluna Q) → R–Z
-const ROTA_FISICA = ['ZA','F','G','H','I','J','K','L','M','N','O','P','Q','E','D','C','B','A','R','S','T','U','V','W','X','Y','Z'];
-let _checklistSortDir = 1; // 1 = crescente (F→Z), -1 = decrescente (Z→F)
+// Rota física do estoque: sempre parte do corredor E
+// E → D → C → B → A → R → S → ... → Z → ZA → F → G → H → I → J → K → L → M → N → O → P → Q
+const ROTA_FISICA = ['E','D','C','B','A','R','S','T','U','V','W','X','Y','Z','ZA','F','G','H','I','J','K','L','M','N','O','P','Q'];
+const _checklistSortDir = 1;
 
 /* ══════════════════════════════════════════
    SEPARAÇÃO — MOBILE (tabs)
@@ -22,19 +23,7 @@ async function carregarChecklistMobile() {
     itensAtuais = await res.json();
     const wrap = document.getElementById('m-cl-wrap');
     if (!itensAtuais.length) { wrap.style.display = 'none'; return; }
-    // Ordena por rota em zigue-zague: começa pela rua mais próxima da última posição do separador
-    const _sepId = separadorAtual?.id || usuarioAtual?.id || 0;
-    const _ultimaRua = localStorage.getItem(`wms_ultima_rua_${_sepId}`);
-    const _ultimaIdx = _ultimaRua ? ROTA_FISICA.indexOf(_ultimaRua) : -1;
-    _checklistSortDir = 1;
-    if (_ultimaIdx >= 0) {
-      const _idxs = itensAtuais.map(i => ROTA_FISICA.indexOf(String(i.endereco||'').split(',')[0].trim().match(/^([A-Z]+)/)?.[1]||'')).filter(x=>x>=0);
-      if (_idxs.length) {
-        const _distMin = Math.abs(_ultimaIdx - Math.min(..._idxs));
-        const _distMax = Math.abs(_ultimaIdx - Math.max(..._idxs));
-        if (_distMax < _distMin) _checklistSortDir = -1;
-      }
-    }
+    // Ordena pela rota física do estoque, sempre partindo do corredor E
     itensAtuais.sort((a,b) => {
       const ra = String(a.endereco||'').split(',')[0].trim();
       const rb = String(b.endereco||'').split(',')[0].trim();
@@ -793,11 +782,7 @@ async function verificarItem(itemId, status, obs='', qtdFalta=0, prefix, renderP
       })
     });
     if (!resp.ok) { toast('Erro ao verificar item!','erro'); return; }
-    if (item) {
-      item.status=status; item.obs=obs; item.aviso_status='';
-      const ruaAtual = String(item.endereco||'').split(',')[0].trim().match(/^([A-Z]+)/)?.[1];
-      if (ruaAtual) localStorage.setItem(`wms_ultima_rua_${sepId}`, ruaAtual);
-    }
+    if (item) { item.status=status; item.obs=obs; item.aviso_status=''; }
     if (status==='falta')     toast('❌ Falta — repositor avisado!','aviso');
     if (status==='parcial')   toast('🟡 Parcial — repositor avisado!','aviso');
     renderChecklist(renderPrefix);
