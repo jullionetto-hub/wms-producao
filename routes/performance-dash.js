@@ -30,10 +30,13 @@ router.get('/performance/separadores', requerAuth, requerPerfil('supervisor'), a
             CASE
               WHEN NULLIF(p2.iniciado_em,'') IS NOT NULL
                AND NULLIF(COALESCE(NULLIF(p2.skus_concluido_em,''), NULLIF(p2.concluido_em,'')), '') IS NOT NULL
-              THEN EXTRACT(EPOCH FROM (
-                COALESCE(NULLIF(p2.skus_concluido_em,''), NULLIF(p2.concluido_em,''))::timestamp
-                - p2.iniciado_em::timestamp
-              )) / 60.0
+              THEN GREATEST(0,
+                EXTRACT(EPOCH FROM (
+                  COALESCE(NULLIF(p2.skus_concluido_em,''), NULLIF(p2.concluido_em,''))::timestamp
+                  - p2.iniciado_em::timestamp
+                )) / 60.0
+                - COALESCE(p2.tempo_aguardando_min, 0)
+              )
               ELSE NULL
             END
           )::numeric, 1)
@@ -128,10 +131,13 @@ router.get('/performance/timing', requerAuth, requerPerfil('supervisor'), async 
         CASE
           WHEN NULLIF(p.iniciado_em,'') IS NOT NULL
            AND NULLIF(COALESCE(NULLIF(p.skus_concluido_em,''), NULLIF(p.concluido_em,'')), '') IS NOT NULL
-          THEN ROUND(EXTRACT(EPOCH FROM (
-            COALESCE(NULLIF(p.skus_concluido_em,''), NULLIF(p.concluido_em,''))::timestamp
-            - p.iniciado_em::timestamp
-          )) / 60.0, 1)::float
+          THEN GREATEST(0, ROUND(
+            EXTRACT(EPOCH FROM (
+              COALESCE(NULLIF(p.skus_concluido_em,''), NULLIF(p.concluido_em,''))::timestamp
+              - p.iniciado_em::timestamp
+            )) / 60.0
+            - COALESCE(p.tempo_aguardando_min, 0)
+          , 1))::float
           ELSE NULL
         END AS duracao_min
       FROM pedidos p
