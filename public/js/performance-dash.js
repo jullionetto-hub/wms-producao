@@ -53,6 +53,9 @@ function renderizarPerformanceDash() {
 
   // Reseta estado para evitar race conditions se o usuário navegar durante carregamento
   _pfCarregando = false;
+  _pfAbaAtiva   = 'resumo';
+  _pfDados      = null;
+  _pfFiltrados  = [];
 
   pag.innerHTML = `
   <div style="padding:0 0 40px">
