@@ -44,6 +44,8 @@ router.put('/usuarios/:id', requerAuth, requerPerfil('supervisor'), async (req,r
       await pool.query(`UPDATE usuarios SET nome=$1,login=$2,perfil=$3,subtipo_repositor=$4,turno=$5,status=$6,perfis_acesso=$7 WHERE id=$8`,
         [nome,login,perfil,subtipo,turno||'Manha',status,extras,req.params.id]);
     }
+    // Sincroniza separadores.turno para manter consistência com usuarios.turno
+    await pool.query(`UPDATE separadores SET turno=$1, nome=$2 WHERE usuario_id=$3`, [turno||'Manha', nome, req.params.id]);
     res.json({mensagem:'Atualizado!'});
   } catch(e){res.status(500).json({erro:e.message});}
 });

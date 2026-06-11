@@ -83,6 +83,9 @@ const ALTERATIONS = [
     criado_em        TIMESTAMPTZ DEFAULT NOW()
   )`,
   "ALTER TABLE ocorrencias ADD COLUMN IF NOT EXISTS colaborador_nome TEXT NOT NULL DEFAULT ''",
+  // Corrige dessincronização: usuarios.turno era atualizado mas separadores.turno não
+  // Usa usuarios.turno como fonte da verdade para todos os separadores vinculados
+  `UPDATE separadores s SET turno = u.turno FROM usuarios u WHERE s.usuario_id = u.id AND u.turno IS NOT NULL AND u.turno != ''`,
 ];
 
 async function runSchema() {
