@@ -29,10 +29,22 @@ router.get('/performance/separadores', requerAuth, requerPerfil('supervisor'), a
         (SELECT ROUND(AVG(
             CASE
               WHEN NULLIF(p2.iniciado_em,'') IS NOT NULL
-               AND NULLIF(COALESCE(NULLIF(p2.skus_concluido_em,''), NULLIF(p2.concluido_em,'')), '') IS NOT NULL
+               AND NULLIF(COALESCE(
+                     NULLIF(p2.skus_concluido_em,''),
+                     NULLIF((SELECT p2.data_pedido||'T'||MAX(iv.hora_verificado)
+                             FROM itens_pedido iv WHERE iv.pedido_id=p2.id AND iv.hora_verificado!=''),
+                            p2.data_pedido||'T'),
+                     NULLIF(p2.concluido_em,'')
+                   ), '') IS NOT NULL
               THEN GREATEST(0,
                 EXTRACT(EPOCH FROM (
-                  COALESCE(NULLIF(p2.skus_concluido_em,''), NULLIF(p2.concluido_em,''))::timestamp
+                  COALESCE(
+                    NULLIF(p2.skus_concluido_em,''),
+                    NULLIF((SELECT p2.data_pedido||'T'||MAX(iv.hora_verificado)
+                            FROM itens_pedido iv WHERE iv.pedido_id=p2.id AND iv.hora_verificado!=''),
+                           p2.data_pedido||'T'),
+                    NULLIF(p2.concluido_em,'')
+                  )::timestamp
                   - p2.iniciado_em::timestamp
                 )) / 60.0
                 - COALESCE(p2.tempo_aguardando_min, 0)
@@ -122,7 +134,13 @@ router.get('/performance/timing', requerAuth, requerPerfil('supervisor'), async 
         REPLACE(COALESCE(u.turno, s.turno, 'Manha'), 'ã', 'a')          AS turno,
         p.data_pedido                                                     AS data,
         p.iniciado_em,
-        COALESCE(NULLIF(p.skus_concluido_em,''), NULLIF(p.concluido_em,'')) AS concluido_em,
+        COALESCE(
+          NULLIF(p.skus_concluido_em,''),
+          NULLIF((SELECT p.data_pedido||'T'||MAX(iv.hora_verificado)
+                  FROM itens_pedido iv WHERE iv.pedido_id=p.id AND iv.hora_verificado!=''),
+                 p.data_pedido||'T'),
+          NULLIF(p.concluido_em,'')
+        ) AS concluido_em,
         COALESCE(NULLIF(p.total_itens,0), p.itens, 0)                    AS total_itens,
         (SELECT COUNT(DISTINCT ip.codigo)
            FROM itens_pedido ip
@@ -130,10 +148,15 @@ router.get('/performance/timing', requerAuth, requerPerfil('supervisor'), async 
              AND ip.codigo IS NOT NULL AND ip.codigo != '')::int          AS skus,
         CASE
           WHEN NULLIF(p.iniciado_em,'') IS NOT NULL
-           AND NULLIF(COALESCE(NULLIF(p.skus_concluido_em,''), NULLIF(p.concluido_em,'')), '') IS NOT NULL
           THEN GREATEST(0, ROUND(
             EXTRACT(EPOCH FROM (
-              COALESCE(NULLIF(p.skus_concluido_em,''), NULLIF(p.concluido_em,''))::timestamp
+              COALESCE(
+                NULLIF(p.skus_concluido_em,''),
+                NULLIF((SELECT p.data_pedido||'T'||MAX(iv.hora_verificado)
+                        FROM itens_pedido iv WHERE iv.pedido_id=p.id AND iv.hora_verificado!=''),
+                       p.data_pedido||'T'),
+                NULLIF(p.concluido_em,'')
+              )::timestamp
               - p.iniciado_em::timestamp
             )) / 60.0
             - COALESCE(p.tempo_aguardando_min, 0)
