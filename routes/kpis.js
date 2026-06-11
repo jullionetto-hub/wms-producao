@@ -19,82 +19,40 @@ router.get('/kpis', requerAuth, async (req,res) => {
     return res.json(cache.data);
   }
   try {
-    // Turno filter helpers
-    // Para operações EM ANDAMENTO: usa o turno cadastrado no perfil do usuário
-    // Para operações CONCLUÍDAS: usa o horário real de conclusão (independe do cadastro)
-    //   Noite: 00-05h | Manhã: 06-14h | Tarde: 15-21h | Noite: 22-23h
-
+    // Turno filter: usa separadores.turno (mesma fonte que sep_turno no pipeline)
+    // Normaliza 'Manhã'→'Manha' para compatibilidade com registros antigos
     const tSep = hasTurno
-      ? ` AND REPLACE(COALESCE((SELECT u2.turno FROM separadores s2 JOIN usuarios u2 ON u2.id=s2.usuario_id WHERE s2.id=p.separador_id LIMIT 1),''),'ã','a')=ANY($T::text[])`
+      ? ` AND REPLACE(COALESCE(p.turno_distribuicao,(SELECT s2.turno FROM separadores s2 WHERE s2.id=p.separador_id LIMIT 1),''),'ã','a')=ANY($T::text[])`
       : '';
     const tNome = (col) => hasTurno
       ? ` AND REPLACE(COALESCE((SELECT u2.turno FROM usuarios u2 WHERE u2.nome=${col} LIMIT 1),''),'ã','a')=ANY($T::text[])`
       : '';
-
-    // Time-based: classifica pelo horário real da operação concluída
-    const tSepHora = hasTurno ? ` AND CASE
-        WHEN NULLIF(p.concluido_em,'') IS NOT NULL THEN
-          CASE WHEN EXTRACT(HOUR FROM p.concluido_em::timestamp) < 6 THEN 'Noite'
-               WHEN EXTRACT(HOUR FROM p.concluido_em::timestamp) < 15 THEN 'Manha'
-               WHEN EXTRACT(HOUR FROM p.concluido_em::timestamp) < 22 THEN 'Tarde'
-               ELSE 'Noite' END
-        ELSE REPLACE(COALESCE((SELECT u2.turno FROM separadores s2 JOIN usuarios u2 ON u2.id=s2.usuario_id WHERE s2.id=p.separador_id LIMIT 1),''),'ã','a')
-      END = ANY($T::text[])` : '';
-    const tCkHora = hasTurno ? ` AND CASE
-        WHEN NULLIF(c.hora_checkout,'') IS NOT NULL THEN
-          CASE WHEN SPLIT_PART(c.hora_checkout,':',1)::int < 6 THEN 'Noite'
-               WHEN SPLIT_PART(c.hora_checkout,':',1)::int < 15 THEN 'Manha'
-               WHEN SPLIT_PART(c.hora_checkout,':',1)::int < 22 THEN 'Tarde'
-               ELSE 'Noite' END
-        ELSE REPLACE(COALESCE((SELECT u2.turno FROM usuarios u2 WHERE u2.nome=c.operador_nome LIMIT 1),''),'ã','a')
-      END = ANY($T::text[])` : '';
-    const tEmbHora = hasTurno ? ` AND CASE
-        WHEN NULLIF(e.embalado_em,'') IS NOT NULL THEN
-          CASE WHEN SPLIT_PART(e.embalado_em,':',1)::int < 6 THEN 'Noite'
-               WHEN SPLIT_PART(e.embalado_em,':',1)::int < 15 THEN 'Manha'
-               WHEN SPLIT_PART(e.embalado_em,':',1)::int < 22 THEN 'Tarde'
-               ELSE 'Noite' END
-        ELSE REPLACE(COALESCE((SELECT u2.turno FROM usuarios u2 WHERE u2.nome=e.embalado_por LIMIT 1),''),'ã','a')
-      END = ANY($T::text[])` : '';
-    const tRepHora = hasTurno ? ` AND CASE
-        WHEN NULLIF(r.hora_reposto,'') IS NOT NULL THEN
-          CASE WHEN SPLIT_PART(r.hora_reposto,':',1)::int < 6 THEN 'Noite'
-               WHEN SPLIT_PART(r.hora_reposto,':',1)::int < 15 THEN 'Manha'
-               WHEN SPLIT_PART(r.hora_reposto,':',1)::int < 22 THEN 'Tarde'
-               ELSE 'Noite' END
-        ELSE REPLACE(COALESCE((SELECT u2.turno FROM usuarios u2 WHERE u2.nome=r.repositor_nome LIMIT 1),''),'ã','a')
-      END = ANY($T::text[])` : '';
 
     // Build params: $1=dIni, $2=dFim, $3=mes%, [$4=turnos se hasTurno]
     const p = [dIni, dFim, dIni.substring(0,7)+'%'];
     if (hasTurno) p.push(turnosArr);
     const T = hasTurno ? `$${p.length}` : null;
 
-    // Filtros por turno registrado (operações em andamento)
-    const sepFilt     = hasTurno ? tSep.replace('$T', T) : '';
-    const ckFilt      = hasTurno ? tNome('c.operador_nome').replace('$T', T) : '';
-    const repFilt     = hasTurno ? tNome('r.repositor_nome').replace('$T', T) : '';
-    // Filtros por horário real (operações concluídas)
-    const sepHoraFilt = hasTurno ? tSepHora.replace(/\$T/g, T) : '';
-    const ckHoraFilt  = hasTurno ? tCkHora.replace(/\$T/g, T) : '';
-    const embHoraFilt = hasTurno ? tEmbHora.replace(/\$T/g, T) : '';
-    const repHoraFilt = hasTurno ? tRepHora.replace(/\$T/g, T) : '';
+    const sepFilt = hasTurno ? tSep.replace('$T', T) : '';
+    const ckFilt  = hasTurno ? tNome('c.operador_nome').replace('$T', T) : '';
+    const embFilt = hasTurno ? tNome('e.embalado_por').replace('$T', T) : '';
+    const repFilt = hasTurno ? tNome('r.repositor_nome').replace('$T', T) : '';
 
     const r = await db.get(`SELECT
-      (SELECT COUNT(*) FROM pedidos p WHERE p.status='concluido' AND p.data_pedido>=$1 AND p.data_pedido<=$2${sepHoraFilt}) as concluidos_hoje,
+      (SELECT COUNT(*) FROM pedidos p WHERE p.status='concluido' AND p.data_pedido>=$1 AND p.data_pedido<=$2${sepFilt}) as concluidos_hoje,
       (SELECT COUNT(*) FROM pedidos p WHERE p.status='separando'${sepFilt}) as em_separacao,
       (SELECT COUNT(*) FROM pedidos WHERE status='pendente') as pendentes,
       (SELECT COUNT(*) FROM avisos_repositor WHERE status='pendente' AND data_aviso>=$1 AND data_aviso<=$2) as faltas_abertas,
       (SELECT COUNT(*) FROM checkout c WHERE c.status='pendente' AND c.data_checkout>=$1 AND c.data_checkout<=$2${ckFilt}) as checkout_pendente,
-      (SELECT COUNT(*) FROM checkout c WHERE c.status='concluido' AND c.data_checkout>=$1 AND c.data_checkout<=$2${ckHoraFilt}) as checkout_hoje,
+      (SELECT COUNT(*) FROM checkout c WHERE c.status='concluido' AND c.data_checkout>=$1 AND c.data_checkout<=$2${ckFilt}) as checkout_hoje,
       (SELECT COUNT(*) FROM pedidos WHERE status='concluido' AND data_pedido LIKE $3) as concluidos_mes,
       (SELECT COUNT(*) FROM pedidos WHERE data_pedido>=$1 AND data_pedido<=$2) as importados_hoje,
       (SELECT COUNT(DISTINCT separador_id) FROM pedidos WHERE status='separando') as seps_ativos,
       (SELECT COUNT(*) FROM avisos_repositor r WHERE r.status='nao_encontrado' AND r.data_aviso>=$1 AND r.data_aviso<=$2${repFilt}) as nao_encontrados_hoje,
       (SELECT COUNT(*) FROM avisos_repositor WHERE data_aviso>=$1 AND data_aviso<=$2) as total_faltas_hoje,
-      (SELECT COUNT(*) FROM embalagem e WHERE e.data_embalagem>=$1 AND e.data_embalagem<=$2${embHoraFilt}) as embalagem_hoje,
-      (SELECT COUNT(*) FROM pedidos p WHERE p.status='concluido' AND p.status_embalagem IN ('pendente','embalando')${sepHoraFilt}) as embalagem_pendente,
-      (SELECT COUNT(*) FROM avisos_repositor r WHERE r.status IN ('reposto','abastecido','subiu') AND r.data_aviso>=$1 AND r.data_aviso<=$2${repHoraFilt}) as reposicao_concluida,
+      (SELECT COUNT(*) FROM embalagem e WHERE e.data_embalagem>=$1 AND e.data_embalagem<=$2${embFilt}) as embalagem_hoje,
+      (SELECT COUNT(*) FROM pedidos p WHERE p.status='concluido' AND p.status_embalagem IN ('pendente','embalando')${sepFilt}) as embalagem_pendente,
+      (SELECT COUNT(*) FROM avisos_repositor r WHERE r.status IN ('reposto','abastecido','subiu') AND r.data_aviso>=$1 AND r.data_aviso<=$2${repFilt}) as reposicao_concluida,
       (SELECT COUNT(*) FROM avisos_repositor r WHERE r.status='pendente' AND r.data_aviso>=$1 AND r.data_aviso<=$2${repFilt}) as reposicao_pendente`,
       p);
 
