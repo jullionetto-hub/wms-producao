@@ -19,10 +19,10 @@ router.get('/kpis', requerAuth, async (req,res) => {
     return res.json(cache.data);
   }
   try {
-    // Turno filter: usa separadores.turno (mesma fonte que sep_turno no pipeline)
-    // Normaliza 'Manhã'→'Manha' para compatibilidade com registros antigos
+    // Turno filter: usa separadores.turno (turno de QUEM executou, não quando foi distribuído)
+    // turno_distribuicao reflete o turno da distribuição do lote, não do separador — ignorado aqui
     const tSep = hasTurno
-      ? ` AND REPLACE(COALESCE(p.turno_distribuicao,(SELECT s2.turno FROM separadores s2 WHERE s2.id=p.separador_id LIMIT 1),''),'ã','a')=ANY($T::text[])`
+      ? ` AND REPLACE(COALESCE((SELECT s2.turno FROM separadores s2 WHERE s2.id=p.separador_id LIMIT 1),''),'ã','a')=ANY($T::text[])`
       : '';
     const tNome = (col) => hasTurno
       ? ` AND REPLACE(COALESCE((SELECT u2.turno FROM usuarios u2 WHERE u2.nome=${col} LIMIT 1),''),'ã','a')=ANY($T::text[])`
