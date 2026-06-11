@@ -360,7 +360,7 @@ function renderCardRepSimples(a, modo) {
   } else if (modo === 'separado') {
     botoes = `
       <div style="padding:12px 14px;border-top:1px solid var(--border)">
-        <button onclick="acaoRepTab(${a.id},'e_subiu','${nomeLogado}','subiu')"
+        <button onclick="mostrarQtdSubiu(${a.id},'${nomeLogado}',${qtd},${a.qtd_encontrada||0})"
           style="width:100%;padding:14px;background:#e0f2fe;border:2px solid #0ea5e9;border-radius:10px;color:#0369a1;font-weight:700;font-size:14px;cursor:pointer;touch-action:manipulation">
           ⬆️ Subiu
         </button>
@@ -389,7 +389,10 @@ function renderCardRepSimples(a, modo) {
         <div style="display:flex;flex-wrap:wrap;gap:5px;align-items:center">
           ${a.numero_pedido?`<span style="background:var(--surface2);border-radius:8px;padding:3px 9px;font-size:11px;color:var(--text2);font-weight:600">📋 ${a.numero_pedido}</span>`:''}
           ${a.separador_nome?`<span style="background:var(--surface2);border-radius:8px;padding:3px 9px;font-size:11px;color:var(--text2)">👤 ${a.separador_nome}</span>`:''}
-          <span style="background:#fee2e2;border-radius:8px;padding:3px 9px;font-size:11px;font-weight:800;color:#dc2626">${qtd} un</span>
+          ${(a.qtd_encontrada > 0 && a.qtd_encontrada < qtd)
+            ? `<span style="background:#fff7ed;border:1.5px solid #fb923c;border-radius:8px;padding:3px 9px;font-size:11px;font-weight:800;color:#c2410c">⚠️ ${a.qtd_encontrada}/${qtd} un</span>`
+            : `<span style="background:#fee2e2;border-radius:8px;padding:3px 9px;font-size:11px;font-weight:800;color:#dc2626">${qtd} un</span>`
+          }
           ${envioBdg}
           ${a.endereco?`<span style="background:var(--surface2);border-radius:8px;padding:3px 9px;font-size:10px;color:var(--text3)">📍 ${a.endereco}</span>`:''}
           ${_tentBadge}
@@ -413,6 +416,7 @@ async function acaoRepTab(id, acao, nomeLogado, proximaTab, qtd = 0) {
   } else if (acao === 'e_subiu') {
     body.situacao = 'subiu';  body.status = 'subiu';
     body.quem_pegou = nomeLogado;
+    if (qtd > 0) body.qtd_encontrada = qtd;
   } else if (acao === 'e_abastecido') {
     body.situacao = 'abastecido'; body.status = 'abastecido';
     body.quem_pegou = nomeLogado; body.quem_guardou = nomeLogado;
@@ -446,6 +450,61 @@ async function acaoRepTab(id, acao, nomeLogado, proximaTab, qtd = 0) {
       }
     } else { toast('Erro ao salvar', 'danger'); }
   } catch(e) { toast('Sem conexão', 'danger'); }
+}
+
+/* ── Modal: Quantidade subindo ───────────────────────────────────── */
+let _qtdSubiuId = null, _qtdSubiuNome = null, _qtdSubiuNecessaria = 1;
+
+function mostrarQtdSubiu(id, nomeLogado, qtdNecessaria, qtdJaEncontrada) {
+  _qtdSubiuId         = id;
+  _qtdSubiuNome       = nomeLogado;
+  _qtdSubiuNecessaria = qtdNecessaria;
+  const sub = document.getElementById('modal-qtd-subiu-sub');
+  if (sub) sub.textContent = `Pedido precisa de ${qtdNecessaria} un.`;
+  const inp = document.getElementById('modal-qtd-subiu-val');
+  if (inp) {
+    inp.value = qtdJaEncontrada > 0 ? qtdJaEncontrada : qtdNecessaria;
+    inp.setAttribute('max', qtdNecessaria);
+  }
+  _subiuAtualizarAviso();
+  const modal = document.getElementById('modal-qtd-subiu');
+  if (modal) modal.style.display = 'flex';
+  setTimeout(() => inp?.select(), 120);
+}
+
+function _subiuAtualizarAviso() {
+  const inp  = document.getElementById('modal-qtd-subiu-val');
+  const aviso= document.getElementById('modal-qtd-subiu-aviso');
+  if (!inp || !aviso) return;
+  const qtd = parseInt(inp.value) || 0;
+  aviso.style.display = (qtd < _qtdSubiuNecessaria && qtd > 0) ? '' : 'none';
+}
+
+function _subiu_menos() {
+  const inp = document.getElementById('modal-qtd-subiu-val');
+  if (inp) { inp.value = Math.max(1, (parseInt(inp.value)||1) - 1); _subiuAtualizarAviso(); }
+}
+
+function _subiu_mais() {
+  const inp = document.getElementById('modal-qtd-subiu-val');
+  if (inp) { inp.value = Math.min(_qtdSubiuNecessaria, (parseInt(inp.value)||0) + 1); _subiuAtualizarAviso(); }
+}
+
+function _cancelarQtdSubiu() {
+  const modal = document.getElementById('modal-qtd-subiu');
+  if (modal) modal.style.display = 'none';
+  _qtdSubiuId = null; _qtdSubiuNome = null;
+}
+
+async function _confirmarQtdSubiu() {
+  const inp = document.getElementById('modal-qtd-subiu-val');
+  const qtd = Math.max(1, parseInt(inp?.value) || 1);
+  const modal = document.getElementById('modal-qtd-subiu');
+  if (modal) modal.style.display = 'none';
+  if (_qtdSubiuId !== null) {
+    await acaoRepTab(_qtdSubiuId, 'e_subiu', _qtdSubiuNome, 'subiu', qtd);
+  }
+  _qtdSubiuId = null; _qtdSubiuNome = null;
 }
 
 /* ── Modal: Quantidade encontrada ───────────────────────────────── */

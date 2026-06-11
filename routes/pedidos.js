@@ -167,7 +167,10 @@ router.post('/pedidos/bipar', requerAuth, async (req,res) => {
 router.get('/pedidos/:id/itens', requerAuth, async (req,res) => {
   try {
     res.json(await db.all(
-      `SELECT i.*,COALESCE((SELECT a.status FROM avisos_repositor a WHERE a.item_id=i.id ORDER BY a.id DESC LIMIT 1),'') as aviso_status FROM itens_pedido i WHERE i.pedido_id=$1 ORDER BY i.id`,
+      `SELECT i.*,
+        COALESCE((SELECT a.status        FROM avisos_repositor a WHERE a.item_id=i.id ORDER BY a.id DESC LIMIT 1),'') AS aviso_status,
+        COALESCE((SELECT a.qtd_encontrada FROM avisos_repositor a WHERE a.item_id=i.id ORDER BY a.id DESC LIMIT 1), 0) AS aviso_qtd_encontrada
+       FROM itens_pedido i WHERE i.pedido_id=$1 ORDER BY i.id`,
       [req.params.id]
     ));
   } catch(e){res.status(500).json({erro:e.message});}
