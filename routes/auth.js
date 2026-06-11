@@ -68,6 +68,19 @@ router.post('/auth/login', async (req,res) => {
   } catch(e) { res.status(500).json({erro:'Erro interno ao autenticar.'}); }
 });
 
+router.post('/auth/ping', requerAuth, (req, res) => {
+  const usuario = req.session?.usuario;
+  if (usuario?.id) {
+    const { data: hoje } = dataHoraLocal();
+    pool.query(
+      `UPDATE sessoes_trabalho SET ultimo_ping=NOW()
+       WHERE id=(SELECT id FROM sessoes_trabalho WHERE usuario_id=$1 AND data=$2 AND logout_em IS NULL ORDER BY login_em DESC LIMIT 1)`,
+      [usuario.id, hoje]
+    ).catch(() => {});
+  }
+  res.json({ ok: true });
+});
+
 router.post('/auth/logout', (req, res) => {
   const usuario = req.session?.usuario;
   if (usuario?.id) {

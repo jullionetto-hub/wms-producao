@@ -237,6 +237,102 @@ router.get('/performance/timing', requerAuth, requerPerfil('supervisor'), async 
   }
 });
 
+// ── GET /performance/metas — Metas proporcionais por tempo logado ────────
+router.get('/performance/metas', requerAuth, requerPerfil('supervisor'), async (req, res) => {
+  const { ini, fim } = req.query;
+  if (!ini || !fim) return res.status(400).json({ erro: 'Informe ini e fim.' });
+
+  try {
+    const METAS     = { separador: 65, checkout: 90, embalador: 120, repositor: 90 };
+    const TURNO_MIN = { Manha: 465, Tarde: 465, Noite: 453 };
+
+    // Tempo logado por colaborador/perfil/data
+    const sessoes = await db.all(`
+      SELECT
+        usuario_nome                                                AS nome,
+        perfil,
+        REPLACE(COALESCE(turno,'Manha'),'ã','a')                   AS turno,
+        data,
+        SUM(
+          CASE
+            WHEN logout_em IS NOT NULL THEN COALESCE(duracao_min, 0)
+            ELSE GREATEST(0,
+              ROUND(EXTRACT(EPOCH FROM (
+                LEAST(COALESCE(ultimo_ping, login_em) + INTERVAL '10 minutes', NOW()) - login_em
+              )) / 60)::int
+            )
+          END
+        )::int                                                      AS minutos_logado
+      FROM sessoes_trabalho
+      WHERE data >= $1
+        AND data <= $2
+        AND perfil IN ('separador','checkout','embalador','repositor')
+      GROUP BY usuario_nome, perfil, REPLACE(COALESCE(turno,'Manha'),'ã','a'), data
+      ORDER BY data, usuario_nome
+    `, [ini, fim]);
+
+    const [sepRows, ckRows, embRows, repRows] = await Promise.all([
+      db.all(`
+        SELECT COALESCE(u.nome,s.nome) AS nome, p.data_pedido AS data, COUNT(*)::int AS realizado
+        FROM pedidos p
+        JOIN separadores s ON s.id=p.separador_id
+        LEFT JOIN usuarios u ON u.id=s.usuario_id
+        WHERE p.status='concluido' AND p.data_pedido>=$1 AND p.data_pedido<=$2
+        GROUP BY COALESCE(u.nome,s.nome), p.data_pedido
+      `, [ini, fim]),
+      db.all(`
+        SELECT operador_nome AS nome, data_checkout AS data, COUNT(*)::int AS realizado
+        FROM checkout
+        WHERE status='concluido' AND data_checkout>=$1 AND data_checkout<=$2
+          AND operador_nome != ''
+        GROUP BY operador_nome, data_checkout
+      `, [ini, fim]),
+      db.all(`
+        SELECT embalado_por AS nome, data_embalagem AS data, COUNT(*)::int AS realizado
+        FROM embalagem
+        WHERE data_embalagem>=$1 AND data_embalagem<=$2 AND embalado_por != ''
+        GROUP BY embalado_por, data_embalagem
+      `, [ini, fim]),
+      db.all(`
+        SELECT repositor_nome AS nome, data_aviso AS data, COUNT(*)::int AS realizado
+        FROM avisos_repositor
+        WHERE data_aviso>=$1 AND data_aviso<=$2
+          AND repositor_nome != '' AND repositor_nome IS NOT NULL
+          AND status NOT IN ('pendente','protocolo')
+        GROUP BY repositor_nome, data_aviso
+      `, [ini, fim]),
+    ]);
+
+    const realIdx = {};
+    const addReal = (rows, perfil) => {
+      for (const r of rows) {
+        const k = `${r.nome}|${perfil}|${r.data}`;
+        realIdx[k] = (realIdx[k] || 0) + r.realizado;
+      }
+    };
+    addReal(sepRows,  'separador');
+    addReal(ckRows,   'checkout');
+    addReal(embRows,  'embalador');
+    addReal(repRows,  'repositor');
+
+    const resultado = sessoes.map(s => {
+      const metaCheia = METAS[s.perfil]    || 0;
+      const turnoMin  = TURNO_MIN[s.turno] || 465;
+      const metaProp  = turnoMin > 0
+        ? Math.round((s.minutos_logado / turnoMin) * metaCheia * 10) / 10
+        : 0;
+      const realizado = realIdx[`${s.nome}|${s.perfil}|${s.data}`] || 0;
+      const pct       = metaProp > 0 ? Math.round((realizado / metaProp) * 100) : null;
+      return { ...s, meta_cheia: metaCheia, meta_proporcional: metaProp, realizado, pct_atingido: pct };
+    });
+
+    res.json(resultado);
+  } catch(e) {
+    console.error('performance/metas:', e.message);
+    res.status(500).json({ erro: e.message });
+  }
+});
+
 // ── GET /performance/range ────────────────────────────────────────────────
 router.get('/performance/range', requerAuth, requerPerfil('supervisor'), async (req, res) => {
   try {

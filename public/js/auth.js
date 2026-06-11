@@ -86,6 +86,12 @@ async function fazerLogin() {
     separadorAtual = data.separador;
     erroEl.style.display = 'none';
     ativarApp();
+    // Heartbeat — mantém sessão de trabalho viva (ping a cada 3 min)
+    if (window._wmsHbTimer) clearInterval(window._wmsHbTimer);
+    fetch(`${API}/auth/ping`, { method:'POST', credentials:'include' }).catch(()=>{});
+    window._wmsHbTimer = setInterval(() => {
+      if (usuarioAtual) fetch(`${API}/auth/ping`, { method:'POST', credentials:'include' }).catch(()=>{});
+    }, 3 * 60 * 1000);
   } catch(e) { erroEl.textContent = 'Erro ao conectar com o servidor!'; erroEl.style.display = 'block'; }
 }
 
@@ -154,6 +160,7 @@ function sair() {
   _confirmarSair();
 }
 function _confirmarSair() {
+  if (window._wmsHbTimer) { clearInterval(window._wmsHbTimer); window._wmsHbTimer = null; }
   fetch(`${API}/auth/logout`, { method:'POST', credentials:'include' }).catch(()=>{});
   usuarioAtual = null; separadorAtual = null; pedidoAtualId = null; pedidoAtualNum = null; itensAtuais = [];
   document.body.classList.remove('sep-mobile','rep-mobile','ck-mobile','emb-mobile');

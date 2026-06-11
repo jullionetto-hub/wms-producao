@@ -68,6 +68,8 @@ const ALTERATIONS = [
   "ALTER TABLE diario_bordo ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'rascunho'",
   "ALTER TABLE diario_bordo ADD COLUMN IF NOT EXISTS enviado_em TIMESTAMPTZ",
   "ALTER TABLE diario_bordo ADD COLUMN IF NOT EXISTS prazo_validacao TIMESTAMPTZ",
+  // Heartbeat de sessão — último ping do frontend (para calcular tempo logado mesmo sem logout explícito)
+  "ALTER TABLE sessoes_trabalho ADD COLUMN IF NOT EXISTS ultimo_ping TIMESTAMPTZ DEFAULT NOW()",
   // Tabela de ocorrências de colaboradores (Performance → aba Ocorrências)
   `CREATE TABLE IF NOT EXISTS ocorrencias (
     id               SERIAL PRIMARY KEY,

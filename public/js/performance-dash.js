@@ -73,6 +73,10 @@ function renderizarPerformanceDash() {
         style="padding:8px 20px;border:none;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;background:transparent;color:var(--text3)">
         ⚠️ Ocorrências
       </button>
+      <button id="pf-tab-metas" onclick="pfSwitchTab('metas')"
+        style="padding:8px 20px;border:none;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;background:transparent;color:var(--text3)">
+        🎯 Metas
+      </button>
     </div>
 
     <!-- FILTROS (compartilhado entre abas) -->
@@ -209,6 +213,17 @@ function renderizarPerformanceDash() {
       <div id="pf-ocorrencias-wrap"></div>
     </div>
 
+    <!-- ABA METAS -->
+    <div id="pf-metas-conteudo" style="display:none">
+      <div id="pf-metas-wrap">
+        <div style="text-align:center;padding:64px 24px;color:var(--text3)">
+          <div style="font-size:36px;margin-bottom:12px">🎯</div>
+          <div style="font-size:14px;font-weight:700;margin-bottom:6px">Selecione o período e clique em Filtrar</div>
+          <div style="font-size:12px">Exibe metas proporcionais ao tempo logado em cada função</div>
+        </div>
+      </div>
+    </div>
+
   </div>`;
 
   if (!document.getElementById('pf-grid-style')) {
@@ -226,8 +241,8 @@ let _pfAbaAtiva = 'resumo';
 
 function pfSwitchTab(aba) {
   _pfAbaAtiva = aba;
-  const tabs = { resumo:'pf-tab-resumo', tempos:'pf-tab-tempos', ocorrencias:'pf-tab-ocorrencias' };
-  const divs = { resumo:'pf-conteudo', tempos:'pf-tempos-conteudo', ocorrencias:'pf-ocorrencias-conteudo' };
+  const tabs = { resumo:'pf-tab-resumo', tempos:'pf-tab-tempos', ocorrencias:'pf-tab-ocorrencias', metas:'pf-tab-metas' };
+  const divs = { resumo:'pf-conteudo', tempos:'pf-tempos-conteudo', ocorrencias:'pf-ocorrencias-conteudo', metas:'pf-metas-conteudo' };
   // Reset todos os botões
   Object.values(tabs).forEach(id => {
     const b = document.getElementById(id);
@@ -257,6 +272,8 @@ function pfSwitchTab(aba) {
       if (!_pfTiming) pfCarregarTiming();
     } else if (aba === 'ocorrencias') {
       pfCarregarOcorrencias();
+    } else if (aba === 'metas') {
+      pfCarregarMetas();
     }
   }
 }
@@ -267,6 +284,8 @@ function pfFiltrarAtivo() {
     pfCarregarTiming();
   } else if (_pfAbaAtiva === 'ocorrencias') {
     pfCarregarOcorrencias();
+  } else if (_pfAbaAtiva === 'metas') {
+    pfCarregarMetas();
   } else {
     pfBuscarDados();
   }
@@ -1135,4 +1154,152 @@ function pfExportarExcel() {
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(abaDia),    'Por Dia');
   XLSX.writeFile(wb, `performance-separadores_${(ini||'').replace(/-/g,'')}${fim?'-'+(fim).replace(/-/g,''):''}.xlsx`);
   pfToast('✅ Excel exportado!','sucesso');
+}
+
+// ── ABA METAS ─────────────────────────────────────────────────────────────
+const PF_PERFIL_LABEL = {
+  separador: '📦 Separação',
+  checkout:  '🏷️ Checkout',
+  embalador: '📫 Embalagem',
+  repositor: '🔧 Reposição',
+};
+const PF_PERFIL_UNIDADE = {
+  separador: 'pedidos',
+  checkout:  'pedidos',
+  embalador: 'pedidos',
+  repositor: 'SKUs',
+};
+
+async function pfCarregarMetas() {
+  const wrap = document.getElementById('pf-metas-wrap');
+  if (!wrap) return;
+  const ini = document.getElementById('pf-ini')?.value || '';
+  const fim = document.getElementById('pf-fim')?.value || '';
+  if (!ini || !fim) { wrap.innerHTML = `<div style="padding:48px;text-align:center;color:var(--text3)">Selecione o período e clique em Filtrar.</div>`; return; }
+
+  wrap.innerHTML = `<div style="padding:48px;text-align:center;color:var(--text3)">⏳ Carregando metas...</div>`;
+
+  const dados = await apiFetch(`/performance/metas?ini=${ini}&fim=${fim}`);
+  if (!dados || dados.erro) {
+    wrap.innerHTML = `<div style="padding:48px;text-align:center;color:var(--red)">Erro ao carregar metas.</div>`;
+    return;
+  }
+  if (!dados.length) {
+    wrap.innerHTML = `<div style="padding:48px;text-align:center;color:var(--text3)"><div style="font-size:32px;margin-bottom:8px">🎯</div>Nenhum dado de sessão encontrado no período.<br><small>Os dados são registrados a partir de agora — logins anteriores a esta atualização não constam.</small></div>`;
+    return;
+  }
+
+  // Agrupar por perfil
+  const porPerfil = {};
+  for (const r of dados) {
+    if (!porPerfil[r.perfil]) porPerfil[r.perfil] = [];
+    porPerfil[r.perfil].push(r);
+  }
+
+  const fmtMin = min => {
+    const h = Math.floor(min / 60);
+    const m = min % 60;
+    return `${h}h${String(m).padStart(2,'0')}`;
+  };
+  const pctCor = pct => {
+    if (pct === null) return '#64748b';
+    if (pct >= 100) return '#22c55e';
+    if (pct >= 80)  return '#f59e0b';
+    return '#ef4444';
+  };
+  const fmtData = d => { if (!d) return '—'; const [y,m,dy] = d.split('-'); return `${dy}/${m}/${y}`; };
+
+  const ordemPerfil = ['separador','checkout','embalador','repositor'];
+  let html = '';
+
+  for (const perfil of ordemPerfil) {
+    const rows = porPerfil[perfil];
+    if (!rows?.length) continue;
+
+    // Totais consolidados por colaborador
+    const totais = {};
+    for (const r of rows) {
+      if (!totais[r.nome]) totais[r.nome] = { nome: r.nome, turno: r.turno, minutos: 0, metaProp: 0, realizado: 0 };
+      totais[r.nome].minutos   += r.minutos_logado;
+      totais[r.nome].metaProp  += r.meta_proporcional;
+      totais[r.nome].realizado += r.realizado;
+    }
+
+    html += `
+    <div class="card" style="margin-bottom:16px;padding:0;overflow:hidden">
+      <div style="padding:12px 18px;background:var(--surface2);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px">
+        <span style="font-size:14px;font-weight:900;color:var(--text)">${PF_PERFIL_LABEL[perfil]||perfil}</span>
+        <span style="font-size:10px;color:var(--text3)">Meta cheia: ${rows[0].meta_cheia} ${PF_PERFIL_UNIDADE[perfil]||''}/turno</span>
+      </div>
+
+      <!-- Resumo por colaborador -->
+      <div style="padding:12px 18px;border-bottom:1px solid var(--border)">
+        <div style="font-size:9px;font-weight:800;color:var(--text3);letter-spacing:.5px;margin-bottom:10px">RESUMO DO PERÍODO</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px">
+          ${Object.values(totais).map(t => {
+            const pct = t.metaProp > 0 ? Math.round((t.realizado / t.metaProp) * 100) : null;
+            const cor = pctCor(pct);
+            const barW = pct !== null ? Math.min(100, pct) : 0;
+            return `
+            <div style="background:var(--surface2);border-radius:10px;padding:10px 12px;border:1px solid var(--border)">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                <div style="font-size:12px;font-weight:800;color:var(--text)">${t.nome}</div>
+                <span style="font-size:10px;color:var(--text3)">${PF_LABEL_TURNO[t.turno]||t.turno||'—'}</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-bottom:4px">
+                <span>⏱️ ${fmtMin(t.minutos)}</span>
+                <span>Meta: <b style="color:var(--text)">${t.metaProp.toFixed(1)}</b> | Realiz.: <b style="color:${cor}">${t.realizado}</b></span>
+              </div>
+              <div style="background:var(--surface);border-radius:4px;height:6px;overflow:hidden;margin-bottom:4px">
+                <div style="height:100%;width:${barW}%;background:${cor};border-radius:4px;transition:width .4s"></div>
+              </div>
+              <div style="text-align:right;font-size:11px;font-weight:800;color:${cor}">${pct !== null ? pct+'%' : '—'}</div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+
+      <!-- Detalhe por dia -->
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:11px">
+          <thead>
+            <tr style="background:var(--surface2)">
+              <th style="padding:8px 12px;text-align:left;font-size:9px;font-weight:800;color:var(--text3)">DATA</th>
+              <th style="padding:8px 12px;text-align:left;font-size:9px;font-weight:800;color:var(--text3)">COLABORADOR</th>
+              <th style="padding:8px 12px;text-align:center;font-size:9px;font-weight:800;color:var(--text3)">TURNO</th>
+              <th style="padding:8px 12px;text-align:center;font-size:9px;font-weight:800;color:var(--text3)">LOGADO</th>
+              <th style="padding:8px 12px;text-align:center;font-size:9px;font-weight:800;color:var(--text3)">META PROP.</th>
+              <th style="padding:8px 12px;text-align:center;font-size:9px;font-weight:800;color:var(--text3)">REALIZADO</th>
+              <th style="padding:8px 12px;text-align:center;font-size:9px;font-weight:800;color:var(--text3)">%</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.map(r => {
+              const cor = pctCor(r.pct_atingido);
+              const barW = r.pct_atingido !== null ? Math.min(100, r.pct_atingido) : 0;
+              return `
+              <tr style="border-bottom:1px solid var(--border)">
+                <td style="padding:7px 12px;color:var(--text3)">${fmtData(r.data)}</td>
+                <td style="padding:7px 12px;font-weight:700;color:var(--text)">${r.nome}</td>
+                <td style="padding:7px 12px;text-align:center;color:var(--text3)">${PF_LABEL_TURNO[r.turno]||r.turno||'—'}</td>
+                <td style="padding:7px 12px;text-align:center;font-family:monospace;font-weight:700;color:var(--text)">${fmtMin(r.minutos_logado)}</td>
+                <td style="padding:7px 12px;text-align:center;font-weight:700;color:var(--text)">${r.meta_proporcional}</td>
+                <td style="padding:7px 12px;text-align:center;font-weight:800;color:${cor}">${r.realizado}</td>
+                <td style="padding:7px 12px;text-align:center;min-width:80px">
+                  <div style="display:flex;align-items:center;gap:6px">
+                    <div style="flex:1;background:var(--surface2);border-radius:3px;height:5px;overflow:hidden">
+                      <div style="height:100%;width:${barW}%;background:${cor};border-radius:3px"></div>
+                    </div>
+                    <span style="font-size:10px;font-weight:800;color:${cor};min-width:30px;text-align:right">${r.pct_atingido !== null ? r.pct_atingido+'%' : '—'}</span>
+                  </div>
+                </td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+  }
+
+  wrap.innerHTML = html;
 }
