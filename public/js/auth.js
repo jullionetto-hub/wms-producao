@@ -330,6 +330,7 @@ function montarSidebar() {
     separador: `
       <div class="mg">SEPARAÇÃO</div>
       <a class="mi ativo" onclick="irPara('separacao',this)"><span class="mi-ic">📦</span>Pedidos</a>
+      <a class="mi" onclick="irPara('entrada-manual',this)"><span class="mi-ic">📥</span>Entrada Manual</a>
       <a class="mi" onclick="irPara('estatisticas-sep',this);carregarEstatisticasSep()"><span class="mi-ic">📊</span>Estatísticas</a>`,
     repositor: `
       <div class="mg">REPOSIÇÃO</div>
@@ -341,11 +342,13 @@ function montarSidebar() {
     checkout: `
       <div class="mg">CHECKOUT</div>
       <a class="mi ativo" onclick="irPara('checkout',this)"><span class="mi-ic">🏷️</span>Checkout</a>
+      <a class="mi" onclick="irPara('entrada-manual',this)"><span class="mi-ic">📥</span>Entrada Manual</a>
       <div class="mg">ANÁLISE</div>
       <a class="mi" onclick="irPara('estatisticas-ck',this)"><span class="mi-ic">📈</span>Estatísticas</a>`,
     embalador: `
       <div class="mg">EMBALAGEM</div>
       <a class="mi ativo" onclick="irPara('embalagem',this)"><span class="mi-ic">📫</span>Embalar</a>
+      <a class="mi" onclick="irPara('entrada-manual',this)"><span class="mi-ic">📥</span>Entrada Manual</a>
       <div class="mg">ANÁLISE</div>
       <a class="mi" onclick="irPara('estatisticas-emb',this);carregarEstatisticasEmb()"><span class="mi-ic">📊</span>Estatísticas</a>`,
   };
