@@ -183,6 +183,14 @@ router.put('/itens/:id/verificar', requerAuth, async (req,res) => {
     const item=await db.get(`SELECT i.*,p.numero_pedido FROM itens_pedido i JOIN pedidos p ON i.pedido_id=p.id WHERE i.id=$1`,[req.params.id]);
     if (!item) return res.status(404).json({erro:'Item nao encontrado'});
     await pool.query('UPDATE itens_pedido SET status=$1,obs=$2,qtd_falta=$3,hora_verificado=$4 WHERE id=$5',[status,obs||'',qtd_falta||0,hora,req.params.id]);
+
+    // Quando todos os itens estão verificados (nenhum 'pendente'), o separador terminou
+    // o trabalho físico. Grava skus_concluido_em agora para não penalizar espera de repositor.
+    const pendR = await db.get(`SELECT COUNT(*)::int AS cnt FROM itens_pedido WHERE pedido_id=$1 AND status='pendente'`,[item.pedido_id]);
+    if (!pendR || parseInt(pendR.cnt) === 0) {
+      await pool.query(`UPDATE pedidos SET skus_concluido_em=COALESCE(NULLIF(skus_concluido_em,''),$1) WHERE id=$2`,[data+'T'+hora, item.pedido_id]);
+    }
+
     if (status==='falta'||status==='parcial') {
       const qtdA=status==='falta'?item.quantidade:(qtd_falta||0);
       const obsA=status==='parcial'?(obs||''):`Falta total - ${item.quantidade} unidade(s)`;
