@@ -115,23 +115,19 @@ router.put('/repositor/avisos/:id', requerAuth, async (req,res) => {
       }
     }
 
-    // Para nao_encontrado vindo de verificando: roteamento por turnos
+    // Para nao_encontrado vindo de verificando: máximo 3 tentativas totais
+    const MAX_TENTATIVAS = 3;
     let stFinal = st;
-    let turno_pendente = atual?.turno_pendente || '';
+    let turno_pendente = '';
     if (st === 'nao_encontrado' && atual?.status === 'verificando') {
-      // Determina o turno da tentativa que acabou de falhar
-      const ultimaTentativa = tentativas[tentativas.length - 1];
-      const turnoFalhou = ultimaTentativa?.turno || turnoAtualHora();
-      const proximo = proximoTurno(turnoFalhou);
-      if (proximo) {
-        // Ainda há turno seguinte — volta para fila direcionada
-        stFinal = 'pendente';
-        turno_pendente = proximo;
-      } else {
-        // Último turno (Noite) também falhou — protocolo
+      const falhas = tentativas.filter(t => t.resultado === 'nao_encontrado').length;
+      if (falhas >= MAX_TENTATIVAS) {
+        // 3 falhas → Liberação
         stFinal = 'nao_encontrado';
-        turno_pendente = '';
         hora_protocolo = hora;
+      } else {
+        // Ainda tem tentativas — volta para a fila (qualquer turno)
+        stFinal = 'pendente';
       }
     }
 
@@ -205,6 +201,19 @@ router.put('/repositor/avisos/:id/iniciar-busca', requerAuth, async (req, res) =
 
     if (atual.status !== 'pendente') {
       return res.status(409).json({erro:`Item não pode iniciar busca (status atual: ${atual.status})`});
+    }
+
+    // Bloqueia se já atingiu o máximo de 3 tentativas
+    const MAX_TENTATIVAS = 3;
+    if (tentativas.length >= MAX_TENTATIVAS) {
+      const { hora: hProto } = dataHoraLocal();
+      await pool.query(
+        `UPDATE avisos_repositor SET status='nao_encontrado', situacao='nao_encontrado', hora_protocolo=$1, turno_pendente='' WHERE id=$2`,
+        [hProto, id]
+      );
+      req.app.get('io')?.emit('liberacao:novo', { id, numero_pedido: atual.numero_pedido });
+      req.app.get('io')?.emit('aviso:atualizado', { id, status: 'nao_encontrado', numero_pedido: atual.numero_pedido });
+      return res.status(409).json({ erro: 'Máximo de 3 tentativas atingido. Item enviado para Liberação.' });
     }
 
     const novaNum = tentativas.length + 1;
