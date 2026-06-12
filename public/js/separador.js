@@ -33,7 +33,7 @@ async function carregarChecklistMobile() {
       const rua_b = rb.match(/^([A-Z]+)/)?.[1] || '';
       const num_a = parseInt(ra.match(/\d+/)?.[0]||0);
       const num_b = parseInt(rb.match(/\d+/)?.[0]||0);
-      const ri = (ROTA_FISICA.indexOf(rua_a) - ROTA_FISICA.indexOf(rua_b)) * _checklistSortDir;
+      const ri = rua_a.localeCompare(rua_b) * _checklistSortDir;
       return ri !== 0 ? ri : (num_a - num_b) * _checklistSortDir;
     });
     wrap.style.display = 'block';
@@ -490,9 +490,9 @@ function renderChecklist(prefix) {
   // Extrai rua do endereço
   const getRua = (end) => String(end||'').split(',')[0].trim().match(/^([A-Z]+)/)?.[1] || '?';
 
-  // Ruas únicas neste pedido, na ordem do corredor (respeitando direção do zigue-zague)
+  // Ruas únicas neste pedido, em ordem alfabética
   const ruasNoPedido = [...new Set(itensAtuais.map(i=>getRua(i.endereco)))]
-    .sort((a,b)=>(ROTA_FISICA.indexOf(a)-ROTA_FISICA.indexOf(b))*_checklistSortDir);
+    .sort((a,b)=>a.localeCompare(b)*_checklistSortDir);
 
   // Rua atual = primeira rua com itens pendentes
   const primeirosPendentes = itensAtuais.filter(i=>i.status==='pendente');

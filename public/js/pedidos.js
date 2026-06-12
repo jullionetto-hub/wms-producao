@@ -612,15 +612,14 @@ async function carregarChecklist() {
     itensAtuais = await res.json();
     const wrap = document.getElementById('cl-wrap');
     if (!itensAtuais.length) { wrap.style.display = 'none'; return; }
-    const RUAS_ORD = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'];
     itensAtuais.sort((a,b) => {
       const ra = String(a.endereco||'').split(',')[0].trim();
       const rb = String(b.endereco||'').split(',')[0].trim();
-      const rua_a = ra.match(/^([A-Z]+)/)?.[1] || 'Z';
-      const rua_b = rb.match(/^([A-Z]+)/)?.[1] || 'Z';
+      const rua_a = ra.match(/^([A-Z]+)/)?.[1] || '';
+      const rua_b = rb.match(/^([A-Z]+)/)?.[1] || '';
       const num_a = parseInt(ra.match(/\d+/)?.[0]||0);
       const num_b = parseInt(rb.match(/\d+/)?.[0]||0);
-      const ri = (RUAS_ORD.indexOf(rua_a) - RUAS_ORD.indexOf(rua_b));
+      const ri = rua_a.localeCompare(rua_b);
       return ri !== 0 ? ri : num_a - num_b;
     });
     wrap.style.display = 'block';
