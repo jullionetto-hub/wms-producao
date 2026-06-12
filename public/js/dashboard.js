@@ -2414,7 +2414,7 @@ function renderRelAnalitico(d) {
   // ── 1. Cards de resumo operacional ──────────────────────────
   const cards = [
     { icon:'📦', label:'SEPARAÇÃO', cor:'#4f46e5', grad:'linear-gradient(135deg,#6366f1,#4338ca)',
-      main: `${fmtN(d.separacao.concluidos)} / ${fmtN(d.separacao.distribuidos||d.separacao.total)}`, sub:'concluídos do lote distribuído',
+      main: `${fmtN(d.separacao.concluidos)} / ${fmtN(d.separacao.distribuidos)}`, sub:'concluídos do lote distribuído',
       kpis:[
         { lbl:'Importados',      val: fmtN(d.separacao.total) },
         { lbl:'Distribuídos',    val: fmtN(d.separacao.distribuidos||0) },

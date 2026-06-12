@@ -434,8 +434,9 @@ router.get('/relatorio/analitico', requerAuth, requerPerfil('supervisor'), async
       FROM pedidos p
       LEFT JOIN separadores sep ON p.separador_id = sep.id
       LEFT JOIN usuarios u ON sep.usuario_id = u.id
-      WHERE p.data_pedido >= $1 AND p.data_pedido <= $2
-      ORDER BY p.data_pedido, p.hora_pedido
+      WHERE COALESCE(NULLIF(p.data_distribuicao,''), NULLIF(LEFT(p.iniciado_em,10),''), p.data_pedido) >= $1
+        AND COALESCE(NULLIF(p.data_distribuicao,''), NULLIF(LEFT(p.iniciado_em,10),''), p.data_pedido) <= $2
+      ORDER BY COALESCE(NULLIF(p.data_distribuicao,''), NULLIF(LEFT(p.iniciado_em,10),''), p.data_pedido), p.hora_pedido
     `, params);
 
     // Lote do turno = pedidos distribuídos para separadores DESSE turno
