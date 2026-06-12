@@ -16,10 +16,11 @@ router.get('/pedidos', requerAuth, async (req,res) => {
     if (separador_id)  add('p.separador_id=',separador_id);
     if (status)        add('p.status=',status);
     if (data)          add('p.data_pedido=',data);
-    // Filtra pela data efetiva de trabalho: usa iniciado_em quando disponível,
-    // caso contrário usa data_pedido (pedidos ainda não iniciados aparecem na data de importação)
-    if (data_ini) { p.push(data_ini); q+=` AND COALESCE(NULLIF(p.iniciado_em,'')::date, p.data_pedido::date) >= $${p.length}::date`; }
-    if (data_fim)  { p.push(data_fim);  q+=` AND COALESCE(NULLIF(p.iniciado_em,'')::date, p.data_pedido::date) <= $${p.length}::date`; }
+    // Data efetiva de trabalho: data_distribuicao (dia que o pedido foi atribuído ao separador)
+    // tem prioridade sobre data_pedido (dia de importação), assim pedidos importados em dias
+    // anteriores mas distribuídos hoje aparecem corretamente no dashboard de hoje.
+    if (data_ini) { p.push(data_ini); q+=` AND COALESCE(NULLIF(p.data_distribuicao,''), NULLIF(LEFT(p.iniciado_em,10),''), p.data_pedido) >= $${p.length}`; }
+    if (data_fim)  { p.push(data_fim);  q+=` AND COALESCE(NULLIF(p.data_distribuicao,''), NULLIF(LEFT(p.iniciado_em,10),''), p.data_pedido) <= $${p.length}`; }
     if (numero_pedido) add('p.numero_pedido=',numero_pedido);
     const order=` ORDER BY CASE WHEN p.aguardando_desde IS NOT NULL AND p.aguardando_desde!='' THEN p.aguardando_desde ELSE COALESCE(p.data_pedido,'')||' '||COALESCE(p.hora_pedido,'') END ASC`;
     if (page) {
@@ -509,16 +510,16 @@ router.post('/pedidos/distribuicao/confirmar', requerAuth, requerPerfil('supervi
       if (dbId) {
         for (const np of item.pedidos) {
           let r;
+          const {data: dataDistrib} = dataHoraLocal();
           if (turnoLote) {
-            // Grava o turno do lote junto com o separador
             r = await pool.query(
-              `UPDATE pedidos SET separador_id=$1, turno_distribuicao=$2 WHERE numero_pedido=$3 AND status='pendente'`,
-              [dbId, turnoLote, np]
+              `UPDATE pedidos SET separador_id=$1, turno_distribuicao=$2, data_distribuicao=$3 WHERE numero_pedido=$4 AND status='pendente'`,
+              [dbId, turnoLote, dataDistrib, np]
             );
           } else {
             r = await pool.query(
-              `UPDATE pedidos SET separador_id=$1 WHERE numero_pedido=$2 AND status='pendente'`,
-              [dbId, np]
+              `UPDATE pedidos SET separador_id=$1, data_distribuicao=$2 WHERE numero_pedido=$3 AND status='pendente'`,
+              [dbId, dataDistrib, np]
             );
           }
           if(r.rowCount>0) dist++;
