@@ -6,10 +6,12 @@ const { requerAuth, requerPerfil } = require('../lib/auth');
 const { dataHoraLocal } = require('../lib/helpers');
 
 // Formatos válidos de endereço:
-//   U080                 → prateleira simples
-//   U087/VERT-U01-CX13   → prateleira + caixa vertical
-//   VERT-U09-CX11        → apenas caixa vertical
-const ADDR_REGEX = /^(U\d{3,4}(\/VERT-U\d{2}-CX\d{2,3})?|VERT-U\d{2}-CX\d{2,3})$/i;
+//   D106                      → rua + número (A-Z, ZA, etc.)
+//   U080                      → prateleira U
+//   C099/VERT-C82-CX18        → rua + caixa vertical
+//   U087/VERT-U01-CX13        → prateleira + caixa vertical
+//   VERT-U09-CX11             → apenas caixa vertical
+const ADDR_REGEX = /^([A-Z]{1,3}\d{1,4}(\/VERT-[A-Z]{1,3}\d{2}-CX\d{2,3})?|VERT-[A-Z]{1,3}\d{2}-CX\d{2,3})$/i;
 
 function validarEndereco(end) {
   if (!end || !end.trim()) return { ok: false, tipo: 'vazio' };
