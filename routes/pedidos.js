@@ -16,8 +16,10 @@ router.get('/pedidos', requerAuth, async (req,res) => {
     if (separador_id)  add('p.separador_id=',separador_id);
     if (status)        add('p.status=',status);
     if (data)          add('p.data_pedido=',data);
-    if (data_ini)      add('p.data_pedido>=',data_ini);
-    if (data_fim)      add('p.data_pedido<=',data_fim);
+    // Filtra pela data efetiva de trabalho: usa iniciado_em quando disponível,
+    // caso contrário usa data_pedido (pedidos ainda não iniciados aparecem na data de importação)
+    if (data_ini) { p.push(data_ini); q+=` AND COALESCE(NULLIF(p.iniciado_em,'')::date, p.data_pedido::date) >= $${p.length}::date`; }
+    if (data_fim)  { p.push(data_fim);  q+=` AND COALESCE(NULLIF(p.iniciado_em,'')::date, p.data_pedido::date) <= $${p.length}::date`; }
     if (numero_pedido) add('p.numero_pedido=',numero_pedido);
     const order=` ORDER BY CASE WHEN p.aguardando_desde IS NOT NULL AND p.aguardando_desde!='' THEN p.aguardando_desde ELSE COALESCE(p.data_pedido,'')||' '||COALESCE(p.hora_pedido,'') END ASC`;
     if (page) {
