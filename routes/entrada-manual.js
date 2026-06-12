@@ -139,6 +139,62 @@ router.put('/entrada-manual/itens/:id', requerAuth, async (req, res) => {
   } catch(e) { res.status(500).json({ erro: e.message }); }
 });
 
+// ── PUT /entrada-manual/lotes/:id/itens-bulk — Salvar todos de uma vez ────
+router.put('/entrada-manual/lotes/:id/itens-bulk', requerAuth, async (req, res) => {
+  const { itens } = req.body;
+  if (!Array.isArray(itens) || !itens.length)
+    return res.status(400).json({ erro: 'Nenhum item informado.' });
+
+  const responsavel = req.session?.usuario?.nome || '';
+  const loteId = req.params.id;
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    for (const item of itens) {
+      const { id, quantidade_abastecida, obs } = item;
+      const qtd = parseInt(quantidade_abastecida) || 0;
+
+      const row = await client.query(
+        `SELECT quantidade_esperada FROM entrada_manual_itens WHERE id=$1 AND lote_id=$2`,
+        [id, loteId]
+      );
+      if (!row.rows.length) continue;
+      const esperada = row.rows[0].quantidade_esperada;
+
+      let novoStatus;
+      if (qtd === 0)            novoStatus = 'nao_encontrado';
+      else if (qtd >= esperada) novoStatus = 'abastecido';
+      else                      novoStatus = 'parcial';
+
+      await client.query(
+        `UPDATE entrada_manual_itens
+         SET quantidade_abastecida=$1, status=$2,
+             obs=COALESCE($3,obs), responsavel=$4, confirmado_em=NOW()
+         WHERE id=$5 AND lote_id=$6`,
+        [qtd, novoStatus, obs || null, responsavel, id, loteId]
+      );
+    }
+
+    const resumo = await client.query(`
+      SELECT COUNT(*)::int AS total,
+             COUNT(*) FILTER (WHERE status!='pendente')::int AS concluidos
+      FROM entrada_manual_itens WHERE lote_id=$1`, [loteId]);
+
+    const { total, concluidos } = resumo.rows[0];
+    const loteStatus = total === concluidos ? 'concluido' : 'aberto';
+    await client.query(
+      `UPDATE entrada_manual_lotes SET itens_concluidos=$1, status=$2 WHERE id=$3`,
+      [concluidos, loteStatus, loteId]
+    );
+
+    await client.query('COMMIT');
+    res.json({ mensagem: `${itens.length} itens salvos!`, itens_concluidos: concluidos, total_itens: total, lote_status: loteStatus });
+  } catch(e) {
+    await client.query('ROLLBACK');
+    res.status(500).json({ erro: e.message });
+  } finally { client.release(); }
+});
+
 // ── DELETE /entrada-manual/lotes/:id — Excluir lote ──────────────────────
 router.delete('/entrada-manual/lotes/:id', requerAuth, requerPerfil('supervisor'), async (req, res) => {
   try {

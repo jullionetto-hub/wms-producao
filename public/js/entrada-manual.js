@@ -158,7 +158,7 @@ function emRenderizarTabela() {
   // Renderiza desktop
   if (tbody) {
     tbody.innerHTML = page.length ? page.map(it => emRowHTML(it)).join('') :
-      `<tr><td colspan="7" style="padding:32px;text-align:center;color:var(--text3)">Nenhum item encontrado.</td></tr>`;
+      `<tr><td colspan="8" style="padding:32px;text-align:center;color:var(--text3)">Nenhum item encontrado.</td></tr>`;
   }
 
   // Renderiza mobile
@@ -173,8 +173,7 @@ function emRenderizarTabela() {
 // ── HTML de uma linha (desktop) ───────────────────────────────────────────
 function emRowHTML(it) {
   const clr = emStatusClr[it.status] || '#64748b';
-  const vEnd = emValidarEndereco(it.endereco);
-  const endClr = !it.endereco ? '#64748b' : vEnd.ok ? '#22c55e' : '#ef4444';
+  const endClr = it.endereco ? '#22c55e' : '#64748b';
   return `
   <tr id="em-tr-${it.id}" style="border-bottom:1px solid var(--border)">
     <td style="padding:8px 10px;font-family:monospace;font-size:11px;font-weight:800;color:#f97316">${it.codigo}</td>
@@ -190,13 +189,11 @@ function emRowHTML(it) {
       </div>
     </td>
     <td style="padding:8px 10px">
-      <div style="position:relative">
-        <input id="em-end-${it.id}" type="text" value="${it.endereco||''}" placeholder="U080"
-          onblur="emEnderecoBlur(${it.id},this)" oninput="emEnderecoInput(${it.id},this)"
-          style="width:140px;background:var(--surface2);border:1.5px solid ${endClr};border-radius:6px;padding:5px 28px 5px 8px;color:${endClr};font-family:monospace;font-size:12px;font-weight:700;text-transform:uppercase;outline:none">
-        <span id="em-end-ic-${it.id}" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);font-size:12px">${!it.endereco ? '' : vEnd.ok ? '✅' : '❌'}</span>
-      </div>
-      <div id="em-end-hint-${it.id}" style="font-size:9px;margin-top:2px;color:${endClr}"></div>
+      <span style="font-family:monospace;font-size:12px;font-weight:700;color:${endClr};background:${endClr}18;border-radius:6px;padding:4px 8px;display:inline-block;min-width:60px">${it.endereco||'—'}</span>
+    </td>
+    <td style="padding:8px 10px">
+      <input id="em-obs-${it.id}" type="text" value="${(it.obs||'').replace(/"/g,'&quot;')}" placeholder="Observação..."
+        style="width:160px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:5px 8px;color:var(--text);font-size:11px;outline:none">
     </td>
     <td style="padding:8px 10px;text-align:center">
       <span style="background:${clr}22;color:${clr};border-radius:20px;padding:3px 8px;font-size:10px;font-weight:800;white-space:nowrap">${emStatusLabel[it.status]||it.status}</span>
@@ -213,9 +210,7 @@ function emRowHTML(it) {
 // ── HTML de um card (mobile) ──────────────────────────────────────────────
 function emCardHTML(it) {
   const clr = emStatusClr[it.status] || '#64748b';
-  const vEnd = emValidarEndereco(it.endereco);
-  const endClr = !it.endereco ? 'var(--border)' : vEnd.ok ? '#22c55e' : '#ef4444';
-  const endIco = !it.endereco ? '' : vEnd.ok ? '✅' : '❌';
+  const endClr = it.endereco ? '#22c55e' : 'var(--text3)';
   return `
   <div id="em-card-${it.id}" style="background:var(--surface);border:1px solid var(--border);border-radius:14px;margin-bottom:8px;overflow:hidden">
     <div style="padding:10px 14px 8px;display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
@@ -228,21 +223,15 @@ function emCardHTML(it) {
     <div style="border-top:1px solid var(--border);padding:10px 14px">
       <div style="display:flex;gap:12px;margin-bottom:10px">
         <div style="flex:1">
-          <div style="font-size:9px;font-weight:700;color:var(--text3);letter-spacing:.5px;margin-bottom:4px">ENDEREÇO ⚠️ VALIDAR</div>
-          <div style="position:relative">
-            <input id="em-mend-${it.id}" type="text" value="${it.endereco||''}" placeholder="Ex: U080"
-              oninput="emEnderecoInput(${it.id},this,true)" onblur="emEnderecoBlur(${it.id},this,true)"
-              style="width:100%;background:var(--surface2);border:1.5px solid ${endClr};border-radius:8px;padding:8px 28px 8px 10px;color:${endClr};font-family:monospace;font-size:14px;font-weight:700;text-transform:uppercase;outline:none;box-sizing:border-box">
-            <span style="position:absolute;right:8px;top:50%;transform:translateY(-50%)">${endIco}</span>
-          </div>
-          <div id="em-mend-hint-${it.id}" style="font-size:9px;margin-top:3px;color:${endClr}"></div>
+          <div style="font-size:9px;font-weight:700;color:var(--text3);letter-spacing:.5px;margin-bottom:4px">ENDEREÇO</div>
+          <div style="font-family:monospace;font-size:14px;font-weight:700;color:${endClr};background:var(--surface2);border-radius:8px;padding:8px 10px">${it.endereco||'—'}</div>
         </div>
         <div style="flex-shrink:0">
           <div style="font-size:9px;font-weight:700;color:var(--text3);letter-spacing:.5px;margin-bottom:4px">QTD ESP.</div>
           <div style="font-size:18px;font-weight:900;color:var(--text);margin-top:6px">${it.quantidade_esperada}</div>
         </div>
       </div>
-      <div style="display:flex;align-items:center;justify-content:space-between">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
         <div style="font-size:9px;font-weight:700;color:var(--text3);letter-spacing:.5px">QTD ABASTECIDA</div>
         <div style="display:flex;align-items:center;gap:0">
           <button onclick="emAjustarQtd(${it.id},-1,true)"
@@ -254,9 +243,14 @@ function emCardHTML(it) {
             style="width:36px;height:36px;border-radius:0 8px 8px 0;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:18px;font-weight:700;cursor:pointer">+</button>
         </div>
       </div>
+      <div>
+        <div style="font-size:9px;font-weight:700;color:var(--text3);letter-spacing:.5px;margin-bottom:4px">OBSERVAÇÃO</div>
+        <input id="em-mobs-${it.id}" type="text" value="${(it.obs||'').replace(/"/g,'&quot;')}" placeholder="Observação sobre o endereço..."
+          style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);font-size:12px;outline:none;box-sizing:border-box">
+      </div>
     </div>
     <button id="em-mbtn-${it.id}" onclick="emSalvarItem(${it.id},true)"
-      style="display:block;width:calc(100% - 28px);margin:4px 14px 12px;background:#f97316;color:#fff;border:none;border-radius:10px;padding:11px;font-size:13px;font-weight:800;cursor:pointer">
+      style="display:block;width:calc(100% - 28px);margin:8px 14px 12px;background:#f97316;color:#fff;border:none;border-radius:10px;padding:11px;font-size:13px;font-weight:800;cursor:pointer">
       💾 Salvar
     </button>
   </div>`;
@@ -339,35 +333,17 @@ async function emSalvarItem(id, mobile = false) {
   const it = _emItens.find(i => i.id === id);
   if (!it) return;
 
-  const endInp = document.getElementById(mobile ? `em-mend-${id}` : `em-end-${id}`);
-  const endereco = (endInp?.value || '').trim().toUpperCase();
-
-  if (endereco && !emValidarEndereco(endereco).ok) {
-    emToast('❌ Endereço inválido. Corrija antes de salvar.', 'erro'); return;
-  }
+  const obsInp = document.getElementById(mobile ? `em-mobs-${id}` : `em-obs-${id}`);
+  const obs = (obsInp?.value || '').trim();
 
   const btnId = mobile ? `em-mbtn-${id}` : `em-btn-save-${id}`;
   const btn   = document.getElementById(btnId);
   if (btn) { btn.disabled = true; btn.textContent = '⏳...'; }
 
-  // Se endereço diferente do histórico, confirma
-  if (endereco && endereco !== it.endereco) {
-    const hist = await apiFetch(`/entrada-manual/historico-endereco/${encodeURIComponent(it.codigo)}`);
-    if (hist && hist.endereco && hist.endereco.toUpperCase() !== endereco) {
-      const ok = await new Promise(res => wmsConfirm(
-        `⚠️ Endereço diferente do histórico!\n\nHistórico: ${hist.endereco}\nInformado: ${endereco}\n\nConfirmar assim mesmo?`,
-        () => res(true), () => res(false)
-      ));
-      if (!ok) {
-        if (btn) { btn.disabled = false; btn.innerHTML = '💾 Salvar'; } return;
-      }
-    }
-  }
-
   const qtd = parseInt(document.getElementById(mobile ? `em-mqty-${id}` : `em-qty-${id}`)?.value)||0;
   const r = await apiFetch(`/entrada-manual/itens/${id}`, {
     method:'PUT', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({ quantidade_abastecida: qtd, endereco })
+    body: JSON.stringify({ quantidade_abastecida: qtd, obs: obs || null })
   });
 
   if (r?.erro) {
@@ -376,21 +352,54 @@ async function emSalvarItem(id, mobile = false) {
     return;
   }
 
-  // Atualiza estado local
   it.quantidade_abastecida = qtd;
-  if (endereco) it.endereco = endereco;
+  it.obs = obs;
   it.status = r.status;
   _emLoteAtivo.itens_concluidos = r.itens_concluidos;
 
   emToast(`✅ ${it.codigo} salvo!`, 'sucesso');
 
-  // Actualiza a linha/card no DOM sem re-renderizar tudo
   const tr   = document.getElementById(`em-tr-${id}`);
   const card = document.getElementById(`em-card-${id}`);
   if (tr)   tr.outerHTML   = emRowHTML(it);
   if (card) card.outerHTML = emCardHTML(it);
 
   emAtualizarProgresso();
+}
+
+// ── Salvar todos os itens do lote de uma vez ──────────────────────────────
+async function emSalvarTudo() {
+  if (!_emLoteAtivo) return;
+  const btn = document.getElementById('em-btn-salvar-tudo');
+  if (btn) { btn.disabled = true; btn.textContent = `⏳ Salvando ${_emItens.length}...`; }
+
+  const payload = _emItens.map(it => {
+    const qtdEl = document.getElementById(`em-qty-${it.id}`);
+    const obsEl = document.getElementById(`em-obs-${it.id}`);
+    return {
+      id: it.id,
+      quantidade_abastecida: qtdEl ? (parseInt(qtdEl.value)||0) : (it.quantidade_abastecida||0),
+      obs: obsEl ? (obsEl.value.trim() || null) : (it.obs || null)
+    };
+  });
+
+  const r = await apiFetch(`/entrada-manual/lotes/${_emLoteAtivo.id}/itens-bulk`, {
+    method: 'PUT', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ itens: payload })
+  });
+
+  if (btn) { btn.disabled = false; btn.innerHTML = '💾 Salvar Tudo'; }
+
+  if (r?.erro) { emToast('Erro ao salvar: ' + r.erro, 'erro'); return; }
+
+  payload.forEach(p => {
+    const it = _emItens.find(i => i.id === p.id);
+    if (it) { it.quantidade_abastecida = p.quantidade_abastecida; it.obs = p.obs; }
+  });
+  if (r.itens_concluidos !== undefined) _emLoteAtivo.itens_concluidos = r.itens_concluidos;
+
+  emToast(`✅ ${payload.length} itens salvos!`, 'sucesso');
+  emRenderizarTabela();
 }
 
 // ── Excluir lote ──────────────────────────────────────────────────────────
@@ -633,6 +642,7 @@ function renderizarPagEntradaManual() {
         </button>
         <div id="em-lote-titulo" style="flex:1"></div>
         <button onclick="emExportarCSV()" style="background:#16a34a;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">📊 Excel</button>
+        <button id="em-btn-salvar-tudo" onclick="emSalvarTudo()" style="background:#1e3a5f;color:#38bdf8;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">💾 Salvar Tudo</button>
       </div>
 
       <!-- Barra de progresso -->
@@ -673,6 +683,7 @@ function renderizarPagEntradaManual() {
             <th style="text-align:center">QTD ESP.</th>
             <th style="text-align:center">QTD ABAST.</th>
             <th>ENDEREÇO</th>
+            <th>OBSERVAÇÃO</th>
             <th style="text-align:center">STATUS</th>
             <th style="text-align:center">SALVAR</th>
           </tr></thead>
