@@ -55,16 +55,16 @@ router.get('/performance/separadores', requerAuth, requerPerfil('supervisor'), a
           FROM pedidos p2
           WHERE p2.separador_id = s.id
             AND p2.status       = 'concluido'
-            AND COALESCE(NULLIF(p2.data_distribuicao,''), NULLIF(LEFT(p2.iniciado_em,10),''), p2.data_pedido) >= $1
-            AND COALESCE(NULLIF(p2.data_distribuicao,''), NULLIF(LEFT(p2.iniciado_em,10),''), p2.data_pedido) <= $2
+            AND COALESCE(NULLIF(LEFT(p2.iniciado_em,10),''), NULLIF(p2.data_distribuicao,''), p2.data_pedido) >= $1
+            AND COALESCE(NULLIF(LEFT(p2.iniciado_em,10),''), NULLIF(p2.data_distribuicao,''), p2.data_pedido) <= $2
         )                                                                     AS tempo_medio_min
       FROM separadores s
       LEFT JOIN usuarios u ON u.id = s.usuario_id
       JOIN pedidos p
         ON p.separador_id = s.id
        AND p.status       = 'concluido'
-       AND COALESCE(NULLIF(p.data_distribuicao,''), NULLIF(LEFT(p.iniciado_em,10),''), p.data_pedido) >= $1
-       AND COALESCE(NULLIF(p.data_distribuicao,''), NULLIF(LEFT(p.iniciado_em,10),''), p.data_pedido) <= $2
+       AND COALESCE(NULLIF(LEFT(p.iniciado_em,10),''), NULLIF(p.data_distribuicao,''), p.data_pedido) >= $1
+       AND COALESCE(NULLIF(LEFT(p.iniciado_em,10),''), NULLIF(p.data_distribuicao,''), p.data_pedido) <= $2
       LEFT JOIN itens_pedido ip ON ip.pedido_id = p.id
       WHERE s.status = 'ativo' ${turnoFiltro}
       GROUP BY s.id,
@@ -89,16 +89,16 @@ router.get('/performance/separadores', requerAuth, requerPerfil('supervisor'), a
     // ── Pedidos por dia (para gráfico de linha) ───────────────────────────
     const porDia = await db.all(`
       SELECT
-        COALESCE(NULLIF(p.data_distribuicao,''), NULLIF(LEFT(p.iniciado_em,10),''), p.data_pedido) AS data,
+        COALESCE(NULLIF(LEFT(p.iniciado_em,10),''), NULLIF(p.data_distribuicao,''), p.data_pedido) AS data,
         COUNT(DISTINCT p.id)::int                   AS pedidos,
         COALESCE(SUM(p.itens), 0)::int              AS itens
       FROM pedidos p
       JOIN separadores s ON s.id = p.separador_id
       WHERE p.status       = 'concluido'
-        AND COALESCE(NULLIF(p.data_distribuicao,''), NULLIF(LEFT(p.iniciado_em,10),''), p.data_pedido) >= $1
-        AND COALESCE(NULLIF(p.data_distribuicao,''), NULLIF(LEFT(p.iniciado_em,10),''), p.data_pedido) <= $2
+        AND COALESCE(NULLIF(LEFT(p.iniciado_em,10),''), NULLIF(p.data_distribuicao,''), p.data_pedido) >= $1
+        AND COALESCE(NULLIF(LEFT(p.iniciado_em,10),''), NULLIF(p.data_distribuicao,''), p.data_pedido) <= $2
         AND s.status = 'ativo'
-      GROUP BY COALESCE(NULLIF(p.data_distribuicao,''), NULLIF(LEFT(p.iniciado_em,10),''), p.data_pedido)
+      GROUP BY COALESCE(NULLIF(LEFT(p.iniciado_em,10),''), NULLIF(p.data_distribuicao,''), p.data_pedido)
       ORDER BY data
     `, [ini, fim]);
 
@@ -132,7 +132,7 @@ router.get('/performance/timing', requerAuth, requerPerfil('supervisor'), async 
         p.numero_pedido,
         COALESCE(u.nome, s.nome)                                         AS colaborador,
         REPLACE(COALESCE(u.turno, s.turno, 'Manha'), 'ã', 'a')          AS turno,
-        COALESCE(NULLIF(p.data_distribuicao,''), NULLIF(LEFT(p.iniciado_em,10),''), p.data_pedido) AS data,
+        COALESCE(NULLIF(LEFT(p.iniciado_em,10),''), NULLIF(p.data_distribuicao,''), p.data_pedido) AS data,
         p.iniciado_em,
         COALESCE(
           NULLIF(p.skus_concluido_em,''),
@@ -167,8 +167,8 @@ router.get('/performance/timing', requerAuth, requerPerfil('supervisor'), async 
       JOIN separadores s ON s.id = p.separador_id
       LEFT JOIN usuarios u ON u.id = s.usuario_id
       WHERE p.status = 'concluido'
-        AND COALESCE(NULLIF(p.data_distribuicao,''), NULLIF(LEFT(p.iniciado_em,10),''), p.data_pedido) >= $1
-        AND COALESCE(NULLIF(p.data_distribuicao,''), NULLIF(LEFT(p.iniciado_em,10),''), p.data_pedido) <= $2
+        AND COALESCE(NULLIF(LEFT(p.iniciado_em,10),''), NULLIF(p.data_distribuicao,''), p.data_pedido) >= $1
+        AND COALESCE(NULLIF(LEFT(p.iniciado_em,10),''), NULLIF(p.data_distribuicao,''), p.data_pedido) <= $2
         AND s.status = 'ativo'
         ${turnoFiltroSep}
       ORDER BY COALESCE(u.nome, s.nome), p.iniciado_em
@@ -297,16 +297,16 @@ router.get('/performance/metas', requerAuth, requerPerfil('supervisor'), async (
     const [sepRows, ckRows, embRows, repRows] = await Promise.all([
       db.all(`
         SELECT COALESCE(u.nome,s.nome) AS nome,
-               COALESCE(NULLIF(p.data_distribuicao,''), NULLIF(LEFT(p.iniciado_em,10),''), p.data_pedido) AS data,
+               COALESCE(NULLIF(LEFT(p.iniciado_em,10),''), NULLIF(p.data_distribuicao,''), p.data_pedido) AS data,
                COUNT(*)::int AS realizado
         FROM pedidos p
         JOIN separadores s ON s.id=p.separador_id
         LEFT JOIN usuarios u ON u.id=s.usuario_id
         WHERE p.status='concluido'
-          AND COALESCE(NULLIF(p.data_distribuicao,''), NULLIF(LEFT(p.iniciado_em,10),''), p.data_pedido) >= $1
-          AND COALESCE(NULLIF(p.data_distribuicao,''), NULLIF(LEFT(p.iniciado_em,10),''), p.data_pedido) <= $2
+          AND COALESCE(NULLIF(LEFT(p.iniciado_em,10),''), NULLIF(p.data_distribuicao,''), p.data_pedido) >= $1
+          AND COALESCE(NULLIF(LEFT(p.iniciado_em,10),''), NULLIF(p.data_distribuicao,''), p.data_pedido) <= $2
         GROUP BY COALESCE(u.nome,s.nome),
-                 COALESCE(NULLIF(p.data_distribuicao,''), NULLIF(LEFT(p.iniciado_em,10),''), p.data_pedido)
+                 COALESCE(NULLIF(LEFT(p.iniciado_em,10),''), NULLIF(p.data_distribuicao,''), p.data_pedido)
       `, [ini, fim]),
       db.all(`
         SELECT operador_nome AS nome, data_checkout AS data, COUNT(*)::int AS realizado
