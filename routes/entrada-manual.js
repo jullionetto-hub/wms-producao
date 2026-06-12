@@ -5,13 +5,8 @@ const { pool, db } = require('../lib/db');
 const { requerAuth, requerPerfil } = require('../lib/auth');
 const { dataHoraLocal } = require('../lib/helpers');
 
-// Formatos válidos de endereço:
-//   D106                      → rua + número (A-Z, ZA, etc.)
-//   U080                      → prateleira U
-//   C099/VERT-C82-CX18        → rua + caixa vertical
-//   U087/VERT-U01-CX13        → prateleira + caixa vertical
-//   VERT-U09-CX11             → apenas caixa vertical
-const ADDR_REGEX = /^([A-Z]{1,3}\d{1,4}(\/VERT-[A-Z]{1,3}\d{2}-CX\d{2,3})?|VERT-[A-Z]{1,3}\d{2}-CX\d{2,3})$/i;
+// Aceita qualquer endereço com letras, números, barra e hífen (ex: D106, ZA387, C099/VERT-C02-CX18)
+const ADDR_REGEX = /^[A-Z0-9][A-Z0-9\/\-]{1,29}$/i;
 
 function validarEndereco(end) {
   if (!end || !end.trim()) return { ok: false, tipo: 'vazio' };
