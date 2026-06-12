@@ -1,6 +1,6 @@
 /* ══ WMS — Entrada Manual de Estoque ══
    Versão 1  |  Desktop (Supervisor) + Mobile (Supervisor + Repositor)
-   Formatos de endereço: U080 | U087/VERT-U01-CX13 | VERT-U09-CX11
+   Formatos de endereço: D106 | ZA387 | C099/VERT-C82-CX18 | U080 | U087/VERT-U01-CX13
 ══════════════════════════════════════════════════════════════════════ */
 
 'use strict';
@@ -13,8 +13,8 @@ let _emBusca       = '';
 let _emPagina      = 1;
 const EM_PAGE_SIZE = 30;
 
-// Regex validação endereço (U080 | U087/VERT-U01-CX13 | VERT-U09-CX11)
-const EM_ADDR_RE = /^(U\d{3,4}(\/VERT-U\d{2}-CX\d{2,3})?|VERT-U\d{2}-CX\d{2,3})$/i;
+// Regex validação endereço (D106 | ZA387 | C099/VERT-C82-CX18 | U080 | U087/VERT-U01-CX13)
+const EM_ADDR_RE = /^([A-Z]{1,3}\d{1,4}(\/VERT-[A-Z]{1,3}\d{2}-CX\d{2,3})?|VERT-[A-Z]{1,3}\d{2}-CX\d{2,3})$/i;
 
 function emValidarEndereco(end) {
   if (!end || !end.trim()) return { ok: false, tipo: 'vazio' };
