@@ -209,10 +209,12 @@ router.get('/performance/timing', requerAuth, requerPerfil('supervisor'), async 
     const checkout = await db.all(`
       SELECT
         c.numero_pedido,
-        COALESCE(NULLIF(c.operador_nome,''), 'Operador') AS colaborador,
-        c.data_checkout                                   AS data,
-        c.hora_criacao                                    AS iniciado_em,
-        c.hora_checkout                                   AS concluido_em,
+        COALESCE(NULLIF(c.operador_nome,''), 'Operador')            AS colaborador,
+        c.data_checkout                                              AS data,
+        c.hora_criacao                                               AS iniciado_em,
+        c.hora_checkout                                              AS concluido_em,
+        COALESCE(NULLIF(p.total_itens,0), p.itens, 0)               AS total_itens,
+        p.itens                                                      AS skus,
         CASE
           WHEN NULLIF(c.hora_criacao,'') IS NOT NULL AND NULLIF(c.hora_checkout,'') IS NOT NULL
           THEN ROUND(EXTRACT(EPOCH FROM (
@@ -222,6 +224,7 @@ router.get('/performance/timing', requerAuth, requerPerfil('supervisor'), async 
           ELSE NULL
         END AS duracao_min
       FROM checkout c
+      LEFT JOIN pedidos p ON c.pedido_id = p.id
       WHERE c.status = 'concluido'
         AND NULLIF(c.hora_checkout,'') IS NOT NULL
         AND c.data_checkout >= $1
@@ -233,10 +236,12 @@ router.get('/performance/timing', requerAuth, requerPerfil('supervisor'), async 
     const embalagem = await db.all(`
       SELECT
         p.numero_pedido,
-        NULLIF(p.embalado_por,'')     AS colaborador,
-        p.data_pedido                  AS data,
-        p.embalagem_iniciado_em        AS iniciado_em,
-        p.embalado_em                  AS concluido_em,
+        NULLIF(p.embalado_por,'')                          AS colaborador,
+        p.data_pedido                                       AS data,
+        p.embalagem_iniciado_em                             AS iniciado_em,
+        p.embalado_em                                       AS concluido_em,
+        COALESCE(NULLIF(p.total_itens,0), p.itens, 0)      AS total_itens,
+        p.itens                                             AS skus,
         CASE
           WHEN NULLIF(p.embalagem_iniciado_em,'') IS NOT NULL AND NULLIF(p.embalado_em,'') IS NOT NULL
           THEN ROUND(EXTRACT(EPOCH FROM (

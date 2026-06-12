@@ -810,7 +810,7 @@ function pfRenderTiming(filtroNome) {
               <div style="font-size:10px;font-weight:700;color:var(--text3)">${pfEsc(r.codigo||'')}</div>
               <div style="font-size:11px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${pfEsc(r.descricao||'')}">${pfEsc((r.descricao||'').slice(0,35))}</div>
             </td>`;
-        } else if (_pfTimingAba === 'separacao') {
+        } else if (_pfTimingAba === 'separacao' || _pfTimingAba === 'checkout' || _pfTimingAba === 'embalagem') {
           extraCells = `
             <td style="padding:8px 14px;text-align:right;font-size:12px;font-weight:700;color:#38bdf8">${r.total_itens ?? '—'}</td>
             <td style="padding:8px 14px;text-align:right;font-size:12px;color:#f59e0b">${r.skus ?? '—'}</td>`;
@@ -828,7 +828,7 @@ function pfRenderTiming(filtroNome) {
 
       const extraTh = _pfTimingAba==='reposicao'
         ? `<th style="${TH}text-align:center">RESULT.</th><th style="${TH}">ITEM</th>`
-        : _pfTimingAba==='separacao'
+        : ['separacao','checkout','embalagem'].includes(_pfTimingAba)
         ? `<th style="${TH}text-align:right">ITENS</th><th style="${TH}text-align:right">SKUs</th>`
         : '';
 
@@ -1114,11 +1114,11 @@ function pfExportarExcel() {
         cols:['Colaborador','Pedido','Data','Início','Fim','Duração (min)','Resultado','Código','Descrição'],
         row: r => [r.colaborador||'', r.numero_pedido||'', fmtData(r.data), fmtHora(r.iniciado_em), fmtHora(r.concluido_em), r.duracao_min??'', r.resultado||'', r.codigo||'', r.descricao||''] },
       { id:'checkout', label:'Checkout',
-        cols:['Colaborador','Pedido','Data','Início','Fim','Duração (min)'],
-        row: r => [r.colaborador||'', r.numero_pedido||'', fmtData(r.data), fmtHora(r.iniciado_em), fmtHora(r.concluido_em), r.duracao_min??''] },
+        cols:['Colaborador','Pedido','Data','Início','Fim','Total Itens','SKUs','Duração (min)'],
+        row: r => [r.colaborador||'', r.numero_pedido||'', fmtData(r.data), fmtHora(r.iniciado_em), fmtHora(r.concluido_em), r.total_itens??'', r.skus??'', r.duracao_min??''] },
       { id:'embalagem', label:'Embalagem',
-        cols:['Colaborador','Pedido','Data','Início','Fim','Duração (min)'],
-        row: r => [r.colaborador||'', r.numero_pedido||'', fmtData(r.data), fmtHora(r.iniciado_em), fmtHora(r.concluido_em), r.duracao_min??''] },
+        cols:['Colaborador','Pedido','Data','Início','Fim','Total Itens','SKUs','Duração (min)'],
+        row: r => [r.colaborador||'', r.numero_pedido||'', fmtData(r.data), fmtHora(r.iniciado_em), fmtHora(r.concluido_em), r.total_itens??'', r.skus??'', r.duracao_min??''] },
     ];
     const wb = XLSX.utils.book_new();
     let temDados = false;
