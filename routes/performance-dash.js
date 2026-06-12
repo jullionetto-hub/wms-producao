@@ -296,12 +296,17 @@ router.get('/performance/metas', requerAuth, requerPerfil('supervisor'), async (
 
     const [sepRows, ckRows, embRows, repRows] = await Promise.all([
       db.all(`
-        SELECT COALESCE(u.nome,s.nome) AS nome, p.data_pedido AS data, COUNT(*)::int AS realizado
+        SELECT COALESCE(u.nome,s.nome) AS nome,
+               COALESCE(NULLIF(p.data_distribuicao,''), NULLIF(LEFT(p.iniciado_em,10),''), p.data_pedido) AS data,
+               COUNT(*)::int AS realizado
         FROM pedidos p
         JOIN separadores s ON s.id=p.separador_id
         LEFT JOIN usuarios u ON u.id=s.usuario_id
-        WHERE p.status='concluido' AND p.data_pedido>=$1 AND p.data_pedido<=$2
-        GROUP BY COALESCE(u.nome,s.nome), p.data_pedido
+        WHERE p.status='concluido'
+          AND COALESCE(NULLIF(p.data_distribuicao,''), NULLIF(LEFT(p.iniciado_em,10),''), p.data_pedido) >= $1
+          AND COALESCE(NULLIF(p.data_distribuicao,''), NULLIF(LEFT(p.iniciado_em,10),''), p.data_pedido) <= $2
+        GROUP BY COALESCE(u.nome,s.nome),
+                 COALESCE(NULLIF(p.data_distribuicao,''), NULLIF(LEFT(p.iniciado_em,10),''), p.data_pedido)
       `, [ini, fim]),
       db.all(`
         SELECT operador_nome AS nome, data_checkout AS data, COUNT(*)::int AS realizado
