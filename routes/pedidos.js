@@ -15,7 +15,7 @@ router.get('/pedidos', requerAuth, async (req,res) => {
     const add=(c,v)=>{p.push(v);q+=` AND ${c}$${p.length}`;};
     if (separador_id)  add('p.separador_id=',separador_id);
     if (status)        add('p.status=',status);
-    if (data)          add('p.data_pedido=',data);
+    if (data) { p.push(data); q+=` AND COALESCE(NULLIF(p.data_distribuicao,''), NULLIF(LEFT(p.iniciado_em,10),''), p.data_pedido) = $${p.length}`; }
     // Data efetiva de trabalho: data_distribuicao (dia que o pedido foi atribuído ao separador)
     // tem prioridade sobre data_pedido (dia de importação), assim pedidos importados em dias
     // anteriores mas distribuídos hoje aparecem corretamente no dashboard de hoje.
