@@ -284,10 +284,13 @@ router.get('/performance/metas', requerAuth, requerPerfil('supervisor'), async (
         SUM(
           CASE
             WHEN logout_em IS NOT NULL THEN COALESCE(duracao_min, 0)
-            ELSE GREATEST(0,
-              ROUND(EXTRACT(EPOCH FROM (
-                LEAST(COALESCE(ultimo_ping, login_em) + INTERVAL '10 minutes', NOW()) - login_em
-              )) / 60)::int
+            ELSE LEAST(
+              GREATEST(0,
+                ROUND(EXTRACT(EPOCH FROM (
+                  LEAST(COALESCE(ultimo_ping, login_em) + INTERVAL '10 minutes', NOW()) - login_em
+                )) / 60)::int
+              ),
+              480  -- cap sessões sem logout em 8h para evitar inflação
             )
           END
         )::int                                                      AS minutos_logado
