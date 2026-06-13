@@ -300,7 +300,7 @@ function emEnderecoInput(id, inp, mobile = false) {
     inp.style.borderColor = '#ef4444'; inp.style.color = '#ef4444';
     if (ic)   ic.textContent  = '❌';
     if (hint) hint.style.color = '#ef4444';
-    if (hint) hint.textContent = 'Inválido. Ex: U080 ou U087/VERT-U01-CX13';
+    if (hint) hint.textContent = 'Inválido. Ex: D106, ZA387, C099/VERT-C02-CX18';
   }
 
   // Espelha no outro input (sync)
@@ -558,11 +558,12 @@ async function emConfirmarImport(itens) {
 
 // ── HTML da zona de upload ────────────────────────────────────────────────
 function emUploadZonaHTML() {
+  const isMobile = window.innerWidth < 768;
   return `
   <div style="border:2px dashed var(--border);border-radius:12px;padding:24px;text-align:center;cursor:pointer;transition:border-color .2s"
        onclick="emAbrirImport()" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
     <div style="font-size:32px;margin-bottom:8px">📂</div>
-    <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">Clique ou arraste o arquivo aqui</div>
+    <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">${isMobile ? 'Toque para selecionar o arquivo' : 'Clique ou arraste o arquivo aqui'}</div>
     <div style="font-size:11px;color:var(--text3)">Suporte: <b>.xlsx · .xls · .csv</b></div>
     <div style="display:inline-block;margin-top:10px;background:var(--surface2);color:var(--accent);border-radius:20px;padding:4px 14px;font-size:10px;font-weight:700;border:1px solid var(--border)">
       Colunas: Código · Quant. · Descrição · Endereço
@@ -636,13 +637,17 @@ function renderizarPagEntradaManual() {
     <div id="em-sec-itens" style="display:none">
 
       <!-- Header do lote -->
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
-        <button onclick="emVoltarLotes()" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text3);cursor:pointer;font-size:12px;font-weight:700">
-          ← Voltar
-        </button>
-        <div id="em-lote-titulo" style="flex:1"></div>
-        <button onclick="emExportarCSV()" style="background:#16a34a;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">📊 Excel</button>
-        <button id="em-btn-salvar-tudo" onclick="emSalvarTudo()" style="background:#1e3a5f;color:#38bdf8;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">💾 Salvar Tudo</button>
+      <div style="margin-bottom:12px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <button onclick="emVoltarLotes()" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text3);cursor:pointer;font-size:12px;font-weight:700;white-space:nowrap">
+            ← Voltar
+          </button>
+          <div id="em-lote-titulo" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+          <button onclick="emExportarCSV()" style="background:#16a34a;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">📊 Excel</button>
+          <button id="em-btn-salvar-tudo" onclick="emSalvarTudo()" style="background:#1e3a5f;color:#38bdf8;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">💾 Salvar Tudo</button>
+        </div>
       </div>
 
       <!-- Barra de progresso -->
