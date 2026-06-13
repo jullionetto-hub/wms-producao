@@ -533,9 +533,20 @@ body.dark .item-card.parcial    .item-ic{background:#78350F}
 /* ══════════════════════════════════════════
    RESPONSIVE
 ══════════════════════════════════════════ */
+/* Botão menu hambúrguer — oculto por padrão, visível só no mobile */
+#btn-menu{display:none;align-items:center;justify-content:center;background:none;border:none;color:var(--text);font-size:22px;cursor:pointer;padding:6px 8px;border-radius:8px;line-height:1}
+#btn-menu:hover{background:var(--surface2)}
+
+/* Overlay escuro quando sidebar aberta no mobile */
+.sidebar-overlay{display:none;position:fixed;inset:0;z-index:998;background:rgba(0,0,0,.45)}
+
 @media(max-width:768px){
-  /* Esconde sidebar */
+  /* Botão hambúrguer visível */
+  #btn-menu{display:flex}
+  /* Esconde sidebar por padrão */
   .sidebar{display:none}
+  /* Sidebar aberta como overlay */
+  .sidebar.aberta{display:flex!important;position:fixed;top:0;left:0;height:100dvh;z-index:999;box-shadow:4px 0 24px rgba(0,0,0,.5)}
   /* Conteudo sem padding lateral grande */
   .conteudo{padding:10px}
   /* Grids */

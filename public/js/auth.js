@@ -365,7 +365,28 @@ function montarSidebar() {
 
 
 
+function toggleMenu() {
+  const sb = document.getElementById('sidebar');
+  const open = sb.classList.toggle('aberta');
+  let ov = document.getElementById('sidebar-overlay');
+  if (!ov) {
+    ov = document.createElement('div');
+    ov.id = 'sidebar-overlay';
+    ov.className = 'sidebar-overlay';
+    ov.onclick = fecharMenu;
+    document.body.appendChild(ov);
+  }
+  ov.style.display = open ? 'block' : 'none';
+}
+
+function fecharMenu() {
+  document.getElementById('sidebar')?.classList.remove('aberta');
+  const ov = document.getElementById('sidebar-overlay');
+  if (ov) ov.style.display = 'none';
+}
+
 function irPara(pag, el) {
+  fecharMenu();
   document.querySelectorAll('.pagina').forEach(p => p.classList.remove('ativa'));
   document.querySelectorAll('.mi').forEach(m => m.classList.remove('ativo'));
   const pg = document.getElementById(`pag-${pag}`);
