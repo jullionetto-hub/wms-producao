@@ -55,7 +55,7 @@ function ativarMobileRep() {
   }, 30000);
 }
 
-const _REP_TABS_LIST = ['separar','separado','subiu','protocolo'];
+const _REP_TABS_LIST = ['separar','separado','subiu','protocolo','entrada-manual'];
 
 function mudarTabRep(tab) {
   _REP_TABS_LIST.forEach(t => {
@@ -64,11 +64,12 @@ function mudarTabRep(tab) {
     if (pg) pg.classList.toggle('ativa', t === tab);
     if (bt) bt.classList.toggle('ativo', t === tab);
   });
-  if      (tab === 'separar')   carregarRepSeparar();
-  else if (tab === 'separado')  carregarRepSeparado();
-  else if (tab === 'subiu')     carregarRepSubiu();
-  else if (tab === 'protocolo') carregarRepProtocolo();
-  else if (tab === 'stats')     carregarStatsRepMobile();
+  if      (tab === 'separar')        carregarRepSeparar();
+  else if (tab === 'separado')       carregarRepSeparado();
+  else if (tab === 'subiu')          carregarRepSubiu();
+  else if (tab === 'protocolo')      carregarRepProtocolo();
+  else if (tab === 'stats')          carregarStatsRepMobile();
+  else if (tab === 'entrada-manual') renderizarPagEntradaManual('rep-em-root');
 }
 
 /* ── Usuários ──────────────────────────────────────────────────────── */

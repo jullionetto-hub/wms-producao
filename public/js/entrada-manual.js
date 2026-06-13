@@ -584,8 +584,8 @@ function emExportarCSV() {
 }
 
 // ── Renderização da página principal ─────────────────────────────────────
-function renderizarPagEntradaManual() {
-  const pag = document.getElementById('pag-entrada-manual');
+function renderizarPagEntradaManual(containerId) {
+  const pag = document.getElementById(containerId || 'pag-entrada-manual');
   if (!pag) return;
 
   const hoje = new Date().toISOString().split('T')[0];
