@@ -6,8 +6,18 @@ function _destroyChart(id) {
   if (_charts[id]) { _charts[id].destroy(); delete _charts[id]; }
 }
 
+function _kpiUrlComFiltro() {
+  const ini = document.getElementById('filtro-data-ini')?.value;
+  const fim = document.getElementById('filtro-data-fim')?.value;
+  const qs = new URLSearchParams();
+  if (ini) qs.set('data_ini', ini);
+  if (fim) qs.set('data_fim', fim);
+  const s = qs.toString();
+  return s ? `/kpis?${s}` : '/kpis';
+}
+
 async function carregarGraficoPizzaStatus() {
-  const kpi = await apiFetch('/kpis');
+  const kpi = await apiFetch(_kpiUrlComFiltro());
   const canvas = document.getElementById('grafico-pizza-status');
   if (!canvas || !kpi) return;
   _destroyChart('pizza-status');
@@ -30,7 +40,7 @@ async function carregarGraficoPizzaStatus() {
 }
 
 async function carregarGraficoPizzaReposicao() {
-  const kpi = await apiFetch('/kpis');
+  const kpi = await apiFetch(_kpiUrlComFiltro());
   const canvas = document.getElementById('grafico-pizza-reposicao');
   if (!canvas || !kpi) return;
   _destroyChart('pizza-reposicao');
@@ -74,7 +84,7 @@ async function carregarGraficoBarrasHoras() {
 }
 
 async function carregarGraficoFunil() {
-  const kpi = await apiFetch('/kpis');
+  const kpi = await apiFetch(_kpiUrlComFiltro());
   const canvas = document.getElementById('grafico-funil');
   if (!canvas || !kpi) return;
   _destroyChart('funil');
@@ -539,9 +549,21 @@ async function carregarRankingGeral() {
   const el = document.getElementById('op-ranking-geral');
   if (!el) return;
   try {
-    const res = await fetch(`${API}/dashboard/ranking-geral`, { credentials:'include' });
+    const ini = document.getElementById('filtro-data-ini')?.value;
+    const fim = document.getElementById('filtro-data-fim')?.value;
+    const qs = new URLSearchParams();
+    if (ini) qs.set('de', ini);
+    if (fim) qs.set('ate', fim);
+    const res = await fetch(`${API}/dashboard/ranking-geral?${qs}`, { credentials:'include' });
     if (!res.ok) return;
     const data = await res.json();
+
+    const label = document.getElementById('ranking-periodo-label');
+    if (label) {
+      const fmt = d => d ? d.split('-').reverse().join('/') : '';
+      const hoje = new Date().toLocaleDateString('pt-BR', {timeZone:'America/Sao_Paulo'}).split('/').reverse().join('-');
+      label.textContent = (ini === hoje && fim === hoje) ? 'HOJE' : `${fmt(ini)} – ${fmt(fim)}`;
+    }
 
     const areas = [
       { key:'separadores', icon:'📦', label:'Separação', cor:'var(--accent)',  metrica:'pedidos'    },
@@ -569,7 +591,7 @@ async function carregarRankingGeral() {
                 ${area.key==='separadores'&&r.itens?`<div style="font-size:9px;color:var(--text3)">${r.itens} itens</div>`:''}
               </div>
             </div>`).join('')
-        : `<div style="color:var(--text3);text-align:center;padding:16px 8px;font-size:12px">Sem dados hoje</div>`;
+        : `<div style="color:var(--text3);text-align:center;padding:16px 8px;font-size:12px">Sem dados no período</div>`;
 
       return `<div style="padding:12px 14px;border-right:1px solid var(--border)">
         <div style="font-size:11px;font-weight:800;color:${area.cor};letter-spacing:.5px;margin-bottom:8px">${area.icon} ${area.label.toUpperCase()}</div>

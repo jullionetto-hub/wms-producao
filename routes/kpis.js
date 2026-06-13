@@ -39,14 +39,18 @@ router.get('/kpis', requerAuth, async (req,res) => {
     const repFilt = hasTurno ? tNome('r.repositor_nome').replace('$T', T) : '';
 
     const r = await db.get(`SELECT
-      (SELECT COUNT(*) FROM pedidos p WHERE p.status='concluido' AND p.data_pedido>=$1 AND p.data_pedido<=$2${sepFilt}) as concluidos_hoje,
+      (SELECT COUNT(*) FROM pedidos p WHERE p.status='concluido'
+        AND COALESCE(NULLIF(LEFT(p.iniciado_em,10),''), NULLIF(p.data_distribuicao,''), p.data_pedido)>=$1
+        AND COALESCE(NULLIF(LEFT(p.iniciado_em,10),''), NULLIF(p.data_distribuicao,''), p.data_pedido)<=$2${sepFilt}) as concluidos_hoje,
       (SELECT COUNT(*) FROM pedidos p WHERE p.status='separando'${sepFilt}) as em_separacao,
       (SELECT COUNT(*) FROM pedidos WHERE status='pendente') as pendentes,
       (SELECT COUNT(*) FROM avisos_repositor WHERE status='pendente' AND data_aviso>=$1 AND data_aviso<=$2) as faltas_abertas,
       (SELECT COUNT(*) FROM checkout c WHERE c.status='pendente' AND c.data_checkout>=$1 AND c.data_checkout<=$2${ckFilt}) as checkout_pendente,
       (SELECT COUNT(*) FROM checkout c WHERE c.status='concluido' AND c.data_checkout>=$1 AND c.data_checkout<=$2${ckFilt}) as checkout_hoje,
       (SELECT COUNT(*) FROM pedidos WHERE status='concluido' AND data_pedido LIKE $3) as concluidos_mes,
-      (SELECT COUNT(*) FROM pedidos WHERE data_pedido>=$1 AND data_pedido<=$2) as importados_hoje,
+      (SELECT COUNT(*) FROM pedidos p WHERE
+        COALESCE(NULLIF(LEFT(p.iniciado_em,10),''), NULLIF(p.data_distribuicao,''), p.data_pedido)>=$1
+        AND COALESCE(NULLIF(LEFT(p.iniciado_em,10),''), NULLIF(p.data_distribuicao,''), p.data_pedido)<=$2) as importados_hoje,
       (SELECT COUNT(DISTINCT separador_id) FROM pedidos WHERE status='separando') as seps_ativos,
       (SELECT COUNT(*) FROM avisos_repositor r WHERE r.status='nao_encontrado' AND r.data_aviso>=$1 AND r.data_aviso<=$2${repFilt}) as nao_encontrados_hoje,
       (SELECT COUNT(*) FROM avisos_repositor WHERE data_aviso>=$1 AND data_aviso<=$2) as total_faltas_hoje,
@@ -515,6 +519,8 @@ router.get('/stats/performance', requerAuth, requerPerfil('supervisor'), async (
 router.get('/dashboard/ranking-geral', requerAuth, requerPerfil('supervisor'), async (req, res) => {
   try {
     const { d: hoje } = await db.get(`SELECT TO_CHAR(NOW() AT TIME ZONE 'America/Sao_Paulo','YYYY-MM-DD') as d`);
+    const dIni = req.query.de  || hoje;
+    const dFim = req.query.ate || hoje;
 
     const separadores = await db.all(`
       SELECT COALESCE(u.nome, s.nome) as nome,
@@ -522,37 +528,39 @@ router.get('/dashboard/ranking-geral', requerAuth, requerPerfil('supervisor'), a
         COALESCE(SUM(COALESCE(NULLIF(p.total_itens,0),p.itens)) FILTER (WHERE p.status='concluido'), 0) as itens
       FROM separadores s
       LEFT JOIN usuarios u ON u.id = s.usuario_id
-      LEFT JOIN pedidos p ON p.separador_id = s.id AND p.data_pedido = $1
+      LEFT JOIN pedidos p ON p.separador_id = s.id
+        AND COALESCE(NULLIF(LEFT(p.iniciado_em,10),''), NULLIF(p.data_distribuicao,''), p.data_pedido) >= $1
+        AND COALESCE(NULLIF(LEFT(p.iniciado_em,10),''), NULLIF(p.data_distribuicao,''), p.data_pedido) <= $2
       WHERE s.status = 'ativo'
       GROUP BY COALESCE(u.nome, s.nome)
       HAVING COUNT(*) FILTER (WHERE p.status='concluido') > 0
       ORDER BY total DESC LIMIT 10
-    `, [hoje]);
+    `, [dIni, dFim]);
 
     const checkout = await db.all(`
       SELECT COALESCE(NULLIF(operador_nome,''), 'Não identificado') as nome, COUNT(*) as total
       FROM checkout
-      WHERE status='concluido' AND data_checkout=$1
+      WHERE status='concluido' AND data_checkout>=$1 AND data_checkout<=$2
       GROUP BY COALESCE(NULLIF(operador_nome,''), 'Não identificado') ORDER BY total DESC LIMIT 10
-    `, [hoje]);
+    `, [dIni, dFim]);
 
     const embalagem = await db.all(`
       SELECT embalado_por as nome, COUNT(*) as total
       FROM embalagem
-      WHERE data_embalagem=$1 AND embalado_por IS NOT NULL AND embalado_por!=''
+      WHERE data_embalagem>=$1 AND data_embalagem<=$2 AND embalado_por IS NOT NULL AND embalado_por!=''
       GROUP BY embalado_por ORDER BY total DESC LIMIT 10
-    `, [hoje]);
+    `, [dIni, dFim]);
 
     const repositores = await db.all(`
       SELECT repositor_nome as nome,
         COUNT(*) FILTER (WHERE status IN ('reposto','abastecido','subiu','encontrado')) as total
       FROM avisos_repositor
-      WHERE data_aviso=$1 AND repositor_nome IS NOT NULL AND repositor_nome!=''
+      WHERE data_aviso>=$1 AND data_aviso<=$2 AND repositor_nome IS NOT NULL AND repositor_nome!=''
         AND status IN ('reposto','abastecido','subiu','encontrado')
       GROUP BY repositor_nome
       HAVING COUNT(*) FILTER (WHERE status IN ('reposto','abastecido','subiu','encontrado')) > 0
       ORDER BY total DESC LIMIT 10
-    `, [hoje]);
+    `, [dIni, dFim]);
 
     res.json({ separadores, checkout, embalagem, repositores });
   } catch(e) { res.status(500).json({ erro: e.message }); }
