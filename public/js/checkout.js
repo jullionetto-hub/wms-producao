@@ -63,8 +63,11 @@ function _renderFilaCkMobile(fila) {
     el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:32px;font-size:13px">✅ Nenhum pedido aguardando checkout</div>';
     return;
   }
-  el.innerHTML = fila.map(p => `
-    <div data-pedido="${p.numero_pedido}" style="border:1.5px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:8px;background:var(--surface)">
+  el.innerHTML = fila.map(p => {
+    const temFalta = p.itens_em_falta > 0;
+    const bordaCor = temFalta ? '#f97316' : 'var(--border)';
+    return `
+    <div data-pedido="${p.numero_pedido}" style="border:1.5px solid ${bordaCor};border-radius:12px;padding:12px 14px;margin-bottom:8px;background:var(--surface)">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
         <div style="font-size:20px;font-weight:800;color:var(--accent);font-family:'Space Mono',monospace">#${p.numero_pedido}</div>
         <span class="pill pendente" style="font-size:10px">aguardando ck</span>
@@ -74,12 +77,14 @@ function _renderFilaCkMobile(fila) {
         <span>👤 ${p.separador_nome||'—'}</span>
         ${p.numero_caixa ? `<span>📦 Cx: <b style="color:var(--indigo)">${p.numero_caixa}</b></span>` : ''}
       </div>
+      ${temFalta ? `<div style="margin-top:6px;background:#fff7ed;border:1px solid #f97316;border-radius:8px;padding:6px 10px;font-size:11px;font-weight:700;color:#c2410c">⚠️ ${p.itens_em_falta} item(s) aguardando repositor</div>` : ''}
       ${p.concluido_em ? `<div style="font-size:11px;color:var(--text3);margin-top:4px">✓ Sep às ${(p.concluido_em||'').substring(11,16)}</div>` : ''}
       <button class="btn btn-primary btn-sm" style="width:100%;margin-top:8px;padding:10px"
         onclick="iniciarCkMobile('${p.numero_caixa||p.numero_pedido||''}')">
         🏷️ Iniciar Checkout
       </button>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 /* Mantida por compatibilidade — o campo m-ck-fila-busca agora chama iniciarCkMobile diretamente */

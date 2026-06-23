@@ -595,7 +595,9 @@ router.get('/pedidos/relatorio/tempo-separacao', requerAuth, requerPerfil('super
         END AS tempo_total_min,
         -- Contagem de reposições e não encontrados
         (SELECT COUNT(*) FROM avisos_repositor a WHERE a.pedido_id=p.id) AS qtd_reposicoes,
-        (SELECT COUNT(*) FROM avisos_repositor a WHERE a.pedido_id=p.id AND a.status='nao_encontrado') AS qtd_nao_encontrados
+        (SELECT COUNT(*) FROM avisos_repositor a WHERE a.pedido_id=p.id AND a.status='nao_encontrado') AS qtd_nao_encontrados,
+        -- Itens ainda em falta (separador marcou falta mas repositor ainda nao resolveu)
+        (SELECT COUNT(*)::int FROM itens_pedido ip WHERE ip.pedido_id=p.id AND ip.status IN ('falta','parcial')) AS itens_em_falta
       FROM pedidos p
       LEFT JOIN separadores s ON s.id=p.separador_id
       LEFT JOIN usuarios u ON u.id=s.usuario_id

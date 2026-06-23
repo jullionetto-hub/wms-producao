@@ -178,9 +178,32 @@ async function carregarRepSeparar(silent=false) {
     const bdgEl = document.getElementById('rtab-separar-badge');
     if (cntEl) cntEl.textContent = n;
     if (bdgEl) { bdgEl.textContent = n; bdgEl.style.display = n ? 'inline-flex' : 'none'; }
-    const html = n
-      ? av.map(a => renderCardRepSimples(a, 'separar')).join('')
-      : `<div style="text-align:center;padding:60px 16px"><div style="font-size:48px;margin-bottom:12px">✅</div><div style="color:var(--text3);font-size:15px;font-weight:500">Nenhum item para separar</div></div>`;
+
+    let html = '';
+    if (!n) {
+      html = `<div style="text-align:center;padding:60px 16px"><div style="font-size:48px;margin-bottom:12px">✅</div><div style="color:var(--text3);font-size:15px;font-weight:500">Nenhum item para separar</div></div>`;
+    } else {
+      // Agrupa por código de produto
+      const grupos = {};
+      av.forEach(a => { const k = a.codigo || ''; if (!grupos[k]) grupos[k] = []; grupos[k].push(a); });
+      Object.values(grupos).forEach(itens => {
+        if (itens.length > 1) {
+          // Cabeçalho do grupo
+          html += `<div style="background:#fff7ed;border:2px solid #f97316;border-radius:12px;padding:10px 14px;margin-bottom:4px;display:flex;align-items:center;justify-content:space-between">
+            <div>
+              <span style="font-size:13px;font-weight:800;color:#c2410c;font-family:'Space Mono',monospace">${itens[0].codigo||'—'}</span>
+              <div style="font-size:11px;color:#92400e;margin-top:2px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${itens[0].descricao||''}</div>
+            </div>
+            <span style="background:#f97316;color:#fff;border-radius:20px;padding:4px 10px;font-size:11px;font-weight:800;white-space:nowrap">📋 ${itens.length} pedidos</span>
+          </div>`;
+          // Cards individuais levemente recuados
+          html += itens.map(a => `<div style="margin-left:12px;border-left:3px solid #f97316;padding-left:4px;margin-bottom:2px">${renderCardRepSimples(a,'separar')}</div>`).join('');
+          html += `<div style="margin-bottom:10px"></div>`;
+        } else {
+          html += renderCardRepSimples(itens[0], 'separar');
+        }
+      });
+    }
     if (el)  el.innerHTML  = html;
     if (elD) elD.innerHTML = html;
   } catch(e) {
