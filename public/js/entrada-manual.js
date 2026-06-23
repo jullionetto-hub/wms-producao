@@ -341,6 +341,14 @@ async function emSalvarItem(id, mobile = false) {
   if (btn) { btn.disabled = true; btn.textContent = '⏳...'; }
 
   const qtd = parseInt(document.getElementById(mobile ? `em-mqty-${id}` : `em-qty-${id}`)?.value)||0;
+
+  // Não faz nada se os dados não mudaram
+  if (qtd === (it.quantidade_abastecida || 0) && obs === (it.obs || '')) {
+    emToast('Nenhuma alteração para salvar', 'aviso');
+    if (btn) { btn.disabled = false; btn.innerHTML = '💾 Salvar'; }
+    return;
+  }
+
   const r = await apiFetch(`/entrada-manual/itens/${id}`, {
     method:'PUT', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({ quantidade_abastecida: qtd, obs: obs || null })
