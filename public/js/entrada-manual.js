@@ -349,6 +349,15 @@ async function emSalvarItem(id, mobile = false) {
     return;
   }
 
+  // Confirmação de segurança se a quantidade supera o esperado
+  const esp = it.quantidade_esperada || 0;
+  if (esp > 0 && qtd > esp) {
+    if (btn) { btn.disabled = false; btn.innerHTML = '💾 Salvar'; }
+    const ok = await emConfirmarQtd(it.codigo, qtd, esp);
+    if (!ok) return;
+    if (btn) { btn.disabled = true; btn.textContent = '⏳...'; }
+  }
+
   const r = await apiFetch(`/entrada-manual/itens/${id}`, {
     method:'PUT', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({ quantidade_abastecida: qtd, obs: obs || null })
@@ -375,6 +384,38 @@ async function emSalvarItem(id, mobile = false) {
   emAtualizarProgresso();
 }
 
+// ── Modal de confirmação de quantidade acima do esperado ─────────────────
+function emConfirmarQtd(codigo, qtd, esp) {
+  return new Promise(resolve => {
+    const id = 'em-modal-confirm-qtd';
+    document.getElementById(id)?.remove();
+    const el = document.createElement('div');
+    el.id = id;
+    el.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:2000;display:flex;align-items:center;justify-content:center;padding:20px';
+    el.innerHTML = `
+      <div style="background:var(--surface);border-radius:16px;padding:24px;width:100%;max-width:360px;box-shadow:0 8px 32px rgba(0,0,0,.3)">
+        <div style="font-size:32px;text-align:center;margin-bottom:12px">⚠️</div>
+        <div style="font-size:15px;font-weight:800;color:var(--text);text-align:center;margin-bottom:8px">Quantidade acima do esperado</div>
+        <div style="background:#fff7ed;border:1.5px solid #f97316;border-radius:10px;padding:14px;margin-bottom:16px;text-align:center">
+          <div style="font-size:12px;font-weight:700;color:#92400e;margin-bottom:6px">${codigo}</div>
+          <div style="display:flex;justify-content:center;gap:24px">
+            <div><div style="font-size:10px;color:#92400e;font-weight:700">ESPERADO</div><div style="font-size:28px;font-weight:900;color:#92400e">${esp}</div></div>
+            <div style="font-size:24px;color:#f97316;align-self:center">→</div>
+            <div><div style="font-size:10px;color:#dc2626;font-weight:700">INFORMADO</div><div style="font-size:28px;font-weight:900;color:#dc2626">${qtd}</div></div>
+          </div>
+        </div>
+        <div style="font-size:13px;color:var(--text2);text-align:center;margin-bottom:20px">Realmente chegaram <b>${qtd}</b> unidades?</div>
+        <div style="display:flex;gap:10px">
+          <button id="em-cq-nao" style="flex:1;padding:13px;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;color:var(--text)">✕ Corrigir</button>
+          <button id="em-cq-sim" style="flex:1;padding:13px;background:#16a34a;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;color:#fff">✓ Confirmar ${qtd}</button>
+        </div>
+      </div>`;
+    document.body.appendChild(el);
+    document.getElementById('em-cq-sim').onclick = () => { el.remove(); resolve(true); };
+    document.getElementById('em-cq-nao').onclick = () => { el.remove(); resolve(false); };
+  });
+}
+
 // ── Salvar todos os itens do lote de uma vez ──────────────────────────────
 async function emSalvarTudo() {
   if (!_emLoteAtivo) return;
@@ -390,6 +431,42 @@ async function emSalvarTudo() {
       obs: obsEl ? (obsEl.value.trim() || null) : (it.obs || null)
     };
   });
+
+  // Verificar se algum item supera a quantidade esperada
+  const acimaDaEsperança = payload.filter(p => {
+    const it = _emItens.find(i => i.id === p.id);
+    return it && (it.quantidade_esperada || 0) > 0 && p.quantidade_abastecida > it.quantidade_esperada;
+  });
+  if (acimaDaEsperança.length > 0) {
+    if (btn) { btn.disabled = false; btn.innerHTML = '💾 Salvar Tudo'; }
+    const linhas = acimaDaEsperança.map(p => {
+      const it = _emItens.find(i => i.id === p.id);
+      return `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border)"><span style="font-family:monospace;font-size:12px;color:#f97316">${it.codigo}</span><span style="font-size:12px">esp. <b>${it.quantidade_esperada}</b> → inf. <b style="color:#dc2626">${p.quantidade_abastecida}</b></span></div>`;
+    }).join('');
+    const modalId = 'em-modal-bulk-confirm';
+    document.getElementById(modalId)?.remove();
+    const el = document.createElement('div');
+    el.id = modalId;
+    el.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:2000;display:flex;align-items:center;justify-content:center;padding:20px';
+    el.innerHTML = `
+      <div style="background:var(--surface);border-radius:16px;padding:24px;width:100%;max-width:380px;box-shadow:0 8px 32px rgba(0,0,0,.3)">
+        <div style="font-size:32px;text-align:center;margin-bottom:8px">⚠️</div>
+        <div style="font-size:15px;font-weight:800;color:var(--text);text-align:center;margin-bottom:12px">${acimaDaEsperança.length} item(s) acima do esperado</div>
+        <div style="max-height:180px;overflow-y:auto;margin-bottom:16px;padding:8px 12px;background:var(--surface2);border-radius:10px">${linhas}</div>
+        <div style="font-size:13px;color:var(--text2);text-align:center;margin-bottom:20px">Confirma salvar com essas quantidades?</div>
+        <div style="display:flex;gap:10px">
+          <button id="em-bk-nao" style="flex:1;padding:13px;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;color:var(--text)">✕ Corrigir</button>
+          <button id="em-bk-sim" style="flex:1;padding:13px;background:#16a34a;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;color:#fff">✓ Confirmar tudo</button>
+        </div>
+      </div>`;
+    document.body.appendChild(el);
+    const ok = await new Promise(resolve => {
+      document.getElementById('em-bk-sim').onclick = () => { el.remove(); resolve(true); };
+      document.getElementById('em-bk-nao').onclick = () => { el.remove(); resolve(false); };
+    });
+    if (!ok) return;
+    if (btn) { btn.disabled = true; btn.textContent = `⏳ Salvando ${_emItens.length}...`; }
+  }
 
   const r = await apiFetch(`/entrada-manual/lotes/${_emLoteAtivo.id}/itens-bulk`, {
     method: 'PUT', headers: {'Content-Type': 'application/json'},
