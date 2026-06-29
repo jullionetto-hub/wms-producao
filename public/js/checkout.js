@@ -16,7 +16,6 @@ function mudarTabCk(tab) {
     if (btn)  btn.classList.toggle('ativo', t === tab);
   });
   if (tab === 'fila')       carregarFilaCkMobile();
-  if (tab === 'busca')      setTimeout(() => document.getElementById('m-ck-input-caixa')?.focus(), 200);
   if (tab === 'feitos')     carregarFeitosCkMobile();
   if (tab === 'aguardando') carregarAguardandoCkMobile();
 }
@@ -34,6 +33,13 @@ function iniciarCkMobile(numero) {
   setTimeout(() => buscarCaixaMobile(), 250);
 }
 
+function escanearQrFila() {
+  escanearQr('m-ck-input-caixa', function() {
+    const num = document.getElementById('m-ck-input-caixa')?.value?.trim();
+    if (num) iniciarCkMobile(num);
+  });
+}
+
 async function carregarFilaCkMobile() {
   const el = document.getElementById('m-ck-fila-lista');
   const badge = document.getElementById('cktab-fila-badge');
@@ -41,15 +47,19 @@ async function carregarFilaCkMobile() {
   el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:24px;font-size:13px">🔄 Carregando...</div>';
   try {
     const hoje = new Date().toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo'}).split('/').reverse().join('-');
-    const res = await fetch(`${API}/pedidos?status=concluido&data=${hoje}`, { credentials:'include' });
-    const pedidos = res.ok ? await res.json() : [];
-    // Fila = sep concluído mas ainda não passou pelo checkout (status_embalagem nao_iniciado)
-    const fila = pedidos.filter(p => !p.status_embalagem || p.status_embalagem === 'nao_iniciado');
+    const [resPedidos, resAguardando] = await Promise.all([
+      fetch(`${API}/pedidos?status=concluido&data=${hoje}`, { credentials:'include' }),
+      fetch(`${API}/checkout/aguardando`, { credentials:'include' })
+    ]);
+    const pedidos    = resPedidos.ok    ? await resPedidos.json()    : [];
+    const aguardando = resAguardando.ok ? await resAguardando.json() : [];
+    // IDs de pedidos que estão na fila de aguardando_item (não devem aparecer na fila normal)
+    const aguardandoIds = new Set(aguardando.map(a => String(a.numero_pedido)));
+    const fila = pedidos.filter(p =>
+      (!p.status_embalagem || p.status_embalagem === 'nao_iniciado') &&
+      !aguardandoIds.has(String(p.numero_pedido))
+    );
     _ckFilaPedidos = fila;
-    // Limpa busca ao recarregar
-    const buscaEl = document.getElementById('m-ck-fila-busca');
-    if (buscaEl) buscaEl.value = '';
-    // Atualiza badge
     if (badge) {
       badge.textContent = fila.length;
       badge.style.display = fila.length > 0 ? 'inline' : 'none';
@@ -91,13 +101,6 @@ function _renderFilaCkMobile(fila) {
   }).join('');
 }
 
-/* Mantida por compatibilidade — o campo m-ck-fila-busca agora chama iniciarCkMobile diretamente */
-function filtrarFilaCkMobile() {
-  const busca = (document.getElementById('m-ck-fila-busca')?.value || '').trim();
-  if (!busca) { _renderFilaCkMobile(_ckFilaPedidos); return; }
-  // O campo é para buscar por número de CAIXA — inicia checkout direto
-  iniciarCkMobile(busca);
-}
 
 async function carregarFeitosCkMobile() {
   const el  = document.getElementById('m-ck-feitos-lista');

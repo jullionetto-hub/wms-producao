@@ -1764,36 +1764,24 @@
             <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">📋 Fila de Checkout</div>
             <button class="btn btn-outline btn-sm" onclick="carregarFilaCkMobile()">🔄</button>
           </div>
-          <div style="display:flex;gap:10px;margin-bottom:12px">
-            <input type="number" id="m-ck-fila-busca"
-              placeholder="📦 Escanear nº da caixa..."
-              onkeydown="if(event.key==='Enter'){const v=this.value.trim();if(v)iniciarCkMobile(v);}"
-              autocomplete="off" inputmode="numeric"
-              style="flex:1;padding:12px 14px;border:2px solid var(--border);border-radius:12px;font-size:15px;font-weight:700;font-family:'Space Mono',monospace;background:var(--surface2);color:var(--text);outline:none;letter-spacing:1px;box-sizing:border-box">
-            <button onclick="const v=document.getElementById('m-ck-fila-busca')?.value?.trim();if(v)iniciarCkMobile(v);else toast('Digite o número da caixa','aviso');"
-              style="padding:12px 20px;background:#4f46e5;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;box-shadow:0 2px 8px rgba(79,70,229,.3);touch-action:manipulation">
-              📦 Buscar
-            </button>
-          </div>
+          <button onclick="escanearQrFila()" style="width:100%;margin-bottom:12px;padding:14px;background:#4f46e5;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;letter-spacing:.5px;touch-action:manipulation;box-shadow:0 2px 8px rgba(79,70,229,.3)">
+            📷 Escanear QR da Caixa
+          </button>
           <div id="m-ck-fila-lista">
             <div style="color:var(--text3);text-align:center;padding:32px;font-size:13px">Carregando...</div>
           </div>
         </div>
       </div>
 
-      <!-- ABA 2 — CHECKOUT (scan + resultado) -->
+      <!-- ABA 2 — CHECKOUT (resultado após scan na Fila) -->
       <div class="ck-tab-page" id="ck-tab-busca">
         <div class="ck-scroll">
-          <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text);margin-bottom:12px">🏷️ Checkout</div>
-          <input type="text" class="bip-input" id="m-ck-input-caixa"
-            placeholder="Bipe ou número da caixa..."
-            autocomplete="off" inputmode="numeric"
-            style="width:100%;font-size:20px;letter-spacing:3px;margin-bottom:8px;box-sizing:border-box"/>
-          <div style="display:flex;gap:8px;margin-bottom:12px">
-            <button onclick="escanearQr('m-ck-input-caixa', buscarCaixaMobile)" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:#1D4ED8;color:#fff;border:none;border-radius:8px;padding:12px 0;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.5px">📷 Escanear QR</button>
-            <button onclick="buscarCaixaMobile()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:#3B82F6;color:#fff;border:none;border-radius:8px;padding:12px 0;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.5px">▶ Buscar</button>
+          <input type="text" id="m-ck-input-caixa" autocomplete="off" inputmode="numeric" style="display:none"/>
+          <div id="m-ck-resultado">
+            <div style="color:var(--text3);text-align:center;padding:48px 24px;font-size:13px;line-height:1.6">
+              📷 Escaneie o QR da caixa<br>na aba <b>FILA</b>
+            </div>
           </div>
-          <div id="m-ck-resultado"></div>
         </div>
       </div>
 
@@ -2027,7 +2015,7 @@
   <script src="/js/pedidos.js?v=13"></script>
   <script src="/js/separador.js?v=6"></script>
   <script src="/js/repositor.js?v=15"></script>
-  <script src="/js/checkout.js?v=5"></script>
+  <script src="/js/checkout.js?v=6"></script>
   <script src="/js/dashboard.js?v=24"></script>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   <script src="/js/entrada-manual.js?v=1"></script>
