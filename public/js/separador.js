@@ -53,6 +53,10 @@ async function concluirPedidoMobile() {
   await _concluirCore('m-cl', carregarChecklistMobile, carregarFilaMobile, carregarStatsMobile, 'm-input-pedido', 'm-status-atual');
 }
 
+async function concluirComFaltaMobile() {
+  await _concluirComFaltaCore('m-cl', carregarChecklistMobile, carregarFilaMobile, carregarStatsMobile, 'm-input-pedido', 'm-status-atual');
+}
+
 
 
 
@@ -434,6 +438,37 @@ async function _confirmarPedidoCore(num, inputId, statusId, clWrapId, fnChecklis
 
 
 
+async function _concluirComFaltaCore(prefix, fnChecklist, fnFila, fnStats, inputId, statusId) {
+  if (!pedidoAtualId) return;
+  try {
+    const res  = await fetch(`${API}/pedidos/${pedidoAtualId}/concluir-com-falta`, { credentials:'include', method:'PUT' });
+    const data = await res.json();
+    if (!res.ok) { toast(data.erro || 'Erro ao concluir com falta!', 'erro'); return; }
+    toast(`⚠️ Pedido ${pedidoAtualNum} enviado para AGUARDANDO (${data.itens_falta} item(s) faltando)`, 'aviso');
+    const wrap = document.getElementById(`${prefix}-wrap`);
+    if (wrap) wrap.style.display = 'none';
+    const statusEl = document.getElementById(statusId);
+    if (statusEl) statusEl.style.display = 'none';
+    document.getElementById(inputId).value = '';
+    const caixaDesktop = document.getElementById('cl-input-caixa');
+    const caixaMobile  = document.getElementById('m-input-caixa');
+    const caixaStD = document.getElementById('cl-caixa-status');
+    const caixaStM = document.getElementById('m-caixa-status');
+    if (caixaDesktop) caixaDesktop.value = '';
+    if (caixaMobile)  caixaMobile.value  = '';
+    if (caixaStD) { caixaStD.style.display = 'none'; caixaStD.innerHTML = ''; }
+    if (caixaStM) { caixaStM.style.display = 'none'; caixaStM.innerHTML = ''; }
+    ['m-cl-wrap-placeholder','cl-wrap-placeholder'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.style.display = 'none';
+    });
+    mostrarCampoCaixa(false);
+    caixaJaVinculada = false;
+    pedidoAtualId=null; pedidoAtualNum=null; itensAtuais=[];
+    fnFila(); fnStats();
+    setTimeout(() => document.getElementById(inputId).focus(), 300);
+  } catch(e) { toast('Erro ao concluir com falta!','erro'); }
+}
+
 async function _concluirCore(prefix, fnChecklist, fnFila, fnStats, inputId, statusId) {
   if (!pedidoAtualId) return;
   try {
@@ -525,10 +560,12 @@ function renderChecklist(prefix) {
   const btnC = document.getElementById(`${prefix.replace('cl','btn-concluir').replace('m-cl','m-btn-concluir')}`);
   const btnA = document.getElementById(`${prefix.replace('cl','btn-aguardar').replace('m-cl','m-btn-aguardar')}`);
   // Map prefix to btn ids
-  const bcId = prefix === 'cl' ? 'btn-concluir' : 'm-btn-concluir';
-  const baId = prefix === 'cl' ? 'btn-aguardar' : 'm-btn-aguardar';
+  const bcId = prefix === 'cl' ? 'btn-concluir'       : 'm-btn-concluir';
+  const baId = prefix === 'cl' ? 'btn-aguardar'       : 'm-btn-aguardar';
+  const bfId = prefix === 'cl' ? 'btn-concluir-falta' : 'm-btn-concluir-falta';
   const bc = document.getElementById(bcId);
   const ba = document.getElementById(baId);
+  const bf = document.getElementById(bfId);
 
 
 
@@ -541,29 +578,24 @@ function renderChecklist(prefix) {
   if (!todosVerif) {
     if(bc){bc.style.display='block';bc.disabled=true;bc.textContent=`🔒 CONCLUIR (${total-verificados} pend.)`}
     if(ba) ba.style.display='none';
+    if(bf) bf.style.display='none';
   } else if (!caixaVinculada && pedidoAtualId) {
     if(bc){bc.style.display='block';bc.disabled=true;bc.textContent='📦 VINCULE A CAIXA ANTES DE CONCLUIR'}
     if(ba) ba.style.display='none';
+    if(bf) bf.style.display='none';
   } else if (temProblema) {
     const itensP = itensAtuais.filter(i=>i.status==='falta'||i.status==='parcial');
-    // Status que liberam o concluir: encontrado, subiu, abastecido, protocolo
-    // ── ALTERADO: 'nao_encontrado' agora é BLOQUEANTE — só supervisor pode liberar ──
     const statusOk   = ['encontrado','reposto','subiu','abastecido','protocolo'];
     const statusBloq = ['nao_encontrado'];
-    const todosResolvidos = itensP.every(i => statusOk.includes(i.aviso_status) || statusBloq.includes(i.aviso_status));
     const temBloqueio = itensP.some(i => statusBloq.includes(i.aviso_status));
     const temPendente = itensP.some(i => !statusOk.includes(i.aviso_status) && !statusBloq.includes(i.aviso_status));
 
-
-
-
     if (temPendente) {
-      // Ainda aguardando repositor resolver
       const qtdP = itensP.filter(i => !statusOk.includes(i.aviso_status) && !statusBloq.includes(i.aviso_status)).length;
       if(bc) bc.style.display='none';
       if(ba){ba.style.display='block';ba.textContent=`⏳ AGUARDANDO REPOSITOR (${qtdP})`;}
+      if(bf) bf.style.display='block';
     } else if (temBloqueio) {
-      // ── ALTERADO: Bloqueado — só o supervisor pode liberar (botão concluir desabilitado) ──
       const qtdBloq = itensP.filter(i => statusBloq.includes(i.aviso_status)).length;
       if(bc){
         bc.style.display='block';
@@ -575,8 +607,8 @@ function renderChecklist(prefix) {
         bc.style.cursor='not-allowed';
       }
       if(ba) ba.style.display='none';
+      if(bf) bf.style.display='none';
     } else {
-      // Todos resolvidos pelo repositor
       if(bc){
         bc.style.display='block';
         bc.disabled=false;
@@ -587,6 +619,7 @@ function renderChecklist(prefix) {
         bc.style.cursor='';
       }
       if(ba) ba.style.display='none';
+      if(bf) bf.style.display='none';
     }
   } else {
     if(bc){
@@ -599,6 +632,7 @@ function renderChecklist(prefix) {
       bc.style.cursor='';
     }
     if(ba) ba.style.display='none';
+    if(bf) bf.style.display='none';
   }
 
 

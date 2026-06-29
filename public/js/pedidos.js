@@ -634,6 +634,10 @@ async function concluirPedido() {
   await _concluirCore('cl', carregarChecklist, carregarFila, carregarContadoresSep, 'input-pedido', 'status-atual');
 }
 
+async function concluirComFaltaDesk() {
+  await _concluirComFaltaCore('cl', carregarChecklist, carregarFila, carregarContadoresSep, 'input-pedido', 'status-atual');
+}
+
 
 
 

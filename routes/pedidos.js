@@ -267,6 +267,52 @@ router.put('/pedidos/:id/concluir', requerAuth, async (req,res) => {
   } catch(e){res.status(500).json({erro:e.message});}
 });
 
+router.put('/pedidos/:id/concluir-com-falta', requerAuth, async (req, res) => {
+  try {
+    const pend = await db.all(`SELECT id FROM itens_pedido WHERE pedido_id=$1 AND status='pendente'`, [req.params.id]);
+    if (pend.length) return res.status(400).json({ erro: `Ainda há ${pend.length} item(s) não verificado(s)!` });
+
+    const { data, hora } = dataHoraLocal();
+
+    // Busca itens que estão aguardando repositor
+    const avisos = await db.all(
+      `SELECT codigo, descricao, quantidade FROM avisos_repositor
+       WHERE pedido_id=$1 AND status IN ('pendente','verificando','nao_encontrado')`,
+      [req.params.id]
+    );
+    if (!avisos.length) return res.status(400).json({ erro: 'Nenhum item com falta registrado. Use Concluir normalmente.' });
+
+    const itens_falta = avisos.map(a => ({ codigo: a.codigo, descricao: a.descricao, quantidade: a.quantidade }));
+
+    // Conclui o pedido
+    await pool.query(
+      `UPDATE pedidos SET status='concluido', concluido_em=$1,
+         skus_concluido_em=COALESCE(NULLIF(skus_concluido_em,''),$1) WHERE id=$2`,
+      [data + 'T' + hora, req.params.id]
+    );
+
+    // Cria ou atualiza registro de checkout como aguardando_item
+    const ped = await db.get('SELECT numero_pedido, numero_caixa, separador_id FROM pedidos WHERE id=$1', [req.params.id]);
+    const sep = ped?.separador_id ? await db.get('SELECT nome FROM separadores WHERE id=$1', [ped.separador_id]) : null;
+    const ckExist = await db.get('SELECT id FROM checkout WHERE pedido_id=$1', [req.params.id]);
+    if (ckExist) {
+      await pool.query(
+        `UPDATE checkout SET status='aguardando_item', itens_falta=$1, hora_criacao=$2, data_checkout=$3 WHERE pedido_id=$4`,
+        [JSON.stringify(itens_falta), hora, data, req.params.id]
+      );
+    } else {
+      await pool.query(
+        `INSERT INTO checkout (numero_caixa,pedido_id,numero_pedido,separador_nome,status,hora_criacao,data_checkout,itens_falta)
+         VALUES ($1,$2,$3,$4,'aguardando_item',$5,$6,$7)`,
+        [ped?.numero_caixa || '', req.params.id, ped?.numero_pedido || '', sep?.nome || '', hora, data, JSON.stringify(itens_falta)]
+      );
+    }
+
+    req.app.get('io')?.emit('pedido:concluido', { pedido_id: req.params.id });
+    res.json({ mensagem: 'Pedido concluído com falta!', itens_falta: itens_falta.length });
+  } catch (e) { res.status(500).json({ erro: e.message }); }
+});
+
 router.put('/pedidos/:id/redefinir', requerAuth, requerPerfil('supervisor'), async (req,res) => {
   try { await pool.query(`UPDATE pedidos SET status='pendente',separador_id=NULL WHERE id=$1`,[req.params.id]); res.json({mensagem:'Redefinido!'}); }
   catch(e){res.status(500).json({erro:e.message});}
