@@ -2227,15 +2227,68 @@ async function encerrarEmbalagemDesk(id) {
    CHECKOUT DESKTOP — TABS
 ══════════════════════════════════════════ */
 function mudarTabCkDesk(tab) {
-  ['fila','checkout','feitos'].forEach(t => {
+  ['fila','checkout','feitos','aguardando'].forEach(t => {
     const el  = document.getElementById(`d-ck-tab-${t}`);
     const btn = document.getElementById(`dcktab-${t}`);
     if (el)  el.style.display = t === tab ? '' : 'none';
     if (btn) btn.classList.toggle('ativo', t === tab);
   });
-  if (tab === 'fila')     carregarFilaCkDesk();
-  if (tab === 'checkout') setTimeout(() => document.getElementById('ck-input-caixa')?.focus(), 200);
-  if (tab === 'feitos')   carregarFeitosCkDesk();
+  if (tab === 'fila')       carregarFilaCkDesk();
+  if (tab === 'checkout')   setTimeout(() => document.getElementById('ck-input-caixa')?.focus(), 200);
+  if (tab === 'feitos')     carregarFeitosCkDesk();
+  if (tab === 'aguardando') carregarAguardandoCkDesk();
+}
+
+async function carregarAguardandoCkDesk() {
+  const el    = document.getElementById('d-ck-aguardando');
+  const badge = document.getElementById('d-cktab-aguardando-badge');
+  if (!el) return;
+  el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:24px;font-size:13px">🔄 Carregando...</div>';
+  try {
+    const res  = await fetch(`${API}/checkout/aguardando`, { credentials:'include' });
+    const rows = res.ok ? await res.json() : [];
+    if (badge) { badge.textContent = rows.length; badge.style.display = rows.length ? 'inline' : 'none'; }
+    if (!rows.length) {
+      el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:40px;font-size:14px">✅ Nenhum pedido aguardando item</div>';
+      return;
+    }
+    el.innerHTML = rows.map(r => {
+      const itens = Array.isArray(r.itens_falta) ? r.itens_falta : (r.itens_falta ? JSON.parse(r.itens_falta) : []);
+      return `
+      <div style="border:2px solid #f97316;border-radius:12px;padding:14px;margin-bottom:10px;background:#fff7ed">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div>
+            <div style="font-size:20px;font-weight:800;color:#c2410c;font-family:'Space Mono',monospace">#${r.numero_pedido}</div>
+            <div style="font-size:12px;color:var(--text2)">📦 ${r.ped_itens||0} itens &nbsp;•&nbsp; 👤 ${r.separador_nome||'—'}</div>
+          </div>
+          <button onclick="retomarCheckoutDesk(${r.id},'${r.numero_caixa||r.numero_pedido}')"
+            style="background:#f97316;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer">
+            ▶ Retomar
+          </button>
+        </div>
+        ${itens.length ? `
+        <div style="background:#fff;border:1px solid #fed7aa;border-radius:8px;padding:8px 12px">
+          <div style="font-size:10px;font-weight:700;color:#c2410c;letter-spacing:.5px;margin-bottom:4px">ITENS FALTANDO</div>
+          ${itens.map(it=>`<div style="font-size:12px;padding:2px 0">❌ <b>${it.codigo}</b> · ${it.descricao} · x${it.quantidade}</div>`).join('')}
+        </div>` : ''}
+      </div>`;
+    }).join('');
+  } catch(e) {
+    if (el) el.innerHTML = '<div style="color:var(--red);padding:20px;text-align:center">Erro ao carregar</div>';
+  }
+}
+
+async function retomarCheckoutDesk(id, numeroCaixa) {
+  try {
+    const res  = await fetch(`${API}/checkout/${id}/retomar`, { credentials:'include', method:'PUT' });
+    const data = await res.json().catch(()=>({}));
+    if (!res.ok) { toast(data.erro||'Erro ao retomar','erro'); return; }
+    toast('▶ Checkout retomado!', 'sucesso');
+    const inp = document.getElementById('ck-input-caixa');
+    if (inp) inp.value = numeroCaixa || '';
+    mudarTabCkDesk('checkout');
+    setTimeout(() => buscarCaixa(), 300);
+  } catch(e) { toast('Erro de rede','erro'); }
 }
 
 /* Inicia checkout a partir da fila desktop: preenche input + busca automaticamente */

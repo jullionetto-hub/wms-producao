@@ -1195,6 +1195,7 @@
           <button class="rel-turno-btn ativo" id="dcktab-fila"     onclick="mudarTabCkDesk('fila')">📋 FILA <span id="d-cktab-fila-badge" style="display:none;background:#2563EB;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:3px">0</span></button>
           <button class="rel-turno-btn"       id="dcktab-checkout" onclick="mudarTabCkDesk('checkout')">🏷️ CHECKOUT</button>
           <button class="rel-turno-btn"       id="dcktab-feitos"   onclick="mudarTabCkDesk('feitos')">✅ FEITOS <span id="d-ck-feitos-cnt" style="display:none;background:#10b981;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:3px">0</span></button>
+          <button class="rel-turno-btn"       id="dcktab-aguardando" onclick="mudarTabCkDesk('aguardando')">⏳ AGUARDANDO <span id="d-cktab-aguardando-badge" style="display:none;background:#f97316;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:3px">0</span></button>
         </div>
 
         <!-- Tab FILA -->
@@ -1241,6 +1242,18 @@
               </div>
             </div>
             <div id="d-ck-feitos" style="padding:4px 0">
+              <div style="color:var(--text3);text-align:center;padding:30px;font-size:13px">Carregando...</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab AGUARDANDO -->
+        <div id="d-ck-tab-aguardando" style="display:none">
+          <div class="card">
+            <div class="card-hd">⏳ AGUARDANDO ITEM
+              <button class="btn btn-outline btn-sm" onclick="carregarAguardandoCkDesk()">🔄</button>
+            </div>
+            <div id="d-ck-aguardando" style="padding:4px 0">
               <div style="color:var(--text3);text-align:center;padding:30px;font-size:13px">Carregando...</div>
             </div>
           </div>
@@ -1800,6 +1813,19 @@
         </div>
       </div>
 
+      <!-- ABA 4 — AGUARDANDO (pedidos com pendência de item) -->
+      <div class="ck-tab-page" id="ck-tab-aguardando">
+        <div class="ck-scroll">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">⏳ Aguardando Item</div>
+            <button class="btn btn-outline btn-sm" onclick="carregarAguardandoCkMobile()">🔄</button>
+          </div>
+          <div id="m-ck-aguardando-lista">
+            <div style="color:var(--text3);text-align:center;padding:32px;font-size:13px">Carregando...</div>
+          </div>
+        </div>
+      </div>
+
     </div><!-- /ck-mobile-root -->
     <div id="sep-mobile-root">
 
@@ -1989,6 +2015,11 @@
     <span class="ck-tab-ic">✅</span>
     FEITOS
   </button>
+  <button class="ck-tab" id="cktab-aguardando" onclick="mudarTabCk('aguardando')">
+    <span class="ck-tab-ic">⏳</span>
+    AGUARD.
+    <span class="rep-tab-badge" id="cktab-aguardando-badge" style="display:none">0</span>
+  </button>
 </div>
 
 
@@ -1996,7 +2027,7 @@
   <script src="/js/pedidos.js?v=13"></script>
   <script src="/js/separador.js?v=6"></script>
   <script src="/js/repositor.js?v=15"></script>
-  <script src="/js/checkout.js?v=4"></script>
+  <script src="/js/checkout.js?v=5"></script>
   <script src="/js/dashboard.js?v=24"></script>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   <script src="/js/entrada-manual.js?v=1"></script>
