@@ -1046,16 +1046,16 @@
         <div id="d-emb-tab-embalar" style="display:none">
           <div class="card">
             <div class="card-hd">📦 EMBALAR — BUSCAR PEDIDO</div>
-            <div style="display:flex;gap:10px;max-width:520px;margin-bottom:14px">
+            <div style="max-width:520px;margin-bottom:14px">
               <input type="text" id="d-emb-embalar-input"
                 placeholder="Digite ou bipe o número do pedido..."
                 onkeydown="if(event.key==='Enter')buscarEmbalagemDesk()"
                 autocomplete="off"
-                style="flex:1;padding:11px 16px;border:2px solid #4f46e5;border-radius:10px;font-size:15px;font-weight:700;font-family:'Space Mono',monospace;color:var(--text);background:var(--surface2);outline:none;letter-spacing:1px;box-sizing:border-box">
-              <button onclick="buscarEmbalagemDesk()"
-                style="padding:11px 20px;background:#4f46e5;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(79,70,229,.3)">
-                🔍 Buscar
-              </button>
+                style="width:100%;padding:11px 16px;border:2px solid #4f46e5;border-radius:10px;font-size:15px;font-weight:700;font-family:'Space Mono',monospace;color:var(--text);background:var(--surface2);outline:none;letter-spacing:1px;box-sizing:border-box;margin-bottom:8px">
+              <div style="display:flex;gap:8px">
+                <button onclick="escanearQr('d-emb-embalar-input', buscarEmbalagemDesk)" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:#1D4ED8;color:#fff;border:none;border-radius:8px;padding:10px 0;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.5px">📷 Escanear QR</button>
+                <button onclick="buscarEmbalagemDesk()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:#4f46e5;color:#fff;border:none;border-radius:8px;padding:10px 0;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(79,70,229,.3);letter-spacing:.5px">🔍 Buscar</button>
+              </div>
             </div>
             <div id="d-emb-resultado">
               <div style="text-align:center;padding:40px 20px;color:var(--text3)">
@@ -1213,12 +1213,13 @@
         <div id="d-ck-tab-checkout" style="display:none">
           <div class="card">
             <div class="card-hd">🔍 BUSCAR POR NÚMERO DE CAIXA</div>
-            <div class="bip-wrap" style="margin-bottom:0">
-              <input type="text" class="bip-input" id="ck-input-caixa"
-                placeholder="Digite ou bipe o número da caixa..."
-                autocomplete="off" inputmode="numeric"
-                style="font-size:20px;letter-spacing:3px"/>
-              <button class="btn-bip" onclick="buscarCaixa()">▶</button>
+            <input type="text" class="bip-input" id="ck-input-caixa"
+              placeholder="Digite ou bipe o número da caixa..."
+              autocomplete="off" inputmode="numeric"
+              style="width:100%;font-size:20px;letter-spacing:3px;margin-bottom:8px;box-sizing:border-box"/>
+            <div style="display:flex;gap:8px">
+              <button onclick="escanearQr('ck-input-caixa', buscarCaixa)" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:#1D4ED8;color:#fff;border:none;border-radius:8px;padding:10px 0;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.5px">📷 Escanear QR</button>
+              <button onclick="buscarCaixa()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:#3B82F6;color:#fff;border:none;border-radius:8px;padding:10px 0;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.5px">▶ Buscar</button>
             </div>
           </div>
           <!-- Resultado da busca -->
@@ -1771,12 +1772,13 @@
       <div class="ck-tab-page" id="ck-tab-busca">
         <div class="ck-scroll">
           <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text);margin-bottom:12px">🏷️ Checkout</div>
-          <div class="bip-wrap">
-            <input type="text" class="bip-input" id="m-ck-input-caixa"
-              placeholder="Bipe ou número da caixa..."
-              autocomplete="off" inputmode="numeric"
-              style="font-size:20px;letter-spacing:3px"/>
-            <button class="btn-bip" onclick="buscarCaixaMobile()">▶</button>
+          <input type="text" class="bip-input" id="m-ck-input-caixa"
+            placeholder="Bipe ou número da caixa..."
+            autocomplete="off" inputmode="numeric"
+            style="width:100%;font-size:20px;letter-spacing:3px;margin-bottom:8px;box-sizing:border-box"/>
+          <div style="display:flex;gap:8px;margin-bottom:12px">
+            <button onclick="escanearQr('m-ck-input-caixa', buscarCaixaMobile)" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:#1D4ED8;color:#fff;border:none;border-radius:8px;padding:12px 0;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.5px">📷 Escanear QR</button>
+            <button onclick="buscarCaixaMobile()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:#3B82F6;color:#fff;border:none;border-radius:8px;padding:12px 0;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.5px">▶ Buscar</button>
           </div>
           <div id="m-ck-resultado"></div>
         </div>
@@ -2335,16 +2337,14 @@ if ('serviceWorker' in navigator) {
   <div id="emb-tab-fila" style="flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden">
     <div style="padding:14px;background:var(--surface,#fff);border-bottom:1px solid var(--border,#e2e8f0);flex-shrink:0">
       <div style="font-size:11px;color:var(--text3,#94a3b8);font-weight:700;margin-bottom:8px;letter-spacing:.5px;text-transform:uppercase">Buscar Pedido</div>
-      <div style="display:flex;gap:10px">
-        <input type="text" id="m-emb-busca"
-          placeholder="🔍 Número do pedido..."
-          onkeydown="if(event.key==='Enter')filtrarEmbalagemMobile()"
-          autocomplete="off" inputmode="numeric"
-          style="flex:1;padding:14px 16px;border:2px solid var(--border,#e2e8f0);border-radius:12px;font-size:16px;font-weight:700;font-family:'Space Mono',monospace;background:var(--surface2,#f8fafc);color:var(--text,#1e293b);box-sizing:border-box;outline:none;letter-spacing:1px">
-        <button onclick="filtrarEmbalagemMobile()"
-          style="padding:14px 20px;background:#4f46e5;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;box-shadow:0 2px 8px rgba(79,70,229,.3)">
-          Buscar
-        </button>
+      <input type="text" id="m-emb-busca"
+        placeholder="🔍 Número do pedido..."
+        onkeydown="if(event.key==='Enter')filtrarEmbalagemMobile()"
+        autocomplete="off" inputmode="numeric"
+        style="width:100%;padding:14px 16px;border:2px solid var(--border,#e2e8f0);border-radius:12px;font-size:16px;font-weight:700;font-family:'Space Mono',monospace;background:var(--surface2,#f8fafc);color:var(--text,#1e293b);box-sizing:border-box;outline:none;letter-spacing:1px;margin-bottom:8px">
+      <div style="display:flex;gap:8px">
+        <button onclick="escanearQr('m-emb-busca', filtrarEmbalagemMobile)" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:#1D4ED8;color:#fff;border:none;border-radius:12px;padding:13px 0;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.5px">📷 Escanear QR</button>
+        <button onclick="filtrarEmbalagemMobile()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:#4f46e5;color:#fff;border:none;border-radius:12px;padding:13px 0;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(79,70,229,.3);letter-spacing:.5px">🔍 Buscar</button>
       </div>
     </div>
     <div style="flex:1;overflow-y:auto;padding:14px;min-height:0" id="m-emb-lista">

@@ -867,91 +867,11 @@ function vincularCaixaMobile() {
 
 
 
-/* ══════════════════════════════════════════
-   ESCANEAR QR CODE — CÂMERA
-══════════════════════════════════════════ */
-async function escanearQrCaixa(isMobile) {
-  if (!('BarcodeDetector' in window)) {
-    toast('Seu navegador não suporta leitura de QR Code. Digite o número manualmente.', 'aviso');
-    return;
-  }
-
-  const overlay = document.createElement('div');
-  overlay.id = 'qr-scan-overlay';
-  overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.92);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;';
-  overlay.innerHTML = `
-    <div style="color:#fff;font-size:14px;font-weight:700;letter-spacing:1px">ESCANEIE O QR CODE DA CAIXA</div>
-    <div style="position:relative;width:280px;height:280px;border-radius:12px;overflow:hidden;border:3px solid #3B82F6">
-      <video id="qr-video" autoplay playsinline muted style="width:100%;height:100%;object-fit:cover"></video>
-      <div style="position:absolute;inset:0;pointer-events:none">
-        <div style="position:absolute;top:12px;left:12px;width:28px;height:28px;border-top:3px solid #3B82F6;border-left:3px solid #3B82F6;border-radius:3px 0 0 0"></div>
-        <div style="position:absolute;top:12px;right:12px;width:28px;height:28px;border-top:3px solid #3B82F6;border-right:3px solid #3B82F6;border-radius:0 3px 0 0"></div>
-        <div style="position:absolute;bottom:12px;left:12px;width:28px;height:28px;border-bottom:3px solid #3B82F6;border-left:3px solid #3B82F6;border-radius:0 0 0 3px"></div>
-        <div style="position:absolute;bottom:12px;right:12px;width:28px;height:28px;border-bottom:3px solid #3B82F6;border-right:3px solid #3B82F6;border-radius:0 0 3px 0"></div>
-        <div style="position:absolute;left:12px;right:12px;top:12px;height:2px;background:#3B82F6;opacity:0.8;animation:qrScanLine 1.8s linear infinite"></div>
-      </div>
-    </div>
-    <div style="color:#94A3B8;font-size:12px">Aponte para o QR Code impresso na caixa</div>
-    <button onclick="fecharQrScan()" style="background:#DC2626;color:#fff;border:none;border-radius:8px;padding:12px 32px;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:1px">✕ CANCELAR</button>
-  `;
-
-  if (!document.getElementById('qr-scan-style')) {
-    const s = document.createElement('style');
-    s.id = 'qr-scan-style';
-    s.textContent = '@keyframes qrScanLine{0%{top:12px}50%{top:calc(100% - 14px)}100%{top:12px}}';
-    document.head.appendChild(s);
-  }
-
-  document.body.appendChild(overlay);
-
-  let stream = null;
-  let animFrame = null;
-
-  window._qrScanCleanup = () => {
-    if (animFrame) cancelAnimationFrame(animFrame);
-    if (stream) stream.getTracks().forEach(t => t.stop());
-    const el = document.getElementById('qr-scan-overlay');
-    if (el) el.remove();
-    delete window._qrScanCleanup;
-  };
-
-  try {
-    stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
-    });
-    const video = document.getElementById('qr-video');
-    video.srcObject = stream;
-    await video.play();
-
-    const detector = new BarcodeDetector({ formats: ['qr_code'] });
-
-    const scanLoop = async () => {
-      if (!document.getElementById('qr-scan-overlay')) return;
-      try {
-        const codes = await detector.detect(video);
-        if (codes.length > 0) {
-          const valor = codes[0].rawValue.trim();
-          window._qrScanCleanup();
-          const inp = document.getElementById(isMobile ? 'm-input-caixa' : 'cl-input-caixa');
-          if (inp) inp.value = valor;
-          if (navigator.vibrate) navigator.vibrate(80);
-          if (isMobile) vincularCaixaMobile();
-          else vincularCaixaDesktop();
-          return;
-        }
-      } catch(e) { /* frame falhou, tenta próximo */ }
-      animFrame = requestAnimationFrame(scanLoop);
-    };
-    animFrame = requestAnimationFrame(scanLoop);
-
-  } catch(e) {
-    window._qrScanCleanup();
-    toast('Não foi possível acessar a câmera. Verifique as permissões do navegador.', 'erro');
-  }
-}
-
-function fecharQrScan() {
-  if (window._qrScanCleanup) window._qrScanCleanup();
+function escanearQrCaixa(isMobile) {
+  escanearQr(
+    isMobile ? 'm-input-caixa' : 'cl-input-caixa',
+    isMobile ? vincularCaixaMobile : vincularCaixaDesktop
+  );
 }
 
 // Mostra campo caixa quando pedido é carregado
