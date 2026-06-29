@@ -490,6 +490,7 @@
                   placeholder="Número da caixa..."
                   autocomplete="off" inputmode="numeric"
                   style="font-size:20px;letter-spacing:3px;border-color:#DC2626;border-width:2px"/>
+                <button class="btn-bip" style="background:#1D4ED8;color:#fff;border:none;flex-shrink:0" onclick="escanearQrCaixa(false)" title="Escanear QR Code">📷</button>
                 <button class="btn-bip" style="background:#DC2626;color:#fff;border:none" onclick="vincularCaixaDesktop()">📦</button>
               </div>
               <div id="cl-caixa-status" style="font-size:12px;color:var(--text3);margin-top:6px;padding:6px 10px;background:var(--surface2);border-radius:6px;display:none"></div>
@@ -1822,6 +1823,7 @@
                 placeholder="Número da caixa..."
                 autocomplete="off" inputmode="numeric"
                 style="font-size:20px;letter-spacing:3px;border-color:#DC2626;border-width:2px"/>
+              <button class="btn-bip" style="background:#1D4ED8;color:#fff;border:none;flex-shrink:0" onclick="escanearQrCaixa(true)" title="Escanear QR Code">📷</button>
               <button class="btn-bip" style="background:#DC2626;color:#fff;border:none" onclick="vincularCaixaMobile()">📦</button>
             </div>
             <div id="m-caixa-status" style="font-size:12px;color:var(--text3);margin-top:6px;padding:6px 10px;background:var(--surface2);border-radius:6px;display:none"></div>
