@@ -485,13 +485,13 @@
             <!-- Campo caixa desktop -->
             <div id="cl-caixa-wrap" style="display:none;margin-top:10px;padding:12px;background:#FFF8F8;border:1.5px solid #FECACA;border-radius:9px">
               <div style="font-size:11px;font-weight:800;color:#B91C1C;letter-spacing:1px;margin-bottom:8px;display:flex;align-items:center;gap:6px"><span style="width:6px;height:6px;background:#DC2626;border-radius:50%;flex-shrink:0"></span>VINCULAR CAIXA ANTES DE INICIAR</div>
-              <div class="bip-wrap" style="margin-bottom:0">
-                <input type="text" class="bip-input" id="cl-input-caixa"
-                  placeholder="Número da caixa..."
-                  autocomplete="off" inputmode="numeric"
-                  style="font-size:20px;letter-spacing:3px;border-color:#DC2626;border-width:2px"/>
-                <button class="btn-bip" style="background:#1D4ED8;color:#fff;border:none;flex-shrink:0" onclick="escanearQrCaixa(false)" title="Escanear QR Code">📷</button>
-                <button class="btn-bip" style="background:#DC2626;color:#fff;border:none" onclick="vincularCaixaDesktop()">📦</button>
+              <input type="text" class="bip-input" id="cl-input-caixa"
+                placeholder="Número da caixa..."
+                autocomplete="off" inputmode="numeric"
+                style="width:100%;font-size:20px;letter-spacing:3px;border-color:#DC2626;border-width:2px;margin-bottom:8px;box-sizing:border-box"/>
+              <div style="display:flex;gap:8px">
+                <button onclick="escanearQrCaixa(false)" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:#1D4ED8;color:#fff;border:none;border-radius:8px;padding:10px 0;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.5px">📷 Escanear QR</button>
+                <button onclick="vincularCaixaDesktop()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:#DC2626;color:#fff;border:none;border-radius:8px;padding:10px 0;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.5px">📦 Vincular</button>
               </div>
               <div id="cl-caixa-status" style="font-size:12px;color:var(--text3);margin-top:6px;padding:6px 10px;background:var(--surface2);border-radius:6px;display:none"></div>
             </div>
@@ -1818,13 +1818,13 @@
             <span style="width:6px;height:6px;background:#DC2626;border-radius:50%;flex-shrink:0"></span>
             VINCULAR CAIXA — OBRIGATÓRIO ANTES DE INICIAR
           </div>
-            <div class="bip-wrap" style="margin-bottom:0">
-              <input type="text" class="bip-input" id="m-input-caixa"
-                placeholder="Número da caixa..."
-                autocomplete="off" inputmode="numeric"
-                style="font-size:20px;letter-spacing:3px;border-color:#DC2626;border-width:2px"/>
-              <button class="btn-bip" style="background:#1D4ED8;color:#fff;border:none;flex-shrink:0" onclick="escanearQrCaixa(true)" title="Escanear QR Code">📷</button>
-              <button class="btn-bip" style="background:#DC2626;color:#fff;border:none" onclick="vincularCaixaMobile()">📦</button>
+            <input type="text" class="bip-input" id="m-input-caixa"
+              placeholder="Número da caixa..."
+              autocomplete="off" inputmode="numeric"
+              style="width:100%;font-size:22px;letter-spacing:3px;border-color:#DC2626;border-width:2px;margin-bottom:8px;box-sizing:border-box"/>
+            <div style="display:flex;gap:8px">
+              <button onclick="escanearQrCaixa(true)" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:#1D4ED8;color:#fff;border:none;border-radius:8px;padding:12px 0;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.5px">📷 Escanear QR</button>
+              <button onclick="vincularCaixaMobile()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:#DC2626;color:#fff;border:none;border-radius:8px;padding:12px 0;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.5px">📦 Vincular</button>
             </div>
             <div id="m-caixa-status" style="font-size:12px;color:var(--text3);margin-top:6px;padding:6px 10px;background:var(--surface2);border-radius:6px;display:none"></div>
           </div>
