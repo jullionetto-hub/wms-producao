@@ -1,0 +1,379 @@
+'use strict';
+
+/* ══════════════════════════════════════════
+   GESTÃO — página de Gerente / Coordenador
+   3 abas: Performance · Ocorrências · Absenteísmo
+══════════════════════════════════════════ */
+
+let _gestaoTabAtual = 'performance';
+
+function renderizarPagGestao() {
+  const root = document.getElementById('pag-gestao');
+  if (!root) return;
+  root.innerHTML = `
+<div style="padding:20px 24px 0">
+  <div style="font-family:'Space Mono',monospace;font-size:17px;color:var(--text);margin-bottom:16px">📊 Painel de Gestão</div>
+  <div style="display:flex;gap:4px;border-bottom:2px solid var(--border);margin-bottom:20px">
+    <button id="gtab-btn-performance"  onclick="mudarTabGestao('performance')"  class="gtab-btn ativo"  style="padding:10px 20px;background:transparent;border:none;font-size:13px;font-weight:700;cursor:pointer;border-bottom:3px solid var(--accent);color:var(--accent);margin-bottom:-2px">📊 Performance</button>
+    <button id="gtab-btn-ocorrencias"  onclick="mudarTabGestao('ocorrencias')"  class="gtab-btn"        style="padding:10px 20px;background:transparent;border:none;font-size:13px;font-weight:700;cursor:pointer;border-bottom:3px solid transparent;color:var(--text2);margin-bottom:-2px">⚠️ Ocorrências</button>
+    <button id="gtab-btn-absenteismo" onclick="mudarTabGestao('absenteismo')" class="gtab-btn"        style="padding:10px 20px;background:transparent;border:none;font-size:13px;font-weight:700;cursor:pointer;border-bottom:3px solid transparent;color:var(--text2);margin-bottom:-2px">📅 Absenteísmo</button>
+  </div>
+</div>
+
+<!-- ABA PERFORMANCE -->
+<div id="gtab-performance" class="gtab-pane" style="padding:0 24px 24px">
+  <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px">
+    <div style="flex:1;min-width:180px">
+      <label style="font-size:11px;font-weight:700;color:var(--text3);display:block;margin-bottom:4px">DE</label>
+      <input type="date" id="gperf-ini" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-size:13px">
+    </div>
+    <div style="flex:1;min-width:180px">
+      <label style="font-size:11px;font-weight:700;color:var(--text3);display:block;margin-bottom:4px">ATÉ</label>
+      <input type="date" id="gperf-fim" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-size:13px">
+    </div>
+    <div style="flex:1;min-width:140px">
+      <label style="font-size:11px;font-weight:700;color:var(--text3);display:block;margin-bottom:4px">TURNO</label>
+      <select id="gperf-turno" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-size:13px">
+        <option value="">Todos</option>
+        <option value="Manha">Manhã</option>
+        <option value="Tarde">Tarde</option>
+        <option value="Noite">Noite</option>
+      </select>
+    </div>
+    <div style="flex:0;display:flex;align-items:flex-end">
+      <button onclick="carregarGestaoPerformance()" style="padding:8px 18px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">🔍 Buscar</button>
+    </div>
+  </div>
+  <div id="gperf-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px"></div>
+  <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:1px;margin-bottom:10px">RANKING SEPARADORES</div>
+  <div id="gperf-tabela" style="overflow-x:auto"></div>
+</div>
+
+<!-- ABA OCORRÊNCIAS -->
+<div id="gtab-ocorrencias" class="gtab-pane" style="display:none;padding:0 24px 24px">
+  <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px">
+    <div style="flex:1;min-width:180px">
+      <label style="font-size:11px;font-weight:700;color:var(--text3);display:block;margin-bottom:4px">DE</label>
+      <input type="date" id="goc-ini" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-size:13px">
+    </div>
+    <div style="flex:1;min-width:180px">
+      <label style="font-size:11px;font-weight:700;color:var(--text3);display:block;margin-bottom:4px">ATÉ</label>
+      <input type="date" id="goc-fim" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-size:13px">
+    </div>
+    <div style="flex:0;display:flex;align-items:flex-end">
+      <button onclick="carregarGestaoOcorrencias()" style="padding:8px 18px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">🔍 Buscar</button>
+    </div>
+  </div>
+  <div id="goc-lista"></div>
+</div>
+
+<!-- ABA ABSENTEÍSMO -->
+<div id="gtab-absenteismo" class="gtab-pane" style="display:none;padding:0 24px 24px">
+  <div id="gabs-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px"></div>
+  <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:1px;margin-bottom:10px">RANKING POR ABSENTEÍSMO</div>
+  <div id="gabs-tabela" style="overflow-x:auto"></div>
+  <div id="gabs-detalhe" style="margin-top:20px"></div>
+</div>
+`;
+
+  const hoje = hojeLocal();
+  ['gperf-ini','gperf-fim','goc-ini','goc-fim'].forEach(id => {
+    const el = document.getElementById(id); if (el && !el.value) el.value = hoje;
+  });
+
+  mudarTabGestao('performance');
+}
+
+
+function mudarTabGestao(tab) {
+  _gestaoTabAtual = tab;
+  ['performance','ocorrencias','absenteismo'].forEach(t => {
+    const pane = document.getElementById(`gtab-${t}`);
+    const btn  = document.getElementById(`gtab-btn-${t}`);
+    if (pane) pane.style.display = t === tab ? '' : 'none';
+    if (btn) {
+      btn.style.borderBottomColor = t === tab ? 'var(--accent)' : 'transparent';
+      btn.style.color = t === tab ? 'var(--accent)' : 'var(--text2)';
+    }
+  });
+  if (tab === 'performance')  carregarGestaoPerformance();
+  if (tab === 'ocorrencias')  carregarGestaoOcorrencias();
+  if (tab === 'absenteismo')  carregarGestaoAbsenteismo();
+}
+
+
+/* ── Performance ──────────────────────────────────────────────── */
+async function carregarGestaoPerformance() {
+  const ini   = document.getElementById('gperf-ini')?.value;
+  const fim   = document.getElementById('gperf-fim')?.value;
+  const turno = document.getElementById('gperf-turno')?.value || '';
+  const cards = document.getElementById('gperf-cards');
+  const tabela = document.getElementById('gperf-tabela');
+  if (!ini || !fim || !cards || !tabela) return;
+
+  cards.innerHTML  = _gestaoLoading();
+  tabela.innerHTML = '';
+
+  try {
+    const qs  = `ini=${ini}&fim=${fim}${turno ? `&turno=${turno}` : ''}`;
+    const [sepsRes, metasRes] = await Promise.all([
+      fetch(`${API}/performance/separadores?${qs}`, { credentials:'include' }),
+      fetch(`${API}/performance/metas?${qs}`, { credentials:'include' }),
+    ]);
+
+    const seps = await sepsRes.json();
+    const metas = metasRes.ok ? await metasRes.json() : {};
+
+    if (!Array.isArray(seps) || !seps.length) {
+      cards.innerHTML  = '';
+      tabela.innerHTML = _gestaoVazio('Nenhum dado encontrado para o período.');
+      return;
+    }
+
+    const totalPedidos = seps.reduce((s, r) => s + (r.pedidos || 0), 0);
+    const totalItens   = seps.reduce((s, r) => s + (r.itens   || 0), 0);
+    const mediaTempo   = seps.filter(r => r.tempo_medio_min).reduce((s, r, _, a) => s + r.tempo_medio_min / a.length, 0);
+    const top          = seps.reduce((a, b) => (b.pedidos || 0) > (a.pedidos || 0) ? b : a, seps[0]);
+
+    cards.innerHTML = [
+      { icon:'📦', label:'Total Pedidos', val: totalPedidos },
+      { icon:'🔢', label:'Itens Separados', val: totalItens.toLocaleString('pt-BR') },
+      { icon:'⏱️', label:'Tempo Médio', val: mediaTempo ? `${mediaTempo.toFixed(1)} min` : '—' },
+      { icon:'🏆', label:'Top Separador', val: top?.nome || '—' },
+    ].map(c => `
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px">
+        <div style="font-size:22px;margin-bottom:6px">${c.icon}</div>
+        <div style="font-size:11px;color:var(--text3);font-weight:700;letter-spacing:.5px;margin-bottom:4px">${c.label.toUpperCase()}</div>
+        <div style="font-size:22px;font-weight:800;color:var(--text);font-family:'Space Mono',monospace">${c.val}</div>
+      </div>`).join('');
+
+    const metaObj = (metas.metas || []).reduce((o, m) => { o[m.usuario_id] = m; return o; }, {});
+    tabela.innerHTML = `
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead>
+          <tr style="background:var(--surface2)">
+            <th style="padding:10px 12px;text-align:left;color:var(--text3);font-size:11px;font-weight:700;border-bottom:1px solid var(--border)">#</th>
+            <th style="padding:10px 12px;text-align:left;color:var(--text3);font-size:11px;font-weight:700;border-bottom:1px solid var(--border)">COLABORADOR</th>
+            <th style="padding:10px 12px;text-align:center;color:var(--text3);font-size:11px;font-weight:700;border-bottom:1px solid var(--border)">TURNO</th>
+            <th style="padding:10px 12px;text-align:center;color:var(--text3);font-size:11px;font-weight:700;border-bottom:1px solid var(--border)">PEDIDOS</th>
+            <th style="padding:10px 12px;text-align:center;color:var(--text3);font-size:11px;font-weight:700;border-bottom:1px solid var(--border)">ITENS</th>
+            <th style="padding:10px 12px;text-align:center;color:var(--text3);font-size:11px;font-weight:700;border-bottom:1px solid var(--border)">TEMPO MÉD.</th>
+            <th style="padding:10px 12px;text-align:center;color:var(--text3);font-size:11px;font-weight:700;border-bottom:1px solid var(--border)">META</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${seps.sort((a,b) => (b.pedidos||0)-(a.pedidos||0)).map((r, i) => {
+            const m  = metaObj[r.usuario_id];
+            const pct = m ? Math.round((r.pedidos / (m.meta_calculada || 1)) * 100) : null;
+            const cor = pct == null ? 'var(--text3)' : pct >= 100 ? 'var(--green)' : pct >= 80 ? '#f59e0b' : 'var(--red)';
+            const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i+1}`;
+            return `
+            <tr style="border-bottom:1px solid var(--border)">
+              <td style="padding:10px 12px;font-weight:700;color:var(--text3)">${medal}</td>
+              <td style="padding:10px 12px;font-weight:700;color:var(--text)">${r.nome}</td>
+              <td style="padding:10px 12px;text-align:center;color:var(--text2)">${r.turno || '—'}</td>
+              <td style="padding:10px 12px;text-align:center;font-weight:800;color:var(--accent);font-family:'Space Mono',monospace">${r.pedidos}</td>
+              <td style="padding:10px 12px;text-align:center;color:var(--text2)">${(r.itens||0).toLocaleString('pt-BR')}</td>
+              <td style="padding:10px 12px;text-align:center;color:var(--text2)">${r.tempo_medio_min ? `${Number(r.tempo_medio_min).toFixed(1)} min` : '—'}</td>
+              <td style="padding:10px 12px;text-align:center;font-weight:700;color:${cor}">${pct != null ? `${pct}%` : '—'}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>`;
+
+  } catch(e) {
+    cards.innerHTML  = '';
+    tabela.innerHTML = `<div style="color:var(--red);padding:20px">Erro ao carregar dados de performance.</div>`;
+  }
+}
+
+
+/* ── Ocorrências ──────────────────────────────────────────────── */
+async function carregarGestaoOcorrencias() {
+  const ini   = document.getElementById('goc-ini')?.value;
+  const fim   = document.getElementById('goc-fim')?.value;
+  const lista = document.getElementById('goc-lista');
+  if (!ini || !fim || !lista) return;
+
+  lista.innerHTML = _gestaoLoading();
+
+  try {
+    const res = await fetch(`${API}/performance/ocorrencias?ini=${ini}&fim=${fim}`, { credentials:'include' });
+    const dados = await res.json();
+
+    if (!Array.isArray(dados) || !dados.length) {
+      lista.innerHTML = _gestaoVazio('Nenhuma ocorrência no período.');
+      return;
+    }
+
+    const tipoIcon = { atraso:'⏰', falta_item:'📦', qualidade:'⭐', outros:'📝' };
+    const gravCor  = { alta:'var(--red)', media:'#f59e0b', baixa:'var(--green)' };
+
+    lista.innerHTML = dados.map(o => `
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:10px;display:flex;gap:14px;align-items:flex-start">
+        <div style="font-size:26px;flex-shrink:0">${tipoIcon[o.tipo] || '📝'}</div>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">
+            <span style="font-weight:700;color:var(--text);font-size:14px">${o.colaborador_nome || '—'}</span>
+            <span style="font-size:11px;font-weight:700;color:${gravCor[o.gravidade]||'var(--text3)'};background:${gravCor[o.gravidade]||'var(--text3)'}22;padding:2px 8px;border-radius:20px">${(o.gravidade||'—').toUpperCase()}</span>
+            <span style="font-size:11px;color:var(--text3)">${o.data_ocorrencia ? new Date(o.data_ocorrencia).toLocaleDateString('pt-BR') : '—'}</span>
+          </div>
+          <div style="font-size:13px;color:var(--text2)">${o.descricao || ''}</div>
+          ${o.registrado_por_nome ? `<div style="font-size:11px;color:var(--text3);margin-top:4px">Registrado por: ${o.registrado_por_nome}</div>` : ''}
+        </div>
+      </div>`).join('');
+
+  } catch(e) {
+    lista.innerHTML = `<div style="color:var(--red);padding:20px">Erro ao carregar ocorrências.</div>`;
+  }
+}
+
+
+/* ── Absenteísmo ──────────────────────────────────────────────── */
+async function carregarGestaoAbsenteismo() {
+  const cards  = document.getElementById('gabs-cards');
+  const tabela = document.getElementById('gabs-tabela');
+  if (!cards || !tabela) return;
+
+  cards.innerHTML  = _gestaoLoading();
+  tabela.innerHTML = '';
+
+  try {
+    const [rankRes, teamRes] = await Promise.all([
+      fetch(`${API}/gestao/absenteismo/ranking`, { credentials:'include' }),
+      fetch(`${API}/gestao/absenteismo/team`, { credentials:'include' }),
+    ]);
+
+    if (!rankRes.ok || !teamRes.ok) throw new Error('Erro na API de absenteísmo');
+
+    const ranking = await rankRes.json();
+    const team    = await teamRes.json();
+
+    // sumário agregado
+    const lista = team.employees || team || [];
+    const totalFuncionarios = lista.length;
+    const totalFaltas   = lista.reduce((s, e) => s + (e.total_faltas || e.faltas || 0), 0);
+    const totalAtestados = lista.reduce((s, e) => s + (e.total_atestados || e.atestados || 0), 0);
+    const taxaMedia = lista.length
+      ? lista.reduce((s, e) => s + (parseFloat(e.taxa_absenteismo) || 0), 0) / lista.length
+      : 0;
+
+    cards.innerHTML = [
+      { icon:'👥', label:'Funcionários', val: totalFuncionarios },
+      { icon:'❌', label:'Total Faltas', val: totalFaltas },
+      { icon:'🏥', label:'Atestados', val: totalAtestados },
+      { icon:'📉', label:'Taxa Média', val: `${taxaMedia.toFixed(1)}%` },
+    ].map(c => `
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px">
+        <div style="font-size:22px;margin-bottom:6px">${c.icon}</div>
+        <div style="font-size:11px;color:var(--text3);font-weight:700;letter-spacing:.5px;margin-bottom:4px">${c.label.toUpperCase()}</div>
+        <div style="font-size:22px;font-weight:800;color:var(--text);font-family:'Space Mono',monospace">${c.val}</div>
+      </div>`).join('');
+
+    const rows = (ranking.employees || ranking || []);
+    if (!rows.length) {
+      tabela.innerHTML = _gestaoVazio('Nenhum dado de absenteísmo disponível.');
+      return;
+    }
+
+    tabela.innerHTML = `
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead>
+          <tr style="background:var(--surface2)">
+            <th style="padding:10px 12px;text-align:left;color:var(--text3);font-size:11px;font-weight:700;border-bottom:1px solid var(--border)">#</th>
+            <th style="padding:10px 12px;text-align:left;color:var(--text3);font-size:11px;font-weight:700;border-bottom:1px solid var(--border)">FUNCIONÁRIO</th>
+            <th style="padding:10px 12px;text-align:center;color:var(--text3);font-size:11px;font-weight:700;border-bottom:1px solid var(--border)">FALTAS</th>
+            <th style="padding:10px 12px;text-align:center;color:var(--text3);font-size:11px;font-weight:700;border-bottom:1px solid var(--border)">ATESTADOS</th>
+            <th style="padding:10px 12px;text-align:center;color:var(--text3);font-size:11px;font-weight:700;border-bottom:1px solid var(--border)">TAXA</th>
+            <th style="padding:10px 12px;text-align:center;color:var(--text3);font-size:11px;font-weight:700;border-bottom:1px solid var(--border)">DETALHE</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map((r, i) => {
+            const taxa = parseFloat(r.taxa_absenteismo) || 0;
+            const cor  = taxa >= 10 ? 'var(--red)' : taxa >= 5 ? '#f59e0b' : 'var(--green)';
+            return `
+            <tr style="border-bottom:1px solid var(--border)">
+              <td style="padding:10px 12px;font-weight:700;color:var(--text3)">${i+1}</td>
+              <td style="padding:10px 12px;font-weight:700;color:var(--text)">${r.nome || r.employee_name || '—'}</td>
+              <td style="padding:10px 12px;text-align:center;color:var(--text2)">${r.total_faltas ?? r.faltas ?? '—'}</td>
+              <td style="padding:10px 12px;text-align:center;color:var(--text2)">${r.total_atestados ?? r.atestados ?? '—'}</td>
+              <td style="padding:10px 12px;text-align:center;font-weight:800;color:${cor};font-family:'Space Mono',monospace">${taxa.toFixed(1)}%</td>
+              <td style="padding:10px 12px;text-align:center">
+                <button onclick="verDetalheAbsenteismo(${r.id || r.employee_id || 0}, '${(r.nome || r.employee_name || '').replace(/'/g,"\\'")}',this)"
+                  style="padding:4px 12px;background:transparent;border:1.5px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer;color:var(--text2)">
+                  Ver
+                </button>
+              </td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>`;
+
+  } catch(e) {
+    cards.innerHTML  = '';
+    tabela.innerHTML = `<div style="color:var(--red);padding:20px">Erro ao carregar absenteísmo: ${e.message}</div>`;
+  }
+}
+
+
+async function verDetalheAbsenteismo(id, nome, btn) {
+  const detalhe = document.getElementById('gabs-detalhe');
+  if (!detalhe) return;
+  if (btn) { btn.textContent = '...'; btn.disabled = true; }
+
+  try {
+    const res  = await fetch(`${API}/gestao/absenteismo/funcionario/${id}`, { credentials:'include' });
+    if (!res.ok) throw new Error('Erro ao carregar');
+    const data = await res.json();
+    const registros = data.records || data.daily_records || data.registros || [];
+
+    detalhe.innerHTML = `
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+          <div style="font-weight:800;color:var(--text);font-size:14px">📅 ${nome}</div>
+          <button onclick="document.getElementById('gabs-detalhe').innerHTML=''"
+            style="background:transparent;border:none;font-size:18px;cursor:pointer;color:var(--text3)">✕</button>
+        </div>
+        ${!registros.length ? '<div style="color:var(--text3);padding:10px">Nenhum registro encontrado.</div>' : `
+        <div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:12px">
+            <thead>
+              <tr style="background:var(--surface)">
+                <th style="padding:8px 10px;text-align:left;color:var(--text3);border-bottom:1px solid var(--border)">DATA</th>
+                <th style="padding:8px 10px;text-align:center;color:var(--text3);border-bottom:1px solid var(--border)">TIPO</th>
+                <th style="padding:8px 10px;text-align:left;color:var(--text3);border-bottom:1px solid var(--border)">OBSERVAÇÃO</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${registros.map(r => {
+                const tipo = r.tipo || r.type || r.ocorrencia || '—';
+                const cor  = tipo.toLowerCase().includes('falt') ? 'var(--red)' : tipo.toLowerCase().includes('atestado') ? '#f59e0b' : 'var(--text2)';
+                const data = r.data || r.date || r.data_ocorrencia || '—';
+                return `
+                <tr style="border-bottom:1px solid var(--border)">
+                  <td style="padding:8px 10px;color:var(--text)">${typeof data === 'string' && data.includes('T') ? new Date(data).toLocaleDateString('pt-BR') : data}</td>
+                  <td style="padding:8px 10px;text-align:center;font-weight:700;color:${cor}">${tipo}</td>
+                  <td style="padding:8px 10px;color:var(--text2)">${r.observacao || r.obs || r.note || '—'}</td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>`}
+      </div>`;
+
+  } catch(e) {
+    detalhe.innerHTML = `<div style="color:var(--red);padding:10px">Erro ao carregar detalhe.</div>`;
+  } finally {
+    if (btn) { btn.textContent = 'Ver'; btn.disabled = false; }
+  }
+}
+
+
+/* ── Helpers ──────────────────────────────────────────────────── */
+function _gestaoLoading() {
+  return `<div style="color:var(--text3);padding:20px;text-align:center;font-size:13px">Carregando...</div>`;
+}
+function _gestaoVazio(msg) {
+  return `<div style="color:var(--text3);padding:40px;text-align:center;font-size:13px">${msg}</div>`;
+}

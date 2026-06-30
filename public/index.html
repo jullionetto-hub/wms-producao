@@ -67,6 +67,7 @@
         <div class="csel-opt" onclick="escolherPerfil('repositor','🔧 Reposição',this,event)"><span class="csel-ic">🔧</span><span class="csel-nm">Reposição</span><span class="csel-chk">✓</span></div>
         <div class="csel-opt" onclick="escolherPerfil('checkout','🏷️ Checkout',this,event)"><span class="csel-ic">🏷️</span><span class="csel-nm">Checkout</span><span class="csel-chk">✓</span></div>
         <div class="csel-opt" onclick="escolherPerfil('embalador','📫 Embalagem',this,event)"><span class="csel-ic">📫</span><span class="csel-nm">Embalagem</span><span class="csel-chk">✓</span></div>
+        <div class="csel-opt" onclick="escolherPerfil('gestor','📊 Gestão',this,event)"><span class="csel-ic">📊</span><span class="csel-nm">Gestão</span><span class="csel-chk">✓</span></div>
       </div>
     </div>
     <div class="login-campo"><label>USUÁRIO</label><input type="text" id="login-usuario" placeholder="Ex: joao.silva" autocomplete="username"/></div>
@@ -1676,6 +1677,10 @@
         <!-- conteúdo renderizado dinamicamente pelo dash-logistica.js -->
       </div>
 
+      <div class="pagina" id="pag-gestao">
+        <!-- conteúdo renderizado dinamicamente pelo gestao.js -->
+      </div>
+
     </div><!-- /conteudo -->
 
 
@@ -2023,6 +2028,7 @@
   <script src="/js/entrada-manual.js?v=1"></script>
   <script src="/js/performance-dash.js?v=5"></script>
   <script src="/js/dash-logistica.js?v=5"></script>
+  <script src="/js/gestao.js?v=1"></script>
   <script src="/js/auth.js?v=16"></script>
 
 

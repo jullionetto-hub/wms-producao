@@ -1,27 +1,27 @@
-'use strict';
+﻿'use strict';
 const express = require('express');
 const router  = express.Router();
 const { db, pool } = require('../lib/db');
 const { requerAuth, requerPerfil } = require('../lib/auth');
 const { dataHoraLocal } = require('../lib/helpers');
 
-// ── GET /performance/separadores?ini=YYYY-MM-DD&fim=YYYY-MM-DD ───────────
-router.get('/performance/separadores', requerAuth, requerPerfil('supervisor'), async (req, res) => {
+// â”€â”€ GET /performance/separadores?ini=YYYY-MM-DD&fim=YYYY-MM-DD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+router.get('/performance/separadores', requerAuth, requerPerfil('supervisor', 'gestor'), async (req, res) => {
   const { ini, fim, turno } = req.query;
   if (!ini || !fim) return res.status(400).json({ erro: 'Informe ini e fim.' });
 
   try {
     // Filtro opcional de turno
     const turnoFiltro = turno
-      ? ` AND REPLACE(COALESCE(u.turno, s.turno, 'Manha'), 'ã', 'a') = $3`
+      ? ` AND REPLACE(COALESCE(u.turno, s.turno, 'Manha'), 'Ã£', 'a') = $3`
       : '';
     const params = turno ? [ini, fim, turno] : [ini, fim];
 
-    // ── Agregação principal por colaborador ─────────────────────────────
+    // â”€â”€ AgregaÃ§Ã£o principal por colaborador â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const colab = await db.all(`
       SELECT
         COALESCE(u.nome, s.nome)                                              AS nome,
-        REPLACE(COALESCE(u.turno, s.turno, 'Manha'), 'ã', 'a')               AS turno,
+        REPLACE(COALESCE(u.turno, s.turno, 'Manha'), 'Ã£', 'a')               AS turno,
         COUNT(DISTINCT p.id)::int                                             AS pedidos,
         COALESCE(SUM(ip.quantidade), 0)::int                                  AS itens,
         COUNT(DISTINCT CASE WHEN ip.codigo IS NOT NULL AND ip.codigo != ''
@@ -69,11 +69,11 @@ router.get('/performance/separadores', requerAuth, requerPerfil('supervisor'), a
       WHERE s.status = 'ativo' ${turnoFiltro}
       GROUP BY s.id,
                COALESCE(u.nome, s.nome),
-               REPLACE(COALESCE(u.turno, s.turno, 'Manha'), 'ã', 'a')
+               REPLACE(COALESCE(u.turno, s.turno, 'Manha'), 'Ã£', 'a')
       ORDER BY pedidos DESC
     `, params);
 
-    // ── Reposições por separador (gerou o aviso) ─────────────────────────
+    // â”€â”€ ReposiÃ§Ãµes por separador (gerou o aviso) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const repos = await db.all(`
       SELECT separador_nome AS nome,
              COUNT(*)::int  AS reposicoes
@@ -86,7 +86,7 @@ router.get('/performance/separadores', requerAuth, requerPerfil('supervisor'), a
     `, [ini, fim]);
     const repoIdx = Object.fromEntries(repos.map(r => [r.nome, r.reposicoes]));
 
-    // ── Pedidos por dia (para gráfico de linha) ───────────────────────────
+    // â”€â”€ Pedidos por dia (para grÃ¡fico de linha) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const porDia = await db.all(`
       SELECT
         COALESCE(NULLIF(LEFT(p.iniciado_em,10),''), NULLIF(p.data_distribuicao,''), p.data_pedido) AS data,
@@ -115,23 +115,23 @@ router.get('/performance/separadores', requerAuth, requerPerfil('supervisor'), a
   }
 });
 
-// ── GET /performance/timing?ini=YYYY-MM-DD&fim=YYYY-MM-DD&turno= ─────────
-router.get('/performance/timing', requerAuth, requerPerfil('supervisor'), async (req, res) => {
+// â”€â”€ GET /performance/timing?ini=YYYY-MM-DD&fim=YYYY-MM-DD&turno= â”€â”€â”€â”€â”€â”€â”€â”€â”€
+router.get('/performance/timing', requerAuth, requerPerfil('supervisor', 'gestor'), async (req, res) => {
   const { ini, fim, turno } = req.query;
   if (!ini || !fim) return res.status(400).json({ erro: 'Informe ini e fim.' });
 
   try {
     const turnoFiltroSep = turno
-      ? ` AND REPLACE(COALESCE(u.turno, s.turno, 'Manha'), 'ã', 'a') = $3`
+      ? ` AND REPLACE(COALESCE(u.turno, s.turno, 'Manha'), 'Ã£', 'a') = $3`
       : '';
     const paramsSep = turno ? [ini, fim, turno] : [ini, fim];
 
-    // Separação — pedido a pedido (skus_concluido_em exclui espera de reposição)
+    // SeparaÃ§Ã£o â€” pedido a pedido (skus_concluido_em exclui espera de reposiÃ§Ã£o)
     const separacao = await db.all(`
       SELECT
         p.numero_pedido,
         COALESCE(u.nome, s.nome)                                         AS colaborador,
-        REPLACE(COALESCE(u.turno, s.turno, 'Manha'), 'ã', 'a')          AS turno,
+        REPLACE(COALESCE(u.turno, s.turno, 'Manha'), 'Ã£', 'a')          AS turno,
         COALESCE(NULLIF(LEFT(p.iniciado_em,10),''), NULLIF(p.data_distribuicao,''), p.data_pedido) AS data,
         p.iniciado_em,
         COALESCE(
@@ -174,7 +174,7 @@ router.get('/performance/timing', requerAuth, requerPerfil('supervisor'), async 
       ORDER BY COALESCE(u.nome, s.nome), p.iniciado_em
     `, paramsSep);
 
-    // Reposição — tentativa a tentativa (unnest JSONB de tentativas)
+    // ReposiÃ§Ã£o â€” tentativa a tentativa (unnest JSONB de tentativas)
     const reposicao = await db.all(`
       SELECT
         ar.numero_pedido,
@@ -205,7 +205,7 @@ router.get('/performance/timing', requerAuth, requerPerfil('supervisor'), async 
       ORDER BY t.value->>'repositor', ar.data_aviso, t.value->>'hora_inicio'
     `, [ini, fim]);
 
-    // Checkout — operador a operador
+    // Checkout â€” operador a operador
     const checkout = await db.all(`
       SELECT
         c.numero_pedido,
@@ -232,7 +232,7 @@ router.get('/performance/timing', requerAuth, requerPerfil('supervisor'), async 
       ORDER BY COALESCE(NULLIF(c.operador_nome,''), 'Operador'), c.data_checkout, c.hora_checkout
     `, [ini, fim]);
 
-    // Embalagem — embalador a embalador
+    // Embalagem â€” embalador a embalador
     const embalagem = await db.all(`
       SELECT
         p.numero_pedido,
@@ -265,8 +265,8 @@ router.get('/performance/timing', requerAuth, requerPerfil('supervisor'), async 
   }
 });
 
-// ── GET /performance/metas — Metas proporcionais por tempo logado ────────
-router.get('/performance/metas', requerAuth, requerPerfil('supervisor'), async (req, res) => {
+// â”€â”€ GET /performance/metas â€” Metas proporcionais por tempo logado â”€â”€â”€â”€â”€â”€â”€â”€
+router.get('/performance/metas', requerAuth, requerPerfil('supervisor', 'gestor'), async (req, res) => {
   const { ini, fim } = req.query;
   if (!ini || !fim) return res.status(400).json({ erro: 'Informe ini e fim.' });
 
@@ -279,7 +279,7 @@ router.get('/performance/metas', requerAuth, requerPerfil('supervisor'), async (
       SELECT
         usuario_nome                                                AS nome,
         perfil,
-        REPLACE(COALESCE(turno,'Manha'),'ã','a')                   AS turno,
+        REPLACE(COALESCE(turno,'Manha'),'Ã£','a')                   AS turno,
         data,
         SUM(
           CASE
@@ -290,7 +290,7 @@ router.get('/performance/metas', requerAuth, requerPerfil('supervisor'), async (
                   LEAST(COALESCE(ultimo_ping, login_em) + INTERVAL '10 minutes', NOW()) - login_em
                 )) / 60)::int
               ),
-              480  -- cap sessões sem logout em 8h para evitar inflação
+              480  -- cap sessÃµes sem logout em 8h para evitar inflaÃ§Ã£o
             )
           END
         )::int                                                      AS minutos_logado
@@ -298,7 +298,7 @@ router.get('/performance/metas', requerAuth, requerPerfil('supervisor'), async (
       WHERE data >= $1
         AND data <= $2
         AND perfil IN ('separador','checkout','embalador','repositor')
-      GROUP BY usuario_nome, perfil, REPLACE(COALESCE(turno,'Manha'),'ã','a'), data
+      GROUP BY usuario_nome, perfil, REPLACE(COALESCE(turno,'Manha'),'Ã£','a'), data
       ORDER BY data, usuario_nome
     `, [ini, fim]);
 
@@ -369,8 +369,8 @@ router.get('/performance/metas', requerAuth, requerPerfil('supervisor'), async (
   }
 });
 
-// ── GET /performance/range ────────────────────────────────────────────────
-router.get('/performance/range', requerAuth, requerPerfil('supervisor'), async (req, res) => {
+// â”€â”€ GET /performance/range â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+router.get('/performance/range', requerAuth, requerPerfil('supervisor', 'gestor'), async (req, res) => {
   try {
     const row = await db.get(`
       SELECT
@@ -386,8 +386,8 @@ router.get('/performance/range', requerAuth, requerPerfil('supervisor'), async (
   } catch(e) { res.status(500).json({ erro: e.message }); }
 });
 
-// ── GET /performance/ocorrencias ─────────────────────────────────────────
-router.get('/performance/ocorrencias', requerAuth, requerPerfil('supervisor'), async (req, res) => {
+// â”€â”€ GET /performance/ocorrencias â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+router.get('/performance/ocorrencias', requerAuth, requerPerfil('supervisor', 'gestor'), async (req, res) => {
   const { ini, fim, colaborador, tipo } = req.query;
   try {
     const params = [];
@@ -404,11 +404,11 @@ router.get('/performance/ocorrencias', requerAuth, requerPerfil('supervisor'), a
   } catch(e) { res.status(500).json({ erro: e.message }); }
 });
 
-// ── POST /performance/ocorrencias ────────────────────────────────────────
-router.post('/performance/ocorrencias', requerAuth, requerPerfil('supervisor'), async (req, res) => {
+// â”€â”€ POST /performance/ocorrencias â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+router.post('/performance/ocorrencias', requerAuth, requerPerfil('supervisor', 'gestor'), async (req, res) => {
   const { colaborador_nome, tipo, gravidade, descricao, data, turno } = req.body;
   if (!colaborador_nome || !tipo || !descricao || !data) {
-    return res.status(400).json({ erro: 'Preencha colaborador, tipo, data e descrição.' });
+    return res.status(400).json({ erro: 'Preencha colaborador, tipo, data e descriÃ§Ã£o.' });
   }
   const supervisor_nome = req.session?.usuario?.nome || '';
   try {
@@ -421,12 +421,13 @@ router.post('/performance/ocorrencias', requerAuth, requerPerfil('supervisor'), 
   } catch(e) { res.status(500).json({ erro: e.message }); }
 });
 
-// ── DELETE /performance/ocorrencias/:id ──────────────────────────────────
-router.delete('/performance/ocorrencias/:id', requerAuth, requerPerfil('supervisor'), async (req, res) => {
+// â”€â”€ DELETE /performance/ocorrencias/:id â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+router.delete('/performance/ocorrencias/:id', requerAuth, requerPerfil('supervisor', 'gestor'), async (req, res) => {
   try {
     await pool.query('DELETE FROM ocorrencias WHERE id=$1', [req.params.id]);
-    res.json({ mensagem: 'Ocorrência excluída!' });
+    res.json({ mensagem: 'OcorrÃªncia excluÃ­da!' });
   } catch(e) { res.status(500).json({ erro: e.message }); }
 });
 
 module.exports = router;
+

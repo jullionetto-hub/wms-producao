@@ -106,7 +106,7 @@ function ativarApp() {
 
   // Botão Senha: apenas Supervisão tem acesso
   const btnSenha = document.getElementById('btn-senha-hdr');
-  if (btnSenha) btnSenha.style.display = usuarioAtual.perfil === 'supervisor' ? '' : 'none';
+  if (btnSenha) btnSenha.style.display = (usuarioAtual.perfil === 'supervisor' || usuarioAtual.perfil === 'gestor') ? '' : 'none';
 
   const perfil = usuarioAtual.perfil;
   const mob = isMobile();
@@ -358,6 +358,9 @@ function montarSidebar() {
       <a class="mi" onclick="irPara('entrada-manual',this)"><span class="mi-ic">📥</span>Entrada Manual</a>
       <div class="mg">ANÁLISE</div>
       <a class="mi" onclick="irPara('estatisticas-emb',this);carregarEstatisticasEmb()"><span class="mi-ic">📊</span>Estatísticas</a>`,
+    gestor: `
+      <div class="mg">GESTÃO</div>
+      <a class="mi ativo" onclick="irPara('gestao',this)"><span class="mi-ic">📊</span>Painel Gestão</a>`,
   };
   sb.innerHTML = menus[usuarioAtual.perfil] || '';
 }
@@ -422,6 +425,7 @@ function irPara(pag, el) {
   if (pag === 'passagem')         { iniciarPassagem(); }
   if (pag === 'entrada-manual')   { renderizarPagEntradaManual(); }
   if (pag === 'dash-logistica')  { renderizarDashLogistica(); }
+  if (pag === 'gestao')          { renderizarPagGestao(); }
 }
 
 
@@ -471,6 +475,10 @@ function iniciarPorPerfil() {
     var _ei=document.getElementById('emb-ini'),_ef=document.getElementById('emb-fim');
     if(_ei&&!_ei.value)_ei.value=hojeLocal(); if(_ef&&!_ef.value)_ef.value=hojeLocal();
     mudarTabEmbDesk('fila');
+  }
+  if (usuarioAtual.perfil === 'gestor') {
+    document.getElementById('pag-gestao').classList.add('ativa');
+    renderizarPagGestao();
   }
 }
 
