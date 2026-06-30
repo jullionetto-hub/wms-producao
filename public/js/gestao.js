@@ -162,30 +162,25 @@ async function carregarGestaoAbsenteismo() {
   tabela.innerHTML = '';
 
   try {
-    const [rankRes, teamRes] = await Promise.all([
-      fetch(`${API}/gestao/absenteismo/ranking`, { credentials:'include' }),
-      fetch(`${API}/gestao/absenteismo/team`, { credentials:'include' }),
-    ]);
+    // Usa apenas /reports/team — retorna tudo incluindo `id` por funcionário
+    const res = await fetch(`${API}/gestao/absenteismo/team`, { credentials:'include' });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.erro || `HTTP ${res.status}`);
+    }
+    const team = await res.json();
 
-    if (!rankRes.ok || !teamRes.ok) throw new Error('Erro na API de absenteísmo');
-
-    const ranking = await rankRes.json();
-    const team    = await teamRes.json();
-
-    // sumário agregado
-    const lista = team.employees || team || [];
-    const totalFuncionarios = lista.length;
-    const totalFaltas   = lista.reduce((s, e) => s + (e.total_faltas || e.faltas || 0), 0);
-    const totalAtestados = lista.reduce((s, e) => s + (e.total_atestados || e.atestados || 0), 0);
-    const taxaMedia = lista.length
-      ? lista.reduce((s, e) => s + (parseFloat(e.taxa_absenteismo) || 0), 0) / lista.length
-      : 0;
+    // Campos corretos da API: total_employees, total_faltas, total_atestados, team_absenteeism_rate
+    const totalFunc     = team.total_employees ?? (team.employees || []).length;
+    const totalFaltas   = team.total_faltas    ?? 0;
+    const totalAtestados = team.total_atestados ?? 0;
+    const taxaEquipe    = parseFloat(team.team_absenteeism_rate) || 0;
 
     cards.innerHTML = [
-      { icon:'👥', label:'Funcionários', val: totalFuncionarios },
-      { icon:'❌', label:'Total Faltas', val: totalFaltas },
-      { icon:'🏥', label:'Atestados', val: totalAtestados },
-      { icon:'📉', label:'Taxa Média', val: `${taxaMedia.toFixed(1)}%` },
+      { icon:'👥', label:'Funcionários',  val: totalFunc },
+      { icon:'❌', label:'Total Faltas',  val: totalFaltas },
+      { icon:'🏥', label:'Atestados',     val: totalAtestados },
+      { icon:'📉', label:'Taxa da Equipe', val: `${taxaEquipe.toFixed(1)}%` },
     ].map(c => `
       <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px">
         <div style="font-size:22px;margin-bottom:6px">${c.icon}</div>
@@ -193,9 +188,13 @@ async function carregarGestaoAbsenteismo() {
         <div style="font-size:22px;font-weight:800;color:var(--text);font-family:'Space Mono',monospace">${c.val}</div>
       </div>`).join('');
 
-    const rows = (ranking.employees || ranking || []);
+    // employees: [{ id, name, sector, faltas_count, atestados_count, absenteeism_rate, ... }]
+    const rows = [...(team.employees || [])].sort(
+      (a, b) => (parseFloat(b.absenteeism_rate) || 0) - (parseFloat(a.absenteeism_rate) || 0)
+    );
+
     if (!rows.length) {
-      tabela.innerHTML = _gestaoVazio('Nenhum dado de absenteísmo disponível.');
+      tabela.innerHTML = _gestaoVazio('Nenhum dado de absenteísmo disponível. Importe os PDFs no sistema de absenteísmo.');
       return;
     }
 
@@ -205,25 +204,30 @@ async function carregarGestaoAbsenteismo() {
           <tr style="background:var(--surface2)">
             <th style="padding:10px 12px;text-align:left;color:var(--text3);font-size:11px;font-weight:700;border-bottom:1px solid var(--border)">#</th>
             <th style="padding:10px 12px;text-align:left;color:var(--text3);font-size:11px;font-weight:700;border-bottom:1px solid var(--border)">FUNCIONÁRIO</th>
+            <th style="padding:10px 12px;text-align:left;color:var(--text3);font-size:11px;font-weight:700;border-bottom:1px solid var(--border)">SETOR</th>
             <th style="padding:10px 12px;text-align:center;color:var(--text3);font-size:11px;font-weight:700;border-bottom:1px solid var(--border)">FALTAS</th>
             <th style="padding:10px 12px;text-align:center;color:var(--text3);font-size:11px;font-weight:700;border-bottom:1px solid var(--border)">ATESTADOS</th>
-            <th style="padding:10px 12px;text-align:center;color:var(--text3);font-size:11px;font-weight:700;border-bottom:1px solid var(--border)">TAXA</th>
+            <th style="padding:10px 12px;text-align:center;color:var(--text3);font-size:11px;font-weight:700;border-bottom:1px solid var(--border)">ATRASO</th>
+            <th style="padding:10px 12px;text-align:center;color:var(--text3);font-size:11px;font-weight:700;border-bottom:1px solid var(--border)">ABSENTEÍSMO</th>
             <th style="padding:10px 12px;text-align:center;color:var(--text3);font-size:11px;font-weight:700;border-bottom:1px solid var(--border)">DETALHE</th>
           </tr>
         </thead>
         <tbody>
           ${rows.map((r, i) => {
-            const taxa = parseFloat(r.taxa_absenteismo) || 0;
+            const taxa = parseFloat(r.absenteeism_rate) || 0;
             const cor  = taxa >= 10 ? 'var(--red)' : taxa >= 5 ? '#f59e0b' : 'var(--green)';
+            const nome = r.name || '—';
             return `
             <tr style="border-bottom:1px solid var(--border)">
               <td style="padding:10px 12px;font-weight:700;color:var(--text3)">${i+1}</td>
-              <td style="padding:10px 12px;font-weight:700;color:var(--text)">${r.nome || r.employee_name || '—'}</td>
-              <td style="padding:10px 12px;text-align:center;color:var(--text2)">${r.total_faltas ?? r.faltas ?? '—'}</td>
-              <td style="padding:10px 12px;text-align:center;color:var(--text2)">${r.total_atestados ?? r.atestados ?? '—'}</td>
+              <td style="padding:10px 12px;font-weight:700;color:var(--text)">${nome}</td>
+              <td style="padding:10px 12px;color:var(--text2);font-size:12px">${r.sector || '—'}</td>
+              <td style="padding:10px 12px;text-align:center;color:var(--text2)">${r.faltas_count ?? '—'}</td>
+              <td style="padding:10px 12px;text-align:center;color:var(--text2)">${r.atestados_count ?? '—'}</td>
+              <td style="padding:10px 12px;text-align:center;color:var(--text2);font-size:12px">${r.total_atraso_formatted || '—'}</td>
               <td style="padding:10px 12px;text-align:center;font-weight:800;color:${cor};font-family:'Space Mono',monospace">${taxa.toFixed(1)}%</td>
               <td style="padding:10px 12px;text-align:center">
-                <button onclick="verDetalheAbsenteismo(${r.id || r.employee_id || 0}, '${(r.nome || r.employee_name || '').replace(/'/g,"\\'")}',this)"
+                <button onclick="verDetalheAbsenteismo(${r.id}, '${nome.replace(/'/g,"\\'")}', this)"
                   style="padding:4px 12px;background:transparent;border:1.5px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer;color:var(--text2)">
                   Ver
                 </button>
@@ -249,35 +253,45 @@ async function verDetalheAbsenteismo(id, nome, btn) {
     const res  = await fetch(`${API}/gestao/absenteismo/funcionario/${id}`, { credentials:'include' });
     if (!res.ok) throw new Error('Erro ao carregar');
     const data = await res.json();
-    const registros = data.records || data.daily_records || data.registros || [];
+    // API retorna: daily_records: [{date, day_of_week, status, falta, atestado, ferias, entry_time, exit_time, atraso_minutes}]
+    const registros = (data.daily_records || []).filter(r => r.falta || r.atestado || r.ferias || r.atraso_minutes > 0);
 
     detalhe.innerHTML = `
       <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
           <div style="font-weight:800;color:var(--text);font-size:14px">📅 ${nome}</div>
           <button onclick="document.getElementById('gabs-detalhe').innerHTML=''"
             style="background:transparent;border:none;font-size:18px;cursor:pointer;color:var(--text3)">✕</button>
         </div>
-        ${!registros.length ? '<div style="color:var(--text3);padding:10px">Nenhum registro encontrado.</div>' : `
+        <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:14px;font-size:12px">
+          <span>Faltas: <b style="color:var(--red)">${data.faltas_count ?? 0}</b></span>
+          <span>Atestados: <b style="color:#f59e0b">${data.atestados_count ?? 0}</b></span>
+          <span>Atraso: <b>${data.total_atraso_formatted || '—'}</b></span>
+          <span>Absenteísmo: <b>${parseFloat(data.absenteeism_rate||0).toFixed(1)}%</b></span>
+          <span style="color:var(--text3)">${data.period_start || ''} → ${data.period_end || ''}</span>
+        </div>
+        ${!registros.length ? '<div style="color:var(--text3);padding:10px">Nenhuma ocorrência encontrada no período.</div>' : `
         <div style="overflow-x:auto">
           <table style="width:100%;border-collapse:collapse;font-size:12px">
             <thead>
               <tr style="background:var(--surface)">
                 <th style="padding:8px 10px;text-align:left;color:var(--text3);border-bottom:1px solid var(--border)">DATA</th>
-                <th style="padding:8px 10px;text-align:center;color:var(--text3);border-bottom:1px solid var(--border)">TIPO</th>
-                <th style="padding:8px 10px;text-align:left;color:var(--text3);border-bottom:1px solid var(--border)">OBSERVAÇÃO</th>
+                <th style="padding:8px 10px;text-align:left;color:var(--text3);border-bottom:1px solid var(--border)">DIA</th>
+                <th style="padding:8px 10px;text-align:center;color:var(--text3);border-bottom:1px solid var(--border)">OCORRÊNCIA</th>
+                <th style="padding:8px 10px;text-align:center;color:var(--text3);border-bottom:1px solid var(--border)">ATRASO</th>
               </tr>
             </thead>
             <tbody>
               ${registros.map(r => {
-                const tipo = r.tipo || r.type || r.ocorrencia || '—';
-                const cor  = tipo.toLowerCase().includes('falt') ? 'var(--red)' : tipo.toLowerCase().includes('atestado') ? '#f59e0b' : 'var(--text2)';
-                const data = r.data || r.date || r.data_ocorrencia || '—';
+                const ocorrencia = r.falta ? '❌ Falta' : r.atestado ? '🏥 Atestado' : r.ferias ? '🌴 Férias' : '⏰ Atraso';
+                const cor = r.falta ? 'var(--red)' : r.atestado ? '#f59e0b' : r.ferias ? '#3b82f6' : '#8b5cf6';
+                const dt  = r.date ? new Date(r.date + 'T12:00:00').toLocaleDateString('pt-BR') : '—';
                 return `
                 <tr style="border-bottom:1px solid var(--border)">
-                  <td style="padding:8px 10px;color:var(--text)">${typeof data === 'string' && data.includes('T') ? new Date(data).toLocaleDateString('pt-BR') : data}</td>
-                  <td style="padding:8px 10px;text-align:center;font-weight:700;color:${cor}">${tipo}</td>
-                  <td style="padding:8px 10px;color:var(--text2)">${r.observacao || r.obs || r.note || '—'}</td>
+                  <td style="padding:8px 10px;color:var(--text)">${dt}</td>
+                  <td style="padding:8px 10px;color:var(--text2)">${r.day_of_week || '—'}</td>
+                  <td style="padding:8px 10px;text-align:center;font-weight:700;color:${cor}">${ocorrencia}</td>
+                  <td style="padding:8px 10px;text-align:center;color:var(--text2)">${r.atraso_minutes ? `${r.atraso_minutes} min` : '—'}</td>
                 </tr>`;
               }).join('')}
             </tbody>

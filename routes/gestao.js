@@ -29,7 +29,11 @@ async function absProxy(path) {
   const res = await fetch(`${ABS_URL}${path}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
-  if (!res.ok) throw new Error(`Absenteísmo API: ${res.status}`);
+  if (!res.ok) {
+    let detail = '';
+    try { const j = await res.json(); detail = j.detail || JSON.stringify(j); } catch {}
+    throw new Error(`API absenteísmo ${res.status}: ${detail}`);
+  }
   return res.json();
 }
 
