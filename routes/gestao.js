@@ -12,12 +12,16 @@ let _absTokenExp = 0;
 
 async function getAbsToken() {
   if (_absToken && Date.now() < _absTokenExp) return _absToken;
-  const res = await fetch(`${ABS_URL}/login`, {
+  const res = await fetch(`${ABS_URL}/api/auth/login`, {
     method : 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body   : `username=${encodeURIComponent(ABS_EMAIL)}&password=${encodeURIComponent(ABS_PASS)}`,
   });
-  if (!res.ok) throw new Error('Falha ao autenticar no sistema de absenteísmo');
+  if (!res.ok) {
+    let detail = '';
+    try { const j = await res.json(); detail = j.detail || JSON.stringify(j); } catch {}
+    throw new Error(`Auth absenteísmo ${res.status}: ${detail}`);
+  }
   const { access_token } = await res.json();
   _absToken    = access_token;
   _absTokenExp = Date.now() + 50 * 60 * 1000;
@@ -40,22 +44,22 @@ async function absProxy(path) {
 const requerGestor = requerPerfil('gestor', 'supervisor');
 
 router.get('/gestao/absenteismo/team',    requerAuth, requerGestor, async (_req, res) => {
-  try { res.json(await absProxy('/reports/team')); }
+  try { res.json(await absProxy('/api/reports/team')); }
   catch (e) { res.status(502).json({ erro: e.message }); }
 });
 
 router.get('/gestao/absenteismo/ranking', requerAuth, requerGestor, async (_req, res) => {
-  try { res.json(await absProxy('/reports/ranking?limit=50')); }
+  try { res.json(await absProxy('/api/reports/ranking?limit=50')); }
   catch (e) { res.status(502).json({ erro: e.message }); }
 });
 
 router.get('/gestao/absenteismo/setor',  requerAuth, requerGestor, async (_req, res) => {
-  try { res.json(await absProxy('/reports/summary-by-sector')); }
+  try { res.json(await absProxy('/api/reports/summary-by-sector')); }
   catch (e) { res.status(502).json({ erro: e.message }); }
 });
 
 router.get('/gestao/absenteismo/funcionario/:id', requerAuth, requerGestor, async (req, res) => {
-  try { res.json(await absProxy(`/reports/employee/${req.params.id}`)); }
+  try { res.json(await absProxy(`/api/reports/employee/${req.params.id}`)); }
   catch (e) { res.status(502).json({ erro: e.message }); }
 });
 
