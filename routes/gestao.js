@@ -63,4 +63,39 @@ router.get('/gestao/absenteismo/funcionario/:id', requerAuth, requerGestor, asyn
   catch (e) { res.status(502).json({ erro: e.message }); }
 });
 
+// Proxy de upload — repassa o multipart raw para o FastAPI
+router.post('/gestao/absenteismo/upload',
+  requerAuth, requerGestor,
+  express.raw({ type: '*/*', limit: '30mb' }),
+  async (req, res) => {
+    try {
+      const token = await getAbsToken();
+      const r = await fetch(`${ABS_URL}/api/upload`, {
+        method : 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': req.headers['content-type'] },
+        body   : req.body,
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) return res.status(r.status).json({ erro: data.detail || 'Erro no upload' });
+      res.json(data);
+    } catch (e) { res.status(502).json({ erro: e.message }); }
+  }
+);
+
+router.get('/gestao/absenteismo/uploads', requerAuth, requerGestor, async (_req, res) => {
+  try { res.json(await absProxy('/api/uploads')); }
+  catch (e) { res.status(502).json({ erro: e.message }); }
+});
+
+router.delete('/gestao/absenteismo/uploads/:id', requerAuth, requerGestor, async (req, res) => {
+  try {
+    const token = await getAbsToken();
+    const r = await fetch(`${ABS_URL}/api/uploads/${req.params.id}`, {
+      method : 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    res.status(r.status).json(await r.json().catch(() => ({})));
+  } catch (e) { res.status(502).json({ erro: e.message }); }
+});
+
 module.exports = router;

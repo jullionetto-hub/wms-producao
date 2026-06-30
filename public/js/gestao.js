@@ -12,8 +12,35 @@ function renderizarPagGestao() {
   if (!root) return;
   root.innerHTML = `
 <div style="padding:20px 24px 0">
-  <div style="font-family:'Space Mono',monospace;font-size:17px;color:var(--text);margin-bottom:20px">📅 Absenteísmo</div>
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:20px">
+    <div style="font-family:'Space Mono',monospace;font-size:17px;color:var(--text)">📅 Absenteísmo</div>
+    <button onclick="toggleImportarAbs()" style="padding:8px 16px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">📥 Importar PDF</button>
+  </div>
+
+  <!-- ÁREA DE IMPORTAÇÃO (colapsável) -->
+  <div id="gabs-import-area" style="display:none;background:var(--surface2);border:1.5px dashed var(--border);border-radius:12px;padding:20px;margin-bottom:20px">
+    <div style="font-size:12px;font-weight:700;color:var(--text3);letter-spacing:1px;margin-bottom:12px">IMPORTAR RELATÓRIO DE PONTO (PDF InPonto / MIESS)</div>
+    <div id="gabs-drop-zone"
+      ondragover="event.preventDefault();this.style.borderColor='var(--accent)'"
+      ondragleave="this.style.borderColor='var(--border)'"
+      ondrop="absHandleDrop(event)"
+      style="border:2px dashed var(--border);border-radius:10px;padding:28px;text-align:center;cursor:pointer;transition:.2s"
+      onclick="document.getElementById('gabs-file-input').click()">
+      <div style="font-size:32px;margin-bottom:8px">📄</div>
+      <div style="font-size:14px;font-weight:700;color:var(--text)">Clique ou arraste o PDF aqui</div>
+      <div style="font-size:12px;color:var(--text3);margin-top:4px">Relatório de ponto do InPonto / MIESS — máx. 30 MB</div>
+    </div>
+    <input type="file" id="gabs-file-input" accept=".pdf" style="display:none" onchange="absEnviarPdf(this.files[0])">
+    <div id="gabs-upload-status" style="margin-top:10px;font-size:13px"></div>
+
+    <!-- Histórico de uploads -->
+    <div style="margin-top:16px">
+      <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:1px;margin-bottom:8px">HISTÓRICO DE IMPORTAÇÕES</div>
+      <div id="gabs-historico">Carregando...</div>
+    </div>
+  </div>
 </div>
+
 <div style="padding:0 24px 24px">
   <div id="gabs-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px"></div>
   <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:1px;margin-bottom:10px">RANKING POR ABSENTEÍSMO</div>
@@ -22,6 +49,83 @@ function renderizarPagGestao() {
 </div>
 `;
   carregarGestaoAbsenteismo();
+}
+
+
+function toggleImportarAbs() {
+  const area = document.getElementById('gabs-import-area');
+  if (!area) return;
+  const visible = area.style.display !== 'none';
+  area.style.display = visible ? 'none' : '';
+  if (!visible) carregarHistoricoAbs();
+}
+
+function absHandleDrop(event) {
+  event.preventDefault();
+  document.getElementById('gabs-drop-zone').style.borderColor = 'var(--border)';
+  const file = event.dataTransfer?.files?.[0];
+  if (file && file.name.toLowerCase().endsWith('.pdf')) absEnviarPdf(file);
+  else toast('Selecione um arquivo PDF', 'erro');
+}
+
+async function absEnviarPdf(file) {
+  if (!file) return;
+  const status = document.getElementById('gabs-upload-status');
+  status.innerHTML = `<span style="color:var(--text2)">⏳ Enviando <b>${file.name}</b>...</span>`;
+  const fd = new FormData();
+  fd.append('file', file);
+  try {
+    const res  = await fetch(`${API}/gestao/absenteismo/upload`, { method:'POST', credentials:'include', body: fd });
+    const data = await res.json();
+    if (!res.ok) { status.innerHTML = `<span style="color:var(--red)">❌ ${data.erro || 'Erro no upload'}</span>`; return; }
+    status.innerHTML = `<span style="color:var(--green)">✅ ${data.message || 'Importado!'} (${data.employees} funcionário(s))</span>`;
+    document.getElementById('gabs-file-input').value = '';
+    carregarHistoricoAbs();
+    carregarGestaoAbsenteismo();
+  } catch(e) {
+    status.innerHTML = `<span style="color:var(--red)">❌ Erro: ${e.message}</span>`;
+  }
+}
+
+async function carregarHistoricoAbs() {
+  const el = document.getElementById('gabs-historico');
+  if (!el) return;
+  try {
+    const res   = await fetch(`${API}/gestao/absenteismo/uploads`, { credentials:'include' });
+    const lista = await res.json();
+    if (!Array.isArray(lista) || !lista.length) {
+      el.innerHTML = '<div style="color:var(--text3);font-size:12px">Nenhum arquivo importado ainda.</div>';
+      return;
+    }
+    el.innerHTML = lista.map(u => {
+      const ok  = u.status === 'success';
+      const dt  = u.upload_at ? new Date(u.upload_at).toLocaleString('pt-BR') : '—';
+      const cor = ok ? 'var(--green)' : 'var(--red)';
+      const ico = ok ? '✅' : '❌';
+      return `
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;background:var(--surface);margin-bottom:6px;font-size:12px">
+        <span>${ico}</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${u.filename}</div>
+          <div style="color:var(--text3)">${dt} · <span style="color:${cor}">${ok ? `${u.records_count ?? 0} func.` : u.error_message || 'erro'}</span></div>
+        </div>
+        <button onclick="absExcluirUpload(${u.id},this)" title="Excluir"
+          style="background:transparent;border:none;color:var(--red);font-size:16px;cursor:pointer;padding:4px">🗑️</button>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    el.innerHTML = `<div style="color:var(--red);font-size:12px">Erro ao carregar histórico.</div>`;
+  }
+}
+
+async function absExcluirUpload(id, btn) {
+  if (!confirm('Excluir esta importação? Os dados dos funcionários serão removidos.')) return;
+  btn.disabled = true;
+  try {
+    const res = await fetch(`${API}/gestao/absenteismo/uploads/${id}`, { method:'DELETE', credentials:'include' });
+    if (res.ok) { carregarHistoricoAbs(); carregarGestaoAbsenteismo(); }
+    else btn.disabled = false;
+  } catch(e) { btn.disabled = false; }
 }
 
 
