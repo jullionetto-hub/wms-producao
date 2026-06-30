@@ -12,93 +12,16 @@ function renderizarPagGestao() {
   if (!root) return;
   root.innerHTML = `
 <div style="padding:20px 24px 0">
-  <div style="font-family:'Space Mono',monospace;font-size:17px;color:var(--text);margin-bottom:16px">📊 Painel de Gestão</div>
-  <div style="display:flex;gap:4px;border-bottom:2px solid var(--border);margin-bottom:20px">
-    <button id="gtab-btn-performance"  onclick="mudarTabGestao('performance')"  class="gtab-btn ativo"  style="padding:10px 20px;background:transparent;border:none;font-size:13px;font-weight:700;cursor:pointer;border-bottom:3px solid var(--accent);color:var(--accent);margin-bottom:-2px">📊 Performance</button>
-    <button id="gtab-btn-ocorrencias"  onclick="mudarTabGestao('ocorrencias')"  class="gtab-btn"        style="padding:10px 20px;background:transparent;border:none;font-size:13px;font-weight:700;cursor:pointer;border-bottom:3px solid transparent;color:var(--text2);margin-bottom:-2px">⚠️ Ocorrências</button>
-    <button id="gtab-btn-absenteismo" onclick="mudarTabGestao('absenteismo')" class="gtab-btn"        style="padding:10px 20px;background:transparent;border:none;font-size:13px;font-weight:700;cursor:pointer;border-bottom:3px solid transparent;color:var(--text2);margin-bottom:-2px">📅 Absenteísmo</button>
-  </div>
+  <div style="font-family:'Space Mono',monospace;font-size:17px;color:var(--text);margin-bottom:20px">📅 Absenteísmo</div>
 </div>
-
-<!-- ABA PERFORMANCE -->
-<div id="gtab-performance" class="gtab-pane" style="padding:0 24px 24px">
-  <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px">
-    <div style="flex:1;min-width:180px">
-      <label style="font-size:11px;font-weight:700;color:var(--text3);display:block;margin-bottom:4px">DE</label>
-      <input type="date" id="gperf-ini" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-size:13px">
-    </div>
-    <div style="flex:1;min-width:180px">
-      <label style="font-size:11px;font-weight:700;color:var(--text3);display:block;margin-bottom:4px">ATÉ</label>
-      <input type="date" id="gperf-fim" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-size:13px">
-    </div>
-    <div style="flex:1;min-width:140px">
-      <label style="font-size:11px;font-weight:700;color:var(--text3);display:block;margin-bottom:4px">TURNO</label>
-      <select id="gperf-turno" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-size:13px">
-        <option value="">Todos</option>
-        <option value="Manha">Manhã</option>
-        <option value="Tarde">Tarde</option>
-        <option value="Noite">Noite</option>
-      </select>
-    </div>
-    <div style="flex:0;display:flex;align-items:flex-end">
-      <button onclick="carregarGestaoPerformance()" style="padding:8px 18px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">🔍 Buscar</button>
-    </div>
-  </div>
-  <div id="gperf-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px"></div>
-  <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:1px;margin-bottom:10px">RANKING SEPARADORES</div>
-  <div id="gperf-tabela" style="overflow-x:auto"></div>
-</div>
-
-<!-- ABA OCORRÊNCIAS -->
-<div id="gtab-ocorrencias" class="gtab-pane" style="display:none;padding:0 24px 24px">
-  <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px">
-    <div style="flex:1;min-width:180px">
-      <label style="font-size:11px;font-weight:700;color:var(--text3);display:block;margin-bottom:4px">DE</label>
-      <input type="date" id="goc-ini" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-size:13px">
-    </div>
-    <div style="flex:1;min-width:180px">
-      <label style="font-size:11px;font-weight:700;color:var(--text3);display:block;margin-bottom:4px">ATÉ</label>
-      <input type="date" id="goc-fim" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-size:13px">
-    </div>
-    <div style="flex:0;display:flex;align-items:flex-end">
-      <button onclick="carregarGestaoOcorrencias()" style="padding:8px 18px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">🔍 Buscar</button>
-    </div>
-  </div>
-  <div id="goc-lista"></div>
-</div>
-
-<!-- ABA ABSENTEÍSMO -->
-<div id="gtab-absenteismo" class="gtab-pane" style="display:none;padding:0 24px 24px">
+<div style="padding:0 24px 24px">
   <div id="gabs-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px"></div>
   <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:1px;margin-bottom:10px">RANKING POR ABSENTEÍSMO</div>
   <div id="gabs-tabela" style="overflow-x:auto"></div>
   <div id="gabs-detalhe" style="margin-top:20px"></div>
 </div>
 `;
-
-  const hoje = hojeLocal();
-  ['gperf-ini','gperf-fim','goc-ini','goc-fim'].forEach(id => {
-    const el = document.getElementById(id); if (el && !el.value) el.value = hoje;
-  });
-
-  mudarTabGestao('performance');
-}
-
-
-function mudarTabGestao(tab) {
-  _gestaoTabAtual = tab;
-  ['performance','ocorrencias','absenteismo'].forEach(t => {
-    const pane = document.getElementById(`gtab-${t}`);
-    const btn  = document.getElementById(`gtab-btn-${t}`);
-    if (pane) pane.style.display = t === tab ? '' : 'none';
-    if (btn) {
-      btn.style.borderBottomColor = t === tab ? 'var(--accent)' : 'transparent';
-      btn.style.color = t === tab ? 'var(--accent)' : 'var(--text2)';
-    }
-  });
-  if (tab === 'performance')  carregarGestaoPerformance();
-  if (tab === 'ocorrencias')  carregarGestaoOcorrencias();
-  if (tab === 'absenteismo')  carregarGestaoAbsenteismo();
+  carregarGestaoAbsenteismo();
 }
 
 

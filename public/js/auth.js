@@ -102,7 +102,8 @@ function ativarApp() {
   document.getElementById('tela-login').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
   document.getElementById('hdr-nome').textContent   = usuarioAtual.nome;
-  document.getElementById('hdr-perfil').textContent = usuarioAtual.perfil === 'repositor' ? labelSubtipoRepositor(usuarioAtual.subtipo_repositor) : usuarioAtual.perfil.toUpperCase();
+  const _labelPerfil = { repositor: labelSubtipoRepositor(usuarioAtual.subtipo_repositor), gestor: 'GESTÃO' };
+  document.getElementById('hdr-perfil').textContent = _labelPerfil[usuarioAtual.perfil] ?? usuarioAtual.perfil.toUpperCase();
 
   // Botão Senha: apenas Supervisão tem acesso
   const btnSenha = document.getElementById('btn-senha-hdr');
@@ -359,8 +360,25 @@ function montarSidebar() {
       <div class="mg">ANÁLISE</div>
       <a class="mi" onclick="irPara('estatisticas-emb',this);carregarEstatisticasEmb()"><span class="mi-ic">📊</span>Estatísticas</a>`,
     gestor: `
-      <div class="mg">GESTÃO</div>
-      <a class="mi ativo" onclick="irPara('gestao',this)"><span class="mi-ic">📊</span>Painel Gestão</a>`,
+      <div class="mg">VISÃO GERAL</div>
+      <a class="mi ativo" onclick="irPara('dashboard',this)"><span class="mi-ic">📊</span>Dashboard</a>
+      <a class="mi" onclick="irPara('pedidos',this)"><span class="mi-ic">📋</span>Pedidos</a>
+      <a class="mi" onclick="irPara('liberacao',this)"><span class="mi-ic">🔓</span>Liberação <span class="mbadge" id="menu-badge-lib" style="display:none;background:var(--red)">0</span></a>
+      <a class="mi" onclick="irPara('performance',this)"><span class="mi-ic">🏆</span>Performance</a>
+      <a class="mi" onclick="irPara('relatorios',this)"><span class="mi-ic">📅</span>Relatórios</a>
+      <a class="mi" onclick="irPara('dash-logistica',this)"><span class="mi-ic">🚚</span>Dash Logística</a>
+      <a class="mi" onclick="irPara('auditoria',this)"><span class="mi-ic">🔍</span>Auditoria</a>
+      <a class="mi" onclick="irPara('diario',this)"><span class="mi-ic">📋</span>Diário de Bordo<span class="mbadge" id="menu-badge-diario" style="display:none;background:#7c3aed">!</span></a>
+      <a class="mi" onclick="irPara('protocolo',this);carregarProtocolo()"><span class="mi-ic">📋</span>Protocolo<span class="mbadge" id="menu-badge-proto" style="display:none">0</span></a>
+      <a class="mi" onclick="irPara('passagem',this)"><span class="mi-ic">🔄</span>Passagem de Turno<span class="mbadge" id="menu-badge-passagem" style="display:none;background:var(--red)">!</span></a>
+      <div class="mg">OPERAÇÃO</div>
+      <a class="mi" onclick="irPara('separacao',this)"><span class="mi-ic">📦</span>Separação</a>
+      <a class="mi" onclick="irPara('reposicao',this)"><span class="mi-ic">🔧</span>Reposição <span class="mbadge" id="menu-badge-rep" style="display:none">0</span></a>
+      <a class="mi" onclick="irPara('entrada-manual',this)"><span class="mi-ic">📥</span>Entrada Manual</a>
+      <a class="mi" onclick="irPara('checkout',this)"><span class="mi-ic">🏷️</span>Checkout</a>
+      <a class="mi" onclick="irPara('embalagem',this)"><span class="mi-ic">📫</span>Embalagem</a>
+      <div class="mg">PESSOAL</div>
+      <a class="mi" onclick="irPara('gestao',this)"><span class="mi-ic">📅</span>Absenteísmo</a>`,
   };
   sb.innerHTML = menus[usuarioAtual.perfil] || '';
 }
@@ -477,8 +495,20 @@ function iniciarPorPerfil() {
     mudarTabEmbDesk('fila');
   }
   if (usuarioAtual.perfil === 'gestor') {
-    document.getElementById('pag-gestao').classList.add('ativa');
-    renderizarPagGestao();
+    document.getElementById('pag-dashboard').classList.add('ativa');
+    const setVal = (id, v) => { const e = document.getElementById(id); if(e) e.value = v; };
+    setVal('filtro-data-ini', hoje); setVal('filtro-data-fim', hoje);
+    setVal('filtro-ped-ini',  hoje); setVal('filtro-ped-fim',  hoje);
+    setVal('filtro-tl-ini',   hoje); setVal('filtro-tl-fim',   hoje);
+    setVal('perf-ini', hoje); setVal('perf-fim', hoje);
+    setVal('filtro-tl-data',  hoje);
+    carregarDashboard();
+    setInterval(atualizarBadgeRep, 15000);
+    atualizarBadgeRep();
+    if (typeof atualizarBadgeLiberacao === 'function') {
+      atualizarBadgeLiberacao();
+      setInterval(atualizarBadgeLiberacao, 20000);
+    }
   }
 }
 

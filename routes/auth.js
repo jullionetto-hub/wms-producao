@@ -16,7 +16,7 @@ router.post('/auth/login', async (req,res) => {
   const perfil = sanitizeStr(req.body.perfil, 50);
 
   if (!login || !senha || !perfil) return res.status(400).json({erro:'Dados incompletos!'});
-  if (!['supervisor','separador','repositor','checkout','embalador'].includes(perfil))
+  if (!['supervisor','separador','repositor','checkout','embalador','gestor'].includes(perfil))
     return res.status(400).json({erro:'Perfil inválido!'});
 
   try {
