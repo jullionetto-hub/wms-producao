@@ -183,15 +183,9 @@ async function retomarCheckoutMobile(id) {
     const data = await res.json().catch(()=>({}));
     if (!res.ok) { toast(data.erro||'Erro ao retomar','erro'); return; }
     toast('▶ Checkout retomado!', 'sucesso');
-    // Vai direto para a aba CHECKOUT e busca o pedido pelo número da caixa
+    const num = data.numero_caixa || data.numero_pedido || '';
     const inp = document.getElementById('m-ck-input-caixa');
-    if (inp && data.checkout_id) {
-      // Busca o checkout pelo id para pegar o numero_caixa
-      const r2 = await fetch(`${API}/checkout/aguardando`, { credentials:'include' });
-      // Usa o numero_pedido do elemento já na tela
-      const card = document.querySelector(`[data-ck-id="${id}"]`);
-      if (card) { inp.value = card.dataset.numeroPedido; }
-    }
+    if (inp) inp.value = num;
     mudarTabCk('busca');
     setTimeout(() => buscarCaixaMobile(), 300);
   } catch(e) { toast('Erro de rede','erro'); }

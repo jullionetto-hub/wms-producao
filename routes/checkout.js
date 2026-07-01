@@ -287,13 +287,22 @@ router.put('/checkout/:id/retomar', requerAuth, async (req,res) => {
        VALUES ($1,$2,$3,'', $4, 0, 'retomado')`,
       [id, operador_nome, hora, data]
     );
-    await pool.query(`UPDATE checkout SET status='pendente' WHERE id=$1`,[id]);
-    // Retorna os itens com lista para o frontend renderizar
+    await pool.query(
+      `UPDATE checkout SET status='pendente', operador_nome=$1 WHERE id=$2`,
+      [operador_nome, id]
+    );
     const itens = await db.all(
       `SELECT codigo,descricao,endereco,quantidade,status,obs FROM itens_pedido WHERE pedido_id=$1 ORDER BY id`,
       [ck.pedido_id]
     );
-    res.json({mensagem:'Checkout retomado!', checkout_id: id, itens_falta: ck.itens_falta, itens_lista: itens});
+    res.json({
+      mensagem: 'Checkout retomado!',
+      checkout_id: id,
+      numero_caixa: ck.numero_caixa || '',
+      numero_pedido: ck.numero_pedido || '',
+      itens_falta: ck.itens_falta,
+      itens_lista: itens,
+    });
   } catch(e){res.status(500).json({erro:e.message});}
 });
 
