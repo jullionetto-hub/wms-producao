@@ -487,6 +487,21 @@ function iniciarPorPerfil() {
     if(_ci&&!_ci.value)_ci.value=hojeLocal(); if(_cf&&!_cf.value)_cf.value=hojeLocal();
     carregarContadoresCk();
     mudarTabCkDesk('fila');
+    // Auto-refresh: atualiza fila e badge de feitos a cada 30s
+    setInterval(() => {
+      carregarFilaCkDesk();
+      // Atualiza silenciosamente o badge de feitos sem trocar de aba
+      (async () => {
+        try {
+          const hoje = new Date().toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo'}).split('/').reverse().join('-');
+          const r = await fetch(`${API}/checkout?status=concluido&data=${hoje}`, { credentials:'include' });
+          if (!r.ok) return;
+          const rows = await r.json();
+          const b = document.getElementById('d-ck-feitos-cnt');
+          if (b) { b.textContent = rows.length; b.style.display = rows.length > 0 ? 'inline' : 'none'; }
+        } catch(e) {}
+      })();
+    }, 30000);
   }
   if (usuarioAtual.perfil === 'embalador') {
     document.getElementById('pag-embalagem').classList.add('ativa');
@@ -2385,8 +2400,9 @@ async function carregarFilaCkDesk() {
 }
 
 async function carregarFeitosCkDesk() {
-  const el  = document.getElementById('d-ck-feitos');
-  const cnt = document.getElementById('d-ck-feitos-cnt-label');
+  const el    = document.getElementById('d-ck-feitos');
+  const cnt   = document.getElementById('d-ck-feitos-cnt-label');
+  const badge = document.getElementById('d-ck-feitos-cnt');
   if (!el) return;
   el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:24px;font-size:13px">🔄 Carregando...</div>';
   try {
@@ -2394,6 +2410,8 @@ async function carregarFeitosCkDesk() {
     const res  = await fetch(`${API}/checkout?status=concluido&data=${hoje}`, { credentials:'include' });
     const rows = res.ok ? await res.json() : [];
     if (cnt) cnt.textContent = rows.length + ' feitos';
+    // Atualiza badge no botão da aba
+    if (badge) { badge.textContent = rows.length; badge.style.display = rows.length > 0 ? 'inline' : 'none'; }
     if (!rows.length) {
       el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:32px;font-size:13px">Nenhum checkout concluído hoje</div>';
       return;

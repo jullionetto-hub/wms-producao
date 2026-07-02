@@ -521,12 +521,12 @@ async function confirmarCheckout(id) {
     const data = await res.json().catch(()=>({}));
     if (!res.ok) { toast(data.erro || 'Erro ao confirmar checkout!','erro'); buscarCaixa(); return; }
     toast('✅ Checkout confirmado! Caixa liberada automaticamente.','sucesso');
-    // Limpa a busca e vai para FILA (atualizada — pedido confirmado some da lista)
     const inp = document.getElementById('ck-input-caixa');
     if (inp) inp.value = '';
     const wrap = document.getElementById('ck-resultado');
     if (wrap) wrap.style.display = 'none';
-    mudarTabCkDesk('fila');
+    // Vai para FEITOS para mostrar o que acabou de ser concluído
+    mudarTabCkDesk('feitos');
   } catch(e) { toast('Erro de rede ao confirmar!','erro'); }
 }
 
