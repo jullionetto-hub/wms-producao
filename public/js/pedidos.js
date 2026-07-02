@@ -127,6 +127,40 @@ function _renderTabelaPedidos() {
   } else if (_filtroTransp) {
     lista = lista.filter(p => String(p.transportadora||'').toUpperCase().includes(_filtroTransp));
   }
+  // ── Totalizadores ──────────────────────────────────────────────
+  const totEl = document.getElementById('ped-totalizadores');
+  if (totEl) {
+    if (!lista.length) {
+      totEl.style.display = 'none';
+    } else {
+      const totalPedidos = lista.length;
+      const totalSkus    = lista.reduce((s, p) => s + (parseInt(p.itens) || 0), 0);
+      const totalItens   = lista.reduce((s, p) => s + (parseInt(p.total_itens || p.itens) || 0), 0);
+      const totalMin     = lista.reduce((s, p) => {
+        const it = parseInt(p.total_itens || p.itens) || 0;
+        if (!it) return s;
+        return s + Math.max(1, Math.ceil(it / _ritmoItens(it, p.pontuacao || 0)));
+      }, 0);
+      const tempoFmt = totalMin >= 60
+        ? `~${Math.floor(totalMin/60)}h ${totalMin%60 > 0 ? totalMin%60+'min' : ''}`.trim()
+        : `~${totalMin} min`;
+      const card = (icon, label, val, cor) =>
+        `<div style="display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:8px 14px">
+          <span style="font-size:16px">${icon}</span>
+          <div>
+            <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.5px">${label}</div>
+            <div style="font-size:16px;font-weight:800;color:${cor};font-family:'Space Mono',monospace">${val}</div>
+          </div>
+        </div>`;
+      totEl.style.display = 'flex';
+      totEl.innerHTML =
+        card('📋', 'PEDIDOS',    totalPedidos,                      'var(--accent)') +
+        card('🔢', 'SKUs',       totalSkus.toLocaleString('pt-BR'), 'var(--text)')   +
+        card('📦', 'ITENS',      totalItens.toLocaleString('pt-BR'),'var(--text)')   +
+        card('⏱️', 'TEMPO EST.', tempoFmt,                          totalMin > 120 ? 'var(--red)' : totalMin > 60 ? '#d97706' : '#16a34a');
+    }
+  }
+  // ───────────────────────────────────────────────────────────────
   if (!lista.length) {
     tbody.innerHTML = '<tr><td colspan="8" style="color:var(--text3);text-align:center;padding:28px">Nenhum pedido</td></tr>';
     return;
