@@ -20,6 +20,49 @@ const { dataHoraLocal } = require('../lib/helpers');
         acao         TEXT NOT NULL DEFAULT ''
       )
     `);
+
+    // Reparo: corrige data_checkout com mês/dia invertidos (bug de locale pt-BR no Node.js Railway).
+    // WHERE seguro: só afeta datas antes de 2026-06-01 (sistema não existia antes),
+    // datas após CURRENT_DATE (impossíveis em produção), ou mês inválido > 12.
+    // Idempotente: após a correção as datas ficam em jun/jul 2026 e não voltam a entrar no filtro.
+    const repairCk = await pool.query(`
+      UPDATE checkout
+      SET data_checkout = CONCAT(
+        SUBSTRING(data_checkout, 1, 5),
+        SUBSTRING(data_checkout, 9, 2),
+        '-',
+        SUBSTRING(data_checkout, 6, 2)
+      )
+      WHERE data_checkout ~ '^\\d{4}-\\d{2}-\\d{2}$'
+        AND (
+          data_checkout < '2026-06-01'
+          OR data_checkout > CURRENT_DATE::text
+          OR CAST(SUBSTRING(data_checkout, 6, 2) AS INTEGER) > 12
+        )
+    `);
+    if (repairCk.rowCount > 0) console.log(`[CHECKOUT] Reparadas ${repairCk.rowCount} datas invertidas em checkout.`);
+
+    const repairSess = await pool.query(`
+      UPDATE checkout_sessoes
+      SET data_sessao = CONCAT(
+        SUBSTRING(data_sessao, 1, 5),
+        SUBSTRING(data_sessao, 9, 2),
+        '-',
+        SUBSTRING(data_sessao, 6, 2)
+      )
+      WHERE data_sessao ~ '^\\d{4}-\\d{2}-\\d{2}$'
+        AND (
+          data_sessao < '2026-06-01'
+          OR data_sessao > CURRENT_DATE::text
+          OR CAST(SUBSTRING(data_sessao, 6, 2) AS INTEGER) > 12
+        )
+    `);
+    if (repairSess.rowCount > 0) console.log(`[CHECKOUT] Reparadas ${repairSess.rowCount} datas invertidas em checkout_sessoes.`);
+
+    // Diagnóstico: loga quantos registros existem e amostra de datas
+    const diag = await pool.query(`SELECT COUNT(*) as cnt, MIN(data_checkout) as min_dt, MAX(data_checkout) as max_dt FROM checkout`);
+    console.log(`[CHECKOUT DIAG] Total: ${diag.rows[0]?.cnt} | Min data: ${diag.rows[0]?.min_dt} | Max data: ${diag.rows[0]?.max_dt}`);
+
   } catch(e) { console.warn('checkout migration:', e.message); }
 })();
 
