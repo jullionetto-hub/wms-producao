@@ -79,7 +79,7 @@ router.get('/checkout/diagnostico', requerAuth, async (req,res) => {
 router.get('/checkout', requerAuth, async (req,res) => {
   const {status, numero_caixa, data, data_ini, data_fim, operador_nome} = req.query;
   try {
-    let sql = `SELECT c.*, p.status as ped_status, p.itens as ped_itens, p.total_itens as ped_total_itens, p.numero_caixa as ped_caixa, p.cliente, p.transportadora, p.forma_envio, p.separador_id, s.nome as separador_nome_join FROM checkout c LEFT JOIN pedidos p ON c.pedido_id=p.id LEFT JOIN separadores s ON p.separador_id=s.id WHERE 1=1`;
+    let sql = `SELECT c.*, p.status as ped_status, p.itens as ped_itens, p.total_itens as ped_total_itens, p.numero_caixa as ped_caixa, p.cliente, p.transportadora, p.separador_id, s.nome as separador_nome_join FROM checkout c LEFT JOIN pedidos p ON c.pedido_id=p.id LEFT JOIN separadores s ON p.separador_id=s.id WHERE 1=1`;
     const pr = [];
     if (status)        { pr.push(status);        sql += ` AND c.status=$${pr.length}`; }
     if (numero_caixa)  { pr.push(numero_caixa);  sql += ` AND c.numero_caixa=$${pr.length}`; }
