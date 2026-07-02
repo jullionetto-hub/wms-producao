@@ -40,7 +40,7 @@ function filtrarPedidosTurno(turno) {
   const sel = document.getElementById('sel-fturno');
   if (sel) sel.value = turno;
   // Recalcula badges de transportadora apenas com os pedidos do turno selecionado
-  const base = turno ? _pedidosLista.filter(p => p.turno_distribuicao === turno) : _pedidosLista;
+  const base = turno ? _pedidosLista.filter(p => (p.sep_turno || p.turno_distribuicao) === turno) : _pedidosLista;
   _atualizarBadgesTransp(base);
   _renderTabelaPedidos();
 }
@@ -53,12 +53,14 @@ async function carregarPedidos() {
     const status = document.getElementById('filtro-ped-status').value;
     const numPed = document.getElementById('filtro-ped-num').value.trim();
     let url = `${API}/pedidos?`;
+    // Envia datas ao backend (usa COALESCE: iniciado_em → data_distribuicao → data_pedido)
+    if (ini) url += `data_ini=${encodeURIComponent(ini)}&`;
+    if (fim) url += `data_fim=${encodeURIComponent(fim)}&`;
     if (status) url += `status=${encodeURIComponent(status)}&`;
     if (numPed) url += `numero_pedido=${encodeURIComponent(numPed)}&`;
     const res = await fetch(url, { credentials:'include' });
     let ps = await res.json();
-    if (ini) ps = ps.filter(p => p.data_pedido >= ini);
-    if (fim) ps = ps.filter(p => p.data_pedido <= fim);
+    // Filtro de usuário por nome (separador_nome vem do join com separadores)
     if (usrId) ps = ps.filter(p => p.separador_nome === usrId);
     _pedidosLista = ps;
     _filtroTurno  = '';
@@ -88,10 +90,11 @@ function _atualizarBadgesFiltroTransp(lista) {
   const c = fn => lista.filter(fn).length;
   const sel = document.getElementById('sel-fturno');
   if (sel) {
+    const turnoEfetivo = p => p.sep_turno || p.turno_distribuicao;
     sel.options[0].text = `Todos (${lista.length})`;
-    sel.options[1].text = `☀️ Manhã (${c(p => p.turno_distribuicao === 'Manha')})`;
-    sel.options[2].text = `🌤️ Tarde (${c(p => p.turno_distribuicao === 'Tarde')})`;
-    sel.options[3].text = `🌙 Noite (${c(p => p.turno_distribuicao === 'Noite')})`;
+    sel.options[1].text = `☀️ Manhã (${c(p => turnoEfetivo(p) === 'Manha')})`;
+    sel.options[2].text = `🌤️ Tarde (${c(p => turnoEfetivo(p) === 'Tarde')})`;
+    sel.options[3].text = `🌙 Noite (${c(p => turnoEfetivo(p) === 'Noite')})`;
   }
   // Botões de transportadora — também parte da lista completa no carregamento inicial
   _atualizarBadgesTransp(lista);
@@ -117,8 +120,8 @@ function _renderTabelaPedidos() {
   const tbody = document.getElementById('tbody-ped');
   if (!tbody) return;
   let lista = _pedidosLista;
-  // Filtro de turno (pelo turno_distribuicao — definido na distribuição)
-  if (_filtroTurno) lista = lista.filter(p => p.turno_distribuicao === _filtroTurno);
+  // Filtro de turno — usa sep_turno (turno_distribuicao → separadores.turno → 'Manha')
+  if (_filtroTurno) lista = lista.filter(p => (p.sep_turno || p.turno_distribuicao) === _filtroTurno);
   // Filtro de transportadora / tipo
   if (_filtroTransp === 'PRIME') {
     lista = lista.filter(p => p.tem_prime);
