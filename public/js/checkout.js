@@ -366,6 +366,7 @@ async function confirmarCheckoutMobile(id) {
     document.getElementById('m-ck-input-caixa').value = '';
     document.getElementById('m-ck-resultado').innerHTML = '';
     mudarTabCk('fila');   // vai para FILA já atualizada (pedido sumiu)
+    if (typeof carregarContadoresCk === 'function') carregarContadoresCk();
   } catch(e) { toast('Erro de rede ao confirmar!','erro'); }
 }
 
@@ -527,6 +528,7 @@ async function confirmarCheckout(id) {
     if (wrap) wrap.style.display = 'none';
     // Vai para FEITOS para mostrar o que acabou de ser concluído
     mudarTabCkDesk('feitos');
+    if (typeof carregarContadoresCk === 'function') carregarContadoresCk();
   } catch(e) { toast('Erro de rede ao confirmar!','erro'); }
 }
 

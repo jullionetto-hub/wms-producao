@@ -487,8 +487,9 @@ function iniciarPorPerfil() {
     if(_ci&&!_ci.value)_ci.value=hojeLocal(); if(_cf&&!_cf.value)_cf.value=hojeLocal();
     carregarContadoresCk();
     mudarTabCkDesk('fila');
-    // Auto-refresh: atualiza fila e badge de feitos a cada 30s
+    // Auto-refresh: atualiza fila, contadores e badge de feitos a cada 30s
     setInterval(() => {
+      carregarContadoresCk();
       carregarFilaCkDesk();
       // Atualiza silenciosamente o badge de feitos sem trocar de aba
       (async () => {
