@@ -67,6 +67,15 @@ const { dataHoraLocal } = require('../lib/helpers');
 })();
 
 
+router.get('/checkout/diagnostico', requerAuth, async (req,res) => {
+  try {
+    const total   = await db.get('SELECT COUNT(*) as cnt FROM checkout');
+    const recentes = await db.all('SELECT id, status, data_checkout, numero_pedido FROM checkout ORDER BY id DESC LIMIT 15');
+    const hoje    = dataHoraLocal();
+    res.json({ total_registros: parseInt(total.cnt||0), data_servidor: hoje.data, hora_servidor: hoje.hora, ultimos_15: recentes });
+  } catch(e) { res.status(500).json({erro: e.message}); }
+});
+
 router.get('/checkout', requerAuth, async (req,res) => {
   const {status, numero_caixa, data, data_ini, data_fim, operador_nome} = req.query;
   try {
