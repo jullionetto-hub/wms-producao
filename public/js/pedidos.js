@@ -147,20 +147,18 @@ function _renderTabelaPedidos() {
       const tempoFmt = totalMin >= 60
         ? `~${Math.floor(totalMin/60)}h ${totalMin%60 > 0 ? totalMin%60+'min' : ''}`.trim()
         : `~${totalMin} min`;
-      const card = (icon, label, val, cor) =>
-        `<div style="display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:8px 14px">
-          <span style="font-size:16px">${icon}</span>
-          <div>
-            <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.5px">${label}</div>
-            <div style="font-size:16px;font-weight:800;color:${cor};font-family:'Space Mono',monospace">${val}</div>
-          </div>
+      const corTempo = totalMin > 120 ? 'var(--red)' : totalMin > 60 ? '#d97706' : '#16a34a';
+      const stat = (label, val, cor) =>
+        `<div style="display:flex;flex-direction:column;align-items:center;padding:0 10px;border-left:1px solid var(--border)">
+          <span style="font-size:9px;font-weight:700;color:var(--text3);letter-spacing:.6px;white-space:nowrap">${label}</span>
+          <span style="font-size:13px;font-weight:800;color:${cor};font-family:'Space Mono',monospace;line-height:1.2">${val}</span>
         </div>`;
       totEl.style.display = 'flex';
       totEl.innerHTML =
-        card('📋', 'PEDIDOS',    totalPedidos,                      'var(--accent)') +
-        card('🔢', 'SKUs',       totalSkus.toLocaleString('pt-BR'), 'var(--text)')   +
-        card('📦', 'ITENS',      totalItens.toLocaleString('pt-BR'),'var(--text)')   +
-        card('⏱️', 'TEMPO EST.', tempoFmt,                          totalMin > 120 ? 'var(--red)' : totalMin > 60 ? '#d97706' : '#16a34a');
+        stat('PEDIDOS',    totalPedidos,                      'var(--accent)') +
+        stat('SKUs',       totalSkus.toLocaleString('pt-BR'), 'var(--text)')   +
+        stat('ITENS',      totalItens.toLocaleString('pt-BR'),'var(--text)')   +
+        stat('TEMPO EST.', tempoFmt,                          corTempo);
     }
   }
   // ───────────────────────────────────────────────────────────────
