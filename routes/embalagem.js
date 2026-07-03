@@ -14,11 +14,14 @@ router.get('/embalagem', requerAuth, async (req,res) => {
     const params = [];
 
     let sql;
+    // COALESCE recalcula total_itens caso esteja zerado (mesmo padrão de GET /pedidos)
+    const colTotalItens = `COALESCE(NULLIF(p.total_itens,0),(SELECT COALESCE(SUM(ip.quantidade),p.itens) FROM itens_pedido ip WHERE ip.pedido_id=p.id),p.itens) AS total_itens`;
+
     if (status === 'pendente') {
       // Mobile/embalador: pedidos com status_embalagem pendente/embalando.
       // LEFT JOIN checkout para dados de horário (não obrigatório).
       // SEM filtro de data — mostra qualquer dia que ainda esteja pendente.
-      sql = `SELECT p.*, ck.hora_checkout, ck.operador_nome, ck.data_checkout
+      sql = `SELECT p.*, ${colTotalItens}, ck.hora_checkout, ck.operador_nome, ck.data_checkout
         FROM pedidos p
         LEFT JOIN checkout ck ON ck.pedido_id = p.id AND ck.status = 'concluido'
         WHERE p.status = 'concluido'
@@ -28,7 +31,7 @@ router.get('/embalagem', requerAuth, async (req,res) => {
       const ini_v = ini || data || hoje;
       const fim_v = fim || data || ini_v;
       params.push(ini_v, fim_v);
-      sql = `SELECT p.*, ck.hora_checkout, ck.operador_nome
+      sql = `SELECT p.*, ${colTotalItens}, ck.hora_checkout, ck.operador_nome
         FROM pedidos p
         LEFT JOIN checkout ck ON ck.pedido_id = p.id AND ck.status = 'concluido'
         WHERE p.status = 'concluido'
@@ -39,7 +42,7 @@ router.get('/embalagem', requerAuth, async (req,res) => {
       const ini_v = ini || data || hoje;
       const fim_v = fim || data || ini_v;
       params.push(ini_v, fim_v);
-      sql = `SELECT p.*, ck.hora_checkout, ck.operador_nome
+      sql = `SELECT p.*, ${colTotalItens}, ck.hora_checkout, ck.operador_nome
         FROM pedidos p
         LEFT JOIN checkout ck ON ck.pedido_id = p.id AND ck.status = 'concluido'
         WHERE p.status = 'concluido'
