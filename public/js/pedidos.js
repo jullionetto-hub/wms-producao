@@ -1086,6 +1086,12 @@ async function abrirModalDistribuicao() {
   // Reseta modo Prime
   _modoPrime = false;
   _aplicarEstadoPrime();
+  // Pré-preenche data com hoje (se ainda não tiver valor)
+  const _dd = document.getElementById('dist-data');
+  if (_dd && !_dd.value) {
+    const _h = new Date();
+    _dd.value = `${_h.getFullYear()}-${String(_h.getMonth()+1).padStart(2,'0')}-${String(_h.getDate()).padStart(2,'0')}`;
+  }
   // Recalcula pontuação de pedidos antigos em background
   fetch(`${API}/pedidos/recalcular-pontuacao`, { method:'POST', credentials:'include' }).catch(()=>{});
   await carregarSeparadoresDistribuicao();
@@ -1273,7 +1279,9 @@ async function carregarSeparadoresDistribuicao() {
 }
 async function carregarPedidosDistribuicao() {
   try {
-    const res = await fetch(`${API}/pedidos?status=pendente`, { credentials:'include' });
+    const dataFiltro = document.getElementById('dist-data')?.value || '';
+    const url = dataFiltro ? `${API}/pedidos?status=pendente&data=${dataFiltro}` : `${API}/pedidos?status=pendente`;
+    const res = await fetch(url, { credentials:'include' });
     const pedidos = await res.json();
     const el = document.getElementById('dist-preview');
     if (!pedidos.length) { el.innerHTML = '<div style="color:var(--text3);font-size:12px;text-align:center;padding:20px">Nenhum pedido pendente para distribuir</div>'; return; }
@@ -1307,6 +1315,39 @@ async function carregarPedidosDistribuicao() {
     el.innerHTML = `<div style="font-size:11px;color:var(--text3);margin-bottom:8px">${labelModo}</div><div class="tabela-wrap" style="max-height:240px;overflow-y:auto"><table><thead><tr><th>PEDIDO</th><th>CLIENTE</th><th>HORÁRIO</th><th>ITENS</th><th>PONTUAÇÃO</th><th>⏱ TEMPO EST.</th><th>STATUS</th></tr></thead><tbody>${lista.map(p=>`<tr${p.tem_prime?' style="background:rgba(217,119,6,.06)"':''}><td style="font-weight:700;color:var(--text);font-family:'Space Mono',monospace;font-size:11px">${p.numero_pedido}${p.tem_prime?' <span style="font-size:9px;background:#D97706;color:#fff;border-radius:4px;padding:1px 4px;vertical-align:middle">PRIME</span>':''}</td><td style="font-size:11px;color:var(--text2);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.cliente||'—'}</td><td style="font-size:11px;color:var(--amber);font-weight:600;white-space:nowrap">${p.aguardando_desde||p.hora_pedido||'—'}</td><td style="font-weight:600">${p.itens||0}</td><td><span style="font-family:'Space Mono',monospace;color:var(--indigo);font-weight:700">${p.pontuacao||'—'}</span></td><td>${badgeTempoSep(p.total_itens||p.itens, p.pontuacao)}</td><td><span class="pill ${(p.status||'pendente')}">${p.status||'pendente'}</span></td></tr>`).join('')}</tbody></table></div>`;
   } catch(e) { console.warn(e); }
 }
+
+function imprimirPedidosDistribuicao() {
+  const el = document.getElementById('dist-preview');
+  if (!el) return;
+  const dataVal = document.getElementById('dist-data')?.value || '';
+  const dataFmt = dataVal
+    ? new Date(dataVal + 'T12:00:00').toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric' })
+    : 'Todos os dias';
+  const tabela = el.querySelector('table');
+  if (!tabela) { toast('Nenhum pedido para imprimir.', 'aviso'); return; }
+  const w = window.open('', '_blank', 'width=900,height=700');
+  w.document.write(`<!DOCTYPE html><html><head>
+    <meta charset="UTF-8">
+    <title>Pedidos — ${dataFmt}</title>
+    <style>
+      body { font-family: Arial, sans-serif; font-size: 12px; margin: 20px; color: #111; }
+      h2 { font-size: 15px; margin-bottom: 4px; }
+      p.sub { font-size: 11px; color: #666; margin-bottom: 14px; }
+      table { width: 100%; border-collapse: collapse; }
+      th { background: #f0f0f0; font-size: 10px; font-weight: 700; text-transform: uppercase; padding: 6px 10px; border: 1px solid #ccc; text-align: left; letter-spacing: .5px; }
+      td { padding: 6px 10px; border: 1px solid #ddd; font-size: 12px; }
+      tr:nth-child(even) td { background: #f9f9f9; }
+      @media print { body { margin: 8px; } }
+    </style>
+  </head><body>
+    <h2>📋 Pedidos para Distribuição</h2>
+    <p class="sub">Data: <b>${dataFmt}</b> &nbsp;·&nbsp; Gerado em: ${new Date().toLocaleString('pt-BR')}</p>
+    ${tabela.outerHTML}
+    <script>window.onload=()=>{ window.print(); }<\/script>
+  </body></html>`);
+  w.document.close();
+}
+
 async function calcularDistribuicao() {
   const checks = document.querySelectorAll('.dist-sep-check:checked');
   if (!checks.length) { toast('Selecione pelo menos um separador!', 'aviso'); return; }

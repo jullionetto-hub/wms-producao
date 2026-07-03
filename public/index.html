@@ -2022,7 +2022,7 @@
 
 
 <script src="/js/config.js?v=10"></script>
-  <script src="/js/pedidos.js?v=16"></script>
+  <script src="/js/pedidos.js?v=17"></script>
   <script src="/js/separador.js?v=7"></script>
   <script src="/js/repositor.js?v=15"></script>
   <script src="/js/checkout.js?v=9"></script>
@@ -2107,6 +2107,14 @@
         <div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(37,99,235,.12);font-size:11px;color:var(--text2);display:flex;align-items:center;gap:6px">
           🚗 <span>Pedidos <b style="color:var(--text)">RETIRADA DRIVE THRU</b> são priorizados e distribuídos primeiro, independentemente do horário.</span>
         </div>
+      </div>
+      <!-- Filtro de data + imprimir -->
+      <div style="display:flex;gap:10px;align-items:flex-end;margin-bottom:14px;padding:10px 14px;background:var(--surface2);border-radius:8px;border:1px solid var(--border)">
+        <div>
+          <div style="font-size:10px;font-weight:700;color:var(--accent);letter-spacing:1px;margin-bottom:5px">📅 DATA DOS PEDIDOS</div>
+          <input type="date" id="dist-data" style="font-size:14px;font-weight:700;padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text)" onchange="carregarPedidosDistribuicao()"/>
+        </div>
+        <button onclick="imprimirPedidosDistribuicao()" class="btn btn-outline" style="height:38px;white-space:nowrap;font-size:13px">🖨️ Imprimir Lista</button>
       </div>
       <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px;align-items:flex-end">
         <div class="fg">
