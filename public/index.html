@@ -2112,7 +2112,10 @@
       <div style="display:flex;gap:10px;align-items:flex-end;margin-bottom:14px;padding:10px 14px;background:var(--surface2);border-radius:8px;border:1px solid var(--border)">
         <div>
           <div style="font-size:10px;font-weight:700;color:var(--accent);letter-spacing:1px;margin-bottom:5px">📅 DATA DOS PEDIDOS</div>
-          <input type="date" id="dist-data" style="font-size:14px;font-weight:700;padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text)" onchange="carregarPedidosDistribuicao()"/>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input type="date" id="dist-data" style="font-size:14px;font-weight:700;padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text)" onkeydown="if(event.key==='Enter')carregarPedidosDistribuicao()"/>
+            <button onclick="carregarPedidosDistribuicao()" class="btn btn-primary btn-sm" style="height:36px;white-space:nowrap">🔍 Filtrar</button>
+          </div>
         </div>
         <button onclick="imprimirPedidosDistribuicao()" class="btn btn-outline" style="height:38px;white-space:nowrap;font-size:13px">🖨️ Imprimir Lista</button>
       </div>
