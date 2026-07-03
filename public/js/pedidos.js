@@ -1280,8 +1280,7 @@ async function carregarSeparadoresDistribuicao() {
 async function carregarPedidosDistribuicao() {
   try {
     const dataFiltro = document.getElementById('dist-data')?.value || '';
-    const url = dataFiltro ? `${API}/pedidos?status=pendente&data=${dataFiltro}` : `${API}/pedidos?status=pendente`;
-    const res = await fetch(url, { credentials:'include' });
+    const res = await fetch(`${API}/pedidos?status=pendente`, { credentials:'include' });
     const pedidos = await res.json();
     const el = document.getElementById('dist-preview');
     if (!pedidos.length) { el.innerHTML = '<div style="color:var(--text3);font-size:12px;text-align:center;padding:20px">Nenhum pedido pendente para distribuir</div>'; return; }
@@ -1295,12 +1294,18 @@ async function carregarPedidosDistribuicao() {
     } else {
       lista = lista.filter(p => !p.tem_prime);
     }
+    // Filtro por data: compara com aguardando_desde (formato DD/MM/YYYY HH:MM)
+    if (dataFiltro) {
+      const [ano, mes, dia] = dataFiltro.split('-');
+      const dataBR = `${dia}/${mes}/${ano}`;
+      lista = lista.filter(p => String(p.aguardando_desde||'').startsWith(dataBR));
+    }
     // Converte DD/MM/YYYY HH:MM → YYYY-MM-DD HH:MM para comparação cronológica correta
     const toISO = v => {
       if (!v) return '';
       const m = v.match(/^(\d{2})\/(\d{2})\/(\d{4})[\s,T]?(\d{2}:\d{2})?/);
       if (m) return `${m[3]}-${m[2]}-${m[1]} ${m[4]||'00:00'}`;
-      return v; // já está em outro formato (YYYY-MM-DD), usa direto
+      return v;
     };
     if (respHora) lista.sort((a,b) => toISO(a.aguardando_desde||a.data_pedido||'').localeCompare(toISO(b.aguardando_desde||b.data_pedido||'')));
     const totalDisponivel = lista.length;
@@ -1312,7 +1317,7 @@ async function carregarPedidosDistribuicao() {
       el.innerHTML = `<div style="font-size:11px;color:var(--text3);margin-bottom:8px">${labelModo}</div><div style="color:var(--text3);font-size:12px;text-align:center;padding:20px">${_modoPrime ? 'Nenhum pedido Prime pendente' : 'Nenhum pedido normal pendente'}</div>`;
       return;
     }
-    el.innerHTML = `<div style="font-size:11px;color:var(--text3);margin-bottom:8px">${labelModo}</div><div class="tabela-wrap" style="max-height:240px;overflow-y:auto"><table><thead><tr><th>PEDIDO</th><th>CLIENTE</th><th>HORÁRIO</th><th>ITENS</th><th>PONTUAÇÃO</th><th>⏱ TEMPO EST.</th><th>STATUS</th></tr></thead><tbody>${lista.map(p=>`<tr${p.tem_prime?' style="background:rgba(217,119,6,.06)"':''}><td style="font-weight:700;color:var(--text);font-family:'Space Mono',monospace;font-size:11px">${p.numero_pedido}${p.tem_prime?' <span style="font-size:9px;background:#D97706;color:#fff;border-radius:4px;padding:1px 4px;vertical-align:middle">PRIME</span>':''}</td><td style="font-size:11px;color:var(--text2);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.cliente||'—'}</td><td style="font-size:11px;color:var(--amber);font-weight:600;white-space:nowrap">${p.data_pedido ? p.data_pedido.split('-').reverse().join('/')+(p.hora_pedido?' '+p.hora_pedido:'') : p.aguardando_desde||'—'}</td><td style="font-weight:600">${p.itens||0}</td><td><span style="font-family:'Space Mono',monospace;color:var(--indigo);font-weight:700">${p.pontuacao||'—'}</span></td><td>${badgeTempoSep(p.total_itens||p.itens, p.pontuacao)}</td><td><span class="pill ${(p.status||'pendente')}">${p.status||'pendente'}</span></td></tr>`).join('')}</tbody></table></div>`;
+    el.innerHTML = `<div style="font-size:11px;color:var(--text3);margin-bottom:8px">${labelModo}</div><div class="tabela-wrap" style="max-height:240px;overflow-y:auto"><table><thead><tr><th>PEDIDO</th><th>CLIENTE</th><th>HORÁRIO</th><th>ITENS</th><th>PONTUAÇÃO</th><th>⏱ TEMPO EST.</th><th>STATUS</th></tr></thead><tbody>${lista.map(p=>`<tr${p.tem_prime?' style="background:rgba(217,119,6,.06)"':''}><td style="font-weight:700;color:var(--text);font-family:'Space Mono',monospace;font-size:11px">${p.numero_pedido}${p.tem_prime?' <span style="font-size:9px;background:#D97706;color:#fff;border-radius:4px;padding:1px 4px;vertical-align:middle">PRIME</span>':''}</td><td style="font-size:11px;color:var(--text2);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.cliente||'—'}</td><td style="font-size:11px;color:var(--amber);font-weight:600;white-space:nowrap">${p.aguardando_desde||p.hora_pedido||'—'}</td><td style="font-weight:600">${p.itens||0}</td><td><span style="font-family:'Space Mono',monospace;color:var(--indigo);font-weight:700">${p.pontuacao||'—'}</span></td><td>${badgeTempoSep(p.total_itens||p.itens, p.pontuacao)}</td><td><span class="pill ${(p.status||'pendente')}">${p.status||'pendente'}</span></td></tr>`).join('')}</tbody></table></div>`;
   } catch(e) { console.warn(e); }
 }
 
