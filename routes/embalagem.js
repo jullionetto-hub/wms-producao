@@ -31,7 +31,8 @@ router.get('/embalagem', requerAuth, async (req,res) => {
       const ini_v = ini || data || hoje;
       const fim_v = fim || data || ini_v;
       params.push(ini_v, fim_v);
-      sql = `SELECT p.*, ${colTotalItens}, ck.hora_checkout, ck.operador_nome
+      sql = `SELECT p.*, ${colTotalItens}, ck.hora_checkout, ck.operador_nome,
+          (SELECT data_embalagem FROM embalagem emb_r WHERE emb_r.pedido_id = p.id ORDER BY emb_r.id DESC LIMIT 1) AS data_embalagem
         FROM pedidos p
         LEFT JOIN checkout ck ON ck.pedido_id = p.id AND ck.status = 'concluido'
         WHERE p.status = 'concluido'

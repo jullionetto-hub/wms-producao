@@ -1705,12 +1705,20 @@ async function carregarEmbalagemEmbalados() {
         </div>
         <div style="padding:12px 16px;display:grid;grid-template-columns:1fr 1fr;gap:8px;border-bottom:1px solid var(--border)">
           <div style="background:var(--surface2);border-radius:10px;padding:8px 10px;text-align:center">
-            <div style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.5px;margin-bottom:2px">DATA</div>
+            <div style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.5px;margin-bottom:2px">DATA PEDIDO</div>
             <div style="font-size:13px;font-weight:700;color:var(--text)">${fmtDt(p.data_pedido)}</div>
           </div>
           <div style="background:var(--surface2);border-radius:10px;padding:8px 10px;text-align:center">
-            <div style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.5px;margin-bottom:2px">ITENS</div>
-            <div style="font-size:16px;font-weight:800;color:#16a34a">${p.itens||0}</div>
+            <div style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.5px;margin-bottom:2px">DATA EMB.</div>
+            <div style="font-size:13px;font-weight:700;color:#16a34a">${fmtDt(p.data_embalagem)}</div>
+          </div>
+          <div style="background:var(--surface2);border-radius:10px;padding:8px 10px;text-align:center">
+            <div style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.5px;margin-bottom:2px">QTDE ITENS</div>
+            <div style="font-size:16px;font-weight:800;color:#16a34a">${p.total_itens||p.itens||0}</div>
+          </div>
+          <div style="background:var(--surface2);border-radius:10px;padding:8px 10px;text-align:center">
+            <div style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.5px;margin-bottom:2px">SKUs</div>
+            <div style="font-size:16px;font-weight:800;color:var(--accent)">${p.itens||0}</div>
           </div>
           <div style="background:var(--surface2);border-radius:10px;padding:8px 10px;text-align:center">
             <div style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.5px;margin-bottom:2px">INICIO EMB.</div>
