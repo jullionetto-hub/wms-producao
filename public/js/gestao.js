@@ -450,8 +450,6 @@ function _renderDetalheAbs(data, nome) {
   const detalhe = document.getElementById('gabs-detalhe');
   if (!detalhe) return;
 
-  console.log('[abs] daily_records sample:', (data.daily_records||[])[0]);
-
   const allRec   = data.daily_records || [];
   const minAtrs  = allRec.filter(r => _minAtraso(r) > _absToleranciMin);
   const ausencias = allRec.filter(r => r.falta || r.atestado || r.ferias);
@@ -542,6 +540,19 @@ function _renderDetalheAbs(data, nome) {
         </div>
         <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--surface)">${tblAusencias}</div>
       </div>
+
+      ${allRec.length ? (() => {
+        const amostra = allRec[0];
+        const campos = Object.entries(amostra).map(([k,v]) =>
+          `<tr><td style="padding:3px 8px;color:var(--text3);font-family:monospace">${k}</td><td style="padding:3px 8px;color:var(--text);font-weight:700;font-family:monospace">${JSON.stringify(v)}</td></tr>`
+        ).join('');
+        return `<details style="margin-top:14px">
+          <summary style="font-size:10px;color:var(--text3);cursor:pointer;user-select:none">🔍 campos da API (debug — ${allRec.length} registros)</summary>
+          <div style="margin-top:6px;background:var(--surface2);border-radius:8px;padding:6px;overflow-x:auto">
+            <table style="font-size:11px;border-collapse:collapse">${campos}</table>
+          </div>
+        </details>`;
+      })() : ''}
     </div>`;
 }
 
