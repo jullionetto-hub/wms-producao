@@ -6,6 +6,7 @@
 
 let _absRows = [];          // todos os funcionários carregados
 let _absToleranciMin = 0;  // minutos de atraso tolerados
+let _absDetalheCache = null; // { id, data } — evita refetch ao mudar tolerância
 
 function renderizarPagGestao() {
   const root = document.getElementById('pag-gestao');
@@ -131,10 +132,10 @@ function setToleranciAbs(min) {
     ? `— atrasos ≤ ${_absToleranciMin} min ignorados`
     : '';
 
-  // Re-renderiza detalhe aberto (se houver)
+  // Re-renderiza detalhe aberto usando cache (sem nova requisição HTTP)
   const detalhe = document.getElementById('gabs-detalhe');
-  if (detalhe && detalhe.innerHTML.trim() && detalhe.dataset.funcId) {
-    verDetalheAbsenteismo(detalhe.dataset.funcId, detalhe.dataset.funcNome, null);
+  if (detalhe && detalhe.innerHTML.trim() && _absDetalheCache) {
+    _renderDetalheAbs(_absDetalheCache.data, _absDetalheCache.nome);
   }
 }
 
@@ -388,166 +389,160 @@ function _renderTabelaAbs(rows) {
 async function verDetalheAbsenteismo(id, nome, btn) {
   const detalhe = document.getElementById('gabs-detalhe');
   if (!detalhe) return;
-  detalhe.dataset.funcId   = id;
-  detalhe.dataset.funcNome = nome;
   detalhe.innerHTML = '<div style="color:var(--text3);padding:14px;font-size:12px">Carregando...</div>';
   detalhe.scrollIntoView({ behavior:'smooth', block:'nearest' });
   if (btn) { btn.textContent = '...'; btn.disabled = true; }
 
   try {
     const res  = await fetch(`${API}/gestao/absenteismo/funcionario/${id}`, { credentials:'include' });
-    if (!res.ok) throw new Error('Erro ao carregar');
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.erro || `Erro ${res.status} ao carregar funcionário`);
+    }
     const data = await res.json();
-
-    // ── helpers para extrair atraso de qualquer formato da API ──
-    const _ZEROS = new Set(['--:--','-:--','00:00','000:00','0:00','','0']);
-    const _parseTstr = s => {
-      if (!s || _ZEROS.has(String(s).trim())) return 0;
-      const parts = String(s).split(':');
-      return (parseInt(parts[0])||0)*60 + (parseInt(parts[1])||0);
-    };
-    const _minAtraso = r => {
-      // campos numéricos conhecidos
-      for (const f of ['atraso_minutes','late_minutes','atraso_mins','delay_minutes','atraso_min','neg_minutes','h_neg_minutes']) {
-        if (Number(r[f]) > 0) return Number(r[f]);
-      }
-      // campos de string conhecidos
-      for (const f of ['atraso','atraso_formatado','atraso_str','late','h_neg','horas_negativas','delay','atraso_total']) {
-        const v = _parseTstr(r[f]);
-        if (v > 0) return v;
-      }
-      // varredura geral: qualquer campo numérico com "atr"/"late"/"neg"/"delay" no nome
-      for (const [k, v] of Object.entries(r||{})) {
-        if (typeof v === 'number' && v > 0 && /atr|late|neg|delay/i.test(k)) return v;
-        if (typeof v === 'string' && /atr|late|neg|delay/i.test(k)) {
-          const m = _parseTstr(v); if (m > 0) return m;
-        }
-      }
-      return 0;
-    };
-    const _fmtAtraso = r => {
-      for (const f of ['atraso','atraso_formatado','atraso_str','h_neg','horas_negativas']) {
-        const s = String(r[f]||'').trim();
-        if (s && !_ZEROS.has(s)) return s;
-      }
-      const m = _minAtraso(r);
-      if (!m) return '—';
-      const hh = Math.floor(m/60), mm = m%60;
-      return `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`;
-    };
-
-    console.log('[abs] daily_records sample:', (data.daily_records||[])[0]);
-
-    const allRec  = data.daily_records || [];
-    const minAtrs = allRec.filter(r => _minAtraso(r) > _absToleranciMin);
-    const ausencias = allRec.filter(r => r.falta || r.atestado || r.ferias);
-
-    const taxa    = parseFloat(data.absenteeism_rate || 0).toFixed(1);
-    const taxaCor = taxa >= 10 ? '#dc2626' : taxa >= 5 ? '#d97706' : '#16a34a';
-    const fmtDt   = s => s ? new Date(s+'T12:00:00').toLocaleDateString('pt-BR') : '—';
-
-    const _tblAtrasos = !minAtrs.length
-      ? `<div style="color:var(--text3);font-size:12px;padding:8px 0">${_absToleranciMin > 0 ? `Nenhum atraso acima de ${_absToleranciMin} min no período.` : 'Nenhum atraso registrado no período.'}</div>`
-      : `<table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:6px">
-          <thead>
-            <tr style="background:var(--surface)">
-              <th style="padding:6px 10px;text-align:left;color:var(--text3);border-bottom:1px solid var(--border);font-size:10px">DATA</th>
-              <th style="padding:6px 10px;text-align:left;color:var(--text3);border-bottom:1px solid var(--border);font-size:10px">DIA</th>
-              <th style="padding:6px 10px;text-align:center;color:var(--text3);border-bottom:1px solid var(--border);font-size:10px">ATRASO</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${minAtrs.map(r => `
-            <tr style="border-bottom:1px solid var(--border)">
-              <td style="padding:6px 10px;color:var(--text);font-weight:700">${fmtDt(r.date)}</td>
-              <td style="padding:6px 10px;color:var(--text2)">${r.day_of_week||'—'}</td>
-              <td style="padding:6px 10px;text-align:center;font-weight:800;color:#7c3aed">${_fmtAtraso(r)}</td>
-            </tr>`).join('')}
-          </tbody>
-        </table>`;
-
-    const _tblAusencias = !ausencias.length
-      ? `<div style="color:var(--text3);font-size:12px;padding:8px 0">Nenhuma falta ou atestado no período.</div>`
-      : `<table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:6px">
-          <thead>
-            <tr style="background:var(--surface)">
-              <th style="padding:6px 10px;text-align:left;color:var(--text3);border-bottom:1px solid var(--border);font-size:10px">DATA</th>
-              <th style="padding:6px 10px;text-align:left;color:var(--text3);border-bottom:1px solid var(--border);font-size:10px">DIA</th>
-              <th style="padding:6px 10px;text-align:center;color:var(--text3);border-bottom:1px solid var(--border);font-size:10px">TIPO</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${ausencias.map(r => {
-              const oc  = r.falta ? '❌ Falta' : r.atestado ? '🏥 Atestado' : '🌴 Férias';
-              const cor = r.falta ? '#dc2626' : r.atestado ? '#d97706' : '#2563eb';
-              return `<tr style="border-bottom:1px solid var(--border)">
-                <td style="padding:6px 10px;color:var(--text);font-weight:700">${fmtDt(r.date)}</td>
-                <td style="padding:6px 10px;color:var(--text2)">${r.day_of_week||'—'}</td>
-                <td style="padding:6px 10px;text-align:center;font-weight:800;color:${cor}">${oc}</td>
-              </tr>`;
-            }).join('')}
-          </tbody>
-        </table>`;
-
-    detalhe.innerHTML = `
-      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-          <div style="font-weight:900;color:var(--text);font-size:15px">📋 ${nome}</div>
-          <button onclick="document.getElementById('gabs-detalhe').innerHTML=''"
-            style="background:transparent;border:none;font-size:18px;cursor:pointer;color:var(--text3);line-height:1;padding:0 4px">✕</button>
-        </div>
-
-        <!-- KPIs -->
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:12px">
-          <div style="background:var(--surface);border-radius:8px;padding:8px 12px;text-align:center">
-            <div style="font-size:10px;color:var(--text3);font-weight:700">FALTAS</div>
-            <div style="font-size:22px;font-weight:900;color:#dc2626">${data.faltas_count ?? 0}</div>
-          </div>
-          <div style="background:var(--surface);border-radius:8px;padding:8px 12px;text-align:center">
-            <div style="font-size:10px;color:var(--text3);font-weight:700">ATESTADOS</div>
-            <div style="font-size:22px;font-weight:900;color:#d97706">${data.atestados_count ?? 0}</div>
-          </div>
-          <div style="background:var(--surface);border-radius:8px;padding:8px 12px;text-align:center">
-            <div style="font-size:10px;color:var(--text3);font-weight:700">ATRASO TOTAL</div>
-            <div style="font-size:16px;font-weight:900;color:#7c3aed">${data.total_atraso_formatted || '—'}</div>
-          </div>
-          <div style="background:var(--surface);border-radius:8px;padding:8px 12px;text-align:center">
-            <div style="font-size:10px;color:var(--text3);font-weight:700">ABSENTEÍSMO</div>
-            <div style="font-size:22px;font-weight:900;color:${taxaCor}">${taxa}%</div>
-          </div>
-        </div>
-
-        <!-- Meta info -->
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
-          <span style="font-size:11px;color:var(--text3)">📅 ${fmtDt(data.period_start)} → ${fmtDt(data.period_end)}</span>
-          ${_absToleranciMin > 0 ? `<span style="font-size:11px;background:#fefce8;border:1px solid #d97706;color:#92400e;border-radius:20px;padding:2px 10px;font-weight:700">⏱ Tolerância: ${_absToleranciMin} min</span>` : ''}
-        </div>
-
-        <!-- Seção atrasos -->
-        <div style="margin-bottom:14px">
-          <div style="font-size:11px;font-weight:800;color:#7c3aed;letter-spacing:.5px;margin-bottom:4px">
-            ⏰ ATRASOS ${minAtrs.length ? `(${minAtrs.length} dia${minAtrs.length>1?'s':''})` : ''}
-          </div>
-          <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--surface)">
-            ${_tblAtrasos}
-          </div>
-        </div>
-
-        <!-- Seção faltas/atestados -->
-        <div>
-          <div style="font-size:11px;font-weight:800;color:#dc2626;letter-spacing:.5px;margin-bottom:4px">
-            ❌ FALTAS E ATESTADOS ${ausencias.length ? `(${ausencias.length})` : ''}
-          </div>
-          <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--surface)">
-            ${_tblAusencias}
-          </div>
-        </div>
-      </div>`;
+    _absDetalheCache = { id, nome, data };
+    _renderDetalheAbs(data, nome);
   } catch(e) {
-    detalhe.innerHTML = `<div style="color:var(--red);padding:10px;font-size:12px">Erro ao carregar detalhe.</div>`;
+    const detalheEl = document.getElementById('gabs-detalhe');
+    if (detalheEl) detalheEl.innerHTML = `
+      <div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:12px;padding:14px 16px">
+        <div style="font-weight:700;color:#dc2626;font-size:13px;margin-bottom:4px">Erro ao carregar funcionário</div>
+        <div style="font-size:12px;color:#7f1d1d">${e.message}</div>
+      </div>`;
   } finally {
     if (btn) { btn.textContent = 'Ver'; btn.disabled = false; }
   }
+}
+
+/* ── helpers de atraso (módulo-level) ── */
+const _ABS_ZEROS = new Set(['--:--','-:--','00:00','000:00','0:00','','0','--']);
+function _parseTstr(s) {
+  if (!s || _ABS_ZEROS.has(String(s).trim())) return 0;
+  const parts = String(s).split(':');
+  return (parseInt(parts[0])||0)*60 + (parseInt(parts[1])||0);
+}
+function _minAtraso(r) {
+  for (const f of ['atraso_minutes','late_minutes','atraso_mins','delay_minutes','atraso_min','neg_minutes','h_neg_minutes']) {
+    if (Number(r[f]) > 0) return Number(r[f]);
+  }
+  for (const f of ['atraso','atraso_formatado','atraso_str','late','h_neg','horas_negativas','delay','atraso_total','neg']) {
+    const v = _parseTstr(r[f]); if (v > 0) return v;
+  }
+  for (const [k, v] of Object.entries(r||{})) {
+    if (typeof v === 'number' && v > 0 && /atr|late|neg|delay/i.test(k)) return v;
+    if (typeof v === 'string' && /atr|late|neg|delay/i.test(k)) { const m = _parseTstr(v); if (m > 0) return m; }
+  }
+  return 0;
+}
+function _fmtAtraso(r) {
+  for (const f of ['atraso','atraso_formatado','atraso_str','h_neg','horas_negativas']) {
+    const s = String(r[f]||'').trim();
+    if (s && !_ABS_ZEROS.has(s)) return s;
+  }
+  const m = _minAtraso(r);
+  if (!m) return '—';
+  const hh = Math.floor(m/60), mm = m%60;
+  return `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`;
+}
+
+/* ── Render do detalhe (separado do fetch para reuso ao mudar tolerância) ── */
+function _renderDetalheAbs(data, nome) {
+  const detalhe = document.getElementById('gabs-detalhe');
+  if (!detalhe) return;
+
+  console.log('[abs] daily_records sample:', (data.daily_records||[])[0]);
+
+  const allRec   = data.daily_records || [];
+  const minAtrs  = allRec.filter(r => _minAtraso(r) > _absToleranciMin);
+  const ausencias = allRec.filter(r => r.falta || r.atestado || r.ferias);
+
+  const taxa    = parseFloat(data.absenteeism_rate || 0).toFixed(1);
+  const taxaCor = taxa >= 10 ? '#dc2626' : taxa >= 5 ? '#d97706' : '#16a34a';
+  const fmtDt   = s => s ? new Date(s+'T12:00:00').toLocaleDateString('pt-BR') : '—';
+
+  const tblAtrasos = !minAtrs.length
+    ? `<div style="color:var(--text3);font-size:12px;padding:10px 12px">${_absToleranciMin > 0 ? `Nenhum atraso acima de ${_absToleranciMin} min no período.` : 'Nenhum atraso registrado no período.'}</div>`
+    : `<table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="background:var(--surface2)">
+          <th style="padding:6px 10px;text-align:left;color:var(--text3);border-bottom:1px solid var(--border);font-size:10px">DATA</th>
+          <th style="padding:6px 10px;text-align:left;color:var(--text3);border-bottom:1px solid var(--border);font-size:10px">DIA</th>
+          <th style="padding:6px 10px;text-align:center;color:var(--text3);border-bottom:1px solid var(--border);font-size:10px">ATRASO</th>
+        </tr></thead>
+        <tbody>${minAtrs.map(r => `
+          <tr style="border-bottom:1px solid var(--border)">
+            <td style="padding:6px 10px;color:var(--text);font-weight:700">${fmtDt(r.date)}</td>
+            <td style="padding:6px 10px;color:var(--text2)">${r.day_of_week||'—'}</td>
+            <td style="padding:6px 10px;text-align:center;font-weight:800;color:#7c3aed">${_fmtAtraso(r)}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+
+  const tblAusencias = !ausencias.length
+    ? `<div style="color:var(--text3);font-size:12px;padding:10px 12px">Nenhuma falta ou atestado no período.</div>`
+    : `<table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="background:var(--surface2)">
+          <th style="padding:6px 10px;text-align:left;color:var(--text3);border-bottom:1px solid var(--border);font-size:10px">DATA</th>
+          <th style="padding:6px 10px;text-align:left;color:var(--text3);border-bottom:1px solid var(--border);font-size:10px">DIA</th>
+          <th style="padding:6px 10px;text-align:center;color:var(--text3);border-bottom:1px solid var(--border);font-size:10px">TIPO</th>
+        </tr></thead>
+        <tbody>${ausencias.map(r => {
+          const oc  = r.falta ? '❌ Falta' : r.atestado ? '🏥 Atestado' : '🌴 Férias';
+          const cor = r.falta ? '#dc2626' : r.atestado ? '#d97706' : '#2563eb';
+          return `<tr style="border-bottom:1px solid var(--border)">
+            <td style="padding:6px 10px;color:var(--text);font-weight:700">${fmtDt(r.date)}</td>
+            <td style="padding:6px 10px;color:var(--text2)">${r.day_of_week||'—'}</td>
+            <td style="padding:6px 10px;text-align:center;font-weight:800;color:${cor}">${oc}</td>
+          </tr>`;
+        }).join('')}
+        </tbody>
+      </table>`;
+
+  detalhe.innerHTML = `
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div style="font-weight:900;color:var(--text);font-size:15px">📋 ${nome}</div>
+        <button onclick="document.getElementById('gabs-detalhe').innerHTML='';_absDetalheCache=null"
+          style="background:transparent;border:none;font-size:18px;cursor:pointer;color:var(--text3);line-height:1;padding:0 4px">✕</button>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:12px">
+        <div style="background:var(--surface);border-radius:8px;padding:8px 12px;text-align:center">
+          <div style="font-size:10px;color:var(--text3);font-weight:700">FALTAS</div>
+          <div style="font-size:22px;font-weight:900;color:#dc2626">${data.faltas_count ?? 0}</div>
+        </div>
+        <div style="background:var(--surface);border-radius:8px;padding:8px 12px;text-align:center">
+          <div style="font-size:10px;color:var(--text3);font-weight:700">ATESTADOS</div>
+          <div style="font-size:22px;font-weight:900;color:#d97706">${data.atestados_count ?? 0}</div>
+        </div>
+        <div style="background:var(--surface);border-radius:8px;padding:8px 12px;text-align:center">
+          <div style="font-size:10px;color:var(--text3);font-weight:700">ATRASO TOTAL</div>
+          <div style="font-size:16px;font-weight:900;color:#7c3aed">${data.total_atraso_formatted || '—'}</div>
+        </div>
+        <div style="background:var(--surface);border-radius:8px;padding:8px 12px;text-align:center">
+          <div style="font-size:10px;color:var(--text3);font-weight:700">ABSENTEÍSMO</div>
+          <div style="font-size:22px;font-weight:900;color:${taxaCor}">${taxa}%</div>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+        <span style="font-size:11px;color:var(--text3)">📅 ${fmtDt(data.period_start)} → ${fmtDt(data.period_end)}</span>
+        ${_absToleranciMin > 0 ? `<span style="font-size:11px;background:#fefce8;border:1px solid #d97706;color:#92400e;border-radius:20px;padding:2px 10px;font-weight:700">⏱ Tolerância: ${_absToleranciMin} min</span>` : ''}
+      </div>
+
+      <div style="margin-bottom:14px">
+        <div style="font-size:11px;font-weight:800;color:#7c3aed;letter-spacing:.5px;margin-bottom:6px">
+          ⏰ ATRASOS ${minAtrs.length ? `(${minAtrs.length} dia${minAtrs.length>1?'s':''})` : ''}
+        </div>
+        <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--surface)">${tblAtrasos}</div>
+      </div>
+
+      <div>
+        <div style="font-size:11px;font-weight:800;color:#dc2626;letter-spacing:.5px;margin-bottom:6px">
+          ❌ FALTAS E ATESTADOS ${ausencias.length ? `(${ausencias.length})` : ''}
+        </div>
+        <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--surface)">${tblAusencias}</div>
+      </div>
+    </div>`;
 }
 
 
