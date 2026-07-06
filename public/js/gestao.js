@@ -339,7 +339,13 @@ async function verDetalheAbsenteismo(id, nome, btn) {
     const res  = await fetch(`${API}/gestao/absenteismo/funcionario/${id}`, { credentials:'include' });
     if (!res.ok) throw new Error('Erro ao carregar');
     const data = await res.json();
-    const registros = (data.daily_records || []).filter(r => r.falta || r.atestado || r.ferias || r.atraso_minutes > 0);
+    const _temAtraso = r => {
+      if (r.atraso_minutes > 0) return true;
+      if (r.late_minutes   > 0) return true;
+      const s = r.atraso || r.atraso_formatado || '';
+      return s && s !== '--:--' && s !== '00:00' && s !== '000:00' && s !== '-:--';
+    };
+    const registros = (data.daily_records || []).filter(r => r.falta || r.atestado || r.ferias || _temAtraso(r));
     const taxa = parseFloat(data.absenteeism_rate || 0).toFixed(1);
     const taxaCor = taxa >= 10 ? '#dc2626' : taxa >= 5 ? '#d97706' : '#16a34a';
 
@@ -368,7 +374,7 @@ async function verDetalheAbsenteismo(id, nome, btn) {
             <div style="font-size:20px;font-weight:900;color:${taxaCor}">${taxa}%</div>
           </div>
         </div>
-        <div style="font-size:11px;color:var(--text3);margin-bottom:10px">Período: ${data.period_start || ''} → ${data.period_end || ''}</div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:10px">Período: ${data.period_start ? new Date(data.period_start+'T12:00:00').toLocaleDateString('pt-BR') : ''} → ${data.period_end ? new Date(data.period_end+'T12:00:00').toLocaleDateString('pt-BR') : ''}</div>
         ${!registros.length
           ? '<div style="color:var(--text3);padding:10px;font-size:12px">Nenhuma ocorrência registrada no período.</div>'
           : `<div style="overflow-x:auto;border:1px solid var(--border);border-radius:8px">
@@ -390,7 +396,7 @@ async function verDetalheAbsenteismo(id, nome, btn) {
                       <td style="padding:7px 10px;color:var(--text)">${dt}</td>
                       <td style="padding:7px 10px;color:var(--text2)">${r.day_of_week || '—'}</td>
                       <td style="padding:7px 10px;text-align:center;font-weight:700;color:${cor}">${oc}</td>
-                      <td style="padding:7px 10px;text-align:center;color:var(--text2)">${r.atraso_minutes ? `${r.atraso_minutes} min` : '—'}</td>
+                      <td style="padding:7px 10px;text-align:center;color:var(--text2)">${r.atraso_minutes ? `${r.atraso_minutes} min` : (r.atraso && r.atraso !== '--:--' && r.atraso !== '00:00' && r.atraso !== '000:00') ? r.atraso : (r.late_minutes > 0 ? `${r.late_minutes} min` : '—')}</td>
                     </tr>`;
                   }).join('')}
                 </tbody>
