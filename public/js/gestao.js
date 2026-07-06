@@ -14,7 +14,10 @@ function renderizarPagGestao() {
 
   <!-- ── Header ── -->
   <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;padding:16px 24px 12px;border-bottom:1px solid var(--border);flex-shrink:0">
-    <div style="font-family:'Space Mono',monospace;font-size:17px;font-weight:800;color:var(--text)">📅 Absenteísmo</div>
+    <div>
+      <div style="font-family:'Space Mono',monospace;font-size:17px;font-weight:800;color:var(--text)">📅 Absenteísmo</div>
+      <div id="gabs-periodo" style="font-size:11px;color:var(--text3);margin-top:3px;font-weight:600"></div>
+    </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button onclick="mostrarArquivosAbs()" style="padding:7px 14px;background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;color:var(--text2)">📁 Arquivos Importados</button>
       <button onclick="toggleImportarAbs()" style="padding:7px 14px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📥 Importar PDF</button>
@@ -191,6 +194,14 @@ async function carregarGestaoAbsenteismo() {
     const totalFaltas    = team.total_faltas    ?? 0;
     const totalAtestados = team.total_atestados ?? 0;
     const taxaEquipe     = parseFloat(team.team_absenteeism_rate) || 0;
+
+    const periodoEl = document.getElementById('gabs-periodo');
+    if (periodoEl) {
+      const fmtDt = s => s ? new Date(s + 'T12:00:00').toLocaleDateString('pt-BR') : null;
+      const ini = fmtDt(team.period_start);
+      const fim = fmtDt(team.period_end);
+      periodoEl.textContent = ini && fim ? `Período: ${ini} a ${fim}` : '';
+    }
 
     const kpis = [
       { icon:'👥', label:'Funcionários',   val: totalFunc,              bg:'#eff6ff', cor:'#1d4ed8' },
