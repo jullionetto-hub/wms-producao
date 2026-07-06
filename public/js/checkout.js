@@ -273,8 +273,8 @@ function _renderSessoesCk(sessoes) {
     <div style="margin-top:10px;border-top:1px solid var(--border);padding-top:10px">
       <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1px;margin-bottom:6px">HISTÓRICO DE CHECKOUT</div>
       ${sessoes.map(s => {
-        const cor  = s.acao==='concluido'?'#16a34a':s.acao==='aguardando_item'?'#f97316':'#3b82f6';
-        const icon = s.acao==='concluido'?'✅':s.acao==='aguardando_item'?'⏳':s.acao==='retomado'?'▶':'🔓';
+        const cor  = s.acao==='concluido'?'#16a34a':s.acao==='aguardando_item'?'#f97316':s.acao==='pausado'?'#7c3aed':'#3b82f6';
+        const icon = s.acao==='concluido'?'✅':s.acao==='aguardando_item'?'⏳':s.acao==='pausado'?'⏸':s.acao==='retomado'?'▶':'🔓';
         return `<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 8px;background:var(--surface2);border-radius:6px;margin-bottom:3px;font-size:11px">
           <span style="color:var(--text2);font-weight:600">${icon} ${s.operador_nome||'—'}</span>
           <span style="color:var(--text3)">${s.hora_inicio||'—'} → ${s.hora_fim||'em andamento'}</span>
@@ -282,6 +282,33 @@ function _renderSessoesCk(sessoes) {
         </div>`;
       }).join('')}
     </div>`;
+}
+
+async function pausarCheckoutMobile(id) {
+  try {
+    const res  = await fetch(`${API}/checkout/${id}/pausar`, { credentials:'include', method:'PUT' });
+    const data = await res.json().catch(()=>({}));
+    if (!res.ok) { toast(data.erro || 'Erro ao pausar','erro'); return; }
+    toast('⏸ Checkout pausado! Disponível na aba Aguardando.', 'aviso');
+    document.getElementById('m-ck-input-caixa').value = '';
+    document.getElementById('m-ck-resultado').innerHTML = '';
+    mudarTabCk('aguardando');
+  } catch(e) { toast('Erro de rede','erro'); }
+}
+
+async function pausarCheckoutDesk(id) {
+  try {
+    const res  = await fetch(`${API}/checkout/${id}/pausar`, { credentials:'include', method:'PUT' });
+    const data = await res.json().catch(()=>({}));
+    if (!res.ok) { toast(data.erro || 'Erro ao pausar','erro'); return; }
+    toast('⏸ Checkout pausado!', 'aviso');
+    const inp = document.getElementById('ck-input-caixa');
+    if (inp) inp.value = '';
+    const wrap = document.getElementById('ck-resultado');
+    if (wrap) wrap.style.display = 'none';
+    if (typeof carregarFilaCk === 'function') carregarFilaCk();
+    if (typeof carregarContadoresCk === 'function') carregarContadoresCk();
+  } catch(e) { toast('Erro de rede','erro'); }
 }
 
 async function buscarCaixaMobile() {
@@ -340,6 +367,7 @@ async function buscarCaixaMobile() {
           ${!concluido && !liberado ? `
             <button class="btn btn-success" style="width:100%;padding:14px;font-size:15px;font-weight:700;border-radius:10px;margin-bottom:8px" onclick="confirmarCheckoutMobile(${r.id})">✅ CONFIRMAR CHECKOUT</button>
             <button id="ck-btn-pendencia-${r.id}" onclick="registrarPendenciaMobile(${r.id})" style="display:none;width:100%;padding:12px;font-size:13px;font-weight:700;background:#f97316;color:#fff;border:none;border-radius:10px;cursor:pointer;margin-bottom:8px">⏳ REGISTRAR PENDÊNCIA (itens faltando)</button>
+            <button onclick="pausarCheckoutMobile(${r.id})" style="width:100%;padding:11px;font-size:13px;font-weight:700;background:#ede9fe;color:#7c3aed;border:1.5px solid #c4b5fd;border-radius:10px;cursor:pointer;margin-bottom:8px">⏸ Pausar Checkout</button>
             <button class="btn" style="width:100%;padding:11px;font-size:13px;background:var(--surface2);border:1.5px solid var(--border);color:var(--text2);border-radius:10px" onclick="liberarCaixaMobile(${r.id})">🔓 Liberar Caixa Sem Checkout</button>`
           : concluido
             ? `<div style="text-align:center;padding:10px;background:#F0FDF4;border-radius:10px;color:var(--green);font-weight:700;font-size:14px">✅ Checkout às ${r.hora_checkout||'—'}</div>`
@@ -493,6 +521,7 @@ async function buscarCaixa() {
             ${!concluido && !liberado ? `
               <button class="btn btn-success" onclick="confirmarCheckout(${r.id})">✅ Confirmar Checkout</button>
               <button id="ck-btn-pendencia-desk-${r.id}" onclick="registrarPendenciaDesk(${r.id})" style="display:none;padding:9px 16px;background:#f97316;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">⏳ Registrar Pendência</button>
+              <button onclick="pausarCheckoutDesk(${r.id})" style="padding:9px 16px;background:#ede9fe;color:#7c3aed;border:1.5px solid #c4b5fd;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">⏸ Pausar</button>
               <button class="btn btn-outline" onclick="liberarCaixaDesktop(${r.id})">🔓 Liberar</button>`
             : concluido
               ? `<span class="pill concluido" style="font-size:12px">✅ Checkout às ${r.hora_checkout||'—'}</span>`

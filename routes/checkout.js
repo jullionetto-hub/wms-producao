@@ -358,6 +358,45 @@ router.put('/checkout/:id/retomar', requerAuth, async (req,res) => {
   } catch(e){res.status(500).json({erro:e.message});}
 });
 
+/* ── Pausar checkout (sem itens faltando — apenas interrupção temporária) ── */
+router.put('/checkout/:id/pausar', requerAuth, async (req,res) => {
+  const { hora, data } = dataHoraLocal();
+  const operador_nome = req.session?.usuario?.nome || '';
+  const id = parseInt(req.params.id);
+  try {
+    const ck = await db.get('SELECT * FROM checkout WHERE id=$1',[id]);
+    if (!ck) return res.status(404).json({erro:'Checkout não encontrado'});
+    if (ck.status === 'concluido') return res.status(400).json({erro:'Checkout já foi concluído'});
+    // Fecha sessão aberta
+    const sessaoAberta = await db.get(
+      `SELECT * FROM checkout_sessoes WHERE checkout_id=$1 AND hora_fim='' ORDER BY id DESC LIMIT 1`, [id]
+    );
+    if (sessaoAberta) {
+      const [hI,mI] = (sessaoAberta.hora_inicio||hora).split(':').map(Number);
+      const [hF,mF] = hora.split(':').map(Number);
+      const tempoMin = Math.max(0,(hF*60+mF)-(hI*60+mI));
+      await pool.query(
+        `UPDATE checkout_sessoes SET hora_fim=$1,tempo_min=$2,acao='pausado' WHERE id=$3`,
+        [hora, tempoMin, sessaoAberta.id]
+      );
+    } else {
+      const [hI,mI] = (ck.hora_criacao||hora).split(':').map(Number);
+      const [hF,mF] = hora.split(':').map(Number);
+      const tempoMin = Math.max(0,(hF*60+mF)-(hI*60+mI));
+      await pool.query(
+        `INSERT INTO checkout_sessoes (checkout_id,operador_nome,hora_inicio,hora_fim,data_sessao,tempo_min,acao)
+         VALUES ($1,$2,$3,$4,$5,$6,'pausado')`,
+        [id, operador_nome, ck.hora_criacao||hora, hora, data, tempoMin]
+      );
+    }
+    await pool.query(
+      `UPDATE checkout SET status='aguardando_item', operador_nome=$1 WHERE id=$2`,
+      [operador_nome, id]
+    );
+    res.json({mensagem:'Checkout pausado!'});
+  } catch(e){res.status(500).json({erro:e.message});}
+});
+
 router.put('/checkout/:id/liberar', requerAuth, async (req,res) => {
   try {
     const ck = await db.get('SELECT pedido_id, status FROM checkout WHERE id=$1',[req.params.id]);
