@@ -233,7 +233,11 @@ function filtrarTurnoUsr(turno) {
   _usrFiltroTurno = turno;
   ['todos','Manha','Tarde','Noite'].forEach(t => {
     const btn = document.getElementById(`uf-${t.toLowerCase()}`);
-    if (btn) btn.className = `btn btn-sm ${t === turno ? 'btn-primary' : 'btn-outline'}`;
+    if (!btn) return;
+    const ativo = t === turno;
+    btn.style.background  = ativo ? 'var(--accent)' : 'var(--surface2)';
+    btn.style.color       = ativo ? '#fff'           : 'var(--text2)';
+    btn.style.borderColor = ativo ? 'var(--accent)'  : 'var(--border)';
   });
   _renderListaUsuarios();
 }

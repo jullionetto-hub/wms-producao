@@ -393,13 +393,17 @@
               <button class="btn btn-primary" style="width:100%;margin-top:4px" onclick="cadastrarUsuario()">✅ Cadastrar Usuário</button>
             </div>
             <div class="card">
-              <div class="card-hd">👥 USUÁRIOS CADASTRADOS <span id="usr-count" style="font-size:11px;color:var(--text3);font-weight:500"></span>
-                <div style="display:flex;gap:4px;margin-left:auto;flex-wrap:wrap">
-                  <button id="uf-todos"  class="btn btn-sm btn-primary" onclick="filtrarTurnoUsr('todos')">Todos</button>
-                  <button id="uf-manha"  class="btn btn-sm btn-outline"  onclick="filtrarTurnoUsr('Manha')">☀️ Manhã</button>
-                  <button id="uf-tarde"  class="btn btn-sm btn-outline"  onclick="filtrarTurnoUsr('Tarde')">🌅 Tarde</button>
-                  <button id="uf-noite"  class="btn btn-sm btn-outline"  onclick="filtrarTurnoUsr('Noite')">🌙 Noite</button>
-                  <button class="btn btn-outline btn-sm" onclick="carregarUsuarios()" title="Recarregar">🔄</button>
+              <div class="card-hd" style="flex-direction:column;align-items:stretch;gap:8px">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <span>👥 USUÁRIOS CADASTRADOS</span>
+                  <span id="usr-count" style="font-size:11px;color:var(--text3);font-weight:500"></span>
+                  <button class="btn btn-outline btn-sm" onclick="carregarUsuarios()" title="Recarregar" style="margin-left:auto;padding:3px 8px">🔄</button>
+                </div>
+                <div style="display:flex;gap:6px">
+                  <button id="uf-todos" onclick="filtrarTurnoUsr('todos')" style="flex:1;padding:5px 0;border-radius:8px;border:1.5px solid var(--accent);background:var(--accent);color:#fff;font-size:11px;font-weight:700;cursor:pointer">Todos</button>
+                  <button id="uf-manha" onclick="filtrarTurnoUsr('Manha')" style="flex:1;padding:5px 0;border-radius:8px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text2);font-size:11px;font-weight:700;cursor:pointer">☀️ Manhã</button>
+                  <button id="uf-tarde" onclick="filtrarTurnoUsr('Tarde')" style="flex:1;padding:5px 0;border-radius:8px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text2);font-size:11px;font-weight:700;cursor:pointer">🌅 Tarde</button>
+                  <button id="uf-noite" onclick="filtrarTurnoUsr('Noite')" style="flex:1;padding:5px 0;border-radius:8px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text2);font-size:11px;font-weight:700;cursor:pointer">🌙 Noite</button>
                 </div>
               </div>
               <div id="lista-usuarios" style="padding:4px 0;max-height:calc(100vh - 220px);overflow-y:auto"></div>
