@@ -445,6 +445,19 @@ function _fmtAtraso(r) {
   return `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`;
 }
 
+/* ── Calcula atraso estimado de um registro a partir das batidas ── */
+function _computeAtrasoRec(r, scheduleStartMin, lunchMin, breakMin) {
+  const toM = s => { if (!s) return null; const [h,m] = s.split(':').map(Number); return h*60+m; };
+  let a = 0;
+  const entry = toM(r.entry_time);
+  if (entry !== null && entry > scheduleStartMin) a += entry - scheduleStartMin;
+  const ls = toM(r.lunch_start), le = toM(r.lunch_end);
+  if (ls !== null && le !== null && le - ls > lunchMin) a += (le - ls) - lunchMin;
+  const bs = toM(r.break_start), be = toM(r.break_end);
+  if (bs !== null && be !== null && be - bs > breakMin) a += (be - bs) - breakMin;
+  return a;
+}
+
 /* ── Render do detalhe (separado do fetch para reuso ao mudar tolerância) ── */
 function _renderDetalheAbs(data, nome) {
   const detalhe = document.getElementById('gabs-detalhe');
@@ -457,33 +470,69 @@ function _renderDetalheAbs(data, nome) {
   const fmtDt     = s => s ? new Date(s+'T12:00:00').toLocaleDateString('pt-BR') : '—';
   const t         = v => v || '—';
 
+  // Parâmetros do turno
+  const schedMatch = (data.schedule || '').match(/(\d+)h/);
+  const schedStartMin = schedMatch ? parseInt(schedMatch[1]) * 60 : 780; // default 13:00
+  const LUNCH_MIN = 60, BREAK_MIN = 15;
+
   // Espelho de ponto — todos os dias trabalhados (status normal com registro)
   const diasTrab = allRec.filter(r => r.status === 'normal' && r.entry_time);
+
+  // Pré-computa atraso por dia
+  diasTrab.forEach(r => {
+    r._atraso = _computeAtrasoRec(r, schedStartMin, LUNCH_MIN, BREAK_MIN);
+  });
+  const totalAtrasoComp = diasTrab.reduce((s, r) => s + r._atraso, 0);
+  const diasComAtraso   = diasTrab.filter(r => r._atraso > _absToleranciMin).length;
 
   // Dias com ocorrência especial (DSR, feriado, falta)
   const diasEspeciais = allRec.filter(r => r.status !== 'normal' || r.falta || r.atestado || r.ferias);
 
+  const _fmtMin = m => m > 0 ? `+${m} min` : '—';
+  const _lunchDur = r => r.lunch_start && r.lunch_end
+    ? (() => { const [lh,lm]=r.lunch_start.split(':').map(Number), [eh,em]=r.lunch_end.split(':').map(Number); return (eh*60+em)-(lh*60+lm); })()
+    : null;
+  const _breakDur = r => r.break_start && r.break_end
+    ? (() => { const [lh,lm]=r.break_start.split(':').map(Number), [eh,em]=r.break_end.split(':').map(Number); return (eh*60+em)-(lh*60+lm); })()
+    : null;
+
   const tblPonto = !diasTrab.length
     ? `<div style="color:var(--text3);font-size:12px;padding:10px 12px">Nenhum registro de ponto no período.</div>`
     : `<div style="overflow-x:auto">
-        <table style="width:100%;border-collapse:collapse;font-size:11px;min-width:500px">
+        <table style="width:100%;border-collapse:collapse;font-size:11px;min-width:560px">
           <thead><tr style="background:var(--surface2)">
-            <th style="padding:5px 8px;text-align:left;color:var(--text3);border-bottom:1px solid var(--border);font-size:10px;white-space:nowrap">DATA</th>
+            <th style="padding:5px 8px;text-align:left;color:var(--text3);border-bottom:1px solid var(--border);font-size:10px">DATA</th>
             <th style="padding:5px 8px;text-align:left;color:var(--text3);border-bottom:1px solid var(--border);font-size:10px">DIA</th>
             <th style="padding:5px 8px;text-align:center;color:var(--text3);border-bottom:1px solid var(--border);font-size:10px">ENTRADA</th>
             <th style="padding:5px 8px;text-align:center;color:var(--text3);border-bottom:1px solid var(--border);font-size:10px">ALMOÇO</th>
             <th style="padding:5px 8px;text-align:center;color:var(--text3);border-bottom:1px solid var(--border);font-size:10px">PAUSA</th>
             <th style="padding:5px 8px;text-align:center;color:var(--text3);border-bottom:1px solid var(--border);font-size:10px">SAÍDA</th>
+            <th style="padding:5px 8px;text-align:center;color:var(--text3);border-bottom:1px solid var(--border);font-size:10px">ATRASO</th>
           </tr></thead>
-          <tbody>${diasTrab.map(r => `
-            <tr style="border-bottom:1px solid var(--border)">
-              <td style="padding:5px 8px;color:var(--text);font-weight:700;white-space:nowrap">${fmtDt(r.date)}</td>
+          <tbody>${diasTrab.map(r => {
+            const atr   = r._atraso;
+            const late  = atr > _absToleranciMin;
+            const rowBg = late ? '#fff7ed' : '';
+            const ld    = _lunchDur(r);
+            const bd    = _breakDur(r);
+            const lunchOver = ld !== null && ld > LUNCH_MIN;
+            const breakOver = bd !== null && bd > BREAK_MIN;
+            const lunchStr  = r.lunch_start && r.lunch_end
+              ? `<span style="color:${lunchOver?'#d97706':'var(--text2)'};font-weight:${lunchOver?'700':'400'}">${r.lunch_start} → ${r.lunch_end}${lunchOver?` <small>(${ld}min)</small>`:''}</span>`
+              : '—';
+            const breakStr  = r.break_start && r.break_end
+              ? `<span style="color:${breakOver?'#d97706':'var(--text2)'};font-weight:${breakOver?'700':'400'}">${r.break_start} → ${r.break_end}${breakOver?` <small>(${bd}min)</small>`:''}</span>`
+              : '—';
+            return `<tr style="border-bottom:1px solid var(--border);background:${rowBg}">
+              <td style="padding:5px 8px;font-weight:700;white-space:nowrap;color:${late?'#c2410c':'var(--text)'}">${fmtDt(r.date)}</td>
               <td style="padding:5px 8px;color:var(--text2)">${r.day_of_week||'—'}</td>
               <td style="padding:5px 8px;text-align:center;font-family:monospace;color:var(--text)">${t(r.entry_time)}</td>
-              <td style="padding:5px 8px;text-align:center;font-family:monospace;color:var(--text2)">${r.lunch_start&&r.lunch_end ? r.lunch_start+' → '+r.lunch_end : '—'}</td>
-              <td style="padding:5px 8px;text-align:center;font-family:monospace;color:var(--text2)">${r.break_start&&r.break_end ? r.break_start+' → '+r.break_end : '—'}</td>
+              <td style="padding:5px 8px;text-align:center;font-family:monospace;font-size:10px">${lunchStr}</td>
+              <td style="padding:5px 8px;text-align:center;font-family:monospace;font-size:10px">${breakStr}</td>
               <td style="padding:5px 8px;text-align:center;font-family:monospace;color:var(--text)">${t(r.exit_time)}</td>
-            </tr>`).join('')}
+              <td style="padding:5px 8px;text-align:center;font-weight:800;color:${late?'#dc2626':atr>0?'#d97706':'var(--text3)'}">${atr > 0 ? atr+' min' : '—'}</td>
+            </tr>`;
+          }).join('')}
           </tbody>
         </table>
       </div>`;
@@ -529,8 +578,12 @@ function _renderDetalheAbs(data, nome) {
           <div style="font-size:22px;font-weight:900;color:#d97706">${data.atestados_count ?? 0}</div>
         </div>
         <div style="background:var(--surface);border-radius:8px;padding:8px 12px;text-align:center">
-          <div style="font-size:10px;color:var(--text3);font-weight:700">ATRASO TOTAL</div>
-          <div style="font-size:16px;font-weight:900;color:#7c3aed">${data.total_atraso_formatted || '—'}</div>
+          <div style="font-size:10px;color:var(--text3);font-weight:700">ATRASO CALC.</div>
+          <div style="font-size:16px;font-weight:900;color:#7c3aed">${totalAtrasoComp > 0 ? totalAtrasoComp+' min' : '—'}</div>
+        </div>
+        <div style="background:var(--surface);border-radius:8px;padding:8px 12px;text-align:center">
+          <div style="font-size:10px;color:var(--text3);font-weight:700">DIAS c/ ATRASO</div>
+          <div style="font-size:22px;font-weight:900;color:${diasComAtraso>0?'#dc2626':'var(--text3)'}">${diasComAtraso}</div>
         </div>
         <div style="background:var(--surface);border-radius:8px;padding:8px 12px;text-align:center">
           <div style="font-size:10px;color:var(--text3);font-weight:700">H. POSITIVAS</div>
@@ -549,8 +602,9 @@ function _renderDetalheAbs(data, nome) {
       </div>
 
       <!-- Espelho de ponto -->
-      <div style="font-size:11px;font-weight:800;color:var(--text);letter-spacing:.5px;margin-bottom:6px">
+      <div style="font-size:11px;font-weight:800;color:var(--text);letter-spacing:.5px;margin-bottom:6px;display:flex;align-items:center;gap:8px">
         🕐 ESPELHO DE PONTO (${diasTrab.length} dia${diasTrab.length!==1?'s':''} trabalhados)
+        ${diasComAtraso > 0 ? `<span style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:12px;padding:2px 8px;font-size:10px;font-weight:800">${diasComAtraso} com atraso</span>` : ''}
       </div>
       <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--surface)">${tblPonto}</div>
 
