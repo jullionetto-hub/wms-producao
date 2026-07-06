@@ -1,65 +1,103 @@
 'use strict';
 
 /* ══════════════════════════════════════════
-   GESTÃO — página de Gerente / Coordenador
-   3 abas: Performance · Ocorrências · Absenteísmo
+   GESTÃO — Absenteísmo
 ══════════════════════════════════════════ */
 
-let _gestaoTabAtual = 'performance';
+let _absRows = [];   // todos os funcionários carregados
 
 function renderizarPagGestao() {
   const root = document.getElementById('pag-gestao');
   if (!root) return;
   root.innerHTML = `
-<div style="padding:20px 24px 0">
-  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:20px">
-    <div style="font-family:'Space Mono',monospace;font-size:17px;color:var(--text)">📅 Absenteísmo</div>
-    <button onclick="toggleImportarAbs()" style="padding:8px 16px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">📥 Importar PDF</button>
+<div style="display:flex;flex-direction:column;height:100%;min-height:0">
+
+  <!-- ── Header ── -->
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;padding:16px 24px 12px;border-bottom:1px solid var(--border);flex-shrink:0">
+    <div style="font-family:'Space Mono',monospace;font-size:17px;font-weight:800;color:var(--text)">📅 Absenteísmo</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button onclick="mostrarArquivosAbs()" style="padding:7px 14px;background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;color:var(--text2)">📁 Arquivos Importados</button>
+      <button onclick="toggleImportarAbs()" style="padding:7px 14px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📥 Importar PDF</button>
+    </div>
   </div>
 
-  <!-- ÁREA DE IMPORTAÇÃO (colapsável) -->
-  <div id="gabs-import-area" style="display:none;background:var(--surface2);border:1.5px dashed var(--border);border-radius:12px;padding:20px;margin-bottom:20px">
-    <div style="font-size:12px;font-weight:700;color:var(--text3);letter-spacing:1px;margin-bottom:12px">IMPORTAR RELATÓRIO DE PONTO (PDF InPonto / MIESS)</div>
+  <!-- ── Modal arquivos ── -->
+  <div id="gabs-modal-arq" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;align-items:center;justify-content:center">
+    <div style="background:var(--surface);border-radius:16px;padding:20px;width:min(520px,95vw);max-height:80vh;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,.3)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div style="font-size:14px;font-weight:800;color:var(--text)">📁 Arquivos Importados</div>
+        <button onclick="fecharArquivosAbs()" style="background:transparent;border:none;font-size:20px;cursor:pointer;color:var(--text3);line-height:1">✕</button>
+      </div>
+      <div id="gabs-historico" style="flex:1;overflow-y:auto">Carregando...</div>
+    </div>
+  </div>
+
+  <!-- ── Área de importação ── -->
+  <div id="gabs-import-area" style="display:none;background:var(--surface2);border-bottom:1.5px solid var(--border);padding:16px 24px;flex-shrink:0">
+    <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:1px;margin-bottom:10px">IMPORTAR RELATÓRIO DE PONTO (PDF InPonto / MIESS)</div>
     <div id="gabs-drop-zone"
       ondragover="event.preventDefault();this.style.borderColor='var(--accent)'"
       ondragleave="this.style.borderColor='var(--border)'"
       ondrop="absHandleDrop(event)"
-      style="border:2px dashed var(--border);border-radius:10px;padding:28px;text-align:center;cursor:pointer;transition:.2s"
+      style="border:2px dashed var(--border);border-radius:10px;padding:22px;text-align:center;cursor:pointer;transition:.2s"
       onclick="document.getElementById('gabs-file-input').click()">
-      <div style="font-size:32px;margin-bottom:8px">📄</div>
-      <div style="font-size:14px;font-weight:700;color:var(--text)">Clique ou arraste o PDF aqui</div>
-      <div style="font-size:12px;color:var(--text3);margin-top:4px">Relatório de ponto do InPonto / MIESS — máx. 30 MB</div>
+      <div style="font-size:28px;margin-bottom:6px">📄</div>
+      <div style="font-size:13px;font-weight:700;color:var(--text)">Clique ou arraste o PDF aqui</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:3px">Relatório InPonto / MIESS — máx. 30 MB</div>
     </div>
     <input type="file" id="gabs-file-input" accept=".pdf" style="display:none" onchange="absEnviarPdf(this.files[0])">
-    <div id="gabs-upload-status" style="margin-top:10px;font-size:13px"></div>
+    <div id="gabs-upload-status" style="margin-top:8px;font-size:12px"></div>
+  </div>
 
-    <!-- Histórico de uploads -->
-    <div style="margin-top:16px">
-      <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:1px;margin-bottom:8px">HISTÓRICO DE IMPORTAÇÕES</div>
-      <div id="gabs-historico">Carregando...</div>
+  <!-- ── KPI cards ── -->
+  <div id="gabs-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;padding:14px 24px;flex-shrink:0"></div>
+
+  <!-- ── Corpo principal: lista de nomes + ranking/detalhe ── -->
+  <div style="display:flex;flex:1;min-height:0;gap:0;overflow:hidden">
+
+    <!-- Painel esquerdo: lista de funcionários -->
+    <div style="width:240px;flex-shrink:0;display:flex;flex-direction:column;border-right:1px solid var(--border);background:var(--surface2)">
+      <div style="padding:10px 12px;border-bottom:1px solid var(--border);flex-shrink:0">
+        <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.5px;margin-bottom:6px">FUNCIONÁRIOS</div>
+        <input type="text" id="gabs-busca" placeholder="🔍 Buscar nome..."
+          oninput="filtrarListaAbs(this.value)"
+          style="width:100%;padding:6px 9px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text);box-sizing:border-box"/>
+      </div>
+      <div id="gabs-lista-nomes" style="flex:1;overflow-y:auto;padding:6px 0"></div>
+    </div>
+
+    <!-- Painel direito: ranking + detalhe -->
+    <div style="flex:1;overflow-y:auto;padding:16px 24px">
+      <div style="font-size:11px;font-weight:800;color:var(--text3);letter-spacing:.5px;margin-bottom:10px">RANKING POR ABSENTEÍSMO</div>
+      <div id="gabs-tabela"></div>
+      <div id="gabs-detalhe" style="margin-top:16px"></div>
     </div>
   </div>
-</div>
-
-<div style="padding:0 24px 24px">
-  <div id="gabs-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px"></div>
-  <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:1px;margin-bottom:10px">RANKING POR ABSENTEÍSMO</div>
-  <div id="gabs-tabela" style="overflow-x:auto"></div>
-  <div id="gabs-detalhe" style="margin-top:20px"></div>
-</div>
-`;
+</div>`;
   carregarGestaoAbsenteismo();
 }
 
 
+/* ── Toggle importar ── */
 function toggleImportarAbs() {
   const area = document.getElementById('gabs-import-area');
   if (!area) return;
-  const visible = area.style.display !== 'none';
-  area.style.display = visible ? 'none' : '';
-  if (!visible) carregarHistoricoAbs();
+  area.style.display = area.style.display !== 'none' ? 'none' : '';
 }
 
+/* ── Modal de arquivos ── */
+function mostrarArquivosAbs() {
+  const modal = document.getElementById('gabs-modal-arq');
+  if (!modal) return;
+  modal.style.display = 'flex';
+  carregarHistoricoAbs();
+}
+function fecharArquivosAbs() {
+  const modal = document.getElementById('gabs-modal-arq');
+  if (modal) modal.style.display = 'none';
+}
+
+/* ── Drop / upload ── */
 function absHandleDrop(event) {
   event.preventDefault();
   document.getElementById('gabs-drop-zone').style.borderColor = 'var(--border)';
@@ -80,338 +118,283 @@ async function absEnviarPdf(file) {
     if (!res.ok) { status.innerHTML = `<span style="color:var(--red)">❌ ${data.erro || 'Erro no upload'}</span>`; return; }
     status.innerHTML = `<span style="color:var(--green)">✅ ${data.message || 'Importado!'} (${data.employees} funcionário(s))</span>`;
     document.getElementById('gabs-file-input').value = '';
-    carregarHistoricoAbs();
     carregarGestaoAbsenteismo();
   } catch(e) {
     status.innerHTML = `<span style="color:var(--red)">❌ Erro: ${e.message}</span>`;
   }
 }
 
+/* ── Histórico de uploads ── */
 async function carregarHistoricoAbs() {
   const el = document.getElementById('gabs-historico');
   if (!el) return;
+  el.innerHTML = '<div style="color:var(--text3);font-size:12px;padding:10px">Carregando...</div>';
   try {
     const res   = await fetch(`${API}/gestao/absenteismo/uploads`, { credentials:'include' });
     const lista = await res.json();
     if (!Array.isArray(lista) || !lista.length) {
-      el.innerHTML = '<div style="color:var(--text3);font-size:12px">Nenhum arquivo importado ainda.</div>';
+      el.innerHTML = '<div style="color:var(--text3);font-size:12px;padding:10px">Nenhum arquivo importado ainda.</div>';
       return;
     }
     el.innerHTML = lista.map(u => {
       const ok  = u.status === 'success';
       const dt  = u.upload_at ? new Date(u.upload_at).toLocaleString('pt-BR') : '—';
-      const cor = ok ? 'var(--green)' : 'var(--red)';
+      const cor = ok ? '#16a34a' : 'var(--red)';
       const ico = ok ? '✅' : '❌';
       return `
-      <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;background:var(--surface);margin-bottom:6px;font-size:12px">
-        <span>${ico}</span>
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;background:var(--surface2);margin-bottom:8px;font-size:12px">
+        <span style="font-size:18px;flex-shrink:0">${ico}</span>
         <div style="flex:1;min-width:0">
           <div style="font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${u.filename}</div>
-          <div style="color:var(--text3)">${dt} · <span style="color:${cor}">${ok ? `${u.records_count ?? 0} func.` : u.error_message || 'erro'}</span></div>
+          <div style="color:var(--text3);margin-top:2px">${dt}</div>
+          <div style="color:${cor};font-size:11px">${ok ? `${u.records_count ?? 0} funcionário(s)` : u.error_message || 'erro'}</div>
         </div>
-        <button onclick="absExcluirUpload(${u.id},this)" title="Excluir"
-          style="background:transparent;border:none;color:var(--red);font-size:16px;cursor:pointer;padding:4px">🗑️</button>
+        <button onclick="absExcluirUpload(${u.id},this)" title="Excluir arquivo"
+          style="background:#fee2e2;border:none;color:#dc2626;font-size:14px;cursor:pointer;padding:6px 10px;border-radius:8px;font-weight:700;flex-shrink:0">
+          🗑️ Excluir
+        </button>
       </div>`;
     }).join('');
   } catch(e) {
-    el.innerHTML = `<div style="color:var(--red);font-size:12px">Erro ao carregar histórico.</div>`;
+    el.innerHTML = `<div style="color:var(--red);font-size:12px;padding:10px">Erro ao carregar histórico.</div>`;
   }
 }
 
 async function absExcluirUpload(id, btn) {
   if (!confirm('Excluir esta importação? Os dados dos funcionários serão removidos.')) return;
-  btn.disabled = true;
+  btn.disabled = true; btn.textContent = '...';
   try {
     const res = await fetch(`${API}/gestao/absenteismo/uploads/${id}`, { method:'DELETE', credentials:'include' });
-    if (res.ok) { carregarHistoricoAbs(); carregarGestaoAbsenteismo(); }
-    else btn.disabled = false;
-  } catch(e) { btn.disabled = false; }
+    if (res.ok) { toast('Arquivo excluído!','sucesso'); carregarHistoricoAbs(); carregarGestaoAbsenteismo(); }
+    else { btn.disabled = false; btn.innerHTML = '🗑️ Excluir'; toast('Erro ao excluir','erro'); }
+  } catch(e) { btn.disabled = false; btn.innerHTML = '🗑️ Excluir'; }
 }
 
 
-/* ── Performance ──────────────────────────────────────────────── */
-async function carregarGestaoPerformance() {
-  const ini   = document.getElementById('gperf-ini')?.value;
-  const fim   = document.getElementById('gperf-fim')?.value;
-  const turno = document.getElementById('gperf-turno')?.value || '';
-  const cards = document.getElementById('gperf-cards');
-  const tabela = document.getElementById('gperf-tabela');
-  if (!ini || !fim || !cards || !tabela) return;
+/* ── Absenteísmo principal ── */
+async function carregarGestaoAbsenteismo() {
+  const cards    = document.getElementById('gabs-cards');
+  const tabela   = document.getElementById('gabs-tabela');
+  const listaNom = document.getElementById('gabs-lista-nomes');
+  if (!cards || !tabela) return;
 
-  cards.innerHTML  = _gestaoLoading();
+  cards.innerHTML  = '<div style="grid-column:1/-1;color:var(--text3);font-size:12px;padding:4px">Carregando...</div>';
   tabela.innerHTML = '';
+  if (listaNom) listaNom.innerHTML = '';
 
   try {
-    const qs  = `ini=${ini}&fim=${fim}${turno ? `&turno=${turno}` : ''}`;
-    const [sepsRes, metasRes] = await Promise.all([
-      fetch(`${API}/performance/separadores?${qs}`, { credentials:'include' }),
-      fetch(`${API}/performance/metas?${qs}`, { credentials:'include' }),
-    ]);
+    const res = await fetch(`${API}/gestao/absenteismo/team`, { credentials:'include' });
+    if (!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e.erro || `HTTP ${res.status}`); }
+    const team = await res.json();
 
-    const seps = await sepsRes.json();
-    const metas = metasRes.ok ? await metasRes.json() : {};
+    const totalFunc      = team.total_employees ?? (team.employees || []).length;
+    const totalFaltas    = team.total_faltas    ?? 0;
+    const totalAtestados = team.total_atestados ?? 0;
+    const taxaEquipe     = parseFloat(team.team_absenteeism_rate) || 0;
 
-    if (!Array.isArray(seps) || !seps.length) {
-      cards.innerHTML  = '';
-      tabela.innerHTML = _gestaoVazio('Nenhum dado encontrado para o período.');
-      return;
-    }
-
-    const totalPedidos = seps.reduce((s, r) => s + (r.pedidos || 0), 0);
-    const totalItens   = seps.reduce((s, r) => s + (r.itens   || 0), 0);
-    const mediaTempo   = seps.filter(r => r.tempo_medio_min).reduce((s, r, _, a) => s + r.tempo_medio_min / a.length, 0);
-    const top          = seps.reduce((a, b) => (b.pedidos || 0) > (a.pedidos || 0) ? b : a, seps[0]);
-
-    cards.innerHTML = [
-      { icon:'📦', label:'Total Pedidos', val: totalPedidos },
-      { icon:'🔢', label:'Itens Separados', val: totalItens.toLocaleString('pt-BR') },
-      { icon:'⏱️', label:'Tempo Médio', val: mediaTempo ? `${mediaTempo.toFixed(1)} min` : '—' },
-      { icon:'🏆', label:'Top Separador', val: top?.nome || '—' },
-    ].map(c => `
-      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px">
-        <div style="font-size:22px;margin-bottom:6px">${c.icon}</div>
-        <div style="font-size:11px;color:var(--text3);font-weight:700;letter-spacing:.5px;margin-bottom:4px">${c.label.toUpperCase()}</div>
-        <div style="font-size:22px;font-weight:800;color:var(--text);font-family:'Space Mono',monospace">${c.val}</div>
-      </div>`).join('');
-
-    const metaObj = (metas.metas || []).reduce((o, m) => { o[m.usuario_id] = m; return o; }, {});
-    tabela.innerHTML = `
-      <table style="width:100%;border-collapse:collapse;font-size:13px">
-        <thead>
-          <tr style="background:var(--surface2)">
-            <th style="padding:10px 12px;text-align:left;color:var(--text3);font-size:11px;font-weight:700;border-bottom:1px solid var(--border)">#</th>
-            <th style="padding:10px 12px;text-align:left;color:var(--text3);font-size:11px;font-weight:700;border-bottom:1px solid var(--border)">COLABORADOR</th>
-            <th style="padding:10px 12px;text-align:center;color:var(--text3);font-size:11px;font-weight:700;border-bottom:1px solid var(--border)">TURNO</th>
-            <th style="padding:10px 12px;text-align:center;color:var(--text3);font-size:11px;font-weight:700;border-bottom:1px solid var(--border)">PEDIDOS</th>
-            <th style="padding:10px 12px;text-align:center;color:var(--text3);font-size:11px;font-weight:700;border-bottom:1px solid var(--border)">ITENS</th>
-            <th style="padding:10px 12px;text-align:center;color:var(--text3);font-size:11px;font-weight:700;border-bottom:1px solid var(--border)">TEMPO MÉD.</th>
-            <th style="padding:10px 12px;text-align:center;color:var(--text3);font-size:11px;font-weight:700;border-bottom:1px solid var(--border)">META</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${seps.sort((a,b) => (b.pedidos||0)-(a.pedidos||0)).map((r, i) => {
-            const m  = metaObj[r.usuario_id];
-            const pct = m ? Math.round((r.pedidos / (m.meta_calculada || 1)) * 100) : null;
-            const cor = pct == null ? 'var(--text3)' : pct >= 100 ? 'var(--green)' : pct >= 80 ? '#f59e0b' : 'var(--red)';
-            const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i+1}`;
-            return `
-            <tr style="border-bottom:1px solid var(--border)">
-              <td style="padding:10px 12px;font-weight:700;color:var(--text3)">${medal}</td>
-              <td style="padding:10px 12px;font-weight:700;color:var(--text)">${r.nome}</td>
-              <td style="padding:10px 12px;text-align:center;color:var(--text2)">${r.turno || '—'}</td>
-              <td style="padding:10px 12px;text-align:center;font-weight:800;color:var(--accent);font-family:'Space Mono',monospace">${r.pedidos}</td>
-              <td style="padding:10px 12px;text-align:center;color:var(--text2)">${(r.itens||0).toLocaleString('pt-BR')}</td>
-              <td style="padding:10px 12px;text-align:center;color:var(--text2)">${r.tempo_medio_min ? `${Number(r.tempo_medio_min).toFixed(1)} min` : '—'}</td>
-              <td style="padding:10px 12px;text-align:center;font-weight:700;color:${cor}">${pct != null ? `${pct}%` : '—'}</td>
-            </tr>`;
-          }).join('')}
-        </tbody>
-      </table>`;
-
-  } catch(e) {
-    cards.innerHTML  = '';
-    tabela.innerHTML = `<div style="color:var(--red);padding:20px">Erro ao carregar dados de performance.</div>`;
-  }
-}
-
-
-/* ── Ocorrências ──────────────────────────────────────────────── */
-async function carregarGestaoOcorrencias() {
-  const ini   = document.getElementById('goc-ini')?.value;
-  const fim   = document.getElementById('goc-fim')?.value;
-  const lista = document.getElementById('goc-lista');
-  if (!ini || !fim || !lista) return;
-
-  lista.innerHTML = _gestaoLoading();
-
-  try {
-    const res = await fetch(`${API}/performance/ocorrencias?ini=${ini}&fim=${fim}`, { credentials:'include' });
-    const dados = await res.json();
-
-    if (!Array.isArray(dados) || !dados.length) {
-      lista.innerHTML = _gestaoVazio('Nenhuma ocorrência no período.');
-      return;
-    }
-
-    const tipoIcon = { atraso:'⏰', falta_item:'📦', qualidade:'⭐', outros:'📝' };
-    const gravCor  = { alta:'var(--red)', media:'#f59e0b', baixa:'var(--green)' };
-
-    lista.innerHTML = dados.map(o => `
-      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:10px;display:flex;gap:14px;align-items:flex-start">
-        <div style="font-size:26px;flex-shrink:0">${tipoIcon[o.tipo] || '📝'}</div>
-        <div style="flex:1;min-width:0">
-          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">
-            <span style="font-weight:700;color:var(--text);font-size:14px">${o.colaborador_nome || '—'}</span>
-            <span style="font-size:11px;font-weight:700;color:${gravCor[o.gravidade]||'var(--text3)'};background:${gravCor[o.gravidade]||'var(--text3)'}22;padding:2px 8px;border-radius:20px">${(o.gravidade||'—').toUpperCase()}</span>
-            <span style="font-size:11px;color:var(--text3)">${o.data_ocorrencia ? new Date(o.data_ocorrencia).toLocaleDateString('pt-BR') : '—'}</span>
-          </div>
-          <div style="font-size:13px;color:var(--text2)">${o.descricao || ''}</div>
-          ${o.registrado_por_nome ? `<div style="font-size:11px;color:var(--text3);margin-top:4px">Registrado por: ${o.registrado_por_nome}</div>` : ''}
+    const kpis = [
+      { icon:'👥', label:'Funcionários',   val: totalFunc,              bg:'#eff6ff', cor:'#1d4ed8' },
+      { icon:'❌', label:'Total Faltas',   val: totalFaltas,            bg:'#fef2f2', cor:'#dc2626' },
+      { icon:'🏥', label:'Atestados',      val: totalAtestados,         bg:'#fefce8', cor:'#ca8a04' },
+      { icon:'📉', label:'Taxa da Equipe', val:`${taxaEquipe.toFixed(1)}%`, bg: taxaEquipe>=10?'#fef2f2':taxaEquipe>=5?'#fefce8':'#f0fdf4', cor: taxaEquipe>=10?'#dc2626':taxaEquipe>=5?'#ca8a04':'#16a34a' },
+    ];
+    cards.innerHTML = kpis.map(c => `
+      <div style="background:${c.bg};border:1px solid ${c.cor}33;border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:12px">
+        <div style="font-size:26px">${c.icon}</div>
+        <div>
+          <div style="font-size:10px;font-weight:800;color:${c.cor}aa;letter-spacing:.5px">${c.label.toUpperCase()}</div>
+          <div style="font-size:24px;font-weight:900;color:${c.cor};font-family:'Space Mono',monospace;line-height:1.1">${c.val}</div>
         </div>
       </div>`).join('');
 
+    _absRows = [...(team.employees || [])].sort(
+      (a, b) => (parseFloat(b.absenteeism_rate)||0) - (parseFloat(a.absenteeism_rate)||0)
+    );
+
+    _renderListaNomesAbs(_absRows);
+    _renderTabelaAbs(_absRows);
+
   } catch(e) {
-    lista.innerHTML = `<div style="color:var(--red);padding:20px">Erro ao carregar ocorrências.</div>`;
+    cards.innerHTML  = '';
+    tabela.innerHTML = `<div style="color:var(--red);padding:20px;font-size:13px">Erro ao carregar absenteísmo: ${e.message}<br><small style="color:var(--text3)">Importe os PDFs no botão 📥 Importar PDF</small></div>`;
   }
 }
 
 
-/* ── Absenteísmo ──────────────────────────────────────────────── */
-async function carregarGestaoAbsenteismo() {
-  const cards  = document.getElementById('gabs-cards');
+/* ── Lista de nomes (painel esquerdo) ── */
+function _renderListaNomesAbs(rows) {
+  const el = document.getElementById('gabs-lista-nomes');
+  if (!el) return;
+  if (!rows.length) {
+    el.innerHTML = '<div style="color:var(--text3);font-size:12px;padding:14px;text-align:center">Nenhum funcionário</div>';
+    return;
+  }
+  el.innerHTML = rows.map(r => {
+    const taxa = parseFloat(r.absenteeism_rate) || 0;
+    const cor  = taxa >= 10 ? '#dc2626' : taxa >= 5 ? '#d97706' : '#16a34a';
+    const bg   = taxa >= 10 ? '#fef2f2' : taxa >= 5 ? '#fefce8' : '#f0fdf4';
+    const nome = r.name || '—';
+    const iniciais = nome.split(' ').slice(0,2).map(n=>n[0]).join('').toUpperCase();
+    return `
+    <div onclick="verDetalheAbsenteismo(${r.id},'${nome.replace(/'/g,"\\'")}',null)"
+      style="display:flex;align-items:center;gap:9px;padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .15s"
+      onmouseover="this.style.background='var(--surface)'" onmouseout="this.style.background=''">
+      <div style="width:32px;height:32px;border-radius:50%;background:${bg};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:${cor};flex-shrink:0">${iniciais}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${nome}</div>
+        <div style="font-size:10px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${(r.sector||'').split('/')[0].trim()}</div>
+      </div>
+      <div style="font-size:12px;font-weight:800;color:${cor};flex-shrink:0">${taxa.toFixed(1)}%</div>
+    </div>`;
+  }).join('');
+}
+
+function filtrarListaAbs(q) {
+  const busca = (q || '').toLowerCase().trim();
+  const filtrado = busca ? _absRows.filter(r => (r.name||'').toLowerCase().includes(busca)) : _absRows;
+  _renderListaNomesAbs(filtrado);
+}
+
+
+/* ── Tabela ranking ── */
+function _renderTabelaAbs(rows) {
   const tabela = document.getElementById('gabs-tabela');
-  if (!cards || !tabela) return;
-
-  cards.innerHTML  = _gestaoLoading();
-  tabela.innerHTML = '';
-
-  try {
-    // Usa apenas /reports/team — retorna tudo incluindo `id` por funcionário
-    const res = await fetch(`${API}/gestao/absenteismo/team`, { credentials:'include' });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.erro || `HTTP ${res.status}`);
-    }
-    const team = await res.json();
-
-    // Campos corretos da API: total_employees, total_faltas, total_atestados, team_absenteeism_rate
-    const totalFunc     = team.total_employees ?? (team.employees || []).length;
-    const totalFaltas   = team.total_faltas    ?? 0;
-    const totalAtestados = team.total_atestados ?? 0;
-    const taxaEquipe    = parseFloat(team.team_absenteeism_rate) || 0;
-
-    cards.innerHTML = [
-      { icon:'👥', label:'Funcionários',  val: totalFunc },
-      { icon:'❌', label:'Total Faltas',  val: totalFaltas },
-      { icon:'🏥', label:'Atestados',     val: totalAtestados },
-      { icon:'📉', label:'Taxa da Equipe', val: `${taxaEquipe.toFixed(1)}%` },
-    ].map(c => `
-      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px">
-        <div style="font-size:22px;margin-bottom:6px">${c.icon}</div>
-        <div style="font-size:11px;color:var(--text3);font-weight:700;letter-spacing:.5px;margin-bottom:4px">${c.label.toUpperCase()}</div>
-        <div style="font-size:22px;font-weight:800;color:var(--text);font-family:'Space Mono',monospace">${c.val}</div>
-      </div>`).join('');
-
-    // employees: [{ id, name, sector, faltas_count, atestados_count, absenteeism_rate, ... }]
-    const rows = [...(team.employees || [])].sort(
-      (a, b) => (parseFloat(b.absenteeism_rate) || 0) - (parseFloat(a.absenteeism_rate) || 0)
-    );
-
-    if (!rows.length) {
-      tabela.innerHTML = _gestaoVazio('Nenhum dado de absenteísmo disponível. Importe os PDFs no sistema de absenteísmo.');
-      return;
-    }
-
-    tabela.innerHTML = `
-      <table style="width:100%;border-collapse:collapse;font-size:13px">
+  if (!tabela) return;
+  if (!rows.length) {
+    tabela.innerHTML = '<div style="color:var(--text3);padding:40px;text-align:center;font-size:13px">Nenhum dado. Importe os PDFs no botão 📥.</div>';
+    return;
+  }
+  tabela.innerHTML = `
+    <div style="overflow-x:auto;border:1px solid var(--border);border-radius:12px">
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
         <thead>
           <tr style="background:var(--surface2)">
-            <th style="padding:10px 12px;text-align:left;color:var(--text3);font-size:11px;font-weight:700;border-bottom:1px solid var(--border)">#</th>
-            <th style="padding:10px 12px;text-align:left;color:var(--text3);font-size:11px;font-weight:700;border-bottom:1px solid var(--border)">FUNCIONÁRIO</th>
-            <th style="padding:10px 12px;text-align:left;color:var(--text3);font-size:11px;font-weight:700;border-bottom:1px solid var(--border)">SETOR</th>
-            <th style="padding:10px 12px;text-align:center;color:var(--text3);font-size:11px;font-weight:700;border-bottom:1px solid var(--border)">FALTAS</th>
-            <th style="padding:10px 12px;text-align:center;color:var(--text3);font-size:11px;font-weight:700;border-bottom:1px solid var(--border)">ATESTADOS</th>
-            <th style="padding:10px 12px;text-align:center;color:var(--text3);font-size:11px;font-weight:700;border-bottom:1px solid var(--border)">ATRASO</th>
-            <th style="padding:10px 12px;text-align:center;color:var(--text3);font-size:11px;font-weight:700;border-bottom:1px solid var(--border)">ABSENTEÍSMO</th>
-            <th style="padding:10px 12px;text-align:center;color:var(--text3);font-size:11px;font-weight:700;border-bottom:1px solid var(--border)">DETALHE</th>
+            <th style="padding:9px 12px;text-align:left;color:var(--text3);font-size:10px;font-weight:800;border-bottom:1px solid var(--border)">#</th>
+            <th style="padding:9px 12px;text-align:left;color:var(--text3);font-size:10px;font-weight:800;border-bottom:1px solid var(--border)">FUNCIONÁRIO</th>
+            <th style="padding:9px 12px;text-align:left;color:var(--text3);font-size:10px;font-weight:800;border-bottom:1px solid var(--border)">SETOR</th>
+            <th style="padding:9px 12px;text-align:center;color:var(--text3);font-size:10px;font-weight:800;border-bottom:1px solid var(--border)">FALTAS</th>
+            <th style="padding:9px 12px;text-align:center;color:var(--text3);font-size:10px;font-weight:800;border-bottom:1px solid var(--border)">ATESTADOS</th>
+            <th style="padding:9px 12px;text-align:center;color:var(--text3);font-size:10px;font-weight:800;border-bottom:1px solid var(--border)">ATRASO</th>
+            <th style="padding:9px 12px;text-align:center;color:var(--text3);font-size:10px;font-weight:800;border-bottom:1px solid var(--border)">ABSENTEÍSMO</th>
+            <th style="padding:9px 12px;text-align:center;color:var(--text3);font-size:10px;font-weight:800;border-bottom:1px solid var(--border)">DETALHE</th>
           </tr>
         </thead>
         <tbody>
           ${rows.map((r, i) => {
             const taxa = parseFloat(r.absenteeism_rate) || 0;
-            const cor  = taxa >= 10 ? 'var(--red)' : taxa >= 5 ? '#f59e0b' : 'var(--green)';
+            const cor  = taxa >= 10 ? '#dc2626' : taxa >= 5 ? '#d97706' : '#16a34a';
+            const bg   = taxa >= 10 ? '#fef2f222' : taxa >= 5 ? '#fefce822' : '';
             const nome = r.name || '—';
+            const barW = Math.min(100, taxa * 5);
             return `
-            <tr style="border-bottom:1px solid var(--border)">
-              <td style="padding:10px 12px;font-weight:700;color:var(--text3)">${i+1}</td>
-              <td style="padding:10px 12px;font-weight:700;color:var(--text)">${nome}</td>
-              <td style="padding:10px 12px;color:var(--text2);font-size:12px">${r.sector || '—'}</td>
-              <td style="padding:10px 12px;text-align:center;color:var(--text2)">${r.faltas_count ?? '—'}</td>
-              <td style="padding:10px 12px;text-align:center;color:var(--text2)">${r.atestados_count ?? '—'}</td>
-              <td style="padding:10px 12px;text-align:center;color:var(--text2);font-size:12px">${r.total_atraso_formatted || '—'}</td>
-              <td style="padding:10px 12px;text-align:center;font-weight:800;color:${cor};font-family:'Space Mono',monospace">${taxa.toFixed(1)}%</td>
-              <td style="padding:10px 12px;text-align:center">
-                <button onclick="verDetalheAbsenteismo(${r.id}, '${nome.replace(/'/g,"\\'")}', this)"
-                  style="padding:4px 12px;background:transparent;border:1.5px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer;color:var(--text2)">
+            <tr style="border-bottom:1px solid var(--border);background:${bg}">
+              <td style="padding:9px 12px;font-weight:700;color:var(--text3)">${i+1}</td>
+              <td style="padding:9px 12px;font-weight:700;color:var(--text)">${nome}</td>
+              <td style="padding:9px 12px;color:var(--text2);font-size:11px">${r.sector || '—'}</td>
+              <td style="padding:9px 12px;text-align:center;font-weight:700;color:${r.faltas_count>0?'#dc2626':'var(--text2)'}">${r.faltas_count ?? '—'}</td>
+              <td style="padding:9px 12px;text-align:center;font-weight:700;color:${r.atestados_count>0?'#d97706':'var(--text2)'}">${r.atestados_count ?? '—'}</td>
+              <td style="padding:9px 12px;text-align:center;color:var(--text2);font-size:11px">${r.total_atraso_formatted || '—'}</td>
+              <td style="padding:9px 12px;text-align:center">
+                <div style="display:flex;align-items:center;gap:6px;justify-content:center">
+                  <div style="width:50px;background:var(--surface2);border-radius:4px;height:5px;overflow:hidden">
+                    <div style="width:${barW}%;height:100%;background:${cor};border-radius:4px"></div>
+                  </div>
+                  <span style="font-size:12px;font-weight:800;color:${cor};min-width:36px">${taxa.toFixed(1)}%</span>
+                </div>
+              </td>
+              <td style="padding:9px 12px;text-align:center">
+                <button onclick="verDetalheAbsenteismo(${r.id},'${nome.replace(/'/g,"\\'")}',this)"
+                  style="padding:4px 12px;background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;font-size:11px;cursor:pointer;color:var(--text2);font-weight:700">
                   Ver
                 </button>
               </td>
             </tr>`;
           }).join('')}
         </tbody>
-      </table>`;
-
-  } catch(e) {
-    cards.innerHTML  = '';
-    tabela.innerHTML = `<div style="color:var(--red);padding:20px">Erro ao carregar absenteísmo: ${e.message}</div>`;
-  }
+      </table>
+    </div>`;
 }
 
 
+/* ── Detalhe do funcionário ── */
 async function verDetalheAbsenteismo(id, nome, btn) {
   const detalhe = document.getElementById('gabs-detalhe');
   if (!detalhe) return;
+  detalhe.innerHTML = '<div style="color:var(--text3);padding:14px;font-size:12px">Carregando...</div>';
+  detalhe.scrollIntoView({ behavior:'smooth', block:'nearest' });
   if (btn) { btn.textContent = '...'; btn.disabled = true; }
 
   try {
     const res  = await fetch(`${API}/gestao/absenteismo/funcionario/${id}`, { credentials:'include' });
     if (!res.ok) throw new Error('Erro ao carregar');
     const data = await res.json();
-    // API retorna: daily_records: [{date, day_of_week, status, falta, atestado, ferias, entry_time, exit_time, atraso_minutes}]
     const registros = (data.daily_records || []).filter(r => r.falta || r.atestado || r.ferias || r.atraso_minutes > 0);
+    const taxa = parseFloat(data.absenteeism_rate || 0).toFixed(1);
+    const taxaCor = taxa >= 10 ? '#dc2626' : taxa >= 5 ? '#d97706' : '#16a34a';
 
     detalhe.innerHTML = `
       <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-          <div style="font-weight:800;color:var(--text);font-size:14px">📅 ${nome}</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <div style="font-weight:900;color:var(--text);font-size:15px">📋 ${nome}</div>
           <button onclick="document.getElementById('gabs-detalhe').innerHTML=''"
-            style="background:transparent;border:none;font-size:18px;cursor:pointer;color:var(--text3)">✕</button>
+            style="background:transparent;border:none;font-size:18px;cursor:pointer;color:var(--text3);line-height:1;padding:0 4px">✕</button>
         </div>
-        <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:14px;font-size:12px">
-          <span>Faltas: <b style="color:var(--red)">${data.faltas_count ?? 0}</b></span>
-          <span>Atestados: <b style="color:#f59e0b">${data.atestados_count ?? 0}</b></span>
-          <span>Atraso: <b>${data.total_atraso_formatted || '—'}</b></span>
-          <span>Absenteísmo: <b>${parseFloat(data.absenteeism_rate||0).toFixed(1)}%</b></span>
-          <span style="color:var(--text3)">${data.period_start || ''} → ${data.period_end || ''}</span>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:14px">
+          <div style="background:var(--surface);border-radius:8px;padding:8px 12px;text-align:center">
+            <div style="font-size:10px;color:var(--text3);font-weight:700">FALTAS</div>
+            <div style="font-size:20px;font-weight:900;color:#dc2626">${data.faltas_count ?? 0}</div>
+          </div>
+          <div style="background:var(--surface);border-radius:8px;padding:8px 12px;text-align:center">
+            <div style="font-size:10px;color:var(--text3);font-weight:700">ATESTADOS</div>
+            <div style="font-size:20px;font-weight:900;color:#d97706">${data.atestados_count ?? 0}</div>
+          </div>
+          <div style="background:var(--surface);border-radius:8px;padding:8px 12px;text-align:center">
+            <div style="font-size:10px;color:var(--text3);font-weight:700">ATRASO TOTAL</div>
+            <div style="font-size:16px;font-weight:900;color:var(--text)">${data.total_atraso_formatted || '—'}</div>
+          </div>
+          <div style="background:var(--surface);border-radius:8px;padding:8px 12px;text-align:center">
+            <div style="font-size:10px;color:var(--text3);font-weight:700">ABSENTEÍSMO</div>
+            <div style="font-size:20px;font-weight:900;color:${taxaCor}">${taxa}%</div>
+          </div>
         </div>
-        ${!registros.length ? '<div style="color:var(--text3);padding:10px">Nenhuma ocorrência encontrada no período.</div>' : `
-        <div style="overflow-x:auto">
-          <table style="width:100%;border-collapse:collapse;font-size:12px">
-            <thead>
-              <tr style="background:var(--surface)">
-                <th style="padding:8px 10px;text-align:left;color:var(--text3);border-bottom:1px solid var(--border)">DATA</th>
-                <th style="padding:8px 10px;text-align:left;color:var(--text3);border-bottom:1px solid var(--border)">DIA</th>
-                <th style="padding:8px 10px;text-align:center;color:var(--text3);border-bottom:1px solid var(--border)">OCORRÊNCIA</th>
-                <th style="padding:8px 10px;text-align:center;color:var(--text3);border-bottom:1px solid var(--border)">ATRASO</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${registros.map(r => {
-                const ocorrencia = r.falta ? '❌ Falta' : r.atestado ? '🏥 Atestado' : r.ferias ? '🌴 Férias' : '⏰ Atraso';
-                const cor = r.falta ? 'var(--red)' : r.atestado ? '#f59e0b' : r.ferias ? '#3b82f6' : '#8b5cf6';
-                const dt  = r.date ? new Date(r.date + 'T12:00:00').toLocaleDateString('pt-BR') : '—';
-                return `
-                <tr style="border-bottom:1px solid var(--border)">
-                  <td style="padding:8px 10px;color:var(--text)">${dt}</td>
-                  <td style="padding:8px 10px;color:var(--text2)">${r.day_of_week || '—'}</td>
-                  <td style="padding:8px 10px;text-align:center;font-weight:700;color:${cor}">${ocorrencia}</td>
-                  <td style="padding:8px 10px;text-align:center;color:var(--text2)">${r.atraso_minutes ? `${r.atraso_minutes} min` : '—'}</td>
-                </tr>`;
-              }).join('')}
-            </tbody>
-          </table>
-        </div>`}
+        <div style="font-size:11px;color:var(--text3);margin-bottom:10px">Período: ${data.period_start || ''} → ${data.period_end || ''}</div>
+        ${!registros.length
+          ? '<div style="color:var(--text3);padding:10px;font-size:12px">Nenhuma ocorrência registrada no período.</div>'
+          : `<div style="overflow-x:auto;border:1px solid var(--border);border-radius:8px">
+              <table style="width:100%;border-collapse:collapse;font-size:12px">
+                <thead>
+                  <tr style="background:var(--surface)">
+                    <th style="padding:7px 10px;text-align:left;color:var(--text3);border-bottom:1px solid var(--border)">DATA</th>
+                    <th style="padding:7px 10px;text-align:left;color:var(--text3);border-bottom:1px solid var(--border)">DIA</th>
+                    <th style="padding:7px 10px;text-align:center;color:var(--text3);border-bottom:1px solid var(--border)">OCORRÊNCIA</th>
+                    <th style="padding:7px 10px;text-align:center;color:var(--text3);border-bottom:1px solid var(--border)">ATRASO</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${registros.map(r => {
+                    const oc  = r.falta ? '❌ Falta' : r.atestado ? '🏥 Atestado' : r.ferias ? '🌴 Férias' : '⏰ Atraso';
+                    const cor = r.falta ? '#dc2626' : r.atestado ? '#d97706' : r.ferias ? '#2563eb' : '#7c3aed';
+                    const dt  = r.date ? new Date(r.date+'T12:00:00').toLocaleDateString('pt-BR') : '—';
+                    return `<tr style="border-bottom:1px solid var(--border)">
+                      <td style="padding:7px 10px;color:var(--text)">${dt}</td>
+                      <td style="padding:7px 10px;color:var(--text2)">${r.day_of_week || '—'}</td>
+                      <td style="padding:7px 10px;text-align:center;font-weight:700;color:${cor}">${oc}</td>
+                      <td style="padding:7px 10px;text-align:center;color:var(--text2)">${r.atraso_minutes ? `${r.atraso_minutes} min` : '—'}</td>
+                    </tr>`;
+                  }).join('')}
+                </tbody>
+              </table>
+            </div>`}
       </div>`;
-
   } catch(e) {
-    detalhe.innerHTML = `<div style="color:var(--red);padding:10px">Erro ao carregar detalhe.</div>`;
+    detalhe.innerHTML = `<div style="color:var(--red);padding:10px;font-size:12px">Erro ao carregar detalhe.</div>`;
   } finally {
     if (btn) { btn.textContent = 'Ver'; btn.disabled = false; }
   }
 }
 
 
-/* ── Helpers ──────────────────────────────────────────────────── */
+/* ── Helpers ── */
 function _gestaoLoading() {
   return `<div style="color:var(--text3);padding:20px;text-align:center;font-size:13px">Carregando...</div>`;
 }
