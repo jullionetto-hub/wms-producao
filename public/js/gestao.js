@@ -4,9 +4,11 @@
    GESTÃO — Absenteísmo
 ══════════════════════════════════════════ */
 
-let _absRows = [];          // todos os funcionários carregados
-let _absToleranciMin = 0;  // minutos de atraso tolerados
-let _absDetalheCache = null; // { id, data } — evita refetch ao mudar tolerância
+let _absRows = [];
+let _absToleranciMin = 0;
+let _absDetalheCache = null;
+let _absPeriodo  = null;   // null = todos, ou {start:'2024-05-27', end:'2024-06-26'}
+let _absUploads  = [];     // cache dos uploads para montar os botões de período
 
 function renderizarPagGestao() {
   const root = document.getElementById('pag-gestao');
@@ -52,6 +54,14 @@ function renderizarPagGestao() {
     </div>
     <input type="file" id="gabs-file-input" accept=".pdf" style="display:none" onchange="absEnviarPdf(this.files[0])">
     <div id="gabs-upload-status" style="margin-top:8px;font-size:12px"></div>
+  </div>
+
+  <!-- ── Seletor de período ── -->
+  <div style="padding:10px 24px 8px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--surface2)">
+    <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.5px;margin-bottom:6px">📅 PERÍODO DE ANÁLISE</div>
+    <div id="gabs-periodo-btns" style="display:flex;gap:6px;flex-wrap:wrap">
+      <span style="font-size:11px;color:var(--text3)">Carregando...</span>
+    </div>
   </div>
 
   <!-- ── KPI cards ── -->
@@ -102,6 +112,72 @@ function renderizarPagGestao() {
     </div>
   </div>
 </div>`;
+  carregarGestaoAbsenteismo();
+}
+
+
+/* ── Seletor de período ── */
+function _parsePeriodFromUpload(u) {
+  if (u.period_start && u.period_end) return { start: u.period_start, end: u.period_end };
+  const dates = (u.filename || '').match(/\d{4}-\d{2}-\d{2}/g) || [];
+  if (dates.length >= 2) return { start: dates[0], end: dates[1] };
+  if (dates.length === 1) return { start: dates[0], end: dates[0] };
+  if (u.upload_at) { const d = u.upload_at.split('T')[0]; return { start: d, end: d }; }
+  return null;
+}
+
+function _fmtPdBtn(start, end) {
+  const f = s => { const [y, m, d] = s.split('-'); return `${d}/${m}`; };
+  return start === end ? f(start) : `${f(start)} – ${f(end)}`;
+}
+
+async function _renderPeriodBtns(forceRefresh) {
+  const el = document.getElementById('gabs-periodo-btns');
+  if (!el) return;
+
+  if (!_absUploads.length || forceRefresh) {
+    try {
+      const r    = await fetch(`${API}/gestao/absenteismo/uploads`, { credentials: 'include' });
+      const list = await r.json();
+      _absUploads = Array.isArray(list) ? list.filter(u => u.status === 'success') : [];
+    } catch { _absUploads = []; }
+  }
+
+  const seen = new Set();
+  const periods = [];
+  for (const u of _absUploads) {
+    const p = _parsePeriodFromUpload(u);
+    if (!p) continue;
+    const key = `${p.start}|${p.end}`;
+    if (!seen.has(key)) { seen.add(key); periods.push(p); }
+  }
+  periods.sort((a, b) => b.start.localeCompare(a.start));
+
+  const activeKey = _absPeriodo ? `${_absPeriodo.start}|${_absPeriodo.end}` : 'todos';
+
+  const btn = (label, onclick, active) =>
+    `<button onclick="${onclick}"
+      style="padding:4px 14px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;
+             border:1.5px solid ${active ? 'var(--accent)' : 'var(--border)'};
+             background:${active ? 'var(--accent)' : 'var(--surface)'};
+             color:${active ? '#fff' : 'var(--text2)'}">
+      ${label}
+    </button>`;
+
+  el.innerHTML = [
+    btn('Todos', 'selecionarPeriodoAbs(null)', activeKey === 'todos'),
+    ...periods.map(p => btn(
+      _fmtPdBtn(p.start, p.end),
+      `selecionarPeriodoAbs('${p.start}','${p.end}')`,
+      activeKey === `${p.start}|${p.end}`
+    )),
+  ].join('') || '<span style="font-size:11px;color:var(--text3)">Importe um PDF para ver períodos</span>';
+}
+
+function selecionarPeriodoAbs(start, end) {
+  _absPeriodo      = start ? { start, end } : null;
+  _absDetalheCache = null;
+  _renderPeriodBtns();
   carregarGestaoAbsenteismo();
 }
 
@@ -179,6 +255,7 @@ async function absEnviarPdf(file) {
     if (!res.ok) { status.innerHTML = `<span style="color:var(--red)">❌ ${data.erro || 'Erro no upload'}</span>`; return; }
     status.innerHTML = `<span style="color:var(--green)">✅ ${data.message || 'Importado!'} (${data.employees} funcionário(s))</span>`;
     document.getElementById('gabs-file-input').value = '';
+    _absUploads = []; // força refresh dos botões de período
     carregarGestaoAbsenteismo();
   } catch(e) {
     status.innerHTML = `<span style="color:var(--red)">❌ Erro: ${e.message}</span>`;
@@ -226,7 +303,7 @@ async function absExcluirUpload(id, btn) {
   btn.disabled = true; btn.textContent = '...';
   try {
     const res = await fetch(`${API}/gestao/absenteismo/uploads/${id}`, { method:'DELETE', credentials:'include' });
-    if (res.ok) { toast('Arquivo excluído!','sucesso'); carregarHistoricoAbs(); carregarGestaoAbsenteismo(); }
+    if (res.ok) { toast('Arquivo excluído!','sucesso'); _absUploads = []; _absPeriodo = null; carregarHistoricoAbs(); carregarGestaoAbsenteismo(); }
     else { btn.disabled = false; btn.innerHTML = '🗑️ Excluir'; toast('Erro ao excluir','erro'); }
   } catch(e) { btn.disabled = false; btn.innerHTML = '🗑️ Excluir'; }
 }
@@ -243,8 +320,12 @@ async function carregarGestaoAbsenteismo() {
   tabela.innerHTML = '';
   if (listaNom) listaNom.innerHTML = '';
 
+  // Carrega os botões de período (usa cache se já tiver)
+  _renderPeriodBtns(!_absUploads.length);
+
   try {
-    const res = await fetch(`${API}/gestao/absenteismo/team`, { credentials:'include' });
+    const pdqs = _absPeriodo ? `?start_date=${_absPeriodo.start}&end_date=${_absPeriodo.end}` : '';
+    const res = await fetch(`${API}/gestao/absenteismo/team${pdqs}`, { credentials:'include' });
     if (!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e.erro || `HTTP ${res.status}`); }
     const team = await res.json();
 
@@ -394,7 +475,8 @@ async function verDetalheAbsenteismo(id, nome, btn) {
   if (btn) { btn.textContent = '...'; btn.disabled = true; }
 
   try {
-    const res  = await fetch(`${API}/gestao/absenteismo/funcionario/${id}`, { credentials:'include' });
+    const pdqs = _absPeriodo ? `?start_date=${_absPeriodo.start}&end_date=${_absPeriodo.end}` : '';
+    const res  = await fetch(`${API}/gestao/absenteismo/funcionario/${id}${pdqs}`, { credentials:'include' });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.erro || `Erro ${res.status} ao carregar funcionário`);

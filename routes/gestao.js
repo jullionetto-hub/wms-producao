@@ -28,11 +28,12 @@ async function getAbsToken() {
   return _absToken;
 }
 
-async function absProxy(path) {
+async function absProxy(path, query = {}) {
   const token = await getAbsToken();
-  const res = await fetch(`${ABS_URL}${path}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  const clean = Object.fromEntries(Object.entries(query).filter(([, v]) => v != null && v !== ''));
+  const qs    = new URLSearchParams(clean).toString();
+  const url   = `${ABS_URL}${path}${qs ? '?' + qs : ''}`;
+  const res   = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
   if (!res.ok) {
     let detail = '';
     try { const j = await res.json(); detail = j.detail || JSON.stringify(j); } catch {}
@@ -43,8 +44,9 @@ async function absProxy(path) {
 
 const requerGestor = requerPerfil('gestor', 'supervisor');
 
-router.get('/gestao/absenteismo/team',    requerAuth, requerGestor, async (_req, res) => {
-  try { res.json(await absProxy('/api/reports/team')); }
+router.get('/gestao/absenteismo/team', requerAuth, requerGestor, async (req, res) => {
+  const { start_date, end_date } = req.query;
+  try { res.json(await absProxy('/api/reports/team', { start_date, end_date })); }
   catch (e) { res.status(502).json({ erro: e.message }); }
 });
 
@@ -59,7 +61,8 @@ router.get('/gestao/absenteismo/setor',  requerAuth, requerGestor, async (_req, 
 });
 
 router.get('/gestao/absenteismo/funcionario/:id', requerAuth, requerGestor, async (req, res) => {
-  try { res.json(await absProxy(`/api/reports/employee/${req.params.id}`)); }
+  const { start_date, end_date } = req.query;
+  try { res.json(await absProxy(`/api/reports/employee/${req.params.id}`, { start_date, end_date })); }
   catch (e) { res.status(502).json({ erro: e.message }); }
 });
 
