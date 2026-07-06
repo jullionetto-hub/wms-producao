@@ -393,7 +393,15 @@
               <button class="btn btn-primary" style="width:100%;margin-top:4px" onclick="cadastrarUsuario()">✅ Cadastrar Usuário</button>
             </div>
             <div class="card">
-              <div class="card-hd">👥 USUÁRIOS CADASTRADOS <span id="usr-count" style="font-size:11px;color:var(--text3);font-weight:500"></span><button class="btn btn-outline btn-sm" onclick="carregarUsuarios()" style="margin-left:auto">🔄</button></div>
+              <div class="card-hd">👥 USUÁRIOS CADASTRADOS <span id="usr-count" style="font-size:11px;color:var(--text3);font-weight:500"></span>
+                <div style="display:flex;gap:4px;margin-left:auto;flex-wrap:wrap">
+                  <button id="uf-todos"  class="btn btn-sm btn-primary" onclick="filtrarTurnoUsr('todos')">Todos</button>
+                  <button id="uf-manha"  class="btn btn-sm btn-outline"  onclick="filtrarTurnoUsr('Manha')">☀️ Manhã</button>
+                  <button id="uf-tarde"  class="btn btn-sm btn-outline"  onclick="filtrarTurnoUsr('Tarde')">🌅 Tarde</button>
+                  <button id="uf-noite"  class="btn btn-sm btn-outline"  onclick="filtrarTurnoUsr('Noite')">🌙 Noite</button>
+                  <button class="btn btn-outline btn-sm" onclick="carregarUsuarios()" title="Recarregar">🔄</button>
+                </div>
+              </div>
               <div id="lista-usuarios" style="padding:4px 0;max-height:calc(100vh - 220px);overflow-y:auto"></div>
             </div>
           </div>
@@ -2022,7 +2030,7 @@
 
 
 <script src="/js/config.js?v=10"></script>
-  <script src="/js/pedidos.js?v=18"></script>
+  <script src="/js/pedidos.js?v=19"></script>
   <script src="/js/separador.js?v=7"></script>
   <script src="/js/repositor.js?v=15"></script>
   <script src="/js/checkout.js?v=9"></script>
@@ -2032,7 +2040,7 @@
   <script src="/js/performance-dash.js?v=5"></script>
   <script src="/js/dash-logistica.js?v=5"></script>
   <script src="/js/gestao.js?v=3"></script>
-  <script src="/js/auth.js?v=20"></script>
+  <script src="/js/auth.js?v=21"></script>
 
 
 <!-- ══ MODAL IMPORTAR ══ -->

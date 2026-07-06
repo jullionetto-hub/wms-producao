@@ -224,44 +224,72 @@ function coletarPerfisMarcados() {
 
 
 
+let _usrTodos = [];
+let _usrFiltroTurno = 'todos';
+
+const _turnoLabel = { Manha:'Manhã', Tarde:'Tarde', Noite:'Noite' };
+
+function filtrarTurnoUsr(turno) {
+  _usrFiltroTurno = turno;
+  ['todos','Manha','Tarde','Noite'].forEach(t => {
+    const btn = document.getElementById(`uf-${t.toLowerCase()}`);
+    if (btn) btn.className = `btn btn-sm ${t === turno ? 'btn-primary' : 'btn-outline'}`;
+  });
+  _renderListaUsuarios();
+}
+
+function _renderListaUsuarios() {
+  const el = document.getElementById('lista-usuarios');
+  if (!el) return;
+  const lista = _usrFiltroTurno === 'todos'
+    ? _usrTodos
+    : _usrTodos.filter(u => (u.turno || 'Manha') === _usrFiltroTurno);
+  const countEl = document.getElementById('usr-count');
+  if (countEl) countEl.textContent = `• ${lista.length} de ${_usrTodos.length} usuário(s)`;
+  if (!lista.length) {
+    el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:24px;font-size:13px">Nenhum usuário neste turno</div>';
+    return;
+  }
+  const perfIcons = {supervisor:'👔',separador:'📦',repositor:'🔧',checkout:'🏷️',embalador:'📫',gestor:'📊'};
+  el.innerHTML = lista.map(u => {
+    const perfisExtra = (u.perfis_acesso || '').split(',').filter(Boolean).filter(p => p !== u.perfil);
+    const todosAcessos = [u.perfil, ...perfisExtra];
+    const iniciais = u.nome.split(' ').slice(0,2).map(n=>n[0]).join('').toUpperCase();
+    const turnoLabel = _turnoLabel[u.turno] || u.turno || '—';
+    return `<div class="usr-card ${u.status}">
+      <div class="usr-avatar">${iniciais}</div>
+      <div class="usr-info">
+        <div class="usr-name">${u.nome}</div>
+        <div class="usr-login">@${u.login}</div>
+        <div class="usr-pills">
+          ${todosAcessos.map(p=>`<span class="usr-pill ${p}">${perfIcons[p]||''} ${p}</span>`).join('')}
+          <span class="usr-pill turno">⏰ ${turnoLabel}</span>
+          <span class="pill ${u.status}" style="font-size:9px;padding:2px 7px">${u.status}</span>
+        </div>
+      </div>
+      <div class="usr-actions">
+        <button class="usr-btn ${u.status==='ativo'?'toggle-on':'toggle-off'}" title="${u.status==='ativo'?'Desativar':'Ativar'}"
+          onclick="alterarStatusUsuario(${u.id},'${u.status==='ativo'?'inativo':'ativo'}','${u.nome}','${u.login}','${u.perfil}','${u.turno||''}')">
+          ${u.status==='ativo'?'⏸':'▶'}
+        </button>
+        <button class="usr-btn" style="background:#3b82f6;color:#fff;border:none;border-radius:6px;padding:5px 10px;cursor:pointer;font-size:12px;margin-right:4px" onclick="abrirEditarUsuario(${u.id})">Editar</button>
+        <button class="usr-btn del" title="Excluir" onclick="excluirUsuario(${u.id},'${u.nome}')">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
 async function carregarUsuarios() {
   try {
     const res   = await fetch(`${API}/usuarios`, { credentials:'include' });
     const users = await res.json();
-    const el = document.getElementById('lista-usuarios');
-    if (!el) return;
-    if (!users.length) {
-      el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:24px;font-size:13px">Nenhum usuário cadastrado</div>';
-      return;
-    }
-    const countEl = document.getElementById('usr-count');
-    if (countEl) countEl.textContent = `• ${users.length} usuário(s)`;
-    el.innerHTML = users.map(u => {
-      const perfisExtra = (u.perfis_acesso || '').split(',').filter(Boolean).filter(p => p !== u.perfil);
-      const todosAcessos = [u.perfil, ...perfisExtra];
-      const iniciais = u.nome.split(' ').slice(0,2).map(n=>n[0]).join('').toUpperCase();
-      const perfIcons = {supervisor:'👔',separador:'📦',repositor:'🔧',checkout:'🏷️',embalador:'📫'};
-      return `<div class="usr-card ${u.status}">
-        <div class="usr-avatar">${iniciais}</div>
-        <div class="usr-info">
-          <div class="usr-name">${u.nome}</div>
-          <div class="usr-login">@${u.login}</div>
-          <div class="usr-pills">
-            ${todosAcessos.map(p=>`<span class="usr-pill ${p}">${perfIcons[p]||''} ${p}</span>`).join('')}
-            <span class="usr-pill turno">⏰ ${u.turno||'—'}</span>
-            <span class="pill ${u.status}" style="font-size:9px;padding:2px 7px">${u.status}</span>
-          </div>
-        </div>
-        <div class="usr-actions">
-          <button class="usr-btn ${u.status==='ativo'?'toggle-on':'toggle-off'}" title="${u.status==='ativo'?'Desativar':'Ativar'}"
-            onclick="alterarStatusUsuario(${u.id},'${u.status==='ativo'?'inativo':'ativo'}','${u.nome}','${u.login}','${u.perfil}','${u.turno||''}')">
-            ${u.status==='ativo'?'⏸':'▶'}
-          </button>
-          <button class="usr-btn" style="background:#3b82f6;color:#fff;border:none;border-radius:6px;padding:5px 10px;cursor:pointer;font-size:12px;margin-right:4px" onclick="abrirEditarUsuario(${u.id})">Editar</button>
-          <button class="usr-btn del" title="Excluir" onclick="excluirUsuario(${u.id},'${u.nome}')">🗑</button>
-        </div>
-      </div>`;
-    }).join('');
+    _usrTodos = users;
+    _usrFiltroTurno = 'todos';
+    ['todos','Manha','Tarde','Noite'].forEach(t => {
+      const btn = document.getElementById(`uf-${t.toLowerCase()}`);
+      if (btn) btn.className = `btn btn-sm ${t === 'todos' ? 'btn-primary' : 'btn-outline'}`;
+    });
+    _renderListaUsuarios();
   } catch(e) { console.warn(e); }
 }
 

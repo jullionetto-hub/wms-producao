@@ -4,7 +4,7 @@ const { db, pool } = require('../lib/db');
 const { requerAuth, requerPerfil } = require('../lib/auth');
 const { hashSenha, validarId } = require('../lib/helpers');
 
-router.get('/usuarios', requerAuth, requerPerfil('supervisor'), async (req,res) => {
+router.get('/usuarios', requerAuth, requerPerfil('supervisor', 'gestor'), async (req,res) => {
   try {
     let sql='SELECT id,nome,login,perfil,subtipo_repositor,perfis_acesso,turno,status,data_cadastro FROM usuarios WHERE 1=1';
     const p=[];
@@ -13,7 +13,7 @@ router.get('/usuarios', requerAuth, requerPerfil('supervisor'), async (req,res) 
   } catch(e){res.status(500).json({erro:e.message});}
 });
 
-router.post('/usuarios', requerAuth, requerPerfil('supervisor'), async (req,res) => {
+router.post('/usuarios', requerAuth, requerPerfil('supervisor', 'gestor'), async (req,res) => {
   const {nome,login,senha,perfil,subtipo_repositor,turno,perfis_acesso}=req.body;
   if (!nome||!login||!senha||!perfil) return res.status(400).json({erro:'Preencha todos os campos!'});
   const extras=Array.isArray(perfis_acesso)?perfis_acesso.filter(Boolean).filter(p=>p!==perfil).join(','):String(perfis_acesso||'');
@@ -30,7 +30,7 @@ router.post('/usuarios', requerAuth, requerPerfil('supervisor'), async (req,res)
   }
 });
 
-router.put('/usuarios/:id', requerAuth, requerPerfil('supervisor'), async (req,res) => {
+router.put('/usuarios/:id', requerAuth, requerPerfil('supervisor', 'gestor'), async (req,res) => {
   const {nome,login,senha,perfil,subtipo_repositor,turno,status,perfis_acesso}=req.body;
   const subtipo=perfil==='repositor'?(subtipo_repositor||'geral'):'geral';
   const extras=Array.isArray(perfis_acesso)?perfis_acesso.filter(Boolean).filter(p=>p!==perfil).join(','):String(perfis_acesso||'');
@@ -50,7 +50,7 @@ router.put('/usuarios/:id', requerAuth, requerPerfil('supervisor'), async (req,r
   } catch(e){res.status(500).json({erro:e.message});}
 });
 
-router.patch('/usuarios/:id/status', requerAuth, requerPerfil('supervisor'), async (req,res) => {
+router.patch('/usuarios/:id/status', requerAuth, requerPerfil('supervisor', 'gestor'), async (req,res) => {
   const id = validarId(req.params.id);
   if (!id) return res.status(400).json({erro:'ID invalido'});
   const {status} = req.body;
@@ -61,7 +61,7 @@ router.patch('/usuarios/:id/status', requerAuth, requerPerfil('supervisor'), asy
   } catch(err) { res.status(500).json({erro:err.message}); }
 });
 
-router.delete('/usuarios/:id', requerAuth, requerPerfil('supervisor'), async (req,res) => {
+router.delete('/usuarios/:id', requerAuth, requerPerfil('supervisor', 'gestor'), async (req,res) => {
   try { await pool.query('DELETE FROM usuarios WHERE id=$1',[req.params.id]); res.json({mensagem:'Excluido!'}); }
   catch(e){res.status(500).json({erro:e.message});}
 });
@@ -77,7 +77,7 @@ router.get('/separadores/:id', requerAuth, async (req,res) => {
   catch(e){res.status(500).json({erro:e.message});}
 });
 
-router.post('/separadores', requerAuth, requerPerfil('supervisor'), async (req,res) => {
+router.post('/separadores', requerAuth, requerPerfil('supervisor', 'gestor'), async (req,res) => {
   const {nome,matricula,turno,usuario_id}=req.body;
   try {
     const r=await pool.query(`INSERT INTO separadores (nome,matricula,turno,usuario_id) VALUES ($1,$2,$3,$4) ON CONFLICT(matricula) DO NOTHING RETURNING id`,
@@ -87,13 +87,13 @@ router.post('/separadores', requerAuth, requerPerfil('supervisor'), async (req,r
   } catch(e){res.status(500).json({erro:e.message});}
 });
 
-router.put('/separadores/:id', requerAuth, requerPerfil('supervisor'), async (req,res) => {
+router.put('/separadores/:id', requerAuth, requerPerfil('supervisor', 'gestor'), async (req,res) => {
   const {nome,matricula,turno,status,usuario_id}=req.body;
   try { await pool.query('UPDATE separadores SET nome=$1,matricula=$2,turno=$3,status=$4,usuario_id=$5 WHERE id=$6',[nome,matricula,turno,status,usuario_id||null,req.params.id]); res.json({mensagem:'Atualizado!'}); }
   catch(e){res.status(500).json({erro:e.message});}
 });
 
-router.delete('/separadores/:id', requerAuth, requerPerfil('supervisor'), async (req,res) => {
+router.delete('/separadores/:id', requerAuth, requerPerfil('supervisor', 'gestor'), async (req,res) => {
   try { await pool.query('DELETE FROM separadores WHERE id=$1',[req.params.id]); res.json({mensagem:'Excluido!'}); }
   catch(e){res.status(500).json({erro:e.message});}
 });
