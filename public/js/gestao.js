@@ -541,18 +541,12 @@ function _renderDetalheAbs(data, nome) {
         <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--surface)">${tblAusencias}</div>
       </div>
 
-      ${allRec.length ? (() => {
-        const amostra = allRec[0];
-        const campos = Object.entries(amostra).map(([k,v]) =>
-          `<tr><td style="padding:3px 8px;color:var(--text3);font-family:monospace">${k}</td><td style="padding:3px 8px;color:var(--text);font-weight:700;font-family:monospace">${JSON.stringify(v)}</td></tr>`
-        ).join('');
-        return `<details style="margin-top:14px">
-          <summary style="font-size:10px;color:var(--text3);cursor:pointer;user-select:none">🔍 campos da API (debug — ${allRec.length} registros)</summary>
-          <div style="margin-top:6px;background:var(--surface2);border-radius:8px;padding:6px;overflow-x:auto">
-            <table style="font-size:11px;border-collapse:collapse">${campos}</table>
-          </div>
-        </details>`;
-      })() : ''}
+      <details style="margin-top:14px">
+        <summary style="font-size:10px;color:var(--text3);cursor:pointer;user-select:none">🔍 Debug — resposta bruta da API</summary>
+        <div style="margin-top:6px;background:#111;border-radius:8px;padding:10px;overflow:auto;max-height:300px">
+          <pre style="font-size:10px;color:#4ade80;margin:0;white-space:pre-wrap;word-break:break-all">${JSON.stringify(data, null, 2)}</pre>
+        </div>
+      </details>
     </div>`;
 }
 
