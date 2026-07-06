@@ -4,7 +4,8 @@
    GESTÃO — Absenteísmo
 ══════════════════════════════════════════ */
 
-let _absRows = [];   // todos os funcionários carregados
+let _absRows = [];          // todos os funcionários carregados
+let _absToleranciMin = 0;  // minutos de atraso tolerados
 
 function renderizarPagGestao() {
   const root = document.getElementById('pag-gestao');
@@ -53,7 +54,30 @@ function renderizarPagGestao() {
   </div>
 
   <!-- ── KPI cards ── -->
-  <div id="gabs-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;padding:14px 24px;flex-shrink:0"></div>
+  <div id="gabs-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;padding:14px 24px 10px;flex-shrink:0"></div>
+
+  <!-- ── Tolerância de atraso ── -->
+  <div style="display:flex;align-items:center;gap:10px;padding:0 24px 12px;flex-shrink:0;flex-wrap:wrap">
+    <span style="font-size:11px;font-weight:800;color:var(--text3);letter-spacing:.5px;white-space:nowrap">⏱ TOLERÂNCIA DE ATRASO:</span>
+    <div style="display:flex;gap:6px;flex-wrap:wrap" id="gabs-tol-btns">
+      ${[0,5,10,15,30].map(m => `
+      <button onclick="setToleranciAbs(${m})" id="gabs-tol-${m}"
+        style="padding:4px 12px;border-radius:20px;border:1.5px solid var(--border);font-size:12px;font-weight:700;cursor:pointer;
+               background:${m===0?'var(--accent)':'var(--surface2)'};color:${m===0?'#fff':'var(--text2)'}">
+        ${m === 0 ? 'Todos' : m + ' min'}
+      </button>`).join('')}
+      <div style="display:flex;align-items:center;gap:4px">
+        <input type="number" id="gabs-tol-custom" min="0" max="120" placeholder="Outro"
+          style="width:70px;padding:4px 8px;border:1.5px solid var(--border);border-radius:20px;font-size:12px;background:var(--surface);color:var(--text);text-align:center"
+          onkeydown="if(event.key==='Enter')setToleranciAbs(+this.value||0)"/>
+        <button onclick="setToleranciAbs(+(document.getElementById('gabs-tol-custom').value)||0)"
+          style="padding:4px 10px;border-radius:20px;border:1.5px solid var(--border);font-size:12px;font-weight:700;cursor:pointer;background:var(--surface2);color:var(--text2)">
+          ✓
+        </button>
+      </div>
+    </div>
+    <span id="gabs-tol-label" style="font-size:11px;color:var(--text3)"></span>
+  </div>
 
   <!-- ── Corpo principal: lista de nomes + ranking/detalhe ── -->
   <div style="display:flex;flex:1;min-height:0;gap:0;overflow:hidden">
@@ -80,6 +104,39 @@ function renderizarPagGestao() {
   carregarGestaoAbsenteismo();
 }
 
+
+/* ── Tolerância de atraso ── */
+function setToleranciAbs(min) {
+  _absToleranciMin = Math.max(0, min || 0);
+
+  // Atualiza botões preset
+  [0,5,10,15,30].forEach(m => {
+    const btn = document.getElementById(`gabs-tol-${m}`);
+    if (!btn) return;
+    const ativo = m === _absToleranciMin;
+    btn.style.background  = ativo ? 'var(--accent)' : 'var(--surface2)';
+    btn.style.color       = ativo ? '#fff'           : 'var(--text2)';
+    btn.style.borderColor = ativo ? 'var(--accent)'  : 'var(--border)';
+  });
+
+  // Limpa campo customizado se for um preset
+  if ([0,5,10,15,30].includes(_absToleranciMin)) {
+    const inp = document.getElementById('gabs-tol-custom');
+    if (inp) inp.value = '';
+  }
+
+  // Atualiza label informativo
+  const lbl = document.getElementById('gabs-tol-label');
+  if (lbl) lbl.textContent = _absToleranciMin > 0
+    ? `— atrasos ≤ ${_absToleranciMin} min ignorados`
+    : '';
+
+  // Re-renderiza detalhe aberto (se houver)
+  const detalhe = document.getElementById('gabs-detalhe');
+  if (detalhe && detalhe.innerHTML.trim() && detalhe.dataset.funcId) {
+    verDetalheAbsenteismo(detalhe.dataset.funcId, detalhe.dataset.funcNome, null);
+  }
+}
 
 /* ── Toggle importar ── */
 function toggleImportarAbs() {
@@ -331,6 +388,8 @@ function _renderTabelaAbs(rows) {
 async function verDetalheAbsenteismo(id, nome, btn) {
   const detalhe = document.getElementById('gabs-detalhe');
   if (!detalhe) return;
+  detalhe.dataset.funcId   = id;
+  detalhe.dataset.funcNome = nome;
   detalhe.innerHTML = '<div style="color:var(--text3);padding:14px;font-size:12px">Carregando...</div>';
   detalhe.scrollIntoView({ behavior:'smooth', block:'nearest' });
   if (btn) { btn.textContent = '...'; btn.disabled = true; }
@@ -339,12 +398,16 @@ async function verDetalheAbsenteismo(id, nome, btn) {
     const res  = await fetch(`${API}/gestao/absenteismo/funcionario/${id}`, { credentials:'include' });
     if (!res.ok) throw new Error('Erro ao carregar');
     const data = await res.json();
-    const _temAtraso = r => {
-      if (r.atraso_minutes > 0) return true;
-      if (r.late_minutes   > 0) return true;
+    const _minAtraso = r => {
+      if (r.atraso_minutes > 0) return r.atraso_minutes;
+      if (r.late_minutes   > 0) return r.late_minutes;
       const s = r.atraso || r.atraso_formatado || '';
-      return s && s !== '--:--' && s !== '00:00' && s !== '000:00' && s !== '-:--';
+      if (!s || s === '--:--' || s === '00:00' || s === '000:00' || s === '-:--') return 0;
+      // converte "HHH:MM" → minutos
+      const parts = s.split(':');
+      return (parseInt(parts[0])||0)*60 + (parseInt(parts[1])||0);
     };
+    const _temAtraso = r => _minAtraso(r) > _absToleranciMin;
     const registros = (data.daily_records || []).filter(r => r.falta || r.atestado || r.ferias || _temAtraso(r));
     const taxa = parseFloat(data.absenteeism_rate || 0).toFixed(1);
     const taxaCor = taxa >= 10 ? '#dc2626' : taxa >= 5 ? '#d97706' : '#16a34a';
@@ -374,7 +437,10 @@ async function verDetalheAbsenteismo(id, nome, btn) {
             <div style="font-size:20px;font-weight:900;color:${taxaCor}">${taxa}%</div>
           </div>
         </div>
-        <div style="font-size:11px;color:var(--text3);margin-bottom:10px">Período: ${data.period_start ? new Date(data.period_start+'T12:00:00').toLocaleDateString('pt-BR') : ''} → ${data.period_end ? new Date(data.period_end+'T12:00:00').toLocaleDateString('pt-BR') : ''}</div>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap">
+          <span style="font-size:11px;color:var(--text3)">Período: ${data.period_start ? new Date(data.period_start+'T12:00:00').toLocaleDateString('pt-BR') : ''} → ${data.period_end ? new Date(data.period_end+'T12:00:00').toLocaleDateString('pt-BR') : ''}</span>
+          ${_absToleranciMin > 0 ? `<span style="font-size:11px;background:#fefce8;border:1px solid #d97706;color:#92400e;border-radius:20px;padding:2px 10px;font-weight:700">⏱ Tolerância: ${_absToleranciMin} min</span>` : ''}
+        </div>
         ${!registros.length
           ? '<div style="color:var(--text3);padding:10px;font-size:12px">Nenhuma ocorrência registrada no período.</div>'
           : `<div style="overflow-x:auto;border:1px solid var(--border);border-radius:8px">
