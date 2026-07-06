@@ -450,60 +450,76 @@ function _renderDetalheAbs(data, nome) {
   const detalhe = document.getElementById('gabs-detalhe');
   if (!detalhe) return;
 
-  const allRec   = data.daily_records || [];
-  const minAtrs  = allRec.filter(r => _minAtraso(r) > _absToleranciMin);
+  const allRec    = data.daily_records || [];
   const ausencias = allRec.filter(r => r.falta || r.atestado || r.ferias);
+  const taxa      = parseFloat(data.absenteeism_rate || 0).toFixed(1);
+  const taxaCor   = taxa >= 10 ? '#dc2626' : taxa >= 5 ? '#d97706' : '#16a34a';
+  const fmtDt     = s => s ? new Date(s+'T12:00:00').toLocaleDateString('pt-BR') : '—';
+  const t         = v => v || '—';
 
-  const taxa    = parseFloat(data.absenteeism_rate || 0).toFixed(1);
-  const taxaCor = taxa >= 10 ? '#dc2626' : taxa >= 5 ? '#d97706' : '#16a34a';
-  const fmtDt   = s => s ? new Date(s+'T12:00:00').toLocaleDateString('pt-BR') : '—';
+  // Espelho de ponto — todos os dias trabalhados (status normal com registro)
+  const diasTrab = allRec.filter(r => r.status === 'normal' && r.entry_time);
 
-  const tblAtrasos = !minAtrs.length
-    ? `<div style="color:var(--text3);font-size:12px;padding:10px 12px">${_absToleranciMin > 0 ? `Nenhum atraso acima de ${_absToleranciMin} min no período.` : 'Nenhum atraso registrado no período.'}</div>`
-    : `<table style="width:100%;border-collapse:collapse;font-size:12px">
-        <thead><tr style="background:var(--surface2)">
-          <th style="padding:6px 10px;text-align:left;color:var(--text3);border-bottom:1px solid var(--border);font-size:10px">DATA</th>
-          <th style="padding:6px 10px;text-align:left;color:var(--text3);border-bottom:1px solid var(--border);font-size:10px">DIA</th>
-          <th style="padding:6px 10px;text-align:center;color:var(--text3);border-bottom:1px solid var(--border);font-size:10px">ATRASO</th>
-        </tr></thead>
-        <tbody>${minAtrs.map(r => `
-          <tr style="border-bottom:1px solid var(--border)">
-            <td style="padding:6px 10px;color:var(--text);font-weight:700">${fmtDt(r.date)}</td>
-            <td style="padding:6px 10px;color:var(--text2)">${r.day_of_week||'—'}</td>
-            <td style="padding:6px 10px;text-align:center;font-weight:800;color:#7c3aed">${_fmtAtraso(r)}</td>
-          </tr>`).join('')}
-        </tbody>
-      </table>`;
+  // Dias com ocorrência especial (DSR, feriado, falta)
+  const diasEspeciais = allRec.filter(r => r.status !== 'normal' || r.falta || r.atestado || r.ferias);
 
-  const tblAusencias = !ausencias.length
-    ? `<div style="color:var(--text3);font-size:12px;padding:10px 12px">Nenhuma falta ou atestado no período.</div>`
-    : `<table style="width:100%;border-collapse:collapse;font-size:12px">
-        <thead><tr style="background:var(--surface2)">
-          <th style="padding:6px 10px;text-align:left;color:var(--text3);border-bottom:1px solid var(--border);font-size:10px">DATA</th>
-          <th style="padding:6px 10px;text-align:left;color:var(--text3);border-bottom:1px solid var(--border);font-size:10px">DIA</th>
-          <th style="padding:6px 10px;text-align:center;color:var(--text3);border-bottom:1px solid var(--border);font-size:10px">TIPO</th>
-        </tr></thead>
-        <tbody>${ausencias.map(r => {
-          const oc  = r.falta ? '❌ Falta' : r.atestado ? '🏥 Atestado' : '🌴 Férias';
-          const cor = r.falta ? '#dc2626' : r.atestado ? '#d97706' : '#2563eb';
-          return `<tr style="border-bottom:1px solid var(--border)">
-            <td style="padding:6px 10px;color:var(--text);font-weight:700">${fmtDt(r.date)}</td>
-            <td style="padding:6px 10px;color:var(--text2)">${r.day_of_week||'—'}</td>
-            <td style="padding:6px 10px;text-align:center;font-weight:800;color:${cor}">${oc}</td>
-          </tr>`;
-        }).join('')}
-        </tbody>
-      </table>`;
+  const tblPonto = !diasTrab.length
+    ? `<div style="color:var(--text3);font-size:12px;padding:10px 12px">Nenhum registro de ponto no período.</div>`
+    : `<div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:11px;min-width:500px">
+          <thead><tr style="background:var(--surface2)">
+            <th style="padding:5px 8px;text-align:left;color:var(--text3);border-bottom:1px solid var(--border);font-size:10px;white-space:nowrap">DATA</th>
+            <th style="padding:5px 8px;text-align:left;color:var(--text3);border-bottom:1px solid var(--border);font-size:10px">DIA</th>
+            <th style="padding:5px 8px;text-align:center;color:var(--text3);border-bottom:1px solid var(--border);font-size:10px">ENTRADA</th>
+            <th style="padding:5px 8px;text-align:center;color:var(--text3);border-bottom:1px solid var(--border);font-size:10px">ALMOÇO</th>
+            <th style="padding:5px 8px;text-align:center;color:var(--text3);border-bottom:1px solid var(--border);font-size:10px">PAUSA</th>
+            <th style="padding:5px 8px;text-align:center;color:var(--text3);border-bottom:1px solid var(--border);font-size:10px">SAÍDA</th>
+          </tr></thead>
+          <tbody>${diasTrab.map(r => `
+            <tr style="border-bottom:1px solid var(--border)">
+              <td style="padding:5px 8px;color:var(--text);font-weight:700;white-space:nowrap">${fmtDt(r.date)}</td>
+              <td style="padding:5px 8px;color:var(--text2)">${r.day_of_week||'—'}</td>
+              <td style="padding:5px 8px;text-align:center;font-family:monospace;color:var(--text)">${t(r.entry_time)}</td>
+              <td style="padding:5px 8px;text-align:center;font-family:monospace;color:var(--text2)">${r.lunch_start&&r.lunch_end ? r.lunch_start+' → '+r.lunch_end : '—'}</td>
+              <td style="padding:5px 8px;text-align:center;font-family:monospace;color:var(--text2)">${r.break_start&&r.break_end ? r.break_start+' → '+r.break_end : '—'}</td>
+              <td style="padding:5px 8px;text-align:center;font-family:monospace;color:var(--text)">${t(r.exit_time)}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`;
+
+  const tblEspeciais = !diasEspeciais.length ? '' : `
+    <div style="margin-top:14px">
+      <div style="font-size:11px;font-weight:800;color:var(--text3);letter-spacing:.5px;margin-bottom:6px">DIAS SEM TRABALHO / OCORRÊNCIAS</div>
+      <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--surface)">
+        <table style="width:100%;border-collapse:collapse;font-size:11px">
+          <tbody>${diasEspeciais.map(r => {
+            const label = r.falta ? '❌ Falta' : r.atestado ? '🏥 Atestado' : r.ferias ? '🌴 Férias' : r.status === 'dsr' ? '🔵 DSR' : r.status === 'holiday' ? '🎉 Feriado' : r.status;
+            const cor   = r.falta ? '#dc2626' : r.atestado ? '#d97706' : r.ferias ? '#2563eb' : 'var(--text3)';
+            return `<tr style="border-bottom:1px solid var(--border)">
+              <td style="padding:5px 8px;color:var(--text);font-weight:700;white-space:nowrap">${fmtDt(r.date)}</td>
+              <td style="padding:5px 8px;color:var(--text2)">${r.day_of_week||'—'}</td>
+              <td style="padding:5px 8px;font-weight:700;color:${cor}">${label}</td>
+            </tr>`;
+          }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
 
   detalhe.innerHTML = `
     <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-        <div style="font-weight:900;color:var(--text);font-size:15px">📋 ${nome}</div>
+        <div>
+          <div style="font-weight:900;color:var(--text);font-size:15px">📋 ${nome}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px">${data.schedule||''} · Mat. ${data.matricula||'—'}</div>
+        </div>
         <button onclick="document.getElementById('gabs-detalhe').innerHTML='';_absDetalheCache=null"
           style="background:transparent;border:none;font-size:18px;cursor:pointer;color:var(--text3);line-height:1;padding:0 4px">✕</button>
       </div>
 
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:12px">
+      <!-- KPIs -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-bottom:12px">
         <div style="background:var(--surface);border-radius:8px;padding:8px 12px;text-align:center">
           <div style="font-size:10px;color:var(--text3);font-weight:700">FALTAS</div>
           <div style="font-size:22px;font-weight:900;color:#dc2626">${data.faltas_count ?? 0}</div>
@@ -517,36 +533,28 @@ function _renderDetalheAbs(data, nome) {
           <div style="font-size:16px;font-weight:900;color:#7c3aed">${data.total_atraso_formatted || '—'}</div>
         </div>
         <div style="background:var(--surface);border-radius:8px;padding:8px 12px;text-align:center">
+          <div style="font-size:10px;color:var(--text3);font-weight:700">H. POSITIVAS</div>
+          <div style="font-size:16px;font-weight:900;color:#16a34a">${data.positive_hours || '—'}</div>
+        </div>
+        <div style="background:var(--surface);border-radius:8px;padding:8px 12px;text-align:center">
           <div style="font-size:10px;color:var(--text3);font-weight:700">ABSENTEÍSMO</div>
           <div style="font-size:22px;font-weight:900;color:${taxaCor}">${taxa}%</div>
         </div>
       </div>
 
+      <!-- Info período -->
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
         <span style="font-size:11px;color:var(--text3)">📅 ${fmtDt(data.period_start)} → ${fmtDt(data.period_end)}</span>
-        ${_absToleranciMin > 0 ? `<span style="font-size:11px;background:#fefce8;border:1px solid #d97706;color:#92400e;border-radius:20px;padding:2px 10px;font-weight:700">⏱ Tolerância: ${_absToleranciMin} min</span>` : ''}
+        <span style="font-size:11px;color:var(--text3)">Previsto: ${data.expected_hours||'—'} · Realizado: ${data.worked_hours||'—'}</span>
       </div>
 
-      <div style="margin-bottom:14px">
-        <div style="font-size:11px;font-weight:800;color:#7c3aed;letter-spacing:.5px;margin-bottom:6px">
-          ⏰ ATRASOS ${minAtrs.length ? `(${minAtrs.length} dia${minAtrs.length>1?'s':''})` : ''}
-        </div>
-        <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--surface)">${tblAtrasos}</div>
+      <!-- Espelho de ponto -->
+      <div style="font-size:11px;font-weight:800;color:var(--text);letter-spacing:.5px;margin-bottom:6px">
+        🕐 ESPELHO DE PONTO (${diasTrab.length} dia${diasTrab.length!==1?'s':''} trabalhados)
       </div>
+      <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--surface)">${tblPonto}</div>
 
-      <div>
-        <div style="font-size:11px;font-weight:800;color:#dc2626;letter-spacing:.5px;margin-bottom:6px">
-          ❌ FALTAS E ATESTADOS ${ausencias.length ? `(${ausencias.length})` : ''}
-        </div>
-        <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--surface)">${tblAusencias}</div>
-      </div>
-
-      <details style="margin-top:14px">
-        <summary style="font-size:10px;color:var(--text3);cursor:pointer;user-select:none">🔍 Debug — resposta bruta da API</summary>
-        <div style="margin-top:6px;background:#111;border-radius:8px;padding:10px;overflow:auto;max-height:300px">
-          <pre style="font-size:10px;color:#4ade80;margin:0;white-space:pre-wrap;word-break:break-all">${JSON.stringify(data, null, 2)}</pre>
-        </div>
-      </details>
+      ${tblEspeciais}
     </div>`;
 }
 
