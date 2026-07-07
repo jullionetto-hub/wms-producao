@@ -570,11 +570,6 @@ function _renderDetalheAbs(data, nome) {
   const totalAtrasoComp = diasTrab.reduce((s, r) => s + r._atraso, 0);
   const diasComAtraso   = diasTrab.filter(r => r._atraso > _absToleranciMin).length;
 
-  // Volta antecipada (almoço < 60min ou pausa < 15min)
-  const diasVoltaAlmoco = diasTrab.filter(r => { const ld = _lunchDur(r); return ld !== null && ld > 0 && ld < LUNCH_MIN; }).length;
-  const diasVoltaPausa  = diasTrab.filter(r => { const bd = _breakDur(r);  return bd !== null && bd > 0 && bd < BREAK_MIN;  }).length;
-  const totalVoltaAntecipada = diasVoltaAlmoco + diasVoltaPausa;
-
   // Dias com ocorrência especial (DSR, feriado, falta)
   const diasEspeciais = allRec.filter(r => r.status !== 'normal' || r.falta || r.atestado || r.ferias);
 
@@ -585,6 +580,11 @@ function _renderDetalheAbs(data, nome) {
   const _breakDur = r => r.break_start && r.break_end
     ? (() => { const [lh,lm]=r.break_start.split(':').map(Number), [eh,em]=r.break_end.split(':').map(Number); return (eh*60+em)-(lh*60+lm); })()
     : null;
+
+  // Volta antecipada (almoço < 60min ou pausa < 15min) — deve ficar após _lunchDur/_breakDur
+  const diasVoltaAlmoco = diasTrab.filter(r => { const ld = _lunchDur(r); return ld !== null && ld > 0 && ld < LUNCH_MIN; }).length;
+  const diasVoltaPausa  = diasTrab.filter(r => { const bd = _breakDur(r);  return bd !== null && bd > 0 && bd < BREAK_MIN;  }).length;
+  const totalVoltaAntecipada = diasVoltaAlmoco + diasVoltaPausa;
 
   const tblPonto = !diasTrab.length
     ? `<div style="color:var(--text3);font-size:12px;padding:10px 12px">Nenhum registro de ponto no período.</div>`
