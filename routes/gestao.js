@@ -85,6 +85,12 @@ router.post('/gestao/absenteismo/upload',
   }
 );
 
+router.get('/gestao/absenteismo/relatorio', requerAuth, requerGestor, async (req, res) => {
+  const { start_date, end_date } = req.query;
+  try { res.json(await absProxy('/api/reports/delays-report', { start_date, end_date })); }
+  catch (e) { res.status(502).json({ erro: e.message }); }
+});
+
 router.get('/gestao/absenteismo/uploads', requerAuth, requerGestor, async (_req, res) => {
   try { res.json(await absProxy('/api/uploads')); }
   catch (e) { res.status(502).json({ erro: e.message }); }

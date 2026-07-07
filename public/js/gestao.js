@@ -23,6 +23,7 @@ function renderizarPagGestao() {
       <div id="gabs-periodo" style="font-size:11px;color:var(--text3);margin-top:3px;font-weight:600"></div>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button onclick="gerarRelatorioAbs()" style="padding:7px 14px;background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;color:var(--text2)">📊 Gerar Relatório</button>
       <button onclick="mostrarArquivosAbs()" style="padding:7px 14px;background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;color:var(--text2)">📁 Arquivos Importados</button>
       <button onclick="toggleImportarAbs()" style="padding:7px 14px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📥 Importar PDF</button>
     </div>
@@ -718,6 +719,165 @@ function _renderDetalheAbs(data, nome) {
 
       ${tblEspeciais}
     </div>`;
+}
+
+
+/* ── Relatório de atrasos e voltas antecipadas ── */
+async function gerarRelatorioAbs() {
+  const LUNCH_MIN = 60, BREAK_MIN = 15;
+  const toM = s => { if (!s) return null; const [h,m] = s.split(':').map(Number); return h*60+m; };
+  const fmtDt = s => s ? new Date(s+'T12:00:00').toLocaleDateString('pt-BR') : '—';
+  const fmtHM = m => { const h=Math.floor(m/60), mm=m%60; return `${String(h).padStart(2,'0')}:${String(mm).padStart(2,'0')}`; };
+
+  const pdqs = _absPeriodo ? `?start_date=${_absPeriodo.start}&end_date=${_absPeriodo.end}` : '';
+  let funcionarios;
+  try {
+    const res = await fetch(`${API}/gestao/absenteismo/relatorio${pdqs}`, { credentials:'include' });
+    if (!res.ok) throw new Error(`Erro ${res.status}`);
+    funcionarios = await res.json();
+  } catch(e) {
+    toast('Erro ao gerar relatório: ' + e.message, 'erro');
+    return;
+  }
+
+  const periodoLabel = _absPeriodo
+    ? `${new Date(_absPeriodo.start+'T12:00:00').toLocaleDateString('pt-BR')} a ${new Date(_absPeriodo.end+'T12:00:00').toLocaleDateString('pt-BR')}`
+    : 'Todos os períodos';
+
+  // Monta linhas por funcionário
+  let linhas = '';
+  let totalAtrasoGeral = 0, totalAntecipadoGeral = 0, totalFuncsComOcorr = 0;
+
+  for (const func of funcionarios) {
+    const schedMatch = (func.schedule || '').match(/(\d+)h/);
+    const schedStart = schedMatch ? parseInt(schedMatch[1]) * 60 : null;
+
+    // Heurística de mediana para entrada
+    let sched = schedStart;
+    if (sched !== null) {
+      const entries = func.daily_records.map(r => toM(r.entry_time)).filter(v => v !== null).sort((a,b)=>a-b);
+      if (entries.length) {
+        const typ = entries[Math.floor(entries.length/2)];
+        if (Math.abs(typ - sched) > 90) sched = null;
+      }
+    }
+
+    const eventos = [];
+    for (const r of func.daily_records) {
+      const entry = toM(r.entry_time);
+      const ls    = toM(r.lunch_start), le = toM(r.lunch_end);
+      const bs    = toM(r.break_start), be = toM(r.break_end);
+
+      if (sched !== null && entry !== null && entry > sched)
+        eventos.push({ date: r.date, dow: r.day_of_week, tipo: 'Atraso entrada',    min: entry - sched,   cor: '#dc2626' });
+      if (ls !== null && le !== null && le - ls > LUNCH_MIN)
+        eventos.push({ date: r.date, dow: r.day_of_week, tipo: 'Atraso almoço',     min: (le-ls) - LUNCH_MIN, cor: '#d97706' });
+      if (ls !== null && le !== null && le - ls > 0 && le - ls < LUNCH_MIN)
+        eventos.push({ date: r.date, dow: r.day_of_week, tipo: 'Volta antecipada',  min: LUNCH_MIN - (le-ls), cor: '#2563eb' });
+      if (bs !== null && be !== null && be - bs > BREAK_MIN)
+        eventos.push({ date: r.date, dow: r.day_of_week, tipo: 'Atraso pausa',      min: (be-bs) - BREAK_MIN, cor: '#d97706' });
+    }
+
+    if (!eventos.length) continue;
+    totalFuncsComOcorr++;
+    const totalAtrasoFunc    = eventos.filter(e=>e.tipo!=='Volta antecipada').reduce((s,e)=>s+e.min,0);
+    const totalAntecipadoFunc= eventos.filter(e=>e.tipo==='Volta antecipada').reduce((s,e)=>s+e.min,0);
+    totalAtrasoGeral     += totalAtrasoFunc;
+    totalAntecipadoGeral += totalAntecipadoFunc;
+
+    linhas += `
+      <tr style="background:#f8fafc">
+        <td colspan="5" style="padding:10px 12px 4px;font-weight:800;font-size:13px;color:#1e293b;border-top:2px solid #e2e8f0">
+          ${func.name}
+          <span style="font-weight:400;font-size:11px;color:#64748b;margin-left:8px">${func.sector||''} · Mat. ${func.matricula||'—'} · ${func.schedule||'—'}</span>
+          <span style="float:right;font-size:11px;color:#64748b">
+            ${totalAtrasoFunc>0?`<span style="color:#dc2626">Atraso total: ${fmtHM(totalAtrasoFunc)}</span>`:''}
+            ${totalAtrasoFunc>0&&totalAntecipadoFunc>0?' · ':''}
+            ${totalAntecipadoFunc>0?`<span style="color:#2563eb">Antecipado: ${fmtHM(totalAntecipadoFunc)}</span>`:''}
+          </span>
+        </td>
+      </tr>`;
+
+    for (const ev of eventos) {
+      const isAntecip = ev.tipo === 'Volta antecipada';
+      linhas += `
+        <tr style="border-bottom:1px solid #f1f5f9">
+          <td style="padding:5px 12px 5px 24px;font-size:12px;color:#374151;white-space:nowrap">${fmtDt(ev.date)}</td>
+          <td style="padding:5px 8px;font-size:11px;color:#9ca3af">${ev.dow||'—'}</td>
+          <td style="padding:5px 8px">
+            <span style="display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700;
+              background:${isAntecip?'#eff6ff':ev.cor==='#dc2626'?'#fef2f2':'#fefce8'};
+              color:${ev.cor}">
+              ${ev.tipo}
+            </span>
+          </td>
+          <td style="padding:5px 8px;font-size:13px;font-weight:800;color:${ev.cor};font-family:monospace;text-align:right">
+            ${isAntecip?'−':'+'} ${fmtHM(ev.min)}
+          </td>
+          <td style="padding:5px 8px;font-size:11px;color:#9ca3af;text-align:right">${ev.min} min</td>
+        </tr>`;
+    }
+  }
+
+  if (!linhas) {
+    toast('Nenhuma ocorrência encontrada no período.', 'info');
+    return;
+  }
+
+  const html = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Relatório de Atrasos e Voltas Antecipadas</title>
+  <style>
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; color:#1e293b; background:#fff; padding:24px; }
+    h1  { font-size:18px; font-weight:800; margin-bottom:4px; }
+    .sub{ font-size:12px; color:#64748b; margin-bottom:20px; }
+    .resumo { display:flex; gap:16px; margin-bottom:20px; flex-wrap:wrap; }
+    .card { background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px 18px; min-width:140px; }
+    .card .lbl { font-size:10px; font-weight:700; color:#94a3b8; letter-spacing:.5px; }
+    .card .val { font-size:22px; font-weight:900; margin-top:2px; }
+    table { width:100%; border-collapse:collapse; font-size:12px; }
+    thead th { padding:8px 12px; background:#f1f5f9; font-size:10px; font-weight:800; color:#64748b; letter-spacing:.5px; text-align:left; border-bottom:2px solid #e2e8f0; }
+    @media print {
+      body { padding:12px; }
+      button { display:none !important; }
+      tr { page-break-inside:avoid; }
+    }
+  </style>
+</head>
+<body>
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">
+    <h1>📊 Relatório de Atrasos e Voltas Antecipadas</h1>
+    <button onclick="window.print()" style="padding:8px 16px;background:#1e293b;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🖨️ Imprimir</button>
+  </div>
+  <div class="sub">Período: ${periodoLabel} · Gerado em ${new Date().toLocaleString('pt-BR')}</div>
+
+  <div class="resumo">
+    <div class="card"><div class="lbl">FUNCIONÁRIOS C/ OCORRÊNCIA</div><div class="val" style="color:#1e293b">${totalFuncsComOcorr}</div></div>
+    <div class="card"><div class="lbl">TOTAL ATRASO</div><div class="val" style="color:#dc2626">${fmtHM(totalAtrasoGeral)}</div></div>
+    <div class="card"><div class="lbl">TOTAL ANTECIPADO</div><div class="val" style="color:#2563eb">${fmtHM(totalAntecipadoGeral)}</div></div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>DATA</th>
+        <th>DIA</th>
+        <th>TIPO</th>
+        <th style="text-align:right">HORA:MIN</th>
+        <th style="text-align:right">MINUTOS</th>
+      </tr>
+    </thead>
+    <tbody>${linhas}</tbody>
+  </table>
+</body>
+</html>`;
+
+  const w = window.open('', '_blank');
+  w.document.write(html);
+  w.document.close();
 }
 
 
