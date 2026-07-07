@@ -166,7 +166,7 @@ async function _renderPeriodBtns(forceRefresh) {
     </button>`;
 
   el.innerHTML = [
-    btn('Todos', 'selecionarPeriodoAbs(null)', activeKey === 'todos'),
+    btn('📈 Histórico', 'selecionarPeriodoAbs(null)', activeKey === 'todos'),
     ...periods.map(p => btn(
       _fmtPdBtn(p.start, p.end),
       `selecionarPeriodoAbs('${p.start}','${p.end}')`,
@@ -324,8 +324,14 @@ async function carregarGestaoAbsenteismo() {
   // Carrega os botões de período (usa cache se já tiver)
   _renderPeriodBtns(!_absUploads.length);
 
+  // "Todos" → exibe histórico de evolução em vez da lista de funcionários
+  if (!_absPeriodo) {
+    await _renderHistoricoEvolucao();
+    return;
+  }
+
   try {
-    const pdqs = _absPeriodo ? `?start_date=${_absPeriodo.start}&end_date=${_absPeriodo.end}` : '';
+    const pdqs = `?start_date=${_absPeriodo.start}&end_date=${_absPeriodo.end}`;
     const res = await fetch(`${API}/gestao/absenteismo/team${pdqs}`, { credentials:'include' });
     if (!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e.erro || `HTTP ${res.status}`); }
     const team = await res.json();
@@ -336,11 +342,11 @@ async function carregarGestaoAbsenteismo() {
     const taxaEquipe     = parseFloat(team.team_absenteeism_rate) || 0;
 
     const periodoEl = document.getElementById('gabs-periodo');
-    if (periodoEl) {
-      const fmtDt = s => s ? new Date(s + 'T12:00:00').toLocaleDateString('pt-BR') : null;
-      const ini = fmtDt(team.period_start);
-      const fim = fmtDt(team.period_end);
-      periodoEl.textContent = ini && fim ? `Período: ${ini} a ${fim}` : '';
+    if (periodoEl && _absPeriodo) {
+      const fmtDt = s => new Date(s + 'T12:00:00').toLocaleDateString('pt-BR');
+      periodoEl.textContent = `Período: ${fmtDt(_absPeriodo.start)} a ${fmtDt(_absPeriodo.end)}`;
+    } else if (periodoEl) {
+      periodoEl.textContent = '';
     }
 
     const kpis = [
@@ -369,6 +375,141 @@ async function carregarGestaoAbsenteismo() {
     cards.innerHTML  = '';
     tabela.innerHTML = `<div style="color:var(--red);padding:20px;font-size:13px">Erro ao carregar absenteísmo: ${e.message}<br><small style="color:var(--text3)">Importe os PDFs no botão 📥 Importar PDF</small></div>`;
   }
+}
+
+
+/* ── Histórico de evolução por período ── */
+async function _renderHistoricoEvolucao() {
+  const cards  = document.getElementById('gabs-cards');
+  const tabela = document.getElementById('gabs-tabela');
+  const lista  = document.getElementById('gabs-lista-nomes');
+  const periEl = document.getElementById('gabs-periodo');
+
+  if (periEl) periEl.textContent = 'Visão geral de todos os períodos';
+  if (lista) lista.innerHTML = '<div style="color:var(--text3);font-size:11px;padding:14px;text-align:center">Selecione um período para ver os funcionários</div>';
+  const detalheEl = document.getElementById('gabs-detalhe');
+  if (detalheEl) detalheEl.innerHTML = '';
+
+  try {
+    const res = await fetch(`${API}/gestao/absenteismo/historico`, { credentials: 'include' });
+    if (!res.ok) throw new Error('Erro ao carregar histórico');
+    const hist = await res.json();
+
+    if (!hist.length) {
+      if (cards) cards.innerHTML = '<div style="grid-column:1/-1;color:var(--text3);font-size:12px;padding:8px">Nenhum período importado ainda.</div>';
+      if (tabela) tabela.innerHTML = '';
+      return;
+    }
+
+    const last = hist[hist.length - 1];
+    const prev = hist.length > 1 ? hist[hist.length - 2] : null;
+
+    const trendHtml = (cur, old, lessBetter) => {
+      if (old == null) return '';
+      const diff = cur - old;
+      if (Math.abs(diff) < 0.05) return '';
+      const up = diff > 0;
+      const good = lessBetter ? !up : up;
+      const color = good ? '#16a34a' : '#dc2626';
+      return `<span style="font-size:9px;color:${color};margin-left:4px">${up ? '▲' : '▼'}${Math.abs(diff).toFixed(1)}</span>`;
+    };
+
+    const fmtPer = p => {
+      if (!p.period_start) return p.filename || `Importação #${p.upload_id}`;
+      const f = s => { const [y,m,d] = s.split('-'); return `${d}/${m}`; };
+      return p.period_start === p.period_end ? f(p.period_start) : `${f(p.period_start)} – ${f(p.period_end)}`;
+    };
+
+    if (cards) {
+      const kpis = [
+        { icon:'📋', label:'Períodos importados', val: hist.length, bg:'#eff6ff', cor:'#1d4ed8', extra:'' },
+        { icon:'👥', label:'Funcionários (atual)', val: last.total_employees, bg:'#f0fdf4', cor:'#16a34a',
+          extra: prev ? trendHtml(last.total_employees, prev.total_employees, false) : '' },
+        { icon:'📉', label:'Absenteísmo (atual)', val: `${last.absenteeism_rate.toFixed(1)}%`,
+          bg: last.absenteeism_rate>=10?'#fef2f2':last.absenteeism_rate>=5?'#fefce8':'#f0fdf4',
+          cor: last.absenteeism_rate>=10?'#dc2626':last.absenteeism_rate>=5?'#ca8a04':'#16a34a',
+          extra: prev ? trendHtml(last.absenteeism_rate, prev.absenteeism_rate, true) : '' },
+        { icon:'⏱', label:'Atraso (atual)', val: `${last.delay_rate.toFixed(1)}%`,
+          bg: last.delay_rate>=5?'#fef2f2':last.delay_rate>=2?'#fefce8':'#f0fdf4',
+          cor: last.delay_rate>=5?'#dc2626':last.delay_rate>=2?'#ca8a04':'#16a34a',
+          extra: prev ? trendHtml(last.delay_rate, prev.delay_rate, true) : '' },
+      ];
+      cards.innerHTML = kpis.map(c => `
+        <div style="background:${c.bg};border:1px solid ${c.cor}33;border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:12px">
+          <div style="font-size:26px">${c.icon}</div>
+          <div>
+            <div style="font-size:10px;font-weight:800;color:${c.cor}aa;letter-spacing:.5px">${c.label.toUpperCase()}</div>
+            <div style="font-size:22px;font-weight:900;color:${c.cor};font-family:'Space Mono',monospace;line-height:1.1">${c.val}${c.extra}</div>
+          </div>
+        </div>`).join('');
+    }
+
+    if (tabela) {
+      const rows = [...hist].reverse();
+      tabela.innerHTML = `
+        <div style="font-size:11px;font-weight:800;color:var(--text3);letter-spacing:.5px;margin-bottom:10px">📈 EVOLUÇÃO POR PERÍODO</div>
+        <div style="overflow-x:auto;border:1px solid var(--border);border-radius:12px">
+          <table style="width:100%;border-collapse:collapse;font-size:12px">
+            <thead>
+              <tr style="background:var(--surface2)">
+                <th style="padding:9px 12px;text-align:left;color:var(--text3);font-size:10px;font-weight:800;border-bottom:1px solid var(--border)">PERÍODO</th>
+                <th style="padding:9px 12px;text-align:center;color:var(--text3);font-size:10px;font-weight:800;border-bottom:1px solid var(--border)">FUNC.</th>
+                <th style="padding:9px 12px;text-align:center;color:var(--text3);font-size:10px;font-weight:800;border-bottom:1px solid var(--border)">FALTAS</th>
+                <th style="padding:9px 12px;text-align:center;color:var(--text3);font-size:10px;font-weight:800;border-bottom:1px solid var(--border)">ATESTADOS</th>
+                <th style="padding:9px 12px;text-align:center;color:var(--text3);font-size:10px;font-weight:800;border-bottom:1px solid var(--border)">ABSENTEÍSMO</th>
+                <th style="padding:9px 12px;text-align:center;color:var(--text3);font-size:10px;font-weight:800;border-bottom:1px solid var(--border)">ATRASO</th>
+                <th style="padding:9px 12px;text-align:center;color:var(--text3);font-size:10px;font-weight:800;border-bottom:1px solid var(--border)">VER</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows.map((p, idx) => {
+                const older = rows[idx + 1];
+                const absRt = p.absenteeism_rate;
+                const absCor = absRt >= 10 ? '#dc2626' : absRt >= 5 ? '#d97706' : '#16a34a';
+                const delRt = p.delay_rate;
+                const delCor = delRt >= 5 ? '#dc2626' : delRt >= 2 ? '#d97706' : '#16a34a';
+                const isLatest = idx === 0;
+                const absTrend = older ? trendHtml(absRt, older.absenteeism_rate, true) : '';
+                const delTrend = older ? trendHtml(delRt, older.delay_rate, true) : '';
+                const perLabel = fmtPer(p);
+                const sel = p.period_start && p.period_end
+                  ? `selecionarPeriodoAbs('${p.period_start}','${p.period_end}')`
+                  : `selecionarUploadAbs(${p.upload_id})`;
+                return `
+                <tr style="border-bottom:1px solid var(--border);${isLatest ? 'background:var(--surface2)' : ''}">
+                  <td style="padding:9px 12px;font-weight:700;color:var(--text)">
+                    ${isLatest ? '<span style="font-size:9px;background:#1d4ed8;color:#fff;padding:2px 6px;border-radius:4px;margin-right:6px">ATUAL</span>' : ''}
+                    ${perLabel}
+                  </td>
+                  <td style="padding:9px 12px;text-align:center;font-weight:700;color:var(--text2)">${p.total_employees}</td>
+                  <td style="padding:9px 12px;text-align:center;font-weight:700;color:${p.total_faltas>0?'#dc2626':'var(--text2)'}">${p.total_faltas}</td>
+                  <td style="padding:9px 12px;text-align:center;font-weight:700;color:${p.total_atestados>0?'#d97706':'var(--text2)'}">${p.total_atestados}</td>
+                  <td style="padding:9px 12px;text-align:center"><span style="font-weight:800;color:${absCor}">${absRt.toFixed(1)}%${absTrend}</span></td>
+                  <td style="padding:9px 12px;text-align:center"><span style="font-weight:800;color:${delCor}">${delRt.toFixed(1)}%${delTrend}</span></td>
+                  <td style="padding:9px 12px;text-align:center">
+                    <button onclick="${sel}"
+                      style="padding:4px 12px;background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;font-size:11px;cursor:pointer;color:var(--text2);font-weight:700">
+                      Ver
+                    </button>
+                  </td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>`;
+    }
+  } catch(e) {
+    if (cards) cards.innerHTML = `<div style="grid-column:1/-1;color:var(--red);font-size:12px;padding:8px">Erro ao carregar histórico: ${e.message}</div>`;
+    if (tabela) tabela.innerHTML = '';
+  }
+}
+
+function selecionarUploadAbs(uploadId) {
+  // Busca o período do upload nos dados cacheados e seleciona
+  const up = _absUploads.find(u => u.id === uploadId);
+  if (!up) return;
+  const p = _parsePeriodFromUpload(up);
+  if (p) selecionarPeriodoAbs(p.start, p.end);
 }
 
 

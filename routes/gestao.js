@@ -91,6 +91,11 @@ router.get('/gestao/absenteismo/relatorio', requerAuth, requerGestor, async (req
   catch (e) { res.status(502).json({ erro: e.message }); }
 });
 
+router.get('/gestao/absenteismo/historico', requerAuth, requerGestor, async (_req, res) => {
+  try { res.json(await absProxy('/api/reports/history')); }
+  catch (e) { res.status(502).json({ erro: e.message }); }
+});
+
 router.get('/gestao/absenteismo/uploads', requerAuth, requerGestor, async (_req, res) => {
   try { res.json(await absProxy('/api/uploads')); }
   catch (e) { res.status(502).json({ erro: e.message }); }
