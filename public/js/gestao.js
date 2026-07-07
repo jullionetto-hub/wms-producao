@@ -582,7 +582,15 @@ function _renderDetalheAbs(data, nome) {
     : null;
 
   // Volta antecipada do almoço (almoço < 60min) — deve ficar após _lunchDur
-  const totalVoltaAntecipada = diasTrab.filter(r => { const ld = _lunchDur(r); return ld !== null && ld > 0 && ld < LUNCH_MIN; }).length;
+  let totalVoltaAntecipada = 0, totalMinVoltaAlmoco = 0;
+  diasTrab.forEach(r => {
+    const ld = _lunchDur(r);
+    if (ld !== null && ld > 0 && ld < LUNCH_MIN) {
+      totalVoltaAntecipada++;
+      totalMinVoltaAlmoco += LUNCH_MIN - ld;
+    }
+  });
+  const _fmtHM = m => { const h = Math.floor(m / 60), mm = m % 60; return `${String(h).padStart(3,'0')}:${String(mm).padStart(2,'0')}`; };
 
   const tblPonto = !diasTrab.length
     ? `<div style="color:var(--text3);font-size:12px;padding:10px 12px">Nenhum registro de ponto no período.</div>`
@@ -680,9 +688,9 @@ function _renderDetalheAbs(data, nome) {
           <div style="font-size:22px;font-weight:900;color:${diasComAtraso>0?'#dc2626':'var(--text3)'}">${diasComAtraso}</div>
         </div>
         <div style="background:var(--surface);border-radius:8px;padding:8px 12px;text-align:center">
-          <div style="font-size:10px;color:var(--text3);font-weight:700">VOLT. ANTECIPADA</div>
-          <div style="font-size:22px;font-weight:900;color:${totalVoltaAntecipada>0?'#2563eb':'var(--text3)'}">${totalVoltaAntecipada}</div>
-          ${totalVoltaAntecipada > 0 ? `<div style="font-size:9px;color:#6b7280;margin-top:2px">dias de almoço antecipado</div>` : ''}
+          <div style="font-size:10px;color:var(--text3);font-weight:700">ANTECIPADA</div>
+          <div style="font-size:16px;font-weight:900;color:${totalVoltaAntecipada>0?'#2563eb':'var(--text3)'};font-family:monospace">${totalMinVoltaAlmoco > 0 ? _fmtHM(totalMinVoltaAlmoco) : '—'}</div>
+          ${totalVoltaAntecipada > 0 ? `<div style="font-size:9px;color:#6b7280;margin-top:2px">${totalVoltaAntecipada} dia${totalVoltaAntecipada!==1?'s':''} de almoço</div>` : ''}
         </div>
         <div style="background:var(--surface);border-radius:8px;padding:8px 12px;text-align:center">
           <div style="font-size:10px;color:var(--text3);font-weight:700">H. POSITIVAS</div>
