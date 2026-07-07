@@ -61,8 +61,8 @@ router.get('/gestao/absenteismo/setor',  requerAuth, requerGestor, async (_req, 
 });
 
 router.get('/gestao/absenteismo/funcionario/:id', requerAuth, requerGestor, async (req, res) => {
-  const { start_date, end_date } = req.query;
-  try { res.json(await absProxy(`/api/reports/employee/${req.params.id}`, { start_date, end_date })); }
+  const { start_date, end_date, matricula } = req.query;
+  try { res.json(await absProxy(`/api/reports/employee/${req.params.id}`, { start_date, end_date, matricula })); }
   catch (e) { res.status(502).json({ erro: e.message }); }
 });
 

@@ -386,7 +386,7 @@ function _renderListaNomesAbs(rows) {
     const nome = r.name || '—';
     const iniciais = nome.split(' ').slice(0,2).map(n=>n[0]).join('').toUpperCase();
     return `
-    <div onclick="verDetalheAbsenteismo(${r.id},'${nome.replace(/'/g,"\\'")}',null)"
+    <div onclick="verDetalheAbsenteismo(${r.id},'${nome.replace(/'/g,"\\'")}',null,'${(r.matricula||'').replace(/'/g,"\\'")}')"
       style="display:flex;align-items:center;gap:9px;padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .15s"
       onmouseover="this.style.background='var(--surface)'" onmouseout="this.style.background=''">
       <div style="width:32px;height:32px;border-radius:50%;background:${bg};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:${cor};flex-shrink:0">${iniciais}</div>
@@ -453,7 +453,7 @@ function _renderTabelaAbs(rows) {
                 </div>
               </td>
               <td style="padding:9px 12px;text-align:center">
-                <button onclick="verDetalheAbsenteismo(${r.id},'${nome.replace(/'/g,"\\'")}',this)"
+                <button onclick="verDetalheAbsenteismo(${r.id},'${nome.replace(/'/g,"\\'")}',this,'${(r.matricula||'').replace(/'/g,"\\'")}')"
                   style="padding:4px 12px;background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;font-size:11px;cursor:pointer;color:var(--text2);font-weight:700">
                   Ver
                 </button>
@@ -467,7 +467,7 @@ function _renderTabelaAbs(rows) {
 
 
 /* ── Detalhe do funcionário ── */
-async function verDetalheAbsenteismo(id, nome, btn) {
+async function verDetalheAbsenteismo(id, nome, btn, matricula) {
   const detalhe = document.getElementById('gabs-detalhe');
   if (!detalhe) return;
   detalhe.innerHTML = '<div style="color:var(--text3);padding:14px;font-size:12px">Carregando...</div>';
@@ -475,7 +475,10 @@ async function verDetalheAbsenteismo(id, nome, btn) {
   if (btn) { btn.textContent = '...'; btn.disabled = true; }
 
   try {
-    const pdqs = _absPeriodo ? `?start_date=${_absPeriodo.start}&end_date=${_absPeriodo.end}` : '';
+    const params = {};
+    if (_absPeriodo) { params.start_date = _absPeriodo.start; params.end_date = _absPeriodo.end; }
+    if (matricula)   { params.matricula = matricula; }
+    const pdqs = Object.keys(params).length ? '?' + new URLSearchParams(params).toString() : '';
     const res  = await fetch(`${API}/gestao/absenteismo/funcionario/${id}${pdqs}`, { credentials:'include' });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
@@ -567,6 +570,11 @@ function _renderDetalheAbs(data, nome) {
   const totalAtrasoComp = diasTrab.reduce((s, r) => s + r._atraso, 0);
   const diasComAtraso   = diasTrab.filter(r => r._atraso > _absToleranciMin).length;
 
+  // Volta antecipada (almoço < 60min ou pausa < 15min)
+  const diasVoltaAlmoco = diasTrab.filter(r => { const ld = _lunchDur(r); return ld !== null && ld > 0 && ld < LUNCH_MIN; }).length;
+  const diasVoltaPausa  = diasTrab.filter(r => { const bd = _breakDur(r);  return bd !== null && bd > 0 && bd < BREAK_MIN;  }).length;
+  const totalVoltaAntecipada = diasVoltaAlmoco + diasVoltaPausa;
+
   // Dias com ocorrência especial (DSR, feriado, falta)
   const diasEspeciais = allRec.filter(r => r.status !== 'normal' || r.falta || r.atestado || r.ferias);
 
@@ -592,19 +600,26 @@ function _renderDetalheAbs(data, nome) {
             <th style="padding:5px 8px;text-align:center;color:var(--text3);border-bottom:1px solid var(--border);font-size:10px">ATRASO</th>
           </tr></thead>
           <tbody>${diasTrab.map(r => {
-            const atr   = r._atraso;
-            const late  = atr > _absToleranciMin;
-            const rowBg = late ? '#fff7ed' : '';
-            const ld    = _lunchDur(r);
-            const bd    = _breakDur(r);
-            const lunchOver = ld !== null && ld > LUNCH_MIN;
-            const breakOver = bd !== null && bd > BREAK_MIN;
-            const lunchStr  = r.lunch_start && r.lunch_end
-              ? `<span style="color:${lunchOver?'#d97706':'var(--text2)'};font-weight:${lunchOver?'700':'400'}">${r.lunch_start} → ${r.lunch_end}${lunchOver?` <small>(${ld}min)</small>`:''}</span>`
+            const atr        = r._atraso;
+            const late       = atr > _absToleranciMin;
+            const ld         = _lunchDur(r);
+            const bd         = _breakDur(r);
+            const lunchOver  = ld !== null && ld > LUNCH_MIN;
+            const lunchEarly = ld !== null && ld > 0 && ld < LUNCH_MIN;
+            const breakOver  = bd !== null && bd > BREAK_MIN;
+            const breakEarly = bd !== null && bd > 0 && bd < BREAK_MIN;
+            const earlyTotal = (lunchEarly ? LUNCH_MIN - ld : 0) + (breakEarly ? BREAK_MIN - bd : 0);
+            const rowBg      = late ? '#fff7ed' : (lunchEarly || breakEarly) ? '#eff6ff' : '';
+            const lunchStr   = r.lunch_start && r.lunch_end
+              ? `<span style="color:${lunchOver?'#d97706':lunchEarly?'#2563eb':'var(--text2)'};font-weight:${lunchOver||lunchEarly?'700':'400'}">${r.lunch_start} → ${r.lunch_end}${lunchOver?` <small>(${ld}min)</small>`:lunchEarly?` <small>${ld}min</small>`:''}</span>`
               : '—';
-            const breakStr  = r.break_start && r.break_end
-              ? `<span style="color:${breakOver?'#d97706':'var(--text2)'};font-weight:${breakOver?'700':'400'}">${r.break_start} → ${r.break_end}${breakOver?` <small>(${bd}min)</small>`:''}</span>`
+            const breakStr   = r.break_start && r.break_end
+              ? `<span style="color:${breakOver?'#d97706':breakEarly?'#2563eb':'var(--text2)'};font-weight:${breakOver||breakEarly?'700':'400'}">${r.break_start} → ${r.break_end}${breakOver?` <small>(${bd}min)</small>`:breakEarly?` <small>${bd}min</small>`:''}</span>`
               : '—';
+            const atrasoPartes = [];
+            if (atr > 0) atrasoPartes.push(`<span style="color:${late?'#dc2626':'#d97706'};font-weight:800">${atr} min</span>`);
+            if (earlyTotal > 0) atrasoPartes.push(`<span style="color:#2563eb;font-size:10px">−${earlyTotal} min antecip.</span>`);
+            const atrasoCel = atrasoPartes.length ? atrasoPartes.join('<br>') : '—';
             return `<tr style="border-bottom:1px solid var(--border);background:${rowBg}">
               <td style="padding:5px 8px;font-weight:700;white-space:nowrap;color:${late?'#c2410c':'var(--text)'}">${fmtDt(r.date)}</td>
               <td style="padding:5px 8px;color:var(--text2)">${r.day_of_week||'—'}</td>
@@ -612,7 +627,7 @@ function _renderDetalheAbs(data, nome) {
               <td style="padding:5px 8px;text-align:center;font-family:monospace;font-size:10px">${lunchStr}</td>
               <td style="padding:5px 8px;text-align:center;font-family:monospace;font-size:10px">${breakStr}</td>
               <td style="padding:5px 8px;text-align:center;font-family:monospace;color:var(--text)">${t(r.exit_time)}</td>
-              <td style="padding:5px 8px;text-align:center;font-weight:800;color:${late?'#dc2626':atr>0?'#d97706':'var(--text3)'}">${atr > 0 ? atr+' min' : '—'}</td>
+              <td style="padding:5px 8px;text-align:center;line-height:1.6">${atrasoCel}</td>
             </tr>`;
           }).join('')}
           </tbody>
@@ -668,6 +683,11 @@ function _renderDetalheAbs(data, nome) {
           <div style="font-size:22px;font-weight:900;color:${diasComAtraso>0?'#dc2626':'var(--text3)'}">${diasComAtraso}</div>
         </div>
         <div style="background:var(--surface);border-radius:8px;padding:8px 12px;text-align:center">
+          <div style="font-size:10px;color:var(--text3);font-weight:700">VOLT. ANTECIPADA</div>
+          <div style="font-size:22px;font-weight:900;color:${totalVoltaAntecipada>0?'#2563eb':'var(--text3)'}">${totalVoltaAntecipada}</div>
+          ${totalVoltaAntecipada > 0 ? `<div style="font-size:9px;color:#6b7280;margin-top:2px">${[diasVoltaAlmoco>0?'Alm: '+diasVoltaAlmoco+'d':'', diasVoltaPausa>0?'Ps: '+diasVoltaPausa+'d':''].filter(Boolean).join(' · ')}</div>` : ''}
+        </div>
+        <div style="background:var(--surface);border-radius:8px;padding:8px 12px;text-align:center">
           <div style="font-size:10px;color:var(--text3);font-weight:700">H. POSITIVAS</div>
           <div style="font-size:16px;font-weight:900;color:#16a34a">${data.positive_hours || '—'}</div>
         </div>
@@ -687,6 +707,7 @@ function _renderDetalheAbs(data, nome) {
       <div style="font-size:11px;font-weight:800;color:var(--text);letter-spacing:.5px;margin-bottom:6px;display:flex;align-items:center;gap:8px">
         🕐 ESPELHO DE PONTO (${diasTrab.length} dia${diasTrab.length!==1?'s':''} trabalhados)
         ${diasComAtraso > 0 ? `<span style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:12px;padding:2px 8px;font-size:10px;font-weight:800">${diasComAtraso} com atraso</span>` : ''}
+        ${totalVoltaAntecipada > 0 ? `<span style="background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;border-radius:12px;padding:2px 8px;font-size:10px;font-weight:800">${totalVoltaAntecipada} volta antecipada</span>` : ''}
       </div>
       <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--surface)">${tblPonto}</div>
 
