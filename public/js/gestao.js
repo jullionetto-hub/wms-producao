@@ -581,10 +581,8 @@ function _renderDetalheAbs(data, nome) {
     ? (() => { const [lh,lm]=r.break_start.split(':').map(Number), [eh,em]=r.break_end.split(':').map(Number); return (eh*60+em)-(lh*60+lm); })()
     : null;
 
-  // Volta antecipada (almoço < 60min ou pausa < 15min) — deve ficar após _lunchDur/_breakDur
-  const diasVoltaAlmoco = diasTrab.filter(r => { const ld = _lunchDur(r); return ld !== null && ld > 0 && ld < LUNCH_MIN; }).length;
-  const diasVoltaPausa  = diasTrab.filter(r => { const bd = _breakDur(r);  return bd !== null && bd > 0 && bd < BREAK_MIN;  }).length;
-  const totalVoltaAntecipada = diasVoltaAlmoco + diasVoltaPausa;
+  // Volta antecipada do almoço (almoço < 60min) — deve ficar após _lunchDur
+  const totalVoltaAntecipada = diasTrab.filter(r => { const ld = _lunchDur(r); return ld !== null && ld > 0 && ld < LUNCH_MIN; }).length;
 
   const tblPonto = !diasTrab.length
     ? `<div style="color:var(--text3);font-size:12px;padding:10px 12px">Nenhum registro de ponto no período.</div>`
@@ -607,18 +605,17 @@ function _renderDetalheAbs(data, nome) {
             const lunchOver  = ld !== null && ld > LUNCH_MIN;
             const lunchEarly = ld !== null && ld > 0 && ld < LUNCH_MIN;
             const breakOver  = bd !== null && bd > BREAK_MIN;
-            const breakEarly = bd !== null && bd > 0 && bd < BREAK_MIN;
-            const earlyTotal = (lunchEarly ? LUNCH_MIN - ld : 0) + (breakEarly ? BREAK_MIN - bd : 0);
-            const rowBg      = late ? '#fff7ed' : (lunchEarly || breakEarly) ? '#eff6ff' : '';
+            const earlyMin   = lunchEarly ? LUNCH_MIN - ld : 0;
+            const rowBg      = late ? '#fff7ed' : lunchEarly ? '#eff6ff' : '';
             const lunchStr   = r.lunch_start && r.lunch_end
               ? `<span style="color:${lunchOver?'#d97706':lunchEarly?'#2563eb':'var(--text2)'};font-weight:${lunchOver||lunchEarly?'700':'400'}">${r.lunch_start} → ${r.lunch_end}${lunchOver?` <small>(${ld}min)</small>`:lunchEarly?` <small>${ld}min</small>`:''}</span>`
               : '—';
             const breakStr   = r.break_start && r.break_end
-              ? `<span style="color:${breakOver?'#d97706':breakEarly?'#2563eb':'var(--text2)'};font-weight:${breakOver||breakEarly?'700':'400'}">${r.break_start} → ${r.break_end}${breakOver?` <small>(${bd}min)</small>`:breakEarly?` <small>${bd}min</small>`:''}</span>`
+              ? `<span style="color:${breakOver?'#d97706':'var(--text2)'};font-weight:${breakOver?'700':'400'}">${r.break_start} → ${r.break_end}${breakOver?` <small>(${bd}min)</small>`:''}</span>`
               : '—';
             const atrasoPartes = [];
             if (atr > 0) atrasoPartes.push(`<span style="color:${late?'#dc2626':'#d97706'};font-weight:800">${atr} min</span>`);
-            if (earlyTotal > 0) atrasoPartes.push(`<span style="color:#2563eb;font-size:10px">−${earlyTotal} min antecip.</span>`);
+            if (earlyMin > 0) atrasoPartes.push(`<span style="color:#2563eb;font-size:10px">−${earlyMin} min antecip.</span>`);
             const atrasoCel = atrasoPartes.length ? atrasoPartes.join('<br>') : '—';
             return `<tr style="border-bottom:1px solid var(--border);background:${rowBg}">
               <td style="padding:5px 8px;font-weight:700;white-space:nowrap;color:${late?'#c2410c':'var(--text)'}">${fmtDt(r.date)}</td>
@@ -685,7 +682,7 @@ function _renderDetalheAbs(data, nome) {
         <div style="background:var(--surface);border-radius:8px;padding:8px 12px;text-align:center">
           <div style="font-size:10px;color:var(--text3);font-weight:700">VOLT. ANTECIPADA</div>
           <div style="font-size:22px;font-weight:900;color:${totalVoltaAntecipada>0?'#2563eb':'var(--text3)'}">${totalVoltaAntecipada}</div>
-          ${totalVoltaAntecipada > 0 ? `<div style="font-size:9px;color:#6b7280;margin-top:2px">${[diasVoltaAlmoco>0?'Alm: '+diasVoltaAlmoco+'d':'', diasVoltaPausa>0?'Ps: '+diasVoltaPausa+'d':''].filter(Boolean).join(' · ')}</div>` : ''}
+          ${totalVoltaAntecipada > 0 ? `<div style="font-size:9px;color:#6b7280;margin-top:2px">dias de almoço antecipado</div>` : ''}
         </div>
         <div style="background:var(--surface);border-radius:8px;padding:8px 12px;text-align:center">
           <div style="font-size:10px;color:var(--text3);font-weight:700">H. POSITIVAS</div>
