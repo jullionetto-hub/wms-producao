@@ -77,9 +77,20 @@ router.post('/auth/login', async (req,res) => {
         );
       }
       // Auto-vincula usuario_id para logins futuros (qualquer fallback que funcionou)
-      if (req.session.separador && !req.session.separador.usuario_id_ok) {
+      if (req.session.separador) {
         pool.query('UPDATE separadores SET usuario_id=$1 WHERE id=$2 AND (usuario_id IS NULL OR usuario_id=0)',
           [user.id, req.session.separador.id]).catch(()=>{});
+      }
+      // Fallback 3: cria registro em separadores se não existir nenhum
+      if (!req.session.separador) {
+        const ins = await pool.query(
+          `INSERT INTO separadores (nome, matricula, turno, status, usuario_id)
+           VALUES ($1,$2,$3,'ativo',$4)
+           ON CONFLICT (usuario_id) DO UPDATE SET nome=EXCLUDED.nome
+           RETURNING id,nome,matricula,turno,status`,
+          [user.nome, user.login, user.turno||'Manha', user.id]
+        );
+        req.session.separador = ins.rows[0] || null;
       }
     } else {
       req.session.separador = null;

@@ -98,6 +98,17 @@ router.delete('/separadores/:id', requerAuth, requerPerfil('supervisor', 'gestor
   catch(e){res.status(500).json({erro:e.message});}
 });
 
+// ── Diagnóstico: cruza usuarios vs separadores ────────────────────────────────
+router.get('/separadores/diagnostico', requerAuth, requerPerfil('supervisor', 'gestor'), async (req,res) => {
+  try {
+    const usuarios = await db.all(`SELECT id, nome, login, turno, status FROM usuarios WHERE perfil='separador' ORDER BY nome`);
+    const separadores = await db.all(`SELECT id, nome, matricula, turno, status, usuario_id FROM separadores ORDER BY nome`);
+    const semVinculo = separadores.filter(s => !s.usuario_id);
+    const usuariosSemSep = usuarios.filter(u => !separadores.find(s => s.usuario_id === u.id));
+    res.json({ usuarios, separadores, sem_vinculo: semVinculo, usuarios_sem_separador: usuariosSemSep });
+  } catch(e) { res.status(500).json({erro:e.message}); }
+});
+
 // ── Auto-vincula separadores sem usuario_id (diagnóstico + correção) ──────────
 router.post('/separadores/vincular-todos', requerAuth, requerPerfil('supervisor', 'gestor'), async (req,res) => {
   try {
