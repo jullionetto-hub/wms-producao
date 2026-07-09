@@ -157,7 +157,8 @@ async function carregarFilaMobile() {
           <span style="font-size:15px">✅</span>
           <span style="font-size:11px;font-weight:700;color:#15803d">${qtdReposto} item${qtdReposto>1?'s':''} reposto${qtdReposto>1?'s':''} pelo repositor — volte para este pedido!</span>
         </div>` : ''}
-        <button class="btn btn-primary btn-sm" style="width:100%;margin-top:8px;padding:10px;font-size:14px;font-weight:700${temReposto?';background:#16a34a':''}">
+        <button class="btn btn-primary btn-sm" style="width:100%;margin-top:8px;padding:10px;font-size:14px;font-weight:700${temReposto?';background:#16a34a':''}"
+          onclick="selecionarPedidoFilaMobile('${p.numero_pedido}')">
           ${temReposto ? '✅ Continuar Separação' : '📦 Iniciar Separação'}
         </button>
       </div>`;
