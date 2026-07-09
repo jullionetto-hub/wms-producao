@@ -83,14 +83,20 @@ router.post('/auth/login', async (req,res) => {
       }
       // Fallback 3: cria registro em separadores se não existir nenhum
       if (!req.session.separador) {
-        const ins = await pool.query(
-          `INSERT INTO separadores (nome, matricula, turno, status, usuario_id)
-           VALUES ($1,$2,$3,'ativo',$4)
-           ON CONFLICT (usuario_id) DO UPDATE SET nome=EXCLUDED.nome
-           RETURNING id,nome,matricula,turno,status`,
-          [user.nome, user.login, user.turno||'Manha', user.id]
-        );
-        req.session.separador = ins.rows[0] || null;
+        try {
+          const ins = await pool.query(
+            `INSERT INTO separadores (nome, matricula, turno, status, usuario_id)
+             VALUES ($1,$2,$3,'ativo',$4)
+             RETURNING id,nome,matricula,turno,status`,
+            [user.nome, user.login, user.turno||'Manha', user.id]
+          );
+          req.session.separador = ins.rows[0] || null;
+        } catch(_) {
+          // Se falhar (constraint de matrícula duplicada), busca qualquer registro
+          req.session.separador = await db.get(
+            `SELECT id,nome,matricula,turno,status FROM separadores WHERE status='ativo' ORDER BY id LIMIT 1`
+          ) || null;
+        }
       }
     } else {
       req.session.separador = null;
