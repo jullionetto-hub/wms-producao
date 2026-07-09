@@ -196,6 +196,17 @@ router.get('/checkout/caixa/:numero', requerAuth, async (req,res) => {
     }
     const operador_nome = req.session?.usuario?.nome || '';
     for (const row of rows) {
+      // Bloqueia se outro operador já tem sessão ativa (hora_fim vazia = sessão aberta)
+      const sessaoAtiva = await db.get(
+        `SELECT operador_nome FROM checkout_sessoes
+         WHERE checkout_id=$1 AND hora_fim='' ORDER BY id DESC LIMIT 1`,
+        [row.id]
+      );
+      if (sessaoAtiva?.operador_nome && sessaoAtiva.operador_nome !== operador_nome) {
+        return res.status(409).json({
+          erro: `Pedido #${row.numero_pedido} já está sendo processado por ${sessaoAtiva.operador_nome}`
+        });
+      }
       // 'fila' = criado pelo separador ao concluir (ainda não aberto pelo operador)
       // 'pendente' sem operador_nome = aberto mas não confirmado ainda
       if (row.status === 'fila' || (row.status === 'pendente' && !row.operador_nome)) {
@@ -251,6 +262,7 @@ router.put('/checkout/:id/confirmar', requerAuth, async (req,res) => {
   try {
     const ck = await db.get('SELECT * FROM checkout WHERE id=$1',[id]);
     if (!ck) return res.status(404).json({erro:'Checkout nao encontrado'});
+    if (ck.status === 'concluido') return res.status(409).json({erro:'Este checkout já foi confirmado por outro operador.'});
     const horaFim = hora_checkout||hora;
     // Fecha sessão aberta deste operador
     const sessaoAberta = await db.get(
