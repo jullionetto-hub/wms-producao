@@ -73,58 +73,97 @@ function _renderizarListaLote() {
   const total = itens.length;
   const feitos = itens.filter(i => i.status === 'encontrado').length;
 
-  // Header chips
+  // Header: só mostra contagem, não todos os chips (evita scroll horizontal com 37 pedidos)
   document.getElementById('m-lote-badge').textContent = `${_loteAtual.length} pedidos`;
-  document.getElementById('m-lote-chips').innerHTML = _loteAtual.map((p,i) =>
-    `<span style="background:${_CX_CORES[i%_CX_CORES.length]}22;border:1px solid ${_CX_CORES[i%_CX_CORES.length]}55;color:${_CX_CORES[i%_CX_CORES.length]};border-radius:10px;padding:2px 8px;font-size:11px;display:inline-flex;align-items:center;gap:3px">
-      <span style="width:6px;height:6px;border-radius:50%;background:${_CX_CORES[i%_CX_CORES.length]}"></span>#${p.numero_pedido}
-    </span>`
-  ).join('');
+  document.getElementById('m-lote-chips').innerHTML =
+    `<span style="font-size:11px;color:var(--text2)">${_loteAtual.length} pedidos em separação simultânea</span>`;
 
   // Progress
-  document.getElementById('m-lote-prog-cnt').textContent = `${feitos} / ${total}`;
+  document.getElementById('m-lote-prog-cnt').textContent = `${feitos} / ${total} itens`;
   document.getElementById('m-lote-prog-fill').style.width = total ? Math.round(feitos/total*100)+'%' : '0%';
   const btnFim = document.getElementById('m-lote-btn-concluir');
   if (btnFim) { btnFim.disabled = feitos < total; btnFim.style.opacity = feitos >= total ? '1' : '0.5'; }
 
-  // Agrupar por endereço primário (primeira vírgula)
-  const grupos = {};
+  // 1. Agrupar por endereço primário
+  const gruposPorEnd = {};
   for (const item of itens) {
     const end = String(item.endereco||'S/END').split(',')[0].trim().toUpperCase();
-    if (!grupos[end]) grupos[end] = [];
-    grupos[end].push(item);
+    if (!gruposPorEnd[end]) gruposPorEnd[end] = [];
+    gruposPorEnd[end].push(item);
   }
 
-  // Ordenar pela rota física
+  // 2. Ordenar pela rota física
   const rotaIdx = e => { const l = e.replace(/\d+.*/,''); const i = ROTA_FISICA.indexOf(l); return i >= 0 ? i*10000 + (parseInt(e.match(/\d+/)?.[0])||0) : 99999; };
-  const endsOrdenados = Object.keys(grupos).sort((a,b) => rotaIdx(a) - rotaIdx(b));
+  const endsOrdenados = Object.keys(gruposPorEnd).sort((a,b) => rotaIdx(a) - rotaIdx(b));
 
   let html = '';
   for (const end of endsOrdenados) {
-    const grp = grupos[end];
-    html += `<div style="padding:6px 14px 3px;background:var(--surface2);border-bottom:0.5px solid var(--border);display:flex;align-items:center;gap:7px">
-      <span style="background:#1a1a2e;color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;font-family:monospace">${end}</span>
-      <span style="font-size:10px;color:var(--text3);margin-left:auto">${grp.length} item(s)</span>
+    const itemsEnd = gruposPorEnd[end];
+
+    // 3. Dentro do endereço, agrupar por SKU (codigo) — elimina linhas duplicadas
+    const porSku = {};
+    for (const item of itemsEnd) {
+      const cod = item.codigo || '_sem_cod_';
+      if (!porSku[cod]) porSku[cod] = [];
+      porSku[cod].push(item);
+    }
+
+    const totalEnd   = itemsEnd.length;
+    const feitosEnd  = itemsEnd.filter(i => i.status === 'encontrado').length;
+    const completo   = feitosEnd === totalEnd;
+
+    html += `<div style="padding:7px 14px 5px;background:var(--surface2);border-bottom:0.5px solid var(--border);display:flex;align-items:center;gap:8px">
+      <span style="background:#1a1a2e;color:#fff;font-size:12px;font-weight:700;padding:3px 10px;border-radius:6px;font-family:monospace">${end}</span>
+      <span style="font-size:11px;color:var(--text3)">${Object.keys(porSku).length} produto(s)</span>
+      ${completo
+        ? '<span style="margin-left:auto;font-size:11px;color:#22c55e;font-weight:700">✓ completo</span>'
+        : `<span style="margin-left:auto;font-size:11px;color:var(--text3)">${feitosEnd}/${totalEnd}</span>`}
     </div>`;
-    for (const item of grp) {
-      const feito = item.status === 'encontrado';
-      const cor = _CX_CORES[(item.caixa_num-1) % _CX_CORES.length];
-      // Mesmo SKU em mais de uma caixa neste endereço
-      const parceiros = grp.filter(i => i.codigo === item.codigo && i.caixa_num !== item.caixa_num);
-      const cxHTML = parceiros.length
-        ? `<span style="font-size:10px;color:#92400e;background:#fef3c7;padding:1px 6px;border-radius:5px">${[item,...parceiros].sort((a,b)=>a.caixa_num-b.caixa_num).map(p=>`${p.quantidade||1}un→Cx.${p.caixa_num}`).join(' · ')}</span>`
-        : `<span style="font-size:10px;font-weight:600;padding:1px 7px;border-radius:5px;color:#fff;background:${cor}">Cx. ${item.caixa_num}</span>`;
-      html += `<div id="m-lote-item-${item.id}" onclick="verificarItemLote(${item.id})"
-        style="padding:9px 14px;border-bottom:0.5px solid var(--border);display:flex;gap:10px;align-items:flex-start;cursor:pointer;${feito?'opacity:0.42':''}">
-        <div style="width:22px;height:22px;border-radius:50%;${feito?`background:#22c55e;border:2px solid #22c55e`:`border:2px solid #cbd5e1`};flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center">
-          ${feito?'<span style="color:#fff;font-size:12px">✓</span>':''}
+
+    for (const [cod, items] of Object.entries(porSku)) {
+      const todosFeit = items.every(i => i.status === 'encontrado');
+      const totalQty  = items.reduce((s, i) => s + (parseInt(i.quantidade)||1), 0);
+
+      // Distribuição por caixa: { cx: qty }
+      const porCaixa = {};
+      for (const item of items) {
+        const cx = item.caixa_num;
+        if (!porCaixa[cx]) porCaixa[cx] = 0;
+        porCaixa[cx] += parseInt(item.quantidade)||1;
+      }
+      const cxEntries = Object.entries(porCaixa).sort((a,b) => Number(a[0]) - Number(b[0]));
+
+      // Tags de caixa compactas — máx 5 visíveis
+      let cxHtml;
+      if (cxEntries.length === 1) {
+        const [cx] = cxEntries[0];
+        const cor = _CX_CORES[(Number(cx)-1) % _CX_CORES.length];
+        cxHtml = `<span style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:5px;color:#fff;background:${cor}">Cx. ${cx}</span>`;
+      } else {
+        const visiveis = cxEntries.slice(0, 5);
+        const resto    = cxEntries.length - 5;
+        cxHtml = visiveis.map(([cx, qty]) => {
+          const cor = _CX_CORES[(Number(cx)-1) % _CX_CORES.length];
+          return `<span style="font-size:9px;font-weight:600;padding:2px 6px;border-radius:5px;color:#fff;background:${cor};white-space:nowrap">Cx.${cx} ${qty}un</span>`;
+        }).join('') + (resto > 0 ? `<span style="font-size:9px;color:var(--text3)">+${resto}</span>` : '');
+      }
+
+      // Todos os IDs do grupo para marcar de uma vez
+      const ids = items.map(i => i.id).join(',');
+
+      html += `<div onclick="verificarGrupoLote('${ids}')"
+        style="padding:10px 14px;border-bottom:0.5px solid var(--border);display:flex;gap:10px;align-items:flex-start;cursor:pointer;${todosFeit?'opacity:0.4':''}">
+        <div style="width:24px;height:24px;border-radius:50%;flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;
+          ${todosFeit?'background:#22c55e;border:2px solid #22c55e':'border:2px solid #cbd5e1'}">
+          ${todosFeit?'<span style="color:#fff;font-size:13px;line-height:1">✓</span>':''}
         </div>
         <div style="flex:1;min-width:0">
-          <div style="font-size:12px;font-weight:500;color:var(--text);line-height:1.35;margin-bottom:3px;${feito?'text-decoration:line-through':''}">${item.descricao||item.codigo||'—'}</div>
-          <div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center">
-            <span style="font-size:9px;color:var(--text3);font-family:monospace">${item.codigo||''}</span>
-            <span style="font-size:10px;font-weight:600;color:#1a1a2e;background:#e2e8f0;padding:1px 6px;border-radius:5px">${item.quantidade||1} un</span>
-            ${cxHTML}
+          <div style="font-size:13px;font-weight:500;color:var(--text);line-height:1.35;margin-bottom:5px;${todosFeit?'text-decoration:line-through':''}">
+            ${items[0].descricao||cod}
+          </div>
+          <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center">
+            <span style="font-size:11px;font-weight:700;color:#1a1a2e;background:#e2e8f0;padding:2px 8px;border-radius:5px">${totalQty} un</span>
+            ${cxHtml}
           </div>
         </div>
       </div>`;
@@ -133,20 +172,22 @@ function _renderizarListaLote() {
   document.getElementById('m-lote-lista-body').innerHTML = html;
 }
 
-async function verificarItemLote(itemId) {
-  const sep = separadorAtual;
+// Marca todos os itens de um mesmo produto+endereço de uma vez
+async function verificarGrupoLote(idsStr) {
+  const ids  = idsStr.split(',').map(Number);
+  const sep  = separadorAtual;
   try {
-    const res = await fetch(`${API}/itens/${itemId}/verificar`, {
-      method:'PUT', credentials:'include',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ status:'encontrado', obs:'', qtd_falta:0, separador_id: sep?.id, separador_nome: sep?.nome })
-    });
-    const data = await res.json();
-    if (!res.ok) { toast(data.erro||'Erro','erro'); return; }
-
-    // Atualiza estado local e re-renderiza
-    const item = _loteItens.find(i => i.id === itemId);
-    if (item) item.status = 'encontrado';
+    await Promise.all(ids.map(id =>
+      fetch(`${API}/itens/${id}/verificar`, {
+        method:'PUT', credentials:'include',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ status:'encontrado', obs:'', qtd_falta:0, separador_id: sep?.id, separador_nome: sep?.nome })
+      })
+    ));
+    for (const id of ids) {
+      const item = _loteItens.find(i => i.id === id);
+      if (item) item.status = 'encontrado';
+    }
     _renderizarListaLote();
   } catch(e) { toast('Erro de rede','erro'); }
 }
