@@ -62,15 +62,17 @@ async function concluirComFaltaMobile() {
 
 async function carregarFilaMobile() {
   try {
-    // Inclui 'verificando' para manter destaque amarelo enquanto repositor busca ativamente
-    const [resPed, resAv] = await Promise.all([
+    const sepId = separadorAtual?.id || 0;
+    const [resPed, resAv, resAguard, resRep] = await Promise.all([
       fetch(`${API}/pedidos`, { credentials:'include' }),
-      fetch(`${API}/repositor/avisos?status=pendente,aguardando_abastecer,verificando`, { credentials:'include' })
+      fetch(`${API}/repositor/avisos?status=pendente,aguardando_abastecer,verificando`, { credentials:'include' }),
+      fetch(`${API}/repositor/avisos?status=nao_encontrado`, { credentials:'include' }),
+      fetch(`${API}/repositor/avisos/separador/${sepId}`, { credentials:'include' })
     ]);
     const todos  = await resPed.json();
     const avisos = resAv.ok ? await resAv.json() : [];
 
-    // Pedidos com itens aguardando repositor
+    // Pedidos aguardando repositor (repositor ainda não resolveu)
     const pedidosComFalta = {};
     avisos.forEach(a => {
       const n = String(a.numero_pedido);
@@ -78,16 +80,24 @@ async function carregarFilaMobile() {
       pedidosComFalta[n]++;
     });
 
-    // Pedidos com itens aguardando liberação do supervisor (nao_encontrado)
-    const [resAguard] = await Promise.all([
-      fetch(`${API}/repositor/avisos?status=nao_encontrado`, { credentials:'include' })
-    ]);
+    // Pedidos aguardando supervisor (nao_encontrado)
     const aguardSup = resAguard.ok ? await resAguard.json() : [];
     const pedidosAguardSup = {};
     aguardSup.forEach(a => {
       const n = String(a.numero_pedido);
       if (!pedidosAguardSup[n]) pedidosAguardSup[n] = 0;
       pedidosAguardSup[n]++;
+    });
+
+    // Pedidos com item já reposto pelo repositor (separador ainda não foi buscar)
+    const avisosSep = resRep.ok ? await resRep.json() : [];
+    const pedidosReposto = {};
+    avisosSep.forEach(a => {
+      if (a.status === 'abastecido' || a.status === 'subiu' || a.status === 'reposto') {
+        const n = String(a.numero_pedido);
+        if (!pedidosReposto[n]) pedidosReposto[n] = 0;
+        pedidosReposto[n]++;
+      }
     });
 
     const ativos = todos.filter(p=>p.status!=='concluido');
@@ -108,26 +118,27 @@ async function carregarFilaMobile() {
       const transp   = String(p.transportadora||'').toUpperCase();
       const isDrive  = transp.includes('DRIVE');
       const isPrime  = p.tem_prime === true;
-      const qtdFalta = pedidosComFalta[String(p.numero_pedido)] || 0;
-      const temFalta = qtdFalta > 0;
-      // ── NOVO: pedido aguardando supervisor ──
-      const qtdSup   = pedidosAguardSup[String(p.numero_pedido)] || 0;
-      const temSup   = qtdSup > 0;
+      const qtdFalta   = pedidosComFalta[String(p.numero_pedido)] || 0;
+      const temFalta   = qtdFalta > 0;
+      const qtdSup     = pedidosAguardSup[String(p.numero_pedido)] || 0;
+      const temSup     = qtdSup > 0;
+      const qtdReposto = (!temFalta && !temSup) ? (pedidosReposto[String(p.numero_pedido)] || 0) : 0;
+      const temReposto = qtdReposto > 0;
 
-      // Hierarquia visual: aguardSup > falta > drive thru > normal
-      const bordColor = temSup ? '#a78bfa' : temFalta ? '#F59E0B' : isDrive ? '#FCA5A5' : 'var(--border)';
-      const bgColor   = temSup ? '#f5f3ff'  : temFalta ? '#FFFBEB' : isDrive ? '#FFF5F5' : 'var(--surface)';
-      const numColor  = isDrive ? '#DC2626' : temSup ? '#7c3aed' : temFalta ? '#92400E' : 'var(--accent)';
-      const pillTxt   = temSup ? '⛔ supervisor' : temFalta ? '⏳ aguard. repositor' : isDrive ? '🚗 drive thru' : 'aguardando sep';
-      const pillCls   = temSup ? 'separando' : temFalta ? 'pendente' : 'pendente';
-      const bordWidth = (temSup || temFalta) ? '2.5px' : '1.5px';
+      // Hierarquia: supervisor (roxo) > falta (âmbar) > reposto (verde) > drive > normal
+      const bordColor = temSup ? '#a78bfa' : temFalta ? '#F59E0B' : temReposto ? '#16a34a' : isDrive ? '#FCA5A5' : 'var(--border)';
+      const bgColor   = temSup ? '#f5f3ff' : temFalta ? '#FFFBEB' : temReposto ? '#f0fdf4' : isDrive ? '#FFF5F5' : 'var(--surface)';
+      const numColor  = isDrive ? '#DC2626' : temSup ? '#7c3aed' : temFalta ? '#92400E' : temReposto ? '#15803d' : 'var(--accent)';
+      const pillTxt   = temSup ? '⛔ supervisor' : temFalta ? '⏳ aguard. repositor' : temReposto ? '✅ pode continuar!' : isDrive ? '🚗 drive thru' : 'aguardando sep';
+      const pillCls   = temSup ? 'separando' : temReposto ? 'separando' : 'pendente';
+      const bordWidth = (temSup || temFalta || temReposto) ? '2.5px' : '1.5px';
 
       return `<div style="border:${bordWidth} solid ${bordColor};border-radius:12px;padding:12px 14px;margin-bottom:8px;background:${bgColor}">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
           <div style="font-size:20px;font-weight:800;color:${numColor};font-family:'Space Mono',monospace">#${p.numero_pedido}</div>
           <div style="display:flex;gap:6px;align-items:center">
             ${badgeTempoSep(p.total_itens||p.itens, p.pontuacao)}
-            <span class="pill ${pillCls}" style="font-size:10px">${pillTxt}</span>
+            <span class="pill ${pillCls}" style="font-size:10px;${temReposto?'background:#dcfce7;color:#15803d;border-color:#86efac':''}">${pillTxt}</span>
           </div>
         </div>
         <div style="display:flex;gap:10px;font-size:12px;color:var(--text2);flex-wrap:wrap;margin-bottom:4px">
@@ -142,9 +153,12 @@ async function carregarFilaMobile() {
         ${temFalta ? `<div style="display:flex;align-items:center;gap:5px;background:#FEF3C7;border:1px solid #F59E0B;border-radius:6px;padding:5px 9px;margin-bottom:5px">
           <span style="font-size:11px;font-weight:700;color:#92400E">⏳ ${qtdFalta} item${qtdFalta>1?'s':''} aguardando repositor — não pegue ainda!</span>
         </div>` : ''}
-        <button class="btn btn-primary btn-sm" style="width:100%;margin-top:8px;padding:10px;font-size:14px;font-weight:700"
-          onclick="selecionarPedidoFilaMobile('${p.numero_pedido}')">
-          📦 Iniciar Separação
+        ${temReposto ? `<div style="display:flex;align-items:center;gap:6px;background:#dcfce7;border:1px solid #86efac;border-radius:6px;padding:6px 10px;margin-bottom:5px">
+          <span style="font-size:15px">✅</span>
+          <span style="font-size:11px;font-weight:700;color:#15803d">${qtdReposto} item${qtdReposto>1?'s':''} reposto${qtdReposto>1?'s':''} pelo repositor — volte para este pedido!</span>
+        </div>` : ''}
+        <button class="btn btn-primary btn-sm" style="width:100%;margin-top:8px;padding:10px;font-size:14px;font-weight:700${temReposto?';background:#16a34a':''}">
+          ${temReposto ? '✅ Continuar Separação' : '📦 Iniciar Separação'}
         </button>
       </div>`;
     }).join('');
@@ -259,9 +273,12 @@ async function carregarFilaDesk() {
   if (!lista) return;
   lista.innerHTML = '<div style="color:var(--text3);text-align:center;padding:30px;font-size:13px">Carregando fila...</div>';
   try {
-    const [resPed, resAv] = await Promise.all([
+    const sepId = separadorAtual?.id || 0;
+    const [resPed, resAv, resAguard, resRep] = await Promise.all([
       fetch(`${API}/pedidos`, { credentials:'include' }),
-      fetch(`${API}/repositor/avisos?status=pendente,aguardando_abastecer`, { credentials:'include' })
+      fetch(`${API}/repositor/avisos?status=pendente,aguardando_abastecer,verificando`, { credentials:'include' }),
+      fetch(`${API}/repositor/avisos?status=nao_encontrado`, { credentials:'include' }),
+      fetch(`${API}/repositor/avisos/separador/${sepId}`, { credentials:'include' })
     ]);
     const todos  = await resPed.json();
     const avisos = resAv.ok ? await resAv.json() : [];
@@ -273,13 +290,22 @@ async function carregarFilaDesk() {
       pedidosComFalta[n]++;
     });
 
-    const resAguard = await fetch(`${API}/repositor/avisos?status=nao_encontrado`, { credentials:'include' });
     const aguardSup = resAguard.ok ? await resAguard.json() : [];
     const pedidosAguardSup = {};
     aguardSup.forEach(a => {
       const n = String(a.numero_pedido);
       if (!pedidosAguardSup[n]) pedidosAguardSup[n] = 0;
       pedidosAguardSup[n]++;
+    });
+
+    const avisosSep = resRep.ok ? await resRep.json() : [];
+    const pedidosReposto = {};
+    avisosSep.forEach(a => {
+      if (a.status === 'abastecido' || a.status === 'subiu' || a.status === 'reposto') {
+        const n = String(a.numero_pedido);
+        if (!pedidosReposto[n]) pedidosReposto[n] = 0;
+        pedidosReposto[n]++;
+      }
     });
 
     const ativos     = todos.filter(p => p.status !== 'concluido');
@@ -297,20 +323,25 @@ async function carregarFilaDesk() {
     lista.innerHTML = ordenados.map(p => {
       const transp   = String(p.transportadora||'').toUpperCase();
       const isDrive  = transp.includes('DRIVE');
-      const qtdFalta = pedidosComFalta[String(p.numero_pedido)] || 0;
-      const temFalta = qtdFalta > 0;
-      const qtdSup   = pedidosAguardSup[String(p.numero_pedido)] || 0;
-      const temSup   = qtdSup > 0;
+      const qtdFalta   = pedidosComFalta[String(p.numero_pedido)] || 0;
+      const temFalta   = qtdFalta > 0;
+      const qtdSup     = pedidosAguardSup[String(p.numero_pedido)] || 0;
+      const temSup     = qtdSup > 0;
+      const qtdReposto = (!temFalta && !temSup) ? (pedidosReposto[String(p.numero_pedido)] || 0) : 0;
+      const temReposto = qtdReposto > 0;
 
-      const bordColor = temSup ? '#ddd6fe' : temFalta ? '#FDE68A' : isDrive ? '#FECACA' : 'var(--border)';
-      const numColor  = isDrive ? '#DC2626' : temSup ? '#7c3aed' : 'var(--accent)';
-      const pillTxt   = temSup ? '⛔ supervisor' : temFalta ? '⚠️ repositor' : isDrive ? '🚗 drive thru' : 'aguardando sep';
-      const pillCls   = temSup ? 'separando' : 'pendente';
+      // Hierarquia: supervisor (roxo) > falta (âmbar) > reposto (verde) > drive > normal
+      const bordColor = temSup ? '#ddd6fe' : temFalta ? '#FDE68A' : temReposto ? '#86efac' : isDrive ? '#FECACA' : 'var(--border)';
+      const bgColor   = temSup ? '#f5f3ff' : temFalta ? '#fffbeb' : temReposto ? '#f0fdf4' : 'var(--surface)';
+      const numColor  = isDrive ? '#DC2626' : temSup ? '#7c3aed' : temReposto ? '#15803d' : 'var(--accent)';
+      const pillTxt   = temSup ? '⛔ supervisor' : temFalta ? '⚠️ repositor' : temReposto ? '✅ pode continuar!' : isDrive ? '🚗 drive thru' : 'aguardando sep';
+      const pillCls   = temSup ? 'separando' : temReposto ? 'separando' : 'pendente';
+      const bordWidth = (temSup || temFalta || temReposto) ? '2px' : '1.5px';
 
-      return `<div style="border:1.5px solid ${bordColor};border-radius:12px;padding:12px 14px;margin-bottom:8px;background:var(--surface)">
+      return `<div style="border:${bordWidth} solid ${bordColor};border-radius:12px;padding:12px 14px;margin-bottom:8px;background:${bgColor}">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
           <div style="font-size:20px;font-weight:800;color:${numColor};font-family:'Space Mono',monospace">#${p.numero_pedido}</div>
-          <span class="pill ${pillCls}" style="font-size:10px">${pillTxt}</span>
+          <span class="pill ${pillCls}" style="font-size:10px;${temReposto?'background:#dcfce7;color:#15803d;border-color:#86efac':''}">${pillTxt}</span>
         </div>
         <div style="display:flex;gap:10px;font-size:12px;color:var(--text2);flex-wrap:wrap;margin-bottom:4px">
           <span>📦 <b style="color:var(--text)">${p.total_itens||p.itens||0} itens</b></span>
@@ -324,9 +355,13 @@ async function carregarFilaDesk() {
         ${temFalta ? `<div style="display:flex;align-items:center;gap:5px;background:#FEF3C7;border:1px solid #FDE68A;border-radius:6px;padding:5px 9px;margin-bottom:5px">
           <span style="font-size:11px;font-weight:600;color:#92400E">⚠️ ${qtdFalta} item${qtdFalta>1?'s':''} aguardando repositor</span>
         </div>` : ''}
-        <button class="btn btn-primary btn-sm" style="width:100%;margin-top:8px;padding:10px;font-size:14px;font-weight:700"
+        ${temReposto ? `<div style="display:flex;align-items:center;gap:6px;background:#dcfce7;border:1px solid #86efac;border-radius:6px;padding:6px 10px;margin-bottom:5px">
+          <span style="font-size:14px">✅</span>
+          <span style="font-size:11px;font-weight:700;color:#15803d">${qtdReposto} item${qtdReposto>1?'s':''} reposto${qtdReposto>1?'s':''} pelo repositor — volte para este pedido!</span>
+        </div>` : ''}
+        <button class="btn btn-primary btn-sm" style="width:100%;margin-top:8px;padding:10px;font-size:14px;font-weight:700${temReposto?';background:#16a34a':''}"
           onclick="selecionarPedidoFilaDesk('${p.numero_pedido}')">
-          📦 Iniciar Separação
+          ${temReposto ? '✅ Continuar Separação' : '📦 Iniciar Separação'}
         </button>
       </div>`;
     }).join('');
