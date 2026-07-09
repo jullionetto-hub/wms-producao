@@ -78,11 +78,12 @@ function _renderizarListaLote() {
   document.getElementById('m-lote-chips').innerHTML =
     `<span style="font-size:11px;color:var(--text2)">${_loteAtual.length} pedidos em separação simultânea</span>`;
 
-  // Progress
-  document.getElementById('m-lote-prog-cnt').textContent = `${feitos} / ${total} itens`;
-  document.getElementById('m-lote-prog-fill').style.width = total ? Math.round(feitos/total*100)+'%' : '0%';
+  // Progresso: encontrado + falta = processado
+  const processados = itens.filter(i => i.status === 'encontrado' || i.status === 'falta').length;
+  document.getElementById('m-lote-prog-cnt').textContent = `${processados} / ${total} itens`;
+  document.getElementById('m-lote-prog-fill').style.width = total ? Math.round(processados/total*100)+'%' : '0%';
   const btnFim = document.getElementById('m-lote-btn-concluir');
-  if (btnFim) { btnFim.disabled = feitos < total; btnFim.style.opacity = feitos >= total ? '1' : '0.5'; }
+  if (btnFim) { btnFim.disabled = processados < total; btnFim.style.opacity = processados >= total ? '1' : '0.5'; }
 
   // 1. Agrupar por endereço primário
   const gruposPorEnd = {};
@@ -109,7 +110,7 @@ function _renderizarListaLote() {
     }
 
     const totalEnd   = itemsEnd.length;
-    const feitosEnd  = itemsEnd.filter(i => i.status === 'encontrado').length;
+    const feitosEnd  = itemsEnd.filter(i => i.status === 'encontrado' || i.status === 'falta').length;
     const completo   = feitosEnd === totalEnd;
 
     html += `<div style="padding:7px 14px 5px;background:var(--surface2);border-bottom:0.5px solid var(--border);display:flex;align-items:center;gap:8px">
@@ -121,8 +122,12 @@ function _renderizarListaLote() {
     </div>`;
 
     for (const [cod, items] of Object.entries(porSku)) {
-      const todosFeit = items.every(i => i.status === 'encontrado');
+      const todosProc = items.every(i => i.status === 'encontrado' || i.status === 'falta');
+      const temFalta  = items.some(i => i.status === 'falta');
       const totalQty  = items.reduce((s, i) => s + (parseInt(i.quantidade)||1), 0);
+
+      // Endereço completo (ex: E011, COL 03, NIV 02)
+      const endCompleto = items[0].endereco || end;
 
       // Distribuição por caixa: { cx: qty }
       const porCaixa = {};
@@ -148,24 +153,40 @@ function _renderizarListaLote() {
         }).join('') + (resto > 0 ? `<span style="font-size:9px;color:var(--text3)">+${resto}</span>` : '');
       }
 
-      // Todos os IDs do grupo para marcar de uma vez
       const ids = items.map(i => i.id).join(',');
 
-      html += `<div onclick="verificarGrupoLote('${ids}')"
-        style="padding:10px 14px;border-bottom:0.5px solid var(--border);display:flex;gap:10px;align-items:flex-start;cursor:pointer;${todosFeit?'opacity:0.4':''}">
-        <div style="width:24px;height:24px;border-radius:50%;flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;
-          ${todosFeit?'background:#22c55e;border:2px solid #22c55e':'border:2px solid #cbd5e1'}">
-          ${todosFeit?'<span style="color:#fff;font-size:13px;line-height:1">✓</span>':''}
-        </div>
-        <div style="flex:1;min-width:0">
-          <div style="font-size:13px;font-weight:500;color:var(--text);line-height:1.35;margin-bottom:5px;${todosFeit?'text-decoration:line-through':''}">
-            ${items[0].descricao||cod}
+      // Cor do círculo: verde=encontrado, âmbar=falta, cinza=pendente
+      const circuloBg    = todosProc ? (temFalta ? '#f59e0b' : '#22c55e') : 'transparent';
+      const circuloBord  = todosProc ? (temFalta ? '#f59e0b' : '#22c55e') : '#cbd5e1';
+      const circuloIcon  = todosProc ? `<span style="color:#fff;font-size:13px;line-height:1">${temFalta?'!':'✓'}</span>` : '';
+
+      html += `<div style="padding:10px 14px;border-bottom:0.5px solid var(--border);${todosProc?'opacity:0.45':''}">
+        <div style="display:flex;gap:10px;align-items:flex-start">
+          <div onclick="verificarGrupoLote('${ids}')"
+            style="width:24px;height:24px;border-radius:50%;flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center;cursor:pointer;
+              background:${circuloBg};border:2px solid ${circuloBord}">
+            ${circuloIcon}
           </div>
-          <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center">
-            <span style="font-size:11px;font-weight:700;color:#1a1a2e;background:#e2e8f0;padding:2px 8px;border-radius:5px">${totalQty} un</span>
-            ${cxHtml}
+          <div style="flex:1;min-width:0" onclick="verificarGrupoLote('${ids}')" style="cursor:pointer">
+            <div style="font-size:13px;font-weight:500;color:var(--text);line-height:1.35;margin-bottom:3px;${todosProc?'text-decoration:line-through':''}">
+              ${items[0].descricao||cod}
+            </div>
+            <div style="font-size:10px;color:#6366f1;font-family:monospace;margin-bottom:5px;font-weight:600">
+              📍 ${endCompleto}
+            </div>
+            <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center">
+              <span style="font-size:11px;font-weight:700;color:#1a1a2e;background:#e2e8f0;padding:2px 8px;border-radius:5px">${totalQty} un</span>
+              ${cxHtml}
+            </div>
           </div>
+          ${!todosProc ? `<button onclick="event.stopPropagation();faltaGrupoLote('${ids}',${totalQty})"
+            style="flex-shrink:0;background:#fef3c7;border:1.5px solid #f59e0b;color:#92400e;font-size:11px;font-weight:700;padding:5px 8px;border-radius:8px;cursor:pointer;margin-top:1px">
+            Falta
+          </button>` : ''}
         </div>
+        ${temFalta ? `<div style="margin-top:6px;margin-left:34px;background:#fef3c7;border:1px solid #f59e0b;border-radius:6px;padding:4px 8px;font-size:10px;color:#92400e;font-weight:600">
+          ⏳ Aguardando repositor
+        </div>` : ''}
       </div>`;
     }
   }
@@ -188,6 +209,27 @@ async function verificarGrupoLote(idsStr) {
       const item = _loteItens.find(i => i.id === id);
       if (item) item.status = 'encontrado';
     }
+    _renderizarListaLote();
+  } catch(e) { toast('Erro de rede','erro'); }
+}
+
+// Reporta falta para o repositor — marca os itens como falta e aciona aviso
+async function faltaGrupoLote(idsStr, qtdTotal) {
+  const ids = idsStr.split(',').map(Number);
+  const sep = separadorAtual;
+  try {
+    await Promise.all(ids.map(id =>
+      fetch(`${API}/itens/${id}/verificar`, {
+        method:'PUT', credentials:'include',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ status:'falta', obs:'Falta no lote', qtd_falta: parseInt(qtdTotal)||1, separador_id: sep?.id, separador_nome: sep?.nome })
+      })
+    ));
+    for (const id of ids) {
+      const item = _loteItens.find(i => i.id === id);
+      if (item) item.status = 'falta';
+    }
+    toast('Repositor acionado','aviso');
     _renderizarListaLote();
   } catch(e) { toast('Erro de rede','erro'); }
 }
