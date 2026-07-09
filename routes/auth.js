@@ -56,46 +56,34 @@ router.post('/auth/login', async (req,res) => {
     ).catch(() => {});
 
     if (perfil === 'separador') {
-      req.session.separador = await db.get(
-        `SELECT id,nome,matricula,turno,status FROM separadores WHERE usuario_id=$1 AND status='ativo'`,
-        [user.id]
-      );
-      // Fallback 1: vincula pelo nome quando usuario_id não está configurado
-      if (!req.session.separador) {
-        req.session.separador = await db.get(
-          `SELECT id,nome,matricula,turno,status FROM separadores
-           WHERE LOWER(TRIM(nome))=LOWER(TRIM($1)) AND status='ativo'`,
-          [user.nome]
-        );
-      }
-      // Fallback 2: vincula pela matrícula (= login do usuário)
-      if (!req.session.separador) {
-        req.session.separador = await db.get(
-          `SELECT id,nome,matricula,turno,status FROM separadores
-           WHERE LOWER(TRIM(matricula))=LOWER(TRIM($1)) AND status='ativo'`,
-          [user.login]
-        );
-      }
-      // Auto-vincula usuario_id para logins futuros (qualquer fallback que funcionou)
+      // Tenta encontrar o registro de separador por usuario_id, nome ou matricula
+      req.session.separador =
+        await db.get(`SELECT id,nome,matricula,turno,status FROM separadores WHERE usuario_id=$1 AND status='ativo'`, [user.id]) ||
+        await db.get(`SELECT id,nome,matricula,turno,status FROM separadores WHERE LOWER(TRIM(nome))=LOWER(TRIM($1)) AND status='ativo'`, [user.nome]) ||
+        await db.get(`SELECT id,nome,matricula,turno,status FROM separadores WHERE LOWER(TRIM(matricula))=LOWER(TRIM($1)) AND status='ativo'`, [user.login]);
+
       if (req.session.separador) {
+        // Garante que usuario_id está vinculado para logins futuros
         pool.query('UPDATE separadores SET usuario_id=$1 WHERE id=$2 AND (usuario_id IS NULL OR usuario_id=0)',
           [user.id, req.session.separador.id]).catch(()=>{});
-      }
-      // Fallback 3: cria registro em separadores se não existir nenhum
-      if (!req.session.separador) {
-        try {
+      } else {
+        // Nenhum registro encontrado: tenta criar, ou atualiza o existente pelo login/matricula
+        const upd = await pool.query(
+          `UPDATE separadores SET usuario_id=$1, nome=$2, status='ativo'
+           WHERE LOWER(TRIM(matricula))=LOWER(TRIM($3)) AND (usuario_id IS NULL OR usuario_id=0)
+           RETURNING id,nome,matricula,turno,status`,
+          [user.id, user.nome, user.login]
+        );
+        if (upd.rows[0]) {
+          req.session.separador = upd.rows[0];
+        } else {
+          // Cria do zero (usuário nunca teve registro em separadores)
           const ins = await pool.query(
-            `INSERT INTO separadores (nome, matricula, turno, status, usuario_id)
-             VALUES ($1,$2,$3,'ativo',$4)
-             RETURNING id,nome,matricula,turno,status`,
+            `INSERT INTO separadores (nome,matricula,turno,status,usuario_id) VALUES ($1,$2,$3,'ativo',$4)
+             ON CONFLICT DO NOTHING RETURNING id,nome,matricula,turno,status`,
             [user.nome, user.login, user.turno||'Manha', user.id]
           );
           req.session.separador = ins.rows[0] || null;
-        } catch(_) {
-          // Se falhar (constraint de matrícula duplicada), busca qualquer registro
-          req.session.separador = await db.get(
-            `SELECT id,nome,matricula,turno,status FROM separadores WHERE status='ativo' ORDER BY id LIMIT 1`
-          ) || null;
         }
       }
     } else {
