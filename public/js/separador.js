@@ -8,8 +8,9 @@ const _checklistSortDir = 1;
 /* ══════════════════════════════════════════
    SEPARAÇÃO EM LOTE — TURNO NOITE
 ══════════════════════════════════════════ */
-let _loteAtual   = [];   // [{id, numero_pedido, total_itens}, ...]
-let _loteItens   = [];   // itens mesclados com caixa_num
+let _loteAtual         = [];   // [{id, numero_pedido, total_itens}, ...]
+let _loteItens         = [];   // itens mesclados com caixa_num
+let _lotePendentes     = [];   // pedidos elegíveis para o lote (usado pelo card)
 
 const _CX_CORES = ['#2563eb','#7c3aed','#b45309','#065a82','#155e3a'];
 
@@ -304,8 +305,9 @@ async function carregarFilaMobile() {
     // Card de separação em lote para turno noite (2+ pedidos pendentes)
     const isNoite = separadorAtual?.turno === 'Noite';
     const pendentesLote = ordenadosMob.filter(p => p.status !== 'separando' && p.status !== 'concluido');
+    _lotePendentes = pendentesLote.map(p => ({ id: p.id, numero_pedido: p.numero_pedido, total_itens: p.total_itens || p.itens || 0 }));
     const loteCard = (isNoite && pendentesLote.length >= 2)
-      ? `<div onclick="abrirPreparacaoLote(${JSON.stringify(pendentesLote.map(p=>({id:p.id,numero_pedido:p.numero_pedido,total_itens:p.total_itens||p.itens||0})))})"
+      ? `<div onclick="abrirPreparacaoLote(_lotePendentes)"
            style="border:2px solid #7c3aed;border-radius:12px;padding:14px;margin-bottom:12px;background:linear-gradient(135deg,#faf5ff,#ede9fe);cursor:pointer">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
             <div style="width:38px;height:38px;border-radius:10px;background:#7c3aed;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">🌙</div>
