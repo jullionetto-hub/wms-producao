@@ -352,17 +352,17 @@ function renderCardRepSimples(a, modo) {
       const _quemBusca   = _ultimaTent.repositor || a.quem_pegou || '?';
       const _isUltima    = _totalTent >= 3;
       botoes = `
-        <div style="padding:10px 14px 12px;border-top:1px solid var(--border)">
-          <div style="background:${_isUltima?'#fef2f2':'#eff6ff'};border:1px solid ${_isUltima?'#fca5a5':'#bfdbfe'};border-radius:8px;padding:8px 11px;margin-bottom:9px;font-size:11px;color:${_isUltima?'#9f1239':'#1e40af'}">
+        <div style="padding:7px 12px 10px;border-top:1px solid var(--border)">
+          <div style="background:${_isUltima?'#fef2f2':'#eff6ff'};border:1px solid ${_isUltima?'#fca5a5':'#bfdbfe'};border-radius:7px;padding:5px 9px;margin-bottom:6px;font-size:10px;color:${_isUltima?'#9f1239':'#1e40af'}">
             🔍 <strong>${_quemBusca}</strong> está buscando${_isUltima?' · <span style="color:#dc2626;font-weight:800">⚠️ ÚLTIMA TENTATIVA</span>':''}
           </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
             <button onclick="mostrarQtdEncontrada(${a.id},'${nomeLogado}',${a.quantidade||1})"
-              style="padding:12px;background:#dcfce7;border:2px solid #10b981;border-radius:10px;color:#065f46;font-weight:700;font-size:13px;cursor:pointer;touch-action:manipulation">
+              style="padding:9px 8px;background:#dcfce7;border:2px solid #10b981;border-radius:8px;color:#065f46;font-weight:700;font-size:12px;cursor:pointer;touch-action:manipulation">
               ✅ Encontrei
             </button>
             <button onclick="acaoRepTab(${a.id},'e_nao_enc','${nomeLogado}','_smart')"
-              style="padding:12px;background:#fee2e2;border:2px solid #ef4444;border-radius:10px;color:#dc2626;font-weight:700;font-size:13px;cursor:pointer;touch-action:manipulation">
+              style="padding:9px 8px;background:#fee2e2;border:2px solid #ef4444;border-radius:8px;color:#dc2626;font-weight:700;font-size:12px;cursor:pointer;touch-action:manipulation">
               ❌ Não encontrei
             </button>
           </div>
@@ -406,23 +406,23 @@ function renderCardRepSimples(a, modo) {
   }
 
   return `
-    <div style="background:var(--surface);border:1px solid var(--border);border-left:4px solid ${cor};border-radius:14px;margin-bottom:10px;overflow:hidden">
-      <div style="padding:14px 14px ${botoes?'8':'14'}px">
-        <div style="font-family:'Space Mono',monospace;font-size:16px;font-weight:700;color:var(--text);margin-bottom:2px">${a.codigo||'—'}</div>
-        <div style="font-size:12px;color:var(--text2);margin-bottom:8px;line-height:1.4">${a.descricao||''}</div>
-        <div style="display:flex;flex-wrap:wrap;gap:5px;align-items:center">
-          ${a.numero_pedido?`<span style="background:var(--surface2);border-radius:8px;padding:3px 9px;font-size:11px;color:var(--text2);font-weight:600">📋 ${a.numero_pedido}</span>`:''}
-          ${a.separador_nome?`<span style="background:var(--surface2);border-radius:8px;padding:3px 9px;font-size:11px;color:var(--text2)">👤 ${a.separador_nome}</span>`:''}
+    <div style="background:var(--surface);border:1px solid var(--border);border-left:4px solid ${cor};border-radius:10px;margin-bottom:8px;overflow:hidden">
+      <div style="padding:10px 12px ${botoes?'6':'10'}px">
+        <div style="font-family:'Space Mono',monospace;font-size:14px;font-weight:700;color:var(--text);margin-bottom:1px">${a.codigo||'—'}</div>
+        <div style="font-size:11px;color:var(--text2);margin-bottom:5px;line-height:1.3">${a.descricao||''}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center">
+          ${a.numero_pedido?`<span style="background:var(--surface2);border-radius:6px;padding:2px 7px;font-size:10px;color:var(--text2);font-weight:600">📋 ${a.numero_pedido}</span>`:''}
+          ${a.separador_nome?`<span style="background:var(--surface2);border-radius:6px;padding:2px 7px;font-size:10px;color:var(--text2)">👤 ${a.separador_nome}</span>`:''}
           ${(a.qtd_encontrada > 0 && a.qtd_encontrada < qtd)
-            ? `<span style="background:#fff7ed;border:1.5px solid #fb923c;border-radius:8px;padding:3px 9px;font-size:11px;font-weight:800;color:#c2410c">⚠️ ${a.qtd_encontrada}/${qtd} un</span>`
-            : `<span style="background:#fee2e2;border-radius:8px;padding:3px 9px;font-size:11px;font-weight:800;color:#dc2626">${qtd} un</span>`
+            ? `<span style="background:#fff7ed;border:1.5px solid #fb923c;border-radius:6px;padding:2px 7px;font-size:10px;font-weight:800;color:#c2410c">⚠️ ${a.qtd_encontrada}/${qtd} un</span>`
+            : `<span style="background:#fee2e2;border-radius:6px;padding:2px 7px;font-size:10px;font-weight:800;color:#dc2626">${qtd} un</span>`
           }
           ${envioBdg}
-          ${a.endereco?`<span style="background:var(--surface2);border-radius:8px;padding:3px 9px;font-size:10px;color:var(--text3)">📍 ${a.endereco}</span>`:''}
+          ${a.endereco?`<span style="background:var(--surface2);border-radius:6px;padding:2px 7px;font-size:10px;color:var(--text3)">📍 ${a.endereco}</span>`:''}
           ${_tentBadge}
         </div>
-        ${a.quem_pegou && modo !== 'separar' ? `<div style="margin-top:6px;font-size:11px;color:var(--text3)">📦 <strong style="color:var(--text2)">${a.quem_pegou}</strong></div>` : ''}
-        ${a.hora_aviso?`<div style="margin-top:4px;font-size:10px;color:var(--text3)">🕐 ${a.hora_aviso}${a.data_aviso?' · '+a.data_aviso:''}</div>`:''}
+        ${a.quem_pegou && modo !== 'separar' ? `<div style="margin-top:4px;font-size:10px;color:var(--text3)">📦 <strong style="color:var(--text2)">${a.quem_pegou}</strong></div>` : ''}
+        ${a.hora_aviso?`<div style="margin-top:2px;font-size:10px;color:var(--text3)">🕐 ${a.hora_aviso}${a.data_aviso?' · '+a.data_aviso:''}</div>`:''}
       </div>
       ${botoes}
     </div>`;
