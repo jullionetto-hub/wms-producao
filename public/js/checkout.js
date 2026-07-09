@@ -555,8 +555,7 @@ async function confirmarCheckout(id) {
     if (inp) inp.value = '';
     const wrap = document.getElementById('ck-resultado');
     if (wrap) wrap.style.display = 'none';
-    // Vai para FEITOS para mostrar o que acabou de ser concluído
-    mudarTabCkDesk('feitos');
+    if (typeof carregarFilaCkDesk === 'function') carregarFilaCkDesk();
     if (typeof carregarContadoresCk === 'function') carregarContadoresCk();
   } catch(e) { toast('Erro de rede ao confirmar!','erro'); }
 }

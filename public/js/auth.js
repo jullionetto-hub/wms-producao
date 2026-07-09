@@ -2285,14 +2285,18 @@ async function encerrarEmbalagemDesk(id) {
    CHECKOUT DESKTOP — TABS
 ══════════════════════════════════════════ */
 function mudarTabCkDesk(tab) {
-  ['fila','checkout','feitos','aguardando'].forEach(t => {
+  // 'checkout' foi unificado na fila — redireciona silenciosamente
+  if (tab === 'checkout') tab = 'fila';
+  ['fila','feitos','aguardando'].forEach(t => {
     const el  = document.getElementById(`d-ck-tab-${t}`);
     const btn = document.getElementById(`dcktab-${t}`);
     if (el)  el.style.display = t === tab ? '' : 'none';
     if (btn) btn.classList.toggle('ativo', t === tab);
   });
-  if (tab === 'fila')       carregarFilaCkDesk();
-  if (tab === 'checkout')   setTimeout(() => document.getElementById('ck-input-caixa')?.focus(), 200);
+  if (tab === 'fila') {
+    carregarFilaCkDesk();
+    setTimeout(() => document.getElementById('ck-input-caixa')?.focus(), 200);
+  }
   if (tab === 'feitos')     carregarFeitosCkDesk();
   if (tab === 'aguardando') carregarAguardandoCkDesk();
 }
@@ -2344,17 +2348,16 @@ async function retomarCheckoutDesk(id, numeroCaixa) {
     toast('▶ Checkout retomado!', 'sucesso');
     const inp = document.getElementById('ck-input-caixa');
     if (inp) inp.value = numeroCaixa || '';
-    mudarTabCkDesk('checkout');
+    mudarTabCkDesk('fila');
     setTimeout(() => buscarCaixa(), 300);
   } catch(e) { toast('Erro de rede','erro'); }
 }
 
-/* Inicia checkout a partir da fila desktop: preenche input + busca automaticamente */
+/* Inicia checkout a partir da fila desktop: preenche input + busca (permanece na FILA) */
 function iniciarCkDesk(numero) {
   const inp = document.getElementById('ck-input-caixa');
   if (inp) inp.value = numero;
-  mudarTabCkDesk('checkout');
-  setTimeout(() => buscarCaixa(), 250);
+  setTimeout(() => buscarCaixa(), 100);
 }
 
 async function carregarFilaCkDesk() {
@@ -2368,20 +2371,11 @@ async function carregarFilaCkDesk() {
     const pedidos = res.ok ? await res.json() : [];
     const fila = pedidos.filter(p => !p.status_embalagem || p.status_embalagem === 'nao_iniciado');
     if (badge) { badge.textContent = fila.length; badge.style.display = fila.length > 0 ? 'inline' : 'none'; }
-    // Barra de busca rápida no topo da fila desktop
-    const scanBar = `
-      <div style="display:flex;gap:8px;margin-bottom:12px">
-        <input type="number" id="d-ck-fila-scan" inputmode="numeric" placeholder="📦 Escanear ou digitar nº da caixa..."
-          style="flex:1;font-size:16px;padding:10px 14px;border-radius:10px;border:2px solid var(--border);background:var(--surface);color:var(--text)"
-          onkeydown="if(event.key==='Enter'){const v=this.value.trim();if(v)iniciarCkDesk(v);}">
-        <button onclick="const v=document.getElementById('d-ck-fila-scan')?.value?.trim();if(v)iniciarCkDesk(v);else toast('Digite o número da caixa','aviso');"
-          class="btn btn-primary" style="padding:10px 18px;font-size:15px">▶ Buscar</button>
-      </div>`;
     if (!fila.length) {
-      el.innerHTML = scanBar + '<div style="color:var(--text3);text-align:center;padding:32px;font-size:13px">✅ Nenhum pedido aguardando checkout</div>';
+      el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:32px;font-size:13px">✅ Nenhum pedido aguardando checkout</div>';
       return;
     }
-    el.innerHTML = scanBar + fila.map(p => `
+    el.innerHTML = fila.map(p => `
       <div style="border:1.5px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:8px;background:var(--surface)">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
           <div style="font-size:20px;font-weight:800;color:var(--accent);font-family:'Space Mono',monospace">#${p.numero_pedido}</div>

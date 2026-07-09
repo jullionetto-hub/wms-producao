@@ -1203,51 +1203,47 @@
           </div>
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
             <div class="cnt-card azul"><div class="cnt-lbl">TOTAL</div><div class="cnt-val" id="ck-cnt-total">0</div><div class="cnt-sub">pedidos</div></div>
-            <div class="cnt-card amarelo"><div class="cnt-lbl">PENDENTES</div><div class="cnt-val" id="ck-cnt-pendentes">0</div><div class="cnt-sub">aguardando</div></div>
+            <div class="cnt-card amarelo" onclick="mudarTabCkDesk('aguardando')" style="cursor:pointer" title="Ver pedidos aguardando"><div class="cnt-lbl">AGUARDANDO ITEM</div><div class="cnt-val" id="ck-cnt-pendentes">0</div><div class="cnt-sub">clique para ver ↗</div></div>
             <div class="cnt-card verde"><div class="cnt-lbl">CHECKOUTS</div><div class="cnt-val" id="ck-cnt-checkouts">0</div><div class="cnt-sub">concluídos</div></div>
           </div>
         </div>
-        <!-- Tabs desktop checkout -->
+        <!-- Tabs desktop checkout (3 tabs — fila unificada com scan) -->
         <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap" id="ck-desk-tabbar">
-          <button class="rel-turno-btn ativo" id="dcktab-fila"     onclick="mudarTabCkDesk('fila')">📋 FILA <span id="d-cktab-fila-badge" style="display:none;background:#2563EB;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:3px">0</span></button>
-          <button class="rel-turno-btn"       id="dcktab-checkout" onclick="mudarTabCkDesk('checkout')">🏷️ CHECKOUT</button>
-          <button class="rel-turno-btn"       id="dcktab-feitos"   onclick="mudarTabCkDesk('feitos')">✅ FEITOS <span id="d-ck-feitos-cnt" style="display:none;background:#10b981;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:3px">0</span></button>
-          <button class="rel-turno-btn"       id="dcktab-aguardando" onclick="mudarTabCkDesk('aguardando')">⏳ AGUARDANDO <span id="d-cktab-aguardando-badge" style="display:none;background:#f97316;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:3px">0</span></button>
+          <button class="rel-turno-btn ativo" id="dcktab-fila"      onclick="mudarTabCkDesk('fila')">📋 FILA <span id="d-cktab-fila-badge" style="display:none;background:#2563EB;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:3px">0</span></button>
+          <button class="rel-turno-btn"        id="dcktab-feitos"    onclick="mudarTabCkDesk('feitos')">✅ FEITOS <span id="d-ck-feitos-cnt" style="display:none;background:#10b981;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:3px">0</span></button>
+          <button class="rel-turno-btn"        id="dcktab-aguardando" onclick="mudarTabCkDesk('aguardando')">⏳ AGUARDANDO <span id="d-cktab-aguardando-badge" style="display:none;background:#f97316;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:3px">0</span></button>
         </div>
 
-        <!-- Tab FILA -->
+        <!-- Tab FILA (unificada com scan) -->
         <div id="d-ck-tab-fila">
           <div class="card">
-            <div class="card-hd">📋 FILA DE CHECKOUT
+            <div class="card-hd">🔍 ESCANEAR / FILA DE CHECKOUT
               <button class="btn btn-outline btn-sm" onclick="carregarFilaCkDesk()">🔄</button>
             </div>
+            <!-- Scan input (unificado aqui) -->
+            <input type="text" class="bip-input" id="ck-input-caixa"
+              placeholder="Digite ou bipe o número da caixa..."
+              autocomplete="off" inputmode="numeric"
+              onkeydown="if(event.key==='Enter')buscarCaixa()"
+              style="width:100%;font-size:20px;letter-spacing:3px;margin-bottom:8px;box-sizing:border-box"/>
+            <div style="display:flex;gap:8px;margin-bottom:14px">
+              <button onclick="escanearQr('ck-input-caixa', buscarCaixa)" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:#1D4ED8;color:#fff;border:none;border-radius:8px;padding:10px 0;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.5px">📷 Escanear QR</button>
+              <button onclick="buscarCaixa()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:#3B82F6;color:#fff;border:none;border-radius:8px;padding:10px 0;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.5px">▶ Buscar</button>
+            </div>
+            <!-- Resultado da busca (aparece aqui, na mesma tela) -->
+            <div id="ck-resultado" style="display:none;margin-bottom:16px;border-top:1px solid var(--border);padding-top:14px">
+              <div class="card-hd" id="ck-res-titulo" style="margin-bottom:8px">RESULTADO</div>
+              <div id="ck-res-conteudo"></div>
+            </div>
+            <!-- Lista da fila -->
             <div id="d-ck-fila" style="padding:4px 0">
               <div style="color:var(--text3);text-align:center;padding:30px;font-size:13px">Carregando...</div>
             </div>
           </div>
         </div>
 
-        <!-- Tab CHECKOUT (scan) -->
-        <div id="d-ck-tab-checkout" style="display:none">
-          <div class="card">
-            <div class="card-hd">🔍 BUSCAR POR NÚMERO DE CAIXA</div>
-            <input type="text" class="bip-input" id="ck-input-caixa"
-              placeholder="Digite ou bipe o número da caixa..."
-              autocomplete="off" inputmode="numeric"
-              style="width:100%;font-size:20px;letter-spacing:3px;margin-bottom:8px;box-sizing:border-box"/>
-            <div style="display:flex;gap:8px">
-              <button onclick="escanearQr('ck-input-caixa', buscarCaixa)" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:#1D4ED8;color:#fff;border:none;border-radius:8px;padding:10px 0;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.5px">📷 Escanear QR</button>
-              <button onclick="buscarCaixa()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:#3B82F6;color:#fff;border:none;border-radius:8px;padding:10px 0;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.5px">▶ Buscar</button>
-            </div>
-          </div>
-          <!-- Resultado da busca -->
-          <div id="ck-resultado" style="display:none;margin-top:14px">
-            <div class="card">
-              <div class="card-hd" id="ck-res-titulo">RESULTADO</div>
-              <div id="ck-res-conteudo"></div>
-            </div>
-          </div>
-        </div>
+        <!-- Tab CHECKOUT mantida oculta para compatibilidade (redirecionada para fila) -->
+        <div id="d-ck-tab-checkout" style="display:none"></div>
 
         <!-- Tab FEITOS -->
         <div id="d-ck-tab-feitos" style="display:none">
@@ -2037,14 +2033,14 @@
   <script src="/js/pedidos.js?v=20"></script>
   <script src="/js/separador.js?v=8"></script>
   <script src="/js/repositor.js?v=15"></script>
-  <script src="/js/checkout.js?v=10"></script>
+  <script src="/js/checkout.js?v=11"></script>
   <script src="/js/dashboard.js?v=24"></script>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   <script src="/js/entrada-manual.js?v=1"></script>
   <script src="/js/performance-dash.js?v=7"></script>
   <script src="/js/dash-logistica.js?v=5"></script>
   <script src="/js/gestao.js?v=14"></script>
-  <script src="/js/auth.js?v=21"></script>
+  <script src="/js/auth.js?v=22"></script>
 
 
 <!-- ══ MODAL IMPORTAR ══ -->
