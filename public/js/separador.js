@@ -138,53 +138,62 @@ function _renderizarListaLote() {
       }
       const cxEntries = Object.entries(porCaixa).sort((a,b) => Number(a[0]) - Number(b[0]));
 
-      // Tags de caixa compactas — máx 5 visíveis
-      let cxHtml;
-      if (cxEntries.length === 1) {
-        const [cx] = cxEntries[0];
-        const cor = _CX_CORES[(Number(cx)-1) % _CX_CORES.length];
-        cxHtml = `<span style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:5px;color:#fff;background:${cor}">Cx. ${cx}</span>`;
-      } else {
-        const visiveis = cxEntries.slice(0, 5);
-        const resto    = cxEntries.length - 5;
-        cxHtml = visiveis.map(([cx, qty]) => {
-          const cor = _CX_CORES[(Number(cx)-1) % _CX_CORES.length];
-          return `<span style="font-size:9px;font-weight:600;padding:2px 6px;border-radius:5px;color:#fff;background:${cor};white-space:nowrap">Cx.${cx} ${qty}un</span>`;
-        }).join('') + (resto > 0 ? `<span style="font-size:9px;color:var(--text3)">+${resto}</span>` : '');
-      }
+      // Tags de caixa: mostra Cx.N + número do pedido + qtd (máx 3 visíveis)
+      const MAX_CX = 3;
+      const visiveis = cxEntries.slice(0, MAX_CX);
+      const resto    = cxEntries.length - MAX_CX;
+      const cxHtml   = visiveis.map(([cx, qty]) => {
+        const cor    = _CX_CORES[(Number(cx)-1) % _CX_CORES.length];
+        const pedNum = _loteAtual[Number(cx)-1]?.numero_pedido || '';
+        return `<div style="display:inline-flex;flex-direction:column;align-items:center;background:${cor};border-radius:7px;padding:3px 7px;min-width:52px">
+          <span style="font-size:9px;font-weight:700;color:#fff;letter-spacing:0.5px">Cx. ${cx}</span>
+          <span style="font-size:8px;color:rgba(255,255,255,0.85)">#${pedNum}</span>
+          <span style="font-size:9px;font-weight:600;color:#fff">${qty} un</span>
+        </div>`;
+      }).join('') + (resto > 0 ? `<span style="font-size:10px;color:var(--text3);align-self:center">+${resto} caixa${resto>1?'s':''}</span>` : '');
 
       const ids = items.map(i => i.id).join(',');
 
-      // Cor do círculo: verde=encontrado, âmbar=falta, cinza=pendente
-      const circuloBg    = todosProc ? (temFalta ? '#f59e0b' : '#22c55e') : 'transparent';
-      const circuloBord  = todosProc ? (temFalta ? '#f59e0b' : '#22c55e') : '#cbd5e1';
-      const circuloIcon  = todosProc ? `<span style="color:#fff;font-size:13px;line-height:1">${temFalta?'!':'✓'}</span>` : '';
+      // Cor do círculo: verde=encontrado, âmbar=falta/parcial, cinza=pendente
+      const circuloBg   = todosProc ? (temFalta ? '#f59e0b' : '#22c55e') : 'transparent';
+      const circuloBord = todosProc ? (temFalta ? '#f59e0b' : '#22c55e') : '#cbd5e1';
+      const circuloIcon = todosProc ? `<span style="color:#fff;font-size:13px;line-height:1">${temFalta?'!':'✓'}</span>` : '';
 
       html += `<div style="padding:10px 14px;border-bottom:0.5px solid var(--border);${todosProc?'opacity:0.45':''}">
         <div style="display:flex;gap:10px;align-items:flex-start">
           <div onclick="verificarGrupoLote('${ids}')"
-            style="width:24px;height:24px;border-radius:50%;flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center;cursor:pointer;
+            style="width:26px;height:26px;border-radius:50%;flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center;cursor:pointer;
               background:${circuloBg};border:2px solid ${circuloBord}">
             ${circuloIcon}
           </div>
-          <div style="flex:1;min-width:0" onclick="verificarGrupoLote('${ids}')" style="cursor:pointer">
-            <div style="font-size:13px;font-weight:500;color:var(--text);line-height:1.35;margin-bottom:3px;${todosProc?'text-decoration:line-through':''}">
+          <div style="flex:1;min-width:0;cursor:pointer" onclick="verificarGrupoLote('${ids}')">
+            <div style="font-size:13px;font-weight:500;color:var(--text);line-height:1.35;margin-bottom:2px;${todosProc?'text-decoration:line-through':''}">
               ${items[0].descricao||cod}
             </div>
-            <div style="font-size:10px;color:#6366f1;font-family:monospace;margin-bottom:5px;font-weight:600">
+            <div style="font-size:10px;color:#6366f1;font-family:monospace;margin-bottom:6px;font-weight:600">
               📍 ${endCompleto}
             </div>
-            <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center">
-              <span style="font-size:11px;font-weight:700;color:#1a1a2e;background:#e2e8f0;padding:2px 8px;border-radius:5px">${totalQty} un</span>
+            <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:flex-start">
+              <span style="font-size:11px;font-weight:700;color:#1a1a2e;background:#e2e8f0;padding:3px 9px;border-radius:5px;align-self:center">${totalQty} un</span>
               ${cxHtml}
             </div>
           </div>
-          ${!todosProc ? `<button onclick="event.stopPropagation();faltaGrupoLote('${ids}',${totalQty})"
-            style="flex-shrink:0;background:#fef3c7;border:1.5px solid #f59e0b;color:#92400e;font-size:11px;font-weight:700;padding:5px 8px;border-radius:8px;cursor:pointer;margin-top:1px">
-            Falta
-          </button>` : ''}
         </div>
-        ${temFalta ? `<div style="margin-top:6px;margin-left:34px;background:#fef3c7;border:1px solid #f59e0b;border-radius:6px;padding:4px 8px;font-size:10px;color:#92400e;font-weight:600">
+        ${!todosProc ? `<div style="display:flex;gap:6px;margin-top:8px;margin-left:36px">
+          <button onclick="verificarGrupoLote('${ids}')"
+            style="flex:1;background:#dcfce7;border:1.5px solid #86efac;color:#15803d;font-size:12px;font-weight:700;padding:7px 0;border-radius:8px;cursor:pointer">
+            ✓ Encontrei tudo
+          </button>
+          <button onclick="event.stopPropagation();parcialGrupoLote('${ids}',${totalQty})"
+            style="flex:1;background:#eff6ff;border:1.5px solid #93c5fd;color:#1d4ed8;font-size:12px;font-weight:700;padding:7px 0;border-radius:8px;cursor:pointer">
+            ~ Parcial
+          </button>
+          <button onclick="event.stopPropagation();faltaGrupoLote('${ids}',${totalQty})"
+            style="flex:1;background:#fef3c7;border:1.5px solid #f59e0b;color:#92400e;font-size:12px;font-weight:700;padding:7px 0;border-radius:8px;cursor:pointer">
+            ✗ Falta
+          </button>
+        </div>` : ''}
+        ${temFalta ? `<div style="margin-top:6px;margin-left:36px;background:#fef3c7;border:1px solid #f59e0b;border-radius:6px;padding:4px 10px;font-size:10px;color:#92400e;font-weight:600">
           ⏳ Aguardando repositor
         </div>` : ''}
       </div>`;
@@ -211,6 +220,43 @@ async function verificarGrupoLote(idsStr) {
     }
     _renderizarListaLote();
   } catch(e) { toast('Erro de rede','erro'); }
+}
+
+// Parcial: pergunta quantas unidades foram encontradas e distribui pelas caixas em ordem
+async function parcialGrupoLote(idsStr, qtdTotal) {
+  const resp = window.prompt(`Quantas unidades encontrou?\n(total esperado: ${qtdTotal})`, '');
+  if (resp === null || resp.trim() === '') return;
+  const qtdEncontrada = parseInt(resp);
+  if (isNaN(qtdEncontrada) || qtdEncontrada < 0) { toast('Quantidade inválida','erro'); return; }
+  if (qtdEncontrada >= qtdTotal) { await verificarGrupoLote(idsStr); return; }
+  if (qtdEncontrada === 0)       { await faltaGrupoLote(idsStr, qtdTotal); return; }
+
+  const ids = idsStr.split(',').map(Number);
+  const sep = separadorAtual;
+  let restante = qtdEncontrada;
+
+  for (const id of ids) {
+    const item = _loteItens.find(i => i.id === id);
+    if (!item) continue;
+    const qty = parseInt(item.quantidade)||1;
+
+    let status, qtd_falta;
+    if (restante >= qty)      { status = 'encontrado'; qtd_falta = 0;           restante -= qty; }
+    else if (restante > 0)    { status = 'parcial';    qtd_falta = qty-restante; restante  = 0;  }
+    else                      { status = 'falta';      qtd_falta = qty;                          }
+
+    try {
+      await fetch(`${API}/itens/${id}/verificar`, {
+        method:'PUT', credentials:'include',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ status, obs:'Parcial no lote', qtd_falta, separador_id: sep?.id, separador_nome: sep?.nome })
+      });
+      item.status = status;
+    } catch(e) { /* segue */ }
+  }
+
+  toast(`${qtdEncontrada} de ${qtdTotal} unidades registradas`,'aviso');
+  _renderizarListaLote();
 }
 
 // Reporta falta para o repositor — marca os itens como falta e aciona aviso
