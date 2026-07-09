@@ -215,14 +215,19 @@ router.get('/performance/timing', requerAuth, requerPerfil('supervisor', 'gestor
         c.hora_checkout                                              AS concluido_em,
         COALESCE(NULLIF(p.total_itens,0), p.itens, 0)               AS total_itens,
         p.itens                                                      AS skus,
-        CASE
-          WHEN NULLIF(c.hora_criacao,'') IS NOT NULL AND NULLIF(c.hora_checkout,'') IS NOT NULL
-          THEN ROUND(EXTRACT(EPOCH FROM (
-            (c.data_checkout || ' ' || c.hora_checkout)::timestamp
-            - (c.data_checkout || ' ' || c.hora_criacao)::timestamp
-          )) / 60.0, 1)::float
-          ELSE NULL
-        END AS duracao_min
+        COALESCE(
+          (SELECT ROUND(SUM(cs.tempo_min)::numeric, 1)::float
+           FROM checkout_sessoes cs
+           WHERE cs.checkout_id = c.id AND cs.tempo_min > 0),
+          CASE
+            WHEN NULLIF(c.hora_criacao,'') IS NOT NULL AND NULLIF(c.hora_checkout,'') IS NOT NULL
+            THEN ROUND(EXTRACT(EPOCH FROM (
+              (c.data_checkout || ' ' || c.hora_checkout)::timestamp
+              - (c.data_checkout || ' ' || c.hora_criacao)::timestamp
+            )) / 60.0, 1)::float
+            ELSE NULL
+          END
+        ) AS duracao_min
       FROM checkout c
       LEFT JOIN pedidos p ON c.pedido_id = p.id
       WHERE c.status = 'concluido'
@@ -493,15 +498,23 @@ router.get('/performance/pedido/:numero', requerAuth, requerPerfil('supervisor',
         c.data_checkout AS data,
         c.hora_criacao  AS iniciado_em,
         c.hora_checkout AS concluido_em,
-        CASE
-          WHEN NULLIF(c.hora_criacao,'') IS NOT NULL AND NULLIF(c.hora_checkout,'') IS NOT NULL
-          THEN ROUND(EXTRACT(EPOCH FROM (
-            (c.data_checkout || ' ' || c.hora_checkout)::timestamp
-            - (c.data_checkout || ' ' || c.hora_criacao)::timestamp
-          )) / 60.0, 1)::float
-          ELSE NULL
-        END AS duracao_min
+        COALESCE(NULLIF(p.total_itens,0), p.itens, 0)   AS total_itens,
+        p.itens                                           AS skus,
+        COALESCE(
+          (SELECT ROUND(SUM(cs.tempo_min)::numeric, 1)::float
+           FROM checkout_sessoes cs
+           WHERE cs.checkout_id = c.id AND cs.tempo_min > 0),
+          CASE
+            WHEN NULLIF(c.hora_criacao,'') IS NOT NULL AND NULLIF(c.hora_checkout,'') IS NOT NULL
+            THEN ROUND(EXTRACT(EPOCH FROM (
+              (c.data_checkout || ' ' || c.hora_checkout)::timestamp
+              - (c.data_checkout || ' ' || c.hora_criacao)::timestamp
+            )) / 60.0, 1)::float
+            ELSE NULL
+          END
+        ) AS duracao_min
       FROM checkout c
+      LEFT JOIN pedidos p ON c.pedido_id = p.id
       WHERE c.numero_pedido = $1 AND c.status = 'concluido'
       ORDER BY c.id DESC LIMIT 1
     `, [numero]);
