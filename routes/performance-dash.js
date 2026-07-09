@@ -514,6 +514,7 @@ router.get('/performance/pedido/:numero', requerAuth, requerPerfil('supervisor',
         p.embalagem_iniciado_em    AS iniciado_em,
         p.embalado_em              AS concluido_em,
         COALESCE(NULLIF(p.total_itens,0), p.itens, 0) AS total_itens,
+        p.itens AS skus,
         CASE
           WHEN NULLIF(p.embalagem_iniciado_em,'') IS NOT NULL AND NULLIF(p.embalado_em,'') IS NOT NULL
           THEN ROUND(EXTRACT(EPOCH FROM (

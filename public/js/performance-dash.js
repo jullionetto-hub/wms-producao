@@ -117,19 +117,6 @@ function renderizarPerformanceDash() {
       <span id="pf-filtro-info" style="margin-left:auto;font-size:11px;color:var(--text3);align-self:center"></span>
     </div>
 
-    <!-- RASTREAR PEDIDO -->
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:10px 16px;margin-bottom:18px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-      <span style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px;white-space:nowrap">🔎 RASTREAR PEDIDO</span>
-      <input type="text" id="pf-pedido-input" placeholder="Nº do pedido..." inputmode="numeric"
-        onkeydown="if(event.key==='Enter')pfBuscarPedido(this.value.trim())"
-        style="padding:7px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;font-weight:700;outline:none;width:150px;font-family:'Space Mono',monospace">
-      <button onclick="pfBuscarPedido(document.getElementById('pf-pedido-input')?.value?.trim())"
-        style="background:#0891b2;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">🔍 Buscar</button>
-      <button onclick="pfFecharRastreio()"
-        style="background:var(--surface2);color:var(--text3);border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-size:12px;cursor:pointer">✕ Limpar</button>
-      <div id="pf-pedido-result" style="width:100%;margin-top:4px"></div>
-    </div>
-
     <!-- LOADING -->
     <div id="pf-loading" style="display:none;text-align:center;padding:48px;color:var(--text3)">
       <div style="font-size:24px;margin-bottom:8px">⏳</div>
@@ -1351,7 +1338,7 @@ function pfRenderPedidoDetalhe(d) {
     if (min == null) return `<span style="color:var(--text3);font-size:11px">—</span>`;
     const cor = min <= 5 ? '#16a34a' : min <= 15 ? '#d97706' : '#dc2626';
     const bg  = min <= 5 ? 'rgba(22,163,74,.12)' : min <= 15 ? 'rgba(217,119,6,.12)' : 'rgba(220,38,38,.12)';
-    return `<span style="background:${bg};color:${cor};border-radius:20px;padding:2px 10px;font-size:11px;font-weight:800">${fmtDur(min)}</span>`;
+    return `<span style="background:${bg};color:${cor};border-radius:20px;padding:3px 12px;font-size:12px;font-weight:800">${fmtDur(min)}</span>`;
   };
   const resMap = { encontrado:'✅', buscado:'✅', abastecido:'✅', nao_encontrado:'❌', protocolo:'📋' };
 
@@ -1360,7 +1347,6 @@ function pfRenderPedidoDetalhe(d) {
   const emb = d.embalagem;
   const rep = d.reposicoes || [];
 
-  // Calcula tempo total (do inicio da separação até fim da embalagem)
   const tsIni = sep?.iniciado_em ? new Date(sep.iniciado_em).getTime() : null;
   const tsFim = emb?.concluido_em
     ? new Date((emb.data || '') + 'T' + emb.concluido_em).getTime()
@@ -1369,74 +1355,83 @@ function pfRenderPedidoDetalhe(d) {
     : null;
   const totalMin = tsIni && tsFim ? Math.round((tsFim - tsIni) / 60000 * 10) / 10 : null;
 
-  const etapaCard = (icon, label, cor, grad, corpo) => `
-    <div style="flex:1;min-width:160px;border-radius:12px;overflow:hidden;border:1px solid var(--border)">
+  const etapaCard = (icon, label, grad, corpo, durMin) => `
+    <div style="flex:1;min-width:190px;border-radius:12px;overflow:hidden;border:1px solid var(--border);display:flex;flex-direction:column">
       <div style="background:${grad};padding:10px 14px;display:flex;align-items:center;gap:8px">
         <span style="font-size:16px">${icon}</span>
-        <span style="font-size:12px;font-weight:800;color:#fff;letter-spacing:.3px">${label}</span>
+        <span style="font-size:13px;font-weight:800;color:#fff;letter-spacing:.3px">${label}</span>
+        <span style="margin-left:auto">${badgeDur(durMin)}</span>
       </div>
-      <div style="padding:12px 14px;background:var(--surface);font-size:12px">${corpo}</div>
+      <div style="padding:12px 14px;background:var(--surface);font-size:12px;flex:1">${corpo}</div>
     </div>`;
 
-  const linha = (label, val) => `
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+  const linha = (label, val, valCor) => `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--border)">
       <span style="color:var(--text3);font-size:10px;font-weight:700;letter-spacing:.4px">${label}</span>
-      <span style="color:var(--text);font-weight:600">${val}</span>
+      <span style="color:${valCor||'var(--text)'};font-weight:600;font-size:12px">${val}</span>
     </div>`;
 
   // Separação
-  const sepCard = etapaCard('✂️','Separação','#6366f1','linear-gradient(135deg,#4f46e5,#7c3aed)', sep
-    ? linha('Colaborador', pfEsc(sep.colaborador||'—')) +
-      linha('Início', fmtHora(sep.iniciado_em)) +
-      linha('Fim', fmtHora(sep.concluido_em)) +
-      linha('Itens / SKUs', `${sep.total_itens} / ${sep.skus}`) +
-      `<div style="text-align:center;margin-top:8px">${badgeDur(sep.duracao_min)}</div>`
-    : '<div style="color:var(--text3);text-align:center;padding:8px 0;font-size:11px">Não iniciada</div>'
+  const sepCard = etapaCard('✂️','Separação','linear-gradient(135deg,#4f46e5,#7c3aed)',
+    sep
+      ? linha('Colaborador', pfEsc(sep.colaborador||'—')) +
+        linha('Início', fmtHora(sep.iniciado_em)) +
+        linha('Fim', fmtHora(sep.concluido_em)) +
+        linha('Itens', sep.total_itens ?? '—') +
+        linha('SKUs', sep.skus ?? '—')
+      : '<div style="color:var(--text3);text-align:center;padding:12px 0;font-size:11px">Não iniciada</div>',
+    sep?.duracao_min
   );
 
   // Reposição
   const repCorpo = !rep.length
-    ? '<div style="color:var(--text3);text-align:center;padding:8px 0;font-size:11px">Sem reposições</div>'
+    ? '<div style="color:var(--text3);text-align:center;padding:12px 0;font-size:11px">Sem reposições</div>'
     : rep.map(r => `
-        <div style="padding:6px 8px;background:var(--surface2);border-radius:8px;margin-bottom:5px">
-          <div style="font-size:10px;font-weight:700;color:var(--text3)">${resMap[r.resultado]||'?'} ${pfEsc(r.codigo||'')} · ${pfEsc((r.descricao||'').slice(0,28))}</div>
-          <div style="display:flex;justify-content:space-between;margin-top:3px">
-            <span style="font-size:11px;color:var(--text2)">${pfEsc(r.colaborador||'—')}</span>
-            <span>${badgeDur(r.duracao_min)}</span>
+        <div style="padding:7px 8px;background:var(--surface2);border-radius:8px;margin-bottom:6px">
+          <div style="font-size:10px;font-weight:700;color:var(--text);margin-bottom:3px">${resMap[r.resultado]||'?'} ${pfEsc(r.codigo||'')} — ${pfEsc((r.descricao||'').slice(0,30))}</div>
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:11px;color:var(--text3)">👤 ${pfEsc(r.colaborador||'—')}</span>
+            ${badgeDur(r.duracao_min)}
           </div>
-          <div style="font-size:10px;color:var(--text3);margin-top:2px">${fmtHora(r.iniciado_em)} → ${fmtHora(r.concluido_em)}</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:2px">⏱ ${fmtHora(r.iniciado_em)} → ${fmtHora(r.concluido_em)}</div>
         </div>`).join('');
-  const repCard = etapaCard('🔁','Reposição','#f59e0b','linear-gradient(135deg,#d97706,#f59e0b)', repCorpo);
+  const repTotalMin = rep.length ? rep.reduce((s,r) => s + (r.duracao_min||0), 0) || null : null;
+  const repCard = etapaCard('🔁','Reposição','linear-gradient(135deg,#d97706,#f59e0b)', repCorpo, repTotalMin);
 
   // Checkout
-  const ckCard = etapaCard('📦','Checkout','#0891b2','linear-gradient(135deg,#0891b2,#0d9488)', ck
-    ? linha('Operador', pfEsc(ck.colaborador||'—')) +
-      linha('Início', fmtHora(ck.iniciado_em)) +
-      linha('Fim', fmtHora(ck.concluido_em)) +
-      `<div style="text-align:center;margin-top:8px">${badgeDur(ck.duracao_min)}</div>`
-    : '<div style="color:var(--text3);text-align:center;padding:8px 0;font-size:11px">Não realizado</div>'
+  const ckCard = etapaCard('📦','Checkout','linear-gradient(135deg,#0891b2,#0d9488)',
+    ck
+      ? linha('Colaborador', pfEsc(ck.colaborador||'—')) +
+        linha('Início', fmtHora(ck.iniciado_em)) +
+        linha('Fim', fmtHora(ck.concluido_em)) +
+        linha('Itens', ck.total_itens ?? sep?.total_itens ?? '—') +
+        linha('SKUs', ck.skus ?? sep?.skus ?? '—')
+      : '<div style="color:var(--text3);text-align:center;padding:12px 0;font-size:11px">Não realizado</div>',
+    ck?.duracao_min
   );
 
   // Embalagem
-  const embCard = etapaCard('🎁','Embalagem','#16a34a','linear-gradient(135deg,#16a34a,#0d9488)', emb?.concluido_em
-    ? linha('Embalador', pfEsc(emb.colaborador||'—')) +
-      linha('Início', fmtHora(emb.iniciado_em)) +
-      linha('Fim', fmtHora(emb.concluido_em)) +
-      linha('Itens', `${emb.total_itens}`) +
-      `<div style="text-align:center;margin-top:8px">${badgeDur(emb.duracao_min)}</div>`
-    : '<div style="color:var(--text3);text-align:center;padding:8px 0;font-size:11px">Não embalado</div>'
+  const embCard = etapaCard('🎁','Embalagem','linear-gradient(135deg,#16a34a,#0d9488)',
+    emb?.concluido_em
+      ? linha('Colaborador', pfEsc(emb.colaborador||'—')) +
+        linha('Início', fmtHora(emb.iniciado_em)) +
+        linha('Fim', fmtHora(emb.concluido_em)) +
+        linha('Itens', emb.total_itens ?? sep?.total_itens ?? '—') +
+        linha('SKUs', sep?.skus ?? '—')
+      : '<div style="color:var(--text3);text-align:center;padding:12px 0;font-size:11px">Não embalado</div>',
+    emb?.duracao_min
   );
 
   return `
     <div style="border:1.5px solid var(--border);border-radius:14px;overflow:hidden;background:var(--surface)">
-      <div style="background:linear-gradient(135deg,#1e293b,#334155);padding:12px 18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <div style="background:linear-gradient(135deg,#1e293b,#334155);padding:14px 18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
         <div style="display:flex;align-items:center;gap:12px">
-          <span style="font-family:'Space Mono',monospace;font-size:20px;font-weight:900;color:#f1f5f9">#${pfEsc(d.numero_pedido)}</span>
-          <span style="font-size:11px;color:#94a3b8">${sep?.total_itens || 0} itens · ${sep?.skus || 0} SKUs</span>
+          <span style="font-family:'Space Mono',monospace;font-size:22px;font-weight:900;color:#f1f5f9">#${pfEsc(d.numero_pedido)}</span>
+          <span style="font-size:12px;color:#94a3b8">${sep?.total_itens ?? '—'} itens · ${sep?.skus ?? '—'} SKUs</span>
         </div>
-        ${totalMin != null ? `<div style="background:rgba(255,255,255,.1);border-radius:20px;padding:4px 16px;color:#f1f5f9;font-size:12px;font-weight:700">⏱ Total: ${fmtDur(totalMin)}</div>` : ''}
+        ${totalMin != null ? `<div style="background:rgba(255,255,255,.15);border-radius:20px;padding:5px 18px;color:#f1f5f9;font-size:13px;font-weight:700">⏱ Total: ${fmtDur(totalMin)}</div>` : ''}
       </div>
-      <div style="display:flex;gap:10px;padding:14px;flex-wrap:wrap">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;padding:14px">
         ${sepCard}${repCard}${ckCard}${embCard}
       </div>
     </div>`;

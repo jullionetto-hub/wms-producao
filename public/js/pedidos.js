@@ -174,7 +174,11 @@ function _renderTabelaPedidos() {
       ? '<span style="margin-left:5px;font-size:9px;background:#D97706;color:#fff;border-radius:4px;padding:2px 5px;font-weight:700;vertical-align:middle">⭐ PRIME</span>'
       : '';
     return `<tr>
-      <td style="font-weight:700;font-family:'Space Mono',monospace;font-size:12px"><span style="color:${corNum}">${p.numero_pedido}</span></td>
+      <td style="font-weight:700;font-family:'Space Mono',monospace;font-size:12px">
+        <span style="color:${corNum};cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px"
+          onclick="abrirRastreioPedido('${p.numero_pedido}')"
+          title="Ver rastreio completo">${p.numero_pedido}</span>
+      </td>
       <td style="font-size:11px;color:var(--text2);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.cliente||''}">${p.cliente||'—'}</td>
       <td style="font-size:11px;font-weight:700;color:${corTransp}">${p.transportadora||'—'}${primeBadge}</td>
       <td style="font-size:11px;color:var(--amber);font-weight:600;white-space:nowrap">${p.aguardando_desde||'—'}</td>
@@ -201,6 +205,45 @@ function _renderTabelaPedidos() {
 }
 
 
+
+
+/* ── Rastreio de pedido (modal) ──────────────────────────────────── */
+async function abrirRastreioPedido(numero) {
+  // Cria ou reutiliza o modal
+  let modal = document.getElementById('ped-rastreio-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'ped-rastreio-modal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+    modal.onclick = e => { if (e.target === modal) fecharRastreioPedido(); };
+    document.body.appendChild(modal);
+  }
+  modal.style.display = 'flex';
+  modal.innerHTML = `
+    <div style="background:var(--surface);border-radius:16px;width:min(900px,98vw);max-height:92vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.4)">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-shrink:0">
+        <div style="font-family:'Space Mono',monospace;font-size:16px;font-weight:800;color:var(--text)">🔍 Rastreio do Pedido <span style="color:var(--accent)">#${numero}</span></div>
+        <button onclick="fecharRastreioPedido()" style="background:transparent;border:none;font-size:22px;cursor:pointer;color:var(--text3);line-height:1">✕</button>
+      </div>
+      <div id="ped-rastreio-conteudo" style="padding:16px 20px">
+        <div style="text-align:center;padding:40px;color:var(--text3)">🔍 Buscando...</div>
+      </div>
+    </div>`;
+
+  const dados = await apiFetch(`/performance/pedido/${encodeURIComponent(numero)}`);
+  const cont  = document.getElementById('ped-rastreio-conteudo');
+  if (!cont) return;
+  if (!dados || dados.erro) {
+    cont.innerHTML = `<div style="color:#dc2626;padding:20px;text-align:center">⚠️ ${dados?.erro || 'Pedido não encontrado'}</div>`;
+    return;
+  }
+  cont.innerHTML = pfRenderPedidoDetalhe(dados);
+}
+
+function fecharRastreioPedido() {
+  const modal = document.getElementById('ped-rastreio-modal');
+  if (modal) modal.style.display = 'none';
+}
 
 
 async function atribuirSeparador(pid, sid) {
