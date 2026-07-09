@@ -72,6 +72,41 @@ router.get('/separadores', requerAuth, async (req,res) => {
   catch(e){res.status(500).json({erro:e.message});}
 });
 
+// Rotas com path fixo ANTES de /:id para não serem capturadas como inteiro
+router.get('/separadores/diagnostico', requerAuth, requerPerfil('supervisor', 'gestor'), async (req,res) => {
+  try {
+    const usuarios = await db.all(`SELECT id, nome, login, turno, status FROM usuarios WHERE perfil='separador' ORDER BY nome`);
+    const separadores = await db.all(`SELECT id, nome, matricula, turno, status, usuario_id FROM separadores ORDER BY nome`);
+    const semVinculo = separadores.filter(s => !s.usuario_id);
+    const usuariosSemSep = usuarios.filter(u => !separadores.find(s => s.usuario_id === u.id));
+    res.json({ usuarios, separadores, sem_vinculo: semVinculo, usuarios_sem_separador: usuariosSemSep });
+  } catch(e) { res.status(500).json({erro:e.message}); }
+});
+
+router.post('/separadores/vincular-todos', requerAuth, requerPerfil('supervisor', 'gestor'), async (req,res) => {
+  try {
+    const r1 = await pool.query(`
+      UPDATE separadores s SET usuario_id = u.id
+      FROM usuarios u
+      WHERE (s.usuario_id IS NULL OR s.usuario_id = 0)
+        AND s.status = 'ativo' AND u.perfil = 'separador' AND u.status = 'ativo'
+        AND LOWER(TRIM(s.matricula)) = LOWER(TRIM(u.login))
+    `);
+    const r2 = await pool.query(`
+      UPDATE separadores s SET usuario_id = u.id
+      FROM usuarios u
+      WHERE (s.usuario_id IS NULL OR s.usuario_id = 0)
+        AND s.status = 'ativo' AND u.perfil = 'separador' AND u.status = 'ativo'
+        AND LOWER(TRIM(s.nome)) = LOWER(TRIM(u.nome))
+    `);
+    const semVinculo = await db.all(`
+      SELECT s.id, s.nome, s.matricula FROM separadores s
+      WHERE (s.usuario_id IS NULL OR s.usuario_id = 0) AND s.status = 'ativo' ORDER BY s.nome
+    `);
+    res.json({ vinculados_matricula: r1.rowCount, vinculados_nome: r2.rowCount, sem_vinculo: semVinculo });
+  } catch(e) { res.status(500).json({erro:e.message}); }
+});
+
 router.get('/separadores/:id', requerAuth, async (req,res) => {
   try { res.json(await db.get('SELECT * FROM separadores WHERE id=$1',[req.params.id])); }
   catch(e){res.status(500).json({erro:e.message});}
@@ -96,55 +131,6 @@ router.put('/separadores/:id', requerAuth, requerPerfil('supervisor', 'gestor'),
 router.delete('/separadores/:id', requerAuth, requerPerfil('supervisor', 'gestor'), async (req,res) => {
   try { await pool.query('DELETE FROM separadores WHERE id=$1',[req.params.id]); res.json({mensagem:'Excluido!'}); }
   catch(e){res.status(500).json({erro:e.message});}
-});
-
-// ── Diagnóstico: cruza usuarios vs separadores ────────────────────────────────
-router.get('/separadores/diagnostico', requerAuth, requerPerfil('supervisor', 'gestor'), async (req,res) => {
-  try {
-    const usuarios = await db.all(`SELECT id, nome, login, turno, status FROM usuarios WHERE perfil='separador' ORDER BY nome`);
-    const separadores = await db.all(`SELECT id, nome, matricula, turno, status, usuario_id FROM separadores ORDER BY nome`);
-    const semVinculo = separadores.filter(s => !s.usuario_id);
-    const usuariosSemSep = usuarios.filter(u => !separadores.find(s => s.usuario_id === u.id));
-    res.json({ usuarios, separadores, sem_vinculo: semVinculo, usuarios_sem_separador: usuariosSemSep });
-  } catch(e) { res.status(500).json({erro:e.message}); }
-});
-
-// ── Auto-vincula separadores sem usuario_id (diagnóstico + correção) ──────────
-router.post('/separadores/vincular-todos', requerAuth, requerPerfil('supervisor', 'gestor'), async (req,res) => {
-  try {
-    // 1. Tenta vincular por matricula = login (mais confiável)
-    const r1 = await pool.query(`
-      UPDATE separadores s SET usuario_id = u.id
-      FROM usuarios u
-      WHERE (s.usuario_id IS NULL OR s.usuario_id = 0)
-        AND s.status = 'ativo'
-        AND u.perfil = 'separador'
-        AND u.status = 'ativo'
-        AND LOWER(TRIM(s.matricula)) = LOWER(TRIM(u.login))
-    `);
-    // 2. Tenta vincular por nome (fallback)
-    const r2 = await pool.query(`
-      UPDATE separadores s SET usuario_id = u.id
-      FROM usuarios u
-      WHERE (s.usuario_id IS NULL OR s.usuario_id = 0)
-        AND s.status = 'ativo'
-        AND u.perfil = 'separador'
-        AND u.status = 'ativo'
-        AND LOWER(TRIM(s.nome)) = LOWER(TRIM(u.nome))
-    `);
-    // 3. Relatório de ainda sem vínculo
-    const semVinculo = await db.all(`
-      SELECT s.id, s.nome, s.matricula, s.turno
-      FROM separadores s
-      WHERE (s.usuario_id IS NULL OR s.usuario_id = 0) AND s.status = 'ativo'
-      ORDER BY s.nome
-    `);
-    res.json({
-      vinculados_matricula: r1.rowCount,
-      vinculados_nome: r2.rowCount,
-      sem_vinculo: semVinculo
-    });
-  } catch(e) { res.status(500).json({erro:e.message}); }
 });
 
 module.exports = router;
