@@ -60,6 +60,19 @@ router.post('/auth/login', async (req,res) => {
         `SELECT id,nome,matricula,turno,status FROM separadores WHERE usuario_id=$1 AND status='ativo'`,
         [user.id]
       );
+      // Fallback: vincula pelo nome quando usuario_id não está configurado
+      if (!req.session.separador) {
+        req.session.separador = await db.get(
+          `SELECT id,nome,matricula,turno,status FROM separadores
+           WHERE LOWER(TRIM(nome))=LOWER(TRIM($1)) AND status='ativo'`,
+          [user.nome]
+        );
+        // Auto-vincula para logins futuros
+        if (req.session.separador) {
+          pool.query('UPDATE separadores SET usuario_id=$1 WHERE id=$2 AND (usuario_id IS NULL OR usuario_id=0)',
+            [user.id, req.session.separador.id]).catch(()=>{});
+        }
+      }
     } else {
       req.session.separador = null;
     }

@@ -101,7 +101,7 @@ async function carregarFilaMobile() {
     });
 
     const ativos = todos.filter(p=>p.status!=='concluido');
-    const meusMob = separadorAtual ? ativos.filter(p=>p.separador_id===separadorAtual.id) : ativos;
+    const meusMob = separadorAtual ? ativos.filter(p=>p.separador_id===separadorAtual.id) : [];
     const ordenadosMob = [...meusMob].sort((a,b)=>(a.itens||0)-(b.itens||0));
 
     const badge = document.getElementById('stab-fila-badge');
@@ -111,6 +111,10 @@ async function carregarFilaMobile() {
 
     const lista = document.getElementById('lista-fila-mobile');
     if (!lista) return;
+    if (!separadorAtual) {
+      lista.innerHTML = '<div style="color:#dc2626;text-align:center;padding:30px;font-size:13px;background:#fee2e2;border-radius:10px;margin:12px">⚠️ Usuário não vinculado a um separador. Fale com o supervisor.</div>';
+      return;
+    }
     if (!ordenadosMob.length) { lista.innerHTML = '<div style="color:var(--text3);text-align:center;padding:30px;font-size:13px">Nenhum pedido na fila</div>'; return; }
 
     await carregarTaxaSeparacao();
@@ -310,7 +314,7 @@ async function carregarFilaDesk() {
     });
 
     const ativos     = todos.filter(p => p.status !== 'concluido');
-    const meusDsk    = separadorAtual ? ativos.filter(p => p.separador_id === separadorAtual.id) : ativos;
+    const meusDsk    = separadorAtual ? ativos.filter(p => p.separador_id === separadorAtual.id) : [];
     const ordenados  = [...meusDsk].sort((a,b) => (a.itens||0)-(b.itens||0));
 
     if (badgeBd)  badgeBd.textContent  = `${ordenados.length} pedidos`;
