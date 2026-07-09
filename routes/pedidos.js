@@ -167,6 +167,82 @@ router.post('/pedidos/bipar', requerAuth, async (req,res) => {
   } catch(e){res.status(500).json({erro:e.message});}
 });
 
+router.get('/pedidos/lote-itens', requerAuth, async (req,res) => {
+  const ids = String(req.query.pedido_ids||'').split(',').map(s=>parseInt(s.trim())).filter(Boolean);
+  if (!ids.length) return res.status(400).json({erro:'pedido_ids obrigatorio'});
+  try {
+    const pedidos = await db.all(`SELECT id,numero_pedido,total_itens,itens FROM pedidos WHERE id=ANY($1)`, [ids]);
+    const caixaMap = {};
+    ids.forEach((id,i) => { caixaMap[id] = i+1; });
+    const itens = await db.all(
+      `SELECT i.*,
+        COALESCE((SELECT a.status FROM avisos_repositor a WHERE a.item_id=i.id ORDER BY a.id DESC LIMIT 1),'') AS aviso_status,
+        COALESCE((SELECT a.qtd_encontrada FROM avisos_repositor a WHERE a.item_id=i.id ORDER BY a.id DESC LIMIT 1),0) AS aviso_qtd_encontrada,
+        p.numero_pedido
+       FROM itens_pedido i JOIN pedidos p ON p.id=i.pedido_id
+       WHERE i.pedido_id=ANY($1)
+       ORDER BY SPLIT_PART(SPLIT_PART(i.endereco,',',1),' ',1), i.pedido_id, i.id`,
+      [ids]
+    );
+    const result = itens.map(i => ({ ...i, caixa_num: caixaMap[i.pedido_id] || 1 }));
+    const pedidosOrdenados = ids.map(id => pedidos.find(p => p.id === id)).filter(Boolean);
+    res.json({ itens: result, pedidos: pedidosOrdenados });
+  } catch(e) { res.status(500).json({erro:e.message}); }
+});
+
+router.post('/pedidos/lote/iniciar', requerAuth, async (req,res) => {
+  const { pedido_ids } = req.body;
+  if (!pedido_ids?.length) return res.status(400).json({erro:'pedido_ids obrigatorio'});
+  const { data, hora } = dataHoraLocal();
+  try {
+    for (const id of pedido_ids) {
+      await pool.query(
+        `UPDATE pedidos SET status='separando', iniciado_em=COALESCE(NULLIF(iniciado_em,''),$1) WHERE id=$2`,
+        [data+'T'+hora, id]
+      );
+    }
+    res.json({ mensagem:'Lote iniciado!', iniciados: pedido_ids.length });
+  } catch(e) { res.status(500).json({erro:e.message}); }
+});
+
+router.post('/pedidos/lote/concluir', requerAuth, async (req,res) => {
+  const { pedido_ids } = req.body;
+  if (!pedido_ids?.length) return res.status(400).json({erro:'pedido_ids obrigatorio'});
+  const { data, hora } = dataHoraLocal();
+  const resultados = [];
+  try {
+    for (const id of pedido_ids) {
+      const pend = await db.all(`SELECT id FROM itens_pedido WHERE pedido_id=$1 AND status='pendente'`,[id]);
+      if (pend.length) { resultados.push({id, ok:false, erro:`${pend.length} item(s) pendente(s)`}); continue; }
+      const avisos = await db.all(`SELECT id FROM avisos_repositor WHERE pedido_id=$1 AND status IN ('pendente','verificando')`,[id]);
+      if (avisos.length) {
+        await pool.query(`UPDATE pedidos SET skus_concluido_em=COALESCE(NULLIF(skus_concluido_em,''),$1) WHERE id=$2`,[data+'T'+hora,id]);
+        resultados.push({id, ok:false, aguardando:true}); continue;
+      }
+      await pool.query(
+        `UPDATE pedidos SET status='concluido', concluido_em=$1, skus_concluido_em=COALESCE(NULLIF(skus_concluido_em,''),$1) WHERE id=$2`,
+        [data+'T'+hora, id]
+      );
+      const ped = await db.get('SELECT numero_pedido,numero_caixa,separador_id FROM pedidos WHERE id=$1',[id]);
+      const sep = ped?.separador_id ? await db.get('SELECT nome FROM separadores WHERE id=$1',[ped.separador_id]) : null;
+      const ckExist = await db.get('SELECT id,status FROM checkout WHERE pedido_id=$1',[id]);
+      if (ckExist) {
+        if (ckExist.status !== 'concluido')
+          await pool.query(`UPDATE checkout SET status='fila',hora_criacao=$1,data_checkout=$2 WHERE pedido_id=$3`,[hora,data,id]);
+      } else {
+        await pool.query(
+          `INSERT INTO checkout (numero_caixa,pedido_id,numero_pedido,separador_nome,status,hora_criacao,data_checkout) VALUES ($1,$2,$3,$4,'fila',$5,$6)`,
+          [ped?.numero_caixa||'',id,ped?.numero_pedido||'',sep?.nome||'',hora,data]
+        );
+      }
+      req.app.get('io')?.emit('pedido:concluido',{pedido_id:id});
+      resultados.push({id, ok:true});
+    }
+    const aguardando = resultados.some(r => r.aguardando);
+    res.json({ mensagem: aguardando ? 'Lote aguardando repositor' : 'Lote concluido!', resultados, aguardando });
+  } catch(e) { res.status(500).json({erro:e.message}); }
+});
+
 router.get('/pedidos/:id/itens', requerAuth, async (req,res) => {
   try {
     res.json(await db.all(

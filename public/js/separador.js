@@ -6,6 +6,188 @@ const ROTA_FISICA = ['E','D','C','B','A','Q','P','O','N','M','L','K','J','I','H'
 const _checklistSortDir = 1;
 
 /* ══════════════════════════════════════════
+   SEPARAÇÃO EM LOTE — TURNO NOITE
+══════════════════════════════════════════ */
+let _loteAtual   = [];   // [{id, numero_pedido, total_itens}, ...]
+let _loteItens   = [];   // itens mesclados com caixa_num
+
+const _CX_CORES = ['#2563eb','#7c3aed','#b45309','#065a82','#155e3a'];
+
+function _loteScreens(ativa) {
+  ['m-lote-prep','m-lote-lista','m-lote-conclusao','m-cl-wrap','m-caixa-wrap'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.style.display = id === ativa ? (id === 'm-cl-wrap' ? '' : 'block') : 'none';
+  });
+}
+
+function abrirPreparacaoLote(pedidos) {
+  _loteAtual = pedidos;
+  _loteScreens('m-lote-prep');
+  mudarTabSep('separar');
+
+  const cores = _CX_CORES;
+  document.getElementById('m-lote-caixas').innerHTML = pedidos.map((p,i) => `
+    <div style="margin:6px 12px;border-radius:10px;border:0.5px solid var(--border);background:var(--surface);padding:10px 14px;display:flex;align-items:center;gap:12px">
+      <div style="width:36px;height:36px;border-radius:8px;background:${cores[i%cores.length]};display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:500;color:#fff;flex-shrink:0">${i+1}</div>
+      <div>
+        <div style="font-size:12px;font-weight:500;color:var(--text)">Pedido #${p.numero_pedido}</div>
+        <div style="font-size:11px;color:var(--text3)">${p.total_itens||p.itens||'?'} itens</div>
+      </div>
+    </div>`).join('');
+
+  // Dica de endereços compartilhados (calculado após carregar itens)
+  document.getElementById('m-lote-prep-dica').innerHTML =
+    '📦 Nos endereços onde dois pedidos têm o mesmo produto, o app vai indicar quantas unidades vão para cada caixa.';
+}
+
+async function iniciarSepLote() {
+  const ids = _loteAtual.map(p => p.id);
+  try {
+    const res = await fetch(`${API}/pedidos/lote/iniciar`, {
+      method:'POST', credentials:'include',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ pedido_ids: ids })
+    });
+    const data = await res.json();
+    if (!res.ok) { toast(data.erro||'Erro ao iniciar lote','erro'); return; }
+    await carregarListaLote(ids);
+  } catch(e) { toast('Erro de rede','erro'); }
+}
+
+async function carregarListaLote(ids) {
+  try {
+    const res = await fetch(`${API}/pedidos/lote-itens?pedido_ids=${ids.join(',')}`, { credentials:'include' });
+    const data = await res.json();
+    if (!res.ok) { toast(data.erro||'Erro ao carregar lote','erro'); return; }
+    _loteItens = data.itens;
+    _loteAtual = data.pedidos;
+    _renderizarListaLote();
+    _loteScreens('m-lote-lista');
+  } catch(e) { toast('Erro de rede','erro'); }
+}
+
+function _renderizarListaLote() {
+  const itens = _loteItens;
+  const total = itens.length;
+  const feitos = itens.filter(i => i.status === 'encontrado').length;
+
+  // Header chips
+  document.getElementById('m-lote-badge').textContent = `${_loteAtual.length} pedidos`;
+  document.getElementById('m-lote-chips').innerHTML = _loteAtual.map((p,i) =>
+    `<span style="background:${_CX_CORES[i%_CX_CORES.length]}22;border:1px solid ${_CX_CORES[i%_CX_CORES.length]}55;color:${_CX_CORES[i%_CX_CORES.length]};border-radius:10px;padding:2px 8px;font-size:11px;display:inline-flex;align-items:center;gap:3px">
+      <span style="width:6px;height:6px;border-radius:50%;background:${_CX_CORES[i%_CX_CORES.length]}"></span>#${p.numero_pedido}
+    </span>`
+  ).join('');
+
+  // Progress
+  document.getElementById('m-lote-prog-cnt').textContent = `${feitos} / ${total}`;
+  document.getElementById('m-lote-prog-fill').style.width = total ? Math.round(feitos/total*100)+'%' : '0%';
+  const btnFim = document.getElementById('m-lote-btn-concluir');
+  if (btnFim) { btnFim.disabled = feitos < total; btnFim.style.opacity = feitos >= total ? '1' : '0.5'; }
+
+  // Agrupar por endereço primário (primeira vírgula)
+  const grupos = {};
+  for (const item of itens) {
+    const end = String(item.endereco||'S/END').split(',')[0].trim().toUpperCase();
+    if (!grupos[end]) grupos[end] = [];
+    grupos[end].push(item);
+  }
+
+  // Ordenar pela rota física
+  const rotaIdx = e => { const l = e.replace(/\d+.*/,''); const i = ROTA_FISICA.indexOf(l); return i >= 0 ? i*10000 + (parseInt(e.match(/\d+/)?.[0])||0) : 99999; };
+  const endsOrdenados = Object.keys(grupos).sort((a,b) => rotaIdx(a) - rotaIdx(b));
+
+  let html = '';
+  for (const end of endsOrdenados) {
+    const grp = grupos[end];
+    html += `<div style="padding:6px 14px 3px;background:var(--surface2);border-bottom:0.5px solid var(--border);display:flex;align-items:center;gap:7px">
+      <span style="background:#1a1a2e;color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;font-family:monospace">${end}</span>
+      <span style="font-size:10px;color:var(--text3);margin-left:auto">${grp.length} item(s)</span>
+    </div>`;
+    for (const item of grp) {
+      const feito = item.status === 'encontrado';
+      const cor = _CX_CORES[(item.caixa_num-1) % _CX_CORES.length];
+      // Mesmo SKU em mais de uma caixa neste endereço
+      const parceiros = grp.filter(i => i.codigo === item.codigo && i.caixa_num !== item.caixa_num);
+      const cxHTML = parceiros.length
+        ? `<span style="font-size:10px;color:#92400e;background:#fef3c7;padding:1px 6px;border-radius:5px">${[item,...parceiros].sort((a,b)=>a.caixa_num-b.caixa_num).map(p=>`${p.quantidade||1}un→Cx.${p.caixa_num}`).join(' · ')}</span>`
+        : `<span style="font-size:10px;font-weight:600;padding:1px 7px;border-radius:5px;color:#fff;background:${cor}">Cx. ${item.caixa_num}</span>`;
+      html += `<div id="m-lote-item-${item.id}" onclick="verificarItemLote(${item.id})"
+        style="padding:9px 14px;border-bottom:0.5px solid var(--border);display:flex;gap:10px;align-items:flex-start;cursor:pointer;${feito?'opacity:0.42':''}">
+        <div style="width:22px;height:22px;border-radius:50%;${feito?`background:#22c55e;border:2px solid #22c55e`:`border:2px solid #cbd5e1`};flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center">
+          ${feito?'<span style="color:#fff;font-size:12px">✓</span>':''}
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12px;font-weight:500;color:var(--text);line-height:1.35;margin-bottom:3px;${feito?'text-decoration:line-through':''}">${item.descricao||item.codigo||'—'}</div>
+          <div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center">
+            <span style="font-size:9px;color:var(--text3);font-family:monospace">${item.codigo||''}</span>
+            <span style="font-size:10px;font-weight:600;color:#1a1a2e;background:#e2e8f0;padding:1px 6px;border-radius:5px">${item.quantidade||1} un</span>
+            ${cxHTML}
+          </div>
+        </div>
+      </div>`;
+    }
+  }
+  document.getElementById('m-lote-lista-body').innerHTML = html;
+}
+
+async function verificarItemLote(itemId) {
+  const sep = separadorAtual;
+  try {
+    const res = await fetch(`${API}/itens/${itemId}/verificar`, {
+      method:'PUT', credentials:'include',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ status:'encontrado', obs:'', qtd_falta:0, separador_id: sep?.id, separador_nome: sep?.nome })
+    });
+    const data = await res.json();
+    if (!res.ok) { toast(data.erro||'Erro','erro'); return; }
+
+    // Atualiza estado local e re-renderiza
+    const item = _loteItens.find(i => i.id === itemId);
+    if (item) item.status = 'encontrado';
+    _renderizarListaLote();
+  } catch(e) { toast('Erro de rede','erro'); }
+}
+
+async function concluirLoteMobile() {
+  const ids = _loteAtual.map(p => p.id);
+  try {
+    const res = await fetch(`${API}/pedidos/lote/concluir`, {
+      method:'POST', credentials:'include',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ pedido_ids: ids })
+    });
+    const data = await res.json();
+    if (!res.ok) { toast(data.erro||'Erro ao concluir lote','erro'); return; }
+
+    if (data.aguardando) toast('Lote enviado para aguardando repositor','aviso');
+    else toast('Lote concluído!','sucesso');
+
+    // Tela de conclusão
+    document.getElementById('m-lote-conclusao-body').innerHTML = _loteAtual.map((p,i) => {
+      const r = data.resultados?.find(r => r.id === p.id);
+      const ok = r?.ok; const ag = r?.aguardando;
+      const label = ok ? 'Concluído' : ag ? 'Aguardando repositor' : (r?.erro||'Erro');
+      const cor = ok ? '#22c55e' : ag ? '#f97316' : '#dc2626';
+      return `<div style="margin:6px 0;border-radius:10px;border:0.5px solid var(--border);background:var(--surface);padding:10px 14px;display:flex;align-items:center;gap:10px;text-align:left">
+        <div style="width:30px;height:30px;border-radius:6px;background:${_CX_CORES[i%_CX_CORES.length]};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:500;color:#fff;flex-shrink:0">${i+1}</div>
+        <div style="flex:1"><div style="font-size:13px;font-weight:500;color:var(--text)">#${p.numero_pedido}</div><div style="font-size:11px;color:var(--text3)">${label}</div></div>
+        <span style="color:${cor};font-size:18px;font-weight:700">${ok?'✓':ag?'⏳':'✗'}</span>
+      </div>`;
+    }).join('');
+    _loteScreens('m-lote-conclusao');
+  } catch(e) { toast('Erro de rede','erro'); }
+}
+
+function voltarFilaLote() {
+  _loteAtual = []; _loteItens = [];
+  _loteScreens('m-cl-wrap');
+  mudarTabSep('fila');
+  carregarFilaMobile();
+}
+
+/* ══════════════════════════════════════════
    SEPARAÇÃO — MOBILE (tabs)
 ══════════════════════════════════════════ */
 async function confirmarPedidoMobile() {
@@ -118,7 +300,32 @@ async function carregarFilaMobile() {
     if (!ordenadosMob.length) { lista.innerHTML = '<div style="color:var(--text3);text-align:center;padding:30px;font-size:13px">Nenhum pedido na fila</div>'; return; }
 
     await carregarTaxaSeparacao();
-    lista.innerHTML = ordenadosMob.map(p => {
+
+    // Card de separação em lote para turno noite (2+ pedidos pendentes)
+    const isNoite = separadorAtual?.turno === 'Noite';
+    const pendentesLote = ordenadosMob.filter(p => p.status !== 'separando' && p.status !== 'concluido');
+    const loteCard = (isNoite && pendentesLote.length >= 2)
+      ? `<div onclick="abrirPreparacaoLote(${JSON.stringify(pendentesLote.map(p=>({id:p.id,numero_pedido:p.numero_pedido,total_itens:p.total_itens||p.itens||0})))})"
+           style="border:2px solid #7c3aed;border-radius:12px;padding:14px;margin-bottom:12px;background:linear-gradient(135deg,#faf5ff,#ede9fe);cursor:pointer">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+            <div style="width:38px;height:38px;border-radius:10px;background:#7c3aed;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">🌙</div>
+            <div>
+              <div style="font-size:14px;font-weight:700;color:#4c1d95">Separação em Lote — Noite</div>
+              <div style="font-size:11px;color:#6d28d9">${pendentesLote.length} pedidos · todos de uma vez</div>
+            </div>
+            <span style="margin-left:auto;font-size:18px;color:#7c3aed">›</span>
+          </div>
+          <div style="display:flex;gap:5px;flex-wrap:wrap">
+            ${pendentesLote.slice(0,5).map((p,i)=>`<span style="background:${_CX_CORES[i%_CX_CORES.length]}22;border:1px solid ${_CX_CORES[i%_CX_CORES.length]}44;color:${_CX_CORES[i%_CX_CORES.length]};border-radius:8px;padding:2px 8px;font-size:11px">#${p.numero_pedido}</span>`).join('')}
+            ${pendentesLote.length>5?`<span style="font-size:11px;color:#6d28d9;padding:2px 4px">+${pendentesLote.length-5}</span>`:''}
+          </div>
+          <div style="margin-top:10px;background:#7c3aed;color:#fff;border-radius:8px;padding:8px;text-align:center;font-size:13px;font-weight:600">
+            Iniciar Lote
+          </div>
+        </div>`
+      : '';
+
+    lista.innerHTML = loteCard + ordenadosMob.map(p => {
       const transp   = String(p.transportadora||'').toUpperCase();
       const isDrive  = transp.includes('DRIVE');
       const isPrime  = p.tem_prime === true;

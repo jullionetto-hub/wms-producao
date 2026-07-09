@@ -1862,6 +1862,57 @@
             </div>
             <div id="m-caixa-status" style="font-size:12px;color:var(--text3);margin-top:6px;padding:6px 10px;background:var(--surface2);border-radius:6px;display:none"></div>
           </div>
+          <!-- LOTE: Preparação de caixas -->
+          <div id="m-lote-prep" style="display:none">
+            <div style="padding:14px 14px 6px;text-align:center">
+              <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">Separe as caixas e identifique-as</div>
+              <div style="font-size:11px;color:var(--text3)">Cole um número em cada caixa antes de iniciar</div>
+            </div>
+            <div id="m-lote-caixas"></div>
+            <div id="m-lote-prep-dica" style="margin:10px 12px 4px;background:#eff6ff;border:0.5px solid #bfdbfe;border-radius:8px;padding:8px 12px;font-size:11px;color:#1e40af;line-height:1.5"></div>
+            <div style="padding:12px 14px;display:flex;gap:8px">
+              <button onclick="voltarFilaLote()" style="flex:1;background:transparent;border:1.5px solid var(--border);color:var(--text2);font-size:12px;padding:10px 0;border-radius:10px;cursor:pointer">Voltar</button>
+              <button onclick="iniciarSepLote()" style="flex:2;background:#f97316;border:none;color:#fff;font-size:13px;font-weight:700;padding:10px 0;border-radius:10px;cursor:pointer">Caixas prontas — iniciar</button>
+            </div>
+          </div>
+
+          <!-- LOTE: Lista unificada -->
+          <div id="m-lote-lista" style="display:none">
+            <div style="background:#1a1a2e;padding:10px 14px 8px">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+                <button onclick="voltarFilaLote()" style="color:#f97316;font-size:16px;background:none;border:none;cursor:pointer;padding:0 4px">&#8592;</button>
+                <span style="color:#fff;font-size:14px;font-weight:500;flex:1">Separação em lote</span>
+                <span id="m-lote-badge" style="background:#f97316;color:#fff;font-size:10px;padding:2px 7px;border-radius:10px;font-weight:600"></span>
+              </div>
+              <div id="m-lote-chips" style="display:flex;gap:5px;flex-wrap:wrap"></div>
+            </div>
+            <div style="background:#f1f5f9;padding:8px 14px 6px;border-bottom:0.5px solid var(--border)">
+              <div style="display:flex;justify-content:space-between;margin-bottom:5px">
+                <span style="font-size:11px;color:var(--text3)">Itens coletados</span>
+                <span style="font-size:11px;font-weight:600;color:#1a1a2e" id="m-lote-prog-cnt">0 / 0</span>
+              </div>
+              <div style="height:5px;background:#e2e8f0;border-radius:4px;overflow:hidden">
+                <div id="m-lote-prog-fill" style="height:100%;background:#22c55e;border-radius:4px;transition:width 0.3s;width:0%"></div>
+              </div>
+            </div>
+            <div id="m-lote-lista-body" style="overflow-y:auto;max-height:360px"></div>
+            <div style="background:#1a1a2e;padding:12px 14px;display:flex;gap:8px">
+              <button onclick="voltarFilaLote()" style="flex:1;background:transparent;border:1.5px solid rgba(255,255,255,0.25);color:#e0e0e0;font-size:12px;padding:10px 0;border-radius:10px;cursor:pointer">Pausar</button>
+              <button id="m-lote-btn-concluir" onclick="concluirLoteMobile()" disabled style="flex:2;background:#22c55e;border:none;color:#fff;font-size:13px;font-weight:700;padding:10px 0;border-radius:10px;cursor:pointer;opacity:0.5">Concluir lote</button>
+            </div>
+          </div>
+
+          <!-- LOTE: Conclusão -->
+          <div id="m-lote-conclusao" style="display:none;padding:20px 14px 10px;text-align:center">
+            <div style="font-size:44px;color:#22c55e;margin-bottom:8px">✓</div>
+            <div style="font-size:16px;font-weight:500;color:var(--text);margin-bottom:4px">Lote separado!</div>
+            <div style="font-size:12px;color:var(--text3);margin-bottom:16px">Leve as caixas para o checkout</div>
+            <div id="m-lote-conclusao-body"></div>
+            <div style="padding:12px 0 0">
+              <button onclick="voltarFilaLote()" style="width:100%;background:#1a1a2e;border:none;color:#fff;font-size:13px;font-weight:700;padding:12px 0;border-radius:10px;cursor:pointer">Voltar à fila</button>
+            </div>
+          </div>
+
           <!-- Checklist mobile -->
           <div class="cl-wrap" id="m-cl-wrap">
             <div class="cl-header"><span id="m-cl-titulo">📋 PEDIDO</span><span id="m-cl-contador" style="color:var(--accent);font-weight:700;font-size:12px">0/0</span></div>
@@ -2032,7 +2083,7 @@
 
 <script src="/js/config.js?v=10"></script>
   <script src="/js/pedidos.js?v=21"></script>
-  <script src="/js/separador.js?v=10"></script>
+  <script src="/js/separador.js?v=12"></script>
   <script src="/js/repositor.js?v=16"></script>
   <script src="/js/checkout.js?v=11"></script>
   <script src="/js/dashboard.js?v=24"></script>
