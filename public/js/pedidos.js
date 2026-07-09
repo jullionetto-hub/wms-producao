@@ -326,6 +326,21 @@ function _renderListaUsuarios() {
   }).join('');
 }
 
+async function vincularTodosSeparadores() {
+  const btn = event?.target;
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Corrigindo...'; }
+  try {
+    const res  = await fetch(`${API}/separadores/vincular-todos`, { method:'POST', credentials:'include' });
+    const data = await res.json();
+    if (!res.ok) { toast(data.erro || 'Erro ao corrigir vínculos', 'erro'); return; }
+    const msg = `✅ ${data.vinculados_matricula + data.vinculados_nome} vínculo(s) corrigido(s).` +
+      (data.sem_vinculo?.length ? ` ⚠️ ${data.sem_vinculo.length} sem correspondência: ${data.sem_vinculo.map(s=>s.nome).join(', ')}` : ' Todos vinculados!');
+    toast(msg, data.sem_vinculo?.length ? 'aviso' : 'sucesso');
+    carregarUsuarios();
+  } catch(e) { toast('Erro de rede', 'erro'); }
+  finally { if (btn) { btn.disabled = false; btn.textContent = '🔗 Corrigir vínculos'; } }
+}
+
 async function carregarUsuarios() {
   try {
     const res   = await fetch(`${API}/usuarios`, { credentials:'include' });
