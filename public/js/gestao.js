@@ -240,7 +240,7 @@ function aplicarToleranciaAbs() {
   const fmtM  = m => { const h = Math.floor(m/60), mm = m%60; return `${String(h).padStart(2,'0')}:${String(mm).padStart(2,'0')}`; };
 
   const rowsCalc = _absRows.map(r => {
-    const expectedMin  = _parseHMtoMin(r.expected_hours);
+    const expectedMin  = _parseHMtoMin(r.expected_hours_adj || r.expected_hours);
     const workedMin    = _parseHMtoMin(r.worked_hours);
     const atrasoRaw    = r.total_atraso_minutes || 0;
     const atrasoEfetivo = Math.max(0, atrasoRaw - tol);
