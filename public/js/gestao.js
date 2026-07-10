@@ -9,6 +9,7 @@ let _absToleranciMin = 0;
 let _absDetalheCache = null;
 let _absPeriodo  = null;   // null = todos, ou {start:'2024-05-27', end:'2024-06-26'}
 let _absUploads  = [];     // cache dos uploads para montar os botões de período
+let _absTurnoFiltro = null; // null = todos os turnos
 
 function renderizarPagGestao() {
   const root = document.getElementById('pag-gestao');
@@ -96,6 +97,12 @@ function renderizarPagGestao() {
       🔄 Atualizar
     </button>
     <span id="gabs-tol-label" style="font-size:11px;color:var(--text3)"></span>
+  </div>
+
+  <!-- ── Filtro de turno ── -->
+  <div style="display:flex;align-items:center;gap:10px;padding:0 24px 12px;flex-shrink:0;flex-wrap:wrap;border-bottom:1px solid var(--border)">
+    <span style="font-size:11px;font-weight:800;color:var(--text3);letter-spacing:.5px;white-space:nowrap">👔 TURNO:</span>
+    <div id="gabs-turno-btns" style="display:flex;gap:6px;flex-wrap:wrap"></div>
   </div>
 
   <!-- ── Corpo principal: lista de nomes + ranking/detalhe ── -->
@@ -190,6 +197,54 @@ function selecionarPeriodoAbs(start, end) {
 }
 
 
+/* ── Filtro de turno ── */
+function _parseTurno(schedule) {
+  if (!schedule) return 'Outros';
+  const s = schedule.toLowerCase();
+  if (s.includes('madrugada'))               return 'Madrugada';
+  if (s.includes('tarde'))                   return 'Tarde';
+  if (s.includes('manhã') || s.includes('manha')) return 'Manhã';
+  const m = schedule.match(/(\d{1,2})h/);
+  if (m) {
+    const h = parseInt(m[1]);
+    if (h >= 22 || h < 6)  return 'Madrugada';
+    if (h >= 12 && h < 18) return 'Tarde';
+    return 'Manhã';
+  }
+  return 'Outros';
+}
+
+function _renderTurnoBtns() {
+  const el = document.getElementById('gabs-turno-btns');
+  if (!el) return;
+  if (!_absRows.length) { el.innerHTML = ''; return; }
+
+  const turnos = [...new Set(_absRows.map(r => _parseTurno(r.schedule)))].sort();
+  if (turnos.length <= 1) {
+    // só 1 turno — mostra label informativo, sem botões de filtro
+    el.innerHTML = `<span style="font-size:11px;color:var(--text3)">${turnos[0] || '—'}</span>`;
+    return;
+  }
+
+  const EMOJI = { 'Manhã': '🌅', 'Tarde': '🌇', 'Madrugada': '🌙', 'Outros': '🕐' };
+  el.innerHTML = ['Todos', ...turnos].map(t => {
+    const ativo = t === 'Todos' ? !_absTurnoFiltro : _absTurnoFiltro === t;
+    const arg   = t === 'Todos' ? 'null' : `'${t}'`;
+    return `<button onclick="setTurnoFiltro(${arg})"
+      style="padding:4px 12px;border-radius:20px;border:1.5px solid var(--border);font-size:12px;font-weight:700;cursor:pointer;
+             background:${ativo?'var(--accent)':'var(--surface2)'};color:${ativo?'#fff':'var(--text2)'}">
+      ${EMOJI[t]||''} ${t}
+    </button>`;
+  }).join('');
+}
+
+function setTurnoFiltro(turno) {
+  _absTurnoFiltro  = turno || null;
+  _absDetalheCache = null;
+  _renderTurnoBtns();
+  aplicarToleranciaAbs();
+}
+
 /* ── Tolerância de atraso ── */
 function setToleranciAbs(min) {
   _absToleranciMin = Math.max(0, min || 0);
@@ -260,14 +315,19 @@ function aplicarToleranciaAbs() {
     };
   }).sort((a, b) => b.absenteeism_rate - a.absenteeism_rate);
 
-  // Atualiza KPI cards
+  // Aplica filtro de turno (só afeta o que é exibido, não os dados base)
+  const rowsFiltro = _absTurnoFiltro
+    ? rowsCalc.filter(r => _parseTurno(r.schedule) === _absTurnoFiltro)
+    : rowsCalc;
+
+  // Atualiza KPI cards (reflete o turno filtrado)
   const cards = document.getElementById('gabs-cards');
   if (cards) {
-    const totalFunc      = rowsCalc.length;
-    const totalFaltas    = rowsCalc.reduce((s, r) => s + (r.faltas_count || 0), 0);
-    const totalAtestados = rowsCalc.reduce((s, r) => s + (r.atestados_count || 0), 0);
+    const totalFunc      = rowsFiltro.length;
+    const totalFaltas    = rowsFiltro.reduce((s, r) => s + (r.faltas_count || 0), 0);
+    const totalAtestados = rowsFiltro.reduce((s, r) => s + (r.atestados_count || 0), 0);
     const taxaEquipe     = totalFunc > 0
-      ? rowsCalc.reduce((s, r) => s + r.absenteeism_rate, 0) / totalFunc
+      ? rowsFiltro.reduce((s, r) => s + r.absenteeism_rate, 0) / totalFunc
       : 0;
 
     const kpis = [
@@ -288,8 +348,8 @@ function aplicarToleranciaAbs() {
       </div>`).join('');
   }
 
-  _renderListaNomesAbs(rowsCalc);
-  _renderTabelaAbs(rowsCalc);
+  _renderListaNomesAbs(rowsFiltro);
+  _renderTabelaAbs(rowsFiltro);
 }
 
 /* ── Toggle importar ── */
@@ -461,8 +521,9 @@ async function carregarGestaoAbsenteismo() {
       (a, b) => (parseFloat(b.absenteeism_rate)||0) - (parseFloat(a.absenteeism_rate)||0)
     );
 
-    _renderListaNomesAbs(_absRows);
-    _renderTabelaAbs(_absRows);
+    _absTurnoFiltro = null; // reseta filtro ao mudar período
+    _renderTurnoBtns();
+    aplicarToleranciaAbs();
 
   } catch(e) {
     cards.innerHTML  = '';
