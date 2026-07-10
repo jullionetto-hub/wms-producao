@@ -1102,15 +1102,20 @@ async function gerarRelatorioAbs() {
     ? `${new Date(_absPeriodo.start+'T12:00:00').toLocaleDateString('pt-BR')} a ${new Date(_absPeriodo.end+'T12:00:00').toLocaleDateString('pt-BR')}`
     : 'Todos os períodos';
 
-  // Monta linhas por funcionário
-  let linhas = '';
-  let totalAtrasoGeral = 0, totalAntecipadoGeral = 0, totalFuncsComOcorr = 0;
-
+  // Agrupa funcionários por turno (Manhã → Tarde → Madrugada → Outros)
+  const TURNO_ORDER = ['Manhã', 'Tarde', 'Madrugada', 'Outros'];
+  const TURNO_EMOJI = { 'Manhã': '🌅', 'Tarde': '🌇', 'Madrugada': '🌙', 'Outros': '🕐' };
+  const grupos = {};
   for (const func of funcionarios) {
+    const t = _parseTurno(func.schedule);
+    if (!grupos[t]) grupos[t] = [];
+    grupos[t].push(func);
+  }
+
+  // Processa evento de um funcionário e retorna { eventos, totalAtraso, totalAntecipado }
+  function _processarFunc(func) {
     const schedMatch = (func.schedule || '').match(/(\d+)h/);
     const schedStart = schedMatch ? parseInt(schedMatch[1]) * 60 : null;
-
-    // Heurística de mediana para entrada
     let sched = schedStart;
     if (sched !== null) {
       const entries = func.daily_records.map(r => toM(r.entry_time)).filter(v => v !== null).sort((a,b)=>a-b);
@@ -1119,62 +1124,93 @@ async function gerarRelatorioAbs() {
         if (Math.abs(typ - sched) > 90) sched = null;
       }
     }
-
     const eventos = [];
     for (const r of func.daily_records) {
       const entry = toM(r.entry_time);
-      const ls    = toM(r.lunch_start), le = toM(r.lunch_end);
-      const bs    = toM(r.break_start), be = toM(r.break_end);
-
+      const ls = toM(r.lunch_start), le = toM(r.lunch_end);
+      const bs = toM(r.break_start), be = toM(r.break_end);
       if (sched !== null && entry !== null && entry > sched)
-        eventos.push({ date: r.date, dow: r.day_of_week, tipo: 'Atraso entrada',    min: entry - sched,   cor: '#dc2626' });
+        eventos.push({ date: r.date, dow: r.day_of_week, tipo: 'Atraso entrada',   min: entry - sched,        cor: '#dc2626' });
       if (ls !== null && le !== null && le - ls > LUNCH_MIN)
-        eventos.push({ date: r.date, dow: r.day_of_week, tipo: 'Atraso almoço',     min: (le-ls) - LUNCH_MIN, cor: '#d97706' });
+        eventos.push({ date: r.date, dow: r.day_of_week, tipo: 'Atraso almoço',    min: (le-ls) - LUNCH_MIN,  cor: '#d97706' });
       if (ls !== null && le !== null && le - ls > 0 && le - ls < LUNCH_MIN)
-        eventos.push({ date: r.date, dow: r.day_of_week, tipo: 'Volta antecipada',  min: LUNCH_MIN - (le-ls), cor: '#2563eb' });
+        eventos.push({ date: r.date, dow: r.day_of_week, tipo: 'Volta antecipada', min: LUNCH_MIN - (le-ls),  cor: '#2563eb' });
       if (bs !== null && be !== null && be - bs > BREAK_MIN)
-        eventos.push({ date: r.date, dow: r.day_of_week, tipo: 'Atraso pausa',      min: (be-bs) - BREAK_MIN, cor: '#d97706' });
+        eventos.push({ date: r.date, dow: r.day_of_week, tipo: 'Atraso pausa',     min: (be-bs) - BREAK_MIN,  cor: '#d97706' });
+    }
+    const totalAtraso     = eventos.filter(e=>e.tipo!=='Volta antecipada').reduce((s,e)=>s+e.min,0);
+    const totalAntecipado = eventos.filter(e=>e.tipo==='Volta antecipada').reduce((s,e)=>s+e.min,0);
+    return { eventos, totalAtraso, totalAntecipado };
+  }
+
+  // Monta linhas por turno → funcionário
+  let linhas = '';
+  let totalAtrasoGeral = 0, totalAntecipadoGeral = 0, totalFuncsComOcorr = 0;
+
+  for (const turno of TURNO_ORDER) {
+    const funcsDoTurno = grupos[turno];
+    if (!funcsDoTurno) continue;
+
+    let linhasTurno = '';
+    let atrasoTurno = 0, antecipadoTurno = 0, funcsTurno = 0;
+
+    for (const func of funcsDoTurno) {
+      const { eventos, totalAtraso, totalAntecipado } = _processarFunc(func);
+      if (!eventos.length) continue;
+      funcsTurno++;
+      atrasoTurno     += totalAtraso;
+      antecipadoTurno += totalAntecipado;
+
+      linhasTurno += `
+        <tr style="background:#f8fafc">
+          <td colspan="5" style="padding:10px 12px 4px;font-weight:800;font-size:13px;color:#1e293b;border-top:2px solid #e2e8f0">
+            ${func.name}
+            <span style="font-weight:400;font-size:11px;color:#64748b;margin-left:8px">${func.sector||''} · Mat. ${func.matricula||'—'}</span>
+            <span style="float:right;font-size:11px;color:#64748b">
+              ${totalAtraso>0?`<span style="color:#dc2626">Atraso: ${fmtHM(totalAtraso)}</span>`:''}
+              ${totalAtraso>0&&totalAntecipado>0?' · ':''}
+              ${totalAntecipado>0?`<span style="color:#2563eb">Antecipado: ${fmtHM(totalAntecipado)}</span>`:''}
+            </span>
+          </td>
+        </tr>`;
+
+      for (const ev of eventos) {
+        const isAntecip = ev.tipo === 'Volta antecipada';
+        linhasTurno += `
+          <tr style="border-bottom:1px solid #f1f5f9">
+            <td style="padding:5px 12px 5px 24px;font-size:12px;color:#374151;white-space:nowrap">${fmtDt(ev.date)}</td>
+            <td style="padding:5px 8px;font-size:11px;color:#9ca3af">${ev.dow||'—'}</td>
+            <td style="padding:5px 8px">
+              <span style="display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700;
+                background:${isAntecip?'#eff6ff':ev.cor==='#dc2626'?'#fef2f2':'#fefce8'};color:${ev.cor}">
+                ${ev.tipo}
+              </span>
+            </td>
+            <td style="padding:5px 8px;font-size:13px;font-weight:800;color:${ev.cor};font-family:monospace;text-align:right">
+              ${isAntecip?'−':'+'} ${fmtHM(ev.min)}
+            </td>
+            <td style="padding:5px 8px;font-size:11px;color:#9ca3af;text-align:right">${ev.min} min</td>
+          </tr>`;
+      }
     }
 
-    if (!eventos.length) continue;
-    totalFuncsComOcorr++;
-    const totalAtrasoFunc    = eventos.filter(e=>e.tipo!=='Volta antecipada').reduce((s,e)=>s+e.min,0);
-    const totalAntecipadoFunc= eventos.filter(e=>e.tipo==='Volta antecipada').reduce((s,e)=>s+e.min,0);
-    totalAtrasoGeral     += totalAtrasoFunc;
-    totalAntecipadoGeral += totalAntecipadoFunc;
+    if (!linhasTurno) continue;
+    totalFuncsComOcorr += funcsTurno;
+    totalAtrasoGeral   += atrasoTurno;
+    totalAntecipadoGeral += antecipadoTurno;
 
+    // Cabeçalho de turno
     linhas += `
-      <tr style="background:#f8fafc">
-        <td colspan="5" style="padding:10px 12px 4px;font-weight:800;font-size:13px;color:#1e293b;border-top:2px solid #e2e8f0">
-          ${func.name}
-          <span style="font-weight:400;font-size:11px;color:#64748b;margin-left:8px">${func.sector||''} · Mat. ${func.matricula||'—'} · ${func.schedule||'—'}</span>
-          <span style="float:right;font-size:11px;color:#64748b">
-            ${totalAtrasoFunc>0?`<span style="color:#dc2626">Atraso total: ${fmtHM(totalAtrasoFunc)}</span>`:''}
-            ${totalAtrasoFunc>0&&totalAntecipadoFunc>0?' · ':''}
-            ${totalAntecipadoFunc>0?`<span style="color:#2563eb">Antecipado: ${fmtHM(totalAntecipadoFunc)}</span>`:''}
+      <tr>
+        <td colspan="5" style="padding:10px 14px;background:#1e293b;color:#fff;font-weight:800;font-size:12px;letter-spacing:.5px;border-top:4px solid #0f172a">
+          ${TURNO_EMOJI[turno]} ${turno.toUpperCase()}
+          <span style="float:right;font-weight:400;font-size:11px;opacity:.8">
+            ${funcsTurno} funcionário${funcsTurno!==1?'s':''}
+            ${atrasoTurno>0?' · Atraso total: '+fmtHM(atrasoTurno):''}
           </span>
         </td>
       </tr>`;
-
-    for (const ev of eventos) {
-      const isAntecip = ev.tipo === 'Volta antecipada';
-      linhas += `
-        <tr style="border-bottom:1px solid #f1f5f9">
-          <td style="padding:5px 12px 5px 24px;font-size:12px;color:#374151;white-space:nowrap">${fmtDt(ev.date)}</td>
-          <td style="padding:5px 8px;font-size:11px;color:#9ca3af">${ev.dow||'—'}</td>
-          <td style="padding:5px 8px">
-            <span style="display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700;
-              background:${isAntecip?'#eff6ff':ev.cor==='#dc2626'?'#fef2f2':'#fefce8'};
-              color:${ev.cor}">
-              ${ev.tipo}
-            </span>
-          </td>
-          <td style="padding:5px 8px;font-size:13px;font-weight:800;color:${ev.cor};font-family:monospace;text-align:right">
-            ${isAntecip?'−':'+'} ${fmtHM(ev.min)}
-          </td>
-          <td style="padding:5px 8px;font-size:11px;color:#9ca3af;text-align:right">${ev.min} min</td>
-        </tr>`;
-    }
+    linhas += linhasTurno;
   }
 
   if (!linhas) {
