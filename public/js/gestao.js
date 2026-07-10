@@ -34,7 +34,10 @@ function renderizarPagGestao() {
     <div style="background:var(--surface);border-radius:16px;padding:20px;width:min(520px,95vw);max-height:80vh;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,.3)">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
         <div style="font-size:14px;font-weight:800;color:var(--text)">📁 Arquivos Importados</div>
-        <button onclick="fecharArquivosAbs()" style="background:transparent;border:none;font-size:20px;cursor:pointer;color:var(--text3);line-height:1">✕</button>
+        <div style="display:flex;align-items:center;gap:8px">
+          <button onclick="absLimparTudo()" style="padding:5px 12px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🗑️ Limpar Tudo</button>
+          <button onclick="fecharArquivosAbs()" style="background:transparent;border:none;font-size:20px;cursor:pointer;color:var(--text3);line-height:1">✕</button>
+        </div>
       </div>
       <div id="gabs-historico" style="flex:1;overflow-y:auto">Carregando...</div>
     </div>
@@ -370,6 +373,23 @@ async function carregarHistoricoAbs() {
   } catch(e) {
     el.innerHTML = `<div style="color:var(--red);font-size:12px;padding:10px">Erro ao carregar histórico.</div>`;
   }
+}
+
+async function absLimparTudo() {
+  if (!confirm('⚠️ ATENÇÃO: Isso vai apagar TODOS os PDFs importados e todos os dados de absenteísmo.\n\nDeseja continuar?')) return;
+  if (!confirm('Confirmar? Esta ação não pode ser desfeita.')) return;
+  try {
+    const res = await fetch(`${API}/gestao/absenteismo/uploads/all`, { method:'DELETE', credentials:'include' });
+    const data = await res.json().catch(()=>({}));
+    if (res.ok) {
+      toast('Todos os dados foram removidos!', 'sucesso');
+      _absUploads = []; _absPeriodo = null;
+      fecharArquivosAbs();
+      carregarGestaoAbsenteismo();
+    } else {
+      toast('Erro ao limpar: ' + (data.erro || data.detail || `HTTP ${res.status}`), 'erro');
+    }
+  } catch(e) { toast('Erro: ' + e.message, 'erro'); }
 }
 
 async function absExcluirUpload(id, btn) {

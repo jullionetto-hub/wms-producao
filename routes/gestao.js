@@ -101,6 +101,17 @@ router.get('/gestao/absenteismo/uploads', requerAuth, requerGestor, async (_req,
   catch (e) { res.status(502).json({ erro: e.message }); }
 });
 
+router.delete('/gestao/absenteismo/uploads/all', requerAuth, requerGestor, async (_req, res) => {
+  try {
+    const token = await getAbsToken();
+    const r = await fetch(`${ABS_URL}/api/uploads/all`, {
+      method : 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    res.status(r.status).json(await r.json().catch(() => ({})));
+  } catch (e) { res.status(502).json({ erro: e.message }); }
+});
+
 router.delete('/gestao/absenteismo/uploads/:id', requerAuth, requerGestor, async (req, res) => {
   try {
     const token = await getAbsToken();
