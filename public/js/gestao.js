@@ -860,8 +860,16 @@ function _renderDetalheAbs(data, nome) {
       <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--surface)">
         <table style="width:100%;border-collapse:collapse;font-size:11px">
           <tbody>${diasEspeciais.map(r => {
-            const label = r.falta ? '❌ Falta' : r.atestado ? '🏥 Atestado' : r.ferias ? '🌴 Férias' : r.status === 'dsr' ? '🔵 DSR' : r.status === 'holiday' ? '🎉 Feriado' : r.status;
-            const cor   = r.falta ? '#dc2626' : r.atestado ? '#d97706' : r.ferias ? '#2563eb' : 'var(--text3)';
+            const stLow = (r.status||'').toLowerCase();
+            const label = r.falta    ? '❌ Falta'
+              : r.atestado ? '🏥 Atestado'
+              : r.ferias   ? '🌴 Férias'
+              : stLow === 'dsr'                                                  ? '🔵 DSR'
+              : stLow.includes('folga') || stLow.includes('banco')               ? '🏦 Folga BH'
+              : stLow === 'holiday' || stLow === 'feriado'                       ? '🎉 Feriado'
+              : r.status || '—';
+            const cor   = r.falta ? '#dc2626' : r.atestado ? '#d97706' : r.ferias ? '#2563eb'
+              : stLow.includes('folga') || stLow.includes('banco') ? '#16a34a' : 'var(--text3)';
             return `<tr style="border-bottom:1px solid var(--border)">
               <td style="padding:5px 8px;color:var(--text);font-weight:700;white-space:nowrap">${fmtDt(r.date)}</td>
               <td style="padding:5px 8px;color:var(--text2)">${r.day_of_week||'—'}</td>
@@ -894,6 +902,12 @@ function _renderDetalheAbs(data, nome) {
           <div style="font-size:10px;color:var(--text3);font-weight:700">ATESTADOS</div>
           <div style="font-size:22px;font-weight:900;color:#d97706">${data.atestados_count ?? 0}</div>
         </div>
+        ${(data.folga_bh_days||0) > 0 ? `
+        <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:8px 12px;text-align:center" title="Dias de folga banco de horas: excluídos do cálculo de absenteísmo">
+          <div style="font-size:10px;color:#16a34a;font-weight:700">FOLGA BH</div>
+          <div style="font-size:22px;font-weight:900;color:#16a34a">${data.folga_bh_days}</div>
+          <div style="font-size:9px;color:#6b7280;margin-top:1px">excluído do cálculo</div>
+        </div>` : ''}
         <div style="background:var(--surface);border-radius:8px;padding:8px 12px;text-align:center">
           <div style="font-size:10px;color:var(--text3);font-weight:700">ATRASO CALC.</div>
           <div style="font-size:16px;font-weight:900;color:#7c3aed">${totalAtrasoComp > 0 ? totalAtrasoComp+' min' : '—'}</div>
@@ -921,6 +935,7 @@ function _renderDetalheAbs(data, nome) {
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
         <span style="font-size:11px;color:var(--text3)">📅 ${fmtDt(data.period_start)} → ${fmtDt(data.period_end)}</span>
         <span style="font-size:11px;color:var(--text3)">Previsto: ${data.expected_hours||'—'} · Realizado: ${data.worked_hours||'—'}</span>
+        ${(data.folga_bh_days||0) > 0 && data.expected_hours_adj ? `<span style="font-size:11px;color:#16a34a;font-weight:700">Previsto ajustado (−${data.folga_bh_days} folga BH): ${data.expected_hours_adj}</span>` : ''}
       </div>
 
       <!-- Espelho de ponto -->
