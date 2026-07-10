@@ -76,18 +76,22 @@ function renderizarPagGestao() {
       <button onclick="setToleranciAbs(${m})" id="gabs-tol-${m}"
         style="padding:4px 12px;border-radius:20px;border:1.5px solid var(--border);font-size:12px;font-weight:700;cursor:pointer;
                background:${m===0?'var(--accent)':'var(--surface2)'};color:${m===0?'#fff':'var(--text2)'}">
-        ${m === 0 ? 'Todos' : m + ' min'}
+        ${m === 0 ? '0 min' : m + ' min'}
       </button>`).join('')}
       <div style="display:flex;align-items:center;gap:4px">
         <input type="number" id="gabs-tol-custom" min="0" max="120" placeholder="Outro"
           style="width:70px;padding:4px 8px;border:1.5px solid var(--border);border-radius:20px;font-size:12px;background:var(--surface);color:var(--text);text-align:center"
-          onkeydown="if(event.key==='Enter')setToleranciAbs(+this.value||0)"/>
-        <button onclick="setToleranciAbs(+(document.getElementById('gabs-tol-custom').value)||0)"
+          onkeydown="if(event.key==='Enter'){setToleranciAbs(+this.value||0);aplicarToleranciaAbs();}"/>
+        <button onclick="setToleranciAbs(+(document.getElementById('gabs-tol-custom').value)||0);aplicarToleranciaAbs()"
           style="padding:4px 10px;border-radius:20px;border:1.5px solid var(--border);font-size:12px;font-weight:700;cursor:pointer;background:var(--surface2);color:var(--text2)">
           ✓
         </button>
       </div>
     </div>
+    <button onclick="aplicarToleranciaAbs()"
+      style="padding:4px 14px;border-radius:20px;border:1.5px solid var(--accent);background:var(--accent);color:#fff;font-size:12px;font-weight:700;cursor:pointer">
+      🔄 Atualizar
+    </button>
     <span id="gabs-tol-label" style="font-size:11px;color:var(--text3)"></span>
   </div>
 
@@ -214,6 +218,75 @@ function setToleranciAbs(min) {
   if (detalhe && detalhe.innerHTML.trim() && _absDetalheCache) {
     _renderDetalheAbs(_absDetalheCache.data, _absDetalheCache.nome);
   }
+
+  // Aplica tolerância na tabela e cards automaticamente
+  aplicarToleranciaAbs();
+}
+
+/* ── Recalcula tabela/cards com a tolerância atual ── */
+function _parseHMtoMin(s) {
+  if (!s) return 0;
+  const parts = String(s).split(':');
+  return (parseInt(parts[0]) || 0) * 60 + (parseInt(parts[1]) || 0);
+}
+
+function aplicarToleranciaAbs() {
+  if (!_absRows.length || !_absPeriodo) return;
+
+  const tol   = _absToleranciMin;
+  const fmtM  = m => { const h = Math.floor(m/60), mm = m%60; return `${String(h).padStart(2,'0')}:${String(mm).padStart(2,'0')}`; };
+
+  const rowsCalc = _absRows.map(r => {
+    const expectedMin  = _parseHMtoMin(r.expected_hours);
+    const workedMin    = _parseHMtoMin(r.worked_hours);
+    const atrasoRaw    = r.total_atraso_minutes || 0;
+    const atrasoEfetivo = Math.max(0, atrasoRaw - tol);
+
+    let taxaEfetiva = parseFloat(r.absenteeism_rate) || 0;
+    if (expectedMin > 0) {
+      const deficit     = Math.max(0, expectedMin - workedMin);
+      const horasPerd   = Math.max(deficit, atrasoEfetivo);
+      taxaEfetiva       = horasPerd / expectedMin * 100;
+    }
+
+    return {
+      ...r,
+      absenteeism_rate:       taxaEfetiva,
+      total_atraso_minutes:   atrasoEfetivo,
+      total_atraso_formatted: atrasoEfetivo > 0 ? fmtM(atrasoEfetivo) : null,
+    };
+  }).sort((a, b) => b.absenteeism_rate - a.absenteeism_rate);
+
+  // Atualiza KPI cards
+  const cards = document.getElementById('gabs-cards');
+  if (cards) {
+    const totalFunc      = rowsCalc.length;
+    const totalFaltas    = rowsCalc.reduce((s, r) => s + (r.faltas_count || 0), 0);
+    const totalAtestados = rowsCalc.reduce((s, r) => s + (r.atestados_count || 0), 0);
+    const taxaEquipe     = totalFunc > 0
+      ? rowsCalc.reduce((s, r) => s + r.absenteeism_rate, 0) / totalFunc
+      : 0;
+
+    const kpis = [
+      { icon:'👥', label:'Funcionários',   val: totalFunc,                bg:'#eff6ff', cor:'#1d4ed8' },
+      { icon:'❌', label:'Total Faltas',   val: totalFaltas,              bg:'#fef2f2', cor:'#dc2626' },
+      { icon:'🏥', label:'Atestados',      val: totalAtestados,           bg:'#fefce8', cor:'#ca8a04' },
+      { icon:'📉', label:'Taxa da Equipe', val:`${taxaEquipe.toFixed(1)}%`,
+        bg:  taxaEquipe>=10?'#fef2f2':taxaEquipe>=5?'#fefce8':'#f0fdf4',
+        cor: taxaEquipe>=10?'#dc2626':taxaEquipe>=5?'#ca8a04':'#16a34a' },
+    ];
+    cards.innerHTML = kpis.map(c => `
+      <div style="background:${c.bg};border:1px solid ${c.cor}33;border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:12px">
+        <div style="font-size:26px">${c.icon}</div>
+        <div>
+          <div style="font-size:10px;font-weight:800;color:${c.cor}aa;letter-spacing:.5px">${c.label.toUpperCase()}</div>
+          <div style="font-size:24px;font-weight:900;color:${c.cor};font-family:'Space Mono',monospace;line-height:1.1">${c.val}</div>
+        </div>
+      </div>`).join('');
+  }
+
+  _renderListaNomesAbs(rowsCalc);
+  _renderTabelaAbs(rowsCalc);
 }
 
 /* ── Toggle importar ── */
