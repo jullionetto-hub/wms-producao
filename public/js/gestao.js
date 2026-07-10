@@ -932,10 +932,29 @@ function _renderDetalheAbs(data, nome) {
       </div>
 
       <!-- Info período -->
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
-        <span style="font-size:11px;color:var(--text3)">📅 ${fmtDt(data.period_start)} → ${fmtDt(data.period_end)}</span>
-        <span style="font-size:11px;color:var(--text3)">Previsto: ${data.expected_hours||'—'} · Realizado: ${data.worked_hours||'—'}</span>
-        ${(data.folga_bh_days||0) > 0 && data.expected_hours_adj ? `<span style="font-size:11px;color:#16a34a;font-weight:700">Previsto ajustado (−${data.folga_bh_days} folga BH): ${data.expected_hours_adj}</span>` : ''}
+      <div style="margin-bottom:14px">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px">
+          <span style="font-size:11px;color:var(--text3)">📅 ${fmtDt(data.period_start)} → ${fmtDt(data.period_end)}</span>
+          <span style="font-size:11px;color:var(--text3)">Previsto <b>${data.expected_hours||'—'}</b> · Realizado <b>${data.worked_hours||'—'}</b></span>
+          ${(data.folga_bh_days||0) > 0 && data.expected_hours_adj ? `<span style="font-size:11px;color:#16a34a;font-weight:700">Previsto ajustado (−${data.folga_bh_days} folga BH): ${data.expected_hours_adj}</span>` : ''}
+        </div>
+        ${(() => {
+          const expAdj = data.expected_hours_adj || data.expected_hours;
+          const parseHM = s => { if (!s || s==='--:--') return 0; const p=String(s).split(':'); return (parseInt(p[0])||0)*60+(parseInt(p[1])||0); };
+          const expMin  = parseHM(expAdj);
+          const wrkMin  = parseHM(data.worked_hours);
+          const atrMin  = data.total_atraso_minutes || 0;
+          const deficit = Math.max(0, expMin - wrkMin);
+          const lost    = Math.max(deficit, atrMin);
+          if (lost <= 0) return '';
+          const fmtM = m => { const h=Math.floor(m/60), mm=m%60; return h>0 ? `${h}h${mm>0?mm+'min':''}` : `${mm}min`; };
+          const origem = deficit > atrMin
+            ? `déficit de horas (${fmtM(deficit)} a menos no período)`
+            : `atraso acumulado (${fmtM(atrMin)})`;
+          return `<div style="font-size:10px;color:#92400e;background:#fef3c7;border:1px solid #fcd34d;border-radius:6px;padding:3px 8px;display:inline-block">
+            ⚠️ Absenteísmo de ${taxa}% originado por ${origem}
+          </div>`;
+        })()}
       </div>
 
       <!-- Espelho de ponto -->
