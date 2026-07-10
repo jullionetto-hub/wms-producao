@@ -807,6 +807,25 @@ function _renderDetalheAbs(data, nome) {
   });
   const _fmtHM = m => { const h = Math.floor(m / 60), mm = m % 60; return `${String(h).padStart(3,'0')}:${String(mm).padStart(2,'0')}`; };
 
+  // Detecção de batidas suspeitas: dias com menos de 30 min trabalhados (líquido)
+  const ANOMALY_MIN = 30;
+  diasTrab.forEach(r => {
+    if (r.entry_time && r.exit_time) {
+      const toM2 = s => { const [h,m] = s.split(':').map(Number); return h*60+m; };
+      const en = toM2(r.entry_time), ex = toM2(r.exit_time);
+      let raw = ex >= en ? ex - en : (1440 - en) + ex; // suporte turno noturno
+      const ld = _lunchDur(r), bd = _breakDur(r);
+      if (ld && ld > 0) raw -= ld;
+      if (bd && bd > 0) raw -= bd;
+      r._workedMin = Math.max(0, raw);
+      r._anomalia  = r._workedMin < ANOMALY_MIN;
+    } else {
+      r._workedMin = null;
+      r._anomalia  = false;
+    }
+  });
+  const diasAnomalia = diasTrab.filter(r => r._anomalia).length;
+
   const tblPonto = !diasTrab.length
     ? `<div style="color:var(--text3);font-size:12px;padding:10px 12px">Nenhum registro de ponto no período.</div>`
     : `<div style="overflow-x:auto">
@@ -823,13 +842,14 @@ function _renderDetalheAbs(data, nome) {
           <tbody>${diasTrab.map(r => {
             const atr        = r._atraso;
             const late       = atr > _absToleranciMin;
+            const anomalia   = r._anomalia;
             const ld         = _lunchDur(r);
             const bd         = _breakDur(r);
             const lunchOver  = ld !== null && ld > LUNCH_MIN;
             const lunchEarly = ld !== null && ld > 0 && ld < LUNCH_MIN;
             const breakOver  = bd !== null && bd > BREAK_MIN;
             const earlyMin   = lunchEarly ? LUNCH_MIN - ld : 0;
-            const rowBg      = late ? '#fff7ed' : lunchEarly ? '#eff6ff' : '';
+            const rowBg      = anomalia ? '#fef2f2' : late ? '#fff7ed' : lunchEarly ? '#eff6ff' : '';
             const lunchStr   = r.lunch_start && r.lunch_end
               ? `<span style="color:${lunchOver?'#d97706':lunchEarly?'#2563eb':'var(--text2)'};font-weight:${lunchOver||lunchEarly?'700':'400'}">${r.lunch_start} → ${r.lunch_end}${lunchOver?` <small>(${ld}min)</small>`:lunchEarly?` <small>${ld}min</small>`:''}</span>`
               : '—';
@@ -837,11 +857,12 @@ function _renderDetalheAbs(data, nome) {
               ? `<span style="color:${breakOver?'#d97706':'var(--text2)'};font-weight:${breakOver?'700':'400'}">${r.break_start} → ${r.break_end}${breakOver?` <small>(${bd}min)</small>`:''}</span>`
               : '—';
             const atrasoPartes = [];
+            if (anomalia) atrasoPartes.push(`<span style="background:#dc2626;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:800;white-space:nowrap">⚠️ ${r._workedMin}min</span>`);
             if (atr > 0) atrasoPartes.push(`<span style="color:${late?'#dc2626':'#d97706'};font-weight:800">${atr} min</span>`);
             if (earlyMin > 0) atrasoPartes.push(`<span style="color:#2563eb;font-size:10px">−${earlyMin} min antecip.</span>`);
             const atrasoCel = atrasoPartes.length ? atrasoPartes.join('<br>') : '—';
             return `<tr style="border-bottom:1px solid var(--border);background:${rowBg}">
-              <td style="padding:5px 8px;font-weight:700;white-space:nowrap;color:${late?'#c2410c':'var(--text)'}">${fmtDt(r.date)}</td>
+              <td style="padding:5px 8px;font-weight:700;white-space:nowrap;color:${anomalia?'#dc2626':late?'#c2410c':'var(--text)'}">${fmtDt(r.date)}</td>
               <td style="padding:5px 8px;color:var(--text2)">${r.day_of_week||'—'}</td>
               <td style="padding:5px 8px;text-align:center;font-family:monospace;color:var(--text)">${t(r.entry_time)}</td>
               <td style="padding:5px 8px;text-align:center;font-family:monospace;font-size:10px">${lunchStr}</td>
@@ -938,6 +959,13 @@ function _renderDetalheAbs(data, nome) {
           <span style="font-size:11px;color:var(--text3)">Previsto <b>${data.expected_hours||'—'}</b> · Realizado <b>${data.worked_hours||'—'}</b></span>
           ${(data.folga_bh_days||0) > 0 && data.expected_hours_adj ? `<span style="font-size:11px;color:#16a34a;font-weight:700">Previsto ajustado (−${data.folga_bh_days} folga BH): ${data.expected_hours_adj}</span>` : ''}
         </div>
+        ${diasAnomalia > 0 ? (() => {
+          const dias = diasTrab.filter(r => r._anomalia)
+            .map(r => `${fmtDt(r.date)} (${r._workedMin}min trabalhados)`).join(', ');
+          return `<div style="font-size:11px;color:#fff;background:#dc2626;border-radius:6px;padding:5px 10px;font-weight:700;margin-bottom:6px;display:inline-block">
+            ⚠️ Batida suspeita: ${dias} — verificar se houve esquecimento de ponto
+          </div>`;
+        })() : ''}
         ${(() => {
           const expAdj = data.expected_hours_adj || data.expected_hours;
           const parseHM = s => { if (!s || s==='--:--') return 0; const p=String(s).split(':'); return (parseInt(p[0])||0)*60+(parseInt(p[1])||0); };
@@ -960,6 +988,7 @@ function _renderDetalheAbs(data, nome) {
       <!-- Espelho de ponto -->
       <div style="font-size:11px;font-weight:800;color:var(--text);letter-spacing:.5px;margin-bottom:6px;display:flex;align-items:center;gap:8px">
         🕐 ESPELHO DE PONTO (${diasTrab.length} dia${diasTrab.length!==1?'s':''} trabalhados)
+        ${diasAnomalia > 0 ? `<span style="background:#dc2626;color:#fff;border-radius:12px;padding:2px 8px;font-size:10px;font-weight:800">⚠️ ${diasAnomalia} batida${diasAnomalia>1?'s':''} suspeita${diasAnomalia>1?'s':''}</span>` : ''}
         ${diasComAtraso > 0 ? `<span style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:12px;padding:2px 8px;font-size:10px;font-weight:800">${diasComAtraso} com atraso</span>` : ''}
         ${totalVoltaAntecipada > 0 ? `<span style="background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;border-radius:12px;padding:2px 8px;font-size:10px;font-weight:800">${totalVoltaAntecipada} volta antecipada</span>` : ''}
       </div>
