@@ -11,6 +11,7 @@ let _absPeriodo  = null;
 let _absUploads  = [];
 let _absTurnoFiltro = null;
 let _absActivePeriodId = null; // upload_id do botão ativo (separado para não ser afetado por race conditions)
+let _absSelectedIds   = new Set();  // IDs selecionados para exclusão em lote
 
 function renderizarPagGestao() {
   const root = document.getElementById('pag-gestao');
@@ -117,6 +118,18 @@ function renderizarPagGestao() {
           oninput="filtrarListaAbs(this.value)"
           style="width:100%;padding:6px 9px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text);box-sizing:border-box"/>
       </div>
+      <div id="gabs-sel-bar" style="display:none;padding:6px 10px;background:#eff6ff;border-bottom:1px solid #bfdbfe;flex-shrink:0">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:6px">
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:11px;font-weight:700;color:#1d4ed8;flex:1;min-width:0" onclick="event.stopPropagation()">
+            <input type="checkbox" id="gabs-chk-all" style="accent-color:#3b82f6;width:14px;height:14px;flex-shrink:0" onchange="absToggleSelectAll(this.checked)">
+            <span id="gabs-sel-count" style="white-space:nowrap">0 selecionados</span>
+          </label>
+          <button onclick="absExcluirSelecionados()"
+            style="padding:3px 8px;background:#dc2626;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0">
+            🗑️ Excluir
+          </button>
+        </div>
+      </div>
       <div id="gabs-lista-nomes" style="flex:1;overflow-y:auto;padding:6px 0"></div>
     </div>
 
@@ -196,7 +209,8 @@ async function _renderPeriodBtns(forceRefresh) {
 
 function selecionarUploadAbs(uploadId) {
   uploadId = uploadId != null ? +uploadId : null;
-  _absActivePeriodId = uploadId || null; // define ANTES de qualquer operação async
+  _absActivePeriodId = uploadId || null;
+  _absSelectedIds    = new Set();
   if (!uploadId) {
     _absPeriodo      = null;
     _absDetalheCache = null;
@@ -469,7 +483,7 @@ async function absLimparTudo() {
     const data = await res.json().catch(()=>({}));
     if (res.ok) {
       toast('Todos os dados foram removidos!', 'sucesso');
-      _absUploads = []; _absPeriodo = null; _absActivePeriodId = null;
+      _absUploads = []; _absPeriodo = null; _absActivePeriodId = null; _absSelectedIds = new Set();
       fecharArquivosAbs();
       carregarGestaoAbsenteismo();
     } else {
@@ -483,7 +497,7 @@ async function absExcluirUpload(id, btn) {
   btn.disabled = true; btn.textContent = '...';
   try {
     const res = await fetch(`${API}/gestao/absenteismo/uploads/${id}`, { method:'DELETE', credentials:'include' });
-    if (res.ok) { toast('Arquivo excluído!','sucesso'); _absUploads = []; _absPeriodo = null; _absActivePeriodId = null; carregarHistoricoAbs(); carregarGestaoAbsenteismo(); }
+    if (res.ok) { toast('Arquivo excluído!','sucesso'); _absUploads = []; _absPeriodo = null; _absActivePeriodId = null; _absSelectedIds = new Set(); carregarHistoricoAbs(); carregarGestaoAbsenteismo(); }
     else { btn.disabled = false; btn.innerHTML = '🗑️ Excluir'; toast('Erro ao excluir','erro'); }
   } catch(e) { btn.disabled = false; btn.innerHTML = '🗑️ Excluir'; }
 }
@@ -687,15 +701,6 @@ async function _renderHistoricoEvolucao() {
   }
 }
 
-function selecionarUploadAbs(uploadId) {
-  // Busca o período do upload nos dados cacheados e seleciona
-  const up = _absUploads.find(u => u.id === uploadId);
-  if (!up) return;
-  const p = _parsePeriodFromUpload(up);
-  if (p) selecionarPeriodoAbs(p.start, p.end);
-}
-
-
 /* ── Lista de nomes (painel esquerdo) ── */
 function _renderListaNomesAbs(rows) {
   const el = document.getElementById('gabs-lista-nomes');
@@ -710,16 +715,23 @@ function _renderListaNomesAbs(rows) {
     const bg   = taxa >= 10 ? '#fef2f2' : taxa >= 5 ? '#fefce8' : '#f0fdf4';
     const nome = r.name || '—';
     const iniciais = nome.split(' ').slice(0,2).map(n=>n[0]).join('').toUpperCase();
+    const sel = _absSelectedIds.has(r.id);
     return `
-    <div onclick="verDetalheAbsenteismo(${r.id},'${nome.replace(/'/g,"\\'")}',null,'${(r.matricula||'').replace(/'/g,"\\'")}')"
-      style="display:flex;align-items:center;gap:9px;padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .15s"
-      onmouseover="this.style.background='var(--surface)'" onmouseout="this.style.background=''">
-      <div style="width:32px;height:32px;border-radius:50%;background:${bg};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:${cor};flex-shrink:0">${iniciais}</div>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:12px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${nome}</div>
-        <div style="font-size:10px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${(r.sector||'').split('/')[0].trim()}</div>
+    <div data-abs-id="${r.id}" style="display:flex;align-items:center;border-bottom:1px solid var(--border);background:${sel ? 'rgba(59,130,246,.10)' : ''}">
+      <label style="display:flex;align-items:center;padding:8px 4px 8px 10px;cursor:pointer;flex-shrink:0" onclick="event.stopPropagation()">
+        <input type="checkbox" ${sel ? 'checked' : ''} onchange="absToggleSelecionado(${r.id})"
+          style="accent-color:#3b82f6;width:15px;height:15px;cursor:pointer">
+      </label>
+      <div onclick="verDetalheAbsenteismo(${r.id},'${nome.replace(/'/g,"\\'")}',null,'${(r.matricula||'').replace(/'/g,"\\'")}')"
+        style="display:flex;align-items:center;gap:8px;padding:8px 12px 8px 4px;cursor:pointer;flex:1;min-width:0;transition:background .15s"
+        onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+        <div style="width:30px;height:30px;border-radius:50%;background:${bg};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:${cor};flex-shrink:0">${iniciais}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${nome}</div>
+          <div style="font-size:10px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${(r.sector||'').split('/')[0].trim()}</div>
+        </div>
+        <div style="font-size:12px;font-weight:800;color:${cor};flex-shrink:0">${taxa.toFixed(1)}%</div>
       </div>
-      <div style="font-size:12px;font-weight:800;color:${cor};flex-shrink:0">${taxa.toFixed(1)}%</div>
     </div>`;
   }).join('');
 }
@@ -728,6 +740,92 @@ function filtrarListaAbs(q) {
   const busca = (q || '').toLowerCase().trim();
   const filtrado = busca ? _absRows.filter(r => (r.name||'').toLowerCase().includes(busca)) : _absRows;
   _renderListaNomesAbs(filtrado);
+}
+
+
+/* ── Seleção em lote ── */
+function absToggleSelecionado(id) {
+  id = +id;
+  if (_absSelectedIds.has(id)) _absSelectedIds.delete(id);
+  else _absSelectedIds.add(id);
+
+  // Atualiza lista (painel esquerdo) sem re-renderizar tudo
+  const listRow = document.querySelector(`[data-abs-id="${id}"]`);
+  if (listRow) {
+    const sel = _absSelectedIds.has(id);
+    listRow.style.background = sel ? 'rgba(59,130,246,.10)' : '';
+    const chk = listRow.querySelector('input[type=checkbox]');
+    if (chk) chk.checked = sel;
+  }
+  // Atualiza tabela (painel direito)
+  const tblRow = document.querySelector(`[data-abs-trow="${id}"]`);
+  if (tblRow) {
+    const sel    = _absSelectedIds.has(id);
+    const baseBg = tblRow.dataset.baseBg || '';
+    tblRow.style.background = sel ? 'rgba(59,130,246,.08)' : baseBg;
+    const chk = tblRow.querySelector('input[type=checkbox]');
+    if (chk) chk.checked = sel;
+  }
+  _updateAbsSelBar();
+}
+
+function absToggleSelectAll(checked) {
+  if (checked) _absRows.forEach(r => _absSelectedIds.add(r.id));
+  else _absSelectedIds.clear();
+
+  document.querySelectorAll('[data-abs-id]').forEach(row => {
+    const id  = +row.dataset.absId;
+    const sel = _absSelectedIds.has(id);
+    row.style.background = sel ? 'rgba(59,130,246,.10)' : '';
+    const chk = row.querySelector('input[type=checkbox]');
+    if (chk) chk.checked = sel;
+  });
+  document.querySelectorAll('[data-abs-trow]').forEach(row => {
+    const id     = +row.dataset.absTrow;
+    const sel    = _absSelectedIds.has(id);
+    const baseBg = row.dataset.baseBg || '';
+    row.style.background = sel ? 'rgba(59,130,246,.08)' : baseBg;
+    const chk = row.querySelector('input[type=checkbox]');
+    if (chk) chk.checked = sel;
+  });
+  _updateAbsSelBar();
+}
+
+function _updateAbsSelBar() {
+  const bar = document.getElementById('gabs-sel-bar');
+  const cnt = document.getElementById('gabs-sel-count');
+  if (!bar) return;
+  const n = _absSelectedIds.size;
+  bar.style.display = n > 0 ? 'block' : 'none';
+  if (cnt) cnt.textContent = `${n} selecionado${n !== 1 ? 's' : ''}`;
+  const allSel = _absRows.length > 0 && _absRows.every(r => _absSelectedIds.has(r.id));
+  ['gabs-chk-all', 'gabs-chk-all-tbl'].forEach(elId => {
+    const el = document.getElementById(elId);
+    if (!el) return;
+    el.checked       = allSel;
+    el.indeterminate = n > 0 && !allSel;
+  });
+}
+
+async function absExcluirSelecionados() {
+  const ids = [..._absSelectedIds];
+  if (!ids.length) return;
+  const nomes = _absRows.filter(r => ids.includes(r.id)).map(r => r.name).slice(0, 5);
+  const extra = ids.length > 5 ? `\n... e mais ${ids.length - 5}` : '';
+  if (!confirm(`Excluir ${ids.length} funcionário(s) selecionado(s)?\n\n${nomes.join('\n')}${extra}\n\nEsta ação não pode ser desfeita.`)) return;
+  try {
+    const res = await fetch(`${API}/gestao/absenteismo/funcionarios/batch`, {
+      method     : 'DELETE',
+      credentials: 'include',
+      headers    : { 'Content-Type': 'application/json' },
+      body       : JSON.stringify({ ids }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) { toast(data.erro || data.detail || 'Erro ao excluir', 'erro'); return; }
+    toast(data.message || `${ids.length} excluído(s)`, 'sucesso');
+    _absSelectedIds = new Set();
+    await carregarGestaoAbsenteismo();
+  } catch(e) { toast('Erro: ' + e.message, 'erro'); }
 }
 
 
@@ -744,6 +842,9 @@ function _renderTabelaAbs(rows) {
       <table style="width:100%;border-collapse:collapse;font-size:12px">
         <thead>
           <tr style="background:var(--surface2)">
+            <th style="padding:9px 12px;text-align:center;border-bottom:1px solid var(--border);width:36px">
+              <input type="checkbox" id="gabs-chk-all-tbl" style="accent-color:#3b82f6;width:15px;height:15px;cursor:pointer" onchange="absToggleSelectAll(this.checked)">
+            </th>
             <th style="padding:9px 12px;text-align:left;color:var(--text3);font-size:10px;font-weight:800;border-bottom:1px solid var(--border)">#</th>
             <th style="padding:9px 12px;text-align:left;color:var(--text3);font-size:10px;font-weight:800;border-bottom:1px solid var(--border)">FUNCIONÁRIO</th>
             <th style="padding:9px 12px;text-align:left;color:var(--text3);font-size:10px;font-weight:800;border-bottom:1px solid var(--border)">SETOR</th>
@@ -762,7 +863,11 @@ function _renderTabelaAbs(rows) {
             const nome = r.name || '—';
             const barW = Math.min(100, taxa * 5);
             return `
-            <tr style="border-bottom:1px solid var(--border);background:${bg}">
+            <tr data-abs-trow="${r.id}" data-base-bg="${bg}" style="border-bottom:1px solid var(--border);background:${_absSelectedIds.has(r.id) ? 'rgba(59,130,246,.08)' : bg}">
+              <td style="padding:9px 12px;text-align:center">
+                <input type="checkbox" ${_absSelectedIds.has(r.id) ? 'checked' : ''} onchange="absToggleSelecionado(${r.id})"
+                  style="accent-color:#3b82f6;width:15px;height:15px;cursor:pointer">
+              </td>
               <td style="padding:9px 12px;font-weight:700;color:var(--text3)">${i+1}</td>
               <td style="padding:9px 12px;font-weight:700;color:var(--text)">${nome}</td>
               <td style="padding:9px 12px;color:var(--text2);font-size:11px">${r.sector || '—'}</td>

@@ -123,4 +123,19 @@ router.delete('/gestao/absenteismo/uploads/:id', requerAuth, requerGestor, async
   } catch (e) { res.status(502).json({ erro: e.message }); }
 });
 
+router.delete('/gestao/absenteismo/funcionarios/batch', requerAuth, requerGestor,
+  express.json(),
+  async (req, res) => {
+    try {
+      const token = await getAbsToken();
+      const r = await fetch(`${ABS_URL}/api/employees/batch`, {
+        method : 'DELETE',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body   : JSON.stringify(req.body),
+      });
+      res.status(r.status).json(await r.json().catch(() => ({})));
+    } catch (e) { res.status(502).json({ erro: e.message }); }
+  }
+);
+
 module.exports = router;
