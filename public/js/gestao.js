@@ -170,7 +170,7 @@ async function _renderPeriodBtns(forceRefresh) {
   }
   const periods = [...rangeMap.values()].sort((a, b) => b.start.localeCompare(a.start));
 
-  const activeId = _absPeriodo ? _absPeriodo.upload_id : null;
+  const activeId = _absPeriodo && _absPeriodo.upload_id ? +_absPeriodo.upload_id : null;
 
   const btn = (label, onclick, active) =>
     `<button onclick="${onclick}"
@@ -182,16 +182,17 @@ async function _renderPeriodBtns(forceRefresh) {
     </button>`;
 
   el.innerHTML = [
-    btn('📈 Histórico', 'selecionarUploadAbs(null)', !activeId),
+    btn('📈 Histórico', 'selecionarUploadAbs(null)', activeId == null),
     ...periods.map(p => btn(
       _fmtPdBtn(p.start, p.end),
       `selecionarUploadAbs(${p.upload_id})`,
-      activeId === p.upload_id
+      activeId === +p.upload_id
     )),
   ].join('') || '<span style="font-size:11px;color:var(--text3)">Importe um PDF para ver períodos</span>';
 }
 
 function selecionarUploadAbs(uploadId) {
+  uploadId = uploadId != null ? +uploadId : null; // normaliza para número
   if (!uploadId) {
     _absPeriodo      = null;
     _absDetalheCache = null;
@@ -200,9 +201,8 @@ function selecionarUploadAbs(uploadId) {
     carregarGestaoAbsenteismo();
     return;
   }
-  const up = _absUploads.find(u => u.id === uploadId);
-  if (!up) return;
-  const p = _parsePeriodFromUpload(up);
+  const up = _absUploads.find(u => +u.id === uploadId);
+  const p  = up ? _parsePeriodFromUpload(up) : null;
   _absPeriodo      = p ? { ...p, upload_id: uploadId } : { upload_id: uploadId };
   _absDetalheCache = null;
   _absTurnoFiltro  = null;
