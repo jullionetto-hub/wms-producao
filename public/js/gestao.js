@@ -1142,12 +1142,12 @@ async function gerarRelatorioAbs() {
       if (ls !== null && le !== null && le - ls > LUNCH_MIN)
         eventos.push({ date: r.date, dow: r.day_of_week, tipo: 'Almoço prolongado',          local: 'Almoço',  min: (le-ls) - LUNCH_MIN,  cor: '#d97706' });
       if (ls !== null && le !== null && le - ls > 0 && le - ls < LUNCH_MIN)
-        eventos.push({ date: r.date, dow: r.day_of_week, tipo: 'Retorno antecipado (almoço)',local: 'Almoço',  min: LUNCH_MIN - (le-ls),  cor: '#2563eb' });
+        eventos.push({ date: r.date, dow: r.day_of_week, tipo: 'Retorno antecipado (almoço)',local: 'Almoço',  min: LUNCH_MIN - (le-ls),  cor: '#2563eb', antecip: true });
       if (bs !== null && be !== null && be - bs > BREAK_MIN)
         eventos.push({ date: r.date, dow: r.day_of_week, tipo: 'Pausa prolongada',            local: 'Pausa',   min: (be-bs) - BREAK_MIN,  cor: '#d97706' });
     }
-    const totalAtraso     = eventos.filter(e=>e.tipo!=='Volta antecipada').reduce((s,e)=>s+e.min,0);
-    const totalAntecipado = eventos.filter(e=>e.tipo==='Volta antecipada').reduce((s,e)=>s+e.min,0);
+    const totalAtraso     = eventos.filter(e=>!e.antecip).reduce((s,e)=>s+e.min,0);
+    const totalAntecipado = eventos.filter(e=> e.antecip).reduce((s,e)=>s+e.min,0);
     return { eventos, totalAtraso, totalAntecipado };
   }
 
@@ -1184,8 +1184,8 @@ async function gerarRelatorioAbs() {
             <span style="font-weight:400;font-size:11px;color:#64748b;margin-left:8px">${func.sector||''} · Mat. ${func.matricula||'—'}</span>
             <span style="float:right;font-size:11px;display:flex;gap:10px;align-items:center">
               ${horasExtrasStr}
-              ${totalAtraso>0?`<span style="color:#dc2626">Atraso: ${fmtHM(totalAtraso)}</span>`:''}
-              ${totalAntecipado>0?`<span style="color:#2563eb">Antecipado: ${fmtHM(totalAntecipado)}</span>`:''}
+              ${totalAntecipado>0?`<span style="color:#2563eb;font-weight:700">↩ Antecipado: ${fmtHM(totalAntecipado)}</span>`:''}
+              ${totalAtraso>0?`<span style="color:#dc2626;font-weight:700">⏰ Atraso: ${fmtHM(totalAtraso)}</span>`:''}
             </span>
           </td>
         </tr>`;
