@@ -158,12 +158,17 @@ async function _renderPeriodBtns(forceRefresh) {
     } catch { _absUploads = []; }
   }
 
-  // Um botão por upload — sem deduplicação por datas para evitar mistura de dados
-  const periods = _absUploads.map(u => {
+  // Um botão por faixa de datas única, usando o upload mais recente de cada faixa
+  const rangeMap = new Map();
+  for (const u of _absUploads) {
     const p = _parsePeriodFromUpload(u);
-    return p ? { ...p, upload_id: u.id } : null;
-  }).filter(Boolean);
-  periods.sort((a, b) => b.start.localeCompare(a.start));
+    if (!p) continue;
+    const key = `${p.start}|${p.end}`;
+    if (!rangeMap.has(key) || u.id > rangeMap.get(key).upload_id) {
+      rangeMap.set(key, { ...p, upload_id: u.id });
+    }
+  }
+  const periods = [...rangeMap.values()].sort((a, b) => b.start.localeCompare(a.start));
 
   const activeId = _absPeriodo ? _absPeriodo.upload_id : null;
 
