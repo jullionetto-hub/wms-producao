@@ -45,8 +45,8 @@ async function absProxy(path, query = {}) {
 const requerGestor = requerPerfil('gestor', 'supervisor');
 
 router.get('/gestao/absenteismo/team', requerAuth, requerGestor, async (req, res) => {
-  const { start_date, end_date } = req.query;
-  try { res.json(await absProxy('/api/reports/team', { start_date, end_date })); }
+  const { start_date, end_date, upload_id } = req.query;
+  try { res.json(await absProxy('/api/reports/team', { start_date, end_date, upload_id })); }
   catch (e) { res.status(502).json({ erro: e.message }); }
 });
 

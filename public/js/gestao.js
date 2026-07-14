@@ -158,17 +158,14 @@ async function _renderPeriodBtns(forceRefresh) {
     } catch { _absUploads = []; }
   }
 
-  const seen = new Set();
-  const periods = [];
-  for (const u of _absUploads) {
+  // Um botão por upload — sem deduplicação por datas para evitar mistura de dados
+  const periods = _absUploads.map(u => {
     const p = _parsePeriodFromUpload(u);
-    if (!p) continue;
-    const key = `${p.start}|${p.end}`;
-    if (!seen.has(key)) { seen.add(key); periods.push(p); }
-  }
+    return p ? { ...p, upload_id: u.id } : null;
+  }).filter(Boolean);
   periods.sort((a, b) => b.start.localeCompare(a.start));
 
-  const activeKey = _absPeriodo ? `${_absPeriodo.start}|${_absPeriodo.end}` : 'todos';
+  const activeId = _absPeriodo ? _absPeriodo.upload_id : null;
 
   const btn = (label, onclick, active) =>
     `<button onclick="${onclick}"
@@ -180,17 +177,37 @@ async function _renderPeriodBtns(forceRefresh) {
     </button>`;
 
   el.innerHTML = [
-    btn('📈 Histórico', 'selecionarPeriodoAbs(null)', activeKey === 'todos'),
+    btn('📈 Histórico', 'selecionarUploadAbs(null)', !activeId),
     ...periods.map(p => btn(
       _fmtPdBtn(p.start, p.end),
-      `selecionarPeriodoAbs('${p.start}','${p.end}')`,
-      activeKey === `${p.start}|${p.end}`
+      `selecionarUploadAbs(${p.upload_id})`,
+      activeId === p.upload_id
     )),
   ].join('') || '<span style="font-size:11px;color:var(--text3)">Importe um PDF para ver períodos</span>';
 }
 
+function selecionarUploadAbs(uploadId) {
+  if (!uploadId) {
+    _absPeriodo      = null;
+    _absDetalheCache = null;
+    _absTurnoFiltro  = null;
+    _renderPeriodBtns();
+    carregarGestaoAbsenteismo();
+    return;
+  }
+  const up = _absUploads.find(u => u.id === uploadId);
+  if (!up) return;
+  const p = _parsePeriodFromUpload(up);
+  _absPeriodo      = p ? { ...p, upload_id: uploadId } : { upload_id: uploadId };
+  _absDetalheCache = null;
+  _absTurnoFiltro  = null;
+  _renderPeriodBtns();
+  carregarGestaoAbsenteismo();
+}
+
 function selecionarPeriodoAbs(start, end) {
-  _absPeriodo      = start ? { start, end } : null;
+  // mantido para compatibilidade com histórico (selecionarUploadAbs preferível)
+  _absPeriodo      = start ? { start, end, upload_id: null } : null;
   _absDetalheCache = null;
   _renderPeriodBtns();
   carregarGestaoAbsenteismo();
@@ -484,7 +501,9 @@ async function carregarGestaoAbsenteismo() {
   }
 
   try {
-    const pdqs = `?start_date=${_absPeriodo.start}&end_date=${_absPeriodo.end}`;
+    const pdqs = _absPeriodo.upload_id
+      ? `?upload_id=${_absPeriodo.upload_id}`
+      : `?start_date=${_absPeriodo.start}&end_date=${_absPeriodo.end}`;
     const res = await fetch(`${API}/gestao/absenteismo/team${pdqs}`, { credentials:'include' });
     if (!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e.erro || `HTTP ${res.status}`); }
     const team = await res.json();
