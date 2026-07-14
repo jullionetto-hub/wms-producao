@@ -7,9 +7,10 @@
 let _absRows = [];
 let _absToleranciMin = 0;
 let _absDetalheCache = null;
-let _absPeriodo  = null;   // null = todos, ou {start:'2024-05-27', end:'2024-06-26'}
-let _absUploads  = [];     // cache dos uploads para montar os botões de período
-let _absTurnoFiltro = null; // null = todos os turnos
+let _absPeriodo  = null;
+let _absUploads  = [];
+let _absTurnoFiltro = null;
+let _absActivePeriodId = null; // upload_id do botão ativo (separado para não ser afetado por race conditions)
 
 function renderizarPagGestao() {
   const root = document.getElementById('pag-gestao');
@@ -170,29 +171,32 @@ async function _renderPeriodBtns(forceRefresh) {
   }
   const periods = [...rangeMap.values()].sort((a, b) => b.start.localeCompare(a.start));
 
-  const activeId = _absPeriodo && _absPeriodo.upload_id ? +_absPeriodo.upload_id : null;
+  const activeId = _absActivePeriodId;
 
-  const btn = (label, onclick, active) =>
-    `<button onclick="${onclick}"
+  const btn = (label, onclick, uploadId) => {
+    const active = uploadId == null ? activeId == null : activeId === uploadId;
+    return `<button onclick="${onclick}"
       style="padding:4px 14px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;
              border:1.5px solid ${active ? 'var(--accent)' : 'var(--border)'};
              background:${active ? 'var(--accent)' : 'var(--surface)'};
              color:${active ? '#fff' : 'var(--text2)'}">
       ${label}
     </button>`;
+  };
 
   el.innerHTML = [
-    btn('📈 Histórico', 'selecionarUploadAbs(null)', activeId == null),
+    btn('📈 Histórico', 'selecionarUploadAbs(null)', null),
     ...periods.map(p => btn(
       _fmtPdBtn(p.start, p.end),
       `selecionarUploadAbs(${p.upload_id})`,
-      activeId === +p.upload_id
+      +p.upload_id
     )),
   ].join('') || '<span style="font-size:11px;color:var(--text3)">Importe um PDF para ver períodos</span>';
 }
 
 function selecionarUploadAbs(uploadId) {
-  uploadId = uploadId != null ? +uploadId : null; // normaliza para número
+  uploadId = uploadId != null ? +uploadId : null;
+  _absActivePeriodId = uploadId || null; // define ANTES de qualquer operação async
   if (!uploadId) {
     _absPeriodo      = null;
     _absDetalheCache = null;
@@ -465,7 +469,7 @@ async function absLimparTudo() {
     const data = await res.json().catch(()=>({}));
     if (res.ok) {
       toast('Todos os dados foram removidos!', 'sucesso');
-      _absUploads = []; _absPeriodo = null;
+      _absUploads = []; _absPeriodo = null; _absActivePeriodId = null;
       fecharArquivosAbs();
       carregarGestaoAbsenteismo();
     } else {
@@ -479,7 +483,7 @@ async function absExcluirUpload(id, btn) {
   btn.disabled = true; btn.textContent = '...';
   try {
     const res = await fetch(`${API}/gestao/absenteismo/uploads/${id}`, { method:'DELETE', credentials:'include' });
-    if (res.ok) { toast('Arquivo excluído!','sucesso'); _absUploads = []; _absPeriodo = null; carregarHistoricoAbs(); carregarGestaoAbsenteismo(); }
+    if (res.ok) { toast('Arquivo excluído!','sucesso'); _absUploads = []; _absPeriodo = null; _absActivePeriodId = null; carregarHistoricoAbs(); carregarGestaoAbsenteismo(); }
     else { btn.disabled = false; btn.innerHTML = '🗑️ Excluir'; toast('Erro ao excluir','erro'); }
   } catch(e) { btn.disabled = false; btn.innerHTML = '🗑️ Excluir'; }
 }
@@ -545,9 +549,10 @@ async function carregarGestaoAbsenteismo() {
       (a, b) => (parseFloat(b.absenteeism_rate)||0) - (parseFloat(a.absenteeism_rate)||0)
     );
 
-    _absTurnoFiltro = null; // reseta filtro ao mudar período
+    _absTurnoFiltro = null;
     _renderTurnoBtns();
     aplicarToleranciaAbs();
+    _renderPeriodBtns(); // garante botão azul após load assíncrono
 
   } catch(e) {
     cards.innerHTML  = '';
