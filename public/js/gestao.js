@@ -524,12 +524,41 @@ async function carregarGestaoAbsenteismo() {
   }
 
   try {
-    const pdqs = _absPeriodo.upload_id
-      ? `?upload_id=${_absPeriodo.upload_id}`
-      : `?start_date=${_absPeriodo.start}&end_date=${_absPeriodo.end}`;
-    const res = await fetch(`${API}/gestao/absenteismo/team${pdqs}`, { credentials:'include' });
-    if (!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e.erro || `HTTP ${res.status}`); }
-    const team = await res.json();
+    // Busca todos os uploads que cobrem exatamente este período (ex: MIESS + Meu Mundo + AME = 3 PDFs)
+    const periodoUploads = (_absPeriodo.start && _absPeriodo.end)
+      ? _absUploads.filter(u => {
+          const p = _parsePeriodFromUpload(u);
+          return p && p.start === _absPeriodo.start && p.end === _absPeriodo.end;
+        })
+      : [];
+
+    let team;
+    if (periodoUploads.length > 1) {
+      // Múltiplos PDFs para o mesmo período → busca cada um por upload_id e mescla
+      const resultados = await Promise.all(
+        periodoUploads.map(u =>
+          fetch(`${API}/gestao/absenteismo/team?upload_id=${u.id}`, { credentials: 'include' })
+            .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
+        )
+      );
+      const allEmps = resultados.flatMap(t => t.employees || []);
+      team = {
+        total_employees:       allEmps.length,
+        total_faltas:          resultados.reduce((s, t) => s + (t.total_faltas    || 0), 0),
+        total_atestados:       resultados.reduce((s, t) => s + (t.total_atestados || 0), 0),
+        team_absenteeism_rate: 0,  // recalculado por aplicarToleranciaAbs
+        team_delay_rate:       0,
+        employees:             allEmps,
+      };
+    } else {
+      const uid  = periodoUploads[0]?.id ?? _absPeriodo.upload_id;
+      const pdqs = uid
+        ? `?upload_id=${uid}`
+        : `?start_date=${_absPeriodo.start}&end_date=${_absPeriodo.end}`;
+      const res = await fetch(`${API}/gestao/absenteismo/team${pdqs}`, { credentials: 'include' });
+      if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.erro || `HTTP ${res.status}`); }
+      team = await res.json();
+    }
 
     const totalFunc      = team.total_employees ?? (team.employees || []).length;
     const totalFaltas    = team.total_faltas    ?? 0;
