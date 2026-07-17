@@ -898,7 +898,12 @@ function _renderTabelaAbs(rows) {
                   style="accent-color:#3b82f6;width:15px;height:15px;cursor:pointer">
               </td>
               <td style="padding:9px 12px;font-weight:700;color:var(--text3)">${i+1}</td>
-              <td style="padding:9px 12px;font-weight:700;color:var(--text)">${nome}</td>
+              <td style="padding:9px 12px;font-weight:700;color:var(--text)">
+                <div style="display:flex;align-items:center;gap:6px">
+                  ${(()=>{const m=r.total_atraso_minutes||0;const c=m<=0?'#22c55e':m<=10?'#22c55e':m<=20?'#f59e0b':'#dc2626';return `<span title="${m>0?m+'min de atraso':'Sem atraso'}" style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${c};flex-shrink:0"></span>`;})()}
+                  ${nome}
+                </div>
+              </td>
               <td style="padding:9px 12px;color:var(--text2);font-size:11px">${r.sector || '—'}</td>
               <td style="padding:9px 12px;text-align:center;font-weight:700;color:${r.faltas_count>0?'#dc2626':'var(--text2)'}">${r.faltas_count ?? '—'}</td>
               <td style="padding:9px 12px;text-align:center;font-weight:700;color:${r.atestados_count>0?'#d97706':'var(--text2)'}">${r.atestados_count ?? '—'}</td>
