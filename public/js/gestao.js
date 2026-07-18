@@ -900,7 +900,7 @@ function _renderTabelaAbs(rows) {
               <td style="padding:9px 12px;font-weight:700;color:var(--text3)">${i+1}</td>
               <td style="padding:9px 12px;font-weight:700;color:var(--text)">
                 <div style="display:flex;align-items:center;gap:6px">
-                  ${(()=>{const m=r.total_atraso_minutes||0;const c=m<=0?'#22c55e':m<=10?'#22c55e':m<=20?'#f59e0b':'#dc2626';return `<span title="${m>0?m+'min de atraso':'Sem atraso'}" style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${c};flex-shrink:0"></span>`;})()}
+                  ${(()=>{const m=r.total_atraso_minutes||0;const f=r.faltas_count||0;const a=r.atestados_count||0;const isRed=m>20||f>=1||a>2;const isYellow=!isRed&&(m>10||(a>=1&&a<=2));const c=isRed?'#dc2626':isYellow?'#f59e0b':'#22c55e';const motivos=[];if(f>=1)motivos.push(`${f} falta(s)`);if(a>2)motivos.push(`${a} atestados`);if(m>20)motivos.push(`${m}min atraso`);else if(m>10)motivos.push(`${m}min atraso`);if(a>=1&&a<=2&&!isRed)motivos.push(`${a} atestado(s)`);const lbl=motivos.length?motivos.join(' · '):'Sem ocorrências';return `<span title="${lbl}" style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${c};flex-shrink:0"></span>`;})()}
                   ${nome}
                 </div>
               </td>
