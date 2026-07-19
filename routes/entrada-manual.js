@@ -169,7 +169,7 @@ router.put('/entrada-manual/lotes/:id/itens-bulk', requerAuth, async (req, res) 
       await client.query(
         `UPDATE entrada_manual_itens
          SET quantidade_abastecida=$1, status=$2,
-             obs=COALESCE($3,obs), responsavel=$4, confirmado_em=NOW()
+             obs=COALESCE($3,obs), responsavel=$4, confirmado_em=clock_timestamp()
          WHERE id=$5 AND lote_id=$6`,
         [qtd, novoStatus, obs || null, responsavel, id, loteId]
       );
@@ -275,7 +275,7 @@ router.get('/entrada-manual/exportar', requerAuth, async (req, res) => {
     const hdrs = ['Data','Responsável','Código','Descrição','Qtd Esperada','Qtd Abastecida','Endereço','Status','Confirmado Em','Obs'];
     const lines = [hdrs.join(SEP)];
     for (const r of rows) {
-      lines.push([r.data_fmt, r.criado_por, r.codigo, r.descricao,
+      lines.push([r.data_fmt, r.responsavel || r.criado_por, r.codigo, r.descricao,
         r.quantidade_esperada, r.quantidade_abastecida||0, r.endereco,
         statusPT[r.status]||r.status, r.confirmado_em||'', r.obs||''].map(esc).join(SEP));
     }
