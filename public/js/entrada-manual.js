@@ -266,13 +266,12 @@ function emAjustarQtd(id, delta, mobile = false) {
 }
 
 function emQtdChange(id, val, mobile = false) {
-  const it = _emItens.find(i => i.id === id);
-  if (!it) return;
-  it.quantidade_abastecida = parseInt(val)||0;
-  // Espelha no outro input (sync desktop↔mobile)
+  // Só sincroniza os inputs desktop↔mobile — não altera o objeto em memória
+  // (it.quantidade_abastecida permanece o último valor SALVO para a checagem de "nenhuma alteração")
+  const parsed = parseInt(val)||0;
   const outId = mobile ? `em-qty-${id}` : `em-mqty-${id}`;
   const out = document.getElementById(outId);
-  if (out) out.value = it.quantidade_abastecida;
+  if (out) out.value = parsed;
 }
 
 // ── Validação de endereço em tempo real ───────────────────────────────────
