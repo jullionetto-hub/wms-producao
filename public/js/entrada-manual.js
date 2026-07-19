@@ -249,10 +249,15 @@ function emCardHTML(it) {
           style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);font-size:12px;outline:none;box-sizing:border-box">
       </div>
     </div>
-    <button id="em-mbtn-${it.id}" onclick="emSalvarItem(${it.id},true)"
-      style="display:block;width:calc(100% - 28px);margin:8px 14px 12px;background:#f97316;color:#fff;border:none;border-radius:10px;padding:11px;font-size:13px;font-weight:800;cursor:pointer">
-      💾 Salvar
-    </button>
+    ${it.status !== 'pendente'
+      ? `<button id="em-mbtn-${it.id}" onclick="emSalvarItem(${it.id},true)" data-saved="true" disabled
+          style="display:block;width:calc(100% - 28px);margin:8px 14px 12px;background:#16a34a;color:#fff;border:none;border-radius:10px;padding:11px;font-size:13px;font-weight:800;cursor:not-allowed;opacity:.85">
+          ✓ Salvo
+        </button>`
+      : `<button id="em-mbtn-${it.id}" onclick="emSalvarItem(${it.id},true)"
+          style="display:block;width:calc(100% - 28px);margin:8px 14px 12px;background:#f97316;color:#fff;border:none;border-radius:10px;padding:11px;font-size:13px;font-weight:800;cursor:pointer">
+          💾 Salvar
+        </button>`}
   </div>`;
 }
 
