@@ -118,7 +118,7 @@ function emAtualizarCabecalho() {
 function emAtualizarProgresso() {
   if (!_emLoteAtivo) return;
   const total     = _emItens.length;
-  const concluidos= _emItens.filter(i => i.status !== 'pendente').length;
+  const concluidos= _emItens.filter(i => i.status === 'abastecido' || i.status === 'parcial').length;
   const pct       = emFmtPct(concluidos, total);
   const barClr    = pct === 100 ? '#22c55e' : pct >= 60 ? '#f59e0b' : '#3b82f6';
   const el = document.getElementById('em-progress-bar');
@@ -266,12 +266,16 @@ function emAjustarQtd(id, delta, mobile = false) {
 }
 
 function emQtdChange(id, val, mobile = false) {
-  // Só sincroniza os inputs desktop↔mobile — não altera o objeto em memória
-  // (it.quantidade_abastecida permanece o último valor SALVO para a checagem de "nenhuma alteração")
   const parsed = parseInt(val)||0;
+  // Sincroniza inputs desktop↔mobile
   const outId = mobile ? `em-qty-${id}` : `em-mqty-${id}`;
   const out = document.getElementById(outId);
   if (out) out.value = parsed;
+  // Reativa botão de salvar se estava no estado "já salvo"
+  const btn = document.getElementById(mobile ? `em-mbtn-${id}` : `em-btn-save-${id}`);
+  if (btn && btn.dataset.saved === 'true') {
+    btn.disabled = false; btn.dataset.saved = ''; btn.style.background = '#f97316'; btn.innerHTML = '💾 Salvar';
+  }
 }
 
 // ── Validação de endereço em tempo real ───────────────────────────────────
@@ -348,11 +352,16 @@ async function emSalvarItem(id, mobile = false) {
     return;
   }
 
-  // Confirmação de segurança se a quantidade supera o esperado
+  // Confirmação se quantidade está fora do esperado
   const esp = it.quantidade_esperada || 0;
   if (esp > 0 && qtd > esp) {
     if (btn) { btn.disabled = false; btn.innerHTML = '💾 Salvar'; }
-    const ok = await emConfirmarQtd(it.codigo, qtd, esp);
+    const ok = await emConfirmarQtd(it.codigo, qtd, esp, 'maior');
+    if (!ok) return;
+    if (btn) { btn.disabled = true; btn.textContent = '⏳...'; }
+  } else if (esp > 0 && qtd > 0 && qtd < esp) {
+    if (btn) { btn.disabled = false; btn.innerHTML = '💾 Salvar'; }
+    const ok = await emConfirmarQtd(it.codigo, qtd, esp, 'menor');
     if (!ok) return;
     if (btn) { btn.disabled = true; btn.textContent = '⏳...'; }
   }
@@ -380,33 +389,49 @@ async function emSalvarItem(id, mobile = false) {
   if (tr)   tr.outerHTML   = emRowHTML(it);
   if (card) card.outerHTML = emCardHTML(it);
 
+  // Marca o botão como "já salvo" para evitar duplo salvamento
+  const savedBtn = document.getElementById(btnId);
+  if (savedBtn) {
+    savedBtn.disabled = true;
+    savedBtn.dataset.saved = 'true';
+    savedBtn.style.background = '#16a34a';
+    savedBtn.innerHTML = '✓ Salvo';
+  }
+
   emAtualizarProgresso();
 }
 
-// ── Modal de confirmação de quantidade acima do esperado ─────────────────
-function emConfirmarQtd(codigo, qtd, esp) {
+// ── Modal de confirmação de quantidade fora do esperado ──────────────────
+function emConfirmarQtd(codigo, qtd, esp, tipo = 'maior') {
   return new Promise(resolve => {
-    const id = 'em-modal-confirm-qtd';
-    document.getElementById(id)?.remove();
+    const mid = 'em-modal-confirm-qtd';
+    document.getElementById(mid)?.remove();
     const el = document.createElement('div');
-    el.id = id;
+    el.id = mid;
     el.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:2000;display:flex;align-items:center;justify-content:center;padding:20px';
+    const isMaior = tipo === 'maior';
+    const cor     = isMaior ? '#dc2626' : '#d97706';
+    const bgCor   = isMaior ? '#fff7ed' : '#fefce8';
+    const borda   = isMaior ? '#f97316' : '#f59e0b';
+    const titulo  = isMaior ? 'Quantidade acima do esperado' : 'Quantidade abaixo do esperado';
+    const msg     = isMaior ? `Realmente chegaram <b>${qtd}</b> unidades?` : `Confirma salvar com quantidade incompleta (${qtd} de ${esp})?`;
+    const corBtn  = isMaior ? '#16a34a' : '#d97706';
     el.innerHTML = `
       <div style="background:var(--surface);border-radius:16px;padding:24px;width:100%;max-width:360px;box-shadow:0 8px 32px rgba(0,0,0,.3)">
         <div style="font-size:32px;text-align:center;margin-bottom:12px">⚠️</div>
-        <div style="font-size:15px;font-weight:800;color:var(--text);text-align:center;margin-bottom:8px">Quantidade acima do esperado</div>
-        <div style="background:#fff7ed;border:1.5px solid #f97316;border-radius:10px;padding:14px;margin-bottom:16px;text-align:center">
+        <div style="font-size:15px;font-weight:800;color:var(--text);text-align:center;margin-bottom:8px">${titulo}</div>
+        <div style="background:${bgCor};border:1.5px solid ${borda};border-radius:10px;padding:14px;margin-bottom:16px;text-align:center">
           <div style="font-size:12px;font-weight:700;color:#92400e;margin-bottom:6px">${codigo}</div>
           <div style="display:flex;justify-content:center;gap:24px">
             <div><div style="font-size:10px;color:#92400e;font-weight:700">ESPERADO</div><div style="font-size:28px;font-weight:900;color:#92400e">${esp}</div></div>
-            <div style="font-size:24px;color:#f97316;align-self:center">→</div>
-            <div><div style="font-size:10px;color:#dc2626;font-weight:700">INFORMADO</div><div style="font-size:28px;font-weight:900;color:#dc2626">${qtd}</div></div>
+            <div style="font-size:24px;color:${borda};align-self:center">→</div>
+            <div><div style="font-size:10px;color:${cor};font-weight:700">INFORMADO</div><div style="font-size:28px;font-weight:900;color:${cor}">${qtd}</div></div>
           </div>
         </div>
-        <div style="font-size:13px;color:var(--text2);text-align:center;margin-bottom:20px">Realmente chegaram <b>${qtd}</b> unidades?</div>
+        <div style="font-size:13px;color:var(--text2);text-align:center;margin-bottom:20px">${msg}</div>
         <div style="display:flex;gap:10px">
           <button id="em-cq-nao" style="flex:1;padding:13px;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;color:var(--text)">✕ Corrigir</button>
-          <button id="em-cq-sim" style="flex:1;padding:13px;background:#16a34a;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;color:#fff">✓ Confirmar ${qtd}</button>
+          <button id="em-cq-sim" style="flex:1;padding:13px;background:${corBtn};border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;color:#fff">✓ Confirmar ${qtd}</button>
         </div>
       </div>`;
     document.body.appendChild(el);
