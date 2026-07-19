@@ -451,15 +451,21 @@ async function emSalvarTudo() {
   const btn = document.getElementById('em-btn-salvar-tudo');
   if (btn) { btn.disabled = true; btn.textContent = `⏳ Salvando ${_emItens.length}...`; }
 
+  // Só envia itens com alteração pendente (não os já salvos individualmente)
   const payload = _emItens.map(it => {
-    const qtdEl = document.getElementById(`em-qty-${it.id}`);
-    const obsEl = document.getElementById(`em-obs-${it.id}`);
-    return {
-      id: it.id,
-      quantidade_abastecida: qtdEl ? (parseInt(qtdEl.value)||0) : (it.quantidade_abastecida||0),
-      obs: obsEl ? (obsEl.value.trim() || null) : (it.obs || null)
-    };
-  });
+    const qtdEl = document.getElementById(`em-qty-${it.id}`) || document.getElementById(`em-mqty-${it.id}`);
+    const obsEl = document.getElementById(`em-obs-${it.id}`) || document.getElementById(`em-mobs-${it.id}`);
+    const newQtd = qtdEl ? (parseInt(qtdEl.value)||0) : (it.quantidade_abastecida||0);
+    const newObs = obsEl ? (obsEl.value.trim() || null) : (it.obs || null);
+    const changed = newQtd !== (it.quantidade_abastecida || 0) || newObs !== (it.obs || null);
+    return changed ? { id: it.id, quantidade_abastecida: newQtd, obs: newObs } : null;
+  }).filter(Boolean);
+
+  if (!payload.length) {
+    emToast('Nenhum item com alterações para salvar.', 'aviso');
+    if (btn) { btn.disabled = false; btn.innerHTML = '💾 Salvar Tudo'; }
+    return;
+  }
 
   // Verificar se algum item supera a quantidade esperada
   const acimaDaEsperança = payload.filter(p => {
