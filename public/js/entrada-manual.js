@@ -216,7 +216,7 @@ function emCardHTML(it) {
     <div style="padding:10px 14px 8px;display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
       <div style="min-width:0">
         <div style="font-family:monospace;font-size:11px;font-weight:800;color:#f97316">${it.codigo}</div>
-        <div style="font-size:12px;color:var(--text);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px">${it.descricao||'—'}</div>
+        <div style="font-size:12px;color:var(--text);margin-top:2px;line-height:1.4">${it.descricao||'—'}</div>
       </div>
       <span style="background:${clr}22;color:${clr};border-radius:20px;padding:3px 8px;font-size:9px;font-weight:800;flex-shrink:0;white-space:nowrap">${emStatusLabel[it.status]||it.status}</span>
     </div>
