@@ -921,10 +921,17 @@ function _renderTabelaAbs(rows) {
                 </div>
               </td>
               <td style="padding:9px 12px;text-align:center">
-                <button onclick="verDetalheAbsenteismo(${r.id},'${nome.replace(/'/g,"\\'")}',this,'${(r.matricula||'').replace(/'/g,"\\'")}')"
-                  style="padding:4px 12px;background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;font-size:11px;cursor:pointer;color:var(--text2);font-weight:700">
-                  Ver
-                </button>
+                <div style="display:flex;gap:5px;justify-content:center">
+                  <button onclick="verDetalheAbsenteismo(${r.id},'${nome.replace(/'/g,"\\'")}',this,'${(r.matricula||'').replace(/'/g,"\\'")}')"
+                    style="padding:4px 12px;background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;font-size:11px;cursor:pointer;color:var(--text2);font-weight:700">
+                    Ver
+                  </button>
+                  <button onclick="absFeedbackTexto(${r.id},'${nome.replace(/'/g,"\\'")}','${(r.matricula||'').replace(/'/g,"\\'")}')"
+                    title="Gerar texto de feedback"
+                    style="padding:4px 10px;background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;font-size:11px;cursor:pointer;color:var(--text2);font-weight:700">
+                    📝
+                  </button>
+                </div>
               </td>
             </tr>`;
           }).join('')}
@@ -965,6 +972,129 @@ async function verDetalheAbsenteismo(id, nome, btn, matricula) {
   } finally {
     if (btn) { btn.textContent = 'Ver'; btn.disabled = false; }
   }
+}
+
+/* ── Feedback individual por colaborador ── */
+async function absFeedbackTexto(id, nome, matricula) {
+  _absFeedbackModal(null, nome);
+  try {
+    const params = {};
+    if (_absPeriodo) { params.start_date = _absPeriodo.start; params.end_date = _absPeriodo.end; }
+    if (matricula)   { params.matricula = matricula; }
+    const qs  = Object.keys(params).length ? '?' + new URLSearchParams(params) : '';
+    const res = await fetch(`${API}/gestao/absenteismo/funcionario/${id}${qs}`, { credentials: 'include' });
+    if (!res.ok) throw new Error(`Erro ${res.status}`);
+    const data = await res.json();
+
+    const allRec  = data.daily_records || [];
+    const fmtD    = s => s ? new Date(s + 'T12:00:00').toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit' }) : '—';
+    const fmtMin  = m => m >= 60 ? `${Math.floor(m/60)}h${m%60>0?(m%60)+'min':''}` : `${m}min`;
+
+    // Schedule para cálculo de atraso
+    const schedM     = (data.schedule || '').match(/(\d+)h/);
+    const schedStart = schedM ? parseInt(schedM[1]) * 60 : 780;
+
+    // Atraso por dia (reusa _computeAtrasoRec já definido)
+    const diasTrab = allRec.filter(r => r.status === 'normal' && r.entry_time);
+    diasTrab.forEach(r => { r._at = _computeAtrasoRec(r, schedStart, 60, 15); });
+
+    // ── Atestados: agrupar dias consecutivos ──
+    const atesRecs = allRec.filter(r => r.atestado).sort((a, b) => a.date < b.date ? -1 : 1);
+    const gruposAtes = [];
+    for (const r of atesRecs) {
+      const last = gruposAtes[gruposAtes.length - 1];
+      if (last) {
+        const d0 = new Date(last[last.length-1].date + 'T12:00:00');
+        const d1 = new Date(r.date + 'T12:00:00');
+        if (Math.round((d1 - d0) / 86400000) === 1) { last.push(r); continue; }
+      }
+      gruposAtes.push([r]);
+    }
+
+    // ── Atrasos acima da tolerância ──
+    const atrasoRecs = diasTrab.filter(r => r._at > _absToleranciMin).sort((a, b) => a.date < b.date ? -1 : 1);
+
+    // ── Folga Banco de Horas ──
+    const folgaRecs = allRec.filter(r => { const s = (r.status || '').toLowerCase(); return s.includes('folga') || s.includes('banco'); }).sort((a, b) => a.date < b.date ? -1 : 1);
+
+    // Helper: formatar lista de labels
+    const listaDias = (labels) => {
+      if (labels.length === 1) return `No dia ${labels[0]}`;
+      return `Nos dias ${labels.slice(0, -1).join(', ')} e ${labels[labels.length - 1]}`;
+    };
+
+    const partes = [];
+
+    // Atestados
+    for (const g of gruposAtes) {
+      const n = g.length;
+      if (n === 1) {
+        partes.push(`No dia ${fmtD(g[0].date)} — atestado de 1 dia.`);
+      } else {
+        partes.push(`Nos dias ${fmtD(g[0].date)} a ${fmtD(g[n-1].date)} — atestado de ${n} dias.`);
+      }
+    }
+
+    // Atrasos
+    if (atrasoRecs.length) {
+      const labels = atrasoRecs.map(r => `${fmtD(r.date)} (${fmtMin(r._at)})`);
+      partes.push(`${listaDias(labels)} — atraso${atrasoRecs.length > 1 ? 's' : ''}.`);
+    }
+
+    // Folga BH
+    if (folgaRecs.length) {
+      const labels = folgaRecs.map(r => fmtD(r.date));
+      partes.push(`${listaDias(labels)} — banco de horas.`);
+    }
+
+    // Horas extras (positive_hours)
+    const hmMatch = (data.positive_hours || '').match(/^0*(\d+):(\d{2})$/);
+    if (hmMatch) {
+      const h = parseInt(hmMatch[1]), m = parseInt(hmMatch[2]);
+      if (h > 0 || m > 0) {
+        const horasStr = h > 0 && m > 0 ? `${h}h${m}min` : h > 0 ? `${h}h` : `${m}min`;
+        partes.push(`Horas extras no período: ${horasStr}.`);
+      }
+    }
+
+    _absFeedbackModal(partes.join('\n') || 'Sem ocorrências registradas no período.', nome);
+  } catch(e) {
+    _absFeedbackModal(`Erro ao gerar feedback: ${e.message}`, nome);
+  }
+}
+
+function _absFeedbackModal(texto, nome) {
+  const prev = document.getElementById('abs-feedback-modal');
+  if (prev) prev.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'abs-feedback-modal';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+  overlay.onclick = e => { if (e.target === overlay) overlay.remove(); };
+
+  const isLoading = texto === null;
+  overlay.innerHTML = `
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:20px;max-width:560px;width:100%;box-shadow:0 20px 40px rgba(0,0,0,.35)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <div style="font-weight:900;font-size:15px;color:var(--text)">📝 Feedback — ${nome}</div>
+        <button onclick="document.getElementById('abs-feedback-modal').remove()" style="background:transparent;border:none;font-size:18px;cursor:pointer;color:var(--text3);line-height:1;padding:0 4px">✕</button>
+      </div>
+      ${isLoading
+        ? '<div style="color:var(--text3);font-size:13px;padding:20px 0;text-align:center">Gerando texto...</div>'
+        : `<textarea id="abs-fb-txt" style="width:100%;min-height:160px;border:1.5px solid var(--border);border-radius:8px;padding:12px;font-size:13px;line-height:1.7;resize:vertical;color:var(--text);background:var(--surface);font-family:inherit;box-sizing:border-box">${texto}</textarea>
+           <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end">
+             <button id="abs-copy-btn" onclick="(() => { const t=document.getElementById('abs-fb-txt'),b=document.getElementById('abs-copy-btn'); navigator.clipboard.writeText(t.value).then(()=>{ b.textContent='✓ Copiado!'; b.style.background='#16a34a'; setTimeout(()=>{ b.textContent='📋 Copiar'; b.style.background=''; },2200); }); })()"
+               style="padding:8px 20px;background:var(--accent,#3b82f6);color:#fff;border:none;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer">
+               📋 Copiar
+             </button>
+             <button onclick="document.getElementById('abs-feedback-modal').remove()"
+               style="padding:8px 16px;background:var(--surface);border:1.5px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;color:var(--text2)">
+               Fechar
+             </button>
+           </div>`
+      }
+    </div>`;
+  document.body.appendChild(overlay);
 }
 
 /* ── helpers de atraso (módulo-level) ── */
