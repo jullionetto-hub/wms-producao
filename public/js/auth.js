@@ -98,7 +98,16 @@ async function fazerLogin() {
 
 
 
-function ativarApp() {
+function _carregarScript(src) {
+  return new Promise((res, rej) => {
+    if (document.querySelector(`script[src="${src}"]`)) { res(); return; }
+    const s = document.createElement('script');
+    s.src = src; s.onload = res; s.onerror = rej;
+    document.head.appendChild(s);
+  });
+}
+
+async function ativarApp() {
   document.getElementById('tela-login').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
   document.getElementById('hdr-nome').textContent   = usuarioAtual.nome;
@@ -112,8 +121,13 @@ function ativarApp() {
   const perfil = usuarioAtual.perfil;
   const mob = isMobile();
 
-
-
+  // Carregar libs pesadas apenas para perfis que precisam
+  const needsChart = perfil === 'supervisor' || perfil === 'gestor';
+  const needsXlsx  = perfil === 'supervisor' || perfil === 'gestor' || perfil === 'repositor';
+  await Promise.all([
+    needsChart ? _carregarScript('https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js') : Promise.resolve(),
+    needsXlsx  ? _carregarScript('https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js')  : Promise.resolve(),
+  ]);
 
   if (perfil === 'separador' && mob) {
     ativarMobileSep();
