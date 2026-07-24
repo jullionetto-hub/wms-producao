@@ -1368,12 +1368,13 @@ async function invSalvarContagem(id) {
 
 async function invConcluir() {
   if (!_invSessaoAtiva) return;
-  if (!confirm('Concluir o inventário? Ele ficará somente leitura.')) return;
-  const r = await apiFetch(`/inventario/sessoes/${_invSessaoAtiva.id}/concluir`, { method:'PUT' });
-  if (r?.erro) { emToast('Erro: '+r.erro, 'erro'); return; }
-  _invSessaoAtiva.status = 'concluido';
-  emToast('✅ Inventário concluído!', 'sucesso');
-  invRenderizarSessaoAtiva();
+  wmsConfirm('Concluir o inventário? Ele ficará somente leitura.', async () => {
+    const r = await apiFetch(`/inventario/sessoes/${_invSessaoAtiva.id}/concluir`, { method:'PUT' });
+    if (r?.erro) { emToast('Erro: '+r.erro, 'erro'); return; }
+    _invSessaoAtiva.status = 'concluido';
+    emToast('✅ Inventário concluído!', 'sucesso');
+    invRenderizarSessaoAtiva();
+  });
 }
 
 async function invSincronizarEnderecos() {
