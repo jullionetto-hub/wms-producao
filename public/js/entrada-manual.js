@@ -940,8 +940,9 @@ async function catProcessarArquivo(input) {
     const rows = XLSX.utils.sheet_to_json(ws, { defval:'' });
     if (!rows.length) { emToast('Arquivo vazio.', 'erro'); if (zona) zona.innerHTML = catUploadZonaHTML(); return; }
 
-    const alias = (key, names) => {
-      const found = Object.keys(rows[0]).find(h => names.includes(h.trim().toLowerCase()));
+    const norm  = s => s.normalize('NFD').replace(/\p{Mn}/gu,'').toLowerCase().trim();
+    const alias = (_key, names) => {
+      const found = Object.keys(rows[0]).find(h => names.some(n => norm(h) === norm(n)));
       return found || null;
     };
     const cCod  = alias('codigo',     ['código','codigo','cod','sku','ref']);
@@ -1047,6 +1048,7 @@ let _invSessaoAtiva = null;
 let _invItens       = [];
 let _invBusca       = '';
 let _invFiltroStatus= 'todos';
+let _invFiltroRua   = '';
 let _invPagina      = 1;
 const INV_PAGE_SIZE = 30;
 
@@ -1164,6 +1166,7 @@ async function invAbrirSessao(id) {
   _invItens       = r.itens || [];
   _invBusca       = '';
   _invFiltroStatus= 'todos';
+  _invFiltroRua   = '';
   _invPagina      = 1;
   invRenderizarSessaoAtiva();
 }
@@ -1187,7 +1190,8 @@ function invRenderizarSessaoAtiva() {
   const itens = _invItens.filter(i => {
     const mS = _invFiltroStatus === 'todos' || i.status === _invFiltroStatus;
     const mB = !_invBusca || i.codigo.toLowerCase().includes(_invBusca.toLowerCase()) || (i.nome||'').toLowerCase().includes(_invBusca.toLowerCase());
-    return mS && mB;
+    const mR = !_invFiltroRua || (i.localizacao||'').toLowerCase().startsWith(_invFiltroRua.toLowerCase());
+    return mS && mB && mR;
   });
   const total = itens.length;
   const start = (_invPagina - 1) * INV_PAGE_SIZE;
@@ -1228,14 +1232,24 @@ function invRenderizarSessaoAtiva() {
     </div>
 
     <div class="card" style="padding:10px 14px;margin-bottom:10px">
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-        <input placeholder="🔍 Código ou nome..." oninput="_invBusca=this.value;_invPagina=1;invRenderizarSessaoAtiva()"
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
+        <input id="inv-busca-input" placeholder="🔍 Código ou nome..." value="${_invBusca}"
+          oninput="_invBusca=this.value;_invPagina=1;invRenderizarSessaoAtiva()"
           style="flex:1;min-width:160px;padding:7px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;outline:none">
+        <input id="inv-rua-input" placeholder="📍 Rua/Setor (prefixo)..." value="${_invFiltroRua}"
+          oninput="_invFiltroRua=this.value;_invPagina=1;invRenderizarSessaoAtiva()"
+          style="width:180px;padding:7px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;outline:none">
+        <button onclick="invSincronizarEnderecos()"
+          title="Atualiza endereços a partir do catálogo importado"
+          style="padding:7px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text3);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">🔄 Sync Endereços</button>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
         ${['todos','pendente','ok','divergente'].map(st=>`
-        <button onclick="_invFiltroStatus='${st}';_invPagina=1;invRenderizarSessaoAtiva();this.closest('.card').querySelectorAll('button').forEach(b=>{b.style.background='var(--surface2)';b.style.color='var(--text3)'});this.style.background='var(--accent)';this.style.color='#fff'"
+        <button onclick="_invFiltroStatus='${st}';_invPagina=1;invRenderizarSessaoAtiva();this.closest('.card').querySelectorAll('[data-sf]').forEach(b=>{b.style.background='var(--surface2)';b.style.color='var(--text3)'});this.style.background='var(--accent)';this.style.color='#fff'" data-sf="1"
           style="padding:6px 12px;border-radius:20px;border:1px solid var(--border);background:${st==='todos'?'var(--accent)':'var(--surface2)'};color:${st==='todos'?'#fff':'var(--text3)'};font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap">
           ${st==='todos'?'Todos':SL[st]||st}
         </button>`).join('')}
+        ${_invFiltroRua ? `<span style="background:#1e3a5f;color:#38bdf8;border-radius:20px;padding:4px 10px;font-size:10px;font-weight:700">📍 ${_invFiltroRua} <span onclick="_invFiltroRua='';_invPagina=1;invRenderizarSessaoAtiva()" style="cursor:pointer;margin-left:4px">✕</span></span>` : ''}
       </div>
     </div>
 
@@ -1315,6 +1329,16 @@ async function invConcluir() {
   _invSessaoAtiva.status = 'concluido';
   emToast('✅ Inventário concluído!', 'sucesso');
   invRenderizarSessaoAtiva();
+}
+
+async function invSincronizarEnderecos() {
+  if (!_invSessaoAtiva) return;
+  const btn = document.querySelector('[onclick="invSincronizarEnderecos()"]');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Sincronizando...'; }
+  const r = await apiFetch(`/inventario/sessoes/${_invSessaoAtiva.id}/sync-enderecos`, { method:'PUT' });
+  if (r?.erro) { emToast('Erro: '+r.erro, 'erro'); if (btn) { btn.disabled = false; btn.innerHTML = '🔄 Sync Endereços'; } return; }
+  emToast(`✅ ${r.atualizados} endereços atualizados do catálogo!`, 'sucesso');
+  await invAbrirSessao(_invSessaoAtiva.id);
 }
 
 async function invExcluirSessao(id) {

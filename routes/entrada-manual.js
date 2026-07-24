@@ -473,6 +473,23 @@ router.put('/inventario/sessoes/:id/concluir', requerAuth, async (req, res) => {
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
+// ── PUT /inventario/sessoes/:id/sync-enderecos — Sincronizar do catálogo ─
+router.put('/inventario/sessoes/:id/sync-enderecos', requerAuth, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `UPDATE inventario_itens ii
+       SET localizacao = p.localizacao
+       FROM produtos p
+       WHERE ii.codigo = p.codigo
+         AND ii.sessao_id = $1
+         AND p.localizacao IS NOT NULL
+         AND p.localizacao != ''`,
+      [req.params.id]
+    );
+    res.json({ mensagem: 'Endereços sincronizados!', atualizados: result.rowCount });
+  } catch(e) { res.status(500).json({ erro: e.message }); }
+});
+
 // ── DELETE /inventario/sessoes/:id ───────────────────────────────────────
 router.delete('/inventario/sessoes/:id', requerAuth, requerPerfil('supervisor'), async (req, res) => {
   try {
