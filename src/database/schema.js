@@ -261,6 +261,45 @@ const TABLES = [
     criado_em            TIMESTAMPTZ DEFAULT NOW()
   )`,
 
+  /* ── Catálogo de Produtos (barras.xlsx) ─────────────────────────────── */
+  `CREATE TABLE IF NOT EXISTS produtos (
+    id            SERIAL PRIMARY KEY,
+    codigo        TEXT NOT NULL UNIQUE,
+    codigo_barras TEXT DEFAULT '',
+    nome          TEXT DEFAULT '',
+    saldo         NUMERIC DEFAULT 0,
+    disponivel    NUMERIC DEFAULT 0,
+    localizacao   TEXT DEFAULT '',
+    atualizado_em TIMESTAMPTZ DEFAULT NOW()
+  )`,
+
+  /* ── Inventário Físico ────────────────────────────────────────────────── */
+  `CREATE TABLE IF NOT EXISTS inventario_sessoes (
+    id           SERIAL PRIMARY KEY,
+    nome         TEXT DEFAULT '',
+    criado_por   TEXT DEFAULT '',
+    status       TEXT DEFAULT 'aberto',
+    total_itens  INTEGER DEFAULT 0,
+    contados     INTEGER DEFAULT 0,
+    criado_em    TIMESTAMPTZ DEFAULT NOW(),
+    concluido_em TIMESTAMPTZ
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS inventario_itens (
+    id            SERIAL PRIMARY KEY,
+    sessao_id     INTEGER NOT NULL REFERENCES inventario_sessoes(id) ON DELETE CASCADE,
+    codigo        TEXT NOT NULL,
+    nome          TEXT DEFAULT '',
+    codigo_barras TEXT DEFAULT '',
+    localizacao   TEXT DEFAULT '',
+    saldo_sistema NUMERIC DEFAULT 0,
+    qtd_contada   NUMERIC,
+    status        TEXT DEFAULT 'pendente',
+    contado_por   TEXT DEFAULT '',
+    contado_em    TIMESTAMPTZ,
+    obs           TEXT DEFAULT ''
+  )`,
+
   /* ── Dash Logística ───────────────────────────────────────────────────── */
   `CREATE TABLE IF NOT EXISTS faturamento_pedidos (
     id            SERIAL PRIMARY KEY,
@@ -310,6 +349,11 @@ const INDEXES = [
   'CREATE INDEX IF NOT EXISTS idx_em_itens_lote       ON entrada_manual_itens(lote_id)',
   'CREATE INDEX IF NOT EXISTS idx_em_itens_codigo     ON entrada_manual_itens(codigo)',
   'CREATE INDEX IF NOT EXISTS idx_em_itens_status     ON entrada_manual_itens(status)',
+  'CREATE INDEX IF NOT EXISTS idx_produtos_codigo     ON produtos(codigo)',
+  'CREATE INDEX IF NOT EXISTS idx_produtos_barras     ON produtos(codigo_barras)',
+  'CREATE INDEX IF NOT EXISTS idx_inv_sessoes_status  ON inventario_sessoes(status)',
+  'CREATE INDEX IF NOT EXISTS idx_inv_itens_sessao    ON inventario_itens(sessao_id)',
+  'CREATE INDEX IF NOT EXISTS idx_inv_itens_codigo    ON inventario_itens(codigo)',
   'CREATE INDEX IF NOT EXISTS idx_fat_data            ON faturamento_pedidos(data_fat)',
   'CREATE INDEX IF NOT EXISTS idx_fat_turno           ON faturamento_pedidos(turno)',
   'CREATE INDEX IF NOT EXISTS idx_fat_usuario         ON faturamento_pedidos(usuario)',

@@ -286,4 +286,232 @@ router.get('/entrada-manual/exportar', requerAuth, async (req, res) => {
   } catch(e) { res.status(500).json({ erro: e.message }); }
 });
 
+// ════════════════════════════════════════════════════════════════════════════
+// CATÁLOGO DE PRODUTOS (barras.xlsx)
+// ════════════════════════════════════════════════════════════════════════════
+
+// ── POST /entrada-manual/produtos/importar — Upsert em bulk ──────────────
+router.post('/entrada-manual/produtos/importar', requerAuth, requerPerfil('supervisor'), async (req, res) => {
+  const { produtos } = req.body;
+  if (!Array.isArray(produtos) || !produtos.length)
+    return res.status(400).json({ erro: 'Nenhum produto informado.' });
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    let inseridos = 0, atualizados = 0;
+    for (const p of produtos) {
+      const codigo = String(p.codigo || '').trim().toUpperCase();
+      if (!codigo) continue;
+      const barras    = String(p.codigo_barras || '').trim();
+      const nome      = String(p.nome || '').trim();
+      const saldo     = parseFloat(p.saldo) || 0;
+      const disponivel= parseFloat(p.disponivel) || 0;
+      const loc       = String(p.localizacao || '').trim().toUpperCase();
+
+      const existing = await client.query('SELECT id FROM produtos WHERE codigo=$1', [codigo]);
+      if (existing.rows.length) {
+        await client.query(
+          `UPDATE produtos SET codigo_barras=$1,nome=$2,saldo=$3,disponivel=$4,localizacao=$5,atualizado_em=NOW() WHERE codigo=$6`,
+          [barras, nome, saldo, disponivel, loc, codigo]
+        );
+        atualizados++;
+      } else {
+        await client.query(
+          `INSERT INTO produtos (codigo,codigo_barras,nome,saldo,disponivel,localizacao) VALUES ($1,$2,$3,$4,$5,$6)`,
+          [codigo, barras, nome, saldo, disponivel, loc]
+        );
+        inseridos++;
+      }
+    }
+    await client.query('COMMIT');
+    res.json({ mensagem: `${inseridos} inseridos, ${atualizados} atualizados.`, inseridos, atualizados });
+  } catch (e) {
+    await client.query('ROLLBACK');
+    res.status(500).json({ erro: e.message });
+  } finally { client.release(); }
+});
+
+// ── GET /entrada-manual/produtos/buscar?q=X — Busca por código ou barras ─
+router.get('/entrada-manual/produtos/buscar', requerAuth, async (req, res) => {
+  const q = String(req.query.q || '').trim();
+  if (!q) return res.json([]);
+  try {
+    const rows = await db.all(
+      `SELECT codigo, codigo_barras, nome, saldo, disponivel, localizacao
+       FROM produtos
+       WHERE codigo ILIKE $1 OR codigo_barras ILIKE $1
+       ORDER BY codigo LIMIT 20`,
+      [`%${q}%`]
+    );
+    res.json(rows);
+  } catch (e) { res.status(500).json({ erro: e.message }); }
+});
+
+// ── GET /entrada-manual/produtos/total — Quantidade total no catálogo ────
+router.get('/entrada-manual/produtos/total', requerAuth, async (req, res) => {
+  try {
+    const r = await db.get('SELECT COUNT(*)::int AS total FROM produtos');
+    res.json(r);
+  } catch (e) { res.status(500).json({ erro: e.message }); }
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// INVENTÁRIO FÍSICO
+// ════════════════════════════════════════════════════════════════════════════
+
+// ── GET /inventario/sessoes ───────────────────────────────────────────────
+router.get('/inventario/sessoes', requerAuth, async (req, res) => {
+  try {
+    const rows = await db.all(
+      `SELECT * FROM inventario_sessoes ORDER BY criado_em DESC LIMIT 50`
+    );
+    res.json(rows);
+  } catch (e) { res.status(500).json({ erro: e.message }); }
+});
+
+// ── POST /inventario/sessoes — Criar sessão (com itens opcionais) ─────────
+router.post('/inventario/sessoes', requerAuth, async (req, res) => {
+  const { nome, itens, carregarCatalogo } = req.body;
+  const criado_por = req.session?.usuario?.nome || '';
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    let produtos = Array.isArray(itens) ? itens : [];
+    if (carregarCatalogo) {
+      const { rows } = await client.query(
+        `SELECT codigo, nome, codigo_barras, localizacao, saldo AS saldo_sistema FROM produtos ORDER BY localizacao, codigo`
+      );
+      produtos = rows;
+    }
+
+    const r = await client.query(
+      `INSERT INTO inventario_sessoes (nome, criado_por, total_itens)
+       VALUES ($1, $2, $3) RETURNING id`,
+      [nome || `Inventário ${new Date().toLocaleDateString('pt-BR')}`, criado_por, produtos.length]
+    );
+    const sessaoId = r.rows[0].id;
+
+    if (produtos.length) {
+      const codigos  = produtos.map(it => String(it.codigo || '').trim().toUpperCase());
+      const nomes    = produtos.map(it => String(it.nome || '').trim());
+      const barras   = produtos.map(it => String(it.codigo_barras || '').trim());
+      const locs     = produtos.map(it => String(it.localizacao || '').trim().toUpperCase());
+      const saldos   = produtos.map(it => parseFloat(it.saldo_sistema) || 0);
+      const ids      = produtos.map(() => sessaoId);
+      await client.query(
+        `INSERT INTO inventario_itens (sessao_id,codigo,nome,codigo_barras,localizacao,saldo_sistema)
+         SELECT unnest($1::int[]), unnest($2::text[]), unnest($3::text[]),
+                unnest($4::text[]), unnest($5::text[]), unnest($6::numeric[])`,
+        [ids, codigos, nomes, barras, locs, saldos]
+      );
+    }
+    await client.query('COMMIT');
+    res.json({ id: sessaoId, mensagem: 'Sessão criada!', total: produtos.length });
+  } catch (e) {
+    await client.query('ROLLBACK');
+    res.status(500).json({ erro: e.message });
+  } finally { client.release(); }
+});
+
+// ── GET /inventario/sessoes/:id — Detalhes + itens ───────────────────────
+router.get('/inventario/sessoes/:id', requerAuth, async (req, res) => {
+  try {
+    const sessao = await db.get(`SELECT * FROM inventario_sessoes WHERE id=$1`, [req.params.id]);
+    if (!sessao) return res.status(404).json({ erro: 'Sessão não encontrada.' });
+    const itens = await db.all(
+      `SELECT * FROM inventario_itens WHERE sessao_id=$1 ORDER BY localizacao, codigo`,
+      [req.params.id]
+    );
+    res.json({ ...sessao, itens });
+  } catch (e) { res.status(500).json({ erro: e.message }); }
+});
+
+// ── PUT /inventario/itens/:id — Salvar contagem de um item ───────────────
+router.put('/inventario/itens/:id', requerAuth, async (req, res) => {
+  const { qtd_contada, obs } = req.body;
+  const contado_por = req.session?.usuario?.nome || '';
+  try {
+    const item = await db.get(`SELECT * FROM inventario_itens WHERE id=$1`, [req.params.id]);
+    if (!item) return res.status(404).json({ erro: 'Item não encontrado.' });
+
+    const qtd  = parseFloat(qtd_contada);
+    const status = isNaN(qtd) ? 'pendente'
+                 : Math.abs(qtd - item.saldo_sistema) < 0.001 ? 'ok'
+                 : 'divergente';
+
+    await pool.query(
+      `UPDATE inventario_itens
+       SET qtd_contada=$1, status=$2, contado_por=$3, contado_em=NOW(), obs=COALESCE($4,obs)
+       WHERE id=$5`,
+      [isNaN(qtd) ? null : qtd, status, contado_por, obs ?? null, req.params.id]
+    );
+
+    // Recalcula contagem na sessão
+    const res2 = await db.get(
+      `SELECT COUNT(*) FILTER (WHERE status!='pendente')::int AS contados FROM inventario_itens WHERE sessao_id=$1`,
+      [item.sessao_id]
+    );
+    await pool.query(
+      `UPDATE inventario_sessoes SET contados=$1 WHERE id=$2`,
+      [res2.contados, item.sessao_id]
+    );
+
+    res.json({ mensagem: 'Salvo!', status, contados: res2.contados });
+  } catch (e) { res.status(500).json({ erro: e.message }); }
+});
+
+// ── PUT /inventario/sessoes/:id/concluir — Marcar sessão como concluída ──
+router.put('/inventario/sessoes/:id/concluir', requerAuth, async (req, res) => {
+  try {
+    await pool.query(
+      `UPDATE inventario_sessoes SET status='concluido', concluido_em=NOW() WHERE id=$1`,
+      [req.params.id]
+    );
+    res.json({ mensagem: 'Inventário concluído.' });
+  } catch (e) { res.status(500).json({ erro: e.message }); }
+});
+
+// ── DELETE /inventario/sessoes/:id ───────────────────────────────────────
+router.delete('/inventario/sessoes/:id', requerAuth, requerPerfil('supervisor'), async (req, res) => {
+  try {
+    await pool.query(`DELETE FROM inventario_sessoes WHERE id=$1`, [req.params.id]);
+    res.json({ mensagem: 'Sessão excluída.' });
+  } catch (e) { res.status(500).json({ erro: e.message }); }
+});
+
+// ── GET /inventario/sessoes/:id/exportar — CSV das divergências ───────────
+router.get('/inventario/sessoes/:id/exportar', requerAuth, async (req, res) => {
+  try {
+    const sessao = await db.get(`SELECT * FROM inventario_sessoes WHERE id=$1`, [req.params.id]);
+    if (!sessao) return res.status(404).json({ erro: 'Sessão não encontrada.' });
+
+    const itens = await db.all(
+      `SELECT codigo, nome, localizacao, saldo_sistema, qtd_contada,
+              (qtd_contada - saldo_sistema) AS diferenca, status, contado_por, obs,
+              TO_CHAR(contado_em AT TIME ZONE 'America/Sao_Paulo','DD/MM/YYYY HH24:MI') AS contado_em_fmt
+       FROM inventario_itens WHERE sessao_id=$1 ORDER BY localizacao, codigo`,
+      [req.params.id]
+    );
+
+    const SEP = ';';
+    const esc = v => { const s = String(v ?? ''); return /[;\n"]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+    const hdrs = ['Código', 'Nome', 'Localização', 'Saldo Sistema', 'Qtd Contada', 'Diferença', 'Status', 'Contado Por', 'Contado Em', 'Obs'];
+    const statusPT = { ok: 'OK', divergente: 'Divergente', pendente: 'Pendente' };
+    const lines = [hdrs.join(SEP)];
+    for (const it of itens) {
+      lines.push([it.codigo, it.nome, it.localizacao, it.saldo_sistema,
+                  it.qtd_contada ?? '', it.diferenca ?? '',
+                  statusPT[it.status] || it.status, it.contado_por,
+                  it.contado_em_fmt || '', it.obs || ''].map(esc).join(SEP));
+    }
+    const csv = '﻿' + lines.join('\r\n');
+    const slug = (sessao.nome || 'inventario').replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${slug}.csv"`);
+    res.send(csv);
+  } catch (e) { res.status(500).json({ erro: e.message }); }
+});
+
 module.exports = router;

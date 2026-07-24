@@ -711,8 +711,20 @@ function renderizarPagEntradaManual(containerId) {
   const hoje = new Date().toISOString().split('T')[0];
   const primDia = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
 
+  const isMob = window.innerWidth < 768;
   pag.innerHTML = `
   <div style="padding:0 0 32px">
+
+    <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap">
+      <button id="em-tab-btn-estoque" onclick="emMostrarAba('estoque')"
+        style="padding:8px 16px;border-radius:20px;border:1px solid var(--border);background:var(--accent);color:#fff;font-size:11px;font-weight:700;cursor:pointer">📥 Entrada de Estoque</button>
+      <button id="em-tab-btn-barcode" onclick="emMostrarAba('barcode')"
+        style="padding:8px 16px;border-radius:20px;border:1px solid var(--border);background:var(--surface2);color:var(--text3);font-size:11px;font-weight:700;cursor:pointer">🔍 Código de Barras</button>
+      ${isMob ? '' : `<button id="em-tab-btn-inventario" onclick="emMostrarAba('inventario')"
+        style="padding:8px 16px;border-radius:20px;border:1px solid var(--border);background:var(--surface2);color:var(--text3);font-size:11px;font-weight:700;cursor:pointer">📋 Inventário</button>`}
+    </div>
+
+    <div id="em-aba-estoque">
 
     <!-- SEÇÃO: LOTES (listagem) -->
     <div id="em-sec-lotes">
@@ -829,6 +841,34 @@ function renderizarPagEntradaManual(containerId) {
       </div>
 
     </div>
+    </div><!-- /em-aba-estoque -->
+
+    <!-- ABA: CÓDIGO DE BARRAS -->
+    <div id="em-aba-barcode" style="display:none">
+      <div class="card" style="padding:20px;margin-bottom:14px">
+        <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:6px">🔍 Exibir Código de Barras na Tela</div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:14px">Quando o leitor não consegue ler a etiqueta física, busque o produto aqui e bipe o código exibido na tela.</div>
+        <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+          <input id="bc-input" type="text" placeholder="Código do produto ou código de barras (EAN)..."
+            style="flex:1;min-width:200px;padding:11px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:14px;outline:none"
+            onkeydown="if(event.key==='Enter')bcBuscar()">
+          <button onclick="bcBuscar()" style="background:var(--accent);color:#fff;border:none;border-radius:10px;padding:11px 22px;font-size:13px;font-weight:700;cursor:pointer">🔍 Buscar</button>
+        </div>
+        <div id="bc-resultado"></div>
+      </div>
+      <div class="card" style="padding:14px 18px">
+        <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:1px;margin-bottom:8px">📦 IMPORTAR CATÁLOGO DE PRODUTOS (barras.xlsx)</div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:10px">Importe o arquivo barras.xlsx para habilitar a busca por código de barras. <span id="bc-total-produtos" style="color:var(--accent);font-weight:700"></span></div>
+        <div id="bc-upload-zona">${catUploadZonaHTML()}</div>
+      </div>
+    </div>
+
+    ${isMob ? '' : `<!-- ABA: INVENTÁRIO (desktop) -->
+    <div id="em-aba-inventario" style="display:none">
+      <div id="inv-sec-sessoes"></div>
+      <div id="inv-sec-itens" style="display:none"></div>
+    </div>`}
+
   </div>`;
 
   // Detecta mobile vs desktop e mostra o layout certo
@@ -846,6 +886,445 @@ function emAjustarLayout() {
 
 // Ajusta layout ao redimensionar
 window.addEventListener('resize', emAjustarLayout);
+
+// ════════════════════════════════════════════════════════════════════════════
+// ABAS
+// ════════════════════════════════════════════════════════════════════════════
+
+let _emAbaTiva = 'estoque';
+
+function emMostrarAba(aba) {
+  _emAbaTiva = aba;
+  ['estoque','barcode','inventario'].forEach(a => {
+    const el  = document.getElementById(`em-aba-${a}`);
+    const btn = document.getElementById(`em-tab-btn-${a}`);
+    if (el)  el.style.display  = a === aba ? '' : 'none';
+    if (btn) { btn.style.background = a === aba ? 'var(--accent)' : 'var(--surface2)'; btn.style.color = a === aba ? '#fff' : 'var(--text3)'; }
+  });
+  if (aba === 'inventario') invCarregarSessoes();
+  if (aba === 'barcode') bcAtualizarTotal();
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// CATÁLOGO / CÓDIGO DE BARRAS
+// ════════════════════════════════════════════════════════════════════════════
+
+function catUploadZonaHTML() {
+  return `
+  <div style="border:2px dashed var(--border);border-radius:10px;padding:16px;text-align:center;cursor:pointer"
+       onclick="catAbrirImport()" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+    <div style="font-size:24px;margin-bottom:6px">📂</div>
+    <div style="font-size:12px;font-weight:700;color:var(--text)">Clique para importar barras.xlsx</div>
+    <div style="font-size:10px;color:var(--text3);margin-top:4px">Suporte: .xlsx · .xls · .csv</div>
+    <input id="cat-import-input" type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="catProcessarArquivo(this)">
+  </div>`;
+}
+
+function catAbrirImport() { document.getElementById('cat-import-input')?.click(); }
+
+async function bcAtualizarTotal() {
+  const r = await apiFetch('/entrada-manual/produtos/total');
+  const el = document.getElementById('bc-total-produtos');
+  if (el && r?.total !== undefined) el.textContent = `(${r.total.toLocaleString('pt-BR')} produtos no catálogo)`;
+}
+
+async function catProcessarArquivo(input) {
+  const file = input.files?.[0];
+  if (!file) return;
+  const zona = document.getElementById('bc-upload-zona');
+  if (zona) zona.innerHTML = `<div style="padding:12px;text-align:center;color:var(--text3)">⏳ Lendo arquivo...</div>`;
+  try {
+    const data = await file.arrayBuffer();
+    const wb   = XLSX.read(data, { type:'array' });
+    const ws   = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(ws, { defval:'' });
+    if (!rows.length) { emToast('Arquivo vazio.', 'erro'); if (zona) zona.innerHTML = catUploadZonaHTML(); return; }
+
+    const alias = (key, names) => {
+      const found = Object.keys(rows[0]).find(h => names.includes(h.trim().toLowerCase()));
+      return found || null;
+    };
+    const cCod  = alias('codigo',     ['código','codigo','cod','sku','ref']);
+    const cBarr = alias('barras',     ['código de barras','codigo de barras','barras','barcode','ean','gtin','cod. barras']);
+    const cNome = alias('nome',       ['nome','descrição','descricao','produto','description','descritor simples','name']);
+    const cSaldo= alias('saldo',      ['saldo','estoque','stock','quantidade','qtd','qty','quantidade total']);
+    const cDisp = alias('disponivel', ['disponível','disponivel','available','disp']);
+    const cLoc  = alias('localizacao',['localização no estoque','localizacao no estoque','localizacao','localização','local','address','endereço']);
+
+    if (!cCod) { emToast('Coluna Código não encontrada.', 'erro'); if (zona) zona.innerHTML = catUploadZonaHTML(); return; }
+
+    const produtos = rows.map(r => ({
+      codigo:        String(r[cCod]||'').trim().toUpperCase(),
+      codigo_barras: cBarr ? String(r[cBarr]||'').trim() : '',
+      nome:          cNome ? String(r[cNome]||'').trim() : '',
+      saldo:         cSaldo ? (parseFloat(r[cSaldo])||0) : 0,
+      disponivel:    cDisp ? (parseFloat(r[cDisp])||0) : 0,
+      localizacao:   cLoc ? String(r[cLoc]||'').trim().toUpperCase() : '',
+    })).filter(p => p.codigo);
+
+    if (!produtos.length) { emToast('Nenhum produto válido.', 'erro'); if (zona) zona.innerHTML = catUploadZonaHTML(); return; }
+
+    if (zona) zona.innerHTML = `<div style="padding:12px;text-align:center;color:var(--text3)">⏳ Importando ${produtos.length.toLocaleString('pt-BR')} produtos...</div>`;
+
+    // Envia em lotes de 1000
+    const LOTE = 1000;
+    let total = 0;
+    for (let i = 0; i < produtos.length; i += LOTE) {
+      const lote = produtos.slice(i, i + LOTE);
+      const r = await apiFetch('/entrada-manual/produtos/importar', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ produtos: lote })
+      });
+      if (r?.erro) { emToast('Erro: '+r.erro, 'erro'); break; }
+      total += (r.inseridos || 0) + (r.atualizados || 0);
+      if (zona) zona.innerHTML = `<div style="padding:12px;text-align:center;color:var(--text3)">⏳ ${total.toLocaleString('pt-BR')} / ${produtos.length.toLocaleString('pt-BR')} processados...</div>`;
+    }
+
+    emToast(`✅ Catálogo importado! ${produtos.length.toLocaleString('pt-BR')} produtos.`, 'sucesso');
+    if (zona) zona.innerHTML = catUploadZonaHTML();
+    bcAtualizarTotal();
+  } catch(e) {
+    emToast('Erro ao ler arquivo: '+e.message, 'erro');
+    if (zona) zona.innerHTML = catUploadZonaHTML();
+  }
+  input.value = '';
+}
+
+async function bcBuscar() {
+  const inp = document.getElementById('bc-input');
+  const q = (inp?.value || '').trim();
+  if (!q) return;
+  const div = document.getElementById('bc-resultado');
+  if (div) div.innerHTML = `<div style="padding:14px;text-align:center;color:var(--text3)">⏳ Buscando...</div>`;
+  const result = await apiFetch(`/entrada-manual/produtos/buscar?q=${encodeURIComponent(q)}`);
+  if (!result || result.erro || !result.length) {
+    if (div) div.innerHTML = `<div style="padding:14px;text-align:center;color:var(--red)">❌ Produto não encontrado. Verifique o código e tente novamente.</div>`;
+    return;
+  }
+  bcRenderizar(result[0]);
+}
+
+function bcRenderizar(p) {
+  const div = document.getElementById('bc-resultado');
+  if (!div) return;
+  const cb = p.codigo_barras || '';
+  const temCB = cb.length >= 8;
+
+  div.innerHTML = `
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px">
+      <div style="font-family:monospace;font-size:12px;font-weight:800;color:#f97316">${p.codigo}</div>
+      <div style="font-size:14px;color:var(--text);margin:4px 0">${p.nome||'—'}</div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:14px">📦 Saldo: ${p.saldo} · Disp.: ${p.disponivel} · 📍 ${p.localizacao||'—'}</div>
+      ${temCB ? `
+      <div style="text-align:center;background:#fff;border-radius:12px;padding:24px 16px;margin-bottom:10px">
+        <svg id="bc-svg" style="max-width:100%;height:auto"></svg>
+        <div style="font-size:13px;color:#666;margin-top:10px;font-family:monospace;letter-spacing:2px">${cb}</div>
+      </div>` : `
+      <div style="text-align:center;background:var(--surface);border:2px dashed var(--border);border-radius:10px;padding:24px;margin-bottom:10px">
+        <div style="font-size:28px;margin-bottom:6px">🚫</div>
+        <div style="font-size:12px;color:var(--text3)">Produto sem código de barras cadastrado.</div>
+      </div>`}
+      <button onclick="document.getElementById('bc-input').value='';document.getElementById('bc-resultado').innerHTML='';document.getElementById('bc-input').focus()"
+        style="background:var(--surface);border:1px solid var(--border);color:var(--text3);border-radius:8px;padding:7px 14px;font-size:11px;cursor:pointer">🔄 Nova busca</button>
+    </div>`;
+
+  if (temCB) {
+    try {
+      const fmt = cb.length === 13 ? 'EAN13' : cb.length === 12 ? 'UPC' : cb.length === 8 ? 'EAN8' : 'CODE128';
+      JsBarcode('#bc-svg', cb, { format: fmt, width: 3, height: 140, displayValue: false, margin: 10 });
+    } catch(e) {
+      try { JsBarcode('#bc-svg', cb, { format:'CODE128', width:2, height:100, displayValue:false }); } catch(e2) {}
+    }
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// INVENTÁRIO
+// ════════════════════════════════════════════════════════════════════════════
+
+let _invSessoes     = [];
+let _invSessaoAtiva = null;
+let _invItens       = [];
+let _invBusca       = '';
+let _invFiltroStatus= 'todos';
+let _invPagina      = 1;
+const INV_PAGE_SIZE = 30;
+
+async function invCarregarSessoes() {
+  const wrap = document.getElementById('inv-sec-sessoes');
+  if (!wrap) return;
+  wrap.innerHTML = `<div style="padding:32px;text-align:center;color:var(--text3)">Carregando...</div>`;
+  const sessoes = await apiFetch('/inventario/sessoes');
+  if (!sessoes || sessoes.erro) { wrap.innerHTML = `<div style="padding:32px;text-align:center;color:var(--red)">Erro ao carregar inventários.</div>`; return; }
+  _invSessoes = sessoes;
+  invRenderizarSessoes();
+}
+
+function invRenderizarSessoes() {
+  const wrap = document.getElementById('inv-sec-sessoes');
+  if (!wrap) return;
+  wrap.innerHTML = `
+    <div class="pg-title" style="margin-bottom:16px">📋 Inventário Físico</div>
+
+    <div class="card" style="padding:16px 18px;margin-bottom:14px">
+      <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:1px;margin-bottom:10px">🆕 CRIAR NOVO INVENTÁRIO</div>
+      <input id="inv-nome-novo" placeholder="Nome do inventário (ex: Inventário Geral Jul/2026)..."
+        style="width:100%;padding:9px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;outline:none;box-sizing:border-box;margin-bottom:10px">
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button onclick="invCriarComCatalogo()"
+          style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:9px 16px;font-size:12px;font-weight:700;cursor:pointer">
+          📦 Criar com todos os produtos do catálogo
+        </button>
+        <button onclick="invCriarVazio()"
+          style="background:var(--surface2);color:var(--text3);border:1px solid var(--border);border-radius:8px;padding:9px 16px;font-size:12px;font-weight:700;cursor:pointer">
+          📄 Criar vazio
+        </button>
+      </div>
+    </div>
+
+    <div id="inv-lista-sessoes">
+      ${_invSessoes.length ? _invSessoes.map(s => invSessaoCardHTML(s)).join('') :
+        `<div style="padding:48px;text-align:center;color:var(--text3)"><div style="font-size:32px;margin-bottom:8px">📋</div><div>Nenhum inventário criado ainda.</div></div>`}
+    </div>`;
+}
+
+function invSessaoCardHTML(s) {
+  const pct   = s.total_itens > 0 ? Math.round((s.contados / s.total_itens) * 100) : 0;
+  const barClr= pct === 100 ? '#22c55e' : pct >= 60 ? '#f59e0b' : '#3b82f6';
+  const chip  = s.status === 'concluido'
+    ? `<span style="background:#14532d;color:#22c55e;border-radius:20px;padding:2px 10px;font-size:10px;font-weight:800">✅ Concluído</span>`
+    : `<span style="background:#1c1917;color:#f59e0b;border:1px solid #78350f;border-radius:20px;padding:2px 10px;font-size:10px;font-weight:800">⏳ Em andamento</span>`;
+  const dt = s.criado_em ? new Date(s.criado_em).toLocaleDateString('pt-BR') : '—';
+  return `
+    <div class="card" style="margin-bottom:10px;padding:14px 16px;cursor:pointer" onclick="invAbrirSessao(${s.id})">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px">
+        <div>
+          <div style="font-size:13px;font-weight:800;color:var(--text)">${s.nome||'Inventário'}</div>
+          <div style="font-size:11px;color:var(--text3)">📅 ${dt} · 👤 ${s.criado_por||'—'} · ${s.total_itens} produtos</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          ${chip}
+          <a href="/inventario/sessoes/${s.id}/exportar" onclick="event.stopPropagation()" title="Exportar CSV"
+            style="color:#22c55e;font-size:15px;text-decoration:none">📊</a>
+          <span onclick="event.stopPropagation();invExcluirSessao(${s.id})" title="Excluir"
+            style="color:var(--accent);font-size:14px;cursor:pointer">🗑️</span>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:10px;font-weight:700;color:var(--text3);margin-bottom:4px">
+        <span>Contados: ${s.contados}/${s.total_itens}</span><span>${pct}%</span>
+      </div>
+      <div style="background:var(--surface2);border-radius:4px;height:6px;overflow:hidden">
+        <div style="height:100%;width:${pct}%;background:${barClr};border-radius:4px;transition:width .3s"></div>
+      </div>
+    </div>`;
+}
+
+async function invCriarComCatalogo() {
+  const nome = document.getElementById('inv-nome-novo')?.value?.trim();
+  if (!nome) { emToast('Informe um nome para o inventário.', 'aviso'); return; }
+  const totalR = await apiFetch('/entrada-manual/produtos/total');
+  const total  = totalR?.total || 0;
+  if (!total) { emToast('Catálogo vazio. Importe o barras.xlsx na aba Código de Barras primeiro.', 'erro'); return; }
+  if (!confirm(`Criar inventário com ${total.toLocaleString('pt-BR')} produtos do catálogo?`)) return;
+
+  const wrap = document.getElementById('inv-lista-sessoes');
+  if (wrap) wrap.innerHTML = `<div style="padding:24px;text-align:center;color:var(--text3)">⏳ Criando inventário com ${total.toLocaleString('pt-BR')} produtos...</div>`;
+
+  const r = await apiFetch('/inventario/sessoes', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ nome, carregarCatalogo: true })
+  });
+  if (r?.erro) { emToast('Erro: '+r.erro, 'erro'); invCarregarSessoes(); return; }
+  emToast(`✅ Inventário criado com ${(r.total||0).toLocaleString('pt-BR')} produtos!`, 'sucesso');
+  await invCarregarSessoes();
+  invAbrirSessao(r.id);
+}
+
+async function invCriarVazio() {
+  const nome = document.getElementById('inv-nome-novo')?.value?.trim();
+  if (!nome) { emToast('Informe um nome para o inventário.', 'aviso'); return; }
+  const r = await apiFetch('/inventario/sessoes', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ nome })
+  });
+  if (r?.erro) { emToast('Erro: '+r.erro, 'erro'); return; }
+  emToast('✅ Inventário criado!', 'sucesso');
+  await invCarregarSessoes();
+  invAbrirSessao(r.id);
+}
+
+async function invAbrirSessao(id) {
+  const secSess = document.getElementById('inv-sec-sessoes');
+  const secIt   = document.getElementById('inv-sec-itens');
+  if (secSess) secSess.style.display = 'none';
+  if (secIt)   { secIt.style.display = ''; secIt.innerHTML = `<div style="padding:32px;text-align:center;color:var(--text3)">Carregando inventário...</div>`; }
+  const r = await apiFetch(`/inventario/sessoes/${id}`);
+  if (!r || r.erro) { emToast('Erro ao carregar inventário.', 'erro'); if (secSess) secSess.style.display = ''; return; }
+  _invSessaoAtiva = r;
+  _invItens       = r.itens || [];
+  _invBusca       = '';
+  _invFiltroStatus= 'todos';
+  _invPagina      = 1;
+  invRenderizarSessaoAtiva();
+}
+
+function invVoltarSessoes() {
+  _invSessaoAtiva = null; _invItens = [];
+  document.getElementById('inv-sec-itens')  && (document.getElementById('inv-sec-itens').style.display = 'none');
+  document.getElementById('inv-sec-sessoes')&& (document.getElementById('inv-sec-sessoes').style.display = '');
+  invCarregarSessoes();
+}
+
+function invRenderizarSessaoAtiva() {
+  const wrap = document.getElementById('inv-sec-itens');
+  if (!wrap || !_invSessaoAtiva) return;
+  const s = _invSessaoAtiva;
+  const pct    = s.total_itens > 0 ? Math.round(((s.contados||0) / s.total_itens) * 100) : 0;
+  const barClr = pct === 100 ? '#22c55e' : pct >= 60 ? '#f59e0b' : '#3b82f6';
+  const SL = { ok:'✅ OK', divergente:'⚠️ Divergente', pendente:'⬜ Pendente' };
+  const SC = { ok:'#22c55e', divergente:'#f59e0b', pendente:'#64748b' };
+
+  const itens = _invItens.filter(i => {
+    const mS = _invFiltroStatus === 'todos' || i.status === _invFiltroStatus;
+    const mB = !_invBusca || i.codigo.toLowerCase().includes(_invBusca.toLowerCase()) || (i.nome||'').toLowerCase().includes(_invBusca.toLowerCase());
+    return mS && mB;
+  });
+  const total = itens.length;
+  const start = (_invPagina - 1) * INV_PAGE_SIZE;
+  const page  = itens.slice(start, start + INV_PAGE_SIZE);
+  const stats = { ok:0, divergente:0, pendente:0 };
+  _invItens.forEach(i => { if (stats[i.status]!==undefined) stats[i.status]++; });
+
+  wrap.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+      <button onclick="invVoltarSessoes()"
+        style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text3);cursor:pointer;font-size:12px;font-weight:700">← Voltar</button>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:14px;font-weight:900;color:var(--text)">${s.nome||'Inventário'}</div>
+        <div style="font-size:11px;color:var(--text3)">👤 ${s.criado_por||'—'} · ${_invItens.length} produtos</div>
+      </div>
+      <div style="display:flex;gap:6px">
+        ${s.status !== 'concluido' ? `<button onclick="invConcluir()"
+          style="background:#16a34a;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:11px;font-weight:700;cursor:pointer">✅ Concluir</button>` : ''}
+        <a href="/inventario/sessoes/${s.id}/exportar"
+          style="background:#1e3a5f;color:#38bdf8;border:none;border-radius:8px;padding:7px 14px;font-size:11px;font-weight:700;cursor:pointer;text-decoration:none;display:inline-block">📊 CSV</a>
+      </div>
+    </div>
+
+    <div class="card" style="padding:12px 16px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;font-size:10px;font-weight:700;color:var(--text3);margin-bottom:6px">
+        <span>CONTAGEM</span><span>${s.contados||0}/${s.total_itens} (${pct}%)</span>
+      </div>
+      <div style="background:var(--surface2);border-radius:6px;height:8px;overflow:hidden;margin-bottom:10px">
+        <div style="height:100%;width:${pct}%;background:${barClr};border-radius:6px;transition:width .4s"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
+        ${[['⬜','PENDENTES',stats.pendente,'#64748b'],['✅','OK',stats.ok,'#22c55e'],['⚠️','DIVERGENTES',stats.divergente,'#f59e0b']].map(([ic,lb,n,c])=>`
+        <div style="background:var(--surface2);border-radius:8px;padding:8px;text-align:center;border:1px solid var(--border)">
+          <div style="font-size:18px;font-weight:900;color:${c}">${n}</div>
+          <div style="font-size:8px;color:var(--text3);font-weight:700;letter-spacing:.5px">${ic} ${lb}</div>
+        </div>`).join('')}
+      </div>
+    </div>
+
+    <div class="card" style="padding:10px 14px;margin-bottom:10px">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <input placeholder="🔍 Código ou nome..." oninput="_invBusca=this.value;_invPagina=1;invRenderizarSessaoAtiva()"
+          style="flex:1;min-width:160px;padding:7px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;outline:none">
+        ${['todos','pendente','ok','divergente'].map(st=>`
+        <button onclick="_invFiltroStatus='${st}';_invPagina=1;invRenderizarSessaoAtiva();this.closest('.card').querySelectorAll('button').forEach(b=>{b.style.background='var(--surface2)';b.style.color='var(--text3)'});this.style.background='var(--accent)';this.style.color='#fff'"
+          style="padding:6px 12px;border-radius:20px;border:1px solid var(--border);background:${st==='todos'?'var(--accent)':'var(--surface2)'};color:${st==='todos'?'#fff':'var(--text3)'};font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap">
+          ${st==='todos'?'Todos':SL[st]||st}
+        </button>`).join('')}
+      </div>
+    </div>
+
+    <div class="tabela-wrap">
+      <table>
+        <thead><tr>
+          <th>CÓDIGO</th><th>NOME</th><th>LOCALIZAÇÃO</th>
+          <th style="text-align:center">SALDO SIS.</th>
+          <th style="text-align:center">CONTADO</th>
+          <th style="text-align:center">DIF.</th>
+          <th style="text-align:center">STATUS</th>
+          <th style="text-align:center">SALVAR</th>
+        </tr></thead>
+        <tbody>
+          ${page.length ? page.map(it => invRowHTML(it, SL, SC)).join('') :
+            `<tr><td colspan="8" style="padding:32px;text-align:center;color:var(--text3)">Nenhum item encontrado.</td></tr>`}
+        </tbody>
+      </table>
+    </div>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;font-size:11px;color:var(--text3);padding:0 2px">
+      <span>${Math.min(start+1,total)}–${Math.min(start+page.length,total)} de ${total}</span>
+      <div style="display:flex;gap:4px">
+        <button onclick="_invPagina=Math.max(1,_invPagina-1);invRenderizarSessaoAtiva()" style="padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text3);cursor:pointer;font-size:11px">←</button>
+        <button onclick="_invPagina++;invRenderizarSessaoAtiva()" style="padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text3);cursor:pointer;font-size:11px">→</button>
+      </div>
+    </div>`;
+}
+
+function invRowHTML(it, SL, SC) {
+  const clr = SC[it.status] || '#64748b';
+  const dif = it.qtd_contada != null ? (parseFloat(it.qtd_contada) - parseFloat(it.saldo_sistema)) : null;
+  const difStr = dif === null ? '—' : (dif > 0 ? `+${dif}` : String(Math.round(dif*100)/100));
+  const difClr = dif === null ? 'var(--text3)' : dif === 0 ? '#22c55e' : dif > 0 ? '#f97316' : '#ef4444';
+  return `
+  <tr id="inv-tr-${it.id}" style="border-bottom:1px solid var(--border)">
+    <td style="padding:8px 10px;font-family:monospace;font-size:11px;font-weight:800;color:#f97316">${it.codigo}</td>
+    <td style="padding:8px 10px;font-size:11px;color:var(--text);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${it.nome||''}">${it.nome||'—'}</td>
+    <td style="padding:8px 10px;font-family:monospace;font-size:11px;color:var(--text3)">${it.localizacao||'—'}</td>
+    <td style="padding:8px 10px;text-align:center;font-weight:700">${it.saldo_sistema}</td>
+    <td style="padding:8px 10px;text-align:center">
+      <input id="inv-qty-${it.id}" type="number" value="${it.qtd_contada??''}" min="0" placeholder="—"
+        onkeydown="if(event.key==='Enter'){invSalvarContagem(${it.id})}"
+        style="width:70px;text-align:center;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:4px;color:var(--text);font-size:13px;font-weight:700;outline:none">
+    </td>
+    <td style="padding:8px 10px;text-align:center;font-weight:800;color:${difClr}">${difStr}</td>
+    <td style="padding:8px 10px;text-align:center">
+      <span style="background:${clr}22;color:${clr};border-radius:20px;padding:3px 8px;font-size:10px;font-weight:800;white-space:nowrap">${SL[it.status]||it.status}</span>
+    </td>
+    <td style="padding:8px 10px;text-align:center">
+      <button onclick="invSalvarContagem(${it.id})"
+        style="background:#1e3a5f;color:#38bdf8;border:none;border-radius:6px;padding:5px 10px;font-size:10px;font-weight:700;cursor:pointer">💾 Salvar</button>
+    </td>
+  </tr>`;
+}
+
+async function invSalvarContagem(id) {
+  const inp = document.getElementById(`inv-qty-${id}`);
+  const qtd = inp ? parseFloat(inp.value) : NaN;
+  const r = await apiFetch(`/inventario/itens/${id}`, {
+    method:'PUT', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ qtd_contada: isNaN(qtd) ? null : qtd })
+  });
+  if (r?.erro) { emToast('Erro: '+r.erro, 'erro'); return; }
+  const it = _invItens.find(i => i.id === id);
+  if (it) { it.qtd_contada = isNaN(qtd) ? null : qtd; it.status = r.status; }
+  if (_invSessaoAtiva && r.contados !== undefined) _invSessaoAtiva.contados = r.contados;
+  emToast(`✅ ${it?.codigo||'Item'} contado!`, 'sucesso');
+  invRenderizarSessaoAtiva();
+}
+
+async function invConcluir() {
+  if (!_invSessaoAtiva) return;
+  if (!confirm('Concluir o inventário? Ele ficará somente leitura.')) return;
+  const r = await apiFetch(`/inventario/sessoes/${_invSessaoAtiva.id}/concluir`, { method:'PUT' });
+  if (r?.erro) { emToast('Erro: '+r.erro, 'erro'); return; }
+  _invSessaoAtiva.status = 'concluido';
+  emToast('✅ Inventário concluído!', 'sucesso');
+  invRenderizarSessaoAtiva();
+}
+
+async function invExcluirSessao(id) {
+  wmsConfirm('Excluir este inventário permanentemente?', async () => {
+    const r = await apiFetch(`/inventario/sessoes/${id}`, { method:'DELETE' });
+    if (r?.erro) { emToast('Erro: '+r.erro, 'erro'); return; }
+    emToast('Inventário excluído.', 'sucesso');
+    invCarregarSessoes();
+  });
+}
 
 // ── irPara integração ─────────────────────────────────────────────────────
 const _emOrigIrPara = typeof irPara === 'function' ? irPara : null;
