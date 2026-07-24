@@ -1142,22 +1142,23 @@ async function invCriarComCatalogo() {
   const msg = filtroRua
     ? `Criar inventário somente com produtos da rua "${filtroRua}"?`
     : `Criar inventário com ${total.toLocaleString('pt-BR')} produtos do catálogo?`;
-  if (!confirm(msg)) return;
 
-  const wrap = document.getElementById('inv-lista-sessoes');
-  if (wrap) wrap.innerHTML = `<div style="padding:24px;text-align:center;color:var(--text3)">⏳ Criando inventário...</div>`;
+  wmsConfirm(msg, async () => {
+    const wrap = document.getElementById('inv-lista-sessoes');
+    if (wrap) wrap.innerHTML = `<div style="padding:24px;text-align:center;color:var(--text3)">⏳ Criando inventário...</div>`;
 
-  const body = { nome, carregarCatalogo: true };
-  if (filtroRua) body.filtroRua = filtroRua;
+    const body = { nome, carregarCatalogo: true };
+    if (filtroRua) body.filtroRua = filtroRua;
 
-  const r = await apiFetch('/inventario/sessoes', {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify(body)
+    const r = await apiFetch('/inventario/sessoes', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(body)
+    });
+    if (r?.erro) { emToast('Erro: '+r.erro, 'erro'); invCarregarSessoes(); return; }
+    emToast(`✅ Inventário criado com ${(r.total||0).toLocaleString('pt-BR')} produtos!`, 'sucesso');
+    await invCarregarSessoes();
+    invAbrirSessao(r.id);
   });
-  if (r?.erro) { emToast('Erro: '+r.erro, 'erro'); invCarregarSessoes(); return; }
-  emToast(`✅ Inventário criado com ${(r.total||0).toLocaleString('pt-BR')} produtos!`, 'sucesso');
-  await invCarregarSessoes();
-  invAbrirSessao(r.id);
 }
 
 async function invCarregarRuasCatalogo() {
