@@ -348,6 +348,22 @@ router.get('/entrada-manual/produtos/buscar', requerAuth, async (req, res) => {
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
+// ── GET /entrada-manual/produtos/ruas — Corredores únicos do catálogo ────
+router.get('/entrada-manual/produtos/ruas', requerAuth, async (req, res) => {
+  try {
+    const rows = await db.all(
+      `SELECT regexp_replace(split_part(localizacao,'/',1), '[0-9].*$', '') AS rua,
+              COUNT(*)::int AS total
+       FROM produtos
+       WHERE localizacao IS NOT NULL AND localizacao != ''
+       GROUP BY rua
+       HAVING regexp_replace(split_part(localizacao,'/',1),'[0-9].*$','') != ''
+       ORDER BY rua`
+    );
+    res.json(rows);
+  } catch(e) { res.status(500).json({ erro: e.message }); }
+});
+
 // ── GET /entrada-manual/produtos/total — Quantidade total no catálogo ────
 router.get('/entrada-manual/produtos/total', requerAuth, async (req, res) => {
   try {
@@ -372,7 +388,7 @@ router.get('/inventario/sessoes', requerAuth, async (req, res) => {
 
 // ── POST /inventario/sessoes — Criar sessão (com itens opcionais) ─────────
 router.post('/inventario/sessoes', requerAuth, async (req, res) => {
-  const { nome, itens, carregarCatalogo } = req.body;
+  const { nome, itens, carregarCatalogo, filtroRua } = req.body;
   const criado_por = req.session?.usuario?.nome || '';
   const client = await pool.connect();
   try {
@@ -380,9 +396,14 @@ router.post('/inventario/sessoes', requerAuth, async (req, res) => {
 
     let produtos = Array.isArray(itens) ? itens : [];
     if (carregarCatalogo) {
-      const { rows } = await client.query(
-        `SELECT codigo, nome, codigo_barras, localizacao, saldo AS saldo_sistema FROM produtos ORDER BY localizacao, codigo`
-      );
+      let q = `SELECT codigo, nome, codigo_barras, localizacao, saldo AS saldo_sistema FROM produtos`;
+      const params = [];
+      if (filtroRua) {
+        q += ` WHERE localizacao ~ ($1 || '[0-9]')`;
+        params.push('^' + filtroRua.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+      }
+      q += ` ORDER BY localizacao, codigo`;
+      const { rows } = await client.query(q, params);
       produtos = rows;
     }
 

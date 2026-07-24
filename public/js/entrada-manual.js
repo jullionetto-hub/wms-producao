@@ -1060,6 +1060,7 @@ async function invCarregarSessoes() {
   if (!sessoes || sessoes.erro) { wrap.innerHTML = `<div style="padding:32px;text-align:center;color:var(--red)">Erro ao carregar inventários.</div>`; return; }
   _invSessoes = sessoes;
   invRenderizarSessoes();
+  invCarregarRuasCatalogo();
 }
 
 function invRenderizarSessoes() {
@@ -1072,10 +1073,18 @@ function invRenderizarSessoes() {
       <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:1px;margin-bottom:10px">🆕 CRIAR NOVO INVENTÁRIO</div>
       <input id="inv-nome-novo" placeholder="Nome do inventário (ex: Inventário Geral Jul/2026)..."
         style="width:100%;padding:9px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;outline:none;box-sizing:border-box;margin-bottom:10px">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+        <div style="flex:1;min-width:160px">
+          <div style="font-size:9px;font-weight:700;color:var(--text3);letter-spacing:.5px;margin-bottom:4px">FILTRAR POR RUA (opcional)</div>
+          <select id="inv-rua-criar" style="width:100%;padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;outline:none">
+            <option value="">📦 Todos os produtos</option>
+          </select>
+        </div>
+      </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button onclick="invCriarComCatalogo()"
           style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:9px 16px;font-size:12px;font-weight:700;cursor:pointer">
-          📦 Criar com todos os produtos do catálogo
+          📦 Criar com catálogo
         </button>
         <button onclick="invCriarVazio()"
           style="background:var(--surface2);color:var(--text3);border:1px solid var(--border);border-radius:8px;padding:9px 16px;font-size:12px;font-weight:700;cursor:pointer">
@@ -1122,24 +1131,47 @@ function invSessaoCardHTML(s) {
 }
 
 async function invCriarComCatalogo() {
-  const nome = document.getElementById('inv-nome-novo')?.value?.trim();
+  const nome     = document.getElementById('inv-nome-novo')?.value?.trim();
   if (!nome) { emToast('Informe um nome para o inventário.', 'aviso'); return; }
+  const filtroRua = document.getElementById('inv-rua-criar')?.value || '';
+
   const totalR = await apiFetch('/entrada-manual/produtos/total');
   const total  = totalR?.total || 0;
   if (!total) { emToast('Catálogo vazio. Importe o barras.xlsx na aba Código de Barras primeiro.', 'erro'); return; }
-  if (!confirm(`Criar inventário com ${total.toLocaleString('pt-BR')} produtos do catálogo?`)) return;
+
+  const msg = filtroRua
+    ? `Criar inventário somente com produtos da rua "${filtroRua}"?`
+    : `Criar inventário com ${total.toLocaleString('pt-BR')} produtos do catálogo?`;
+  if (!confirm(msg)) return;
 
   const wrap = document.getElementById('inv-lista-sessoes');
-  if (wrap) wrap.innerHTML = `<div style="padding:24px;text-align:center;color:var(--text3)">⏳ Criando inventário com ${total.toLocaleString('pt-BR')} produtos...</div>`;
+  if (wrap) wrap.innerHTML = `<div style="padding:24px;text-align:center;color:var(--text3)">⏳ Criando inventário...</div>`;
+
+  const body = { nome, carregarCatalogo: true };
+  if (filtroRua) body.filtroRua = filtroRua;
 
   const r = await apiFetch('/inventario/sessoes', {
     method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({ nome, carregarCatalogo: true })
+    body: JSON.stringify(body)
   });
   if (r?.erro) { emToast('Erro: '+r.erro, 'erro'); invCarregarSessoes(); return; }
   emToast(`✅ Inventário criado com ${(r.total||0).toLocaleString('pt-BR')} produtos!`, 'sucesso');
   await invCarregarSessoes();
   invAbrirSessao(r.id);
+}
+
+async function invCarregarRuasCatalogo() {
+  const sel = document.getElementById('inv-rua-criar');
+  if (!sel) return;
+  const rows = await apiFetch('/entrada-manual/produtos/ruas');
+  if (!rows || rows.erro || !rows.length) return;
+  sel.innerHTML = '<option value="">📦 Todos os produtos</option>';
+  rows.forEach(r => {
+    const opt = document.createElement('option');
+    opt.value = r.rua;
+    opt.textContent = `${r.rua}  (${Number(r.total).toLocaleString('pt-BR')} itens)`;
+    sel.appendChild(opt);
+  });
 }
 
 async function invCriarVazio() {
@@ -1196,8 +1228,16 @@ function invRenderizarSessaoAtiva() {
   const total = itens.length;
   const start = (_invPagina - 1) * INV_PAGE_SIZE;
   const page  = itens.slice(start, start + INV_PAGE_SIZE);
-  const stats = { ok:0, divergente:0, pendente:0 };
-  _invItens.forEach(i => { if (stats[i.status]!==undefined) stats[i.status]++; });
+  const stats = { ok:0, divergente:0, pendente:0, aMais:0, aMenos:0 };
+  _invItens.forEach(i => {
+    if (stats[i.status]!==undefined) stats[i.status]++;
+    if (i.qtd_contada != null) {
+      const dif = parseFloat(i.qtd_contada) - parseFloat(i.saldo_sistema);
+      if (dif > 0) stats.aMais++;
+      else if (dif < 0) stats.aMenos++;
+    }
+  });
+  const acuracia = s.total_itens > 0 ? Math.round((stats.ok / s.total_itens) * 100) : 0;
 
   wrap.innerHTML = `
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
@@ -1222,11 +1262,11 @@ function invRenderizarSessaoAtiva() {
       <div style="background:var(--surface2);border-radius:6px;height:8px;overflow:hidden;margin-bottom:10px">
         <div style="height:100%;width:${pct}%;background:${barClr};border-radius:6px;transition:width .4s"></div>
       </div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
-        ${[['⬜','PENDENTES',stats.pendente,'#64748b'],['✅','OK',stats.ok,'#22c55e'],['⚠️','DIVERGENTES',stats.divergente,'#f59e0b']].map(([ic,lb,n,c])=>`
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px">
+        ${[['⬜','PENDENTES',stats.pendente,'#64748b'],['✅','OK',stats.ok,'#22c55e'],['⬆️','A MAIS',stats.aMais,'#f97316'],['⬇️','A MENOS',stats.aMenos,'#ef4444'],[`${acuracia}%`,'ACURÁCIA','','#38bdf8']].map(([ic,lb,n,c])=>`
         <div style="background:var(--surface2);border-radius:8px;padding:8px;text-align:center;border:1px solid var(--border)">
-          <div style="font-size:18px;font-weight:900;color:${c}">${n}</div>
-          <div style="font-size:8px;color:var(--text3);font-weight:700;letter-spacing:.5px">${ic} ${lb}</div>
+          <div style="font-size:${lb==='ACURÁCIA'?'16px':'18px'};font-weight:900;color:${c}">${lb==='ACURÁCIA'?ic:n}</div>
+          <div style="font-size:8px;color:var(--text3);font-weight:700;letter-spacing:.5px">${lb==='ACURÁCIA'?'':''+ic+' '}${lb}</div>
         </div>`).join('')}
       </div>
     </div>
@@ -1236,12 +1276,17 @@ function invRenderizarSessaoAtiva() {
         <input id="inv-busca-input" placeholder="🔍 Código ou nome..." value="${_invBusca}"
           oninput="_invBusca=this.value;_invPagina=1;invRenderizarSessaoAtiva()"
           style="flex:1;min-width:160px;padding:7px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;outline:none">
-        <input id="inv-rua-input" placeholder="📍 Rua/Setor (prefixo)..." value="${_invFiltroRua}"
-          oninput="_invFiltroRua=this.value;_invPagina=1;invRenderizarSessaoAtiva()"
-          style="width:180px;padding:7px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;outline:none">
+        <select id="inv-rua-select"
+          onchange="_invFiltroRua=this.value;_invPagina=1;invRenderizarSessaoAtiva()"
+          style="padding:7px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;outline:none;min-width:120px">
+          <option value="">📍 Todas as ruas</option>
+          ${[...new Set(_invItens.map(i=>{const m=(i.localizacao||'').split('/')[0].match(/^([A-Za-z]+)/);return m?m[1].toUpperCase():'';}).filter(Boolean))].sort().map(r=>`<option value="${r}" ${_invFiltroRua===r?'selected':''}>${r}</option>`).join('')}
+        </select>
+        <button onclick="invAbrirColetor()"
+          style="padding:7px 12px;border-radius:8px;border:none;background:#7c3aed;color:#fff;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">📷 Coletor</button>
         <button onclick="invSincronizarEnderecos()"
           title="Atualiza endereços a partir do catálogo importado"
-          style="padding:7px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text3);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">🔄 Sync Endereços</button>
+          style="padding:7px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text3);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">🔄 Sync</button>
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         ${['todos','pendente','ok','divergente'].map(st=>`
@@ -1249,7 +1294,6 @@ function invRenderizarSessaoAtiva() {
           style="padding:6px 12px;border-radius:20px;border:1px solid var(--border);background:${st==='todos'?'var(--accent)':'var(--surface2)'};color:${st==='todos'?'#fff':'var(--text3)'};font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap">
           ${st==='todos'?'Todos':SL[st]||st}
         </button>`).join('')}
-        ${_invFiltroRua ? `<span style="background:#1e3a5f;color:#38bdf8;border-radius:20px;padding:4px 10px;font-size:10px;font-weight:700">📍 ${_invFiltroRua} <span onclick="_invFiltroRua='';_invPagina=1;invRenderizarSessaoAtiva()" style="cursor:pointer;margin-left:4px">✕</span></span>` : ''}
       </div>
     </div>
 
@@ -1287,7 +1331,7 @@ function invRowHTML(it, SL, SC) {
   return `
   <tr id="inv-tr-${it.id}" style="border-bottom:1px solid var(--border)">
     <td style="padding:8px 10px;font-family:monospace;font-size:11px;font-weight:800;color:#f97316">${it.codigo}</td>
-    <td style="padding:8px 10px;font-size:11px;color:var(--text);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${it.nome||''}">${it.nome||'—'}</td>
+    <td style="padding:8px 10px;font-size:11px;color:var(--text);max-width:280px">${it.nome||'—'}</td>
     <td style="padding:8px 10px;font-family:monospace;font-size:11px;color:var(--text3)">${it.localizacao||'—'}</td>
     <td style="padding:8px 10px;text-align:center;font-weight:700">${it.saldo_sistema}</td>
     <td style="padding:8px 10px;text-align:center">
@@ -1348,6 +1392,94 @@ async function invExcluirSessao(id) {
     emToast('Inventário excluído.', 'sucesso');
     invCarregarSessoes();
   });
+}
+
+// ── Coletor de Dados ─────────────────────────────────────────────────────
+let _coletorIdx = -1;
+
+function invAbrirColetor() {
+  if (!_invSessaoAtiva) return;
+  const pendentes = _invItens.filter(i => i.status === 'pendente');
+  const modal = document.createElement('div');
+  modal.id = 'inv-coletor-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:24px 16px;overflow-y:auto';
+  modal.innerHTML = `
+    <div style="width:100%;max-width:480px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+        <div style="font-size:16px;font-weight:900;color:#fff">📷 Coletor de Dados</div>
+        <button onclick="invColetorCancelar()" style="background:#334155;border:none;border-radius:8px;padding:7px 14px;color:#fff;font-size:12px;font-weight:700;cursor:pointer">✕ Fechar</button>
+      </div>
+      <div style="background:#1e293b;border-radius:12px;padding:16px;margin-bottom:14px">
+        <div style="font-size:10px;color:#94a3b8;font-weight:700;letter-spacing:.5px;margin-bottom:6px">BIPAGEM / CÓDIGO</div>
+        <input id="coletor-scan-input" type="text" placeholder="Bipe o código de barras ou digite o código..." autofocus
+          style="width:100%;padding:12px 14px;background:#0f172a;border:2px solid #7c3aed;border-radius:8px;color:#fff;font-size:15px;outline:none;box-sizing:border-box"
+          onkeydown="if(event.key==='Enter'){invColetorBuscar()}">
+        <button onclick="invColetorBuscar()" style="width:100%;margin-top:8px;padding:10px;background:#7c3aed;border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:pointer">🔍 Buscar</button>
+      </div>
+      <div id="coletor-item-card" style="display:none;background:#1e293b;border-radius:12px;padding:16px;margin-bottom:14px">
+        <div id="coletor-item-info" style="margin-bottom:12px"></div>
+        <div style="font-size:10px;color:#94a3b8;font-weight:700;letter-spacing:.5px;margin-bottom:6px">QUANTIDADE CONTADA</div>
+        <input id="coletor-qty-input" type="number" min="0" placeholder="0"
+          style="width:100%;padding:12px 14px;background:#0f172a;border:2px solid #22c55e;border-radius:8px;color:#fff;font-size:20px;font-weight:900;text-align:center;outline:none;box-sizing:border-box"
+          onkeydown="if(event.key==='Enter'){invColetorSalvar()}">
+        <button onclick="invColetorSalvar()" style="width:100%;margin-top:8px;padding:10px;background:#16a34a;border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:pointer">💾 Salvar e Próximo (Enter)</button>
+      </div>
+      <div id="coletor-msg" style="text-align:center;padding:10px;font-size:13px;color:#94a3b8">
+        ${pendentes.length} itens pendentes. Bipe para iniciar.
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  setTimeout(() => document.getElementById('coletor-scan-input')?.focus(), 100);
+}
+
+function invColetorBuscar() {
+  const inp = document.getElementById('coletor-scan-input');
+  const q = (inp?.value || '').trim().toUpperCase();
+  if (!q) return;
+  const it = _invItens.find(i => i.codigo.toUpperCase() === q || (i.codigo_barras||'').toUpperCase() === q);
+  const msg = document.getElementById('coletor-msg');
+  const card = document.getElementById('coletor-item-card');
+  if (!it) {
+    if (msg) { msg.style.color = '#ef4444'; msg.textContent = `❌ Código "${q}" não encontrado no inventário.`; }
+    if (card) card.style.display = 'none';
+    return;
+  }
+  _coletorIdx = it.id;
+  if (card) card.style.display = '';
+  const info = document.getElementById('coletor-item-info');
+  if (info) info.innerHTML = `
+    <div style="font-size:13px;font-weight:900;color:#f97316">${it.codigo}</div>
+    <div style="font-size:12px;color:#e2e8f0;margin:4px 0">${it.nome||'—'}</div>
+    <div style="font-size:11px;color:#94a3b8">📍 ${it.localizacao||'—'} &nbsp;·&nbsp; Saldo: <strong style="color:#38bdf8">${it.saldo_sistema}</strong></div>
+    <div style="font-size:11px;color:${it.status==='ok'?'#22c55e':it.status==='divergente'?'#f59e0b':'#64748b'}">${it.status}</div>`;
+  const qty = document.getElementById('coletor-qty-input');
+  if (qty) { qty.value = it.qtd_contada ?? ''; qty.focus(); qty.select(); }
+  if (msg) { msg.style.color = '#22c55e'; msg.textContent = `Encontrado: ${it.codigo}`; }
+  if (inp) inp.value = '';
+}
+
+async function invColetorSalvar() {
+  if (_coletorIdx < 0) return;
+  const qty = parseFloat(document.getElementById('coletor-qty-input')?.value);
+  const r = await apiFetch(`/inventario/itens/${_coletorIdx}`, {
+    method:'PUT', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ qtd_contada: isNaN(qty) ? null : qty })
+  });
+  if (r?.erro) { emToast('Erro: '+r.erro, 'erro'); return; }
+  const it = _invItens.find(i => i.id === _coletorIdx);
+  if (it) { it.qtd_contada = isNaN(qty) ? null : qty; it.status = r.status; }
+  if (_invSessaoAtiva && r.contados !== undefined) _invSessaoAtiva.contados = r.contados;
+  const msg = document.getElementById('coletor-msg');
+  if (msg) { msg.style.color='#22c55e'; msg.textContent = `✅ ${it?.codigo||''} salvo! Bipe o próximo.`; }
+  const card = document.getElementById('coletor-item-card');
+  if (card) card.style.display = 'none';
+  _coletorIdx = -1;
+  document.getElementById('coletor-scan-input')?.focus();
+}
+
+function invColetorCancelar() {
+  document.getElementById('inv-coletor-modal')?.remove();
+  invRenderizarSessaoAtiva();
 }
 
 // ── irPara integração ─────────────────────────────────────────────────────
