@@ -720,8 +720,8 @@ function renderizarPagEntradaManual(containerId) {
         style="padding:8px 16px;border-radius:20px;border:1px solid var(--border);background:var(--accent);color:#fff;font-size:11px;font-weight:700;cursor:pointer">📥 Entrada de Estoque</button>
       <button id="em-tab-btn-barcode" onclick="emMostrarAba('barcode')"
         style="padding:8px 16px;border-radius:20px;border:1px solid var(--border);background:var(--surface2);color:var(--text3);font-size:11px;font-weight:700;cursor:pointer">🔍 Código de Barras</button>
-      ${isMob ? '' : `<button id="em-tab-btn-inventario" onclick="emMostrarAba('inventario')"
-        style="padding:8px 16px;border-radius:20px;border:1px solid var(--border);background:var(--surface2);color:var(--text3);font-size:11px;font-weight:700;cursor:pointer">📋 Inventário</button>`}
+      <button id="em-tab-btn-inventario" onclick="emMostrarAba('inventario')"
+        style="padding:8px 16px;border-radius:20px;border:1px solid var(--border);background:var(--surface2);color:var(--text3);font-size:11px;font-weight:700;cursor:pointer">📋 Inventário</button>
     </div>
 
     <div id="em-aba-estoque">
@@ -863,11 +863,11 @@ function renderizarPagEntradaManual(containerId) {
       </div>
     </div>
 
-    ${isMob ? '' : `<!-- ABA: INVENTÁRIO (desktop) -->
+    <!-- ABA: INVENTÁRIO -->
     <div id="em-aba-inventario" style="display:none">
       <div id="inv-sec-sessoes"></div>
       <div id="inv-sec-itens" style="display:none"></div>
-    </div>`}
+    </div>
 
   </div>`;
 
@@ -1281,7 +1281,7 @@ function invRenderizarSessaoAtiva() {
           onchange="_invFiltroRua=this.value;_invPagina=1;invRenderizarSessaoAtiva()"
           style="padding:7px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;outline:none;min-width:120px">
           <option value="">📍 Todas as ruas</option>
-          ${[...new Set(_invItens.map(i=>{const m=(i.localizacao||'').split('/')[0].match(/^([A-Za-z]+)/);return m?m[1].toUpperCase():'';}).filter(Boolean))].sort().map(r=>`<option value="${r}" ${_invFiltroRua===r?'selected':''}>${r}</option>`).join('')}
+          ${[...new Set(_invItens.map(i=>invExtrairRua(i.localizacao)).filter(Boolean))].sort().map(r=>`<option value="${r}" ${_invFiltroRua===r?'selected':''}>${r}</option>`).join('')}
         </select>
         ${s.status !== 'concluido' ? `<button onclick="invAbrirColetor()"
           style="padding:7px 12px;border-radius:8px;border:none;background:#7c3aed;color:#fff;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">📷 Coletor</button>` : ''}
@@ -1401,6 +1401,7 @@ async function invExcluirSessao(id) {
 }
 
 // ── Coletor de Dados ─────────────────────────────────────────────────────
+const invExtrairRua = loc => { if (!loc) return ''; const m = loc.split('/')[0].match(/^([A-Za-z]+)/); return m ? m[1].toUpperCase() : ''; };
 let _coletorIdx = -1;
 
 function invAbrirColetor() {
@@ -1452,15 +1453,31 @@ function invColetorBuscar() {
   }
   _coletorIdx = it.id;
   if (card) card.style.display = '';
+
+  const ruaItem   = invExtrairRua(it.localizacao);
+  const ruaFiltro = _invFiltroRua ? _invFiltroRua.toUpperCase() : '';
+  const colmeiaErrada = ruaFiltro && ruaItem && ruaItem !== ruaFiltro;
+
   const info = document.getElementById('coletor-item-info');
   if (info) info.innerHTML = `
+    ${colmeiaErrada ? `
+    <div style="background:#7f1d1d;border:2px solid #ef4444;border-radius:10px;padding:12px;margin-bottom:10px;text-align:center">
+      <div style="font-size:20px;margin-bottom:4px">⚠️</div>
+      <div style="font-size:13px;font-weight:900;color:#fca5a5">ITEM NA COLMEIA ERRADA!</div>
+      <div style="font-size:11px;color:#fca5a5;margin-top:4px">
+        Este item fica na rua <strong>${ruaItem}</strong>, mas você está contando a rua <strong>${ruaFiltro}</strong>.
+      </div>
+    </div>` : ''}
     <div style="font-size:13px;font-weight:900;color:#f97316">${it.codigo}</div>
     <div style="font-size:12px;color:#e2e8f0;margin:4px 0">${it.nome||'—'}</div>
-    <div style="font-size:11px;color:#94a3b8">📍 ${it.localizacao||'—'} &nbsp;·&nbsp; Saldo: <strong style="color:#38bdf8">${it.saldo_sistema}</strong></div>
-    <div style="font-size:11px;color:${it.status==='ok'?'#22c55e':it.status==='divergente'?'#f59e0b':'#64748b'}">${it.status}</div>`;
+    <div style="font-size:11px;color:${colmeiaErrada?'#ef4444':'#94a3b8'}">
+      📍 <strong style="color:${colmeiaErrada?'#fca5a5':'#38bdf8'}">${it.localizacao||'—'}</strong>
+      &nbsp;·&nbsp; Saldo: <strong style="color:#38bdf8">${it.saldo_sistema}</strong>
+    </div>`;
+
   const qty = document.getElementById('coletor-qty-input');
   if (qty) { qty.value = it.qtd_contada ?? ''; qty.focus(); qty.select(); }
-  if (msg) { msg.style.color = '#22c55e'; msg.textContent = `Encontrado: ${it.codigo}`; }
+  if (msg) { msg.style.color = colmeiaErrada ? '#ef4444' : '#22c55e'; msg.textContent = colmeiaErrada ? `⚠️ Atenção: rua ${ruaItem} (esperado: ${ruaFiltro})` : `Encontrado: ${it.codigo}`; }
   if (inp) inp.value = '';
 }
 
