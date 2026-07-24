@@ -1283,8 +1283,8 @@ function invRenderizarSessaoAtiva() {
           <option value="">📍 Todas as ruas</option>
           ${[...new Set(_invItens.map(i=>{const m=(i.localizacao||'').split('/')[0].match(/^([A-Za-z]+)/);return m?m[1].toUpperCase():'';}).filter(Boolean))].sort().map(r=>`<option value="${r}" ${_invFiltroRua===r?'selected':''}>${r}</option>`).join('')}
         </select>
-        <button onclick="invAbrirColetor()"
-          style="padding:7px 12px;border-radius:8px;border:none;background:#7c3aed;color:#fff;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">📷 Coletor</button>
+        ${s.status !== 'concluido' ? `<button onclick="invAbrirColetor()"
+          style="padding:7px 12px;border-radius:8px;border:none;background:#7c3aed;color:#fff;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">📷 Coletor</button>` : ''}
         <button onclick="invSincronizarEnderecos()"
           title="Atualiza endereços a partir do catálogo importado"
           style="padding:7px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text3);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">🔄 Sync</button>
@@ -1325,6 +1325,7 @@ function invRenderizarSessaoAtiva() {
 }
 
 function invRowHTML(it, SL, SC) {
+  const concluido = _invSessaoAtiva?.status === 'concluido';
   const clr = SC[it.status] || '#64748b';
   const dif = it.qtd_contada != null ? (parseFloat(it.qtd_contada) - parseFloat(it.saldo_sistema)) : null;
   const difStr = dif === null ? '—' : (dif > 0 ? `+${dif}` : String(Math.round(dif*100)/100));
@@ -1336,22 +1337,25 @@ function invRowHTML(it, SL, SC) {
     <td style="padding:8px 10px;font-family:monospace;font-size:11px;color:var(--text3)">${it.localizacao||'—'}</td>
     <td style="padding:8px 10px;text-align:center;font-weight:700">${it.saldo_sistema}</td>
     <td style="padding:8px 10px;text-align:center">
-      <input id="inv-qty-${it.id}" type="number" value="${it.qtd_contada??''}" min="0" placeholder="—"
-        onkeydown="if(event.key==='Enter'){invSalvarContagem(${it.id})}"
-        style="width:70px;text-align:center;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:4px;color:var(--text);font-size:13px;font-weight:700;outline:none">
+      ${concluido
+        ? `<span style="font-size:13px;font-weight:700;color:var(--text)">${it.qtd_contada??'—'}</span>`
+        : `<input id="inv-qty-${it.id}" type="number" value="${it.qtd_contada??''}" min="0" placeholder="—"
+            onkeydown="if(event.key==='Enter'){invSalvarContagem(${it.id})}"
+            style="width:70px;text-align:center;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:4px;color:var(--text);font-size:13px;font-weight:700;outline:none">`}
     </td>
     <td style="padding:8px 10px;text-align:center;font-weight:800;color:${difClr}">${difStr}</td>
     <td style="padding:8px 10px;text-align:center">
       <span style="background:${clr}22;color:${clr};border-radius:20px;padding:3px 8px;font-size:10px;font-weight:800;white-space:nowrap">${SL[it.status]||it.status}</span>
     </td>
     <td style="padding:8px 10px;text-align:center">
-      <button onclick="invSalvarContagem(${it.id})"
-        style="background:#1e3a5f;color:#38bdf8;border:none;border-radius:6px;padding:5px 10px;font-size:10px;font-weight:700;cursor:pointer">💾 Salvar</button>
+      ${concluido ? '—' : `<button onclick="invSalvarContagem(${it.id})"
+        style="background:#1e3a5f;color:#38bdf8;border:none;border-radius:6px;padding:5px 10px;font-size:10px;font-weight:700;cursor:pointer">💾 Salvar</button>`}
     </td>
   </tr>`;
 }
 
 async function invSalvarContagem(id) {
+  if (_invSessaoAtiva?.status === 'concluido') { emToast('Inventário concluído — edição bloqueada.', 'aviso'); return; }
   const inp = document.getElementById(`inv-qty-${id}`);
   const qtd = inp ? parseFloat(inp.value) : NaN;
   const r = await apiFetch(`/inventario/itens/${id}`, {
