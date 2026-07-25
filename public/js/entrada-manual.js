@@ -1449,7 +1449,7 @@ const COLETOR_COOLDOWN = 2000; // ms entre re-leitura do mesmo código
 function invAbrirColetor() {
   if (!_invSessaoAtiva) return;
   const pendentes = _invItens.filter(i => i.status === 'pendente');
-  _coletorIdx = -1; _coletorPausado = false;
+  _coletorIdx = -1; _coletorUltimoCode = ''; _coletorUltimoTempo = 0;
 
   const modal = document.createElement('div');
   modal.id = 'inv-coletor-modal';
