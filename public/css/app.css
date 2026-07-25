@@ -114,7 +114,7 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
 .mi{display:flex;align-items:center;gap:9px;padding:9px 12px;color:#94A3B8;font-size:13px;font-weight:500;cursor:pointer;border-radius:var(--r-sm);transition:all .18s;text-decoration:none;margin-bottom:2px}
 .mi:hover{background:rgba(255,255,255,.06);color:#E2E8F0}
 .mi.ativo{background:rgba(59,130,246,.15);color:#60A5FA;font-weight:600}
-.mi-ic{font-size:15px;flex-shrink:0;width:20px;text-align:center}
+.mi-ic{flex-shrink:0;width:18px;height:18px;display:flex;align-items:center;justify-content:center;opacity:.85}
 .mbadge{background:var(--red);color:#fff;border-radius:10px;padding:1px 6px;font-size:9px;font-weight:700;margin-left:auto}
 
 

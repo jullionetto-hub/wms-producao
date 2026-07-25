@@ -327,68 +327,89 @@ async function sepGuardeiItem(id, nome, btn) {
 /* ══════════════════════════════════════════
    SIDEBAR (supervisor / desktop)
 ══════════════════════════════════════════ */
+const _IC = {
+  dashboard:   `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>`,
+  pedidos:     `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="2"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>`,
+  liberacao:   `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>`,
+  performance: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>`,
+  relatorios:  `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>`,
+  logistica:   `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>`,
+  auditoria:   `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`,
+  diario:      `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>`,
+  cadastros:   `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`,
+  protocolo:   `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>`,
+  separacao:   `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>`,
+  reposicao:   `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>`,
+  entrada:     `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>`,
+  checkout:    `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>`,
+  embalagem:   `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>`,
+  absenteismo: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
+  estatisticas:`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>`,
+};
+
 function montarSidebar() {
   const sb = document.getElementById('sidebar');
+  const IC = _IC;
   const menus = {
     supervisor: `
       <div class="mg">SUPERVISÃO</div>
-      <a class="mi ativo" onclick="irPara('dashboard',this)"><span class="mi-ic">📊</span>Dashboard</a>
-      <a class="mi" onclick="irPara('pedidos',this)"><span class="mi-ic">📋</span>Pedidos</a>
-      <a class="mi" onclick="irPara('liberacao',this)"><span class="mi-ic">🔓</span>Liberação <span class="mbadge" id="menu-badge-lib" style="display:none;background:var(--red)">0</span></a>
-      <a class="mi" onclick="irPara('performance',this)"><span class="mi-ic">🏆</span>Performance</a>
-      <a class="mi" onclick="irPara('relatorios',this)"><span class="mi-ic">📅</span>Relatórios</a>
-      <a class="mi" onclick="irPara('dash-logistica',this)"><span class="mi-ic">🚚</span>Dash Logística</a>
-      <a class="mi" onclick="irPara('auditoria',this)"><span class="mi-ic">🔍</span>Auditoria</a>
-      <a class="mi" onclick="irPara('diario',this)"><span class="mi-ic">📋</span>Diário de Bordo<span class="mbadge" id="menu-badge-diario" style="display:none;background:#7c3aed">!</span></a>
-      <a class="mi" onclick="irPara('cadastros',this)"><span class="mi-ic">⚙️</span>Cadastros</a>
-      <a class="mi" onclick="irPara('protocolo',this);carregarProtocolo()"><span class="mi-ic">📋</span>Protocolo<span class="mbadge" id="menu-badge-proto" style="display:none">0</span></a>
+      <a class="mi ativo" onclick="irPara('dashboard',this)"><span class="mi-ic">${IC.dashboard}</span>Dashboard</a>
+      <a class="mi" onclick="irPara('pedidos',this)"><span class="mi-ic">${IC.pedidos}</span>Pedidos</a>
+      <a class="mi" onclick="irPara('liberacao',this)"><span class="mi-ic">${IC.liberacao}</span>Liberação <span class="mbadge" id="menu-badge-lib" style="display:none;background:var(--red)">0</span></a>
+      <a class="mi" onclick="irPara('performance',this)"><span class="mi-ic">${IC.performance}</span>Performance</a>
+      <a class="mi" onclick="irPara('relatorios',this)"><span class="mi-ic">${IC.relatorios}</span>Relatórios</a>
+      <a class="mi" onclick="irPara('dash-logistica',this)"><span class="mi-ic">${IC.logistica}</span>Dash Logística</a>
+      <a class="mi" onclick="irPara('auditoria',this)"><span class="mi-ic">${IC.auditoria}</span>Auditoria</a>
+      <a class="mi" onclick="irPara('diario',this)"><span class="mi-ic">${IC.diario}</span>Diário de Bordo<span class="mbadge" id="menu-badge-diario" style="display:none;background:#7c3aed">!</span></a>
+      <a class="mi" onclick="irPara('cadastros',this)"><span class="mi-ic">${IC.cadastros}</span>Cadastros</a>
+      <a class="mi" onclick="irPara('protocolo',this);carregarProtocolo()"><span class="mi-ic">${IC.protocolo}</span>Protocolo<span class="mbadge" id="menu-badge-proto" style="display:none">0</span></a>
       <div class="mg">OPERAÇÃO</div>
-      <a class="mi" onclick="irPara('separacao',this)"><span class="mi-ic">📦</span>Separação</a>
-      <a class="mi" onclick="irPara('reposicao',this)"><span class="mi-ic">🔧</span>Reposição <span class="mbadge" id="menu-badge-rep" style="display:none">0</span></a>
-      <a class="mi" onclick="irPara('entrada-manual',this)"><span class="mi-ic">📥</span>Entrada Manual</a>
-      <a class="mi" onclick="irPara('checkout',this)"><span class="mi-ic">🏷️</span>Checkout</a>
-      <a class="mi" onclick="irPara('embalagem',this)"><span class="mi-ic">📫</span>Embalagem</a>`,
+      <a class="mi" onclick="irPara('separacao',this)"><span class="mi-ic">${IC.separacao}</span>Separação</a>
+      <a class="mi" onclick="irPara('reposicao',this)"><span class="mi-ic">${IC.reposicao}</span>Reposição <span class="mbadge" id="menu-badge-rep" style="display:none">0</span></a>
+      <a class="mi" onclick="irPara('entrada-manual',this)"><span class="mi-ic">${IC.entrada}</span>Entrada Manual</a>
+      <a class="mi" onclick="irPara('checkout',this)"><span class="mi-ic">${IC.checkout}</span>Checkout</a>
+      <a class="mi" onclick="irPara('embalagem',this)"><span class="mi-ic">${IC.embalagem}</span>Embalagem</a>`,
     separador: `
       <div class="mg">SEPARAÇÃO</div>
-      <a class="mi ativo" onclick="irPara('separacao',this)"><span class="mi-ic">📦</span>Pedidos</a>
-      <a class="mi" onclick="irPara('estatisticas-sep',this);carregarEstatisticasSep()"><span class="mi-ic">📊</span>Estatísticas</a>`,
+      <a class="mi ativo" onclick="irPara('separacao',this)"><span class="mi-ic">${IC.separacao}</span>Pedidos</a>
+      <a class="mi" onclick="irPara('estatisticas-sep',this);carregarEstatisticasSep()"><span class="mi-ic">${IC.estatisticas}</span>Estatísticas</a>`,
     repositor: `
       <div class="mg">REPOSIÇÃO</div>
-      <a class="mi ativo" onclick="irPara('reposicao',this)"><span class="mi-ic">🔧</span>Solicitações <span class="mbadge" id="menu-badge-rep" style="display:none">0</span></a>
-      <a class="mi" onclick="irPara('protocolo-rep',this)"><span class="mi-ic">📋</span>Protocolo</a>
-      <a class="mi" onclick="irPara('entrada-manual',this)"><span class="mi-ic">📥</span>Entrada Manual</a>
+      <a class="mi ativo" onclick="irPara('reposicao',this)"><span class="mi-ic">${IC.reposicao}</span>Solicitações <span class="mbadge" id="menu-badge-rep" style="display:none">0</span></a>
+      <a class="mi" onclick="irPara('protocolo-rep',this)"><span class="mi-ic">${IC.protocolo}</span>Protocolo</a>
+      <a class="mi" onclick="irPara('entrada-manual',this)"><span class="mi-ic">${IC.entrada}</span>Entrada Manual</a>
       <div class="mg">ANÁLISE</div>
-      <a class="mi" onclick="irPara('stats-repositor',this)"><span class="mi-ic">📈</span>Estatísticas</a>`,
+      <a class="mi" onclick="irPara('stats-repositor',this)"><span class="mi-ic">${IC.estatisticas}</span>Estatísticas</a>`,
     checkout: `
       <div class="mg">CHECKOUT</div>
-      <a class="mi ativo" onclick="irPara('checkout',this)"><span class="mi-ic">🏷️</span>Checkout</a>
+      <a class="mi ativo" onclick="irPara('checkout',this)"><span class="mi-ic">${IC.checkout}</span>Checkout</a>
       <div class="mg">ANÁLISE</div>
-      <a class="mi" onclick="irPara('estatisticas-ck',this)"><span class="mi-ic">📈</span>Estatísticas</a>`,
+      <a class="mi" onclick="irPara('estatisticas-ck',this)"><span class="mi-ic">${IC.estatisticas}</span>Estatísticas</a>`,
     embalador: `
       <div class="mg">EMBALAGEM</div>
-      <a class="mi ativo" onclick="irPara('embalagem',this)"><span class="mi-ic">📫</span>Embalar</a>
+      <a class="mi ativo" onclick="irPara('embalagem',this)"><span class="mi-ic">${IC.embalagem}</span>Embalar</a>
       <div class="mg">ANÁLISE</div>
-      <a class="mi" onclick="irPara('estatisticas-emb',this);carregarEstatisticasEmb()"><span class="mi-ic">📊</span>Estatísticas</a>`,
+      <a class="mi" onclick="irPara('estatisticas-emb',this);carregarEstatisticasEmb()"><span class="mi-ic">${IC.estatisticas}</span>Estatísticas</a>`,
     gestor: `
       <div class="mg">VISÃO GERAL</div>
-      <a class="mi ativo" onclick="irPara('dashboard',this)"><span class="mi-ic">📊</span>Dashboard</a>
-      <a class="mi" onclick="irPara('pedidos',this)"><span class="mi-ic">📋</span>Pedidos</a>
-      <a class="mi" onclick="irPara('liberacao',this)"><span class="mi-ic">🔓</span>Liberação <span class="mbadge" id="menu-badge-lib" style="display:none;background:var(--red)">0</span></a>
-      <a class="mi" onclick="irPara('performance',this)"><span class="mi-ic">🏆</span>Performance</a>
-      <a class="mi" onclick="irPara('relatorios',this)"><span class="mi-ic">📅</span>Relatórios</a>
-      <a class="mi" onclick="irPara('dash-logistica',this)"><span class="mi-ic">🚚</span>Dash Logística</a>
-      <a class="mi" onclick="irPara('auditoria',this)"><span class="mi-ic">🔍</span>Auditoria</a>
-      <a class="mi" onclick="irPara('diario',this)"><span class="mi-ic">📋</span>Diário de Bordo<span class="mbadge" id="menu-badge-diario" style="display:none;background:#7c3aed">!</span></a>
-      <a class="mi" onclick="irPara('cadastros',this)"><span class="mi-ic">⚙️</span>Cadastros</a>
-      <a class="mi" onclick="irPara('protocolo',this);carregarProtocolo()"><span class="mi-ic">📋</span>Protocolo<span class="mbadge" id="menu-badge-proto" style="display:none">0</span></a>
+      <a class="mi ativo" onclick="irPara('dashboard',this)"><span class="mi-ic">${IC.dashboard}</span>Dashboard</a>
+      <a class="mi" onclick="irPara('pedidos',this)"><span class="mi-ic">${IC.pedidos}</span>Pedidos</a>
+      <a class="mi" onclick="irPara('liberacao',this)"><span class="mi-ic">${IC.liberacao}</span>Liberação <span class="mbadge" id="menu-badge-lib" style="display:none;background:var(--red)">0</span></a>
+      <a class="mi" onclick="irPara('performance',this)"><span class="mi-ic">${IC.performance}</span>Performance</a>
+      <a class="mi" onclick="irPara('relatorios',this)"><span class="mi-ic">${IC.relatorios}</span>Relatórios</a>
+      <a class="mi" onclick="irPara('dash-logistica',this)"><span class="mi-ic">${IC.logistica}</span>Dash Logística</a>
+      <a class="mi" onclick="irPara('auditoria',this)"><span class="mi-ic">${IC.auditoria}</span>Auditoria</a>
+      <a class="mi" onclick="irPara('diario',this)"><span class="mi-ic">${IC.diario}</span>Diário de Bordo<span class="mbadge" id="menu-badge-diario" style="display:none;background:#7c3aed">!</span></a>
+      <a class="mi" onclick="irPara('cadastros',this)"><span class="mi-ic">${IC.cadastros}</span>Cadastros</a>
+      <a class="mi" onclick="irPara('protocolo',this);carregarProtocolo()"><span class="mi-ic">${IC.protocolo}</span>Protocolo<span class="mbadge" id="menu-badge-proto" style="display:none">0</span></a>
       <div class="mg">OPERAÇÃO</div>
-      <a class="mi" onclick="irPara('separacao',this)"><span class="mi-ic">📦</span>Separação</a>
-      <a class="mi" onclick="irPara('reposicao',this)"><span class="mi-ic">🔧</span>Reposição <span class="mbadge" id="menu-badge-rep" style="display:none">0</span></a>
-      <a class="mi" onclick="irPara('entrada-manual',this)"><span class="mi-ic">📥</span>Entrada Manual</a>
-      <a class="mi" onclick="irPara('checkout',this)"><span class="mi-ic">🏷️</span>Checkout</a>
-      <a class="mi" onclick="irPara('embalagem',this)"><span class="mi-ic">📫</span>Embalagem</a>
+      <a class="mi" onclick="irPara('separacao',this)"><span class="mi-ic">${IC.separacao}</span>Separação</a>
+      <a class="mi" onclick="irPara('reposicao',this)"><span class="mi-ic">${IC.reposicao}</span>Reposição <span class="mbadge" id="menu-badge-rep" style="display:none">0</span></a>
+      <a class="mi" onclick="irPara('entrada-manual',this)"><span class="mi-ic">${IC.entrada}</span>Entrada Manual</a>
+      <a class="mi" onclick="irPara('checkout',this)"><span class="mi-ic">${IC.checkout}</span>Checkout</a>
+      <a class="mi" onclick="irPara('embalagem',this)"><span class="mi-ic">${IC.embalagem}</span>Embalagem</a>
       <div class="mg">PESSOAL</div>
-      <a class="mi" onclick="irPara('gestao',this)"><span class="mi-ic">📅</span>Absenteísmo</a>`,
+      <a class="mi" onclick="irPara('gestao',this)"><span class="mi-ic">${IC.absenteismo}</span>Absenteísmo</a>`,
   };
   sb.innerHTML = menus[usuarioAtual.perfil] || '';
 }

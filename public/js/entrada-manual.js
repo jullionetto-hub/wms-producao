@@ -52,8 +52,8 @@ async function carregarEntradaManualLotes() {
     const pct = emFmtPct(l.itens_concluidos, l.total_itens);
     const barClr = pct === 100 ? '#22c55e' : pct >= 60 ? '#f59e0b' : '#3b82f6';
     const statusChip = l.status === 'concluido'
-      ? `<span style="background:#DCFCE7;color:#16A34A;border:1px solid #BBF7D0;border-radius:20px;padding:2px 10px;font-size:10px;font-weight:700">✅ Concluído</span>`
-      : `<span style="background:#FEF9C3;color:#A16207;border:1px solid #FDE68A;border-radius:20px;padding:2px 10px;font-size:10px;font-weight:700">⏳ Em andamento</span>`;
+      ? `<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:#16A34A"><span style="width:7px;height:7px;border-radius:50%;background:#16A34A;flex-shrink:0;display:inline-block"></span>Concluído</span>`
+      : `<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:#D97706"><span style="width:7px;height:7px;border-radius:50%;background:#D97706;flex-shrink:0;display:inline-block"></span>Em andamento</span>`;
     return `
     <div class="card" style="margin-bottom:10px;padding:14px 16px;cursor:pointer" onclick="abrirLoteEM(${l.id})">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap">
@@ -1126,8 +1126,8 @@ function invSessaoCardHTML(s) {
   const pct   = s.total_itens > 0 ? Math.round((s.contados / s.total_itens) * 100) : 0;
   const barClr= pct === 100 ? '#22c55e' : pct >= 60 ? '#f59e0b' : '#3b82f6';
   const chip  = s.status === 'concluido'
-    ? `<span style="background:#DCFCE7;color:#16A34A;border:1px solid #BBF7D0;border-radius:20px;padding:2px 10px;font-size:10px;font-weight:700">✅ Concluído</span>`
-    : `<span style="background:#FEF9C3;color:#A16207;border:1px solid #FDE68A;border-radius:20px;padding:2px 10px;font-size:10px;font-weight:700">⏳ Em andamento</span>`;
+    ? `<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:#16A34A"><span style="width:7px;height:7px;border-radius:50%;background:#16A34A;flex-shrink:0;display:inline-block"></span>Concluído</span>`
+    : `<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:#D97706"><span style="width:7px;height:7px;border-radius:50%;background:#D97706;flex-shrink:0;display:inline-block"></span>Em andamento</span>`;
   const dt = s.criado_em ? new Date(s.criado_em).toLocaleDateString('pt-BR') : '—';
   return `
     <div class="card" style="margin-bottom:10px;padding:14px 16px;cursor:pointer" onclick="invAbrirSessao(${s.id})">
@@ -1251,8 +1251,8 @@ function invRenderizarDashboard() {
   });
   const acuracia = s.total_itens > 0 ? Math.round((stats.ok / s.total_itens) * 100) : 0;
   const chip = s.status === 'concluido'
-    ? `<span style="background:#DCFCE7;color:#16A34A;border:1px solid #BBF7D0;border-radius:20px;padding:3px 12px;font-size:11px;font-weight:700">✅ Concluído</span>`
-    : `<span style="background:#FEF9C3;color:#A16207;border:1px solid #FDE68A;border-radius:20px;padding:3px 12px;font-size:11px;font-weight:700">⏳ Em andamento</span>`;
+    ? `<span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:#16A34A"><span style="width:8px;height:8px;border-radius:50%;background:#16A34A;flex-shrink:0;display:inline-block"></span>Concluído</span>`
+    : `<span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:#D97706"><span style="width:8px;height:8px;border-radius:50%;background:#D97706;flex-shrink:0;display:inline-block"></span>Em andamento</span>`;
   const dt     = s.criado_em    ? new Date(s.criado_em).toLocaleString('pt-BR')    : '—';
   const dtConc = s.concluido_em ? new Date(s.concluido_em).toLocaleString('pt-BR') : null;
 
