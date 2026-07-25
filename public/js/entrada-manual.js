@@ -1438,11 +1438,13 @@ function invMobileCardHTML(it, SL, SC) {
 
 // ── Coletor de Dados ─────────────────────────────────────────────────────
 const invExtrairRua = loc => { if (!loc) return ''; const m = loc.split('/')[0].match(/^([A-Za-z]+)/); return m ? m[1].toUpperCase() : ''; };
-let _coletorIdx      = -1;
-let _coletorStream   = null;
-let _coletorScanAtivo= false;
-let _coletorPausado  = false;
-let _coletorDetector = null;
+let _coletorIdx        = -1;
+let _coletorStream     = null;
+let _coletorScanAtivo  = false;
+let _coletorDetector   = null;
+let _coletorUltimoCode = '';
+let _coletorUltimoTempo= 0;
+const COLETOR_COOLDOWN = 2000; // ms entre re-leitura do mesmo código
 
 function invAbrirColetor() {
   if (!_invSessaoAtiva) return;
@@ -1504,8 +1506,9 @@ function invAbrirColetor() {
 }
 
 async function invColetorIniciarCamera() {
-  _coletorScanAtivo = true;
-  _coletorPausado  = false;
+  _coletorScanAtivo  = true;
+  _coletorUltimoCode = '';
+  _coletorUltimoTempo= 0;
   const statusEl = document.getElementById('coletor-cam-status');
   const videoWrap= document.getElementById('coletor-video-wrap');
   try {
@@ -1533,21 +1536,49 @@ async function invColetorIniciarCamera() {
   }
 }
 
+function invColetorBeep(tipo) {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc  = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    if (tipo === 'acumulou') {
+      osc.frequency.value = 1400; osc.type = 'sine';
+      gain.gain.setValueAtTime(0.35, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
+      osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.08);
+    } else if (tipo === 'ok') {
+      osc.frequency.value = 880; osc.type = 'sine';
+      gain.gain.setValueAtTime(0.4, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.14);
+      osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.14);
+    } else {
+      osc.frequency.value = 300; osc.type = 'square';
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.22);
+      osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.22);
+    }
+  } catch {}
+}
+
 async function invColetorLoopScan() {
   if (!_coletorScanAtivo) return;
-  if (!_coletorPausado) {
-    const video = document.getElementById('coletor-video');
-    if (video && _coletorDetector && video.readyState >= 2) {
-      try {
-        const codes = await _coletorDetector.detect(video);
-        if (codes.length > 0) {
-          _coletorPausado = true;
+  const video = document.getElementById('coletor-video');
+  if (video && _coletorDetector && video.readyState >= 2) {
+    try {
+      const codes = await _coletorDetector.detect(video);
+      if (codes.length > 0) {
+        const code = codes[0].rawValue;
+        const now  = Date.now();
+        if (code !== _coletorUltimoCode || now - _coletorUltimoTempo > COLETOR_COOLDOWN) {
+          _coletorUltimoCode  = code;
+          _coletorUltimoTempo = now;
           const inp = document.getElementById('coletor-scan-input');
-          if (inp) inp.value = codes[0].rawValue;
-          invColetorBuscar();
+          if (inp) inp.value = code;
+          await invColetorBuscar();
         }
-      } catch {}
-    }
+      }
+    } catch {}
   }
   if (_coletorScanAtivo) setTimeout(invColetorLoopScan, 300);
 }
@@ -1559,77 +1590,102 @@ function invColetorPararCamera() {
 }
 
 function invColetorPularItem() {
-  _coletorIdx    = -1;
-  _coletorPausado= false;
+  _coletorIdx = -1;
+  _coletorUltimoCode = '';
   document.getElementById('coletor-item-card') && (document.getElementById('coletor-item-card').style.display = 'none');
   const msg = document.getElementById('coletor-msg');
   if (msg) { msg.style.color = '#64748b'; msg.textContent = 'Aponte para o próximo código de barras.'; }
   document.getElementById('coletor-scan-input') && (document.getElementById('coletor-scan-input').value = '');
 }
 
-function invColetorBuscar() {
+async function invColetorBuscar() {
   const inp = document.getElementById('coletor-scan-input');
-  const q = (inp?.value || '').trim().toUpperCase();
+  const q   = (inp?.value || '').trim().toUpperCase();
+  if (inp) inp.value = '';
   if (!q) return;
-  const it = _invItens.find(i => i.codigo.toUpperCase() === q || (i.codigo_barras||'').toUpperCase() === q);
-  const msg = document.getElementById('coletor-msg');
+
+  const it  = _invItens.find(i => i.codigo.toUpperCase() === q || (i.codigo_barras||'').toUpperCase() === q);
+  const msg  = document.getElementById('coletor-msg');
   const card = document.getElementById('coletor-item-card');
+
   if (!it) {
-    _coletorPausado = false;
-    if (msg) { msg.style.color = '#ef4444'; msg.textContent = `❌ Código "${q}" não encontrado no inventário.`; }
+    invColetorBeep('erro');
+    if (msg) { msg.style.color = '#ef4444'; msg.textContent = `❌ "${q}" não encontrado no inventário.`; }
     if (card) card.style.display = 'none';
+    _coletorIdx = -1;
     return;
   }
-  _coletorIdx    = it.id;
-  _coletorPausado= true;
-  if (card) card.style.display = '';
 
-  const ruaItem   = invExtrairRua(it.localizacao);
-  const ruaFiltro = _invFiltroRua ? _invFiltroRua.toUpperCase() : '';
+  const qtyInp = document.getElementById('coletor-qty-input');
+  const mesmoCodigo = _coletorIdx === it.id && card?.style.display !== 'none';
+
+  // Calcular nova quantidade: se mesmo item acumula, senão começa do último salvo
+  let novaQtd;
+  if (mesmoCodigo && qtyInp) {
+    novaQtd = (parseFloat(qtyInp.value) || 0) + 1;
+    invColetorBeep('acumulou');
+  } else {
+    novaQtd = (it.qtd_contada != null ? parseFloat(it.qtd_contada) : 0) + 1;
+    invColetorBeep('ok');
+  }
+
+  _coletorIdx = it.id;
+  if (card) card.style.display = '';
+  if (qtyInp) qtyInp.value = novaQtd;
+
+  const ruaItem       = invExtrairRua(it.localizacao);
+  const ruaFiltro     = _invFiltroRua ? _invFiltroRua.toUpperCase() : '';
   const colmeiaErrada = ruaFiltro && ruaItem && ruaItem !== ruaFiltro;
 
   const info = document.getElementById('coletor-item-info');
   if (info) info.innerHTML = `
     ${colmeiaErrada ? `
-    <div style="background:#7f1d1d;border:2px solid #ef4444;border-radius:10px;padding:12px;margin-bottom:10px;text-align:center">
-      <div style="font-size:20px;margin-bottom:4px">⚠️</div>
-      <div style="font-size:13px;font-weight:900;color:#fca5a5">ITEM NA COLMEIA ERRADA!</div>
-      <div style="font-size:11px;color:#fca5a5;margin-top:4px">
-        Este item fica na rua <strong>${ruaItem}</strong>, mas você está contando a rua <strong>${ruaFiltro}</strong>.
-      </div>
+    <div style="background:#7f1d1d;border:2px solid #ef4444;border-radius:10px;padding:10px;margin-bottom:10px;text-align:center">
+      <div style="font-size:16px;margin-bottom:2px">⚠️ ITEM NA COLMEIA ERRADA!</div>
+      <div style="font-size:11px;color:#fca5a5">Rua <strong>${ruaItem}</strong> — você está contando a rua <strong>${ruaFiltro}</strong></div>
     </div>` : ''}
-    <div style="font-size:13px;font-weight:900;color:#f97316">${it.codigo}</div>
-    <div style="font-size:12px;color:#e2e8f0;margin:4px 0">${it.nome||'—'}</div>
-    <div style="font-size:11px;color:${colmeiaErrada?'#ef4444':'#94a3b8'}">
+    <div style="font-size:14px;font-weight:900;color:#f97316">${it.codigo}</div>
+    <div style="font-size:12px;color:#e2e8f0;margin:4px 0;line-height:1.4">${it.nome||'—'}</div>
+    <div style="font-size:11px;color:${colmeiaErrada?'#fca5a5':'#94a3b8'}">
       📍 <strong style="color:${colmeiaErrada?'#fca5a5':'#38bdf8'}">${it.localizacao||'—'}</strong>
       &nbsp;·&nbsp; Saldo: <strong style="color:#38bdf8">${it.saldo_sistema}</strong>
     </div>`;
 
-  const qty = document.getElementById('coletor-qty-input');
-  if (qty) { qty.value = it.qtd_contada ?? ''; qty.focus(); qty.select(); }
-  if (msg) { msg.style.color = colmeiaErrada ? '#ef4444' : '#22c55e'; msg.textContent = colmeiaErrada ? `⚠️ Atenção: rua ${ruaItem} (esperado: ${ruaFiltro})` : `Encontrado: ${it.codigo}`; }
-  if (inp) inp.value = '';
+  const msgTxt = colmeiaErrada
+    ? `⚠️ Rua ${ruaItem} (esperado: ${ruaFiltro})  — contado: ${novaQtd}`
+    : `${mesmoCodigo ? `+1 acumulado →` : '✅'} ${it.codigo}: ${novaQtd} unidade${novaQtd !== 1 ? 's' : ''}`;
+  if (msg) { msg.style.color = colmeiaErrada ? '#ef4444' : '#22c55e'; msg.textContent = msgTxt; }
+
+  // Auto-salvar silenciosamente
+  const r = await apiFetch(`/inventario/itens/${it.id}`, {
+    method:'PUT', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ qtd_contada: novaQtd })
+  });
+  if (r?.erro) { emToast('Erro ao salvar: '+r.erro, 'erro'); return; }
+  it.qtd_contada = novaQtd; it.status = r.status;
+  if (_invSessaoAtiva && r.contados !== undefined) _invSessaoAtiva.contados = r.contados;
+  if (qtyInp) { qtyInp.style.borderColor = '#22c55e'; setTimeout(() => { if (qtyInp) qtyInp.style.borderColor = '#22c55e'; }, 500); }
 }
 
 async function invColetorSalvar() {
   if (_coletorIdx < 0) return;
-  const qty = parseFloat(document.getElementById('coletor-qty-input')?.value);
+  const qtyInp = document.getElementById('coletor-qty-input');
+  const qty = parseFloat(qtyInp?.value);
+  if (isNaN(qty)) return;
   const r = await apiFetch(`/inventario/itens/${_coletorIdx}`, {
     method:'PUT', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({ qtd_contada: isNaN(qty) ? null : qty })
+    body: JSON.stringify({ qtd_contada: qty })
   });
   if (r?.erro) { emToast('Erro: '+r.erro, 'erro'); return; }
   const it = _invItens.find(i => i.id === _coletorIdx);
-  if (it) { it.qtd_contada = isNaN(qty) ? null : qty; it.status = r.status; }
+  if (it) { it.qtd_contada = qty; it.status = r.status; }
   if (_invSessaoAtiva && r.contados !== undefined) _invSessaoAtiva.contados = r.contados;
+  invColetorBeep('ok');
   const msg = document.getElementById('coletor-msg');
-  if (msg) { msg.style.color='#22c55e'; msg.textContent = `✅ ${it?.codigo||''} salvo! Aponte para o próximo.`; }
-  const card = document.getElementById('coletor-item-card');
-  if (card) card.style.display = 'none';
-  const scanInp = document.getElementById('coletor-scan-input');
-  if (scanInp) scanInp.value = '';
-  _coletorIdx    = -1;
-  _coletorPausado= false;
+  if (msg) { msg.style.color = '#22c55e'; msg.textContent = `💾 ${it?.codigo||''} salvo com ${qty}! Aponte para o próximo.`; }
+  document.getElementById('coletor-item-card') && (document.getElementById('coletor-item-card').style.display = 'none');
+  _coletorIdx = -1;
+  _coletorUltimoCode = '';
 }
 
 function invColetorCancelar() {
