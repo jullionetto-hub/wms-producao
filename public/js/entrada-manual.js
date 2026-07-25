@@ -1217,6 +1217,7 @@ function invRenderizarSessaoAtiva() {
   const s = _invSessaoAtiva;
   const pct    = s.total_itens > 0 ? Math.round(((s.contados||0) / s.total_itens) * 100) : 0;
   const barClr = pct === 100 ? '#22c55e' : pct >= 60 ? '#f59e0b' : '#3b82f6';
+  const isMob = window.innerWidth < 768;
   const SL = { ok:'✅ OK', divergente:'⚠️ Divergente', pendente:'⬜ Pendente' };
   const SC = { ok:'#22c55e', divergente:'#f59e0b', pendente:'#64748b' };
 
@@ -1298,7 +1299,11 @@ function invRenderizarSessaoAtiva() {
       </div>
     </div>
 
-    <div class="tabela-wrap">
+    ${isMob
+      ? (page.length
+          ? `<div>${page.map(it => invMobileCardHTML(it, SL, SC)).join('')}</div>`
+          : `<div style="padding:32px;text-align:center;color:var(--text3)">Nenhum item encontrado.</div>`)
+      : `<div class="tabela-wrap">
       <table>
         <thead><tr>
           <th>CÓDIGO</th><th>NOME</th><th>LOCALIZAÇÃO</th>
@@ -1313,7 +1318,7 @@ function invRenderizarSessaoAtiva() {
             `<tr><td colspan="8" style="padding:32px;text-align:center;color:var(--text3)">Nenhum item encontrado.</td></tr>`}
         </tbody>
       </table>
-    </div>
+    </div>`}
 
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;font-size:11px;color:var(--text3);padding:0 2px">
       <span>${Math.min(start+1,total)}–${Math.min(start+page.length,total)} de ${total}</span>
@@ -1400,43 +1405,166 @@ async function invExcluirSessao(id) {
   });
 }
 
+// ── Card mobile para cada item do inventário ──────────────────────────────
+function invMobileCardHTML(it, SL, SC) {
+  const concluido = _invSessaoAtiva?.status === 'concluido';
+  const clr = SC[it.status] || '#64748b';
+  const dif = it.qtd_contada != null ? parseFloat(it.qtd_contada) - parseFloat(it.saldo_sistema) : null;
+  const difStr = dif === null ? null : (dif > 0 ? `+${dif}` : String(Math.round(dif * 100) / 100));
+  const difClr = dif === null ? '' : dif === 0 ? '#22c55e' : dif > 0 ? '#f97316' : '#ef4444';
+  return `
+  <div id="inv-tr-${it.id}" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <span style="font-family:monospace;font-size:13px;font-weight:900;color:#f97316">${it.codigo}</span>
+      <span style="background:${clr}22;color:${clr};border-radius:20px;padding:3px 10px;font-size:10px;font-weight:800">${SL[it.status]||it.status}</span>
+    </div>
+    <div style="font-size:13px;color:var(--text);line-height:1.4;margin-bottom:8px">${it.nome||'—'}</div>
+    <div style="display:flex;gap:12px;font-size:11px;color:var(--text3);margin-bottom:10px;flex-wrap:wrap">
+      <span>📍 <strong style="color:var(--text)">${it.localizacao||'—'}</strong></span>
+      <span>Saldo: <strong style="color:#38bdf8">${it.saldo_sistema}</strong></span>
+      ${difStr != null ? `<span>Dif: <strong style="color:${difClr}">${difStr}</strong></span>` : ''}
+    </div>
+    ${concluido
+      ? `<div style="font-size:14px;font-weight:700;color:var(--text)">Contado: ${it.qtd_contada ?? '—'}</div>`
+      : `<div style="display:flex;gap:8px;align-items:center">
+          <input id="inv-qty-${it.id}" type="number" value="${it.qtd_contada??''}" min="0" placeholder="Quantidade contada..."
+            onkeydown="if(event.key==='Enter'){invSalvarContagem(${it.id})}"
+            style="flex:1;padding:12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:18px;font-weight:700;text-align:center;outline:none">
+          <button onclick="invSalvarContagem(${it.id})"
+            style="padding:12px 16px;background:#1e3a5f;color:#38bdf8;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">💾</button>
+        </div>`}
+  </div>`;
+}
+
 // ── Coletor de Dados ─────────────────────────────────────────────────────
 const invExtrairRua = loc => { if (!loc) return ''; const m = loc.split('/')[0].match(/^([A-Za-z]+)/); return m ? m[1].toUpperCase() : ''; };
-let _coletorIdx = -1;
+let _coletorIdx      = -1;
+let _coletorStream   = null;
+let _coletorScanAtivo= false;
+let _coletorPausado  = false;
+let _coletorDetector = null;
 
 function invAbrirColetor() {
   if (!_invSessaoAtiva) return;
   const pendentes = _invItens.filter(i => i.status === 'pendente');
+  _coletorIdx = -1; _coletorPausado = false;
+
   const modal = document.createElement('div');
   modal.id = 'inv-coletor-modal';
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:24px 16px;overflow-y:auto';
+  modal.style.cssText = 'position:fixed;inset:0;background:#000;z-index:9999;display:flex;flex-direction:column;align-items:center;overflow-y:auto';
   modal.innerHTML = `
-    <div style="width:100%;max-width:480px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+    <style>@keyframes scanPulse{0%,100%{opacity:.5}50%{opacity:1}}</style>
+    <div style="width:100%;max-width:500px;padding:16px">
+
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
         <div style="font-size:16px;font-weight:900;color:#fff">📷 Coletor de Dados</div>
-        <button onclick="invColetorCancelar()" style="background:#334155;border:none;border-radius:8px;padding:7px 14px;color:#fff;font-size:12px;font-weight:700;cursor:pointer">✕ Fechar</button>
+        <button onclick="invColetorCancelar()" style="background:#334155;border:none;border-radius:8px;padding:8px 16px;color:#fff;font-size:12px;font-weight:700;cursor:pointer">✕ Fechar</button>
       </div>
-      <div style="background:#1e293b;border-radius:12px;padding:16px;margin-bottom:14px">
-        <div style="font-size:10px;color:#94a3b8;font-weight:700;letter-spacing:.5px;margin-bottom:6px">BIPAGEM / CÓDIGO</div>
-        <input id="coletor-scan-input" type="text" placeholder="Bipe o código de barras ou digite o código..." autofocus
-          style="width:100%;padding:12px 14px;background:#0f172a;border:2px solid #7c3aed;border-radius:8px;color:#fff;font-size:15px;outline:none;box-sizing:border-box"
-          onkeydown="if(event.key==='Enter'){invColetorBuscar()}">
-        <button onclick="invColetorBuscar()" style="width:100%;margin-top:8px;padding:10px;background:#7c3aed;border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:pointer">🔍 Buscar</button>
+
+      <!-- CÂMERA -->
+      <div id="coletor-video-wrap" style="position:relative;border-radius:14px;overflow:hidden;background:#0f172a;margin-bottom:12px">
+        <video id="coletor-video" autoplay playsinline muted
+          style="width:100%;max-height:240px;object-fit:cover;display:block"></video>
+        <div style="position:absolute;inset:0;border:2px solid #7c3aed;border-radius:14px;pointer-events:none"></div>
+        <div style="position:absolute;top:50%;left:8%;right:8%;height:2px;background:#a855f7;box-shadow:0 0 14px #a855f7;animation:scanPulse 1.5s infinite;transform:translateY(-50%);pointer-events:none"></div>
+        <div id="coletor-cam-status" style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.5);padding:6px;text-align:center;font-size:10px;color:#94a3b8">
+          Aguardando câmera...
+        </div>
       </div>
-      <div id="coletor-item-card" style="display:none;background:#1e293b;border-radius:12px;padding:16px;margin-bottom:14px">
+
+      <!-- INPUT MANUAL -->
+      <div style="background:#1e293b;border-radius:12px;padding:12px;margin-bottom:12px">
+        <div style="font-size:9px;color:#64748b;font-weight:700;letter-spacing:.5px;margin-bottom:6px">OU DIGITE / COLE O CÓDIGO MANUALMENTE</div>
+        <div style="display:flex;gap:8px">
+          <input id="coletor-scan-input" type="text" placeholder="Código do produto ou EAN..." inputmode="none"
+            style="flex:1;padding:10px 12px;background:#0f172a;border:2px solid #7c3aed;border-radius:8px;color:#fff;font-size:14px;outline:none;box-sizing:border-box"
+            onkeydown="if(event.key==='Enter'){invColetorBuscar()}">
+          <button onclick="invColetorBuscar()" style="padding:10px 16px;background:#7c3aed;border:none;border-radius:8px;color:#fff;font-size:14px;font-weight:700;cursor:pointer">🔍</button>
+        </div>
+      </div>
+
+      <!-- ITEM ENCONTRADO -->
+      <div id="coletor-item-card" style="display:none;background:#1e293b;border-radius:12px;padding:16px;margin-bottom:12px">
         <div id="coletor-item-info" style="margin-bottom:12px"></div>
-        <div style="font-size:10px;color:#94a3b8;font-weight:700;letter-spacing:.5px;margin-bottom:6px">QUANTIDADE CONTADA</div>
-        <input id="coletor-qty-input" type="number" min="0" placeholder="0"
-          style="width:100%;padding:12px 14px;background:#0f172a;border:2px solid #22c55e;border-radius:8px;color:#fff;font-size:20px;font-weight:900;text-align:center;outline:none;box-sizing:border-box"
+        <div style="font-size:9px;color:#64748b;font-weight:700;letter-spacing:.5px;margin-bottom:6px">QUANTIDADE CONTADA</div>
+        <input id="coletor-qty-input" type="number" min="0" placeholder="0" inputmode="decimal"
+          style="width:100%;padding:16px;background:#0f172a;border:2px solid #22c55e;border-radius:10px;color:#fff;font-size:28px;font-weight:900;text-align:center;outline:none;box-sizing:border-box"
           onkeydown="if(event.key==='Enter'){invColetorSalvar()}">
-        <button onclick="invColetorSalvar()" style="width:100%;margin-top:8px;padding:10px;background:#16a34a;border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:pointer">💾 Salvar e Próximo (Enter)</button>
+        <button onclick="invColetorSalvar()" style="width:100%;margin-top:10px;padding:14px;background:#16a34a;border:none;border-radius:12px;color:#fff;font-size:15px;font-weight:700;cursor:pointer">💾 Salvar (Enter)</button>
+        <button onclick="invColetorPularItem()" style="width:100%;margin-top:6px;padding:8px;background:#1e293b;border:1px solid #334155;border-radius:8px;color:#64748b;font-size:12px;font-weight:600;cursor:pointer">↩ Cancelar / próximo</button>
       </div>
-      <div id="coletor-msg" style="text-align:center;padding:10px;font-size:13px;color:#94a3b8">
-        ${pendentes.length} itens pendentes. Bipe para iniciar.
+
+      <div id="coletor-msg" style="text-align:center;padding:8px;font-size:13px;color:#64748b">
+        ${pendentes.length} itens pendentes · aponte para o código de barras
       </div>
     </div>`;
+
   document.body.appendChild(modal);
-  setTimeout(() => document.getElementById('coletor-scan-input')?.focus(), 100);
+  invColetorIniciarCamera();
+}
+
+async function invColetorIniciarCamera() {
+  _coletorScanAtivo = true;
+  _coletorPausado  = false;
+  const statusEl = document.getElementById('coletor-cam-status');
+  const videoWrap= document.getElementById('coletor-video-wrap');
+  try {
+    _coletorStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width: { ideal: 1280 } }
+    });
+    const video = document.getElementById('coletor-video');
+    if (!video) return;
+    video.srcObject = _coletorStream;
+    await video.play();
+    if ('BarcodeDetector' in window) {
+      _coletorDetector = new BarcodeDetector({
+        formats: ['ean_13','ean_8','code_128','code_39','itf','upc_a','upc_e','qr_code']
+      });
+      if (statusEl) statusEl.textContent = '📷 Câmera ativa — aponte para o código de barras';
+      invColetorLoopScan();
+    } else {
+      if (statusEl) statusEl.textContent = '📷 Câmera ativa (use o campo de texto para digitar o código)';
+    }
+  } catch {
+    if (videoWrap) videoWrap.style.display = 'none';
+    const msg = document.getElementById('coletor-msg');
+    if (msg) { msg.style.color = '#f59e0b'; msg.textContent = '⚠️ Câmera não autorizada. Use o campo de texto abaixo.'; }
+    setTimeout(() => document.getElementById('coletor-scan-input')?.focus(), 100);
+  }
+}
+
+async function invColetorLoopScan() {
+  if (!_coletorScanAtivo) return;
+  if (!_coletorPausado) {
+    const video = document.getElementById('coletor-video');
+    if (video && _coletorDetector && video.readyState >= 2) {
+      try {
+        const codes = await _coletorDetector.detect(video);
+        if (codes.length > 0) {
+          _coletorPausado = true;
+          const inp = document.getElementById('coletor-scan-input');
+          if (inp) inp.value = codes[0].rawValue;
+          invColetorBuscar();
+        }
+      } catch {}
+    }
+  }
+  if (_coletorScanAtivo) setTimeout(invColetorLoopScan, 300);
+}
+
+function invColetorPararCamera() {
+  _coletorScanAtivo = false;
+  if (_coletorStream) { _coletorStream.getTracks().forEach(t => t.stop()); _coletorStream = null; }
+  _coletorDetector = null;
+}
+
+function invColetorPularItem() {
+  _coletorIdx    = -1;
+  _coletorPausado= false;
+  document.getElementById('coletor-item-card') && (document.getElementById('coletor-item-card').style.display = 'none');
+  const msg = document.getElementById('coletor-msg');
+  if (msg) { msg.style.color = '#64748b'; msg.textContent = 'Aponte para o próximo código de barras.'; }
+  document.getElementById('coletor-scan-input') && (document.getElementById('coletor-scan-input').value = '');
 }
 
 function invColetorBuscar() {
@@ -1447,11 +1575,13 @@ function invColetorBuscar() {
   const msg = document.getElementById('coletor-msg');
   const card = document.getElementById('coletor-item-card');
   if (!it) {
+    _coletorPausado = false;
     if (msg) { msg.style.color = '#ef4444'; msg.textContent = `❌ Código "${q}" não encontrado no inventário.`; }
     if (card) card.style.display = 'none';
     return;
   }
-  _coletorIdx = it.id;
+  _coletorIdx    = it.id;
+  _coletorPausado= true;
   if (card) card.style.display = '';
 
   const ruaItem   = invExtrairRua(it.localizacao);
@@ -1493,14 +1623,17 @@ async function invColetorSalvar() {
   if (it) { it.qtd_contada = isNaN(qty) ? null : qty; it.status = r.status; }
   if (_invSessaoAtiva && r.contados !== undefined) _invSessaoAtiva.contados = r.contados;
   const msg = document.getElementById('coletor-msg');
-  if (msg) { msg.style.color='#22c55e'; msg.textContent = `✅ ${it?.codigo||''} salvo! Bipe o próximo.`; }
+  if (msg) { msg.style.color='#22c55e'; msg.textContent = `✅ ${it?.codigo||''} salvo! Aponte para o próximo.`; }
   const card = document.getElementById('coletor-item-card');
   if (card) card.style.display = 'none';
-  _coletorIdx = -1;
-  document.getElementById('coletor-scan-input')?.focus();
+  const scanInp = document.getElementById('coletor-scan-input');
+  if (scanInp) scanInp.value = '';
+  _coletorIdx    = -1;
+  _coletorPausado= false;
 }
 
 function invColetorCancelar() {
+  invColetorPararCamera();
   document.getElementById('inv-coletor-modal')?.remove();
   invRenderizarSessaoAtiva();
 }
