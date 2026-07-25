@@ -242,7 +242,7 @@ async function carregarAvisosSeparador() {
     const badge = document.getElementById('stab-avisos-sep-badge');
     if (badge) { badge.textContent = avisos.length; badge.style.display = avisos.length > 0 ? 'inline' : 'none'; }
     if (!avisos.length) {
-      lista.innerHTML = '<div style="color:var(--text3);text-align:center;padding:40px;font-size:13px">✅ Nenhum aviso do repositor hoje</div>';
+      lista.innerHTML = '<div style="color:var(--text3);text-align:center;padding:40px;font-size:13px">Nenhum aviso do repositor hoje</div>';
       return;
     }
     lista.innerHTML = avisos.map(a => {
@@ -251,23 +251,21 @@ async function carregarAvisosSeparador() {
       const isAguard   = a.status === 'aguardando_abastecer';
       const bg    = isSubiu ? '#F0FDF4' : isAguard ? '#FFFBEB' : '#EFF6FF';
       const bord  = isSubiu ? '#BBF7D0' : isAguard ? '#FDE68A' : '#BFDBFE';
-      const icon  = isSubiu ? '⬆️' : isAguard ? '🕐' : '📦';
       const label = isSubiu ? 'SUBIU' : isAguard ? 'AGUARD. GUARDAR' : 'ABASTECIDO';
       const cor   = isSubiu ? 'var(--green)' : isAguard ? '#92400e' : 'var(--accent)';
       const nomeLogado = usuarioAtual?.nome || '';
       const btnGuardei = isAguard
         ? `<button onclick="sepGuardeiItem(${a.id},'${nomeLogado.replace(/'/g,"\\'")}',this)"
             style="width:100%;margin-top:12px;padding:13px;background:#10b981;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer">
-            🏠 Guardei este item eu mesmo
+            Guardei este item eu mesmo
            </button>`
         : `<button onclick="sepCienteAviso(${a.id},this)"
             style="width:100%;margin-top:12px;padding:10px;background:transparent;color:var(--text3);border:1.5px solid var(--border);border-radius:12px;font-size:13px;font-weight:700;cursor:pointer">
-            ✓ Ciente — remover notificação
+            Ciente — remover notificação
            </button>`;
       return `
       <div style="background:${bg};border:2px solid ${bord};border-radius:14px;padding:14px;margin-bottom:10px">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <div style="font-size:30px">${icon}</div>
           <div>
             <div style="font-size:12px;font-weight:800;color:${cor};letter-spacing:1px">${label}</div>
             <div style="font-size:11px;color:var(--text3)">Pedido <b style="color:var(--text)">#${a.numero_pedido}</b> &nbsp;•&nbsp; ${a.hora_reposto||a.hora_aviso||'—'}</div>
@@ -275,9 +273,9 @@ async function carregarAvisosSeparador() {
         </div>
         <div style="font-size:16px;font-weight:800;color:var(--accent);font-family:'Space Mono',monospace">${a.codigo||'—'}</div>
         <div style="font-size:13px;font-weight:600;color:var(--text);margin:4px 0">${a.descricao||'—'}</div>
-        <div style="font-size:12px;color:var(--text2)">📍 <b>${a.endereco||'—'}</b> &nbsp;•&nbsp; Qtde: <b>${a.qtd_encontrada||a.quantidade||1}</b></div>
-        ${a.quem_pegou ? `<div style="font-size:11px;color:var(--text3);margin-top:4px">📦 Buscado por: <b>${a.quem_pegou}</b></div>` : ''}
-        ${a.repositor_nome && !a.quem_pegou ? `<div style="font-size:11px;color:var(--text3);margin-top:4px">👷 ${a.repositor_nome}</div>` : ''}
+        <div style="font-size:12px;color:var(--text2)">End.: <b>${a.endereco||'—'}</b> &nbsp;•&nbsp; Qtde: <b>${a.qtd_encontrada||a.quantidade||1}</b></div>
+        ${a.quem_pegou ? `<div style="font-size:11px;color:var(--text3);margin-top:4px">Buscado por: <b>${a.quem_pegou}</b></div>` : ''}
+        ${a.repositor_nome && !a.quem_pegou ? `<div style="font-size:11px;color:var(--text3);margin-top:4px">${a.repositor_nome}</div>` : ''}
         ${btnGuardei}
       </div>`;
     }).join('');
@@ -307,16 +305,16 @@ async function sepGuardeiItem(id, nome, btn) {
       body: JSON.stringify({ quem_guardou: nome, situacao:'abastecido', status:'abastecido' })
     });
     if (res.ok) {
-      toast('Registrado! ✅', 'sucesso');
+      toast('Registrado!', 'sucesso');
       carregarAvisosSeparador();
     } else {
       btn.disabled = false;
-      btn.textContent = '🏠 Guardei este item eu mesmo';
+      btn.textContent = 'Guardei este item eu mesmo';
       toast('Erro ao salvar', 'erro');
     }
   } catch(e) {
     btn.disabled = false;
-    btn.textContent = '🏠 Guardei este item eu mesmo';
+    btn.textContent = 'Guardei este item eu mesmo';
     toast('Sem conexão', 'erro');
   }
 }
@@ -732,14 +730,14 @@ async function salvarEdicaoUsuario() {
 }
 function confirmarZerarDados() {
   wmsConfirm({
-    icone: '⚠️',
+    
     titulo: 'Zerar todos os dados?',
     sub: 'Apaga TODOS os pedidos, reposições e checkouts. Usuários NÃO serão apagados. Esta ação não pode ser desfeita.',
     btnOk: 'Sim, zerar tudo',
     btnOkClass: 'btn-danger',
   }, () => {
     wmsConfirm({
-      icone: '🔴',
+      
       titulo: 'Tem ABSOLUTA certeza?',
       sub: 'Não há como recuperar os dados após esta ação.',
       btnOk: 'Confirmo — zerar agora',
@@ -948,7 +946,7 @@ function iniciarCountdown(segundos) {
       clearInterval(_valTimer);
       // Mantém o banner visível mas muda para indicar que está atrasada
       // (não oculta — validação retroativa ainda é possível)
-      if (el) { el.textContent = '⚠️ Atrasada'; el.style.color='#fcd34d'; }
+      if (el) { el.textContent = 'Atrasada'; el.style.color='#fcd34d'; }
       return;
     }
     if (el) {
@@ -1039,7 +1037,7 @@ async function abrirModalValidacao() {
         const subtitulo = document.getElementById('modal-val-subtitulo');
         if (subtitulo && !subtitulo.dataset.exp) {
           subtitulo.dataset.exp = '1';
-          subtitulo.innerHTML += ' <span style="background:#fef3c7;color:#92400e;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:700">⚠️ Atrasada — validação ainda possível</span>';
+          subtitulo.innerHTML += ' <span style="background:#fef3c7;color:#92400e;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:700">Atrasada — validação ainda possível</span>';
         }
         return;
       }
@@ -1140,7 +1138,7 @@ async function submeterValidacao() {
 
     if (res.ok && r.mensagem) {
       // Sucesso normal
-      toast(`✅ Validação concluída! Pontuação: ${r.pontuacao ?? '?'}/100`, 'sucesso');
+      toast(`Validação concluída! Pontuação: ${r.pontuacao ?? '?'}/100`, 'sucesso');
       _limparBanner();
     } else if (r.erro === 'Este diário já foi validado') {
       // Já foi validado por outro supervisor — limpa o banner normalmente
@@ -1153,7 +1151,7 @@ async function submeterValidacao() {
     toast('Erro ao submeter validação','erro');
   } finally {
     _submetendoValidacao = false;
-    if (btnConfirmar) { btnConfirmar.disabled = false; btnConfirmar.textContent = '✅ Confirmar Validação'; }
+    if (btnConfirmar) { btnConfirmar.disabled = false; btnConfirmar.textContent = 'Confirmar Validação'; }
   }
 }
 
@@ -1298,7 +1296,7 @@ function rowEmb(p) {
 
   // Status pill
   let pillClass, pillText;
-  if (isEmbalado)       { pillClass = 'concluido'; pillText = '✅ Embalado'; }
+  if (isEmbalado)       { pillClass = 'concluido'; pillText = 'Embalado'; }
   else if (isEmbalando) { pillClass = 'separando'; pillText = '⏱ Embalando'; }
   else                  { pillClass = 'pendente';  pillText = '⏳ Pendente'; }
 
@@ -1313,8 +1311,8 @@ function rowEmb(p) {
     acao = '<span style="font-size:11px;color:var(--text3)">—</span>';
   } else if (isEmbalando) {
     acao = `<div style="display:flex;gap:5px;flex-wrap:nowrap">
-      <button onclick="iniciarEmbalagemDesk(${p.id})" class="btn btn-outline btn-sm" title="Reiniciar">🔄</button>
-      <button onclick="encerrarEmbalagemDesk(${p.id})" class="btn btn-success btn-sm">✅ Encerrar</button>
+      <button onclick="iniciarEmbalagemDesk(${p.id})" class="btn btn-outline btn-sm" title="Reiniciar">↺</button>
+      <button onclick="encerrarEmbalagemDesk(${p.id})" class="btn btn-success btn-sm">Encerrar</button>
     </div>`;
   } else {
     acao = `<button onclick="iniciarEmbalagemDesk(${p.id})" class="btn btn-primary btn-sm">▶️ Iniciar</button>`;
@@ -1356,7 +1354,7 @@ async function carregarEmbalagem() {
     if (elPend) elPend.textContent = pend;
     if (elEmb)  elEmb.textContent  = emb;
     if (!pedidos.length) {
-      el.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:60px;color:var(--text3);font-size:15px">✅ Nenhum pedido para embalar</td></tr>';
+      el.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:60px;color:var(--text3);font-size:15px">Nenhum pedido para embalar</td></tr>';
       return;
     }
     const embalando = pedidos.filter(p => p.status_embalagem === 'embalando');
@@ -1382,7 +1380,7 @@ async function _buscarEmbalagemDeskLegacy() {
   const num  = (document.getElementById('emb-desk-scan')?.value || '').trim();
   const cont = document.getElementById('emb-desk-scan-resultado');
   if (!num) { toast('Digite o número do pedido!','aviso'); return; }
-  if (cont) cont.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:8px">🔍 Buscando...</div>';
+  if (cont) cont.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:8px">Buscando...</div>';
   try {
     const ini  = document.getElementById('emb-ini')?.value || hojeLocal();
     const fim  = document.getElementById('emb-fim')?.value || ini;
@@ -1480,7 +1478,7 @@ async function buscarPedidoEmbMobile() {
   const num  = (document.getElementById('m-emb-embalar-input')?.value || '').trim();
   const cont = document.getElementById('m-emb-embalar-resultado');
   if (!num) { toast('Digite o número do pedido!','aviso'); return; }
-  if (cont) cont.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3)">🔍 Buscando...</div>';
+  if (cont) cont.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3)">Buscando...</div>';
 
   // Garante lista atualizada
   if (!_embPedidos.length) {
@@ -1502,7 +1500,6 @@ async function buscarPedidoEmbMobile() {
       }
     } catch(e) {}
     if (cont) cont.innerHTML = `<div style="text-align:center;padding:50px 20px">
-      <div style="font-size:40px;margin-bottom:12px">🔍</div>
       <div style="font-weight:700;color:var(--text)">Pedido ${num} não encontrado</div>
       <div style="color:var(--text3);font-size:13px;margin-top:6px">Não está na fila de embalagem</div>
     </div>`;
@@ -1532,7 +1529,6 @@ function filtrarEmbalagemMobile() {
     : _embPedidos;
   if (!filtrados.length) {
     el.innerHTML = `<div style="text-align:center;padding:40px 16px">
-      <div style="font-size:40px;margin-bottom:12px">🔍</div>
       <div style="font-weight:700;color:var(--text)">Nenhum pedido encontrado</div>
       <div style="color:var(--text3);font-size:13px;margin-top:4px">"${busca}" não corresponde a nenhum pedido</div>
     </div>`;
@@ -1549,9 +1545,9 @@ function renderCardEmbFila(p, emAndamento) {
   const isPrime = p.tem_prime;
   const bordColor = emAndamento ? '#bfdbfe' : isDrive ? '#FECACA' : isPrime ? '#ddd6fe' : 'var(--border)';
   const numColor  = emAndamento ? '#2563eb' : isDrive ? '#DC2626' : isPrime ? '#7c3aed' : 'var(--accent)';
-  const pillTxt   = emAndamento ? '⏱ embalando' : isDrive ? '🚗 drive thru' : isPrime ? '⭐ prime' : 'aguardando emb';
+  const pillTxt   = emAndamento ? 'embalando' : isDrive ? 'drive thru' : isPrime ? 'prime' : 'aguardando emb';
   const pillCls   = emAndamento ? 'separando' : 'pendente';
-  const btnTxt    = emAndamento ? '📦 Continuar Embalagem' : '📦 Iniciar Embalagem';
+  const btnTxt    = emAndamento ? 'Continuar Embalagem' : 'Iniciar Embalagem';
 
   return `
     <div style="border:1.5px solid ${bordColor};border-radius:12px;padding:12px 14px;margin-bottom:8px;background:var(--surface)">
@@ -1560,13 +1556,13 @@ function renderCardEmbFila(p, emAndamento) {
         <span class="pill ${pillCls}" style="font-size:10px">${pillTxt}</span>
       </div>
       <div style="display:flex;gap:10px;font-size:12px;color:var(--text2);flex-wrap:wrap;margin-bottom:4px">
-        <span>📦 <b style="color:var(--text)">${p.total_itens||p.itens||0} itens</b></span>
-        <span>🏷️ <b style="color:var(--text)">${p.itens||0} SKUs</b></span>
-        ${p.cliente ? `<span>👤 ${p.cliente}</span>` : ''}
-        ${p.transportadora ? `<span>🚚 ${p.transportadora}</span>` : ''}
+        <span><b style="color:var(--text)">${p.total_itens||p.itens||0} itens</b></span>
+        <span>${p.itens||0} SKUs</span>
+        ${p.cliente ? `<span>${p.cliente}</span>` : ''}
+        ${p.transportadora ? `<span>${p.transportadora}</span>` : ''}
       </div>
-      ${p.hora_checkout ? `<div style="font-size:11px;color:var(--text3);margin-top:2px">✓ Checkout às ${p.hora_checkout}</div>` : ''}
-      ${emAndamento && p.embalagem_iniciado_em ? `<div style="font-size:11px;color:#2563eb;margin-top:2px">⏱ Embalagem iniciada às ${p.embalagem_iniciado_em}</div>` : ''}
+      ${p.hora_checkout ? `<div style="font-size:11px;color:var(--text3);margin-top:2px">Checkout às ${p.hora_checkout}</div>` : ''}
+      ${emAndamento && p.embalagem_iniciado_em ? `<div style="font-size:11px;color:#2563eb;margin-top:2px">Embalagem iniciada às ${p.embalagem_iniciado_em}</div>` : ''}
       <button class="btn btn-primary btn-sm" style="width:100%;margin-top:8px;padding:10px;font-size:14px;font-weight:700"
         onclick="selecionarPedidoEmbFila(${p.id})">
         ${btnTxt}
@@ -1586,7 +1582,7 @@ function renderCardEmb(p, emAndamento, mode, readOnly) {
   const corBorda = isEmbalado ? '#16a34a' : emAndamento ? '#2563eb' : isDrive ? '#dc2626' : isPrime ? '#7c3aed' : '#64748b';
   const corFundo = isEmbalado ? '#f0fdf4' : emAndamento ? '#eff6ff' : isDrive ? '#fef2f2' : isPrime ? '#f5f3ff' : '#f8fafc';
   const statusBadge = isEmbalado
-    ? `<span style="font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;background:#16a34a;color:#fff">✅ EMBALADO</span>`
+    ? `<span style="font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;background:#16a34a;color:#fff">EMBALADO</span>`
     : emAndamento
       ? `<span style="font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;background:#2563eb;color:#fff;animation:pulse 1.5s infinite">⏱ EM ANDAMENTO</span>`
       : '';
@@ -1686,7 +1682,6 @@ async function carregarEmbalagemMobile() {
     if (busca) busca.value = '';
     if (!pedidos.length) {
       el.innerHTML = `<div style="text-align:center;padding:60px 16px">
-        <div style="font-size:56px;margin-bottom:16px">✅</div>
         <div style="font-weight:700;font-size:16px;color:var(--text);margin-bottom:6px">Tudo embalado!</div>
         <div style="color:var(--text3);font-size:13px">Nenhum pedido pendente</div>
       </div>`;
@@ -1711,7 +1706,6 @@ async function carregarEmbalagemEmbalados() {
     const pedidos = await res.json();
     if (!pedidos.length) {
       el.innerHTML = `<div style="text-align:center;padding:60px 16px">
-        <div style="font-size:48px;margin-bottom:12px">📦</div>
         <div style="font-weight:700;font-size:15px;color:var(--text);margin-bottom:6px">Nenhum pedido embalado</div>
         <div style="color:var(--text3);font-size:12px">no período de hoje</div>
       </div>`;
@@ -1726,7 +1720,7 @@ async function carregarEmbalagemEmbalados() {
               <div style="font-family:'Space Mono',monospace;font-size:19px;font-weight:700;color:var(--text)">${p.numero_pedido}</div>
               <div style="font-size:12px;color:var(--text2);margin-top:3px;font-weight:500">${p.cliente||'—'}</div>
             </div>
-            <span style="font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;background:#16a34a;color:#fff;flex-shrink:0">✅ EMBALADO</span>
+            <span style="font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;background:#16a34a;color:#fff;flex-shrink:0">EMBALADO</span>
           </div>
         </div>
         <div style="padding:12px 16px;display:grid;grid-template-columns:1fr 1fr;gap:8px;border-bottom:1px solid var(--border)">
@@ -1784,14 +1778,13 @@ async function encerrarEmbalagemMobile(id) {
     if (btn) { btn.disabled = true; btn.textContent = 'Encerrando...'; }
     const res = await fetch(`${API}/embalagem/${id}/confirmar`, { method:'PUT', credentials:'include' });
     const r = await res.json();
-    if (!res.ok) { toast(r.erro||'Erro','erro'); if(btn){btn.disabled=false;btn.textContent='✅ Encerrar';} return; }
-    toast('Embalagem concluída! 📦', 'sucesso');
+    if (!res.ok) { toast(r.erro||'Erro','erro'); if(btn){btn.disabled=false;btn.textContent='Encerrar';} return; }
+    toast('Embalagem concluída!', 'sucesso');
     // Limpa input e resultado na aba embalar
     const embInput = document.getElementById('m-emb-embalar-input');
     if (embInput) embInput.value = '';
     const cont = document.getElementById('m-emb-embalar-resultado');
     if (cont) cont.innerHTML = `<div style="text-align:center;padding:50px 20px;color:var(--text3)">
-      <div style="font-size:48px;margin-bottom:12px">✅</div>
       <div style="font-size:14px;font-weight:700;color:#16a34a">Embalagem concluída!</div>
       <div style="font-size:12px;margin-top:6px">Selecione o próximo pedido na Fila</div>
     </div>`;
@@ -1858,7 +1851,7 @@ async function trocarSenhaTemp() {
     document.getElementById('trocar-senha-box').style.display = 'none';
     document.getElementById('login-box').style.display = 'flex';
     const erroLogin = document.getElementById('login-erro');
-    if (erroLogin) { erroLogin.textContent = '✅ Senha alterada! Faça o login.'; erroLogin.style.display='block'; erroLogin.style.color='#16a34a'; }
+    if (erroLogin) { erroLogin.textContent = 'Senha alterada! Faça o login.'; erroLogin.style.display='block'; erroLogin.style.color='#16a34a'; }
   } catch(e) { if(erroEl) erroEl.textContent='Erro ao salvar'; }
 }
 
@@ -1958,7 +1951,7 @@ function renderFormValidacao(p) {
   if (!sec) return;
   const SECOES = [
     {
-      titulo: '📦 Separação', cor: '#2563EB', fundo: '#EFF6FF', borda: '#BFDBFE',
+      titulo: 'Separação', cor: '#2563EB', fundo: '#EFF6FF', borda: '#BFDBFE',
       campos: [
         { key:'sep_separados',    label:'Separados',      val: p.sep_separados,    pts: 75 },
         { key:'sep_pendentes',    label:'Pendentes',      val: p.sep_pendentes,    pts: 75 },
@@ -1966,28 +1959,28 @@ function renderFormValidacao(p) {
       ]
     },
     {
-      titulo: '✅ Checkout', cor: '#16a34a', fundo: '#F0FDF4', borda: '#BBF7D0',
+      titulo: 'Checkout', cor: '#16a34a', fundo: '#F0FDF4', borda: '#BBF7D0',
       campos: [
         { key:'ck_feitos',    label:'Realizados', val: p.ck_feitos,    pts: 75 },
         { key:'ck_pendentes', label:'Pendentes',  val: p.ck_pendentes, pts: 75 },
       ]
     },
     {
-      titulo: '📫 Embalagem', cor: '#7C3AED', fundo: '#F5F3FF', borda: '#DDD6FE',
+      titulo: 'Embalagem', cor: '#7C3AED', fundo: '#F5F3FF', borda: '#DDD6FE',
       campos: [
         { key:'emb_embalados', label:'Embalados', val: p.emb_embalados, pts: 75 },
         { key:'emb_pendentes', label:'Pendentes', val: p.emb_pendentes, pts: 75 },
       ]
     },
     {
-      titulo: '⚠️ Reposição — Pendências', cor: '#DC2626', fundo: '#FEF2F2', borda: '#FECACA',
+      titulo: 'Reposição — Pendências', cor: '#DC2626', fundo: '#FEF2F2', borda: '#FECACA',
       campos: [
         { key:'rep_procurando', label:'Procurando Itens', val: p.rep_procurando, pts: 75 },
         { key:'rep_na_rua',     label:'Caixas na Rua',    val: p.rep_na_rua,     pts: 75 },
       ]
     },
     {
-      titulo: '📝 Informações Gerais', cor: '#475569', fundo: '#F8FAFC', borda: '#E2E8F0',
+      titulo: 'Informações Gerais', cor: '#475569', fundo: '#F8FAFC', borda: '#E2E8F0',
       campos: [
         { key:'separadores_presentes', label:'Separadores Presentes', val: p.separadores_presentes, pts: 25 },
         { key:'ocorrencias',           label:'Ocorrências',           val: p.ocorrencias,           pts: 25 },
@@ -2015,7 +2008,7 @@ function renderFormValidacao(p) {
     </div>`;
   sec.innerHTML = `
     <div style="background:#FEF3C7;border:1px solid #FDE68A;border-radius:10px;padding:14px 16px;margin-bottom:16px">
-      <div style="font-size:12px;font-weight:700;color:#92400E">📋 Passagem pendente de validação</div>
+      <div style="font-size:12px;font-weight:700;color:#92400E">Passagem pendente de validação</div>
       <div style="font-size:11px;color:#78350F;margin-top:4px">Turno: <b>${p.turno}</b> | Data: <b>${fmtData(p.data)}</b> | Supervisor: <b>${p.supervisor}</b></div>
     </div>
     ${SECOES.map(s => `
@@ -2031,9 +2024,9 @@ function renderFormValidacao(p) {
     <div style="margin-top:6px">
       <label style="font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase">Turno que está ENTRANDO</label>
       <select id="val-turno-entrando" style="width:100%;margin-top:4px;padding:10px;border:1px solid #E2E8F0;border-radius:8px;font-size:13px;box-sizing:border-box">
-        <option value="Manha">☀️ Manhã</option>
-        <option value="Tarde">🌤️ Tarde</option>
-        <option value="Noite">🌙 Noite</option>
+        <option value="Manha">Manhã</option>
+        <option value="Tarde">Tarde</option>
+        <option value="Noite">Noite</option>
       </select>
     </div>
     <button onclick="confirmarValidacao(${p.id})"
@@ -2066,7 +2059,7 @@ async function confirmarValidacao(passagem_id) {
     });
     const r = await res.json();
     if (!res.ok) { toast(r.erro||'Erro','erro'); return; }
-    const status = r.status === 'contestado' ? '⚠️ Passagem contestada' : '✅ Passagem validada';
+    const status = r.status === 'contestado' ? 'Passagem contestada' : 'Passagem validada';
     const msg = r.pontos_perdidos > 0 ? `${status} — ${r.pontos_perdidos} pontos descontados!` : `${status} sem penalidades.`;
     toast(msg, r.pontos_perdidos > 0 ? 'aviso' : 'info');
     Object.keys(_valResultados).forEach(k => delete _valResultados[k]);
@@ -2147,7 +2140,7 @@ async function carregarEmbalagemDesk() {
     if (elEmb)  elEmb.textContent  = emb;
     if (badge) { badge.textContent = pedidos.length; badge.style.display = pedidos.length ? 'inline' : 'none'; }
     if (!pedidos.length) {
-      el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:40px;font-size:13px">✅ Nenhum pedido pendente para embalar</div>';
+      el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:40px;font-size:13px">Nenhum pedido pendente para embalar</div>';
       return;
     }
     // Render as cards (same as mobile fila)
@@ -2184,9 +2177,9 @@ function renderCardEmbFilaDesk(p, emAndamento) {
   const isPrime  = p.tem_prime;
   const bordColor = emAndamento ? '#bfdbfe' : isDrive ? '#FECACA' : isPrime ? '#ddd6fe' : 'var(--border)';
   const numColor  = emAndamento ? '#2563eb' : isDrive ? '#DC2626' : isPrime ? '#7c3aed' : 'var(--accent)';
-  const pillTxt   = emAndamento ? '⏱ embalando' : isDrive ? '🚗 drive thru' : isPrime ? '⭐ prime' : 'aguardando emb';
+  const pillTxt   = emAndamento ? 'embalando' : isDrive ? 'drive thru' : isPrime ? 'prime' : 'aguardando emb';
   const pillCls   = emAndamento ? 'separando' : 'pendente';
-  const btnTxt    = emAndamento ? '📦 Continuar Embalagem' : '📦 Iniciar Embalagem';
+  const btnTxt    = emAndamento ? 'Continuar Embalagem' : 'Iniciar Embalagem';
   return `
     <div style="border:1.5px solid ${bordColor};border-radius:12px;padding:12px 14px;margin-bottom:8px;background:var(--surface)">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
@@ -2194,10 +2187,10 @@ function renderCardEmbFilaDesk(p, emAndamento) {
         <span class="pill ${pillCls}" style="font-size:10px">${pillTxt}</span>
       </div>
       <div style="display:flex;gap:10px;font-size:12px;color:var(--text2);flex-wrap:wrap;margin-bottom:4px">
-        <span>📦 <b style="color:var(--text)">${p.total_itens||p.itens||0} itens</b></span>
-        <span>🏷️ <b style="color:var(--text)">${p.itens||0} SKUs</b></span>
-        ${p.cliente ? `<span>👤 ${p.cliente}</span>` : ''}
-        ${p.transportadora ? `<span>🚚 ${p.transportadora}</span>` : ''}
+        <span>${r.ped_itens||0}<b style="color:var(--text)">${p.total_itens||p.itens||0} itens</b></span>
+        <span><b style="color:var(--text)">${p.itens||0} SKUs</b></span>
+        ${p.cliente ? `<span>${r.separador_nome||'—'}${p.cliente}</span>` : ''}
+        ${p.transportadora ? `<span>${p.transportadora}${p.transportadora}</span>` : ''}
       </div>
       ${p.hora_checkout ? `<div style="font-size:11px;color:var(--text3);margin-top:2px">✓ Checkout às ${p.hora_checkout}</div>` : ''}
       ${emAndamento && p.embalagem_iniciado_em ? `<div style="font-size:11px;color:#2563eb;margin-top:2px">⏱ Embalagem iniciada às ${p.embalagem_iniciado_em}</div>` : ''}
@@ -2228,7 +2221,7 @@ async function carregarEmbalagemEmbaladesDesk() {
     const res = await fetch(`${API}/embalagem?ini=${ini}&fim=${fim}&status=embalado`, { credentials:'include' });
     const pedidos = res.ok ? await res.json() : [];
     if (!pedidos.length) {
-      el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:40px;font-size:13px">📦 Nenhum pedido embalado no período</div>';
+      el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:40px;font-size:13px">Nenhum pedido embalado no período</div>';
       return;
     }
     const fmtDt = d => { if (!d) return '—'; const [y,m,dd] = d.split('-'); return `${dd}/${m}/${y}`; };
@@ -2236,14 +2229,14 @@ async function carregarEmbalagemEmbaladesDesk() {
       <div style="border:1.5px solid #BBF7D0;border-radius:12px;padding:12px 14px;margin-bottom:8px;background:#F0FDF4">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
           <div style="font-size:20px;font-weight:800;color:var(--green);font-family:'Space Mono',monospace">#${p.numero_pedido}</div>
-          <span style="font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;background:#16a34a;color:#fff">✅ EMBALADO</span>
+          <span style="font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;background:#16a34a;color:#fff">EMBALADO</span>
         </div>
         <div style="display:flex;gap:12px;font-size:12px;color:var(--text2);flex-wrap:wrap">
-          <span>📦 <b style="color:var(--text)">${p.total_itens||p.itens||0} itens</b></span>
-        <span>🏷️ <b style="color:var(--text)">${p.itens||0} SKUs</b></span>
-          ${p.cliente ? `<span>👤 ${p.cliente}</span>` : ''}
-          ${p.transportadora ? `<span>🚚 ${p.transportadora}</span>` : ''}
-          ${p.embalado_por ? `<span>👷 ${p.embalado_por}</span>` : ''}
+          <span>${r.ped_itens||0}<b style="color:var(--text)">${p.total_itens||p.itens||0} itens</b></span>
+        <span><b style="color:var(--text)">${p.itens||0} SKUs</b></span>
+          ${p.cliente ? `<span>${r.separador_nome||'—'}${p.cliente}</span>` : ''}
+          ${p.transportadora ? `<span>${p.transportadora}${p.transportadora}</span>` : ''}
+          ${p.embalado_por ? `<span>${p.embalado_por}${p.embalado_por}</span>` : ''}
         </div>
         ${p.hora_checkout ? `<div style="font-size:11px;color:var(--text3);margin-top:4px">Checkout: ${p.hora_checkout}</div>` : ''}
         ${p.embalagem_iniciado_em ? `<div style="font-size:11px;color:#16a34a;margin-top:2px">Início emb.: ${p.embalagem_iniciado_em}</div>` : ''}
@@ -2260,7 +2253,7 @@ async function buscarEmbalagemDesk() {
   const num  = (inputEl?.value || '').trim();
   const cont = document.getElementById('d-emb-resultado') || document.getElementById('emb-desk-scan-resultado');
   if (!num) { toast('Digite o número do pedido!','aviso'); return; }
-  if (cont) cont.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:8px">🔍 Buscando...</div>';
+  if (cont) cont.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:8px">Buscando...</div>';
   try {
     const ini  = document.getElementById('emb-ini')?.value || hojeLocal();
     const fim  = document.getElementById('emb-fim')?.value || ini;
@@ -2297,12 +2290,12 @@ async function encerrarEmbalagemDesk(id) {
     const res = await fetch(`${API}/embalagem/${id}/confirmar`, { method:'PUT', credentials:'include' });
     const r = await res.json();
     if (!res.ok) { toast(r.erro||'Erro','erro'); return; }
-    toast('Embalagem concluída! 📦', 'sucesso');
+    toast('Embalagem concluída!', 'sucesso');
     const dInput = document.getElementById('d-emb-embalar-input');
     if (dInput) dInput.value = '';
     const dCont = document.getElementById('d-emb-resultado');
     if (dCont) dCont.innerHTML = `<div style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px;color:#16a34a;font-weight:700;font-size:13px">
-      ✅ Embalagem concluída! Bipe o próximo pedido.
+      ${r.hora_checkout||'—'}Embalagem concluída! Bipe o próximo pedido.
     </div>`;
     if (document.getElementById('d-emb-tab-fila')?.style.display !== 'none') carregarEmbalagemDesk();
   } catch(e) { toast('Erro ao encerrar','erro'); }
@@ -2332,13 +2325,13 @@ async function carregarAguardandoCkDesk() {
   const el    = document.getElementById('d-ck-aguardando');
   const badge = document.getElementById('d-cktab-aguardando-badge');
   if (!el) return;
-  el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:24px;font-size:13px">🔄 Carregando...</div>';
+  el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:24px;font-size:13px">Carregando...</div>';
   try {
     const res  = await fetch(`${API}/checkout/aguardando`, { credentials:'include' });
     const rows = res.ok ? await res.json() : [];
     if (badge) { badge.textContent = rows.length; badge.style.display = rows.length ? 'inline' : 'none'; }
     if (!rows.length) {
-      el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:40px;font-size:14px">✅ Nenhum pedido aguardando item</div>';
+      el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:40px;font-size:14px">Nenhum pedido aguardando item</div>';
       return;
     }
     el.innerHTML = rows.map(r => {
@@ -2348,7 +2341,7 @@ async function carregarAguardandoCkDesk() {
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
           <div>
             <div style="font-size:20px;font-weight:800;color:#c2410c;font-family:'Space Mono',monospace">#${r.numero_pedido}</div>
-            <div style="font-size:12px;color:var(--text2)">📦 ${r.ped_itens||0} itens &nbsp;•&nbsp; 👤 ${r.separador_nome||'—'}</div>
+            <div style="font-size:12px;color:var(--text2)">${r.ped_itens||0}${r.ped_itens||0} itens &nbsp;•&nbsp; ${r.separador_nome||'—'}${r.separador_nome||'—'}</div>
           </div>
           <button onclick="retomarCheckoutDesk(${r.id},'${r.numero_caixa||r.numero_pedido}')"
             style="background:#f97316;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer">
@@ -2358,7 +2351,7 @@ async function carregarAguardandoCkDesk() {
         ${itens.length ? `
         <div style="background:#fff;border:1px solid #fed7aa;border-radius:8px;padding:8px 12px">
           <div style="font-size:10px;font-weight:700;color:#c2410c;letter-spacing:.5px;margin-bottom:4px">ITENS FALTANDO</div>
-          ${itens.map(it=>`<div style="font-size:12px;padding:2px 0">❌ <b>${it.codigo}</b> · ${it.descricao} · x${it.quantidade}</div>`).join('')}
+          ${itens.map(it=>`<div style="font-size:12px;padding:2px 0"><b>${it.codigo}</b> · ${it.descricao} · x${it.quantidade}</div>`).join('')}
         </div>` : ''}
       </div>`;
     }).join('');
@@ -2391,7 +2384,7 @@ async function carregarFilaCkDesk() {
   const el    = document.getElementById('d-ck-fila');
   const badge = document.getElementById('d-cktab-fila-badge');
   if (!el) return;
-  el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:24px;font-size:13px">🔄 Carregando...</div>';
+  el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:24px;font-size:13px">Carregando...</div>';
   try {
     const hoje = new Date().toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo'}).split('/').reverse().join('-');
     const res  = await fetch(`${API}/pedidos?status=concluido&data=${hoje}`, { credentials:'include' });
@@ -2399,7 +2392,7 @@ async function carregarFilaCkDesk() {
     const fila = pedidos.filter(p => !p.status_embalagem || p.status_embalagem === 'nao_iniciado');
     if (badge) { badge.textContent = fila.length; badge.style.display = fila.length > 0 ? 'inline' : 'none'; }
     if (!fila.length) {
-      el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:32px;font-size:13px">✅ Nenhum pedido aguardando checkout</div>';
+      el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:32px;font-size:13px">Nenhum pedido aguardando checkout</div>';
       return;
     }
     el.innerHTML = fila.map(p => `
@@ -2409,15 +2402,15 @@ async function carregarFilaCkDesk() {
           <span class="pill pendente" style="font-size:10px">aguardando ck</span>
         </div>
         <div style="display:flex;gap:12px;font-size:12px;color:var(--text2)">
-          <span>📦 <b style="color:var(--text)">${p.total_itens||p.itens||0} itens</b></span>
-        <span>🏷️ <b style="color:var(--text)">${p.itens||0} SKUs</b></span>
-          <span>👤 ${p.separador_nome||'—'}</span>
-          ${p.numero_caixa ? `<span>🏷️ Cx: <b style="color:var(--indigo)">${p.numero_caixa}</b></span>` : ''}
+          <span>${r.ped_itens||0}<b style="color:var(--text)">${p.total_itens||p.itens||0} itens</b></span>
+        <span><b style="color:var(--text)">${p.itens||0} SKUs</b></span>
+          <span>${r.separador_nome||'—'}${p.separador_nome||'—'}</span>
+          ${p.numero_caixa ? `<span>Cx: <b style="color:var(--indigo)">${p.numero_caixa}</b></span>` : ''}
         </div>
         ${p.concluido_em ? `<div style="font-size:11px;color:var(--text3);margin-top:4px">✓ Sep às ${(p.concluido_em||'').substring(11,16)}</div>` : ''}
         <button class="btn btn-primary btn-sm" style="width:100%;margin-top:8px;padding:10px"
           onclick="iniciarCkDesk('${p.numero_caixa||p.numero_pedido||''}')">
-          🏷️ Iniciar Checkout
+          Iniciar Checkout
         </button>
       </div>`).join('');
   } catch(e) {
@@ -2430,7 +2423,7 @@ async function carregarFeitosCkDesk() {
   const cnt   = document.getElementById('d-ck-feitos-cnt-label');
   const badge = document.getElementById('d-ck-feitos-cnt');
   if (!el) return;
-  el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:24px;font-size:13px">🔄 Carregando...</div>';
+  el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:24px;font-size:13px">Carregando...</div>';
   try {
     const hoje = new Date().toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo'}).split('/').reverse().join('-');
     const res  = await fetch(`${API}/checkout?status=concluido&data=${hoje}`, { credentials:'include' });
@@ -2446,13 +2439,13 @@ async function carregarFeitosCkDesk() {
       <div style="border:1.5px solid #BBF7D0;border-radius:12px;padding:12px 14px;margin-bottom:8px;background:#F0FDF4">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
           <div style="font-size:20px;font-weight:800;color:var(--green);font-family:'Space Mono',monospace">#${r.numero_pedido||'—'}</div>
-          <span style="font-size:11px;color:var(--green);font-weight:700">✅ ${r.hora_checkout||'—'}</span>
+          <span style="font-size:11px;color:var(--green);font-weight:700">${r.hora_checkout||'—'}${r.hora_checkout||'—'}</span>
         </div>
         <div style="display:flex;gap:12px;font-size:12px;color:var(--text2)">
-          <span>📦 <b style="color:var(--text)">${r.ped_total_itens||r.ped_itens||0} itens</b></span>
-          <span>🏷️ <b style="color:var(--text)">${r.ped_itens||0} SKUs</b></span>
-          <span>👤 ${r.separador_nome_join||r.separador_nome||'—'}</span>
-          ${r.operador_nome ? `<span>🏷️ ${r.operador_nome}</span>` : ''}
+          <span>${r.ped_itens||0}<b style="color:var(--text)">${r.ped_total_itens||r.ped_itens||0} itens</b></span>
+          <span><b style="color:var(--text)">${r.ped_itens||0} SKUs</b></span>
+          <span>${r.separador_nome||'—'}${r.separador_nome_join||r.separador_nome||'—'}</span>
+          ${r.operador_nome ? `<span>${r.operador_nome}</span>` : ''}
         </div>
       </div>`).join('');
   } catch(e) {
@@ -2478,7 +2471,7 @@ async function carregarStatsPedidosDesk(page) {
     const data = res.ok ? await res.json() : [];
     const lista = Array.isArray(data) ? data : (data.dados || []);
     if (!lista.length) {
-      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:40px;color:var(--text3)"><div style="font-size:32px;margin-bottom:8px">📋</div>Nenhum pedido no período</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:40px;color:var(--text3)"><div style="font-size:32px;margin-bottom:8px"></div>Nenhum pedido no período</td></tr>';
       return;
     }
     tbody.innerHTML = lista.map(p => `
@@ -2518,14 +2511,14 @@ async function carregarAvisosSeparadorDesk() {
   const destEl = document.getElementById('d-sep-avisos');
   if (!destEl) { carregarAvisosSeparador(); return; }
   if (!separadorAtual) { destEl.innerHTML = '<div style="color:var(--text3);text-align:center;padding:24px">Faça login como separador para ver avisos</div>'; return; }
-  destEl.innerHTML = '<div style="color:var(--text3);text-align:center;padding:24px">🔄 Carregando...</div>';
+  destEl.innerHTML = '<div style="color:var(--text3);text-align:center;padding:24px">Carregando...</div>';
   try {
     const res   = await fetch(`${API}/repositor/avisos/separador/${separadorAtual.id}`, { credentials:'include' });
     const avisos = await res.json();
     const badge  = document.getElementById('d-sep-avisos-badge');
     if (badge) { badge.textContent = avisos.length; badge.style.display = avisos.length > 0 ? 'inline' : 'none'; }
     if (!avisos.length) {
-      destEl.innerHTML = '<div style="color:var(--text3);text-align:center;padding:40px;font-size:13px">✅ Nenhum aviso do repositor hoje</div>';
+      destEl.innerHTML = '<div style="color:var(--text3);text-align:center;padding:40px;font-size:13px">Nenhum aviso do repositor hoje</div>';
       return;
     }
     destEl.innerHTML = avisos.map(a => {
@@ -2533,18 +2526,17 @@ async function carregarAvisosSeparadorDesk() {
       const isAguard = a.status === 'aguardando_abastecer';
       const bg    = isSubiu ? '#F0FDF4' : isAguard ? '#FFFBEB' : '#EFF6FF';
       const bord  = isSubiu ? '#BBF7D0' : isAguard ? '#FDE68A' : '#BFDBFE';
-      const icon  = isSubiu ? '⬆️' : isAguard ? '🕐' : '📦';
       const label = isSubiu ? 'SUBIU' : isAguard ? 'AGUARD. GUARDAR' : 'ABASTECIDO';
       const cor   = isSubiu ? 'var(--green)' : isAguard ? '#92400e' : 'var(--accent)';
       const nomeLogado = usuarioAtual?.nome || '';
       const btnGuardei = isAguard
         ? `<button onclick="sepGuardeiItem(${a.id},'${nomeLogado.replace(/'/g,"\\'")}',this)"
             style="margin-top:10px;padding:10px 18px;background:#10b981;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">
-            🏠 Guardei este item eu mesmo
+            Guardei este item eu mesmo
            </button>`
         : `<button onclick="sepCienteAviso(${a.id},this)"
             style="margin-top:10px;padding:8px 16px;background:transparent;color:var(--text3);border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">
-            ✓ Ciente
+            Ciente
            </button>`;
       return `
       <div style="background:${bg};border:2px solid ${bord};border-radius:12px;padding:14px;margin-bottom:10px">
@@ -2557,8 +2549,8 @@ async function carregarAvisosSeparadorDesk() {
         </div>
         <div style="font-size:15px;font-weight:800;color:var(--accent);font-family:'Space Mono',monospace">${a.codigo||'—'}</div>
         <div style="font-size:13px;font-weight:600;color:var(--text);margin:4px 0">${a.descricao||'—'}</div>
-        <div style="font-size:12px;color:var(--text2)">📍 <b>${a.endereco||'—'}</b> &nbsp;•&nbsp; Qtde: <b>${a.qtd_encontrada||a.quantidade||1}</b></div>
-        ${a.quem_pegou ? `<div style="font-size:11px;color:var(--text3);margin-top:4px">📦 Buscado por: <b>${a.quem_pegou}</b></div>` : ''}
+        <div style="font-size:12px;color:var(--text2)"><b>${a.endereco||'—'}</b> &nbsp;•&nbsp; Qtde: <b>${a.qtd_encontrada||a.quantidade||1}</b></div>
+        ${a.quem_pegou ? `<div style="font-size:11px;color:var(--text3);margin-top:4px">Buscado por: <b>${a.quem_pegou}</b></div>` : ''}
         ${btnGuardei}
       </div>`;
     }).join('');
@@ -2572,7 +2564,7 @@ async function carregarAguardandoDesk() {
   const cntEl   = document.getElementById('d-sep-cnt-aguardando');
   const badgeEl = document.getElementById('d-sep-aguard-badge');
   if (!el) return;
-  el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:24px">🔄 Carregando...</div>';
+  el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:24px">Carregando...</div>';
   try {
     const res = await fetch(`${API}/repositor/avisos?status=nao_encontrado,protocolo`, { credentials:'include' });
     if (!res.ok) throw new Error();
@@ -2626,7 +2618,7 @@ async function carregarHistoricoPassagens() {
     const el = document.getElementById('pass-historico');
     if (!el) return;
     const STATUS_COR  = { pendente:'#F59E0B', validado:'#16a34a', contestado:'#DC2626' };
-    const STATUS_NOME = { pendente:'⏳ Pendente', validado:'✅ Validado', contestado:'⚠️ Contestado' };
+    const STATUS_NOME = { pendente:'Pendente', validado:'Validado', contestado:'Contestado' };
     el.innerHTML = lista.length ? lista.map(p => `
       <div style="background:#fff;border:1px solid #E2E8F0;border-left:3px solid ${STATUS_COR[p.status]||'#CBD5E1'};border-radius:8px;padding:12px 14px;margin-bottom:8px">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">
@@ -2637,10 +2629,10 @@ async function carregarHistoricoPassagens() {
           <div style="font-size:11px;color:#64748B">${p.supervisor}</div>
         </div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;font-size:11px;color:#475569">
-          <span>📦 ${p.sep_separados||0} sep / ${p.sep_pendentes||0} pend</span>
-          <span>✅ ${p.ck_feitos||0} ck / ${p.ck_pendentes||0} pend</span>
-          <span>📫 ${p.emb_embalados||0} emb / ${p.emb_pendentes||0} pend</span>
-          <span>⚠️ ${p.rep_procurando||0} proc / ${p.rep_na_rua||0} rua</span>
+          <span>Sep: ${p.sep_separados||0} / ${p.sep_pendentes||0} pend</span>
+          <span>CK: ${p.ck_feitos||0} / ${p.ck_pendentes||0} pend</span>
+          <span>Emb: ${p.emb_embalados||0} / ${p.emb_pendentes||0} pend</span>
+          <span>Rep: ${p.rep_procurando||0} proc / ${p.rep_na_rua||0} rua</span>
           ${p.pontos_perdidos ? `<span style="color:#DC2626;font-weight:700">-${p.pontos_perdidos} pts</span>` : ''}
         </div>
       </div>`).join('') : '<div style="color:var(--text3);text-align:center;padding:20px;font-size:13px">Nenhuma passagem registrada</div>';

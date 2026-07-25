@@ -1,4 +1,4 @@
-/* ══ WMS — Entrada Manual de Estoque ══
+﻿/* ══ WMS — Entrada Manual de Estoque ══
    Versão 1  |  Desktop (Supervisor) + Mobile (Supervisor + Repositor)
    Formatos de endereço: D106 | ZA387 | C099/VERT-C82-CX18 | U080 | U087/VERT-U01-CX13
 ══════════════════════════════════════════════════════════════════════ */
@@ -25,7 +25,7 @@ function emValidarEndereco(end) {
 const emToast = (msg, tipo='info') => typeof toast === 'function' ? toast(msg, tipo) : console.log(msg);
 const emFmt   = d => { if (!d) return '—'; const [y,m,dy] = d.split('-'); return `${dy}/${m}/${y}`; };
 const emFmtPct= (a,b) => b > 0 ? Math.round((a/b)*100) : 0;
-const emStatusLabel = { pendente:'⬜ Pendente', abastecido:'✅ Abastecido', parcial:'⚠️ Parcial', nao_encontrado:'❌ Não encontrado' };
+const emStatusLabel = { pendente:'Pendente', abastecido:'Abastecido', parcial:'Parcial', nao_encontrado:'Não encontrado' };
 const emStatusClr   = { pendente:'#64748b', abastecido:'#22c55e', parcial:'#f59e0b', nao_encontrado:'#ef4444' };
 
 // ── Carregar lista de lotes ───────────────────────────────────────────────
@@ -44,7 +44,7 @@ async function carregarEntradaManualLotes() {
   if (!lotes || lotes.erro) { wrap.innerHTML = `<div style="padding:32px;text-align:center;color:var(--red)">Erro ao carregar lotes.</div>`; return; }
 
   if (!lotes.length) {
-    wrap.innerHTML = `<div style="padding:48px;text-align:center;color:var(--text3)"><div style="font-size:32px;margin-bottom:8px">📭</div><div>Nenhum lote encontrado no período.</div></div>`;
+    wrap.innerHTML = `<div style="padding:48px;text-align:center;color:var(--text3)"><div>Nenhum lote encontrado no período.</div></div>`;
     return;
   }
 
@@ -59,7 +59,7 @@ async function carregarEntradaManualLotes() {
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap">
         <div style="flex:1;min-width:0">
           <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:2px">${l.nome||'Entrada sem nome'}</div>
-          <div style="font-size:11px;color:var(--text3)">📅 ${emFmt(l.data_entrada)} &nbsp;·&nbsp; 👤 ${l.criado_por||'—'}</div>
+          <div style="font-size:11px;color:var(--text3)">${emFmt(l.data_entrada)} &nbsp;·&nbsp; ${l.criado_por||'—'}</div>
         </div>
         <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">${statusChip}</div>
       </div>
@@ -72,11 +72,11 @@ async function carregarEntradaManualLotes() {
         </div>
       </div>
       <div style="display:flex;gap:12px;margin-top:10px;font-size:11px">
-        <span style="color:#22c55e">✅ ${l.itens_abastecidos} abast.</span>
-        <span style="color:#f59e0b">⚠️ ${l.itens_parciais} parcial</span>
+        <span style="color:#22c55e">${l.itens_abastecidos} abast.</span>
+        <span style="color:#f59e0b">${l.itens_parciais} parcial</span>
         <span style="color:#64748b">⬜ ${l.itens_pendentes} pend.</span>
-        <span style="color:#ef4444">❌ ${l.itens_nao_encontrados} n/enc.</span>
-        <span style="margin-left:auto;color:var(--accent);font-weight:700;cursor:pointer" onclick="event.stopPropagation();emExcluirLote(${l.id})">🗑️</span>
+        <span style="color:#ef4444">${l.itens_nao_encontrados} n/enc.</span>
+        <span style="margin-left:auto;color:var(--accent);font-weight:700;cursor:pointer" onclick="event.stopPropagation();emExcluirLote(${l.id})">✕</span>
       </div>
     </div>`;
   }).join('');
@@ -111,7 +111,7 @@ function emAtualizarCabecalho() {
   const el = document.getElementById('em-lote-titulo');
   if (el) el.innerHTML = `
     <div style="font-size:14px;font-weight:900;color:var(--text)">${_emLoteAtivo.nome||'Sem nome'}</div>
-    <div style="font-size:11px;color:var(--text3)">📅 ${emFmt(_emLoteAtivo.data_entrada)} · 👤 ${_emLoteAtivo.criado_por||'—'} · ${_emItens.length} itens</div>`;
+    <div style="font-size:11px;color:var(--text3)">${emFmt(_emLoteAtivo.data_entrada)} · ${_emLoteAtivo.criado_por||'—'} · ${_emItens.length} itens</div>`;
   emAtualizarProgresso();
 }
 
@@ -201,7 +201,7 @@ function emRowHTML(it) {
     <td style="padding:8px 10px;text-align:center">
       <button id="em-btn-save-${it.id}" onclick="emSalvarItem(${it.id})"
         style="background:var(--surface2);color:var(--accent);border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:10px;font-weight:700;cursor:pointer">
-        💾 Salvar
+        Salvar
       </button>
     </td>
   </tr>`;
@@ -256,7 +256,7 @@ function emCardHTML(it) {
         </button>`
       : `<button id="em-mbtn-${it.id}" onclick="emSalvarItem(${it.id},true)"
           style="display:block;width:calc(100% - 28px);margin:8px 14px 12px;background:#f97316;color:#fff;border:none;border-radius:10px;padding:11px;font-size:13px;font-weight:800;cursor:pointer">
-          💾 Salvar
+          Salvar
         </button>`}
   </div>`;
 }
@@ -279,7 +279,7 @@ function emQtdChange(id, val, mobile = false) {
   // Reativa botão de salvar se estava no estado "já salvo"
   const btn = document.getElementById(mobile ? `em-mbtn-${id}` : `em-btn-save-${id}`);
   if (btn && btn.dataset.saved === 'true') {
-    btn.disabled = false; btn.dataset.saved = ''; btn.style.background = '#f97316'; btn.innerHTML = '💾 Salvar';
+    btn.disabled = false; btn.dataset.saved = ''; btn.style.background = '#f97316'; btn.innerHTML = 'Salvar';
   }
 }
 
@@ -301,12 +301,12 @@ function emEnderecoInput(id, inp, mobile = false) {
   const v = emValidarEndereco(val);
   if (v.ok) {
     inp.style.borderColor = '#22c55e'; inp.style.color = '#22c55e';
-    if (ic)   ic.textContent  = '✅';
+    if (ic)   ic.textContent  = 'OK';
     if (hint) hint.style.color = '#22c55e';
     if (hint) hint.textContent = 'Formato válido';
   } else {
     inp.style.borderColor = '#ef4444'; inp.style.color = '#ef4444';
-    if (ic)   ic.textContent  = '❌';
+    if (ic)   ic.textContent  = 'NG';
     if (hint) hint.style.color = '#ef4444';
     if (hint) hint.textContent = 'Inválido. Ex: D106, ZA387, C099/VERT-C02-CX18';
   }
@@ -330,9 +330,9 @@ async function emEnderecoBlur(id, inp, mobile = false) {
   const hint   = document.getElementById(hintId);
   if (hist && hist.endereco && hist.endereco.toUpperCase() !== val) {
     inp.style.borderColor = '#f59e0b'; inp.style.color = '#f59e0b';
-    if (hint) { hint.style.color = '#f59e0b'; hint.textContent = `⚠️ Histórico indica: ${hist.endereco}`; }
+    if (hint) { hint.style.color = '#f59e0b'; hint.textContent = `Histórico indica: ${hist.endereco}`; }
   } else if (hist && hist.endereco) {
-    if (hint) { hint.style.color = '#22c55e'; hint.textContent = '✅ Confirmado pelo histórico'; }
+    if (hint) { hint.style.color = '#22c55e'; hint.textContent = 'Confirmado pelo histórico'; }
   }
 }
 
@@ -353,19 +353,19 @@ async function emSalvarItem(id, mobile = false) {
   // Não faz nada se os dados não mudaram
   if (qtd === (it.quantidade_abastecida || 0) && obs === (it.obs || '')) {
     emToast('Nenhuma alteração para salvar', 'aviso');
-    if (btn) { btn.disabled = false; btn.innerHTML = '💾 Salvar'; }
+    if (btn) { btn.disabled = false; btn.innerHTML = 'Salvar'; }
     return;
   }
 
   // Confirmação se quantidade está fora do esperado
   const esp = it.quantidade_esperada || 0;
   if (esp > 0 && qtd > esp) {
-    if (btn) { btn.disabled = false; btn.innerHTML = '💾 Salvar'; }
+    if (btn) { btn.disabled = false; btn.innerHTML = 'Salvar'; }
     const ok = await emConfirmarQtd(it.codigo, qtd, esp, 'maior');
     if (!ok) return;
     if (btn) { btn.disabled = true; btn.textContent = '⏳...'; }
   } else if (esp > 0 && qtd > 0 && qtd < esp) {
-    if (btn) { btn.disabled = false; btn.innerHTML = '💾 Salvar'; }
+    if (btn) { btn.disabled = false; btn.innerHTML = 'Salvar'; }
     const ok = await emConfirmarQtd(it.codigo, qtd, esp, 'menor');
     if (!ok) return;
     if (btn) { btn.disabled = true; btn.textContent = '⏳...'; }
@@ -378,7 +378,7 @@ async function emSalvarItem(id, mobile = false) {
 
   if (r?.erro) {
     emToast(`Erro: ${r.erro}`, 'erro');
-    if (btn) { btn.disabled = false; btn.innerHTML = '💾 Salvar'; }
+    if (btn) { btn.disabled = false; btn.innerHTML = 'Salvar'; }
     return;
   }
 
@@ -387,7 +387,7 @@ async function emSalvarItem(id, mobile = false) {
   it.status = r.status;
   _emLoteAtivo.itens_concluidos = r.itens_concluidos;
 
-  emToast(`✅ ${it.codigo} salvo!`, 'sucesso');
+  emToast(`${it.codigo} salvo!`, 'sucesso');
 
   const tr   = document.getElementById(`em-tr-${id}`);
   const card = document.getElementById(`em-card-${id}`);
@@ -423,7 +423,7 @@ function emConfirmarQtd(codigo, qtd, esp, tipo = 'maior') {
     const corBtn  = isMaior ? '#16a34a' : '#d97706';
     el.innerHTML = `
       <div style="background:var(--surface);border-radius:16px;padding:24px;width:100%;max-width:360px;box-shadow:0 8px 32px rgba(0,0,0,.3)">
-        <div style="font-size:32px;text-align:center;margin-bottom:12px">⚠️</div>
+        
         <div style="font-size:15px;font-weight:800;color:var(--text);text-align:center;margin-bottom:8px">${titulo}</div>
         <div style="background:${bgCor};border:1.5px solid ${borda};border-radius:10px;padding:14px;margin-bottom:16px;text-align:center">
           <div style="font-size:12px;font-weight:700;color:#92400e;margin-bottom:6px">${codigo}</div>
@@ -463,7 +463,7 @@ async function emSalvarTudo() {
 
   if (!payload.length) {
     emToast('Nenhum item com alterações para salvar.', 'aviso');
-    if (btn) { btn.disabled = false; btn.innerHTML = '💾 Salvar Tudo'; }
+    if (btn) { btn.disabled = false; btn.innerHTML = 'Salvar Tudo'; }
     return;
   }
 
@@ -473,7 +473,7 @@ async function emSalvarTudo() {
     return it && (it.quantidade_esperada || 0) > 0 && p.quantidade_abastecida > it.quantidade_esperada;
   });
   if (acimaDaEsperança.length > 0) {
-    if (btn) { btn.disabled = false; btn.innerHTML = '💾 Salvar Tudo'; }
+    if (btn) { btn.disabled = false; btn.innerHTML = 'Salvar Tudo'; }
     const linhas = acimaDaEsperança.map(p => {
       const it = _emItens.find(i => i.id === p.id);
       return `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border)"><span style="font-family:monospace;font-size:12px;color:#f97316">${it.codigo}</span><span style="font-size:12px">esp. <b>${it.quantidade_esperada}</b> → inf. <b style="color:#dc2626">${p.quantidade_abastecida}</b></span></div>`;
@@ -485,7 +485,7 @@ async function emSalvarTudo() {
     el.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:2000;display:flex;align-items:center;justify-content:center;padding:20px';
     el.innerHTML = `
       <div style="background:var(--surface);border-radius:16px;padding:24px;width:100%;max-width:380px;box-shadow:0 8px 32px rgba(0,0,0,.3)">
-        <div style="font-size:32px;text-align:center;margin-bottom:8px">⚠️</div>
+        
         <div style="font-size:15px;font-weight:800;color:var(--text);text-align:center;margin-bottom:12px">${acimaDaEsperança.length} item(s) acima do esperado</div>
         <div style="max-height:180px;overflow-y:auto;margin-bottom:16px;padding:8px 12px;background:var(--surface2);border-radius:10px">${linhas}</div>
         <div style="font-size:13px;color:var(--text2);text-align:center;margin-bottom:20px">Confirma salvar com essas quantidades?</div>
@@ -508,7 +508,7 @@ async function emSalvarTudo() {
     body: JSON.stringify({ itens: payload })
   });
 
-  if (btn) { btn.disabled = false; btn.innerHTML = '💾 Salvar Tudo'; }
+  if (btn) { btn.disabled = false; btn.innerHTML = 'Salvar Tudo'; }
 
   if (r?.erro) { emToast('Erro ao salvar: ' + r.erro, 'erro'); return; }
 
@@ -518,7 +518,7 @@ async function emSalvarTudo() {
   });
   if (r.itens_concluidos !== undefined) _emLoteAtivo.itens_concluidos = r.itens_concluidos;
 
-  emToast(`✅ ${payload.length} itens salvos!`, 'sucesso');
+  emToast(`${payload.length} itens salvos!`, 'sucesso');
   emRenderizarTabela();
 }
 
@@ -609,13 +609,13 @@ function emMostrarPreview(itens, nomeArq) {
   <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px 16px">
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px">
       <div>
-        <div style="font-size:13px;font-weight:800;color:#22c55e">✅ ${nomeArq}</div>
+        <div style="font-size:13px;font-weight:800;color:#22c55e">${nomeArq}</div>
         <div style="font-size:11px;color:var(--text3);margin-top:2px">${itens.length} itens detectados</div>
       </div>
       <div style="display:flex;gap:8px">
         <button onclick="emConfirmarImport(window.__emItensPreview)"
           style="background:#22c55e;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer">
-          ✅ Importar ${itens.length} itens
+          Importar ${itens.length} itens
         </button>
         <button onclick="emResetUpload()"
           style="background:var(--surface);border:1px solid var(--border);color:var(--text3);border-radius:8px;padding:8px 12px;font-size:12px;cursor:pointer">
@@ -623,8 +623,8 @@ function emMostrarPreview(itens, nomeArq) {
         </button>
       </div>
     </div>
-    ${semEnd ? `<div style="font-size:11px;color:#f59e0b;background:#78350f22;border-radius:6px;padding:6px 10px;margin-bottom:8px">⚠️ ${semEnd} item(ns) sem endereço — poderão ser preenchidos depois.</div>` : ''}
-    ${endInv ? `<div style="font-size:11px;color:#ef4444;background:#7f1d1d22;border-radius:6px;padding:6px 10px;margin-bottom:8px">❌ ${endInv} endereço(s) com formato inválido — serão importados e deverão ser corrigidos.</div>` : ''}
+    ${semEnd ? `<div style="font-size:11px;color:#f59e0b;background:#78350f22;border-radius:6px;padding:6px 10px;margin-bottom:8px">${semEnd} item(ns) sem endereço — poderão ser preenchidos depois.</div>` : ''}
+    ${endInv ? `<div style="font-size:11px;color:#ef4444;background:#7f1d1d22;border-radius:6px;padding:6px 10px;margin-bottom:8px">${endInv} endereço(s) com formato inválido — serão importados e deverão ser corrigidos.</div>` : ''}
     <div style="overflow-x:auto;border-radius:8px;border:1px solid var(--border);max-height:200px;overflow-y:auto">
       <table style="width:100%;border-collapse:collapse;font-size:11px">
         <thead style="position:sticky;top:0;background:var(--surface2)">
@@ -670,7 +670,7 @@ async function emConfirmarImport(itens) {
 
   if (r?.erro) { emToast('Erro ao importar: '+r.erro, 'erro'); emResetUpload(); return; }
 
-  emToast(`✅ ${r.total} itens importados! Abrindo lote...`, 'sucesso');
+  emToast(`${r.total} itens importados! Abrindo lote...`, 'sucesso');
   emResetUpload();
   await carregarEntradaManualLotes();
   await abrirLoteEM(r.id);
@@ -682,7 +682,7 @@ function emUploadZonaHTML() {
   return `
   <div style="border:2px dashed var(--border);border-radius:12px;padding:24px;text-align:center;cursor:pointer;transition:border-color .2s"
        onclick="emAbrirImport()" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
-    <div style="font-size:32px;margin-bottom:8px">📂</div>
+    
     <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">${isMobile ? 'Toque para selecionar o arquivo' : 'Clique ou arraste o arquivo aqui'}</div>
     <div style="font-size:11px;color:var(--text3)">Suporte: <b>.xlsx · .xls · .csv</b></div>
     <div style="display:inline-block;margin-top:10px;background:var(--surface2);color:var(--accent);border-radius:20px;padding:4px 14px;font-size:10px;font-weight:700;border:1px solid var(--border)">
@@ -717,11 +717,11 @@ function renderizarPagEntradaManual(containerId) {
 
     <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap">
       <button id="em-tab-btn-estoque" onclick="emMostrarAba('estoque')"
-        style="padding:8px 16px;border-radius:20px;border:1px solid var(--border);background:var(--accent);color:#fff;font-size:11px;font-weight:700;cursor:pointer">📥 Entrada de Estoque</button>
+        style="padding:8px 16px;border-radius:20px;border:1px solid var(--border);background:var(--accent);color:#fff;font-size:11px;font-weight:700;cursor:pointer">Entrada de Estoque</button>
       <button id="em-tab-btn-barcode" onclick="emMostrarAba('barcode')"
-        style="padding:8px 16px;border-radius:20px;border:1px solid var(--border);background:var(--surface2);color:var(--text3);font-size:11px;font-weight:700;cursor:pointer">🔍 Código de Barras</button>
+        style="padding:8px 16px;border-radius:20px;border:1px solid var(--border);background:var(--surface2);color:var(--text3);font-size:11px;font-weight:700;cursor:pointer">Código de Barras</button>
       <button id="em-tab-btn-inventario" onclick="emMostrarAba('inventario')"
-        style="padding:8px 16px;border-radius:20px;border:1px solid var(--border);background:var(--surface2);color:var(--text3);font-size:11px;font-weight:700;cursor:pointer">📋 Inventário</button>
+        style="padding:8px 16px;border-radius:20px;border:1px solid var(--border);background:var(--surface2);color:var(--text3);font-size:11px;font-weight:700;cursor:pointer">Inventário</button>
     </div>
 
     <div id="em-aba-estoque">
@@ -729,13 +729,13 @@ function renderizarPagEntradaManual(containerId) {
     <!-- SEÇÃO: LOTES (listagem) -->
     <div id="em-sec-lotes">
       <div class="pg-title" style="margin-bottom:16px">
-        📥 Entrada Manual
-        <button onclick="emExportarCSV()" class="btn btn-outline btn-sm" style="float:right;margin-left:8px">📊 Excel</button>
+        Entrada Manual
+        <button onclick="emExportarCSV()" class="btn btn-outline btn-sm" style="float:right;margin-left:8px">Excel</button>
       </div>
 
       <!-- Upload + nome do lote -->
       <div class="card" style="margin-bottom:14px;padding:16px 18px">
-        <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:1px;margin-bottom:10px">📂 IMPORTAR NOVO ARQUIVO</div>
+        <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:1px;margin-bottom:10px">IMPORTAR NOVO ARQUIVO</div>
         <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
           <input id="em-nome-lote" placeholder="Nome do lote (ex: 3R Import 28/05)" class="input"
             style="flex:1;min-width:180px;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px">
@@ -756,7 +756,7 @@ function renderizarPagEntradaManual(containerId) {
             <input id="em-filtro-fim" type="date" value="${hoje}" class="input"
               style="padding:7px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px">
           </div>
-          <button onclick="carregarEntradaManualLotes()" class="btn btn-primary btn-sm" style="margin-top:14px">🔍 Filtrar</button>
+          <button onclick="carregarEntradaManualLotes()" class="btn btn-primary btn-sm" style="margin-top:14px">Filtrar</button>
         </div>
       </div>
 
@@ -777,8 +777,8 @@ function renderizarPagEntradaManual(containerId) {
           <div id="em-lote-titulo" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
         </div>
         <div style="display:flex;gap:8px;justify-content:flex-end">
-          <button onclick="emExportarCSV()" style="background:#16a34a;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">📊 Excel</button>
-          <button id="em-btn-salvar-tudo" onclick="emSalvarTudo()" style="background:var(--surface2);color:var(--accent);border:1px solid var(--border);border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">💾 Salvar Tudo</button>
+          <button onclick="emExportarCSV()" style="background:#16a34a;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">Excel</button>
+          <button id="em-btn-salvar-tudo" onclick="emSalvarTudo()" style="background:var(--surface2);color:var(--accent);border:1px solid var(--border);border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">Salvar Tudo</button>
         </div>
       </div>
 
@@ -791,7 +791,7 @@ function renderizarPagEntradaManual(containerId) {
           <div id="em-progress-bar" style="height:100%;width:0%;background:#3b82f6;border-radius:6px;transition:width .4s"></div>
         </div>
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">
-          ${[['⬜','PENDENTES','em-stat-pend','#64748b'],['✅','ABASTECIDOS','em-stat-abast','#22c55e'],['⚠️','PARCIAIS','em-stat-parc','#f59e0b'],['❌','NÃO ENC.','em-stat-nenc','#ef4444']].map(([ic,lb,id,c])=>`
+          ${[['○','PENDENTES','em-stat-pend','#64748b'],['●','ABASTECIDOS','em-stat-abast','#22c55e'],['!','PARCIAIS','em-stat-parc','#f59e0b'],['✗','NÃO ENC.','em-stat-nenc','#ef4444']].map(([ic,lb,id,c])=>`
           <div style="background:var(--surface2);border-radius:8px;padding:8px;text-align:center;border:1px solid var(--border)">
             <div style="font-size:18px;font-weight:900;color:${c}" id="${id}">0</div>
             <div style="font-size:8px;color:var(--text3);font-weight:700;letter-spacing:.5px">${ic} ${lb}</div>
@@ -802,7 +802,7 @@ function renderizarPagEntradaManual(containerId) {
       <!-- Filtros da tabela -->
       <div class="card" style="padding:10px 14px;margin-bottom:10px">
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-          <input id="em-busca" placeholder="🔍 Código ou descrição..." oninput="_emBusca=this.value;_emPagina=1;emRenderizarTabela()"
+          <input id="em-busca" placeholder="Código ou descrição..." oninput="_emBusca=this.value;_emPagina=1;emRenderizarTabela()"
             style="flex:1;min-width:160px;padding:7px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;outline:none">
           ${['todos','pendente','abastecido','parcial','nao_encontrado'].map(s=>`
           <button onclick="_emFiltroStatus='${s}';_emPagina=1;emRenderizarTabela();this.closest('.card').querySelectorAll('button').forEach(b=>b.style.background='var(--surface2)');this.style.background='var(--accent)';this.style.color='#fff'"
@@ -846,18 +846,18 @@ function renderizarPagEntradaManual(containerId) {
     <!-- ABA: CÓDIGO DE BARRAS -->
     <div id="em-aba-barcode" style="display:none">
       <div class="card" style="padding:20px;margin-bottom:14px">
-        <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:6px">🔍 Exibir Código de Barras na Tela</div>
+        <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:6px">Exibir Código de Barras</div>
         <div style="font-size:11px;color:var(--text3);margin-bottom:14px">Quando o leitor não consegue ler a etiqueta física, busque o produto aqui e bipe o código exibido na tela.</div>
         <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
           <input id="bc-input" type="text" placeholder="Código do produto ou código de barras (EAN)..."
             style="flex:1;min-width:200px;padding:11px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:14px;outline:none"
             onkeydown="if(event.key==='Enter')bcBuscar()">
-          <button onclick="bcBuscar()" style="background:var(--accent);color:#fff;border:none;border-radius:10px;padding:11px 22px;font-size:13px;font-weight:700;cursor:pointer">🔍 Buscar</button>
+          <button onclick="bcBuscar()" style="background:var(--accent);color:#fff;border:none;border-radius:10px;padding:11px 22px;font-size:13px;font-weight:700;cursor:pointer">Buscar</button>
         </div>
         <div id="bc-resultado"></div>
       </div>
       <div class="card" style="padding:14px 18px">
-        <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:1px;margin-bottom:8px">📦 IMPORTAR CATÁLOGO DE PRODUTOS (barras.xlsx)</div>
+        <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:1px;margin-bottom:8px">IMPORTAR CATÁLOGO DE PRODUTOS (barras.xlsx)</div>
         <div style="font-size:11px;color:var(--text3);margin-bottom:10px">Importe o arquivo barras.xlsx para habilitar a busca por código de barras. <span id="bc-total-produtos" style="color:var(--accent);font-weight:700"></span></div>
         <div id="bc-upload-zona">${catUploadZonaHTML()}</div>
       </div>
@@ -913,7 +913,7 @@ function catUploadZonaHTML() {
   return `
   <div style="border:2px dashed var(--border);border-radius:10px;padding:16px;text-align:center;cursor:pointer"
        onclick="catAbrirImport()" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
-    <div style="font-size:24px;margin-bottom:6px">📂</div>
+    <div style="display:none">
     <div style="font-size:12px;font-weight:700;color:var(--text)">Clique para importar barras.xlsx</div>
     <div style="font-size:10px;color:var(--text3);margin-top:4px">Suporte: .xlsx · .xls · .csv</div>
     <input id="cat-import-input" type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="catProcessarArquivo(this)">
@@ -981,7 +981,7 @@ async function catProcessarArquivo(input) {
       if (zona) zona.innerHTML = `<div style="padding:12px;text-align:center;color:var(--text3)">⏳ ${total.toLocaleString('pt-BR')} / ${produtos.length.toLocaleString('pt-BR')} processados...</div>`;
     }
 
-    emToast(`✅ Catálogo importado! ${produtos.length.toLocaleString('pt-BR')} produtos.`, 'sucesso');
+    emToast(`Catálogo importado! ${produtos.length.toLocaleString('pt-BR')} produtos.`, 'sucesso');
     if (zona) zona.innerHTML = catUploadZonaHTML();
     bcAtualizarTotal();
   } catch(e) {
@@ -999,7 +999,7 @@ async function bcBuscar() {
   if (div) div.innerHTML = `<div style="padding:14px;text-align:center;color:var(--text3)">⏳ Buscando...</div>`;
   const result = await apiFetch(`/entrada-manual/produtos/buscar?q=${encodeURIComponent(q)}`);
   if (!result || result.erro || !result.length) {
-    if (div) div.innerHTML = `<div style="padding:14px;text-align:center;color:var(--red)">❌ Produto não encontrado. Verifique o código e tente novamente.</div>`;
+    if (div) div.innerHTML = `<div style="padding:14px;text-align:center;color:var(--red)">Produto não encontrado. Verifique o código e tente novamente.</div>`;
     return;
   }
   bcRenderizar(result[0]);
@@ -1015,18 +1015,18 @@ function bcRenderizar(p) {
     <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px">
       <div style="font-family:monospace;font-size:12px;font-weight:800;color:#f97316">${p.codigo}</div>
       <div style="font-size:14px;color:var(--text);margin:4px 0">${p.nome||'—'}</div>
-      <div style="font-size:11px;color:var(--text3);margin-bottom:14px">📦 Saldo: ${p.saldo} · Disp.: ${p.disponivel} · 📍 ${p.localizacao||'—'}</div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:14px">Saldo: ${p.saldo} · Disp.: ${p.disponivel} · ${p.localizacao||'—'}</div>
       ${temCB ? `
       <div style="text-align:center;background:#fff;border-radius:12px;padding:24px 16px;margin-bottom:10px">
         <svg id="bc-svg" style="max-width:100%;height:auto"></svg>
         <div style="font-size:13px;color:#666;margin-top:10px;font-family:monospace;letter-spacing:2px">${cb}</div>
       </div>` : `
       <div style="text-align:center;background:var(--surface);border:2px dashed var(--border);border-radius:10px;padding:24px;margin-bottom:10px">
-        <div style="font-size:28px;margin-bottom:6px">🚫</div>
+        
         <div style="font-size:12px;color:var(--text3)">Produto sem código de barras cadastrado.</div>
       </div>`}
       <button onclick="document.getElementById('bc-input').value='';document.getElementById('bc-resultado').innerHTML='';document.getElementById('bc-input').focus()"
-        style="background:var(--surface);border:1px solid var(--border);color:var(--text3);border-radius:8px;padding:7px 14px;font-size:11px;cursor:pointer">🔄 Nova busca</button>
+        style="background:var(--surface);border:1px solid var(--border);color:var(--text3);border-radius:8px;padding:7px 14px;font-size:11px;cursor:pointer">Nova busca</button>
     </div>`;
 
   if (temCB) {
@@ -1075,7 +1075,7 @@ function invRenderizarSessoes() {
     color:${_invAbaAtual===aba?'var(--accent)':'var(--text3)'};
     border-bottom:${_invAbaAtual===aba?'2px solid var(--accent)':'2px solid transparent'};margin-bottom:-2px`;
   wrap.innerHTML = `
-    <div class="pg-title" style="margin-bottom:16px">📋 Inventário Físico</div>
+    <div class="pg-title" style="margin-bottom:16px">Inventário Físico</div>
 
     ${podeCriar ? `
     <div class="card" style="padding:16px 18px;margin-bottom:14px">
@@ -1086,18 +1086,18 @@ function invRenderizarSessoes() {
         <div style="flex:1;min-width:160px">
           <div style="font-size:9px;font-weight:700;color:var(--text3);letter-spacing:.5px;margin-bottom:4px">FILTRAR POR RUA (opcional)</div>
           <select id="inv-rua-criar" style="width:100%;padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;outline:none">
-            <option value="">📦 Todos os produtos</option>
+            <option value="">Todos os produtos</option>
           </select>
         </div>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button onclick="invCriarComCatalogo()"
           style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:9px 16px;font-size:12px;font-weight:700;cursor:pointer">
-          📦 Criar com catálogo
+          Criar com catálogo
         </button>
         <button onclick="invCriarVazio()"
           style="background:var(--surface2);color:var(--text3);border:1px solid var(--border);border-radius:8px;padding:9px 16px;font-size:12px;font-weight:700;cursor:pointer">
-          📄 Criar vazio
+          Criar vazio
         </button>
       </div>
     </div>` : ''}
@@ -1108,7 +1108,7 @@ function invRenderizarSessoes() {
         <span style="background:var(--surface2);border-radius:20px;padding:1px 7px;font-size:10px;margin-left:5px">${sessAndamento.length}</span>
       </button>
       <button onclick="_invAbaAtual='concluidos';invRenderizarSessoes()" style="${tabBtnStyle('concluidos')}">
-        ✅ Realizados
+        Realizados
         <span style="background:var(--surface2);border-radius:20px;padding:1px 7px;font-size:10px;margin-left:5px">${sessConcluidos.length}</span>
       </button>
     </div>
@@ -1116,7 +1116,7 @@ function invRenderizarSessoes() {
     <div id="inv-lista-sessoes">
       ${listaAtual.length ? listaAtual.map(s => invSessaoCardHTML(s)).join('') :
         `<div style="padding:48px;text-align:center;color:var(--text3)">
-          <div style="font-size:32px;margin-bottom:8px">${_invAbaAtual==='andamento'?'📋':'✅'}</div>
+          <div style="display:none"></div>
           <div>${_invAbaAtual==='andamento'?'Nenhum inventário em andamento.':'Nenhum inventário realizado ainda.'}</div>
         </div>`}
     </div>`;
@@ -1134,14 +1134,14 @@ function invSessaoCardHTML(s) {
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px">
         <div>
           <div style="font-size:13px;font-weight:800;color:var(--text)">${s.nome||'Inventário'}</div>
-          <div style="font-size:11px;color:var(--text3)">📅 ${dt} · 👤 ${s.criado_por||'—'} · ${s.total_itens} produtos</div>
+          <div style="font-size:11px;color:var(--text3)">${dt} · ${s.criado_por||'—'} · ${s.total_itens} produtos</div>
         </div>
         <div style="display:flex;align-items:center;gap:8px">
           ${chip}
           <a href="/inventario/sessoes/${s.id}/exportar" onclick="event.stopPropagation()" title="Exportar CSV"
-            style="color:#22c55e;font-size:15px;text-decoration:none">📊</a>
+            style="color:#22c55e;font-size:15px;text-decoration:none">CSV</a>
           <span onclick="event.stopPropagation();invExcluirSessao(${s.id})" title="Excluir"
-            style="color:var(--accent);font-size:14px;cursor:pointer">🗑️</span>
+            style="color:var(--accent);font-size:14px;cursor:pointer">✕</span>
         </div>
       </div>
       <div style="display:flex;justify-content:space-between;font-size:10px;font-weight:700;color:var(--text3);margin-bottom:4px">
@@ -1178,7 +1178,7 @@ async function invCriarComCatalogo() {
       body: JSON.stringify(body)
     });
     if (r?.erro) { emToast('Erro: '+r.erro, 'erro'); invCarregarSessoes(); return; }
-    emToast(`✅ Inventário criado com ${(r.total||0).toLocaleString('pt-BR')} produtos!`, 'sucesso');
+    emToast(`Inventário criado com ${(r.total||0).toLocaleString('pt-BR')} produtos!`, 'sucesso');
     await invCarregarSessoes();
     invAbrirSessao(r.id);
   });
@@ -1189,7 +1189,7 @@ async function invCarregarRuasCatalogo() {
   if (!sel) return;
   const rows = await apiFetch('/entrada-manual/produtos/ruas');
   if (!rows || rows.erro || !rows.length) return;
-  sel.innerHTML = '<option value="">📦 Todos os produtos</option>';
+  sel.innerHTML = '<option value="">Todos os produtos</option>';
   rows.forEach(r => {
     const opt = document.createElement('option');
     opt.value = r.rua;
@@ -1206,7 +1206,7 @@ async function invCriarVazio() {
     body: JSON.stringify({ nome })
   });
   if (r?.erro) { emToast('Erro: '+r.erro, 'erro'); return; }
-  emToast('✅ Inventário criado!', 'sucesso');
+  emToast('Inventário criado!', 'sucesso');
   await invCarregarSessoes();
   invAbrirSessao(r.id);
 }
@@ -1263,16 +1263,16 @@ function invRenderizarDashboard() {
       ${chip}
       <div style="flex:1"></div>
       <a href="/inventario/sessoes/${s.id}/exportar"
-        style="background:var(--surface2);color:var(--accent);border:1px solid var(--border);border-radius:8px;padding:7px 14px;font-size:11px;font-weight:700;text-decoration:none;display:inline-block">📊 CSV</a>
+        style="background:var(--surface2);color:var(--accent);border:1px solid var(--border);border-radius:8px;padding:7px 14px;font-size:11px;font-weight:700;text-decoration:none;display:inline-block">CSV</a>
     </div>
 
     <div class="card" style="padding:20px;margin-bottom:14px">
       <div style="font-size:19px;font-weight:900;color:var(--text);margin-bottom:8px">${s.nome||'Inventário'}</div>
       <div style="display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--text3);margin-bottom:18px">
-        <span>👤 ${s.criado_por||'—'}</span>
-        <span>📅 ${dt}</span>
-        ${dtConc ? `<span>🏁 Concluído: ${dtConc}</span>` : ''}
-        <span>📦 ${s.total_itens} produtos</span>
+        <span>${s.criado_por||'—'}</span>
+        <span>${dt}</span>
+        ${dtConc ? `<span>Concluído: ${dtConc}</span>` : ''}
+        <span>${s.total_itens} produtos</span>
       </div>
 
       <div style="display:flex;justify-content:space-between;font-size:10px;font-weight:700;color:var(--text3);margin-bottom:6px">
@@ -1283,7 +1283,7 @@ function invRenderizarDashboard() {
       </div>
 
       <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px">
-        ${[['⬜','PENDENTES',stats.pendente,'#64748b'],['✅','OK',stats.ok,'#22c55e'],['⬆️','A MAIS',stats.aMais,'#f97316'],['⬇️','A MENOS',stats.aMenos,'#ef4444'],[`${acuracia}%`,'ACURÁCIA','','#38bdf8']].map(([ic,lb,n,c])=>`
+        ${[['○','PENDENTES',stats.pendente,'#64748b'],['●','OK',stats.ok,'#22c55e'],['+','A MAIS',stats.aMais,'#f97316'],['-','A MENOS',stats.aMenos,'#ef4444'],[`${acuracia}%`,'ACURÁCIA','','#38bdf8']].map(([ic,lb,n,c])=>`
         <div style="background:var(--surface2);border-radius:10px;padding:12px 8px;text-align:center;border:1px solid var(--border)">
           <div style="font-size:${lb==='ACURÁCIA'?'18px':'22px'};font-weight:900;color:${c}">${lb==='ACURÁCIA'?ic:n}</div>
           <div style="font-size:8px;color:var(--text3);font-weight:700;letter-spacing:.4px;margin-top:3px">${lb==='ACURÁCIA'?'':ic+' '}${lb}</div>
@@ -1294,16 +1294,16 @@ function invRenderizarDashboard() {
     <div style="display:flex;gap:10px;flex-wrap:wrap">
       <button onclick="invEntrarContagem()"
         style="flex:1;min-width:180px;background:${s.status!=='concluido'?'var(--accent)':'var(--surface2)'};color:${s.status!=='concluido'?'#fff':'var(--text3)'};border:${s.status!=='concluido'?'none':'1px solid var(--border)'};border-radius:12px;padding:14px;font-size:14px;font-weight:700;cursor:pointer">
-        ${s.status!=='concluido'?'📋 Iniciar Contagem':'👁️ Ver Itens'}
+        ${s.status!=='concluido'?'Iniciar Contagem':'Ver Itens'}
       </button>
       ${s.status !== 'concluido' ? `
       <button onclick="invConcluir()"
         style="background:#16a34a;color:#fff;border:none;border-radius:12px;padding:14px 22px;font-size:14px;font-weight:700;cursor:pointer">
-        ✅ Concluir
+        Concluir
       </button>` : ''}
       <button onclick="invExcluirSessao(${s.id})"
         style="background:var(--surface2);color:var(--accent);border:1px solid var(--border);border-radius:12px;padding:14px 18px;font-size:14px;font-weight:700;cursor:pointer">
-        🗑️
+        ✕
       </button>
     </div>`;
 }
@@ -1319,7 +1319,7 @@ function invRenderizarSessaoAtiva() {
   const pct    = s.total_itens > 0 ? Math.round(((s.contados||0) / s.total_itens) * 100) : 0;
   const barClr = pct === 100 ? '#22c55e' : pct >= 60 ? '#f59e0b' : '#3b82f6';
   const isMob = window.innerWidth < 768;
-  const SL = { ok:'✅ OK', divergente:'⚠️ Divergente', pendente:'⬜ Pendente' };
+  const SL = { ok:'OK', divergente:'Divergente', pendente:'Pendente' };
   const SC = { ok:'#22c55e', divergente:'#f59e0b', pendente:'#64748b' };
 
   const itens = _invItens.filter(i => {
@@ -1348,13 +1348,13 @@ function invRenderizarSessaoAtiva() {
         style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text3);cursor:pointer;font-size:12px;font-weight:700">← Painel</button>
       <div style="flex:1;min-width:0">
         <div style="font-size:14px;font-weight:900;color:var(--text)">${s.nome||'Inventário'}</div>
-        <div style="font-size:11px;color:var(--text3)">👤 ${s.criado_por||'—'} · ${_invItens.length} produtos</div>
+        <div style="font-size:11px;color:var(--text3)">${s.criado_por||'—'} · ${_invItens.length} produtos</div>
       </div>
       <div style="display:flex;gap:6px">
         ${s.status !== 'concluido' ? `<button onclick="invConcluir()"
-          style="background:#16a34a;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:11px;font-weight:700;cursor:pointer">✅ Concluir</button>` : ''}
+          style="background:#16a34a;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:11px;font-weight:700;cursor:pointer">Concluir</button>` : ''}
         <a href="/inventario/sessoes/${s.id}/exportar"
-          style="background:var(--surface2);color:var(--accent);border:1px solid var(--border);border-radius:8px;padding:7px 14px;font-size:11px;font-weight:700;cursor:pointer;text-decoration:none;display:inline-block">📊 CSV</a>
+          style="background:var(--surface2);color:var(--accent);border:1px solid var(--border);border-radius:8px;padding:7px 14px;font-size:11px;font-weight:700;cursor:pointer;text-decoration:none;display:inline-block">CSV</a>
       </div>
     </div>
 
@@ -1366,7 +1366,7 @@ function invRenderizarSessaoAtiva() {
         <div style="height:100%;width:${pct}%;background:${barClr};border-radius:6px;transition:width .4s"></div>
       </div>
       <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px">
-        ${[['⬜','PENDENTES',stats.pendente,'#64748b'],['✅','OK',stats.ok,'#22c55e'],['⬆️','A MAIS',stats.aMais,'#f97316'],['⬇️','A MENOS',stats.aMenos,'#ef4444'],[`${acuracia}%`,'ACURÁCIA','','#38bdf8']].map(([ic,lb,n,c])=>`
+        ${[['○','PENDENTES',stats.pendente,'#64748b'],['●','OK',stats.ok,'#22c55e'],['+','A MAIS',stats.aMais,'#f97316'],['-','A MENOS',stats.aMenos,'#ef4444'],[`${acuracia}%`,'ACURÁCIA','','#38bdf8']].map(([ic,lb,n,c])=>`
         <div style="background:var(--surface2);border-radius:8px;padding:8px;text-align:center;border:1px solid var(--border)">
           <div style="font-size:${lb==='ACURÁCIA'?'16px':'18px'};font-weight:900;color:${c}">${lb==='ACURÁCIA'?ic:n}</div>
           <div style="font-size:8px;color:var(--text3);font-weight:700;letter-spacing:.5px">${lb==='ACURÁCIA'?'':''+ic+' '}${lb}</div>
@@ -1376,20 +1376,20 @@ function invRenderizarSessaoAtiva() {
 
     <div class="card" style="padding:10px 14px;margin-bottom:10px">
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
-        <input id="inv-busca-input" placeholder="🔍 Código ou nome..." value="${_invBusca}"
+        <input id="inv-busca-input" placeholder="Código ou nome..." value="${_invBusca}"
           oninput="_invBusca=this.value;_invPagina=1;invRenderizarSessaoAtiva()"
           style="flex:1;min-width:160px;padding:7px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;outline:none">
         <select id="inv-rua-select"
           onchange="_invFiltroRua=this.value;_invPagina=1;invRenderizarSessaoAtiva()"
           style="padding:7px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;outline:none;min-width:120px">
-          <option value="">📍 Todas as ruas</option>
+          <option value="">Todas as ruas</option>
           ${[...new Set(_invItens.map(i=>invExtrairRua(i.localizacao)).filter(Boolean))].sort().map(r=>`<option value="${r}" ${_invFiltroRua===r?'selected':''}>${r}</option>`).join('')}
         </select>
         ${s.status !== 'concluido' ? `<button onclick="invAbrirColetor()"
-          style="padding:7px 12px;border-radius:8px;border:none;background:#7c3aed;color:#fff;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">📷 Coletor</button>` : ''}
+          style="padding:7px 12px;border-radius:8px;border:none;background:#7c3aed;color:#fff;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">Coletor</button>` : ''}
         <button onclick="invSincronizarEnderecos()"
           title="Atualiza endereços a partir do catálogo importado"
-          style="padding:7px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text3);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">🔄 Sync</button>
+          style="padding:7px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text3);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">Sync</button>
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         ${['todos','pendente','ok','divergente'].map(st=>`
@@ -1455,7 +1455,7 @@ function invRowHTML(it, SL, SC) {
     </td>
     <td style="padding:8px 10px;text-align:center">
       ${concluido ? '—' : `<button onclick="invSalvarContagem(${it.id})"
-        style="background:var(--surface2);color:var(--accent);border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:10px;font-weight:700;cursor:pointer">💾 Salvar</button>`}
+        style="background:var(--surface2);color:var(--accent);border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:10px;font-weight:700;cursor:pointer">Salvar</button>`}
     </td>
   </tr>`;
 }
@@ -1472,7 +1472,7 @@ async function invSalvarContagem(id) {
   const it = _invItens.find(i => i.id === id);
   if (it) { it.qtd_contada = isNaN(qtd) ? null : qtd; it.status = r.status; }
   if (_invSessaoAtiva && r.contados !== undefined) _invSessaoAtiva.contados = r.contados;
-  emToast(`✅ ${it?.codigo||'Item'} contado!`, 'sucesso');
+  emToast(`${it?.codigo||'Item'} contado!`, 'sucesso');
   invRenderizarSessaoAtiva();
 }
 
@@ -1482,7 +1482,7 @@ async function invConcluir() {
     const r = await apiFetch(`/inventario/sessoes/${_invSessaoAtiva.id}/concluir`, { method:'PUT' });
     if (r?.erro) { emToast('Erro: '+r.erro, 'erro'); return; }
     _invSessaoAtiva.status = 'concluido';
-    emToast('✅ Inventário concluído!', 'sucesso');
+    emToast('Inventário concluído!', 'sucesso');
     invRenderizarDashboard();
   });
 }
@@ -1492,8 +1492,8 @@ async function invSincronizarEnderecos() {
   const btn = document.querySelector('[onclick="invSincronizarEnderecos()"]');
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Sincronizando...'; }
   const r = await apiFetch(`/inventario/sessoes/${_invSessaoAtiva.id}/sync-enderecos`, { method:'PUT' });
-  if (r?.erro) { emToast('Erro: '+r.erro, 'erro'); if (btn) { btn.disabled = false; btn.innerHTML = '🔄 Sync Endereços'; } return; }
-  emToast(`✅ ${r.atualizados} endereços atualizados do catálogo!`, 'sucesso');
+  if (r?.erro) { emToast('Erro: '+r.erro, 'erro'); if (btn) { btn.disabled = false; btn.innerHTML = 'Sync Endereços'; } return; }
+  emToast(`${r.atualizados} endereços atualizados do catálogo!`, 'sucesso');
   await invAbrirSessao(_invSessaoAtiva.id);
 }
 
@@ -1521,7 +1521,7 @@ function invMobileCardHTML(it, SL, SC) {
     </div>
     <div style="font-size:13px;color:var(--text);line-height:1.4;margin-bottom:8px">${it.nome||'—'}</div>
     <div style="display:flex;gap:12px;font-size:11px;color:var(--text3);margin-bottom:10px;flex-wrap:wrap">
-      <span>📍 <strong style="color:var(--text)">${it.localizacao||'—'}</strong></span>
+      <span><strong style="color:var(--text)">${it.localizacao||'—'}</strong></span>
       <span>Saldo: <strong style="color:var(--accent)">${it.saldo_sistema}</strong></span>
       ${difStr != null ? `<span>Dif: <strong style="color:${difClr}">${difStr}</strong></span>` : ''}
     </div>
@@ -1532,7 +1532,7 @@ function invMobileCardHTML(it, SL, SC) {
             onkeydown="if(event.key==='Enter'){invSalvarContagem(${it.id})}"
             style="flex:1;padding:12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:18px;font-weight:700;text-align:center;outline:none">
           <button onclick="invSalvarContagem(${it.id})"
-            style="padding:12px 16px;background:var(--surface2);color:var(--accent);border:1px solid var(--border);border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">💾</button>
+            style="padding:12px 16px;background:var(--surface2);color:var(--accent);border:1px solid var(--border);border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">Salvar</button>
         </div>`}
   </div>`;
 }
@@ -1560,7 +1560,7 @@ function invAbrirColetor() {
     <div style="width:100%;max-width:500px;padding:16px">
 
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-        <div style="font-size:16px;font-weight:900;color:#fff">📷 Coletor de Dados</div>
+        <div style="font-size:16px;font-weight:900;color:#fff">Coletor de Dados</div>
         <button onclick="invColetorCancelar()" style="background:#334155;border:none;border-radius:8px;padding:8px 16px;color:#fff;font-size:12px;font-weight:700;cursor:pointer">✕ Fechar</button>
       </div>
 
@@ -1582,7 +1582,7 @@ function invAbrirColetor() {
           <input id="coletor-scan-input" type="text" placeholder="Código do produto ou EAN..." inputmode="none"
             style="flex:1;padding:10px 12px;background:#0f172a;border:2px solid #7c3aed;border-radius:8px;color:#fff;font-size:14px;outline:none;box-sizing:border-box"
             onkeydown="if(event.key==='Enter'){invColetorBuscar()}">
-          <button onclick="invColetorBuscar()" style="padding:10px 16px;background:#7c3aed;border:none;border-radius:8px;color:#fff;font-size:14px;font-weight:700;cursor:pointer">🔍</button>
+          <button onclick="invColetorBuscar()" style="padding:10px 16px;background:#7c3aed;border:none;border-radius:8px;color:#fff;font-size:14px;font-weight:700;cursor:pointer">Buscar</button>
         </div>
       </div>
 
@@ -1593,7 +1593,7 @@ function invAbrirColetor() {
         <input id="coletor-qty-input" type="number" min="0" placeholder="0" inputmode="decimal"
           style="width:100%;padding:16px;background:#0f172a;border:2px solid #22c55e;border-radius:10px;color:#fff;font-size:28px;font-weight:900;text-align:center;outline:none;box-sizing:border-box"
           onkeydown="if(event.key==='Enter'){invColetorSalvar()}">
-        <button onclick="invColetorSalvar()" style="width:100%;margin-top:10px;padding:14px;background:#16a34a;border:none;border-radius:12px;color:#fff;font-size:15px;font-weight:700;cursor:pointer">💾 Salvar (Enter)</button>
+        <button onclick="invColetorSalvar()" style="width:100%;margin-top:10px;padding:14px;background:#16a34a;border:none;border-radius:12px;color:#fff;font-size:15px;font-weight:700;cursor:pointer">Salvar (Enter)</button>
         <button onclick="invColetorPularItem()" style="width:100%;margin-top:6px;padding:8px;background:#1e293b;border:1px solid #334155;border-radius:8px;color:#64748b;font-size:12px;font-weight:600;cursor:pointer">↩ Cancelar / próximo</button>
       </div>
 
@@ -1624,15 +1624,15 @@ async function invColetorIniciarCamera() {
       _coletorDetector = new BarcodeDetector({
         formats: ['ean_13','ean_8','code_128','code_39','itf','upc_a','upc_e','qr_code']
       });
-      if (statusEl) statusEl.textContent = '📷 Câmera ativa — aponte para o código de barras';
+      if (statusEl) statusEl.textContent = 'Câmera ativa — aponte para o código de barras';
       invColetorLoopScan();
     } else {
-      if (statusEl) statusEl.textContent = '📷 Câmera ativa (use o campo de texto para digitar o código)';
+      if (statusEl) statusEl.textContent = 'Câmera ativa (use o campo de texto para digitar o código)';
     }
   } catch {
     if (videoWrap) videoWrap.style.display = 'none';
     const msg = document.getElementById('coletor-msg');
-    if (msg) { msg.style.color = '#f59e0b'; msg.textContent = '⚠️ Câmera não autorizada. Use o campo de texto abaixo.'; }
+    if (msg) { msg.style.color = '#f59e0b'; msg.textContent = 'Câmera não autorizada. Use o campo de texto abaixo.'; }
     setTimeout(() => document.getElementById('coletor-scan-input')?.focus(), 100);
   }
 }
@@ -1711,7 +1711,7 @@ async function invColetorBuscar() {
 
   if (!it) {
     invColetorBeep('erro');
-    if (msg) { msg.style.color = '#ef4444'; msg.textContent = `❌ "${q}" não encontrado no inventário.`; }
+    if (msg) { msg.style.color = '#ef4444'; msg.textContent = `"${q}" não encontrado no inventário.`; }
     if (card) card.style.display = 'none';
     _coletorIdx = -1;
     return;
@@ -1742,18 +1742,18 @@ async function invColetorBuscar() {
   if (info) info.innerHTML = `
     ${colmeiaErrada ? `
     <div style="background:#7f1d1d;border:2px solid #ef4444;border-radius:10px;padding:10px;margin-bottom:10px;text-align:center">
-      <div style="font-size:16px;margin-bottom:2px">⚠️ ITEM NA COLMEIA ERRADA!</div>
+      <div style="font-size:16px;margin-bottom:2px">ITEM NA COLMEIA ERRADA!</div>
       <div style="font-size:11px;color:#fca5a5">Rua <strong>${ruaItem}</strong> — você está contando a rua <strong>${ruaFiltro}</strong></div>
     </div>` : ''}
     <div style="font-size:14px;font-weight:900;color:#f97316">${it.codigo}</div>
     <div style="font-size:12px;color:#e2e8f0;margin:4px 0;line-height:1.4">${it.nome||'—'}</div>
     <div style="font-size:11px;color:${colmeiaErrada?'#fca5a5':'#94a3b8'}">
-      📍 <strong style="color:${colmeiaErrada?'#fca5a5':'#38bdf8'}">${it.localizacao||'—'}</strong>
+      <strong style="color:${colmeiaErrada?'#fca5a5':'#38bdf8'}">${it.localizacao||'—'}</strong>
       &nbsp;·&nbsp; Saldo: <strong style="color:var(--accent)">${it.saldo_sistema}</strong>
     </div>`;
 
   const msgTxt = colmeiaErrada
-    ? `⚠️ Rua ${ruaItem} (esperado: ${ruaFiltro})  — contado: ${novaQtd}`
+    ? `Rua ${ruaItem} (esperado: ${ruaFiltro})  — contado: ${novaQtd}`
     : `${mesmoCodigo ? `+1 acumulado →` : '✅'} ${it.codigo}: ${novaQtd} unidade${novaQtd !== 1 ? 's' : ''}`;
   if (msg) { msg.style.color = colmeiaErrada ? '#ef4444' : '#22c55e'; msg.textContent = msgTxt; }
 
@@ -1783,7 +1783,7 @@ async function invColetorSalvar() {
   if (_invSessaoAtiva && r.contados !== undefined) _invSessaoAtiva.contados = r.contados;
   invColetorBeep('ok');
   const msg = document.getElementById('coletor-msg');
-  if (msg) { msg.style.color = '#22c55e'; msg.textContent = `💾 ${it?.codigo||''} salvo com ${qty}! Aponte para o próximo.`; }
+  if (msg) { msg.style.color = '#22c55e'; msg.textContent = `${it?.codigo||''} salvo com ${qty}! Aponte para o próximo.`; }
   document.getElementById('coletor-item-card') && (document.getElementById('coletor-item-card').style.display = 'none');
   _coletorIdx = -1;
   _coletorUltimoCode = '';

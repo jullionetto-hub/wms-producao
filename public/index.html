@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
@@ -30,7 +30,7 @@
   <div id="trocar-senha-box" style="display:none;position:fixed;inset:0;background:linear-gradient(145deg,#1A0008 0%,#3B0B20 55%,#4D1230 100%);align-items:center;justify-content:center;z-index:999;flex-direction:column">
     <div style="background:#fff;border-radius:20px;padding:32px;max-width:380px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.5)">
       <div style="text-align:center;margin-bottom:24px">
-        <div style="font-size:44px">🔑</div>
+        
         <div style="font-size:18px;font-weight:700;color:var(--text);margin-top:10px">Troca de Senha Obrigatória</div>
         <div style="font-size:12px;color:var(--text3);margin-top:6px;line-height:1.5">Sua senha foi redefinida pelo supervisor.<br>Crie uma nova senha para continuar.</div>
       </div>
@@ -48,7 +48,7 @@
     </div>
   </div>
     <div class="login-box" id="login-box">
-    <div class="login-logo">📦</div>
+    <div class="login-logo" style="width:48px;height:48px;background:var(--accent);border-radius:12px;margin:0 auto 12px"></div>
     <div class="login-titulo">WMS — <span>Miess</span></div>
     <div class="login-sub">Gestão de Pedidos</div>
     <div class="login-campo" style="position:relative">
@@ -60,12 +60,12 @@
       </div>
       <!-- Dropdown flutuante -->
       <div class="csel-drop" id="csel-drop">
-        <div class="csel-opt" onclick="escolherPerfil('supervisor','👔 Supervisão',this,event)"><span class="csel-ic">👔</span><span class="csel-nm">Supervisão</span><span class="csel-chk">✓</span></div>
-        <div class="csel-opt" onclick="escolherPerfil('separador','📦 Separação',this,event)"><span class="csel-ic">📦</span><span class="csel-nm">Separação</span><span class="csel-chk">✓</span></div>
-        <div class="csel-opt" onclick="escolherPerfil('repositor','🔧 Reposição',this,event)"><span class="csel-ic">🔧</span><span class="csel-nm">Reposição</span><span class="csel-chk">✓</span></div>
-        <div class="csel-opt" onclick="escolherPerfil('checkout','🏷️ Checkout',this,event)"><span class="csel-ic">🏷️</span><span class="csel-nm">Checkout</span><span class="csel-chk">✓</span></div>
-        <div class="csel-opt" onclick="escolherPerfil('embalador','📫 Embalagem',this,event)"><span class="csel-ic">📫</span><span class="csel-nm">Embalagem</span><span class="csel-chk">✓</span></div>
-        <div class="csel-opt" onclick="escolherPerfil('gestor','📊 Gestão',this,event)"><span class="csel-ic">📊</span><span class="csel-nm">Gestão</span><span class="csel-chk">✓</span></div>
+        <div class="csel-opt" onclick="escolherPerfil('supervisor','Supervisão',this,event)"><span class="csel-nm">Supervisão</span><span class="csel-chk">✓</span></div>
+        <div class="csel-opt" onclick="escolherPerfil('separador','Separação',this,event)"><span class="csel-nm">Separação</span><span class="csel-chk">✓</span></div>
+        <div class="csel-opt" onclick="escolherPerfil('repositor','Reposição',this,event)"><span class="csel-nm">Reposição</span><span class="csel-chk">✓</span></div>
+        <div class="csel-opt" onclick="escolherPerfil('checkout','Checkout',this,event)"><span class="csel-nm">Checkout</span><span class="csel-chk">✓</span></div>
+        <div class="csel-opt" onclick="escolherPerfil('embalador','Embalagem',this,event)"><span class="csel-nm">Embalagem</span><span class="csel-chk">✓</span></div>
+        <div class="csel-opt" onclick="escolherPerfil('gestor','Gestão',this,event)"><span class="csel-nm">Gestão</span><span class="csel-chk">✓</span></div>
       </div>
     </div>
     <div class="login-campo"><label>USUÁRIO</label><input type="text" id="login-usuario" placeholder="Ex: joao.silva" autocomplete="username"/></div>
@@ -94,7 +94,7 @@
     <div style="display:flex;align-items:center;gap:10px">
       <button id="btn-menu" onclick="toggleMenu()" aria-label="Menu">☰</button>
       <div class="logo">
-        <div class="logo-ic">📦</div>
+        <div class="logo-ic"></div>
         <div class="logo-tx">WMS — Miess<small>Separação de Pedidos</small></div>
       </div>
     </div>
@@ -377,11 +377,11 @@
                     <svg class="perm-sel-seta" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
                   </div>
                   <div class="perm-sel-drop">
-                    <div class="perm-sel-opt" onclick="togglePermOpt(this,event)"><input type="checkbox" class="usr-perm" value="supervisor"><span class="perm-sel-ic">👔</span><span class="perm-sel-nm">Supervisão</span><span class="perm-sel-chk"></span></div>
-                    <div class="perm-sel-opt" onclick="togglePermOpt(this,event)"><input type="checkbox" class="usr-perm" value="separador"><span class="perm-sel-ic">📦</span><span class="perm-sel-nm">Separação</span><span class="perm-sel-chk"></span></div>
-                    <div class="perm-sel-opt" onclick="togglePermOpt(this,event)"><input type="checkbox" class="usr-perm" value="repositor"><span class="perm-sel-ic">🔧</span><span class="perm-sel-nm">Reposição</span><span class="perm-sel-chk"></span></div>
-                    <div class="perm-sel-opt" onclick="togglePermOpt(this,event)"><input type="checkbox" class="usr-perm" value="checkout"><span class="perm-sel-ic">🏷️</span><span class="perm-sel-nm">Checkout</span><span class="perm-sel-chk"></span></div>
-                    <div class="perm-sel-opt" onclick="togglePermOpt(this,event)"><input type="checkbox" class="usr-perm" value="embalador"><span class="perm-sel-ic">📫</span><span class="perm-sel-nm">Embalagem</span><span class="perm-sel-chk"></span></div>
+                    <div class="perm-sel-opt" onclick="togglePermOpt(this,event)"><input type="checkbox" class="usr-perm" value="supervisor"><span class="perm-sel-nm">Supervisão</span><span class="perm-sel-chk"></span></div>
+                    <div class="perm-sel-opt" onclick="togglePermOpt(this,event)"><input type="checkbox" class="usr-perm" value="separador"><span class="perm-sel-nm">Separação</span><span class="perm-sel-chk"></span></div>
+                    <div class="perm-sel-opt" onclick="togglePermOpt(this,event)"><input type="checkbox" class="usr-perm" value="repositor"><span class="perm-sel-nm">Reposição</span><span class="perm-sel-chk"></span></div>
+                    <div class="perm-sel-opt" onclick="togglePermOpt(this,event)"><input type="checkbox" class="usr-perm" value="checkout"><span class="perm-sel-nm">Checkout</span><span class="perm-sel-chk"></span></div>
+                    <div class="perm-sel-opt" onclick="togglePermOpt(this,event)"><input type="checkbox" class="usr-perm" value="embalador"><span class="perm-sel-nm">Embalagem</span><span class="perm-sel-chk"></span></div>
                   </div>
                 </div>
               </div>
@@ -418,7 +418,7 @@
                 ondragleave="this.classList.remove('drag')"
                 ondrop="handleDrop(event)"
                 onclick="document.getElementById('input-arquivo').click()">
-                <div style="font-size:40px;margin-bottom:10px">📊</div>
+                
                 <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:6px">Arraste o arquivo aqui</div>
                 <div style="font-size:11px;color:var(--text3);margin-bottom:14px">ou clique para selecionar<br><b style="color:var(--text2)">Colunas: Pedido, Codigo, Descricao, Qtde, Endereço</b></div>
                 <input type="file" id="input-arquivo" accept=".xlsx,.xls,.csv" onchange="processarArquivo(event)"/>
@@ -1074,7 +1074,7 @@
             </div>
             <div id="d-emb-resultado">
               <div style="text-align:center;padding:40px 20px;color:var(--text3)">
-                <div style="font-size:48px;margin-bottom:12px">📦</div>
+                
                 <div style="font-size:14px;font-weight:700;color:var(--text2)">Selecione um pedido da Fila</div>
                 <div style="font-size:12px;margin-top:4px">ou digite o número acima</div>
               </div>
@@ -2094,7 +2094,7 @@
             ondragleave="this.classList.remove('drag')"
             ondrop="handleDropModal(event)"
             onclick="document.getElementById('modal-input-arquivo').click()">
-            <div style="font-size:36px;margin-bottom:8px">📊</div>
+            
             <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">Arraste o arquivo aqui</div>
             <div style="font-size:11px;color:var(--text3);margin-bottom:12px">ou clique para selecionar<br><b style="color:var(--text2)">Aba "Itens": Codigo, Pedido, Descricao, Quantidade, Endereço<br>Aba "Transportadora": Pedido, Razão social, Serviço de entrega</b></div>
             <input type="file" id="modal-input-arquivo" accept=".xlsx,.xls,.csv" onchange="processarArquivoModal(event)" style="display:none"/>
@@ -2277,11 +2277,11 @@
             <svg class="perm-sel-seta" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
           </div>
           <div class="perm-sel-drop">
-            <div class="perm-sel-opt" onclick="togglePermOpt(this,event)"><input type="checkbox" class="edit-usr-perm" value="supervisor"><span class="perm-sel-ic">👔</span><span class="perm-sel-nm">Supervisão</span><span class="perm-sel-chk"></span></div>
-            <div class="perm-sel-opt" onclick="togglePermOpt(this,event)"><input type="checkbox" class="edit-usr-perm" value="separador"><span class="perm-sel-ic">📦</span><span class="perm-sel-nm">Separação</span><span class="perm-sel-chk"></span></div>
-            <div class="perm-sel-opt" onclick="togglePermOpt(this,event)"><input type="checkbox" class="edit-usr-perm" value="repositor"><span class="perm-sel-ic">🔧</span><span class="perm-sel-nm">Reposição</span><span class="perm-sel-chk"></span></div>
-            <div class="perm-sel-opt" onclick="togglePermOpt(this,event)"><input type="checkbox" class="edit-usr-perm" value="checkout"><span class="perm-sel-ic">🏷️</span><span class="perm-sel-nm">Checkout</span><span class="perm-sel-chk"></span></div>
-            <div class="perm-sel-opt" onclick="togglePermOpt(this,event)"><input type="checkbox" class="edit-usr-perm" value="embalador"><span class="perm-sel-ic">📫</span><span class="perm-sel-nm">Embalagem</span><span class="perm-sel-chk"></span></div>
+            <div class="perm-sel-opt" onclick="togglePermOpt(this,event)"><input type="checkbox" class="edit-usr-perm" value="supervisor"><span class="perm-sel-nm">Supervisão</span><span class="perm-sel-chk"></span></div>
+            <div class="perm-sel-opt" onclick="togglePermOpt(this,event)"><input type="checkbox" class="edit-usr-perm" value="separador"><span class="perm-sel-nm">Separação</span><span class="perm-sel-chk"></span></div>
+            <div class="perm-sel-opt" onclick="togglePermOpt(this,event)"><input type="checkbox" class="edit-usr-perm" value="repositor"><span class="perm-sel-nm">Reposição</span><span class="perm-sel-chk"></span></div>
+            <div class="perm-sel-opt" onclick="togglePermOpt(this,event)"><input type="checkbox" class="edit-usr-perm" value="checkout"><span class="perm-sel-nm">Checkout</span><span class="perm-sel-chk"></span></div>
+            <div class="perm-sel-opt" onclick="togglePermOpt(this,event)"><input type="checkbox" class="edit-usr-perm" value="embalador"><span class="perm-sel-nm">Embalagem</span><span class="perm-sel-chk"></span></div>
           </div>
         </div>
       </div>
@@ -2299,8 +2299,8 @@
 
     <!-- Modal Confirmação Genérico -->
     <div id="modal-confirm" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center">
-      <div style="background:var(--surface);border-radius:20px;padding:32px 28px;max-width:380px;width:92%;text-align:center;box-shadow:0 24px 64px rgba(0,0,0,.3)">
-        <div id="modal-confirm-icon" style="font-size:52px;margin-bottom:14px">❓</div>
+      <div style="background:var(--surface);border-radius:20px;padding:28px;max-width:380px;width:92%;text-align:center;box-shadow:0 24px 64px rgba(0,0,0,.3)">
+        <div id="modal-confirm-icon" style="display:none"></div>
         <div id="modal-confirm-titulo" style="font-size:19px;font-weight:800;color:var(--text);margin-bottom:8px">Confirmar ação?</div>
         <div id="modal-confirm-sub" style="font-size:13px;color:var(--text3);margin-bottom:26px;line-height:1.5"></div>
         <div style="display:flex;gap:10px">
@@ -2313,7 +2313,7 @@
     <!-- Modal Quantidade Encontrada -->
     <div id="modal-qtd-enc" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;align-items:center;justify-content:center">
       <div style="background:var(--surface);border-radius:16px;padding:28px 24px;max-width:340px;width:92%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3)">
-        <div style="font-size:44px;margin-bottom:12px">📦</div>
+        
         <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:4px">Quantas unidades encontrou?</div>
         <div id="modal-qtd-enc-sub" style="font-size:12px;color:var(--text3);margin-bottom:16px"></div>
         <input type="number" id="modal-qtd-enc-val" min="1" inputmode="numeric"
@@ -2355,7 +2355,7 @@
     <!-- Modal Sair -->
     <div id="modal-sair" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:10001;align-items:center;justify-content:center">
       <div style="background:var(--surface);border-radius:16px;padding:32px;max-width:360px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3)">
-        <div style="font-size:48px;margin-bottom:16px">👋</div>
+        
         <div style="font-size:18px;font-weight:700;color:var(--text);margin-bottom:8px">Sair do sistema?</div>
         <div style="font-size:13px;color:var(--text3);margin-bottom:24px">Você será redirecionado para a tela de login.</div>
         <div style="display:flex;gap:10px;justify-content:center">
@@ -2442,7 +2442,7 @@ if ('serviceWorker' in navigator) {
     <input type="hidden" id="m-emb-embalar-input">
     <div style="flex:1;overflow-y:auto;padding:14px;min-height:0" id="m-emb-embalar-resultado">
       <div style="text-align:center;padding:60px 20px;color:var(--text3,#94a3b8)">
-        <div style="font-size:48px;margin-bottom:12px">📦</div>
+        
         <div style="font-size:14px;font-weight:700;color:var(--text2)">Selecione um pedido da Fila</div>
         <div style="font-size:12px;margin-top:4px">ou digite o número acima</div>
       </div>

@@ -86,7 +86,7 @@ function badgeTimerAoVivo(iniciadoEm, totalItens, pontuacao, tempoAguardandoMin,
   const decorTxt = decorMin < 60 ? `${decorMin}min` : `${Math.floor(decorMin/60)}h${decorMin%60>0?decorMin%60+'m':''}`;
   const estimTxt = estimMin < 60 ? `${estimMin}min` : `${Math.floor(estimMin/60)}h${estimMin%60>0?estimMin%60+'m':''}`;
   if (atrasado) {
-    return `<span style="background:rgba(220,38,38,.1);color:#dc2626;border-radius:20px;padding:2px 8px;font-size:11px;font-weight:700;white-space:nowrap">⏱ ${decorTxt} ⚠️ +${decorMin-estimMin}min</span>`;
+    return `<span style="background:rgba(220,38,38,.1);color:#dc2626;border-radius:20px;padding:2px 8px;font-size:11px;font-weight:700;white-space:nowrap">${decorTxt} +${decorMin-estimMin}min</span>`;
   }
   return `<span style="background:rgba(99,102,241,.1);color:#6366f1;border-radius:20px;padding:2px 8px;font-size:11px;font-weight:700;white-space:nowrap">⏱ ${decorTxt} / ${estimTxt} est.</span>`;
 }
@@ -228,12 +228,12 @@ function _renderProtoKpis(pedList, pedListH) {
   const tipos = {};
   pedList.forEach(ped => {
     const t = (ped.transportadora || '').toUpperCase();
-    const tipo = /DRIVE|RETIRADA/i.test(t) ? '🚗 Drive Thru'
+    const tipo = /DRIVE|RETIRADA/i.test(t) ? 'Drive Thru'
                : /PRIME/i.test(t)           ? '⭐ Prime'
-               : /SEDEX/i.test(t)           ? '📮 SEDEX'
-               : /^PAC/i.test(t)            ? '📦 PAC'
-               : /MOTOBOY|MOTO/i.test(t)    ? '🏍️ Motoboy'
-               : '📦 Outros';
+               : /SEDEX/i.test(t)           ? 'SEDEX'
+               : /^PAC/i.test(t)            ? 'PAC'
+               : /MOTOBOY|MOTO/i.test(t)    ? 'Motoboy'
+               : 'Outros';
     tipos[tipo] = (tipos[tipo] || 0) + 1;
   });
   const tiposKpis = Object.entries(tipos).map(([k,v]) => `<div style="background:var(--surface2);border-radius:8px;padding:7px 10px"><div style="font-size:9px;color:var(--text3);font-weight:700;letter-spacing:.5px">${k.toUpperCase()}</div><div style="font-size:15px;font-weight:800;color:var(--text);margin-top:2px">${v} ped.</div></div>`).join('');
@@ -282,12 +282,12 @@ function _renderProtoKpis(pedList, pedListH) {
 function _transpBadgeProto(transp) {
   const t = (transp||'').trim();
   if (!t || t === '—') return '';
-  if (/DRIVE|RETIRADA/i.test(t))  return `<span style="background:#fee2e2;color:#dc2626;border:1.5px solid #fca5a5;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;white-space:nowrap">🚗 Drive Thru</span>`;
+  if (/DRIVE|RETIRADA/i.test(t))  return `<span style="background:#fee2e2;color:#dc2626;border:1.5px solid #fca5a5;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;white-space:nowrap">Drive Thru</span>`;
   if (/PRIME/i.test(t))           return `<span style="background:#FEF3C7;color:#92400E;border:1.5px solid #FCD34D;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;white-space:nowrap">⭐ Prime</span>`;
-  if (/SEDEX/i.test(t))           return `<span style="background:#EFF6FF;color:#1D4ED8;border:1.5px solid #BFDBFE;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;white-space:nowrap">📮 ${t}</span>`;
-  if (/^PAC/i.test(t))            return `<span style="background:#F0FDF4;color:#166534;border:1.5px solid #BBF7D0;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;white-space:nowrap">📦 ${t}</span>`;
-  if (/MOTOBOY|MOTO/i.test(t))    return `<span style="background:#F5F3FF;color:#6D28D9;border:1.5px solid #DDD6FE;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;white-space:nowrap">🏍️ ${t}</span>`;
-  return `<span style="background:var(--surface2);color:var(--text2);border:1px solid var(--border);font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;white-space:nowrap">📦 ${t}</span>`;
+  if (/SEDEX/i.test(t))           return `<span style="background:#EFF6FF;color:#1D4ED8;border:1.5px solid #BFDBFE;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;white-space:nowrap">${t}</span>`;
+  if (/^PAC/i.test(t))            return `<span style="background:#F0FDF4;color:#166534;border:1.5px solid #BBF7D0;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;white-space:nowrap">${t}</span>`;
+  if (/MOTOBOY|MOTO/i.test(t))    return `<span style="background:#F5F3FF;color:#6D28D9;border:1.5px solid #DDD6FE;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;white-space:nowrap">${t}</span>`;
+  return `<span style="background:var(--surface2);color:var(--text2);border:1px solid var(--border);font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;white-space:nowrap">${t}</span>`;
 }
 
 async function carregarProtocolo() {
@@ -323,7 +323,7 @@ async function carregarProtocolo() {
   if (!pedList.length) {
     el.innerHTML = `
       <div style="text-align:center;padding:60px 20px">
-        <div style="font-size:48px;margin-bottom:12px">✅</div>
+        
         <div style="font-size:15px;font-weight:600;color:var(--text2)">Nenhum item aguardando protocolo</div>
       </div>`;
   } else {
@@ -514,9 +514,9 @@ async function encerrarProtocoloPedido(numero_pedido, idsStr, qtdItens, btn) {
         r?.erro ? erros++ : ok++;
       }
       if (erros === 0) {
-        toast(`✅ Pedido #${numero_pedido}: ${ok} item(ns) protocolado(s)`, 'sucesso');
+        toast(`Pedido #${numero_pedido}: ${ok} item(ns) protocolado(s)`, 'sucesso');
       } else {
-        toast(`⚠️ ${ok} ok · ${erros} com erro — recarregando...`, 'aviso');
+        toast(`${ok} ok · ${erros} com erro — recarregando...`, 'aviso');
       }
       carregarProtocolo();
     } catch(e) {
@@ -650,7 +650,7 @@ async function _carregarEstatisticasPage(page) {
     `;
 
     if (!pedidos.length) {
-      if (lista) lista.innerHTML = '<div style="text-align:center;color:var(--text3);padding:48px;font-size:14px">📭 Nenhum pedido encontrado no período</div>';
+      if (lista) lista.innerHTML = '<div style="text-align:center;color:var(--text3);padding:48px;font-size:14px">Nenhum pedido encontrado no período</div>';
       return;
     }
 
@@ -682,7 +682,7 @@ async function _carregarEstatisticasPage(page) {
     if (lista) lista.innerHTML = `
       <div class="card">
         <div class="card-hd">
-          📋 DETALHAMENTO DE PEDIDOS
+          DETALHAMENTO DE PEDIDOS
           <span style="font-size:12px;font-weight:600;color:var(--text3)">${pedidos.length} registro${pedidos.length !== 1 ? 's' : ''}</span>
         </div>
         <div class="tabela-wrap">
@@ -707,7 +707,7 @@ async function _carregarEstatisticasPage(page) {
     `;
   } catch (e) {
     console.error('Erro estatísticas:', e);
-    if (lista) lista.innerHTML = '<div style="text-align:center;color:var(--red);padding:32px;font-size:13px">⚠️ Erro ao carregar estatísticas</div>';
+    if (lista) lista.innerHTML = '<div style="text-align:center;color:var(--red);padding:32px;font-size:13px">Erro ao carregar estatísticas</div>';
   }
 }
 

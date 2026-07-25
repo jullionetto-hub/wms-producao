@@ -1,4 +1,4 @@
-/* ══════════════════════════════════════════════════════════════════
+﻿/* ══════════════════════════════════════════════════════════════════
    PROTOCOLO — SUPERVISOR
    Tela de liberação de itens não encontrados pelo repositor.
    Alterações:
@@ -30,7 +30,7 @@ async function carregarProtocoloSupervisor() {
 
     if (!avisos.length) {
       el.innerHTML = `<div style="text-align:center;padding:60px 20px">
-        <div style="font-size:48px;margin-bottom:12px">✅</div>
+        
         <div style="font-size:15px;color:var(--text3);font-weight:500">Nenhum item aguardando liberação</div>
       </div>`;
       return;
@@ -55,14 +55,14 @@ function renderCardProtocolo(a) {
           <div style="font-size:16px;font-weight:700;color:var(--text);font-family:'Space Mono',monospace;margin-bottom:2px">${a.codigo||'—'}</div>
           <div style="font-size:12px;color:var(--text2);line-height:1.4">${a.descricao||''}</div>
         </div>
-        <span style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;background:#f5f3ff;color:#7c3aed;border:1px solid #ddd6fe;flex-shrink:0;margin-left:10px">⛔ Protocolo</span>
+        <span style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;background:#f5f3ff;color:#7c3aed;border:1px solid #ddd6fe;flex-shrink:0;margin-left:10px">Protocolo</span>
       </div>
       <!-- Dados do pedido -->
       <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">
-        ${a.numero_pedido ? `<span style="background:var(--surface2);border-radius:8px;padding:3px 10px;font-size:11px;font-weight:600;color:var(--text2)">📋 Pedido #${a.numero_pedido}</span>` : ''}
-        ${a.separador_nome ? `<span style="background:var(--surface2);border-radius:8px;padding:3px 10px;font-size:11px;color:var(--text2)">👤 ${a.separador_nome}</span>` : ''}
+        ${a.numero_pedido ? `<span style="background:var(--surface2);border-radius:8px;padding:3px 10px;font-size:11px;font-weight:600;color:var(--text2)">Pedido #${a.numero_pedido}</span>` : ''}
+        ${a.separador_nome ? `<span style="background:var(--surface2);border-radius:8px;padding:3px 10px;font-size:11px;color:var(--text2)">${a.separador_nome}</span>` : ''}
         ${a.quantidade ? `<span style="background:#fee2e2;border-radius:8px;padding:3px 10px;font-size:11px;font-weight:700;color:#dc2626">${a.quantidade} un</span>` : ''}
-        ${a.endereco ? `<span style="background:var(--surface2);border-radius:8px;padding:3px 10px;font-size:10px;color:var(--text3)">📍 ${a.endereco}</span>` : ''}
+        ${a.endereco ? `<span style="background:var(--surface2);border-radius:8px;padding:3px 10px;font-size:10px;color:var(--text3)">${a.endereco}</span>` : ''}
       </div>
       <!-- Info repositor -->
       ${a.quem_pegou ? `<div style="font-size:11px;color:var(--text3);margin-bottom:10px">Registrado por: <strong style="color:var(--text2)">${a.quem_pegou}</strong>${a.hora_aviso ? ` às ${a.hora_aviso}` : ''}</div>` : ''}
@@ -72,13 +72,13 @@ function renderCardProtocolo(a) {
           id="protocolo-btn-enc-${a.id}"
           onclick="liberarProtocolo(${a.id},'encontrado','${nomeLogado}',this)"
           style="padding:12px 0;background:#f0fdf4;border:2px solid #16a34a;border-radius:10px;color:#15803d;font-weight:700;font-size:13px;cursor:pointer;transition:all .15s">
-          ✅ Liberar como Encontrado
+          Liberar como Encontrado
         </button>
         <button
           id="protocolo-btn-nenc-${a.id}"
           onclick="liberarProtocolo(${a.id},'nao_encontrado_confirmado','${nomeLogado}',this)"
           style="padding:12px 0;background:#fef2f2;border:2px solid #dc2626;border-radius:10px;color:#b91c1c;font-weight:700;font-size:13px;cursor:pointer;transition:all .15s">
-          ❌ Liberar como Não Encontrado
+          Liberar como Não Encontrado
         </button>
       </div>
     </div>`;
@@ -130,8 +130,8 @@ async function liberarProtocolo(id, decisao, supervisor, btn) {
     if (res.ok) {
       toast(
         decisao === 'encontrado'
-          ? '✅ Item liberado como Encontrado!'
-          : '❌ Item liberado como Não Encontrado — separador desbloqueado!',
+          ? 'Item liberado como Encontrado!'
+          : 'Item liberado como Não Encontrado — separador desbloqueado!',
         'success'
       );
       // Remove o card da lista com animação suave
@@ -172,7 +172,7 @@ function _atualizarContagemProtocolo() {
   }
   if (!n) {
     el.innerHTML = `<div style="text-align:center;padding:60px 20px">
-      <div style="font-size:48px;margin-bottom:12px">✅</div>
+      
       <div style="font-size:15px;color:var(--text3);font-weight:500">Nenhum item aguardando liberação</div>
     </div>`;
   }

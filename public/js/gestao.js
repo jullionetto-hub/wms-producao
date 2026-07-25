@@ -1,4 +1,4 @@
-'use strict';
+﻿'use strict';
 
 /* ══════════════════════════════════════════
    GESTÃO — Absenteísmo
@@ -470,7 +470,7 @@ async function carregarHistoricoAbs() {
 }
 
 async function absLimparTudo() {
-  if (!confirm('⚠️ ATENÇÃO: Isso vai apagar TODOS os PDFs importados e todos os dados de absenteísmo.\n\nDeseja continuar?')) return;
+  if (!confirm('ATENÇÃO: Isso vai apagar TODOS os PDFs importados e todos os dados de absenteísmo.\n\nDeseja continuar?')) return;
   if (!confirm('Confirmar? Esta ação não pode ser desfeita.')) return;
   try {
     const res = await fetch(`${API}/gestao/absenteismo/uploads/all`, { method:'DELETE', credentials:'include' });

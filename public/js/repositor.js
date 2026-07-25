@@ -1,6 +1,6 @@
-
+﻿
 async function marcarSituacaoDesk(id, situacao) {
-  const labels = { subiu:'⬆️ Subiu', devolucao:'↩️ Devolução', protocolo:'📋 Protocolo' };
+  const labels = { subiu:'Subiu', devolucao:'Devolução', protocolo:'Protocolo' };
   if (!confirm(`Marcar como ${labels[situacao]||situacao}?`)) return;
   try {
     const res = await fetch(`${API}/repositor/avisos/${id}`, {
@@ -101,12 +101,12 @@ function corSituacao(sit) {
 
 function labelSituacao(sit) {
   return {
-    pendente:'⏳ Separar', verificando:'🔍 Verificando',
-    buscado:'📦 Separado', separado:'📦 Separado',
-    aguardando_abastecer:'🕐 Aguard. Entregar',
-    subiu:'⬆️ Subiu', abastecido:'✅ Abastecido',
-    protocolo:'📋 Protocolo', devolucao:'↩️ Devolução',
-    nao_encontrado:'❌ Não encontrado'
+    pendente:'Separar', verificando:'Verificando',
+    buscado:'Separado', separado:'Separado',
+    aguardando_abastecer:'Aguard. Entregar',
+    subiu:'Subiu', abastecido:'Abastecido',
+    protocolo:'Protocolo', devolucao:'Devolução',
+    nao_encontrado:'Não encontrado'
   }[sit] || sit;
 }
 
@@ -181,7 +181,7 @@ async function carregarRepSeparar(silent=false) {
 
     let html = '';
     if (!n) {
-      html = `<div style="text-align:center;padding:60px 16px"><div style="font-size:48px;margin-bottom:12px">✅</div><div style="color:var(--text3);font-size:15px;font-weight:500">Nenhum item para separar</div></div>`;
+      html = `<div style="text-align:center;padding:60px 16px"><div style="color:var(--text3);font-size:15px;font-weight:500">Nenhum item para separar</div></div>`;
     } else {
       // Agrupa por código de produto
       const grupos = {};
@@ -194,7 +194,7 @@ async function carregarRepSeparar(silent=false) {
               <span style="font-size:13px;font-weight:800;color:#c2410c;font-family:'Space Mono',monospace">${itens[0].codigo||'—'}</span>
               <div style="font-size:11px;color:#92400e;margin-top:2px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${itens[0].descricao||''}</div>
             </div>
-            <span style="background:#f97316;color:#fff;border-radius:20px;padding:4px 10px;font-size:11px;font-weight:800;white-space:nowrap">📋 ${itens.length} pedidos</span>
+            <span style="background:#f97316;color:#fff;border-radius:20px;padding:4px 10px;font-size:11px;font-weight:800;white-space:nowrap">${itens.length} pedidos</span>
           </div>`;
           // Cards individuais levemente recuados
           html += itens.map(a => `<div style="margin-left:12px;border-left:3px solid #f97316;padding-left:4px;margin-bottom:2px">${renderCardRepSimples(a,'separar')}</div>`).join('');
@@ -207,7 +207,7 @@ async function carregarRepSeparar(silent=false) {
     if (el)  el.innerHTML  = html;
     if (elD) elD.innerHTML = html;
   } catch(e) {
-    const errHtml = `<div style="color:#ef4444;text-align:center;padding:24px;font-size:13px">Erro ao carregar — toque 🔄</div>`;
+    const errHtml = `<div style="color:#ef4444;text-align:center;padding:24px;font-size:13px">Erro ao carregar — toque atualizar</div>`;
     if (!silent) {
       if (el)  el.innerHTML  = errHtml;
       if (elD) elD.innerHTML = errHtml;
@@ -230,11 +230,11 @@ async function carregarRepSeparado(silent=false) {
     if (bdgEl) { bdgEl.textContent = n; bdgEl.style.display = n ? 'inline-flex' : 'none'; }
     const html = n
       ? av.map(a => renderCardRepSimples(a, 'separado')).join('')
-      : `<div style="text-align:center;padding:60px 16px"><div style="font-size:48px;margin-bottom:12px">📦</div><div style="color:var(--text3);font-size:15px;font-weight:500">Nenhum item separado</div></div>`;
+      : `<div style="text-align:center;padding:60px 16px"><div style="display:none"><div style="color:var(--text3);font-size:15px;font-weight:500">Nenhum item separado</div></div>`;
     if (el)  el.innerHTML  = html;
     if (elD) elD.innerHTML = html;
   } catch(e) {
-    const errHtml = `<div style="color:#ef4444;text-align:center;padding:24px;font-size:13px">Erro ao carregar — toque 🔄</div>`;
+    const errHtml = `<div style="color:#ef4444;text-align:center;padding:24px;font-size:13px">Erro ao carregar — toque atualizar</div>`;
     if (!silent) {
       if (el)  el.innerHTML  = errHtml;
       if (elD) elD.innerHTML = errHtml;
@@ -261,7 +261,7 @@ async function carregarRepSubiu(silent=false) {
     if (el)  el.innerHTML  = html;
     if (elD) elD.innerHTML = html;
   } catch(e) {
-    const errHtml = `<div style="color:#ef4444;text-align:center;padding:24px;font-size:13px">Erro ao carregar — toque 🔄</div>`;
+    const errHtml = `<div style="color:#ef4444;text-align:center;padding:24px;font-size:13px">Erro ao carregar — toque atualizar</div>`;
     if (!silent) {
       if (el)  el.innerHTML  = errHtml;
       if (elD) elD.innerHTML = errHtml;
@@ -284,11 +284,11 @@ async function carregarRepProtocolo(silent=false) {
     if (bdgEl) { bdgEl.textContent = n; bdgEl.style.display = n ? 'inline-flex' : 'none'; }
     const html = n
       ? av.map(a => renderCardRepSimples(a, 'protocolo')).join('')
-      : `<div style="text-align:center;padding:60px 16px"><div style="font-size:48px;margin-bottom:12px">📋</div><div style="color:var(--text3);font-size:15px;font-weight:500">Nenhum item em protocolo</div></div>`;
+      : `<div style="text-align:center;padding:60px 16px"><div style="display:none"><div style="color:var(--text3);font-size:15px;font-weight:500">Nenhum item em protocolo</div></div>`;
     if (el)  el.innerHTML  = html;
     if (elD) elD.innerHTML = html;
   } catch(e) {
-    const errHtml = `<div style="color:#ef4444;text-align:center;padding:24px;font-size:13px">Erro ao carregar — toque 🔄</div>`;
+    const errHtml = `<div style="color:#ef4444;text-align:center;padding:24px;font-size:13px">Erro ao carregar — toque atualizar</div>`;
     if (!silent) {
       if (el)  el.innerHTML  = errHtml;
       if (elD) elD.innerHTML = errHtml;
@@ -308,16 +308,16 @@ function renderCardRepSimples(a, modo) {
   const envioBdg = (() => {
     if (!envio) return '';
     if (/DRIVE|RETIRADA/i.test(envio))
-      return `<span style="background:#fee2e2;color:#dc2626;border:1.5px solid #fca5a5;font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">🚗 Drive Thru</span>`;
+      return `<span style="background:#fee2e2;color:#dc2626;border:1.5px solid #fca5a5;font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">Drive Thru</span>`;
     if (/PRIME/i.test(envio))
       return `<span style="background:#FEF3C7;color:#92400E;border:1.5px solid #FCD34D;font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">⭐ Prime</span>`;
     if (/SEDEX/i.test(envio))
-      return `<span style="background:#EFF6FF;color:#1D4ED8;border:1.5px solid #BFDBFE;font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">📮 ${envio}</span>`;
+      return `<span style="background:#EFF6FF;color:#1D4ED8;border:1.5px solid #BFDBFE;font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">${envio}</span>`;
     if (/^PAC/i.test(envio))
-      return `<span style="background:#F0FDF4;color:#166534;border:1.5px solid #BBF7D0;font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">📦 ${envio}</span>`;
+      return `<span style="background:#F0FDF4;color:#166534;border:1.5px solid #BBF7D0;font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">${envio}</span>`;
     if (/MOTOBOY|MOTO/i.test(envio))
-      return `<span style="background:#F5F3FF;color:#6D28D9;border:1.5px solid #DDD6FE;font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">🏍️ ${envio}</span>`;
-    return `<span style="background:var(--surface2);color:var(--text2);border:1px solid var(--border);font-size:10px;font-weight:700;padding:2px 9px;border-radius:20px;white-space:nowrap">📦 ${envio}</span>`;
+      return `<span style="background:#F5F3FF;color:#6D28D9;border:1.5px solid #DDD6FE;font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">${envio}</span>`;
+    return `<span style="background:var(--surface2);color:var(--text2);border:1px solid var(--border);font-size:10px;font-weight:700;padding:2px 9px;border-radius:20px;white-space:nowrap">${envio}</span>`;
   })();
 
   // ── Parse tentativas ────────────────────────────────────────────────
@@ -326,12 +326,12 @@ function renderCardRepSimples(a, modo) {
   const _totalTent = a.total_tentativas || 0;
 
   // ── Badge de tentativas (aparece no topo do card quando há tentativas prévias) ──
-  const _turnoIcon = { Manha:'☀️', Tarde:'🌅', Noite:'🌙' };
+  const _turnoIcon = { Manha:'M', Tarde:'T', Noite:'N' };
   const _tentOrdinal = ['', '2ª', '3ª'];
   const _isUltima = _totalTent >= 2; // Noite = última chance
   const _tentBadge = _totalTent > 0 && sit === 'pendente'
     ? `<span style="background:${_isUltima?'#fef2f2':'#eff6ff'};color:${_isUltima?'#dc2626':'#1d4ed8'};border:1px solid ${_isUltima?'#fca5a5':'#bfdbfe'};font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;white-space:nowrap">
-        ${_isUltima?'⚠️ ÚLTIMA tentativa':'🔄 '+(_tentOrdinal[_totalTent]||(_totalTent+1)+'ª')+' tentativa'}
+        ${_isUltima?'ÚLTIMA tentativa':''+(_tentOrdinal[_totalTent]||(_totalTent+1)+'ª')+' tentativa'}
        </span>`
     : '';
 
@@ -340,7 +340,7 @@ function renderCardRepSimples(a, modo) {
   const _histTentHtml = _prevFailed.length
     ? `<div style="margin-top:5px;padding:6px 9px;background:#fff1f2;border-radius:7px;border:1px solid #fecaca">
         <div style="font-size:9px;font-weight:700;color:#be123c;letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px">Tentativas anteriores</div>
-        ${_prevFailed.map(t => `<div style="font-size:10px;color:#9f1239;margin-bottom:2px">❌ ${t.turno||'?'} · <strong>${t.repositor||'?'}</strong> · ${t.hora_inicio||'?'}${t.hora_fim?' → '+t.hora_fim:''}</div>`).join('')}
+        ${_prevFailed.map(t => `<div style="font-size:10px;color:#9f1239;margin-bottom:2px">${t.turno||'?'} · <strong>${t.repositor||'?'}</strong> · ${t.hora_inicio||'?'}${t.hora_fim?' → '+t.hora_fim:''}</div>`).join('')}
       </div>`
     : '';
 
@@ -354,7 +354,7 @@ function renderCardRepSimples(a, modo) {
       botoes = `
         <div style="padding:7px 12px 10px;border-top:1px solid var(--border)">
           <div style="background:${_isUltima?'#fef2f2':'#eff6ff'};border:1px solid ${_isUltima?'#fca5a5':'#bfdbfe'};border-radius:7px;padding:5px 9px;margin-bottom:6px;font-size:10px;color:${_isUltima?'#9f1239':'#1e40af'}">
-            🔍 <strong>${_quemBusca}</strong> está buscando${_isUltima?' · <span style="color:#dc2626;font-weight:800">⚠️ ÚLTIMA TENTATIVA</span>':''}
+            <strong>${_quemBusca}</strong> está buscando${_isUltima?' · <span style="color:#dc2626;font-weight:800">ÚLTIMA TENTATIVA</span>':''}
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
             <button onclick="mostrarQtdEncontrada(${a.id},'${nomeLogado}',${a.quantidade||1})"
@@ -376,7 +376,7 @@ function renderCardRepSimples(a, modo) {
         <div style="padding:12px 14px;border-top:1px solid var(--border)">
           <button onclick="iniciarBuscaRep(${a.id},'${nomeLogado}')"
             style="width:100%;padding:13px 14px;background:${_isUltima?'#fef2f2':'#eff6ff'};border:2px solid ${_isUltima?'#ef4444':'#3b82f6'};border-radius:10px;color:${_isUltima?'#dc2626':'#1d4ed8'};font-weight:700;font-size:13px;cursor:pointer;touch-action:manipulation;display:flex;align-items:center;justify-content:center;gap:8px">
-            🔍 Iniciar Busca <span style="font-size:11px;opacity:.8;font-weight:600">${_tentLabel}</span>
+            Iniciar Busca <span style="font-size:11px;opacity:.8;font-weight:600">${_tentLabel}</span>
           </button>
           ${_histTentHtml}
         </div>`;
@@ -411,18 +411,18 @@ function renderCardRepSimples(a, modo) {
         <div style="font-family:'Space Mono',monospace;font-size:14px;font-weight:700;color:var(--text);margin-bottom:1px">${a.codigo||'—'}</div>
         <div style="font-size:11px;color:var(--text2);margin-bottom:5px;line-height:1.3">${a.descricao||''}</div>
         <div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center">
-          ${a.numero_pedido?`<span style="background:var(--surface2);border-radius:6px;padding:2px 7px;font-size:10px;color:var(--text2);font-weight:600">📋 ${a.numero_pedido}</span>`:''}
-          ${a.separador_nome?`<span style="background:var(--surface2);border-radius:6px;padding:2px 7px;font-size:10px;color:var(--text2)">👤 ${a.separador_nome}</span>`:''}
+          ${a.numero_pedido?`<span style="background:var(--surface2);border-radius:6px;padding:2px 7px;font-size:10px;color:var(--text2);font-weight:600">${a.numero_pedido}</span>`:''}
+          ${a.separador_nome?`<span style="background:var(--surface2);border-radius:6px;padding:2px 7px;font-size:10px;color:var(--text2)">${a.separador_nome}</span>`:''}
           ${(a.qtd_encontrada > 0 && a.qtd_encontrada < qtd)
-            ? `<span style="background:#fff7ed;border:1.5px solid #fb923c;border-radius:6px;padding:2px 7px;font-size:10px;font-weight:800;color:#c2410c">⚠️ ${a.qtd_encontrada}/${qtd} un</span>`
+            ? `<span style="background:#fff7ed;border:1.5px solid #fb923c;border-radius:6px;padding:2px 7px;font-size:10px;font-weight:800;color:#c2410c">${a.qtd_encontrada}/${qtd} un</span>`
             : `<span style="background:#fee2e2;border-radius:6px;padding:2px 7px;font-size:10px;font-weight:800;color:#dc2626">${qtd} un</span>`
           }
           ${envioBdg}
-          ${a.endereco?`<span style="background:var(--surface2);border-radius:6px;padding:2px 7px;font-size:10px;color:var(--text3)">📍 ${a.endereco}</span>`:''}
+          ${a.endereco?`<span style="background:var(--surface2);border-radius:6px;padding:2px 7px;font-size:10px;color:var(--text3)">${a.endereco}</span>`:''}
           ${_tentBadge}
         </div>
-        ${a.quem_pegou && modo !== 'separar' ? `<div style="margin-top:4px;font-size:10px;color:var(--text3)">📦 <strong style="color:var(--text2)">${a.quem_pegou}</strong></div>` : ''}
-        ${a.hora_aviso?`<div style="margin-top:2px;font-size:10px;color:var(--text3)">🕐 ${a.hora_aviso}${a.data_aviso?' · '+a.data_aviso:''}</div>`:''}
+        ${a.quem_pegou && modo !== 'separar' ? `<div style="margin-top:4px;font-size:10px;color:var(--text3)"><strong style="color:var(--text2)">${a.quem_pegou}</strong></div>` : ''}
+        ${a.hora_aviso?`<div style="margin-top:2px;font-size:10px;color:var(--text3)">${a.hora_aviso}${a.data_aviso?' · '+a.data_aviso:''}</div>`:''}
       </div>
       ${botoes}
     </div>`;
@@ -749,7 +749,7 @@ async function carregarAvisosMobile() {
     if (cnt) cnt.textContent = pend;
     if (!avisos.length) {
       el.innerHTML = `<div style="text-align:center;padding:60px 16px">
-        <div style="font-size:48px;margin-bottom:12px">✅</div>
+        
         <div style="color:var(--text3);font-size:15px;font-weight:500">Nenhum item em falta</div>
       </div>`;
       return;
@@ -757,7 +757,7 @@ async function carregarAvisosMobile() {
     el.innerHTML = avisos.map(a => renderCardMobile(a)).join('');
   } catch(e) {
     if (primeiraVez) {
-      el.innerHTML = `<div style="color:#ef4444;text-align:center;padding:24px">Erro ao carregar — toque 🔄 para tentar novamente</div>`;
+      el.innerHTML = `<div style="color:#ef4444;text-align:center;padding:24px">Erro ao carregar — toque atualizar para tentar novamente</div>`;
     }
   }
 }
@@ -775,15 +775,15 @@ function renderCardMobile(a) {
   // ── Badge de status ──
   const BADGES = {
     pendente:            `<span style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px">⏳ Separar</span>`,
-    verificando:         `<span style="background:#f3e8ff;color:#6b21a8;border:1px solid #d8b4fe;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px">🔍 Verificando</span>`,
-    buscado:             `<span style="background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px">📦 Separado</span>`,
-    separado:            `<span style="background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px">📦 Separado</span>`,
-    aguardando_abastecer:`<span style="background:#ffedd5;color:#9a3412;border:1px solid #fed7aa;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px">🕐 Aguardando</span>`,
+    verificando:         `<span style="background:#f3e8ff;color:#6b21a8;border:1px solid #d8b4fe;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px">Verificando</span>`,
+    buscado:             `<span style="background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px">Separado</span>`,
+    separado:            `<span style="background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px">Separado</span>`,
+    aguardando_abastecer:`<span style="background:#ffedd5;color:#9a3412;border:1px solid #fed7aa;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px">Aguardando</span>`,
     subiu:               `<span style="background:#e0f2fe;color:#0369a1;border:1px solid #7dd3fc;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px">⬆️ Subiu</span>`,
-    abastecido:          `<span style="background:#dcfce7;color:#166534;border:1px solid #86efac;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px">✅ Abastecido</span>`,
-    protocolo:           `<span style="background:#f3f4f6;color:#374151;border:1px solid #d1d5db;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px">📋 Protocolo</span>`,
+    abastecido:          `<span style="background:#dcfce7;color:#166534;border:1px solid #86efac;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px">Abastecido</span>`,
+    protocolo:           `<span style="background:#f3f4f6;color:#374151;border:1px solid #d1d5db;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px">Protocolo</span>`,
     devolucao:           `<span style="background:#faf5ff;color:#7e22ce;border:1px solid #d8b4fe;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px">↩️ Devolução</span>`,
-    nao_encontrado:      `<span style="background:#fee2e2;color:#991b1b;border:1px solid #fecaca;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px">❌ Não encontrado</span>`,
+    nao_encontrado:      `<span style="background:#fee2e2;color:#991b1b;border:1px solid #fecaca;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px">Não encontrado</span>`,
   };
   const badge = BADGES[sit] || `<span style="font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;background:${cor}22;color:${cor}">${labelSituacao(sit)}</span>`;
 
@@ -793,16 +793,16 @@ function renderCardMobile(a) {
   const envioBdg = (() => {
     if (!envio) return '';
     if (/DRIVE|RETIRADA/i.test(envio))
-      return `<span style="background:#fee2e2;color:#dc2626;border:1.5px solid #fca5a5;font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">🚗 Drive Thru</span>`;
+      return `<span style="background:#fee2e2;color:#dc2626;border:1.5px solid #fca5a5;font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">Drive Thru</span>`;
     if (/PRIME/i.test(envio))
       return `<span style="background:#FEF3C7;color:#92400E;border:1.5px solid #FCD34D;font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">⭐ Prime</span>`;
     if (/SEDEX/i.test(envio))
-      return `<span style="background:#EFF6FF;color:#1D4ED8;border:1.5px solid #BFDBFE;font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">📮 ${envio}</span>`;
+      return `<span style="background:#EFF6FF;color:#1D4ED8;border:1.5px solid #BFDBFE;font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">${envio}</span>`;
     if (/^PAC/i.test(envio))
-      return `<span style="background:#F0FDF4;color:#166534;border:1.5px solid #BBF7D0;font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">📦 ${envio}</span>`;
+      return `<span style="background:#F0FDF4;color:#166534;border:1.5px solid #BBF7D0;font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">${envio}</span>`;
     if (/MOTOBOY|MOTO/i.test(envio))
-      return `<span style="background:#F5F3FF;color:#6D28D9;border:1.5px solid #DDD6FE;font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">🏍️ ${envio}</span>`;
-    return `<span style="background:var(--surface2);color:var(--text2);border:1px solid var(--border);font-size:10px;font-weight:700;padding:2px 9px;border-radius:20px;white-space:nowrap">📦 ${envio}</span>`;
+      return `<span style="background:#F5F3FF;color:#6D28D9;border:1.5px solid #DDD6FE;font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">${envio}</span>`;
+    return `<span style="background:var(--surface2);color:var(--text2);border:1px solid var(--border);font-size:10px;font-weight:700;padding:2px 9px;border-radius:20px;white-space:nowrap">${envio}</span>`;
   })();
 
   // ── Progress stepper ──
@@ -857,19 +857,19 @@ function renderCardMobile(a) {
   // ── Obs ──
   const obsRedundante = (a.obs||'').startsWith('Falta total');
   const obsExtra = !obsRedundante && a.obs
-    ? `<div style="margin-top:6px;font-size:11px;color:var(--text3);background:var(--surface2);border-radius:8px;padding:5px 10px">💬 ${a.obs}</div>`
+    ? `<div style="margin-top:6px;font-size:11px;color:var(--text3);background:var(--surface2);border-radius:8px;padding:5px 10px">${a.obs}</div>`
     : '';
 
   // ── Botões de ação ──
   // ── Dropdown de etapas ──
   const ETAPAS_DROP = [
-    { acao:'e_verificando', ico:'🔍', lbl:'Verificando',    cor:'#8b5cf6' },
-    { acao:'e_separado',    ico:'📦', lbl:'Separado',        cor:'#3b82f6' },
+    { acao:'e_verificando', ico:'', lbl:'Verificando',    cor:'#8b5cf6' },
+    { acao:'e_separado',    ico:'', lbl:'Separado',        cor:'#3b82f6' },
     { acao:'e_subiu',       ico:'⬆️', lbl:'Subiu',           cor:'#0ea5e9' },
-    { acao:'e_abastecido',  ico:'✅', lbl:'Abastecido',      cor:'#10b981' },
-    { acao:'e_protocolo',   ico:'📋', lbl:'Protocolo',       cor:'#6b7280' },
+    { acao:'e_abastecido',  ico:'', lbl:'Abastecido',      cor:'#10b981' },
+    { acao:'e_protocolo',   ico:'', lbl:'Protocolo',       cor:'#6b7280' },
     { acao:'e_devolucao',   ico:'↩️', lbl:'Devolução',       cor:'#a855f7' },
-    { acao:'e_nao_enc',     ico:'❌', lbl:'Não encontrado',  cor:'#ef4444' },
+    { acao:'e_nao_enc',     ico:'', lbl:'Não encontrado',  cor:'#ef4444' },
   ];
 
   const dropEtapas = `
@@ -910,7 +910,7 @@ function renderCardMobile(a) {
       <div style="border-top:1px solid var(--border);padding:12px 0 0">
         ${sit === 'aguardando_abastecer' ? `
           <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:9px 12px;margin-bottom:10px;font-size:12px;color:#92400e">
-            📦 <strong>${a.quem_pegou||'—'}</strong> separou ${a.qtd_encontrada||qtdSolic} de ${qtdSolic} un. Aguardando entrega.
+            <strong>${a.quem_pegou||'—'}</strong> separou ${a.qtd_encontrada||qtdSolic} de ${qtdSolic} un. Aguardando entrega.
           </div>` : `
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
             <span style="font-size:12px;color:var(--text3);white-space:nowrap">Qtd encontrada:</span>
@@ -928,8 +928,8 @@ function renderCardMobile(a) {
     const tem = a.quem_guardou || a.quem_pegou;
     botoesEtapa = tem ? `
       <div style="border-top:1px solid var(--border);padding-top:8px;display:flex;gap:14px;font-size:12px;color:var(--text3)">
-        ${a.quem_pegou  ? `<span>📦 <strong style="color:var(--text)">${a.quem_pegou}</strong></span>` : ''}
-        ${a.quem_guardou? `<span>🏠 <strong style="color:var(--text)">${a.quem_guardou}</strong></span>` : ''}
+        ${a.quem_pegou  ? `<strong style="color:var(--text)">${a.quem_pegou}</strong>` : ''}
+        ${a.quem_guardou? `<strong style="color:var(--text)">${a.quem_guardou}</strong>` : ''}
       </div>` : '';
   }
 
@@ -948,12 +948,12 @@ function renderCardMobile(a) {
         <div style="display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin-bottom:6px">
           ${envioBdg}
           <span style="background:#fee2e2;border-radius:8px;padding:3px 10px;font-size:12px;font-weight:800;color:#dc2626">${qtdSolic} un em falta</span>
-          <span style="background:var(--surface2);border-radius:8px;padding:3px 10px;font-size:11px;color:var(--text2)">📍 ${a.endereco||'—'}</span>
+          <span style="background:var(--surface2);border-radius:8px;padding:3px 10px;font-size:11px;color:var(--text2)">${a.endereco||'—'}</span>
         </div>
         <!-- Linha 3: separador + hora -->
         <div style="display:flex;gap:10px;font-size:11px;color:var(--text3);align-items:center">
-          ${a.separador_nome?`<span>👤 <strong style="color:var(--text2)">${a.separador_nome}</strong></span>`:''}
-          ${a.hora_aviso?`<span>🕐 ${a.hora_aviso}</span>`:''}
+          ${a.separador_nome?`<span><strong style="color:var(--text2)">${a.separador_nome}</strong></span>`:''}
+          ${a.hora_aviso?`<span>${a.hora_aviso}</span>`:''}
           ${a.data_aviso?`<span style="font-size:10px">${fmtData(a.data_aviso)}</span>`:''}
         </div>
         <!-- Stepper de etapas -->
@@ -993,9 +993,9 @@ function selecionarEtapaRep(id, acao, nomeLogado, el, e) {
   if (seta) seta.style.transform = '';
   // Feedback visual imediato no label
   const labels = {
-    e_verificando:'🔍 Verificando', e_separado:'📦 Separado', e_subiu:'⬆️ Subiu',
-    e_abastecido:'✅ Abastecido',  e_protocolo:'📋 Protocolo', e_devolucao:'↩️ Devolução',
-    e_nao_enc:'❌ Não encontrado'
+    e_verificando:'Verificando', e_separado:'Separado', e_subiu:'Subiu',
+    e_abastecido:'Abastecido',  e_protocolo:'Protocolo', e_devolucao:'Devolução',
+    e_nao_enc:'Não encontrado'
   };
   if (val) val.textContent = labels[acao] || 'Registrando...';
   acaoRepositor(id, acao, nomeLogado);
@@ -1072,10 +1072,10 @@ async function carregarStatsRepMobile() {
     el.innerHTML = `
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:4px 0">
         ${[
-          ['✅','#10b981','Resolvidas hoje',   d.resolvidos_hoje||0],
-          ['❌','#ef4444','Não encontradas',   d.nao_encontrados_hoje||0],
+          ['','#10b981','Resolvidas hoje',   d.resolvidos_hoje||0],
+          ['','#ef4444','Não encontradas',   d.nao_encontrados_hoje||0],
           ['⏳','#f59e0b','Pendentes agora',   d.pendentes_hoje||0],
-          ['📋','#6b7280','Total hoje',         d.avisos_hoje||0],
+          ['','#6b7280','Total hoje',         d.avisos_hoje||0],
         ].map(([ico,cor,lbl,val]) => `
           <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center">
             <div style="font-size:28px;margin-bottom:4px">${ico}</div>
@@ -1158,7 +1158,7 @@ async function carregarTabelaReposicao() {
 
     if (!avisos.length) {
       tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:48px;color:var(--text3)">
-        <div style="font-size:32px;margin-bottom:8px">✅</div>Nenhum item</td></tr>`;
+        Nenhum item</td></tr>`;
       return;
     }
 
@@ -1189,14 +1189,14 @@ async function carregarTabelaReposicao() {
         </td>
         <td style="padding:10px 12px;white-space:nowrap">
           ${a.forma_envio
-            ? `<span style="background:${isDrive?'#fee2e2':'var(--surface2)'};color:${isDrive?'#dc2626':'var(--text2)'};border:1px solid ${isDrive?'#fca5a5':'var(--border)'};font-weight:700;font-size:11px;padding:3px 8px;border-radius:20px">${isDrive?'🚗':'📦'} ${a.forma_envio}</span>`
+            ? `<span style="background:${isDrive?'#fee2e2':'var(--surface2)'};color:${isDrive?'#dc2626':'var(--text2)'};border:1px solid ${isDrive?'#fca5a5':'var(--border)'};font-weight:700;font-size:11px;padding:3px 8px;border-radius:20px">${isDrive?'DT':''} ${a.forma_envio}</span>`
             : `<span style="color:var(--text3)">—</span>`}
         </td>
         <td style="padding:10px 12px;font-size:12px;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;color:var(--text2)">${a.separador_nome||'—'}</td>
         <td style="padding:8px 10px;min-width:130px">
           ${a.quem_pegou
             ? `<div style="display:flex;align-items:center;gap:4px">
-                 <span style="font-size:12px;color:var(--text2);font-weight:600">📦 ${a.quem_pegou}</span>
+                 <span style="font-size:12px;color:var(--text2);font-weight:600">${a.quem_pegou}</span>
                  <button onclick="limparCampoPessoa(${a.id},'quem_pegou')" title="Limpar" style="font-size:10px;padding:1px 5px;background:transparent;border:1px solid var(--border);border-radius:4px;cursor:pointer;color:var(--text3)">✕</button>
                </div>`
             : `<select onchange="salvarCampoPessoa(${a.id},'quem_pegou',this.value)"
@@ -1207,7 +1207,7 @@ async function carregarTabelaReposicao() {
         <td style="padding:8px 10px;min-width:130px">
           ${a.quem_guardou
             ? `<div style="display:flex;align-items:center;gap:4px">
-                 <span style="font-size:12px;color:var(--text2);font-weight:600">🏠 ${a.quem_guardou}</span>
+                 <span style="font-size:12px;color:var(--text2);font-weight:600">${a.quem_guardou}</span>
                  <button onclick="limparCampoPessoa(${a.id},'quem_guardou')" title="Limpar" style="font-size:10px;padding:1px 5px;background:transparent;border:1px solid var(--border);border-radius:4px;cursor:pointer;color:var(--text3)">✕</button>
                </div>`
             : (!['nao_encontrado','protocolo','devolucao'].includes(sit)
@@ -1222,7 +1222,7 @@ async function carregarTabelaReposicao() {
             <span style="font-size:12px;font-weight:700;color:${cor};background:${cor}18;padding:4px 10px;border-radius:20px;white-space:nowrap">${lbl}</span>
             ${!['protocolo','abastecido','nao_encontrado','devolucao','subiu'].includes(sit)
               ? `<button onclick="marcarSituacaoDesk(${a.id},'subiu')" title="Subiu" style="font-size:10px;padding:3px 8px;border:1px solid #0ea5e9;border-radius:20px;background:transparent;color:#0ea5e9;cursor:pointer">⬆️ Subiu</button>
-                 <button onclick="marcarProtocolo(${a.id})" title="Protocolo" style="font-size:10px;padding:3px 8px;border:1px solid #6b7280;border-radius:20px;background:transparent;color:#6b7280;cursor:pointer">📋</button>
+                 <button onclick="marcarProtocolo(${a.id})" title="Protocolo" style="font-size:10px;padding:3px 8px;border:1px solid #6b7280;border-radius:20px;background:transparent;color:#6b7280;cursor:pointer">Proto</button>
                  <button onclick="marcarSituacaoDesk(${a.id},'devolucao')" title="Devolução" style="font-size:10px;padding:3px 8px;border:1px solid #a855f7;border-radius:20px;background:transparent;color:#a855f7;cursor:pointer">↩️</button>`
               : ''}
           </div>
@@ -1475,7 +1475,7 @@ async function carregarEstatisticasRep() {
               const sit = it.situacao || it.status;
               const cor = corSituacao(sit);
               const lbl = labelSituacao(sit);
-              const papel = it.campo === 'quem_pegou' ? '📦 Pegou' : '🏠 Guardou';
+              const papel = it.campo === 'quem_pegou' ? 'Pegou' : 'Guardou';
               return `<tr style="background:var(--surface2);border-bottom:1px solid var(--border)">
                 <td colspan="6" style="padding:6px 16px 6px 64px">
                   <div style="display:flex;align-items:center;gap:12px;font-size:12px">

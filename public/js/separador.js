@@ -1,4 +1,4 @@
-// Rota física do estoque — separadores partem de E (corredor + ponto de acúmulo)
+﻿// Rota física do estoque — separadores partem de E (corredor + ponto de acúmulo)
 // 1. Começa em E, desce ramal: E → D → C → B → A
 // 2. Sobe ao corredor principal, varre esquerda até F: Q → P → O → N → M → L → K → J → I → H → Arara → G → F → ZA
 // 3. Varre direita até Z: R → S → T → U → V → W → X → Y → Z
@@ -39,7 +39,7 @@ function abrirPreparacaoLote(pedidos) {
 
   // Dica de endereços compartilhados (calculado após carregar itens)
   document.getElementById('m-lote-prep-dica').innerHTML =
-    '📦 Nos endereços onde dois pedidos têm o mesmo produto, o app vai indicar quantas unidades vão para cada caixa.';
+    'Nos endereços onde dois pedidos têm o mesmo produto, o app vai indicar quantas unidades vão para cada caixa.';
 }
 
 async function iniciarSepLote() {
@@ -171,7 +171,7 @@ function _renderizarListaLote() {
               ${items[0].descricao||cod}
             </div>
             <div style="font-size:10px;color:#6366f1;font-family:monospace;margin-bottom:6px;font-weight:600">
-              📍 ${endCompleto}
+              ${endCompleto}
             </div>
             <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:flex-start">
               <span style="font-size:11px;font-weight:700;color:#1a1a2e;background:#e2e8f0;padding:3px 9px;border-radius:5px;align-self:center">${totalQty} un</span>
@@ -303,7 +303,7 @@ async function concluirLoteMobile() {
       return `<div style="margin:6px 0;border-radius:10px;border:0.5px solid var(--border);background:var(--surface);padding:10px 14px;display:flex;align-items:center;gap:10px;text-align:left">
         <div style="width:30px;height:30px;border-radius:6px;background:${_CX_CORES[i%_CX_CORES.length]};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:500;color:#fff;flex-shrink:0">${i+1}</div>
         <div style="flex:1"><div style="font-size:13px;font-weight:500;color:var(--text)">#${p.numero_pedido}</div><div style="font-size:11px;color:var(--text3)">${label}</div></div>
-        <span style="color:${cor};font-size:18px;font-weight:700">${ok?'✓':ag?'⏳':'✗'}</span>
+        <span style="color:${cor};font-size:18px;font-weight:700">${ok?'✓':'✗'}</span>
       </div>`;
     }).join('');
     _loteScreens('m-lote-conclusao');
@@ -424,7 +424,7 @@ async function carregarFilaMobile() {
     const lista = document.getElementById('lista-fila-mobile');
     if (!lista) return;
     if (!separadorAtual) {
-      lista.innerHTML = '<div style="color:#dc2626;text-align:center;padding:30px;font-size:13px;background:#fee2e2;border-radius:10px;margin:12px">⚠️ Usuário não vinculado a um separador. Fale com o supervisor.</div>';
+      lista.innerHTML = '<div style="color:#dc2626;text-align:center;padding:30px;font-size:13px;background:#fee2e2;border-radius:10px;margin:12px">Usuário não vinculado a um separador. Fale com o supervisor.</div>';
       return;
     }
     if (!ordenadosMob.length) { lista.innerHTML = '<div style="color:var(--text3);text-align:center;padding:30px;font-size:13px">Nenhum pedido na fila</div>'; return; }
@@ -439,7 +439,7 @@ async function carregarFilaMobile() {
       ? `<div onclick="abrirPreparacaoLote(_lotePendentes)"
            style="border:2px solid #7c3aed;border-radius:12px;padding:14px;margin-bottom:12px;background:linear-gradient(135deg,#faf5ff,#ede9fe);cursor:pointer">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-            <div style="width:38px;height:38px;border-radius:10px;background:#7c3aed;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">🌙</div>
+            <div style="width:38px;height:38px;border-radius:10px;background:#7c3aed;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0">N</div>
             <div>
               <div style="font-size:14px;font-weight:700;color:#4c1d95">Separação em Lote — Noite</div>
               <div style="font-size:11px;color:#6d28d9">${pendentesLote.length} pedidos · todos de uma vez</div>
@@ -471,7 +471,7 @@ async function carregarFilaMobile() {
       const bordColor = temSup ? '#a78bfa' : temFalta ? '#F59E0B' : temReposto ? '#16a34a' : isDrive ? '#FCA5A5' : 'var(--border)';
       const bgColor   = temSup ? '#f5f3ff' : temFalta ? '#FFFBEB' : temReposto ? '#f0fdf4' : isDrive ? '#FFF5F5' : 'var(--surface)';
       const numColor  = isDrive ? '#DC2626' : temSup ? '#7c3aed' : temFalta ? '#92400E' : temReposto ? '#15803d' : 'var(--accent)';
-      const pillTxt   = temSup ? '⛔ supervisor' : temFalta ? '⏳ aguard. repositor' : temReposto ? '✅ pode continuar!' : isDrive ? '🚗 drive thru' : 'aguardando sep';
+      const pillTxt   = temSup ? 'supervisor' : temFalta ? 'aguard. repositor' : temReposto ? 'pode continuar!' : isDrive ? 'drive thru' : 'aguardando sep';
       const pillCls   = temSup ? 'separando' : temReposto ? 'separando' : 'pendente';
       const bordWidth = (temSup || temFalta || temReposto) ? '2.5px' : '1.5px';
 
@@ -484,24 +484,24 @@ async function carregarFilaMobile() {
           </div>
         </div>
         <div style="display:flex;gap:10px;font-size:12px;color:var(--text2);flex-wrap:wrap;margin-bottom:4px">
-          <span>📦 <b style="color:var(--text)">${p.total_itens||p.itens||0} itens</b></span>
-          <span>🏷️ <b style="color:var(--text)">${p.itens||0} SKUs</b></span>
-          ${p.cliente ? `<span>👤 ${p.cliente}</span>` : ''}
-          ${p.transportadora ? `<span>🚚 ${p.transportadora}</span>` : ''}
+          <span><b style="color:var(--text)">${p.total_itens||p.itens||0} itens</b></span>
+          <span><b style="color:var(--text)">${p.itens||0} SKUs</b></span>
+          ${p.cliente ? `<span>${p.cliente}</span>` : ''}
+          ${p.transportadora ? `<span>${p.transportadora}</span>` : ''}
         </div>
         ${temSup ? `<div style="display:flex;align-items:center;gap:5px;background:#ede9fe;border:1px solid #c4b5fd;border-radius:6px;padding:5px 9px;margin-bottom:5px">
-          <span style="font-size:11px;font-weight:700;color:#5b21b6">⛔ ${qtdSup} item${qtdSup>1?'s':''} aguardando supervisor</span>
+          <span style="font-size:11px;font-weight:700;color:#5b21b6">${qtdSup} item${qtdSup>1?'s':''} aguardando supervisor</span>
         </div>` : ''}
         ${temFalta ? `<div style="display:flex;align-items:center;gap:5px;background:#FEF3C7;border:1px solid #F59E0B;border-radius:6px;padding:5px 9px;margin-bottom:5px">
           <span style="font-size:11px;font-weight:700;color:#92400E">⏳ ${qtdFalta} item${qtdFalta>1?'s':''} aguardando repositor — não pegue ainda!</span>
         </div>` : ''}
         ${temReposto ? `<div style="display:flex;align-items:center;gap:6px;background:#dcfce7;border:1px solid #86efac;border-radius:6px;padding:6px 10px;margin-bottom:5px">
-          <span style="font-size:15px">✅</span>
+          
           <span style="font-size:11px;font-weight:700;color:#15803d">${qtdReposto} item${qtdReposto>1?'s':''} reposto${qtdReposto>1?'s':''} pelo repositor — volte para este pedido!</span>
         </div>` : ''}
         <button class="btn btn-primary btn-sm" style="width:100%;margin-top:8px;padding:10px;font-size:14px;font-weight:700${temReposto?';background:#16a34a':''}"
           onclick="selecionarPedidoFilaMobile('${p.numero_pedido}')">
-          ${temReposto ? '✅ Continuar Separação' : '📦 Iniciar Separação'}
+          ${temReposto ? 'Continuar Separação' : 'Iniciar Separação'}
         </button>
       </div>`;
     }).join('');
@@ -588,7 +588,7 @@ async function carregarAguardandoMobile() {
 async function carregarStatsMobile() {
   try {
     const nomeEl = document.getElementById('m-stat-nome');
-    if (nomeEl) nomeEl.textContent = `👤 ${separadorAtual?.nome || usuarioAtual?.nome || '—'}`;
+    if (nomeEl) nomeEl.textContent = `${separadorAtual?.nome || usuarioAtual?.nome || '—'}`;
     let dados = [];
     if (separadorAtual) {
       const res = await fetch(`${API}/produtividade?separador_id=${separadorAtual.id}`, { credentials:'include' });
@@ -677,7 +677,7 @@ async function carregarFilaDesk() {
       const bordColor = temSup ? '#ddd6fe' : temFalta ? '#FDE68A' : temReposto ? '#86efac' : isDrive ? '#FECACA' : 'var(--border)';
       const bgColor   = temSup ? '#f5f3ff' : temFalta ? '#fffbeb' : temReposto ? '#f0fdf4' : 'var(--surface)';
       const numColor  = isDrive ? '#DC2626' : temSup ? '#7c3aed' : temReposto ? '#15803d' : 'var(--accent)';
-      const pillTxt   = temSup ? '⛔ supervisor' : temFalta ? '⚠️ repositor' : temReposto ? '✅ pode continuar!' : isDrive ? '🚗 drive thru' : 'aguardando sep';
+      const pillTxt   = temSup ? 'supervisor' : temFalta ? 'repositor' : temReposto ? 'pode continuar!' : isDrive ? 'drive thru' : 'aguardando sep';
       const pillCls   = temSup ? 'separando' : temReposto ? 'separando' : 'pendente';
       const bordWidth = (temSup || temFalta || temReposto) ? '2px' : '1.5px';
 
@@ -687,24 +687,24 @@ async function carregarFilaDesk() {
           <span class="pill ${pillCls}" style="font-size:10px;${temReposto?'background:#dcfce7;color:#15803d;border-color:#86efac':''}">${pillTxt}</span>
         </div>
         <div style="display:flex;gap:10px;font-size:12px;color:var(--text2);flex-wrap:wrap;margin-bottom:4px">
-          <span>📦 <b style="color:var(--text)">${p.total_itens||p.itens||0} itens</b></span>
-          <span>🏷️ <b style="color:var(--text)">${p.itens||0} SKUs</b></span>
-          ${p.cliente ? `<span>👤 ${p.cliente}</span>` : ''}
-          ${p.transportadora ? `<span>🚚 ${p.transportadora}</span>` : ''}
+          <span><b style="color:var(--text)">${p.total_itens||p.itens||0} itens</b></span>
+          <span><b style="color:var(--text)">${p.itens||0} SKUs</b></span>
+          ${p.cliente ? `<span>${p.cliente}</span>` : ''}
+          ${p.transportadora ? `<span>${p.transportadora}</span>` : ''}
         </div>
         ${temSup ? `<div style="display:flex;align-items:center;gap:5px;background:#f5f3ff;border:1px solid #ddd6fe;border-radius:6px;padding:5px 9px;margin-bottom:5px">
-          <span style="font-size:11px;font-weight:600;color:#5b21b6">⛔ ${qtdSup} item${qtdSup>1?'s':''} aguardando supervisor</span>
+          <span style="font-size:11px;font-weight:600;color:#5b21b6">${qtdSup} item${qtdSup>1?'s':''} aguardando supervisor</span>
         </div>` : ''}
         ${temFalta ? `<div style="display:flex;align-items:center;gap:5px;background:#FEF3C7;border:1px solid #FDE68A;border-radius:6px;padding:5px 9px;margin-bottom:5px">
-          <span style="font-size:11px;font-weight:600;color:#92400E">⚠️ ${qtdFalta} item${qtdFalta>1?'s':''} aguardando repositor</span>
+          <span style="font-size:11px;font-weight:600;color:#92400E">${qtdFalta} item${qtdFalta>1?'s':''} aguardando repositor</span>
         </div>` : ''}
         ${temReposto ? `<div style="display:flex;align-items:center;gap:6px;background:#dcfce7;border:1px solid #86efac;border-radius:6px;padding:6px 10px;margin-bottom:5px">
-          <span style="font-size:14px">✅</span>
+          
           <span style="font-size:11px;font-weight:700;color:#15803d">${qtdReposto} item${qtdReposto>1?'s':''} reposto${qtdReposto>1?'s':''} pelo repositor — volte para este pedido!</span>
         </div>` : ''}
         <button class="btn btn-primary btn-sm" style="width:100%;margin-top:8px;padding:10px;font-size:14px;font-weight:700${temReposto?';background:#16a34a':''}"
           onclick="selecionarPedidoFilaDesk('${p.numero_pedido}')">
-          ${temReposto ? '✅ Continuar Separação' : '📦 Iniciar Separação'}
+          ${temReposto ? 'Continuar Separação' : 'Iniciar Separação'}
         </button>
       </div>`;
     }).join('');
@@ -733,9 +733,9 @@ async function _confirmarPedidoCore(num, inputId, statusId, clWrapId, fnChecklis
     const res  = await fetch(`${API}/pedidos/bipar`, { credentials:'include', method:'POST', headers:{'Content-Type':'application/json'},
       body:JSON.stringify({numero_pedido:num, separador_id:sepId}) });
     const data = await res.json();
-    if (res.status===404) { toast('❌ Pedido não encontrado!','erro'); document.getElementById(inputId).value=''; return; }
-    if (res.status===409||res.status===400) { toast(`⚠️ ${data.erro}`,'aviso'); document.getElementById(inputId).value=''; return; }
-    if (!res.ok) { toast(`❌ ${data.erro}`,'erro'); return; }
+    if (res.status===404) { toast('Pedido não encontrado!','erro'); document.getElementById(inputId).value=''; return; }
+    if (res.status===409||res.status===400) { toast(`${data.erro}`,'aviso'); document.getElementById(inputId).value=''; return; }
+    if (!res.ok) { toast(`${data.erro}`,'erro'); return; }
     pedidoAtualId  = data.pedido_id;
     pedidoAtualNum = num;
     const statusEl = document.getElementById(statusId);
@@ -747,8 +747,8 @@ async function _confirmarPedidoCore(num, inputId, statusId, clWrapId, fnChecklis
         const tData = await tRes.json();
         if (tData.cliente || tData.transportadora) {
           infoTransp = `<div style="margin-top:6px;padding:8px 10px;background:rgba(37,99,235,.06);border:1px solid rgba(37,99,235,.18);border-radius:8px;font-size:12px">
-            ${tData.cliente ? `<div>👤 <b style="color:var(--text)">${tData.cliente}</b></div>` : ''}
-            ${tData.transportadora ? `<div>🚚 <b style="color:var(--accent)">${tData.transportadora}</b></div>` : ''}
+            ${tData.cliente ? `<div><b style="color:var(--text)">${tData.cliente}</b></div>` : ''}
+            ${tData.transportadora ? `<div><b style="color:var(--accent)">${tData.transportadora}</b></div>` : ''}
           </div>`;
         }
       }
@@ -790,7 +790,7 @@ async function _confirmarPedidoCore(num, inputId, statusId, clWrapId, fnChecklis
             const stDesk = document.getElementById('cl-caixa-status');
             if (inpMob)  inpMob.value  = dCaixa.numero_caixa;
             if (inpDesk) inpDesk.value = dCaixa.numero_caixa;
-            const msg = `<span style="color:var(--green);font-weight:600">✅ Caixa <b>${dCaixa.numero_caixa}</b> já vinculada</span>`;
+            const msg = `<span style="color:var(--green);font-weight:600">Caixa <b>${dCaixa.numero_caixa}</b> já vinculada</span>`;
             if (stMob)  { stMob.style.display='block';  stMob.innerHTML = msg; }
             if (stDesk) { stDesk.style.display='block'; stDesk.innerHTML = msg; }
           }
@@ -804,7 +804,7 @@ async function _confirmarPedidoCore(num, inputId, statusId, clWrapId, fnChecklis
       if (clWrap) clWrap.style.display = 'none';
       ph.style.display = 'block';
       ph.innerHTML = `<div style="background:var(--surface);border:1.5px solid #FECACA;border-radius:10px;text-align:center;padding:28px 20px;">
-        <div style="width:44px;height:44px;border-radius:50%;background:#FEF2F2;border:1.5px solid #FECACA;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;font-size:20px;">📦</div>
+        <div style="width:44px;height:44px;border-radius:50%;background:#FEF2F2;border:1.5px solid #FECACA;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;display:none">
         <div style="font-size:13px;font-weight:700;color:#B91C1C;margin-bottom:4px;">Vincule a caixa para iniciar</div>
         <div style="font-size:11px;color:#94A3B8;">A lista de itens só aparece após vincular o número da caixa</div>
       </div>`;
@@ -822,7 +822,7 @@ async function _concluirComFaltaCore(prefix, fnChecklist, fnFila, fnStats, input
     const res  = await fetch(`${API}/pedidos/${pedidoAtualId}/concluir-com-falta`, { credentials:'include', method:'PUT' });
     const data = await res.json();
     if (!res.ok) { toast(data.erro || 'Erro ao concluir com falta!', 'erro'); return; }
-    toast(`⚠️ Pedido ${pedidoAtualNum} enviado para AGUARDANDO (${data.itens_falta} item(s) faltando)`, 'aviso');
+    toast(`Pedido ${pedidoAtualNum} enviado para AGUARDANDO (${data.itens_falta} item(s) faltando)`, 'aviso');
     const wrap = document.getElementById(`${prefix}-wrap`);
     if (wrap) wrap.style.display = 'none';
     const statusEl = document.getElementById(statusId);
@@ -853,8 +853,8 @@ async function _concluirCore(prefix, fnChecklist, fnFila, fnStats, inputId, stat
     const res  = await fetch(`${API}/pedidos/${pedidoAtualId}/concluir`, { credentials:'include', method:'PUT' });
     const data = await res.json();
     if (data.aguardando) { toast('⏳ Ainda aguardando o repositor!','aviso'); return; }
-    if (data.bloqueado)  { toast('⛔ Bloqueado! Aguarde o supervisor liberar.','erro'); return; }
-    if (data.erro)       { toast(`⚠️ ${data.erro}`,'aviso'); return; }
+    if (data.bloqueado)  { toast('Bloqueado! Aguarde o supervisor liberar.','erro'); return; }
+    if (data.erro)       { toast(`${data.erro}`,'aviso'); return; }
     toast(`Pedido ${pedidoAtualNum} concluído`, 'sucesso');
     const wrap = document.getElementById(`${prefix}-wrap`);
     if (wrap) wrap.style.display = 'none';
@@ -954,11 +954,11 @@ function renderChecklist(prefix) {
   const caixaVinculada = statusCaixaEl && statusCaixaEl.style.display !== 'none' && statusCaixaEl.textContent.includes('✅');
 
   if (!todosVerif) {
-    if(bc){bc.style.display='block';bc.disabled=true;bc.textContent=`🔒 CONCLUIR (${total-verificados} pend.)`}
+    if(bc){bc.style.display='block';bc.disabled=true;bc.textContent=`CONCLUIR (${total-verificados} pend.)`}
     if(ba) ba.style.display='none';
     if(bf) bf.style.display='none';
   } else if (!caixaVinculada && pedidoAtualId) {
-    if(bc){bc.style.display='block';bc.disabled=true;bc.textContent='📦 VINCULE A CAIXA ANTES DE CONCLUIR'}
+    if(bc){bc.style.display='block';bc.disabled=true;bc.textContent='VINCULE A CAIXA ANTES DE CONCLUIR'}
     if(ba) ba.style.display='none';
     if(bf) bf.style.display='none';
   } else if (temProblema) {
@@ -978,7 +978,7 @@ function renderChecklist(prefix) {
       if(bc){
         bc.style.display='block';
         bc.disabled=true;
-        bc.textContent=`⛔ AGUARDANDO SUPERVISOR (${qtdBloq})`;
+        bc.textContent=`AGUARDANDO SUPERVISOR (${qtdBloq})`;
         bc.style.background='#f5f3ff';
         bc.style.color='#7c3aed';
         bc.style.border='2px solid #ddd6fe';
@@ -990,7 +990,7 @@ function renderChecklist(prefix) {
       if(bc){
         bc.style.display='block';
         bc.disabled=false;
-        bc.textContent='✅ CONCLUIR PEDIDO';
+        bc.textContent='CONCLUIR PEDIDO';
         bc.style.background='';
         bc.style.color='';
         bc.style.border='';
@@ -1003,7 +1003,7 @@ function renderChecklist(prefix) {
     if(bc){
       bc.style.display='block';
       bc.disabled=false;
-      bc.textContent='✅ CONCLUIR PEDIDO';
+      bc.textContent='CONCLUIR PEDIDO';
       bc.style.background='';
       bc.style.color='';
       bc.style.border='';
@@ -1020,7 +1020,7 @@ function renderChecklist(prefix) {
   if (!listEl) return;
   const isMob = prefix.startsWith('m-') || document.body.classList.contains('sep-mobile');
   listEl.innerHTML = itensAtuais.map(item => {
-    const icones = { pendente:'⬜', encontrado:'✅', falta:'❌', parcial:'🟡' };
+    const icones = { pendente:'○', encontrado:'●', falta:'✗', parcial:'◑' };
     const v = item.status !== 'pendente';
     const fnVerif  = isMob ? 'verificarItemMobile' : 'verificarItemDesktop';
     const fnToggle = isMob ? 'toggleParcialMobile'  : 'toggleParcialDesktop';
@@ -1068,7 +1068,7 @@ function renderChecklist(prefix) {
           <div style="flex:1;min-width:0">
             <div style="font-family:'Space Mono',monospace;font-size:14px;font-weight:700;color:#64748b;letter-spacing:-.3px;margin-bottom:2px">${item.codigo||'—'}</div>
             <div style="font-size:16px;font-weight:800;color:#0F172A;line-height:1.3;margin-bottom:4px">${item.descricao||'<span style="color:#94a3b8;font-style:italic">Sem descrição</span>'}</div>
-            <div style="font-size:15px;font-weight:700;color:#1e40af;letter-spacing:.5px">📍 ${item.endereco||'—'}</div>
+            <div style="font-size:15px;font-weight:700;color:#1e40af;letter-spacing:.5px">${item.endereco||'—'}</div>
           </div>
           <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;margin-left:10px">
             ${item.status!=='pendente'?`<span style="font-size:9px;font-weight:800;letter-spacing:1.5px;padding:3px 8px;border-radius:4px;background:${cardAccent};color:#fff">${statusLabel}</span>`:''}
@@ -1081,7 +1081,7 @@ function renderChecklist(prefix) {
         ${(item.status==='falta'||item.status==='parcial')&&avisoStatus==='subiu'&&(item.aviso_qtd_encontrada>0)&&(item.aviso_qtd_encontrada<(item.quantidade||1))?`<div style="font-size:11px;font-weight:700;color:#c2410c;margin-bottom:8px;padding:6px 8px;background:#fff7ed;border:1px solid #fb923c;border-radius:5px">⬆️ Repositor enviou <strong>${item.aviso_qtd_encontrada}/${item.quantidade||1}</strong> unidades — confirme a quantidade ao coletar</div>`:``}
         ${(item.status==='falta'||item.status==='parcial')&&avisoStatus==='subiu'&&(!(item.aviso_qtd_encontrada>0)||item.aviso_qtd_encontrada>=(item.quantidade||1))?`<div style="font-size:11px;font-weight:600;color:#0369a1;margin-bottom:8px;padding:5px 8px;background:#e0f2fe;border-radius:5px">⬆️ Repositor enviou o item — verifique na colmeia</div>`:``}
         ${(item.status==='falta'||item.status==='parcial')&&avisoStatus==='reposto'?`<div style="font-size:11px;font-weight:600;color:var(--green);margin-bottom:8px;padding:5px 8px;background:#F0FDF4;border-radius:5px">Repositor confirmou reposição</div>`:``}
-        ${(item.status==='falta'||item.status==='parcial')&&avisoStatus==='nao_encontrado'?`<div style="font-size:11px;font-weight:600;color:#7c3aed;margin-bottom:8px;padding:5px 8px;background:#f5f3ff;border-radius:5px">⛔ Não localizado — aguardando supervisor liberar</div>`:``}
+        ${(item.status==='falta'||item.status==='parcial')&&avisoStatus==='nao_encontrado'?`<div style="font-size:11px;font-weight:600;color:#7c3aed;margin-bottom:8px;padding:5px 8px;background:#f5f3ff;border-radius:5px">Não localizado — aguardando supervisor liberar</div>`:``}
         ${item.hora_verificado?`<div style="font-size:10px;color:#94A3B8;margin-bottom:8px">Verificado às ${item.hora_verificado}</div>`:''}
         <!-- Campo parcial -->
         <div class="parcial-wrap" id="${prefix}-pw-${item.id}" style="margin-bottom:8px">
@@ -1129,7 +1129,7 @@ function renderChecklist(prefix) {
         ${item.status==='falta'?`<div style="font-size:11px;color:var(--red);font-weight:600;margin-top:4px">Repositor notificado — aguardando reposição</div>`:''}
         ${item.status==='parcial'?`<div style="font-size:11px;color:var(--amber);font-weight:600;margin-top:4px">${item.obs||'Parcial'} — repositor notificado</div>`:''}
         ${(item.status==='falta'||item.status==='parcial')&&avisoSt==='reposto'?`<div style="font-size:11px;color:var(--green);font-weight:600;margin-top:4px">Repositor confirmou reposição</div>`:''}
-        ${(item.status==='falta'||item.status==='parcial')&&avisoSt==='nao_encontrado'?`<div style="font-size:11px;color:#7c3aed;font-weight:600;margin-top:4px">⛔ Não localizado — aguardando supervisor liberar</div>`:''}
+        ${(item.status==='falta'||item.status==='parcial')&&avisoSt==='nao_encontrado'?`<div style="font-size:11px;color:#7c3aed;font-weight:600;margin-top:4px">Não localizado — aguardando supervisor liberar</div>`:''}
         <div class="parcial-wrap" id="${prefix}-pw-${item.id}" style="margin-top:8px">
           <label>Qtde encontrada (de ${item.quantidade||1}):</label>
           <div class="parcial-row">
@@ -1174,7 +1174,7 @@ async function confirmarParcial(id, qtdTotal, prefix, renderPrefix) {
   const input  = document.getElementById(`${prefix}-pi-${id}`);
   const qtdEnc = parseInt(input?.value);
   if (isNaN(qtdEnc)||qtdEnc<0)   { toast('Digite uma quantidade válida!','aviso'); return; }
-  if (qtdEnc >= qtdTotal)          { toast('Se encontrou tudo, use ✔!','aviso'); return; }
+  if (qtdEnc >= qtdTotal)          { toast('Se encontrou tudo, confirme acima!','aviso'); return; }
   const qtdFalta = qtdTotal - qtdEnc;
   await verificarItem(id,'parcial',`Encontrou ${qtdEnc} de ${qtdTotal} — faltam ${qtdFalta}`,qtdFalta,prefix,renderPrefix);
 }
@@ -1199,8 +1199,8 @@ async function verificarItem(itemId, status, obs='', qtdFalta=0, prefix, renderP
     });
     if (!resp.ok) { toast('Erro ao verificar item!','erro'); return; }
     if (item) { item.status=status; item.obs=obs; item.aviso_status=''; }
-    if (status==='falta')     toast('❌ Falta — repositor avisado!','aviso');
-    if (status==='parcial')   toast('🟡 Parcial — repositor avisado!','aviso');
+    if (status==='falta')     toast('Falta — repositor avisado!','aviso');
+    if (status==='parcial')   toast('Parcial — repositor avisado!','aviso');
     renderChecklist(renderPrefix);
   } catch(e) { toast('Erro ao verificar item!','erro'); }
 }
@@ -1233,7 +1233,7 @@ async function vincularCaixaCore(caixa, inputStatusId, isMobile) {
       if (ph) {
         ph.style.display = 'block';
         ph.innerHTML = `<div style="background:var(--surface);border:1.5px solid #FECACA;border-radius:10px;text-align:center;padding:28px 20px;">
-          <div style="width:44px;height:44px;border-radius:50%;background:#FEF2F2;border:1.5px solid #FECACA;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;font-size:20px;">⛔</div>
+          <div style="width:44px;height:44px;border-radius:50%;background:#FEF2F2;border:1.5px solid #FECACA;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;display:none">
           <div style="font-size:13px;font-weight:700;color:#B91C1C;margin-bottom:4px;">Caixa indisponível</div>
           <div style="font-size:11px;color:#94A3B8;">${data.erro}</div>
         </div>`;
@@ -1241,7 +1241,7 @@ async function vincularCaixaCore(caixa, inputStatusId, isMobile) {
       const statusEl = document.getElementById(inputStatusId);
       if (statusEl) {
         statusEl.style.display = 'block';
-        statusEl.innerHTML = `<span style="color:#B91C1C;font-weight:700">⛔ ${data.erro}</span>`;
+        statusEl.innerHTML = `<span style="color:#B91C1C;font-weight:700">${data.erro}</span>`;
       }
       return;
     }
@@ -1249,7 +1249,7 @@ async function vincularCaixaCore(caixa, inputStatusId, isMobile) {
     const statusEl = document.getElementById(inputStatusId);
     if (statusEl) {
       statusEl.style.display = 'block';
-      statusEl.innerHTML = `<span style="color:var(--green);font-weight:600">✅ Caixa <b>${caixa}</b> vinculada — Pedido #${pedidoAtualNum}</span>`;
+      statusEl.innerHTML = `<span style="color:var(--green);font-weight:600">Caixa <b>${caixa}</b> vinculada — Pedido #${pedidoAtualNum}</span>`;
     }
     caixaJaVinculada = true;
     ['m-cl-wrap-placeholder','cl-wrap-placeholder'].forEach(id => {

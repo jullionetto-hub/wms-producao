@@ -1,4 +1,4 @@
-
+﻿
 // ── Gráficos Operacionais ─────────────────────────────────────────────────────
 const _charts = {};
 
@@ -500,7 +500,7 @@ async function confirmarZerarDados() {
   if (data === null) return; // cancelou
   const dia = data.trim() || hoje;
   wmsConfirm({
-    icone:      '⚠️',
+    
     titulo:     `Zerar dados de ${dia}?`,
     sub:        'Serão apagados PERMANENTEMENTE: Pedidos, Checkout, Embalagem, Reposições e Sessões de trabalho desta data.',
     btnOk:      'Zerar dados',
@@ -517,7 +517,7 @@ async function confirmarZerarDados() {
     const d = await res.json();
     if (!res.ok) { alert('Erro: ' + (d.erro || 'falha')); return; }
     const r = d.removidos;
-    alert(`✅ Dados de ${dia} removidos!\n\nPedidos: ${r.pedidos}\nCheckout: ${r.checkout}\nEmbalagem: ${r.embalagem}\nReposição: ${r.reposicao}\nSessões: ${r.sessoes}`);
+    alert(`Dados de ${dia} removidos!\n\nPedidos: ${r.pedidos}\nCheckout: ${r.checkout}\nEmbalagem: ${r.embalagem}\nReposição: ${r.reposicao}\nSessões: ${r.sessoes}`);
     carregarDashboard();
   } catch(e) { toast('Erro de conexão: ' + e.message, 'erro'); }
   });
@@ -571,7 +571,7 @@ async function carregarRankingGeral() {
       { key:'embalagem',   label:'Embalagem', cor:'#7c3aed', metrica:'embalagens' },
       { key:'repositores', label:'Reposição', cor:'#d97706', metrica:'repostos'   },
     ];
-    const medalhas = ['🥇','🥈','🥉'];
+    const medalhas = ['1º','2º','3º'];
 
     el.innerHTML = areas.map(area => {
       const lista = (data[area.key] || []).map(r => ({ ...r, total: parseInt(r.total)||0 }));
@@ -668,12 +668,12 @@ async function carregarLiberacao() {
         <td style="color:var(--text3);font-size:12px">${fmtD(r.data_aviso)} ${r.hora_reposto||r.hora_aviso||''}</td>
         <td id="lib-btn-${r.id}" style="white-space:nowrap">
           <button class="btn btn-sm" style="background:#10b981;color:#fff;margin-right:4px;white-space:nowrap"
-            onclick="liberarItem(${r.id},'encontrado',this)">✅ Encontrado</button>
+            onclick="liberarItem(${r.id},'encontrado',this)">Encontrado</button>
           <button class="btn btn-sm" style="background:#ef4444;color:#fff;white-space:nowrap"
-            onclick="liberarItem(${r.id},'nao_encontrado',this)">❌ Não Encontrado</button>
+            onclick="liberarItem(${r.id},'nao_encontrado',this)">Não Encontrado</button>
         </td>
       </tr>`).join('')
-    : '<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:32px;font-size:13px">✅ Nenhum item aguardando liberação</td></tr>';
+    : '<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:32px;font-size:13px">Nenhum item aguardando liberação</td></tr>';
 
     // ── Histórico de liberados ────────────────────────────────────────
     if (tbodyLib) {
@@ -688,8 +688,8 @@ async function carregarLiberacao() {
         const horaLib     = libEntry?.hora || r.hora_reposto || '—';
         const decisao     = libEntry?.decisao || (r.status === 'protocolo' ? 'nao_encontrado' : 'encontrado');
         const decLabel    = decisao === 'encontrado'
-          ? '<span style="color:#10b981;font-weight:700">✅ Encontrado</span>'
-          : '<span style="color:#7c3aed;font-weight:700">📋 Não Encontrado</span>';
+          ? '<span style="color:#10b981;font-weight:700">Encontrado</span>'
+          : '<span style="color:#7c3aed;font-weight:700">Não Encontrado</span>';
         return `<tr>
           <td style="font-weight:700">${r.numero_pedido||'—'}</td>
           <td>
@@ -710,8 +710,8 @@ async function carregarLiberacao() {
 // IDs de itens atualmente em processo de liberação — impede duplo clique e re-render
 const _liberandoIds = new Set();
 function _btnsLiberacao(id) {
-  return `<button class="btn btn-sm" style="background:#10b981;color:#fff;margin-right:4px;white-space:nowrap" onclick="liberarItem(${id},'encontrado',this)">✅ Encontrado</button>`+
-         `<button class="btn btn-sm" style="background:#ef4444;color:#fff;white-space:nowrap" onclick="liberarItem(${id},'nao_encontrado',this)">❌ Não Encontrado</button>`;
+  return `<button class="btn btn-sm" style="background:#10b981;color:#fff;margin-right:4px;white-space:nowrap" onclick="liberarItem(${id},'encontrado',this)">Encontrado</button>`+
+         `<button class="btn btn-sm" style="background:#ef4444;color:#fff;white-space:nowrap" onclick="liberarItem(${id},'nao_encontrado',this)">Não Encontrado</button>`;
 }
 
 async function liberarItem(id, decisao, btn) {
@@ -745,10 +745,10 @@ async function liberarItem(id, decisao, btn) {
         if (c) c.innerHTML = _btnsLiberacao(id);
         return;
       }
-      toast(data.mensagem || '✅ Item liberado!','sucesso');
+      toast(data.mensagem || 'Item liberado!','sucesso');
       const badge = decisao === 'encontrado'
-        ? '<span style="color:#10b981;font-weight:700;font-size:12px">✅ Liberado (Encontrado)</span>'
-        : '<span style="color:#7c3aed;font-weight:700;font-size:12px">📋 Em Protocolo</span>';
+        ? '<span style="color:#10b981;font-weight:700;font-size:12px">Liberado (Encontrado)</span>'
+        : '<span style="color:#7c3aed;font-weight:700;font-size:12px">Em Protocolo</span>';
       const cellFresh = document.getElementById(`lib-btn-${id}`);
       if (cellFresh) cellFresh.innerHTML = badge;
       _liberandoIds.delete(id);
@@ -1260,7 +1260,7 @@ async function carregarPerformanceDetalhe(ini, fim, filtPerfil, filtColab) {
           <span style="font-size:13px;font-weight:800;color:${cor}">${AREA_LABEL[colab.perfil]||colab.perfil}</span>
           <span style="font-size:14px;font-weight:700;color:var(--text)">${colab.nome}</span>
           <span style="font-size:11px;color:var(--text3);font-weight:600">${colab.pedidos.length} pedido${colab.pedidos.length!==1?'s':''}</span>
-          <button class="btn btn-outline btn-sm" style="margin-left:auto" onclick="gerarRelatorioColaborador('${nomeSafe}')">📄 Relatório do Mês</button>
+          <button class="btn btn-outline btn-sm" style="margin-left:auto" onclick="gerarRelatorioColaborador('${nomeSafe}')">Relatório do Mês</button>
         </div>`;
 
       let tabela = '';
@@ -1360,7 +1360,7 @@ async function carregarPerformanceDetalhe(ini, fim, filtPerfil, filtColab) {
           </div>`;
       } else if (isRep) {
         const RESCor   = { encontrado:'var(--green)', nao_encontrado:'var(--red)' };
-        const RESLabel = { encontrado:'✅ Encontrou', nao_encontrado:'❌ Não encontrou' };
+        const RESLabel = { encontrado:'Encontrou', nao_encontrado:'Não encontrou' };
         const TENTCor  = { '1ª':'var(--accent)', '2ª':'var(--amber)', '3ª':'var(--red)', 'ÚLTIMA tentativa':'var(--red)' };
         const linhas = colab.pedidos.map(p => {
           // ── tempo individual da busca ──
@@ -1543,9 +1543,9 @@ async function abrirConfigMetas() {
       meta_checkout:  'Meta Checkout (checkouts/turno)',
       meta_embalagem: 'Meta Embalagem (pedidos/turno)',
       meta_reposicao: 'Meta Reposição (itens/turno)',
-      horas_turno_manha: '☀️ Horas turno Manhã',
-      horas_turno_tarde: '🌤️ Horas turno Tarde',
-      horas_turno_noite: '🌙 Horas turno Noite',
+      horas_turno_manha: 'Horas turno Manhã',
+      horas_turno_tarde: 'Horas turno Tarde',
+      horas_turno_noite: 'Horas turno Noite',
     };
     const form = document.getElementById('config-metas-form');
     if (form) {
@@ -1774,7 +1774,7 @@ async function gerarRelatorioColaborador(nomeColab) {
             ${pontosBons.map(p=>`<div style="font-size:12px;color:var(--text);padding:6px 10px;background:#F0FDF4;border-radius:6px;margin-bottom:4px;border-left:3px solid #22C55E">• ${p}</div>`).join('')}
           </div>` : ''}
           ${melhorar.length ? `<div>
-            <div style="font-size:10px;font-weight:800;color:#B45309;letter-spacing:1px;margin-bottom:6px">⚠️ PONTOS A MELHORAR</div>
+            <div style="font-size:10px;font-weight:800;color:#B45309;letter-spacing:1px;margin-bottom:6px">PONTOS A MELHORAR</div>
             ${melhorar.map(p=>`<div style="font-size:12px;color:var(--text);padding:6px 10px;background:#FFFBEB;border-radius:6px;margin-bottom:4px;border-left:3px solid #F59E0B">• ${p}</div>`).join('')}
           </div>` : ''}
 
@@ -1870,7 +1870,7 @@ async function gerarRelatorioColaborador(nomeColab) {
           </div>
 
           ${pontosBons.length?`<div style="margin-bottom:10px"><div style="font-size:10px;font-weight:800;color:#15803D;letter-spacing:1px;margin-bottom:6px">PONTOS POSITIVOS</div>${pontosBons.map(p=>`<div style="font-size:12px;color:var(--text);padding:6px 10px;background:#F0FDF4;border-radius:6px;margin-bottom:4px;border-left:3px solid #22C55E">• ${p}</div>`).join('')}</div>`:''}
-          ${melhorar.length?`<div><div style="font-size:10px;font-weight:800;color:#B45309;letter-spacing:1px;margin-bottom:6px">⚠️ PONTOS A MELHORAR</div>${melhorar.map(p=>`<div style="font-size:12px;color:var(--text);padding:6px 10px;background:#FFFBEB;border-radius:6px;margin-bottom:4px;border-left:3px solid #F59E0B">• ${p}</div>`).join('')}</div>`:''}
+          ${melhorar.length?`<div><div style="font-size:10px;font-weight:800;color:#B45309;letter-spacing:1px;margin-bottom:6px">PONTOS A MELHORAR</div>${melhorar.map(p=>`<div style="font-size:12px;color:var(--text);padding:6px 10px;background:#FFFBEB;border-radius:6px;margin-bottom:4px;border-left:3px solid #F59E0B">• ${p}</div>`).join('')}</div>`:''}
         </div>
       </div>`;
 
@@ -1976,7 +1976,7 @@ async function gerarRelatorioColaborador(nomeColab) {
           </div>
 
           ${pontosBons.length?`<div style="margin-bottom:10px"><div style="font-size:10px;font-weight:800;color:#15803D;letter-spacing:1px;margin-bottom:6px">PONTOS POSITIVOS</div>${pontosBons.map(p=>`<div style="font-size:12px;color:var(--text);padding:6px 10px;background:#F0FDF4;border-radius:6px;margin-bottom:4px;border-left:3px solid #22C55E">• ${p}</div>`).join('')}</div>`:''}
-          ${melhorar.length?`<div><div style="font-size:10px;font-weight:800;color:#B45309;letter-spacing:1px;margin-bottom:6px">⚠️ PONTOS A MELHORAR</div>${melhorar.map(p=>`<div style="font-size:12px;color:var(--text);padding:6px 10px;background:#FFFBEB;border-radius:6px;margin-bottom:4px;border-left:3px solid #F59E0B">• ${p}</div>`).join('')}</div>`:''}
+          ${melhorar.length?`<div><div style="font-size:10px;font-weight:800;color:#B45309;letter-spacing:1px;margin-bottom:6px">PONTOS A MELHORAR</div>${melhorar.map(p=>`<div style="font-size:12px;color:var(--text);padding:6px 10px;background:#FFFBEB;border-radius:6px;margin-bottom:4px;border-left:3px solid #F59E0B">• ${p}</div>`).join('')}</div>`:''}
         </div>
       </div>`;
 
@@ -2007,7 +2007,7 @@ async function gerarRelatorioColaborador(nomeColab) {
         const tCol = p.tempo_resolucao_min;
         const tClr = tCol === null ? '#94A3B8' : tCol <= 10 ? '#22C55E' : tCol <= 25 ? '#F59E0B' : '#EF4444';
         const resClr = p.resultado_tentativa === 'encontrado' ? '#22C55E' : '#EF4444';
-        const resLbl = p.resultado_tentativa === 'encontrado' ? '✅' : '❌';
+        const resLbl = p.resultado_tentativa === 'encontrado' ? 'Enc' : 'NE';
         return `<tr style="border-bottom:1px solid var(--border)">
           <td style="padding:5px 8px;font-family:monospace;font-size:11px;font-weight:700">${p.numero_pedido}</td>
           <td style="padding:5px 8px;font-size:11px;color:var(--text3)">${fmtData(p.data_pedido)}</td>
@@ -2074,7 +2074,7 @@ async function gerarRelatorioColaborador(nomeColab) {
           </div>
 
           ${pontosBons.length?`<div style="margin-bottom:10px"><div style="font-size:10px;font-weight:800;color:#15803D;letter-spacing:1px;margin-bottom:6px">PONTOS POSITIVOS</div>${pontosBons.map(p=>`<div style="font-size:12px;color:var(--text);padding:6px 10px;background:#F0FDF4;border-radius:6px;margin-bottom:4px;border-left:3px solid #22C55E">• ${p}</div>`).join('')}</div>`:''}
-          ${melhorar.length?`<div><div style="font-size:10px;font-weight:800;color:#B45309;letter-spacing:1px;margin-bottom:6px">⚠️ PONTOS A MELHORAR</div>${melhorar.map(p=>`<div style="font-size:12px;color:var(--text);padding:6px 10px;background:#FFFBEB;border-radius:6px;margin-bottom:4px;border-left:3px solid #F59E0B">• ${p}</div>`).join('')}</div>`:''}
+          ${melhorar.length?`<div><div style="font-size:10px;font-weight:800;color:#B45309;letter-spacing:1px;margin-bottom:6px">PONTOS A MELHORAR</div>${melhorar.map(p=>`<div style="font-size:12px;color:var(--text);padding:6px 10px;background:#FFFBEB;border-radius:6px;margin-bottom:4px;border-left:3px solid #F59E0B">• ${p}</div>`).join('')}</div>`:''}
         </div>
       </div>`;
 
@@ -2093,7 +2093,7 @@ async function gerarRelatorioColaborador(nomeColab) {
       modal.innerHTML = `
         <div style="background:var(--bg);border-radius:14px;width:100%;max-width:820px;max-height:92vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)">
           <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:1">
-            <span style="font-size:13px;font-weight:700;color:var(--text)">📄 Relatório do Mês — ${nomeColab}</span>
+            <span style="font-size:13px;font-weight:700;color:var(--text)">Relatório do Mês — ${nomeColab}</span>
             <button onclick="document.getElementById('modal-relatorio-colab').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text3)">✕</button>
           </div>
           <div id="relatorio-colab-body" style="padding:16px"></div>
@@ -2147,7 +2147,7 @@ async function carregarAvisos() {
     if (dups.length > 0) {
       html += `<div style="margin-bottom:12px">${dups.map(d=>`
         <div class="aviso-duplicata">
-          <span style="font-size:20px">⚠️</span>
+          
           <div>
             <div style="font-size:13px;font-weight:800">ATENÇÃO — Item duplicado hoje: <b>${d.codigo}</b> — ${d.descricao||''}</div>
             <div style="font-size:12px;font-weight:400;margin-top:2px">Já solicitado hoje para os pedidos: <b>${d.pedidos}</b></div>
@@ -2159,7 +2159,7 @@ async function carregarAvisos() {
 
 
     if (!avisos.length) {
-      html += '<div style="color:var(--text3);text-align:center;padding:36px;font-size:14px">✅ Nenhum item encontrado</div>';
+      html += '<div style="color:var(--text3);text-align:center;padding:36px;font-size:14px">Nenhum item encontrado</div>';
       lista.innerHTML = html;
       return;
     }
@@ -2174,24 +2174,24 @@ async function carregarAvisos() {
       const isAbast = a.status==='abastecido';
       const isNE    = a.status==='nao_encontrado';
       const isProto = a.status==='protocolo';
-      const icon    = isEnc?'✅':isSubiu?'⬆️':isAbast?'📦':isNE?'🚫':isProto?'📋':'🔴';
+      const icon    = isEnc?'Enc':isSubiu?'↑':isAbast?'Abast':isNE?'NE':isProto?'Proto':'Pend';
       const dupAlerta = dupMap[a.codigo] && isPend
-        ? `<div style="font-size:11px;color:#92400E;font-weight:700;background:#FEF3C7;border:1px solid #F59E0B;border-radius:6px;padding:5px 8px;margin-top:5px">⚠️ Já solicitado hoje para: <b>${dupMap[a.codigo].pedidos}</b></div>` : '';
+        ? `<div style="font-size:11px;color:#92400E;font-weight:700;background:#FEF3C7;border:1px solid #F59E0B;border-radius:6px;padding:5px 8px;margin-top:5px">Já solicitado hoje para: <b>${dupMap[a.codigo].pedidos}</b></div>` : '';
       return `
       <div class="aviso-card ${a.status}">
         <div style="font-size:26px;flex-shrink:0">${icon}</div>
         <div class="aviso-info">
           <div class="aviso-cod">${a.codigo||'—'} <span style="font-size:11px;font-weight:500;color:var(--text3);margin-left:6px">Pedido #${a.numero_pedido}</span></div>
           <div class="aviso-desc">${a.descricao||'—'}</div>
-          <div class="aviso-det">📍 ${a.endereco||'—'} &nbsp;•&nbsp; Qtde: <b>${a.quantidade||'—'}</b></div>
+          <div class="aviso-det">${a.endereco||'—'} &nbsp;•&nbsp; Qtde: <b>${a.quantidade||'—'}</b></div>
           ${dupAlerta}
-          ${isEnc   ? `<div style="font-size:12px;color:var(--green);margin-top:4px;font-weight:700">✅ Encontrado às ${a.hora_reposto||'—'}${a.qtd_encontrada>0?' — '+a.qtd_encontrada+' un.':''}</div>` : ''}
-          ${isSubiu ? `<div style="font-size:12px;color:#0D9488;margin-top:4px;font-weight:700">⬆️ Subiu às ${a.hora_reposto||'—'}${a.qtd_encontrada>0?' — '+a.qtd_encontrada+' un.':''}</div>` : ''}
-          ${isAbast ? `<div style="font-size:12px;color:var(--accent);margin-top:4px;font-weight:700">📦 Abastecido às ${a.hora_reposto||'—'}${a.qtd_encontrada>0?' — '+a.qtd_encontrada+' un.':''}</div>` : ''}
-          ${isNE    ? `<div style="font-size:12px;color:var(--indigo);margin-top:4px;font-weight:700">🚫 Não encontrado às ${a.hora_reposto||'—'}</div>` : ''}
-          ${isProto ? `<div style="font-size:12px;color:var(--amber);margin-top:4px;font-weight:700">📋 Protocolo às ${a.hora_reposto||'—'}</div>` : ''}
-          ${isPend  ? `<div style="font-size:12px;color:var(--red);margin-top:4px;font-weight:700">⏱ Aviso às ${a.hora_aviso||'—'} &nbsp;•&nbsp; Sep: ${a.separador_nome||'—'}</div>` : ''}
-          ${a.obs   ? `<div style="font-size:11px;color:var(--text2);margin-top:3px">📝 ${a.obs}</div>` : ''}
+          ${isEnc   ? `<div style="font-size:12px;color:var(--green);margin-top:4px;font-weight:700">Encontrado às ${a.hora_reposto||'—'}${a.qtd_encontrada>0?' — '+a.qtd_encontrada+' un.':''}</div>` : ''}
+          ${isSubiu ? `<div style="font-size:12px;color:#0D9488;margin-top:4px;font-weight:700">Subiu às ${a.hora_reposto||'—'}${a.qtd_encontrada>0?' — '+a.qtd_encontrada+' un.':''}</div>` : ''}
+          ${isAbast ? `<div style="font-size:12px;color:var(--accent);margin-top:4px;font-weight:700">Abastecido às ${a.hora_reposto||'—'}${a.qtd_encontrada>0?' — '+a.qtd_encontrada+' un.':''}</div>` : ''}
+          ${isNE    ? `<div style="font-size:12px;color:var(--indigo);margin-top:4px;font-weight:700">Não encontrado às ${a.hora_reposto||'—'}</div>` : ''}
+          ${isProto ? `<div style="font-size:12px;color:var(--amber);margin-top:4px;font-weight:700">Protocolo às ${a.hora_reposto||'—'}</div>` : ''}
+          ${isPend  ? `<div style="font-size:12px;color:var(--red);margin-top:4px;font-weight:700">Aviso às ${a.hora_aviso||'—'} &nbsp;•&nbsp; Sep: ${a.separador_nome||'—'}</div>` : ''}
+          ${a.obs   ? `<div style="font-size:11px;color:var(--text2);margin-top:3px">${a.obs}</div>` : ''}
           ${isPend  ? `
             <div class="qtd-enc-wrap">
               <label>Qtde encontrada:</label>
@@ -2201,11 +2201,11 @@ async function carregarAvisos() {
         </div>
         <div style="display:flex;flex-direction:column;gap:7px;align-items:flex-end;flex-shrink:0">
           ${isPend ? `
-            <button class="btn btn-success btn-sm" style="min-width:110px" onclick="marcarAviso(${a.id},${a.quantidade||0},'encontrado')">✅ Encontrado</button>
-            <button class="btn btn-sm" style="background:#0D9488;color:#fff;min-width:110px" onclick="marcarAviso(${a.id},${a.quantidade||0},'subiu')">⬆️ Subiu</button>
-            <button class="btn btn-sm" style="background:var(--accent);color:#fff;min-width:110px" onclick="marcarAviso(${a.id},${a.quantidade||0},'abastecido')">📦 Abastecido</button>
-            <button class="btn btn-sm" style="background:var(--indigo);color:#fff;min-width:110px" onclick="marcarAviso(${a.id},0,'nao_encontrado')">🚫 Não encontrei</button>
-            <button class="btn btn-sm" style="background:var(--amber);color:#fff;min-width:110px" onclick="marcarAviso(${a.id},0,'protocolo')">📋 Protocolo</button>
+            <button class="btn btn-success btn-sm" style="min-width:110px" onclick="marcarAviso(${a.id},${a.quantidade||0},'encontrado')">Encontrado</button>
+            <button class="btn btn-sm" style="background:#0D9488;color:#fff;min-width:110px" onclick="marcarAviso(${a.id},${a.quantidade||0},'subiu')">Subiu</button>
+            <button class="btn btn-sm" style="background:var(--accent);color:#fff;min-width:110px" onclick="marcarAviso(${a.id},${a.quantidade||0},'abastecido')">Abastecido</button>
+            <button class="btn btn-sm" style="background:var(--indigo);color:#fff;min-width:110px" onclick="marcarAviso(${a.id},0,'nao_encontrado')">Não encontrei</button>
+            <button class="btn btn-sm" style="background:var(--amber);color:#fff;min-width:110px" onclick="marcarAviso(${a.id},0,'protocolo')">Protocolo</button>
           ` : `<span class="pill ${isEnc?'reposto':isSubiu?'ciano':isAbast?'separador':isProto?'protocolo':isNE?'inativo':'pendente'}">${isEnc?'Encontrado':isSubiu?'Subiu':isAbast?'Abastecido':isProto?'Protocolo':'Não encontrado'}</span>`}
         </div>
       </div>`;
@@ -2233,7 +2233,7 @@ async function marcarAviso(id, qtdTotal, acao) {
       });
       const data = await res.json();
       if (data.erro) { toast(data.erro,'erro'); return; }
-      const msgs = { encontrado:'✅ Encontrado!', subiu:'⬆️ Subiu!', abastecido:'📦 Abastecido!', nao_encontrado:'🚫 Não encontrado!', protocolo:'📋 Protocolo!' };
+      const msgs = { encontrado:'Encontrado!', subiu:'Subiu!', abastecido:'Abastecido!', nao_encontrado:'Não encontrado!', protocolo:'Protocolo!' };
       const tipos = { encontrado:'sucesso', subiu:'sucesso', abastecido:'sucesso', nao_encontrado:'aviso', protocolo:'aviso' };
       toast(msgs[acao]||'OK', tipos[acao]||'info');
       carregarAvisos();
@@ -2574,7 +2574,7 @@ function renderRelAnalitico(d) {
     </div>`).join('');
 
   // ── 7. Seções de colaboradores por área ──────────────────────
-  const turno_icn = { Manha:'🌅', Tarde:'☀️', Noite:'🌙' };
+  const turno_icn = { Manha:'M', Tarde:'T', Noite:'N' };
   const mkCell = (content, extraStyle='') => `<td style="padding:8px 12px${extraStyle?';'+extraStyle:''}">${content}</td>`;
   const mkRow  = cells => `<tr style="border-bottom:1px solid var(--border)">${cells.join('')}</tr>`;
   const mkAreaCors = {'SEPARAÇÃO':'#4f46e5','CHECKOUT':'#0891b2','EMBALAGEM':'#7c3aed','REPOSIÇÃO':'#d97706'};
@@ -2671,23 +2671,23 @@ function renderRelAnalitico(d) {
 
   // ── Sugestões ─────────────────────────────────────────────────
   const sugestoes = [];
-  if (d.sla.pct != null && d.sla.pct < 85) sugestoes.push(`⚠️ SLA de separação em ${d.sla.pct}% — meta: 85%. Considere redistribuir pedidos entre turnos.`);
-  if (d.reposicao.nao_encontrados > 0) sugestoes.push(`🔍 ${fmtN(d.reposicao.nao_encontrados)} itens não encontrados na reposição — revisar localização no estoque.`);
+  if (d.sla.pct != null && d.sla.pct < 85) sugestoes.push(`SLA de separação em ${d.sla.pct}% — meta: 85%. Considere redistribuir pedidos entre turnos.`);
+  if (d.reposicao.nao_encontrados > 0) sugestoes.push(`${fmtN(d.reposicao.nao_encontrados)} itens não encontrados na reposição — revisar localização no estoque.`);
   const melhorTurno = d.ranking_turnos[0];
-  if (melhorTurno && melhorTurno.pedidos > 0) sugestoes.push(`🏆 Melhor turno: ${melhorTurno.turno} com ${fmtN(melhorTurno.pedidos)} pedidos concluídos.`);
-  if (d.separacao.pendentes > 20) sugestoes.push(`🚨 ${fmtN(d.separacao.pendentes)} pedidos ainda pendentes — verificar distribuição.`);
-  if (d.complexidade.dificil > d.complexidade.facil) sugestoes.push(`📍 Mais pedidos difíceis (${fmtN(d.complexidade.dificil)}) do que fáceis (${fmtN(d.complexidade.facil)}) — considere priorizar corredores F-L.`);
-  if (d.embalagem.pendentes > 50) sugestoes.push(`📫 ${fmtN(d.embalagem.pendentes)} pedidos separados aguardando embalagem.`);
+  if (melhorTurno && melhorTurno.pedidos > 0) sugestoes.push(`Melhor turno: ${melhorTurno.turno} com ${fmtN(melhorTurno.pedidos)} pedidos concluídos.`);
+  if (d.separacao.pendentes > 20) sugestoes.push(`${fmtN(d.separacao.pendentes)} pedidos ainda pendentes — verificar distribuição.`);
+  if (d.complexidade.dificil > d.complexidade.facil) sugestoes.push(`Mais pedidos difíceis (${fmtN(d.complexidade.dificil)}) do que fáceis (${fmtN(d.complexidade.facil)}) — considere priorizar corredores F-L.`);
+  if (d.embalagem.pendentes > 50) sugestoes.push(`${fmtN(d.embalagem.pendentes)} pedidos separados aguardando embalagem.`);
   const topTransp = d.por_transportadora[0];
-  if (topTransp) sugestoes.push(`🚚 Transportadora mais comum: ${topTransp.transportadora} (${fmtN(topTransp.total)} pedidos).`);
-  sugestoes.push(`📊 Índice de produtividade: ${fmtN(d.separacao.pontuacao_total)} pontos totais distribuídos entre ${d.colaboradores.filter(c=>c.perfil==='separador').length} separadores.`);
+  if (topTransp) sugestoes.push(`Transportadora mais comum: ${topTransp.transportadora} (${fmtN(topTransp.total)} pedidos).`);
+  sugestoes.push(`Índice de produtividade: ${fmtN(d.separacao.pontuacao_total)} pontos totais distribuídos entre ${d.colaboradores.filter(c=>c.perfil==='separador').length} separadores.`);
 
   // ── Montar HTML ───────────────────────────────────────────────
   wrap.innerHTML = `
     <!-- Título do período -->
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
       <div>
-        <div style="font-size:16px;font-weight:800;color:var(--text)">📋 ${periodo}</div>
+        <div style="font-size:16px;font-weight:800;color:var(--text)">${periodo}</div>
         <div style="font-size:12px;color:var(--text3);margin-top:2px">Turno: <b>${d.turno_filtro === 'Todos' ? 'Todos os turnos' : d.turno_filtro}</b></div>
       </div>
     </div>
@@ -2724,16 +2724,16 @@ function renderRelAnalitico(d) {
     ${porDiaHTML}
 
     <!-- Seções de colaboradores por área -->
-    ${mkArea('📦','SEPARAÇÃO — DESEMPENHO INDIVIDUAL','linear-gradient(135deg,#6366f1,#4338ca)',
+    ${mkArea('SEP','SEPARAÇÃO — DESEMPENHO INDIVIDUAL','linear-gradient(135deg,#6366f1,#4338ca)',
       ['COLABORADOR / TURNO','PEDIDOS','ITENS','PONTUAÇÃO','TEMPO MÉD.','RITMO'],
       sepAreaRows)}
-    ${mkArea('🔖','CHECKOUT — DESEMPENHO INDIVIDUAL','linear-gradient(135deg,#22d3ee,#0369a1)',
+    ${mkArea('CK','CHECKOUT — DESEMPENHO INDIVIDUAL','linear-gradient(135deg,#22d3ee,#0369a1)',
       ['OPERADOR','EXPEDIÇÕES','ITENS','TEMPO MÉD.','RITMO'],
       ckAreaRows)}
-    ${mkArea('📫','EMBALAGEM — DESEMPENHO INDIVIDUAL','linear-gradient(135deg,#a855f7,#6d28d9)',
+    ${mkArea('EMB','EMBALAGEM — DESEMPENHO INDIVIDUAL','linear-gradient(135deg,#a855f7,#6d28d9)',
       ['EMBALADOR','EMBALADOS','ITENS','TEMPO MÉD.','RITMO'],
       embAreaRows)}
-    ${mkArea('🔧','REPOSIÇÃO — DESEMPENHO INDIVIDUAL','linear-gradient(135deg,#f59e0b,#b45309)',
+    ${mkArea('REP','REPOSIÇÃO — DESEMPENHO INDIVIDUAL','linear-gradient(135deg,#f59e0b,#b45309)',
       ['REPOSITOR','TOTAL AVISOS','REPOSTOS','NÃO ENCONTR.','TAXA RESOLUÇÃO','T. MÉDIO'],
       repAreaRows)}
 
@@ -2846,7 +2846,7 @@ async function zerarSessoesHoje() {
       });
       const data = await res.json();
       if (data.erro) { toast(data.erro, 'erro'); return; }
-      toast(`✅ ${data.mensagem}`, 'sucesso');
+      toast(``, 'sucesso');
       carregarPerformance();
     } catch(e) { toast('Erro ao zerar sessões!', 'erro'); }
   });

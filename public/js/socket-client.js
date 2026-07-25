@@ -1,4 +1,4 @@
-/* ══ WMS Miess — Socket.io client ══
+﻿/* ══ WMS Miess — Socket.io client ══
    Conecta ao servidor e propaga eventos para as funções de refresh
    existentes, eliminando polling desnecessário.
 */
@@ -36,10 +36,10 @@
       if (typeof usuarioAtual !== 'undefined' && usuarioAtual?.perfil === 'separador') {
         if (data?.status === 'subiu') {
           const ped = data?.numero_pedido ? ` — Pedido #${data.numero_pedido}` : '';
-          if (typeof toast === 'function') toast(`📦 Repositor subiu item ao estoque${ped}!`, 'info');
+          if (typeof toast === 'function') toast(`Repositor subiu item ao estoque${ped}!`, 'info');
         } else if (data?.status === 'abastecido') {
           const ped = data?.numero_pedido ? ` — Pedido #${data.numero_pedido}` : '';
-          if (typeof toast === 'function') toast(`✅ Item abastecido pelo repositor${ped}!`, 'sucesso');
+          if (typeof toast === 'function') toast(`Item abastecido pelo repositor${ped}!`, 'sucesso');
         }
       }
     });
@@ -50,7 +50,7 @@
       if (typeof atualizarBadgeLiberacao === 'function') atualizarBadgeLiberacao();
       // Notificação sonora/visual somente para supervisores logados no desktop
       if (typeof usuarioAtual !== 'undefined' && usuarioAtual?.perfil === 'supervisor') {
-        if (typeof toast === 'function') toast('⚠️ Repositor marcou item como NÃO ENCONTRADO — aguardando liberação!', 'aviso');
+        if (typeof toast === 'function') toast('Repositor marcou item como NÃO ENCONTRADO — aguardando liberação!', 'aviso');
         // Pulsa o badge do menu Liberação por 3 segundos
         const badge = document.getElementById('menu-badge-lib');
         if (badge) {
@@ -77,9 +77,9 @@
       const meuTurno = (usuarioAtual?.turno || '').replace('ã','a').replace('Manh','Manha');
       const turnoQueValida = NEXT_TURNO[data.turno];
       if (turnoQueValida && meuTurno && meuTurno !== turnoQueValida) return;
-      const turnoIcon = data.turno==='Manha'?'☀️':data.turno==='Tarde'?'🌅':'🌙';
+      const turnoIcon = data.turno==='Manha'?'M':data.turno==='Tarde'?'T':'N';
       if (typeof toast === 'function') {
-        toast(`📋 Diário do turno ${turnoIcon} ${data.turno} (${data.supervisor}) aguarda validação! Você tem 30 minutos.`, 'aviso');
+        toast(`Diário do turno ${data.turno} (${data.supervisor}) aguarda validação! Você tem 30 minutos.`, 'aviso');
       }
       // Atualiza o banner de validação pendente se estiver na tela de diário
       if (typeof verificarValidacaoPendente === 'function') {
@@ -95,7 +95,7 @@
       if (typeof usuarioAtual === 'undefined' || usuarioAtual?.perfil !== 'supervisor') return;
       if (typeof toast === 'function') {
         const cor = data.pontuacao>=80?'sucesso':data.pontuacao>=60?'aviso':'erro';
-        toast(`✅ Diário validado! Pontuação: ${data.pontuacao}/100`, cor);
+        toast(`Diário validado! Pontuação: ${data.pontuacao}/100`, cor);
       }
       // Atualiza o banner de status se for o autor do diário
       if (typeof atualizarStatusBanner === 'function') {

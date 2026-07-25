@@ -1,4 +1,4 @@
-/* ══ WMS — Performance dos Separadores ══
+﻿/* ══ WMS — Performance dos Separadores ══
    Versão 2 — cards gradiente + dropdown de colaboradores
    Pedidos, itens, SKUs, reposições, tempo médio por colaborador.
 ══════════════════════════════════════════════════════════════════════ */
@@ -30,7 +30,7 @@ function pfEsc(s) {
 }
 
 const PF_COR_TURNO   = { Manha:'#38bdf8', Tarde:'#f59e0b', Noite:'#a78bfa' };
-const PF_LABEL_TURNO = { Manha:'☀️ Manhã', Tarde:'🌅 Tarde', Noite:'🌙 Noite' };
+const PF_LABEL_TURNO = { Manha:'Manhã', Tarde:'Tarde', Noite:'Noite' };
 const PF_GRID = { color:'rgba(51,65,85,.25)' };
 const PF_TICK = { color:'#64748b', font:{ size:10 } };
 
@@ -60,13 +60,13 @@ function renderizarPerformanceDash() {
   pag.innerHTML = `
   <div style="padding:0 0 40px">
 
-    <div class="pg-title" style="margin-bottom:14px">🏆 Performance Logística</div>
+    <div class="pg-title" style="margin-bottom:14px">Performance Logística</div>
 
     <!-- ABAS PRINCIPAIS -->
     <div style="display:flex;gap:4px;margin-bottom:16px;background:var(--surface2);border-radius:12px;padding:4px;width:fit-content;flex-wrap:wrap">
       <button id="pf-tab-resumo" onclick="pfSwitchTab('resumo')"
         style="padding:8px 20px;border:none;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;background:#6366f1;color:#fff">
-        📊 Resumo
+        Resumo
       </button>
       <button id="pf-tab-tempos" onclick="pfSwitchTab('tempos')"
         style="padding:8px 20px;border:none;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;background:transparent;color:var(--text3)">
@@ -74,11 +74,11 @@ function renderizarPerformanceDash() {
       </button>
       <button id="pf-tab-ocorrencias" onclick="pfSwitchTab('ocorrencias')"
         style="padding:8px 20px;border:none;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;background:transparent;color:var(--text3)">
-        ⚠️ Ocorrências
+        Ocorrências
       </button>
       <button id="pf-tab-metas" onclick="pfSwitchTab('metas')"
         style="padding:8px 20px;border:none;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;background:transparent;color:var(--text3)">
-        🎯 Metas
+        Metas
       </button>
     </div>
 
@@ -99,9 +99,9 @@ function renderizarPerformanceDash() {
         <select id="pf-turno"
           style="padding:7px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;outline:none">
           <option value="">Todos</option>
-          <option value="Manha">☀️ Manhã</option>
-          <option value="Tarde">🌅 Tarde</option>
-          <option value="Noite">🌙 Noite</option>
+          <option value="Manha">Manhã</option>
+          <option value="Tarde">Tarde</option>
+          <option value="Noite">Noite</option>
         </select>
       </div>
       <div id="pf-colab-wrap">
@@ -111,9 +111,9 @@ function renderizarPerformanceDash() {
           <option value="">Todos os colaboradores</option>
         </select>
       </div>
-      <button id="pf-btn-filtrar" onclick="pfFiltrarAtivo()" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer">🔍 Filtrar</button>
+      <button id="pf-btn-filtrar" onclick="pfFiltrarAtivo()" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer">Filtrar</button>
       <button onclick="pfInicializar()" style="background:var(--surface2);color:var(--text3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:12px;cursor:pointer">✕ Limpar</button>
-      <button onclick="pfExportarExcel()" style="background:#16a34a;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer">📊 Excel</button>
+      <button onclick="pfExportarExcel()" style="background:#16a34a;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer">Excel</button>
       <span id="pf-filtro-info" style="margin-left:auto;font-size:11px;color:var(--text3);align-self:center"></span>
     </div>
 
@@ -125,7 +125,7 @@ function renderizarPerformanceDash() {
 
     <!-- VAZIO -->
     <div id="pf-vazio" style="display:none;text-align:center;padding:72px 24px;color:var(--text3)">
-      <div style="font-size:40px;margin-bottom:12px">📊</div>
+      
       <div style="font-size:15px;font-weight:700;margin-bottom:6px">Nenhum dado encontrado</div>
       <div style="font-size:12px">Ajuste o período e tente novamente</div>
     </div>
@@ -138,18 +138,18 @@ function renderizarPerformanceDash() {
 
       <!-- Pedidos por colaborador (full width) -->
       <div class="card" style="padding:16px 18px;margin-bottom:16px">
-        <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px;margin-bottom:14px">📋 PEDIDOS POR COLABORADOR</div>
+        <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px;margin-bottom:14px">PEDIDOS POR COLABORADOR</div>
         <div style="position:relative;height:300px"><canvas id="pf-chart-pedidos"></canvas></div>
       </div>
 
       <!-- Itens + SKUs -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px" class="pf-grid-2">
         <div class="card" style="padding:16px 18px">
-          <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px;margin-bottom:14px">📦 ITENS POR COLABORADOR</div>
+          <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px;margin-bottom:14px">ITENS POR COLABORADOR</div>
           <div style="position:relative;height:260px"><canvas id="pf-chart-itens"></canvas></div>
         </div>
         <div class="card" style="padding:16px 18px">
-          <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px;margin-bottom:14px">🏷️ SKUs POR COLABORADOR</div>
+          <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px;margin-bottom:14px">SKUs POR COLABORADOR</div>
           <div style="position:relative;height:260px"><canvas id="pf-chart-skus"></canvas></div>
         </div>
       </div>
@@ -157,7 +157,7 @@ function renderizarPerformanceDash() {
       <!-- Reposições + Tempo médio -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px" class="pf-grid-2">
         <div class="card" style="padding:16px 18px">
-          <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px;margin-bottom:14px">🔁 REPOSIÇÕES POR COLABORADOR</div>
+          <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px;margin-bottom:14px">REPOSIÇÕES POR COLABORADOR</div>
           <div style="position:relative;height:260px"><canvas id="pf-chart-repos"></canvas></div>
         </div>
         <div class="card" style="padding:16px 18px">
@@ -168,14 +168,14 @@ function renderizarPerformanceDash() {
 
       <!-- Evolução diária -->
       <div id="pf-dia-wrap" class="card" style="padding:16px 18px;margin-bottom:20px">
-        <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px;margin-bottom:14px">📅 EVOLUÇÃO DIÁRIA DE PEDIDOS</div>
+        <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px;margin-bottom:14px">EVOLUÇÃO DIÁRIA DE PEDIDOS</div>
         <div style="position:relative;height:220px"><canvas id="pf-chart-dia"></canvas></div>
       </div>
 
       <!-- Ranking -->
       <div class="card" style="padding:0;overflow:hidden">
         <div style="padding:12px 18px;background:var(--surface2);border-bottom:1px solid var(--border);font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px;display:flex;align-items:center;gap:8px">
-          🏆 RANKING DETALHADO
+          RANKING DETALHADO
           <span style="margin-left:auto;font-size:10px;font-weight:600;color:var(--text3)" id="pf-table-count"></span>
         </div>
         <div style="overflow-x:auto">
@@ -220,7 +220,7 @@ function renderizarPerformanceDash() {
     <div id="pf-metas-conteudo" style="display:none">
       <div id="pf-metas-wrap">
         <div style="text-align:center;padding:64px 24px;color:var(--text3)">
-          <div style="font-size:36px;margin-bottom:12px">🎯</div>
+          
           <div style="font-size:14px;font-weight:700;margin-bottom:6px">Selecione o período e clique em Filtrar</div>
           <div style="font-size:12px">Exibe metas proporcionais ao tempo logado em cada função</div>
         </div>
@@ -384,7 +384,7 @@ async function pfBuscarDados() {
     const kpisEl = document.getElementById('pf-kpis');
     if (kpisEl && !kpisEl.children.length && dados.colaboradores?.length) {
       kpisEl.innerHTML = `<div style="grid-column:1/-1;background:#fef3c7;border:1px solid #f59e0b;border-radius:12px;padding:16px;color:#92400e;font-size:12px">
-        ⚠️ Dados recebidos mas cards não renderizaram.<br>
+        Dados recebidos mas cards não renderizaram.<br>
         <b>${dados.colaboradores.length} colaborador(es):</b>
         ${dados.colaboradores.map(c=>`${pfEsc(c.nome||'?')} (${c.pedidos} ped)`).join(', ')}<br>
         <small>Abra o console do navegador (F12 → Console) para ver o erro.</small>
@@ -479,7 +479,7 @@ function pfRenderizarDados(colab, porDia) {
     console.error('[Performance] Erro ao renderizar:', err);
     const kpisEl = document.getElementById('pf-kpis');
     if (kpisEl) kpisEl.innerHTML = `<div style="grid-column:1/-1;background:#fee2e2;border:1px solid #ef4444;border-radius:12px;padding:16px;color:#b91c1c;font-size:13px">
-      ⚠️ Erro ao renderizar os dados: <b>${pfEsc(err.message)}</b><br>
+      Erro ao renderizar os dados: <b>${pfEsc(err.message)}</b><br>
       <small>Verifique o console do navegador (F12) para mais detalhes.</small>
     </div>`;
   }
@@ -626,7 +626,7 @@ function pfRenderChartDia(porDia) {
 // ── Ranking ────────────────────────────────────────────────────────────────
 function pfRenderTabela(colab, totPed) {
   document.getElementById('pf-table-count').textContent = `${colab.length} colaboradores`;
-  const ICONS = ['🥇','🥈','🥉'];
+  const ICONS = ['1º','2º','3º'];
   const T_BG  = { Manha:'rgba(56,189,248,.12)', Tarde:'rgba(245,158,11,.12)', Noite:'rgba(167,139,250,.12)' };
   const T_TXT = { Manha:'#38bdf8', Tarde:'#f59e0b', Noite:'#a78bfa' };
   const maxPed = colab[0]?.pedidos || 1;
@@ -681,7 +681,7 @@ async function pfCarregarTiming() {
   const dados = await apiFetch(`/performance/timing?${qs}`);
 
   if (!dados || dados.erro) {
-    wrap.innerHTML = `<div style="padding:20px;color:#ef4444;font-size:13px">⚠️ ${pfEsc(dados?.erro || 'Erro ao carregar')}</div>`;
+    wrap.innerHTML = `<div style="padding:20px;color:#ef4444;font-size:13px">${pfEsc(dados?.erro || 'Erro ao carregar')}</div>`;
     return;
   }
   _pfTiming = dados;
@@ -794,15 +794,15 @@ function pfRenderTiming(filtroNome) {
         const enc    = rows.filter(r=>['encontrado','buscado','abastecido'].includes(r.resultado)).length;
         const naoEnc = rows.filter(r=>['nao_encontrado','protocolo'].includes(r.resultado)).length;
         statsExtra = `
-          <div style="font-size:11px">✅ <b style="color:#16a34a">${enc}</b> encontrado(s)</div>
-          <div style="font-size:11px">❌ <b style="color:#dc2626">${naoEnc}</b> não encontrado(s)</div>`;
+          <div style="font-size:11px"><b style="color:#16a34a">${enc}</b> encontrado(s)</div>
+          <div style="font-size:11px"><b style="color:#dc2626">${naoEnc}</b> não encontrado(s)</div>`;
       }
 
       const linhas = rows.map((r,i) => {
         const dataFmt = r.data ? (()=>{const[y,m,d]=r.data.split('-');return`${d}/${m}`;})() : '';
         let extraCells = '';
         if (_pfTimingAba === 'reposicao') {
-          const resMap = {encontrado:'✅',buscado:'✅',abastecido:'✅',nao_encontrado:'❌',protocolo:'📋'};
+          const resMap = {encontrado:'Enc',buscado:'Enc',abastecido:'Abast',nao_encontrado:'NE',protocolo:'Proto'};
           extraCells = `
             <td style="padding:8px 14px;text-align:center;font-size:13px">${resMap[r.resultado]||'?'}</td>
             <td style="padding:8px 14px;max-width:200px">
@@ -878,13 +878,13 @@ function pfSwitchAba(id) {
 let _pfOcorrencias = [];
 
 const OC_TIPOS = {
-  processo_errado:      { label: 'Processo Errado',          icon: '⚠️',  cor: '#f59e0b' },
-  absenteismo:          { label: 'Absenteísmo',              icon: '🚫',  cor: '#ef4444' },
-  conduta_inapropriada: { label: 'Conduta Inapropriada',     icon: '🚨',  cor: '#dc2626' },
+  processo_errado:      { label: 'Processo Errado',          icon: '',  cor: '#f59e0b' },
+  absenteismo:          { label: 'Absenteísmo',              icon: '',  cor: '#ef4444' },
+  conduta_inapropriada: { label: 'Conduta Inapropriada',     icon: '',  cor: '#dc2626' },
   atraso:               { label: 'Atraso',                   icon: '⏰',  cor: '#f97316' },
-  descumprimento_norma: { label: 'Descumprimento de Norma',  icon: '📋',  cor: '#8b5cf6' },
-  qualidade:            { label: 'Problema de Qualidade',    icon: '📉',  cor: '#0891b2' },
-  outro:                { label: 'Outro',                    icon: '📝',  cor: '#6b7280' },
+  descumprimento_norma: { label: 'Descumprimento de Norma',  icon: '',  cor: '#8b5cf6' },
+  qualidade:            { label: 'Problema de Qualidade',    icon: '',  cor: '#0891b2' },
+  outro:                { label: 'Outro',                    icon: '',  cor: '#6b7280' },
 };
 
 const OC_GRAVIDADE = {
@@ -929,7 +929,7 @@ function pfRenderOcorrenciasUI(lista, carregando) {
   const form = `
     <div class="card" style="padding:24px;margin-bottom:24px;border:1.5px solid var(--border)">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">
-        <span style="font-size:20px">⚠️</span>
+        
         <div>
           <div style="font-size:15px;font-weight:800;color:var(--text)">Registrar Ocorrência</div>
           <div style="font-size:12px;color:var(--text3);margin-top:2px">Registre faltas, processos errados, condutas ou ausências de colaboradores</div>
@@ -938,40 +938,40 @@ function pfRenderOcorrenciasUI(lista, carregando) {
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px" class="pf-grid-2">
         <div>
-          <label style="${LBL}">👤 Colaborador <span style="color:#ef4444">*</span></label>
+          <label style="${LBL}">Colaborador <span style="color:#ef4444">*</span></label>
           <select id="oc-colab" style="${INP}">
             <option value="">— Selecione o colaborador —</option>${usuariosOpts}
           </select>
         </div>
         <div>
-          <label style="${LBL}">📋 Tipo de Ocorrência <span style="color:#ef4444">*</span></label>
+          <label style="${LBL}">Tipo de Ocorrência <span style="color:#ef4444">*</span></label>
           <select id="oc-tipo" style="${INP}">
             <option value="">— Selecione o tipo —</option>${tiposOpts}
           </select>
         </div>
         <div>
-          <label style="${LBL}">🔴 Gravidade</label>
+          <label style="${LBL}">Gravidade</label>
           <select id="oc-grav" style="${INP}">
             ${gravsOpts}
           </select>
         </div>
         <div>
-          <label style="${LBL}">📅 Data da ocorrência <span style="color:#ef4444">*</span></label>
+          <label style="${LBL}">Data da ocorrência <span style="color:#ef4444">*</span></label>
           <input type="date" id="oc-data" value="${new Date().toISOString().slice(0,10)}" style="${INP}">
         </div>
         <div>
-          <label style="${LBL}">🕐 Turno</label>
+          <label style="${LBL}">Turno</label>
           <select id="oc-turno" style="${INP}">
             <option value="">— Selecione o turno —</option>
-            <option value="Manha">☀️ Manhã</option>
-            <option value="Tarde">🌅 Tarde</option>
-            <option value="Noite">🌙 Noite</option>
+            <option value="Manha">Manhã</option>
+            <option value="Tarde">Tarde</option>
+            <option value="Noite">Noite</option>
           </select>
         </div>
       </div>
 
       <div style="margin-bottom:20px">
-        <label style="${LBL}">📝 Descrição / O que aconteceu <span style="color:#ef4444">*</span></label>
+        <label style="${LBL}">Descrição / O que aconteceu <span style="color:#ef4444">*</span></label>
         <textarea id="oc-desc" rows="4"
           placeholder="Descreva com detalhes o que ocorreu: local, horário, o que foi feito de errado, impacto na operação..."
           style="${INP}resize:vertical;font-family:inherit;line-height:1.5"></textarea>
@@ -979,7 +979,7 @@ function pfRenderOcorrenciasUI(lista, carregando) {
 
       <button onclick="pfSalvarOcorrencia()"
         style="background:linear-gradient(135deg,#dc2626,#b91c1c);color:#fff;border:none;border-radius:10px;padding:12px 24px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px">
-        ⚠️ Registrar Ocorrência
+        Registrar Ocorrência
       </button>
     </div>`;
 
@@ -1011,13 +1011,13 @@ function pfRenderOcorrenciasUI(lista, carregando) {
 
   const rows = lista.length === 0
     ? `<div style="text-align:center;padding:48px;color:var(--text3)">
-        <div style="font-size:32px;margin-bottom:10px">✅</div>
+        
         <div style="font-size:13px;font-weight:700">Nenhuma ocorrência no período</div>
        </div>`
     : lista.map(o => {
-        const t  = OC_TIPOS[o.tipo]    || { icon:'📝', label: o.tipo,      cor:'#6b7280' };
+        const t  = OC_TIPOS[o.tipo]    || { icon:'', label: o.tipo,      cor:'#6b7280' };
         const g  = OC_GRAVIDADE[o.gravidade] || { label: o.gravidade, bg:'var(--surface2)', cor:'#6b7280' };
-        const tu = { Manha:'☀️ Manhã', Tarde:'🌅 Tarde', Noite:'🌙 Noite' }[o.turno] || o.turno || '—';
+        const tu = { Manha:'Manhã', Tarde:'Tarde', Noite:'Noite' }[o.turno] || o.turno || '—';
         // Borda esquerda colorida pela gravidade
         const bordaGrav = { leve:'#22c55e', moderada:'#f59e0b', grave:'#dc2626' }[o.gravidade] || '#6b7280';
         return `
@@ -1032,19 +1032,19 @@ function pfRenderOcorrenciasUI(lista, carregando) {
                 </div>
                 <div style="font-size:14px;color:var(--text);line-height:1.5;margin-bottom:8px">${pfEsc(o.descricao)}</div>
                 <div style="font-size:12px;color:var(--text3)">
-                  📅 ${fmtDt(o.data)} &nbsp;·&nbsp; ${tu} &nbsp;·&nbsp; Registrado por: <b style="color:var(--text2)">${pfEsc(o.supervisor_nome)}</b>
+                  ${fmtDt(o.data)} &nbsp;·&nbsp; ${tu} &nbsp;·&nbsp; Registrado por: <b style="color:var(--text2)">${pfEsc(o.supervisor_nome)}</b>
                 </div>
               </div>
               <button onclick="pfExcluirOcorrencia(${o.id})"
                 style="background:none;border:1.5px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text3);font-size:14px;cursor:pointer;flex-shrink:0"
-                title="Excluir ocorrência">🗑️ Excluir</button>
+                title="Excluir ocorrência">Excluir</button>
             </div>
           </div>`;
       }).join('');
 
   return form + kpis + `
     <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:14px">
-      📋 Ocorrências Registradas${lista.length ? ` — ${lista.length} no período` : ''}
+      Ocorrências Registradas${lista.length ? ` — ${lista.length} no período` : ''}
     </div>
     ${rows}`;
 }
@@ -1067,7 +1067,7 @@ async function pfSalvarOcorrencia() {
     body: JSON.stringify({ colaborador_nome, tipo, gravidade, descricao, data, turno })
   });
   if (r) {
-    pfToast('✅ Ocorrência registrada!','sucesso');
+    pfToast('Ocorrência registrada!','sucesso');
     pfCarregarOcorrencias();
   }
 }
@@ -1099,7 +1099,7 @@ function pfExportarExcel() {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([cols, ...rows]), 'Ocorrências');
     XLSX.writeFile(wb, `ocorrencias_${(ini||'').replace(/-/g,'')}${fim?'-'+(fim).replace(/-/g,''):''}.xlsx`);
-    pfToast('✅ Excel exportado!','sucesso');
+    pfToast('Excel exportado!','sucesso');
     return;
   }
 
@@ -1129,7 +1129,7 @@ function pfExportarExcel() {
     });
     if (!temDados) { pfToast('Nenhum dado de tempo para exportar.','aviso'); return; }
     XLSX.writeFile(wb, `tempos-por-pedido_${(ini||'').replace(/-/g,'')}${fim?'-'+(fim).replace(/-/g,''):''}.xlsx`);
-    pfToast('✅ Excel exportado!','sucesso');
+    pfToast('Excel exportado!','sucesso');
     return;
   }
 
@@ -1155,15 +1155,15 @@ function pfExportarExcel() {
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(abaResumo), 'Resumo');
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(abaDia),    'Por Dia');
   XLSX.writeFile(wb, `performance-separadores_${(ini||'').replace(/-/g,'')}${fim?'-'+(fim).replace(/-/g,''):''}.xlsx`);
-  pfToast('✅ Excel exportado!','sucesso');
+  pfToast('Excel exportado!','sucesso');
 }
 
 // ── ABA METAS ─────────────────────────────────────────────────────────────
 const PF_PERFIL_LABEL = {
-  separador: '📦 Separação',
-  checkout:  '🏷️ Checkout',
-  embalador: '📫 Embalagem',
-  repositor: '🔧 Reposição',
+  separador: 'Separação',
+  checkout:  'Checkout',
+  embalador: 'Embalagem',
+  repositor: 'Reposição',
 };
 const PF_PERFIL_UNIDADE = {
   separador: 'pedidos',
@@ -1187,7 +1187,7 @@ async function pfCarregarMetas() {
     return;
   }
   if (!dados.length) {
-    wrap.innerHTML = `<div style="padding:48px;text-align:center;color:var(--text3)"><div style="font-size:32px;margin-bottom:8px">🎯</div>Nenhum dado de sessão encontrado no período.<br><small>Os dados são registrados a partir de agora — logins anteriores a esta atualização não constam.</small></div>`;
+    wrap.innerHTML = `<div style="padding:48px;text-align:center;color:var(--text3)">Nenhum dado de sessão encontrado no período.<br><small>Os dados são registrados a partir de agora — logins anteriores a esta atualização não constam.</small></div>`;
     return;
   }
 
@@ -1310,10 +1310,10 @@ async function pfCarregarMetas() {
 async function pfBuscarPedido(num) {
   const el = document.getElementById('pf-pedido-result');
   if (!num) { pfToast('Digite o número do pedido','aviso'); return; }
-  if (el) el.innerHTML = '<span style="color:var(--text3);font-size:12px">🔍 Buscando...</span>';
+  if (el) el.innerHTML = '<span style="color:var(--text3);font-size:12px">Buscando...</span>';
   const dados = await apiFetch(`/performance/pedido/${encodeURIComponent(num)}`);
   if (!dados || dados.erro) {
-    if (el) el.innerHTML = `<div style="color:#dc2626;font-size:12px;padding:8px 0">⚠️ ${pfEsc(dados?.erro || 'Pedido não encontrado')}</div>`;
+    if (el) el.innerHTML = `<div style="color:#dc2626;font-size:12px;padding:8px 0">${pfEsc(dados?.erro || 'Pedido não encontrado')}</div>`;
     return;
   }
   if (el) el.innerHTML = pfRenderPedidoDetalhe(dados);
@@ -1339,7 +1339,7 @@ function pfRenderPedidoDetalhe(d) {
     const bg  = min <= 5 ? 'rgba(22,163,74,.12)' : min <= 15 ? 'rgba(217,119,6,.12)' : 'rgba(220,38,38,.12)';
     return `<span style="background:${bg};color:${cor};border-radius:20px;padding:3px 12px;font-size:12px;font-weight:800">${fmtDur(min)}</span>`;
   };
-  const resMap = { encontrado:'✅', buscado:'✅', abastecido:'✅', nao_encontrado:'❌', protocolo:'📋' };
+  const resMap = { encontrado:'Enc', buscado:'Enc', abastecido:'Abast', nao_encontrado:'NE', protocolo:'Proto' };
 
   const sep = d.separacao;
   const ck  = d.checkout;
@@ -1393,7 +1393,7 @@ function pfRenderPedidoDetalhe(d) {
         <div style="padding:7px 8px;background:var(--surface2);border-radius:8px;margin-bottom:6px">
           <div style="font-size:10px;font-weight:700;color:var(--text);margin-bottom:3px">${resMap[r.resultado]||'?'} ${pfEsc(r.codigo||'')} — ${pfEsc((r.descricao||'').slice(0,30))}</div>
           <div style="display:flex;justify-content:space-between;align-items:center">
-            <span style="font-size:11px;color:var(--text3)">👤 ${pfEsc(r.colaborador||'—')}</span>
+            <span style="font-size:11px;color:var(--text3)">${pfEsc(r.colaborador||'—')}</span>
             ${badgeDur(r.duracao_min)}
           </div>
           <div style="font-size:10px;color:var(--text3);margin-top:2px">⏱ ${fmtHora(r.iniciado_em)} → ${fmtHora(r.concluido_em)}</div>

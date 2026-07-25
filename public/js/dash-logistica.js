@@ -1,4 +1,4 @@
-/* ══ WMS — Dash Logística ══
+﻿/* ══ WMS — Dash Logística ══
    Versão 5 — ranking ordenado por nº de pedidos
    Upload salva no BD; ao abrir, carrega histórico automaticamente.
    Filtra Usuário Faturado com 1, 2 ou 3 na frente.
@@ -48,11 +48,11 @@ function renderizarDashLogistica() {
   <div style="padding:0 0 40px">
 
     <div class="pg-title" style="margin-bottom:18px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-      📊 Dash Logística
+      Dash Logística
       <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-        <button onclick="dlExportarExcel()" style="background:#16a34a;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">📊 Excel</button>
-        <button onclick="dlExportarPDF()" style="background:#dc2626;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">📄 PDF</button>
-        <button onclick="dlAbrirImport()" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:7px 16px;font-size:12px;font-weight:700;cursor:pointer">📂 Importar Planilha</button>
+        <button onclick="dlExportarExcel()" style="background:#16a34a;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">Excel</button>
+        <button onclick="dlExportarPDF()" style="background:#dc2626;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">PDF</button>
+        <button onclick="dlAbrirImport()" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:7px 16px;font-size:12px;font-weight:700;cursor:pointer">Importar Planilha</button>
       </div>
     </div>
 
@@ -64,10 +64,10 @@ function renderizarDashLogistica() {
              ondragover="event.preventDefault();this.style.background='rgba(99,102,241,.08)'"
              ondragleave="this.style.background=''"
              ondrop="dlHandleDrop(event)">
-          <div style="font-size:32px;margin-bottom:8px">📂</div>
+          
           <div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:5px">Clique ou arraste a planilha aqui</div>
           <div style="font-size:11px;color:var(--text3)">Suporte: <b>.xlsx · .xls</b> &nbsp;·&nbsp; Abas: <b>Pedidos-turno</b> + <b>Itens</b></div>
-          <div style="font-size:11px;color:#f59e0b;margin-top:6px">⚠️ Os dados do período da planilha serão substituídos no banco</div>
+          <div style="font-size:11px;color:#f59e0b;margin-top:6px">Os dados do período da planilha serão substituídos no banco</div>
           <input type="file" id="dl-input" accept=".xlsx,.xls" style="display:none" onchange="dlProcessarArquivo(this.files[0])">
           <div style="display:flex;justify-content:center;gap:10px;margin-top:12px">
             <div style="background:var(--accent);color:#fff;border-radius:8px;padding:7px 18px;font-size:12px;font-weight:700">Selecionar arquivo</div>
@@ -79,7 +79,7 @@ function renderizarDashLogistica() {
 
     <!-- STATUS BANCO -->
     <div id="dl-banco-info" style="display:none;background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.25);border-radius:8px;padding:10px 16px;margin-bottom:16px;align-items:center;gap:10px;font-size:12px;color:var(--blue)">
-      <span>🗄️</span>
+      
       <span id="dl-banco-txt"></span>
     </div>
 
@@ -105,17 +105,17 @@ function renderizarDashLogistica() {
           <option value="3">Turno 3</option>
         </select>
       </div>
-      <button onclick="dlBuscarDados()" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:1px">🔍 Filtrar</button>
+      <button onclick="dlBuscarDados()" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:1px">Filtrar</button>
       <button onclick="dlResetarFiltros()" style="background:var(--surface2);color:var(--text3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:12px;cursor:pointer;margin-bottom:1px">✕ Limpar</button>
       <span id="dl-filtro-info" style="margin-left:auto;font-size:11px;color:var(--text3);align-self:center"></span>
     </div>
 
     <!-- ESTADO VAZIO -->
     <div id="dl-vazio" style="text-align:center;padding:72px 24px;color:var(--text3)">
-      <div style="font-size:40px;margin-bottom:12px">📊</div>
+      
       <div style="font-size:15px;font-weight:700;margin-bottom:6px">Nenhum dado importado ainda</div>
       <div style="font-size:12px;margin-bottom:20px">Clique em <b>Importar Planilha</b> para começar</div>
-      <button onclick="dlAbrirImport()" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:9px 22px;font-size:13px;font-weight:700;cursor:pointer">📂 Importar primeira planilha</button>
+      <button onclick="dlAbrirImport()" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:9px 22px;font-size:13px;font-weight:700;cursor:pointer">Importar primeira planilha</button>
     </div>
 
     <!-- LOADING -->
@@ -132,18 +132,18 @@ function renderizarDashLogistica() {
 
       <!-- Faturamento por colaborador -->
       <div class="card" style="padding:16px 18px;margin-bottom:16px">
-        <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px;margin-bottom:14px">💰 FATURAMENTO POR COLABORADOR (R$)</div>
+        <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px;margin-bottom:14px">FATURAMENTO POR COLABORADOR (R$)</div>
         <div style="position:relative;height:300px"><canvas id="dl-chart-fat"></canvas></div>
       </div>
 
       <!-- Pedidos + Itens -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px" class="dl-grid-2">
         <div class="card" style="padding:16px 18px">
-          <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px;margin-bottom:14px">📋 PEDIDOS POR COLABORADOR</div>
+          <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px;margin-bottom:14px">PEDIDOS POR COLABORADOR</div>
           <div style="position:relative;height:260px"><canvas id="dl-chart-ped"></canvas></div>
         </div>
         <div class="card" style="padding:16px 18px">
-          <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px;margin-bottom:14px">📦 ITENS POR COLABORADOR</div>
+          <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px;margin-bottom:14px">ITENS POR COLABORADOR</div>
           <div style="position:relative;height:260px"><canvas id="dl-chart-itens"></canvas></div>
         </div>
       </div>
@@ -151,11 +151,11 @@ function renderizarDashLogistica() {
       <!-- Faturamento por dia + Turno -->
       <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:16px" class="dl-grid-2">
         <div class="card" style="padding:16px 18px">
-          <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px;margin-bottom:14px">📅 FATURAMENTO POR DIA</div>
+          <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px;margin-bottom:14px">FATURAMENTO POR DIA</div>
           <div style="position:relative;height:210px"><canvas id="dl-chart-dia"></canvas></div>
         </div>
         <div class="card" style="padding:16px 18px">
-          <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px;margin-bottom:14px">🔄 POR TURNO</div>
+          <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px;margin-bottom:14px">POR TURNO</div>
           <div style="position:relative;height:210px"><canvas id="dl-chart-turno"></canvas></div>
         </div>
       </div>
@@ -167,7 +167,7 @@ function renderizarDashLogistica() {
           <div style="position:relative;height:220px"><canvas id="dl-chart-hora"></canvas></div>
         </div>
         <div class="card" style="padding:16px 18px">
-          <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px;margin-bottom:14px">📈 EVOLUÇÃO DIÁRIA POR TURNO</div>
+          <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px;margin-bottom:14px">EVOLUÇÃO DIÁRIA POR TURNO</div>
           <div style="position:relative;height:220px"><canvas id="dl-chart-evolucao"></canvas></div>
         </div>
       </div>
@@ -175,7 +175,7 @@ function renderizarDashLogistica() {
       <!-- Tabela ranking -->
       <div class="card" style="padding:0;overflow:hidden;margin-bottom:24px">
         <div style="padding:12px 18px;background:var(--surface2);border-bottom:1px solid var(--border);font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px;display:flex;align-items:center;gap:8px">
-          🏆 RANKING DETALHADO POR COLABORADOR
+          RANKING DETALHADO POR COLABORADOR
           <span style="margin-left:auto;font-size:10px;font-weight:600;color:var(--text3)" id="dl-table-count"></span>
         </div>
         <div style="overflow-x:auto">
@@ -203,9 +203,9 @@ function renderizarDashLogistica() {
     <!-- ══ HISTÓRICO DE IMPORTAÇÕES ══ -->
     <div class="card" style="padding:0;overflow:hidden">
       <div style="padding:12px 18px;background:var(--surface2);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px">
-        <span style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px">📁 ARQUIVOS IMPORTADOS</span>
+        <span style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px">ARQUIVOS IMPORTADOS</span>
         <button onclick="dlCarregarImportacoes()" title="Atualizar lista"
-          style="margin-left:auto;background:none;border:1px solid var(--border);border-radius:6px;color:var(--text3);padding:3px 9px;font-size:11px;cursor:pointer">🔄 Atualizar</button>
+          style="margin-left:auto;background:none;border:1px solid var(--border);border-radius:6px;color:var(--text3);padding:3px 9px;font-size:11px;cursor:pointer">Atualizar</button>
       </div>
       <div id="dl-importacoes-lista" style="padding:8px 0">
         <div style="text-align:center;padding:24px;color:var(--text3);font-size:12px">Carregando...</div>
@@ -347,7 +347,7 @@ async function dlCarregarImportacoes() {
                 <button onclick="dlExcluirImportacao(${r.id},'${escHtml(r.nome_arquivo||'arquivo.xlsx').replace(/'/g,"\\'")}')"
                   title="Excluir este período do banco"
                   style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#ef4444;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer">
-                  🗑️ Excluir
+                  Excluir
                 </button>
               </td>
             </tr>
@@ -359,7 +359,7 @@ async function dlCarregarImportacoes() {
 
 function dlExcluirImportacao(id, nome) {
   wmsConfirm({
-    icone:      '🗑️',
+    
     titulo:     'Excluir importação?',
     sub:        `"${nome}" e todos os seus pedidos serão removidos do banco. Esta ação não pode ser desfeita.`,
     btnOk:      'Excluir',
@@ -367,7 +367,7 @@ function dlExcluirImportacao(id, nome) {
   }, async () => {
     const r = await apiFetch(`/dash-logistica/importacoes/${id}`, { method:'DELETE' });
     if (r?.erro) { dlToast('Erro ao excluir: '+r.erro, 'erro'); return; }
-    dlToast('✅ Importação excluída com sucesso.', 'sucesso');
+    dlToast('Importação excluída com sucesso.', 'sucesso');
     dlCarregarImportacoes();
     dlInicializar();
   });
@@ -387,10 +387,10 @@ function dlFecharImport() {
   // Reseta o drop zone para o HTML original
   const drop = document.getElementById('dl-drop');
   if (drop) drop.innerHTML = `
-    <div style="font-size:32px;margin-bottom:8px">📂</div>
+    
     <div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:5px">Clique ou arraste a planilha aqui</div>
     <div style="font-size:11px;color:var(--text3)">Suporte: <b>.xlsx · .xls</b> &nbsp;·&nbsp; Abas: <b>Pedidos-turno</b> + <b>Itens</b></div>
-    <div style="font-size:11px;color:#f59e0b;margin-top:6px">⚠️ Os dados do período da planilha serão substituídos no banco</div>
+    <div style="font-size:11px;color:#f59e0b;margin-top:6px">Os dados do período da planilha serão substituídos no banco</div>
     <input type="file" id="dl-input" accept=".xlsx,.xls" style="display:none" onchange="dlProcessarArquivo(this.files[0])">
     <div style="display:flex;justify-content:center;gap:10px;margin-top:12px">
       <div style="background:var(--accent);color:#fff;border-radius:8px;padding:7px 18px;font-size:12px;font-weight:700">Selecionar arquivo</div>
@@ -477,7 +477,7 @@ async function dlProcessarArquivo(file) {
       return;
     }
 
-    dlToast(`✅ ${r.total} pedidos importados! (${dlFmtBR(ini)} a ${dlFmtBR(fim)})`, 'sucesso');
+    dlToast(` pedidos importados! (${dlFmtBR(ini)} a ${dlFmtBR(fim)})`, 'sucesso');
 
     // Atualiza filtros e recarrega
     const iniEl = document.getElementById('dl-ini');
@@ -554,13 +554,13 @@ function dlRenderKPIs(fat, ped, itens, nColab, byTurno) {
   const itensPed = ped > 0 ? itens / ped : 0;
   const COR = { green:'#22c55e', blue:'#38bdf8', amber:'#f59e0b', purple:'#a78bfa', teal:'#2dd4bf' };
   document.getElementById('dl-kpis').innerHTML = [
-    ['green',  '💰 Faturamento Total', `R$ ${dlFmt(fat)}`,           `${dlFmtN(ped)} pedidos`],
-    ['blue',   '📋 Total de Pedidos',   dlFmtN(ped),                   `${nColab} colaboradores`],
-    ['amber',  '📦 Total de Itens',     dlFmtN(itens),                `${itensPed.toFixed(1)} itens/pedido`],
-    ['purple', '🎯 Ticket Médio',       `R$ ${dlFmt(ticket)}`,        'por pedido'],
-    ['blue',   '☀️ Turno 1',            `R$ ${dlFmt(byTurno['1'].fat)}`, `${dlFmtN(byTurno['1'].ped)} ped.`],
-    ['purple', '🌅 Turno 2',            `R$ ${dlFmt(byTurno['2'].fat)}`, `${dlFmtN(byTurno['2'].ped)} ped.`],
-    ['teal',   '🌙 Turno 3',            `R$ ${dlFmt(byTurno['3'].fat)}`, `${dlFmtN(byTurno['3'].ped)} ped.`],
+    ['green',  'Faturamento Total', `R$ ${dlFmt(fat)}`,           `${dlFmtN(ped)} pedidos`],
+    ['blue',   'Total de Pedidos',   dlFmtN(ped),                   `${nColab} colaboradores`],
+    ['amber',  'Total de Itens',     dlFmtN(itens),                `${itensPed.toFixed(1)} itens/pedido`],
+    ['purple', 'Ticket Médio',       `R$ ${dlFmt(ticket)}`,        'por pedido'],
+    ['blue',   'Turno 1',            `R$ ${dlFmt(byTurno['1'].fat)}`, `${dlFmtN(byTurno['1'].ped)} ped.`],
+    ['purple', 'Turno 2',            `R$ ${dlFmt(byTurno['2'].fat)}`, `${dlFmtN(byTurno['2'].ped)} ped.`],
+    ['teal',   'Turno 3',            `R$ ${dlFmt(byTurno['3'].fat)}`, `${dlFmtN(byTurno['3'].ped)} ped.`],
   ].map(([cor,lb,val,sub]) => `
     <div class="card" style="padding:14px 16px;border-top:3px solid ${COR[cor]};overflow:hidden">
       <div style="font-size:9px;font-weight:800;color:var(--text3);letter-spacing:.8px;margin-bottom:5px">${lb}</div>
@@ -660,7 +660,7 @@ function dlRenderChartEvolucao(byDiaTurno) {
 // ── Tabela ranking ─────────────────────────────────────────────────────────
 function dlRenderTabela(ranking, totalFat) {
   document.getElementById('dl-table-count').textContent = `${ranking.length} colaboradores`;
-  const ICONS = ['🥇','🥈','🥉'];
+  const ICONS = ['1º','2º','3º'];
   const T_COR = { '1':'rgba(56,189,248,.15)','2':'rgba(167,139,250,.15)','3':'rgba(45,212,191,.15)' };
   const T_TXT = { '1':'#38bdf8','2':'#a78bfa','3':'#2dd4bf' };
   const maxFat = ranking[0]?.[1].fat || 1;
@@ -773,7 +773,7 @@ function dlExportarExcel() {
   const fim = document.getElementById('dl-fim')?.value || '';
   const nomeArq = `dash-logistica_${(ini||'').replace(/-/g,'')}${fim?'-'+(fim||'').replace(/-/g,''):''}.xlsx`;
   XLSX.writeFile(wb, nomeArq);
-  dlToast('✅ Excel exportado com sucesso!', 'sucesso');
+  dlToast('Excel exportado com sucesso!', 'sucesso');
 }
 
 // ── Exportar PDF (abre janela de impressão formatada) ──────────────────────
@@ -799,7 +799,7 @@ function dlExportarPDF() {
 
   const ini = document.getElementById('dl-ini')?.value || '';
   const fim = document.getElementById('dl-fim')?.value || '';
-  const ICONS = ['🥇','🥈','🥉'];
+  const ICONS = ['1º','2º','3º'];
   const T_COR = { '1':'#38bdf8','2':'#a78bfa','3':'#2dd4bf' };
 
   const linhas = ranking.map(([,v], i) => {
@@ -847,20 +847,20 @@ function dlExportarPDF() {
   }
 </style>
 </head><body>
-<h1>📊 Dash Logística</h1>
+<h1>Dash Logística</h1>
 <div class="sub">Período: <b>${dlFmtBR(ini)}</b> a <b>${dlFmtBR(fim)}</b> &nbsp;·&nbsp; Gerado em ${new Date().toLocaleString('pt-BR')} &nbsp;·&nbsp; WMS Miess</div>
 
 <div class="kpis">
-  <div class="kpi"><div class="kpi-lb">💰 Faturamento Total</div><div class="kpi-val">R$ ${dlFmt(totalFat)}</div><div class="kpi-sub">${dlFmtN(totalPed)} pedidos</div></div>
-  <div class="kpi"><div class="kpi-lb">📋 Total de Pedidos</div><div class="kpi-val">${dlFmtN(totalPed)}</div><div class="kpi-sub">${ranking.length} colaboradores</div></div>
-  <div class="kpi"><div class="kpi-lb">📦 Total de Itens</div><div class="kpi-val">${dlFmtN(totalItens)}</div><div class="kpi-sub">${totalPed>0?(totalItens/totalPed).toFixed(1):0} itens/ped.</div></div>
-  <div class="kpi"><div class="kpi-lb">🎯 Ticket Médio</div><div class="kpi-val">R$ ${dlFmt(totalPed>0?totalFat/totalPed:0)}</div><div class="kpi-sub">por pedido</div></div>
-  <div class="kpi"><div class="kpi-lb" style="color:#38bdf8">☀️ Turno 1</div><div class="kpi-val" style="color:#38bdf8">R$ ${dlFmt(byTurno['1'].fat)}</div><div class="kpi-sub">${dlFmtN(byTurno['1'].ped)} ped.</div></div>
-  <div class="kpi"><div class="kpi-lb" style="color:#a78bfa">🌅 Turno 2</div><div class="kpi-val" style="color:#a78bfa">R$ ${dlFmt(byTurno['2'].fat)}</div><div class="kpi-sub">${dlFmtN(byTurno['2'].ped)} ped.</div></div>
-  <div class="kpi"><div class="kpi-lb" style="color:#2dd4bf">🌙 Turno 3</div><div class="kpi-val" style="color:#2dd4bf">R$ ${dlFmt(byTurno['3'].fat)}</div><div class="kpi-sub">${dlFmtN(byTurno['3'].ped)} ped.</div></div>
+  <div class="kpi"><div class="kpi-lb">Faturamento Total</div><div class="kpi-val">R$ ${dlFmt(totalFat)}</div><div class="kpi-sub">${dlFmtN(totalPed)} pedidos</div></div>
+  <div class="kpi"><div class="kpi-lb">Total de Pedidos</div><div class="kpi-val">${dlFmtN(totalPed)}</div><div class="kpi-sub">${ranking.length} colaboradores</div></div>
+  <div class="kpi"><div class="kpi-lb">Total de Itens</div><div class="kpi-val">${dlFmtN(totalItens)}</div><div class="kpi-sub">${totalPed>0?(totalItens/totalPed).toFixed(1):0} itens/ped.</div></div>
+  <div class="kpi"><div class="kpi-lb">Ticket Médio</div><div class="kpi-val">R$ ${dlFmt(totalPed>0?totalFat/totalPed:0)}</div><div class="kpi-sub">por pedido</div></div>
+  <div class="kpi"><div class="kpi-lb" style="color:#38bdf8">Turno 1</div><div class="kpi-val" style="color:#38bdf8">R$ ${dlFmt(byTurno['1'].fat)}</div><div class="kpi-sub">${dlFmtN(byTurno['1'].ped)} ped.</div></div>
+  <div class="kpi"><div class="kpi-lb" style="color:#a78bfa">Turno 2</div><div class="kpi-val" style="color:#a78bfa">R$ ${dlFmt(byTurno['2'].fat)}</div><div class="kpi-sub">${dlFmtN(byTurno['2'].ped)} ped.</div></div>
+  <div class="kpi"><div class="kpi-lb" style="color:#2dd4bf">Turno 3</div><div class="kpi-val" style="color:#2dd4bf">R$ ${dlFmt(byTurno['3'].fat)}</div><div class="kpi-sub">${dlFmtN(byTurno['3'].ped)} ped.</div></div>
 </div>
 
-<div class="secao">🏆 Ranking Detalhado por Colaborador</div>
+<div class="secao">Ranking Detalhado por Colaborador</div>
 <table>
   <thead><tr>
     <th>#</th>
