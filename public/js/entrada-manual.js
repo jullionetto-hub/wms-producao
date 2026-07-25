@@ -1050,6 +1050,7 @@ let _invBusca       = '';
 let _invFiltroStatus= 'todos';
 let _invFiltroRua   = '';
 let _invPagina      = 1;
+let _invAbaAtual    = 'andamento';
 const INV_PAGE_SIZE = 30;
 
 async function invCarregarSessoes() {
@@ -1066,9 +1067,17 @@ async function invCarregarSessoes() {
 function invRenderizarSessoes() {
   const wrap = document.getElementById('inv-sec-sessoes');
   if (!wrap) return;
+  const podeCriar    = ['gestor','supervisor'].includes(usuarioAtual?.perfil);
+  const sessAndamento  = _invSessoes.filter(s => s.status !== 'concluido');
+  const sessConcluidos = _invSessoes.filter(s => s.status === 'concluido');
+  const listaAtual     = _invAbaAtual === 'andamento' ? sessAndamento : sessConcluidos;
+  const tabBtnStyle = (aba) => `padding:9px 18px;border:none;background:transparent;font-size:12px;font-weight:800;cursor:pointer;
+    color:${_invAbaAtual===aba?'var(--accent)':'var(--text3)'};
+    border-bottom:${_invAbaAtual===aba?'2px solid var(--accent)':'2px solid transparent'};margin-bottom:-2px`;
   wrap.innerHTML = `
     <div class="pg-title" style="margin-bottom:16px">📋 Inventário Físico</div>
 
+    ${podeCriar ? `
     <div class="card" style="padding:16px 18px;margin-bottom:14px">
       <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:1px;margin-bottom:10px">🆕 CRIAR NOVO INVENTÁRIO</div>
       <input id="inv-nome-novo" placeholder="Nome do inventário (ex: Inventário Geral Jul/2026)..."
@@ -1091,11 +1100,25 @@ function invRenderizarSessoes() {
           📄 Criar vazio
         </button>
       </div>
+    </div>` : ''}
+
+    <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:14px">
+      <button onclick="_invAbaAtual='andamento';invRenderizarSessoes()" style="${tabBtnStyle('andamento')}">
+        ⏳ Em andamento
+        <span style="background:var(--surface2);border-radius:20px;padding:1px 7px;font-size:10px;margin-left:5px">${sessAndamento.length}</span>
+      </button>
+      <button onclick="_invAbaAtual='concluidos';invRenderizarSessoes()" style="${tabBtnStyle('concluidos')}">
+        ✅ Realizados
+        <span style="background:var(--surface2);border-radius:20px;padding:1px 7px;font-size:10px;margin-left:5px">${sessConcluidos.length}</span>
+      </button>
     </div>
 
     <div id="inv-lista-sessoes">
-      ${_invSessoes.length ? _invSessoes.map(s => invSessaoCardHTML(s)).join('') :
-        `<div style="padding:48px;text-align:center;color:var(--text3)"><div style="font-size:32px;margin-bottom:8px">📋</div><div>Nenhum inventário criado ainda.</div></div>`}
+      ${listaAtual.length ? listaAtual.map(s => invSessaoCardHTML(s)).join('') :
+        `<div style="padding:48px;text-align:center;color:var(--text3)">
+          <div style="font-size:32px;margin-bottom:8px">${_invAbaAtual==='andamento'?'📋':'✅'}</div>
+          <div>${_invAbaAtual==='andamento'?'Nenhum inventário em andamento.':'Nenhum inventário realizado ainda.'}</div>
+        </div>`}
     </div>`;
 }
 
@@ -1201,7 +1224,7 @@ async function invAbrirSessao(id) {
   _invFiltroStatus= 'todos';
   _invFiltroRua   = '';
   _invPagina      = 1;
-  invRenderizarSessaoAtiva();
+  invRenderizarDashboard();
 }
 
 function invVoltarSessoes() {
@@ -1209,6 +1232,84 @@ function invVoltarSessoes() {
   document.getElementById('inv-sec-itens')  && (document.getElementById('inv-sec-itens').style.display = 'none');
   document.getElementById('inv-sec-sessoes')&& (document.getElementById('inv-sec-sessoes').style.display = '');
   invCarregarSessoes();
+}
+
+function invRenderizarDashboard() {
+  const wrap = document.getElementById('inv-sec-itens');
+  if (!wrap || !_invSessaoAtiva) return;
+  const s = _invSessaoAtiva;
+  const pct    = s.total_itens > 0 ? Math.round(((s.contados||0) / s.total_itens) * 100) : 0;
+  const barClr = pct === 100 ? '#22c55e' : pct >= 60 ? '#f59e0b' : '#3b82f6';
+  const stats  = { ok:0, divergente:0, pendente:0, aMais:0, aMenos:0 };
+  _invItens.forEach(i => {
+    if (stats[i.status]!==undefined) stats[i.status]++;
+    if (i.qtd_contada != null) {
+      const dif = parseFloat(i.qtd_contada) - parseFloat(i.saldo_sistema);
+      if (dif > 0) stats.aMais++;
+      else if (dif < 0) stats.aMenos++;
+    }
+  });
+  const acuracia = s.total_itens > 0 ? Math.round((stats.ok / s.total_itens) * 100) : 0;
+  const chip = s.status === 'concluido'
+    ? `<span style="background:#14532d;color:#22c55e;border-radius:20px;padding:3px 12px;font-size:11px;font-weight:800">✅ Concluído</span>`
+    : `<span style="background:#1c1917;color:#f59e0b;border:1px solid #78350f;border-radius:20px;padding:3px 12px;font-size:11px;font-weight:800">⏳ Em andamento</span>`;
+  const dt     = s.criado_em    ? new Date(s.criado_em).toLocaleString('pt-BR')    : '—';
+  const dtConc = s.concluido_em ? new Date(s.concluido_em).toLocaleString('pt-BR') : null;
+
+  wrap.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+      <button onclick="invVoltarSessoes()"
+        style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text3);cursor:pointer;font-size:12px;font-weight:700">← Voltar</button>
+      ${chip}
+      <div style="flex:1"></div>
+      <a href="/inventario/sessoes/${s.id}/exportar"
+        style="background:#1e3a5f;color:#38bdf8;border:none;border-radius:8px;padding:7px 14px;font-size:11px;font-weight:700;text-decoration:none;display:inline-block">📊 CSV</a>
+    </div>
+
+    <div class="card" style="padding:20px;margin-bottom:14px">
+      <div style="font-size:19px;font-weight:900;color:var(--text);margin-bottom:8px">${s.nome||'Inventário'}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--text3);margin-bottom:18px">
+        <span>👤 ${s.criado_por||'—'}</span>
+        <span>📅 ${dt}</span>
+        ${dtConc ? `<span>🏁 Concluído: ${dtConc}</span>` : ''}
+        <span>📦 ${s.total_itens} produtos</span>
+      </div>
+
+      <div style="display:flex;justify-content:space-between;font-size:10px;font-weight:700;color:var(--text3);margin-bottom:6px">
+        <span>PROGRESSO DA CONTAGEM</span><span>${s.contados||0} / ${s.total_itens} (${pct}%)</span>
+      </div>
+      <div style="background:var(--surface2);border-radius:8px;height:12px;overflow:hidden;margin-bottom:18px">
+        <div style="height:100%;width:${pct}%;background:${barClr};border-radius:8px;transition:width .4s"></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px">
+        ${[['⬜','PENDENTES',stats.pendente,'#64748b'],['✅','OK',stats.ok,'#22c55e'],['⬆️','A MAIS',stats.aMais,'#f97316'],['⬇️','A MENOS',stats.aMenos,'#ef4444'],[`${acuracia}%`,'ACURÁCIA','','#38bdf8']].map(([ic,lb,n,c])=>`
+        <div style="background:var(--surface2);border-radius:10px;padding:12px 8px;text-align:center;border:1px solid var(--border)">
+          <div style="font-size:${lb==='ACURÁCIA'?'18px':'22px'};font-weight:900;color:${c}">${lb==='ACURÁCIA'?ic:n}</div>
+          <div style="font-size:8px;color:var(--text3);font-weight:700;letter-spacing:.4px;margin-top:3px">${lb==='ACURÁCIA'?'':ic+' '}${lb}</div>
+        </div>`).join('')}
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button onclick="invEntrarContagem()"
+        style="flex:1;min-width:180px;background:${s.status!=='concluido'?'var(--accent)':'var(--surface2)'};color:${s.status!=='concluido'?'#fff':'var(--text3)'};border:${s.status!=='concluido'?'none':'1px solid var(--border)'};border-radius:12px;padding:14px;font-size:14px;font-weight:700;cursor:pointer">
+        ${s.status!=='concluido'?'📋 Iniciar Contagem':'👁️ Ver Itens'}
+      </button>
+      ${s.status !== 'concluido' ? `
+      <button onclick="invConcluir()"
+        style="background:#16a34a;color:#fff;border:none;border-radius:12px;padding:14px 22px;font-size:14px;font-weight:700;cursor:pointer">
+        ✅ Concluir
+      </button>` : ''}
+      <button onclick="invExcluirSessao(${s.id})"
+        style="background:var(--surface2);color:var(--accent);border:1px solid var(--border);border-radius:12px;padding:14px 18px;font-size:14px;font-weight:700;cursor:pointer">
+        🗑️
+      </button>
+    </div>`;
+}
+
+function invEntrarContagem() {
+  invRenderizarSessaoAtiva();
 }
 
 function invRenderizarSessaoAtiva() {
@@ -1243,8 +1344,8 @@ function invRenderizarSessaoAtiva() {
 
   wrap.innerHTML = `
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
-      <button onclick="invVoltarSessoes()"
-        style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text3);cursor:pointer;font-size:12px;font-weight:700">← Voltar</button>
+      <button onclick="invRenderizarDashboard()"
+        style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text3);cursor:pointer;font-size:12px;font-weight:700">← Painel</button>
       <div style="flex:1;min-width:0">
         <div style="font-size:14px;font-weight:900;color:var(--text)">${s.nome||'Inventário'}</div>
         <div style="font-size:11px;color:var(--text3)">👤 ${s.criado_por||'—'} · ${_invItens.length} produtos</div>
@@ -1382,7 +1483,7 @@ async function invConcluir() {
     if (r?.erro) { emToast('Erro: '+r.erro, 'erro'); return; }
     _invSessaoAtiva.status = 'concluido';
     emToast('✅ Inventário concluído!', 'sucesso');
-    invRenderizarSessaoAtiva();
+    invRenderizarDashboard();
   });
 }
 
