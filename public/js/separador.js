@@ -114,7 +114,7 @@ function _renderizarListaLote() {
     const completo   = feitosEnd === totalEnd;
 
     html += `<div style="padding:7px 14px 5px;background:var(--surface2);border-bottom:0.5px solid var(--border);display:flex;align-items:center;gap:8px">
-      <span style="background:#1a1a2e;color:#fff;font-size:12px;font-weight:700;padding:3px 10px;border-radius:6px;font-family:monospace">${end}</span>
+      <span style="background:var(--surface2);color:var(--text);font-size:12px;font-weight:700;padding:3px 10px;border-radius:6px;font-family:monospace;border:1px solid var(--border)">${end}</span>
       <span style="font-size:11px;color:var(--text3)">${Object.keys(porSku).length} produto(s)</span>
       ${completo
         ? '<span style="margin-left:auto;font-size:11px;color:#22c55e;font-weight:700">✓ completo</span>'

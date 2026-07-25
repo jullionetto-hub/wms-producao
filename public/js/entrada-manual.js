@@ -52,8 +52,8 @@ async function carregarEntradaManualLotes() {
     const pct = emFmtPct(l.itens_concluidos, l.total_itens);
     const barClr = pct === 100 ? '#22c55e' : pct >= 60 ? '#f59e0b' : '#3b82f6';
     const statusChip = l.status === 'concluido'
-      ? `<span style="background:#14532d;color:#22c55e;border-radius:20px;padding:2px 10px;font-size:10px;font-weight:800">✅ Concluído</span>`
-      : `<span style="background:#1c1917;color:#f59e0b;border:1px solid #78350f;border-radius:20px;padding:2px 10px;font-size:10px;font-weight:800">⏳ Em andamento</span>`;
+      ? `<span style="background:#DCFCE7;color:#16A34A;border:1px solid #BBF7D0;border-radius:20px;padding:2px 10px;font-size:10px;font-weight:700">✅ Concluído</span>`
+      : `<span style="background:#FEF9C3;color:#A16207;border:1px solid #FDE68A;border-radius:20px;padding:2px 10px;font-size:10px;font-weight:700">⏳ Em andamento</span>`;
     return `
     <div class="card" style="margin-bottom:10px;padding:14px 16px;cursor:pointer" onclick="abrirLoteEM(${l.id})">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap">
@@ -200,7 +200,7 @@ function emRowHTML(it) {
     </td>
     <td style="padding:8px 10px;text-align:center">
       <button id="em-btn-save-${it.id}" onclick="emSalvarItem(${it.id})"
-        style="background:#1e3a5f;color:#38bdf8;border:none;border-radius:6px;padding:5px 10px;font-size:10px;font-weight:700;cursor:pointer">
+        style="background:var(--surface2);color:var(--accent);border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:10px;font-weight:700;cursor:pointer">
         💾 Salvar
       </button>
     </td>
@@ -778,7 +778,7 @@ function renderizarPagEntradaManual(containerId) {
         </div>
         <div style="display:flex;gap:8px;justify-content:flex-end">
           <button onclick="emExportarCSV()" style="background:#16a34a;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">📊 Excel</button>
-          <button id="em-btn-salvar-tudo" onclick="emSalvarTudo()" style="background:#1e3a5f;color:#38bdf8;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">💾 Salvar Tudo</button>
+          <button id="em-btn-salvar-tudo" onclick="emSalvarTudo()" style="background:var(--surface2);color:var(--accent);border:1px solid var(--border);border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">💾 Salvar Tudo</button>
         </div>
       </div>
 
@@ -1126,8 +1126,8 @@ function invSessaoCardHTML(s) {
   const pct   = s.total_itens > 0 ? Math.round((s.contados / s.total_itens) * 100) : 0;
   const barClr= pct === 100 ? '#22c55e' : pct >= 60 ? '#f59e0b' : '#3b82f6';
   const chip  = s.status === 'concluido'
-    ? `<span style="background:#14532d;color:#22c55e;border-radius:20px;padding:2px 10px;font-size:10px;font-weight:800">✅ Concluído</span>`
-    : `<span style="background:#1c1917;color:#f59e0b;border:1px solid #78350f;border-radius:20px;padding:2px 10px;font-size:10px;font-weight:800">⏳ Em andamento</span>`;
+    ? `<span style="background:#DCFCE7;color:#16A34A;border:1px solid #BBF7D0;border-radius:20px;padding:2px 10px;font-size:10px;font-weight:700">✅ Concluído</span>`
+    : `<span style="background:#FEF9C3;color:#A16207;border:1px solid #FDE68A;border-radius:20px;padding:2px 10px;font-size:10px;font-weight:700">⏳ Em andamento</span>`;
   const dt = s.criado_em ? new Date(s.criado_em).toLocaleDateString('pt-BR') : '—';
   return `
     <div class="card" style="margin-bottom:10px;padding:14px 16px;cursor:pointer" onclick="invAbrirSessao(${s.id})">
@@ -1251,8 +1251,8 @@ function invRenderizarDashboard() {
   });
   const acuracia = s.total_itens > 0 ? Math.round((stats.ok / s.total_itens) * 100) : 0;
   const chip = s.status === 'concluido'
-    ? `<span style="background:#14532d;color:#22c55e;border-radius:20px;padding:3px 12px;font-size:11px;font-weight:800">✅ Concluído</span>`
-    : `<span style="background:#1c1917;color:#f59e0b;border:1px solid #78350f;border-radius:20px;padding:3px 12px;font-size:11px;font-weight:800">⏳ Em andamento</span>`;
+    ? `<span style="background:#DCFCE7;color:#16A34A;border:1px solid #BBF7D0;border-radius:20px;padding:3px 12px;font-size:11px;font-weight:700">✅ Concluído</span>`
+    : `<span style="background:#FEF9C3;color:#A16207;border:1px solid #FDE68A;border-radius:20px;padding:3px 12px;font-size:11px;font-weight:700">⏳ Em andamento</span>`;
   const dt     = s.criado_em    ? new Date(s.criado_em).toLocaleString('pt-BR')    : '—';
   const dtConc = s.concluido_em ? new Date(s.concluido_em).toLocaleString('pt-BR') : null;
 
@@ -1263,7 +1263,7 @@ function invRenderizarDashboard() {
       ${chip}
       <div style="flex:1"></div>
       <a href="/inventario/sessoes/${s.id}/exportar"
-        style="background:#1e3a5f;color:#38bdf8;border:none;border-radius:8px;padding:7px 14px;font-size:11px;font-weight:700;text-decoration:none;display:inline-block">📊 CSV</a>
+        style="background:var(--surface2);color:var(--accent);border:1px solid var(--border);border-radius:8px;padding:7px 14px;font-size:11px;font-weight:700;text-decoration:none;display:inline-block">📊 CSV</a>
     </div>
 
     <div class="card" style="padding:20px;margin-bottom:14px">
@@ -1354,7 +1354,7 @@ function invRenderizarSessaoAtiva() {
         ${s.status !== 'concluido' ? `<button onclick="invConcluir()"
           style="background:#16a34a;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:11px;font-weight:700;cursor:pointer">✅ Concluir</button>` : ''}
         <a href="/inventario/sessoes/${s.id}/exportar"
-          style="background:#1e3a5f;color:#38bdf8;border:none;border-radius:8px;padding:7px 14px;font-size:11px;font-weight:700;cursor:pointer;text-decoration:none;display:inline-block">📊 CSV</a>
+          style="background:var(--surface2);color:var(--accent);border:1px solid var(--border);border-radius:8px;padding:7px 14px;font-size:11px;font-weight:700;cursor:pointer;text-decoration:none;display:inline-block">📊 CSV</a>
       </div>
     </div>
 
@@ -1455,7 +1455,7 @@ function invRowHTML(it, SL, SC) {
     </td>
     <td style="padding:8px 10px;text-align:center">
       ${concluido ? '—' : `<button onclick="invSalvarContagem(${it.id})"
-        style="background:#1e3a5f;color:#38bdf8;border:none;border-radius:6px;padding:5px 10px;font-size:10px;font-weight:700;cursor:pointer">💾 Salvar</button>`}
+        style="background:var(--surface2);color:var(--accent);border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:10px;font-weight:700;cursor:pointer">💾 Salvar</button>`}
     </td>
   </tr>`;
 }
@@ -1522,7 +1522,7 @@ function invMobileCardHTML(it, SL, SC) {
     <div style="font-size:13px;color:var(--text);line-height:1.4;margin-bottom:8px">${it.nome||'—'}</div>
     <div style="display:flex;gap:12px;font-size:11px;color:var(--text3);margin-bottom:10px;flex-wrap:wrap">
       <span>📍 <strong style="color:var(--text)">${it.localizacao||'—'}</strong></span>
-      <span>Saldo: <strong style="color:#38bdf8">${it.saldo_sistema}</strong></span>
+      <span>Saldo: <strong style="color:var(--accent)">${it.saldo_sistema}</strong></span>
       ${difStr != null ? `<span>Dif: <strong style="color:${difClr}">${difStr}</strong></span>` : ''}
     </div>
     ${concluido
@@ -1532,7 +1532,7 @@ function invMobileCardHTML(it, SL, SC) {
             onkeydown="if(event.key==='Enter'){invSalvarContagem(${it.id})}"
             style="flex:1;padding:12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:18px;font-weight:700;text-align:center;outline:none">
           <button onclick="invSalvarContagem(${it.id})"
-            style="padding:12px 16px;background:#1e3a5f;color:#38bdf8;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">💾</button>
+            style="padding:12px 16px;background:var(--surface2);color:var(--accent);border:1px solid var(--border);border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">💾</button>
         </div>`}
   </div>`;
 }
@@ -1749,7 +1749,7 @@ async function invColetorBuscar() {
     <div style="font-size:12px;color:#e2e8f0;margin:4px 0;line-height:1.4">${it.nome||'—'}</div>
     <div style="font-size:11px;color:${colmeiaErrada?'#fca5a5':'#94a3b8'}">
       📍 <strong style="color:${colmeiaErrada?'#fca5a5':'#38bdf8'}">${it.localizacao||'—'}</strong>
-      &nbsp;·&nbsp; Saldo: <strong style="color:#38bdf8">${it.saldo_sistema}</strong>
+      &nbsp;·&nbsp; Saldo: <strong style="color:var(--accent)">${it.saldo_sistema}</strong>
     </div>`;
 
   const msgTxt = colmeiaErrada

@@ -1515,7 +1515,7 @@ async function gerarRelatorioAbs() {
     // Cabeçalho de turno
     linhas += `
       <tr>
-        <td colspan="5" style="padding:10px 14px;background:#1e293b;color:#fff;font-weight:800;font-size:12px;letter-spacing:.5px;border-top:4px solid #0f172a">
+        <td colspan="5" style="padding:10px 14px;background:var(--surface2);color:var(--text);font-weight:800;font-size:12px;letter-spacing:.5px;border-top:4px solid var(--accent)">
           ${TURNO_EMOJI[turno]} ${turno.toUpperCase()}
           <span style="float:right;font-weight:400;font-size:11px;opacity:.8">
             ${funcsTurno} funcionário${funcsTurno!==1?'s':''}
@@ -1557,7 +1557,7 @@ async function gerarRelatorioAbs() {
 <body>
   <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">
     <h1>📊 Relatório de Atrasos e Voltas Antecipadas</h1>
-    <button onclick="window.print()" style="padding:8px 16px;background:#1e293b;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🖨️ Imprimir</button>
+    <button onclick="window.print()" style="padding:8px 16px;background:#0F172A;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🖨️ Imprimir</button>
   </div>
   <div class="sub">Período: ${periodoLabel} · Gerado em ${new Date().toLocaleString('pt-BR')}</div>
 
