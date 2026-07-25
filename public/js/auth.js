@@ -856,16 +856,16 @@ function atualizarStatusBanner(status, extra) {
   const el = document.getElementById('diario-status-banner');
   if (!el) return;
   const cfg = {
-    rascunho: { bg:'#f1f5f9', borda:'#cbd5e1', txt:'#475569', icone:'💾', msg:'Rascunho salvo — clique em "Finalizar e Enviar" para enviar ao próximo turno' },
-    enviado:  { bg:'#eff6ff', borda:'#93c5fd', txt:'#1d4ed8', icone:'📤', msg:`Enviado para validação — prazo: ${extra||'30 min'}` },
-    validado: { bg:'#f0fdf4', borda:'#86efac', txt:'#166534', icone:'✅', msg:`Validado pelo próximo turno — Pontuação: <b>${extra||'?'}/100</b>` },
-    expirado: { bg:'#fef2f2', borda:'#fca5a5', txt:'#991b1b', icone:'⏰', msg:'Prazo de validação expirou sem resposta do próximo turno' },
-    outro:    { bg:'#fefce8', borda:'#fde68a', txt:'#92400e', icone:'👁️', msg:extra || 'Visualizando diário de outro turno — somente leitura' },
+    rascunho: { bg:'#f1f5f9', borda:'#cbd5e1', txt:'#475569', msg:'Rascunho salvo — clique em "Finalizar e Enviar" para enviar ao próximo turno' },
+    enviado:  { bg:'#eff6ff', borda:'#93c5fd', txt:'#1d4ed8', msg:`Enviado para validação — prazo: ${extra||'30 min'}` },
+    validado: { bg:'#f0fdf4', borda:'#86efac', txt:'#166534', msg:`Validado pelo próximo turno — Pontuação: <b>${extra||'?'}/100</b>` },
+    expirado: { bg:'#fef2f2', borda:'#fca5a5', txt:'#991b1b', msg:'Prazo de validação expirou sem resposta do próximo turno' },
+    outro:    { bg:'#fefce8', borda:'#fde68a', txt:'#92400e', msg:extra || 'Visualizando diário de outro turno — somente leitura' },
   };
   const c = cfg[status] || cfg.rascunho;
   el.style.display = '';
   el.innerHTML = `<div style="background:${c.bg};border:1.5px solid ${c.borda};border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:10px">
-    <span style="font-size:20px">${c.icone}</span>
+    <span style="width:8px;height:8px;border-radius:50%;background:${c.borda};flex-shrink:0;display:inline-block"></span>
     <div style="font-size:13px;color:${c.txt}">${c.msg}</div>
   </div>`;
 }
@@ -876,7 +876,6 @@ function enviarDiario() {
     toast('Salve o diário primeiro antes de enviar!','aviso'); return;
   }
   wmsConfirm({
-    icone:      '📤',
     titulo:     'Enviar Diário de Bordo?',
     sub:        'O próximo supervisor terá 30 minutos para validar as informações do turno.',
     btnOk:      'Sim, enviar',
@@ -902,7 +901,6 @@ async function verificarValidacaoPendente() {
     if (!el) return;
     if (!val) { el.style.display='none'; return; }
     _validacaoId = val.validacao_id;
-    const turnoIcon = val.turno==='Manha'?'☀️':val.turno==='Tarde'?'🌅':'🌙';
     const atrasada = val.atrasada;
     const validCor = atrasada ? '#d97706' : '#7c3aed';
 
@@ -927,7 +925,7 @@ async function verificarValidacaoPendente() {
           <span style="width:10px;height:10px;border-radius:50%;background:${validCor};flex-shrink:0;display:inline-block"></span>
           <div style="flex:1">
             <div style="font-weight:800;font-size:15px;color:var(--text)">${atrasada ? 'Validação Pendente (Atrasada)' : 'Validação Pendente'}</div>
-            <div style="font-size:12px;color:var(--text2);margin-top:2px">${turnoIcon} Turno ${val.turno} · ${fmtData(val.data)} · <b>${val.supervisor}</b></div>
+            <div style="font-size:12px;color:var(--text2);margin-top:2px">Turno ${val.turno} · ${fmtData(val.data)} · <b>${val.supervisor}</b></div>
             ${atrasada ? '<div style="font-size:11px;color:var(--text3);margin-top:2px">O prazo expirou, mas você ainda pode validar.</div>' : ''}
           </div>
           ${timerHtml}
@@ -970,9 +968,8 @@ async function abrirModalValidacao() {
     if (!val) { toast('Validação não encontrada ou expirada','aviso'); return; }
 
     const modal = document.getElementById('modal-diario-validacao');
-    const turnoIcon = val.turno==='Manha'?'☀️':val.turno==='Tarde'?'🌅':'🌙';
     document.getElementById('modal-val-subtitulo').textContent =
-      `${turnoIcon} ${val.turno} · ${fmtData(val.data)} · ${val.supervisor}`;
+      `${val.turno} · ${fmtData(val.data)} · ${val.supervisor}`;
 
     // Resumo
     const d = val.dados || {};
@@ -1005,11 +1002,11 @@ async function abrirModalValidacao() {
           <div style="display:flex;gap:6px">
             <button onclick="marcarItem('${item.id}',true,this)" data-item="${item.id}" data-val="true"
               style="padding:7px 16px;border-radius:7px;border:2px solid #86efac;background:transparent;color:#16a34a;font-weight:800;font-size:13px;cursor:pointer;transition:.15s">
-              ✅ Sim
+              Sim
             </button>
             <button onclick="marcarItem('${item.id}',false,this)" data-item="${item.id}" data-val="false"
               style="padding:7px 16px;border-radius:7px;border:2px solid #fca5a5;background:transparent;color:#dc2626;font-weight:800;font-size:13px;cursor:pointer;transition:.15s">
-              ❌ Não
+              Não
             </button>
           </div>
         </div>
@@ -1174,17 +1171,17 @@ async function carregarListaDiarios() {
     const lista = await res.json();
     if (!lista.length) { el.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:8px">Nenhum diário salvo ainda</div>'; return; }
     el.innerHTML = lista.map(d => {
-      const turnoIcon = d.turno === 'Manha' ? '☀️' : d.turno === 'Tarde' ? '🌅' : '🌙';
-      const leuBadge = d.leu_anterior ? '<span style="font-size:9px;background:#f0fdf4;color:#166534;border:1px solid #86efac;border-radius:10px;padding:1px 6px">✓ leu</span>' : '';
+      const turnoCor = d.turno === 'Manha' ? '#F59E0B' : d.turno === 'Tarde' ? '#3B82F6' : '#8B5CF6';
+      const leuBadge = d.leu_anterior ? '<span style="font-size:9px;background:#f0fdf4;color:#166534;border:1px solid #86efac;border-radius:10px;padding:1px 6px">leu</span>' : '';
       const statusMap = {
         rascunho: '<span style="font-size:9px;background:#f1f5f9;color:#64748b;border:1px solid #cbd5e1;border-radius:10px;padding:1px 6px">Rascunho</span>',
-        enviado:  '<span style="font-size:9px;background:#eff6ff;color:#1d4ed8;border:1px solid #93c5fd;border-radius:10px;padding:1px 6px">📤 Enviado</span>',
-        validado: `<span style="font-size:9px;background:#f0fdf4;color:#166534;border:1px solid #86efac;border-radius:10px;padding:1px 6px">✅ ${d.pontuacao!=null?d.pontuacao+'/100':''}</span>`,
-        expirado: '<span style="font-size:9px;background:#fef2f2;color:#991b1b;border:1px solid #fca5a5;border-radius:10px;padding:1px 6px">⏰ Expirado</span>',
+        enviado:  '<span style="font-size:9px;background:#eff6ff;color:#1d4ed8;border:1px solid #93c5fd;border-radius:10px;padding:1px 6px">Enviado</span>',
+        validado: `<span style="font-size:9px;background:#f0fdf4;color:#166534;border:1px solid #86efac;border-radius:10px;padding:1px 6px">${d.pontuacao!=null?d.pontuacao+'/100':'Validado'}</span>`,
+        expirado: '<span style="font-size:9px;background:#fef2f2;color:#991b1b;border:1px solid #fca5a5;border-radius:10px;padding:1px 6px">Expirado</span>',
       };
       const stBadge = statusMap[d.status] || statusMap.rascunho;
       return `<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);cursor:pointer;margin-bottom:6px" onclick="verDiario(${d.id})">
-        <div style="font-size:18px">${turnoIcon}</div>
+        <span style="width:8px;height:8px;border-radius:50%;background:${turnoCor};flex-shrink:0;display:inline-block"></span>
         <div style="flex:1">
           <div style="font-weight:700;font-size:13px">${fmtData(d.data)} — ${d.turno} ${leuBadge} ${stBadge}</div>
           <div style="font-size:11px;color:var(--text3)">${d.supervisor}</div>
@@ -1395,7 +1392,7 @@ async function _buscarEmbalagemDeskLegacy() {
     const p = pedidos.find(x => String(x.numero_pedido) === num);
     if (!p) {
       if (cont) cont.innerHTML = `<div style="padding:12px 16px;background:#fef2f2;border:1.5px solid #fecaca;border-radius:10px;color:#dc2626;font-weight:700;font-size:13px">
-        ❌ Pedido <b>${num}</b> não encontrado na fila de embalagem
+        Pedido <b>${num}</b> não encontrado na fila de embalagem
       </div>`;
       return;
     }
@@ -1598,38 +1595,35 @@ function renderCardEmb(p, emAndamento, mode, readOnly) {
     // Fila tab — exibe apenas o status, sem botões de ação
     const statusInfo = isEmbalado
       ? `<div style="display:flex;align-items:center;gap:8px;padding:10px 16px;background:#f0fdf4;border-top:1px solid #bbf7d0">
-           <span style="font-size:14px">✅</span>
            <span style="font-size:12px;color:#16a34a;font-weight:700">Embalado por <b>${p.embalado_por||'—'}</b></span>
          </div>`
       : emAndamento
         ? `<div style="display:flex;align-items:center;gap:8px;padding:10px 16px;background:#eff6ff;border-top:1px solid #bfdbfe">
-             <span style="font-size:14px">⏱</span>
              <span style="font-size:12px;color:#2563eb;font-weight:700">Em andamento</span>
            </div>`
         : `<div style="display:flex;align-items:center;gap:8px;padding:10px 16px;background:var(--surface2);border-top:1px solid var(--border)">
-             <span style="font-size:14px">⏳</span>
              <span style="font-size:12px;color:var(--text3);font-weight:600">Aguardando embalagem</span>
            </div>`;
     botoes = statusInfo;
   } else {
     botoes = isEmbalado
       ? `<div style="padding:12px 16px;background:#f0fdf4;border-top:1px solid #bbf7d0">
-           <div style="font-size:12px;color:#16a34a;font-weight:700">✅ Embalado por <b>${p.embalado_por||'—'}</b></div>
+           <div style="font-size:12px;color:#16a34a;font-weight:700">Embalado por <b>${p.embalado_por||'—'}</b></div>
          </div>`
       : `<div style="padding:14px 16px;display:grid;grid-template-columns:${emAndamento?'1fr 1fr':'1fr'};gap:10px">
           ${emAndamento ? `
             <button onclick="${initFn}(${p.id})"
               style="padding:14px;background:#f1f5f9;color:#64748b;border:2px solid #cbd5e1;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer">
-              🔄 Reiniciar
+              Reiniciar
             </button>
             <button onclick="${endFn}(${p.id})"
               style="padding:14px;background:#16a34a;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(22,163,74,.3)">
-              ✅ Encerrar
+              Encerrar
             </button>
           ` : `
             <button onclick="${initFn}(${p.id})"
               style="padding:16px;background:#4f46e5;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(79,70,229,.3)">
-              ▶️ Iniciar Embalagem
+              Iniciar Embalagem
             </button>
           `}
          </div>`;
@@ -1668,7 +1662,7 @@ function renderCardEmb(p, emAndamento, mode, readOnly) {
         </div>
       </div>
       <div style="padding:8px 16px;border-bottom:1px solid var(--border)">
-        <span style="font-size:11px;color:var(--text2)">🚚 ${p.transportadora||'—'}</span>
+        <span style="font-size:11px;color:var(--text2)">${p.transportadora||'—'}</span>
       </div>
       ${botoes}
     </div>`;
@@ -1762,7 +1756,7 @@ async function carregarEmbalagemEmbalados() {
           </div>
         </div>
         <div style="padding:8px 16px">
-          <span style="font-size:11px;color:var(--text2)">🚚 ${p.transportadora||'—'}</span>
+          <span style="font-size:11px;color:var(--text2)">${p.transportadora||'—'}</span>
         </div>
       </div>
     `).join('');
@@ -1904,13 +1898,13 @@ async function carregarPlacar() {
     const el = document.getElementById('pass-placar-content');
     if (!el) return;
     const COR = { Manha:'#F59E0B', Tarde:'#3B82F6', Noite:'#8B5CF6' };
-    const EMO = { Manha:'☀️', Tarde:'🌤️', Noite:'🌙' };
+    const RANK = ['1º', '2º', '3º'];
     el.innerHTML = `
       <div style="margin-bottom:16px">
         ${placar.map((p,i) => `
           <div style="background:#fff;border:1px solid #E2E8F0;border-left:4px solid ${COR[p.turno]||'#CBD5E1'};border-radius:10px;padding:14px 16px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">
             <div>
-              <div style="font-size:12px;font-weight:700;color:#0F172A">${i===0?'🥇':i===1?'🥈':'🥉'} ${EMO[p.turno]||''} ${p.turno}</div>
+              <div style="font-size:12px;font-weight:700;color:#0F172A">${RANK[i]||''} ${p.turno}</div>
             </div>
             <div style="text-align:right">
               <div style="font-size:22px;font-weight:800;color:${COR[p.turno]||'#334155'}">${p.pontos}</div>
@@ -1920,7 +1914,7 @@ async function carregarPlacar() {
       </div>
       <button onclick="resetarPlacar(prompt('Turno para resetar (Manha/Tarde/Noite):'))"
         style="width:100%;padding:10px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;font-size:12px;color:#64748B;cursor:pointer">
-        🔄 Resetar pontuação de turno
+        Resetar pontuação de turno
       </button>`;
   } catch(e) { console.warn(e); }
 }
@@ -2276,7 +2270,7 @@ async function buscarEmbalagemDesk() {
     const p = pedidos.find(x => String(x.numero_pedido) === num);
     if (!p) {
       if (cont) cont.innerHTML = `<div style="padding:12px 16px;background:#fef2f2;border:1.5px solid #fecaca;border-radius:10px;color:#dc2626;font-weight:700;font-size:13px">
-        ❌ Pedido <b>${num}</b> não encontrado na fila de embalagem
+        Pedido <b>${num}</b> não encontrado na fila de embalagem
       </div>`;
       return;
     }
