@@ -913,7 +913,6 @@ function catUploadZonaHTML() {
   return `
   <div style="border:2px dashed var(--border);border-radius:10px;padding:16px;text-align:center;cursor:pointer"
        onclick="catAbrirImport()" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
-    <div style="display:none">
     <div style="font-size:12px;font-weight:700;color:var(--text)">Clique para importar barras.xlsx</div>
     <div style="font-size:10px;color:var(--text3);margin-top:4px">Suporte: .xlsx · .xls · .csv</div>
     <input id="cat-import-input" type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="catProcessarArquivo(this)">
@@ -932,7 +931,7 @@ async function catProcessarArquivo(input) {
   const file = input.files?.[0];
   if (!file) return;
   const zona = document.getElementById('bc-upload-zona');
-  if (zona) zona.innerHTML = `<div style="padding:12px;text-align:center;color:var(--text3)">⏳ Lendo arquivo...</div>`;
+  if (zona) zona.innerHTML = `<div style="padding:12px;text-align:center;color:var(--text3)">Lendo arquivo...</div>`;
   try {
     const data = await file.arrayBuffer();
     const wb   = XLSX.read(data, { type:'array' });
@@ -1079,7 +1078,7 @@ function invRenderizarSessoes() {
 
     ${podeCriar ? `
     <div class="card" style="padding:16px 18px;margin-bottom:14px">
-      <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:1px;margin-bottom:10px">🆕 CRIAR NOVO INVENTÁRIO</div>
+      <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:1px;margin-bottom:10px">CRIAR NOVO INVENTÁRIO</div>
       <input id="inv-nome-novo" placeholder="Nome do inventário (ex: Inventário Geral Jul/2026)..."
         style="width:100%;padding:9px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;outline:none;box-sizing:border-box;margin-bottom:10px">
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
@@ -1104,7 +1103,7 @@ function invRenderizarSessoes() {
 
     <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:14px">
       <button onclick="_invAbaAtual='andamento';invRenderizarSessoes()" style="${tabBtnStyle('andamento')}">
-        ⏳ Em andamento
+        Em andamento
         <span style="background:var(--surface2);border-radius:20px;padding:1px 7px;font-size:10px;margin-left:5px">${sessAndamento.length}</span>
       </button>
       <button onclick="_invAbaAtual='concluidos';invRenderizarSessoes()" style="${tabBtnStyle('concluidos')}">
