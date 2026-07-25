@@ -460,7 +460,7 @@ async function acaoRepTab(id, acao, nomeLogado, proximaTab, qtd = 0) {
           toast('Voltou para a fila — próximo turno vai buscar.', 'success');
           carregarRepSeparar(); _atualizarBadgesRep();
         } else {
-          toast('3ª tentativa — item enviado para protocolo.', 'success');
+          toast('3ª tentativa — item enviado para Liberação do supervisor.', 'success');
           mudarTabRep('protocolo'); mudarTabRepDesk('protocolo'); _atualizarBadgesRep();
         }
       } else {

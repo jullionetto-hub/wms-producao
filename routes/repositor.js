@@ -387,6 +387,10 @@ router.put('/repositor/avisos/:id/liberar', requerAuth, requerPerfil('supervisor
       `UPDATE avisos_repositor SET status=$1, situacao=$1, hora_reposto=$2, historico=$3, quem_guardou=$4 WHERE id=$5`,
       [novoStatus, hora, JSON.stringify(histNovo), supervisorNome, req.params.id]
     );
+    if (novoStatus === 'reposto') {
+      const av = await db.get('SELECT item_id FROM avisos_repositor WHERE id=$1', [req.params.id]);
+      if (av?.item_id) await pool.query(`UPDATE itens_pedido SET status='encontrado' WHERE id=$1`, [av.item_id]);
+    }
     const atual2 = await db.get('SELECT numero_pedido FROM avisos_repositor WHERE id=$1', [req.params.id]);
     req.app.get('io')?.emit('aviso:atualizado', { id: req.params.id, status: novoStatus, numero_pedido: atual2?.numero_pedido });
     res.json({mensagem: decisao === 'encontrado' ? 'Item liberado como Encontrado.' : 'Item liberado para Protocolo.'});
