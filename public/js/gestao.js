@@ -22,13 +22,13 @@ function renderizarPagGestao() {
   <!-- ── Header ── -->
   <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;padding:16px 24px 12px;border-bottom:1px solid var(--border);flex-shrink:0">
     <div>
-      <div style="font-family:'Space Mono',monospace;font-size:17px;font-weight:800;color:var(--text)">📅 Absenteísmo</div>
+      <div style="font-family:'Space Mono',monospace;font-size:17px;font-weight:800;color:var(--text)">Absenteísmo</div>
       <div id="gabs-periodo" style="font-size:11px;color:var(--text3);margin-top:3px;font-weight:600"></div>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button onclick="gerarRelatorioAbs()" style="padding:7px 14px;background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;color:var(--text2)">📊 Gerar Relatório</button>
-      <button onclick="mostrarArquivosAbs()" style="padding:7px 14px;background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;color:var(--text2)">📁 Arquivos Importados</button>
-      <button onclick="toggleImportarAbs()" style="padding:7px 14px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📥 Importar PDF</button>
+      <button onclick="gerarRelatorioAbs()" style="padding:7px 14px;background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;color:var(--text2)">Gerar Relatório</button>
+      <button onclick="mostrarArquivosAbs()" style="padding:7px 14px;background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;color:var(--text2)">Arquivos Importados</button>
+      <button onclick="toggleImportarAbs()" style="padding:7px 14px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">Importar PDF</button>
     </div>
   </div>
 
@@ -36,9 +36,9 @@ function renderizarPagGestao() {
   <div id="gabs-modal-arq" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;align-items:center;justify-content:center">
     <div style="background:var(--surface);border-radius:16px;padding:20px;width:min(520px,95vw);max-height:80vh;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,.3)">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-        <div style="font-size:14px;font-weight:800;color:var(--text)">📁 Arquivos Importados</div>
+        <div style="font-size:14px;font-weight:800;color:var(--text)">Arquivos Importados</div>
         <div style="display:flex;align-items:center;gap:8px">
-          <button onclick="absLimparTudo()" style="padding:5px 12px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🗑️ Limpar Tudo</button>
+          <button onclick="absLimparTudo()" style="padding:5px 12px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">Limpar Tudo</button>
           <button onclick="fecharArquivosAbs()" style="background:transparent;border:none;font-size:20px;cursor:pointer;color:var(--text3);line-height:1">✕</button>
         </div>
       </div>
@@ -55,7 +55,6 @@ function renderizarPagGestao() {
       ondrop="absHandleDrop(event)"
       style="border:2px dashed var(--border);border-radius:10px;padding:22px;text-align:center;cursor:pointer;transition:.2s"
       onclick="document.getElementById('gabs-file-input').click()">
-      <div style="font-size:28px;margin-bottom:6px">📄</div>
       <div style="font-size:13px;font-weight:700;color:var(--text)">Clique ou arraste o PDF aqui</div>
       <div style="font-size:11px;color:var(--text3);margin-top:3px">Relatório InPonto / MIESS — máx. 30 MB</div>
     </div>
@@ -65,7 +64,7 @@ function renderizarPagGestao() {
 
   <!-- ── Seletor de período ── -->
   <div style="padding:10px 24px 8px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--surface2)">
-    <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.5px;margin-bottom:6px">📅 PERÍODO DE ANÁLISE</div>
+    <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.5px;margin-bottom:6px">PERÍODO DE ANÁLISE</div>
     <div id="gabs-periodo-btns" style="display:flex;gap:6px;flex-wrap:wrap">
       <span style="font-size:11px;color:var(--text3)">Carregando...</span>
     </div>
@@ -76,7 +75,7 @@ function renderizarPagGestao() {
 
   <!-- ── Tolerância de atraso ── -->
   <div style="display:flex;align-items:center;gap:10px;padding:0 24px 12px;flex-shrink:0;flex-wrap:wrap">
-    <span style="font-size:11px;font-weight:800;color:var(--text3);letter-spacing:.5px;white-space:nowrap">⏱ TOLERÂNCIA DE ATRASO:</span>
+    <span style="font-size:11px;font-weight:800;color:var(--text3);letter-spacing:.5px;white-space:nowrap">TOLERÂNCIA DE ATRASO:</span>
     <div style="display:flex;gap:6px;flex-wrap:wrap" id="gabs-tol-btns">
       ${[0,5,10,15,30].map(m => `
       <button onclick="setToleranciAbs(${m})" id="gabs-tol-${m}"
@@ -96,14 +95,14 @@ function renderizarPagGestao() {
     </div>
     <button onclick="aplicarToleranciaAbs()"
       style="padding:4px 14px;border-radius:20px;border:1.5px solid var(--accent);background:var(--accent);color:#fff;font-size:12px;font-weight:700;cursor:pointer">
-      🔄 Atualizar
+      Atualizar
     </button>
     <span id="gabs-tol-label" style="font-size:11px;color:var(--text3)"></span>
   </div>
 
   <!-- ── Filtro de turno ── -->
   <div style="display:flex;align-items:center;gap:10px;padding:0 24px 12px;flex-shrink:0;flex-wrap:wrap;border-bottom:1px solid var(--border)">
-    <span style="font-size:11px;font-weight:800;color:var(--text3);letter-spacing:.5px;white-space:nowrap">👔 TURNO:</span>
+    <span style="font-size:11px;font-weight:800;color:var(--text3);letter-spacing:.5px;white-space:nowrap">TURNO:</span>
     <div id="gabs-turno-btns" style="display:flex;gap:6px;flex-wrap:wrap"></div>
   </div>
 
@@ -114,7 +113,7 @@ function renderizarPagGestao() {
     <div style="width:240px;flex-shrink:0;display:flex;flex-direction:column;border-right:1px solid var(--border);background:var(--surface2)">
       <div style="padding:10px 12px;border-bottom:1px solid var(--border);flex-shrink:0">
         <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.5px;margin-bottom:6px">FUNCIONÁRIOS</div>
-        <input type="text" id="gabs-busca" placeholder="🔍 Buscar nome..."
+        <input type="text" id="gabs-busca" placeholder="Buscar nome..."
           oninput="filtrarListaAbs(this.value)"
           style="width:100%;padding:6px 9px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text);box-sizing:border-box"/>
       </div>
@@ -126,7 +125,7 @@ function renderizarPagGestao() {
           </label>
           <button onclick="absExcluirSelecionados()"
             style="padding:3px 8px;background:#dc2626;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0">
-            🗑️ Excluir
+            Excluir
           </button>
         </div>
       </div>
@@ -198,7 +197,7 @@ async function _renderPeriodBtns(forceRefresh) {
   };
 
   el.innerHTML = [
-    btn('📈 Histórico', 'selecionarUploadAbs(null)', null),
+    btn('Histórico', 'selecionarUploadAbs(null)', null),
     ...periods.map(p => btn(
       _fmtPdBtn(p.start, p.end),
       `selecionarUploadAbs(${p.upload_id})`,
@@ -266,14 +265,13 @@ function _renderTurnoBtns() {
     return;
   }
 
-  const EMOJI = { 'Manhã': '🌅', 'Tarde': '🌇', 'Madrugada': '🌙', 'Outros': '🕐' };
   el.innerHTML = ['Todos', ...turnos].map(t => {
     const ativo = t === 'Todos' ? !_absTurnoFiltro : _absTurnoFiltro === t;
     const arg   = t === 'Todos' ? 'null' : `'${t}'`;
     return `<button onclick="setTurnoFiltro(${arg})"
       style="padding:4px 12px;border-radius:20px;border:1.5px solid var(--border);font-size:12px;font-weight:700;cursor:pointer;
              background:${ativo?'var(--accent)':'var(--surface2)'};color:${ativo?'#fff':'var(--text2)'}">
-      ${EMOJI[t]||''} ${t}
+      ${t}
     </button>`;
   }).join('');
 }
@@ -371,20 +369,17 @@ function aplicarToleranciaAbs() {
       : 0;
 
     const kpis = [
-      { icon:'👥', label:'Funcionários',   val: totalFunc,                bg:'#eff6ff', cor:'#1d4ed8' },
-      { icon:'❌', label:'Total Faltas',   val: totalFaltas,              bg:'#fef2f2', cor:'#dc2626' },
-      { icon:'🏥', label:'Atestados',      val: totalAtestados,           bg:'#fefce8', cor:'#ca8a04' },
-      { icon:'📉', label:'Taxa da Equipe', val:`${taxaEquipe.toFixed(1)}%`,
+      { label:'Funcionários',   val: totalFunc,                bg:'#eff6ff', cor:'#1d4ed8' },
+      { label:'Total Faltas',   val: totalFaltas,              bg:'#fef2f2', cor:'#dc2626' },
+      { label:'Atestados',      val: totalAtestados,           bg:'#fefce8', cor:'#ca8a04' },
+      { label:'Taxa da Equipe', val:`${taxaEquipe.toFixed(1)}%`,
         bg:  taxaEquipe>=10?'#fef2f2':taxaEquipe>=5?'#fefce8':'#f0fdf4',
         cor: taxaEquipe>=10?'#dc2626':taxaEquipe>=5?'#ca8a04':'#16a34a' },
     ];
     cards.innerHTML = kpis.map(c => `
-      <div style="background:${c.bg};border:1px solid ${c.cor}33;border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:12px">
-        <div style="font-size:26px">${c.icon}</div>
-        <div>
-          <div style="font-size:10px;font-weight:800;color:${c.cor}aa;letter-spacing:.5px">${c.label.toUpperCase()}</div>
-          <div style="font-size:24px;font-weight:900;color:${c.cor};font-family:'Space Mono',monospace;line-height:1.1">${c.val}</div>
-        </div>
+      <div style="background:${c.bg};border:1px solid ${c.cor}33;border-radius:12px;padding:14px 16px">
+        <div style="font-size:10px;font-weight:800;color:${c.cor};letter-spacing:.5px;margin-bottom:6px">${c.label.toUpperCase()}</div>
+        <div style="font-size:28px;font-weight:900;color:${c.cor};font-family:'Space Mono',monospace;line-height:1">${c.val}</div>
       </div>`).join('');
   }
 
@@ -423,19 +418,19 @@ function absHandleDrop(event) {
 async function absEnviarPdf(file) {
   if (!file) return;
   const status = document.getElementById('gabs-upload-status');
-  status.innerHTML = `<span style="color:var(--text2)">⏳ Enviando <b>${file.name}</b>...</span>`;
+  status.innerHTML = `<span style="color:var(--text2)">Enviando <b>${file.name}</b>...</span>`;
   const fd = new FormData();
   fd.append('file', file);
   try {
     const res  = await fetch(`${API}/gestao/absenteismo/upload`, { method:'POST', credentials:'include', body: fd });
     const data = await res.json();
-    if (!res.ok) { status.innerHTML = `<span style="color:var(--red)">❌ ${data.erro || 'Erro no upload'}</span>`; return; }
-    status.innerHTML = `<span style="color:var(--green)">✅ ${data.message || 'Importado!'} (${data.employees} funcionário(s))</span>`;
+    if (!res.ok) { status.innerHTML = `<span style="color:var(--red)">${data.erro || 'Erro no upload'}</span>`; return; }
+    status.innerHTML = `<span style="color:var(--green)">${data.message || 'Importado!'} (${data.employees} funcionário(s))</span>`;
     document.getElementById('gabs-file-input').value = '';
     _absUploads = []; // força refresh dos botões de período
     carregarGestaoAbsenteismo();
   } catch(e) {
-    status.innerHTML = `<span style="color:var(--red)">❌ Erro: ${e.message}</span>`;
+    status.innerHTML = `<span style="color:var(--red)">Erro: ${e.message}</span>`;
   }
 }
 
@@ -455,18 +450,17 @@ async function carregarHistoricoAbs() {
       const ok  = u.status === 'success';
       const dt  = u.upload_at ? new Date(u.upload_at).toLocaleString('pt-BR') : '—';
       const cor = ok ? '#16a34a' : 'var(--red)';
-      const ico = ok ? '✅' : '❌';
       return `
       <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;background:var(--surface2);margin-bottom:8px;font-size:12px">
-        <span style="font-size:18px;flex-shrink:0">${ico}</span>
+        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${cor};flex-shrink:0"></span>
         <div style="flex:1;min-width:0">
           <div style="font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${u.filename}</div>
           <div style="color:var(--text3);margin-top:2px">${dt}</div>
           <div style="color:${cor};font-size:11px">${ok ? `${u.records_count ?? 0} funcionário(s)` : u.error_message || 'erro'}</div>
         </div>
         <button onclick="absExcluirUpload(${u.id},this)" title="Excluir arquivo"
-          style="background:#fee2e2;border:none;color:#dc2626;font-size:14px;cursor:pointer;padding:6px 10px;border-radius:8px;font-weight:700;flex-shrink:0">
-          🗑️ Excluir
+          style="background:#fee2e2;border:none;color:#dc2626;font-size:12px;cursor:pointer;padding:6px 10px;border-radius:8px;font-weight:700;flex-shrink:0">
+          Excluir
         </button>
       </div>`;
     }).join('');
@@ -498,8 +492,8 @@ async function absExcluirUpload(id, btn) {
   try {
     const res = await fetch(`${API}/gestao/absenteismo/uploads/${id}`, { method:'DELETE', credentials:'include' });
     if (res.ok) { toast('Arquivo excluído!','sucesso'); _absUploads = []; _absPeriodo = null; _absActivePeriodId = null; _absSelectedIds = new Set(); carregarHistoricoAbs(); carregarGestaoAbsenteismo(); }
-    else { btn.disabled = false; btn.innerHTML = '🗑️ Excluir'; toast('Erro ao excluir','erro'); }
-  } catch(e) { btn.disabled = false; btn.innerHTML = '🗑️ Excluir'; }
+    else { btn.disabled = false; btn.innerHTML = 'Excluir'; toast('Erro ao excluir','erro'); }
+  } catch(e) { btn.disabled = false; btn.innerHTML = 'Excluir'; }
 }
 
 
@@ -574,18 +568,15 @@ async function carregarGestaoAbsenteismo() {
     }
 
     const kpis = [
-      { icon:'👥', label:'Funcionários',   val: totalFunc,              bg:'#eff6ff', cor:'#1d4ed8' },
-      { icon:'❌', label:'Total Faltas',   val: totalFaltas,            bg:'#fef2f2', cor:'#dc2626' },
-      { icon:'🏥', label:'Atestados',      val: totalAtestados,         bg:'#fefce8', cor:'#ca8a04' },
-      { icon:'📉', label:'Taxa da Equipe', val:`${taxaEquipe.toFixed(1)}%`, bg: taxaEquipe>=10?'#fef2f2':taxaEquipe>=5?'#fefce8':'#f0fdf4', cor: taxaEquipe>=10?'#dc2626':taxaEquipe>=5?'#ca8a04':'#16a34a' },
+      { label:'Funcionários',   val: totalFunc,              bg:'#eff6ff', cor:'#1d4ed8' },
+      { label:'Total Faltas',   val: totalFaltas,            bg:'#fef2f2', cor:'#dc2626' },
+      { label:'Atestados',      val: totalAtestados,         bg:'#fefce8', cor:'#ca8a04' },
+      { label:'Taxa da Equipe', val:`${taxaEquipe.toFixed(1)}%`, bg: taxaEquipe>=10?'#fef2f2':taxaEquipe>=5?'#fefce8':'#f0fdf4', cor: taxaEquipe>=10?'#dc2626':taxaEquipe>=5?'#ca8a04':'#16a34a' },
     ];
     cards.innerHTML = kpis.map(c => `
-      <div style="background:${c.bg};border:1px solid ${c.cor}33;border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:12px">
-        <div style="font-size:26px">${c.icon}</div>
-        <div>
-          <div style="font-size:10px;font-weight:800;color:${c.cor}aa;letter-spacing:.5px">${c.label.toUpperCase()}</div>
-          <div style="font-size:24px;font-weight:900;color:${c.cor};font-family:'Space Mono',monospace;line-height:1.1">${c.val}</div>
-        </div>
+      <div style="background:${c.bg};border:1px solid ${c.cor}33;border-radius:12px;padding:14px 16px">
+        <div style="font-size:10px;font-weight:800;color:${c.cor};letter-spacing:.5px;margin-bottom:6px">${c.label.toUpperCase()}</div>
+        <div style="font-size:28px;font-weight:900;color:${c.cor};font-family:'Space Mono',monospace;line-height:1">${c.val}</div>
       </div>`).join('');
 
     _absRows = [...(team.employees || [])].sort(
@@ -599,7 +590,7 @@ async function carregarGestaoAbsenteismo() {
 
   } catch(e) {
     cards.innerHTML  = '';
-    tabela.innerHTML = `<div style="color:var(--red);padding:20px;font-size:13px">Erro ao carregar absenteísmo: ${e.message}<br><small style="color:var(--text3)">Importe os PDFs no botão 📥 Importar PDF</small></div>`;
+    tabela.innerHTML = `<div style="color:var(--red);padding:20px;font-size:13px">Erro ao carregar absenteísmo: ${e.message}<br><small style="color:var(--text3)">Importe os PDFs pelo botão Importar PDF</small></div>`;
   }
 }
 
@@ -648,32 +639,29 @@ async function _renderHistoricoEvolucao() {
 
     if (cards) {
       const kpis = [
-        { icon:'📋', label:'Períodos importados', val: hist.length, bg:'#eff6ff', cor:'#1d4ed8', extra:'' },
-        { icon:'👥', label:'Funcionários (atual)', val: last.total_employees, bg:'#f0fdf4', cor:'#16a34a',
+        { label:'Períodos importados', val: hist.length, bg:'#eff6ff', cor:'#1d4ed8', extra:'' },
+        { label:'Funcionários (atual)', val: last.total_employees, bg:'#f0fdf4', cor:'#16a34a',
           extra: prev ? trendHtml(last.total_employees, prev.total_employees, false) : '' },
-        { icon:'📉', label:'Absenteísmo (atual)', val: `${last.absenteeism_rate.toFixed(1)}%`,
+        { label:'Absenteísmo (atual)', val: `${last.absenteeism_rate.toFixed(1)}%`,
           bg: last.absenteeism_rate>=10?'#fef2f2':last.absenteeism_rate>=5?'#fefce8':'#f0fdf4',
           cor: last.absenteeism_rate>=10?'#dc2626':last.absenteeism_rate>=5?'#ca8a04':'#16a34a',
           extra: prev ? trendHtml(last.absenteeism_rate, prev.absenteeism_rate, true) : '' },
-        { icon:'⏱', label:'Atraso (atual)', val: `${last.delay_rate.toFixed(1)}%`,
+        { label:'Atraso (atual)', val: `${last.delay_rate.toFixed(1)}%`,
           bg: last.delay_rate>=5?'#fef2f2':last.delay_rate>=2?'#fefce8':'#f0fdf4',
           cor: last.delay_rate>=5?'#dc2626':last.delay_rate>=2?'#ca8a04':'#16a34a',
           extra: prev ? trendHtml(last.delay_rate, prev.delay_rate, true) : '' },
       ];
       cards.innerHTML = kpis.map(c => `
-        <div style="background:${c.bg};border:1px solid ${c.cor}33;border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:12px">
-          <div style="font-size:26px">${c.icon}</div>
-          <div>
-            <div style="font-size:10px;font-weight:800;color:${c.cor}aa;letter-spacing:.5px">${c.label.toUpperCase()}</div>
-            <div style="font-size:22px;font-weight:900;color:${c.cor};font-family:'Space Mono',monospace;line-height:1.1">${c.val}${c.extra}</div>
-          </div>
+        <div style="background:${c.bg};border:1px solid ${c.cor}33;border-radius:12px;padding:14px 16px">
+          <div style="font-size:10px;font-weight:800;color:${c.cor};letter-spacing:.5px;margin-bottom:6px">${c.label.toUpperCase()}</div>
+          <div style="font-size:24px;font-weight:900;color:${c.cor};font-family:'Space Mono',monospace;line-height:1">${c.val}${c.extra}</div>
         </div>`).join('');
     }
 
     if (tabela) {
       const rows = [...hist].reverse();
       tabela.innerHTML = `
-        <div style="font-size:11px;font-weight:800;color:var(--text3);letter-spacing:.5px;margin-bottom:10px">📈 EVOLUÇÃO POR PERÍODO</div>
+        <div style="font-size:11px;font-weight:800;color:var(--text3);letter-spacing:.5px;margin-bottom:10px">EVOLUÇÃO POR PERÍODO</div>
         <div style="overflow-x:auto;border:1px solid var(--border);border-radius:12px">
           <table style="width:100%;border-collapse:collapse;font-size:12px">
             <thead>
@@ -863,7 +851,7 @@ function _renderTabelaAbs(rows) {
   const tabela = document.getElementById('gabs-tabela');
   if (!tabela) return;
   if (!rows.length) {
-    tabela.innerHTML = '<div style="color:var(--text3);padding:40px;text-align:center;font-size:13px">Nenhum dado. Importe os PDFs no botão 📥.</div>';
+    tabela.innerHTML = '<div style="color:var(--text3);padding:40px;text-align:center;font-size:13px">Nenhum dado. Importe os PDFs pelo botão Importar PDF.</div>';
     return;
   }
   tabela.innerHTML = `
@@ -929,7 +917,7 @@ function _renderTabelaAbs(rows) {
                   <button onclick="absFeedbackTexto(${r.id},'${nome.replace(/'/g,"\\'")}','${(r.matricula||'').replace(/'/g,"\\'")}')"
                     title="Gerar texto de feedback"
                     style="padding:4px 10px;background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;font-size:11px;cursor:pointer;color:var(--text2);font-weight:700">
-                    📝
+                    FB
                   </button>
                 </div>
               </td>
@@ -1076,16 +1064,16 @@ function _absFeedbackModal(texto, nome) {
   overlay.innerHTML = `
     <div style="background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:20px;max-width:560px;width:100%;box-shadow:0 20px 40px rgba(0,0,0,.35)">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-        <div style="font-weight:900;font-size:15px;color:var(--text)">📝 Feedback — ${nome}</div>
+        <div style="font-weight:900;font-size:15px;color:var(--text)">Feedback — ${nome}</div>
         <button onclick="document.getElementById('abs-feedback-modal').remove()" style="background:transparent;border:none;font-size:18px;cursor:pointer;color:var(--text3);line-height:1;padding:0 4px">✕</button>
       </div>
       ${isLoading
         ? '<div style="color:var(--text3);font-size:13px;padding:20px 0;text-align:center">Gerando texto...</div>'
         : `<textarea id="abs-fb-txt" style="width:100%;min-height:160px;border:1.5px solid var(--border);border-radius:8px;padding:12px;font-size:13px;line-height:1.7;resize:vertical;color:var(--text);background:var(--surface);font-family:inherit;box-sizing:border-box">${texto}</textarea>
            <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end">
-             <button id="abs-copy-btn" onclick="(() => { const t=document.getElementById('abs-fb-txt'),b=document.getElementById('abs-copy-btn'); navigator.clipboard.writeText(t.value).then(()=>{ b.textContent='✓ Copiado!'; b.style.background='#16a34a'; setTimeout(()=>{ b.textContent='📋 Copiar'; b.style.background=''; },2200); }); })()"
+             <button id="abs-copy-btn" onclick="(() => { const t=document.getElementById('abs-fb-txt'),b=document.getElementById('abs-copy-btn'); navigator.clipboard.writeText(t.value).then(()=>{ b.textContent='Copiado!'; b.style.background='#16a34a'; setTimeout(()=>{ b.textContent='Copiar'; b.style.background=''; },2200); }); })()"
                style="padding:8px 20px;background:var(--accent,#3b82f6);color:#fff;border:none;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer">
-               📋 Copiar
+               Copiar
              </button>
              <button onclick="document.getElementById('abs-feedback-modal').remove()"
                style="padding:8px 16px;background:var(--surface);border:1.5px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;color:var(--text2)">
@@ -1240,7 +1228,7 @@ function _renderDetalheAbs(data, nome) {
               ? `<span style="color:${breakOver?'#d97706':'var(--text2)'};font-weight:${breakOver?'700':'400'}">${r.break_start} → ${r.break_end}${breakOver?` <small>(${bd}min)</small>`:''}</span>`
               : '—';
             const atrasoPartes = [];
-            if (anomalia) atrasoPartes.push(`<span style="background:#dc2626;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:800;white-space:nowrap">⚠️ ${r._workedMin}min</span>`);
+            if (anomalia) atrasoPartes.push(`<span style="background:#dc2626;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:800;white-space:nowrap">${r._workedMin}min</span>`);
             if (atr > 0) atrasoPartes.push(`<span style="color:${late?'#dc2626':'#d97706'};font-weight:800">${atr} min</span>`);
             if (earlyMin > 0) atrasoPartes.push(`<span style="color:#2563eb;font-size:10px">−${earlyMin} min antecip.</span>`);
             const atrasoCel = atrasoPartes.length ? atrasoPartes.join('<br>') : '—';
@@ -1265,12 +1253,12 @@ function _renderDetalheAbs(data, nome) {
         <table style="width:100%;border-collapse:collapse;font-size:11px">
           <tbody>${diasEspeciais.map(r => {
             const stLow = (r.status||'').toLowerCase();
-            const label = r.falta    ? '❌ Falta'
-              : r.atestado ? '🏥 Atestado'
-              : r.ferias   ? '🌴 Férias'
-              : stLow === 'dsr'                                                  ? '🔵 DSR'
-              : stLow.includes('folga') || stLow.includes('banco')               ? '🏦 Folga BH'
-              : stLow === 'holiday' || stLow === 'feriado'                       ? '🎉 Feriado'
+            const label = r.falta    ? 'Falta'
+              : r.atestado ? 'Atestado'
+              : r.ferias   ? 'Férias'
+              : stLow === 'dsr'                                                  ? 'DSR'
+              : stLow.includes('folga') || stLow.includes('banco')               ? 'Folga BH'
+              : stLow === 'holiday' || stLow === 'feriado'                       ? 'Feriado'
               : r.status || '—';
             const cor   = r.falta ? '#dc2626' : r.atestado ? '#d97706' : r.ferias ? '#2563eb'
               : stLow.includes('folga') || stLow.includes('banco') ? '#16a34a' : 'var(--text3)';
@@ -1289,7 +1277,7 @@ function _renderDetalheAbs(data, nome) {
     <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
         <div>
-          <div style="font-weight:900;color:var(--text);font-size:15px">📋 ${nome}</div>
+          <div style="font-weight:900;color:var(--text);font-size:15px">${nome}</div>
           <div style="font-size:11px;color:var(--text3);margin-top:2px">${data.schedule||''} · Mat. ${data.matricula||'—'}</div>
         </div>
         <button onclick="document.getElementById('gabs-detalhe').innerHTML='';_absDetalheCache=null"
@@ -1338,7 +1326,7 @@ function _renderDetalheAbs(data, nome) {
       <!-- Info período -->
       <div style="margin-bottom:14px">
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px">
-          <span style="font-size:11px;color:var(--text3)">📅 ${fmtDt(data.period_start)} → ${fmtDt(data.period_end)}</span>
+          <span style="font-size:11px;color:var(--text3)">${fmtDt(data.period_start)} → ${fmtDt(data.period_end)}</span>
           <span style="font-size:11px;color:var(--text3)">Previsto <b>${data.expected_hours||'—'}</b> · Realizado <b>${data.worked_hours||'—'}</b></span>
           ${(data.folga_bh_days||0) > 0 && data.expected_hours_adj ? `<span style="font-size:11px;color:#16a34a;font-weight:700">Previsto ajustado (−${data.folga_bh_days} folga BH): ${data.expected_hours_adj}</span>` : ''}
         </div>
@@ -1346,7 +1334,7 @@ function _renderDetalheAbs(data, nome) {
           const dias = diasTrab.filter(r => r._anomalia)
             .map(r => `${fmtDt(r.date)} (${r._workedMin}min trabalhados)`).join(', ');
           return `<div style="font-size:11px;color:#fff;background:#dc2626;border-radius:6px;padding:5px 10px;font-weight:700;margin-bottom:6px;display:inline-block">
-            ⚠️ Batida suspeita: ${dias} — verificar se houve esquecimento de ponto
+            Batida suspeita: ${dias} — verificar se houve esquecimento de ponto
           </div>`;
         })() : ''}
         ${(() => {
@@ -1363,15 +1351,15 @@ function _renderDetalheAbs(data, nome) {
             ? `déficit de horas (${fmtM(deficit)} a menos no período)`
             : `atraso acumulado (${fmtM(atrMin)})`;
           return `<div style="font-size:10px;color:#92400e;background:#fef3c7;border:1px solid #fcd34d;border-radius:6px;padding:3px 8px;display:inline-block">
-            ⚠️ Absenteísmo de ${taxa}% originado por ${origem}
+            Absenteísmo de ${taxa}% originado por ${origem}
           </div>`;
         })()}
       </div>
 
       <!-- Espelho de ponto -->
       <div style="font-size:11px;font-weight:800;color:var(--text);letter-spacing:.5px;margin-bottom:6px;display:flex;align-items:center;gap:8px">
-        🕐 ESPELHO DE PONTO (${diasTrab.length} dia${diasTrab.length!==1?'s':''} trabalhados)
-        ${diasAnomalia > 0 ? `<span style="background:#dc2626;color:#fff;border-radius:12px;padding:2px 8px;font-size:10px;font-weight:800">⚠️ ${diasAnomalia} batida${diasAnomalia>1?'s':''} suspeita${diasAnomalia>1?'s':''}</span>` : ''}
+        ESPELHO DE PONTO (${diasTrab.length} dia${diasTrab.length!==1?'s':''} trabalhados)
+        ${diasAnomalia > 0 ? `<span style="background:#dc2626;color:#fff;border-radius:12px;padding:2px 8px;font-size:10px;font-weight:800">${diasAnomalia} batida${diasAnomalia>1?'s':''} suspeita${diasAnomalia>1?'s':''}</span>` : ''}
         ${diasComAtraso > 0 ? `<span style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:12px;padding:2px 8px;font-size:10px;font-weight:800">${diasComAtraso} com atraso</span>` : ''}
         ${totalVoltaAntecipada > 0 ? `<span style="background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;border-radius:12px;padding:2px 8px;font-size:10px;font-weight:800">${totalVoltaAntecipada} volta antecipada</span>` : ''}
       </div>
@@ -1405,8 +1393,7 @@ async function gerarRelatorioAbs() {
     funcionarios = funcionarios.filter(f => _parseTurno(f.schedule) === _absTurnoFiltro);
   }
 
-  const TURNO_EMOJI_REL = { 'Manhã': '🌅', 'Tarde': '🌇', 'Madrugada': '🌙', 'Outros': '🕐' };
-  const turnoLabel = _absTurnoFiltro ? ` · ${TURNO_EMOJI_REL[_absTurnoFiltro]||''} ${_absTurnoFiltro}` : '';
+  const turnoLabel = _absTurnoFiltro ? ` · ${_absTurnoFiltro}` : '';
 
   const periodoLabel = _absPeriodo
     ? `${new Date(_absPeriodo.start+'T12:00:00').toLocaleDateString('pt-BR')} a ${new Date(_absPeriodo.end+'T12:00:00').toLocaleDateString('pt-BR')}${turnoLabel}`
@@ -1414,7 +1401,6 @@ async function gerarRelatorioAbs() {
 
   // Agrupa funcionários por turno (Manhã → Tarde → Madrugada → Outros)
   const TURNO_ORDER = ['Manhã', 'Tarde', 'Madrugada', 'Outros'];
-  const TURNO_EMOJI = { 'Manhã': '🌅', 'Tarde': '🌇', 'Madrugada': '🌙', 'Outros': '🕐' };
   const grupos = {};
   for (const func of funcionarios) {
     const t = _parseTurno(func.schedule);
@@ -1516,7 +1502,7 @@ async function gerarRelatorioAbs() {
     linhas += `
       <tr>
         <td colspan="5" style="padding:10px 14px;background:var(--surface2);color:var(--text);font-weight:800;font-size:12px;letter-spacing:.5px;border-top:4px solid var(--accent)">
-          ${TURNO_EMOJI[turno]} ${turno.toUpperCase()}
+          ${turno.toUpperCase()}
           <span style="float:right;font-weight:400;font-size:11px;opacity:.8">
             ${funcsTurno} funcionário${funcsTurno!==1?'s':''}
             ${atrasoTurno>0?' · Atraso total: '+fmtHM(atrasoTurno):''}
@@ -1556,8 +1542,8 @@ async function gerarRelatorioAbs() {
 </head>
 <body>
   <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">
-    <h1>📊 Relatório de Atrasos e Voltas Antecipadas</h1>
-    <button onclick="window.print()" style="padding:8px 16px;background:#0F172A;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🖨️ Imprimir</button>
+    <h1>Relatório de Atrasos e Voltas Antecipadas</h1>
+    <button onclick="window.print()" style="padding:8px 16px;background:#0F172A;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">Imprimir</button>
   </div>
   <div class="sub">Período: ${periodoLabel} · Gerado em ${new Date().toLocaleString('pt-BR')}</div>
 
