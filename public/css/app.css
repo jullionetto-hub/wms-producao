@@ -178,7 +178,7 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
 ══════════════════════════════════════════ */
 .btn{padding:7px 14px;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;transition:all .18s;font-family:'DM Sans',sans-serif;letter-spacing:.2px;display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
 .btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{background:var(--accent2)}
-.btn-success{background:#16a34a;color:#fff}.btn-success:hover{filter:brightness(1.1)}
+.btn-success{background:var(--accent);color:#fff}.btn-success:hover{background:var(--accent2)}
 .btn-danger{background:var(--red);color:#fff}.btn-danger:hover{filter:brightness(1.1)}
 .btn-outline{background:transparent;border:1.5px solid var(--border);color:var(--text2)}.btn-outline:hover{border-color:var(--accent);color:var(--accent);background:var(--bg)}
 .btn-sm{padding:6px 12px;font-size:11px}
@@ -795,8 +795,8 @@ body.dark .item-card.parcial    .item-ic{background:#78350F}
 .date-filter-bar{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px;padding:12px 14px;background:var(--surface2);border-radius:var(--r-sm);border:1px solid var(--border)}
 .date-filter-bar .fg label{color:var(--accent);font-size:10px;font-weight:700;letter-spacing:1px}
 .date-filter-bar input[type=date]{min-width:140px}
-.excel-btn{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .18s;white-space:nowrap}
-.excel-btn:hover{filter:brightness(1.1);transform:translateY(-1px)}
+.excel-btn{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;background:transparent;color:var(--text2);border:1.5px solid var(--border);border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .18s;white-space:nowrap}
+.excel-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--bg)}
 
 /* ══════════════════════════════════════════
    RELATÓRIO ANALÍTICO — botões turno
@@ -809,7 +809,7 @@ body.dark .item-card.parcial    .item-ic{background:#78350F}
   white-space:nowrap;
 }
 .rel-turno-btn.ativo{
-  background:#0F172A;color:#fff;border-color:#0F172A;
+  background:var(--accent);color:#fff;border-color:var(--accent);
 }
 .rel-turno-btn:hover:not(.ativo){background:var(--border);}
 
@@ -844,7 +844,7 @@ body.dark .item-card.parcial    .item-ic{background:#78350F}
   cursor:pointer;letter-spacing:.3px;font-family:'DM Sans',sans-serif;
   transition:all .18s;white-space:nowrap
 }
-.btn-turno.ativo{background:var(--amber);color:#fff;border-color:var(--amber)}
+.btn-turno.ativo{background:var(--accent);color:#fff;border-color:var(--accent)}
 .btn-turno-dist{
   padding:3px 10px;font-size:10px;font-weight:700;
   border:1.5px solid var(--border);border-radius:20px;
@@ -861,11 +861,6 @@ body.dark .item-card.parcial    .item-ic{background:#78350F}
   transition:all .18s;white-space:nowrap
 }
 .btn-transp.ativo{background:var(--accent);color:#fff;border-color:var(--accent)}
-.btn-transp[id="ftransp-drive"].ativo{background:#DC2626;border-color:#DC2626}
-.btn-transp[id="ftransp-prime"].ativo{background:#D97706;border-color:#D97706}
-.btn-transp[id="fturno-manha"].ativo{background:#F59E0B;border-color:#F59E0B}
-.btn-transp[id="fturno-tarde"].ativo{background:#3B82F6;border-color:#3B82F6}
-.btn-transp[id="fturno-noite"].ativo{background:#8B5CF6;border-color:#8B5CF6}
 
 /* Tabela de pedidos — hora formato BR */
 .hora-br{font-variant-numeric:tabular-nums;white-space:nowrap}

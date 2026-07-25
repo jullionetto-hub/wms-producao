@@ -92,9 +92,9 @@ function _atualizarBadgesFiltroTransp(lista) {
   if (sel) {
     const turnoEfetivo = p => p.sep_turno || p.turno_distribuicao;
     sel.options[0].text = `Todos (${lista.length})`;
-    sel.options[1].text = `☀️ Manhã (${c(p => turnoEfetivo(p) === 'Manha')})`;
-    sel.options[2].text = `🌤️ Tarde (${c(p => turnoEfetivo(p) === 'Tarde')})`;
-    sel.options[3].text = `🌙 Noite (${c(p => turnoEfetivo(p) === 'Noite')})`;
+    sel.options[1].text = `Manhã (${c(p => turnoEfetivo(p) === 'Manha')})`;
+    sel.options[2].text = `Tarde (${c(p => turnoEfetivo(p) === 'Tarde')})`;
+    sel.options[3].text = `Noite (${c(p => turnoEfetivo(p) === 'Noite')})`;
   }
   // Botões de transportadora — também parte da lista completa no carregamento inicial
   _atualizarBadgesTransp(lista);

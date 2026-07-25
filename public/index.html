@@ -13,7 +13,7 @@
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/app.css?v=15">
+  <link rel="stylesheet" href="/css/app.css?v=16">
 </head>
 <body>
 
@@ -44,7 +44,7 @@
         <input type="password" id="trocar-senha-conf" placeholder="Digite novamente">
       </div>
       <div id="trocar-erro" style="color:#ef4444;font-size:12px;margin:8px 0;min-height:16px"></div>
-      <button onclick="trocarSenhaTemp()" class="btn-login" style="margin-top:4px">✅ Salvar nova senha</button>
+      <button onclick="trocarSenhaTemp()" class="btn-login" style="margin-top:4px">Salvar nova senha</button>
     </div>
   </div>
     <div class="login-box" id="login-box">
@@ -101,7 +101,7 @@
     <div class="hdir">
       <span id="data-hora"></span>
       <div class="uinfo"><b id="hdr-nome">—</b><small id="hdr-perfil">—</small></div>
-      <button id="btn-senha-hdr" onclick="abrirRedefinirSenha()" class="btn btn-outline btn-sm" style="margin-right:6px">🔑 Senha</button><button class="btn-sair" onclick="sair()">✕ Sair</button>
+      <button id="btn-senha-hdr" onclick="abrirRedefinirSenha()" class="btn btn-outline btn-sm" style="margin-right:6px">Senha</button><button class="btn-sair" onclick="sair()">✕ Sair</button>
     </div>
   </header>
 
@@ -127,22 +127,22 @@
         </div>
         <div class="card" style="margin-bottom:14px">
           <div class="card-hd">FILTROS
-            <button onclick="exportarDashboardExcel()" class="excel-btn">📊 Excel</button>
+            <button onclick="exportarDashboardExcel()" class="excel-btn">Excel</button>
           </div>
           <div class="date-filter-bar" style="align-items:flex-end;gap:14px;flex-wrap:wrap">
             <div>
               <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">TURNO</div>
               <div style="display:flex;gap:4px" id="dash-turno-btns">
                 <button onclick="toggleTurnoDash('Todos')" class="rel-turno-btn ativo" data-t="Todos">Todos</button>
-                <button onclick="toggleTurnoDash('Manha')" class="rel-turno-btn" data-t="Manha">🌅 Manhã</button>
-                <button onclick="toggleTurnoDash('Tarde')" class="rel-turno-btn" data-t="Tarde">☀️ Tarde</button>
-                <button onclick="toggleTurnoDash('Noite')" class="rel-turno-btn" data-t="Noite">🌙 Noite</button>
+                <button onclick="toggleTurnoDash('Manha')" class="rel-turno-btn" data-t="Manha">Manhã</button>
+                <button onclick="toggleTurnoDash('Tarde')" class="rel-turno-btn" data-t="Tarde">Tarde</button>
+                <button onclick="toggleTurnoDash('Noite')" class="rel-turno-btn" data-t="Noite">Noite</button>
               </div>
             </div>
             <div class="fg"><label>DE</label><input type="date" id="filtro-data-ini"/></div>
             <div class="fg"><label>ATÉ</label><input type="date" id="filtro-data-fim"/></div>
             <button class="btn btn-primary btn-sm" onclick="carregarDashboard()">Filtrar</button>
-            <button class="btn btn-outline btn-sm" onclick="document.getElementById('filtro-data-ini').value='';document.getElementById('filtro-data-fim').value='';carregarDashboard()">🔄</button>
+            <button class="btn btn-outline btn-sm" onclick="document.getElementById('filtro-data-ini').value='';document.getElementById('filtro-data-fim').value='';carregarDashboard()">↺</button>
           </div>
         </div>
 
@@ -168,7 +168,7 @@
 
           <!-- Ranking Geral — todas as áreas -->
           <div class="card" style="margin-bottom:14px">
-            <div class="card-hd">🏆 RANKING GERAL — <span id="ranking-periodo-label">HOJE</span></div>
+            <div class="card-hd">RANKING GERAL — <span id="ranking-periodo-label">HOJE</span></div>
             <div id="op-ranking-geral" style="display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--border)">
               <div style="color:var(--text3);text-align:center;padding:20px;font-size:13px;grid-column:span 4">Carregando...</div>
             </div>
@@ -177,26 +177,26 @@
           <!-- Gráficos operacionais -->
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:2px">
             <div class="card">
-              <div class="card-hd">STATUS DOS PEDIDOS — HOJE <button class="btn btn-outline btn-sm" style="margin-left:auto" onclick="carregarGraficoPizzaStatus()">🔄</button></div>
+              <div class="card-hd">STATUS DOS PEDIDOS — HOJE <button class="btn btn-outline btn-sm" style="margin-left:auto" onclick="carregarGraficoPizzaStatus()">↺</button></div>
               <div style="padding:12px;display:flex;align-items:center;justify-content:center;min-height:200px">
                 <canvas id="grafico-pizza-status" style="max-height:200px"></canvas>
               </div>
             </div>
             <div class="card">
-              <div class="card-hd">SITUAÇÃO DA REPOSIÇÃO <button class="btn btn-outline btn-sm" style="margin-left:auto" onclick="carregarGraficoPizzaReposicao()">🔄</button></div>
+              <div class="card-hd">SITUAÇÃO DA REPOSIÇÃO <button class="btn btn-outline btn-sm" style="margin-left:auto" onclick="carregarGraficoPizzaReposicao()">↺</button></div>
               <div style="padding:12px;display:flex;align-items:center;justify-content:center;min-height:200px">
                 <canvas id="grafico-pizza-reposicao" style="max-height:200px"></canvas>
               </div>
             </div>
           </div>
           <div class="card" style="margin-top:14px">
-            <div class="card-hd">PRODUÇÃO POR HORA <button class="btn btn-outline btn-sm" style="margin-left:auto" onclick="carregarGraficoBarrasHoras()">🔄</button></div>
+            <div class="card-hd">PRODUÇÃO POR HORA <button class="btn btn-outline btn-sm" style="margin-left:auto" onclick="carregarGraficoBarrasHoras()">↺</button></div>
             <div style="padding:12px;min-height:180px">
               <canvas id="grafico-barras-horas" style="max-height:200px"></canvas>
             </div>
           </div>
           <div class="card" style="margin-top:14px">
-            <div class="card-hd">FUNIL OPERACIONAL — HOJE <button class="btn btn-outline btn-sm" style="margin-left:auto" onclick="carregarGraficoFunil()">🔄</button></div>
+            <div class="card-hd">FUNIL OPERACIONAL — HOJE <button class="btn btn-outline btn-sm" style="margin-left:auto" onclick="carregarGraficoFunil()">↺</button></div>
             <div style="padding:12px;min-height:180px">
               <canvas id="grafico-funil" style="max-height:200px"></canvas>
             </div>
@@ -208,7 +208,7 @@
           <div class="grid-2">
             <div class="card">
               <div class="card-hd">PRODUTIVIDADE POR SEPARADOR
-                <button class="btn btn-outline btn-sm" onclick="carregarProdutividade()">🔄</button>
+                <button class="btn btn-outline btn-sm" onclick="carregarProdutividade()">↺</button>
               </div>
               <div class="filtros">
                 <div class="fg"><label>USUÁRIO</label><select id="filtro-sep-prod" onchange="carregarProdutividade()"><option value="">Todos</option></select></div>
@@ -220,7 +220,7 @@
             </div>
             <div class="card">
               <div class="card-hd">LINHA DO TEMPO
-                <button class="btn btn-outline btn-sm" onclick="carregarTimeline()">🔄</button>
+                <button class="btn btn-outline btn-sm" onclick="carregarTimeline()">↺</button>
               </div>
               <div class="filtros">
                 <div class="fg"><label>DE</label><input type="date" id="filtro-tl-ini"/></div>
@@ -243,7 +243,7 @@
                     <option value="">Todos os pedidos de hoje</option>
                   </select>
                 </div>
-                <button class="btn btn-outline btn-sm" onclick="carregarMapaEstoque()">🔄</button>
+                <button class="btn btn-outline btn-sm" onclick="carregarMapaEstoque()">↺</button>
               </div>
             </div>
             <div style="padding:12px 0 4px">
@@ -279,8 +279,8 @@
         <div class="pg-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
           Pedidos
           <div style="display:flex;gap:8px;align-items:center">
-            <button onclick="abrirConfigMetas()" class="btn btn-outline btn-sm" title="Configurar metas de performance">⚙️ Metas</button>
-            <button onclick="confirmarZerarDados()" class="btn btn-danger btn-sm">🗑️ Zerar Dados de Teste</button>
+            <button onclick="abrirConfigMetas()" class="btn btn-outline btn-sm" title="Configurar metas de performance">Metas</button>
+            <button onclick="confirmarZerarDados()" class="btn btn-danger btn-sm">Zerar Dados de Teste</button>
           </div>
         </div>
 
@@ -291,10 +291,10 @@
         <div class="card">
           <div class="card-hd">FILTROS
             <div style="display:flex;gap:8px">
-              <button class="btn btn-outline btn-sm" onclick="carregarPedidos()">🔄 Atualizar</button>
-              <button class="btn btn-primary btn-sm" onclick="abrirModalImportar()" style="background:var(--indigo)">📥 Importar</button>
-              <button class="btn btn-success btn-sm" onclick="abrirModalDistribuicao()">⚖️ Distribuir</button>
-              <button class="excel-btn" onclick="exportarExcel('pedidos')">📊 Excel</button>
+              <button class="btn btn-outline btn-sm" onclick="carregarPedidos()">Atualizar</button>
+              <button class="btn btn-primary btn-sm" onclick="abrirModalImportar()">Importar</button>
+              <button class="btn btn-primary btn-sm" onclick="abrirModalDistribuicao()">Distribuir</button>
+              <button class="excel-btn" onclick="exportarExcel('pedidos')">Excel</button>
             </div>
           </div>
           <div class="date-filter-bar">
@@ -311,22 +311,22 @@
               </select>
             </div>
             <div class="fg"><label>Nº PEDIDO</label><input type="text" id="filtro-ped-num" placeholder="Buscar..."/></div>
-            <button class="btn btn-primary btn-sm" onclick="carregarPedidos()">🔍 Filtrar</button>
+            <button class="btn btn-primary btn-sm" onclick="carregarPedidos()">Filtrar</button>
           </div>
           <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:10px;padding-top:4px">
             <!-- TURNO -->
             <select id="sel-fturno" onchange="filtrarPedidosTurno(this.value)"
               style="padding:5px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-weight:700;background:var(--surface);color:var(--text);cursor:pointer;min-width:148px;height:30px">
               <option value="">Todos</option>
-              <option value="Manha">☀️ Manhã</option>
-              <option value="Tarde">🌤️ Tarde</option>
-              <option value="Noite">🌙 Noite</option>
+              <option value="Manha">Manhã</option>
+              <option value="Tarde">Tarde</option>
+              <option value="Noite">Noite</option>
             </select>
             <!-- separador visual -->
             <span style="width:1px;height:22px;background:var(--border);margin:0 2px"></span>
             <!-- TRANSPORTADORA -->
-            <button onclick="filtrarPedidosTransp('DRIVE')"   id="ftransp-drive"   class="btn-transp">🚗 Drive Thru</button>
-            <button onclick="filtrarPedidosTransp('PRIME')"   id="ftransp-prime"   class="btn-transp">⭐ Prime</button>
+            <button onclick="filtrarPedidosTransp('DRIVE')"   id="ftransp-drive"   class="btn-transp">Drive Thru</button>
+            <button onclick="filtrarPedidosTransp('PRIME')"   id="ftransp-prime"   class="btn-transp">Prime</button>
             <button onclick="filtrarPedidosTransp('SEDEX')"   id="ftransp-sedex"   class="btn-transp">SEDEX</button>
             <button onclick="filtrarPedidosTransp('PAC')"     id="ftransp-pac"     class="btn-transp">PAC</button>
             <button onclick="filtrarPedidosTransp('MOTOBOY')" id="ftransp-motoboy" class="btn-transp">MOTOBOY</button>
@@ -345,12 +345,12 @@
         <div class="pg-title">Cadastros</div>
 
         <div style="display:flex;gap:8px;margin-bottom:16px">
-          <button class="btn btn-primary btn-sm" id="ctab-usuarios" onclick="trocarCadastroTab('usuarios')">👥 Usuários</button>
+          <button class="btn btn-primary btn-sm" id="ctab-usuarios" onclick="trocarCadastroTab('usuarios')">Usuários</button>
         </div>
         <div id="cad-usuarios">
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start">
             <div class="card" style="position:sticky;top:70px">
-              <div class="card-hd">➕ NOVO USUÁRIO</div>
+              <div class="card-hd">NOVO USUÁRIO</div>
               <div class="form-grp"><label>NOME COMPLETO</label><input type="text" id="usr-nome" placeholder="Nome do colaborador"/></div>
               <div class="form-grp"><label>LOGIN</label><input type="text" id="usr-login" placeholder="Ex: joao.silva"/></div>
               <div class="form-grp"><label>SENHA</label><input type="password" id="usr-senha" placeholder="Mínimo 6 caracteres"/></div>
@@ -388,21 +388,21 @@
               <div class="form-grp"><label>TURNO</label>
                 <select id="usr-turno"><option value="Manha">Manhã</option><option value="Tarde">Tarde</option><option value="Noite">Noite</option></select>
               </div>
-              <button class="btn btn-primary" style="width:100%;margin-top:4px" onclick="cadastrarUsuario()">✅ Cadastrar Usuário</button>
+              <button class="btn btn-primary" style="width:100%;margin-top:4px" onclick="cadastrarUsuario()">Cadastrar Usuário</button>
             </div>
             <div class="card">
               <div class="card-hd" style="flex-direction:column;align-items:stretch;gap:8px">
                 <div style="display:flex;align-items:center;gap:8px">
-                  <span>👥 USUÁRIOS CADASTRADOS</span>
+                  <span>USUÁRIOS CADASTRADOS</span>
                   <span id="usr-count" style="font-size:11px;color:var(--text3);font-weight:500"></span>
-                  <button class="btn btn-outline btn-sm" onclick="carregarUsuarios()" title="Recarregar" style="margin-left:auto;padding:3px 8px">🔄</button>
-                  <button class="btn btn-sm" style="padding:3px 10px;background:#ede9fe;color:#6d28d9;border:1.5px solid #c4b5fd;font-size:11px;font-weight:700" onclick="vincularTodosSeparadores()" title="Corrigir vínculos quebrados">🔗 Corrigir vínculos</button>
+                  <button class="btn btn-outline btn-sm" onclick="carregarUsuarios()" title="Recarregar" style="margin-left:auto;padding:3px 8px">↺</button>
+                  <button class="btn btn-sm" style="padding:3px 10px;background:#ede9fe;color:#6d28d9;border:1.5px solid #c4b5fd;font-size:11px;font-weight:700" onclick="vincularTodosSeparadores()" title="Corrigir vínculos quebrados">Corrigir vínculos</button>
                 </div>
                 <div style="display:flex;gap:6px">
                   <button id="uf-todos" onclick="filtrarTurnoUsr('todos')" style="flex:1;padding:5px 0;border-radius:8px;border:1.5px solid var(--accent);background:var(--accent);color:#fff;font-size:11px;font-weight:700;cursor:pointer">Todos</button>
-                  <button id="uf-manha" onclick="filtrarTurnoUsr('Manha')" style="flex:1;padding:5px 0;border-radius:8px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text2);font-size:11px;font-weight:700;cursor:pointer">☀️ Manhã</button>
-                  <button id="uf-tarde" onclick="filtrarTurnoUsr('Tarde')" style="flex:1;padding:5px 0;border-radius:8px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text2);font-size:11px;font-weight:700;cursor:pointer">🌅 Tarde</button>
-                  <button id="uf-noite" onclick="filtrarTurnoUsr('Noite')" style="flex:1;padding:5px 0;border-radius:8px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text2);font-size:11px;font-weight:700;cursor:pointer">🌙 Noite</button>
+                  <button id="uf-manha" onclick="filtrarTurnoUsr('Manha')" style="flex:1;padding:5px 0;border-radius:8px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text2);font-size:11px;font-weight:700;cursor:pointer">Manhã</button>
+                  <button id="uf-tarde" onclick="filtrarTurnoUsr('Tarde')" style="flex:1;padding:5px 0;border-radius:8px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text2);font-size:11px;font-weight:700;cursor:pointer">Tarde</button>
+                  <button id="uf-noite" onclick="filtrarTurnoUsr('Noite')" style="flex:1;padding:5px 0;border-radius:8px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text2);font-size:11px;font-weight:700;cursor:pointer">Noite</button>
                 </div>
               </div>
               <div id="lista-usuarios" style="padding:4px 0;max-height:calc(100vh - 220px);overflow-y:auto"></div>
@@ -412,7 +412,7 @@
         <div id="cad-importar" style="display:none">
           <div class="grid-2">
             <div class="card">
-              <div class="card-hd">📥 IMPORTAR PLANILHA</div>
+              <div class="card-hd">IMPORTAR PLANILHA</div>
               <div class="upload-area" id="upload-area"
                 ondragover="event.preventDefault();this.classList.add('drag')"
                 ondragleave="this.classList.remove('drag')"
@@ -422,7 +422,7 @@
                 <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:6px">Arraste o arquivo aqui</div>
                 <div style="font-size:11px;color:var(--text3);margin-bottom:14px">ou clique para selecionar<br><b style="color:var(--text2)">Colunas: Pedido, Codigo, Descricao, Qtde, Endereço</b></div>
                 <input type="file" id="input-arquivo" accept=".xlsx,.xls,.csv" onchange="processarArquivo(event)"/>
-                <button class="btn btn-outline btn-sm" onclick="event.stopPropagation();document.getElementById('input-arquivo').click()">📂 Selecionar Arquivo</button>
+                <button class="btn btn-outline btn-sm" onclick="event.stopPropagation();document.getElementById('input-arquivo').click()">Selecionar Arquivo</button>
               </div>
               <div class="status-box" id="status-leitura"></div>
               <div id="preview-importacao" style="display:none;margin-top:14px">
@@ -432,12 +432,12 @@
                 </div>
                 <div style="margin-top:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
                   <span id="txt-total-import" style="font-size:12px;color:var(--text2);font-weight:600"></span>
-                  <button class="btn btn-success" onclick="confirmarImportacao()">📥 Importar para Fila</button>
+                  <button class="btn btn-primary" onclick="confirmarImportacao()">Importar para Fila</button>
                 </div>
               </div>
             </div>
             <div class="card">
-              <div class="card-hd">📋 HISTÓRICO <button class="btn btn-danger btn-sm" onclick="limparHistorico()">🗑 Limpar</button></div>
+              <div class="card-hd">HISTÓRICO <button class="btn btn-danger btn-sm" onclick="limparHistorico()">Limpar</button></div>
               <div id="hist-importacoes"></div>
             </div>
           </div>
@@ -456,7 +456,7 @@
           <div class="date-filter-bar" style="margin-bottom:14px">
             <div class="fg"><label>DE</label><input type="date" id="sep-ini" onchange="carregarContadoresSep()"/></div>
             <div class="fg"><label>ATÉ</label><input type="date" id="sep-fim" onchange="carregarContadoresSep()"/></div>
-            <button onclick="carregarContadoresSep()" class="btn btn-primary btn-sm">🔄 Atualizar</button>
+            <button onclick="carregarContadoresSep()" class="btn btn-primary btn-sm">Atualizar</button>
           </div>
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
             <div class="cnt-card azul"><div class="cnt-lbl">TOTAL</div><div class="cnt-val" id="sep-cnt-total">0</div><div class="cnt-sub">pedidos</div></div>
@@ -466,19 +466,19 @@
         </div>
         <!-- Tabs desktop separação -->
         <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap" id="sep-desk-tabbar">
-          <button class="rel-turno-btn ativo" id="dstab-fila"     onclick="mudarTabSepDesk('fila')">📋 FILA <span id="d-sep-fila-badge" style="display:none;background:#2563EB;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:3px">0</span></button>
-          <button class="rel-turno-btn"       id="dstab-separar"  onclick="mudarTabSepDesk('separar')">📦 SEPARAR</button>
-          <button class="rel-turno-btn"       id="dstab-avisos"   onclick="mudarTabSepDesk('avisos')">🔔 AVISOS <span id="d-sep-avisos-badge" style="display:none;background:#f59e0b;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:3px">0</span></button>
-          <button class="rel-turno-btn"       id="dstab-aguardando" onclick="mudarTabSepDesk('aguardando')">⏸️ AGUARD. <span id="d-sep-aguard-badge" style="display:none;background:#f59e0b;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:3px">0</span></button>
+          <button class="rel-turno-btn ativo" id="dstab-fila"     onclick="mudarTabSepDesk('fila')">FILA <span id="d-sep-fila-badge" style="display:none;background:#2563EB;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:3px">0</span></button>
+          <button class="rel-turno-btn"       id="dstab-separar"  onclick="mudarTabSepDesk('separar')">SEPARAR</button>
+          <button class="rel-turno-btn"       id="dstab-avisos"   onclick="mudarTabSepDesk('avisos')">AVISOS <span id="d-sep-avisos-badge" style="display:none;background:#f59e0b;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:3px">0</span></button>
+          <button class="rel-turno-btn"       id="dstab-aguardando" onclick="mudarTabSepDesk('aguardando')">AGUARD. <span id="d-sep-aguard-badge" style="display:none;background:#f59e0b;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:3px">0</span></button>
         </div>
 
         <!-- Tab FILA -->
         <div id="d-sep-tab-fila">
           <div class="card">
-            <div class="card-hd">📋 FILA DE PEDIDOS
+            <div class="card-hd">FILA DE PEDIDOS
               <div style="display:flex;gap:8px;align-items:center">
                 <span id="badge-fila-d" style="font-size:11px;color:var(--text3);font-weight:600"></span>
-                <button class="btn btn-outline btn-sm" onclick="carregarFilaDesk()">🔄</button>
+                <button class="btn btn-outline btn-sm" onclick="carregarFilaDesk()">↺</button>
               </div>
             </div>
             <div id="d-sep-fila" style="padding:4px 0">
@@ -491,7 +491,7 @@
         <div id="d-sep-tab-separar" style="display:none">
           <!-- Leitura -->
           <div class="card" style="margin-bottom:13px">
-            <div class="card-hd">🔍 LEITURA DE PEDIDO</div>
+            <div class="card-hd">LEITURA DE PEDIDO</div>
             <div class="bip-wrap">
               <input type="text" class="bip-input" id="input-pedido" placeholder="Bipe ou digite o número do pedido..." autocomplete="off" inputmode="numeric"/>
               <button class="btn-bip" onclick="confirmarPedido()">▶</button>
@@ -505,22 +505,22 @@
                 autocomplete="off" inputmode="numeric"
                 style="width:100%;font-size:20px;letter-spacing:3px;border-color:#DC2626;border-width:2px;margin-bottom:8px;box-sizing:border-box"/>
               <div style="display:flex;gap:8px">
-                <button onclick="escanearQrCaixa(false)" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:#1D4ED8;color:#fff;border:none;border-radius:8px;padding:10px 0;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.5px">📷 Escanear QR</button>
-                <button onclick="vincularCaixaDesktop()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:#DC2626;color:#fff;border:none;border-radius:8px;padding:10px 0;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.5px">📦 Vincular</button>
+                <button onclick="escanearQrCaixa(false)" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:#1D4ED8;color:#fff;border:none;border-radius:8px;padding:10px 0;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.5px">Escanear QR</button>
+                <button onclick="vincularCaixaDesktop()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:#DC2626;color:#fff;border:none;border-radius:8px;padding:10px 0;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.5px">Vincular</button>
               </div>
               <div id="cl-caixa-status" style="font-size:12px;color:var(--text3);margin-top:6px;padding:6px 10px;background:var(--surface2);border-radius:6px;display:none"></div>
             </div>
           </div>
           <!-- Checklist desktop -->
           <div class="cl-wrap" id="cl-wrap">
-            <div class="cl-header"><span id="cl-titulo">📋 PEDIDO</span><span id="cl-contador" style="color:var(--accent);font-weight:700">0/0</span></div>
+            <div class="cl-header"><span id="cl-titulo">PEDIDO</span><span id="cl-contador" style="color:var(--accent);font-weight:700">0/0</span></div>
             <div class="cl-prog"><div class="cl-prog-fill" id="cl-barra" style="width:0%"></div></div>
             <div class="cl-resumo" id="cl-resumo"></div>
             <div class="cl-lista" id="cl-lista" style="max-height:380px"></div>
             <div class="cl-footer">
-              <button class="btn-acao concluir" id="btn-concluir" onclick="concluirPedido()" disabled>🔒 CONCLUIR</button>
-              <button class="btn-acao aguardar" id="btn-aguardar" style="display:none">⏳ AGUARDANDO</button>
-              <button class="btn-acao" id="btn-concluir-falta" onclick="concluirComFaltaDesk()" style="display:none;background:#f97316;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;padding:12px;width:100%;margin-top:6px">⚠️ CONCLUIR COM FALTA</button>
+              <button class="btn-acao concluir" id="btn-concluir" onclick="concluirPedido()" disabled>CONCLUIR</button>
+              <button class="btn-acao aguardar" id="btn-aguardar" style="display:none">AGUARDANDO</button>
+              <button class="btn-acao" id="btn-concluir-falta" onclick="concluirComFaltaDesk()" style="display:none;background:#f97316;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;padding:12px;width:100%;margin-top:6px">CONCLUIR COM FALTA</button>
             </div>
           </div>
         </div>
@@ -528,8 +528,8 @@
         <!-- Tab AVISOS -->
         <div id="d-sep-tab-avisos" style="display:none">
           <div class="card">
-            <div class="card-hd">🔔 AVISOS DO REPOSITOR
-              <button class="btn btn-outline btn-sm" onclick="carregarAvisosSeparador()">🔄</button>
+            <div class="card-hd">AVISOS DO REPOSITOR
+              <button class="btn btn-outline btn-sm" onclick="carregarAvisosSeparador()">↺</button>
             </div>
             <div id="d-sep-avisos" style="padding:4px 0">
               <div style="color:var(--text3);text-align:center;padding:30px;font-size:13px">Carregando...</div>
@@ -540,12 +540,12 @@
         <!-- Tab AGUARDANDO -->
         <div id="d-sep-tab-aguardando" style="display:none">
           <div class="card">
-            <div class="card-hd">⏸️ AGUARDANDO
+            <div class="card-hd">AGUARDANDO
               <span style="font-size:11px;color:var(--text3);font-weight:600;margin-left:6px"><span id="d-sep-cnt-aguardando">0</span> itens</span>
-              <button class="btn btn-outline btn-sm" onclick="carregarAguardandoDesk()">🔄</button>
+              <button class="btn btn-outline btn-sm" onclick="carregarAguardandoDesk()">↺</button>
             </div>
             <div style="font-size:12px;color:var(--text3);margin:8px 16px 10px;padding:8px 12px;background:#fffbeb;border-radius:8px;border:1px solid #fde68a">
-              ⏸️ Pedidos com itens em <b style="color:#92400e">Protocolo</b> — aguardando definição do supervisor.
+              Pedidos com itens em <b style="color:#92400e">Protocolo</b> — aguardando definição do supervisor.
             </div>
             <div id="d-sep-aguardando" style="padding:4px 0">
               <div style="color:var(--text3);text-align:center;padding:30px;font-size:13px">Carregando...</div>
@@ -578,26 +578,26 @@
         <!-- Abas -->
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px">
           <button id="d-rtab-separar" onclick="mudarTabRepDesk('separar')" class="rel-turno-btn ativo" data-t="separar">
-            ⏳ Separar <span id="d-rtab-separar-badge" style="display:none;background:#ef4444;color:#fff;border-radius:20px;padding:1px 7px;font-size:10px;font-weight:700;margin-left:4px">0</span>
+            Separar <span id="d-rtab-separar-badge" style="display:none;background:#ef4444;color:#fff;border-radius:20px;padding:1px 7px;font-size:10px;font-weight:700;margin-left:4px">0</span>
           </button>
           <button id="d-rtab-separado" onclick="mudarTabRepDesk('separado')" class="rel-turno-btn" data-t="separado">
-            📦 Separado <span id="d-rtab-separado-badge" style="display:none;background:#3b82f6;color:#fff;border-radius:20px;padding:1px 7px;font-size:10px;font-weight:700;margin-left:4px">0</span>
+            Separado <span id="d-rtab-separado-badge" style="display:none;background:#3b82f6;color:#fff;border-radius:20px;padding:1px 7px;font-size:10px;font-weight:700;margin-left:4px">0</span>
           </button>
           <button id="d-rtab-subiu" onclick="mudarTabRepDesk('subiu')" class="rel-turno-btn" data-t="subiu">
-            ⬆️ Subiu <span id="d-rtab-subiu-badge" style="display:none;background:#0ea5e9;color:#fff;border-radius:20px;padding:1px 7px;font-size:10px;font-weight:700;margin-left:4px">0</span>
+            Subiu <span id="d-rtab-subiu-badge" style="display:none;background:#0ea5e9;color:#fff;border-radius:20px;padding:1px 7px;font-size:10px;font-weight:700;margin-left:4px">0</span>
           </button>
           <button id="d-rtab-protocolo" onclick="mudarTabRepDesk('protocolo')" class="rel-turno-btn" data-t="protocolo">
-            📋 Protocolo <span id="d-rtab-protocolo-badge" style="display:none;background:#6b7280;color:#fff;border-radius:20px;padding:1px 7px;font-size:10px;font-weight:700;margin-left:4px">0</span>
+            Protocolo <span id="d-rtab-protocolo-badge" style="display:none;background:#6b7280;color:#fff;border-radius:20px;padding:1px 7px;font-size:10px;font-weight:700;margin-left:4px">0</span>
           </button>
-          <button id="d-rtab-stats" onclick="mudarTabRepDesk('stats')" class="rel-turno-btn" data-t="stats">📊 Indicadores</button>
-          <button id="d-rtab-ranking" onclick="mudarTabRepDesk('ranking')" class="rel-turno-btn" data-t="ranking">🏆 Ranking</button>
+          <button id="d-rtab-stats" onclick="mudarTabRepDesk('stats')" class="rel-turno-btn" data-t="stats">Indicadores</button>
+          <button id="d-rtab-ranking" onclick="mudarTabRepDesk('ranking')" class="rel-turno-btn" data-t="ranking">Ranking</button>
         </div>
 
         <!-- Tab: SEPARAR -->
         <div id="d-rep-tab-separar">
           <div class="card">
-            <div class="card-hd">⏳ PARA SEPARAR
-              <button class="btn btn-outline btn-sm" onclick="carregarRepSeparar()">🔄 Atualizar</button>
+            <div class="card-hd">PARA SEPARAR
+              <button class="btn btn-outline btn-sm" onclick="carregarRepSeparar()">Atualizar</button>
             </div>
             <div id="d-rep-lista-separar" style="padding:8px 4px">
               <div style="text-align:center;padding:32px;color:var(--text3)">Carregando...</div>
@@ -608,8 +608,8 @@
         <!-- Tab: SEPARADO -->
         <div id="d-rep-tab-separado" style="display:none">
           <div class="card">
-            <div class="card-hd">📦 SEPARADO — AGUARDANDO GUARDAR
-              <button class="btn btn-outline btn-sm" onclick="carregarRepSeparado()">🔄 Atualizar</button>
+            <div class="card-hd">SEPARADO — AGUARDANDO GUARDAR
+              <button class="btn btn-outline btn-sm" onclick="carregarRepSeparado()">Atualizar</button>
             </div>
             <div id="d-rep-lista-separado" style="padding:8px 4px">
               <div style="text-align:center;padding:32px;color:var(--text3)">Carregando...</div>
@@ -620,8 +620,8 @@
         <!-- Tab: SUBIU -->
         <div id="d-rep-tab-subiu" style="display:none">
           <div class="card">
-            <div class="card-hd">⬆️ SUBIU — AGUARDANDO ABASTECER
-              <button class="btn btn-outline btn-sm" onclick="carregarRepSubiu()">🔄 Atualizar</button>
+            <div class="card-hd">SUBIU — AGUARDANDO ABASTECER
+              <button class="btn btn-outline btn-sm" onclick="carregarRepSubiu()">Atualizar</button>
             </div>
             <div id="d-rep-lista-subiu" style="padding:8px 4px">
               <div style="text-align:center;padding:32px;color:var(--text3)">Carregando...</div>
@@ -632,8 +632,8 @@
         <!-- Tab: PROTOCOLO -->
         <div id="d-rep-tab-protocolo" style="display:none">
           <div class="card">
-            <div class="card-hd">📋 PROTOCOLO — NÃO ENCONTRADO
-              <button class="btn btn-outline btn-sm" onclick="carregarRepProtocolo()">🔄 Atualizar</button>
+            <div class="card-hd">PROTOCOLO — NÃO ENCONTRADO
+              <button class="btn btn-outline btn-sm" onclick="carregarRepProtocolo()">Atualizar</button>
             </div>
             <div id="d-rep-lista-protocolo" style="padding:8px 4px">
               <div style="text-align:center;padding:32px;color:var(--text3)">Carregando...</div>
@@ -644,15 +644,15 @@
         <!-- Tab: INDICADORES -->
         <div id="d-rep-tab-stats" style="display:none">
           <div class="card">
-            <div class="card-hd">📊 INDICADORES POR COLABORADOR
+            <div class="card-hd">INDICADORES POR COLABORADOR
               <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
                 <input type="date" id="rep-stats-ini" style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)">
                 <span style="font-size:11px;color:var(--text3)">até</span>
                 <input type="date" id="rep-stats-fim" style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)">
                 <button class="btn btn-primary btn-sm" onclick="carregarEstatisticasRep()">Filtrar</button>
-                <button class="btn btn-outline btn-sm" onclick="carregarEstatisticasRep()">🔄</button>
-                <button class="excel-btn" onclick="exportarIndicadoresExcel()">📊 Excel</button>
-                <button class="excel-btn" onclick="exportarTentativasExcel()" style="background:#7c3aed;border-color:#7c3aed" title="Exportar análise de tentativas de busca por turno">📋 Tentativas</button>
+                <button class="btn btn-outline btn-sm" onclick="carregarEstatisticasRep()">↺</button>
+                <button class="excel-btn" onclick="exportarIndicadoresExcel()">Excel</button>
+                <button class="excel-btn" onclick="exportarTentativasExcel()" title="Exportar análise de tentativas de busca por turno">Tentativas</button>
               </div>
             </div>
             <div id="rep-stats-desktop">
@@ -664,13 +664,13 @@
         <!-- Tab: RANKING -->
         <div id="d-rep-tab-ranking" style="display:none">
           <div class="card">
-            <div class="card-hd">🏆 PRODUTOS QUE MAIS GERAM REPOSIÇÃO
+            <div class="card-hd">PRODUTOS QUE MAIS GERAM REPOSIÇÃO
               <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
                 <input type="date" id="rep-rank-ini" style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)">
                 <span style="font-size:11px;color:var(--text3)">até</span>
                 <input type="date" id="rep-rank-fim" style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)">
                 <button class="btn btn-primary btn-sm" onclick="carregarRankingProdutos()">Filtrar</button>
-                <button class="excel-btn" onclick="exportarRankingExcel()">📥 Excel</button>
+                <button class="excel-btn" onclick="exportarRankingExcel()">Excel</button>
               </div>
             </div>
             <div id="rep-ranking-lista">
@@ -710,7 +710,7 @@
                 <input type="text" id="em-obs" placeholder="Ex: chegou do fornecedor..." style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-size:14px;box-sizing:border-box">
               </div>
               <button onclick="salvarEntradaManual()" style="width:100%;padding:14px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;margin-top:4px">
-                ✅ REGISTRAR ENTRADA
+                REGISTRAR ENTRADA
               </button>
             </div>
           </div>
@@ -722,7 +722,7 @@
 
       <!-- LIBERAÇÃO DE ITENS -->
       <div class="pagina" id="pag-liberacao">
-        <div class="pg-title">🔓 Liberação de Itens</div>
+        <div class="pg-title">Liberação de Itens</div>
 
         <!-- Filtros de data -->
         <div class="card" style="margin-bottom:14px">
@@ -731,7 +731,7 @@
             <div class="fg"><label>DE</label><input type="date" id="lib-filtro-ini"/></div>
             <div class="fg"><label>ATÉ</label><input type="date" id="lib-filtro-fim"/></div>
             <button class="btn btn-primary btn-sm" onclick="carregarLiberacao()">Filtrar</button>
-            <button class="btn btn-outline btn-sm" onclick="document.getElementById('lib-filtro-ini').value='';document.getElementById('lib-filtro-fim').value='';carregarLiberacao()">🔄 Todos</button>
+            <button class="btn btn-outline btn-sm" onclick="document.getElementById('lib-filtro-ini').value='';document.getElementById('lib-filtro-fim').value='';carregarLiberacao()">Todos</button>
           </div>
         </div>
 
@@ -789,11 +789,11 @@
       <!-- Modal de configuração de metas — fora das paginas para funcionar em qualquer tela -->
       <div id="modal-config-metas" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;align-items:center;justify-content:center">
         <div style="background:var(--surface);border-radius:16px;padding:24px;width:360px;max-width:95vw;box-shadow:0 8px 32px rgba(0,0,0,.3)">
-          <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:16px">⚙️ Configurar Metas e Horas de Turno</div>
+          <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:16px">Configurar Metas e Horas de Turno</div>
           <div id="config-metas-form"></div>
           <div style="display:flex;gap:10px;margin-top:16px">
             <button onclick="fecharConfigMetas()" class="btn btn-outline" style="flex:1;padding:10px">Cancelar</button>
-            <button onclick="salvarConfigMetas()" class="btn btn-primary" style="flex:1;padding:10px">💾 Salvar</button>
+            <button onclick="salvarConfigMetas()" class="btn btn-primary" style="flex:1;padding:10px">Salvar</button>
           </div>
         </div>
       </div>
@@ -806,7 +806,7 @@
 
       <!-- DIARIO DE BORDO -->
       <div class="pagina" id="pag-diario">
-        <div class="pg-title">📋 Diário de Bordo</div>
+        <div class="pg-title">Diário de Bordo</div>
 
         <!-- Banner de validação pendente — TOPO, bem visível -->
         <div id="diario-validacao-pendente" style="display:none;margin-bottom:16px"></div>
@@ -819,17 +819,17 @@
             <div class="date-filter-bar">
               <div class="fg"><label>DATA</label><input type="date" id="diario-data" onchange="iniciarDiario()"/></div>
               <div class="fg"><label>TURNO</label><select id="diario-turno" onchange="iniciarDiario()">
-                <option value="Manha">☀️ Manhã</option>
-                <option value="Tarde">🌅 Tarde</option>
-                <option value="Noite">🌙 Noite</option>
+                <option value="Manha">Manhã</option>
+                <option value="Tarde">Tarde</option>
+                <option value="Noite">Noite</option>
               </select></div>
-              <button onclick="carregarDadosDiario()" class="btn btn-primary btn-sm">🔄 Atualizar</button>
+              <button onclick="carregarDadosDiario()" class="btn btn-primary btn-sm">Atualizar</button>
             </div>
           </div>
 
           <!-- Separação -->
           <div class="card" style="margin-bottom:12px">
-            <div class="card-hd">📦 SEPARAÇÃO</div>
+            <div class="card-hd">SEPARAÇÃO</div>
             <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:12px 0">
               <div style="text-align:center;background:var(--surface2);border-radius:8px;padding:10px">
                 <div style="font-size:22px;font-weight:800;color:var(--text)" id="diario-sep-total">0</div>
@@ -856,7 +856,7 @@
 
           <!-- Checkout -->
           <div class="card" style="margin-bottom:12px">
-            <div class="card-hd">🏷️ CHECKOUT</div>
+            <div class="card-hd">CHECKOUT</div>
             <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:12px 0">
               <div style="text-align:center;background:var(--surface2);border-radius:8px;padding:10px">
                 <div style="font-size:22px;font-weight:800;color:var(--text)" id="diario-ck-total">0</div>
@@ -879,7 +879,7 @@
 
           <!-- Embalagem -->
           <div class="card" style="margin-bottom:12px">
-            <div class="card-hd">📫 EMBALAGEM</div>
+            <div class="card-hd">EMBALAGEM</div>
             <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:12px 0">
               <div style="text-align:center;background:var(--surface2);border-radius:8px;padding:10px">
                 <div style="font-size:22px;font-weight:800;color:var(--text)" id="diario-emb-total">0</div>
@@ -902,7 +902,7 @@
 
           <!-- Reposição -->
           <div class="card" style="margin-bottom:12px">
-            <div class="card-hd">🔧 REPOSIÇÃO</div>
+            <div class="card-hd">REPOSIÇÃO</div>
             <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:12px 0">
               <div style="text-align:center;background:var(--surface2);border-radius:8px;padding:10px">
                 <div style="font-size:22px;font-weight:800;color:var(--text)" id="diario-rep-total">0</div>
@@ -929,7 +929,7 @@
 
           <!-- Pedidos com problema -->
           <div class="card" style="margin-bottom:12px">
-            <div class="card-hd">⚠️ PEDIDOS COM PROBLEMA</div>
+            <div class="card-hd">PEDIDOS COM PROBLEMA</div>
             <div class="tabela-wrap" style="margin-top:8px">
               <table><thead><tr><th>Nº Pedido</th><th>Cliente</th><th>Item não encontrado</th></tr></thead>
               <tbody id="tbody-diario-prob"><tr><td colspan="3" style="text-align:center;color:var(--text3);padding:16px">Carregando...</td></tr></tbody>
@@ -939,7 +939,7 @@
 
           <!-- Observações gerais -->
           <div class="card" style="margin-bottom:12px">
-            <div class="card-hd">📝 OBSERVAÇÕES GERAIS DO TURNO</div>
+            <div class="card-hd">OBSERVAÇÕES GERAIS DO TURNO</div>
             <textarea id="diario-obs-geral" placeholder="Registre ocorrências gerais, problemas de equipamento, funcionários ausentes, intercorrências..." style="width:100%;min-height:100px;border:1px solid var(--border);border-radius:8px;padding:10px;font-size:13px;font-family:inherit;background:var(--surface2);color:var(--text);resize:vertical;margin-top:8px;box-sizing:border-box"></textarea>
           </div>
 
@@ -949,10 +949,10 @@
           <!-- Botões de ação -->
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
             <button onclick="salvarDiario()" style="padding:14px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">
-              💾 Salvar Rascunho
+              Salvar Rascunho
             </button>
-            <button id="btn-enviar-diario" onclick="enviarDiario()" style="padding:14px;background:#7c3aed;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">
-              📤 Finalizar e Enviar
+            <button id="btn-enviar-diario" onclick="enviarDiario()" style="padding:14px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">
+              Finalizar e Enviar
             </button>
           </div>
         </div>
@@ -961,7 +961,7 @@
         <div>
           <!-- Histórico lateral -->
           <div class="card" style="position:sticky;top:80px">
-            <div class="card-hd">📚 HISTÓRICO</div>
+            <div class="card-hd">HISTÓRICO</div>
             <div id="lista-diarios" style="margin-top:8px">
               <div style="color:var(--text3);font-size:13px">Carregando...</div>
             </div>
@@ -1003,7 +1003,7 @@
             </div>
             <div style="display:flex;gap:8px">
               <button onclick="fecharModalValidacao()" style="padding:12px 18px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:13px">Cancelar</button>
-              <button onclick="submeterValidacao()" style="padding:12px 22px;background:#16a34a;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px;font-weight:700">✅ Confirmar Validação</button>
+              <button onclick="submeterValidacao()" style="padding:12px 22px;background:#16a34a;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px;font-weight:700">Confirmar Validação</button>
             </div>
           </div>
         </div>
@@ -1011,17 +1011,17 @@
 
       <!-- EMBALAGEM -->
       <div class="pagina" id="pag-embalagem">
-        <div class="pg-title">📫 Embalagem</div>
+        <div class="pg-title">Embalagem</div>
 
         <!-- Contadores + Filtros -->
         <div class="card" style="margin-bottom:14px">
           <div class="card-hd">PERÍODO
-            <button onclick="exportarEmbalagemExcel()" class="excel-btn">📊 Excel</button>
+            <button onclick="exportarEmbalagemExcel()" class="excel-btn">Excel</button>
           </div>
           <div class="date-filter-bar" style="flex-wrap:wrap;gap:10px;margin-bottom:14px">
             <div class="fg"><label>DE</label><input type="date" id="emb-ini" onchange="carregarEmbalagemDesk()"/></div>
             <div class="fg"><label>ATÉ</label><input type="date" id="emb-fim" onchange="carregarEmbalagemDesk()"/></div>
-            <button onclick="carregarEmbalagemDesk()" class="btn btn-primary btn-sm">🔄 Filtrar</button>
+            <button onclick="carregarEmbalagemDesk()" class="btn btn-primary btn-sm">Filtrar</button>
           </div>
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
             <div class="cnt-card azul"><div class="cnt-lbl">TOTAL</div><div class="cnt-val" id="emb-total">0</div><div class="cnt-sub">pedidos</div></div>
@@ -1032,15 +1032,15 @@
 
         <!-- Tabs desktop embalagem -->
         <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap" id="emb-desk-tabbar">
-          <button class="rel-turno-btn ativo" id="dembtab-fila"      onclick="mudarTabEmbDesk('fila')">📋 FILA <span id="d-emb-fila-badge" style="display:none;background:#2563EB;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:3px">0</span></button>
-          <button class="rel-turno-btn"       id="dembtab-embalar"   onclick="mudarTabEmbDesk('embalar')">📦 EMBALAR</button>
-          <button class="rel-turno-btn"       id="dembtab-embalados" onclick="mudarTabEmbDesk('embalados')">✅ EMBALADOS</button>
+          <button class="rel-turno-btn ativo" id="dembtab-fila"      onclick="mudarTabEmbDesk('fila')">FILA <span id="d-emb-fila-badge" style="display:none;background:#2563EB;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:3px">0</span></button>
+          <button class="rel-turno-btn"       id="dembtab-embalar"   onclick="mudarTabEmbDesk('embalar')">EMBALAR</button>
+          <button class="rel-turno-btn"       id="dembtab-embalados" onclick="mudarTabEmbDesk('embalados')">EMBALADOS</button>
         </div>
 
         <!-- Tab FILA -->
         <div id="d-emb-tab-fila">
           <div class="card">
-            <div class="card-hd">📋 FILA DE EMBALAGEM
+            <div class="card-hd">FILA DE EMBALAGEM
               <div style="display:flex;gap:8px;align-items:center">
                 <div style="display:flex;gap:10px;max-width:380px">
                   <input type="text" id="d-emb-busca"
@@ -1049,7 +1049,7 @@
                     autocomplete="off"
                     style="flex:1;padding:6px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Space Mono',monospace;color:var(--text);background:var(--surface2);outline:none;box-sizing:border-box">
                 </div>
-                <button class="btn btn-outline btn-sm" onclick="carregarEmbalagemDesk()">🔄</button>
+                <button class="btn btn-outline btn-sm" onclick="carregarEmbalagemDesk()">↺</button>
               </div>
             </div>
             <div id="d-emb-lista" style="padding:4px 0">
@@ -1061,7 +1061,7 @@
         <!-- Tab EMBALAR (scan) -->
         <div id="d-emb-tab-embalar" style="display:none">
           <div class="card">
-            <div class="card-hd">📦 EMBALAR — BUSCAR PEDIDO</div>
+            <div class="card-hd">EMBALAR — BUSCAR PEDIDO</div>
             <div style="max-width:520px;margin-bottom:14px">
               <input type="text" id="d-emb-embalar-input"
                 placeholder="Digite ou bipe o número do pedido..."
@@ -1069,8 +1069,8 @@
                 autocomplete="off"
                 style="width:100%;padding:11px 16px;border:2px solid #4f46e5;border-radius:10px;font-size:15px;font-weight:700;font-family:'Space Mono',monospace;color:var(--text);background:var(--surface2);outline:none;letter-spacing:1px;box-sizing:border-box;margin-bottom:8px">
               <div style="display:flex;gap:8px">
-                <button onclick="escanearQr('d-emb-embalar-input', buscarEmbalagemDesk)" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:#1D4ED8;color:#fff;border:none;border-radius:8px;padding:10px 0;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.5px">📷 Escanear QR</button>
-                <button onclick="buscarEmbalagemDesk()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:#4f46e5;color:#fff;border:none;border-radius:8px;padding:10px 0;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(79,70,229,.3);letter-spacing:.5px">🔍 Buscar</button>
+                <button onclick="escanearQr('d-emb-embalar-input', buscarEmbalagemDesk)" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:#1D4ED8;color:#fff;border:none;border-radius:8px;padding:10px 0;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.5px">Escanear QR</button>
+                <button onclick="buscarEmbalagemDesk()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:#4f46e5;color:#fff;border:none;border-radius:8px;padding:10px 0;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(79,70,229,.3);letter-spacing:.5px">Buscar</button>
               </div>
             </div>
             <div id="d-emb-resultado">
@@ -1086,8 +1086,8 @@
         <!-- Tab EMBALADOS -->
         <div id="d-emb-tab-embalados" style="display:none">
           <div class="card">
-            <div class="card-hd">✅ EMBALADOS
-              <button class="btn btn-outline btn-sm" onclick="carregarEmbalagemEmbaladesDesk()">🔄</button>
+            <div class="card-hd">EMBALADOS
+              <button class="btn btn-outline btn-sm" onclick="carregarEmbalagemEmbaladesDesk()">↺</button>
             </div>
             <div id="d-emb-embalados" style="padding:4px 0">
               <div style="color:var(--text3);text-align:center;padding:30px;font-size:13px">Carregando...</div>
@@ -1108,16 +1108,16 @@
       <div class="pagina" id="pag-estatisticas">
         <div class="pg-title">Estatísticas</div>
         <div class="card" style="margin-bottom:16px">
-        <div class="card-hd">📅 FILTRO DE PERÍODO
+        <div class="card-hd">FILTRO DE PERÍODO
           <div style="display:flex;gap:8px">
-            <button class="btn btn-outline btn-sm" onclick="carregarEstatisticas()">🔄</button>
-            <button class="excel-btn" onclick="exportarExcel('estatisticas')">📊 Excel</button>
+            <button class="btn btn-outline btn-sm" onclick="carregarEstatisticas()">↺</button>
+            <button class="excel-btn" onclick="exportarExcel('estatisticas')">Excel</button>
           </div>
         </div>
         <div class="date-filter-bar">
           <div class="fg"><label>DE</label><input type="date" id="est-ini"/></div>
           <div class="fg"><label>ATÉ</label><input type="date" id="est-fim"/></div>
-          <button class="btn btn-primary btn-sm" onclick="carregarEstatisticas()">🔍 Filtrar</button>
+          <button class="btn btn-primary btn-sm" onclick="carregarEstatisticas()">Filtrar</button>
         </div>
         </div>
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px">
@@ -1141,7 +1141,7 @@
         </div>
         </div>
         <div id="est-periodo-wrap" style="display:none" class="card">
-        <div class="card-hd">📊 RESULTADO DO PERÍODO</div>
+        <div class="card-hd">RESULTADO DO PERÍODO</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:10px 0">
           <div class="cnt-card verde">
             <div class="cnt-lbl">CONCLUÍDOS</div>
@@ -1156,8 +1156,8 @@
         </div>
         </div>
         <div class="card" style="margin-bottom:16px">
-        <div class="card-hd">👥 PRODUTIVIDADE POR SEPARADOR
-          <button class="btn btn-outline btn-sm" onclick="carregarEstatisticas()">🔄</button>
+        <div class="card-hd">PRODUTIVIDADE POR SEPARADOR
+          <button class="btn btn-outline btn-sm" onclick="carregarEstatisticas()">↺</button>
         </div>
         <div class="tabela-wrap">
           <table><thead><tr><th>SEPARADOR</th><th>HOJE</th><th>MÊS</th><th>ANO</th><th>STATUS</th></tr></thead>
@@ -1166,15 +1166,15 @@
         </div>
         <!-- Lista de checkouts fica aqui embaixo das estatísticas -->
         <div class="card">
-        <div class="card-hd">📦 TODOS OS CHECKOUTS
+        <div class="card-hd">TODOS OS CHECKOUTS
           <div style="display:flex;gap:8px;align-items:center">
             <select id="filtro-ck-status" class="sel-sm" onchange="carregarCheckoutLista()">
               <option value="">Todos</option>
               <option value="pendente">Pendente</option>
               <option value="concluido">Concluído</option>
             </select>
-            <button class="btn btn-outline btn-sm" onclick="carregarCheckoutLista()">🔄</button>
-            <button class="excel-btn" onclick="exportarExcel('checkout-lista')">📊 Excel</button>
+            <button class="btn btn-outline btn-sm" onclick="carregarCheckoutLista()">↺</button>
+            <button class="excel-btn" onclick="exportarExcel('checkout-lista')">Excel</button>
           </div>
         </div>
         <div class="tabela-wrap">
@@ -1198,7 +1198,7 @@
           <div class="date-filter-bar" style="margin-bottom:14px">
             <div class="fg"><label>DE</label><input type="date" id="ck-ini" onchange="carregarContadoresCk()"/></div>
             <div class="fg"><label>ATÉ</label><input type="date" id="ck-fim" onchange="carregarContadoresCk()"/></div>
-            <button onclick="carregarContadoresCk()" class="btn btn-primary btn-sm">🔄 Atualizar</button>
+            <button onclick="carregarContadoresCk()" class="btn btn-primary btn-sm">Atualizar</button>
           </div>
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
             <div class="cnt-card azul"><div class="cnt-lbl">TOTAL</div><div class="cnt-val" id="ck-cnt-total">0</div><div class="cnt-sub">pedidos</div></div>
@@ -1208,16 +1208,16 @@
         </div>
         <!-- Tabs desktop checkout (3 tabs — fila unificada com scan) -->
         <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap" id="ck-desk-tabbar">
-          <button class="rel-turno-btn ativo" id="dcktab-fila"      onclick="mudarTabCkDesk('fila')">📋 FILA <span id="d-cktab-fila-badge" style="display:none;background:#2563EB;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:3px">0</span></button>
-          <button class="rel-turno-btn"        id="dcktab-feitos"    onclick="mudarTabCkDesk('feitos')">✅ FEITOS <span id="d-ck-feitos-cnt" style="display:none;background:#10b981;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:3px">0</span></button>
-          <button class="rel-turno-btn"        id="dcktab-aguardando" onclick="mudarTabCkDesk('aguardando')">⏳ AGUARDANDO <span id="d-cktab-aguardando-badge" style="display:none;background:#f97316;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:3px">0</span></button>
+          <button class="rel-turno-btn ativo" id="dcktab-fila"      onclick="mudarTabCkDesk('fila')">FILA <span id="d-cktab-fila-badge" style="display:none;background:#2563EB;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:3px">0</span></button>
+          <button class="rel-turno-btn"        id="dcktab-feitos"    onclick="mudarTabCkDesk('feitos')">FEITOS <span id="d-ck-feitos-cnt" style="display:none;background:#10b981;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:3px">0</span></button>
+          <button class="rel-turno-btn"        id="dcktab-aguardando" onclick="mudarTabCkDesk('aguardando')">AGUARDANDO <span id="d-cktab-aguardando-badge" style="display:none;background:#f97316;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:3px">0</span></button>
         </div>
 
         <!-- Tab FILA (unificada com scan) -->
         <div id="d-ck-tab-fila">
           <div class="card">
-            <div class="card-hd">🔍 ESCANEAR / FILA DE CHECKOUT
-              <button class="btn btn-outline btn-sm" onclick="carregarFilaCkDesk()">🔄</button>
+            <div class="card-hd">ESCANEAR / FILA DE CHECKOUT
+              <button class="btn btn-outline btn-sm" onclick="carregarFilaCkDesk()">↺</button>
             </div>
             <!-- Scan input (unificado aqui) -->
             <input type="text" class="bip-input" id="ck-input-caixa"
@@ -1226,7 +1226,7 @@
               onkeydown="if(event.key==='Enter')buscarCaixa()"
               style="width:100%;font-size:20px;letter-spacing:3px;margin-bottom:8px;box-sizing:border-box"/>
             <div style="display:flex;gap:8px;margin-bottom:14px">
-              <button onclick="escanearQr('ck-input-caixa', buscarCaixa)" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:#1D4ED8;color:#fff;border:none;border-radius:8px;padding:10px 0;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.5px">📷 Escanear QR</button>
+              <button onclick="escanearQr('ck-input-caixa', buscarCaixa)" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:#1D4ED8;color:#fff;border:none;border-radius:8px;padding:10px 0;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.5px">Escanear QR</button>
               <button onclick="buscarCaixa()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:#3B82F6;color:#fff;border:none;border-radius:8px;padding:10px 0;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.5px">▶ Buscar</button>
             </div>
             <!-- Resultado da busca (aparece aqui, na mesma tela) -->
@@ -1247,10 +1247,10 @@
         <!-- Tab FEITOS -->
         <div id="d-ck-tab-feitos" style="display:none">
           <div class="card">
-            <div class="card-hd">✅ FEITOS HOJE
+            <div class="card-hd">FEITOS HOJE
               <div style="display:flex;gap:8px;align-items:center">
                 <span id="d-ck-feitos-cnt-label" style="font-size:12px;font-weight:700;color:var(--green)">0 feitos</span>
-                <button class="btn btn-outline btn-sm" onclick="carregarFeitosCkDesk()">🔄</button>
+                <button class="btn btn-outline btn-sm" onclick="carregarFeitosCkDesk()">↺</button>
               </div>
             </div>
             <div id="d-ck-feitos" style="padding:4px 0">
@@ -1262,8 +1262,8 @@
         <!-- Tab AGUARDANDO -->
         <div id="d-ck-tab-aguardando" style="display:none">
           <div class="card">
-            <div class="card-hd">⏳ AGUARDANDO ITEM
-              <button class="btn btn-outline btn-sm" onclick="carregarAguardandoCkDesk()">🔄</button>
+            <div class="card-hd">AGUARDANDO ITEM
+              <button class="btn btn-outline btn-sm" onclick="carregarAguardandoCkDesk()">↺</button>
             </div>
             <div id="d-ck-aguardando" style="padding:4px 0">
               <div style="color:var(--text3);text-align:center;padding:30px;font-size:13px">Carregando...</div>
@@ -1280,16 +1280,16 @@
       <div class="pagina" id="pag-stats-repositor">
         <div class="pg-title">Estatísticas — Reposição</div>
         <div class="card" style="margin-bottom:16px">
-          <div class="card-hd">📅 FILTRO DE PERÍODO
+          <div class="card-hd">FILTRO DE PERÍODO
             <div style="display:flex;gap:8px">
-              <button class="btn btn-outline btn-sm" onclick="carregarStatsRepositor()">🔄</button>
-              <button class="excel-btn" onclick="exportarExcel('stats-repositor')">📊 Excel</button>
+              <button class="btn btn-outline btn-sm" onclick="carregarStatsRepositor()">↺</button>
+              <button class="excel-btn" onclick="exportarExcel('stats-repositor')">Excel</button>
             </div>
           </div>
           <div class="date-filter-bar">
             <div class="fg"><label>DE</label><input type="date" id="srep-ini"/></div>
             <div class="fg"><label>ATÉ</label><input type="date" id="srep-fim"/></div>
-            <button class="btn btn-primary btn-sm" onclick="carregarStatsRepositor()">🔍 Filtrar</button>
+            <button class="btn btn-primary btn-sm" onclick="carregarStatsRepositor()">Filtrar</button>
           </div>
         </div>
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:13px;margin-bottom:16px">
@@ -1303,7 +1303,7 @@
           <div class="cnt-card verde"><div class="cnt-lbl">AVISOS NO ANO</div><div class="cnt-val" id="srep-ano" style="font-size:32px">0</div><div class="cnt-sub">total de avisos</div></div>
         </div>
         <div class="card">
-          <div class="card-hd">👥 PRODUTIVIDADE POR REPOSITOR</div>
+          <div class="card-hd">PRODUTIVIDADE POR REPOSITOR</div>
           <div class="tabela-wrap">
             <table><thead><tr><th>REPOSITOR</th><th>HOJE</th><th>REPOSTOS</th><th>NÃO ENCONTR.</th><th>TOTAL</th></tr></thead>
             <tbody id="tbody-srep-prod"></tbody></table>
@@ -1318,16 +1318,16 @@
       <div class="pagina" id="pag-stats-checkout">
         <div class="pg-title">Estatísticas — Checkout</div>
         <div class="card" style="margin-bottom:16px">
-          <div class="card-hd">📅 FILTRO DE PERÍODO
+          <div class="card-hd">FILTRO DE PERÍODO
             <div style="display:flex;gap:8px">
-              <button class="btn btn-outline btn-sm" onclick="carregarStatsCheckout()">🔄</button>
-              <button class="excel-btn" onclick="exportarExcel('stats-checkout')">📊 Excel</button>
+              <button class="btn btn-outline btn-sm" onclick="carregarStatsCheckout()">↺</button>
+              <button class="excel-btn" onclick="exportarExcel('stats-checkout')">Excel</button>
             </div>
           </div>
           <div class="date-filter-bar">
             <div class="fg"><label>DE</label><input type="date" id="sck-ini"/></div>
             <div class="fg"><label>ATÉ</label><input type="date" id="sck-fim"/></div>
-            <button class="btn btn-primary btn-sm" onclick="carregarStatsCheckout()">🔍 Filtrar</button>
+            <button class="btn btn-primary btn-sm" onclick="carregarStatsCheckout()">Filtrar</button>
           </div>
         </div>
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:13px;margin-bottom:16px">
@@ -1340,7 +1340,7 @@
           <div class="cnt-card vermelho"><div class="cnt-lbl">IMPORTADOS HOJE</div><div class="cnt-val" id="sck-importados" style="font-size:32px">0</div><div class="cnt-sub">pedidos do dia</div></div>
         </div>
         <div class="card">
-          <div class="card-hd">📦 ÚLTIMOS CHECKOUTS
+          <div class="card-hd">ÚLTIMOS CHECKOUTS
             <div style="display:flex;gap:8px;align-items:center">
               <select id="sck-filtro-status" class="sel-sm" onchange="carregarStatsCheckout()">
                 <option value="">Todos</option>
@@ -1361,7 +1361,7 @@
 
       <!-- RELATÓRIOS -->
       <div class="pagina" id="pag-relatorios" style="min-height:calc(100vh - 60px);padding:0 0 32px 0">
-        <div class="pg-title" style="padding:20px 20px 8px">📊 Relatórios</div>
+        <div class="pg-title" style="padding:20px 20px 8px">Relatórios</div>
 
         <!-- Barra de filtros -->
         <div class="card" style="margin:0 0 18px 0;border-radius:0 0 var(--r) var(--r);border-left:none;border-right:none">
@@ -1371,19 +1371,19 @@
               <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">TURNO</div>
               <div style="display:flex;gap:4px" id="rel-turno-btns">
                 <button onclick="setTurnoRel('Todos')" class="rel-turno-btn ativo" data-t="Todos">Todos</button>
-                <button onclick="setTurnoRel('Manha')" class="rel-turno-btn" data-t="Manha">🌅 Manhã</button>
-                <button onclick="setTurnoRel('Tarde')" class="rel-turno-btn" data-t="Tarde">☀️ Tarde</button>
-                <button onclick="setTurnoRel('Noite')" class="rel-turno-btn" data-t="Noite">🌙 Noite</button>
+                <button onclick="setTurnoRel('Manha')" class="rel-turno-btn" data-t="Manha">Manhã</button>
+                <button onclick="setTurnoRel('Tarde')" class="rel-turno-btn" data-t="Tarde">Tarde</button>
+                <button onclick="setTurnoRel('Noite')" class="rel-turno-btn" data-t="Noite">Noite</button>
               </div>
             </div>
             <!-- Datas -->
             <div class="fg"><label>DE</label><input type="date" id="rel-de"/></div>
             <div class="fg"><label>ATÉ</label><input type="date" id="rel-ate"/></div>
-            <button class="btn btn-primary btn-sm" onclick="carregarRelatorioAnalitico()">🔍 Gerar Relatório</button>
+            <button class="btn btn-primary btn-sm" onclick="carregarRelatorioAnalitico()">Gerar Relatório</button>
             <!-- Exports -->
             <div style="margin-left:auto;display:flex;gap:8px">
-              <button onclick="exportarRelAnaliticoExcel()" class="excel-btn" id="btn-rel-excel" style="display:none">📊 Excel</button>
-              <button onclick="exportarRelAnaliticoPDF()" class="btn btn-outline btn-sm" id="btn-rel-pdf" style="display:none;color:#dc2626;border-color:#dc2626">🖨️ PDF</button>
+              <button onclick="exportarRelAnaliticoExcel()" class="excel-btn" id="btn-rel-excel" style="display:none">Excel</button>
+              <button onclick="exportarRelAnaliticoPDF()" class="btn btn-outline btn-sm" id="btn-rel-pdf" style="display:none;color:#dc2626;border-color:#dc2626">PDF</button>
             </div>
           </div>
         </div>
@@ -1435,18 +1435,18 @@
 
 <!-- ══ PROTOCOLO ══ -->
 <div class="pagina" id="pag-protocolo">
-  <div class="pg-title">📋 Protocolo</div>
+  <div class="pg-title">Protocolo</div>
 
   <!-- Filtros -->
   <div class="card" style="margin-bottom:14px">
     <div class="card-hd">FILTROS
-      <button class="btn btn-outline btn-sm" onclick="exportarProtocolo()" title="Exportar lista em CSV">📥 Excel</button>
+      <button class="btn btn-outline btn-sm" onclick="exportarProtocolo()" title="Exportar lista em CSV">Excel</button>
     </div>
     <div class="date-filter-bar">
       <div class="fg"><label>DE</label><input type="date" id="proto-filtro-ini"/></div>
       <div class="fg"><label>ATÉ</label><input type="date" id="proto-filtro-fim"/></div>
       <button class="btn btn-primary btn-sm" onclick="carregarProtocolo()">Filtrar</button>
-      <button class="btn btn-outline btn-sm" onclick="document.getElementById('proto-filtro-ini').value='';document.getElementById('proto-filtro-fim').value='';carregarProtocolo()">🔄</button>
+      <button class="btn btn-outline btn-sm" onclick="document.getElementById('proto-filtro-ini').value='';document.getElementById('proto-filtro-fim').value='';carregarProtocolo()">↺</button>
     </div>
   </div>
 
@@ -1457,12 +1457,12 @@
   <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:16px">
     <button id="proto-tab-btn-aguardando" onclick="mudarProtoTab('aguardando')"
       style="padding:10px 18px;border:none;background:transparent;font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.5px;cursor:pointer;border-bottom:2px solid var(--accent);margin-bottom:-2px;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:7px">
-      📋 AGUARDANDO
+      AGUARDANDO
       <span id="proto-tab-badge-aguardando" style="background:var(--accent);color:#fff;padding:1px 8px;border-radius:20px;font-size:10px;font-weight:700">0</span>
     </button>
     <button id="proto-tab-btn-protocolados" onclick="mudarProtoTab('protocolados')"
       style="padding:10px 18px;border:none;background:transparent;font-size:12px;font-weight:700;color:var(--text3);letter-spacing:.5px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:7px">
-      ✅ PROTOCOLADOS
+      PROTOCOLADOS
       <span id="proto-tab-badge-protocolados" style="background:#059669;color:#fff;padding:1px 8px;border-radius:20px;font-size:10px;font-weight:700">0</span>
     </button>
   </div>
@@ -1481,16 +1481,16 @@
 
 <!-- ══ ESTATÍSTICAS SEPARADOR ══ -->
 <div class="pagina" id="pag-estatisticas-sep">
-  <div class="pag-header"><h2>📊 Minhas Estatísticas</h2></div>
+  <div class="pag-header"><h2>Minhas Estatísticas</h2></div>
   <div style="padding:16px;max-width:1400px">
     <div class="card" style="margin-bottom:16px">
-      <div class="card-hd">📅 FILTRO DE PERÍODO
-        <button class="btn btn-outline btn-sm" onclick="carregarEstatisticasSep()">🔄</button>
+      <div class="card-hd">FILTRO DE PERÍODO
+        <button class="btn btn-outline btn-sm" onclick="carregarEstatisticasSep()">↺</button>
       </div>
       <div class="date-filter-bar">
         <div class="fg"><label>DE</label><input type="date" id="stats-sep-ini"></div>
         <div class="fg"><label>ATÉ</label><input type="date" id="stats-sep-fim"></div>
-        <button class="btn btn-primary btn-sm" onclick="carregarEstatisticasSep()">🔍 Filtrar</button>
+        <button class="btn btn-primary btn-sm" onclick="carregarEstatisticasSep()">Filtrar</button>
       </div>
     </div>
     <div id="stats-sep-cards" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px"></div>
@@ -1500,16 +1500,16 @@
 
 <!-- ══ ESTATÍSTICAS CHECKOUT ══ -->
 <div class="pagina" id="pag-estatisticas-ck">
-  <div class="pag-header"><h2>📊 Minhas Estatísticas</h2></div>
+  <div class="pag-header"><h2>Minhas Estatísticas</h2></div>
   <div style="padding:16px;max-width:1400px">
     <div class="card" style="margin-bottom:16px">
-      <div class="card-hd">📅 FILTRO DE PERÍODO
-        <button class="btn btn-outline btn-sm" onclick="carregarEstatisticasCk()">🔄</button>
+      <div class="card-hd">FILTRO DE PERÍODO
+        <button class="btn btn-outline btn-sm" onclick="carregarEstatisticasCk()">↺</button>
       </div>
       <div class="date-filter-bar">
         <div class="fg"><label>DE</label><input type="date" id="stats-ck-ini"></div>
         <div class="fg"><label>ATÉ</label><input type="date" id="stats-ck-fim"></div>
-        <button class="btn btn-primary btn-sm" onclick="carregarEstatisticasCk()">🔍 Filtrar</button>
+        <button class="btn btn-primary btn-sm" onclick="carregarEstatisticasCk()">Filtrar</button>
       </div>
     </div>
     <div id="stats-ck-cards" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px"></div>
@@ -1519,16 +1519,16 @@
 
 <!-- ══ ESTATÍSTICAS EMBALAGEM ══ -->
 <div class="pagina" id="pag-estatisticas-emb">
-  <div class="pag-header"><h2>📊 Minhas Estatísticas</h2></div>
+  <div class="pag-header"><h2>Minhas Estatísticas</h2></div>
   <div style="padding:16px;max-width:1400px">
     <div class="card" style="margin-bottom:16px">
-      <div class="card-hd">📅 FILTRO DE PERÍODO
-        <button class="btn btn-outline btn-sm" onclick="carregarEstatisticasEmb()">🔄</button>
+      <div class="card-hd">FILTRO DE PERÍODO
+        <button class="btn btn-outline btn-sm" onclick="carregarEstatisticasEmb()">↺</button>
       </div>
       <div class="date-filter-bar">
         <div class="fg"><label>DE</label><input type="date" id="stats-emb-ini"></div>
         <div class="fg"><label>ATÉ</label><input type="date" id="stats-emb-fim"></div>
-        <button class="btn btn-primary btn-sm" onclick="carregarEstatisticasEmb()">🔍 Filtrar</button>
+        <button class="btn btn-primary btn-sm" onclick="carregarEstatisticasEmb()">Filtrar</button>
       </div>
     </div>
     <div id="stats-emb-cards" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px"></div>
@@ -1539,26 +1539,26 @@
 
       <!-- ══ PASSAGEM DE TURNO ══ -->
       <div class="pagina" id="pag-passagem">
-        <div class="pag-header"><h2>🔄 Passagem de Turno</h2></div>
+        <div class="pag-header"><h2>Passagem de Turno</h2></div>
         <div style="padding:16px;max-width:600px;margin:0 auto">
 
           <!-- TABS -->
           <div style="display:flex;gap:8px;margin-bottom:16px">
             <button id="ptab-registrar" onclick="mudarPassagemTab('registrar',this)"
               style="flex:1;padding:10px;border-radius:8px;border:none;background:#2563EB;color:#fff;font-size:13px;font-weight:700;cursor:pointer">
-              📝 Registrar
+              Registrar
             </button>
             <button id="ptab-validar" onclick="mudarPassagemTab('validar',this)"
               style="flex:1;padding:10px;border-radius:8px;border:1.5px solid #E2E8F0;background:#fff;color:#64748B;font-size:13px;font-weight:600;cursor:pointer">
-              ✅ Validar <span id="menu-badge-passagem-tab" style="display:none;background:#DC2626;color:#fff;border-radius:50%;padding:1px 5px;font-size:10px;margin-left:4px">!</span>
+              Validar <span id="menu-badge-passagem-tab" style="display:none;background:#DC2626;color:#fff;border-radius:50%;padding:1px 5px;font-size:10px;margin-left:4px">!</span>
             </button>
             <button id="ptab-placar" onclick="mudarPassagemTab('placar',this)"
               style="flex:1;padding:10px;border-radius:8px;border:1.5px solid #E2E8F0;background:#fff;color:#64748B;font-size:13px;font-weight:600;cursor:pointer">
-              🏆 Placar
+              Placar
             </button>
             <button id="ptab-historico" onclick="mudarPassagemTab('historico',this)"
               style="flex:1;padding:10px;border-radius:8px;border:1.5px solid #E2E8F0;background:#fff;color:#64748B;font-size:13px;font-weight:600;cursor:pointer">
-              📋 Histórico
+              Histórico
             </button>
           </div>
 
@@ -1572,16 +1572,16 @@
               <div>
                 <label style="font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase">Turno saindo</label>
                 <select id="pass-turno" style="width:100%;margin-top:4px;padding:10px;border:1px solid #E2E8F0;border-radius:8px;font-size:13px;box-sizing:border-box">
-                  <option value="Manha">☀️ Manhã</option>
-                  <option value="Tarde">🌤️ Tarde</option>
-                  <option value="Noite">🌙 Noite</option>
+                  <option value="Manha">Manhã</option>
+                  <option value="Tarde">Tarde</option>
+                  <option value="Noite">Noite</option>
                 </select>
               </div>
             </div>
 
             <!-- Separação -->
             <div style="border:1.5px solid #BFDBFE;border-radius:10px;padding:12px 14px;margin-bottom:12px;background:#EFF6FF">
-              <div style="font-size:12px;font-weight:700;color:#2563EB;margin-bottom:10px">📦 Separação</div>
+              <div style="font-size:12px;font-weight:700;color:#2563EB;margin-bottom:10px">Separação</div>
               <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
                 <div>
                   <label style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase">Separados</label>
@@ -1600,7 +1600,7 @@
 
             <!-- Checkout -->
             <div style="border:1.5px solid #BBF7D0;border-radius:10px;padding:12px 14px;margin-bottom:12px;background:#F0FDF4">
-              <div style="font-size:12px;font-weight:700;color:#16a34a;margin-bottom:10px">✅ Checkout</div>
+              <div style="font-size:12px;font-weight:700;color:#16a34a;margin-bottom:10px">Checkout</div>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
                 <div>
                   <label style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase">Realizados</label>
@@ -1615,7 +1615,7 @@
 
             <!-- Embalagem -->
             <div style="border:1.5px solid #DDD6FE;border-radius:10px;padding:12px 14px;margin-bottom:12px;background:#F5F3FF">
-              <div style="font-size:12px;font-weight:700;color:#7C3AED;margin-bottom:10px">📫 Embalagem</div>
+              <div style="font-size:12px;font-weight:700;color:#7C3AED;margin-bottom:10px">Embalagem</div>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
                 <div>
                   <label style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase">Embalados</label>
@@ -1630,7 +1630,7 @@
 
             <!-- Reposição Pendências -->
             <div style="border:1.5px solid #FECACA;border-radius:10px;padding:12px 14px;margin-bottom:12px;background:#FEF2F2">
-              <div style="font-size:12px;font-weight:700;color:#DC2626;margin-bottom:10px">⚠️ Reposição — Pendências</div>
+              <div style="font-size:12px;font-weight:700;color:#DC2626;margin-bottom:10px">Reposição — Pendências</div>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
                 <div>
                   <label style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase">Procurando Itens</label>
@@ -1657,7 +1657,7 @@
 
             <button onclick="salvarPassagem()"
               style="width:100%;padding:14px;background:#2563EB;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">
-              💾 Salvar Passagem
+              Salvar Passagem
             </button>
           </div>
 
@@ -1703,10 +1703,10 @@
       <div class="rep-tab-page ativa" id="rep-tab-separar">
         <div class="rep-scroll">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-            <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">⏳ Para Separar</div>
+            <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">Para Separar</div>
             <div style="display:flex;gap:8px;align-items:center">
-              <span style="font-size:12px;color:#f59e0b;font-weight:700">⏳ <span id="rep-cnt-separar">0</span></span>
-              <button class="btn btn-outline btn-sm" onclick="carregarRepSeparar()">🔄</button>
+              <span style="font-size:12px;color:#f59e0b;font-weight:700"><span id="rep-cnt-separar">0</span></span>
+              <button class="btn btn-outline btn-sm" onclick="carregarRepSeparar()">↺</button>
             </div>
           </div>
           <div id="rep-lista-separar"><div style="color:var(--text3);text-align:center;padding:40px;font-size:13px">✅ Nenhum item</div></div>
@@ -1717,10 +1717,10 @@
       <div class="rep-tab-page" id="rep-tab-separado">
         <div class="rep-scroll">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-            <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">📦 Separado</div>
+            <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">Separado</div>
             <div style="display:flex;gap:8px;align-items:center">
-              <span style="font-size:12px;color:#3b82f6;font-weight:700">📦 <span id="rep-cnt-separado">0</span></span>
-              <button class="btn btn-outline btn-sm" onclick="carregarRepSeparado()">🔄</button>
+              <span style="font-size:12px;color:#3b82f6;font-weight:700"><span id="rep-cnt-separado">0</span></span>
+              <button class="btn btn-outline btn-sm" onclick="carregarRepSeparado()">↺</button>
             </div>
           </div>
           <div id="rep-lista-separado"><div style="color:var(--text3);text-align:center;padding:40px;font-size:13px">Nenhum item separado</div></div>
@@ -1731,10 +1731,10 @@
       <div class="rep-tab-page" id="rep-tab-subiu">
         <div class="rep-scroll">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-            <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">⬆️ Subiu</div>
+            <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">Subiu</div>
             <div style="display:flex;gap:8px;align-items:center">
-              <span style="font-size:12px;color:#0ea5e9;font-weight:700">⬆️ <span id="rep-cnt-subiu">0</span></span>
-              <button class="btn btn-outline btn-sm" onclick="carregarRepSubiu()">🔄</button>
+              <span style="font-size:12px;color:#0ea5e9;font-weight:700"><span id="rep-cnt-subiu">0</span></span>
+              <button class="btn btn-outline btn-sm" onclick="carregarRepSubiu()">↺</button>
             </div>
           </div>
           <div id="rep-lista-subiu"><div style="color:var(--text3);text-align:center;padding:40px;font-size:13px">Nenhum item subiu</div></div>
@@ -1745,10 +1745,10 @@
       <div class="rep-tab-page" id="rep-tab-protocolo">
         <div class="rep-scroll">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-            <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">📋 Protocolo</div>
+            <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">Protocolo</div>
             <div style="display:flex;gap:8px;align-items:center">
-              <span style="font-size:12px;color:#ef4444;font-weight:700">❌ <span id="rep-cnt-protocolo">0</span></span>
-              <button class="btn btn-outline btn-sm" onclick="carregarRepProtocolo()">🔄</button>
+              <span style="font-size:12px;color:#ef4444;font-weight:700"><span id="rep-cnt-protocolo">0</span></span>
+              <button class="btn btn-outline btn-sm" onclick="carregarRepProtocolo()">↺</button>
             </div>
           </div>
           <div id="rep-lista-protocolo"><div style="color:var(--text3);text-align:center;padding:40px;font-size:13px">Nenhum item em protocolo</div></div>
@@ -1777,11 +1777,11 @@
       <div class="ck-tab-page ativa" id="ck-tab-fila">
         <div class="ck-scroll">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-            <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">📋 Fila de Checkout</div>
-            <button class="btn btn-outline btn-sm" onclick="carregarFilaCkMobile()">🔄</button>
+            <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">Fila de Checkout</div>
+            <button class="btn btn-outline btn-sm" onclick="carregarFilaCkMobile()">↺</button>
           </div>
           <button onclick="escanearQrFila()" style="width:100%;margin-bottom:12px;padding:14px;background:#4f46e5;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;letter-spacing:.5px;touch-action:manipulation;box-shadow:0 2px 8px rgba(79,70,229,.3)">
-            📷 Escanear QR da Caixa
+            Escanear QR da Caixa
           </button>
           <div id="m-ck-fila-lista">
             <div style="color:var(--text3);text-align:center;padding:32px;font-size:13px">Carregando...</div>
@@ -1795,7 +1795,7 @@
           <input type="text" id="m-ck-input-caixa" autocomplete="off" inputmode="numeric" style="display:none"/>
           <div id="m-ck-resultado">
             <div style="color:var(--text3);text-align:center;padding:48px 24px;font-size:13px;line-height:1.6">
-              📷 Escaneie o QR da caixa<br>na aba <b>FILA</b>
+              Escaneie o QR da caixa<br>na aba <b>FILA</b>
             </div>
           </div>
         </div>
@@ -1805,10 +1805,10 @@
       <div class="ck-tab-page" id="ck-tab-feitos">
         <div class="ck-scroll">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-            <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">✅ Feitos Hoje</div>
+            <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">Feitos Hoje</div>
             <div style="display:flex;gap:8px;align-items:center">
               <span id="m-ck-feitos-cnt" style="font-size:12px;font-weight:700;color:var(--green)">0</span>
-              <button class="btn btn-outline btn-sm" onclick="carregarFeitosCkMobile()">🔄</button>
+              <button class="btn btn-outline btn-sm" onclick="carregarFeitosCkMobile()">↺</button>
             </div>
           </div>
           <div id="m-ck-feitos-lista">
@@ -1821,8 +1821,8 @@
       <div class="ck-tab-page" id="ck-tab-aguardando">
         <div class="ck-scroll">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-            <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">⏳ Aguardando Item</div>
-            <button class="btn btn-outline btn-sm" onclick="carregarAguardandoCkMobile()">🔄</button>
+            <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">Aguardando Item</div>
+            <button class="btn btn-outline btn-sm" onclick="carregarAguardandoCkMobile()">↺</button>
           </div>
           <div id="m-ck-aguardando-lista">
             <div style="color:var(--text3);text-align:center;padding:32px;font-size:13px">Carregando...</div>
@@ -1855,8 +1855,8 @@
               autocomplete="off" inputmode="numeric"
               style="width:100%;font-size:22px;letter-spacing:3px;border-color:#DC2626;border-width:2px;margin-bottom:8px;box-sizing:border-box"/>
             <div style="display:flex;gap:8px">
-              <button onclick="escanearQrCaixa(true)" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:#1D4ED8;color:#fff;border:none;border-radius:8px;padding:12px 0;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.5px">📷 Escanear QR</button>
-              <button onclick="vincularCaixaMobile()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:#DC2626;color:#fff;border:none;border-radius:8px;padding:12px 0;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.5px">📦 Vincular</button>
+              <button onclick="escanearQrCaixa(true)" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:#1D4ED8;color:#fff;border:none;border-radius:8px;padding:12px 0;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.5px">Escanear QR</button>
+              <button onclick="vincularCaixaMobile()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:#DC2626;color:#fff;border:none;border-radius:8px;padding:12px 0;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.5px">Vincular</button>
             </div>
             <div id="m-caixa-status" style="font-size:12px;color:var(--text3);margin-top:6px;padding:6px 10px;background:var(--surface2);border-radius:6px;display:none"></div>
           </div>
@@ -1913,14 +1913,14 @@
 
           <!-- Checklist mobile -->
           <div class="cl-wrap" id="m-cl-wrap">
-            <div class="cl-header"><span id="m-cl-titulo">📋 PEDIDO</span><span id="m-cl-contador" style="color:var(--accent);font-weight:700;font-size:12px">0/0</span></div>
+            <div class="cl-header"><span id="m-cl-titulo">PEDIDO</span><span id="m-cl-contador" style="color:var(--accent);font-weight:700;font-size:12px">0/0</span></div>
             <div class="cl-prog"><div class="cl-prog-fill" id="m-cl-barra" style="width:0%"></div></div>
             <div class="cl-resumo" id="m-cl-resumo"></div>
             <div class="cl-lista" id="m-cl-lista"></div>
             <div class="cl-footer">
-              <button class="btn-acao concluir" id="m-btn-concluir" onclick="concluirPedidoMobile()" disabled>🔒 CONCLUIR</button>
-              <button class="btn-acao aguardar" id="m-btn-aguardar" style="display:none">⏳ AGUARDANDO</button>
-              <button class="btn-acao" id="m-btn-concluir-falta" onclick="concluirComFaltaMobile()" style="display:none;background:#f97316;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;padding:12px;width:100%;margin-top:6px">⚠️ CONCLUIR COM FALTA</button>
+              <button class="btn-acao concluir" id="m-btn-concluir" onclick="concluirPedidoMobile()" disabled>CONCLUIR</button>
+              <button class="btn-acao aguardar" id="m-btn-aguardar" style="display:none">AGUARDANDO</button>
+              <button class="btn-acao" id="m-btn-concluir-falta" onclick="concluirComFaltaMobile()" style="display:none;background:#f97316;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;padding:12px;width:100%;margin-top:6px">CONCLUIR COM FALTA</button>
             </div>
           </div>
         </div>
@@ -1933,10 +1933,10 @@
       <div class="sep-tab-page ativa" id="sep-tab-fila">
         <div class="sep-scroll">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-            <div style="font-family:'Space Mono',monospace;font-size:15px;font-weight:700;color:var(--text)">📋 Fila de Separação</div>
+            <div style="font-family:'Space Mono',monospace;font-size:15px;font-weight:700;color:var(--text)">Fila de Separação</div>
             <div style="display:flex;gap:8px;align-items:center">
               <span id="badge-fila-m" style="font-size:11px;color:var(--text3);font-weight:600"></span>
-              <button style="padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;font-size:13px;cursor:pointer" onclick="carregarFilaMobile()">🔄</button>
+              <button style="padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;font-size:13px;cursor:pointer" onclick="carregarFilaMobile()">↺</button>
             </div>
           </div>
           <div id="lista-fila-mobile">
@@ -1952,8 +1952,8 @@
       <div class="sep-tab-page" id="sep-tab-avisos-sep">
         <div class="rep-scroll">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-            <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">🔔 Avisos do Repositor</div>
-            <button class="btn btn-outline btn-sm" onclick="carregarAvisosSeparador()">🔄</button>
+            <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">Avisos do Repositor</div>
+            <button class="btn btn-outline btn-sm" onclick="carregarAvisosSeparador()">↺</button>
           </div>
           <div id="sep-avisos-lista">
             <div style="color:var(--text3);text-align:center;padding:40px;font-size:13px">✅ Nenhum aviso</div>
@@ -1965,14 +1965,14 @@
       <div class="sep-tab-page" id="sep-tab-aguardando">
         <div class="rep-scroll">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-            <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">⏸️ Aguardando</div>
+            <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">Aguardando</div>
             <div style="display:flex;gap:8px;align-items:center">
-              <span style="font-size:12px;color:#f59e0b;font-weight:700">⏸️ <span id="sep-cnt-aguardando">0</span></span>
-              <button class="btn btn-outline btn-sm" onclick="carregarAguardandoMobile()">🔄</button>
+              <span style="font-size:12px;color:#f59e0b;font-weight:700"><span id="sep-cnt-aguardando">0</span></span>
+              <button class="btn btn-outline btn-sm" onclick="carregarAguardandoMobile()">↺</button>
             </div>
           </div>
           <div style="font-size:12px;color:var(--text3);margin-bottom:12px;padding:8px 12px;background:#fffbeb;border-radius:8px;border:1px solid #fde68a">
-            ⏸️ Pedidos com itens em <b style="color:#92400e">Protocolo</b> — aguardando definição do supervisor.
+            Pedidos com itens em <b style="color:#92400e">Protocolo</b> — aguardando definição do supervisor.
           </div>
           <div id="sep-lista-aguardando">
             <div style="color:var(--text3);text-align:center;padding:40px;font-size:13px">Nenhum item aguardando</div>
@@ -2002,21 +2002,17 @@
 <!-- Tab bar -->
 <div class="sep-tabbar" id="sep-tabbar">
   <button class="sep-tab ativo" id="stab-fila" onclick="mudarTabSep('fila')">
-    <span class="sep-tab-ic">📋</span>
     FILA
     <span class="sep-tab-badge" id="stab-fila-badge" style="display:none">0</span>
   </button>
   <button class="sep-tab" id="stab-separar" onclick="mudarTabSep('separar')">
-    <span class="sep-tab-ic">📦</span>
     SEPARAR
   </button>
   <button class="sep-tab" id="stab-avisos-sep" onclick="mudarTabSep('avisos-sep')">
-    <span class="sep-tab-ic">🔔</span>
     AVISOS
     <span class="sep-tab-badge" id="stab-avisos-sep-badge" style="display:none">0</span>
   </button>
   <button class="sep-tab" id="stab-aguardando" onclick="mudarTabSep('aguardando')">
-    <span class="sep-tab-ic">⏸️</span>
     AGUARD.
     <span class="sep-tab-badge" id="stab-aguardando-badge" style="display:none">0</span>
   </button>
@@ -2028,27 +2024,22 @@
 <!-- Tab bar Repositor -->
 <div class="rep-tabbar" id="rep-tabbar">
   <button class="rep-tab ativo" id="rtab-separar" onclick="mudarTabRep('separar')">
-    <span class="rep-tab-ic">⏳</span>
     SEPARAR
     <span class="rep-tab-badge" id="rtab-separar-badge" style="display:none">0</span>
   </button>
   <button class="rep-tab" id="rtab-separado" onclick="mudarTabRep('separado')">
-    <span class="rep-tab-ic">📦</span>
     SEPARADO
     <span class="rep-tab-badge" id="rtab-separado-badge" style="display:none">0</span>
   </button>
   <button class="rep-tab" id="rtab-subiu" onclick="mudarTabRep('subiu')">
-    <span class="rep-tab-ic">⬆️</span>
     SUBIU
     <span class="rep-tab-badge" id="rtab-subiu-badge" style="display:none">0</span>
   </button>
   <button class="rep-tab" id="rtab-protocolo" onclick="mudarTabRep('protocolo')">
-    <span class="rep-tab-ic">📋</span>
     PROTOCOLO
     <span class="rep-tab-badge" id="rtab-protocolo-badge" style="display:none">0</span>
   </button>
   <button class="rep-tab" id="rtab-entrada-manual" onclick="mudarTabRep('entrada-manual')">
-    <span class="rep-tab-ic">📥</span>
     ENTRADA
   </button>
 </div>
@@ -2059,20 +2050,16 @@
 <!-- Tab bar Checkout -->
 <div class="ck-tabbar" id="ck-tabbar">
   <button class="ck-tab ativo" id="cktab-fila" onclick="mudarTabCk('fila')">
-    <span class="ck-tab-ic">📋</span>
     FILA
     <span class="rep-tab-badge" id="cktab-fila-badge" style="display:none">0</span>
   </button>
   <button class="ck-tab" id="cktab-busca" onclick="mudarTabCk('busca')">
-    <span class="ck-tab-ic">🏷️</span>
     CHECKOUT
   </button>
   <button class="ck-tab" id="cktab-feitos" onclick="mudarTabCk('feitos')">
-    <span class="ck-tab-ic">✅</span>
     FEITOS
   </button>
   <button class="ck-tab" id="cktab-aguardando" onclick="mudarTabCk('aguardando')">
-    <span class="ck-tab-ic">⏳</span>
     AGUARD.
     <span class="rep-tab-badge" id="cktab-aguardando-badge" style="display:none">0</span>
   </button>
@@ -2096,13 +2083,13 @@
 <div id="modal-importar" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9998;align-items:center;justify-content:center;padding:16px">
   <div style="background:var(--surface);border-radius:var(--r);box-shadow:var(--sh-lg);width:100%;max-width:880px;max-height:90vh;overflow-y:auto">
     <div style="background:var(--surface2);padding:14px 18px;border-bottom:1px solid var(--border);border-radius:var(--r) var(--r) 0 0;display:flex;align-items:center;justify-content:space-between">
-      <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">📥 Importar Planilha de Pedidos</div>
+      <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">Importar Planilha de Pedidos</div>
       <button onclick="fecharModalImportar()" style="background:transparent;border:none;font-size:22px;cursor:pointer;color:var(--text3);padding:0 4px">✕</button>
     </div>
     <div style="padding:18px">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
         <div>
-          <div style="font-size:10px;font-weight:700;color:var(--accent);letter-spacing:1px;margin-bottom:10px">📥 IMPORTAR PLANILHA</div>
+          <div style="font-size:10px;font-weight:700;color:var(--accent);letter-spacing:1px;margin-bottom:10px">IMPORTAR PLANILHA</div>
           <div class="upload-area" id="modal-upload-area"
             ondragover="event.preventDefault();this.classList.add('drag')"
             ondragleave="this.classList.remove('drag')"
@@ -2112,7 +2099,7 @@
             <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">Arraste o arquivo aqui</div>
             <div style="font-size:11px;color:var(--text3);margin-bottom:12px">ou clique para selecionar<br><b style="color:var(--text2)">Aba "Itens": Codigo, Pedido, Descricao, Quantidade, Endereço<br>Aba "Transportadora": Pedido, Razão social, Serviço de entrega</b></div>
             <input type="file" id="modal-input-arquivo" accept=".xlsx,.xls,.csv" onchange="processarArquivoModal(event)" style="display:none"/>
-            <button class="btn btn-outline btn-sm" onclick="event.stopPropagation();document.getElementById('modal-input-arquivo').click()">📂 Selecionar Arquivo</button>
+            <button class="btn btn-outline btn-sm" onclick="event.stopPropagation();document.getElementById('modal-input-arquivo').click()">Selecionar Arquivo</button>
           </div>
           <div class="status-box" id="modal-status-leitura"></div>
           <div id="modal-preview-importacao" style="display:none;margin-top:14px">
@@ -2122,12 +2109,12 @@
             </div>
             <div style="margin-top:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
               <span id="modal-txt-total-import" style="font-size:12px;color:var(--text2);font-weight:600"></span>
-              <button class="btn btn-success" onclick="confirmarImportacaoModal()">📥 Importar para Fila</button>
+              <button class="btn btn-success" onclick="confirmarImportacaoModal()">Importar para Fila</button>
             </div>
           </div>
         </div>
         <div>
-          <div style="font-size:10px;font-weight:700;color:var(--accent);letter-spacing:1px;margin-bottom:10px">📋 HISTÓRICO</div>
+          <div style="font-size:10px;font-weight:700;color:var(--accent);letter-spacing:1px;margin-bottom:10px">HISTÓRICO</div>
           <div id="modal-hist-importacoes"></div>
         </div>
       </div>
@@ -2139,22 +2126,22 @@
 <div id="modal-distribuicao" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9998;align-items:center;justify-content:center;padding:16px">
   <div style="background:var(--surface);border-radius:var(--r);box-shadow:var(--sh-lg);width:100%;max-width:700px;max-height:90vh;overflow-y:auto">
     <div style="background:var(--surface2);padding:14px 18px;border-bottom:1px solid var(--border);border-radius:var(--r) var(--r) 0 0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
-      <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">⚖️ Distribuição de Pedidos</div>
+      <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">Distribuição de Pedidos</div>
       <div style="display:flex;gap:4px;background:var(--surface);border-radius:8px;padding:3px">
         <button id="btn-modo-auto" onclick="distSetModo('auto')"
           style="padding:5px 14px;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;background:#6366f1;color:#fff;transition:all .2s">
-          ⚖️ Automática
+          Automática
         </button>
         <button id="btn-modo-manual" onclick="distSetModo('manual')"
           style="padding:5px 14px;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;background:transparent;color:var(--text3);transition:all .2s">
-          ✋ Manual
+          Manual
         </button>
       </div>
       <button onclick="fecharModalDistribuicao()" style="background:transparent;border:none;font-size:22px;cursor:pointer;color:var(--text3);padding:0 4px">✕</button>
     </div>
     <div style="padding:18px">
       <div style="background:linear-gradient(135deg,rgba(37,99,235,.04),rgba(99,102,241,.04));border:1px solid rgba(37,99,235,.15);border-radius:var(--r-sm);padding:14px 16px;margin-bottom:16px">
-        <div style="font-size:11px;font-weight:800;color:var(--accent);letter-spacing:1.5px;margin-bottom:10px;text-transform:uppercase">📊 Critérios de Distribuição</div>
+        <div style="font-size:11px;font-weight:800;color:var(--accent);letter-spacing:1.5px;margin-bottom:10px;text-transform:uppercase">Critérios de Distribuição</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:11px;color:var(--text2)">
           <div style="display:flex;align-items:flex-start;gap:6px"><span style="color:var(--green);font-size:13px">●</span><span><b style="color:var(--text)">Corredores fáceis</b> (A–E, P–U)<br><span style="color:var(--text3)">Peso 1.0 por item</span></span></div>
           <div style="display:flex;align-items:flex-start;gap:6px"><span style="color:var(--amber);font-size:13px">●</span><span><b style="color:var(--text)">Corredores médios</b> (M, N, O, V–Z)<br><span style="color:var(--text3)">Peso 1.5 por item</span></span></div>
@@ -2162,26 +2149,26 @@
           <div style="display:flex;align-items:flex-start;gap:6px"><span style="color:var(--indigo);font-size:13px">●</span><span><b style="color:var(--text)">Ruas únicas</b> no pedido<br><span style="color:var(--text3)">+ 2 pontos cada</span></span></div>
         </div>
         <div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(37,99,235,.12);font-size:11px;color:var(--text2);display:flex;align-items:center;gap:6px">
-          🚗 <span>Pedidos <b style="color:var(--text)">RETIRADA DRIVE THRU</b> são priorizados e distribuídos primeiro, independentemente do horário.</span>
+          <span>Pedidos <b style="color:var(--text)">RETIRADA DRIVE THRU</b> são priorizados e distribuídos primeiro, independentemente do horário.</span>
         </div>
       </div>
       <!-- Filtro de data + imprimir -->
       <div style="display:flex;gap:10px;align-items:flex-end;margin-bottom:14px;padding:10px 14px;background:var(--surface2);border-radius:8px;border:1px solid var(--border)">
         <div>
-          <div style="font-size:10px;font-weight:700;color:var(--accent);letter-spacing:1px;margin-bottom:5px">📅 DATA DOS PEDIDOS</div>
+          <div style="font-size:10px;font-weight:700;color:var(--accent);letter-spacing:1px;margin-bottom:5px">DATA DOS PEDIDOS</div>
           <div style="display:flex;gap:6px;align-items:center">
             <input type="date" id="dist-data" style="font-size:14px;font-weight:700;padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text)" onkeydown="if(event.key==='Enter')carregarPedidosDistribuicao()"/>
-            <button onclick="carregarPedidosDistribuicao()" class="btn btn-primary btn-sm" style="height:36px;white-space:nowrap">🔍 Filtrar</button>
+            <button onclick="carregarPedidosDistribuicao()" class="btn btn-primary btn-sm" style="height:36px;white-space:nowrap">Filtrar</button>
           </div>
         </div>
-        <button onclick="imprimirPedidosDistribuicao()" class="btn btn-outline" style="height:38px;white-space:nowrap;font-size:13px">🖨️ Imprimir Lista</button>
+        <button onclick="imprimirPedidosDistribuicao()" class="btn btn-outline" style="height:38px;white-space:nowrap;font-size:13px">Imprimir Lista</button>
       </div>
       <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px;align-items:flex-end">
         <div class="fg">
           <label>QUANTIDADE DE PEDIDOS A DISTRIBUIR</label>
           <div style="display:flex;gap:6px;align-items:center">
             <input type="number" id="dist-quantidade" placeholder="Todos" min="1" style="min-width:140px;font-size:15px;font-weight:700" oninput="clearTimeout(window._distTimer);window._distTimer=setTimeout(carregarPedidosDistribuicao,400)"/>
-            <button class="btn btn-primary btn-sm" onclick="carregarPedidosDistribuicao()" title="Atualizar prévia com a quantidade informada" style="height:36px;white-space:nowrap">🔍 Filtrar</button>
+            <button class="btn btn-primary btn-sm" onclick="carregarPedidosDistribuicao()" title="Atualizar prévia com a quantidade informada" style="height:36px;white-space:nowrap">Filtrar</button>
           </div>
         </div>
         <label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;cursor:pointer;margin-bottom:4px">
@@ -2195,11 +2182,11 @@
           </label>
           <button id="btn-prime-dist" onclick="togglePrimeDistribuicao()"
             style="padding:4px 10px;border-radius:6px;border:1.5px solid #D97706;background:transparent;color:#D97706;font-size:11px;font-weight:700;cursor:pointer;transition:all .15s;white-space:nowrap">
-            ⭐ Incluir Prime
+            Incluir Prime
           </button>
         </div>
         <div id="dist-prime-aviso" style="display:none;margin-top:6px;padding:7px 11px;border-radius:7px;background:#FFFBEB;border:1.5px solid #FCD34D;font-size:11px;font-weight:600;color:#92400E">
-          ⭐ MODO PRIME ATIVO — Apenas pedidos <em>Postagem Ágil Miess Prime</em> serão distribuídos.
+          MODO PRIME ATIVO — Apenas pedidos <em>Postagem Ágil Miess Prime</em> serão distribuídos.
         </div>
       </div>
 
@@ -2227,17 +2214,17 @@
       </div>
       <div style="display:flex;gap:8px;justify-content:flex-end" id="dist-botoes-auto">
         <button class="btn btn-outline" onclick="fecharModalDistribuicao()">Cancelar</button>
-        <button class="btn btn-primary" onclick="calcularDistribuicao()" id="btn-calcular-dist">🔍 Calcular Distribuição</button>
-        <button class="btn btn-success" onclick="confirmarDistribuicao()" id="btn-confirmar-dist" style="display:none">✅ Confirmar Distribuição</button>
+        <button class="btn btn-primary" onclick="calcularDistribuicao()" id="btn-calcular-dist">Calcular Distribuição</button>
+        <button class="btn btn-success" onclick="confirmarDistribuicao()" id="btn-confirmar-dist" style="display:none">Confirmar Distribuição</button>
       </div>
 
       <!-- PAINEL MANUAL -->
       <div id="dist-painel-manual" style="display:none">
         <div style="background:rgba(99,102,241,.06);border:1px solid rgba(99,102,241,.2);border-radius:10px;padding:14px 16px;margin-bottom:14px;font-size:12px;color:var(--text2)">
-          ✋ <b>Distribuição Manual:</b> busque um pedido pelo número ou cliente e atribua diretamente a um colaborador.
+          <b>Distribuição Manual:</b> busque um pedido pelo número ou cliente e atribua diretamente a um colaborador.
         </div>
         <div style="display:flex;gap:8px;margin-bottom:14px">
-          <input id="dist-manual-busca" type="text" placeholder="🔍  Número do pedido ou nome do cliente..."
+          <input id="dist-manual-busca" type="text" placeholder="Número do pedido ou nome do cliente..."
             style="flex:1;padding:10px 14px;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;color:var(--text);font-size:13px;outline:none"
             oninput="clearTimeout(window._dmTimer);window._dmTimer=setTimeout(distManualBuscar,350)">
           <button class="btn btn-primary" onclick="distManualBuscar()">Buscar</button>
@@ -2333,12 +2320,12 @@
         <input type="number" id="modal-qtd-enc-val" min="1" inputmode="numeric"
           style="width:100%;padding:16px;border:2px solid var(--accent);border-radius:12px;font-size:28px;font-weight:800;text-align:center;margin-bottom:16px;box-sizing:border-box;font-family:'Space Mono',monospace;color:var(--text);background:var(--surface2)">
         <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:10px 14px;margin-bottom:16px;text-align:left">
-          <div style="font-size:11px;font-weight:700;color:#92400e;margin-bottom:4px">💡 DICA</div>
+          <div style="font-size:11px;font-weight:700;color:#92400e;margin-bottom:4px">DICA</div>
           <div style="font-size:11px;color:#78350f;line-height:1.4">Se encontrou mais do que o pedido precisa, coloque a quantidade total que irá abastecer a colmeia.</div>
         </div>
         <div style="display:flex;gap:10px">
           <button onclick="_cancelarQtdEnc()" class="btn btn-outline" style="flex:1;padding:12px">Cancelar</button>
-          <button onclick="_confirmarQtdEnc()" class="btn btn-primary" style="flex:1;padding:12px;font-weight:700">✅ Confirmar</button>
+          <button onclick="_confirmarQtdEnc()" class="btn btn-primary" style="flex:1;padding:12px;font-weight:700">Confirmar</button>
         </div>
       </div>
     </div>
@@ -2357,11 +2344,11 @@
           <button onclick="_subiu_mais()" style="width:44px;height:44px;border-radius:10px;border:2px solid var(--border);background:var(--surface2);color:var(--text);font-size:22px;font-weight:700;cursor:pointer">+</button>
         </div>
         <div id="modal-qtd-subiu-aviso" style="display:none;background:#fff7ed;border:1px solid #fb923c;border-radius:10px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:#c2410c;font-weight:600;text-align:left">
-          ⚠️ Quantidade parcial — o separador será notificado da falta.
+          Quantidade parcial — o separador será notificado da falta.
         </div>
         <div style="display:flex;gap:10px">
           <button onclick="_cancelarQtdSubiu()" class="btn btn-outline" style="flex:1;padding:12px">Cancelar</button>
-          <button onclick="_confirmarQtdSubiu()" class="btn btn-primary" style="flex:1;padding:12px;font-weight:700">⬆️ Confirmar</button>
+          <button onclick="_confirmarQtdSubiu()" class="btn btn-primary" style="flex:1;padding:12px;font-weight:700">Confirmar</button>
         </div>
       </div>
     </div>
@@ -2385,7 +2372,7 @@
     <div id="modal-redef-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center">
       <div style="background:var(--surface);border-radius:16px;padding:28px;max-width:380px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.3)">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
-          <div style="font-size:16px;font-weight:700;color:var(--text)">🔑 Redefinir Senha</div>
+          <div style="font-size:16px;font-weight:700;color:var(--text)">Redefinir Senha</div>
           <button onclick="fecharRedefinirSenha()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text3)">✕</button>
         </div>
         <div class="form-grp">
@@ -2421,13 +2408,13 @@ if ('serviceWorker' in navigator) {
   <!-- Header -->
   <div style="background:var(--surface,#fff);border-bottom:1.5px solid var(--border,#e2e8f0);padding:14px 16px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
     <div>
-      <div style="font-family:'Space Mono',monospace;font-size:15px;font-weight:700;color:var(--text,#1e293b)">📫 Embalagem</div>
+      <div style="font-family:'Space Mono',monospace;font-size:15px;font-weight:700;color:var(--text,#1e293b)">Embalagem</div>
       <div style="font-size:11px;color:var(--text3,#94a3b8);margin-top:1px">
         <span id="m-emb-pend" style="font-weight:700;color:#ca8a04">0</span> pendentes
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:8px">
-      <button onclick="carregarEmbalagemMobile()" style="padding:8px 12px;background:var(--surface2,#f8fafc);border:1px solid var(--border,#e2e8f0);border-radius:10px;font-size:13px;cursor:pointer">🔄</button>
+      <button onclick="carregarEmbalagemMobile()" style="padding:8px 12px;background:var(--surface2,#f8fafc);border:1px solid var(--border,#e2e8f0);border-radius:10px;font-size:13px;cursor:pointer">↺</button>
       <button onclick="sair()" style="padding:8px 14px;background:#fee2e2;color:#dc2626;border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer">Sair</button>
     </div>
   </div>
@@ -2437,13 +2424,13 @@ if ('serviceWorker' in navigator) {
     <div style="padding:14px;background:var(--surface,#fff);border-bottom:1px solid var(--border,#e2e8f0);flex-shrink:0">
       <div style="font-size:11px;color:var(--text3,#94a3b8);font-weight:700;margin-bottom:8px;letter-spacing:.5px;text-transform:uppercase">Buscar Pedido</div>
       <input type="text" id="m-emb-busca"
-        placeholder="🔍 Número do pedido..."
+        placeholder="Número do pedido..."
         onkeydown="if(event.key==='Enter')filtrarEmbalagemMobile()"
         autocomplete="off" inputmode="numeric"
         style="width:100%;padding:14px 16px;border:2px solid var(--border,#e2e8f0);border-radius:12px;font-size:16px;font-weight:700;font-family:'Space Mono',monospace;background:var(--surface2,#f8fafc);color:var(--text,#1e293b);box-sizing:border-box;outline:none;letter-spacing:1px;margin-bottom:8px">
       <div style="display:flex;gap:8px">
-        <button onclick="escanearQr('m-emb-busca', filtrarEmbalagemMobile)" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:#1D4ED8;color:#fff;border:none;border-radius:12px;padding:13px 0;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.5px">📷 Escanear QR</button>
-        <button onclick="filtrarEmbalagemMobile()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:#4f46e5;color:#fff;border:none;border-radius:12px;padding:13px 0;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(79,70,229,.3);letter-spacing:.5px">🔍 Buscar</button>
+        <button onclick="escanearQr('m-emb-busca', filtrarEmbalagemMobile)" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:#1D4ED8;color:#fff;border:none;border-radius:12px;padding:13px 0;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.5px">Escanear QR</button>
+        <button onclick="filtrarEmbalagemMobile()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:#4f46e5;color:#fff;border:none;border-radius:12px;padding:13px 0;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(79,70,229,.3);letter-spacing:.5px">Buscar</button>
       </div>
     </div>
     <div style="flex:1;overflow-y:auto;padding:14px;min-height:0" id="m-emb-lista">
@@ -2474,16 +2461,13 @@ if ('serviceWorker' in navigator) {
 <!-- Embalagem Tab Bar -->
 <div class="emb-tabbar" id="emb-tabbar">
   <button class="emb-tab-btn ativo" id="etab-fila" onclick="mudarTabEmb('fila')">
-    <span class="emb-tab-ic">📋</span>
     FILA
     <span class="emb-tab-bdg" id="etab-fila-badge" style="display:none">0</span>
   </button>
   <button class="emb-tab-btn" id="etab-embalar" onclick="mudarTabEmb('embalar')">
-    <span class="emb-tab-ic">📦</span>
     EMBALAR
   </button>
   <button class="emb-tab-btn" id="etab-embalados" onclick="mudarTabEmb('embalados')">
-    <span class="emb-tab-ic">✅</span>
     EMBALADOS
   </button>
 </div>
