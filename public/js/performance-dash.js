@@ -493,50 +493,50 @@ function pfRenderKPIs({ totPed, totItens, totSkus, totRep, tempoMed, tempoMin, t
 
   const mini = (label, val) => `
     <div>
-      <div style="font-size:8px;font-weight:700;opacity:.65;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">${label}</div>
-      <div style="font-size:15px;font-weight:800;line-height:1">${val}</div>
+      <div style="font-size:8px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">${label}</div>
+      <div style="font-size:15px;font-weight:800;line-height:1;color:var(--text)">${val}</div>
     </div>`;
 
-  const card = (grad, icon, label, num, desc, stats) => `
-    <div style="background:${grad};border-radius:16px;padding:20px;color:#fff;position:relative;overflow:hidden">
-      <div style="position:absolute;right:-18px;top:-18px;width:90px;height:90px;background:rgba(255,255,255,.12);border-radius:50%"></div>
-      <div style="position:absolute;right:22px;top:28px;width:52px;height:52px;background:rgba(255,255,255,.08);border-radius:50%"></div>
-      <div style="font-size:26px;margin-bottom:4px;position:relative">${icon}</div>
-      <div style="font-size:10px;font-weight:800;letter-spacing:.8px;opacity:.85;text-transform:uppercase">${label}</div>
-      <div style="font-size:44px;font-weight:900;line-height:1.05;margin:6px 0 2px;position:relative">${num}</div>
-      <div style="font-size:11px;opacity:.75">${desc}</div>
-      <div style="border-top:1px solid rgba(255,255,255,.2);margin:12px 0 10px"></div>
+  const card = (cor, label, num, desc, stats) => `
+    <div style="background:var(--surface);border-radius:16px;border:1px solid var(--border);border-top:3px solid ${cor};padding:20px">
+      <div style="display:flex;align-items:center;gap:7px;margin-bottom:10px">
+        <span style="width:8px;height:8px;border-radius:50%;background:${cor};flex-shrink:0;display:inline-block"></span>
+        <span style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px;text-transform:uppercase">${label}</span>
+      </div>
+      <div style="font-size:42px;font-weight:900;line-height:1.05;margin:6px 0 2px;color:var(--text)">${num}</div>
+      <div style="font-size:11px;color:var(--text2)">${desc}</div>
+      <div style="border-top:1px solid var(--border);margin:12px 0 10px"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">${stats}</div>
     </div>`;
 
   document.getElementById('pf-kpis').innerHTML =
     card(
-      'linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%)',
-      '📋', 'SEPARAÇÃO', pfFmtN(totPed), 'pedidos concluídos',
+      '#4f46e5',
+      'SEPARAÇÃO', pfFmtN(totPed), 'pedidos concluídos',
       mini('COLABORADORES', nColab) +
       mini('ITENS/PED', itensPed) +
       mini('TOTAL ITENS', pfFmtN(totItens)) +
       mini('TOTAL SKUs', pfFmtN(totSkus))
     ) +
     card(
-      'linear-gradient(135deg,#0891b2 0%,#0d9488 100%)',
-      '📦', 'ITENS', pfFmtN(totItens), 'itens separados',
+      '#0891b2',
+      'ITENS', pfFmtN(totItens), 'itens separados',
       mini('TOTAL SKUs', pfFmtN(totSkus)) +
       mini('SKUs/PED', skusPed) +
       mini('MAIS ITENS', liderPed ? (liderPed.nome||'?').split(' ')[0] : '—') +
       mini('MÉDIA/DIA', _pfDados?.por_dia?.length ? pfFmtN(Math.round(totItens / _pfDados.por_dia.length)) : '—')
     ) +
     card(
-      'linear-gradient(135deg,#ea580c 0%,#f59e0b 100%)',
-      '🔁', 'REPOSIÇÃO', pfFmtN(totRep), 'reposições geradas',
+      '#ea580c',
+      'REPOSIÇÃO', pfFmtN(totRep), 'reposições geradas',
       mini('% DOS PEDIDOS', repPct + '%') +
       mini('PEDIDOS SEM REP.', pfFmtN(totPed - Math.min(totRep, totPed))) +
       mini('MAIS REPOS.', liderRep?.reposicoes ? (liderRep.nome||'?').split(' ')[0] : '—') +
       mini('MÉD/COLAB', nColab > 0 ? (totRep / nColab).toFixed(1) : '0')
     ) +
     card(
-      'linear-gradient(135deg,#7c3aed 0%,#a855f7 100%)',
-      '⏱️', 'TEMPO MÉDIO', tempoMed != null ? tempoMed.toFixed(1)+' min' : '—', 'por pedido (separação)',
+      '#7c3aed',
+      'TEMPO MÉDIO', tempoMed != null ? tempoMed.toFixed(1)+' min' : '—', 'por pedido (separação)',
       mini('MAIS RÁPIDO', tempoMin ? (tempoMin.nome||'?').split(' ')[0]+' ('+tempoMin.t.toFixed(1)+'m)' : '—') +
       mini('MAIS LENTO', tempoMax ? (tempoMax.nome||'?').split(' ')[0]+' ('+tempoMax.t.toFixed(1)+'m)' : '—') +
       mini('COM TEMPO', pfFmtN(nComTempo)) +
@@ -694,10 +694,10 @@ function pfRenderTiming(filtroNome) {
   if (filtroNome === undefined) filtroNome = document.getElementById('pf-colab')?.value || '';
 
   const ABAS = [
-    { id:'separacao', label:'Separação',  icon:'✂️', cor:'#6366f1', grad:'linear-gradient(135deg,#4f46e5,#7c3aed)' },
-    { id:'reposicao', label:'Reposição',  icon:'🔁', cor:'#f59e0b', grad:'linear-gradient(135deg,#d97706,#f59e0b)' },
-    { id:'checkout',  label:'Checkout',   icon:'📦', cor:'#0891b2', grad:'linear-gradient(135deg,#0891b2,#0d9488)' },
-    { id:'embalagem', label:'Embalagem',  icon:'🎁', cor:'#16a34a', grad:'linear-gradient(135deg,#16a34a,#0d9488)' },
+    { id:'separacao', label:'Separação', cor:'#4f46e5' },
+    { id:'reposicao', label:'Reposição', cor:'#d97706' },
+    { id:'checkout',  label:'Checkout',  cor:'#0891b2' },
+    { id:'embalagem', label:'Embalagem', cor:'#16a34a' },
   ];
   const abaAtual = ABAS.find(a => a.id === _pfTimingAba) || ABAS[0];
 
@@ -723,10 +723,9 @@ function pfRenderTiming(filtroNome) {
     const ativo = a.id === _pfTimingAba;
     return `<button onclick="pfSwitchAba('${a.id}')"
       style="display:flex;align-items:center;gap:6px;padding:9px 16px;border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;
-             background:${ativo ? a.grad : 'var(--surface2)'};color:${ativo ? '#fff' : 'var(--text3)'}">
-      <span>${a.icon}</span>
+             background:${ativo ? a.cor+'1a' : 'var(--surface2)'};color:${ativo ? a.cor : 'var(--text3)'};border:1.5px solid ${ativo ? a.cor : 'transparent'}">
       <span>${a.label}</span>
-      <span style="background:${ativo ? 'rgba(255,255,255,.25)' : 'var(--border)'};color:${ativo ? '#fff' : 'var(--text3)'};border-radius:20px;padding:1px 7px;font-size:10px;font-weight:800">${n}</span>
+      <span style="background:${ativo ? a.cor+'22' : 'var(--border)'};color:${ativo ? a.cor : 'var(--text3)'};border-radius:20px;padding:1px 7px;font-size:10px;font-weight:800">${n}</span>
     </button>`;
   }).join('');
 
@@ -1355,15 +1354,19 @@ function pfRenderPedidoDetalhe(d) {
     : null;
   const totalMin = tsIni && tsFim ? Math.round((tsFim - tsIni) / 60000 * 10) / 10 : null;
 
-  const etapaCard = (icon, label, grad, corpo, durMin) => `
-    <div style="flex:1;min-width:190px;border-radius:12px;overflow:hidden;border:1px solid var(--border);display:flex;flex-direction:column">
-      <div style="background:${grad};padding:10px 14px;display:flex;align-items:center;gap:8px">
-        <span style="font-size:16px">${icon}</span>
-        <span style="font-size:13px;font-weight:800;color:#fff;letter-spacing:.3px">${label}</span>
+  const etapaColors = { 'Separação':'#4f46e5', 'Reposição':'#d97706', 'Checkout':'#0891b2', 'Embalagem':'#16a34a' };
+  const etapaCard = (icon, label, grad, corpo, durMin) => {
+    const cor = etapaColors[label] || '#64748b';
+    return `
+    <div style="flex:1;min-width:190px;border-radius:12px;overflow:hidden;border:1px solid var(--border);border-top:3px solid ${cor};display:flex;flex-direction:column">
+      <div style="background:var(--surface2);padding:10px 14px;display:flex;align-items:center;gap:8px">
+        <span style="width:7px;height:7px;border-radius:50%;background:${cor};flex-shrink:0;display:inline-block"></span>
+        <span style="font-size:12px;font-weight:800;color:var(--text);letter-spacing:.3px">${label}</span>
         <span style="margin-left:auto">${badgeDur(durMin)}</span>
       </div>
       <div style="padding:12px 14px;background:var(--surface);font-size:12px;flex:1">${corpo}</div>
     </div>`;
+  };
 
   const linha = (label, val, valCor) => `
     <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--border)">
@@ -1372,7 +1375,7 @@ function pfRenderPedidoDetalhe(d) {
     </div>`;
 
   // Separação
-  const sepCard = etapaCard('✂️','Separação','linear-gradient(135deg,#4f46e5,#7c3aed)',
+  const sepCard = etapaCard('','Separação','',
     sep
       ? linha('Colaborador', pfEsc(sep.colaborador||'—')) +
         linha('Início', fmtHora(sep.iniciado_em)) +
@@ -1396,10 +1399,10 @@ function pfRenderPedidoDetalhe(d) {
           <div style="font-size:10px;color:var(--text3);margin-top:2px">⏱ ${fmtHora(r.iniciado_em)} → ${fmtHora(r.concluido_em)}</div>
         </div>`).join('');
   const repTotalMin = rep.length ? rep.reduce((s,r) => s + (r.duracao_min||0), 0) || null : null;
-  const repCard = etapaCard('🔁','Reposição','linear-gradient(135deg,#d97706,#f59e0b)', repCorpo, repTotalMin);
+  const repCard = etapaCard('','Reposição','', repCorpo, repTotalMin);
 
   // Checkout
-  const ckCard = etapaCard('📦','Checkout','linear-gradient(135deg,#0891b2,#0d9488)',
+  const ckCard = etapaCard('','Checkout','',
     ck
       ? linha('Colaborador', pfEsc(ck.colaborador||'—')) +
         linha('Início', fmtHora(ck.iniciado_em)) +
@@ -1411,7 +1414,7 @@ function pfRenderPedidoDetalhe(d) {
   );
 
   // Embalagem
-  const embCard = etapaCard('🎁','Embalagem','linear-gradient(135deg,#16a34a,#0d9488)',
+  const embCard = etapaCard('','Embalagem','',
     emb?.concluido_em
       ? linha('Colaborador', pfEsc(emb.colaborador||'—')) +
         linha('Início', fmtHora(emb.iniciado_em)) +
@@ -1424,12 +1427,12 @@ function pfRenderPedidoDetalhe(d) {
 
   return `
     <div style="border:1.5px solid var(--border);border-radius:14px;overflow:hidden;background:var(--surface)">
-      <div style="background:linear-gradient(135deg,#1e293b,#334155);padding:14px 18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <div style="background:var(--surface2);border-bottom:1px solid var(--border);padding:14px 18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
         <div style="display:flex;align-items:center;gap:12px">
-          <span style="font-family:'Space Mono',monospace;font-size:22px;font-weight:900;color:#f1f5f9">#${pfEsc(d.numero_pedido)}</span>
-          <span style="font-size:12px;color:#94a3b8">${sep?.total_itens ?? '—'} itens · ${sep?.skus ?? '—'} SKUs</span>
+          <span style="font-family:'Space Mono',monospace;font-size:20px;font-weight:900;color:var(--text)">#${pfEsc(d.numero_pedido)}</span>
+          <span style="font-size:12px;color:var(--text2)">${sep?.total_itens ?? '—'} itens · ${sep?.skus ?? '—'} SKUs</span>
         </div>
-        ${totalMin != null ? `<div style="background:rgba(255,255,255,.15);border-radius:20px;padding:5px 18px;color:#f1f5f9;font-size:13px;font-weight:700">⏱ Total: ${fmtDur(totalMin)}</div>` : ''}
+        ${totalMin != null ? `<div style="background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:5px 18px;color:var(--text);font-size:13px;font-weight:700">Total: ${fmtDur(totalMin)}</div>` : ''}
       </div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;padding:14px">
         ${sepCard}${repCard}${ckCard}${embCard}

@@ -566,10 +566,10 @@ async function carregarRankingGeral() {
     }
 
     const areas = [
-      { key:'separadores', icon:'📦', label:'Separação', cor:'var(--accent)',  metrica:'pedidos'    },
-      { key:'checkout',    icon:'✅', label:'Checkout',  cor:'var(--green)',   metrica:'checkouts'  },
-      { key:'embalagem',   icon:'📫', label:'Embalagem', cor:'var(--indigo)',  metrica:'embalagens' },
-      { key:'repositores', icon:'🔧', label:'Reposição', cor:'var(--amber)',   metrica:'repostos'   },
+      { key:'separadores', label:'Separação', cor:'#4f46e5', metrica:'pedidos'    },
+      { key:'checkout',    label:'Checkout',  cor:'#0891b2', metrica:'checkouts'  },
+      { key:'embalagem',   label:'Embalagem', cor:'#7c3aed', metrica:'embalagens' },
+      { key:'repositores', label:'Reposição', cor:'#d97706', metrica:'repostos'   },
     ];
     const medalhas = ['🥇','🥈','🥉'];
 
@@ -594,7 +594,7 @@ async function carregarRankingGeral() {
         : `<div style="color:var(--text3);text-align:center;padding:16px 8px;font-size:12px">Sem dados no período</div>`;
 
       return `<div style="padding:12px 14px;border-right:1px solid var(--border)">
-        <div style="font-size:11px;font-weight:800;color:${area.cor};letter-spacing:.5px;margin-bottom:8px">${area.icon} ${area.label.toUpperCase()}</div>
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px"><span style="width:7px;height:7px;border-radius:50%;background:${area.cor};display:inline-block;flex-shrink:0"></span><span style="font-size:11px;font-weight:800;color:${area.cor};letter-spacing:.5px">${area.label.toUpperCase()}</span></div>
         ${linhas}
       </div>`;
     }).join('');
@@ -865,7 +865,7 @@ function renderDashPipeline() {
   const repTotal  = parseInt(kpi.total_faltas_hoje    || 0);
 
   const cards = [
-    { icon: '📦', label: 'SEPARAÇÃO', cor: '#4f46e5', grad: 'linear-gradient(135deg,#6366f1,#4338ca)',
+    { label: 'SEPARAÇÃO', cor: '#4f46e5',
       main: fmtN(sepConcluido), sub: 'pedidos concluídos',
       kpis: [
         { lbl: 'Total Pedidos',  val: fmtN(sepTotal) },
@@ -873,7 +873,7 @@ function renderDashPipeline() {
         { lbl: 'Pendentes',      val: fmtN(sepPendente) },
         { lbl: 'Total Itens',    val: fmtN(sepItens) },
       ]},
-    { icon: '🔖', label: 'CHECKOUT', cor: '#0891b2', grad: 'linear-gradient(135deg,#22d3ee,#0369a1)',
+    { label: 'CHECKOUT', cor: '#0891b2',
       main: fmtN(ckConc), sub: 'checkouts concluídos',
       kpis: [
         { lbl: 'Total Checkout', val: fmtN(ckFila + ckEmCk + ckConc) },
@@ -881,15 +881,15 @@ function renderDashPipeline() {
         { lbl: 'Pendentes',      val: fmtN(ckFila) },
         { lbl: 'Total Itens',    val: fmtN(ckItens) },
       ]},
-    { icon: '📫', label: 'EMBALAGEM', cor: '#7c3aed', grad: 'linear-gradient(135deg,#a855f7,#6d28d9)',
+    { label: 'EMBALAGEM', cor: '#7c3aed',
       main: fmtN(embConc), sub: 'pedidos embalados',
       kpis: [
-        { lbl: 'Emb. Pendente',  val: fmtN(embPend),  note: 'pós-checkout' },
+        { lbl: 'Emb. Pendente',  val: fmtN(embPend) },
         { lbl: 'Embalando',      val: fmtN(embalando) },
         { lbl: 'Embalados',      val: fmtN(embConc) },
         { lbl: 'Total Itens',    val: fmtN(embItens) },
       ]},
-    { icon: '🔧', label: 'REPOSIÇÃO', cor: '#d97706', grad: 'linear-gradient(135deg,#f59e0b,#b45309)',
+    { label: 'REPOSIÇÃO', cor: '#d97706',
       main: fmtN(repConc), sub: 'reposições resolvidas',
       kpis: [
         { lbl: 'Total Reposição', val: fmtN(repTotal) },
@@ -900,18 +900,16 @@ function renderDashPipeline() {
   ];
 
   wrap.innerHTML = cards.map(c => `
-    <div style="background:var(--surface);border-radius:18px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.10)">
-      <div style="background:${c.grad};padding:20px 20px 18px;position:relative;overflow:hidden">
-        <div style="position:absolute;right:-14px;top:-14px;width:90px;height:90px;border-radius:50%;background:rgba(255,255,255,.10);pointer-events:none"></div>
-        <div style="position:absolute;right:-20px;bottom:-18px;width:70px;height:70px;border-radius:50%;background:rgba(255,255,255,.07);pointer-events:none"></div>
-        <div style="position:relative">
-          <div style="display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,.2);font-size:22px;margin-bottom:10px">${c.icon}</div>
-          <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,.8);letter-spacing:1.2px;margin-bottom:4px">${c.label}</div>
-          <div style="font-size:44px;font-weight:800;color:#fff;line-height:1;letter-spacing:-1px">${c.main}</div>
-          <div style="font-size:11px;color:rgba(255,255,255,.7);margin-top:6px">${c.sub}</div>
+    <div style="background:var(--surface);border-radius:16px;border:1px solid var(--border);border-top:3px solid ${c.cor};overflow:hidden;box-shadow:var(--sh)">
+      <div style="padding:18px 20px 14px">
+        <div style="display:flex;align-items:center;gap:7px;margin-bottom:10px">
+          <span style="width:8px;height:8px;border-radius:50%;background:${c.cor};flex-shrink:0;display:inline-block"></span>
+          <span style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:1.5px">${c.label}</span>
         </div>
+        <div style="font-size:42px;font-weight:800;color:var(--text);line-height:1;letter-spacing:-1px">${c.main}</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:6px">${c.sub}</div>
       </div>
-      <div style="padding:14px 16px">
+      <div style="padding:0 16px 14px">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
           ${c.kpis.map(k => `
             <div style="background:var(--surface2);border-radius:8px;padding:7px 10px">
@@ -1092,10 +1090,10 @@ async function carregarStatsCheckout() {
 
 /* PERFORMANCE DOS COLABORADORES */
 const AREA_INFO = {
-  separador: { icon:'📦', label:'Separação',  cor:'var(--accent)', grad:'linear-gradient(135deg,#6366f1,#4338ca)' },
-  checkout:  { icon:'✅', label:'Checkout',   cor:'var(--indigo)', grad:'linear-gradient(135deg,#22d3ee,#0369a1)' },
-  embalador: { icon:'📫', label:'Embalagem',  cor:'#7C3AED',       grad:'linear-gradient(135deg,#a855f7,#6d28d9)' },
-  repositor: { icon:'🔧', label:'Reposição',  cor:'#EA580C',       grad:'linear-gradient(135deg,#f59e0b,#b45309)' },
+  separador: { label:'Separação',  cor:'#4f46e5' },
+  checkout:  { label:'Checkout',   cor:'#0891b2' },
+  embalador: { label:'Embalagem',  cor:'#7C3AED' },
+  repositor: { label:'Reposição',  cor:'#EA580C' },
 };
 
 function _pctBar(pct, temSessao) {
@@ -1171,7 +1169,7 @@ async function carregarPerformance() {
     cardsWrap.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
 
     cardsWrap.innerHTML = areasVisiveis.map(p => {
-      const area = AREA_INFO[p] || { icon:'👤', label: p, cor:'var(--text)' };
+      const area = AREA_INFO[p] || { label: p, cor:'var(--text)' };
       const ag   = porArea[p];
 
       let tempoBody = '';
@@ -1180,7 +1178,6 @@ async function carregarPerformance() {
         const min = r?.minutos || 0;
         tempoBody = `<div style="padding:12px 14px">
           <div style="background:var(--surface2);border-radius:8px;padding:7px 10px;display:flex;align-items:center;gap:10px">
-            <span style="font-size:20px">⏱</span>
             <div>
               <div style="font-size:9px;color:var(--text3);font-weight:700;letter-spacing:.5px">TEMPO LOGADO</div>
               <div style="font-size:15px;font-weight:800;color:var(--text)">${min > 0 ? _horasStr(min) : '—'}</div>
@@ -1189,20 +1186,18 @@ async function carregarPerformance() {
         </div>`;
       }
 
-      const grad = area.grad || 'linear-gradient(135deg,#64748b,#334155)';
-      const colabInfo = !colab ? `<div style="font-size:11px;color:rgba(255,255,255,.65);margin-top:2px">${ag.colaboradores} colaborador${ag.colaboradores!==1?'es':''}</div>` : '';
+      const cor = area.cor || '#64748b';
+      const colabInfo = !colab ? `<div style="font-size:11px;color:var(--text3);margin-top:2px">${ag.colaboradores} colaborador${ag.colaboradores!==1?'es':''}</div>` : '';
 
-      return `<div style="background:var(--surface);border-radius:18px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.10)">
-        <div style="background:${grad};padding:18px 18px 16px;position:relative;overflow:hidden">
-          <div style="position:absolute;right:-14px;top:-14px;width:80px;height:80px;border-radius:50%;background:rgba(255,255,255,.10);pointer-events:none"></div>
-          <div style="position:absolute;right:-18px;bottom:-18px;width:65px;height:65px;border-radius:50%;background:rgba(255,255,255,.07);pointer-events:none"></div>
-          <div style="position:relative">
-            <div style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,.2);font-size:20px;margin-bottom:8px">${area.icon}</div>
-            <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,.8);letter-spacing:1.2px;margin-bottom:4px">${area.label.toUpperCase()}</div>
-            <div style="font-size:44px;font-weight:800;color:#fff;line-height:1;letter-spacing:-1px">${ag.atividades}</div>
-            <div style="font-size:11px;color:rgba(255,255,255,.7);margin-top:4px">${LABELS[p]}</div>
-            ${colabInfo}
+      return `<div style="background:var(--surface);border-radius:16px;border:1px solid var(--border);border-top:3px solid ${cor};overflow:hidden;box-shadow:var(--sh)">
+        <div style="padding:18px 18px 14px">
+          <div style="display:flex;align-items:center;gap:7px;margin-bottom:10px">
+            <span style="width:8px;height:8px;border-radius:50%;background:${cor};flex-shrink:0;display:inline-block"></span>
+            <span style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:1.5px">${area.label.toUpperCase()}</span>
           </div>
+          <div style="font-size:42px;font-weight:800;color:var(--text);line-height:1;letter-spacing:-1px">${ag.atividades}</div>
+          <div style="font-size:11px;color:var(--text2);margin-top:4px">${LABELS[p]}</div>
+          ${colabInfo}
         </div>
         ${tempoBody}
       </div>`;
@@ -1256,7 +1251,7 @@ async function carregarPerformanceDetalhe(ini, fim, filtPerfil, filtColab) {
       const isEmb  = colab.perfil === 'embalador';
       const isRep  = colab.perfil === 'repositor';
       const AREA_COR   = { separador:'var(--accent)', checkout:'var(--green)', embalador:'#8B5CF6', repositor:'#F97316' };
-      const AREA_LABEL = { separador:'📦 Separação', checkout:'✅ Checkout', embalador:'📫 Embalagem', repositor:'🔧 Reposição' };
+      const AREA_LABEL = { separador:'Separação', checkout:'Checkout', embalador:'Embalagem', repositor:'Reposição' };
       const cor = AREA_COR[colab.perfil] || 'var(--text)';
 
       const nomeSafe = colab.nome.replace(/'/g, "\\'");
@@ -1299,7 +1294,7 @@ async function carregarPerformanceDetalhe(ini, fim, filtPerfil, filtColab) {
             <table>
               <thead><tr>
                 <th>Nº PEDIDO</th><th>DATA</th><th>INÍCIO</th><th>CONCLUSÃO</th>
-                <th>T. TOTAL</th><th>⏸ ESPERA</th><th>✅ T. REAL</th>
+                <th>T. TOTAL</th><th>ESPERA</th><th>T. REAL</th>
                 <th>ITENS</th><th>PRODUTOS</th><th>REPOS.</th>
               </tr></thead>
               <tbody>${linhas}</tbody>
@@ -1326,9 +1321,9 @@ async function carregarPerformanceDetalhe(ini, fim, filtPerfil, filtColab) {
             <table>
               <thead><tr>
                 <th>Nº PEDIDO</th><th>DATA</th>
-                <th title="Hora em que o pedido ficou disponível para checkout">📥 ENTRADA FILA</th>
-                <th>🔓 ABERTURA</th><th>✅ CONFIRMAÇÃO</th>
-                <th>⏱ T. REAL</th><th>ITENS</th><th>PRODUTOS</th>
+                <th title="Hora em que o pedido ficou disponível para checkout">ENTRADA FILA</th>
+                <th>ABERTURA</th><th>CONFIRMAÇÃO</th>
+                <th>T. REAL</th><th>ITENS</th><th>PRODUTOS</th>
               </tr></thead>
               <tbody>${linhas}</tbody>
             </table>
@@ -1356,9 +1351,9 @@ async function carregarPerformanceDetalhe(ini, fim, filtPerfil, filtColab) {
             <table>
               <thead><tr>
                 <th>Nº PEDIDO</th><th>DATA</th>
-                <th title="Hora em que o checkout foi concluído e o pedido entrou para embalagem">📥 ENTRADA FILA</th>
-                <th>🔓 INÍCIO</th><th>✅ FIM</th>
-                <th>⏱ T. REAL</th><th>CLIENTE</th><th>TRANSP.</th><th>ITENS</th><th>PRODUTOS</th>
+                <th title="Hora em que o checkout foi concluído e o pedido entrou para embalagem">ENTRADA FILA</th>
+                <th>INÍCIO</th><th>FIM</th>
+                <th>T. REAL</th><th>CLIENTE</th><th>TRANSP.</th><th>ITENS</th><th>PRODUTOS</th>
               </tr></thead>
               <tbody>${linhas}</tbody>
             </table>
@@ -1399,7 +1394,7 @@ async function carregarPerformanceDetalhe(ini, fim, filtPerfil, filtColab) {
             <table>
               <thead><tr>
                 <th>Nº PEDIDO</th><th>DATA</th><th>AVISO</th><th>INÍCIO BUSCA</th><th>FIM BUSCA</th>
-                <th>⏱ T. BUSCA</th><th>TENTATIVA</th><th>CÓDIGO</th><th>DESCRIÇÃO</th><th>QTD</th><th>RESULTADO</th>
+                <th>T. BUSCA</th><th>TENTATIVA</th><th>CÓDIGO</th><th>DESCRIÇÃO</th><th>QTD</th><th>RESULTADO</th>
               </tr></thead>
               <tbody>${linhas}</tbody>
             </table>
@@ -1544,10 +1539,10 @@ async function abrirConfigMetas() {
     const configs = await res.json();
     _configMetasData = Object.fromEntries(configs.map(c => [c.chave, c]));
     const LABELS = {
-      meta_separacao: '📦 Meta Separação (pedidos/turno)',
-      meta_checkout:  '✅ Meta Checkout (checkouts/turno)',
-      meta_embalagem: '📫 Meta Embalagem (pedidos/turno)',
-      meta_reposicao: '🔧 Meta Reposição (itens/turno)',
+      meta_separacao: 'Meta Separação (pedidos/turno)',
+      meta_checkout:  'Meta Checkout (checkouts/turno)',
+      meta_embalagem: 'Meta Embalagem (pedidos/turno)',
+      meta_reposicao: 'Meta Reposição (itens/turno)',
       horas_turno_manha: '☀️ Horas turno Manhã',
       horas_turno_tarde: '🌤️ Horas turno Tarde',
       horas_turno_noite: '🌙 Horas turno Noite',
@@ -1688,13 +1683,13 @@ async function gerarRelatorioColaborador(nomeColab) {
       html = `<div style="font-family:'DM Sans',sans-serif;max-width:780px;margin:0 auto">
 
         <!-- HEADER -->
-        <div style="background:linear-gradient(135deg,#2563EB,#1D4ED8);color:#fff;border-radius:12px 12px 0 0;padding:20px 24px">
-          <div style="font-size:10px;font-weight:700;letter-spacing:2px;opacity:.75">RELATÓRIO DE DESEMPENHO · SEPARAÇÃO</div>
-          <div style="font-size:22px;font-weight:900;margin-top:4px">${nomeColab}</div>
-          <div style="display:flex;gap:16px;margin-top:6px;font-size:12px;opacity:.85">
-            <span>📅 ${nomesMes[parseInt(mes)]} de ${ano}</span>
-            <span>📊 ${totalPedidos} pedidos · ${totalItens} itens · ${totalProdutos} prod.</span>
-            ${itensHora ? `<span>⚡ ${itensHora} itens/h</span>` : ''}
+        <div style="background:var(--surface2);border-top:4px solid #4f46e5;border-radius:12px 12px 0 0;padding:20px 24px">
+          <div style="font-size:10px;font-weight:700;letter-spacing:2px;color:var(--text3)">RELATÓRIO DE DESEMPENHO · SEPARAÇÃO</div>
+          <div style="font-size:22px;font-weight:900;margin-top:4px;color:var(--text)">${nomeColab}</div>
+          <div style="display:flex;gap:16px;margin-top:6px;font-size:12px;color:var(--text2)">
+            <span>${nomesMes[parseInt(mes)]} de ${ano}</span>
+            <span>${totalPedidos} pedidos · ${totalItens} itens · ${totalProdutos} prod.</span>
+            ${itensHora ? `<span>${itensHora} itens/h</span>` : ''}
           </div>
         </div>
 
@@ -1703,12 +1698,12 @@ async function gerarRelatorioColaborador(nomeColab) {
           <!-- CARDS RESUMO -->
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:18px">
             ${[
-              ['📦 PEDIDOS', totalPedidos, 'var(--accent)'],
-              ['🔢 ITENS TOTAIS', totalItens, 'var(--accent)'],
-              ['🏷️ PRODUTOS', totalProdutos, 'var(--text2)'],
-              ['⭐ PONTUAÇÃO TOTAL', totalPontuacao, '#8B5CF6'],
-              ['⏱ TEMPO MÉDIO', mediaTempoReal ? Math.round(mediaTempoReal)+'min' : '—', mediaTempoReal && mediaTempoReal<=30 ? '#22C55E' : '#F59E0B'],
-              ['🔄 REPOSIÇÕES', `${totalReps} (${pctRep}%)`, pctRep<=15 ? '#22C55E' : pctRep<=30 ? '#F59E0B' : '#EF4444'],
+              ['PEDIDOS', totalPedidos, 'var(--accent)'],
+              ['ITENS TOTAIS', totalItens, 'var(--accent)'],
+              ['PRODUTOS', totalProdutos, 'var(--text2)'],
+              ['PONTUAÇÃO TOTAL', totalPontuacao, '#8B5CF6'],
+              ['TEMPO MÉDIO', mediaTempoReal ? Math.round(mediaTempoReal)+'min' : '—', mediaTempoReal && mediaTempoReal<=30 ? '#22C55E' : '#F59E0B'],
+              ['REPOSIÇÕES', `${totalReps} (${pctRep}%)`, pctRep<=15 ? '#22C55E' : pctRep<=30 ? '#F59E0B' : '#EF4444'],
             ].map(([l,v,c]) => `<div style="background:var(--surface2);border-radius:10px;padding:12px;text-align:center;border:1px solid var(--border)">
               <div style="font-size:20px;font-weight:900;color:${c}">${v}</div>
               <div style="font-size:9px;color:var(--text3);font-weight:700;letter-spacing:.5px;margin-top:2px">${l}</div>
@@ -1717,7 +1712,7 @@ async function gerarRelatorioColaborador(nomeColab) {
 
           <!-- DIFICULDADE -->
           <div style="background:var(--surface2);border-radius:10px;padding:14px;margin-bottom:14px;border:1px solid var(--border)">
-            <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:1px;margin-bottom:10px">📍 DIFICULDADE DOS PEDIDOS (PONTUAÇÃO POR CORREDOR)</div>
+            <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:1px;margin-bottom:10px">DIFICULDADE DOS PEDIDOS (PONTUAÇÃO POR CORREDOR)</div>
             <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
               <div style="flex:1">
                 <div style="height:10px;background:var(--border);border-radius:5px;overflow:hidden">
@@ -1737,12 +1732,12 @@ async function gerarRelatorioColaborador(nomeColab) {
 
           <!-- DISTRIBUIÇÃO DE TEMPO -->
           ${comTempo > 0 ? `<div style="background:var(--surface2);border-radius:10px;padding:14px;margin-bottom:14px;border:1px solid var(--border)">
-            <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:1px;margin-bottom:10px">⏱ DISTRIBUIÇÃO DE VELOCIDADE (${comTempo} pedidos com tempo calculado)</div>
+            <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:1px;margin-bottom:10px">DISTRIBUIÇÃO DE VELOCIDADE (${comTempo} pedidos com tempo calculado)</div>
             <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
               ${[
-                ['⚡ RÁPIDO','< 15min', rapido, pctR, '#22C55E'],
-                ['✅ NORMAL','15–30min', normal, pctN, '#3B82F6'],
-                ['🐢 LENTO','> 30min', lento, pctL, '#EF4444'],
+                ['RÁPIDO','< 15min', rapido, pctR, '#22C55E'],
+                ['NORMAL','15–30min', normal, pctN, '#3B82F6'],
+                ['LENTO','> 30min', lento, pctL, '#EF4444'],
               ].map(([l,r,n,pct,c]) => `<div style="text-align:center;background:var(--surface);border-radius:8px;padding:10px;border:1px solid var(--border)">
                 <div style="font-size:18px;font-weight:900;color:${c}">${n}</div>
                 <div style="font-size:9px;font-weight:700;color:${c}">${pct}%</div>
@@ -1754,7 +1749,7 @@ async function gerarRelatorioColaborador(nomeColab) {
 
           <!-- TABELA DE PEDIDOS -->
           <div style="margin-bottom:14px">
-            <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:1px;margin-bottom:8px">📋 DETALHAMENTO POR PEDIDO</div>
+            <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:1px;margin-bottom:8px">DETALHAMENTO POR PEDIDO</div>
             <div style="overflow-x:auto;border-radius:8px;border:1px solid var(--border)">
               <table style="width:100%;border-collapse:collapse;font-size:12px">
                 <thead><tr style="background:var(--surface2);font-size:10px;font-weight:700;color:var(--text3)">
@@ -1775,7 +1770,7 @@ async function gerarRelatorioColaborador(nomeColab) {
 
           <!-- ANÁLISE -->
           ${pontosBons.length ? `<div style="margin-bottom:10px">
-            <div style="font-size:10px;font-weight:800;color:#15803D;letter-spacing:1px;margin-bottom:6px">✅ PONTOS POSITIVOS</div>
+            <div style="font-size:10px;font-weight:800;color:#15803D;letter-spacing:1px;margin-bottom:6px">PONTOS POSITIVOS</div>
             ${pontosBons.map(p=>`<div style="font-size:12px;color:var(--text);padding:6px 10px;background:#F0FDF4;border-radius:6px;margin-bottom:4px;border-left:3px solid #22C55E">• ${p}</div>`).join('')}
           </div>` : ''}
           ${melhorar.length ? `<div>
@@ -1832,37 +1827,37 @@ async function gerarRelatorioColaborador(nomeColab) {
       }).join('');
 
       html = `<div style="font-family:'DM Sans',sans-serif;max-width:780px;margin:0 auto">
-        <div style="background:linear-gradient(135deg,#0891b2,#0369a1);color:#fff;border-radius:12px 12px 0 0;padding:20px 24px">
-          <div style="font-size:10px;font-weight:700;letter-spacing:2px;opacity:.75">RELATÓRIO DE DESEMPENHO · CHECKOUT</div>
-          <div style="font-size:22px;font-weight:900;margin-top:4px">${nomeColab}</div>
-          <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:6px;font-size:12px;opacity:.85">
-            <span>📅 ${nomesMes[parseInt(mes)]} de ${ano}</span>
-            <span>✅ ${totalCk} checkouts · ${totalItens} itens</span>
-            ${ckHora ? `<span>⚡ ${ckHora} CK/h</span>` : ''}
+        <div style="background:var(--surface2);border-top:4px solid #0891b2;border-radius:12px 12px 0 0;padding:20px 24px">
+          <div style="font-size:10px;font-weight:700;letter-spacing:2px;color:var(--text3)">RELATÓRIO DE DESEMPENHO · CHECKOUT</div>
+          <div style="font-size:22px;font-weight:900;margin-top:4px;color:var(--text)">${nomeColab}</div>
+          <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:6px;font-size:12px;color:var(--text2)">
+            <span>${nomesMes[parseInt(mes)]} de ${ano}</span>
+            <span>${totalCk} checkouts · ${totalItens} itens</span>
+            ${ckHora ? `<span>${ckHora} CK/h</span>` : ''}
           </div>
         </div>
         <div style="background:var(--surface);border:1px solid var(--border);border-top:none;border-radius:0 0 12px 12px;padding:20px 24px">
 
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:18px">
             ${[
-              ['✅ CHECKOUTS', totalCk, '#0891b2'],
-              ['🔢 ITENS PROCESSADOS', totalItens, 'var(--accent)'],
-              ['⏱ TEMPO MÉDIO', mediaCk !== null ? mediaCk.toFixed(1)+'min' : '—', mediaCk !== null && mediaCk <= 10 ? '#22C55E' : '#F59E0B'],
-              ['⚡ MAIS RÁPIDO', tempoMin !== null ? fmtTck(tempoMin) : '—', '#22C55E'],
-              ['🐢 MAIS LENTO', tempoMax !== null ? fmtTck(tempoMax) : '—', tempoMax > 10 ? '#EF4444' : '#F59E0B'],
-              ['🏃 RITMO', ckHora ? ckHora+' CK/h' : '—', '#8B5CF6'],
+              ['CHECKOUTS', totalCk, '#0891b2'],
+              ['ITENS PROCESSADOS', totalItens, 'var(--accent)'],
+              ['TEMPO MÉDIO', mediaCk !== null ? mediaCk.toFixed(1)+'min' : '—', mediaCk !== null && mediaCk <= 10 ? '#22C55E' : '#F59E0B'],
+              ['MAIS RÁPIDO', tempoMin !== null ? fmtTck(tempoMin) : '—', '#22C55E'],
+              ['MAIS LENTO', tempoMax !== null ? fmtTck(tempoMax) : '—', tempoMax > 10 ? '#EF4444' : '#F59E0B'],
+              ['RITMO', ckHora ? ckHora+' CK/h' : '—', '#8B5CF6'],
             ].map(([l,v,c])=>`<div style="background:var(--surface2);border-radius:10px;padding:12px;text-align:center;border:1px solid var(--border)"><div style="font-size:20px;font-weight:900;color:${c}">${v}</div><div style="font-size:9px;color:var(--text3);font-weight:700;letter-spacing:.5px;margin-top:2px">${l}</div></div>`).join('')}
           </div>
 
           ${comTempo > 0 ? `<div style="background:var(--surface2);border-radius:10px;padding:14px;margin-bottom:14px;border:1px solid var(--border)">
-            <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:1px;margin-bottom:10px">⏱ DISTRIBUIÇÃO DE VELOCIDADE (${comTempo} checkouts com tempo)</div>
+            <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:1px;margin-bottom:10px">DISTRIBUIÇÃO DE VELOCIDADE (${comTempo} checkouts com tempo)</div>
             <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
-              ${[['⚡ RÁPIDO','≤ 3min',rapido,pctR,'#22C55E'],['✅ NORMAL','3–10min',normal,pctN,'#3B82F6'],['🐢 LENTO','> 10min',lento,pctL,'#EF4444']].map(([l,r,n,p2,c])=>`<div style="text-align:center;background:var(--surface);border-radius:8px;padding:10px;border:1px solid var(--border)"><div style="font-size:18px;font-weight:900;color:${c}">${n}</div><div style="font-size:9px;font-weight:700;color:${c}">${p2}%</div><div style="font-size:10px;color:var(--text3);font-weight:600;margin-top:2px">${l}</div><div style="font-size:9px;color:var(--text3)">${r}</div></div>`).join('')}
+              ${[['RÁPIDO','≤ 3min',rapido,pctR,'#22C55E'],['NORMAL','3–10min',normal,pctN,'#3B82F6'],['LENTO','> 10min',lento,pctL,'#EF4444']].map(([l,r,n,p2,c])=>`<div style="text-align:center;background:var(--surface);border-radius:8px;padding:10px;border:1px solid var(--border)"><div style="font-size:18px;font-weight:900;color:${c}">${n}</div><div style="font-size:9px;font-weight:700;color:${c}">${p2}%</div><div style="font-size:10px;color:var(--text3);font-weight:600;margin-top:2px">${l}</div><div style="font-size:9px;color:var(--text3)">${r}</div></div>`).join('')}
             </div>
           </div>` : ''}
 
           <div style="margin-bottom:14px">
-            <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:1px;margin-bottom:8px">📋 DETALHAMENTO POR PEDIDO</div>
+            <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:1px;margin-bottom:8px">DETALHAMENTO POR PEDIDO</div>
             <div style="overflow-x:auto;border-radius:8px;border:1px solid var(--border)">
               <table style="width:100%;border-collapse:collapse;font-size:12px">
                 <thead><tr style="background:var(--surface2);font-size:10px;font-weight:700;color:var(--text3)">
@@ -1874,7 +1869,7 @@ async function gerarRelatorioColaborador(nomeColab) {
             </div>
           </div>
 
-          ${pontosBons.length?`<div style="margin-bottom:10px"><div style="font-size:10px;font-weight:800;color:#15803D;letter-spacing:1px;margin-bottom:6px">✅ PONTOS POSITIVOS</div>${pontosBons.map(p=>`<div style="font-size:12px;color:var(--text);padding:6px 10px;background:#F0FDF4;border-radius:6px;margin-bottom:4px;border-left:3px solid #22C55E">• ${p}</div>`).join('')}</div>`:''}
+          ${pontosBons.length?`<div style="margin-bottom:10px"><div style="font-size:10px;font-weight:800;color:#15803D;letter-spacing:1px;margin-bottom:6px">PONTOS POSITIVOS</div>${pontosBons.map(p=>`<div style="font-size:12px;color:var(--text);padding:6px 10px;background:#F0FDF4;border-radius:6px;margin-bottom:4px;border-left:3px solid #22C55E">• ${p}</div>`).join('')}</div>`:''}
           ${melhorar.length?`<div><div style="font-size:10px;font-weight:800;color:#B45309;letter-spacing:1px;margin-bottom:6px">⚠️ PONTOS A MELHORAR</div>${melhorar.map(p=>`<div style="font-size:12px;color:var(--text);padding:6px 10px;background:#FFFBEB;border-radius:6px;margin-bottom:4px;border-left:3px solid #F59E0B">• ${p}</div>`).join('')}</div>`:''}
         </div>
       </div>`;
@@ -1930,44 +1925,44 @@ async function gerarRelatorioColaborador(nomeColab) {
       }).join('');
 
       html = `<div style="font-family:'DM Sans',sans-serif;max-width:780px;margin:0 auto">
-        <div style="background:linear-gradient(135deg,#a855f7,#6d28d9);color:#fff;border-radius:12px 12px 0 0;padding:20px 24px">
-          <div style="font-size:10px;font-weight:700;letter-spacing:2px;opacity:.75">RELATÓRIO DE DESEMPENHO · EMBALAGEM</div>
-          <div style="font-size:22px;font-weight:900;margin-top:4px">${nomeColab}</div>
-          <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:6px;font-size:12px;opacity:.85">
-            <span>📅 ${nomesMes[parseInt(mes)]} de ${ano}</span>
-            <span>📫 ${totalEmb} embalagens · ${totalItens} itens</span>
-            ${embHora ? `<span>⚡ ${embHora} emb/h</span>` : ''}
+        <div style="background:var(--surface2);border-top:4px solid #7c3aed;border-radius:12px 12px 0 0;padding:20px 24px">
+          <div style="font-size:10px;font-weight:700;letter-spacing:2px;color:var(--text3)">RELATÓRIO DE DESEMPENHO · EMBALAGEM</div>
+          <div style="font-size:22px;font-weight:900;margin-top:4px;color:var(--text)">${nomeColab}</div>
+          <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:6px;font-size:12px;color:var(--text2)">
+            <span>${nomesMes[parseInt(mes)]} de ${ano}</span>
+            <span>${totalEmb} embalagens · ${totalItens} itens</span>
+            ${embHora ? `<span>${embHora} emb/h</span>` : ''}
           </div>
         </div>
         <div style="background:var(--surface);border:1px solid var(--border);border-top:none;border-radius:0 0 12px 12px;padding:20px 24px">
 
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:18px">
             ${[
-              ['📫 EMBALADOS', totalEmb, '#7c3aed'],
-              ['🔢 ITENS', totalItens, 'var(--accent)'],
-              ['⏱ TEMPO MÉDIO', mediaEmb !== null ? mediaEmb.toFixed(1)+'min' : '—', mediaEmb !== null && mediaEmb <= 15 ? '#22C55E' : '#F59E0B'],
-              ['⚡ MAIS RÁPIDO', tempoMin !== null ? fmtTe(tempoMin) : '—', '#22C55E'],
-              ['🐢 MAIS LENTO', tempoMax !== null ? fmtTe(tempoMax) : '—', tempoMax > 15 ? '#EF4444' : '#F59E0B'],
-              ['🏃 RITMO', embHora ? embHora+' emb/h' : '—', '#8B5CF6'],
+              ['EMBALADOS', totalEmb, '#7c3aed'],
+              ['ITENS', totalItens, 'var(--accent)'],
+              ['TEMPO MÉDIO', mediaEmb !== null ? mediaEmb.toFixed(1)+'min' : '—', mediaEmb !== null && mediaEmb <= 15 ? '#22C55E' : '#F59E0B'],
+              ['MAIS RÁPIDO', tempoMin !== null ? fmtTe(tempoMin) : '—', '#22C55E'],
+              ['MAIS LENTO', tempoMax !== null ? fmtTe(tempoMax) : '—', tempoMax > 15 ? '#EF4444' : '#F59E0B'],
+              ['RITMO', embHora ? embHora+' emb/h' : '—', '#8B5CF6'],
             ].map(([l,v,c])=>`<div style="background:var(--surface2);border-radius:10px;padding:12px;text-align:center;border:1px solid var(--border)"><div style="font-size:20px;font-weight:900;color:${c}">${v}</div><div style="font-size:9px;color:var(--text3);font-weight:700;letter-spacing:.5px;margin-top:2px">${l}</div></div>`).join('')}
           </div>
 
           ${comTempo > 0 ? `<div style="background:var(--surface2);border-radius:10px;padding:14px;margin-bottom:14px;border:1px solid var(--border)">
-            <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:1px;margin-bottom:10px">⏱ DISTRIBUIÇÃO DE VELOCIDADE (${comTempo} embalagens com tempo)</div>
+            <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:1px;margin-bottom:10px">DISTRIBUIÇÃO DE VELOCIDADE (${comTempo} embalagens com tempo)</div>
             <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
-              ${[['⚡ RÁPIDO','≤ 5min',rapido,pctR,'#22C55E'],['✅ NORMAL','5–15min',normal,pctN,'#3B82F6'],['🐢 LENTO','> 15min',lento,pctL,'#EF4444']].map(([l,r,n,p2,c])=>`<div style="text-align:center;background:var(--surface);border-radius:8px;padding:10px;border:1px solid var(--border)"><div style="font-size:18px;font-weight:900;color:${c}">${n}</div><div style="font-size:9px;font-weight:700;color:${c}">${p2}%</div><div style="font-size:10px;color:var(--text3);font-weight:600;margin-top:2px">${l}</div><div style="font-size:9px;color:var(--text3)">${r}</div></div>`).join('')}
+              ${[['RÁPIDO','≤ 5min',rapido,pctR,'#22C55E'],['NORMAL','5–15min',normal,pctN,'#3B82F6'],['LENTO','> 15min',lento,pctL,'#EF4444']].map(([l,r,n,p2,c])=>`<div style="text-align:center;background:var(--surface);border-radius:8px;padding:10px;border:1px solid var(--border)"><div style="font-size:18px;font-weight:900;color:${c}">${n}</div><div style="font-size:9px;font-weight:700;color:${c}">${p2}%</div><div style="font-size:10px;color:var(--text3);font-weight:600;margin-top:2px">${l}</div><div style="font-size:9px;color:var(--text3)">${r}</div></div>`).join('')}
             </div>
           </div>` : ''}
 
           ${topTransp.length ? `<div style="background:var(--surface2);border-radius:10px;padding:14px;margin-bottom:14px;border:1px solid var(--border)">
-            <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:1px;margin-bottom:8px">🚚 TOP TRANSPORTADORAS</div>
+            <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:1px;margin-bottom:8px">TOP TRANSPORTADORAS</div>
             <div style="display:flex;flex-wrap:wrap;gap:8px">
               ${topTransp.map(([t,n])=>`<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px 14px;text-align:center"><div style="font-size:16px;font-weight:900;color:var(--accent)">${n}</div><div style="font-size:9px;color:var(--text3);font-weight:700;margin-top:1px">${t}</div></div>`).join('')}
             </div>
           </div>` : ''}
 
           <div style="margin-bottom:14px">
-            <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:1px;margin-bottom:8px">📋 DETALHAMENTO POR PEDIDO</div>
+            <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:1px;margin-bottom:8px">DETALHAMENTO POR PEDIDO</div>
             <div style="overflow-x:auto;border-radius:8px;border:1px solid var(--border)">
               <table style="width:100%;border-collapse:collapse;font-size:12px">
                 <thead><tr style="background:var(--surface2);font-size:10px;font-weight:700;color:var(--text3)">
@@ -1980,7 +1975,7 @@ async function gerarRelatorioColaborador(nomeColab) {
             </div>
           </div>
 
-          ${pontosBons.length?`<div style="margin-bottom:10px"><div style="font-size:10px;font-weight:800;color:#15803D;letter-spacing:1px;margin-bottom:6px">✅ PONTOS POSITIVOS</div>${pontosBons.map(p=>`<div style="font-size:12px;color:var(--text);padding:6px 10px;background:#F0FDF4;border-radius:6px;margin-bottom:4px;border-left:3px solid #22C55E">• ${p}</div>`).join('')}</div>`:''}
+          ${pontosBons.length?`<div style="margin-bottom:10px"><div style="font-size:10px;font-weight:800;color:#15803D;letter-spacing:1px;margin-bottom:6px">PONTOS POSITIVOS</div>${pontosBons.map(p=>`<div style="font-size:12px;color:var(--text);padding:6px 10px;background:#F0FDF4;border-radius:6px;margin-bottom:4px;border-left:3px solid #22C55E">• ${p}</div>`).join('')}</div>`:''}
           ${melhorar.length?`<div><div style="font-size:10px;font-weight:800;color:#B45309;letter-spacing:1px;margin-bottom:6px">⚠️ PONTOS A MELHORAR</div>${melhorar.map(p=>`<div style="font-size:12px;color:var(--text);padding:6px 10px;background:#FFFBEB;border-radius:6px;margin-bottom:4px;border-left:3px solid #F59E0B">• ${p}</div>`).join('')}</div>`:''}
         </div>
       </div>`;
@@ -2027,30 +2022,30 @@ async function gerarRelatorioColaborador(nomeColab) {
       }).join('');
 
       html = `<div style="font-family:'DM Sans',sans-serif;max-width:820px;margin:0 auto">
-        <div style="background:linear-gradient(135deg,#f59e0b,#b45309);color:#fff;border-radius:12px 12px 0 0;padding:20px 24px">
-          <div style="font-size:10px;font-weight:700;letter-spacing:2px;opacity:.75">RELATÓRIO DE DESEMPENHO · REPOSIÇÃO</div>
-          <div style="font-size:22px;font-weight:900;margin-top:4px">${nomeColab}</div>
-          <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:6px;font-size:12px;opacity:.85">
-            <span>📅 ${nomesMes[parseInt(mes)]} de ${ano}</span>
-            <span>🔧 ${totalAv} avisos · ${repostos} repostos · ${naoEnc} não enc.</span>
-            ${taxa !== null ? `<span>✅ ${taxa}% resolvidos</span>` : ''}
+        <div style="background:var(--surface2);border-top:4px solid #d97706;border-radius:12px 12px 0 0;padding:20px 24px">
+          <div style="font-size:10px;font-weight:700;letter-spacing:2px;color:var(--text3)">RELATÓRIO DE DESEMPENHO · REPOSIÇÃO</div>
+          <div style="font-size:22px;font-weight:900;margin-top:4px;color:var(--text)">${nomeColab}</div>
+          <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:6px;font-size:12px;color:var(--text2)">
+            <span>${nomesMes[parseInt(mes)]} de ${ano}</span>
+            <span>${totalAv} avisos · ${repostos} repostos · ${naoEnc} não enc.</span>
+            ${taxa !== null ? `<span>${taxa}% resolvidos</span>` : ''}
           </div>
         </div>
         <div style="background:var(--surface);border:1px solid var(--border);border-top:none;border-radius:0 0 12px 12px;padding:20px 24px">
 
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:18px">
             ${[
-              ['🔔 TOTAL AVISOS', totalAv, '#d97706'],
-              ['✅ REPOSTOS', repostos, '#22C55E'],
-              ['❌ NÃO ENCONTR.', naoEnc, '#EF4444'],
-              ['📊 TAXA RESOLUÇÃO', taxa !== null ? taxa+'%' : '—', taxaClr],
-              ['⏱ TEMPO MÉDIO', mediaRep !== null ? mediaRep.toFixed(1)+'min' : '—', mediaRep !== null && mediaRep <= 20 ? '#22C55E' : '#F59E0B'],
-              ['📅 DIAS ATIVOS', Object.keys(diasMap).length, 'var(--accent)'],
+              ['TOTAL AVISOS', totalAv, '#d97706'],
+              ['REPOSTOS', repostos, '#22C55E'],
+              ['NÃO ENCONTR.', naoEnc, '#EF4444'],
+              ['TAXA RESOLUÇÃO', taxa !== null ? taxa+'%' : '—', taxaClr],
+              ['TEMPO MÉDIO', mediaRep !== null ? mediaRep.toFixed(1)+'min' : '—', mediaRep !== null && mediaRep <= 20 ? '#22C55E' : '#F59E0B'],
+              ['DIAS ATIVOS', Object.keys(diasMap).length, 'var(--accent)'],
             ].map(([l,v,c])=>`<div style="background:var(--surface2);border-radius:10px;padding:12px;text-align:center;border:1px solid var(--border)"><div style="font-size:20px;font-weight:900;color:${c}">${v}</div><div style="font-size:9px;color:var(--text3);font-weight:700;letter-spacing:.5px;margin-top:2px">${l}</div></div>`).join('')}
           </div>
 
           ${taxa !== null ? `<div style="background:var(--surface2);border-radius:10px;padding:14px;margin-bottom:14px;border:1px solid var(--border)">
-            <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:1px;margin-bottom:8px">📊 TAXA DE RESOLUÇÃO</div>
+            <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:1px;margin-bottom:8px">TAXA DE RESOLUÇÃO</div>
             <div style="display:flex;align-items:center;gap:12px">
               <div style="flex:1;height:12px;background:var(--border);border-radius:6px;overflow:hidden">
                 <div style="height:100%;width:${taxa}%;background:${taxaClr};border-radius:6px"></div>
@@ -2065,7 +2060,7 @@ async function gerarRelatorioColaborador(nomeColab) {
           </div>` : ''}
 
           <div style="margin-bottom:14px">
-            <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:1px;margin-bottom:8px">📋 DETALHAMENTO POR AVISO</div>
+            <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:1px;margin-bottom:8px">DETALHAMENTO POR AVISO</div>
             <div style="overflow-x:auto;border-radius:8px;border:1px solid var(--border)">
               <table style="width:100%;border-collapse:collapse;font-size:12px">
                 <thead><tr style="background:var(--surface2);font-size:10px;font-weight:700;color:var(--text3)">
@@ -2078,7 +2073,7 @@ async function gerarRelatorioColaborador(nomeColab) {
             </div>
           </div>
 
-          ${pontosBons.length?`<div style="margin-bottom:10px"><div style="font-size:10px;font-weight:800;color:#15803D;letter-spacing:1px;margin-bottom:6px">✅ PONTOS POSITIVOS</div>${pontosBons.map(p=>`<div style="font-size:12px;color:var(--text);padding:6px 10px;background:#F0FDF4;border-radius:6px;margin-bottom:4px;border-left:3px solid #22C55E">• ${p}</div>`).join('')}</div>`:''}
+          ${pontosBons.length?`<div style="margin-bottom:10px"><div style="font-size:10px;font-weight:800;color:#15803D;letter-spacing:1px;margin-bottom:6px">PONTOS POSITIVOS</div>${pontosBons.map(p=>`<div style="font-size:12px;color:var(--text);padding:6px 10px;background:#F0FDF4;border-radius:6px;margin-bottom:4px;border-left:3px solid #22C55E">• ${p}</div>`).join('')}</div>`:''}
           ${melhorar.length?`<div><div style="font-size:10px;font-weight:800;color:#B45309;letter-spacing:1px;margin-bottom:6px">⚠️ PONTOS A MELHORAR</div>${melhorar.map(p=>`<div style="font-size:12px;color:var(--text);padding:6px 10px;background:#FFFBEB;border-radius:6px;margin-bottom:4px;border-left:3px solid #F59E0B">• ${p}</div>`).join('')}</div>`:''}
         </div>
       </div>`;
@@ -2435,7 +2430,7 @@ function renderRelAnalitico(d) {
 
   // ── 1. Cards de resumo operacional ──────────────────────────
   const cards = [
-    { icon:'📦', label:'SEPARAÇÃO', cor:'#4f46e5', grad:'linear-gradient(135deg,#6366f1,#4338ca)',
+    { label:'SEPARAÇÃO', cor:'#4f46e5',
       main: `${fmtN(d.separacao.concluidos)} / ${fmtN(d.separacao.distribuidos)}`, sub:'concluídos do lote distribuído',
       kpis:[
         { lbl:'Importados',      val: fmtN(d.separacao.total) },
@@ -2446,7 +2441,7 @@ function renderRelAnalitico(d) {
         { lbl:'Pontuação total', val: fmtN(d.separacao.pontuacao_total) },
         { lbl:'Tempo médio',     val: fmtT(d.separacao.media_tempo_min) },
       ]},
-    { icon:'🔖', label:'CHECKOUT', cor:'#0891b2', grad:'linear-gradient(135deg,#22d3ee,#0369a1)',
+    { label:'CHECKOUT', cor:'#0891b2',
       main: fmtN(d.checkout.concluidos), sub:'checkouts realizados',
       kpis:[
         { lbl:'Total criados',   val: fmtN(d.checkout.total) },
@@ -2454,14 +2449,14 @@ function renderRelAnalitico(d) {
         { lbl:'Total itens',     val: fmtN(d.checkout.total_itens) },
         { lbl:'Tempo médio',     val: fmtT(d.checkout.media_tempo_min) },
       ]},
-    { icon:'📫', label:'EMBALAGEM', cor:'#7c3aed', grad:'linear-gradient(135deg,#a855f7,#6d28d9)',
+    { label:'EMBALAGEM', cor:'#7c3aed',
       main: fmtN(d.embalagem.total_embalados), sub:'pedidos embalados',
       kpis:[
         { lbl:'Pendentes emb.',  val: fmtN(d.embalagem.pendentes) },
         { lbl:'Total itens',     val: fmtN(d.embalagem.total_itens) },
         { lbl:'Tempo médio',     val: fmtT(d.embalagem.media_tempo_min) },
       ]},
-    { icon:'🔧', label:'REPOSIÇÃO', cor:'#d97706', grad:'linear-gradient(135deg,#f59e0b,#b45309)',
+    { label:'REPOSIÇÃO', cor:'#d97706',
       main: fmtN(d.reposicao.resolvidas), sub:'reposições resolvidas',
       kpis:[
         { lbl:'Total abertos',    val: fmtN(d.reposicao.total) },
@@ -2472,18 +2467,16 @@ function renderRelAnalitico(d) {
   ];
 
   const cardsHTML = cards.map(c => `
-    <div style="background:var(--surface);border-radius:18px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.10)">
-      <div style="background:${c.grad};padding:20px 20px 18px;position:relative;overflow:hidden">
-        <div style="position:absolute;right:-14px;top:-14px;width:90px;height:90px;border-radius:50%;background:rgba(255,255,255,.10);pointer-events:none"></div>
-        <div style="position:absolute;right:-20px;bottom:-18px;width:70px;height:70px;border-radius:50%;background:rgba(255,255,255,.07);pointer-events:none"></div>
-        <div style="position:relative">
-          <div style="display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,.2);font-size:22px;margin-bottom:10px">${c.icon}</div>
-          <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,.8);letter-spacing:1.2px;margin-bottom:4px">${c.label}</div>
-          <div style="font-size:38px;font-weight:800;color:#fff;line-height:1;letter-spacing:-1px">${c.main}</div>
-          <div style="font-size:11px;color:rgba(255,255,255,.7);margin-top:6px">${c.sub}</div>
+    <div style="background:var(--surface);border-radius:16px;border:1px solid var(--border);border-top:3px solid ${c.cor};overflow:hidden;box-shadow:var(--sh)">
+      <div style="padding:18px 20px 14px">
+        <div style="display:flex;align-items:center;gap:7px;margin-bottom:10px">
+          <span style="width:8px;height:8px;border-radius:50%;background:${c.cor};flex-shrink:0;display:inline-block"></span>
+          <span style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:1.5px">${c.label}</span>
         </div>
+        <div style="font-size:36px;font-weight:800;color:var(--text);line-height:1;letter-spacing:-1px">${c.main}</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:6px">${c.sub}</div>
       </div>
-      <div style="padding:14px 16px">
+      <div style="padding:0 16px 14px">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
           ${c.kpis.map(k=>`
             <div style="background:var(--surface2);border-radius:8px;padding:7px 10px">
@@ -2584,12 +2577,15 @@ function renderRelAnalitico(d) {
   const turno_icn = { Manha:'🌅', Tarde:'☀️', Noite:'🌙' };
   const mkCell = (content, extraStyle='') => `<td style="padding:8px 12px${extraStyle?';'+extraStyle:''}">${content}</td>`;
   const mkRow  = cells => `<tr style="border-bottom:1px solid var(--border)">${cells.join('')}</tr>`;
-  const mkArea = (icon, label, grad, headers, rows) => `
-    <div class="card" style="margin-bottom:18px;overflow:hidden">
-      <div style="background:${grad};padding:14px 16px;display:flex;align-items:center;gap:10px">
-        <span style="font-size:20px">${icon}</span>
-        <span style="font-size:13px;font-weight:800;color:#fff;letter-spacing:.8px">${label}</span>
-        <span style="margin-left:auto;font-size:11px;font-weight:600;color:rgba(255,255,255,.8)">${rows.length} colaborador${rows.length!==1?'es':''}</span>
+  const mkAreaCors = {'SEPARAÇÃO':'#4f46e5','CHECKOUT':'#0891b2','EMBALAGEM':'#7c3aed','REPOSIÇÃO':'#d97706'};
+  const mkArea = (icon, label, grad, headers, rows) => {
+    const cor = mkAreaCors[label.split(' — ')[0]] || '#64748b';
+    return `
+    <div class="card" style="margin-bottom:18px;overflow:hidden;border-top:3px solid ${cor}">
+      <div style="padding:12px 16px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border)">
+        <span style="width:8px;height:8px;border-radius:50%;background:${cor};flex-shrink:0;display:inline-block"></span>
+        <span style="font-size:12px;font-weight:800;color:var(--text);letter-spacing:.5px">${label}</span>
+        <span style="margin-left:auto;font-size:11px;font-weight:600;color:var(--text3)">${rows.length} colaborador${rows.length!==1?'es':''}</span>
       </div>
       <div style="overflow-x:auto">
         <table style="width:100%;border-collapse:collapse">
@@ -2598,6 +2594,7 @@ function renderRelAnalitico(d) {
         </table>
       </div>
     </div>`;
+  };
 
   // ─ Separação ─
   const sepColabs = d.colaboradores.filter(c=>c.perfil==='separador').sort((a,b)=>(b.pedidos||0)-(a.pedidos||0));
@@ -2660,7 +2657,7 @@ function renderRelAnalitico(d) {
     const maxD = Math.max(...d.por_dia.map(x=>x.total),1);
     porDiaHTML = `
       <div class="card" style="margin-bottom:18px">
-        <div class="card-hd">📅 PEDIDOS POR DIA</div>
+        <div class="card-hd">PEDIDOS POR DIA</div>
         <div style="display:flex;align-items:flex-end;gap:4px;height:80px;padding:8px 0 4px">
           ${d.por_dia.map(x=>`
             <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px">
@@ -2703,11 +2700,11 @@ function renderRelAnalitico(d) {
     <!-- Complexidade + SLA -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px">
       <div class="card">
-        <div class="card-hd">📍 COMPLEXIDADE DOS PEDIDOS</div>
+        <div class="card-hd">COMPLEXIDADE DOS PEDIDOS</div>
         <div style="display:flex;gap:10px">${cxBars}</div>
       </div>
       <div class="card">
-        <div class="card-hd">⏱ SLA DE SEPARAÇÃO</div>
+        <div class="card-hd">SLA DE SEPARAÇÃO</div>
         ${slaHTML}
       </div>
     </div>
@@ -2715,11 +2712,11 @@ function renderRelAnalitico(d) {
     <!-- Ranking de turnos + Por hora -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px">
       <div class="card">
-        <div class="card-hd">🏆 RANKING POR TURNO</div>
+        <div class="card-hd">RANKING POR TURNO</div>
         ${rankHTML || '<div style="color:var(--text3);font-size:13px;padding:12px">Sem dados</div>'}
       </div>
       <div class="card">
-        <div class="card-hd">📈 PEDIDOS POR HORA DO DIA</div>
+        <div class="card-hd">PEDIDOS POR HORA DO DIA</div>
         ${porHoraHTML}
       </div>
     </div>
@@ -2743,11 +2740,11 @@ function renderRelAnalitico(d) {
     <!-- Transportadoras -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px">
       <div class="card">
-        <div class="card-hd">🚚 TOP TRANSPORTADORAS</div>
+        <div class="card-hd">TOP TRANSPORTADORAS</div>
         ${trHTML || '<div style="color:var(--text3);font-size:13px;padding:12px">Sem dados</div>'}
       </div>
       <div class="card">
-        <div class="card-hd">💡 ANÁLISE AUTOMÁTICA</div>
+        <div class="card-hd">ANÁLISE AUTOMÁTICA</div>
         <div style="display:flex;flex-direction:column;gap:8px">
           ${sugestoes.map(s=>`<div style="font-size:12px;color:var(--text2);padding:8px 10px;background:var(--surface2);border-radius:8px;line-height:1.4">${s}</div>`).join('')}
         </div>

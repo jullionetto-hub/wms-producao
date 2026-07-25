@@ -904,38 +904,36 @@ async function verificarValidacaoPendente() {
     _validacaoId = val.validacao_id;
     const turnoIcon = val.turno==='Manha'?'☀️':val.turno==='Tarde'?'🌅':'🌙';
     const atrasada = val.atrasada;
-    const grad = atrasada
-      ? 'linear-gradient(135deg,#b45309,#d97706)'      // laranja = atrasada
-      : 'linear-gradient(135deg,#7c3aed,#4f46e5)';     // roxo = no prazo
+    const validCor = atrasada ? '#d97706' : '#7c3aed';
 
     let timerHtml = '';
     if (!atrasada && val.restante_segundos > 0) {
       const m = Math.floor(val.restante_segundos/60).toString().padStart(2,'0');
       const s = (val.restante_segundos%60).toString().padStart(2,'0');
       timerHtml = `<div style="text-align:right">
-        <div style="font-size:9px;opacity:.75;text-transform:uppercase">Expira em</div>
-        <div id="val-countdown" style="font-size:20px;font-weight:900">${m}:${s}</div>
+        <div style="font-size:9px;color:var(--text3);text-transform:uppercase">Expira em</div>
+        <div id="val-countdown" style="font-size:20px;font-weight:900;color:var(--text)">${m}:${s}</div>
       </div>`;
     } else if (atrasada) {
       timerHtml = `<div style="text-align:right">
-        <div style="background:rgba(255,255,255,.25);border-radius:8px;padding:4px 10px;font-size:11px;font-weight:700">Atrasada</div>
+        <div style="background:rgba(217,119,6,.12);color:#d97706;border-radius:8px;padding:4px 10px;font-size:11px;font-weight:700">Atrasada</div>
       </div>`;
     }
 
     el.style.display = '';
     el.innerHTML = `
-      <div style="background:${grad};border-radius:12px;padding:18px 20px;color:#fff;box-shadow:0 4px 20px rgba(0,0,0,.15)">
+      <div style="background:var(--surface);border-radius:12px;border:1px solid var(--border);border-top:3px solid ${validCor};padding:18px 20px;box-shadow:var(--sh)">
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
-          <span style="font-size:28px">${atrasada ? '⚠️' : '🔔'}</span>
+          <span style="width:10px;height:10px;border-radius:50%;background:${validCor};flex-shrink:0;display:inline-block"></span>
           <div style="flex:1">
-            <div style="font-weight:800;font-size:16px">${atrasada ? 'Validação Pendente (Atrasada)' : 'Validação Pendente!'}</div>
-            <div style="font-size:13px;opacity:.9;margin-top:2px">${turnoIcon} Turno ${val.turno} · ${fmtData(val.data)} · <b>${val.supervisor}</b></div>
-            ${atrasada ? '<div style="font-size:11px;opacity:.75;margin-top:2px">O prazo expirou, mas você ainda pode validar.</div>' : ''}
+            <div style="font-weight:800;font-size:15px;color:var(--text)">${atrasada ? 'Validação Pendente (Atrasada)' : 'Validação Pendente'}</div>
+            <div style="font-size:12px;color:var(--text2);margin-top:2px">${turnoIcon} Turno ${val.turno} · ${fmtData(val.data)} · <b>${val.supervisor}</b></div>
+            ${atrasada ? '<div style="font-size:11px;color:var(--text3);margin-top:2px">O prazo expirou, mas você ainda pode validar.</div>' : ''}
           </div>
           ${timerHtml}
         </div>
-        <button onclick="abrirModalValidacao()" style="width:100%;padding:12px;background:rgba(255,255,255,.2);color:#fff;border:2px solid rgba(255,255,255,.5);border-radius:8px;font-size:14px;font-weight:800;cursor:pointer;letter-spacing:.3px">
-          ✅ Abrir Checklist e Validar Diário do Turno Anterior
+        <button onclick="abrirModalValidacao()" style="width:100%;padding:12px;background:${validCor};color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:800;cursor:pointer;letter-spacing:.3px">
+          Abrir Checklist e Validar Diário do Turno Anterior
         </button>
       </div>`;
     if (!atrasada) iniciarCountdown(val.restante_segundos);

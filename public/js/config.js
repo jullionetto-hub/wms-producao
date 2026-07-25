@@ -239,18 +239,18 @@ function _renderProtoKpis(pedList, pedListH) {
   const tiposKpis = Object.entries(tipos).map(([k,v]) => `<div style="background:var(--surface2);border-radius:8px;padding:7px 10px"><div style="font-size:9px;color:var(--text3);font-weight:700;letter-spacing:.5px">${k.toUpperCase()}</div><div style="font-size:15px;font-weight:800;color:var(--text);margin-top:2px">${v} ped.</div></div>`).join('');
 
   const cards = [
-    { icon:'📋', label:'AGUARDANDO', grad:'linear-gradient(135deg,#7c3aed,#6d28d9)',
+    { label:'AGUARDANDO', cor:'#7c3aed',
       main: itensPend,
       sub: `${pedList.length} pedido${pedList.length!==1?'s':''}`,
       kpis: tiposKpis || `<div style="background:var(--surface2);border-radius:8px;padding:7px 10px"><div style="font-size:11px;color:var(--text3)">Nenhum aguardando</div></div>` },
-    { icon:'✅', label:'PROTOCOLADOS', grad:'linear-gradient(135deg,#10b981,#047857)',
+    { label:'PROTOCOLADOS', cor:'#10b981',
       main: itensProto,
       sub: `${pedListH.length} pedido${pedListH.length!==1?'s':''}`,
       kpis: [
         { lbl:'Total Itens',   val: itensProto },
         { lbl:'Total Pedidos', val: pedListH.length },
       ]},
-    { icon:'📊', label:'TOTAL PERÍODO', grad:'linear-gradient(135deg,#3b82f6,#1d4ed8)',
+    { label:'TOTAL PERÍODO', cor:'#2563eb',
       main: totalItens,
       sub: `${totalPeds} pedido${totalPeds!==1?'s':''}`,
       kpis: [
@@ -264,18 +264,16 @@ function _renderProtoKpis(pedList, pedListH) {
       ? `<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">${c.kpis}</div>`
       : `<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">${c.kpis.map(k=>`<div style="background:var(--surface2);border-radius:8px;padding:7px 10px"><div style="font-size:9px;color:var(--text3);font-weight:700;letter-spacing:.5px">${k.lbl.toUpperCase()}</div><div style="font-size:15px;font-weight:800;color:var(--text);margin-top:2px">${k.val}</div></div>`).join('')}</div>`;
     return `
-    <div style="background:var(--surface);border-radius:18px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.10)">
-      <div style="background:${c.grad};padding:18px 18px 16px;position:relative;overflow:hidden">
-        <div style="position:absolute;right:-14px;top:-14px;width:80px;height:80px;border-radius:50%;background:rgba(255,255,255,.10);pointer-events:none"></div>
-        <div style="position:absolute;right:-18px;bottom:-18px;width:65px;height:65px;border-radius:50%;background:rgba(255,255,255,.07);pointer-events:none"></div>
-        <div style="position:relative">
-          <div style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,.2);font-size:20px;margin-bottom:8px">${c.icon}</div>
-          <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,.8);letter-spacing:1.2px;margin-bottom:4px">${c.label}</div>
-          <div style="font-size:44px;font-weight:800;color:#fff;line-height:1;letter-spacing:-1px">${c.main}</div>
-          <div style="font-size:11px;color:rgba(255,255,255,.7);margin-top:4px">${c.sub}</div>
+    <div style="background:var(--surface);border-radius:16px;border:1px solid var(--border);border-top:3px solid ${c.cor};overflow:hidden;box-shadow:var(--sh)">
+      <div style="padding:18px 18px 14px">
+        <div style="display:flex;align-items:center;gap:7px;margin-bottom:10px">
+          <span style="width:8px;height:8px;border-radius:50%;background:${c.cor};flex-shrink:0;display:inline-block"></span>
+          <span style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:1.2px">${c.label}</span>
         </div>
+        <div style="font-size:42px;font-weight:800;color:var(--text);line-height:1;letter-spacing:-1px">${c.main}</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:4px">${c.sub}</div>
       </div>
-      <div style="padding:12px 14px">${kpisHtml}</div>
+      <div style="padding:0 14px 12px">${kpisHtml}</div>
     </div>`;
   }).join('');
 }
@@ -336,12 +334,12 @@ async function carregarProtocolo() {
     el.innerHTML = `
       <div style="background:var(--surface);border-radius:16px;overflow:hidden;border:1.5px solid var(--border);box-shadow:0 2px 12px rgba(0,0,0,.07);margin-bottom:20px">
         <!-- Cabeçalho da seção -->
-        <div style="background:linear-gradient(135deg,#7c3aed,#6d28d9);padding:14px 18px;display:flex;align-items:center;justify-content:space-between">
-          <div style="display:flex;align-items:center;gap:10px">
-            <span style="font-size:20px">📋</span>
-            <span style="color:#fff;font-weight:800;font-size:15px;letter-spacing:.3px">Aguardando Protocolo</span>
+        <div style="background:var(--surface2);border-bottom:1px solid var(--border);border-top:3px solid #7c3aed;padding:14px 18px;display:flex;align-items:center;justify-content:space-between">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="width:8px;height:8px;border-radius:50%;background:#7c3aed;flex-shrink:0;display:inline-block"></span>
+            <span style="color:var(--text);font-weight:800;font-size:14px;letter-spacing:.3px">Aguardando Protocolo</span>
           </div>
-          <span style="background:rgba(255,255,255,.25);color:#fff;padding:4px 14px;border-radius:20px;font-size:12px;font-weight:800">${todosItens.length} ${todosItens.length===1?'item':'itens'} · ${pedList.length} pedido${pedList.length!==1?'s':''}</span>
+          <span style="background:rgba(124,58,237,.1);color:#7c3aed;padding:4px 14px;border-radius:20px;font-size:12px;font-weight:800">${todosItens.length} ${todosItens.length===1?'item':'itens'} · ${pedList.length} pedido${pedList.length!==1?'s':''}</span>
         </div>
         <!-- Tabela de itens -->
         <div style="overflow-x:auto">
@@ -396,8 +394,8 @@ async function carregarProtocolo() {
         <div style="padding:14px 16px;border-top:1px solid var(--border);display:flex;gap:10px;flex-wrap:wrap">
           ${pedList.map(ped => `
             <button onclick="encerrarProtocoloPedido('${ped.numero_pedido}','${ped.itens.map(i=>i.id).join(',')}',${ped.itens.length},this)" id="proto-enc-${ped.numero_pedido}"
-              style="padding:9px 16px;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff;border:none;border-radius:10px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap">
-              📋 Encerrar Pedido #${ped.numero_pedido} (${ped.itens.length} ${ped.itens.length===1?'item':'itens'})
+              style="padding:9px 16px;background:#7c3aed;color:#fff;border:none;border-radius:10px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap">
+              Encerrar Pedido #${ped.numero_pedido} (${ped.itens.length} ${ped.itens.length===1?'item':'itens'})
             </button>`).join('')}
         </div>` : ''}
       </div>`;
@@ -429,12 +427,12 @@ async function carregarProtocolo() {
       const todosH = pedListH.flatMap(ped => ped.itens.map(r => ({...r, _ped: ped})));
       elHist.innerHTML = `
         <div style="background:var(--surface);border-radius:16px;overflow:hidden;border:1.5px solid #d1fae5;box-shadow:0 1px 6px rgba(0,0,0,.04)">
-          <div style="background:linear-gradient(135deg,#059669,#047857);padding:12px 18px;display:flex;align-items:center;justify-content:space-between">
-            <div style="display:flex;align-items:center;gap:10px">
-              <span style="font-size:18px">✅</span>
-              <span style="color:#fff;font-weight:800;font-size:14px;letter-spacing:.3px">Protocolados</span>
+          <div style="background:var(--surface2);border-bottom:1px solid var(--border);border-top:3px solid #10b981;padding:12px 18px;display:flex;align-items:center;justify-content:space-between">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="width:8px;height:8px;border-radius:50%;background:#10b981;flex-shrink:0;display:inline-block"></span>
+              <span style="color:var(--text);font-weight:800;font-size:14px;letter-spacing:.3px">Protocolados</span>
             </div>
-            <span style="background:rgba(255,255,255,.25);color:#fff;padding:3px 12px;border-radius:20px;font-size:11px;font-weight:800">${todosH.length} itens · ${pedListH.length} pedidos</span>
+            <span style="background:rgba(16,185,129,.1);color:#10b981;padding:3px 12px;border-radius:20px;font-size:11px;font-weight:800">${todosH.length} itens · ${pedListH.length} pedidos</span>
           </div>
           <div style="overflow-x:auto">
             <table style="width:100%;border-collapse:collapse;font-size:12px">
