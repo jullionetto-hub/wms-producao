@@ -108,7 +108,29 @@ router.get('/performance/separadores', requerAuth, requerPerfil('supervisor', 'g
       tempo_medio_min: c.tempo_medio_min ? parseFloat(c.tempo_medio_min) : null,
     }));
 
-    res.json({ colaboradores: resultado, por_dia: porDia });
+    const ruas = await db.all(`
+      SELECT rua, SUM(itens)::int AS itens, COUNT(DISTINCT pedido_id)::int AS pedidos
+      FROM (
+        SELECT
+          UPPER((regexp_match(split_part(ip.endereco,'/',1),'^([A-Za-z]+)[0-9]'))[1]) AS rua,
+          ip.quantidade AS itens,
+          p.id AS pedido_id
+        FROM pedidos p
+        JOIN separadores s ON s.id = p.separador_id
+        LEFT JOIN usuarios u ON u.id = s.usuario_id
+        JOIN itens_pedido ip ON ip.pedido_id = p.id
+        WHERE p.status = 'concluido'
+          AND ip.endereco IS NOT NULL AND ip.endereco != ''
+          AND COALESCE(NULLIF(LEFT(p.iniciado_em,10),''),NULLIF(p.data_distribuicao,''),p.data_pedido) >= $1
+          AND COALESCE(NULLIF(LEFT(p.iniciado_em,10),''),NULLIF(p.data_distribuicao,''),p.data_pedido) <= $2
+          AND s.status = 'ativo' ${turnoFiltro}
+      ) sq
+      WHERE rua IS NOT NULL
+      GROUP BY rua
+      ORDER BY itens DESC
+    `, params);
+
+    res.json({ colaboradores: resultado, por_dia: porDia, ruas });
   } catch(e) {
     console.error('performance/separadores:', e.message);
     res.status(500).json({ erro: e.message });

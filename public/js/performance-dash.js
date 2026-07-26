@@ -509,6 +509,44 @@ function pfRenderKPIs({ totPed, totItens, totSkus, totRep, tempoMed, tempoMin, t
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">${stats}</div>
     </div>`;
 
+  const ruas       = _pfDados?.ruas || [];
+  const topRua     = ruas[0];
+  const top6       = ruas.slice(0, 6);
+  const maxItens   = top6[0]?.itens || 1;
+  const TOTAL_RUAS = 27;
+
+  const ruaBars = top6.length ? `
+    <div style="border-top:1px solid var(--border);margin:10px 0 8px"></div>
+    <div style="font-size:8px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">TOP RUAS</div>
+    ${top6.map(r => {
+      const pct = Math.round(r.itens / maxItens * 100);
+      return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">
+        <div style="width:20px;font-size:10px;font-weight:800;color:var(--text2);text-align:right;flex-shrink:0">${r.rua}</div>
+        <div style="flex:1;background:var(--surface2);border-radius:3px;height:5px;overflow:hidden">
+          <div style="width:${pct}%;background:#059669;height:100%;border-radius:3px"></div>
+        </div>
+        <div style="width:32px;font-size:9px;font-weight:600;color:var(--text3);text-align:right;flex-shrink:0">${r.itens}</div>
+      </div>`;
+    }).join('')}` : '';
+
+  const ruasCard = `
+    <div style="background:var(--surface);border-radius:16px;border:1px solid var(--border);border-top:3px solid #059669;padding:20px">
+      <div style="display:flex;align-items:center;gap:7px;margin-bottom:10px">
+        <span style="width:8px;height:8px;border-radius:50%;background:#059669;flex-shrink:0;display:inline-block"></span>
+        <span style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px;text-transform:uppercase">RUAS</span>
+      </div>
+      <div style="font-size:42px;font-weight:900;line-height:1.05;margin:6px 0 2px;color:var(--text)">${ruas.length}</div>
+      <div style="font-size:11px;color:var(--text2)">ruas percorridas</div>
+      <div style="border-top:1px solid var(--border);margin:12px 0 10px"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        ${mini('MAIS ATIVA', topRua?.rua || '—')}
+        ${mini('ITENS LÁ', pfFmtN(topRua?.itens || 0))}
+        ${mini('COBERTURA', ruas.length ? Math.round(ruas.length / TOTAL_RUAS * 100) + '%' : '—')}
+        ${mini('NO ARMAZÉM', TOTAL_RUAS + ' ruas')}
+      </div>
+      ${ruaBars}
+    </div>`;
+
   document.getElementById('pf-kpis').innerHTML =
     card(
       '#4f46e5',
@@ -541,7 +579,8 @@ function pfRenderKPIs({ totPed, totItens, totSkus, totRep, tempoMed, tempoMin, t
       mini('MAIS LENTO', tempoMax ? (tempoMax.nome||'?').split(' ')[0]+' ('+tempoMax.t.toFixed(1)+'m)' : '—') +
       mini('COM TEMPO', pfFmtN(nComTempo)) +
       mini('SEM TEMPO', pfFmtN(nColab - nComTempo))
-    );
+    ) +
+    ruasCard;
 }
 
 // ── Charts ─────────────────────────────────────────────────────────────────
