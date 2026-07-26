@@ -139,6 +139,7 @@ async function ativarApp() {
     ativarMobileEmb();
   } else {
     montarSidebar();
+    initSidebarCollapse();
     iniciarPorPerfil();
   }
 }
@@ -443,6 +444,18 @@ function postProcessSidebar() {
 
 
 
+
+function toggleSidebarCollapse() {
+  const sb = document.getElementById('sidebar');
+  const collapsed = sb.classList.toggle('sb-collapsed');
+  localStorage.setItem('sb-collapsed', collapsed ? '1' : '0');
+}
+
+function initSidebarCollapse() {
+  if (localStorage.getItem('sb-collapsed') === '1') {
+    document.getElementById('sidebar')?.classList.add('sb-collapsed');
+  }
+}
 
 function toggleMenu() {
   const sb = document.getElementById('sidebar');
