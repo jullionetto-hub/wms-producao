@@ -138,6 +138,75 @@ router.get('/performance/separadores', requerAuth, requerPerfil('supervisor', 'g
   }
 });
 
+// ── GET /performance/pedidos-detail ──────────────────────────────────────────
+router.get('/performance/pedidos-detail', requerAuth, requerPerfil('supervisor', 'gestor'), async (req, res) => {
+  const { ini, fim, turno } = req.query;
+  if (!ini || !fim) return res.status(400).json({ erro: 'Informe ini e fim.' });
+  try {
+    const turnoFiltro = turno
+      ? ` AND REPLACE(COALESCE(u.turno, s.turno, 'Manha'), 'Ã£', 'a') = $3`
+      : '';
+    const params = turno ? [ini, fim, turno] : [ini, fim];
+
+    const rows = await db.all(`
+      SELECT
+        COALESCE(NULLIF(LEFT(p.iniciado_em,10),''), NULLIF(p.data_distribuicao,''), p.data_pedido) AS data,
+        p.numero_pedido,
+        COALESCE(u.nome, s.nome)                                              AS colaborador,
+        REPLACE(COALESCE(u.turno, s.turno, 'Manha'), 'Ã£', 'a')              AS turno,
+        COALESCE(NULLIF(p.total_itens,0), p.itens, 0)::int                   AS total_itens,
+        (SELECT COUNT(DISTINCT ip2.codigo)::int
+           FROM itens_pedido ip2
+           WHERE ip2.pedido_id = p.id
+             AND ip2.codigo IS NOT NULL AND ip2.codigo != '')                 AS skus,
+        CASE
+          WHEN NULLIF(p.iniciado_em,'') IS NOT NULL
+          THEN GREATEST(0, ROUND((
+            EXTRACT(EPOCH FROM (
+              COALESCE(
+                NULLIF(p.skus_concluido_em,''),
+                NULLIF(p.data_pedido||'T'||(
+                  SELECT MAX(iv.hora_verificado) FROM itens_pedido iv
+                  WHERE iv.pedido_id=p.id AND iv.hora_verificado!=''
+                ), p.data_pedido||'T'),
+                NULLIF(p.concluido_em,'')
+              )::timestamp - p.iniciado_em::timestamp
+            )) / 60.0
+            - COALESCE(p.tempo_aguardando_min, 0)
+          )::numeric, 1))
+          ELSE NULL
+        END                                                                   AS duracao_min,
+        (SELECT COUNT(DISTINCT UPPER((regexp_match(split_part(ip3.endereco,'/',1),'^([A-Za-z]+)[0-9]'))[1]))::int
+           FROM itens_pedido ip3
+           WHERE ip3.pedido_id = p.id
+             AND ip3.endereco IS NOT NULL AND ip3.endereco != ''
+             AND (regexp_match(split_part(ip3.endereco,'/',1),'^([A-Za-z]+)[0-9]'))[1] IS NOT NULL
+        )                                                                     AS ruas_percorridas,
+        (SELECT STRING_AGG(rr, ',' ORDER BY rr)
+           FROM (SELECT DISTINCT UPPER((regexp_match(split_part(ip3.endereco,'/',1),'^([A-Za-z]+)[0-9]'))[1]) AS rr
+                 FROM itens_pedido ip3
+                 WHERE ip3.pedido_id = p.id
+                   AND ip3.endereco IS NOT NULL AND ip3.endereco != ''
+                   AND (regexp_match(split_part(ip3.endereco,'/',1),'^([A-Za-z]+)[0-9]'))[1] IS NOT NULL
+                ) _sub
+        )                                                                     AS ruas_lista
+      FROM pedidos p
+      JOIN separadores s ON s.id = p.separador_id
+      LEFT JOIN usuarios u ON u.id = s.usuario_id
+      WHERE p.status = 'concluido'
+        AND COALESCE(NULLIF(LEFT(p.iniciado_em,10),''), NULLIF(p.data_distribuicao,''), p.data_pedido) >= $1
+        AND COALESCE(NULLIF(LEFT(p.iniciado_em,10),''), NULLIF(p.data_distribuicao,''), p.data_pedido) <= $2
+        AND s.status = 'ativo' ${turnoFiltro}
+      ORDER BY data, COALESCE(u.nome, s.nome), p.numero_pedido
+    `, params);
+
+    res.json(rows);
+  } catch(e) {
+    console.error('performance/pedidos-detail:', e.message);
+    res.status(500).json({ erro: e.message });
+  }
+});
+
 // â”€â”€ GET /performance/timing?ini=YYYY-MM-DD&fim=YYYY-MM-DD&turno= â”€â”€â”€â”€â”€â”€â”€â”€â”€
 router.get('/performance/timing', requerAuth, requerPerfil('supervisor', 'gestor'), async (req, res) => {
   const { ini, fim, turno } = req.query;
