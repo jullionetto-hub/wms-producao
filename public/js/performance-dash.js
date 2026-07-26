@@ -509,7 +509,19 @@ function pfRenderKPIs({ totPed, totItens, totSkus, totRep, tempoMed, tempoMin, t
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">${stats}</div>
     </div>`;
 
-  const ruas       = _pfDados?.ruas || [];
+  const nomeAtual  = document.getElementById('pf-colab')?.value || '';
+  const ruasRaw    = _pfDados?.ruas || [];
+  const ruasFiltradas = (() => {
+    const src = nomeAtual ? ruasRaw.filter(r => r.nome === nomeAtual) : ruasRaw;
+    const m = {};
+    src.forEach(r => {
+      if (!m[r.rua]) m[r.rua] = { rua: r.rua, itens: 0, pedidos: 0 };
+      m[r.rua].itens   += r.itens   || 0;
+      m[r.rua].pedidos += r.pedidos || 0;
+    });
+    return Object.values(m).sort((a, b) => b.itens - a.itens);
+  })();
+  const ruas       = ruasFiltradas;
   const topRua     = ruas[0];
   const top6       = ruas.slice(0, 6);
   const maxItens   = top6[0]?.itens || 1;
