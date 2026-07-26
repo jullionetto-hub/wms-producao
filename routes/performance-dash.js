@@ -131,7 +131,45 @@ router.get('/performance/separadores', requerAuth, requerPerfil('supervisor', 'g
       ORDER BY itens DESC
     `, params);
 
-    res.json({ colaboradores: resultado, por_dia: porDia, ruas: ruasRaw });
+    const porColabDia = await db.all(`
+      SELECT
+        data, colaborador, turno,
+        COUNT(DISTINCT pedido_id)::int                        AS pedidos,
+        SUM(itens)::int                                       AS itens,
+        COUNT(DISTINCT CASE WHEN codigo IS NOT NULL AND codigo!='' THEN codigo END)::int AS skus,
+        COUNT(DISTINCT rua)::int                              AS ruas,
+        ROUND(AVG(duracao_min)::numeric, 1)                  AS tempo_medio
+      FROM (
+        SELECT
+          p.id                                                                          AS pedido_id,
+          COALESCE(NULLIF(LEFT(p.iniciado_em,10),''),NULLIF(p.data_distribuicao,''),p.data_pedido) AS data,
+          COALESCE(u.nome, s.nome)                                                     AS colaborador,
+          REPLACE(COALESCE(u.turno, s.turno, 'Manha'), 'Ã£', 'a')                    AS turno,
+          ip.quantidade                                                                AS itens,
+          ip.codigo,
+          CASE WHEN ip.endereco IS NOT NULL AND ip.endereco != ''
+               THEN UPPER((regexp_match(split_part(ip.endereco,'/',1),'^([A-Za-z]+)[0-9]'))[1])
+               ELSE NULL END                                                            AS rua,
+          CASE WHEN NULLIF(p.iniciado_em,'') IS NOT NULL
+               THEN GREATEST(0, EXTRACT(EPOCH FROM (
+                 COALESCE(NULLIF(p.skus_concluido_em,''), NULLIF(p.concluido_em,''))::timestamp
+                 - p.iniciado_em::timestamp
+               )) / 60.0 - COALESCE(p.tempo_aguardando_min, 0))
+               ELSE NULL END                                                           AS duracao_min
+        FROM pedidos p
+        JOIN separadores s ON s.id = p.separador_id
+        LEFT JOIN usuarios u ON u.id = s.usuario_id
+        JOIN itens_pedido ip ON ip.pedido_id = p.id
+        WHERE p.status = 'concluido'
+          AND COALESCE(NULLIF(LEFT(p.iniciado_em,10),''),NULLIF(p.data_distribuicao,''),p.data_pedido) >= $1
+          AND COALESCE(NULLIF(LEFT(p.iniciado_em,10),''),NULLIF(p.data_distribuicao,''),p.data_pedido) <= $2
+          AND s.status = 'ativo' ${turnoFiltro}
+      ) sub
+      GROUP BY data, colaborador, turno
+      ORDER BY data, colaborador
+    `, params);
+
+    res.json({ colaboradores: resultado, por_dia: porDia, ruas: ruasRaw, por_colab_dia: porColabDia });
   } catch(e) {
     console.error('performance/separadores:', e.message);
     res.status(500).json({ erro: e.message });

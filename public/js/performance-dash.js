@@ -1130,7 +1130,7 @@ async function pfExcluirOcorrencia(id) {
 }
 
 // ── Exportar Excel ─────────────────────────────────────────────────────────
-async function pfExportarExcel() {
+function pfExportarExcel() {
   const ini = document.getElementById('pf-ini')?.value || '';
   const fim = document.getElementById('pf-fim')?.value || '';
   const fmtHora = v => { if (!v) return ''; return v.includes('T') ? v.slice(11,16) : v.slice(0,5); };
@@ -1188,48 +1188,55 @@ async function pfExportarExcel() {
   const colab = _pfFiltrados?.length ? _pfFiltrados : _pfDados?.colaboradores;
   if (!colab?.length) { pfToast('Sem dados para exportar.','aviso'); return; }
 
-  pfToast('Gerando Excel...', 'info');
-
-  const turno = document.getElementById('pf-turno')?.value || '';
-  const qs2   = new URLSearchParams({ ini, fim });
-  if (turno) qs2.set('turno', turno);
-  const detalhe = await apiFetch(`/performance/pedidos-detail?${qs2}`);
-
   const nomeAtualExp = document.getElementById('pf-colab')?.value || '';
-  const detalheFiltrado = detalhe && !detalhe.erro
-    ? (nomeAtualExp ? detalhe.filter(r => r.colaborador === nomeAtualExp) : detalhe)
-    : [];
+  const fmtTurno = v => v === 'Manha' ? 'Manhã' : (v || '');
 
   const abaResumo = [
     ['#','Colaborador','Turno','Pedidos','Itens','SKUs','Reposições','Itens/Ped','Tempo Médio (min)'],
     ...colab.map((c,i) => [
-      i+1, c.nome,
-      c.turno === 'Manha' ? 'Manhã' : c.turno,
+      i+1, c.nome, fmtTurno(c.turno),
       c.pedidos, c.itens, c.skus, c.reposicoes,
       c.pedidos > 0 ? parseFloat((c.itens/c.pedidos).toFixed(1)) : 0,
       c.tempo_medio_min != null ? parseFloat(c.tempo_medio_min.toFixed(1)) : '',
     ])
   ];
 
-  const abaPedidos = [
-    ['Data','Colaborador','Turno','Nº Pedido','Itens','SKUs','Ruas','Lista de Ruas','Tempo (min)','Itens/Ped','Itens/Rua'],
-    ...detalheFiltrado.map(r => {
-      const itens = r.total_itens || 0;
-      const ruas  = r.ruas_percorridas || 0;
+  const pcdSrc = (_pfDados?.por_colab_dia || []);
+  const pcdFilt = nomeAtualExp ? pcdSrc.filter(r => r.colaborador === nomeAtualExp) : pcdSrc;
+  const abaDia2 = [
+    ['Data','Colaborador','Turno','Pedidos','Itens','SKUs','Ruas','Itens/Ped','Itens/Rua','Tempo Médio (min)'],
+    ...pcdFilt.map(r => {
+      const ped = r.pedidos || 0;
+      const it  = r.itens   || 0;
+      const ru  = r.ruas    || 0;
       return [
-        fmtData(r.data),
-        r.colaborador,
-        r.turno === 'Manha' ? 'Manhã' : (r.turno || ''),
-        r.numero_pedido,
-        itens,
-        r.skus ?? '',
-        ruas,
-        r.ruas_lista || '',
-        r.duracao_min ?? '',
-        itens,
-        ruas > 0 ? parseFloat((itens / ruas).toFixed(1)) : '',
+        fmtData(r.data), r.colaborador, fmtTurno(r.turno),
+        ped, it, r.skus ?? '', ru,
+        ped > 0 ? parseFloat((it/ped).toFixed(1)) : '',
+        ru  > 0 ? parseFloat((it/ru).toFixed(1))  : '',
+        r.tempo_medio != null ? parseFloat(r.tempo_medio) : '',
       ];
     })
+  ];
+
+  const ruasSrc = (_pfDados?.ruas || []);
+  const ruasFilt = nomeAtualExp ? ruasSrc.filter(r => r.nome === nomeAtualExp) : ruasSrc;
+  const ruasAgg = (() => {
+    const m = {};
+    ruasFilt.forEach(r => {
+      const k = `${r.nome}||${r.rua}`;
+      if (!m[k]) m[k] = { colaborador: r.nome, rua: r.rua, itens: 0, pedidos: 0 };
+      m[k].itens   += r.itens   || 0;
+      m[k].pedidos += r.pedidos || 0;
+    });
+    return Object.values(m).sort((a,b) => b.itens - a.itens);
+  })();
+  const abaRuas = [
+    ['Colaborador','Rua','Itens','Pedidos','Itens/Pedido'],
+    ...ruasAgg.map(r => [
+      r.colaborador, r.rua, r.itens, r.pedidos,
+      r.pedidos > 0 ? parseFloat((r.itens/r.pedidos).toFixed(1)) : '',
+    ])
   ];
 
   const abaDia = [
@@ -1238,9 +1245,10 @@ async function pfExportarExcel() {
   ];
 
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(abaResumo),  'Resumo');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(abaPedidos), 'Pedidos');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(abaDia),     'Por Dia');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(abaResumo), 'Resumo');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(abaDia2),   'Por Colab-Dia');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(abaRuas),   'Ruas');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(abaDia),    'Por Dia');
   XLSX.writeFile(wb, `performance-separadores_${(ini||'').replace(/-/g,'')}${fim?'-'+(fim).replace(/-/g,''):''}.xlsx`);
   pfToast('Excel exportado!','sucesso');
 }
