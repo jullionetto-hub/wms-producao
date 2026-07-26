@@ -110,7 +110,12 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
    SIDEBAR (desktop supervisor)
 ══════════════════════════════════════════ */
 .sidebar{width:205px;background:#0F172A;border-right:1px solid #1E293B;display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto;padding:12px 8px}
-.mg{padding:10px 10px 4px;font-size:9px;font-weight:700;color:#475569;letter-spacing:2px;text-transform:uppercase}
+.mg{padding:10px 10px 4px;font-size:9px;font-weight:700;color:#475569;letter-spacing:2px;text-transform:uppercase;cursor:pointer;display:flex;justify-content:space-between;align-items:center;user-select:none}
+.mg:hover{color:#64748B}
+.mg-arrow{flex-shrink:0;opacity:.5;transition:transform .2s;display:flex;align-items:center}
+.mg-collapsed .mg-arrow{transform:rotate(-90deg)}
+.mg-items{overflow:hidden;max-height:600px;transition:max-height .22s ease}
+.mg-collapsed .mg-items{max-height:0}
 .mi{display:flex;align-items:center;gap:9px;padding:9px 12px;color:#94A3B8;font-size:13px;font-weight:500;cursor:pointer;border-radius:var(--r-sm);transition:all .18s;text-decoration:none;margin-bottom:2px}
 .mi:hover{background:rgba(255,255,255,.06);color:#E2E8F0}
 .mi.ativo{background:rgba(59,130,246,.15);color:#60A5FA;font-weight:600}

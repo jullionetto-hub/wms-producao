@@ -410,6 +410,35 @@ function montarSidebar() {
       <a class="mi" onclick="irPara('gestao',this)"><span class="mi-ic">${IC.absenteismo}</span>Absenteísmo</a>`,
   };
   sb.innerHTML = menus[usuarioAtual.perfil] || '';
+  postProcessSidebar();
+}
+
+function postProcessSidebar() {
+  const sb = document.getElementById('sidebar');
+  const mgEls = Array.from(sb.querySelectorAll('.mg'));
+  mgEls.forEach(mg => {
+    const group = document.createElement('div');
+    group.className = 'mg-group';
+    mg.parentNode.insertBefore(group, mg);
+
+    const arrow = document.createElement('span');
+    arrow.className = 'mg-arrow';
+    arrow.innerHTML = `<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>`;
+    mg.appendChild(arrow);
+    mg.onclick = () => group.classList.toggle('mg-collapsed');
+    group.appendChild(mg);
+
+    const items = document.createElement('div');
+    items.className = 'mg-items';
+    group.appendChild(items);
+
+    let next = group.nextSibling;
+    while (next && !(next.nodeType === 1 && next.classList && next.classList.contains('mg'))) {
+      const toMove = next;
+      next = next.nextSibling;
+      items.appendChild(toMove);
+    }
+  });
 }
 
 
