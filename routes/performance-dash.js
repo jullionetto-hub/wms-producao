@@ -348,7 +348,8 @@ router.get('/performance/timing', requerAuth, requerPerfil('supervisor', 'gestor
         COALESCE(
           (SELECT ROUND(SUM(cs.tempo_min)::numeric, 1)::float
            FROM checkout_sessoes cs
-           WHERE cs.checkout_id = c.id AND cs.tempo_min > 0),
+           WHERE cs.checkout_id = c.id AND cs.tempo_min > 0
+             AND cs.data_sessao = c.data_checkout AND cs.operador_nome = c.operador_nome),
           CASE
             WHEN NULLIF(c.hora_criacao,'') IS NOT NULL AND NULLIF(c.hora_checkout,'') IS NOT NULL
             THEN ROUND(EXTRACT(EPOCH FROM (
@@ -633,7 +634,8 @@ router.get('/performance/pedido/:numero', requerAuth, requerPerfil('supervisor',
         COALESCE(
           (SELECT ROUND(SUM(cs.tempo_min)::numeric, 1)::float
            FROM checkout_sessoes cs
-           WHERE cs.checkout_id = c.id AND cs.tempo_min > 0),
+           WHERE cs.checkout_id = c.id AND cs.tempo_min > 0
+             AND cs.data_sessao = c.data_checkout AND cs.operador_nome = c.operador_nome),
           CASE
             WHEN NULLIF(c.hora_criacao,'') IS NOT NULL AND NULLIF(c.hora_checkout,'') IS NOT NULL
             THEN ROUND(EXTRACT(EPOCH FROM (

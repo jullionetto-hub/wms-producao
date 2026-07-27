@@ -269,16 +269,25 @@ async function registrarPendenciaDesk(id) {
 
 function _renderSessoesCk(sessoes) {
   if (!sessoes || !sessoes.length) return '';
+  const hoje = new Date().toLocaleDateString('pt-BR', {timeZone:'America/Sao_Paulo'}).split('/').reverse().join('-');
+  const filtradas = sessoes.filter(s => !s.data_sessao || s.data_sessao === hoje);
+  if (!filtradas.length) return '';
   return `
     <div style="margin-top:10px;border-top:1px solid var(--border);padding-top:10px">
       <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1px;margin-bottom:6px">HISTÓRICO DE CHECKOUT</div>
-      ${sessoes.map(s => {
-        const cor  = s.acao==='concluido'?'#16a34a':s.acao==='aguardando_item'?'#f97316':s.acao==='pausado'?'#7c3aed':'#3b82f6';
-        const icon = s.acao==='concluido'?'OK':s.acao==='aguardando_item'?'Aguard':s.acao==='pausado'?'Pausado':s.acao==='retomado'?'Retomado':'Lib';
-        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 8px;background:var(--surface2);border-radius:6px;margin-bottom:3px;font-size:11px">
-          <span style="color:var(--text2);font-weight:600">${icon} ${s.operador_nome||'—'}</span>
-          <span style="color:var(--text3)">${s.hora_inicio||'—'} → ${s.hora_fim||'em andamento'}</span>
-          <span style="font-weight:700;color:${cor}">${s.tempo_min > 0 ? s.tempo_min+'min' : '—'}</span>
+      ${filtradas.map(s => {
+        const bgBadge = s.acao==='concluido'?'#dcfce7':s.acao==='aguardando_item'?'#fff7ed':s.acao==='pausado'?'#ede9fe':'#dbeafe';
+        const txBadge = s.acao==='concluido'?'#15803d':s.acao==='aguardando_item'?'#c2410c':s.acao==='pausado'?'#6d28d9':'#1d4ed8';
+        const label   = s.acao==='concluido'?'OK':s.acao==='aguardando_item'?'Aguard':s.acao==='pausado'?'Pausado':s.acao==='retomado'?'Retomado':s.acao==='aberto'?'Aberto':'—';
+        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 8px;background:var(--surface2);border-radius:6px;margin-bottom:3px;font-size:11px;gap:6px">
+          <div style="display:flex;align-items:center;gap:5px;min-width:0;flex:1">
+            <span style="flex-shrink:0;padding:1px 5px;background:${bgBadge};color:${txBadge};border-radius:4px;font-size:10px;font-weight:700">${label}</span>
+            <span style="color:var(--text2);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.operador_nome||'—'}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+            <span style="color:var(--text3);font-size:10px">${s.hora_inicio||'—'} → ${s.hora_fim||'andamento'}</span>
+            <span style="font-weight:700;color:${txBadge};min-width:28px;text-align:right">${s.tempo_min > 0 ? s.tempo_min+'min' : '—'}</span>
+          </div>
         </div>`;
       }).join('')}
     </div>`;
