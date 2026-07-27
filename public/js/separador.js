@@ -776,7 +776,7 @@ async function _confirmarPedidoCore(num, inputId, statusId, clWrapId, fnChecklis
     if (data.caixa_vinculada) {
       // Pedido já tinha caixa — libera direto e mostra caixa vinculada
       caixaJaVinculada = true;
-      mostrarCampoCaixa(true);
+      mostrarCampoCaixa(true, true); // jaVinculada=true → modo compacto verde
       ph.style.display = 'none';
       // Busca e exibe o número da caixa já vinculada
       try {
@@ -948,10 +948,10 @@ function renderChecklist(prefix) {
 
 
 
-  // Verifica se caixa foi vinculada
-  const inputCaixa = document.getElementById(prefix === 'cl' ? 'cl-input-caixa' : 'm-input-caixa');
+  // Verifica se caixa foi vinculada — usa variável global (mais confiável que ler o DOM)
   const statusCaixaEl = document.getElementById(prefix === 'cl' ? 'cl-caixa-status' : 'm-caixa-status');
-  const caixaVinculada = statusCaixaEl && statusCaixaEl.style.display !== 'none' && statusCaixaEl.textContent.includes('✅');
+  const caixaVinculadaDOM = statusCaixaEl && statusCaixaEl.style.display !== 'none' && statusCaixaEl.textContent.includes('✅');
+  const caixaVinculada = caixaJaVinculada || caixaVinculadaDOM;
 
   if (!todosVerif) {
     if(bc){bc.style.display='block';bc.disabled=true;bc.textContent=`CONCLUIR (${total-verificados} pend.)`}
@@ -1252,6 +1252,7 @@ async function vincularCaixaCore(caixa, inputStatusId, isMobile) {
       statusEl.innerHTML = `<span style="color:var(--green);font-weight:600">Caixa <b>${caixa}</b> vinculada — Pedido #${pedidoAtualNum}</span>`;
     }
     caixaJaVinculada = true;
+    mostrarCampoCaixa(true, true); // compacto verde após vincular
     ['m-cl-wrap-placeholder','cl-wrap-placeholder'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.style.display = 'none';
@@ -1286,12 +1287,36 @@ function escanearQrCaixa(isMobile) {
   );
 }
 
-// Mostra campo caixa quando pedido é carregado
-function mostrarCampoCaixa(show) {
+// Mostra campo caixa quando pedido é carregado.
+// jaVinculada=true: esconde o formulário e exibe só o status (caixa já foi vinculada).
+function mostrarCampoCaixa(show, jaVinculada = false) {
   const d = document.getElementById('cl-caixa-wrap');
   const m = document.getElementById('m-caixa-wrap');
   if (d) d.style.display = show ? 'block' : 'none';
   if (m) m.style.display = show ? 'block' : 'none';
+
+  if (show) {
+    // Mobile: alterna entre estado "pendente" (vermelho) e "vinculada" (verde compacto)
+    const mHeader = document.getElementById('m-caixa-header');
+    const mForm   = document.getElementById('m-caixa-form');
+    if (jaVinculada) {
+      if (m) { m.style.background = '#f0fdf4'; m.style.borderColor = '#86efac'; }
+      if (mHeader) {
+        mHeader.style.color = '#15803d';
+        mHeader.innerHTML = '<span style="width:6px;height:6px;background:#16a34a;border-radius:50%;flex-shrink:0"></span> CAIXA VINCULADA';
+        mHeader.style.marginBottom = '0';
+      }
+      if (mForm) mForm.style.display = 'none';
+    } else {
+      if (m) { m.style.background = '#FFF8F8'; m.style.borderColor = '#FECACA'; }
+      if (mHeader) {
+        mHeader.style.color = '#B91C1C';
+        mHeader.innerHTML = '<span style="width:6px;height:6px;background:#DC2626;border-radius:50%;flex-shrink:0"></span> VINCULAR CAIXA — OBRIGATÓRIO ANTES DE INICIAR';
+        mHeader.style.marginBottom = '8px';
+      }
+      if (mForm) mForm.style.display = '';
+    }
+  }
 }
 
 
