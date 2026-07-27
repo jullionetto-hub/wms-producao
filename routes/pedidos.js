@@ -605,6 +605,100 @@ router.post('/pedidos/distribuicao', requerAuth, requerPerfil('supervisor'), asy
   } catch(err){res.status(500).json({erro:err.message});}
 });
 
+// Distribuição entre turnos: divide pedidos pendentes entre os 3 turnos de forma equilibrada,
+// proporcional ao número de separadores de cada turno.
+router.post('/pedidos/distribuicao-turnos', requerAuth, requerPerfil('supervisor'), async (req,res) => {
+  const {turnos, cenario, apenas_sem_sep, quantidade} = req.body;
+  // turnos = [{nome:'Manhã', separadores:5}, {nome:'Tarde', separadores:4}, {nome:'Noite', separadores:3}]
+  if (!turnos?.length || turnos.some(t => !(t.separadores > 0))) {
+    return res.status(400).json({erro:'Informe os turnos com pelo menos 1 separador cada!'});
+  }
+  const modoDist = cenario || 'balanceado';
+  try {
+    let w = "p.status='pendente'";
+    if (apenas_sem_sep !== false) w += ' AND p.separador_id IS NULL';
+    w += ' AND (p.tem_prime=false OR p.tem_prime IS NULL)';
+    const pedidos = await db.all(
+      `SELECT p.* FROM pedidos p WHERE ${w}
+       ORDER BY
+         CASE WHEN p.aguardando_desde ~ '^[0-9]{2}/[0-9]{2}/[0-9]{4}'
+              THEN TO_TIMESTAMP(p.aguardando_desde, 'DD/MM/YYYY HH24:MI')
+              ELSE NULL END ASC NULLS LAST,
+         CASE WHEN p.data_pedido IS NOT NULL AND p.data_pedido != ''
+              THEN (p.data_pedido||' '||COALESCE(p.hora_pedido,'00:00'))::TIMESTAMP
+              ELSE NULL END ASC NULLS LAST,
+         p.id ASC`
+    );
+    if (!pedidos.length) return res.json({plano:[], total_pedidos:0, total_distribuidos:0});
+
+    for (const ped of pedidos) {
+      const itens = await db.all('SELECT endereco,quantidade,codigo FROM itens_pedido WHERE pedido_id=$1', [ped.id]);
+      const scoreBase = calcularPontuacaoPedido(itens);
+      const ruasSet = new Set(), skusSet = new Set();
+      for (const i of itens) {
+        const e = String(i.endereco||'').split('/')[0].trim().toUpperCase();
+        const m = e.match(/^([A-Z]+)/); if (m) ruasSet.add(m[1]);
+        if (i.codigo) skusSet.add(i.codigo);
+      }
+      const bonusRuas = Math.max(0, ruasSet.size - 2) * 15;
+      const bonusSkus = Math.max(0, skusSet.size - 1) * 3;
+      ped._ruas = ruasSet.size;
+      ped._skus = skusSet.size;
+      ped._p = (modoDist === 'complexidade') ? (scoreBase + bonusRuas + bonusSkus) : scoreBase;
+    }
+
+    const lim = (quantidade > 0) ? quantidade : pedidos.length;
+    const isDrive = p => String(p.transportadora||'').toUpperCase().includes('DRIVE');
+    const drive  = pedidos.filter(isDrive).slice(0, lim);
+    const outros = pedidos.filter(p => !isDrive(p)).slice(0, Math.max(0, lim - drive.length));
+    const ordenados = [...drive, ...outros];
+
+    // LPT proporcional: balanceia (score / sep_count) entre turnos
+    // Assim, turno com mais separadores recebe mais pedidos proporcionalmente.
+    const buckets = turnos.map(t => ({
+      nome: t.nome,
+      separadores: t.separadores,
+      pedidos: [],
+      pontuacao_total: 0,
+      itens_total: 0,
+      ruas_total: 0,
+      skus_total: 0,
+    }));
+
+    for (const ped of ordenados) {
+      // Métrica de carga por separador em cada turno
+      buckets.sort((a, b) => {
+        const rA = a.pontuacao_total / a.separadores;
+        const rB = b.pontuacao_total / b.separadores;
+        if (modoDist === 'por_itens') return (a.itens_total / a.separadores) - (b.itens_total / b.separadores);
+        return rA - rB;
+      });
+      buckets[0].pedidos.push(ped.numero_pedido);
+      buckets[0].pontuacao_total += ped._p;
+      buckets[0].itens_total += (ped.itens || 0);
+      buckets[0].ruas_total += (ped._ruas || 0);
+      buckets[0].skus_total += (ped._skus || 0);
+    }
+
+    const totalDist = buckets.reduce((s, b) => s + b.pedidos.length, 0);
+    res.json({
+      cenario: modoDist,
+      plano: buckets.map(b => ({
+        nome: b.nome,
+        separadores: b.separadores,
+        pedidos: b.pedidos,
+        pedidos_count: b.pedidos.length,
+        pontuacao_total: Math.round(b.pontuacao_total),
+        itens_total: b.itens_total,
+        ruas_media: b.pedidos.length ? Math.round((b.ruas_total / b.pedidos.length) * 10) / 10 : 0,
+        skus_media: b.pedidos.length ? Math.round((b.skus_total / b.pedidos.length) * 10) / 10 : 0,
+      })),
+      total_pedidos: pedidos.length,
+      total_distribuidos: totalDist,
+    });
+  } catch(err) { res.status(500).json({erro: err.message}); }
+});
+
 router.post('/pedidos/distribuicao/confirmar', requerAuth, requerPerfil('supervisor'), async (req,res) => {
   const {plano, turno_lote}=req.body;
   if (!plano?.length) return res.status(400).json({erro:'Plano não informado!'});

@@ -2136,6 +2136,10 @@
           style="padding:5px 14px;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;background:#6366f1;color:#fff;transition:all .2s">
           Automática
         </button>
+        <button id="btn-modo-turno" onclick="distSetModo('turno')"
+          style="padding:5px 14px;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;background:transparent;color:var(--text3);transition:all .2s">
+          Por Turno
+        </button>
         <button id="btn-modo-manual" onclick="distSetModo('manual')"
           style="padding:5px 14px;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;background:transparent;color:var(--text3);transition:all .2s">
           Manual
@@ -2242,6 +2246,21 @@
         <button class="btn btn-outline" onclick="fecharModalDistribuicao()">Cancelar</button>
         <button class="btn btn-primary" onclick="calcularDistribuicao()" id="btn-calcular-dist">Calcular Distribuição</button>
         <button class="btn btn-success" onclick="confirmarDistribuicao()" id="btn-confirmar-dist" style="display:none">Confirmar Distribuição</button>
+      </div>
+
+      <!-- PAINEL POR TURNO -->
+      <div id="dist-painel-turno" style="display:none">
+        <div style="background:rgba(99,102,241,.06);border:1px solid rgba(99,102,241,.2);border-radius:10px;padding:14px 16px;margin-bottom:14px;font-size:12px;color:var(--text2)">
+          <b>Distribuição por Turno:</b> divide os pedidos entre os turnos de forma proporcional ao número de separadores. Cada turno fica com carga equivalente por colaborador.
+        </div>
+        <div style="display:grid;gap:8px;margin-bottom:16px" id="dist-turno-config">
+          <!-- linhas geradas pelo JS -->
+        </div>
+        <div id="dist-turno-resultado" style="display:none"></div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+          <button class="btn btn-outline" onclick="fecharModalDistribuicao()">Cancelar</button>
+          <button class="btn btn-primary" onclick="calcularDistribuicaoTurnos()" id="btn-calcular-turnos">Calcular por Turno</button>
+        </div>
       </div>
 
       <!-- PAINEL MANUAL -->

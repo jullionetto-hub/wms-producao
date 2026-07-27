@@ -1251,36 +1251,185 @@ function fecharModalDistribuicao() {
   _turnoAtivoDistribuicao = '';
 }
 
-/* ══ DISTRIBUIÇÃO MANUAL ══════════════════════════════════════════════ */
+/* ══ DISTRIBUIÇÃO MANUAL / POR TURNO ══════════════════════════════════ */
 let _distModoAtual = 'auto';
 
 function distSetModo(modo) {
   _distModoAtual = modo;
   const btnAuto   = document.getElementById('btn-modo-auto');
   const btnManual = document.getElementById('btn-modo-manual');
-  const painelAuto   = document.querySelectorAll('#dist-painel-manual, #dist-botoes-auto, #dist-resultado');
+  const btnTurno  = document.getElementById('btn-modo-turno');
   const painelManual = document.getElementById('dist-painel-manual');
+  const painelTurno  = document.getElementById('dist-painel-turno');
   const botoesAuto   = document.getElementById('dist-botoes-auto');
   const resultado    = document.getElementById('dist-resultado');
 
+  // Reset all buttons
+  [btnAuto, btnManual, btnTurno].forEach(b => { if (b) { b.style.background='transparent'; b.style.color='var(--text3)'; } });
+  if (painelManual) painelManual.style.display = 'none';
+  if (painelTurno)  painelTurno.style.display  = 'none';
+  if (botoesAuto)   botoesAuto.style.display   = 'none';
+  if (resultado)    resultado.style.display     = 'none';
+
   if (modo === 'auto') {
-    if (btnAuto)   { btnAuto.style.background='#6366f1'; btnAuto.style.color='#fff'; }
-    if (btnManual) { btnManual.style.background='transparent'; btnManual.style.color='var(--text3)'; }
-    if (painelManual) painelManual.style.display = 'none';
-    if (botoesAuto)   botoesAuto.style.display   = 'flex';
-    if (resultado)    resultado.style.display     = distribuicaoPlano ? '' : 'none';
+    if (btnAuto) { btnAuto.style.background='#6366f1'; btnAuto.style.color='#fff'; }
+    if (botoesAuto) botoesAuto.style.display = 'flex';
+    if (resultado)  resultado.style.display  = distribuicaoPlano ? '' : 'none';
+  } else if (modo === 'turno') {
+    if (btnTurno) { btnTurno.style.background='#6366f1'; btnTurno.style.color='#fff'; }
+    if (painelTurno) { painelTurno.style.display = ''; renderTurnoConfig(); }
   } else {
     if (btnManual) { btnManual.style.background='#6366f1'; btnManual.style.color='#fff'; }
-    if (btnAuto)   { btnAuto.style.background='transparent'; btnAuto.style.color='var(--text3)'; }
     if (painelManual) painelManual.style.display = '';
-    if (botoesAuto)   botoesAuto.style.display   = 'none';
-    if (resultado)    resultado.style.display     = 'none';
-    // Limpa resultado de busca anterior
     const r = document.getElementById('dist-manual-resultado');
     const inp = document.getElementById('dist-manual-busca');
     if (inp) inp.value = '';
     if (r) r.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text3);font-size:13px">Digite o número do pedido ou nome do cliente para buscar</div>';
   }
+}
+
+/* ══ DISTRIBUIÇÃO POR TURNO ═══════════════════════════════════════════ */
+let _turnosConfig = [
+  { nome: 'Manhã',  separadores: 3 },
+  { nome: 'Tarde',  separadores: 3 },
+  { nome: 'Noite',  separadores: 2 },
+];
+
+function renderTurnoConfig() {
+  const el = document.getElementById('dist-turno-config');
+  if (!el) return;
+  const colors = ['#3b82f6','#f59e0b','#8b5cf6'];
+  el.innerHTML = _turnosConfig.map((t,i) => `
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-left:3px solid ${colors[i]};border-radius:6px">
+      <input value="${t.nome}" oninput="_turnosConfig[${i}].nome=this.value"
+        style="flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-size:13px;font-weight:700"/>
+      <div style="display:flex;align-items:center;gap:6px;white-space:nowrap">
+        <span style="font-size:11px;color:var(--text3)">Separadores:</span>
+        <input type="number" min="1" max="20" value="${t.separadores}" oninput="_turnosConfig[${i}].separadores=Math.max(1,parseInt(this.value)||1)"
+          style="width:60px;padding:7px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-size:14px;font-weight:800;text-align:center"/>
+      </div>
+    </div>`).join('');
+  document.getElementById('dist-turno-resultado').style.display = 'none';
+}
+
+async function calcularDistribuicaoTurnos() {
+  const btn = document.getElementById('btn-calcular-turnos');
+  if (btn) { btn.disabled = true; btn.textContent = 'Calculando...'; }
+  try {
+    const apenasSem = document.getElementById('dist-apenas-sem-sep')?.checked !== false;
+    const quantidade = parseInt(document.getElementById('dist-quantidade')?.value) || 0;
+    const res = await fetch(`${API}/pedidos/distribuicao-turnos`, {
+      credentials: 'include', method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ turnos: _turnosConfig, cenario: _cenarioDistrib, apenas_sem_sep: apenasSem, quantidade: quantidade||null }),
+    });
+    const data = await res.json();
+    if (data.erro) { toast(data.erro, 'erro'); return; }
+    renderResultadoTurnos(data);
+  } catch(e) { toast('Erro ao calcular distribuição por turno!', 'erro'); }
+  finally { if (btn) { btn.disabled = false; btn.textContent = 'Calcular por Turno'; } }
+}
+
+function renderResultadoTurnos(data) {
+  const el = document.getElementById('dist-turno-resultado');
+  if (!el) return;
+
+  const colors  = ['#3b82f6','#f59e0b','#8b5cf6'];
+  const plano   = data.plano || [];
+  const totalPed = plano.reduce((s,t) => s + t.pedidos_count, 0);
+  const totalIts = plano.reduce((s,t) => s + (t.itens_total||0), 0);
+  const totalPts = plano.reduce((s,t) => s + (t.pontuacao_total||0), 0);
+  const maxIts   = Math.max(...plano.map(t => t.itens_total||0), 1);
+  const maxPts   = Math.max(...plano.map(t => t.pontuacao_total||0), 1);
+  const maxPed   = Math.max(...plano.map(t => t.pedidos_count||0), 1);
+
+  // Cards dos turnos
+  let html = `<div style="font-size:10px;font-weight:700;color:var(--accent);letter-spacing:1px;margin-bottom:10px">RESULTADO — DISTRIBUIÇÃO POR TURNO</div>`;
+  html += `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">`;
+  plano.forEach((t,i) => {
+    const ptsPorSep = t.separadores ? Math.round(t.pontuacao_total / t.separadores) : 0;
+    html += `<div style="background:var(--surface);border:1px solid var(--border);border-top:3px solid ${colors[i]};border-radius:8px;padding:12px">
+      <div style="font-size:11px;font-weight:800;color:${colors[i]};margin-bottom:8px;letter-spacing:.5px">${t.nome.toUpperCase()}</div>
+      <div style="font-size:22px;font-weight:900;color:var(--text);line-height:1">${t.pedidos_count}</div>
+      <div style="font-size:9px;color:var(--text3);margin-bottom:8px">pedidos</div>
+      <div style="font-size:13px;font-weight:700;color:var(--text)">${t.itens_total||0} itens</div>
+      <div style="font-size:9px;color:var(--text3);margin-bottom:6px">${t.pontuacao_total} pts · ${t.separadores} sep</div>
+      <div style="font-size:10px;font-weight:700;color:var(--text2)">${ptsPorSep} pts/sep</div>
+      <div style="font-size:9px;color:var(--text3)">~${t.ruas_media} ruas/ped · ${t.skus_media} SKUs/ped</div>
+    </div>`;
+  });
+  html += `</div>`;
+
+  // Gráfico comparativo SVG
+  html += renderGraficoTurnos(plano, colors, maxIts, maxPts, maxPed);
+
+  // Lista de pedidos por turno (colapsável)
+  html += `<div style="margin-top:14px">`;
+  plano.forEach((t,i) => {
+    const id = `turno-peds-${i}`;
+    html += `<details style="margin-bottom:6px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;overflow:hidden">
+      <summary style="padding:10px 14px;cursor:pointer;font-size:12px;font-weight:700;color:${colors[i]};list-style:none;display:flex;align-items:center;justify-content:space-between">
+        <span>${t.nome} — ${t.pedidos_count} pedidos</span>
+        <span style="font-size:10px;font-weight:400;color:var(--text3)">clique para ver</span>
+      </summary>
+      <div style="padding:8px 14px 12px;font-size:11px;color:var(--text2);line-height:1.8">${t.pedidos.join(', ') || '—'}</div>
+    </details>`;
+  });
+  html += `</div>`;
+
+  html += `<div style="margin-top:12px;padding:10px 14px;background:var(--surface2);border-radius:6px;font-size:12px;color:var(--text2);display:flex;gap:16px;flex-wrap:wrap">
+    <span><b style="color:var(--green)">${totalPed}</b> pedidos distribuídos</span>
+    <span><b style="color:var(--text)">${totalIts}</b> itens no total</span>
+    <span><b style="color:var(--accent)">${totalPts}</b> pts no total</span>
+    ${data.total_pedidos > totalPed ? `<span style="color:var(--amber)">⏳ ${data.total_pedidos - totalPed} pedidos ficam na fila</span>` : ''}
+  </div>`;
+
+  el.innerHTML = html;
+  el.style.display = '';
+}
+
+function renderGraficoTurnos(plano, colors, maxIts, maxPts, maxPed) {
+  const W = 540, H = 200, PAD = 40, BAR_G = 60, BAR_W = 16, GAP = 6;
+  const nTurnos = plano.length;
+  const groupW = BAR_W * 3 + GAP * 2;
+  const totalGroupW = groupW * nTurnos + BAR_G * (nTurnos - 1);
+  const startX = (W - PAD * 2 - totalGroupW) / 2 + PAD;
+
+  let bars = '';
+  plano.forEach((t, ti) => {
+    const gx = startX + ti * (groupW + BAR_G);
+    const metrics = [
+      { val: t.pedidos_count, max: maxPed,  color: colors[ti], label: `${t.pedidos_count} ped` },
+      { val: t.itens_total,   max: maxIts,  color: colors[ti]+'99', label: `${t.itens_total} its` },
+      { val: t.pontuacao_total, max: maxPts, color: colors[ti]+'66', label: `${t.pontuacao_total} pts` },
+    ];
+    metrics.forEach((m, mi) => {
+      const bh = Math.max(4, Math.round(((H - PAD * 2)) * m.val / m.max));
+      const bx = gx + mi * (BAR_W + GAP);
+      const by = H - PAD - bh;
+      bars += `<rect x="${bx}" y="${by}" width="${BAR_W}" height="${bh}" rx="3" fill="${m.color}"/>`;
+      bars += `<text x="${bx + BAR_W/2}" y="${by - 3}" text-anchor="middle" font-size="8" fill="currentColor" opacity=".7">${m.label}</text>`;
+    });
+    // turno label
+    bars += `<text x="${gx + groupW/2}" y="${H - PAD + 14}" text-anchor="middle" font-size="10" font-weight="700" fill="${colors[ti]}">${t.nome}</text>`;
+    bars += `<text x="${gx + groupW/2}" y="${H - PAD + 25}" text-anchor="middle" font-size="9" fill="currentColor" opacity=".5">${t.separadores} sep</text>`;
+  });
+
+  // legenda
+  const legenda = ['Pedidos','Itens','Pontuação'].map((lb,li) => {
+    const lx = PAD + li * 110;
+    return `<rect x="${lx}" y="${H - 8}" width="10" height="10" rx="2" fill="${li===0?'#94a3b8':li===1?'#94a3b866':'#94a3b844'}"/>
+            <text x="${lx + 14}" y="${H + 1}" font-size="9" fill="currentColor" opacity=".6">${lb}</text>`;
+  }).join('');
+
+  return `<div style="overflow-x:auto;margin-bottom:4px">
+    <svg viewBox="0 0 ${W} ${H + 14}" width="100%" style="max-width:${W}px;display:block;margin:0 auto;color:var(--text)">
+      <line x1="${PAD}" y1="${PAD}" x2="${PAD}" y2="${H-PAD}" stroke="currentColor" opacity=".15" stroke-width="1"/>
+      <line x1="${PAD}" y1="${H-PAD}" x2="${W-PAD}" y2="${H-PAD}" stroke="currentColor" opacity=".15" stroke-width="1"/>
+      ${bars}
+      ${legenda}
+    </svg>
+  </div>`;
 }
 
 async function distManualBuscar() {
