@@ -816,6 +816,7 @@ async function iniciarDiario() {
   const hj = hojeLocal();
   const dataEl = document.getElementById('diario-data');
   if (dataEl && !dataEl.value) dataEl.value = hj;
+  initDiarioHistorico();
   await carregarDadosDiario();
   await carregarListaDiarios();
   await verificarValidacaoPendente();
@@ -896,18 +897,40 @@ function atualizarStatusBanner(status, extra) {
   const el = document.getElementById('diario-status-banner');
   if (!el) return;
   const cfg = {
-    rascunho: { bg:'#f1f5f9', borda:'#cbd5e1', txt:'#475569', msg:'Rascunho salvo — clique em "Finalizar e Enviar" para enviar ao próximo turno' },
-    enviado:  { bg:'#eff6ff', borda:'#93c5fd', txt:'#1d4ed8', msg:`Enviado para validação — prazo: ${extra||'30 min'}` },
-    validado: { bg:'#f0fdf4', borda:'#86efac', txt:'#166534', msg:`Validado pelo próximo turno — Pontuação: <b>${extra||'?'}/100</b>` },
-    expirado: { bg:'#fef2f2', borda:'#fca5a5', txt:'#991b1b', msg:'Prazo de validação expirou sem resposta do próximo turno' },
-    outro:    { bg:'#fefce8', borda:'#fde68a', txt:'#92400e', msg:extra || 'Visualizando diário de outro turno — somente leitura' },
+    rascunho: { acc:'#64748b', msg:'Rascunho salvo — clique em "Finalizar e Enviar" para enviar ao próximo turno' },
+    enviado:  { acc:'#3b82f6', msg:`Enviado para validação — prazo: ${extra||'30 min'}` },
+    validado: { acc:'#10b981', msg:`Validado pelo próximo turno — Pontuação: <b>${extra||'?'}/100</b>` },
+    expirado: { acc:'#ef4444', msg:'Prazo de validação expirou sem resposta do próximo turno' },
+    outro:    { acc:'#f59e0b', msg:extra || 'Visualizando diário de outro turno — somente leitura' },
   };
   const c = cfg[status] || cfg.rascunho;
   el.style.display = '';
-  el.innerHTML = `<div style="background:${c.bg};border:1.5px solid ${c.borda};border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:10px">
-    <span style="width:8px;height:8px;border-radius:50%;background:${c.borda};flex-shrink:0;display:inline-block"></span>
-    <div style="font-size:13px;color:${c.txt}">${c.msg}</div>
+  el.innerHTML = `<div style="background:var(--surface2);border:1px solid var(--border);border-left:3px solid ${c.acc};border-radius:0 8px 8px 0;padding:11px 16px;display:flex;align-items:center;gap:10px">
+    <span style="width:7px;height:7px;border-radius:50%;background:${c.acc};flex-shrink:0;display:inline-block"></span>
+    <div style="font-size:13px;color:var(--text)">${c.msg}</div>
   </div>`;
+}
+
+// ── Histórico colapsável ───────────────────────────────────────────────────────
+function toggleDiarioHistorico() {
+  const body = document.getElementById('diario-hist-body');
+  const arrow = document.getElementById('diario-hist-arrow');
+  if (!body) return;
+  const open = body.style.maxHeight && body.style.maxHeight !== '0px';
+  body.style.maxHeight = open ? '0px' : '2000px';
+  if (arrow) arrow.style.transform = open ? '' : 'rotate(180deg)';
+  if (open) localStorage.removeItem('diarioHistOpen');
+  else localStorage.setItem('diarioHistOpen', '1');
+}
+
+function initDiarioHistorico() {
+  const body = document.getElementById('diario-hist-body');
+  const arrow = document.getElementById('diario-hist-arrow');
+  if (!body) return;
+  if (localStorage.getItem('diarioHistOpen')) {
+    body.style.maxHeight = '2000px';
+    if (arrow) arrow.style.transform = 'rotate(180deg)';
+  }
 }
 
 // ── Finaliza e envia para validação ───────────────────────────────────────────
@@ -1212,12 +1235,12 @@ async function carregarListaDiarios() {
     if (!lista.length) { el.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:8px">Nenhum diário salvo ainda</div>'; return; }
     el.innerHTML = lista.map(d => {
       const turnoCor = d.turno === 'Manha' ? '#F59E0B' : d.turno === 'Tarde' ? '#3B82F6' : '#8B5CF6';
-      const leuBadge = d.leu_anterior ? '<span style="font-size:9px;background:#f0fdf4;color:#166534;border:1px solid #86efac;border-radius:10px;padding:1px 6px">leu</span>' : '';
+      const leuBadge = d.leu_anterior ? '<span style="font-size:9px;background:var(--surface2);color:#10b981;border:1px solid #10b981;border-radius:4px;padding:1px 6px">leu</span>' : '';
       const statusMap = {
-        rascunho: '<span style="font-size:9px;background:#f1f5f9;color:#64748b;border:1px solid #cbd5e1;border-radius:10px;padding:1px 6px">Rascunho</span>',
-        enviado:  '<span style="font-size:9px;background:#eff6ff;color:#1d4ed8;border:1px solid #93c5fd;border-radius:10px;padding:1px 6px">Enviado</span>',
-        validado: `<span style="font-size:9px;background:#f0fdf4;color:#166534;border:1px solid #86efac;border-radius:10px;padding:1px 6px">${d.pontuacao!=null?d.pontuacao+'/100':'Validado'}</span>`,
-        expirado: '<span style="font-size:9px;background:#fef2f2;color:#991b1b;border:1px solid #fca5a5;border-radius:10px;padding:1px 6px">Expirado</span>',
+        rascunho: '<span style="font-size:9px;background:var(--surface2);color:var(--text3);border:1px solid var(--border);border-radius:4px;padding:1px 6px">Rascunho</span>',
+        enviado:  '<span style="font-size:9px;background:var(--surface2);color:#3b82f6;border:1px solid #3b82f6;border-radius:4px;padding:1px 6px">Enviado</span>',
+        validado: `<span style="font-size:9px;background:var(--surface2);color:#10b981;border:1px solid #10b981;border-radius:4px;padding:1px 6px">${d.pontuacao!=null?d.pontuacao+'/100':'Validado'}</span>`,
+        expirado: '<span style="font-size:9px;background:var(--surface2);color:#ef4444;border:1px solid #ef4444;border-radius:4px;padding:1px 6px">Expirado</span>',
       };
       const stBadge = statusMap[d.status] || statusMap.rascunho;
       return `<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);cursor:pointer;margin-bottom:6px" onclick="verDiario(${d.id})">

@@ -814,7 +814,6 @@
         <!-- Banner de validação pendente — TOPO, bem visível -->
         <div id="diario-validacao-pendente" style="display:none;margin-bottom:16px"></div>
 
-        <div style="display:grid;grid-template-columns:1fr 300px;gap:16px;align-items:start">
         <div>
           <!-- Filtros -->
           <div class="card" style="margin-bottom:12px">
@@ -834,26 +833,26 @@
           <div class="card" style="margin-bottom:12px">
             <div class="card-hd">SEPARAÇÃO</div>
             <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:12px 0">
-              <div style="text-align:center;background:var(--surface2);border-radius:8px;padding:10px">
-                <div style="font-size:22px;font-weight:800;color:var(--text)" id="diario-sep-total">0</div>
-                <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px">Total</div>
+              <div class="db-stat">
+                <div class="db-stat-n" id="diario-sep-total">0</div>
+                <div class="db-stat-l">Total</div>
               </div>
-              <div style="text-align:center;background:#f0fdf4;border-radius:8px;padding:10px">
-                <div style="font-size:22px;font-weight:800;color:#16a34a" id="diario-sep-conc">0</div>
-                <div style="font-size:9px;color:#16a34a;text-transform:uppercase;letter-spacing:1px">Concluídos</div>
+              <div class="db-stat db-stat-ok">
+                <div class="db-stat-n" id="diario-sep-conc">0</div>
+                <div class="db-stat-l">Concluídos</div>
               </div>
-              <div style="text-align:center;background:#eff6ff;border-radius:8px;padding:10px">
-                <div style="font-size:22px;font-weight:800;color:#2563eb" id="diario-sep-sep">0</div>
-                <div style="font-size:9px;color:#2563eb;text-transform:uppercase;letter-spacing:1px">Separando</div>
+              <div class="db-stat db-stat-info">
+                <div class="db-stat-n" id="diario-sep-sep">0</div>
+                <div class="db-stat-l">Separando</div>
               </div>
-              <div style="text-align:center;background:#fefce8;border-radius:8px;padding:10px">
-                <div style="font-size:22px;font-weight:800;color:#ca8a04" id="diario-sep-pend">0</div>
-                <div style="font-size:9px;color:#ca8a04;text-transform:uppercase;letter-spacing:1px">Pendentes</div>
+              <div class="db-stat db-stat-warn">
+                <div class="db-stat-n" id="diario-sep-pend">0</div>
+                <div class="db-stat-l">Pendentes</div>
               </div>
             </div>
-            <div style="margin-top:8px">
-              <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:4px">Observações da separação:</div>
-              <textarea id="diario-obs-sep" placeholder="Ocorrências na separação..." style="width:100%;min-height:70px;border:1px solid var(--border);border-radius:8px;padding:8px;font-size:12px;font-family:inherit;background:var(--surface2);color:var(--text);resize:vertical;box-sizing:border-box"></textarea>
+            <div style="margin-top:4px">
+              <div style="font-size:11px;font-weight:600;color:var(--text3);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">Observações</div>
+              <textarea id="diario-obs-sep" placeholder="Ocorrências na separação..." style="width:100%;min-height:60px;border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;font-family:inherit;background:var(--surface2);color:var(--text);resize:vertical;box-sizing:border-box"></textarea>
             </div>
           </div>
 
@@ -861,22 +860,22 @@
           <div class="card" style="margin-bottom:12px">
             <div class="card-hd">CHECKOUT</div>
             <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:12px 0">
-              <div style="text-align:center;background:var(--surface2);border-radius:8px;padding:10px">
-                <div style="font-size:22px;font-weight:800;color:var(--text)" id="diario-ck-total">0</div>
-                <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px">Total</div>
+              <div class="db-stat">
+                <div class="db-stat-n" id="diario-ck-total">0</div>
+                <div class="db-stat-l">Total</div>
               </div>
-              <div style="text-align:center;background:#f0fdf4;border-radius:8px;padding:10px">
-                <div style="font-size:22px;font-weight:800;color:#16a34a" id="diario-ck-conc">0</div>
-                <div style="font-size:9px;color:#16a34a;text-transform:uppercase;letter-spacing:1px">Concluídos</div>
+              <div class="db-stat db-stat-ok">
+                <div class="db-stat-n" id="diario-ck-conc">0</div>
+                <div class="db-stat-l">Concluídos</div>
               </div>
-              <div style="text-align:center;background:#fefce8;border-radius:8px;padding:10px">
-                <div style="font-size:22px;font-weight:800;color:#ca8a04" id="diario-ck-pend">0</div>
-                <div style="font-size:9px;color:#ca8a04;text-transform:uppercase;letter-spacing:1px">Pendentes</div>
+              <div class="db-stat db-stat-warn">
+                <div class="db-stat-n" id="diario-ck-pend">0</div>
+                <div class="db-stat-l">Pendentes</div>
               </div>
             </div>
-            <div style="margin-top:8px">
-              <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:4px">Observações do checkout:</div>
-              <textarea id="diario-obs-ck" placeholder="Ocorrências no checkout..." style="width:100%;min-height:70px;border:1px solid var(--border);border-radius:8px;padding:8px;font-size:12px;font-family:inherit;background:var(--surface2);color:var(--text);resize:vertical;box-sizing:border-box"></textarea>
+            <div style="margin-top:4px">
+              <div style="font-size:11px;font-weight:600;color:var(--text3);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">Observações</div>
+              <textarea id="diario-obs-ck" placeholder="Ocorrências no checkout..." style="width:100%;min-height:60px;border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;font-family:inherit;background:var(--surface2);color:var(--text);resize:vertical;box-sizing:border-box"></textarea>
             </div>
           </div>
 
@@ -884,22 +883,22 @@
           <div class="card" style="margin-bottom:12px">
             <div class="card-hd">EMBALAGEM</div>
             <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:12px 0">
-              <div style="text-align:center;background:var(--surface2);border-radius:8px;padding:10px">
-                <div style="font-size:22px;font-weight:800;color:var(--text)" id="diario-emb-total">0</div>
-                <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px">Total</div>
+              <div class="db-stat">
+                <div class="db-stat-n" id="diario-emb-total">0</div>
+                <div class="db-stat-l">Total</div>
               </div>
-              <div style="text-align:center;background:#f0fdf4;border-radius:8px;padding:10px">
-                <div style="font-size:22px;font-weight:800;color:#16a34a" id="diario-emb-emb">0</div>
-                <div style="font-size:9px;color:#16a34a;text-transform:uppercase;letter-spacing:1px">Embalados</div>
+              <div class="db-stat db-stat-ok">
+                <div class="db-stat-n" id="diario-emb-emb">0</div>
+                <div class="db-stat-l">Embalados</div>
               </div>
-              <div style="text-align:center;background:#fefce8;border-radius:8px;padding:10px">
-                <div style="font-size:22px;font-weight:800;color:#ca8a04" id="diario-emb-pend">0</div>
-                <div style="font-size:9px;color:#ca8a04;text-transform:uppercase;letter-spacing:1px">Pendentes</div>
+              <div class="db-stat db-stat-warn">
+                <div class="db-stat-n" id="diario-emb-pend">0</div>
+                <div class="db-stat-l">Pendentes</div>
               </div>
             </div>
-            <div style="margin-top:8px">
-              <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:4px">Observações da embalagem:</div>
-              <textarea id="diario-obs-emb" placeholder="Ocorrências na embalagem..." style="width:100%;min-height:70px;border:1px solid var(--border);border-radius:8px;padding:8px;font-size:12px;font-family:inherit;background:var(--surface2);color:var(--text);resize:vertical;box-sizing:border-box"></textarea>
+            <div style="margin-top:4px">
+              <div style="font-size:11px;font-weight:600;color:var(--text3);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">Observações</div>
+              <textarea id="diario-obs-emb" placeholder="Ocorrências na embalagem..." style="width:100%;min-height:60px;border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;font-family:inherit;background:var(--surface2);color:var(--text);resize:vertical;box-sizing:border-box"></textarea>
             </div>
           </div>
 
@@ -907,26 +906,26 @@
           <div class="card" style="margin-bottom:12px">
             <div class="card-hd">REPOSIÇÃO</div>
             <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:12px 0">
-              <div style="text-align:center;background:var(--surface2);border-radius:8px;padding:10px">
-                <div style="font-size:22px;font-weight:800;color:var(--text)" id="diario-rep-total">0</div>
-                <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px">Total</div>
+              <div class="db-stat">
+                <div class="db-stat-n" id="diario-rep-total">0</div>
+                <div class="db-stat-l">Total</div>
               </div>
-              <div style="text-align:center;background:#f0fdf4;border-radius:8px;padding:10px">
-                <div style="font-size:22px;font-weight:800;color:#16a34a" id="diario-rep-res">0</div>
-                <div style="font-size:9px;color:#16a34a;text-transform:uppercase;letter-spacing:1px">Resolvidas</div>
+              <div class="db-stat db-stat-ok">
+                <div class="db-stat-n" id="diario-rep-res">0</div>
+                <div class="db-stat-l">Resolvidas</div>
               </div>
-              <div style="text-align:center;background:#fefce8;border-radius:8px;padding:10px">
-                <div style="font-size:22px;font-weight:800;color:#ca8a04" id="diario-rep-pend">0</div>
-                <div style="font-size:9px;color:#ca8a04;text-transform:uppercase;letter-spacing:1px">Pendentes</div>
+              <div class="db-stat db-stat-warn">
+                <div class="db-stat-n" id="diario-rep-pend">0</div>
+                <div class="db-stat-l">Pendentes</div>
               </div>
-              <div style="text-align:center;background:#fef2f2;border-radius:8px;padding:10px">
-                <div style="font-size:22px;font-weight:800;color:#dc2626" id="diario-rep-nao">0</div>
-                <div style="font-size:9px;color:#dc2626;text-transform:uppercase;letter-spacing:1px">Não encontr.</div>
+              <div class="db-stat db-stat-danger">
+                <div class="db-stat-n" id="diario-rep-nao">0</div>
+                <div class="db-stat-l">Não encontr.</div>
               </div>
             </div>
-            <div style="margin-top:8px">
-              <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:4px">Observações da reposição:</div>
-              <textarea id="diario-obs-rep" placeholder="Ocorrências na reposição..." style="width:100%;min-height:70px;border:1px solid var(--border);border-radius:8px;padding:8px;font-size:12px;font-family:inherit;background:var(--surface2);color:var(--text);resize:vertical;box-sizing:border-box"></textarea>
+            <div style="margin-top:4px">
+              <div style="font-size:11px;font-weight:600;color:var(--text3);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">Observações</div>
+              <textarea id="diario-obs-rep" placeholder="Ocorrências na reposição..." style="width:100%;min-height:60px;border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;font-family:inherit;background:var(--surface2);color:var(--text);resize:vertical;box-sizing:border-box"></textarea>
             </div>
           </div>
 
@@ -943,33 +942,36 @@
           <!-- Observações gerais -->
           <div class="card" style="margin-bottom:12px">
             <div class="card-hd">OBSERVAÇÕES GERAIS DO TURNO</div>
-            <textarea id="diario-obs-geral" placeholder="Registre ocorrências gerais, problemas de equipamento, funcionários ausentes, intercorrências..." style="width:100%;min-height:100px;border:1px solid var(--border);border-radius:8px;padding:10px;font-size:13px;font-family:inherit;background:var(--surface2);color:var(--text);resize:vertical;margin-top:8px;box-sizing:border-box"></textarea>
+            <textarea id="diario-obs-geral" placeholder="Registre ocorrências gerais, problemas de equipamento, funcionários ausentes, intercorrências..." style="width:100%;min-height:90px;border:1px solid var(--border);border-radius:6px;padding:10px;font-size:13px;font-family:inherit;background:var(--surface2);color:var(--text);resize:vertical;margin-top:8px;box-sizing:border-box"></textarea>
           </div>
 
           <!-- Banner de status do diário atual -->
           <div id="diario-status-banner" style="display:none;margin-bottom:12px"></div>
 
           <!-- Botões de ação -->
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-            <button onclick="salvarDiario()" style="padding:14px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+            <button onclick="salvarDiario()" style="padding:13px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">
               Salvar Rascunho
             </button>
-            <button id="btn-enviar-diario" onclick="enviarDiario()" style="padding:14px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">
+            <button id="btn-enviar-diario" onclick="enviarDiario()" style="padding:13px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">
               Finalizar e Enviar
             </button>
           </div>
-        </div>
 
-        <!-- Coluna direita -->
-        <div>
-          <!-- Histórico lateral -->
-          <div class="card" style="position:sticky;top:80px">
-            <div class="card-hd">HISTÓRICO</div>
-            <div id="lista-diarios" style="margin-top:8px">
-              <div style="color:var(--text3);font-size:13px">Carregando...</div>
+          <!-- Histórico colapsável -->
+          <div class="card">
+            <div class="card-hd" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;user-select:none" onclick="toggleDiarioHistorico()">
+              <span>HISTÓRICO DE DIÁRIOS</span>
+              <span id="diario-hist-arrow" style="opacity:.5;transition:transform .22s;display:flex;align-items:center">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+              </span>
+            </div>
+            <div id="diario-hist-body" style="overflow:hidden;max-height:0;transition:max-height .3s ease">
+              <div id="lista-diarios" style="margin-top:8px;max-height:600px;overflow-y:auto">
+                <div style="color:var(--text3);font-size:13px;padding:8px">Carregando...</div>
+              </div>
             </div>
           </div>
-        </div>
         </div>
       </div>
 
