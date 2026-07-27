@@ -628,6 +628,22 @@ async function desbloquearPedido(id, num) {
 
 
 
+async function reenviarParaEmbalagem() {
+  const num = (document.getElementById('lib-reenviar-numero')?.value || '').trim();
+  if (!num) { toast('Informe o número do pedido','aviso'); return; }
+  try {
+    const res  = await fetch(`${API}/pedidos/embalagem/reenviar`, {
+      method: 'PUT', credentials: 'include',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({numero_pedido: num})
+    });
+    const data = await res.json();
+    if (!res.ok) { toast(data.erro || 'Erro ao reenviar','erro'); return; }
+    toast(data.mensagem || `Pedido #${num} reenviado!`, 'sucesso');
+    document.getElementById('lib-reenviar-numero').value = '';
+  } catch(e) { toast('Erro de rede','erro'); }
+}
+
 async function liberarCaixaDesktop(id) {
   if (!confirm('Liberar esta caixa? Ela ficará disponível para uso.')) return;
   try {

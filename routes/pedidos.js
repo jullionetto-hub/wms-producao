@@ -394,6 +394,19 @@ router.put('/pedidos/:id/redefinir', requerAuth, requerPerfil('supervisor'), asy
   catch(e){res.status(500).json({erro:e.message});}
 });
 
+router.put('/pedidos/embalagem/reenviar', requerAuth, requerPerfil('supervisor'), async (req,res) => {
+  const { numero_pedido } = req.body;
+  if (!numero_pedido) return res.status(400).json({erro:'numero_pedido obrigatorio'});
+  try {
+    const ped = await db.get('SELECT * FROM pedidos WHERE numero_pedido=$1',[numero_pedido]);
+    if (!ped) return res.status(404).json({erro:'Pedido não encontrado'});
+    if (ped.status_embalagem === 'embalado') return res.status(400).json({erro:'Pedido já embalado!'});
+    await pool.query(`UPDATE pedidos SET status='concluido', status_embalagem='pendente' WHERE numero_pedido=$1`,[numero_pedido]);
+    const cache = req.app.get('kpiCache'); if (cache) cache.ts = 0;
+    res.json({mensagem:`Pedido #${numero_pedido} reenviado para embalagem!`});
+  } catch(e) { res.status(500).json({erro:e.message}); }
+});
+
 router.put('/pedidos/:id/desbloquear', requerAuth, requerPerfil('supervisor'), async (req,res) => {
   try {
     const {data, hora} = dataHoraLocal();

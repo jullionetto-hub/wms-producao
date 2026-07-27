@@ -763,6 +763,18 @@
           </div>
         </div>
 
+        <!-- Reenviar pedido para embalagem -->
+        <div class="card" style="margin-bottom:14px;border-left:4px solid #f97316">
+          <div class="card-hd">PEDIDO NÃO APARECE NA EMBALAGEM?</div>
+          <div style="padding:12px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+            <input id="lib-reenviar-numero" type="text" placeholder="Nº do pedido (ex: 5568815)" class="form-control" style="max-width:220px;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px"/>
+            <button class="btn btn-primary btn-sm" onclick="reenviarParaEmbalagem()">Reenviar para Embalagem</button>
+          </div>
+          <div style="padding:0 16px 10px;font-size:12px;color:var(--text3)">
+            Use quando o checkout foi confirmado mas o pedido não aparece na fila de embalagem.
+          </div>
+        </div>
+
         <!-- Histórico de liberados -->
         <div class="card">
           <div class="card-hd">LIBERADOS — HISTÓRICO
