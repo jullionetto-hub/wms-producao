@@ -699,6 +699,28 @@ router.post('/pedidos/distribuicao-turnos', requerAuth, requerPerfil('supervisor
   } catch(err) { res.status(500).json({erro: err.message}); }
 });
 
+// Confirma a distribuição por turno: marca turno_distribuicao em cada pedido sem atribuir separador.
+// Após isso, o supervisor usa a aba Automática filtrando por turno para distribuir dentro do turno.
+router.post('/pedidos/distribuicao-turnos/confirmar', requerAuth, requerPerfil('supervisor'), async (req,res) => {
+  const {plano} = req.body; // plano = [{nome:'Manhã', pedidos:['123','456',...]}, ...]
+  if (!plano?.length) return res.status(400).json({erro:'Plano não informado!'});
+  const {data: dataDistrib} = dataHoraLocal();
+  let marcados = 0;
+  try {
+    for (const turno of plano) {
+      const turnoNome = turno.nome || '';
+      for (const np of (turno.pedidos || [])) {
+        const r = await pool.query(
+          `UPDATE pedidos SET turno_distribuicao=$1, data_distribuicao=$2 WHERE numero_pedido=$3 AND status='pendente'`,
+          [turnoNome, dataDistrib, String(np)]
+        );
+        if (r.rowCount > 0) marcados++;
+      }
+    }
+    res.json({marcados, mensagem:`${marcados} pedido(s) marcados por turno.`});
+  } catch(e) { res.status(500).json({erro: e.message}); }
+});
+
 router.post('/pedidos/distribuicao/confirmar', requerAuth, requerPerfil('supervisor'), async (req,res) => {
   const {plano, turno_lote}=req.body;
   if (!plano?.length) return res.status(400).json({erro:'Plano não informado!'});

@@ -1294,6 +1294,7 @@ let _turnosConfig = [
   { nome: 'Tarde',  separadores: 3 },
   { nome: 'Noite',  separadores: 2 },
 ];
+let _turnosPlanoCurrent = null;
 
 function renderTurnoConfig() {
   const el = document.getElementById('dist-turno-config');
@@ -1309,6 +1310,10 @@ function renderTurnoConfig() {
           style="width:60px;padding:7px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-size:14px;font-weight:800;text-align:center"/>
       </div>
     </div>`).join('');
+  // Reseta resultado e botão confirmar ao reconfigurar
+  _turnosPlanoCurrent = null;
+  const btnConf = document.getElementById('btn-confirmar-turnos');
+  if (btnConf) btnConf.style.display = 'none';
   document.getElementById('dist-turno-resultado').style.display = 'none';
 }
 
@@ -1331,6 +1336,9 @@ async function calcularDistribuicaoTurnos() {
 }
 
 function renderResultadoTurnos(data) {
+  _turnosPlanoCurrent = data.plano;
+  const btnConf = document.getElementById('btn-confirmar-turnos');
+  if (btnConf) btnConf.style.display = 'inline-flex';
   const el = document.getElementById('dist-turno-resultado');
   if (!el) return;
 
@@ -1430,6 +1438,28 @@ function renderGraficoTurnos(plano, colors, maxIts, maxPts, maxPed) {
       ${legenda}
     </svg>
   </div>`;
+}
+
+async function confirmarDistribuicaoTurnos() {
+  if (!_turnosPlanoCurrent) return;
+  const btn = document.getElementById('btn-confirmar-turnos');
+  if (btn) { btn.disabled = true; btn.textContent = 'Confirmando...'; }
+  try {
+    const res = await fetch(`${API}/pedidos/distribuicao-turnos/confirmar`, {
+      credentials: 'include', method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ plano: _turnosPlanoCurrent }),
+    });
+    const data = await res.json();
+    if (data.erro) { toast(data.erro, 'erro'); return; }
+    const resumo = _turnosPlanoCurrent.map(t => `${t.nome}: ${t.pedidos_count} ped`).join(' · ');
+    toast(`${data.marcados} pedidos marcados por turno — ${resumo}`, 'sucesso');
+    _turnosPlanoCurrent = null;
+    if (btn) btn.style.display = 'none';
+    fecharModalDistribuicao();
+    carregarPedidos();
+  } catch(e) { toast('Erro ao confirmar distribuição por turno!', 'erro'); }
+  finally { if (btn) { btn.disabled = false; btn.textContent = 'Confirmar por Turno'; } }
 }
 
 async function distManualBuscar() {
