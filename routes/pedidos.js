@@ -483,7 +483,8 @@ router.post('/pedidos/importar', requerAuth, requerPerfil('supervisor'), async (
 });
 
 router.post('/pedidos/distribuicao', requerAuth, requerPerfil('supervisor'), async (req,res) => {
-  const {separadores,quantidade,apenas_sem_sep,respeitar_hora,apenas_prime}=req.body;
+  const {separadores,quantidade,apenas_sem_sep,respeitar_hora,apenas_prime,cenario}=req.body;
+  const modoDist = cenario || 'balanceado'; // 'balanceado' | 'por_itens' | 'complexidade'
   if (!separadores?.length) return res.status(400).json({erro:'Informe os separadores!'});
   try {
     let w="p.status='pendente'";
@@ -515,10 +516,21 @@ router.post('/pedidos/distribuicao', requerAuth, requerPerfil('supervisor'), asy
     );
     if (!pedidos.length) return res.json({plano:[],total_pedidos:0,total_distribuidos:0});
     for (const ped of pedidos) {
-      const itens=await db.all('SELECT endereco,quantidade FROM itens_pedido WHERE pedido_id=$1',[ped.id]);
-      // Sempre recalcula com a fórmula atual (ignora valor em cache para garantir consistência)
-      ped._p = calcularPontuacaoPedido(itens);
-      await pool.query('UPDATE pedidos SET pontuacao=$1 WHERE id=$2',[ped._p,ped.id]);
+      const itens=await db.all('SELECT endereco,quantidade,codigo FROM itens_pedido WHERE pedido_id=$1',[ped.id]);
+      const scoreBase = calcularPontuacaoPedido(itens);
+      // Métricas extras para cenário 'complexidade'
+      const ruasSet=new Set(), skusSet=new Set();
+      for (const i of itens) {
+        const e=String(i.endereco||'').split('/')[0].trim().toUpperCase();
+        const m=e.match(/^([A-Z]+)/); if (m) ruasSet.add(m[1]);
+        if (i.codigo) skusSet.add(i.codigo);
+      }
+      const bonusRuas = Math.max(0, ruasSet.size - 2) * 15;
+      const bonusSkus = Math.max(0, skusSet.size - 1) * 3;
+      ped._ruas = ruasSet.size;
+      ped._skus = skusSet.size;
+      ped._p = (modoDist === 'complexidade') ? (scoreBase + bonusRuas + bonusSkus) : scoreBase;
+      await pool.query('UPDATE pedidos SET pontuacao=$1 WHERE id=$2',[scoreBase,ped.id]);
     }
     const lim=(quantidade>0)?quantidade:pedidos.length;
     const isDrive=p=>String(p.transportadora||'').toUpperCase().includes('DRIVE');
@@ -568,23 +580,28 @@ router.post('/pedidos/distribuicao', requerAuth, requerPerfil('supervisor'), asy
     const alvoPts  = (filas.reduce((s,f)=>s+f.pontuacao_ja,0) + totalPtsLote)  / n;
     const alvoItens= (filas.reduce((s,f)=>s+f.itens_ja,0)    + totalItensLote) / n;
 
-    for (const ped of ordenados) {
-      // Score combinado normalizado:
-      //   pontuação/alvo  = captura endereço (corredor) + dificuldade + quantidade
-      //   itens/alvo      = captura volume físico bruto
-      // Quem está mais longe do alvo (score menor) recebe o próximo pedido.
-      // Peso igual para ambas as dimensões → nem uma pedido grande nem muitos pequenos
-      // sobrecarregam o mesmo separador.
-      filas.sort((a,b) => {
-        const scoreA = (a.pontuacao_total / alvoPts) + (a.itens_total / alvoItens);
-        const scoreB = (b.pontuacao_total / alvoPts) + (b.itens_total / alvoItens);
-        return scoreA - scoreB;
-      });
-      filas[0].pedidos.push(ped.numero_pedido);
-      filas[0].pontuacao_total += ped._p;
-      filas[0].itens_total += (ped.itens || 0);
+    if (modoDist === 'por_itens') {
+      // LPT por volume: quem tem menos itens recebe o próximo pedido
+      for (const ped of ordenados) {
+        filas.sort((a,b) => a.itens_total - b.itens_total);
+        filas[0].pedidos.push(ped.numero_pedido);
+        filas[0].pontuacao_total += ped._p;
+        filas[0].itens_total += (ped.itens || 0);
+      }
+    } else {
+      // 'balanceado' e 'complexidade': LPT com score normalizado (pontuação + itens)
+      for (const ped of ordenados) {
+        filas.sort((a,b) => {
+          const sA = (a.pontuacao_total / alvoPts) + (a.itens_total / alvoItens);
+          const sB = (b.pontuacao_total / alvoPts) + (b.itens_total / alvoItens);
+          return sA - sB;
+        });
+        filas[0].pedidos.push(ped.numero_pedido);
+        filas[0].pontuacao_total += ped._p;
+        filas[0].itens_total += (ped.itens || 0);
+      }
     }
-    res.json({plano:filas.map(f=>({separador_id:f.separador_id,sep_db_id:f.sep_db_id,separador_nome:f.separador_nome,pedidos:f.pedidos,pontuacao_total:Math.round(f.pontuacao_total),itens_total:f.itens_total,pontuacao_ja:Math.round(f.pontuacao_ja||0),itens_ja:f.itens_ja||0})),total_pedidos:pedidos.length,total_distribuidos:ordenados.length});
+    res.json({cenario:modoDist,plano:filas.map(f=>({separador_id:f.separador_id,sep_db_id:f.sep_db_id,separador_nome:f.separador_nome,pedidos:f.pedidos,pontuacao_total:Math.round(f.pontuacao_total),itens_total:f.itens_total,pontuacao_ja:Math.round(f.pontuacao_ja||0),itens_ja:f.itens_ja||0})),total_pedidos:pedidos.length,total_distribuidos:ordenados.length});
   } catch(err){res.status(500).json({erro:err.message});}
 });
 

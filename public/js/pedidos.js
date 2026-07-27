@@ -1165,6 +1165,33 @@ function mostrarStatusModal(msg, tipo) {
 ══════════════════════════════════════════ */
 let distribuicaoPlano = null;
 let _modoPrime = false;
+let _cenarioDistrib = 'balanceado';
+
+const _CENARIO_DESC = {
+  balanceado:   'Score por corredor: itens × dificuldade + deslocamento por localização. LPT balanceia pontuação e volume.',
+  por_itens:    'Equaliza apenas a quantidade total de itens entre os separadores. Ignora dificuldade dos corredores.',
+  complexidade: 'Score completo: pontuação base + bônus por ruas extras (≥3 ruas) + bônus por SKUs distintos (≥2 SKUs). O mais justo para pedidos de alto esforço.',
+};
+
+function selecionarCenario(c) {
+  _cenarioDistrib = c;
+  ['balanceado','por_itens','complexidade'].forEach(x => {
+    const btn = document.getElementById('btn-cen-' + x);
+    if (!btn) return;
+    const ativo = x === c;
+    btn.style.background = ativo ? 'var(--accent)' : 'transparent';
+    btn.style.color      = ativo ? '#fff' : 'var(--text3)';
+    btn.style.border     = ativo ? 'none' : '1px solid var(--border)';
+  });
+  const el = document.getElementById('dist-cenario-desc');
+  if (el) el.textContent = _CENARIO_DESC[c] || '';
+  // Reset resultado anterior
+  const resEl = document.getElementById('dist-resultado');
+  if (resEl) resEl.style.display = 'none';
+  document.getElementById('btn-confirmar-dist').style.display = 'none';
+  document.getElementById('btn-calcular-dist').style.display  = 'inline-flex';
+  distribuicaoPlano = null;
+}
 
 async function abrirModalDistribuicao() {
   document.getElementById('modal-distribuicao').style.display = 'flex';
@@ -1184,6 +1211,9 @@ async function abrirModalDistribuicao() {
   }
   // Recalcula pontuação de pedidos antigos em background
   fetch(`${API}/pedidos/recalcular-pontuacao`, { method:'POST', credentials:'include' }).catch(()=>{});
+  // Reseta cenário para o padrão
+  _cenarioDistrib = 'balanceado';
+  selecionarCenario('balanceado');
   await carregarSeparadoresDistribuicao();
   await carregarPedidosDistribuicao();
 }
@@ -1451,7 +1481,7 @@ async function calcularDistribuicao() {
     const quantidade = parseInt(document.getElementById('dist-quantidade')?.value) || 0;
     const apenasSem = document.getElementById('dist-apenas-sem-sep')?.checked !== false;
     const respeitarHora = document.getElementById('dist-respeitar-hora')?.checked !== false;
-    const res = await fetch(`${API}/pedidos/distribuicao`, { credentials:'include', method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ separadores:seps.map(s=>s.id), quantidade: quantidade||null, apenas_sem_sep:apenasSem, respeitar_hora:respeitarHora, apenas_prime:_modoPrime }) });
+    const res = await fetch(`${API}/pedidos/distribuicao`, { credentials:'include', method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ separadores:seps.map(s=>s.id), quantidade: quantidade||null, apenas_sem_sep:apenasSem, respeitar_hora:respeitarHora, apenas_prime:_modoPrime, cenario:_cenarioDistrib }) });
     const data = await res.json();
     if (data.erro) { toast(data.erro, 'erro'); return; }
     distribuicaoPlano = data.plano;
@@ -1463,7 +1493,12 @@ async function calcularDistribuicao() {
     const temCargaPrevia = data.plano.some(p => (p.pontuacao_ja||0) > 0);
     // Calcula desvio de pontuação total (carga real = já tinha + novo)
     const avgPts = data.plano.length ? data.plano.reduce((s,p)=>s+(p.pontuacao_total||0),0) / data.plano.length : 0;
-    let html = `<div style="font-size:11px;font-weight:700;color:${_modoPrime?'#D97706':'var(--accent)'};letter-spacing:1px;margin-bottom:10px">${_modoPrime?'⭐ RESULTADO DA DISTRIBUIÇÃO PRIME':'RESULTADO DA DISTRIBUIÇÃO'}</div>`;
+    const cenarioLabel = { balanceado:'BALANCEADO', por_itens:'POR VOLUME', complexidade:'COMPLEXIDADE TOTAL' };
+    const cenarioUsado = cenarioLabel[data.cenario || _cenarioDistrib] || 'AUTOMÁTICO';
+    let html = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+      <span style="font-size:11px;font-weight:700;color:${_modoPrime?'#D97706':'var(--accent)'};letter-spacing:1px">${_modoPrime?'RESULTADO PRIME':'RESULTADO DA DISTRIBUIÇÃO'}</span>
+      <span style="font-size:9px;font-weight:700;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:2px 7px;color:var(--text2);letter-spacing:.5px">${cenarioUsado}</span>
+    </div>`;
     if (temCargaPrevia) {
       html += `<div style="background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.2);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:11px;color:#6366f1">
         Carga anterior considerada — novos pedidos nivelam o que cada colaborador já tem.

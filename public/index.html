@@ -2208,6 +2208,28 @@
           <div style="color:var(--text3);font-size:12px">Carregando...</div>
         </div>
       </div>
+      <!-- Cenário de distribuição -->
+      <div style="margin-bottom:14px;padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px">
+        <div style="font-size:10px;font-weight:700;color:var(--accent);letter-spacing:1px;margin-bottom:10px">CENÁRIO DE DISTRIBUIÇÃO</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+          <button id="btn-cen-balanceado" onclick="selecionarCenario('balanceado')"
+            style="padding:6px 14px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;background:var(--accent);color:#fff;border:none;transition:all .15s">
+            Balanceado
+          </button>
+          <button id="btn-cen-por_itens" onclick="selecionarCenario('por_itens')"
+            style="padding:6px 14px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;background:transparent;color:var(--text3);border:1px solid var(--border);transition:all .15s">
+            Por Volume
+          </button>
+          <button id="btn-cen-complexidade" onclick="selecionarCenario('complexidade')"
+            style="padding:6px 14px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;background:transparent;color:var(--text3);border:1px solid var(--border);transition:all .15s">
+            Complexidade Total
+          </button>
+        </div>
+        <div id="dist-cenario-desc" style="font-size:11px;color:var(--text3);line-height:1.5">
+          Score por corredor: itens × dificuldade + deslocamento por localização. LPT balanceia pontuação e volume.
+        </div>
+      </div>
+
       <div style="margin-bottom:14px">
         <div style="font-size:10px;font-weight:700;color:var(--accent);letter-spacing:1px;margin-bottom:8px">PEDIDOS PENDENTES PARA DISTRIBUIR</div>
         <div id="dist-preview" style="max-height:300px;overflow-y:auto">
