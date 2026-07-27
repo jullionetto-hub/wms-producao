@@ -291,7 +291,11 @@ router.put('/checkout/:id/confirmar', requerAuth, async (req,res) => {
       `UPDATE checkout SET status='concluido',hora_checkout=$1,data_checkout=$2,operador_nome=$3 WHERE id=$4`,
       [horaFim, data_checkout||data, operador_nome, id]
     );
-    await pool.query(`UPDATE pedidos SET status_embalagem='pendente', numero_caixa='' WHERE id=$1`,[ck.pedido_id]);
+    if (ck.pedido_id) {
+      await pool.query(`UPDATE pedidos SET status_embalagem='pendente', numero_caixa='' WHERE id=$1`,[ck.pedido_id]);
+    } else if (ck.numero_pedido) {
+      await pool.query(`UPDATE pedidos SET status_embalagem='pendente', numero_caixa='' WHERE numero_pedido=$1`,[ck.numero_pedido]);
+    }
     const cache = req.app.get('kpiCache'); if (cache) cache.ts = 0;
     res.json({mensagem:'Checkout concluido!'});
   } catch(e){res.status(500).json({erro:e.message});}
