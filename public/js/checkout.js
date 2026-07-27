@@ -403,7 +403,6 @@ async function confirmarCheckoutMobile(id) {
 
 function liberarCaixaMobile(id) {
   wmsConfirm({
-    ,
     titulo: 'Liberar esta caixa?',
     sub: 'Ela ficará disponível para uso.',
     btnOk: 'Liberar',
