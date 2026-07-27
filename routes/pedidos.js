@@ -483,7 +483,7 @@ router.post('/pedidos/importar', requerAuth, requerPerfil('supervisor'), async (
 });
 
 router.post('/pedidos/distribuicao', requerAuth, requerPerfil('supervisor'), async (req,res) => {
-  const {separadores,quantidade,apenas_sem_sep,respeitar_hora,apenas_prime,cenario}=req.body;
+  const {separadores,quantidade,apenas_sem_sep,respeitar_hora,apenas_prime,cenario,turno_filtro}=req.body;
   const modoDist = cenario || 'balanceado'; // 'balanceado' | 'por_itens' | 'complexidade'
   if (!separadores?.length) return res.status(400).json({erro:'Informe os separadores!'});
   try {
@@ -494,6 +494,17 @@ router.post('/pedidos/distribuicao', requerAuth, requerPerfil('supervisor'), asy
       w+=' AND p.tem_prime=true';
     } else {
       w+=' AND (p.tem_prime=false OR p.tem_prime IS NULL)';
+    }
+    // Filtro de turno: quando pedidos já foram divididos por turno (via distribuicao-turnos),
+    // distribui apenas os pedidos marcados para o turno selecionado no filtro do modal.
+    // Normaliza variantes: botão passa 'Manha' mas DB pode ter 'Manhã' (com til, digitado pelo usuário).
+    if (turno_filtro) {
+      const _tf = String(turno_filtro);
+      const variantes = [_tf];
+      if (_tf === 'Manha') variantes.push('Manhã');
+      if (_tf === 'Manhã') variantes.push('Manha');
+      const placeholders = variantes.map(v => `'${v.replace(/'/g,"''")}'`).join(',');
+      w += ` AND p.turno_distribuicao IN (${placeholders})`;
     }
     // Ordena pelo momento real do pedido (aguardando_desde) usando TO_TIMESTAMP para
     // garantir ordenação correta mesmo entre datas diferentes (formato DD/MM/YYYY HH:MM).

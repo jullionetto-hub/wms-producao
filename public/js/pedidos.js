@@ -1660,7 +1660,7 @@ async function calcularDistribuicao() {
     const quantidade = parseInt(document.getElementById('dist-quantidade')?.value) || 0;
     const apenasSem = document.getElementById('dist-apenas-sem-sep')?.checked !== false;
     const respeitarHora = document.getElementById('dist-respeitar-hora')?.checked !== false;
-    const res = await fetch(`${API}/pedidos/distribuicao`, { credentials:'include', method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ separadores:seps.map(s=>s.id), quantidade: quantidade||null, apenas_sem_sep:apenasSem, respeitar_hora:respeitarHora, apenas_prime:_modoPrime, cenario:_cenarioDistrib }) });
+    const res = await fetch(`${API}/pedidos/distribuicao`, { credentials:'include', method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ separadores:seps.map(s=>s.id), quantidade: quantidade||null, apenas_sem_sep:apenasSem, respeitar_hora:respeitarHora, apenas_prime:_modoPrime, cenario:_cenarioDistrib, turno_filtro: _turnoAtivoDistribuicao || null }) });
     const data = await res.json();
     if (data.erro) { toast(data.erro, 'erro'); return; }
     distribuicaoPlano = data.plano;
@@ -1674,10 +1674,18 @@ async function calcularDistribuicao() {
     const avgPts = data.plano.length ? data.plano.reduce((s,p)=>s+(p.pontuacao_total||0),0) / data.plano.length : 0;
     const cenarioLabel = { balanceado:'BALANCEADO', por_itens:'POR VOLUME', complexidade:'COMPLEXIDADE TOTAL' };
     const cenarioUsado = cenarioLabel[data.cenario || _cenarioDistrib] || 'AUTOMÁTICO';
+    const turnoLabel = { Manha:'MANHÃ', Tarde:'TARDE', Noite:'NOITE' };
+    const turnoAtivo = _turnoAtivoDistribuicao;
     let html = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
       <span style="font-size:11px;font-weight:700;color:${_modoPrime?'#D97706':'var(--accent)'};letter-spacing:1px">${_modoPrime?'RESULTADO PRIME':'RESULTADO DA DISTRIBUIÇÃO'}</span>
       <span style="font-size:9px;font-weight:700;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:2px 7px;color:var(--text2);letter-spacing:.5px">${cenarioUsado}</span>
+      ${turnoAtivo ? `<span style="font-size:9px;font-weight:700;background:#dbeafe;border:1px solid #93c5fd;border-radius:4px;padding:2px 7px;color:#1d4ed8;letter-spacing:.5px">TURNO ${turnoLabel[turnoAtivo]||turnoAtivo}</span>` : ''}
     </div>`;
+    if (turnoAtivo) {
+      html += `<div style="background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.25);border-left:3px solid #3b82f6;border-radius:6px;padding:8px 12px;margin-bottom:10px;font-size:11px;color:#1d4ed8">
+        Distribuindo apenas pedidos do turno <b>${turnoLabel[turnoAtivo]||turnoAtivo}</b> — pedidos dos outros turnos não serão afetados.
+      </div>`;
+    }
     if (temCargaPrevia) {
       html += `<div style="background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.2);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:11px;color:#6366f1">
         Carga anterior considerada — novos pedidos nivelam o que cada colaborador já tem.
