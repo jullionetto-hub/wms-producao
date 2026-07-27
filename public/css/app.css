@@ -147,13 +147,13 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:16px;box-shadow:var(--sh)}
 .card-hd{background:var(--surface2);margin:-16px -16px 14px;padding:10px 16px;border-radius:var(--r) var(--r) 0 0;font-size:10px;font-weight:700;color:var(--text2);letter-spacing:1.2px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
 /* ── Diário de Bordo stat boxes ─────────────────────────────── */
-.db-stat{background:var(--surface2);border-left:3px solid var(--border);border-radius:0 6px 6px 0;padding:10px 12px}
+.db-stat{background:var(--surface2);border-left:3px solid var(--border);border-radius:0 6px 6px 0;padding:7px 10px}
 .db-stat-ok{border-left-color:#10b981}
 .db-stat-info{border-left-color:#3b82f6}
 .db-stat-warn{border-left-color:#f59e0b}
 .db-stat-danger{border-left-color:#ef4444}
-.db-stat-n{font-size:22px;font-weight:800;color:var(--text);line-height:1.1}
-.db-stat-l{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-top:3px}
+.db-stat-n{font-size:18px;font-weight:800;color:var(--text);line-height:1.1}
+.db-stat-l{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-top:2px}
 .pg-title{font-family:'DM Sans',sans-serif;font-size:16px;color:#0F172A;margin-bottom:18px;letter-spacing:0;font-weight:700;display:flex;align-items:center;gap:10px;padding-bottom:14px;border-bottom:1px solid var(--border)}
 
 
