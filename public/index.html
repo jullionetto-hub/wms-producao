@@ -1576,6 +1576,10 @@
               style="flex:1;padding:10px;border-radius:8px;border:1.5px solid #E2E8F0;background:#fff;color:#64748B;font-size:13px;font-weight:600;cursor:pointer">
               Histórico
             </button>
+            <button id="ptab-celulares" onclick="mudarPassagemTab('celulares',this)"
+              style="flex:1;padding:10px;border-radius:8px;border:1.5px solid #E2E8F0;background:#fff;color:#64748B;font-size:13px;font-weight:600;cursor:pointer">
+              📱 Celulares
+            </button>
           </div>
 
           <!-- REGISTRAR -->
@@ -1689,6 +1693,72 @@
           <div id="pass-sec-historico" style="display:none">
             <div id="pass-historico"></div>
           </div>
+
+          <!-- CELULARES -->
+          <div id="pass-sec-celulares" style="display:none">
+
+            <!-- seletor de celular -->
+            <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">
+              <div id="ck-seg-celular" style="display:flex;gap:6px;flex-wrap:wrap;flex:1"></div>
+              <select id="ck-turno" onchange="ckRender()"
+                style="padding:8px 12px;border:1.5px solid #E2E8F0;border-radius:8px;font-size:13px;font-weight:600;background:#fff;color:#374151;cursor:pointer">
+                <option value="manha">Manhã</option>
+                <option value="tarde">Tarde</option>
+                <option value="noite">Noite</option>
+              </select>
+            </div>
+
+            <!-- quem recebeu -->
+            <div style="display:flex;gap:8px;margin-bottom:14px">
+              <div style="flex:1">
+                <label style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;display:block;margin-bottom:4px">Quem recebeu</label>
+                <input id="ck-recebeu" type="text" placeholder="Nome do colaborador" oninput="ckSaveField('recebeu')"
+                  style="width:100%;padding:9px 11px;border:1.5px solid #E2E8F0;border-radius:8px;font-size:13px;box-sizing:border-box">
+              </div>
+              <div style="width:100px">
+                <label style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;display:block;margin-bottom:4px">Horário</label>
+                <input id="ck-hora" type="time" oninput="ckSaveField('hora')"
+                  style="width:100%;padding:9px 11px;border:1.5px solid #E2E8F0;border-radius:8px;font-size:13px;box-sizing:border-box">
+              </div>
+            </div>
+
+            <!-- barra de progresso -->
+            <div style="display:flex;height:5px;border-radius:3px;overflow:hidden;gap:2px;margin-bottom:14px">
+              <div id="ck-bar-ok" style="background:#16A34A;flex:0;transition:flex .3s"></div>
+              <div id="ck-bar-prob" style="background:#DC2626;flex:0;transition:flex .3s"></div>
+              <div style="background:#E5E7EB;flex:1"></div>
+            </div>
+
+            <!-- itens dinâmicos -->
+            <div id="ck-items-wrap"></div>
+
+            <!-- obs -->
+            <div style="margin-top:8px;margin-bottom:14px">
+              <label style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;display:block;margin-bottom:4px">Observações</label>
+              <textarea id="ck-obs" rows="2" placeholder="Descreva qualquer problema ou avaria encontrado..." oninput="ckSaveField('obs')"
+                style="width:100%;padding:9px 11px;border:1.5px solid #E2E8F0;border-radius:8px;font-size:13px;resize:none;box-sizing:border-box"></textarea>
+            </div>
+
+            <div style="display:flex;gap:8px">
+              <button onclick="ckSalvar()"
+                style="flex:1;padding:13px;background:#2563EB;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">
+                Salvar ficha
+              </button>
+              <button onclick="ckLimpar()"
+                style="padding:13px 16px;border:1.5px solid #E2E8F0;background:#fff;border-radius:10px;font-size:13px;font-weight:600;color:#64748B;cursor:pointer">
+                Limpar
+              </button>
+            </div>
+
+            <!-- histórico de fichas -->
+            <div style="margin-top:18px">
+              <div style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Fichas salvas</div>
+              <div id="ck-hist-lista">
+                <div style="padding:16px;text-align:center;font-size:13px;color:#94A3B8;background:#F8FAFC;border-radius:8px">Nenhuma ficha salva</div>
+              </div>
+            </div>
+
+          </div><!-- /pass-sec-celulares -->
 
         </div>
       </div>

@@ -1926,7 +1926,7 @@ async function trocarSenhaTemp() {
 let _passagemPendente = null;
 
 function mudarPassagemTab(tab, btn) {
-  ['registrar','validar','placar','historico'].forEach(t => {
+  ['registrar','validar','placar','historico','celulares'].forEach(t => {
     const sec = document.getElementById(`pass-sec-${t}`);
     const bt  = document.getElementById(`ptab-${t}`);
     if (sec) sec.style.display = t === tab ? '' : 'none';
@@ -1936,8 +1936,178 @@ function mudarPassagemTab(tab, btn) {
       bt.style.border = t === tab ? 'none' : '1.5px solid #E2E8F0';
     }
   });
-  if (tab === 'historico') carregarHistoricoPassagens();
-  if (tab === 'placar')    carregarPlacar();
+  if (tab === 'historico')  carregarHistoricoPassagens();
+  if (tab === 'placar')     carregarPlacar();
+  if (tab === 'celulares')  ckInit();
+}
+
+/* ══ CHECKLIST CELULARES ══════════════════════════════════════════ */
+const CK_CELULARES = 5;
+let _ckCel = 1;
+
+const CK_ITENS = [
+  { id:'bateria',    txt:'Bateria carregada',        sub:'Nível acima de 80% ao receber' },
+  { id:'carregador', txt:'Carregador no local',       sub:'Cabo e tomada / base presentes' },
+  { id:'tela',       txt:'Tela sem avarias',          sub:'Sem rachaduras ou manchas' },
+  { id:'carcaca',    txt:'Carcaça íntegra',           sub:'Sem amassados ou sinais de queda' },
+  { id:'capa',       txt:'Capa protetora no lugar',   sub:'Case/película instalado' },
+  { id:'liga',       txt:'Celular ligando normalmente',sub:'Sem trava ou loop de boot' },
+  { id:'touch',      txt:'Touch screen respondendo',  sub:'Sem áreas mortas ou lentidão' },
+  { id:'wms',        txt:'WMS abrindo pelo atalho',   sub:'Ícone na tela inicial funciona' },
+];
+
+function _ckKey(c, t, id)    { return `wmsck-${c}-${t}-${id}`; }
+function _ckField(c, t, f)   { return `wmscf-${c}-${t}-${f}`; }
+function _ckHistKey()        { return 'wmsck-hist'; }
+function _ckGetTurno()       { return document.getElementById('ck-turno')?.value || 'manha'; }
+
+function ckInit() {
+  const wrap = document.getElementById('ck-seg-celular');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+  for (let i = 1; i <= CK_CELULARES; i++) {
+    const b = document.createElement('button');
+    b.id = `ck-cel-${i}`;
+    b.textContent = `#${i}`;
+    b.style.cssText = `padding:8px 14px;border-radius:8px;border:1.5px solid #E2E8F0;background:#fff;color:#64748B;font-size:13px;font-weight:600;cursor:pointer`;
+    b.onclick = () => { _ckCel = i; ckLoadFields(); ckRender(); };
+    wrap.appendChild(b);
+  }
+  _ckCel = 1;
+  // set current time if hour field is empty
+  const hEl = document.getElementById('ck-hora');
+  if (hEl && !hEl.value) {
+    const n = new Date();
+    hEl.value = String(n.getHours()).padStart(2,'0') + ':' + String(n.getMinutes()).padStart(2,'0');
+  }
+  ckLoadFields();
+  ckRender();
+  ckRenderHist();
+}
+
+function _ckHighlightSeg() {
+  const t = _ckGetTurno();
+  for (let i = 1; i <= CK_CELULARES; i++) {
+    const b = document.getElementById(`ck-cel-${i}`);
+    if (!b) continue;
+    const ativo = i === _ckCel;
+    b.style.background = ativo ? '#2563EB' : '#fff';
+    b.style.color      = ativo ? '#fff'    : '#64748B';
+    b.style.border     = ativo ? 'none'    : '1.5px solid #E2E8F0';
+  }
+}
+
+function ckLoadFields() {
+  const t = _ckGetTurno();
+  ['recebeu','hora','obs'].forEach(f => {
+    const el = document.getElementById(`ck-${f}`);
+    if (el) el.value = localStorage.getItem(_ckField(_ckCel, t, f)) || '';
+  });
+  if (!document.getElementById('ck-hora').value) {
+    const n = new Date();
+    document.getElementById('ck-hora').value = String(n.getHours()).padStart(2,'0') + ':' + String(n.getMinutes()).padStart(2,'0');
+  }
+}
+
+function ckSaveField(f) {
+  const t  = _ckGetTurno();
+  const el = document.getElementById(`ck-${f}`);
+  if (el) localStorage.setItem(_ckField(_ckCel, t, f), el.value);
+}
+
+function ckGetState(id) {
+  return localStorage.getItem(_ckKey(_ckCel, _ckGetTurno(), id)) || 'pend';
+}
+function ckSetState(id, val) {
+  const cur = ckGetState(id);
+  localStorage.setItem(_ckKey(_ckCel, _ckGetTurno(), id), cur === val ? 'pend' : val);
+}
+
+function ckRender() {
+  _ckHighlightSeg();
+  ckLoadFields();
+  const wrap = document.getElementById('ck-items-wrap');
+  if (!wrap) return;
+
+  let okCnt = 0, probCnt = 0;
+  wrap.innerHTML = CK_ITENS.map(item => {
+    const s = ckGetState(item.id);
+    if (s === 'ok')   okCnt++;
+    if (s === 'prob') probCnt++;
+    const okAct   = s === 'ok';
+    const probAct = s === 'prob';
+    return `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:${probAct?'#FEF2F2':okAct?'#F0FDF4':'#F8FAFC'};border-radius:8px;margin-bottom:6px;border:1px solid ${probAct?'#FECACA':okAct?'#BBF7D0':'#E2E8F0'}">
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:600;color:${probAct?'#991B1B':okAct?'#166534':'#374151'}">${item.txt}</div>
+        <div style="font-size:11px;color:#94A3B8;margin-top:1px">${item.sub}</div>
+      </div>
+      <div style="display:flex;gap:5px">
+        <button onclick="ckToggle('${item.id}','ok')"
+          style="padding:5px 11px;border-radius:6px;border:none;font-size:11px;font-weight:700;cursor:pointer;background:${okAct?'#16A34A':'#E5E7EB'};color:${okAct?'#fff':'#6B7280'}">OK</button>
+        <button onclick="ckToggle('${item.id}','prob')"
+          style="padding:5px 11px;border-radius:6px;border:none;font-size:11px;font-weight:700;cursor:pointer;background:${probAct?'#DC2626':'#E5E7EB'};color:${probAct?'#fff':'#6B7280'}">PROB.</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  const total = CK_ITENS.length;
+  const barOk   = document.getElementById('ck-bar-ok');
+  const barProb = document.getElementById('ck-bar-prob');
+  if (barOk)   barOk.style.flex   = okCnt;
+  if (barProb) barProb.style.flex = probCnt;
+}
+
+function ckToggle(id, val) {
+  ckSetState(id, val);
+  ckRender();
+}
+
+function ckSalvar() {
+  const t       = _ckGetTurno();
+  const recebeu = document.getElementById('ck-recebeu')?.value?.trim();
+  if (!recebeu) { toast('Informe o nome de quem recebeu o celular', 'aviso'); return; }
+
+  const probs = CK_ITENS.filter(it => ckGetState(it.id) === 'prob').map(it => it.txt);
+  const hist  = JSON.parse(localStorage.getItem(_ckHistKey()) || '[]');
+  const turnoNome = {manha:'Manhã', tarde:'Tarde', noite:'Noite'}[t] || t;
+  hist.unshift({
+    ts: new Date().toLocaleString('pt-BR'),
+    cel: _ckCel, turno: turnoNome, recebeu,
+    obs: document.getElementById('ck-obs')?.value || '',
+    probs
+  });
+  localStorage.setItem(_ckHistKey(), JSON.stringify(hist.slice(0, 40)));
+  ckRenderHist();
+  toast(`Ficha do Celular #${_ckCel} salva!${probs.length ? ' ⚠ '+probs.length+' problema(s)' : ''}`, probs.length ? 'aviso' : 'sucesso');
+}
+
+function ckLimpar() {
+  if (!confirm('Limpar checklist deste celular/turno?')) return;
+  const t = _ckGetTurno();
+  CK_ITENS.forEach(it => localStorage.removeItem(_ckKey(_ckCel, t, it.id)));
+  ['recebeu','hora','obs'].forEach(f => localStorage.removeItem(_ckField(_ckCel, t, f)));
+  ckLoadFields();
+  ckRender();
+}
+
+function ckRenderHist() {
+  const el = document.getElementById('ck-hist-lista');
+  if (!el) return;
+  const hist = JSON.parse(localStorage.getItem(_ckHistKey()) || '[]');
+  if (!hist.length) {
+    el.innerHTML = '<div style="padding:16px;text-align:center;font-size:13px;color:#94A3B8;background:#F8FAFC;border-radius:8px">Nenhuma ficha salva</div>';
+    return;
+  }
+  el.innerHTML = hist.map(h => `
+    <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:#F8FAFC;border-radius:8px;margin-bottom:6px;border:1px solid #E2E8F0">
+      <div style="width:8px;height:8px;border-radius:50%;margin-top:4px;flex-shrink:0;background:${h.probs?.length?'#DC2626':'#16A34A'}"></div>
+      <div style="flex:1;font-size:12px;color:#64748B;line-height:1.5">
+        <span style="font-weight:700;color:#0F172A">Celular #${h.cel} — ${h.turno}</span> · ${h.ts}<br>
+        Recebido por: ${h.recebeu}
+        ${h.probs?.length ? `<div style="margin-top:3px"><span style="background:#FEE2E2;color:#991B1B;border-radius:4px;padding:1px 7px;font-size:11px;font-weight:700">⚠ ${h.probs.join(' · ')}</span></div>` : ''}
+        ${h.obs ? `<div style="color:#94A3B8;font-size:11px;margin-top:2px">${h.obs}</div>` : ''}
+      </div>
+    </div>`).join('');
 }
 
 async function iniciarPassagem() {
