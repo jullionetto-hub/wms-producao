@@ -817,6 +817,7 @@ async function iniciarDiario() {
   const dataEl = document.getElementById('diario-data');
   if (dataEl && !dataEl.value) dataEl.value = hj;
   initDiarioHistorico();
+  ckInit();
   await carregarDadosDiario();
   await carregarListaDiarios();
   await verificarValidacaoPendente();
@@ -1926,7 +1927,7 @@ async function trocarSenhaTemp() {
 let _passagemPendente = null;
 
 function mudarPassagemTab(tab, btn) {
-  ['registrar','validar','placar','historico','celulares'].forEach(t => {
+  ['registrar','validar','placar','historico'].forEach(t => {
     const sec = document.getElementById(`pass-sec-${t}`);
     const bt  = document.getElementById(`ptab-${t}`);
     if (sec) sec.style.display = t === tab ? '' : 'none';
@@ -1938,7 +1939,6 @@ function mudarPassagemTab(tab, btn) {
   });
   if (tab === 'historico')  carregarHistoricoPassagens();
   if (tab === 'placar')     carregarPlacar();
-  if (tab === 'celulares')  ckInit();
 }
 
 /* ══ CHECKLIST CELULARES ══════════════════════════════════════════ */
