@@ -344,6 +344,7 @@ const _IC = {
   embalagem:   `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>`,
   absenteismo: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
   estatisticas:`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>`,
+  celulares:   `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>`,
 };
 
 function montarSidebar() {
@@ -360,6 +361,7 @@ function montarSidebar() {
       <a class="mi" onclick="irPara('dash-logistica',this)"><span class="mi-ic">${IC.logistica}</span>Dash Logística</a>
       <a class="mi" onclick="irPara('auditoria',this)"><span class="mi-ic">${IC.auditoria}</span>Auditoria</a>
       <a class="mi" onclick="irPara('diario',this)"><span class="mi-ic">${IC.diario}</span>Diário de Bordo<span class="mbadge" id="menu-badge-diario" style="display:none;background:#7c3aed">!</span></a>
+      <a class="mi" onclick="irPara('celulares',this)"><span class="mi-ic">${IC.celulares}</span>Celulares</a>
       <a class="mi" onclick="irPara('cadastros',this)"><span class="mi-ic">${IC.cadastros}</span>Cadastros</a>
       <a class="mi" onclick="irPara('protocolo',this);carregarProtocolo()"><span class="mi-ic">${IC.protocolo}</span>Protocolo<span class="mbadge" id="menu-badge-proto" style="display:none">0</span></a>
       <div class="mg">OPERAÇÃO</div>
@@ -399,6 +401,7 @@ function montarSidebar() {
       <a class="mi" onclick="irPara('dash-logistica',this)"><span class="mi-ic">${IC.logistica}</span>Dash Logística</a>
       <a class="mi" onclick="irPara('auditoria',this)"><span class="mi-ic">${IC.auditoria}</span>Auditoria</a>
       <a class="mi" onclick="irPara('diario',this)"><span class="mi-ic">${IC.diario}</span>Diário de Bordo<span class="mbadge" id="menu-badge-diario" style="display:none;background:#7c3aed">!</span></a>
+      <a class="mi" onclick="irPara('celulares',this)"><span class="mi-ic">${IC.celulares}</span>Celulares</a>
       <a class="mi" onclick="irPara('cadastros',this)"><span class="mi-ic">${IC.cadastros}</span>Cadastros</a>
       <a class="mi" onclick="irPara('protocolo',this);carregarProtocolo()"><span class="mi-ic">${IC.protocolo}</span>Protocolo<span class="mbadge" id="menu-badge-proto" style="display:none">0</span></a>
       <div class="mg">OPERAÇÃO</div>
@@ -499,6 +502,7 @@ function irPara(pag, el) {
   if (pag === 'relatorios')   { var hj=hojeLocal(); var rd=document.getElementById('rel-de'),ra=document.getElementById('rel-ate'); if(rd&&!rd.value)rd.value=hj; if(ra&&!ra.value)ra.value=hj; }
   if (pag === 'auditoria')    { var hj=hojeLocal(); var ea=document.getElementById('aud-ini'); if(ea&&!ea.value)ea.value=hj; carregarAuditoria(); }
   if (pag === 'diario')       { iniciarDiario(); }
+  if (pag === 'celulares')    { ckInit(); }
   if (pag === 'embalagem')    { var _ei=document.getElementById('emb-ini'),_ef=document.getElementById('emb-fim'); if(_ei&&!_ei.value)_ei.value=hojeLocal(); if(_ef&&!_ef.value)_ef.value=hojeLocal(); mudarTabEmbDesk('fila'); }
   if (pag === 'protocolo')    { carregarProtocolo(); }
   if (pag === 'protocolo-rep') {
@@ -817,7 +821,6 @@ async function iniciarDiario() {
   const dataEl = document.getElementById('diario-data');
   if (dataEl && !dataEl.value) dataEl.value = hj;
   initDiarioHistorico();
-  ckInit();
   await carregarDadosDiario();
   await carregarListaDiarios();
   await verificarValidacaoPendente();
