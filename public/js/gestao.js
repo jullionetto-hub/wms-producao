@@ -1422,9 +1422,9 @@ function abrirModalRelatorioGeral() {
 }
 
 async function _executarRelatorioGeral() {
-  const fmtDt   = s => s ? new Date(s+'T12:00:00').toLocaleDateString('pt-BR') : '—';
-  const fmtHM   = m => { const h=Math.floor(m/60), mm=m%60; return `${String(h).padStart(2,'0')}:${String(mm).padStart(2,'0')}`; };
-  const toM     = s => { if (!s) return null; const [h,m] = s.split(':').map(Number); return h*60+m; };
+  const fmtDt = s => s ? new Date(s+'T12:00:00').toLocaleDateString('pt-BR') : '—';
+  const fmtHM = m => { const h=Math.floor(m/60), mm=m%60; return `${String(h).padStart(2,'0')}:${String(mm).padStart(2,'0')}`; };
+  const toM   = s => { if (!s) return null; const [h,m] = s.split(':').map(Number); return h*60+m; };
   const LUNCH_MIN = 60, BREAK_MIN = 15;
 
   const cfg = {};
@@ -1447,26 +1447,30 @@ async function _executarRelatorioGeral() {
   } catch(e) { toast('Erro ao gerar relatório: ' + e.message, 'erro'); return; }
   const funcionarios = data.employees || [];
 
-  const TURNO_MAP = { 'Manhã':'manha', 'Tarde':'tarde', 'Madrugada':'madrugada', 'Outros':'madrugada' };
+  const TURNO_MAP   = { 'Manhã':'manha', 'Tarde':'tarde', 'Madrugada':'madrugada', 'Outros':'madrugada' };
   const TURNO_ORDER = ['Manhã','Tarde','Madrugada','Outros'];
+  const periodoLabel = _absPeriodo
+    ? `${fmtDt(_absPeriodo.start)} a ${fmtDt(_absPeriodo.end)}`
+    : 'Todos os períodos';
 
-  // Agrupa por turno e aplica filtros de data
+  // Agrupa e processa por turno
   const grupos = {};
   for (const func of funcionarios) {
     const turno = _parseTurno(func.schedule);
     if (!grupos[turno]) grupos[turno] = [];
-    const key   = TURNO_MAP[turno] || 'manha';
-    const ini   = cfg[key].inicio;
-    const fim   = cfg[key].fim;
-    // filtra daily_records pelo intervalo configurado
-    const recs  = (func.daily_records || []).filter(r => {
+    const key = TURNO_MAP[turno] || 'manha';
+    const ini = cfg[key].inicio, fim = cfg[key].fim;
+
+    const recs = (func.daily_records || []).filter(r => {
       if (ini && r.date < ini) return false;
       if (fim && r.date > fim) return false;
       return true;
     });
-    const faltas    = recs.filter(r => r.falta    === true || (r.status||'').toLowerCase().includes('falta')).length;
-    const atestados = recs.filter(r => r.atestado === true || (r.status||'').toLowerCase().includes('atestado')).length;
-    // atrasos: igual ao relatório de atrasos mas sobre os recs filtrados
+
+    const faltaRecs    = recs.filter(r => r.falta    === true || (r.status||'').toLowerCase().includes('falta'));
+    const atestadoRecs = recs.filter(r => r.atestado === true || (r.status||'').toLowerCase().includes('atestado'));
+
+    // Detecta horário de entrada típico
     const schedMatch = (func.schedule||'').match(/(\d+)h/);
     const schedStart = schedMatch ? parseInt(schedMatch[1])*60 : null;
     let sched = schedStart;
@@ -1474,29 +1478,30 @@ async function _executarRelatorioGeral() {
       const entries = recs.map(r=>toM(r.entry_time)).filter(v=>v!==null).sort((a,b)=>a-b);
       if (entries.length) { const typ=entries[Math.floor(entries.length/2)]; if(Math.abs(typ-sched)>90) sched=null; }
     }
-    let totalAtrasoMin = 0;
-    for (const r of recs) {
-      const entry=toM(r.entry_time), ls=toM(r.lunch_start), le=toM(r.lunch_end), bs=toM(r.break_start), be=toM(r.break_end);
-      if (sched!==null && entry!==null && entry>sched) totalAtrasoMin += entry-sched;
-      if (ls!==null && le!==null && le-ls>LUNCH_MIN) totalAtrasoMin += (le-ls)-LUNCH_MIN;
-      if (bs!==null && be!==null && be-bs>BREAK_MIN)  totalAtrasoMin += (be-bs)-BREAK_MIN;
-    }
-    // subtrai tolerância ativa
-    const diasComAtraso = recs.filter(r=>{
-      const e=toM(r.entry_time); return sched!==null && e!==null && e>sched && (e-sched)>_absToleranciMin;
-    }).length;
-    const totalAtrasoAdj = Math.max(0, totalAtrasoMin - (diasComAtraso * _absToleranciMin));
 
-    grupos[turno].push({ ...func, _recs: recs, _faltas: faltas, _atestados: atestados, _atrasoMin: totalAtrasoAdj });
+    // Gera lista de eventos (atrasos, almoços, pausas, retornos antecipados)
+    const eventos = [];
+    for (const r of recs) {
+      if (!r.entry_time) continue;
+      const entry=toM(r.entry_time), ls=toM(r.lunch_start), le=toM(r.lunch_end), bs=toM(r.break_start), be=toM(r.break_end);
+      if (sched!==null && entry!==null && entry>sched && (entry-sched)>_absToleranciMin)
+        eventos.push({date:r.date, dow:r.day_of_week, tipo:'Entrada com atraso',         local:'Entrada', min:entry-sched,      cor:'#dc2626'});
+      if (ls!==null && le!==null && le-ls>LUNCH_MIN)
+        eventos.push({date:r.date, dow:r.day_of_week, tipo:'Almoço prolongado',           local:'Almoço',  min:(le-ls)-LUNCH_MIN,cor:'#d97706'});
+      if (ls!==null && le!==null && le-ls>0 && le-ls<LUNCH_MIN)
+        eventos.push({date:r.date, dow:r.day_of_week, tipo:'Retorno antecipado (almoço)', local:'Almoço',  min:LUNCH_MIN-(le-ls),cor:'#2563eb', antecip:true});
+      if (bs!==null && be!==null && be-bs>BREAK_MIN)
+        eventos.push({date:r.date, dow:r.day_of_week, tipo:'Pausa prolongada',             local:'Pausa',   min:(be-bs)-BREAK_MIN,cor:'#d97706'});
+    }
+    const totalAtraso     = eventos.filter(e=>!e.antecip).reduce((s,e)=>s+e.min,0);
+    const totalAntecipado = eventos.filter(e=> e.antecip).reduce((s,e)=>s+e.min,0);
+
+    grupos[turno].push({ ...func, _recs:recs, _faltaRecs:faltaRecs, _atestadoRecs:atestadoRecs, _eventos:eventos, _totalAtraso:totalAtraso, _totalAntecipado:totalAntecipado });
   }
 
-  // Monta HTML do relatório
-  const periodoLabel = _absPeriodo
-    ? `${fmtDt(_absPeriodo.start)} a ${fmtDt(_absPeriodo.end)}`
-    : 'Todos os períodos';
-
+  // Totais gerais
+  let totFuncs=0, totFaltas=0, totAtestados=0, totAtraso=0, totAntecipado=0;
   let secoes = '';
-  let totFuncs=0, totFaltas=0, totAtestados=0, totAtraso=0;
 
   for (const turno of TURNO_ORDER) {
     const funcs = grupos[turno];
@@ -1505,62 +1510,133 @@ async function _executarRelatorioGeral() {
     const ini = cfg[key].inicio, fim = cfg[key].fim;
     const subPeriodo = ini ? `${fmtDt(ini)} a ${fmtDt(fim||_absPeriodo?.end||'')}` : periodoLabel;
 
-    const tFaltas    = funcs.reduce((s,f)=>s+f._faltas,0);
-    const tAtestados = funcs.reduce((s,f)=>s+f._atestados,0);
-    const tAtraso    = funcs.reduce((s,f)=>s+f._atrasoMin,0);
-    totFuncs+=funcs.length; totFaltas+=tFaltas; totAtestados+=tAtestados; totAtraso+=tAtraso;
+    const tFaltas     = funcs.reduce((s,f)=>s+f._faltaRecs.length,0);
+    const tAtestados  = funcs.reduce((s,f)=>s+f._atestadoRecs.length,0);
+    const tAtraso     = funcs.reduce((s,f)=>s+f._totalAtraso,0);
+    const tAntecipado = funcs.reduce((s,f)=>s+f._totalAntecipado,0);
+    totFuncs+=funcs.length; totFaltas+=tFaltas; totAtestados+=tAtestados; totAtraso+=tAtraso; totAntecipado+=tAntecipado;
 
-    const linhas = funcs
-      .sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'))
-      .map(f => {
-        const bg = f._faltas>0||f._atestados>0||f._atrasoMin>0 ? '#fffbeb' : '#fff';
-        const atrasoStr = f._atrasoMin>0 ? `<span style="color:#dc2626;font-weight:700">${fmtHM(f._atrasoMin)}</span>` : '<span style="color:#94a3b8">—</span>';
-        return `<tr style="background:${bg};border-bottom:1px solid #f1f5f9">
-          <td style="padding:7px 12px;font-weight:600">${f.name}</td>
-          <td style="padding:7px 8px;font-size:11px;color:#64748b">${f.sector||'—'}</td>
-          <td style="padding:7px 8px;text-align:center">${f._recs.length}</td>
-          <td style="padding:7px 8px;text-align:center;color:${f._faltas>0?'#dc2626':'inherit'};font-weight:${f._faltas>0?'700':'400'}">${f._faltas||'—'}</td>
-          <td style="padding:7px 8px;text-align:center;color:${f._atestados>0?'#d97706':'inherit'};font-weight:${f._atestados>0?'700':'400'}">${f._atestados||'—'}</td>
-          <td style="padding:7px 8px;text-align:right">${atrasoStr}</td>
+    // ── Seção FALTAS
+    let secFaltas = '';
+    const comFalta = funcs.filter(f=>f._faltaRecs.length>0).sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));
+    if (comFalta.length) {
+      const rows = comFalta.map(f => {
+        const datas = f._faltaRecs.map(r=>fmtDt(r.date)).join(', ');
+        return `<tr style="border-bottom:1px solid #fee2e2">
+          <td style="padding:6px 12px;font-weight:700">${f.name}</td>
+          <td style="padding:6px 8px;font-size:11px;color:#64748b">${f.sector||'—'}</td>
+          <td style="padding:6px 8px;text-align:center;font-weight:900;color:#dc2626;font-size:15px">${f._faltaRecs.length}</td>
+          <td style="padding:6px 8px;font-size:11px;color:#9ca3af">${datas}</td>
         </tr>`;
       }).join('');
+      secFaltas = `<div style="margin-bottom:14px">
+        <div style="font-size:10px;font-weight:800;color:#b91c1c;letter-spacing:.5px;margin-bottom:5px">▸ FALTAS — ${tFaltas} dia${tFaltas!==1?'s':''}</div>
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead><tr style="background:#fef2f2">
+            <th style="padding:5px 12px;text-align:left;font-size:10px;font-weight:800;color:#b91c1c;border-bottom:2px solid #fecaca">FUNCIONÁRIO</th>
+            <th style="padding:5px 8px;text-align:left;font-size:10px;font-weight:800;color:#b91c1c;border-bottom:2px solid #fecaca">SETOR</th>
+            <th style="padding:5px 8px;text-align:center;font-size:10px;font-weight:800;color:#b91c1c;border-bottom:2px solid #fecaca">QTD</th>
+            <th style="padding:5px 8px;text-align:left;font-size:10px;font-weight:800;color:#b91c1c;border-bottom:2px solid #fecaca">DATAS</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+    }
 
-    secoes += `
-    <div style="margin-bottom:32px">
-      <div style="display:flex;align-items:baseline;gap:16px;margin-bottom:10px;padding-bottom:6px;border-bottom:3px solid #0F172A">
-        <span style="font-size:15px;font-weight:900;text-transform:uppercase;letter-spacing:.5px">${turno}</span>
+    // ── Seção ATESTADOS
+    let secAtestados = '';
+    const comAtestado = funcs.filter(f=>f._atestadoRecs.length>0).sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));
+    if (comAtestado.length) {
+      const rows = comAtestado.map(f => {
+        const datas = f._atestadoRecs.map(r=>fmtDt(r.date)).join(', ');
+        return `<tr style="border-bottom:1px solid #fde68a">
+          <td style="padding:6px 12px;font-weight:700">${f.name}</td>
+          <td style="padding:6px 8px;font-size:11px;color:#64748b">${f.sector||'—'}</td>
+          <td style="padding:6px 8px;text-align:center;font-weight:900;color:#d97706;font-size:15px">${f._atestadoRecs.length}</td>
+          <td style="padding:6px 8px;font-size:11px;color:#9ca3af">${datas}</td>
+        </tr>`;
+      }).join('');
+      secAtestados = `<div style="margin-bottom:14px">
+        <div style="font-size:10px;font-weight:800;color:#92400e;letter-spacing:.5px;margin-bottom:5px">▸ ATESTADOS — ${tAtestados} dia${tAtestados!==1?'s':''}</div>
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead><tr style="background:#fefce8">
+            <th style="padding:5px 12px;text-align:left;font-size:10px;font-weight:800;color:#92400e;border-bottom:2px solid #fde68a">FUNCIONÁRIO</th>
+            <th style="padding:5px 8px;text-align:left;font-size:10px;font-weight:800;color:#92400e;border-bottom:2px solid #fde68a">SETOR</th>
+            <th style="padding:5px 8px;text-align:center;font-size:10px;font-weight:800;color:#92400e;border-bottom:2px solid #fde68a">QTD</th>
+            <th style="padding:5px 8px;text-align:left;font-size:10px;font-weight:800;color:#92400e;border-bottom:2px solid #fde68a">DATAS</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+    }
+
+    // ── Seção ATRASOS E RETORNOS ANTECIPADOS
+    let secAtrasos = '';
+    const comEvento = funcs.filter(f=>f._eventos.length>0).sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));
+    if (comEvento.length) {
+      let rowsAtrasos = '';
+      for (const f of comEvento) {
+        const hExtra    = f.extra_hours    && f.extra_hours    !== '--:--' ? f.extra_hours    : null;
+        const hPositivo = f.positive_hours && f.positive_hours !== '--:--' ? f.positive_hours : null;
+        const heStr = hExtra ? `<span style="color:#16a34a;font-weight:700">HE: ${hExtra}</span>` : hPositivo ? `<span style="color:#16a34a;font-weight:700">H+: ${hPositivo}</span>` : '';
+        rowsAtrasos += `<tr style="background:#f8fafc">
+          <td colspan="5" style="padding:8px 12px 3px;font-weight:800;font-size:13px;color:#1e293b;border-top:2px solid #e2e8f0">
+            ${f.name}
+            <span style="font-weight:400;font-size:11px;color:#64748b;margin-left:8px">${f.sector||''} · Mat. ${f.matricula||'—'}</span>
+            <span style="float:right;font-size:11px;display:inline-flex;gap:10px;align-items:center">
+              ${heStr}
+              ${f._totalAntecipado>0?`<span style="color:#2563eb;font-weight:700">↩ Antecipado: ${fmtHM(f._totalAntecipado)}</span>`:''}
+              ${f._totalAtraso>0?`<span style="color:#dc2626;font-weight:700">⏰ Atraso: ${fmtHM(f._totalAtraso)}</span>`:''}
+            </span>
+          </td>
+        </tr>`;
+        for (const ev of f._eventos) {
+          const ia = ev.antecip;
+          const bg = ia ? '#eff6ff' : ev.cor==='#dc2626' ? '#fef2f2' : '#fefce8';
+          const badge = `<span style="font-size:10px;color:#94a3b8;border:1px solid #e2e8f0;border-radius:4px;padding:0 5px;margin-right:5px">${ev.local}</span>`;
+          rowsAtrasos += `<tr style="border-bottom:1px solid #f1f5f9">
+            <td style="padding:4px 12px 4px 24px;font-size:12px;color:#374151;white-space:nowrap">${fmtDt(ev.date)}</td>
+            <td style="padding:4px 8px;font-size:11px;color:#9ca3af">${ev.dow||'—'}</td>
+            <td style="padding:4px 8px">${badge}<span style="padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700;background:${bg};color:${ev.cor}">${ev.tipo}</span></td>
+            <td style="padding:4px 8px;font-size:13px;font-weight:800;color:${ev.cor};font-family:monospace;text-align:right">${ia?'−':'+'} ${fmtHM(ev.min)}</td>
+            <td style="padding:4px 8px;font-size:11px;color:#9ca3af;text-align:right">${ev.min} min</td>
+          </tr>`;
+        }
+      }
+      secAtrasos = `<div style="margin-bottom:14px">
+        <div style="font-size:10px;font-weight:800;color:#475569;letter-spacing:.5px;margin-bottom:5px">▸ ATRASOS E RETORNOS ANTECIPADOS</div>
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead><tr style="background:#f1f5f9">
+            <th style="padding:5px 12px;text-align:left;font-size:10px;font-weight:800;color:#64748b;border-bottom:2px solid #e2e8f0">DATA</th>
+            <th style="padding:5px 8px;text-align:left;font-size:10px;font-weight:800;color:#64748b;border-bottom:2px solid #e2e8f0">DIA</th>
+            <th style="padding:5px 8px;text-align:left;font-size:10px;font-weight:800;color:#64748b;border-bottom:2px solid #e2e8f0">TIPO</th>
+            <th style="padding:5px 8px;text-align:right;font-size:10px;font-weight:800;color:#64748b;border-bottom:2px solid #e2e8f0">HORA:MIN</th>
+            <th style="padding:5px 8px;text-align:right;font-size:10px;font-weight:800;color:#64748b;border-bottom:2px solid #e2e8f0">MIN</th>
+          </tr></thead>
+          <tbody>${rowsAtrasos}</tbody>
+        </table>
+      </div>`;
+    }
+
+    if (!secFaltas && !secAtestados && !secAtrasos) continue;
+
+    secoes += `<div style="margin-bottom:36px">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;padding-bottom:6px;border-bottom:3px solid #0F172A">
+        <span style="font-size:14px;font-weight:900;text-transform:uppercase;letter-spacing:.5px">${turno}</span>
         <span style="font-size:11px;color:#64748b">${subPeriodo}</span>
-        <span style="margin-left:auto;font-size:11px;color:#64748b">${funcs.length} funcionário${funcs.length!==1?'s':''}</span>
+        <span style="margin-left:auto;font-size:11px;display:inline-flex;gap:12px;align-items:center">
+          <span style="color:#64748b">${funcs.length} func.</span>
+          ${tFaltas>0?`<span style="color:#dc2626;font-weight:700">${tFaltas} falta${tFaltas!==1?'s':''}</span>`:''}
+          ${tAtestados>0?`<span style="color:#d97706;font-weight:700">${tAtestados} atestado${tAtestados!==1?'s':''}</span>`:''}
+          ${tAtraso>0?`<span style="color:#dc2626;font-weight:700">⏰ ${fmtHM(tAtraso)}</span>`:''}
+          ${tAntecipado>0?`<span style="color:#2563eb;font-weight:700">↩ ${fmtHM(tAntecipado)}</span>`:''}
+        </span>
       </div>
-      <div style="display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap">
-        <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:10px 16px;min-width:100px">
-          <div style="font-size:9px;font-weight:800;color:#94a3b8;letter-spacing:.5px">FALTAS</div>
-          <div style="font-size:24px;font-weight:900;color:#dc2626">${tFaltas}</div>
-        </div>
-        <div style="background:#fefce8;border:1px solid #fde68a;border-radius:8px;padding:10px 16px;min-width:100px">
-          <div style="font-size:9px;font-weight:800;color:#94a3b8;letter-spacing:.5px">ATESTADOS</div>
-          <div style="font-size:24px;font-weight:900;color:#ca8a04">${tAtestados}</div>
-        </div>
-        <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:10px 16px;min-width:100px">
-          <div style="font-size:9px;font-weight:800;color:#94a3b8;letter-spacing:.5px">ATRASO TOTAL</div>
-          <div style="font-size:24px;font-weight:900;color:#dc2626">${fmtHM(tAtraso)}</div>
-        </div>
-      </div>
-      <table style="width:100%;border-collapse:collapse;font-size:12px">
-        <thead>
-          <tr style="background:#f8fafc">
-            <th style="padding:7px 12px;text-align:left;font-size:10px;font-weight:800;color:#64748b;letter-spacing:.5px;border-bottom:2px solid #e2e8f0">FUNCIONÁRIO</th>
-            <th style="padding:7px 8px;text-align:left;font-size:10px;font-weight:800;color:#64748b;letter-spacing:.5px;border-bottom:2px solid #e2e8f0">SETOR</th>
-            <th style="padding:7px 8px;text-align:center;font-size:10px;font-weight:800;color:#64748b;letter-spacing:.5px;border-bottom:2px solid #e2e8f0">DIAS</th>
-            <th style="padding:7px 8px;text-align:center;font-size:10px;font-weight:800;color:#64748b;letter-spacing:.5px;border-bottom:2px solid #e2e8f0">FALTAS</th>
-            <th style="padding:7px 8px;text-align:center;font-size:10px;font-weight:800;color:#64748b;letter-spacing:.5px;border-bottom:2px solid #e2e8f0">ATESTADOS</th>
-            <th style="padding:7px 8px;text-align:right;font-size:10px;font-weight:800;color:#64748b;letter-spacing:.5px;border-bottom:2px solid #e2e8f0">ATRASO</th>
-          </tr>
-        </thead>
-        <tbody>${linhas}</tbody>
-      </table>
+      ${secFaltas}${secAtestados}${secAtrasos}
     </div>`;
   }
+
+  if (!secoes) { toast('Nenhuma ocorrência encontrada no período.', 'info'); return; }
 
   const html = `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -1569,35 +1645,39 @@ async function _executarRelatorioGeral() {
   <title>Relatório Geral de Absenteísmo</title>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:'Segoe UI',Arial,sans-serif;color:#1e293b;background:#fff;padding:28px;max-width:900px;margin:0 auto}
+    body{font-family:'Segoe UI',Arial,sans-serif;color:#1e293b;background:#fff;padding:28px;max-width:980px;margin:0 auto}
     @media print{body{padding:12px}button{display:none!important}div{page-break-inside:avoid}}
   </style>
 </head>
 <body>
-  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;padding-bottom:16px;border-bottom:3px solid #0F172A">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;padding-bottom:14px;border-bottom:3px solid #0F172A">
     <div>
-      <div style="font-size:20px;font-weight:900;letter-spacing:-.3px">Relatório Geral de Absenteísmo</div>
-      <div style="font-size:12px;color:#64748b;margin-top:3px">Período base: ${periodoLabel} · Gerado em ${new Date().toLocaleString('pt-BR')}</div>
+      <div style="font-size:20px;font-weight:900">Relatório Geral de Absenteísmo</div>
+      <div style="font-size:11px;color:#64748b;margin-top:3px">Período base: ${periodoLabel} · Gerado em ${new Date().toLocaleString('pt-BR')}</div>
     </div>
     <button onclick="window.print()" style="padding:8px 16px;background:#0F172A;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">Imprimir / PDF</button>
   </div>
 
-  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:28px">
-    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px 16px">
+  <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:24px">
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px 14px">
       <div style="font-size:9px;font-weight:800;color:#94a3b8;letter-spacing:.5px">FUNCIONÁRIOS</div>
-      <div style="font-size:28px;font-weight:900;color:#1e293b;margin-top:2px">${totFuncs}</div>
+      <div style="font-size:26px;font-weight:900;color:#1e293b">${totFuncs}</div>
     </div>
-    <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:14px 16px">
-      <div style="font-size:9px;font-weight:800;color:#94a3b8;letter-spacing:.5px">TOTAL FALTAS</div>
-      <div style="font-size:28px;font-weight:900;color:#dc2626;margin-top:2px">${totFaltas}</div>
+    <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px 14px">
+      <div style="font-size:9px;font-weight:800;color:#94a3b8;letter-spacing:.5px">FALTAS</div>
+      <div style="font-size:26px;font-weight:900;color:#dc2626">${totFaltas}</div>
     </div>
-    <div style="background:#fefce8;border:1px solid #fde68a;border-radius:10px;padding:14px 16px">
-      <div style="font-size:9px;font-weight:800;color:#94a3b8;letter-spacing:.5px">TOTAL ATESTADOS</div>
-      <div style="font-size:28px;font-weight:900;color:#ca8a04;margin-top:2px">${totAtestados}</div>
+    <div style="background:#fefce8;border:1px solid #fde68a;border-radius:8px;padding:12px 14px">
+      <div style="font-size:9px;font-weight:800;color:#94a3b8;letter-spacing:.5px">ATESTADOS</div>
+      <div style="font-size:26px;font-weight:900;color:#ca8a04">${totAtestados}</div>
     </div>
-    <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:14px 16px">
-      <div style="font-size:9px;font-weight:800;color:#94a3b8;letter-spacing:.5px">ATRASO GERAL</div>
-      <div style="font-size:28px;font-weight:900;color:#dc2626;margin-top:2px">${fmtHM(totAtraso)}</div>
+    <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px 14px">
+      <div style="font-size:9px;font-weight:800;color:#94a3b8;letter-spacing:.5px">ATRASO TOTAL</div>
+      <div style="font-size:26px;font-weight:900;color:#dc2626">${fmtHM(totAtraso)}</div>
+    </div>
+    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 14px">
+      <div style="font-size:9px;font-weight:800;color:#94a3b8;letter-spacing:.5px">ANTECIPADOS</div>
+      <div style="font-size:26px;font-weight:900;color:#2563eb">${fmtHM(totAntecipado)}</div>
     </div>
   </div>
 
