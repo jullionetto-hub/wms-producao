@@ -1381,79 +1381,72 @@ function abrirModalRelatorioGeral() {
 
   document.getElementById('gabs-modal-relatorio')?.remove();
 
-  // Lista de dias excluídos (persistida entre aberturas do modal nesta sessão)
-  if (!window._absRelDiasExcluidos) window._absRelDiasExcluidos = [];
+  // Dias excluídos por turno: { manha: Set, tarde: Set, madrugada: Set }
+  if (!window._absRelExclPorTurno) window._absRelExclPorTurno = { manha: new Set(), tarde: new Set(), madrugada: new Set() };
 
-  function _renderExcluidos() {
-    const el = document.getElementById('gabs-rel-excluidos');
+  function _renderChips(id) {
+    const el = document.getElementById(`gabs-excl-chips-${id}`);
     if (!el) return;
-    if (!window._absRelDiasExcluidos.length) {
-      el.innerHTML = '<span style="font-size:11px;color:var(--text3)">Nenhum dia excluído</span>';
-      return;
-    }
-    el.innerHTML = [...window._absRelDiasExcluidos]
-      .sort()
-      .map(d => {
-        const label = new Date(d+'T12:00:00').toLocaleDateString('pt-BR', {day:'2-digit',month:'2-digit',year:'numeric'});
-        return `<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px 4px 12px;background:#fef2f2;border:1.5px solid #fecaca;border-radius:20px;font-size:12px;font-weight:700;color:#dc2626">
-          ${label}
-          <button onclick="_absRelRemDia('${d}')" style="background:none;border:none;cursor:pointer;font-size:13px;color:#dc2626;padding:0;line-height:1;margin-left:2px">✕</button>
-        </span>`;
-      }).join('');
+    const dias = window._absRelExclPorTurno[id];
+    if (!dias.size) { el.innerHTML = ''; return; }
+    el.innerHTML = [...dias].sort().map(d => {
+      const lbl = new Date(d+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
+      return `<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px 3px 10px;background:#fef2f2;border:1.5px solid #fecaca;border-radius:20px;font-size:11px;font-weight:700;color:#dc2626">
+        ${lbl}
+        <button onclick="_absRelRemDia('${id}','${d}')" style="background:none;border:none;cursor:pointer;font-size:12px;color:#dc2626;padding:0;line-height:1">✕</button>
+      </span>`;
+    }).join('');
   }
 
-  window._absRelAddDia = function() {
-    const inp = document.getElementById('gabs-rel-excluir-inp');
-    const v   = inp?.value;
-    if (!v) return;
-    if (!window._absRelDiasExcluidos.includes(v)) window._absRelDiasExcluidos.push(v);
+  window._absRelAddDia = function(id) {
+    const inp = document.getElementById(`gabs-excl-inp-${id}`);
+    const v = inp?.value; if (!v) return;
+    window._absRelExclPorTurno[id].add(v);
     inp.value = '';
-    _renderExcluidos();
+    _renderChips(id);
   };
-
-  window._absRelRemDia = function(d) {
-    window._absRelDiasExcluidos = window._absRelDiasExcluidos.filter(x => x !== d);
-    _renderExcluidos();
+  window._absRelRemDia = function(id, d) {
+    window._absRelExclPorTurno[id].delete(d);
+    _renderChips(id);
   };
 
   const modal = document.createElement('div');
   modal.id = 'gabs-modal-relatorio';
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
   modal.innerHTML = `
-    <div style="background:var(--surface);border-radius:16px;padding:24px;width:min(520px,100%);max-height:90vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.3)">
+    <div style="background:var(--surface);border-radius:16px;padding:24px;width:min(540px,100%);max-height:92vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.3)">
       <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:3px">Relatório Geral por Turno</div>
-      <div style="font-size:11px;color:var(--text3);margin-bottom:18px">Configure o intervalo de cada turno e exclua dias específicos</div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:18px">Defina o intervalo e os dias excluídos de cada turno separadamente</div>
 
-      <!-- Intervalos por turno -->
-      <div style="display:grid;gap:8px;margin-bottom:20px">
+      <div style="display:grid;gap:10px;margin-bottom:20px">
         ${[['Manhã','manha'],['Tarde','tarde'],['Madrugada','madrugada']].map(([label,id]) => `
-        <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface2);border-radius:10px;border:1px solid var(--border)">
-          <span style="font-size:12px;font-weight:700;color:var(--text);min-width:88px">${label}</span>
-          <div style="flex:1;display:flex;flex-direction:column;gap:2px">
-            <label style="font-size:9px;color:var(--text3);font-weight:700;letter-spacing:.4px">INÍCIO</label>
-            <input type="date" id="gabs-rel-inicio-${id}" value="${defStart}"
-              style="width:100%;padding:5px 8px;border:1.5px solid var(--border);border-radius:7px;font-size:12px;background:var(--surface);color:var(--text)">
+        <div style="padding:12px 14px;background:var(--surface2);border-radius:10px;border:1px solid var(--border)">
+          <div style="font-size:12px;font-weight:800;color:var(--text);margin-bottom:10px">${label}</div>
+          <div style="display:flex;gap:8px;margin-bottom:10px">
+            <div style="flex:1">
+              <label style="font-size:9px;color:var(--text3);font-weight:700;letter-spacing:.4px;display:block;margin-bottom:3px">INÍCIO</label>
+              <input type="date" id="gabs-rel-inicio-${id}" value="${defStart}"
+                style="width:100%;padding:6px 8px;border:1.5px solid var(--border);border-radius:7px;font-size:12px;background:var(--surface);color:var(--text)">
+            </div>
+            <div style="flex:1">
+              <label style="font-size:9px;color:var(--text3);font-weight:700;letter-spacing:.4px;display:block;margin-bottom:3px">FIM</label>
+              <input type="date" id="gabs-rel-fim-${id}" value="${defEnd}"
+                style="width:100%;padding:6px 8px;border:1.5px solid var(--border);border-radius:7px;font-size:12px;background:var(--surface);color:var(--text)">
+            </div>
           </div>
-          <div style="flex:1;display:flex;flex-direction:column;gap:2px">
-            <label style="font-size:9px;color:var(--text3);font-weight:700;letter-spacing:.4px">FIM</label>
-            <input type="date" id="gabs-rel-fim-${id}" value="${defEnd}"
-              style="width:100%;padding:5px 8px;border:1.5px solid var(--border);border-radius:7px;font-size:12px;background:var(--surface);color:var(--text)">
+          <div style="border-top:1px solid var(--border);padding-top:8px">
+            <div style="font-size:10px;font-weight:700;color:var(--text3);margin-bottom:6px">EXCLUIR DIAS DESTE TURNO</div>
+            <div style="display:flex;gap:6px;margin-bottom:6px">
+              <input type="date" id="gabs-excl-inp-${id}"
+                style="flex:1;padding:5px 8px;border:1.5px solid var(--border);border-radius:7px;font-size:12px;background:var(--surface);color:var(--text)">
+              <button onclick="_absRelAddDia('${id}')"
+                style="padding:5px 12px;background:var(--accent);color:#fff;border:none;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">
+                + Excluir
+              </button>
+            </div>
+            <div id="gabs-excl-chips-${id}" style="display:flex;flex-wrap:wrap;gap:5px;min-height:4px"></div>
           </div>
         </div>`).join('')}
-      </div>
-
-      <!-- Dias excluídos -->
-      <div style="border-top:1px solid var(--border);padding-top:16px;margin-bottom:20px">
-        <div style="font-size:12px;font-weight:800;color:var(--text);margin-bottom:10px">Excluir dias específicos da análise</div>
-        <div style="display:flex;gap:8px;margin-bottom:10px">
-          <input type="date" id="gabs-rel-excluir-inp"
-            style="flex:1;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface);color:var(--text)">
-          <button onclick="_absRelAddDia()"
-            style="padding:7px 16px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">
-            + Excluir este dia
-          </button>
-        </div>
-        <div id="gabs-rel-excluidos" style="display:flex;flex-wrap:wrap;gap:6px;min-height:22px"></div>
       </div>
 
       <div style="display:flex;gap:8px;justify-content:flex-end">
@@ -1468,7 +1461,7 @@ function abrirModalRelatorioGeral() {
       </div>
     </div>`;
   document.body.appendChild(modal);
-  _renderExcluidos();
+  ['manha','tarde','madrugada'].forEach(id => _renderChips(id));
 }
 
 async function _executarRelatorioGeral() {
@@ -1503,8 +1496,8 @@ async function _executarRelatorioGeral() {
     ? `${fmtDt(_absPeriodo.start)} a ${fmtDt(_absPeriodo.end)}`
     : 'Todos os períodos';
 
-  // Dias excluídos da análise
-  const diasExcluidos = new Set(window._absRelDiasExcluidos || []);
+  // Dias excluídos por turno
+  const exclPorTurno = window._absRelExclPorTurno || {};
 
   // Agrupa e processa por turno
   const grupos = {};
@@ -1514,8 +1507,9 @@ async function _executarRelatorioGeral() {
     const key = TURNO_MAP[turno] || 'manha';
     const ini = cfg[key].inicio, fim = cfg[key].fim;
 
+    const excl = exclPorTurno[key] || new Set();
     const recs = (func.daily_records || []).filter(r => {
-      if (diasExcluidos.has(r.date)) return false;
+      if (excl.has(r.date)) return false;
       if (ini && r.date < ini) return false;
       if (fim && r.date > fim) return false;
       return true;
@@ -1708,7 +1702,7 @@ async function _executarRelatorioGeral() {
     <div>
       <div style="font-size:20px;font-weight:900">Relatório Geral de Absenteísmo</div>
       <div style="font-size:11px;color:#64748b;margin-top:3px">Período base: ${periodoLabel} · Gerado em ${new Date().toLocaleString('pt-BR')}</div>
-      ${diasExcluidos.size ? `<div style="font-size:11px;color:#dc2626;margin-top:3px">Dias excluídos: ${[...diasExcluidos].sort().map(d=>new Date(d+'T12:00:00').toLocaleDateString('pt-BR')).join(', ')}</div>` : ''}
+      ${Object.entries(exclPorTurno).some(([,s])=>s.size) ? `<div style="font-size:11px;color:#dc2626;margin-top:3px">Dias excluídos: ${Object.entries(exclPorTurno).filter(([,s])=>s.size).map(([k,s])=>`${k}: ${[...s].sort().map(d=>new Date(d+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})).join(', ')}`).join(' | ')}</div>` : ''}
     </div>
     <button onclick="window.print()" style="padding:8px 16px;background:#0F172A;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">Imprimir / PDF</button>
   </div>
