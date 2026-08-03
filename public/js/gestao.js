@@ -977,78 +977,126 @@ async function absFeedbackTexto(id, nome, matricula) {
     if (!res.ok) throw new Error(`Erro ${res.status}`);
     const data = await res.json();
 
-    const allRec  = data.daily_records || [];
-    const fmtD    = s => s ? new Date(s + 'T12:00:00').toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit' }) : '—';
-    const fmtMin  = m => m >= 60 ? `${Math.floor(m/60)}h${m%60>0?(m%60)+'min':''}` : `${m}min`;
+    const LUNCH_MIN = 60, BREAK_MIN = 15;
+    const toM    = s => { if (!s) return null; const [h,m] = s.split(':').map(Number); return h*60+m; };
+    const fmtD   = s => s ? new Date(s+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}) : '—';
+    const fmtMin = m => m >= 60 ? `${Math.floor(m/60)}h${String(m%60).padStart(2,'0')}min` : `${m}min`;
 
-    // Schedule para cálculo de atraso
-    const schedM     = (data.schedule || '').match(/(\d+)h/);
-    const schedStart = schedM ? parseInt(schedM[1]) * 60 : 780;
+    const allRec = data.daily_records || [];
+    const schedM = (data.schedule||'').match(/(\d+)h/);
+    const schedStart = schedM ? parseInt(schedM[1])*60 : null;
 
-    // Atraso por dia (reusa _computeAtrasoRec já definido)
-    const diasTrab = allRec.filter(r => r.status === 'normal' && r.entry_time);
-    diasTrab.forEach(r => { r._at = _computeAtrasoRec(r, schedStart, 60, 15); });
+    const diasTrab = allRec.filter(r => r.status === 'normal' && r.entry_time)
+      .sort((a,b) => a.date < b.date ? -1 : 1);
 
-    // ── Atestados: agrupar dias consecutivos ──
-    const atesRecs = allRec.filter(r => r.atestado).sort((a, b) => a.date < b.date ? -1 : 1);
+    // Classificar eventos por dia
+    const atrasos = [], almocosProlong = [], retornosAntecip = [], pausasProlong = [];
+    for (const r of diasTrab) {
+      const entry = toM(r.entry_time);
+      const ls = toM(r.lunch_start), le = toM(r.lunch_end);
+      const bs = toM(r.break_start), be = toM(r.break_end);
+
+      if (schedStart !== null && entry !== null && entry > schedStart) {
+        atrasos.push({ date: r.date, min: entry - schedStart });
+      }
+      if (ls !== null && le !== null && le - ls > LUNCH_MIN) {
+        almocosProlong.push({ date: r.date, min: (le-ls) - LUNCH_MIN });
+      }
+      if (ls !== null && le !== null && le - ls > 0 && le - ls < LUNCH_MIN) {
+        retornosAntecip.push({ date: r.date, min: LUNCH_MIN - (le-ls) });
+      }
+      if (bs !== null && be !== null && be - bs > BREAK_MIN) {
+        pausasProlong.push({ date: r.date, min: (be-bs) - BREAK_MIN });
+      }
+    }
+
+    // Atestados: agrupar dias consecutivos
+    const atesRecs = allRec.filter(r => r.atestado).sort((a,b) => a.date < b.date ? -1 : 1);
     const gruposAtes = [];
     for (const r of atesRecs) {
-      const last = gruposAtes[gruposAtes.length - 1];
+      const last = gruposAtes[gruposAtes.length-1];
       if (last) {
-        const d0 = new Date(last[last.length-1].date + 'T12:00:00');
-        const d1 = new Date(r.date + 'T12:00:00');
-        if (Math.round((d1 - d0) / 86400000) === 1) { last.push(r); continue; }
+        const d0 = new Date(last[last.length-1].date+'T12:00:00');
+        const d1 = new Date(r.date+'T12:00:00');
+        if (Math.round((d1-d0)/86400000) === 1) { last.push(r); continue; }
       }
       gruposAtes.push([r]);
     }
 
-    // ── Atrasos acima da tolerância ──
-    const atrasoRecs = diasTrab.filter(r => r._at > _absToleranciMin).sort((a, b) => a.date < b.date ? -1 : 1);
+    // Faltas
+    const faltaRecs = allRec.filter(r => r.falta).sort((a,b) => a.date < b.date ? -1 : 1);
 
-    // ── Folga Banco de Horas ──
-    const folgaRecs = allRec.filter(r => { const s = (r.status || '').toLowerCase(); return s.includes('folga') || s.includes('banco'); }).sort((a, b) => a.date < b.date ? -1 : 1);
-
-    // Helper: formatar lista de labels
-    const listaDias = (labels) => {
-      if (labels.length === 1) return `No dia ${labels[0]}`;
-      return `Nos dias ${labels.slice(0, -1).join(', ')} e ${labels[labels.length - 1]}`;
-    };
+    // Folga BH
+    const folgaRecs = allRec.filter(r => { const s=(r.status||'').toLowerCase(); return s.includes('folga')||s.includes('banco'); })
+      .sort((a,b) => a.date < b.date ? -1 : 1);
 
     const partes = [];
+
+    // Faltas
+    if (faltaRecs.length) {
+      const datas = faltaRecs.map(r => fmtD(r.date)).join(', ');
+      partes.push(`Falta${faltaRecs.length>1?'s':''} injustificada${faltaRecs.length>1?'s':''} (${faltaRecs.length}): ${datas}.`);
+    }
 
     // Atestados
     for (const g of gruposAtes) {
       const n = g.length;
-      if (n === 1) {
-        partes.push(`No dia ${fmtD(g[0].date)} — atestado de 1 dia.`);
-      } else {
-        partes.push(`Nos dias ${fmtD(g[0].date)} a ${fmtD(g[n-1].date)} — atestado de ${n} dias.`);
-      }
+      if (n === 1) partes.push(`Atestado médico — dia ${fmtD(g[0].date)} (1 dia).`);
+      else partes.push(`Atestado médico — ${fmtD(g[0].date)} a ${fmtD(g[n-1].date)} (${n} dias consecutivos).`);
     }
 
-    // Atrasos
-    if (atrasoRecs.length) {
-      const labels = atrasoRecs.map(r => `${fmtD(r.date)} (${fmtMin(r._at)})`);
-      partes.push(`${listaDias(labels)} — atraso${atrasoRecs.length > 1 ? 's' : ''}.`);
+    // Atrasos — mostra TODOS, com nota de tolerância
+    if (atrasos.length) {
+      const totalMin = atrasos.reduce((s,r)=>s+r.min,0);
+      const dentroTol = atrasos.filter(r => r.min <= _absToleranciMin);
+      const detalhes = atrasos.map(r =>
+        `${fmtD(r.date)}: ${fmtMin(r.min)}${r.min <= _absToleranciMin && _absToleranciMin>0 ? ' (dentro da tolerância)' : ''}`
+      );
+      partes.push(`Atraso${atrasos.length>1?'s':''} na entrada (${atrasos.length}x · total ${fmtMin(totalMin)}${dentroTol.length && _absToleranciMin>0 ? ` · ${dentroTol.length} dentro da tolerância de ${_absToleranciMin}min`:''}):` +
+        `\n  ${detalhes.join('\n  ')}`);
+    }
+
+    // Retornos antecipados do almoço
+    if (retornosAntecip.length) {
+      const totalMin = retornosAntecip.reduce((s,r)=>s+r.min,0);
+      const detalhes = retornosAntecip.map(r => `${fmtD(r.date)}: ${fmtMin(r.min)} a menos`);
+      partes.push(`Retorno antecipado do almoço (${retornosAntecip.length}x · total ${fmtMin(totalMin)}):` +
+        `\n  ${detalhes.join('\n  ')}`);
+    }
+
+    // Almoços prolongados
+    if (almocosProlong.length) {
+      const totalMin = almocosProlong.reduce((s,r)=>s+r.min,0);
+      const detalhes = almocosProlong.map(r => `${fmtD(r.date)}: ${fmtMin(r.min)} a mais`);
+      partes.push(`Almoço${almocosProlong.length>1?'s':''} prolongado${almocosProlong.length>1?'s':''} (${almocosProlong.length}x · excesso total ${fmtMin(totalMin)}):` +
+        `\n  ${detalhes.join('\n  ')}`);
+    }
+
+    // Pausas prolongadas
+    if (pausasProlong.length) {
+      const totalMin = pausasProlong.reduce((s,r)=>s+r.min,0);
+      const detalhes = pausasProlong.map(r => `${fmtD(r.date)}: ${fmtMin(r.min)} a mais`);
+      partes.push(`Pausa${pausasProlong.length>1?'s':''} prolongada${pausasProlong.length>1?'s':''} (${pausasProlong.length}x · excesso total ${fmtMin(totalMin)}):` +
+        `\n  ${detalhes.join('\n  ')}`);
     }
 
     // Folga BH
     if (folgaRecs.length) {
-      const labels = folgaRecs.map(r => fmtD(r.date));
-      partes.push(`${listaDias(labels)} — banco de horas.`);
+      const datas = folgaRecs.map(r => fmtD(r.date)).join(', ');
+      partes.push(`Banco de horas (${folgaRecs.length} dia${folgaRecs.length>1?'s':''}): ${datas}.`);
     }
 
-    // Horas extras (positive_hours)
-    const hmMatch = (data.positive_hours || '').match(/^0*(\d+):(\d{2})$/);
+    // Horas positivas / extras
+    const hmMatch = (data.positive_hours||'').match(/^0*(\d+):(\d{2})$/);
     if (hmMatch) {
       const h = parseInt(hmMatch[1]), m = parseInt(hmMatch[2]);
       if (h > 0 || m > 0) {
-        const horasStr = h > 0 && m > 0 ? `${h}h${m}min` : h > 0 ? `${h}h` : `${m}min`;
-        partes.push(`Horas extras no período: ${horasStr}.`);
+        const s = h > 0 && m > 0 ? `${h}h${m}min` : h > 0 ? `${h}h` : `${m}min`;
+        partes.push(`Horas positivas no período: ${s}.`);
       }
     }
 
-    _absFeedbackModal(partes.join('\n') || 'Sem ocorrências registradas no período.', nome);
+    _absFeedbackModal(partes.join('\n\n') || 'Sem ocorrências registradas no período.', nome);
   } catch(e) {
     _absFeedbackModal(`Erro ao gerar feedback: ${e.message}`, nome);
   }
