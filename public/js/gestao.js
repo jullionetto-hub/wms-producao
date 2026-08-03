@@ -1686,36 +1686,181 @@ async function _executarRelatorioGeral() {
 
   if (!secoes) { toast('Nenhuma ocorrência encontrada no período.', 'info'); return; }
 
-  // ── Narrativa de feedback geral ──
+  // ── Feedback geral elaborado ──
   const allFuncs = Object.values(grupos).flat();
   const totFuncComOcorr = allFuncs.filter(f => f._faltaRecs.length || f._atestadoRecs.length || f._totalAtraso > 0).length;
+  const pctOcorr = totFuncs ? Math.round(totFuncComOcorr / totFuncs * 100) : 0;
 
-  const partes = [];
-  if (totFaltas > 0)    partes.push(`<strong>${totFaltas}</strong> falta${totFaltas !== 1 ? 's injustificadas' : ' injustificada'}`);
-  if (totAtestados > 0) partes.push(`<strong>${totAtestados}</strong> atestado${totAtestados !== 1 ? 's médicos' : ' médico'}`);
-  if (totAtraso > 0)    partes.push(`<strong>${fmtHM(totAtraso)}</strong> de atraso acumulado no ponto de entrada`);
-  if (totAntecipado > 0) partes.push(`<strong>${fmtHM(totAntecipado)}</strong> de retornos antecipados do almoço`);
-
-  let narrativa = `No período avaliado, a equipe de <strong>${totFuncs}</strong> funcionário${totFuncs !== 1 ? 's' : ''} `;
-  if (partes.length === 0) {
-    narrativa += 'não registrou ocorrências de atraso, falta ou atestado.';
-  } else {
-    narrativa += `registrou ${partes.length === 1 ? partes[0] : partes.slice(0,-1).join(', ') + ' e ' + partes.at(-1)}.`;
-    if (totFuncComOcorr > 0) narrativa += ` <strong>${totFuncComOcorr} de ${totFuncs}</strong> funcionário${totFuncComOcorr !== 1 ? 's tiveram' : ' teve'} alguma ocorrência no período.`;
+  // Contagem por tipo de evento em todos os turnos
+  const evCount = { entrada:0, almocoProl:0, antecip:0, pausaProl:0 };
+  const evMin   = { entrada:0, almocoProl:0, antecip:0, pausaProl:0 };
+  for (const f of allFuncs) {
+    for (const ev of f._eventos) {
+      if (ev.tipo === 'Entrada com atraso')          { evCount.entrada++;    evMin.entrada    += ev.min; }
+      else if (ev.tipo === 'Almoço prolongado')       { evCount.almocoProl++; evMin.almocoProl += ev.min; }
+      else if (ev.tipo.includes('antecipado'))        { evCount.antecip++;    evMin.antecip    += ev.min; }
+      else if (ev.tipo === 'Pausa prolongada')        { evCount.pausaProl++;  evMin.pausaProl  += ev.min; }
+    }
   }
 
+  // Top 3 com mais atraso
+  const top3Atraso = [...allFuncs]
+    .filter(f => f._totalAtraso > 0)
+    .sort((a,b) => b._totalAtraso - a._totalAtraso)
+    .slice(0, 3);
+
+  // Top 3 com mais faltas+atestados
+  const top3Ausencias = [...allFuncs]
+    .filter(f => f._faltaRecs.length + f._atestadoRecs.length > 0)
+    .sort((a,b) => (b._faltaRecs.length + b._atestadoRecs.length) - (a._faltaRecs.length + a._atestadoRecs.length))
+    .slice(0, 3);
+
+  // Visão por turno
+  const turnoRows = TURNO_ORDER.filter(t => grupos[t]?.length).map(t => {
+    const fs = grupos[t];
+    const tf = fs.reduce((s,f)=>s+f._faltaRecs.length,0);
+    const ta = fs.reduce((s,f)=>s+f._atestadoRecs.length,0);
+    const tr = fs.reduce((s,f)=>s+f._totalAtraso,0);
+    const tan= fs.reduce((s,f)=>s+f._totalAntecipado,0);
+    const key= TURNO_MAP[t]||'manha';
+    const ini= cfg[key].inicio, fim2=cfg[key].fim;
+    const sub= ini ? `${fmtDt(ini)} – ${fmtDt(fim2||_absPeriodo?.end||'')}` : periodoLabel;
+    return `<tr style="border-bottom:1px solid #f1f5f9">
+      <td style="padding:7px 10px;font-weight:700;color:#1e293b">${t}</td>
+      <td style="padding:7px 10px;font-size:11px;color:#64748b">${sub}</td>
+      <td style="padding:7px 10px;text-align:center;font-weight:700">${fs.length}</td>
+      <td style="padding:7px 10px;text-align:center;font-weight:700;color:${tf>0?'#dc2626':'#94a3b8'}">${tf||'—'}</td>
+      <td style="padding:7px 10px;text-align:center;font-weight:700;color:${ta>0?'#d97706':'#94a3b8'}">${ta||'—'}</td>
+      <td style="padding:7px 10px;text-align:center;font-weight:700;color:${tr>0?'#dc2626':'#94a3b8'};font-family:monospace">${tr>0?fmtHM(tr):'—'}</td>
+      <td style="padding:7px 10px;text-align:center;font-weight:700;color:${tan>0?'#2563eb':'#94a3b8'};font-family:monospace">${tan>0?fmtHM(tan):'—'}</td>
+    </tr>`;
+  }).join('');
+
+  // Linha de ocorrências por tipo
+  const tipoRows = [
+    ['Atrasos na entrada',     evCount.entrada,    evMin.entrada,    '#dc2626'],
+    ['Almoços prolongados',    evCount.almocoProl, evMin.almocoProl, '#d97706'],
+    ['Retornos antecipados',   evCount.antecip,    evMin.antecip,    '#2563eb'],
+    ['Pausas prolongadas',     evCount.pausaProl,  evMin.pausaProl,  '#d97706'],
+  ].filter(r=>r[1]>0).map(([tipo,cnt,min,cor]) =>
+    `<tr style="border-bottom:1px solid #f1f5f9">
+      <td style="padding:6px 10px;font-size:12px;font-weight:600;color:${cor}">${tipo}</td>
+      <td style="padding:6px 10px;text-align:center;font-weight:800;color:${cor}">${cnt}</td>
+      <td style="padding:6px 10px;text-align:center;font-family:monospace;font-weight:700;color:${cor}">${fmtHM(min)}</td>
+      <td style="padding:6px 10px;text-align:center;font-size:11px;color:#64748b">${cnt>0?fmtHM(Math.round(min/cnt)):'-'} / ocorr.</td>
+    </tr>`
+  ).join('');
+
+  // Top atrasos
+  const topAtrasoRows = top3Atraso.map((f,i) =>
+    `<tr style="border-bottom:1px solid #f1f5f9">
+      <td style="padding:5px 8px;font-size:11px;color:#94a3b8;text-align:center">${i+1}º</td>
+      <td style="padding:5px 8px;font-weight:700;font-size:12px">${f.name}</td>
+      <td style="padding:5px 8px;font-size:11px;color:#64748b">${f.sector||'—'}</td>
+      <td style="padding:5px 8px;font-family:monospace;font-weight:800;color:#dc2626;text-align:right">${fmtHM(f._totalAtraso)}</td>
+    </tr>`
+  ).join('');
+
+  // Top ausências
+  const topAusRows = top3Ausencias.map((f,i) =>
+    `<tr style="border-bottom:1px solid #f1f5f9">
+      <td style="padding:5px 8px;font-size:11px;color:#94a3b8;text-align:center">${i+1}º</td>
+      <td style="padding:5px 8px;font-weight:700;font-size:12px">${f.name}</td>
+      <td style="padding:5px 8px;font-size:11px;color:#64748b">${f.sector||'—'}</td>
+      <td style="padding:5px 8px;text-align:center;font-weight:800;color:#dc2626">${f._faltaRecs.length}</td>
+      <td style="padding:5px 8px;text-align:center;font-weight:800;color:#d97706">${f._atestadoRecs.length}</td>
+    </tr>`
+  ).join('');
+
   const alertas = [];
-  if (totAtestados >= 5) alertas.push(`alto volume de atestados médicos (${totAtestados})`);
-  if (totFaltas >= 3)    alertas.push(`número elevado de faltas (${totFaltas})`);
-  if (totAtraso >= 180)  alertas.push(`atraso acumulado expressivo de ${fmtHM(totAtraso)}`);
+  if (totAtestados >= 5)  alertas.push(`alto volume de atestados médicos (${totAtestados})`);
+  if (totFaltas >= 3)     alertas.push(`número elevado de faltas (${totFaltas})`);
+  if (totAtraso >= 180)   alertas.push(`atraso acumulado expressivo (${fmtHM(totAtraso)})`);
+  if (evCount.almocoProl >= 10) alertas.push(`frequência alta de almoços prolongados (${evCount.almocoProl} ocorrências)`);
+  if (pctOcorr >= 70)    alertas.push(`${pctOcorr}% da equipe teve alguma ocorrência`);
 
   const feedbackHtml = `
-  <div style="background:#f8fafc;border:1px solid #e2e8f0;border-left:4px solid #0F172A;border-radius:8px;padding:16px 18px;margin-bottom:24px">
-    <div style="font-size:10px;font-weight:800;color:#94a3b8;letter-spacing:.5px;margin-bottom:8px">RESUMO GERAL DA OPERAÇÃO</div>
-    <p style="font-size:13px;color:#1e293b;line-height:1.7;margin:0 0 10px">${narrativa}</p>
-    ${alertas.length
-      ? `<div style="font-size:12px;color:#b45309;font-weight:700;background:#fefce8;border:1px solid #fde68a;border-radius:6px;padding:8px 12px">⚠ Ponto de atenção: ${alertas.join('; ')}.</div>`
-      : `<div style="font-size:12px;color:#16a34a;font-weight:700;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:8px 12px">✓ Nenhum indicador crítico identificado no período.</div>`}
+  <div style="border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;margin-bottom:28px">
+    <div style="background:#0F172A;padding:12px 18px;display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:12px;font-weight:800;color:#fff;letter-spacing:.5px">RESUMO GERAL DA OPERAÇÃO</span>
+      <span style="font-size:11px;color:#94a3b8">${totFuncComOcorr} de ${totFuncs} funcionários com ocorrências (${pctOcorr}%)</span>
+    </div>
+
+    <!-- Parágrafo narrativo -->
+    <div style="padding:14px 18px;border-bottom:1px solid #f1f5f9;background:#fff;font-size:13px;color:#1e293b;line-height:1.75">
+      No período avaliado, a equipe de <strong>${totFuncs} funcionários</strong> registrou
+      ${totFaltas>0 ? `<span style="color:#dc2626;font-weight:700">${totFaltas} falta${totFaltas!==1?'s':''} injustificada${totFaltas!==1?'s':''}</span>` : '<span style="color:#16a34a">nenhuma falta</span>'},
+      ${totAtestados>0 ? `<span style="color:#d97706;font-weight:700">${totAtestados} atestado${totAtestados!==1?'s médicos':' médico'}</span>` : '<span style="color:#16a34a">nenhum atestado</span>'},
+      <span style="color:#dc2626;font-weight:700">${fmtHM(totAtraso)} de atraso acumulado</span> no ponto de entrada
+      ${totAntecipado>0 ? `e <span style="color:#2563eb;font-weight:700">${fmtHM(totAntecipado)} de retornos antecipados</span> do almoço` : ''}.
+    </div>
+
+    <!-- Alerta ou ok -->
+    <div style="padding:10px 18px;border-bottom:1px solid #f1f5f9;background:${alertas.length?'#fefce8':'#f0fdf4'}">
+      ${alertas.length
+        ? `<span style="font-size:12px;color:#b45309;font-weight:700">⚠ Pontos de atenção: ${alertas.join(' · ')}</span>`
+        : `<span style="font-size:12px;color:#16a34a;font-weight:700">✓ Nenhum indicador crítico identificado no período</span>`}
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;background:#fff">
+
+      <!-- Coluna esquerda: por turno + por tipo -->
+      <div style="border-right:1px solid #f1f5f9">
+        <div style="padding:10px 14px;font-size:10px;font-weight:800;color:#94a3b8;letter-spacing:.5px;border-bottom:1px solid #f1f5f9;background:#f8fafc">VISÃO POR TURNO</div>
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead><tr style="background:#f8fafc">
+            <th style="padding:6px 10px;text-align:left;font-size:9px;font-weight:800;color:#64748b;border-bottom:1px solid #e2e8f0">TURNO</th>
+            <th style="padding:6px 10px;text-align:left;font-size:9px;font-weight:800;color:#64748b;border-bottom:1px solid #e2e8f0">PERÍODO</th>
+            <th style="padding:6px 10px;text-align:center;font-size:9px;font-weight:800;color:#64748b;border-bottom:1px solid #e2e8f0">FUNC</th>
+            <th style="padding:6px 10px;text-align:center;font-size:9px;font-weight:800;color:#dc2626;border-bottom:1px solid #e2e8f0">FALTAS</th>
+            <th style="padding:6px 10px;text-align:center;font-size:9px;font-weight:800;color:#d97706;border-bottom:1px solid #e2e8f0">ATES.</th>
+            <th style="padding:6px 10px;text-align:center;font-size:9px;font-weight:800;color:#dc2626;border-bottom:1px solid #e2e8f0">ATRASO</th>
+            <th style="padding:6px 10px;text-align:center;font-size:9px;font-weight:800;color:#2563eb;border-bottom:1px solid #e2e8f0">ANTEC.</th>
+          </tr></thead>
+          <tbody>${turnoRows}</tbody>
+        </table>
+
+        ${tipoRows ? `
+        <div style="padding:10px 14px;font-size:10px;font-weight:800;color:#94a3b8;letter-spacing:.5px;border-top:2px solid #e2e8f0;border-bottom:1px solid #f1f5f9;background:#f8fafc">OCORRÊNCIAS POR TIPO</div>
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead><tr style="background:#f8fafc">
+            <th style="padding:5px 10px;text-align:left;font-size:9px;font-weight:800;color:#64748b;border-bottom:1px solid #e2e8f0">TIPO</th>
+            <th style="padding:5px 10px;text-align:center;font-size:9px;font-weight:800;color:#64748b;border-bottom:1px solid #e2e8f0">OCORR.</th>
+            <th style="padding:5px 10px;text-align:center;font-size:9px;font-weight:800;color:#64748b;border-bottom:1px solid #e2e8f0">TOTAL</th>
+            <th style="padding:5px 10px;text-align:center;font-size:9px;font-weight:800;color:#64748b;border-bottom:1px solid #e2e8f0">MÉDIA</th>
+          </tr></thead>
+          <tbody>${tipoRows}</tbody>
+        </table>` : ''}
+      </div>
+
+      <!-- Coluna direita: destaques -->
+      <div>
+        ${topAtrasoRows ? `
+        <div style="padding:10px 14px;font-size:10px;font-weight:800;color:#94a3b8;letter-spacing:.5px;border-bottom:1px solid #f1f5f9;background:#f8fafc">MAIOR ATRASO ACUMULADO</div>
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead><tr style="background:#f8fafc">
+            <th style="padding:5px 8px;text-align:center;font-size:9px;font-weight:800;color:#64748b;border-bottom:1px solid #e2e8f0">#</th>
+            <th style="padding:5px 8px;text-align:left;font-size:9px;font-weight:800;color:#64748b;border-bottom:1px solid #e2e8f0">FUNCIONÁRIO</th>
+            <th style="padding:5px 8px;text-align:left;font-size:9px;font-weight:800;color:#64748b;border-bottom:1px solid #e2e8f0">SETOR</th>
+            <th style="padding:5px 8px;text-align:right;font-size:9px;font-weight:800;color:#dc2626;border-bottom:1px solid #e2e8f0">ATRASO</th>
+          </tr></thead>
+          <tbody>${topAtrasoRows}</tbody>
+        </table>` : ''}
+
+        ${topAusRows ? `
+        <div style="padding:10px 14px;font-size:10px;font-weight:800;color:#94a3b8;letter-spacing:.5px;border-top:2px solid #e2e8f0;border-bottom:1px solid #f1f5f9;background:#f8fafc">MAIS AUSÊNCIAS (FALTAS + ATESTADOS)</div>
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead><tr style="background:#f8fafc">
+            <th style="padding:5px 8px;text-align:center;font-size:9px;font-weight:800;color:#64748b;border-bottom:1px solid #e2e8f0">#</th>
+            <th style="padding:5px 8px;text-align:left;font-size:9px;font-weight:800;color:#64748b;border-bottom:1px solid #e2e8f0">FUNCIONÁRIO</th>
+            <th style="padding:5px 8px;text-align:left;font-size:9px;font-weight:800;color:#64748b;border-bottom:1px solid #e2e8f0">SETOR</th>
+            <th style="padding:5px 8px;text-align:center;font-size:9px;font-weight:800;color:#dc2626;border-bottom:1px solid #e2e8f0">FALTAS</th>
+            <th style="padding:5px 8px;text-align:center;font-size:9px;font-weight:800;color:#d97706;border-bottom:1px solid #e2e8f0">ATES.</th>
+          </tr></thead>
+          <tbody>${topAusRows}</tbody>
+        </table>` : ''}
+      </div>
+    </div>
   </div>`;
 
   const html = `<!DOCTYPE html>
