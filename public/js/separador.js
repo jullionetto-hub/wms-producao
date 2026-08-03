@@ -27,28 +27,45 @@ function abrirPreparacaoLote(pedidos) {
   _loteScreens('m-lote-prep');
   mudarTabSep('separar');
 
-  const cores = _CX_CORES;
-  document.getElementById('m-lote-caixas').innerHTML = pedidos.map((p,i) => `
+  document.getElementById('m-lote-caixas').innerHTML = pedidos.map(p => `
     <div style="margin:6px 12px;border-radius:10px;border:0.5px solid var(--border);background:var(--surface);padding:10px 14px;display:flex;align-items:center;gap:12px">
-      <div style="width:36px;height:36px;border-radius:8px;background:${cores[i%cores.length]};display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:500;color:#fff;flex-shrink:0">${i+1}</div>
-      <div>
-        <div style="font-size:12px;font-weight:500;color:var(--text)">Pedido #${p.numero_pedido}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:600;color:var(--text)">#${p.numero_pedido}</div>
         <div style="font-size:11px;color:var(--text3)">${p.total_itens||p.itens||'?'} itens</div>
       </div>
+      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+        <span style="font-size:11px;color:var(--text3)">Caixa</span>
+        <input id="cx-input-${p.id}" type="number" min="1" placeholder="Nº" inputmode="numeric"
+          style="width:62px;padding:8px 6px;border:1.5px solid var(--border);border-radius:8px;font-size:16px;font-weight:700;text-align:center;background:var(--surface);color:var(--text);outline:none"
+          oninput="this.style.borderColor=this.value?'#f97316':'var(--border)'">
+      </div>
     </div>`).join('');
-
-  // Dica de endereços compartilhados (calculado após carregar itens)
-  document.getElementById('m-lote-prep-dica').innerHTML =
-    'Nos endereços onde dois pedidos têm o mesmo produto, o app vai indicar quantas unidades vão para cada caixa.';
 }
 
 async function iniciarSepLote() {
+  const caixas = [];
+  const usados = new Set();
+  for (const p of _loteAtual) {
+    const input = document.getElementById(`cx-input-${p.id}`);
+    const val = (input?.value||'').trim();
+    if (!val) {
+      toast(`Informe o número da caixa para o pedido #${p.numero_pedido}`, 'erro');
+      input?.focus(); return;
+    }
+    if (usados.has(val)) {
+      toast(`Caixa "${val}" já foi usada em outro pedido`, 'erro'); return;
+    }
+    usados.add(val);
+    caixas.push({ pedido_id: p.id, caixa_lote: val });
+    p.caixa_lote = val; // guarda localmente para exibição imediata
+  }
+
   const ids = _loteAtual.map(p => p.id);
   try {
     const res = await fetch(`${API}/pedidos/lote/iniciar`, {
       method:'POST', credentials:'include',
       headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ pedido_ids: ids })
+      body: JSON.stringify({ pedido_ids: ids, caixas })
     });
     const data = await res.json();
     if (!res.ok) { toast(data.erro||'Erro ao iniciar lote','erro'); return; }
@@ -129,7 +146,7 @@ function _renderizarListaLote() {
       // Endereço completo (ex: E011, COL 03, NIV 02)
       const endCompleto = items[0].endereco || end;
 
-      // Distribuição por caixa: { cx: qty }
+      // Distribuição por caixa: { cx_num: qty }
       const porCaixa = {};
       for (const item of items) {
         const cx = item.caixa_num;
@@ -138,19 +155,11 @@ function _renderizarListaLote() {
       }
       const cxEntries = Object.entries(porCaixa).sort((a,b) => Number(a[0]) - Number(b[0]));
 
-      // Tags de caixa: mostra Cx.N + número do pedido + qtd (máx 3 visíveis)
-      const MAX_CX = 3;
-      const visiveis = cxEntries.slice(0, MAX_CX);
-      const resto    = cxEntries.length - MAX_CX;
-      const cxHtml   = visiveis.map(([cx, qty]) => {
-        const cor    = _CX_CORES[(Number(cx)-1) % _CX_CORES.length];
-        const pedNum = _loteAtual[Number(cx)-1]?.numero_pedido || '';
-        return `<div style="display:inline-flex;flex-direction:column;align-items:center;background:${cor};border-radius:7px;padding:3px 7px;min-width:52px">
-          <span style="font-size:9px;font-weight:700;color:#fff;letter-spacing:0.5px">Cx. ${cx}</span>
-          <span style="font-size:8px;color:rgba(255,255,255,0.85)">#${pedNum}</span>
-          <span style="font-size:9px;font-weight:600;color:#fff">${qty} un</span>
-        </div>`;
-      }).join('') + (resto > 0 ? `<span style="font-size:10px;color:var(--text3);align-self:center">+${resto} caixa${resto>1?'s':''}</span>` : '');
+      // Exibe "→ Cx. [label]: N un" — usa caixa_lote (número físico) se disponível
+      const cxLabel = (cxNum) => _loteAtual[Number(cxNum)-1]?.caixa_lote || cxNum;
+      const cxHtml = cxEntries.map(([cx, qty]) =>
+        `<span style="font-size:11px;color:var(--text2);white-space:nowrap">→ Cx. ${cxLabel(cx)}: ${qty} un</span>`
+      ).join('');
 
       const ids = items.map(i => i.id).join(',');
 
@@ -173,8 +182,10 @@ function _renderizarListaLote() {
             <div style="font-size:10px;color:#6366f1;font-family:monospace;margin-bottom:6px;font-weight:600">
               ${endCompleto}
             </div>
-            <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:flex-start">
-              <span style="font-size:11px;font-weight:700;color:#1a1a2e;background:#e2e8f0;padding:3px 9px;border-radius:5px;align-self:center">${totalQty} un</span>
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:2px">
+              <span style="font-size:12px;font-weight:700;color:var(--text);background:var(--surface2);padding:3px 9px;border-radius:5px;border:0.5px solid var(--border)">PEGAR ${totalQty} un</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:2px;padding-left:2px">
               ${cxHtml}
             </div>
           </div>

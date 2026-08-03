@@ -171,7 +171,7 @@ router.get('/pedidos/lote-itens', requerAuth, async (req,res) => {
   const ids = String(req.query.pedido_ids||'').split(',').map(s=>parseInt(s.trim())).filter(Boolean);
   if (!ids.length) return res.status(400).json({erro:'pedido_ids obrigatorio'});
   try {
-    const pedidos = await db.all(`SELECT id,numero_pedido,total_itens,itens FROM pedidos WHERE id=ANY($1)`, [ids]);
+    const pedidos = await db.all(`SELECT id,numero_pedido,total_itens,itens,caixa_lote FROM pedidos WHERE id=ANY($1)`, [ids]);
     const caixaMap = {};
     ids.forEach((id,i) => { caixaMap[id] = i+1; });
     const itens = await db.all(
@@ -191,17 +191,37 @@ router.get('/pedidos/lote-itens', requerAuth, async (req,res) => {
 });
 
 router.post('/pedidos/lote/iniciar', requerAuth, async (req,res) => {
-  const { pedido_ids } = req.body;
+  const { pedido_ids, caixas } = req.body;
+  // caixas = [{pedido_id, caixa_lote}] — atribuição livre de número de caixa física
   if (!pedido_ids?.length) return res.status(400).json({erro:'pedido_ids obrigatorio'});
   const { data, hora } = dataHoraLocal();
   try {
     for (const id of pedido_ids) {
+      const caixa = caixas?.find(c => c.pedido_id === id)?.caixa_lote || null;
       await pool.query(
-        `UPDATE pedidos SET status='separando', iniciado_em=COALESCE(NULLIF(iniciado_em,''),$1) WHERE id=$2`,
-        [data+'T'+hora, id]
+        `UPDATE pedidos SET status='separando', iniciado_em=COALESCE(NULLIF(iniciado_em,''),$1), caixa_lote=$2 WHERE id=$3`,
+        [data+'T'+hora, caixa, id]
       );
     }
     res.json({ mensagem:'Lote iniciado!', iniciados: pedido_ids.length });
+  } catch(e) { res.status(500).json({erro:e.message}); }
+});
+
+router.get('/pedidos/buscar-caixa-lote', requerAuth, async (req,res) => {
+  const { numero } = req.query;
+  if (!numero) return res.status(400).json({erro:'numero obrigatorio'});
+  try {
+    const ped = await db.get(
+      `SELECT p.id, p.numero_pedido, p.cliente, p.transportadora, p.status, p.caixa_lote,
+              p.total_itens, p.itens, p.status_embalagem
+       FROM pedidos p
+       WHERE p.caixa_lote=$1
+         AND p.status IN ('separando','concluido')
+       ORDER BY p.id DESC LIMIT 1`,
+      [String(numero).trim()]
+    );
+    if (!ped) return res.status(404).json({erro:`Nenhum pedido encontrado na caixa ${numero}`});
+    res.json(ped);
   } catch(e) { res.status(500).json({erro:e.message}); }
 });
 
@@ -223,16 +243,18 @@ router.post('/pedidos/lote/concluir', requerAuth, async (req,res) => {
         `UPDATE pedidos SET status='concluido', concluido_em=$1, skus_concluido_em=COALESCE(NULLIF(skus_concluido_em,''),$1) WHERE id=$2`,
         [data+'T'+hora, id]
       );
-      const ped = await db.get('SELECT numero_pedido,numero_caixa,separador_id FROM pedidos WHERE id=$1',[id]);
+      const ped = await db.get('SELECT numero_pedido,numero_caixa,caixa_lote,separador_id FROM pedidos WHERE id=$1',[id]);
       const sep = ped?.separador_id ? await db.get('SELECT nome FROM separadores WHERE id=$1',[ped.separador_id]) : null;
       const ckExist = await db.get('SELECT id,status FROM checkout WHERE pedido_id=$1',[id]);
+      // Para pedidos de lote usa caixa_lote como número da caixa no checkout
+      const ckNumCaixa = ped?.numero_caixa || ped?.caixa_lote || '';
       if (ckExist) {
         if (ckExist.status !== 'concluido')
           await pool.query(`UPDATE checkout SET status='fila',hora_criacao=$1,data_checkout=$2 WHERE pedido_id=$3`,[hora,data,id]);
       } else {
         await pool.query(
           `INSERT INTO checkout (numero_caixa,pedido_id,numero_pedido,separador_nome,status,hora_criacao,data_checkout) VALUES ($1,$2,$3,$4,'fila',$5,$6)`,
-          [ped?.numero_caixa||'',id,ped?.numero_pedido||'',sep?.nome||'',hora,data]
+          [ckNumCaixa,id,ped?.numero_pedido||'',sep?.nome||'',hora,data]
         );
       }
       req.app.get('io')?.emit('pedido:concluido',{pedido_id:id});
