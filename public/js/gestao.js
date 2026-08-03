@@ -63,9 +63,9 @@ function renderizarPagGestao() {
   </div>
 
   <!-- ── Seletor de período ── -->
-  <div style="padding:10px 24px 8px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--surface2)">
-    <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.5px;margin-bottom:6px">PERÍODO DE ANÁLISE</div>
-    <div id="gabs-periodo-btns" style="display:flex;gap:6px;flex-wrap:wrap">
+  <div style="padding:8px 24px 8px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--surface2);display:flex;align-items:center;gap:12px">
+    <span style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.5px;white-space:nowrap">PERÍODO</span>
+    <div id="gabs-periodo-btns" style="display:flex;gap:6px;flex-wrap:nowrap;overflow-x:auto;padding-bottom:2px;scrollbar-width:thin">
       <span style="font-size:11px;color:var(--text3)">Carregando...</span>
     </div>
   </div>
@@ -446,21 +446,23 @@ async function carregarHistoricoAbs() {
       el.innerHTML = '<div style="color:var(--text3);font-size:12px;padding:10px">Nenhum arquivo importado ainda.</div>';
       return;
     }
-    el.innerHTML = lista.map(u => {
-      const ok  = u.status === 'success';
-      const dt  = u.upload_at ? new Date(u.upload_at).toLocaleString('pt-BR') : '—';
-      const cor = ok ? '#16a34a' : 'var(--red)';
+    // ordena do mais recente ao mais antigo
+    const ordenada = [...lista].sort((a,b) => (b.upload_at||'').localeCompare(a.upload_at||''));
+    el.innerHTML = ordenada.map(u => {
+      const ok   = u.status === 'success';
+      const p    = _parsePeriodFromUpload(u);
+      const label = p ? _fmtPdBtn(p.start, p.end) : '—';
+      const dtImport = u.upload_at ? new Date(u.upload_at).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'}) : '—';
+      const cor  = ok ? '#16a34a' : 'var(--red)';
       return `
-      <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;background:var(--surface2);margin-bottom:8px;font-size:12px">
-        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${cor};flex-shrink:0"></span>
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;background:var(--surface2);margin-bottom:8px;border:1px solid var(--border)">
         <div style="flex:1;min-width:0">
-          <div style="font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${u.filename}</div>
-          <div style="color:var(--text3);margin-top:2px">${dt}</div>
-          <div style="color:${cor};font-size:11px">${ok ? `${u.records_count ?? 0} funcionário(s)` : u.error_message || 'erro'}</div>
+          <div style="font-size:14px;font-weight:800;color:var(--text)">${label}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px">Importado em ${dtImport} · ${ok ? `${u.records_count ?? 0} funcionário(s)` : `<span style="color:var(--red)">${u.error_message||'erro'}</span>`}</div>
         </div>
-        <button onclick="absExcluirUpload(${u.id},this)" title="Excluir arquivo"
+        <button onclick="absExcluirUpload(${u.id},this)" title="Excluir"
           style="background:#fee2e2;border:none;color:#dc2626;font-size:12px;cursor:pointer;padding:6px 10px;border-radius:8px;font-weight:700;flex-shrink:0">
-          Excluir
+          🗑 Excluir
         </button>
       </div>`;
     }).join('');
