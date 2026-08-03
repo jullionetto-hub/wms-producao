@@ -1375,38 +1375,61 @@ function _renderDetalheAbs(data, nome) {
 
 /* ── Modal config + Relatório Geral por Turno ── */
 function abrirModalRelatorioGeral() {
-  const periodo = _absPeriodo;
+  const periodo  = _absPeriodo;
   const defStart = periodo?.start || '';
   const defEnd   = periodo?.end   || '';
 
-  // Remove modal anterior se existir
   document.getElementById('gabs-modal-relatorio')?.remove();
+
+  const TURNOS = [
+    { label:'Manhã',     id:'manha',     start:defStart, end:defEnd, ativo:true },
+    { label:'Tarde',     id:'tarde',     start:defStart, end:defEnd, ativo:true },
+    { label:'Madrugada', id:'madrugada', start:defStart, end:defEnd, ativo:true },
+  ];
+
+  function _renderRows() {
+    return TURNOS.map((t, i) => `
+      <div id="gabs-rel-row-${i}" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface2);border-radius:10px;border:1.5px solid ${t.ativo?'var(--border)':'transparent'};opacity:${t.ativo?'1':'.4'};transition:.15s">
+        <button onclick="_absRelToggle(${i})" title="${t.ativo?'Excluir turno':'Incluir turno'}"
+          style="width:22px;height:22px;border-radius:50%;border:none;cursor:pointer;font-size:13px;line-height:1;flex-shrink:0;
+                 background:${t.ativo?'#fecaca':'#d1fae5'};color:${t.ativo?'#dc2626':'#16a34a'};display:flex;align-items:center;justify-content:center">
+          ${t.ativo?'✕':'＋'}
+        </button>
+        <span style="font-size:12px;font-weight:700;color:var(--text);min-width:80px">${t.label}</span>
+        <div style="flex:1;display:flex;flex-direction:column;gap:2px">
+          <label style="font-size:9px;color:var(--text3);font-weight:700;letter-spacing:.4px">INÍCIO</label>
+          <div style="display:flex;align-items:center;gap:4px">
+            <input type="date" id="gabs-rel-inicio-${t.id}" value="${t.start}" ${t.ativo?'':'disabled'}
+              style="flex:1;padding:5px 8px;border:1.5px solid var(--border);border-radius:7px;font-size:12px;background:var(--surface);color:var(--text)">
+            <button onclick="document.getElementById('gabs-rel-inicio-${t.id}').value=''" title="Limpar" ${t.ativo?'':'disabled'}
+              style="padding:4px 7px;border:1.5px solid var(--border);border-radius:7px;font-size:11px;cursor:pointer;background:var(--surface);color:var(--text3)">✕</button>
+          </div>
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:2px">
+          <label style="font-size:9px;color:var(--text3);font-weight:700;letter-spacing:.4px">FIM</label>
+          <div style="display:flex;align-items:center;gap:4px">
+            <input type="date" id="gabs-rel-fim-${t.id}" value="${t.end}" ${t.ativo?'':'disabled'}
+              style="flex:1;padding:5px 8px;border:1.5px solid var(--border);border-radius:7px;font-size:12px;background:var(--surface);color:var(--text)">
+            <button onclick="document.getElementById('gabs-rel-fim-${t.id}').value=''" title="Limpar" ${t.ativo?'':'disabled'}
+              style="padding:4px 7px;border:1.5px solid var(--border);border-radius:7px;font-size:11px;cursor:pointer;background:var(--surface);color:var(--text3)">✕</button>
+          </div>
+        </div>
+      </div>`).join('');
+  }
+
+  window._absRelToggle = function(i) {
+    TURNOS[i].ativo = !TURNOS[i].ativo;
+    document.getElementById('gabs-rel-lista').innerHTML = _renderRows();
+  };
 
   const modal = document.createElement('div');
   modal.id = 'gabs-modal-relatorio';
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center';
   modal.innerHTML = `
-    <div style="background:var(--surface);border-radius:16px;padding:24px;width:min(480px,95vw);box-shadow:0 8px 40px rgba(0,0,0,.3)">
-      <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:4px">Relatório Geral por Turno</div>
-      <div style="font-size:11px;color:var(--text3);margin-bottom:20px">Configure a data de início de cada turno no período</div>
-
-      <div style="display:grid;gap:12px;margin-bottom:20px">
-        ${[['Manhã','manha',defStart],['Tarde','tarde',defStart],['Madrugada','madrugada',defStart]].map(([label,id,def]) => `
-        <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--surface2);border-radius:10px;border:1px solid var(--border)">
-          <span style="font-size:12px;font-weight:700;color:var(--text);min-width:90px">${label}</span>
-          <div style="flex:1">
-            <label style="font-size:10px;color:var(--text3);display:block;margin-bottom:3px">Data de início</label>
-            <input type="date" id="gabs-rel-inicio-${id}" value="${def}"
-              style="width:100%;padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface);color:var(--text)">
-          </div>
-          <div style="flex:1">
-            <label style="font-size:10px;color:var(--text3);display:block;margin-bottom:3px">Data de fim</label>
-            <input type="date" id="gabs-rel-fim-${id}" value="${defEnd}"
-              style="width:100%;padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface);color:var(--text)">
-          </div>
-        </div>`).join('')}
-      </div>
-
+    <div style="background:var(--surface);border-radius:16px;padding:24px;width:min(520px,96vw);box-shadow:0 8px 40px rgba(0,0,0,.3)">
+      <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:3px">Relatório Geral por Turno</div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:16px">Ative ou desative turnos · Defina o intervalo de datas · ✕ limpa o campo</div>
+      <div id="gabs-rel-lista" style="display:grid;gap:8px;margin-bottom:18px">${_renderRows()}</div>
       <div style="display:flex;gap:8px;justify-content:flex-end">
         <button onclick="document.getElementById('gabs-modal-relatorio').remove()"
           style="padding:8px 16px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;background:var(--surface2);color:var(--text2)">
@@ -1453,10 +1476,20 @@ async function _executarRelatorioGeral() {
     ? `${fmtDt(_absPeriodo.start)} a ${fmtDt(_absPeriodo.end)}`
     : 'Todos os períodos';
 
+  // Detecta quais turnos estão ativos (inputs não-disabled = turno ativo)
+  const turnosAtivos = new Set(
+    Object.entries(TURNO_MAP)
+      .filter(([,id]) => !document.getElementById(`gabs-rel-inicio-${id}`)?.disabled)
+      .map(([turno]) => turno)
+  );
+  // "Outros" segue o mesmo estado que Madrugada
+  if (turnosAtivos.has('Madrugada')) turnosAtivos.add('Outros');
+
   // Agrupa e processa por turno
   const grupos = {};
   for (const func of funcionarios) {
     const turno = _parseTurno(func.schedule);
+    if (!turnosAtivos.has(turno)) continue;
     if (!grupos[turno]) grupos[turno] = [];
     const key = TURNO_MAP[turno] || 'manha';
     const ini = cfg[key].inicio, fim = cfg[key].fim;
