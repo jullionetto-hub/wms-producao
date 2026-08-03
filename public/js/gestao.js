@@ -26,7 +26,7 @@ function renderizarPagGestao() {
       <div id="gabs-periodo" style="font-size:11px;color:var(--text3);margin-top:3px;font-weight:600"></div>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button onclick="gerarRelatorioAbs()" style="padding:7px 14px;background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;color:var(--text2)">Gerar Relatório</button>
+      <button onclick="abrirModalRelatorioGeral()" style="padding:7px 14px;background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;color:var(--text2)">Gerar Relatório</button>
       <button onclick="mostrarArquivosAbs()" style="padding:7px 14px;background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;color:var(--text2)">Arquivos Importados</button>
       <button onclick="toggleImportarAbs()" style="padding:7px 14px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">Importar PDF</button>
     </div>
@@ -1371,6 +1371,243 @@ function _renderDetalheAbs(data, nome) {
     </div>`;
 }
 
+
+/* ── Modal config + Relatório Geral por Turno ── */
+function abrirModalRelatorioGeral() {
+  const periodo = _absPeriodo;
+  const defStart = periodo?.start || '';
+  const defEnd   = periodo?.end   || '';
+
+  // Remove modal anterior se existir
+  document.getElementById('gabs-modal-relatorio')?.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'gabs-modal-relatorio';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center';
+  modal.innerHTML = `
+    <div style="background:var(--surface);border-radius:16px;padding:24px;width:min(480px,95vw);box-shadow:0 8px 40px rgba(0,0,0,.3)">
+      <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:4px">Relatório Geral por Turno</div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:20px">Configure a data de início de cada turno no período</div>
+
+      <div style="display:grid;gap:12px;margin-bottom:20px">
+        ${[['Manhã','manha',defStart],['Tarde','tarde',defStart],['Madrugada','madrugada',defStart]].map(([label,id,def]) => `
+        <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--surface2);border-radius:10px;border:1px solid var(--border)">
+          <span style="font-size:12px;font-weight:700;color:var(--text);min-width:90px">${label}</span>
+          <div style="flex:1">
+            <label style="font-size:10px;color:var(--text3);display:block;margin-bottom:3px">Data de início</label>
+            <input type="date" id="gabs-rel-inicio-${id}" value="${def}"
+              style="width:100%;padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface);color:var(--text)">
+          </div>
+          <div style="flex:1">
+            <label style="font-size:10px;color:var(--text3);display:block;margin-bottom:3px">Data de fim</label>
+            <input type="date" id="gabs-rel-fim-${id}" value="${defEnd}"
+              style="width:100%;padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface);color:var(--text)">
+          </div>
+        </div>`).join('')}
+      </div>
+
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button onclick="document.getElementById('gabs-modal-relatorio').remove()"
+          style="padding:8px 16px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;background:var(--surface2);color:var(--text2)">
+          Cancelar
+        </button>
+        <button onclick="_executarRelatorioGeral()"
+          style="padding:8px 18px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">
+          Gerar Relatório
+        </button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+}
+
+async function _executarRelatorioGeral() {
+  const fmtDt   = s => s ? new Date(s+'T12:00:00').toLocaleDateString('pt-BR') : '—';
+  const fmtHM   = m => { const h=Math.floor(m/60), mm=m%60; return `${String(h).padStart(2,'0')}:${String(mm).padStart(2,'0')}`; };
+  const toM     = s => { if (!s) return null; const [h,m] = s.split(':').map(Number); return h*60+m; };
+  const LUNCH_MIN = 60, BREAK_MIN = 15;
+
+  const cfg = {};
+  for (const t of ['manha','tarde','madrugada']) {
+    cfg[t] = {
+      inicio: document.getElementById(`gabs-rel-inicio-${t}`)?.value || '',
+      fim:    document.getElementById(`gabs-rel-fim-${t}`)?.value    || '',
+    };
+  }
+  document.getElementById('gabs-modal-relatorio')?.remove();
+
+  const pdqs = _absPeriodo
+    ? `?start_date=${_absPeriodo.start}&end_date=${_absPeriodo.end}&include_records=true`
+    : '?include_records=true';
+  let data;
+  try {
+    const res = await fetch(`${API}/gestao/absenteismo/team${pdqs}`, { credentials:'include' });
+    if (!res.ok) throw new Error(`Erro ${res.status}`);
+    data = await res.json();
+  } catch(e) { toast('Erro ao gerar relatório: ' + e.message, 'erro'); return; }
+  const funcionarios = data.employees || [];
+
+  const TURNO_MAP = { 'Manhã':'manha', 'Tarde':'tarde', 'Madrugada':'madrugada', 'Outros':'madrugada' };
+  const TURNO_ORDER = ['Manhã','Tarde','Madrugada','Outros'];
+
+  // Agrupa por turno e aplica filtros de data
+  const grupos = {};
+  for (const func of funcionarios) {
+    const turno = _parseTurno(func.schedule);
+    if (!grupos[turno]) grupos[turno] = [];
+    const key   = TURNO_MAP[turno] || 'manha';
+    const ini   = cfg[key].inicio;
+    const fim   = cfg[key].fim;
+    // filtra daily_records pelo intervalo configurado
+    const recs  = (func.daily_records || []).filter(r => {
+      if (ini && r.date < ini) return false;
+      if (fim && r.date > fim) return false;
+      return true;
+    });
+    const faltas    = recs.filter(r => r.falta    === true || (r.status||'').toLowerCase().includes('falta')).length;
+    const atestados = recs.filter(r => r.atestado === true || (r.status||'').toLowerCase().includes('atestado')).length;
+    // atrasos: igual ao relatório de atrasos mas sobre os recs filtrados
+    const schedMatch = (func.schedule||'').match(/(\d+)h/);
+    const schedStart = schedMatch ? parseInt(schedMatch[1])*60 : null;
+    let sched = schedStart;
+    if (sched !== null) {
+      const entries = recs.map(r=>toM(r.entry_time)).filter(v=>v!==null).sort((a,b)=>a-b);
+      if (entries.length) { const typ=entries[Math.floor(entries.length/2)]; if(Math.abs(typ-sched)>90) sched=null; }
+    }
+    let totalAtrasoMin = 0;
+    for (const r of recs) {
+      const entry=toM(r.entry_time), ls=toM(r.lunch_start), le=toM(r.lunch_end), bs=toM(r.break_start), be=toM(r.break_end);
+      if (sched!==null && entry!==null && entry>sched) totalAtrasoMin += entry-sched;
+      if (ls!==null && le!==null && le-ls>LUNCH_MIN) totalAtrasoMin += (le-ls)-LUNCH_MIN;
+      if (bs!==null && be!==null && be-bs>BREAK_MIN)  totalAtrasoMin += (be-bs)-BREAK_MIN;
+    }
+    // subtrai tolerância ativa
+    const diasComAtraso = recs.filter(r=>{
+      const e=toM(r.entry_time); return sched!==null && e!==null && e>sched && (e-sched)>_absToleranciMin;
+    }).length;
+    const totalAtrasoAdj = Math.max(0, totalAtrasoMin - (diasComAtraso * _absToleranciMin));
+
+    grupos[turno].push({ ...func, _recs: recs, _faltas: faltas, _atestados: atestados, _atrasoMin: totalAtrasoAdj });
+  }
+
+  // Monta HTML do relatório
+  const periodoLabel = _absPeriodo
+    ? `${fmtDt(_absPeriodo.start)} a ${fmtDt(_absPeriodo.end)}`
+    : 'Todos os períodos';
+
+  let secoes = '';
+  let totFuncs=0, totFaltas=0, totAtestados=0, totAtraso=0;
+
+  for (const turno of TURNO_ORDER) {
+    const funcs = grupos[turno];
+    if (!funcs?.length) continue;
+    const key = TURNO_MAP[turno] || 'manha';
+    const ini = cfg[key].inicio, fim = cfg[key].fim;
+    const subPeriodo = ini ? `${fmtDt(ini)} a ${fmtDt(fim||_absPeriodo?.end||'')}` : periodoLabel;
+
+    const tFaltas    = funcs.reduce((s,f)=>s+f._faltas,0);
+    const tAtestados = funcs.reduce((s,f)=>s+f._atestados,0);
+    const tAtraso    = funcs.reduce((s,f)=>s+f._atrasoMin,0);
+    totFuncs+=funcs.length; totFaltas+=tFaltas; totAtestados+=tAtestados; totAtraso+=tAtraso;
+
+    const linhas = funcs
+      .sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'))
+      .map(f => {
+        const bg = f._faltas>0||f._atestados>0||f._atrasoMin>0 ? '#fffbeb' : '#fff';
+        const atrasoStr = f._atrasoMin>0 ? `<span style="color:#dc2626;font-weight:700">${fmtHM(f._atrasoMin)}</span>` : '<span style="color:#94a3b8">—</span>';
+        return `<tr style="background:${bg};border-bottom:1px solid #f1f5f9">
+          <td style="padding:7px 12px;font-weight:600">${f.name}</td>
+          <td style="padding:7px 8px;font-size:11px;color:#64748b">${f.sector||'—'}</td>
+          <td style="padding:7px 8px;text-align:center">${f._recs.length}</td>
+          <td style="padding:7px 8px;text-align:center;color:${f._faltas>0?'#dc2626':'inherit'};font-weight:${f._faltas>0?'700':'400'}">${f._faltas||'—'}</td>
+          <td style="padding:7px 8px;text-align:center;color:${f._atestados>0?'#d97706':'inherit'};font-weight:${f._atestados>0?'700':'400'}">${f._atestados||'—'}</td>
+          <td style="padding:7px 8px;text-align:right">${atrasoStr}</td>
+        </tr>`;
+      }).join('');
+
+    secoes += `
+    <div style="margin-bottom:32px">
+      <div style="display:flex;align-items:baseline;gap:16px;margin-bottom:10px;padding-bottom:6px;border-bottom:3px solid #0F172A">
+        <span style="font-size:15px;font-weight:900;text-transform:uppercase;letter-spacing:.5px">${turno}</span>
+        <span style="font-size:11px;color:#64748b">${subPeriodo}</span>
+        <span style="margin-left:auto;font-size:11px;color:#64748b">${funcs.length} funcionário${funcs.length!==1?'s':''}</span>
+      </div>
+      <div style="display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap">
+        <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:10px 16px;min-width:100px">
+          <div style="font-size:9px;font-weight:800;color:#94a3b8;letter-spacing:.5px">FALTAS</div>
+          <div style="font-size:24px;font-weight:900;color:#dc2626">${tFaltas}</div>
+        </div>
+        <div style="background:#fefce8;border:1px solid #fde68a;border-radius:8px;padding:10px 16px;min-width:100px">
+          <div style="font-size:9px;font-weight:800;color:#94a3b8;letter-spacing:.5px">ATESTADOS</div>
+          <div style="font-size:24px;font-weight:900;color:#ca8a04">${tAtestados}</div>
+        </div>
+        <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:10px 16px;min-width:100px">
+          <div style="font-size:9px;font-weight:800;color:#94a3b8;letter-spacing:.5px">ATRASO TOTAL</div>
+          <div style="font-size:24px;font-weight:900;color:#dc2626">${fmtHM(tAtraso)}</div>
+        </div>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead>
+          <tr style="background:#f8fafc">
+            <th style="padding:7px 12px;text-align:left;font-size:10px;font-weight:800;color:#64748b;letter-spacing:.5px;border-bottom:2px solid #e2e8f0">FUNCIONÁRIO</th>
+            <th style="padding:7px 8px;text-align:left;font-size:10px;font-weight:800;color:#64748b;letter-spacing:.5px;border-bottom:2px solid #e2e8f0">SETOR</th>
+            <th style="padding:7px 8px;text-align:center;font-size:10px;font-weight:800;color:#64748b;letter-spacing:.5px;border-bottom:2px solid #e2e8f0">DIAS</th>
+            <th style="padding:7px 8px;text-align:center;font-size:10px;font-weight:800;color:#64748b;letter-spacing:.5px;border-bottom:2px solid #e2e8f0">FALTAS</th>
+            <th style="padding:7px 8px;text-align:center;font-size:10px;font-weight:800;color:#64748b;letter-spacing:.5px;border-bottom:2px solid #e2e8f0">ATESTADOS</th>
+            <th style="padding:7px 8px;text-align:right;font-size:10px;font-weight:800;color:#64748b;letter-spacing:.5px;border-bottom:2px solid #e2e8f0">ATRASO</th>
+          </tr>
+        </thead>
+        <tbody>${linhas}</tbody>
+      </table>
+    </div>`;
+  }
+
+  const html = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Relatório Geral de Absenteísmo</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Segoe UI',Arial,sans-serif;color:#1e293b;background:#fff;padding:28px;max-width:900px;margin:0 auto}
+    @media print{body{padding:12px}button{display:none!important}div{page-break-inside:avoid}}
+  </style>
+</head>
+<body>
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;padding-bottom:16px;border-bottom:3px solid #0F172A">
+    <div>
+      <div style="font-size:20px;font-weight:900;letter-spacing:-.3px">Relatório Geral de Absenteísmo</div>
+      <div style="font-size:12px;color:#64748b;margin-top:3px">Período base: ${periodoLabel} · Gerado em ${new Date().toLocaleString('pt-BR')}</div>
+    </div>
+    <button onclick="window.print()" style="padding:8px 16px;background:#0F172A;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">Imprimir / PDF</button>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:28px">
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px 16px">
+      <div style="font-size:9px;font-weight:800;color:#94a3b8;letter-spacing:.5px">FUNCIONÁRIOS</div>
+      <div style="font-size:28px;font-weight:900;color:#1e293b;margin-top:2px">${totFuncs}</div>
+    </div>
+    <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:14px 16px">
+      <div style="font-size:9px;font-weight:800;color:#94a3b8;letter-spacing:.5px">TOTAL FALTAS</div>
+      <div style="font-size:28px;font-weight:900;color:#dc2626;margin-top:2px">${totFaltas}</div>
+    </div>
+    <div style="background:#fefce8;border:1px solid #fde68a;border-radius:10px;padding:14px 16px">
+      <div style="font-size:9px;font-weight:800;color:#94a3b8;letter-spacing:.5px">TOTAL ATESTADOS</div>
+      <div style="font-size:28px;font-weight:900;color:#ca8a04;margin-top:2px">${totAtestados}</div>
+    </div>
+    <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:14px 16px">
+      <div style="font-size:9px;font-weight:800;color:#94a3b8;letter-spacing:.5px">ATRASO GERAL</div>
+      <div style="font-size:28px;font-weight:900;color:#dc2626;margin-top:2px">${fmtHM(totAtraso)}</div>
+    </div>
+  </div>
+
+  ${secoes}
+</body>
+</html>`;
+
+  const w = window.open('', '_blank');
+  w.document.write(html);
+  w.document.close();
+}
 
 /* ── Relatório de atrasos e voltas antecipadas ── */
 async function gerarRelatorioAbs() {
