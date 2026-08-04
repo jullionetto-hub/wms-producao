@@ -977,132 +977,75 @@ async function absFeedbackTexto(id, nome, matricula) {
     if (!res.ok) throw new Error(`Erro ${res.status}`);
     const data = await res.json();
 
-    const LUNCH_MIN = 60, BREAK_MIN = 15;
-    const toM    = s => { if (!s) return null; const [h,m] = s.split(':').map(Number); return h*60+m; };
-    const fmtD   = s => s ? new Date(s+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}) : '—';
-    const fmtMin = m => m >= 60 ? `${Math.floor(m/60)}h${String(m%60).padStart(2,'0')}min` : `${m}min`;
+    const toM  = s => { if (!s) return null; const [h,m] = s.split(':').map(Number); return h*60+m; };
+    const fmtD = s => s ? new Date(s+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}) : '—';
+    const fmtMin = m => m >= 60 ? `${Math.floor(m/60)}h${m%60>0?String(m%60).padStart(2,'0')+'min':''}` : `${m}min`;
 
     const allRec = data.daily_records || [];
     const schedM = (data.schedule||'').match(/(\d+)h/);
     const schedStart = schedM ? parseInt(schedM[1])*60 : null;
 
-    const diasTrab = allRec.filter(r => r.status === 'normal' && r.entry_time)
-      .sort((a,b) => a.date < b.date ? -1 : 1);
+    // Faltas
+    const faltaRecs = allRec.filter(r => r.falta).sort((a,b)=>a.date<b.date?-1:1);
 
-    // Classificar eventos por dia
-    const atrasos = [], almocosProlong = [], retornosAntecip = [], pausasProlong = [];
-    for (const r of diasTrab) {
-      const entry = toM(r.entry_time);
-      const ls = toM(r.lunch_start), le = toM(r.lunch_end);
-      const bs = toM(r.break_start), be = toM(r.break_end);
-
-      if (schedStart !== null && entry !== null && entry > schedStart) {
-        atrasos.push({ date: r.date, min: entry - schedStart });
-      }
-      if (ls !== null && le !== null && le - ls > LUNCH_MIN) {
-        almocosProlong.push({ date: r.date, min: (le-ls) - LUNCH_MIN });
-      }
-      if (ls !== null && le !== null && le - ls > 0 && le - ls < LUNCH_MIN) {
-        retornosAntecip.push({ date: r.date, min: LUNCH_MIN - (le-ls) });
-      }
-      if (bs !== null && be !== null && be - bs > BREAK_MIN) {
-        pausasProlong.push({ date: r.date, min: (be-bs) - BREAK_MIN });
-      }
-    }
-
-    // Atestados: agrupar dias consecutivos
-    const atesRecs = allRec.filter(r => r.atestado).sort((a,b) => a.date < b.date ? -1 : 1);
+    // Atestados agrupados por consecutivos
+    const atesRecs = allRec.filter(r => r.atestado).sort((a,b)=>a.date<b.date?-1:1);
     const gruposAtes = [];
     for (const r of atesRecs) {
       const last = gruposAtes[gruposAtes.length-1];
       if (last) {
-        const d0 = new Date(last[last.length-1].date+'T12:00:00');
-        const d1 = new Date(r.date+'T12:00:00');
-        if (Math.round((d1-d0)/86400000) === 1) { last.push(r); continue; }
+        const diff = Math.round((new Date(r.date+'T12:00:00') - new Date(last[last.length-1].date+'T12:00:00')) / 86400000);
+        if (diff === 1) { last.push(r); continue; }
       }
       gruposAtes.push([r]);
     }
 
-    // Faltas
-    const faltaRecs = allRec.filter(r => r.falta).sort((a,b) => a.date < b.date ? -1 : 1);
+    // Atrasos na entrada (todos, independente de tolerância)
+    const atrasos = allRec
+      .filter(r => r.status === 'normal' && r.entry_time && schedStart !== null)
+      .map(r => ({ date: r.date, min: Math.max(0, (toM(r.entry_time)||0) - schedStart) }))
+      .filter(r => r.min > 0)
+      .sort((a,b)=>a.date<b.date?-1:1);
 
-    // Folga BH
-    const folgaRecs = allRec.filter(r => { const s=(r.status||'').toLowerCase(); return s.includes('folga')||s.includes('banco'); })
-      .sort((a,b) => a.date < b.date ? -1 : 1);
+    const totalAtraso = atrasos.reduce((s,r)=>s+r.min,0);
 
-    const partes = [];
+    // Monta HTML lado a lado
+    const colFaltas = `
+      <div style="flex:1;min-width:0">
+        <div style="font-size:9px;font-weight:800;color:#dc2626;letter-spacing:.5px;margin-bottom:6px">FALTAS</div>
+        <div style="font-size:28px;font-weight:900;color:#dc2626;margin-bottom:8px">${faltaRecs.length}</div>
+        ${faltaRecs.length ? faltaRecs.map(r=>`<div style="font-size:12px;padding:3px 0;border-bottom:1px solid #fecaca;color:#7f1d1d">• ${fmtD(r.date)}</div>`).join('') : '<div style="font-size:11px;color:#94a3b8">Nenhuma falta</div>'}
+      </div>`;
 
-    // Faltas
-    if (faltaRecs.length) {
-      const datas = faltaRecs.map(r => fmtD(r.date)).join(', ');
-      partes.push(`Falta${faltaRecs.length>1?'s':''} injustificada${faltaRecs.length>1?'s':''} (${faltaRecs.length}): ${datas}.`);
-    }
+    const colAtestados = `
+      <div style="flex:1;min-width:0">
+        <div style="font-size:9px;font-weight:800;color:#d97706;letter-spacing:.5px;margin-bottom:6px">ATESTADOS</div>
+        <div style="font-size:28px;font-weight:900;color:#d97706;margin-bottom:8px">${atesRecs.length} dia${atesRecs.length!==1?'s':''}</div>
+        ${gruposAtes.length ? gruposAtes.map(g=>{
+          const n=g.length;
+          return `<div style="font-size:12px;padding:3px 0;border-bottom:1px solid #fde68a;color:#92400e">• ${n===1?fmtD(g[0].date):`${fmtD(g[0].date)} – ${fmtD(g[n-1].date)}`} <span style="color:#d97706">(${n}d)</span></div>`;
+        }).join('') : '<div style="font-size:11px;color:#94a3b8">Nenhum atestado</div>'}
+      </div>`;
 
-    // Atestados
-    for (const g of gruposAtes) {
-      const n = g.length;
-      if (n === 1) partes.push(`Atestado médico — dia ${fmtD(g[0].date)} (1 dia).`);
-      else partes.push(`Atestado médico — ${fmtD(g[0].date)} a ${fmtD(g[n-1].date)} (${n} dias consecutivos).`);
-    }
+    const colAtrasos = `
+      <div style="flex:1;min-width:0">
+        <div style="font-size:9px;font-weight:800;color:#7c3aed;letter-spacing:.5px;margin-bottom:6px">ATRASOS NA ENTRADA</div>
+        <div style="font-size:28px;font-weight:900;color:#7c3aed;margin-bottom:8px">${atrasos.length ? fmtMin(totalAtraso) : '—'}</div>
+        ${atrasos.length ? atrasos.map(r=>{
+          const dentroTol = _absToleranciMin>0 && r.min<=_absToleranciMin;
+          return `<div style="font-size:12px;padding:3px 0;border-bottom:1px solid #ede9fe;color:${dentroTol?'#94a3b8':'#4c1d95'}">• ${fmtD(r.date)}: <b>${fmtMin(r.min)}</b>${dentroTol?' <span style="font-size:10px">(tol.)</span>':''}</div>`;
+        }).join('') : '<div style="font-size:11px;color:#94a3b8">Nenhum atraso</div>'}
+      </div>`;
 
-    // Atrasos — mostra TODOS, com nota de tolerância
-    if (atrasos.length) {
-      const totalMin = atrasos.reduce((s,r)=>s+r.min,0);
-      const dentroTol = atrasos.filter(r => r.min <= _absToleranciMin);
-      const detalhes = atrasos.map(r =>
-        `${fmtD(r.date)}: ${fmtMin(r.min)}${r.min <= _absToleranciMin && _absToleranciMin>0 ? ' (dentro da tolerância)' : ''}`
-      );
-      partes.push(`Atraso${atrasos.length>1?'s':''} na entrada (${atrasos.length}x · total ${fmtMin(totalMin)}${dentroTol.length && _absToleranciMin>0 ? ` · ${dentroTol.length} dentro da tolerância de ${_absToleranciMin}min`:''}):` +
-        `\n  ${detalhes.join('\n  ')}`);
-    }
+    const html = `<div style="display:flex;gap:16px;align-items:flex-start">${colFaltas}<div style="width:1px;background:var(--border);align-self:stretch"></div>${colAtestados}<div style="width:1px;background:var(--border);align-self:stretch"></div>${colAtrasos}</div>`;
 
-    // Retornos antecipados do almoço
-    if (retornosAntecip.length) {
-      const totalMin = retornosAntecip.reduce((s,r)=>s+r.min,0);
-      const detalhes = retornosAntecip.map(r => `${fmtD(r.date)}: ${fmtMin(r.min)} a menos`);
-      partes.push(`Retorno antecipado do almoço (${retornosAntecip.length}x · total ${fmtMin(totalMin)}):` +
-        `\n  ${detalhes.join('\n  ')}`);
-    }
-
-    // Almoços prolongados
-    if (almocosProlong.length) {
-      const totalMin = almocosProlong.reduce((s,r)=>s+r.min,0);
-      const detalhes = almocosProlong.map(r => `${fmtD(r.date)}: ${fmtMin(r.min)} a mais`);
-      partes.push(`Almoço${almocosProlong.length>1?'s':''} prolongado${almocosProlong.length>1?'s':''} (${almocosProlong.length}x · excesso total ${fmtMin(totalMin)}):` +
-        `\n  ${detalhes.join('\n  ')}`);
-    }
-
-    // Pausas prolongadas
-    if (pausasProlong.length) {
-      const totalMin = pausasProlong.reduce((s,r)=>s+r.min,0);
-      const detalhes = pausasProlong.map(r => `${fmtD(r.date)}: ${fmtMin(r.min)} a mais`);
-      partes.push(`Pausa${pausasProlong.length>1?'s':''} prolongada${pausasProlong.length>1?'s':''} (${pausasProlong.length}x · excesso total ${fmtMin(totalMin)}):` +
-        `\n  ${detalhes.join('\n  ')}`);
-    }
-
-    // Folga BH
-    if (folgaRecs.length) {
-      const datas = folgaRecs.map(r => fmtD(r.date)).join(', ');
-      partes.push(`Banco de horas (${folgaRecs.length} dia${folgaRecs.length>1?'s':''}): ${datas}.`);
-    }
-
-    // Horas positivas / extras
-    const hmMatch = (data.positive_hours||'').match(/^0*(\d+):(\d{2})$/);
-    if (hmMatch) {
-      const h = parseInt(hmMatch[1]), m = parseInt(hmMatch[2]);
-      if (h > 0 || m > 0) {
-        const s = h > 0 && m > 0 ? `${h}h${m}min` : h > 0 ? `${h}h` : `${m}min`;
-        partes.push(`Horas positivas no período: ${s}.`);
-      }
-    }
-
-    _absFeedbackModal(partes.join('\n\n') || 'Sem ocorrências registradas no período.', nome);
+    _absFeedbackModal(html, nome, true);
   } catch(e) {
-    _absFeedbackModal(`Erro ao gerar feedback: ${e.message}`, nome);
+    _absFeedbackModal(`Erro ao gerar feedback: ${e.message}`, nome, false);
   }
 }
 
-function _absFeedbackModal(texto, nome) {
+function _absFeedbackModal(texto, nome, isHtml) {
   const prev = document.getElementById('abs-feedback-modal');
   if (prev) prev.remove();
 
@@ -1112,26 +1055,42 @@ function _absFeedbackModal(texto, nome) {
   overlay.onclick = e => { if (e.target === overlay) overlay.remove(); };
 
   const isLoading = texto === null;
+  const modalWidth = isHtml ? '680px' : '560px';
+
+  let bodyHtml;
+  if (isLoading) {
+    bodyHtml = '<div style="color:var(--text3);font-size:13px;padding:20px 0;text-align:center">Gerando...</div>';
+  } else if (isHtml) {
+    bodyHtml = `
+      <div style="overflow-x:auto;padding:4px 0">${texto}</div>
+      <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end">
+        <button onclick="document.getElementById('abs-feedback-modal').remove()"
+          style="padding:8px 20px;background:var(--surface);border:1.5px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;color:var(--text2)">
+          Fechar
+        </button>
+      </div>`;
+  } else {
+    bodyHtml = `
+      <textarea id="abs-fb-txt" style="width:100%;min-height:160px;border:1.5px solid var(--border);border-radius:8px;padding:12px;font-size:13px;line-height:1.7;resize:vertical;color:var(--text);background:var(--surface);font-family:inherit;box-sizing:border-box">${texto}</textarea>
+      <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end">
+        <button id="abs-copy-btn" onclick="(() => { const t=document.getElementById('abs-fb-txt'),b=document.getElementById('abs-copy-btn'); navigator.clipboard.writeText(t.value).then(()=>{ b.textContent='Copiado!'; b.style.background='#16a34a'; setTimeout(()=>{ b.textContent='Copiar'; b.style.background=''; },2200); }); })()"
+          style="padding:8px 20px;background:var(--accent,#3b82f6);color:#fff;border:none;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer">
+          Copiar
+        </button>
+        <button onclick="document.getElementById('abs-feedback-modal').remove()"
+          style="padding:8px 16px;background:var(--surface);border:1.5px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;color:var(--text2)">
+          Fechar
+        </button>
+      </div>`;
+  }
+
   overlay.innerHTML = `
-    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:20px;max-width:560px;width:100%;box-shadow:0 20px 40px rgba(0,0,0,.35)">
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:20px;max-width:${modalWidth};width:100%;box-shadow:0 20px 40px rgba(0,0,0,.35)">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
         <div style="font-weight:900;font-size:15px;color:var(--text)">Feedback — ${nome}</div>
         <button onclick="document.getElementById('abs-feedback-modal').remove()" style="background:transparent;border:none;font-size:18px;cursor:pointer;color:var(--text3);line-height:1;padding:0 4px">✕</button>
       </div>
-      ${isLoading
-        ? '<div style="color:var(--text3);font-size:13px;padding:20px 0;text-align:center">Gerando texto...</div>'
-        : `<textarea id="abs-fb-txt" style="width:100%;min-height:160px;border:1.5px solid var(--border);border-radius:8px;padding:12px;font-size:13px;line-height:1.7;resize:vertical;color:var(--text);background:var(--surface);font-family:inherit;box-sizing:border-box">${texto}</textarea>
-           <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end">
-             <button id="abs-copy-btn" onclick="(() => { const t=document.getElementById('abs-fb-txt'),b=document.getElementById('abs-copy-btn'); navigator.clipboard.writeText(t.value).then(()=>{ b.textContent='Copiado!'; b.style.background='#16a34a'; setTimeout(()=>{ b.textContent='Copiar'; b.style.background=''; },2200); }); })()"
-               style="padding:8px 20px;background:var(--accent,#3b82f6);color:#fff;border:none;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer">
-               Copiar
-             </button>
-             <button onclick="document.getElementById('abs-feedback-modal').remove()"
-               style="padding:8px 16px;background:var(--surface);border:1.5px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;color:var(--text2)">
-               Fechar
-             </button>
-           </div>`
-      }
+      ${bodyHtml}
     </div>`;
   document.body.appendChild(overlay);
 }
