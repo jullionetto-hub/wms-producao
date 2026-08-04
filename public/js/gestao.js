@@ -1190,8 +1190,10 @@ async function absExportarMatriz(wmsId, nome, matricula) {
 
     // Período label
     const mesLabel = (() => {
-      if (!_absPeriodo?.start) return '';
-      const d = new Date(_absPeriodo.start + 'T12:00:00');
+      // Usa a data de fim do período (mês principal do ciclo)
+      const ref = _absPeriodo?.end || _absPeriodo?.start;
+      if (!ref) return '';
+      const d = new Date(ref + 'T12:00:00');
       return d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
     })();
 
