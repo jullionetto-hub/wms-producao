@@ -982,16 +982,18 @@ async function absFeedbackTexto(id, nome, matricula) {
     if (!res.ok) throw new Error(`Erro ${res.status}`);
     const data = await res.json();
 
+    const LUNCH_MIN = 60, BREAK_MIN = 15;
     const toM  = s => { if (!s) return null; const [h,m] = s.split(':').map(Number); return h*60+m; };
     const fmtD = s => s ? new Date(s+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}) : '—';
     const fmtMin = m => m >= 60 ? `${Math.floor(m/60)}h${m%60>0?String(m%60).padStart(2,'0')+'min':''}` : `${m}min`;
+    const divider = `<div style="width:1px;background:var(--border);align-self:stretch;flex-shrink:0"></div>`;
 
     const allRec = data.daily_records || [];
     const schedM = (data.schedule||'').match(/(\d+)h/);
     const schedStart = schedM ? parseInt(schedM[1])*60 : null;
 
-    // Faltas
-    const faltaRecs = allRec.filter(r => r.falta).sort((a,b)=>a.date<b.date?-1:1);
+    // Faltas (sem atestado)
+    const faltaRecs = allRec.filter(r => r.falta && !r.atestado).sort((a,b)=>a.date<b.date?-1:1);
 
     // Atestados agrupados por consecutivos
     const atesRecs = allRec.filter(r => r.atestado).sort((a,b)=>a.date<b.date?-1:1);
@@ -1005,44 +1007,52 @@ async function absFeedbackTexto(id, nome, matricula) {
       gruposAtes.push([r]);
     }
 
-    // Atrasos na entrada (todos, independente de tolerância)
+    // Atrasos na entrada
     const atrasos = allRec
       .filter(r => r.status === 'normal' && r.entry_time && schedStart !== null)
       .map(r => ({ date: r.date, min: Math.max(0, (toM(r.entry_time)||0) - schedStart) }))
       .filter(r => r.min > 0)
       .sort((a,b)=>a.date<b.date?-1:1);
-
     const totalAtraso = atrasos.reduce((s,r)=>s+r.min,0);
 
-    // Monta HTML lado a lado
-    const colFaltas = `
-      <div style="flex:1;min-width:0">
-        <div style="font-size:9px;font-weight:800;color:#dc2626;letter-spacing:.5px;margin-bottom:6px">FALTAS</div>
-        <div style="font-size:28px;font-weight:900;color:#dc2626;margin-bottom:8px">${faltaRecs.length}</div>
-        ${faltaRecs.length ? faltaRecs.map(r=>`<div style="font-size:12px;padding:3px 0;border-bottom:1px solid #fecaca;color:#7f1d1d">• ${fmtD(r.date)}</div>`).join('') : '<div style="font-size:11px;color:#94a3b8">Nenhuma falta</div>'}
+    // Almoço prolongado (voltou tarde do almoço)
+    const almocoProl = allRec
+      .filter(r => r.status === 'normal' && r.lunch_start && r.lunch_end)
+      .map(r => { const dur=(toM(r.lunch_end)||0)-(toM(r.lunch_start)||0); return { date:r.date, min: dur-LUNCH_MIN }; })
+      .filter(r => r.min > 0)
+      .sort((a,b)=>a.date<b.date?-1:1);
+    const totalAlmoco = almocoProl.reduce((s,r)=>s+r.min,0);
+
+    // Pausa prolongada (voltou tarde da pausa)
+    const pausaProl = allRec
+      .filter(r => r.status === 'normal' && r.break_start && r.break_end)
+      .map(r => { const dur=(toM(r.break_end)||0)-(toM(r.break_start)||0); return { date:r.date, min: dur-BREAK_MIN }; })
+      .filter(r => r.min > 0)
+      .sort((a,b)=>a.date<b.date?-1:1);
+    const totalPausa = pausaProl.reduce((s,r)=>s+r.min,0);
+
+    // Helper para montar coluna
+    const col = (label, cor, corBorder, bigVal, items, emptyMsg) => `
+      <div style="flex:1;min-width:0;overflow:hidden">
+        <div style="font-size:9px;font-weight:800;color:${cor};letter-spacing:.5px;margin-bottom:5px">${label}</div>
+        <div style="font-size:24px;font-weight:900;color:${cor};margin-bottom:7px;line-height:1">${bigVal}</div>
+        <div style="max-height:200px;overflow-y:auto">
+          ${items.length ? items.map(it=>`<div style="font-size:11px;padding:2px 0;border-bottom:1px solid ${corBorder};color:var(--text2)">• ${it}</div>`).join('') : `<div style="font-size:11px;color:#94a3b8">${emptyMsg}</div>`}
+        </div>
       </div>`;
 
-    const colAtestados = `
-      <div style="flex:1;min-width:0">
-        <div style="font-size:9px;font-weight:800;color:#d97706;letter-spacing:.5px;margin-bottom:6px">ATESTADOS</div>
-        <div style="font-size:28px;font-weight:900;color:#d97706;margin-bottom:8px">${atesRecs.length} dia${atesRecs.length!==1?'s':''}</div>
-        ${gruposAtes.length ? gruposAtes.map(g=>{
-          const n=g.length;
-          return `<div style="font-size:12px;padding:3px 0;border-bottom:1px solid #fde68a;color:#92400e">• ${n===1?fmtD(g[0].date):`${fmtD(g[0].date)} – ${fmtD(g[n-1].date)}`} <span style="color:#d97706">(${n}d)</span></div>`;
-        }).join('') : '<div style="font-size:11px;color:#94a3b8">Nenhum atestado</div>'}
-      </div>`;
+    const colFaltas    = col('FALTAS',              '#dc2626','#fecaca', faltaRecs.length,
+      faltaRecs.map(r=>fmtD(r.date)), 'Nenhuma falta');
+    const colAtestados = col('ATESTADOS',           '#d97706','#fde68a', `${atesRecs.length}d`,
+      gruposAtes.map(g=>{ const n=g.length; return n===1?fmtD(g[0].date):`${fmtD(g[0].date)}–${fmtD(g[n-1].date)} (${n}d)`; }), 'Nenhum atestado');
+    const colAtrasos   = col('ATRASO ENTRADA',      '#7c3aed','#ede9fe', almocoProl.length||atrasos.length ? fmtMin(totalAtraso)||'—' : '—',
+      atrasos.map(r=>{ const tol=_absToleranciMin>0&&r.min<=_absToleranciMin; return `${fmtD(r.date)}: <b>${fmtMin(r.min)}</b>${tol?' (tol.)':''}`; }), 'Nenhum atraso');
+    const colAlmoco    = col('ALMOÇO PROLONG.',     '#b45309','#fde68a', almocoProl.length ? fmtMin(totalAlmoco) : '—',
+      almocoProl.map(r=>`${fmtD(r.date)}: <b>+${fmtMin(r.min)}</b>`), 'Nenhum');
+    const colPausa     = col('PAUSA PROLONG.',      '#0369a1','#bae6fd', pausaProl.length ? fmtMin(totalPausa) : '—',
+      pausaProl.map(r=>`${fmtD(r.date)}: <b>+${fmtMin(r.min)}</b>`), 'Nenhuma');
 
-    const colAtrasos = `
-      <div style="flex:1;min-width:0">
-        <div style="font-size:9px;font-weight:800;color:#7c3aed;letter-spacing:.5px;margin-bottom:6px">ATRASOS NA ENTRADA</div>
-        <div style="font-size:28px;font-weight:900;color:#7c3aed;margin-bottom:8px">${atrasos.length ? fmtMin(totalAtraso) : '—'}</div>
-        ${atrasos.length ? atrasos.map(r=>{
-          const dentroTol = _absToleranciMin>0 && r.min<=_absToleranciMin;
-          return `<div style="font-size:12px;padding:3px 0;border-bottom:1px solid #ede9fe;color:${dentroTol?'#94a3b8':'#4c1d95'}">• ${fmtD(r.date)}: <b>${fmtMin(r.min)}</b>${dentroTol?' <span style="font-size:10px">(tol.)</span>':''}</div>`;
-        }).join('') : '<div style="font-size:11px;color:#94a3b8">Nenhum atraso</div>'}
-      </div>`;
-
-    const html = `<div style="display:flex;gap:16px;align-items:flex-start">${colFaltas}<div style="width:1px;background:var(--border);align-self:stretch"></div>${colAtestados}<div style="width:1px;background:var(--border);align-self:stretch"></div>${colAtrasos}</div>`;
+    const html = `<div style="display:flex;gap:12px;align-items:flex-start;overflow-x:auto">${colFaltas}${divider}${colAtestados}${divider}${colAtrasos}${divider}${colAlmoco}${divider}${colPausa}</div>`;
 
     _absFeedbackModal(html, nome, true);
   } catch(e) {
@@ -1060,7 +1070,7 @@ function _absFeedbackModal(texto, nome, isHtml) {
   overlay.onclick = e => { if (e.target === overlay) overlay.remove(); };
 
   const isLoading = texto === null;
-  const modalWidth = isHtml ? '680px' : '560px';
+  const modalWidth = isHtml ? '900px' : '560px';
 
   let bodyHtml;
   if (isLoading) {
