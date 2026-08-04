@@ -1144,6 +1144,7 @@ async function absExportarMatriz(wmsId, nome, matricula) {
       fetch(`${API}/gestao/absenteismo/matriz/feedbacks`, { credentials: 'include' }).then(r => r.json()),
     ]);
 
+    const LUNCH_MIN = 60, BREAK_MIN = 15;
     const allRec    = empRes.daily_records || [];
     const schedM    = (empRes.schedule||'').match(/(\d+)h/);
     const schedStart = schedM ? parseInt(schedM[1])*60 : null;
@@ -1156,7 +1157,19 @@ async function absExportarMatriz(wmsId, nome, matricula) {
       .map(r => ({ date: r.date, min: Math.max(0, (toM(r.entry_time)||0) - schedStart) }))
       .filter(r => r.min > 0)
       .sort((a,b)=>a.date<b.date?-1:1);
-    const totalAtrasoMin = atrasoRecs.reduce((s,r)=>s+r.min,0);
+    const almocoProlRecs = allRec
+      .filter(r => r.status === 'normal' && r.lunch_start && r.lunch_end)
+      .map(r => { const dur=(toM(r.lunch_end)||0)-(toM(r.lunch_start)||0); return { date:r.date, min: dur-LUNCH_MIN }; })
+      .filter(r => r.min > 0)
+      .sort((a,b)=>a.date<b.date?-1:1);
+    const pausaProlRecs = allRec
+      .filter(r => r.status === 'normal' && r.break_start && r.break_end)
+      .map(r => { const dur=(toM(r.break_end)||0)-(toM(r.break_start)||0); return { date:r.date, min: dur-BREAK_MIN }; })
+      .filter(r => r.min > 0)
+      .sort((a,b)=>a.date<b.date?-1:1);
+    const totalAtrasoMin = atrasoRecs.reduce((s,r)=>s+r.min,0)
+                         + almocoProlRecs.reduce((s,r)=>s+r.min,0)
+                         + pausaProlRecs.reduce((s,r)=>s+r.min,0);
 
     // Agrupa atestados consecutivos
     const gruposAtes = [];
@@ -1174,6 +1187,14 @@ async function absExportarMatriz(wmsId, nome, matricula) {
     if (atrasoRecs.length) {
       linhas.push('Atrasos na entrada:');
       atrasoRecs.forEach(r => linhas.push(`  ${fmtD(r.date)}: ${fmtMin(r.min)}`));
+    }
+    if (almocoProlRecs.length) {
+      linhas.push('Almoço prolongado:');
+      almocoProlRecs.forEach(r => linhas.push(`  ${fmtD(r.date)}: +${fmtMin(r.min)}`));
+    }
+    if (pausaProlRecs.length) {
+      linhas.push('Pausa prolongada:');
+      pausaProlRecs.forEach(r => linhas.push(`  ${fmtD(r.date)}: +${fmtMin(r.min)}`));
     }
     if (faltaRecs.length) {
       linhas.push('Faltas injustificadas:');
