@@ -1131,22 +1131,21 @@ async function absExportarMatriz(wmsId, nome, matricula) {
     const fmtD = s => s ? new Date(s+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}) : '—';
     const fmtMin = m => m >= 60 ? `${Math.floor(m/60)}h${m%60>0?String(m%60).padStart(2,'0')+'min':''}` : `${m}min`;
 
-    // Busca dados WMS e colaboradores da Matriz em paralelo
-    const uid  = _absPeriodo?.upload_id;
-    const pdqs = uid ? `?upload_id=${uid}&include_records=true`
-                     : `?start_date=${_absPeriodo?.start}&end_date=${_absPeriodo?.end}&include_records=true`;
+    // Busca dados individuais do funcionário + colaboradores da Matriz em paralelo
+    const params = {};
+    if (_absPeriodo?.start) params.start_date = _absPeriodo.start;
+    if (_absPeriodo?.end)   params.end_date   = _absPeriodo.end;
+    if (matricula)          params.matricula   = matricula;
+    const qs = Object.keys(params).length ? '?' + new URLSearchParams(params) : '';
 
-    const [teamRes, matrizCols, matrizFbs] = await Promise.all([
-      fetch(`${API}/gestao/absenteismo/team${pdqs}`, { credentials: 'include' }).then(r => r.json()),
+    const [empRes, matrizCols, matrizFbs] = await Promise.all([
+      fetch(`${API}/gestao/absenteismo/funcionario/${wmsId}${qs}`, { credentials: 'include' }).then(r => r.json()),
       fetch(`${API}/gestao/absenteismo/matriz/colaboradores`, { credentials: 'include' }).then(r => r.json()),
       fetch(`${API}/gestao/absenteismo/matriz/feedbacks`, { credentials: 'include' }).then(r => r.json()),
     ]);
 
-    const emp = (teamRes.employees || []).find(e => e.id === wmsId);
-    if (!emp) throw new Error('Funcionário não encontrado nos dados do período');
-
-    const allRec   = emp.daily_records || [];
-    const schedM   = (emp.schedule||'').match(/(\d+)h/);
+    const allRec    = empRes.daily_records || [];
+    const schedM    = (empRes.schedule||'').match(/(\d+)h/);
     const schedStart = schedM ? parseInt(schedM[1])*60 : null;
 
     // Computa dados de absenteísmo
