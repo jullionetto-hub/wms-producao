@@ -42,6 +42,49 @@ async function absProxy(path, query = {}) {
   return res.json();
 }
 
+/* ─── Matriz de Responsabilidades — proxy ─── */
+const MATRIZ_URL  = (process.env.MATRIZ_URL || 'https://matriz-responsabilidades-production.up.railway.app').replace(/\/$/, '');
+const MATRIZ_USER = process.env.MATRIZ_EMAIL    || '';
+const MATRIZ_PASS = process.env.MATRIZ_PASSWORD || '';
+
+let _matrizToken    = null;
+let _matrizTokenExp = 0;
+
+async function getMatrizToken() {
+  if (_matrizToken && Date.now() < _matrizTokenExp) return _matrizToken;
+  if (!MATRIZ_USER || !MATRIZ_PASS) throw new Error('Credenciais da Matriz não configuradas (MATRIZ_EMAIL / MATRIZ_PASSWORD)');
+  const body = new URLSearchParams();
+  body.set('username', MATRIZ_USER);
+  body.set('password', MATRIZ_PASS);
+  const res = await fetch(`${MATRIZ_URL}/api/auth/login`, { method: 'POST', body });
+  if (!res.ok) {
+    let d = ''; try { d = (await res.json()).detail || ''; } catch {}
+    throw new Error(`Auth Matriz ${res.status}: ${d}`);
+  }
+  const { access_token } = await res.json();
+  _matrizToken    = access_token;
+  _matrizTokenExp = Date.now() + 50 * 60 * 1000;
+  return _matrizToken;
+}
+
+async function matrizGet(path) {
+  const token = await getMatrizToken();
+  const res = await fetch(`${MATRIZ_URL}${path}`, { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) { let d=''; try{d=(await res.json()).detail||'';}catch{} throw new Error(`Matriz ${res.status}: ${d}`); }
+  return res.json();
+}
+
+async function matrizSend(method, path, body) {
+  const token = await getMatrizToken();
+  const res = await fetch(`${MATRIZ_URL}${path}`, {
+    method,
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) { let d=''; try{d=(await res.json()).detail||'';}catch{} throw new Error(`Matriz ${res.status}: ${d}`); }
+  return res.status === 204 ? null : res.json();
+}
+
 const requerGestor = requerPerfil('gestor', 'supervisor');
 
 router.get('/gestao/absenteismo/team', requerAuth, requerGestor, async (req, res) => {
@@ -134,6 +177,32 @@ router.delete('/gestao/absenteismo/funcionarios/batch', requerAuth, requerGestor
         body   : JSON.stringify(req.body),
       });
       res.status(r.status).json(await r.json().catch(() => ({})));
+    } catch (e) { res.status(502).json({ erro: e.message }); }
+  }
+);
+
+/* ─── Rotas Matriz ─── */
+router.get('/gestao/absenteismo/matriz/colaboradores', requerAuth, requerGestor, async (_req, res) => {
+  try { res.json(await matrizGet('/api/colaboradores')); }
+  catch (e) { res.status(502).json({ erro: e.message }); }
+});
+
+router.get('/gestao/absenteismo/matriz/feedbacks', requerAuth, requerGestor, async (_req, res) => {
+  try { res.json(await matrizGet('/api/feedbacks')); }
+  catch (e) { res.status(502).json({ erro: e.message }); }
+});
+
+router.post('/gestao/absenteismo/exportar-matriz', requerAuth, requerGestor,
+  express.json(),
+  async (req, res) => {
+    try {
+      const { colaborador_id, mes, atrasos, faltas_injustificadas, ausencias_justificadas, absenteismo_mes, feedback_id } = req.body;
+      if (!colaborador_id) return res.status(400).json({ erro: 'colaborador_id obrigatório' });
+      const payload = { colaborador_id, mes, atrasos, faltas_injustificadas, ausencias_justificadas, absenteismo_mes };
+      const result  = feedback_id
+        ? await matrizSend('PATCH', `/api/feedbacks/${feedback_id}`, payload)
+        : await matrizSend('POST',  '/api/feedbacks', payload);
+      res.json(result || { ok: true });
     } catch (e) { res.status(502).json({ erro: e.message }); }
   }
 );

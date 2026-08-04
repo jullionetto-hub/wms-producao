@@ -922,6 +922,11 @@ function _renderTabelaAbs(rows) {
                     style="padding:4px 10px;background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;font-size:11px;cursor:pointer;color:var(--text2);font-weight:700">
                     FB
                   </button>
+                  <button onclick="absExportarMatriz(${r.id},'${nome.replace(/'/g,"\\'")}','${(r.matricula||'').replace(/'/g,"\\'")}')"
+                    title="Exportar absenteísmo para a Matriz"
+                    style="padding:4px 10px;background:#1e3a5f;border:1.5px solid #2d5a9e;border-radius:8px;font-size:11px;cursor:pointer;color:#93c5fd;font-weight:700">
+                    Mtz
+                  </button>
                 </div>
               </td>
             </tr>`;
@@ -1093,6 +1098,220 @@ function _absFeedbackModal(texto, nome, isHtml) {
       ${bodyHtml}
     </div>`;
   document.body.appendChild(overlay);
+}
+
+/* ── Exportar para Matriz de Responsabilidades ── */
+async function absExportarMatriz(wmsId, nome, matricula) {
+  const prev = document.getElementById('abs-matriz-modal');
+  if (prev) prev.remove();
+
+  // Modal de loading
+  const overlay = document.createElement('div');
+  overlay.id = 'abs-matriz-modal';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+  overlay.onclick = e => { if (e.target === overlay) overlay.remove(); };
+  overlay.innerHTML = `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:24px;max-width:600px;width:100%;box-shadow:0 20px 40px rgba(0,0,0,.35)">
+    <div style="font-weight:900;font-size:15px;color:var(--text);margin-bottom:16px">Exportar para Matriz — ${nome}</div>
+    <div style="color:var(--text3);font-size:13px">Carregando dados...</div>
+  </div>`;
+  document.body.appendChild(overlay);
+
+  try {
+    const toM  = s => { if (!s) return null; const [h,m] = s.split(':').map(Number); return h*60+m; };
+    const fmtD = s => s ? new Date(s+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}) : '—';
+    const fmtMin = m => m >= 60 ? `${Math.floor(m/60)}h${m%60>0?String(m%60).padStart(2,'0')+'min':''}` : `${m}min`;
+
+    // Busca dados WMS e colaboradores da Matriz em paralelo
+    const uid  = _absPeriodo?.upload_id;
+    const pdqs = uid ? `?upload_id=${uid}&include_records=true`
+                     : `?start_date=${_absPeriodo?.start}&end_date=${_absPeriodo?.end}&include_records=true`;
+
+    const [teamRes, matrizCols, matrizFbs] = await Promise.all([
+      fetch(`${API}/gestao/absenteismo/team${pdqs}`, { credentials: 'include' }).then(r => r.json()),
+      fetch(`${API}/gestao/absenteismo/matriz/colaboradores`, { credentials: 'include' }).then(r => r.json()),
+      fetch(`${API}/gestao/absenteismo/matriz/feedbacks`, { credentials: 'include' }).then(r => r.json()),
+    ]);
+
+    const emp = (teamRes.employees || []).find(e => e.id === wmsId);
+    if (!emp) throw new Error('Funcionário não encontrado nos dados do período');
+
+    const allRec   = emp.daily_records || [];
+    const schedM   = (emp.schedule||'').match(/(\d+)h/);
+    const schedStart = schedM ? parseInt(schedM[1])*60 : null;
+
+    // Computa dados de absenteísmo
+    const faltaRecs = allRec.filter(r => r.falta && !r.atestado).sort((a,b)=>a.date<b.date?-1:1);
+    const atesRecs  = allRec.filter(r => r.atestado).sort((a,b)=>a.date<b.date?-1:1);
+    const atrasoRecs = allRec
+      .filter(r => r.status === 'normal' && r.entry_time && schedStart !== null)
+      .map(r => ({ date: r.date, min: Math.max(0, (toM(r.entry_time)||0) - schedStart) }))
+      .filter(r => r.min > 0)
+      .sort((a,b)=>a.date<b.date?-1:1);
+    const totalAtrasoMin = atrasoRecs.reduce((s,r)=>s+r.min,0);
+
+    // Agrupa atestados consecutivos
+    const gruposAtes = [];
+    for (const r of atesRecs) {
+      const last = gruposAtes[gruposAtes.length-1];
+      if (last) {
+        const diff = Math.round((new Date(r.date+'T12:00:00') - new Date(last[last.length-1].date+'T12:00:00')) / 86400000);
+        if (diff === 1) { last.push(r); continue; }
+      }
+      gruposAtes.push([r]);
+    }
+
+    // Monta texto de detalhes
+    const linhas = [];
+    if (atrasoRecs.length) {
+      linhas.push('Atrasos na entrada:');
+      atrasoRecs.forEach(r => linhas.push(`  ${fmtD(r.date)}: ${fmtMin(r.min)}`));
+    }
+    if (faltaRecs.length) {
+      linhas.push('Faltas injustificadas:');
+      faltaRecs.forEach(r => linhas.push(`  ${fmtD(r.date)}`));
+    }
+    if (gruposAtes.length) {
+      linhas.push('Atestados:');
+      gruposAtes.forEach(g => {
+        const n = g.length;
+        linhas.push(`  ${n===1?fmtD(g[0].date):`${fmtD(g[0].date)} a ${fmtD(g[n-1].date)}`} (${n} dia${n>1?'s':''})`);
+      });
+    }
+    const textoDetalhe = linhas.join('\n');
+
+    // Período label
+    const mesLabel = (() => {
+      if (!_absPeriodo?.start) return '';
+      const d = new Date(_absPeriodo.start + 'T12:00:00');
+      return d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+    })();
+
+    // Match de colaborador na Matriz por nome normalizado
+    const norm = s => (s||'').normalize('NFD').replace(/\p{Diacritic}/gu,'').toLowerCase().trim();
+    const nomeNorm = norm(nome);
+    const matchCol = (Array.isArray(matrizCols) ? matrizCols : []).find(c => norm(c.nome) === nomeNorm)
+                  || (Array.isArray(matrizCols) ? matrizCols : []).find(c => nomeNorm.includes(norm(c.nome)) || norm(c.nome).includes(nomeNorm));
+
+    // Feedback existente no período para este colaborador
+    const fbExistente = matchCol
+      ? (Array.isArray(matrizFbs) ? matrizFbs : []).find(f =>
+          f.colaborador_id === matchCol.id &&
+          (f.mes||'').toLowerCase().includes(mesLabel.split(' ')[0]?.toLowerCase())
+        )
+      : null;
+
+    // Monta opções do select
+    const colOptions = (Array.isArray(matrizCols) ? matrizCols : [])
+      .sort((a,b)=>(a.nome||'').localeCompare(b.nome||''))
+      .map(c => `<option value="${c.id}" ${matchCol&&c.id===matchCol.id?'selected':''}>${c.nome}${c.turno?' · '+c.turno:''}</option>`)
+      .join('');
+
+    const card = overlay.querySelector('div');
+    card.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div style="font-weight:900;font-size:15px;color:var(--text)">Exportar para Matriz — ${nome}</div>
+        <button onclick="document.getElementById('abs-matriz-modal').remove()" style="background:transparent;border:none;font-size:18px;cursor:pointer;color:var(--text3);line-height:1;padding:0 4px">✕</button>
+      </div>
+
+      ${fbExistente ? `<div style="background:#fefce8;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#92400e">
+        Já existe um feedback de <b>${fbExistente.mes}</b> para este colaborador na Matriz. Confirmar vai <b>atualizar</b> os campos de absenteísmo.
+      </div>` : ''}
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+        <div>
+          <div style="font-size:9px;font-weight:800;color:var(--text3);letter-spacing:.5px;margin-bottom:4px">COLABORADOR NA MATRIZ</div>
+          <select id="abs-mtz-colid" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+            <option value="">— selecionar —</option>
+            ${colOptions}
+          </select>
+        </div>
+        <div>
+          <div style="font-size:9px;font-weight:800;color:var(--text3);letter-spacing:.5px;margin-bottom:4px">MÊS/ANO</div>
+          <input id="abs-mtz-mes" value="${mesLabel}" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text);box-sizing:border-box">
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px">
+        <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:12px;text-align:center">
+          <div style="font-size:9px;font-weight:800;color:#dc2626;letter-spacing:.5px;margin-bottom:4px">FALTAS</div>
+          <div style="font-size:26px;font-weight:900;color:#dc2626">${faltaRecs.length}</div>
+        </div>
+        <div style="background:#fefce8;border:1px solid #fde68a;border-radius:10px;padding:12px;text-align:center">
+          <div style="font-size:9px;font-weight:800;color:#d97706;letter-spacing:.5px;margin-bottom:4px">ATESTADOS</div>
+          <div style="font-size:26px;font-weight:900;color:#d97706">${atesRecs.length}</div>
+        </div>
+        <div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:10px;padding:12px;text-align:center">
+          <div style="font-size:9px;font-weight:800;color:#7c3aed;letter-spacing:.5px;margin-bottom:4px">ATRASOS (MIN)</div>
+          <div style="font-size:26px;font-weight:900;color:#7c3aed">${totalAtrasoMin}</div>
+        </div>
+      </div>
+
+      <div style="margin-bottom:14px">
+        <div style="font-size:9px;font-weight:800;color:var(--text3);letter-spacing:.5px;margin-bottom:4px">DETALHES (editável)</div>
+        <textarea id="abs-mtz-detalhe" style="width:100%;min-height:110px;border:1.5px solid var(--border);border-radius:8px;padding:10px;font-size:12px;line-height:1.6;resize:vertical;color:var(--text);background:var(--surface);font-family:inherit;box-sizing:border-box">${textoDetalhe}</textarea>
+      </div>
+
+      <div id="abs-mtz-erro" style="color:#dc2626;font-size:12px;margin-bottom:8px;display:none"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button id="abs-mtz-btn" onclick="absConfirmarExportarMatriz(${faltaRecs.length},${atesRecs.length},${totalAtrasoMin},${fbExistente?fbExistente.id:'null'})"
+          style="padding:9px 22px;background:#1d4ed8;color:#fff;border:none;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer">
+          ${fbExistente ? 'Atualizar na Matriz' : 'Enviar para Matriz'}
+        </button>
+        <button onclick="document.getElementById('abs-matriz-modal').remove()"
+          style="padding:9px 16px;background:var(--surface);border:1.5px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;color:var(--text2)">
+          Cancelar
+        </button>
+      </div>`;
+
+  } catch(e) {
+    const card = overlay.querySelector('div');
+    card.innerHTML = `
+      <div style="font-weight:900;font-size:15px;color:var(--text);margin-bottom:12px">Exportar para Matriz</div>
+      <div style="color:#dc2626;font-size:13px;margin-bottom:16px">Erro: ${e.message}</div>
+      <div style="text-align:right"><button onclick="document.getElementById('abs-matriz-modal').remove()" style="padding:8px 16px;background:var(--surface);border:1.5px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer">Fechar</button></div>`;
+  }
+}
+
+async function absConfirmarExportarMatriz(faltas, atestados, atrasoMin, feedbackId) {
+  const colId   = parseInt(document.getElementById('abs-mtz-colid')?.value);
+  const mes     = document.getElementById('abs-mtz-mes')?.value?.trim();
+  const detalhe = document.getElementById('abs-mtz-detalhe')?.value?.trim();
+  const erroEl  = document.getElementById('abs-mtz-erro');
+  const btn     = document.getElementById('abs-mtz-btn');
+
+  if (!colId) { erroEl.textContent='Selecione o colaborador na Matriz'; erroEl.style.display='block'; return; }
+  if (!mes)   { erroEl.textContent='Informe o mês/ano'; erroEl.style.display='block'; return; }
+  erroEl.style.display = 'none';
+  btn.textContent = 'Enviando...';
+  btn.disabled = true;
+
+  try {
+    const body = {
+      colaborador_id:        colId,
+      mes,
+      atrasos:               atrasoMin || null,
+      faltas_injustificadas: faltas    || null,
+      ausencias_justificadas: atestados || null,
+      absenteismo_mes:       detalhe   || null,
+    };
+    if (feedbackId) body.feedback_id = feedbackId;
+
+    const res = await fetch(`${API}/gestao/absenteismo/exportar-matriz`, {
+      method     : 'POST',
+      credentials: 'include',
+      headers    : { 'Content-Type': 'application/json' },
+      body       : JSON.stringify(body),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.erro || data.detail || `HTTP ${res.status}`);
+    document.getElementById('abs-matriz-modal')?.remove();
+    toast('Exportado para a Matriz com sucesso!', 'sucesso');
+  } catch(e) {
+    erroEl.textContent = 'Erro: ' + e.message;
+    erroEl.style.display = 'block';
+    btn.textContent = feedbackId ? 'Atualizar na Matriz' : 'Enviar para Matriz';
+    btn.disabled = false;
+  }
 }
 
 /* ── helpers de atraso (módulo-level) ── */
