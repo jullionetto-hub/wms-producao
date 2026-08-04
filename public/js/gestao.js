@@ -1162,6 +1162,11 @@ async function absExportarMatriz(wmsId, nome, matricula) {
       .map(r => { const dur=(toM(r.lunch_end)||0)-(toM(r.lunch_start)||0); return { date:r.date, min: dur-LUNCH_MIN }; })
       .filter(r => r.min > 0)
       .sort((a,b)=>a.date<b.date?-1:1);
+    const almocoAntecipadoRecs = allRec
+      .filter(r => r.status === 'normal' && r.lunch_start && r.lunch_end)
+      .map(r => { const dur=(toM(r.lunch_end)||0)-(toM(r.lunch_start)||0); return { date:r.date, min: LUNCH_MIN-dur }; })
+      .filter(r => r.min > 0)
+      .sort((a,b)=>a.date<b.date?-1:1);
     const pausaProlRecs = allRec
       .filter(r => r.status === 'normal' && r.break_start && r.break_end)
       .map(r => { const dur=(toM(r.break_end)||0)-(toM(r.break_start)||0); return { date:r.date, min: dur-BREAK_MIN }; })
@@ -1191,6 +1196,10 @@ async function absExportarMatriz(wmsId, nome, matricula) {
     if (almocoProlRecs.length) {
       linhas.push('Almoço prolongado:');
       almocoProlRecs.forEach(r => linhas.push(`  ${fmtD(r.date)}: +${fmtMin(r.min)}`));
+    }
+    if (almocoAntecipadoRecs.length) {
+      linhas.push('Retorno antecipado do almoço:');
+      almocoAntecipadoRecs.forEach(r => linhas.push(`  ${fmtD(r.date)}: -${fmtMin(r.min)}`));
     }
     if (pausaProlRecs.length) {
       linhas.push('Pausa prolongada:');
