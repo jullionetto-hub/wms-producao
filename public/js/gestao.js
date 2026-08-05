@@ -1062,7 +1062,31 @@ async function absFeedbackTexto(id, nome, matricula) {
     const colAntecipado = col('RETORNO ANTECIP.',   '#0f766e','#99f6e4', almocoAntecipado.length ? `${almocoAntecipado.length}d` : '—',
       almocoAntecipado.map(r=>`${fmtD(r.date)}: <b>-${fmtMin(r.min)}</b>`), 'Nenhum');
 
-    const html = `<div style="display:flex;gap:12px;align-items:flex-start;overflow-x:auto">${colFaltas}${divider}${colAtestados}${divider}${colAtrasos}${divider}${colAlmoco}${divider}${colPausa}${divider}${colAntecipado}</div>`;
+    // Texto cronológico de todos os eventos (copiável)
+    const eventos = [];
+    faltaRecs.forEach(r        => eventos.push({ date: r.date, txt: 'falta injustificada' }));
+    atesRecs.forEach(r         => eventos.push({ date: r.date, txt: 'atestado' }));
+    atrasos.forEach(r          => eventos.push({ date: r.date, txt: `${fmtMin(r.min)} atraso entrada` }));
+    almocoProl.forEach(r       => eventos.push({ date: r.date, txt: `${fmtMin(r.min)} almoço prolongado` }));
+    almocoAntecipado.forEach(r => eventos.push({ date: r.date, txt: `${fmtMin(r.min)} retorno antecipado almoço` }));
+    pausaProl.forEach(r        => eventos.push({ date: r.date, txt: `${fmtMin(r.min)} pausa prolongada` }));
+    eventos.sort((a,b) => a.date < b.date ? -1 : 1);
+    const textoEvt = eventos.length
+      ? eventos.map(e => `${fmtD(e.date)} ${e.txt}`).join(', ')
+      : 'Sem ocorrências no período';
+
+    const html = `
+      <div style="display:flex;gap:12px;align-items:flex-start;overflow-x:auto">${colFaltas}${divider}${colAtestados}${divider}${colAtrasos}${divider}${colAlmoco}${divider}${colPausa}${divider}${colAntecipado}</div>
+      <div style="margin-top:14px">
+        <div style="font-size:9px;font-weight:800;color:var(--text3);letter-spacing:.5px;margin-bottom:5px">TEXTO PARA COPIAR</div>
+        <textarea id="abs-fb-cronol" style="width:100%;min-height:72px;border:1.5px solid var(--border);border-radius:8px;padding:10px;font-size:12px;line-height:1.6;resize:vertical;color:var(--text);background:var(--surface);font-family:inherit;box-sizing:border-box">${textoEvt}</textarea>
+        <div style="text-align:right;margin-top:6px">
+          <button onclick="(() => { const t=document.getElementById('abs-fb-cronol'),b=this; navigator.clipboard.writeText(t.value).then(()=>{ b.textContent='Copiado!'; b.style.background='#16a34a'; setTimeout(()=>{ b.textContent='Copiar texto'; b.style.background=''; },2200); }); })()"
+            style="padding:7px 18px;background:var(--accent,#3b82f6);color:#fff;border:none;border-radius:8px;font-weight:700;font-size:12px;cursor:pointer">
+            Copiar texto
+          </button>
+        </div>
+      </div>`;
 
     _absFeedbackModal(html, nome, true);
   } catch(e) {
