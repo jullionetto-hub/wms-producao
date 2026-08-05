@@ -1031,6 +1031,14 @@ async function absFeedbackTexto(id, nome, matricula) {
       .sort((a,b)=>a.date<b.date?-1:1);
     const totalPausa = pausaProl.reduce((s,r)=>s+r.min,0);
 
+    // Retorno antecipado do almoço (almoço < 60 min)
+    const almocoAntecipado = allRec
+      .filter(r => r.status === 'normal' && r.lunch_start && r.lunch_end)
+      .map(r => { const dur=(toM(r.lunch_end)||0)-(toM(r.lunch_start)||0); return { date:r.date, min: LUNCH_MIN-dur }; })
+      .filter(r => r.min > 0)
+      .sort((a,b)=>a.date<b.date?-1:1);
+    const totalAntecipado = almocoAntecipado.reduce((s,r)=>s+r.min,0);
+
     // Helper para montar coluna
     const col = (label, cor, corBorder, bigVal, items, emptyMsg) => `
       <div style="flex:1;min-width:0;overflow:hidden">
@@ -1051,8 +1059,10 @@ async function absFeedbackTexto(id, nome, matricula) {
       almocoProl.map(r=>`${fmtD(r.date)}: <b>+${fmtMin(r.min)}</b>`), 'Nenhum');
     const colPausa     = col('PAUSA PROLONG.',      '#0369a1','#bae6fd', pausaProl.length ? fmtMin(totalPausa) : '—',
       pausaProl.map(r=>`${fmtD(r.date)}: <b>+${fmtMin(r.min)}</b>`), 'Nenhuma');
+    const colAntecipado = col('RETORNO ANTECIP.',   '#0f766e','#99f6e4', almocoAntecipado.length ? `${almocoAntecipado.length}d` : '—',
+      almocoAntecipado.map(r=>`${fmtD(r.date)}: <b>-${fmtMin(r.min)}</b>`), 'Nenhum');
 
-    const html = `<div style="display:flex;gap:12px;align-items:flex-start;overflow-x:auto">${colFaltas}${divider}${colAtestados}${divider}${colAtrasos}${divider}${colAlmoco}${divider}${colPausa}</div>`;
+    const html = `<div style="display:flex;gap:12px;align-items:flex-start;overflow-x:auto">${colFaltas}${divider}${colAtestados}${divider}${colAtrasos}${divider}${colAlmoco}${divider}${colPausa}${divider}${colAntecipado}</div>`;
 
     _absFeedbackModal(html, nome, true);
   } catch(e) {
