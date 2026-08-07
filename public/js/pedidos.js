@@ -1219,12 +1219,13 @@ async function abrirModalDistribuicao() {
   // Reseta modo Prime
   _modoPrime = false;
   _aplicarEstadoPrime();
-  // Pré-preenche data com hoje (se ainda não tiver valor)
-  const _dd = document.getElementById('dist-data');
-  if (_dd && !_dd.value) {
-    const _h = new Date();
-    _dd.value = `${_h.getFullYear()}-${String(_h.getMonth()+1).padStart(2,'0')}-${String(_h.getDate()).padStart(2,'0')}`;
-  }
+  // Pré-preenche intervalo de datas com hoje (se ainda não tiver valor)
+  const _hoje = new Date();
+  const _hojeStr = `${_hoje.getFullYear()}-${String(_hoje.getMonth()+1).padStart(2,'0')}-${String(_hoje.getDate()).padStart(2,'0')}`;
+  const _ddDe = document.getElementById('dist-data-de');
+  const _ddAte = document.getElementById('dist-data-ate');
+  if (_ddDe && !_ddDe.value) _ddDe.value = _hojeStr;
+  if (_ddAte && !_ddAte.value) _ddAte.value = _hojeStr;
   // Recalcula pontuação de pedidos antigos em background
   fetch(`${API}/pedidos/recalcular-pontuacao`, { method:'POST', credentials:'include' }).catch(()=>{});
   // Reseta cenário para o padrão
@@ -1594,7 +1595,8 @@ async function carregarSeparadoresDistribuicao() {
 }
 async function carregarPedidosDistribuicao() {
   try {
-    const dataFiltro = document.getElementById('dist-data')?.value || '';
+    const dataFiltroDE  = document.getElementById('dist-data-de')?.value || '';
+    const dataFiltroATE = document.getElementById('dist-data-ate')?.value || '';
     const res = await fetch(`${API}/pedidos?status=pendente`, { credentials:'include' });
     const pedidos = await res.json();
     const el = document.getElementById('dist-preview');
@@ -1609,11 +1611,21 @@ async function carregarPedidosDistribuicao() {
     } else {
       lista = lista.filter(p => !p.tem_prime);
     }
-    // Filtro por data: compara com aguardando_desde (formato DD/MM/YYYY HH:MM)
-    if (dataFiltro) {
-      const [ano, mes, dia] = dataFiltro.split('-');
-      const dataBR = `${dia}/${mes}/${ano}`;
-      lista = lista.filter(p => String(p.aguardando_desde||'').startsWith(dataBR));
+    // Filtro por intervalo de data: compara com aguardando_desde (formato DD/MM/YYYY HH:MM)
+    if (dataFiltroDE || dataFiltroATE) {
+      const toBR = v => { if (!v) return ''; const [a,m,d] = v.split('-'); return `${d}/${m}/${a}`; };
+      const toNum = v => { if (!v) return null; const [d,m,a] = v.split('/'); return parseInt(`${a}${m}${d}`); };
+      const deNum  = dataFiltroDE  ? toNum(toBR(dataFiltroDE))  : null;
+      const ateNum = dataFiltroATE ? toNum(toBR(dataFiltroATE)) : null;
+      lista = lista.filter(p => {
+        const ds = String(p.aguardando_desde||'');
+        const partes = ds.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+        if (!partes) return false;
+        const pNum = parseInt(`${partes[3]}${partes[2]}${partes[1]}`);
+        if (deNum  && pNum < deNum)  return false;
+        if (ateNum && pNum > ateNum) return false;
+        return true;
+      });
     }
     // Converte DD/MM/YYYY HH:MM → YYYY-MM-DD HH:MM para comparação cronológica correta
     const toISO = v => {
@@ -1639,9 +1651,11 @@ async function carregarPedidosDistribuicao() {
 function imprimirPedidosDistribuicao() {
   const el = document.getElementById('dist-preview');
   if (!el) return;
-  const dataVal = document.getElementById('dist-data')?.value || '';
-  const dataFmt = dataVal
-    ? new Date(dataVal + 'T12:00:00').toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric' })
+  const dataValDE  = document.getElementById('dist-data-de')?.value  || '';
+  const dataValATE = document.getElementById('dist-data-ate')?.value || '';
+  const fmtBR = v => v ? new Date(v + 'T12:00:00').toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric' }) : '';
+  const dataFmt = (dataValDE || dataValATE)
+    ? (dataValDE === dataValATE ? fmtBR(dataValDE) : `${fmtBR(dataValDE)||'início'} até ${fmtBR(dataValATE)||'hoje'}`)
     : 'Todos os dias';
   const tabela = el.querySelector('table');
   if (!tabela) { toast('Nenhum pedido para imprimir.', 'aviso'); return; }
