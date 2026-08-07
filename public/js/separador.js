@@ -442,17 +442,17 @@ async function carregarFilaMobile() {
 
     await carregarTaxaSeparacao();
 
-    // Card de separação em lote para turno noite (2+ pedidos pendentes)
-    const isNoite = separadorAtual?.turno === 'Noite';
+    // Card de separação em lote — disponível para todos os turnos (2+ pedidos pendentes)
     const pendentesLote = ordenadosMob.filter(p => p.status !== 'separando' && p.status !== 'concluido');
     _lotePendentes = pendentesLote.map(p => ({ id: p.id, numero_pedido: p.numero_pedido, total_itens: p.total_itens || p.itens || 0 }));
-    const loteCard = (isNoite && pendentesLote.length >= 2)
+    const turnoLabel = separadorAtual?.turno || 'Lote';
+    const loteCard = (pendentesLote.length >= 2)
       ? `<div onclick="abrirPreparacaoLote(_lotePendentes)"
            style="border:2px solid #7c3aed;border-radius:12px;padding:14px;margin-bottom:12px;background:linear-gradient(135deg,#faf5ff,#ede9fe);cursor:pointer">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-            <div style="width:38px;height:38px;border-radius:10px;background:#7c3aed;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0">N</div>
+            <div style="width:38px;height:38px;border-radius:10px;background:#7c3aed;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0">${turnoLabel[0].toUpperCase()}</div>
             <div>
-              <div style="font-size:14px;font-weight:700;color:#4c1d95">Separação em Lote — Noite</div>
+              <div style="font-size:14px;font-weight:700;color:#4c1d95">Separação em Lote — ${turnoLabel}</div>
               <div style="font-size:11px;color:#6d28d9">${pendentesLote.length} pedidos · todos de uma vez</div>
             </div>
             <span style="margin-left:auto;font-size:18px;color:#7c3aed">›</span>
