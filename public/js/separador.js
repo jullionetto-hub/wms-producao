@@ -442,11 +442,11 @@ async function carregarFilaMobile() {
 
     await carregarTaxaSeparacao();
 
-    // Card de separação em lote — disponível para todos os turnos (2+ pedidos pendentes)
+    // Card de separação em lote — desabilitado temporariamente para todos os turnos
     const pendentesLote = ordenadosMob.filter(p => p.status !== 'separando' && p.status !== 'concluido');
     _lotePendentes = pendentesLote.map(p => ({ id: p.id, numero_pedido: p.numero_pedido, total_itens: p.total_itens || p.itens || 0 }));
     const turnoLabel = separadorAtual?.turno || 'Lote';
-    const loteCard = (pendentesLote.length >= 2)
+    const loteCard = (false)
       ? `<div onclick="abrirPreparacaoLote(_lotePendentes)"
            style="border:2px solid #7c3aed;border-radius:12px;padding:14px;margin-bottom:12px;background:linear-gradient(135deg,#faf5ff,#ede9fe);cursor:pointer">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
