@@ -4,6 +4,7 @@
 // 3. Varre direita até Z: R → S → T → U → V → W → X → Y → Z
 const ROTA_FISICA = ['E','D','C','B','A','Q','P','O','N','M','L','K','J','I','H','Arara','G','F','ZA','R','S','T','U','V','W','X','Y','Z'];
 const _checklistSortDir = 1;
+const CAIXA_OBRIGATORIA = false; // mudar para true para reativar vínculo de caixa
 
 /* ══════════════════════════════════════════
    SEPARAÇÃO EM LOTE — TURNO NOITE
@@ -342,7 +343,7 @@ async function confirmarPedidoMobile() {
 
 async function carregarChecklistMobile() {
   if (!pedidoAtualId) return;
-  if (!caixaJaVinculada) return; // não mostra itens sem caixa vinculada
+  if (CAIXA_OBRIGATORIA && !caixaJaVinculada) return;
   try {
     const res = await fetch(`${API}/pedidos/${pedidoAtualId}/itens`, { credentials:'include' });
     itensAtuais = await res.json();
@@ -808,7 +809,7 @@ async function _confirmarPedidoCore(num, inputId, statusId, clWrapId, fnChecklis
         }
       } catch(e) { console.warn(e); }
       await fnChecklist();
-    } else {
+    } else if (CAIXA_OBRIGATORIA) {
       // Exige caixa antes de mostrar itens
       caixaJaVinculada = false;
       mostrarCampoCaixa(true);
@@ -819,6 +820,12 @@ async function _confirmarPedidoCore(num, inputId, statusId, clWrapId, fnChecklis
         <div style="font-size:13px;font-weight:700;color:#B91C1C;margin-bottom:4px;">Vincule a caixa para iniciar</div>
         <div style="font-size:11px;color:#94A3B8;">A lista de itens só aparece após vincular o número da caixa</div>
       </div>`;
+    } else {
+      // Caixa desabilitada — libera checklist direto
+      caixaJaVinculada = true;
+      mostrarCampoCaixa(false);
+      ph.style.display = 'none';
+      await fnChecklist();
     }
     fnFila();
   } catch(e) { toast('Erro ao conectar!','erro'); }
@@ -968,7 +975,7 @@ function renderChecklist(prefix) {
     if(bc){bc.style.display='block';bc.disabled=true;bc.textContent=`CONCLUIR (${total-verificados} pend.)`}
     if(ba) ba.style.display='none';
     if(bf) bf.style.display='none';
-  } else if (!caixaVinculada && pedidoAtualId) {
+  } else if (CAIXA_OBRIGATORIA && !caixaVinculada && pedidoAtualId) {
     if(bc){bc.style.display='block';bc.disabled=true;bc.textContent='VINCULE A CAIXA ANTES DE CONCLUIR'}
     if(ba) ba.style.display='none';
     if(bf) bf.style.display='none';
