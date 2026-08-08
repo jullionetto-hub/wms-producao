@@ -473,7 +473,7 @@ function renderizarBarcodes() {
 
 async function buscarCaixa() {
   const num = document.getElementById('ck-input-caixa')?.value?.trim();
-  if (!num) { toast('Digite o número da caixa!','aviso'); return; }
+  if (!num) { toast('Digite o número do pedido!','aviso'); return; }
   const wrap = document.getElementById('ck-resultado');
   const cont = document.getElementById('ck-res-conteudo');
   const tit  = document.getElementById('ck-res-titulo');
@@ -482,9 +482,9 @@ async function buscarCaixa() {
   try {
     const res  = await fetch(`${API}/checkout/caixa/${encodeURIComponent(num)}`, { credentials:'include' });
     const rows = await res.json();
-    if (tit) tit.textContent = `CAIXA ${num}`;
+    if (tit) tit.textContent = `PEDIDO #${num}`;
     if (!rows.length) {
-      if (cont) cont.innerHTML = '<div style="color:var(--text3);padding:20px;text-align:center;font-size:14px">Nenhum pedido vinculado a esta caixa.</div>';
+      if (cont) cont.innerHTML = '<div style="color:var(--text3);padding:20px;text-align:center;font-size:14px">Pedido não encontrado ou ainda não está aguardando checkout.</div>';
       return;
     }
     if (cont) cont.innerHTML = rows.map(r => {

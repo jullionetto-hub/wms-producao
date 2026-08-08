@@ -1311,13 +1311,12 @@
             </div>
             <!-- Scan input (unificado aqui) -->
             <input type="text" class="bip-input" id="ck-input-caixa"
-              placeholder="Digite ou bipe o número da caixa..."
+              placeholder="Digite o número do pedido..."
               autocomplete="off" inputmode="numeric"
               onkeydown="if(event.key==='Enter')buscarCaixa()"
               style="width:100%;font-size:20px;letter-spacing:3px;margin-bottom:8px;box-sizing:border-box"/>
             <div style="display:flex;gap:8px;margin-bottom:14px">
-              <button onclick="escanearQr('ck-input-caixa', buscarCaixa)" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:#1D4ED8;color:#fff;border:none;border-radius:8px;padding:10px 0;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.5px">Escanear QR</button>
-              <button onclick="buscarCaixa()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:#3B82F6;color:#fff;border:none;border-radius:8px;padding:10px 0;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.5px">▶ Buscar</button>
+              <button onclick="buscarCaixa()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:#3B82F6;color:#fff;border:none;border-radius:8px;padding:10px 0;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.5px">▶ Buscar Pedido</button>
             </div>
             <!-- Resultado da busca (aparece aqui, na mesma tela) -->
             <div id="ck-resultado" style="display:none;margin-bottom:16px;border-top:1px solid var(--border);padding-top:14px">
@@ -2167,7 +2166,7 @@
   <script src="/js/pedidos.js?v=23"></script>
   <script src="/js/separador.js?v=15"></script>
   <script src="/js/repositor.js?v=16"></script>
-  <script src="/js/checkout.js?v=13"></script>
+  <script src="/js/checkout.js?v=14"></script>
   <script src="/js/dashboard.js?v=24"></script>
   <script src="/js/entrada-manual.js?v=6"></script>
   <script src="/js/performance-dash.js?v=7"></script>
