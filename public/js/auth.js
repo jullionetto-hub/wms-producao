@@ -2624,11 +2624,15 @@ async function carregarFilaCkDesk() {
   if (!el) return;
   el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:24px;font-size:13px">Carregando...</div>';
   try {
-    const hoje = new Date().toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo'}).split('/').reverse().join('-');
-    const res  = await fetch(`${API}/checkout?data=${hoje}`, { credentials:'include' });
-    const rows = res.ok ? await res.json() : [];
-    // Fila = pedidos prontos para checkout (exclui aguardando_item e concluido)
-    const fila = rows.filter(r => r.status === 'fila' || r.status === 'pendente');
+    // Busca por status — sem filtro de data para não perder pedidos ao virar meia-noite
+    const [r1, r2] = await Promise.all([
+      fetch(`${API}/checkout?status=fila`,    { credentials:'include' }),
+      fetch(`${API}/checkout?status=pendente`, { credentials:'include' })
+    ]);
+    const fila = [
+      ...(r1.ok ? await r1.json() : []),
+      ...(r2.ok ? await r2.json() : [])
+    ].sort((a, b) => b.id - a.id);
     if (badge) { badge.textContent = fila.length; badge.style.display = fila.length > 0 ? 'inline' : 'none'; }
     if (!fila.length) {
       el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:32px;font-size:13px">Nenhum pedido aguardando checkout</div>';

@@ -165,33 +165,49 @@ router.get('/checkout/caixa/:numero', requerAuth, async (req,res) => {
         [numero]
       );
     }
-    // Fallback: nenhum registro de checkout encontrado — cria automaticamente se existir pedido concluído
+    // Fallback: nenhum registro ativo encontrado
     if (!rows.length) {
-      const ped = await db.get(
-        `SELECT p.id, p.numero_pedido, p.numero_caixa, p.cliente, p.transportadora, p.itens,
-                s.nome as separador_nome, p.separador_id
-         FROM pedidos p
-         LEFT JOIN separadores s ON s.id = p.separador_id
-         WHERE (p.numero_caixa=$1 OR p.numero_pedido=$1)
-           AND p.status='concluido'
-         ORDER BY p.id DESC LIMIT 1`,
+      // 1º: verifica se já existe checkout concluído — não recria
+      const ckConc = await db.all(
+        `SELECT c.*, p.status as ped_status, p.itens as ped_itens,
+                p.numero_caixa, p.cliente, p.transportadora, s.nome as separador_nome
+         FROM checkout c
+         JOIN pedidos p ON c.pedido_id=p.id
+         LEFT JOIN separadores s ON p.separador_id=s.id
+         WHERE (c.numero_caixa=$1 OR c.numero_pedido=$1) AND c.status='concluido'
+         ORDER BY c.id DESC LIMIT 1`,
         [numero]
       );
-      if (ped) {
-        await pool.query(
-          `INSERT INTO checkout (numero_caixa,pedido_id,numero_pedido,separador_nome,status,hora_criacao,data_checkout)
-           VALUES ($1,$2,$3,$4,'pendente',$5,$6)`,
-          [ped.numero_caixa||numero, ped.id, ped.numero_pedido, ped.separador_nome||'', hora, data]
+      if (ckConc.length) {
+        rows = ckConc; // retorna o concluído — frontend mostrará sem botão de confirmar
+      } else {
+        // 2º: pedido concluído sem registro de checkout — cria entrada
+        const ped = await db.get(
+          `SELECT p.id, p.numero_pedido, p.numero_caixa, p.cliente, p.transportadora, p.itens,
+                  s.nome as separador_nome, p.separador_id
+           FROM pedidos p
+           LEFT JOIN separadores s ON s.id = p.separador_id
+           WHERE (p.numero_caixa=$1 OR p.numero_pedido=$1)
+             AND p.status='concluido'
+           ORDER BY p.id DESC LIMIT 1`,
+          [numero]
         );
-        rows = await db.all(
-          `SELECT c.*, p.status as ped_status, p.itens as ped_itens,
-                  p.numero_caixa, p.cliente, p.transportadora, s.nome as separador_nome
-           FROM checkout c
-           JOIN pedidos p ON c.pedido_id=p.id
-           LEFT JOIN separadores s ON p.separador_id=s.id
-           WHERE c.numero_pedido=$1 ORDER BY c.id DESC`,
-          [ped.numero_pedido]
-        );
+        if (ped) {
+          await pool.query(
+            `INSERT INTO checkout (numero_caixa,pedido_id,numero_pedido,separador_nome,status,hora_criacao,data_checkout)
+             VALUES ($1,$2,$3,$4,'pendente',$5,$6)`,
+            [ped.numero_caixa||numero, ped.id, ped.numero_pedido, ped.separador_nome||'', hora, data]
+          );
+          rows = await db.all(
+            `SELECT c.*, p.status as ped_status, p.itens as ped_itens,
+                    p.numero_caixa, p.cliente, p.transportadora, s.nome as separador_nome
+             FROM checkout c
+             JOIN pedidos p ON c.pedido_id=p.id
+             LEFT JOIN separadores s ON p.separador_id=s.id
+             WHERE c.numero_pedido=$1 ORDER BY c.id DESC`,
+            [ped.numero_pedido]
+          );
+        }
       }
     }
     const operador_nome = req.session?.usuario?.nome || '';
