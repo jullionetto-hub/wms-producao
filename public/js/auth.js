@@ -2640,10 +2640,9 @@ async function carregarFilaCkDesk() {
           <span class="pill pendente" style="font-size:10px">aguardando ck</span>
         </div>
         <div style="display:flex;gap:12px;font-size:12px;color:var(--text2)">
-          <span>${r.ped_itens||0}<b style="color:var(--text)">${p.total_itens||p.itens||0} itens</b></span>
-        <span><b style="color:var(--text)">${p.itens||0} SKUs</b></span>
-          <span>${r.separador_nome||'—'}${p.separador_nome||'—'}</span>
-          ${p.numero_caixa ? `<span>Cx: <b style="color:var(--indigo)">${p.numero_caixa}</b></span>` : ''}
+          <span><b style="color:var(--text)">${p.total_itens||p.itens||0} itens</b></span>
+          <span><b style="color:var(--text)">${p.itens||0} SKUs</b></span>
+          <span>${p.separador_nome||'—'}</span>
         </div>
         ${p.concluido_em ? `<div style="font-size:11px;color:var(--text3);margin-top:4px">✓ Sep às ${(p.concluido_em||'').substring(11,16)}</div>` : ''}
         <button class="btn btn-primary btn-sm" style="width:100%;margin-top:8px;padding:10px"
