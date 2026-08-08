@@ -1572,6 +1572,10 @@ async function distManualAtribuir(pedidoId, numeroPedido) {
     });
     const data = await res.json();
     if (!res.ok) { toast(data.erro || 'Erro ao atribuir pedido.', 'erro'); return; }
+    if (data.distribuidos === 0) {
+      toast(`Pedido ${numeroPedido} não foi atribuído — verifique se ainda está pendente.`, 'aviso');
+      return;
+    }
     toast(`Pedido ${numeroPedido} atribuído com sucesso!`, 'sucesso');
     // Remove a linha da tabela
     const tr = document.getElementById(`sep-sel-${pedidoId}`)?.closest('tr');

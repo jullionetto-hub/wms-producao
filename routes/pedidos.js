@@ -788,21 +788,32 @@ router.post('/pedidos/distribuicao/confirmar', requerAuth, requerPerfil('supervi
         // 3. Colaborador não tem registro em separadores (checkout/embalagem/repositor):
         //    cria automaticamente para poder receber pedidos
         if (!dbId) {
-          const user = await db.get('SELECT nome, turno FROM usuarios WHERE id=$1',[item.separador_id]);
+          const user = await db.get('SELECT nome, login, turno FROM usuarios WHERE id=$1',[item.separador_id]);
           if (user) {
-            try {
-              const ins = await pool.query(
-                `INSERT INTO separadores (nome, usuario_id, status, turno)
-                 VALUES ($1,$2,'ativo',$3)
-                 ON CONFLICT (usuario_id) DO UPDATE SET nome=EXCLUDED.nome
-                 RETURNING id`,
-                [user.nome, item.separador_id, user.turno||'Manha']
-              );
-              dbId = ins.rows[0]?.id;
-            } catch(e) {
-              // Se não tiver unique em usuario_id, só busca pelo nome
-              const found = await db.get('SELECT id FROM separadores WHERE nome=$1 LIMIT 1',[user.nome]);
-              dbId = found?.id;
+            // Tenta encontrar por nome ou matricula antes de criar
+            const porNome = await db.get(
+              `SELECT id FROM separadores WHERE LOWER(TRIM(nome))=LOWER(TRIM($1)) LIMIT 1`,
+              [user.nome]
+            );
+            if (porNome) {
+              dbId = porNome.id;
+              // Vincula usuario_id ao registro encontrado
+              pool.query('UPDATE separadores SET usuario_id=$1 WHERE id=$2 AND (usuario_id IS NULL OR usuario_id=0)',
+                [item.separador_id, dbId]).catch(()=>{});
+            } else {
+              // Cria novo registro sem depender de constraint UNIQUE
+              try {
+                const ins = await pool.query(
+                  `INSERT INTO separadores (nome, matricula, usuario_id, status, turno)
+                   VALUES ($1,$2,$3,'ativo',$4) RETURNING id`,
+                  [user.nome, user.login, item.separador_id, user.turno||'Manha']
+                );
+                dbId = ins.rows[0]?.id;
+              } catch(e) {
+                // Último recurso: busca qualquer registro com esse usuario_id (pode ter sido inserido em paralelo)
+                const recheck = await db.get('SELECT id FROM separadores WHERE usuario_id=$1 LIMIT 1',[item.separador_id]);
+                dbId = recheck?.id;
+              }
             }
           }
         }

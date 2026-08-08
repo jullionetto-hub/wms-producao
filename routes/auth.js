@@ -135,10 +135,34 @@ router.get('/auth/me', async (req,res) => {
       await db.get(`SELECT id,nome,matricula,turno,status FROM separadores WHERE usuario_id=$1 AND status='ativo'`, [user.id]) ||
       await db.get(`SELECT id,nome,matricula,turno,status FROM separadores WHERE LOWER(TRIM(nome))=LOWER(TRIM($1)) AND status='ativo'`, [user.nome]) ||
       await db.get(`SELECT id,nome,matricula,turno,status FROM separadores WHERE LOWER(TRIM(matricula))=LOWER(TRIM($1)) AND status='ativo'`, [user.login]);
-    if (separador && !req.session.separador) {
-      req.session.separador = separador;
+    if (separador) {
+      // Garante que usuario_id está vinculado para logins futuros
+      if (!req.session.separador || req.session.separador.id !== separador.id) {
+        req.session.separador = separador;
+      }
       pool.query('UPDATE separadores SET usuario_id=$1 WHERE id=$2 AND (usuario_id IS NULL OR usuario_id=0)',
         [user.id, separador.id]).catch(()=>{});
+    } else {
+      // Nenhum registro encontrado: cria automaticamente (usuário foi adicionado após seu último login)
+      try {
+        const upd = await pool.query(
+          `UPDATE separadores SET usuario_id=$1, nome=$2, status='ativo'
+           WHERE LOWER(TRIM(matricula))=LOWER(TRIM($3)) AND (usuario_id IS NULL OR usuario_id=0)
+           RETURNING id,nome,matricula,turno,status`,
+          [user.id, user.nome, user.login]
+        );
+        if (upd.rows[0]) {
+          separador = upd.rows[0];
+        } else {
+          const ins = await pool.query(
+            `INSERT INTO separadores (nome,matricula,turno,status,usuario_id) VALUES ($1,$2,$3,'ativo',$4)
+             RETURNING id,nome,matricula,turno,status`,
+            [user.nome, user.login, user.turno||'Manha', user.id]
+          );
+          separador = ins.rows[0] || null;
+        }
+        if (separador) req.session.separador = separador;
+      } catch(e) { /* silently fail — separador ficará null */ }
     }
   } else {
     separador = req.session.separador || null;
