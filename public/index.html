@@ -1292,7 +1292,7 @@
           </div>
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
             <div class="cnt-card azul"><div class="cnt-lbl">TOTAL</div><div class="cnt-val" id="ck-cnt-total">0</div><div class="cnt-sub">pedidos</div></div>
-            <div class="cnt-card amarelo" onclick="mudarTabCkDesk('aguardando')" style="cursor:pointer" title="Ver pedidos aguardando"><div class="cnt-lbl">AGUARDANDO ITEM</div><div class="cnt-val" id="ck-cnt-pendentes">0</div><div class="cnt-sub">clique para ver ↗</div></div>
+            <div class="cnt-card amarelo" onclick="mudarTabCkDesk('fila')" style="cursor:pointer" title="Ver pedidos aguardando na fila"><div class="cnt-lbl">AGUARDANDO ITEM</div><div class="cnt-val" id="ck-cnt-pendentes">0</div><div class="cnt-sub">clique para ver ↗</div></div>
             <div class="cnt-card verde"><div class="cnt-lbl">CHECKOUTS</div><div class="cnt-val" id="ck-cnt-checkouts">0</div><div class="cnt-sub">concluídos</div></div>
           </div>
         </div>
@@ -1300,7 +1300,7 @@
         <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap" id="ck-desk-tabbar">
           <button class="rel-turno-btn ativo" id="dcktab-fila"      onclick="mudarTabCkDesk('fila')">FILA <span id="d-cktab-fila-badge" style="display:none;background:#2563EB;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:3px">0</span></button>
           <button class="rel-turno-btn"        id="dcktab-feitos"    onclick="mudarTabCkDesk('feitos')">FEITOS <span id="d-ck-feitos-cnt" style="display:none;background:#10b981;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:3px">0</span></button>
-          <button class="rel-turno-btn"        id="dcktab-aguardando" onclick="mudarTabCkDesk('aguardando')">AGUARDANDO <span id="d-cktab-aguardando-badge" style="display:none;background:#f97316;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:3px">0</span></button>
+          <button class="rel-turno-btn" id="dcktab-aguardando" onclick="mudarTabCkDesk('aguardando')" style="display:none">AGUARDANDO <span id="d-cktab-aguardando-badge" style="display:none;background:#f97316;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:3px">0</span></button>
         </div>
 
         <!-- Tab FILA (unificada com scan) -->
@@ -2172,7 +2172,7 @@
   <script src="/js/performance-dash.js?v=7"></script>
   <script src="/js/dash-logistica.js?v=5"></script>
   <script src="/js/gestao.js?v=40"></script>
-  <script src="/js/auth.js?v=27"></script>
+  <script src="/js/auth.js?v=28"></script>
 
 
 <!-- ══ MODAL IMPORTAR ══ -->

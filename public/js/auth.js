@@ -2624,16 +2624,17 @@ async function carregarFilaCkDesk() {
   if (!el) return;
   el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:24px;font-size:13px">Carregando...</div>';
   try {
-    // Busca por status — sem filtro de data para não perder pedidos ao virar meia-noite
-    const [r1, r2] = await Promise.all([
-      fetch(`${API}/checkout?status=fila`,    { credentials:'include' }),
-      fetch(`${API}/checkout?status=pendente`, { credentials:'include' })
+    const [r1, r2, r3] = await Promise.all([
+      fetch(`${API}/checkout?status=fila`,           { credentials:'include' }),
+      fetch(`${API}/checkout?status=pendente`,        { credentials:'include' }),
+      fetch(`${API}/checkout?status=aguardando_item`, { credentials:'include' })
     ]);
     const rawFila = [
       ...(r1.ok ? await r1.json() : []),
-      ...(r2.ok ? await r2.json() : [])
+      ...(r2.ok ? await r2.json() : []),
+      ...(r3.ok ? await r3.json() : [])
     ].sort((a, b) => b.id - a.id);
-    // Deduplica por numero_pedido mantendo o registro mais recente (maior id)
+    // Deduplica por numero_pedido mantendo o registro mais recente
     const _vistoPed = new Set();
     const fila = rawFila.filter(r => {
       const k = r.numero_pedido || r.id;
@@ -2645,7 +2646,34 @@ async function carregarFilaCkDesk() {
       el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:32px;font-size:13px">Nenhum pedido aguardando checkout</div>';
       return;
     }
-    el.innerHTML = fila.map(r => `
+    el.innerHTML = fila.map(r => {
+      const isAguardando = r.status === 'aguardando_item';
+      if (isAguardando) {
+        let itens = [];
+        try { itens = Array.isArray(r.itens_falta) ? r.itens_falta : (r.itens_falta ? JSON.parse(r.itens_falta) : []); } catch(e) {}
+        return `
+      <div style="border:2px solid #f97316;border-radius:12px;padding:12px 14px;margin-bottom:8px;background:#fff7ed">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <div style="font-size:20px;font-weight:800;color:#c2410c;font-family:'Space Mono',monospace">#${r.numero_pedido}</div>
+          <span style="background:#f97316;color:#fff;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;white-space:nowrap">⏳ aguardando item</span>
+        </div>
+        <div style="display:flex;gap:12px;font-size:12px;color:var(--text2);margin-bottom:4px">
+          <span><b style="color:#92400e">${r.ped_total_itens||r.ped_itens||0} itens</b></span>
+          <span>${r.separador_nome_join||r.separador_nome||'—'}</span>
+          ${r.cliente ? `<span>${r.cliente}</span>` : ''}
+        </div>
+        ${itens.length ? `
+        <div style="background:#fff;border:1px solid #fed7aa;border-radius:8px;padding:6px 10px;margin-bottom:6px">
+          <div style="font-size:10px;font-weight:700;color:#c2410c;letter-spacing:.5px;margin-bottom:3px">ITENS FALTANDO</div>
+          ${itens.map(it=>`<div style="font-size:11px;padding:1px 0"><b>${it.codigo}</b> · ${it.descricao} · x${it.quantidade}</div>`).join('')}
+        </div>` : ''}
+        <button style="width:100%;background:#f97316;color:#fff;border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:700;cursor:pointer"
+          onclick="retomarCheckoutDesk(${r.id},'${r.numero_caixa||r.numero_pedido}')">
+          ▶ Retomar Checkout
+        </button>
+      </div>`;
+      }
+      return `
       <div style="border:1.5px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:8px;background:var(--surface)">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
           <div style="font-size:20px;font-weight:800;color:var(--accent);font-family:'Space Mono',monospace">#${r.numero_pedido}</div>
@@ -2661,7 +2689,8 @@ async function carregarFilaCkDesk() {
           onclick="iniciarCkDesk('${r.numero_pedido||''}')">
           Iniciar Checkout
         </button>
-      </div>`).join('');
+      </div>`;
+    }).join('');
   } catch(e) {
     if (el) el.innerHTML = '<div style="color:var(--red);padding:20px;text-align:center">Erro ao carregar fila</div>';
   }
