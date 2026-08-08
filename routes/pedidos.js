@@ -245,13 +245,13 @@ router.post('/pedidos/lote/concluir', requerAuth, async (req,res) => {
       );
       const ped = await db.get('SELECT numero_pedido,numero_caixa,caixa_lote,separador_id FROM pedidos WHERE id=$1',[id]);
       const sep = ped?.separador_id ? await db.get('SELECT nome FROM separadores WHERE id=$1',[ped.separador_id]) : null;
-      const ckExist = await db.get('SELECT id,status FROM checkout WHERE pedido_id=$1',[id]);
       // Para pedidos de lote usa caixa_lote como número da caixa no checkout
       const ckNumCaixa = ped?.numero_caixa || ped?.caixa_lote || '';
-      if (ckExist) {
-        if (ckExist.status !== 'concluido')
-          await pool.query(`UPDATE checkout SET status='fila',hora_criacao=$1,data_checkout=$2 WHERE pedido_id=$3`,[hora,data,id]);
-      } else {
+      const ckUpd = await pool.query(
+        `UPDATE checkout SET status='fila',hora_criacao=$1,data_checkout=$2 WHERE pedido_id=$3 AND status != 'concluido'`,
+        [hora, data, id]
+      );
+      if (!ckUpd.rowCount) {
         await pool.query(
           `INSERT INTO checkout (numero_caixa,pedido_id,numero_pedido,separador_nome,status,hora_criacao,data_checkout) VALUES ($1,$2,$3,$4,'fila',$5,$6)`,
           [ckNumCaixa,id,ped?.numero_pedido||'',sep?.nome||'',hora,data]
@@ -348,13 +348,11 @@ router.put('/pedidos/:id/concluir', requerAuth, async (req,res) => {
     // Só muda para 'pendente' quando o operador de checkout abre o pedido (GET /checkout/caixa/:numero)
     const ped = await db.get('SELECT numero_pedido, numero_caixa, separador_id FROM pedidos WHERE id=$1',[req.params.id]);
     const sep = ped?.separador_id ? await db.get('SELECT nome FROM separadores WHERE id=$1',[ped.separador_id]) : null;
-    const ckExist = await db.get('SELECT id, status FROM checkout WHERE pedido_id=$1',[req.params.id]);
-    if (ckExist) {
-      // Só rebobina para 'fila' se ainda não foi processado pelo operador
-      if (ckExist.status !== 'concluido') {
-        await pool.query(`UPDATE checkout SET status='fila',hora_criacao=$1,data_checkout=$2 WHERE pedido_id=$3`,[hora,data,req.params.id]);
-      }
-    } else {
+    const ckUpd = await pool.query(
+      `UPDATE checkout SET status='fila',hora_criacao=$1,data_checkout=$2 WHERE pedido_id=$3 AND status != 'concluido'`,
+      [hora, data, req.params.id]
+    );
+    if (!ckUpd.rowCount) {
       await pool.query(
         `INSERT INTO checkout (numero_caixa,pedido_id,numero_pedido,separador_nome,status,hora_criacao,data_checkout) VALUES ($1,$2,$3,$4,'fila',$5,$6)`,
         [ped?.numero_caixa||'',req.params.id,ped?.numero_pedido||'',sep?.nome||'',hora,data]
@@ -392,13 +390,11 @@ router.put('/pedidos/:id/concluir-com-falta', requerAuth, async (req, res) => {
     // Cria ou atualiza registro de checkout como aguardando_item
     const ped = await db.get('SELECT numero_pedido, numero_caixa, separador_id FROM pedidos WHERE id=$1', [req.params.id]);
     const sep = ped?.separador_id ? await db.get('SELECT nome FROM separadores WHERE id=$1', [ped.separador_id]) : null;
-    const ckExist = await db.get('SELECT id FROM checkout WHERE pedido_id=$1', [req.params.id]);
-    if (ckExist) {
-      await pool.query(
-        `UPDATE checkout SET status='aguardando_item', itens_falta=$1, hora_criacao=$2, data_checkout=$3 WHERE pedido_id=$4`,
-        [JSON.stringify(itens_falta), hora, data, req.params.id]
-      );
-    } else {
+    const ckUpd = await pool.query(
+      `UPDATE checkout SET status='aguardando_item', itens_falta=$1, hora_criacao=$2, data_checkout=$3 WHERE pedido_id=$4 AND status != 'concluido'`,
+      [JSON.stringify(itens_falta), hora, data, req.params.id]
+    );
+    if (!ckUpd.rowCount) {
       await pool.query(
         `INSERT INTO checkout (numero_caixa,pedido_id,numero_pedido,separador_nome,status,hora_criacao,data_checkout,itens_falta)
          VALUES ($1,$2,$3,$4,'aguardando_item',$5,$6,$7)`,

@@ -2579,7 +2579,7 @@ async function carregarAguardandoCkDesk() {
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
           <div>
             <div style="font-size:20px;font-weight:800;color:#c2410c;font-family:'Space Mono',monospace">#${r.numero_pedido}</div>
-            <div style="font-size:12px;color:var(--text2)">${r.ped_itens||0}${r.ped_itens||0} itens &nbsp;•&nbsp; ${r.separador_nome||'—'}${r.separador_nome||'—'}</div>
+            <div style="font-size:12px;color:var(--text2)">${r.ped_total_itens||r.ped_itens||0} itens &nbsp;•&nbsp; ${r.separador_nome||'—'}</div>
           </div>
           <button onclick="retomarCheckoutDesk(${r.id},'${r.numero_caixa||r.numero_pedido}')"
             style="background:#f97316;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer">
@@ -2629,10 +2629,17 @@ async function carregarFilaCkDesk() {
       fetch(`${API}/checkout?status=fila`,    { credentials:'include' }),
       fetch(`${API}/checkout?status=pendente`, { credentials:'include' })
     ]);
-    const fila = [
+    const rawFila = [
       ...(r1.ok ? await r1.json() : []),
       ...(r2.ok ? await r2.json() : [])
     ].sort((a, b) => b.id - a.id);
+    // Deduplica por numero_pedido mantendo o registro mais recente (maior id)
+    const _vistoPed = new Set();
+    const fila = rawFila.filter(r => {
+      const k = r.numero_pedido || r.id;
+      if (_vistoPed.has(k)) return false;
+      _vistoPed.add(k); return true;
+    });
     if (badge) { badge.textContent = fila.length; badge.style.display = fila.length > 0 ? 'inline' : 'none'; }
     if (!fila.length) {
       el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:32px;font-size:13px">Nenhum pedido aguardando checkout</div>';
@@ -2681,12 +2688,11 @@ async function carregarFeitosCkDesk() {
       <div style="border:1.5px solid #BBF7D0;border-radius:12px;padding:12px 14px;margin-bottom:8px;background:#F0FDF4">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
           <div style="font-size:20px;font-weight:800;color:var(--green);font-family:'Space Mono',monospace">#${r.numero_pedido||'—'}</div>
-          <span style="font-size:11px;color:var(--green);font-weight:700">${r.hora_checkout||'—'}${r.hora_checkout||'—'}</span>
+          <span style="font-size:11px;color:var(--green);font-weight:700">${r.hora_checkout||'—'}</span>
         </div>
         <div style="display:flex;gap:12px;font-size:12px;color:var(--text2)">
-          <span>${r.ped_itens||0}<b style="color:var(--text)">${r.ped_total_itens||r.ped_itens||0} itens</b></span>
-          <span><b style="color:var(--text)">${r.ped_itens||0} SKUs</b></span>
-          <span>${r.separador_nome||'—'}${r.separador_nome_join||r.separador_nome||'—'}</span>
+          <span><b style="color:var(--text)">${r.ped_total_itens||r.ped_itens||0} itens</b></span>
+          <span>${r.separador_nome_join||r.separador_nome||'—'}</span>
           ${r.operador_nome ? `<span>${r.operador_nome}</span>` : ''}
         </div>
       </div>`).join('');
