@@ -1690,7 +1690,9 @@ async function calcularDistribuicao() {
     const quantidade = parseInt(document.getElementById('dist-quantidade')?.value) || 0;
     const apenasSem = document.getElementById('dist-apenas-sem-sep')?.checked !== false;
     const respeitarHora = document.getElementById('dist-respeitar-hora')?.checked !== false;
-    const res = await fetch(`${API}/pedidos/distribuicao`, { credentials:'include', method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ separadores:seps.map(s=>s.id), quantidade: quantidade||null, apenas_sem_sep:apenasSem, respeitar_hora:respeitarHora, apenas_prime:_modoPrime, cenario:_cenarioDistrib, turno_filtro: _turnoAtivoDistribuicao || null }) });
+    // turno_filtro não é enviado no modo Automática — o botão de turno nos colaboradores
+    // é filtro de UI (mostra/oculta nomes), não filtra os pedidos a distribuir.
+    const res = await fetch(`${API}/pedidos/distribuicao`, { credentials:'include', method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ separadores:seps.map(s=>s.id), quantidade: quantidade||null, apenas_sem_sep:apenasSem, respeitar_hora:respeitarHora, apenas_prime:_modoPrime, cenario:_cenarioDistrib, turno_filtro: null }) });
     const data = await res.json();
     if (data.erro) { toast(data.erro, 'erro'); return; }
     distribuicaoPlano = data.plano;
