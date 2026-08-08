@@ -61,10 +61,24 @@
     });
 
     // Pedido concluído → atualiza dashboard e fila
-    socket.on('pedido:concluido', () => {
+    socket.on('pedido:concluido', (data) => {
       if (typeof carregarFilaMobile === 'function') carregarFilaMobile();
       if (typeof carregarPedidos === 'function') carregarPedidos();
       if (typeof atualizarKPIs === 'function') atualizarKPIs();
+      if (typeof carregarFilaCkDesk === 'function') carregarFilaCkDesk();
+      // Auto-conclusão pelo repositor: avisa o separador que tinha este pedido aberto
+      if (data?.auto && data?.pedido_id &&
+          typeof pedidoAtualId !== 'undefined' && pedidoAtualId == data.pedido_id) {
+        const num = data.numero_pedido ? ` #${data.numero_pedido}` : '';
+        if (typeof toast === 'function') toast(`Pedido${num} concluído pelo repositor!`, 'sucesso');
+        pedidoAtualId = null;
+        if (typeof pedidoAtualNum !== 'undefined') pedidoAtualNum = null;
+        if (typeof itensAtuais !== 'undefined') itensAtuais = [];
+        ['cl-wrap','m-cl-wrap'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
+        ['cl-status-atual','m-status-atual'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
+        if (typeof carregarContadoresSep === 'function') carregarContadoresSep();
+        if (typeof carregarStatsMobile === 'function') carregarStatsMobile();
+      }
     });
 
     // Diário enviado → notifica APENAS o supervisor do próximo turno

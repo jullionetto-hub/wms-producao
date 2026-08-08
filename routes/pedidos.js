@@ -316,6 +316,9 @@ router.put('/itens/:id/verificar', requerAuth, async (req,res) => {
 
 router.put('/pedidos/:id/concluir', requerAuth, async (req,res) => {
   try {
+    // Se o repositor já resolveu os avisos e concluiu automaticamente, retorna sucesso
+    const pedCheck = await db.get('SELECT status FROM pedidos WHERE id=$1', [req.params.id]);
+    if (pedCheck?.status === 'concluido') return res.json({ mensagem: 'Pedido já concluído!' });
     const pend=await db.all(`SELECT id FROM itens_pedido WHERE pedido_id=$1 AND status='pendente'`,[req.params.id]);
     if (pend.length) return res.status(400).json({erro:`Ainda ha ${pend.length} item(s) nao verificado(s)!`});
     const {data,hora}=dataHoraLocal();

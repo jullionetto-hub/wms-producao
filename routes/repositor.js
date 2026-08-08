@@ -352,7 +352,10 @@ async function resolverAvisoEAcumularTempo(req, res, status, extra={}) {
   try {
     const av = await db.get('SELECT pedido_id FROM avisos_repositor WHERE id=$1',[req.params.id]);
     if (!av) return;
-    const ped = await db.get('SELECT aguardando_repositor_desde, tempo_aguardando_min FROM pedidos WHERE id=$1',[av.pedido_id]);
+    const ped = await db.get(
+      'SELECT aguardando_repositor_desde, tempo_aguardando_min, status, numero_pedido, numero_caixa, separador_id FROM pedidos WHERE id=$1',
+      [av.pedido_id]
+    );
     if (!ped || !ped.aguardando_repositor_desde) return;
     const ainda = await db.all("SELECT id FROM avisos_repositor WHERE pedido_id=$1 AND status='pendente'",[av.pedido_id]);
     if (ainda.length > 0) return;
@@ -361,6 +364,50 @@ async function resolverAvisoEAcumularTempo(req, res, status, extra={}) {
     const mins   = Math.round((agora - inicio) / 60000);
     const total  = (ped.tempo_aguardando_min || 0) + (mins > 0 ? mins : 0);
     await pool.query("UPDATE pedidos SET tempo_aguardando_min=$1, aguardando_repositor_desde='' WHERE id=$2",[total, av.pedido_id]);
+
+    // Se o pedido ainda está em 'separando', o separador estava aguardando o repositor
+    // para poder concluir. Conclui automaticamente — sem precisar que o separador
+    // pressione "Concluir" de novo.
+    if (ped.status === 'separando') {
+      const { data, hora } = dataHoraLocal();
+      await pool.query(
+        `UPDATE pedidos SET status='concluido', concluido_em=$1,
+           skus_concluido_em=COALESCE(NULLIF(skus_concluido_em,''),$1)
+         WHERE id=$2`,
+        [data + 'T' + hora, av.pedido_id]
+      );
+      const sep = ped.separador_id ? await db.get('SELECT nome FROM separadores WHERE id=$1',[ped.separador_id]) : null;
+      // Verifica se ainda há itens com falta definitiva (não encontrados pelo repositor)
+      const comFalta = await db.all(
+        "SELECT codigo, descricao, quantidade FROM avisos_repositor WHERE pedido_id=$1 AND status='nao_encontrado'",
+        [av.pedido_id]
+      );
+      if (comFalta.length > 0) {
+        const itens_falta = comFalta.map(a => ({ codigo: a.codigo, descricao: a.descricao, quantidade: a.quantidade }));
+        const ckUpd = await pool.query(
+          `UPDATE checkout SET status='aguardando_item', itens_falta=$1, hora_criacao=$2, data_checkout=$3 WHERE pedido_id=$4 AND status != 'concluido'`,
+          [JSON.stringify(itens_falta), hora, data, av.pedido_id]
+        );
+        if (!ckUpd.rowCount) {
+          await pool.query(
+            `INSERT INTO checkout (numero_caixa,pedido_id,numero_pedido,separador_nome,status,hora_criacao,data_checkout,itens_falta) VALUES ($1,$2,$3,$4,'aguardando_item',$5,$6,$7)`,
+            [ped.numero_caixa||'', av.pedido_id, ped.numero_pedido||'', sep?.nome||'', hora, data, JSON.stringify(itens_falta)]
+          );
+        }
+      } else {
+        const ckUpd = await pool.query(
+          `UPDATE checkout SET status='fila', hora_criacao=$1, data_checkout=$2 WHERE pedido_id=$3 AND status != 'concluido'`,
+          [hora, data, av.pedido_id]
+        );
+        if (!ckUpd.rowCount) {
+          await pool.query(
+            `INSERT INTO checkout (numero_caixa,pedido_id,numero_pedido,separador_nome,status,hora_criacao,data_checkout) VALUES ($1,$2,$3,$4,'fila',$5,$6)`,
+            [ped.numero_caixa||'', av.pedido_id, ped.numero_pedido||'', sep?.nome||'', hora, data]
+          );
+        }
+      }
+      req.app.get('io')?.emit('pedido:concluido', { pedido_id: av.pedido_id, numero_pedido: ped.numero_pedido, auto: true });
+    }
   } catch(e) { console.warn(e); }
 }
 
