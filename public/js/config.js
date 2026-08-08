@@ -602,17 +602,20 @@ async function _carregarEstatisticasPage(page) {
     const pedidos = Array.isArray(data) ? data : (data.dados || []);
 
     // ── Normalizar campos de tempo por tipo de página ──────────────────────
+    // Converte "HH:MM" ou "HH:MM:SS" + data para string ISO — nunca duplica os segundos
+    const toISO = (base, hm) => {
+      if (!base || !hm) return null;
+      return hm.split(':').length >= 3 ? `${base}T${hm}` : `${base}T${hm}:00`;
+    };
     pedidos.forEach(p => {
       if (page === 'ck') {
-        // hora_criacao + hora_checkout são "HH:MM" no mesmo dia data_checkout
         const base = p.data_checkout || '';
-        p._ck_ini = base && p.hora_criacao  ? `${base}T${p.hora_criacao}:00`  : null;
-        p._ck_fim = base && p.hora_checkout ? `${base}T${p.hora_checkout}:00` : null;
+        p._ck_ini = toISO(base, p.hora_criacao);
+        p._ck_fim = toISO(base, p.hora_checkout);
       } else if (page === 'emb') {
-        // embalagem_iniciado_em + embalado_em são "HH:MM" com data_pedido como base
         const base = p.data_pedido || '';
-        p._emb_ini = base && p.embalagem_iniciado_em ? `${base}T${p.embalagem_iniciado_em}:00` : null;
-        p._emb_fim = base && p.embalado_em           ? `${base}T${p.embalado_em}:00`           : null;
+        p._emb_ini = toISO(base, p.embalagem_iniciado_em);
+        p._emb_fim = toISO(base, p.embalado_em);
       }
     });
 
