@@ -2625,28 +2625,29 @@ async function carregarFilaCkDesk() {
   el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:24px;font-size:13px">Carregando...</div>';
   try {
     const hoje = new Date().toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo'}).split('/').reverse().join('-');
-    const res  = await fetch(`${API}/pedidos?status=concluido&data=${hoje}`, { credentials:'include' });
-    const pedidos = res.ok ? await res.json() : [];
-    const fila = pedidos.filter(p => !p.status_embalagem || p.status_embalagem === 'nao_iniciado');
+    const res  = await fetch(`${API}/checkout?data=${hoje}`, { credentials:'include' });
+    const rows = res.ok ? await res.json() : [];
+    // Fila = pedidos prontos para checkout (exclui aguardando_item e concluido)
+    const fila = rows.filter(r => r.status === 'fila' || r.status === 'pendente');
     if (badge) { badge.textContent = fila.length; badge.style.display = fila.length > 0 ? 'inline' : 'none'; }
     if (!fila.length) {
       el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:32px;font-size:13px">Nenhum pedido aguardando checkout</div>';
       return;
     }
-    el.innerHTML = fila.map(p => `
+    el.innerHTML = fila.map(r => `
       <div style="border:1.5px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:8px;background:var(--surface)">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-          <div style="font-size:20px;font-weight:800;color:var(--accent);font-family:'Space Mono',monospace">#${p.numero_pedido}</div>
+          <div style="font-size:20px;font-weight:800;color:var(--accent);font-family:'Space Mono',monospace">#${r.numero_pedido}</div>
           <span class="pill pendente" style="font-size:10px">aguardando ck</span>
         </div>
         <div style="display:flex;gap:12px;font-size:12px;color:var(--text2)">
-          <span><b style="color:var(--text)">${p.total_itens||p.itens||0} itens</b></span>
-          <span><b style="color:var(--text)">${p.itens||0} SKUs</b></span>
-          <span>${p.separador_nome||'—'}</span>
+          <span><b style="color:var(--text)">${r.ped_total_itens||r.ped_itens||0} itens</b></span>
+          <span>${r.separador_nome_join||r.separador_nome||'—'}</span>
+          ${r.cliente ? `<span>${r.cliente}</span>` : ''}
         </div>
-        ${p.concluido_em ? `<div style="font-size:11px;color:var(--text3);margin-top:4px">✓ Sep às ${(p.concluido_em||'').substring(11,16)}</div>` : ''}
+        ${r.hora_criacao ? `<div style="font-size:11px;color:var(--text3);margin-top:4px">Sep às ${r.hora_criacao}</div>` : ''}
         <button class="btn btn-primary btn-sm" style="width:100%;margin-top:8px;padding:10px"
-          onclick="iniciarCkDesk('${p.numero_caixa||p.numero_pedido||''}')">
+          onclick="iniciarCkDesk('${r.numero_pedido||''}')">
           Iniciar Checkout
         </button>
       </div>`).join('');
