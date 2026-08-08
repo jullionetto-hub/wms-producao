@@ -124,9 +124,26 @@ router.post('/auth/logout', (req, res) => {
   });
 });
 
-router.get('/auth/me', (req,res) => {
+router.get('/auth/me', async (req,res) => {
   if (!req.session.usuario) return res.status(401).json({erro:'Nao autenticado'});
-  res.json({usuario:req.session.usuario, separador:req.session.separador||null});
+  const user = req.session.usuario;
+  // Sempre re-busca o separador do banco para pegar dados atualizados
+  // (garante que sessões criadas antes do vínculo funcionem corretamente)
+  let separador = null;
+  if (user.perfil === 'separador') {
+    separador =
+      await db.get(`SELECT id,nome,matricula,turno,status FROM separadores WHERE usuario_id=$1 AND status='ativo'`, [user.id]) ||
+      await db.get(`SELECT id,nome,matricula,turno,status FROM separadores WHERE LOWER(TRIM(nome))=LOWER(TRIM($1)) AND status='ativo'`, [user.nome]) ||
+      await db.get(`SELECT id,nome,matricula,turno,status FROM separadores WHERE LOWER(TRIM(matricula))=LOWER(TRIM($1)) AND status='ativo'`, [user.login]);
+    if (separador && !req.session.separador) {
+      req.session.separador = separador;
+      pool.query('UPDATE separadores SET usuario_id=$1 WHERE id=$2 AND (usuario_id IS NULL OR usuario_id=0)',
+        [user.id, separador.id]).catch(()=>{});
+    }
+  } else {
+    separador = req.session.separador || null;
+  }
+  res.json({usuario:user, separador});
 });
 
 router.post('/auth/redefinir-senha', requerAuth, async (req,res) => {

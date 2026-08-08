@@ -388,7 +388,7 @@ async function carregarFilaMobile() {
   try {
     const sepId = separadorAtual?.id || 0;
     const [resPed, resAv, resAguard, resRep] = await Promise.all([
-      fetch(`${API}/pedidos`, { credentials:'include' }),
+      fetch(`${API}/pedidos${sepId ? `?separador_id=${sepId}` : ''}`, { credentials:'include' }),
       fetch(`${API}/repositor/avisos?status=pendente,aguardando_abastecer,verificando`, { credentials:'include' }),
       fetch(`${API}/repositor/avisos?status=nao_encontrado`, { credentials:'include' }),
       fetch(`${API}/repositor/avisos/separador/${sepId}`, { credentials:'include' })
@@ -630,7 +630,7 @@ async function carregarFilaDesk() {
   try {
     const sepId = separadorAtual?.id || 0;
     const [resPed, resAv, resAguard, resRep] = await Promise.all([
-      fetch(`${API}/pedidos`, { credentials:'include' }),
+      fetch(`${API}/pedidos${sepId ? `?separador_id=${sepId}` : ''}`, { credentials:'include' }),
       fetch(`${API}/repositor/avisos?status=pendente,aguardando_abastecer,verificando`, { credentials:'include' }),
       fetch(`${API}/repositor/avisos?status=nao_encontrado`, { credentials:'include' }),
       fetch(`${API}/repositor/avisos/separador/${sepId}`, { credentials:'include' })
