@@ -496,19 +496,29 @@ function processarArquivoFile(file) {
   reader.readAsArrayBuffer(file);
 }
 
-function _processarSheetsMIESS(wb, norm, iItens, iTransp) {
+function _processarSheetsMIESS(wb, _norm, iItens, iTransp) {
   try {
+    // Normalização local com escape Unicode ([̀-ͯ]) — garante que acento seja removido
+    const normR = s => String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
+
     // ── Sheet itens ──
     const rowsI = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[iItens]], { defval:'', header:1 });
     if (!rowsI.length) throw new Error('Sheet "itens" está vazia');
-    const cabI = rowsI[0].map(c => norm(c));
+    const cabI = rowsI[0].map(c => normR(String(c)));
     const fi = fn => cabI.findIndex(fn);
-    const cCod  = fi(c => c.includes('codigo') || c.includes('item - c'));
-    const cNum  = fi(c => c.includes('numero') && !c.includes('dat') && !c.includes('status'));
-    const cDesc = fi(c => c.includes('nome') && !c.includes('cliente'));
-    const cQtd  = fi(c => c.includes('qtde') || (c.includes('qtd') && !c.includes('produto')));
-    const cEnd  = fi(c => c.includes('endereco') || c.includes('estoque'));
-    if (cNum < 0) throw new Error('Coluna "Pedido - Número" não encontrada na sheet itens');
+
+    // Detecção com fallback posicional (MIESS itens: Código=col0, Número=col1, Nome=col2, Qtde=col3, Endereço=col4)
+    let cCod  = fi(c => c.includes('codigo') || c.includes('item - c'));
+    let cNum  = fi(c => c.includes('numero') && !c.includes('dat') && !c.includes('status'));
+    if (cNum  < 0) cNum  = fi(c => c.includes('num'));
+    let cDesc = fi(c => c.includes('nome') && !c.includes('cliente'));
+    let cQtd  = fi(c => c.includes('qtde') || (c.includes('qtd') && !c.includes('produto')));
+    let cEnd  = fi(c => c.includes('endereco') || c.includes('estoque'));
+    if (cCod  < 0) cCod  = 0;
+    if (cNum  < 0) cNum  = 1;
+    if (cDesc < 0) cDesc = 2;
+    if (cQtd  < 0) cQtd  = 3;
+    if (cEnd  < 0) cEnd  = 4;
 
     const dadosItens = [];
     for (let i = 1; i < rowsI.length; i++) {
@@ -517,48 +527,48 @@ function _processarSheetsMIESS(wb, norm, iItens, iTransp) {
       if (!num || !/^\d{5,}$/.test(num)) continue;
       dadosItens.push({
         numero_pedido: num,
-        codigo:    cCod  >= 0 ? String(r[cCod]||'').trim()  : '',
-        descricao: cDesc >= 0 ? String(r[cDesc]||'').trim() : '',
+        codigo:    String(r[cCod]||'').trim(),
+        descricao: String(r[cDesc]||'').trim(),
         quantidade: parseInt(r[cQtd]) || 1,
-        endereco:  cEnd  >= 0 ? String(r[cEnd]||'').trim()  : '',
+        endereco:  String(r[cEnd]||'').trim(),
         cliente: '', transportadora: '', aguardando_desde: '',
       });
     }
-    if (!dadosItens.length) throw new Error('Nenhum item encontrado na sheet itens');
+    if (!dadosItens.length) throw new Error('Nenhum item encontrado na sheet itens (colunas detectadas: cod=' + cCod + ' num=' + cNum + ')');
 
     // ── Sheet transportadora ──
     const transpLookup = {};
     if (iTransp >= 0) {
       const rowsT = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[iTransp]], { defval:'', header:1 });
-      const cabT = (rowsT[0]||[]).map(c => norm(c));
+      const cabT = (rowsT[0]||[]).map(c => normR(String(c)));
       const ft = fn => cabT.findIndex(fn);
-      const tNum = ft(c => c.includes('pedido') || c.includes('numero'));
-      const tAgu = ft(c => c.includes('aguard'));
-      const tRaz = ft(c => c.includes('razao') || c.includes('social'));
-      const tSrv = ft(c => c.includes('servico') || c.includes('entrega'));
-      if (tNum >= 0) {
-        for (let i = 1; i < rowsT.length; i++) {
-          const r = rowsT[i];
-          const num = String(r[tNum]||'').trim();
-          if (!num || !/^\d{5,}$/.test(num)) continue;
-          const razao = tRaz >= 0 ? String(r[tRaz]||'').trim() : '';
-          const cliente = razao.replace(/^[\d.\/-]+\s+/, '');
-          const servico = tSrv >= 0 ? String(r[tSrv]||'').trim() : '';
-          const transportadora = /SEDEX/i.test(servico) ? 'SEDEX' : /PAC/i.test(servico) ? 'PAC' : servico;
-          let aguardando = '';
-          if (tAgu >= 0) {
-            const val = r[tAgu];
-            if (typeof val === 'number') {
-              // Serial de data do Excel → string DD/MM/YYYY HH:MM
-              const d = new Date(Math.round((val - 25569) * 86400000));
-              const pad = n => String(n).padStart(2,'0');
-              aguardando = `${pad(d.getUTCDate())}/${pad(d.getUTCMonth()+1)}/${d.getUTCFullYear()} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
-            } else {
-              aguardando = String(val||'').trim();
-            }
-          }
-          if (!transpLookup[num]) transpLookup[num] = { cliente, transportadora, aguardando_desde: aguardando };
+      // Fallback posicional (MIESS transp: Nº pedido=0, Aguardando=1, Razão social=2, Qtde=3, Serviço=4)
+      let tNum = ft(c => c.includes('pedido') || c.includes('numero'));
+      let tAgu = ft(c => c.includes('aguard'));
+      let tRaz = ft(c => c.includes('razao') || c.includes('social'));
+      let tSrv = ft(c => c.includes('servico') || c.includes('entrega'));
+      if (tNum < 0) tNum = 0;
+      if (tAgu < 0) tAgu = 1;
+      if (tRaz < 0) tRaz = 2;
+      if (tSrv < 0) tSrv = 4;
+      for (let i = 1; i < rowsT.length; i++) {
+        const r = rowsT[i];
+        const num = String(r[tNum]||'').trim();
+        if (!num || !/^\d{5,}$/.test(num)) continue;
+        const razao = String(r[tRaz]||'').trim();
+        const cliente = razao.replace(/^[\d.\/-]+\s+/, '');
+        const servico = String(r[tSrv]||'').trim();
+        const transportadora = /SEDEX/i.test(servico) ? 'SEDEX' : /PAC/i.test(servico) ? 'PAC' : servico;
+        let aguardando = '';
+        const val = r[tAgu];
+        if (typeof val === 'number') {
+          const d = new Date(Math.round((val - 25569) * 86400000));
+          const pad = n => String(n).padStart(2,'0');
+          aguardando = `${pad(d.getUTCDate())}/${pad(d.getUTCMonth()+1)}/${d.getUTCFullYear()} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
+        } else {
+          aguardando = String(val||'').trim();
         }
+        if (!transpLookup[num]) transpLookup[num] = { cliente, transportadora, aguardando_desde: aguardando };
       }
     }
 
