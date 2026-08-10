@@ -496,9 +496,13 @@ router.post('/pedidos/importar', requerAuth, requerPerfil('supervisor'), async (
     try {
       const ruasU=new Set(itensReais.map(i=>String(i.endereco||'').split(',')[0].trim().replace(/\d+/g,'').trim())).size;
       const pts=Math.round(itensReais.reduce((s,i)=>s+calcularPesoCorredor(i.endereco)*(parseInt(i.quantidade)||1),0)+ruasU*2);
-      const totalItens=itensReais.reduce((s,i)=>s+(parseInt(i.quantidade)||1),0);
+      // totalItens: quando importado via HTML MIESS (sem SKU), usa o hint de quantidade da planilha HTML
+      const totalItens = itensReais.length > 0
+        ? itensReais.reduce((s,i)=>s+(parseInt(i.quantidade)||1),0)
+        : (parseInt(itens[0]?.total_itens_hint)||0);
+      const itensCount = itensReais.length || totalItens;
       const r=await pool.query(`INSERT INTO pedidos (numero_pedido,status,itens,total_itens,rua,cliente,transportadora,aguardando_desde,pontuacao,data_pedido,hora_pedido,tem_prime,status_embalagem) VALUES ($1,'pendente',$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'nao_iniciado') ON CONFLICT(numero_pedido) DO NOTHING RETURNING id`,
-        [numero,itensReais.length,totalItens,itens[0]?.endereco||'',itens[0]?.cliente||'',itens[0]?.transportadora||'',itens[0]?.aguardando_desde||'',pts,hoje,hora,itensReais.some(i=>String(i.codigo||'').toUpperCase()==='PRIME')]);
+        [numero,itensCount,totalItens,itens[0]?.endereco||'',itens[0]?.cliente||'',itens[0]?.transportadora||'',itens[0]?.aguardando_desde||'',pts,hoje,hora,itensReais.some(i=>String(i.codigo||'').toUpperCase()==='PRIME')]);
       if (!r.rows[0]){ignorados++;continue;}
       const pid=r.rows[0].id;
       if (itensReais.length > 0) {
@@ -587,15 +591,22 @@ router.post('/pedidos/distribuicao', requerAuth, requerPerfil('supervisor'), asy
     const ordenados = [...drive, ...outros];
     const sepMap={};
     for (const sid of separadores) {
-      let row=await db.get('SELECT s.id,s.nome FROM separadores s WHERE s.usuario_id=$1 LIMIT 1',[sid]);
-      if (!row) row=await db.get('SELECT id,nome FROM usuarios WHERE id=$1',[sid]);
-      if (row) sepMap[sid]=row;
+      // Busca separadores.id vinculado ao usuario; guarda também o usuarios.id para fallback de nome
+      const sepRow = await db.get('SELECT s.id,s.nome FROM separadores s WHERE s.usuario_id=$1 LIMIT 1',[sid]);
+      const userRow = await db.get('SELECT id,nome,login,turno FROM usuarios WHERE id=$1',[sid]);
+      sepMap[sid] = {
+        sepDbId: sepRow?.id || null,          // separadores.id correto (null se não vinculado)
+        nome: sepRow?.nome || userRow?.nome || `Sep ${sid}`,
+        login: userRow?.login || null,
+        turno: userRow?.turno || 'Manha',
+        userRow,
+      };
     }
     // Carrega carga atual de cada colaborador (pedidos já atribuídos ainda pendentes/em separação)
     // para que redistribuições no mesmo dia não ignorem o que já foi distribuído antes.
     const filas=[];
     for (const sid of separadores) {
-      const dbId = sepMap[sid]?.id || null;
+      const dbId = sepMap[sid]?.sepDbId || null;
       let cargaAtual = { pontuacao: 0, itens: 0 };
       if (dbId) {
         const ja = await db.get(
@@ -790,10 +801,13 @@ router.post('/pedidos/distribuicao/confirmar', requerAuth, requerPerfil('supervi
         if (!dbId) {
           const user = await db.get('SELECT nome, login, turno FROM usuarios WHERE id=$1',[item.separador_id]);
           if (user) {
-            // Tenta encontrar por nome ou matricula antes de criar
+            // Tenta encontrar por nome OU matrícula antes de criar
             const porNome = await db.get(
-              `SELECT id FROM separadores WHERE LOWER(TRIM(nome))=LOWER(TRIM($1)) LIMIT 1`,
-              [user.nome]
+              `SELECT id FROM separadores
+               WHERE LOWER(TRIM(nome))=LOWER(TRIM($1))
+                  OR LOWER(TRIM(matricula))=LOWER(TRIM($2))
+               LIMIT 1`,
+              [user.nome, user.login]
             );
             if (porNome) {
               dbId = porNome.id;
@@ -801,7 +815,7 @@ router.post('/pedidos/distribuicao/confirmar', requerAuth, requerPerfil('supervi
               pool.query('UPDATE separadores SET usuario_id=$1 WHERE id=$2 AND (usuario_id IS NULL OR usuario_id=0)',
                 [item.separador_id, dbId]).catch(()=>{});
             } else {
-              // Cria novo registro sem depender de constraint UNIQUE
+              // Cria novo registro (INSERT simples, sem ON CONFLICT)
               try {
                 const ins = await pool.query(
                   `INSERT INTO separadores (nome, matricula, usuario_id, status, turno)
@@ -810,9 +824,15 @@ router.post('/pedidos/distribuicao/confirmar', requerAuth, requerPerfil('supervi
                 );
                 dbId = ins.rows[0]?.id;
               } catch(e) {
-                // Último recurso: busca qualquer registro com esse usuario_id (pode ter sido inserido em paralelo)
-                const recheck = await db.get('SELECT id FROM separadores WHERE usuario_id=$1 LIMIT 1',[item.separador_id]);
-                dbId = recheck?.id;
+                // INSERT falhou (ex: constraint UNIQUE em matricula) — busca por usuario_id ou matricula
+                const recheck =
+                  await db.get('SELECT id FROM separadores WHERE usuario_id=$1 LIMIT 1',[item.separador_id]) ||
+                  await db.get('SELECT id FROM separadores WHERE LOWER(TRIM(matricula))=LOWER(TRIM($1)) LIMIT 1',[user.login]);
+                if (recheck) {
+                  dbId = recheck.id;
+                  pool.query('UPDATE separadores SET usuario_id=$1 WHERE id=$2 AND (usuario_id IS NULL OR usuario_id=0)',
+                    [item.separador_id, recheck.id]).catch(()=>{});
+                }
               }
             }
           }

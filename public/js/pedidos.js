@@ -436,6 +436,7 @@ function processarArquivo(e) { const f = e.target.files[0]; if (f) processarArqu
 function processarArquivoFile(file) {
   mostrarStatus('⏳ Lendo arquivo...','carregando');
   document.getElementById('preview-importacao').style.display = 'none';
+  if (/\.html?$/i.test(file.name)) return processarArquivoHTML(file);
   const reader = new FileReader();
   reader.onload = function(e) {
     try {
@@ -482,7 +483,63 @@ function processarArquivoFile(file) {
 
 
 
- async function confirmarImportacao() {
+function processarArquivoHTML(file) {
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const doc = new DOMParser().parseFromString(e.target.result, 'text/html');
+      const rows = Array.from(doc.querySelectorAll('tr'));
+      if (!rows.length) throw new Error('Nenhuma linha encontrada no HTML');
+
+      // Localiza linha de cabeçalho e mapeamento de colunas
+      let headerIdx = -1, colPedido=-1, colCliente=-1, colQtd=-1, colData=-1, colAguardando=-1, colServico=-1;
+      for (let i = 0; i < rows.length; i++) {
+        const cells = Array.from(rows[i].querySelectorAll('td,th')).map(c => c.textContent.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,''));
+        if (cells.some(c => c.includes('pedido'))) {
+          headerIdx = i;
+          colPedido     = cells.findIndex(c => c.includes('pedido'));
+          colCliente    = cells.findIndex(c => c.includes('razao') || c.includes('social') || c.includes('cliente'));
+          colQtd        = cells.findIndex(c => c.includes('qtd') || c.includes('quant'));
+          colData       = cells.findIndex(c => c.includes('data') || c.includes('movim'));
+          colAguardando = cells.findIndex(c => c.includes('aguard'));
+          colServico    = cells.findIndex(c => c.includes('servi') || c.includes('entrega') || c.includes('frete'));
+          break;
+        }
+      }
+      if (headerIdx < 0 || colPedido < 0) throw new Error('Cabeçalho não encontrado — coluna "Nº do pedido" não localizada');
+
+      const dados = [];
+      for (let i = headerIdx + 1; i < rows.length; i++) {
+        const cells = Array.from(rows[i].querySelectorAll('td'));
+        if (!cells.length) continue;
+        const num = cells[colPedido]?.textContent.trim() || '';
+        if (!num || !/^\d{5,}$/.test(num)) continue;
+        const cliente = colCliente >= 0 ? (cells[colCliente]?.textContent.trim() || '') : '';
+        const qtd = colQtd >= 0 ? (parseInt(cells[colQtd]?.textContent.trim()) || 0) : 0;
+        const data = colData >= 0 ? (cells[colData]?.textContent.trim() || '') : '';
+        const aguardando = colAguardando >= 0 ? (cells[colAguardando]?.textContent.trim() || '') : '';
+        const servico = colServico >= 0 ? (cells[colServico]?.textContent.trim() || '') : '';
+        const transportadora = /SEDEX/i.test(servico) ? 'SEDEX' : /PAC/i.test(servico) ? 'PAC' : servico;
+        dados.push({ numero_pedido: num, codigo:'', descricao:'', quantidade:0, endereco:'', cliente, transportadora, aguardando_desde: aguardando || data, total_itens_hint: qtd });
+      }
+      if (!dados.length) throw new Error('Nenhum pedido válido encontrado no HTML');
+
+      pedidosImportar = dados;
+      const totalP = new Set(dados.map(d => d.numero_pedido)).size;
+      const totalQtd = dados.reduce((s,d) => s + (d.total_itens_hint || 0), 0);
+      mostrarStatus(`${totalP} pedido(s) lidos do HTML MIESS — clique Importar`, 'sucesso');
+      document.getElementById('tbody-prev').innerHTML =
+        dados.slice(0,10).map(d=>`<tr><td>${d.numero_pedido}</td><td style="color:var(--text3)">—</td><td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.cliente}</td><td style="color:var(--amber)">${d.transportadora}</td><td style="color:var(--green)">${d.total_itens_hint}</td></tr>`).join('') +
+        (dados.length>10?`<tr><td colspan="5" style="color:var(--text3);text-align:center;padding:8px">... +${dados.length-10} pedidos</td></tr>`:'');
+      document.getElementById('txt-total-import').textContent = `${totalP} pedido(s) • ${totalQtd} itens totais (importação sem detalhe SKU)`;
+      document.getElementById('preview-importacao').style.display = 'block';
+    } catch(err) { mostrarStatus(`${err.message}`, 'erro'); }
+  };
+  reader.onerror = () => mostrarStatus('Erro ao abrir arquivo HTML!','erro');
+  reader.readAsText(file, 'ISO-8859-1');
+}
+
+async function confirmarImportacao() {
   if (!pedidosImportar.length) return;
   mostrarStatus('⏳ Importando...', 'carregando');
 

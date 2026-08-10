@@ -439,7 +439,7 @@ async function carregarFilaMobile() {
       lista.innerHTML = '<div style="color:#dc2626;text-align:center;padding:30px;font-size:13px;background:#fee2e2;border-radius:10px;margin:12px">Usuário não vinculado a um separador. Fale com o supervisor.</div>';
       return;
     }
-    if (!ordenadosMob.length) { lista.innerHTML = '<div style="color:var(--text3);text-align:center;padding:30px;font-size:13px">Nenhum pedido na fila</div>'; return; }
+    if (!ordenadosMob.length) { lista.innerHTML = `<div style="color:var(--text3);text-align:center;padding:30px;font-size:13px">Nenhum pedido na fila<br><span style="font-size:10px;opacity:0.5">sep #${separadorAtual.id} · ${ativos.length} pedido(s) carregado(s)</span></div>`; return; }
 
     await carregarTaxaSeparacao();
 
