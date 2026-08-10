@@ -452,6 +452,11 @@ function processarArquivoFile(file) {
   reader.onload = function(e) {
     try {
       const wb   = XLSX.read(new Uint8Array(e.target.result), { type:'array' });
+      const normS = s => String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+      const sheetNorms = wb.SheetNames.map(n => normS(n));
+      const iItens  = sheetNorms.findIndex(n => n.includes('iten'));
+      const iTransp = sheetNorms.findIndex(n => n.includes('transp'));
+      if (iItens >= 0) return _processarSheetsMIESS(wb, normS, iItens, iTransp >= 0 ? iTransp : -1);
       const ws   = wb.Sheets[wb.SheetNames[0]];
       const rows = XLSX.utils.sheet_to_json(ws, { defval:'', header:1 });
       if (!rows.length) throw new Error('Arquivo vazio');
@@ -491,8 +496,94 @@ function processarArquivoFile(file) {
   reader.readAsArrayBuffer(file);
 }
 
+function _processarSheetsMIESS(wb, norm, iItens, iTransp) {
+  try {
+    // ── Sheet itens ──
+    const rowsI = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[iItens]], { defval:'', header:1 });
+    if (!rowsI.length) throw new Error('Sheet "itens" está vazia');
+    const cabI = rowsI[0].map(c => norm(c));
+    const fi = fn => cabI.findIndex(fn);
+    const cCod  = fi(c => c.includes('codigo') || c.includes('item - c'));
+    const cNum  = fi(c => c.includes('numero') && !c.includes('dat') && !c.includes('status'));
+    const cDesc = fi(c => c.includes('nome') && !c.includes('cliente'));
+    const cQtd  = fi(c => c.includes('qtde') || (c.includes('qtd') && !c.includes('produto')));
+    const cEnd  = fi(c => c.includes('endereco') || c.includes('estoque'));
+    if (cNum < 0) throw new Error('Coluna "Pedido - Número" não encontrada na sheet itens');
 
+    const dadosItens = [];
+    for (let i = 1; i < rowsI.length; i++) {
+      const r = rowsI[i];
+      const num = String(r[cNum]||'').trim();
+      if (!num || !/^\d{5,}$/.test(num)) continue;
+      dadosItens.push({
+        numero_pedido: num,
+        codigo:    cCod  >= 0 ? String(r[cCod]||'').trim()  : '',
+        descricao: cDesc >= 0 ? String(r[cDesc]||'').trim() : '',
+        quantidade: parseInt(r[cQtd]) || 1,
+        endereco:  cEnd  >= 0 ? String(r[cEnd]||'').trim()  : '',
+        cliente: '', transportadora: '', aguardando_desde: '',
+      });
+    }
+    if (!dadosItens.length) throw new Error('Nenhum item encontrado na sheet itens');
 
+    // ── Sheet transportadora ──
+    const transpLookup = {};
+    if (iTransp >= 0) {
+      const rowsT = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[iTransp]], { defval:'', header:1 });
+      const cabT = (rowsT[0]||[]).map(c => norm(c));
+      const ft = fn => cabT.findIndex(fn);
+      const tNum = ft(c => c.includes('pedido') || c.includes('numero'));
+      const tAgu = ft(c => c.includes('aguard'));
+      const tRaz = ft(c => c.includes('razao') || c.includes('social'));
+      const tSrv = ft(c => c.includes('servico') || c.includes('entrega'));
+      if (tNum >= 0) {
+        for (let i = 1; i < rowsT.length; i++) {
+          const r = rowsT[i];
+          const num = String(r[tNum]||'').trim();
+          if (!num || !/^\d{5,}$/.test(num)) continue;
+          const razao = tRaz >= 0 ? String(r[tRaz]||'').trim() : '';
+          const cliente = razao.replace(/^[\d.\/-]+\s+/, '');
+          const servico = tSrv >= 0 ? String(r[tSrv]||'').trim() : '';
+          const transportadora = /SEDEX/i.test(servico) ? 'SEDEX' : /PAC/i.test(servico) ? 'PAC' : servico;
+          let aguardando = '';
+          if (tAgu >= 0) {
+            const val = r[tAgu];
+            if (typeof val === 'number') {
+              // Serial de data do Excel → string DD/MM/YYYY HH:MM
+              const d = new Date(Math.round((val - 25569) * 86400000));
+              const pad = n => String(n).padStart(2,'0');
+              aguardando = `${pad(d.getUTCDate())}/${pad(d.getUTCMonth()+1)}/${d.getUTCFullYear()} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
+            } else {
+              aguardando = String(val||'').trim();
+            }
+          }
+          if (!transpLookup[num]) transpLookup[num] = { cliente, transportadora, aguardando_desde: aguardando };
+        }
+      }
+    }
+
+    // ── Merge ──
+    for (const item of dadosItens) {
+      const tr = transpLookup[item.numero_pedido];
+      if (tr) {
+        if (tr.transportadora)   item.transportadora   = tr.transportadora;
+        if (tr.aguardando_desde) item.aguardando_desde = tr.aguardando_desde;
+        if (tr.cliente)          item.cliente          = tr.cliente;
+      }
+    }
+
+    pedidosImportar = dadosItens;
+    const totalP   = new Set(dadosItens.map(d => d.numero_pedido)).size;
+    const totalQtd = dadosItens.reduce((s,d) => s+(d.quantidade||1), 0);
+    const comTransp = new Set(dadosItens.filter(d => d.transportadora).map(d => d.numero_pedido)).size;
+    mostrarStatus(`${dadosItens.length} SKU(s) em ${totalP} pedido(s)${comTransp ? ` • transp. em ${comTransp}` : ''} — clique Importar`, 'sucesso');
+    document.getElementById('tbody-prev').innerHTML =
+      dadosItens.slice(0,10).map(d => `<tr><td>${d.numero_pedido}</td><td style="color:var(--accent)">${d.codigo}</td><td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.descricao}</td><td style="color:var(--amber)">${d.endereco}</td><td style="color:var(--green)">${d.quantidade}</td></tr>`).join('') +
+      (dadosItens.length > 10 ? `<tr><td colspan="5" style="color:var(--text3);text-align:center;padding:8px">... +${dadosItens.length-10} linhas</td></tr>` : '');
+    document.getElementById('txt-total-import').textContent = `${totalP} pedido(s) • ${dadosItens.length} SKUs • ${totalQtd} itens`;
+    document.getElementById('preview-importacao').style.display = 'block';
+  } catch(err) { mostrarStatus(err.message, 'erro'); }
+}
 
 function processarArquivoHTML(file) {
   const reader = new FileReader();

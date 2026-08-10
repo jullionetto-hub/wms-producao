@@ -501,8 +501,18 @@ router.post('/pedidos/importar', requerAuth, requerPerfil('supervisor'), async (
         ? itensReais.reduce((s,i)=>s+(parseInt(i.quantidade)||1),0)
         : (parseInt(itens[0]?.total_itens_hint)||0);
       const itensCount = itensReais.length || totalItens;
-      const r=await pool.query(`INSERT INTO pedidos (numero_pedido,status,itens,total_itens,rua,cliente,transportadora,aguardando_desde,pontuacao,data_pedido,hora_pedido,tem_prime,status_embalagem) VALUES ($1,'pendente',$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'nao_iniciado') ON CONFLICT(numero_pedido) DO NOTHING RETURNING id`,
-        [numero,itensCount,totalItens,itens[0]?.endereco||'',itens[0]?.cliente||'',itens[0]?.transportadora||'',itens[0]?.aguardando_desde||'',pts,hoje,hora,itensReais.some(i=>String(i.codigo||'').toUpperCase()==='PRIME')]);
+      const cliente       = itens[0]?.cliente||'';
+      const transportadora= itens[0]?.transportadora||'';
+      const aguardando    = itens[0]?.aguardando_desde||'';
+      const r=await pool.query(
+        `INSERT INTO pedidos (numero_pedido,status,itens,total_itens,rua,cliente,transportadora,aguardando_desde,pontuacao,data_pedido,hora_pedido,tem_prime,status_embalagem)
+         VALUES ($1,'pendente',$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'nao_iniciado')
+         ON CONFLICT(numero_pedido) DO UPDATE SET
+           cliente=CASE WHEN pedidos.cliente='' OR pedidos.cliente IS NULL THEN EXCLUDED.cliente ELSE pedidos.cliente END,
+           transportadora=CASE WHEN pedidos.transportadora='' OR pedidos.transportadora IS NULL THEN EXCLUDED.transportadora ELSE pedidos.transportadora END,
+           aguardando_desde=CASE WHEN pedidos.aguardando_desde='' OR pedidos.aguardando_desde IS NULL THEN EXCLUDED.aguardando_desde ELSE pedidos.aguardando_desde END
+         RETURNING id`,
+        [numero,itensCount,totalItens,itens[0]?.endereco||'',cliente,transportadora,aguardando,pts,hoje,hora,itensReais.some(i=>String(i.codigo||'').toUpperCase()==='PRIME')]);
       if (!r.rows[0]){ignorados++;continue;}
       const pid=r.rows[0].id;
       if (itensReais.length > 0) {
