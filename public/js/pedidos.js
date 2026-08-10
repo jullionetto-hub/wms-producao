@@ -426,9 +426,20 @@ function excluirUsuario(id, nome) {
 ══════════════════════════════════════════ */
 function handleDrop(e) {
   e.preventDefault(); document.getElementById('upload-area').classList.remove('drag');
-  const f = e.dataTransfer.files[0]; if (f) processarArquivoFile(f);
+  const files = Array.from(e.dataTransfer.files);
+  if (files.length) processarArquivos(files);
 }
-function processarArquivo(e) { const f = e.target.files[0]; if (f) processarArquivoFile(f); }
+function processarArquivo(e) {
+  const files = Array.from(e.target.files);
+  if (files.length) processarArquivos(files);
+}
+function processarArquivos(files) {
+  mostrarStatus('⏳ Lendo arquivo(s)...', 'carregando');
+  document.getElementById('preview-importacao').style.display = 'none';
+  const htmls = files.filter(f => /\.html?$/i.test(f.name));
+  if (htmls.length >= 2) return processarDoisHTMLs(htmls);
+  processarArquivoFile(files[0]);
+}
 
 
 
@@ -491,52 +502,213 @@ function processarArquivoHTML(file) {
       const rows = Array.from(doc.querySelectorAll('tr'));
       if (!rows.length) throw new Error('Nenhuma linha encontrada no HTML');
 
-      // Localiza linha de cabeçalho e mapeamento de colunas
-      let headerIdx = -1, colPedido=-1, colCliente=-1, colQtd=-1, colData=-1, colAguardando=-1, colServico=-1;
+      const norm = s => String(s||'').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+
+      // Localiza cabeçalho
+      let headerIdx = -1, headerCells = [];
       for (let i = 0; i < rows.length; i++) {
-        const cells = Array.from(rows[i].querySelectorAll('td,th')).map(c => c.textContent.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,''));
-        if (cells.some(c => c.includes('pedido'))) {
-          headerIdx = i;
-          colPedido     = cells.findIndex(c => c.includes('pedido'));
-          colCliente    = cells.findIndex(c => c.includes('razao') || c.includes('social') || c.includes('cliente'));
-          colQtd        = cells.findIndex(c => c.includes('qtd') || c.includes('quant'));
-          colData       = cells.findIndex(c => c.includes('data') || c.includes('movim'));
-          colAguardando = cells.findIndex(c => c.includes('aguard'));
-          colServico    = cells.findIndex(c => c.includes('servi') || c.includes('entrega') || c.includes('frete'));
-          break;
+        const cells = Array.from(rows[i].querySelectorAll('td,th')).map(c => norm(c.textContent));
+        if (cells.some(c => c.includes('pedido'))) { headerIdx = i; headerCells = cells; break; }
+      }
+      if (headerIdx < 0) throw new Error('Cabeçalho não encontrado no HTML');
+
+      // Detecta formato: item-level (tem "codigo" e "endereco") vs. resumo por pedido
+      const temCodigo  = headerCells.some(c => c.includes('codigo') || c.includes('item - c'));
+      const temEndereco = headerCells.some(c => c.includes('endereco') || c.includes('estoque'));
+
+      if (temCodigo && temEndereco) {
+        // ── FORMATO ITEM-LEVEL (testeixml.html: relatório de itens do MIESS) ──
+        // Colunas: Item-Código | Pedido-Número | Item-Nome | Qtde.pedida | Qtde.reservada |
+        //          Dat.movto | Dat.liberação | Cliente-Nome | Status | ... | Endereço
+        const fi = (test) => headerCells.findIndex(c => test(c));
+        const colCod   = fi(c => c.includes('codigo') || c.includes('item - c'));
+        const colNum   = fi(c => c.includes('numero') || (c.includes('pedido') && !c.includes('dat') && !c.includes('status') && !c.includes('valor') && !c.includes('custo')));
+        const colDesc  = fi(c => c.includes('nome') && !c.includes('cliente'));
+        const colQtd   = fi(c => c.includes('qtde. pedida') || (c.includes('qtd') && c.includes('pedid')));
+        const colData  = fi(c => c.includes('dat') && c.includes('movto'));
+        const colCli   = fi(c => c.includes('cliente'));
+        const colSts   = fi(c => c.includes('status'));
+        const colEnd   = fi(c => c.includes('endereco') || c.includes('estoque'));
+
+        const dados = [];
+        for (let i = headerIdx + 1; i < rows.length; i++) {
+          const cells = Array.from(rows[i].querySelectorAll('td'));
+          if (!cells.length) continue;
+          const num = colNum >= 0 ? cells[colNum]?.textContent.trim() : '';
+          if (!num || !/^\d{5,}$/.test(num)) continue;
+          const status = colSts >= 0 ? norm(cells[colSts]?.textContent) : '';
+          // Importa apenas pedidos aguardando separação — ignora DESPACHADO/ENTREGUE
+          if (!status.includes('aguardando') && !status.includes('separac')) continue;
+          dados.push({
+            numero_pedido: num,
+            codigo:    (colCod  >= 0 ? cells[colCod]?.textContent.trim()  : ''),
+            descricao: (colDesc >= 0 ? cells[colDesc]?.textContent.trim() : '').replace(/^\s+/,''),
+            quantidade: parseInt(colQtd >= 0 ? cells[colQtd]?.textContent.trim() : '') || 1,
+            endereco:  (colEnd  >= 0 ? cells[colEnd]?.textContent.trim()  : ''),
+            cliente:   (colCli  >= 0 ? cells[colCli]?.textContent.replace(/ /g,' ').trim() : ''),
+            aguardando_desde: (colData >= 0 ? cells[colData]?.textContent.trim() : ''),
+          });
         }
+        if (!dados.length) throw new Error('Nenhum item com "AGUARDANDO SEPARACAO" encontrado — verifique o filtro de status no relatório');
+        pedidosImportar = dados;
+        const totalP   = new Set(dados.map(d => d.numero_pedido)).size;
+        const totalQtd = dados.reduce((s,d) => s + (d.quantidade || 1), 0);
+        mostrarStatus(`${dados.length} SKU(s) em ${totalP} pedido(s) do HTML MIESS — clique Importar`, 'sucesso');
+        document.getElementById('tbody-prev').innerHTML =
+          dados.slice(0,10).map(d=>`<tr><td>${d.numero_pedido}</td><td style="color:var(--accent)">${d.codigo}</td><td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.descricao}</td><td style="color:var(--amber)">${d.endereco}</td><td style="color:var(--green)">${d.quantidade}</td></tr>`).join('') +
+          (dados.length>10?`<tr><td colspan="5" style="color:var(--text3);text-align:center;padding:8px">... +${dados.length-10} linhas</td></tr>`:'');
+        document.getElementById('txt-total-import').textContent = `${totalP} pedido(s) • ${dados.length} SKUs • ${totalQtd} itens (somente "Aguardando Separação")`;
+        document.getElementById('preview-importacao').style.display = 'block';
+      } else {
+        // ── FORMATO RESUMO POR PEDIDO (testexml.html: fila de pedidos do MIESS) ──
+        const colPedido     = headerCells.findIndex(c => c.includes('pedido'));
+        const colCliente    = headerCells.findIndex(c => c.includes('razao') || c.includes('social') || c.includes('cliente'));
+        const colQtd        = headerCells.findIndex(c => c.includes('qtd') || c.includes('quant'));
+        const colData       = headerCells.findIndex(c => c.includes('data') || c.includes('movim'));
+        const colAguardando = headerCells.findIndex(c => c.includes('aguard'));
+        const colServico    = headerCells.findIndex(c => c.includes('servi') || c.includes('entrega') || c.includes('frete'));
+        if (colPedido < 0) throw new Error('Coluna "Nº do pedido" não localizada no cabeçalho');
+        const dados = [];
+        for (let i = headerIdx + 1; i < rows.length; i++) {
+          const cells = Array.from(rows[i].querySelectorAll('td'));
+          if (!cells.length) continue;
+          const num = cells[colPedido]?.textContent.trim() || '';
+          if (!num || !/^\d{5,}$/.test(num)) continue;
+          const cliente = colCliente >= 0 ? cells[colCliente]?.textContent.trim() : '';
+          const qtd = parseInt(colQtd >= 0 ? cells[colQtd]?.textContent.trim() : '') || 0;
+          const data = colData >= 0 ? cells[colData]?.textContent.trim() : '';
+          const aguardando = colAguardando >= 0 ? cells[colAguardando]?.textContent.trim() : '';
+          const servico = colServico >= 0 ? cells[colServico]?.textContent.trim() : '';
+          const transportadora = /SEDEX/i.test(servico) ? 'SEDEX' : /PAC/i.test(servico) ? 'PAC' : servico;
+          dados.push({ numero_pedido:num, codigo:'', descricao:'', quantidade:0, endereco:'', cliente, transportadora, aguardando_desde: aguardando||data, total_itens_hint:qtd });
+        }
+        if (!dados.length) throw new Error('Nenhum pedido válido encontrado no HTML');
+        pedidosImportar = dados;
+        const totalP   = new Set(dados.map(d => d.numero_pedido)).size;
+        const totalQtd = dados.reduce((s,d) => s + (d.total_itens_hint || 0), 0);
+        mostrarStatus(`${totalP} pedido(s) lidos do HTML MIESS (resumo) — clique Importar`, 'sucesso');
+        document.getElementById('tbody-prev').innerHTML =
+          dados.slice(0,10).map(d=>`<tr><td>${d.numero_pedido}</td><td style="color:var(--text3)">—</td><td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.cliente}</td><td style="color:var(--amber)">${d.transportadora}</td><td style="color:var(--green)">${d.total_itens_hint}</td></tr>`).join('') +
+          (dados.length>10?`<tr><td colspan="5" style="color:var(--text3);text-align:center;padding:8px">... +${dados.length-10} pedidos</td></tr>`:'');
+        document.getElementById('txt-total-import').textContent = `${totalP} pedido(s) • ${totalQtd} itens totais (sem detalhe SKU)`;
+        document.getElementById('preview-importacao').style.display = 'block';
       }
-      if (headerIdx < 0 || colPedido < 0) throw new Error('Cabeçalho não encontrado — coluna "Nº do pedido" não localizada');
-
-      const dados = [];
-      for (let i = headerIdx + 1; i < rows.length; i++) {
-        const cells = Array.from(rows[i].querySelectorAll('td'));
-        if (!cells.length) continue;
-        const num = cells[colPedido]?.textContent.trim() || '';
-        if (!num || !/^\d{5,}$/.test(num)) continue;
-        const cliente = colCliente >= 0 ? (cells[colCliente]?.textContent.trim() || '') : '';
-        const qtd = colQtd >= 0 ? (parseInt(cells[colQtd]?.textContent.trim()) || 0) : 0;
-        const data = colData >= 0 ? (cells[colData]?.textContent.trim() || '') : '';
-        const aguardando = colAguardando >= 0 ? (cells[colAguardando]?.textContent.trim() || '') : '';
-        const servico = colServico >= 0 ? (cells[colServico]?.textContent.trim() || '') : '';
-        const transportadora = /SEDEX/i.test(servico) ? 'SEDEX' : /PAC/i.test(servico) ? 'PAC' : servico;
-        dados.push({ numero_pedido: num, codigo:'', descricao:'', quantidade:0, endereco:'', cliente, transportadora, aguardando_desde: aguardando || data, total_itens_hint: qtd });
-      }
-      if (!dados.length) throw new Error('Nenhum pedido válido encontrado no HTML');
-
-      pedidosImportar = dados;
-      const totalP = new Set(dados.map(d => d.numero_pedido)).size;
-      const totalQtd = dados.reduce((s,d) => s + (d.total_itens_hint || 0), 0);
-      mostrarStatus(`${totalP} pedido(s) lidos do HTML MIESS — clique Importar`, 'sucesso');
-      document.getElementById('tbody-prev').innerHTML =
-        dados.slice(0,10).map(d=>`<tr><td>${d.numero_pedido}</td><td style="color:var(--text3)">—</td><td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.cliente}</td><td style="color:var(--amber)">${d.transportadora}</td><td style="color:var(--green)">${d.total_itens_hint}</td></tr>`).join('') +
-        (dados.length>10?`<tr><td colspan="5" style="color:var(--text3);text-align:center;padding:8px">... +${dados.length-10} pedidos</td></tr>`:'');
-      document.getElementById('txt-total-import').textContent = `${totalP} pedido(s) • ${totalQtd} itens totais (importação sem detalhe SKU)`;
-      document.getElementById('preview-importacao').style.display = 'block';
     } catch(err) { mostrarStatus(`${err.message}`, 'erro'); }
   };
   reader.onerror = () => mostrarStatus('Erro ao abrir arquivo HTML!','erro');
   reader.readAsText(file, 'ISO-8859-1');
+}
+
+function lerArquivoTexto(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = e => res(e.target.result);
+    r.onerror = rej;
+    r.readAsText(file, 'ISO-8859-1');
+  });
+}
+
+async function processarDoisHTMLs(htmlFiles) {
+  try {
+    const norm = s => String(s||'').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+    const textos = await Promise.all(htmlFiles.map(lerArquivoTexto));
+    const docs   = textos.map(t => new DOMParser().parseFromString(t, 'text/html'));
+
+    let infoItens = null, infoTransp = null;
+
+    for (const doc of docs) {
+      for (const row of doc.querySelectorAll('tr')) {
+        const cells = Array.from(row.querySelectorAll('td,th')).map(c => norm(c.textContent));
+        if (!cells.length) continue;
+        const temCod  = cells.some(c => c.includes('codigo') || c.includes('item - c'));
+        const temEnd  = cells.some(c => c.includes('endereco') || c.includes('estoque'));
+        const temSrv  = cells.some(c => (c.includes('servico') || c.includes('entrega')) && !c.includes('cod'));
+        if (temCod && temEnd)  { infoItens = { doc, hdr: cells }; break; }
+        if (temSrv)            { infoTransp = { doc, hdr: cells }; break; }
+      }
+    }
+
+    if (!infoItens) throw new Error('Arquivo de itens não identificado — envie o relatório de itens do MIESS junto com o de pedidos');
+
+    // ── Parseando testei (item-level) ──
+    const hI = infoItens.hdr;
+    const fi = fn => hI.findIndex(fn);
+    const cCod  = fi(c => c.includes('codigo') || c.includes('item - c'));
+    const cNum  = fi(c => c.includes('numero') && !c.includes('dat') && !c.includes('status') && !c.includes('valor'));
+    const cDesc = fi(c => c.includes('nome') && !c.includes('cliente'));
+    const cQtd  = fi(c => c.includes('qtde') && c.includes('pedida'));
+    const cData = fi(c => c.includes('dat') && c.includes('movto'));
+    const cCli  = fi(c => c.includes('cliente'));
+    const cSts  = fi(c => c.includes('status'));
+    const cEnd  = fi(c => c.includes('endereco') || c.includes('estoque'));
+
+    const dadosItens = [];
+    for (const row of infoItens.doc.querySelectorAll('tr')) {
+      const cells = Array.from(row.querySelectorAll('td'));
+      if (!cells.length) continue;
+      const num = cNum >= 0 ? cells[cNum]?.textContent.trim() : '';
+      if (!num || !/^\d{5,}$/.test(num)) continue;
+      const status = cSts >= 0 ? norm(cells[cSts]?.textContent) : '';
+      if (!status.includes('aguardando') && !status.includes('separac')) continue;
+      dadosItens.push({
+        numero_pedido:   num,
+        codigo:          cCod  >= 0 ? cells[cCod]?.textContent.trim()                                    : '',
+        descricao:       cDesc >= 0 ? cells[cDesc]?.textContent.trim().replace(/^\s+/, '')                : '',
+        quantidade:      parseInt(cQtd >= 0 ? cells[cQtd]?.textContent.trim() : '') || 1,
+        endereco:        cEnd  >= 0 ? cells[cEnd]?.textContent.trim()                                     : '',
+        cliente:         cCli  >= 0 ? cells[cCli]?.textContent.replace(/ /g, ' ').trim()            : '',
+        aguardando_desde:cData >= 0 ? cells[cData]?.textContent.trim()                                   : '',
+        transportadora:  '',
+      });
+    }
+    if (!dadosItens.length) throw new Error('Nenhum item "AGUARDANDO SEPARACAO" encontrado no arquivo de itens');
+
+    // ── Parseando testet (transport) → lookup pedido → dados ──
+    const transpLookup = {};
+    if (infoTransp) {
+      const hT = infoTransp.hdr;
+      const ft = fn => hT.findIndex(fn);
+      const tNum = ft(c => c.includes('pedido') && !c.includes('dat') && !c.includes('status'));
+      const tAgu = ft(c => c.includes('aguard'));
+      const tRaz = ft(c => c.includes('razao') || c.includes('social'));
+      const tSrv = ft(c => c.includes('servico') || c.includes('entrega'));
+
+      for (const row of infoTransp.doc.querySelectorAll('tr')) {
+        const cells = Array.from(row.querySelectorAll('td'));
+        if (!cells.length) continue;
+        const num = tNum >= 0 ? cells[tNum]?.textContent.trim() : '';
+        if (!num || !/^\d{5,}$/.test(num)) continue;
+        const razao        = tRaz >= 0 ? cells[tRaz]?.textContent.trim() : '';
+        const cliente      = razao.replace(/^[\d.\/-]+\s+/, ''); // strip CPF/CNPJ prefix
+        const servico      = tSrv >= 0 ? cells[tSrv]?.textContent.trim() : '';
+        const transportadora = /SEDEX/i.test(servico) ? 'SEDEX' : /PAC/i.test(servico) ? 'PAC' : servico;
+        const aguardando   = tAgu >= 0 ? cells[tAgu]?.textContent.trim() : '';
+        if (!transpLookup[num]) transpLookup[num] = { cliente, transportadora, aguardando_desde: aguardando };
+      }
+    }
+
+    // ── Merge ──
+    for (const item of dadosItens) {
+      const tr = transpLookup[item.numero_pedido];
+      if (tr) {
+        if (tr.transportadora)   item.transportadora    = tr.transportadora;
+        if (tr.aguardando_desde) item.aguardando_desde  = tr.aguardando_desde;
+        if (!item.cliente && tr.cliente) item.cliente   = tr.cliente;
+      }
+    }
+
+    pedidosImportar = dadosItens;
+    const totalP   = new Set(dadosItens.map(d => d.numero_pedido)).size;
+    const totalQtd = dadosItens.reduce((s, d) => s + (d.quantidade || 1), 0);
+    const comTransp = dadosItens.filter(d => d.transportadora).length;
+    const temTransp = infoTransp ? ` • transportadora em ${new Set(Object.keys(transpLookup)).size} pedido(s)` : ' (sem arquivo de pedidos)';
+    mostrarStatus(`${dadosItens.length} SKU(s) em ${totalP} pedido(s)${temTransp} — clique Importar`, 'sucesso');
+    document.getElementById('tbody-prev').innerHTML =
+      dadosItens.slice(0, 10).map(d => `<tr><td>${d.numero_pedido}</td><td style="color:var(--accent)">${d.codigo}</td><td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.descricao}</td><td style="color:var(--amber)">${d.endereco}</td><td style="color:var(--green)">${d.quantidade}</td></tr>`).join('') +
+      (dadosItens.length > 10 ? `<tr><td colspan="5" style="color:var(--text3);text-align:center;padding:8px">... +${dadosItens.length - 10} linhas</td></tr>` : '');
+    document.getElementById('txt-total-import').textContent = `${totalP} pedido(s) • ${dadosItens.length} SKUs • ${totalQtd} itens`;
+    document.getElementById('preview-importacao').style.display = 'block';
+  } catch(err) { mostrarStatus(err.message, 'erro'); }
 }
 
 async function confirmarImportacao() {
