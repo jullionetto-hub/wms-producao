@@ -451,12 +451,20 @@ function processarArquivoFile(file) {
   const reader = new FileReader();
   reader.onload = function(e) {
     try {
-      const wb   = XLSX.read(new Uint8Array(e.target.result), { type:'array' });
-      const normS = s => String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
-      const sheetNorms = wb.SheetNames.map(n => normS(n));
-      const iItens  = sheetNorms.findIndex(n => n.includes('iten'));
-      const iTransp = sheetNorms.findIndex(n => n.includes('transp'));
-      if (iItens >= 0) return _processarSheetsMIESS(wb, normS, iItens, iTransp >= 0 ? iTransp : -1);
+      const wb = XLSX.read(new Uint8Array(e.target.result), { type:'array' });
+      // Detecta sheets por CONTEÚDO (não por nome) — pedidos MIESS têm 7+ dígitos
+      // Itens:         col A = código produto (texto), col B = pedido (7+ dígitos)
+      // Transportadora: col A = pedido (7+ dígitos)
+      let iItens = -1, iTransp = -1;
+      for (let s = 0; s < wb.SheetNames.length; s++) {
+        const rr = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[s]], { defval:'', header:1 });
+        if (rr.length < 2) continue;
+        const colA = String(rr[1][0]||'').trim();
+        const colB = String(rr[1][1]||'').trim();
+        if (!/^\d{7,}$/.test(colA) && /^\d{7,}$/.test(colB)) iItens  = s; // A=código, B=pedido
+        else if (/^\d{7,}$/.test(colA))                       iTransp = s; // A=pedido
+      }
+      if (iItens >= 0) return _processarSheetsMIESS(wb, null, iItens, iTransp);
       const ws   = wb.Sheets[wb.SheetNames[0]];
       const rows = XLSX.utils.sheet_to_json(ws, { defval:'', header:1 });
       if (!rows.length) throw new Error('Arquivo vazio');
