@@ -511,18 +511,27 @@ router.post('/pedidos/importar', requerAuth, requerPerfil('supervisor'), async (
            cliente=CASE WHEN pedidos.cliente='' OR pedidos.cliente IS NULL THEN EXCLUDED.cliente ELSE pedidos.cliente END,
            transportadora=CASE WHEN pedidos.transportadora='' OR pedidos.transportadora IS NULL THEN EXCLUDED.transportadora ELSE pedidos.transportadora END,
            aguardando_desde=CASE WHEN pedidos.aguardando_desde='' OR pedidos.aguardando_desde IS NULL THEN EXCLUDED.aguardando_desde ELSE pedidos.aguardando_desde END
-         RETURNING id`,
+         RETURNING id, (xmax = 0) AS inserido`,
         [numero,itensCount,totalItens,itens[0]?.endereco||'',cliente,transportadora,aguardando,pts,hoje,hora,itensReais.some(i=>String(i.codigo||'').toUpperCase()==='PRIME')]);
       if (!r.rows[0]){ignorados++;continue;}
       const pid=r.rows[0].id;
+      const pedidoNovo=r.rows[0].inserido;
+      // Evita duplicar itens_pedido quando o mesmo pedido é reimportado (ex.: pedido pendente
+      // que aparece em exportações de dias diferentes) — só insere se ainda não tem itens.
       if (itensReais.length > 0) {
-        const client=await pool.connect();
-        try {
-          await client.query('BEGIN');
-          for (const it of itensReais) await client.query(`INSERT INTO itens_pedido (pedido_id,codigo,descricao,endereco,quantidade) VALUES ($1,$2,$3,$4,$5)`,[pid,String(it.codigo||'').trim(),String(it.descricao||'').trim(),String(it.endereco||'').trim(),parseInt(it.quantidade)||1]);
-          await client.query('COMMIT');
-        } catch(ei){await client.query('ROLLBACK');await pool.query('DELETE FROM pedidos WHERE id=$1',[pid]);erros++;continue;}
-        finally{client.release();}
+        const jaTemItens = await pool.query('SELECT 1 FROM itens_pedido WHERE pedido_id=$1 LIMIT 1',[pid]);
+        if (!jaTemItens.rows.length) {
+          const client=await pool.connect();
+          try {
+            await client.query('BEGIN');
+            for (const it of itensReais) await client.query(`INSERT INTO itens_pedido (pedido_id,codigo,descricao,endereco,quantidade) VALUES ($1,$2,$3,$4,$5)`,[pid,String(it.codigo||'').trim(),String(it.descricao||'').trim(),String(it.endereco||'').trim(),parseInt(it.quantidade)||1]);
+            await client.query('COMMIT');
+          } catch(ei){
+            await client.query('ROLLBACK');
+            if (pedidoNovo) await pool.query('DELETE FROM pedidos WHERE id=$1',[pid]);
+            erros++;continue;
+          } finally{client.release();}
+        }
       }
       importados++;
     } catch(err){erros++;}

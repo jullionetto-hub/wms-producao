@@ -538,28 +538,32 @@ function _processarSheetsMIESS(wb, _norm, iItens, iTransp) {
     }
     if (!dadosItens.length) throw new Error('Nenhum item válido na sheet itens — coluna B deve ter o número do pedido (5+ dígitos). Primeiros valores col B: ' + [1,2,3].map(i => rowsI[i] ? String(rowsI[i][1]) : '').join(', '));
 
-    // ── Sheet TRANSPORTADORA — índices fixos conforme exportação MIESS ──
-    // col 0: Nº do pedido
-    // col 1: Aguardando desde
-    // col 2: Razão social
-    // col 3: Qtde. de produtos  (ignorado)
-    // col 4: Serviço de entrega
+    // ── Sheet TRANSPORTADORA — colunas detectadas pelo cabeçalho ──
+    // (a exportação MIESS varia entre 4 e 5 colunas dependendo se "Qtde. de produtos"
+    // está incluída; índices fixos quebram silenciosamente quando isso muda)
     const transpLookup = {};
     if (iTransp >= 0) {
       const rowsT = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[iTransp]], { defval:'', header:1 });
+      const normT = s => String(s||'').toLowerCase().trim().normalize('NFD').replace(/[̀-ͯ]/g,'');
+      const hT = (rowsT[0]||[]).map(normT);
+      const findT = (fn, fallback) => { const i = hT.findIndex(fn); return i >= 0 ? i : fallback; };
+      const iNum = findT(c => c.includes('pedido'), 0);
+      const iAg  = findT(c => c.includes('aguard'), 1);
+      const iRaz = findT(c => c.includes('razao') || c.includes('social'), 2);
+      const iSrv = findT(c => c.includes('servico') || c.includes('entrega'), 3);
       for (let i = 1; i < rowsT.length; i++) {
         const r   = rowsT[i];
-        const num = String(r[0]||'').trim();         // col 0 = Nº do pedido
+        const num = String(r[iNum]||'').trim();       // Nº do pedido
         if (!num || !/^\d{5,}$/.test(num)) continue;
 
-        const razao  = String(r[2]||'').trim();      // col 2 = Razão social
+        const razao  = String(r[iRaz]||'').trim();    // Razão social
         const cliente = razao.replace(/^[\d.\/-]+\s+/, '');
 
-        const servico = String(r[4]||'').trim();     // col 4 = Serviço de entrega
+        const servico = String(r[iSrv]||'').trim();   // Serviço de entrega
         const transportadora = /SEDEX/i.test(servico) ? 'SEDEX' : /PAC/i.test(servico) ? 'PAC' : servico;
 
         let aguardando = '';
-        const val = r[1];                            // col 1 = Aguardando desde (serial Excel)
+        const val = r[iAg];                           // Aguardando desde (serial Excel)
         if (typeof val === 'number') {
           const d   = new Date(Math.round((val - 25569) * 86400000));
           const pad = n => String(n).padStart(2,'0');
