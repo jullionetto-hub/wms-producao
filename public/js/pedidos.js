@@ -498,71 +498,55 @@ function processarArquivoFile(file) {
 
 function _processarSheetsMIESS(wb, _norm, iItens, iTransp) {
   try {
-    // Normalização local com escape Unicode ([̀-ͯ]) — garante que acento seja removido
-    const normR = s => String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
-
-    // ── Sheet itens ──
+    // ── Sheet ITENS — índices fixos conforme exportação MIESS ──
+    // col 0: Item - Código do produto
+    // col 1: Pedido - Número
+    // col 2: Item - Nome
+    // col 3: Item - Qtde. pedida
+    // col 4: Endereço do Produto no Estoque
     const rowsI = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[iItens]], { defval:'', header:1 });
-    if (!rowsI.length) throw new Error('Sheet "itens" está vazia');
-    const cabI = rowsI[0].map(c => normR(String(c)));
-    const fi = fn => cabI.findIndex(fn);
-
-    // Detecção com fallback posicional (MIESS itens: Código=col0, Número=col1, Nome=col2, Qtde=col3, Endereço=col4)
-    let cCod  = fi(c => c.includes('codigo') || c.includes('item - c'));
-    let cNum  = fi(c => c.includes('numero') && !c.includes('dat') && !c.includes('status'));
-    if (cNum  < 0) cNum  = fi(c => c.includes('num'));
-    let cDesc = fi(c => c.includes('nome') && !c.includes('cliente'));
-    let cQtd  = fi(c => c.includes('qtde') || (c.includes('qtd') && !c.includes('produto')));
-    let cEnd  = fi(c => c.includes('endereco') || c.includes('estoque'));
-    if (cCod  < 0) cCod  = 0;
-    if (cNum  < 0) cNum  = 1;
-    if (cDesc < 0) cDesc = 2;
-    if (cQtd  < 0) cQtd  = 3;
-    if (cEnd  < 0) cEnd  = 4;
+    if (rowsI.length < 2) throw new Error('Sheet itens sem dados (nome da sheet: ' + wb.SheetNames[iItens] + ')');
 
     const dadosItens = [];
     for (let i = 1; i < rowsI.length; i++) {
-      const r = rowsI[i];
-      const num = String(r[cNum]||'').trim();
+      const r   = rowsI[i];
+      const num = String(r[1]||'').trim();          // col 1 = Pedido - Número
       if (!num || !/^\d{5,}$/.test(num)) continue;
       dadosItens.push({
         numero_pedido: num,
-        codigo:    String(r[cCod]||'').trim(),
-        descricao: String(r[cDesc]||'').trim(),
-        quantidade: parseInt(r[cQtd]) || 1,
-        endereco:  String(r[cEnd]||'').trim(),
+        codigo:    String(r[0]||'').trim(),          // col 0 = Item - Código do produto
+        descricao: String(r[2]||'').trim(),          // col 2 = Item - Nome
+        quantidade: parseInt(r[3]) || 1,             // col 3 = Item - Qtde. pedida
+        endereco:  String(r[4]||'').trim(),          // col 4 = Endereço do Produto no Estoque
         cliente: '', transportadora: '', aguardando_desde: '',
       });
     }
-    if (!dadosItens.length) throw new Error('Nenhum item encontrado na sheet itens (colunas detectadas: cod=' + cCod + ' num=' + cNum + ')');
+    if (!dadosItens.length) throw new Error('Nenhum item válido na sheet itens — coluna B deve ter o número do pedido (5+ dígitos). Primeiros valores col B: ' + [1,2,3].map(i => rowsI[i] ? String(rowsI[i][1]) : '').join(', '));
 
-    // ── Sheet transportadora ──
+    // ── Sheet TRANSPORTADORA — índices fixos conforme exportação MIESS ──
+    // col 0: Nº do pedido
+    // col 1: Aguardando desde
+    // col 2: Razão social
+    // col 3: Qtde. de produtos  (ignorado)
+    // col 4: Serviço de entrega
     const transpLookup = {};
     if (iTransp >= 0) {
       const rowsT = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[iTransp]], { defval:'', header:1 });
-      const cabT = (rowsT[0]||[]).map(c => normR(String(c)));
-      const ft = fn => cabT.findIndex(fn);
-      // Fallback posicional (MIESS transp: Nº pedido=0, Aguardando=1, Razão social=2, Qtde=3, Serviço=4)
-      let tNum = ft(c => c.includes('pedido') || c.includes('numero'));
-      let tAgu = ft(c => c.includes('aguard'));
-      let tRaz = ft(c => c.includes('razao') || c.includes('social'));
-      let tSrv = ft(c => c.includes('servico') || c.includes('entrega'));
-      if (tNum < 0) tNum = 0;
-      if (tAgu < 0) tAgu = 1;
-      if (tRaz < 0) tRaz = 2;
-      if (tSrv < 0) tSrv = 4;
       for (let i = 1; i < rowsT.length; i++) {
-        const r = rowsT[i];
-        const num = String(r[tNum]||'').trim();
+        const r   = rowsT[i];
+        const num = String(r[0]||'').trim();         // col 0 = Nº do pedido
         if (!num || !/^\d{5,}$/.test(num)) continue;
-        const razao = String(r[tRaz]||'').trim();
+
+        const razao  = String(r[2]||'').trim();      // col 2 = Razão social
         const cliente = razao.replace(/^[\d.\/-]+\s+/, '');
-        const servico = String(r[tSrv]||'').trim();
+
+        const servico = String(r[4]||'').trim();     // col 4 = Serviço de entrega
         const transportadora = /SEDEX/i.test(servico) ? 'SEDEX' : /PAC/i.test(servico) ? 'PAC' : servico;
+
         let aguardando = '';
-        const val = r[tAgu];
+        const val = r[1];                            // col 1 = Aguardando desde (serial Excel)
         if (typeof val === 'number') {
-          const d = new Date(Math.round((val - 25569) * 86400000));
+          const d   = new Date(Math.round((val - 25569) * 86400000));
           const pad = n => String(n).padStart(2,'0');
           aguardando = `${pad(d.getUTCDate())}/${pad(d.getUTCMonth()+1)}/${d.getUTCFullYear()} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
         } else {
@@ -576,15 +560,15 @@ function _processarSheetsMIESS(wb, _norm, iItens, iTransp) {
     for (const item of dadosItens) {
       const tr = transpLookup[item.numero_pedido];
       if (tr) {
+        if (tr.cliente)          item.cliente          = tr.cliente;
         if (tr.transportadora)   item.transportadora   = tr.transportadora;
         if (tr.aguardando_desde) item.aguardando_desde = tr.aguardando_desde;
-        if (tr.cliente)          item.cliente          = tr.cliente;
       }
     }
 
     pedidosImportar = dadosItens;
-    const totalP   = new Set(dadosItens.map(d => d.numero_pedido)).size;
-    const totalQtd = dadosItens.reduce((s,d) => s+(d.quantidade||1), 0);
+    const totalP    = new Set(dadosItens.map(d => d.numero_pedido)).size;
+    const totalQtd  = dadosItens.reduce((s,d) => s+(d.quantidade||1), 0);
     const comTransp = new Set(dadosItens.filter(d => d.transportadora).map(d => d.numero_pedido)).size;
     mostrarStatus(`${dadosItens.length} SKU(s) em ${totalP} pedido(s)${comTransp ? ` • transp. em ${comTransp}` : ''} — clique Importar`, 'sucesso');
     document.getElementById('tbody-prev').innerHTML =
