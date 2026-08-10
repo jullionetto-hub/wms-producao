@@ -1359,8 +1359,12 @@ function processarArquivoModalFile(file) {
   reader.onload = function(evt) {
     try {
       const wb = XLSX.read(new Uint8Array(evt.target.result), { type:'array' });
-      let itensSheet = wb.SheetNames.includes('Itens') ? wb.Sheets['Itens'] : wb.Sheets[wb.SheetNames[0]];
-      let transpSheet = wb.SheetNames.includes('Transportadora') ? wb.Sheets['Transportadora'] : null;
+      // Busca por nome de sheet ignorando maiusculas/minusculas — a exportacao MIESS usa
+      // nomes em minusculas ("itens"/"transportadora"), mas o codigo antigo exigia match exato.
+      const nomeItensSheet  = wb.SheetNames.find(n => n.toLowerCase().includes('iten'));
+      const nomeTranspSheet = wb.SheetNames.find(n => n.toLowerCase().includes('transp'));
+      let itensSheet = nomeItensSheet ? wb.Sheets[nomeItensSheet] : wb.Sheets[wb.SheetNames[0]];
+      let transpSheet = nomeTranspSheet ? wb.Sheets[nomeTranspSheet] : null;
       const rows = XLSX.utils.sheet_to_json(itensSheet, { defval:'', header:1 });
       if (!rows.length) throw new Error('Arquivo vazio');
       const cab = rows[0].map(c => String(c).toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g,''));
