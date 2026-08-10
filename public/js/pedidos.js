@@ -585,15 +585,27 @@ function _processarSheetsMIESS(wb, _norm, iItens, iTransp) {
       }
     }
 
-    pedidosImportar = dadosItens;
-    const totalP    = new Set(dadosItens.map(d => d.numero_pedido)).size;
-    const totalQtd  = dadosItens.reduce((s,d) => s+(d.quantidade||1), 0);
-    const comTransp = new Set(dadosItens.filter(d => d.transportadora).map(d => d.numero_pedido)).size;
-    mostrarStatus(`${dadosItens.length} SKU(s) em ${totalP} pedido(s)${comTransp ? ` • transp. em ${comTransp}` : ''} — clique Importar`, 'sucesso');
+    // Filtra: só importa pedidos que existem na aba Transportadora — a aba Itens traz
+    // o histórico completo (inclusive pedidos já separados/finalizados de outras datas),
+    // enquanto a Transportadora lista apenas quem está de fato aguardando separação.
+    let dadosFinal = dadosItens;
+    let ignoradosSemTransp = 0;
+    if (iTransp >= 0 && Object.keys(transpLookup).length) {
+      const antes = new Set(dadosItens.map(d => d.numero_pedido)).size;
+      dadosFinal = dadosItens.filter(d => transpLookup[d.numero_pedido]);
+      const depois = new Set(dadosFinal.map(d => d.numero_pedido)).size;
+      ignoradosSemTransp = antes - depois;
+    }
+
+    pedidosImportar = dadosFinal;
+    const totalP    = new Set(dadosFinal.map(d => d.numero_pedido)).size;
+    const totalQtd  = dadosFinal.reduce((s,d) => s+(d.quantidade||1), 0);
+    const comTransp = new Set(dadosFinal.filter(d => d.transportadora).map(d => d.numero_pedido)).size;
+    mostrarStatus(`${dadosFinal.length} SKU(s) em ${totalP} pedido(s)${comTransp ? ` • transp. em ${comTransp}` : ''}${ignoradosSemTransp ? ` • ${ignoradosSemTransp} pedido(s) sem correspondência na Transportadora ignorados` : ''} — clique Importar`, 'sucesso');
     document.getElementById('tbody-prev').innerHTML =
-      dadosItens.slice(0,10).map(d => `<tr><td>${d.numero_pedido}</td><td style="color:var(--accent)">${d.codigo}</td><td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.descricao}</td><td style="color:var(--amber)">${d.endereco}</td><td style="color:var(--green)">${d.quantidade}</td></tr>`).join('') +
-      (dadosItens.length > 10 ? `<tr><td colspan="5" style="color:var(--text3);text-align:center;padding:8px">... +${dadosItens.length-10} linhas</td></tr>` : '');
-    document.getElementById('txt-total-import').textContent = `${totalP} pedido(s) • ${dadosItens.length} SKUs • ${totalQtd} itens`;
+      dadosFinal.slice(0,10).map(d => `<tr><td>${d.numero_pedido}</td><td style="color:var(--accent)">${d.codigo}</td><td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.descricao}</td><td style="color:var(--amber)">${d.endereco}</td><td style="color:var(--green)">${d.quantidade}</td></tr>`).join('') +
+      (dadosFinal.length > 10 ? `<tr><td colspan="5" style="color:var(--text3);text-align:center;padding:8px">... +${dadosFinal.length-10} linhas</td></tr>` : '');
+    document.getElementById('txt-total-import').textContent = `${totalP} pedido(s) • ${dadosFinal.length} SKUs • ${totalQtd} itens`;
     document.getElementById('preview-importacao').style.display = 'block';
   } catch(err) { mostrarStatus(err.message, 'erro'); }
 }
