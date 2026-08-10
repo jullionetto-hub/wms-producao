@@ -504,11 +504,11 @@ function processarArquivoHTML(file) {
 
       const norm = s => String(s||'').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
 
-      // Localiza cabeçalho
+      // Localiza cabeçalho — usa :scope > td para pegar só filhos diretos (evita TRs wrapper com tabelas aninhadas)
       let headerIdx = -1, headerCells = [];
       for (let i = 0; i < rows.length; i++) {
-        const cells = Array.from(rows[i].querySelectorAll('td,th')).map(c => norm(c.textContent));
-        if (cells.some(c => c.includes('pedido'))) { headerIdx = i; headerCells = cells; break; }
+        const cells = Array.from(rows[i].querySelectorAll(':scope > td, :scope > th')).map(c => norm(c.textContent));
+        if (cells.length > 3 && cells.some(c => c.includes('pedido'))) { headerIdx = i; headerCells = cells; break; }
       }
       if (headerIdx < 0) throw new Error('Cabeçalho não encontrado no HTML');
 
@@ -532,8 +532,8 @@ function processarArquivoHTML(file) {
 
         const dados = [];
         for (let i = headerIdx + 1; i < rows.length; i++) {
-          const cells = Array.from(rows[i].querySelectorAll('td'));
-          if (!cells.length) continue;
+          const cells = Array.from(rows[i].querySelectorAll(':scope > td'));
+          if (cells.length < 4) continue;
           const num = colNum >= 0 ? cells[colNum]?.textContent.trim() : '';
           if (!num || !/^\d{5,}$/.test(num)) continue;
           const status = colSts >= 0 ? norm(cells[colSts]?.textContent) : '';
@@ -570,8 +570,8 @@ function processarArquivoHTML(file) {
         if (colPedido < 0) throw new Error('Coluna "Nº do pedido" não localizada no cabeçalho');
         const dados = [];
         for (let i = headerIdx + 1; i < rows.length; i++) {
-          const cells = Array.from(rows[i].querySelectorAll('td'));
-          if (!cells.length) continue;
+          const cells = Array.from(rows[i].querySelectorAll(':scope > td'));
+          if (cells.length < 4) continue;
           const num = cells[colPedido]?.textContent.trim() || '';
           if (!num || !/^\d{5,}$/.test(num)) continue;
           const cliente = colCliente >= 0 ? cells[colCliente]?.textContent.trim() : '';
@@ -618,8 +618,8 @@ async function processarDoisHTMLs(htmlFiles) {
 
     for (const doc of docs) {
       for (const row of doc.querySelectorAll('tr')) {
-        const cells = Array.from(row.querySelectorAll('td,th')).map(c => norm(c.textContent));
-        if (!cells.length) continue;
+        const cells = Array.from(row.querySelectorAll(':scope > td, :scope > th')).map(c => norm(c.textContent));
+        if (cells.length < 4) continue; // pula TR wrapper (só 1 filho direto)
         const temCod  = cells.some(c => c.includes('codigo') || c.includes('item - c'));
         const temEnd  = cells.some(c => c.includes('endereco') || c.includes('estoque'));
         const temSrv  = cells.some(c => (c.includes('servico') || c.includes('entrega')) && !c.includes('cod'));
@@ -644,8 +644,8 @@ async function processarDoisHTMLs(htmlFiles) {
 
     const dadosItens = [];
     for (const row of infoItens.doc.querySelectorAll('tr')) {
-      const cells = Array.from(row.querySelectorAll('td'));
-      if (!cells.length) continue;
+      const cells = Array.from(row.querySelectorAll(':scope > td'));
+      if (cells.length < 4) continue;
       const num = cNum >= 0 ? cells[cNum]?.textContent.trim() : '';
       if (!num || !/^\d{5,}$/.test(num)) continue;
       const status = cSts >= 0 ? norm(cells[cSts]?.textContent) : '';
@@ -674,8 +674,8 @@ async function processarDoisHTMLs(htmlFiles) {
       const tSrv = ft(c => c.includes('servico') || c.includes('entrega'));
 
       for (const row of infoTransp.doc.querySelectorAll('tr')) {
-        const cells = Array.from(row.querySelectorAll('td'));
-        if (!cells.length) continue;
+        const cells = Array.from(row.querySelectorAll(':scope > td'));
+        if (cells.length < 4) continue;
         const num = tNum >= 0 ? cells[tNum]?.textContent.trim() : '';
         if (!num || !/^\d{5,}$/.test(num)) continue;
         const razao        = tRaz >= 0 ? cells[tRaz]?.textContent.trim() : '';
