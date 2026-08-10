@@ -451,18 +451,25 @@ function processarArquivoFile(file) {
   const reader = new FileReader();
   reader.onload = function(e) {
     try {
-      const wb = XLSX.read(new Uint8Array(e.target.result), { type:'array' });
-      // Detecta sheets por CONTEÚDO (não por nome) — pedidos MIESS têm 7+ dígitos
-      // Itens:         col A = código produto (texto), col B = pedido (7+ dígitos)
-      // Transportadora: col A = pedido (7+ dígitos)
+      // cellDates:false → datas voltam como número serial, nunca Date object
+      const wb = XLSX.read(new Uint8Array(e.target.result), { type:'array', cellDates: false });
       let iItens = -1, iTransp = -1;
+      // 1ª tentativa: nome da sheet (simples, sem regex unicode)
       for (let s = 0; s < wb.SheetNames.length; s++) {
-        const rr = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[s]], { defval:'', header:1 });
-        if (rr.length < 2) continue;
-        const colA = String(rr[1][0]||'').trim();
-        const colB = String(rr[1][1]||'').trim();
-        if (!/^\d{7,}$/.test(colA) && /^\d{7,}$/.test(colB)) iItens  = s; // A=código, B=pedido
-        else if (/^\d{7,}$/.test(colA))                       iTransp = s; // A=pedido
+        const n = wb.SheetNames[s].toLowerCase();
+        if (n.includes('iten') || n.includes('item'))  iItens  = s;
+        else if (n.includes('transp'))                  iTransp = s;
+      }
+      // 2ª tentativa: conteúdo — raw:true garante números brutos, sem conversão p/ Date
+      if (iItens < 0) {
+        for (let s = 0; s < wb.SheetNames.length; s++) {
+          const rr = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[s]], { defval:'', header:1, raw: true });
+          if (rr.length < 2) continue;
+          const colA = String(rr[1][0]||'').trim();
+          const colB = String(rr[1][1]||'').trim();
+          if (!/^\d{7,}$/.test(colA) && /^\d{7,}$/.test(colB)) { if (iItens  < 0) iItens  = s; }
+          else if (/^\d{7,}$/.test(colA))                       { if (iTransp < 0) iTransp = s; }
+        }
       }
       if (iItens >= 0) return _processarSheetsMIESS(wb, null, iItens, iTransp);
       const ws   = wb.Sheets[wb.SheetNames[0]];
