@@ -774,31 +774,6 @@ async function salvarEdicaoUsuario() {
     carregarUsuarios();
   } catch(e) { toast('Erro ao salvar!','erro'); }
 }
-function confirmarZerarDados() {
-  wmsConfirm({
-    
-    titulo: 'Zerar todos os dados?',
-    sub: 'Apaga TODOS os pedidos, reposições e checkouts. Usuários NÃO serão apagados. Esta ação não pode ser desfeita.',
-    btnOk: 'Sim, zerar tudo',
-    btnOkClass: 'btn-danger',
-  }, () => {
-    wmsConfirm({
-      
-      titulo: 'Tem ABSOLUTA certeza?',
-      sub: 'Não há como recuperar os dados após esta ação.',
-      btnOk: 'Confirmo — zerar agora',
-      btnOkClass: 'btn-danger',
-    }, async () => {
-      try {
-        var res = await fetch(API + '/admin/zerar-dados', { method:'POST', credentials:'include', headers:{'Content-Type':'application/json'}, body: JSON.stringify({confirmar:'ZERAR_TUDO_CONFIRMO'}) });
-        var data = await res.json();
-        if (res.ok) { toast('Dados zerados!','sucesso'); } else { toast('Erro: '+data.erro,'erro'); }
-      } catch(e) { toast('Erro ao zerar','erro'); }
-    });
-  });
-}
-
-
 /* ══════════════════════════════════════════
    DIÁRIO DE BORDO + SISTEMA DE VALIDAÇÃO
 ══════════════════════════════════════════ */
