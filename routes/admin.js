@@ -684,11 +684,21 @@ router.post('/admin/zerar-dados-teste', requerAuth, requerPerfil('supervisor'), 
   try {
     const resultados = {};
 
+    // itens_pedido, avisos_repositor, checkout e embalagem têm FK para pedidos.id —
+    // precisam ser apagados antes do pedido, senão o DELETE de pedidos viola a constraint.
+    const pedIds = (await pool.query('SELECT id FROM pedidos WHERE data_pedido = $1', [dia])).rows.map(r => r.id);
+    if (pedIds.length) {
+      await pool.query('DELETE FROM avisos_repositor WHERE pedido_id = ANY($1)', [pedIds]); // referencia itens_pedido.id tambem
+      await pool.query('DELETE FROM itens_pedido WHERE pedido_id = ANY($1)', [pedIds]);
+      await pool.query('DELETE FROM checkout WHERE pedido_id = ANY($1)', [pedIds]);
+      await pool.query('DELETE FROM embalagem WHERE pedido_id = ANY($1)', [pedIds]);
+    }
+
     // Pedidos do dia
     const rPed = await pool.query('DELETE FROM pedidos WHERE data_pedido = $1', [dia]);
     resultados.pedidos = rPed.rowCount;
 
-    // Checkout do dia
+    // Checkout do dia (inclui registros de pedidos de outras datas, checados hoje)
     const rCk = await pool.query('DELETE FROM checkout WHERE data_checkout = $1', [dia]);
     resultados.checkout = rCk.rowCount;
 
