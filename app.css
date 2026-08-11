@@ -338,10 +338,11 @@ body.dark .aviso-card.nao_encontrado{background:#1E1B4B;border-color:#3730A3;opa
 ══════════════════════════════════════════ */
 .bip-wrap{display:flex;gap:10px;margin-bottom:12px}
 .bip-input{
-  flex:1;padding:16px 18px;
+  flex:1;min-width:0;padding:16px 18px;
   background:var(--surface);border:2px solid var(--accent);border-radius:10px;
   color:#0F172A;font-size:24px;font-weight:700;outline:none;
-  letter-spacing:5px;font-family:'Space Mono',monospace;transition:border-color .2s
+  letter-spacing:5px;font-family:'Space Mono',monospace;transition:border-color .2s;
+  box-sizing:border-box
 }
 .bip-input:focus{border-color:#1D4ED8;box-shadow:0 0 0 3px rgba(37,99,235,.1)}
 .bip-input::placeholder{color:#CBD5E1;font-weight:400;font-size:13px;letter-spacing:0;font-family:'DM Sans',sans-serif}
@@ -534,6 +535,9 @@ body.dark .item-card.parcial    .item-ic{background:#78350F}
   body.sep-mobile .sep-tabbar{display:flex}
   body.sep-mobile #sep-mobile-root{display:flex;flex-direction:column;flex:1;overflow:hidden}
   body.sep-mobile .layout{overflow:hidden}
+  /* Campo de bipagem menor no mobile — evita que o botão ▶ seja cortado da tela */
+  .bip-input{font-size:19px;letter-spacing:2px;padding:14px 12px}
+  .btn-bip{padding:14px 16px;min-width:48px;flex-shrink:0}
 }
 /* Sep mobile root escondido por padrão */
 #sep-mobile-root{display:none}
