@@ -1651,7 +1651,118 @@ function distSetModo(modo) {
     const inp = document.getElementById('dist-manual-busca');
     if (inp) inp.value = '';
     if (r) r.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text3);font-size:13px">Digite o número do pedido ou nome do cliente para buscar</div>';
+    distManualSubModo('buscar');
   }
+}
+
+/* ── Distribuição Manual: sub-modo "Bipar Código de Barras" ──────────────── */
+function distManualSubModo(modo) {
+  const buscarWrap = document.getElementById('dist-manual-busca-wrap');
+  const bipeWrap    = document.getElementById('dist-manual-bipe-wrap');
+  const btnBuscar   = document.getElementById('btn-dm-buscar');
+  const btnBipar    = document.getElementById('btn-dm-bipar');
+  const ativo   = { background:'#6366f1', color:'#fff' };
+  const inativo = { background:'transparent', color:'var(--text3)' };
+  const aplicar = (el, s) => { if (el) { el.style.background = s.background; el.style.color = s.color; } };
+
+  if (modo === 'bipar') {
+    if (buscarWrap) buscarWrap.style.display = 'none';
+    if (bipeWrap)   bipeWrap.style.display   = '';
+    aplicar(btnBuscar, inativo);
+    aplicar(btnBipar, ativo);
+    _dmBipeReset();
+    _dmPopularSepsBipe();
+    setTimeout(() => document.getElementById('dist-bipe-input')?.focus(), 50);
+  } else {
+    if (buscarWrap) buscarWrap.style.display = '';
+    if (bipeWrap)   bipeWrap.style.display   = 'none';
+    aplicar(btnBuscar, ativo);
+    aplicar(btnBipar, inativo);
+  }
+}
+
+function _dmPopularSepsBipe() {
+  const sel = document.getElementById('dist-bipe-sep');
+  if (!sel) return;
+  const seps = (_todosSepsDistribuicao || []).filter(u => u.status === 'ativo' && u.perfil !== 'supervisor');
+  const atual = sel.value;
+  sel.innerHTML = '<option value="">— Selecione o colaborador —</option>' +
+    seps.map(s => `<option value="${s.id}">${s.nome}</option>`).join('');
+  if (atual) sel.value = atual;
+}
+
+let _dmBipeOk = 0, _dmBipeErro = 0;
+
+function _dmBipeReset() {
+  _dmBipeOk = 0; _dmBipeErro = 0;
+  const elOk = document.getElementById('dist-bipe-count-ok');
+  const elErro = document.getElementById('dist-bipe-count-erro');
+  const log = document.getElementById('dist-bipe-log');
+  if (elOk) elOk.textContent = '0';
+  if (elErro) elErro.textContent = '0';
+  if (log) log.innerHTML = '';
+}
+
+async function distBipePedido() {
+  const input  = document.getElementById('dist-bipe-input');
+  const sepSel = document.getElementById('dist-bipe-sep');
+  const sepId  = sepSel?.value;
+  const raw    = (input?.value || '').trim();
+  if (input) input.value = '';
+  if (!raw) return;
+
+  if (!sepId) {
+    toast('Selecione o colaborador antes de bipar os pedidos.', 'aviso');
+    input?.focus();
+    return;
+  }
+
+  // O código bipado pode vir só com o número do pedido ou com prefixo/sufixo do
+  // código de barras impresso na folha — extrai a sequência numérica do pedido.
+  const m = raw.match(/\d{5,}/);
+  const numeroPedido = m ? m[0] : raw;
+  const sepNome = sepSel.selectedOptions[0]?.textContent || '';
+
+  try {
+    const res = await fetch(`${API}/pedidos/distribuicao/confirmar`, {
+      credentials:'include', method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        plano: [{ separador_id: parseInt(sepId), pedidos: [numeroPedido] }],
+        turno_lote: null
+      })
+    });
+    const data = await res.json();
+    if (!res.ok || data.distribuidos === 0) {
+      _dmBipeRegistrar(numeroPedido, false, data.erro || 'Pedido não encontrado ou já atribuído');
+    } else {
+      _dmBipeRegistrar(numeroPedido, true, `Atribuído para ${sepNome}`);
+      if (typeof carregarPedidos === 'function') carregarPedidos();
+    }
+  } catch(e) {
+    _dmBipeRegistrar(numeroPedido, false, 'Erro de conexão');
+  } finally {
+    input?.focus();
+  }
+}
+
+function _dmBipeRegistrar(numeroPedido, sucesso, msg) {
+  if (sucesso) _dmBipeOk++; else _dmBipeErro++;
+  const elOk = document.getElementById('dist-bipe-count-ok');
+  const elErro = document.getElementById('dist-bipe-count-erro');
+  if (elOk) elOk.textContent = _dmBipeOk;
+  if (elErro) elErro.textContent = _dmBipeErro;
+
+  const log = document.getElementById('dist-bipe-log');
+  if (!log) return;
+  const cor    = sucesso ? 'var(--green)' : '#ef4444';
+  const icone  = sucesso ? '✅' : '❌';
+  const linha  = document.createElement('div');
+  linha.style.cssText = `display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--surface2);border-left:3px solid ${cor};border-radius:6px;font-size:12px`;
+  linha.innerHTML = `<span style="font-size:14px">${icone}</span>
+    <span style="font-weight:700;color:var(--accent);font-family:'Space Mono',monospace">${numeroPedido}</span>
+    <span style="color:var(--text3)">${msg}</span>`;
+  log.insertBefore(linha, log.firstChild);
 }
 
 /* ══ DISTRIBUIÇÃO POR TURNO ═══════════════════════════════════════════ */

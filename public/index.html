@@ -2365,20 +2365,51 @@
 
       <!-- PAINEL MANUAL -->
       <div id="dist-painel-manual" style="display:none">
-        <div style="background:rgba(99,102,241,.06);border:1px solid rgba(99,102,241,.2);border-radius:10px;padding:14px 16px;margin-bottom:14px;font-size:12px;color:var(--text2)">
-          <b>Distribuição Manual:</b> busque um pedido pelo número ou cliente e atribua diretamente a um colaborador.
+        <div style="display:flex;gap:6px;margin-bottom:14px">
+          <button id="btn-dm-buscar" class="btn btn-sm" onclick="distManualSubModo('buscar')" style="flex:1;background:#6366f1;color:#fff">🔍 Buscar</button>
+          <button id="btn-dm-bipar"  class="btn btn-sm" onclick="distManualSubModo('bipar')"  style="flex:1;background:transparent;color:var(--text3)">📷 Bipar Código de Barras</button>
         </div>
-        <div style="display:flex;gap:8px;margin-bottom:14px">
-          <input id="dist-manual-busca" type="text" placeholder="Número do pedido ou nome do cliente..."
-            style="flex:1;padding:10px 14px;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;color:var(--text);font-size:13px;outline:none"
-            oninput="clearTimeout(window._dmTimer);window._dmTimer=setTimeout(distManualBuscar,350)">
-          <button class="btn btn-primary" onclick="distManualBuscar()">Buscar</button>
-        </div>
-        <div id="dist-manual-resultado" style="max-height:340px;overflow-y:auto">
-          <div style="text-align:center;padding:32px;color:var(--text3);font-size:13px">
-            Digite o número do pedido ou nome do cliente para buscar
+
+        <!-- Sub-modo: buscar por número/cliente -->
+        <div id="dist-manual-busca-wrap">
+          <div style="background:rgba(99,102,241,.06);border:1px solid rgba(99,102,241,.2);border-radius:10px;padding:14px 16px;margin-bottom:14px;font-size:12px;color:var(--text2)">
+            <b>Distribuição Manual:</b> busque um pedido pelo número ou cliente e atribua diretamente a um colaborador.
+          </div>
+          <div style="display:flex;gap:8px;margin-bottom:14px">
+            <input id="dist-manual-busca" type="text" placeholder="Número do pedido ou nome do cliente..."
+              style="flex:1;padding:10px 14px;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;color:var(--text);font-size:13px;outline:none"
+              oninput="clearTimeout(window._dmTimer);window._dmTimer=setTimeout(distManualBuscar,350)">
+            <button class="btn btn-primary" onclick="distManualBuscar()">Buscar</button>
+          </div>
+          <div id="dist-manual-resultado" style="max-height:340px;overflow-y:auto">
+            <div style="text-align:center;padding:32px;color:var(--text3);font-size:13px">
+              Digite o número do pedido ou nome do cliente para buscar
+            </div>
           </div>
         </div>
+
+        <!-- Sub-modo: bipar código de barras -->
+        <div id="dist-manual-bipe-wrap" style="display:none">
+          <div style="background:rgba(99,102,241,.06);border:1px solid rgba(99,102,241,.2);border-radius:10px;padding:14px 16px;margin-bottom:14px;font-size:12px;color:var(--text2)">
+            <b>Bipar Código de Barras:</b> selecione o colaborador uma vez e vá bipando as folhas dos pedidos — cada bipagem atribui o pedido automaticamente para ele.
+          </div>
+          <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center">
+            <label style="font-size:12px;font-weight:700;color:var(--text2);white-space:nowrap">Colaborador:</label>
+            <select id="dist-bipe-sep" onchange="document.getElementById('dist-bipe-input')?.focus()"
+              style="flex:1;padding:10px 14px;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;color:var(--text);font-size:13px;outline:none">
+              <option value="">— Selecione o colaborador —</option>
+            </select>
+          </div>
+          <input id="dist-bipe-input" type="text" placeholder="Bipe o código de barras do pedido..." autocomplete="off"
+            style="width:100%;padding:14px 16px;background:var(--surface2);border:2px solid #6366f1;border-radius:10px;color:var(--text);font-size:15px;outline:none;box-sizing:border-box;font-family:'Space Mono',monospace"
+            onkeydown="if(event.key==='Enter'){event.preventDefault();distBipePedido();}">
+          <div style="display:flex;gap:16px;margin:12px 2px;font-size:12px;color:var(--text3)">
+            <span>✅ <b id="dist-bipe-count-ok" style="color:var(--green)">0</b> atribuído(s)</span>
+            <span>❌ <b id="dist-bipe-count-erro" style="color:#ef4444">0</b> erro(s)</span>
+          </div>
+          <div id="dist-bipe-log" style="max-height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:6px"></div>
+        </div>
+
         <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
           <button class="btn btn-outline" onclick="fecharModalDistribuicao()">Cancelar</button>
         </div>
