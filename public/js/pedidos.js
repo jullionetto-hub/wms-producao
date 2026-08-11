@@ -26,6 +26,7 @@ function filtrarPedidosTodos() {
 let _pedidosLista  = [];
 let _filtroTransp  = '';
 let _filtroTurno   = '';
+let _ritmoRealCarregado = false;
 
 function _turnoHora(p) {
   // Usa turno_distribuicao — definido pelo supervisor na hora de distribuir
@@ -46,6 +47,7 @@ function filtrarPedidosTurno(turno) {
 }
 
 async function carregarPedidos() {
+  if (!_ritmoRealCarregado) { _ritmoRealCarregado = true; carregarRitmoReal(); }
   try {
     const ini    = document.getElementById('filtro-ped-ini').value;
     const fim    = document.getElementById('filtro-ped-fim').value;

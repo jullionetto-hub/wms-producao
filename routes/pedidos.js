@@ -64,6 +64,61 @@ router.get('/pedidos', requerAuth, async (req,res) => {
   } catch(e){res.status(500).json({erro:e.message});}
 });
 
+/* ── Ritmo real de separação (itens/min) por faixa de dificuldade ──────────
+   Alimenta a estimativa de tempo (⏱) com dados reais em vez de números
+   fixos "no chute". Calcula a partir dos pedidos já concluídos, descontando
+   tempo de espera de repositor. Cacheado em memória — a query varre todo o
+   histórico de pedidos concluídos, não vale recalcular a cada requisição. */
+let _ritmoCache = { data: null, calculadoEm: 0 };
+const RITMO_CACHE_MS      = 30 * 60 * 1000; // 30 min
+const RITMO_MIN_AMOSTRAS  = 20; // abaixo disso, o front usa o fallback fixo
+
+router.get('/pedidos/ritmo-estimativa', requerAuth, async (req, res) => {
+  try {
+    const agora = Date.now();
+    if (_ritmoCache.data && (agora - _ritmoCache.calculadoEm) < RITMO_CACHE_MS) {
+      return res.json(_ritmoCache.data);
+    }
+    const rows = await db.all(`
+      SELECT
+        CASE
+          WHEN total_itens <= 0 THEN 'facil'
+          WHEN pontuacao / total_itens <= 1.2 THEN 'facil'
+          WHEN pontuacao / total_itens <= 1.7 THEN 'medio'
+          ELSE 'dificil'
+        END AS bucket,
+        COUNT(*) AS amostras,
+        PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY total_itens / duracao_min) AS ritmo
+      FROM (
+        SELECT
+          COALESCE(NULLIF(p.total_itens,0), p.itens, 0)::float AS total_itens,
+          COALESCE(p.pontuacao,0)::float AS pontuacao,
+          GREATEST(0.5, EXTRACT(EPOCH FROM (
+            COALESCE(NULLIF(p.skus_concluido_em,''), NULLIF(p.concluido_em,''))::timestamp
+            - p.iniciado_em::timestamp
+          )) / 60.0 - COALESCE(p.tempo_aguardando_min,0)) AS duracao_min
+        FROM pedidos p
+        WHERE p.status = 'concluido'
+          AND NULLIF(p.iniciado_em,'') IS NOT NULL
+          AND NULLIF(COALESCE(NULLIF(p.skus_concluido_em,''), NULLIF(p.concluido_em,'')),'') IS NOT NULL
+      ) sub
+      WHERE total_itens > 0 AND duracao_min BETWEEN 0.5 AND 180
+      GROUP BY 1
+    `);
+    const buckets = {};
+    for (const r of rows) {
+      const amostras = parseInt(r.amostras) || 0;
+      buckets[r.bucket] = {
+        ritmo: amostras >= RITMO_MIN_AMOSTRAS ? Math.round(parseFloat(r.ritmo) * 100) / 100 : null,
+        amostras,
+      };
+    }
+    const resultado = { buckets, min_amostras: RITMO_MIN_AMOSTRAS, calculado_em: new Date().toISOString() };
+    _ritmoCache = { data: resultado, calculadoEm: agora };
+    res.json(resultado);
+  } catch(e) { res.status(500).json({erro:e.message}); }
+});
+
 router.post('/pedidos', requerAuth, requerPerfil('supervisor'), async (req,res) => {
   const {numero_pedido,separador_id,status,itens,rua,data_pedido,hora_pedido}=req.body;
   const {data:dl,hora:hl}=dataHoraLocal();

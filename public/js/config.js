@@ -2,27 +2,41 @@
 let usuarioAtual     = null;
 
 // ── Estimativa de tempo de separação ──────────────────────────────────────
-// Fórmula baseada em itens reais (não pontuação que pode estar desatualizada):
-//   Ritmo base: 2.5 itens/minuto
-//   Ajuste de dificuldade via pontuação/item:
-//     ratio 1.0 (fácil) → 2.5 itens/min → 24s/item
-//     ratio 1.5 (médio) → 2.0 itens/min → 30s/item
-//     ratio 2.0 (difícil) → 1.5 itens/min → 40s/item
-//   Fórmula: min = total_itens / ritmo_ajustado
+// Ritmo (itens/min) vem do backend (/pedidos/ritmo-estimativa), calculado a
+// partir da mediana real dos pedidos já concluídos, por faixa de dificuldade
+// (pontuação/item). Enquanto não há amostras suficientes numa faixa, usa a
+// fórmula fixa abaixo como fallback.
+//   ratio 1.0 (fácil)   → 7.0 itens/min (~9s/item)
+//   ratio 1.5 (médio)   → 5.0 itens/min (~12s/item)
+//   ratio 2.0 (difícil) → 3.5 itens/min (~17s/item)
+
+let _ritmoReal = null; // { buckets: { facil, medio, dificil }, min_amostras, calculado_em }
 
 function carregarTaxaSeparacao() {
   return Promise.resolve(null); // sem chamada ao servidor
 }
 
+async function carregarRitmoReal() {
+  try {
+    const res = await fetch(`${API}/pedidos/ritmo-estimativa`, { credentials: 'include' });
+    if (res.ok) _ritmoReal = await res.json();
+  } catch(e) { /* mantém fallback fixo */ }
+}
+
+function _bucketDificuldade(ratio) {
+  if (ratio <= 1.2) return 'facil';
+  if (ratio <= 1.7) return 'medio';
+  return 'dificil';
+}
+
 function _ritmoItens(totalItens, pontuacao) {
   if (!totalItens || totalItens <= 0) return 7.0;
   const ratio = pontuacao > 0 ? pontuacao / totalItens : 1.0;
-  // Calibrado: 53 itens faceis (ratio~1.0) = ~8 min → 6.6 itens/min
-  // Corredor facil  (ratio 1.0) → 7 itens/min (~9s/item)
-  // Corredor medio  (ratio 1.5) → 5 itens/min (~12s/item)
-  // Corredor dificil(ratio 2.0) → 3.5 itens/min (~17s/item)
-  const ritmo = Math.max(3.5, 7.0 - (ratio - 1.0) * 3.5);
-  return ritmo;
+  const bucket = _bucketDificuldade(ratio);
+  const real = _ritmoReal?.buckets?.[bucket];
+  if (real?.ritmo) return real.ritmo;
+  // Fallback: fórmula fixa, usada até essa faixa de dificuldade acumular amostras suficientes
+  return Math.max(3.5, 7.0 - (ratio - 1.0) * 3.5);
 }
 
 function estimarTempoSep(totalItens, pontuacao) {
