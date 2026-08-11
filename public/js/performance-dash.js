@@ -114,6 +114,7 @@ function renderizarPerformanceDash() {
       <button id="pf-btn-filtrar" onclick="pfFiltrarAtivo()" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer">Filtrar</button>
       <button onclick="pfInicializar()" style="background:var(--surface2);color:var(--text3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:12px;cursor:pointer">✕ Limpar</button>
       <button onclick="pfExportarExcel()" style="background:#16a34a;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer">Excel</button>
+      <button onclick="pfAbrirAnalisePdf()" style="background:#dc2626;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer">📄 Análise PDF</button>
       <span id="pf-filtro-info" style="margin-left:auto;font-size:11px;color:var(--text3);align-self:center"></span>
     </div>
 
@@ -559,6 +560,21 @@ function pfRenderKPIs({ totPed, totItens, totSkus, totRep, tempoMed, tempoMin, t
       ${ruaBars}
     </div>`;
 
+  // ── Checkout e Embalagem — vêm prontos do backend (não dependem do filtro de colaborador) ──
+  const setorCard = (cor, label, setor, unidade) => {
+    if (!setor) return '';
+    const tempoTxt = setor.tempo_medio_min != null ? setor.tempo_medio_min.toFixed(1)+' min' : '—';
+    const rapNome = setor.mais_rapido?.nome ? setor.mais_rapido.nome.split(' ')[0] : '—';
+    const lenNome = setor.mais_lento?.nome  ? setor.mais_lento.nome.split(' ')[0]  : '—';
+    return card(
+      cor, label, pfFmtN(setor.concluidos), `${unidade} concluídos`,
+      mini('PENDENTES', pfFmtN(setor.pendentes)) +
+      mini('TEMPO MÉDIO', tempoTxt) +
+      mini('MAIS RÁPIDO', rapNome !== '—' && setor.mais_rapido ? `${rapNome} (${setor.mais_rapido.tempo_medio_min.toFixed(1)}m)` : '—') +
+      mini('MAIS LENTO',  lenNome !== '—' && setor.mais_lento  ? `${lenNome} (${setor.mais_lento.tempo_medio_min.toFixed(1)}m)`  : '—')
+    );
+  };
+
   document.getElementById('pf-kpis').innerHTML =
     card(
       '#4f46e5',
@@ -592,6 +608,8 @@ function pfRenderKPIs({ totPed, totItens, totSkus, totRep, tempoMed, tempoMin, t
       mini('COM TEMPO', pfFmtN(nComTempo)) +
       mini('SEM TEMPO', pfFmtN(nColab - nComTempo))
     ) +
+    setorCard('#0ea5e9', 'CHECKOUT',  _pfDados?.checkout,  'pedidos') +
+    setorCard('#16a34a', 'EMBALAGEM', _pfDados?.embalagem, 'pedidos') +
     ruasCard;
 }
 
@@ -1130,6 +1148,127 @@ async function pfExcluirOcorrencia(id) {
 }
 
 // ── Exportar Excel ─────────────────────────────────────────────────────────
+// ── Análise do turno (pontos de atenção) — regras simples sobre os dados já carregados ──
+function pfGerarInsights() {
+  const insights = [];
+  const colab = _pfDados?.colaboradores || [];
+  const comTempo = colab.filter(c => c.tempo_medio_min != null);
+
+  if (comTempo.length >= 2) {
+    const ordenado = [...comTempo].sort((a,b) => a.tempo_medio_min - b.tempo_medio_min);
+    const rapido = ordenado[0], lento = ordenado[ordenado.length-1];
+    if (lento.tempo_medio_min > rapido.tempo_medio_min * 1.5) {
+      insights.push(`${pfEsc(lento.nome)} levou em média ${lento.tempo_medio_min.toFixed(1)} min por pedido — cerca de ${(lento.tempo_medio_min/rapido.tempo_medio_min).toFixed(1)}x mais que ${pfEsc(rapido.nome)} (${rapido.tempo_medio_min.toFixed(1)} min). Vale entender se foi complexidade dos pedidos recebidos ou dificuldade pontual.`);
+    }
+  }
+
+  const totPed = colab.reduce((s,c) => s + (c.pedidos||0), 0);
+  const totRep = colab.reduce((s,c) => s + (c.reposicoes||0), 0);
+  if (totPed > 0) {
+    const repPct = Math.round((totRep/totPed)*100);
+    if (repPct > 40) insights.push(`${repPct}% dos pedidos precisaram de reposição de estoque — indica ruptura frequente nesse período. Vale revisar quais SKUs mais geraram falta.`);
+  }
+
+  const ck = _pfDados?.checkout;
+  if (ck && (ck.concluidos + ck.pendentes) > 0) {
+    const pctPend = Math.round((ck.pendentes/(ck.concluidos+ck.pendentes))*100);
+    if (pctPend > 30) insights.push(`Checkout com ${ck.pendentes} pedido(s) pendente(s) (${pctPend}% do total do período) — pode estar represando a saída dos pedidos.`);
+  }
+
+  const emb = _pfDados?.embalagem;
+  if (emb && (emb.concluidos + emb.pendentes) > 0) {
+    const pctPend = Math.round((emb.pendentes/(emb.concluidos+emb.pendentes))*100);
+    if (pctPend > 30) insights.push(`Embalagem com ${emb.pendentes} pedido(s) pendente(s) (${pctPend}% do total do período) — candidata a gargalo do turno.`);
+  }
+
+  const semTempo = colab.filter(c => c.tempo_medio_min == null).length;
+  if (semTempo > 0) insights.push(`${semTempo} colaborador(es) sem tempo de separação registrado — verifique se estão batendo início/fim corretamente no app.`);
+
+  if (!insights.length) insights.push('Nenhum ponto crítico identificado automaticamente para o período selecionado — operação dentro do esperado.');
+  return insights;
+}
+
+function pfAbrirAnalisePdf() {
+  if (!_pfDados) { pfToast('Carregue os dados antes de gerar a análise.', 'aviso'); return; }
+  const ini   = document.getElementById('pf-ini')?.value || '';
+  const fim   = document.getElementById('pf-fim')?.value || '';
+  const turno = document.getElementById('pf-turno')?.value || '';
+  const turnoLabel = { Manha:'Manhã', Tarde:'Tarde', Noite:'Noite' }[turno] || 'Todos';
+
+  const colab      = _pfDados.colaboradores || [];
+  const totPed     = colab.reduce((s,c) => s + (c.pedidos||0), 0);
+  const totItens   = colab.reduce((s,c) => s + (c.itens||0), 0);
+  const totRep     = colab.reduce((s,c) => s + (c.reposicoes||0), 0);
+  const comTempo   = colab.filter(c => c.tempo_medio_min != null);
+  const tempoMedio = comTempo.length ? comTempo.reduce((s,c) => s+c.tempo_medio_min, 0) / comTempo.length : null;
+  const ck  = _pfDados.checkout  || {};
+  const emb = _pfDados.embalagem || {};
+  const insights = pfGerarInsights();
+
+  const linha = (label, val) => `<tr><td style="padding:6px 10px;color:#555;font-size:12px">${label}</td><td style="padding:6px 10px;text-align:right;font-weight:700;font-size:12px">${val}</td></tr>`;
+
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Análise do Turno</title>
+  <style>
+    body{font-family:Arial,Helvetica,sans-serif;color:#1a1a1a;padding:32px;max-width:800px;margin:0 auto}
+    h1{font-size:20px;margin-bottom:2px}
+    .sub{color:#666;font-size:12px;margin-bottom:24px}
+    h2{font-size:14px;margin:24px 0 8px;border-bottom:2px solid #4f46e5;padding-bottom:4px}
+    table{width:100%;border-collapse:collapse;margin-bottom:8px}
+    tr{border-bottom:1px solid #eee}
+    ul{padding-left:18px;font-size:13px;line-height:1.7}
+    li{margin-bottom:6px}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    .box{border:1px solid #ddd;border-radius:8px;padding:12px}
+    @media print{ body{padding:12px} }
+  </style></head><body>
+    <h1>Análise de Performance — Logística</h1>
+    <div class="sub">Período: ${ini||'—'} a ${fim||'—'} · Turno: ${turnoLabel} · Gerado em ${new Date().toLocaleString('pt-BR')}</div>
+
+    <h2>Resumo geral</h2>
+    <div class="grid">
+      <div class="box"><table>
+        ${linha('Pedidos separados', pfFmtN(totPed))}
+        ${linha('Itens separados', pfFmtN(totItens))}
+        ${linha('Tempo médio de separação', tempoMedio!=null ? tempoMedio.toFixed(1)+' min' : '—')}
+        ${linha('Colaboradores na separação', colab.length)}
+      </table></div>
+      <div class="box"><table>
+        ${linha('Reposições geradas', pfFmtN(totRep))}
+        ${linha('Checkout concluídos / pendentes', `${ck.concluidos||0} / ${ck.pendentes||0}`)}
+        ${linha('Embalagem concluídos / pendentes', `${emb.concluidos||0} / ${emb.pendentes||0}`)}
+        ${linha('Tempo médio checkout', ck.tempo_medio_min!=null ? ck.tempo_medio_min.toFixed(1)+' min' : '—')}
+      </table></div>
+    </div>
+
+    <h2>Pontos de atenção</h2>
+    <ul>${insights.map(i => `<li>${i}</li>`).join('')}</ul>
+
+    <h2>Por colaborador (separação)</h2>
+    <table>
+      <tr style="border-bottom:2px solid #333;font-size:11px;text-transform:uppercase;color:#666">
+        <td style="padding:6px 10px">Nome</td><td style="padding:6px 10px;text-align:right">Pedidos</td>
+        <td style="padding:6px 10px;text-align:right">Itens</td><td style="padding:6px 10px;text-align:right">Reposições</td>
+        <td style="padding:6px 10px;text-align:right">Tempo médio</td>
+      </tr>
+      ${colab.map(c => `<tr>
+        <td style="padding:6px 10px;font-size:12px">${pfEsc(c.nome||'—')}</td>
+        <td style="padding:6px 10px;text-align:right;font-size:12px">${c.pedidos||0}</td>
+        <td style="padding:6px 10px;text-align:right;font-size:12px">${c.itens||0}</td>
+        <td style="padding:6px 10px;text-align:right;font-size:12px">${c.reposicoes||0}</td>
+        <td style="padding:6px 10px;text-align:right;font-size:12px">${c.tempo_medio_min!=null ? c.tempo_medio_min.toFixed(1)+' min' : '—'}</td>
+      </tr>`).join('')}
+    </table>
+
+    <div style="margin-top:28px;text-align:center;color:#999;font-size:10px">Gerado automaticamente pelo WMS Miess — análise baseada em regras simples sobre os dados do período, não substitui avaliação humana.</div>
+    <script>window.onload = () => setTimeout(() => window.print(), 300);<\/script>
+  </body></html>`;
+
+  const w = window.open('', '_blank');
+  if (!w) { pfToast('Habilite pop-ups no navegador para gerar a análise.', 'aviso'); return; }
+  w.document.write(html);
+  w.document.close();
+}
+
 function pfExportarExcel() {
   const ini = document.getElementById('pf-ini')?.value || '';
   const fim = document.getElementById('pf-fim')?.value || '';

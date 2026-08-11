@@ -169,7 +169,67 @@ router.get('/performance/separadores', requerAuth, requerPerfil('supervisor', 'g
       ORDER BY data, colaborador
     `, params);
 
-    res.json({ colaboradores: resultado, por_dia: porDia, ruas: ruasRaw, por_colab_dia: porColabDia });
+    // ── Checkout — resumo do período (turno filtrado via o pedido, checkout não tem turno próprio) ──
+    const checkoutRows = await db.all(`
+      SELECT
+        NULLIF(ck.operador_nome,'') AS nome,
+        COUNT(*) FILTER (WHERE ck.status='concluido')::int AS concluidos,
+        COUNT(*) FILTER (WHERE ck.status!='concluido')::int AS pendentes,
+        ROUND(AVG(CASE WHEN ck.status='concluido'
+            AND NULLIF(ck.hora_criacao,'') IS NOT NULL AND NULLIF(ck.hora_checkout,'') IS NOT NULL
+          THEN EXTRACT(EPOCH FROM (
+            (ck.data_checkout||' '||ck.hora_checkout)::timestamp
+            - (ck.data_checkout||' '||ck.hora_criacao)::timestamp
+          ))/60.0 END)::numeric, 1) AS tempo_medio_min
+      FROM checkout ck
+      JOIN pedidos p2 ON p2.id = ck.pedido_id
+      LEFT JOIN separadores s2 ON s2.id = p2.separador_id
+      LEFT JOIN usuarios u2 ON u2.id = s2.usuario_id
+      WHERE ck.data_checkout >= $1 AND ck.data_checkout <= $2 ${turno ? `AND REPLACE(COALESCE(u2.turno, s2.turno, 'Manha'), 'Ã£', 'a') = $3` : ''}
+      GROUP BY NULLIF(ck.operador_nome,'')
+    `, params);
+
+    // ── Embalagem — resumo do período (timestamps ficam na própria tabela pedidos) ──
+    const embalagemRows = await db.all(`
+      SELECT
+        NULLIF(p3.embalado_por,'') AS nome,
+        COUNT(*) FILTER (WHERE p3.status_embalagem='embalado')::int AS concluidos,
+        COUNT(*) FILTER (WHERE p3.status_embalagem!='embalado')::int AS pendentes,
+        ROUND(AVG(CASE WHEN p3.status_embalagem='embalado'
+            AND NULLIF(p3.embalagem_iniciado_em,'') IS NOT NULL AND NULLIF(p3.embalado_em,'') IS NOT NULL
+          THEN EXTRACT(EPOCH FROM (
+            (p3.data_pedido||' '||p3.embalado_em)::timestamp
+            - (p3.data_pedido||' '||p3.embalagem_iniciado_em)::timestamp
+          ))/60.0 END)::numeric, 1) AS tempo_medio_min
+      FROM pedidos p3
+      LEFT JOIN separadores s3 ON s3.id = p3.separador_id
+      LEFT JOIN usuarios u3 ON u3.id = s3.usuario_id
+      WHERE p3.status = 'concluido'
+        AND COALESCE(NULLIF(LEFT(p3.iniciado_em,10),''), NULLIF(p3.data_distribuicao,''), p3.data_pedido) >= $1
+        AND COALESCE(NULLIF(LEFT(p3.iniciado_em,10),''), NULLIF(p3.data_distribuicao,''), p3.data_pedido) <= $2
+        ${turno ? `AND REPLACE(COALESCE(u3.turno, s3.turno, 'Manha'), 'Ã£', 'a') = $3` : ''}
+      GROUP BY NULLIF(p3.embalado_por,'')
+    `, params);
+
+    const resumirSetor = rows => {
+      const concluidos = rows.reduce((s,r) => s + (r.concluidos||0), 0);
+      const pendentes  = rows.reduce((s,r) => s + (r.pendentes||0), 0);
+      const comTempo   = rows.filter(r => r.tempo_medio_min != null).map(r => ({ ...r, tempo_medio_min: parseFloat(r.tempo_medio_min) }));
+      const tempoMedio = comTempo.length ? Math.round(comTempo.reduce((s,r) => s+r.tempo_medio_min, 0) / comTempo.length * 10) / 10 : null;
+      const maisRapido = comTempo.length ? comTempo.reduce((a,b) => a.tempo_medio_min < b.tempo_medio_min ? a : b) : null;
+      const maisLento  = comTempo.length ? comTempo.reduce((a,b) => a.tempo_medio_min > b.tempo_medio_min ? a : b) : null;
+      return {
+        colaboradores: rows.length, concluidos, pendentes, tempo_medio_min: tempoMedio,
+        mais_rapido: maisRapido ? { nome: maisRapido.nome, tempo_medio_min: maisRapido.tempo_medio_min } : null,
+        mais_lento:  maisLento  ? { nome: maisLento.nome,  tempo_medio_min: maisLento.tempo_medio_min }  : null,
+      };
+    };
+
+    res.json({
+      colaboradores: resultado, por_dia: porDia, ruas: ruasRaw, por_colab_dia: porColabDia,
+      checkout:  resumirSetor(checkoutRows),
+      embalagem: resumirSetor(embalagemRows),
+    });
   } catch(e) {
     console.error('performance/separadores:', e.message);
     res.status(500).json({ erro: e.message });
