@@ -565,13 +565,12 @@ function pfRenderKPIs({ totPed, totItens, totSkus, totRep, tempoMed, tempoMin, t
     if (!setor) return '';
     const tempoTxt = setor.tempo_medio_min != null ? setor.tempo_medio_min.toFixed(1)+' min' : '—';
     const rapNome = setor.mais_rapido?.nome ? setor.mais_rapido.nome.split(' ')[0] : '—';
-    const lenNome = setor.mais_lento?.nome  ? setor.mais_lento.nome.split(' ')[0]  : '—';
     return card(
       cor, label, pfFmtN(setor.concluidos), `${unidade} concluídos`,
+      mini('ITENS', pfFmtN(setor.itens||0)) +
       mini('PENDENTES', pfFmtN(setor.pendentes)) +
       mini('TEMPO MÉDIO', tempoTxt) +
-      mini('MAIS RÁPIDO', rapNome !== '—' && setor.mais_rapido ? `${rapNome} (${setor.mais_rapido.tempo_medio_min.toFixed(1)}m)` : '—') +
-      mini('MAIS LENTO',  lenNome !== '—' && setor.mais_lento  ? `${lenNome} (${setor.mais_lento.tempo_medio_min.toFixed(1)}m)`  : '—')
+      mini('MAIS RÁPIDO', rapNome !== '—' && setor.mais_rapido ? `${rapNome} (${setor.mais_rapido.tempo_medio_min.toFixed(1)}m)` : '—')
     );
   };
 
@@ -596,7 +595,7 @@ function pfRenderKPIs({ totPed, totItens, totSkus, totRep, tempoMed, tempoMin, t
       '#ea580c',
       'REPOSIÇÃO', pfFmtN(totRep), 'reposições geradas',
       mini('% DOS PEDIDOS', repPct + '%') +
-      mini('PEDIDOS SEM REP.', pfFmtN(totPed - Math.min(totRep, totPed))) +
+      mini('TEMPO MÉDIO', _pfDados?.reposicao?.tempo_medio_min != null ? _pfDados.reposicao.tempo_medio_min.toFixed(1)+' min' : '—') +
       mini('MAIS REPOS.', liderRep?.reposicoes ? (liderRep.nome||'?').split(' ')[0] : '—') +
       mini('MÉD/COLAB', nColab > 0 ? (totRep / nColab).toFixed(1) : '0')
     ) +
@@ -1199,10 +1198,13 @@ function pfAbrirAnalisePdf() {
   const totPed     = colab.reduce((s,c) => s + (c.pedidos||0), 0);
   const totItens   = colab.reduce((s,c) => s + (c.itens||0), 0);
   const totRep     = colab.reduce((s,c) => s + (c.reposicoes||0), 0);
+  const totSkus    = _pfDados.total_skus || 0;
+  const totRuas    = new Set((_pfDados.ruas||[]).map(r => r.rua)).size;
   const comTempo   = colab.filter(c => c.tempo_medio_min != null);
   const tempoMedio = comTempo.length ? comTempo.reduce((s,c) => s+c.tempo_medio_min, 0) / comTempo.length : null;
   const ck  = _pfDados.checkout  || {};
   const emb = _pfDados.embalagem || {};
+  const rep = _pfDados.reposicao || {};
   const insights = pfGerarInsights();
 
   const linha = (label, val) => `<tr><td style="padding:6px 10px;color:#555;font-size:12px">${label}</td><td style="padding:6px 10px;text-align:right;font-weight:700;font-size:12px">${val}</td></tr>`;
@@ -1219,24 +1221,35 @@ function pfAbrirAnalisePdf() {
     li{margin-bottom:6px}
     .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
     .box{border:1px solid #ddd;border-radius:8px;padding:12px}
+    .box h3{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#888;margin:0 0 4px}
     @media print{ body{padding:12px} }
   </style></head><body>
     <h1>Análise de Performance — Logística</h1>
     <div class="sub">Período: ${ini||'—'} a ${fim||'—'} · Turno: ${turnoLabel} · Gerado em ${new Date().toLocaleString('pt-BR')}</div>
 
-    <h2>Resumo geral</h2>
+    <h2>Resumo geral — todo o processo</h2>
     <div class="grid">
-      <div class="box"><table>
+      <div class="box"><h3>Separação</h3><table>
         ${linha('Pedidos separados', pfFmtN(totPed))}
         ${linha('Itens separados', pfFmtN(totItens))}
+        ${linha('SKUs (total)', pfFmtN(totSkus))}
+        ${linha('Ruas percorridas (total)', pfFmtN(totRuas))}
         ${linha('Tempo médio de separação', tempoMedio!=null ? tempoMedio.toFixed(1)+' min' : '—')}
-        ${linha('Colaboradores na separação', colab.length)}
+        ${linha('Colaboradores', colab.length)}
       </table></div>
-      <div class="box"><table>
+      <div class="box"><h3>Reposição</h3><table>
         ${linha('Reposições geradas', pfFmtN(totRep))}
-        ${linha('Checkout concluídos / pendentes', `${ck.concluidos||0} / ${ck.pendentes||0}`)}
-        ${linha('Embalagem concluídos / pendentes', `${emb.concluidos||0} / ${emb.pendentes||0}`)}
-        ${linha('Tempo médio checkout', ck.tempo_medio_min!=null ? ck.tempo_medio_min.toFixed(1)+' min' : '—')}
+        ${linha('Tempo médio de resolução', rep.tempo_medio_min!=null ? rep.tempo_medio_min.toFixed(1)+' min' : '—')}
+      </table></div>
+      <div class="box"><h3>Checkout</h3><table>
+        ${linha('Pedidos concluídos / pendentes', `${ck.concluidos||0} / ${ck.pendentes||0}`)}
+        ${linha('Itens conferidos', pfFmtN(ck.itens||0))}
+        ${linha('Tempo médio', ck.tempo_medio_min!=null ? ck.tempo_medio_min.toFixed(1)+' min' : '—')}
+      </table></div>
+      <div class="box"><h3>Embalagem</h3><table>
+        ${linha('Pedidos concluídos / pendentes', `${emb.concluidos||0} / ${emb.pendentes||0}`)}
+        ${linha('Itens embalados', pfFmtN(emb.itens||0))}
+        ${linha('Tempo médio', emb.tempo_medio_min!=null ? emb.tempo_medio_min.toFixed(1)+' min' : '—')}
       </table></div>
     </div>
 

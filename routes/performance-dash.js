@@ -175,6 +175,7 @@ router.get('/performance/separadores', requerAuth, requerPerfil('supervisor', 'g
         NULLIF(ck.operador_nome,'') AS nome,
         COUNT(*) FILTER (WHERE ck.status='concluido')::int AS concluidos,
         COUNT(*) FILTER (WHERE ck.status!='concluido')::int AS pendentes,
+        COALESCE(SUM(COALESCE(NULLIF(p2.total_itens,0), p2.itens, 0)) FILTER (WHERE ck.status='concluido'), 0)::int AS itens,
         ROUND(AVG(CASE WHEN ck.status='concluido'
             AND NULLIF(ck.hora_criacao,'') IS NOT NULL AND NULLIF(ck.hora_checkout,'') IS NOT NULL
           THEN EXTRACT(EPOCH FROM (
@@ -195,6 +196,7 @@ router.get('/performance/separadores', requerAuth, requerPerfil('supervisor', 'g
         NULLIF(p3.embalado_por,'') AS nome,
         COUNT(*) FILTER (WHERE p3.status_embalagem='embalado')::int AS concluidos,
         COUNT(*) FILTER (WHERE p3.status_embalagem!='embalado')::int AS pendentes,
+        COALESCE(SUM(COALESCE(NULLIF(p3.total_itens,0), p3.itens, 0)) FILTER (WHERE p3.status_embalagem='embalado'), 0)::int AS itens,
         ROUND(AVG(CASE WHEN p3.status_embalagem='embalado'
             AND NULLIF(p3.embalagem_iniciado_em,'') IS NOT NULL AND NULLIF(p3.embalado_em,'') IS NOT NULL
           THEN EXTRACT(EPOCH FROM (
@@ -211,15 +213,48 @@ router.get('/performance/separadores', requerAuth, requerPerfil('supervisor', 'g
       GROUP BY NULLIF(p3.embalado_por,'')
     `, params);
 
+    // ── Reposição — tempo médio de resolução (do avisos ao repositor resolver) ──
+    const reposicaoTiming = await db.get(`
+      SELECT
+        ROUND(AVG(EXTRACT(EPOCH FROM (
+          (ar.data_aviso || ' ' || (t.value->>'hora_fim'))::timestamp
+          - (ar.data_aviso || ' ' || (t.value->>'hora_inicio'))::timestamp
+        )) / 60.0)::numeric, 1) AS tempo_medio_min
+      FROM avisos_repositor ar
+      JOIN pedidos p4 ON p4.id = ar.pedido_id
+      LEFT JOIN separadores s4 ON s4.id = p4.separador_id
+      LEFT JOIN usuarios u4 ON u4.id = s4.usuario_id,
+      jsonb_array_elements(COALESCE(ar.tentativas, '[]'::jsonb)) AS t(value)
+      WHERE ar.data_aviso >= $1 AND ar.data_aviso <= $2
+        AND (t.value->>'hora_inicio') IS NOT NULL AND (t.value->>'hora_inicio') != ''
+        AND (t.value->>'hora_fim')    IS NOT NULL AND (t.value->>'hora_fim')    != ''
+        ${turno ? `AND REPLACE(COALESCE(u4.turno, s4.turno, 'Manha'), 'Ã£', 'a') = $3` : ''}
+    `, params);
+
+    // ── Separação — total de SKUs distintos no período (evita somar duplicado por colaborador) ──
+    const skusTotal = await db.get(`
+      SELECT COUNT(DISTINCT ip.codigo) FILTER (WHERE ip.codigo IS NOT NULL AND ip.codigo != '')::int AS total_skus
+      FROM pedidos p5
+      JOIN separadores s5 ON s5.id = p5.separador_id
+      LEFT JOIN usuarios u5 ON u5.id = s5.usuario_id
+      JOIN itens_pedido ip ON ip.pedido_id = p5.id
+      WHERE p5.status = 'concluido'
+        AND COALESCE(NULLIF(LEFT(p5.iniciado_em,10),''), NULLIF(p5.data_distribuicao,''), p5.data_pedido) >= $1
+        AND COALESCE(NULLIF(LEFT(p5.iniciado_em,10),''), NULLIF(p5.data_distribuicao,''), p5.data_pedido) <= $2
+        AND s5.status = 'ativo'
+        ${turno ? `AND REPLACE(COALESCE(u5.turno, s5.turno, 'Manha'), 'Ã£', 'a') = $3` : ''}
+    `, params);
+
     const resumirSetor = rows => {
       const concluidos = rows.reduce((s,r) => s + (r.concluidos||0), 0);
       const pendentes  = rows.reduce((s,r) => s + (r.pendentes||0), 0);
+      const itens      = rows.reduce((s,r) => s + (r.itens||0), 0);
       const comTempo   = rows.filter(r => r.tempo_medio_min != null).map(r => ({ ...r, tempo_medio_min: parseFloat(r.tempo_medio_min) }));
       const tempoMedio = comTempo.length ? Math.round(comTempo.reduce((s,r) => s+r.tempo_medio_min, 0) / comTempo.length * 10) / 10 : null;
       const maisRapido = comTempo.length ? comTempo.reduce((a,b) => a.tempo_medio_min < b.tempo_medio_min ? a : b) : null;
       const maisLento  = comTempo.length ? comTempo.reduce((a,b) => a.tempo_medio_min > b.tempo_medio_min ? a : b) : null;
       return {
-        colaboradores: rows.length, concluidos, pendentes, tempo_medio_min: tempoMedio,
+        colaboradores: rows.length, concluidos, pendentes, itens, tempo_medio_min: tempoMedio,
         mais_rapido: maisRapido ? { nome: maisRapido.nome, tempo_medio_min: maisRapido.tempo_medio_min } : null,
         mais_lento:  maisLento  ? { nome: maisLento.nome,  tempo_medio_min: maisLento.tempo_medio_min }  : null,
       };
@@ -227,8 +262,10 @@ router.get('/performance/separadores', requerAuth, requerPerfil('supervisor', 'g
 
     res.json({
       colaboradores: resultado, por_dia: porDia, ruas: ruasRaw, por_colab_dia: porColabDia,
+      total_skus: parseInt(skusTotal?.total_skus || 0),
       checkout:  resumirSetor(checkoutRows),
       embalagem: resumirSetor(embalagemRows),
+      reposicao: { tempo_medio_min: reposicaoTiming?.tempo_medio_min != null ? parseFloat(reposicaoTiming.tempo_medio_min) : null },
     });
   } catch(e) {
     console.error('performance/separadores:', e.message);
