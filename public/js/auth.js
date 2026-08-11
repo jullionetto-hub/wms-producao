@@ -86,13 +86,20 @@ async function fazerLogin() {
     separadorAtual = data.separador;
     erroEl.style.display = 'none';
     ativarApp();
-    // Heartbeat — mantém sessão de trabalho viva (ping a cada 3 min)
-    if (window._wmsHbTimer) clearInterval(window._wmsHbTimer);
-    fetch(`${API}/auth/ping`, { method:'POST', credentials:'include' }).catch(()=>{});
-    window._wmsHbTimer = setInterval(() => {
-      if (usuarioAtual) fetch(`${API}/auth/ping`, { method:'POST', credentials:'include' }).catch(()=>{});
-    }, 3 * 60 * 1000);
+    iniciarHeartbeat();
   } catch(e) { erroEl.textContent = 'Erro ao conectar com o servidor!'; erroEl.style.display = 'block'; }
+}
+
+// Heartbeat — mantém sessão de trabalho viva (ping a cada 3 min), usado tanto no
+// login quanto na restauração de sessão (verificarSessao). Sem isso na restauração,
+// qualquer reload/reabertura do app (comum em PWA mobile) parava os pings pro
+// resto da sessão — o "tempo logado" do colaborador congelava e nunca mais subia.
+function iniciarHeartbeat() {
+  if (window._wmsHbTimer) clearInterval(window._wmsHbTimer);
+  fetch(`${API}/auth/ping`, { method:'POST', credentials:'include' }).catch(()=>{});
+  window._wmsHbTimer = setInterval(() => {
+    if (usuarioAtual) fetch(`${API}/auth/ping`, { method:'POST', credentials:'include' }).catch(()=>{});
+  }, 3 * 60 * 1000);
 }
 
 

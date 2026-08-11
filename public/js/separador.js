@@ -1496,6 +1496,7 @@ document.getElementById('ck-input-caixa')?.addEventListener('keypress', e => { i
     separadorAtual    = data.separador;
     perfilSelecionado = data.usuario.perfil;
     ativarApp();
+    iniciarHeartbeat();
   } catch(e) { console.warn(e); mostrarLogin(); }
 })();
 
