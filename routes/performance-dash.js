@@ -572,6 +572,8 @@ router.get('/performance/pedido/:numero', requerAuth, requerPerfil('supervisor',
     const sep = await db.get(`
       SELECT
         p.numero_pedido,
+        p.cliente,
+        p.transportadora,
         COALESCE(u.nome, s.nome) AS colaborador,
         COALESCE(NULLIF(LEFT(p.iniciado_em,10),''), p.data_pedido) AS data,
         p.iniciado_em,

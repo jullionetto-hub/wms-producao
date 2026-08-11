@@ -1553,12 +1553,35 @@ function pfRenderPedidoDetalhe(d) {
       </div>
     </details>`;
 
+  // Badge de forma de envio — mesmas cores usadas no resto do app
+  const envio = (sep?.transportadora || '').trim();
+  const envioBdg = (() => {
+    if (!envio) return '';
+    if (/DRIVE|RETIRADA/i.test(envio))
+      return `<span style="background:#fee2e2;color:#dc2626;border:1.5px solid #fca5a5;font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">Drive Thru</span>`;
+    if (/PRIME/i.test(envio))
+      return `<span style="background:#FEF3C7;color:#92400E;border:1.5px solid #FCD34D;font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">⭐ Prime</span>`;
+    if (/SEDEX/i.test(envio))
+      return `<span style="background:#EFF6FF;color:#1D4ED8;border:1.5px solid #BFDBFE;font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">${pfEsc(envio)}</span>`;
+    if (/^PAC/i.test(envio))
+      return `<span style="background:#F0FDF4;color:#166534;border:1.5px solid #BBF7D0;font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">${pfEsc(envio)}</span>`;
+    if (/MOTOBOY|MOTO/i.test(envio))
+      return `<span style="background:#F5F3FF;color:#6D28D9;border:1.5px solid #DDD6FE;font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">${pfEsc(envio)}</span>`;
+    return `<span style="background:var(--surface2);color:var(--text2);border:1px solid var(--border);font-size:10px;font-weight:700;padding:2px 9px;border-radius:20px;white-space:nowrap">${pfEsc(envio)}</span>`;
+  })();
+
   return `
     <div style="border:1.5px solid var(--border);border-radius:14px;overflow:hidden;background:var(--surface)">
       <div style="background:var(--surface2);border-bottom:1px solid var(--border);padding:14px 18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-        <div style="display:flex;align-items:center;gap:12px">
-          <span style="font-family:'Space Mono',monospace;font-size:20px;font-weight:900;color:var(--text)">#${pfEsc(d.numero_pedido)}</span>
-          <span style="font-size:12px;color:var(--text2)">${sep?.total_itens ?? '—'} itens · ${sep?.skus ?? '—'} SKUs</span>
+        <div>
+          <div style="display:flex;align-items:center;gap:12px">
+            <span style="font-family:'Space Mono',monospace;font-size:20px;font-weight:900;color:var(--text)">#${pfEsc(d.numero_pedido)}</span>
+            <span style="font-size:12px;color:var(--text2)">${sep?.total_itens ?? '—'} itens · ${sep?.skus ?? '—'} SKUs</span>
+          </div>
+          ${(sep?.cliente || envioBdg) ? `<div style="display:flex;align-items:center;gap:8px;margin-top:5px">
+            ${sep?.cliente ? `<span style="font-size:12px;color:var(--text2)">${pfEsc(sep.cliente)}</span>` : ''}
+            ${envioBdg}
+          </div>` : ''}
         </div>
         ${totalMin != null ? `<div style="background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:5px 18px;color:var(--text);font-size:13px;font-weight:700">Total: ${fmtDur(totalMin)}</div>` : ''}
       </div>
