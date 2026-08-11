@@ -494,32 +494,42 @@ async function carregarOperacao() {
 }
 
 /* ── Zerar Dados de Teste ─────────────────────────────────────────────────── */
-async function confirmarZerarDados() {
+function confirmarZerarDados() {
   const hoje = hojeLocal();
-  const data = prompt(`Zerar TODOS os dados operacionais de qual data?\n(deixe em branco para hoje: ${hoje})`, hoje);
-  if (data === null) return; // cancelou
-  const dia = data.trim() || hoje;
-  wmsConfirm({
-    
-    titulo:     `Zerar dados de ${dia}?`,
-    sub:        'Serão apagados PERMANENTEMENTE: Pedidos, Checkout, Embalagem, Reposições e Sessões de trabalho desta data.',
-    btnOk:      'Zerar dados',
-    btnOkClass: 'btn-danger',
-  }, async () => {
+  wmsPrompt({
+    titulo:      'Zerar dados de qual data?',
+    sub:         `Apaga PERMANENTEMENTE os dados operacionais dessa data. Deixe em branco para hoje (${fmtDataDDMMAA(hoje)}).`,
+    valor:       fmtDataDDMMAA(hoje),
+    placeholder: 'DD/MM/AA',
+  }, (valorDigitado) => {
+    const texto = (valorDigitado || '').trim();
+    const dia = texto ? parseDDMMAAparaISO(texto) : hoje;
+    if (!dia) { toast('Data inválida — use o formato DD/MM/AA', 'erro'); return; }
+    const diaFmt = fmtDataDDMMAA(dia);
 
-  try {
-    const res = await fetch(`${API}/admin/zerar-dados-teste`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ confirmar: true, data: dia }),
-      credentials: 'include'
+    wmsConfirm({
+      titulo:     `Zerar dados de ${diaFmt}?`,
+      sub:        'Serão apagados PERMANENTEMENTE: Pedidos, Checkout, Embalagem, Reposições e Sessões de trabalho desta data.',
+      btnOk:      'Zerar dados',
+      btnOkClass: 'btn-danger',
+    }, async () => {
+      try {
+        const res = await fetch(`${API}/admin/zerar-dados-teste`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ confirmar: true, data: dia }),
+          credentials: 'include'
+        });
+        const d = await res.json();
+        if (!res.ok) { wmsAlert({ icone:'⚠️', titulo:'Erro ao zerar dados', sub: d.erro || 'falha' }); return; }
+        const r = d.removidos;
+        wmsAlert({
+          icone:  '✅',
+          titulo: `Dados de ${diaFmt} removidos!`,
+          sub:    `Pedidos: ${r.pedidos}\nCheckout: ${r.checkout}\nEmbalagem: ${r.embalagem}\nReposição: ${r.reposicao}\nSessões: ${r.sessoes}`,
+        }, () => carregarDashboard());
+      } catch(e) { toast('Erro de conexão: ' + e.message, 'erro'); }
     });
-    const d = await res.json();
-    if (!res.ok) { alert('Erro: ' + (d.erro || 'falha')); return; }
-    const r = d.removidos;
-    alert(`Dados de ${dia} removidos!\n\nPedidos: ${r.pedidos}\nCheckout: ${r.checkout}\nEmbalagem: ${r.embalagem}\nReposição: ${r.reposicao}\nSessões: ${r.sessoes}`);
-    carregarDashboard();
-  } catch(e) { toast('Erro de conexão: ' + e.message, 'erro'); }
   });
 }
 

@@ -200,6 +200,69 @@ function _cancelarWms() {
   if (_wmsConfirmCancelCb) { const cb = _wmsConfirmCancelCb; _wmsConfirmCancelCb = null; cb(); }
 }
 
+// ── Modal prompt genérico — mesmo design do modal-confirm ────────────────────
+// Uso: wmsPrompt({ titulo, sub, valor, placeholder }, valorDigitado => {...})
+let _wmsPromptCb = null;
+
+function wmsPrompt(opts, onOk) {
+  _wmsPromptCb = onOk || null;
+  if (typeof opts === 'string') opts = { titulo: opts };
+
+  const s = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val; };
+  s('modal-prompt-titulo', opts.titulo || 'Informe um valor');
+  s('modal-prompt-sub',    opts.sub    || '');
+
+  const input = document.getElementById('modal-prompt-input');
+  input.value = opts.valor || '';
+  input.placeholder = opts.placeholder || '';
+
+  document.getElementById('modal-prompt').style.display = 'flex';
+  setTimeout(() => input.focus(), 50);
+}
+function _confirmarWmsPrompt() {
+  const valor = document.getElementById('modal-prompt-input').value;
+  document.getElementById('modal-prompt').style.display = 'none';
+  if (_wmsPromptCb) { const cb = _wmsPromptCb; _wmsPromptCb = null; cb(valor); }
+}
+function _cancelarWmsPrompt() {
+  document.getElementById('modal-prompt').style.display = 'none';
+  _wmsPromptCb = null;
+}
+
+// ── Modal alerta genérico — mesmo design do modal-confirm, 1 botão ───────────
+// Uso: wmsAlert({ icone, titulo, sub }, onOk)
+let _wmsAlertCb = null;
+
+function wmsAlert(opts, onOk) {
+  _wmsAlertCb = onOk || null;
+  if (typeof opts === 'string') opts = { titulo: opts };
+
+  const s = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val; };
+  s('modal-alert-icon',   opts.icone  || '✅');
+  s('modal-alert-titulo', opts.titulo || 'Aviso');
+  s('modal-alert-sub',    opts.sub    || '');
+
+  document.getElementById('modal-alert').style.display = 'flex';
+}
+function _fecharWmsAlert() {
+  document.getElementById('modal-alert').style.display = 'none';
+  if (_wmsAlertCb) { const cb = _wmsAlertCb; _wmsAlertCb = null; cb(); }
+}
+
+// ── Formatação de data DD/MM/AA (ano com 2 dígitos) ──────────────────────────
+function fmtDataDDMMAA(iso) {
+  if (!iso) return '';
+  const [y,m,d] = iso.split('-');
+  return `${d}/${m}/${y.slice(2)}`;
+}
+function parseDDMMAAparaISO(str) {
+  const m = String(str||'').trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{2}|\d{4})$/);
+  if (!m) return null;
+  const [, d, mo, yRaw] = m;
+  const y = yRaw.length === 2 ? `20${yRaw}` : yRaw;
+  return `${y}-${mo.padStart(2,'0')}-${d.padStart(2,'0')}`;
+}
+
 // ── Protocolo ─────────────────────────────────────────────────────────────────
 let _protocoloRows = [];
 
