@@ -957,7 +957,14 @@ async function _concluirComFaltaCore(prefix, fnChecklist, fnFila, fnStats, input
   try {
     const res  = await fetch(`${API}/pedidos/${pedidoAtualId}/concluir-com-falta`, { credentials:'include', method:'PUT' });
     const data = await res.json();
-    if (!res.ok) { toast(data.erro || 'Erro ao concluir com falta!', 'erro'); return; }
+    if (!res.ok) {
+      toast(data.erro || 'Erro ao concluir com falta!', 'erro');
+      // A falta pode já ter sido resolvida pelo repositor sem a tela ter atualizado
+      // ainda (poll de 30s) — recarrega o checklist agora pra liberar o botão
+      // "CONCLUIR" normal na hora, em vez de deixar o separador travado.
+      await fnChecklist();
+      return;
+    }
     toast(`Pedido ${pedidoAtualNum} enviado para AGUARDANDO (${data.itens_falta} item(s) faltando)`, 'aviso');
     const wrap = document.getElementById(`${prefix}-wrap`);
     if (wrap) wrap.style.display = 'none';
@@ -988,9 +995,15 @@ async function _concluirCore(prefix, fnChecklist, fnFila, fnStats, inputId, stat
   try {
     const res  = await fetch(`${API}/pedidos/${pedidoAtualId}/concluir`, { credentials:'include', method:'PUT' });
     const data = await res.json();
-    if (data.aguardando) { toast('⏳ Ainda aguardando o repositor!','aviso'); return; }
-    if (data.bloqueado)  { toast('Bloqueado! Aguarde o supervisor liberar.','erro'); return; }
-    if (data.erro)       { toast(`${data.erro}`,'aviso'); return; }
+    if (data.aguardando || data.bloqueado || data.erro) {
+      if (data.aguardando) toast('⏳ Ainda aguardando o repositor!','aviso');
+      else if (data.bloqueado) toast('Bloqueado! Aguarde o supervisor liberar.','erro');
+      else toast(`${data.erro}`,'aviso');
+      // Estado pode ter mudado (repositor resolveu, supervisor liberou) sem a tela
+      // ter atualizado ainda — recarrega o checklist pra refletir a situação atual.
+      await fnChecklist();
+      return;
+    }
     toast(`Pedido ${pedidoAtualNum} concluído`, 'sucesso');
     const wrap = document.getElementById(`${prefix}-wrap`);
     if (wrap) wrap.style.display = 'none';
