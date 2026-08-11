@@ -757,52 +757,70 @@ function _initFilaDragReorder(container) {
   });
 }
 
-let _filaDrag = null;
-
 function _filaDragStart(ev, container) {
   ev.preventDefault();
   const block = ev.currentTarget.closest('.fila-drag-block');
   if (!block) return;
+  const blocks = Array.from(container.querySelectorAll('.fila-drag-block'));
+  const startIndex = blocks.indexOf(block);
+  if (startIndex < 0) return;
+  // Mede as posições UMA vez no início — referência fixa durante todo o arraste,
+  // evita reflow a cada pixel (era a causa da "travada").
+  const rects = blocks.map(b => b.getBoundingClientRect());
+  const draggedHeight = rects[startIndex].height + 8; // + gap aproximado entre blocos
+  const startY = ev.clientY;
+  let currentIndex = startIndex;
+
   block.style.position   = 'relative';
   block.style.zIndex     = '50';
-  block.style.opacity    = '.9';
+  block.style.opacity    = '.92';
   block.style.background = 'var(--surface)';
   block.style.boxShadow  = '0 4px 14px rgba(0,0,0,.18)';
+  block.style.pointerEvents = 'none';
   try { block.setPointerCapture(ev.pointerId); } catch(e) {}
-
-  _filaDrag = { block, container, startY: ev.clientY };
+  blocks.forEach(b => { if (b !== block) b.style.transition = 'transform .12s ease'; });
 
   const onMove = (e) => {
-    if (!_filaDrag) return;
-    const dy = e.clientY - _filaDrag.startY;
-    _filaDrag.block.style.transform = `translateY(${dy}px)`;
-    const siblings = Array.from(_filaDrag.container.querySelectorAll('.fila-drag-block')).filter(b => b !== _filaDrag.block);
-    const draggedRect = _filaDrag.block.getBoundingClientRect();
-    const draggedMid = draggedRect.top + draggedRect.height / 2;
-    for (const sib of siblings) {
-      const r = sib.getBoundingClientRect();
-      if (draggedMid < r.top || draggedMid > r.bottom) continue;
-      const mid = r.top + r.height / 2;
-      if (draggedMid < mid) _filaDrag.container.insertBefore(_filaDrag.block, sib);
-      else _filaDrag.container.insertBefore(_filaDrag.block, sib.nextElementSibling);
-      _filaDrag.block.style.transform = 'translateY(0)';
-      _filaDrag.startY = e.clientY;
-      break;
+    const dy = e.clientY - startY;
+    block.style.transform = `translateY(${dy}px)`;
+    const draggedMid = rects[startIndex].top + rects[startIndex].height / 2 + dy;
+
+    let newIndex = currentIndex;
+    if (dy > 0) {
+      for (let i = currentIndex + 1; i < rects.length; i++) {
+        if (draggedMid > rects[i].top + rects[i].height / 2) newIndex = i; else break;
+      }
+    } else if (dy < 0) {
+      for (let i = currentIndex - 1; i >= 0; i--) {
+        if (draggedMid < rects[i].top + rects[i].height / 2) newIndex = i; else break;
+      }
+    }
+    if (newIndex !== currentIndex) {
+      currentIndex = newIndex;
+      blocks.forEach((b, i) => {
+        if (b === block) return;
+        let shift = 0;
+        if (i > startIndex && i <= currentIndex) shift = -draggedHeight;
+        else if (i < startIndex && i >= currentIndex) shift = draggedHeight;
+        b.style.transform = shift ? `translateY(${shift}px)` : '';
+      });
     }
   };
 
   const onUp = async () => {
     document.removeEventListener('pointermove', onMove);
     document.removeEventListener('pointerup', onUp);
-    if (!_filaDrag) return;
-    const { block, container } = _filaDrag;
-    block.style.position   = '';
-    block.style.zIndex     = '';
-    block.style.opacity    = '';
-    block.style.background = '';
-    block.style.boxShadow  = '';
-    block.style.transform  = '';
-    _filaDrag = null;
+    blocks.forEach(b => { b.style.transition = ''; b.style.transform = ''; });
+    block.style.position    = '';
+    block.style.zIndex      = '';
+    block.style.opacity     = '';
+    block.style.background  = '';
+    block.style.boxShadow   = '';
+    block.style.pointerEvents = '';
+    if (currentIndex !== startIndex) {
+      if (currentIndex > startIndex) container.insertBefore(block, blocks[currentIndex].nextSibling);
+      else container.insertBefore(block, blocks[currentIndex]);
+    }
     await _filaSalvarOrdem(container);
   };
 

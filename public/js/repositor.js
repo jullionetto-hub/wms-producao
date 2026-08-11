@@ -239,52 +239,70 @@ function _initRepDragReorder(container) {
   });
 }
 
-let _repDrag = null;
-
 function _repDragStart(ev, container) {
   ev.preventDefault();
   const block = ev.currentTarget.closest('.rep-drag-block');
   if (!block) return;
+  const blocks = Array.from(container.querySelectorAll('.rep-drag-block'));
+  const startIndex = blocks.indexOf(block);
+  if (startIndex < 0) return;
+  // Mede as posições UMA vez no início — referência fixa durante todo o arraste,
+  // evita reflow a cada pixel (era a causa da "travada").
+  const rects = blocks.map(b => b.getBoundingClientRect());
+  const draggedHeight = rects[startIndex].height + 4; // + gap aproximado entre blocos
+  const startY = ev.clientY;
+  let currentIndex = startIndex;
+
   block.style.position   = 'relative';
   block.style.zIndex     = '50';
-  block.style.opacity    = '.9';
+  block.style.opacity    = '.92';
   block.style.background = 'var(--surface)';
   block.style.boxShadow  = '0 4px 14px rgba(0,0,0,.18)';
+  block.style.pointerEvents = 'none';
   try { block.setPointerCapture(ev.pointerId); } catch(e) {}
-
-  _repDrag = { block, container, startY: ev.clientY };
+  blocks.forEach(b => { if (b !== block) b.style.transition = 'transform .12s ease'; });
 
   const onMove = (e) => {
-    if (!_repDrag) return;
-    const dy = e.clientY - _repDrag.startY;
-    _repDrag.block.style.transform = `translateY(${dy}px)`;
-    const siblings = Array.from(_repDrag.container.querySelectorAll('.rep-drag-block')).filter(b => b !== _repDrag.block);
-    const draggedRect = _repDrag.block.getBoundingClientRect();
-    const draggedMid = draggedRect.top + draggedRect.height / 2;
-    for (const sib of siblings) {
-      const r = sib.getBoundingClientRect();
-      if (draggedMid < r.top || draggedMid > r.bottom) continue;
-      const mid = r.top + r.height / 2;
-      if (draggedMid < mid) _repDrag.container.insertBefore(_repDrag.block, sib);
-      else _repDrag.container.insertBefore(_repDrag.block, sib.nextElementSibling);
-      _repDrag.block.style.transform = 'translateY(0)';
-      _repDrag.startY = e.clientY;
-      break;
+    const dy = e.clientY - startY;
+    block.style.transform = `translateY(${dy}px)`;
+    const draggedMid = rects[startIndex].top + rects[startIndex].height / 2 + dy;
+
+    let newIndex = currentIndex;
+    if (dy > 0) {
+      for (let i = currentIndex + 1; i < rects.length; i++) {
+        if (draggedMid > rects[i].top + rects[i].height / 2) newIndex = i; else break;
+      }
+    } else if (dy < 0) {
+      for (let i = currentIndex - 1; i >= 0; i--) {
+        if (draggedMid < rects[i].top + rects[i].height / 2) newIndex = i; else break;
+      }
+    }
+    if (newIndex !== currentIndex) {
+      currentIndex = newIndex;
+      blocks.forEach((b, i) => {
+        if (b === block) return;
+        let shift = 0;
+        if (i > startIndex && i <= currentIndex) shift = -draggedHeight;
+        else if (i < startIndex && i >= currentIndex) shift = draggedHeight;
+        b.style.transform = shift ? `translateY(${shift}px)` : '';
+      });
     }
   };
 
   const onUp = async () => {
     document.removeEventListener('pointermove', onMove);
     document.removeEventListener('pointerup', onUp);
-    if (!_repDrag) return;
-    const { block, container } = _repDrag;
-    block.style.position   = '';
-    block.style.zIndex     = '';
-    block.style.opacity    = '';
-    block.style.background = '';
-    block.style.boxShadow  = '';
-    block.style.transform  = '';
-    _repDrag = null;
+    blocks.forEach(b => { b.style.transition = ''; b.style.transform = ''; });
+    block.style.position    = '';
+    block.style.zIndex      = '';
+    block.style.opacity     = '';
+    block.style.background  = '';
+    block.style.boxShadow   = '';
+    block.style.pointerEvents = '';
+    if (currentIndex !== startIndex) {
+      if (currentIndex > startIndex) container.insertBefore(block, blocks[currentIndex].nextSibling);
+      else container.insertBefore(block, blocks[currentIndex]);
+    }
     await _repSalvarOrdem(container);
   };
 
@@ -443,17 +461,17 @@ function renderCardRepSimples(a, modo) {
       const _quemBusca   = _ultimaTent.repositor || a.quem_pegou || '?';
       const _isUltima    = _totalTent >= 3;
       botoes = `
-        <div style="padding:7px 12px 10px;border-top:1px solid var(--border)">
-          <div style="background:${_isUltima?'#fef2f2':'#eff6ff'};border:1px solid ${_isUltima?'#fca5a5':'#bfdbfe'};border-radius:7px;padding:5px 9px;margin-bottom:6px;font-size:10px;color:${_isUltima?'#9f1239':'#1e40af'}">
+        <div style="padding:5px 9px 7px;border-top:1px solid var(--border)">
+          <div style="background:${_isUltima?'#fef2f2':'#eff6ff'};border:1px solid ${_isUltima?'#fca5a5':'#bfdbfe'};border-radius:7px;padding:4px 8px;margin-bottom:5px;font-size:10px;color:${_isUltima?'#9f1239':'#1e40af'}">
             <strong>${_quemBusca}</strong> está buscando${_isUltima?' · <span style="color:#dc2626;font-weight:800">ÚLTIMA TENTATIVA</span>':''}
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
             <button onclick="mostrarQtdEncontrada(${a.id},'${nomeLogado}',${a.quantidade||1})"
-              style="padding:9px 8px;background:#dcfce7;border:2px solid #10b981;border-radius:8px;color:#065f46;font-weight:700;font-size:12px;cursor:pointer;touch-action:manipulation">
+              style="padding:7px 8px;background:#dcfce7;border:2px solid #10b981;border-radius:8px;color:#065f46;font-weight:700;font-size:12px;cursor:pointer;touch-action:manipulation">
               ✅ Encontrei
             </button>
             <button onclick="acaoRepTab(${a.id},'e_nao_enc','${nomeLogado}','_smart')"
-              style="padding:9px 8px;background:#fee2e2;border:2px solid #ef4444;border-radius:8px;color:#dc2626;font-weight:700;font-size:12px;cursor:pointer;touch-action:manipulation">
+              style="padding:7px 8px;background:#fee2e2;border:2px solid #ef4444;border-radius:8px;color:#dc2626;font-weight:700;font-size:12px;cursor:pointer;touch-action:manipulation">
               ❌ Não encontrei
             </button>
           </div>
@@ -464,10 +482,10 @@ function renderCardRepSimples(a, modo) {
       const _tentLabel = _labels[Math.min(_totalTent, 2)];
       const _isUltima  = _totalTent >= 2;
       botoes = `
-        <div style="padding:12px 14px;border-top:1px solid var(--border)">
+        <div style="padding:7px 9px;border-top:1px solid var(--border)">
           <button onclick="iniciarBuscaRep(${a.id},'${nomeLogado}')"
-            style="width:100%;padding:13px 14px;background:${_isUltima?'#fef2f2':'#eff6ff'};border:2px solid ${_isUltima?'#ef4444':'#3b82f6'};border-radius:10px;color:${_isUltima?'#dc2626':'#1d4ed8'};font-weight:700;font-size:13px;cursor:pointer;touch-action:manipulation;display:flex;align-items:center;justify-content:center;gap:8px">
-            Iniciar Busca <span style="font-size:11px;opacity:.8;font-weight:600">${_tentLabel}</span>
+            style="width:100%;padding:9px 10px;background:${_isUltima?'#fef2f2':'#eff6ff'};border:2px solid ${_isUltima?'#ef4444':'#3b82f6'};border-radius:8px;color:${_isUltima?'#dc2626':'#1d4ed8'};font-weight:700;font-size:12px;cursor:pointer;touch-action:manipulation;display:flex;align-items:center;justify-content:center;gap:8px">
+            Iniciar Busca <span style="font-size:10px;opacity:.8;font-weight:600">${_tentLabel}</span>
           </button>
           ${_histTentHtml}
         </div>`;
@@ -496,11 +514,21 @@ function renderCardRepSimples(a, modo) {
       </div>`;
   }
 
+  // Layout compacto só na aba Separar: código + descrição na mesma linha,
+  // horário embutido nos badges — corta ~2 linhas de altura por card.
+  const compacto = modo === 'separar';
+  const cabecalho = compacto
+    ? `<div style="display:flex;align-items:baseline;gap:6px;margin-bottom:3px">
+         <span style="font-family:'Space Mono',monospace;font-size:13px;font-weight:700;color:var(--text);flex-shrink:0">${a.codigo||'—'}</span>
+         <span style="font-size:11px;color:var(--text2);min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.descricao||''}</span>
+       </div>`
+    : `<div style="font-family:'Space Mono',monospace;font-size:14px;font-weight:700;color:var(--text);margin-bottom:1px">${a.codigo||'—'}</div>
+       <div style="font-size:11px;color:var(--text2);margin-bottom:5px;line-height:1.3">${a.descricao||''}</div>`;
+
   return `
-    <div style="background:var(--surface);border:1px solid var(--border);border-left:4px solid ${cor};border-radius:10px;margin-bottom:8px;overflow:hidden">
-      <div style="padding:10px 12px ${botoes?'6':'10'}px">
-        <div style="font-family:'Space Mono',monospace;font-size:14px;font-weight:700;color:var(--text);margin-bottom:1px">${a.codigo||'—'}</div>
-        <div style="font-size:11px;color:var(--text2);margin-bottom:5px;line-height:1.3">${a.descricao||''}</div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-left:4px solid ${cor};border-radius:10px;margin-bottom:${compacto?'4':'8'}px;overflow:hidden">
+      <div style="padding:${compacto?'7px 9px':'10px 12px'} ${botoes?(compacto?'4':'6'):(compacto?'7':'10')}px">
+        ${cabecalho}
         <div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center">
           ${a.numero_pedido?`<span style="background:var(--surface2);border-radius:6px;padding:2px 7px;font-size:10px;color:var(--text2);font-weight:600">${a.numero_pedido}</span>`:''}
           ${a.separador_nome?`<span style="background:var(--surface2);border-radius:6px;padding:2px 7px;font-size:10px;color:var(--text2)">${a.separador_nome}</span>`:''}
@@ -511,9 +539,10 @@ function renderCardRepSimples(a, modo) {
           ${envioBdg}
           ${a.endereco?`<span style="background:var(--surface2);border-radius:6px;padding:2px 7px;font-size:10px;color:var(--text3)">${a.endereco}</span>`:''}
           ${_tentBadge}
+          ${compacto && a.hora_aviso ? `<span style="font-size:10px;color:var(--text3);margin-left:auto;white-space:nowrap">${a.hora_aviso}</span>` : ''}
         </div>
-        ${a.quem_pegou && modo !== 'separar' ? `<div style="margin-top:4px;font-size:10px;color:var(--text3)"><strong style="color:var(--text2)">${a.quem_pegou}</strong></div>` : ''}
-        ${a.hora_aviso?`<div style="margin-top:2px;font-size:10px;color:var(--text3)">${a.hora_aviso}${a.data_aviso?' · '+a.data_aviso:''}</div>`:''}
+        ${!compacto && a.quem_pegou && modo !== 'separar' ? `<div style="margin-top:4px;font-size:10px;color:var(--text3)"><strong style="color:var(--text2)">${a.quem_pegou}</strong></div>` : ''}
+        ${!compacto && a.hora_aviso?`<div style="margin-top:2px;font-size:10px;color:var(--text3)">${a.hora_aviso}${a.data_aviso?' · '+a.data_aviso:''}</div>`:''}
       </div>
       ${botoes}
     </div>`;
