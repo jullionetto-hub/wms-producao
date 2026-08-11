@@ -510,7 +510,9 @@ router.post('/pedidos/importar', requerAuth, requerPerfil('supervisor'), async (
          ON CONFLICT(numero_pedido) DO UPDATE SET
            cliente=CASE WHEN pedidos.cliente='' OR pedidos.cliente IS NULL THEN EXCLUDED.cliente ELSE pedidos.cliente END,
            transportadora=CASE WHEN pedidos.transportadora='' OR pedidos.transportadora IS NULL THEN EXCLUDED.transportadora ELSE pedidos.transportadora END,
-           aguardando_desde=CASE WHEN pedidos.aguardando_desde='' OR pedidos.aguardando_desde IS NULL THEN EXCLUDED.aguardando_desde ELSE pedidos.aguardando_desde END
+           aguardando_desde=CASE WHEN pedidos.aguardando_desde='' OR pedidos.aguardando_desde IS NULL THEN EXCLUDED.aguardando_desde ELSE pedidos.aguardando_desde END,
+           data_pedido=EXCLUDED.data_pedido,
+           hora_pedido=EXCLUDED.hora_pedido
          RETURNING id, (xmax = 0) AS inserido`,
         [numero,itensCount,totalItens,itens[0]?.endereco||'',cliente,transportadora,aguardando,pts,hoje,hora,itensReais.some(i=>String(i.codigo||'').toUpperCase()==='PRIME')]);
       if (!r.rows[0]){ignorados++;continue;}
