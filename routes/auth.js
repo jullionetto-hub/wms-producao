@@ -1,15 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const { db, pool } = require('../lib/db');
-const { requerAuth, checkRateLimit } = require('../lib/auth');
+const { requerAuth, checkRateLimit, registrarFalhaLogin } = require('../lib/auth');
 const { hashSenha, verificarSenha, hashNeedsMigration, perfisPermitidos, sanitizeStr, dataHoraLocal } = require('../lib/helpers');
 const { registrarAuditoria } = require('../lib/auditoria');
 
 router.post('/auth/login', async (req,res) => {
   const ip = req.ip || req.connection.remoteAddress || 'unknown';
-  if (!checkRateLimit(ip)) {
-    return res.status(429).json({ erro: 'Muitas tentativas. Aguarde 15 minutos.' });
-  }
 
   const login  = sanitizeStr(req.body.login, 100);
   const senha  = sanitizeStr(req.body.senha, 200);
@@ -18,6 +15,13 @@ router.post('/auth/login', async (req,res) => {
   if (!login || !senha || !perfil) return res.status(400).json({erro:'Dados incompletos!'});
   if (!['supervisor','separador','repositor','checkout','embalador','gestor'].includes(perfil))
     return res.status(400).json({erro:'Perfil inválido!'});
+
+  // Chave por IP+login: protege contra força bruta numa conta especifica sem
+  // travar outros colaboradores logando da mesma rede/IP compartilhado.
+  const rlKey = `${ip}:${login.toLowerCase()}`;
+  if (!checkRateLimit(rlKey)) {
+    return res.status(429).json({ erro: 'Muitas tentativas para este usuário. Aguarde 15 minutos.' });
+  }
 
   try {
     const user = await db.get(
@@ -28,7 +32,10 @@ router.post('/auth/login', async (req,res) => {
 
     const senhaCorreta = user ? verificarSenha(senha, user.senha_hash || '') : false;
 
-    if (!user || !senhaCorreta) return res.status(401).json({erro:'Login ou senha incorretos!'});
+    if (!user || !senhaCorreta) {
+      registrarFalhaLogin(rlKey);
+      return res.status(401).json({erro:'Login ou senha incorretos!'});
+    }
 
     if (user && hashNeedsMigration(user.senha_hash)) {
       pool.query('UPDATE usuarios SET senha_hash=$1 WHERE id=$2', [hashSenha(senha), user.id]).catch(()=>{});
