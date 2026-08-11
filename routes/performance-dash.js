@@ -671,7 +671,15 @@ router.get('/performance/pedido/:numero', requerAuth, requerPerfil('supervisor',
       FROM pedidos p WHERE p.numero_pedido = $1
     `, [numero]);
 
-    res.json({ numero_pedido: numero, separacao: sep, reposicoes: reposicoes || [], checkout: ck || null, embalagem: emb || null });
+    const itens = await db.all(`
+      SELECT i.codigo, i.descricao, i.quantidade, i.endereco
+      FROM itens_pedido i
+      JOIN pedidos p ON p.id = i.pedido_id
+      WHERE p.numero_pedido = $1
+      ORDER BY i.id ASC
+    `, [numero]);
+
+    res.json({ numero_pedido: numero, separacao: sep, reposicoes: reposicoes || [], checkout: ck || null, embalagem: emb || null, itens: itens || [] });
   } catch(e) {
     console.error('performance/pedido:', e.message);
     res.status(500).json({ erro: e.message });

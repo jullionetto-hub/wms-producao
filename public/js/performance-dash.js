@@ -1520,6 +1520,39 @@ function pfRenderPedidoDetalhe(d) {
     emb?.duracao_min
   );
 
+  // Itens do pedido — lista suspensa (SKU, item, quantidade, endereço)
+  const itens = d.itens || [];
+  const itensRows = itens.map(it => `
+    <tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:6px 10px;font-family:'Space Mono',monospace;font-size:11px;color:var(--accent);font-weight:700;white-space:nowrap">${pfEsc(it.codigo||'—')}</td>
+      <td style="padding:6px 10px;font-size:11px;color:var(--text)">${pfEsc(it.descricao||'')}</td>
+      <td style="padding:6px 10px;font-size:11px;color:var(--text);text-align:center">${it.quantidade ?? '—'}</td>
+      <td style="padding:6px 10px;font-size:11px;color:var(--text3);white-space:nowrap">${pfEsc(it.endereco||'—')}</td>
+    </tr>`).join('');
+
+  const itensSecao = `
+    <details style="border-top:1px solid var(--border)">
+      <summary style="padding:12px 18px;cursor:pointer;font-size:12px;font-weight:800;color:var(--text);letter-spacing:.3px;display:flex;align-items:center;justify-content:space-between">
+        <span>Itens do Pedido</span>
+        <span style="font-size:11px;font-weight:600;color:var(--text3)">${itens.length} SKU(s) · clique para ver</span>
+      </summary>
+      <div style="overflow-x:auto;max-height:340px;overflow-y:auto;border-top:1px solid var(--border)">
+        <table style="width:100%;border-collapse:collapse">
+          <thead>
+            <tr style="background:var(--surface2)">
+              <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:800;color:var(--text3)">SKU</th>
+              <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:800;color:var(--text3)">ITEM</th>
+              <th style="padding:8px 10px;text-align:center;font-size:10px;font-weight:800;color:var(--text3)">QTD</th>
+              <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:800;color:var(--text3)">ENDEREÇO</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${itensRows || `<tr><td colspan="4" style="padding:16px;text-align:center;color:var(--text3);font-size:12px">Nenhum item encontrado</td></tr>`}
+          </tbody>
+        </table>
+      </div>
+    </details>`;
+
   return `
     <div style="border:1.5px solid var(--border);border-radius:14px;overflow:hidden;background:var(--surface)">
       <div style="background:var(--surface2);border-bottom:1px solid var(--border);padding:14px 18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
@@ -1532,5 +1565,6 @@ function pfRenderPedidoDetalhe(d) {
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;padding:14px">
         ${sepCard}${repCard}${ckCard}${embCard}
       </div>
+      ${itensSecao}
     </div>`;
 }
