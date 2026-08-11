@@ -24,6 +24,7 @@ function filtrarPedidosTodos() {
 }
 
 let _pedidosLista  = [];
+let _pedidosListaFiltrada = [];
 let _filtroTransp  = '';
 let _filtroTurno   = '';
 let _ritmoRealCarregado = false;
@@ -132,6 +133,17 @@ function _renderTabelaPedidos() {
   } else if (_filtroTransp) {
     lista = lista.filter(p => String(p.transportadora||'').toUpperCase().includes(_filtroTransp));
   }
+  _pedidosListaFiltrada = lista;
+
+  // Botão "Reatribuir Todos" — só faz sentido filtrando por um colaborador específico
+  const btnReatr = document.getElementById('btn-reatribuir-todos');
+  if (btnReatr) {
+    const usrFiltro = document.getElementById('filtro-ped-sep')?.value || '';
+    const pendentesDoUsr = lista.filter(p => p.status === 'pendente').length;
+    btnReatr.style.display = (usrFiltro && pendentesDoUsr > 0) ? 'inline-flex' : 'none';
+    btnReatr.textContent = `Reatribuir ${pendentesDoUsr} pendente(s)`;
+  }
+
   // ── Totalizadores ──────────────────────────────────────────────
   const totEl = document.getElementById('ped-totalizadores');
   if (totEl) {
@@ -254,6 +266,59 @@ async function atribuirSeparador(pid, sid) {
     await fetch(`${API}/pedidos/${pid}/separador`, { credentials:'include', method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({separador_id:sid}) });
     toast('Usuário atribuído!', 'sucesso');
   } catch(e) { toast('Erro ao atribuir!', 'erro'); }
+}
+
+/* ── Reatribuir em lote os pedidos pendentes do colaborador filtrado ──────
+   Só mexe em pedidos com status='pendente' — pedidos já em separação não
+   são tocados, pra não bagunçar trabalho já em andamento. */
+let _reatribuirPedidos = [];
+
+async function abrirReatribuirTodos() {
+  const pendentes = (_pedidosListaFiltrada || []).filter(p => p.status === 'pendente');
+  if (!pendentes.length) { toast('Nenhum pedido pendente na lista atual.', 'aviso'); return; }
+  _reatribuirPedidos = pendentes;
+
+  const nomeAtual = document.getElementById('filtro-ped-sep')?.value || 'colaborador atual';
+  const sub = document.getElementById('modal-reatribuir-sub');
+  if (sub) sub.textContent = `${pendentes.length} pedido(s) pendente(s) de ${nomeAtual} serão movidos para o novo colaborador.`;
+
+  const sel = document.getElementById('modal-reatribuir-sel');
+  if (sel) {
+    sel.innerHTML = '<option value="">— Carregando colaboradores...</option>';
+    try {
+      const res = await fetch(`${API}/usuarios`, { credentials:'include' });
+      const users = await res.json();
+      const seps = users.filter(u => u.status === 'ativo' && u.perfil === 'separador' && u.nome !== nomeAtual);
+      sel.innerHTML = '<option value="">— Selecione o novo colaborador —</option>' +
+        seps.map(s => `<option value="${s.id}">${s.nome}</option>`).join('');
+    } catch(e) {
+      sel.innerHTML = '<option value="">Erro ao carregar colaboradores</option>';
+    }
+  }
+  document.getElementById('modal-reatribuir').style.display = 'flex';
+}
+
+function _fecharModalReatribuir() {
+  document.getElementById('modal-reatribuir').style.display = 'none';
+}
+
+async function _confirmarReatribuir() {
+  const sid = document.getElementById('modal-reatribuir-sel')?.value;
+  if (!sid) { toast('Selecione o colaborador de destino.', 'aviso'); return; }
+  _fecharModalReatribuir();
+  let ok = 0, falhas = 0;
+  for (const p of _reatribuirPedidos) {
+    try {
+      const res = await fetch(`${API}/pedidos/${p.id}/separador`, {
+        credentials:'include', method:'PUT', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ separador_id: parseInt(sid) })
+      });
+      if (res.ok) ok++; else falhas++;
+    } catch(e) { falhas++; }
+  }
+  toast(`${ok} pedido(s) reatribuído(s)${falhas ? ` — ${falhas} falharam` : ''}`, falhas ? 'aviso' : 'sucesso');
+  _reatribuirPedidos = [];
+  carregarPedidos();
 }
 
 

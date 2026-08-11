@@ -333,6 +333,8 @@
             <button onclick="filtrarPedidosTransp('SEDEX')"   id="ftransp-sedex"   class="btn-transp">SEDEX</button>
             <button onclick="filtrarPedidosTransp('PAC')"     id="ftransp-pac"     class="btn-transp">PAC</button>
             <button onclick="filtrarPedidosTransp('MOTOBOY')" id="ftransp-motoboy" class="btn-transp">MOTOBOY</button>
+            <button onclick="abrirReatribuirTodos()" id="btn-reatribuir-todos" class="btn btn-outline btn-sm"
+              style="display:none;color:#c2410c;border-color:#fb923c;white-space:nowrap">Reatribuir</button>
             <!-- TOTALIZADORES inline -->
             <div id="ped-totalizadores" style="display:none;gap:0;align-items:center;margin-left:auto"></div>
           </div>
@@ -2508,6 +2510,22 @@
         <div id="modal-alert-titulo" style="font-size:19px;font-weight:800;color:var(--text);margin-bottom:8px">Aviso</div>
         <div id="modal-alert-sub" style="font-size:13px;color:var(--text3);margin-bottom:26px;line-height:1.7;text-align:left;white-space:pre-line"></div>
         <button onclick="_fecharWmsAlert()" class="btn btn-primary" style="width:100%;padding:13px;font-size:14px;font-weight:700">OK</button>
+      </div>
+    </div>
+
+    <!-- Modal Reatribuir Pedidos em Lote -->
+    <div id="modal-reatribuir" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center">
+      <div style="background:var(--surface);border-radius:20px;padding:28px;max-width:380px;width:92%;text-align:center;box-shadow:0 24px 64px rgba(0,0,0,.3)">
+        <div style="font-size:19px;font-weight:800;color:var(--text);margin-bottom:8px">Reatribuir pedidos</div>
+        <div id="modal-reatribuir-sub" style="font-size:13px;color:var(--text3);margin-bottom:18px;line-height:1.5"></div>
+        <select id="modal-reatribuir-sel"
+          style="width:100%;padding:12px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:14px;margin-bottom:22px;box-sizing:border-box">
+          <option value="">— Selecione o novo colaborador —</option>
+        </select>
+        <div style="display:flex;gap:10px">
+          <button onclick="_fecharModalReatribuir()" class="btn btn-outline" style="flex:1;padding:13px;font-size:14px">Cancelar</button>
+          <button onclick="_confirmarReatribuir()" class="btn btn-primary" style="flex:1;padding:13px;font-size:14px;font-weight:700">Reatribuir</button>
+        </div>
       </div>
     </div>
 
