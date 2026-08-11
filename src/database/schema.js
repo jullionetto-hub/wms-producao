@@ -49,6 +49,7 @@ const TABLES = [
     embalado_por               TEXT DEFAULT '',
     data_pedido                TEXT,
     hora_pedido                TEXT,
+    ordem_fila                 INTEGER DEFAULT 0,
     data_criacao               TIMESTAMP DEFAULT NOW()
   )`,
 

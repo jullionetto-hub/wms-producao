@@ -426,7 +426,7 @@ async function carregarFilaMobile() {
 
     const ativos = todos.filter(p=>p.status!=='concluido');
     const meusMob = separadorAtual ? ativos.filter(p=>p.separador_id===separadorAtual.id) : [];
-    const ordenadosMob = [...meusMob].sort((a,b)=>(a.itens||0)-(b.itens||0));
+    const ordenadosMob = [...meusMob].sort(_compararOrdemFila);
 
     const badge = document.getElementById('stab-fila-badge');
     if (badge) { badge.textContent = ordenadosMob.length; badge.style.display = ordenadosMob.length > 0 ? 'inline' : 'none'; }
@@ -487,7 +487,7 @@ async function carregarFilaMobile() {
       const pillCls   = temSup ? 'separando' : temReposto ? 'separando' : 'pendente';
       const bordWidth = (temSup || temFalta || temReposto) ? '2.5px' : '1.5px';
 
-      return `<div style="border:${bordWidth} solid ${bordColor};border-radius:12px;padding:12px 14px;margin-bottom:8px;background:${bgColor}">
+      return _filaDragWrap(p.id, `<div style="border:${bordWidth} solid ${bordColor};border-radius:12px;padding:12px 14px;margin-bottom:8px;background:${bgColor}">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
           <div style="font-size:20px;font-weight:800;color:${numColor};font-family:'Space Mono',monospace">#${p.numero_pedido}</div>
           <div style="display:flex;gap:6px;align-items:center">
@@ -508,15 +508,16 @@ async function carregarFilaMobile() {
           <span style="font-size:11px;font-weight:700;color:#92400E">⏳ ${qtdFalta} item${qtdFalta>1?'s':''} aguardando repositor — não pegue ainda!</span>
         </div>` : ''}
         ${temReposto ? `<div style="display:flex;align-items:center;gap:6px;background:#dcfce7;border:1px solid #86efac;border-radius:6px;padding:6px 10px;margin-bottom:5px">
-          
+
           <span style="font-size:11px;font-weight:700;color:#15803d">${qtdReposto} item${qtdReposto>1?'s':''} reposto${qtdReposto>1?'s':''} pelo repositor — volte para este pedido!</span>
         </div>` : ''}
         <button class="btn btn-primary btn-sm" style="width:100%;margin-top:8px;padding:10px;font-size:14px;font-weight:700${temReposto?';background:#16a34a':''}"
           onclick="selecionarPedidoFilaMobile('${p.numero_pedido}')">
           ${temReposto ? 'Continuar Separação' : 'Iniciar Separação'}
         </button>
-      </div>`;
+      </div>`);
     }).join('');
+    _initFilaDragReorder(lista);
   } catch(e) { console.warn(e); }
 }
 
@@ -665,7 +666,7 @@ async function carregarFilaDesk() {
 
     const ativos     = todos.filter(p => p.status !== 'concluido');
     const meusDsk    = separadorAtual ? ativos.filter(p => p.separador_id === separadorAtual.id) : [];
-    const ordenados  = [...meusDsk].sort((a,b) => (a.itens||0)-(b.itens||0));
+    const ordenados  = [...meusDsk].sort(_compararOrdemFila);
 
     if (badgeBd)  badgeBd.textContent  = `${ordenados.length} pedidos`;
     if (badgeTab) { badgeTab.textContent = ordenados.length; badgeTab.style.display = ordenados.length > 0 ? 'inline' : 'none'; }
@@ -693,7 +694,7 @@ async function carregarFilaDesk() {
       const pillCls   = temSup ? 'separando' : temReposto ? 'separando' : 'pendente';
       const bordWidth = (temSup || temFalta || temReposto) ? '2px' : '1.5px';
 
-      return `<div style="border:${bordWidth} solid ${bordColor};border-radius:12px;padding:12px 14px;margin-bottom:8px;background:${bgColor}">
+      return _filaDragWrap(p.id, `<div style="border:${bordWidth} solid ${bordColor};border-radius:12px;padding:12px 14px;margin-bottom:8px;background:${bgColor}">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
           <div style="font-size:20px;font-weight:800;color:${numColor};font-family:'Space Mono',monospace">#${p.numero_pedido}</div>
           <span class="pill ${pillCls}" style="font-size:10px;${temReposto?'background:#dcfce7;color:#15803d;border-color:#86efac':''}">${pillTxt}</span>
@@ -711,16 +712,115 @@ async function carregarFilaDesk() {
           <span style="font-size:11px;font-weight:600;color:#92400E">${qtdFalta} item${qtdFalta>1?'s':''} aguardando repositor</span>
         </div>` : ''}
         ${temReposto ? `<div style="display:flex;align-items:center;gap:6px;background:#dcfce7;border:1px solid #86efac;border-radius:6px;padding:6px 10px;margin-bottom:5px">
-          
+
           <span style="font-size:11px;font-weight:700;color:#15803d">${qtdReposto} item${qtdReposto>1?'s':''} reposto${qtdReposto>1?'s':''} pelo repositor — volte para este pedido!</span>
         </div>` : ''}
         <button class="btn btn-primary btn-sm" style="width:100%;margin-top:8px;padding:10px;font-size:14px;font-weight:700${temReposto?';background:#16a34a':''}"
           onclick="selecionarPedidoFilaDesk('${p.numero_pedido}')">
           ${temReposto ? 'Continuar Separação' : 'Iniciar Separação'}
         </button>
-      </div>`;
+      </div>`);
     }).join('');
+    _initFilaDragReorder(lista);
   } catch(e) { console.warn(e); }
+}
+
+/* ── Ordem manual da fila do separador (drag-and-drop) ────────────────────
+   Itens já reordenados manualmente (ordem_fila>0) vêm primeiro, na sequência
+   escolhida; os demais mantêm o critério padrão (menos itens primeiro). */
+function _compararOrdemFila(a, b) {
+  const oa = a.ordem_fila || 0, ob = b.ordem_fila || 0;
+  if (oa > 0 || ob > 0) {
+    if (oa > 0 && ob > 0) return oa - ob;
+    return oa > 0 ? -1 : 1;
+  }
+  return (a.itens||0) - (b.itens||0);
+}
+
+function _filaDragWrap(id, innerHtml) {
+  return `<div class="fila-drag-block" data-id="${id}" style="display:flex;align-items:stretch;gap:2px">
+    <div class="fila-drag-handle" style="display:flex;align-items:center;justify-content:center;width:26px;flex-shrink:0;touch-action:none;cursor:grab;color:var(--text3)">
+      <svg width="12" height="18" viewBox="0 0 12 18" fill="currentColor" aria-hidden="true">
+        <circle cx="3" cy="3" r="1.6"/><circle cx="9" cy="3" r="1.6"/>
+        <circle cx="3" cy="9" r="1.6"/><circle cx="9" cy="9" r="1.6"/>
+        <circle cx="3" cy="15" r="1.6"/><circle cx="9" cy="15" r="1.6"/>
+      </svg>
+    </div>
+    <div style="flex:1;min-width:0">${innerHtml}</div>
+  </div>`;
+}
+
+function _initFilaDragReorder(container) {
+  if (!container) return;
+  container.querySelectorAll('.fila-drag-handle').forEach(handle => {
+    handle.onpointerdown = (ev) => _filaDragStart(ev, container);
+  });
+}
+
+let _filaDrag = null;
+
+function _filaDragStart(ev, container) {
+  ev.preventDefault();
+  const block = ev.currentTarget.closest('.fila-drag-block');
+  if (!block) return;
+  block.style.position   = 'relative';
+  block.style.zIndex     = '50';
+  block.style.opacity    = '.9';
+  block.style.background = 'var(--surface)';
+  block.style.boxShadow  = '0 4px 14px rgba(0,0,0,.18)';
+  try { block.setPointerCapture(ev.pointerId); } catch(e) {}
+
+  _filaDrag = { block, container, startY: ev.clientY };
+
+  const onMove = (e) => {
+    if (!_filaDrag) return;
+    const dy = e.clientY - _filaDrag.startY;
+    _filaDrag.block.style.transform = `translateY(${dy}px)`;
+    const siblings = Array.from(_filaDrag.container.querySelectorAll('.fila-drag-block')).filter(b => b !== _filaDrag.block);
+    const draggedRect = _filaDrag.block.getBoundingClientRect();
+    const draggedMid = draggedRect.top + draggedRect.height / 2;
+    for (const sib of siblings) {
+      const r = sib.getBoundingClientRect();
+      if (draggedMid < r.top || draggedMid > r.bottom) continue;
+      const mid = r.top + r.height / 2;
+      if (draggedMid < mid) _filaDrag.container.insertBefore(_filaDrag.block, sib);
+      else _filaDrag.container.insertBefore(_filaDrag.block, sib.nextElementSibling);
+      _filaDrag.block.style.transform = 'translateY(0)';
+      _filaDrag.startY = e.clientY;
+      break;
+    }
+  };
+
+  const onUp = async () => {
+    document.removeEventListener('pointermove', onMove);
+    document.removeEventListener('pointerup', onUp);
+    if (!_filaDrag) return;
+    const { block, container } = _filaDrag;
+    block.style.position   = '';
+    block.style.zIndex     = '';
+    block.style.opacity    = '';
+    block.style.background = '';
+    block.style.boxShadow  = '';
+    block.style.transform  = '';
+    _filaDrag = null;
+    await _filaSalvarOrdem(container);
+  };
+
+  document.addEventListener('pointermove', onMove);
+  document.addEventListener('pointerup', onUp);
+}
+
+async function _filaSalvarOrdem(container) {
+  const blocks = Array.from(container.querySelectorAll('.fila-drag-block'));
+  const ids = blocks.map(b => parseInt(b.dataset.id)).filter(Boolean);
+  if (!ids.length) return;
+  try {
+    await fetch(`${API}/pedidos/reordenar-fila`, {
+      credentials: 'include', method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids })
+    });
+  } catch(e) { toast('Erro ao salvar nova ordem.', 'erro'); }
 }
 
 function selecionarPedidoFilaDesk(num) {

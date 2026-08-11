@@ -167,6 +167,23 @@ router.post('/pedidos/bipar', requerAuth, async (req,res) => {
   } catch(e){res.status(500).json({erro:e.message});}
 });
 
+// Salva a ordem manual (drag-and-drop) que o separador definiu na própria fila —
+// só pode reordenar pedidos já atribuídos a ele mesmo.
+router.put('/pedidos/reordenar-fila', requerAuth, async (req,res) => {
+  const { ids } = req.body;
+  if (!Array.isArray(ids) || !ids.length) return res.status(400).json({erro:'Informe a lista de ids na nova ordem!'});
+  const sepId = req.session?.separador?.id;
+  if (!sepId) return res.status(403).json({erro:'Usuário não vinculado a um separador.'});
+  try {
+    for (let i = 0; i < ids.length; i++) {
+      const id = validarId(ids[i]);
+      if (!id) continue;
+      await pool.query('UPDATE pedidos SET ordem_fila=$1 WHERE id=$2 AND separador_id=$3', [i + 1, id, sepId]);
+    }
+    res.json({ mensagem: 'Ordem da fila atualizada!', atualizados: ids.length });
+  } catch(e) { res.status(500).json({erro:e.message}); }
+});
+
 router.get('/pedidos/lote-itens', requerAuth, async (req,res) => {
   const ids = String(req.query.pedido_ids||'').split(',').map(s=>parseInt(s.trim())).filter(Boolean);
   if (!ids.length) return res.status(400).json({erro:'pedido_ids obrigatorio'});

@@ -90,6 +90,8 @@ const ALTERATIONS = [
   "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS caixa_lote TEXT DEFAULT NULL",
   // Ordem manual arrastada pelo repositor na aba Separar — compartilhada entre todos.
   "ALTER TABLE avisos_repositor ADD COLUMN IF NOT EXISTS ordem_manual INTEGER DEFAULT 0",
+  // Ordem manual arrastada pelo separador na própria fila de pedidos.
+  "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS ordem_fila INTEGER DEFAULT 0",
 ];
 
 async function runSchema() {
