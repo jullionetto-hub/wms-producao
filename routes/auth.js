@@ -20,7 +20,7 @@ router.post('/auth/login', async (req,res) => {
   // travar outros colaboradores logando da mesma rede/IP compartilhado.
   const rlKey = `${ip}:${login.toLowerCase()}`;
   if (!checkRateLimit(rlKey)) {
-    return res.status(429).json({ erro: 'Muitas tentativas para este usuário. Aguarde 15 minutos.' });
+    return res.status(429).json({ erro: 'Muitas tentativas para este usuário. Aguarde 5 minutos.' });
   }
 
   try {
