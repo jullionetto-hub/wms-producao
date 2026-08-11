@@ -289,10 +289,12 @@ async function abrirReatribuirTodos() {
       const res = await fetch(`${API}/usuarios`, { credentials:'include' });
       const users = await res.json();
       const seps = users.filter(u => u.status === 'ativo' && u.perfil === 'separador' && u.nome !== nomeAtual);
-      sel.innerHTML = '<option value="">— Selecione o novo colaborador —</option>' +
+      sel.innerHTML = '<option value="">— Selecione o destino —</option>' +
+        '<option value="fila">↩ Devolver para a fila (sem separador)</option>' +
         seps.map(s => `<option value="${s.id}">${s.nome}</option>`).join('');
     } catch(e) {
-      sel.innerHTML = '<option value="">Erro ao carregar colaboradores</option>';
+      sel.innerHTML = '<option value="">— Selecione o destino —</option>' +
+        '<option value="fila">↩ Devolver para a fila (sem separador)</option>';
     }
   }
   document.getElementById('modal-reatribuir').style.display = 'flex';
@@ -304,19 +306,21 @@ function _fecharModalReatribuir() {
 
 async function _confirmarReatribuir() {
   const sid = document.getElementById('modal-reatribuir-sel')?.value;
-  if (!sid) { toast('Selecione o colaborador de destino.', 'aviso'); return; }
+  if (!sid) { toast('Selecione um destino.', 'aviso'); return; }
+  const paraFila = sid === 'fila';
   _fecharModalReatribuir();
   let ok = 0, falhas = 0;
   for (const p of _reatribuirPedidos) {
     try {
       const res = await fetch(`${API}/pedidos/${p.id}/separador`, {
         credentials:'include', method:'PUT', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ separador_id: parseInt(sid) })
+        body: JSON.stringify({ separador_id: paraFila ? null : parseInt(sid) })
       });
       if (res.ok) ok++; else falhas++;
     } catch(e) { falhas++; }
   }
-  toast(`${ok} pedido(s) reatribuído(s)${falhas ? ` — ${falhas} falharam` : ''}`, falhas ? 'aviso' : 'sucesso');
+  const acao = paraFila ? 'devolvido(s) para a fila' : 'reatribuído(s)';
+  toast(`${ok} pedido(s) ${acao}${falhas ? ` — ${falhas} falharam` : ''}`, falhas ? 'aviso' : 'sucesso');
   _reatribuirPedidos = [];
   carregarPedidos();
 }
