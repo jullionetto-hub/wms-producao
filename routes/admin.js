@@ -162,28 +162,51 @@ router.get('/diario/dados/turno', requerAuth, requerPerfil('supervisor'), async 
     const { data, turno } = req.query;
     const { dataHoraLocal: dhl } = require('../lib/helpers');
     const dt = data || dhl().data;
-    const pedidos = await db.all('SELECT * FROM pedidos WHERE data_pedido=$1', [dt]);
+    // O parâmetro turno chegava a ser recebido mas nunca era usado pra filtrar —
+    // toda consulta trazia o dia inteiro, então qualquer turno selecionado mostrava
+    // sempre os mesmos números do dia todo. sep_turno sem default 'Manha' — pedido
+    // ainda não distribuído não deve contar em nenhum turno específico.
+    const turnoFiltro = turno && turno !== 'Todos' ? turno : null;
+
+    let pedidos = await db.all(`
+      SELECT p.*, COALESCE(p.turno_distribuicao, s.turno) AS sep_turno
+      FROM pedidos p LEFT JOIN separadores s ON p.separador_id = s.id
+      WHERE p.data_pedido=$1
+    `, [dt]);
+    if (turnoFiltro) pedidos = pedidos.filter(p => p.sep_turno === turnoFiltro);
+    const idsPedidosTurno = new Set(pedidos.map(p => p.id));
+
     const total = pedidos.length;
     const concluidos = pedidos.filter(p => p.status === 'concluido').length;
     const pendentes = pedidos.filter(p => p.status === 'pendente').length;
     const separando = pedidos.filter(p => p.status === 'separando').length;
-    const faltas = await db.all(`SELECT ar.*, p.numero_pedido, p.cliente FROM avisos_repositor ar LEFT JOIN pedidos p ON ar.pedido_id = p.id WHERE ar.data_aviso=$1 AND ar.status='nao_encontrado'`, [dt]);
-    const checkouts = await db.all('SELECT * FROM checkout WHERE data_checkout=$1', [dt]);
+
+    const faltasRaw = await db.all(`SELECT ar.*, p.numero_pedido, p.cliente FROM avisos_repositor ar LEFT JOIN pedidos p ON ar.pedido_id = p.id WHERE ar.data_aviso=$1 AND ar.status='nao_encontrado'`, [dt]);
+    const faltas = turnoFiltro ? faltasRaw.filter(f => idsPedidosTurno.has(f.pedido_id)) : faltasRaw;
+
+    const checkoutsRaw = await db.all('SELECT * FROM checkout WHERE data_checkout=$1', [dt]);
+    const checkouts = turnoFiltro ? checkoutsRaw.filter(c => idsPedidosTurno.has(c.pedido_id)) : checkoutsRaw;
     const ckConcluidos = checkouts.filter(c => c.status === 'concluido').length;
     const ckPendentes = checkouts.filter(c => c.status !== 'concluido').length;
-    const reposicoes = await db.all('SELECT * FROM avisos_repositor WHERE data_aviso=$1', [dt]);
+
+    const reposicoesRaw = await db.all('SELECT * FROM avisos_repositor WHERE data_aviso=$1', [dt]);
+    const reposicoes = turnoFiltro ? reposicoesRaw.filter(r => idsPedidosTurno.has(r.pedido_id)) : reposicoesRaw;
     const repResolvidas = reposicoes.filter(r => ['reposto','abastecido','subiu'].includes(r.status)).length;
     const repPendentes = reposicoes.filter(r => r.status === 'pendente' || r.status === 'aberto').length;
     const repNaoEncontrados = reposicoes.filter(r => r.status === 'nao_encontrado').length;
-    const embTotal = await db.get('SELECT COUNT(*) as total, SUM(CASE WHEN status_embalagem=$2 THEN 1 ELSE 0 END) as embalados FROM pedidos WHERE data_pedido=$1 AND status=$3', [dt, 'embalado', 'concluido']);
-    const embEmbalados = parseInt(embTotal?.embalados || 0);
-    const embPendentes = parseInt(embTotal?.total || 0) - embEmbalados;
+
+    // Embalagem — reaproveita os pedidos já filtrados por turno acima, em vez de
+    // uma nova query com filtro fixo só por data (que ignorava o turno).
+    const embPedidos = pedidos.filter(p => p.status === 'concluido');
+    const embEmbalados = embPedidos.filter(p => p.status_embalagem === 'embalado').length;
+    const embPendentes = embPedidos.length - embEmbalados;
+
     res.json({
       data: dt, turno: turno || 'Todos',
       separacao: { total, concluidos, pendentes, separando },
       checkout: { concluidos: ckConcluidos, pendentes: ckPendentes, total: checkouts.length },
       reposicao: { resolvidas: repResolvidas, pendentes: repPendentes, nao_encontrados: repNaoEncontrados, total: reposicoes.length },
-      embalagem: { total: parseInt(embTotal?.total || 0), embalados: embEmbalados, pendentes: embPendentes },
+      embalagem: { total: embPedidos.length, embalados: embEmbalados, pendentes: embPendentes },
       problemas: faltas.map(f => ({ pedido: f.numero_pedido, cliente: f.cliente, item: f.descricao, codigo: f.codigo }))
     });
   } catch(e) { res.status(500).json({erro:e.message}); }
