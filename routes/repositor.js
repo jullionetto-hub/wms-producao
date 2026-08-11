@@ -11,6 +11,7 @@ pool.query(`ALTER TABLE avisos_repositor ADD COLUMN IF NOT EXISTS total_tentativ
 pool.query(`ALTER TABLE avisos_repositor ADD COLUMN IF NOT EXISTS hora_inicio_busca TEXT  DEFAULT ''`).catch(()=>{});
 pool.query(`ALTER TABLE avisos_repositor ADD COLUMN IF NOT EXISTS hora_protocolo    TEXT  DEFAULT ''`).catch(()=>{});
 pool.query(`ALTER TABLE avisos_repositor ADD COLUMN IF NOT EXISTS turno_pendente    TEXT  DEFAULT ''`).catch(()=>{});
+pool.query(`ALTER TABLE avisos_repositor ADD COLUMN IF NOT EXISTS ordem_manual      INTEGER DEFAULT 0`).catch(()=>{});
 
 // Sequência de turnos para passagem de item entre turnos
 const SEQ_TURNO = ['Manha', 'Tarde', 'Noite'];
@@ -72,9 +73,30 @@ router.get('/repositor/avisos', requerAuth, async (req,res) => {
     if (data_ini){params.push(data_ini);sql+=` AND a.data_aviso>=$${params.length}`;}
     if (data_fim){params.push(data_fim);sql+=` AND a.data_aviso<=$${params.length}`;}
     if (codigo){params.push('%'+codigo+'%');sql+=` AND UPPER(a.codigo) LIKE UPPER($${params.length})`;}
-    const rows = await db.all(sql+' ORDER BY prioridade ASC, a.id DESC', params);
+    // Itens já reordenados manualmente (ordem_manual>0) vêm primeiro, na ordem definida
+    // pelo repositor; os demais mantêm o critério padrão (drive-thru primeiro, mais novo primeiro).
+    const rows = await db.all(sql+` ORDER BY
+      CASE WHEN a.ordem_manual > 0 THEN 0 ELSE 1 END ASC,
+      a.ordem_manual ASC,
+      prioridade ASC,
+      a.id DESC`, params);
     res.json(rows.map(r=>({...r, forma_envio: r.forma_envio_real||r.forma_envio||''})));
   } catch(e){res.status(500).json({erro:e.message});}
+});
+
+// Salva a ordem manual (drag-and-drop) definida pelo repositor na aba Separar —
+// compartilhada: todo repositor que olhar a fila vê a mesma sequência.
+router.put('/repositor/avisos/reordenar', requerAuth, async (req,res) => {
+  const { ids } = req.body;
+  if (!Array.isArray(ids) || !ids.length) return res.status(400).json({erro:'Informe a lista de ids na nova ordem!'});
+  try {
+    for (let i = 0; i < ids.length; i++) {
+      const id = validarId(ids[i]);
+      if (!id) continue;
+      await pool.query('UPDATE avisos_repositor SET ordem_manual=$1 WHERE id=$2', [i + 1, id]);
+    }
+    res.json({ mensagem: 'Ordem atualizada!', atualizados: ids.length });
+  } catch(e) { res.status(500).json({erro:e.message}); }
 });
 
 router.put('/repositor/avisos/:id', requerAuth, async (req,res) => {

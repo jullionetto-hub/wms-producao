@@ -87,7 +87,8 @@ const TABLES = [
     quem_guardou   TEXT DEFAULT '',
     forma_envio    TEXT DEFAULT '',
     situacao       TEXT DEFAULT '',
-    lido_separador BOOLEAN DEFAULT false
+    lido_separador BOOLEAN DEFAULT false,
+    ordem_manual   INTEGER DEFAULT 0
   )`,
 
   `CREATE TABLE IF NOT EXISTS checkout (

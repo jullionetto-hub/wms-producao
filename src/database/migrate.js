@@ -88,6 +88,8 @@ const ALTERATIONS = [
   // Usa usuarios.turno como fonte da verdade para todos os separadores vinculados
   `UPDATE separadores s SET turno = u.turno FROM usuarios u WHERE s.usuario_id = u.id AND u.turno IS NOT NULL AND u.turno != ''`,
   "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS caixa_lote TEXT DEFAULT NULL",
+  // Ordem manual arrastada pelo repositor na aba Separar — compartilhada entre todos.
+  "ALTER TABLE avisos_repositor ADD COLUMN IF NOT EXISTS ordem_manual INTEGER DEFAULT 0",
 ];
 
 async function runSchema() {

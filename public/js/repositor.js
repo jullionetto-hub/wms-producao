@@ -187,9 +187,11 @@ async function carregarRepSeparar(silent=false) {
       const grupos = {};
       av.forEach(a => { const k = a.codigo || ''; if (!grupos[k]) grupos[k] = []; grupos[k].push(a); });
       Object.values(grupos).forEach(itens => {
+        const ids = itens.map(a => a.id).join(',');
+        let bloco = '';
         if (itens.length > 1) {
           // Cabeçalho do grupo
-          html += `<div style="background:#fff7ed;border:2px solid #f97316;border-radius:12px;padding:10px 14px;margin-bottom:4px;display:flex;align-items:center;justify-content:space-between">
+          bloco += `<div style="background:#fff7ed;border:2px solid #f97316;border-radius:12px;padding:10px 14px;margin-bottom:4px;display:flex;align-items:center;justify-content:space-between">
             <div>
               <span style="font-size:13px;font-weight:800;color:#c2410c;font-family:'Space Mono',monospace">${itens[0].codigo||'—'}</span>
               <div style="font-size:11px;color:#92400e;margin-top:2px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${itens[0].descricao||''}</div>
@@ -197,15 +199,16 @@ async function carregarRepSeparar(silent=false) {
             <span style="background:#f97316;color:#fff;border-radius:20px;padding:4px 10px;font-size:11px;font-weight:800;white-space:nowrap">${itens.length} pedidos</span>
           </div>`;
           // Cards individuais levemente recuados
-          html += itens.map(a => `<div style="margin-left:12px;border-left:3px solid #f97316;padding-left:4px;margin-bottom:2px">${renderCardRepSimples(a,'separar')}</div>`).join('');
-          html += `<div style="margin-bottom:10px"></div>`;
+          bloco += itens.map(a => `<div style="margin-left:12px;border-left:3px solid #f97316;padding-left:4px;margin-bottom:2px">${renderCardRepSimples(a,'separar')}</div>`).join('');
+          bloco += `<div style="margin-bottom:10px"></div>`;
         } else {
-          html += renderCardRepSimples(itens[0], 'separar');
+          bloco = renderCardRepSimples(itens[0], 'separar');
         }
+        html += _repDragWrap(ids, bloco);
       });
     }
-    if (el)  el.innerHTML  = html;
-    if (elD) elD.innerHTML = html;
+    if (el)  { el.innerHTML  = html; _initRepDragReorder(el); }
+    if (elD) { elD.innerHTML = html; _initRepDragReorder(elD); }
   } catch(e) {
     const errHtml = `<div style="color:#ef4444;text-align:center;padding:24px;font-size:13px">Erro ao carregar — toque atualizar</div>`;
     if (!silent) {
@@ -213,6 +216,94 @@ async function carregarRepSeparar(silent=false) {
       if (elD) elD.innerHTML = errHtml;
     }
   }
+}
+
+/* ── Reordenar por arrastar (só aba Separar) — mouse e touch via Pointer Events ── */
+function _repDragWrap(ids, innerHtml) {
+  return `<div class="rep-drag-block" data-ids="${ids}" style="display:flex;align-items:stretch;gap:2px;margin-bottom:2px">
+    <div class="rep-drag-handle" style="display:flex;align-items:center;justify-content:center;width:26px;flex-shrink:0;touch-action:none;cursor:grab;color:var(--text3)">
+      <svg width="12" height="18" viewBox="0 0 12 18" fill="currentColor" aria-hidden="true">
+        <circle cx="3" cy="3" r="1.6"/><circle cx="9" cy="3" r="1.6"/>
+        <circle cx="3" cy="9" r="1.6"/><circle cx="9" cy="9" r="1.6"/>
+        <circle cx="3" cy="15" r="1.6"/><circle cx="9" cy="15" r="1.6"/>
+      </svg>
+    </div>
+    <div style="flex:1;min-width:0">${innerHtml}</div>
+  </div>`;
+}
+
+function _initRepDragReorder(container) {
+  if (!container) return;
+  container.querySelectorAll('.rep-drag-handle').forEach(handle => {
+    handle.onpointerdown = (ev) => _repDragStart(ev, container);
+  });
+}
+
+let _repDrag = null;
+
+function _repDragStart(ev, container) {
+  ev.preventDefault();
+  const block = ev.currentTarget.closest('.rep-drag-block');
+  if (!block) return;
+  block.style.position   = 'relative';
+  block.style.zIndex     = '50';
+  block.style.opacity    = '.9';
+  block.style.background = 'var(--surface)';
+  block.style.boxShadow  = '0 4px 14px rgba(0,0,0,.18)';
+  try { block.setPointerCapture(ev.pointerId); } catch(e) {}
+
+  _repDrag = { block, container, startY: ev.clientY };
+
+  const onMove = (e) => {
+    if (!_repDrag) return;
+    const dy = e.clientY - _repDrag.startY;
+    _repDrag.block.style.transform = `translateY(${dy}px)`;
+    const siblings = Array.from(_repDrag.container.querySelectorAll('.rep-drag-block')).filter(b => b !== _repDrag.block);
+    const draggedRect = _repDrag.block.getBoundingClientRect();
+    const draggedMid = draggedRect.top + draggedRect.height / 2;
+    for (const sib of siblings) {
+      const r = sib.getBoundingClientRect();
+      if (draggedMid < r.top || draggedMid > r.bottom) continue;
+      const mid = r.top + r.height / 2;
+      if (draggedMid < mid) _repDrag.container.insertBefore(_repDrag.block, sib);
+      else _repDrag.container.insertBefore(_repDrag.block, sib.nextElementSibling);
+      _repDrag.block.style.transform = 'translateY(0)';
+      _repDrag.startY = e.clientY;
+      break;
+    }
+  };
+
+  const onUp = async () => {
+    document.removeEventListener('pointermove', onMove);
+    document.removeEventListener('pointerup', onUp);
+    if (!_repDrag) return;
+    const { block, container } = _repDrag;
+    block.style.position   = '';
+    block.style.zIndex     = '';
+    block.style.opacity    = '';
+    block.style.background = '';
+    block.style.boxShadow  = '';
+    block.style.transform  = '';
+    _repDrag = null;
+    await _repSalvarOrdem(container);
+  };
+
+  document.addEventListener('pointermove', onMove);
+  document.addEventListener('pointerup', onUp);
+}
+
+async function _repSalvarOrdem(container) {
+  const blocks = Array.from(container.querySelectorAll('.rep-drag-block'));
+  const ids = [];
+  blocks.forEach(b => (b.dataset.ids || '').split(',').forEach(id => { if (id) ids.push(parseInt(id)); }));
+  if (!ids.length) return;
+  try {
+    await fetch(`${API}/repositor/avisos/reordenar`, {
+      credentials: 'include', method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids })
+    });
+  } catch(e) { toast('Erro ao salvar nova ordem.', 'erro'); }
 }
 
 async function carregarRepSeparado(silent=false) {
