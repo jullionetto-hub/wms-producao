@@ -42,7 +42,9 @@ function filtrarPedidosTurno(turno) {
   const sel = document.getElementById('sel-fturno');
   if (sel) sel.value = turno;
   // Recalcula badges de transportadora apenas com os pedidos do turno selecionado
-  const base = turno ? _pedidosLista.filter(p => (p.sep_turno || p.turno_distribuicao) === turno) : _pedidosLista;
+  const base = !turno ? _pedidosLista
+    : turno === '_sem_turno' ? _pedidosLista.filter(p => !(p.sep_turno || p.turno_distribuicao))
+    : _pedidosLista.filter(p => (p.sep_turno || p.turno_distribuicao) === turno);
   _atualizarBadgesTransp(base);
   _renderTabelaPedidos();
 }
@@ -93,11 +95,12 @@ function _atualizarBadgesFiltroTransp(lista) {
   const c = fn => lista.filter(fn).length;
   const sel = document.getElementById('sel-fturno');
   if (sel) {
-    const turnoEfetivo = p => p.sep_turno || p.turno_distribuicao;
+    const turnoEfetivo = p => p.sep_turno || p.turno_distribuicao || '';
     sel.options[0].text = `Todos (${lista.length})`;
     sel.options[1].text = `Manhã (${c(p => turnoEfetivo(p) === 'Manha')})`;
     sel.options[2].text = `Tarde (${c(p => turnoEfetivo(p) === 'Tarde')})`;
     sel.options[3].text = `Noite (${c(p => turnoEfetivo(p) === 'Noite')})`;
+    sel.options[4].text = `Sem turno (${c(p => !turnoEfetivo(p))})`;
   }
   // Botões de transportadora — também parte da lista completa no carregamento inicial
   _atualizarBadgesTransp(lista);
@@ -123,8 +126,10 @@ function _renderTabelaPedidos() {
   const tbody = document.getElementById('tbody-ped');
   if (!tbody) return;
   let lista = _pedidosLista;
-  // Filtro de turno — usa sep_turno (turno_distribuicao → separadores.turno → 'Manha')
-  if (_filtroTurno) lista = lista.filter(p => (p.sep_turno || p.turno_distribuicao) === _filtroTurno);
+  // Filtro de turno — usa sep_turno (turno_distribuicao → separadores.turno; sem default,
+  // pedido ainda não distribuído fica sem turno até ser realmente distribuído)
+  if (_filtroTurno === '_sem_turno') lista = lista.filter(p => !(p.sep_turno || p.turno_distribuicao));
+  else if (_filtroTurno) lista = lista.filter(p => (p.sep_turno || p.turno_distribuicao) === _filtroTurno);
   // Filtro de transportadora / tipo
   if (_filtroTransp === 'PRIME') {
     lista = lista.filter(p => p.tem_prime);

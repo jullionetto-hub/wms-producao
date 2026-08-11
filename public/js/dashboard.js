@@ -826,8 +826,9 @@ function renderDashPipeline() {
   if (_turnosDash.size > 0) {
     const filtro = [..._turnosDash];
     pedidos = pedidos.filter(p => {
-      // sep_turno é retornado pelo /pedidos endpoint (COALESCE turno_distribuicao, sep.turno)
-      const t = p.sep_turno || p.turno_distribuicao || 'Manha';
+      // sep_turno é retornado pelo /pedidos endpoint (COALESCE turno_distribuicao, sep.turno) —
+      // sem default: pedido ainda não distribuído não conta como nenhum turno específico
+      const t = p.sep_turno || p.turno_distribuicao || '';
       return filtro.includes(t);
     });
   }

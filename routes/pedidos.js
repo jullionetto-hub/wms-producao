@@ -10,7 +10,11 @@ router.get('/pedidos', requerAuth, async (req,res) => {
   try {
     // total_itens sobrescreve p.total_itens com o valor calculado da tabela itens_pedido
     // (fallback para pedidos antigos onde total_itens pode ser NULL ou 0)
-    let q=`SELECT p.*, COALESCE(NULLIF(p.total_itens,0),(SELECT COALESCE(SUM(ip.quantidade),p.itens) FROM itens_pedido ip WHERE ip.pedido_id=p.id),p.itens) AS total_itens, s.nome as separador_nome,COALESCE(p.turno_distribuicao,s.turno,'Manha') as sep_turno FROM pedidos p LEFT JOIN separadores s ON p.separador_id=s.id WHERE 1=1`;
+    // sep_turno: turno_distribuicao (definido ao distribuir) tem prioridade; se o pedido já
+    // tem separador mas não passou por distribuição com turno, cai no turno do separador.
+    // SEM default pra 'Manha' — pedido ainda não distribuído (sem separador) fica com
+    // sep_turno NULL, pra não ser contado como se já tivesse ido pro turno da manhã.
+    let q=`SELECT p.*, COALESCE(NULLIF(p.total_itens,0),(SELECT COALESCE(SUM(ip.quantidade),p.itens) FROM itens_pedido ip WHERE ip.pedido_id=p.id),p.itens) AS total_itens, s.nome as separador_nome,COALESCE(p.turno_distribuicao,s.turno) as sep_turno FROM pedidos p LEFT JOIN separadores s ON p.separador_id=s.id WHERE 1=1`;
     const p=[];
     const add=(c,v)=>{p.push(v);q+=` AND ${c}$${p.length}`;};
     if (separador_id)  add('p.separador_id=',separador_id);
