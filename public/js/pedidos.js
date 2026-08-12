@@ -386,17 +386,17 @@ function _renderListaUsuarios() {
         <div class="usr-login">@${u.login}</div>
         <div class="usr-pills">
           ${todosAcessos.map(p=>`<span class="usr-pill ${p}">${perfIcons[p]||''} ${p}</span>`).join('')}
-          <span class="usr-pill turno">⏰ ${turnoLabel}</span>
+          <span class="usr-pill turno"><i class="ti ti-clock" aria-hidden="true"></i> ${turnoLabel}</span>
           <span class="pill ${u.status}" style="font-size:9px;padding:2px 7px">${u.status}</span>
         </div>
       </div>
       <div class="usr-actions">
         <button class="usr-btn ${u.status==='ativo'?'toggle-on':'toggle-off'}" title="${u.status==='ativo'?'Desativar':'Ativar'}"
           onclick="alterarStatusUsuario(${u.id},'${u.status==='ativo'?'inativo':'ativo'}','${u.nome}','${u.login}','${u.perfil}','${u.turno||''}')">
-          ${u.status==='ativo'?'⏸':'▶'}
+          <i class="ti ti-${u.status==='ativo'?'player-pause-filled':'player-play-filled'}" aria-hidden="true"></i>
         </button>
-        <button class="usr-btn" style="background:#3b82f6;color:#fff;border:none;border-radius:6px;padding:5px 10px;cursor:pointer;font-size:12px;margin-right:4px" onclick="abrirEditarUsuario(${u.id})">Editar</button>
-        <button class="usr-btn del" title="Excluir" onclick="excluirUsuario(${u.id},'${u.nome}')">✕</button>
+        <button class="usr-btn edit" onclick="abrirEditarUsuario(${u.id})">Editar</button>
+        <button class="usr-btn del" title="Excluir" onclick="excluirUsuario(${u.id},'${u.nome}')"><i class="ti ti-trash" aria-hidden="true"></i></button>
       </div>
     </div>`;
   }).join('');
@@ -404,7 +404,7 @@ function _renderListaUsuarios() {
 
 async function vincularTodosSeparadores() {
   const btn = event?.target;
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ Corrigindo...'; }
+  if (btn) { btn.disabled = true; btn.textContent = 'Corrigindo...'; }
   try {
     const res  = await fetch(`${API}/separadores/vincular-todos`, { method:'POST', credentials:'include' });
     const data = await res.json();

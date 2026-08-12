@@ -357,7 +357,7 @@
         <div id="cad-usuarios">
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start">
             <div class="card" style="position:sticky;top:70px">
-              <div class="card-hd">NOVO USUÁRIO</div>
+              <div class="card-hd">Novo usuário</div>
               <div class="form-grp"><label>NOME COMPLETO</label><input type="text" id="usr-nome" placeholder="Nome do colaborador"/></div>
               <div class="form-grp"><label>LOGIN</label><input type="text" id="usr-login" placeholder="Ex: joao.silva"/></div>
               <div class="form-grp"><label>SENHA</label><input type="password" id="usr-senha" placeholder="Mínimo 6 caracteres"/></div>
@@ -400,7 +400,7 @@
             <div class="card">
               <div class="card-hd" style="flex-direction:column;align-items:stretch;gap:8px">
                 <div style="display:flex;align-items:center;gap:8px">
-                  <span>USUÁRIOS CADASTRADOS</span>
+                  <span>Usuários cadastrados</span>
                   <span id="usr-count" style="font-size:11px;color:var(--text3);font-weight:500"></span>
                   <button class="btn btn-outline btn-sm" onclick="carregarUsuarios()" title="Recarregar" style="margin-left:auto;padding:3px 8px">↺</button>
                   <button class="btn btn-sm" style="padding:3px 10px;background:#ede9fe;color:#6d28d9;border:1.5px solid #c4b5fd;font-size:11px;font-weight:700" onclick="vincularTodosSeparadores()" title="Corrigir vínculos quebrados">Corrigir vínculos</button>
@@ -419,7 +419,7 @@
         <div id="cad-importar" style="display:none">
           <div class="grid-2">
             <div class="card">
-              <div class="card-hd">IMPORTAR PLANILHA</div>
+              <div class="card-hd">Importar planilha</div>
               <div class="upload-area" id="upload-area"
                 ondragover="event.preventDefault();this.classList.add('drag')"
                 ondragleave="this.classList.remove('drag')"
@@ -433,7 +433,7 @@
               </div>
               <div class="status-box" id="status-leitura"></div>
               <div id="preview-importacao" style="display:none;margin-top:14px">
-                <div style="font-size:11px;color:var(--text3);margin-bottom:8px">PREVIEW (10 primeiras linhas)</div>
+                <div style="font-size:11px;color:var(--text3);margin-bottom:8px">Preview (10 primeiras linhas)</div>
                 <div class="tabela-wrap" style="max-height:200px;overflow-y:auto">
                   <table><thead><tr><th>PEDIDO</th><th>CÓDIGO</th><th>DESCRIÇÃO</th><th>ENDEREÇO</th><th>QTDE</th></tr></thead><tbody id="tbody-prev"></tbody></table>
                 </div>
@@ -444,7 +444,7 @@
               </div>
             </div>
             <div class="card">
-              <div class="card-hd">HISTÓRICO <button class="btn btn-danger btn-sm" onclick="limparHistorico()">Limpar</button></div>
+              <div class="card-hd">Histórico <button class="btn btn-danger btn-sm" onclick="limparHistorico()">Limpar</button></div>
               <div id="hist-importacoes"></div>
             </div>
           </div>

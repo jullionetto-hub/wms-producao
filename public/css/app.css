@@ -697,6 +697,8 @@ body.dark .item-card.parcial    .item-ic{background:#78350F}
 .usr-pill.separador{background:#EFF6FF;color:var(--accent);border:1px solid #BFDBFE}
 .usr-pill.repositor{background:#FFFBEB;color:var(--amber);border:1px solid #FDE68A}
 .usr-pill.checkout{background:#F0FDFA;color:#0D9488;border:1px solid #99F6E4}
+.usr-pill.embalador{background:#FDF2F8;color:#BE185D;border:1px solid #FBCFE8}
+.usr-pill.gestor{background:#FFF7ED;color:var(--orange);border:1px solid #FED7AA}
 .usr-pill.turno{background:var(--surface2);color:var(--text3);border:1px solid var(--border)}
 .usr-actions{display:flex;gap:6px;flex-shrink:0}
 .usr-btn{width:36px;height:36px;border-radius:10px;border:none;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .18s;font-family:'DM Sans',sans-serif}
