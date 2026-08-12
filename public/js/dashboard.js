@@ -572,7 +572,7 @@ async function carregarRankingGeral() {
     if (label) {
       const fmt = d => d ? d.split('-').reverse().join('/') : '';
       const hoje = new Date().toLocaleDateString('pt-BR', {timeZone:'America/Sao_Paulo'}).split('/').reverse().join('-');
-      label.textContent = (ini === hoje && fim === hoje) ? 'HOJE' : `${fmt(ini)} – ${fmt(fim)}`;
+      label.textContent = (ini === hoje && fim === hoje) ? 'Hoje' : `${fmt(ini)} – ${fmt(fim)}`;
     }
 
     const areas = [
@@ -604,7 +604,7 @@ async function carregarRankingGeral() {
         : `<div style="color:var(--text3);text-align:center;padding:16px 8px;font-size:12px">Sem dados no período</div>`;
 
       return `<div style="padding:12px 14px;border-right:1px solid var(--border)">
-        <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px"><span style="width:7px;height:7px;border-radius:50%;background:${area.cor};display:inline-block;flex-shrink:0"></span><span style="font-size:11px;font-weight:800;color:${area.cor};letter-spacing:.5px">${area.label.toUpperCase()}</span></div>
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px"><span style="width:7px;height:7px;border-radius:50%;background:${area.cor};display:inline-block;flex-shrink:0"></span><span style="font-size:11px;font-weight:700;color:${area.cor};letter-spacing:.3px">${area.label}</span></div>
         ${linhas}
       </div>`;
     }).join('');

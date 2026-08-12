@@ -130,7 +130,7 @@
           <span style="font-size:12px;color:var(--text3);font-weight:400;font-family:'DM Sans',sans-serif" id="dash-ultima-atualizacao"></span>
         </div>
         <div class="card" style="margin-bottom:14px">
-          <div class="card-hd">FILTROS
+          <div class="card-hd">Filtros
             <button onclick="exportarDashboardExcel()" class="excel-btn">Excel</button>
           </div>
           <div class="date-filter-bar" style="align-items:flex-end;gap:14px;flex-wrap:wrap">
@@ -161,8 +161,8 @@
         <!-- ABAS DO DASHBOARD -->
         <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:16px">
           <button id="dtab-btn-operacao" onclick="mudarDashTab('operacao')"
-            style="padding:10px 18px;border:none;background:transparent;font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.5px;cursor:pointer;border-bottom:2px solid var(--accent);margin-bottom:-2px;font-family:'DM Sans',sans-serif">
-            OPERAÇÃO
+            style="padding:10px 18px;border:none;background:transparent;font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.3px;cursor:pointer;border-bottom:2px solid var(--accent);margin-bottom:-2px;font-family:var(--font-sans)">
+            Operação
           </button>
 
         </div>
@@ -172,7 +172,7 @@
 
           <!-- Ranking Geral — todas as áreas -->
           <div class="card" style="margin-bottom:14px">
-            <div class="card-hd">RANKING GERAL — <span id="ranking-periodo-label">HOJE</span></div>
+            <div class="card-hd">Ranking geral — <span id="ranking-periodo-label">Hoje</span></div>
             <div id="op-ranking-geral" style="display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--border)">
               <div style="color:var(--text3);text-align:center;padding:20px;font-size:13px;grid-column:span 4">Carregando...</div>
             </div>
@@ -181,26 +181,26 @@
           <!-- Gráficos operacionais -->
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:2px">
             <div class="card">
-              <div class="card-hd">STATUS DOS PEDIDOS — HOJE <button class="btn btn-outline btn-sm" style="margin-left:auto" onclick="carregarGraficoPizzaStatus()">↺</button></div>
+              <div class="card-hd">Status dos pedidos — hoje <button class="btn btn-outline btn-sm" style="margin-left:auto" onclick="carregarGraficoPizzaStatus()">↺</button></div>
               <div style="padding:12px;display:flex;align-items:center;justify-content:center;min-height:200px">
                 <canvas id="grafico-pizza-status" style="max-height:200px"></canvas>
               </div>
             </div>
             <div class="card">
-              <div class="card-hd">SITUAÇÃO DA REPOSIÇÃO <button class="btn btn-outline btn-sm" style="margin-left:auto" onclick="carregarGraficoPizzaReposicao()">↺</button></div>
+              <div class="card-hd">Situação da reposição <button class="btn btn-outline btn-sm" style="margin-left:auto" onclick="carregarGraficoPizzaReposicao()">↺</button></div>
               <div style="padding:12px;display:flex;align-items:center;justify-content:center;min-height:200px">
                 <canvas id="grafico-pizza-reposicao" style="max-height:200px"></canvas>
               </div>
             </div>
           </div>
           <div class="card" style="margin-top:14px">
-            <div class="card-hd">PRODUÇÃO POR HORA <button class="btn btn-outline btn-sm" style="margin-left:auto" onclick="carregarGraficoBarrasHoras()">↺</button></div>
+            <div class="card-hd">Produção por hora <button class="btn btn-outline btn-sm" style="margin-left:auto" onclick="carregarGraficoBarrasHoras()">↺</button></div>
             <div style="padding:12px;min-height:180px">
               <canvas id="grafico-barras-horas" style="max-height:200px"></canvas>
             </div>
           </div>
           <div class="card" style="margin-top:14px">
-            <div class="card-hd">FUNIL OPERACIONAL — HOJE <button class="btn btn-outline btn-sm" style="margin-left:auto" onclick="carregarGraficoFunil()">↺</button></div>
+            <div class="card-hd">Funil operacional — hoje <button class="btn btn-outline btn-sm" style="margin-left:auto" onclick="carregarGraficoFunil()">↺</button></div>
             <div style="padding:12px;min-height:180px">
               <canvas id="grafico-funil" style="max-height:200px"></canvas>
             </div>
@@ -211,7 +211,7 @@
         <div id="dtab-visao" style="display:none">
           <div class="grid-2">
             <div class="card">
-              <div class="card-hd">PRODUTIVIDADE POR SEPARADOR
+              <div class="card-hd">Produtividade por separador
                 <button class="btn btn-outline btn-sm" onclick="carregarProdutividade()">↺</button>
               </div>
               <div class="filtros">
@@ -223,7 +223,7 @@
               <div class="tabela-wrap"><table><thead><tr><th>USUÁRIO</th><th>HOJE</th><th>MÊS</th><th>ANO</th><th>PROGRESSO</th><th>STATUS</th></tr></thead><tbody id="tbody-prod"></tbody></table></div>
             </div>
             <div class="card">
-              <div class="card-hd">LINHA DO TEMPO
+              <div class="card-hd">Linha do tempo
                 <button class="btn btn-outline btn-sm" onclick="carregarTimeline()">↺</button>
               </div>
               <div class="filtros">
@@ -239,7 +239,7 @@
         <!-- ABA 2: MAPA DO ESTOQUE -->
         <div id="dtab-mapa" style="display:none">
           <div class="card">
-            <div class="card-hd">MAPA DO ESTOQUE
+            <div class="card-hd">Mapa do estoque
               <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
                 <div class="fg">
                   <label style="font-size:9px;letter-spacing:1px">PEDIDO</label>
