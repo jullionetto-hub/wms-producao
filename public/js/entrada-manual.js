@@ -346,7 +346,7 @@ async function emSalvarItem(id, mobile = false) {
 
   const btnId = mobile ? `em-mbtn-${id}` : `em-btn-save-${id}`;
   const btn   = document.getElementById(btnId);
-  if (btn) { btn.disabled = true; btn.textContent = '⏳...'; }
+  if (btn) { btn.disabled = true; btn.textContent = '...'; }
 
   const qtd = parseInt(document.getElementById(mobile ? `em-mqty-${id}` : `em-qty-${id}`)?.value)||0;
 
@@ -363,12 +363,12 @@ async function emSalvarItem(id, mobile = false) {
     if (btn) { btn.disabled = false; btn.innerHTML = 'Salvar'; }
     const ok = await emConfirmarQtd(it.codigo, qtd, esp, 'maior');
     if (!ok) return;
-    if (btn) { btn.disabled = true; btn.textContent = '⏳...'; }
+    if (btn) { btn.disabled = true; btn.textContent = '...'; }
   } else if (esp > 0 && qtd > 0 && qtd < esp) {
     if (btn) { btn.disabled = false; btn.innerHTML = 'Salvar'; }
     const ok = await emConfirmarQtd(it.codigo, qtd, esp, 'menor');
     if (!ok) return;
-    if (btn) { btn.disabled = true; btn.textContent = '⏳...'; }
+    if (btn) { btn.disabled = true; btn.textContent = '...'; }
   }
 
   const r = await apiFetch(`/entrada-manual/itens/${id}`, {
@@ -400,7 +400,7 @@ async function emSalvarItem(id, mobile = false) {
     savedBtn.disabled = true;
     savedBtn.dataset.saved = 'true';
     savedBtn.style.background = '#16a34a';
-    savedBtn.innerHTML = '✓ Salvo';
+    savedBtn.innerHTML = '<i class="ti ti-check" aria-hidden="true"></i> Salvo';
   }
 
   emAtualizarProgresso();
@@ -428,15 +428,15 @@ function emConfirmarQtd(codigo, qtd, esp, tipo = 'maior') {
         <div style="background:${bgCor};border:1.5px solid ${borda};border-radius:10px;padding:14px;margin-bottom:16px;text-align:center">
           <div style="font-size:12px;font-weight:700;color:#92400e;margin-bottom:6px">${codigo}</div>
           <div style="display:flex;justify-content:center;gap:24px">
-            <div><div style="font-size:10px;color:#92400e;font-weight:700">ESPERADO</div><div style="font-size:28px;font-weight:900;color:#92400e">${esp}</div></div>
+            <div><div style="font-size:10px;color:#92400e;font-weight:700">Esperado</div><div style="font-size:28px;font-weight:900;color:#92400e">${esp}</div></div>
             <div style="font-size:24px;color:${borda};align-self:center">→</div>
-            <div><div style="font-size:10px;color:${cor};font-weight:700">INFORMADO</div><div style="font-size:28px;font-weight:900;color:${cor}">${qtd}</div></div>
+            <div><div style="font-size:10px;color:${cor};font-weight:700">Informado</div><div style="font-size:28px;font-weight:900;color:${cor}">${qtd}</div></div>
           </div>
         </div>
         <div style="font-size:13px;color:var(--text2);text-align:center;margin-bottom:20px">${msg}</div>
         <div style="display:flex;gap:10px">
-          <button id="em-cq-nao" style="flex:1;padding:13px;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;color:var(--text)">✕ Corrigir</button>
-          <button id="em-cq-sim" style="flex:1;padding:13px;background:${corBtn};border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;color:#fff">✓ Confirmar ${qtd}</button>
+          <button id="em-cq-nao" style="flex:1;padding:13px;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;color:var(--text)"><i class="ti ti-x" aria-hidden="true"></i> Corrigir</button>
+          <button id="em-cq-sim" style="flex:1;padding:13px;background:${corBtn};border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;color:#fff"><i class="ti ti-check" aria-hidden="true"></i> Confirmar ${qtd}</button>
         </div>
       </div>`;
     document.body.appendChild(el);
@@ -449,7 +449,7 @@ function emConfirmarQtd(codigo, qtd, esp, tipo = 'maior') {
 async function emSalvarTudo() {
   if (!_emLoteAtivo) return;
   const btn = document.getElementById('em-btn-salvar-tudo');
-  if (btn) { btn.disabled = true; btn.textContent = `⏳ Salvando ${_emItens.length}...`; }
+  if (btn) { btn.disabled = true; btn.textContent = `Salvando ${_emItens.length}...`; }
 
   // Só envia itens com alteração pendente (não os já salvos individualmente)
   const payload = _emItens.map(it => {
@@ -490,8 +490,8 @@ async function emSalvarTudo() {
         <div style="max-height:180px;overflow-y:auto;margin-bottom:16px;padding:8px 12px;background:var(--surface2);border-radius:10px">${linhas}</div>
         <div style="font-size:13px;color:var(--text2);text-align:center;margin-bottom:20px">Confirma salvar com essas quantidades?</div>
         <div style="display:flex;gap:10px">
-          <button id="em-bk-nao" style="flex:1;padding:13px;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;color:var(--text)">✕ Corrigir</button>
-          <button id="em-bk-sim" style="flex:1;padding:13px;background:#16a34a;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;color:#fff">✓ Confirmar tudo</button>
+          <button id="em-bk-nao" style="flex:1;padding:13px;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;color:var(--text)"><i class="ti ti-x" aria-hidden="true"></i> Corrigir</button>
+          <button id="em-bk-sim" style="flex:1;padding:13px;background:#16a34a;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;color:#fff"><i class="ti ti-check" aria-hidden="true"></i> Confirmar tudo</button>
         </div>
       </div>`;
     document.body.appendChild(el);
@@ -500,7 +500,7 @@ async function emSalvarTudo() {
       document.getElementById('em-bk-nao').onclick = () => { el.remove(); resolve(false); };
     });
     if (!ok) return;
-    if (btn) { btn.disabled = true; btn.textContent = `⏳ Salvando ${_emItens.length}...`; }
+    if (btn) { btn.disabled = true; btn.textContent = `Salvando ${_emItens.length}...`; }
   }
 
   const r = await apiFetch(`/entrada-manual/lotes/${_emLoteAtivo.id}/itens-bulk`, {
@@ -542,7 +542,7 @@ async function emProcessarArquivo(input) {
   if (!file) return;
 
   const zona = document.getElementById('em-upload-zona');
-  if (zona) zona.innerHTML = `<div style="padding:16px;text-align:center;color:var(--text3)">⏳ Lendo arquivo...</div>`;
+  if (zona) zona.innerHTML = `<div style="padding:16px;text-align:center;color:var(--text3)">Lendo arquivo...</div>`;
 
   try {
     const data = await file.arrayBuffer();
@@ -619,7 +619,7 @@ function emMostrarPreview(itens, nomeArq) {
         </button>
         <button onclick="emResetUpload()"
           style="background:var(--surface);border:1px solid var(--border);color:var(--text3);border-radius:8px;padding:8px 12px;font-size:12px;cursor:pointer">
-          ✕ Cancelar
+          <i class="ti ti-x" aria-hidden="true"></i> Cancelar
         </button>
       </div>
     </div>
@@ -661,7 +661,7 @@ async function emConfirmarImport(itens) {
   const nome = document.getElementById('em-nome-lote')?.value?.trim() || `Entrada ${hoje}`;
 
   const zona = document.getElementById('em-upload-zona');
-  if (zona) zona.innerHTML = `<div style="padding:16px;text-align:center;color:var(--text3)">⏳ Criando lote...</div>`;
+  if (zona) zona.innerHTML = `<div style="padding:16px;text-align:center;color:var(--text3)">Criando lote...</div>`;
 
   const r = await apiFetch('/entrada-manual/lotes', {
     method:'POST', headers:{'Content-Type':'application/json'},
@@ -961,7 +961,7 @@ async function catProcessarArquivo(input) {
 
     if (!produtos.length) { emToast('Nenhum produto válido.', 'erro'); if (zona) zona.innerHTML = catUploadZonaHTML(); return; }
 
-    if (zona) zona.innerHTML = `<div style="padding:12px;text-align:center;color:var(--text3)">⏳ Importando ${produtos.length.toLocaleString('pt-BR')} produtos...</div>`;
+    if (zona) zona.innerHTML = `<div style="padding:12px;text-align:center;color:var(--text3)">Importando ${produtos.length.toLocaleString('pt-BR')} produtos...</div>`;
 
     // Envia em lotes de 1000
     const LOTE = 1000;
@@ -974,7 +974,7 @@ async function catProcessarArquivo(input) {
       });
       if (r?.erro) { emToast('Erro: '+r.erro, 'erro'); break; }
       total += (r.inseridos || 0) + (r.atualizados || 0);
-      if (zona) zona.innerHTML = `<div style="padding:12px;text-align:center;color:var(--text3)">⏳ ${total.toLocaleString('pt-BR')} / ${produtos.length.toLocaleString('pt-BR')} processados...</div>`;
+      if (zona) zona.innerHTML = `<div style="padding:12px;text-align:center;color:var(--text3)">${total.toLocaleString('pt-BR')} / ${produtos.length.toLocaleString('pt-BR')} processados...</div>`;
     }
 
     emToast(`Catálogo importado! ${produtos.length.toLocaleString('pt-BR')} produtos.`, 'sucesso');
@@ -1075,7 +1075,7 @@ function invRenderizarSessoes() {
 
     ${podeCriar ? `
     <div class="card" style="padding:16px 18px;margin-bottom:14px">
-      <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:1px;margin-bottom:10px">CRIAR NOVO INVENTÁRIO</div>
+      <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.2px;margin-bottom:10px">Criar novo inventário</div>
       <input id="inv-nome-novo" placeholder="Nome do inventário (ex: Inventário Geral Jul/2026)..."
         style="width:100%;padding:9px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;outline:none;box-sizing:border-box;margin-bottom:10px">
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
@@ -1137,7 +1137,7 @@ function invSessaoCardHTML(s) {
           <a href="/inventario/sessoes/${s.id}/exportar" onclick="event.stopPropagation()" title="Exportar CSV"
             style="color:#22c55e;font-size:15px;text-decoration:none">CSV</a>
           <span onclick="event.stopPropagation();invExcluirSessao(${s.id})" title="Excluir"
-            style="color:var(--accent);font-size:14px;cursor:pointer">✕</span>
+            style="color:var(--accent);font-size:14px;cursor:pointer"><i class="ti ti-trash" aria-hidden="true"></i></span>
         </div>
       </div>
       <div style="display:flex;justify-content:space-between;font-size:10px;font-weight:700;color:var(--text3);margin-bottom:4px">
@@ -1164,7 +1164,7 @@ async function invCriarComCatalogo() {
 
   wmsConfirm(msg, async () => {
     const wrap = document.getElementById('inv-lista-sessoes');
-    if (wrap) wrap.innerHTML = `<div style="padding:24px;text-align:center;color:var(--text3)">⏳ Criando inventário...</div>`;
+    if (wrap) wrap.innerHTML = `<div style="padding:24px;text-align:center;color:var(--text3)">Criando inventário...</div>`;
 
     const body = { nome, carregarCatalogo: true };
     if (filtroRua) body.filtroRua = filtroRua;
@@ -1272,17 +1272,17 @@ function invRenderizarDashboard() {
       </div>
 
       <div style="display:flex;justify-content:space-between;font-size:10px;font-weight:700;color:var(--text3);margin-bottom:6px">
-        <span>PROGRESSO DA CONTAGEM</span><span>${s.contados||0} / ${s.total_itens} (${pct}%)</span>
+        <span>Progresso da contagem</span><span>${s.contados||0} / ${s.total_itens} (${pct}%)</span>
       </div>
       <div style="background:var(--surface2);border-radius:8px;height:12px;overflow:hidden;margin-bottom:18px">
         <div style="height:100%;width:${pct}%;background:${barClr};border-radius:8px;transition:width .4s"></div>
       </div>
 
       <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px">
-        ${[['○','PENDENTES',stats.pendente,'#64748b'],['●','OK',stats.ok,'#22c55e'],['+','A MAIS',stats.aMais,'#f97316'],['-','A MENOS',stats.aMenos,'#ef4444'],[`${acuracia}%`,'ACURÁCIA','','#38bdf8']].map(([ic,lb,n,c])=>`
+        ${[['○','Pendentes',stats.pendente,'#64748b'],['●','OK',stats.ok,'#22c55e'],['+','A mais',stats.aMais,'#f97316'],['-','A menos',stats.aMenos,'#ef4444'],[`${acuracia}%`,'Acurácia','','#38bdf8']].map(([ic,lb,n,c])=>`
         <div style="background:var(--surface2);border-radius:10px;padding:12px 8px;text-align:center;border:1px solid var(--border)">
-          <div style="font-size:${lb==='ACURÁCIA'?'18px':'22px'};font-weight:900;color:${c}">${lb==='ACURÁCIA'?ic:n}</div>
-          <div style="font-size:8px;color:var(--text3);font-weight:700;letter-spacing:.4px;margin-top:3px">${lb==='ACURÁCIA'?'':ic+' '}${lb}</div>
+          <div style="font-size:${lb==='Acurácia'?'18px':'22px'};font-weight:900;color:${c}">${lb==='Acurácia'?ic:n}</div>
+          <div style="font-size:8px;color:var(--text3);font-weight:700;letter-spacing:.4px;margin-top:3px">${lb==='Acurácia'?'':ic+' '}${lb}</div>
         </div>`).join('')}
       </div>
     </div>
@@ -1299,7 +1299,7 @@ function invRenderizarDashboard() {
       </button>` : ''}
       <button onclick="invExcluirSessao(${s.id})"
         style="background:var(--surface2);color:var(--accent);border:1px solid var(--border);border-radius:12px;padding:14px 18px;font-size:14px;font-weight:700;cursor:pointer">
-        ✕
+        <i class="ti ti-trash" aria-hidden="true"></i>
       </button>
     </div>`;
 }
@@ -1356,16 +1356,16 @@ function invRenderizarSessaoAtiva() {
 
     <div class="card" style="padding:12px 16px;margin-bottom:10px">
       <div style="display:flex;justify-content:space-between;font-size:10px;font-weight:700;color:var(--text3);margin-bottom:6px">
-        <span>CONTAGEM</span><span>${s.contados||0}/${s.total_itens} (${pct}%)</span>
+        <span>Contagem</span><span>${s.contados||0}/${s.total_itens} (${pct}%)</span>
       </div>
       <div style="background:var(--surface2);border-radius:6px;height:8px;overflow:hidden;margin-bottom:10px">
         <div style="height:100%;width:${pct}%;background:${barClr};border-radius:6px;transition:width .4s"></div>
       </div>
       <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px">
-        ${[['○','PENDENTES',stats.pendente,'#64748b'],['●','OK',stats.ok,'#22c55e'],['+','A MAIS',stats.aMais,'#f97316'],['-','A MENOS',stats.aMenos,'#ef4444'],[`${acuracia}%`,'ACURÁCIA','','#38bdf8']].map(([ic,lb,n,c])=>`
+        ${[['○','Pendentes',stats.pendente,'#64748b'],['●','OK',stats.ok,'#22c55e'],['+','A mais',stats.aMais,'#f97316'],['-','A menos',stats.aMenos,'#ef4444'],[`${acuracia}%`,'Acurácia','','#38bdf8']].map(([ic,lb,n,c])=>`
         <div style="background:var(--surface2);border-radius:8px;padding:8px;text-align:center;border:1px solid var(--border)">
-          <div style="font-size:${lb==='ACURÁCIA'?'16px':'18px'};font-weight:900;color:${c}">${lb==='ACURÁCIA'?ic:n}</div>
-          <div style="font-size:8px;color:var(--text3);font-weight:700;letter-spacing:.5px">${lb==='ACURÁCIA'?'':''+ic+' '}${lb}</div>
+          <div style="font-size:${lb==='Acurácia'?'16px':'18px'};font-weight:900;color:${c}">${lb==='Acurácia'?ic:n}</div>
+          <div style="font-size:8px;color:var(--text3);font-weight:700;letter-spacing:.5px">${lb==='Acurácia'?'':''+ic+' '}${lb}</div>
         </div>`).join('')}
       </div>
     </div>
@@ -1486,7 +1486,7 @@ async function invConcluir() {
 async function invSincronizarEnderecos() {
   if (!_invSessaoAtiva) return;
   const btn = document.querySelector('[onclick="invSincronizarEnderecos()"]');
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ Sincronizando...'; }
+  if (btn) { btn.disabled = true; btn.textContent = 'Sincronizando...'; }
   const r = await apiFetch(`/inventario/sessoes/${_invSessaoAtiva.id}/sync-enderecos`, { method:'PUT' });
   if (r?.erro) { emToast('Erro: '+r.erro, 'erro'); if (btn) { btn.disabled = false; btn.innerHTML = 'Sync Endereços'; } return; }
   emToast(`${r.atualizados} endereços atualizados do catálogo!`, 'sucesso');
@@ -1557,7 +1557,7 @@ function invAbrirColetor() {
 
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
         <div style="font-size:16px;font-weight:900;color:#fff">Coletor de Dados</div>
-        <button onclick="invColetorCancelar()" style="background:#334155;border:none;border-radius:8px;padding:8px 16px;color:#fff;font-size:12px;font-weight:700;cursor:pointer">✕ Fechar</button>
+        <button onclick="invColetorCancelar()" style="background:#334155;border:none;border-radius:8px;padding:8px 16px;color:#fff;font-size:12px;font-weight:700;cursor:pointer"><i class="ti ti-x" aria-hidden="true"></i> Fechar</button>
       </div>
 
       <!-- CÂMERA -->
@@ -1573,7 +1573,7 @@ function invAbrirColetor() {
 
       <!-- INPUT MANUAL -->
       <div style="background:#1e293b;border-radius:12px;padding:12px;margin-bottom:12px">
-        <div style="font-size:9px;color:#64748b;font-weight:700;letter-spacing:.5px;margin-bottom:6px">OU DIGITE / COLE O CÓDIGO MANUALMENTE</div>
+        <div style="font-size:9px;color:#64748b;font-weight:700;letter-spacing:.2px;margin-bottom:6px">Ou digite / cole o código manualmente</div>
         <div style="display:flex;gap:8px">
           <input id="coletor-scan-input" type="text" placeholder="Código do produto ou EAN..." inputmode="none"
             style="flex:1;padding:10px 12px;background:#0f172a;border:2px solid #7c3aed;border-radius:8px;color:#fff;font-size:14px;outline:none;box-sizing:border-box"
@@ -1585,7 +1585,7 @@ function invAbrirColetor() {
       <!-- ITEM ENCONTRADO -->
       <div id="coletor-item-card" style="display:none;background:#1e293b;border-radius:12px;padding:16px;margin-bottom:12px">
         <div id="coletor-item-info" style="margin-bottom:12px"></div>
-        <div style="font-size:9px;color:#64748b;font-weight:700;letter-spacing:.5px;margin-bottom:6px">QUANTIDADE CONTADA</div>
+        <div style="font-size:9px;color:#64748b;font-weight:700;letter-spacing:.2px;margin-bottom:6px">Quantidade contada</div>
         <input id="coletor-qty-input" type="number" min="0" placeholder="0" inputmode="decimal"
           style="width:100%;padding:16px;background:#0f172a;border:2px solid #22c55e;border-radius:10px;color:#fff;font-size:28px;font-weight:900;text-align:center;outline:none;box-sizing:border-box"
           onkeydown="if(event.key==='Enter'){invColetorSalvar()}">
