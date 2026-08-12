@@ -591,7 +591,7 @@
             Separado <span id="d-rtab-separado-badge" style="display:none;background:#3b82f6;color:#fff;border-radius:20px;padding:1px 7px;font-size:10px;font-weight:700;margin-left:4px">0</span>
           </button>
           <button id="d-rtab-subiu" onclick="mudarTabRepDesk('subiu')" class="rel-turno-btn" data-t="subiu">
-            Subiu <span id="d-rtab-subiu-badge" style="display:none;background:#0ea5e9;color:#fff;border-radius:20px;padding:1px 7px;font-size:10px;font-weight:700;margin-left:4px">0</span>
+            Subiu <span id="d-rtab-subiu-badge" style="display:none;background:var(--info);color:#fff;border-radius:20px;padding:1px 7px;font-size:10px;font-weight:700;margin-left:4px">0</span>
           </button>
           <button id="d-rtab-protocolo" onclick="mudarTabRepDesk('protocolo')" class="rel-turno-btn" data-t="protocolo">
             Protocolo <span id="d-rtab-protocolo-badge" style="display:none;background:#6b7280;color:#fff;border-radius:20px;padding:1px 7px;font-size:10px;font-weight:700;margin-left:4px">0</span>
@@ -603,7 +603,7 @@
         <!-- Tab: SEPARAR -->
         <div id="d-rep-tab-separar">
           <div class="card">
-            <div class="card-hd">PARA SEPARAR
+            <div class="card-hd">Para separar
               <button class="btn btn-outline btn-sm" onclick="carregarRepSeparar()">Atualizar</button>
             </div>
             <div id="d-rep-lista-separar" style="padding:8px 4px">
@@ -615,7 +615,7 @@
         <!-- Tab: SEPARADO -->
         <div id="d-rep-tab-separado" style="display:none">
           <div class="card">
-            <div class="card-hd">SEPARADO — AGUARDANDO GUARDAR
+            <div class="card-hd">Separado — aguardando guardar
               <button class="btn btn-outline btn-sm" onclick="carregarRepSeparado()">Atualizar</button>
             </div>
             <div id="d-rep-lista-separado" style="padding:8px 4px">
@@ -627,7 +627,7 @@
         <!-- Tab: SUBIU -->
         <div id="d-rep-tab-subiu" style="display:none">
           <div class="card">
-            <div class="card-hd">SUBIU — AGUARDANDO ABASTECER
+            <div class="card-hd">Subiu — aguardando abastecer
               <button class="btn btn-outline btn-sm" onclick="carregarRepSubiu()">Atualizar</button>
             </div>
             <div id="d-rep-lista-subiu" style="padding:8px 4px">
@@ -639,7 +639,7 @@
         <!-- Tab: PROTOCOLO -->
         <div id="d-rep-tab-protocolo" style="display:none">
           <div class="card">
-            <div class="card-hd">PROTOCOLO — NÃO ENCONTRADO
+            <div class="card-hd">Protocolo — não encontrado
               <button class="btn btn-outline btn-sm" onclick="carregarRepProtocolo()">Atualizar</button>
             </div>
             <div id="d-rep-lista-protocolo" style="padding:8px 4px">
@@ -651,7 +651,7 @@
         <!-- Tab: INDICADORES -->
         <div id="d-rep-tab-stats" style="display:none">
           <div class="card">
-            <div class="card-hd">INDICADORES POR COLABORADOR
+            <div class="card-hd">Indicadores por colaborador
               <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
                 <input type="date" id="rep-stats-ini" style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)">
                 <span style="font-size:11px;color:var(--text3)">até</span>
@@ -671,7 +671,7 @@
         <!-- Tab: RANKING -->
         <div id="d-rep-tab-ranking" style="display:none">
           <div class="card">
-            <div class="card-hd">PRODUTOS QUE MAIS GERAM REPOSIÇÃO
+            <div class="card-hd">Produtos que mais geram reposição
               <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
                 <input type="date" id="rep-rank-ini" style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)">
                 <span style="font-size:11px;color:var(--text3)">até</span>
@@ -716,8 +716,8 @@
                 <label style="font-size:11px;font-weight:700;color:var(--text3);display:block;margin-bottom:4px">OBSERVAÇÃO</label>
                 <input type="text" id="em-obs" placeholder="Ex: chegou do fornecedor..." style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-size:14px;box-sizing:border-box">
               </div>
-              <button onclick="salvarEntradaManual()" style="width:100%;padding:14px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;margin-top:4px">
-                REGISTRAR ENTRADA
+              <button onclick="salvarEntradaManual()" class="btn btn-primary" style="width:100%;padding:14px;font-size:14px;font-weight:700;margin-top:4px">
+                Registrar Entrada
               </button>
             </div>
           </div>
