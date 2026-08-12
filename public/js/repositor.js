@@ -419,7 +419,7 @@ function renderCardRepSimples(a, modo) {
     if (/DRIVE|RETIRADA/i.test(envio))
       return `<span style="background:#fee2e2;color:#dc2626;border:1.5px solid #fca5a5;font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">Drive Thru</span>`;
     if (/PRIME/i.test(envio))
-      return `<span style="background:#FEF3C7;color:#92400E;border:1.5px solid #FCD34D;font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">⭐ Prime</span>`;
+      return `<span style="background:#FEF3C7;color:#92400E;border:1.5px solid #FCD34D;font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap"><i class="ti ti-star-filled" aria-hidden="true"></i> Prime</span>`;
     if (/SEDEX/i.test(envio))
       return `<span style="background:#EFF6FF;color:#1D4ED8;border:1.5px solid #BFDBFE;font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">${envio}</span>`;
     if (/^PAC/i.test(envio))
@@ -440,7 +440,7 @@ function renderCardRepSimples(a, modo) {
   const _isUltima = _totalTent >= 2; // Noite = última chance
   const _tentBadge = _totalTent > 0 && sit === 'pendente'
     ? `<span style="background:${_isUltima?'#fef2f2':'#eff6ff'};color:${_isUltima?'#dc2626':'#1d4ed8'};border:1px solid ${_isUltima?'#fca5a5':'#bfdbfe'};font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;white-space:nowrap">
-        ${_isUltima?'ÚLTIMA tentativa':''+(_tentOrdinal[_totalTent]||(_totalTent+1)+'ª')+' tentativa'}
+        ${_isUltima?'Última tentativa':''+(_tentOrdinal[_totalTent]||(_totalTent+1)+'ª')+' tentativa'}
        </span>`
     : '';
 
@@ -463,22 +463,22 @@ function renderCardRepSimples(a, modo) {
       botoes = `
         <div style="padding:5px 9px 7px;border-top:1px solid var(--border)">
           <div style="background:${_isUltima?'#fef2f2':'#eff6ff'};border:1px solid ${_isUltima?'#fca5a5':'#bfdbfe'};border-radius:7px;padding:4px 8px;margin-bottom:5px;font-size:10px;color:${_isUltima?'#9f1239':'#1e40af'}">
-            <strong>${_quemBusca}</strong> está buscando${_isUltima?' · <span style="color:#dc2626;font-weight:800">ÚLTIMA TENTATIVA</span>':''}
+            <strong>${_quemBusca}</strong> está buscando${_isUltima?' · <span style="color:#dc2626;font-weight:800">Última tentativa</span>':''}
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
             <button onclick="mostrarQtdEncontrada(${a.id},'${nomeLogado}',${a.quantidade||1})"
               style="padding:7px 8px;background:#dcfce7;border:2px solid #10b981;border-radius:8px;color:#065f46;font-weight:700;font-size:12px;cursor:pointer;touch-action:manipulation">
-              ✅ Encontrei
+              <i class="ti ti-check" aria-hidden="true"></i> Encontrei
             </button>
             <button onclick="acaoRepTab(${a.id},'e_nao_enc','${nomeLogado}','_smart')"
               style="padding:7px 8px;background:#fee2e2;border:2px solid #ef4444;border-radius:8px;color:#dc2626;font-weight:700;font-size:12px;cursor:pointer;touch-action:manipulation">
-              ❌ Não encontrei
+              <i class="ti ti-x" aria-hidden="true"></i> Não encontrei
             </button>
           </div>
         </div>`;
     } else {
       // ── Card pendente — mostrar Iniciar Busca ─────────────────────────
-      const _labels = ['1ª tentativa', '2ª tentativa', 'ÚLTIMA tentativa'];
+      const _labels = ['1ª tentativa', '2ª tentativa', 'Última tentativa'];
       const _tentLabel = _labels[Math.min(_totalTent, 2)];
       const _isUltima  = _totalTent >= 2;
       botoes = `
@@ -495,7 +495,7 @@ function renderCardRepSimples(a, modo) {
       <div style="padding:12px 14px;border-top:1px solid var(--border)">
         <button onclick="mostrarQtdSubiu(${a.id},'${nomeLogado}',${qtd},${a.qtd_encontrada||0})"
           style="width:100%;padding:14px;background:#e0f2fe;border:2px solid #0ea5e9;border-radius:10px;color:#0369a1;font-weight:700;font-size:14px;cursor:pointer;touch-action:manipulation">
-          ⬆️ Subiu
+          <i class="ti ti-arrow-big-up-lines" aria-hidden="true"></i> Subiu
         </button>
       </div>`;
   } else if (modo === 'subiu') {
@@ -503,13 +503,13 @@ function renderCardRepSimples(a, modo) {
       <div style="padding:12px 14px;border-top:1px solid var(--border)">
         <button onclick="acaoRepTab(${a.id},'e_abastecido','${nomeLogado}','done')"
           style="width:100%;padding:14px;background:#dcfce7;border:2px solid #10b981;border-radius:10px;color:#065f46;font-weight:700;font-size:14px;cursor:pointer;touch-action:manipulation">
-          ✅ Abastecido
+          <i class="ti ti-check" aria-hidden="true"></i> Abastecido
         </button>
       </div>`;
   } else if (modo === 'protocolo') {
     botoes = `
       <div style="padding:10px 14px;border-top:1px solid var(--border);background:#fff1f2;border-radius:0 0 14px 14px">
-        <div style="font-size:12px;color:#be123c;font-weight:600;text-align:center">⏳ Aguardando liberação do supervisor</div>
+        <div style="font-size:12px;color:#be123c;font-weight:600;text-align:center"><i class="ti ti-clock" aria-hidden="true"></i> Aguardando liberação do supervisor</div>
         ${a.quem_pegou?`<div style="font-size:11px;color:#9f1239;text-align:center;margin-top:3px">Registrado por: ${a.quem_pegou}</div>`:''}
       </div>`;
   }
@@ -915,7 +915,7 @@ function renderCardMobile(a) {
     if (/DRIVE|RETIRADA/i.test(envio))
       return `<span style="background:#fee2e2;color:#dc2626;border:1.5px solid #fca5a5;font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">Drive Thru</span>`;
     if (/PRIME/i.test(envio))
-      return `<span style="background:#FEF3C7;color:#92400E;border:1.5px solid #FCD34D;font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">⭐ Prime</span>`;
+      return `<span style="background:#FEF3C7;color:#92400E;border:1.5px solid #FCD34D;font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap"><i class="ti ti-star-filled" aria-hidden="true"></i> Prime</span>`;
     if (/SEDEX/i.test(envio))
       return `<span style="background:#EFF6FF;color:#1D4ED8;border:1.5px solid #BFDBFE;font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">${envio}</span>`;
     if (/^PAC/i.test(envio))
@@ -1533,7 +1533,7 @@ async function exportarIndicadoresExcel() {
 async function carregarEstatisticasRep() {
   const el = document.getElementById('rep-stats-desktop');
   if (!el) return;
-  el.innerHTML = `<div style="text-align:center;padding:32px;color:var(--text3)">⏳ Carregando...</div>`;
+  el.innerHTML = `<div style="text-align:center;padding:32px;color:var(--text3)">Carregando...</div>`;
   try {
     const sIni = document.getElementById('rep-stats-ini')?.value || '';
     const sFim = document.getElementById('rep-stats-fim')?.value || '';
@@ -1652,7 +1652,7 @@ async function carregarStatsRepositor() {
 async function carregarRankingProdutos() {
   const el = document.getElementById('rep-ranking-lista');
   if (!el) return;
-  el.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text3)">⏳ Carregando...</div>';
+  el.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text3)">Carregando...</div>';
   try {
     const ini = document.getElementById('rep-rank-ini')?.value || '';
     const fim = document.getElementById('rep-rank-fim')?.value || '';
