@@ -313,21 +313,21 @@ function _renderProtoKpis(pedList, pedListH) {
                : 'Outros';
     tipos[tipo] = (tipos[tipo] || 0) + 1;
   });
-  const tiposKpis = Object.entries(tipos).map(([k,v]) => `<div style="background:var(--surface2);border-radius:8px;padding:7px 10px"><div style="font-size:9px;color:var(--text3);font-weight:700;letter-spacing:.5px">${k.toUpperCase()}</div><div style="font-size:15px;font-weight:800;color:var(--text);margin-top:2px">${v} ped.</div></div>`).join('');
+  const tiposKpis = Object.entries(tipos).map(([k,v]) => `<div class="pipeline-card-kpi"><div class="pipeline-card-kpi-lbl">${k}</div><div class="pipeline-card-kpi-val">${v} ped.</div></div>`).join('');
 
   const cards = [
-    { label:'AGUARDANDO', cor:'#7c3aed',
+    { label:'Aguardando', cor:'#7c3aed',
       main: itensPend,
       sub: `${pedList.length} pedido${pedList.length!==1?'s':''}`,
-      kpis: tiposKpis || `<div style="background:var(--surface2);border-radius:8px;padding:7px 10px"><div style="font-size:11px;color:var(--text3)">Nenhum aguardando</div></div>` },
-    { label:'PROTOCOLADOS', cor:'#10b981',
+      kpis: tiposKpis || `<div class="pipeline-card-kpi"><div class="pipeline-card-kpi-lbl">Nenhum aguardando</div></div>` },
+    { label:'Protocolados', cor:'#10b981',
       main: itensProto,
       sub: `${pedListH.length} pedido${pedListH.length!==1?'s':''}`,
       kpis: [
-        { lbl:'Total Itens',   val: itensProto },
-        { lbl:'Total Pedidos', val: pedListH.length },
+        { lbl:'Total itens',   val: itensProto },
+        { lbl:'Total pedidos', val: pedListH.length },
       ]},
-    { label:'TOTAL PERÍODO', cor:'#2563eb',
+    { label:'Total período', cor:'var(--accent)',
       main: totalItens,
       sub: `${totalPeds} pedido${totalPeds!==1?'s':''}`,
       kpis: [
@@ -338,19 +338,19 @@ function _renderProtoKpis(pedList, pedListH) {
 
   wrap.innerHTML = cards.map((c, i) => {
     const kpisHtml = i === 0
-      ? `<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">${c.kpis}</div>`
-      : `<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">${c.kpis.map(k=>`<div style="background:var(--surface2);border-radius:8px;padding:7px 10px"><div style="font-size:9px;color:var(--text3);font-weight:700;letter-spacing:.5px">${k.lbl.toUpperCase()}</div><div style="font-size:15px;font-weight:800;color:var(--text);margin-top:2px">${k.val}</div></div>`).join('')}</div>`;
+      ? `<div class="pipeline-card-kpis">${c.kpis}</div>`
+      : `<div class="pipeline-card-kpis">${c.kpis.map(k=>`<div class="pipeline-card-kpi"><div class="pipeline-card-kpi-lbl">${k.lbl}</div><div class="pipeline-card-kpi-val">${k.val}</div></div>`).join('')}</div>`;
     return `
-    <div style="background:var(--surface);border-radius:16px;border:1px solid var(--border);border-top:3px solid ${c.cor};overflow:hidden;box-shadow:var(--sh)">
-      <div style="padding:18px 18px 14px">
-        <div style="display:flex;align-items:center;gap:7px;margin-bottom:10px">
-          <span style="width:8px;height:8px;border-radius:50%;background:${c.cor};flex-shrink:0;display:inline-block"></span>
-          <span style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:1.2px">${c.label}</span>
+    <div class="pipeline-card" style="border-top:3px solid ${c.cor}">
+      <div class="pipeline-card-top">
+        <div class="pipeline-card-hd">
+          <span class="pipeline-card-dot" style="background:${c.cor}"></span>
+          <span class="pipeline-card-label">${c.label}</span>
         </div>
-        <div style="font-size:42px;font-weight:800;color:var(--text);line-height:1;letter-spacing:-1px">${c.main}</div>
-        <div style="font-size:11px;color:var(--text2);margin-top:4px">${c.sub}</div>
+        <div class="pipeline-card-value">${c.main}</div>
+        <div class="pipeline-card-sub">${c.sub}</div>
       </div>
-      <div style="padding:0 14px 12px">${kpisHtml}</div>
+      ${kpisHtml}
     </div>`;
   }).join('');
 }
@@ -359,8 +359,8 @@ function _renderProtoKpis(pedList, pedListH) {
 function _transpBadgeProto(transp) {
   const t = (transp||'').trim();
   if (!t || t === '—') return '';
-  if (/DRIVE|RETIRADA/i.test(t))  return `<span style="background:#fee2e2;color:#dc2626;border:1.5px solid #fca5a5;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;white-space:nowrap">Drive Thru</span>`;
-  if (/PRIME/i.test(t))           return `<span style="background:#FEF3C7;color:#92400E;border:1.5px solid #FCD34D;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;white-space:nowrap">⭐ Prime</span>`;
+  if (/DRIVE|RETIRADA/i.test(t))  return `<span style="background:#fee2e2;color:var(--red);border:1.5px solid #fca5a5;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;white-space:nowrap">Drive Thru</span>`;
+  if (/PRIME/i.test(t))           return `<span style="background:#FEF3C7;color:#92400E;border:1.5px solid #FCD34D;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;white-space:nowrap"><i class="ti ti-star-filled" aria-hidden="true"></i> Prime</span>`;
   if (/SEDEX/i.test(t))           return `<span style="background:#EFF6FF;color:#1D4ED8;border:1.5px solid #BFDBFE;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;white-space:nowrap">${t}</span>`;
   if (/^PAC/i.test(t))            return `<span style="background:#F0FDF4;color:#166534;border:1.5px solid #BBF7D0;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;white-space:nowrap">${t}</span>`;
   if (/MOTOBOY|MOTO/i.test(t))    return `<span style="background:#F5F3FF;color:#6D28D9;border:1.5px solid #DDD6FE;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;white-space:nowrap">${t}</span>`;
@@ -445,7 +445,7 @@ async function carregarProtocolo() {
                     ${r._ped.cliente && r._ped.cliente !== '—' ? `<div style="font-size:10px;color:var(--text3);margin-top:1px">${r._ped.cliente}</div>` : ''}
                   </td>
                   <td style="padding:9px 12px">${transp}</td>
-                  <td style="padding:9px 12px;font-family:'Space Mono',monospace;font-weight:700;color:#dc2626;font-size:12px;white-space:nowrap">${r.codigo||'—'}</td>
+                  <td style="padding:9px 12px;font-family:'Space Mono',monospace;font-weight:700;color:var(--red);font-size:12px;white-space:nowrap">${r.codigo||'—'}</td>
                   <td style="padding:9px 12px;font-weight:600;color:var(--text);max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${r.descricao||''}">${r.descricao||'—'}</td>
                   <td style="padding:9px 12px;text-align:center">
                     <span style="background:#FEF3C7;color:#92400E;border-radius:8px;padding:3px 10px;font-weight:900;font-size:14px">${r.quantidade||0}</span>
@@ -458,7 +458,7 @@ async function carregarProtocolo() {
                   <td style="padding:6px 12px;text-align:center">
                     <button onclick="encerrarItemProtocolo(${r.id},this)" id="proto-btn-${r.id}"
                       style="padding:5px 12px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">
-                      ✔ Encerrar
+                      <i class="ti ti-check" aria-hidden="true"></i> Encerrar
                     </button>
                   </td>` : ''}
                 </tr>`;
@@ -536,7 +536,7 @@ async function carregarProtocolo() {
                       ${r._ped.cliente && r._ped.cliente !== '—' ? `<div style="font-size:10px;color:var(--text3)">${r._ped.cliente}</div>` : ''}
                     </td>
                     <td style="padding:8px 12px">${transp}</td>
-                    <td style="padding:8px 12px;font-family:'Space Mono',monospace;font-weight:700;color:#dc2626;font-size:12px">${r.codigo||'—'}</td>
+                    <td style="padding:8px 12px;font-family:'Space Mono',monospace;font-weight:700;color:var(--red);font-size:12px">${r.codigo||'—'}</td>
                     <td style="padding:8px 12px;font-weight:600;color:var(--text);max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${r.descricao||''}">${r.descricao||'—'}</td>
                     <td style="padding:8px 12px;text-align:center">
                       <span style="background:#dcfce7;color:#166534;border-radius:8px;padding:2px 10px;font-weight:800;font-size:13px">${r.quantidade||0}</span>
@@ -557,7 +557,7 @@ async function carregarProtocolo() {
 async function encerrarItemProtocolo(id, btn) {
   if (btn?.disabled) return;
   const orig = btn?.innerHTML;
-  if (btn) { btn.disabled = true; btn.innerHTML = '⏳'; }
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader-2" aria-hidden="true"></i>'; }
   try {
     const r = await apiFetch(`/repositor/avisos/${id}`, {
       method:'PUT', headers:{'Content-Type':'application/json'},
@@ -579,7 +579,7 @@ async function encerrarProtocoloPedido(numero_pedido, idsStr, qtdItens, btn) {
   if (btn?.disabled) return;
   wmsConfirm(`Encerrar protocolo do pedido #${numero_pedido}?\n${qtdItens} item(ns) serão marcados como protocolados.`, async () => {
     const orig = btn?.innerHTML;
-    if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Encerrando...'; }
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader-2" aria-hidden="true"></i> Encerrando...'; }
     try {
       const ids = String(idsStr).split(',').map(Number).filter(Boolean);
       let ok = 0, erros = 0;
