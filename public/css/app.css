@@ -38,44 +38,11 @@
 }
 
 /* ══════════════════════════════════════════
-   DIÁRIO DE BORDO — piloto de tema escuro corporativo
-   Escopado só nesta página: sobrescreve as variáveis de cor,
-   o resto dos componentes (.card, textarea, botões) já usa var(),
-   então reherdam o tema automaticamente por cascata.
+   DIÁRIO DE BORDO — anel de progresso por setor
+   A página usa só .card/.card-hd/.db-stat/.pg-title padrão do
+   sistema (tema claro, igual a qualquer outra tela) — aqui fica só
+   o estilo do anel de progresso, que é específico dessa página.
 ══════════════════════════════════════════ */
-#pag-diario.db-dark {
-  --bg:        #0c1017;
-  --surface:   #111826;
-  --surface2:  #0f141d;
-  --border:    #1e2636;
-  --accent:    #4C6FE6;
-  --accent2:   #8AA3F5;
-  --green:     #57b981;
-  --red:       #c9524f;
-  --amber:     #e0a83e;
-  --indigo:    #8AA3F5;
-  --text:      #e7e9ee;
-  --text2:     #9aa3b5;
-  --text3:     #6b7280;
-  background: var(--bg);
-  border-radius: 14px;
-  padding: 20px 22px;
-  margin: -18px;
-  color-scheme: dark;
-}
-#pag-diario.db-dark .pg-title{color:var(--text)}
-#pag-diario.db-dark .db-stat-n{font-weight:500;font-size:20px}
-#pag-diario.db-dark .db-stat-l{color:var(--text3);text-transform:none;letter-spacing:.2px}
-#pag-diario.db-dark .db-stat{background:var(--surface);border-left:none;border-radius:8px;padding:10px 12px}
-#pag-diario.db-dark .card{box-shadow:none;border:0.5px solid var(--border)}
-#pag-diario.db-dark .card-hd{background:transparent;border-bottom:0.5px solid var(--border);font-weight:500;letter-spacing:0;justify-content:flex-start}
-#pag-diario.db-dark .card-hd i{color:var(--accent2);font-size:15px;margin-right:8px}
-#pag-diario.db-dark .btn-primary{background:var(--accent);font-weight:500}
-#pag-diario.db-dark .fg label{text-transform:none;letter-spacing:.2px}
-#pag-diario.db-dark thead th{text-transform:none;letter-spacing:.2px}
-#pag-diario.db-dark input[type="date"],
-#pag-diario.db-dark select{color-scheme:dark}
-
 .db-ring-wrap{display:flex;justify-content:center;margin-bottom:14px}
 .db-ring-total{font-size:26px;font-weight:500}
 .db-ring-label{font-size:10px;letter-spacing:.5px}
@@ -645,7 +612,6 @@ body.dark .item-card.parcial    .item-ic{background:#78350F}
   .sidebar.aberta{display:flex!important;position:fixed;top:0;left:0;height:100dvh;z-index:999;box-shadow:4px 0 24px rgba(0,0,0,.5)}
   /* Conteudo sem padding lateral grande */
   .conteudo{padding:10px}
-  #pag-diario.db-dark{margin:-10px;padding:14px}
   /* Grids */
   .grid-4{grid-template-columns:1fr 1fr}
   .grid-2{grid-template-columns:1fr}

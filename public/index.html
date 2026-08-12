@@ -824,8 +824,11 @@
         
 
       <!-- DIARIO DE BORDO -->
-      <div class="pagina db-dark" id="pag-diario">
-        <div class="pg-title">Diário de Bordo</div>
+      <div class="pagina" id="pag-diario">
+        <div class="pg-title-wrap">
+          <div class="pg-title">Diário de Bordo</div>
+          <p class="pg-subtitle">Acompanhamento operacional por turno</p>
+        </div>
 
         <!-- Banner de validação pendente — TOPO, bem visível -->
         <div id="diario-validacao-pendente" style="display:none;margin-bottom:16px"></div>
@@ -991,12 +994,8 @@
 
           <!-- Botões de ação -->
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
-            <button onclick="salvarDiario()" style="padding:13px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:8px;font-size:14px;font-weight:500;cursor:pointer">
-              Salvar rascunho
-            </button>
-            <button id="btn-enviar-diario" onclick="enviarDiario()" style="padding:13px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer">
-              Finalizar e enviar
-            </button>
+            <button onclick="salvarDiario()" class="btn btn-outline" style="padding:13px;font-size:14px">Salvar rascunho</button>
+            <button id="btn-enviar-diario" onclick="enviarDiario()" class="btn btn-primary" style="padding:13px;font-size:14px">Finalizar e enviar</button>
           </div>
 
           <!-- Histórico colapsável -->
