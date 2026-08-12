@@ -207,13 +207,25 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
 .card-hd{background:var(--surface2);margin:-16px -16px 14px;padding:10px 16px;border-radius:var(--r) var(--r) 0 0;font-size:10px;font-weight:700;color:var(--text2);letter-spacing:1.2px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
 /* ── Diário de Bordo stat boxes ─────────────────────────────── */
 .db-stat{background:var(--surface2);border-left:3px solid var(--border);border-radius:0 6px 6px 0;padding:7px 10px}
-.db-stat-ok{border-left-color:#10b981}
-.db-stat-info{border-left-color:#3b82f6}
-.db-stat-warn{border-left-color:#f59e0b}
-.db-stat-danger{border-left-color:#ef4444}
+.db-stat-ok{border-left-color:var(--green)}
+.db-stat-info{border-left-color:var(--accent)}
+.db-stat-warn{border-left-color:var(--amber)}
+.db-stat-danger{border-left-color:var(--red)}
 .db-stat-n{font-size:18px;font-weight:800;color:var(--text);line-height:1.1}
 .db-stat-l{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-top:2px}
-.pg-title{font-family:'DM Sans',sans-serif;font-size:16px;color:#0F172A;margin-bottom:18px;letter-spacing:0;font-weight:700;display:flex;align-items:center;gap:10px;padding-bottom:14px;border-bottom:1px solid var(--border)}
+
+/* Título de página — padrão único pra toda tela do sistema.
+   .pg-title sozinho continua funcionando exatamente como antes (só maior
+   e com a cor certa) em todas as páginas que já usam essa classe.
+   .pg-title-wrap é opcional: usado quando a página quer um subtítulo
+   (item 9 do redesign) — aí a borda/espaçamento saem do título e vão
+   pro wrapper, envolvendo título+subtítulo juntos. */
+.pg-title{font-family:var(--font-sans);font-size:20px;color:var(--text);margin-bottom:18px;letter-spacing:0;font-weight:700;display:flex;align-items:center;gap:10px;padding-bottom:14px;border-bottom:1px solid var(--border)}
+.pg-title-wrap{margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--border)}
+.pg-title-wrap .pg-title{margin-bottom:4px;padding-bottom:0;border-bottom:none}
+.pg-subtitle{font-family:var(--font-sans);font-size:13px;color:var(--text2);font-weight:400;margin:0}
+.pag-header{margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--border)}
+.pag-header h2{font-family:var(--font-sans);font-size:20px;color:var(--text);letter-spacing:0;font-weight:700;margin:0}
 
 
 
@@ -253,9 +265,9 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
 /* ══════════════════════════════════════════
    BUTTONS
 ══════════════════════════════════════════ */
-.btn{padding:7px 14px;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;transition:all .18s;font-family:'DM Sans',sans-serif;letter-spacing:.2px;display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.btn{padding:7px 14px;border:none;border-radius:var(--r-sm);font-size:12px;font-weight:600;cursor:pointer;transition:all .18s;font-family:var(--font-sans);letter-spacing:.2px;display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
 .btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{background:var(--accent2)}
-.btn-success{background:var(--accent);color:#fff}.btn-success:hover{background:var(--accent2)}
+.btn-success{background:var(--green);color:#fff}.btn-success:hover{filter:brightness(1.1)}
 .btn-danger{background:var(--red);color:#fff}.btn-danger:hover{filter:brightness(1.1)}
 .btn-outline{background:transparent;border:1.5px solid var(--border);color:var(--text2)}.btn-outline:hover{border-color:var(--accent);color:var(--accent);background:var(--bg)}
 .btn-sm{padding:6px 12px;font-size:11px}
@@ -301,16 +313,16 @@ td{padding:10px 13px;vertical-align:middle;color:var(--text2)}
    PILLS
 ══════════════════════════════════════════ */
 .pill{display:inline-block;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;white-space:nowrap;letter-spacing:.3px}
-.pill.pendente  {background:#EFF6FF;color:#2563EB;border:1px solid #BFDBFE}
-.pill.separando {background:#EFF6FF;color:#1D4ED8;border:1px solid #93C5FD}
-.pill.concluido {background:#F0FDF4;color:#16A34A;border:1px solid #BBF7D0}
-.pill.falta     {background:#FEF2F2;color:#DC2626;border:1px solid #FECACA}
-.pill.reposto   {background:#F0FDF4;color:#16A34A;border:1px solid #BBF7D0}
-.pill.ativo     {background:#F0FDF4;color:#16A34A;border:1px solid #BBF7D0}
-.pill.inativo   {background:#FEF2F2;color:#DC2626;border:1px solid #FECACA}
-.pill.supervisor{background:#F5F3FF;color:#6366F1;border:1px solid #DDD6FE}
-.pill.repositor {background:#FFFBEB;color:#D97706;border:1px solid #FDE68A}
-.pill.separador {background:#EFF6FF;color:#2563EB;border:1px solid #BFDBFE}
+.pill.pendente  {background:#EFF6FF;color:var(--accent);border:1px solid #BFDBFE}
+.pill.separando {background:#EFF6FF;color:var(--accent2);border:1px solid #93C5FD}
+.pill.concluido {background:#F0FDF4;color:var(--green);border:1px solid #BBF7D0}
+.pill.falta     {background:#FEF2F2;color:var(--red);border:1px solid #FECACA}
+.pill.reposto   {background:#F0FDF4;color:var(--green);border:1px solid #BBF7D0}
+.pill.ativo     {background:#F0FDF4;color:var(--green);border:1px solid #BBF7D0}
+.pill.inativo   {background:#FEF2F2;color:var(--red);border:1px solid #FECACA}
+.pill.supervisor{background:#F5F3FF;color:var(--indigo);border:1px solid #DDD6FE}
+.pill.repositor {background:#FFFBEB;color:var(--amber);border:1px solid #FDE68A}
+.pill.separador {background:#EFF6FF;color:var(--accent);border:1px solid #BFDBFE}
 .pill.checkout  {background:#F0FDFA;color:#0D9488;border:1px solid #99F6E4}
 
 
@@ -713,9 +725,9 @@ body.dark .item-card.parcial    .item-ic{background:#78350F}
 .usr-login{font-size:11px;color:var(--text3);font-family:'Space Mono',monospace;margin-bottom:5px}
 .usr-pills{display:flex;flex-wrap:wrap;gap:4px}
 .usr-pill{font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px;letter-spacing:.5px;white-space:nowrap}
-.usr-pill.supervisor{background:#F5F3FF;color:#6366F1;border:1px solid #DDD6FE}
-.usr-pill.separador{background:#EFF6FF;color:#2563EB;border:1px solid #BFDBFE}
-.usr-pill.repositor{background:#FFFBEB;color:#D97706;border:1px solid #FDE68A}
+.usr-pill.supervisor{background:#F5F3FF;color:var(--indigo);border:1px solid #DDD6FE}
+.usr-pill.separador{background:#EFF6FF;color:var(--accent);border:1px solid #BFDBFE}
+.usr-pill.repositor{background:#FFFBEB;color:var(--amber);border:1px solid #FDE68A}
 .usr-pill.checkout{background:#F0FDFA;color:#0D9488;border:1px solid #99F6E4}
 .usr-pill.turno{background:var(--surface2);color:var(--text3);border:1px solid var(--border)}
 .usr-actions{display:flex;gap:6px;flex-shrink:0}
