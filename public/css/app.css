@@ -992,6 +992,7 @@ body.dark .aviso-duplicata{background:#2D1A05;border-color:#78350F;color:#FCD34D
 .stat-card--danger{border-left-color:var(--red)}
 .stat-card--info{border-left-color:var(--info)}
 .stat-card--orange{border-left-color:var(--orange)}
+.stat-card--indigo{border-left-color:var(--indigo)}
 .stat-card-hd{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:700;color:var(--text2);letter-spacing:.2px;margin-bottom:10px}
 .stat-card-hd i{font-size:14px;color:var(--text3)}
 .stat-card-value{font-size:28px;font-weight:700;color:var(--text);line-height:1.1}

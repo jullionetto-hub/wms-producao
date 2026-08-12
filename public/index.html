@@ -1226,7 +1226,7 @@
       <div class="pagina" id="pag-estatisticas">
         <div class="pg-title">Estatísticas</div>
         <div class="card" style="margin-bottom:16px">
-        <div class="card-hd">FILTRO DE PERÍODO
+        <div class="card-hd">Filtro de período
           <div style="display:flex;gap:8px">
             <button class="btn btn-outline btn-sm" onclick="carregarEstatisticas()">↺</button>
             <button class="excel-btn" onclick="exportarExcel('estatisticas')">Excel</button>
@@ -1397,7 +1397,7 @@
       <div class="pagina" id="pag-stats-repositor">
         <div class="pg-title">Estatísticas — Reposição</div>
         <div class="card" style="margin-bottom:16px">
-          <div class="card-hd">FILTRO DE PERÍODO
+          <div class="card-hd">Filtro de período
             <div style="display:flex;gap:8px">
               <button class="btn btn-outline btn-sm" onclick="carregarStatsRepositor()">↺</button>
               <button class="excel-btn" onclick="exportarExcel('stats-repositor')">Excel</button>
@@ -1410,17 +1410,17 @@
           </div>
         </div>
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:13px;margin-bottom:16px">
-          <div class="cnt-card verde"><div class="cnt-lbl">REPOSTOS HOJE</div><div class="cnt-val" id="srep-rep-hoje" style="font-size:32px">0</div><div class="cnt-sub">itens repostos</div></div>
-          <div class="cnt-card azul"><div class="cnt-lbl">REPOSTOS NO MÊS</div><div class="cnt-val" id="srep-rep-mes" style="font-size:32px">0</div><div class="cnt-sub">itens repostos</div></div>
-          <div class="cnt-card vermelho"><div class="cnt-lbl">PENDENTES AGORA</div><div class="cnt-val" id="srep-pendentes" style="font-size:32px">0</div><div class="cnt-sub">aguardando</div></div>
+          <div class="stat-card stat-card--success"><div class="stat-card-hd">Repostos hoje</div><div class="stat-card-value" id="srep-rep-hoje">0</div><div class="stat-card-label">itens repostos</div></div>
+          <div class="stat-card stat-card--accent"><div class="stat-card-hd">Repostos no mês</div><div class="stat-card-value" id="srep-rep-mes">0</div><div class="stat-card-label">itens repostos</div></div>
+          <div class="stat-card stat-card--danger"><div class="stat-card-hd">Pendentes agora</div><div class="stat-card-value" id="srep-pendentes">0</div><div class="stat-card-label">aguardando</div></div>
         </div>
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:13px;margin-bottom:16px">
-          <div class="cnt-card roxo"><div class="cnt-lbl">NÃO ENCONTRADOS</div><div class="cnt-val" id="srep-nao-enc" style="font-size:32px">0</div><div class="cnt-sub">total</div></div>
-          <div class="cnt-card amarelo"><div class="cnt-lbl">PROTOCOLOS</div><div class="cnt-val" id="srep-proto" style="font-size:32px">0</div><div class="cnt-sub">em análise</div></div>
-          <div class="cnt-card verde"><div class="cnt-lbl">AVISOS NO ANO</div><div class="cnt-val" id="srep-ano" style="font-size:32px">0</div><div class="cnt-sub">total de avisos</div></div>
+          <div class="stat-card stat-card--indigo"><div class="stat-card-hd">Não encontrados</div><div class="stat-card-value" id="srep-nao-enc">0</div><div class="stat-card-label">total</div></div>
+          <div class="stat-card stat-card--warning"><div class="stat-card-hd">Protocolos</div><div class="stat-card-value" id="srep-proto">0</div><div class="stat-card-label">em análise</div></div>
+          <div class="stat-card stat-card--success"><div class="stat-card-hd">Avisos no ano</div><div class="stat-card-value" id="srep-ano">0</div><div class="stat-card-label">total de avisos</div></div>
         </div>
         <div class="card">
-          <div class="card-hd">PRODUTIVIDADE POR REPOSITOR</div>
+          <div class="card-hd">Produtividade por repositor</div>
           <div class="tabela-wrap">
             <table><thead><tr><th>REPOSITOR</th><th>HOJE</th><th>REPOSTOS</th><th>NÃO ENCONTR.</th><th>TOTAL</th></tr></thead>
             <tbody id="tbody-srep-prod"></tbody></table>
@@ -1435,7 +1435,7 @@
       <div class="pagina" id="pag-stats-checkout">
         <div class="pg-title">Estatísticas — Checkout</div>
         <div class="card" style="margin-bottom:16px">
-          <div class="card-hd">FILTRO DE PERÍODO
+          <div class="card-hd">Filtro de período
             <div style="display:flex;gap:8px">
               <button class="btn btn-outline btn-sm" onclick="carregarStatsCheckout()">↺</button>
               <button class="excel-btn" onclick="exportarExcel('stats-checkout')">Excel</button>
@@ -1448,16 +1448,16 @@
           </div>
         </div>
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:13px;margin-bottom:16px">
-          <div class="cnt-card verde"><div class="cnt-lbl">EXPEDIDOS HOJE</div><div class="cnt-val" id="sck-hoje" style="font-size:32px">0</div><div class="cnt-sub">checkouts</div></div>
-          <div class="cnt-card azul"><div class="cnt-lbl">EXPEDIDOS NO MÊS</div><div class="cnt-val" id="sck-mes" style="font-size:32px">0</div><div class="cnt-sub">checkouts</div></div>
-          <div class="cnt-card roxo"><div class="cnt-lbl">EXPEDIDOS NO ANO</div><div class="cnt-val" id="sck-ano" style="font-size:32px">0</div><div class="cnt-sub">checkouts</div></div>
+          <div class="stat-card stat-card--success"><div class="stat-card-hd">Expedidos hoje</div><div class="stat-card-value" id="sck-hoje">0</div><div class="stat-card-label">checkouts</div></div>
+          <div class="stat-card stat-card--accent"><div class="stat-card-hd">Expedidos no mês</div><div class="stat-card-value" id="sck-mes">0</div><div class="stat-card-label">checkouts</div></div>
+          <div class="stat-card stat-card--indigo"><div class="stat-card-hd">Expedidos no ano</div><div class="stat-card-value" id="sck-ano">0</div><div class="stat-card-label">checkouts</div></div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:13px;margin-bottom:16px">
-          <div class="cnt-card amarelo"><div class="cnt-lbl">PENDENTES AGORA</div><div class="cnt-val" id="sck-pend" style="font-size:32px">0</div><div class="cnt-sub">aguardando checkout</div></div>
-          <div class="cnt-card vermelho"><div class="cnt-lbl">IMPORTADOS HOJE</div><div class="cnt-val" id="sck-importados" style="font-size:32px">0</div><div class="cnt-sub">pedidos do dia</div></div>
+          <div class="stat-card stat-card--warning"><div class="stat-card-hd">Pendentes agora</div><div class="stat-card-value" id="sck-pend">0</div><div class="stat-card-label">aguardando checkout</div></div>
+          <div class="stat-card stat-card--danger"><div class="stat-card-hd">Importados hoje</div><div class="stat-card-value" id="sck-importados">0</div><div class="stat-card-label">pedidos do dia</div></div>
         </div>
         <div class="card">
-          <div class="card-hd">ÚLTIMOS CHECKOUTS
+          <div class="card-hd">Últimos checkouts
             <div style="display:flex;gap:8px;align-items:center">
               <select id="sck-filtro-status" class="sel-sm" onchange="carregarStatsCheckout()">
                 <option value="">Todos</option>
@@ -1601,7 +1601,7 @@
   <div class="pag-header"><h2>Minhas Estatísticas</h2></div>
   <div style="padding:16px;max-width:1400px">
     <div class="card" style="margin-bottom:16px">
-      <div class="card-hd">FILTRO DE PERÍODO
+      <div class="card-hd">Filtro de período
         <button class="btn btn-outline btn-sm" onclick="carregarEstatisticasSep()">↺</button>
       </div>
       <div class="date-filter-bar">
@@ -1620,7 +1620,7 @@
   <div class="pag-header"><h2>Minhas Estatísticas</h2></div>
   <div style="padding:16px;max-width:1400px">
     <div class="card" style="margin-bottom:16px">
-      <div class="card-hd">FILTRO DE PERÍODO
+      <div class="card-hd">Filtro de período
         <button class="btn btn-outline btn-sm" onclick="carregarEstatisticasCk()">↺</button>
       </div>
       <div class="date-filter-bar">
@@ -1639,7 +1639,7 @@
   <div class="pag-header"><h2>Minhas Estatísticas</h2></div>
   <div style="padding:16px;max-width:1400px">
     <div class="card" style="margin-bottom:16px">
-      <div class="card-hd">FILTRO DE PERÍODO
+      <div class="card-hd">Filtro de período
         <button class="btn btn-outline btn-sm" onclick="carregarEstatisticasEmb()">↺</button>
       </div>
       <div class="date-filter-bar">

@@ -635,7 +635,7 @@ async function _carregarEstatisticasPage(page) {
   const cards = document.getElementById(`stats-${page}-cards`);
   const lista = document.getElementById(`stats-${page}-lista`);
   if (!cards && !lista) return;
-  if (lista) lista.innerHTML = '<div style="text-align:center;padding:48px;color:var(--text3);font-size:14px">⏳ Carregando...</div>';
+  if (lista) lista.innerHTML = '<div style="text-align:center;padding:48px;color:var(--text3);font-size:14px">Carregando...</div>';
   try {
     const params = new URLSearchParams();
 
@@ -707,25 +707,25 @@ async function _carregarEstatisticasPage(page) {
 
     // ── Cards de resumo ──────────────────────────────────────────────────────
     if (cards) cards.innerHTML = `
-      <div class="cnt-card azul">
-        <div class="cnt-lbl">PEDIDOS</div>
-        <div class="cnt-val">${pedidos.length}</div>
-        <div class="cnt-sub">no período</div>
+      <div class="stat-card stat-card--accent">
+        <div class="stat-card-hd">Pedidos</div>
+        <div class="stat-card-value">${pedidos.length}</div>
+        <div class="stat-card-label">no período</div>
       </div>
-      <div class="cnt-card verde">
-        <div class="cnt-lbl">SKUs</div>
-        <div class="cnt-val">${totalSkus}</div>
-        <div class="cnt-sub">tipos de produto</div>
+      <div class="stat-card stat-card--success">
+        <div class="stat-card-hd">SKUs</div>
+        <div class="stat-card-value">${totalSkus}</div>
+        <div class="stat-card-label">tipos de produto</div>
       </div>
-      <div class="cnt-card amarelo">
-        <div class="cnt-lbl">ITENS</div>
-        <div class="cnt-val">${totalItens}</div>
-        <div class="cnt-sub">quantidade total</div>
+      <div class="stat-card stat-card--warning">
+        <div class="stat-card-hd">Itens</div>
+        <div class="stat-card-value">${totalItens}</div>
+        <div class="stat-card-label">quantidade total</div>
       </div>
-      <div class="cnt-card roxo">
-        <div class="cnt-lbl">TEMPO MÉDIO</div>
-        <div class="cnt-val" style="font-size:22px;line-height:1.2">${_fmtTempo(tempoMed)}</div>
-        <div class="cnt-sub">por pedido</div>
+      <div class="stat-card stat-card--indigo">
+        <div class="stat-card-hd">Tempo médio</div>
+        <div class="stat-card-value" style="font-size:22px;line-height:1.2">${_fmtTempo(tempoMed)}</div>
+        <div class="stat-card-label">por pedido</div>
       </div>
     `;
 
@@ -762,7 +762,7 @@ async function _carregarEstatisticasPage(page) {
     if (lista) lista.innerHTML = `
       <div class="card">
         <div class="card-hd">
-          DETALHAMENTO DE PEDIDOS
+          Detalhamento de pedidos
           <span style="font-size:12px;font-weight:600;color:var(--text3)">${pedidos.length} registro${pedidos.length !== 1 ? 's' : ''}</span>
         </div>
         <div class="tabela-wrap">
