@@ -52,8 +52,8 @@ async function carregarEntradaManualLotes() {
     const pct = emFmtPct(l.itens_concluidos, l.total_itens);
     const barClr = pct === 100 ? '#22c55e' : pct >= 60 ? '#f59e0b' : '#3b82f6';
     const statusChip = l.status === 'concluido'
-      ? `<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:#16A34A"><span style="width:7px;height:7px;border-radius:50%;background:#16A34A;flex-shrink:0;display:inline-block"></span>Concluído</span>`
-      : `<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:#D97706"><span style="width:7px;height:7px;border-radius:50%;background:#D97706;flex-shrink:0;display:inline-block"></span>Em andamento</span>`;
+      ? `<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--green)"><span style="width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0;display:inline-block"></span>Concluído</span>`
+      : `<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--amber)"><span style="width:7px;height:7px;border-radius:50%;background:var(--amber);flex-shrink:0;display:inline-block"></span>Em andamento</span>`;
     return `
     <div class="card" style="margin-bottom:10px;padding:14px 16px;cursor:pointer" onclick="abrirLoteEM(${l.id})">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap">
@@ -74,9 +74,9 @@ async function carregarEntradaManualLotes() {
       <div style="display:flex;gap:12px;margin-top:10px;font-size:11px">
         <span style="color:#22c55e">${l.itens_abastecidos} abast.</span>
         <span style="color:#f59e0b">${l.itens_parciais} parcial</span>
-        <span style="color:#64748b">⬜ ${l.itens_pendentes} pend.</span>
+        <span style="color:#64748b"><i class="ti ti-square" aria-hidden="true"></i> ${l.itens_pendentes} pend.</span>
         <span style="color:#ef4444">${l.itens_nao_encontrados} n/enc.</span>
-        <span style="margin-left:auto;color:var(--accent);font-weight:700;cursor:pointer" onclick="event.stopPropagation();emExcluirLote(${l.id})">✕</span>
+        <span style="margin-left:auto;color:var(--accent);font-weight:700;cursor:pointer" onclick="event.stopPropagation();emExcluirLote(${l.id})"><i class="ti ti-trash" aria-hidden="true"></i></span>
       </div>
     </div>`;
   }).join('');
@@ -252,7 +252,7 @@ function emCardHTML(it) {
     ${it.status !== 'pendente'
       ? `<button id="em-mbtn-${it.id}" onclick="emSalvarItem(${it.id},true)" data-saved="true" disabled
           style="display:block;width:calc(100% - 28px);margin:8px 14px 12px;background:#16a34a;color:#fff;border:none;border-radius:10px;padding:11px;font-size:13px;font-weight:800;cursor:not-allowed;opacity:.85">
-          ✓ Salvo
+          <i class="ti ti-check" aria-hidden="true"></i> Salvo
         </button>`
       : `<button id="em-mbtn-${it.id}" onclick="emSalvarItem(${it.id},true)"
           style="display:block;width:calc(100% - 28px);margin:8px 14px 12px;background:#f97316;color:#fff;border:none;border-radius:10px;padding:11px;font-size:13px;font-weight:800;cursor:pointer">
