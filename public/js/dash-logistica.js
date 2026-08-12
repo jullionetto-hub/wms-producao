@@ -50,8 +50,8 @@ function renderizarDashLogistica() {
     <div class="pg-title" style="margin-bottom:18px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
       Dash Logística
       <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-        <button onclick="dlExportarExcel()" style="background:#16a34a;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">Excel</button>
-        <button onclick="dlExportarPDF()" style="background:#dc2626;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">PDF</button>
+        <button onclick="dlExportarExcel()" style="background:var(--green);color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">Excel</button>
+        <button onclick="dlExportarPDF()" style="background:var(--red);color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">PDF</button>
         <button onclick="dlAbrirImport()" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:7px 16px;font-size:12px;font-weight:700;cursor:pointer">Importar Planilha</button>
       </div>
     </div>
@@ -78,7 +78,7 @@ function renderizarDashLogistica() {
     </div>
 
     <!-- STATUS BANCO -->
-    <div id="dl-banco-info" style="display:none;background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.25);border-radius:8px;padding:10px 16px;margin-bottom:16px;align-items:center;gap:10px;font-size:12px;color:var(--blue)">
+    <div id="dl-banco-info" style="display:none;background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.25);border-radius:8px;padding:10px 16px;margin-bottom:16px;align-items:center;gap:10px;font-size:12px;color:var(--info)">
       
       <span id="dl-banco-txt"></span>
     </div>
@@ -106,7 +106,7 @@ function renderizarDashLogistica() {
         </select>
       </div>
       <button onclick="dlBuscarDados()" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:1px">Filtrar</button>
-      <button onclick="dlResetarFiltros()" style="background:var(--surface2);color:var(--text3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:12px;cursor:pointer;margin-bottom:1px">✕ Limpar</button>
+      <button onclick="dlResetarFiltros()" style="background:var(--surface2);color:var(--text3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:12px;cursor:pointer;margin-bottom:1px"><i class="ti ti-x" aria-hidden="true"></i> Limpar</button>
       <span id="dl-filtro-info" style="margin-left:auto;font-size:11px;color:var(--text3);align-self:center"></span>
     </div>
 
@@ -120,7 +120,7 @@ function renderizarDashLogistica() {
 
     <!-- LOADING -->
     <div id="dl-loading" style="display:none;text-align:center;padding:48px;color:var(--text3)">
-      <div style="font-size:24px;margin-bottom:8px">⏳</div>
+      <div style="font-size:24px;margin-bottom:8px"><i class="ti ti-loader-2" aria-hidden="true"></i></div>
       <div>Carregando dados...</div>
     </div>
 
@@ -132,18 +132,18 @@ function renderizarDashLogistica() {
 
       <!-- Faturamento por colaborador -->
       <div class="card" style="padding:16px 18px;margin-bottom:16px">
-        <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px;margin-bottom:14px">FATURAMENTO POR COLABORADOR (R$)</div>
+        <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px;margin-bottom:14px">Faturamento por colaborador (R$)</div>
         <div style="position:relative;height:300px"><canvas id="dl-chart-fat"></canvas></div>
       </div>
 
       <!-- Pedidos + Itens -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px" class="dl-grid-2">
         <div class="card" style="padding:16px 18px">
-          <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px;margin-bottom:14px">PEDIDOS POR COLABORADOR</div>
+          <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px;margin-bottom:14px">Pedidos por colaborador</div>
           <div style="position:relative;height:260px"><canvas id="dl-chart-ped"></canvas></div>
         </div>
         <div class="card" style="padding:16px 18px">
-          <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px;margin-bottom:14px">ITENS POR COLABORADOR</div>
+          <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px;margin-bottom:14px">Itens por colaborador</div>
           <div style="position:relative;height:260px"><canvas id="dl-chart-itens"></canvas></div>
         </div>
       </div>
@@ -151,11 +151,11 @@ function renderizarDashLogistica() {
       <!-- Faturamento por dia + Turno -->
       <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:16px" class="dl-grid-2">
         <div class="card" style="padding:16px 18px">
-          <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px;margin-bottom:14px">FATURAMENTO POR DIA</div>
+          <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px;margin-bottom:14px">Faturamento por dia</div>
           <div style="position:relative;height:210px"><canvas id="dl-chart-dia"></canvas></div>
         </div>
         <div class="card" style="padding:16px 18px">
-          <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px;margin-bottom:14px">POR TURNO</div>
+          <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px;margin-bottom:14px">Por turno</div>
           <div style="position:relative;height:210px"><canvas id="dl-chart-turno"></canvas></div>
         </div>
       </div>
@@ -163,11 +163,11 @@ function renderizarDashLogistica() {
       <!-- Por hora + Evolução acumulada -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px" class="dl-grid-2">
         <div class="card" style="padding:16px 18px">
-          <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px;margin-bottom:14px">⏱️ FATURAMENTO POR HORA DO DIA</div>
+          <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px;margin-bottom:14px"><i class="ti ti-clock" aria-hidden="true"></i> Faturamento por hora do dia</div>
           <div style="position:relative;height:220px"><canvas id="dl-chart-hora"></canvas></div>
         </div>
         <div class="card" style="padding:16px 18px">
-          <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px;margin-bottom:14px">EVOLUÇÃO DIÁRIA POR TURNO</div>
+          <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px;margin-bottom:14px">Evolução diária por turno</div>
           <div style="position:relative;height:220px"><canvas id="dl-chart-evolucao"></canvas></div>
         </div>
       </div>
@@ -175,7 +175,7 @@ function renderizarDashLogistica() {
       <!-- Tabela ranking -->
       <div class="card" style="padding:0;overflow:hidden;margin-bottom:24px">
         <div style="padding:12px 18px;background:var(--surface2);border-bottom:1px solid var(--border);font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px;display:flex;align-items:center;gap:8px">
-          RANKING DETALHADO POR COLABORADOR
+          Ranking detalhado por colaborador
           <span style="margin-left:auto;font-size:10px;font-weight:600;color:var(--text3)" id="dl-table-count"></span>
         </div>
         <div style="overflow-x:auto">
@@ -203,7 +203,7 @@ function renderizarDashLogistica() {
     <!-- ══ HISTÓRICO DE IMPORTAÇÕES ══ -->
     <div class="card" style="padding:0;overflow:hidden">
       <div style="padding:12px 18px;background:var(--surface2);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px">
-        <span style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px">ARQUIVOS IMPORTADOS</span>
+        <span style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px">Arquivos importados</span>
         <button onclick="dlCarregarImportacoes()" title="Atualizar lista"
           style="margin-left:auto;background:none;border:1px solid var(--border);border-radius:6px;color:var(--text3);padding:3px 9px;font-size:11px;cursor:pointer">Atualizar</button>
       </div>
@@ -305,7 +305,7 @@ async function dlCarregarImportacoes() {
   const lista = document.getElementById('dl-importacoes-lista');
   if (!lista) return;
 
-  lista.innerHTML = `<div style="text-align:center;padding:24px;color:var(--text3);font-size:12px">⏳ Carregando...</div>`;
+  lista.innerHTML = `<div style="text-align:center;padding:24px;color:var(--text3);font-size:12px">Carregando...</div>`;
 
   const rows = await apiFetch('/dash-logistica/importacoes');
 
@@ -410,7 +410,7 @@ async function dlProcessarArquivo(file) {
   const drop = document.getElementById('dl-drop');
 
   // Mostra estado de leitura
-  if (drop) drop.innerHTML = `<div style="padding:24px;text-align:center;color:var(--text3)">⏳ Lendo <b>${escHtml(file.name)}</b>...</div>`;
+  if (drop) drop.innerHTML = `<div style="padding:24px;text-align:center;color:var(--text3)">Lendo <b>${escHtml(file.name)}</b>...</div>`;
 
   try {
     const buf = await file.arrayBuffer();
@@ -464,7 +464,7 @@ async function dlProcessarArquivo(file) {
     if (!pedidos.length) { dlToast('Nenhum pedido com turno 1/2/3 encontrado.','aviso'); return; }
 
     // Mostra estado de envio
-    if (drop) drop.innerHTML = `<div style="padding:24px;text-align:center;color:var(--text3)">⏳ Salvando <b>${dlFmtN(pedidos.length)}</b> pedidos no banco...</div>`;
+    if (drop) drop.innerHTML = `<div style="padding:24px;text-align:center;color:var(--text3)">Salvando <b>${dlFmtN(pedidos.length)}</b> pedidos no banco...</div>`;
 
     const r = await apiFetch('/dash-logistica/importar', {
       method:'POST',
@@ -669,7 +669,7 @@ function dlRenderTabela(ranking, totalFat) {
     const pct    = totalFat > 0 ? (v.fat/totalFat*100) : 0;
     const ticket = v.ped > 0  ? v.fat/v.ped  : 0;
     const ipd    = v.ped > 0  ? v.itens/v.ped : 0;
-    const cor    = DL_COR_TURNO[v.turno] || '#6366f1';
+    const cor    = DL_COR_TURNO[v.turno] || 'var(--indigo)';
     return `<tr style="border-bottom:1px solid rgba(51,65,85,.4)">
       <td style="padding:10px 12px;text-align:center;font-size:14px">${ICONS[i]||`<span style="font-size:10px;color:var(--text3);font-weight:700">${i+1}</span>`}</td>
       <td style="padding:10px 14px">
@@ -678,7 +678,7 @@ function dlRenderTabela(ranking, totalFat) {
           <div style="height:100%;width:${(v.fat/maxFat*100).toFixed(1)}%;background:${cor};border-radius:3px"></div>
         </div>
       </td>
-      <td style="padding:10px 12px;text-align:center"><span style="background:${T_COR[v.turno]||'rgba(99,102,241,.15)'};color:${T_TXT[v.turno]||'#6366f1'};border-radius:20px;padding:2px 10px;font-size:10px;font-weight:800">T${v.turno}</span></td>
+      <td style="padding:10px 12px;text-align:center"><span style="background:${T_COR[v.turno]||'rgba(99,102,241,.15)'};color:${T_TXT[v.turno]||'var(--indigo)'};border-radius:20px;padding:2px 10px;font-size:10px;font-weight:800">T${v.turno}</span></td>
       <td style="padding:10px 14px;text-align:right;font-weight:700;color:#22c55e;font-size:13px">R$ ${dlFmt(v.fat)}</td>
       <td style="padding:10px 14px;text-align:right;color:var(--text3);font-size:12px">${pct.toFixed(1)}%</td>
       <td style="padding:10px 14px;text-align:right;font-weight:600;font-size:13px">${dlFmtN(v.ped)}</td>
