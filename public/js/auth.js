@@ -808,6 +808,16 @@ async function iniciarDiario() {
   await verificarValidacaoPendente();
 }
 
+// Atualiza o anel circular de progresso da Separação no Diário de Bordo
+function _atualizarAnelSeparacaoDiario(total, concluidos) {
+  const txt = document.getElementById('diario-sep-total-txt');
+  if (txt) txt.textContent = total || 0;
+  const ring = document.getElementById('diario-sep-ring');
+  if (!ring) return;
+  const circ = 339.3;
+  const pct  = total > 0 ? Math.min(1, (concluidos || 0) / total) : 0;
+  ring.style.strokeDashoffset = (circ * (1 - pct)).toFixed(1);
+}
 
 async function carregarDadosDiario() {
   const data = document.getElementById('diario-data')?.value || hojeLocal();
@@ -819,6 +829,7 @@ async function carregarDadosDiario() {
     document.getElementById('diario-sep-total').textContent = d.separacao.total;
     document.getElementById('diario-sep-conc').textContent = d.separacao.concluidos;
     document.getElementById('diario-sep-pend').textContent = d.separacao.pendentes;
+    _atualizarAnelSeparacaoDiario(d.separacao.total, d.separacao.concluidos);
     document.getElementById('diario-sep-sep').textContent = d.separacao.separando;
     document.getElementById('diario-ck-total').textContent = d.checkout.total;
     document.getElementById('diario-ck-conc').textContent = d.checkout.concluidos;
@@ -1280,6 +1291,7 @@ async function verDiario(id) {
       document.getElementById('diario-sep-conc').textContent = dd.separacao.concluidos||0;
       document.getElementById('diario-sep-pend').textContent = dd.separacao.pendentes||0;
       document.getElementById('diario-sep-sep').textContent = dd.separacao.separando||0;
+      _atualizarAnelSeparacaoDiario(dd.separacao.total, dd.separacao.concluidos);
     }
     if (dd.checkout) {
       document.getElementById('diario-ck-total').textContent = dd.checkout.total||0;
