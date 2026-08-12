@@ -166,18 +166,18 @@ function _renderTabelaPedidos() {
       const tempoFmt = totalMin >= 60
         ? `~${Math.floor(totalMin/60)}h ${totalMin%60 > 0 ? totalMin%60+'min' : ''}`.trim()
         : `~${totalMin} min`;
-      const corTempo = totalMin > 120 ? 'var(--red)' : totalMin > 60 ? '#d97706' : '#16a34a';
+      const corTempo = totalMin > 120 ? 'var(--red)' : totalMin > 60 ? 'var(--amber)' : 'var(--green)';
       const stat = (label, val, cor) =>
         `<div style="display:flex;flex-direction:column;align-items:center;padding:0 10px;border-left:1px solid var(--border)">
-          <span style="font-size:9px;font-weight:700;color:var(--text3);letter-spacing:.6px;white-space:nowrap">${label}</span>
+          <span style="font-size:9px;font-weight:700;color:var(--text3);letter-spacing:.2px;white-space:nowrap">${label}</span>
           <span style="font-size:13px;font-weight:800;color:${cor};font-family:'Space Mono',monospace;line-height:1.2">${val}</span>
         </div>`;
       totEl.style.display = 'flex';
       totEl.innerHTML =
-        stat('PEDIDOS',    totalPedidos,                      'var(--accent)') +
+        stat('Pedidos',    totalPedidos,                      'var(--accent)') +
         stat('SKUs',       totalSkus.toLocaleString('pt-BR'), 'var(--text)')   +
-        stat('ITENS',      totalItens.toLocaleString('pt-BR'),'var(--text)')   +
-        stat('TEMPO EST.', tempoFmt,                          corTempo);
+        stat('Itens',      totalItens.toLocaleString('pt-BR'),'var(--text)')   +
+        stat('Tempo est.', tempoFmt,                          corTempo);
     }
   }
   // ───────────────────────────────────────────────────────────────
@@ -190,7 +190,7 @@ function _renderTabelaPedidos() {
     const corNum   = isDrive(p) ? 'var(--red)' : 'var(--accent)';
     const corTransp = isDrive(p) ? 'var(--red)' : 'var(--indigo)';
     const primeBadge = p.tem_prime
-      ? '<span style="margin-left:5px;font-size:9px;background:#D97706;color:#fff;border-radius:4px;padding:2px 5px;font-weight:700;vertical-align:middle">⭐ PRIME</span>'
+      ? '<span class="badge badge-warning" style="margin-left:5px"><i class="ti ti-star-filled" aria-hidden="true"></i>Prime</span>'
       : '';
     return `<tr>
       <td style="font-weight:700;font-family:'Space Mono',monospace;font-size:12px">
@@ -1676,14 +1676,14 @@ function _aplicarEstadoPrime() {
   const aviso = document.getElementById('dist-prime-aviso');
   if (!btn) return;
   if (_modoPrime) {
-    btn.style.background = '#D97706';
+    btn.style.background = 'var(--amber)';
     btn.style.color      = '#fff';
-    btn.textContent      = '⭐ Modo Prime ATIVO';
+    btn.innerHTML        = '<i class="ti ti-star-filled" aria-hidden="true"></i> Modo Prime ativo';
     if (aviso) aviso.style.display = 'block';
   } else {
     btn.style.background = 'transparent';
-    btn.style.color      = '#D97706';
-    btn.textContent      = '⭐ Incluir Prime';
+    btn.style.color      = 'var(--amber)';
+    btn.innerHTML        = '<i class="ti ti-star-filled" aria-hidden="true"></i> Incluir Prime';
     if (aviso) aviso.style.display = 'none';
   }
 }
@@ -2184,7 +2184,7 @@ async function carregarPedidosDistribuicao() {
       el.innerHTML = `<div style="font-size:11px;color:var(--text3);margin-bottom:8px">${labelModo}</div><div style="color:var(--text3);font-size:12px;text-align:center;padding:20px">${_modoPrime ? 'Nenhum pedido Prime pendente' : 'Nenhum pedido normal pendente'}</div>`;
       return;
     }
-    el.innerHTML = `<div style="font-size:11px;color:var(--text3);margin-bottom:8px">${labelModo}</div><div class="tabela-wrap" style="max-height:240px;overflow-y:auto"><table><thead><tr><th>PEDIDO</th><th>CLIENTE</th><th>HORÁRIO</th><th>ITENS</th><th>PONTUAÇÃO</th><th>⏱ TEMPO EST.</th><th>STATUS</th></tr></thead><tbody>${lista.map(p=>`<tr${p.tem_prime?' style="background:rgba(217,119,6,.06)"':''}><td style="font-weight:700;color:var(--text);font-family:'Space Mono',monospace;font-size:11px">${p.numero_pedido}${p.tem_prime?' <span style="font-size:9px;background:#D97706;color:#fff;border-radius:4px;padding:1px 4px;vertical-align:middle">PRIME</span>':''}</td><td style="font-size:11px;color:var(--text2);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.cliente||'—'}</td><td style="font-size:11px;color:var(--amber);font-weight:600;white-space:nowrap">${p.aguardando_desde||p.hora_pedido||'—'}</td><td style="font-weight:600">${p.itens||0}</td><td><span style="font-family:'Space Mono',monospace;color:var(--indigo);font-weight:700">${p.pontuacao||'—'}</span></td><td>${badgeTempoSep(p.total_itens||p.itens, p.pontuacao)}</td><td><span class="pill ${(p.status||'pendente')}">${p.status||'pendente'}</span></td></tr>`).join('')}</tbody></table></div>`;
+    el.innerHTML = `<div style="font-size:11px;color:var(--text3);margin-bottom:8px">${labelModo}</div><div class="tabela-wrap" style="max-height:240px;overflow-y:auto"><table><thead><tr><th>PEDIDO</th><th>CLIENTE</th><th>HORÁRIO</th><th>ITENS</th><th>PONTUAÇÃO</th><th>⏱ TEMPO EST.</th><th>STATUS</th></tr></thead><tbody>${lista.map(p=>`<tr${p.tem_prime?' style="background:rgba(217,119,6,.06)"':''}><td style="font-weight:700;color:var(--text);font-family:'Space Mono',monospace;font-size:11px">${p.numero_pedido}${p.tem_prime?' <span class="badge badge-warning"><i class="ti ti-star-filled" aria-hidden="true"></i>Prime</span>':''}</td><td style="font-size:11px;color:var(--text2);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.cliente||'—'}</td><td style="font-size:11px;color:var(--amber);font-weight:600;white-space:nowrap">${p.aguardando_desde||p.hora_pedido||'—'}</td><td style="font-weight:600">${p.itens||0}</td><td><span style="font-family:'Space Mono',monospace;color:var(--indigo);font-weight:700">${p.pontuacao||'—'}</span></td><td>${badgeTempoSep(p.total_itens||p.itens, p.pontuacao)}</td><td><span class="pill ${(p.status||'pendente')}">${p.status||'pendente'}</span></td></tr>`).join('')}</tbody></table></div>`;
   } catch(e) { console.warn(e); }
 }
 
