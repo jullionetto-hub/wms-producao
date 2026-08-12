@@ -716,12 +716,9 @@ function renderizarPagEntradaManual(containerId) {
   <div style="padding:0 0 32px">
 
     <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap">
-      <button id="em-tab-btn-estoque" onclick="emMostrarAba('estoque')"
-        style="padding:8px 16px;border-radius:20px;border:1px solid var(--border);background:var(--accent);color:#fff;font-size:11px;font-weight:700;cursor:pointer">Entrada de Estoque</button>
-      <button id="em-tab-btn-barcode" onclick="emMostrarAba('barcode')"
-        style="padding:8px 16px;border-radius:20px;border:1px solid var(--border);background:var(--surface2);color:var(--text3);font-size:11px;font-weight:700;cursor:pointer">Código de Barras</button>
-      <button id="em-tab-btn-inventario" onclick="emMostrarAba('inventario')"
-        style="padding:8px 16px;border-radius:20px;border:1px solid var(--border);background:var(--surface2);color:var(--text3);font-size:11px;font-weight:700;cursor:pointer">Inventário</button>
+      <button id="em-tab-btn-estoque" onclick="emMostrarAba('estoque')" class="rel-turno-btn ativo">Entrada de Estoque</button>
+      <button id="em-tab-btn-barcode" onclick="emMostrarAba('barcode')" class="rel-turno-btn">Código de Barras</button>
+      <button id="em-tab-btn-inventario" onclick="emMostrarAba('inventario')" class="rel-turno-btn">Inventário</button>
     </div>
 
     <div id="em-aba-estoque">
@@ -735,7 +732,7 @@ function renderizarPagEntradaManual(containerId) {
 
       <!-- Upload + nome do lote -->
       <div class="card" style="margin-bottom:14px;padding:16px 18px">
-        <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:1px;margin-bottom:10px">IMPORTAR NOVO ARQUIVO</div>
+        <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.2px;margin-bottom:10px">Importar novo arquivo</div>
         <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
           <input id="em-nome-lote" placeholder="Nome do lote (ex: 3R Import 28/05)" class="input"
             style="flex:1;min-width:180px;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px">
@@ -785,16 +782,16 @@ function renderizarPagEntradaManual(containerId) {
       <!-- Barra de progresso -->
       <div class="card" style="padding:12px 16px;margin-bottom:10px">
         <div style="display:flex;justify-content:space-between;font-size:10px;font-weight:700;color:var(--text3);margin-bottom:6px">
-          <span>PROGRESSO</span><span id="em-progress-txt">0/0</span>
+          <span>Progresso</span><span id="em-progress-txt">0/0</span>
         </div>
         <div style="background:var(--surface2);border-radius:6px;height:8px;overflow:hidden;margin-bottom:10px">
           <div id="em-progress-bar" style="height:100%;width:0%;background:#3b82f6;border-radius:6px;transition:width .4s"></div>
         </div>
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">
-          ${[['○','PENDENTES','em-stat-pend','#64748b'],['●','ABASTECIDOS','em-stat-abast','#22c55e'],['!','PARCIAIS','em-stat-parc','#f59e0b'],['✗','NÃO ENC.','em-stat-nenc','#ef4444']].map(([ic,lb,id,c])=>`
+          ${[['ti-circle','Pendentes','em-stat-pend','#64748b'],['ti-circle-check','Abastecidos','em-stat-abast','#22c55e'],['ti-alert-triangle','Parciais','em-stat-parc','#f59e0b'],['ti-x','Não enc.','em-stat-nenc','#ef4444']].map(([ic,lb,id,c])=>`
           <div style="background:var(--surface2);border-radius:8px;padding:8px;text-align:center;border:1px solid var(--border)">
             <div style="font-size:18px;font-weight:900;color:${c}" id="${id}">0</div>
-            <div style="font-size:8px;color:var(--text3);font-weight:700;letter-spacing:.5px">${ic} ${lb}</div>
+            <div style="font-size:8px;color:var(--text3);font-weight:700;letter-spacing:.2px"><i class="ti ${ic}" aria-hidden="true"></i> ${lb}</div>
           </div>`).join('')}
         </div>
       </div>
@@ -857,7 +854,7 @@ function renderizarPagEntradaManual(containerId) {
         <div id="bc-resultado"></div>
       </div>
       <div class="card" style="padding:14px 18px">
-        <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:1px;margin-bottom:8px">IMPORTAR CATÁLOGO DE PRODUTOS (barras.xlsx)</div>
+        <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.2px;margin-bottom:8px">Importar catálogo de produtos (barras.xlsx)</div>
         <div style="font-size:11px;color:var(--text3);margin-bottom:10px">Importe o arquivo barras.xlsx para habilitar a busca por código de barras. <span id="bc-total-produtos" style="color:var(--accent);font-weight:700"></span></div>
         <div id="bc-upload-zona">${catUploadZonaHTML()}</div>
       </div>
@@ -899,7 +896,7 @@ function emMostrarAba(aba) {
     const el  = document.getElementById(`em-aba-${a}`);
     const btn = document.getElementById(`em-tab-btn-${a}`);
     if (el)  el.style.display  = a === aba ? '' : 'none';
-    if (btn) { btn.style.background = a === aba ? 'var(--accent)' : 'var(--surface2)'; btn.style.color = a === aba ? '#fff' : 'var(--text3)'; }
+    if (btn) btn.classList.toggle('ativo', a === aba);
   });
   if (aba === 'inventario') invCarregarSessoes();
   if (aba === 'barcode') bcAtualizarTotal();
