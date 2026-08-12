@@ -1007,3 +1007,44 @@ body.dark .item-card.parcial    .item-ic{background:#78350F}
 .aviso-duplicata{background:#FEF3C7;border:1.5px solid #FCD34D;border-radius:10px;padding:12px 15px;margin-bottom:12px;display:flex;align-items:center;gap:10px;font-size:13px;font-weight:700;color:#92400E}
 body.dark .aviso-duplicata{background:#2D1A05;border-color:#78350F;color:#FCD34D}
 .usr-btn.edit{background:var(--accent);color:#fff;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;font-weight:700}
+
+
+
+
+/* ══════════════════════════════════════════
+   STAT CARD — componente único de card numérico
+   (substitui .cnt-card/.kpi-card/.stat-big em telas
+   novas; os antigos continuam funcionando onde já
+   estão em uso, migração é feita tela por tela)
+══════════════════════════════════════════ */
+.stat-card{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--border);border-radius:var(--r);padding:16px}
+.stat-card--success{border-left-color:var(--green)}
+.stat-card--warning{border-left-color:var(--amber)}
+.stat-card--danger{border-left-color:var(--red)}
+.stat-card--info{border-left-color:var(--info)}
+.stat-card-hd{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px}
+.stat-card-hd i{font-size:14px;color:var(--text3)}
+.stat-card-value{font-size:28px;font-weight:700;color:var(--text);line-height:1.1}
+.stat-card-label{font-size:11px;color:var(--text3);margin-top:2px}
+.stat-card-foot{display:flex;justify-content:space-between;font-size:11.5px;border-top:1px solid var(--border);padding-top:10px;margin-top:12px}
+
+/* ══════════════════════════════════════════
+   BADGE — mesma lógica de cor de .pill, versão
+   compacta pra uso em tabelas/listas/headers
+══════════════════════════════════════════ */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.3px;white-space:nowrap;background:var(--surface2);color:var(--text2);border:1px solid var(--border)}
+.badge-success{background:#F0FDF4;color:var(--green);border-color:#BBF7D0}
+.badge-warning{background:#FFFBEB;color:var(--amber);border-color:#FDE68A}
+.badge-danger{background:#FEF2F2;color:var(--red);border-color:#FECACA}
+.badge-info{background:#F0F9FF;color:var(--info);border-color:#BAE6FD}
+
+/* ══════════════════════════════════════════
+   MODAL — padrão único pros modais genéricos
+   (#modal-confirm/#modal-prompt/#modal-alert)
+══════════════════════════════════════════ */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center}
+.modal-card{background:var(--surface);border-radius:20px;padding:28px;max-width:380px;width:92%;text-align:center;box-shadow:0 24px 64px rgba(0,0,0,.3)}
+.modal-hd{font-size:19px;font-weight:800;color:var(--text);margin-bottom:8px}
+.modal-body{font-size:13px;color:var(--text3);margin-bottom:26px;line-height:1.5}
+.modal-actions{display:flex;gap:10px}
+.modal-actions .btn{flex:1;padding:13px;font-size:14px}
