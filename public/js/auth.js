@@ -2584,20 +2584,20 @@ async function carregarAguardandoCkDesk() {
     el.innerHTML = rows.map(r => {
       const itens = Array.isArray(r.itens_falta) ? r.itens_falta : (r.itens_falta ? JSON.parse(r.itens_falta) : []);
       return `
-      <div style="border:2px solid #f97316;border-radius:12px;padding:14px;margin-bottom:10px;background:#fff7ed">
+      <div style="border:2px solid var(--orange);border-radius:12px;padding:14px;margin-bottom:10px;background:#fff7ed">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
           <div>
             <div style="font-size:20px;font-weight:800;color:#c2410c;font-family:'Space Mono',monospace">#${r.numero_pedido}</div>
             <div style="font-size:12px;color:var(--text2)">${r.ped_total_itens||r.ped_itens||0} itens &nbsp;•&nbsp; ${r.separador_nome||'—'}</div>
           </div>
           <button onclick="retomarCheckoutDesk(${r.id},'${r.numero_caixa||r.numero_pedido}')"
-            style="background:#f97316;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer">
-            ▶ Retomar
+            style="background:var(--orange);color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer">
+            <i class="ti ti-player-play-filled" aria-hidden="true"></i> Retomar
           </button>
         </div>
         ${itens.length ? `
         <div style="background:#fff;border:1px solid #fed7aa;border-radius:8px;padding:8px 12px">
-          <div style="font-size:10px;font-weight:700;color:#c2410c;letter-spacing:.5px;margin-bottom:4px">ITENS FALTANDO</div>
+          <div style="font-size:10px;font-weight:700;color:#c2410c;letter-spacing:.5px;margin-bottom:4px">Itens faltando</div>
           ${itens.map(it=>`<div style="font-size:12px;padding:2px 0"><b>${it.codigo}</b> · ${it.descricao} · x${it.quantidade}</div>`).join('')}
         </div>` : ''}
       </div>`;
@@ -2661,10 +2661,10 @@ async function carregarFilaCkDesk() {
         let itens = [];
         try { itens = Array.isArray(r.itens_falta) ? r.itens_falta : (r.itens_falta ? JSON.parse(r.itens_falta) : []); } catch(e) {}
         return `
-      <div style="border:2px solid #f97316;border-radius:12px;padding:12px 14px;margin-bottom:8px;background:#fff7ed">
+      <div style="border:2px solid var(--orange);border-radius:12px;padding:12px 14px;margin-bottom:8px;background:#fff7ed">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
           <div style="font-size:20px;font-weight:800;color:#c2410c;font-family:'Space Mono',monospace">#${r.numero_pedido}</div>
-          <span style="background:#f97316;color:#fff;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;white-space:nowrap">⏳ aguardando item</span>
+          <span style="background:var(--orange);color:#fff;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;white-space:nowrap"><i class="ti ti-clock" aria-hidden="true"></i> aguardando item</span>
         </div>
         <div style="display:flex;gap:12px;font-size:12px;color:var(--text2);margin-bottom:4px">
           <span><b style="color:#92400e">${r.ped_total_itens||r.ped_itens||0} itens</b></span>
@@ -2673,12 +2673,12 @@ async function carregarFilaCkDesk() {
         </div>
         ${itens.length ? `
         <div style="background:#fff;border:1px solid #fed7aa;border-radius:8px;padding:6px 10px;margin-bottom:6px">
-          <div style="font-size:10px;font-weight:700;color:#c2410c;letter-spacing:.5px;margin-bottom:3px">ITENS FALTANDO</div>
+          <div style="font-size:10px;font-weight:700;color:#c2410c;letter-spacing:.5px;margin-bottom:3px">Itens faltando</div>
           ${itens.map(it=>`<div style="font-size:11px;padding:1px 0"><b>${it.codigo}</b> · ${it.descricao} · x${it.quantidade}</div>`).join('')}
         </div>` : ''}
-        <button style="width:100%;background:#f97316;color:#fff;border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:700;cursor:pointer"
+        <button style="width:100%;background:var(--orange);color:#fff;border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:700;cursor:pointer"
           onclick="retomarCheckoutDesk(${r.id},'${r.numero_caixa||r.numero_pedido}')">
-          ▶ Retomar Checkout
+          <i class="ti ti-player-play-filled" aria-hidden="true"></i> Retomar Checkout
         </button>
       </div>`;
       }
@@ -2748,7 +2748,7 @@ async function carregarStatsPedidosDesk(page) {
   const fim   = document.getElementById(`${page}-stats-fim`)?.value || '';
   const tbody = document.getElementById(`${page}-stats-tbody`);
   if (!tbody) return;
-  tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:32px;color:var(--text3)">⏳ Carregando...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:32px;color:var(--text3)">Carregando...</td></tr>';
   try {
     const params = new URLSearchParams();
     if (ini) params.set('data_ini', ini);
