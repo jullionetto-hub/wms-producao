@@ -2413,7 +2413,7 @@ async function carregarRelatorioAnalitico() {
   const de  = document.getElementById('rel-de')?.value  || hojeLocal();
   const ate = document.getElementById('rel-ate')?.value || hojeLocal();
   const turno = getTurnoRel();
-  wrap.innerHTML = `<div style="text-align:center;padding:60px;color:var(--text3)"><div style="font-size:40px;margin-bottom:12px">⏳</div><div style="font-weight:600">Gerando relatório...</div></div>`;
+  wrap.innerHTML = `<div style="text-align:center;padding:60px;color:var(--text3)"><div style="font-size:40px;margin-bottom:12px"><i class="ti ti-loader-2" aria-hidden="true"></i></div><div style="font-weight:600">Gerando relatório...</div></div>`;
   try {
     const r = await fetch(`${API}/relatorio/analitico?de=${de}&ate=${ate}&turno=${turno}`, { credentials:'include' });
     if (!r.ok) throw new Error((await r.json()).erro || 'Erro');
@@ -2439,7 +2439,7 @@ function renderRelAnalitico(d) {
 
   // ── 1. Cards de resumo operacional ──────────────────────────
   const cards = [
-    { label:'SEPARAÇÃO', cor:'#4f46e5',
+    { label:'Separação', cor:'#4f46e5',
       main: `${fmtN(d.separacao.concluidos)} / ${fmtN(d.separacao.distribuidos)}`, sub:'concluídos do lote distribuído',
       kpis:[
         { lbl:'Importados',      val: fmtN(d.separacao.total) },
@@ -2450,7 +2450,7 @@ function renderRelAnalitico(d) {
         { lbl:'Pontuação total', val: fmtN(d.separacao.pontuacao_total) },
         { lbl:'Tempo médio',     val: fmtT(d.separacao.media_tempo_min) },
       ]},
-    { label:'CHECKOUT', cor:'#0891b2',
+    { label:'Checkout', cor:'#0891b2',
       main: fmtN(d.checkout.concluidos), sub:'checkouts realizados',
       kpis:[
         { lbl:'Total criados',   val: fmtN(d.checkout.total) },
@@ -2458,14 +2458,14 @@ function renderRelAnalitico(d) {
         { lbl:'Total itens',     val: fmtN(d.checkout.total_itens) },
         { lbl:'Tempo médio',     val: fmtT(d.checkout.media_tempo_min) },
       ]},
-    { label:'EMBALAGEM', cor:'#7c3aed',
+    { label:'Embalagem', cor:'#7c3aed',
       main: fmtN(d.embalagem.total_embalados), sub:'pedidos embalados',
       kpis:[
         { lbl:'Pendentes emb.',  val: fmtN(d.embalagem.pendentes) },
         { lbl:'Total itens',     val: fmtN(d.embalagem.total_itens) },
         { lbl:'Tempo médio',     val: fmtT(d.embalagem.media_tempo_min) },
       ]},
-    { label:'REPOSIÇÃO', cor:'#d97706',
+    { label:'Reposição', cor:'var(--amber)',
       main: fmtN(d.reposicao.resolvidas), sub:'reposições resolvidas',
       kpis:[
         { lbl:'Total abertos',    val: fmtN(d.reposicao.total) },
@@ -2476,23 +2476,21 @@ function renderRelAnalitico(d) {
   ];
 
   const cardsHTML = cards.map(c => `
-    <div style="background:var(--surface);border-radius:16px;border:1px solid var(--border);border-top:3px solid ${c.cor};overflow:hidden;box-shadow:var(--sh)">
-      <div style="padding:18px 20px 14px">
-        <div style="display:flex;align-items:center;gap:7px;margin-bottom:10px">
-          <span style="width:8px;height:8px;border-radius:50%;background:${c.cor};flex-shrink:0;display:inline-block"></span>
-          <span style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:1.5px">${c.label}</span>
+    <div class="pipeline-card" style="border-top:3px solid ${c.cor}">
+      <div class="pipeline-card-top">
+        <div class="pipeline-card-hd">
+          <span class="pipeline-card-dot" style="background:${c.cor}"></span>
+          <span class="pipeline-card-label">${c.label}</span>
         </div>
-        <div style="font-size:36px;font-weight:800;color:var(--text);line-height:1;letter-spacing:-1px">${c.main}</div>
-        <div style="font-size:11px;color:var(--text2);margin-top:6px">${c.sub}</div>
+        <div class="pipeline-card-value" style="font-size:36px">${c.main}</div>
+        <div class="pipeline-card-sub">${c.sub}</div>
       </div>
-      <div style="padding:0 16px 14px">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-          ${c.kpis.map(k=>`
-            <div style="background:var(--surface2);border-radius:8px;padding:7px 10px">
-              <div style="font-size:9px;color:var(--text3);font-weight:700;letter-spacing:.5px">${k.lbl.toUpperCase()}</div>
-              <div style="font-size:14px;font-weight:800;color:var(--text);margin-top:2px">${k.val}</div>
-            </div>`).join('')}
-        </div>
+      <div class="pipeline-card-kpis">
+        ${c.kpis.map(k=>`
+          <div class="pipeline-card-kpi">
+            <div class="pipeline-card-kpi-lbl">${k.lbl}</div>
+            <div class="pipeline-card-kpi-val" style="font-size:14px">${k.val}</div>
+          </div>`).join('')}
       </div>
     </div>`).join('');
 
@@ -2500,9 +2498,9 @@ function renderRelAnalitico(d) {
   const cx = d.complexidade;
   const cxTotalPed = (cx.facil?.pedidos||0) + (cx.medio?.pedidos||0) + (cx.dificil?.pedidos||0) || 1;
   const cxBars = [
-    { lbl:'Fácil',   cor:'#16a34a', bg:'#dcfce7', ped: cx.facil?.pedidos||0,   itens: cx.facil?.itens||0 },
-    { lbl:'Médio',   cor:'#d97706', bg:'#fef3c7', ped: cx.medio?.pedidos||0,   itens: cx.medio?.itens||0 },
-    { lbl:'Difícil', cor:'#dc2626', bg:'#fee2e2', ped: cx.dificil?.pedidos||0, itens: cx.dificil?.itens||0 },
+    { lbl:'Fácil',   cor:'var(--green)', bg:'#dcfce7', ped: cx.facil?.pedidos||0,   itens: cx.facil?.itens||0 },
+    { lbl:'Médio',   cor:'var(--amber)', bg:'#fef3c7', ped: cx.medio?.pedidos||0,   itens: cx.medio?.itens||0 },
+    { lbl:'Difícil', cor:'var(--red)',   bg:'#fee2e2', ped: cx.dificil?.pedidos||0, itens: cx.dificil?.itens||0 },
   ].map(b => `
     <div style="flex:1;background:${b.bg};border-radius:12px;padding:14px 12px;text-align:center">
       <div style="font-size:28px;font-weight:800;color:${b.cor};line-height:1">${pct(b.ped,cxTotalPed)}%</div>
@@ -2512,11 +2510,11 @@ function renderRelAnalitico(d) {
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:8px">
         <div style="background:rgba(255,255,255,.6);border-radius:8px;padding:5px 6px">
-          <div style="font-size:9px;color:${b.cor};font-weight:700;letter-spacing:.3px">PEDIDOS</div>
+          <div style="font-size:9px;color:${b.cor};font-weight:700;letter-spacing:.3px">Pedidos</div>
           <div style="font-size:15px;font-weight:800;color:${b.cor}">${fmtN(b.ped)}</div>
         </div>
         <div style="background:rgba(255,255,255,.6);border-radius:8px;padding:5px 6px">
-          <div style="font-size:9px;color:${b.cor};font-weight:700;letter-spacing:.3px">ITENS</div>
+          <div style="font-size:9px;color:${b.cor};font-weight:700;letter-spacing:.3px">Itens</div>
           <div style="font-size:15px;font-weight:800;color:${b.cor}">${fmtN(b.itens)}</div>
         </div>
       </div>
@@ -2526,13 +2524,13 @@ function renderRelAnalitico(d) {
   const rankColors = ['#f59e0b','#94a3b8','#cd7c37'];
   const rankHTML = d.ranking_turnos.map((t,i) => `
     <div style="display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid var(--border);${i===0?'':''}">
-      <div style="width:28px;height:28px;border-radius:50%;background:${rankColors[i]||'#94a3b8'};color:${i===0?'#1e293b':'#fff'};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0">${i+1}</div>
+      <div style="width:28px;height:28px;border-radius:50%;background:${rankColors[i]||'var(--text3)'};color:${i===0?'#1e293b':'#fff'};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0">${i+1}</div>
       <div style="flex:1;min-width:0">
         <div style="font-weight:700;font-size:14px;color:var(--text)">${t.turno}</div>
         <div style="font-size:12px;color:var(--text3)">${fmtN(t.itens)} itens · Tempo médio: ${fmtT(t.media_tempo)}</div>
       </div>
       <div style="text-align:right;flex-shrink:0">
-        <div style="font-size:20px;font-weight:800;color:${rankColors[i]||'#94a3b8'}">${fmtN(t.pedidos)}</div>
+        <div style="font-size:20px;font-weight:800;color:${rankColors[i]||'var(--text3)'}">${fmtN(t.pedidos)}</div>
         <div style="font-size:10px;color:var(--text3)">pedidos</div>
       </div>
       <div style="text-align:right;flex-shrink:0">
@@ -2542,19 +2540,19 @@ function renderRelAnalitico(d) {
     </div>`).join('');
 
   // ── 4. SLA ────────────────────────────────────────────────────
-  const slaColor = d.sla.pct == null ? '#94a3b8' : d.sla.pct >= 85 ? '#16a34a' : d.sla.pct >= 70 ? '#d97706' : '#dc2626';
+  const slaColor = d.sla.pct == null ? 'var(--text3)' : d.sla.pct >= 85 ? 'var(--green)' : d.sla.pct >= 70 ? 'var(--amber)' : 'var(--red)';
   const slaHTML = `
     <div style="text-align:center;padding:12px 0">
       <div style="font-size:40px;font-weight:800;color:${slaColor}">${d.sla.pct != null ? d.sla.pct+'%' : '—'}</div>
       <div style="font-size:12px;color:var(--text2);margin:4px 0">pedidos separados em até ${d.sla.meta_horas}h</div>
       <div style="display:flex;gap:12px;justify-content:center;margin-top:10px">
         <div style="background:#dcfce7;border-radius:8px;padding:6px 14px;text-align:center">
-          <div style="font-size:16px;font-weight:700;color:#16a34a">${fmtN(d.sla.dentro)}</div>
-          <div style="font-size:10px;color:#16a34a">Dentro do SLA</div>
+          <div style="font-size:16px;font-weight:700;color:var(--green)">${fmtN(d.sla.dentro)}</div>
+          <div style="font-size:10px;color:var(--green)">Dentro do SLA</div>
         </div>
         <div style="background:#fee2e2;border-radius:8px;padding:6px 14px;text-align:center">
-          <div style="font-size:16px;font-weight:700;color:#dc2626">${fmtN(d.sla.fora)}</div>
-          <div style="font-size:10px;color:#dc2626">Fora do SLA</div>
+          <div style="font-size:16px;font-weight:700;color:var(--red)">${fmtN(d.sla.fora)}</div>
+          <div style="font-size:10px;color:var(--red)">Fora do SLA</div>
         </div>
       </div>
     </div>`;
@@ -2586,7 +2584,7 @@ function renderRelAnalitico(d) {
   const turno_icn = { Manha:'M', Tarde:'T', Noite:'N' };
   const mkCell = (content, extraStyle='') => `<td style="padding:8px 12px${extraStyle?';'+extraStyle:''}">${content}</td>`;
   const mkRow  = cells => `<tr style="border-bottom:1px solid var(--border)">${cells.join('')}</tr>`;
-  const mkAreaCors = {'SEPARAÇÃO':'#4f46e5','CHECKOUT':'#0891b2','EMBALAGEM':'#7c3aed','REPOSIÇÃO':'#d97706'};
+  const mkAreaCors = {'Separação':'#4f46e5','Checkout':'#0891b2','Embalagem':'#7c3aed','Reposição':'var(--amber)'};
   const mkArea = (icon, label, grad, headers, rows) => {
     const cor = mkAreaCors[label.split(' — ')[0]] || '#64748b';
     return `
@@ -2666,7 +2664,7 @@ function renderRelAnalitico(d) {
     const maxD = Math.max(...d.por_dia.map(x=>x.total),1);
     porDiaHTML = `
       <div class="card" style="margin-bottom:18px">
-        <div class="card-hd">PEDIDOS POR DIA</div>
+        <div class="card-hd">Pedidos por dia</div>
         <div style="display:flex;align-items:flex-end;gap:4px;height:80px;padding:8px 0 4px">
           ${d.por_dia.map(x=>`
             <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px">
@@ -2709,11 +2707,11 @@ function renderRelAnalitico(d) {
     <!-- Complexidade + SLA -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px">
       <div class="card">
-        <div class="card-hd">COMPLEXIDADE DOS PEDIDOS</div>
+        <div class="card-hd">Complexidade dos pedidos</div>
         <div style="display:flex;gap:10px">${cxBars}</div>
       </div>
       <div class="card">
-        <div class="card-hd">SLA DE SEPARAÇÃO</div>
+        <div class="card-hd">SLA de separação</div>
         ${slaHTML}
       </div>
     </div>
@@ -2721,11 +2719,11 @@ function renderRelAnalitico(d) {
     <!-- Ranking de turnos + Por hora -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px">
       <div class="card">
-        <div class="card-hd">RANKING POR TURNO</div>
+        <div class="card-hd">Ranking por turno</div>
         ${rankHTML || '<div style="color:var(--text3);font-size:13px;padding:12px">Sem dados</div>'}
       </div>
       <div class="card">
-        <div class="card-hd">PEDIDOS POR HORA DO DIA</div>
+        <div class="card-hd">Pedidos por hora do dia</div>
         ${porHoraHTML}
       </div>
     </div>
@@ -2733,27 +2731,27 @@ function renderRelAnalitico(d) {
     ${porDiaHTML}
 
     <!-- Seções de colaboradores por área -->
-    ${mkArea('SEP','SEPARAÇÃO — DESEMPENHO INDIVIDUAL','linear-gradient(135deg,#6366f1,#4338ca)',
+    ${mkArea('SEP','Separação — desempenho individual','linear-gradient(135deg,#6366f1,#4338ca)',
       ['COLABORADOR / TURNO','PEDIDOS','ITENS','PONTUAÇÃO','TEMPO MÉD.','RITMO'],
       sepAreaRows)}
-    ${mkArea('CK','CHECKOUT — DESEMPENHO INDIVIDUAL','linear-gradient(135deg,#22d3ee,#0369a1)',
+    ${mkArea('CK','Checkout — desempenho individual','linear-gradient(135deg,#22d3ee,#0369a1)',
       ['OPERADOR','EXPEDIÇÕES','ITENS','TEMPO MÉD.','RITMO'],
       ckAreaRows)}
-    ${mkArea('EMB','EMBALAGEM — DESEMPENHO INDIVIDUAL','linear-gradient(135deg,#a855f7,#6d28d9)',
+    ${mkArea('EMB','Embalagem — desempenho individual','linear-gradient(135deg,#a855f7,#6d28d9)',
       ['EMBALADOR','EMBALADOS','ITENS','TEMPO MÉD.','RITMO'],
       embAreaRows)}
-    ${mkArea('REP','REPOSIÇÃO — DESEMPENHO INDIVIDUAL','linear-gradient(135deg,#f59e0b,#b45309)',
+    ${mkArea('REP','Reposição — desempenho individual','linear-gradient(135deg,#f59e0b,#b45309)',
       ['REPOSITOR','TOTAL AVISOS','REPOSTOS','NÃO ENCONTR.','TAXA RESOLUÇÃO','T. MÉDIO'],
       repAreaRows)}
 
     <!-- Transportadoras -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px">
       <div class="card">
-        <div class="card-hd">TOP TRANSPORTADORAS</div>
+        <div class="card-hd">Top transportadoras</div>
         ${trHTML || '<div style="color:var(--text3);font-size:13px;padding:12px">Sem dados</div>'}
       </div>
       <div class="card">
-        <div class="card-hd">ANÁLISE AUTOMÁTICA</div>
+        <div class="card-hd">Análise automática</div>
         <div style="display:flex;flex-direction:column;gap:8px">
           ${sugestoes.map(s=>`<div style="font-size:12px;color:var(--text2);padding:8px 10px;background:var(--surface2);border-radius:8px;line-height:1.4">${s}</div>`).join('')}
         </div>
