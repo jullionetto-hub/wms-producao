@@ -2434,13 +2434,13 @@ function renderCardEmbFilaDesk(p, emAndamento) {
         <span class="pill ${pillCls}" style="font-size:10px">${pillTxt}</span>
       </div>
       <div style="display:flex;gap:10px;font-size:12px;color:var(--text2);flex-wrap:wrap;margin-bottom:4px">
-        <span>${r.ped_itens||0}<b style="color:var(--text)">${p.total_itens||p.itens||0} itens</b></span>
+        <span><b style="color:var(--text)">${p.total_itens||p.itens||0} itens</b></span>
         <span><b style="color:var(--text)">${p.itens||0} SKUs</b></span>
-        ${p.cliente ? `<span>${r.separador_nome||'—'}${p.cliente}</span>` : ''}
-        ${p.transportadora ? `<span>${p.transportadora}${p.transportadora}</span>` : ''}
+        ${p.cliente ? `<span>${p.cliente}</span>` : ''}
+        ${p.transportadora ? `<span>${p.transportadora}</span>` : ''}
       </div>
-      ${p.hora_checkout ? `<div style="font-size:11px;color:var(--text3);margin-top:2px">✓ Checkout às ${p.hora_checkout}</div>` : ''}
-      ${emAndamento && p.embalagem_iniciado_em ? `<div style="font-size:11px;color:#2563eb;margin-top:2px">⏱ Embalagem iniciada às ${p.embalagem_iniciado_em}</div>` : ''}
+      ${p.hora_checkout ? `<div style="font-size:11px;color:var(--text3);margin-top:2px"><i class="ti ti-check" aria-hidden="true"></i> Checkout às ${p.hora_checkout}</div>` : ''}
+      ${emAndamento && p.embalagem_iniciado_em ? `<div style="font-size:11px;color:#2563eb;margin-top:2px"><i class="ti ti-clock" aria-hidden="true"></i> Embalagem iniciada às ${p.embalagem_iniciado_em}</div>` : ''}
       <button class="btn btn-primary btn-sm" style="width:100%;margin-top:8px;padding:10px;font-size:14px;font-weight:700"
         onclick="selecionarPedidoEmbFilaDesk(${p.id})">
         ${btnTxt}
@@ -2812,8 +2812,9 @@ async function carregarAvisosSeparadorDesk() {
       const isAguard = a.status === 'aguardando_abastecer';
       const bg    = isSubiu ? '#F0FDF4' : isAguard ? '#FFFBEB' : '#EFF6FF';
       const bord  = isSubiu ? '#BBF7D0' : isAguard ? '#FDE68A' : '#BFDBFE';
-      const label = isSubiu ? 'SUBIU' : isAguard ? 'AGUARD. GUARDAR' : 'ABASTECIDO';
+      const label = isSubiu ? 'Subiu' : isAguard ? 'Aguard. guardar' : 'Abastecido';
       const cor   = isSubiu ? 'var(--green)' : isAguard ? '#92400e' : 'var(--accent)';
+      const icon  = isSubiu ? 'ti-arrow-big-up-lines' : isAguard ? 'ti-clock' : 'ti-check';
       const nomeLogado = usuarioAtual?.nome || '';
       const btnGuardei = isAguard
         ? `<button onclick="sepGuardeiItem(${a.id},'${nomeLogado.replace(/'/g,"\\'")}',this)"
@@ -2827,7 +2828,7 @@ async function carregarAvisosSeparadorDesk() {
       return `
       <div style="background:${bg};border:2px solid ${bord};border-radius:12px;padding:14px;margin-bottom:10px">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <div style="font-size:28px">${icon}</div>
+          <div style="font-size:24px;color:${cor}"><i class="ti ${icon}" aria-hidden="true"></i></div>
           <div>
             <div style="font-size:12px;font-weight:800;color:${cor};letter-spacing:1px">${label}</div>
             <div style="font-size:11px;color:var(--text3)">Pedido <b style="color:var(--text)">#${a.numero_pedido}</b> &nbsp;•&nbsp; ${a.hora_reposto||a.hora_aviso||'—'}</div>
@@ -2875,17 +2876,17 @@ async function carregarAguardandoDesk() {
       const temProtocolo = itens.some(a => a.status === 'protocolo');
       const borderColor  = temProtocolo ? '#6366f1' : '#f59e0b';
       const bgColor      = temProtocolo ? '#f5f3ff' : '#fffbeb';
-      const labelTxt     = temProtocolo ? 'PROTOCOLO' : 'NÃO ENCONTRADO';
-      const labelColor   = temProtocolo ? '#7c3aed'   : '#d97706';
+      const labelTxt     = temProtocolo ? 'Protocolo' : 'Não encontrado';
+      const labelColor   = temProtocolo ? '#7c3aed'   : 'var(--amber)';
       return `<div style="background:${bgColor};border:1px solid ${borderColor}44;border-left:3px solid ${borderColor};border-radius:10px;padding:14px;margin-bottom:10px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-          <span style="font-family:'Space Mono',monospace;font-size:15px;font-weight:700;color:#0f172a">Pedido #${ped}</span>
+          <span style="font-family:'Space Mono',monospace;font-size:15px;font-weight:700;color:var(--text)">Pedido #${ped}</span>
           <span style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:12px;background:${borderColor}22;color:${labelColor};border:1px solid ${borderColor}66">${labelTxt}</span>
         </div>
         ${itens.map(a => `
-          <div style="background:rgba(255,255,255,.75);border:1px solid #e2e8f0;border-radius:7px;padding:10px;margin-bottom:6px">
-            <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:2px">${a.codigo||'—'}</div>
-            <div style="font-size:11px;color:#475569;margin-bottom:3px">${a.descricao||'—'}</div>
+          <div style="background:rgba(255,255,255,.75);border:1px solid var(--border);border-radius:7px;padding:10px;margin-bottom:6px">
+            <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:2px">${a.codigo||'—'}</div>
+            <div style="font-size:11px;color:var(--text2);margin-bottom:3px">${a.descricao||'—'}</div>
             <div style="font-size:11px;color:#64748b">Qtd: <b>${a.quantidade||1}</b>${a.endereco?' | End: '+a.endereco:''}${a.hora_aviso?' | '+a.hora_aviso:''}</div>
           </div>
         `).join('')}
