@@ -466,9 +466,9 @@
             <button onclick="carregarContadoresSep()" class="btn btn-primary btn-sm">Atualizar</button>
           </div>
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
-            <div class="cnt-card azul"><div class="cnt-lbl">TOTAL</div><div class="cnt-val" id="sep-cnt-total">0</div><div class="cnt-sub">pedidos</div></div>
-            <div class="cnt-card amarelo"><div class="cnt-lbl">PENDENTES</div><div class="cnt-val" id="sep-cnt-pendentes">0</div><div class="cnt-sub">aguardando</div></div>
-            <div class="cnt-card verde"><div class="cnt-lbl">SEPARADOS</div><div class="cnt-val" id="sep-cnt-separados">0</div><div class="cnt-sub">concluídos</div></div>
+            <div class="stat-card stat-card--accent"><div class="stat-card-hd">Total</div><div class="stat-card-value" id="sep-cnt-total">0</div><div class="stat-card-label">pedidos</div></div>
+            <div class="stat-card stat-card--warning"><div class="stat-card-hd">Pendentes</div><div class="stat-card-value" id="sep-cnt-pendentes">0</div><div class="stat-card-label">aguardando</div></div>
+            <div class="stat-card stat-card--success"><div class="stat-card-hd">Separados</div><div class="stat-card-value" id="sep-cnt-separados">0</div><div class="stat-card-label">concluídos</div></div>
           </div>
         </div>
         <!-- Tabs desktop separação -->
@@ -576,10 +576,10 @@
 
         <!-- Contadores -->
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
-          <div class="cnt-card azul"><div class="cnt-lbl">SEPARAR</div><div class="cnt-val" id="d-rep-cnt-separar">0</div><div class="cnt-sub">pendentes</div></div>
-          <div class="cnt-card amarelo"><div class="cnt-lbl">SEPARADO</div><div class="cnt-val" id="d-rep-cnt-separado">0</div><div class="cnt-sub">em andamento</div></div>
-          <div class="cnt-card laranja"><div class="cnt-lbl">SUBIU</div><div class="cnt-val" id="d-rep-cnt-subiu">0</div><div class="cnt-sub">para guardar</div></div>
-          <div class="cnt-card amarelo"><div class="cnt-lbl">PROTOCOLO</div><div class="cnt-val" id="d-rep-cnt-protocolo">0</div><div class="cnt-sub">aguardando</div></div>
+          <div class="stat-card stat-card--accent"><div class="stat-card-hd">Separar</div><div class="stat-card-value" id="d-rep-cnt-separar">0</div><div class="stat-card-label">pendentes</div></div>
+          <div class="stat-card stat-card--warning"><div class="stat-card-hd">Separado</div><div class="stat-card-value" id="d-rep-cnt-separado">0</div><div class="stat-card-label">em andamento</div></div>
+          <div class="stat-card stat-card--orange"><div class="stat-card-hd">Subiu</div><div class="stat-card-value" id="d-rep-cnt-subiu">0</div><div class="stat-card-label">para guardar</div></div>
+          <div class="stat-card stat-card--warning"><div class="stat-card-hd">Protocolo</div><div class="stat-card-value" id="d-rep-cnt-protocolo">0</div><div class="stat-card-label">aguardando</div></div>
         </div>
 
         <!-- Abas -->
@@ -1142,9 +1142,9 @@
             <button onclick="carregarEmbalagemDesk()" class="btn btn-primary btn-sm">Filtrar</button>
           </div>
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
-            <div class="cnt-card azul"><div class="cnt-lbl">TOTAL</div><div class="cnt-val" id="emb-total">0</div><div class="cnt-sub">pedidos</div></div>
-            <div class="cnt-card amarelo"><div class="cnt-lbl">PENDENTES</div><div class="cnt-val" id="emb-pendentes">0</div><div class="cnt-sub">aguardando</div></div>
-            <div class="cnt-card verde"><div class="cnt-lbl">EMBALADOS</div><div class="cnt-val" id="emb-embalados">0</div><div class="cnt-sub">embalados</div></div>
+            <div class="stat-card stat-card--accent"><div class="stat-card-hd">Total</div><div class="stat-card-value" id="emb-total">0</div><div class="stat-card-label">pedidos</div></div>
+            <div class="stat-card stat-card--warning"><div class="stat-card-hd">Pendentes</div><div class="stat-card-value" id="emb-pendentes">0</div><div class="stat-card-label">aguardando</div></div>
+            <div class="stat-card stat-card--success"><div class="stat-card-hd">Embalados</div><div class="stat-card-value" id="emb-embalados">0</div><div class="stat-card-label">embalados</div></div>
           </div>
         </div>
 
@@ -1319,9 +1319,9 @@
             <button onclick="carregarContadoresCk()" class="btn btn-primary btn-sm">Atualizar</button>
           </div>
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
-            <div class="cnt-card azul"><div class="cnt-lbl">TOTAL</div><div class="cnt-val" id="ck-cnt-total">0</div><div class="cnt-sub">pedidos</div></div>
-            <div class="cnt-card amarelo" onclick="mudarTabCkDesk('fila')" style="cursor:pointer" title="Ver pedidos aguardando na fila"><div class="cnt-lbl">AGUARDANDO ITEM</div><div class="cnt-val" id="ck-cnt-pendentes">0</div><div class="cnt-sub">clique para ver ↗</div></div>
-            <div class="cnt-card verde"><div class="cnt-lbl">CHECKOUTS</div><div class="cnt-val" id="ck-cnt-checkouts">0</div><div class="cnt-sub">concluídos</div></div>
+            <div class="stat-card stat-card--accent"><div class="stat-card-hd">Total</div><div class="stat-card-value" id="ck-cnt-total">0</div><div class="stat-card-label">pedidos</div></div>
+            <div class="stat-card stat-card--warning" onclick="mudarTabCkDesk('fila')" title="Ver pedidos aguardando na fila"><div class="stat-card-hd">Aguardando item</div><div class="stat-card-value" id="ck-cnt-pendentes">0</div><div class="stat-card-label">clique para ver ↗</div></div>
+            <div class="stat-card stat-card--success"><div class="stat-card-hd">Checkouts</div><div class="stat-card-value" id="ck-cnt-checkouts">0</div><div class="stat-card-label">concluídos</div></div>
           </div>
         </div>
         <!-- Tabs desktop checkout (3 tabs — fila unificada com scan) -->

@@ -986,15 +986,19 @@ body.dark .aviso-duplicata{background:#2D1A05;border-color:#78350F;color:#FCD34D
    estão em uso, migração é feita tela por tela)
 ══════════════════════════════════════════ */
 .stat-card{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--border);border-radius:var(--r);padding:16px}
+.stat-card--accent{border-left-color:var(--accent)}
 .stat-card--success{border-left-color:var(--green)}
 .stat-card--warning{border-left-color:var(--amber)}
 .stat-card--danger{border-left-color:var(--red)}
 .stat-card--info{border-left-color:var(--info)}
-.stat-card-hd{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px}
+.stat-card--orange{border-left-color:var(--orange)}
+.stat-card-hd{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:700;color:var(--text2);letter-spacing:.2px;margin-bottom:10px}
 .stat-card-hd i{font-size:14px;color:var(--text3)}
 .stat-card-value{font-size:28px;font-weight:700;color:var(--text);line-height:1.1}
 .stat-card-label{font-size:11px;color:var(--text3);margin-top:2px}
 .stat-card-foot{display:flex;justify-content:space-between;font-size:11.5px;border-top:1px solid var(--border);padding-top:10px;margin-top:12px}
+.stat-card[onclick]{cursor:pointer;transition:transform .15s,box-shadow .15s}
+.stat-card[onclick]:hover{transform:translateY(-1px);box-shadow:var(--sh-lg)}
 
 /* ══════════════════════════════════════════
    BADGE — mesma lógica de cor de .pill, versão
