@@ -181,7 +181,7 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
 .db-stat-warn{border-left-color:var(--amber)}
 .db-stat-danger{border-left-color:var(--red)}
 .db-stat-n{font-size:18px;font-weight:800;color:var(--text);line-height:1.1}
-.db-stat-l{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-top:2px}
+.db-stat-l{font-size:9px;color:var(--text3);text-transform:none;letter-spacing:.2px;margin-top:2px}
 
 /* Título de página — padrão único pra toda tela do sistema.
    .pg-title sozinho continua funcionando exatamente como antes (só maior
