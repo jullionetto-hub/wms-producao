@@ -876,7 +876,7 @@ function renderDashPipeline() {
   const repTotal  = parseInt(kpi.total_faltas_hoje    || 0);
 
   const cards = [
-    { label: 'SEPARAÇÃO', cor: '#4f46e5',
+    { label: 'Separação', cor: '#4f46e5',
       main: fmtN(sepConcluido), sub: 'pedidos concluídos',
       kpis: [
         { lbl: 'Total Pedidos',  val: fmtN(sepTotal) },
@@ -884,7 +884,7 @@ function renderDashPipeline() {
         { lbl: 'Pendentes',      val: fmtN(sepPendente) },
         { lbl: 'Total Itens',    val: fmtN(sepItens) },
       ]},
-    { label: 'CHECKOUT', cor: '#0891b2',
+    { label: 'Checkout', cor: '#0891b2',
       main: fmtN(ckConc), sub: 'checkouts concluídos',
       kpis: [
         { lbl: 'Total Checkout', val: fmtN(ckFila + ckEmCk + ckConc) },
@@ -892,7 +892,7 @@ function renderDashPipeline() {
         { lbl: 'Pendentes',      val: fmtN(ckFila) },
         { lbl: 'Total Itens',    val: fmtN(ckItens) },
       ]},
-    { label: 'EMBALAGEM', cor: '#7c3aed',
+    { label: 'Embalagem', cor: '#7c3aed',
       main: fmtN(embConc), sub: 'pedidos embalados',
       kpis: [
         { lbl: 'Emb. Pendente',  val: fmtN(embPend) },
@@ -900,7 +900,7 @@ function renderDashPipeline() {
         { lbl: 'Embalados',      val: fmtN(embConc) },
         { lbl: 'Total Itens',    val: fmtN(embItens) },
       ]},
-    { label: 'REPOSIÇÃO', cor: '#d97706',
+    { label: 'Reposição', cor: '#d97706',
       main: fmtN(repConc), sub: 'reposições resolvidas',
       kpis: [
         { lbl: 'Total Reposição', val: fmtN(repTotal) },
@@ -911,23 +911,21 @@ function renderDashPipeline() {
   ];
 
   wrap.innerHTML = cards.map(c => `
-    <div style="background:var(--surface);border-radius:16px;border:1px solid var(--border);border-top:3px solid ${c.cor};overflow:hidden;box-shadow:var(--sh)">
-      <div style="padding:18px 20px 14px">
-        <div style="display:flex;align-items:center;gap:7px;margin-bottom:10px">
-          <span style="width:8px;height:8px;border-radius:50%;background:${c.cor};flex-shrink:0;display:inline-block"></span>
-          <span style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:1.5px">${c.label}</span>
+    <div class="pipeline-card" style="border-top:3px solid ${c.cor}">
+      <div class="pipeline-card-top">
+        <div class="pipeline-card-hd">
+          <span class="pipeline-card-dot" style="background:${c.cor}"></span>
+          <span class="pipeline-card-label">${c.label}</span>
         </div>
-        <div style="font-size:42px;font-weight:800;color:var(--text);line-height:1;letter-spacing:-1px">${c.main}</div>
-        <div style="font-size:11px;color:var(--text2);margin-top:6px">${c.sub}</div>
+        <div class="pipeline-card-value">${c.main}</div>
+        <div class="pipeline-card-sub">${c.sub}</div>
       </div>
-      <div style="padding:0 16px 14px">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-          ${c.kpis.map(k => `
-            <div style="background:var(--surface2);border-radius:8px;padding:7px 10px">
-              <div style="font-size:9px;color:var(--text3);font-weight:700;letter-spacing:.5px">${k.lbl.toUpperCase()}</div>
-              <div style="font-size:15px;font-weight:800;color:var(--text);margin-top:2px">${k.val}</div>
-            </div>`).join('')}
-        </div>
+      <div class="pipeline-card-kpis">
+        ${c.kpis.map(k => `
+          <div class="pipeline-card-kpi">
+            <div class="pipeline-card-kpi-lbl">${k.lbl}</div>
+            <div class="pipeline-card-kpi-val">${k.val}</div>
+          </div>`).join('')}
       </div>
     </div>`).join('');
 }
