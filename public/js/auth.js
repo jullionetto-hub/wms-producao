@@ -808,11 +808,12 @@ async function iniciarDiario() {
   await verificarValidacaoPendente();
 }
 
-// Atualiza o anel circular de progresso da Separação no Diário de Bordo
-function _atualizarAnelSeparacaoDiario(total, concluidos) {
-  const txt = document.getElementById('diario-sep-total-txt');
+// Atualiza o anel circular de progresso de uma seção do Diário de Bordo
+// prefixo: 'sep' | 'ck' | 'emb' | 'rep'
+function _atualizarAnelDiario(prefixo, total, concluidos) {
+  const txt = document.getElementById(`diario-${prefixo}-total-txt`);
   if (txt) txt.textContent = total || 0;
-  const ring = document.getElementById('diario-sep-ring');
+  const ring = document.getElementById(`diario-${prefixo}-ring`);
   if (!ring) return;
   const circ = 339.3;
   const pct  = total > 0 ? Math.min(1, (concluidos || 0) / total) : 0;
@@ -829,15 +830,17 @@ async function carregarDadosDiario() {
     document.getElementById('diario-sep-total').textContent = d.separacao.total;
     document.getElementById('diario-sep-conc').textContent = d.separacao.concluidos;
     document.getElementById('diario-sep-pend').textContent = d.separacao.pendentes;
-    _atualizarAnelSeparacaoDiario(d.separacao.total, d.separacao.concluidos);
+    _atualizarAnelDiario('sep', d.separacao.total, d.separacao.concluidos);
     document.getElementById('diario-sep-sep').textContent = d.separacao.separando;
     document.getElementById('diario-ck-total').textContent = d.checkout.total;
     document.getElementById('diario-ck-conc').textContent = d.checkout.concluidos;
     document.getElementById('diario-ck-pend').textContent = d.checkout.pendentes;
+    _atualizarAnelDiario('ck', d.checkout.total, d.checkout.concluidos);
     document.getElementById('diario-rep-total').textContent = d.reposicao.total;
     document.getElementById('diario-rep-res').textContent = d.reposicao.resolvidas;
     document.getElementById('diario-rep-pend').textContent = d.reposicao.pendentes;
     document.getElementById('diario-rep-nao').textContent = d.reposicao.nao_encontrados;
+    _atualizarAnelDiario('rep', d.reposicao.total, d.reposicao.resolvidas);
     if (d.embalagem) {
       const embTotal = document.getElementById('diario-emb-total');
       const embEmb   = document.getElementById('diario-emb-emb');
@@ -845,6 +848,7 @@ async function carregarDadosDiario() {
       if (embTotal) embTotal.textContent = d.embalagem.total;
       if (embEmb)   embEmb.textContent   = d.embalagem.embalados;
       if (embPend)  embPend.textContent  = d.embalagem.pendentes;
+      _atualizarAnelDiario('emb', d.embalagem.total, d.embalagem.embalados);
     }
     const tbProb = document.getElementById('tbody-diario-prob');
     if (tbProb) {
@@ -894,7 +898,7 @@ function atualizarStatusBanner(status, extra) {
   const el = document.getElementById('diario-status-banner');
   if (!el) return;
   const cfg = {
-    rascunho: { acc:'#64748b', msg:'Rascunho salvo — clique em "Finalizar e Enviar" para enviar ao próximo turno' },
+    rascunho: { acc:'#64748b', msg:'Rascunho salvo — clique em "Finalizar e enviar" para enviar ao próximo turno' },
     enviado:  { acc:'#3b82f6', msg:`Enviado para validação — prazo: ${extra||'30 min'}` },
     validado: { acc:'#10b981', msg:`Validado pelo próximo turno — Pontuação: <b>${extra||'?'}/100</b>` },
     expirado: { acc:'#ef4444', msg:'Prazo de validação expirou sem resposta do próximo turno' },
@@ -969,7 +973,7 @@ async function verificarValidacaoPendente() {
       const m = Math.floor(val.restante_segundos/60).toString().padStart(2,'0');
       const s = (val.restante_segundos%60).toString().padStart(2,'0');
       timerHtml = `<div style="text-align:right">
-        <div style="font-size:9px;color:var(--text3);text-transform:uppercase">Expira em</div>
+        <div style="font-size:9px;color:var(--text3)">Expira em</div>
         <div id="val-countdown" style="font-size:20px;font-weight:900;color:var(--text)">${m}:${s}</div>
       </div>`;
     } else if (atrasada) {
@@ -1232,7 +1236,7 @@ async function carregarListaDiarios() {
     if (!lista.length) { el.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:8px">Nenhum diário salvo ainda</div>'; return; }
     el.innerHTML = lista.map(d => {
       const turnoCor = d.turno === 'Manha' ? '#F59E0B' : d.turno === 'Tarde' ? '#3B82F6' : '#8B5CF6';
-      const leuBadge = d.leu_anterior ? '<span style="font-size:9px;background:var(--surface2);color:#10b981;border:1px solid #10b981;border-radius:4px;padding:1px 6px">leu</span>' : '';
+      const leuBadge = d.leu_anterior ? '<span style="font-size:9px;background:var(--surface2);color:#10b981;border:1px solid #10b981;border-radius:4px;padding:1px 6px">Leu</span>' : '';
       const statusMap = {
         rascunho: '<span style="font-size:9px;background:var(--surface2);color:var(--text3);border:1px solid var(--border);border-radius:4px;padding:1px 6px">Rascunho</span>',
         enviado:  '<span style="font-size:9px;background:var(--surface2);color:#3b82f6;border:1px solid #3b82f6;border-radius:4px;padding:1px 6px">Enviado</span>',
@@ -1291,18 +1295,29 @@ async function verDiario(id) {
       document.getElementById('diario-sep-conc').textContent = dd.separacao.concluidos||0;
       document.getElementById('diario-sep-pend').textContent = dd.separacao.pendentes||0;
       document.getElementById('diario-sep-sep').textContent = dd.separacao.separando||0;
-      _atualizarAnelSeparacaoDiario(dd.separacao.total, dd.separacao.concluidos);
+      _atualizarAnelDiario('sep', dd.separacao.total, dd.separacao.concluidos);
     }
     if (dd.checkout) {
       document.getElementById('diario-ck-total').textContent = dd.checkout.total||0;
       document.getElementById('diario-ck-conc').textContent = dd.checkout.concluidos||0;
       document.getElementById('diario-ck-pend').textContent = dd.checkout.pendentes||0;
+      _atualizarAnelDiario('ck', dd.checkout.total, dd.checkout.concluidos);
     }
     if (dd.reposicao) {
       document.getElementById('diario-rep-total').textContent = dd.reposicao.total||0;
       document.getElementById('diario-rep-res').textContent = dd.reposicao.resolvidas||0;
       document.getElementById('diario-rep-pend').textContent = dd.reposicao.pendentes||0;
       document.getElementById('diario-rep-nao').textContent = dd.reposicao.nao_encontrados||0;
+      _atualizarAnelDiario('rep', dd.reposicao.total, dd.reposicao.resolvidas);
+    }
+    if (dd.embalagem) {
+      const embTotal = document.getElementById('diario-emb-total');
+      const embEmb   = document.getElementById('diario-emb-emb');
+      const embPend  = document.getElementById('diario-emb-pend');
+      if (embTotal) embTotal.textContent = dd.embalagem.total||0;
+      if (embEmb)   embEmb.textContent   = dd.embalagem.embalados||0;
+      if (embPend)  embPend.textContent  = dd.embalagem.pendentes||0;
+      _atualizarAnelDiario('emb', dd.embalagem.total, dd.embalagem.embalados);
     }
   } catch(e) { console.warn(e); }
 }

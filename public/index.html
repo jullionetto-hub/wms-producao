@@ -833,10 +833,10 @@
         <div>
           <!-- Filtros -->
           <div class="card" style="margin-bottom:12px">
-            <div class="card-hd"><i class="ti ti-filter" aria-hidden="true"></i>FILTROS</div>
+            <div class="card-hd"><i class="ti ti-filter" aria-hidden="true"></i>Filtros</div>
             <div class="date-filter-bar">
-              <div class="fg"><label>DATA</label><input type="date" id="diario-data" onchange="iniciarDiario()"/></div>
-              <div class="fg"><label>TURNO</label><select id="diario-turno" onchange="iniciarDiario()">
+              <div class="fg"><label>Data</label><input type="date" id="diario-data" onchange="iniciarDiario()"/></div>
+              <div class="fg"><label>Turno</label><select id="diario-turno" onchange="iniciarDiario()">
                 <option value="Manha">Manhã</option>
                 <option value="Tarde">Tarde</option>
                 <option value="Noite">Noite</option>
@@ -848,7 +848,7 @@
           <!-- Separação + Checkout lado a lado -->
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
             <div class="card" style="margin-bottom:0">
-              <div class="card-hd"><i class="ti ti-package-export" aria-hidden="true"></i>SEPARAÇÃO</div>
+              <div class="card-hd"><i class="ti ti-package-export" aria-hidden="true"></i>Separação</div>
               <div class="db-ring-wrap">
                 <svg width="128" height="128" viewBox="0 0 128 128">
                   <circle cx="64" cy="64" r="54" fill="none" stroke="var(--border)" stroke-width="11"/>
@@ -875,17 +875,22 @@
               <!-- total numérico permanece no DOM (oculto) pra nao quebrar o JS que ja preenche esse id -->
               <div id="diario-sep-total" style="display:none">0</div>
               <div style="margin-top:6px">
-                <div style="font-size:10px;font-weight:600;color:var(--text3);margin-bottom:3px;text-transform:uppercase;letter-spacing:.5px">Observações</div>
+                <div style="font-size:10px;font-weight:600;color:var(--text3);margin-bottom:3px;letter-spacing:.2px">Observações</div>
                 <textarea id="diario-obs-sep" placeholder="Ocorrências na separação..." style="width:100%;min-height:56px;border:1px solid var(--border);border-radius:6px;padding:7px;font-size:12px;font-family:inherit;background:var(--surface2);color:var(--text);resize:vertical;box-sizing:border-box"></textarea>
               </div>
             </div>
             <div class="card" style="margin-bottom:0">
-              <div class="card-hd"><i class="ti ti-truck-delivery" aria-hidden="true"></i>CHECKOUT</div>
-              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;padding:6px 0">
-                <div class="db-stat">
-                  <div class="db-stat-n" id="diario-ck-total">0</div>
-                  <div class="db-stat-l">Total</div>
-                </div>
+              <div class="card-hd"><i class="ti ti-truck-delivery" aria-hidden="true"></i>Checkout</div>
+              <div class="db-ring-wrap">
+                <svg width="128" height="128" viewBox="0 0 128 128">
+                  <circle cx="64" cy="64" r="54" fill="none" stroke="var(--border)" stroke-width="11"/>
+                  <circle id="diario-ck-ring" cx="64" cy="64" r="54" fill="none" stroke="var(--accent)" stroke-width="11"
+                    stroke-linecap="round" stroke-dasharray="339.3" stroke-dashoffset="339.3" transform="rotate(-90 64 64)" style="transition:stroke-dashoffset .4s"/>
+                  <text x="64" y="60" text-anchor="middle" class="db-ring-total" fill="var(--text)" id="diario-ck-total-txt">0</text>
+                  <text x="64" y="77" text-anchor="middle" class="db-ring-label" fill="var(--text3)">total</text>
+                </svg>
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:5px;padding:0 0 6px">
                 <div class="db-stat db-stat-ok">
                   <div class="db-stat-n" id="diario-ck-conc">0</div>
                   <div class="db-stat-l">Concluídos</div>
@@ -895,8 +900,9 @@
                   <div class="db-stat-l">Pendentes</div>
                 </div>
               </div>
+              <div id="diario-ck-total" style="display:none">0</div>
               <div style="margin-top:6px">
-                <div style="font-size:10px;font-weight:600;color:var(--text3);margin-bottom:3px;text-transform:uppercase;letter-spacing:.5px">Observações</div>
+                <div style="font-size:10px;font-weight:600;color:var(--text3);margin-bottom:3px;letter-spacing:.2px">Observações</div>
                 <textarea id="diario-obs-ck" placeholder="Ocorrências no checkout..." style="width:100%;min-height:56px;border:1px solid var(--border);border-radius:6px;padding:7px;font-size:12px;font-family:inherit;background:var(--surface2);color:var(--text);resize:vertical;box-sizing:border-box"></textarea>
               </div>
             </div>
@@ -905,12 +911,17 @@
           <!-- Embalagem + Reposição lado a lado -->
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
             <div class="card" style="margin-bottom:0">
-              <div class="card-hd"><i class="ti ti-package" aria-hidden="true"></i>EMBALAGEM</div>
-              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;padding:6px 0">
-                <div class="db-stat">
-                  <div class="db-stat-n" id="diario-emb-total">0</div>
-                  <div class="db-stat-l">Total</div>
-                </div>
+              <div class="card-hd"><i class="ti ti-package" aria-hidden="true"></i>Embalagem</div>
+              <div class="db-ring-wrap">
+                <svg width="128" height="128" viewBox="0 0 128 128">
+                  <circle cx="64" cy="64" r="54" fill="none" stroke="var(--border)" stroke-width="11"/>
+                  <circle id="diario-emb-ring" cx="64" cy="64" r="54" fill="none" stroke="var(--accent)" stroke-width="11"
+                    stroke-linecap="round" stroke-dasharray="339.3" stroke-dashoffset="339.3" transform="rotate(-90 64 64)" style="transition:stroke-dashoffset .4s"/>
+                  <text x="64" y="60" text-anchor="middle" class="db-ring-total" fill="var(--text)" id="diario-emb-total-txt">0</text>
+                  <text x="64" y="77" text-anchor="middle" class="db-ring-label" fill="var(--text3)">total</text>
+                </svg>
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:5px;padding:0 0 6px">
                 <div class="db-stat db-stat-ok">
                   <div class="db-stat-n" id="diario-emb-emb">0</div>
                   <div class="db-stat-l">Embalados</div>
@@ -920,18 +931,24 @@
                   <div class="db-stat-l">Pendentes</div>
                 </div>
               </div>
+              <div id="diario-emb-total" style="display:none">0</div>
               <div style="margin-top:6px">
-                <div style="font-size:10px;font-weight:600;color:var(--text3);margin-bottom:3px;text-transform:uppercase;letter-spacing:.5px">Observações</div>
+                <div style="font-size:10px;font-weight:600;color:var(--text3);margin-bottom:3px;letter-spacing:.2px">Observações</div>
                 <textarea id="diario-obs-emb" placeholder="Ocorrências na embalagem..." style="width:100%;min-height:56px;border:1px solid var(--border);border-radius:6px;padding:7px;font-size:12px;font-family:inherit;background:var(--surface2);color:var(--text);resize:vertical;box-sizing:border-box"></textarea>
               </div>
             </div>
             <div class="card" style="margin-bottom:0">
-              <div class="card-hd"><i class="ti ti-package-import" aria-hidden="true"></i>REPOSIÇÃO</div>
-              <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:5px;padding:6px 0">
-                <div class="db-stat">
-                  <div class="db-stat-n" id="diario-rep-total">0</div>
-                  <div class="db-stat-l">Total</div>
-                </div>
+              <div class="card-hd"><i class="ti ti-package-import" aria-hidden="true"></i>Reposição</div>
+              <div class="db-ring-wrap">
+                <svg width="128" height="128" viewBox="0 0 128 128">
+                  <circle cx="64" cy="64" r="54" fill="none" stroke="var(--border)" stroke-width="11"/>
+                  <circle id="diario-rep-ring" cx="64" cy="64" r="54" fill="none" stroke="var(--accent)" stroke-width="11"
+                    stroke-linecap="round" stroke-dasharray="339.3" stroke-dashoffset="339.3" transform="rotate(-90 64 64)" style="transition:stroke-dashoffset .4s"/>
+                  <text x="64" y="60" text-anchor="middle" class="db-ring-total" fill="var(--text)" id="diario-rep-total-txt">0</text>
+                  <text x="64" y="77" text-anchor="middle" class="db-ring-label" fill="var(--text3)">total</text>
+                </svg>
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;padding:0 0 6px">
                 <div class="db-stat db-stat-ok">
                   <div class="db-stat-n" id="diario-rep-res">0</div>
                   <div class="db-stat-l">Resolvidas</div>
@@ -945,8 +962,9 @@
                   <div class="db-stat-l">Não enc.</div>
                 </div>
               </div>
+              <div id="diario-rep-total" style="display:none">0</div>
               <div style="margin-top:6px">
-                <div style="font-size:10px;font-weight:600;color:var(--text3);margin-bottom:3px;text-transform:uppercase;letter-spacing:.5px">Observações</div>
+                <div style="font-size:10px;font-weight:600;color:var(--text3);margin-bottom:3px;letter-spacing:.2px">Observações</div>
                 <textarea id="diario-obs-rep" placeholder="Ocorrências na reposição..." style="width:100%;min-height:56px;border:1px solid var(--border);border-radius:6px;padding:7px;font-size:12px;font-family:inherit;background:var(--surface2);color:var(--text);resize:vertical;box-sizing:border-box"></textarea>
               </div>
             </div>
@@ -954,7 +972,7 @@
 
           <!-- Pedidos com problema -->
           <div class="card" style="margin-bottom:12px">
-            <div class="card-hd"><i class="ti ti-alert-triangle" aria-hidden="true"></i>PEDIDOS COM PROBLEMA</div>
+            <div class="card-hd"><i class="ti ti-alert-triangle" aria-hidden="true"></i>Pedidos com problema</div>
             <div class="tabela-wrap" style="margin-top:8px">
               <table><thead><tr><th>Nº Pedido</th><th>Cliente</th><th>Item não encontrado</th></tr></thead>
               <tbody id="tbody-diario-prob"><tr><td colspan="3" style="text-align:center;color:var(--text3);padding:16px">Carregando...</td></tr></tbody>
@@ -964,7 +982,7 @@
 
           <!-- Observações gerais -->
           <div class="card" style="margin-bottom:12px">
-            <div class="card-hd"><i class="ti ti-notes" aria-hidden="true"></i>OBSERVAÇÕES GERAIS DO TURNO</div>
+            <div class="card-hd"><i class="ti ti-notes" aria-hidden="true"></i>Observações gerais do turno</div>
             <textarea id="diario-obs-geral" placeholder="Registre ocorrências gerais, problemas de equipamento, funcionários ausentes, intercorrências..." style="width:100%;min-height:90px;border:1px solid var(--border);border-radius:6px;padding:10px;font-size:13px;font-family:inherit;background:var(--surface2);color:var(--text);resize:vertical;margin-top:8px;box-sizing:border-box"></textarea>
           </div>
 
@@ -984,7 +1002,7 @@
           <!-- Histórico colapsável -->
           <div class="card">
             <div class="card-hd" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;user-select:none" onclick="toggleDiarioHistorico()">
-              <span style="display:flex;align-items:center;gap:8px"><i class="ti ti-history" aria-hidden="true"></i>HISTÓRICO DE DIÁRIOS</span>
+              <span style="display:flex;align-items:center;gap:8px"><i class="ti ti-history" aria-hidden="true"></i>Histórico de diários</span>
               <span id="diario-hist-arrow" style="opacity:.5;transition:transform .22s;display:flex;align-items:center">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
               </span>

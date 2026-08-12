@@ -32,12 +32,12 @@
   --surface:   #111826;
   --surface2:  #0f141d;
   --border:    #1e2636;
-  --accent:    #3454d1;
-  --accent2:   #6f8fef;
+  --accent:    #4C6FE6;
+  --accent2:   #8AA3F5;
   --green:     #57b981;
   --red:       #c9524f;
   --amber:     #e0a83e;
-  --indigo:    #6f8fef;
+  --indigo:    #8AA3F5;
   --text:      #e7e9ee;
   --text2:     #9aa3b5;
   --text3:     #6b7280;
@@ -45,15 +45,20 @@
   border-radius: 14px;
   padding: 20px 22px;
   margin: -18px;
+  color-scheme: dark;
 }
 #pag-diario.db-dark .pg-title{color:var(--text)}
 #pag-diario.db-dark .db-stat-n{font-weight:500;font-size:20px}
-#pag-diario.db-dark .db-stat-l{color:var(--text3)}
+#pag-diario.db-dark .db-stat-l{color:var(--text3);text-transform:none;letter-spacing:.2px}
 #pag-diario.db-dark .db-stat{background:var(--surface);border-left:none;border-radius:8px;padding:10px 12px}
 #pag-diario.db-dark .card{box-shadow:none;border:0.5px solid var(--border)}
-#pag-diario.db-dark .card-hd{background:transparent;border-bottom:0.5px solid var(--border);font-weight:500;letter-spacing:.4px;display:flex;align-items:center;gap:8px}
-#pag-diario.db-dark .card-hd i{color:var(--accent2);font-size:15px}
+#pag-diario.db-dark .card-hd{background:transparent;border-bottom:0.5px solid var(--border);font-weight:500;letter-spacing:0;justify-content:flex-start}
+#pag-diario.db-dark .card-hd i{color:var(--accent2);font-size:15px;margin-right:8px}
 #pag-diario.db-dark .btn-primary{background:var(--accent);font-weight:500}
+#pag-diario.db-dark .fg label{text-transform:none;letter-spacing:.2px}
+#pag-diario.db-dark thead th{text-transform:none;letter-spacing:.2px}
+#pag-diario.db-dark input[type="date"],
+#pag-diario.db-dark select{color-scheme:dark}
 
 .db-ring-wrap{display:flex;justify-content:center;margin-bottom:14px}
 .db-ring-total{font-size:26px;font-weight:500}
