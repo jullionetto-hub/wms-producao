@@ -992,7 +992,7 @@ async function bcBuscar() {
   const q = (inp?.value || '').trim();
   if (!q) return;
   const div = document.getElementById('bc-resultado');
-  if (div) div.innerHTML = `<div style="padding:14px;text-align:center;color:var(--text3)">⏳ Buscando...</div>`;
+  if (div) div.innerHTML = `<div style="padding:14px;text-align:center;color:var(--text3)">Buscando...</div>`;
   const result = await apiFetch(`/entrada-manual/produtos/buscar?q=${encodeURIComponent(q)}`);
   if (!result || result.erro || !result.length) {
     if (div) div.innerHTML = `<div style="padding:14px;text-align:center;color:var(--red)">Produto não encontrado. Verifique o código e tente novamente.</div>`;
