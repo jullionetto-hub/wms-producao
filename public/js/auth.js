@@ -1981,7 +1981,7 @@ function ckInit() {
     const b = document.createElement('button');
     b.id = `ck-cel-${i}`;
     b.textContent = `#${i}`;
-    b.style.cssText = `padding:8px 14px;border-radius:8px;border:1.5px solid #E2E8F0;background:#fff;color:#64748B;font-size:13px;font-weight:600;cursor:pointer`;
+    b.style.cssText = `padding:8px 14px;border-radius:8px;border:1.5px solid var(--border);background:var(--surface);color:#64748B;font-size:13px;font-weight:600;cursor:pointer`;
     b.onclick = () => { _ckCel = i; ckLoadFields(); ckRender(); };
     wrap.appendChild(b);
   }
@@ -2003,9 +2003,9 @@ function _ckHighlightSeg() {
     const b = document.getElementById(`ck-cel-${i}`);
     if (!b) continue;
     const ativo = i === _ckCel;
-    b.style.background = ativo ? '#2563EB' : '#fff';
+    b.style.background = ativo ? 'var(--accent)' : 'var(--surface)';
     b.style.color      = ativo ? '#fff'    : '#64748B';
-    b.style.border     = ativo ? 'none'    : '1.5px solid #E2E8F0';
+    b.style.border     = ativo ? 'none'    : '1.5px solid var(--border)';
   }
 }
 
@@ -2048,16 +2048,16 @@ function ckRender() {
     if (s === 'prob') probCnt++;
     const okAct   = s === 'ok';
     const probAct = s === 'prob';
-    return `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:${probAct?'#FEF2F2':okAct?'#F0FDF4':'#F8FAFC'};border-radius:8px;margin-bottom:6px;border:1px solid ${probAct?'#FECACA':okAct?'#BBF7D0':'#E2E8F0'}">
+    return `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:${probAct?'#FEF2F2':okAct?'#F0FDF4':'var(--surface2)'};border-radius:8px;margin-bottom:6px;border:1px solid ${probAct?'#FECACA':okAct?'#BBF7D0':'var(--border)'}">
       <div style="flex:1">
         <div style="font-size:13px;font-weight:600;color:${probAct?'#991B1B':okAct?'#166534':'#374151'}">${item.txt}</div>
-        <div style="font-size:11px;color:#94A3B8;margin-top:1px">${item.sub}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:1px">${item.sub}</div>
       </div>
       <div style="display:flex;gap:5px">
         <button onclick="ckToggle('${item.id}','ok')"
-          style="padding:5px 11px;border-radius:6px;border:none;font-size:11px;font-weight:700;cursor:pointer;background:${okAct?'#16A34A':'#E5E7EB'};color:${okAct?'#fff':'#6B7280'}">OK</button>
+          style="padding:5px 11px;border-radius:6px;border:none;font-size:11px;font-weight:700;cursor:pointer;background:${okAct?'var(--green)':'#E5E7EB'};color:${okAct?'#fff':'#6B7280'}">OK</button>
         <button onclick="ckToggle('${item.id}','prob')"
-          style="padding:5px 11px;border-radius:6px;border:none;font-size:11px;font-weight:700;cursor:pointer;background:${probAct?'#DC2626':'#E5E7EB'};color:${probAct?'#fff':'#6B7280'}">PROB.</button>
+          style="padding:5px 11px;border-radius:6px;border:none;font-size:11px;font-weight:700;cursor:pointer;background:${probAct?'var(--red)':'#E5E7EB'};color:${probAct?'#fff':'#6B7280'}">PROB.</button>
       </div>
     </div>`;
   }).join('');
@@ -2107,17 +2107,17 @@ function ckRenderHist() {
   if (!el) return;
   const hist = JSON.parse(localStorage.getItem(_ckHistKey()) || '[]');
   if (!hist.length) {
-    el.innerHTML = '<div style="padding:16px;text-align:center;font-size:13px;color:#94A3B8;background:#F8FAFC;border-radius:8px">Nenhuma ficha salva</div>';
+    el.innerHTML = '<div style="padding:16px;text-align:center;font-size:13px;color:var(--text3);background:var(--surface2);border-radius:8px">Nenhuma ficha salva</div>';
     return;
   }
   el.innerHTML = hist.map(h => `
-    <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:#F8FAFC;border-radius:8px;margin-bottom:6px;border:1px solid #E2E8F0">
-      <div style="width:8px;height:8px;border-radius:50%;margin-top:4px;flex-shrink:0;background:${h.probs?.length?'#DC2626':'#16A34A'}"></div>
+    <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:var(--surface2);border-radius:8px;margin-bottom:6px;border:1px solid var(--border)">
+      <div style="width:8px;height:8px;border-radius:50%;margin-top:4px;flex-shrink:0;background:${h.probs?.length?'var(--red)':'var(--green)'}"></div>
       <div style="flex:1;font-size:12px;color:#64748B;line-height:1.5">
-        <span style="font-weight:700;color:#0F172A">Celular #${h.cel} — ${h.turno}</span> · ${h.ts}<br>
+        <span style="font-weight:700;color:var(--text)">Celular #${h.cel} — ${h.turno}</span> · ${h.ts}<br>
         Recebido por: ${h.recebeu}
-        ${h.probs?.length ? `<div style="margin-top:3px"><span style="background:#FEE2E2;color:#991B1B;border-radius:4px;padding:1px 7px;font-size:11px;font-weight:700">⚠ ${h.probs.join(' · ')}</span></div>` : ''}
-        ${h.obs ? `<div style="color:#94A3B8;font-size:11px;margin-top:2px">${h.obs}</div>` : ''}
+        ${h.probs?.length ? `<div style="margin-top:3px"><span style="background:#FEE2E2;color:#991B1B;border-radius:4px;padding:1px 7px;font-size:11px;font-weight:700"><i class="ti ti-alert-triangle" aria-hidden="true"></i> ${h.probs.join(' · ')}</span></div>` : ''}
+        ${h.obs ? `<div style="color:var(--text3);font-size:11px;margin-top:2px">${h.obs}</div>` : ''}
       </div>
     </div>`).join('');
 }
