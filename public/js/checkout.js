@@ -482,7 +482,7 @@ async function buscarCaixa() {
   try {
     const res  = await fetch(`${API}/checkout/caixa/${encodeURIComponent(num)}`, { credentials:'include' });
     const rows = await res.json();
-    if (tit) tit.textContent = `PEDIDO #${num}`;
+    if (tit) tit.textContent = `Pedido #${num}`;
     if (!rows.length) {
       if (cont) cont.innerHTML = '<div style="color:var(--text3);padding:20px;text-align:center;font-size:14px">Pedido não encontrado ou ainda não está aguardando checkout.</div>';
       return;

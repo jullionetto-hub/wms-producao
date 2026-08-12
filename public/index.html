@@ -459,7 +459,7 @@
         <div class="pg-title">Separação</div>
         <!-- Filtro de data + Contadores (mantidos para carregarContadoresSep()) -->
         <div class="card" style="margin-bottom:14px">
-          <div class="card-hd">PERÍODO</div>
+          <div class="card-hd">Período</div>
           <div class="date-filter-bar" style="margin-bottom:14px">
             <div class="fg"><label>DE</label><input type="date" id="sep-ini" onchange="carregarContadoresSep()"/></div>
             <div class="fg"><label>ATÉ</label><input type="date" id="sep-fim" onchange="carregarContadoresSep()"/></div>
@@ -473,16 +473,16 @@
         </div>
         <!-- Tabs desktop separação -->
         <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap" id="sep-desk-tabbar">
-          <button class="rel-turno-btn ativo" id="dstab-fila"     onclick="mudarTabSepDesk('fila')">FILA <span id="d-sep-fila-badge" style="display:none;background:#2563EB;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:3px">0</span></button>
-          <button class="rel-turno-btn"       id="dstab-separar"  onclick="mudarTabSepDesk('separar')">SEPARAR</button>
-          <button class="rel-turno-btn"       id="dstab-avisos"   onclick="mudarTabSepDesk('avisos')">AVISOS <span id="d-sep-avisos-badge" style="display:none;background:#f59e0b;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:3px">0</span></button>
-          <button class="rel-turno-btn"       id="dstab-aguardando" onclick="mudarTabSepDesk('aguardando')">AGUARD. <span id="d-sep-aguard-badge" style="display:none;background:#f59e0b;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:3px">0</span></button>
+          <button class="rel-turno-btn ativo" id="dstab-fila"     onclick="mudarTabSepDesk('fila')">Fila <span id="d-sep-fila-badge" style="display:none;background:var(--accent);color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:3px">0</span></button>
+          <button class="rel-turno-btn"       id="dstab-separar"  onclick="mudarTabSepDesk('separar')">Separar</button>
+          <button class="rel-turno-btn"       id="dstab-avisos"   onclick="mudarTabSepDesk('avisos')">Avisos <span id="d-sep-avisos-badge" style="display:none;background:#f59e0b;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:3px">0</span></button>
+          <button class="rel-turno-btn"       id="dstab-aguardando" onclick="mudarTabSepDesk('aguardando')">Aguard. <span id="d-sep-aguard-badge" style="display:none;background:#f59e0b;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:3px">0</span></button>
         </div>
 
         <!-- Tab FILA -->
         <div id="d-sep-tab-fila">
           <div class="card">
-            <div class="card-hd">FILA DE PEDIDOS
+            <div class="card-hd">Fila de pedidos
               <div style="display:flex;gap:8px;align-items:center">
                 <span id="badge-fila-d" style="font-size:11px;color:var(--text3);font-weight:600"></span>
                 <button class="btn btn-outline btn-sm" onclick="carregarFilaDesk()">↺</button>
@@ -498,7 +498,7 @@
         <div id="d-sep-tab-separar" style="display:none">
           <!-- Leitura -->
           <div class="card" style="margin-bottom:13px">
-            <div class="card-hd">LEITURA DE PEDIDO</div>
+            <div class="card-hd">Leitura de pedido</div>
             <div class="bip-wrap">
               <input type="text" class="bip-input" id="input-pedido" placeholder="Bipe ou digite o número do pedido..." autocomplete="off" inputmode="numeric"/>
               <button class="btn-bip" onclick="confirmarPedido()">▶</button>
@@ -506,14 +506,14 @@
             <div class="status-pedido" id="status-atual"></div>
             <!-- Campo caixa desktop -->
             <div id="cl-caixa-wrap" style="display:none;margin-top:10px;padding:12px;background:#FFF8F8;border:1.5px solid #FECACA;border-radius:9px">
-              <div style="font-size:11px;font-weight:800;color:#B91C1C;letter-spacing:1px;margin-bottom:8px;display:flex;align-items:center;gap:6px"><span style="width:6px;height:6px;background:#DC2626;border-radius:50%;flex-shrink:0"></span>VINCULAR CAIXA ANTES DE INICIAR</div>
+              <div style="font-size:11px;font-weight:800;color:#B91C1C;letter-spacing:1px;margin-bottom:8px;display:flex;align-items:center;gap:6px"><span style="width:6px;height:6px;background:var(--red);border-radius:50%;flex-shrink:0"></span>VINCULAR CAIXA ANTES DE INICIAR</div>
               <input type="text" class="bip-input" id="cl-input-caixa"
                 placeholder="Número da caixa..."
                 autocomplete="off" inputmode="numeric"
-                style="width:100%;font-size:20px;letter-spacing:3px;border-color:#DC2626;border-width:2px;margin-bottom:8px;box-sizing:border-box"/>
+                style="width:100%;font-size:20px;letter-spacing:3px;border-color:var(--red);border-width:2px;margin-bottom:8px;box-sizing:border-box"/>
               <div style="display:flex;gap:8px">
-                <button onclick="escanearQrCaixa(false)" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:#1D4ED8;color:#fff;border:none;border-radius:8px;padding:10px 0;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.5px">Escanear QR</button>
-                <button onclick="vincularCaixaDesktop()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:#DC2626;color:#fff;border:none;border-radius:8px;padding:10px 0;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.5px">Vincular</button>
+                <button onclick="escanearQrCaixa(false)" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:var(--accent2);color:#fff;border:none;border-radius:8px;padding:10px 0;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.5px">Escanear QR</button>
+                <button onclick="vincularCaixaDesktop()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:var(--red);color:#fff;border:none;border-radius:8px;padding:10px 0;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.5px">Vincular</button>
               </div>
               <div id="cl-caixa-status" style="font-size:12px;color:var(--text3);margin-top:6px;padding:6px 10px;background:var(--surface2);border-radius:6px;display:none"></div>
             </div>
@@ -527,7 +527,7 @@
             <div class="cl-footer">
               <button class="btn-acao concluir" id="btn-concluir" onclick="concluirPedido()" disabled>CONCLUIR</button>
               <button class="btn-acao aguardar" id="btn-aguardar" style="display:none">AGUARDANDO</button>
-              <button class="btn-acao" id="btn-concluir-falta" onclick="concluirComFaltaDesk()" style="display:none;background:#f97316;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;padding:12px;width:100%;margin-top:6px">CONCLUIR COM FALTA</button>
+              <button class="btn-acao" id="btn-concluir-falta" onclick="concluirComFaltaDesk()" style="display:none;background:var(--orange);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;padding:12px;width:100%;margin-top:6px">CONCLUIR COM FALTA</button>
             </div>
           </div>
         </div>
@@ -535,7 +535,7 @@
         <!-- Tab AVISOS -->
         <div id="d-sep-tab-avisos" style="display:none">
           <div class="card">
-            <div class="card-hd">AVISOS DO REPOSITOR
+            <div class="card-hd">Avisos do repositor
               <button class="btn btn-outline btn-sm" onclick="carregarAvisosSeparador()">↺</button>
             </div>
             <div id="d-sep-avisos" style="padding:4px 0">
@@ -547,7 +547,7 @@
         <!-- Tab AGUARDANDO -->
         <div id="d-sep-tab-aguardando" style="display:none">
           <div class="card">
-            <div class="card-hd">AGUARDANDO
+            <div class="card-hd">Aguardando
               <span style="font-size:11px;color:var(--text3);font-weight:600;margin-left:6px"><span id="d-sep-cnt-aguardando">0</span> itens</span>
               <button class="btn btn-outline btn-sm" onclick="carregarAguardandoDesk()">↺</button>
             </div>
@@ -1133,7 +1133,7 @@
 
         <!-- Contadores + Filtros -->
         <div class="card" style="margin-bottom:14px">
-          <div class="card-hd">PERÍODO
+          <div class="card-hd">Período
             <button onclick="exportarEmbalagemExcel()" class="excel-btn">Excel</button>
           </div>
           <div class="date-filter-bar" style="flex-wrap:wrap;gap:10px;margin-bottom:14px">
@@ -1150,15 +1150,15 @@
 
         <!-- Tabs desktop embalagem -->
         <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap" id="emb-desk-tabbar">
-          <button class="rel-turno-btn ativo" id="dembtab-fila"      onclick="mudarTabEmbDesk('fila')">FILA <span id="d-emb-fila-badge" style="display:none;background:#2563EB;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:3px">0</span></button>
-          <button class="rel-turno-btn"       id="dembtab-embalar"   onclick="mudarTabEmbDesk('embalar')">EMBALAR</button>
-          <button class="rel-turno-btn"       id="dembtab-embalados" onclick="mudarTabEmbDesk('embalados')">EMBALADOS</button>
+          <button class="rel-turno-btn ativo" id="dembtab-fila"      onclick="mudarTabEmbDesk('fila')">Fila <span id="d-emb-fila-badge" style="display:none;background:var(--accent);color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:3px">0</span></button>
+          <button class="rel-turno-btn"       id="dembtab-embalar"   onclick="mudarTabEmbDesk('embalar')">Embalar</button>
+          <button class="rel-turno-btn"       id="dembtab-embalados" onclick="mudarTabEmbDesk('embalados')">Embalados</button>
         </div>
 
         <!-- Tab FILA -->
         <div id="d-emb-tab-fila">
           <div class="card">
-            <div class="card-hd">FILA DE EMBALAGEM
+            <div class="card-hd">Fila de embalagem
               <div style="display:flex;gap:8px;align-items:center">
                 <div style="display:flex;gap:10px;max-width:380px">
                   <input type="text" id="d-emb-busca"
@@ -1179,7 +1179,7 @@
         <!-- Tab EMBALAR (scan) -->
         <div id="d-emb-tab-embalar" style="display:none">
           <div class="card">
-            <div class="card-hd">EMBALAR — BUSCAR PEDIDO</div>
+            <div class="card-hd">Embalar — buscar pedido</div>
             <div style="max-width:520px;margin-bottom:14px">
               <input type="text" id="d-emb-embalar-input"
                 placeholder="Digite ou bipe o número do pedido..."
@@ -1187,7 +1187,7 @@
                 autocomplete="off"
                 style="width:100%;padding:11px 16px;border:2px solid #4f46e5;border-radius:10px;font-size:15px;font-weight:700;font-family:'Space Mono',monospace;color:var(--text);background:var(--surface2);outline:none;letter-spacing:1px;box-sizing:border-box;margin-bottom:8px">
               <div style="display:flex;gap:8px">
-                <button onclick="escanearQr('d-emb-embalar-input', buscarEmbalagemDesk)" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:#1D4ED8;color:#fff;border:none;border-radius:8px;padding:10px 0;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.5px">Escanear QR</button>
+                <button onclick="escanearQr('d-emb-embalar-input', buscarEmbalagemDesk)" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:var(--accent2);color:#fff;border:none;border-radius:8px;padding:10px 0;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.5px">Escanear QR</button>
                 <button onclick="buscarEmbalagemDesk()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:#4f46e5;color:#fff;border:none;border-radius:8px;padding:10px 0;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(79,70,229,.3);letter-spacing:.5px">Buscar</button>
               </div>
             </div>
@@ -1204,7 +1204,7 @@
         <!-- Tab EMBALADOS -->
         <div id="d-emb-tab-embalados" style="display:none">
           <div class="card">
-            <div class="card-hd">EMBALADOS
+            <div class="card-hd">Embalados
               <button class="btn btn-outline btn-sm" onclick="carregarEmbalagemEmbaladesDesk()">↺</button>
             </div>
             <div id="d-emb-embalados" style="padding:4px 0">
@@ -1312,7 +1312,7 @@
         <div class="pg-title">Checkout</div>
         <!-- Contadores + filtro de período (mantidos para carregarContadoresCk()) -->
         <div class="card" style="margin-bottom:14px">
-          <div class="card-hd">PERÍODO</div>
+          <div class="card-hd">Período</div>
           <div class="date-filter-bar" style="margin-bottom:14px">
             <div class="fg"><label>DE</label><input type="date" id="ck-ini" onchange="carregarContadoresCk()"/></div>
             <div class="fg"><label>ATÉ</label><input type="date" id="ck-fim" onchange="carregarContadoresCk()"/></div>
@@ -1326,15 +1326,15 @@
         </div>
         <!-- Tabs desktop checkout (3 tabs — fila unificada com scan) -->
         <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap" id="ck-desk-tabbar">
-          <button class="rel-turno-btn ativo" id="dcktab-fila"      onclick="mudarTabCkDesk('fila')">FILA <span id="d-cktab-fila-badge" style="display:none;background:#2563EB;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:3px">0</span></button>
-          <button class="rel-turno-btn"        id="dcktab-feitos"    onclick="mudarTabCkDesk('feitos')">FEITOS <span id="d-ck-feitos-cnt" style="display:none;background:#10b981;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:3px">0</span></button>
-          <button class="rel-turno-btn" id="dcktab-aguardando" onclick="mudarTabCkDesk('aguardando')" style="display:none">AGUARDANDO <span id="d-cktab-aguardando-badge" style="display:none;background:#f97316;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:3px">0</span></button>
+          <button class="rel-turno-btn ativo" id="dcktab-fila"      onclick="mudarTabCkDesk('fila')">Fila <span id="d-cktab-fila-badge" style="display:none;background:var(--accent);color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:3px">0</span></button>
+          <button class="rel-turno-btn"        id="dcktab-feitos"    onclick="mudarTabCkDesk('feitos')">Feitos <span id="d-ck-feitos-cnt" style="display:none;background:#10b981;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:3px">0</span></button>
+          <button class="rel-turno-btn" id="dcktab-aguardando" onclick="mudarTabCkDesk('aguardando')" style="display:none">Aguardando <span id="d-cktab-aguardando-badge" style="display:none;background:var(--orange);color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:3px">0</span></button>
         </div>
 
         <!-- Tab FILA (unificada com scan) -->
         <div id="d-ck-tab-fila">
           <div class="card">
-            <div class="card-hd">ESCANEAR / FILA DE CHECKOUT
+            <div class="card-hd">Escanear / fila de checkout
               <button class="btn btn-outline btn-sm" onclick="carregarFilaCkDesk()">↺</button>
             </div>
             <!-- Scan input (unificado aqui) -->
@@ -1344,11 +1344,11 @@
               onkeydown="if(event.key==='Enter')buscarCaixa()"
               style="width:100%;font-size:20px;letter-spacing:3px;margin-bottom:8px;box-sizing:border-box"/>
             <div style="display:flex;gap:8px;margin-bottom:14px">
-              <button onclick="buscarCaixa()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:#3B82F6;color:#fff;border:none;border-radius:8px;padding:10px 0;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.5px">▶ Buscar Pedido</button>
+              <button onclick="buscarCaixa()" class="btn btn-primary" style="flex:1;padding:10px 0;font-size:13px;font-weight:700;letter-spacing:.5px"><i class="ti ti-player-play-filled" aria-hidden="true"></i>Buscar Pedido</button>
             </div>
             <!-- Resultado da busca (aparece aqui, na mesma tela) -->
             <div id="ck-resultado" style="display:none;margin-bottom:16px;border-top:1px solid var(--border);padding-top:14px">
-              <div class="card-hd" id="ck-res-titulo" style="margin-bottom:8px">RESULTADO</div>
+              <div class="card-hd" id="ck-res-titulo" style="margin-bottom:8px">Resultado</div>
               <div id="ck-res-conteudo"></div>
             </div>
             <!-- Lista da fila -->
@@ -1364,7 +1364,7 @@
         <!-- Tab FEITOS -->
         <div id="d-ck-tab-feitos" style="display:none">
           <div class="card">
-            <div class="card-hd">FEITOS HOJE
+            <div class="card-hd">Feitos hoje
               <div style="display:flex;gap:8px;align-items:center">
                 <span id="d-ck-feitos-cnt-label" style="font-size:12px;font-weight:700;color:var(--green)">0 feitos</span>
                 <button class="btn btn-outline btn-sm" onclick="carregarFeitosCkDesk()">↺</button>
@@ -1379,7 +1379,7 @@
         <!-- Tab AGUARDANDO -->
         <div id="d-ck-tab-aguardando" style="display:none">
           <div class="card">
-            <div class="card-hd">AGUARDANDO ITEM
+            <div class="card-hd">Aguardando item
               <button class="btn btn-outline btn-sm" onclick="carregarAguardandoCkDesk()">↺</button>
             </div>
             <div id="d-ck-aguardando" style="padding:4px 0">
