@@ -19,6 +19,22 @@
   --sh-lg:     0 8px 32px rgba(15,23,42,.10);
   --r:         12px;
   --r-sm:      8px;
+
+  /* Design system — Fase 1: tokens que faltavam, mesma paleta já usada
+     informalmente pelo sistema (não são cores novas, só ganharam nome) */
+  --info:      #0EA5E9;
+  --orange:    #F97316;
+  --font-sans: 'DM Sans', sans-serif;
+
+  /* Sidebar — hoje é hex fixo espalhado no CSS; namespace próprio pra
+     poder ajustar o tema da sidebar sem mexer nos tokens de conteúdo */
+  --sidebar-bg:          #0F172A;
+  --sidebar-border:      #1E293B;
+  --sidebar-text:        #94A3B8;
+  --sidebar-text-hover:  #E2E8F0;
+  --sidebar-group:       #475569;
+  --sidebar-active-bg:   rgba(59,130,246,.15);
+  --sidebar-active-text: #60A5FA;
 }
 
 /* ══════════════════════════════════════════
