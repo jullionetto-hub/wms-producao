@@ -193,19 +193,19 @@ function _renderizarListaLote() {
         </div>
         ${!todosProc ? `<div style="display:flex;gap:6px;margin-top:8px;margin-left:36px">
           <button onclick="verificarGrupoLote('${ids}')"
-            style="flex:1;background:#dcfce7;border:1.5px solid #86efac;color:#15803d;font-size:12px;font-weight:700;padding:7px 0;border-radius:8px;cursor:pointer">
+            style="flex:1;background:rgba(87,185,129,.15);border:1.5px solid rgba(87,185,129,.4);color:var(--green);font-size:12px;font-weight:700;padding:7px 0;border-radius:8px;cursor:pointer">
             ✓ Encontrei tudo
           </button>
           <button onclick="event.stopPropagation();parcialGrupoLote('${ids}',${totalQty})"
-            style="flex:1;background:#eff6ff;border:1.5px solid #93c5fd;color:#4338CA;font-size:12px;font-weight:700;padding:7px 0;border-radius:8px;cursor:pointer">
+            style="flex:1;background:rgba(79,70,229,.15);border:1.5px solid rgba(79,70,229,.4);color:#818CF8;font-size:12px;font-weight:700;padding:7px 0;border-radius:8px;cursor:pointer">
             ~ Parcial
           </button>
           <button onclick="event.stopPropagation();faltaGrupoLote('${ids}',${totalQty})"
-            style="flex:1;background:#fef3c7;border:1.5px solid #f59e0b;color:#92400e;font-size:12px;font-weight:700;padding:7px 0;border-radius:8px;cursor:pointer">
+            style="flex:1;background:rgba(224,168,62,.15);border:1.5px solid rgba(224,168,62,.4);color:var(--amber);font-size:12px;font-weight:700;padding:7px 0;border-radius:8px;cursor:pointer">
             ✗ Falta
           </button>
         </div>` : ''}
-        ${temFalta ? `<div style="margin-top:6px;margin-left:36px;background:#fef3c7;border:1px solid #f59e0b;border-radius:6px;padding:4px 10px;font-size:10px;color:#92400e;font-weight:600">
+        ${temFalta ? `<div style="margin-top:6px;margin-left:36px;background:rgba(224,168,62,.15);border:1px solid rgba(224,168,62,.4);border-radius:6px;padding:4px 10px;font-size:10px;color:var(--amber);font-weight:600">
           ⏳ Aguardando repositor
         </div>` : ''}
       </div>`;
@@ -480,9 +480,9 @@ async function carregarFilaMobile() {
       const temReposto = qtdReposto > 0;
 
       // Hierarquia: supervisor (roxo) > falta (âmbar) > reposto (verde) > drive > normal
-      const bordColor = temSup ? '#a78bfa' : temFalta ? '#F59E0B' : temReposto ? '#16a34a' : isDrive ? '#FCA5A5' : 'var(--border)';
-      const bgColor   = temSup ? '#f5f3ff' : temFalta ? '#FFFBEB' : temReposto ? '#f0fdf4' : isDrive ? '#FFF5F5' : 'var(--surface)';
-      const numColor  = isDrive ? '#DC2626' : temSup ? '#7c3aed' : temFalta ? '#92400E' : temReposto ? '#15803d' : 'var(--accent)';
+      const bordColor = temSup ? 'var(--indigo)' : temFalta ? 'var(--amber)' : temReposto ? 'var(--green)' : isDrive ? 'var(--red)' : 'var(--border)';
+      const bgColor   = temSup ? 'rgba(139,92,246,.1)' : temFalta ? 'rgba(224,168,62,.1)' : temReposto ? 'rgba(87,185,129,.1)' : isDrive ? 'rgba(201,82,79,.1)' : 'var(--surface)';
+      const numColor  = isDrive ? 'var(--red)' : temSup ? 'var(--indigo)' : temFalta ? 'var(--amber)' : temReposto ? 'var(--green)' : 'var(--accent)';
       const pillTxt   = temSup ? 'supervisor' : temFalta ? 'aguard. repositor' : temReposto ? 'pode continuar!' : isDrive ? 'drive thru' : 'aguardando sep';
       const pillCls   = temSup ? 'separando' : temReposto ? 'separando' : 'pendente';
       const bordWidth = (temSup || temFalta || temReposto) ? '2.5px' : '1.5px';
@@ -492,7 +492,7 @@ async function carregarFilaMobile() {
           <div style="font-size:20px;font-weight:800;color:${numColor};font-family:'Space Mono',monospace">#${p.numero_pedido}</div>
           <div style="display:flex;gap:6px;align-items:center">
             ${badgeTempoSep(p.total_itens||p.itens, p.pontuacao)}
-            <span class="pill ${pillCls}" style="font-size:10px;${temReposto?'background:#dcfce7;color:#15803d;border-color:#86efac':''}">${pillTxt}</span>
+            <span class="pill ${pillCls}" style="font-size:10px;${temReposto?'background:rgba(87,185,129,.15);color:var(--green);border-color:rgba(87,185,129,.4)':''}">${pillTxt}</span>
           </div>
         </div>
         <div style="display:flex;gap:10px;font-size:12px;color:var(--text2);flex-wrap:wrap;margin-bottom:4px">
@@ -501,15 +501,15 @@ async function carregarFilaMobile() {
           ${p.cliente ? `<span>${p.cliente}</span>` : ''}
           ${p.transportadora ? `<span>${p.transportadora}</span>` : ''}
         </div>
-        ${temSup ? `<div style="display:flex;align-items:center;gap:5px;background:#ede9fe;border:1px solid #c4b5fd;border-radius:6px;padding:5px 9px;margin-bottom:5px">
-          <span style="font-size:11px;font-weight:700;color:#5b21b6">${qtdSup} item${qtdSup>1?'s':''} aguardando supervisor</span>
+        ${temSup ? `<div style="display:flex;align-items:center;gap:5px;background:rgba(139,92,246,.15);border:1px solid rgba(139,92,246,.4);border-radius:6px;padding:5px 9px;margin-bottom:5px">
+          <span style="font-size:11px;font-weight:700;color:var(--indigo)">${qtdSup} item${qtdSup>1?'s':''} aguardando supervisor</span>
         </div>` : ''}
-        ${temFalta ? `<div style="display:flex;align-items:center;gap:5px;background:#FEF3C7;border:1px solid #F59E0B;border-radius:6px;padding:5px 9px;margin-bottom:5px">
-          <span style="font-size:11px;font-weight:700;color:#92400E">⏳ ${qtdFalta} item${qtdFalta>1?'s':''} aguardando repositor — não pegue ainda!</span>
+        ${temFalta ? `<div style="display:flex;align-items:center;gap:5px;background:rgba(224,168,62,.15);border:1px solid rgba(224,168,62,.4);border-radius:6px;padding:5px 9px;margin-bottom:5px">
+          <span style="font-size:11px;font-weight:700;color:var(--amber)">⏳ ${qtdFalta} item${qtdFalta>1?'s':''} aguardando repositor — não pegue ainda!</span>
         </div>` : ''}
-        ${temReposto ? `<div style="display:flex;align-items:center;gap:6px;background:#dcfce7;border:1px solid #86efac;border-radius:6px;padding:6px 10px;margin-bottom:5px">
+        ${temReposto ? `<div style="display:flex;align-items:center;gap:6px;background:rgba(87,185,129,.15);border:1px solid rgba(87,185,129,.4);border-radius:6px;padding:6px 10px;margin-bottom:5px">
 
-          <span style="font-size:11px;font-weight:700;color:#15803d">${qtdReposto} item${qtdReposto>1?'s':''} reposto${qtdReposto>1?'s':''} pelo repositor — volte para este pedido!</span>
+          <span style="font-size:11px;font-weight:700;color:var(--green)">${qtdReposto} item${qtdReposto>1?'s':''} reposto${qtdReposto>1?'s':''} pelo repositor — volte para este pedido!</span>
         </div>` : ''}
         <button class="btn btn-primary btn-sm" style="width:100%;margin-top:8px;padding:10px;font-size:14px;font-weight:700${temReposto?';background:#16a34a':''}"
           onclick="selecionarPedidoFilaMobile('${p.numero_pedido}')">
@@ -573,12 +573,12 @@ async function carregarAguardandoMobile() {
     el.innerHTML = Object.entries(porPedido).map(([ped, itens]) => {
       const temProtocolo = itens.some(a => a.status === 'protocolo');
       const borderColor  = temProtocolo ? '#8B5CF6' : '#f59e0b';
-      const bgColor      = temProtocolo ? '#f5f3ff' : '#fffbeb';
+      const bgColor      = temProtocolo ? 'rgba(139,92,246,.1)' : 'rgba(224,168,62,.1)';
       const labelTxt     = temProtocolo ? 'PROTOCOLO' : 'NÃO ENCONTRADO';
       const labelColor   = temProtocolo ? '#7c3aed'   : '#d97706';
       return `<div style="background:${bgColor};border:1px solid ${borderColor}44;border-left:3px solid ${borderColor};border-radius:10px;padding:14px;margin-bottom:10px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-          <span style="font-family:'Space Mono',monospace;font-size:15px;font-weight:700;color:#0f172a">Pedido #${ped}</span>
+          <span style="font-family:'Space Mono',monospace;font-size:15px;font-weight:700;color:var(--text)">Pedido #${ped}</span>
           <span style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:12px;background:${borderColor}22;color:${labelColor};border:1px solid ${borderColor}66">${labelTxt}</span>
         </div>
         ${itens.map(a => `
@@ -687,9 +687,9 @@ async function carregarFilaDesk() {
       const temReposto = qtdReposto > 0;
 
       // Hierarquia: supervisor (roxo) > falta (âmbar) > reposto (verde) > drive > normal
-      const bordColor = temSup ? '#ddd6fe' : temFalta ? '#FDE68A' : temReposto ? '#86efac' : isDrive ? '#FECACA' : 'var(--border)';
-      const bgColor   = temSup ? '#f5f3ff' : temFalta ? '#fffbeb' : temReposto ? '#f0fdf4' : 'var(--surface)';
-      const numColor  = isDrive ? '#DC2626' : temSup ? '#7c3aed' : temReposto ? '#15803d' : 'var(--accent)';
+      const bordColor = temSup ? 'var(--indigo)' : temFalta ? 'var(--amber)' : temReposto ? 'var(--green)' : isDrive ? 'var(--red)' : 'var(--border)';
+      const bgColor   = temSup ? 'rgba(139,92,246,.1)' : temFalta ? 'rgba(224,168,62,.1)' : temReposto ? 'rgba(87,185,129,.1)' : 'var(--surface)';
+      const numColor  = isDrive ? 'var(--red)' : temSup ? 'var(--indigo)' : temReposto ? 'var(--green)' : 'var(--accent)';
       const pillTxt   = temSup ? 'supervisor' : temFalta ? 'repositor' : temReposto ? 'pode continuar!' : isDrive ? 'drive thru' : 'aguardando sep';
       const pillCls   = temSup ? 'separando' : temReposto ? 'separando' : 'pendente';
       const bordWidth = (temSup || temFalta || temReposto) ? '2px' : '1.5px';
@@ -697,7 +697,7 @@ async function carregarFilaDesk() {
       return _filaDragWrap(p.id, `<div style="border:${bordWidth} solid ${bordColor};border-radius:12px;padding:12px 14px;margin-bottom:8px;background:${bgColor}">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
           <div style="font-size:20px;font-weight:800;color:${numColor};font-family:'Space Mono',monospace">#${p.numero_pedido}</div>
-          <span class="pill ${pillCls}" style="font-size:10px;${temReposto?'background:#dcfce7;color:#15803d;border-color:#86efac':''}">${pillTxt}</span>
+          <span class="pill ${pillCls}" style="font-size:10px;${temReposto?'background:rgba(87,185,129,.15);color:var(--green);border-color:rgba(87,185,129,.4)':''}">${pillTxt}</span>
         </div>
         <div style="display:flex;gap:10px;font-size:12px;color:var(--text2);flex-wrap:wrap;margin-bottom:4px">
           <span><b style="color:var(--text)">${p.total_itens||p.itens||0} itens</b></span>
@@ -705,15 +705,15 @@ async function carregarFilaDesk() {
           ${p.cliente ? `<span>${p.cliente}</span>` : ''}
           ${p.transportadora ? `<span>${p.transportadora}</span>` : ''}
         </div>
-        ${temSup ? `<div style="display:flex;align-items:center;gap:5px;background:#f5f3ff;border:1px solid #ddd6fe;border-radius:6px;padding:5px 9px;margin-bottom:5px">
-          <span style="font-size:11px;font-weight:600;color:#5b21b6">${qtdSup} item${qtdSup>1?'s':''} aguardando supervisor</span>
+        ${temSup ? `<div style="display:flex;align-items:center;gap:5px;background:rgba(139,92,246,.12);border:1px solid rgba(139,92,246,.35);border-radius:6px;padding:5px 9px;margin-bottom:5px">
+          <span style="font-size:11px;font-weight:600;color:var(--indigo)">${qtdSup} item${qtdSup>1?'s':''} aguardando supervisor</span>
         </div>` : ''}
-        ${temFalta ? `<div style="display:flex;align-items:center;gap:5px;background:#FEF3C7;border:1px solid #FDE68A;border-radius:6px;padding:5px 9px;margin-bottom:5px">
-          <span style="font-size:11px;font-weight:600;color:#92400E">${qtdFalta} item${qtdFalta>1?'s':''} aguardando repositor</span>
+        ${temFalta ? `<div style="display:flex;align-items:center;gap:5px;background:rgba(224,168,62,.12);border:1px solid rgba(224,168,62,.35);border-radius:6px;padding:5px 9px;margin-bottom:5px">
+          <span style="font-size:11px;font-weight:600;color:var(--amber)">${qtdFalta} item${qtdFalta>1?'s':''} aguardando repositor</span>
         </div>` : ''}
-        ${temReposto ? `<div style="display:flex;align-items:center;gap:6px;background:#dcfce7;border:1px solid #86efac;border-radius:6px;padding:6px 10px;margin-bottom:5px">
+        ${temReposto ? `<div style="display:flex;align-items:center;gap:6px;background:rgba(87,185,129,.15);border:1px solid rgba(87,185,129,.4);border-radius:6px;padding:6px 10px;margin-bottom:5px">
 
-          <span style="font-size:11px;font-weight:700;color:#15803d">${qtdReposto} item${qtdReposto>1?'s':''} reposto${qtdReposto>1?'s':''} pelo repositor — volte para este pedido!</span>
+          <span style="font-size:11px;font-weight:700;color:var(--green)">${qtdReposto} item${qtdReposto>1?'s':''} reposto${qtdReposto>1?'s':''} pelo repositor — volte para este pedido!</span>
         </div>` : ''}
         <button class="btn btn-primary btn-sm" style="width:100%;margin-top:8px;padding:10px;font-size:14px;font-weight:700${temReposto?';background:#16a34a':''}"
           onclick="selecionarPedidoFilaDesk('${p.numero_pedido}')">
@@ -933,10 +933,10 @@ async function _confirmarPedidoCore(num, inputId, statusId, clWrapId, fnChecklis
       mostrarCampoCaixa(true);
       if (clWrap) clWrap.style.display = 'none';
       ph.style.display = 'block';
-      ph.innerHTML = `<div style="background:var(--surface);border:1.5px solid #FECACA;border-radius:10px;text-align:center;padding:28px 20px;">
-        <div style="width:44px;height:44px;border-radius:50%;background:#FEF2F2;border:1.5px solid #FECACA;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;display:none">
-        <div style="font-size:13px;font-weight:700;color:#B91C1C;margin-bottom:4px;">Vincule a caixa para iniciar</div>
-        <div style="font-size:11px;color:#94A3B8;">A lista de itens só aparece após vincular o número da caixa</div>
+      ph.innerHTML = `<div style="background:var(--surface);border:1.5px solid rgba(201,82,79,.4);border-radius:10px;text-align:center;padding:28px 20px;">
+        <div style="width:44px;height:44px;border-radius:50%;background:rgba(201,82,79,.15);border:1.5px solid rgba(201,82,79,.4);display:flex;align-items:center;justify-content:center;margin:0 auto 10px;display:none">
+        <div style="font-size:13px;font-weight:700;color:var(--red);margin-bottom:4px;">Vincule a caixa para iniciar</div>
+        <div style="font-size:11px;color:var(--text3);">A lista de itens só aparece após vincular o número da caixa</div>
       </div>`;
     } else {
       // Caixa desabilitada — libera checklist direto
@@ -1128,9 +1128,9 @@ function renderChecklist(prefix) {
         bc.style.display='block';
         bc.disabled=true;
         bc.textContent=`AGUARDANDO SUPERVISOR (${qtdBloq})`;
-        bc.style.background='#f5f3ff';
-        bc.style.color='#7c3aed';
-        bc.style.border='2px solid #ddd6fe';
+        bc.style.background='rgba(139,92,246,.15)';
+        bc.style.color='var(--indigo)';
+        bc.style.border='2px solid rgba(139,92,246,.4)';
         bc.style.cursor='not-allowed';
       }
       if(ba) ba.style.display='none';
@@ -1206,8 +1206,8 @@ function renderChecklist(prefix) {
       </div>` : '';
 
       // Estado visual do card
-      const cardBg = item.status==='encontrado'?'#F8FFFE':item.status==='falta'?'#FFF8F8':item.status==='parcial'?'#FFFCF0':'var(--surface)';
-      const cardBord = item.status==='encontrado'?'#C6F6D5':item.status==='falta'?'#FED7D7':item.status==='parcial'?'#FEF08A':'var(--border)';
+      const cardBg = item.status==='encontrado'?'rgba(87,185,129,.08)':item.status==='falta'?'rgba(201,82,79,.08)':item.status==='parcial'?'rgba(224,168,62,.08)':'var(--surface)';
+      const cardBord = item.status==='encontrado'?'rgba(87,185,129,.4)':item.status==='falta'?'rgba(201,82,79,.4)':item.status==='parcial'?'rgba(224,168,62,.4)':'var(--border)';
       const cardAccent = item.status==='encontrado'?'var(--green)':item.status==='falta'?'var(--red)':item.status==='parcial'?'var(--amber)':'var(--border)';
       const statusLabel = item.status==='encontrado'?'COLETADO':item.status==='falta'?'FALTA':item.status==='parcial'?'PARCIAL':'PENDENTE';
       const avisoStatus = item.aviso_status||'';
@@ -1225,12 +1225,12 @@ function renderChecklist(prefix) {
           </div>
         </div>
         <!-- Avisos repositor -->
-        ${item.status==='falta'?`<div style="font-size:11px;font-weight:600;color:var(--red);margin-bottom:8px;padding:5px 8px;background:#FEF2F2;border-radius:5px">Repositor notificado — aguardando reposição</div>`:``}
-        ${item.status==='parcial'?`<div style="font-size:11px;font-weight:600;color:var(--amber);margin-bottom:8px;padding:5px 8px;background:#FFFBEB;border-radius:5px">${item.obs||'Parcial'} — repositor notificado</div>`:``}
-        ${(item.status==='falta'||item.status==='parcial')&&avisoStatus==='subiu'&&(item.aviso_qtd_encontrada>0)&&(item.aviso_qtd_encontrada<(item.quantidade||1))?`<div style="font-size:11px;font-weight:700;color:#c2410c;margin-bottom:8px;padding:6px 8px;background:#fff7ed;border:1px solid #fb923c;border-radius:5px">⬆️ Repositor enviou <strong>${item.aviso_qtd_encontrada}/${item.quantidade||1}</strong> unidades — confirme a quantidade ao coletar</div>`:``}
-        ${(item.status==='falta'||item.status==='parcial')&&avisoStatus==='subiu'&&(!(item.aviso_qtd_encontrada>0)||item.aviso_qtd_encontrada>=(item.quantidade||1))?`<div style="font-size:11px;font-weight:600;color:#0369a1;margin-bottom:8px;padding:5px 8px;background:#e0f2fe;border-radius:5px">⬆️ Repositor enviou o item — verifique na colmeia</div>`:``}
-        ${(item.status==='falta'||item.status==='parcial')&&avisoStatus==='reposto'?`<div style="font-size:11px;font-weight:600;color:var(--green);margin-bottom:8px;padding:5px 8px;background:#F0FDF4;border-radius:5px">Repositor confirmou reposição</div>`:``}
-        ${(item.status==='falta'||item.status==='parcial')&&avisoStatus==='nao_encontrado'?`<div style="font-size:11px;font-weight:600;color:#7c3aed;margin-bottom:8px;padding:5px 8px;background:#f5f3ff;border-radius:5px">Não localizado — aguardando supervisor liberar</div>`:``}
+        ${item.status==='falta'?`<div style="font-size:11px;font-weight:600;color:var(--red);margin-bottom:8px;padding:5px 8px;background:rgba(201,82,79,.12);border-radius:5px">Repositor notificado — aguardando reposição</div>`:``}
+        ${item.status==='parcial'?`<div style="font-size:11px;font-weight:600;color:var(--amber);margin-bottom:8px;padding:5px 8px;background:rgba(224,168,62,.12);border-radius:5px">${item.obs||'Parcial'} — repositor notificado</div>`:``}
+        ${(item.status==='falta'||item.status==='parcial')&&avisoStatus==='subiu'&&(item.aviso_qtd_encontrada>0)&&(item.aviso_qtd_encontrada<(item.quantidade||1))?`<div style="font-size:11px;font-weight:700;color:var(--orange);margin-bottom:8px;padding:6px 8px;background:rgba(251,146,60,.12);border:1px solid rgba(251,146,60,.4);border-radius:5px">⬆️ Repositor enviou <strong>${item.aviso_qtd_encontrada}/${item.quantidade||1}</strong> unidades — confirme a quantidade ao coletar</div>`:``}
+        ${(item.status==='falta'||item.status==='parcial')&&avisoStatus==='subiu'&&(!(item.aviso_qtd_encontrada>0)||item.aviso_qtd_encontrada>=(item.quantidade||1))?`<div style="font-size:11px;font-weight:600;color:var(--info);margin-bottom:8px;padding:5px 8px;background:rgba(56,189,248,.12);border-radius:5px">⬆️ Repositor enviou o item — verifique na colmeia</div>`:``}
+        ${(item.status==='falta'||item.status==='parcial')&&avisoStatus==='reposto'?`<div style="font-size:11px;font-weight:600;color:var(--green);margin-bottom:8px;padding:5px 8px;background:rgba(87,185,129,.12);border-radius:5px">Repositor confirmou reposição</div>`:``}
+        ${(item.status==='falta'||item.status==='parcial')&&avisoStatus==='nao_encontrado'?`<div style="font-size:11px;font-weight:600;color:var(--indigo);margin-bottom:8px;padding:5px 8px;background:rgba(139,92,246,.12);border-radius:5px">Não localizado — aguardando supervisor liberar</div>`:``}
         ${item.hora_verificado?`<div style="font-size:10px;color:#94A3B8;margin-bottom:8px">Verificado às ${item.hora_verificado}</div>`:''}
         <!-- Campo parcial -->
         <div class="parcial-wrap" id="${prefix}-pw-${item.id}" style="margin-bottom:8px">
@@ -1243,15 +1243,15 @@ function renderChecklist(prefix) {
         <!-- Botões EMBAIXO — layout horizontal de 3 -->
         ${!v?`<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:4px">
           <button onclick="${fnVerif}(${item.id},'encontrado','${prefix}')"
-            style="padding:12px 0;border:1.5px solid #C6F6D5;border-radius:8px;background:#F0FDF4;color:#15803D;font-size:12px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;letter-spacing:.3px">
+            style="padding:12px 0;border:1.5px solid rgba(87,185,129,.4);border-radius:8px;background:rgba(87,185,129,.12);color:var(--green);font-size:12px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;letter-spacing:.3px">
             COLETADO
           </button>
           <button onclick="${fnToggle}(${item.id},'${prefix}')"
-            style="padding:12px 0;border:1.5px solid #FEF08A;border-radius:8px;background:#FFFBEB;color:#92400E;font-size:12px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;letter-spacing:.3px">
+            style="padding:12px 0;border:1.5px solid rgba(224,168,62,.4);border-radius:8px;background:rgba(224,168,62,.12);color:var(--amber);font-size:12px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;letter-spacing:.3px">
             PARCIAL
           </button>
           <button onclick="${fnVerif}(${item.id},'falta','${prefix}')"
-            style="padding:12px 0;border:1.5px solid #FED7D7;border-radius:8px;background:#FEF2F2;color:#B91C1C;font-size:12px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;letter-spacing:.3px">
+            style="padding:12px 0;border:1.5px solid rgba(201,82,79,.4);border-radius:8px;background:rgba(201,82,79,.12);color:var(--red);font-size:12px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;letter-spacing:.3px">
             FALTA
           </button>
         </div>`:`<div style="font-size:11px;color:#94A3B8;text-align:center;padding:6px 0">Item verificado</div>`}
@@ -1263,9 +1263,9 @@ function renderChecklist(prefix) {
 
     // Layout desktop — redesenhado
     const avisoSt = item.aviso_status||'';
-    const dCardBord = item.status==='encontrado'?'#C6F6D5':item.status==='falta'?'#FED7D7':item.status==='parcial'?'#FEF08A':'var(--border)';
+    const dCardBord = item.status==='encontrado'?'rgba(87,185,129,.4)':item.status==='falta'?'rgba(201,82,79,.4)':item.status==='parcial'?'rgba(224,168,62,.4)':'var(--border)';
     const dCardLeft = item.status==='encontrado'?'var(--green)':item.status==='falta'?'var(--red)':item.status==='parcial'?'var(--amber)':'var(--border)';
-    const dCardBg = item.status==='encontrado'?'#FAFFFE':item.status==='falta'?'#FFFAFA':item.status==='parcial'?'#FFFDFA':'var(--surface)';
+    const dCardBg = item.status==='encontrado'?'rgba(87,185,129,.08)':item.status==='falta'?'rgba(201,82,79,.08)':item.status==='parcial'?'rgba(224,168,62,.08)':'var(--surface)';
     return `<div id="${prefix}-ic-${item.id}" style="background:${dCardBg};border:1px solid ${dCardBord};border-left:3px solid ${dCardLeft};border-radius:9px;padding:12px 14px;margin-bottom:7px;display:flex;align-items:center;gap:14px">
       <div style="flex:1;min-width:0">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
@@ -1288,9 +1288,9 @@ function renderChecklist(prefix) {
         </div>
       </div>
       <div style="display:flex;flex-direction:column;gap:5px;flex-shrink:0">
-        <button style="width:80px;padding:8px 0;border:1px solid ${v?'var(--border)':'#C6F6D5'};border-radius:7px;background:${v?'var(--surface2)':'#F0FDF4'};color:${v?'var(--text3)':'#15803D'};font-size:11px;font-weight:700;cursor:${v?'not-allowed':'pointer'};font-family:'DM Sans',sans-serif;letter-spacing:.5px" ${v?'disabled':''} onclick="${fnVerif}(${item.id},'encontrado','${prefix}')">COLETADO</button>
-        <button style="width:80px;padding:8px 0;border:1px solid ${v?'var(--border)':'#FEF08A'};border-radius:7px;background:${v?'var(--surface2)':'#FFFBEB'};color:${v?'var(--text3)':'#92400E'};font-size:11px;font-weight:700;cursor:${v?'not-allowed':'pointer'};font-family:'DM Sans',sans-serif;letter-spacing:.5px" ${v?'disabled':''} onclick="${fnToggle}(${item.id},'${prefix}')">PARCIAL</button>
-        <button style="width:80px;padding:8px 0;border:1px solid ${v?'var(--border)':'#FED7D7'};border-radius:7px;background:${v?'var(--surface2)':'#FEF2F2'};color:${v?'var(--text3)':'#B91C1C'};font-size:11px;font-weight:700;cursor:${v?'not-allowed':'pointer'};font-family:'DM Sans',sans-serif;letter-spacing:.5px" ${v?'disabled':''} onclick="${fnVerif}(${item.id},'falta','${prefix}')">FALTA</button>
+        <button style="width:80px;padding:8px 0;border:1px solid ${v?'var(--border)':'rgba(87,185,129,.4)'};border-radius:7px;background:${v?'var(--surface2)':'rgba(87,185,129,.12)'};color:${v?'var(--text3)':'var(--green)'};font-size:11px;font-weight:700;cursor:${v?'not-allowed':'pointer'};font-family:'DM Sans',sans-serif;letter-spacing:.5px" ${v?'disabled':''} onclick="${fnVerif}(${item.id},'encontrado','${prefix}')">COLETADO</button>
+        <button style="width:80px;padding:8px 0;border:1px solid ${v?'var(--border)':'rgba(224,168,62,.4)'};border-radius:7px;background:${v?'var(--surface2)':'rgba(224,168,62,.12)'};color:${v?'var(--text3)':'var(--amber)'};font-size:11px;font-weight:700;cursor:${v?'not-allowed':'pointer'};font-family:'DM Sans',sans-serif;letter-spacing:.5px" ${v?'disabled':''} onclick="${fnToggle}(${item.id},'${prefix}')">PARCIAL</button>
+        <button style="width:80px;padding:8px 0;border:1px solid ${v?'var(--border)':'rgba(201,82,79,.4)'};border-radius:7px;background:${v?'var(--surface2)':'rgba(201,82,79,.12)'};color:${v?'var(--text3)':'var(--red)'};font-size:11px;font-weight:700;cursor:${v?'not-allowed':'pointer'};font-family:'DM Sans',sans-serif;letter-spacing:.5px" ${v?'disabled':''} onclick="${fnVerif}(${item.id},'falta','${prefix}')">FALTA</button>
       </div>
     </div>`;
   }).join('');
@@ -1381,10 +1381,10 @@ async function vincularCaixaCore(caixa, inputStatusId, isMobile) {
       if (wrap) wrap.style.display = 'none';
       if (ph) {
         ph.style.display = 'block';
-        ph.innerHTML = `<div style="background:var(--surface);border:1.5px solid #FECACA;border-radius:10px;text-align:center;padding:28px 20px;">
-          <div style="width:44px;height:44px;border-radius:50%;background:#FEF2F2;border:1.5px solid #FECACA;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;display:none">
-          <div style="font-size:13px;font-weight:700;color:#B91C1C;margin-bottom:4px;">Caixa indisponível</div>
-          <div style="font-size:11px;color:#94A3B8;">${data.erro}</div>
+        ph.innerHTML = `<div style="background:var(--surface);border:1.5px solid rgba(201,82,79,.4);border-radius:10px;text-align:center;padding:28px 20px;">
+          <div style="width:44px;height:44px;border-radius:50%;background:rgba(201,82,79,.15);border:1.5px solid rgba(201,82,79,.4);display:flex;align-items:center;justify-content:center;margin:0 auto 10px;display:none">
+          <div style="font-size:13px;font-weight:700;color:var(--red);margin-bottom:4px;">Caixa indisponível</div>
+          <div style="font-size:11px;color:var(--text3);">${data.erro}</div>
         </div>`;
       }
       const statusEl = document.getElementById(inputStatusId);
@@ -1449,7 +1449,7 @@ function mostrarCampoCaixa(show, jaVinculada = false) {
     const mHeader = document.getElementById('m-caixa-header');
     const mForm   = document.getElementById('m-caixa-form');
     if (jaVinculada) {
-      if (m) { m.style.background = '#f0fdf4'; m.style.borderColor = '#86efac'; }
+      if (m) { m.style.background = 'rgba(87,185,129,.12)'; m.style.borderColor = 'rgba(87,185,129,.4)'; }
       if (mHeader) {
         mHeader.style.color = '#15803d';
         mHeader.innerHTML = '<span style="width:6px;height:6px;background:#16a34a;border-radius:50%;flex-shrink:0"></span> CAIXA VINCULADA';
@@ -1511,13 +1511,13 @@ async function carregarMeusStats() {
     if (d.perfil === 'separador' && d.separacao) {
       el.innerHTML = `
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding:12px 0">
-          <div style="text-align:center;background:#eff6ff;border-radius:10px;padding:12px 8px">
-            <div style="font-size:26px;font-weight:800;color:#4F46E5">${d.separacao.separados_hoje||0}</div>
-            <div style="font-size:9px;color:#4F46E5;text-transform:uppercase;letter-spacing:1px">Hoje</div>
+          <div style="text-align:center;background:rgba(79,70,229,.12);border-radius:10px;padding:12px 8px">
+            <div style="font-size:26px;font-weight:800;color:var(--accent)">${d.separacao.separados_hoje||0}</div>
+            <div style="font-size:9px;color:var(--accent);text-transform:uppercase;letter-spacing:1px">Hoje</div>
           </div>
-          <div style="text-align:center;background:#f0fdf4;border-radius:10px;padding:12px 8px">
-            <div style="font-size:26px;font-weight:800;color:#16a34a">${d.separacao.total_hoje||0}</div>
-            <div style="font-size:9px;color:#16a34a;text-transform:uppercase;letter-spacing:1px">Recebidos</div>
+          <div style="text-align:center;background:rgba(87,185,129,.12);border-radius:10px;padding:12px 8px">
+            <div style="font-size:26px;font-weight:800;color:var(--green)">${d.separacao.total_hoje||0}</div>
+            <div style="font-size:9px;color:var(--green);text-transform:uppercase;letter-spacing:1px">Recebidos</div>
           </div>
           <div style="text-align:center;background:var(--surface2);border-radius:10px;padding:12px 8px">
             <div style="font-size:26px;font-weight:800;color:var(--text)">${d.separacao.separados_total||0}</div>
@@ -1527,17 +1527,17 @@ async function carregarMeusStats() {
     } else if (d.perfil === 'repositor' && d.reposicao) {
       el.innerHTML = `
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;padding:12px 0">
-          <div style="text-align:center;background:#f0fdf4;border-radius:10px;padding:10px 6px">
-            <div style="font-size:22px;font-weight:800;color:#16a34a">${d.reposicao.resolvidos_hoje||0}</div>
-            <div style="font-size:9px;color:#16a34a;text-transform:uppercase;letter-spacing:.5px">Resolvidas</div>
+          <div style="text-align:center;background:rgba(87,185,129,.12);border-radius:10px;padding:10px 6px">
+            <div style="font-size:22px;font-weight:800;color:var(--green)">${d.reposicao.resolvidos_hoje||0}</div>
+            <div style="font-size:9px;color:var(--green);text-transform:uppercase;letter-spacing:.5px">Resolvidas</div>
           </div>
-          <div style="text-align:center;background:#fef2f2;border-radius:10px;padding:10px 6px">
-            <div style="font-size:22px;font-weight:800;color:#dc2626">${d.reposicao.nao_encontrados_hoje||0}</div>
-            <div style="font-size:9px;color:#dc2626;text-transform:uppercase;letter-spacing:.5px">Nao encon.</div>
+          <div style="text-align:center;background:rgba(201,82,79,.12);border-radius:10px;padding:10px 6px">
+            <div style="font-size:22px;font-weight:800;color:var(--red)">${d.reposicao.nao_encontrados_hoje||0}</div>
+            <div style="font-size:9px;color:var(--red);text-transform:uppercase;letter-spacing:.5px">Nao encon.</div>
           </div>
-          <div style="text-align:center;background:#fefce8;border-radius:10px;padding:10px 6px">
-            <div style="font-size:22px;font-weight:800;color:#ca8a04">${d.reposicao.pendentes_hoje||0}</div>
-            <div style="font-size:9px;color:#ca8a04;text-transform:uppercase;letter-spacing:.5px">Pendentes</div>
+          <div style="text-align:center;background:rgba(224,168,62,.12);border-radius:10px;padding:10px 6px">
+            <div style="font-size:22px;font-weight:800;color:var(--amber)">${d.reposicao.pendentes_hoje||0}</div>
+            <div style="font-size:9px;color:var(--amber);text-transform:uppercase;letter-spacing:.5px">Pendentes</div>
           </div>
           <div style="text-align:center;background:var(--surface2);border-radius:10px;padding:10px 6px">
             <div style="font-size:22px;font-weight:800;color:var(--text)">${d.reposicao.avisos_hoje||0}</div>
@@ -1547,17 +1547,17 @@ async function carregarMeusStats() {
     } else if (d.perfil === 'checkout' && d.checkout) {
       el.innerHTML = `
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding:12px 0">
-          <div style="text-align:center;background:#f5f3ff;border-radius:10px;padding:12px 8px">
-            <div style="font-size:26px;font-weight:800;color:#7c3aed">${d.checkout.expedidos_hoje||0}</div>
-            <div style="font-size:9px;color:#7c3aed;text-transform:uppercase;letter-spacing:1px">Expedidas</div>
+          <div style="text-align:center;background:rgba(139,92,246,.12);border-radius:10px;padding:12px 8px">
+            <div style="font-size:26px;font-weight:800;color:var(--indigo)">${d.checkout.expedidos_hoje||0}</div>
+            <div style="font-size:9px;color:var(--indigo);text-transform:uppercase;letter-spacing:1px">Expedidas</div>
           </div>
           <div style="text-align:center;background:var(--surface2);border-radius:10px;padding:12px 8px">
             <div style="font-size:26px;font-weight:800;color:var(--text)">${d.checkout.total_hoje||0}</div>
             <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px">Recebidas</div>
           </div>
-          <div style="text-align:center;background:#fefce8;border-radius:10px;padding:12px 8px">
-            <div style="font-size:26px;font-weight:800;color:#ca8a04">${d.checkout.pendentes||0}</div>
-            <div style="font-size:9px;color:#ca8a04;text-transform:uppercase;letter-spacing:1px">Pendentes</div>
+          <div style="text-align:center;background:rgba(224,168,62,.12);border-radius:10px;padding:12px 8px">
+            <div style="font-size:26px;font-weight:800;color:var(--amber)">${d.checkout.pendentes||0}</div>
+            <div style="font-size:9px;color:var(--amber);text-transform:uppercase;letter-spacing:1px">Pendentes</div>
           </div>
         </div>`;
     }

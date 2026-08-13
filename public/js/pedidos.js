@@ -995,7 +995,7 @@ function limparHistorico() {
 
 
 function mostrarStatus(msg, tipo) {
-  const cores = { carregando:'background:#EFF6FF;border:1px solid #BFDBFE;color:#4338CA', sucesso:'background:#F0FDF4;border:1px solid #BBF7D0;color:#15803D', erro:'background:#FEF2F2;border:1px solid #FECACA;color:#DC2626', aviso:'background:#FFFBEB;border:1px solid #FDE68A;color:#D97706' };
+  const cores = { carregando:'background:rgba(79,70,229,.15);border:1px solid rgba(79,70,229,.35);color:#818CF8', sucesso:'background:rgba(87,185,129,.15);border:1px solid rgba(87,185,129,.35);color:var(--green)', erro:'background:rgba(201,82,79,.15);border:1px solid rgba(201,82,79,.35);color:var(--red)', aviso:'background:rgba(224,168,62,.15);border:1px solid rgba(224,168,62,.35);color:var(--amber)' };
   const el = document.getElementById('status-leitura');
   el.setAttribute('style', `display:block;margin-top:10px;padding:10px;border-radius:8px;font-size:12px;font-weight:600;text-align:center;${cores[tipo]}`);
   el.textContent = msg;
@@ -1287,9 +1287,9 @@ async function carregarPedidosPendentesReposicao() {
     const meus = avisos.filter(a => String(a.separador_id) === String(separadorAtual.id));
 
     if (!meus.length) {
-      el.innerHTML = '<div style="background:#F0FDF4;border:1px solid #C6F6D5;border-radius:10px;padding:14px 16px;text-align:center;">' +
-        '<div style="font-size:13px;font-weight:500;color:#15803D;">Nenhum item aguardando reposição</div>' +
-        '<div style="font-size:11px;color:#16A34A;margin-top:4px;">Todos os seus pedidos estão completos</div>' +
+      el.innerHTML = '<div style="background:rgba(87,185,129,.1);border:1px solid rgba(87,185,129,.35);border-radius:10px;padding:14px 16px;text-align:center;">' +
+        '<div style="font-size:13px;font-weight:500;color:var(--green);">Nenhum item aguardando reposição</div>' +
+        '<div style="font-size:11px;color:var(--green);margin-top:4px;">Todos os seus pedidos estão completos</div>' +
         '</div>';
       return;
     }
@@ -1309,46 +1309,46 @@ async function carregarPedidosPendentesReposicao() {
     if (badge) { badge.textContent = totalItens; badge.style.display = totalItens > 0 ? 'inline' : 'none'; }
 
     let html = `<div style="display:flex;gap:8px;margin-bottom:10px;">
-      <div style="flex:1;background:#FEF2F2;border:1px solid #FECACA;border-radius:8px;padding:10px;text-align:center;">
-        <div style="font-size:20px;font-weight:500;color:#B91C1C;">${numPedidos}</div>
-        <div style="font-size:10px;color:#DC2626;letter-spacing:.5px;">PEDIDOS</div>
+      <div style="flex:1;background:rgba(201,82,79,.1);border:1px solid rgba(201,82,79,.35);border-radius:8px;padding:10px;text-align:center;">
+        <div style="font-size:20px;font-weight:500;color:var(--red);">${numPedidos}</div>
+        <div style="font-size:10px;color:var(--red);letter-spacing:.5px;">PEDIDOS</div>
       </div>
-      <div style="flex:1;background:#FEF2F2;border:1px solid #FECACA;border-radius:8px;padding:10px;text-align:center;">
-        <div style="font-size:20px;font-weight:500;color:#B91C1C;">${totalItens}</div>
-        <div style="font-size:10px;color:#DC2626;letter-spacing:.5px;">ITENS</div>
+      <div style="flex:1;background:rgba(201,82,79,.1);border:1px solid rgba(201,82,79,.35);border-radius:8px;padding:10px;text-align:center;">
+        <div style="font-size:20px;font-weight:500;color:var(--red);">${totalItens}</div>
+        <div style="font-size:10px;color:var(--red);letter-spacing:.5px;">ITENS</div>
       </div>
     </div>`;
 
     Object.entries(porPedido).forEach(([numPed, itensAviso]) => {
       const tempoMaisAntigo = itensAviso.reduce((m, a) => a.hora_aviso < m ? a.hora_aviso : m, itensAviso[0].hora_aviso);
-      html += `<div style="background:var(--surface);border:1px solid #FECACA;border-left:3px solid #DC2626;border-radius:0 10px 10px 0;margin-bottom:8px;overflow:hidden;">
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#FFF8F8;">
+      html += `<div style="background:var(--surface);border:1px solid rgba(201,82,79,.35);border-left:3px solid var(--red);border-radius:0 10px 10px 0;margin-bottom:8px;overflow:hidden;">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(201,82,79,.06);">
           <div>
-            <span style="font-family:'Space Mono',monospace;font-size:14px;font-weight:500;color:#0F172A;">#${numPed}</span>
-            <span style="font-size:10px;color:#94A3B8;margin-left:8px;">desde ${tempoMaisAntigo||'—'}</span>
+            <span style="font-family:'Space Mono',monospace;font-size:14px;font-weight:500;color:var(--text);">#${numPed}</span>
+            <span style="font-size:10px;color:var(--text3);margin-left:8px;">desde ${tempoMaisAntigo||'—'}</span>
           </div>
-          <span style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;background:#FEF2F2;color:#B91C1C;border:1px solid #FECACA;">${itensAviso.length} item${itensAviso.length>1?'s':''}</span>
+          <span style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;background:rgba(201,82,79,.15);color:var(--red);border:1px solid rgba(201,82,79,.35);">${itensAviso.length} item${itensAviso.length>1?'s':''}</span>
         </div>`;
 
       itensAviso.forEach(a => {
-        html += `<div style="padding:10px 14px;border-top:0.5px solid #FECACA;">
+        html += `<div style="padding:10px 14px;border-top:0.5px solid rgba(201,82,79,.25);">
           <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
             <div style="flex:1;min-width:0;">
               <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;">
-                <span style="font-family:'Space Mono',monospace;font-size:12px;font-weight:500;color:#0F172A;">${a.endereco||'—'}</span>
-                <span style="font-size:10px;font-weight:500;padding:1px 6px;border-radius:4px;background:#FEF2F2;color:#B91C1C;">aguardando</span>
+                <span style="font-family:'Space Mono',monospace;font-size:12px;font-weight:500;color:var(--text);">${a.endereco||'—'}</span>
+                <span style="font-size:10px;font-weight:500;padding:1px 6px;border-radius:4px;background:rgba(201,82,79,.15);color:var(--red);">aguardando</span>
               </div>
-              <div style="font-size:10px;color:#64748B;font-family:monospace;">${a.codigo||'—'}</div>
-              <div style="font-size:12px;color:#0F172A;line-height:1.3;margin-top:1px;">${a.descricao||'—'}</div>
+              <div style="font-size:10px;color:var(--text3);font-family:monospace;">${a.codigo||'—'}</div>
+              <div style="font-size:12px;color:var(--text);line-height:1.3;margin-top:1px;">${a.descricao||'—'}</div>
             </div>
-            <div style="font-size:20px;font-weight:500;color:#0F172A;flex-shrink:0;">×${a.quantidade||1}</div>
+            <div style="font-size:20px;font-weight:500;color:var(--text);flex-shrink:0;">×${a.quantidade||1}</div>
           </div>
         </div>`;
       });
 
       // Botão para ir ao pedido
-      html += `<div style="padding:10px 14px;border-top:0.5px solid #FECACA;background:#FFF8F8;">
-        <button onclick="irParaPedidoComFalta('${numPed}')" style="width:100%;padding:9px;border-radius:8px;border:1px solid #FECACA;background:#FEF2F2;color:#B91C1C;font-size:12px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif;">
+      html += `<div style="padding:10px 14px;border-top:0.5px solid rgba(201,82,79,.25);background:rgba(201,82,79,.06);">
+        <button onclick="irParaPedidoComFalta('${numPed}')" style="width:100%;padding:9px;border-radius:8px;border:1px solid rgba(201,82,79,.35);background:rgba(201,82,79,.15);color:var(--red);font-size:12px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif;">
           Abrir pedido #${numPed}
         </button>
       </div></div>`;
@@ -1593,7 +1593,7 @@ function renderHistoricoModal() {
   el.innerHTML = historicoImportacoes.map(h=>`<div class="hist-item"><div><div style="color:var(--green);font-weight:700">${h.ok} pedido(s)</div>${h.erro>0?`<div style="color:var(--amber);font-size:10px">${h.erro} já existiam</div>`:''}</div><div style="color:var(--text3);font-size:10px">${h.data} às ${h.hora}</div></div>`).join('');
 }
 function mostrarStatusModal(msg, tipo) {
-  const cores = { carregando:'background:#EFF6FF;border:1px solid #BFDBFE;color:#4338CA', sucesso:'background:#F0FDF4;border:1px solid #BBF7D0;color:#15803D', erro:'background:#FEF2F2;border:1px solid #FECACA;color:#DC2626', aviso:'background:#FFFBEB;border:1px solid #FDE68A;color:#D97706' };
+  const cores = { carregando:'background:rgba(79,70,229,.15);border:1px solid rgba(79,70,229,.35);color:#818CF8', sucesso:'background:rgba(87,185,129,.15);border:1px solid rgba(87,185,129,.35);color:var(--green)', erro:'background:rgba(201,82,79,.15);border:1px solid rgba(201,82,79,.35);color:var(--red)', aviso:'background:rgba(224,168,62,.15);border:1px solid rgba(224,168,62,.35);color:var(--amber)' };
   const el = document.getElementById('modal-status-leitura');
   if (!el) return;
   if (!msg) { el.style.display='none'; return; }
