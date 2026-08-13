@@ -120,7 +120,7 @@ function renderizarPagGestao() {
       </div>
       <div id="gabs-sel-bar" style="display:none;padding:6px 10px;background:#eff6ff;border-bottom:1px solid #bfdbfe;flex-shrink:0">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:6px">
-          <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:11px;font-weight:700;color:#1d4ed8;flex:1;min-width:0" onclick="event.stopPropagation()">
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:11px;font-weight:700;color:#4338CA;flex:1;min-width:0" onclick="event.stopPropagation()">
             <input type="checkbox" id="gabs-chk-all" style="accent-color:#3b82f6;width:14px;height:14px;flex-shrink:0" onchange="absToggleSelectAll(this.checked)">
             <span id="gabs-sel-count" style="white-space:nowrap">0 selecionados</span>
           </label>
@@ -370,7 +370,7 @@ function aplicarToleranciaAbs() {
       : 0;
 
     const kpis = [
-      { label:'Funcionários',   val: totalFunc,                bg:'#eff6ff', cor:'#1d4ed8' },
+      { label:'Funcionários',   val: totalFunc,                bg:'#eff6ff', cor:'#4338CA' },
       { label:'Total Faltas',   val: totalFaltas,              bg:'#fef2f2', cor:'#dc2626' },
       { label:'Atestados',      val: totalAtestados,           bg:'#fefce8', cor:'#ca8a04' },
       { label:'Taxa da Equipe', val:`${taxaEquipe.toFixed(1)}%`,
@@ -571,7 +571,7 @@ async function carregarGestaoAbsenteismo() {
     }
 
     const kpis = [
-      { label:'Funcionários',   val: totalFunc,              bg:'#eff6ff', cor:'#1d4ed8' },
+      { label:'Funcionários',   val: totalFunc,              bg:'#eff6ff', cor:'#4338CA' },
       { label:'Total Faltas',   val: totalFaltas,            bg:'#fef2f2', cor:'#dc2626' },
       { label:'Atestados',      val: totalAtestados,         bg:'#fefce8', cor:'#ca8a04' },
       { label:'Taxa da Equipe', val:`${taxaEquipe.toFixed(1)}%`, bg: taxaEquipe>=10?'#fef2f2':taxaEquipe>=5?'#fefce8':'#f0fdf4', cor: taxaEquipe>=10?'#dc2626':taxaEquipe>=5?'#ca8a04':'#16a34a' },
@@ -642,7 +642,7 @@ async function _renderHistoricoEvolucao() {
 
     if (cards) {
       const kpis = [
-        { label:'Períodos importados', val: hist.length, bg:'#eff6ff', cor:'#1d4ed8', extra:'' },
+        { label:'Períodos importados', val: hist.length, bg:'#eff6ff', cor:'#4338CA', extra:'' },
         { label:'Funcionários (atual)', val: last.total_employees, bg:'#f0fdf4', cor:'#16a34a',
           extra: prev ? trendHtml(last.total_employees, prev.total_employees, false) : '' },
         { label:'Absenteísmo (atual)', val: `${last.absenteeism_rate.toFixed(1)}%`,
@@ -695,7 +695,7 @@ async function _renderHistoricoEvolucao() {
                 return `
                 <tr style="border-bottom:1px solid var(--border);${isLatest ? 'background:var(--surface2)' : ''}">
                   <td style="padding:9px 12px;font-weight:700;color:var(--text)">
-                    ${isLatest ? '<span style="font-size:9px;background:#1d4ed8;color:#fff;padding:2px 6px;border-radius:4px;margin-right:6px">ATUAL</span>' : ''}
+                    ${isLatest ? '<span style="font-size:9px;background:#4338CA;color:#fff;padding:2px 6px;border-radius:4px;margin-right:6px">ATUAL</span>' : ''}
                     ${perLabel}
                   </td>
                   <td style="padding:9px 12px;text-align:center;font-weight:700;color:var(--text2)">${p.total_employees}</td>
@@ -1329,7 +1329,7 @@ async function absExportarMatriz(wmsId, nome, matricula) {
       <div id="abs-mtz-erro" style="color:#dc2626;font-size:12px;margin-bottom:8px;display:none"></div>
       <div style="display:flex;gap:8px;justify-content:flex-end">
         <button id="abs-mtz-btn" onclick="absConfirmarExportarMatriz(${faltaRecs.length},${atesRecs.length},${totalAtrasoMin},${fbExistente?fbExistente.id:'null'})"
-          style="padding:9px 22px;background:#1d4ed8;color:#fff;border:none;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer">
+          style="padding:9px 22px;background:#4338CA;color:#fff;border:none;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer">
           ${fbExistente ? 'Atualizar na Matriz' : 'Enviar para Matriz'}
         </button>
         <button onclick="document.getElementById('abs-matriz-modal').remove()"
@@ -1526,7 +1526,7 @@ function _renderDetalheAbs(data, nome) {
             const earlyMin   = lunchEarly ? LUNCH_MIN - ld : 0;
             const rowBg      = anomalia ? '#fef2f2' : late ? '#fff7ed' : lunchEarly ? '#eff6ff' : '';
             const lunchStr   = r.lunch_start && r.lunch_end
-              ? `<span style="color:${lunchOver?'#d97706':lunchEarly?'#2563eb':'var(--text2)'};font-weight:${lunchOver||lunchEarly?'700':'400'}">${r.lunch_start} → ${r.lunch_end}${lunchOver?` <small>(${ld}min)</small>`:lunchEarly?` <small>${ld}min</small>`:''}</span>`
+              ? `<span style="color:${lunchOver?'#d97706':lunchEarly?'#4F46E5':'var(--text2)'};font-weight:${lunchOver||lunchEarly?'700':'400'}">${r.lunch_start} → ${r.lunch_end}${lunchOver?` <small>(${ld}min)</small>`:lunchEarly?` <small>${ld}min</small>`:''}</span>`
               : '—';
             const breakStr   = r.break_start && r.break_end
               ? `<span style="color:${breakOver?'#d97706':'var(--text2)'};font-weight:${breakOver?'700':'400'}">${r.break_start} → ${r.break_end}${breakOver?` <small>(${bd}min)</small>`:''}</span>`
@@ -1534,7 +1534,7 @@ function _renderDetalheAbs(data, nome) {
             const atrasoPartes = [];
             if (anomalia) atrasoPartes.push(`<span style="background:#dc2626;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:800;white-space:nowrap">${r._workedMin}min</span>`);
             if (atr > 0) atrasoPartes.push(`<span style="color:${late?'#dc2626':'#d97706'};font-weight:800">${atr} min</span>`);
-            if (earlyMin > 0) atrasoPartes.push(`<span style="color:#2563eb;font-size:10px">−${earlyMin} min antecip.</span>`);
+            if (earlyMin > 0) atrasoPartes.push(`<span style="color:#4F46E5;font-size:10px">−${earlyMin} min antecip.</span>`);
             const atrasoCel = atrasoPartes.length ? atrasoPartes.join('<br>') : '—';
             return `<tr style="border-bottom:1px solid var(--border);background:${rowBg}">
               <td style="padding:5px 8px;font-weight:700;white-space:nowrap;color:${anomalia?'#dc2626':late?'#c2410c':'var(--text)'}">${fmtDt(r.date)}</td>
@@ -1564,7 +1564,7 @@ function _renderDetalheAbs(data, nome) {
               : stLow.includes('folga') || stLow.includes('banco')               ? 'Folga BH'
               : stLow === 'holiday' || stLow === 'feriado'                       ? 'Feriado'
               : r.status || '—';
-            const cor   = r.falta ? '#dc2626' : r.atestado ? '#d97706' : r.ferias ? '#2563eb'
+            const cor   = r.falta ? '#dc2626' : r.atestado ? '#d97706' : r.ferias ? '#4F46E5'
               : stLow.includes('folga') || stLow.includes('banco') ? '#16a34a' : 'var(--text3)';
             return `<tr style="border-bottom:1px solid var(--border)">
               <td style="padding:5px 8px;color:var(--text);font-weight:700;white-space:nowrap">${fmtDt(r.date)}</td>
@@ -1614,7 +1614,7 @@ function _renderDetalheAbs(data, nome) {
         </div>
         <div style="background:var(--surface);border-radius:8px;padding:8px 12px;text-align:center">
           <div style="font-size:10px;color:var(--text3);font-weight:700">ANTECIPADA</div>
-          <div style="font-size:16px;font-weight:900;color:${totalVoltaAntecipada>0?'#2563eb':'var(--text3)'};font-family:monospace">${totalMinVoltaAlmoco > 0 ? _fmtHM(totalMinVoltaAlmoco) : '—'}</div>
+          <div style="font-size:16px;font-weight:900;color:${totalVoltaAntecipada>0?'#4F46E5':'var(--text3)'};font-family:monospace">${totalMinVoltaAlmoco > 0 ? _fmtHM(totalMinVoltaAlmoco) : '—'}</div>
           ${totalVoltaAntecipada > 0 ? `<div style="font-size:9px;color:#6b7280;margin-top:2px">${totalVoltaAntecipada} dia${totalVoltaAntecipada!==1?'s':''} de almoço</div>` : ''}
         </div>
         <div style="background:var(--surface);border-radius:8px;padding:8px 12px;text-align:center">
@@ -1665,7 +1665,7 @@ function _renderDetalheAbs(data, nome) {
         ESPELHO DE PONTO (${diasTrab.length} dia${diasTrab.length!==1?'s':''} trabalhados)
         ${diasAnomalia > 0 ? `<span style="background:#dc2626;color:#fff;border-radius:12px;padding:2px 8px;font-size:10px;font-weight:800">${diasAnomalia} batida${diasAnomalia>1?'s':''} suspeita${diasAnomalia>1?'s':''}</span>` : ''}
         ${diasComAtraso > 0 ? `<span style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:12px;padding:2px 8px;font-size:10px;font-weight:800">${diasComAtraso} com atraso</span>` : ''}
-        ${totalVoltaAntecipada > 0 ? `<span style="background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;border-radius:12px;padding:2px 8px;font-size:10px;font-weight:800">${totalVoltaAntecipada} volta antecipada</span>` : ''}
+        ${totalVoltaAntecipada > 0 ? `<span style="background:#eff6ff;color:#4F46E5;border:1px solid #bfdbfe;border-radius:12px;padding:2px 8px;font-size:10px;font-weight:800">${totalVoltaAntecipada} volta antecipada</span>` : ''}
       </div>
       <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--surface)">${tblPonto}</div>
 
@@ -1838,7 +1838,7 @@ async function _executarRelatorioGeral() {
       if (ls!==null && le!==null && le-ls>LUNCH_MIN)
         eventos.push({date:r.date, dow:r.day_of_week, tipo:'Almoço prolongado',           local:'Almoço',  min:(le-ls)-LUNCH_MIN,cor:'#d97706'});
       if (ls!==null && le!==null && le-ls>0 && le-ls<LUNCH_MIN)
-        eventos.push({date:r.date, dow:r.day_of_week, tipo:'Retorno antecipado (almoço)', local:'Almoço',  min:LUNCH_MIN-(le-ls),cor:'#2563eb', antecip:true});
+        eventos.push({date:r.date, dow:r.day_of_week, tipo:'Retorno antecipado (almoço)', local:'Almoço',  min:LUNCH_MIN-(le-ls),cor:'#4F46E5', antecip:true});
       if (bs!==null && be!==null && be-bs>BREAK_MIN)
         eventos.push({date:r.date, dow:r.day_of_week, tipo:'Pausa prolongada',             local:'Pausa',   min:(be-bs)-BREAK_MIN,cor:'#d97706'});
     }
@@ -1934,7 +1934,7 @@ async function _executarRelatorioGeral() {
             <span style="font-weight:400;font-size:11px;color:#64748b;margin-left:8px">${f.sector||''} · Mat. ${f.matricula||'—'}</span>
             <span style="float:right;font-size:11px;display:inline-flex;gap:10px;align-items:center">
               ${heStr}
-              ${f._totalAntecipado>0?`<span style="color:#2563eb;font-weight:700">↩ Antecipado: ${fmtHM(f._totalAntecipado)}</span>`:''}
+              ${f._totalAntecipado>0?`<span style="color:#4F46E5;font-weight:700">↩ Antecipado: ${fmtHM(f._totalAntecipado)}</span>`:''}
               ${f._totalAtraso>0?`<span style="color:#dc2626;font-weight:700">⏰ Atraso: ${fmtHM(f._totalAtraso)}</span>`:''}
             </span>
           </td>
@@ -1978,7 +1978,7 @@ async function _executarRelatorioGeral() {
           ${tFaltas>0?`<span style="color:#dc2626;font-weight:700">${tFaltas} falta${tFaltas!==1?'s':''}</span>`:''}
           ${tAtestados>0?`<span style="color:#d97706;font-weight:700">${tAtestados} atestado${tAtestados!==1?'s':''}</span>`:''}
           ${tAtraso>0?`<span style="color:#dc2626;font-weight:700">⏰ ${fmtHM(tAtraso)}</span>`:''}
-          ${tAntecipado>0?`<span style="color:#2563eb;font-weight:700">↩ ${fmtHM(tAntecipado)}</span>`:''}
+          ${tAntecipado>0?`<span style="color:#4F46E5;font-weight:700">↩ ${fmtHM(tAntecipado)}</span>`:''}
         </span>
       </div>
       ${secFaltas}${secAtestados}${secAtrasos}
@@ -2033,7 +2033,7 @@ async function _executarRelatorioGeral() {
       <td style="padding:7px 10px;text-align:center;font-weight:700;color:${tf>0?'#dc2626':'#94a3b8'}">${tf||'—'}</td>
       <td style="padding:7px 10px;text-align:center;font-weight:700;color:${ta>0?'#d97706':'#94a3b8'}">${ta||'—'}</td>
       <td style="padding:7px 10px;text-align:center;font-weight:700;color:${tr>0?'#dc2626':'#94a3b8'};font-family:monospace">${tr>0?fmtHM(tr):'—'}</td>
-      <td style="padding:7px 10px;text-align:center;font-weight:700;color:${tan>0?'#2563eb':'#94a3b8'};font-family:monospace">${tan>0?fmtHM(tan):'—'}</td>
+      <td style="padding:7px 10px;text-align:center;font-weight:700;color:${tan>0?'#4F46E5':'#94a3b8'};font-family:monospace">${tan>0?fmtHM(tan):'—'}</td>
     </tr>`;
   }).join('');
 
@@ -2041,7 +2041,7 @@ async function _executarRelatorioGeral() {
   const tipoRows = [
     ['Atrasos na entrada',     evCount.entrada,    evMin.entrada,    '#dc2626'],
     ['Almoços prolongados',    evCount.almocoProl, evMin.almocoProl, '#d97706'],
-    ['Retornos antecipados',   evCount.antecip,    evMin.antecip,    '#2563eb'],
+    ['Retornos antecipados',   evCount.antecip,    evMin.antecip,    '#4F46E5'],
     ['Pausas prolongadas',     evCount.pausaProl,  evMin.pausaProl,  '#d97706'],
   ].filter(r=>r[1]>0).map(([tipo,cnt,min,cor]) =>
     `<tr style="border-bottom:1px solid #f1f5f9">
@@ -2093,7 +2093,7 @@ async function _executarRelatorioGeral() {
       ${totFaltas>0 ? `<span style="color:#dc2626;font-weight:700">${totFaltas} falta${totFaltas!==1?'s':''} injustificada${totFaltas!==1?'s':''}</span>` : '<span style="color:#16a34a">nenhuma falta</span>'},
       ${totAtestados>0 ? `<span style="color:#d97706;font-weight:700">${totAtestados} atestado${totAtestados!==1?'s médicos':' médico'}</span>` : '<span style="color:#16a34a">nenhum atestado</span>'},
       <span style="color:#dc2626;font-weight:700">${fmtHM(totAtraso)} de atraso acumulado</span> no ponto de entrada
-      ${totAntecipado>0 ? `e <span style="color:#2563eb;font-weight:700">${fmtHM(totAntecipado)} de retornos antecipados</span> do almoço` : ''}.
+      ${totAntecipado>0 ? `e <span style="color:#4F46E5;font-weight:700">${fmtHM(totAntecipado)} de retornos antecipados</span> do almoço` : ''}.
     </div>
 
     <!-- Alerta ou ok -->
@@ -2116,7 +2116,7 @@ async function _executarRelatorioGeral() {
             <th style="padding:6px 10px;text-align:center;font-size:9px;font-weight:800;color:#dc2626;border-bottom:1px solid #e2e8f0">FALTAS</th>
             <th style="padding:6px 10px;text-align:center;font-size:9px;font-weight:800;color:#d97706;border-bottom:1px solid #e2e8f0">ATES.</th>
             <th style="padding:6px 10px;text-align:center;font-size:9px;font-weight:800;color:#dc2626;border-bottom:1px solid #e2e8f0">ATRASO</th>
-            <th style="padding:6px 10px;text-align:center;font-size:9px;font-weight:800;color:#2563eb;border-bottom:1px solid #e2e8f0">ANTEC.</th>
+            <th style="padding:6px 10px;text-align:center;font-size:9px;font-weight:800;color:#4F46E5;border-bottom:1px solid #e2e8f0">ANTEC.</th>
           </tr></thead>
           <tbody>${turnoRows}</tbody>
         </table>
@@ -2204,7 +2204,7 @@ async function _executarRelatorioGeral() {
     </div>
     <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 14px">
       <div style="font-size:9px;font-weight:800;color:#94a3b8;letter-spacing:.5px">ANTECIPADOS</div>
-      <div style="font-size:26px;font-weight:900;color:#2563eb">${fmtHM(totAntecipado)}</div>
+      <div style="font-size:26px;font-weight:900;color:#4F46E5">${fmtHM(totAntecipado)}</div>
     </div>
   </div>
 
@@ -2278,7 +2278,7 @@ async function gerarRelatorioAbs() {
       if (ls !== null && le !== null && le - ls > LUNCH_MIN)
         eventos.push({ date: r.date, dow: r.day_of_week, tipo: 'Almoço prolongado',          local: 'Almoço',  min: (le-ls) - LUNCH_MIN,  cor: '#d97706' });
       if (ls !== null && le !== null && le - ls > 0 && le - ls < LUNCH_MIN)
-        eventos.push({ date: r.date, dow: r.day_of_week, tipo: 'Retorno antecipado (almoço)',local: 'Almoço',  min: LUNCH_MIN - (le-ls),  cor: '#2563eb', antecip: true });
+        eventos.push({ date: r.date, dow: r.day_of_week, tipo: 'Retorno antecipado (almoço)',local: 'Almoço',  min: LUNCH_MIN - (le-ls),  cor: '#4F46E5', antecip: true });
       if (bs !== null && be !== null && be - bs > BREAK_MIN)
         eventos.push({ date: r.date, dow: r.day_of_week, tipo: 'Pausa prolongada',            local: 'Pausa',   min: (be-bs) - BREAK_MIN,  cor: '#d97706' });
     }
@@ -2320,7 +2320,7 @@ async function gerarRelatorioAbs() {
             <span style="font-weight:400;font-size:11px;color:#64748b;margin-left:8px">${func.sector||''} · Mat. ${func.matricula||'—'}</span>
             <span style="float:right;font-size:11px;display:flex;gap:10px;align-items:center">
               ${horasExtrasStr}
-              ${totalAntecipado>0?`<span style="color:#2563eb;font-weight:700">↩ Antecipado: ${fmtHM(totalAntecipado)}</span>`:''}
+              ${totalAntecipado>0?`<span style="color:#4F46E5;font-weight:700">↩ Antecipado: ${fmtHM(totalAntecipado)}</span>`:''}
               ${totalAtraso>0?`<span style="color:#dc2626;font-weight:700">⏰ Atraso: ${fmtHM(totalAtraso)}</span>`:''}
             </span>
           </td>
@@ -2398,7 +2398,7 @@ async function gerarRelatorioAbs() {
   <div class="resumo">
     <div class="card"><div class="lbl">FUNCIONÁRIOS C/ OCORRÊNCIA</div><div class="val" style="color:#1e293b">${totalFuncsComOcorr}</div></div>
     <div class="card"><div class="lbl">TOTAL ATRASO</div><div class="val" style="color:#dc2626">${fmtHM(totalAtrasoGeral)}</div></div>
-    <div class="card"><div class="lbl">TOTAL ANTECIPADO</div><div class="val" style="color:#2563eb">${fmtHM(totalAntecipadoGeral)}</div></div>
+    <div class="card"><div class="lbl">TOTAL ANTECIPADO</div><div class="val" style="color:#4F46E5">${fmtHM(totalAntecipadoGeral)}</div></div>
   </div>
 
   <table>

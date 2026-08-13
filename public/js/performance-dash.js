@@ -34,7 +34,7 @@ const PF_LABEL_TURNO = { Manha:'Manhã', Tarde:'Tarde', Noite:'Noite' };
 const PF_GRID = { color:'rgba(51,65,85,.25)' };
 const PF_TICK = { color:'#64748b', font:{ size:10 } };
 
-function pfCor(turno) { return PF_COR_TURNO[turno] || '#6366f1'; }
+function pfCor(turno) { return PF_COR_TURNO[turno] || '#8B5CF6'; }
 function pfChartOpts(extra={}) {
   return Object.assign({ responsive:true, maintainAspectRatio:false,
     plugins:{ legend:{display:false} }, animation:{duration:250} }, extra);
@@ -711,7 +711,7 @@ function pfRenderTabela(colab, totPed) {
         </div>
       </td>
       <td style="padding:10px 12px;text-align:center">
-        <span style="background:${T_BG[c.turno]||'rgba(99,102,241,.12)'};color:${T_TXT[c.turno]||'#6366f1'};border-radius:20px;padding:2px 10px;font-size:10px;font-weight:800">
+        <span style="background:${T_BG[c.turno]||'rgba(79,70,229,.12)'};color:${T_TXT[c.turno]||'var(--accent)'};border-radius:20px;padding:2px 10px;font-size:10px;font-weight:800">
           ${PF_LABEL_TURNO[c.turno]||c.turno}
         </span>
       </td>
@@ -831,7 +831,7 @@ function pfRenderTiming(filtroNome) {
 
   // Nota informativa
   const nota = _pfTimingAba==='separacao'
-    ? `<div style="display:flex;align-items:center;gap:8px;background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.2);border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:#6366f1">
+    ? `<div style="display:flex;align-items:center;gap:8px;background:rgba(79,70,229,.08);border:1px solid rgba(79,70,229,.2);border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:var(--accent)">
         ℹ️ Tempo de separação <strong>não inclui</strong> o tempo aguardando reposição de item.
        </div>` : '';
 
@@ -1714,7 +1714,7 @@ function pfRenderPedidoDetalhe(d) {
     if (/PRIME/i.test(envio))
       return `<span style="background:#FEF3C7;color:#92400E;border:1.5px solid #FCD34D;font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap"><i class="ti ti-star-filled" aria-hidden="true"></i> Prime</span>`;
     if (/SEDEX/i.test(envio))
-      return `<span style="background:#EFF6FF;color:#1D4ED8;border:1.5px solid #BFDBFE;font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">${pfEsc(envio)}</span>`;
+      return `<span style="background:#EFF6FF;color:#4338CA;border:1.5px solid #BFDBFE;font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">${pfEsc(envio)}</span>`;
     if (/^PAC/i.test(envio))
       return `<span style="background:#F0FDF4;color:#166534;border:1.5px solid #BBF7D0;font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">${pfEsc(envio)}</span>`;
     if (/MOTOBOY|MOTO/i.test(envio))

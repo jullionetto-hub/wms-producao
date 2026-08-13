@@ -100,7 +100,7 @@ async function carregarGraficoFunil() {
     data: {
       labels,
       datasets: [{ label: 'Pedidos', data: valores,
-        backgroundColor: ['#6366F1','#22C55E','#F59E0B','#3B82F6'],
+        backgroundColor: ['#8B5CF6','#22C55E','#F59E0B','#3B82F6'],
         borderRadius: 6, borderSkipped: false }]
     },
     options: {
@@ -241,7 +241,7 @@ function renderMapaEstoque(contRua, isPedidoUnico) {
     if (!total) return null;
     if (total >= 10) return '#DC2626';
     if (total >= 5)  return '#F59E0B';
-    return '#2563EB';
+    return '#4F46E5';
   }
 
   const BW = 42, BH = 36, HGAP = 5, VGAP = 8;
@@ -1111,7 +1111,7 @@ function _pctBar(pct, temSessao) {
     return `<span style="color:var(--text3);font-size:11px">${txt}</span>`;
   }
   const p = Math.min(100, pct);
-  const cor = pct >= 100 ? '#16a34a' : pct >= 70 ? '#2563EB' : pct >= 40 ? '#D97706' : '#DC2626';
+  const cor = pct >= 100 ? '#16a34a' : pct >= 70 ? '#4F46E5' : pct >= 40 ? '#D97706' : '#DC2626';
   return `<div style="display:flex;align-items:center;gap:6px">
     <div style="flex:1;height:8px;background:#E2E8F0;border-radius:4px;overflow:hidden;min-width:60px">
       <div style="height:100%;width:${p}%;background:${cor};border-radius:4px;transition:width .3s"></div>
@@ -2731,7 +2731,7 @@ function renderRelAnalitico(d) {
     ${porDiaHTML}
 
     <!-- Seções de colaboradores por área -->
-    ${mkArea('SEP','Separação — desempenho individual','linear-gradient(135deg,#6366f1,#4338ca)',
+    ${mkArea('SEP','Separação — desempenho individual','linear-gradient(135deg,#8B5CF6,#4338CA)',
       ['COLABORADOR / TURNO','PEDIDOS','ITENS','PONTUAÇÃO','TEMPO MÉD.','RITMO'],
       sepAreaRows)}
     ${mkArea('CK','Checkout — desempenho individual','linear-gradient(135deg,#22d3ee,#0369a1)',

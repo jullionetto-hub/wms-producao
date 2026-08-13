@@ -277,7 +277,7 @@ function _renderSessoesCk(sessoes) {
       <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1px;margin-bottom:6px">HISTÓRICO DE CHECKOUT</div>
       ${filtradas.map(s => {
         const bgBadge = s.acao==='concluido'?'#dcfce7':s.acao==='aguardando_item'?'#fff7ed':s.acao==='pausado'?'#ede9fe':'#dbeafe';
-        const txBadge = s.acao==='concluido'?'#15803d':s.acao==='aguardando_item'?'#c2410c':s.acao==='pausado'?'#6d28d9':'#1d4ed8';
+        const txBadge = s.acao==='concluido'?'#15803d':s.acao==='aguardando_item'?'#c2410c':s.acao==='pausado'?'#6d28d9':'#4338CA';
         const label   = s.acao==='concluido'?'OK':s.acao==='aguardando_item'?'Aguard':s.acao==='pausado'?'Pausado':s.acao==='retomado'?'Retomado':s.acao==='aberto'?'Aberto':'—';
         return `<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 8px;background:var(--surface2);border-radius:6px;margin-bottom:3px;font-size:11px;gap:6px">
           <div style="display:flex;align-items:center;gap:5px;min-width:0;flex:1">

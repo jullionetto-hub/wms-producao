@@ -13,7 +13,7 @@ let _loteAtual         = [];   // [{id, numero_pedido, total_itens}, ...]
 let _loteItens         = [];   // itens mesclados com caixa_num
 let _lotePendentes     = [];   // pedidos elegíveis para o lote (usado pelo card)
 
-const _CX_CORES = ['#2563eb','#7c3aed','#b45309','#065a82','#155e3a'];
+const _CX_CORES = ['#4F46E5','#7c3aed','#b45309','#065a82','#155e3a'];
 
 function _loteScreens(ativa) {
   ['m-lote-prep','m-lote-lista','m-lote-conclusao','m-cl-wrap','m-caixa-wrap'].forEach(id => {
@@ -180,7 +180,7 @@ function _renderizarListaLote() {
             <div style="font-size:13px;font-weight:500;color:var(--text);line-height:1.35;margin-bottom:2px;${todosProc?'text-decoration:line-through':''}">
               ${items[0].descricao||cod}
             </div>
-            <div style="font-size:10px;color:#6366f1;font-family:monospace;margin-bottom:6px;font-weight:600">
+            <div style="font-size:10px;color:var(--accent);font-family:monospace;margin-bottom:6px;font-weight:600">
               ${endCompleto}
             </div>
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:2px">
@@ -197,7 +197,7 @@ function _renderizarListaLote() {
             ✓ Encontrei tudo
           </button>
           <button onclick="event.stopPropagation();parcialGrupoLote('${ids}',${totalQty})"
-            style="flex:1;background:#eff6ff;border:1.5px solid #93c5fd;color:#1d4ed8;font-size:12px;font-weight:700;padding:7px 0;border-radius:8px;cursor:pointer">
+            style="flex:1;background:#eff6ff;border:1.5px solid #93c5fd;color:#4338CA;font-size:12px;font-weight:700;padding:7px 0;border-radius:8px;cursor:pointer">
             ~ Parcial
           </button>
           <button onclick="event.stopPropagation();faltaGrupoLote('${ids}',${totalQty})"
@@ -572,7 +572,7 @@ async function carregarAguardandoMobile() {
     });
     el.innerHTML = Object.entries(porPedido).map(([ped, itens]) => {
       const temProtocolo = itens.some(a => a.status === 'protocolo');
-      const borderColor  = temProtocolo ? '#6366f1' : '#f59e0b';
+      const borderColor  = temProtocolo ? '#8B5CF6' : '#f59e0b';
       const bgColor      = temProtocolo ? '#f5f3ff' : '#fffbeb';
       const labelTxt     = temProtocolo ? 'PROTOCOLO' : 'NÃO ENCONTRADO';
       const labelColor   = temProtocolo ? '#7c3aed'   : '#d97706';
@@ -876,7 +876,7 @@ async function _confirmarPedidoCore(num, inputId, statusId, clWrapId, fnChecklis
       if (tRes.ok) {
         const tData = await tRes.json();
         if (tData.cliente || tData.transportadora) {
-          infoTransp = `<div style="margin-top:6px;padding:8px 10px;background:rgba(37,99,235,.06);border:1px solid rgba(37,99,235,.18);border-radius:8px;font-size:12px">
+          infoTransp = `<div style="margin-top:6px;padding:8px 10px;background:rgba(79,70,229,.06);border:1px solid rgba(79,70,229,.18);border-radius:8px;font-size:12px">
             ${tData.cliente ? `<div><b style="color:var(--text)">${tData.cliente}</b></div>` : ''}
             ${tData.transportadora ? `<div><b style="color:var(--accent)">${tData.transportadora}</b></div>` : ''}
           </div>`;
@@ -1512,8 +1512,8 @@ async function carregarMeusStats() {
       el.innerHTML = `
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding:12px 0">
           <div style="text-align:center;background:#eff6ff;border-radius:10px;padding:12px 8px">
-            <div style="font-size:26px;font-weight:800;color:#2563eb">${d.separacao.separados_hoje||0}</div>
-            <div style="font-size:9px;color:#2563eb;text-transform:uppercase;letter-spacing:1px">Hoje</div>
+            <div style="font-size:26px;font-weight:800;color:#4F46E5">${d.separacao.separados_hoje||0}</div>
+            <div style="font-size:9px;color:#4F46E5;text-transform:uppercase;letter-spacing:1px">Hoje</div>
           </div>
           <div style="text-align:center;background:#f0fdf4;border-radius:10px;padding:12px 8px">
             <div style="font-size:26px;font-weight:800;color:#16a34a">${d.separacao.total_hoje||0}</div>

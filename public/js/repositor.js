@@ -421,7 +421,7 @@ function renderCardRepSimples(a, modo) {
     if (/PRIME/i.test(envio))
       return `<span style="background:#FEF3C7;color:#92400E;border:1.5px solid #FCD34D;font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap"><i class="ti ti-star-filled" aria-hidden="true"></i> Prime</span>`;
     if (/SEDEX/i.test(envio))
-      return `<span style="background:#EFF6FF;color:#1D4ED8;border:1.5px solid #BFDBFE;font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">${envio}</span>`;
+      return `<span style="background:#EFF6FF;color:#4338CA;border:1.5px solid #BFDBFE;font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">${envio}</span>`;
     if (/^PAC/i.test(envio))
       return `<span style="background:#F0FDF4;color:#166534;border:1.5px solid #BBF7D0;font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">${envio}</span>`;
     if (/MOTOBOY|MOTO/i.test(envio))
@@ -439,7 +439,7 @@ function renderCardRepSimples(a, modo) {
   const _tentOrdinal = ['', '2ª', '3ª'];
   const _isUltima = _totalTent >= 2; // Noite = última chance
   const _tentBadge = _totalTent > 0 && sit === 'pendente'
-    ? `<span style="background:${_isUltima?'#fef2f2':'#eff6ff'};color:${_isUltima?'#dc2626':'#1d4ed8'};border:1px solid ${_isUltima?'#fca5a5':'#bfdbfe'};font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;white-space:nowrap">
+    ? `<span style="background:${_isUltima?'#fef2f2':'#eff6ff'};color:${_isUltima?'#dc2626':'#4338CA'};border:1px solid ${_isUltima?'#fca5a5':'#bfdbfe'};font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;white-space:nowrap">
         ${_isUltima?'Última tentativa':''+(_tentOrdinal[_totalTent]||(_totalTent+1)+'ª')+' tentativa'}
        </span>`
     : '';
@@ -484,7 +484,7 @@ function renderCardRepSimples(a, modo) {
       botoes = `
         <div style="padding:7px 9px;border-top:1px solid var(--border)">
           <button onclick="iniciarBuscaRep(${a.id},'${nomeLogado}')"
-            style="width:100%;padding:9px 10px;background:${_isUltima?'#fef2f2':'#eff6ff'};border:2px solid ${_isUltima?'#ef4444':'#3b82f6'};border-radius:8px;color:${_isUltima?'#dc2626':'#1d4ed8'};font-weight:700;font-size:12px;cursor:pointer;touch-action:manipulation;display:flex;align-items:center;justify-content:center;gap:8px">
+            style="width:100%;padding:9px 10px;background:${_isUltima?'#fef2f2':'#eff6ff'};border:2px solid ${_isUltima?'#ef4444':'#3b82f6'};border-radius:8px;color:${_isUltima?'#dc2626':'#4338CA'};font-weight:700;font-size:12px;cursor:pointer;touch-action:manipulation;display:flex;align-items:center;justify-content:center;gap:8px">
             Iniciar Busca <span style="font-size:10px;opacity:.8;font-weight:600">${_tentLabel}</span>
           </button>
           ${_histTentHtml}
@@ -917,7 +917,7 @@ function renderCardMobile(a) {
     if (/PRIME/i.test(envio))
       return `<span style="background:#FEF3C7;color:#92400E;border:1.5px solid #FCD34D;font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap"><i class="ti ti-star-filled" aria-hidden="true"></i> Prime</span>`;
     if (/SEDEX/i.test(envio))
-      return `<span style="background:#EFF6FF;color:#1D4ED8;border:1.5px solid #BFDBFE;font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">${envio}</span>`;
+      return `<span style="background:#EFF6FF;color:#4338CA;border:1.5px solid #BFDBFE;font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">${envio}</span>`;
     if (/^PAC/i.test(envio))
       return `<span style="background:#F0FDF4;color:#166534;border:1.5px solid #BBF7D0;font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">${envio}</span>`;
     if (/MOTOBOY|MOTO/i.test(envio))

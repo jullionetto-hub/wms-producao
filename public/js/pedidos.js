@@ -995,7 +995,7 @@ function limparHistorico() {
 
 
 function mostrarStatus(msg, tipo) {
-  const cores = { carregando:'background:#EFF6FF;border:1px solid #BFDBFE;color:#1D4ED8', sucesso:'background:#F0FDF4;border:1px solid #BBF7D0;color:#15803D', erro:'background:#FEF2F2;border:1px solid #FECACA;color:#DC2626', aviso:'background:#FFFBEB;border:1px solid #FDE68A;color:#D97706' };
+  const cores = { carregando:'background:#EFF6FF;border:1px solid #BFDBFE;color:#4338CA', sucesso:'background:#F0FDF4;border:1px solid #BBF7D0;color:#15803D', erro:'background:#FEF2F2;border:1px solid #FECACA;color:#DC2626', aviso:'background:#FFFBEB;border:1px solid #FDE68A;color:#D97706' };
   const el = document.getElementById('status-leitura');
   el.setAttribute('style', `display:block;margin-top:10px;padding:10px;border-radius:8px;font-size:12px;font-weight:600;text-align:center;${cores[tipo]}`);
   el.textContent = msg;
@@ -1593,7 +1593,7 @@ function renderHistoricoModal() {
   el.innerHTML = historicoImportacoes.map(h=>`<div class="hist-item"><div><div style="color:var(--green);font-weight:700">${h.ok} pedido(s)</div>${h.erro>0?`<div style="color:var(--amber);font-size:10px">${h.erro} já existiam</div>`:''}</div><div style="color:var(--text3);font-size:10px">${h.data} às ${h.hora}</div></div>`).join('');
 }
 function mostrarStatusModal(msg, tipo) {
-  const cores = { carregando:'background:#EFF6FF;border:1px solid #BFDBFE;color:#1D4ED8', sucesso:'background:#F0FDF4;border:1px solid #BBF7D0;color:#15803D', erro:'background:#FEF2F2;border:1px solid #FECACA;color:#DC2626', aviso:'background:#FFFBEB;border:1px solid #FDE68A;color:#D97706' };
+  const cores = { carregando:'background:#EFF6FF;border:1px solid #BFDBFE;color:#4338CA', sucesso:'background:#F0FDF4;border:1px solid #BBF7D0;color:#15803D', erro:'background:#FEF2F2;border:1px solid #FECACA;color:#DC2626', aviso:'background:#FFFBEB;border:1px solid #FDE68A;color:#D97706' };
   const el = document.getElementById('modal-status-leitura');
   if (!el) return;
   if (!msg) { el.style.display='none'; return; }
@@ -1714,14 +1714,14 @@ function distSetModo(modo) {
   if (resultado)    resultado.style.display     = 'none';
 
   if (modo === 'auto') {
-    if (btnAuto) { btnAuto.style.background='#6366f1'; btnAuto.style.color='#fff'; }
+    if (btnAuto) { btnAuto.style.background='var(--accent)'; btnAuto.style.color='#fff'; }
     if (botoesAuto) botoesAuto.style.display = 'flex';
     if (resultado)  resultado.style.display  = distribuicaoPlano ? '' : 'none';
   } else if (modo === 'turno') {
-    if (btnTurno) { btnTurno.style.background='#6366f1'; btnTurno.style.color='#fff'; }
+    if (btnTurno) { btnTurno.style.background='var(--accent)'; btnTurno.style.color='#fff'; }
     if (painelTurno) { painelTurno.style.display = ''; renderTurnoConfig(); }
   } else {
-    if (btnManual) { btnManual.style.background='#6366f1'; btnManual.style.color='#fff'; }
+    if (btnManual) { btnManual.style.background='var(--accent)'; btnManual.style.color='#fff'; }
     if (painelManual) painelManual.style.display = '';
     const r = document.getElementById('dist-manual-resultado');
     const inp = document.getElementById('dist-manual-busca');
@@ -1737,7 +1737,7 @@ function distManualSubModo(modo) {
   const bipeWrap    = document.getElementById('dist-manual-bipe-wrap');
   const btnBuscar   = document.getElementById('btn-dm-buscar');
   const btnBipar    = document.getElementById('btn-dm-bipar');
-  const ativo   = { background:'#6366f1', color:'#fff' };
+  const ativo   = { background:'var(--accent)', color:'#fff' };
   const inativo = { background:'transparent', color:'var(--text3)' };
   const aplicar = (el, s) => { if (el) { el.style.background = s.background; el.style.color = s.color; } };
 
@@ -2082,7 +2082,7 @@ async function distManualBuscar() {
               </td>
               <td style="padding:8px 4px">
                 <button onclick="distManualAtribuir(${p.id},'${p.numero_pedido}')"
-                  style="background:#6366f1;color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">
+                  style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">
                   Atribuir
                 </button>
               </td>
@@ -2251,15 +2251,15 @@ async function calcularDistribuicao() {
     let html = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
       <span style="font-size:11px;font-weight:700;color:${_modoPrime?'#D97706':'var(--accent)'};letter-spacing:1px">${_modoPrime?'RESULTADO PRIME':'RESULTADO DA DISTRIBUIÇÃO'}</span>
       <span style="font-size:9px;font-weight:700;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:2px 7px;color:var(--text2);letter-spacing:.5px">${cenarioUsado}</span>
-      ${turnoAtivo ? `<span style="font-size:9px;font-weight:700;background:#dbeafe;border:1px solid #93c5fd;border-radius:4px;padding:2px 7px;color:#1d4ed8;letter-spacing:.5px">TURNO ${turnoLabel[turnoAtivo]||turnoAtivo}</span>` : ''}
+      ${turnoAtivo ? `<span style="font-size:9px;font-weight:700;background:#dbeafe;border:1px solid #93c5fd;border-radius:4px;padding:2px 7px;color:#4338CA;letter-spacing:.5px">TURNO ${turnoLabel[turnoAtivo]||turnoAtivo}</span>` : ''}
     </div>`;
     if (turnoAtivo) {
-      html += `<div style="background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.25);border-left:3px solid #3b82f6;border-radius:6px;padding:8px 12px;margin-bottom:10px;font-size:11px;color:#1d4ed8">
+      html += `<div style="background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.25);border-left:3px solid #3b82f6;border-radius:6px;padding:8px 12px;margin-bottom:10px;font-size:11px;color:#4338CA">
         Distribuindo apenas pedidos do turno <b>${turnoLabel[turnoAtivo]||turnoAtivo}</b> — pedidos dos outros turnos não serão afetados.
       </div>`;
     }
     if (temCargaPrevia) {
-      html += `<div style="background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.2);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:11px;color:#6366f1">
+      html += `<div style="background:rgba(79,70,229,.08);border:1px solid rgba(79,70,229,.2);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:11px;color:var(--accent)">
         Carga anterior considerada — novos pedidos nivelam o que cada colaborador já tem.
       </div>`;
     }

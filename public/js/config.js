@@ -102,7 +102,7 @@ function badgeTimerAoVivo(iniciadoEm, totalItens, pontuacao, tempoAguardandoMin,
   if (atrasado) {
     return `<span style="background:rgba(220,38,38,.1);color:#dc2626;border-radius:20px;padding:2px 8px;font-size:11px;font-weight:700;white-space:nowrap">${decorTxt} +${decorMin-estimMin}min</span>`;
   }
-  return `<span style="background:rgba(99,102,241,.1);color:#6366f1;border-radius:20px;padding:2px 8px;font-size:11px;font-weight:700;white-space:nowrap">⏱ ${decorTxt} / ${estimTxt} est.</span>`;
+  return `<span style="background:rgba(79,70,229,.1);color:var(--accent);border-radius:20px;padding:2px 8px;font-size:11px;font-weight:700;white-space:nowrap">⏱ ${decorTxt} / ${estimTxt} est.</span>`;
 }
 let separadorAtual   = null;
 let pedidoAtualId    = null;
@@ -361,7 +361,7 @@ function _transpBadgeProto(transp) {
   if (!t || t === '—') return '';
   if (/DRIVE|RETIRADA/i.test(t))  return `<span style="background:#fee2e2;color:var(--red);border:1.5px solid #fca5a5;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;white-space:nowrap">Drive Thru</span>`;
   if (/PRIME/i.test(t))           return `<span style="background:#FEF3C7;color:#92400E;border:1.5px solid #FCD34D;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;white-space:nowrap"><i class="ti ti-star-filled" aria-hidden="true"></i> Prime</span>`;
-  if (/SEDEX/i.test(t))           return `<span style="background:#EFF6FF;color:#1D4ED8;border:1.5px solid #BFDBFE;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;white-space:nowrap">${t}</span>`;
+  if (/SEDEX/i.test(t))           return `<span style="background:#EFF6FF;color:#4338CA;border:1.5px solid #BFDBFE;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;white-space:nowrap">${t}</span>`;
   if (/^PAC/i.test(t))            return `<span style="background:#F0FDF4;color:#166534;border:1.5px solid #BBF7D0;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;white-space:nowrap">${t}</span>`;
   if (/MOTOBOY|MOTO/i.test(t))    return `<span style="background:#F5F3FF;color:#6D28D9;border:1.5px solid #DDD6FE;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;white-space:nowrap">${t}</span>`;
   return `<span style="background:var(--surface2);color:var(--text2);border:1px solid var(--border);font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;white-space:nowrap">${t}</span>`;

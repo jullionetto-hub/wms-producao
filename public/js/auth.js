@@ -714,7 +714,7 @@ async function carregarAuditoria() {
     var logs = res.ok ? await res.json() : [];
     if (!logs.length) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:32px;color:var(--text3)">Nenhum registro encontrado</td></tr>'; return; }
     tbody.innerHTML = logs.map(function(l) {
-      return '<tr style="border-bottom:1px solid var(--border)"><td style="padding:10px 12px;font-size:12px">' + (l.data||'') + ' ' + (l.hora||'') + '</td><td style="padding:10px 12px;font-size:13px;font-weight:600">' + (l.usuario_nome||l.usuario_login||'&mdash;') + '</td><td style="padding:10px 12px"><span style="font-size:11px;font-weight:700;color:var(--indigo);background:rgba(99,102,241,.1);padding:3px 8px;border-radius:20px">' + l.acao + '</span></td><td style="padding:10px 12px;font-size:12px;color:var(--text2)">' + (l.entidade||'&mdash;') + (l.entidade_id?' #'+l.entidade_id:'') + '</td><td style="padding:10px 12px;font-size:11px;color:var(--text3)">' + (l.ip||'&mdash;') + '</td></tr>';
+      return '<tr style="border-bottom:1px solid var(--border)"><td style="padding:10px 12px;font-size:12px">' + (l.data||'') + ' ' + (l.hora||'') + '</td><td style="padding:10px 12px;font-size:13px;font-weight:600">' + (l.usuario_nome||l.usuario_login||'&mdash;') + '</td><td style="padding:10px 12px"><span style="font-size:11px;font-weight:700;color:var(--indigo);background:rgba(79,70,229,.1);padding:3px 8px;border-radius:20px">' + l.acao + '</span></td><td style="padding:10px 12px;font-size:12px;color:var(--text2)">' + (l.entidade||'&mdash;') + (l.entidade_id?' #'+l.entidade_id:'') + '</td><td style="padding:10px 12px;font-size:11px;color:var(--text3)">' + (l.ip||'&mdash;') + '</td></tr>';
     }).join('');
   } catch(e) { tbody.innerHTML = '<tr><td colspan="5" style="color:#ef4444;padding:16px">Erro: ' + e.message + '</td></tr>'; }
 }
@@ -1396,7 +1396,7 @@ function rowEmb(p) {
     acao = `<button onclick="iniciarEmbalagemDesk(${p.id})" class="btn btn-primary btn-sm">▶️ Iniciar</button>`;
   }
 
-  return `<tr style="${isEmbalando ? 'background:rgba(37,99,235,.04)' : isEmbalado ? 'opacity:.65' : ''}">
+  return `<tr style="${isEmbalando ? 'background:rgba(79,70,229,.04)' : isEmbalado ? 'opacity:.65' : ''}">
     <td style="font-weight:700;font-family:'Space Mono',monospace;font-size:12px">
       <span style="color:${isDrive ? 'var(--red)' : 'var(--accent)'}">${p.numero_pedido}</span>
     </td>
@@ -1405,7 +1405,7 @@ function rowEmb(p) {
       ${transp}${driveBadge}${primeBadge}
     </td>
     <td style="font-size:11px;color:var(--text2);white-space:nowrap">${p.hora_checkout||'—'}</td>
-    <td style="font-size:11px;color:${isEmbalando ? '#2563eb' : 'var(--text2)'};font-weight:${isEmbalando ? 700 : 400};white-space:nowrap">${p.embalagem_iniciado_em||'—'}</td>
+    <td style="font-size:11px;color:${isEmbalando ? '#4F46E5' : 'var(--text2)'};font-weight:${isEmbalando ? 700 : 400};white-space:nowrap">${p.embalagem_iniciado_em||'—'}</td>
     <td><span class="pill ${pillClass}">${pillText}</span></td>
     <td style="font-size:11px;color:var(--text2)">${p.embalado_por||'—'}</td>
     <td style="font-weight:600;color:${(p.itens||0)>20 ? 'var(--red)' : (p.itens||0)>10 ? 'var(--amber)' : 'var(--text)'}">${p.itens||'—'}</td>
@@ -1622,7 +1622,7 @@ function renderCardEmbFila(p, emAndamento) {
   const isDrive = String(p.transportadora||'').toUpperCase().includes('DRIVE');
   const isPrime = p.tem_prime;
   const bordColor = emAndamento ? '#bfdbfe' : isDrive ? '#FECACA' : isPrime ? '#ddd6fe' : 'var(--border)';
-  const numColor  = emAndamento ? '#2563eb' : isDrive ? '#DC2626' : isPrime ? '#7c3aed' : 'var(--accent)';
+  const numColor  = emAndamento ? '#4F46E5' : isDrive ? '#DC2626' : isPrime ? '#7c3aed' : 'var(--accent)';
   const pillTxt   = emAndamento ? 'embalando' : isDrive ? 'drive thru' : isPrime ? 'prime' : 'aguardando emb';
   const pillCls   = emAndamento ? 'separando' : 'pendente';
   const btnTxt    = emAndamento ? 'Continuar Embalagem' : 'Iniciar Embalagem';
@@ -1640,7 +1640,7 @@ function renderCardEmbFila(p, emAndamento) {
         ${p.transportadora ? `<span>${p.transportadora}</span>` : ''}
       </div>
       ${p.hora_checkout ? `<div style="font-size:11px;color:var(--text3);margin-top:2px">Checkout às ${p.hora_checkout}</div>` : ''}
-      ${emAndamento && p.embalagem_iniciado_em ? `<div style="font-size:11px;color:#2563eb;margin-top:2px">Embalagem iniciada às ${p.embalagem_iniciado_em}</div>` : ''}
+      ${emAndamento && p.embalagem_iniciado_em ? `<div style="font-size:11px;color:#4F46E5;margin-top:2px">Embalagem iniciada às ${p.embalagem_iniciado_em}</div>` : ''}
       <button class="btn btn-primary btn-sm" style="width:100%;margin-top:8px;padding:10px;font-size:14px;font-weight:700"
         onclick="selecionarPedidoEmbFila(${p.id})">
         ${btnTxt}
@@ -1657,12 +1657,12 @@ function renderCardEmb(p, emAndamento, mode, readOnly) {
   const isDrive  = String(p.transportadora||'').toUpperCase().includes('DRIVE');
   const isPrime  = p.tem_prime;
   const isEmbalado = p.status_embalagem === 'embalado';
-  const corBorda = isEmbalado ? '#16a34a' : emAndamento ? '#2563eb' : isDrive ? '#dc2626' : isPrime ? '#7c3aed' : '#64748b';
+  const corBorda = isEmbalado ? '#16a34a' : emAndamento ? '#4F46E5' : isDrive ? '#dc2626' : isPrime ? '#7c3aed' : '#64748b';
   const corFundo = isEmbalado ? '#f0fdf4' : emAndamento ? '#eff6ff' : isDrive ? '#fef2f2' : isPrime ? '#f5f3ff' : '#f8fafc';
   const statusBadge = isEmbalado
     ? `<span style="font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;background:#16a34a;color:#fff">EMBALADO</span>`
     : emAndamento
-      ? `<span style="font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;background:#2563eb;color:#fff;animation:pulse 1.5s infinite">⏱ EM ANDAMENTO</span>`
+      ? `<span style="font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;background:#4F46E5;color:#fff;animation:pulse 1.5s infinite">⏱ EM ANDAMENTO</span>`
       : '';
   let botoes;
   if (readOnly) {
@@ -1673,7 +1673,7 @@ function renderCardEmb(p, emAndamento, mode, readOnly) {
          </div>`
       : emAndamento
         ? `<div style="display:flex;align-items:center;gap:8px;padding:10px 16px;background:#eff6ff;border-top:1px solid #bfdbfe">
-             <span style="font-size:12px;color:#2563eb;font-weight:700">Em andamento</span>
+             <span style="font-size:12px;color:#4F46E5;font-weight:700">Em andamento</span>
            </div>`
         : `<div style="display:flex;align-items:center;gap:8px;padding:10px 16px;background:var(--surface2);border-top:1px solid var(--border)">
              <span style="font-size:12px;color:var(--text3);font-weight:600">Aguardando embalagem</span>
@@ -1732,7 +1732,7 @@ function renderCardEmb(p, emAndamento, mode, readOnly) {
         </div>
         <div style="background:var(--surface2);border-radius:10px;padding:8px 10px;text-align:center">
           <div style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.5px;margin-bottom:2px">INÍCIO EMB.</div>
-          <div style="font-size:13px;font-weight:700;color:${emAndamento?'#2563eb':'var(--text3)'}">${p.embalagem_iniciado_em||'—'}</div>
+          <div style="font-size:13px;font-weight:700;color:${emAndamento?'#4F46E5':'var(--text3)'}">${p.embalagem_iniciado_em||'—'}</div>
         </div>
       </div>
       <div style="padding:8px 16px;border-bottom:1px solid var(--border)">
@@ -1944,7 +1944,7 @@ function mudarPassagemTab(tab, btn) {
     const bt  = document.getElementById(`ptab-${t}`);
     if (sec) sec.style.display = t === tab ? '' : 'none';
     if (bt) {
-      bt.style.background = t === tab ? '#2563EB' : '#fff';
+      bt.style.background = t === tab ? '#4F46E5' : '#fff';
       bt.style.color = t === tab ? '#fff' : '#64748B';
       bt.style.border = t === tab ? 'none' : '1.5px solid #E2E8F0';
     }
@@ -2198,7 +2198,7 @@ function renderFormValidacao(p) {
   if (!sec) return;
   const SECOES = [
     {
-      titulo: 'Separação', cor: '#2563EB', fundo: '#EFF6FF', borda: '#BFDBFE',
+      titulo: 'Separação', cor: '#4F46E5', fundo: '#EFF6FF', borda: '#BFDBFE',
       campos: [
         { key:'sep_separados',    label:'Separados',      val: p.sep_separados,    pts: 75 },
         { key:'sep_pendentes',    label:'Pendentes',      val: p.sep_pendentes,    pts: 75 },
@@ -2277,7 +2277,7 @@ function renderFormValidacao(p) {
       </select>
     </div>
     <button onclick="confirmarValidacao(${p.id})"
-      style="width:100%;margin-top:14px;padding:14px;background:#2563EB;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">
+      style="width:100%;margin-top:14px;padding:14px;background:#4F46E5;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">
       Confirmar Validação
     </button>`;
 }
@@ -2423,7 +2423,7 @@ function renderCardEmbFilaDesk(p, emAndamento) {
   const isDrive  = String(p.transportadora||'').toUpperCase().includes('DRIVE');
   const isPrime  = p.tem_prime;
   const bordColor = emAndamento ? '#bfdbfe' : isDrive ? '#FECACA' : isPrime ? '#ddd6fe' : 'var(--border)';
-  const numColor  = emAndamento ? '#2563eb' : isDrive ? '#DC2626' : isPrime ? '#7c3aed' : 'var(--accent)';
+  const numColor  = emAndamento ? '#4F46E5' : isDrive ? '#DC2626' : isPrime ? '#7c3aed' : 'var(--accent)';
   const pillTxt   = emAndamento ? 'embalando' : isDrive ? 'drive thru' : isPrime ? 'prime' : 'aguardando emb';
   const pillCls   = emAndamento ? 'separando' : 'pendente';
   const btnTxt    = emAndamento ? 'Continuar Embalagem' : 'Iniciar Embalagem';
@@ -2440,7 +2440,7 @@ function renderCardEmbFilaDesk(p, emAndamento) {
         ${p.transportadora ? `<span>${p.transportadora}</span>` : ''}
       </div>
       ${p.hora_checkout ? `<div style="font-size:11px;color:var(--text3);margin-top:2px"><i class="ti ti-check" aria-hidden="true"></i> Checkout às ${p.hora_checkout}</div>` : ''}
-      ${emAndamento && p.embalagem_iniciado_em ? `<div style="font-size:11px;color:#2563eb;margin-top:2px"><i class="ti ti-clock" aria-hidden="true"></i> Embalagem iniciada às ${p.embalagem_iniciado_em}</div>` : ''}
+      ${emAndamento && p.embalagem_iniciado_em ? `<div style="font-size:11px;color:#4F46E5;margin-top:2px"><i class="ti ti-clock" aria-hidden="true"></i> Embalagem iniciada às ${p.embalagem_iniciado_em}</div>` : ''}
       <button class="btn btn-primary btn-sm" style="width:100%;margin-top:8px;padding:10px;font-size:14px;font-weight:700"
         onclick="selecionarPedidoEmbFilaDesk(${p.id})">
         ${btnTxt}
@@ -2874,7 +2874,7 @@ async function carregarAguardandoDesk() {
     });
     el.innerHTML = Object.entries(porPedido).map(([ped, itens]) => {
       const temProtocolo = itens.some(a => a.status === 'protocolo');
-      const borderColor  = temProtocolo ? '#6366f1' : '#f59e0b';
+      const borderColor  = temProtocolo ? '#8B5CF6' : '#f59e0b';
       const bgColor      = temProtocolo ? '#f5f3ff' : '#fffbeb';
       const labelTxt     = temProtocolo ? 'Protocolo' : 'Não encontrado';
       const labelColor   = temProtocolo ? '#7c3aed'   : 'var(--amber)';

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>WMS — Miess</title>
   <link rel="manifest" href="/manifest.json">
-  <meta name="theme-color" content="#2563EB">
+  <meta name="theme-color" content="#4F46E5">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -260,7 +260,7 @@
                   <span style="width:10px;height:10px;border-radius:50%;background:#F59E0B;display:inline-block"></span>Média (5–9)
                 </span>
                 <span style="display:flex;align-items:center;gap:5px">
-                  <span style="width:10px;height:10px;border-radius:50%;background:#2563EB;display:inline-block"></span>Baixa (1–4)
+                  <span style="width:10px;height:10px;border-radius:50%;background:#4F46E5;display:inline-block"></span>Baixa (1–4)
                 </span>
                 <span style="display:flex;align-items:center;gap:5px">
                   <span style="width:10px;height:10px;border-radius:50%;background:var(--border);display:inline-block"></span>Sem atividade
@@ -1663,7 +1663,7 @@
           <!-- TABS -->
           <div style="display:flex;gap:8px;margin-bottom:16px">
             <button id="ptab-registrar" onclick="mudarPassagemTab('registrar',this)"
-              style="flex:1;padding:10px;border-radius:8px;border:none;background:#2563EB;color:#fff;font-size:13px;font-weight:700;cursor:pointer">
+              style="flex:1;padding:10px;border-radius:8px;border:none;background:#4F46E5;color:#fff;font-size:13px;font-weight:700;cursor:pointer">
               Registrar
             </button>
             <button id="ptab-validar" onclick="mudarPassagemTab('validar',this)"
@@ -1699,7 +1699,7 @@
 
             <!-- Separação -->
             <div style="border:1.5px solid #BFDBFE;border-radius:10px;padding:12px 14px;margin-bottom:12px;background:#EFF6FF">
-              <div style="font-size:12px;font-weight:700;color:#2563EB;margin-bottom:10px">Separação</div>
+              <div style="font-size:12px;font-weight:700;color:#4F46E5;margin-bottom:10px">Separação</div>
               <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
                 <div>
                   <label style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase">Separados</label>
@@ -1774,7 +1774,7 @@
             </div>
 
             <button onclick="salvarPassagem()"
-              style="width:100%;padding:14px;background:#2563EB;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">
+              style="width:100%;padding:14px;background:#4F46E5;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">
               Salvar Passagem
             </button>
           </div>
@@ -1977,7 +1977,7 @@
                 autocomplete="off" inputmode="numeric"
                 style="width:100%;font-size:20px;letter-spacing:3px;border-color:#DC2626;border-width:2px;margin-bottom:8px;box-sizing:border-box"/>
               <div style="display:flex;gap:8px">
-                <button onclick="escanearQrCaixa(true)" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:#1D4ED8;color:#fff;border:none;border-radius:8px;padding:10px 0;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.5px">Escanear QR</button>
+                <button onclick="escanearQrCaixa(true)" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:#4338CA;color:#fff;border:none;border-radius:8px;padding:10px 0;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.5px">Escanear QR</button>
                 <button onclick="vincularCaixaMobile()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:#DC2626;color:#fff;border:none;border-radius:8px;padding:10px 0;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.5px">Vincular</button>
               </div>
             </div>
@@ -2254,7 +2254,7 @@
       <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">Distribuição de Pedidos</div>
       <div style="display:flex;gap:4px;background:var(--surface);border-radius:8px;padding:3px">
         <button id="btn-modo-auto" onclick="distSetModo('auto')"
-          style="padding:5px 14px;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;background:#6366f1;color:#fff;transition:all .2s">
+          style="padding:5px 14px;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;background:var(--accent);color:#fff;transition:all .2s">
           Automática
         </button>
         <button id="btn-modo-turno" onclick="distSetModo('turno')"
@@ -2269,7 +2269,7 @@
       <button onclick="fecharModalDistribuicao()" style="background:transparent;border:none;font-size:22px;cursor:pointer;color:var(--text3);padding:0 4px">✕</button>
     </div>
     <div style="padding:18px">
-      <div style="background:linear-gradient(135deg,rgba(37,99,235,.04),rgba(99,102,241,.04));border:1px solid rgba(37,99,235,.15);border-radius:var(--r-sm);padding:14px 16px;margin-bottom:16px">
+      <div style="background:linear-gradient(135deg,rgba(79,70,229,.04),rgba(79,70,229,.04));border:1px solid rgba(79,70,229,.15);border-radius:var(--r-sm);padding:14px 16px;margin-bottom:16px">
         <div style="font-size:11px;font-weight:800;color:var(--accent);letter-spacing:1.5px;margin-bottom:10px;text-transform:uppercase">Critérios de Distribuição</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:11px;color:var(--text2)">
           <div style="display:flex;align-items:flex-start;gap:6px"><span style="color:var(--green);font-size:13px">●</span><span><b style="color:var(--text)">Corredores fáceis</b> (A–E, P–U)<br><span style="color:var(--text3)">Peso 1.0 por item</span></span></div>
@@ -2277,7 +2277,7 @@
           <div style="display:flex;align-items:flex-start;gap:6px"><span style="color:var(--red);font-size:13px">●</span><span><b style="color:var(--text)">Corredores difíceis</b> (F–L, ZA, Arara)<br><span style="color:var(--text3)">Peso 2.0 por item</span></span></div>
           <div style="display:flex;align-items:flex-start;gap:6px"><span style="color:var(--indigo);font-size:13px">●</span><span><b style="color:var(--text)">Ruas únicas</b> no pedido<br><span style="color:var(--text3)">+ 2 pontos cada</span></span></div>
         </div>
-        <div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(37,99,235,.12);font-size:11px;color:var(--text2);display:flex;align-items:center;gap:6px">
+        <div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(79,70,229,.12);font-size:11px;color:var(--text2);display:flex;align-items:center;gap:6px">
           <span>Pedidos <b style="color:var(--text)">RETIRADA DRIVE THRU</b> são priorizados e distribuídos primeiro, independentemente do horário.</span>
         </div>
       </div>
@@ -2378,7 +2378,7 @@
 
       <!-- PAINEL POR TURNO -->
       <div id="dist-painel-turno" style="display:none">
-        <div style="background:rgba(99,102,241,.06);border:1px solid rgba(99,102,241,.2);border-radius:10px;padding:14px 16px;margin-bottom:14px;font-size:12px;color:var(--text2)">
+        <div style="background:rgba(79,70,229,.06);border:1px solid rgba(79,70,229,.2);border-radius:10px;padding:14px 16px;margin-bottom:14px;font-size:12px;color:var(--text2)">
           <b>Distribuição por Turno:</b> divide os pedidos entre os turnos de forma proporcional ao número de separadores. Cada turno fica com carga equivalente por colaborador.
         </div>
         <div style="display:grid;gap:8px;margin-bottom:16px" id="dist-turno-config">
@@ -2395,13 +2395,13 @@
       <!-- PAINEL MANUAL -->
       <div id="dist-painel-manual" style="display:none">
         <div style="display:flex;gap:6px;margin-bottom:14px">
-          <button id="btn-dm-buscar" class="btn btn-sm" onclick="distManualSubModo('buscar')" style="flex:1;background:#6366f1;color:#fff">🔍 Buscar</button>
+          <button id="btn-dm-buscar" class="btn btn-sm" onclick="distManualSubModo('buscar')" style="flex:1;background:var(--accent);color:#fff">🔍 Buscar</button>
           <button id="btn-dm-bipar"  class="btn btn-sm" onclick="distManualSubModo('bipar')"  style="flex:1;background:transparent;color:var(--text3)">📷 Bipar Código de Barras</button>
         </div>
 
         <!-- Sub-modo: buscar por número/cliente -->
         <div id="dist-manual-busca-wrap">
-          <div style="background:rgba(99,102,241,.06);border:1px solid rgba(99,102,241,.2);border-radius:10px;padding:14px 16px;margin-bottom:14px;font-size:12px;color:var(--text2)">
+          <div style="background:rgba(79,70,229,.06);border:1px solid rgba(79,70,229,.2);border-radius:10px;padding:14px 16px;margin-bottom:14px;font-size:12px;color:var(--text2)">
             <b>Distribuição Manual:</b> busque um pedido pelo número ou cliente e atribua diretamente a um colaborador.
           </div>
           <div style="display:flex;gap:8px;margin-bottom:14px">
@@ -2419,7 +2419,7 @@
 
         <!-- Sub-modo: bipar código de barras -->
         <div id="dist-manual-bipe-wrap" style="display:none">
-          <div style="background:rgba(99,102,241,.06);border:1px solid rgba(99,102,241,.2);border-radius:10px;padding:14px 16px;margin-bottom:14px;font-size:12px;color:var(--text2)">
+          <div style="background:rgba(79,70,229,.06);border:1px solid rgba(79,70,229,.2);border-radius:10px;padding:14px 16px;margin-bottom:14px;font-size:12px;color:var(--text2)">
             <b>Bipar Código de Barras:</b> selecione o colaborador uma vez e vá bipando as folhas dos pedidos — cada bipagem atribui o pedido automaticamente para ele.
           </div>
           <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center">
@@ -2430,7 +2430,7 @@
             </select>
           </div>
           <input id="dist-bipe-input" type="text" placeholder="Bipe o código de barras do pedido..." autocomplete="off"
-            style="width:100%;padding:14px 16px;background:var(--surface2);border:2px solid #6366f1;border-radius:10px;color:var(--text);font-size:15px;outline:none;box-sizing:border-box;font-family:'Space Mono',monospace"
+            style="width:100%;padding:14px 16px;background:var(--surface2);border:2px solid var(--accent);border-radius:10px;color:var(--text);font-size:15px;outline:none;box-sizing:border-box;font-family:'Space Mono',monospace"
             onkeydown="if(event.key==='Enter'){event.preventDefault();distBipePedido();}">
           <div style="display:flex;gap:16px;margin:12px 2px;font-size:12px;color:var(--text3)">
             <span>✅ <b id="dist-bipe-count-ok" style="color:var(--green)">0</b> atribuído(s)</span>
@@ -2674,7 +2674,7 @@ if ('serviceWorker' in navigator) {
         autocomplete="off" inputmode="numeric"
         style="width:100%;padding:14px 16px;border:2px solid var(--border,#e2e8f0);border-radius:12px;font-size:16px;font-weight:700;font-family:'Space Mono',monospace;background:var(--surface2,#f8fafc);color:var(--text,#1e293b);box-sizing:border-box;outline:none;letter-spacing:1px;margin-bottom:8px">
       <div style="display:flex;gap:8px">
-        <button onclick="escanearQr('m-emb-busca', filtrarEmbalagemMobile)" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:#1D4ED8;color:#fff;border:none;border-radius:12px;padding:13px 0;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.5px">Escanear QR</button>
+        <button onclick="escanearQr('m-emb-busca', filtrarEmbalagemMobile)" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:#4338CA;color:#fff;border:none;border-radius:12px;padding:13px 0;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.5px">Escanear QR</button>
         <button onclick="filtrarEmbalagemMobile()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:#4f46e5;color:#fff;border:none;border-radius:12px;padding:13px 0;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(79,70,229,.3);letter-spacing:.5px">Buscar</button>
       </div>
     </div>

@@ -61,7 +61,7 @@ function renderizarDashLogistica() {
       <div class="card" style="padding:0">
         <div id="dl-drop" style="padding:32px 24px;text-align:center;cursor:pointer;border-radius:var(--r);transition:background .2s"
              onclick="document.getElementById('dl-input').click()"
-             ondragover="event.preventDefault();this.style.background='rgba(99,102,241,.08)'"
+             ondragover="event.preventDefault();this.style.background='rgba(79,70,229,.08)'"
              ondragleave="this.style.background=''"
              ondrop="dlHandleDrop(event)">
           
@@ -577,7 +577,7 @@ function dlChartOpts(extra={}) {
 function dlRenderChartFat(ranking) {
   dlDestroyChart('fat');
   const labels = ranking.map(([,v]) => v.nome);
-  const colors = ranking.map(([,v]) => DL_COR_TURNO[v.turno] || '#6366f1');
+  const colors = ranking.map(([,v]) => DL_COR_TURNO[v.turno] || '#8B5CF6');
   _dlCharts['fat'] = new Chart(document.getElementById('dl-chart-fat'), {
     type:'bar',
     data:{ labels, datasets:[{ data:ranking.map(([,v])=>v.fat), backgroundColor:colors.map(c=>c+'99'), borderColor:colors, borderWidth:1.5, borderRadius:6 }] },
@@ -590,7 +590,7 @@ function dlRenderChartFat(ranking) {
 
 function dlRenderChartPed(ranking) {
   dlDestroyChart('ped');
-  const colors = ranking.map(([,v]) => DL_COR_TURNO[v.turno] || '#6366f1');
+  const colors = ranking.map(([,v]) => DL_COR_TURNO[v.turno] || '#8B5CF6');
   _dlCharts['ped'] = new Chart(document.getElementById('dl-chart-ped'), {
     type:'bar',
     data:{ labels:ranking.map(([,v])=>v.nome), datasets:[{ data:ranking.map(([,v])=>v.ped), backgroundColor:colors.map(c=>c+'99'), borderColor:colors, borderWidth:1.5, borderRadius:5 }] },
@@ -600,7 +600,7 @@ function dlRenderChartPed(ranking) {
 
 function dlRenderChartItens(ranking) {
   dlDestroyChart('itens');
-  const colors = ranking.map(([,v]) => DL_COR_TURNO[v.turno] || '#6366f1');
+  const colors = ranking.map(([,v]) => DL_COR_TURNO[v.turno] || '#8B5CF6');
   _dlCharts['itens'] = new Chart(document.getElementById('dl-chart-itens'), {
     type:'bar',
     data:{ labels:ranking.map(([,v])=>v.nome), datasets:[{ data:ranking.map(([,v])=>v.itens), backgroundColor:colors.map(c=>c+'99'), borderColor:colors, borderWidth:1.5, borderRadius:5 }] },
@@ -631,7 +631,7 @@ function dlRenderChartTurno(byTurno) {
 function dlRenderChartHora(byHora) {
   dlDestroyChart('hora');
   const hLabels = Array.from({length:24},(_,i)=>`${String(i).padStart(2,'0')}h`);
-  const colors = byHora.map(v => v > 0 ? 'rgba(99,102,241,.75)' : 'rgba(51,65,85,.3)');
+  const colors = byHora.map(v => v > 0 ? 'rgba(79,70,229,.75)' : 'rgba(51,65,85,.3)');
   _dlCharts['hora'] = new Chart(document.getElementById('dl-chart-hora'), {
     type:'bar',
     data:{ labels:hLabels, datasets:[{ data:byHora, backgroundColor:colors, borderRadius:3, borderWidth:0 }] },
@@ -678,7 +678,7 @@ function dlRenderTabela(ranking, totalFat) {
           <div style="height:100%;width:${(v.fat/maxFat*100).toFixed(1)}%;background:${cor};border-radius:3px"></div>
         </div>
       </td>
-      <td style="padding:10px 12px;text-align:center"><span style="background:${T_COR[v.turno]||'rgba(99,102,241,.15)'};color:${T_TXT[v.turno]||'var(--indigo)'};border-radius:20px;padding:2px 10px;font-size:10px;font-weight:800">T${v.turno}</span></td>
+      <td style="padding:10px 12px;text-align:center"><span style="background:${T_COR[v.turno]||'rgba(79,70,229,.15)'};color:${T_TXT[v.turno]||'var(--indigo)'};border-radius:20px;padding:2px 10px;font-size:10px;font-weight:800">T${v.turno}</span></td>
       <td style="padding:10px 14px;text-align:right;font-weight:700;color:#22c55e;font-size:13px">R$ ${dlFmt(v.fat)}</td>
       <td style="padding:10px 14px;text-align:right;color:var(--text3);font-size:12px">${pct.toFixed(1)}%</td>
       <td style="padding:10px 14px;text-align:right;font-weight:600;font-size:13px">${dlFmtN(v.ped)}</td>
@@ -806,7 +806,7 @@ function dlExportarPDF() {
     const pct    = totalFat > 0 ? (v.fat/totalFat*100).toFixed(1) : '0.0';
     const ticket = v.ped > 0 ? v.fat/v.ped : 0;
     const ipd    = v.ped > 0 ? v.itens/v.ped : 0;
-    const cor    = T_COR[v.turno] || '#6366f1';
+    const cor    = T_COR[v.turno] || '#8B5CF6';
     return `<tr>
       <td style="text-align:center;font-size:15px">${ICONS[i] || (i+1)}</td>
       <td><b>${escHtml(v.nome)}</b></td>
