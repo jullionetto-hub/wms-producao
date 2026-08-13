@@ -2,7 +2,7 @@
    VARIÁVEIS — TEMA ESCURO (azul-marinho, sistema inteiro)
    Pedido explícito do usuário: nada de fundo claro em área nenhuma —
    sidebar E conteúdo no mesmo tom de azul-marinho escuro. Valores de
-   --bg/--surface/--surface2/--border/--text*/--green/--red/--amber
+   --bg/--surface/--surface2/--border/--text/--green/--red/--amber
    reaproveitados do piloto testado em #pag-diario.db-dark (removido na
    Fase 1), que já tinha sido ajustado pra contraste/legibilidade em
    fundo escuro. --accent continua o indigo já escolhido antes — só o
