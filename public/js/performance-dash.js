@@ -63,21 +63,17 @@ function renderizarPerformanceDash() {
     <div class="pg-title" style="margin-bottom:14px">Performance Logística</div>
 
     <!-- ABAS PRINCIPAIS -->
-    <div style="display:flex;gap:4px;margin-bottom:16px;background:var(--surface2);border-radius:12px;padding:4px;width:fit-content;flex-wrap:wrap">
-      <button id="pf-tab-resumo" onclick="pfSwitchTab('resumo')"
-        style="padding:8px 20px;border:none;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;background:#6366f1;color:#fff">
+    <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap">
+      <button id="pf-tab-resumo" onclick="pfSwitchTab('resumo')" class="rel-turno-btn ativo">
         Resumo
       </button>
-      <button id="pf-tab-tempos" onclick="pfSwitchTab('tempos')"
-        style="padding:8px 20px;border:none;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;background:transparent;color:var(--text3)">
-        ⏱️ Tempos por Pedido
+      <button id="pf-tab-tempos" onclick="pfSwitchTab('tempos')" class="rel-turno-btn">
+        <i class="ti ti-clock" aria-hidden="true"></i> Tempos por Pedido
       </button>
-      <button id="pf-tab-ocorrencias" onclick="pfSwitchTab('ocorrencias')"
-        style="padding:8px 20px;border:none;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;background:transparent;color:var(--text3)">
+      <button id="pf-tab-ocorrencias" onclick="pfSwitchTab('ocorrencias')" class="rel-turno-btn">
         Ocorrências
       </button>
-      <button id="pf-tab-metas" onclick="pfSwitchTab('metas')"
-        style="padding:8px 20px;border:none;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;background:transparent;color:var(--text3)">
+      <button id="pf-tab-metas" onclick="pfSwitchTab('metas')" class="rel-turno-btn">
         Metas
       </button>
     </div>
@@ -112,15 +108,15 @@ function renderizarPerformanceDash() {
         </select>
       </div>
       <button id="pf-btn-filtrar" onclick="pfFiltrarAtivo()" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer">Filtrar</button>
-      <button onclick="pfInicializar()" style="background:var(--surface2);color:var(--text3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:12px;cursor:pointer">✕ Limpar</button>
-      <button onclick="pfExportarExcel()" style="background:#16a34a;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer">Excel</button>
-      <button onclick="pfAbrirAnalisePdf()" style="background:#dc2626;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer">📄 Análise PDF</button>
+      <button onclick="pfInicializar()" style="background:var(--surface2);color:var(--text3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:12px;cursor:pointer"><i class="ti ti-x" aria-hidden="true"></i> Limpar</button>
+      <button onclick="pfExportarExcel()" style="background:var(--green);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer">Excel</button>
+      <button onclick="pfAbrirAnalisePdf()" style="background:var(--red);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer"><i class="ti ti-file-text" aria-hidden="true"></i> Análise PDF</button>
       <span id="pf-filtro-info" style="margin-left:auto;font-size:11px;color:var(--text3);align-self:center"></span>
     </div>
 
     <!-- LOADING -->
     <div id="pf-loading" style="display:none;text-align:center;padding:48px;color:var(--text3)">
-      <div style="font-size:24px;margin-bottom:8px">⏳</div>
+      <div style="font-size:24px;margin-bottom:8px"><i class="ti ti-loader-2" aria-hidden="true"></i></div>
       <div>Carregando dados...</div>
     </div>
 
@@ -139,14 +135,14 @@ function renderizarPerformanceDash() {
 
       <!-- Pedidos por colaborador (full width) -->
       <div class="card" style="padding:16px 18px;margin-bottom:16px">
-        <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px;margin-bottom:14px">PEDIDOS POR COLABORADOR</div>
+        <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px;margin-bottom:14px">Pedidos por colaborador</div>
         <div style="position:relative;height:300px"><canvas id="pf-chart-pedidos"></canvas></div>
       </div>
 
       <!-- Itens + SKUs -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px" class="pf-grid-2">
         <div class="card" style="padding:16px 18px">
-          <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px;margin-bottom:14px">ITENS POR COLABORADOR</div>
+          <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px;margin-bottom:14px">Itens por colaborador</div>
           <div style="position:relative;height:260px"><canvas id="pf-chart-itens"></canvas></div>
         </div>
         <div class="card" style="padding:16px 18px">
@@ -158,18 +154,18 @@ function renderizarPerformanceDash() {
       <!-- Reposições + Tempo médio -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px" class="pf-grid-2">
         <div class="card" style="padding:16px 18px">
-          <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px;margin-bottom:14px">REPOSIÇÕES POR COLABORADOR</div>
+          <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px;margin-bottom:14px">Reposições por colaborador</div>
           <div style="position:relative;height:260px"><canvas id="pf-chart-repos"></canvas></div>
         </div>
         <div class="card" style="padding:16px 18px">
-          <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px;margin-bottom:14px">⏱️ TEMPO MÉDIO POR PEDIDO (min)</div>
+          <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px;margin-bottom:14px"><i class="ti ti-clock" aria-hidden="true"></i> Tempo médio por pedido (min)</div>
           <div style="position:relative;height:260px"><canvas id="pf-chart-tempo"></canvas></div>
         </div>
       </div>
 
       <!-- Evolução diária -->
       <div id="pf-dia-wrap" class="card" style="padding:16px 18px;margin-bottom:20px">
-        <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px;margin-bottom:14px">EVOLUÇÃO DIÁRIA DE PEDIDOS</div>
+        <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px;margin-bottom:14px">Evolução diária de pedidos</div>
         <div style="position:relative;height:220px"><canvas id="pf-chart-dia"></canvas></div>
       </div>
 
@@ -205,7 +201,7 @@ function renderizarPerformanceDash() {
     <div id="pf-tempos-conteudo" style="display:none">
       <div id="pf-timing-wrap">
         <div style="text-align:center;padding:64px 24px;color:var(--text3)">
-          <div style="font-size:36px;margin-bottom:12px">⏱️</div>
+          <div style="font-size:36px;margin-bottom:12px"><i class="ti ti-clock" aria-hidden="true"></i></div>
           <div style="font-size:14px;font-weight:700;margin-bottom:6px">Selecione o período e clique em Filtrar</div>
           <div style="font-size:12px">Verá o início e fim de cada operação por colaborador</div>
         </div>
@@ -250,11 +246,11 @@ function pfSwitchTab(aba) {
   // Reset todos os botões
   Object.values(tabs).forEach(id => {
     const b = document.getElementById(id);
-    if (b) { b.style.background='transparent'; b.style.color='var(--text3)'; }
+    if (b) b.classList.remove('ativo');
   });
   // Ativa o botão atual
   const btn = document.getElementById(tabs[aba]);
-  if (btn) { btn.style.background='#6366f1'; btn.style.color='#fff'; }
+  if (btn) btn.classList.add('ativo');
   // Mostra só o div correto
   Object.entries(divs).forEach(([k,id]) => {
     const d = document.getElementById(id);
@@ -493,21 +489,22 @@ function pfRenderKPIs({ totPed, totItens, totSkus, totRep, tempoMed, tempoMin, t
   const repPct   = totPed > 0 ? (totRep   / totPed * 100).toFixed(1) : '0';
 
   const mini = (label, val) => `
-    <div>
-      <div style="font-size:8px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">${label}</div>
-      <div style="font-size:15px;font-weight:800;line-height:1;color:var(--text)">${val}</div>
+    <div class="pipeline-card-kpi">
+      <div class="pipeline-card-kpi-lbl">${label}</div>
+      <div class="pipeline-card-kpi-val" style="font-size:15px">${val}</div>
     </div>`;
 
   const card = (cor, label, num, desc, stats) => `
-    <div style="background:var(--surface);border-radius:16px;border:1px solid var(--border);border-top:3px solid ${cor};padding:20px">
-      <div style="display:flex;align-items:center;gap:7px;margin-bottom:10px">
-        <span style="width:8px;height:8px;border-radius:50%;background:${cor};flex-shrink:0;display:inline-block"></span>
-        <span style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px;text-transform:uppercase">${label}</span>
+    <div class="pipeline-card" style="border-top:3px solid ${cor}">
+      <div class="pipeline-card-top">
+        <div class="pipeline-card-hd">
+          <span class="pipeline-card-dot" style="background:${cor}"></span>
+          <span class="pipeline-card-label">${label}</span>
+        </div>
+        <div class="pipeline-card-value">${num}</div>
+        <div class="pipeline-card-sub">${desc}</div>
       </div>
-      <div style="font-size:42px;font-weight:900;line-height:1.05;margin:6px 0 2px;color:var(--text)">${num}</div>
-      <div style="font-size:11px;color:var(--text2)">${desc}</div>
-      <div style="border-top:1px solid var(--border);margin:12px 0 10px"></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">${stats}</div>
+      <div class="pipeline-card-kpis">${stats}</div>
     </div>`;
 
   const nomeAtual  = document.getElementById('pf-colab')?.value || '';
@@ -529,33 +526,36 @@ function pfRenderKPIs({ totPed, totItens, totSkus, totRep, tempoMed, tempoMin, t
   const TOTAL_RUAS = 27;
 
   const ruaBars = top6.length ? `
-    <div style="border-top:1px solid var(--border);margin:10px 0 8px"></div>
-    <div style="font-size:8px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">TOP RUAS</div>
-    ${top6.map(r => {
-      const pct = Math.round(r.itens / maxItens * 100);
-      return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">
-        <div style="width:20px;font-size:10px;font-weight:800;color:var(--text2);text-align:right;flex-shrink:0">${r.rua}</div>
-        <div style="flex:1;background:var(--surface2);border-radius:3px;height:5px;overflow:hidden">
-          <div style="width:${pct}%;background:#059669;height:100%;border-radius:3px"></div>
-        </div>
-        <div style="width:32px;font-size:9px;font-weight:600;color:var(--text3);text-align:right;flex-shrink:0">${r.itens}</div>
-      </div>`;
-    }).join('')}` : '';
+    <div style="padding:0 16px 14px">
+      <div style="border-top:1px solid var(--border);margin:0 0 8px"></div>
+      <div class="pipeline-card-kpi-lbl" style="margin-bottom:6px">Top ruas</div>
+      ${top6.map(r => {
+        const pct = Math.round(r.itens / maxItens * 100);
+        return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">
+          <div style="width:20px;font-size:10px;font-weight:800;color:var(--text2);text-align:right;flex-shrink:0">${r.rua}</div>
+          <div style="flex:1;background:var(--surface2);border-radius:3px;height:5px;overflow:hidden">
+            <div style="width:${pct}%;background:var(--green);height:100%;border-radius:3px"></div>
+          </div>
+          <div style="width:32px;font-size:9px;font-weight:600;color:var(--text3);text-align:right;flex-shrink:0">${r.itens}</div>
+        </div>`;
+      }).join('')}
+    </div>` : '';
 
   const ruasCard = `
-    <div style="background:var(--surface);border-radius:16px;border:1px solid var(--border);border-top:3px solid #059669;padding:20px">
-      <div style="display:flex;align-items:center;gap:7px;margin-bottom:10px">
-        <span style="width:8px;height:8px;border-radius:50%;background:#059669;flex-shrink:0;display:inline-block"></span>
-        <span style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px;text-transform:uppercase">RUAS</span>
+    <div class="pipeline-card" style="border-top:3px solid var(--green)">
+      <div class="pipeline-card-top">
+        <div class="pipeline-card-hd">
+          <span class="pipeline-card-dot" style="background:var(--green)"></span>
+          <span class="pipeline-card-label">Ruas</span>
+        </div>
+        <div class="pipeline-card-value">${ruas.length}</div>
+        <div class="pipeline-card-sub">ruas percorridas</div>
       </div>
-      <div style="font-size:42px;font-weight:900;line-height:1.05;margin:6px 0 2px;color:var(--text)">${ruas.length}</div>
-      <div style="font-size:11px;color:var(--text2)">ruas percorridas</div>
-      <div style="border-top:1px solid var(--border);margin:12px 0 10px"></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        ${mini('MAIS ATIVA', topRua?.rua || '—')}
-        ${mini('ITENS LÁ', pfFmtN(topRua?.itens || 0))}
-        ${mini('COBERTURA', ruas.length ? Math.round(ruas.length / TOTAL_RUAS * 100) + '%' : '—')}
-        ${mini('NO ARMAZÉM', TOTAL_RUAS + ' ruas')}
+      <div class="pipeline-card-kpis">
+        ${mini('Mais ativa', topRua?.rua || '—')}
+        ${mini('Itens lá', pfFmtN(topRua?.itens || 0))}
+        ${mini('Cobertura', ruas.length ? Math.round(ruas.length / TOTAL_RUAS * 100) + '%' : '—')}
+        ${mini('No armazém', TOTAL_RUAS + ' ruas')}
       </div>
       ${ruaBars}
     </div>`;
@@ -567,48 +567,48 @@ function pfRenderKPIs({ totPed, totItens, totSkus, totRep, tempoMed, tempoMin, t
     const rapNome = setor.mais_rapido?.nome ? setor.mais_rapido.nome.split(' ')[0] : '—';
     return card(
       cor, label, pfFmtN(setor.concluidos), `${unidade} concluídos`,
-      mini('ITENS', pfFmtN(setor.itens||0)) +
-      mini('PENDENTES', pfFmtN(setor.pendentes)) +
-      mini('TEMPO MÉDIO', tempoTxt) +
-      mini('MAIS RÁPIDO', rapNome !== '—' && setor.mais_rapido ? `${rapNome} (${setor.mais_rapido.tempo_medio_min.toFixed(1)}m)` : '—')
+      mini('Itens', pfFmtN(setor.itens||0)) +
+      mini('Pendentes', pfFmtN(setor.pendentes)) +
+      mini('Tempo médio', tempoTxt) +
+      mini('Mais rápido', rapNome !== '—' && setor.mais_rapido ? `${rapNome} (${setor.mais_rapido.tempo_medio_min.toFixed(1)}m)` : '—')
     );
   };
 
   document.getElementById('pf-kpis').innerHTML =
     card(
       '#4f46e5',
-      'SEPARAÇÃO', pfFmtN(totPed), 'pedidos concluídos',
-      mini('COLABORADORES', nColab) +
-      mini('ITENS/PED', itensPed) +
-      mini('TOTAL ITENS', pfFmtN(totItens)) +
-      mini('TOTAL SKUs', pfFmtN(totSkus))
+      'Separação', pfFmtN(totPed), 'pedidos concluídos',
+      mini('Colaboradores', nColab) +
+      mini('Itens/ped', itensPed) +
+      mini('Total itens', pfFmtN(totItens)) +
+      mini('Total SKUs', pfFmtN(totSkus))
     ) +
     card(
       '#0891b2',
-      'ITENS', pfFmtN(totItens), 'itens separados',
-      mini('TOTAL SKUs', pfFmtN(totSkus)) +
-      mini('SKUs/PED', skusPed) +
-      mini('MAIS ITENS', liderPed ? (liderPed.nome||'?').split(' ')[0] : '—') +
-      mini('MÉDIA/DIA', _pfDados?.por_dia?.length ? pfFmtN(Math.round(totItens / _pfDados.por_dia.length)) : '—')
+      'Itens', pfFmtN(totItens), 'itens separados',
+      mini('Total SKUs', pfFmtN(totSkus)) +
+      mini('SKUs/ped', skusPed) +
+      mini('Mais itens', liderPed ? (liderPed.nome||'?').split(' ')[0] : '—') +
+      mini('Média/dia', _pfDados?.por_dia?.length ? pfFmtN(Math.round(totItens / _pfDados.por_dia.length)) : '—')
     ) +
     card(
       '#ea580c',
-      'REPOSIÇÃO', pfFmtN(totRep), 'reposições geradas',
-      mini('% DOS PEDIDOS', repPct + '%') +
-      mini('TEMPO MÉDIO', _pfDados?.reposicao?.tempo_medio_min != null ? _pfDados.reposicao.tempo_medio_min.toFixed(1)+' min' : '—') +
-      mini('MAIS REPOS.', liderRep?.reposicoes ? (liderRep.nome||'?').split(' ')[0] : '—') +
-      mini('MÉD/COLAB', nColab > 0 ? (totRep / nColab).toFixed(1) : '0')
+      'Reposição', pfFmtN(totRep), 'reposições geradas',
+      mini('% dos pedidos', repPct + '%') +
+      mini('Tempo médio', _pfDados?.reposicao?.tempo_medio_min != null ? _pfDados.reposicao.tempo_medio_min.toFixed(1)+' min' : '—') +
+      mini('Mais repos.', liderRep?.reposicoes ? (liderRep.nome||'?').split(' ')[0] : '—') +
+      mini('Méd/colab', nColab > 0 ? (totRep / nColab).toFixed(1) : '0')
     ) +
     card(
       '#7c3aed',
-      'TEMPO MÉDIO', tempoMed != null ? tempoMed.toFixed(1)+' min' : '—', 'por pedido (separação)',
-      mini('MAIS RÁPIDO', tempoMin ? (tempoMin.nome||'?').split(' ')[0]+' ('+tempoMin.t.toFixed(1)+'m)' : '—') +
-      mini('MAIS LENTO', tempoMax ? (tempoMax.nome||'?').split(' ')[0]+' ('+tempoMax.t.toFixed(1)+'m)' : '—') +
-      mini('COM TEMPO', pfFmtN(nComTempo)) +
-      mini('SEM TEMPO', pfFmtN(nColab - nComTempo))
+      'Tempo médio', tempoMed != null ? tempoMed.toFixed(1)+' min' : '—', 'por pedido (separação)',
+      mini('Mais rápido', tempoMin ? (tempoMin.nome||'?').split(' ')[0]+' ('+tempoMin.t.toFixed(1)+'m)' : '—') +
+      mini('Mais lento', tempoMax ? (tempoMax.nome||'?').split(' ')[0]+' ('+tempoMax.t.toFixed(1)+'m)' : '—') +
+      mini('Com tempo', pfFmtN(nComTempo)) +
+      mini('Sem tempo', pfFmtN(nColab - nComTempo))
     ) +
-    setorCard('#0ea5e9', 'CHECKOUT',  _pfDados?.checkout,  'pedidos') +
-    setorCard('#16a34a', 'EMBALAGEM', _pfDados?.embalagem, 'pedidos') +
+    setorCard('var(--info)', 'Checkout',  _pfDados?.checkout,  'pedidos') +
+    setorCard('var(--green)', 'Embalagem', _pfDados?.embalagem, 'pedidos') +
     ruasCard;
 }
 
@@ -738,7 +738,7 @@ async function pfCarregarTiming() {
 
   wrap.innerHTML = `
     <div style="text-align:center;padding:48px;color:var(--text3)">
-      <div style="font-size:28px;margin-bottom:10px">⏳</div>
+      <div style="font-size:28px;margin-bottom:10px"><i class="ti ti-loader-2" aria-hidden="true"></i></div>
       <div style="font-size:13px">Buscando tempos...</div>
     </div>`;
 
@@ -1053,7 +1053,7 @@ function pfRenderOcorrenciasUI(lista, carregando) {
 
   // Lista de ocorrências
   if (carregando) {
-    return form + `<div style="text-align:center;padding:32px;color:var(--text3)">⏳ Carregando...</div>`;
+    return form + `<div style="text-align:center;padding:32px;color:var(--text3)">Carregando...</div>`;
   }
 
   // Totais por tipo
@@ -1426,7 +1426,7 @@ async function pfCarregarMetas() {
   const fim = document.getElementById('pf-fim')?.value || '';
   if (!ini || !fim) { wrap.innerHTML = `<div style="padding:48px;text-align:center;color:var(--text3)">Selecione o período e clique em Filtrar.</div>`; return; }
 
-  wrap.innerHTML = `<div style="padding:48px;text-align:center;color:var(--text3)">⏳ Carregando metas...</div>`;
+  wrap.innerHTML = `<div style="padding:48px;text-align:center;color:var(--text3)">Carregando metas...</div>`;
 
   const dados = await apiFetch(`/performance/metas?ini=${ini}&fim=${fim}`);
   if (!dados || dados.erro) {
@@ -1483,7 +1483,7 @@ async function pfCarregarMetas() {
 
       <!-- Resumo por colaborador -->
       <div style="padding:12px 18px;border-bottom:1px solid var(--border)">
-        <div style="font-size:9px;font-weight:800;color:var(--text3);letter-spacing:.5px;margin-bottom:10px">RESUMO DO PERÍODO</div>
+        <div style="font-size:9px;font-weight:800;color:var(--text3);letter-spacing:.5px;margin-bottom:10px">Resumo do período</div>
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px">
           ${Object.values(totais).map(t => {
             const pct = t.metaProp > 0 ? Math.round((t.realizado / t.metaProp) * 100) : null;
@@ -1496,7 +1496,7 @@ async function pfCarregarMetas() {
                 <span style="font-size:10px;color:var(--text3)">${PF_LABEL_TURNO[t.turno]||t.turno||'—'}</span>
               </div>
               <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-bottom:4px">
-                <span>⏱️ ${fmtMin(t.minutos)}</span>
+                <span><i class="ti ti-clock" aria-hidden="true"></i> ${fmtMin(t.minutos)}</span>
                 <span>Meta: <b style="color:var(--text)">${t.metaProp.toFixed(1)}</b> | Realiz.: <b style="color:${cor}">${t.realizado}</b></span>
               </div>
               <div style="background:var(--surface);border-radius:4px;height:6px;overflow:hidden;margin-bottom:4px">
@@ -1712,7 +1712,7 @@ function pfRenderPedidoDetalhe(d) {
     if (/DRIVE|RETIRADA/i.test(envio))
       return `<span style="background:#fee2e2;color:#dc2626;border:1.5px solid #fca5a5;font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">Drive Thru</span>`;
     if (/PRIME/i.test(envio))
-      return `<span style="background:#FEF3C7;color:#92400E;border:1.5px solid #FCD34D;font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">⭐ Prime</span>`;
+      return `<span style="background:#FEF3C7;color:#92400E;border:1.5px solid #FCD34D;font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap"><i class="ti ti-star-filled" aria-hidden="true"></i> Prime</span>`;
     if (/SEDEX/i.test(envio))
       return `<span style="background:#EFF6FF;color:#1D4ED8;border:1.5px solid #BFDBFE;font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">${pfEsc(envio)}</span>`;
     if (/^PAC/i.test(envio))
