@@ -1069,12 +1069,12 @@ async function abrirModalValidacao() {
               Sim
             </button>
             <button onclick="marcarItem('${item.id}',false,this)" data-item="${item.id}" data-val="false"
-              style="padding:7px 16px;border-radius:7px;border:2px solid #fca5a5;background:transparent;color:#dc2626;font-weight:800;font-size:13px;cursor:pointer;transition:.15s">
+              style="padding:7px 16px;border-radius:7px;border:2px solid rgba(201,82,79,.4);background:transparent;color:var(--red);font-weight:800;font-size:13px;cursor:pointer;transition:.15s">
               Não
             </button>
           </div>
         </div>
-        <div id="obs-wrap-${item.id}" style="display:none;padding:10px 14px;border-top:1px solid var(--border);background:#fef2f2">
+        <div id="obs-wrap-${item.id}" style="display:none;padding:10px 14px;border-top:1px solid var(--border);background:rgba(201,82,79,.08)">
           <label style="font-size:11px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.5px">
             Registre o que foi encontrado / ocorrência:
           </label>
@@ -1467,7 +1467,7 @@ async function _buscarEmbalagemDeskLegacy() {
     const pedidos = await res.json();
     const p = pedidos.find(x => String(x.numero_pedido) === num);
     if (!p) {
-      if (cont) cont.innerHTML = `<div style="padding:12px 16px;background:#fef2f2;border:1.5px solid #fecaca;border-radius:10px;color:#dc2626;font-weight:700;font-size:13px">
+      if (cont) cont.innerHTML = `<div style="padding:12px 16px;background:rgba(201,82,79,.12);border:1.5px solid rgba(201,82,79,.4);border-radius:10px;color:var(--red);font-weight:700;font-size:13px">
         Pedido <b>${num}</b> não encontrado na fila de embalagem
       </div>`;
       return;
@@ -1668,12 +1668,12 @@ function renderCardEmb(p, emAndamento, mode, readOnly) {
   if (readOnly) {
     // Fila tab — exibe apenas o status, sem botões de ação
     const statusInfo = isEmbalado
-      ? `<div style="display:flex;align-items:center;gap:8px;padding:10px 16px;background:#f0fdf4;border-top:1px solid #bbf7d0">
-           <span style="font-size:12px;color:#16a34a;font-weight:700">Embalado por <b>${p.embalado_por||'—'}</b></span>
+      ? `<div style="display:flex;align-items:center;gap:8px;padding:10px 16px;background:rgba(87,185,129,.1);border-top:1px solid rgba(87,185,129,.35)">
+           <span style="font-size:12px;color:var(--green);font-weight:700">Embalado por <b>${p.embalado_por||'—'}</b></span>
          </div>`
       : emAndamento
-        ? `<div style="display:flex;align-items:center;gap:8px;padding:10px 16px;background:#eff6ff;border-top:1px solid #bfdbfe">
-             <span style="font-size:12px;color:#4F46E5;font-weight:700">Em andamento</span>
+        ? `<div style="display:flex;align-items:center;gap:8px;padding:10px 16px;background:rgba(79,70,229,.1);border-top:1px solid rgba(79,70,229,.35)">
+             <span style="font-size:12px;color:#818CF8;font-weight:700">Em andamento</span>
            </div>`
         : `<div style="display:flex;align-items:center;gap:8px;padding:10px 16px;background:var(--surface2);border-top:1px solid var(--border)">
              <span style="font-size:12px;color:var(--text3);font-weight:600">Aguardando embalagem</span>
@@ -1681,8 +1681,8 @@ function renderCardEmb(p, emAndamento, mode, readOnly) {
     botoes = statusInfo;
   } else {
     botoes = isEmbalado
-      ? `<div style="padding:12px 16px;background:#f0fdf4;border-top:1px solid #bbf7d0">
-           <div style="font-size:12px;color:#16a34a;font-weight:700">Embalado por <b>${p.embalado_por||'—'}</b></div>
+      ? `<div style="padding:12px 16px;background:rgba(87,185,129,.1);border-top:1px solid rgba(87,185,129,.35)">
+           <div style="font-size:12px;color:var(--green);font-weight:700">Embalado por <b>${p.embalado_por||'—'}</b></div>
          </div>`
       : `<div style="padding:14px 16px;display:grid;grid-template-columns:${emAndamento?'1fr 1fr':'1fr'};gap:10px">
           ${emAndamento ? `
@@ -1792,7 +1792,7 @@ async function carregarEmbalagemEmbalados() {
     const fmtDt = d => { if (!d) return '—'; const [y,m,dd] = d.split('-'); return `${dd}/${m}/${y}`; };
     el.innerHTML = pedidos.map(p => `
       <div style="background:var(--surface);border-radius:16px;margin-bottom:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.08)">
-        <div style="background:#f0fdf4;border-left:5px solid #16a34a;padding:14px 16px">
+        <div style="background:rgba(87,185,129,.1);border-left:5px solid var(--green);padding:14px 16px">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
             <div>
               <div style="font-family:'Space Mono',monospace;font-size:19px;font-weight:700;color:var(--text)">${p.numero_pedido}</div>
@@ -2473,7 +2473,7 @@ async function carregarEmbalagemEmbaladesDesk() {
     }
     const fmtDt = d => { if (!d) return '—'; const [y,m,dd] = d.split('-'); return `${dd}/${m}/${y}`; };
     el.innerHTML = pedidos.map(p => `
-      <div style="border:1.5px solid #BBF7D0;border-radius:12px;padding:12px 14px;margin-bottom:8px;background:#F0FDF4">
+      <div style="border:1.5px solid rgba(87,185,129,.4);border-radius:12px;padding:12px 14px;margin-bottom:8px;background:rgba(87,185,129,.1)">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
           <div style="font-size:20px;font-weight:800;color:var(--green);font-family:'Space Mono',monospace">#${p.numero_pedido}</div>
           <span style="font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;background:#16a34a;color:#fff">EMBALADO</span>
@@ -2509,7 +2509,7 @@ async function buscarEmbalagemDesk() {
     const pedidos = await res.json();
     const p = pedidos.find(x => String(x.numero_pedido) === num);
     if (!p) {
-      if (cont) cont.innerHTML = `<div style="padding:12px 16px;background:#fef2f2;border:1.5px solid #fecaca;border-radius:10px;color:#dc2626;font-weight:700;font-size:13px">
+      if (cont) cont.innerHTML = `<div style="padding:12px 16px;background:rgba(201,82,79,.12);border:1.5px solid rgba(201,82,79,.4);border-radius:10px;color:var(--red);font-weight:700;font-size:13px">
         Pedido <b>${num}</b> não encontrado na fila de embalagem
       </div>`;
       return;
@@ -2541,7 +2541,7 @@ async function encerrarEmbalagemDesk(id) {
     const dInput = document.getElementById('d-emb-embalar-input');
     if (dInput) dInput.value = '';
     const dCont = document.getElementById('d-emb-resultado');
-    if (dCont) dCont.innerHTML = `<div style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px;color:#16a34a;font-weight:700;font-size:13px">
+    if (dCont) dCont.innerHTML = `<div style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:rgba(87,185,129,.1);border:1.5px solid rgba(87,185,129,.4);border-radius:10px;color:var(--green);font-weight:700;font-size:13px">
       ${r.hora_checkout||'—'}Embalagem concluída! Bipe o próximo pedido.
     </div>`;
     if (document.getElementById('d-emb-tab-fila')?.style.display !== 'none') carregarEmbalagemDesk();
@@ -2723,7 +2723,7 @@ async function carregarFeitosCkDesk() {
       return;
     }
     el.innerHTML = rows.map(r => `
-      <div style="border:1.5px solid #BBF7D0;border-radius:12px;padding:12px 14px;margin-bottom:8px;background:#F0FDF4">
+      <div style="border:1.5px solid rgba(87,185,129,.4);border-radius:12px;padding:12px 14px;margin-bottom:8px;background:rgba(87,185,129,.1)">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
           <div style="font-size:20px;font-weight:800;color:var(--green);font-family:'Space Mono',monospace">#${r.numero_pedido||'—'}</div>
           <span style="font-size:11px;color:var(--green);font-weight:700">${r.hora_checkout||'—'}</span>
