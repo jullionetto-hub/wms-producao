@@ -582,10 +582,10 @@ async function carregarAguardandoMobile() {
           <span style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:12px;background:${borderColor}22;color:${labelColor};border:1px solid ${borderColor}66">${labelTxt}</span>
         </div>
         ${itens.map(a => `
-          <div style="background:rgba(255,255,255,.75);border:1px solid #e2e8f0;border-radius:7px;padding:10px;margin-bottom:6px">
-            <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:2px">${a.codigo||'—'}</div>
-            <div style="font-size:11px;color:#475569;margin-bottom:3px">${a.descricao||'—'}</div>
-            <div style="font-size:11px;color:#64748b">Qtd: <b>${a.quantidade||1}</b>${a.endereco?' | End: '+a.endereco:''}${a.hora_aviso?' | '+a.hora_aviso:''}</div>
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:10px;margin-bottom:6px">
+            <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:2px">${a.codigo||'—'}</div>
+            <div style="font-size:11px;color:var(--text2);margin-bottom:3px">${a.descricao||'—'}</div>
+            <div style="font-size:11px;color:var(--text3)">Qtd: <b>${a.quantidade||1}</b>${a.endereco?' | End: '+a.endereco:''}${a.hora_aviso?' | '+a.hora_aviso:''}</div>
           </div>
         `).join('')}
       </div>`;
@@ -884,7 +884,7 @@ async function _confirmarPedidoCore(num, inputId, statusId, clWrapId, fnChecklis
       }
     } catch(e) { console.warn(e); }
     if (statusEl) { 
-      statusEl.innerHTML = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:${infoTransp?'8px':'0'}"><span style="width:8px;height:8px;background:var(--accent);border-radius:50%;flex-shrink:0;display:inline-block"></span><span style="font-size:13px;color:#475569">Pedido <b style="color:#0F172A;font-family:'Space Mono',monospace">${num}</b> — <span style="font-weight:700;color:var(--accent)">Em separação</span></span></div>${infoTransp}`; 
+      statusEl.innerHTML = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:${infoTransp?'8px':'0'}"><span style="width:8px;height:8px;background:var(--accent);border-radius:50%;flex-shrink:0;display:inline-block"></span><span style="font-size:13px;color:var(--text2)">Pedido <b style="color:var(--text);font-family:'Space Mono',monospace">${num}</b> — <span style="font-weight:700;color:var(--accent)">Em separação</span></span></div>${infoTransp}`;
       statusEl.style.display = 'block'; 
     }
     // Drive Thru — destaque vermelho no info card
@@ -1215,13 +1215,13 @@ function renderChecklist(prefix) {
         <!-- Linha 1: Código + Status badge + Quantidade -->
         <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px">
           <div style="flex:1;min-width:0">
-            <div style="font-family:'Space Mono',monospace;font-size:14px;font-weight:700;color:#64748b;letter-spacing:-.3px;margin-bottom:2px">${item.codigo||'—'}</div>
-            <div style="font-size:16px;font-weight:800;color:#0F172A;line-height:1.3;margin-bottom:4px">${item.descricao||'<span style="color:#94a3b8;font-style:italic">Sem descrição</span>'}</div>
-            <div style="font-size:15px;font-weight:700;color:#1e40af;letter-spacing:.5px">${item.endereco||'—'}</div>
+            <div style="font-family:'Space Mono',monospace;font-size:14px;font-weight:700;color:var(--text3);letter-spacing:-.3px;margin-bottom:2px">${item.codigo||'—'}</div>
+            <div style="font-size:16px;font-weight:800;color:var(--text);line-height:1.3;margin-bottom:4px">${item.descricao||'<span style="color:var(--text3);font-style:italic">Sem descrição</span>'}</div>
+            <div style="font-size:15px;font-weight:700;color:#818CF8;letter-spacing:.5px">${item.endereco||'—'}</div>
           </div>
           <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;margin-left:10px">
             ${item.status!=='pendente'?`<span style="font-size:9px;font-weight:800;letter-spacing:1.5px;padding:3px 8px;border-radius:4px;background:${cardAccent};color:#fff">${statusLabel}</span>`:''}
-            <span style="font-family:'Space Mono',monospace;font-size:28px;font-weight:800;color:#0F172A;line-height:1">×${item.quantidade||1}</span>
+            <span style="font-family:'Space Mono',monospace;font-size:28px;font-weight:800;color:var(--text);line-height:1">×${item.quantidade||1}</span>
           </div>
         </div>
         <!-- Avisos repositor -->
@@ -1269,12 +1269,12 @@ function renderChecklist(prefix) {
     return `<div id="${prefix}-ic-${item.id}" style="background:${dCardBg};border:1px solid ${dCardBord};border-left:3px solid ${dCardLeft};border-radius:9px;padding:12px 14px;margin-bottom:7px;display:flex;align-items:center;gap:14px">
       <div style="flex:1;min-width:0">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
-          <span style="font-family:'Space Mono',monospace;font-size:13px;font-weight:700;color:#0F172A">${item.codigo||'—'}</span>
-          <span style="font-size:12px;font-weight:700;color:#0F172A;background:var(--surface2);padding:2px 8px;border-radius:5px;border:1px solid var(--border)">${item.endereco||'—'}</span>
-          <span style="font-family:'Space Mono',monospace;font-size:13px;font-weight:700;color:#0F172A;background:var(--surface2);padding:2px 8px;border-radius:5px;border:1px solid var(--border)">×${item.quantidade||1}</span>
-          ${item.hora_verificado?`<span style="font-size:10px;color:#94A3B8">${item.hora_verificado}</span>`:''}
+          <span style="font-family:'Space Mono',monospace;font-size:13px;font-weight:700;color:var(--text)">${item.codigo||'—'}</span>
+          <span style="font-size:12px;font-weight:700;color:var(--text);background:var(--surface2);padding:2px 8px;border-radius:5px;border:1px solid var(--border)">${item.endereco||'—'}</span>
+          <span style="font-family:'Space Mono',monospace;font-size:13px;font-weight:700;color:var(--text);background:var(--surface2);padding:2px 8px;border-radius:5px;border:1px solid var(--border)">×${item.quantidade||1}</span>
+          ${item.hora_verificado?`<span style="font-size:10px;color:var(--text3)">${item.hora_verificado}</span>`:''}
         </div>
-        <div style="font-size:12px;color:#475569;line-height:1.35">${item.descricao||'—'}</div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.35">${item.descricao||'—'}</div>
         ${item.status==='falta'?`<div style="font-size:11px;color:var(--red);font-weight:600;margin-top:4px">Repositor notificado — aguardando reposição</div>`:''}
         ${item.status==='parcial'?`<div style="font-size:11px;color:var(--amber);font-weight:600;margin-top:4px">${item.obs||'Parcial'} — repositor notificado</div>`:''}
         ${(item.status==='falta'||item.status==='parcial')&&avisoSt==='reposto'?`<div style="font-size:11px;color:var(--green);font-weight:600;margin-top:4px">Repositor confirmou reposição</div>`:''}
