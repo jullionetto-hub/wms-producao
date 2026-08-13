@@ -191,7 +191,7 @@ async function carregarRepSeparar(silent=false) {
         let bloco = '';
         if (itens.length > 1) {
           // Cabeçalho do grupo
-          bloco += `<div style="background:#fff7ed;border:2px solid #f97316;border-radius:12px;padding:10px 14px;margin-bottom:4px;display:flex;align-items:center;justify-content:space-between">
+          bloco += `<div style="background:rgba(251,146,60,.1);border:2px solid var(--orange);border-radius:12px;padding:10px 14px;margin-bottom:4px;display:flex;align-items:center;justify-content:space-between">
             <div>
               <span style="font-size:13px;font-weight:800;color:#c2410c;font-family:'Space Mono',monospace">${itens[0].codigo||'—'}</span>
               <div style="font-size:11px;color:#92400e;margin-top:2px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${itens[0].descricao||''}</div>
@@ -417,15 +417,15 @@ function renderCardRepSimples(a, modo) {
   const envioBdg = (() => {
     if (!envio) return '';
     if (/DRIVE|RETIRADA/i.test(envio))
-      return `<span style="background:#fee2e2;color:#dc2626;border:1.5px solid #fca5a5;font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">Drive Thru</span>`;
+      return `<span style="background:rgba(201,82,79,.15);color:var(--red);border:1.5px solid rgba(201,82,79,.35);font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">Drive Thru</span>`;
     if (/PRIME/i.test(envio))
       return `<span style="background:#FEF3C7;color:#92400E;border:1.5px solid #FCD34D;font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap"><i class="ti ti-star-filled" aria-hidden="true"></i> Prime</span>`;
     if (/SEDEX/i.test(envio))
-      return `<span style="background:#EFF6FF;color:#4338CA;border:1.5px solid #BFDBFE;font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">${envio}</span>`;
+      return `<span style="background:rgba(79,70,229,.15);color:#818CF8;border:1.5px solid rgba(79,70,229,.35);font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">${envio}</span>`;
     if (/^PAC/i.test(envio))
-      return `<span style="background:#F0FDF4;color:#166534;border:1.5px solid #BBF7D0;font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">${envio}</span>`;
+      return `<span style="background:rgba(87,185,129,.15);color:#4ADE80;border:1.5px solid rgba(87,185,129,.35);font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">${envio}</span>`;
     if (/MOTOBOY|MOTO/i.test(envio))
-      return `<span style="background:#F5F3FF;color:#6D28D9;border:1.5px solid #DDD6FE;font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">${envio}</span>`;
+      return `<span style="background:rgba(139,92,246,.15);color:#C4B5FD;border:1.5px solid rgba(139,92,246,.35);font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">${envio}</span>`;
     return `<span style="background:var(--surface2);color:var(--text2);border:1px solid var(--border);font-size:10px;font-weight:700;padding:2px 9px;border-radius:20px;white-space:nowrap">${envio}</span>`;
   })();
 
@@ -439,7 +439,7 @@ function renderCardRepSimples(a, modo) {
   const _tentOrdinal = ['', '2ª', '3ª'];
   const _isUltima = _totalTent >= 2; // Noite = última chance
   const _tentBadge = _totalTent > 0 && sit === 'pendente'
-    ? `<span style="background:${_isUltima?'#fef2f2':'#eff6ff'};color:${_isUltima?'#dc2626':'#4338CA'};border:1px solid ${_isUltima?'#fca5a5':'#bfdbfe'};font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;white-space:nowrap">
+    ? `<span style="background:${_isUltima?'rgba(201,82,79,.15)':'rgba(79,70,229,.15)'};color:${_isUltima?'var(--red)':'#818CF8'};border:1px solid ${_isUltima?'rgba(201,82,79,.35)':'rgba(79,70,229,.35)'};font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;white-space:nowrap">
         ${_isUltima?'Última tentativa':''+(_tentOrdinal[_totalTent]||(_totalTent+1)+'ª')+' tentativa'}
        </span>`
     : '';
@@ -447,9 +447,9 @@ function renderCardRepSimples(a, modo) {
   // ── Histórico compacto de tentativas anteriores ──────────────────────
   const _prevFailed = _tentArr.filter(t => t.resultado === 'nao_encontrado');
   const _histTentHtml = _prevFailed.length
-    ? `<div style="margin-top:5px;padding:6px 9px;background:#fff1f2;border-radius:7px;border:1px solid #fecaca">
-        <div style="font-size:9px;font-weight:700;color:#be123c;letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px">Tentativas anteriores</div>
-        ${_prevFailed.map(t => `<div style="font-size:10px;color:#9f1239;margin-bottom:2px">${t.turno||'?'} · <strong>${t.repositor||'?'}</strong> · ${t.hora_inicio||'?'}${t.hora_fim?' → '+t.hora_fim:''}</div>`).join('')}
+    ? `<div style="margin-top:5px;padding:6px 9px;background:rgba(201,82,79,.1);border-radius:7px;border:1px solid rgba(201,82,79,.35)">
+        <div style="font-size:9px;font-weight:700;color:var(--red);letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px">Tentativas anteriores</div>
+        ${_prevFailed.map(t => `<div style="font-size:10px;color:var(--red);margin-bottom:2px">${t.turno||'?'} · <strong>${t.repositor||'?'}</strong> · ${t.hora_inicio||'?'}${t.hora_fim?' → '+t.hora_fim:''}</div>`).join('')}
       </div>`
     : '';
 
@@ -462,16 +462,16 @@ function renderCardRepSimples(a, modo) {
       const _isUltima    = _totalTent >= 3;
       botoes = `
         <div style="padding:5px 9px 7px;border-top:1px solid var(--border)">
-          <div style="background:${_isUltima?'#fef2f2':'#eff6ff'};border:1px solid ${_isUltima?'#fca5a5':'#bfdbfe'};border-radius:7px;padding:4px 8px;margin-bottom:5px;font-size:10px;color:${_isUltima?'#9f1239':'#1e40af'}">
-            <strong>${_quemBusca}</strong> está buscando${_isUltima?' · <span style="color:#dc2626;font-weight:800">Última tentativa</span>':''}
+          <div style="background:${_isUltima?'rgba(201,82,79,.1)':'rgba(79,70,229,.1)'};border:1px solid ${_isUltima?'rgba(201,82,79,.35)':'rgba(79,70,229,.35)'};border-radius:7px;padding:4px 8px;margin-bottom:5px;font-size:10px;color:${_isUltima?'var(--red)':'#818CF8'}">
+            <strong>${_quemBusca}</strong> está buscando${_isUltima?' · <span style="color:var(--red);font-weight:800">Última tentativa</span>':''}
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
             <button onclick="mostrarQtdEncontrada(${a.id},'${nomeLogado}',${a.quantidade||1})"
-              style="padding:7px 8px;background:#dcfce7;border:2px solid #10b981;border-radius:8px;color:#065f46;font-weight:700;font-size:12px;cursor:pointer;touch-action:manipulation">
+              style="padding:7px 8px;background:rgba(87,185,129,.15);border:2px solid var(--green);border-radius:8px;color:var(--green);font-weight:700;font-size:12px;cursor:pointer;touch-action:manipulation">
               <i class="ti ti-check" aria-hidden="true"></i> Encontrei
             </button>
             <button onclick="acaoRepTab(${a.id},'e_nao_enc','${nomeLogado}','_smart')"
-              style="padding:7px 8px;background:#fee2e2;border:2px solid #ef4444;border-radius:8px;color:#dc2626;font-weight:700;font-size:12px;cursor:pointer;touch-action:manipulation">
+              style="padding:7px 8px;background:rgba(201,82,79,.15);border:2px solid var(--red);border-radius:8px;color:var(--red);font-weight:700;font-size:12px;cursor:pointer;touch-action:manipulation">
               <i class="ti ti-x" aria-hidden="true"></i> Não encontrei
             </button>
           </div>
@@ -484,7 +484,7 @@ function renderCardRepSimples(a, modo) {
       botoes = `
         <div style="padding:7px 9px;border-top:1px solid var(--border)">
           <button onclick="iniciarBuscaRep(${a.id},'${nomeLogado}')"
-            style="width:100%;padding:9px 10px;background:${_isUltima?'#fef2f2':'#eff6ff'};border:2px solid ${_isUltima?'#ef4444':'#3b82f6'};border-radius:8px;color:${_isUltima?'#dc2626':'#4338CA'};font-weight:700;font-size:12px;cursor:pointer;touch-action:manipulation;display:flex;align-items:center;justify-content:center;gap:8px">
+            style="width:100%;padding:9px 10px;background:${_isUltima?'rgba(201,82,79,.15)':'rgba(79,70,229,.15)'};border:2px solid ${_isUltima?'var(--red)':'var(--accent)'};border-radius:8px;color:${_isUltima?'var(--red)':'#818CF8'};font-weight:700;font-size:12px;cursor:pointer;touch-action:manipulation;display:flex;align-items:center;justify-content:center;gap:8px">
             Iniciar Busca <span style="font-size:10px;opacity:.8;font-weight:600">${_tentLabel}</span>
           </button>
           ${_histTentHtml}
@@ -494,7 +494,7 @@ function renderCardRepSimples(a, modo) {
     botoes = `
       <div style="padding:12px 14px;border-top:1px solid var(--border)">
         <button onclick="mostrarQtdSubiu(${a.id},'${nomeLogado}',${qtd},${a.qtd_encontrada||0})"
-          style="width:100%;padding:14px;background:#e0f2fe;border:2px solid #0ea5e9;border-radius:10px;color:#0369a1;font-weight:700;font-size:14px;cursor:pointer;touch-action:manipulation">
+          style="width:100%;padding:14px;background:rgba(56,189,248,.15);border:2px solid var(--info);border-radius:10px;color:var(--info);font-weight:700;font-size:14px;cursor:pointer;touch-action:manipulation">
           <i class="ti ti-arrow-big-up-lines" aria-hidden="true"></i> Subiu
         </button>
       </div>`;
@@ -502,7 +502,7 @@ function renderCardRepSimples(a, modo) {
     botoes = `
       <div style="padding:12px 14px;border-top:1px solid var(--border)">
         <button onclick="acaoRepTab(${a.id},'e_abastecido','${nomeLogado}','done')"
-          style="width:100%;padding:14px;background:#dcfce7;border:2px solid #10b981;border-radius:10px;color:#065f46;font-weight:700;font-size:14px;cursor:pointer;touch-action:manipulation">
+          style="width:100%;padding:14px;background:rgba(87,185,129,.15);border:2px solid var(--green);border-radius:10px;color:var(--green);font-weight:700;font-size:14px;cursor:pointer;touch-action:manipulation">
           <i class="ti ti-check" aria-hidden="true"></i> Abastecido
         </button>
       </div>`;
@@ -533,8 +533,8 @@ function renderCardRepSimples(a, modo) {
           ${a.numero_pedido?`<span style="background:var(--surface2);border-radius:6px;padding:2px 7px;font-size:10px;color:var(--text2);font-weight:600">${a.numero_pedido}</span>`:''}
           ${a.separador_nome?`<span style="background:var(--surface2);border-radius:6px;padding:2px 7px;font-size:10px;color:var(--text2)">${a.separador_nome}</span>`:''}
           ${(a.qtd_encontrada > 0 && a.qtd_encontrada < qtd)
-            ? `<span style="background:#fff7ed;border:1.5px solid #fb923c;border-radius:6px;padding:2px 7px;font-size:10px;font-weight:800;color:#c2410c">${a.qtd_encontrada}/${qtd} un</span>`
-            : `<span style="background:#fee2e2;border-radius:6px;padding:2px 7px;font-size:10px;font-weight:800;color:#dc2626">${qtd} un</span>`
+            ? `<span style="background:rgba(251,146,60,.15);border:1.5px solid rgba(251,146,60,.4);border-radius:6px;padding:2px 7px;font-size:10px;font-weight:800;color:var(--orange)">${a.qtd_encontrada}/${qtd} un</span>`
+            : `<span style="background:rgba(201,82,79,.15);border-radius:6px;padding:2px 7px;font-size:10px;font-weight:800;color:var(--red)">${qtd} un</span>`
           }
           ${envioBdg}
           ${a.endereco?`<span style="background:var(--surface2);border-radius:6px;padding:2px 7px;font-size:10px;color:var(--text3)">${a.endereco}</span>`:''}
@@ -894,16 +894,16 @@ function renderCardMobile(a) {
 
   // ── Badge de status ──
   const BADGES = {
-    pendente:            `<span style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px">⏳ Separar</span>`,
-    verificando:         `<span style="background:#f3e8ff;color:#6b21a8;border:1px solid #d8b4fe;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px">Verificando</span>`,
-    buscado:             `<span style="background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px">Separado</span>`,
-    separado:            `<span style="background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px">Separado</span>`,
-    aguardando_abastecer:`<span style="background:#ffedd5;color:#9a3412;border:1px solid #fed7aa;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px">Aguardando</span>`,
-    subiu:               `<span style="background:#e0f2fe;color:#0369a1;border:1px solid #7dd3fc;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px">⬆️ Subiu</span>`,
-    abastecido:          `<span style="background:#dcfce7;color:#166534;border:1px solid #86efac;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px">Abastecido</span>`,
-    protocolo:           `<span style="background:#f3f4f6;color:#374151;border:1px solid #d1d5db;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px">Protocolo</span>`,
-    devolucao:           `<span style="background:#faf5ff;color:#7e22ce;border:1px solid #d8b4fe;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px">↩️ Devolução</span>`,
-    nao_encontrado:      `<span style="background:#fee2e2;color:#991b1b;border:1px solid #fecaca;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px">Não encontrado</span>`,
+    pendente:            `<span style="background:rgba(224,168,62,.15);color:var(--amber);border:1px solid rgba(224,168,62,.35);font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px">⏳ Separar</span>`,
+    verificando:         `<span style="background:rgba(139,92,246,.15);color:var(--indigo);border:1px solid rgba(139,92,246,.35);font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px">Verificando</span>`,
+    buscado:             `<span style="background:rgba(79,70,229,.15);color:#818CF8;border:1px solid rgba(79,70,229,.35);font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px">Separado</span>`,
+    separado:            `<span style="background:rgba(79,70,229,.15);color:#818CF8;border:1px solid rgba(79,70,229,.35);font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px">Separado</span>`,
+    aguardando_abastecer:`<span style="background:rgba(251,146,60,.15);color:var(--orange);border:1px solid rgba(251,146,60,.35);font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px">Aguardando</span>`,
+    subiu:               `<span style="background:rgba(56,189,248,.15);color:var(--info);border:1px solid rgba(56,189,248,.35);font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px">⬆️ Subiu</span>`,
+    abastecido:          `<span style="background:rgba(87,185,129,.15);color:var(--green);border:1px solid rgba(87,185,129,.35);font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px">Abastecido</span>`,
+    protocolo:           `<span style="background:var(--surface2);color:var(--text2);border:1px solid var(--border);font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px">Protocolo</span>`,
+    devolucao:           `<span style="background:rgba(139,92,246,.15);color:var(--indigo);border:1px solid rgba(139,92,246,.35);font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px">↩️ Devolução</span>`,
+    nao_encontrado:      `<span style="background:rgba(201,82,79,.15);color:var(--red);border:1px solid rgba(201,82,79,.35);font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px">Não encontrado</span>`,
   };
   const badge = BADGES[sit] || `<span style="font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;background:${cor}22;color:${cor}">${labelSituacao(sit)}</span>`;
 
@@ -913,15 +913,15 @@ function renderCardMobile(a) {
   const envioBdg = (() => {
     if (!envio) return '';
     if (/DRIVE|RETIRADA/i.test(envio))
-      return `<span style="background:#fee2e2;color:#dc2626;border:1.5px solid #fca5a5;font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">Drive Thru</span>`;
+      return `<span style="background:rgba(201,82,79,.15);color:var(--red);border:1.5px solid rgba(201,82,79,.35);font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">Drive Thru</span>`;
     if (/PRIME/i.test(envio))
       return `<span style="background:#FEF3C7;color:#92400E;border:1.5px solid #FCD34D;font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap"><i class="ti ti-star-filled" aria-hidden="true"></i> Prime</span>`;
     if (/SEDEX/i.test(envio))
-      return `<span style="background:#EFF6FF;color:#4338CA;border:1.5px solid #BFDBFE;font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">${envio}</span>`;
+      return `<span style="background:rgba(79,70,229,.15);color:#818CF8;border:1.5px solid rgba(79,70,229,.35);font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">${envio}</span>`;
     if (/^PAC/i.test(envio))
-      return `<span style="background:#F0FDF4;color:#166534;border:1.5px solid #BBF7D0;font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">${envio}</span>`;
+      return `<span style="background:rgba(87,185,129,.15);color:#4ADE80;border:1.5px solid rgba(87,185,129,.35);font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">${envio}</span>`;
     if (/MOTOBOY|MOTO/i.test(envio))
-      return `<span style="background:#F5F3FF;color:#6D28D9;border:1.5px solid #DDD6FE;font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">${envio}</span>`;
+      return `<span style="background:rgba(139,92,246,.15);color:#C4B5FD;border:1.5px solid rgba(139,92,246,.35);font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">${envio}</span>`;
     return `<span style="background:var(--surface2);color:var(--text2);border:1px solid var(--border);font-size:10px;font-weight:700;padding:2px 9px;border-radius:20px;white-space:nowrap">${envio}</span>`;
   })();
 
@@ -1019,7 +1019,7 @@ function renderCardMobile(a) {
     // Etapa intermediária: alguém trouxe o item, outro precisa guardar
     botoesEtapa = `
       <div style="border-top:1px solid var(--border);padding:12px 0 0">
-        <div style="background:#e0f2fe;border:1px solid #bae6fd;border-radius:10px;padding:9px 12px;margin-bottom:10px;font-size:12px;color:#0369a1">
+        <div style="background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.35);border-radius:10px;padding:9px 12px;margin-bottom:10px;font-size:12px;color:var(--info)">
           ⬆️ <strong>${a.quem_pegou||'—'}</strong> trouxe o item — quem vai guardar no estoque?
         </div>
         ${dropEtapas}
@@ -1029,7 +1029,7 @@ function renderCardMobile(a) {
     botoesEtapa = `
       <div style="border-top:1px solid var(--border);padding:12px 0 0">
         ${sit === 'aguardando_abastecer' ? `
-          <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:9px 12px;margin-bottom:10px;font-size:12px;color:#92400e">
+          <div style="background:rgba(251,146,60,.1);border:1px solid rgba(251,146,60,.35);border-radius:10px;padding:9px 12px;margin-bottom:10px;font-size:12px;color:var(--orange)">
             <strong>${a.quem_pegou||'—'}</strong> separou ${a.qtd_encontrada||qtdSolic} de ${qtdSolic} un. Aguardando entrega.
           </div>` : `
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
@@ -1067,7 +1067,7 @@ function renderCardMobile(a) {
         <!-- Linha 2: tags (envio, qtd, endereço) -->
         <div style="display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin-bottom:6px">
           ${envioBdg}
-          <span style="background:#fee2e2;border-radius:8px;padding:3px 10px;font-size:12px;font-weight:800;color:#dc2626">${qtdSolic} un em falta</span>
+          <span style="background:rgba(201,82,79,.15);border-radius:8px;padding:3px 10px;font-size:12px;font-weight:800;color:var(--red)">${qtdSolic} un em falta</span>
           <span style="background:var(--surface2);border-radius:8px;padding:3px 10px;font-size:11px;color:var(--text2)">${a.endereco||'—'}</span>
         </div>
         <!-- Linha 3: separador + hora -->
@@ -1309,7 +1309,7 @@ async function carregarTabelaReposicao() {
         </td>
         <td style="padding:10px 12px;white-space:nowrap">
           ${a.forma_envio
-            ? `<span style="background:${isDrive?'#fee2e2':'var(--surface2)'};color:${isDrive?'#dc2626':'var(--text2)'};border:1px solid ${isDrive?'#fca5a5':'var(--border)'};font-weight:700;font-size:11px;padding:3px 8px;border-radius:20px">${isDrive?'DT':''} ${a.forma_envio}</span>`
+            ? `<span style="background:${isDrive?'rgba(201,82,79,.15)':'var(--surface2)'};color:${isDrive?'var(--red)':'var(--text2)'};border:1px solid ${isDrive?'rgba(201,82,79,.35)':'var(--border)'};font-weight:700;font-size:11px;padding:3px 8px;border-radius:20px">${isDrive?'DT':''} ${a.forma_envio}</span>`
             : `<span style="color:var(--text3)">—</span>`}
         </td>
         <td style="padding:10px 12px;font-size:12px;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;color:var(--text2)">${a.separador_nome||'—'}</td>

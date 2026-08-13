@@ -475,7 +475,7 @@ function pfRenderizarDados(colab, porDia) {
   } catch(err) {
     console.error('[Performance] Erro ao renderizar:', err);
     const kpisEl = document.getElementById('pf-kpis');
-    if (kpisEl) kpisEl.innerHTML = `<div style="grid-column:1/-1;background:#fee2e2;border:1px solid #ef4444;border-radius:12px;padding:16px;color:#b91c1c;font-size:13px">
+    if (kpisEl) kpisEl.innerHTML = `<div style="grid-column:1/-1;background:rgba(201,82,79,.15);border:1px solid var(--red);border-radius:12px;padding:16px;color:var(--red);font-size:13px">
       Erro ao renderizar os dados: <b>${pfEsc(err.message)}</b><br>
       <small>Verifique o console do navegador (F12) para mais detalhes.</small>
     </div>`;
@@ -1710,15 +1710,15 @@ function pfRenderPedidoDetalhe(d) {
   const envioBdg = (() => {
     if (!envio) return '';
     if (/DRIVE|RETIRADA/i.test(envio))
-      return `<span style="background:#fee2e2;color:#dc2626;border:1.5px solid #fca5a5;font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">Drive Thru</span>`;
+      return `<span style="background:rgba(201,82,79,.15);color:var(--red);border:1.5px solid rgba(201,82,79,.35);font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">Drive Thru</span>`;
     if (/PRIME/i.test(envio))
       return `<span style="background:#FEF3C7;color:#92400E;border:1.5px solid #FCD34D;font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap"><i class="ti ti-star-filled" aria-hidden="true"></i> Prime</span>`;
     if (/SEDEX/i.test(envio))
-      return `<span style="background:#EFF6FF;color:#4338CA;border:1.5px solid #BFDBFE;font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">${pfEsc(envio)}</span>`;
+      return `<span style="background:rgba(79,70,229,.15);color:#818CF8;border:1.5px solid rgba(79,70,229,.35);font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">${pfEsc(envio)}</span>`;
     if (/^PAC/i.test(envio))
-      return `<span style="background:#F0FDF4;color:#166534;border:1.5px solid #BBF7D0;font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">${pfEsc(envio)}</span>`;
+      return `<span style="background:rgba(87,185,129,.15);color:#4ADE80;border:1.5px solid rgba(87,185,129,.35);font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">${pfEsc(envio)}</span>`;
     if (/MOTOBOY|MOTO/i.test(envio))
-      return `<span style="background:#F5F3FF;color:#6D28D9;border:1.5px solid #DDD6FE;font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">${pfEsc(envio)}</span>`;
+      return `<span style="background:rgba(139,92,246,.15);color:#C4B5FD;border:1.5px solid rgba(139,92,246,.35);font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">${pfEsc(envio)}</span>`;
     return `<span style="background:var(--surface2);color:var(--text2);border:1px solid var(--border);font-size:10px;font-weight:700;padding:2px 9px;border-radius:20px;white-space:nowrap">${pfEsc(envio)}</span>`;
   })();
 

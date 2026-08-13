@@ -359,11 +359,11 @@ function _renderProtoKpis(pedList, pedListH) {
 function _transpBadgeProto(transp) {
   const t = (transp||'').trim();
   if (!t || t === '—') return '';
-  if (/DRIVE|RETIRADA/i.test(t))  return `<span style="background:#fee2e2;color:var(--red);border:1.5px solid #fca5a5;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;white-space:nowrap">Drive Thru</span>`;
+  if (/DRIVE|RETIRADA/i.test(t))  return `<span style="background:rgba(201,82,79,.15);color:var(--red);border:1.5px solid rgba(201,82,79,.35);font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;white-space:nowrap">Drive Thru</span>`;
   if (/PRIME/i.test(t))           return `<span style="background:#FEF3C7;color:#92400E;border:1.5px solid #FCD34D;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;white-space:nowrap"><i class="ti ti-star-filled" aria-hidden="true"></i> Prime</span>`;
-  if (/SEDEX/i.test(t))           return `<span style="background:#EFF6FF;color:#4338CA;border:1.5px solid #BFDBFE;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;white-space:nowrap">${t}</span>`;
-  if (/^PAC/i.test(t))            return `<span style="background:#F0FDF4;color:#166534;border:1.5px solid #BBF7D0;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;white-space:nowrap">${t}</span>`;
-  if (/MOTOBOY|MOTO/i.test(t))    return `<span style="background:#F5F3FF;color:#6D28D9;border:1.5px solid #DDD6FE;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;white-space:nowrap">${t}</span>`;
+  if (/SEDEX/i.test(t))           return `<span style="background:rgba(79,70,229,.15);color:#818CF8;border:1.5px solid rgba(79,70,229,.35);font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;white-space:nowrap">${t}</span>`;
+  if (/^PAC/i.test(t))            return `<span style="background:rgba(87,185,129,.15);color:#4ADE80;border:1.5px solid rgba(87,185,129,.35);font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;white-space:nowrap">${t}</span>`;
+  if (/MOTOBOY|MOTO/i.test(t))    return `<span style="background:rgba(139,92,246,.15);color:#C4B5FD;border:1.5px solid rgba(139,92,246,.35);font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;white-space:nowrap">${t}</span>`;
   return `<span style="background:var(--surface2);color:var(--text2);border:1px solid var(--border);font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;white-space:nowrap">${t}</span>`;
 }
 
@@ -539,7 +539,7 @@ async function carregarProtocolo() {
                     <td style="padding:8px 12px;font-family:'Space Mono',monospace;font-weight:700;color:var(--red);font-size:12px">${r.codigo||'—'}</td>
                     <td style="padding:8px 12px;font-weight:600;color:var(--text);max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${r.descricao||''}">${r.descricao||'—'}</td>
                     <td style="padding:8px 12px;text-align:center">
-                      <span style="background:#dcfce7;color:#166534;border-radius:8px;padding:2px 10px;font-weight:800;font-size:13px">${r.quantidade||0}</span>
+                      <span style="background:rgba(87,185,129,.15);color:var(--green);border-radius:8px;padding:2px 10px;font-weight:800;font-size:13px">${r.quantidade||0}</span>
                     </td>
                     <td style="padding:8px 12px;color:var(--text2);font-size:11px;white-space:nowrap">${r.separador_nome||'—'}</td>
                     <td style="padding:8px 12px;color:#059669;font-weight:700;font-size:11px;white-space:nowrap">${r.quem_guardou||'—'}</td>
