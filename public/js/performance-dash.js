@@ -1735,7 +1735,7 @@ function pfRenderPedidoDetalhe(d) {
             ${envioBdg}
           </div>` : ''}
         </div>
-        ${totalMin != null ? `<div style="background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:5px 18px;color:var(--text);font-size:13px;font-weight:700">Total: ${fmtDur(totalMin)}</div>` : ''}
+        ${totalMin != null ? `<div style="background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:5px 18px;color:var(--text);font-size:13px;font-weight:700">Total: ${_horasStr(Math.round(totalMin))}</div>` : ''}
       </div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;padding:14px">
         ${sepCard}${repCard}${ckCard}${embCard}
