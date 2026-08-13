@@ -231,10 +231,10 @@ function renderMapaEstoque(contRua, isPedidoUnico) {
     ZA:'especial',ARARA:'especial'
   };
   const CORES = {
-    facil:   { bg:'#DCFCE7', bord:'#4ADE80', txt:'#166534', bord2:'#16A34A' },
-    medio:   { bg:'#FEF9C3', bord:'#FACC15', txt:'#854D0E', bord2:'#CA8A04' },
-    dificil: { bg:'#FEE2E2', bord:'#F87171', txt:'#991B1B', bord2:'#DC2626' },
-    especial:{ bg:'#EDE9FE', bord:'#A78BFA', txt:'#5B21B6', bord2:'#7C3AED' },
+    facil:   { bg:'rgba(87,185,129,.15)', bord:'#57B981', txt:'#57B981', bord2:'#57B981' },
+    medio:   { bg:'rgba(224,168,62,.15)', bord:'#E0A83E', txt:'#E0A83E', bord2:'#E0A83E' },
+    dificil: { bg:'rgba(201,82,79,.15)', bord:'#C9524F', txt:'#C9524F', bord2:'#C9524F' },
+    especial:{ bg:'rgba(139,92,246,.15)', bord:'#8B5CF6', txt:'#8B5CF6', bord2:'#8B5CF6' },
   };
 
   function corPonto(total) {
@@ -262,13 +262,13 @@ function renderMapaEstoque(contRua, isPedidoUnico) {
   let s = `<svg viewBox="0 0 ${svgW} ${svgH}" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:${svgW}px;font-family:'DM Sans',system-ui,sans-serif">`;
 
   // ── Faixa de fundo (corredor) ──
-  s += `<rect x="${PAD_L-4}" y="${fundoY-4}" width="${FUNDO.length*(BW+HGAP)+2}" height="${BH+8}" rx="8" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1"/>`;
+  s += `<rect x="${PAD_L-4}" y="${fundoY-4}" width="${FUNDO.length*(BW+HGAP)+2}" height="${BH+8}" rx="8" fill="var(--surface2)" stroke="var(--border)" stroke-width="1"/>`;
 
   // ── Faixa de frente (corredor vertical) ──
-  s += `<rect x="${frenteX-4}" y="${frenteStartY-4}" width="${BW+8}" height="${FRENTE.length*(BH+VGAP)+4}" rx="8" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1"/>`;
+  s += `<rect x="${frenteX-4}" y="${frenteStartY-4}" width="${BW+8}" height="${FRENTE.length*(BH+VGAP)+4}" rx="8" fill="var(--surface2)" stroke="var(--border)" stroke-width="1"/>`;
 
   // ── Conector vertical entre fundo e frente ──
-  s += `<line x1="${qCX}" y1="${fundoY+BH+4}" x2="${qCX}" y2="${frenteStartY-4}" stroke="#CBD5E1" stroke-width="2" stroke-dasharray="4,3"/>`;
+  s += `<line x1="${qCX}" y1="${fundoY+BH+4}" x2="${qCX}" y2="${frenteStartY-4}" stroke="var(--border)" stroke-width="2" stroke-dasharray="4,3"/>`;
 
   // ── Labels ──
   s += `<text x="${PAD_L-2}" y="${fundoY-10}" font-size="9" fill="#94A3B8" font-weight="700" letter-spacing="1.5">FUNDO</text>`;
@@ -328,8 +328,8 @@ function renderMapaEstoque(contRua, isPedidoUnico) {
 
       if (isPedidoUnico && (d.encontrado||0) > 0) {
         const pct = Math.min(1, d.encontrado / total);
-        s += `<rect x="${x+3}" y="${y+BH-5}" width="${BW-6}" height="3" rx="1.5" fill="#CBD5E1"/>`;
-        s += `<rect x="${x+3}" y="${y+BH-5}" width="${Math.round((BW-6)*pct)}" height="3" rx="1.5" fill="#16A34A"/>`;
+        s += `<rect x="${x+3}" y="${y+BH-5}" width="${BW-6}" height="3" rx="1.5" fill="var(--border)"/>`;
+        s += `<rect x="${x+3}" y="${y+BH-5}" width="${Math.round((BW-6)*pct)}" height="3" rx="1.5" fill="var(--green)"/>`;
       }
     }
   });
@@ -360,8 +360,8 @@ function renderMapaEstoque(contRua, isPedidoUnico) {
 
       if (isPedidoUnico && (d.encontrado||0) > 0) {
         const pct = Math.min(1, d.encontrado / total);
-        s += `<rect x="${x+3}" y="${y+BH-5}" width="${BW-6}" height="3" rx="1.5" fill="#CBD5E1"/>`;
-        s += `<rect x="${x+3}" y="${y+BH-5}" width="${Math.round((BW-6)*pct)}" height="3" rx="1.5" fill="#16A34A"/>`;
+        s += `<rect x="${x+3}" y="${y+BH-5}" width="${BW-6}" height="3" rx="1.5" fill="var(--border)"/>`;
+        s += `<rect x="${x+3}" y="${y+BH-5}" width="${Math.round((BW-6)*pct)}" height="3" rx="1.5" fill="var(--green)"/>`;
       }
     }
   });
@@ -1113,7 +1113,7 @@ function _pctBar(pct, temSessao) {
   const p = Math.min(100, pct);
   const cor = pct >= 100 ? '#16a34a' : pct >= 70 ? '#4F46E5' : pct >= 40 ? '#D97706' : '#DC2626';
   return `<div style="display:flex;align-items:center;gap:6px">
-    <div style="flex:1;height:8px;background:#E2E8F0;border-radius:4px;overflow:hidden;min-width:60px">
+    <div style="flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden;min-width:60px">
       <div style="height:100%;width:${p}%;background:${cor};border-radius:4px;transition:width .3s"></div>
     </div>
     <span style="font-size:11px;font-weight:700;color:${cor};min-width:34px">${pct}%</span>
@@ -1562,7 +1562,7 @@ async function abrirConfigMetas() {
         <div style="margin-bottom:10px">
           <label style="font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase;display:block;margin-bottom:3px">${label}</label>
           <input type="number" id="cfg-${k}" value="${_configMetasData[k]?.valor || ''}" min="0" step="1"
-            style="width:100%;padding:8px 10px;border:1px solid #E2E8F0;border-radius:7px;font-size:14px;font-weight:600;box-sizing:border-box">
+            style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:7px;font-size:14px;font-weight:600;box-sizing:border-box">
         </div>`).join('');
     }
     const modal = document.getElementById('modal-config-metas');
@@ -1779,12 +1779,12 @@ async function gerarRelatorioColaborador(nomeColab) {
 
           <!-- ANÁLISE -->
           ${pontosBons.length ? `<div style="margin-bottom:10px">
-            <div style="font-size:10px;font-weight:800;color:#15803D;letter-spacing:1px;margin-bottom:6px">PONTOS POSITIVOS</div>
-            ${pontosBons.map(p=>`<div style="font-size:12px;color:var(--text);padding:6px 10px;background:#F0FDF4;border-radius:6px;margin-bottom:4px;border-left:3px solid #22C55E">• ${p}</div>`).join('')}
+            <div style="font-size:10px;font-weight:800;color:var(--green);letter-spacing:1px;margin-bottom:6px">PONTOS POSITIVOS</div>
+            ${pontosBons.map(p=>`<div style="font-size:12px;color:var(--text);padding:6px 10px;background:rgba(87,185,129,.1);border-radius:6px;margin-bottom:4px;border-left:3px solid var(--green)">• ${p}</div>`).join('')}
           </div>` : ''}
           ${melhorar.length ? `<div>
-            <div style="font-size:10px;font-weight:800;color:#B45309;letter-spacing:1px;margin-bottom:6px">PONTOS A MELHORAR</div>
-            ${melhorar.map(p=>`<div style="font-size:12px;color:var(--text);padding:6px 10px;background:#FFFBEB;border-radius:6px;margin-bottom:4px;border-left:3px solid #F59E0B">• ${p}</div>`).join('')}
+            <div style="font-size:10px;font-weight:800;color:var(--amber);letter-spacing:1px;margin-bottom:6px">PONTOS A MELHORAR</div>
+            ${melhorar.map(p=>`<div style="font-size:12px;color:var(--text);padding:6px 10px;background:rgba(224,168,62,.1);border-radius:6px;margin-bottom:4px;border-left:3px solid var(--amber)">• ${p}</div>`).join('')}
           </div>` : ''}
 
         </div>
@@ -1878,8 +1878,8 @@ async function gerarRelatorioColaborador(nomeColab) {
             </div>
           </div>
 
-          ${pontosBons.length?`<div style="margin-bottom:10px"><div style="font-size:10px;font-weight:800;color:#15803D;letter-spacing:1px;margin-bottom:6px">PONTOS POSITIVOS</div>${pontosBons.map(p=>`<div style="font-size:12px;color:var(--text);padding:6px 10px;background:#F0FDF4;border-radius:6px;margin-bottom:4px;border-left:3px solid #22C55E">• ${p}</div>`).join('')}</div>`:''}
-          ${melhorar.length?`<div><div style="font-size:10px;font-weight:800;color:#B45309;letter-spacing:1px;margin-bottom:6px">PONTOS A MELHORAR</div>${melhorar.map(p=>`<div style="font-size:12px;color:var(--text);padding:6px 10px;background:#FFFBEB;border-radius:6px;margin-bottom:4px;border-left:3px solid #F59E0B">• ${p}</div>`).join('')}</div>`:''}
+          ${pontosBons.length?`<div style="margin-bottom:10px"><div style="font-size:10px;font-weight:800;color:var(--green);letter-spacing:1px;margin-bottom:6px">PONTOS POSITIVOS</div>${pontosBons.map(p=>`<div style="font-size:12px;color:var(--text);padding:6px 10px;background:rgba(87,185,129,.1);border-radius:6px;margin-bottom:4px;border-left:3px solid var(--green)">• ${p}</div>`).join('')}</div>`:''}
+          ${melhorar.length?`<div><div style="font-size:10px;font-weight:800;color:var(--amber);letter-spacing:1px;margin-bottom:6px">PONTOS A MELHORAR</div>${melhorar.map(p=>`<div style="font-size:12px;color:var(--text);padding:6px 10px;background:rgba(224,168,62,.1);border-radius:6px;margin-bottom:4px;border-left:3px solid var(--amber)">• ${p}</div>`).join('')}</div>`:''}
         </div>
       </div>`;
 
@@ -1984,8 +1984,8 @@ async function gerarRelatorioColaborador(nomeColab) {
             </div>
           </div>
 
-          ${pontosBons.length?`<div style="margin-bottom:10px"><div style="font-size:10px;font-weight:800;color:#15803D;letter-spacing:1px;margin-bottom:6px">PONTOS POSITIVOS</div>${pontosBons.map(p=>`<div style="font-size:12px;color:var(--text);padding:6px 10px;background:#F0FDF4;border-radius:6px;margin-bottom:4px;border-left:3px solid #22C55E">• ${p}</div>`).join('')}</div>`:''}
-          ${melhorar.length?`<div><div style="font-size:10px;font-weight:800;color:#B45309;letter-spacing:1px;margin-bottom:6px">PONTOS A MELHORAR</div>${melhorar.map(p=>`<div style="font-size:12px;color:var(--text);padding:6px 10px;background:#FFFBEB;border-radius:6px;margin-bottom:4px;border-left:3px solid #F59E0B">• ${p}</div>`).join('')}</div>`:''}
+          ${pontosBons.length?`<div style="margin-bottom:10px"><div style="font-size:10px;font-weight:800;color:var(--green);letter-spacing:1px;margin-bottom:6px">PONTOS POSITIVOS</div>${pontosBons.map(p=>`<div style="font-size:12px;color:var(--text);padding:6px 10px;background:rgba(87,185,129,.1);border-radius:6px;margin-bottom:4px;border-left:3px solid var(--green)">• ${p}</div>`).join('')}</div>`:''}
+          ${melhorar.length?`<div><div style="font-size:10px;font-weight:800;color:var(--amber);letter-spacing:1px;margin-bottom:6px">PONTOS A MELHORAR</div>${melhorar.map(p=>`<div style="font-size:12px;color:var(--text);padding:6px 10px;background:rgba(224,168,62,.1);border-radius:6px;margin-bottom:4px;border-left:3px solid var(--amber)">• ${p}</div>`).join('')}</div>`:''}
         </div>
       </div>`;
 
@@ -2082,8 +2082,8 @@ async function gerarRelatorioColaborador(nomeColab) {
             </div>
           </div>
 
-          ${pontosBons.length?`<div style="margin-bottom:10px"><div style="font-size:10px;font-weight:800;color:#15803D;letter-spacing:1px;margin-bottom:6px">PONTOS POSITIVOS</div>${pontosBons.map(p=>`<div style="font-size:12px;color:var(--text);padding:6px 10px;background:#F0FDF4;border-radius:6px;margin-bottom:4px;border-left:3px solid #22C55E">• ${p}</div>`).join('')}</div>`:''}
-          ${melhorar.length?`<div><div style="font-size:10px;font-weight:800;color:#B45309;letter-spacing:1px;margin-bottom:6px">PONTOS A MELHORAR</div>${melhorar.map(p=>`<div style="font-size:12px;color:var(--text);padding:6px 10px;background:#FFFBEB;border-radius:6px;margin-bottom:4px;border-left:3px solid #F59E0B">• ${p}</div>`).join('')}</div>`:''}
+          ${pontosBons.length?`<div style="margin-bottom:10px"><div style="font-size:10px;font-weight:800;color:var(--green);letter-spacing:1px;margin-bottom:6px">PONTOS POSITIVOS</div>${pontosBons.map(p=>`<div style="font-size:12px;color:var(--text);padding:6px 10px;background:rgba(87,185,129,.1);border-radius:6px;margin-bottom:4px;border-left:3px solid var(--green)">• ${p}</div>`).join('')}</div>`:''}
+          ${melhorar.length?`<div><div style="font-size:10px;font-weight:800;color:var(--amber);letter-spacing:1px;margin-bottom:6px">PONTOS A MELHORAR</div>${melhorar.map(p=>`<div style="font-size:12px;color:var(--text);padding:6px 10px;background:rgba(224,168,62,.1);border-radius:6px;margin-bottom:4px;border-left:3px solid var(--amber)">• ${p}</div>`).join('')}</div>`:''}
         </div>
       </div>`;
 
