@@ -163,8 +163,8 @@ async function carregarAguardandoCkMobile() {
           ${r.numero_caixa ? ` &nbsp;•&nbsp; Cx: <b>${r.numero_caixa}</b>` : ''}
         </div>
         ${itens.length ? `
-        <div style="background:#fff;border:1px solid #fed7aa;border-radius:8px;padding:8px 10px;margin-bottom:8px">
-          <div style="font-size:10px;font-weight:700;color:#c2410c;letter-spacing:.5px;margin-bottom:4px">ITENS FALTANDO</div>
+        <div style="background:var(--surface);border:1px solid rgba(251,146,60,.4);border-radius:8px;padding:8px 10px;margin-bottom:8px">
+          <div style="font-size:10px;font-weight:700;color:var(--orange);letter-spacing:.5px;margin-bottom:4px">ITENS FALTANDO</div>
           ${itens.map(it=>`<div style="font-size:12px;color:var(--text);padding:2px 0"><b>${it.codigo}</b> · ${it.descricao} · x${it.quantidade}</div>`).join('')}
         </div>` : ''}
         <button onclick="retomarCheckoutMobile(${r.id})" style="width:100%;background:#f97316;color:#fff;border:none;border-radius:8px;padding:11px;font-size:13px;font-weight:700;cursor:pointer">
@@ -533,7 +533,7 @@ async function buscarCaixa() {
               <button class="btn btn-outline" onclick="liberarCaixaDesktop(${r.id})">Liberar</button>`
             : concluido
               ? `<span class="pill concluido" style="font-size:12px">Checkout às ${r.hora_checkout||'—'}</span>`
-              : `<span class="pill" style="background:#F5F3FF;color:var(--indigo);border:1px solid #DDD6FE;font-size:12px">Caixa Liberada</span>`}
+              : `<span class="pill" style="background:rgba(139,92,246,.15);color:var(--indigo);border:1px solid rgba(139,92,246,.35);font-size:12px">Caixa Liberada</span>`}
           </div>
         </div>
         <div style="text-align:center;background:#fff;padding:16px;border-radius:8px;border:1px solid var(--border);overflow-x:auto">

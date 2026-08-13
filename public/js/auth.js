@@ -1075,11 +1075,11 @@ async function abrirModalValidacao() {
           </div>
         </div>
         <div id="obs-wrap-${item.id}" style="display:none;padding:10px 14px;border-top:1px solid var(--border);background:#fef2f2">
-          <label style="font-size:11px;font-weight:700;color:#991b1b;text-transform:uppercase;letter-spacing:.5px">
+          <label style="font-size:11px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.5px">
             Registre o que foi encontrado / ocorrência:
           </label>
           <textarea id="obs-${item.id}" placeholder="Descreva a ocorrência encontrada..."
-            style="width:100%;min-height:60px;margin-top:6px;border:1px solid #fca5a5;border-radius:7px;padding:8px;font-size:12px;font-family:inherit;background:#fff;color:#1e293b;resize:vertical;box-sizing:border-box"></textarea>
+            style="width:100%;min-height:60px;margin-top:6px;border:1px solid rgba(201,82,79,.4);border-radius:7px;padding:8px;font-size:12px;font-family:inherit;background:var(--surface);color:var(--text);resize:vertical;box-sizing:border-box"></textarea>
         </div>
       </div>`).join('');
 
@@ -2584,10 +2584,10 @@ async function carregarAguardandoCkDesk() {
     el.innerHTML = rows.map(r => {
       const itens = Array.isArray(r.itens_falta) ? r.itens_falta : (r.itens_falta ? JSON.parse(r.itens_falta) : []);
       return `
-      <div style="border:2px solid var(--orange);border-radius:12px;padding:14px;margin-bottom:10px;background:#fff7ed">
+      <div style="border:2px solid var(--orange);border-radius:12px;padding:14px;margin-bottom:10px;background:rgba(251,146,60,.08)">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
           <div>
-            <div style="font-size:20px;font-weight:800;color:#c2410c;font-family:'Space Mono',monospace">#${r.numero_pedido}</div>
+            <div style="font-size:20px;font-weight:800;color:var(--orange);font-family:'Space Mono',monospace">#${r.numero_pedido}</div>
             <div style="font-size:12px;color:var(--text2)">${r.ped_total_itens||r.ped_itens||0} itens &nbsp;•&nbsp; ${r.separador_nome||'—'}</div>
           </div>
           <button onclick="retomarCheckoutDesk(${r.id},'${r.numero_caixa||r.numero_pedido}')"
@@ -2596,8 +2596,8 @@ async function carregarAguardandoCkDesk() {
           </button>
         </div>
         ${itens.length ? `
-        <div style="background:#fff;border:1px solid #fed7aa;border-radius:8px;padding:8px 12px">
-          <div style="font-size:10px;font-weight:700;color:#c2410c;letter-spacing:.5px;margin-bottom:4px">Itens faltando</div>
+        <div style="background:var(--surface);border:1px solid rgba(251,146,60,.4);border-radius:8px;padding:8px 12px">
+          <div style="font-size:10px;font-weight:700;color:var(--orange);letter-spacing:.5px;margin-bottom:4px">Itens faltando</div>
           ${itens.map(it=>`<div style="font-size:12px;padding:2px 0"><b>${it.codigo}</b> · ${it.descricao} · x${it.quantidade}</div>`).join('')}
         </div>` : ''}
       </div>`;
@@ -2661,19 +2661,19 @@ async function carregarFilaCkDesk() {
         let itens = [];
         try { itens = Array.isArray(r.itens_falta) ? r.itens_falta : (r.itens_falta ? JSON.parse(r.itens_falta) : []); } catch(e) {}
         return `
-      <div style="border:2px solid var(--orange);border-radius:12px;padding:12px 14px;margin-bottom:8px;background:#fff7ed">
+      <div style="border:2px solid var(--orange);border-radius:12px;padding:12px 14px;margin-bottom:8px;background:rgba(251,146,60,.08)">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-          <div style="font-size:20px;font-weight:800;color:#c2410c;font-family:'Space Mono',monospace">#${r.numero_pedido}</div>
+          <div style="font-size:20px;font-weight:800;color:var(--orange);font-family:'Space Mono',monospace">#${r.numero_pedido}</div>
           <span style="background:var(--orange);color:#fff;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;white-space:nowrap"><i class="ti ti-clock" aria-hidden="true"></i> aguardando item</span>
         </div>
         <div style="display:flex;gap:12px;font-size:12px;color:var(--text2);margin-bottom:4px">
-          <span><b style="color:#92400e">${r.ped_total_itens||r.ped_itens||0} itens</b></span>
+          <span><b style="color:var(--orange)">${r.ped_total_itens||r.ped_itens||0} itens</b></span>
           <span>${r.separador_nome_join||r.separador_nome||'—'}</span>
           ${r.cliente ? `<span>${r.cliente}</span>` : ''}
         </div>
         ${itens.length ? `
-        <div style="background:#fff;border:1px solid #fed7aa;border-radius:8px;padding:6px 10px;margin-bottom:6px">
-          <div style="font-size:10px;font-weight:700;color:#c2410c;letter-spacing:.5px;margin-bottom:3px">Itens faltando</div>
+        <div style="background:var(--surface);border:1px solid rgba(251,146,60,.4);border-radius:8px;padding:6px 10px;margin-bottom:6px">
+          <div style="font-size:10px;font-weight:700;color:var(--orange);letter-spacing:.5px;margin-bottom:3px">Itens faltando</div>
           ${itens.map(it=>`<div style="font-size:11px;padding:1px 0"><b>${it.codigo}</b> · ${it.descricao} · x${it.quantidade}</div>`).join('')}
         </div>` : ''}
         <button style="width:100%;background:var(--orange);color:#fff;border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:700;cursor:pointer"
