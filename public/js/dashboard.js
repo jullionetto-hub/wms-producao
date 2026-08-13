@@ -577,7 +577,7 @@ async function carregarRankingGeral() {
 
     const areas = [
       { key:'separadores', label:'Separação', cor:'#4f46e5', metrica:'pedidos'    },
-      { key:'checkout',    label:'Checkout',  cor:'#0891b2', metrica:'checkouts'  },
+      { key:'checkout',    label:'Checkout',  cor:'#db2777', metrica:'checkouts'  },
       { key:'embalagem',   label:'Embalagem', cor:'#7c3aed', metrica:'embalagens' },
       { key:'repositores', label:'Reposição', cor:'#d97706', metrica:'repostos'   },
     ];
@@ -884,7 +884,7 @@ function renderDashPipeline() {
         { lbl: 'Pendentes',      val: fmtN(sepPendente) },
         { lbl: 'Total Itens',    val: fmtN(sepItens) },
       ]},
-    { label: 'Checkout', cor: '#0891b2',
+    { label: 'Checkout', cor: '#db2777',
       main: fmtN(ckConc), sub: 'checkouts concluídos',
       kpis: [
         { lbl: 'Total Checkout', val: fmtN(ckFila + ckEmCk + ckConc) },
@@ -1100,7 +1100,7 @@ async function carregarStatsCheckout() {
 /* PERFORMANCE DOS COLABORADORES */
 const AREA_INFO = {
   separador: { label:'Separação',  cor:'#4f46e5' },
-  checkout:  { label:'Checkout',   cor:'#0891b2' },
+  checkout:  { label:'Checkout',   cor:'#db2777' },
   embalador: { label:'Embalagem',  cor:'#7C3AED' },
   repositor: { label:'Reposição',  cor:'#EA580C' },
 };
@@ -1836,7 +1836,7 @@ async function gerarRelatorioColaborador(nomeColab) {
       }).join('');
 
       html = `<div style="font-family:'DM Sans',sans-serif;max-width:780px;margin:0 auto">
-        <div style="background:var(--surface2);border-top:4px solid #0891b2;border-radius:12px 12px 0 0;padding:20px 24px">
+        <div style="background:var(--surface2);border-top:4px solid #db2777;border-radius:12px 12px 0 0;padding:20px 24px">
           <div style="font-size:10px;font-weight:700;letter-spacing:2px;color:var(--text3)">RELATÓRIO DE DESEMPENHO · CHECKOUT</div>
           <div style="font-size:22px;font-weight:900;margin-top:4px;color:var(--text)">${nomeColab}</div>
           <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:6px;font-size:12px;color:var(--text2)">
@@ -1849,7 +1849,7 @@ async function gerarRelatorioColaborador(nomeColab) {
 
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:18px">
             ${[
-              ['CHECKOUTS', totalCk, '#0891b2'],
+              ['CHECKOUTS', totalCk, '#db2777'],
               ['ITENS PROCESSADOS', totalItens, 'var(--accent)'],
               ['TEMPO MÉDIO', mediaCk !== null ? mediaCk.toFixed(1)+'min' : '—', mediaCk !== null && mediaCk <= 10 ? '#22C55E' : '#F59E0B'],
               ['MAIS RÁPIDO', tempoMin !== null ? fmtTck(tempoMin) : '—', '#22C55E'],
@@ -2450,7 +2450,7 @@ function renderRelAnalitico(d) {
         { lbl:'Pontuação total', val: fmtN(d.separacao.pontuacao_total) },
         { lbl:'Tempo médio',     val: fmtT(d.separacao.media_tempo_min) },
       ]},
-    { label:'Checkout', cor:'#0891b2',
+    { label:'Checkout', cor:'#db2777',
       main: fmtN(d.checkout.concluidos), sub:'checkouts realizados',
       kpis:[
         { lbl:'Total criados',   val: fmtN(d.checkout.total) },
@@ -2584,7 +2584,7 @@ function renderRelAnalitico(d) {
   const turno_icn = { Manha:'M', Tarde:'T', Noite:'N' };
   const mkCell = (content, extraStyle='') => `<td style="padding:8px 12px${extraStyle?';'+extraStyle:''}">${content}</td>`;
   const mkRow  = cells => `<tr style="border-bottom:1px solid var(--border)">${cells.join('')}</tr>`;
-  const mkAreaCors = {'Separação':'#4f46e5','Checkout':'#0891b2','Embalagem':'#7c3aed','Reposição':'var(--amber)'};
+  const mkAreaCors = {'Separação':'#4f46e5','Checkout':'#db2777','Embalagem':'#7c3aed','Reposição':'var(--amber)'};
   const mkArea = (icon, label, grad, headers, rows) => {
     const cor = mkAreaCors[label.split(' — ')[0]] || '#64748b';
     return `
@@ -2623,7 +2623,7 @@ function renderRelAnalitico(d) {
     const ritmo = c.tempo_medio>0 ? `~${Math.round(60/c.tempo_medio)}/h` : '—';
     return mkRow([
       mkCell(`<span style="font-weight:700;font-size:13px;color:var(--text)">${c.nome}</span>`),
-      mkCell(`<span style="font-size:15px;font-weight:800;color:#0891b2">${fmtN(c.pedidos)}</span>`),
+      mkCell(`<span style="font-size:15px;font-weight:800;color:#db2777">${fmtN(c.pedidos)}</span>`),
       mkCell(`<span style="font-size:13px;color:var(--text2)">${fmtN(c.itens)}</span>`),
       mkCell(`<span style="font-size:13px;color:var(--text2)">${fmtT(c.tempo_medio)}</span>`),
       mkCell(`<span style="font-size:12px;font-weight:700;color:#16a34a">${ritmo}</span>`),
@@ -2734,7 +2734,7 @@ function renderRelAnalitico(d) {
     ${mkArea('SEP','Separação — desempenho individual','linear-gradient(135deg,#8B5CF6,#4338CA)',
       ['COLABORADOR / TURNO','PEDIDOS','ITENS','PONTUAÇÃO','TEMPO MÉD.','RITMO'],
       sepAreaRows)}
-    ${mkArea('CK','Checkout — desempenho individual','linear-gradient(135deg,#22d3ee,#0369a1)',
+    ${mkArea('CK','Checkout — desempenho individual','linear-gradient(135deg,#EC4899,#9D174D)',
       ['OPERADOR','EXPEDIÇÕES','ITENS','TEMPO MÉD.','RITMO'],
       ckAreaRows)}
     ${mkArea('EMB','Embalagem — desempenho individual','linear-gradient(135deg,#a855f7,#6d28d9)',

@@ -584,7 +584,7 @@ function pfRenderKPIs({ totPed, totItens, totSkus, totRep, tempoMed, tempoMin, t
       mini('Total SKUs', pfFmtN(totSkus))
     ) +
     card(
-      '#0891b2',
+      '#db2777',
       'Itens', pfFmtN(totItens), 'itens separados',
       mini('Total SKUs', pfFmtN(totSkus)) +
       mini('SKUs/ped', skusPed) +
@@ -764,8 +764,8 @@ function pfRenderTiming(filtroNome) {
   const ABAS = [
     { id:'separacao', label:'Separação', cor:'#4f46e5' },
     { id:'reposicao', label:'Reposição', cor:'#d97706' },
-    { id:'checkout',  label:'Checkout',  cor:'#0891b2' },
-    { id:'embalagem', label:'Embalagem', cor:'#16a34a' },
+    { id:'checkout',  label:'Checkout',  cor:'#db2777' },
+    { id:'embalagem', label:'Embalagem', cor:'#7c3aed' },
   ];
   const abaAtual = ABAS.find(a => a.id === _pfTimingAba) || ABAS[0];
 
@@ -951,7 +951,7 @@ const OC_TIPOS = {
   conduta_inapropriada: { label: 'Conduta Inapropriada',     icon: '',  cor: '#dc2626' },
   atraso:               { label: 'Atraso',                   icon: '⏰',  cor: '#f97316' },
   descumprimento_norma: { label: 'Descumprimento de Norma',  icon: '',  cor: '#8b5cf6' },
-  qualidade:            { label: 'Problema de Qualidade',    icon: '',  cor: '#0891b2' },
+  qualidade:            { label: 'Problema de Qualidade',    icon: '',  cor: '#db2777' },
   outro:                { label: 'Outro',                    icon: '',  cor: '#6b7280' },
 };
 
@@ -1601,7 +1601,7 @@ function pfRenderPedidoDetalhe(d) {
     : null;
   const totalMin = tsIni && tsFim ? Math.round((tsFim - tsIni) / 60000 * 10) / 10 : null;
 
-  const etapaColors = { 'Separação':'#4f46e5', 'Reposição':'#d97706', 'Checkout':'#0891b2', 'Embalagem':'#16a34a' };
+  const etapaColors = { 'Separação':'#4f46e5', 'Reposição':'#d97706', 'Checkout':'#db2777', 'Embalagem':'#7c3aed' };
   const etapaCard = (icon, label, grad, corpo, durMin) => {
     const cor = etapaColors[label] || '#64748b';
     return `
