@@ -1599,7 +1599,10 @@ function pfRenderPedidoDetalhe(d) {
     : ck?.concluido_em
     ? new Date((ck.data || '') + 'T' + ck.concluido_em).getTime()
     : null;
-  const totalMin = tsIni && tsFim ? Math.round((tsFim - tsIni) / 60000 * 10) / 10 : null;
+  // tsFim < tsIni só acontece com dado inconsistente (ex: iniciado_em com data
+  // errada) — nunca é um tempo real negativo, então tratamos como desconhecido
+  // em vez de mostrar um total sem sentido.
+  const totalMin = tsIni && tsFim && tsFim > tsIni ? Math.round((tsFim - tsIni) / 60000 * 10) / 10 : null;
 
   const etapaColors = { 'Separação':'var(--accent)', 'Reposição':'var(--accent)', 'Checkout':'var(--accent)', 'Embalagem':'var(--accent)' };
   const etapaCard = (icon, label, grad, corpo, durMin) => {
