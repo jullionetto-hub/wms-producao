@@ -471,7 +471,10 @@ router.get('/performance/timing', requerAuth, requerPerfil('supervisor', 'gestor
       SELECT
         p.numero_pedido,
         NULLIF(p.embalado_por,'')                          AS colaborador,
-        p.data_pedido                                       AS data,
+        COALESCE(
+          (SELECT eb.data_embalagem FROM embalagem eb WHERE eb.pedido_id = p.id ORDER BY eb.id DESC LIMIT 1),
+          p.data_pedido
+        )                                                    AS data,
         p.embalagem_iniciado_em                             AS iniciado_em,
         p.embalado_em                                       AS concluido_em,
         COALESCE(NULLIF(p.total_itens,0), p.itens, 0)      AS total_itens,
@@ -480,8 +483,8 @@ router.get('/performance/timing', requerAuth, requerPerfil('supervisor', 'gestor
         CASE
           WHEN NULLIF(p.embalagem_iniciado_em,'') IS NOT NULL AND NULLIF(p.embalado_em,'') IS NOT NULL
           THEN ROUND(EXTRACT(EPOCH FROM (
-            (p.data_pedido || ' ' || p.embalado_em)::timestamp
-            - (p.data_pedido || ' ' || p.embalagem_iniciado_em)::timestamp
+            (COALESCE((SELECT eb.data_embalagem FROM embalagem eb WHERE eb.pedido_id = p.id ORDER BY eb.id DESC LIMIT 1), p.data_pedido) || ' ' || p.embalado_em)::timestamp
+            - (COALESCE((SELECT eb.data_embalagem FROM embalagem eb WHERE eb.pedido_id = p.id ORDER BY eb.id DESC LIMIT 1), p.data_pedido) || ' ' || p.embalagem_iniciado_em)::timestamp
           )) / 60.0, 1)::float
           ELSE NULL
         END AS duracao_min
@@ -757,7 +760,10 @@ router.get('/performance/pedido/:numero', requerAuth, requerPerfil('supervisor',
       SELECT
         p.numero_pedido,
         NULLIF(p.embalado_por,'') AS colaborador,
-        p.data_pedido              AS data,
+        COALESCE(
+          (SELECT eb.data_embalagem FROM embalagem eb WHERE eb.pedido_id = p.id ORDER BY eb.id DESC LIMIT 1),
+          p.data_pedido
+        ) AS data,
         p.embalagem_iniciado_em    AS iniciado_em,
         p.embalado_em              AS concluido_em,
         COALESCE(NULLIF(p.total_itens,0), p.itens, 0) AS total_itens,
@@ -766,8 +772,8 @@ router.get('/performance/pedido/:numero', requerAuth, requerPerfil('supervisor',
         CASE
           WHEN NULLIF(p.embalagem_iniciado_em,'') IS NOT NULL AND NULLIF(p.embalado_em,'') IS NOT NULL
           THEN ROUND(EXTRACT(EPOCH FROM (
-            (p.data_pedido || ' ' || p.embalado_em)::timestamp
-            - (p.data_pedido || ' ' || p.embalagem_iniciado_em)::timestamp
+            (COALESCE((SELECT eb.data_embalagem FROM embalagem eb WHERE eb.pedido_id = p.id ORDER BY eb.id DESC LIMIT 1), p.data_pedido) || ' ' || p.embalado_em)::timestamp
+            - (COALESCE((SELECT eb.data_embalagem FROM embalagem eb WHERE eb.pedido_id = p.id ORDER BY eb.id DESC LIMIT 1), p.data_pedido) || ' ' || p.embalagem_iniciado_em)::timestamp
           )) / 60.0, 1)::float
           ELSE NULL
         END AS duracao_min
