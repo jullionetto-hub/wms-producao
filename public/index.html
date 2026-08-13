@@ -733,7 +733,7 @@
 
         <!-- Filtros de data -->
         <div class="card" style="margin-bottom:14px">
-          <div class="card-hd">FILTROS</div>
+          <div class="card-hd">Filtros</div>
           <div class="date-filter-bar">
             <div class="fg"><label>DE</label><input type="date" id="lib-filtro-ini"/></div>
             <div class="fg"><label>ATÉ</label><input type="date" id="lib-filtro-fim"/></div>
@@ -745,7 +745,7 @@
         <!-- Aguardando liberação -->
         <div class="card" style="margin-bottom:14px;border-left:4px solid var(--red)">
           <div class="card-hd">
-            AGUARDANDO LIBERAÇÃO DO SUPERVISOR
+            Aguardando liberação do supervisor
             <span id="lib-total-badge" style="background:var(--red);color:#fff;border-radius:20px;padding:2px 12px;font-size:12px;font-weight:700;margin-left:8px">0</span>
           </div>
           <div style="padding:10px 16px;font-size:13px;color:var(--text2)">
@@ -768,8 +768,8 @@
         </div>
 
         <!-- Reenviar pedido para embalagem -->
-        <div class="card" style="margin-bottom:14px;border-left:4px solid #f97316">
-          <div class="card-hd">PEDIDO NÃO APARECE NA EMBALAGEM?</div>
+        <div class="card" style="margin-bottom:14px;border-left:4px solid var(--orange)">
+          <div class="card-hd">Pedido não aparece na embalagem?</div>
           <div style="padding:12px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
             <input id="lib-reenviar-numero" type="text" placeholder="Nº do pedido (ex: 5568815)" class="form-control" style="max-width:220px;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px"/>
             <button class="btn btn-primary btn-sm" onclick="reenviarParaEmbalagem()">Reenviar para Embalagem</button>
@@ -781,7 +781,7 @@
 
         <!-- Histórico de liberados -->
         <div class="card">
-          <div class="card-hd">LIBERADOS — HISTÓRICO
+          <div class="card-hd">Liberados — histórico
             <span id="lib-hist-badge" style="background:#10b981;color:#fff;border-radius:20px;padding:2px 12px;font-size:12px;font-weight:700;margin-left:8px">0</span>
           </div>
           <div class="tabela-wrap">
@@ -1482,6 +1482,7 @@
 
         <!-- Barra de filtros -->
         <div class="card" style="margin:0 0 18px 0;border-radius:0 0 var(--r) var(--r);border-left:none;border-right:none">
+          <div class="card-hd">Filtros</div>
           <div style="display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px">
             <!-- Turno -->
             <div>

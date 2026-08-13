@@ -43,6 +43,11 @@
    sistema (tema claro, igual a qualquer outra tela) — aqui fica só
    o estilo do anel de progresso, que é específico dessa página.
 ══════════════════════════════════════════ */
+/* .card-hd nessa página tem ícone + texto e mais nada (sem botão/
+   badge à direita) — o justify-content:space-between da regra base
+   (pensada pra título+ação) empurra o ícone pra esquerda e o texto
+   pro canto direito. Restaura os dois juntos à esquerda. */
+#pag-diario .card-hd{justify-content:flex-start;gap:8px}
 .db-ring-wrap{display:flex;justify-content:center;margin-bottom:14px}
 .db-ring-total{font-size:26px;font-weight:500}
 .db-ring-label{font-size:10px;letter-spacing:.5px}
