@@ -48,20 +48,20 @@ async function carregarProtocoloSupervisor() {
 function renderCardProtocolo(a) {
   const nomeLogado = (usuarioAtual?.nome || '').replace(/'/g, "\\'");
   return `
-    <div id="protocolo-card-${a.id}" style="background:var(--surface);border:1px solid #ddd6fe;border-left:4px solid #7c3aed;border-radius:12px;padding:16px;margin-bottom:12px">
+    <div id="protocolo-card-${a.id}" style="background:var(--surface);border:1px solid rgba(139,92,246,.35);border-left:4px solid var(--indigo);border-radius:12px;padding:16px;margin-bottom:12px">
       <!-- Cabeçalho -->
       <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px">
         <div style="flex:1;min-width:0">
           <div style="font-size:16px;font-weight:700;color:var(--text);font-family:'Space Mono',monospace;margin-bottom:2px">${a.codigo||'—'}</div>
           <div style="font-size:12px;color:var(--text2);line-height:1.4">${a.descricao||''}</div>
         </div>
-        <span style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;background:#f5f3ff;color:#7c3aed;border:1px solid #ddd6fe;flex-shrink:0;margin-left:10px">Protocolo</span>
+        <span style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;background:rgba(139,92,246,.15);color:var(--indigo);border:1px solid rgba(139,92,246,.35);flex-shrink:0;margin-left:10px">Protocolo</span>
       </div>
       <!-- Dados do pedido -->
       <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">
         ${a.numero_pedido ? `<span style="background:var(--surface2);border-radius:8px;padding:3px 10px;font-size:11px;font-weight:600;color:var(--text2)">Pedido #${a.numero_pedido}</span>` : ''}
         ${a.separador_nome ? `<span style="background:var(--surface2);border-radius:8px;padding:3px 10px;font-size:11px;color:var(--text2)">${a.separador_nome}</span>` : ''}
-        ${a.quantidade ? `<span style="background:#fee2e2;border-radius:8px;padding:3px 10px;font-size:11px;font-weight:700;color:#dc2626">${a.quantidade} un</span>` : ''}
+        ${a.quantidade ? `<span style="background:rgba(201,82,79,.15);border-radius:8px;padding:3px 10px;font-size:11px;font-weight:700;color:var(--red)">${a.quantidade} un</span>` : ''}
         ${a.endereco ? `<span style="background:var(--surface2);border-radius:8px;padding:3px 10px;font-size:10px;color:var(--text3)">${a.endereco}</span>` : ''}
       </div>
       <!-- Info repositor -->
@@ -71,13 +71,13 @@ function renderCardProtocolo(a) {
         <button
           id="protocolo-btn-enc-${a.id}"
           onclick="liberarProtocolo(${a.id},'encontrado','${nomeLogado}',this)"
-          style="padding:12px 0;background:#f0fdf4;border:2px solid #16a34a;border-radius:10px;color:#15803d;font-weight:700;font-size:13px;cursor:pointer;transition:all .15s">
+          style="padding:12px 0;background:rgba(87,185,129,.12);border:2px solid var(--green);border-radius:10px;color:var(--green);font-weight:700;font-size:13px;cursor:pointer;transition:all .15s">
           Liberar como Encontrado
         </button>
         <button
           id="protocolo-btn-nenc-${a.id}"
           onclick="liberarProtocolo(${a.id},'nao_encontrado_confirmado','${nomeLogado}',this)"
-          style="padding:12px 0;background:#fef2f2;border:2px solid #dc2626;border-radius:10px;color:#b91c1c;font-weight:700;font-size:13px;cursor:pointer;transition:all .15s">
+          style="padding:12px 0;background:rgba(201,82,79,.12);border:2px solid var(--red);border-radius:10px;color:var(--red);font-weight:700;font-size:13px;cursor:pointer;transition:all .15s">
           Liberar como Não Encontrado
         </button>
       </div>
