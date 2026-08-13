@@ -91,7 +91,7 @@ function _renderFilaCkMobile(fila) {
         <span>${p.separador_nome||'—'}</span>
         ${p.numero_caixa ? `<span>Cx: <b style="color:var(--indigo)">${p.numero_caixa}</b></span>` : ''}
       </div>
-      ${temFalta ? `<div style="margin-top:6px;background:#fff7ed;border:1px solid #f97316;border-radius:8px;padding:6px 10px;font-size:11px;font-weight:700;color:#c2410c">${p.itens_em_falta} item(s) aguardando repositor</div>` : ''}
+      ${temFalta ? `<div style="margin-top:6px;background:rgba(251,146,60,.1);border:1px solid rgba(251,146,60,.4);border-radius:8px;padding:6px 10px;font-size:11px;font-weight:700;color:var(--orange)">${p.itens_em_falta} item(s) aguardando repositor</div>` : ''}
       ${p.concluido_em ? `<div style="font-size:11px;color:var(--text3);margin-top:4px">✓ Sep às ${(p.concluido_em||'').substring(11,16)}</div>` : ''}
       <button class="btn btn-primary btn-sm" style="width:100%;margin-top:8px;padding:10px"
         onclick="iniciarCkMobile('${p.numero_caixa||p.numero_pedido||''}')">
@@ -117,7 +117,7 @@ async function carregarFeitosCkMobile() {
       return;
     }
     el.innerHTML = rows.map(r => `
-      <div style="border:1.5px solid #BBF7D0;border-radius:12px;padding:12px 14px;margin-bottom:8px;background:#F0FDF4">
+      <div style="border:1.5px solid rgba(87,185,129,.4);border-radius:12px;padding:12px 14px;margin-bottom:8px;background:rgba(87,185,129,.1)">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
           <div style="font-size:20px;font-weight:800;color:var(--green);font-family:'Space Mono',monospace">#${r.numero_pedido||'—'}</div>
           <span style="font-size:11px;color:var(--green);font-weight:700">${r.hora_checkout||'—'}</span>
@@ -153,10 +153,10 @@ async function carregarAguardandoCkMobile() {
     el.innerHTML = rows.map(r => {
       const itens = Array.isArray(r.itens_falta) ? r.itens_falta : (r.itens_falta ? JSON.parse(r.itens_falta) : []);
       return `
-      <div style="border:2px solid #f97316;border-radius:12px;padding:12px 14px;margin-bottom:10px;background:#fff7ed">
+      <div style="border:2px solid var(--orange);border-radius:12px;padding:12px 14px;margin-bottom:10px;background:rgba(251,146,60,.1)">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
           <div style="font-size:20px;font-weight:800;color:#c2410c;font-family:'Space Mono',monospace">#${r.numero_pedido}</div>
-          <span style="background:#fed7aa;color:#c2410c;border-radius:20px;padding:3px 10px;font-size:10px;font-weight:800">⏳ AGUARDANDO</span>
+          <span style="background:rgba(251,146,60,.2);color:var(--orange);border-radius:20px;padding:3px 10px;font-size:10px;font-weight:800">⏳ AGUARDANDO</span>
         </div>
         <div style="font-size:12px;color:var(--text2);margin-bottom:6px">
           <b>${r.ped_itens||0} itens</b> &nbsp;•&nbsp; ${r.separador_nome||'—'}
@@ -216,8 +216,8 @@ function marcarItemFaltandoMobile(ckId, codigo, descricao, quantidade, btn) {
   const idx   = lista.findIndex(i => i.codigo === codigo);
   if (idx >= 0) {
     lista.splice(idx, 1);
-    btn.style.background = '#e2e8f0';
-    btn.style.color      = '#64748b';
+    btn.style.background = 'var(--surface2)';
+    btn.style.color      = 'var(--text2)';
     btn.textContent      = 'Marcar Falta';
   } else {
     lista.push({ codigo, descricao, quantidade });
@@ -236,8 +236,8 @@ function marcarItemFaltandoDesk(ckId, codigo, descricao, quantidade, btn) {
   const idx   = lista.findIndex(i => i.codigo === codigo);
   if (idx >= 0) {
     lista.splice(idx, 1);
-    btn.style.background = '#e2e8f0';
-    btn.style.color      = '#64748b';
+    btn.style.background = 'var(--surface2)';
+    btn.style.color      = 'var(--text2)';
     btn.textContent      = 'Marcar Falta';
   } else {
     lista.push({ codigo, descricao, quantidade });
@@ -276,7 +276,7 @@ function _renderSessoesCk(sessoes) {
     <div style="margin-top:10px;border-top:1px solid var(--border);padding-top:10px">
       <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1px;margin-bottom:6px">HISTÓRICO DE CHECKOUT</div>
       ${filtradas.map(s => {
-        const bgBadge = s.acao==='concluido'?'#dcfce7':s.acao==='aguardando_item'?'#fff7ed':s.acao==='pausado'?'#ede9fe':'#dbeafe';
+        const bgBadge = s.acao==='concluido'?'rgba(87,185,129,.15)':s.acao==='aguardando_item'?'rgba(251,146,60,.15)':s.acao==='pausado'?'rgba(139,92,246,.15)':'rgba(79,70,229,.15)';
         const txBadge = s.acao==='concluido'?'#15803d':s.acao==='aguardando_item'?'#c2410c':s.acao==='pausado'?'#6d28d9':'#4338CA';
         const label   = s.acao==='concluido'?'OK':s.acao==='aguardando_item'?'Aguard':s.acao==='pausado'?'Pausado':s.acao==='retomado'?'Retomado':s.acao==='aberto'?'Aberto':'—';
         return `<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 8px;background:var(--surface2);border-radius:6px;margin-bottom:3px;font-size:11px;gap:6px">
@@ -339,7 +339,7 @@ async function buscarCaixaMobile() {
         ? `<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px">
             <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1px;margin-bottom:8px">ITENS DO PEDIDO — marque os que estão faltando</div>
             ${r.itens_lista.map(it => `
-              <div style="padding:8px 10px;background:var(--surface);border-radius:8px;margin-bottom:5px;border:1.5px solid ${it.status==='encontrado'?'#BBF7D0':it.status==='falta'?'#FECACA':'var(--border)'}">
+              <div style="padding:8px 10px;background:var(--surface);border-radius:8px;margin-bottom:5px;border:1.5px solid ${it.status==='encontrado'?'rgba(87,185,129,.4)':it.status==='falta'?'rgba(201,82,79,.4)':'var(--border)'}">
                 <div style="display:flex;justify-content:space-between;align-items:center">
                   <div style="flex:1;min-width:0">
                     <div style="font-size:12px;font-weight:700;color:var(--accent)">${it.codigo||'—'}</div>
@@ -347,21 +347,21 @@ async function buscarCaixaMobile() {
                     <div style="font-size:11px;color:var(--text3)">${it.endereco||'—'} &nbsp;•&nbsp; x${it.quantidade||1}</div>
                   </div>
                   <button onclick="marcarItemFaltandoMobile(${r.id},'${it.codigo}','${(it.descricao||'').replace(/'/g,"\\'")}',${it.quantidade||1},this)"
-                    style="flex-shrink:0;margin-left:8px;padding:5px 10px;background:#e2e8f0;color:#64748b;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">
+                    style="flex-shrink:0;margin-left:8px;padding:5px 10px;background:var(--surface2);color:var(--text2);border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">
                     Marcar Falta
                   </button>
                 </div>
               </div>`).join('')}
           </div>` : (r.itens_lista||[]).length > 0 ? `<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px">
             <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1px;margin-bottom:8px">ITENS DO PEDIDO</div>
-            ${r.itens_lista.map(it=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;background:var(--surface);border-radius:8px;margin-bottom:4px;border:1.5px solid ${it.status==='encontrado'?'#BBF7D0':it.status==='falta'?'#FECACA':'var(--border)'}">
+            ${r.itens_lista.map(it=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;background:var(--surface);border-radius:8px;margin-bottom:4px;border:1.5px solid ${it.status==='encontrado'?'rgba(87,185,129,.4)':it.status==='falta'?'rgba(201,82,79,.4)':'var(--border)'}">
               <div><span style="font-size:12px;font-weight:700;color:var(--accent)">${it.codigo||'—'}</span>
               <span style="font-size:12px;color:var(--text);margin-left:6px">${it.descricao||'—'}</span></div>
               <span style="font-size:13px;font-weight:800">x${it.quantidade||1}</span>
             </div>`).join('')}
           </div>` : '';
       return `
-      <div data-ck-id="${r.id}" data-numero-pedido="${r.numero_pedido}" style="border:1.5px solid ${concluido?'#BBF7D0':liberado?'#DDD6FE':'var(--accent)'};border-radius:12px;padding:14px;margin-bottom:10px;background:${concluido?'#F0FDF4':liberado?'#F5F3FF':'var(--surface)'}">
+      <div data-ck-id="${r.id}" data-numero-pedido="${r.numero_pedido}" style="border:1.5px solid ${concluido?'rgba(87,185,129,.4)':liberado?'rgba(139,92,246,.4)':'var(--accent)'};border-radius:12px;padding:14px;margin-bottom:10px;background:${concluido?'rgba(87,185,129,.1)':liberado?'rgba(139,92,246,.1)':'var(--surface)'}">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
           <div>
             <div style="font-size:22px;font-weight:800;color:var(--accent);font-family:'Space Mono',monospace">#${r.numero_pedido}</div>
@@ -376,11 +376,11 @@ async function buscarCaixaMobile() {
           ${!concluido && !liberado ? `
             <button class="btn btn-success" style="width:100%;padding:14px;font-size:15px;font-weight:700;border-radius:10px;margin-bottom:8px" onclick="confirmarCheckoutMobile(${r.id})">CONFIRMAR CHECKOUT</button>
             <button id="ck-btn-pendencia-${r.id}" onclick="registrarPendenciaMobile(${r.id})" style="display:none;width:100%;padding:12px;font-size:13px;font-weight:700;background:#f97316;color:#fff;border:none;border-radius:10px;cursor:pointer;margin-bottom:8px">⏳ REGISTRAR PENDÊNCIA (itens faltando)</button>
-            <button onclick="pausarCheckoutMobile(${r.id})" style="width:100%;padding:11px;font-size:13px;font-weight:700;background:#ede9fe;color:#7c3aed;border:1.5px solid #c4b5fd;border-radius:10px;cursor:pointer;margin-bottom:8px">⏸ Pausar Checkout</button>
+            <button onclick="pausarCheckoutMobile(${r.id})" style="width:100%;padding:11px;font-size:13px;font-weight:700;background:rgba(139,92,246,.15);color:var(--indigo);border:1.5px solid rgba(139,92,246,.4);border-radius:10px;cursor:pointer;margin-bottom:8px">⏸ Pausar Checkout</button>
             <button class="btn" style="width:100%;padding:11px;font-size:13px;background:var(--surface2);border:1.5px solid var(--border);color:var(--text2);border-radius:10px" onclick="liberarCaixaMobile(${r.id})">Liberar Caixa Sem Checkout</button>`
           : concluido
-            ? `<div style="text-align:center;padding:10px;background:#F0FDF4;border-radius:10px;color:var(--green);font-weight:700;font-size:14px">Checkout às ${r.hora_checkout||'—'}</div>`
-            : `<div style="text-align:center;padding:10px;background:#F5F3FF;border-radius:10px;color:var(--indigo);font-weight:700;font-size:14px">Caixa Liberada</div>`}
+            ? `<div style="text-align:center;padding:10px;background:rgba(87,185,129,.15);border-radius:10px;color:var(--green);font-weight:700;font-size:14px">Checkout às ${r.hora_checkout||'—'}</div>`
+            : `<div style="text-align:center;padding:10px;background:rgba(139,92,246,.15);border-radius:10px;color:var(--indigo);font-weight:700;font-size:14px">Caixa Liberada</div>`}
         </div>
         ${gerarCodigoBarrasSVG(r.numero_pedido)}
         ${_renderSessoesCk(r.sessoes)}
@@ -501,7 +501,7 @@ async function buscarCaixa() {
                   <span style="font-size:11px;color:var(--text3);margin-left:6px">${it.endereco||'—'} · x${it.quantidade||1}</span>
                 </div>
                 <button onclick="marcarItemFaltandoDesk(${r.id},'${it.codigo}','${(it.descricao||'').replace(/'/g,"\\'")}',${it.quantidade||1},this)"
-                  style="flex-shrink:0;margin-left:8px;padding:5px 12px;background:#e2e8f0;color:#64748b;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">
+                  style="flex-shrink:0;margin-left:8px;padding:5px 12px;background:var(--surface2);color:var(--text2);border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">
                   Marcar Falta
                 </button>
               </div>`).join('')}
@@ -509,13 +509,13 @@ async function buscarCaixa() {
         : (r.itens_lista||[]).length > 0
           ? `<div style="margin-top:10px;border-top:1px solid var(--border);padding-top:10px">
               <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:1px;margin-bottom:6px">ITENS DO PEDIDO</div>
-              ${r.itens_lista.map(it=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;background:var(--surface);border-radius:8px;margin-bottom:4px;border:1.5px solid ${it.status==='encontrado'?'#BBF7D0':it.status==='falta'?'#FECACA':'var(--border)'}">
+              ${r.itens_lista.map(it=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;background:var(--surface);border-radius:8px;margin-bottom:4px;border:1.5px solid ${it.status==='encontrado'?'rgba(87,185,129,.4)':it.status==='falta'?'rgba(201,82,79,.4)':'var(--border)'}">
                 <div><span style="font-size:12px;font-weight:700;color:var(--accent)">${it.codigo||'—'}</span><span style="font-size:12px;color:var(--text);margin-left:8px">${it.descricao||'—'}</span></div>
                 <span style="font-weight:800">x${it.quantidade||1}</span>
               </div>`).join('')}
             </div>` : '';
       return `
-      <div data-ck-id="${r.id}" data-numero-pedido="${r.numero_pedido}" style="border:1.5px solid ${concluido?'#BBF7D0':liberado?'#DDD6FE':'var(--border)'};border-radius:12px;padding:14px;margin-bottom:10px;background:${concluido?'#F0FDF4':liberado?'#F5F3FF':'var(--surface2)'}">
+      <div data-ck-id="${r.id}" data-numero-pedido="${r.numero_pedido}" style="border:1.5px solid ${concluido?'rgba(87,185,129,.4)':liberado?'rgba(139,92,246,.4)':'var(--border)'};border-radius:12px;padding:14px;margin-bottom:10px;background:${concluido?'rgba(87,185,129,.1)':liberado?'rgba(139,92,246,.1)':'var(--surface2)'}">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px">
           <div>
             <div style="font-size:22px;font-weight:800;color:var(--accent);font-family:'Space Mono',monospace">#${r.numero_pedido}</div>
@@ -529,7 +529,7 @@ async function buscarCaixa() {
             ${!concluido && !liberado ? `
               <button class="btn btn-success" onclick="confirmarCheckout(${r.id})">Confirmar Checkout</button>
               <button id="ck-btn-pendencia-desk-${r.id}" onclick="registrarPendenciaDesk(${r.id})" style="display:none;padding:9px 16px;background:#f97316;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">⏳ Registrar Pendência</button>
-              <button onclick="pausarCheckoutDesk(${r.id})" style="padding:9px 16px;background:#ede9fe;color:#7c3aed;border:1.5px solid #c4b5fd;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">⏸ Pausar</button>
+              <button onclick="pausarCheckoutDesk(${r.id})" style="padding:9px 16px;background:rgba(139,92,246,.15);color:var(--indigo);border:1.5px solid rgba(139,92,246,.4);border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">⏸ Pausar</button>
               <button class="btn btn-outline" onclick="liberarCaixaDesktop(${r.id})">Liberar</button>`
             : concluido
               ? `<span class="pill concluido" style="font-size:12px">Checkout às ${r.hora_checkout||'—'}</span>`
