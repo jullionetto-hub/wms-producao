@@ -129,39 +129,75 @@ async function _atualizarBadgesRep() {
     const res = await fetch(`${API}/repositor/avisos`, { credentials:'include' });
     if (!res.ok) return;
     const av = await res.json();
+    const cnt = (lista, sits) => lista.filter(a => sits.includes(a.situacao||a.status)).length;
+
+    // Mobile (sem filtro de data — repositor precisa ver tudo)
+    const nSeparar   = cnt(av, ['pendente','verificando']);
+    const nSeparado  = cnt(av, ['buscado','separado','aguardando_abastecer']);
+    const nSubiu     = cnt(av, ['subiu']);
+    const nProtocolo = cnt(av, ['nao_encontrado']);
     const setBdg = (id, n) => {
       const el = document.getElementById(id);
       if (!el) return;
       el.textContent = n;
       el.style.display = n ? 'inline-flex' : 'none';
     };
-    const cnt = (sits) => av.filter(a => sits.includes(a.situacao||a.status)).length;
-    const nSeparar   = cnt(['pendente','verificando']);
-    const nSeparado  = cnt(['buscado','separado','aguardando_abastecer']);
-    const nSubiu     = cnt(['subiu']);
-    const nProtocolo = cnt(['nao_encontrado']);
-    // Mobile badges
+    const setC = (id, n) => { const e=document.getElementById(id); if(e) e.textContent=n; };
     setBdg('rtab-separar-badge',   nSeparar);
     setBdg('rtab-separado-badge',  nSeparado);
     setBdg('rtab-subiu-badge',     nSubiu);
     setBdg('rtab-protocolo-badge', nProtocolo);
-    // Desktop badges
-    setBdg('d-rtab-separar-badge',   nSeparar);
-    setBdg('d-rtab-separado-badge',  nSeparado);
-    setBdg('d-rtab-subiu-badge',     nSubiu);
-    setBdg('d-rtab-protocolo-badge', nProtocolo);
-    const setC = (id, n) => { const e=document.getElementById(id); if(e) e.textContent=n; };
-    // Mobile counters
     setC('rep-cnt-separar',   nSeparar);
     setC('rep-cnt-separado',  nSeparado);
     setC('rep-cnt-subiu',     nSubiu);
     setC('rep-cnt-protocolo', nProtocolo);
-    // Desktop counters
-    setC('d-rep-cnt-separar',   nSeparar);
-    setC('d-rep-cnt-separado',  nSeparado);
-    setC('d-rep-cnt-subiu',     nSubiu);
-    setC('d-rep-cnt-protocolo', nProtocolo);
+
+    // Desktop — respeita o filtro de data do supervisor, se houver
+    const qDesk = _repFiltroData();
+    const avDesk = qDesk
+      ? await (async () => {
+          const r = await fetch(`${API}/repositor/avisos?${qDesk.slice(1)}`, { credentials:'include' });
+          return r.ok ? r.json() : av;
+        })()
+      : av;
+    const dSeparar   = cnt(avDesk, ['pendente','verificando']);
+    const dSeparado  = cnt(avDesk, ['buscado','separado','aguardando_abastecer']);
+    const dSubiu     = cnt(avDesk, ['subiu']);
+    const dProtocolo = cnt(avDesk, ['nao_encontrado']);
+    setBdg('d-rtab-separar-badge',   dSeparar);
+    setBdg('d-rtab-separado-badge',  dSeparado);
+    setBdg('d-rtab-subiu-badge',     dSubiu);
+    setBdg('d-rtab-protocolo-badge', dProtocolo);
+    setC('d-rep-cnt-separar',   dSeparar);
+    setC('d-rep-cnt-separado',  dSeparado);
+    setC('d-rep-cnt-subiu',     dSubiu);
+    setC('d-rep-cnt-protocolo', dProtocolo);
   } catch(e) {}
+}
+
+/* ── Filtro de data (desktop) ─────────────────────────────────────── */
+// Só existe na tela de supervisor (drep-data-ini/fim); no mobile os elementos
+// não existem, então a query fica vazia e o repositor continua vendo tudo.
+function _repFiltroData() {
+  const ini = document.getElementById('drep-data-ini')?.value;
+  const fim = document.getElementById('drep-data-fim')?.value;
+  let q = '';
+  if (ini) q += `&data_ini=${ini}`;
+  if (fim) q += `&data_fim=${fim}`;
+  return q;
+}
+
+function filtrarRepDesk() {
+  const activeBtn = document.querySelector('#pag-reposicao [id^="d-rtab-"].ativo');
+  const tab = activeBtn?.id?.replace('d-rtab-','') || 'separar';
+  mudarTabRepDesk(tab);
+  _atualizarBadgesRep();
+}
+
+function limparFiltroRepDesk() {
+  document.getElementById('drep-data-ini').value = hojeLocal();
+  document.getElementById('drep-data-fim').value = hojeLocal();
+  filtrarRepDesk();
 }
 
 /* ── Carregamento por aba ─────────────────────────────────────────── */
@@ -170,7 +206,7 @@ async function carregarRepSeparar(silent=false) {
   const elD = document.getElementById('d-rep-lista-separar');
   if (!el && !elD) return;
   try {
-    const res = await fetch(`${API}/repositor/avisos?status=pendente,verificando`, { credentials:'include' });
+    const res = await fetch(`${API}/repositor/avisos?status=pendente,verificando${_repFiltroData()}`, { credentials:'include' });
     if (!res.ok) throw new Error();
     const av = await res.json();
     const n = av.length;
@@ -329,7 +365,7 @@ async function carregarRepSeparado(silent=false) {
   const elD = document.getElementById('d-rep-lista-separado');
   if (!el && !elD) return;
   try {
-    const res = await fetch(`${API}/repositor/avisos?status=buscado,separado,aguardando_abastecer`, { credentials:'include' });
+    const res = await fetch(`${API}/repositor/avisos?status=buscado,separado,aguardando_abastecer${_repFiltroData()}`, { credentials:'include' });
     if (!res.ok) throw new Error();
     const av = await res.json();
     const n = av.length;
@@ -356,7 +392,7 @@ async function carregarRepSubiu(silent=false) {
   const elD = document.getElementById('d-rep-lista-subiu');
   if (!el && !elD) return;
   try {
-    const res = await fetch(`${API}/repositor/avisos?status=subiu`, { credentials:'include' });
+    const res = await fetch(`${API}/repositor/avisos?status=subiu${_repFiltroData()}`, { credentials:'include' });
     if (!res.ok) throw new Error();
     const av = await res.json();
     const n = av.length;
@@ -383,7 +419,7 @@ async function carregarRepProtocolo(silent=false) {
   const elD = document.getElementById('d-rep-lista-protocolo');
   if (!el && !elD) return;
   try {
-    const res = await fetch(`${API}/repositor/avisos?status=nao_encontrado`, { credentials:'include' });
+    const res = await fetch(`${API}/repositor/avisos?status=nao_encontrado${_repFiltroData()}`, { credentials:'include' });
     if (!res.ok) throw new Error();
     const av = await res.json();
     const n = av.length;
@@ -1236,6 +1272,11 @@ function mudarTabRepDesk(tab) {
 
 async function carregarReposicaoDesktop() {
   await carregarUsuariosParaRep();
+  // Filtro de data — começa sempre no dia de hoje, como pedido pelo supervisor
+  const fIni = document.getElementById('drep-data-ini');
+  const fFim = document.getElementById('drep-data-fim');
+  if (fIni && !fIni.value) fIni.value = hojeLocal();
+  if (fFim && !fFim.value) fFim.value = hojeLocal();
   // Mantém a aba ativa se já iniciada, senão começa em separar
   const activeBtn = document.querySelector('#pag-reposicao [id^="d-rtab-"].ativo');
   const tab = activeBtn?.id?.replace('d-rtab-','') || 'separar';
