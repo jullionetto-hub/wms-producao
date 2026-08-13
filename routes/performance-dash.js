@@ -491,9 +491,9 @@ router.get('/performance/timing', requerAuth, requerPerfil('supervisor', 'gestor
       FROM pedidos p
       WHERE p.status_embalagem = 'embalado'
         AND NULLIF(p.embalado_por,'') IS NOT NULL
-        AND p.data_pedido >= $1
-        AND p.data_pedido <= $2
-      ORDER BY p.embalado_por, p.data_pedido, p.embalado_em
+        AND COALESCE((SELECT eb.data_embalagem FROM embalagem eb WHERE eb.pedido_id = p.id ORDER BY eb.id DESC LIMIT 1), p.data_pedido) >= $1
+        AND COALESCE((SELECT eb.data_embalagem FROM embalagem eb WHERE eb.pedido_id = p.id ORDER BY eb.id DESC LIMIT 1), p.data_pedido) <= $2
+      ORDER BY p.embalado_por, COALESCE((SELECT eb.data_embalagem FROM embalagem eb WHERE eb.pedido_id = p.id ORDER BY eb.id DESC LIMIT 1), p.data_pedido), p.embalado_em
     `, [ini, fim]);
 
     res.json({ separacao, reposicao, checkout, embalagem });
