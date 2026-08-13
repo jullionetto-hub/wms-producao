@@ -576,7 +576,7 @@ function pfRenderKPIs({ totPed, totItens, totSkus, totRep, tempoMed, tempoMin, t
 
   document.getElementById('pf-kpis').innerHTML =
     card(
-      '#4f46e5',
+      'var(--accent)',
       'Separação', pfFmtN(totPed), 'pedidos concluídos',
       mini('Colaboradores', nColab) +
       mini('Itens/ped', itensPed) +
@@ -584,7 +584,7 @@ function pfRenderKPIs({ totPed, totItens, totSkus, totRep, tempoMed, tempoMin, t
       mini('Total SKUs', pfFmtN(totSkus))
     ) +
     card(
-      '#db2777',
+      'var(--accent)',
       'Itens', pfFmtN(totItens), 'itens separados',
       mini('Total SKUs', pfFmtN(totSkus)) +
       mini('SKUs/ped', skusPed) +
@@ -592,7 +592,7 @@ function pfRenderKPIs({ totPed, totItens, totSkus, totRep, tempoMed, tempoMin, t
       mini('Média/dia', _pfDados?.por_dia?.length ? pfFmtN(Math.round(totItens / _pfDados.por_dia.length)) : '—')
     ) +
     card(
-      '#ea580c',
+      'var(--accent)',
       'Reposição', pfFmtN(totRep), 'reposições geradas',
       mini('% dos pedidos', repPct + '%') +
       mini('Tempo médio', _pfDados?.reposicao?.tempo_medio_min != null ? _pfDados.reposicao.tempo_medio_min.toFixed(1)+' min' : '—') +
@@ -600,15 +600,15 @@ function pfRenderKPIs({ totPed, totItens, totSkus, totRep, tempoMed, tempoMin, t
       mini('Méd/colab', nColab > 0 ? (totRep / nColab).toFixed(1) : '0')
     ) +
     card(
-      '#7c3aed',
+      'var(--accent)',
       'Tempo médio', tempoMed != null ? tempoMed.toFixed(1)+' min' : '—', 'por pedido (separação)',
       mini('Mais rápido', tempoMin ? (tempoMin.nome||'?').split(' ')[0]+' ('+tempoMin.t.toFixed(1)+'m)' : '—') +
       mini('Mais lento', tempoMax ? (tempoMax.nome||'?').split(' ')[0]+' ('+tempoMax.t.toFixed(1)+'m)' : '—') +
       mini('Com tempo', pfFmtN(nComTempo)) +
       mini('Sem tempo', pfFmtN(nColab - nComTempo))
     ) +
-    setorCard('var(--info)', 'Checkout',  _pfDados?.checkout,  'pedidos') +
-    setorCard('var(--green)', 'Embalagem', _pfDados?.embalagem, 'pedidos') +
+    setorCard('var(--accent)', 'Checkout',  _pfDados?.checkout,  'pedidos') +
+    setorCard('var(--accent)', 'Embalagem', _pfDados?.embalagem, 'pedidos') +
     ruasCard;
 }
 
@@ -762,10 +762,10 @@ function pfRenderTiming(filtroNome) {
   if (filtroNome === undefined) filtroNome = document.getElementById('pf-colab')?.value || '';
 
   const ABAS = [
-    { id:'separacao', label:'Separação', cor:'#4f46e5' },
-    { id:'reposicao', label:'Reposição', cor:'#d97706' },
-    { id:'checkout',  label:'Checkout',  cor:'#db2777' },
-    { id:'embalagem', label:'Embalagem', cor:'#7c3aed' },
+    { id:'separacao', label:'Separação', cor:'var(--accent)' },
+    { id:'reposicao', label:'Reposição', cor:'var(--accent)' },
+    { id:'checkout',  label:'Checkout',  cor:'var(--accent)' },
+    { id:'embalagem', label:'Embalagem', cor:'var(--accent)' },
   ];
   const abaAtual = ABAS.find(a => a.id === _pfTimingAba) || ABAS[0];
 
@@ -1601,7 +1601,7 @@ function pfRenderPedidoDetalhe(d) {
     : null;
   const totalMin = tsIni && tsFim ? Math.round((tsFim - tsIni) / 60000 * 10) / 10 : null;
 
-  const etapaColors = { 'Separação':'#4f46e5', 'Reposição':'#d97706', 'Checkout':'#db2777', 'Embalagem':'#7c3aed' };
+  const etapaColors = { 'Separação':'var(--accent)', 'Reposição':'var(--accent)', 'Checkout':'var(--accent)', 'Embalagem':'var(--accent)' };
   const etapaCard = (icon, label, grad, corpo, durMin) => {
     const cor = etapaColors[label] || '#64748b';
     return `
