@@ -441,7 +441,8 @@ router.get('/performance/timing', requerAuth, requerPerfil('supervisor', 'gestor
         c.hora_criacao                                               AS iniciado_em,
         c.hora_checkout                                              AS concluido_em,
         COALESCE(NULLIF(p.total_itens,0), p.itens, 0)               AS total_itens,
-        p.itens                                                      AS skus,
+        (SELECT COUNT(DISTINCT ip.codigo) FROM itens_pedido ip
+          WHERE ip.pedido_id=p.id AND ip.codigo IS NOT NULL AND ip.codigo != '')::int AS skus,
         COALESCE(
           (SELECT ROUND(SUM(cs.tempo_min)::numeric, 1)::float
            FROM checkout_sessoes cs
@@ -474,7 +475,8 @@ router.get('/performance/timing', requerAuth, requerPerfil('supervisor', 'gestor
         p.embalagem_iniciado_em                             AS iniciado_em,
         p.embalado_em                                       AS concluido_em,
         COALESCE(NULLIF(p.total_itens,0), p.itens, 0)      AS total_itens,
-        p.itens                                             AS skus,
+        (SELECT COUNT(DISTINCT ip.codigo) FROM itens_pedido ip
+          WHERE ip.pedido_id=p.id AND ip.codigo IS NOT NULL AND ip.codigo != '')::int AS skus,
         CASE
           WHEN NULLIF(p.embalagem_iniciado_em,'') IS NOT NULL AND NULLIF(p.embalado_em,'') IS NOT NULL
           THEN ROUND(EXTRACT(EPOCH FROM (
@@ -729,7 +731,8 @@ router.get('/performance/pedido/:numero', requerAuth, requerPerfil('supervisor',
         c.hora_criacao  AS iniciado_em,
         c.hora_checkout AS concluido_em,
         COALESCE(NULLIF(p.total_itens,0), p.itens, 0)   AS total_itens,
-        p.itens                                           AS skus,
+        (SELECT COUNT(DISTINCT ip.codigo) FROM itens_pedido ip
+          WHERE ip.pedido_id=p.id AND ip.codigo IS NOT NULL AND ip.codigo != '')::int AS skus,
         COALESCE(
           (SELECT ROUND(SUM(cs.tempo_min)::numeric, 1)::float
            FROM checkout_sessoes cs
@@ -758,7 +761,8 @@ router.get('/performance/pedido/:numero', requerAuth, requerPerfil('supervisor',
         p.embalagem_iniciado_em    AS iniciado_em,
         p.embalado_em              AS concluido_em,
         COALESCE(NULLIF(p.total_itens,0), p.itens, 0) AS total_itens,
-        p.itens AS skus,
+        (SELECT COUNT(DISTINCT ip.codigo) FROM itens_pedido ip
+          WHERE ip.pedido_id=p.id AND ip.codigo IS NOT NULL AND ip.codigo != '')::int AS skus,
         CASE
           WHEN NULLIF(p.embalagem_iniciado_em,'') IS NOT NULL AND NULLIF(p.embalado_em,'') IS NOT NULL
           THEN ROUND(EXTRACT(EPOCH FROM (
