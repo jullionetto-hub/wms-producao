@@ -1864,7 +1864,7 @@ async function _executarRelatorioGeral() {
   }
 
   // Totais gerais
-  let totFuncs=0, totFaltas=0, totAtestados=0, totAtraso=0, totAntecipado=0;
+  let totFuncs=0, totFaltas=0, totAtestados=0, totAtraso=0, totAntecipado=0, totBH=0;
   let secoes = '';
 
   for (const turno of TURNO_ORDER) {
@@ -1878,7 +1878,8 @@ async function _executarRelatorioGeral() {
     const tAtestados  = funcs.reduce((s,f)=>s+f._atestadoRecs.length,0);
     const tAtraso     = funcs.reduce((s,f)=>s+f._totalAtraso,0);
     const tAntecipado = funcs.reduce((s,f)=>s+f._totalAntecipado,0);
-    totFuncs+=funcs.length; totFaltas+=tFaltas; totAtestados+=tAtestados; totAtraso+=tAtraso; totAntecipado+=tAntecipado;
+    const tBH         = funcs.reduce((s,f)=>s+(f.banco_horas_net_minutes||0),0);
+    totFuncs+=funcs.length; totFaltas+=tFaltas; totAtestados+=tAtestados; totAtraso+=tAtraso; totAntecipado+=tAntecipado; totBH+=tBH;
 
     // ── Seção FALTAS
     let secFaltas = '';
@@ -1943,12 +1944,17 @@ async function _executarRelatorioGeral() {
         const hExtra    = f.extra_hours    && f.extra_hours    !== '--:--' ? f.extra_hours    : null;
         const hPositivo = f.positive_hours && f.positive_hours !== '--:--' ? f.positive_hours : null;
         const heStr = hExtra ? `<span style="color:#16a34a;font-weight:700">HE: ${hExtra}</span>` : hPositivo ? `<span style="color:#16a34a;font-weight:700">H+: ${hPositivo}</span>` : '';
+        const bhMin = f.banco_horas_net_minutes || 0;
+        const bhStr = bhMin !== 0
+          ? `<span style="color:${bhMin>0?'#16a34a':'#dc2626'};font-weight:700">Banco de horas: ${bhMin>0?'+':''}${f.banco_horas_net}</span>`
+          : '';
         rowsAtrasos += `<tr style="background:#f8fafc">
           <td colspan="5" style="padding:8px 12px 3px;font-weight:800;font-size:13px;color:#1e293b;border-top:2px solid #e2e8f0">
             ${f.name}
             <span style="font-weight:400;font-size:11px;color:#64748b;margin-left:8px">${f.sector||''} · Mat. ${f.matricula||'—'}</span>
             <span style="float:right;font-size:11px;display:inline-flex;gap:10px;align-items:center">
               ${heStr}
+              ${bhStr}
               ${f._totalAntecipado>0?`<span style="color:#4F46E5;font-weight:700">↩ Antecipado: ${fmtHM(f._totalAntecipado)}</span>`:''}
               ${f._totalAtraso>0?`<span style="color:#dc2626;font-weight:700">⏰ Atraso: ${fmtHM(f._totalAtraso)}</span>`:''}
             </span>
@@ -2200,7 +2206,7 @@ async function _executarRelatorioGeral() {
     <button onclick="window.print()" style="padding:8px 16px;background:#0F172A;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">Imprimir / PDF</button>
   </div>
 
-  <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:24px">
+  <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:24px">
     <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px 14px">
       <div style="font-size:9px;font-weight:800;color:#94a3b8;letter-spacing:.5px">FUNCIONÁRIOS</div>
       <div style="font-size:26px;font-weight:900;color:#1e293b">${totFuncs}</div>
@@ -2220,6 +2226,10 @@ async function _executarRelatorioGeral() {
     <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 14px">
       <div style="font-size:9px;font-weight:800;color:#94a3b8;letter-spacing:.5px">ANTECIPADOS</div>
       <div style="font-size:26px;font-weight:900;color:#4F46E5">${fmtHM(totAntecipado)}</div>
+    </div>
+    <div style="background:${totBH>0?'#f0fdf4':totBH<0?'#fef2f2':'#f8fafc'};border:1px solid ${totBH>0?'#86efac':totBH<0?'#fecaca':'#e2e8f0'};border-radius:8px;padding:12px 14px">
+      <div style="font-size:9px;font-weight:800;color:#94a3b8;letter-spacing:.5px">BANCO DE HORAS</div>
+      <div style="font-size:26px;font-weight:900;color:${totBH>0?'#16a34a':totBH<0?'#dc2626':'#1e293b'}">${totBH>0?'+':totBH<0?'-':''}${fmtHM(Math.abs(totBH))}</div>
     </div>
   </div>
 
