@@ -1460,6 +1460,16 @@ function _renderDetalheAbs(data, nome) {
   const totalAtrasoComp = diasTrab.reduce((s, r) => s + r._atraso, 0);
   const diasComAtraso   = diasTrab.filter(r => r._atraso > _absToleranciMin).length;
 
+  // Saldo de banco de horas SÓ dos dias trabalhados no período (soma direta
+  // de H.Pos/H.Neg de cada linha da tabela abaixo) — não usa o H.Positivas/
+  // H.Negativas do resumo do PDF, que é acumulado histórico (inclui saldo
+  // "Anterior" de períodos passados), não o saldo deste período.
+  const bhPeriodoMin = diasTrab.reduce((s, r) => s + ((r.positive_hours || 0) + (r.negative_hours || 0)), 0);
+  const _fmtBH = m => {
+    const abs = Math.abs(m), h = Math.floor(abs / 60), mm = abs % 60;
+    return `${m > 0 ? '+' : m < 0 ? '-' : ''}${String(h).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+  };
+
   // Dias com ocorrência especial (DSR, feriado, falta)
   const diasEspeciais = allRec.filter(r => r.status !== 'normal' || r.falta || r.atestado || r.ferias);
 
@@ -1557,6 +1567,11 @@ function _renderDetalheAbs(data, nome) {
               <td style="padding:5px 8px;text-align:center;line-height:1.6">${atrasoCel}</td>
             </tr>`;
           }).join('')}
+          <tr style="border-top:2px solid var(--border);font-weight:800">
+            <td colspan="6" style="padding:5px 8px;text-align:right;color:var(--text2)">SALDO DO PERÍODO (${diasTrab.length} dia${diasTrab.length!==1?'s':''} trabalhado${diasTrab.length!==1?'s':''})</td>
+            <td style="padding:5px 8px;text-align:center;font-family:monospace;color:${bhPeriodoMin>0?'#16a34a':bhPeriodoMin<0?'#dc2626':'var(--text3)'}">${_fmtBH(bhPeriodoMin)}</td>
+            <td></td>
+          </tr>
           </tbody>
         </table>
       </div>`;
@@ -1632,9 +1647,9 @@ function _renderDetalheAbs(data, nome) {
           <div style="font-size:10px;color:var(--text3);font-weight:700">H. POSITIVAS</div>
           <div style="font-size:16px;font-weight:900;color:#16a34a">${data.positive_hours || '—'}</div>
         </div>
-        <div style="background:var(--surface);border-radius:8px;padding:8px 12px;text-align:center">
-          <div style="font-size:10px;color:var(--text3);font-weight:700">BANCO DE HORAS</div>
-          <div style="font-size:16px;font-weight:900;color:${data.banco_horas_net_minutes > 0 ? '#16a34a' : data.banco_horas_net_minutes < 0 ? '#dc2626' : 'var(--text3)'}">${data.banco_horas_net_minutes > 0 ? '+' : ''}${data.banco_horas_net || '—'}</div>
+        <div style="background:var(--surface);border-radius:8px;padding:8px 12px;text-align:center" title="Soma de H.Pos/H.Neg só dos dias trabalhados no período (${diasTrab.length} dias) — não inclui saldo acumulado de períodos anteriores">
+          <div style="font-size:10px;color:var(--text3);font-weight:700">BANCO DE HORAS (PERÍODO)</div>
+          <div style="font-size:16px;font-weight:900;color:${bhPeriodoMin > 0 ? '#16a34a' : bhPeriodoMin < 0 ? '#dc2626' : 'var(--text3)'}">${_fmtBH(bhPeriodoMin)}</div>
         </div>
         <div style="background:var(--surface);border-radius:8px;padding:8px 12px;text-align:center">
           <div style="font-size:10px;color:var(--text3);font-weight:700">ABSENTEÍSMO</div>
@@ -1860,7 +1875,14 @@ async function _executarRelatorioGeral() {
     const totalAtraso     = eventos.filter(e=>!e.antecip).reduce((s,e)=>s+e.min,0);
     const totalAntecipado = eventos.filter(e=> e.antecip).reduce((s,e)=>s+e.min,0);
 
-    grupos[turno].push({ ...func, _recs:recs, _faltaRecs:faltaRecs, _atestadoRecs:atestadoRecs, _eventos:eventos, _totalAtraso:totalAtraso, _totalAntecipado:totalAntecipado });
+    // Saldo de banco de horas só dos dias trabalhados dentro do período/filtro
+    // aplicado neste relatório — soma direta de H.Pos/H.Neg de cada dia, não
+    // o acumulado histórico do resumo do PDF (que inclui saldo "Anterior").
+    const bancoHoras = recs
+      .filter(r => r.entry_time)
+      .reduce((s,r) => s + ((r.positive_hours||0) + (r.negative_hours||0)), 0);
+
+    grupos[turno].push({ ...func, _recs:recs, _faltaRecs:faltaRecs, _atestadoRecs:atestadoRecs, _eventos:eventos, _totalAtraso:totalAtraso, _totalAntecipado:totalAntecipado, _bancoHoras:bancoHoras });
   }
 
   // Totais gerais
@@ -1878,7 +1900,7 @@ async function _executarRelatorioGeral() {
     const tAtestados  = funcs.reduce((s,f)=>s+f._atestadoRecs.length,0);
     const tAtraso     = funcs.reduce((s,f)=>s+f._totalAtraso,0);
     const tAntecipado = funcs.reduce((s,f)=>s+f._totalAntecipado,0);
-    const tBH         = funcs.reduce((s,f)=>s+(f.banco_horas_net_minutes||0),0);
+    const tBH         = funcs.reduce((s,f)=>s+(f._bancoHoras||0),0);
     totFuncs+=funcs.length; totFaltas+=tFaltas; totAtestados+=tAtestados; totAtraso+=tAtraso; totAntecipado+=tAntecipado; totBH+=tBH;
 
     // ── Seção FALTAS
@@ -1944,9 +1966,10 @@ async function _executarRelatorioGeral() {
         const hExtra    = f.extra_hours    && f.extra_hours    !== '--:--' ? f.extra_hours    : null;
         const hPositivo = f.positive_hours && f.positive_hours !== '--:--' ? f.positive_hours : null;
         const heStr = hExtra ? `<span style="color:#16a34a;font-weight:700">HE: ${hExtra}</span>` : hPositivo ? `<span style="color:#16a34a;font-weight:700">H+: ${hPositivo}</span>` : '';
-        const bhMin = f.banco_horas_net_minutes || 0;
+        const bhMin = f._bancoHoras || 0;
+        const bhFmt = (() => { const abs=Math.abs(bhMin), h=Math.floor(abs/60), mm=abs%60; return `${bhMin>0?'+':bhMin<0?'-':''}${String(h).padStart(2,'0')}:${String(mm).padStart(2,'0')}`; })();
         const bhStr = bhMin !== 0
-          ? `<span style="color:${bhMin>0?'#16a34a':'#dc2626'};font-weight:700">Banco de horas: ${bhMin>0?'+':''}${f.banco_horas_net}</span>`
+          ? `<span style="color:${bhMin>0?'#16a34a':'#dc2626'};font-weight:700">Banco de horas: ${bhFmt}</span>`
           : '';
         rowsAtrasos += `<tr style="background:#f8fafc">
           <td colspan="5" style="padding:8px 12px 3px;font-weight:800;font-size:13px;color:#1e293b;border-top:2px solid #e2e8f0">
