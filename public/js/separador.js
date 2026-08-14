@@ -491,7 +491,7 @@ async function carregarFilaMobile() {
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
           <div style="font-size:20px;font-weight:800;color:${numColor};font-family:'Space Mono',monospace">#${p.numero_pedido}</div>
           <div style="display:flex;gap:6px;align-items:center">
-            ${badgeTempoSep(p.total_itens||p.itens, p.pontuacao)}
+            ${badgeTempoSep(p.total_itens||p.itens, p.pontuacao, p.itens)}
             <span class="pill ${pillCls}" style="font-size:10px;${temReposto?'background:rgba(87,185,129,.15);color:var(--green);border-color:rgba(87,185,129,.4)':''}">${pillTxt}</span>
           </div>
         </div>

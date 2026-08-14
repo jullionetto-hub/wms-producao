@@ -3,19 +3,26 @@ let usuarioAtual     = null;
 
 // ── Estimativa de tempo de separação ──────────────────────────────────────
 // Ritmo (pontos/min) vem do backend (/pedidos/ritmo-estimativa), calculado a
-// partir da mediana real dos pedidos já concluídos, por faixa de dificuldade
-// (pontuação/item). Usa PONTUAÇÃO como driver do tempo, não itens crus — a
-// pontuação (lib/pontuacao.js) já pondera cada endereço único visitado por
-// peso do corredor + custo fixo de deslocamento, então um pedido com muitos
-// itens concentrados em poucos endereços (ex.: 200 itens em 2 SKUs) já sai
-// com pontuação baixa e separa rápido, o que itens/min sozinho não pegava.
-// Enquanto não há amostras suficientes numa faixa, usa a fórmula fixa abaixo
-// como fallback (mesma curva de sempre, só reexpressa em pontos/min).
+// partir da mediana real dos pedidos já concluídos, segmentado por faixa de
+// dificuldade (pontuação/item) × concentração (itens totais ÷ nº de SKUs).
+// Usa PONTUAÇÃO como driver do tempo, não itens crus — a pontuação
+// (lib/pontuacao.js) já pondera cada endereço único visitado por peso do
+// corredor + custo fixo de deslocamento. Mas isso sozinho não bastava: um
+// pedido com muitos itens concentrados em poucos SKUs (ex.: 200 itens em 2
+// SKUs) é pego bem mais rápido por item do que um pedido espalhado com a
+// mesma pontuação, porque o custo fixo de deslocamento (+20/endereço) fica
+// diluído quando a quantidade por SKU é grande — por isso a concentração
+// entra como uma segunda dimensão do balde, não só a dificuldade da rua.
+// Enquanto um balde não tem amostras suficientes, usa a fórmula fixa abaixo
+// como fallback (curva antiga de itens/min, reexpressa em pontos/min, com um
+// ajuste conservador pra concentração alta — o valor exato só a mediana real
+// confirma conforme o balde acumula amostras).
 //   ratio 1.0 (fácil)   → 7.0 pontos/min (~9s/ponto)
 //   ratio 1.5 (médio)   → 5.0 pontos/min (~12s/ponto)
 //   ratio 2.0 (difícil) → 3.5 pontos/min (~17s/ponto)
 
-let _ritmoReal = null; // { buckets: { facil, medio, dificil }, min_amostras, calculado_em }
+let _ritmoReal = null; // { buckets: { facil_alta, facil_baixa, ... }, min_amostras, calculado_em }
+const RITMO_CONC_LIMIAR = 8; // itens/SKU a partir daqui = concentração "alta" (bate com o backend)
 
 function carregarTaxaSeparacao() {
   return Promise.resolve(null); // sem chamada ao servidor
@@ -34,29 +41,36 @@ function _bucketDificuldade(ratio) {
   return 'dificil';
 }
 
-function _ritmoPontosMin(totalItens, pontos) {
-  if (!totalItens || totalItens <= 0) return 7.0;
-  const ratio = pontos > 0 ? pontos / totalItens : 1.0;
-  const bucket = _bucketDificuldade(ratio);
-  const real = _ritmoReal?.buckets?.[bucket];
-  if (real?.ritmo) return real.ritmo; // já em pontos/min (calibrado pelo backend)
-  // Fallback: mesma curva fixa de sempre (itens/min), reexpressa em pontos/min
-  // multiplicando pelo ratio — dá o mesmo resultado até a faixa acumular amostras reais.
-  return Math.max(3.5, 7.0 - (ratio - 1.0) * 3.5) * ratio;
+function _bucketConcentracao(itensPorSku) {
+  return itensPorSku >= RITMO_CONC_LIMIAR ? 'alta' : 'baixa';
 }
 
-// Minutos estimados de separação — usa a pontuação (rua+dificuldade+concentração)
-// como driver; cai pra itens só se o pedido não tiver pontuação calculada.
-function _minutosEstimados(totalItens, pontuacao) {
+function _ritmoPontosMin(totalItens, pontos, skus) {
+  if (!totalItens || totalItens <= 0) return 7.0;
+  const ratio = pontos > 0 ? pontos / totalItens : 1.0;
+  const itensPorSku = skus > 0 ? totalItens / skus : 1.0;
+  const bucket = _bucketDificuldade(ratio) + '_' + _bucketConcentracao(itensPorSku);
+  const real = _ritmoReal?.buckets?.[bucket];
+  if (real?.ritmo) return real.ritmo; // já em pontos/min (calibrado pelo backend)
+  // Fallback: curva fixa de itens/min de sempre, reexpressa em pontos/min
+  // (× ratio), com um ajuste pra concentração alta até haver amostra real.
+  const base = Math.max(3.5, 7.0 - (ratio - 1.0) * 3.5) * ratio;
+  return itensPorSku >= RITMO_CONC_LIMIAR ? base * 1.4 : base;
+}
+
+// Minutos estimados de separação — usa pontuação (rua+dificuldade) e a
+// concentração (itens/SKU) como driver; cai pra itens só se o pedido não
+// tiver pontuação calculada.
+function _minutosEstimados(totalItens, pontuacao, skus) {
   const itens = parseInt(totalItens) || 0;
   if (itens <= 0) return 0;
   const pontos = (parseFloat(pontuacao) || 0) > 0 ? parseFloat(pontuacao) : itens;
-  const ritmo  = _ritmoPontosMin(itens, pontos);
+  const ritmo  = _ritmoPontosMin(itens, pontos, parseInt(skus) || 0);
   return Math.max(1, Math.ceil(pontos / ritmo));
 }
 
-function estimarTempoSep(totalItens, pontuacao) {
-  const min = _minutosEstimados(totalItens, pontuacao);
+function estimarTempoSep(totalItens, pontuacao, skus) {
+  const min = _minutosEstimados(totalItens, pontuacao, skus);
   if (!min) return null;
   if (min < 60) return `~${min} min`;
   const h = Math.floor(min / 60);
@@ -64,10 +78,10 @@ function estimarTempoSep(totalItens, pontuacao) {
   return m > 0 ? `~${h}h ${m}min` : `~${h}h`;
 }
 
-function badgeTempoSep(totalItens, pontuacao) {
-  const t = estimarTempoSep(totalItens, pontuacao);
+function badgeTempoSep(totalItens, pontuacao, skus) {
+  const t = estimarTempoSep(totalItens, pontuacao, skus);
   if (!t) return '';
-  const min = _minutosEstimados(totalItens, pontuacao);
+  const min = _minutosEstimados(totalItens, pontuacao, skus);
   const cor = min <= 10 ? '#16a34a' : min <= 20 ? '#d97706' : '#dc2626';
   const bg  = min <= 10 ? 'rgba(22,163,74,.1)' : min <= 20 ? 'rgba(217,119,6,.1)' : 'rgba(220,38,38,.1)';
   return `<span style="background:${bg};color:${cor};border-radius:20px;padding:2px 8px;font-size:11px;font-weight:700;white-space:nowrap">⏱ ${t}</span>`;
@@ -77,7 +91,7 @@ function badgeTempoSep(totalItens, pontuacao) {
 // - Para quando entra em aguardando_repositor (exibe badge pausado)
 // - Subtrai tempo já acumulado de espera (tempo_aguardando_min)
 // - Subtrai espera atual se aguardando_repositor_desde estiver preenchido
-function badgeTimerAoVivo(iniciadoEm, totalItens, pontuacao, tempoAguardandoMin, aguardandoRepositorDesde) {
+function badgeTimerAoVivo(iniciadoEm, totalItens, pontuacao, tempoAguardandoMin, aguardandoRepositorDesde, skus) {
   if (!iniciadoEm) return '';
   const inicio = new Date(iniciadoEm);
   if (isNaN(inicio)) return '';
@@ -108,7 +122,7 @@ function badgeTimerAoVivo(iniciadoEm, totalItens, pontuacao, tempoAguardandoMin,
 
   // Tempo real de separação (sem espera)
   const decorMin = Math.max(0, totalDecorMin - jaAguardou);
-  const estimMin = _minutosEstimados(totalItens, pontuacao);
+  const estimMin = _minutosEstimados(totalItens, pontuacao, skus);
   const atrasado = decorMin > estimMin;
   const decorTxt = decorMin < 60 ? `${decorMin}min` : `${Math.floor(decorMin/60)}h${decorMin%60>0?decorMin%60+'m':''}`;
   const estimTxt = estimMin < 60 ? `${estimMin}min` : `${Math.floor(estimMin/60)}h${estimMin%60>0?estimMin%60+'m':''}`;

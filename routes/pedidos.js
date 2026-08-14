@@ -68,19 +68,23 @@ router.get('/pedidos', requerAuth, async (req,res) => {
   } catch(e){res.status(500).json({erro:e.message});}
 });
 
-/* ── Ritmo real de separação (pontos/min) por faixa de dificuldade ─────────
+/* ── Ritmo real de separação (pontos/min) por faixa de dificuldade × concentração
    Alimenta a estimativa de tempo (⏱) com dados reais em vez de números
    fixos "no chute". Usa PONTUAÇÃO como driver (não itens crus) porque ela já
    pondera rua/dificuldade + custo fixo de deslocamento por endereço único
-   (lib/pontuacao.js) — um pedido com muitos itens concentrados em poucos
-   endereços tem pontuação baixa e separa rápido, o que a contagem de itens
-   sozinha não capturava. Calcula a partir dos pedidos já concluídos,
-   descontando tempo de espera de repositor. Cacheado em memória — a query
-   varre todo o histórico de pedidos concluídos, não vale recalcular a cada
-   requisição. */
+   (lib/pontuacao.js). Além disso, segmenta também por CONCENTRAÇÃO (itens
+   totais ÷ nº de SKUs do pedido): um pedido com muitos itens em poucos SKUs
+   (ex.: 200 itens em só 2 SKUs) é pego muito mais rápido por item do que um
+   pedido com a mesma dificuldade mas itens espalhados em muitos SKUs — a
+   pontuação sozinha não capturava esse efeito porque o custo fixo de
+   deslocamento (+20/endereço) fica diluído quando a quantidade por SKU é
+   grande. Calcula a partir dos pedidos já concluídos, descontando tempo de
+   espera de repositor. Cacheado em memória — a query varre todo o histórico
+   de pedidos concluídos, não vale recalcular a cada requisição. */
 let _ritmoCache = { data: null, calculadoEm: 0 };
 const RITMO_CACHE_MS      = 30 * 60 * 1000; // 30 min
 const RITMO_MIN_AMOSTRAS  = 20; // abaixo disso, o front usa o fallback fixo
+const RITMO_CONC_LIMIAR   = 8;  // itens/SKU a partir daqui = concentração "alta"
 
 router.get('/pedidos/ritmo-estimativa', requerAuth, async (req, res) => {
   try {
@@ -90,18 +94,21 @@ router.get('/pedidos/ritmo-estimativa', requerAuth, async (req, res) => {
     }
     const rows = await db.all(`
       SELECT
-        CASE
+        (CASE
           WHEN total_itens <= 0 THEN 'facil'
           WHEN pontuacao / total_itens <= 1.2 THEN 'facil'
           WHEN pontuacao / total_itens <= 1.7 THEN 'medio'
           ELSE 'dificil'
-        END AS bucket,
+        END) || '_' || (
+          CASE WHEN total_itens / GREATEST(1, itens_skus) >= ${RITMO_CONC_LIMIAR} THEN 'alta' ELSE 'baixa' END
+        ) AS bucket,
         COUNT(*) AS amostras,
         PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY pontuacao / duracao_min) AS ritmo
       FROM (
         SELECT
           COALESCE(NULLIF(p.total_itens,0), p.itens, 0)::float AS total_itens,
           COALESCE(p.pontuacao,0)::float AS pontuacao,
+          COALESCE(NULLIF(p.itens,0), 1)::float AS itens_skus,
           GREATEST(0.5, EXTRACT(EPOCH FROM (
             COALESCE(NULLIF(p.skus_concluido_em,''), NULLIF(p.concluido_em,''))::timestamp
             - p.iniciado_em::timestamp
