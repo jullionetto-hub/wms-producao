@@ -14,7 +14,7 @@ router.get('/pedidos', requerAuth, async (req,res) => {
     // tem separador mas não passou por distribuição com turno, cai no turno do separador.
     // SEM default pra 'Manha' — pedido ainda não distribuído (sem separador) fica com
     // sep_turno NULL, pra não ser contado como se já tivesse ido pro turno da manhã.
-    let q=`SELECT p.*, COALESCE(NULLIF(p.total_itens,0),(SELECT COALESCE(SUM(ip.quantidade),p.itens) FROM itens_pedido ip WHERE ip.pedido_id=p.id),p.itens) AS total_itens, s.nome as separador_nome,COALESCE(p.turno_distribuicao,s.turno) as sep_turno FROM pedidos p LEFT JOIN separadores s ON p.separador_id=s.id WHERE 1=1`;
+    let q=`SELECT p.*, COALESCE(NULLIF(p.total_itens,0),(SELECT COALESCE(SUM(ip.quantidade),p.itens) FROM itens_pedido ip WHERE ip.pedido_id=p.id),p.itens) AS total_itens, s.nome as separador_nome,COALESCE(p.turno_distribuicao,s.turno) as sep_turno, EXISTS(SELECT 1 FROM checkout c WHERE c.pedido_id=p.id AND c.status='concluido') AS checkout_concluido FROM pedidos p LEFT JOIN separadores s ON p.separador_id=s.id WHERE 1=1`;
     const p=[];
     const add=(c,v)=>{p.push(v);q+=` AND ${c}$${p.length}`;};
     if (separador_id)  add('p.separador_id=',separador_id);

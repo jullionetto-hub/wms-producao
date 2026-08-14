@@ -35,6 +35,22 @@ function _turnoHora(p) {
   return p.turno_distribuicao || null;
 }
 
+// Status geral do pedido no pipeline inteiro (não só separação) —
+// combina p.status (separação) + checkout_concluido (tabela checkout,
+// via subquery no backend) + status_embalagem, do mais avançado pro
+// menos avançado.
+function _statusGeral(p) {
+  if (p.status_embalagem === 'embalado') return 'embalado';
+  if (p.checkout_concluido) return 'checkoutado';
+  if (p.status === 'concluido') return 'separado';
+  if (p.status === 'separando') return 'separando';
+  return 'pendente';
+}
+const _statusGeralLabel = {
+  pendente: 'Pendente', separando: 'Separando', separado: 'Separado',
+  checkoutado: 'Checkoutado', embalado: 'Embalado',
+};
+
 function filtrarPedidosTurno(turno) {
   _filtroTurno  = turno;
   _filtroTransp = '';  // reseta filtro de transportadora ao trocar turno
@@ -55,13 +71,15 @@ async function carregarPedidos() {
     const ini    = document.getElementById('filtro-ped-ini').value;
     const fim    = document.getElementById('filtro-ped-fim').value;
     const usrId  = document.getElementById('filtro-ped-sep').value;
-    const status = document.getElementById('filtro-ped-status').value;
     const numPed = document.getElementById('filtro-ped-num').value.trim();
     let url = `${API}/pedidos?`;
     // Envia datas ao backend (usa COALESCE: iniciado_em → data_distribuicao → data_pedido)
+    // Status NÃO é mais filtrado no servidor: o filtro agora é o pipeline inteiro
+    // (pendente/separando/separado/checkoutado/embalado — ver _statusGeral), que
+    // depende de checkout_concluido + status_embalagem além do p.status. Filtra
+    // no cliente em _renderTabelaPedidos(), igual turno/transportadora já fazem.
     if (ini) url += `data_ini=${encodeURIComponent(ini)}&`;
     if (fim) url += `data_fim=${encodeURIComponent(fim)}&`;
-    if (status) url += `status=${encodeURIComponent(status)}&`;
     if (numPed) url += `numero_pedido=${encodeURIComponent(numPed)}&`;
     const res = await fetch(url, { credentials:'include' });
     let ps = await res.json();
@@ -138,6 +156,9 @@ function _renderTabelaPedidos() {
   } else if (_filtroTransp) {
     lista = lista.filter(p => String(p.transportadora||'').toUpperCase().includes(_filtroTransp));
   }
+  // Filtro de status geral (pipeline inteiro, não só separação — ver _statusGeral)
+  const filtroStatus = document.getElementById('filtro-ped-status')?.value || '';
+  if (filtroStatus) lista = lista.filter(p => _statusGeral(p) === filtroStatus);
   _pedidosListaFiltrada = lista;
 
   // Botão "Reatribuir Todos" — só faz sentido filtrando por um colaborador específico
@@ -202,7 +223,7 @@ function _renderTabelaPedidos() {
       <td style="font-size:11px;font-weight:700;color:${corTransp}">${p.transportadora||'—'}${primeBadge}</td>
       <td style="font-size:11px;color:var(--amber);font-weight:600;white-space:nowrap">${p.aguardando_desde||'—'}</td>
       <td style="font-size:12px;color:var(--text2)">${p.separador_nome||'—'}</td>
-      <td><span class="pill ${(p.status||'').replace(' ','-')}">${p.status}</span></td>
+      <td><span class="pill ${_statusGeral(p)}">${_statusGeralLabel[_statusGeral(p)]}</span></td>
       <td style="font-weight:600;text-align:center;color:var(--text2)">${p.itens||'—'}</td>
       <td style="font-weight:700;text-align:center;color:${(p.total_itens||p.itens||0)>100?'var(--red)':(p.total_itens||p.itens||0)>30?'var(--amber)':'var(--text)'}">${p.total_itens||p.itens||'—'}</td>
       <td style="text-align:center" id="timer-ped-${p.id}">${p.status==='separando' && p.iniciado_em

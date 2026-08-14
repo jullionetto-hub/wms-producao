@@ -313,6 +313,9 @@ td{padding:10px 13px;vertical-align:middle;color:var(--text2)}
 .pill.repositor {background:rgba(224,168,62,.15);color:var(--amber);border:1px solid rgba(224,168,62,.35)}
 .pill.separador {background:rgba(79,70,229,.15);color:var(--accent);border:1px solid rgba(79,70,229,.35)}
 .pill.checkout  {background:rgba(45,212,191,.15);color:#2DD4BF;border:1px solid rgba(45,212,191,.35)}
+.pill.separado    {background:rgba(56,189,248,.15);color:var(--info);border:1px solid rgba(56,189,248,.35)}
+.pill.checkoutado {background:rgba(45,212,191,.15);color:#2DD4BF;border:1px solid rgba(45,212,191,.35)}
+.pill.embalado    {background:rgba(87,185,129,.15);color:var(--green);border:1px solid rgba(87,185,129,.35)}
 
 
 
