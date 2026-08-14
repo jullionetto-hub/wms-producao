@@ -195,6 +195,9 @@ function renderizarPerformanceDash() {
         </div>
       </div>
 
+      <!-- Ranking por setor (Checkout/Embalagem/Reposição) -->
+      <div id="pf-setores-extra" style="margin-top:16px"></div>
+
     </div><!-- /pf-conteudo (resumo) -->
 
     <!-- ABA TEMPOS -->
@@ -472,6 +475,7 @@ function pfRenderizarDados(colab, porDia) {
   pfRenderChartTempo(colab);
   pfRenderChartDia(porDia);
   pfRenderTabela(colab, totPed);
+  pfRenderSetoresExtra();
   } catch(err) {
     console.error('[Performance] Erro ao renderizar:', err);
     const kpisEl = document.getElementById('pf-kpis');
@@ -723,6 +727,63 @@ function pfRenderTabela(colab, totPed) {
       <td style="padding:10px 14px;text-align:right;font-size:12px;color:#a78bfa">${c.tempo_medio_min!=null?c.tempo_medio_min.toFixed(1)+' min':'—'}</td>
     </tr>`;
   }).join('');
+}
+
+// ── Ranking por setor: Checkout / Embalagem / Reposição ────────────────────
+function pfRenderTabelaSetor(titulo, rows, temItens) {
+  const nomeAtual = document.getElementById('pf-colab')?.value || '';
+  const filtrado  = (nomeAtual ? rows.filter(r => r.nome === nomeAtual) : rows)
+    .slice().sort((a,b) => (b.concluidos||0) - (a.concluidos||0));
+
+  if (!filtrado.length) {
+    return `
+    <div class="card" style="padding:0;overflow:hidden;margin-bottom:16px">
+      <div style="padding:12px 18px;background:var(--surface2);border-bottom:1px solid var(--border);font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px">${titulo}</div>
+      <div style="padding:24px 18px;text-align:center;color:var(--text3);font-size:12px">Nenhum registro no período.</div>
+    </div>`;
+  }
+
+  const total = filtrado.reduce((s,r) => s + (r.concluidos||0), 0);
+
+  return `
+  <div class="card" style="padding:0;overflow:hidden;margin-bottom:16px">
+    <div style="padding:12px 18px;background:var(--surface2);border-bottom:1px solid var(--border);font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.8px;display:flex;align-items:center;gap:8px">
+      ${titulo}
+      <span style="margin-left:auto;font-size:10px;font-weight:600;color:var(--text3)">${filtrado.length} colaborador(es) · ${pfFmtN(total)} concluídos</span>
+    </div>
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse">
+        <thead>
+          <tr style="background:var(--surface2)">
+            <th style="padding:9px 14px;text-align:left;font-size:9px;font-weight:800;color:var(--text3);letter-spacing:.5px">COLABORADOR</th>
+            <th style="padding:9px 14px;text-align:right;font-size:9px;font-weight:800;color:var(--text3);letter-spacing:.5px">CONCLUÍDOS</th>
+            <th style="padding:9px 14px;text-align:right;font-size:9px;font-weight:800;color:var(--text3);letter-spacing:.5px">PENDENTES</th>
+            ${temItens ? `<th style="padding:9px 14px;text-align:right;font-size:9px;font-weight:800;color:var(--text3);letter-spacing:.5px">ITENS</th>` : ''}
+            <th style="padding:9px 14px;text-align:right;font-size:9px;font-weight:800;color:var(--text3);letter-spacing:.5px">TEMPO MÉDIO</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${filtrado.map(r => `
+          <tr style="border-bottom:1px solid rgba(51,65,85,.4)">
+            <td style="padding:10px 14px;font-weight:700;color:var(--text);font-size:13px">${pfEsc(r.nome)}</td>
+            <td style="padding:10px 14px;text-align:right;font-weight:700;color:#38bdf8;font-size:13px">${pfFmtN(r.concluidos)}</td>
+            <td style="padding:10px 14px;text-align:right;font-size:12px;color:#ef4444">${pfFmtN(r.pendentes)}</td>
+            ${temItens ? `<td style="padding:10px 14px;text-align:right;font-size:12px">${pfFmtN(r.itens||0)}</td>` : ''}
+            <td style="padding:10px 14px;text-align:right;font-size:12px;color:#a78bfa">${r.tempo_medio_min!=null?r.tempo_medio_min.toFixed(1)+' min':'—'}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+  </div>`;
+}
+
+function pfRenderSetoresExtra() {
+  const el = document.getElementById('pf-setores-extra');
+  if (!el || !_pfDados) return;
+  el.innerHTML =
+    pfRenderTabelaSetor('CHECKOUT',  _pfDados.checkout_colaboradores  || [], true) +
+    pfRenderTabelaSetor('EMBALAGEM', _pfDados.embalagem_colaboradores || [], true) +
+    pfRenderTabelaSetor('REPOSIÇÃO', _pfDados.reposicao_colaboradores || [], false);
 }
 
 // ── Tempos Detalhados por Pedido ───────────────────────────────────────────
