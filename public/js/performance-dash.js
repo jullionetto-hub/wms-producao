@@ -1418,6 +1418,14 @@ const PF_PERFIL_UNIDADE = {
   embalador: 'pedidos',
   repositor: 'SKUs',
 };
+// Espelha METAS em routes/performance-dash.js — só usado quando não há
+// nenhuma sessão registrada no período (para ainda assim mostrar a meta cheia).
+const PF_PERFIL_META = {
+  separador: 65,
+  checkout:  90,
+  embalador: 120,
+  repositor: 90,
+};
 
 async function pfCarregarMetas() {
   const wrap = document.getElementById('pf-metas-wrap');
@@ -1462,8 +1470,19 @@ async function pfCarregarMetas() {
   let html = '';
 
   for (const perfil of ordemPerfil) {
-    const rows = porPerfil[perfil];
-    if (!rows?.length) continue;
+    const rows = porPerfil[perfil] || [];
+
+    if (!rows.length) {
+      html += `
+      <div class="card" style="margin-bottom:16px;padding:0;overflow:hidden">
+        <div style="padding:12px 18px;background:var(--surface2);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px">
+          <span style="font-size:14px;font-weight:900;color:var(--text)">${PF_PERFIL_LABEL[perfil]||perfil}</span>
+          <span style="font-size:10px;color:var(--text3)">Meta cheia: ${PF_PERFIL_META[perfil]??'—'} ${PF_PERFIL_UNIDADE[perfil]||''}/turno</span>
+        </div>
+        <div style="padding:24px 18px;text-align:center;color:var(--text3);font-size:12px">Nenhuma sessão registrada neste perfil no período.</div>
+      </div>`;
+      continue;
+    }
 
     // Totais consolidados por colaborador
     const totais = {};
