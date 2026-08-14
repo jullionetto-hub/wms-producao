@@ -1457,11 +1457,37 @@ function pfExportarExcel() {
     ...(_pfDados?.por_dia||[]).map(r => [fmtData(r.data), r.pedidos, r.itens])
   ];
 
+  const filtrarSetor = rows => nomeAtualExp ? (rows||[]).filter(r => r.nome === nomeAtualExp) : (rows||[]);
+  const abaCheckout = [
+    ['Colaborador','Concluídos','Pendentes','Itens','Tempo Médio (min)'],
+    ...filtrarSetor(_pfDados?.checkout_colaboradores).map(r => [
+      r.nome, r.concluidos, r.pendentes, r.itens ?? '',
+      r.tempo_medio_min != null ? parseFloat(r.tempo_medio_min.toFixed(1)) : '',
+    ])
+  ];
+  const abaEmbalagem = [
+    ['Colaborador','Concluídos','Pendentes','Itens','Tempo Médio (min)'],
+    ...filtrarSetor(_pfDados?.embalagem_colaboradores).map(r => [
+      r.nome, r.concluidos, r.pendentes, r.itens ?? '',
+      r.tempo_medio_min != null ? parseFloat(r.tempo_medio_min.toFixed(1)) : '',
+    ])
+  ];
+  const abaReposicao = [
+    ['Colaborador','Concluídos','Pendentes','Tempo Médio (min)'],
+    ...filtrarSetor(_pfDados?.reposicao_colaboradores).map(r => [
+      r.nome, r.concluidos, r.pendentes,
+      r.tempo_medio_min != null ? parseFloat(r.tempo_medio_min.toFixed(1)) : '',
+    ])
+  ];
+
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(abaResumo), 'Resumo');
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(abaDia2),   'Por Colab-Dia');
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(abaRuas),   'Ruas');
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(abaDia),    'Por Dia');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(abaCheckout),  'Checkout');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(abaEmbalagem), 'Embalagem');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(abaReposicao), 'Reposição');
   XLSX.writeFile(wb, `performance-separadores_${(ini||'').replace(/-/g,'')}${fim?'-'+(fim).replace(/-/g,''):''}.xlsx`);
   pfToast('Excel exportado!','sucesso');
 }
