@@ -213,6 +213,27 @@ router.get('/performance/separadores', requerAuth, requerPerfil('supervisor', 'g
       GROUP BY NULLIF(p3.embalado_por,'')
     `, params);
 
+    // ── Reposição — por colaborador (repositor que resolveu cada tentativa) ──
+    const reposicaoPorColabRows = await db.all(`
+      SELECT
+        t.value->>'repositor' AS nome,
+        COUNT(*) FILTER (WHERE (t.value->>'resultado') IN ('encontrado','buscado','abastecido'))::int AS concluidos,
+        COUNT(*) FILTER (WHERE (t.value->>'resultado') IN ('nao_encontrado','protocolo'))::int AS pendentes,
+        ROUND(AVG(
+          CASE WHEN (t.value->>'hora_inicio') IS NOT NULL AND (t.value->>'hora_inicio') != ''
+           AND (t.value->>'hora_fim') IS NOT NULL AND (t.value->>'hora_fim') != ''
+          THEN EXTRACT(EPOCH FROM (
+            (ar.data_aviso || ' ' || (t.value->>'hora_fim'))::timestamp
+            - (ar.data_aviso || ' ' || (t.value->>'hora_inicio'))::timestamp
+          )) / 60.0 END
+        )::numeric, 1) AS tempo_medio_min
+      FROM avisos_repositor ar,
+           jsonb_array_elements(COALESCE(ar.tentativas, '[]'::jsonb)) AS t(value)
+      WHERE ar.data_aviso >= $1 AND ar.data_aviso <= $2
+        AND (t.value->>'repositor') IS NOT NULL AND (t.value->>'repositor') != ''
+      GROUP BY t.value->>'repositor'
+    `, [ini, fim]);
+
     // ── Reposição — tempo médio de resolução (do avisos ao repositor resolver) ──
     const reposicaoTiming = await db.get(`
       SELECT
@@ -260,12 +281,23 @@ router.get('/performance/separadores', requerAuth, requerPerfil('supervisor', 'g
       };
     };
 
+    const mapColab = rows => rows
+      .filter(r => r.nome)
+      .map(r => ({
+        nome: r.nome, concluidos: r.concluidos, pendentes: r.pendentes, itens: r.itens ?? null,
+        tempo_medio_min: r.tempo_medio_min != null ? parseFloat(r.tempo_medio_min) : null,
+      }))
+      .sort((a,b) => b.concluidos - a.concluidos);
+
     res.json({
       colaboradores: resultado, por_dia: porDia, ruas: ruasRaw, por_colab_dia: porColabDia,
       total_skus: parseInt(skusTotal?.total_skus || 0),
       checkout:  resumirSetor(checkoutRows),
       embalagem: resumirSetor(embalagemRows),
       reposicao: { tempo_medio_min: reposicaoTiming?.tempo_medio_min != null ? parseFloat(reposicaoTiming.tempo_medio_min) : null },
+      checkout_colaboradores:  mapColab(checkoutRows),
+      embalagem_colaboradores: mapColab(embalagemRows),
+      reposicao_colaboradores: mapColab(reposicaoPorColabRows),
     });
   } catch(e) {
     console.error('performance/separadores:', e.message);
