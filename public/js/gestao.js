@@ -1878,11 +1878,16 @@ async function _executarRelatorioGeral() {
     // Saldo de banco de horas só dos dias trabalhados dentro do período/filtro
     // aplicado neste relatório — soma direta de H.Pos/H.Neg de cada dia, não
     // o acumulado histórico do resumo do PDF (que inclui saldo "Anterior").
-    const bancoHoras = recs
-      .filter(r => r.entry_time)
-      .reduce((s,r) => s + ((r.positive_hours||0) + (r.negative_hours||0)), 0);
+    const bhDias = recs
+      .filter(r => r.entry_time && ((r.positive_hours||0) !== 0 || (r.negative_hours||0) !== 0))
+      .map(r => {
+        const pos = r.positive_hours || 0, neg = r.negative_hours || 0;
+        return { date:r.date, dow:r.day_of_week, pos, neg, saldo: pos + neg };
+      })
+      .sort((a,b) => a.date.localeCompare(b.date));
+    const bancoHoras = bhDias.reduce((s,d) => s + d.saldo, 0);
 
-    grupos[turno].push({ ...func, _recs:recs, _faltaRecs:faltaRecs, _atestadoRecs:atestadoRecs, _eventos:eventos, _totalAtraso:totalAtraso, _totalAntecipado:totalAntecipado, _bancoHoras:bancoHoras });
+    grupos[turno].push({ ...func, _recs:recs, _faltaRecs:faltaRecs, _atestadoRecs:atestadoRecs, _eventos:eventos, _totalAtraso:totalAtraso, _totalAntecipado:totalAntecipado, _bancoHoras:bancoHoras, _bhDias:bhDias });
   }
 
   // Totais gerais
@@ -2011,7 +2016,45 @@ async function _executarRelatorioGeral() {
       </div>`;
     }
 
-    if (!secFaltas && !secAtestados && !secAtrasos) continue;
+    // ── Seção BANCO DE HORAS POR DIA ──
+    let secBancoHoras = '';
+    const comBH = funcs.filter(f => (f._bhDias||[]).length > 0).sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));
+    if (comBH.length) {
+      let rowsBH = '';
+      for (const f of comBH) {
+        rowsBH += `<tr style="background:#f8fafc">
+          <td colspan="5" style="padding:8px 12px 3px;font-weight:800;font-size:13px;color:#1e293b;border-top:2px solid #e2e8f0">
+            ${f.name}
+            <span style="font-weight:400;font-size:11px;color:#64748b;margin-left:8px">${f.sector||''} · Mat. ${f.matricula||'—'}</span>
+            <span style="float:right;font-size:12px;font-weight:800;color:${f._bancoHoras>0?'#16a34a':f._bancoHoras<0?'#dc2626':'#64748b'}">Saldo do período: ${f._bancoHoras>0?'+':f._bancoHoras<0?'-':''}${fmtHM(Math.abs(f._bancoHoras))}</span>
+          </td>
+        </tr>`;
+        for (const d of f._bhDias) {
+          rowsBH += `<tr style="border-bottom:1px solid #f1f5f9">
+            <td style="padding:4px 12px 4px 24px;font-size:12px;color:#374151;white-space:nowrap">${fmtDt(d.date)}</td>
+            <td style="padding:4px 8px;font-size:11px;color:#9ca3af">${d.dow||'—'}</td>
+            <td style="padding:4px 8px;text-align:right;font-size:11px;color:#16a34a;font-family:monospace">${d.pos>0?'+'+fmtHM(d.pos):'—'}</td>
+            <td style="padding:4px 8px;text-align:right;font-size:11px;color:#dc2626;font-family:monospace">${d.neg<0?'-'+fmtHM(Math.abs(d.neg)):'—'}</td>
+            <td style="padding:4px 8px;font-size:13px;font-weight:800;color:${d.saldo>0?'#16a34a':d.saldo<0?'#dc2626':'#64748b'};font-family:monospace;text-align:right">${d.saldo>0?'+':d.saldo<0?'-':''}${fmtHM(Math.abs(d.saldo))}</td>
+          </tr>`;
+        }
+      }
+      secBancoHoras = `<div style="margin-bottom:14px">
+        <div style="font-size:10px;font-weight:800;color:#475569;letter-spacing:.5px;margin-bottom:5px">▸ BANCO DE HORAS POR DIA</div>
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead><tr style="background:#f1f5f9">
+            <th style="padding:5px 12px;text-align:left;font-size:10px;font-weight:800;color:#64748b;border-bottom:2px solid #e2e8f0">DATA</th>
+            <th style="padding:5px 8px;text-align:left;font-size:10px;font-weight:800;color:#64748b;border-bottom:2px solid #e2e8f0">DIA</th>
+            <th style="padding:5px 8px;text-align:right;font-size:10px;font-weight:800;color:#64748b;border-bottom:2px solid #e2e8f0">H.POS</th>
+            <th style="padding:5px 8px;text-align:right;font-size:10px;font-weight:800;color:#64748b;border-bottom:2px solid #e2e8f0">H.NEG</th>
+            <th style="padding:5px 8px;text-align:right;font-size:10px;font-weight:800;color:#64748b;border-bottom:2px solid #e2e8f0">SALDO DIA</th>
+          </tr></thead>
+          <tbody>${rowsBH}</tbody>
+        </table>
+      </div>`;
+    }
+
+    if (!secFaltas && !secAtestados && !secAtrasos && !secBancoHoras) continue;
 
     secoes += `<div style="margin-bottom:36px">
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;padding-bottom:6px;border-bottom:3px solid #0F172A">
@@ -2025,7 +2068,7 @@ async function _executarRelatorioGeral() {
           ${tAntecipado>0?`<span style="color:#4F46E5;font-weight:700">↩ ${fmtHM(tAntecipado)}</span>`:''}
         </span>
       </div>
-      ${secFaltas}${secAtestados}${secAtrasos}
+      ${secFaltas}${secAtestados}${secAtrasos}${secBancoHoras}
     </div>`;
   }
 
