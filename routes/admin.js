@@ -168,10 +168,15 @@ router.get('/diario/dados/turno', requerAuth, requerPerfil('supervisor'), async 
     // ainda não distribuído não deve contar em nenhum turno específico.
     const turnoFiltro = turno && turno !== 'Todos' ? turno : null;
 
+    // Data efetiva de trabalho (mesmo critério de routes/pedidos.js e
+    // routes/performance-dash.js): data_pedido é quando o pedido ENTROU no
+    // sistema, não quando foi separado — usar só ela deixava o Diário de
+    // Bordo zerado sempre que o pedido chegou num dia e foi trabalhado
+    // (distribuído/iniciado) em outro.
     let pedidos = await db.all(`
       SELECT p.*, COALESCE(p.turno_distribuicao, s.turno) AS sep_turno
       FROM pedidos p LEFT JOIN separadores s ON p.separador_id = s.id
-      WHERE p.data_pedido=$1
+      WHERE COALESCE(NULLIF(LEFT(p.iniciado_em,10),''), NULLIF(p.data_distribuicao,''), p.data_pedido) = $1
     `, [dt]);
     if (turnoFiltro) pedidos = pedidos.filter(p => p.sep_turno === turnoFiltro);
     const idsPedidosTurno = new Set(pedidos.map(p => p.id));
