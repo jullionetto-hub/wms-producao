@@ -1512,6 +1512,7 @@ function _renderDetalheAbs(data, nome) {
             <th style="padding:5px 8px;text-align:center;color:var(--text3);border-bottom:1px solid var(--border);font-size:10px">ALMOÇO</th>
             <th style="padding:5px 8px;text-align:center;color:var(--text3);border-bottom:1px solid var(--border);font-size:10px">PAUSA</th>
             <th style="padding:5px 8px;text-align:center;color:var(--text3);border-bottom:1px solid var(--border);font-size:10px">SAÍDA</th>
+            <th style="padding:5px 8px;text-align:center;color:var(--text3);border-bottom:1px solid var(--border);font-size:10px;white-space:nowrap">BANCO DE HORAS</th>
             <th style="padding:5px 8px;text-align:center;color:var(--text3);border-bottom:1px solid var(--border);font-size:10px">ATRASO</th>
           </tr></thead>
           <tbody>${diasTrab.map(r => {
@@ -1536,6 +1537,15 @@ function _renderDetalheAbs(data, nome) {
             if (atr > 0) atrasoPartes.push(`<span style="color:${late?'#dc2626':'#d97706'};font-weight:800">${atr} min</span>`);
             if (earlyMin > 0) atrasoPartes.push(`<span style="color:#4F46E5;font-size:10px">−${earlyMin} min antecip.</span>`);
             const atrasoCel = atrasoPartes.length ? atrasoPartes.join('<br>') : '—';
+            const bhNet = (r.positive_hours != null || r.negative_hours != null)
+              ? (r.positive_hours || 0) + (r.negative_hours || 0)
+              : null;
+            const bhCel = bhNet == null
+              ? '<span style="color:var(--text3)">—</span>'
+              : bhNet === 0
+                ? '<span style="color:var(--text3)">00:00</span>'
+                : (() => { const abs = Math.abs(bhNet), h = Math.floor(abs/60), mm = abs%60;
+                    return `<span style="color:${bhNet>0?'#16a34a':'#dc2626'};font-weight:800">${bhNet>0?'+':'-'}${String(h).padStart(2,'0')}:${String(mm).padStart(2,'0')}</span>`; })();
             return `<tr style="border-bottom:1px solid var(--border);background:${rowBg}">
               <td style="padding:5px 8px;font-weight:700;white-space:nowrap;color:${anomalia?'#dc2626':late?'#c2410c':'var(--text)'}">${fmtDt(r.date)}</td>
               <td style="padding:5px 8px;color:var(--text2)">${r.day_of_week||'—'}</td>
@@ -1543,6 +1553,7 @@ function _renderDetalheAbs(data, nome) {
               <td style="padding:5px 8px;text-align:center;font-family:monospace;font-size:10px">${lunchStr}</td>
               <td style="padding:5px 8px;text-align:center;font-family:monospace;font-size:10px">${breakStr}</td>
               <td style="padding:5px 8px;text-align:center;font-family:monospace;color:var(--text)">${t(r.exit_time)}</td>
+              <td style="padding:5px 8px;text-align:center;font-family:monospace">${bhCel}</td>
               <td style="padding:5px 8px;text-align:center;line-height:1.6">${atrasoCel}</td>
             </tr>`;
           }).join('')}
@@ -1620,6 +1631,10 @@ function _renderDetalheAbs(data, nome) {
         <div style="background:var(--surface);border-radius:8px;padding:8px 12px;text-align:center">
           <div style="font-size:10px;color:var(--text3);font-weight:700">H. POSITIVAS</div>
           <div style="font-size:16px;font-weight:900;color:#16a34a">${data.positive_hours || '—'}</div>
+        </div>
+        <div style="background:var(--surface);border-radius:8px;padding:8px 12px;text-align:center">
+          <div style="font-size:10px;color:var(--text3);font-weight:700">BANCO DE HORAS</div>
+          <div style="font-size:16px;font-weight:900;color:${data.banco_horas_net_minutes > 0 ? '#16a34a' : data.banco_horas_net_minutes < 0 ? '#dc2626' : 'var(--text3)'}">${data.banco_horas_net_minutes > 0 ? '+' : ''}${data.banco_horas_net || '—'}</div>
         </div>
         <div style="background:var(--surface);border-radius:8px;padding:8px 12px;text-align:center">
           <div style="font-size:10px;color:var(--text3);font-weight:700">ABSENTEÍSMO</div>
