@@ -68,11 +68,16 @@ router.get('/pedidos', requerAuth, async (req,res) => {
   } catch(e){res.status(500).json({erro:e.message});}
 });
 
-/* ── Ritmo real de separação (itens/min) por faixa de dificuldade ──────────
+/* ── Ritmo real de separação (pontos/min) por faixa de dificuldade ─────────
    Alimenta a estimativa de tempo (⏱) com dados reais em vez de números
-   fixos "no chute". Calcula a partir dos pedidos já concluídos, descontando
-   tempo de espera de repositor. Cacheado em memória — a query varre todo o
-   histórico de pedidos concluídos, não vale recalcular a cada requisição. */
+   fixos "no chute". Usa PONTUAÇÃO como driver (não itens crus) porque ela já
+   pondera rua/dificuldade + custo fixo de deslocamento por endereço único
+   (lib/pontuacao.js) — um pedido com muitos itens concentrados em poucos
+   endereços tem pontuação baixa e separa rápido, o que a contagem de itens
+   sozinha não capturava. Calcula a partir dos pedidos já concluídos,
+   descontando tempo de espera de repositor. Cacheado em memória — a query
+   varre todo o histórico de pedidos concluídos, não vale recalcular a cada
+   requisição. */
 let _ritmoCache = { data: null, calculadoEm: 0 };
 const RITMO_CACHE_MS      = 30 * 60 * 1000; // 30 min
 const RITMO_MIN_AMOSTRAS  = 20; // abaixo disso, o front usa o fallback fixo
@@ -92,7 +97,7 @@ router.get('/pedidos/ritmo-estimativa', requerAuth, async (req, res) => {
           ELSE 'dificil'
         END AS bucket,
         COUNT(*) AS amostras,
-        PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY total_itens / duracao_min) AS ritmo
+        PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY pontuacao / duracao_min) AS ritmo
       FROM (
         SELECT
           COALESCE(NULLIF(p.total_itens,0), p.itens, 0)::float AS total_itens,
@@ -106,7 +111,7 @@ router.get('/pedidos/ritmo-estimativa', requerAuth, async (req, res) => {
           AND NULLIF(p.iniciado_em,'') IS NOT NULL
           AND NULLIF(COALESCE(NULLIF(p.skus_concluido_em,''), NULLIF(p.concluido_em,'')),'') IS NOT NULL
       ) sub
-      WHERE total_itens > 0 AND duracao_min BETWEEN 0.5 AND 180
+      WHERE total_itens > 0 AND pontuacao > 0 AND duracao_min BETWEEN 0.5 AND 180
       GROUP BY 1
     `);
     const buckets = {};

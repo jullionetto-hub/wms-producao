@@ -2,13 +2,18 @@
 let usuarioAtual     = null;
 
 // ── Estimativa de tempo de separação ──────────────────────────────────────
-// Ritmo (itens/min) vem do backend (/pedidos/ritmo-estimativa), calculado a
+// Ritmo (pontos/min) vem do backend (/pedidos/ritmo-estimativa), calculado a
 // partir da mediana real dos pedidos já concluídos, por faixa de dificuldade
-// (pontuação/item). Enquanto não há amostras suficientes numa faixa, usa a
-// fórmula fixa abaixo como fallback.
-//   ratio 1.0 (fácil)   → 7.0 itens/min (~9s/item)
-//   ratio 1.5 (médio)   → 5.0 itens/min (~12s/item)
-//   ratio 2.0 (difícil) → 3.5 itens/min (~17s/item)
+// (pontuação/item). Usa PONTUAÇÃO como driver do tempo, não itens crus — a
+// pontuação (lib/pontuacao.js) já pondera cada endereço único visitado por
+// peso do corredor + custo fixo de deslocamento, então um pedido com muitos
+// itens concentrados em poucos endereços (ex.: 200 itens em 2 SKUs) já sai
+// com pontuação baixa e separa rápido, o que itens/min sozinho não pegava.
+// Enquanto não há amostras suficientes numa faixa, usa a fórmula fixa abaixo
+// como fallback (mesma curva de sempre, só reexpressa em pontos/min).
+//   ratio 1.0 (fácil)   → 7.0 pontos/min (~9s/ponto)
+//   ratio 1.5 (médio)   → 5.0 pontos/min (~12s/ponto)
+//   ratio 2.0 (difícil) → 3.5 pontos/min (~17s/ponto)
 
 let _ritmoReal = null; // { buckets: { facil, medio, dificil }, min_amostras, calculado_em }
 
@@ -29,21 +34,30 @@ function _bucketDificuldade(ratio) {
   return 'dificil';
 }
 
-function _ritmoItens(totalItens, pontuacao) {
+function _ritmoPontosMin(totalItens, pontos) {
   if (!totalItens || totalItens <= 0) return 7.0;
-  const ratio = pontuacao > 0 ? pontuacao / totalItens : 1.0;
+  const ratio = pontos > 0 ? pontos / totalItens : 1.0;
   const bucket = _bucketDificuldade(ratio);
   const real = _ritmoReal?.buckets?.[bucket];
-  if (real?.ritmo) return real.ritmo;
-  // Fallback: fórmula fixa, usada até essa faixa de dificuldade acumular amostras suficientes
-  return Math.max(3.5, 7.0 - (ratio - 1.0) * 3.5);
+  if (real?.ritmo) return real.ritmo; // já em pontos/min (calibrado pelo backend)
+  // Fallback: mesma curva fixa de sempre (itens/min), reexpressa em pontos/min
+  // multiplicando pelo ratio — dá o mesmo resultado até a faixa acumular amostras reais.
+  return Math.max(3.5, 7.0 - (ratio - 1.0) * 3.5) * ratio;
+}
+
+// Minutos estimados de separação — usa a pontuação (rua+dificuldade+concentração)
+// como driver; cai pra itens só se o pedido não tiver pontuação calculada.
+function _minutosEstimados(totalItens, pontuacao) {
+  const itens = parseInt(totalItens) || 0;
+  if (itens <= 0) return 0;
+  const pontos = (parseFloat(pontuacao) || 0) > 0 ? parseFloat(pontuacao) : itens;
+  const ritmo  = _ritmoPontosMin(itens, pontos);
+  return Math.max(1, Math.ceil(pontos / ritmo));
 }
 
 function estimarTempoSep(totalItens, pontuacao) {
-  const itens = parseInt(totalItens) || 0;
-  if (itens <= 0) return null;
-  const ritmo = _ritmoItens(itens, pontuacao||0);
-  const min   = Math.max(1, Math.ceil(itens / ritmo));
+  const min = _minutosEstimados(totalItens, pontuacao);
+  if (!min) return null;
   if (min < 60) return `~${min} min`;
   const h = Math.floor(min / 60);
   const m = min % 60;
@@ -53,8 +67,7 @@ function estimarTempoSep(totalItens, pontuacao) {
 function badgeTempoSep(totalItens, pontuacao) {
   const t = estimarTempoSep(totalItens, pontuacao);
   if (!t) return '';
-  const itens = parseInt(totalItens) || 0;
-  const min   = Math.max(1, Math.ceil(itens / _ritmoItens(itens, pontuacao||0)));
+  const min = _minutosEstimados(totalItens, pontuacao);
   const cor = min <= 10 ? '#16a34a' : min <= 20 ? '#d97706' : '#dc2626';
   const bg  = min <= 10 ? 'rgba(22,163,74,.1)' : min <= 20 ? 'rgba(217,119,6,.1)' : 'rgba(220,38,38,.1)';
   return `<span style="background:${bg};color:${cor};border-radius:20px;padding:2px 8px;font-size:11px;font-weight:700;white-space:nowrap">⏱ ${t}</span>`;
@@ -95,7 +108,7 @@ function badgeTimerAoVivo(iniciadoEm, totalItens, pontuacao, tempoAguardandoMin,
 
   // Tempo real de separação (sem espera)
   const decorMin = Math.max(0, totalDecorMin - jaAguardou);
-  const estimMin = Math.max(1, Math.ceil((parseInt(totalItens)||0) / _ritmoItens(parseInt(totalItens)||0, pontuacao||0)));
+  const estimMin = _minutosEstimados(totalItens, pontuacao);
   const atrasado = decorMin > estimMin;
   const decorTxt = decorMin < 60 ? `${decorMin}min` : `${Math.floor(decorMin/60)}h${decorMin%60>0?decorMin%60+'m':''}`;
   const estimTxt = estimMin < 60 ? `${estimMin}min` : `${Math.floor(estimMin/60)}h${estimMin%60>0?estimMin%60+'m':''}`;

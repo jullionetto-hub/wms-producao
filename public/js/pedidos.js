@@ -182,7 +182,7 @@ function _renderTabelaPedidos() {
       const totalMin     = lista.reduce((s, p) => {
         const it = parseInt(p.total_itens || p.itens) || 0;
         if (!it) return s;
-        return s + Math.max(1, Math.ceil(it / _ritmoItens(it, p.pontuacao || 0)));
+        return s + _minutosEstimados(it, p.pontuacao || 0);
       }, 0);
       const tempoFmt = totalMin >= 60
         ? `~${Math.floor(totalMin/60)}h ${totalMin%60 > 0 ? totalMin%60+'min' : ''}`.trim()
