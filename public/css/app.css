@@ -44,6 +44,12 @@
   --sidebar-group:       #6B7280;
   --sidebar-active-bg:   rgba(79,70,229,.22);
   --sidebar-active-text: #A5B4FC;
+
+  /* Sem isso, o navegador não sabe que o app é escuro e os controles
+     nativos (calendário de <input type="date">, checkboxes, scrollbar)
+     renderizam com o esquema de cores errado/ilegível sobre o fundo
+     escuro do sistema inteiro. */
+  color-scheme: dark;
 }
 
 /* ══════════════════════════════════════════
