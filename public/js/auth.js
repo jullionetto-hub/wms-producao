@@ -784,9 +784,10 @@ async function salvarEdicaoUsuario() {
 /* ══════════════════════════════════════════
    DIÁRIO DE BORDO + SISTEMA DE VALIDAÇÃO
 ══════════════════════════════════════════ */
-let _diarioAtualId  = null;   // id do diário salvo/carregado
-let _validacaoId    = null;   // id da diario_validacoes pendente
-let _valTimer       = null;   // interval do countdown
+let _diarioAtualId    = null;   // id do diário salvo/carregado
+let _validacaoId      = null;   // id da diario_validacoes pendente
+let _valTimer         = null;   // interval do countdown
+let _diarioLeuAnterior = false; // true assim que o resumo do turno anterior é checado/exibido
 
 // Checklist espelhada do backend
 const CHECKLIST_VAL = [
@@ -804,8 +805,55 @@ async function iniciarDiario() {
   if (dataEl && !dataEl.value) dataEl.value = hj;
   initDiarioHistorico();
   await carregarDadosDiario();
+  await carregarDiarioAnterior();
   await carregarListaDiarios();
   await verificarValidacaoPendente();
+}
+
+// ── Mostra o que o turno anterior deixou registrado, antes do supervisor
+// preencher o próprio diário — evita repetir problema já reportado / perder
+// contexto na virada de turno. Marca leu_anterior=true pra refletir que a
+// tela realmente exibiu (ou confirmou a ausência de) o diário anterior.
+async function carregarDiarioAnterior() {
+  const data = document.getElementById('diario-data')?.value || hojeLocal();
+  const turno = document.getElementById('diario-turno')?.value || 'Manha';
+  const el = document.getElementById('diario-anterior-resumo');
+  if (!el) return;
+  try {
+    const res = await fetch(`${API}/diario/anterior?data=${data}&turno=${turno}`, { credentials:'include' });
+    if (!res.ok) throw new Error('falha ao buscar diário anterior');
+    const ant = await res.json();
+    _diarioLeuAnterior = true;
+    if (!ant) { el.style.display = 'none'; el.innerHTML = ''; return; }
+    const d = ant.dados || {};
+    const obsGeral = ant.observacoes?.geral || '';
+    el.style.display = '';
+    el.innerHTML = `
+      <div style="background:var(--surface);border-radius:12px;border:1px solid var(--border);border-top:3px solid #64748b;padding:14px 18px">
+        <div style="font-weight:800;font-size:13px;color:var(--text);margin-bottom:8px">
+          <i class="ti ti-history" aria-hidden="true"></i> Turno anterior — ${ant.turno} · ${fmtData(ant.data)} · ${ant.supervisor||'—'}
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:${obsGeral?'8px':'0'}">
+          <div style="text-align:center;background:var(--surface2);border-radius:8px;padding:6px">
+            <div style="font-size:15px;font-weight:800">${d.separacao?.concluidos||0}/${d.separacao?.total||0}</div>
+            <div style="font-size:9px;color:var(--text3);text-transform:uppercase">Separação</div>
+          </div>
+          <div style="text-align:center;background:var(--surface2);border-radius:8px;padding:6px">
+            <div style="font-size:15px;font-weight:800">${d.checkout?.concluidos||0}/${d.checkout?.total||0}</div>
+            <div style="font-size:9px;color:var(--text3);text-transform:uppercase">Checkout</div>
+          </div>
+          <div style="text-align:center;background:var(--surface2);border-radius:8px;padding:6px">
+            <div style="font-size:15px;font-weight:800;color:${(d.reposicao?.nao_encontrados||0)>0?'#dc2626':'inherit'}">${d.reposicao?.nao_encontrados||0}</div>
+            <div style="font-size:9px;color:var(--text3);text-transform:uppercase">Não encontr.</div>
+          </div>
+        </div>
+        ${obsGeral ? `<div style="font-size:12px;color:var(--text2)"><b>Obs. geral deixada pelo turno anterior:</b> ${escHtml(obsGeral)}</div>` : ''}
+      </div>`;
+  } catch(e) {
+    console.warn('carregarDiarioAnterior:', e);
+    el.style.display = 'none';
+    el.innerHTML = '';
+  }
 }
 
 // Atualiza o anel circular de progresso de uma seção do Diário de Bordo
@@ -867,10 +915,13 @@ async function carregarDadosDiario() {
   } catch(e) { toast('Erro ao carregar dados','erro'); }
 }
 
-async function salvarDiario() {
+// Persiste data+turno+dados+observações no backend. Usado tanto pelo botão
+// "Salvar rascunho" quanto silenciosamente por enviarDiario() — pra garantir
+// que o que é enviado pra validação seja sempre o snapshot mais recente.
+async function _persistirDiario() {
   const data = document.getElementById('diario-data')?.value;
   const turno = document.getElementById('diario-turno')?.value;
-  if (!data || !turno) { toast('Selecione data e turno','aviso'); return; }
+  if (!data || !turno) { toast('Selecione data e turno','aviso'); return null; }
   const observacoes = {
     separacao: document.getElementById('diario-obs-sep')?.value || '',
     checkout: document.getElementById('diario-obs-ck')?.value || '',
@@ -882,15 +933,21 @@ async function salvarDiario() {
     const res = await fetch(`${API}/diario`, {
       method: 'POST', credentials: 'include',
       headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ data, turno, dados: window._dadosDiario||{}, observacoes, leu_anterior: false })
+      body: JSON.stringify({ data, turno, dados: window._dadosDiario||{}, observacoes, leu_anterior: _diarioLeuAnterior })
     });
     const r = await res.json();
-    if (!res.ok) { toast(r.erro||'Erro ao salvar','erro'); return; }
+    if (!res.ok) { toast(r.erro||'Erro ao salvar','erro'); return null; }
     _diarioAtualId = r.id;
-    toast('Diário salvo como rascunho!','sucesso');
-    atualizarStatusBanner('rascunho');
-    await carregarListaDiarios();
-  } catch(e) { toast('Erro ao salvar','erro'); }
+    return r;
+  } catch(e) { toast('Erro ao salvar','erro'); return null; }
+}
+
+async function salvarDiario() {
+  const r = await _persistirDiario();
+  if (!r) return;
+  toast('Diário salvo como rascunho!','sucesso');
+  atualizarStatusBanner('rascunho');
+  await carregarListaDiarios();
 }
 
 // ── Mostra banner de status do diário atual ────────────────────────────────────
@@ -946,6 +1003,10 @@ function enviarDiario() {
     btnOkClass: 'btn-primary',
   }, async () => {
     try {
+      // Atualiza os números ao vivo e regrava antes de enviar — evita validar
+      // um snapshot velho de um "Salvar rascunho" de mais cedo no turno.
+      await carregarDadosDiario();
+      if (!(await _persistirDiario())) return;
       const res = await apiFetch(`/diario/${_diarioAtualId}/enviar`, { method:'POST' });
       if (!res) return;
       const prazoFmt = new Date(res.prazo).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
