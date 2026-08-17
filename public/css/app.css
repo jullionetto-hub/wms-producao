@@ -987,7 +987,8 @@ td{padding:10px 13px;vertical-align:middle;color:var(--text2)}
    AVISO DUPLICATA
 ══════════════════════════════════════════ */
 .aviso-duplicata{background:rgba(224,168,62,.12);border:1.5px solid rgba(224,168,62,.4);border-radius:10px;padding:12px 15px;margin-bottom:12px;display:flex;align-items:center;gap:10px;font-size:13px;font-weight:700;color:#FCD34D}
-.usr-btn.edit{background:var(--accent);color:#fff;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;font-weight:700}
+.usr-btn.edit{background:var(--accent);color:#fff;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:11px;font-weight:700}
+.usr-btn.edit:hover{background:var(--accent2)}
 
 
 
