@@ -73,14 +73,15 @@ async function carregarPedidos() {
     const usrId  = document.getElementById('filtro-ped-sep').value;
     const numPed = document.getElementById('filtro-ped-num').value.trim();
     let url = `${API}/pedidos?`;
-    // Envia datas ao backend — filtra pela data de aguardando_desde (não pela data de
-    // trabalho), ver comentário em routes/pedidos.js.
+    // aguardando_ini/fim (não data_ini/fim) — a tela de Pedidos filtra pela data de
+    // "aguardando desde", não pela data de trabalho. data_ini/fim continuam reservados
+    // pra data de trabalho, usados pelo Dashboard e outras telas (ver routes/pedidos.js).
     // Status NÃO é mais filtrado no servidor: o filtro agora é o pipeline inteiro
     // (pendente/separando/separado/checkoutado/embalado — ver _statusGeral), que
     // depende de checkout_concluido + status_embalagem além do p.status. Filtra
     // no cliente em _renderTabelaPedidos(), igual turno/transportadora já fazem.
-    if (ini) url += `data_ini=${encodeURIComponent(ini)}&`;
-    if (fim) url += `data_fim=${encodeURIComponent(fim)}&`;
+    if (ini) url += `aguardando_ini=${encodeURIComponent(ini)}&`;
+    if (fim) url += `aguardando_fim=${encodeURIComponent(fim)}&`;
     if (numPed) url += `numero_pedido=${encodeURIComponent(numPed)}&`;
     const res = await fetch(url, { credentials:'include' });
     let ps = await res.json();
