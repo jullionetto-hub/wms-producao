@@ -172,12 +172,19 @@ router.get('/diario/dados/turno', requerAuth, requerPerfil('supervisor'), async 
     // routes/performance-dash.js): data_pedido é quando o pedido ENTROU no
     // sistema, não quando foi separado — usar só ela deixava o Diário de
     // Bordo zerado sempre que o pedido chegou num dia e foi trabalhado
-    // (distribuído/iniciado) em outro.
+    // (distribuído/iniciado) em outro. Além disso, iniciado_em só é gravado
+    // UMA VEZ (não atualiza quando o separador retoma um pedido pausado/
+    // antigo), então um pedido ainda ATIVO (pendente/separando) sempre conta
+    // como relevante a HOJE, senão trabalho em andamento (retomando pedido
+    // de dias atrás) sumia do Diário de hoje. Concluído usa concluido_em.
+    const hoje = dhl().data;
     let pedidos = await db.all(`
       SELECT p.*, COALESCE(p.turno_distribuicao, s.turno) AS sep_turno
       FROM pedidos p LEFT JOIN separadores s ON p.separador_id = s.id
-      WHERE COALESCE(NULLIF(LEFT(p.iniciado_em,10),''), NULLIF(p.data_distribuicao,''), p.data_pedido) = $1
-    `, [dt]);
+      WHERE (p.status='concluido' AND NULLIF(p.concluido_em,'') IS NOT NULL AND LEFT(p.concluido_em,10) = $1)
+         OR (p.status != 'concluido' AND COALESCE(NULLIF(LEFT(p.iniciado_em,10),''), NULLIF(p.data_distribuicao,''), p.data_pedido) = $1)
+         OR (p.status != 'concluido' AND $2 = $1)
+    `, [dt, hoje]);
     if (turnoFiltro) pedidos = pedidos.filter(p => p.sep_turno === turnoFiltro);
     const idsPedidosTurno = new Set(pedidos.map(p => p.id));
 

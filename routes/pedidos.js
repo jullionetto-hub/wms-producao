@@ -19,13 +19,29 @@ router.get('/pedidos', requerAuth, async (req,res) => {
     const add=(c,v)=>{p.push(v);q+=` AND ${c}$${p.length}`;};
     if (separador_id)  add('p.separador_id=',separador_id);
     if (status)        add('p.status=',status);
-    if (data) { p.push(data); q+=` AND COALESCE(NULLIF(LEFT(p.iniciado_em,10),''), NULLIF(p.data_distribuicao,''), p.data_pedido) = $${p.length}`; }
-    // Data efetiva de trabalho: data_distribuicao (dia que o pedido foi atribuído ao separador)
-    // tem prioridade sobre data_pedido (dia de importação), assim pedidos importados em dias
-    // anteriores mas distribuídos hoje aparecem corretamente no dashboard de hoje. Usado pelo
-    // Dashboard e afins — não usar pra "pedidos aguardando desde X", ver aguardando_ini/fim abaixo.
-    if (data_ini) { p.push(data_ini); q+=` AND COALESCE(NULLIF(LEFT(p.iniciado_em,10),''), NULLIF(p.data_distribuicao,''), p.data_pedido) >= $${p.length}`; }
-    if (data_fim)  { p.push(data_fim);  q+=` AND COALESCE(NULLIF(LEFT(p.iniciado_em,10),''), NULLIF(p.data_distribuicao,''), p.data_pedido) <= $${p.length}`; }
+    // Data efetiva de trabalho (usada pelo Dashboard e afins, não pelo filtro De/Até de
+    // Pedidos — ver aguardando_ini/fim abaixo). iniciado_em só é gravado UMA VEZ (não
+    // atualiza quando um separador retoma um pedido pausado/antigo — ver /pedidos/bipar),
+    // então um pedido ainda ATIVO (pendente/separando) sempre conta como relevante a HOJE,
+    // independente de quando começou — senão trabalho em andamento (ex.: retomando pedido
+    // de dias atrás) sumia do Dashboard/Diário de Bordo de hoje. Pra datas passadas, o
+    // pedido ativo continua contando na data em que começou (histórico preservado). Pedido
+    // CONCLUÍDO sempre usa a data real de conclusão (concluido_em, sempre atualizado).
+    if (data || data_ini || data_fim) {
+      const dIni = data_ini || data || null;
+      const dFim = data_fim || data || null;
+      const hoje = dataHoraLocal().data;
+      const WORK_DATE = `COALESCE(NULLIF(LEFT(p.iniciado_em,10),''), NULLIF(p.data_distribuicao,''), p.data_pedido)`;
+      p.push(hoje); const hoje$ = p.length;
+      let iniConc='', fimConc='', iniWork='', fimWork='', iniHoje='', fimHoje='';
+      if (dIni) { p.push(dIni); const i=p.length; iniConc=` AND LEFT(p.concluido_em,10) >= $${i}`; iniWork=` AND ${WORK_DATE} >= $${i}`; iniHoje=` AND $${hoje$} >= $${i}`; }
+      if (dFim) { p.push(dFim); const f=p.length; fimConc=` AND LEFT(p.concluido_em,10) <= $${f}`; fimWork=` AND ${WORK_DATE} <= $${f}`; fimHoje=` AND $${hoje$} <= $${f}`; }
+      q += ` AND (
+        (p.status='concluido' AND NULLIF(p.concluido_em,'') IS NOT NULL${iniConc}${fimConc})
+        OR (p.status != 'concluido'${iniWork}${fimWork})
+        OR (p.status != 'concluido'${iniHoje}${fimHoje})
+      )`;
+    }
     // Filtro De/Até da tela de Pedidos: usa a DATA de aguardando_desde (quando o pedido
     // passou a esperar separação), não a data de trabalho — o supervisor quer selecionar
     // "12/08" e ver os pedidos que estão aguardando desde aquele dia, mesmo que só estejam
