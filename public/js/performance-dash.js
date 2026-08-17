@@ -8,6 +8,7 @@
 let _pfDados      = null;   // resposta completa da API
 let _pfFiltrados  = [];     // colaboradores após filtro de nome
 let _pfUsuarios   = [];     // todos os usuários ativos (para o dropdown)
+let _pfRanking    = [];     // ranking de bonificação calculado (para exportação em Excel)
 const _pfCharts   = {};
 let _pfCarregando = false;
 
@@ -75,6 +76,9 @@ function renderizarPerformanceDash() {
       </button>
       <button id="pf-tab-metas" onclick="pfSwitchTab('metas')" class="rel-turno-btn">
         Metas
+      </button>
+      <button id="pf-tab-ranking" onclick="pfSwitchTab('ranking')" class="rel-turno-btn">
+        Ranking Bonificação
       </button>
     </div>
 
@@ -220,9 +224,20 @@ function renderizarPerformanceDash() {
     <div id="pf-metas-conteudo" style="display:none">
       <div id="pf-metas-wrap">
         <div style="text-align:center;padding:64px 24px;color:var(--text3)">
-          
+
           <div style="font-size:14px;font-weight:700;margin-bottom:6px">Selecione o período e clique em Filtrar</div>
           <div style="font-size:12px">Exibe metas proporcionais ao tempo logado em cada função</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ABA RANKING BONIFICAÇÃO -->
+    <div id="pf-ranking-conteudo" style="display:none">
+      <div id="pf-ranking-wrap">
+        <div style="text-align:center;padding:64px 24px;color:var(--text3)">
+
+          <div style="font-size:14px;font-weight:700;margin-bottom:6px">Selecione o período e clique em Filtrar</div>
+          <div style="font-size:12px">Cruza % de meta batida com ocorrências de qualidade/processo para sugerir a faixa de bônus</div>
         </div>
       </div>
     </div>
@@ -244,8 +259,8 @@ let _pfAbaAtiva = 'resumo';
 
 function pfSwitchTab(aba) {
   _pfAbaAtiva = aba;
-  const tabs = { resumo:'pf-tab-resumo', tempos:'pf-tab-tempos', ocorrencias:'pf-tab-ocorrencias', metas:'pf-tab-metas' };
-  const divs = { resumo:'pf-conteudo', tempos:'pf-tempos-conteudo', ocorrencias:'pf-ocorrencias-conteudo', metas:'pf-metas-conteudo' };
+  const tabs = { resumo:'pf-tab-resumo', tempos:'pf-tab-tempos', ocorrencias:'pf-tab-ocorrencias', metas:'pf-tab-metas', ranking:'pf-tab-ranking' };
+  const divs = { resumo:'pf-conteudo', tempos:'pf-tempos-conteudo', ocorrencias:'pf-ocorrencias-conteudo', metas:'pf-metas-conteudo', ranking:'pf-ranking-conteudo' };
   // Reset todos os botões
   Object.values(tabs).forEach(id => {
     const b = document.getElementById(id);
@@ -277,6 +292,8 @@ function pfSwitchTab(aba) {
       pfCarregarOcorrencias();
     } else if (aba === 'metas') {
       pfCarregarMetas();
+    } else if (aba === 'ranking') {
+      pfCarregarRanking();
     }
   }
 }
@@ -289,6 +306,8 @@ function pfFiltrarAtivo() {
     pfCarregarOcorrencias();
   } else if (_pfAbaAtiva === 'metas') {
     pfCarregarMetas();
+  } else if (_pfAbaAtiva === 'ranking') {
+    pfCarregarRanking();
   } else {
     pfBuscarDados();
   }
@@ -1367,6 +1386,20 @@ function pfExportarExcel() {
     return;
   }
 
+  // Na aba Ranking Bonificação → exporta a nota calculada por colaborador
+  if (_pfAbaAtiva === 'ranking') {
+    if (!_pfRanking.length) { pfToast('Nenhum dado de ranking para exportar.','aviso'); return; }
+    const cols = ['Setor','Colaborador','% Meta','Ocorrências','Desconto','Nota','Faixa'];
+    const rows = [..._pfRanking]
+      .sort((a,b) => (PF_PERFIL_LABEL[a.perfil]||a.perfil).localeCompare(PF_PERFIL_LABEL[b.perfil]||b.perfil) || b.nota - a.nota)
+      .map(r => [PF_PERFIL_LABEL[r.perfil]||r.perfil, r.nome, r.pct!=null?r.pct+'%':'', r.qtdOcorr||0, r.desconto||0, r.nota, r.faixa]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([cols, ...rows]), 'Ranking');
+    XLSX.writeFile(wb, `ranking-bonificacao_${(ini||'').replace(/-/g,'')}${fim?'-'+(fim).replace(/-/g,''):''}.xlsx`);
+    pfToast('Excel exportado!','sucesso');
+    return;
+  }
+
   // Na aba Tempos → exporta pedido a pedido
   if (_pfAbaAtiva === 'tempos' && _pfTiming) {
     const ABAS_EXP = [
@@ -1657,6 +1690,120 @@ async function pfCarregarMetas() {
   }
 
   wrap.innerHTML = html;
+}
+
+// ── ABA RANKING BONIFICAÇÃO ──────────────────────────────────────────────
+// Nota = % da meta batida no período (capado em 120%) − desconto por
+// ocorrência de Qualidade/Processo Errado no mesmo período. Reaproveita
+// /performance/metas e /performance/ocorrencias, já existentes — nenhum
+// dado novo precisa ser instrumentado.
+const PF_RANKING_DESCONTO = { leve: 10, moderada: 25, grave: 50 };
+const PF_RANKING_TIPOS_PENALIZADOS = ['qualidade', 'processo_errado'];
+
+async function pfCarregarRanking() {
+  const wrap = document.getElementById('pf-ranking-wrap');
+  if (!wrap) return;
+  const ini = document.getElementById('pf-ini')?.value || '';
+  const fim = document.getElementById('pf-fim')?.value || '';
+  if (!ini || !fim) { wrap.innerHTML = `<div style="padding:48px;text-align:center;color:var(--text3)">Selecione o período e clique em Filtrar.</div>`; return; }
+
+  wrap.innerHTML = `<div style="padding:48px;text-align:center;color:var(--text3)">Calculando ranking...</div>`;
+
+  const [metas, ocorrencias] = await Promise.all([
+    apiFetch(`/performance/metas?ini=${ini}&fim=${fim}`),
+    apiFetch(`/performance/ocorrencias?ini=${ini}&fim=${fim}`),
+  ]);
+  if (!metas || metas.erro) {
+    wrap.innerHTML = `<div style="padding:48px;text-align:center;color:var(--red)">Erro ao carregar dados de meta.</div>`;
+    return;
+  }
+  if (!metas.length) {
+    wrap.innerHTML = `<div style="padding:48px;text-align:center;color:var(--text3)">Nenhum dado de sessão encontrado no período.</div>`;
+    return;
+  }
+
+  // Totais de meta por colaborador+perfil no período (mesmo agrupamento da aba Metas)
+  const totais = {};
+  for (const r of metas) {
+    const k = `${r.nome}|${r.perfil}`;
+    if (!totais[k]) totais[k] = { nome: r.nome, perfil: r.perfil, turno: r.turno, metaProp: 0, realizado: 0 };
+    totais[k].metaProp  += r.meta_proporcional;
+    totais[k].realizado += r.realizado;
+  }
+
+  // Desconto por ocorrência de qualidade/processo no período, por colaborador
+  const descontos   = {};
+  const ocorrPorNome = {};
+  for (const o of (Array.isArray(ocorrencias) ? ocorrencias : [])) {
+    if (!PF_RANKING_TIPOS_PENALIZADOS.includes(o.tipo)) continue;
+    descontos[o.colaborador_nome] = (descontos[o.colaborador_nome] || 0) + (PF_RANKING_DESCONTO[o.gravidade] || 0);
+    (ocorrPorNome[o.colaborador_nome] ||= []).push(o);
+  }
+
+  const linhas = Object.values(totais).map(t => {
+    const pct       = t.metaProp > 0 ? Math.round((t.realizado / t.metaProp) * 100) : null;
+    const pctCapado = pct !== null ? Math.min(pct, 120) : 0;
+    const desconto  = descontos[t.nome] || 0;
+    const nota      = Math.max(0, pctCapado - desconto);
+    const qtdOcorr  = (ocorrPorNome[t.nome] || []).length;
+    let faixa, faixaCor;
+    if      (nota >= 90) { faixa = 'Bônus cheio';    faixaCor = '#22c55e'; }
+    else if (nota >= 70) { faixa = 'Bônus parcial';  faixaCor = '#f59e0b'; }
+    else                 { faixa = 'Sem bônus';      faixaCor = '#ef4444'; }
+    return { ...t, pct, desconto, nota, qtdOcorr, faixa, faixaCor };
+  });
+  _pfRanking = linhas;
+
+  const porPerfil = {};
+  for (const l of linhas) (porPerfil[l.perfil] ||= []).push(l);
+
+  const ordemPerfil = ['separador', 'checkout', 'embalador', 'repositor'];
+  let html = `
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px 16px;margin-bottom:16px;font-size:11px;color:var(--text3);line-height:1.6">
+    <b style="color:var(--text)">Como a nota é calculada:</b> % da meta batida no período (capado em 120%) menos desconto por ocorrência de <b>Qualidade</b> ou <b>Processo Errado</b> no mesmo período (leve −10, moderada −25, grave −50). ≥90 = bônus cheio · 70–89 = bônus parcial · &lt;70 = sem bônus. Critério de referência — ajuste pesos e faixas conforme a política definida com o time.
+  </div>`;
+
+  for (const perfil of ordemPerfil) {
+    const rows = (porPerfil[perfil] || []).sort((a, b) => b.nota - a.nota);
+    if (!rows.length) continue;
+    html += `
+    <div class="card" style="margin-bottom:16px;padding:0;overflow:hidden">
+      <div style="padding:12px 18px;background:var(--surface2);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px">
+        <span style="font-size:14px;font-weight:900;color:var(--text)">${PF_PERFIL_LABEL[perfil] || perfil}</span>
+      </div>
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:11px">
+          <thead>
+            <tr style="background:var(--surface2)">
+              <th style="padding:8px 12px;text-align:center;font-size:9px;font-weight:800;color:var(--text3)">#</th>
+              <th style="padding:8px 12px;text-align:left;font-size:9px;font-weight:800;color:var(--text3)">COLABORADOR</th>
+              <th style="padding:8px 12px;text-align:center;font-size:9px;font-weight:800;color:var(--text3)">% META</th>
+              <th style="padding:8px 12px;text-align:center;font-size:9px;font-weight:800;color:var(--text3)">OCORRÊNCIAS</th>
+              <th style="padding:8px 12px;text-align:center;font-size:9px;font-weight:800;color:var(--text3)">DESCONTO</th>
+              <th style="padding:8px 12px;text-align:center;font-size:9px;font-weight:800;color:var(--text3)">NOTA</th>
+              <th style="padding:8px 12px;text-align:center;font-size:9px;font-weight:800;color:var(--text3)">FAIXA</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.map((r, i) => `
+            <tr style="border-bottom:1px solid var(--border)">
+              <td style="padding:7px 12px;text-align:center;color:var(--text3)">${i + 1}</td>
+              <td style="padding:7px 12px;font-weight:700;color:var(--text)">${pfEsc(r.nome)}</td>
+              <td style="padding:7px 12px;text-align:center;color:var(--text)">${r.pct != null ? r.pct + '%' : '—'}</td>
+              <td style="padding:7px 12px;text-align:center;color:${r.qtdOcorr ? '#dc2626' : 'var(--text3)'}">${r.qtdOcorr || 0}</td>
+              <td style="padding:7px 12px;text-align:center;color:${r.desconto ? '#dc2626' : 'var(--text3)'}">${r.desconto ? '-' + r.desconto : '—'}</td>
+              <td style="padding:7px 12px;text-align:center;font-weight:800;color:${r.faixaCor}">${r.nota}</td>
+              <td style="padding:7px 12px;text-align:center">
+                <span style="background:${r.faixaCor}22;color:${r.faixaCor};border-radius:20px;padding:3px 10px;font-size:10px;font-weight:800">${r.faixa}</span>
+              </td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+  }
+
+  wrap.innerHTML = html || `<div style="padding:48px;text-align:center;color:var(--text3)">Nenhum colaborador com sessão registrada no período.</div>`;
 }
 
 // ── Rastreio de pedido ─────────────────────────────────────────────────────
