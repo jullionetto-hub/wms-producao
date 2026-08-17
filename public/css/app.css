@@ -261,6 +261,7 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
 .btn-outline{background:transparent;border:1.5px solid var(--border);color:var(--text2)}.btn-outline:hover{border-color:var(--accent);color:var(--accent);background:var(--bg)}
 .btn-sm{padding:6px 12px;font-size:11px}
 .btn:active{transform:scale(.97);opacity:.9}
+.btn:disabled{opacity:.45;cursor:not-allowed;pointer-events:none}
 
 
 
