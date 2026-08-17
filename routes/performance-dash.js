@@ -222,10 +222,10 @@ router.get('/performance/separadores', requerAuth, requerPerfil('supervisor', 'g
         ROUND(AVG(
           CASE WHEN (t.value->>'hora_inicio') IS NOT NULL AND (t.value->>'hora_inicio') != ''
            AND (t.value->>'hora_fim') IS NOT NULL AND (t.value->>'hora_fim') != ''
-          THEN EXTRACT(EPOCH FROM (
+          THEN GREATEST(0, EXTRACT(EPOCH FROM (
             (ar.data_aviso || ' ' || (t.value->>'hora_fim'))::timestamp
             - (ar.data_aviso || ' ' || (t.value->>'hora_inicio'))::timestamp
-          )) / 60.0 END
+          )) / 60.0) END
         )::numeric, 1) AS tempo_medio_min
       FROM avisos_repositor ar,
            jsonb_array_elements(COALESCE(ar.tentativas, '[]'::jsonb)) AS t(value)
@@ -237,10 +237,10 @@ router.get('/performance/separadores', requerAuth, requerPerfil('supervisor', 'g
     // ── Reposição — tempo médio de resolução (do avisos ao repositor resolver) ──
     const reposicaoTiming = await db.get(`
       SELECT
-        ROUND(AVG(EXTRACT(EPOCH FROM (
+        ROUND(AVG(GREATEST(0, EXTRACT(EPOCH FROM (
           (ar.data_aviso || ' ' || (t.value->>'hora_fim'))::timestamp
           - (ar.data_aviso || ' ' || (t.value->>'hora_inicio'))::timestamp
-        )) / 60.0)::numeric, 1) AS tempo_medio_min
+        )) / 60.0))::numeric, 1) AS tempo_medio_min
       FROM avisos_repositor ar
       JOIN pedidos p4 ON p4.id = ar.pedido_id
       LEFT JOIN separadores s4 ON s4.id = p4.separador_id
@@ -447,10 +447,10 @@ router.get('/performance/timing', requerAuth, requerPerfil('supervisor', 'gestor
         CASE
           WHEN (t.value->>'hora_inicio') IS NOT NULL AND (t.value->>'hora_inicio') != ''
            AND (t.value->>'hora_fim')    IS NOT NULL AND (t.value->>'hora_fim')    != ''
-          THEN ROUND(EXTRACT(EPOCH FROM (
+          THEN GREATEST(0, ROUND(EXTRACT(EPOCH FROM (
             (ar.data_aviso || ' ' || (t.value->>'hora_fim'))::timestamp
             - (ar.data_aviso || ' ' || (t.value->>'hora_inicio'))::timestamp
-          )) / 60.0, 1)::float
+          )) / 60.0, 1))::float
           ELSE NULL
         END AS duracao_min
       FROM avisos_repositor ar,
@@ -745,10 +745,10 @@ router.get('/performance/pedido/:numero', requerAuth, requerPerfil('supervisor',
         CASE
           WHEN (t.value->>'hora_inicio') IS NOT NULL AND (t.value->>'hora_inicio') != ''
            AND (t.value->>'hora_fim')    IS NOT NULL AND (t.value->>'hora_fim')    != ''
-          THEN ROUND(EXTRACT(EPOCH FROM (
+          THEN GREATEST(0, ROUND(EXTRACT(EPOCH FROM (
             (ar.data_aviso || ' ' || (t.value->>'hora_fim'))::timestamp
             - (ar.data_aviso || ' ' || (t.value->>'hora_inicio'))::timestamp
-          )) / 60.0, 1)::float
+          )) / 60.0, 1))::float
           ELSE NULL
         END AS duracao_min
       FROM avisos_repositor ar,
