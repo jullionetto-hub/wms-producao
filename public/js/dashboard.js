@@ -1552,16 +1552,17 @@ async function abrirConfigMetas() {
       meta_checkout:  'Meta Checkout (checkouts/turno)',
       meta_embalagem: 'Meta Embalagem (pedidos/turno)',
       meta_reposicao: 'Meta Reposição (itens/turno)',
-      horas_turno_manha: 'Horas turno Manhã',
-      horas_turno_tarde: 'Horas turno Tarde',
-      horas_turno_noite: 'Horas turno Noite',
+      horas_turno_manha: 'Horas turno Manhã (decimal — ex: 7:45 = 7.75)',
+      horas_turno_tarde: 'Horas turno Tarde (decimal — ex: 7:45 = 7.75)',
+      horas_turno_noite: 'Horas turno Noite (decimal — ex: 7:33 = 7.55)',
     };
+    const STEP = { horas_turno_manha: '0.01', horas_turno_tarde: '0.01', horas_turno_noite: '0.01' };
     const form = document.getElementById('config-metas-form');
     if (form) {
       form.innerHTML = Object.entries(LABELS).map(([k, label]) => `
         <div style="margin-bottom:10px">
           <label style="font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase;display:block;margin-bottom:3px">${label}</label>
-          <input type="number" id="cfg-${k}" value="${_configMetasData[k]?.valor || ''}" min="0" step="1"
+          <input type="number" id="cfg-${k}" value="${_configMetasData[k]?.valor || ''}" min="0" step="${STEP[k] || '1'}"
             style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:7px;font-size:14px;font-weight:600;box-sizing:border-box">
         </div>`).join('');
     }
@@ -1581,16 +1582,17 @@ async function salvarConfigMetas() {
     for (const k of CHAVES) {
       const v = document.getElementById(`cfg-${k}`)?.value;
       if (v !== undefined && v !== '') {
-        await fetch(`${API}/configuracoes/${k}`, {
+        const res = await fetch(`${API}/configuracoes/${k}`, {
           method:'PUT', credentials:'include', headers:{'Content-Type':'application/json'},
           body: JSON.stringify({ valor: v })
         });
+        if (!res.ok) throw new Error(`Falha ao salvar ${k} (${res.status})`);
       }
     }
     toast('Configurações salvas!','info');
     fecharConfigMetas();
     carregarPerformance();
-  } catch(e) { toast('Erro ao salvar','erro'); }
+  } catch(e) { console.error('salvarConfigMetas:', e); toast('Erro ao salvar','erro'); }
 }
 
 /* ─── RELATÓRIO MENSAL DO COLABORADOR ──────────────────────────────── */
