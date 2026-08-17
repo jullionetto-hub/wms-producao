@@ -49,8 +49,9 @@ const cspDirectives = {
     "'self'",
     "'unsafe-inline'",       // style= inline extensivo no app
     "fonts.googleapis.com",
+    "cdn.jsdelivr.net",      // Tabler Icons (tabler-icons.min.css) — bloqueado, ícones do site inteiro sumidos
   ],
-  fontSrc:    ["'self'", "fonts.gstatic.com"],
+  fontSrc:    ["'self'", "fonts.gstatic.com", "cdn.jsdelivr.net"],  // arquivos .woff2 dos Tabler Icons
   imgSrc:     ["'self'", "data:", "blob:"],
   connectSrc: [
     "'self'",
