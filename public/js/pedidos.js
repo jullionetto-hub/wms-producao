@@ -73,7 +73,8 @@ async function carregarPedidos() {
     const usrId  = document.getElementById('filtro-ped-sep').value;
     const numPed = document.getElementById('filtro-ped-num').value.trim();
     let url = `${API}/pedidos?`;
-    // Envia datas ao backend (usa COALESCE: iniciado_em → data_distribuicao → data_pedido)
+    // Envia datas ao backend — filtra pela data de aguardando_desde (não pela data de
+    // trabalho), ver comentário em routes/pedidos.js.
     // Status NÃO é mais filtrado no servidor: o filtro agora é o pipeline inteiro
     // (pendente/separando/separado/checkoutado/embalado — ver _statusGeral), que
     // depende de checkout_concluido + status_embalagem além do p.status. Filtra

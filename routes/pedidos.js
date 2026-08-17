@@ -20,11 +20,15 @@ router.get('/pedidos', requerAuth, async (req,res) => {
     if (separador_id)  add('p.separador_id=',separador_id);
     if (status)        add('p.status=',status);
     if (data) { p.push(data); q+=` AND COALESCE(NULLIF(LEFT(p.iniciado_em,10),''), NULLIF(p.data_distribuicao,''), p.data_pedido) = $${p.length}`; }
-    // Data efetiva de trabalho: data_distribuicao (dia que o pedido foi atribuído ao separador)
-    // tem prioridade sobre data_pedido (dia de importação), assim pedidos importados em dias
-    // anteriores mas distribuídos hoje aparecem corretamente no dashboard de hoje.
-    if (data_ini) { p.push(data_ini); q+=` AND COALESCE(NULLIF(LEFT(p.iniciado_em,10),''), NULLIF(p.data_distribuicao,''), p.data_pedido) >= $${p.length}`; }
-    if (data_fim)  { p.push(data_fim);  q+=` AND COALESCE(NULLIF(LEFT(p.iniciado_em,10),''), NULLIF(p.data_distribuicao,''), p.data_pedido) <= $${p.length}`; }
+    // Filtro De/Até da tela de Pedidos: usa a DATA de aguardando_desde (quando o pedido
+    // passou a esperar separação), não a data de trabalho — o supervisor quer selecionar
+    // "12/08" e ver os pedidos que estão aguardando desde aquele dia, não os que foram
+    // iniciados/distribuídos nele. aguardando_desde é texto 'DD/MM/YYYY HH:MM'; pedidos
+    // sem esse campo preenchido corretamente ficam de fora do filtro por data (correto,
+    // já que não têm "aguardando desde" pra comparar).
+    const AGUARDANDO_DATA = `(CASE WHEN p.aguardando_desde ~ '^[0-9]{2}/[0-9]{2}/[0-9]{4}' THEN TO_TIMESTAMP(p.aguardando_desde,'DD/MM/YYYY HH24:MI')::DATE END)`;
+    if (data_ini) { p.push(data_ini); q+=` AND ${AGUARDANDO_DATA} >= $${p.length}::DATE`; }
+    if (data_fim)  { p.push(data_fim);  q+=` AND ${AGUARDANDO_DATA} <= $${p.length}::DATE`; }
     if (numero_pedido) add('p.numero_pedido=',numero_pedido);
     const order=` ORDER BY CASE WHEN p.aguardando_desde IS NOT NULL AND p.aguardando_desde!='' THEN p.aguardando_desde ELSE COALESCE(p.data_pedido,'')||' '||COALESCE(p.hora_pedido,'') END ASC`;
     if (page) {
