@@ -1011,9 +1011,13 @@ async function carregarTimeline() {
 
 async function popularSelects() {
   try {
-    const res   = await fetch(`${API}/usuarios`, { credentials:'include' });
-    const users = await res.json();
-    const seps  = users.filter(u => u.perfil === 'separador');
+    const res  = await fetch(`${API}/separadores`, { credentials:'include' });
+    const all  = await res.json();
+    // Fonte é a tabela separadores (não usuarios filtrado por perfil) porque
+    // um usuário pode ter perfil diferente (ex: gestor) e ainda assim ter um
+    // registro de separador vinculado com pedidos atribuídos — filtrar por
+    // perfil==='separador' escondia esses casos do dropdown.
+    const seps = all.filter(s => s.status === 'ativo').map(s => ({ id: s.id, nome: s.usuario_nome || s.nome }));
     todosSeparadores = seps;
     ['filtro-sep-prod','filtro-ped-sep'].forEach(id => {
       const sel = document.getElementById(id); if (!sel) return;
