@@ -1958,11 +1958,11 @@ function pfLayoutEstoqueSVG() {
     <text x="${x + w / 2}" y="${y + h / 2}" text-anchor="middle" dominant-baseline="central" font-size="${w < 30 ? 9 : 11}" font-weight="${peso||400}" fill="${roxo ? 'var(--accent)' : 'var(--text2)'}">${texto}</text>`;
 
   let s = '';
-  s += box(45, 68, 415, 32, 'ZA', 700);
+  s += box(45, 68, 415, 32, 'ZA 1-518', 700);
   s += `
     <polygon points="463,68 544,68 544,250 524,250 524,100 463,100" fill="var(--surface2)" stroke="var(--border)" stroke-width="0.75"/>
-    <text x="503.5" y="84" text-anchor="middle" dominant-baseline="central" font-size="11" font-weight="700" fill="var(--text2)">25-26</text>
-    <text x="534" y="185" text-anchor="middle" dominant-baseline="central" font-size="9" fill="var(--text2)">16-24</text>`;
+    <text x="503.5" y="84" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="700" fill="var(--text2)">Arara 25-26</text>
+    <text x="534" y="185" text-anchor="middle" dominant-baseline="central" font-size="9" font-weight="700" fill="var(--text2)">Arara 16-24</text>`;
   s += `<line x1="111" y1="184" x2="504" y2="184" stroke="var(--border)" stroke-width="0.75" stroke-dasharray="3,3"/>`;
   PF_ESTOQUE_RUAS_FZ.forEach((r, i) => {
     const x = pfColX(i);
@@ -1974,16 +1974,21 @@ function pfLayoutEstoqueSVG() {
       s += `<rect x="${x}" y="188" width="19" height="62" rx="4" fill="var(--surface2)" stroke="var(--border)" stroke-width="0.75"/>`;
     }
   });
-  // Arara 1-7 no espaço de frente do corredor H (mesma coluna, sem empurrar nada)
+  // Arara 1-7 no espaço de frente do corredor H (mesma coluna, sem empurrar nada) —
+  // caixa é estreita demais pro nome completo, então o nome vai numa legenda abaixo.
   s += box(PF_ESTOQUE_X_FZ['H'] - 9.5, 188, 19, 62, '1-7', 700, true);
+  s += `<text x="${PF_ESTOQUE_X_FZ['H']}" y="264" text-anchor="middle" dominant-baseline="central" font-size="9" font-weight="700" fill="var(--accent)">Arara 1-7</text>`;
 
   // Linha de baixo: arara 8-14 (I a M), corredores E a A empilhados (Q a U), arara 15 (W a X)
-  s += box(111, PF_ESTOQUE_LINHA_BAIXO_Y, 107, PF_ESTOQUE_ALTURA_BAIXO, '8-14', 700, true);
+  s += box(111, PF_ESTOQUE_LINHA_BAIXO_Y, 107, PF_ESTOQUE_ALTURA_BAIXO, 'Arara 8-14', 700, true);
   PF_ESTOQUE_RUAS_AE.forEach((r, i) => {
     const y = PF_ESTOQUE_LINHA_BAIXO_Y + i * (PF_ESTOQUE_ALTURA_BAIXO + 4);
-    s += box(287, y, 107, PF_ESTOQUE_ALTURA_BAIXO, r);
+    // Legenda da rua fica à esquerda da caixa (fora dela) pelo mesmo motivo
+    // do F-Z: dentro é onde o marcador do caminho pode cobrir a letra.
+    s += `<text x="279" y="${y + PF_ESTOQUE_ALTURA_BAIXO / 2}" text-anchor="end" dominant-baseline="central" font-size="10" font-weight="700" fill="var(--text2)">${r}</text>`;
+    s += box(287, y, 107, PF_ESTOQUE_ALTURA_BAIXO, '');
   });
-  s += box(419, PF_ESTOQUE_LINHA_BAIXO_Y, 41, PF_ESTOQUE_ALTURA_BAIXO, '15', 700, true);
+  s += box(419, PF_ESTOQUE_LINHA_BAIXO_Y, 60, PF_ESTOQUE_ALTURA_BAIXO, 'Arara 15', 700, true);
   return s;
 }
 
@@ -2021,8 +2026,8 @@ function pfRenderMapaCaminho(itens) {
     const [x, y] = p.xy;
     const cor = i === 0 ? 'var(--green)' : (i === passos.length - 1 ? 'var(--red)' : 'var(--accent)');
     return `
-    <circle cx="${x}" cy="${y}" r="9" fill="${cor}" stroke="var(--surface)" stroke-width="1.5"/>
-    <text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="central" font-size="9" font-weight="800" fill="#fff">${i + 1}</text>`;
+    <circle cx="${x}" cy="${y}" r="7" fill="${cor}" stroke="var(--surface)" stroke-width="1.5"/>
+    <text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="central" font-size="8" font-weight="800" fill="#fff">${i + 1}</text>`;
   }).join('');
 
   return `
