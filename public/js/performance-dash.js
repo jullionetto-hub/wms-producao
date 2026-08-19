@@ -1880,20 +1880,14 @@ const PF_SEGMENTOS_RUA = [
   ['Y',1,120,'Frente'],['Y',201,320,'Frente'],['Y',121,160,'Fundo'],['Y',161,200,'Fundo'],
   ['Z',1,120,'Frente'],['Z',121,160,'Fundo'],
 ];
-// Retorna o segmento (de-até-local) da faixa que contém essa colmeia, ou o
-// primeiro segmento da rua como fallback se o número não bater com nenhuma
-// faixa cadastrada.
-function pfSegmentoRua(rua, numero) {
+function pfLocalPosicao(rua, numero) {
   if (numero != null) {
     for (const [r, de, ate, local] of PF_SEGMENTOS_RUA) {
-      if (r === rua && de <= numero && numero <= ate) return { de, ate, local };
+      if (r === rua && de <= numero && numero <= ate) return local;
     }
   }
-  for (const [r, de, ate, local] of PF_SEGMENTOS_RUA) { if (r === rua) return { de, ate, local }; }
-  return { de: 1, ate: 1, local: 'Frente' };
-}
-function pfLocalPosicao(rua, numero) {
-  return pfSegmentoRua(rua, numero).local;
+  for (const [r,,,local] of PF_SEGMENTOS_RUA) { if (r === rua) return local; }
+  return 'Frente';
 }
 
 // ZA: 518 colmeias num rack só, no fundo do galpão — ZA001 perto do corredor
@@ -1943,20 +1937,6 @@ function pfExtrairPosicao(endereco) {
   return { zona: 'RUA', rua: m[1], numero: parseInt(m[2], 10) };
 }
 
-// Interpola a posição Y da colmeia dentro do retângulo (fundo ou frente,
-// sempre 62px de altura) proporcional a onde o número cai na faixa de-até
-// do segmento — em vez de cravar sempre no centro. Direção (de=topo do
-// retângulo, até=base) é uma convenção consistente, não confirmada
-// fisicamente com o usuário — só afeta a ordem relativa dentro da mesma
-// rua+lado, não a comparação entre ruas diferentes.
-function pfPosicaoRuaFina(rua, numero) {
-  const seg = pfSegmentoRua(rua, numero);
-  const baseY = seg.local === 'Fundo' ? PF_ESTOQUE_Y_FUNDO - 31 : PF_ESTOQUE_Y_FRENTE - 31; // topo do retângulo (y118 ou y188)
-  const faixa = seg.ate - seg.de;
-  const t = faixa > 0 && numero != null ? Math.min(1, Math.max(0, (numero - seg.de) / faixa)) : 0.5;
-  return [PF_ESTOQUE_X_FZ[rua], baseY + t * 62];
-}
-
 function pfPosicaoNoMapa(posInfo) {
   if (!posInfo) return null;
   if (posInfo.zona === 'ZA') return pfPosicaoZA(posInfo.numero);
@@ -1964,7 +1944,9 @@ function pfPosicaoNoMapa(posInfo) {
   if (posInfo.zona === 'RUA') {
     if (PF_ESTOQUE_POS_AE[posInfo.rua]) return PF_ESTOQUE_POS_AE[posInfo.rua];
     if (PF_ESTOQUE_X_FZ[posInfo.rua] != null) {
-      return pfPosicaoRuaFina(posInfo.rua, posInfo.numero);
+      if (PF_ESTOQUE_SO_FUNDO.has(posInfo.rua)) return [PF_ESTOQUE_X_FZ[posInfo.rua], PF_ESTOQUE_Y_FUNDO];
+      const local = pfLocalPosicao(posInfo.rua, posInfo.numero);
+      return [PF_ESTOQUE_X_FZ[posInfo.rua], local === 'Fundo' ? PF_ESTOQUE_Y_FUNDO : PF_ESTOQUE_Y_FRENTE];
     }
   }
   return null;
@@ -2012,10 +1994,10 @@ function pfLayoutEstoqueSVG() {
 
 // Reconstrói o caminho percorrido pelo separador: só itens já conferidos
 // (hora_verificado preenchido), na ordem real de conferência — itens já vêm
-// ordenados assim pela API. Ignora repetições consecutivas na mesma colmeia
-// exata (item seguinte na mesma posição não é um novo "passo" no mapa) —
-// mas colmeias diferentes na mesma rua+lado agora contam como passos
-// distintos, já que a posição é interpolada dentro do segmento.
+// ordenados assim pela API. Ignora repetições consecutivas na mesma posição
+// (item seguinte na mesma rua+lado, ou mesma colmeia de ZA, não é um novo
+// "passo" no mapa — mas trocar de fundo pra frente na mesma rua já conta,
+// porque exige atravessar o corredor transversal).
 function pfCaminhoSeparacao(itens) {
   const passos = [];
   for (const it of (itens || [])) {
@@ -2024,7 +2006,7 @@ function pfCaminhoSeparacao(itens) {
     if (!posInfo) continue;
     const xy = pfPosicaoNoMapa(posInfo);
     if (!xy) continue;
-    const chave = posInfo.zona === 'RUA' ? `${posInfo.rua}-${posInfo.numero}`
+    const chave = posInfo.zona === 'RUA' ? `${posInfo.rua}-${pfLocalPosicao(posInfo.rua, posInfo.numero)}`
                 : posInfo.zona === 'ZA'  ? `ZA-${posInfo.numero}`
                 : `ARARA-${posInfo.numero}`;
     const ultimo = passos[passos.length - 1];
