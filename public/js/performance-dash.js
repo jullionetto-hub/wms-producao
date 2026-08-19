@@ -2091,10 +2091,8 @@ function pfRenderMapaCaminho(itens) {
       <span style="margin-left:auto">${passos.length} corredor(es) visitado(s)</span>
     </div>
     <div style="margin-top:8px;padding:10px 12px;background:var(--surface2);border-radius:8px;font-size:11px;color:var(--text3);line-height:1.6">
-      Rota real: <b style="color:var(--text)">${Math.round(distReal)}</b> unidades de percurso no mapa ·
-      Rota ideal sugerida (mesmas paradas, ordem otimizada): <b style="color:var(--text)">${Math.round(distIdeal)}</b> unidades
-      ${economia > 5 ? `— <b style="color:var(--green)">${economia}% mais curta</b>` : economia < -5 ? '' : '— já bem próxima do ideal'}.
-      Estimativa relativa (posições no mapa esquemático), não é distância real em metros.
+      Comparando a rota real com a rota ideal sugerida (mesmas paradas, ordem otimizada pra andar menos):
+      ${economia > 5 ? `a real foi <b style="color:var(--amber)">${economia}% mais longa</b> que a ideal.` : economia < -5 ? 'a real já ficou mais curta que a heurística sugerida — provavelmente o separador achou um atalho que o algoritmo não viu.' : 'a real já está bem próxima do ideal.'}
     </div>
   </div>`;
 }
