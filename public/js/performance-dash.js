@@ -2042,6 +2042,31 @@ function pfDistanciaRota(pontos) {
   return d;
 }
 
+// Refinamento 2-opt: o vizinho mais próximo é guloso e pode prender numa
+// escolha ruim (deixar um ponto isolado pra visitar por último). 2-opt
+// desfaz cruzamentos — testa inverter cada trecho do caminho e mantém se
+// encurtar — até não sobrar melhoria. Só o ponto de partida (onde o
+// separador realmente começou) fica fixo; o resto, incluindo onde termina,
+// é livre pra reordenar.
+function pfDoisOpt(pontos) {
+  if (pontos.length < 4) return pontos;
+  let rota = pontos.slice();
+  let melhorou = true;
+  while (melhorou) {
+    melhorou = false;
+    for (let i = 1; i < rota.length - 1; i++) {
+      for (let k = i + 1; k < rota.length; k++) {
+        const candidata = rota.slice(0, i).concat(rota.slice(i, k + 1).reverse(), rota.slice(k + 1));
+        if (pfDistanciaRota(candidata) < pfDistanciaRota(rota) - 1e-6) {
+          rota = candidata;
+          melhorou = true;
+        }
+      }
+    }
+  }
+  return rota;
+}
+
 function pfRenderMapaCaminho(itens) {
   const passos = pfCaminhoSeparacao(itens);
   if (!passos.length) {
@@ -2057,12 +2082,14 @@ function pfRenderMapaCaminho(itens) {
   }).join('');
 
   // Rota ideal: mesmas posições visitadas na real (sem duplicar), começando
-  // do mesmo ponto onde o separador de fato começou, reordenadas pelo
-  // vizinho mais próximo.
+  // do mesmo ponto onde o separador de fato começou. Vizinho mais próximo
+  // dá um primeiro rascunho rápido, 2-opt refina desfazendo cruzamentos —
+  // sem isso a heurística gulosa podia ficar pior que uma rota "ingênua".
   const posicoesUnicas = [...new Map(passos.map(p => [p.chave, p.xy])).values()];
-  const rotaIdeal = posicoesUnicas.length > 1
+  const rotaInicial = posicoesUnicas.length > 1
     ? [posicoesUnicas[0], ...pfRotaMaisProxima(posicoesUnicas[0], posicoesUnicas.slice(1))]
     : posicoesUnicas;
+  const rotaIdeal = pfDoisOpt(rotaInicial);
   const linhaIdeal = rotaIdeal.map(p => p.join(',')).join(' ');
   const marcadoresIdeal = rotaIdeal.map(([x, y]) =>
     `<circle cx="${x}" cy="${y}" r="3.5" fill="var(--amber)"/>`
@@ -2092,7 +2119,7 @@ function pfRenderMapaCaminho(itens) {
     </div>
     <div style="margin-top:8px;padding:10px 12px;background:var(--surface2);border-radius:8px;font-size:11px;color:var(--text3);line-height:1.6">
       Comparando a rota real com a rota ideal sugerida (mesmas paradas, ordem otimizada pra andar menos):
-      ${economia > 5 ? `a real foi <b style="color:var(--amber)">${economia}% mais longa</b> que a ideal.` : economia < -5 ? 'a real já ficou mais curta que a heurística sugerida — provavelmente o separador achou um atalho que o algoritmo não viu.' : 'a real já está bem próxima do ideal.'}
+      ${economia > 5 ? `a real foi <b style="color:var(--amber)">${economia}% mais longa</b> que a ideal.` : economia < -5 ? 'a real ficou mais curta que a sugestão do algoritmo — vale conferir esse caso, não deveria acontecer com frequência.' : 'a real já está bem próxima do ideal.'}
     </div>
   </div>`;
 }
