@@ -182,9 +182,30 @@ function sair() {
   if (modal) { modal.style.display = 'flex'; return; }
   _confirmarSair();
 }
-function _confirmarSair() {
+// Encerra a sessão no servidor antes de voltar pra tela de login. Sem isso
+// confirmado, uma falha de rede silenciosa deixava a sessão válida no
+// servidor (até 8h, rolling) enquanto a tela já mostrava "deslogado" — o
+// próximo colaborador a abrir o app no mesmo aparelho era automaticamente
+// restaurado nela por verificarSessao() (separador.js), herdando o perfil
+// de quem "saiu". Tenta algumas vezes antes de desistir e avisar.
+async function _logoutNoServidor(tentativas = 3) {
+  for (let i = 0; i < tentativas; i++) {
+    try {
+      const res = await fetch(`${API}/auth/logout`, { method:'POST', credentials:'include' });
+      if (res.ok) return true;
+    } catch (e) { /* tenta de novo */ }
+  }
+  return false;
+}
+async function _confirmarSair() {
   if (window._wmsHbTimer) { clearInterval(window._wmsHbTimer); window._wmsHbTimer = null; }
-  fetch(`${API}/auth/logout`, { method:'POST', credentials:'include' }).catch(()=>{});
+  const ok = await _logoutNoServidor();
+  if (!ok) {
+    console.error('Logout: não foi possível confirmar o encerramento da sessão no servidor.');
+    if (typeof toast === 'function') {
+      toast('Sem conexão pra confirmar a saída — verifique antes de deixar o aparelho.', 'erro');
+    }
+  }
   usuarioAtual = null; separadorAtual = null; pedidoAtualId = null; pedidoAtualNum = null; itensAtuais = [];
   document.body.classList.remove('sep-mobile','rep-mobile','ck-mobile','emb-mobile');
   document.getElementById('app').style.display     = 'none';
