@@ -1826,67 +1826,188 @@ function pfFecharRastreio() {
   if (inp) inp.value   = '';
 }
 
-// ── Mapa do estoque — layout confirmado com o usuário em 2026-08-19 a partir
-// de "Layout do estoque.xlsx". Coordenadas fixas do SVG (viewBox 0 0 680 524).
-// ZA cobre os corredores F a X; Arara começa no Y, cobre até Z e desce em L
-// pela lateral direita ao longo de toda a extensão dos corredores.
+// ── Mapa do estoque — layout confirmado com o usuário em 2026-08-19, lido
+// direto de "Layout do estoque.xlsx" e "Dificuldade estoque.xlsx" (célula por
+// célula, sem interpretar desenho). Coordenadas fixas do SVG (viewBox 0 0 680 434).
+// ZA cobre os corredores F a X (reto, no topo). Arara 25-26 fica no fundo
+// entre Y e Z e desce em L (16-24) pela lateral direita. F, G e H só têm
+// fundo (sem frente própria) — o espaço de frente de H é ocupado pela arara
+// 1-7. Embaixo, na mesma linha: arara 8-14 (de I a M), corredores E a A
+// empilhados (de Q a U), arara 15 (de W a X).
 const PF_ESTOQUE_RUAS_FZ = ['F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'];
 const PF_ESTOQUE_RUAS_AE = ['E','D','C','B','A'];
 const pfColX = i => 45 + i * 22;
+const PF_ESTOQUE_SO_FUNDO = new Set(['F','G','H']); // sem retângulo de frente
 
-const PF_MAPA_ESTOQUE = {};
-PF_ESTOQUE_RUAS_FZ.forEach((r, i) => { PF_MAPA_ESTOQUE[r] = [pfColX(i) + 9.5, 219]; });
-PF_ESTOQUE_RUAS_AE.forEach((r, i) => { PF_MAPA_ESTOQUE[r] = [350, 316 + i * 38]; });
+// Coordenada X de cada corredor F-Z (a mesma pro lado Frente e pro lado Fundo
+// — só muda o Y, que depende da colmeia).
+const PF_ESTOQUE_X_FZ = {};
+PF_ESTOQUE_RUAS_FZ.forEach((r, i) => { PF_ESTOQUE_X_FZ[r] = pfColX(i) + 9.5; });
+// A-E: achatados (altura 19, igual à largura de um corredor F-Z), empilhados
+// na faixa de Q a U, mesma linha das araras 8-14 e 15.
+const PF_ESTOQUE_LINHA_BAIXO_Y = 280;
+const PF_ESTOQUE_ALTURA_BAIXO = 19;
+const PF_ESTOQUE_POS_AE = {};
+PF_ESTOQUE_RUAS_AE.forEach((r, i) => {
+  const y = PF_ESTOQUE_LINHA_BAIXO_Y + i * (PF_ESTOQUE_ALTURA_BAIXO + 4);
+  PF_ESTOQUE_POS_AE[r] = [340.5, y + PF_ESTOQUE_ALTURA_BAIXO / 2];
+});
+const PF_ESTOQUE_Y_FUNDO  = 149; // centro do retângulo de fundo (y118-180)
+const PF_ESTOQUE_Y_FRENTE = 219; // centro do retângulo de frente (y188-250)
+
+// Faixas de colmeia (DE-ATÉ) por rua → Frente ou Fundo. Espelha (sem a coluna
+// de dificuldade, que o mapa não usa) lib/pontuacao.js SEGMENTOS_ESTOQUE,
+// conferido contra "Dificuldade estoque.xlsx" em 2026-08-19.
+const PF_SEGMENTOS_RUA = [
+  ['A',1,84,'Frente'],['B',1,168,'Frente'],['C',1,168,'Frente'],['D',1,168,'Frente'],['E',1,77,'Frente'],
+  ['F',1,40,'Fundo'],['G',41,96,'Fundo'],['H',1,112,'Fundo'],
+  ['I',1,112,'Fundo'],['I',113,203,'Frente'],
+  ['J',1,91,'Frente'],['J',204,287,'Frente'],['J',92,147,'Fundo'],['J',148,203,'Fundo'],
+  ['K',1,84,'Frente'],['K',197,287,'Frente'],['K',85,140,'Fundo'],['K',141,196,'Fundo'],
+  ['L',1,91,'Frente'],['L',204,294,'Frente'],['L',148,203,'Fundo'],['L',92,147,'Fundo'],
+  ['M',1,91,'Frente'],['M',204,287,'Frente'],['M',92,147,'Fundo'],['M',148,203,'Fundo'],
+  ['N',1,84,'Frente'],['N',197,287,'Frente'],['N',141,196,'Fundo'],['N',85,140,'Fundo'],
+  ['O',1,91,'Frente'],['O',204,294,'Frente'],['O',92,147,'Fundo'],['O',148,203,'Fundo'],
+  ['P',1,91,'Frente'],['P',204,287,'Frente'],['P',92,147,'Fundo'],['P',148,203,'Fundo'],
+  ['Q',1,84,'Frente'],['Q',197,287,'Frente'],['Q',85,140,'Fundo'],['Q',141,196,'Fundo'],
+  ['R',1,91,'Frente'],['R',204,294,'Frente'],['R',92,147,'Fundo'],['R',148,203,'Fundo'],
+  ['S',1,91,'Frente'],['S',204,294,'Frente'],['S',92,147,'Fundo'],['S',148,203,'Fundo'],
+  ['T',1,84,'Frente'],['T',197,287,'Frente'],['T',85,140,'Fundo'],['T',141,196,'Fundo'],
+  ['U',1,91,'Frente'],['U',204,347,'Frente'],['U',92,147,'Fundo'],['U',148,203,'Fundo'],
+  ['V',1,144,'Frente'],['V',257,360,'Frente'],['V',145,200,'Fundo'],['V',201,256,'Fundo'],
+  ['W',1,104,'Frente'],['W',241,352,'Frente'],['W',105,160,'Fundo'],['W',161,240,'Fundo'],
+  ['X',1,112,'Frente'],['X',233,352,'Frente'],['X',113,192,'Fundo'],['X',193,232,'Fundo'],
+  ['Y',1,120,'Frente'],['Y',201,320,'Frente'],['Y',121,160,'Fundo'],['Y',161,200,'Fundo'],
+  ['Z',1,120,'Frente'],['Z',121,160,'Fundo'],
+];
+function pfLocalPosicao(rua, numero) {
+  if (numero != null) {
+    for (const [r, de, ate, local] of PF_SEGMENTOS_RUA) {
+      if (r === rua && de <= numero && numero <= ate) return local;
+    }
+  }
+  for (const [r,,,local] of PF_SEGMENTOS_RUA) { if (r === rua) return local; }
+  return 'Frente';
+}
+
+// ZA: 518 colmeias num rack só, no fundo do galpão — ZA001 perto do corredor
+// X, ZA518 perto do corredor F (confirmado com o usuário em 2026-08-19).
+// Interpola linearmente ao longo do retângulo do ZA (x45 a x460).
+function pfPosicaoZA(numero) {
+  const n = Math.max(1, Math.min(518, numero || 1));
+  const x = 460 - (n - 1) / 517 * 415;
+  return [x, 84];
+}
+// Araras 1-26 — 5 paredes diferentes, lidas direto de "Layout do estoque.xlsx"
+// em 2026-08-19: 1-7 no espaço de frente do corredor H (sem coluna extra);
+// 8-14 na parede em frente aos corredores I a M; 15 em frente a W-X; 16-24 na
+// lateral do corredor Z (braço vertical do L); 25-26 no fundo entre Y e Z
+// (braço horizontal do L).
+function pfPosicaoArara(numero) {
+  const n = numero || 1;
+  if (n <= 7)  return [98.5, 219];                 // frente do corredor H
+  if (n <= 14) {                                    // parede 8-14 (frente a I-M), x111-218
+    const t = (n - 8) / 6;
+    return [111 + t * 107, PF_ESTOQUE_LINHA_BAIXO_Y + PF_ESTOQUE_ALTURA_BAIXO / 2];
+  }
+  if (n === 15) return [439.5, PF_ESTOQUE_LINHA_BAIXO_Y + PF_ESTOQUE_ALTURA_BAIXO / 2]; // W-X
+  if (n <= 24) {                                    // lateral do Z (16-24), braço vertical x524-544
+    const t = (n - 16) / 8;
+    return [534, 250 - t * 150];
+  }
+  return [463 + (n - 25) * 81, 84];                 // 25-26, fundo Y a Z, braço horizontal
+}
+
+// Extrai zona/rua/número de um endereço tipo "N144/VERT-N08-CX21", "ZA245"
+// ou "ARARA12" — endereço primário é a parte antes do '/', mesma lógica de
+// lib/pontuacao.js.
+function pfExtrairPosicao(endereco) {
+  if (!endereco) return null;
+  const end = String(endereco).split(',')[0].split('/')[0].trim().toUpperCase();
+  if (end.includes('ARARA')) {
+    const m = end.match(/(\d+)/);
+    return { zona: 'ARARA', numero: m ? parseInt(m[1], 10) : null };
+  }
+  if (end.startsWith('ZA')) {
+    const n = parseInt(end.slice(2), 10);
+    return { zona: 'ZA', numero: Number.isFinite(n) ? n : null };
+  }
+  const m = end.match(/^([A-Z]+)(\d+)/);
+  if (!m) return null;
+  return { zona: 'RUA', rua: m[1], numero: parseInt(m[2], 10) };
+}
+
+function pfPosicaoNoMapa(posInfo) {
+  if (!posInfo) return null;
+  if (posInfo.zona === 'ZA') return pfPosicaoZA(posInfo.numero);
+  if (posInfo.zona === 'ARARA') return pfPosicaoArara(posInfo.numero);
+  if (posInfo.zona === 'RUA') {
+    if (PF_ESTOQUE_POS_AE[posInfo.rua]) return PF_ESTOQUE_POS_AE[posInfo.rua];
+    if (PF_ESTOQUE_X_FZ[posInfo.rua] != null) {
+      if (PF_ESTOQUE_SO_FUNDO.has(posInfo.rua)) return [PF_ESTOQUE_X_FZ[posInfo.rua], PF_ESTOQUE_Y_FUNDO];
+      const local = pfLocalPosicao(posInfo.rua, posInfo.numero);
+      return [PF_ESTOQUE_X_FZ[posInfo.rua], local === 'Fundo' ? PF_ESTOQUE_Y_FUNDO : PF_ESTOQUE_Y_FRENTE];
+    }
+  }
+  return null;
+}
 
 function pfLayoutEstoqueSVG() {
-  const box = (x, y, w, h, texto, peso) => `
-    <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="4" fill="var(--surface2)" stroke="var(--border)" stroke-width="0.75"/>
-    <text x="${x + w / 2}" y="${y + h / 2}" text-anchor="middle" dominant-baseline="central" font-size="11" font-weight="${peso||400}" fill="var(--text2)">${texto}</text>`;
+  const box = (x, y, w, h, texto, peso, roxo) => `
+    <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="4" fill="var(--surface2)" stroke="${roxo ? 'var(--accent)' : 'var(--border)'}" stroke-width="0.75"/>
+    <text x="${x + w / 2}" y="${y + h / 2}" text-anchor="middle" dominant-baseline="central" font-size="${w < 30 ? 9 : 11}" font-weight="${peso||400}" fill="${roxo ? 'var(--accent)' : 'var(--text2)'}">${texto}</text>`;
 
   let s = '';
   s += box(45, 68, 415, 32, 'ZA', 700);
   s += `
     <polygon points="463,68 544,68 544,250 524,250 524,100 463,100" fill="var(--surface2)" stroke="var(--border)" stroke-width="0.75"/>
-    <text x="503.5" y="84" text-anchor="middle" dominant-baseline="central" font-size="11" font-weight="700" fill="var(--text2)">Arara</text>`;
-  s += `<line x1="45" y1="184" x2="504" y2="184" stroke="var(--border)" stroke-width="0.75" stroke-dasharray="3,3"/>`;
+    <text x="503.5" y="84" text-anchor="middle" dominant-baseline="central" font-size="11" font-weight="700" fill="var(--text2)">25-26</text>
+    <text x="534" y="185" text-anchor="middle" dominant-baseline="central" font-size="9" fill="var(--text2)">16-24</text>`;
+  s += `<line x1="111" y1="184" x2="504" y2="184" stroke="var(--border)" stroke-width="0.75" stroke-dasharray="3,3"/>`;
   PF_ESTOQUE_RUAS_FZ.forEach((r, i) => {
     const x = pfColX(i);
-    s += `
-    <rect x="${x}" y="118" width="19" height="62" rx="4" fill="var(--surface2)" stroke="var(--border)" stroke-width="0.75"/>
-    <rect x="${x}" y="188" width="19" height="62" rx="4" fill="var(--surface2)" stroke="var(--border)" stroke-width="0.75"/>
-    <text x="${x + 9.5}" y="219" text-anchor="middle" dominant-baseline="central" font-size="11" fill="var(--text2)">${r}</text>`;
+    s += `<rect x="${x}" y="118" width="19" height="62" rx="4" fill="var(--surface2)" stroke="var(--border)" stroke-width="0.75"/>`;
+    if (PF_ESTOQUE_SO_FUNDO.has(r)) {
+      s += `<text x="${x + 9.5}" y="149" text-anchor="middle" dominant-baseline="central" font-size="11" fill="var(--text2)">${r}</text>`;
+    } else {
+      s += `
+      <rect x="${x}" y="188" width="19" height="62" rx="4" fill="var(--surface2)" stroke="var(--border)" stroke-width="0.75"/>
+      <text x="${x + 9.5}" y="219" text-anchor="middle" dominant-baseline="central" font-size="11" fill="var(--text2)">${r}</text>`;
+    }
   });
-  s += box(60, 300, 120, 32, 'Arara', 700);
-  PF_ESTOQUE_RUAS_AE.forEach((r, i) => {
-    const y = 300 + i * 38;
-    s += box(200, y, 300, 32, r);
-  });
-  s += box(520, 300, 100, 32, 'Arara', 700);
-  return s;
-}
+  // Arara 1-7 no espaço de frente do corredor H (mesma coluna, sem empurrar nada)
+  s += box(PF_ESTOQUE_X_FZ['H'] - 9.5, 188, 19, 62, '1-7', 700, true);
 
-// Extrai a letra do corredor de um endereço tipo "N144/VERT-N08-CX21" — mesma
-// lógica de lib/pontuacao.js (endereço primário é a parte antes de '/').
-function pfExtrairRua(endereco) {
-  if (!endereco) return null;
-  const end = String(endereco).split(',')[0].split('/')[0].trim().toUpperCase();
-  const m = end.match(/^([A-Z]+)\d/);
-  return m ? m[1] : null;
+  // Linha de baixo: arara 8-14 (I a M), corredores E a A empilhados (Q a U), arara 15 (W a X)
+  s += box(111, PF_ESTOQUE_LINHA_BAIXO_Y, 107, PF_ESTOQUE_ALTURA_BAIXO, '8-14', 700, true);
+  PF_ESTOQUE_RUAS_AE.forEach((r, i) => {
+    const y = PF_ESTOQUE_LINHA_BAIXO_Y + i * (PF_ESTOQUE_ALTURA_BAIXO + 4);
+    s += box(287, y, 107, PF_ESTOQUE_ALTURA_BAIXO, r);
+  });
+  s += box(419, PF_ESTOQUE_LINHA_BAIXO_Y, 41, PF_ESTOQUE_ALTURA_BAIXO, '15', 700, true);
+  return s;
 }
 
 // Reconstrói o caminho percorrido pelo separador: só itens já conferidos
 // (hora_verificado preenchido), na ordem real de conferência — itens já vêm
-// ordenados assim pela API. Ignora repetições consecutivas do mesmo corredor
-// (item seguinte no mesmo lugar não é um novo "passo" no mapa).
+// ordenados assim pela API. Ignora repetições consecutivas na mesma posição
+// (item seguinte na mesma rua+lado, ou mesma colmeia de ZA, não é um novo
+// "passo" no mapa — mas trocar de fundo pra frente na mesma rua já conta,
+// porque exige atravessar o corredor transversal).
 function pfCaminhoSeparacao(itens) {
   const passos = [];
   for (const it of (itens || [])) {
     if (!it.hora_verificado) continue;
-    const rua = pfExtrairRua(it.endereco);
-    if (!rua || !PF_MAPA_ESTOQUE[rua]) continue;
+    const posInfo = pfExtrairPosicao(it.endereco);
+    if (!posInfo) continue;
+    const xy = pfPosicaoNoMapa(posInfo);
+    if (!xy) continue;
+    const chave = posInfo.zona === 'RUA' ? `${posInfo.rua}-${pfLocalPosicao(posInfo.rua, posInfo.numero)}`
+                : posInfo.zona === 'ZA'  ? `ZA-${posInfo.numero}`
+                : `ARARA-${posInfo.numero}`;
     const ultimo = passos[passos.length - 1];
-    if (ultimo && ultimo.rua === rua) continue;
-    passos.push({ rua, item: it });
+    if (ultimo && ultimo.chave === chave) continue;
+    passos.push({ chave, xy });
   }
   return passos;
 }
@@ -1896,9 +2017,9 @@ function pfRenderMapaCaminho(itens) {
   if (!passos.length) {
     return `<div style="padding:24px;text-align:center;color:var(--text3);font-size:12px">Sem itens conferidos ainda pra desenhar o caminho.</div>`;
   }
-  const linhaPath = passos.map(p => PF_MAPA_ESTOQUE[p.rua].join(',')).join(' ');
+  const linhaPath = passos.map(p => p.xy.join(',')).join(' ');
   const marcadores = passos.map((p, i) => {
-    const [x, y] = PF_MAPA_ESTOQUE[p.rua];
+    const [x, y] = p.xy;
     const cor = i === 0 ? 'var(--green)' : (i === passos.length - 1 ? 'var(--red)' : 'var(--accent)');
     return `
     <circle cx="${x}" cy="${y}" r="9" fill="${cor}" stroke="var(--surface)" stroke-width="1.5"/>
@@ -1908,7 +2029,7 @@ function pfRenderMapaCaminho(itens) {
   return `
   <div style="padding:14px 18px">
     <div style="overflow-x:auto">
-      <svg viewBox="0 0 680 524" style="width:100%;min-width:560px;height:auto;display:block">
+      <svg viewBox="0 0 680 434" style="width:100%;min-width:560px;height:auto;display:block">
         ${pfLayoutEstoqueSVG()}
         <polyline points="${linhaPath}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="5,4"/>
         ${marcadores}
