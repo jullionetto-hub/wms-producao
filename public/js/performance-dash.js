@@ -1966,13 +1966,12 @@ function pfLayoutEstoqueSVG() {
   s += `<line x1="111" y1="184" x2="504" y2="184" stroke="var(--border)" stroke-width="0.75" stroke-dasharray="3,3"/>`;
   PF_ESTOQUE_RUAS_FZ.forEach((r, i) => {
     const x = pfColX(i);
+    // Legenda da rua fica acima da caixa (não dentro) — dentro é onde o
+    // marcador do caminho pode cair em cima e esconder a letra.
+    s += `<text x="${x + 9.5}" y="109" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="700" fill="var(--text2)">${r}</text>`;
     s += `<rect x="${x}" y="118" width="19" height="62" rx="4" fill="var(--surface2)" stroke="var(--border)" stroke-width="0.75"/>`;
-    if (PF_ESTOQUE_SO_FUNDO.has(r)) {
-      s += `<text x="${x + 9.5}" y="149" text-anchor="middle" dominant-baseline="central" font-size="11" fill="var(--text2)">${r}</text>`;
-    } else {
-      s += `
-      <rect x="${x}" y="188" width="19" height="62" rx="4" fill="var(--surface2)" stroke="var(--border)" stroke-width="0.75"/>
-      <text x="${x + 9.5}" y="219" text-anchor="middle" dominant-baseline="central" font-size="11" fill="var(--text2)">${r}</text>`;
+    if (!PF_ESTOQUE_SO_FUNDO.has(r)) {
+      s += `<rect x="${x}" y="188" width="19" height="62" rx="4" fill="var(--surface2)" stroke="var(--border)" stroke-width="0.75"/>`;
     }
   });
   // Arara 1-7 no espaço de frente do corredor H (mesma coluna, sem empurrar nada)
