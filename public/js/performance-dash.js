@@ -2090,9 +2090,13 @@ function pfRenderMapaCaminho(itens) {
     ? [posicoesUnicas[0], ...pfRotaMaisProxima(posicoesUnicas[0], posicoesUnicas.slice(1))]
     : posicoesUnicas;
   const rotaIdeal = pfDoisOpt(rotaInicial);
-  const linhaIdeal = rotaIdeal.map(p => p.join(',')).join(' ');
+  // Desloca a linha ideal um pouco (só no desenho, não afeta a distância
+  // calculada) pra não ficar exatamente em cima da linha real — sem isso,
+  // trechos que coincidem nas duas rotas ficavam ilegíveis, uma escondendo
+  // a outra.
+  const linhaIdeal = rotaIdeal.map(([x, y]) => `${x + 6},${y + 6}`).join(' ');
   const marcadoresIdeal = rotaIdeal.map(([x, y]) =>
-    `<circle cx="${x}" cy="${y}" r="3.5" fill="var(--amber)"/>`
+    `<circle cx="${x + 6}" cy="${y + 6}" r="3.5" fill="var(--amber)"/>`
   ).join('');
 
   const distReal  = pfDistanciaRota(passos.map(p => p.xy));
