@@ -2016,6 +2016,32 @@ function pfCaminhoSeparacao(itens) {
   return passos;
 }
 
+// Vizinho mais próximo: a partir de `atual`, sempre visita a posição restante
+// mais perto (distância euclidiana nas coordenadas do mapa esquemático — não
+// é metro real, é só uma proxy relativa de "quão longe" cada corredor fica).
+// Heurística simples, não é o ótimo matemático, mas dá uma rota bem melhor
+// que a ordem arbitrária em segundos.
+function pfRotaMaisProxima(inicio, restantes) {
+  const pendentes = restantes.slice();
+  const rota = [];
+  let atual = inicio;
+  while (pendentes.length) {
+    let idx = 0, menorDist = Infinity;
+    pendentes.forEach((p, i) => {
+      const d = Math.hypot(p[0] - atual[0], p[1] - atual[1]);
+      if (d < menorDist) { menorDist = d; idx = i; }
+    });
+    atual = pendentes.splice(idx, 1)[0];
+    rota.push(atual);
+  }
+  return rota;
+}
+function pfDistanciaRota(pontos) {
+  let d = 0;
+  for (let i = 1; i < pontos.length; i++) d += Math.hypot(pontos[i][0] - pontos[i-1][0], pontos[i][1] - pontos[i-1][1]);
+  return d;
+}
+
 function pfRenderMapaCaminho(itens) {
   const passos = pfCaminhoSeparacao(itens);
   if (!passos.length) {
@@ -2030,11 +2056,29 @@ function pfRenderMapaCaminho(itens) {
     <text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="central" font-size="8" font-weight="800" fill="#fff">${i + 1}</text>`;
   }).join('');
 
+  // Rota ideal: mesmas posições visitadas na real (sem duplicar), começando
+  // do mesmo ponto onde o separador de fato começou, reordenadas pelo
+  // vizinho mais próximo.
+  const posicoesUnicas = [...new Map(passos.map(p => [p.chave, p.xy])).values()];
+  const rotaIdeal = posicoesUnicas.length > 1
+    ? [posicoesUnicas[0], ...pfRotaMaisProxima(posicoesUnicas[0], posicoesUnicas.slice(1))]
+    : posicoesUnicas;
+  const linhaIdeal = rotaIdeal.map(p => p.join(',')).join(' ');
+  const marcadoresIdeal = rotaIdeal.map(([x, y]) =>
+    `<circle cx="${x}" cy="${y}" r="3.5" fill="var(--amber)"/>`
+  ).join('');
+
+  const distReal  = pfDistanciaRota(passos.map(p => p.xy));
+  const distIdeal = pfDistanciaRota(rotaIdeal);
+  const economia  = distReal > 0 ? Math.round((1 - distIdeal / distReal) * 100) : 0;
+
   return `
   <div style="padding:14px 18px">
     <div style="overflow-x:auto">
       <svg viewBox="0 0 680 434" style="width:100%;min-width:560px;height:auto;display:block">
         ${pfLayoutEstoqueSVG()}
+        <polyline points="${linhaIdeal}" fill="none" stroke="var(--amber)" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="2,3"/>
+        ${marcadoresIdeal}
         <polyline points="${linhaPath}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="5,4"/>
         ${marcadores}
       </svg>
@@ -2043,7 +2087,14 @@ function pfRenderMapaCaminho(itens) {
       <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green);margin-right:5px"></span>Início</span>
       <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);margin-right:5px"></span>Passagem</span>
       <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--red);margin-right:5px"></span>Fim</span>
+      <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--amber);margin-right:5px"></span>Rota ideal sugerida</span>
       <span style="margin-left:auto">${passos.length} corredor(es) visitado(s)</span>
+    </div>
+    <div style="margin-top:8px;padding:10px 12px;background:var(--surface2);border-radius:8px;font-size:11px;color:var(--text3);line-height:1.6">
+      Rota real: <b style="color:var(--text)">${Math.round(distReal)}</b> unidades de percurso no mapa ·
+      Rota ideal sugerida (mesmas paradas, ordem otimizada): <b style="color:var(--text)">${Math.round(distIdeal)}</b> unidades
+      ${economia > 5 ? `— <b style="color:var(--green)">${economia}% mais curta</b>` : economia < -5 ? '' : '— já bem próxima do ideal'}.
+      Estimativa relativa (posições no mapa esquemático), não é distância real em metros.
     </div>
   </div>`;
 }
