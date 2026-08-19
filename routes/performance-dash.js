@@ -812,12 +812,16 @@ router.get('/performance/pedido/:numero', requerAuth, requerPerfil('supervisor',
       FROM pedidos p WHERE p.numero_pedido = $1
     `, [numero]);
 
+    // hora_verificado ordena pela sequência real de conferência (usado pra
+    // reconstruir o caminho do separador no mapa do estoque) — itens ainda
+    // não conferidos (hora_verificado vazio) ficam por último, na ordem
+    // original de cadastro.
     const itens = await db.all(`
-      SELECT i.codigo, i.descricao, i.quantidade, i.endereco
+      SELECT i.codigo, i.descricao, i.quantidade, i.endereco, i.hora_verificado
       FROM itens_pedido i
       JOIN pedidos p ON p.id = i.pedido_id
       WHERE p.numero_pedido = $1
-      ORDER BY i.id ASC
+      ORDER BY NULLIF(i.hora_verificado,'') ASC NULLS LAST, i.id ASC
     `, [numero]);
 
     res.json({ numero_pedido: numero, separacao: sep, reposicoes: reposicoes || [], checkout: ck || null, embalagem: emb || null, itens: itens || [] });

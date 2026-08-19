@@ -1826,6 +1826,103 @@ function pfFecharRastreio() {
   if (inp) inp.value   = '';
 }
 
+// ── Mapa do estoque — layout confirmado com o usuário em 2026-08-19 a partir
+// de "Layout do estoque.xlsx". Coordenadas fixas do SVG (viewBox 0 0 680 524).
+// ZA cobre os corredores F a X; Arara começa no Y, cobre até Z e desce em L
+// pela lateral direita ao longo de toda a extensão dos corredores.
+const PF_ESTOQUE_RUAS_FZ = ['F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'];
+const PF_ESTOQUE_RUAS_AE = ['E','D','C','B','A'];
+const pfColX = i => 45 + i * 22;
+
+const PF_MAPA_ESTOQUE = {};
+PF_ESTOQUE_RUAS_FZ.forEach((r, i) => { PF_MAPA_ESTOQUE[r] = [pfColX(i) + 9.5, 219]; });
+PF_ESTOQUE_RUAS_AE.forEach((r, i) => { PF_MAPA_ESTOQUE[r] = [350, 316 + i * 38]; });
+
+function pfLayoutEstoqueSVG() {
+  const box = (x, y, w, h, texto, peso) => `
+    <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="4" fill="var(--surface2)" stroke="var(--border)" stroke-width="0.75"/>
+    <text x="${x + w / 2}" y="${y + h / 2}" text-anchor="middle" dominant-baseline="central" font-size="11" font-weight="${peso||400}" fill="var(--text2)">${texto}</text>`;
+
+  let s = '';
+  s += box(45, 68, 415, 32, 'ZA', 700);
+  s += `
+    <polygon points="463,68 544,68 544,250 524,250 524,100 463,100" fill="var(--surface2)" stroke="var(--border)" stroke-width="0.75"/>
+    <text x="503.5" y="84" text-anchor="middle" dominant-baseline="central" font-size="11" font-weight="700" fill="var(--text2)">Arara</text>`;
+  s += `<line x1="45" y1="184" x2="504" y2="184" stroke="var(--border)" stroke-width="0.75" stroke-dasharray="3,3"/>`;
+  PF_ESTOQUE_RUAS_FZ.forEach((r, i) => {
+    const x = pfColX(i);
+    s += `
+    <rect x="${x}" y="118" width="19" height="62" rx="4" fill="var(--surface2)" stroke="var(--border)" stroke-width="0.75"/>
+    <rect x="${x}" y="188" width="19" height="62" rx="4" fill="var(--surface2)" stroke="var(--border)" stroke-width="0.75"/>
+    <text x="${x + 9.5}" y="219" text-anchor="middle" dominant-baseline="central" font-size="11" fill="var(--text2)">${r}</text>`;
+  });
+  s += box(60, 300, 120, 32, 'Arara', 700);
+  PF_ESTOQUE_RUAS_AE.forEach((r, i) => {
+    const y = 300 + i * 38;
+    s += box(200, y, 300, 32, r);
+  });
+  s += box(520, 300, 100, 32, 'Arara', 700);
+  return s;
+}
+
+// Extrai a letra do corredor de um endereço tipo "N144/VERT-N08-CX21" — mesma
+// lógica de lib/pontuacao.js (endereço primário é a parte antes de '/').
+function pfExtrairRua(endereco) {
+  if (!endereco) return null;
+  const end = String(endereco).split(',')[0].split('/')[0].trim().toUpperCase();
+  const m = end.match(/^([A-Z]+)\d/);
+  return m ? m[1] : null;
+}
+
+// Reconstrói o caminho percorrido pelo separador: só itens já conferidos
+// (hora_verificado preenchido), na ordem real de conferência — itens já vêm
+// ordenados assim pela API. Ignora repetições consecutivas do mesmo corredor
+// (item seguinte no mesmo lugar não é um novo "passo" no mapa).
+function pfCaminhoSeparacao(itens) {
+  const passos = [];
+  for (const it of (itens || [])) {
+    if (!it.hora_verificado) continue;
+    const rua = pfExtrairRua(it.endereco);
+    if (!rua || !PF_MAPA_ESTOQUE[rua]) continue;
+    const ultimo = passos[passos.length - 1];
+    if (ultimo && ultimo.rua === rua) continue;
+    passos.push({ rua, item: it });
+  }
+  return passos;
+}
+
+function pfRenderMapaCaminho(itens) {
+  const passos = pfCaminhoSeparacao(itens);
+  if (!passos.length) {
+    return `<div style="padding:24px;text-align:center;color:var(--text3);font-size:12px">Sem itens conferidos ainda pra desenhar o caminho.</div>`;
+  }
+  const linhaPath = passos.map(p => PF_MAPA_ESTOQUE[p.rua].join(',')).join(' ');
+  const marcadores = passos.map((p, i) => {
+    const [x, y] = PF_MAPA_ESTOQUE[p.rua];
+    const cor = i === 0 ? 'var(--green)' : (i === passos.length - 1 ? 'var(--red)' : 'var(--accent)');
+    return `
+    <circle cx="${x}" cy="${y}" r="9" fill="${cor}" stroke="var(--surface)" stroke-width="1.5"/>
+    <text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="central" font-size="9" font-weight="800" fill="#fff">${i + 1}</text>`;
+  }).join('');
+
+  return `
+  <div style="padding:14px 18px">
+    <div style="overflow-x:auto">
+      <svg viewBox="0 0 680 524" style="width:100%;min-width:560px;height:auto;display:block">
+        ${pfLayoutEstoqueSVG()}
+        <polyline points="${linhaPath}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="5,4"/>
+        ${marcadores}
+      </svg>
+    </div>
+    <div style="display:flex;gap:16px;margin-top:10px;font-size:11px;color:var(--text3);flex-wrap:wrap">
+      <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green);margin-right:5px"></span>Início</span>
+      <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);margin-right:5px"></span>Passagem</span>
+      <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--red);margin-right:5px"></span>Fim</span>
+      <span style="margin-left:auto">${passos.length} corredor(es) visitado(s)</span>
+    </div>
+  </div>`;
+}
+
 function pfRenderPedidoDetalhe(d) {
   const fmtHora = v => { if (!v) return '—'; return v.includes('T') ? v.slice(11, 16) : String(v).slice(0, 5); };
   const fmtDur  = min => {
@@ -1996,6 +2093,10 @@ function pfRenderPedidoDetalhe(d) {
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;padding:14px">
         ${sepCard}${repCard}${ckCard}${embCard}
       </div>
+      <details style="border-top:1px solid var(--border)">
+        <summary style="padding:12px 18px;cursor:pointer;font-size:12px;font-weight:800;color:var(--text);letter-spacing:.3px">Mapa do Caminho</summary>
+        ${pfRenderMapaCaminho(itens)}
+      </details>
       ${itensSecao}
     </div>`;
 }
