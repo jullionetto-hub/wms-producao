@@ -113,8 +113,8 @@ function renderizarPerformanceDash() {
       </div>
       <button id="pf-btn-filtrar" onclick="pfFiltrarAtivo()" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer">Filtrar</button>
       <button onclick="pfInicializar()" style="background:var(--surface2);color:var(--text3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:12px;cursor:pointer"><i class="ti ti-x" aria-hidden="true"></i> Limpar</button>
-      <button onclick="pfExportarExcel()" style="background:var(--green);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer">Excel</button>
-      <button onclick="pfAbrirAnalisePdf()" style="background:var(--red);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer"><i class="ti ti-file-text" aria-hidden="true"></i> Análise PDF</button>
+      <button onclick="pfExportarExcel()" style="background:var(--surface2);color:var(--green);border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer">Excel</button>
+      <button onclick="pfAbrirAnalisePdf()" style="background:var(--surface2);color:var(--red);border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer"><i class="ti ti-file-text" aria-hidden="true"></i> Análise PDF</button>
       <span id="pf-filtro-info" style="margin-left:auto;font-size:11px;color:var(--text3);align-self:center"></span>
     </div>
 
@@ -1126,7 +1126,7 @@ function pfRenderOcorrenciasUI(lista, carregando) {
       </div>
 
       <button onclick="pfSalvarOcorrencia()"
-        style="background:linear-gradient(135deg,#dc2626,#b91c1c);color:#fff;border:none;border-radius:10px;padding:12px 24px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px">
+        style="background:var(--accent);color:#fff;border:none;border-radius:10px;padding:12px 24px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px">
         Registrar Ocorrência
       </button>
     </div>`;
@@ -1146,14 +1146,14 @@ function pfRenderOcorrenciasUI(lista, carregando) {
 
   const kpis = lista.length === 0 ? '' : `
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px;margin-bottom:24px">
-      <div style="background:var(--surface2);border-radius:12px;padding:16px 18px">
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px 18px">
         <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:6px">Total de Ocorrências</div>
         <div style="font-size:32px;font-weight:900;color:var(--text)">${lista.length}</div>
       </div>
       ${Object.entries(contGrav).map(([g,n])=>{const gc=OC_GRAVIDADE[g]||{cor:'#6b7280',bg:'var(--surface2)',label:g};return`
-      <div style="background:${gc.bg||'var(--surface2)'};border-radius:12px;padding:16px 18px">
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px 18px">
         <div style="font-size:11px;font-weight:700;color:${gc.cor};margin-bottom:6px">${gc.label}</div>
-        <div style="font-size:32px;font-weight:900;color:${gc.cor}">${n}</div>
+        <div style="font-size:32px;font-weight:900;color:var(--text)">${n}</div>
       </div>`;}).join('')}
     </div>`;
 
