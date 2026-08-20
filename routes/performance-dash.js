@@ -824,7 +824,16 @@ router.get('/performance/pedido/:numero', requerAuth, requerPerfil('supervisor',
       ORDER BY NULLIF(i.hora_verificado,'') ASC NULLS LAST, i.id ASC
     `, [numero]);
 
-    res.json({ numero_pedido: numero, separacao: sep, reposicoes: reposicoes || [], checkout: ck || null, embalagem: emb || null, itens: itens || [] });
+    const itensComProblema = await db.all(`
+      SELECT cic.item_codigo AS codigo, cic.item_descricao AS descricao,
+             cic.separador_nome, cic.operador_nome, cic.data, cic.hora
+      FROM checkout_itens_conferencia cic
+      JOIN pedidos p ON p.id = cic.pedido_id
+      WHERE p.numero_pedido = $1
+      ORDER BY cic.id ASC
+    `, [numero]);
+
+    res.json({ numero_pedido: numero, separacao: sep, reposicoes: reposicoes || [], checkout: ck || null, embalagem: emb || null, itens: itens || [], itens_com_problema: itensComProblema || [] });
   } catch(e) {
     console.error('performance/pedido:', e.message);
     res.status(500).json({ erro: e.message });

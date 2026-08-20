@@ -2298,10 +2298,36 @@ function pfRenderPedidoDetalhe(d) {
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;padding:14px">
         ${sepCard}${repCard}${ckCard}${embCard}
       </div>
+      ${pfRenderItensProblemaCheckout(d.itens_com_problema)}
       <details style="border-top:1px solid var(--border)">
         <summary style="padding:12px 18px;cursor:pointer;font-size:12px;font-weight:800;color:var(--text);letter-spacing:.3px">Mapa do Caminho</summary>
         ${pfRenderMapaCaminho(itens)}
       </details>
       ${itensSecao}
+    </div>`;
+}
+
+// Itens que o checkout marcou com X (errados) — histórico ligado ao
+// separador, gravado em checkout_itens_conferencia. Só aparece quando tem
+// algo pra mostrar; não é uma penalidade, é só um registro pra revisão.
+function pfRenderItensProblemaCheckout(lista) {
+  if (!lista || !lista.length) return '';
+  const fmtHora = v => (v || '').slice(0, 5) || '—';
+  return `
+    <div style="margin:0 14px 14px;padding:12px 14px;background:rgba(201,82,79,.08);border:1px solid rgba(201,82,79,.3);border-radius:10px">
+      <div style="font-size:11px;font-weight:800;color:var(--red);letter-spacing:.3px;margin-bottom:8px">
+        ⚠ ${lista.length} item(ns) marcado(s) com problema no checkout
+      </div>
+      ${lista.map(it => `
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;border-top:1px solid rgba(201,82,79,.15)">
+          <div style="min-width:0">
+            <span style="font-family:'Space Mono',monospace;font-size:11px;font-weight:700;color:var(--text)">${pfEsc(it.codigo || '—')}</span>
+            <span style="font-size:12px;color:var(--text2);margin-left:6px">${pfEsc(it.descricao || '—')}</span>
+          </div>
+          <div style="text-align:right;flex-shrink:0;font-size:10px;color:var(--text3)">
+            separado por <b style="color:var(--text2)">${pfEsc(it.separador_nome || '—')}</b> ·
+            visto por ${pfEsc(it.operador_nome || '—')} às ${fmtHora(it.hora)}
+          </div>
+        </div>`).join('')}
     </div>`;
 }
