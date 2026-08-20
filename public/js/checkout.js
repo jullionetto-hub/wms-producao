@@ -210,43 +210,52 @@ async function registrarPendenciaMobile(id) {
   } catch(e) { toast('Erro de rede','erro'); }
 }
 
-function marcarItemFaltandoMobile(ckId, codigo, descricao, quantidade, btn) {
-  if (!_ckItensFalta[ckId]) _ckItensFalta[ckId] = [];
-  const lista = _ckItensFalta[ckId];
-  const idx   = lista.findIndex(i => i.codigo === codigo);
-  if (idx >= 0) {
-    lista.splice(idx, 1);
-    btn.style.background = 'var(--surface2)';
-    btn.style.color      = 'var(--text2)';
-    btn.textContent      = 'Marcar Falta';
-  } else {
-    lista.push({ codigo, descricao, quantidade });
-    btn.style.background = '#fee2e2';
-    btn.style.color      = '#dc2626';
-    btn.textContent      = 'Falta Marcada';
+// Estilo dos dois botões V/X — um grupo, um ativo por vez. `ok=true` deixa
+// o ✓ verde aceso; `ok=false` deixa o ✕ vermelho aceso.
+function _ckEstilizarGrupoChecagem(grupo, ok) {
+  const btnOk = grupo.querySelector('[data-role="ok"]');
+  const btnX  = grupo.querySelector('[data-role="x"]');
+  if (btnOk) {
+    btnOk.style.background   = ok ? 'rgba(87,185,129,.18)' : 'var(--surface2)';
+    btnOk.style.color        = ok ? '#16a34a' : 'var(--text3)';
+    btnOk.style.borderColor  = ok ? 'rgba(87,185,129,.5)' : 'var(--border)';
   }
-  // Mostra/esconde botão de registrar pendência
-  const btnPend = document.getElementById(`ck-btn-pendencia-${ckId}`);
-  if (btnPend) btnPend.style.display = lista.length ? 'block' : 'none';
+  if (btnX) {
+    btnX.style.background    = !ok ? 'rgba(201,82,79,.18)' : 'var(--surface2)';
+    btnX.style.color         = !ok ? '#dc2626' : 'var(--text3)';
+    btnX.style.borderColor   = !ok ? 'rgba(201,82,79,.5)' : 'var(--border)';
+  }
 }
 
-function marcarItemFaltandoDesk(ckId, codigo, descricao, quantidade, btn) {
+// Registra o resultado da conferência de um item (V = ok, X = errado).
+// Mantém a lista local `_ckItensFalta` (usada pelo fluxo existente de
+// "Registrar Pendência") e, em paralelo, grava o histórico ligado ao
+// separador via /checkout/:id/item-verificacao — não bloqueia a UI nem
+// afeta pontuação, é só consulta futura.
+function _ckRegistrarChecagem(ckId, itemId, codigo, descricao, quantidade, ok, btn, btnPendId, btnPendDisplay) {
   if (!_ckItensFalta[ckId]) _ckItensFalta[ckId] = [];
   const lista = _ckItensFalta[ckId];
-  const idx   = lista.findIndex(i => i.codigo === codigo);
-  if (idx >= 0) {
-    lista.splice(idx, 1);
-    btn.style.background = 'var(--surface2)';
-    btn.style.color      = 'var(--text2)';
-    btn.textContent      = 'Marcar Falta';
-  } else {
-    lista.push({ codigo, descricao, quantidade });
-    btn.style.background = '#fee2e2';
-    btn.style.color      = '#dc2626';
-    btn.textContent      = 'Falta Marcada';
-  }
-  const btnPend = document.getElementById(`ck-btn-pendencia-desk-${ckId}`);
-  if (btnPend) btnPend.style.display = lista.length ? 'inline-block' : 'none';
+  const idx   = lista.findIndex(i => i.item_id === itemId);
+  if (ok) { if (idx >= 0) lista.splice(idx, 1); }
+  else if (idx < 0) { lista.push({ item_id: itemId, codigo, descricao, quantidade }); }
+
+  _ckEstilizarGrupoChecagem(btn.parentElement, ok);
+
+  const btnPend = document.getElementById(btnPendId);
+  if (btnPend) btnPend.style.display = lista.length ? btnPendDisplay : 'none';
+
+  fetch(`${API}/checkout/${ckId}/item-verificacao`, {
+    method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ item_id: itemId, codigo, descricao, errado: !ok })
+  }).catch(() => {});
+}
+
+function marcarItemChecagemMobile(ckId, itemId, codigo, descricao, quantidade, ok, btn) {
+  _ckRegistrarChecagem(ckId, itemId, codigo, descricao, quantidade, ok, btn, `ck-btn-pendencia-${ckId}`, 'block');
+}
+
+function marcarItemChecagemDesk(ckId, itemId, codigo, descricao, quantidade, ok, btn) {
+  _ckRegistrarChecagem(ckId, itemId, codigo, descricao, quantidade, ok, btn, `ck-btn-pendencia-desk-${ckId}`, 'inline-block');
 }
 
 async function registrarPendenciaDesk(id) {
@@ -336,20 +345,20 @@ async function buscarCaixaMobile() {
       const concluido = r.status === 'concluido';
       const liberado  = r.status === 'liberado';
       const itensHtml = (r.itens_lista||[]).length > 0 && !concluido && !liberado
-        ? `<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px">
-            <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1px;margin-bottom:8px">ITENS DO PEDIDO — marque os que estão faltando</div>
+        ? `<div style="margin-top:10px;border-top:1px solid var(--border);padding-top:8px">
+            <div style="font-size:9px;font-weight:700;color:var(--text3);letter-spacing:.6px;margin-bottom:6px">ITENS DO PEDIDO — confira cada um</div>
             ${r.itens_lista.map(it => `
-              <div style="padding:8px 10px;background:var(--surface);border-radius:8px;margin-bottom:5px;border:1.5px solid ${it.status==='encontrado'?'rgba(87,185,129,.4)':it.status==='falta'?'rgba(201,82,79,.4)':'var(--border)'}">
-                <div style="display:flex;justify-content:space-between;align-items:center">
-                  <div style="flex:1;min-width:0">
-                    <div style="font-size:12px;font-weight:700;color:var(--accent)">${it.codigo||'—'}</div>
-                    <div style="font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${it.descricao||'—'}</div>
-                    <div style="font-size:11px;color:var(--text3)">${it.endereco||'—'} &nbsp;•&nbsp; x${it.quantidade||1}</div>
-                  </div>
-                  <button onclick="marcarItemFaltandoMobile(${r.id},'${it.codigo}','${(it.descricao||'').replace(/'/g,"\\'")}',${it.quantidade||1},this)"
-                    style="flex-shrink:0;margin-left:8px;padding:5px 10px;background:var(--surface2);color:var(--text2);border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">
-                    Marcar Falta
-                  </button>
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;padding:5px 8px;background:var(--surface);border-radius:6px;margin-bottom:3px;border:1px solid var(--border)">
+                <div style="flex:1;min-width:0">
+                  <span style="font-size:11px;font-weight:700;color:var(--accent)">${it.codigo||'—'}</span>
+                  <span style="font-size:11px;color:var(--text);margin-left:5px">${it.descricao||'—'}</span>
+                  <div style="font-size:10px;color:var(--text3)">${it.endereco||'—'} · x${it.quantidade||1}</div>
+                </div>
+                <div class="ck-chk-grupo" style="display:flex;gap:3px;flex-shrink:0">
+                  <button data-role="ok" onclick="marcarItemChecagemMobile(${r.id},${it.item_id},'${it.codigo}','${(it.descricao||'').replace(/'/g,"\\'")}',${it.quantidade||1},true,this)"
+                    style="width:24px;height:24px;padding:0;border-radius:5px;border:1px solid rgba(87,185,129,.5);background:rgba(87,185,129,.18);color:#16a34a;font-size:13px;font-weight:800;cursor:pointer">✓</button>
+                  <button data-role="x" onclick="marcarItemChecagemMobile(${r.id},${it.item_id},'${it.codigo}','${(it.descricao||'').replace(/'/g,"\\'")}',${it.quantidade||1},false,this)"
+                    style="width:24px;height:24px;padding:0;border-radius:5px;border:1px solid var(--border);background:var(--surface2);color:var(--text3);font-size:13px;font-weight:800;cursor:pointer">✕</button>
                 </div>
               </div>`).join('')}
           </div>` : (r.itens_lista||[]).length > 0 ? `<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px">
@@ -491,19 +500,21 @@ async function buscarCaixa() {
       const concluido = r.status === 'concluido';
       const liberado  = r.status === 'liberado';
       const itensHtml = (r.itens_lista||[]).length > 0 && !concluido && !liberado
-        ? `<div style="margin-top:10px;border-top:1px solid var(--border);padding-top:10px">
-            <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:1px;margin-bottom:6px">ITENS DO PEDIDO — marque os que estão faltando</div>
+        ? `<div style="margin-top:10px;border-top:1px solid var(--border);padding-top:8px">
+            <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.6px;margin-bottom:6px">ITENS DO PEDIDO — confira cada um</div>
             ${r.itens_lista.map(it=>`
-              <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;background:var(--surface);border-radius:8px;margin-bottom:4px;border:1.5px solid var(--border)">
-                <div>
-                  <span style="font-size:12px;font-weight:700;color:var(--accent)">${it.codigo||'—'}</span>
-                  <span style="font-size:12px;color:var(--text);margin-left:8px">${it.descricao||'—'}</span>
-                  <span style="font-size:11px;color:var(--text3);margin-left:6px">${it.endereco||'—'} · x${it.quantidade||1}</span>
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:5px 8px;background:var(--surface);border-radius:6px;margin-bottom:3px;border:1px solid var(--border)">
+                <div style="min-width:0">
+                  <span style="font-size:11px;font-weight:700;color:var(--accent)">${it.codigo||'—'}</span>
+                  <span style="font-size:11px;color:var(--text);margin-left:6px">${it.descricao||'—'}</span>
+                  <span style="font-size:10px;color:var(--text3);margin-left:5px">${it.endereco||'—'} · x${it.quantidade||1}</span>
                 </div>
-                <button onclick="marcarItemFaltandoDesk(${r.id},'${it.codigo}','${(it.descricao||'').replace(/'/g,"\\'")}',${it.quantidade||1},this)"
-                  style="flex-shrink:0;margin-left:8px;padding:5px 12px;background:var(--surface2);color:var(--text2);border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">
-                  Marcar Falta
-                </button>
+                <div class="ck-chk-grupo" style="display:flex;gap:3px;flex-shrink:0">
+                  <button data-role="ok" onclick="marcarItemChecagemDesk(${r.id},${it.item_id},'${it.codigo}','${(it.descricao||'').replace(/'/g,"\\'")}',${it.quantidade||1},true,this)"
+                    style="width:24px;height:24px;padding:0;border-radius:5px;border:1px solid rgba(87,185,129,.5);background:rgba(87,185,129,.18);color:#16a34a;font-size:13px;font-weight:800;cursor:pointer">✓</button>
+                  <button data-role="x" onclick="marcarItemChecagemDesk(${r.id},${it.item_id},'${it.codigo}','${(it.descricao||'').replace(/'/g,"\\'")}',${it.quantidade||1},false,this)"
+                    style="width:24px;height:24px;padding:0;border-radius:5px;border:1px solid var(--border);background:var(--surface2);color:var(--text3);font-size:13px;font-weight:800;cursor:pointer">✕</button>
+                </div>
               </div>`).join('')}
           </div>`
         : (r.itens_lista||[]).length > 0

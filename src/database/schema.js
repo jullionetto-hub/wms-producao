@@ -105,6 +105,24 @@ const TABLES = [
     data_checkout  TEXT
   )`,
 
+  // Histórico de itens marcados como errados na conferência do checkout —
+  // não afeta pontuação/ranking automaticamente, é só registro consultável
+  // por separador/pedido. Vira ocorrência formal só se um supervisor decidir.
+  `CREATE TABLE IF NOT EXISTS checkout_itens_conferencia (
+    id             SERIAL PRIMARY KEY,
+    checkout_id    INTEGER NOT NULL REFERENCES checkout(id),
+    item_id        INTEGER NOT NULL REFERENCES itens_pedido(id),
+    pedido_id      INTEGER NOT NULL REFERENCES pedidos(id),
+    numero_pedido  TEXT DEFAULT '',
+    item_codigo    TEXT DEFAULT '',
+    item_descricao TEXT DEFAULT '',
+    separador_nome TEXT DEFAULT '',
+    operador_nome  TEXT DEFAULT '',
+    data           TEXT,
+    hora           TEXT,
+    UNIQUE(checkout_id, item_id)
+  )`,
+
   `CREATE TABLE IF NOT EXISTS embalagem (
     id             SERIAL PRIMARY KEY,
     pedido_id      INTEGER REFERENCES pedidos(id),

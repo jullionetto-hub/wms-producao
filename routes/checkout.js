@@ -241,7 +241,7 @@ router.get('/checkout/caixa/:numero', requerAuth, async (req,res) => {
         row.data_checkout = data;
       }
       row.itens_lista = await db.all(
-        `SELECT codigo, descricao, endereco, quantidade, status, obs FROM itens_pedido WHERE pedido_id=$1 ORDER BY id`,
+        `SELECT id AS item_id, codigo, descricao, endereco, quantidade, status, obs FROM itens_pedido WHERE pedido_id=$1 ORDER BY id`,
         [row.pedido_id]
       );
       row.sessoes = await db.all(
@@ -356,6 +356,33 @@ router.put('/checkout/:id/pendencia', requerAuth, async (req,res) => {
   } catch(e){res.status(500).json({erro:e.message});}
 });
 
+/* ── Marca/desmarca um item como errado na conferência (V/X por item) ──
+   Não mexe no status do checkout nem gera ocorrência — é só histórico,
+   ligado ao separador que separou o pedido, pra consulta/revisão depois. */
+router.put('/checkout/:id/item-verificacao', requerAuth, async (req,res) => {
+  const { item_id, codigo, descricao, errado } = req.body || {};
+  const { data, hora } = dataHoraLocal();
+  const operador_nome = req.session?.usuario?.nome || '';
+  const id = parseInt(req.params.id);
+  if (!item_id) return res.status(400).json({erro:'item_id obrigatório'});
+  try {
+    const ck = await db.get('SELECT * FROM checkout WHERE id=$1',[id]);
+    if (!ck) return res.status(404).json({erro:'Checkout não encontrado'});
+    if (errado) {
+      await pool.query(
+        `INSERT INTO checkout_itens_conferencia
+           (checkout_id, item_id, pedido_id, numero_pedido, item_codigo, item_descricao, separador_nome, operador_nome, data, hora)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+         ON CONFLICT (checkout_id, item_id) DO UPDATE SET operador_nome=$8, data=$9, hora=$10`,
+        [id, item_id, ck.pedido_id, ck.numero_pedido, codigo||'', descricao||'', ck.separador_nome||'', operador_nome, data, hora]
+      );
+    } else {
+      await pool.query(`DELETE FROM checkout_itens_conferencia WHERE checkout_id=$1 AND item_id=$2`, [id, item_id]);
+    }
+    res.json({mensagem:'ok'});
+  } catch(e){res.status(500).json({erro:e.message});}
+});
+
 /* ── Retomar checkout da fila de espera ─────────────────────────── */
 router.put('/checkout/:id/retomar', requerAuth, async (req,res) => {
   const { hora, data } = dataHoraLocal();
@@ -376,7 +403,7 @@ router.put('/checkout/:id/retomar', requerAuth, async (req,res) => {
       [operador_nome, id]
     );
     const itens = await db.all(
-      `SELECT codigo,descricao,endereco,quantidade,status,obs FROM itens_pedido WHERE pedido_id=$1 ORDER BY id`,
+      `SELECT id AS item_id, codigo,descricao,endereco,quantidade,status,obs FROM itens_pedido WHERE pedido_id=$1 ORDER BY id`,
       [ck.pedido_id]
     );
     res.json({
