@@ -589,14 +589,13 @@ router.delete('/pedidos', requerAuth, requerPerfil('supervisor'), async (req,res
   const {data,status}=req.query;
   if (!data && !status) return res.status(400).json({erro:'Informe data ou status!'});
   try {
+    // Exclusão em lote (subquery), não em loop — um pedido por vez faz milhares de
+    // idas ao banco em listas grandes e estoura o timeout da requisição.
     const cond = data ? 'data_pedido=$1' : 'status=$1';
     const val  = data || status;
-    const peds=await db.all(`SELECT id FROM pedidos WHERE ${cond}`,[val]);
-    for (const p of peds) {
-      await pool.query('DELETE FROM avisos_repositor WHERE pedido_id=$1',[p.id]);
-      await pool.query('DELETE FROM checkout WHERE pedido_id=$1',[p.id]);
-      await pool.query('DELETE FROM itens_pedido WHERE pedido_id=$1',[p.id]);
-    }
+    await pool.query(`DELETE FROM avisos_repositor WHERE pedido_id IN (SELECT id FROM pedidos WHERE ${cond})`,[val]);
+    await pool.query(`DELETE FROM checkout WHERE pedido_id IN (SELECT id FROM pedidos WHERE ${cond})`,[val]);
+    await pool.query(`DELETE FROM itens_pedido WHERE pedido_id IN (SELECT id FROM pedidos WHERE ${cond})`,[val]);
     const r=await pool.query(`DELETE FROM pedidos WHERE ${cond}`,[val]);
     res.json({mensagem:`${r.rowCount} pedidos excluidos!`});
   } catch(e){res.status(500).json({erro:e.message});}
@@ -628,11 +627,9 @@ router.get('/pedidos/vazios', requerAuth, requerPerfil('supervisor'), async (req
 
 router.delete('/pedidos/vazios', requerAuth, requerPerfil('supervisor'), async (req,res) => {
   try {
-    const alvos = await db.all(`SELECT p.id FROM pedidos p WHERE ${WHERE_PEDIDOS_VAZIOS}`);
-    for (const p of alvos) {
-      await pool.query('DELETE FROM avisos_repositor WHERE pedido_id=$1',[p.id]);
-      await pool.query('DELETE FROM checkout WHERE pedido_id=$1',[p.id]);
-    }
+    const idsSub = `SELECT p.id FROM pedidos p WHERE ${WHERE_PEDIDOS_VAZIOS}`;
+    await pool.query(`DELETE FROM avisos_repositor WHERE pedido_id IN (${idsSub})`);
+    await pool.query(`DELETE FROM checkout WHERE pedido_id IN (${idsSub})`);
     const r = await pool.query(
       `DELETE FROM pedidos p WHERE ${WHERE_PEDIDOS_VAZIOS}`
     );
