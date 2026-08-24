@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { db, pool } = require('../lib/db');
-const { requerAuth } = require('../lib/auth');
+const { requerAuth, requerPerfil } = require('../lib/auth');
 const { dataHoraLocal, validarId } = require('../lib/helpers');
 const { registrarAuditoria } = require('../lib/auditoria');
 
@@ -124,6 +124,68 @@ router.get('/embalagem/stats', requerAuth, async (req,res) => {
       FROM pedidos WHERE status='concluido' AND data_pedido=$1`, [dt]);
     res.json({ data: dt, stats, totais });
   } catch(e) { res.status(500).json({erro:e.message}); }
+});
+
+// Marca em lote como embalado pedidos já concluídos (separados) de uma data e
+// separador(es) específicos — pra corrigir casos onde a embalagem física já
+// aconteceu mas não foi escaneada/registrada no sistema. Só supervisor.
+const WHERE_EMBALAGEM_LOTE = `
+  p.status = 'concluido'
+  AND p.data_pedido = $1
+  AND p.status_embalagem IS DISTINCT FROM 'embalado'
+  AND s.nome ILIKE ANY($2::text[])
+`;
+
+router.get('/embalagem/lote/preview', requerAuth, requerPerfil('supervisor'), async (req, res) => {
+  const { data, separadores } = req.query;
+  const nomes = String(separadores || '').split(',').map(n => n.trim()).filter(Boolean);
+  if (!data || !nomes.length) return res.status(400).json({ erro: 'Informe data e ao menos um separador!' });
+  try {
+    const padroes = nomes.map(n => `%${n}%`);
+    const rows = await db.all(
+      `SELECT p.id, p.numero_pedido, s.nome AS separador_nome
+       FROM pedidos p JOIN separadores s ON p.separador_id = s.id
+       WHERE ${WHERE_EMBALAGEM_LOTE}
+       ORDER BY p.id`,
+      [data, padroes]
+    );
+    res.json({ total: rows.length, pedidos: rows });
+  } catch(e) { res.status(500).json({ erro: e.message }); }
+});
+
+router.put('/embalagem/lote', requerAuth, requerPerfil('supervisor'), async (req, res) => {
+  const { data, separadores } = req.body;
+  const nomes = Array.isArray(separadores) ? separadores.map(n=>String(n).trim()).filter(Boolean) : [];
+  if (!data || !nomes.length) return res.status(400).json({ erro: 'Informe data e ao menos um separador!' });
+  try {
+    const padroes = nomes.map(n => `%${n}%`);
+    const { hora } = dataHoraLocal();
+    const embalado_por = `${req.session?.usuario?.nome || 'Supervisor'} (lote automático)`;
+    const alvos = await db.all(
+      `SELECT p.id, p.numero_pedido, p.cliente, p.transportadora, p.tem_prime,
+              p.embalagem_iniciado_em, p.embalado_em, s.nome AS separador_nome
+       FROM pedidos p JOIN separadores s ON p.separador_id = s.id
+       WHERE ${WHERE_EMBALAGEM_LOTE}`,
+      [data, padroes]
+    );
+    for (const ped of alvos) {
+      await pool.query(
+        `UPDATE pedidos SET status_embalagem='embalado', embalado_por=$1, embalado_em=$2 WHERE id=$3`,
+        [embalado_por, hora, ped.id]
+      );
+      const inicio = ped.embalagem_iniciado_em || ped.embalado_em || '';
+      await pool.query(
+        `INSERT INTO embalagem (pedido_id,numero_pedido,embalado_por,embalado_em,data_embalagem,cliente,transportadora,is_drive,is_prime,embalagem_inicio)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+        [ped.id, ped.numero_pedido, embalado_por, hora, data,
+         ped.cliente||'', ped.transportadora||'',
+         String(ped.transportadora||'').toUpperCase().includes('DRIVE'),
+         ped.tem_prime||false, inicio]
+      );
+      await registrarAuditoria(req, 'EMBALAR_LOTE', 'pedido', ped.id, null, {embalado_por, separador: ped.separador_nome, data});
+    }
+    res.json({ mensagem: `${alvos.length} pedido(s) marcado(s) como embalado!`, marcados: alvos.length });
+  } catch(e) { res.status(500).json({ erro: e.message }); }
 });
 
 module.exports = router;

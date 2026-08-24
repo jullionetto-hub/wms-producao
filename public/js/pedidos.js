@@ -502,6 +502,40 @@ async function alterarStatusUsuario(id, novoStatus, nome, login, perfil, turno) 
 
 
 
+async function marcarEmbaladoLote() {
+  const data = prompt('Data dos pedidos (AAAA-MM-DD):', hojeLocal());
+  if (!data) return;
+  const nomesTxt = prompt('Nome do(s) separador(es), separados por vírgula:', '');
+  if (!nomesTxt || !nomesTxt.trim()) return;
+  const nomes = nomesTxt.split(',').map(n => n.trim()).filter(Boolean);
+  let total = 0;
+  try {
+    const res = await fetch(`${API}/embalagem/lote/preview?data=${encodeURIComponent(data)}&separadores=${encodeURIComponent(nomes.join(','))}`, { credentials:'include' });
+    ({ total } = await res.json());
+  } catch(e) { toast('Erro ao verificar pedidos!','erro'); return; }
+  if (!total) { toast('Nenhum pedido concluído e não embalado encontrado pra esses filtros.','info'); return; }
+  wmsConfirm({
+    titulo:     `Marcar ${total} pedido(s) como embalado?`,
+    sub:        `Pedidos concluídos em ${data} de: ${nomes.join(', ')}. Ação não afeta pedidos já embalados.`,
+    btnOk:      'Marcar embalado',
+    btnOkClass: 'btn-primary',
+  }, async () => {
+    try {
+      const res = await fetch(`${API}/embalagem/lote`, {
+        credentials:'include', method:'PUT',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ data, separadores: nomes }),
+      });
+      const dados = await res.json();
+      toast(dados.mensagem || 'Pedidos marcados como embalado!','sucesso');
+      carregarPedidos();
+    } catch(e) { toast('Erro!','erro'); }
+  });
+}
+
+
+
+
 async function recalcularTempoEstimado() {
   try {
     const res = await fetch(`${API}/pedidos/ritmo-estimativa/recalcular`, { credentials:'include', method:'POST' });
