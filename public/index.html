@@ -16,16 +16,16 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2/tabler-icons.min.css">
   <link rel="stylesheet" href="/css/app.css?v=18">
   <style>
-    /* ── Etiquetas de pedido (Zebra ZD-220, ~101,6 x 50,8mm) ────────────────
+    /* ── Etiquetas de pedido (Zebra ZD-220, 104 x 50,8mm) ────────────────
        Se a etiqueta física sair maior/menor, ajustar só o @page e .etiqueta abaixo. */
     #etiquetas-print { display:none; }
     @media print {
       body.imprimindo-etiquetas > *:not(#etiquetas-print) { display:none !important; }
       body.imprimindo-etiquetas #etiquetas-print { display:block !important; }
-      @page { size: 101.6mm 50.8mm; margin: 0; }
+      @page { size: 104mm 50.8mm; margin: 0; }
     }
     .etiqueta {
-      width: 101.6mm; height: 50.8mm; box-sizing: border-box;
+      width: 104mm; height: 50.8mm; box-sizing: border-box;
       padding: 2mm 4mm; page-break-after: always; break-after: page;
       display: flex; flex-direction: column;
       font-family: Arial, Helvetica, sans-serif; color: #000; background: #fff;

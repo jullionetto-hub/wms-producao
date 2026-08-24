@@ -557,7 +557,11 @@ function imprimirEtiquetas() {
     </div>`).join('');
   renderizarBarcodes();
   document.body.classList.add('imprimindo-etiquetas');
-  window.print();
+  // Força reflow completo antes de imprimir — chamar window.print() logo após
+  // inserir muito conteúdo no DOM pode capturar a página antes do navegador
+  // terminar de recalcular o layout, paginando só com a 1ª etiqueta.
+  void cont.offsetHeight;
+  requestAnimationFrame(() => requestAnimationFrame(() => window.print()));
 }
 window.addEventListener('afterprint', () => document.body.classList.remove('imprimindo-etiquetas'));
 
