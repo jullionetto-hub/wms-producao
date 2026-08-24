@@ -502,6 +502,31 @@ async function alterarStatusUsuario(id, novoStatus, nome, login, perfil, turno) 
 
 
 
+async function excluirPedidosPendentes() {
+  let total = 0;
+  try {
+    const res = await fetch(`${API}/pedidos?status=pendente`, { credentials:'include' });
+    total = (await res.json()).length;
+  } catch(e) { toast('Erro ao verificar pedidos pendentes!','erro'); return; }
+  if (!total) { toast('Nenhum pedido pendente encontrado.','info'); return; }
+  wmsConfirm({
+    titulo:     `Excluir ${total} pedido(s) pendente(s)?`,
+    sub:        'TODOS os pedidos com status Pendente serão excluídos permanentemente, incluindo cliente, itens e histórico. Ação irreversível.',
+    btnOk:      'Excluir tudo',
+    btnOkClass: 'btn-danger',
+  }, async () => {
+    try {
+      const res = await fetch(`${API}/pedidos?status=pendente`, { credentials:'include', method:'DELETE' });
+      const dados = await res.json();
+      toast(dados.mensagem || 'Pedidos pendentes excluídos!','sucesso');
+      carregarPedidos();
+    } catch(e) { toast('Erro!','erro'); }
+  });
+}
+
+
+
+
 async function limparPedidosVazios() {
   let total = 0;
   try {

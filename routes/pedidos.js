@@ -586,16 +586,18 @@ router.delete('/pedidos/:id', requerAuth, requerPerfil('supervisor'), async (req
 });
 
 router.delete('/pedidos', requerAuth, requerPerfil('supervisor'), async (req,res) => {
-  const {data}=req.query;
-  if (!data) return res.status(400).json({erro:'Data nao informada!'});
+  const {data,status}=req.query;
+  if (!data && !status) return res.status(400).json({erro:'Informe data ou status!'});
   try {
-    const peds=await db.all(`SELECT id FROM pedidos WHERE data_pedido=$1`,[data]);
+    const cond = data ? 'data_pedido=$1' : 'status=$1';
+    const val  = data || status;
+    const peds=await db.all(`SELECT id FROM pedidos WHERE ${cond}`,[val]);
     for (const p of peds) {
       await pool.query('DELETE FROM avisos_repositor WHERE pedido_id=$1',[p.id]);
       await pool.query('DELETE FROM checkout WHERE pedido_id=$1',[p.id]);
       await pool.query('DELETE FROM itens_pedido WHERE pedido_id=$1',[p.id]);
     }
-    const r=await pool.query(`DELETE FROM pedidos WHERE data_pedido=$1`,[data]);
+    const r=await pool.query(`DELETE FROM pedidos WHERE ${cond}`,[val]);
     res.json({mensagem:`${r.rowCount} pedidos excluidos!`});
   } catch(e){res.status(500).json({erro:e.message});}
 });
