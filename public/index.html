@@ -20,6 +20,12 @@
        Se a etiqueta física sair maior/menor, ajustar só o @page e .etiqueta abaixo. */
     #etiquetas-print { display:none; }
     @media print {
+      /* html/body do app são fixos em 100% da tela com overflow:hidden (layout
+         de SPA em tela cheia) — sem isso, qualquer etiqueta além da 1ª fica
+         cortada fora do viewport antes mesmo de chegar na paginação. */
+      html:has(body.imprimindo-etiquetas), body.imprimindo-etiquetas {
+        height: auto !important; overflow: visible !important;
+      }
       body.imprimindo-etiquetas > *:not(#etiquetas-print) { display:none !important; }
       body.imprimindo-etiquetas #etiquetas-print { display:block !important; }
       @page { size: 104mm 50.8mm; margin: 0; }
