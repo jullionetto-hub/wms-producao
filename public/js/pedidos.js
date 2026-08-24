@@ -502,6 +502,31 @@ async function alterarStatusUsuario(id, novoStatus, nome, login, perfil, turno) 
 
 
 
+async function limparPedidosVazios() {
+  let total = 0;
+  try {
+    const res = await fetch(`${API}/pedidos/vazios`, { credentials:'include' });
+    ({ total } = await res.json());
+  } catch(e) { toast('Erro ao verificar pedidos vazios!','erro'); return; }
+  if (!total) { toast('Nenhum pedido vazio encontrado.','info'); return; }
+  wmsConfirm({
+    titulo:     `Excluir ${total} pedido(s) vazio(s)?`,
+    sub:        'Pedidos sem nenhum item, cliente, transportadora ou rua preenchidos, ainda pendentes e nunca distribuídos. Ação permanente.',
+    btnOk:      'Excluir',
+    btnOkClass: 'btn-danger',
+  }, async () => {
+    try {
+      const res = await fetch(`${API}/pedidos/vazios`, { credentials:'include', method:'DELETE' });
+      const dados = await res.json();
+      toast(dados.mensagem || 'Pedidos vazios excluídos!','sucesso');
+      carregarPedidos();
+    } catch(e) { toast('Erro!','erro'); }
+  });
+}
+
+
+
+
 function excluirUsuario(id, nome) {
   wmsConfirm({
     

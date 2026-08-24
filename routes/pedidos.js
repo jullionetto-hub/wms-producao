@@ -600,6 +600,44 @@ router.delete('/pedidos', requerAuth, requerPerfil('supervisor'), async (req,res
   } catch(e){res.status(500).json({erro:e.message});}
 });
 
+// Pedidos "vazios": sem nenhum item, sem cliente/transportadora/rua preenchidos,
+// nunca distribuídos e ainda pendentes — sobras de importação (placeholder sem
+// itensReais, ver /pedidos/importar) que não têm nenhuma informação aproveitável.
+const WHERE_PEDIDOS_VAZIOS = `
+  NOT EXISTS (SELECT 1 FROM itens_pedido i WHERE i.pedido_id = p.id)
+  AND COALESCE(p.itens,0) = 0
+  AND COALESCE(NULLIF(TRIM(p.cliente),''),'') = ''
+  AND COALESCE(NULLIF(TRIM(p.transportadora),''),'') = ''
+  AND COALESCE(NULLIF(TRIM(p.rua),''),'') = ''
+  AND p.status = 'pendente'
+  AND p.separador_id IS NULL
+`;
+
+router.get('/pedidos/vazios', requerAuth, requerPerfil('supervisor'), async (req,res) => {
+  try {
+    const rows = await db.all(
+      `SELECT p.id, p.numero_pedido, p.data_pedido, p.hora_pedido
+       FROM pedidos p WHERE ${WHERE_PEDIDOS_VAZIOS}
+       ORDER BY p.id`
+    );
+    res.json({ total: rows.length, pedidos: rows });
+  } catch(e) { res.status(500).json({erro:e.message}); }
+});
+
+router.delete('/pedidos/vazios', requerAuth, requerPerfil('supervisor'), async (req,res) => {
+  try {
+    const alvos = await db.all(`SELECT p.id FROM pedidos p WHERE ${WHERE_PEDIDOS_VAZIOS}`);
+    for (const p of alvos) {
+      await pool.query('DELETE FROM avisos_repositor WHERE pedido_id=$1',[p.id]);
+      await pool.query('DELETE FROM checkout WHERE pedido_id=$1',[p.id]);
+    }
+    const r = await pool.query(
+      `DELETE FROM pedidos p WHERE ${WHERE_PEDIDOS_VAZIOS}`
+    );
+    res.json({ mensagem:`${r.rowCount} pedido(s) vazio(s) excluído(s)!`, excluidos: r.rowCount });
+  } catch(e) { res.status(500).json({erro:e.message}); }
+});
+
 router.post('/pedidos/importar', requerAuth, requerPerfil('supervisor'), async (req,res) => {
   const dados = req.body.pedidos || req.body.linhas || [];
   if (!dados?.length) return res.status(400).json({erro:'Nenhum pedido informado!'});
