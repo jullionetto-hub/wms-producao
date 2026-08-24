@@ -126,33 +126,38 @@ router.get('/embalagem/stats', requerAuth, async (req,res) => {
   } catch(e) { res.status(500).json({erro:e.message}); }
 });
 
-// Marca em lote como embalado pedidos já concluídos (separados) de uma data e
-// separador(es) específicos — pra corrigir casos onde a embalagem física já
-// aconteceu mas não foi escaneada/registrada no sistema. Só supervisor.
-// Data = dia de "aguardando desde" (quando o pedido entrou na fila), mesmo
-// campo que a tela de Pedidos usa pro filtro De/Até — não data_pedido.
-const WHERE_EMBALAGEM_LOTE = `
-  p.status = 'concluido'
-  AND (CASE WHEN p.aguardando_desde ~ '^[0-9]{2}/[0-9]{2}/[0-9]{4}'
-             THEN TO_TIMESTAMP(p.aguardando_desde,'DD/MM/YYYY HH24:MI')::DATE END) = $1::DATE
-  AND p.status_embalagem IS DISTINCT FROM 'embalado'
-  AND s.nome ILIKE ANY($2::text[])
-`;
+// Marca em lote como embalado pedidos de uma data ("aguardando desde") e
+// separador(es) específicos — pra fechar dias parados sem passar pedido por
+// pedido. Força até pedidos ainda Pendente/Separando pra Concluído+Embalado
+// (pula separação/checkout) quando ainda não tinham sido finalizados. Só
+// supervisor. Nome comparado sem acento/maiúscula em JS (não em SQL) porque
+// ILIKE é sensível a acento — "Julio" não bateria com "Júlio" no banco.
+function _semAcento(s) {
+  return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+}
+
+async function _pedidosParaLote(data, nomes) {
+  const rows = await db.all(
+    `SELECT p.id, p.numero_pedido, p.status, p.cliente, p.transportadora, p.tem_prime,
+            p.embalagem_iniciado_em, p.embalado_em, s.nome AS separador_nome
+     FROM pedidos p JOIN separadores s ON p.separador_id = s.id
+     WHERE p.status != 'cancelado'
+       AND p.status_embalagem IS DISTINCT FROM 'embalado'
+       AND (CASE WHEN p.aguardando_desde ~ '^[0-9]{2}/[0-9]{2}/[0-9]{4}'
+                 THEN TO_TIMESTAMP(p.aguardando_desde,'DD/MM/YYYY HH24:MI')::DATE END) = $1::DATE`,
+    [data]
+  );
+  const alvo = nomes.map(_semAcento);
+  return rows.filter(r => alvo.some(n => _semAcento(r.separador_nome).includes(n)));
+}
 
 router.get('/embalagem/lote/preview', requerAuth, requerPerfil('supervisor'), async (req, res) => {
   const { data, separadores } = req.query;
   const nomes = String(separadores || '').split(',').map(n => n.trim()).filter(Boolean);
   if (!data || !nomes.length) return res.status(400).json({ erro: 'Informe data e ao menos um separador!' });
   try {
-    const padroes = nomes.map(n => `%${n}%`);
-    const rows = await db.all(
-      `SELECT p.id, p.numero_pedido, s.nome AS separador_nome
-       FROM pedidos p JOIN separadores s ON p.separador_id = s.id
-       WHERE ${WHERE_EMBALAGEM_LOTE}
-       ORDER BY p.id`,
-      [data, padroes]
-    );
-    res.json({ total: rows.length, pedidos: rows });
+    const alvos = await _pedidosParaLote(data, nomes);
+    res.json({ total: alvos.length, pedidos: alvos });
   } catch(e) { res.status(500).json({ erro: e.message }); }
 });
 
@@ -161,20 +166,19 @@ router.put('/embalagem/lote', requerAuth, requerPerfil('supervisor'), async (req
   const nomes = Array.isArray(separadores) ? separadores.map(n=>String(n).trim()).filter(Boolean) : [];
   if (!data || !nomes.length) return res.status(400).json({ erro: 'Informe data e ao menos um separador!' });
   try {
-    const padroes = nomes.map(n => `%${n}%`);
-    const { hora } = dataHoraLocal();
+    const { data: hoje, hora } = dataHoraLocal();
+    const agora = hoje + 'T' + hora;
     const embalado_por = `${req.session?.usuario?.nome || 'Supervisor'} (lote automático)`;
-    const alvos = await db.all(
-      `SELECT p.id, p.numero_pedido, p.cliente, p.transportadora, p.tem_prime,
-              p.embalagem_iniciado_em, p.embalado_em, s.nome AS separador_nome
-       FROM pedidos p JOIN separadores s ON p.separador_id = s.id
-       WHERE ${WHERE_EMBALAGEM_LOTE}`,
-      [data, padroes]
-    );
+    const alvos = await _pedidosParaLote(data, nomes);
     for (const ped of alvos) {
       await pool.query(
-        `UPDATE pedidos SET status_embalagem='embalado', embalado_por=$1, embalado_em=$2 WHERE id=$3`,
-        [embalado_por, hora, ped.id]
+        `UPDATE pedidos SET
+           status='concluido',
+           concluido_em=COALESCE(NULLIF(concluido_em,''),$1),
+           skus_concluido_em=COALESCE(NULLIF(skus_concluido_em,''),$1),
+           status_embalagem='embalado', embalado_por=$2, embalado_em=$3
+         WHERE id=$4`,
+        [agora, embalado_por, hora, ped.id]
       );
       const inicio = ped.embalagem_iniciado_em || ped.embalado_em || '';
       await pool.query(
@@ -185,7 +189,7 @@ router.put('/embalagem/lote', requerAuth, requerPerfil('supervisor'), async (req
          String(ped.transportadora||'').toUpperCase().includes('DRIVE'),
          ped.tem_prime||false, inicio]
       );
-      await registrarAuditoria(req, 'EMBALAR_LOTE', 'pedido', ped.id, null, {embalado_por, separador: ped.separador_nome, data});
+      await registrarAuditoria(req, 'EMBALAR_LOTE', 'pedido', ped.id, null, {embalado_por, separador: ped.separador_nome, data, status_anterior: ped.status});
     }
     res.json({ mensagem: `${alvos.length} pedido(s) marcado(s) como embalado!`, marcados: alvos.length });
   } catch(e) { res.status(500).json({ erro: e.message }); }

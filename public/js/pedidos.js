@@ -513,10 +513,10 @@ async function marcarEmbaladoLote() {
     const res = await fetch(`${API}/embalagem/lote/preview?data=${encodeURIComponent(data)}&separadores=${encodeURIComponent(nomes.join(','))}`, { credentials:'include' });
     ({ total } = await res.json());
   } catch(e) { toast('Erro ao verificar pedidos!','erro'); return; }
-  if (!total) { toast('Nenhum pedido concluído e não embalado encontrado pra esses filtros.','info'); return; }
+  if (!total) { toast('Nenhum pedido não embalado encontrado pra esses filtros.','info'); return; }
   wmsConfirm({
     titulo:     `Marcar ${total} pedido(s) como embalado?`,
-    sub:        `Pedidos concluídos, aguardando desde ${data}, de: ${nomes.join(', ')}. Ação não afeta pedidos já embalados.`,
+    sub:        `Aguardando desde ${data}, de: ${nomes.join(', ')}. Quem ainda estava Pendente/Separando vai pra Concluído + Embalado direto, pulando separação e checkout. Ação não afeta pedidos já embalados.`,
     btnOk:      'Marcar embalado',
     btnOkClass: 'btn-primary',
   }, async () => {
