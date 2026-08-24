@@ -537,9 +537,12 @@ async function alterarStatusUsuario(id, novoStatus, nome, login, perfil, turno) 
 // barras Code128 do número do pedido — o mesmo valor que /pedidos/bipar espera
 // ao escanear. Etiqueta dimensionada pra Zebra ZD-220 (~101,6 x 50,8mm); pra
 // ajustar tamanho físico, mexer só no @page/.etiqueta em index.html.
+// Agrupada por separador (sort estável — mantém a ordem de aguardando_desde
+// dentro de cada grupo) pra sair "todas do colaborador A, depois B, ...".
 function imprimirEtiquetas() {
-  const lista = _pedidosListaFiltrada || [];
+  const lista = [...(_pedidosListaFiltrada || [])];
   if (!lista.length) { toast('Nenhum pedido na lista pra imprimir.','info'); return; }
+  lista.sort((a, b) => (a.separador_nome || '~Sem separador').localeCompare(b.separador_nome || '~Sem separador', 'pt-BR'));
   const cont = document.getElementById('etiquetas-print');
   if (!cont) return;
   cont.innerHTML = lista.map(p => `
@@ -549,7 +552,7 @@ function imprimirEtiquetas() {
         <span class="et-envio">${pfEsc(p.transportadora||'—')}</span>
       </div>
       <div class="et-cliente">${pfEsc(p.cliente||'—')}</div>
-      <div class="et-contagem">${p.itens||0} SKUs · ${p.total_itens||p.itens||0} itens</div>
+      <div class="et-meta">${p.itens||0} SKUs · ${p.total_itens||p.itens||0} itens · desde ${pfEsc(p.aguardando_desde||'—')}</div>
       <div class="et-barcode"><svg data-barcode="${pfEsc(p.numero_pedido)}"></svg></div>
     </div>`).join('');
   renderizarBarcodes();

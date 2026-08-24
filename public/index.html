@@ -26,18 +26,26 @@
     }
     .etiqueta {
       width: 101.6mm; height: 50.8mm; box-sizing: border-box;
-      padding: 3mm 4mm; page-break-after: always; break-after: page;
-      display: flex; flex-direction: column; justify-content: space-between;
+      padding: 2mm 4mm; page-break-after: always; break-after: page;
+      display: flex; flex-direction: column;
       font-family: Arial, Helvetica, sans-serif; color: #000; background: #fff;
       overflow: hidden;
     }
-    .etiqueta .et-topo { display:flex; justify-content:space-between; align-items:baseline; gap:6px }
-    .etiqueta .et-pedido { font-size: 8mm; font-weight: 800; letter-spacing: .3px; white-space:nowrap }
-    .etiqueta .et-envio { font-size: 4mm; font-weight: 700; text-transform:uppercase; white-space:nowrap }
-    .etiqueta .et-cliente { font-size: 4.6mm; font-weight: 600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
-    .etiqueta .et-contagem { font-size: 3.6mm; font-weight: 600; color:#333 }
-    .etiqueta .et-barcode { display:flex; justify-content:center; align-items:center; flex:1 }
-    .etiqueta .et-barcode svg { max-width:100%; max-height:100% }
+    .etiqueta .et-topo { display:flex; justify-content:space-between; align-items:baseline; gap:6px; flex:0 0 auto }
+    .etiqueta .et-pedido { font-size: 6.5mm; font-weight: 800; letter-spacing: .2px; white-space:nowrap }
+    .etiqueta .et-envio { font-size: 3.6mm; font-weight: 700; text-transform:uppercase; white-space:nowrap }
+    .etiqueta .et-cliente {
+      font-size: 4mm; font-weight: 600; overflow:hidden; text-overflow:ellipsis;
+      white-space:nowrap; flex:0 0 auto; margin-top:1mm;
+    }
+    .etiqueta .et-meta {
+      font-size: 3mm; font-weight: 600; color:#333; overflow:hidden; text-overflow:ellipsis;
+      white-space:nowrap; flex:0 0 auto; margin-top:.5mm;
+    }
+    /* Código de barras ocupa o resto da etiqueta — svg preenche 100% da área
+       reservada (não só o tamanho intrínseco) pra não sobrar espaço morto. */
+    .etiqueta .et-barcode { flex:1 1 auto; min-height:0; display:flex; justify-content:center; align-items:center; margin-top:1mm }
+    .etiqueta .et-barcode svg { width:100%; height:100% }
   </style>
 </head>
 <body>
