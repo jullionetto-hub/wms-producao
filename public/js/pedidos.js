@@ -503,7 +503,7 @@ async function alterarStatusUsuario(id, novoStatus, nome, login, perfil, turno) 
 
 
 async function marcarEmbaladoLote() {
-  const data = prompt('Data dos pedidos (AAAA-MM-DD):', hojeLocal());
+  const data = prompt('Pedidos aguardando desde (AAAA-MM-DD):', hojeLocal());
   if (!data) return;
   const nomesTxt = prompt('Nome do(s) separador(es), separados por vírgula:', '');
   if (!nomesTxt || !nomesTxt.trim()) return;
@@ -516,7 +516,7 @@ async function marcarEmbaladoLote() {
   if (!total) { toast('Nenhum pedido concluído e não embalado encontrado pra esses filtros.','info'); return; }
   wmsConfirm({
     titulo:     `Marcar ${total} pedido(s) como embalado?`,
-    sub:        `Pedidos concluídos em ${data} de: ${nomes.join(', ')}. Ação não afeta pedidos já embalados.`,
+    sub:        `Pedidos concluídos, aguardando desde ${data}, de: ${nomes.join(', ')}. Ação não afeta pedidos já embalados.`,
     btnOk:      'Marcar embalado',
     btnOkClass: 'btn-primary',
   }, async () => {

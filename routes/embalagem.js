@@ -129,9 +129,12 @@ router.get('/embalagem/stats', requerAuth, async (req,res) => {
 // Marca em lote como embalado pedidos já concluídos (separados) de uma data e
 // separador(es) específicos — pra corrigir casos onde a embalagem física já
 // aconteceu mas não foi escaneada/registrada no sistema. Só supervisor.
+// Data = dia de "aguardando desde" (quando o pedido entrou na fila), mesmo
+// campo que a tela de Pedidos usa pro filtro De/Até — não data_pedido.
 const WHERE_EMBALAGEM_LOTE = `
   p.status = 'concluido'
-  AND p.data_pedido = $1
+  AND (CASE WHEN p.aguardando_desde ~ '^[0-9]{2}/[0-9]{2}/[0-9]{4}'
+             THEN TO_TIMESTAMP(p.aguardando_desde,'DD/MM/YYYY HH24:MI')::DATE END) = $1::DATE
   AND p.status_embalagem IS DISTINCT FROM 'embalado'
   AND s.nome ILIKE ANY($2::text[])
 `;
