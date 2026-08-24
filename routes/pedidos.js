@@ -115,51 +115,66 @@ const RITMO_CACHE_MS      = 30 * 60 * 1000; // 30 min
 const RITMO_MIN_AMOSTRAS  = 20; // abaixo disso, o front usa o fallback fixo
 const RITMO_CONC_LIMIAR   = 8;  // itens/SKU a partir daqui = concentração "alta"
 
+async function _computarRitmo() {
+  const rows = await db.all(`
+    SELECT
+      (CASE
+        WHEN total_itens <= 0 THEN 'facil'
+        WHEN pontuacao / total_itens <= 1.2 THEN 'facil'
+        WHEN pontuacao / total_itens <= 1.7 THEN 'medio'
+        ELSE 'dificil'
+      END) || '_' || (
+        CASE WHEN total_itens / GREATEST(1, itens_skus) >= ${RITMO_CONC_LIMIAR} THEN 'alta' ELSE 'baixa' END
+      ) AS bucket,
+      COUNT(*) AS amostras,
+      PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY pontuacao / duracao_min) AS ritmo
+    FROM (
+      SELECT
+        COALESCE(NULLIF(p.total_itens,0), p.itens, 0)::float AS total_itens,
+        COALESCE(p.pontuacao,0)::float AS pontuacao,
+        COALESCE(NULLIF(p.itens,0), 1)::float AS itens_skus,
+        GREATEST(0.5, EXTRACT(EPOCH FROM (
+          COALESCE(NULLIF(p.skus_concluido_em,''), NULLIF(p.concluido_em,''))::timestamp
+          - p.iniciado_em::timestamp
+        )) / 60.0 - COALESCE(p.tempo_aguardando_min,0)) AS duracao_min
+      FROM pedidos p
+      WHERE p.status = 'concluido'
+        AND NULLIF(p.iniciado_em,'') IS NOT NULL
+        AND NULLIF(COALESCE(NULLIF(p.skus_concluido_em,''), NULLIF(p.concluido_em,'')),'') IS NOT NULL
+    ) sub
+    WHERE total_itens > 0 AND pontuacao > 0 AND duracao_min BETWEEN 0.5 AND 180
+    GROUP BY 1
+  `);
+  const buckets = {};
+  for (const r of rows) {
+    const amostras = parseInt(r.amostras) || 0;
+    buckets[r.bucket] = {
+      ritmo: amostras >= RITMO_MIN_AMOSTRAS ? Math.round(parseFloat(r.ritmo) * 100) / 100 : null,
+      amostras,
+    };
+  }
+  return { buckets, min_amostras: RITMO_MIN_AMOSTRAS, calculado_em: new Date().toISOString() };
+}
+
 router.get('/pedidos/ritmo-estimativa', requerAuth, async (req, res) => {
   try {
     const agora = Date.now();
     if (_ritmoCache.data && (agora - _ritmoCache.calculadoEm) < RITMO_CACHE_MS) {
       return res.json(_ritmoCache.data);
     }
-    const rows = await db.all(`
-      SELECT
-        (CASE
-          WHEN total_itens <= 0 THEN 'facil'
-          WHEN pontuacao / total_itens <= 1.2 THEN 'facil'
-          WHEN pontuacao / total_itens <= 1.7 THEN 'medio'
-          ELSE 'dificil'
-        END) || '_' || (
-          CASE WHEN total_itens / GREATEST(1, itens_skus) >= ${RITMO_CONC_LIMIAR} THEN 'alta' ELSE 'baixa' END
-        ) AS bucket,
-        COUNT(*) AS amostras,
-        PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY pontuacao / duracao_min) AS ritmo
-      FROM (
-        SELECT
-          COALESCE(NULLIF(p.total_itens,0), p.itens, 0)::float AS total_itens,
-          COALESCE(p.pontuacao,0)::float AS pontuacao,
-          COALESCE(NULLIF(p.itens,0), 1)::float AS itens_skus,
-          GREATEST(0.5, EXTRACT(EPOCH FROM (
-            COALESCE(NULLIF(p.skus_concluido_em,''), NULLIF(p.concluido_em,''))::timestamp
-            - p.iniciado_em::timestamp
-          )) / 60.0 - COALESCE(p.tempo_aguardando_min,0)) AS duracao_min
-        FROM pedidos p
-        WHERE p.status = 'concluido'
-          AND NULLIF(p.iniciado_em,'') IS NOT NULL
-          AND NULLIF(COALESCE(NULLIF(p.skus_concluido_em,''), NULLIF(p.concluido_em,'')),'') IS NOT NULL
-      ) sub
-      WHERE total_itens > 0 AND pontuacao > 0 AND duracao_min BETWEEN 0.5 AND 180
-      GROUP BY 1
-    `);
-    const buckets = {};
-    for (const r of rows) {
-      const amostras = parseInt(r.amostras) || 0;
-      buckets[r.bucket] = {
-        ritmo: amostras >= RITMO_MIN_AMOSTRAS ? Math.round(parseFloat(r.ritmo) * 100) / 100 : null,
-        amostras,
-      };
-    }
-    const resultado = { buckets, min_amostras: RITMO_MIN_AMOSTRAS, calculado_em: new Date().toISOString() };
+    const resultado = await _computarRitmo();
     _ritmoCache = { data: resultado, calculadoEm: agora };
+    res.json(resultado);
+  } catch(e) { res.status(500).json({erro:e.message}); }
+});
+
+// Força recálculo imediato, ignorando o cache de 30min — usado pelo botão
+// "Recalcular tempo estimado" na tela de Pedidos, pra refletir na hora os
+// pedidos concluídos mais recentes em vez de esperar o cache expirar.
+router.post('/pedidos/ritmo-estimativa/recalcular', requerAuth, requerPerfil('supervisor'), async (req, res) => {
+  try {
+    const resultado = await _computarRitmo();
+    _ritmoCache = { data: resultado, calculadoEm: Date.now() };
     res.json(resultado);
   } catch(e) { res.status(500).json({erro:e.message}); }
 });

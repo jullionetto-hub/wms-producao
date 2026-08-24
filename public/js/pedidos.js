@@ -502,6 +502,22 @@ async function alterarStatusUsuario(id, novoStatus, nome, login, perfil, turno) 
 
 
 
+async function recalcularTempoEstimado() {
+  try {
+    const res = await fetch(`${API}/pedidos/ritmo-estimativa/recalcular`, { credentials:'include', method:'POST' });
+    const dados = await res.json();
+    if (!res.ok) { toast(dados.erro || 'Erro ao recalcular!','erro'); return; }
+    _ritmoReal = dados;
+    const buckets = Object.values(dados.buckets || {});
+    const comAmostra = buckets.filter(b => b.ritmo !== null).length;
+    toast(`Tempo estimado recalculado! ${comAmostra}/${buckets.length || 6} faixas com dado real.`,'sucesso');
+    _renderTabelaPedidos();
+  } catch(e) { toast('Erro ao recalcular tempo estimado!','erro'); }
+}
+
+
+
+
 async function excluirPedidosPendentes() {
   let total = 0;
   try {
