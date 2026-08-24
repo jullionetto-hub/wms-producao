@@ -15,9 +15,34 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2/tabler-icons.min.css">
   <link rel="stylesheet" href="/css/app.css?v=18">
+  <style>
+    /* ── Etiquetas de pedido (Zebra ZD-220, ~101,6 x 50,8mm) ────────────────
+       Se a etiqueta física sair maior/menor, ajustar só o @page e .etiqueta abaixo. */
+    #etiquetas-print { display:none; }
+    @media print {
+      body.imprimindo-etiquetas > *:not(#etiquetas-print) { display:none !important; }
+      body.imprimindo-etiquetas #etiquetas-print { display:block !important; }
+      @page { size: 101.6mm 50.8mm; margin: 0; }
+    }
+    .etiqueta {
+      width: 101.6mm; height: 50.8mm; box-sizing: border-box;
+      padding: 3mm 4mm; page-break-after: always; break-after: page;
+      display: flex; flex-direction: column; justify-content: space-between;
+      font-family: Arial, Helvetica, sans-serif; color: #000; background: #fff;
+      overflow: hidden;
+    }
+    .etiqueta .et-topo { display:flex; justify-content:space-between; align-items:baseline; gap:6px }
+    .etiqueta .et-pedido { font-size: 8mm; font-weight: 800; letter-spacing: .3px; white-space:nowrap }
+    .etiqueta .et-envio { font-size: 4mm; font-weight: 700; text-transform:uppercase; white-space:nowrap }
+    .etiqueta .et-cliente { font-size: 4.6mm; font-weight: 600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+    .etiqueta .et-contagem { font-size: 3.6mm; font-weight: 600; color:#333 }
+    .etiqueta .et-barcode { display:flex; justify-content:center; align-items:center; flex:1 }
+    .etiqueta .et-barcode svg { max-width:100%; max-height:100% }
+  </style>
 </head>
 <body>
 
+<div id="etiquetas-print"></div>
 
 
 
@@ -302,6 +327,7 @@
               <button class="btn btn-outline btn-sm" style="color:var(--red);border-color:var(--red)" onclick="excluirPedidosPendentes()">Excluir pendentes</button>
               <button class="btn btn-outline btn-sm" onclick="recalcularTempoEstimado()">Recalcular tempo</button>
               <button class="btn btn-outline btn-sm" onclick="marcarEmbaladoLote()">Marcar embalado</button>
+              <button class="btn btn-primary btn-sm" onclick="imprimirEtiquetas()">Imprimir etiquetas</button>
               <button class="excel-btn" onclick="exportarExcel('pedidos')">Excel</button>
             </div>
           </div>

@@ -533,6 +533,34 @@ async function alterarStatusUsuario(id, novoStatus, nome, login, perfil, turno) 
 
 
 
+// Imprime uma etiqueta por pedido (lista filtrada atual da tela) com código de
+// barras Code128 do número do pedido — o mesmo valor que /pedidos/bipar espera
+// ao escanear. Etiqueta dimensionada pra Zebra ZD-220 (~101,6 x 50,8mm); pra
+// ajustar tamanho físico, mexer só no @page/.etiqueta em index.html.
+function imprimirEtiquetas() {
+  const lista = _pedidosListaFiltrada || [];
+  if (!lista.length) { toast('Nenhum pedido na lista pra imprimir.','info'); return; }
+  const cont = document.getElementById('etiquetas-print');
+  if (!cont) return;
+  cont.innerHTML = lista.map(p => `
+    <div class="etiqueta">
+      <div class="et-topo">
+        <span class="et-pedido">#${pfEsc(p.numero_pedido)}</span>
+        <span class="et-envio">${pfEsc(p.transportadora||'—')}</span>
+      </div>
+      <div class="et-cliente">${pfEsc(p.cliente||'—')}</div>
+      <div class="et-contagem">${p.itens||0} SKUs · ${p.total_itens||p.itens||0} itens</div>
+      <div class="et-barcode"><svg data-barcode="${pfEsc(p.numero_pedido)}"></svg></div>
+    </div>`).join('');
+  renderizarBarcodes();
+  document.body.classList.add('imprimindo-etiquetas');
+  window.print();
+}
+window.addEventListener('afterprint', () => document.body.classList.remove('imprimindo-etiquetas'));
+
+
+
+
 async function marcarEmbaladoLote() {
   const data = prompt('Pedidos aguardando desde (AAAA-MM-DD):', hojeLocal());
   if (!data) return;
