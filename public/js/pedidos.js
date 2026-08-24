@@ -265,7 +265,10 @@ async function abrirRastreioPedido(numero) {
     <div style="background:var(--surface);border-radius:16px;width:min(900px,98vw);max-height:92vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.4)">
       <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-shrink:0">
         <div style="font-family:'Space Mono',monospace;font-size:16px;font-weight:800;color:var(--text)">Rastreio do Pedido <span style="color:var(--accent)">#${numero}</span></div>
-        <button onclick="fecharRastreioPedido()" style="background:transparent;border:none;font-size:22px;cursor:pointer;color:var(--text3);line-height:1">✕</button>
+        <div style="display:flex;align-items:center;gap:10px">
+          <button class="btn btn-outline btn-sm" onclick="retornarPedidoParaFila('${numero}')">Voltar pra fila</button>
+          <button onclick="fecharRastreioPedido()" style="background:transparent;border:none;font-size:22px;cursor:pointer;color:var(--text3);line-height:1">✕</button>
+        </div>
       </div>
       <div id="ped-rastreio-conteudo" style="padding:16px 20px">
         <div style="text-align:center;padding:40px;color:var(--text3)">Buscando...</div>
@@ -285,6 +288,34 @@ async function abrirRastreioPedido(numero) {
 function fecharRastreioPedido() {
   const modal = document.getElementById('ped-rastreio-modal');
   if (modal) modal.style.display = 'none';
+}
+
+// Desfaz a distribuição: volta o pedido pra fila (status=pendente, sem
+// separador), pra corrigir atribuição errada. Não mexe em itens já escaneados.
+async function retornarPedidoParaFila(numero) {
+  let ped;
+  try {
+    const res = await fetch(`${API}/pedidos?numero_pedido=${encodeURIComponent(numero)}`, { credentials:'include' });
+    const rows = await res.json();
+    ped = rows?.[0];
+  } catch(e) { toast('Erro ao buscar pedido!','erro'); return; }
+  if (!ped) { toast('Pedido não encontrado!','erro'); return; }
+  if (ped.status === 'pendente' && !ped.separador_id) { toast('Esse pedido já está na fila, sem colaborador.','info'); return; }
+  wmsConfirm({
+    titulo:     `Voltar pedido #${numero} pra fila?`,
+    sub:        `Remove ${ped.separador_nome ? `de "${ped.separador_nome}"` : 'o colaborador atual'} e volta o status pra Pendente. Itens já escaneados não são desfeitos.`,
+    btnOk:      'Voltar pra fila',
+    btnOkClass: 'btn-danger',
+  }, async () => {
+    try {
+      const res = await fetch(`${API}/pedidos/${ped.id}/redefinir`, { credentials:'include', method:'PUT' });
+      const dados = await res.json();
+      if (!res.ok) { toast(dados.erro || 'Erro!','erro'); return; }
+      toast('Pedido de volta pra fila!','sucesso');
+      fecharRastreioPedido();
+      carregarPedidos();
+    } catch(e) { toast('Erro!','erro'); }
+  });
 }
 
 

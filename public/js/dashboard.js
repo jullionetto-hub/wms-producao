@@ -1018,13 +1018,18 @@ async function popularSelects() {
     // registro de separador vinculado com pedidos atribuídos — filtrar por
     // perfil==='separador' escondia esses casos do dropdown.
     const seps = all.filter(s => s.status === 'ativo').map(s => ({ id: s.id, nome: s.usuario_nome || s.nome }));
+    // filtro-ped-sep lista TODOS os colaboradores, incluindo inativos — o filtro
+    // de Pedidos precisa achar pedidos antigos de gente que já saiu/foi
+    // desativada, não só quem está ativo hoje.
+    const todos = all.map(s => ({ id: s.id, nome: s.usuario_nome || s.nome }))
+      .sort((a,b) => a.nome.localeCompare(b.nome, 'pt-BR'));
     todosSeparadores = seps;
     ['filtro-sep-prod','filtro-ped-sep'].forEach(id => {
       const sel = document.getElementById(id); if (!sel) return;
       const val = sel.value;
       // filtro-ped-sep usa nome para comparar com separador_nome nos pedidos
       if (id === 'filtro-ped-sep') {
-        sel.innerHTML = '<option value="">Todos</option>' + seps.map(s=>`<option value="${s.nome}">${s.nome}</option>`).join('');
+        sel.innerHTML = '<option value="">Todos</option>' + todos.map(s=>`<option value="${s.nome}">${s.nome}</option>`).join('');
       } else {
         sel.innerHTML = '<option value="">Todos</option>' + seps.map(s=>`<option value="${s.id}">${s.nome}</option>`).join('');
       }
