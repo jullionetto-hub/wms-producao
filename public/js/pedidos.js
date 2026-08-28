@@ -618,6 +618,15 @@ async function recalcularTempoEstimado() {
 
 
 
+function toggleMenuPedidosMais(e) {
+  e && e.stopPropagation();
+  document.getElementById('menu-pedidos-mais')?.classList.toggle('aberto');
+}
+function fecharMenuPedidosMais() {
+  document.getElementById('menu-pedidos-mais')?.classList.remove('aberto');
+}
+document.addEventListener('click', fecharMenuPedidosMais);
+
 async function excluirPedidosPendentes() {
   let total = 0;
   try {

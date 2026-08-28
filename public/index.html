@@ -333,16 +333,22 @@
         <!-- Painel de pedidos bloqueados: removido da tela Pedidos — ver tela Liberação -->
         <div class="card">
           <div class="card-hd">Filtros
-            <div style="display:flex;gap:8px">
+            <div style="display:flex;gap:8px;position:relative">
               <button class="btn btn-outline btn-sm" onclick="carregarPedidos()">Atualizar</button>
               <button class="btn btn-primary btn-sm" onclick="abrirModalImportar()">Importar</button>
               <button class="btn btn-primary btn-sm" onclick="abrirModalDistribuicao()">Distribuir</button>
-              <button class="btn btn-outline btn-sm" onclick="limparPedidosVazios()">Limpar vazios</button>
-              <button class="btn btn-outline btn-sm" style="color:var(--red);border-color:var(--red)" onclick="excluirPedidosPendentes()">Excluir pendentes</button>
-              <button class="btn btn-outline btn-sm" onclick="recalcularTempoEstimado()">Recalcular tempo</button>
-              <button class="btn btn-outline btn-sm" onclick="marcarEmbaladoLote()">Marcar embalado</button>
-              <button class="btn btn-primary btn-sm" onclick="imprimirEtiquetas()">Imprimir etiquetas</button>
+              <button class="btn btn-outline btn-sm" onclick="imprimirEtiquetas()">Imprimir etiquetas</button>
               <button class="excel-btn" onclick="exportarExcel('pedidos')">Excel</button>
+              <div style="position:relative">
+                <button class="btn btn-outline btn-sm" onclick="toggleMenuPedidosMais(event)">Mais ações <i class="ti ti-chevron-down" aria-hidden="true"></i></button>
+                <div id="menu-pedidos-mais" class="mais-acoes-drop">
+                  <button onclick="fecharMenuPedidosMais();limparPedidosVazios()">Limpar vazios</button>
+                  <button onclick="fecharMenuPedidosMais();recalcularTempoEstimado()">Recalcular tempo</button>
+                  <button onclick="fecharMenuPedidosMais();marcarEmbaladoLote()">Marcar embalado</button>
+                  <div class="mais-acoes-sep"></div>
+                  <button class="perigo" onclick="fecharMenuPedidosMais();excluirPedidosPendentes()">Excluir pendentes</button>
+                </div>
+              </div>
             </div>
           </div>
           <div class="date-filter-bar">
@@ -2374,7 +2380,7 @@
 
 
 <script src="/js/config.js?v=11"></script>
-  <script src="/js/pedidos.js?v=29"></script>
+  <script src="/js/pedidos.js?v=30"></script>
   <script src="/js/separador.js?v=17"></script>
   <script src="/js/repositor.js?v=17"></script>
   <script src="/js/checkout.js?v=14"></script>
