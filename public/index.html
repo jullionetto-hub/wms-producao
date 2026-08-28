@@ -1192,7 +1192,46 @@
         <div class="pg-title">Caixas</div>
         <div style="padding:0 0 40px">
           <p style="color:var(--text3);font-size:12px;margin:-6px 0 14px">Checklist de organização das estações (computador, mouse, impressora...). Clique numa caixa pra conferir.</p>
-          <div id="caixas-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px"></div>
+          <div id="caixas-grid" class="caixas-grid"></div>
+
+          <div class="card" style="margin-top:20px">
+            <div class="card-hd"><i class="ti ti-history" aria-hidden="true"></i>Histórico de conferências</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px">
+              <div class="fg"><label>De</label><input type="date" id="cxlog-ini"/></div>
+              <div class="fg"><label>Até</label><input type="date" id="cxlog-fim"/></div>
+              <div class="fg"><label>Caixa</label>
+                <select id="cxlog-numero">
+                  <option value="">Todas</option>
+                  ${Array.from({length:10},(_,i)=>`<option value="${i+1}">Caixa ${String(i+1).padStart(2,'0')}</option>`).join('')}
+                </select>
+              </div>
+              <div class="fg"><label>Turno</label>
+                <select id="cxlog-turno">
+                  <option value="">Todos</option>
+                  <option value="Manha">Manhã</option>
+                  <option value="Tarde">Tarde</option>
+                  <option value="Noite">Noite</option>
+                </select>
+              </div>
+              <button onclick="carregarLogCaixas()" class="btn btn-primary btn-sm">Filtrar</button>
+            </div>
+            <div style="overflow-x:auto">
+              <table style="width:100%;border-collapse:collapse;font-size:12px">
+                <thead>
+                  <tr style="background:var(--surface2)">
+                    <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:800;color:var(--text3)">DATA</th>
+                    <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:800;color:var(--text3)">CAIXA</th>
+                    <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:800;color:var(--text3)">TURNO</th>
+                    <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:800;color:var(--text3)">OPERADOR</th>
+                    <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:800;color:var(--text3)">CONFERIDO POR</th>
+                    <th style="padding:8px 10px;text-align:center;font-size:10px;font-weight:800;color:var(--text3)">STATUS</th>
+                    <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:800;color:var(--text3)">OBSERVAÇÕES</th>
+                  </tr>
+                </thead>
+                <tbody id="cxlog-tbody"><tr><td colspan="7" style="text-align:center;color:var(--text3);padding:16px">Carregando...</td></tr></tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1204,6 +1243,22 @@
             <button onclick="fecharModalCaixa()" style="background:transparent;border:none;font-size:22px;cursor:pointer;color:var(--text3);line-height:1">✕</button>
           </div>
           <div style="padding:18px 20px;display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;gap:10px">
+              <div style="flex:1">
+                <label style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;display:block;margin-bottom:4px">Quem estava operando</label>
+                <input id="mcc-operador" type="text" placeholder="Nome do colaborador"
+                  style="width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:var(--surface2);color:var(--text);box-sizing:border-box">
+              </div>
+              <div style="width:120px">
+                <label style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;display:block;margin-bottom:4px">Turno</label>
+                <select id="mcc-turno" style="width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:var(--surface2);color:var(--text);box-sizing:border-box">
+                  <option value="">—</option>
+                  <option value="Manha">Manhã</option>
+                  <option value="Tarde">Tarde</option>
+                  <option value="Noite">Noite</option>
+                </select>
+              </div>
+            </div>
             <label class="mcc-item" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;cursor:pointer">
               <input type="checkbox" id="mcc-organizada" checked style="width:18px;height:18px;accent-color:var(--green)">
               <span style="font-size:13px;font-weight:600">Está organizada?</span>
@@ -2307,8 +2362,8 @@
   <script src="/js/performance-dash.js?v=8"></script>
   <script src="/js/dash-logistica.js?v=5"></script>
   <script src="/js/gestao.js?v=40"></script>
-  <script src="/js/caixas.js?v=1"></script>
-  <script src="/js/auth.js?v=30"></script>
+  <script src="/js/caixas.js?v=2"></script>
+  <script src="/js/auth.js?v=31"></script>
 
 
 <!-- ══ MODAL IMPORTAR ══ -->

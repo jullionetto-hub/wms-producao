@@ -29,6 +29,8 @@ async function carregarCaixas() {
 async function abrirModalCaixa(numero) {
   _caixaAtual = numero;
   document.getElementById('mcc-titulo').textContent = `Caixa ${String(numero).padStart(2,'0')}`;
+  document.getElementById('mcc-operador').value = '';
+  document.getElementById('mcc-turno').value = '';
   document.getElementById('mcc-organizada').checked = true;
   document.getElementById('mcc-limpa').checked = true;
   document.getElementById('mcc-produtos').checked = false;
@@ -67,7 +69,13 @@ function fecharModalCaixa() {
 
 async function salvarChecklistCaixa() {
   if (!_caixaAtual) return;
+  const operador = document.getElementById('mcc-operador').value.trim();
+  const turno = document.getElementById('mcc-turno').value;
+  if (!operador) { toast('Informe quem estava operando a caixa.','aviso'); return; }
+  if (!turno) { toast('Selecione o turno.','aviso'); return; }
   const body = {
+    operador_nome: operador,
+    turno,
     organizada: document.getElementById('mcc-organizada').checked,
     limpa: document.getElementById('mcc-limpa').checked,
     produtos_espalhados: document.getElementById('mcc-produtos').checked,
@@ -85,5 +93,48 @@ async function salvarChecklistCaixa() {
     toast('Conferência registrada!','sucesso');
     fecharModalCaixa();
     carregarCaixas();
+    carregarLogCaixas();
   } catch(e) { toast('Erro ao salvar!','erro'); }
+}
+
+const TURNO_LABEL = { Manha:'Manhã', Tarde:'Tarde', Noite:'Noite' };
+
+// Log completo pra gestão/supervisão acompanharem todas as conferências —
+// filtrável por período, caixa e turno.
+async function carregarLogCaixas() {
+  const tbody = document.getElementById('cxlog-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:16px">Carregando...</td></tr>';
+  const ini = document.getElementById('cxlog-ini')?.value || '';
+  const fim = document.getElementById('cxlog-fim')?.value || '';
+  const numero = document.getElementById('cxlog-numero')?.value || '';
+  const turno = document.getElementById('cxlog-turno')?.value || '';
+  const qs = new URLSearchParams();
+  if (ini) qs.set('data_ini', ini);
+  if (fim) qs.set('data_fim', fim);
+  if (numero) qs.set('numero', numero);
+  if (turno) qs.set('turno', turno);
+  try {
+    const res = await fetch(`${API}/caixas/checklist/log?${qs}`, { credentials:'include' });
+    const lista = await res.json();
+    if (!lista.length) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:16px">Nenhuma conferência encontrada</td></tr>';
+      return;
+    }
+    tbody.innerHTML = lista.map(h => {
+      const ok = h.organizada && h.limpa && !h.produtos_espalhados && !h.objetos_indevidos;
+      const cor = ok ? 'var(--green)' : 'var(--red)';
+      return `<tr>
+        <td style="padding:7px 10px">${pfEsc(h.data)} ${pfEsc(h.hora||'')}</td>
+        <td style="padding:7px 10px;font-weight:700">Caixa ${String(h.numero).padStart(2,'0')}</td>
+        <td style="padding:7px 10px">${pfEsc(TURNO_LABEL[h.turno]||h.turno||'—')}</td>
+        <td style="padding:7px 10px">${pfEsc(h.operador_nome||'—')}</td>
+        <td style="padding:7px 10px;color:var(--text3)">${pfEsc(h.usuario_nome||'—')}</td>
+        <td style="padding:7px 10px;text-align:center;color:${cor};font-weight:700">${ok?'OK':'Atenção'}</td>
+        <td style="padding:7px 10px;color:var(--text3)">${pfEsc(h.observacoes||'—')}</td>
+      </tr>`;
+    }).join('');
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--red);padding:16px">Erro ao carregar histórico</td></tr>';
+  }
 }

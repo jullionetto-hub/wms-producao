@@ -534,7 +534,7 @@ function irPara(pag, el) {
   if (pag === 'auditoria')    { var hj=hojeLocal(); var ea=document.getElementById('aud-ini'); if(ea&&!ea.value)ea.value=hj; carregarAuditoria(); }
   if (pag === 'diario')       { iniciarDiario(); }
   if (pag === 'celulares')    { ckInit(); }
-  if (pag === 'caixas')       { carregarCaixas(); }
+  if (pag === 'caixas')       { carregarCaixas(); carregarLogCaixas(); }
   if (pag === 'embalagem')    { var _ei=document.getElementById('emb-ini'),_ef=document.getElementById('emb-fim'); if(_ei&&!_ei.value)_ei.value=hojeLocal(); if(_ef&&!_ef.value)_ef.value=hojeLocal(); mudarTabEmbDesk('fila'); }
   if (pag === 'protocolo')    { carregarProtocolo(); }
   if (pag === 'protocolo-rep') {

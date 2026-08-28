@@ -202,6 +202,10 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
 .db-stat-danger{border-left-color:var(--red)}
 .db-stat-n{font-size:18px;font-weight:800;color:var(--text);line-height:1.1}
 .db-stat-l{font-size:9px;color:var(--text3);text-transform:none;letter-spacing:.2px;margin-top:2px}
+/* Caixas: 5 por linha (5 em cima, 5 embaixo com as 10 estações) */
+.caixas-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+@media (max-width:900px){.caixas-grid{grid-template-columns:repeat(2,1fr)}}
+
 /* Diário de Bordo: contagens editáveis manualmente (por enquanto substituem o
    auto-cálculo) — mesma aparência do número fixo, sem cara de campo nativo. */
 input.db-stat-n{border:none;background:transparent;padding:0;width:100%;min-width:0;font-family:inherit;-moz-appearance:textfield}

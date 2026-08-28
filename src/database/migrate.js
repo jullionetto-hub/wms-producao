@@ -92,6 +92,9 @@ const ALTERATIONS = [
   "ALTER TABLE avisos_repositor ADD COLUMN IF NOT EXISTS ordem_manual INTEGER DEFAULT 0",
   // Ordem manual arrastada pelo separador na própria fila de pedidos.
   "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS ordem_fila INTEGER DEFAULT 0",
+  // Checklist de Caixas: quem estava operando a estação e em qual turno
+  "ALTER TABLE checklist_caixas ADD COLUMN IF NOT EXISTS operador_nome TEXT DEFAULT ''",
+  "ALTER TABLE checklist_caixas ADD COLUMN IF NOT EXISTS turno TEXT DEFAULT ''",
 ];
 
 async function runSchema() {

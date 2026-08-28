@@ -355,6 +355,8 @@ const TABLES = [
     data                TEXT NOT NULL,
     hora                TEXT DEFAULT '',
     usuario_nome        TEXT DEFAULT '',
+    operador_nome       TEXT DEFAULT '',
+    turno               TEXT DEFAULT '',
     organizada          BOOLEAN DEFAULT true,
     limpa               BOOLEAN DEFAULT true,
     produtos_espalhados BOOLEAN DEFAULT false,
