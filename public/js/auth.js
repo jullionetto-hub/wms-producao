@@ -829,10 +829,27 @@ async function iniciarDiario() {
   const dataEl = document.getElementById('diario-data');
   if (dataEl && !dataEl.value) dataEl.value = hj;
   initDiarioHistorico();
-  await carregarDadosDiario();
+  await carregarOuCalcularDiario();
   await carregarDiarioAnterior();
   await carregarListaDiarios();
   await verificarValidacaoPendente();
+}
+
+// Se já existe um diário salvo pra essa data+turno, reabre ele (respeitando
+// qualquer edição manual já feita e salva) em vez de recalcular ao vivo e
+// sobrescrever silenciosamente — era isso que fazia o turno seguinte ver os
+// valores zerados mesmo depois do turno anterior ter preenchido na mão.
+// Só cai no cálculo ao vivo quando o diário ainda nem existe.
+async function carregarOuCalcularDiario() {
+  const data = document.getElementById('diario-data')?.value;
+  const turno = document.getElementById('diario-turno')?.value;
+  if (!data || !turno) { await carregarDadosDiario(); return; }
+  try {
+    const res = await fetch(`${API}/diario/existe?data=${data}&turno=${turno}`, { credentials:'include' });
+    const existente = await res.json();
+    if (existente?.id) { await verDiario(existente.id); return; }
+  } catch(e) { /* segue pro cálculo ao vivo */ }
+  await carregarDadosDiario();
 }
 
 // ── Mostra o que o turno anterior deixou registrado, antes do supervisor
@@ -1387,6 +1404,7 @@ async function verDiario(id) {
     if (document.getElementById('diario-obs-sep')) document.getElementById('diario-obs-sep').value = obs.separacao||'';
     if (document.getElementById('diario-obs-ck')) document.getElementById('diario-obs-ck').value = obs.checkout||'';
     if (document.getElementById('diario-obs-rep')) document.getElementById('diario-obs-rep').value = obs.reposicao||'';
+    if (document.getElementById('diario-obs-emb')) document.getElementById('diario-obs-emb').value = obs.embalagem||'';
     if (document.getElementById('diario-obs-geral')) document.getElementById('diario-obs-geral').value = obs.geral||'';
     window._dadosDiario = d.dados;
     _diarioAtualId = d.id;
@@ -1395,8 +1413,9 @@ async function verDiario(id) {
     const meuNome  = usuarioAtual?.nome || '';
     const ehMeu    = !d.supervisor || d.supervisor === meuNome;
     const bloqueado = !ehMeu || d.status === 'enviado' || d.status === 'validado';
-    document.querySelectorAll('#pag-diario textarea').forEach(el => {
+    document.querySelectorAll('#pag-diario textarea, #pag-diario input.db-stat-n').forEach(el => {
       el.readOnly = bloqueado;
+      el.disabled = bloqueado && el.tagName === 'INPUT';
       el.style.opacity = bloqueado ? '.65' : '1';
       el.style.cursor  = bloqueado ? 'not-allowed' : '';
     });
@@ -1412,22 +1431,22 @@ async function verDiario(id) {
     const dd = d.dados||{};
     if (dd.separacao) {
       document.getElementById('diario-sep-total').textContent = dd.separacao.total||0;
-      document.getElementById('diario-sep-conc').textContent = dd.separacao.concluidos||0;
-      document.getElementById('diario-sep-pend').textContent = dd.separacao.pendentes||0;
-      document.getElementById('diario-sep-sep').textContent = dd.separacao.separando||0;
+      document.getElementById('diario-sep-conc').value = dd.separacao.concluidos||0;
+      document.getElementById('diario-sep-pend').value = dd.separacao.pendentes||0;
+      document.getElementById('diario-sep-sep').value = dd.separacao.separando||0;
       _atualizarAnelDiario('sep', dd.separacao.total, dd.separacao.concluidos);
     }
     if (dd.checkout) {
       document.getElementById('diario-ck-total').textContent = dd.checkout.total||0;
-      document.getElementById('diario-ck-conc').textContent = dd.checkout.concluidos||0;
-      document.getElementById('diario-ck-pend').textContent = dd.checkout.pendentes||0;
+      document.getElementById('diario-ck-conc').value = dd.checkout.concluidos||0;
+      document.getElementById('diario-ck-pend').value = dd.checkout.pendentes||0;
       _atualizarAnelDiario('ck', dd.checkout.total, dd.checkout.concluidos);
     }
     if (dd.reposicao) {
       document.getElementById('diario-rep-total').textContent = dd.reposicao.total||0;
-      document.getElementById('diario-rep-res').textContent = dd.reposicao.resolvidas||0;
-      document.getElementById('diario-rep-pend').textContent = dd.reposicao.pendentes||0;
-      document.getElementById('diario-rep-nao').textContent = dd.reposicao.nao_encontrados||0;
+      document.getElementById('diario-rep-res').value = dd.reposicao.resolvidas||0;
+      document.getElementById('diario-rep-pend').value = dd.reposicao.pendentes||0;
+      document.getElementById('diario-rep-nao').value = dd.reposicao.nao_encontrados||0;
       _atualizarAnelDiario('rep', dd.reposicao.total, dd.reposicao.resolvidas);
     }
     if (dd.embalagem) {
@@ -1435,8 +1454,8 @@ async function verDiario(id) {
       const embEmb   = document.getElementById('diario-emb-emb');
       const embPend  = document.getElementById('diario-emb-pend');
       if (embTotal) embTotal.textContent = dd.embalagem.total||0;
-      if (embEmb)   embEmb.textContent   = dd.embalagem.embalados||0;
-      if (embPend)  embPend.textContent  = dd.embalagem.pendentes||0;
+      if (embEmb)   embEmb.value   = dd.embalagem.embalados||0;
+      if (embPend)  embPend.value  = dd.embalagem.pendentes||0;
       _atualizarAnelDiario('emb', dd.embalagem.total, dd.embalagem.embalados);
     }
   } catch(e) { console.warn(e); }
@@ -1449,37 +1468,62 @@ async function exportarDiarioExcel(id) {
     if (!res.ok) return;
     const dd = d.dados||{};
     const obs = typeof d.observacoes === 'string' ? JSON.parse(d.observacoes||'{}') : (d.observacoes||{});
-    const wb = XLSX.utils.book_new();
-    const rows = [
-      ['DIARIO DE BORDO — WMS MIESS'],
-      ['Data:', fmtData(d.data), 'Turno:', d.turno, 'Supervisor:', d.supervisor, 'Leu anterior:', d.leu_anterior ? 'Sim' : 'Nao'],
-      [''],
-      ['SEPARACAO'],
-      ['Total', 'Concluidos', 'Pendentes', 'Separando'],
-      [dd.separacao?.total||0, dd.separacao?.concluidos||0, dd.separacao?.pendentes||0, dd.separacao?.separando||0],
-      ['Observacoes:', obs.separacao||''],
-      [''],
-      ['CHECKOUT'],
-      ['Total', 'Concluidos', 'Pendentes'],
-      [dd.checkout?.total||0, dd.checkout?.concluidos||0, dd.checkout?.pendentes||0],
-      ['Observacoes:', obs.checkout||''],
-      [''],
-      ['REPOSICAO'],
-      ['Total', 'Resolvidas', 'Pendentes', 'Nao Encontrados'],
-      [dd.reposicao?.total||0, dd.reposicao?.resolvidas||0, dd.reposicao?.pendentes||0, dd.reposicao?.nao_encontrados||0],
-      ['Observacoes:', obs.reposicao||''],
-      [''],
-      ['PEDIDOS COM PROBLEMA'],
-      ['Pedido', 'Cliente', 'Item'],
-    ];
-    if (dd.problemas?.length) {
-      dd.problemas.forEach(p => rows.push([p.pedido||'-', p.cliente||'-', `${p.codigo||''} ${p.item||''}`]));
-    } else { rows.push(['Nenhum problema']); }
-    rows.push([''], ['OBSERVACOES GERAIS'], [obs.geral||'']);
+    const turnoLabel = { Manha:'Manhã', Tarde:'Tarde', Noite:'Noite' }[d.turno] || d.turno;
+
+    const NCOLS = 4;
+    const rows = [];
+    const merges = [];
+    const tituloRows = [];
+    const secaoRows = [];
+    const headerRows = [];
+    const push = r => { rows.push(r); return rows.length - 1; };
+    const merge = (r, c1, c2) => merges.push({ s:{r,c:c1}, e:{r,c:c2} });
+
+    const rTitulo = push(['Diário de Bordo — WMS Miess']);
+    tituloRows.push(rTitulo); merge(rTitulo, 0, NCOLS-1);
+    push([]);
+    const rMeta = push(['Data:', fmtData(d.data), 'Turno:', turnoLabel]);
+    push(['Supervisor:', d.supervisor, 'Leu diário anterior:', d.leu_anterior ? 'Sim' : 'Não']);
+    push([]);
+
+    const secao = (titulo, header, dadosLinha, obsTexto) => {
+      const r1 = push([titulo]); secaoRows.push(r1); merge(r1, 0, NCOLS-1);
+      const r2 = push(header); headerRows.push(r2);
+      push(dadosLinha);
+      push(['Observações:', obsTexto || '—']);
+      push([]);
+    };
+    secao('Separação', ['Total','Concluídos','Pendentes','Separando'],
+      [dd.separacao?.total||0, dd.separacao?.concluidos||0, dd.separacao?.pendentes||0, dd.separacao?.separando||0], obs.separacao);
+    secao('Checkout', ['Total','Concluídos','Pendentes',''],
+      [dd.checkout?.total||0, dd.checkout?.concluidos||0, dd.checkout?.pendentes||0,''], obs.checkout);
+    secao('Embalagem', ['Total','Embalados','Pendentes',''],
+      [dd.embalagem?.total||0, dd.embalagem?.embalados||0, dd.embalagem?.pendentes||0,''], obs.embalagem);
+    secao('Reposição', ['Total','Resolvidas','Pendentes','Não Encontrados'],
+      [dd.reposicao?.total||0, dd.reposicao?.resolvidas||0, dd.reposicao?.pendentes||0, dd.reposicao?.nao_encontrados||0], obs.reposicao);
+
+    const rProb = push(['Pedidos com Problema']); secaoRows.push(rProb); merge(rProb, 0, NCOLS-1);
+    const rProbH = push(['Pedido','Cliente','Item','']); headerRows.push(rProbH);
+    if (dd.problemas?.length) dd.problemas.forEach(p => push([p.pedido||'-', p.cliente||'-', `${p.codigo||''} ${p.item||''}`.trim(), '']));
+    else push(['Nenhum problema registrado']);
+    push([]);
+
+    const rObs = push(['Observações Gerais']); secaoRows.push(rObs); merge(rObs, 0, NCOLS-1);
+    push([obs.geral || '—']);
+
     const ws = XLSX.utils.aoa_to_sheet(rows);
-    ws['!cols'] = [{wch:20},{wch:25},{wch:20},{wch:20}];
-    XLSX.utils.book_append_sheet(wb, ws, 'Diario');
-    XLSX.writeFile(wb, `diario_${fmtData(d.data).replace(/\//g,'-')}_${d.turno}.xlsx`);
+    ws['!cols'] = [{wch:22},{wch:22},{wch:18},{wch:18}];
+    ws['!merges'] = merges;
+
+    const cell = (r,c) => ws[XLSX.utils.encode_cell({r,c})];
+    tituloRows.forEach(r => { const cl = cell(r,0); if (cl) cl.s = { font:{ bold:true, sz:16 } }; });
+    [rMeta, rMeta+1].forEach(r => { for (let c=0;c<NCOLS;c+=2) { const cl = cell(r,c); if (cl) cl.s = { font:{ bold:true } }; } });
+    secaoRows.forEach(r => { const cl = cell(r,0); if (cl) cl.s = { font:{ bold:true, sz:12, color:{rgb:'FFFFFF'} }, fill:{ fgColor:{rgb:'4F46E5'} } }; });
+    headerRows.forEach(r => { for (let c=0;c<NCOLS;c++) { const cl = cell(r,c); if (cl) cl.s = { font:{ bold:true }, fill:{ fgColor:{rgb:'E5E7EB'} } }; } });
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Diário');
+    XLSX.writeFile(wb, `diario_${fmtData(d.data).replace(/\//g,'-')}_${d.turno}.xlsx`, { cellStyles: true });
     toast('Excel exportado!','sucesso');
   } catch(e) { toast('Erro ao exportar','erro'); }
 }

@@ -224,6 +224,20 @@ router.get('/diario/dados/turno', requerAuth, requerPerfil('supervisor'), async 
   } catch(e) { res.status(500).json({erro:e.message}); }
 });
 
+// Existe diário salvo pra essa data+turno? Usado no carregamento da tela pra
+// decidir entre reabrir o que já foi salvo (respeitando edição manual) ou
+// calcular um sugestão nova a partir dos números ao vivo — sem isso, toda
+// vez que a tela abria ela recalculava e sobrescrevia silenciosamente
+// qualquer valor preenchido manualmente antes de salvar.
+router.get('/diario/existe', requerAuth, requerPerfil('supervisor'), async (req,res) => {
+  try {
+    const { data, turno } = req.query;
+    if (!data || !turno) return res.json(null);
+    const d = await db.get('SELECT id FROM diario_bordo WHERE data=$1 AND turno=$2', [data, turno]);
+    res.json(d ? { id: d.id } : null);
+  } catch(e) { res.status(500).json({erro:e.message}); }
+});
+
 router.get('/diario/:id', requerAuth, requerPerfil('supervisor'), async (req,res) => {
   try {
     const d = await db.get('SELECT * FROM diario_bordo WHERE id=$1', [req.params.id]);
