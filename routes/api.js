@@ -14,5 +14,6 @@ router.use(require('./entrada-manual'));
 router.use(require('./dash-logistica'));
 router.use(require('./performance-dash'));
 router.use(require('./gestao'));
+router.use(require('./caixas'));
 
 module.exports = router;

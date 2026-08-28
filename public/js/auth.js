@@ -373,6 +373,7 @@ const _IC = {
   absenteismo: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
   estatisticas:`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>`,
   celulares:   `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>`,
+  caixas:      `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>`,
 };
 
 function montarSidebar() {
@@ -390,6 +391,7 @@ function montarSidebar() {
       <a class="mi" onclick="irPara('auditoria',this)"><span class="mi-ic">${IC.auditoria}</span>Auditoria</a>
       <a class="mi" onclick="irPara('diario',this)"><span class="mi-ic">${IC.diario}</span>Diário de Bordo<span class="mbadge" id="menu-badge-diario" style="display:none;background:#7c3aed">!</span></a>
       <a class="mi" onclick="irPara('celulares',this)"><span class="mi-ic">${IC.celulares}</span>Celulares</a>
+      <a class="mi" onclick="irPara('caixas',this)"><span class="mi-ic">${IC.caixas}</span>Caixas</a>
       <a class="mi" onclick="irPara('cadastros',this)"><span class="mi-ic">${IC.cadastros}</span>Cadastros</a>
       <a class="mi" onclick="irPara('protocolo',this);carregarProtocolo()"><span class="mi-ic">${IC.protocolo}</span>Protocolo<span class="mbadge" id="menu-badge-proto" style="display:none">0</span></a>
       <div class="mg">OPERAÇÃO</div>
@@ -430,6 +432,7 @@ function montarSidebar() {
       <a class="mi" onclick="irPara('auditoria',this)"><span class="mi-ic">${IC.auditoria}</span>Auditoria</a>
       <a class="mi" onclick="irPara('diario',this)"><span class="mi-ic">${IC.diario}</span>Diário de Bordo<span class="mbadge" id="menu-badge-diario" style="display:none;background:#7c3aed">!</span></a>
       <a class="mi" onclick="irPara('celulares',this)"><span class="mi-ic">${IC.celulares}</span>Celulares</a>
+      <a class="mi" onclick="irPara('caixas',this)"><span class="mi-ic">${IC.caixas}</span>Caixas</a>
       <a class="mi" onclick="irPara('cadastros',this)"><span class="mi-ic">${IC.cadastros}</span>Cadastros</a>
       <a class="mi" onclick="irPara('protocolo',this);carregarProtocolo()"><span class="mi-ic">${IC.protocolo}</span>Protocolo<span class="mbadge" id="menu-badge-proto" style="display:none">0</span></a>
       <div class="mg">OPERAÇÃO</div>
@@ -531,6 +534,7 @@ function irPara(pag, el) {
   if (pag === 'auditoria')    { var hj=hojeLocal(); var ea=document.getElementById('aud-ini'); if(ea&&!ea.value)ea.value=hj; carregarAuditoria(); }
   if (pag === 'diario')       { iniciarDiario(); }
   if (pag === 'celulares')    { ckInit(); }
+  if (pag === 'caixas')       { carregarCaixas(); }
   if (pag === 'embalagem')    { var _ei=document.getElementById('emb-ini'),_ef=document.getElementById('emb-fim'); if(_ei&&!_ei.value)_ei.value=hojeLocal(); if(_ef&&!_ef.value)_ef.value=hojeLocal(); mudarTabEmbDesk('fila'); }
   if (pag === 'protocolo')    { carregarProtocolo(); }
   if (pag === 'protocolo-rep') {

@@ -345,6 +345,23 @@ const TABLES = [
     importado_por  TEXT    DEFAULT '',
     importado_em   TIMESTAMPTZ DEFAULT NOW()
   )`,
+
+  /* ── Checklist das Caixas (estações de trabalho: computador, mouse,
+     impressora etc.) — "numero" identifica a estação (1 a 10), sem relação
+     com checkout.numero_caixa (que é a caixa física de despacho do pedido). */
+  `CREATE TABLE IF NOT EXISTS checklist_caixas (
+    id                  SERIAL PRIMARY KEY,
+    numero              INTEGER NOT NULL,
+    data                TEXT NOT NULL,
+    hora                TEXT DEFAULT '',
+    usuario_nome        TEXT DEFAULT '',
+    organizada          BOOLEAN DEFAULT true,
+    limpa               BOOLEAN DEFAULT true,
+    produtos_espalhados BOOLEAN DEFAULT false,
+    objetos_indevidos   BOOLEAN DEFAULT false,
+    observacoes         TEXT DEFAULT '',
+    criado_em           TIMESTAMPTZ DEFAULT NOW()
+  )`,
 ];
 
 const INDEXES = [
@@ -378,6 +395,7 @@ const INDEXES = [
   'CREATE INDEX IF NOT EXISTS idx_fat_turno           ON faturamento_pedidos(turno)',
   'CREATE INDEX IF NOT EXISTS idx_fat_usuario         ON faturamento_pedidos(usuario)',
   'CREATE INDEX IF NOT EXISTS idx_fat_data_turno      ON faturamento_pedidos(data_fat, turno)',
+  'CREATE INDEX IF NOT EXISTS idx_checklist_caixas_num ON checklist_caixas(numero, criado_em)',
 ];
 
 module.exports = { TABLES, INDEXES };
