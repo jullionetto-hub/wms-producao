@@ -3,6 +3,23 @@
 ══════════════════════════════════════════ */
 
 let _caixaAtual = null;
+let _mccRespostas = {};
+
+function mccResponder(campo, valor, btnEl) {
+  _mccRespostas[campo] = valor;
+  const wrap = document.querySelector(`.mcc-item[data-mcc="${campo}"]`);
+  if (wrap) wrap.querySelectorAll('.mcc-btn').forEach(b => b.classList.remove('ativo'));
+  btnEl.classList.add('ativo');
+}
+
+function _mccDefinir(campo, valor) {
+  _mccRespostas[campo] = valor;
+  const wrap = document.querySelector(`.mcc-item[data-mcc="${campo}"]`);
+  if (!wrap) return;
+  wrap.querySelectorAll('.mcc-btn').forEach(b => {
+    b.classList.toggle('ativo', b.dataset.val === String(valor));
+  });
+}
 
 async function carregarCaixas() {
   const grid = document.getElementById('caixas-grid');
@@ -31,10 +48,11 @@ async function abrirModalCaixa(numero) {
   document.getElementById('mcc-titulo').textContent = `Caixa ${String(numero).padStart(2,'0')}`;
   document.getElementById('mcc-operador').value = '';
   document.getElementById('mcc-turno').value = '';
-  document.getElementById('mcc-organizada').checked = true;
-  document.getElementById('mcc-limpa').checked = true;
-  document.getElementById('mcc-produtos').checked = false;
-  document.getElementById('mcc-objetos').checked = false;
+  _mccRespostas = {};
+  _mccDefinir('organizada', true);
+  _mccDefinir('limpa', true);
+  _mccDefinir('produtos', false);
+  _mccDefinir('objetos', false);
   document.getElementById('mcc-obs').value = '';
   const hist = document.getElementById('mcc-historico');
   hist.innerHTML = '<div style="font-size:11px;color:var(--text3)">Carregando histórico...</div>';
@@ -76,10 +94,10 @@ async function salvarChecklistCaixa() {
   const body = {
     operador_nome: operador,
     turno,
-    organizada: document.getElementById('mcc-organizada').checked,
-    limpa: document.getElementById('mcc-limpa').checked,
-    produtos_espalhados: document.getElementById('mcc-produtos').checked,
-    objetos_indevidos: document.getElementById('mcc-objetos').checked,
+    organizada: !!_mccRespostas.organizada,
+    limpa: !!_mccRespostas.limpa,
+    produtos_espalhados: !!_mccRespostas.produtos,
+    objetos_indevidos: !!_mccRespostas.objetos,
     observacoes: document.getElementById('mcc-obs').value.trim(),
   };
   try {

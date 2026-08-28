@@ -206,6 +206,14 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
 .caixas-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
 @media (max-width:900px){.caixas-grid{grid-template-columns:repeat(2,1fr)}}
 
+/* Checklist de Caixas: pergunta + botões Sim/Não (mesmo padrão da validação do Diário) */
+.mcc-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:10px}
+.mcc-btn{padding:7px 16px;border-radius:7px;font-weight:800;font-size:13px;cursor:pointer;transition:.15s;background:transparent}
+.mcc-btn-sim{border:2px solid #86efac;color:#16a34a}
+.mcc-btn-sim.ativo{background:#dcfce7;box-shadow:0 0 0 2px #16a34a}
+.mcc-btn-nao{border:2px solid rgba(201,82,79,.4);color:var(--red)}
+.mcc-btn-nao.ativo{background:#fee2e2;box-shadow:0 0 0 2px #dc2626}
+
 /* Diário de Bordo: contagens editáveis manualmente (por enquanto substituem o
    auto-cálculo) — mesma aparência do número fixo, sem cara de campo nativo. */
 input.db-stat-n{border:none;background:transparent;padding:0;width:100%;min-width:0;font-family:inherit;-moz-appearance:textfield}

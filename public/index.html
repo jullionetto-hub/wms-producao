@@ -1259,22 +1259,34 @@
                 </select>
               </div>
             </div>
-            <label class="mcc-item" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;cursor:pointer">
-              <input type="checkbox" id="mcc-organizada" checked style="width:18px;height:18px;accent-color:var(--green)">
+            <div class="mcc-item" data-mcc="organizada">
               <span style="font-size:13px;font-weight:600">Está organizada?</span>
-            </label>
-            <label class="mcc-item" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;cursor:pointer">
-              <input type="checkbox" id="mcc-limpa" checked style="width:18px;height:18px;accent-color:var(--green)">
+              <div style="display:flex;gap:6px">
+                <button type="button" class="mcc-btn mcc-btn-sim" data-val="true" onclick="mccResponder('organizada',true,this)">Sim</button>
+                <button type="button" class="mcc-btn mcc-btn-nao" data-val="false" onclick="mccResponder('organizada',false,this)">Não</button>
+              </div>
+            </div>
+            <div class="mcc-item" data-mcc="limpa">
               <span style="font-size:13px;font-weight:600">Está limpa?</span>
-            </label>
-            <label class="mcc-item" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;cursor:pointer">
-              <input type="checkbox" id="mcc-produtos" style="width:18px;height:18px;accent-color:var(--red)">
+              <div style="display:flex;gap:6px">
+                <button type="button" class="mcc-btn mcc-btn-sim" data-val="true" onclick="mccResponder('limpa',true,this)">Sim</button>
+                <button type="button" class="mcc-btn mcc-btn-nao" data-val="false" onclick="mccResponder('limpa',false,this)">Não</button>
+              </div>
+            </div>
+            <div class="mcc-item" data-mcc="produtos">
               <span style="font-size:13px;font-weight:600">Tem produtos espalhados?</span>
-            </label>
-            <label class="mcc-item" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;cursor:pointer">
-              <input type="checkbox" id="mcc-objetos" style="width:18px;height:18px;accent-color:var(--red)">
+              <div style="display:flex;gap:6px">
+                <button type="button" class="mcc-btn mcc-btn-sim" data-val="true" onclick="mccResponder('produtos',true,this)">Sim</button>
+                <button type="button" class="mcc-btn mcc-btn-nao" data-val="false" onclick="mccResponder('produtos',false,this)">Não</button>
+              </div>
+            </div>
+            <div class="mcc-item" data-mcc="objetos">
               <span style="font-size:13px;font-weight:600">Tem outros objetos (que não deveriam estar ali)?</span>
-            </label>
+              <div style="display:flex;gap:6px">
+                <button type="button" class="mcc-btn mcc-btn-sim" data-val="true" onclick="mccResponder('objetos',true,this)">Sim</button>
+                <button type="button" class="mcc-btn mcc-btn-nao" data-val="false" onclick="mccResponder('objetos',false,this)">Não</button>
+              </div>
+            </div>
             <div>
               <div style="font-size:10px;font-weight:700;color:var(--text3);margin-bottom:4px;letter-spacing:.2px">OBSERVAÇÕES</div>
               <textarea id="mcc-obs" placeholder="Detalhes, o que precisa ser resolvido..." style="width:100%;min-height:64px;border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;font-family:inherit;background:var(--surface2);color:var(--text);resize:vertical;box-sizing:border-box"></textarea>
@@ -2362,7 +2374,7 @@
   <script src="/js/performance-dash.js?v=8"></script>
   <script src="/js/dash-logistica.js?v=5"></script>
   <script src="/js/gestao.js?v=40"></script>
-  <script src="/js/caixas.js?v=3"></script>
+  <script src="/js/caixas.js?v=4"></script>
   <script src="/js/auth.js?v=32"></script>
 
 
