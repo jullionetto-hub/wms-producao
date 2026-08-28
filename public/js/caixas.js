@@ -14,7 +14,7 @@ async function carregarCaixas() {
     grid.innerHTML = caixas.map(c => {
       const cor = c.ok === null ? 'var(--text3)' : c.ok ? 'var(--green)' : 'var(--red)';
       const label = c.ok === null ? 'Nunca conferida' : c.ok ? 'OK' : 'Atenção';
-      const quando = c.ultima ? `${c.ultima.data} ${c.ultima.hora||''}`.trim() : '';
+      const quando = c.ultima ? `${fmtData(c.ultima.data)} ${(c.ultima.hora||'').slice(0,5)}`.trim() : '';
       const quem = c.ultima?.usuario_nome || '';
       return `
         <div class="card" style="margin-bottom:0;cursor:pointer;border-top:3px solid ${cor}" onclick="abrirModalCaixa(${c.numero})">
@@ -52,7 +52,7 @@ async function abrirModalCaixa(numero) {
           const cor = ok ? 'var(--green)' : 'var(--red)';
           return `<div style="background:var(--surface2);border-radius:8px;padding:7px 10px;font-size:11px">
             <div style="display:flex;justify-content:space-between;color:var(--text2)">
-              <span>${h.data} ${h.hora||''} — ${pfEsc(h.usuario_nome||'—')}</span>
+              <span>${fmtData(h.data)} ${(h.hora||'').slice(0,5)} — ${pfEsc(h.usuario_nome||'—')}</span>
               <span style="color:${cor};font-weight:700">${ok?'OK':'Atenção'}</span>
             </div>
             ${h.observacoes ? `<div style="color:var(--text3);margin-top:3px">${pfEsc(h.observacoes)}</div>` : ''}
@@ -125,7 +125,7 @@ async function carregarLogCaixas() {
       const ok = h.organizada && h.limpa && !h.produtos_espalhados && !h.objetos_indevidos;
       const cor = ok ? 'var(--green)' : 'var(--red)';
       return `<tr>
-        <td style="padding:7px 10px">${pfEsc(h.data)} ${pfEsc(h.hora||'')}</td>
+        <td style="padding:7px 10px">${fmtData(h.data)} ${pfEsc((h.hora||'').slice(0,5))}</td>
         <td style="padding:7px 10px;font-weight:700">Caixa ${String(h.numero).padStart(2,'0')}</td>
         <td style="padding:7px 10px">${pfEsc(TURNO_LABEL[h.turno]||h.turno||'—')}</td>
         <td style="padding:7px 10px">${pfEsc(h.operador_nome||'—')}</td>
