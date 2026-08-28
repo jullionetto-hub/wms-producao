@@ -202,6 +202,11 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
 .db-stat-danger{border-left-color:var(--red)}
 .db-stat-n{font-size:18px;font-weight:800;color:var(--text);line-height:1.1}
 .db-stat-l{font-size:9px;color:var(--text3);text-transform:none;letter-spacing:.2px;margin-top:2px}
+/* Diário de Bordo: contagens editáveis manualmente (por enquanto substituem o
+   auto-cálculo) — mesma aparência do número fixo, sem cara de campo nativo. */
+input.db-stat-n{border:none;background:transparent;padding:0;width:100%;min-width:0;font-family:inherit;-moz-appearance:textfield}
+input.db-stat-n::-webkit-inner-spin-button,input.db-stat-n::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+input.db-stat-n:focus{outline:none;background:var(--surface);border-radius:4px;box-shadow:0 0 0 2px var(--accent)}
 
 /* Título de página — padrão único pra toda tela do sistema.
    .pg-title sozinho continua funcionando exatamente como antes (só maior

@@ -877,6 +877,40 @@ async function carregarDiarioAnterior() {
   }
 }
 
+// Edição manual das contagens do Diário de Bordo (por enquanto substitui o
+// auto-cálculo, que estava saindo errado) — recalcula total/anel e grava em
+// window._dadosDiario, que é o que _persistirDiario() efetivamente salva.
+function _atualizarSetorDiario(prefixo) {
+  const num = id => { const v = parseInt(document.getElementById(id)?.value); return Number.isFinite(v) && v >= 0 ? v : 0; };
+  if (!window._dadosDiario) window._dadosDiario = {};
+  const d = window._dadosDiario;
+  if (prefixo === 'sep') {
+    const conc = num('diario-sep-conc'), sep = num('diario-sep-sep'), pend = num('diario-sep-pend');
+    const total = conc + sep + pend;
+    document.getElementById('diario-sep-total').textContent = total;
+    _atualizarAnelDiario('sep', total, conc);
+    d.separacao = { ...(d.separacao||{}), total, concluidos: conc, separando: sep, pendentes: pend };
+  } else if (prefixo === 'ck') {
+    const conc = num('diario-ck-conc'), pend = num('diario-ck-pend');
+    const total = conc + pend;
+    document.getElementById('diario-ck-total').textContent = total;
+    _atualizarAnelDiario('ck', total, conc);
+    d.checkout = { ...(d.checkout||{}), total, concluidos: conc, pendentes: pend };
+  } else if (prefixo === 'emb') {
+    const emb = num('diario-emb-emb'), pend = num('diario-emb-pend');
+    const total = emb + pend;
+    document.getElementById('diario-emb-total').textContent = total;
+    _atualizarAnelDiario('emb', total, emb);
+    d.embalagem = { ...(d.embalagem||{}), total, embalados: emb, pendentes: pend };
+  } else if (prefixo === 'rep') {
+    const res = num('diario-rep-res'), pend = num('diario-rep-pend'), nao = num('diario-rep-nao');
+    const total = res + pend + nao;
+    document.getElementById('diario-rep-total').textContent = total;
+    _atualizarAnelDiario('rep', total, res);
+    d.reposicao = { ...(d.reposicao||{}), total, resolvidas: res, pendentes: pend, nao_encontrados: nao };
+  }
+}
+
 // Atualiza o anel circular de progresso de uma seção do Diário de Bordo
 // prefixo: 'sep' | 'ck' | 'emb' | 'rep'
 function _atualizarAnelDiario(prefixo, total, concluidos) {
@@ -897,26 +931,26 @@ async function carregarDadosDiario() {
     const d = await res.json();
     if (!res.ok) { toast('Erro ao carregar dados','erro'); return; }
     document.getElementById('diario-sep-total').textContent = d.separacao.total;
-    document.getElementById('diario-sep-conc').textContent = d.separacao.concluidos;
-    document.getElementById('diario-sep-pend').textContent = d.separacao.pendentes;
+    document.getElementById('diario-sep-conc').value = d.separacao.concluidos;
+    document.getElementById('diario-sep-pend').value = d.separacao.pendentes;
     _atualizarAnelDiario('sep', d.separacao.total, d.separacao.concluidos);
-    document.getElementById('diario-sep-sep').textContent = d.separacao.separando;
+    document.getElementById('diario-sep-sep').value = d.separacao.separando;
     document.getElementById('diario-ck-total').textContent = d.checkout.total;
-    document.getElementById('diario-ck-conc').textContent = d.checkout.concluidos;
-    document.getElementById('diario-ck-pend').textContent = d.checkout.pendentes;
+    document.getElementById('diario-ck-conc').value = d.checkout.concluidos;
+    document.getElementById('diario-ck-pend').value = d.checkout.pendentes;
     _atualizarAnelDiario('ck', d.checkout.total, d.checkout.concluidos);
     document.getElementById('diario-rep-total').textContent = d.reposicao.total;
-    document.getElementById('diario-rep-res').textContent = d.reposicao.resolvidas;
-    document.getElementById('diario-rep-pend').textContent = d.reposicao.pendentes;
-    document.getElementById('diario-rep-nao').textContent = d.reposicao.nao_encontrados;
+    document.getElementById('diario-rep-res').value = d.reposicao.resolvidas;
+    document.getElementById('diario-rep-pend').value = d.reposicao.pendentes;
+    document.getElementById('diario-rep-nao').value = d.reposicao.nao_encontrados;
     _atualizarAnelDiario('rep', d.reposicao.total, d.reposicao.resolvidas);
     if (d.embalagem) {
       const embTotal = document.getElementById('diario-emb-total');
       const embEmb   = document.getElementById('diario-emb-emb');
       const embPend  = document.getElementById('diario-emb-pend');
       if (embTotal) embTotal.textContent = d.embalagem.total;
-      if (embEmb)   embEmb.textContent   = d.embalagem.embalados;
-      if (embPend)  embPend.textContent  = d.embalagem.pendentes;
+      if (embEmb)   embEmb.value   = d.embalagem.embalados;
+      if (embPend)  embPend.value  = d.embalagem.pendentes;
       _atualizarAnelDiario('emb', d.embalagem.total, d.embalagem.embalados);
     }
     const tbProb = document.getElementById('tbody-diario-prob');
