@@ -374,6 +374,7 @@ const _IC = {
   estatisticas:`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>`,
   celulares:   `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>`,
   caixas:      `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>`,
+  matriz:      `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>`,
 };
 
 function montarSidebar() {
@@ -442,7 +443,8 @@ function montarSidebar() {
       <a class="mi" onclick="irPara('checkout',this)"><span class="mi-ic">${IC.checkout}</span>Checkout</a>
       <a class="mi" onclick="irPara('embalagem',this)"><span class="mi-ic">${IC.embalagem}</span>Embalagem</a>
       <div class="mg">PESSOAL</div>
-      <a class="mi" onclick="irPara('gestao',this)"><span class="mi-ic">${IC.absenteismo}</span>Absenteísmo</a>`,
+      <a class="mi" onclick="irPara('gestao',this)"><span class="mi-ic">${IC.absenteismo}</span>Absenteísmo</a>
+      <a class="mi" onclick="irPara('matriz',this)"><span class="mi-ic">${IC.matriz}</span>Matriz de Responsabilidades</a>`,
   };
   sb.innerHTML = menus[usuarioAtual.perfil] || '';
   postProcessSidebar();
@@ -551,6 +553,7 @@ function irPara(pag, el) {
   if (pag === 'entrada-manual')   { renderizarPagEntradaManual(); }
   if (pag === 'dash-logistica')  { renderizarDashLogistica(); }
   if (pag === 'gestao')          { renderizarPagGestao(); }
+  if (pag === 'matriz')          { renderizarPagMatriz(); }
 }
 
 
