@@ -4,7 +4,7 @@
    MATRIZ DE RESPONSABILIDADES — todas as telas do sistema original
 ══════════════════════════════════════════ */
 
-let _mzTab = 'colaboradores';
+let _mzTab = 'raci';
 let _mzUsandoBanco = true; // rotas já leem/escrevem direto no banco do WMS (não fazem mais proxy pro serviço externo)
 let _mzColaboradores = [];
 let _mzRaci = [];
@@ -57,7 +57,7 @@ function renderizarPagMatriz() {
     ? 'Dados no banco do próprio WMS'
     : 'Sistema separado — os dados ainda ficam lá, aqui é só a tela';
   _mzRenderTabs();
-  mzTrocarTab('colaboradores');
+  mzTrocarTab('raci');
 }
 
 function mzToggleMigracao() {
@@ -111,7 +111,6 @@ async function mzConferirMigracao() {
 
 function _mzRenderTabs() {
   const tabs = [
-    ['colaboradores','Colaboradores'],
     ['raci','Responsabilidades'],
     ['cargos','Cargos'],
     ['banco-horas','Banco de Horas'],
@@ -122,7 +121,6 @@ function _mzRenderTabs() {
     ['incentivo','Incentivo'],
     ['ausencias','Ausências'],
     ['carreira','Plano de Carreira'],
-    ['feedbacks','Feedbacks'],
   ];
   document.getElementById('mz-tabs').innerHTML = `<div style="display:flex;gap:4px;flex-wrap:wrap;padding-bottom:8px">` + tabs.map(([id,label]) => `
     <button onclick="mzTrocarTab('${id}')"
@@ -132,9 +130,7 @@ function _mzRenderTabs() {
 }
 
 const MZ_LOADERS = {
-  colaboradores:  { deps:['colaboradores'],                          render:'_mzRenderColaboradores' },
   raci:           { deps:['colaboradores','raci'],                   render:'_mzRenderRaci' },
-  feedbacks:      { deps:['colaboradores','feedbacks'],               render:'_mzRenderFeedbacks' },
   classificacoes: { deps:['colaboradores','classificacoes'],          render:'_mzRenderClassificacoes' },
   ausencias:      { deps:['colaboradores','ausencias'],                render:'_mzRenderAusencias' },
   'banco-horas':  { deps:['colaboradores','bancoHoras'],               render:'_mzRenderBancoHoras' },
@@ -184,47 +180,10 @@ async function mzCarregarColaboradores() {
   _mzCarregado.colaboradores = true;
 }
 
-function _mzRenderColaboradores() {
-  const cont = document.getElementById('mz-conteudo');
-  const lista = [..._mzColaboradores].sort((a,b) => (a.nome||'').localeCompare(b.nome||''));
-  cont.innerHTML = `
-    <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
-      <button class="btn btn-primary btn-sm" onclick="mzAbrirColaborador()">+ Novo colaborador</button>
-    </div>
-    <div class="card" style="padding:0;overflow-x:auto">
-      <table style="width:100%;border-collapse:collapse;font-size:12.5px">
-        <thead><tr style="background:var(--surface2)">
-          <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:800;color:var(--text3)">NOME</th>
-          <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:800;color:var(--text3)">CARGO</th>
-          <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:800;color:var(--text3)">NÍVEL</th>
-          <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:800;color:var(--text3)">ÁREA</th>
-          <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:800;color:var(--text3)">TURNO</th>
-          <th style="padding:8px 12px;text-align:center;font-size:10px;font-weight:800;color:var(--text3)">STATUS</th>
-          <th style="padding:8px 12px"></th>
-        </tr></thead>
-        <tbody>${lista.map(c => `
-          <tr style="border-top:1px solid var(--border)">
-            <td style="padding:8px 12px;font-weight:700">${pfEsc(c.nome)}</td>
-            <td style="padding:8px 12px;color:var(--text2)">${pfEsc(c.cargo||'—')}</td>
-            <td style="padding:8px 12px;color:var(--text2)">${MZ_TIER_LABEL[c.tier]||c.tier}</td>
-            <td style="padding:8px 12px;color:var(--text2)">${pfEsc(c.area||'—')}</td>
-            <td style="padding:8px 12px;color:var(--text2)">${pfEsc(c.turno||'—')}</td>
-            <td style="padding:8px 12px;text-align:center">
-              ${c.vaga ? '<span style="font-size:10px;font-weight:800;color:var(--amber)">VAGA</span>' : c.ativo ? '<span style="font-size:10px;font-weight:800;color:var(--green)">ATIVO</span>' : '<span style="font-size:10px;font-weight:800;color:var(--text3)">INATIVO</span>'}
-            </td>
-            <td style="padding:8px 12px;text-align:right;white-space:nowrap">
-              <button class="btn btn-outline btn-sm" onclick="mzAbrirColaborador(${c.id})">Editar</button>
-              <button class="btn btn-outline btn-sm" style="color:var(--red);border-color:var(--red)" onclick="mzExcluirColaborador(${c.id})">Excluir</button>
-            </td>
-          </tr>`).join('') || `<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:20px">Nenhum colaborador cadastrado</td></tr>`}
-        </tbody>
-      </table>
-    </div>`;
-}
-
-function mzAbrirColaborador(id) {
+function mzAbrirColaborador(id, turnoDefault) {
   const c = id ? _mzColaboradores.find(x => x.id === id) : null;
   const editando = !!c;
+  const turnoAtual = editando ? c.turno : (turnoDefault || '');
   const modal = document.createElement('div');
   modal.id = 'mz-modal-colab';
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
@@ -249,9 +208,9 @@ function mzAbrirColaborador(id) {
           <div style="width:140px"><label style="font-size:10px;font-weight:700;color:var(--text3)">TURNO</label>
             <select id="mzc-turno" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:13px">
               <option value="">—</option>
-              <option value="1° Turno" ${editando&&c.turno==='1° Turno'?'selected':''}>1° Turno</option>
-              <option value="2° Turno" ${editando&&c.turno==='2° Turno'?'selected':''}>2° Turno</option>
-              <option value="3° Turno" ${editando&&c.turno==='3° Turno'?'selected':''}>3° Turno</option>
+              <option value="1° Turno" ${turnoAtual==='1° Turno'?'selected':''}>1° Turno</option>
+              <option value="2° Turno" ${turnoAtual==='2° Turno'?'selected':''}>2° Turno</option>
+              <option value="3° Turno" ${turnoAtual==='3° Turno'?'selected':''}>3° Turno</option>
             </select></div>
         </div>
         <div style="display:flex;gap:16px;margin-top:2px">
@@ -285,7 +244,7 @@ async function mzSalvarColaborador(id) {
     toast('Salvo!','sucesso');
     _mzCarregado.colaboradores = false;
     await mzCarregarColaboradores();
-    _mzRenderColaboradores();
+    _mzRenderOrganograma();
   } catch(e) { toast('Erro: ' + e.message, 'erro'); }
 }
 
@@ -301,7 +260,7 @@ function mzExcluirColaborador(id) {
       toast('Excluído!','sucesso');
       _mzCarregado.colaboradores = false;
       await mzCarregarColaboradores();
-      _mzRenderColaboradores();
+      _mzRenderOrganograma();
     } catch(e) { toast('Erro: ' + e.message, 'erro'); }
   });
 }
@@ -364,84 +323,96 @@ async function mzCarregarFeedbacks() {
   _mzCarregado.feedbacks = true;
 }
 
-function _mzRenderFeedbacks() {
-  const cont = document.getElementById('mz-conteudo');
-  const lista = [..._mzFeedbacks].sort((a,b) => (b.created_at||'').localeCompare(a.created_at||''));
-  cont.innerHTML = `
-    <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
-      <button class="btn btn-primary btn-sm" onclick="mzAbrirFeedback()">+ Novo feedback</button>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:8px">
-      ${lista.map(f => `
-        <div class="card" style="margin-bottom:0">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
-            <div>
-              <div style="font-weight:800;font-size:13px">${pfEsc(_mzColNome(f.colaborador_id))}</div>
-              <div style="font-size:11px;color:var(--text3)">${pfEsc(f.mes||'—')}${f.meta!=null?` · Meta ${f.meta} / Entregue ${f.entregue??'—'}`:''}</div>
-            </div>
-            <button class="btn btn-outline btn-sm" style="color:var(--red);border-color:var(--red)" onclick="mzExcluirFeedback(${f.id})">Excluir</button>
-          </div>
-          ${f.pontos_positivos?`<div style="font-size:12px;margin-top:8px"><b>Pontos positivos:</b> ${pfEsc(f.pontos_positivos)}</div>`:''}
-          ${f.pontos_construtivos?`<div style="font-size:12px;margin-top:4px"><b>Pontos construtivos:</b> ${pfEsc(f.pontos_construtivos)}</div>`:''}
-        </div>`).join('') || `<div class="card" style="text-align:center;color:var(--text3);padding:20px">Nenhum feedback registrado</div>`}
-    </div>`;
-}
-
-function mzAbrirFeedback() {
+function mzAbrirFeedback(id) {
+  const fb = id ? _mzFeedbacks.find(x => x.id === id) : null;
+  const editando = !!fb;
+  const col = _mzColaboradores.find(c => c.id === _mzPainelColabId);
   const modal = document.createElement('div');
   modal.id = 'mz-modal-fb';
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
   modal.onclick = e => { if (e.target === modal) modal.remove(); };
-  const colOpts = [..._mzColaboradores].sort((a,b)=>(a.nome||'').localeCompare(b.nome||'')).map(c=>`<option value="${c.id}">${pfEsc(c.nome)}</option>`).join('');
+  const v = k => editando ? (fb[k] ?? '') : '';
   modal.innerHTML = `
-    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:22px;max-width:520px;width:100%;max-height:90vh;overflow-y:auto">
-      <div style="font-weight:900;font-size:15px;margin-bottom:14px">Novo feedback</div>
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:22px;max-width:560px;width:100%;max-height:90vh;overflow-y:auto">
+      <div style="font-weight:900;font-size:15px;margin-bottom:14px">${editando?'Editar':'Novo'} feedback${col?` — ${pfEsc(col.nome)}`:''}</div>
       <div style="display:flex;flex-direction:column;gap:10px">
-        <div><label style="font-size:10px;font-weight:700;color:var(--text3)">COLABORADOR</label>
-          <select id="mzf-colab" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:13px">${colOpts}</select></div>
-        <div><label style="font-size:10px;font-weight:700;color:var(--text3)">MÊS</label>
-          <input id="mzf-mes" placeholder="Agosto 2026" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:13px;box-sizing:border-box"></div>
         <div style="display:flex;gap:10px">
-          <div style="flex:1"><label style="font-size:10px;font-weight:700;color:var(--text3)">META</label>
-            <input id="mzf-meta" type="number" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:13px;box-sizing:border-box"></div>
-          <div style="flex:1"><label style="font-size:10px;font-weight:700;color:var(--text3)">ENTREGUE</label>
-            <input id="mzf-entregue" type="number" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:13px;box-sizing:border-box"></div>
+          <div style="flex:1"><label style="font-size:10px;font-weight:700;color:var(--text3)">MÊS</label>
+            <input id="mzf-mes" placeholder="Agosto 2026" value="${pfEsc(v('mes'))}" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:13px;box-sizing:border-box"></div>
+          <div style="flex:1"><label style="font-size:10px;font-weight:700;color:var(--text3)">CARGO</label>
+            <input id="mzf-cargo" value="${editando?pfEsc(v('cargo_snapshot')):pfEsc(col?.cargo||'')}" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:13px;box-sizing:border-box"></div>
+          <div style="flex:1"><label style="font-size:10px;font-weight:700;color:var(--text3)">ÁREA</label>
+            <input id="mzf-area" value="${editando?pfEsc(v('area_snapshot')):pfEsc(col?.area||'')}" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:13px;box-sizing:border-box"></div>
         </div>
-        <div><label style="font-size:10px;font-weight:700;color:var(--text3)">PONTOS POSITIVOS</label>
-          <textarea id="mzf-pos" style="width:100%;min-height:60px;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:12px;resize:vertical;box-sizing:border-box"></textarea></div>
-        <div><label style="font-size:10px;font-weight:700;color:var(--text3)">PONTOS CONSTRUTIVOS</label>
-          <textarea id="mzf-cons" style="width:100%;min-height:60px;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:12px;resize:vertical;box-sizing:border-box"></textarea></div>
-        <div><label style="font-size:10px;font-weight:700;color:var(--text3)">COMBINADO DO MÊS</label>
-          <textarea id="mzf-comb" style="width:100%;min-height:44px;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:12px;resize:vertical;box-sizing:border-box"></textarea></div>
+
+        <div style="font-size:10px;font-weight:800;color:var(--text3);margin-top:4px">1 — META X ENTREGUE</div>
+        <div style="display:flex;gap:10px">
+          <input id="mzf-meta" type="number" placeholder="Meta" value="${v('meta')}" style="flex:1;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:13px;box-sizing:border-box">
+          <input id="mzf-entregue" type="number" placeholder="Entregue" value="${v('entregue')}" style="flex:1;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:13px;box-sizing:border-box">
+        </div>
+
+        <div><label style="font-size:10px;font-weight:700;color:var(--text3)">2 — PONTOS POSITIVOS</label>
+          <textarea id="mzf-pos" style="width:100%;min-height:50px;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:12px;resize:vertical;box-sizing:border-box">${pfEsc(v('pontos_positivos'))}</textarea></div>
+        <div><label style="font-size:10px;font-weight:700;color:var(--text3)">3 — PONTOS CONSTRUTIVOS</label>
+          <textarea id="mzf-cons" style="width:100%;min-height:50px;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:12px;resize:vertical;box-sizing:border-box">${pfEsc(v('pontos_construtivos'))}</textarea></div>
+
+        <div style="font-size:10px;font-weight:800;color:var(--text3);margin-top:4px">4 — ABSENTEÍSMO DO MÊS</div>
+        <div style="display:flex;gap:10px">
+          <input id="mzf-atrasos" type="number" placeholder="Atrasos (min)" value="${v('atrasos')}" style="flex:1;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:13px;box-sizing:border-box">
+          <input id="mzf-faltas" type="number" placeholder="Faltas injust." value="${v('faltas_injustificadas')}" style="flex:1;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:13px;box-sizing:border-box">
+          <input id="mzf-ausj" type="number" placeholder="Ausências just." value="${v('ausencias_justificadas')}" style="flex:1;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:13px;box-sizing:border-box">
+        </div>
+        <textarea id="mzf-absmes" placeholder="Detalhes (datas, minutos, ocorrências)" style="width:100%;min-height:40px;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:12px;resize:vertical;box-sizing:border-box">${pfEsc(v('absenteismo_mes'))}</textarea>
+
+        <div><label style="font-size:10px;font-weight:700;color:var(--text3)">5 — RETORNO ANTECIPADO DO ALMOÇO</label>
+          <textarea id="mzf-retorno" style="width:100%;min-height:40px;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:12px;resize:vertical;box-sizing:border-box">${pfEsc(v('retorno_antecipado'))}</textarea></div>
+        <div><label style="font-size:10px;font-weight:700;color:var(--text3)">6 — RECORRÊNCIA DE AUSÊNCIA</label>
+          <textarea id="mzf-recorrencia" style="width:100%;min-height:40px;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:12px;resize:vertical;box-sizing:border-box">${pfEsc(v('recorrencia_ausencia'))}</textarea></div>
+        <div><label style="font-size:10px;font-weight:700;color:var(--text3)">7 — OUTROS PONTOS</label>
+          <textarea id="mzf-outros" style="width:100%;min-height:40px;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:12px;resize:vertical;box-sizing:border-box">${pfEsc(v('outros_pontos'))}</textarea></div>
+        <div><label style="font-size:10px;font-weight:700;color:var(--text3)">8 — SALDO DE BANCO DE HORAS</label>
+          <input id="mzf-saldobh" value="${pfEsc(v('saldo_banco_horas'))}" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:13px;box-sizing:border-box"></div>
+        <div><label style="font-size:10px;font-weight:700;color:var(--text3)">9 — COMBINADO DESTE MÊS</label>
+          <textarea id="mzf-comb" style="width:100%;min-height:44px;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:12px;resize:vertical;box-sizing:border-box">${pfEsc(v('combinado_mes'))}</textarea></div>
       </div>
       <div style="display:flex;gap:10px;margin-top:18px">
         <button class="btn btn-outline" style="flex:1" onclick="document.getElementById('mz-modal-fb').remove()">Cancelar</button>
-        <button class="btn btn-primary" style="flex:1" onclick="mzSalvarFeedback()">Salvar</button>
+        <button class="btn btn-primary" style="flex:1" onclick="mzSalvarFeedback(${editando?fb.id:'null'})">Salvar</button>
       </div>
     </div>`;
   document.body.appendChild(modal);
 }
 
-async function mzSalvarFeedback() {
-  const colId = parseInt(document.getElementById('mzf-colab').value);
-  if (!colId) { toast('Selecione o colaborador.','aviso'); return; }
+async function mzSalvarFeedback(id) {
+  if (!_mzPainelColabId) { toast('Selecione o colaborador.','aviso'); return; }
   const num = v => v === '' ? null : parseInt(v);
   const body = {
-    colaborador_id: colId,
+    colaborador_id: _mzPainelColabId,
     mes: document.getElementById('mzf-mes').value.trim(),
+    cargo_snapshot: document.getElementById('mzf-cargo').value.trim(),
+    area_snapshot: document.getElementById('mzf-area').value.trim(),
     meta: num(document.getElementById('mzf-meta').value),
     entregue: num(document.getElementById('mzf-entregue').value),
     pontos_positivos: document.getElementById('mzf-pos').value.trim(),
     pontos_construtivos: document.getElementById('mzf-cons').value.trim(),
+    atrasos: num(document.getElementById('mzf-atrasos').value),
+    faltas_injustificadas: num(document.getElementById('mzf-faltas').value),
+    ausencias_justificadas: num(document.getElementById('mzf-ausj').value),
+    absenteismo_mes: document.getElementById('mzf-absmes').value.trim(),
+    retorno_antecipado: document.getElementById('mzf-retorno').value.trim(),
+    recorrencia_ausencia: document.getElementById('mzf-recorrencia').value.trim(),
+    outros_pontos: document.getElementById('mzf-outros').value.trim(),
+    saldo_banco_horas: document.getElementById('mzf-saldobh').value.trim(),
     combinado_mes: document.getElementById('mzf-comb').value.trim(),
   };
   try {
-    await _mzFetch('/matriz/feedbacks', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    if (id) await _mzFetch(`/matriz/feedbacks/${id}`, { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    else    await _mzFetch('/matriz/feedbacks', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
     document.getElementById('mz-modal-fb')?.remove();
     toast('Feedback salvo!','sucesso');
     _mzCarregado.feedbacks = false;
     await mzCarregarFeedbacks();
-    _mzRenderFeedbacks();
+    _mzRenderPainel();
   } catch(e) { toast('Erro: ' + e.message, 'erro'); }
 }
 
@@ -452,7 +423,7 @@ function mzExcluirFeedback(id) {
       toast('Excluído!','sucesso');
       _mzCarregado.feedbacks = false;
       await mzCarregarFeedbacks();
-      _mzRenderFeedbacks();
+      _mzRenderPainel();
     } catch(e) { toast('Erro: ' + e.message, 'erro'); }
   });
 }
@@ -967,28 +938,77 @@ async function mzSalvarCarreira() {
   } catch(e) { toast('Erro: ' + e.message, 'erro'); }
 }
 
-/* ── Organograma (visão só de leitura, agrupada por área/nível) ── */
-const MZ_TIER_ORDEM = ['gerente','coordenador','supervisor','analista','assistente','auxiliar'];
+/* ── Organograma (liderança + times por turno, com CRUD de colaborador) ── */
+const MZ_TURNOS = ['1° Turno', '2° Turno', '3° Turno'];
+let _mzOrgTurno = '1° Turno';
 
 function _mzRenderOrganograma() {
   const cont = document.getElementById('mz-conteudo');
-  const ativos = [..._mzColaboradores].filter(c => c.ativo || c.vaga);
-  const areas = [...new Set(ativos.map(c => c.area || 'Sem área'))].sort();
-  cont.innerHTML = areas.map(area => {
-    const doArea = ativos.filter(c => (c.area||'Sem área') === area);
-    const porTier = MZ_TIER_ORDEM.map(t => ({ tier:t, gente: doArea.filter(c => c.tier === t) })).filter(g => g.gente.length);
-    return `
-      <div class="card" style="margin-bottom:12px">
-        <div style="font-weight:800;font-size:13px;margin-bottom:10px">${pfEsc(area)}</div>
-        ${porTier.map(g => `
-          <div style="margin-bottom:8px">
-            <div style="font-size:9px;font-weight:800;color:var(--text3);letter-spacing:.4px;margin-bottom:4px">${(MZ_TIER_LABEL[g.tier]||g.tier).toUpperCase()}</div>
-            <div style="display:flex;flex-wrap:wrap;gap:6px">
-              ${g.gente.map(c => `<span style="padding:5px 12px;border-radius:20px;background:var(--surface2);font-size:11.5px;font-weight:600;${c.vaga?'border:1.5px dashed var(--amber);color:var(--amber)':''}">${pfEsc(c.nome)}${c.vaga?' (vaga)':''}</span>`).join('')}
-            </div>
-          </div>`).join('')}
-      </div>`;
-  }).join('') || `<div class="card" style="text-align:center;color:var(--text3);padding:20px">Nenhum colaborador cadastrado</div>`;
+  const gerente = _mzColaboradores.find(c => c.tier === 'gerente');
+  const coordenador = _mzColaboradores.find(c => c.tier === 'coordenador');
+  const branches = _mzColaboradores.filter(c => c.tier === 'supervisor' && (c.area === 'Supervisão' || c.area === 'Prevenção de Protocolos'));
+
+  const membros = _mzColaboradores.filter(c => c.turno === _mzOrgTurno && c.tier !== 'gerente' && c.tier !== 'coordenador' && c.ativo);
+  const porArea = {};
+  membros.forEach(p => { const a = p.area || 'Sem área'; (porArea[a] = porArea[a] || []).push(p); });
+
+  const desligados = [..._mzColaboradores].filter(c => !c.ativo).sort((a,b) => (a.nome||'').localeCompare(b.nome||''));
+
+  cont.innerHTML = `
+    ${(gerente || coordenador || branches.length) ? `
+    <div class="card" style="margin-bottom:14px;text-align:center">
+      ${gerente ? `<div style="display:inline-block;padding:10px 18px;border-radius:10px;background:var(--surface2);font-weight:800;font-size:13px">${pfEsc(gerente.nome)}<div style="font-size:10px;color:var(--text3);font-weight:600">${pfEsc(gerente.cargo||'')}</div></div>` : ''}
+      ${coordenador ? `<div style="margin:8px auto 0;display:inline-block;padding:10px 18px;border-radius:10px;background:var(--surface2);font-weight:800;font-size:13px">${pfEsc(coordenador.nome)}<div style="font-size:10px;color:var(--text3);font-weight:600">${pfEsc(coordenador.cargo||'')}</div></div>` : ''}
+      ${branches.length ? `<div style="display:flex;justify-content:center;flex-wrap:wrap;gap:8px;margin-top:12px">
+        ${branches.map(b => `<div style="padding:8px 14px;border-radius:10px;background:var(--surface2);font-size:12px;font-weight:700;${b.vaga?'border:1.5px dashed var(--amber);color:var(--amber)':''}">${pfEsc(b.nome)}${b.vaga?' (vaga)':''}<div style="font-size:9px;color:var(--text3);font-weight:600">${pfEsc(b.cargo||'')}${b.turno?' · '+pfEsc(b.turno):''}</div></div>`).join('')}
+      </div>` : ''}
+    </div>` : ''}
+
+    <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">
+      ${MZ_TURNOS.map(t => `<button onclick="_mzOrgTurno='${t}';_mzRenderOrganograma()" style="padding:7px 13px;background:${_mzOrgTurno===t?'var(--accent)':'var(--surface2)'};border:none;border-radius:20px;color:${_mzOrgTurno===t?'#fff':'var(--text2)'};font-size:11.5px;font-weight:700;cursor:pointer">${t}</button>`).join('')}
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">
+      ${Object.entries(porArea).map(([area, pessoas]) => `
+        <div class="card" style="margin-bottom:0">
+          <div style="font-weight:800;font-size:12.5px;margin-bottom:8px">${pfEsc(area)}</div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            ${pessoas.map(p => `
+              <div style="background:var(--surface2);border-radius:8px;padding:8px 10px">
+                <div style="font-weight:700;font-size:12px">${pfEsc(p.nome)}</div>
+                <div style="font-size:10.5px;color:var(--text3);margin-top:1px">${pfEsc(p.cargo||'')}</div>
+                <button class="btn btn-outline btn-sm" style="margin-top:6px;padding:3px 8px;font-size:10.5px" onclick="mzAbrirColaborador(${p.id})">Editar</button>
+              </div>`).join('')}
+          </div>
+        </div>`).join('') || `<div class="card" style="text-align:center;color:var(--text3);padding:20px">Nenhum colaborador nesse turno</div>`}
+    </div>
+    <div style="margin-top:14px">
+      <button class="btn btn-outline btn-sm" onclick="mzAbrirColaborador(null,'${_mzOrgTurno}')">+ novo colaborador — ${_mzOrgTurno}</button>
+    </div>
+
+    ${desligados.length ? `
+    <div style="margin-top:28px">
+      <div style="font-weight:800;font-size:13px;margin-bottom:6px">Ex-colaboradores</div>
+      <p style="font-size:11px;color:var(--text3);margin-bottom:10px">Desligados, mantidos só para histórico. Excluir aqui apaga a pessoa e todo o histórico dela (banco de horas, férias, classificações, feedbacks) permanentemente.</p>
+      <div class="card" style="padding:0;overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+          <thead><tr style="background:var(--surface2)">
+            <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:800;color:var(--text3)">NOME</th>
+            <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:800;color:var(--text3)">CARGO</th>
+            <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:800;color:var(--text3)">TURNO</th>
+            <th style="padding:8px 12px"></th>
+          </tr></thead>
+          <tbody>${desligados.map(c => `
+            <tr style="border-top:1px solid var(--border)">
+              <td style="padding:8px 12px;font-weight:700">${pfEsc(c.nome)}</td>
+              <td style="padding:8px 12px;color:var(--text2)">${pfEsc(c.cargo||'—')}</td>
+              <td style="padding:8px 12px;color:var(--text2)">${pfEsc(c.turno||'—')}</td>
+              <td style="padding:8px 12px;text-align:right"><button class="btn btn-outline btn-sm" style="color:var(--red);border-color:var(--red)" onclick="mzExcluirColaborador(${c.id})">Excluir</button></td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>` : ''}`;
 }
 
 /* ── Painel do Colaborador (visão agregada de tudo, um por vez) ── */
@@ -1006,7 +1026,8 @@ function _mzRenderPainel() {
   const corpo = document.getElementById('mz-painel-corpo');
   if (!c) { corpo.innerHTML = ''; return; }
 
-  const fbs = _mzFeedbacks.filter(f => f.colaborador_id === c.id).sort((a,b)=>(b.created_at||'').localeCompare(a.created_at||''));
+  const fbs = _mzFeedbacks.filter(f => f.colaborador_id === c.id).sort((a,b)=>(a.created_at||'').localeCompare(b.created_at||''));
+  const ultimoFb = fbs.length ? fbs[fbs.length-1] : null;
   const cls = _mzClassificacoes.filter(x => x.colaborador_id === c.id).sort((a,b)=>(b.periodo_label||'').localeCompare(a.periodo_label||''))[0];
   const aus = _mzAusencias.filter(a => a.colaborador_id === c.id);
   const bh = _mzBancoHoras.find(b => b.colaborador_id === c.id);
@@ -1039,11 +1060,37 @@ function _mzRenderPainel() {
       </div>
     </div>
     <div class="card" style="margin-bottom:12px">
-      <div style="font-weight:800;font-size:12px;margin-bottom:8px">Últimos feedbacks</div>
-      ${fbs.slice(0,3).map(f => `<div style="padding:8px 0;border-top:1px solid var(--border)"><b style="font-size:12px">${pfEsc(f.mes||'—')}</b><div style="font-size:11px;color:var(--text3);margin-top:2px">${pfEsc((f.pontos_positivos||f.pontos_construtivos||'').slice(0,120))}${(f.pontos_positivos||'').length>120?'...':''}</div></div>`).join('') || '<div style="font-size:12px;color:var(--text3)">Nenhum feedback ainda</div>'}
-    </div>
-    <div class="card">
       <div style="font-weight:800;font-size:12px;margin-bottom:8px">Ausências</div>
       ${aus.slice(0,5).map(a => `<div style="padding:6px 0;border-top:1px solid var(--border);font-size:12px">${pfEsc(a.periodo_label)} — ${a.dias} dia(s) ${a.motivo?`· ${pfEsc(a.motivo)}`:''}</div>`).join('') || '<div style="font-size:12px;color:var(--text3)">Nenhuma ausência registrada</div>'}
+    </div>
+
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div style="font-weight:800;font-size:12px">Registro Mensal</div>
+        <button class="btn btn-primary btn-sm" onclick="mzAbrirFeedback()">+ Novo feedback</button>
+      </div>
+      <p style="font-size:10.5px;color:var(--text3);margin-bottom:10px;line-height:1.5">Regra de ouro: antes de cada nova conversa, releia o "Combinado deste mês" da linha anterior. Uma linha = uma conversa. O histórico se acumula mês a mês.</p>
+      ${ultimoFb ? `<div style="background:rgba(217,119,6,.12);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:11.5px">
+        <b>📌 Combinado do último ciclo (${pfEsc(ultimoFb.mes||'—')}):</b> ${pfEsc(ultimoFb.combinado_mes || 'Nenhum combinado foi registrado no último ciclo.')}
+      </div>` : ''}
+      ${fbs.length ? fbs.map(f => `
+        <div style="background:var(--surface2);border-radius:10px;padding:12px;margin-bottom:8px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+            <div style="font-weight:800;font-size:12.5px">${pfEsc(f.mes||'Sem data')}${f.cargo_snapshot?` · ${pfEsc(f.cargo_snapshot)}`:''}${f.area_snapshot?` · ${pfEsc(f.area_snapshot)}`:''}</div>
+            <div style="display:flex;gap:6px;flex-shrink:0">
+              <button class="btn btn-outline btn-sm" style="padding:3px 8px;font-size:10.5px" onclick="mzAbrirFeedback(${f.id})">Editar</button>
+              <button class="btn btn-outline btn-sm" style="padding:3px 8px;font-size:10.5px;color:var(--red);border-color:var(--red)" onclick="mzExcluirFeedback(${f.id})">Excluir</button>
+            </div>
+          </div>
+          ${f.meta!=null && f.entregue!=null ? `<div style="font-size:11.5px;margin-top:8px"><b>1 — Meta x Entregue:</b> ${f.meta} / ${f.entregue}${f.meta?` (${Math.round(f.entregue/f.meta*100)}%)`:''}</div>` : ''}
+          ${f.pontos_positivos?`<div style="font-size:11.5px;margin-top:6px"><b>2 — Pontos positivos:</b> ${pfEsc(f.pontos_positivos)}</div>`:''}
+          ${f.pontos_construtivos?`<div style="font-size:11.5px;margin-top:6px"><b>3 — Pontos construtivos:</b> ${pfEsc(f.pontos_construtivos)}</div>`:''}
+          ${(f.atrasos||f.faltas_injustificadas||f.ausencias_justificadas||f.absenteismo_mes)?`<div style="font-size:11.5px;margin-top:6px"><b>4 — Absenteísmo:</b> ${f.atrasos?`${f.atrasos} min atraso`:''}${f.faltas_injustificadas?`, ${f.faltas_injustificadas} falta(s) injust.`:''}${f.ausencias_justificadas?`, ${f.ausencias_justificadas} ausência(s) just.`:''}${f.absenteismo_mes?` — ${pfEsc(f.absenteismo_mes)}`:''}</div>`:''}
+          ${f.retorno_antecipado?`<div style="font-size:11.5px;margin-top:6px"><b>5 — Retorno antecipado:</b> ${pfEsc(f.retorno_antecipado)}</div>`:''}
+          ${f.recorrencia_ausencia?`<div style="font-size:11.5px;margin-top:6px"><b>6 — Recorrência de ausência:</b> ${pfEsc(f.recorrencia_ausencia)}</div>`:''}
+          ${f.outros_pontos?`<div style="font-size:11.5px;margin-top:6px"><b>7 — Outros pontos:</b> ${pfEsc(f.outros_pontos)}</div>`:''}
+          ${f.saldo_banco_horas?`<div style="font-size:11.5px;margin-top:6px"><b>8 — Saldo banco de horas:</b> ${pfEsc(f.saldo_banco_horas)}</div>`:''}
+          ${f.combinado_mes?`<div style="font-size:11.5px;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)"><b>9 — Combinado deste mês:</b> ${pfEsc(f.combinado_mes)}</div>`:''}
+        </div>`).join('') : '<div style="font-size:12px;color:var(--text3)">Nenhum feedback registrado ainda</div>'}
     </div>`;
 }
