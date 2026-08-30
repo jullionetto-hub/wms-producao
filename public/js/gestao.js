@@ -1263,9 +1263,29 @@ async function absExportarMatriz(wmsId, nome, matricula) {
 
     // Match de colaborador na Matriz por nome normalizado
     const norm = s => (s||'').normalize('NFD').replace(/\p{Diacritic}/gu,'').toLowerCase().trim();
+    const STOP_WORDS = new Set(['da','de','do','das','dos','e']);
+    const sig = s => norm(s).split(/\s+/).filter(t => t.length > 1 && !STOP_WORDS.has(t));
     const nomeNorm = norm(nome);
-    const matchCol = (Array.isArray(matrizCols) ? matrizCols : []).find(c => norm(c.nome) === nomeNorm)
-                  || (Array.isArray(matrizCols) ? matrizCols : []).find(c => nomeNorm.includes(norm(c.nome)) || norm(c.nome).includes(nomeNorm));
+    const nomeSig = sig(nome);
+    const cols = Array.isArray(matrizCols) ? matrizCols : [];
+
+    let matchCol = cols.find(c => norm(c.nome) === nomeNorm)
+      // substring (cobre nome abreviado de um lado)
+      || cols.find(c => nomeNorm.includes(norm(c.nome)) || norm(c.nome).includes(nomeNorm));
+
+    if (!matchCol && nomeSig.length) {
+      // tokens em comum (primeiro nome + ao menos 1 sobrenome), robusto a ordem/palavras faltando
+      const scored = cols
+        .map(c => {
+          const cSig = sig(c.nome);
+          const setB = new Set(cSig);
+          const common = nomeSig.filter(t => setB.has(t)).length;
+          return { c, common, total: Math.max(nomeSig.length, cSig.length) };
+        })
+        .filter(x => x.common >= 2)
+        .sort((a, b) => (b.common / b.total) - (a.common / a.total));
+      matchCol = scored[0]?.c || null;
+    }
 
     // Feedback existente no período para este colaborador
     const fbExistente = matchCol
