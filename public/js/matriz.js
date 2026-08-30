@@ -7,7 +7,7 @@
 ══════════════════════════════════════════ */
 
 let _mzTab = 'colaboradores';
-let _mzUsandoBanco = false; // true depois que as rotas do WMS pararem de fazer proxy e passarem a ler do próprio banco
+let _mzUsandoBanco = true; // rotas já leem/escrevem direto no banco do WMS (não fazem mais proxy pro serviço externo)
 let _mzColaboradores = [];
 let _mzRaci = [];
 let _mzFeedbacks = [];
