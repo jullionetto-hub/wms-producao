@@ -1012,6 +1012,64 @@ function _mzRenderOrganograma() {
 }
 
 /* ── Painel do Colaborador (visão agregada de tudo, um por vez) ── */
+
+// Critério "3.2 Performance": Ótimo ≥90% · Mediano 70–89% · Ruim <70%
+function _mzPerformancePct(meta, entregue) {
+  const m = parseFloat(meta), e = parseFloat(entregue);
+  if (!m || isNaN(m) || isNaN(e)) return null;
+  return Math.round((e / m) * 100);
+}
+function _mzStatusPorFaixa(pct) {
+  if (pct == null) return null;
+  if (pct >= 90) return { cor:'var(--green)', bg:'rgba(22,163,74,.12)', label:'🟢 Ótimo' };
+  if (pct >= 70) return { cor:'var(--amber)', bg:'rgba(217,119,6,.12)', label:'🟡 Mediano' };
+  return { cor:'var(--red)', bg:'rgba(220,38,38,.12)', label:'🔴 Ruim' };
+}
+// Critério "3.1 Absenteísmo": atrasos em minutos no mês (não qtd de ocorrências).
+// Ótimo: 0 faltas injust. · até 10min atraso · 0 ausências | Mediano: 0 faltas · até 30min · até 1 ausência | Ruim: senão
+function _mzStatusAbsenteismo(atrasosMin, faltasInj, ausJust) {
+  if (atrasosMin == null && faltasInj == null && ausJust == null) return null;
+  const min = Number(atrasosMin) || 0, fi = Number(faltasInj) || 0, aj = Number(ausJust) || 0;
+  if (fi >= 1 || min > 30 || aj >= 2) return { cor:'var(--red)', bg:'rgba(220,38,38,.12)', label:'🔴 Ruim' };
+  if (min <= 10 && aj === 0) return { cor:'var(--green)', bg:'rgba(22,163,74,.12)', label:'🟢 Ótimo' };
+  return { cor:'var(--amber)', bg:'rgba(217,119,6,.12)', label:'🟡 Mediano' };
+}
+
+function _mzFeedbackCardHtml(f) {
+  const pct = (f.meta != null && f.entregue != null) ? _mzPerformancePct(f.meta, f.entregue) : null;
+  const stPerf = _mzStatusPorFaixa(pct);
+  const stAbs = _mzStatusAbsenteismo(f.atrasos, f.faltas_injustificadas, f.ausencias_justificadas);
+  const grid = (bg, cols) => `<div style="display:grid;grid-template-columns:repeat(${cols.length},1fr);gap:8px;background:${bg};border-radius:8px;padding:10px 12px">
+    ${cols.map(([label,valor,cor]) => `<div><div style="font-size:9px;color:var(--text3)">${label}</div><div style="font-size:13px;font-weight:800;${cor?`color:${cor}`:''}">${valor}</div></div>`).join('')}
+  </div>`;
+  return `
+    <div style="background:var(--surface2);border-radius:10px;padding:12px;margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+        <div style="font-weight:800;font-size:12.5px">${pfEsc(f.mes||'Sem data')}${f.cargo_snapshot?` · ${pfEsc(f.cargo_snapshot)}`:''}${f.area_snapshot?` · ${pfEsc(f.area_snapshot)}`:''}</div>
+        <div style="display:flex;gap:6px;flex-shrink:0">
+          <button class="btn btn-outline btn-sm" style="padding:3px 8px;font-size:10.5px" onclick="mzAbrirFeedback(${f.id})">Editar</button>
+          <button class="btn btn-outline btn-sm" style="padding:3px 8px;font-size:10.5px;color:var(--red);border-color:var(--red)" onclick="mzExcluirFeedback(${f.id})">Excluir</button>
+        </div>
+      </div>
+      ${pct != null ? `<div style="margin-top:8px">
+        <div style="font-size:10px;font-weight:800;color:var(--text3);margin-bottom:4px">1 — META X ENTREGUE</div>
+        ${grid(stPerf.bg, [['META',f.meta],['ENTREGUE',f.entregue],['%',pct+'%',stPerf.cor],['STATUS',stPerf.label,stPerf.cor]])}
+      </div>` : ''}
+      ${f.pontos_positivos?`<div style="font-size:11.5px;margin-top:8px"><b>2 — Pontos positivos:</b> ${pfEsc(f.pontos_positivos)}</div>`:''}
+      ${f.pontos_construtivos?`<div style="font-size:11.5px;margin-top:6px"><b>3 — Pontos construtivos:</b> ${pfEsc(f.pontos_construtivos)}</div>`:''}
+      ${stAbs ? `<div style="margin-top:8px">
+        <div style="font-size:10px;font-weight:800;color:var(--text3);margin-bottom:4px">4 — ABSENTEÍSMO DO MÊS: RESUMO</div>
+        ${grid(stAbs.bg, [['ATRASOS (MIN)',f.atrasos||0],['FALTAS INJUST.',f.faltas_injustificadas||0],['AUSÊNCIAS JUST.',f.ausencias_justificadas||0],['STATUS',stAbs.label,stAbs.cor]])}
+      </div>` : ''}
+      ${f.absenteismo_mes?`<div style="font-size:11.5px;margin-top:8px"><b>4 — Absenteísmo do mês: detalhes</b><div style="color:var(--text2);margin-top:2px">${pfEsc(f.absenteismo_mes)}</div></div>`:''}
+      ${f.retorno_antecipado?`<div style="font-size:11.5px;margin-top:6px"><b>5 — Retorno antecipado:</b> ${pfEsc(f.retorno_antecipado)}</div>`:''}
+      ${f.recorrencia_ausencia?`<div style="font-size:11.5px;margin-top:6px"><b>6 — Recorrência de ausência:</b> ${pfEsc(f.recorrencia_ausencia)}</div>`:''}
+      ${f.outros_pontos?`<div style="font-size:11.5px;margin-top:6px"><b>7 — Outros pontos:</b> ${pfEsc(f.outros_pontos)}</div>`:''}
+      ${f.saldo_banco_horas?`<div style="font-size:11.5px;margin-top:6px"><b>8 — Saldo banco de horas:</b> ${pfEsc(f.saldo_banco_horas)}</div>`:''}
+      ${f.combinado_mes?`<div style="font-size:11.5px;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)"><b>9 — Combinado deste mês:</b> ${pfEsc(f.combinado_mes)}</div>`:''}
+    </div>`;
+}
+
 function _mzRenderPainel() {
   const cont = document.getElementById('mz-conteudo');
   const ativos = [..._mzColaboradores].sort((a,b)=>(a.nome||'').localeCompare(b.nome||''));
@@ -1073,24 +1131,6 @@ function _mzRenderPainel() {
       ${ultimoFb ? `<div style="background:rgba(217,119,6,.12);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:11.5px">
         <b>📌 Combinado do último ciclo (${pfEsc(ultimoFb.mes||'—')}):</b> ${pfEsc(ultimoFb.combinado_mes || 'Nenhum combinado foi registrado no último ciclo.')}
       </div>` : ''}
-      ${fbs.length ? fbs.map(f => `
-        <div style="background:var(--surface2);border-radius:10px;padding:12px;margin-bottom:8px">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
-            <div style="font-weight:800;font-size:12.5px">${pfEsc(f.mes||'Sem data')}${f.cargo_snapshot?` · ${pfEsc(f.cargo_snapshot)}`:''}${f.area_snapshot?` · ${pfEsc(f.area_snapshot)}`:''}</div>
-            <div style="display:flex;gap:6px;flex-shrink:0">
-              <button class="btn btn-outline btn-sm" style="padding:3px 8px;font-size:10.5px" onclick="mzAbrirFeedback(${f.id})">Editar</button>
-              <button class="btn btn-outline btn-sm" style="padding:3px 8px;font-size:10.5px;color:var(--red);border-color:var(--red)" onclick="mzExcluirFeedback(${f.id})">Excluir</button>
-            </div>
-          </div>
-          ${f.meta!=null && f.entregue!=null ? `<div style="font-size:11.5px;margin-top:8px"><b>1 — Meta x Entregue:</b> ${f.meta} / ${f.entregue}${f.meta?` (${Math.round(f.entregue/f.meta*100)}%)`:''}</div>` : ''}
-          ${f.pontos_positivos?`<div style="font-size:11.5px;margin-top:6px"><b>2 — Pontos positivos:</b> ${pfEsc(f.pontos_positivos)}</div>`:''}
-          ${f.pontos_construtivos?`<div style="font-size:11.5px;margin-top:6px"><b>3 — Pontos construtivos:</b> ${pfEsc(f.pontos_construtivos)}</div>`:''}
-          ${(f.atrasos||f.faltas_injustificadas||f.ausencias_justificadas||f.absenteismo_mes)?`<div style="font-size:11.5px;margin-top:6px"><b>4 — Absenteísmo:</b> ${f.atrasos?`${f.atrasos} min atraso`:''}${f.faltas_injustificadas?`, ${f.faltas_injustificadas} falta(s) injust.`:''}${f.ausencias_justificadas?`, ${f.ausencias_justificadas} ausência(s) just.`:''}${f.absenteismo_mes?` — ${pfEsc(f.absenteismo_mes)}`:''}</div>`:''}
-          ${f.retorno_antecipado?`<div style="font-size:11.5px;margin-top:6px"><b>5 — Retorno antecipado:</b> ${pfEsc(f.retorno_antecipado)}</div>`:''}
-          ${f.recorrencia_ausencia?`<div style="font-size:11.5px;margin-top:6px"><b>6 — Recorrência de ausência:</b> ${pfEsc(f.recorrencia_ausencia)}</div>`:''}
-          ${f.outros_pontos?`<div style="font-size:11.5px;margin-top:6px"><b>7 — Outros pontos:</b> ${pfEsc(f.outros_pontos)}</div>`:''}
-          ${f.saldo_banco_horas?`<div style="font-size:11.5px;margin-top:6px"><b>8 — Saldo banco de horas:</b> ${pfEsc(f.saldo_banco_horas)}</div>`:''}
-          ${f.combinado_mes?`<div style="font-size:11.5px;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)"><b>9 — Combinado deste mês:</b> ${pfEsc(f.combinado_mes)}</div>`:''}
-        </div>`).join('') : '<div style="font-size:12px;color:var(--text3)">Nenhum feedback registrado ainda</div>'}
+      ${fbs.length ? fbs.map(_mzFeedbackCardHtml).join('') : '<div style="font-size:12px;color:var(--text3)">Nenhum feedback registrado ainda</div>'}
     </div>`;
 }
