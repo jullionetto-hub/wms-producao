@@ -124,6 +124,10 @@ function renderizarPagGestao() {
             <input type="checkbox" id="gabs-chk-all" style="accent-color:#3b82f6;width:14px;height:14px;flex-shrink:0" onchange="absToggleSelectAll(this.checked)">
             <span id="gabs-sel-count" style="white-space:nowrap">0 selecionados</span>
           </label>
+          <button id="gabs-btn-export-mtz" onclick="absExportarSelecionadosMatriz()"
+            style="padding:3px 8px;background:#2563eb;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0">
+            Exportar p/ Matriz
+          </button>
           <button onclick="absExcluirSelecionados()"
             style="padding:3px 8px;background:#dc2626;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0">
             Excluir
@@ -1142,6 +1146,172 @@ function _absFeedbackModal(texto, nome, isHtml) {
       ${bodyHtml}
     </div>`;
   document.body.appendChild(overlay);
+}
+
+/* ── Cálculo de absenteísmo + match de colaborador na Matriz, sem tocar DOM ──
+   Usado pela exportação individual (Mtz) e pela exportação em lote. */
+async function _absDadosParaMatriz(wmsId, nome, matricula, matrizCols, matrizFbs) {
+  const toM  = s => { if (!s) return null; const [h,m] = s.split(':').map(Number); return h*60+m; };
+  const fmtD = s => s ? new Date(s+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}) : '—';
+  const fmtMin = m => m >= 60 ? `${Math.floor(m/60)}h${m%60>0?String(m%60).padStart(2,'0')+'min':''}` : `${m}min`;
+
+  const params = {};
+  if (_absPeriodo?.start) params.start_date = _absPeriodo.start;
+  if (_absPeriodo?.end)   params.end_date   = _absPeriodo.end;
+  if (matricula)          params.matricula   = matricula;
+  const qs = Object.keys(params).length ? '?' + new URLSearchParams(params) : '';
+
+  const empRes = await fetch(`${API}/gestao/absenteismo/funcionario/${wmsId}${qs}`, { credentials: 'include' }).then(r => r.json());
+
+  const LUNCH_MIN = 60, BREAK_MIN = 15;
+  const allRec = empRes.daily_records || [];
+  const schedM = (empRes.schedule||'').match(/(\d+)h/);
+  const schedStart = schedM ? parseInt(schedM[1])*60 : null;
+
+  const faltaRecs = allRec.filter(r => r.falta && !r.atestado).sort((a,b)=>a.date<b.date?-1:1);
+  const atesRecs  = allRec.filter(r => r.atestado).sort((a,b)=>a.date<b.date?-1:1);
+  const atrasoRecs = allRec
+    .filter(r => r.status === 'normal' && r.entry_time && schedStart !== null)
+    .map(r => ({ date: r.date, min: Math.max(0, (toM(r.entry_time)||0) - schedStart) }))
+    .filter(r => r.min > 0)
+    .sort((a,b)=>a.date<b.date?-1:1);
+  const almocoProlRecs = allRec
+    .filter(r => r.status === 'normal' && r.lunch_start && r.lunch_end)
+    .map(r => { const dur=(toM(r.lunch_end)||0)-(toM(r.lunch_start)||0); return { date:r.date, min: dur-LUNCH_MIN }; })
+    .filter(r => r.min > 0)
+    .sort((a,b)=>a.date<b.date?-1:1);
+  const almocoAntecipadoRecs = allRec
+    .filter(r => r.status === 'normal' && r.lunch_start && r.lunch_end)
+    .map(r => { const dur=(toM(r.lunch_end)||0)-(toM(r.lunch_start)||0); return { date:r.date, min: LUNCH_MIN-dur }; })
+    .filter(r => r.min > 0)
+    .sort((a,b)=>a.date<b.date?-1:1);
+  const pausaProlRecs = allRec
+    .filter(r => r.status === 'normal' && r.break_start && r.break_end)
+    .map(r => { const dur=(toM(r.break_end)||0)-(toM(r.break_start)||0); return { date:r.date, min: dur-BREAK_MIN }; })
+    .filter(r => r.min > 0)
+    .sort((a,b)=>a.date<b.date?-1:1);
+  const totalAtrasoMin = atrasoRecs.reduce((s,r)=>s+r.min,0)
+                       + almocoProlRecs.reduce((s,r)=>s+r.min,0)
+                       + pausaProlRecs.reduce((s,r)=>s+r.min,0);
+
+  const gruposAtes = [];
+  for (const r of atesRecs) {
+    const last = gruposAtes[gruposAtes.length-1];
+    if (last) {
+      const diff = Math.round((new Date(r.date+'T12:00:00') - new Date(last[last.length-1].date+'T12:00:00')) / 86400000);
+      if (diff === 1) { last.push(r); continue; }
+    }
+    gruposAtes.push([r]);
+  }
+
+  const linhas = [];
+  if (atrasoRecs.length) { linhas.push('Atrasos na entrada:'); atrasoRecs.forEach(r => linhas.push(`  ${fmtD(r.date)}: ${fmtMin(r.min)}`)); }
+  if (almocoProlRecs.length) { linhas.push('Almoço prolongado:'); almocoProlRecs.forEach(r => linhas.push(`  ${fmtD(r.date)}: +${fmtMin(r.min)}`)); }
+  if (almocoAntecipadoRecs.length) { linhas.push('Retorno antecipado do almoço:'); almocoAntecipadoRecs.forEach(r => linhas.push(`  ${fmtD(r.date)}: -${fmtMin(r.min)}`)); }
+  if (pausaProlRecs.length) { linhas.push('Pausa prolongada:'); pausaProlRecs.forEach(r => linhas.push(`  ${fmtD(r.date)}: +${fmtMin(r.min)}`)); }
+  if (faltaRecs.length) { linhas.push('Faltas injustificadas:'); faltaRecs.forEach(r => linhas.push(`  ${fmtD(r.date)}`)); }
+  if (gruposAtes.length) {
+    linhas.push('Atestados:');
+    gruposAtes.forEach(g => {
+      const n = g.length;
+      linhas.push(`  ${n===1?fmtD(g[0].date):`${fmtD(g[0].date)} a ${fmtD(g[n-1].date)}`} (${n} dia${n>1?'s':''})`);
+    });
+  }
+  const textoDetalhe = linhas.join('\n');
+
+  const mesLabel = (() => {
+    const ref = _absPeriodo?.end || _absPeriodo?.start;
+    if (!ref) return '';
+    const d = new Date(ref + 'T12:00:00');
+    return d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+  })();
+
+  const norm = s => (s||'').normalize('NFD').replace(/\p{Diacritic}/gu,'').toLowerCase().trim();
+  const STOP_WORDS = new Set(['da','de','do','das','dos','e']);
+  const sig = s => norm(s).split(/\s+/).filter(t => t.length > 1 && !STOP_WORDS.has(t));
+  const nomeNorm = norm(nome);
+  const nomeSig = sig(nome);
+  const cols = Array.isArray(matrizCols) ? matrizCols : [];
+
+  let matchCol = cols.find(c => norm(c.nome) === nomeNorm)
+    || cols.find(c => nomeNorm.includes(norm(c.nome)) || norm(c.nome).includes(nomeNorm));
+
+  if (!matchCol && nomeSig.length) {
+    const scored = cols
+      .map(c => {
+        const cSig = sig(c.nome);
+        const setB = new Set(cSig);
+        const common = nomeSig.filter(t => setB.has(t)).length;
+        return { c, common, total: Math.max(nomeSig.length, cSig.length) };
+      })
+      .filter(x => x.common >= 2)
+      .sort((a, b) => (b.common / b.total) - (a.common / a.total));
+    matchCol = scored[0]?.c || null;
+  }
+
+  const fbExistente = matchCol
+    ? (Array.isArray(matrizFbs) ? matrizFbs : []).find(f =>
+        f.colaborador_id === matchCol.id &&
+        (f.mes||'').toLowerCase().includes(mesLabel.split(' ')[0]?.toLowerCase())
+      )
+    : null;
+
+  return { matchCol, textoDetalhe, mesLabel, faltaRecs, atesRecs, totalAtrasoMin, fbExistente };
+}
+
+// Exporta pra Matriz todos os funcionários selecionados (checkboxes) de uma vez —
+// sem abrir modal por pessoa. Só exporta quem teve correspondência confiável de
+// nome na Matriz (mesma lógica de match do fluxo individual); quem não teve fica
+// de fora, listado no resumo, pra exportar manualmente pelo botão Mtz.
+async function absExportarSelecionadosMatriz() {
+  const ids = [..._absSelectedIds];
+  if (!ids.length) { toast('Selecione ao menos um funcionário.','aviso'); return; }
+  const alvos = _absRows.filter(r => ids.includes(r.id));
+  if (!confirm(`Exportar ${alvos.length} funcionário(s) para a Matriz de Responsabilidades?\n\nSó quem tiver correspondência de nome encontrada na Matriz é exportado automaticamente — quem não tiver fica de fora do lote pra você conferir manualmente.`)) return;
+
+  const btn = document.getElementById('gabs-btn-export-mtz');
+  if (btn) { btn.disabled = true; btn.textContent = 'Exportando...'; }
+
+  try {
+    const [matrizCols, matrizFbs] = await Promise.all([
+      fetch(`${API}/gestao/absenteismo/matriz/colaboradores`, { credentials: 'include' }).then(r => r.json()),
+      fetch(`${API}/gestao/absenteismo/matriz/feedbacks`, { credentials: 'include' }).then(r => r.json()),
+    ]);
+
+    let novos = 0, atualizados = 0;
+    const semMatch = [];
+    for (const r of alvos) {
+      try {
+        const d = await _absDadosParaMatriz(r.id, r.name, r.matricula, matrizCols, matrizFbs);
+        if (!d.matchCol) { semMatch.push(r.name); continue; }
+        const body = {
+          colaborador_id: d.matchCol.id,
+          mes: d.mesLabel,
+          atrasos: d.totalAtrasoMin || null,
+          faltas_injustificadas: d.faltaRecs.length || null,
+          ausencias_justificadas: d.atesRecs.length || null,
+          absenteismo_mes: d.textoDetalhe || null,
+        };
+        if (d.fbExistente) body.feedback_id = d.fbExistente.id;
+        const res = await fetch(`${API}/gestao/absenteismo/exportar-matriz`, {
+          method: 'POST', credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        if (!res.ok) throw new Error();
+        if (d.fbExistente) atualizados++; else novos++;
+      } catch(e) { semMatch.push(`${r.name} (erro ao enviar)`); }
+    }
+
+    const total = novos + atualizados;
+    let msg = total ? `${total} exportado(s) pra Matriz (${novos} novo(s), ${atualizados} atualizado(s))` : 'Nenhum exportado.';
+    if (semMatch.length) msg += ` — ${semMatch.length} sem correspondência: ${semMatch.slice(0,5).join(', ')}${semMatch.length>5?', ...':''}`;
+    toast(msg, semMatch.length ? 'aviso' : 'sucesso');
+  } catch(e) {
+    toast('Erro ao exportar em lote: ' + e.message, 'erro');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Exportar p/ Matriz'; }
+  }
 }
 
 /* ── Exportar para Matriz de Responsabilidades ── */
