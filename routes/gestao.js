@@ -2,6 +2,7 @@
 const express = require('express');
 const router  = express.Router();
 const { requerAuth, requerPerfil } = require('../lib/auth');
+const { db, pool } = require('../lib/db');
 
 const ABS_URL   = (process.env.ABS_API_URL   || 'https://backend-production-e7bdc.up.railway.app').replace(/\/$/, '');
 const ABS_EMAIL = process.env.ABS_EMAIL    || 'jotaceene1987@gmail.com';
@@ -40,49 +41,6 @@ async function absProxy(path, query = {}) {
     throw new Error(`API absenteísmo ${res.status}: ${detail}`);
   }
   return res.json();
-}
-
-/* ─── Matriz de Responsabilidades — proxy ─── */
-const MATRIZ_URL  = (process.env.MATRIZ_URL || 'https://matriz-responsabilidades-production.up.railway.app').replace(/\/$/, '');
-const MATRIZ_USER = process.env.MATRIZ_EMAIL    || '';
-const MATRIZ_PASS = process.env.MATRIZ_PASSWORD || '';
-
-let _matrizToken    = null;
-let _matrizTokenExp = 0;
-
-async function getMatrizToken() {
-  if (_matrizToken && Date.now() < _matrizTokenExp) return _matrizToken;
-  if (!MATRIZ_USER || !MATRIZ_PASS) throw new Error('Credenciais da Matriz não configuradas (MATRIZ_EMAIL / MATRIZ_PASSWORD)');
-  const body = new URLSearchParams();
-  body.set('username', MATRIZ_USER);
-  body.set('password', MATRIZ_PASS);
-  const res = await fetch(`${MATRIZ_URL}/api/auth/login`, { method: 'POST', body });
-  if (!res.ok) {
-    let d = ''; try { d = (await res.json()).detail || ''; } catch {}
-    throw new Error(`Auth Matriz ${res.status}: ${d}`);
-  }
-  const { access_token } = await res.json();
-  _matrizToken    = access_token;
-  _matrizTokenExp = Date.now() + 50 * 60 * 1000;
-  return _matrizToken;
-}
-
-async function matrizGet(path) {
-  const token = await getMatrizToken();
-  const res = await fetch(`${MATRIZ_URL}${path}`, { headers: { Authorization: `Bearer ${token}` } });
-  if (!res.ok) { let d=''; try{d=(await res.json()).detail||'';}catch{} throw new Error(`Matriz ${res.status}: ${d}`); }
-  return res.json();
-}
-
-async function matrizSend(method, path, body) {
-  const token = await getMatrizToken();
-  const res = await fetch(`${MATRIZ_URL}${path}`, {
-    method,
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) { let d=''; try{d=(await res.json()).detail||'';}catch{} throw new Error(`Matriz ${res.status}: ${d}`); }
-  return res.status === 204 ? null : res.json();
 }
 
 const requerGestor = requerPerfil('gestor', 'supervisor');
@@ -181,14 +139,16 @@ router.delete('/gestao/absenteismo/funcionarios/batch', requerAuth, requerGestor
   }
 );
 
-/* ─── Rotas Matriz ─── */
+/* ─── Rotas Matriz ─── lê/grava direto no banco do WMS (mz_colaboradores/mz_feedbacks),
+   não fazem mais proxy pro serviço externo — a Matriz de Responsabilidades já roda
+   nativamente dentro do WMS (ver routes/matriz.js). */
 router.get('/gestao/absenteismo/matriz/colaboradores', requerAuth, requerGestor, async (_req, res) => {
-  try { res.json(await matrizGet('/api/colaboradores')); }
+  try { res.json(await db.all('SELECT id,nome,cargo,tier,area,turno,ativo,vaga FROM mz_colaboradores ORDER BY nome')); }
   catch (e) { res.status(502).json({ erro: e.message }); }
 });
 
 router.get('/gestao/absenteismo/matriz/feedbacks', requerAuth, requerGestor, async (_req, res) => {
-  try { res.json(await matrizGet('/api/feedbacks')); }
+  try { res.json(await db.all('SELECT *, criado_em AS created_at FROM mz_feedbacks ORDER BY criado_em DESC')); }
   catch (e) { res.status(502).json({ erro: e.message }); }
 });
 
@@ -198,11 +158,24 @@ router.post('/gestao/absenteismo/exportar-matriz', requerAuth, requerGestor,
     try {
       const { colaborador_id, mes, atrasos, faltas_injustificadas, ausencias_justificadas, absenteismo_mes, feedback_id } = req.body;
       if (!colaborador_id) return res.status(400).json({ erro: 'colaborador_id obrigatório' });
-      const payload = { colaborador_id, mes, atrasos, faltas_injustificadas, ausencias_justificadas, absenteismo_mes };
-      const result  = feedback_id
-        ? await matrizSend('PATCH', `/api/feedbacks/${feedback_id}`, payload)
-        : await matrizSend('POST',  '/api/feedbacks', payload);
-      res.json(result || { ok: true });
+      let result;
+      if (feedback_id) {
+        // Atualiza só os campos de absenteísmo — preserva o resto do feedback (pontos positivos, combinado etc).
+        const r = await pool.query(
+          `UPDATE mz_feedbacks SET mes=$1, atrasos=$2, faltas_injustificadas=$3, ausencias_justificadas=$4, absenteismo_mes=$5
+           WHERE id=$6 RETURNING *`,
+          [mes||'', atrasos??null, faltas_injustificadas??null, ausencias_justificadas??null, absenteismo_mes||'', feedback_id]
+        );
+        result = r.rows[0];
+      } else {
+        const r = await pool.query(
+          `INSERT INTO mz_feedbacks (colaborador_id, mes, atrasos, faltas_injustificadas, ausencias_justificadas, absenteismo_mes)
+           VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
+          [colaborador_id, mes||'', atrasos??null, faltas_injustificadas??null, ausencias_justificadas??null, absenteismo_mes||'']
+        );
+        result = r.rows[0];
+      }
+      res.json(result);
     } catch (e) { res.status(502).json({ erro: e.message }); }
   }
 );
