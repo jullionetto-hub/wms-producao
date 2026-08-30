@@ -1725,7 +1725,7 @@ function _renderDetalheAbs(data, nome) {
             const lunchEarly = ld !== null && ld > 0 && ld < LUNCH_MIN;
             const breakOver  = bd !== null && bd > BREAK_MIN;
             const earlyMin   = lunchEarly ? LUNCH_MIN - ld : 0;
-            const rowBg      = anomalia ? '#fef2f2' : late ? '#fff7ed' : lunchEarly ? '#eff6ff' : '';
+            const rowBg      = anomalia ? 'rgba(220,38,38,.14)' : late ? 'rgba(217,119,6,.14)' : lunchEarly ? 'rgba(79,70,229,.14)' : '';
             const lunchStr   = r.lunch_start && r.lunch_end
               ? `<span style="color:${lunchOver?'#d97706':lunchEarly?'#4F46E5':'var(--text2)'};font-weight:${lunchOver||lunchEarly?'700':'400'}">${r.lunch_start} → ${r.lunch_end}${lunchOver?` <small>(${ld}min)</small>`:lunchEarly?` <small>${ld}min</small>`:''}</span>`
               : '—';
