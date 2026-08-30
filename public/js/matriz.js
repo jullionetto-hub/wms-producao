@@ -1043,31 +1043,43 @@ function _mzFeedbackCardHtml(f) {
     ${cols.map(([label,valor,cor]) => `<div><div style="font-size:9px;color:var(--text3)">${label}</div><div style="font-size:13px;font-weight:800;${cor?`color:${cor}`:''}">${valor}</div></div>`).join('')}
   </div>`;
   return `
-    <div style="background:var(--surface2);border-radius:10px;padding:12px;margin-bottom:8px">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+    <div style="background:var(--surface2);border-radius:10px;margin-bottom:8px;overflow:hidden">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px;cursor:pointer" onclick="mzToggleFeedback(${f.id})">
         <div style="font-weight:800;font-size:12.5px">${pfEsc(f.mes||'Sem data')}${f.cargo_snapshot?` · ${pfEsc(f.cargo_snapshot)}`:''}${f.area_snapshot?` · ${pfEsc(f.area_snapshot)}`:''}</div>
-        <div style="display:flex;gap:6px;flex-shrink:0">
-          <button class="btn btn-outline btn-sm" style="padding:3px 8px;font-size:10.5px" onclick="mzAbrirFeedback(${f.id})">Editar</button>
-          <button class="btn btn-outline btn-sm" style="padding:3px 8px;font-size:10.5px;color:var(--red);border-color:var(--red)" onclick="mzExcluirFeedback(${f.id})">Excluir</button>
+        <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
+          <button class="btn btn-outline btn-sm" style="padding:3px 8px;font-size:10.5px" onclick="event.stopPropagation();mzAbrirFeedback(${f.id})">Editar</button>
+          <button class="btn btn-outline btn-sm" style="padding:3px 8px;font-size:10.5px;color:var(--red);border-color:var(--red)" onclick="event.stopPropagation();mzExcluirFeedback(${f.id})">Excluir</button>
+          <span id="mzfb-chevron-${f.id}" style="font-size:11px;color:var(--text3);transition:transform .2s ease">▾</span>
         </div>
       </div>
-      ${pct != null ? `<div style="margin-top:8px">
-        <div style="font-size:10px;font-weight:800;color:var(--text3);margin-bottom:4px">1 — META X ENTREGUE</div>
-        ${grid(stPerf.bg, [['META',f.meta],['ENTREGUE',f.entregue],['%',pct+'%',stPerf.cor],['STATUS',stPerf.label,stPerf.cor]])}
-      </div>` : ''}
-      ${f.pontos_positivos?`<div style="font-size:11.5px;margin-top:8px"><b>2 — Pontos positivos:</b> ${pfEsc(f.pontos_positivos)}</div>`:''}
-      ${f.pontos_construtivos?`<div style="font-size:11.5px;margin-top:6px"><b>3 — Pontos construtivos:</b> ${pfEsc(f.pontos_construtivos)}</div>`:''}
-      ${stAbs ? `<div style="margin-top:8px">
-        <div style="font-size:10px;font-weight:800;color:var(--text3);margin-bottom:4px">4 — ABSENTEÍSMO DO MÊS: RESUMO</div>
-        ${grid(stAbs.bg, [['ATRASOS (MIN)',f.atrasos||0],['FALTAS INJUST.',f.faltas_injustificadas||0],['AUSÊNCIAS JUST.',f.ausencias_justificadas||0],['STATUS',stAbs.label,stAbs.cor]])}
-      </div>` : ''}
-      ${f.absenteismo_mes?`<div style="font-size:11.5px;margin-top:8px"><b>4 — Absenteísmo do mês: detalhes</b><div style="color:var(--text2);margin-top:2px">${pfEsc(f.absenteismo_mes)}</div></div>`:''}
-      ${f.retorno_antecipado?`<div style="font-size:11.5px;margin-top:6px"><b>5 — Retorno antecipado:</b> ${pfEsc(f.retorno_antecipado)}</div>`:''}
-      ${f.recorrencia_ausencia?`<div style="font-size:11.5px;margin-top:6px"><b>6 — Recorrência de ausência:</b> ${pfEsc(f.recorrencia_ausencia)}</div>`:''}
-      ${f.outros_pontos?`<div style="font-size:11.5px;margin-top:6px"><b>7 — Outros pontos:</b> ${pfEsc(f.outros_pontos)}</div>`:''}
-      ${f.saldo_banco_horas?`<div style="font-size:11.5px;margin-top:6px"><b>8 — Saldo banco de horas:</b> ${pfEsc(f.saldo_banco_horas)}</div>`:''}
-      ${f.combinado_mes?`<div style="font-size:11.5px;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)"><b>9 — Combinado deste mês:</b> ${pfEsc(f.combinado_mes)}</div>`:''}
+      <div id="mzfb-body-${f.id}" style="display:none;padding:0 12px 12px">
+        ${pct != null ? `<div style="margin-top:2px">
+          <div style="font-size:10px;font-weight:800;color:var(--text3);margin-bottom:4px">1 — META X ENTREGUE</div>
+          ${grid(stPerf.bg, [['META',f.meta],['ENTREGUE',f.entregue],['%',pct+'%',stPerf.cor],['STATUS',stPerf.label,stPerf.cor]])}
+        </div>` : ''}
+        ${f.pontos_positivos?`<div style="font-size:11.5px;margin-top:8px"><b>2 — Pontos positivos:</b> ${pfEsc(f.pontos_positivos)}</div>`:''}
+        ${f.pontos_construtivos?`<div style="font-size:11.5px;margin-top:6px"><b>3 — Pontos construtivos:</b> ${pfEsc(f.pontos_construtivos)}</div>`:''}
+        ${stAbs ? `<div style="margin-top:8px">
+          <div style="font-size:10px;font-weight:800;color:var(--text3);margin-bottom:4px">4 — ABSENTEÍSMO DO MÊS: RESUMO</div>
+          ${grid(stAbs.bg, [['ATRASOS (MIN)',f.atrasos||0],['FALTAS INJUST.',f.faltas_injustificadas||0],['AUSÊNCIAS JUST.',f.ausencias_justificadas||0],['STATUS',stAbs.label,stAbs.cor]])}
+        </div>` : ''}
+        ${f.absenteismo_mes?`<div style="font-size:11.5px;margin-top:8px"><b>4 — Absenteísmo do mês: detalhes</b><div style="color:var(--text2);margin-top:2px">${pfEsc(f.absenteismo_mes)}</div></div>`:''}
+        ${f.retorno_antecipado?`<div style="font-size:11.5px;margin-top:6px"><b>5 — Retorno antecipado:</b> ${pfEsc(f.retorno_antecipado)}</div>`:''}
+        ${f.recorrencia_ausencia?`<div style="font-size:11.5px;margin-top:6px"><b>6 — Recorrência de ausência:</b> ${pfEsc(f.recorrencia_ausencia)}</div>`:''}
+        ${f.outros_pontos?`<div style="font-size:11.5px;margin-top:6px"><b>7 — Outros pontos:</b> ${pfEsc(f.outros_pontos)}</div>`:''}
+        ${f.saldo_banco_horas?`<div style="font-size:11.5px;margin-top:6px"><b>8 — Saldo banco de horas:</b> ${pfEsc(f.saldo_banco_horas)}</div>`:''}
+        ${f.combinado_mes?`<div style="font-size:11.5px;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)"><b>9 — Combinado deste mês:</b> ${pfEsc(f.combinado_mes)}</div>`:''}
+      </div>
     </div>`;
+}
+
+function mzToggleFeedback(id) {
+  const body = document.getElementById(`mzfb-body-${id}`);
+  const chevron = document.getElementById(`mzfb-chevron-${id}`);
+  if (!body) return;
+  const abrindo = body.style.display === 'none';
+  body.style.display = abrindo ? 'block' : 'none';
+  if (chevron) chevron.style.transform = abrindo ? 'rotate(180deg)' : '';
 }
 
 function _mzRenderPainel() {
