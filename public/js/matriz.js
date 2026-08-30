@@ -7,6 +7,7 @@
 ══════════════════════════════════════════ */
 
 let _mzTab = 'colaboradores';
+let _mzUsandoBanco = false; // true depois que as rotas do WMS pararem de fazer proxy e passarem a ler do próprio banco
 let _mzColaboradores = [];
 let _mzRaci = [];
 let _mzFeedbacks = [];
@@ -25,14 +26,78 @@ function renderizarPagMatriz() {
   <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;padding:16px 24px 12px;border-bottom:1px solid var(--border);flex-shrink:0">
     <div>
       <div style="font-family:'Space Mono',monospace;font-size:17px;font-weight:800;color:var(--text)">Matriz de Responsabilidades</div>
-      <div style="font-size:11px;color:var(--text3);margin-top:3px;font-weight:600">Sistema separado — os dados ficam lá, aqui é só a tela</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:3px;font-weight:600" id="mz-fonte-label">Carregando origem dos dados...</div>
     </div>
+    <button class="btn btn-outline btn-sm" onclick="mzToggleMigracao()">Migração ▾</button>
+  </div>
+  <div id="mz-painel-migracao" style="display:none;padding:14px 24px;border-bottom:1px solid var(--border);background:var(--surface2);flex-shrink:0">
+    <div style="font-size:12px;color:var(--text2);margin-bottom:10px;line-height:1.6">
+      Copia tudo do sistema separado (Railway) pra dentro do banco do próprio WMS. Pode rodar quantas vezes quiser — atualiza em vez de duplicar.
+      <b>Não apaga nada na origem.</b> Só depois de conferir as contagens abaixo é seguro desligar o Railway da Matriz.
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <button class="btn btn-primary btn-sm" onclick="mzRodarMigracao()">Migrar agora</button>
+      <button class="btn btn-outline btn-sm" onclick="mzConferirMigracao()">Conferir contagens</button>
+    </div>
+    <div id="mz-migracao-resultado"></div>
   </div>
   <div style="display:flex;gap:6px;padding:12px 24px 0;border-bottom:1px solid var(--border);flex-shrink:0" id="mz-tabs"></div>
   <div style="flex:1;overflow-y:auto;padding:16px 24px" id="mz-conteudo"></div>
 </div>`;
+  document.getElementById('mz-fonte-label').textContent = _mzUsandoBanco
+    ? 'Dados no banco do próprio WMS'
+    : 'Sistema separado — os dados ainda ficam lá, aqui é só a tela';
   _mzRenderTabs();
   mzTrocarTab('colaboradores');
+}
+
+function mzToggleMigracao() {
+  const el = document.getElementById('mz-painel-migracao');
+  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+async function mzRodarMigracao() {
+  const out = document.getElementById('mz-migracao-resultado');
+  out.innerHTML = '<div style="color:var(--text3);font-size:12px;padding:8px 0">Migrando... pode levar um tempinho.</div>';
+  try {
+    const r = await _mzFetch('/matriz/migrar', { method:'POST' });
+    out.innerHTML = `
+      <div style="background:rgba(22,163,74,.12);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--green)">
+        Migração concluída! Rode "Conferir contagens" pra validar antes de mexer no Railway.
+      </div>
+      <pre style="font-size:10.5px;color:var(--text3);margin-top:8px;white-space:pre-wrap;overflow-x:auto">${pfEsc(JSON.stringify(r, null, 2))}</pre>`;
+    toast('Migração concluída!','sucesso');
+  } catch(e) {
+    out.innerHTML = `<div style="background:rgba(220,38,38,.12);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--red)">Erro na migração: ${pfEsc(e.message)}</div>`;
+  }
+}
+
+async function mzConferirMigracao() {
+  const out = document.getElementById('mz-migracao-resultado');
+  out.innerHTML = '<div style="color:var(--text3);font-size:12px;padding:8px 0">Conferindo...</div>';
+  try {
+    const r = await _mzFetch('/matriz/migrar/conferencia');
+    const linhas = Object.entries(r).map(([k,v]) => {
+      const bate = v.origem === v.wms;
+      return `<tr style="border-top:1px solid var(--border)">
+        <td style="padding:6px 10px">${pfEsc(k)}</td>
+        <td style="padding:6px 10px;text-align:center;font-family:monospace">${v.origem}</td>
+        <td style="padding:6px 10px;text-align:center;font-family:monospace">${v.wms}</td>
+        <td style="padding:6px 10px;text-align:center;font-weight:800;color:${bate?'var(--green)':'var(--red)'}">${bate?'OK':'DIFERENTE'}</td>
+      </tr>`;
+    }).join('');
+    const tudoOk = Object.values(r).every(v => v.origem === v.wms);
+    out.innerHTML = `
+      <table style="width:100%;border-collapse:collapse;font-size:11.5px;margin-top:4px">
+        <thead><tr style="background:var(--surface)"><th style="padding:6px 10px;text-align:left;font-size:9px;color:var(--text3)">TABELA</th><th style="padding:6px 10px;font-size:9px;color:var(--text3)">ORIGEM</th><th style="padding:6px 10px;font-size:9px;color:var(--text3)">WMS</th><th style="padding:6px 10px;font-size:9px;color:var(--text3)">STATUS</th></tr></thead>
+        <tbody>${linhas}</tbody>
+      </table>
+      <div style="margin-top:10px;font-size:12px;font-weight:700;color:${tudoOk?'var(--green)':'var(--red)'}">
+        ${tudoOk ? 'Tudo bateu — migração está completa.' : 'Tem diferença — roda "Migrar agora" de novo antes de considerar desligar o Railway.'}
+      </div>`;
+  } catch(e) {
+    out.innerHTML = `<div style="background:rgba(220,38,38,.12);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--red)">Erro: ${pfEsc(e.message)}</div>`;
+  }
 }
 
 function _mzRenderTabs() {

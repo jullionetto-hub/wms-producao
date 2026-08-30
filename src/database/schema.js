@@ -364,6 +364,157 @@ const TABLES = [
     observacoes         TEXT DEFAULT '',
     criado_em           TIMESTAMPTZ DEFAULT NOW()
   )`,
+
+  /* ── Matriz de Responsabilidades — migrado do serviço externo para dentro
+     do WMS. "origem_id" guarda o id original de lá, só pra conferência da
+     migração e pra permitir rodar de novo sem duplicar (idempotência). */
+  `CREATE TABLE IF NOT EXISTS mz_colaboradores (
+    id         SERIAL PRIMARY KEY,
+    origem_id  INTEGER UNIQUE,
+    nome       TEXT NOT NULL,
+    cargo      TEXT DEFAULT '',
+    tier       TEXT DEFAULT 'analista',
+    area       TEXT DEFAULT '',
+    turno      TEXT,
+    ativo      BOOLEAN DEFAULT true,
+    vaga       BOOLEAN DEFAULT false,
+    criado_em  TIMESTAMPTZ DEFAULT NOW()
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS mz_banco_horas_periodo (
+    id           SERIAL PRIMARY KEY,
+    inicio_label TEXT DEFAULT '',
+    fim_label    TEXT DEFAULT ''
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS mz_banco_horas (
+    id             SERIAL PRIMARY KEY,
+    colaborador_id INTEGER NOT NULL REFERENCES mz_colaboradores(id) ON DELETE CASCADE,
+    saldo_atual    INTEGER DEFAULT 0,
+    delta          INTEGER DEFAULT 0,
+    updated_at     TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(colaborador_id)
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS mz_ferias (
+    id             SERIAL PRIMARY KEY,
+    colaborador_id INTEGER NOT NULL REFERENCES mz_colaboradores(id) ON DELETE CASCADE,
+    tipo           TEXT NOT NULL,
+    data_inicio    DATE,
+    dias           INTEGER,
+    UNIQUE(colaborador_id, tipo)
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS mz_classificacoes (
+    id             SERIAL PRIMARY KEY,
+    colaborador_id INTEGER NOT NULL REFERENCES mz_colaboradores(id) ON DELETE CASCADE,
+    periodo_label  TEXT NOT NULL,
+    absenteismo    TEXT,
+    performance    TEXT,
+    comportamento  TEXT,
+    UNIQUE(colaborador_id, periodo_label)
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS mz_ausencias (
+    id             SERIAL PRIMARY KEY,
+    origem_id      INTEGER UNIQUE,
+    colaborador_id INTEGER NOT NULL REFERENCES mz_colaboradores(id) ON DELETE CASCADE,
+    periodo_label  TEXT NOT NULL,
+    dias           INTEGER DEFAULT 1,
+    data           TEXT DEFAULT '',
+    motivo         TEXT DEFAULT ''
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS mz_feedbacks (
+    id                      SERIAL PRIMARY KEY,
+    origem_id               INTEGER UNIQUE,
+    colaborador_id          INTEGER NOT NULL REFERENCES mz_colaboradores(id) ON DELETE CASCADE,
+    autor_nome              TEXT DEFAULT '',
+    mes                     TEXT DEFAULT '',
+    cargo_snapshot          TEXT DEFAULT '',
+    area_snapshot           TEXT DEFAULT '',
+    meta                    INTEGER,
+    entregue                INTEGER,
+    pontos_positivos        TEXT DEFAULT '',
+    pontos_construtivos     TEXT DEFAULT '',
+    absenteismo_mes         TEXT DEFAULT '',
+    retorno_antecipado      TEXT DEFAULT '',
+    atrasos                 INTEGER,
+    faltas_injustificadas   INTEGER,
+    ausencias_justificadas  INTEGER,
+    recorrencia_ausencia    TEXT DEFAULT '',
+    outros_pontos           TEXT DEFAULT '',
+    saldo_banco_horas       TEXT DEFAULT '',
+    combinado_mes           TEXT DEFAULT '',
+    criado_em               TIMESTAMPTZ DEFAULT NOW()
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS mz_areas (
+    id        SERIAL PRIMARY KEY,
+    origem_id INTEGER UNIQUE,
+    nome      TEXT NOT NULL UNIQUE,
+    ordem     INTEGER DEFAULT 0
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS mz_roles (
+    id        SERIAL PRIMARY KEY,
+    origem_id INTEGER UNIQUE,
+    area_id   INTEGER NOT NULL REFERENCES mz_areas(id) ON DELETE CASCADE,
+    nome      TEXT NOT NULL,
+    ordem     INTEGER DEFAULT 0
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS mz_atividades (
+    id        SERIAL PRIMARY KEY,
+    origem_id INTEGER UNIQUE,
+    area_id   INTEGER NOT NULL REFERENCES mz_areas(id) ON DELETE CASCADE,
+    nome      TEXT NOT NULL,
+    ordem     INTEGER DEFAULT 0,
+    categoria TEXT,
+    sugestao  TEXT
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS mz_status (
+    id           SERIAL PRIMARY KEY,
+    atividade_id INTEGER NOT NULL REFERENCES mz_atividades(id) ON DELETE CASCADE,
+    role_id      INTEGER NOT NULL REFERENCES mz_roles(id) ON DELETE CASCADE,
+    status       TEXT NOT NULL,
+    UNIQUE(atividade_id, role_id)
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS mz_cargos (
+    id              SERIAL PRIMARY KEY,
+    origem_id       INTEGER UNIQUE,
+    cargo           TEXT NOT NULL,
+    area            TEXT DEFAULT '',
+    gestor          TEXT DEFAULT '',
+    perfil          TEXT DEFAULT '',
+    graduacoes      JSONB DEFAULT '[]',
+    descricao       TEXT DEFAULT '',
+    funcoes         JSONB DEFAULT '[]',
+    formacao        TEXT DEFAULT '',
+    tecnicas        JSONB DEFAULT '[]',
+    comportamentais JSONB DEFAULT '[]',
+    atitudes        JSONB DEFAULT '[]'
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS mz_incentivo_config (
+    id          SERIAL PRIMARY KEY,
+    abs_green   INTEGER DEFAULT 30,
+    abs_yellow  INTEGER DEFAULT 15,
+    abs_red     INTEGER DEFAULT 0,
+    perf_green  INTEGER DEFAULT 40,
+    perf_yellow INTEGER DEFAULT 20,
+    perf_red    INTEGER DEFAULT 0,
+    comp_green  INTEGER DEFAULT 30,
+    comp_yellow INTEGER DEFAULT 15,
+    comp_red    INTEGER DEFAULT 0
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS mz_carreira_config (
+    id     SERIAL PRIMARY KEY,
+    ladder JSONB DEFAULT '{}'
+  )`,
 ];
 
 const INDEXES = [
@@ -398,6 +549,14 @@ const INDEXES = [
   'CREATE INDEX IF NOT EXISTS idx_fat_usuario         ON faturamento_pedidos(usuario)',
   'CREATE INDEX IF NOT EXISTS idx_fat_data_turno      ON faturamento_pedidos(data_fat, turno)',
   'CREATE INDEX IF NOT EXISTS idx_checklist_caixas_num ON checklist_caixas(numero, criado_em)',
+  'CREATE INDEX IF NOT EXISTS idx_mz_banco_horas_colab ON mz_banco_horas(colaborador_id)',
+  'CREATE INDEX IF NOT EXISTS idx_mz_ferias_colab      ON mz_ferias(colaborador_id)',
+  'CREATE INDEX IF NOT EXISTS idx_mz_classif_colab     ON mz_classificacoes(colaborador_id)',
+  'CREATE INDEX IF NOT EXISTS idx_mz_ausencias_colab   ON mz_ausencias(colaborador_id)',
+  'CREATE INDEX IF NOT EXISTS idx_mz_feedbacks_colab   ON mz_feedbacks(colaborador_id)',
+  'CREATE INDEX IF NOT EXISTS idx_mz_roles_area        ON mz_roles(area_id)',
+  'CREATE INDEX IF NOT EXISTS idx_mz_atividades_area   ON mz_atividades(area_id)',
+  'CREATE INDEX IF NOT EXISTS idx_mz_status_atividade  ON mz_status(atividade_id)',
 ];
 
 module.exports = { TABLES, INDEXES };
