@@ -137,9 +137,9 @@ const MZ_LOADERS = {
   ferias:         { deps:['colaboradores','ferias'],                   render:'_mzRenderFerias' },
   cargos:         { deps:['cargos'],                                   render:'_mzRenderCargos' },
   incentivo:      { deps:['colaboradores','classificacoes','incentivo'], render:'_mzRenderIncentivo' },
-  carreira:       { deps:['carreira'],                                 render:'_mzRenderCarreira' },
+  carreira:       { deps:['carreira','cargos'],                        render:'_mzRenderCarreira' },
   organograma:    { deps:['colaboradores'],                            render:'_mzRenderOrganograma' },
-  painel:         { deps:['colaboradores','feedbacks','classificacoes','ausencias','bancoHoras','ferias','raci'], render:'_mzRenderPainel' },
+  painel:         { deps:['colaboradores','feedbacks','classificacoes','ausencias','bancoHoras','ferias','raci','cargos','carreira'], render:'_mzRenderPainel' },
 };
 const MZ_CARREGAR_FN = {
   colaboradores: mzCarregarColaboradoresRef, raci: () => mzCarregarRaci(), feedbacks: () => mzCarregarFeedbacks(),
@@ -1522,41 +1522,156 @@ async function mzCarregarCarreira() {
   _mzCarregado.carreira = true;
 }
 
+function _mzNormalizeName(s) {
+  return (s||'').toString().normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[°.]/g,'').trim().replace(/\s+/g,' ');
+}
+function _mzCarreiraCargoIndex(area, cargoAtual) {
+  const ladder = (_mzCarreira?.ladder || {})[area];
+  if (!ladder) return -1;
+  const cargoNorm = _mzNormalizeName(cargoAtual).replace(/\bn1\b/,'').trim();
+  return ladder.findIndex(c => _mzNormalizeName(c) === cargoNorm);
+}
+function _mzProximoNivel(area, cargoAtual) {
+  const ladder = (_mzCarreira?.ladder || {})[area];
+  if (!ladder) return null;
+  const idx = _mzCarreiraCargoIndex(area, cargoAtual);
+  if (idx === -1) return null;
+  if (idx < ladder.length-1) return { cargo: ladder[idx+1], area, transversal:false };
+  if (area !== 'Estoque') return { cargo:'Coordenador de Logística', area:'Logística', transversal:true };
+  return null;
+}
+function _mzFindJDCarreira(cargo, area) {
+  if (!cargo) return null;
+  const cargoNorm = _mzNormalizeName(cargo).replace(/\bn1\b/,'').trim();
+  let jd = _mzCargos.find(j => _mzNormalizeName(j.cargo)===cargoNorm && _mzNormalizeName(j.area)===_mzNormalizeName(area||''));
+  if (jd) return jd;
+  jd = _mzCargos.find(j => _mzNormalizeName(j.cargo)===cargoNorm);
+  if (jd) return jd;
+  const fallback = { 'auxiliar de estoque': {cargo:'Estoquista', area:'Estoque'} };
+  const fb = fallback[_mzNormalizeName(cargo)];
+  if (fb) return _mzCargos.find(j => _mzNormalizeName(j.cargo)===_mzNormalizeName(fb.cargo) && _mzNormalizeName(j.area)===_mzNormalizeName(fb.area));
+  return null;
+}
+
+function _mzPlanoCarreiraHtml(col) {
+  if (!col.area || !col.cargo) return '<div style="font-size:11px;color:var(--text3)">Sem cargo/área confirmado — não é possível montar o plano de carreira.</div>';
+  const proximo = _mzProximoNivel(col.area, col.cargo);
+  const atualJd = _mzFindJDCarreira(col.cargo, col.area);
+  const box = (label, cargo, area, jd) => `
+    <div style="flex:1;min-width:180px;background:var(--surface2);border-radius:10px;padding:10px 12px">
+      <div style="font-size:9px;font-weight:800;color:var(--text3)">${label}</div>
+      <div style="font-weight:800;font-size:13px;margin-top:2px">${pfEsc(cargo)} — ${pfEsc(area)}</div>
+      ${jd && (jd.funcoes||[]).length ? `<ul style="margin:6px 0 0;padding-left:16px;font-size:11px;color:var(--text2)">${jd.funcoes.slice(0,3).map(f=>`<li>${pfEsc(f)}</li>`).join('')}</ul>` : '<div style="font-size:10.5px;color:var(--text3);margin-top:4px">Job description não cadastrado.</div>'}
+    </div>`;
+  if (!proximo) {
+    return `<div style="display:flex;gap:10px;flex-wrap:wrap">${box('HOJE', col.cargo, col.area, atualJd)}</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:8px">Este colaborador já está no topo da trilha de carreira mapeada para esta área.</div>`;
+  }
+  const proxJd = _mzFindJDCarreira(proximo.cargo, proximo.area);
+  return `<div style="display:flex;gap:10px;flex-wrap:wrap">
+    ${box('HOJE', col.cargo, col.area, atualJd)}
+    ${box(`PRÓXIMO NÍVEL${proximo.transversal?' (transversal)':''}`, proximo.cargo, proximo.area, proxJd)}
+  </div>`;
+}
+
+let _mzCarreiraArea = null;
+
 function _mzRenderCarreira() {
   const cont = document.getElementById('mz-conteudo');
   const ladder = _mzCarreira?.ladder || {};
-  cont.innerHTML = `
-    <p style="font-size:11px;color:var(--text3);margin-bottom:10px">Um cargo por linha, na ordem da trilha (o primeiro é o nível de entrada).</p>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px">
-      ${Object.entries(ladder).map(([area, cargos]) => `
-        <div class="card" style="margin-bottom:0">
-          <div style="font-weight:800;font-size:13px;margin-bottom:8px">${pfEsc(area)}</div>
-          <textarea id="mzcr-${pfEsc(area).replace(/[^a-zA-Z0-9]/g,'_')}" data-area="${pfEsc(area)}" class="mzcr-area" style="width:100%;min-height:100px;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:12px;resize:vertical;box-sizing:border-box">${(cargos||[]).join('\n')}</textarea>
-        </div>`).join('') || '<div class="card" style="text-align:center;color:var(--text3);padding:20px">Nenhuma trilha cadastrada</div>'}
-    </div>
-    <div style="display:flex;gap:8px;margin-top:12px">
-      <button class="btn btn-outline btn-sm" onclick="mzNovaAreaCarreira()">+ Nova área</button>
-      <button class="btn btn-primary btn-sm" onclick="mzSalvarCarreira()">Salvar tudo</button>
+  const areas = Object.keys(ladder);
+  if (!_mzCarreiraArea || !areas.includes(_mzCarreiraArea)) _mzCarreiraArea = areas[0];
+
+  const trilha = _mzCarreiraArea ? (ladder[_mzCarreiraArea]||[]) : [];
+  const trilhaHtml = trilha.map((cargo,i) => {
+    const jd = _mzFindJDCarreira(cargo, _mzCarreiraArea);
+    return `<div style="display:flex;gap:12px;margin-bottom:10px">
+      <div style="width:26px;flex-shrink:0;display:flex;flex-direction:column;align-items:center">
+        <div style="width:10px;height:10px;border-radius:50%;background:var(--accent);flex-shrink:0"></div>
+        ${i<trilha.length-1?'<div style="flex:1;width:2px;background:var(--border);margin-top:4px"></div>':''}
+      </div>
+      <div class="card" style="margin-bottom:0;flex:1">
+        <div style="font-size:9px;font-weight:800;color:var(--text3)">NÍVEL ${i+1}</div>
+        <div style="font-weight:800;font-size:13px;margin-top:2px">${pfEsc(cargo)}</div>
+        ${jd ? `${jd.descricao?`<div style="font-size:11.5px;color:var(--text2);margin-top:6px">${pfEsc(jd.descricao)}</div>`:''}${(jd.funcoes||[]).length?`<ul style="margin:6px 0 0;padding-left:16px;font-size:11px;color:var(--text2)">${jd.funcoes.slice(0,3).map(f=>`<li>${pfEsc(f)}</li>`).join('')}</ul>`:''}` : '<div style="font-size:11px;color:var(--text3);margin-top:6px">Job description ainda não cadastrado.</div>'}
+      </div>
     </div>`;
+  }).join('') + (_mzCarreiraArea && _mzCarreiraArea!=='Estoque' ? `
+    <div style="display:flex;gap:12px">
+      <div style="width:26px;flex-shrink:0;display:flex;flex-direction:column;align-items:center">
+        <div style="width:10px;height:10px;border-radius:50%;background:var(--amber);flex-shrink:0"></div>
+      </div>
+      <div class="card" style="margin-bottom:0;flex:1;border-style:dashed;background:transparent">
+        <div style="font-size:9px;font-weight:800;color:var(--amber)">PRÓXIMO PASSO</div>
+        <div style="font-weight:800;font-size:14px;margin-top:2px">Coordenador de Logística → Gerente de Logística</div>
+        <div style="font-size:11.5px;color:var(--text2);margin-top:6px">Ao chegar ao topo da trilha operacional, o crescimento passa a ser transversal — deixa de ser específico de uma área e passa a coordenar/gerenciar as quatro (Reposição, Separação, Checkout, Embalagem) ao mesmo tempo.</div>
+      </div>
+    </div>` : '');
+
+  cont.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        ${areas.map(a => `<button onclick="_mzCarreiraArea='${a.replace(/'/g,"\\'")}';_mzRenderCarreira()" style="padding:6px 12px;background:${a===_mzCarreiraArea?'var(--accent)':'var(--surface2)'};border:none;border-radius:20px;color:${a===_mzCarreiraArea?'#fff':'var(--text2)'};font-size:11.5px;font-weight:700;cursor:pointer">${pfEsc(a)}</button>`).join('')}
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-outline btn-sm" onclick="mzNovaAreaCarreira()">+ Nova área</button>
+        <button class="btn btn-outline btn-sm" onclick="mzAbrirEditarCarreira()">Editar trilhas</button>
+      </div>
+    </div>
+    ${areas.length ? trilhaHtml : '<div class="card" style="text-align:center;color:var(--text3);padding:20px">Nenhuma trilha cadastrada</div>'}`;
 }
 
-function mzNovaAreaCarreira() {
-  const nome = prompt('Nome da área:');
+async function mzNovaAreaCarreira() {
+  const nome = prompt('Nome da nova área:');
   if (!nome) return;
-  if (!_mzCarreira) _mzCarreira = { ladder: {} };
-  if (!_mzCarreira.ladder) _mzCarreira.ladder = {};
-  _mzCarreira.ladder[nome] = _mzCarreira.ladder[nome] || [];
-  _mzRenderCarreira();
+  const ladder = { ...(_mzCarreira?.ladder || {}) };
+  if (ladder[nome]) { toast('Essa área já existe.','aviso'); return; }
+  ladder[nome] = [];
+  try {
+    _mzCarreira = await _mzFetch('/matriz/carreira', { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ ladder }) });
+    _mzCarreiraArea = nome;
+    toast('Área criada!','sucesso');
+    _mzRenderCarreira();
+  } catch(e) { toast('Erro: ' + e.message, 'erro'); }
+}
+
+function mzAbrirEditarCarreira() {
+  const ladder = _mzCarreira?.ladder || {};
+  const texto = Object.entries(ladder).map(([area,cargos]) => `${area}: ${(cargos||[]).join(', ')}`).join('\n');
+  const modal = document.createElement('div');
+  modal.id = 'mz-modal-carreira';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+  modal.onclick = e => { if (e.target === modal) modal.remove(); };
+  modal.innerHTML = `
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:22px;max-width:520px;width:100%;max-height:90vh;overflow-y:auto">
+      <div style="font-weight:900;font-size:15px;margin-bottom:8px">Editar trilhas de carreira</div>
+      <p style="font-size:11.5px;color:var(--text3);margin:0 0 10px">Uma área por linha, no formato "Área: Cargo nível 1, Cargo nível 2, Cargo nível 3". Pode adicionar áreas novas ou remover linhas — só não pode ficar em branco.</p>
+      <textarea id="mzcr-texto" style="width:100%;min-height:220px;padding:10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:12.5px;resize:vertical;box-sizing:border-box;font-family:inherit">${pfEsc(texto)}</textarea>
+      <div style="display:flex;gap:10px;margin-top:14px">
+        <button class="btn btn-outline" style="flex:1" onclick="document.getElementById('mz-modal-carreira').remove()">Cancelar</button>
+        <button class="btn btn-primary" style="flex:1" onclick="mzSalvarCarreira()">Salvar</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
 }
 
 async function mzSalvarCarreira() {
+  const linhas = document.getElementById('mzcr-texto').value.split('\n').map(l=>l.trim()).filter(Boolean);
   const ladder = {};
-  document.querySelectorAll('.mzcr-area').forEach(el => {
-    ladder[el.dataset.area] = el.value.split('\n').map(s=>s.trim()).filter(Boolean);
+  linhas.forEach(linha => {
+    const idx = linha.indexOf(':');
+    if (idx===-1) return;
+    const area = linha.slice(0,idx).trim();
+    const cargos = linha.slice(idx+1).split(',').map(c=>c.trim()).filter(Boolean);
+    if (area && cargos.length) ladder[area] = cargos;
   });
+  if (!Object.keys(ladder).length) { toast('Informe pelo menos uma área com cargos.','aviso'); return; }
   try {
     _mzCarreira = await _mzFetch('/matriz/carreira', { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ ladder }) });
+    _mzCarreiraArea = null;
+    document.getElementById('mz-modal-carreira')?.remove();
     toast('Plano de carreira salvo!','sucesso');
+    _mzRenderCarreira();
   } catch(e) { toast('Erro: ' + e.message, 'erro'); }
 }
 
@@ -1726,6 +1841,12 @@ function _mzRenderPainel() {
   const fer = _mzFerias.filter(f => f.colaborador_id === c.id);
   const dot = v => `<span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:${MZ_SEMAFORO[v]||'var(--border)'}"></span>`;
 
+  const jd = _mzFindJDCarreira(c.cargo, c.area);
+  const jdHtml = !jd
+    ? '<div style="font-size:12px;color:var(--text3)">Nenhuma descrição de cargo cadastrada para este cargo.</div>'
+    : `${jd.descricao?`<p style="font-size:12px;color:var(--text2);margin:0 0 8px">${pfEsc(jd.descricao)}</p>`:''}${(jd.funcoes||[]).length?`<div style="font-size:10px;font-weight:800;color:var(--text3);margin-bottom:4px">FUNÇÕES</div><ul style="margin:0;padding-left:18px;font-size:12px;color:var(--text2)">${jd.funcoes.map(f=>`<li>${pfEsc(f)}</li>`).join('')}</ul>`:''}`;
+  const planoCarreiraHtml = _mzPlanoCarreiraHtml(c);
+
   corpo.innerHTML = `
     <div class="card" style="margin-bottom:12px">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px">
@@ -1754,6 +1875,14 @@ function _mzRenderPainel() {
     <div class="card" style="margin-bottom:12px">
       <div style="font-weight:800;font-size:12px;margin-bottom:8px">Ausências</div>
       ${aus.slice(0,5).map(a => `<div style="padding:6px 0;border-top:1px solid var(--border);font-size:12px">${pfEsc(a.periodo_label)} — ${a.dias} dia(s) ${a.motivo?`· ${pfEsc(a.motivo)}`:''}</div>`).join('') || '<div style="font-size:12px;color:var(--text3)">Nenhuma ausência registrada</div>'}
+    </div>
+    <div class="card" style="margin-bottom:12px">
+      <div style="font-weight:800;font-size:12px;margin-bottom:8px">Job Description</div>
+      ${jdHtml}
+    </div>
+    <div class="card" style="margin-bottom:12px">
+      <div style="font-weight:800;font-size:12px;margin-bottom:8px">Plano de Carreira</div>
+      ${planoCarreiraHtml}
     </div>
 
     <div class="card">
