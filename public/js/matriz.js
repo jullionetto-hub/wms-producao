@@ -437,42 +437,120 @@ async function mzCarregarClassificacoes() {
   _mzCarregado.classificacoes = true;
 }
 
-let _mzPeriodoSel = null;
+let _mzClassPeriodo = null;
+let _mzClassTurnoFiltro = 'Todos';
+let _mzClassAlertaFiltro = 'Todos';
+let _mzClassCriteriosAberto = false;
+const MZ_CLASS_SCORE = { green:0, yellow:1, red:2 };
+
+function _mzClassPeriodos() { return [...new Set(_mzClassificacoes.map(c => c.periodo_label))]; }
+
+function _mzClassRows(periodo) {
+  return [..._mzColaboradores].filter(c=>c.ativo).map(c => {
+    const cl = _mzClassificacoes.find(x => x.colaborador_id === c.id && x.periodo_label === periodo);
+    return { colaborador_id: c.id, nome: c.nome, turno: c.turno, abs: cl?cl.absenteismo:null, perf: cl?cl.performance:null, comp: cl?cl.comportamento:null };
+  });
+}
+function _mzClassRisco(r) { return (MZ_CLASS_SCORE[r.abs]||0) + (MZ_CLASS_SCORE[r.perf]||0) + (MZ_CLASS_SCORE[r.comp]||0); }
 
 function _mzRenderClassificacoes() {
   const cont = document.getElementById('mz-conteudo');
-  if (!_mzPeriodoSel) {
-    const periodos = [...new Set(_mzClassificacoes.map(c => c.periodo_label))].sort().reverse();
-    _mzPeriodoSel = periodos[0] || _mzPeriodoAtualLabel();
+  const periodos = _mzClassPeriodos();
+  if (!_mzClassPeriodo || (periodos.length && !periodos.includes(_mzClassPeriodo))) _mzClassPeriodo = periodos[periodos.length-1] || _mzPeriodoAtualLabel();
+  const periodo = _mzClassPeriodo;
+  const rows = _mzClassRows(periodo);
+
+  const ruins = rows.filter(r=>_mzClassRisco(r)>=3).length;
+  const medianos = rows.filter(r=>{ const s=_mzClassRisco(r); return s>=1 && s<3; }).length;
+  const otimos = rows.filter(r=>_mzClassRisco(r)===0).length;
+
+  const dims = [['abs','Absenteísmo'],['perf','Performance'],['comp','Comportamento']];
+  const breakdownHtml = dims.map(([key,label]) => {
+    const total = rows.length || 1;
+    const g = rows.filter(r=>r[key]==='green').length;
+    const y = rows.filter(r=>r[key]==='yellow').length;
+    const rC = rows.filter(r=>r[key]==='red').length;
+    return `<div style="margin-bottom:10px">
+      <div style="font-size:11px;font-weight:700;margin-bottom:4px">${label}</div>
+      <div style="display:flex;height:8px;border-radius:4px;overflow:hidden;background:var(--surface2)">
+        <span style="width:${g/total*100}%;background:var(--green)"></span>
+        <span style="width:${y/total*100}%;background:var(--amber)"></span>
+        <span style="width:${rC/total*100}%;background:var(--red)"></span>
+      </div>
+      <div style="font-size:10px;color:var(--text3);margin-top:3px">${g} ótimo · ${y} mediano · ${rC} ruim</div>
+    </div>`;
+  }).join('');
+
+  const turnos = ['Todos', ...new Set(rows.map(r=>r.turno).filter(Boolean))];
+  const alertas = ['Todos','Problema','Mediano','Ótimo'];
+
+  let lista = rows;
+  if (_mzClassTurnoFiltro!=='Todos') lista = lista.filter(r=>r.turno===_mzClassTurnoFiltro);
+  if (_mzClassAlertaFiltro!=='Todos') {
+    lista = lista.filter(r => {
+      const s = _mzClassRisco(r);
+      if (_mzClassAlertaFiltro==='Problema') return s>=3;
+      if (_mzClassAlertaFiltro==='Mediano') return s>=1 && s<3;
+      return s===0;
+    });
   }
-  const periodoSel = _mzPeriodoSel;
+  lista = [...lista].sort((a,b)=>_mzClassRisco(b)-_mzClassRisco(a));
+
+  const dot = (colId, campo, valor) => {
+    const cor = MZ_SEMAFORO[valor] || 'var(--border)';
+    return `<button onclick="mzCicloClassificacao(${colId},'${campo}')" title="Clique pra mudar"
+      style="width:22px;height:22px;border-radius:50%;background:${cor};border:2px solid ${valor?cor:'var(--border)'};cursor:pointer"></button>`;
+  };
+
   cont.innerHTML = `
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-      <label style="font-size:11px;font-weight:700;color:var(--text3)">PERÍODO</label>
-      <input id="mz-cl-periodo" value="${pfEsc(periodoSel)}" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:12px" onchange="_mzPeriodoSel=this.value;_mzRenderClassificacoes()">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        ${periodos.map(p => `<button onclick="_mzClassPeriodo='${p.replace(/'/g,"\\'")}';_mzRenderClassificacoes()" style="padding:6px 12px;background:${p===periodo?'var(--accent)':'var(--surface2)'};border:none;border-radius:20px;color:${p===periodo?'#fff':'var(--text2)'};font-size:11.5px;font-weight:700;cursor:pointer">${pfEsc(p)}</button>`).join('')}
+      </div>
+      <button class="btn btn-outline btn-sm" onclick="mzNovoCicloClassificacao()">+ Novo ciclo</button>
     </div>
+
+    <div class="card" style="margin-bottom:14px;padding:0;overflow:hidden">
+      <div onclick="_mzClassCriteriosAberto=!_mzClassCriteriosAberto;_mzRenderClassificacoes()" style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;cursor:pointer">
+        <div style="font-weight:800;font-size:13px">Critérios de Classificação</div>
+        <span style="font-size:12px;color:var(--text3)">${_mzClassCriteriosAberto?'▲':'▾'}</span>
+      </div>
+      ${_mzClassCriteriosAberto ? `<div style="padding:0 16px 16px">${_mzCriteriosClassificacaoHtml()}</div>` : ''}
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px">
+      <div class="tile" style="background:var(--surface2);border-radius:10px;padding:12px"><div style="font-size:10px;color:var(--text3)">COLABORADORES</div><div style="font-size:18px;font-weight:800;margin-top:4px">${rows.length}</div></div>
+      <div class="tile" style="background:var(--surface2);border-radius:10px;padding:12px"><div style="font-size:10px;color:var(--text3)">PERFIL PROBLEMA</div><div style="font-size:18px;font-weight:800;margin-top:4px;color:var(--red)">${ruins}</div></div>
+      <div class="tile" style="background:var(--surface2);border-radius:10px;padding:12px"><div style="font-size:10px;color:var(--text3)">PERFIL MEDIANO</div><div style="font-size:18px;font-weight:800;margin-top:4px;color:var(--amber)">${medianos}</div></div>
+      <div class="tile" style="background:var(--surface2);border-radius:10px;padding:12px"><div style="font-size:10px;color:var(--text3)">PERFIL ÓTIMO</div><div style="font-size:18px;font-weight:800;margin-top:4px;color:var(--green)">${otimos}</div></div>
+    </div>
+
+    <div class="card" style="margin-bottom:14px">${breakdownHtml}</div>
+
+    <div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap">
+      ${turnos.map(t => `<button onclick="_mzClassTurnoFiltro='${t.replace(/'/g,"\\'")}';_mzRenderClassificacoes()" style="padding:6px 12px;background:${t===_mzClassTurnoFiltro?'var(--accent)':'var(--surface2)'};border:none;border-radius:20px;color:${t===_mzClassTurnoFiltro?'#fff':'var(--text2)'};font-size:11.5px;font-weight:700;cursor:pointer">${pfEsc(t)}</button>`).join('')}
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">
+      ${alertas.map(a => `<button onclick="_mzClassAlertaFiltro='${a}';_mzRenderClassificacoes()" style="padding:6px 12px;background:${a===_mzClassAlertaFiltro?'var(--accent)':'var(--surface2)'};border:none;border-radius:20px;color:${a===_mzClassAlertaFiltro?'#fff':'var(--text2)'};font-size:11.5px;font-weight:700;cursor:pointer">${pfEsc(a)}</button>`).join('')}
+    </div>
+
     <div class="card" style="padding:0;overflow-x:auto">
       <table style="width:100%;border-collapse:collapse;font-size:12.5px">
         <thead><tr style="background:var(--surface2)">
           <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:800;color:var(--text3)">COLABORADOR</th>
+          <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:800;color:var(--text3)">TURNO</th>
           <th style="padding:8px 12px;text-align:center;font-size:10px;font-weight:800;color:var(--text3)">ABSENTEÍSMO</th>
           <th style="padding:8px 12px;text-align:center;font-size:10px;font-weight:800;color:var(--text3)">PERFORMANCE</th>
           <th style="padding:8px 12px;text-align:center;font-size:10px;font-weight:800;color:var(--text3)">COMPORTAMENTO</th>
         </tr></thead>
-        <tbody>${[..._mzColaboradores].filter(c=>c.ativo).sort((a,b)=>(a.nome||'').localeCompare(b.nome||'')).map(c => {
-          const cl = _mzClassificacoes.find(x => x.colaborador_id === c.id && x.periodo_label === periodoSel) || {};
-          const dot = (campo, valor) => {
-            const cor = MZ_SEMAFORO[valor] || 'var(--border)';
-            return `<button onclick="mzCicloClassificacao(${c.id},'${campo}',this)" data-campo="${campo}" data-colab="${c.id}" title="Clique pra mudar"
-              style="width:22px;height:22px;border-radius:50%;background:${cor};border:2px solid ${valor?cor:'var(--border)'};cursor:pointer"></button>`;
-          };
-          return `<tr style="border-top:1px solid var(--border)">
-            <td style="padding:8px 12px;font-weight:700">${pfEsc(c.nome)}</td>
-            <td style="padding:8px 12px;text-align:center">${dot('absenteismo', cl.absenteismo)}</td>
-            <td style="padding:8px 12px;text-align:center">${dot('performance', cl.performance)}</td>
-            <td style="padding:8px 12px;text-align:center">${dot('comportamento', cl.comportamento)}</td>
-          </tr>`;
-        }).join('') || `<tr><td colspan="4" style="text-align:center;color:var(--text3);padding:20px">Nenhum colaborador ativo</td></tr>`}
+        <tbody>${lista.map(r => `
+          <tr style="border-top:1px solid var(--border)">
+            <td style="padding:8px 12px;font-weight:700">${pfEsc(r.nome)}</td>
+            <td style="padding:8px 12px;color:var(--text2)">${pfEsc(r.turno||'—')}</td>
+            <td style="padding:8px 12px;text-align:center">${dot(r.colaborador_id,'absenteismo',r.abs)}</td>
+            <td style="padding:8px 12px;text-align:center">${dot(r.colaborador_id,'performance',r.perf)}</td>
+            <td style="padding:8px 12px;text-align:center">${dot(r.colaborador_id,'comportamento',r.comp)} <button class="btn btn-outline btn-sm" style="padding:2px 8px;font-size:10px;margin-left:4px" onclick="mzAbrirComportamento(${r.colaborador_id})">calcular</button></td>
+          </tr>`).join('') || `<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:20px">Nenhum colaborador</td></tr>`}
         </tbody>
       </table>
     </div>
@@ -483,8 +561,148 @@ function _mzPeriodoAtualLabel() {
   return new Date().toLocaleDateString('pt-BR', { month:'long', year:'numeric' });
 }
 
-async function mzCicloClassificacao(colaboradorId, campo, btnEl) {
-  const periodo = _mzPeriodoSel || _mzPeriodoAtualLabel();
+function mzNovoCicloClassificacao() {
+  const nome = prompt('Nome do novo ciclo (ex: Julho 2026):');
+  if (!nome) return;
+  _mzClassPeriodo = nome.trim();
+  _mzClassTurnoFiltro = 'Todos';
+  _mzClassAlertaFiltro = 'Todos';
+  _mzRenderClassificacoes();
+}
+
+function _mzCriteriosClassificacaoHtml() {
+  const col = (titulo, otimo, mediano, ruim) => `
+    <div style="flex:1;min-width:200px">
+      <div style="font-weight:800;font-size:12px;margin-bottom:8px">${titulo}</div>
+      <div style="background:rgba(22,163,74,.1);border-radius:8px;padding:8px 10px;margin-bottom:6px">
+        <div style="font-size:11px;font-weight:700;color:var(--green);margin-bottom:3px">🟢 Ótimo</div>
+        <ul style="margin:0;padding-left:16px;font-size:11px;color:var(--text2)">${otimo.map(x=>`<li>${x}</li>`).join('')}</ul>
+      </div>
+      <div style="background:rgba(217,119,6,.1);border-radius:8px;padding:8px 10px;margin-bottom:6px">
+        <div style="font-size:11px;font-weight:700;color:var(--amber);margin-bottom:3px">🟡 Mediano</div>
+        <ul style="margin:0;padding-left:16px;font-size:11px;color:var(--text2)">${mediano.map(x=>`<li>${x}</li>`).join('')}</ul>
+      </div>
+      <div style="background:rgba(220,38,38,.1);border-radius:8px;padding:8px 10px">
+        <div style="font-size:11px;font-weight:700;color:var(--red);margin-bottom:3px">🔴 Ruim</div>
+        <ul style="margin:0;padding-left:16px;font-size:11px;color:var(--text2)">${ruim.map(x=>`<li>${x}</li>`).join('')}</ul>
+      </div>
+    </div>`;
+  return `
+    <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:16px">
+      ${col('Absenteísmo', ['0 atrasos','0 ausência'], ['0 falta injustificada','Máximo 3 atrasos','Até 2 ausências justificadas'], ['Acima de 1 falta injustificada','Acima de 3 atrasos','Padrão repetitivo de ausência'])}
+      ${col('Performance', ['Bate meta com frequência (90%)','Entrega volume + qualidade'], ['Entrega parcial (abaixo de 89%)','+2 erros'], ['Não bate meta','Gera retrabalho','Abaixo de 70%'])}
+      ${col('Comportamento', ['Assume responsabilidade','Resolve problema','Ajuda o time'], ['Faz o básico','Não atrapalha, mas também não puxa'], ['Reclama','Transfere culpa','Influencia negativamente'])}
+    </div>
+    <div style="font-weight:800;font-size:12px;margin-bottom:8px">Perfil Geral</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">
+      <div style="flex:1;min-width:180px;background:rgba(22,163,74,.1);border-radius:8px;padding:10px 12px"><div style="font-weight:700;font-size:11.5px;color:var(--green)">🟢 Ótimo <span style="font-weight:400;color:var(--text3)">(reter e desenvolver)</span></div><div style="font-size:11px;color:var(--text2);margin-top:4px">Absenteísmo 🟢 · Performance 🟢 · Comportamento 🟢</div></div>
+      <div style="flex:1;min-width:180px;background:rgba(217,119,6,.1);border-radius:8px;padding:10px 12px"><div style="font-weight:700;font-size:11.5px;color:var(--amber)">🟡 Mediano <span style="font-weight:400;color:var(--text3)">(direcionar)</span></div><div style="font-size:11px;color:var(--text2);margin-top:4px">Mistura de 🟢 e 🟡. Precisa de mais cobrança, mais clareza, mais acompanhamento.</div></div>
+      <div style="flex:1;min-width:180px;background:rgba(220,38,38,.1);border-radius:8px;padding:10px 12px"><div style="font-weight:700;font-size:11.5px;color:var(--red)">🔴 Problema <span style="font-weight:400;color:var(--text3)">(agir rápido)</span></div><div style="font-size:11px;color:var(--text2);margin-top:4px">Qualquer combinação com 🔴 forte. Ex: falta muito mesmo entregando; entrega pouco mesmo presente; comportamento ruim contamina o time.</div></div>
+    </div>
+    <div style="font-weight:800;font-size:12px;margin-bottom:8px">Decisão</div>
+    <table style="width:100%;border-collapse:collapse;font-size:11.5px;margin-bottom:16px">
+      <thead><tr style="background:var(--surface2)"><th style="padding:6px 10px;text-align:left;font-size:10px;color:var(--text3)">PERFIL</th><th style="padding:6px 10px;text-align:left;font-size:10px;color:var(--text3)">DECISÃO</th></tr></thead>
+      <tbody>
+        <tr style="border-top:1px solid var(--border)"><td style="padding:6px 10px">🟢 🟢 🟢</td><td style="padding:6px 10px">Desenvolver / reconhecer</td></tr>
+        <tr style="border-top:1px solid var(--border)"><td style="padding:6px 10px">🟢 🟡 🟡</td><td style="padding:6px 10px">Ajustar e acompanhar</td></tr>
+        <tr style="border-top:1px solid var(--border)"><td style="padding:6px 10px">🔴 em qualquer</td><td style="padding:6px 10px">Plano imediato ou substituir</td></tr>
+      </tbody>
+    </table>
+    <div style="font-weight:800;font-size:12px;margin-bottom:6px">Regras</div>
+    <ol style="margin:0;padding-left:18px;font-size:11.5px;color:var(--text2)">
+      <li>Presença vem antes de performance</li>
+      <li>Comportamento sustenta resultado</li>
+      <li>Não sustentar 🔴</li>
+    </ol>`;
+}
+
+const MZ_COMPORTAMENTO_ITENS = [
+  { key:'assume', label:'Assume responsabilidade', peso:2 },
+  { key:'resolve', label:'Resolve problema', peso:3 },
+  { key:'ajuda', label:'Ajuda o time', peso:3 },
+  { key:'basico', label:'Faz o básico', peso:1 },
+  { key:'neutro', label:'Não atrapalha, mas também não puxa', peso:0 },
+  { key:'espera', label:'Espera ser cobrado para agir', peso:0 },
+  { key:'reclama', label:'Reclama', peso:-2 },
+  { key:'culpa', label:'Transfere culpa', peso:-2 },
+  { key:'negativo', label:'Influencia negativamente', peso:-3 },
+];
+function _mzComportamentoScore(freq) {
+  return MZ_COMPORTAMENTO_ITENS.reduce((acc,it)=>acc + it.peso*(freq[it.key]||0), 0);
+}
+function _mzComportamentoClasse(freq) {
+  if ((freq.negativo||0) >= 2) return 'red';
+  const score = _mzComportamentoScore(freq);
+  if (score >= 8) return 'green';
+  if (score >= 1) return 'yellow';
+  return 'red';
+}
+function _mzLerFrequenciasComportamento() {
+  const freq = {};
+  MZ_COMPORTAMENTO_ITENS.forEach(it => { freq[it.key] = parseInt(document.getElementById(`mzcc-${it.key}`)?.value || '0'); });
+  return freq;
+}
+
+function mzAbrirComportamento(colId) {
+  const modal = document.createElement('div');
+  modal.id = 'mz-modal-comp';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+  modal.onclick = e => { if (e.target === modal) modal.remove(); };
+  modal.innerHTML = `
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:22px;max-width:480px;width:100%;max-height:90vh;overflow-y:auto">
+      <div style="font-weight:900;font-size:15px;margin-bottom:6px">Calcular Comportamento — ${pfEsc(_mzColNome(colId))}</div>
+      <p style="font-size:11.5px;color:var(--text3);margin:0 0 14px">Informe quantas vezes cada comportamento foi observado no período. Ótimo ≥8 pts · Mediano 1–7 pts · Ruim ≤0 pts (ou "influencia negativamente" 2+ vezes, que zera a nota).</p>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        ${MZ_COMPORTAMENTO_ITENS.map(it => `
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+            <label style="font-size:12px">${pfEsc(it.label)} <span style="color:var(--text3);font-size:10.5px">(peso ${it.peso>0?'+':''}${it.peso})</span></label>
+            <input id="mzcc-${it.key}" type="number" min="0" value="0" style="width:64px;padding:6px 8px;border:1.5px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-size:12px;text-align:center">
+          </div>`).join('')}
+      </div>
+      <div id="mzcc-resultado" style="margin-top:14px;padding:10px 12px;border-radius:8px;background:var(--surface);font-size:12.5px">Preencha os campos e clique em "Pré-visualizar".</div>
+      <div style="display:flex;gap:10px;margin-top:14px">
+        <button class="btn btn-outline" style="flex:1" onclick="mzPreviewComportamento()">Pré-visualizar</button>
+        <button class="btn btn-primary" style="flex:1" onclick="mzSalvarComportamento(${colId})">Salvar</button>
+      </div>
+      <div style="margin-top:10px;text-align:right">
+        <button class="btn btn-outline btn-sm" onclick="document.getElementById('mz-modal-comp').remove()">Cancelar</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+}
+
+function mzPreviewComportamento() {
+  const freq = _mzLerFrequenciasComportamento();
+  const score = _mzComportamentoScore(freq);
+  const classe = _mzComportamentoClasse(freq);
+  const label = { green:'🟢 Ótimo', yellow:'🟡 Mediano', red:'🔴 Ruim' }[classe];
+  const vetoUsado = (freq.negativo||0) >= 2;
+  document.getElementById('mzcc-resultado').innerHTML =
+    `Pontuação: <b>${score}</b> → ${label}` +
+    (vetoUsado ? `<br><span style="color:var(--red);font-size:11px">Regra de exceção aplicada: "influencia negativamente" observado 2+ vezes.</span>` : '');
+}
+
+async function mzSalvarComportamento(colId) {
+  const freq = _mzLerFrequenciasComportamento();
+  const classe = _mzComportamentoClasse(freq);
+  const periodo = _mzClassPeriodo || _mzPeriodoAtualLabel();
+  const reg = _mzClassificacoes.find(x => x.colaborador_id === colId && x.periodo_label === periodo);
+  const body = {
+    colaborador_id: colId, periodo_label: periodo,
+    absenteismo: reg?.absenteismo ?? null, performance: reg?.performance ?? null, comportamento: classe,
+  };
+  try {
+    const salvo = await _mzFetch('/matriz/classificacoes', { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    const i = _mzClassificacoes.findIndex(x => x.id === salvo.id);
+    if (i >= 0) _mzClassificacoes[i] = salvo; else _mzClassificacoes.push(salvo);
+    document.getElementById('mz-modal-comp')?.remove();
+    toast('Comportamento calculado e salvo!','sucesso');
+    _mzRenderClassificacoes();
+  } catch(e) { toast('Erro: ' + e.message, 'erro'); }
+}
+
+async function mzCicloClassificacao(colaboradorId, campo) {
+  const periodo = _mzClassPeriodo || _mzPeriodoAtualLabel();
   let reg = _mzClassificacoes.find(x => x.colaborador_id === colaboradorId && x.periodo_label === periodo);
   const atual = reg ? reg[campo] : null;
   const idx = MZ_SEMAFORO_CICLO.indexOf(atual || null);
