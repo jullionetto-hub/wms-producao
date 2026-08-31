@@ -617,61 +617,172 @@ async function mzCarregarBancoHoras() {
   _mzCarregado.bancoHoras = true;
 }
 
+let _mzBancoFiltro = 'todos';
+function _mzFmtH(n) { return `${n > 0 ? '+' : ''}${n}h`; }
+
+function _mzBancoRows() {
+  return [..._mzColaboradores].filter(c => c.ativo).map(c => {
+    const bh = _mzBancoHoras.find(b => b.colaborador_id === c.id) || { saldo_atual:0, delta:0 };
+    return { colaborador_id: c.id, nome: c.nome, atual: bh.saldo_atual||0, delta: bh.delta||0, inicio: (bh.saldo_atual||0) - (bh.delta||0) };
+  });
+}
+
 function _mzRenderBancoHoras() {
   const cont = document.getElementById('mz-conteudo');
-  const ativos = [..._mzColaboradores].filter(c=>c.ativo).sort((a,b)=>(a.nome||'').localeCompare(b.nome||''));
+  const rows = _mzBancoRows();
+  const periodo = _mzBancoHorasPeriodo || { inicio_label:'', fim_label:'' };
+
+  const somaInicio = rows.reduce((a,r)=>a+r.inicio,0);
+  const somaAtual  = rows.reduce((a,r)=>a+r.atual,0);
+  const somaDelta  = rows.reduce((a,r)=>a+r.delta,0);
+  const pct = somaInicio ? ((somaDelta/somaInicio)*100).toFixed(1) : '0.0';
+
+  const tiers = [
+    { label:'Acima de 160h', test:v=>v>=160, cor:'var(--red)' },
+    { label:'101h – 159h',   test:v=>v>=101 && v<160, cor:'var(--amber)' },
+    { label:'41h – 100h',    test:v=>v>=41 && v<=100, cor:'#2563eb' },
+    { label:'Até 40h',       test:v=>v<=40, cor:'var(--green)' },
+  ];
+  const totalRows = rows.length;
+
+  const filtros = [
+    { key:'todos',    label:`Todos (${rows.length})` },
+    { key:'reduziu',  label:`Reduziram (${rows.filter(r=>r.delta<0).length})` },
+    { key:'estavel',  label:`Estáveis (${rows.filter(r=>r.delta===0).length})` },
+    { key:'aumentou', label:`Aumentaram (${rows.filter(r=>r.delta>0).length})` },
+  ];
+  let lista = rows;
+  if (_mzBancoFiltro==='reduziu')  lista = rows.filter(r=>r.delta<0);
+  if (_mzBancoFiltro==='estavel')  lista = rows.filter(r=>r.delta===0);
+  if (_mzBancoFiltro==='aumentou') lista = rows.filter(r=>r.delta>0);
+  lista = [...lista].sort((a,b)=>b.atual-a.atual);
+
   cont.innerHTML = `
-    <div class="card" style="margin-bottom:14px">
-      <div style="font-size:10px;font-weight:800;color:var(--text3);margin-bottom:8px">PERÍODO ATUAL</div>
-      <div style="display:flex;gap:10px;align-items:flex-end">
-        <div style="flex:1"><label style="font-size:10px;color:var(--text3)">INÍCIO</label>
-          <input id="mzbh-inicio" value="${pfEsc(_mzBancoHorasPeriodo?.inicio_label||'')}" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:12px;box-sizing:border-box"></div>
-        <div style="flex:1"><label style="font-size:10px;color:var(--text3)">FIM</label>
-          <input id="mzbh-fim" value="${pfEsc(_mzBancoHorasPeriodo?.fim_label||'')}" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:12px;box-sizing:border-box"></div>
-        <button class="btn btn-outline btn-sm" onclick="mzSalvarPeriodoBH()">Salvar período</button>
-      </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+      <div style="font-size:12px;color:var(--text3)">${pfEsc(periodo.inicio_label)} → ${pfEsc(periodo.fim_label)} · ${totalRows} colaboradores</div>
+      <button class="btn btn-outline btn-sm" onclick="mzAbrirPeriodoBH()">Editar período</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:14px">
+      <div class="tile" style="background:var(--surface2);border-radius:10px;padding:12px"><div style="font-size:10px;color:var(--text3)">SALDO ${pfEsc(periodo.inicio_label||'INÍCIO')}</div><div style="font-size:18px;font-weight:800;margin-top:4px">${somaInicio.toLocaleString('pt-BR')}h</div></div>
+      <div class="tile" style="background:var(--surface2);border-radius:10px;padding:12px"><div style="font-size:10px;color:var(--text3)">SALDO ${pfEsc(periodo.fim_label||'ATUAL')}</div><div style="font-size:18px;font-weight:800;margin-top:4px">${somaAtual.toLocaleString('pt-BR')}h</div></div>
+      <div class="tile" style="background:var(--surface2);border-radius:10px;padding:12px"><div style="font-size:10px;color:var(--text3)">REDUÇÃO LÍQUIDA</div><div style="font-size:18px;font-weight:800;margin-top:4px;color:var(--green)">${somaDelta.toLocaleString('pt-BR')}h</div></div>
+      <div class="tile" style="background:var(--surface2);border-radius:10px;padding:12px"><div style="font-size:10px;color:var(--text3)">VARIAÇÃO DO PERÍODO</div><div style="font-size:18px;font-weight:800;margin-top:4px;color:var(--green)">${pct}%</div></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px">
+      ${tiers.map(t => {
+        const n = rows.filter(r=>t.test(r.atual)).length;
+        const p = totalRows ? Math.round(n/totalRows*100) : 0;
+        return `<div style="display:flex;align-items:center;gap:10px">
+          <div style="width:110px;font-size:11px;color:var(--text3)">${t.label}</div>
+          <div style="flex:1;height:8px;border-radius:4px;background:var(--surface2);overflow:hidden"><div style="width:${p}%;height:100%;background:${t.cor}"></div></div>
+          <div style="width:70px;text-align:right;font-size:11px;color:var(--text2)">${n}/${totalRows} · ${p}%</div>
+        </div>`;
+      }).join('')}
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
+      ${filtros.map(f => `<button onclick="_mzBancoFiltro='${f.key}';_mzRenderBancoHoras()" style="padding:6px 12px;background:${_mzBancoFiltro===f.key?'var(--accent)':'var(--surface2)'};border:none;border-radius:20px;color:${_mzBancoFiltro===f.key?'#fff':'var(--text2)'};font-size:11.5px;font-weight:700;cursor:pointer">${f.label}</button>`).join('')}
     </div>
     <div class="card" style="padding:0;overflow-x:auto">
       <table style="width:100%;border-collapse:collapse;font-size:12.5px">
         <thead><tr style="background:var(--surface2)">
+          <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:800;color:var(--text3)">#</th>
           <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:800;color:var(--text3)">COLABORADOR</th>
-          <th style="padding:8px 12px;text-align:center;font-size:10px;font-weight:800;color:var(--text3)">SALDO ATUAL (min)</th>
-          <th style="padding:8px 12px;text-align:center;font-size:10px;font-weight:800;color:var(--text3)">DELTA (min)</th>
+          <th style="padding:8px 12px;text-align:center;font-size:10px;font-weight:800;color:var(--text3)">${pfEsc(periodo.inicio_label||'INÍCIO')}</th>
+          <th style="padding:8px 12px;text-align:center;font-size:10px;font-weight:800;color:var(--text3)">${pfEsc(periodo.fim_label||'ATUAL')}</th>
+          <th style="padding:8px 12px;text-align:center;font-size:10px;font-weight:800;color:var(--text3)">VARIAÇÃO</th>
+          <th style="padding:8px 12px;text-align:center;font-size:10px;font-weight:800;color:var(--text3)">%</th>
+          <th style="padding:8px 12px;text-align:center;font-size:10px;font-weight:800;color:var(--text3)">STATUS</th>
           <th style="padding:8px 12px"></th>
         </tr></thead>
-        <tbody>${ativos.map(c => {
-          const bh = _mzBancoHoras.find(b => b.colaborador_id === c.id) || {};
+        <tbody>${lista.map((r,i) => {
+          const cor = r.delta<0 ? 'var(--green)' : r.delta>0 ? 'var(--red)' : 'var(--text3)';
+          const pctR = r.inicio !== 0 ? Math.round(r.delta/r.inicio*100)+'%' : '—';
+          const statusLabel = r.delta<0 ? 'Reduziu' : r.delta>0 ? 'Aumentou' : 'Estável';
           return `<tr style="border-top:1px solid var(--border)">
-            <td style="padding:8px 12px;font-weight:700">${pfEsc(c.nome)}</td>
-            <td style="padding:6px 12px;text-align:center"><input id="mzbh-saldo-${c.id}" type="number" value="${bh.saldo_atual||0}" style="width:90px;padding:5px 8px;border:1.5px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-size:12px;text-align:center"></td>
-            <td style="padding:6px 12px;text-align:center"><input id="mzbh-delta-${c.id}" type="number" value="${bh.delta||0}" style="width:90px;padding:5px 8px;border:1.5px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-size:12px;text-align:center"></td>
-            <td style="padding:6px 12px;text-align:right"><button class="btn btn-outline btn-sm" onclick="mzSalvarBancoHoras(${c.id})">Salvar</button></td>
+            <td style="padding:8px 12px;color:var(--text3)">${i+1}</td>
+            <td style="padding:8px 12px;font-weight:700">${pfEsc(r.nome)}</td>
+            <td style="padding:8px 12px;text-align:center">${r.inicio}h</td>
+            <td style="padding:8px 12px;text-align:center">${r.atual}h</td>
+            <td style="padding:8px 12px;text-align:center;color:${cor};font-weight:700">${_mzFmtH(r.delta)}</td>
+            <td style="padding:8px 12px;text-align:center;color:${cor}">${pctR}</td>
+            <td style="padding:8px 12px;text-align:center;font-size:11px;font-weight:700;color:${cor}">${statusLabel}</td>
+            <td style="padding:8px 12px;text-align:right"><button class="btn btn-outline btn-sm" onclick="mzAbrirBancoHoras(${r.colaborador_id})">Editar</button></td>
           </tr>`;
-        }).join('') || `<tr><td colspan="4" style="text-align:center;color:var(--text3);padding:20px">Nenhum colaborador ativo</td></tr>`}
+        }).join('') || `<tr><td colspan="8" style="text-align:center;color:var(--text3);padding:20px">Nenhum colaborador ativo</td></tr>`}
         </tbody>
       </table>
     </div>`;
 }
 
+function mzAbrirPeriodoBH() {
+  const periodo = _mzBancoHorasPeriodo || { inicio_label:'', fim_label:'' };
+  const modal = document.createElement('div');
+  modal.id = 'mz-modal-bhperiodo';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+  modal.onclick = e => { if (e.target === modal) modal.remove(); };
+  modal.innerHTML = `
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:22px;max-width:360px;width:100%">
+      <div style="font-weight:900;font-size:15px;margin-bottom:14px">Período do Banco de Horas</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div><label style="font-size:10px;font-weight:700;color:var(--text3)">RÓTULO DO INÍCIO</label>
+          <input id="mzbhp-inicio" placeholder="ex: Jan/Fev 2026" value="${pfEsc(periodo.inicio_label||'')}" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:13px;box-sizing:border-box"></div>
+        <div><label style="font-size:10px;font-weight:700;color:var(--text3)">RÓTULO DO FIM</label>
+          <input id="mzbhp-fim" placeholder="ex: Jun 2026" value="${pfEsc(periodo.fim_label||'')}" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:13px;box-sizing:border-box"></div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:18px">
+        <button class="btn btn-outline" style="flex:1" onclick="document.getElementById('mz-modal-bhperiodo').remove()">Cancelar</button>
+        <button class="btn btn-primary" style="flex:1" onclick="mzSalvarPeriodoBH()">Salvar</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+}
+
 async function mzSalvarPeriodoBH() {
-  const body = { inicio_label: document.getElementById('mzbh-inicio').value.trim(), fim_label: document.getElementById('mzbh-fim').value.trim() };
+  const body = { inicio_label: document.getElementById('mzbhp-inicio').value.trim(), fim_label: document.getElementById('mzbhp-fim').value.trim() };
   try {
     _mzBancoHorasPeriodo = await _mzFetch('/matriz/banco-horas/periodo', { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    document.getElementById('mz-modal-bhperiodo')?.remove();
     toast('Período salvo!','sucesso');
+    _mzRenderBancoHoras();
   } catch(e) { toast('Erro: ' + e.message, 'erro'); }
+}
+
+function mzAbrirBancoHoras(colId) {
+  const bh = _mzBancoHoras.find(b => b.colaborador_id === colId) || { saldo_atual:0, delta:0 };
+  const modal = document.createElement('div');
+  modal.id = 'mz-modal-bh';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+  modal.onclick = e => { if (e.target === modal) modal.remove(); };
+  modal.innerHTML = `
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:22px;max-width:360px;width:100%">
+      <div style="font-weight:900;font-size:15px;margin-bottom:14px">Editar Banco de Horas — ${pfEsc(_mzColNome(colId))}</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div><label style="font-size:10px;font-weight:700;color:var(--text3)">SALDO ATUAL (h)</label>
+          <input id="mzbh-saldo" type="number" value="${bh.saldo_atual||0}" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:13px;box-sizing:border-box"></div>
+        <div><label style="font-size:10px;font-weight:700;color:var(--text3)">VARIAÇÃO DO PERÍODO (h)</label>
+          <input id="mzbh-delta" type="number" value="${bh.delta||0}" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:13px;box-sizing:border-box"></div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:18px">
+        <button class="btn btn-outline" style="flex:1" onclick="document.getElementById('mz-modal-bh').remove()">Cancelar</button>
+        <button class="btn btn-primary" style="flex:1" onclick="mzSalvarBancoHoras(${colId})">Salvar</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
 }
 
 async function mzSalvarBancoHoras(colId) {
   const body = {
     colaborador_id: colId,
-    saldo_atual: parseInt(document.getElementById(`mzbh-saldo-${colId}`).value) || 0,
-    delta: parseInt(document.getElementById(`mzbh-delta-${colId}`).value) || 0,
+    saldo_atual: parseInt(document.getElementById('mzbh-saldo').value) || 0,
+    delta: parseInt(document.getElementById('mzbh-delta').value) || 0,
   };
   try {
     const salvo = await _mzFetch('/matriz/banco-horas', { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
     const i = _mzBancoHoras.findIndex(b => b.colaborador_id === colId);
     if (i >= 0) _mzBancoHoras[i] = salvo; else _mzBancoHoras.push(salvo);
+    document.getElementById('mz-modal-bh')?.remove();
     toast('Salvo!','sucesso');
+    _mzRenderBancoHoras();
   } catch(e) { toast('Erro: ' + e.message, 'erro'); }
 }
 
@@ -681,43 +792,120 @@ async function mzCarregarFerias() {
   _mzCarregado.ferias = true;
 }
 
+let _mzFeriasSetorFiltro = 'Todos';
+let _mzFeriasTurnoFiltro = 'Todos';
+
+function _mzFeriasRows() {
+  const byColab = {};
+  _mzFerias.forEach(f => { (byColab[f.colaborador_id] = byColab[f.colaborador_id] || {})[f.tipo] = f; });
+  return Object.entries(byColab).map(([cid, tipos]) => {
+    const col = _mzColaboradores.find(c => c.id === parseInt(cid));
+    if (!col) return null;
+    return { colaborador_id: parseInt(cid), nome: col.nome, turno: col.turno, setor: col.area, limite: tipos.limite, p1: tipos.p1, p2: tipos.p2 };
+  }).filter(Boolean);
+}
+function _mzFeriasDiasProgramados(r) { return (r.p1?r.p1.dias:0) + (r.p2?r.p2.dias:0); }
+function _mzFeriasStatus(r) {
+  const prog = _mzFeriasDiasProgramados(r);
+  const total = r.limite ? r.limite.dias : 30;
+  if (prog >= total) return 'completo';
+  if (prog > 0) return 'parcial';
+  return 'pendente';
+}
+
 function _mzRenderFerias() {
   const cont = document.getElementById('mz-conteudo');
-  const ativos = [..._mzColaboradores].filter(c=>c.ativo).sort((a,b)=>(a.nome||'').localeCompare(b.nome||''));
-  const campo = (colId, tipo, dado) => {
-    const f = _mzFerias.find(x => x.colaborador_id === colId && x.tipo === tipo) || {};
-    return `
-      <input id="mzf-${tipo}-data-${colId}" type="date" value="${f.data_inicio||''}" style="width:128px;padding:5px 6px;border:1.5px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-size:11px">
-      <input id="mzf-${tipo}-dias-${colId}" type="number" placeholder="dias" value="${f.dias??''}" style="width:56px;padding:5px 6px;border:1.5px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-size:11px">`;
-  };
+  const rows = _mzFeriasRows();
+  const hoje = new Date();
+  const diasAte = r => r.limite ? (new Date(r.limite.data_inicio) - hoje) / 86400000 : null;
+  const completos = rows.filter(r => _mzFeriasStatus(r)==='completo').length;
+  const vencendo  = rows.filter(r => { const d = diasAte(r); return d!=null && d<=60 && d>=0; }).length;
+  const vencidos  = rows.filter(r => { const d = diasAte(r); return d!=null && d<0; }).length;
+
+  const setores = ['Todos', ...new Set(rows.map(r=>r.setor).filter(Boolean))];
+  const turnos  = ['Todos', ...new Set(rows.map(r=>r.turno).filter(Boolean))];
+  let lista = rows;
+  if (_mzFeriasSetorFiltro!=='Todos') lista = lista.filter(r=>r.setor===_mzFeriasSetorFiltro);
+  if (_mzFeriasTurnoFiltro!=='Todos') lista = lista.filter(r=>r.turno===_mzFeriasTurnoFiltro);
+
+  const pill = (label, ativo, onclick) => `<button onclick="${onclick}" style="padding:6px 12px;background:${ativo?'var(--accent)':'var(--surface2)'};border:none;border-radius:20px;color:${ativo?'#fff':'var(--text2)'};font-size:11.5px;font-weight:700;cursor:pointer">${pfEsc(label)}</button>`;
+  const fmtCell = p => p ? `<div>${fmtData(p.data_inicio)}<div style="font-size:10px;color:var(--text3)">${p.dias} dias</div></div>` : '<span style="color:var(--text3);font-size:11px">não programado</span>';
+
   cont.innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:14px">
+      <div class="tile" style="background:var(--surface2);border-radius:10px;padding:12px"><div style="font-size:10px;color:var(--text3)">COLABORADORES</div><div style="font-size:18px;font-weight:800;margin-top:4px">${rows.length}</div></div>
+      <div class="tile" style="background:var(--surface2);border-radius:10px;padding:12px"><div style="font-size:10px;color:var(--text3)">PROGRAMAÇÃO COMPLETA</div><div style="font-size:18px;font-weight:800;margin-top:4px;color:var(--green)">${completos}</div></div>
+      <div class="tile" style="background:var(--surface2);border-radius:10px;padding:12px"><div style="font-size:10px;color:var(--text3)">LIMITE EM ATÉ 60 DIAS</div><div style="font-size:18px;font-weight:800;margin-top:4px;color:var(--amber)">${vencendo}</div></div>
+      <div class="tile" style="background:var(--surface2);border-radius:10px;padding:12px"><div style="font-size:10px;color:var(--text3)">LIMITE VENCIDO</div><div style="font-size:18px;font-weight:800;margin-top:4px;color:var(--red)">${vencidos}</div></div>
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap">
+      ${setores.map(s => pill(s, s===_mzFeriasSetorFiltro, `_mzFeriasSetorFiltro='${s.replace(/'/g,"\\'")}';_mzRenderFerias()`)).join('')}
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">
+      ${turnos.map(t => pill(t, t===_mzFeriasTurnoFiltro, `_mzFeriasTurnoFiltro='${t.replace(/'/g,"\\'")}';_mzRenderFerias()`)).join('')}
+    </div>
     <div class="card" style="padding:0;overflow-x:auto">
       <table style="width:100%;border-collapse:collapse;font-size:12px">
         <thead><tr style="background:var(--surface2)">
           <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:800;color:var(--text3)">COLABORADOR</th>
-          <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:800;color:var(--text3)">LIMITE</th>
-          <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:800;color:var(--text3)">1º PERÍODO</th>
-          <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:800;color:var(--text3)">2º PERÍODO</th>
+          <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:800;color:var(--text3)">TURNO</th>
+          <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:800;color:var(--text3)">SETOR</th>
+          <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:800;color:var(--text3)">LIMITE LEGAL</th>
+          <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:800;color:var(--text3)">PERÍODO 1</th>
+          <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:800;color:var(--text3)">PERÍODO 2</th>
           <th style="padding:8px 12px"></th>
         </tr></thead>
-        <tbody>${ativos.map(c => `
+        <tbody>${lista.map(r => `
           <tr style="border-top:1px solid var(--border)">
-            <td style="padding:8px 12px;font-weight:700;white-space:nowrap">${pfEsc(c.nome)}</td>
-            <td style="padding:6px 12px;white-space:nowrap">${campo(c.id,'limite')}</td>
-            <td style="padding:6px 12px;white-space:nowrap">${campo(c.id,'p1')}</td>
-            <td style="padding:6px 12px;white-space:nowrap">${campo(c.id,'p2')}</td>
-            <td style="padding:6px 12px;text-align:right"><button class="btn btn-outline btn-sm" onclick="mzSalvarFerias(${c.id})">Salvar</button></td>
-          </tr>`).join('') || `<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:20px">Nenhum colaborador ativo</td></tr>`}
+            <td style="padding:8px 12px;font-weight:700;white-space:nowrap">${pfEsc(r.nome)}</td>
+            <td style="padding:8px 12px;color:var(--text2)">${pfEsc(r.turno||'—')}</td>
+            <td style="padding:8px 12px;color:var(--text2)">${pfEsc(r.setor||'—')}</td>
+            <td style="padding:8px 12px">${fmtCell(r.limite)}</td>
+            <td style="padding:8px 12px">${fmtCell(r.p1)}</td>
+            <td style="padding:8px 12px">${fmtCell(r.p2)}</td>
+            <td style="padding:8px 12px;text-align:right"><button class="btn btn-outline btn-sm" onclick="mzAbrirFerias(${r.colaborador_id})">Editar</button></td>
+          </tr>`).join('') || `<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:20px">Nenhum colaborador</td></tr>`}
         </tbody>
       </table>
     </div>`;
 }
 
+function mzAbrirFerias(colId) {
+  const row = _mzFeriasRows().find(r => r.colaborador_id === colId) || {};
+  const modal = document.createElement('div');
+  modal.id = 'mz-modal-ferias';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+  modal.onclick = e => { if (e.target === modal) modal.remove(); };
+  const campo = (tipo, label, def) => {
+    const p = row[tipo];
+    return `<div style="display:flex;gap:10px;align-items:flex-end">
+      <div style="flex:1"><label style="font-size:10px;font-weight:700;color:var(--text3)">${label} — DATA</label>
+        <input id="mzfr-${tipo}-data" type="date" value="${p?p.data_inicio:''}" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:13px;box-sizing:border-box"></div>
+      <div style="width:80px"><label style="font-size:10px;font-weight:700;color:var(--text3)">DIAS</label>
+        <input id="mzfr-${tipo}-dias" type="number" value="${p?p.dias:def}" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:13px;box-sizing:border-box"></div>
+    </div>`;
+  };
+  modal.innerHTML = `
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:22px;max-width:420px;width:100%">
+      <div style="font-weight:900;font-size:15px;margin-bottom:14px">Editar Férias — ${pfEsc(_mzColNome(colId))}</div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        ${campo('limite','LIMITE LEGAL',30)}
+        ${campo('p1','PERÍODO 1','')}
+        ${campo('p2','PERÍODO 2','')}
+      </div>
+      <div style="display:flex;gap:10px;margin-top:18px">
+        <button class="btn btn-outline" style="flex:1" onclick="document.getElementById('mz-modal-ferias').remove()">Cancelar</button>
+        <button class="btn btn-primary" style="flex:1" onclick="mzSalvarFerias(${colId})">Salvar</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+}
+
 async function mzSalvarFerias(colId) {
   try {
     for (const tipo of ['limite','p1','p2']) {
-      const dataEl = document.getElementById(`mzf-${tipo}-data-${colId}`);
-      const diasEl = document.getElementById(`mzf-${tipo}-dias-${colId}`);
+      const dataEl = document.getElementById(`mzfr-${tipo}-data`);
+      const diasEl = document.getElementById(`mzfr-${tipo}-dias`);
       if (!dataEl.value && !diasEl.value) continue;
       const salvo = await _mzFetch('/matriz/ferias', {
         method:'PUT', headers:{'Content-Type':'application/json'},
@@ -726,7 +914,9 @@ async function mzSalvarFerias(colId) {
       const i = _mzFerias.findIndex(f => f.colaborador_id === colId && f.tipo === tipo);
       if (i >= 0) _mzFerias[i] = salvo; else _mzFerias.push(salvo);
     }
+    document.getElementById('mz-modal-ferias')?.remove();
     toast('Férias salvas!','sucesso');
+    _mzRenderFerias();
   } catch(e) { toast('Erro: ' + e.message, 'erro'); }
 }
 
@@ -736,25 +926,66 @@ async function mzCarregarCargos() {
   _mzCarregado.cargos = true;
 }
 
+let _mzCargoFiltro = 'Todos';
+
 function _mzRenderCargos() {
   const cont = document.getElementById('mz-conteudo');
+  const areas = ['Todos', ...new Set(_mzCargos.map(c => c.area).filter(Boolean))];
+  const filtrados = _mzCargoFiltro === 'Todos' ? _mzCargos : _mzCargos.filter(c => c.area === _mzCargoFiltro);
   cont.innerHTML = `
-    <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        ${areas.map(a => {
+          const n = a==='Todos' ? _mzCargos.length : _mzCargos.filter(c=>c.area===a).length;
+          return `<button onclick="_mzCargoFiltro='${a.replace(/'/g,"\\'")}';_mzRenderCargos()" style="padding:6px 12px;background:${_mzCargoFiltro===a?'var(--accent)':'var(--surface2)'};border:none;border-radius:20px;color:${_mzCargoFiltro===a?'#fff':'var(--text2)'};font-size:11.5px;font-weight:700;cursor:pointer">${pfEsc(a)} (${n})</button>`;
+        }).join('')}
+      </div>
       <button class="btn btn-primary btn-sm" onclick="mzAbrirCargo()">+ Novo cargo</button>
     </div>
     <div style="display:flex;flex-direction:column;gap:8px">
-      ${_mzCargos.map(c => `
-        <div class="card" style="margin-bottom:0;display:flex;justify-content:space-between;align-items:center">
-          <div>
-            <div style="font-weight:800;font-size:13px">${pfEsc(c.cargo)}</div>
-            <div style="font-size:11px;color:var(--text3)">${pfEsc(c.area||'—')}${c.gestor?` · Gestor: ${pfEsc(c.gestor)}`:''}</div>
-          </div>
-          <div style="display:flex;gap:6px">
-            <button class="btn btn-outline btn-sm" onclick="mzAbrirCargo(${c.id})">Editar</button>
-            <button class="btn btn-outline btn-sm" style="color:var(--red);border-color:var(--red)" onclick="mzExcluirCargo(${c.id})">Excluir</button>
-          </div>
-        </div>`).join('') || `<div class="card" style="text-align:center;color:var(--text3);padding:20px">Nenhum cargo cadastrado</div>`}
+      ${filtrados.map(_mzCargoCardHtml).join('') || `<div class="card" style="text-align:center;color:var(--text3);padding:20px">Nenhum cargo cadastrado</div>`}
     </div>`;
+}
+
+function _mzCargoCardHtml(c) {
+  const lista = (arr, titulo) => (arr && arr.length) ? `<div style="margin-top:10px"><div style="font-size:10px;font-weight:800;color:var(--text3);margin-bottom:4px">${titulo}</div><ul style="margin:0;padding-left:18px;font-size:12px;color:var(--text2)">${arr.map(x=>`<li>${pfEsc(x)}</li>`).join('')}</ul></div>` : '';
+  return `
+    <div style="background:var(--surface2);border-radius:10px;overflow:hidden">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 14px;cursor:pointer" onclick="mzToggleCargo(${c.id})">
+        <div>
+          <div style="font-weight:800;font-size:13px">${pfEsc(c.cargo)}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px">${pfEsc(c.area||'—')}${c.gestor?` · Gestor: ${pfEsc(c.gestor)}`:''}</div>
+        </div>
+        <span id="mzcg-chevron-${c.id}" style="font-size:11px;color:var(--text3);transition:transform .2s ease">▾</span>
+      </div>
+      <div id="mzcg-body-${c.id}" style="display:none;padding:0 14px 14px">
+        ${c.descricao?`<div><div style="font-size:10px;font-weight:800;color:var(--text3);margin-bottom:4px">DESCRIÇÃO</div><p style="font-size:12px;color:var(--text2);margin:0">${pfEsc(c.descricao)}</p></div>`:''}
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px">
+          ${c.perfil?`<div><div style="font-size:10px;font-weight:800;color:var(--text3);margin-bottom:4px">PERFIL</div><p style="font-size:12px;color:var(--text2);margin:0">${pfEsc(c.perfil)}</p></div>`:''}
+          ${c.formacao?`<div><div style="font-size:10px;font-weight:800;color:var(--text3);margin-bottom:4px">FORMAÇÃO</div><p style="font-size:12px;color:var(--text2);margin:0">${pfEsc(c.formacao)}</p></div>`:''}
+        </div>
+        ${lista(c.funcoes,'FUNÇÕES DETALHADAS')}
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          ${lista(c.tecnicas,'HABILIDADES TÉCNICAS')}
+          ${lista(c.comportamentais,'HABILIDADES COMPORTAMENTAIS')}
+        </div>
+        ${lista(c.atitudes,'ATITUDES ESPERADAS')}
+        ${(c.graduacoes&&c.graduacoes.length)?`<div style="margin-top:10px"><div style="font-size:10px;font-weight:800;color:var(--text3);margin-bottom:4px">GRADUAÇÕES</div><div style="display:flex;flex-wrap:wrap;gap:6px">${c.graduacoes.map(g=>`<span style="padding:4px 10px;border-radius:20px;background:var(--surface);font-size:11px">${pfEsc(c.cargo)} ${pfEsc(g)}</span>`).join('')}</div></div>`:''}
+        <div style="display:flex;gap:8px;margin-top:14px">
+          <button class="btn btn-outline btn-sm" onclick="event.stopPropagation();mzAbrirCargo(${c.id})">Editar</button>
+          <button class="btn btn-outline btn-sm" style="color:var(--red);border-color:var(--red)" onclick="event.stopPropagation();mzExcluirCargo(${c.id})">Excluir</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function mzToggleCargo(id) {
+  const body = document.getElementById(`mzcg-body-${id}`);
+  const chevron = document.getElementById(`mzcg-chevron-${id}`);
+  if (!body) return;
+  const abrindo = body.style.display === 'none';
+  body.style.display = abrindo ? 'block' : 'none';
+  if (chevron) chevron.style.transform = abrindo ? 'rotate(180deg)' : '';
 }
 
 function mzAbrirCargo(id) {
@@ -1119,7 +1350,7 @@ function _mzRenderPainel() {
       </div>
     </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-bottom:12px">
-      <div class="tile" style="background:var(--surface2);border-radius:10px;padding:12px"><div style="font-size:10px;color:var(--text3)">BANCO DE HORAS</div><div style="font-size:18px;font-weight:800;margin-top:4px">${bh?`${bh.saldo_atual>0?'+':''}${bh.saldo_atual} min`:'—'}</div></div>
+      <div class="tile" style="background:var(--surface2);border-radius:10px;padding:12px"><div style="font-size:10px;color:var(--text3)">BANCO DE HORAS</div><div style="font-size:18px;font-weight:800;margin-top:4px">${bh?_mzFmtH(bh.saldo_atual||0):'—'}</div></div>
       <div class="tile" style="background:var(--surface2);border-radius:10px;padding:12px"><div style="font-size:10px;color:var(--text3)">AUSÊNCIAS REGISTRADAS</div><div style="font-size:18px;font-weight:800;margin-top:4px">${aus.length}</div></div>
       <div class="tile" style="background:var(--surface2);border-radius:10px;padding:12px"><div style="font-size:10px;color:var(--text3)">FEEDBACKS</div><div style="font-size:18px;font-weight:800;margin-top:4px">${fbs.length}</div></div>
     </div>
