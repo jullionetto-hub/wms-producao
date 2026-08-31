@@ -511,73 +511,160 @@ async function mzCarregarAusencias() {
   _mzCarregado.ausencias = true;
 }
 
+let _mzAusPeriodo = null;
+let _mzAusTurno = 'Todos';
+
+function _mzAusPeriodos() { return [...new Set(_mzAusencias.map(a=>a.periodo_label))]; }
+function _mzAusRows(periodo) {
+  return _mzAusencias.filter(a=>a.periodo_label===periodo).map(a => {
+    const col = _mzColaboradores.find(c=>c.id===a.colaborador_id);
+    return { id:a.id, colaborador_id:a.colaborador_id, nome: col?col.nome:'—', turno: col?col.turno:null, dias:a.dias||1, data:a.data, motivo:a.motivo, ativo: col?col.ativo:true };
+  });
+}
+function _mzAusStatus(motivo) {
+  motivo = motivo || '';
+  if (motivo.startsWith('Ainda não apresentou')) return { label:'Pendente', cor:'var(--amber)' };
+  if (motivo.startsWith('Ausência convertida')) return { label:'Convertida (BH)', cor:'#2563eb' };
+  if (motivo === 'Falta' || motivo.startsWith('Desconto')) return { label:'Não justificada', cor:'var(--red)' };
+  return { label:'Justificada', cor:'var(--green)' };
+}
+function _mzAbreviaMes(periodo) { return (periodo.split(' ')[0]||'').slice(0,3).toLowerCase(); }
+function _mzDiasPorTurno(rows) { const out={}; rows.forEach(r=>{ if(r.turno) out[r.turno]=(out[r.turno]||0)+r.dias; }); return out; }
+
 function _mzRenderAusencias() {
   const cont = document.getElementById('mz-conteudo');
-  const lista = [..._mzAusencias].sort((a,b) => (b.data||'').localeCompare(a.data||''));
+  const periodos = _mzAusPeriodos();
+  if (!_mzAusPeriodo || !periodos.includes(_mzAusPeriodo)) _mzAusPeriodo = periodos[periodos.length-1];
+  const rows = _mzAusPeriodo ? _mzAusRows(_mzAusPeriodo) : [];
+
+  const idxAtual = periodos.indexOf(_mzAusPeriodo);
+  let comparativoHtml = '';
+  if (idxAtual > 0) {
+    const periodoAnterior = periodos[idxAtual-1];
+    const rowsAnterior = _mzAusRows(periodoAnterior);
+    const diasAnterior = _mzDiasPorTurno(rowsAnterior);
+    const diasAtual = _mzDiasPorTurno(rows);
+    const turnos = [...new Set([...Object.keys(diasAnterior), ...Object.keys(diasAtual)])].sort();
+    const totalAnterior = rowsAnterior.reduce((a,r)=>a+r.dias,0);
+    const totalAtual = rows.reduce((a,r)=>a+r.dias,0);
+    const colabAnterior = new Set(rowsAnterior.map(r=>r.colaborador_id)).size;
+    const colabAtual = new Set(rows.map(r=>r.colaborador_id)).size;
+    const pctTotal = totalAnterior ? Math.round(((totalAtual-totalAnterior)/totalAnterior)*100) : 0;
+    comparativoHtml = `
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px">
+        ${turnos.map(t => {
+          const antes = diasAnterior[t]||0, depois = diasAtual[t]||0;
+          const pct = antes ? Math.round(((depois-antes)/antes)*100) : (depois>0?100:0);
+          const melhorou = depois <= antes;
+          return `<div style="background:var(--surface2);border-radius:10px;padding:10px 14px;min-width:140px">
+            <div style="font-size:10px;font-weight:800;color:var(--text3)">${pfEsc(t)}</div>
+            <div style="font-size:14px;font-weight:800;margin-top:2px">${antes}d → ${depois}d</div>
+            <div style="font-size:11px;font-weight:700;color:${melhorou?'var(--green)':'var(--red)'};margin-top:2px">${melhorou?'▼':'▲'} ${Math.abs(pct)}% ${_mzAbreviaMes(periodoAnterior)}→${_mzAbreviaMes(_mzAusPeriodo)}</div>
+          </div>`;
+        }).join('')}
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:14px">
+        Total: ${totalAnterior} dias (${colabAnterior} colaborador${colabAnterior!==1?'es':''}) em ${pfEsc(periodoAnterior)} → ${totalAtual} dias (${colabAtual} colaborador${colabAtual!==1?'es':''}) em ${pfEsc(_mzAusPeriodo)}
+        · ${pctTotal<=0?'queda':'aumento'} de ${Math.abs(pctTotal)}%
+      </div>`;
+  }
+
+  const justificadas = rows.filter(r=>_mzAusStatus(r.motivo).label==='Justificada').length;
+  const pendentes = rows.filter(r=>_mzAusStatus(r.motivo).label==='Pendente').length;
+  const naoJust = rows.filter(r=>_mzAusStatus(r.motivo).label==='Não justificada').length;
+
+  const turnosFiltro = ['Todos', ...new Set(rows.map(r=>r.turno).filter(Boolean))];
+  const turnosParaMostrar = _mzAusTurno==='Todos' ? [...new Set(rows.map(r=>r.turno).filter(Boolean))].sort() : [_mzAusTurno];
+
   cont.innerHTML = `
-    <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        ${periodos.map(p => `<button onclick="_mzAusPeriodo='${p.replace(/'/g,"\\'")}';_mzAusTurno='Todos';_mzRenderAusencias()" style="padding:6px 12px;background:${p===_mzAusPeriodo?'var(--accent)':'var(--surface2)'};border:none;border-radius:20px;color:${p===_mzAusPeriodo?'#fff':'var(--text2)'};font-size:11.5px;font-weight:700;cursor:pointer">${pfEsc(p)}</button>`).join('')}
+      </div>
       <button class="btn btn-primary btn-sm" onclick="mzAbrirAusencia()">+ Nova ausência</button>
     </div>
-    <div class="card" style="padding:0;overflow-x:auto">
-      <table style="width:100%;border-collapse:collapse;font-size:12.5px">
-        <thead><tr style="background:var(--surface2)">
-          <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:800;color:var(--text3)">COLABORADOR</th>
-          <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:800;color:var(--text3)">PERÍODO</th>
-          <th style="padding:8px 12px;text-align:center;font-size:10px;font-weight:800;color:var(--text3)">DIAS</th>
-          <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:800;color:var(--text3)">DATA</th>
-          <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:800;color:var(--text3)">MOTIVO</th>
-          <th style="padding:8px 12px"></th>
-        </tr></thead>
-        <tbody>${lista.map(a => `
-          <tr style="border-top:1px solid var(--border)">
-            <td style="padding:8px 12px;font-weight:700">${pfEsc(_mzColNome(a.colaborador_id))}</td>
-            <td style="padding:8px 12px;color:var(--text2)">${pfEsc(a.periodo_label||'—')}</td>
-            <td style="padding:8px 12px;text-align:center">${a.dias??1}</td>
-            <td style="padding:8px 12px;color:var(--text2)">${pfEsc(a.data||'—')}</td>
-            <td style="padding:8px 12px;color:var(--text2)">${pfEsc(a.motivo||'—')}</td>
-            <td style="padding:8px 12px;text-align:right"><button class="btn btn-outline btn-sm" style="color:var(--red);border-color:var(--red)" onclick="mzExcluirAusencia(${a.id})">Excluir</button></td>
-          </tr>`).join('') || `<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px">Nenhuma ausência registrada</td></tr>`}
-        </tbody>
-      </table>
-    </div>`;
+    ${comparativoHtml}
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px">
+      <div class="tile" style="background:var(--surface2);border-radius:10px;padding:12px"><div style="font-size:10px;color:var(--text3)">TOTAL DE REGISTROS</div><div style="font-size:18px;font-weight:800;margin-top:4px">${rows.length}</div></div>
+      <div class="tile" style="background:var(--surface2);border-radius:10px;padding:12px"><div style="font-size:10px;color:var(--text3)">JUSTIFICADAS</div><div style="font-size:18px;font-weight:800;margin-top:4px;color:var(--green)">${justificadas}</div></div>
+      <div class="tile" style="background:var(--surface2);border-radius:10px;padding:12px"><div style="font-size:10px;color:var(--text3)">PENDENTES DE JUSTIFICATIVA</div><div style="font-size:18px;font-weight:800;margin-top:4px;color:var(--amber)">${pendentes}</div></div>
+      <div class="tile" style="background:var(--surface2);border-radius:10px;padding:12px"><div style="font-size:10px;color:var(--text3)">NÃO JUSTIFICADAS</div><div style="font-size:18px;font-weight:800;margin-top:4px;color:var(--red)">${naoJust}</div></div>
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">
+      ${turnosFiltro.map(t => {
+        const n = t==='Todos' ? rows.length : rows.filter(r=>r.turno===t).length;
+        return `<button onclick="_mzAusTurno='${t.replace(/'/g,"\\'")}';_mzRenderAusencias()" style="padding:6px 12px;background:${t===_mzAusTurno?'var(--accent)':'var(--surface2)'};border:none;border-radius:20px;color:${t===_mzAusTurno?'#fff':'var(--text2)'};font-size:11.5px;font-weight:700;cursor:pointer">${pfEsc(t)} (${n})</button>`;
+      }).join('')}
+    </div>
+    ${turnosParaMostrar.map(turno => {
+      const registros = rows.filter(r=>r.turno===turno);
+      return `<div style="margin-bottom:16px">
+        <div style="font-size:12px;font-weight:800;margin-bottom:8px">${pfEsc(turno)} — ${registros.length} registro${registros.length!==1?'s':''}</div>
+        <div class="card" style="padding:0;overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:12px">
+            <thead><tr style="background:var(--surface2)">
+              <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:800;color:var(--text3)">COLABORADOR</th>
+              <th style="padding:8px 12px;text-align:center;font-size:10px;font-weight:800;color:var(--text3)">DIAS</th>
+              <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:800;color:var(--text3)">DATA</th>
+              <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:800;color:var(--text3)">MOTIVO</th>
+              <th style="padding:8px 12px;text-align:center;font-size:10px;font-weight:800;color:var(--text3)">STATUS</th>
+              <th style="padding:8px 12px"></th>
+            </tr></thead>
+            <tbody>${registros.map(r => {
+              const st = _mzAusStatus(r.motivo);
+              return `<tr style="border-top:1px solid var(--border)">
+                <td style="padding:8px 12px;font-weight:700">${pfEsc(r.nome)}${!r.ativo?' <span style="font-size:9px;color:var(--text3)">(desligado)</span>':''}</td>
+                <td style="padding:8px 12px;text-align:center">${r.dias}</td>
+                <td style="padding:8px 12px;color:var(--text2)">${pfEsc(r.data||'—')}</td>
+                <td style="padding:8px 12px;color:var(--text2)">${pfEsc(r.motivo||'—')}</td>
+                <td style="padding:8px 12px;text-align:center"><span style="font-size:10px;font-weight:700;color:${st.cor}">${st.label}</span></td>
+                <td style="padding:8px 12px;text-align:right;white-space:nowrap">
+                  <button class="btn btn-outline btn-sm" onclick="mzAbrirAusencia(${r.id})">Editar</button>
+                  <button class="btn btn-outline btn-sm" style="color:var(--red);border-color:var(--red)" onclick="mzExcluirAusencia(${r.id})">Excluir</button>
+                </td>
+              </tr>`;
+            }).join('')}</tbody>
+          </table>
+        </div>
+      </div>`;
+    }).join('') || `<div class="card" style="text-align:center;color:var(--text3);padding:20px">Nenhuma ausência registrada nesse período</div>`}`;
 }
 
-function mzAbrirAusencia() {
+function mzAbrirAusencia(id) {
+  const au = id ? _mzAusencias.find(a => a.id === id) : null;
+  const editando = !!au;
   const modal = document.createElement('div');
   modal.id = 'mz-modal-aus';
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
   modal.onclick = e => { if (e.target === modal) modal.remove(); };
-  const colOpts = [..._mzColaboradores].sort((a,b)=>(a.nome||'').localeCompare(b.nome||'')).map(c=>`<option value="${c.id}">${pfEsc(c.nome)}</option>`).join('');
+  const colOpts = [..._mzColaboradores].sort((a,b)=>(a.nome||'').localeCompare(b.nome||'')).map(c=>`<option value="${c.id}" ${editando&&au.colaborador_id===c.id?'selected':''}>${pfEsc(c.nome)}</option>`).join('');
   modal.innerHTML = `
     <div style="background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:22px;max-width:420px;width:100%">
-      <div style="font-weight:900;font-size:15px;margin-bottom:14px">Nova ausência</div>
+      <div style="font-weight:900;font-size:15px;margin-bottom:14px">${editando?'Editar':'Nova'} ausência</div>
       <div style="display:flex;flex-direction:column;gap:10px">
         <div><label style="font-size:10px;font-weight:700;color:var(--text3)">COLABORADOR</label>
-          <select id="mza-colab" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:13px">${colOpts}</select></div>
+          <select id="mza-colab" ${editando?'disabled':''} style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:13px">${colOpts}</select></div>
         <div style="display:flex;gap:10px">
           <div style="flex:1"><label style="font-size:10px;font-weight:700;color:var(--text3)">PERÍODO</label>
-            <input id="mza-periodo" placeholder="Agosto 2026" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:13px;box-sizing:border-box"></div>
+            <input id="mza-periodo" placeholder="Agosto 2026" value="${editando?pfEsc(au.periodo_label):pfEsc(_mzAusPeriodo||'')}" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:13px;box-sizing:border-box"></div>
           <div style="width:80px"><label style="font-size:10px;font-weight:700;color:var(--text3)">DIAS</label>
-            <input id="mza-dias" type="number" value="1" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:13px;box-sizing:border-box"></div>
+            <input id="mza-dias" type="number" value="${editando?au.dias:1}" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:13px;box-sizing:border-box"></div>
         </div>
         <div><label style="font-size:10px;font-weight:700;color:var(--text3)">DATA(S)</label>
-          <input id="mza-data" placeholder="17/08 e 18/08" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:13px;box-sizing:border-box"></div>
+          <input id="mza-data" placeholder="17/08 e 18/08" value="${editando?pfEsc(au.data||''):''}" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:13px;box-sizing:border-box"></div>
         <div><label style="font-size:10px;font-weight:700;color:var(--text3)">MOTIVO</label>
-          <textarea id="mza-motivo" style="width:100%;min-height:60px;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:12px;resize:vertical;box-sizing:border-box"></textarea></div>
+          <textarea id="mza-motivo" placeholder="ex: Falta, Atestado (CID: ...), Ainda não apresentou justificativa..." style="width:100%;min-height:60px;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:12px;resize:vertical;box-sizing:border-box">${editando?pfEsc(au.motivo||''):''}</textarea></div>
       </div>
       <div style="display:flex;gap:10px;margin-top:18px">
         <button class="btn btn-outline" style="flex:1" onclick="document.getElementById('mz-modal-aus').remove()">Cancelar</button>
-        <button class="btn btn-primary" style="flex:1" onclick="mzSalvarAusencia()">Salvar</button>
+        <button class="btn btn-primary" style="flex:1" onclick="mzSalvarAusencia(${editando?au.id:'null'})">Salvar</button>
       </div>
     </div>`;
   document.body.appendChild(modal);
 }
 
-async function mzSalvarAusencia() {
-  const colId = parseInt(document.getElementById('mza-colab').value);
-  if (!colId) { toast('Selecione o colaborador.','aviso'); return; }
+async function mzSalvarAusencia(id) {
   const body = {
-    colaborador_id: colId,
     periodo_label: document.getElementById('mza-periodo').value.trim(),
     dias: parseInt(document.getElementById('mza-dias').value) || 1,
     data: document.getElementById('mza-data').value.trim(),
@@ -585,7 +672,14 @@ async function mzSalvarAusencia() {
   };
   if (!body.periodo_label) { toast('Informe o período.','aviso'); return; }
   try {
-    await _mzFetch('/matriz/ausencias', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    if (id) {
+      await _mzFetch(`/matriz/ausencias/${id}`, { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    } else {
+      const colId = parseInt(document.getElementById('mza-colab').value);
+      if (!colId) { toast('Selecione o colaborador.','aviso'); return; }
+      body.colaborador_id = colId;
+      await _mzFetch('/matriz/ausencias', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    }
     document.getElementById('mz-modal-aus')?.remove();
     toast('Ausência salva!','sucesso');
     _mzCarregado.ausencias = false;
