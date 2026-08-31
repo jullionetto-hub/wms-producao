@@ -16,5 +16,6 @@ router.use(require('./performance-dash'));
 router.use(require('./gestao'));
 router.use(require('./caixas'));
 router.use(require('./matriz'));
+router.use(require('./absenteismo'));
 
 module.exports = router;

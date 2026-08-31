@@ -515,6 +515,60 @@ const TABLES = [
     id     SERIAL PRIMARY KEY,
     ladder JSONB DEFAULT '{}'
   )`,
+
+  // ── Absenteísmo nativo (espelho de ponto InPonto) ──────────────────────
+  `CREATE TABLE IF NOT EXISTS abs_colaboradores (
+    id         SERIAL PRIMARY KEY,
+    nome       TEXT NOT NULL,
+    empresa    TEXT DEFAULT '',
+    cnpj       TEXT DEFAULT '',
+    setor      TEXT DEFAULT '',
+    horario    TEXT DEFAULT '',
+    matricula  TEXT DEFAULT '',
+    pis        TEXT DEFAULT '',
+    cpf        TEXT UNIQUE,
+    admissao   TEXT DEFAULT '',
+    ativo      BOOLEAN DEFAULT true,
+    criado_em  TIMESTAMPTZ DEFAULT NOW()
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS abs_uploads (
+    id                   SERIAL PRIMARY KEY,
+    arquivo_nome         TEXT DEFAULT '',
+    enviado_por          TEXT DEFAULT '',
+    enviado_em           TIMESTAMPTZ DEFAULT NOW(),
+    periodo_inicio       TEXT,
+    periodo_fim          TEXT,
+    total_colaboradores  INTEGER DEFAULT 0
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS abs_registros_diarios (
+    id                   SERIAL PRIMARY KEY,
+    upload_id            INTEGER REFERENCES abs_uploads(id) ON DELETE SET NULL,
+    colaborador_id        INTEGER NOT NULL REFERENCES abs_colaboradores(id) ON DELETE CASCADE,
+    data                 TEXT NOT NULL,
+    dia_semana           TEXT DEFAULT '',
+    status               TEXT DEFAULT '',
+    registros            JSONB DEFAULT '[]',
+    entrada_hora         TEXT,
+    entrada_atraso_min   INTEGER,
+    almoco_retorno_hora  TEXT,
+    almoco_atraso_min    INTEGER,
+    pausa_retorno_hora   TEXT,
+    pausa_atraso_min     INTEGER,
+    UNIQUE(colaborador_id, data)
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS abs_horarios_esperados (
+    id             SERIAL PRIMARY KEY,
+    horario        TEXT NOT NULL,
+    padrao         INTEGER NOT NULL,
+    indice         INTEGER NOT NULL,
+    hora_esperada  TEXT NOT NULL,
+    origem         TEXT DEFAULT 'inferido',
+    atualizado_em  TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(horario, padrao, indice)
+  )`,
 ];
 
 const INDEXES = [
@@ -557,6 +611,10 @@ const INDEXES = [
   'CREATE INDEX IF NOT EXISTS idx_mz_roles_area        ON mz_roles(area_id)',
   'CREATE INDEX IF NOT EXISTS idx_mz_atividades_area   ON mz_atividades(area_id)',
   'CREATE INDEX IF NOT EXISTS idx_mz_status_atividade  ON mz_status(atividade_id)',
+  'CREATE INDEX IF NOT EXISTS idx_abs_colab_cpf        ON abs_colaboradores(cpf)',
+  'CREATE INDEX IF NOT EXISTS idx_abs_reg_colab        ON abs_registros_diarios(colaborador_id)',
+  'CREATE INDEX IF NOT EXISTS idx_abs_reg_data         ON abs_registros_diarios(data)',
+  'CREATE INDEX IF NOT EXISTS idx_abs_reg_upload       ON abs_registros_diarios(upload_id)',
 ];
 
 module.exports = { TABLES, INDEXES };

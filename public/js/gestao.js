@@ -13,6 +13,116 @@ let _absTurnoFiltro = null;
 let _absActivePeriodId = null; // upload_id do botão ativo (separado para não ser afetado por race conditions)
 let _absSelectedIds   = new Set();  // IDs selecionados para exclusão em lote
 
+/* ── Absenteísmo nativo: upload de PDF → atraso por marcação (entrada / almoço / pausa) ── */
+let _absnUploadId = null;
+let _absnTolerancia = 0;
+
+async function absnEnviarPdf(file) {
+  if (!file) return;
+  const statusEl = document.getElementById('absn-status');
+  statusEl.textContent = 'Enviando e lendo o PDF...';
+  statusEl.style.color = 'var(--text3)';
+  try {
+    const buf = await file.arrayBuffer();
+    const res = await fetch(`${API}/absenteismo/upload?nome=${encodeURIComponent(file.name)}`, {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/pdf' },
+      body: buf,
+    });
+    const data = await res.json();
+    if (!res.ok) { statusEl.textContent = 'Erro: ' + (data.erro || 'falha ao importar'); statusEl.style.color = 'var(--red)'; return; }
+    statusEl.textContent = `Importado! ${data.total_colaboradores} colaborador(es), período ${fmtData(data.periodo_inicio)} a ${fmtData(data.periodo_fim)}.`;
+    statusEl.style.color = 'var(--green)';
+    _absnUploadId = data.upload_id;
+    const tolEl = document.getElementById('absn-tolerancia');
+    if (tolEl) tolEl.style.display = 'flex';
+    await absnCarregarResultado();
+  } catch(e) {
+    statusEl.textContent = 'Erro: ' + e.message;
+    statusEl.style.color = 'var(--red)';
+  }
+}
+
+function absnSetTolerancia(min) {
+  _absnTolerancia = min;
+  [0,5,10,15,30].forEach(m => {
+    const btn = document.getElementById(`absn-tol-${m}`);
+    if (btn) { btn.style.background = m===min ? 'var(--accent)' : 'var(--surface)'; btn.style.color = m===min ? '#fff' : 'var(--text2)'; }
+  });
+  absnCarregarResultado();
+}
+
+async function absnCarregarResultado() {
+  if (!_absnUploadId) return;
+  const cont = document.getElementById('absn-resultado');
+  if (!cont) return;
+  cont.innerHTML = '<div style="color:var(--text3);font-size:12px;padding:10px">Carregando...</div>';
+  try {
+    const res = await fetch(`${API}/absenteismo/uploads/${_absnUploadId}/resultado?tolerancia=${_absnTolerancia}`, { credentials:'include' });
+    const data = await res.json();
+    if (!res.ok) { cont.innerHTML = `<div style="color:var(--red);font-size:12px">${data.erro||'erro'}</div>`; return; }
+    window._absnResultadoCache = data.resultado;
+    const linhas = [...data.resultado].sort((a,b) =>
+      (b.entradas_atrasadas+b.almocos_atrasados+b.pausas_atrasadas) - (a.entradas_atrasadas+a.almocos_atrasados+a.pausas_atrasadas));
+    cont.innerHTML = `
+      <div style="overflow-x:auto;background:var(--surface);border:1px solid var(--border);border-radius:10px">
+        <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+          <thead><tr style="background:var(--surface2)">
+            <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:800;color:var(--text3)">COLABORADOR</th>
+            <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:800;color:var(--text3)">SETOR</th>
+            <th style="padding:8px 12px;text-align:center;font-size:10px;font-weight:800;color:var(--text3)">ENTRADAS ATRASADAS</th>
+            <th style="padding:8px 12px;text-align:center;font-size:10px;font-weight:800;color:var(--text3)">ALMOÇO ATRASADO</th>
+            <th style="padding:8px 12px;text-align:center;font-size:10px;font-weight:800;color:var(--text3)">PAUSA ATRASADA</th>
+            <th style="padding:8px 12px"></th>
+          </tr></thead>
+          <tbody>${linhas.map(r => `
+            <tr style="border-top:1px solid var(--border)">
+              <td style="padding:8px 12px;font-weight:700;color:var(--text)">${pfEsc(r.colaborador.nome)}</td>
+              <td style="padding:8px 12px;color:var(--text3)">${pfEsc(r.colaborador.setor||'—')}</td>
+              <td style="padding:8px 12px;text-align:center;font-weight:800;color:${r.entradas_atrasadas?'var(--red)':'var(--text3)'}">${r.entradas_atrasadas}</td>
+              <td style="padding:8px 12px;text-align:center;font-weight:800;color:${r.almocos_atrasados?'var(--red)':'var(--text3)'}">${r.almocos_atrasados}</td>
+              <td style="padding:8px 12px;text-align:center;font-weight:800;color:${r.pausas_atrasadas?'var(--red)':'var(--text3)'}">${r.pausas_atrasadas}</td>
+              <td style="padding:8px 12px;text-align:right"><button class="btn btn-outline btn-sm" onclick="absnAbrirDetalhe(${r.colaborador.id})">Ver dias</button></td>
+            </tr>`).join('') || `<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px">Nenhum colaborador</td></tr>`}
+          </tbody>
+        </table>
+      </div>
+      <div id="absn-detalhe" style="margin-top:12px"></div>`;
+  } catch(e) { cont.innerHTML = `<div style="color:var(--red);font-size:12px">Erro: ${e.message}</div>`; }
+}
+
+function absnAbrirDetalhe(colaboradorId) {
+  const r = (window._absnResultadoCache||[]).find(x => x.colaborador.id === colaboradorId);
+  const cont = document.getElementById('absn-detalhe');
+  if (!r || !cont) return;
+  const fmtDev = min => min == null ? '—' : (min > 0 ? `+${min}min` : `${min}min`);
+  const corDev = min => min == null ? 'var(--text3)' : (min > _absnTolerancia ? 'var(--red)' : 'var(--green)');
+  cont.innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px">
+      <div style="font-weight:800;font-size:13px;margin-bottom:10px">${pfEsc(r.colaborador.nome)} — dia a dia</div>
+      <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="background:var(--surface2)">
+          <th style="padding:6px 10px;text-align:left;font-size:10px;color:var(--text3)">DATA</th>
+          <th style="padding:6px 10px;text-align:left;font-size:10px;color:var(--text3)">STATUS</th>
+          <th style="padding:6px 10px;text-align:center;font-size:10px;color:var(--text3)">ENTRADA</th>
+          <th style="padding:6px 10px;text-align:center;font-size:10px;color:var(--text3)">VOLTA ALMOÇO</th>
+          <th style="padding:6px 10px;text-align:center;font-size:10px;color:var(--text3)">VOLTA PAUSA</th>
+        </tr></thead>
+        <tbody>${r.dias.map(d => `
+          <tr style="border-top:1px solid var(--border)">
+            <td style="padding:6px 10px;font-weight:600">${fmtData(d.data)} <span style="color:var(--text3);font-weight:400">${pfEsc(d.dia_semana||'')}</span></td>
+            <td style="padding:6px 10px;color:var(--text3)">${pfEsc(d.status||'—')}</td>
+            <td style="padding:6px 10px;text-align:center">${d.entrada_hora?`${d.entrada_hora} <span style="color:${corDev(d.entrada_atraso_min)}">(${fmtDev(d.entrada_atraso_min)})</span>`:'—'}</td>
+            <td style="padding:6px 10px;text-align:center">${d.almoco_retorno_hora?`${d.almoco_retorno_hora} <span style="color:${corDev(d.almoco_atraso_min)}">(${fmtDev(d.almoco_atraso_min)})</span>`:'—'}</td>
+            <td style="padding:6px 10px;text-align:center">${d.pausa_retorno_hora?`${d.pausa_retorno_hora} <span style="color:${corDev(d.pausa_atraso_min)}">(${fmtDev(d.pausa_atraso_min)})</span>`:'—'}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+      </div>
+    </div>`;
+}
+
 function renderizarPagGestao() {
   const root = document.getElementById('pag-gestao');
   if (!root) return;
@@ -31,6 +141,21 @@ function renderizarPagGestao() {
       <button onclick="mostrarArquivosAbs()" style="padding:7px 14px;background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;color:var(--text2)">Arquivos Importados</button>
       <button onclick="toggleImportarAbs()" style="padding:7px 14px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">Importar PDF</button>
     </div>
+  </div>
+
+  <!-- ── Absenteísmo nativo (novo) ── -->
+  <div style="background:var(--surface2);border-bottom:1.5px solid var(--border);padding:16px 24px;flex-shrink:0">
+    <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:1px;margin-bottom:10px">ATRASO POR MARCAÇÃO — ESPELHO DE PONTO (NATIVO)</div>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <button onclick="document.getElementById('absn-file-input').click()" style="padding:8px 16px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📄 Enviar PDF do espelho de ponto</button>
+      <input type="file" id="absn-file-input" accept=".pdf" style="display:none" onchange="absnEnviarPdf(this.files[0])">
+      <div id="absn-status" style="font-size:12px;color:var(--text3)"></div>
+    </div>
+    <div id="absn-tolerancia" style="display:none;align-items:center;gap:8px;margin-top:10px;font-size:11.5px">
+      <span style="color:var(--text3);font-weight:700">TOLERÂNCIA:</span>
+      ${[0,5,10,15,30].map(m => `<button onclick="absnSetTolerancia(${m})" id="absn-tol-${m}" style="padding:5px 10px;border-radius:20px;border:1.5px solid var(--border);background:${m===0?'var(--accent)':'var(--surface)'};color:${m===0?'#fff':'var(--text2)'};font-size:11px;font-weight:700;cursor:pointer">${m} min</button>`).join('')}
+    </div>
+    <div id="absn-resultado" style="margin-top:14px"></div>
   </div>
 
   <!-- ── Modal arquivos ── -->
