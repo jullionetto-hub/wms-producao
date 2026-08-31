@@ -891,33 +891,6 @@ function escolherFiltroRepMobile(val, label, el) {
   carregarAvisosMobile();
 }
 
-async function carregarAvisosMobile() {
-  const el  = document.getElementById('m-lista-avisos');
-  const cnt = document.getElementById('m-rep-pend');
-  if (!el) return;
-  const primeiraVez = el.children.length === 0 || el.innerHTML.includes('Nenhum item') || el.innerHTML.includes('Erro');
-  try {
-    const url = `${API}/repositor/avisos${_filtroMobileRep ? '?status=' + _filtroMobileRep : ''}`;
-    const res = await fetch(url, { credentials:'include' });
-    if (!res.ok) throw new Error('Servidor retornou ' + res.status);
-    const avisos = await res.json();
-    const pend = avisos.filter(a => ['pendente','verificando','buscado','aguardando_abastecer'].includes(a.situacao||a.status)).length;
-    if (cnt) cnt.textContent = pend;
-    if (!avisos.length) {
-      el.innerHTML = `<div style="text-align:center;padding:60px 16px">
-        
-        <div style="color:var(--text3);font-size:15px;font-weight:500">Nenhum item em falta</div>
-      </div>`;
-      return;
-    }
-    el.innerHTML = avisos.map(a => renderCardMobile(a)).join('');
-  } catch(e) {
-    if (primeiraVez) {
-      el.innerHTML = `<div style="color:#ef4444;text-align:center;padding:24px">Erro ao carregar — toque atualizar para tentar novamente</div>`;
-    }
-  }
-}
-
 function renderCardMobile(a) {
   const sit          = a.situacao || a.status || 'pendente';
   const nomeLogado   = usuarioAtual?.nome || '';

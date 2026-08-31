@@ -5,14 +5,15 @@ const { requerAuth, requerPerfil } = require('../lib/auth');
 const { db, pool } = require('../lib/db');
 
 const ABS_URL   = (process.env.ABS_API_URL   || 'https://backend-production-e7bdc.up.railway.app').replace(/\/$/, '');
-const ABS_EMAIL = process.env.ABS_EMAIL    || 'jotaceene1987@gmail.com';
-const ABS_PASS  = process.env.ABS_PASSWORD || 'Admin@2024!Secure';
+const ABS_EMAIL = process.env.ABS_EMAIL    || '';
+const ABS_PASS  = process.env.ABS_PASSWORD || '';
 
 let _absToken    = null;
 let _absTokenExp = 0;
 
 async function getAbsToken() {
   if (_absToken && Date.now() < _absTokenExp) return _absToken;
+  if (!ABS_EMAIL || !ABS_PASS) throw new Error('Credenciais do absenteísmo não configuradas (ABS_EMAIL / ABS_PASSWORD)');
   const res = await fetch(`${ABS_URL}/api/auth/login`, {
     method : 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -161,13 +162,17 @@ router.post('/gestao/absenteismo/exportar-matriz', requerAuth, requerGestor,
       let result;
       if (feedback_id) {
         // Atualiza só os campos de absenteísmo — preserva o resto do feedback (pontos positivos, combinado etc).
+        // Exige colaborador_id igual ao do feedback: se o usuário trocou a seleção no dropdown antes de
+        // confirmar, feedback_id (fixado ao abrir o modal) não pertence mais à pessoa escolhida — nesse
+        // caso cai no INSERT abaixo em vez de gravar por cima do registro de outra pessoa.
         const r = await pool.query(
           `UPDATE mz_feedbacks SET mes=$1, atrasos=$2, faltas_injustificadas=$3, ausencias_justificadas=$4, absenteismo_mes=$5
-           WHERE id=$6 RETURNING *`,
-          [mes||'', atrasos??null, faltas_injustificadas??null, ausencias_justificadas??null, absenteismo_mes||'', feedback_id]
+           WHERE id=$6 AND colaborador_id=$7 RETURNING *`,
+          [mes||'', atrasos??null, faltas_injustificadas??null, ausencias_justificadas??null, absenteismo_mes||'', feedback_id, colaborador_id]
         );
         result = r.rows[0];
-      } else {
+      }
+      if (!result) {
         const r = await pool.query(
           `INSERT INTO mz_feedbacks (colaborador_id, mes, atrasos, faltas_injustificadas, ausencias_justificadas, absenteismo_mes)
            VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,

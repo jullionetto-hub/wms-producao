@@ -2,10 +2,10 @@
 const express = require('express');
 const router  = express.Router();
 const { pool, db } = require('../lib/db');
-const { requerAuth } = require('../lib/auth');
+const { requerAuth, requerPerfil } = require('../lib/auth');
 
 // ── POST /dash-logistica/importar ─────────────────────────────────────────
-router.post('/dash-logistica/importar', requerAuth, async (req, res) => {
+router.post('/dash-logistica/importar', requerAuth, requerPerfil('supervisor'), async (req, res) => {
   const { pedidos, ini, fim, nome_arquivo } = req.body;
   if (!Array.isArray(pedidos) || !pedidos.length)
     return res.status(400).json({ erro: 'Nenhum dado enviado.' });
@@ -125,7 +125,7 @@ router.get('/dash-logistica/importacoes', requerAuth, async (req, res) => {
 });
 
 // ── DELETE /dash-logistica/importacoes/:id ────────────────────────────────
-router.delete('/dash-logistica/importacoes/:id', requerAuth, async (req, res) => {
+router.delete('/dash-logistica/importacoes/:id', requerAuth, requerPerfil('supervisor'), async (req, res) => {
   try {
     const imp = await db.get(`SELECT * FROM fat_importacoes WHERE id=$1`, [req.params.id]);
     if (!imp) return res.status(404).json({ erro: 'Importação não encontrada.' });

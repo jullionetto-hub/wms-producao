@@ -219,7 +219,9 @@ router.get('/estatisticas/separador', requerAuth, async (req,res) => {
   try {
     const {data, separador_id} = req.query;
     const hoje = data || (await db.get(`SELECT TO_CHAR(NOW() AT TIME ZONE 'America/Sao_Paulo','YYYY-MM-DD') as d`)).d;
-    let sid = separador_id || null;
+    const perfil = req.session.usuario?.perfil;
+    const podeVerOutro = perfil === 'supervisor' || perfil === 'gestor';
+    let sid = (podeVerOutro && separador_id) ? separador_id : null;
     if (!sid) {
       const usr = await db.get(`SELECT s.id FROM separadores s JOIN usuarios u ON s.usuario_id=u.id WHERE u.id=$1`, [req.session.usuario?.id]);
       sid = usr?.id;

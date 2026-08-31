@@ -202,61 +202,78 @@ router.put('/repositor/avisos/:id/iniciar-busca', requerAuth, async (req, res) =
   const { hora } = dataHoraLocal();
   const usuario  = req.session?.usuario?.nome || req.body?.repositor_nome || 'Sistema';
 
-  // Determina turno pela hora atual
-  const h = new Date().getHours();
+  // Determina turno pela hora atual em America/Sao_Paulo (não a hora local do processo —
+  // o servidor no Railway não roda em horário de Brasília, ver dataHoraLocal()).
+  const h = parseInt(hora.split(':')[0], 10);
   const turno = h >= 6 && h < 14 ? 'Manha' : h >= 14 && h < 22 ? 'Tarde' : 'Noite';
 
+  // Toda a leitura+decisão+escrita das tentativas roda dentro de uma transação com a linha
+  // travada (FOR UPDATE): sem isso, dois repositores tocando "iniciar busca" quase ao mesmo
+  // tempo no mesmo aviso liam o mesmo array de tentativas e o segundo UPDATE apagava a
+  // tentativa que o primeiro tinha acabado de registrar.
+  const client = await pool.connect();
+  let resposta = null;
   try {
-    const atual = await db.get('SELECT * FROM avisos_repositor WHERE id=$1', [id]);
-    if (!atual) return res.status(404).json({erro:'Aviso não encontrado'});
+    await client.query('BEGIN');
+    const atualR = await client.query('SELECT * FROM avisos_repositor WHERE id=$1 FOR UPDATE', [id]);
+    const atual = atualR.rows[0];
+    if (!atual) { resposta = { status: 404, body: { erro: 'Aviso não encontrado' } }; }
+    else {
+      let tentativas = [];
+      try { tentativas = Array.isArray(atual.tentativas) ? atual.tentativas : (atual.tentativas ? JSON.parse(atual.tentativas) : []); } catch{}
 
-    let tentativas = [];
-    try { tentativas = Array.isArray(atual.tentativas) ? atual.tentativas : (atual.tentativas ? JSON.parse(atual.tentativas) : []); } catch{}
+      // Se status já é 'verificando' (situacao desincronizada ou app reaberto),
+      // apenas sincroniza situacao para restaurar os botões corretos no frontend
+      if (atual.status === 'verificando') {
+        await client.query(`UPDATE avisos_repositor SET situacao='verificando' WHERE id=$1`, [id]);
+        resposta = { status: 200, body: { mensagem: 'Busca já em andamento!', tentativa: atual.total_tentativas || tentativas.length },
+          emit: { evento: 'aviso:atualizado', payload: { id, status: 'verificando', numero_pedido: atual.numero_pedido } } };
+      } else if (atual.status !== 'pendente') {
+        resposta = { status: 409, body: { erro: `Item não pode iniciar busca (status atual: ${atual.status})` } };
+      } else {
+        // Bloqueia se já atingiu o máximo de 3 tentativas
+        const MAX_TENTATIVAS = 3;
+        if (tentativas.length >= MAX_TENTATIVAS) {
+          const { hora: hProto } = dataHoraLocal();
+          await client.query(
+            `UPDATE avisos_repositor SET status='nao_encontrado', situacao='nao_encontrado', hora_protocolo=$1, turno_pendente='' WHERE id=$2`,
+            [hProto, id]
+          );
+          resposta = { status: 409, body: { erro: 'Máximo de 3 tentativas atingido. Item enviado para Liberação.' },
+            emit: [{ evento: 'liberacao:novo', payload: { id, numero_pedido: atual.numero_pedido } },
+                   { evento: 'aviso:atualizado', payload: { id, status: 'nao_encontrado', numero_pedido: atual.numero_pedido } }] };
+        } else {
+          const novaNum = tentativas.length + 1;
+          tentativas.push({ numero: novaNum, repositor: usuario, turno, hora_inicio: hora, hora_fim: null, resultado: null });
 
-    // Se status já é 'verificando' (situacao desincronizada ou app reaberto),
-    // apenas sincroniza situacao para restaurar os botões corretos no frontend
-    if (atual.status === 'verificando') {
-      await pool.query(`UPDATE avisos_repositor SET situacao='verificando' WHERE id=$1`, [id]);
-      req.app.get('io')?.emit('aviso:atualizado', { id, status: 'verificando', numero_pedido: atual.numero_pedido });
-      return res.json({ mensagem: 'Busca já em andamento!', tentativa: atual.total_tentativas || tentativas.length });
+          let histAtual = [];
+          try { histAtual = Array.isArray(atual.historico) ? atual.historico : (atual.historico ? JSON.parse(atual.historico) : []); } catch{}
+          const histNovo = [...histAtual, { usuario, acao: 'verificando', hora }];
+
+          await client.query(
+            `UPDATE avisos_repositor
+               SET status='verificando', situacao='verificando', hora_inicio_busca=$1,
+                   tentativas=$2, total_tentativas=$3,
+                   historico=$4, quem_pegou=$5, turno_pendente=''
+             WHERE id=$6`,
+            [hora, JSON.stringify(tentativas), novaNum, JSON.stringify(histNovo), usuario, id]
+          );
+          resposta = { status: 200, body: { mensagem: 'Busca iniciada!', tentativa: novaNum },
+            emit: { evento: 'aviso:atualizado', payload: { id, status: 'verificando', numero_pedido: atual.numero_pedido } } };
+        }
+      }
     }
+    await client.query('COMMIT');
+  } catch (e) {
+    await client.query('ROLLBACK');
+    return res.status(500).json({erro: e.message});
+  } finally {
+    client.release();
+  }
 
-    if (atual.status !== 'pendente') {
-      return res.status(409).json({erro:`Item não pode iniciar busca (status atual: ${atual.status})`});
-    }
-
-    // Bloqueia se já atingiu o máximo de 3 tentativas
-    const MAX_TENTATIVAS = 3;
-    if (tentativas.length >= MAX_TENTATIVAS) {
-      const { hora: hProto } = dataHoraLocal();
-      await pool.query(
-        `UPDATE avisos_repositor SET status='nao_encontrado', situacao='nao_encontrado', hora_protocolo=$1, turno_pendente='' WHERE id=$2`,
-        [hProto, id]
-      );
-      req.app.get('io')?.emit('liberacao:novo', { id, numero_pedido: atual.numero_pedido });
-      req.app.get('io')?.emit('aviso:atualizado', { id, status: 'nao_encontrado', numero_pedido: atual.numero_pedido });
-      return res.status(409).json({ erro: 'Máximo de 3 tentativas atingido. Item enviado para Liberação.' });
-    }
-
-    const novaNum = tentativas.length + 1;
-    tentativas.push({ numero: novaNum, repositor: usuario, turno, hora_inicio: hora, hora_fim: null, resultado: null });
-
-    let histAtual = [];
-    try { histAtual = Array.isArray(atual.historico) ? atual.historico : (atual.historico ? JSON.parse(atual.historico) : []); } catch{}
-    const histNovo = [...histAtual, { usuario, acao: 'verificando', hora }];
-
-    await pool.query(
-      `UPDATE avisos_repositor
-         SET status='verificando', situacao='verificando', hora_inicio_busca=$1,
-             tentativas=$2, total_tentativas=$3,
-             historico=$4, quem_pegou=$5, turno_pendente=''
-       WHERE id=$6`,
-      [hora, JSON.stringify(tentativas), novaNum, JSON.stringify(histNovo), usuario, id]
-    );
-
-    req.app.get('io')?.emit('aviso:atualizado', { id, status: 'verificando', numero_pedido: atual.numero_pedido });
-    res.json({ mensagem: 'Busca iniciada!', tentativa: novaNum });
-  } catch(e) { res.status(500).json({erro: e.message}); }
+  const emits = Array.isArray(resposta.emit) ? resposta.emit : (resposta.emit ? [resposta.emit] : []);
+  emits.forEach(({ evento, payload }) => req.app.get('io')?.emit(evento, payload));
+  res.status(resposta.status).json(resposta.body);
 });
 
 router.put('/repositor/avisos/:id/lido-separador', requerAuth, async (req,res) => {

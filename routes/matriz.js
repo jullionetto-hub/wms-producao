@@ -254,10 +254,21 @@ router.get('/matriz/raci', requerAuth, gLeitura, wrap(async (req, res) => {
 router.post('/matriz/raci', requerAuth, gGestor, wrap(async (req, res) => {
   const { nome, ordem, roles } = req.body;
   if (!nome) return res.status(400).json({ erro: 'nome obrigatório' });
-  const rArea = await pool.query('INSERT INTO mz_areas (nome,ordem) VALUES ($1,$2) RETURNING id', [nome, ordem||0]);
-  const areaId = rArea.rows[0].id;
-  let i = 0;
-  for (const nomeRole of (roles||[])) { await pool.query('INSERT INTO mz_roles (area_id,nome,ordem) VALUES ($1,$2,$3)', [areaId, nomeRole, i++]); }
+  const client = await pool.connect();
+  let areaId;
+  try {
+    await client.query('BEGIN');
+    const rArea = await client.query('INSERT INTO mz_areas (nome,ordem) VALUES ($1,$2) RETURNING id', [nome, ordem||0]);
+    areaId = rArea.rows[0].id;
+    let i = 0;
+    for (const nomeRole of (roles||[])) { await client.query('INSERT INTO mz_roles (area_id,nome,ordem) VALUES ($1,$2,$3)', [areaId, nomeRole, i++]); }
+    await client.query('COMMIT');
+  } catch (e) {
+    await client.query('ROLLBACK');
+    throw e;
+  } finally {
+    client.release();
+  }
   const [area] = (await _carregarRaci()).filter(a => a.id === areaId);
   res.status(201).json(area);
 }));
@@ -271,12 +282,24 @@ router.post('/matriz/raci/areas/:areaId/roles', requerAuth, gGestor, wrap(async 
 router.post('/matriz/raci/areas/:areaId/atividades', requerAuth, gGestor, wrap(async (req, res) => {
   const { nome, ordem, categoria, sugestao, status } = req.body;
   if (!nome) return res.status(400).json({ erro: 'nome obrigatório' });
-  const rAt = await pool.query(
-    'INSERT INTO mz_atividades (area_id,nome,ordem,categoria,sugestao) VALUES ($1,$2,$3,$4,$5) RETURNING id,nome',
-    [req.params.areaId, nome, ordem||0, categoria||null, sugestao||null]
-  );
-  for (const s of (status||[])) { await pool.query('INSERT INTO mz_status (atividade_id,role_id,status) VALUES ($1,$2,$3)', [rAt.rows[0].id, s.role_id, s.status]); }
-  res.status(201).json(rAt.rows[0]);
+  const client = await pool.connect();
+  let atividade;
+  try {
+    await client.query('BEGIN');
+    const rAt = await client.query(
+      'INSERT INTO mz_atividades (area_id,nome,ordem,categoria,sugestao) VALUES ($1,$2,$3,$4,$5) RETURNING id,nome',
+      [req.params.areaId, nome, ordem||0, categoria||null, sugestao||null]
+    );
+    atividade = rAt.rows[0];
+    for (const s of (status||[])) { await client.query('INSERT INTO mz_status (atividade_id,role_id,status) VALUES ($1,$2,$3)', [atividade.id, s.role_id, s.status]); }
+    await client.query('COMMIT');
+  } catch (e) {
+    await client.query('ROLLBACK');
+    throw e;
+  } finally {
+    client.release();
+  }
+  res.status(201).json(atividade);
 }));
 router.patch('/matriz/raci/atividades/:id', requerAuth, gGestor, wrap(async (req, res) => {
   const atual = await db.get('SELECT * FROM mz_atividades WHERE id=$1', [req.params.id]);

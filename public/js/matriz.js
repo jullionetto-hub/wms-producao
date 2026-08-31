@@ -1231,8 +1231,8 @@ function _mzRenderBancoHoras() {
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:14px">
       <div class="tile" style="background:var(--surface2);border-radius:10px;padding:12px"><div style="font-size:10px;color:var(--text3)">SALDO ${pfEsc(periodo.inicio_label||'INÍCIO')}</div><div style="font-size:18px;font-weight:800;margin-top:4px">${somaInicio.toLocaleString('pt-BR')}h</div></div>
       <div class="tile" style="background:var(--surface2);border-radius:10px;padding:12px"><div style="font-size:10px;color:var(--text3)">SALDO ${pfEsc(periodo.fim_label||'ATUAL')}</div><div style="font-size:18px;font-weight:800;margin-top:4px">${somaAtual.toLocaleString('pt-BR')}h</div></div>
-      <div class="tile" style="background:var(--surface2);border-radius:10px;padding:12px"><div style="font-size:10px;color:var(--text3)">REDUÇÃO LÍQUIDA</div><div style="font-size:18px;font-weight:800;margin-top:4px;color:var(--green)">${somaDelta.toLocaleString('pt-BR')}h</div></div>
-      <div class="tile" style="background:var(--surface2);border-radius:10px;padding:12px"><div style="font-size:10px;color:var(--text3)">VARIAÇÃO DO PERÍODO</div><div style="font-size:18px;font-weight:800;margin-top:4px;color:var(--green)">${pct}%</div></div>
+      <div class="tile" style="background:var(--surface2);border-radius:10px;padding:12px"><div style="font-size:10px;color:var(--text3)">REDUÇÃO LÍQUIDA</div><div style="font-size:18px;font-weight:800;margin-top:4px;color:${somaDelta<0?'var(--green)':somaDelta>0?'var(--red)':'var(--text)'}">${somaDelta.toLocaleString('pt-BR')}h</div></div>
+      <div class="tile" style="background:var(--surface2);border-radius:10px;padding:12px"><div style="font-size:10px;color:var(--text3)">VARIAÇÃO DO PERÍODO</div><div style="font-size:18px;font-weight:800;margin-top:4px;color:${somaDelta<0?'var(--green)':somaDelta>0?'var(--red)':'var(--text)'}">${pct}%</div></div>
     </div>
     <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px">
       ${tiers.map(t => {
@@ -2075,7 +2075,7 @@ function mzToggleFeedback(id) {
 
 function _mzRenderPainel() {
   const cont = document.getElementById('mz-conteudo');
-  const ativos = [..._mzColaboradores].sort((a,b)=>(a.nome||'').localeCompare(b.nome||''));
+  const ativos = [..._mzColaboradores].filter(c=>c.ativo && c.tier!=='gerente' && c.tier!=='coordenador').sort((a,b)=>(a.nome||'').localeCompare(b.nome||''));
   if (!_mzPainelColabId && ativos.length) _mzPainelColabId = ativos[0].id;
   const opts = ativos.map(c => `<option value="${c.id}" ${c.id===_mzPainelColabId?'selected':''}>${pfEsc(c.nome)}</option>`).join('');
   cont.innerHTML = `

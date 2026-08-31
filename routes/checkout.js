@@ -212,33 +212,53 @@ router.get('/checkout/caixa/:numero', requerAuth, async (req,res) => {
     }
     const operador_nome = req.session?.usuario?.nome || '';
     for (const row of rows) {
-      // Bloqueia se outro operador já tem sessão ativa (hora_fim vazia = sessão aberta)
-      const sessaoAtiva = await db.get(
-        `SELECT operador_nome FROM checkout_sessoes
-         WHERE checkout_id=$1 AND hora_fim='' ORDER BY id DESC LIMIT 1`,
-        [row.id]
-      );
-      if (sessaoAtiva?.operador_nome && sessaoAtiva.operador_nome !== operador_nome) {
-        return res.status(409).json({
-          erro: `Pedido #${row.numero_pedido} já está sendo processado por ${sessaoAtiva.operador_nome}`
-        });
+      // Checagem de sessão ativa + abertura de sessão nova precisam ser atômicas — senão duas
+      // estações de checkout bipando a mesma caixa quase ao mesmo tempo passam as duas pela
+      // checagem (nenhuma sessão aberta ainda) e as duas abrem sessão própria. Trava a linha do
+      // checkout (SELECT ... FOR UPDATE) pra serializar: a segunda requisição espera a primeira
+      // committar e enxerga a sessão que ela acabou de abrir.
+      const client = await pool.connect();
+      let conflito = null;
+      try {
+        await client.query('BEGIN');
+        await client.query('SELECT id FROM checkout WHERE id=$1 FOR UPDATE', [row.id]);
+        // Bloqueia se outro operador já tem sessão ativa (hora_fim vazia = sessão aberta)
+        const sessaoAtivaR = await client.query(
+          `SELECT operador_nome FROM checkout_sessoes
+           WHERE checkout_id=$1 AND hora_fim='' ORDER BY id DESC LIMIT 1`,
+          [row.id]
+        );
+        const sessaoAtiva = sessaoAtivaR.rows[0];
+        if (sessaoAtiva?.operador_nome && sessaoAtiva.operador_nome !== operador_nome) {
+          conflito = sessaoAtiva.operador_nome;
+        } else if (row.status === 'fila' || (row.status === 'pendente' && !row.operador_nome)) {
+          // 'fila' = criado pelo separador ao concluir (ainda não aberto pelo operador)
+          // 'pendente' sem operador_nome = aberto mas não confirmado ainda
+          await client.query(
+            `UPDATE checkout SET status='pendente', hora_criacao=$1, data_checkout=$2 WHERE id=$3`,
+            [hora, data, row.id]
+          );
+          // Abre sessão para este operador
+          await client.query(
+            `INSERT INTO checkout_sessoes (checkout_id, operador_nome, hora_inicio, hora_fim, data_sessao, tempo_min, acao)
+             VALUES ($1,$2,$3,'', $4, 0, 'aberto')`,
+            [row.id, operador_nome, hora, data]
+          );
+          row.status = 'pendente';
+          row.hora_criacao = hora;
+          row.data_checkout = data;
+        }
+        await client.query('COMMIT');
+      } catch (e) {
+        await client.query('ROLLBACK');
+        throw e;
+      } finally {
+        client.release();
       }
-      // 'fila' = criado pelo separador ao concluir (ainda não aberto pelo operador)
-      // 'pendente' sem operador_nome = aberto mas não confirmado ainda
-      if (row.status === 'fila' || (row.status === 'pendente' && !row.operador_nome)) {
-        await pool.query(
-          `UPDATE checkout SET status='pendente', hora_criacao=$1, data_checkout=$2 WHERE id=$3`,
-          [hora, data, row.id]
-        );
-        // Abre sessão para este operador
-        await pool.query(
-          `INSERT INTO checkout_sessoes (checkout_id, operador_nome, hora_inicio, hora_fim, data_sessao, tempo_min, acao)
-           VALUES ($1,$2,$3,'', $4, 0, 'aberto')`,
-          [row.id, operador_nome, hora, data]
-        );
-        row.status = 'pendente';
-        row.hora_criacao = hora;
-        row.data_checkout = data;
+      if (conflito) {
+        return res.status(409).json({
+          erro: `Pedido #${row.numero_pedido} já está sendo processado por ${conflito}`
+        });
       }
       row.itens_lista = await db.all(
         `SELECT id AS item_id, codigo, descricao, endereco, quantidade, status, obs FROM itens_pedido WHERE pedido_id=$1 ORDER BY id`,

@@ -148,7 +148,7 @@ async function _pedidosParaLote(data, nomes) {
     [data]
   );
   const alvo = nomes.map(_semAcento);
-  return rows.filter(r => alvo.some(n => _semAcento(r.separador_nome).includes(n)));
+  return rows.filter(r => alvo.includes(_semAcento(r.separador_nome)));
 }
 
 router.get('/embalagem/lote/preview', requerAuth, requerPerfil('supervisor'), async (req, res) => {

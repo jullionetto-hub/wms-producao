@@ -264,21 +264,30 @@ router.post('/pedidos/bipar', requerAuth, async (req,res) => {
     const ped=await db.get('SELECT * FROM pedidos WHERE numero_pedido=$1',[numero_pedido]);
     if (!ped) return res.status(404).json({erro:'Pedido nao encontrado!'});
     if (ped.status==='concluido') return res.status(400).json({erro:'Pedido ja concluido!',status:'concluido'});
-    if (separador_id && ped.separador_id && String(ped.separador_id)===String(separador_id)) {
-      const bipDHL = dataHoraLocal();
-      // Garante que status vira 'separando' e iniciado_em é preenchido
-      await pool.query(
-        `UPDATE pedidos SET status='separando', iniciado_em=COALESCE(NULLIF(iniciado_em,''),$1) WHERE id=$2`,
-        [bipDHL.data+'T'+bipDHL.hora, ped.id]
-      );
-      return res.json({mensagem:'Pedido ja atribuido.',pedido_id:ped.id,status:'separando',ja_atribuido:true,caixa_vinculada:!!(ped.numero_caixa)});
-    }
-    if (separador_id && ped.separador_id && String(ped.separador_id)!==String(separador_id) && ped.status==='separando')
-      return res.status(409).json({erro:'Pedido sendo separado por outro operador!'});
-    const sepId=separador_id||ped.separador_id||null;
-    const bipDHL=dataHoraLocal();
-    await pool.query(`UPDATE pedidos SET separador_id=$1,status='separando',iniciado_em=COALESCE(NULLIF(iniciado_em,''),$3) WHERE id=$2`,[sepId,ped.id,bipDHL.data+'T'+bipDHL.hora]);
-    res.json({mensagem:'Pedido atribuido!',pedido_id:ped.id,status:'separando',caixa_vinculada:!!(ped.numero_caixa)});
+    const bipDHL = dataHoraLocal();
+    const iniciadoEm = bipDHL.data+'T'+bipDHL.hora;
+    // Claim atômico numa única query: evita que duas bipagens quase simultâneas do
+    // mesmo pedido leiam o mesmo "sem dono" e a segunda sobrescreva silenciosamente
+    // a primeira. Só atribui/reafirma se ninguém MAIS já estiver com ele em separando.
+    const r = await pool.query(
+      `UPDATE pedidos SET
+         separador_id = COALESCE($1, separador_id),
+         status = 'separando',
+         iniciado_em = COALESCE(NULLIF(iniciado_em,''), $2)
+       WHERE id = $3
+         AND (separador_id IS NULL OR separador_id = $1 OR status <> 'separando')
+       RETURNING *`,
+      [separador_id||null, iniciadoEm, ped.id]
+    );
+    if (!r.rows.length) return res.status(409).json({erro:'Pedido sendo separado por outro operador!'});
+    const pedAtual = r.rows[0];
+    const jaAtribuido = !!(separador_id && ped.separador_id && String(ped.separador_id)===String(separador_id));
+    res.json({
+      mensagem: jaAtribuido ? 'Pedido ja atribuido.' : 'Pedido atribuido!',
+      pedido_id: pedAtual.id, status:'separando',
+      ja_atribuido: jaAtribuido,
+      caixa_vinculada: !!(pedAtual.numero_caixa),
+    });
   } catch(e){res.status(500).json({erro:e.message});}
 });
 
@@ -410,7 +419,12 @@ router.get('/pedidos/:id/itens', requerAuth, async (req,res) => {
 });
 
 router.put('/itens/:id/verificar', requerAuth, async (req,res) => {
-  const {status,obs,qtd_falta,separador_id,separador_nome}=req.body;
+  const {status,obs,qtd_falta}=req.body;
+  // Identidade de quem verificou vem da sessão, não do corpo da requisição — o cliente sempre
+  // manda a própria identidade mesmo, mas confiar no valor enviado deixaria qualquer chamada
+  // forjar o nome/id de outro separador nos avisos de repositor gerados abaixo.
+  const separador_id = req.session?.separador?.id || null;
+  const separador_nome = req.session?.separador?.nome || req.session?.usuario?.nome || '';
   const {hora,data}=dataHoraLocal();
   try {
     const item=await db.get(`SELECT i.*,p.numero_pedido FROM itens_pedido i JOIN pedidos p ON i.pedido_id=p.id WHERE i.id=$1`,[req.params.id]);
