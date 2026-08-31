@@ -13,6 +13,36 @@ const { parseEspelhoPonto, inferirHorariosEsperados, classificarDia } = require(
 // não é usado nem salvo.
 const gLeitura = requerPerfil('gestor', 'supervisor');
 
+// Rota temporária de diagnóstico — não grava nada, só mostra o que o pdf-parse
+// extraiu de verdade e como o parser interpretou, pra depurar sem precisar
+// rodar Node local (não tem npm/node nesta máquina de desenvolvimento).
+router.post('/absenteismo/debug', requerAuth, gLeitura,
+  express.raw({ type: 'application/pdf', limit: '25mb' }),
+  async (req, res) => {
+    try {
+      if (!Buffer.isBuffer(req.body) || !req.body.length) {
+        return res.status(400).json({ erro: 'Nenhum arquivo PDF enviado.' });
+      }
+      const nomeArquivo = req.query.nome || 'espelho_ponto.pdf';
+      const { text } = await pdfParse(req.body);
+      const colaboradores = parseEspelhoPonto(text, nomeArquivo);
+      res.json({
+        nomeArquivo,
+        tamanho_texto: text.length,
+        texto_bruto_inicio: text.slice(0, 4000),
+        colaboradores_encontrados: colaboradores.length,
+        resumo: colaboradores.map(c => ({
+          nome: c.nome, empresa: c.empresa, horario: c.horario, cpf: c.cpf,
+          total_dias: c.dias.length,
+          dias_com_data: c.dias.filter(d => d.data).length,
+          primeiro_dia: c.dias[0] || null,
+          segundo_dia: c.dias[1] || null,
+        })),
+      });
+    } catch (e) { res.status(500).json({ erro: e.message, stack: e.stack }); }
+  }
+);
+
 router.post('/absenteismo/upload', requerAuth, gLeitura,
   express.raw({ type: 'application/pdf', limit: '25mb' }),
   async (req, res) => {

@@ -43,6 +43,24 @@ async function absnEnviarPdf(file) {
   }
 }
 
+async function absnDebugPdf(file) {
+  if (!file) return;
+  const out = document.getElementById('absn-debug-out');
+  out.style.display = 'block';
+  out.value = 'Lendo...';
+  try {
+    const buf = await file.arrayBuffer();
+    const res = await fetch(`${API}/absenteismo/debug?nome=${encodeURIComponent(file.name)}`, {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/pdf' },
+      body: buf,
+    });
+    const data = await res.json();
+    out.value = JSON.stringify(data, null, 2);
+    out.select();
+  } catch(e) { out.value = 'Erro: ' + e.message; }
+}
+
 function absnSetTolerancia(min) {
   _absnTolerancia = min;
   [0,5,10,15,30].forEach(m => {
@@ -149,8 +167,11 @@ function renderizarPagGestao() {
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
       <button onclick="document.getElementById('absn-file-input').click()" style="padding:8px 16px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📄 Enviar PDF do espelho de ponto</button>
       <input type="file" id="absn-file-input" accept=".pdf" style="display:none" onchange="absnEnviarPdf(this.files[0])">
+      <button onclick="document.getElementById('absn-debug-input').click()" style="padding:8px 16px;background:var(--surface);border:1.5px solid var(--border);color:var(--text2);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🔍 Diagnóstico (temporário)</button>
+      <input type="file" id="absn-debug-input" accept=".pdf" style="display:none" onchange="absnDebugPdf(this.files[0])">
       <div id="absn-status" style="font-size:12px;color:var(--text3)"></div>
     </div>
+    <textarea id="absn-debug-out" readonly style="display:none;width:100%;min-height:300px;margin-top:10px;padding:10px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:monospace;font-size:11px;white-space:pre;overflow:auto"></textarea>
     <div id="absn-tolerancia" style="display:none;align-items:center;gap:8px;margin-top:10px;font-size:11.5px">
       <span style="color:var(--text3);font-weight:700">TOLERÂNCIA:</span>
       ${[0,5,10,15,30].map(m => `<button onclick="absnSetTolerancia(${m})" id="absn-tol-${m}" style="padding:5px 10px;border-radius:20px;border:1.5px solid var(--border);background:${m===0?'var(--accent)':'var(--surface)'};color:${m===0?'#fff':'var(--text2)'};font-size:11px;font-weight:700;cursor:pointer">${m} min</button>`).join('')}
