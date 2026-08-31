@@ -25,7 +25,16 @@ let _mzCarregado = {
 
 const MZ_TIER_LABEL = { gerente:'Gerente', coordenador:'Coordenador', supervisor:'Supervisor', analista:'Analista', assistente:'Assistente', auxiliar:'Auxiliar' };
 const MZ_STATUS_OPCOES = ['Executa','Garante','Acompanha','Apoia','Sim','Não'];
-const MZ_STATUS_COR = { Executa:'#16a34a', Garante:'#2563eb', Acompanha:'#7c3aed', Apoia:'#d97706', Sim:'#16a34a', 'Não':'#6b7280' };
+const MZ_STATUS_COR = { Sim:'#dc2626', Garante:'#7c3aed', Acompanha:'#d97706', Apoia:'#c2703d', Executa:'#16a34a', 'Não':'#6b7280' };
+const MZ_STATUS_DESC = {
+  Sim: 'É o dono principal da atividade. Faz acontecer e responde primeiro pela entrega.',
+  Garante: 'Cobra, verifica e assegura que a atividade seja executada corretamente.',
+  Acompanha: 'Tem visibilidade do resultado e evolução, mas não participa necessariamente da rotina.',
+  Apoia: 'Contribui com a atividade, mas não é quem decide nem quem responde por ela.',
+  Executa: 'Realiza a atividade na prática, no dia a dia.',
+  'Não': 'Sem envolvimento nessa atividade.',
+};
+const MZ_STATUS_ROTULO = { Sim:'Responsável Direto', Garante:'Garante', Acompanha:'Acompanha', Apoia:'Apoia', Executa:'Executa', 'Não':'Não' };
 
 function renderizarPagMatriz() {
   const root = document.getElementById('pag-matriz');
@@ -271,37 +280,178 @@ async function mzCarregarRaci() {
   _mzCarregado.raci = true;
 }
 
+function _mzStatusByRole(atividade) {
+  const m = {};
+  (atividade.status||[]).forEach(s => { m[s.role_id] = s.status; });
+  return m;
+}
+function _mzContarResponsaveisPorPapel(area, atividades) {
+  return area.roles.map(role => atividades.filter(a => _mzStatusByRole(a)[role.id]==='Sim').length);
+}
+function _mzBreakdownLabel(area, counts) {
+  return area.roles.map((r,i) => `${(r.nome[0]||'?')}:${counts[i]}`).join(' · ');
+}
+
+let _mzRaciAreaId = null;
+let _mzRaciCategoriaFiltro = 'Todas';
+let _mzRaciPapeisAberto = false;
+let _mzRaciEscalonamentoAberto = false;
+let _mzRaciEstruturaAberto = false;
+
+function _mzColapsavel(varName, aberto, titulo, corpo) {
+  return `
+    <div class="card" style="margin-bottom:10px;padding:0;overflow:hidden">
+      <div onclick="${varName}=!${varName};_mzRenderRaci()" style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;cursor:pointer">
+        <div style="font-weight:800;font-size:12.5px">${titulo}</div>
+        <span style="font-size:11px;color:var(--text3)">${aberto?'▲':'▾'}</span>
+      </div>
+      ${aberto ? `<div style="padding:0 16px 16px">${corpo}</div>` : ''}
+    </div>`;
+}
+
 function _mzRenderRaci() {
   const cont = document.getElementById('mz-conteudo');
   if (!_mzRaci.length) {
     cont.innerHTML = `<div class="card" style="text-align:center;color:var(--text3);padding:30px">Nenhuma área cadastrada na Matriz ainda.</div>`;
     return;
   }
-  cont.innerHTML = _mzRaci.map(area => `
-    <div class="card" style="margin-bottom:14px;overflow-x:auto">
-      <div style="font-weight:800;font-size:13px;margin-bottom:10px">${pfEsc(area.nome)}</div>
-      <table style="width:100%;border-collapse:collapse;font-size:11.5px;min-width:${300+area.roles.length*130}px">
+  if (!_mzRaciAreaId || !_mzRaci.find(a=>a.id===_mzRaciAreaId)) _mzRaciAreaId = _mzRaci[0].id;
+  const area = _mzRaci.find(a => a.id === _mzRaciAreaId);
+  const podeEditar = usuarioAtual?.perfil === 'gestor';
+
+  const categorias = [...new Set(area.atividades.map(a=>a.categoria).filter(Boolean))];
+  let categoriaCardsHtml = '';
+  let categoriasVisiveis = null;
+  if (categorias.length) {
+    const cards = [
+      { nome:'Todas', count: area.atividades.length, counts: _mzContarResponsaveisPorPapel(area, area.atividades) },
+      ...categorias.map(nome => {
+        const rows = area.atividades.filter(a=>a.categoria===nome);
+        return { nome, count: rows.length, counts: _mzContarResponsaveisPorPapel(area, rows) };
+      }),
+    ];
+    categoriaCardsHtml = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:14px">
+      ${cards.map(c => `<div onclick="_mzRaciCategoriaFiltro='${c.nome.replace(/'/g,"\\'")}';_mzRenderRaci()" style="cursor:pointer;background:${c.nome===_mzRaciCategoriaFiltro?'var(--accent)':'var(--surface2)'};border-radius:10px;padding:10px 12px">
+        <div style="font-size:11px;font-weight:700;color:${c.nome===_mzRaciCategoriaFiltro?'#fff':'var(--text)'}">${pfEsc(c.nome)}</div>
+        <div style="font-size:18px;font-weight:800;color:${c.nome===_mzRaciCategoriaFiltro?'#fff':'var(--text)'};margin-top:2px">${c.count}<span style="font-size:10px;font-weight:600"> ativ.</span></div>
+        <div style="font-size:9.5px;color:${c.nome===_mzRaciCategoriaFiltro?'rgba(255,255,255,.8)':'var(--text3)'};margin-top:2px">${_mzBreakdownLabel(area,c.counts)}</div>
+      </div>`).join('')}
+    </div>`;
+    categoriasVisiveis = (_mzRaciCategoriaFiltro==='Todas' ? categorias : categorias.filter(c=>c===_mzRaciCategoriaFiltro))
+      .map(nome => ({ nome, rows: area.atividades.filter(a=>a.categoria===nome) }));
+  }
+
+  const legendHtml = `<div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:14px;font-size:11px;color:var(--text2)">
+    ${MZ_STATUS_OPCOES.concat(['Sim']).filter((v,i,arr)=>arr.indexOf(v)===i).map(st => `<div style="display:flex;align-items:center;gap:5px"><span style="width:9px;height:9px;border-radius:50%;background:${MZ_STATUS_COR[st]};display:inline-block"></span>${st==='Sim'?'Responsável':pfEsc(st)} — ${MZ_STATUS_DESC[st]}</div>`).join('')}
+  </div>`;
+
+  const papeisHtml = _mzColapsavel('_mzRaciPapeisAberto', _mzRaciPapeisAberto, 'Definição dos Papéis', `
+    <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead><tr style="background:var(--surface2)"><th style="padding:6px 10px;text-align:left;font-size:10px;color:var(--text3)">PAPEL</th><th style="padding:6px 10px;text-align:left;font-size:10px;color:var(--text3)">SIGNIFICADO</th></tr></thead>
+      <tbody>${['Sim','Garante','Acompanha','Apoia','Executa','Não'].map(st => `<tr style="border-top:1px solid var(--border)"><td style="padding:6px 10px"><span style="width:9px;height:9px;border-radius:50%;background:${MZ_STATUS_COR[st]};display:inline-block;margin-right:6px"></span>${MZ_STATUS_ROTULO[st]}</td><td style="padding:6px 10px;color:var(--text2)">${MZ_STATUS_DESC[st]}</td></tr>`).join('')}</tbody>
+    </table>`);
+
+  const escalonamentoHtml = _mzColapsavel('_mzRaciEscalonamentoAberto', _mzRaciEscalonamentoAberto, 'Regra de Escalonamento', `
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:14px">
+      <div style="background:rgba(37,99,235,.1);border-radius:8px;padding:10px 12px"><div style="font-size:11.5px;color:var(--text2)">Aconteceu hoje</div><div style="font-weight:800;font-size:12.5px;margin-top:4px">→ Analista resolve</div></div>
+      <div style="background:rgba(124,58,237,.1);border-radius:8px;padding:10px 12px"><div style="font-size:11.5px;color:var(--text2)">Está acontecendo repetidamente</div><div style="font-weight:800;font-size:12.5px;margin-top:4px">→ Coordenador resolve</div></div>
+      <div style="background:rgba(220,38,38,.1);border-radius:8px;padding:10px 12px"><div style="font-size:11.5px;color:var(--text2)">Exige mudança estrutural, capacidade, investimento ou pessoas</div><div style="font-weight:800;font-size:12.5px;margin-top:4px">→ Gerente resolve</div></div>
+    </div>
+    <div style="font-weight:800;font-size:12px;margin-bottom:8px">Segunda regra</div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:11.5px;font-weight:700">
+      <span style="background:rgba(37,99,235,.15);padding:6px 12px;border-radius:20px">Analista executa</span> →
+      <span style="background:rgba(124,58,237,.15);padding:6px 12px;border-radius:20px">Coordenador garante</span> →
+      <span style="background:rgba(220,38,38,.15);padding:6px 12px;border-radius:20px">Gerente acompanha o resultado</span>
+    </div>`);
+
+  const estruturaHtml = _mzColapsavel('_mzRaciEstruturaAberto', _mzRaciEstruturaAberto, 'O Desenho da Estrutura', `
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:14px">
+      <div style="background:var(--surface2);border-radius:10px;padding:12px"><div style="font-weight:800;font-size:12.5px">Gerente</div><div style="font-size:11px;color:var(--text3);font-style:italic;margin-top:2px">Faz a operação evoluir.</div><div style="font-size:11.5px;color:var(--text2);margin-top:6px">Não fica presa ao que está acontecendo na colmeia às 14h. Está olhando capacidade, produtividade, estrutura, custo, indicadores, liderança e próximos passos.</div></div>
+      <div style="background:var(--surface2);border-radius:10px;padding:12px"><div style="font-weight:800;font-size:12.5px">Coordenador</div><div style="font-size:11px;color:var(--text3);font-style:italic;margin-top:2px">Faz a operação funcionar.</div><div style="font-size:11.5px;color:var(--text2);margin-top:6px">É o principal responsável por processos, rotina, produtividade, equipe e funcionamento dos três turnos.</div></div>
+      <div style="background:var(--surface2);border-radius:10px;padding:12px"><div style="font-weight:800;font-size:12.5px">Analista do Turno</div><div style="font-size:11px;color:var(--text3);font-style:italic;margin-top:2px">Faz o turno acontecer.</div><div style="font-size:11.5px;color:var(--text2);margin-top:6px">Executa, acompanha, organiza, orienta, identifica desvios e resolve o primeiro nível de problemas.</div></div>
+    </div>
+    <div style="font-weight:800;font-size:12px;margin-bottom:8px">Fluxo de Responsabilidade</div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+      <div style="background:var(--surface2);border-radius:8px;padding:8px 16px;text-align:center"><b style="font-size:12px">Analista</b><div style="font-size:10.5px;color:var(--text3)">Execução do turno</div></div>
+      <div style="font-size:14px;color:var(--text3)">↓</div>
+      <div style="background:var(--surface2);border-radius:8px;padding:8px 16px;text-align:center"><b style="font-size:12px">Coordenador</b><div style="font-size:10.5px;color:var(--text3)">Garantia da operação</div></div>
+      <div style="font-size:14px;color:var(--text3)">↓</div>
+      <div style="background:var(--surface2);border-radius:8px;padding:8px 16px;text-align:center"><b style="font-size:12px">Gerente</b><div style="font-size:10.5px;color:var(--text3)">Resultado + estratégia + evolução</div></div>
+    </div>`);
+
+  const dot = (atividadeId, roleId, statusAtual) => {
+    const cor = MZ_STATUS_COR[statusAtual] || 'var(--text3)';
+    if (podeEditar) {
+      return `<select onchange="mzDefinirStatus(${atividadeId},${roleId},this.value)" style="padding:3px 6px;border-radius:6px;border:1.5px solid ${cor};background:transparent;color:${cor};font-size:11px;font-weight:700;cursor:pointer">
+        <option value="" ${!statusAtual?'selected':''}>—</option>
+        ${MZ_STATUS_OPCOES.map(o => `<option value="${o}" ${statusAtual===o?'selected':''}>${o}</option>`).join('')}
+      </select>`;
+    }
+    return `<span style="font-size:10.5px;font-weight:700;color:${cor}">${statusAtual==='Sim'?'Responsável':(statusAtual||'—')}</span>`;
+  };
+
+  const colspanTotal = area.roles.length + 3 + (podeEditar?1:0);
+  const renderRowsHtml = rows => rows.map(at => {
+    const statusByRole = _mzStatusByRole(at);
+    const diretos = area.roles.filter(r => statusByRole[r.id]==='Sim').map(r=>r.nome).join(', ') || '—';
+    const garantidores = area.roles.filter(r => statusByRole[r.id]==='Garante').map(r=>r.nome).join(', ') || '—';
+    return `<tr style="border-top:1px solid var(--border)">
+      <td style="padding:6px 10px;font-weight:600">${pfEsc(at.nome)}${at.sugestao?`<span title="${pfEsc(at.sugestao)}" style="margin-left:4px;cursor:help">💡</span>`:''}</td>
+      ${area.roles.map(r => `<td style="padding:4px 8px;text-align:center">${dot(at.id, r.id, statusByRole[r.id])}</td>`).join('')}
+      <td style="padding:6px 10px;font-size:10.5px;color:var(--text2)">${pfEsc(diretos)}</td>
+      <td style="padding:6px 10px;font-size:10.5px;color:var(--text2)">${pfEsc(garantidores)}</td>
+      ${podeEditar?`<td style="padding:6px 10px;text-align:right"><button class="btn btn-outline btn-sm" style="padding:2px 8px;font-size:10px;color:var(--red);border-color:var(--red)" onclick="mzExcluirAtividade(${at.id})">excluir</button></td>`:''}
+    </tr>`;
+  }).join('');
+
+  let tbodyHtml = '';
+  let todasAsAtividades = [];
+  if (categoriasVisiveis) {
+    categoriasVisiveis.forEach(cat => {
+      const counts = _mzContarResponsaveisPorPapel(area, cat.rows);
+      tbodyHtml += `<tr style="border-top:1.5px solid var(--border);background:var(--surface2)"><td colspan="${colspanTotal}" style="padding:6px 10px;font-weight:800;font-size:11px">${pfEsc(cat.nome)} <span style="font-weight:400;color:var(--text3);font-size:10px">${_mzBreakdownLabel(area,counts)}</span></td></tr>`;
+      tbodyHtml += renderRowsHtml(cat.rows);
+      todasAsAtividades = todasAsAtividades.concat(cat.rows);
+    });
+  } else {
+    const rows = [...area.atividades].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
+    tbodyHtml = renderRowsHtml(rows);
+    todasAsAtividades = rows;
+  }
+
+  const summaryBar = `<div style="display:grid;grid-template-columns:repeat(${area.roles.length},1fr);gap:8px;padding:12px 16px;border-top:1px solid var(--border)">
+    ${area.roles.map(role => {
+      const simCount = todasAsAtividades.filter(a => _mzStatusByRole(a)[role.id]==='Sim').length;
+      return `<div><div style="font-size:10px;font-weight:800;color:var(--text3)">${pfEsc(role.nome)}</div><div style="font-size:13px;font-weight:800;margin-top:2px">${simCount}<span style="font-size:9.5px;color:var(--text3);font-weight:400"> / ${todasAsAtividades.length} sob resp. direta</span></div></div>`;
+    }).join('')}
+  </div>`;
+
+  cont.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        ${_mzRaci.map(a => `<button onclick="_mzRaciAreaId=${a.id};_mzRaciCategoriaFiltro='Todas';_mzRenderRaci()" style="padding:6px 12px;background:${a.id===_mzRaciAreaId?'var(--accent)':'var(--surface2)'};border:none;border-radius:20px;color:${a.id===_mzRaciAreaId?'#fff':'var(--text2)'};font-size:11.5px;font-weight:700;cursor:pointer">${pfEsc(a.nome)}</button>`).join('')}
+      </div>
+      ${podeEditar?`<button class="btn btn-outline btn-sm" onclick="mzAbrirNovaAreaRaci()">+ Nova área</button>`:''}
+    </div>
+    ${categoriaCardsHtml}
+    ${legendHtml}
+    ${papeisHtml}
+    ${escalonamentoHtml}
+    ${estruturaHtml}
+    <div class="card" style="padding:0;overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:11.5px;min-width:${300+area.roles.length*110}px">
         <thead><tr style="background:var(--surface2)">
-          <th style="padding:6px 10px;text-align:left;font-size:10px;font-weight:800;color:var(--text3);min-width:220px">ATIVIDADE</th>
-          ${area.roles.map(r => `<th style="padding:6px 10px;text-align:center;font-size:10px;font-weight:800;color:var(--text3);min-width:120px">${pfEsc(r.nome)}</th>`).join('')}
+          <th style="padding:6px 10px;text-align:left;font-size:10px;font-weight:800;color:var(--text3);min-width:200px">ATIVIDADE</th>
+          ${area.roles.map(r => `<th style="padding:6px 10px;text-align:center;font-size:10px;font-weight:800;color:var(--text3);min-width:110px">${pfEsc(r.nome)}</th>`).join('')}
+          <th style="padding:6px 10px;text-align:left;font-size:10px;font-weight:800;color:var(--text3)">RESPONSÁVEL DIRETO</th>
+          <th style="padding:6px 10px;text-align:left;font-size:10px;font-weight:800;color:var(--text3)">GARANTE</th>
+          ${podeEditar?'<th style="padding:6px 10px"></th>':''}
         </tr></thead>
-        <tbody>${area.atividades.map(at => `
-          <tr style="border-top:1px solid var(--border)">
-            <td style="padding:6px 10px;font-weight:600">${pfEsc(at.nome)}${at.categoria?`<div style="font-size:9px;color:var(--text3);font-weight:400">${pfEsc(at.categoria)}</div>`:''}</td>
-            ${area.roles.map(r => {
-              const st = at.status.find(s => s.role_id === r.id)?.status || '';
-              const cor = MZ_STATUS_COR[st] || 'var(--text3)';
-              return `<td style="padding:4px 8px;text-align:center">
-                <select onchange="mzDefinirStatus(${at.id},${r.id},this.value)" style="padding:3px 6px;border-radius:6px;border:1.5px solid ${cor};background:transparent;color:${cor};font-size:11px;font-weight:700;cursor:pointer">
-                  <option value="" ${!st?'selected':''}>—</option>
-                  ${MZ_STATUS_OPCOES.map(o => `<option value="${o}" ${st===o?'selected':''}>${o}</option>`).join('')}
-                </select>
-              </td>`;
-            }).join('')}
-          </tr>`).join('') || `<tr><td colspan="${area.roles.length+1}" style="text-align:center;color:var(--text3);padding:14px">Sem atividades nessa área</td></tr>`}
-        </tbody>
+        <tbody>${tbodyHtml || `<tr><td colspan="${colspanTotal}" style="text-align:center;color:var(--text3);padding:14px">Sem atividades nessa área</td></tr>`}</tbody>
       </table>
-    </div>`).join('');
+      ${summaryBar}
+      ${podeEditar?`<div style="padding:14px 16px"><button class="btn btn-outline btn-sm" onclick="mzAbrirNovaAtividade(${area.id})">+ Nova atividade</button></div>`:''}
+    </div>`;
 }
 
 async function mzDefinirStatus(atividadeId, roleId, status) {
@@ -311,6 +461,110 @@ async function mzDefinirStatus(atividadeId, roleId, status) {
       body: JSON.stringify({ role_id: roleId, status }),
     });
     toast('Atualizado!','sucesso');
+    _mzCarregado.raci = false;
+    await mzCarregarRaci();
+    _mzRenderRaci();
+  } catch(e) { toast('Erro: ' + e.message, 'erro'); }
+}
+
+function mzExcluirAtividade(id) {
+  wmsConfirm({ titulo:'Excluir esta atividade?', sub:'Ação permanente.', btnOk:'Excluir', btnOkClass:'btn-danger' }, async () => {
+    try {
+      await _mzFetch(`/matriz/raci/atividades/${id}`, { method:'DELETE' });
+      toast('Excluída!','sucesso');
+      _mzCarregado.raci = false;
+      await mzCarregarRaci();
+      _mzRenderRaci();
+    } catch(e) { toast('Erro: ' + e.message, 'erro'); }
+  });
+}
+
+function mzAbrirNovaAreaRaci() {
+  const modal = document.createElement('div');
+  modal.id = 'mz-modal-novaarea';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+  modal.onclick = e => { if (e.target === modal) modal.remove(); };
+  modal.innerHTML = `
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:22px;max-width:400px;width:100%">
+      <div style="font-weight:900;font-size:15px;margin-bottom:14px">Nova área</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div><label style="font-size:10px;font-weight:700;color:var(--text3)">NOME DA ÁREA</label>
+          <input id="mzra-nome" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:13px;box-sizing:border-box"></div>
+        <div><label style="font-size:10px;font-weight:700;color:var(--text3)">PAPÉIS (um por linha, ex: Gerente)</label>
+          <textarea id="mzra-roles" style="width:100%;min-height:80px;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:12px;resize:vertical;box-sizing:border-box"></textarea></div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:18px">
+        <button class="btn btn-outline" style="flex:1" onclick="document.getElementById('mz-modal-novaarea').remove()">Cancelar</button>
+        <button class="btn btn-primary" style="flex:1" onclick="mzSalvarNovaAreaRaci()">Criar</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+}
+
+async function mzSalvarNovaAreaRaci() {
+  const nome = document.getElementById('mzra-nome').value.trim();
+  if (!nome) { toast('Informe o nome da área.','aviso'); return; }
+  const roles = document.getElementById('mzra-roles').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  try {
+    await _mzFetch('/matriz/raci', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ nome, ordem: _mzRaci.length, roles }) });
+    document.getElementById('mz-modal-novaarea')?.remove();
+    toast('Área criada!','sucesso');
+    _mzCarregado.raci = false;
+    await mzCarregarRaci();
+    _mzRaciAreaId = null;
+    _mzRenderRaci();
+  } catch(e) { toast('Erro: ' + e.message, 'erro'); }
+}
+
+function mzAbrirNovaAtividade(areaId) {
+  const area = _mzRaci.find(a => a.id === areaId);
+  if (!area) return;
+  const categoriasExistentes = [...new Set(area.atividades.map(a=>a.categoria).filter(Boolean))];
+  const modal = document.createElement('div');
+  modal.id = 'mz-modal-novaatividade';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+  modal.onclick = e => { if (e.target === modal) modal.remove(); };
+  modal.innerHTML = `
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:22px;max-width:460px;width:100%;max-height:90vh;overflow-y:auto">
+      <div style="font-weight:900;font-size:15px;margin-bottom:14px">Nova atividade — ${pfEsc(area.nome)}</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div><label style="font-size:10px;font-weight:700;color:var(--text3)">CATEGORIA</label>
+          <input id="mzat-categoria" list="mzat-categoria-list" placeholder="ex: Metas e Resultados" value="${_mzRaciCategoriaFiltro!=='Todas'?pfEsc(_mzRaciCategoriaFiltro):''}" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:13px;box-sizing:border-box">
+          <datalist id="mzat-categoria-list">${categoriasExistentes.map(c=>`<option value="${pfEsc(c)}">`).join('')}</datalist></div>
+        <div><label style="font-size:10px;font-weight:700;color:var(--text3)">ATIVIDADE</label>
+          <input id="mzat-nome" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:13px;box-sizing:border-box"></div>
+        <div><label style="font-size:10px;font-weight:700;color:var(--text3)">SUGESTÃO (OPCIONAL)</label>
+          <textarea id="mzat-sugestao" placeholder="Nota de melhoria futura, mostrada como dica 💡" style="width:100%;min-height:50px;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:12px;resize:vertical;box-sizing:border-box"></textarea></div>
+        ${area.roles.map(r => `<div><label style="font-size:10px;font-weight:700;color:var(--text3)">${pfEsc(r.nome)}</label>
+          <select id="mzat-role-${r.id}" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:13px">
+            <option value="">—</option>
+            ${MZ_STATUS_OPCOES.map(o=>`<option value="${o}">${o}</option>`).join('')}
+          </select></div>`).join('')}
+      </div>
+      <div style="display:flex;gap:10px;margin-top:18px">
+        <button class="btn btn-outline" style="flex:1" onclick="document.getElementById('mz-modal-novaatividade').remove()">Cancelar</button>
+        <button class="btn btn-primary" style="flex:1" onclick="mzSalvarNovaAtividade(${areaId})">Criar</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+}
+
+async function mzSalvarNovaAtividade(areaId) {
+  const nome = document.getElementById('mzat-nome').value.trim();
+  if (!nome) { toast('Informe o nome da atividade.','aviso'); return; }
+  const area = _mzRaci.find(a => a.id === areaId);
+  const status = area.roles.map(r => ({ role_id: r.id, status: document.getElementById(`mzat-role-${r.id}`).value })).filter(s => s.status);
+  const body = {
+    nome,
+    ordem: area.atividades.length,
+    categoria: document.getElementById('mzat-categoria').value.trim() || null,
+    sugestao: document.getElementById('mzat-sugestao').value.trim() || null,
+    status,
+  };
+  try {
+    await _mzFetch(`/matriz/raci/areas/${areaId}/atividades`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    document.getElementById('mz-modal-novaatividade')?.remove();
+    toast('Atividade criada!','sucesso');
     _mzCarregado.raci = false;
     await mzCarregarRaci();
     _mzRenderRaci();
