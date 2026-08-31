@@ -136,7 +136,7 @@ const MZ_LOADERS = {
   'banco-horas':  { deps:['colaboradores','bancoHoras'],               render:'_mzRenderBancoHoras' },
   ferias:         { deps:['colaboradores','ferias'],                   render:'_mzRenderFerias' },
   cargos:         { deps:['cargos'],                                   render:'_mzRenderCargos' },
-  incentivo:      { deps:['incentivo'],                                render:'_mzRenderIncentivo' },
+  incentivo:      { deps:['colaboradores','classificacoes','incentivo'], render:'_mzRenderIncentivo' },
   carreira:       { deps:['carreira'],                                 render:'_mzRenderCarreira' },
   organograma:    { deps:['colaboradores'],                            render:'_mzRenderOrganograma' },
   painel:         { deps:['colaboradores','feedbacks','classificacoes','ausencias','bancoHoras','ferias','raci'], render:'_mzRenderPainel' },
@@ -1397,34 +1397,111 @@ async function mzCarregarIncentivo() {
   _mzCarregado.incentivo = true;
 }
 
+let _mzIncentivoPeriodo = null;
+let _mzIncentivoTurnoFiltro = 'Todos';
+
+function _mzCalcIncentivo(r) {
+  const cfg = _mzIncentivo;
+  if (!cfg) return null;
+  const pa = { green:cfg.abs_green, yellow:cfg.abs_yellow, red:cfg.abs_red }[r.abs];
+  const pp = { green:cfg.perf_green, yellow:cfg.perf_yellow, red:cfg.perf_red }[r.perf];
+  const pc = { green:cfg.comp_green, yellow:cfg.comp_yellow, red:cfg.comp_red }[r.comp];
+  if (pa===undefined || pp===undefined || pc===undefined) return null;
+  const total = pa + pp + pc;
+  let tier;
+  if (total>=90) tier = { label:'🏆 Destaque', valor:'R$ 200,00', cor:'var(--accent)' };
+  else if (total>=70) tier = { label:'⭐ Bom', valor:'R$ 100,00', cor:'var(--green)' };
+  else if (total>=50) tier = { label:'👍 Regular', valor:'—', cor:'var(--amber)' };
+  else tier = { label:'📋 Atenção', valor:'—', cor:'var(--red)' };
+  return { total, ...tier };
+}
+
 function _mzRenderIncentivo() {
   const cont = document.getElementById('mz-conteudo');
-  const linha = (label, key) => `
-    <tr style="border-top:1px solid var(--border)">
-      <td style="padding:8px 12px;font-weight:700">${label}</td>
-      <td style="padding:6px 12px;text-align:center"><input id="mzin-${key}_green" type="number" value="${_mzIncentivo[key+'_green']}" style="width:70px;padding:5px;border:1.5px solid var(--border);border-radius:6px;background:var(--surface);color:var(--green);font-weight:700;text-align:center"></td>
-      <td style="padding:6px 12px;text-align:center"><input id="mzin-${key}_yellow" type="number" value="${_mzIncentivo[key+'_yellow']}" style="width:70px;padding:5px;border:1.5px solid var(--border);border-radius:6px;background:var(--surface);color:var(--amber);font-weight:700;text-align:center"></td>
-      <td style="padding:6px 12px;text-align:center"><input id="mzin-${key}_red" type="number" value="${_mzIncentivo[key+'_red']}" style="width:70px;padding:5px;border:1.5px solid var(--border);border-radius:6px;background:var(--surface);color:var(--red);font-weight:700;text-align:center"></td>
-    </tr>`;
+  const periodos = _mzClassPeriodos();
+  if (!_mzIncentivoPeriodo || (periodos.length && !periodos.includes(_mzIncentivoPeriodo))) _mzIncentivoPeriodo = periodos[periodos.length-1] || _mzPeriodoAtualLabel();
+  const periodo = _mzIncentivoPeriodo;
+  const rows = _mzClassRows(periodo).map(r => ({ ...r, calc: _mzCalcIncentivo(r) }));
+
+  const destaque = rows.filter(r=>r.calc && r.calc.label.includes('Destaque')).length;
+  const bom      = rows.filter(r=>r.calc && r.calc.label.includes('Bom')).length;
+  const regular  = rows.filter(r=>r.calc && r.calc.label.includes('Regular')).length;
+  const atencao  = rows.filter(r=>r.calc && r.calc.label.includes('Atenção')).length;
+
+  const turnos = ['Todos', ...new Set(rows.map(r=>r.turno).filter(Boolean))];
+  let lista = rows;
+  if (_mzIncentivoTurnoFiltro!=='Todos') lista = lista.filter(r=>r.turno===_mzIncentivoTurnoFiltro);
+
   cont.innerHTML = `
+    <div class="card" style="margin-bottom:14px;padding:14px 16px">
+      <p style="font-size:12px;color:var(--text2);margin:0">Bonificação calculada a partir da Classificação do ciclo — Absenteísmo (${_mzIncentivo?.abs_green ?? 30} pts) + Performance (${_mzIncentivo?.perf_green ?? 40} pts) + Comportamento (${_mzIncentivo?.comp_green ?? 30} pts).</p>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        ${periodos.map(p => `<button onclick="_mzIncentivoPeriodo='${p.replace(/'/g,"\\'")}';_mzRenderIncentivo()" style="padding:6px 12px;background:${p===periodo?'var(--accent)':'var(--surface2)'};border:none;border-radius:20px;color:${p===periodo?'#fff':'var(--text2)'};font-size:11.5px;font-weight:700;cursor:pointer">${pfEsc(p)}</button>`).join('')}
+      </div>
+      <button class="btn btn-outline btn-sm" onclick="mzAbrirIncentivoConfig()">Editar pontuação</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:14px">
+      <div class="tile" style="background:var(--surface2);border-radius:10px;padding:12px"><div style="font-size:10px;color:var(--text3)">🏆 DESTAQUE</div><div style="font-size:18px;font-weight:800;margin-top:4px">${destaque}</div></div>
+      <div class="tile" style="background:var(--surface2);border-radius:10px;padding:12px"><div style="font-size:10px;color:var(--text3)">⭐ BOM</div><div style="font-size:18px;font-weight:800;margin-top:4px">${bom}</div></div>
+      <div class="tile" style="background:var(--surface2);border-radius:10px;padding:12px"><div style="font-size:10px;color:var(--text3)">👍 REGULAR</div><div style="font-size:18px;font-weight:800;margin-top:4px">${regular}</div></div>
+      <div class="tile" style="background:var(--surface2);border-radius:10px;padding:12px"><div style="font-size:10px;color:var(--text3)">📋 ATENÇÃO</div><div style="font-size:18px;font-weight:800;margin-top:4px">${atencao}</div></div>
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">
+      ${turnos.map(t => `<button onclick="_mzIncentivoTurnoFiltro='${t.replace(/'/g,"\\'")}';_mzRenderIncentivo()" style="padding:6px 12px;background:${t===_mzIncentivoTurnoFiltro?'var(--accent)':'var(--surface2)'};border:none;border-radius:20px;color:${t===_mzIncentivoTurnoFiltro?'#fff':'var(--text2)'};font-size:11.5px;font-weight:700;cursor:pointer">${pfEsc(t)}</button>`).join('')}
+    </div>
     <div class="card" style="padding:0;overflow-x:auto">
       <table style="width:100%;border-collapse:collapse;font-size:12.5px">
         <thead><tr style="background:var(--surface2)">
-          <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:800;color:var(--text3)">CRITÉRIO</th>
-          <th style="padding:8px 12px;text-align:center;font-size:10px;font-weight:800;color:var(--green)">ÓTIMO</th>
-          <th style="padding:8px 12px;text-align:center;font-size:10px;font-weight:800;color:var(--amber)">MEDIANO</th>
-          <th style="padding:8px 12px;text-align:center;font-size:10px;font-weight:800;color:var(--red)">RUIM</th>
+          <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:800;color:var(--text3)">COLABORADOR</th>
+          <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:800;color:var(--text3)">TURNO</th>
+          <th style="padding:8px 12px;text-align:center;font-size:10px;font-weight:800;color:var(--text3)">PONTUAÇÃO</th>
+          <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:800;color:var(--text3)">CLASSIFICAÇÃO</th>
+          <th style="padding:8px 12px;text-align:center;font-size:10px;font-weight:800;color:var(--text3)">BÔNUS</th>
         </tr></thead>
-        <tbody>
-          ${linha('Absenteísmo','abs')}
-          ${linha('Performance','perf')}
-          ${linha('Comportamento','comp')}
+        <tbody>${lista.map(r => {
+          if (!r.calc) return `<tr style="border-top:1px solid var(--border)"><td style="padding:8px 12px;font-weight:700">${pfEsc(r.nome)}</td><td style="padding:8px 12px;color:var(--text2)">${pfEsc(r.turno||'—')}</td><td colspan="3" style="padding:8px 12px;text-align:center;color:var(--text3);font-size:11px">ciclo incompleto</td></tr>`;
+          return `<tr style="border-top:1px solid var(--border)">
+            <td style="padding:8px 12px;font-weight:700">${pfEsc(r.nome)}</td>
+            <td style="padding:8px 12px;color:var(--text2)">${pfEsc(r.turno||'—')}</td>
+            <td style="padding:8px 12px;text-align:center;font-weight:800">${r.calc.total} pts</td>
+            <td style="padding:8px 12px;color:${r.calc.cor};font-weight:700">${r.calc.label}</td>
+            <td style="padding:8px 12px;text-align:center">${r.calc.valor}</td>
+          </tr>`;
+        }).join('') || `<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:20px">Nenhum colaborador</td></tr>`}
         </tbody>
       </table>
-    </div>
-    <div style="display:flex;justify-content:flex-end;margin-top:10px">
-      <button class="btn btn-primary btn-sm" onclick="mzSalvarIncentivo()">Salvar</button>
     </div>`;
+}
+
+function mzAbrirIncentivoConfig() {
+  const c = _mzIncentivo;
+  const modal = document.createElement('div');
+  modal.id = 'mz-modal-incentivo';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+  modal.onclick = e => { if (e.target === modal) modal.remove(); };
+  const linha = (label, key) => `
+    <div style="margin-bottom:10px">
+      <label style="font-size:10px;font-weight:700;color:var(--text3)">${label} — ÓTIMO / MEDIANO / RUIM</label>
+      <div style="display:flex;gap:8px;margin-top:4px">
+        <input id="mzin-${key}_green" type="number" value="${c[key+'_green']}" style="flex:1;padding:6px 8px;border:1.5px solid var(--border);border-radius:6px;background:var(--surface);color:var(--green);font-weight:700;text-align:center">
+        <input id="mzin-${key}_yellow" type="number" value="${c[key+'_yellow']}" style="flex:1;padding:6px 8px;border:1.5px solid var(--border);border-radius:6px;background:var(--surface);color:var(--amber);font-weight:700;text-align:center">
+        <input id="mzin-${key}_red" type="number" value="${c[key+'_red']}" style="flex:1;padding:6px 8px;border:1.5px solid var(--border);border-radius:6px;background:var(--surface);color:var(--red);font-weight:700;text-align:center">
+      </div>
+    </div>`;
+  modal.innerHTML = `
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:22px;max-width:420px;width:100%">
+      <div style="font-weight:900;font-size:15px;margin-bottom:14px">Pontos por nível</div>
+      ${linha('Absenteísmo','abs')}
+      ${linha('Performance','perf')}
+      ${linha('Comportamento','comp')}
+      <div style="display:flex;gap:10px;margin-top:8px">
+        <button class="btn btn-outline" style="flex:1" onclick="document.getElementById('mz-modal-incentivo').remove()">Cancelar</button>
+        <button class="btn btn-primary" style="flex:1" onclick="mzSalvarIncentivo()">Salvar</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
 }
 
 async function mzSalvarIncentivo() {
@@ -1433,7 +1510,9 @@ async function mzSalvarIncentivo() {
   campos.forEach(c => { body[c] = parseInt(document.getElementById(`mzin-${c}`).value) || 0; });
   try {
     _mzIncentivo = await _mzFetch('/matriz/incentivo', { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    document.getElementById('mz-modal-incentivo')?.remove();
     toast('Configuração de incentivo salva!','sucesso');
+    _mzRenderIncentivo();
   } catch(e) { toast('Erro: ' + e.message, 'erro'); }
 }
 
