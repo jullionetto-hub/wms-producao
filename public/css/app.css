@@ -181,7 +181,7 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
 /* ══════════════════════════════════════════
    CONTENT AREA
 ══════════════════════════════════════════ */
-.conteudo{flex:1;overflow-y:auto;padding:18px;background:var(--bg)}
+.conteudo{flex:1;min-width:0;overflow-y:auto;padding:18px;background:var(--bg)}
 .pagina{display:none}
 .pagina.ativa{display:block;animation:fadeUp .2s ease}
 @keyframes fadeUp{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
