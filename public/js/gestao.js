@@ -13,34 +13,60 @@ let _absTurnoFiltro = null;
 let _absActivePeriodId = null; // upload_id do botão ativo (separado para não ser afetado por race conditions)
 let _absSelectedIds   = new Set();  // IDs selecionados para exclusão em lote
 
-/* ── Absenteísmo nativo: upload de PDF → atraso por marcação (entrada / almoço / pausa) ── */
-let _absnUploadId = null;
+/* ── Absenteísmo nativo: upload de PDF → atraso por marcação (entrada / almoço / pausa) ──
+   Cada PDF (uma empresa) vira um upload_id separado no backend; aqui a gente sobe vários
+   em sequência (um de cada vez, pra não sobrecarregar) e junta o resultado de todos numa
+   tabela só, guardando os upload_ids do lote em _absnUploadIds. */
+let _absnUploadIds = [];
 let _absnTolerancia = 0;
 
-async function absnEnviarPdf(file) {
-  if (!file) return;
+async function _absnUploadUmPdf(file) {
+  const buf = await file.arrayBuffer();
+  const res = await fetch(`${API}/absenteismo/upload?nome=${encodeURIComponent(file.name)}`, {
+    method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/pdf' },
+    body: buf,
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.erro || 'falha ao importar');
+  return data;
+}
+
+async function absnEnviarPdfs(fileList) {
+  const arquivos = Array.from(fileList || []);
+  if (!arquivos.length) return;
   const statusEl = document.getElementById('absn-status');
-  statusEl.textContent = 'Enviando e lendo o PDF...';
-  statusEl.style.color = 'var(--text3)';
-  try {
-    const buf = await file.arrayBuffer();
-    const res = await fetch(`${API}/absenteismo/upload?nome=${encodeURIComponent(file.name)}`, {
-      method: 'POST', credentials: 'include',
-      headers: { 'Content-Type': 'application/pdf' },
-      body: buf,
-    });
-    const data = await res.json();
-    if (!res.ok) { statusEl.textContent = 'Erro: ' + (data.erro || 'falha ao importar'); statusEl.style.color = 'var(--red)'; return; }
-    statusEl.textContent = `Importado! ${data.total_colaboradores} colaborador(es), período ${fmtData(data.periodo_inicio)} a ${fmtData(data.periodo_fim)}.`;
-    statusEl.style.color = 'var(--green)';
-    _absnUploadId = data.upload_id;
-    const tolEl = document.getElementById('absn-tolerancia');
-    if (tolEl) tolEl.style.display = 'flex';
-    await absnCarregarResultado();
-  } catch(e) {
-    statusEl.textContent = 'Erro: ' + e.message;
-    statusEl.style.color = 'var(--red)';
+  _absnUploadIds = [];
+  let totalColaboradores = 0, periodoInicio = null, periodoFim = null;
+  const erros = [];
+  for (let i = 0; i < arquivos.length; i++) {
+    const arq = arquivos[i];
+    statusEl.textContent = arquivos.length > 1
+      ? `Enviando ${i+1} de ${arquivos.length}: ${arq.name}...`
+      : 'Enviando e lendo o PDF...';
+    statusEl.style.color = 'var(--text3)';
+    try {
+      const data = await _absnUploadUmPdf(arq);
+      _absnUploadIds.push(data.upload_id);
+      totalColaboradores += data.total_colaboradores;
+      if (!periodoInicio || data.periodo_inicio < periodoInicio) periodoInicio = data.periodo_inicio;
+      if (!periodoFim || data.periodo_fim > periodoFim) periodoFim = data.periodo_fim;
+    } catch (e) {
+      erros.push(`${arq.name}: ${e.message}`);
+    }
   }
+  if (!_absnUploadIds.length) {
+    statusEl.textContent = 'Erro: nenhum PDF foi importado. ' + erros.join(' | ');
+    statusEl.style.color = 'var(--red)';
+    return;
+  }
+  const okCount = arquivos.length - erros.length;
+  statusEl.textContent = `Importado! ${okCount}/${arquivos.length} arquivo(s), ${totalColaboradores} colaborador(es), período ${fmtData(periodoInicio)} a ${fmtData(periodoFim)}.`
+    + (erros.length ? ` Falhas: ${erros.join(' | ')}` : '');
+  statusEl.style.color = erros.length ? 'var(--amber)' : 'var(--green)';
+  const tolEl = document.getElementById('absn-tolerancia');
+  if (tolEl) tolEl.style.display = 'flex';
+  await absnCarregarResultado();
 }
 
 async function absnDebugPdf(file) {
@@ -71,16 +97,17 @@ function absnSetTolerancia(min) {
 }
 
 async function absnCarregarResultado() {
-  if (!_absnUploadId) return;
+  if (!_absnUploadIds.length) return;
   const cont = document.getElementById('absn-resultado');
   if (!cont) return;
   cont.innerHTML = '<div style="color:var(--text3);font-size:12px;padding:10px">Carregando...</div>';
   try {
-    const res = await fetch(`${API}/absenteismo/uploads/${_absnUploadId}/resultado?tolerancia=${_absnTolerancia}`, { credentials:'include' });
-    const data = await res.json();
-    if (!res.ok) { cont.innerHTML = `<div style="color:var(--red);font-size:12px">${data.erro||'erro'}</div>`; return; }
-    window._absnResultadoCache = data.resultado;
-    const linhas = [...data.resultado].sort((a,b) =>
+    const respostas = await Promise.all(_absnUploadIds.map(id =>
+      fetch(`${API}/absenteismo/uploads/${id}/resultado?tolerancia=${_absnTolerancia}`, { credentials:'include' }).then(r => r.json())
+    ));
+    const resultado = respostas.flatMap(d => d.resultado || []);
+    window._absnResultadoCache = resultado;
+    const linhas = [...resultado].sort((a,b) =>
       (b.entradas_atrasadas+b.almocos_atrasados+b.pausas_atrasadas) - (a.entradas_atrasadas+a.almocos_atrasados+a.pausas_atrasadas));
     cont.innerHTML = `
       <div style="overflow-x:auto;background:var(--surface);border:1px solid var(--border);border-radius:10px">
@@ -165,8 +192,8 @@ function renderizarPagGestao() {
   <div style="background:var(--surface2);border-bottom:1.5px solid var(--border);padding:16px 24px;flex-shrink:0">
     <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:1px;margin-bottom:10px">ATRASO POR MARCAÇÃO — ESPELHO DE PONTO (NATIVO)</div>
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-      <button onclick="document.getElementById('absn-file-input').click()" style="padding:8px 16px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📄 Enviar PDF do espelho de ponto</button>
-      <input type="file" id="absn-file-input" accept=".pdf" style="display:none" onchange="absnEnviarPdf(this.files[0])">
+      <button onclick="document.getElementById('absn-file-input').click()" style="padding:8px 16px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📄 Enviar PDF(s) do espelho de ponto</button>
+      <input type="file" id="absn-file-input" accept=".pdf" multiple style="display:none" onchange="absnEnviarPdfs(this.files)">
       <button onclick="document.getElementById('absn-debug-input').click()" style="padding:8px 16px;background:var(--surface);border:1.5px solid var(--border);color:var(--text2);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🔍 Diagnóstico (temporário)</button>
       <input type="file" id="absn-debug-input" accept=".pdf" style="display:none" onchange="absnDebugPdf(this.files[0])">
       <div id="absn-status" style="font-size:12px;color:var(--text3)"></div>
