@@ -117,7 +117,7 @@ router.post('/absenteismo/upload', requerAuth, gLeitura,
 
           for (const d of c.dias) {
             if (!d.data) continue;
-            const classe = classificarDia(d.registros, c.horario, esperado);
+            const classe = classificarDia(d.registros, c.horario, esperado, d.dia_semana);
             await client.query(
               `INSERT INTO abs_registros_diarios
                  (upload_id,colaborador_id,data,dia_semana,status,registros,
