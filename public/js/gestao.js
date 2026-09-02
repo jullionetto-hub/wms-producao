@@ -144,7 +144,8 @@ function absnAbrirDetalhe(colaboradorId) {
     const h = Math.floor(abs / 60), m = abs % 60;
     return `${sinal}${h}:${String(m).padStart(2,'0')}`;
   };
-  const corDev = min => min == null ? 'var(--text3)' : (min > _absnTolerancia ? 'var(--red)' : 'var(--green)');
+  // Tolerância só vale pra entrada — almoço/pausa não têm tolerância.
+  const corDev = (min, comTolerancia) => min == null ? 'var(--text3)' : (min > (comTolerancia ? _absnTolerancia : 0) ? 'var(--red)' : 'var(--green)');
   cont.innerHTML = `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px">
       <div style="font-weight:800;font-size:13px;margin-bottom:10px">${pfEsc(r.colaborador.nome)} — dia a dia</div>
@@ -161,9 +162,9 @@ function absnAbrirDetalhe(colaboradorId) {
           <tr style="border-top:1px solid var(--border)">
             <td style="padding:6px 10px;font-weight:600">${fmtData(d.data)} <span style="color:var(--text3);font-weight:400">${pfEsc(d.dia_semana||'')}</span></td>
             <td style="padding:6px 10px;color:var(--text3)">${pfEsc(d.status||'—')}</td>
-            <td style="padding:6px 10px;text-align:center">${d.entrada_hora?`${d.entrada_hora} <span style="color:${corDev(d.entrada_atraso_min)}">(${fmtDev(d.entrada_atraso_min)})</span>`:'—'}</td>
-            <td style="padding:6px 10px;text-align:center">${d.almoco_retorno_hora?`${d.almoco_retorno_hora} <span style="color:${corDev(d.almoco_atraso_min)}">(${fmtDev(d.almoco_atraso_min)})</span>`:'—'}</td>
-            <td style="padding:6px 10px;text-align:center">${d.pausa_retorno_hora?`${d.pausa_retorno_hora} <span style="color:${corDev(d.pausa_atraso_min)}">(${fmtDev(d.pausa_atraso_min)})</span>`:'—'}</td>
+            <td style="padding:6px 10px;text-align:center">${d.entrada_hora?`${d.entrada_hora} <span style="color:${corDev(d.entrada_atraso_min,true)}">(${fmtDev(d.entrada_atraso_min)})</span>`:'—'}</td>
+            <td style="padding:6px 10px;text-align:center">${d.almoco_retorno_hora?`${d.almoco_retorno_hora} <span style="color:${corDev(d.almoco_atraso_min,false)}">(${fmtDev(d.almoco_atraso_min)})</span>`:'—'}</td>
+            <td style="padding:6px 10px;text-align:center">${d.pausa_retorno_hora?`${d.pausa_retorno_hora} <span style="color:${corDev(d.pausa_atraso_min,false)}">(${fmtDev(d.pausa_atraso_min)})</span>`:'—'}</td>
           </tr>`).join('')}
         </tbody>
       </table>

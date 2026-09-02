@@ -187,12 +187,15 @@ router.get('/absenteismo/resultado', requerAuth, gLeitura, wrap(async (req, res)
   const porColaborador = {};
   dias.forEach(d => { (porColaborador[d.colaborador_id] = porColaborador[d.colaborador_id] || []).push(d); });
 
+  // Tolerância só vale pra entrada. Almoço/pausa não têm tolerância: passou
+  // 1 minuto do tempo permitido de retorno já conta como atraso.
   const passaTolerancia = min => min != null && min > tolerancia;
+  const semTolerancia   = min => min != null && min > 0;
   const resultado = colaboradores.map(c => {
     const diasDele = porColaborador[c.id] || [];
     const entradasAtrasadas = diasDele.filter(d => passaTolerancia(d.entrada_atraso_min));
-    const almocosAtrasados  = diasDele.filter(d => passaTolerancia(d.almoco_atraso_min));
-    const pausasAtrasadas   = diasDele.filter(d => passaTolerancia(d.pausa_atraso_min));
+    const almocosAtrasados  = diasDele.filter(d => semTolerancia(d.almoco_atraso_min));
+    const pausasAtrasadas   = diasDele.filter(d => semTolerancia(d.pausa_atraso_min));
     return {
       colaborador: c,
       total_dias: diasDele.length,
@@ -224,12 +227,15 @@ router.get('/absenteismo/uploads/:id/resultado', requerAuth, gLeitura, wrap(asyn
   const porColaborador = {};
   dias.forEach(d => { (porColaborador[d.colaborador_id] = porColaborador[d.colaborador_id] || []).push(d); });
 
+  // Tolerância só vale pra entrada. Almoço/pausa não têm tolerância: passou
+  // 1 minuto do tempo permitido de retorno já conta como atraso.
   const passaTolerancia = min => min != null && min > tolerancia;
+  const semTolerancia   = min => min != null && min > 0;
   const resultado = colaboradores.map(c => {
     const diasDele = porColaborador[c.id] || [];
     const entradasAtrasadas = diasDele.filter(d => passaTolerancia(d.entrada_atraso_min));
-    const almocosAtrasados  = diasDele.filter(d => passaTolerancia(d.almoco_atraso_min));
-    const pausasAtrasadas   = diasDele.filter(d => passaTolerancia(d.pausa_atraso_min));
+    const almocosAtrasados  = diasDele.filter(d => semTolerancia(d.almoco_atraso_min));
+    const pausasAtrasadas   = diasDele.filter(d => semTolerancia(d.pausa_atraso_min));
     return {
       colaborador: c,
       total_dias: diasDele.length,
