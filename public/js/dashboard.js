@@ -71,12 +71,16 @@ async function carregarGraficoBarrasHoras() {
     type: 'bar',
     data: {
       labels: rows.map(r => `${r.hora}h`),
-      datasets: [{ label: 'Pedidos concluídos', data: rows.map(r => Number(r.total)),
-        backgroundColor: '#3B82F6', borderRadius: 6, borderSkipped: false }]
+      datasets: [
+        { label: 'Separação', data: rows.map(r => Number(r.separacao)), backgroundColor: '#3B82F6', borderRadius: 4, borderSkipped: false },
+        { label: 'Checkout',  data: rows.map(r => Number(r.checkout)),  backgroundColor: '#22C55E', borderRadius: 4, borderSkipped: false },
+        { label: 'Embalagem', data: rows.map(r => Number(r.embalagem)), backgroundColor: '#F59E0B', borderRadius: 4, borderSkipped: false },
+        { label: 'Reposição', data: rows.map(r => Number(r.reposicao)), backgroundColor: '#8B5CF6', borderRadius: 4, borderSkipped: false },
+      ]
     },
     options: {
       responsive: true, maintainAspectRatio: true,
-      plugins: { legend: { display: false } },
+      plugins: { legend: { display: true, position: 'top', labels: { font: { size: 11 }, boxWidth: 12 } } },
       scales: { y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 11 } } },
                 x: { ticks: { font: { size: 11 } } } }
     }

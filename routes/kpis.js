@@ -261,29 +261,67 @@ router.get('/dashboard/ranking', requerAuth, requerPerfil('supervisor'), async (
   } catch(e) { res.status(500).json({erro: e.message}); }
 });
 
+// Produção por hora, separada pelos 4 setores. Cada um usa sua própria coluna
+// de conclusão: separação (pedidos.concluido_em), checkout (checkout.hora_checkout),
+// embalagem (embalagem.embalado_em — a tabela já só tem linha quando embala) e
+// reposição (avisos_repositor.hora_reposto, nos status finais de "resolvido").
+// Reposição usa data_aviso como filtro de dia por não existir uma "data_reposto"
+// própria na tabela — aproximação aceitável já que o fluxo normal resolve no
+// mesmo turno/dia em que o item foi avisado.
 router.get('/dashboard/por-hora', requerAuth, requerPerfil('supervisor'), async (req,res) => {
   try {
     const hoje = (await db.get(`SELECT TO_CHAR(NOW() AT TIME ZONE 'America/Sao_Paulo','YYYY-MM-DD') as d`)).d;
     const rows = await db.all(`
-      SELECT
-        CASE
-          WHEN concluido_em LIKE '%T%' THEN LPAD(SPLIT_PART(SPLIT_PART(concluido_em,'T',2),':',1),2,'0')
-          WHEN concluido_em LIKE '% %' THEN LPAD(SPLIT_PART(SPLIT_PART(concluido_em,' ',2),':',1),2,'0')
-          ELSE NULL
-        END AS hora,
-        COUNT(*) AS total
-      FROM pedidos
-      WHERE data_pedido=$1 AND status='concluido'
-        AND concluido_em IS NOT NULL AND concluido_em <> ''
-      GROUP BY hora
-      HAVING (
-        CASE
-          WHEN concluido_em LIKE '%T%' THEN LPAD(SPLIT_PART(SPLIT_PART(concluido_em,'T',2),':',1),2,'0')
-          WHEN concluido_em LIKE '% %' THEN LPAD(SPLIT_PART(SPLIT_PART(concluido_em,' ',2),':',1),2,'0')
-          ELSE NULL
-        END
-      ) IS NOT NULL
-      ORDER BY hora`, [hoje]);
+      WITH sep AS (
+        SELECT
+          CASE
+            WHEN concluido_em LIKE '%T%' THEN LPAD(SPLIT_PART(SPLIT_PART(concluido_em,'T',2),':',1),2,'0')
+            WHEN concluido_em LIKE '% %' THEN LPAD(SPLIT_PART(SPLIT_PART(concluido_em,' ',2),':',1),2,'0')
+            ELSE NULL
+          END AS hora,
+          COUNT(*) AS total
+        FROM pedidos
+        WHERE data_pedido=$1 AND status='concluido'
+          AND concluido_em IS NOT NULL AND concluido_em <> ''
+        GROUP BY hora
+      ),
+      ck AS (
+        SELECT LPAD(SPLIT_PART(hora_checkout,':',1),2,'0') AS hora, COUNT(*) AS total
+        FROM checkout
+        WHERE data_checkout=$1 AND status='concluido'
+          AND hora_checkout IS NOT NULL AND hora_checkout <> ''
+        GROUP BY hora
+      ),
+      emb AS (
+        SELECT LPAD(SPLIT_PART(embalado_em,':',1),2,'0') AS hora, COUNT(*) AS total
+        FROM embalagem
+        WHERE data_embalagem=$1 AND embalado_em IS NOT NULL AND embalado_em <> ''
+        GROUP BY hora
+      ),
+      rep AS (
+        SELECT LPAD(SPLIT_PART(hora_reposto,':',1),2,'0') AS hora, COUNT(*) AS total
+        FROM avisos_repositor
+        WHERE data_aviso=$1 AND status IN ('reposto','abastecido','encontrado')
+          AND hora_reposto IS NOT NULL AND hora_reposto <> ''
+        GROUP BY hora
+      ),
+      horas AS (
+        SELECT hora FROM sep WHERE hora IS NOT NULL
+        UNION SELECT hora FROM ck  WHERE hora IS NOT NULL
+        UNION SELECT hora FROM emb WHERE hora IS NOT NULL
+        UNION SELECT hora FROM rep WHERE hora IS NOT NULL
+      )
+      SELECT h.hora,
+        COALESCE(sep.total,0) AS separacao,
+        COALESCE(ck.total,0)  AS checkout,
+        COALESCE(emb.total,0) AS embalagem,
+        COALESCE(rep.total,0) AS reposicao
+      FROM horas h
+      LEFT JOIN sep ON sep.hora=h.hora
+      LEFT JOIN ck  ON ck.hora=h.hora
+      LEFT JOIN emb ON emb.hora=h.hora
+      LEFT JOIN rep ON rep.hora=h.hora
+      ORDER BY h.hora`, [hoje]);
     res.json(rows||[]);
   } catch(e) { res.status(500).json({erro: e.message}); }
 });
