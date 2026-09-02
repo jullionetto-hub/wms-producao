@@ -177,6 +177,35 @@ router.get('/absenteismo/uploads', requerAuth, gLeitura, wrap(async (req, res) =
   res.json(await db.all('SELECT * FROM abs_uploads ORDER BY enviado_em DESC LIMIT 50'));
 }));
 
+// Resultado geral: todos os colaboradores ativos com dado importado, sem
+// depender de um upload_id específico — é o que fica salvo entre sessões
+// (a UI carrega isso ao abrir a tela, não só logo depois de um upload).
+router.get('/absenteismo/resultado', requerAuth, gLeitura, wrap(async (req, res) => {
+  const tolerancia = parseInt(req.query.tolerancia) || 0;
+  const colaboradores = await db.all(`SELECT * FROM abs_colaboradores WHERE ativo=true ORDER BY nome`);
+  const dias = await db.all(`SELECT * FROM abs_registros_diarios ORDER BY data`);
+  const porColaborador = {};
+  dias.forEach(d => { (porColaborador[d.colaborador_id] = porColaborador[d.colaborador_id] || []).push(d); });
+
+  const passaTolerancia = min => min != null && min > tolerancia;
+  const resultado = colaboradores.map(c => {
+    const diasDele = porColaborador[c.id] || [];
+    const entradasAtrasadas = diasDele.filter(d => passaTolerancia(d.entrada_atraso_min));
+    const almocosAtrasados  = diasDele.filter(d => passaTolerancia(d.almoco_atraso_min));
+    const pausasAtrasadas   = diasDele.filter(d => passaTolerancia(d.pausa_atraso_min));
+    return {
+      colaborador: c,
+      total_dias: diasDele.length,
+      entradas_atrasadas: entradasAtrasadas.length,
+      almocos_atrasados: almocosAtrasados.length,
+      pausas_atrasadas: pausasAtrasadas.length,
+      dias: diasDele,
+    };
+  }).filter(r => r.total_dias > 0);
+
+  res.json({ resultado });
+}));
+
 // Resultado de um upload específico: todos os colaboradores dele com os dias
 // classificados (entrada/almoço/pausa atrasados), já filtrando pela tolerância.
 router.get('/absenteismo/uploads/:id/resultado', requerAuth, gLeitura, wrap(async (req, res) => {

@@ -14,10 +14,9 @@ let _absActivePeriodId = null; // upload_id do botão ativo (separado para não 
 let _absSelectedIds   = new Set();  // IDs selecionados para exclusão em lote
 
 /* ── Absenteísmo nativo: upload de PDF → atraso por marcação (entrada / almoço / pausa) ──
-   Cada PDF (uma empresa) vira um upload_id separado no backend; aqui a gente sobe vários
-   em sequência (um de cada vez, pra não sobrecarregar) e junta o resultado de todos numa
-   tabela só, guardando os upload_ids do lote em _absnUploadIds. */
-let _absnUploadIds = [];
+   Cada PDF (uma empresa) vira um upload_id separado no backend, mas a tela sempre mostra
+   o resultado GERAL (todo mundo que já tem dado salvo, não só o que foi importado nesta
+   sessão) — é o que faz a informação persistir ao navegar/recarregar a página. */
 let _absnTolerancia = 0;
 
 async function _absnUploadUmPdf(file) {
@@ -36,8 +35,7 @@ async function absnEnviarPdfs(fileList) {
   const arquivos = Array.from(fileList || []);
   if (!arquivos.length) return;
   const statusEl = document.getElementById('absn-status');
-  _absnUploadIds = [];
-  let totalColaboradores = 0, periodoInicio = null, periodoFim = null;
+  let okCount = 0, totalColaboradores = 0, periodoInicio = null, periodoFim = null;
   const erros = [];
   for (let i = 0; i < arquivos.length; i++) {
     const arq = arquivos[i];
@@ -47,7 +45,7 @@ async function absnEnviarPdfs(fileList) {
     statusEl.style.color = 'var(--text3)';
     try {
       const data = await _absnUploadUmPdf(arq);
-      _absnUploadIds.push(data.upload_id);
+      okCount++;
       totalColaboradores += data.total_colaboradores;
       if (!periodoInicio || data.periodo_inicio < periodoInicio) periodoInicio = data.periodo_inicio;
       if (!periodoFim || data.periodo_fim > periodoFim) periodoFim = data.periodo_fim;
@@ -55,17 +53,14 @@ async function absnEnviarPdfs(fileList) {
       erros.push(`${arq.name}: ${e.message}`);
     }
   }
-  if (!_absnUploadIds.length) {
+  if (!okCount) {
     statusEl.textContent = 'Erro: nenhum PDF foi importado. ' + erros.join(' | ');
     statusEl.style.color = 'var(--red)';
     return;
   }
-  const okCount = arquivos.length - erros.length;
   statusEl.textContent = `Importado! ${okCount}/${arquivos.length} arquivo(s), ${totalColaboradores} colaborador(es), período ${fmtData(periodoInicio)} a ${fmtData(periodoFim)}.`
     + (erros.length ? ` Falhas: ${erros.join(' | ')}` : '');
   statusEl.style.color = erros.length ? 'var(--amber)' : 'var(--green)';
-  const tolEl = document.getElementById('absn-tolerancia');
-  if (tolEl) tolEl.style.display = 'flex';
   await absnCarregarResultado();
 }
 
@@ -97,15 +92,16 @@ function absnSetTolerancia(min) {
 }
 
 async function absnCarregarResultado() {
-  if (!_absnUploadIds.length) return;
   const cont = document.getElementById('absn-resultado');
   if (!cont) return;
   cont.innerHTML = '<div style="color:var(--text3);font-size:12px;padding:10px">Carregando...</div>';
   try {
-    const respostas = await Promise.all(_absnUploadIds.map(id =>
-      fetch(`${API}/absenteismo/uploads/${id}/resultado?tolerancia=${_absnTolerancia}`, { credentials:'include' }).then(r => r.json())
-    ));
-    const resultado = respostas.flatMap(d => d.resultado || []);
+    const res = await fetch(`${API}/absenteismo/resultado?tolerancia=${_absnTolerancia}`, { credentials:'include' });
+    const data = await res.json();
+    if (!res.ok) { cont.innerHTML = `<div style="color:var(--red);font-size:12px">${data.erro||'erro'}</div>`; return; }
+    const resultado = data.resultado || [];
+    const tolEl = document.getElementById('absn-tolerancia');
+    if (tolEl) tolEl.style.display = resultado.length ? 'flex' : 'none';
     window._absnResultadoCache = resultado;
     const linhas = [...resultado].sort((a,b) =>
       (b.entradas_atrasadas+b.almocos_atrasados+b.pausas_atrasadas) - (a.entradas_atrasadas+a.almocos_atrasados+a.pausas_atrasadas));
@@ -319,6 +315,7 @@ function renderizarPagGestao() {
   </div>
 </div>`;
   carregarGestaoAbsenteismo();
+  absnCarregarResultado();
 }
 
 
