@@ -136,7 +136,14 @@ function absnAbrirDetalhe(colaboradorId) {
   const r = (window._absnResultadoCache||[]).find(x => x.colaborador.id === colaboradorId);
   const cont = document.getElementById('absn-detalhe');
   if (!r || !cont) return;
-  const fmtDev = min => min == null ? '—' : (min > 0 ? `+${min}min` : `${min}min`);
+  const fmtDev = min => {
+    if (min == null) return '—';
+    const sinal = min > 0 ? '+' : (min < 0 ? '-' : '');
+    const abs = Math.abs(min);
+    if (abs < 60) return `${sinal}${abs}min`;
+    const h = Math.floor(abs / 60), m = abs % 60;
+    return `${sinal}${h}:${String(m).padStart(2,'0')}`;
+  };
   const corDev = min => min == null ? 'var(--text3)' : (min > _absnTolerancia ? 'var(--red)' : 'var(--green)');
   cont.innerHTML = `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px">
