@@ -1181,19 +1181,27 @@ async function abrirModalValidacao() {
     const d = val.dados || {};
     const obs = val.observacoes || {};
     document.getElementById('modal-val-resumo').innerHTML = `
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px">
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:8px">
         <div style="text-align:center;background:var(--surface);border-radius:8px;padding:8px">
           <div style="font-size:18px;font-weight:800">${d.separacao?.concluidos||0}/${d.separacao?.total||0}</div>
           <div style="font-size:9px;color:var(--text3);text-transform:uppercase">Separação</div>
+        </div>
+        <div style="text-align:center;background:var(--surface);border-radius:8px;padding:8px">
+          <div style="font-size:18px;font-weight:800">${d.embalagem?.embalados||0}/${d.embalagem?.total||0}</div>
+          <div style="font-size:9px;color:var(--text3);text-transform:uppercase">Embalagem</div>
         </div>
         <div style="text-align:center;background:var(--surface);border-radius:8px;padding:8px">
           <div style="font-size:18px;font-weight:800">${d.checkout?.concluidos||0}/${d.checkout?.total||0}</div>
           <div style="font-size:9px;color:var(--text3);text-transform:uppercase">Checkout</div>
         </div>
         <div style="text-align:center;background:var(--surface);border-radius:8px;padding:8px">
-          <div style="font-size:18px;font-weight:800;color:#dc2626">${d.reposicao?.nao_encontrados||0}</div>
-          <div style="font-size:9px;color:#dc2626;text-transform:uppercase">Não encontr.</div>
+          <div style="font-size:18px;font-weight:800">${d.reposicao?.resolvidas||0}/${d.reposicao?.total||0}</div>
+          <div style="font-size:9px;color:var(--text3);text-transform:uppercase">Reposição</div>
         </div>
+      </div>
+      <div style="text-align:center;background:var(--surface);border-radius:8px;padding:8px;margin-bottom:8px">
+        <div style="font-size:18px;font-weight:800;color:#dc2626">${d.reposicao?.nao_encontrados||0}</div>
+        <div style="font-size:9px;color:#dc2626;text-transform:uppercase">Não encontr. (reposição)</div>
       </div>
       ${obs.geral ? `<div style="font-size:12px;color:var(--text2)"><b>Obs. geral:</b> ${escHtml(obs.geral)}</div>` : ''}`;
 
