@@ -1082,9 +1082,11 @@ function enviarDiario() {
     btnOkClass: 'btn-primary',
   }, async () => {
     try {
-      // Atualiza os números ao vivo e regrava antes de enviar — evita validar
-      // um snapshot velho de um "Salvar rascunho" de mais cedo no turno.
-      await carregarDadosDiario();
+      // NÃO chama carregarDadosDiario() aqui — isso recarrega o auto-cálculo
+      // (sabidamente errado, por isso existe a edição manual dos campos) e
+      // sobrescreve silenciosamente o que o supervisor digitou, mandando pra
+      // validação números que ele nunca preencheu. Envia o que está no
+      // formulário agora, igual ao "Salvar rascunho".
       if (!(await _persistirDiario())) return;
       const res = await apiFetch(`/diario/${_diarioAtualId}/enviar`, { method:'POST' });
       if (!res) return;
