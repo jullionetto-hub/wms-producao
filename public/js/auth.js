@@ -1030,15 +1030,17 @@ async function salvarDiario() {
 }
 
 // ── Mostra banner de status do diário atual ────────────────────────────────────
-function atualizarStatusBanner(status, extra) {
+function atualizarStatusBanner(status, extra, supervisor) {
   const el = document.getElementById('diario-status-banner');
   if (!el) return;
+  // Qualquer supervisor pode editar o diário do turno — mostra quem editou
+  // por último só como informação, não trava mais a edição pros outros.
+  const editadoPor = supervisor ? ` — editado por ${escHtml(supervisor)}` : '';
   const cfg = {
-    rascunho: { acc:'#64748b', msg:'Rascunho salvo — clique em "Finalizar e enviar" para enviar ao próximo turno' },
-    enviado:  { acc:'#3b82f6', msg:`Enviado para validação — prazo: ${extra||'30 min'}` },
+    rascunho: { acc:'#64748b', msg:`Rascunho salvo${editadoPor} — clique em "Finalizar e enviar" para enviar ao próximo turno` },
+    enviado:  { acc:'#3b82f6', msg:`Enviado para validação${editadoPor} — prazo: ${extra||'30 min'}` },
     validado: { acc:'#10b981', msg:`Validado pelo próximo turno — Pontuação: <b>${extra||'?'}/100</b>` },
     expirado: { acc:'#ef4444', msg:'Prazo de validação expirou sem resposta do próximo turno' },
-    outro:    { acc:'#f59e0b', msg:extra || 'Visualizando diário de outro turno — somente leitura' },
   };
   const c = cfg[status] || cfg.rascunho;
   el.style.display = '';
@@ -1422,10 +1424,9 @@ async function verDiario(id) {
     window._dadosDiario = d.dados;
     _diarioAtualId = d.id;
 
-    // Bloqueia edição se pertence a outro supervisor ou já foi enviado/validado
-    const meuNome  = usuarioAtual?.nome || '';
-    const ehMeu    = !d.supervisor || d.supervisor === meuNome;
-    const bloqueado = !ehMeu || d.status === 'enviado' || d.status === 'validado';
+    // Qualquer supervisor/gestor pode editar o diário do turno (não só quem
+    // criou) — só trava depois de enviado/validado.
+    const bloqueado = d.status === 'enviado' || d.status === 'validado';
     document.querySelectorAll('#pag-diario textarea, #pag-diario input.db-stat-n').forEach(el => {
       el.readOnly = bloqueado;
       el.disabled = bloqueado && el.tagName === 'INPUT';
@@ -1435,12 +1436,8 @@ async function verDiario(id) {
     const btnSalvar = document.querySelector('#pag-diario button[onclick="salvarDiario()"]');
     const btnEnviar = document.getElementById('btn-enviar-diario');
     if (btnSalvar) btnSalvar.disabled = bloqueado;
-    if (btnEnviar) btnEnviar.disabled = bloqueado || d.status === 'enviado' || d.status === 'validado';
-    if (!ehMeu) {
-      atualizarStatusBanner('outro', `Diário de ${d.supervisor} — somente leitura`);
-    } else {
-      atualizarStatusBanner(d.status || 'rascunho');
-    }
+    if (btnEnviar) btnEnviar.disabled = bloqueado;
+    atualizarStatusBanner(d.status || 'rascunho', null, d.supervisor);
     const dd = d.dados||{};
     if (dd.separacao) {
       document.getElementById('diario-sep-total').textContent = dd.separacao.total||0;

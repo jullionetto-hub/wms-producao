@@ -254,12 +254,10 @@ router.post('/diario', requerAuth, requerPerfil('supervisor'), async (req,res) =
     const supervisor = req.session?.usuario?.nome || 'Supervisor';
     const existe = await db.get('SELECT id, supervisor, status FROM diario_bordo WHERE data=$1 AND turno=$2', [data, turno]);
     if (existe) {
-      // Bloqueia edição se o diário foi criado por outro supervisor (não o atual)
-      if (existe.supervisor && existe.supervisor !== supervisor) {
-        return res.status(403).json({
-          erro: `Este diário já foi criado pelo supervisor "${existe.supervisor}". Você não pode alterá-lo.`
-        });
-      }
+      // Qualquer supervisor/gestor pode editar o diário do turno, não só quem
+      // criou — vários podem estar no mesmo turno ao mesmo tempo. Cada save
+      // atualiza "supervisor" pra refletir quem editou por último; a única
+      // trava que resta é depois de enviado/validado.
       // Bloqueia edição se já foi enviado/validado
       if (existe.status === 'enviado' || existe.status === 'validado') {
         return res.status(403).json({
