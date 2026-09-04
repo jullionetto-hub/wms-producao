@@ -947,6 +947,25 @@ function _atualizarAnelDiario(prefixo, total, concluidos) {
   ring.style.strokeDashoffset = (circ * (1 - pct)).toFixed(1);
 }
 
+// Aplica (ou remove) o bloqueio de edição dos campos do diário. Usada tanto
+// quando um diário já existente é aberto (verDiario, pode estar travado) quanto
+// quando um diário novo/inexistente é calculado ao vivo (carregarDadosDiario,
+// sempre destravado) — sem isso, destravar nunca acontecia: uma vez que você
+// via um diário já enviado/validado, o próximo diário (mesmo em branco, novo)
+// continuava com a aparência travada, porque só existia código pra travar.
+function _diarioAplicarBloqueio(bloqueado) {
+  document.querySelectorAll('#pag-diario textarea, #pag-diario input.db-stat-n').forEach(el => {
+    el.readOnly = bloqueado;
+    el.disabled = bloqueado && el.tagName === 'INPUT';
+    el.style.opacity = bloqueado ? '.65' : '1';
+    el.style.cursor  = bloqueado ? 'not-allowed' : '';
+  });
+  const btnSalvar = document.querySelector('#pag-diario button[onclick="salvarDiario()"]');
+  const btnEnviar = document.getElementById('btn-enviar-diario');
+  if (btnSalvar) btnSalvar.disabled = bloqueado;
+  if (btnEnviar) btnEnviar.disabled = bloqueado;
+}
+
 async function carregarDadosDiario() {
   const data = document.getElementById('diario-data')?.value || hojeLocal();
   const turno = document.getElementById('diario-turno')?.value || 'Manha';
@@ -954,6 +973,12 @@ async function carregarDadosDiario() {
     const res = await fetch(`${API}/diario/dados/turno?data=${data}&turno=${turno}`, { credentials:'include' });
     const d = await res.json();
     if (!res.ok) { toast('Erro ao carregar dados','erro'); return; }
+    // Esse caminho só roda quando ainda NÃO existe diário salvo pra essa
+    // data+turno (ver carregarOuCalcularDiario) — então é sempre editável.
+    _diarioAplicarBloqueio(false);
+    _diarioAtualId = null;
+    const bannerEl = document.getElementById('diario-status-banner');
+    if (bannerEl) bannerEl.style.display = 'none';
     document.getElementById('diario-sep-total').textContent = d.separacao.total;
     document.getElementById('diario-sep-conc').value = d.separacao.concluidos;
     document.getElementById('diario-sep-pend').value = d.separacao.pendentes;
@@ -1426,17 +1451,7 @@ async function verDiario(id) {
 
     // Qualquer supervisor/gestor pode editar o diário do turno (não só quem
     // criou) — só trava depois de enviado/validado.
-    const bloqueado = d.status === 'enviado' || d.status === 'validado';
-    document.querySelectorAll('#pag-diario textarea, #pag-diario input.db-stat-n').forEach(el => {
-      el.readOnly = bloqueado;
-      el.disabled = bloqueado && el.tagName === 'INPUT';
-      el.style.opacity = bloqueado ? '.65' : '1';
-      el.style.cursor  = bloqueado ? 'not-allowed' : '';
-    });
-    const btnSalvar = document.querySelector('#pag-diario button[onclick="salvarDiario()"]');
-    const btnEnviar = document.getElementById('btn-enviar-diario');
-    if (btnSalvar) btnSalvar.disabled = bloqueado;
-    if (btnEnviar) btnEnviar.disabled = bloqueado;
+    _diarioAplicarBloqueio(d.status === 'enviado' || d.status === 'validado');
     atualizarStatusBanner(d.status || 'rascunho', null, d.supervisor);
     const dd = d.dados||{};
     if (dd.separacao) {
