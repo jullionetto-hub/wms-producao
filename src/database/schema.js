@@ -556,6 +556,7 @@ const TABLES = [
     almoco_atraso_min    INTEGER,
     pausa_retorno_hora   TEXT,
     pausa_atraso_min     INTEGER,
+    banco_horas_min      INTEGER,
     UNIQUE(colaborador_id, data)
   )`,
 

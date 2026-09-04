@@ -95,6 +95,8 @@ const ALTERATIONS = [
   // Checklist de Caixas: quem estava operando a estação e em qual turno
   "ALTER TABLE checklist_caixas ADD COLUMN IF NOT EXISTS operador_nome TEXT DEFAULT ''",
   "ALTER TABLE checklist_caixas ADD COLUMN IF NOT EXISTS turno TEXT DEFAULT ''",
+  // Banco de horas do dia (saída real - saída oficial do turno), absenteísmo nativo.
+  "ALTER TABLE abs_registros_diarios ADD COLUMN IF NOT EXISTS banco_horas_min INTEGER",
 ];
 
 async function runSchema() {

@@ -91,6 +91,31 @@ function absnSetTolerancia(min) {
   absnCarregarResultado();
 }
 
+// abs = valor absoluto (total de atrasos, sempre >=0); comSinal = mostra +/-
+// (banco de horas, pode ser negativo).
+function _absnFmtMin(min, comSinal) {
+  if (min == null) return '—';
+  const sinal = comSinal ? (min > 0 ? '+' : (min < 0 ? '-' : '')) : '';
+  const valorAbs = Math.abs(min);
+  if (valorAbs < 60) return `${sinal}${valorAbs}min`;
+  return `${sinal}${Math.floor(valorAbs / 60)}:${String(valorAbs % 60).padStart(2, '0')}`;
+}
+
+async function absnEnviarMatriz(colaboradorId, nome) {
+  const mes = prompt(`Mês de referência na Matriz de Responsabilidades (ex: Agosto/2026)\nColaborador: ${nome}`, '');
+  if (!mes) return;
+  try {
+    const res = await fetch(`${API}/absenteismo/colaboradores/${colaboradorId}/enviar-matriz`, {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mes }),
+    });
+    const data = await res.json();
+    if (!res.ok) { toast(data.erro || 'Erro ao enviar pra Matriz', 'erro'); return; }
+    toast(`Enviado pra Matriz — absenteísmo: ${data.status}`, 'sucesso');
+  } catch(e) { toast('Erro: ' + e.message, 'erro'); }
+}
+
 async function absnCarregarResultado() {
   const cont = document.getElementById('absn-resultado');
   if (!cont) return;
@@ -114,6 +139,8 @@ async function absnCarregarResultado() {
             <th style="padding:8px 12px;text-align:center;font-size:10px;font-weight:800;color:var(--text3)">ENTRADAS ATRASADAS</th>
             <th style="padding:8px 12px;text-align:center;font-size:10px;font-weight:800;color:var(--text3)">ALMOÇO ATRASADO</th>
             <th style="padding:8px 12px;text-align:center;font-size:10px;font-weight:800;color:var(--text3)">PAUSA ATRASADA</th>
+            <th style="padding:8px 12px;text-align:center;font-size:10px;font-weight:800;color:var(--text3)">TOTAL ATRASOS</th>
+            <th style="padding:8px 12px;text-align:center;font-size:10px;font-weight:800;color:var(--text3)">BANCO DE HORAS</th>
             <th style="padding:8px 12px"></th>
           </tr></thead>
           <tbody>${linhas.map(r => `
@@ -123,8 +150,13 @@ async function absnCarregarResultado() {
               <td style="padding:8px 12px;text-align:center;font-weight:800;color:${r.entradas_atrasadas?'var(--red)':'var(--text3)'}">${r.entradas_atrasadas}</td>
               <td style="padding:8px 12px;text-align:center;font-weight:800;color:${r.almocos_atrasados?'var(--red)':'var(--text3)'}">${r.almocos_atrasados}</td>
               <td style="padding:8px 12px;text-align:center;font-weight:800;color:${r.pausas_atrasadas?'var(--red)':'var(--text3)'}">${r.pausas_atrasadas}</td>
-              <td style="padding:8px 12px;text-align:right"><button class="btn btn-outline btn-sm" onclick="absnAbrirDetalhe(${r.colaborador.id})">Ver dias</button></td>
-            </tr>`).join('') || `<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px">Nenhum colaborador</td></tr>`}
+              <td style="padding:8px 12px;text-align:center;font-weight:800;color:${r.total_atraso_min?'var(--red)':'var(--text3)'}">${_absnFmtMin(r.total_atraso_min,false)}</td>
+              <td style="padding:8px 12px;text-align:center;font-weight:800;color:${r.banco_horas_min>0?'var(--green)':(r.banco_horas_min<0?'var(--red)':'var(--text3)')}">${_absnFmtMin(r.banco_horas_min,true)}</td>
+              <td style="padding:8px 12px;text-align:right;white-space:nowrap">
+                <button class="btn btn-outline btn-sm" onclick="absnAbrirDetalhe(${r.colaborador.id})">Ver dias</button>
+                <button class="btn btn-outline btn-sm" onclick="absnEnviarMatriz(${r.colaborador.id},'${pfEsc(r.colaborador.nome).replace(/'/g,"\\'")}')">Enviar p/ Matriz</button>
+              </td>
+            </tr>`).join('') || `<tr><td colspan="8" style="text-align:center;color:var(--text3);padding:20px">Nenhum colaborador</td></tr>`}
           </tbody>
         </table>
       </div>

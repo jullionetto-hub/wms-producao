@@ -4,14 +4,47 @@ const router  = express.Router();
 const { requerAuth, requerPerfil } = require('../lib/auth');
 const { db, pool } = require('../lib/db');
 const pdfParse = require('pdf-parse');
-const { parseEspelhoPonto, inferirHorariosEsperados, classificarDia } = require('../lib/absenteismo');
+const { parseEspelhoPonto, inferirHorariosEsperados, classificarDia, classificarAbsenteismoMes } = require('../lib/absenteismo');
 
 // ── Absenteísmo nativo — lê o espelho de ponto (PDF do InPonto) direto no WMS.
 // Substitui o antigo proxy pro serviço FastAPI separado (desativado). Guarda
 // só o que a feature de atraso precisa: identidade do colaborador e os
 // horários batidos por dia — o resto das colunas do PDF (H.Pos, H.Neg etc.)
-// não é usado nem salvo.
+// não é usado nem salvo (banco de horas é calculado por conta própria a
+// partir do horário real de saída, não lido do PDF).
 const gLeitura = requerPerfil('gestor', 'supervisor');
+
+// Formata minutos (podem ser negativos) como "+1:30" / "-0:45" — usado pro
+// saldo de banco de horas mandado pra Matriz de Responsabilidades.
+function fmtSaldoHoras(min) {
+  if (min == null) return '';
+  const sinal = min > 0 ? '+' : (min < 0 ? '-' : '');
+  const abs = Math.abs(min);
+  return `${sinal}${Math.floor(abs / 60)}:${String(abs % 60).padStart(2, '0')}`;
+}
+
+// Resumo de um colaborador a partir dos dias dele já salvos. total_atraso_min
+// é a soma bruta de entrada+almoço+pausa atrasados (sem tolerância — é o
+// número absoluto usado nos critérios da Matriz). banco_horas_min é a soma
+// dos saldos diários (saída real - saída oficial), pode dar negativo.
+// faltas_injustificadas/ausencias_justificadas contam pelo texto de Status
+// batido no PDF ("Falta" / "Atestado Médico").
+function resumoColaborador(diasDele, tolerancia) {
+  const passaTolerancia = min => min != null && min > tolerancia;
+  const semTolerancia   = min => min != null && min > 0;
+  const positivo = min => (min != null && min > 0) ? min : 0;
+  return {
+    total_dias: diasDele.length,
+    entradas_atrasadas: diasDele.filter(d => passaTolerancia(d.entrada_atraso_min)).length,
+    almocos_atrasados:  diasDele.filter(d => semTolerancia(d.almoco_atraso_min)).length,
+    pausas_atrasadas:   diasDele.filter(d => semTolerancia(d.pausa_atraso_min)).length,
+    total_atraso_min: diasDele.reduce((s, d) =>
+      s + positivo(d.entrada_atraso_min) + positivo(d.almoco_atraso_min) + positivo(d.pausa_atraso_min), 0),
+    banco_horas_min: diasDele.reduce((s, d) => s + (d.banco_horas_min || 0), 0),
+    faltas_injustificadas: diasDele.filter(d => d.status === 'Falta').length,
+    ausencias_justificadas: diasDele.filter(d => d.status === 'Atestado Médico').length,
+  };
+}
 
 // Rota temporária de diagnóstico — não grava nada, só mostra o que o pdf-parse
 // extraiu de verdade e como o parser interpretou, pra depurar sem precisar
@@ -121,17 +154,19 @@ router.post('/absenteismo/upload', requerAuth, gLeitura,
             await client.query(
               `INSERT INTO abs_registros_diarios
                  (upload_id,colaborador_id,data,dia_semana,status,registros,
-                  entrada_hora,entrada_atraso_min,almoco_retorno_hora,almoco_atraso_min,pausa_retorno_hora,pausa_atraso_min)
-               VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+                  entrada_hora,entrada_atraso_min,almoco_retorno_hora,almoco_atraso_min,pausa_retorno_hora,pausa_atraso_min,banco_horas_min)
+               VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
                ON CONFLICT (colaborador_id,data) DO UPDATE SET
                  upload_id=EXCLUDED.upload_id, dia_semana=EXCLUDED.dia_semana, status=EXCLUDED.status,
                  registros=EXCLUDED.registros, entrada_hora=EXCLUDED.entrada_hora, entrada_atraso_min=EXCLUDED.entrada_atraso_min,
                  almoco_retorno_hora=EXCLUDED.almoco_retorno_hora, almoco_atraso_min=EXCLUDED.almoco_atraso_min,
-                 pausa_retorno_hora=EXCLUDED.pausa_retorno_hora, pausa_atraso_min=EXCLUDED.pausa_atraso_min`,
+                 pausa_retorno_hora=EXCLUDED.pausa_retorno_hora, pausa_atraso_min=EXCLUDED.pausa_atraso_min,
+                 banco_horas_min=EXCLUDED.banco_horas_min`,
               [uploadId, colaboradorId, d.data, d.dia_semana, d.status, JSON.stringify(d.registros),
                classe.entrada_hora||null, classe.entrada_atraso_min ?? null,
                classe.almoco_retorno_hora||null, classe.almoco_atraso_min ?? null,
-               classe.pausa_retorno_hora||null, classe.pausa_atraso_min ?? null]
+               classe.pausa_retorno_hora||null, classe.pausa_atraso_min ?? null,
+               classe.banco_horas_min ?? null]
             );
           }
         }
@@ -187,23 +222,9 @@ router.get('/absenteismo/resultado', requerAuth, gLeitura, wrap(async (req, res)
   const porColaborador = {};
   dias.forEach(d => { (porColaborador[d.colaborador_id] = porColaborador[d.colaborador_id] || []).push(d); });
 
-  // Tolerância só vale pra entrada. Almoço/pausa não têm tolerância: passou
-  // 1 minuto do tempo permitido de retorno já conta como atraso.
-  const passaTolerancia = min => min != null && min > tolerancia;
-  const semTolerancia   = min => min != null && min > 0;
   const resultado = colaboradores.map(c => {
     const diasDele = porColaborador[c.id] || [];
-    const entradasAtrasadas = diasDele.filter(d => passaTolerancia(d.entrada_atraso_min));
-    const almocosAtrasados  = diasDele.filter(d => semTolerancia(d.almoco_atraso_min));
-    const pausasAtrasadas   = diasDele.filter(d => semTolerancia(d.pausa_atraso_min));
-    return {
-      colaborador: c,
-      total_dias: diasDele.length,
-      entradas_atrasadas: entradasAtrasadas.length,
-      almocos_atrasados: almocosAtrasados.length,
-      pausas_atrasadas: pausasAtrasadas.length,
-      dias: diasDele,
-    };
+    return { colaborador: c, ...resumoColaborador(diasDele, tolerancia), dias: diasDele };
   }).filter(r => r.total_dias > 0);
 
   res.json({ resultado });
@@ -227,23 +248,9 @@ router.get('/absenteismo/uploads/:id/resultado', requerAuth, gLeitura, wrap(asyn
   const porColaborador = {};
   dias.forEach(d => { (porColaborador[d.colaborador_id] = porColaborador[d.colaborador_id] || []).push(d); });
 
-  // Tolerância só vale pra entrada. Almoço/pausa não têm tolerância: passou
-  // 1 minuto do tempo permitido de retorno já conta como atraso.
-  const passaTolerancia = min => min != null && min > tolerancia;
-  const semTolerancia   = min => min != null && min > 0;
   const resultado = colaboradores.map(c => {
     const diasDele = porColaborador[c.id] || [];
-    const entradasAtrasadas = diasDele.filter(d => passaTolerancia(d.entrada_atraso_min));
-    const almocosAtrasados  = diasDele.filter(d => semTolerancia(d.almoco_atraso_min));
-    const pausasAtrasadas   = diasDele.filter(d => semTolerancia(d.pausa_atraso_min));
-    return {
-      colaborador: c,
-      total_dias: diasDele.length,
-      entradas_atrasadas: entradasAtrasadas.length,
-      almocos_atrasados: almocosAtrasados.length,
-      pausas_atrasadas: pausasAtrasadas.length,
-      dias: diasDele,
-    };
+    return { colaborador: c, ...resumoColaborador(diasDele, tolerancia), dias: diasDele };
   });
 
   res.json({ upload, resultado });
@@ -261,6 +268,51 @@ router.get('/absenteismo/colaboradores/:id/dias', requerAuth, gLeitura, wrap(asy
   if (data_fim) { params.push(data_fim); sql += ` AND data <= $${params.length}`; }
   sql += ' ORDER BY data';
   res.json(await db.all(sql, params));
+}));
+
+// Envia o resumo de absenteísmo do colaborador (todos os dias já salvos, sem
+// recorte de período — mesmo critério do resultado geral) como um feedback
+// mensal na Matriz de Responsabilidades (Painel do Colaborador). O
+// casamento entre abs_colaboradores e mz_colaboradores é só por nome
+// (tabelas separadas, sem FK entre elas) — se não achar, retorna erro
+// pedindo pra conferir o cadastro em vez de criar um colaborador novo.
+router.post('/absenteismo/colaboradores/:id/enviar-matriz', requerAuth, gLeitura, wrap(async (req, res) => {
+  const { mes } = req.body || {};
+  if (!mes) return res.status(400).json({ erro: 'Informe o mês (ex: Agosto/2026)' });
+
+  const colaborador = await db.get('SELECT * FROM abs_colaboradores WHERE id=$1', [req.params.id]);
+  if (!colaborador) return res.status(404).json({ erro: 'Colaborador não encontrado' });
+
+  const mzColab = await db.get(
+    `SELECT * FROM mz_colaboradores WHERE LOWER(TRIM(nome))=LOWER(TRIM($1)) LIMIT 1`,
+    [colaborador.nome]
+  );
+  if (!mzColab) {
+    return res.status(404).json({
+      erro: `Não achei "${colaborador.nome}" cadastrado na Matriz de Responsabilidades (nome tem que bater exatamente). Cadastre lá primeiro ou confira o nome.`,
+    });
+  }
+
+  const dias = await db.all('SELECT * FROM abs_registros_diarios WHERE colaborador_id=$1', [req.params.id]);
+  const resumo = resumoColaborador(dias, 0);
+  const status = classificarAbsenteismoMes({
+    atrasoMin: resumo.total_atraso_min,
+    faltasInjustificadas: resumo.faltas_injustificadas,
+    ausenciasJustificadas: resumo.ausencias_justificadas,
+  });
+
+  const autor_nome = req.session?.usuario?.nome || '';
+  const r = await pool.query(
+    `INSERT INTO mz_feedbacks
+       (colaborador_id,autor_nome,mes,cargo_snapshot,area_snapshot,absenteismo_mes,
+        atrasos,faltas_injustificadas,ausencias_justificadas,saldo_banco_horas)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+     RETURNING *, criado_em AS created_at`,
+    [mzColab.id, autor_nome, mes, mzColab.cargo||'', mzColab.area||'', status,
+     resumo.total_atraso_min, resumo.faltas_injustificadas, resumo.ausencias_justificadas,
+     fmtSaldoHoras(resumo.banco_horas_min)]
+  );
+  res.status(201).json({ feedback: r.rows[0], resumo, status, mz_colaborador: mzColab });
 }));
 
 function wrap(fn) { return (req, res, next) => fn(req, res).catch(next); }
