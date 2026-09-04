@@ -13,6 +13,7 @@ const { parseEspelhoPonto, inferirHorariosEsperados, classificarDia, classificar
 // não é usado nem salvo (banco de horas é calculado por conta própria a
 // partir do horário real de saída, não lido do PDF).
 const gLeitura = requerPerfil('gestor', 'supervisor');
+const gGestor  = requerPerfil('gestor'); // ações destrutivas (apagar tudo) só pra gestor
 
 // Formata minutos (podem ser negativos) como "+1:30" / "-0:45" — usado pro
 // saldo de banco de horas mandado pra Matriz de Responsabilidades.
@@ -254,6 +255,17 @@ router.get('/absenteismo/uploads/:id/resultado', requerAuth, gLeitura, wrap(asyn
   });
 
   res.json({ upload, resultado });
+}));
+
+// Apaga TODOS os dados do absenteísmo nativo (colaboradores, dias importados,
+// uploads e horários esperados) — pra recomeçar do zero. Irreversível, por
+// isso só gestor pode chamar (a UI ainda pede confirmação dupla antes).
+router.delete('/absenteismo/dados', requerAuth, gGestor, wrap(async (req, res) => {
+  await pool.query('DELETE FROM abs_registros_diarios');
+  await pool.query('DELETE FROM abs_colaboradores');
+  await pool.query('DELETE FROM abs_uploads');
+  await pool.query('DELETE FROM abs_horarios_esperados');
+  res.json({ mensagem: 'Todos os dados do absenteísmo foram apagados.' });
 }));
 
 router.get('/absenteismo/colaboradores', requerAuth, gLeitura, wrap(async (req, res) => {

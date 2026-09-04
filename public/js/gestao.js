@@ -101,6 +101,20 @@ function _absnFmtMin(min, comSinal) {
   return `${sinal}${Math.floor(valorAbs / 60)}:${String(valorAbs % 60).padStart(2, '0')}`;
 }
 
+async function absnApagarTudo() {
+  if (!confirm('ATENÇÃO: Isso vai apagar TODOS os colaboradores, dias importados e uploads do Absenteísmo (a seção nova, "Atraso por Marcação").\n\nDeseja continuar?')) return;
+  if (!confirm('Confirmar? Esta ação não pode ser desfeita — os PDFs precisam ser reimportados do zero depois.')) return;
+  try {
+    const res = await fetch(`${API}/absenteismo/dados`, { method:'DELETE', credentials:'include' });
+    const data = await res.json().catch(()=>({}));
+    if (!res.ok) { toast(data.erro || 'Erro ao apagar dados', 'erro'); return; }
+    toast('Todos os dados do absenteísmo foram apagados!', 'sucesso');
+    const statusEl = document.getElementById('absn-status');
+    if (statusEl) { statusEl.textContent = ''; }
+    await absnCarregarResultado();
+  } catch(e) { toast('Erro: ' + e.message, 'erro'); }
+}
+
 async function absnEnviarMatriz(colaboradorId, nome) {
   const mes = prompt(`Mês de referência na Matriz de Responsabilidades (ex: Agosto/2026)\nColaborador: ${nome}`, '');
   if (!mes) return;
@@ -232,6 +246,7 @@ function renderizarPagGestao() {
       <input type="file" id="absn-file-input" accept=".pdf" multiple style="display:none" onchange="absnEnviarPdfs(this.files)">
       <button onclick="document.getElementById('absn-debug-input').click()" style="padding:8px 16px;background:var(--surface);border:1.5px solid var(--border);color:var(--text2);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🔍 Diagnóstico (temporário)</button>
       <input type="file" id="absn-debug-input" accept=".pdf" style="display:none" onchange="absnDebugPdf(this.files[0])">
+      <button onclick="absnApagarTudo()" style="padding:8px 16px;background:transparent;border:1.5px solid var(--red);color:var(--red);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🗑️ Apagar todos os dados</button>
       <div id="absn-status" style="font-size:12px;color:var(--text3)"></div>
     </div>
     <textarea id="absn-debug-out" readonly style="display:none;width:100%;min-height:300px;margin-top:10px;padding:10px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:monospace;font-size:11px;white-space:pre;overflow:auto"></textarea>
