@@ -47,6 +47,7 @@ function resumoColaborador(diasDele, tolerancia, saldoFinalMin) {
     banco_horas_min: saldoFinalMin ?? null,
     faltas_injustificadas: diasDele.filter(d => d.status === 'Falta').length,
     ausencias_justificadas: diasDele.filter(d => d.status === 'Atestado Médico').length,
+    declaracoes_horas: diasDele.filter(d => d.status === 'Declaração de Horas').length,
   };
 }
 

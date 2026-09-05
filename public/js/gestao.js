@@ -254,6 +254,9 @@ function absnGerarPDF() {
       <td style="text-align:center">${r.pausas_atrasadas}</td>
       <td style="text-align:center">${_absnFmtMin(r.total_atraso_min,false)}</td>
       <td style="text-align:center">${_absnFmtMin(r.banco_horas_min,true)}</td>
+      <td style="text-align:center">${r.ausencias_justificadas}</td>
+      <td style="text-align:center">${r.faltas_injustificadas}</td>
+      <td style="text-align:center">${r.declaracoes_horas}</td>
     </tr>`).join('');
   const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Absenteísmo${turnoLabel}</title>
 <style>
@@ -268,7 +271,7 @@ function absnGerarPDF() {
 </style></head><body>
   <button class="btn" onclick="window.print()">Imprimir / Salvar PDF</button>
   <h1>Absenteísmo — Atraso por Marcação${turnoLabel}</h1>
-  <div class="sub">Gerado em ${new Date().toLocaleString('pt-BR')}${_absnTolerancia?` · Tolerância de entrada: ${_absnTolerancia}min`:''}</div>
+  <div class="sub">${_absnMesAtivo ? `Mês de referência: <b>${_absnMesAtivo}</b> · ` : ''}Gerado em ${new Date().toLocaleString('pt-BR')}${_absnTolerancia?` · Tolerância de entrada: ${_absnTolerancia}min`:''}</div>
   <table>
     <thead><tr>
       <th>Colaborador</th><th>Setor</th>
@@ -277,8 +280,11 @@ function absnGerarPDF() {
       <th style="text-align:center">Pausa Atrasada</th>
       <th style="text-align:center">Total Atrasos</th>
       <th style="text-align:center">Banco de Horas</th>
+      <th style="text-align:center">Atestados</th>
+      <th style="text-align:center">Faltas</th>
+      <th style="text-align:center">Declaração de Horas</th>
     </tr></thead>
-    <tbody>${linhasHtml || '<tr><td colspan="7" style="text-align:center">Nenhum colaborador</td></tr>'}</tbody>
+    <tbody>${linhasHtml || '<tr><td colspan="10" style="text-align:center">Nenhum colaborador</td></tr>'}</tbody>
   </table>
 </body></html>`;
   const w = window.open('', '_blank');
