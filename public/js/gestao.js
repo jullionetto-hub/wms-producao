@@ -31,11 +31,16 @@ async function _absnUploadUmPdf(file) {
   return data;
 }
 
+// Mês de referência do último upload (identificado automaticamente pelo fim
+// do período do PDF — ver mesReferencia no backend) — usado pra pré-preencher
+// o mês na hora de enviar pra Matriz, sem precisar digitar de novo toda vez.
+let _absnMesAtivo = null;
+
 async function absnEnviarPdfs(fileList) {
   const arquivos = Array.from(fileList || []);
   if (!arquivos.length) return;
   const statusEl = document.getElementById('absn-status');
-  let okCount = 0, totalColaboradores = 0, periodoInicio = null, periodoFim = null;
+  let okCount = 0, totalColaboradores = 0, periodoInicio = null, periodoFim = null, mesReferencia = null;
   const erros = [];
   for (let i = 0; i < arquivos.length; i++) {
     const arq = arquivos[i];
@@ -48,7 +53,7 @@ async function absnEnviarPdfs(fileList) {
       okCount++;
       totalColaboradores += data.total_colaboradores;
       if (!periodoInicio || data.periodo_inicio < periodoInicio) periodoInicio = data.periodo_inicio;
-      if (!periodoFim || data.periodo_fim > periodoFim) periodoFim = data.periodo_fim;
+      if (!periodoFim || data.periodo_fim > periodoFim) { periodoFim = data.periodo_fim; mesReferencia = data.mes_referencia; }
     } catch (e) {
       erros.push(`${arq.name}: ${e.message}`);
     }
@@ -58,10 +63,16 @@ async function absnEnviarPdfs(fileList) {
     statusEl.style.color = 'var(--red)';
     return;
   }
-  statusEl.textContent = `Importado! ${okCount}/${arquivos.length} arquivo(s), ${totalColaboradores} colaborador(es), período ${fmtData(periodoInicio)} a ${fmtData(periodoFim)}.`
+  _absnMesAtivo = mesReferencia;
+  statusEl.innerHTML = `Importado! ${okCount}/${arquivos.length} arquivo(s), ${totalColaboradores} colaborador(es), período ${fmtData(periodoInicio)} a ${fmtData(periodoFim)}`
+    + (mesReferencia ? ` <button onclick="absnMostrarMesAtivo()" style="margin-left:6px;padding:3px 10px;background:var(--accent);color:#fff;border:none;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer">📅 ${mesReferencia}</button>` : '.')
     + (erros.length ? ` Falhas: ${erros.join(' | ')}` : '');
   statusEl.style.color = erros.length ? 'var(--amber)' : 'var(--green)';
   await absnCarregarResultado();
+}
+
+function absnMostrarMesAtivo() {
+  toast(`Mês identificado: ${_absnMesAtivo}. Esse é o mês que será usado por padrão ao "Enviar p/ Matriz".`, 'info');
 }
 
 async function absnDebugPdf(file) {
@@ -116,7 +127,7 @@ async function absnApagarTudo() {
 }
 
 async function absnEnviarMatriz(colaboradorId, nome) {
-  const mes = prompt(`Mês de referência na Matriz de Responsabilidades (ex: Agosto/2026)\nColaborador: ${nome}`, '');
+  const mes = prompt(`Mês de referência na Matriz de Responsabilidades (ex: Agosto/2026)\nColaborador: ${nome}`, _absnMesAtivo || '');
   if (!mes) return;
   try {
     const res = await fetch(`${API}/absenteismo/colaboradores/${colaboradorId}/enviar-matriz`, {
@@ -166,6 +177,13 @@ async function absnCarregarResultado() {
   const cont = document.getElementById('absn-resultado');
   if (!cont) return;
   cont.innerHTML = '<div style="color:var(--text3);font-size:12px;padding:10px">Carregando...</div>';
+  // Se ainda não sabe o mês ativo nesta sessão (ex: acabou de abrir a página,
+  // sem ter subido PDF ainda), pega do upload mais recente já salvo.
+  if (!_absnMesAtivo) {
+    fetch(`${API}/absenteismo/uploads`, { credentials:'include' })
+      .then(r => r.json()).then(ups => { if (ups?.[0]?.mes_referencia) _absnMesAtivo = ups[0].mes_referencia; })
+      .catch(() => {});
+  }
   try {
     const res = await fetch(`${API}/absenteismo/resultado?tolerancia=${_absnTolerancia}`, { credentials:'include' });
     const data = await res.json();

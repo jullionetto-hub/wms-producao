@@ -4,7 +4,7 @@ const router  = express.Router();
 const { requerAuth, requerPerfil } = require('../lib/auth');
 const { db, pool } = require('../lib/db');
 const pdfParse = require('pdf-parse');
-const { parseEspelhoPonto, inferirHorariosEsperados, classificarDia, classificarAbsenteismoMes } = require('../lib/absenteismo');
+const { parseEspelhoPonto, inferirHorariosEsperados, classificarDia, classificarAbsenteismoMes, mesReferencia } = require('../lib/absenteismo');
 
 // ── Absenteísmo nativo — lê o espelho de ponto (PDF do InPonto) direto no WMS.
 // Substitui o antigo proxy pro serviço FastAPI separado (desativado). Guarda
@@ -206,6 +206,7 @@ router.post('/absenteismo/upload', requerAuth, gLeitura,
         arquivo_nome: nomeArquivo,
         periodo_inicio: periodoInicio,
         periodo_fim: periodoFim,
+        mes_referencia: mesReferencia(periodoFim),
         total_colaboradores: colaboradores.length,
       });
     } catch (e) { res.status(500).json({ erro: e.message }); }
@@ -213,7 +214,8 @@ router.post('/absenteismo/upload', requerAuth, gLeitura,
 );
 
 router.get('/absenteismo/uploads', requerAuth, gLeitura, wrap(async (req, res) => {
-  res.json(await db.all('SELECT * FROM abs_uploads ORDER BY enviado_em DESC LIMIT 50'));
+  const uploads = await db.all('SELECT * FROM abs_uploads ORDER BY enviado_em DESC LIMIT 50');
+  res.json(uploads.map(u => ({ ...u, mes_referencia: mesReferencia(u.periodo_fim) })));
 }));
 
 // Resultado geral: todos os colaboradores ativos com dado importado, sem
