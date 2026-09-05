@@ -64,11 +64,20 @@ async function absnEnviarPdfs(fileList) {
     return;
   }
   _absnMesAtivo = mesReferencia;
-  statusEl.innerHTML = `Importado! ${okCount}/${arquivos.length} arquivo(s), ${totalColaboradores} colaborador(es), período ${fmtData(periodoInicio)} a ${fmtData(periodoFim)}`
-    + (mesReferencia ? ` <button onclick="absnMostrarMesAtivo()" style="margin-left:6px;padding:3px 10px;background:var(--accent);color:#fff;border:none;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer">📅 ${mesReferencia}</button>` : '.')
+  _absnAtualizarBadgeMes();
+  statusEl.textContent = `Importado! ${okCount}/${arquivos.length} arquivo(s), ${totalColaboradores} colaborador(es), período ${fmtData(periodoInicio)} a ${fmtData(periodoFim)}.`
     + (erros.length ? ` Falhas: ${erros.join(' | ')}` : '');
   statusEl.style.color = erros.length ? 'var(--amber)' : 'var(--green)';
   await absnCarregarResultado();
+}
+
+// Botão fixo (não só na mensagem de status, que some ao recarregar a página)
+// mostrando o mês identificado do upload mais recente.
+function _absnAtualizarBadgeMes() {
+  const btn = document.getElementById('absn-mes-ativo');
+  if (!btn) return;
+  if (_absnMesAtivo) { btn.textContent = `📅 ${_absnMesAtivo}`; btn.style.display = ''; }
+  else { btn.style.display = 'none'; }
 }
 
 function absnMostrarMesAtivo() {
@@ -199,8 +208,11 @@ async function absnCarregarResultado() {
   // sem ter subido PDF ainda), pega do upload mais recente já salvo.
   if (!_absnMesAtivo) {
     fetch(`${API}/absenteismo/uploads`, { credentials:'include' })
-      .then(r => r.json()).then(ups => { if (ups?.[0]?.mes_referencia) _absnMesAtivo = ups[0].mes_referencia; })
+      .then(r => r.json())
+      .then(ups => { if (ups?.[0]?.mes_referencia) { _absnMesAtivo = ups[0].mes_referencia; _absnAtualizarBadgeMes(); } })
       .catch(() => {});
+  } else {
+    _absnAtualizarBadgeMes();
   }
   const labelEl = document.getElementById('absn-periodo-label');
   if (labelEl) labelEl.textContent = (_absnDataIni || _absnDataFim)
@@ -388,6 +400,7 @@ function renderizarPagGestao() {
       <button onclick="document.getElementById('absn-debug-input').click()" style="padding:8px 16px;background:var(--surface);border:1.5px solid var(--border);color:var(--text2);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🔍 Diagnóstico (temporário)</button>
       <input type="file" id="absn-debug-input" accept=".pdf" style="display:none" onchange="absnDebugPdf(this.files[0])">
       <button onclick="absnApagarTudo()" style="padding:8px 16px;background:transparent;border:1.5px solid var(--red);color:var(--red);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🗑️ Apagar todos os dados</button>
+      <button id="absn-mes-ativo" onclick="absnMostrarMesAtivo()" style="display:none;padding:6px 14px;background:var(--accent);color:#fff;border:none;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer">📅</button>
       <div id="absn-status" style="font-size:12px;color:var(--text3)"></div>
     </div>
     <textarea id="absn-debug-out" readonly style="display:none;width:100%;min-height:300px;margin-top:10px;padding:10px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:monospace;font-size:11px;white-space:pre;overflow:auto"></textarea>
