@@ -222,10 +222,22 @@ router.get('/absenteismo/uploads', requerAuth, gLeitura, wrap(async (req, res) =
 // Resultado geral: todos os colaboradores ativos com dado importado, sem
 // depender de um upload_id específico — é o que fica salvo entre sessões
 // (a UI carrega isso ao abrir a tela, não só logo depois de um upload).
+// data_ini/data_fim (opcionais) recortam os DIAS somados (atrasos, faltas,
+// atestados, declarações de horas) num período customizado (ex: julho a
+// setembro) — o banco de horas continua vindo do Saldo Final mais recente
+// do colaborador, não é filtrado por data (é um saldo acumulado).
 router.get('/absenteismo/resultado', requerAuth, gLeitura, wrap(async (req, res) => {
   const tolerancia = parseInt(req.query.tolerancia) || 0;
+  const { data_ini, data_fim } = req.query;
   const colaboradores = await db.all(`SELECT * FROM abs_colaboradores WHERE ativo=true ORDER BY nome`);
-  const dias = await db.all(`SELECT * FROM abs_registros_diarios ORDER BY data`);
+  const params = [];
+  const where = [];
+  if (data_ini) { params.push(data_ini); where.push(`data >= $${params.length}`); }
+  if (data_fim) { params.push(data_fim); where.push(`data <= $${params.length}`); }
+  const dias = await db.all(
+    `SELECT * FROM abs_registros_diarios${where.length ? ' WHERE ' + where.join(' AND ') : ''} ORDER BY data`,
+    params
+  );
   const porColaborador = {};
   dias.forEach(d => { (porColaborador[d.colaborador_id] = porColaborador[d.colaborador_id] || []).push(d); });
 

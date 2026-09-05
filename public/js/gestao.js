@@ -173,6 +173,24 @@ function absnSetTurnoFiltro(turno) {
   _absnRenderTabela();
 }
 
+// Período customizado (ex: "de julho a setembro") pra somar atrasos/faltas/
+// atestados/declarações de horas num recorte de dias — o banco de horas
+// continua vindo do Saldo Final mais recente (não é filtrado por período,
+// já que é um saldo acumulado, não algo pra somar por dia).
+let _absnDataIni = null, _absnDataFim = null;
+
+function absnAplicarPeriodo() {
+  _absnDataIni = document.getElementById('absn-data-ini')?.value || null;
+  _absnDataFim = document.getElementById('absn-data-fim')?.value || null;
+  absnCarregarResultado();
+}
+function absnLimparPeriodo() {
+  _absnDataIni = null; _absnDataFim = null;
+  const ini = document.getElementById('absn-data-ini'); if (ini) ini.value = '';
+  const fim = document.getElementById('absn-data-fim'); if (fim) fim.value = '';
+  absnCarregarResultado();
+}
+
 async function absnCarregarResultado() {
   const cont = document.getElementById('absn-resultado');
   if (!cont) return;
@@ -184,8 +202,14 @@ async function absnCarregarResultado() {
       .then(r => r.json()).then(ups => { if (ups?.[0]?.mes_referencia) _absnMesAtivo = ups[0].mes_referencia; })
       .catch(() => {});
   }
+  const labelEl = document.getElementById('absn-periodo-label');
+  if (labelEl) labelEl.textContent = (_absnDataIni || _absnDataFim)
+    ? `Mostrando ${fmtData(_absnDataIni)||'início'} a ${fmtData(_absnDataFim)||'hoje'}` : '';
   try {
-    const res = await fetch(`${API}/absenteismo/resultado?tolerancia=${_absnTolerancia}`, { credentials:'include' });
+    const qs = new URLSearchParams({ tolerancia: _absnTolerancia });
+    if (_absnDataIni) qs.set('data_ini', _absnDataIni);
+    if (_absnDataFim) qs.set('data_fim', _absnDataFim);
+    const res = await fetch(`${API}/absenteismo/resultado?${qs}`, { credentials:'include' });
     const data = await res.json();
     if (!res.ok) { cont.innerHTML = `<div style="color:var(--red);font-size:12px">${data.erro||'erro'}</div>`; return; }
     const resultado = data.resultado || [];
@@ -271,7 +295,10 @@ function absnGerarPDF() {
 </style></head><body>
   <button class="btn" onclick="window.print()">Imprimir / Salvar PDF</button>
   <h1>Absenteísmo — Atraso por Marcação${turnoLabel}</h1>
-  <div class="sub">${_absnMesAtivo ? `Mês de referência: <b>${_absnMesAtivo}</b> · ` : ''}Gerado em ${new Date().toLocaleString('pt-BR')}${_absnTolerancia?` · Tolerância de entrada: ${_absnTolerancia}min`:''}</div>
+  <div class="sub">${(_absnDataIni || _absnDataFim)
+      ? `Período: <b>${fmtData(_absnDataIni)||'início'} a ${fmtData(_absnDataFim)||'hoje'}</b> · `
+      : (_absnMesAtivo ? `Mês de referência: <b>${_absnMesAtivo}</b> · ` : '')
+    }Gerado em ${new Date().toLocaleString('pt-BR')}${_absnTolerancia?` · Tolerância de entrada: ${_absnTolerancia}min`:''}</div>
   <table>
     <thead><tr>
       <th>Colaborador</th><th>Setor</th>
@@ -367,6 +394,15 @@ function renderizarPagGestao() {
     <div id="absn-tolerancia" style="display:none;align-items:center;gap:8px;margin-top:10px;font-size:11.5px">
       <span style="color:var(--text3);font-weight:700">TOLERÂNCIA:</span>
       ${[0,5,10,15,30].map(m => `<button onclick="absnSetTolerancia(${m})" id="absn-tol-${m}" style="padding:5px 10px;border-radius:20px;border:1.5px solid var(--border);background:${m===0?'var(--accent)':'var(--surface)'};color:${m===0?'#fff':'var(--text2)'};font-size:11px;font-weight:700;cursor:pointer">${m} min</button>`).join('')}
+    </div>
+    <div id="absn-periodo" style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:11.5px;flex-wrap:wrap">
+      <span style="color:var(--text3);font-weight:700">PERÍODO:</span>
+      <input type="date" id="absn-data-ini" style="padding:5px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:11px">
+      <span style="color:var(--text3)">até</span>
+      <input type="date" id="absn-data-fim" style="padding:5px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:11px">
+      <button onclick="absnAplicarPeriodo()" style="padding:5px 12px;background:var(--accent);color:#fff;border:none;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer">Aplicar</button>
+      <button onclick="absnLimparPeriodo()" style="padding:5px 12px;background:var(--surface);border:1.5px solid var(--border);color:var(--text2);border-radius:20px;font-size:11px;font-weight:700;cursor:pointer">Ver tudo</button>
+      <span id="absn-periodo-label" style="color:var(--text3)"></span>
     </div>
     <div id="absn-resultado" style="margin-top:14px"></div>
   </div>
