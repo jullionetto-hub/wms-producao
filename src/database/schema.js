@@ -529,6 +529,7 @@ const TABLES = [
     cpf        TEXT UNIQUE,
     admissao   TEXT DEFAULT '',
     ativo      BOOLEAN DEFAULT true,
+    saldo_final_min INTEGER,
     criado_em  TIMESTAMPTZ DEFAULT NOW()
   )`,
 

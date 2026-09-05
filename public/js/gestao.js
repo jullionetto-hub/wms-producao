@@ -130,6 +130,38 @@ async function absnEnviarMatriz(colaboradorId, nome) {
   } catch(e) { toast('Erro: ' + e.message, 'erro'); }
 }
 
+// Turno do colaborador a partir do texto livre de horario do PDF — mesmo
+// casamento por substring usado no backend (lib/absenteismo.js turnoOficial).
+let _absnTurnoFiltro = null; // null = todos
+function _absnTurnoDe(horarioTexto) {
+  const t = (horarioTexto || '').toLowerCase();
+  if (t.includes('madrugada')) return 'Madrugada';
+  if (t.includes('tarde')) return 'Tarde';
+  if (t.includes('manh')) return 'Manhã';
+  return 'Outro';
+}
+
+function _absnLinhasFiltradas() {
+  const resultado = window._absnResultadoCache || [];
+  const filtradas = _absnTurnoFiltro
+    ? resultado.filter(r => _absnTurnoDe(r.colaborador.horario) === _absnTurnoFiltro)
+    : resultado;
+  return [...filtradas].sort((a,b) =>
+    (b.entradas_atrasadas+b.almocos_atrasados+b.pausas_atrasadas) - (a.entradas_atrasadas+a.almocos_atrasados+a.pausas_atrasadas));
+}
+
+function absnSetTurnoFiltro(turno) {
+  _absnTurnoFiltro = turno;
+  ['Manhã','Tarde','Madrugada',''].forEach(t => {
+    const btn = document.getElementById(`absn-turno-${t||'todos'}`);
+    if (!btn) return;
+    const ativo = (t||null) === _absnTurnoFiltro;
+    btn.style.background = ativo ? 'var(--accent)' : 'var(--surface)';
+    btn.style.color = ativo ? '#fff' : 'var(--text2)';
+  });
+  _absnRenderTabela();
+}
+
 async function absnCarregarResultado() {
   const cont = document.getElementById('absn-resultado');
   if (!cont) return;
@@ -142,9 +174,21 @@ async function absnCarregarResultado() {
     const tolEl = document.getElementById('absn-tolerancia');
     if (tolEl) tolEl.style.display = resultado.length ? 'flex' : 'none';
     window._absnResultadoCache = resultado;
-    const linhas = [...resultado].sort((a,b) =>
-      (b.entradas_atrasadas+b.almocos_atrasados+b.pausas_atrasadas) - (a.entradas_atrasadas+a.almocos_atrasados+a.pausas_atrasadas));
-    cont.innerHTML = `
+    _absnRenderTabela();
+  } catch(e) { cont.innerHTML = `<div style="color:var(--red);font-size:12px">Erro: ${e.message}</div>`; }
+}
+
+function _absnRenderTabela() {
+  const cont = document.getElementById('absn-resultado');
+  if (!cont) return;
+  const linhas = _absnLinhasFiltradas();
+  const turnos = ['Manhã','Tarde','Madrugada'];
+  cont.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+        <button id="absn-turno-todos" onclick="absnSetTurnoFiltro(null)" style="padding:5px 12px;border-radius:20px;border:1.5px solid var(--border);background:${!_absnTurnoFiltro?'var(--accent)':'var(--surface)'};color:${!_absnTurnoFiltro?'#fff':'var(--text2)'};font-size:11px;font-weight:700;cursor:pointer">Todos</button>
+        ${turnos.map(t => `<button id="absn-turno-${t}" onclick="absnSetTurnoFiltro('${t}')" style="padding:5px 12px;border-radius:20px;border:1.5px solid var(--border);background:${_absnTurnoFiltro===t?'var(--accent)':'var(--surface)'};color:${_absnTurnoFiltro===t?'#fff':'var(--text2)'};font-size:11px;font-weight:700;cursor:pointer">${t}</button>`).join('')}
+        <button onclick="absnGerarPDF()" style="margin-left:auto;padding:5px 12px;background:#0F172A;color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">🖨️ Gerar PDF / Imprimir</button>
+      </div>
       <div style="overflow-x:auto;background:var(--surface);border:1px solid var(--border);border-radius:10px">
         <table style="width:100%;border-collapse:collapse;font-size:12.5px">
           <thead><tr style="background:var(--surface2)">
@@ -175,7 +219,53 @@ async function absnCarregarResultado() {
         </table>
       </div>
       <div id="absn-detalhe" style="margin-top:12px"></div>`;
-  } catch(e) { cont.innerHTML = `<div style="color:var(--red);font-size:12px">Erro: ${e.message}</div>`; }
+}
+
+// Abre uma janela com a tabela atualmente filtrada (respeitando o filtro de
+// turno ativo) já pronta pra imprimir/salvar como PDF — mesmo padrão do
+// "Imprimir/PDF" já usado no relatório antigo de absenteísmo.
+function absnGerarPDF() {
+  const linhas = _absnLinhasFiltradas();
+  const turnoLabel = _absnTurnoFiltro ? ` — ${_absnTurnoFiltro}` : '';
+  const linhasHtml = linhas.map(r => `
+    <tr>
+      <td>${pfEsc(r.colaborador.nome)}</td>
+      <td>${pfEsc(r.colaborador.setor||'—')}</td>
+      <td style="text-align:center">${r.entradas_atrasadas}</td>
+      <td style="text-align:center">${r.almocos_atrasados}</td>
+      <td style="text-align:center">${r.pausas_atrasadas}</td>
+      <td style="text-align:center">${_absnFmtMin(r.total_atraso_min,false)}</td>
+      <td style="text-align:center">${_absnFmtMin(r.banco_horas_min,true)}</td>
+    </tr>`).join('');
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Absenteísmo${turnoLabel}</title>
+<style>
+  body{font-family:Arial,Helvetica,sans-serif;color:#1e293b;padding:24px}
+  h1{font-size:18px;margin:0 0 4px}
+  .sub{font-size:12px;color:#64748b;margin-bottom:16px}
+  table{width:100%;border-collapse:collapse;font-size:11px}
+  th,td{border:1px solid #cbd5e1;padding:6px 8px;text-align:left}
+  th{background:#f1f5f9}
+  .btn{margin-bottom:16px;padding:8px 16px;background:#0F172A;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer}
+  @media print{.btn{display:none}}
+</style></head><body>
+  <button class="btn" onclick="window.print()">Imprimir / Salvar PDF</button>
+  <h1>Absenteísmo — Atraso por Marcação${turnoLabel}</h1>
+  <div class="sub">Gerado em ${new Date().toLocaleString('pt-BR')}${_absnTolerancia?` · Tolerância de entrada: ${_absnTolerancia}min`:''}</div>
+  <table>
+    <thead><tr>
+      <th>Colaborador</th><th>Setor</th>
+      <th style="text-align:center">Entradas Atrasadas</th>
+      <th style="text-align:center">Almoço Atrasado</th>
+      <th style="text-align:center">Pausa Atrasada</th>
+      <th style="text-align:center">Total Atrasos</th>
+      <th style="text-align:center">Banco de Horas</th>
+    </tr></thead>
+    <tbody>${linhasHtml || '<tr><td colspan="7" style="text-align:center">Nenhum colaborador</td></tr>'}</tbody>
+  </table>
+</body></html>`;
+  const w = window.open('', '_blank');
+  w.document.write(html);
+  w.document.close();
 }
 
 function absnAbrirDetalhe(colaboradorId) {

@@ -96,7 +96,12 @@ const ALTERATIONS = [
   "ALTER TABLE checklist_caixas ADD COLUMN IF NOT EXISTS operador_nome TEXT DEFAULT ''",
   "ALTER TABLE checklist_caixas ADD COLUMN IF NOT EXISTS turno TEXT DEFAULT ''",
   // Banco de horas do dia (saída real - saída oficial do turno), absenteísmo nativo.
+  // Abandonado em favor do Saldo Final oficial do PDF (ver saldo_final_min abaixo)
+  // mas a coluna fica (sem uso, sem dado perdido em não apagar).
   "ALTER TABLE abs_registros_diarios ADD COLUMN IF NOT EXISTS banco_horas_min INTEGER",
+  // Banco de horas = "Saldo Final" lido direto do resumo do PDF (já soma o
+  // acumulado de períodos anteriores, não dá pra recalcular por conta própria).
+  "ALTER TABLE abs_colaboradores ADD COLUMN IF NOT EXISTS saldo_final_min INTEGER",
 ];
 
 async function runSchema() {

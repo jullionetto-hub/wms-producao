@@ -8,12 +8,15 @@ const { parseEspelhoPonto, inferirHorariosEsperados, classificarDia, classificar
 
 // ── Absenteísmo nativo — lê o espelho de ponto (PDF do InPonto) direto no WMS.
 // Substitui o antigo proxy pro serviço FastAPI separado (desativado). Guarda
-// só o que a feature de atraso precisa: identidade do colaborador e os
-// horários batidos por dia — o resto das colunas do PDF (H.Pos, H.Neg etc.)
-// não é usado nem salvo (banco de horas é calculado por conta própria a
-// partir do horário real de saída, não lido do PDF).
+// identidade do colaborador, os horários batidos por dia e o Saldo Final do
+// banco de horas (lido pronto do resumo do PDF) — as demais colunas
+// calculadas do PDF (H.Pos, H.Neg diário, Atraso etc.) não são usadas.
 const gLeitura = requerPerfil('gestor', 'supervisor');
 const gGestor  = requerPerfil('gestor'); // ações destrutivas (apagar tudo) só pra gestor
+// Banco de horas é o "Saldo Final" oficial lido do resumo do PDF
+// (abs_colaboradores.saldo_final_min) — não é calculado por conta própria,
+// porque esse número já soma o acumulado de períodos anteriores, que não
+// temos como reconstruir só com os dias importados.
 
 // Formata minutos (podem ser negativos) como "+1:30" / "-0:45" — usado pro
 // saldo de banco de horas mandado pra Matriz de Responsabilidades.
@@ -26,11 +29,11 @@ function fmtSaldoHoras(min) {
 
 // Resumo de um colaborador a partir dos dias dele já salvos. total_atraso_min
 // é a soma bruta de entrada+almoço+pausa atrasados (sem tolerância — é o
-// número absoluto usado nos critérios da Matriz). banco_horas_min é a soma
-// dos saldos diários (saída real - saída oficial), pode dar negativo.
-// faltas_injustificadas/ausencias_justificadas contam pelo texto de Status
-// batido no PDF ("Falta" / "Atestado Médico").
-function resumoColaborador(diasDele, tolerancia) {
+// número absoluto usado nos critérios da Matriz). banco_horas_min vem do
+// Saldo Final salvo no cadastro do colaborador (saldoFinalMin), não é
+// somado dia a dia. faltas_injustificadas/ausencias_justificadas contam pelo
+// texto de Status batido no PDF ("Falta" / "Atestado Médico").
+function resumoColaborador(diasDele, tolerancia, saldoFinalMin) {
   const passaTolerancia = min => min != null && min > tolerancia;
   const semTolerancia   = min => min != null && min > 0;
   const positivo = min => (min != null && min > 0) ? min : 0;
@@ -41,7 +44,7 @@ function resumoColaborador(diasDele, tolerancia) {
     pausas_atrasadas:   diasDele.filter(d => semTolerancia(d.pausa_atraso_min)).length,
     total_atraso_min: diasDele.reduce((s, d) =>
       s + positivo(d.entrada_atraso_min) + positivo(d.almoco_atraso_min) + positivo(d.pausa_atraso_min), 0),
-    banco_horas_min: diasDele.reduce((s, d) => s + (d.banco_horas_min || 0), 0),
+    banco_horas_min: saldoFinalMin ?? null,
     faltas_injustificadas: diasDele.filter(d => d.status === 'Falta').length,
     ausencias_justificadas: diasDele.filter(d => d.status === 'Atestado Médico').length,
   };
@@ -67,6 +70,7 @@ router.post('/absenteismo/debug', requerAuth, gLeitura,
         colaboradores_encontrados: colaboradores.length,
         resumo: colaboradores.map(c => ({
           nome: c.nome, empresa: c.empresa, horario: c.horario, cpf: c.cpf,
+          saldo_final_min: c.saldo_final_min,
           total_dias: c.dias.length,
           dias_com_data: c.dias.filter(d => d.data).length,
           primeiro_dia: c.dias[0] || null,
@@ -119,13 +123,14 @@ router.post('/absenteismo/upload', requerAuth, gLeitura,
           let colaboradorId;
           if (c.cpf) {
             const rColab = await client.query(
-              `INSERT INTO abs_colaboradores (nome,empresa,cnpj,setor,horario,matricula,pis,cpf,admissao)
-               VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+              `INSERT INTO abs_colaboradores (nome,empresa,cnpj,setor,horario,matricula,pis,cpf,admissao,saldo_final_min)
+               VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
                ON CONFLICT (cpf) DO UPDATE SET
                  nome=EXCLUDED.nome, empresa=EXCLUDED.empresa, cnpj=EXCLUDED.cnpj, setor=EXCLUDED.setor,
-                 horario=EXCLUDED.horario, matricula=EXCLUDED.matricula, pis=EXCLUDED.pis, ativo=true
+                 horario=EXCLUDED.horario, matricula=EXCLUDED.matricula, pis=EXCLUDED.pis, ativo=true,
+                 saldo_final_min=EXCLUDED.saldo_final_min
                RETURNING id`,
-              [c.nome, c.empresa, c.cnpj, c.setor, c.horario, c.matricula, c.pis, c.cpf, c.admissao]
+              [c.nome, c.empresa, c.cnpj, c.setor, c.horario, c.matricula, c.pis, c.cpf, c.admissao, c.saldo_final_min]
             );
             colaboradorId = rColab.rows[0].id;
           } else {
@@ -136,14 +141,14 @@ router.post('/absenteismo/upload', requerAuth, gLeitura,
             if (existente.rows.length) {
               colaboradorId = existente.rows[0].id;
               await client.query(
-                'UPDATE abs_colaboradores SET setor=$1, horario=$2, matricula=$3, ativo=true WHERE id=$4',
-                [c.setor, c.horario, c.matricula, colaboradorId]
+                'UPDATE abs_colaboradores SET setor=$1, horario=$2, matricula=$3, ativo=true, saldo_final_min=$4 WHERE id=$5',
+                [c.setor, c.horario, c.matricula, c.saldo_final_min, colaboradorId]
               );
             } else {
               const rColab = await client.query(
-                `INSERT INTO abs_colaboradores (nome,empresa,cnpj,setor,horario,matricula,pis,admissao)
-                 VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id`,
-                [c.nome, c.empresa, c.cnpj, c.setor, c.horario, c.matricula, c.pis, c.admissao]
+                `INSERT INTO abs_colaboradores (nome,empresa,cnpj,setor,horario,matricula,pis,admissao,saldo_final_min)
+                 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id`,
+                [c.nome, c.empresa, c.cnpj, c.setor, c.horario, c.matricula, c.pis, c.admissao, c.saldo_final_min]
               );
               colaboradorId = rColab.rows[0].id;
             }
@@ -155,19 +160,17 @@ router.post('/absenteismo/upload', requerAuth, gLeitura,
             await client.query(
               `INSERT INTO abs_registros_diarios
                  (upload_id,colaborador_id,data,dia_semana,status,registros,
-                  entrada_hora,entrada_atraso_min,almoco_retorno_hora,almoco_atraso_min,pausa_retorno_hora,pausa_atraso_min,banco_horas_min)
-               VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+                  entrada_hora,entrada_atraso_min,almoco_retorno_hora,almoco_atraso_min,pausa_retorno_hora,pausa_atraso_min)
+               VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
                ON CONFLICT (colaborador_id,data) DO UPDATE SET
                  upload_id=EXCLUDED.upload_id, dia_semana=EXCLUDED.dia_semana, status=EXCLUDED.status,
                  registros=EXCLUDED.registros, entrada_hora=EXCLUDED.entrada_hora, entrada_atraso_min=EXCLUDED.entrada_atraso_min,
                  almoco_retorno_hora=EXCLUDED.almoco_retorno_hora, almoco_atraso_min=EXCLUDED.almoco_atraso_min,
-                 pausa_retorno_hora=EXCLUDED.pausa_retorno_hora, pausa_atraso_min=EXCLUDED.pausa_atraso_min,
-                 banco_horas_min=EXCLUDED.banco_horas_min`,
+                 pausa_retorno_hora=EXCLUDED.pausa_retorno_hora, pausa_atraso_min=EXCLUDED.pausa_atraso_min`,
               [uploadId, colaboradorId, d.data, d.dia_semana, d.status, JSON.stringify(d.registros),
                classe.entrada_hora||null, classe.entrada_atraso_min ?? null,
                classe.almoco_retorno_hora||null, classe.almoco_atraso_min ?? null,
-               classe.pausa_retorno_hora||null, classe.pausa_atraso_min ?? null,
-               classe.banco_horas_min ?? null]
+               classe.pausa_retorno_hora||null, classe.pausa_atraso_min ?? null]
             );
           }
         }
@@ -225,7 +228,7 @@ router.get('/absenteismo/resultado', requerAuth, gLeitura, wrap(async (req, res)
 
   const resultado = colaboradores.map(c => {
     const diasDele = porColaborador[c.id] || [];
-    return { colaborador: c, ...resumoColaborador(diasDele, tolerancia), dias: diasDele };
+    return { colaborador: c, ...resumoColaborador(diasDele, tolerancia, c.saldo_final_min), dias: diasDele };
   }).filter(r => r.total_dias > 0);
 
   res.json({ resultado });
@@ -251,7 +254,7 @@ router.get('/absenteismo/uploads/:id/resultado', requerAuth, gLeitura, wrap(asyn
 
   const resultado = colaboradores.map(c => {
     const diasDele = porColaborador[c.id] || [];
-    return { colaborador: c, ...resumoColaborador(diasDele, tolerancia), dias: diasDele };
+    return { colaborador: c, ...resumoColaborador(diasDele, tolerancia, c.saldo_final_min), dias: diasDele };
   });
 
   res.json({ upload, resultado });
@@ -306,7 +309,7 @@ router.post('/absenteismo/colaboradores/:id/enviar-matriz', requerAuth, gLeitura
   }
 
   const dias = await db.all('SELECT * FROM abs_registros_diarios WHERE colaborador_id=$1', [req.params.id]);
-  const resumo = resumoColaborador(dias, 0);
+  const resumo = resumoColaborador(dias, 0, colaborador.saldo_final_min);
   const status = classificarAbsenteismoMes({
     atrasoMin: resumo.total_atraso_min,
     faltasInjustificadas: resumo.faltas_injustificadas,
