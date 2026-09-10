@@ -64,9 +64,20 @@ router.post('/absenteismo/debug', requerAuth, gLeitura,
       const nomeArquivo = req.query.nome || 'espelho_ponto.pdf';
       const { text } = await pdfParse(req.body);
       const colaboradores = parseEspelhoPonto(text, nomeArquivo);
+      // Mesmo cálculo de período do upload de verdade — pra conferir aqui,
+      // sem gravar nada, qual mês esse arquivo específico vai gerar.
+      let periodoInicio = null, periodoFim = null;
+      colaboradores.forEach(c => c.dias.forEach(d => {
+        if (!d.data) return;
+        if (!periodoInicio || d.data < periodoInicio) periodoInicio = d.data;
+        if (!periodoFim || d.data > periodoFim) periodoFim = d.data;
+      }));
       res.json({
         nomeArquivo,
         tamanho_texto: text.length,
+        periodo_inicio: periodoInicio,
+        periodo_fim: periodoFim,
+        mes_referencia: mesReferencia(periodoFim),
         texto_bruto_inicio: text.slice(0, 4000),
         colaboradores_encontrados: colaboradores.length,
         resumo: colaboradores.map(c => ({
@@ -75,7 +86,7 @@ router.post('/absenteismo/debug', requerAuth, gLeitura,
           total_dias: c.dias.length,
           dias_com_data: c.dias.filter(d => d.data).length,
           primeiro_dia: c.dias[0] || null,
-          segundo_dia: c.dias[1] || null,
+          ultimo_dia: c.dias[c.dias.length - 1] || null,
         })),
       });
     } catch (e) { res.status(500).json({ erro: e.message, stack: e.stack }); }

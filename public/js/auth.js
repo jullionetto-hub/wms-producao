@@ -1486,8 +1486,14 @@ async function verDiario(id) {
   } catch(e) { console.warn(e); }
 }
 
+// Usa ExcelJS (não o XLSX/SheetJS usado no resto do app) só pra esse export
+// — a versão grátis do SheetJS aceita marcar estilo nas células mas IGNORA
+// tudo na hora de escrever o arquivo, então o Excel saía todo em texto
+// preto sem cor/negrito nenhum, apesar do código já tentar. ExcelJS aplica
+// estilo de verdade na versão grátis.
 async function exportarDiarioExcel(id) {
   try {
+    await _carregarScript('https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js');
     const res = await fetch(`${API}/diario/${id}`, { credentials:'include' });
     const d = await res.json();
     if (!res.ok) return;
@@ -1496,27 +1502,50 @@ async function exportarDiarioExcel(id) {
     const turnoLabel = { Manha:'Manhã', Tarde:'Tarde', Noite:'Noite' }[d.turno] || d.turno;
 
     const NCOLS = 4;
-    const rows = [];
-    const merges = [];
-    const tituloRows = [];
-    const secaoRows = [];
-    const headerRows = [];
-    const push = r => { rows.push(r); return rows.length - 1; };
-    const merge = (r, c1, c2) => merges.push({ s:{r,c:c1}, e:{r,c:c2} });
+    const ROXO = 'FF4F46E5', CINZA = 'FFE5E7EB', BORDA = 'FFD1D5DB';
+    const fina = { style:'thin', color:{argb:BORDA} };
+    const bordaFina = { top:fina, bottom:fina, left:fina, right:fina };
 
-    const rTitulo = push(['Diário de Bordo — WMS Miess']);
-    tituloRows.push(rTitulo); merge(rTitulo, 0, NCOLS-1);
-    push([]);
-    const rMeta = push(['Data:', fmtData(d.data), 'Turno:', turnoLabel]);
-    push(['Supervisor:', d.supervisor, 'Leu diário anterior:', d.leu_anterior ? 'Sim' : 'Não']);
-    push([]);
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet('Diário');
+    ws.columns = [{width:24},{width:24},{width:20},{width:20}];
+
+    let r = 1;
+    const linha = (vals, estilo) => {
+      const row = ws.getRow(r);
+      vals.forEach((v, i) => { const c = row.getCell(i+1); c.value = v; if (estilo) estilo(c, i); });
+      r++;
+      return row.number;
+    };
+    const pular = () => { r++; };
+
+    const rTitulo = linha(['Diário de Bordo — WMS Miess']);
+    ws.mergeCells(rTitulo, 1, rTitulo, NCOLS);
+    ws.getCell(rTitulo, 1).font = { bold:true, size:16, color:{argb:ROXO} };
+    ws.getRow(rTitulo).height = 26;
+    pular();
+
+    linha(['Data:', fmtData(d.data), 'Turno:', turnoLabel], (c, i) => { if (i===0||i===2) c.font = { bold:true }; });
+    linha(['Supervisor:', d.supervisor, 'Leu diário anterior:', d.leu_anterior ? 'Sim' : 'Não'], (c, i) => { if (i===0||i===2) c.font = { bold:true }; });
+    pular();
 
     const secao = (titulo, header, dadosLinha, obsTexto) => {
-      const r1 = push([titulo]); secaoRows.push(r1); merge(r1, 0, NCOLS-1);
-      const r2 = push(header); headerRows.push(r2);
-      push(dadosLinha);
-      push(['Observações:', obsTexto || '—']);
-      push([]);
+      const rSec = linha([titulo]);
+      ws.mergeCells(rSec, 1, rSec, NCOLS);
+      const cSec = ws.getCell(rSec, 1);
+      cSec.font = { bold:true, size:12, color:{argb:'FFFFFFFF'} };
+      cSec.fill = { type:'pattern', pattern:'solid', fgColor:{argb:ROXO} };
+      cSec.alignment = { vertical:'middle' };
+      ws.getRow(rSec).height = 20;
+
+      const rHead = linha(header, (c) => {
+        c.font = { bold:true };
+        c.fill = { type:'pattern', pattern:'solid', fgColor:{argb:CINZA} };
+        c.border = bordaFina;
+      });
+      const rDados = linha(dadosLinha, (c) => { c.border = bordaFina; c.alignment = { horizontal:'center' }; });
+      linha(['Observações:', obsTexto || '—'], (c, i) => { if (i===0) c.font = { bold:true }; });
+      pular();
     };
     secao('Separação', ['Total','Concluídos','Pendentes','Separando'],
       [dd.separacao?.total||0, dd.separacao?.concluidos||0, dd.separacao?.pendentes||0, dd.separacao?.separando||0], obs.separacao);
@@ -1527,28 +1556,30 @@ async function exportarDiarioExcel(id) {
     secao('Reposição', ['Total','Resolvidas','Pendentes','Não Encontrados'],
       [dd.reposicao?.total||0, dd.reposicao?.resolvidas||0, dd.reposicao?.pendentes||0, dd.reposicao?.nao_encontrados||0], obs.reposicao);
 
-    const rProb = push(['Pedidos com Problema']); secaoRows.push(rProb); merge(rProb, 0, NCOLS-1);
-    const rProbH = push(['Pedido','Cliente','Item','']); headerRows.push(rProbH);
-    if (dd.problemas?.length) dd.problemas.forEach(p => push([p.pedido||'-', p.cliente||'-', `${p.codigo||''} ${p.item||''}`.trim(), '']));
-    else push(['Nenhum problema registrado']);
-    push([]);
+    const rProb = linha(['Pedidos com Problema']);
+    ws.mergeCells(rProb, 1, rProb, NCOLS);
+    const cProb = ws.getCell(rProb, 1);
+    cProb.font = { bold:true, size:12, color:{argb:'FFFFFFFF'} };
+    cProb.fill = { type:'pattern', pattern:'solid', fgColor:{argb:ROXO} };
+    linha(['Pedido','Cliente','Item',''], (c) => { c.font = { bold:true }; c.fill = { type:'pattern', pattern:'solid', fgColor:{argb:CINZA} }; c.border = bordaFina; });
+    if (dd.problemas?.length) dd.problemas.forEach(p => linha([p.pedido||'-', p.cliente||'-', `${p.codigo||''} ${p.item||''}`.trim(), ''], (c) => { c.border = bordaFina; }));
+    else linha(['Nenhum problema registrado']);
+    pular();
 
-    const rObs = push(['Observações Gerais']); secaoRows.push(rObs); merge(rObs, 0, NCOLS-1);
-    push([obs.geral || '—']);
+    const rObs = linha(['Observações Gerais']);
+    ws.mergeCells(rObs, 1, rObs, NCOLS);
+    const cObs = ws.getCell(rObs, 1);
+    cObs.font = { bold:true, size:12, color:{argb:'FFFFFFFF'} };
+    cObs.fill = { type:'pattern', pattern:'solid', fgColor:{argb:ROXO} };
+    linha([obs.geral || '—']);
 
-    const ws = XLSX.utils.aoa_to_sheet(rows);
-    ws['!cols'] = [{wch:22},{wch:22},{wch:18},{wch:18}];
-    ws['!merges'] = merges;
-
-    const cell = (r,c) => ws[XLSX.utils.encode_cell({r,c})];
-    tituloRows.forEach(r => { const cl = cell(r,0); if (cl) cl.s = { font:{ bold:true, sz:16 } }; });
-    [rMeta, rMeta+1].forEach(r => { for (let c=0;c<NCOLS;c+=2) { const cl = cell(r,c); if (cl) cl.s = { font:{ bold:true } }; } });
-    secaoRows.forEach(r => { const cl = cell(r,0); if (cl) cl.s = { font:{ bold:true, sz:12, color:{rgb:'FFFFFF'} }, fill:{ fgColor:{rgb:'4F46E5'} } }; });
-    headerRows.forEach(r => { for (let c=0;c<NCOLS;c++) { const cl = cell(r,c); if (cl) cl.s = { font:{ bold:true }, fill:{ fgColor:{rgb:'E5E7EB'} } }; } });
-
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Diário');
-    XLSX.writeFile(wb, `diario_${fmtData(d.data).replace(/\//g,'-')}_${d.turno}.xlsx`, { cellStyles: true });
+    const buf = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buf], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `diario_${fmtData(d.data).replace(/\//g,'-')}_${d.turno}.xlsx`;
+    a.click();
+    URL.revokeObjectURL(a.href);
     toast('Excel exportado!','sucesso');
   } catch(e) { toast('Erro ao exportar','erro'); }
 }
