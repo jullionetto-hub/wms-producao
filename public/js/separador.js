@@ -112,10 +112,23 @@ function _renderizarListaLote() {
   const total = itens.length;
   const feitos = itens.filter(i => i.status === 'encontrado').length;
 
-  // Header: só mostra contagem, não todos os chips (evita scroll horizontal com 37 pedidos)
+  // Header: um chip por pedido/caixa do lote, com progresso próprio — mostra qual
+  // pedido é a "Cx. N" citada em cada item e quando aquele pedido específico (não
+  // o lote inteiro) já pode ser fechado e encaminhado.
   document.getElementById('m-lote-badge').textContent = `${_loteAtual.length} pedidos`;
-  document.getElementById('m-lote-chips').innerHTML =
-    `<span style="font-size:11px;color:var(--text2)">${_loteAtual.length} pedidos em separação simultânea</span>`;
+  document.getElementById('m-lote-chips').innerHTML = _loteAtual.map((p, idx) => {
+    const cx = idx + 1;
+    const itensDoPedido = itens.filter(i => i.caixa_num === cx);
+    const totalP  = itensDoPedido.length;
+    const feitosP = itensDoPedido.filter(i => i.status === 'encontrado' || i.status === 'falta').length;
+    const completoP = totalP > 0 && feitosP === totalP;
+    return `<span style="font-size:11px;font-weight:700;padding:4px 9px;border-radius:7px;white-space:nowrap;
+        background:${completoP ? 'rgba(34,197,94,.15)' : 'var(--surface2)'};
+        border:1px solid ${completoP ? 'rgba(34,197,94,.4)' : 'var(--border)'};
+        color:${completoP ? '#22c55e' : 'var(--text2)'}">
+        Cx.${cx} · #${p.numero_pedido} ${completoP ? '✓' : `${feitosP}/${totalP}`}
+      </span>`;
+  }).join('');
 
   // Progresso: encontrado + falta = processado
   const processados = itens.filter(i => i.status === 'encontrado' || i.status === 'falta').length;
