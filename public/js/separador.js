@@ -112,21 +112,23 @@ function _renderizarListaLote() {
   const total = itens.length;
   const feitos = itens.filter(i => i.status === 'encontrado').length;
 
-  // Header: um chip por pedido do lote, com progresso próprio — mostra qual
-  // pedido é o "→ Pedido #N" citado em cada item e quando aquele pedido
-  // específico (não o lote inteiro) já pode ser fechado e encaminhado.
+  // Header: uma legenda fixa por pedido (número + cor), sempre visível acima da
+  // lista rolável. Cada item, mais abaixo, só precisa mostrar a bolinha colorida
+  // com o número — o separador bate a cor/número com a legenda pra saber em qual
+  // pedido colocar, sem ter que ler um número de pedido inteiro item por item.
   document.getElementById('m-lote-badge').textContent = `${_loteAtual.length} pedidos`;
   document.getElementById('m-lote-chips').innerHTML = _loteAtual.map((p, idx) => {
     const cx = idx + 1;
+    const cor = _CX_CORES[idx % _CX_CORES.length];
     const itensDoPedido = itens.filter(i => i.caixa_num === cx);
     const totalP  = itensDoPedido.length;
     const feitosP = itensDoPedido.filter(i => i.status === 'encontrado' || i.status === 'falta').length;
     const completoP = totalP > 0 && feitosP === totalP;
-    return `<span style="font-size:11px;font-weight:700;padding:4px 9px;border-radius:7px;white-space:nowrap;
+    return `<span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;padding:3px 10px 3px 3px;border-radius:20px;white-space:nowrap;
         background:${completoP ? 'rgba(34,197,94,.15)' : 'var(--surface2)'};
-        border:1px solid ${completoP ? 'rgba(34,197,94,.4)' : 'var(--border)'};
-        color:${completoP ? '#22c55e' : 'var(--text2)'}">
-        Pedido #${p.numero_pedido} ${completoP ? '✓' : `${feitosP}/${totalP}`}
+        border:1px solid ${completoP ? 'rgba(34,197,94,.4)' : cor+'66'}">
+        <span style="width:20px;height:20px;border-radius:50%;background:${cor};color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0">${completoP ? '✓' : cx}</span>
+        <span style="color:${completoP ? '#22c55e' : 'var(--text2)'}">#${p.numero_pedido} · ${feitosP}/${totalP}</span>
       </span>`;
   }).join('');
 
@@ -190,12 +192,16 @@ function _renderizarListaLote() {
       }
       const cxEntries = Object.entries(porCaixa).sort((a,b) => Number(a[0]) - Number(b[0]));
 
-      // Exibe "→ Pedido #numero: N un" — não usa mais rótulo de "caixa", que não
-      // corresponde a nada físico na operação (não há caixa física por pedido aqui).
-      const pedidoLabel = (cxNum) => _loteAtual[Number(cxNum)-1]?.numero_pedido || cxNum;
-      const cxHtml = cxEntries.map(([cx, qty]) =>
-        `<span style="font-size:11px;color:var(--text2);white-space:nowrap">→ Pedido #${pedidoLabel(cx)}: ${qty} un</span>`
-      ).join('');
+      // Bolinha colorida + número (mesma cor/número da legenda no topo) em vez de
+      // repetir "Pedido #numero" em cada item — mais rápido de bater o olho e
+      // combinar com a caixa física certa enquanto separa rápido.
+      const cxHtml = cxEntries.map(([cx, qty]) => {
+        const cor = _CX_CORES[(Number(cx)-1) % _CX_CORES.length];
+        return `<span style="display:inline-flex;align-items:center;gap:5px">
+          <span style="width:18px;height:18px;border-radius:50%;background:${cor};color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0">${cx}</span>
+          <span style="font-size:12px;font-weight:700;color:var(--text2)">${qty} un</span>
+        </span>`;
+      }).join('');
 
       const ids = items.map(i => i.id).join(',');
 
@@ -221,7 +227,7 @@ function _renderizarListaLote() {
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:2px">
               <span style="font-size:12px;font-weight:700;color:var(--text);background:var(--surface2);padding:3px 9px;border-radius:5px;border:0.5px solid var(--border)">PEGAR ${totalQty} un</span>
             </div>
-            <div style="display:flex;flex-direction:column;gap:2px;padding-left:2px">
+            <div style="display:flex;flex-wrap:wrap;gap:10px;padding-left:2px">
               ${cxHtml}
             </div>
           </div>
