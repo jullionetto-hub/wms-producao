@@ -1097,6 +1097,35 @@ function _rotaIdxLote(rua) {
   const i = ROTA_FISICA_LOTE.indexOf(rua);
   return i === -1 ? 999 : i;
 }
+// Distância física real (não a posição na rota de caminhada) — usada só pra decidir
+// QUAIS pedidos cabem no mesmo lote. O corredor principal (FUNDO) é uma reta; o
+// ramal da frente (E→D→C→B→A) pendura perpendicular bem no meio dele, na altura de
+// Q — por isso E fica fisicamente colado em Q/P/N e longe de A (ponta morta do
+// ramal), mesmo E aparecendo "antes" de N na ordem de caminhada (que precisa
+// descer o ramal inteiro e voltar antes de seguir pro resto do corredor). Mesma
+// geometria validada em public/js/dashboard.js (renderMapaEstoque).
+const FUNDO_COORD  = ['ZA','F','G','ARARA','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'];
+const FRENTE_COORD = { E:1, D:2, C:3, B:4, A:5 };
+const Q_IDX_COORD  = FUNDO_COORD.indexOf('Q');
+function _coordRua(rua) {
+  const fIdx = FUNDO_COORD.indexOf(rua);
+  if (fIdx !== -1) return { x: fIdx, y: 0 };
+  if (FRENTE_COORD[rua] != null) return { x: Q_IDX_COORD, y: FRENTE_COORD[rua] };
+  return null;
+}
+function _distanciaRuas(a, b) {
+  const ca = _coordRua(a), cb = _coordRua(b);
+  if (!ca || !cb) return 999;
+  return Math.abs(ca.x-cb.x) + Math.abs(ca.y-cb.y);
+}
+function _distanciaPedidosLote(a, b) {
+  let menor = Infinity;
+  for (const ra of a._ruasSet) for (const rb of b._ruasSet) {
+    const d = _distanciaRuas(ra, rb);
+    if (d < menor) menor = d;
+  }
+  return menor;
+}
 
 // Preview — não grava nada, só calcula os lotes e devolve pra conferência.
 router.post('/pedidos/lote/formar', requerAuth, requerPerfil('supervisor'), async (req,res) => {
@@ -1156,9 +1185,13 @@ router.post('/pedidos/lote/formar', requerAuth, requerPerfil('supervisor'), asyn
     }
     if (ondaAtual.length) ondas.push(ondaAtual);
 
-    // 2. Dentro de cada onda, ordena por rua predominante (proximidade) e
-    //    corta em lotes de até 8 — resto pequeno (<5) absorve no grupo
-    //    anterior se couber, em vez de virar um lote isolado de 1-2 pedidos.
+    // 2. Dentro de cada onda (já limitada a até 8 pedidos pela formação acima),
+    //    monta o lote por vizinhança real: começa pelo pedido mais perto do
+    //    início da rota (E) e vai sempre pegando o pedido fisicamente mais
+    //    próximo do último adicionado (_distanciaPedidosLote), em vez de só
+    //    ordenar pela posição no índice da rota de caminhada — que sozinha
+    //    colocaria pedidos do ramal E-D-C-B-A "perto" uns dos outros mesmo
+    //    quando fisicamente um está na ponta oposta do outro.
     const lotesPreview = [];
     for (const onda of ondas) {
       for (const p of onda) {
@@ -1181,15 +1214,18 @@ router.post('/pedidos/lote/formar', requerAuth, requerPerfil('supervisor'), asyn
         }
         await pool.query('UPDATE pedidos SET pontuacao=$1 WHERE id=$2', [scoreBase, p.id]);
       }
-      onda.sort((a,b) => _rotaIdxLote(a._ruaPrincipal) - _rotaIdxLote(b._ruaPrincipal));
-      let i = 0;
-      while (i < onda.length) {
-        let tamanho = Math.min(8, onda.length - i);
-        const resto = onda.length - i - tamanho;
-        if (resto > 0 && resto < 5 && tamanho + resto <= 8) tamanho += resto;
-        lotesPreview.push({ pedidos: onda.slice(i, i+tamanho) });
-        i += tamanho;
+      const restantes = [...onda].sort((a,b) => _rotaIdxLote(a._ruaPrincipal) - _rotaIdxLote(b._ruaPrincipal));
+      const grupo = [restantes.shift()];
+      while (restantes.length) {
+        const ultimo = grupo[grupo.length-1];
+        let melhorIdx = 0, melhorDist = Infinity;
+        restantes.forEach((cand, idx) => {
+          const d = _distanciaPedidosLote(ultimo, cand);
+          if (d < melhorDist) { melhorDist = d; melhorIdx = idx; }
+        });
+        grupo.push(restantes.splice(melhorIdx,1)[0]);
       }
+      lotesPreview.push({ pedidos: grupo });
     }
 
     // 3. Atribui cada lote ao separador mais atrasado na fórmula de 3 eixos
