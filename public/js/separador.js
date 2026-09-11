@@ -112,9 +112,9 @@ function _renderizarListaLote() {
   const total = itens.length;
   const feitos = itens.filter(i => i.status === 'encontrado').length;
 
-  // Header: um chip por pedido/caixa do lote, com progresso próprio — mostra qual
-  // pedido é a "Cx. N" citada em cada item e quando aquele pedido específico (não
-  // o lote inteiro) já pode ser fechado e encaminhado.
+  // Header: um chip por pedido do lote, com progresso próprio — mostra qual
+  // pedido é o "→ Pedido #N" citado em cada item e quando aquele pedido
+  // específico (não o lote inteiro) já pode ser fechado e encaminhado.
   document.getElementById('m-lote-badge').textContent = `${_loteAtual.length} pedidos`;
   document.getElementById('m-lote-chips').innerHTML = _loteAtual.map((p, idx) => {
     const cx = idx + 1;
@@ -126,7 +126,7 @@ function _renderizarListaLote() {
         background:${completoP ? 'rgba(34,197,94,.15)' : 'var(--surface2)'};
         border:1px solid ${completoP ? 'rgba(34,197,94,.4)' : 'var(--border)'};
         color:${completoP ? '#22c55e' : 'var(--text2)'}">
-        Cx.${cx} · #${p.numero_pedido} ${completoP ? '✓' : `${feitosP}/${totalP}`}
+        Pedido #${p.numero_pedido} ${completoP ? '✓' : `${feitosP}/${totalP}`}
       </span>`;
   }).join('');
 
@@ -190,10 +190,11 @@ function _renderizarListaLote() {
       }
       const cxEntries = Object.entries(porCaixa).sort((a,b) => Number(a[0]) - Number(b[0]));
 
-      // Exibe "→ Cx. [label]: N un" — usa caixa_lote (número físico) se disponível
-      const cxLabel = (cxNum) => _loteAtual[Number(cxNum)-1]?.caixa_lote || cxNum;
+      // Exibe "→ Pedido #numero: N un" — não usa mais rótulo de "caixa", que não
+      // corresponde a nada físico na operação (não há caixa física por pedido aqui).
+      const pedidoLabel = (cxNum) => _loteAtual[Number(cxNum)-1]?.numero_pedido || cxNum;
       const cxHtml = cxEntries.map(([cx, qty]) =>
-        `<span style="font-size:11px;color:var(--text2);white-space:nowrap">→ Cx. ${cxLabel(cx)}: ${qty} un</span>`
+        `<span style="font-size:11px;color:var(--text2);white-space:nowrap">→ Pedido #${pedidoLabel(cx)}: ${qty} un</span>`
       ).join('');
 
       const ids = items.map(i => i.id).join(',');
