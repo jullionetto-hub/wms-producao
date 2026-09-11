@@ -2442,6 +2442,7 @@ async function calcularDistribuicao() {
     const temCargaPrevia = data.plano.some(p => (p.pontuacao_ja||0) > 0);
     // Calcula desvio de pontuação total (carga real = já tinha + novo)
     const avgPts = data.plano.length ? data.plano.reduce((s,p)=>s+(p.pontuacao_total||0),0) / data.plano.length : 0;
+    const avgPedidos = data.plano.length ? data.plano.reduce((s,p)=>s+(p.pedidos_total||0),0) / data.plano.length : 0;
     const cenarioLabel = { balanceado:'BALANCEADO', por_itens:'POR VOLUME', complexidade:'COMPLEXIDADE TOTAL' };
     const cenarioUsado = cenarioLabel[data.cenario || _cenarioDistrib] || 'AUTOMÁTICO';
     const turnoLabel = { Manha:'MANHÃ', Tarde:'TARDE', Noite:'NOITE' };
@@ -2461,17 +2462,21 @@ async function calcularDistribuicao() {
         Carga anterior considerada — novos pedidos nivelam o que cada colaborador já tem.
       </div>`;
     }
-    html += `<div class="tabela-wrap"><table><thead><tr><th>COLABORADOR</th><th>PEDIDOS AGORA</th><th>ITENS AGORA</th><th>CARGA TOTAL</th><th>LISTA</th></tr></thead><tbody>`;
+    html += `<div class="tabela-wrap"><table><thead><tr><th>COLABORADOR</th><th>PEDIDOS AGORA</th><th>PEDIDOS HOJE (TOTAL)</th><th>ITENS AGORA</th><th>CARGA TOTAL</th><th>LISTA</th></tr></thead><tbody>`;
     data.plano.forEach(item => {
       const ptsTotais = item.pontuacao_total || 0;
       const ptsNovos  = ptsTotais - (item.pontuacao_ja || 0);
       const desvio    = avgPts > 0 ? Math.abs(ptsTotais - avgPts) / avgPts : 0;
       const corCarga  = desvio < 0.08 ? 'var(--green)' : desvio < 0.2 ? 'var(--amber)' : 'var(--red)';
+      const pedidosTotais = item.pedidos_total || 0;
+      const desvioPed  = avgPedidos > 0 ? Math.abs(pedidosTotais - avgPedidos) / avgPedidos : 0;
+      const corPed     = desvioPed < 0.08 ? 'var(--green)' : desvioPed < 0.2 ? 'var(--amber)' : 'var(--red)';
       const infoPrevia = (item.pontuacao_ja||0) > 0
         ? `<div style="font-size:10px;color:var(--text3);margin-top:2px">+${Math.round(ptsNovos)} pts novos · já tinha ${Math.round(item.pontuacao_ja)} pts</div>` : '';
       html += `<tr>
         <td style="font-weight:700;color:var(--text)">${item.separador_nome}</td>
         <td style="color:var(--green);font-weight:700">${item.pedidos.length}</td>
+        <td style="font-family:'Space Mono',monospace;color:${corPed};font-size:13px;font-weight:800">${pedidosTotais}${pedidosTotais<65?` <span style="font-size:9px;color:var(--text3);font-weight:400">(falta ${65-pedidosTotais} p/ mín.)</span>`:''}</td>
         <td style="font-weight:800;font-size:14px;color:var(--green)">${item.itens_total||0} itens</td>
         <td><span style="font-family:'Space Mono',monospace;color:${corCarga};font-size:11px;font-weight:700">${ptsTotais} pts</span>${infoPrevia}</td>
         <td style="font-size:11px;color:var(--text3)">${item.pedidos.join(', ')}</td>

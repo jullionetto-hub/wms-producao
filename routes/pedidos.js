@@ -811,15 +811,16 @@ router.post('/pedidos/distribuicao', requerAuth, requerPerfil('supervisor'), asy
     const filas=[];
     for (const sid of separadores) {
       const dbId = sepMap[sid]?.sepDbId || null;
-      let cargaAtual = { pontuacao: 0, itens: 0 };
+      let cargaAtual = { pontuacao: 0, itens: 0, pedidos: 0 };
       if (dbId) {
         const ja = await db.get(
           `SELECT COALESCE(SUM(COALESCE(p.pontuacao,0)),0) AS pts,
-                  COALESCE(SUM(COALESCE(p.itens,0)),0) AS itens
+                  COALESCE(SUM(COALESCE(p.itens,0)),0) AS itens,
+                  COUNT(*) AS qtd
            FROM pedidos p
            WHERE p.separador_id = $1
              AND p.status IN ('pendente','separando')`, [dbId]);
-        if (ja) { cargaAtual.pontuacao = parseFloat(ja.pts)||0; cargaAtual.itens = parseInt(ja.itens)||0; }
+        if (ja) { cargaAtual.pontuacao = parseFloat(ja.pts)||0; cargaAtual.itens = parseInt(ja.itens)||0; cargaAtual.pedidos = parseInt(ja.qtd)||0; }
       }
       filas.push({
         separador_id: sid,
@@ -827,8 +828,10 @@ router.post('/pedidos/distribuicao', requerAuth, requerPerfil('supervisor'), asy
         pedidos: [],
         pontuacao_total: cargaAtual.pontuacao,   // começa com o que já tem
         itens_total:     cargaAtual.itens,
+        pedidos_total:   cargaAtual.pedidos,     // quantidade de pedidos (independente de pontuação/itens)
         pontuacao_ja:    cargaAtual.pontuacao,    // guarda para mostrar no resultado
         itens_ja:        cargaAtual.itens,
+        pedidos_ja:      cargaAtual.pedidos,
         sep_db_id: dbId,
       });
     }
@@ -837,8 +840,12 @@ router.post('/pedidos/distribuicao', requerAuth, requerPerfil('supervisor'), asy
     const totalItensLote= ordenados.reduce((s,p)=>s+(p.itens||0),0) || 1;
     const n = filas.length || 1;
     // Carga alvo por separador (carga já existente + lote atual dividido igualmente)
-    const alvoPts  = (filas.reduce((s,f)=>s+f.pontuacao_ja,0) + totalPtsLote)  / n;
-    const alvoItens= (filas.reduce((s,f)=>s+f.itens_ja,0)    + totalItensLote) / n;
+    const alvoPts    = (filas.reduce((s,f)=>s+f.pontuacao_ja,0) + totalPtsLote)   / n;
+    const alvoItens  = (filas.reduce((s,f)=>s+f.itens_ja,0)     + totalItensLote) / n;
+    // Meta de QUANTIDADE de pedidos por separador (ex: mínimo de 65/dia) — pesa
+    // junto com pontuação/itens pra ninguém ficar "na frente" só por ter pego
+    // pedido fácil: só conta como adiantado quem tá na frente nos três eixos.
+    const alvoPedidos = (filas.reduce((s,f)=>s+f.pedidos_ja,0) + ordenados.length) / n;
 
     if (modoDist === 'por_itens') {
       // LPT por volume: quem tem menos itens recebe o próximo pedido
@@ -847,21 +854,23 @@ router.post('/pedidos/distribuicao', requerAuth, requerPerfil('supervisor'), asy
         filas[0].pedidos.push(ped.numero_pedido);
         filas[0].pontuacao_total += ped._p;
         filas[0].itens_total += (ped.itens || 0);
+        filas[0].pedidos_total += 1;
       }
     } else {
-      // 'balanceado' e 'complexidade': LPT com score normalizado (pontuação + itens)
+      // 'balanceado' e 'complexidade': LPT com score normalizado (pontuação + itens + qtd. de pedidos)
       for (const ped of ordenados) {
         filas.sort((a,b) => {
-          const sA = (a.pontuacao_total / alvoPts) + (a.itens_total / alvoItens);
-          const sB = (b.pontuacao_total / alvoPts) + (b.itens_total / alvoItens);
+          const sA = (a.pontuacao_total / alvoPts) + (a.itens_total / alvoItens) + (a.pedidos_total / alvoPedidos);
+          const sB = (b.pontuacao_total / alvoPts) + (b.itens_total / alvoItens) + (b.pedidos_total / alvoPedidos);
           return sA - sB;
         });
         filas[0].pedidos.push(ped.numero_pedido);
         filas[0].pontuacao_total += ped._p;
         filas[0].itens_total += (ped.itens || 0);
+        filas[0].pedidos_total += 1;
       }
     }
-    res.json({cenario:modoDist,plano:filas.map(f=>({separador_id:f.separador_id,sep_db_id:f.sep_db_id,separador_nome:f.separador_nome,pedidos:f.pedidos,pontuacao_total:Math.round(f.pontuacao_total),itens_total:f.itens_total,pontuacao_ja:Math.round(f.pontuacao_ja||0),itens_ja:f.itens_ja||0})),total_pedidos:pedidos.length,total_distribuidos:ordenados.length});
+    res.json({cenario:modoDist,plano:filas.map(f=>({separador_id:f.separador_id,sep_db_id:f.sep_db_id,separador_nome:f.separador_nome,pedidos:f.pedidos,pontuacao_total:Math.round(f.pontuacao_total),itens_total:f.itens_total,pedidos_total:f.pedidos_total,pontuacao_ja:Math.round(f.pontuacao_ja||0),itens_ja:f.itens_ja||0,pedidos_ja:f.pedidos_ja||0})),total_pedidos:pedidos.length,total_distribuidos:ordenados.length});
   } catch(err){res.status(500).json({erro:err.message});}
 });
 
