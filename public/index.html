@@ -2386,7 +2386,7 @@
 
 
 <script src="/js/config.js?v=11"></script>
-  <script src="/js/pedidos.js?v=34"></script>
+  <script src="/js/pedidos.js?v=35"></script>
   <script src="/js/separador.js?v=18"></script>
   <script src="/js/repositor.js?v=18"></script>
   <script src="/js/checkout.js?v=14"></script>
@@ -2656,6 +2656,22 @@
         <b style="color:var(--text)">proximidade de rua</b> em lotes de 5-8, fechando um lote antes se algum pedido já
         estiver esperando mais de <b style="color:var(--text)">20min</b>. Cada lote inteiro vai pro separador mais
         atrasado na mesma fórmula de pontuação + itens + quantidade de pedidos usada em Distribuir.
+      </div>
+
+      <div style="display:flex;gap:10px;align-items:flex-end;margin-bottom:14px;padding:10px 14px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);flex-wrap:wrap">
+        <div>
+          <div style="font-size:10px;font-weight:700;color:var(--accent);letter-spacing:1px;margin-bottom:5px">DATA DOS PEDIDOS (AGUARDANDO DESDE)</div>
+          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+            <div style="display:flex;align-items:center;gap:4px">
+              <span style="font-size:10px;font-weight:600;color:var(--text2)">DE</span>
+              <input type="date" id="lote-data-de" style="font-size:13px;font-weight:700;padding:6px 8px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text)"/>
+            </div>
+            <div style="display:flex;align-items:center;gap:4px">
+              <span style="font-size:10px;font-weight:600;color:var(--text2)">ATÉ</span>
+              <input type="date" id="lote-data-ate" style="font-size:13px;font-weight:700;padding:6px 8px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text)"/>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px;align-items:flex-end">

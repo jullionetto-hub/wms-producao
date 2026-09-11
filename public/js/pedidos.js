@@ -1922,6 +1922,12 @@ async function abrirModalFormarLote() {
   if (qtdEl) qtdEl.value = '';
   _lotesPlano = null;
   _turnoAtivoLote = '';
+  const _hoje = new Date();
+  const _hojeStr = `${_hoje.getFullYear()}-${String(_hoje.getMonth()+1).padStart(2,'0')}-${String(_hoje.getDate()).padStart(2,'0')}`;
+  const _ldDe = document.getElementById('lote-data-de');
+  const _ldAte = document.getElementById('lote-data-ate');
+  if (_ldDe)  _ldDe.value  = _hojeStr;
+  if (_ldAte) _ldAte.value = _hojeStr;
   selecionarCenarioLote('balanceado');
   try {
     const res = await fetch(`${API}/usuarios`, { credentials:'include' });
@@ -1960,10 +1966,12 @@ async function calcularLotes() {
   if (!checks.length) { toast('Selecione pelo menos um separador!', 'aviso'); return; }
   const seps = Array.from(checks).map(c => parseInt(c.value));
   const quantidade = parseInt(document.getElementById('lote-quantidade')?.value) || 0;
+  const dataDe  = document.getElementById('lote-data-de')?.value  || null;
+  const dataAte = document.getElementById('lote-data-ate')?.value || null;
   try {
     const res = await fetch(`${API}/pedidos/lote/formar`, {
       credentials:'include', method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ separadores: seps, turno_filtro: _turnoAtivoLote || null, quantidade: quantidade||null, cenario: _cenarioLote })
+      body: JSON.stringify({ separadores: seps, quantidade: quantidade||null, cenario: _cenarioLote, data_de: dataDe, data_ate: dataAte })
     });
     const data = await res.json();
     if (data.erro) { toast(data.erro, 'erro'); return; }

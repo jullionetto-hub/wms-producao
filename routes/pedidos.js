@@ -1100,18 +1100,20 @@ function _rotaIdxLote(rua) {
 
 // Preview — não grava nada, só calcula os lotes e devolve pra conferência.
 router.post('/pedidos/lote/formar', requerAuth, requerPerfil('supervisor'), async (req,res) => {
-  const { separadores, turno_filtro, quantidade, cenario } = req.body;
+  const { separadores, quantidade, cenario, data_de, data_ate } = req.body;
   const modoLote = cenario || 'balanceado'; // 'balanceado' | 'por_itens' | 'complexidade'
   if (!separadores?.length) return res.status(400).json({erro:'Informe os separadores!'});
   try {
     let w = "p.status='pendente' AND p.separador_id IS NULL AND (p.tem_prime=false OR p.tem_prime IS NULL)";
-    if (turno_filtro) {
-      const _tf = String(turno_filtro);
-      const variantes = [_tf];
-      if (_tf === 'Manha') variantes.push('Manhã');
-      if (_tf === 'Manhã') variantes.push('Manha');
-      const placeholders = variantes.map(v => `'${v.replace(/'/g,"''")}'`).join(',');
-      w += ` AND p.turno_distribuicao IN (${placeholders})`;
+    const wParams = [];
+    // Filtro por data de "aguardando desde" — pedido pendente/não atribuído nunca tem
+    // turno_distribuicao preenchido (só é gravado no momento da distribuição), então
+    // filtrar por turno aqui sempre dava zero resultado. Data é o filtro que faz sentido
+    // pra um pedido ainda não distribuído.
+    if (data_de || data_ate) {
+      const AGUARDANDO_DATA = `(CASE WHEN p.aguardando_desde ~ '^[0-9]{2}/[0-9]{2}/[0-9]{4}' THEN TO_TIMESTAMP(p.aguardando_desde,'DD/MM/YYYY HH24:MI')::DATE END)`;
+      if (data_de)  { wParams.push(data_de);  w += ` AND ${AGUARDANDO_DATA} >= $${wParams.length}::DATE`; }
+      if (data_ate) { wParams.push(data_ate); w += ` AND ${AGUARDANDO_DATA} <= $${wParams.length}::DATE`; }
     }
     const pedidos = await db.all(
       `SELECT p.*,
@@ -1127,7 +1129,8 @@ router.post('/pedidos/lote/formar', requerAuth, requerPerfil('supervisor'), asyn
          CASE WHEN p.aguardando_desde ~ '^[0-9]{2}/[0-9]{2}/[0-9]{4}'
               THEN TO_TIMESTAMP(p.aguardando_desde, 'DD/MM/YYYY HH24:MI')
               ELSE NULL END ASC NULLS LAST,
-         p.id ASC`
+         p.id ASC`,
+      wParams
     );
     const isDrive = p => String(p.transportadora||'').toUpperCase().includes('DRIVE');
     let elegiveis = pedidos.filter(p => !isDrive(p));
