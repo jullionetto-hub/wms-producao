@@ -1139,13 +1139,17 @@ router.post('/pedidos/lote/formar', requerAuth, requerPerfil('supervisor'), asyn
     // aguardando_desde), igual ao campo "Quantidade" do Distribuir.
     if (quantidade > 0) elegiveis = elegiveis.slice(0, quantidade);
 
-    // 1. Forma ondas em ordem de chegada: fecha em 8, ou antes se o pedido
-    //    mais antigo da onda já passou de 20min esperando.
+    // 1. Forma ondas em ordem de chegada: fecha em 8, ou antes (nunca abaixo de 5)
+    //    se o pedido mais antigo da onda já passou de 20min esperando. O piso de 5
+    //    evita que um backlog com pedidos já antigos (comum ao formar lotes de uma
+    //    fila represada) feche onda de 1 em 1 assim que o primeiro pedido entra —
+    //    nesse caso o pedido já nasce "urgente" e a onda fechava antes de agrupar nada.
     const ondas = [];
     let ondaAtual = [];
     for (const p of elegiveis) {
       ondaAtual.push(p);
-      if (ondaAtual.length >= 8 || (ondaAtual[0].espera_min||0) > 20) {
+      const urgente = ondaAtual.length >= 5 && (ondaAtual[0].espera_min||0) > 20;
+      if (ondaAtual.length >= 8 || urgente) {
         ondas.push(ondaAtual);
         ondaAtual = [];
       }
