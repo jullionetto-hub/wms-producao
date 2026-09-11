@@ -2479,7 +2479,7 @@ async function calcularDistribuicao() {
         <td style="font-family:'Space Mono',monospace;color:${corPed};font-size:13px;font-weight:800">${pedidosTotais}${pedidosTotais<65?` <span style="font-size:9px;color:var(--text3);font-weight:400">(falta ${65-pedidosTotais} p/ mín.)</span>`:''}</td>
         <td style="font-weight:800;font-size:14px;color:var(--green)">${item.itens_total||0} itens</td>
         <td><span style="font-family:'Space Mono',monospace;color:${corCarga};font-size:11px;font-weight:700">${ptsTotais} pts</span>${infoPrevia}</td>
-        <td style="font-size:11px;color:var(--text3)">${item.pedidos.join(', ')}</td>
+        <td style="font-size:11px;color:var(--text3);max-width:220px">${item.pedidos.slice(0,12).join(', ')}${item.pedidos.length>12 ? ` <span style="color:var(--text2);font-weight:700">e mais ${item.pedidos.length-12}</span>` : ''}</td>
       </tr>`;
     });
     html += `</tbody></table></div>`;
