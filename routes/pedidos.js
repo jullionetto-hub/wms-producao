@@ -1074,6 +1074,194 @@ router.post('/pedidos/distribuicao/confirmar', requerAuth, requerPerfil('supervi
   } catch(err){res.status(500).json({erro:err.message});}
 });
 
+/* ══════════════════════════════════════════
+   SEPARAÇÃO POR LOTE — formação automática
+   Agrupa pedidos pendentes por proximidade de rua (mesma ROTA_FISICA usada no
+   celular do separador, em public/js/separador.js) e por onda de chegada
+   (fecha em até 8 pedidos, ou antes se o mais antigo da onda passar de
+   20min esperando). Cada lote inteiro é atribuído ao separador mais atrasado
+   na mesma fórmula de 3 eixos (pontuação+itens+qtd. de pedidos) usada em
+   /pedidos/distribuicao. Prime e Drive Thru ficam de fora — continuam sendo
+   distribuídos individual, como hoje.
+══════════════════════════════════════════ */
+const ROTA_FISICA_LOTE = ['E','D','C','B','A','Q','P','O','N','M','L','K','J','I','H','ARARA','G','F','ZA','R','S','T','U','V','W','X','Y','Z'];
+function _ruaPrincipalLote(endereco) {
+  const end = String(endereco||'').split(',')[0].trim().toUpperCase();
+  const semVert = end.includes('/') ? end.split('/')[0].trim() : end;
+  if (semVert.startsWith('ZA')) return 'ZA';
+  if (semVert.includes('ARARA')) return 'ARARA';
+  const m = semVert.match(/^([A-Z]+)/);
+  return m ? m[1] : '';
+}
+function _rotaIdxLote(rua) {
+  const i = ROTA_FISICA_LOTE.indexOf(rua);
+  return i === -1 ? 999 : i;
+}
+
+// Preview — não grava nada, só calcula os lotes e devolve pra conferência.
+router.post('/pedidos/lote/formar', requerAuth, requerPerfil('supervisor'), async (req,res) => {
+  const { separadores, turno_filtro } = req.body;
+  if (!separadores?.length) return res.status(400).json({erro:'Informe os separadores!'});
+  try {
+    let w = "p.status='pendente' AND p.separador_id IS NULL AND (p.tem_prime=false OR p.tem_prime IS NULL)";
+    if (turno_filtro) {
+      const _tf = String(turno_filtro);
+      const variantes = [_tf];
+      if (_tf === 'Manha') variantes.push('Manhã');
+      if (_tf === 'Manhã') variantes.push('Manha');
+      const placeholders = variantes.map(v => `'${v.replace(/'/g,"''")}'`).join(',');
+      w += ` AND p.turno_distribuicao IN (${placeholders})`;
+    }
+    const pedidos = await db.all(
+      `SELECT p.*,
+         EXTRACT(EPOCH FROM (
+           (NOW() AT TIME ZONE 'America/Sao_Paulo') -
+           CASE WHEN p.aguardando_desde ~ '^[0-9]{2}/[0-9]{2}/[0-9]{4}'
+                THEN TO_TIMESTAMP(p.aguardando_desde, 'DD/MM/YYYY HH24:MI')
+                ELSE (NOW() AT TIME ZONE 'America/Sao_Paulo')
+           END
+         ))/60 AS espera_min
+       FROM pedidos p WHERE ${w}
+       ORDER BY
+         CASE WHEN p.aguardando_desde ~ '^[0-9]{2}/[0-9]{2}/[0-9]{4}'
+              THEN TO_TIMESTAMP(p.aguardando_desde, 'DD/MM/YYYY HH24:MI')
+              ELSE NULL END ASC NULLS LAST,
+         p.id ASC`
+    );
+    const isDrive = p => String(p.transportadora||'').toUpperCase().includes('DRIVE');
+    const elegiveis = pedidos.filter(p => !isDrive(p));
+
+    // 1. Forma ondas em ordem de chegada: fecha em 8, ou antes se o pedido
+    //    mais antigo da onda já passou de 20min esperando.
+    const ondas = [];
+    let ondaAtual = [];
+    for (const p of elegiveis) {
+      ondaAtual.push(p);
+      if (ondaAtual.length >= 8 || (ondaAtual[0].espera_min||0) > 20) {
+        ondas.push(ondaAtual);
+        ondaAtual = [];
+      }
+    }
+    if (ondaAtual.length) ondas.push(ondaAtual);
+
+    // 2. Dentro de cada onda, ordena por rua predominante (proximidade) e
+    //    corta em lotes de até 8 — resto pequeno (<5) absorve no grupo
+    //    anterior se couber, em vez de virar um lote isolado de 1-2 pedidos.
+    const lotesPreview = [];
+    for (const onda of ondas) {
+      for (const p of onda) {
+        const itens = await db.all('SELECT endereco,quantidade,codigo FROM itens_pedido WHERE pedido_id=$1', [p.id]);
+        const ruas = itens.map(i => _ruaPrincipalLote(i.endereco)).filter(Boolean);
+        p._ruaPrincipal = [...ruas].sort((a,b) => _rotaIdxLote(a) - _rotaIdxLote(b))[0] || '';
+        p._ruasSet = [...new Set(ruas)];
+        p._pontuacao = calcularPontuacaoPedido(itens);
+        p._itensQtd = itens.reduce((s,i) => s + (parseInt(i.quantidade)||1), 0);
+      }
+      onda.sort((a,b) => _rotaIdxLote(a._ruaPrincipal) - _rotaIdxLote(b._ruaPrincipal));
+      let i = 0;
+      while (i < onda.length) {
+        let tamanho = Math.min(8, onda.length - i);
+        const resto = onda.length - i - tamanho;
+        if (resto > 0 && resto < 5 && tamanho + resto <= 8) tamanho += resto;
+        lotesPreview.push({ pedidos: onda.slice(i, i+tamanho) });
+        i += tamanho;
+      }
+    }
+
+    // 3. Atribui cada lote ao separador mais atrasado na fórmula de 3 eixos
+    //    (mesma lógica de /pedidos/distribuicao, aplicada ao lote inteiro).
+    const sepMap = {};
+    for (const sid of separadores) {
+      const sepRow = await db.get('SELECT s.id,s.nome FROM separadores s WHERE s.usuario_id=$1 LIMIT 1', [sid]);
+      const userRow = await db.get('SELECT id,nome FROM usuarios WHERE id=$1', [sid]);
+      sepMap[sid] = { sepDbId: sepRow?.id || null, nome: sepRow?.nome || userRow?.nome || `Sep ${sid}` };
+    }
+    const filas = separadores.map(sid => ({
+      separador_id: sid, separador_nome: sepMap[sid].nome, sep_db_id: sepMap[sid].sepDbId,
+      pontuacao_total: 0, itens_total: 0, pedidos_total: 0,
+    }));
+    for (const f of filas) {
+      if (!f.sep_db_id) continue;
+      const ja = await db.get(
+        `SELECT COALESCE(SUM(COALESCE(p.pontuacao,0)),0) AS pts, COALESCE(SUM(COALESCE(p.itens,0)),0) AS itens, COUNT(*) AS qtd
+         FROM pedidos p WHERE p.separador_id=$1 AND p.status IN ('pendente','separando')`, [f.sep_db_id]);
+      if (ja) { f.pontuacao_total = parseFloat(ja.pts)||0; f.itens_total = parseInt(ja.itens)||0; f.pedidos_total = parseInt(ja.qtd)||0; }
+    }
+    const totalPtsLotes    = lotesPreview.reduce((s,l) => s + l.pedidos.reduce((s2,p) => s2+p._pontuacao, 0), 0) || 1;
+    const totalItensLotes  = lotesPreview.reduce((s,l) => s + l.pedidos.reduce((s2,p) => s2+p._itensQtd, 0), 0) || 1;
+    const totalPedidosLotes= lotesPreview.reduce((s,l) => s + l.pedidos.length, 0) || 1;
+    const n = filas.length || 1;
+    const alvoPts     = (filas.reduce((s,f)=>s+f.pontuacao_total,0) + totalPtsLotes)     / n;
+    const alvoItens   = (filas.reduce((s,f)=>s+f.itens_total,0)     + totalItensLotes)   / n;
+    const alvoPedidos = (filas.reduce((s,f)=>s+f.pedidos_total,0)   + totalPedidosLotes) / n;
+
+    for (const lote of lotesPreview) {
+      const lotePts   = lote.pedidos.reduce((s,p) => s+p._pontuacao, 0);
+      const loteItens = lote.pedidos.reduce((s,p) => s+p._itensQtd, 0);
+      filas.sort((a,b) => {
+        const sA = (a.pontuacao_total/alvoPts) + (a.itens_total/alvoItens) + (a.pedidos_total/alvoPedidos);
+        const sB = (b.pontuacao_total/alvoPts) + (b.itens_total/alvoItens) + (b.pedidos_total/alvoPedidos);
+        return sA - sB;
+      });
+      const alvoFila = filas[0];
+      alvoFila.pontuacao_total += lotePts;
+      alvoFila.itens_total     += loteItens;
+      alvoFila.pedidos_total   += lote.pedidos.length;
+      lote.separador_id   = alvoFila.separador_id;
+      lote.separador_nome = alvoFila.separador_nome;
+      lote.pontuacao_total = Math.round(lotePts);
+      lote.itens_total     = loteItens;
+      lote.pedidos_hoje_total = alvoFila.pedidos_total;
+      lote.ruas = [...new Set(lote.pedidos.flatMap(p => p._ruasSet))].sort((a,b) => _rotaIdxLote(a)-_rotaIdxLote(b));
+    }
+
+    res.json({
+      lotes: lotesPreview.map(l => ({
+        pedidos: l.pedidos.map(p => ({ id:p.id, numero_pedido:p.numero_pedido, itens:p._itensQtd, espera_min: Math.round(p.espera_min||0) })),
+        ruas: l.ruas,
+        separador_id: l.separador_id,
+        separador_nome: l.separador_nome,
+        pontuacao_total: l.pontuacao_total,
+        itens_total: l.itens_total,
+        pedidos_hoje_total: l.pedidos_hoje_total,
+      })),
+      total_pedidos: elegiveis.length,
+      drive_thru_excluidos: pedidos.length - elegiveis.length,
+    });
+  } catch(err) { res.status(500).json({erro:err.message}); }
+});
+
+// Confirma — grava lotes_separacao + separador_id/lote_id nos pedidos.
+router.post('/pedidos/lote/formar/confirmar', requerAuth, requerPerfil('supervisor'), async (req,res) => {
+  const { lotes } = req.body;
+  if (!lotes?.length) return res.status(400).json({erro:'Nenhum lote informado!'});
+  const client = await pool.connect();
+  let lotesGravados = 0, pedidosGravados = 0;
+  try {
+    await client.query('BEGIN');
+    for (const lote of lotes) {
+      const ids = (lote.pedidos||[]).map(p => p.id).filter(Boolean);
+      if (!ids.length) continue;
+      const porUsuario = await client.query('SELECT id FROM separadores WHERE usuario_id=$1 LIMIT 1', [lote.separador_id]);
+      const dbId = porUsuario.rows[0]?.id || null;
+      if (!dbId) continue;
+      const rLote = await client.query(`INSERT INTO lotes_separacao (separador_id, status) VALUES ($1,'aguardando') RETURNING id`, [dbId]);
+      const loteId = rLote.rows[0].id;
+      const r = await client.query(
+        `UPDATE pedidos SET separador_id=$1, lote_id=$2 WHERE id=ANY($3) AND status='pendente'`,
+        [dbId, loteId, ids]
+      );
+      lotesGravados++;
+      pedidosGravados += r.rowCount;
+    }
+    await client.query('COMMIT');
+    res.json({ mensagem:'Lotes formados!', lotes: lotesGravados, pedidos: pedidosGravados });
+  } catch(err) {
+    await client.query('ROLLBACK');
+    res.status(500).json({erro:err.message});
+  } finally { client.release(); }
+});
+
 router.post('/pedidos/recalcular-pontuacao', requerAuth, requerPerfil('supervisor'), async (req,res) => {
   try {
     const peds=await db.all("SELECT id FROM pedidos WHERE pontuacao=0 OR pontuacao IS NULL");

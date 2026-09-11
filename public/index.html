@@ -337,6 +337,7 @@
               <button class="btn btn-outline btn-sm" onclick="carregarPedidos()">Atualizar</button>
               <button class="btn btn-primary btn-sm" onclick="abrirModalImportar()">Importar</button>
               <button class="btn btn-primary btn-sm" onclick="abrirModalDistribuicao()">Distribuir</button>
+              <button class="btn btn-outline btn-sm" onclick="abrirModalFormarLote()">📦 Formar Lotes</button>
               <button class="btn btn-outline btn-sm" onclick="imprimirEtiquetas()">Imprimir etiquetas</button>
               <button class="excel-btn" onclick="exportarExcel('pedidos')">Excel</button>
               <div style="position:relative">
@@ -2385,8 +2386,8 @@
 
 
 <script src="/js/config.js?v=11"></script>
-  <script src="/js/pedidos.js?v=32"></script>
-  <script src="/js/separador.js?v=17"></script>
+  <script src="/js/pedidos.js?v=33"></script>
+  <script src="/js/separador.js?v=18"></script>
   <script src="/js/repositor.js?v=18"></script>
   <script src="/js/checkout.js?v=14"></script>
   <script src="/js/dashboard.js?v=26"></script>
@@ -2642,6 +2643,46 @@
   </div>
 </div>
 
+<!-- ── Formar Lotes — separação por lote (teste) ── -->
+<div id="modal-formar-lote" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9998;align-items:center;justify-content:center;padding:16px">
+  <div style="background:var(--surface);border-radius:var(--r);box-shadow:var(--sh-lg);width:100%;max-width:700px;max-height:90vh;overflow-y:auto">
+    <div style="background:var(--surface2);padding:14px 18px;border-bottom:1px solid var(--border);border-radius:var(--r) var(--r) 0 0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+      <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">Formar Lotes (teste)</div>
+      <button onclick="fecharModalFormarLote()" style="background:transparent;border:none;font-size:22px;cursor:pointer;color:var(--text3);padding:0 4px">✕</button>
+    </div>
+    <div style="padding:18px">
+      <div style="background:rgba(79,70,229,.06);border:1px solid rgba(79,70,229,.2);border-radius:var(--r-sm);padding:12px 16px;margin-bottom:16px;font-size:12px;color:var(--text2);line-height:1.6">
+        Agrupa pedidos pendentes (sem Prime, sem Drive Thru — esses continuam indo individual) por
+        <b style="color:var(--text)">proximidade de rua</b> em lotes de 5-8, fechando um lote antes se algum pedido já
+        estiver esperando mais de <b style="color:var(--text)">20min</b>. Cada lote inteiro vai pro separador mais
+        atrasado na mesma fórmula de pontuação + itens + quantidade de pedidos usada em Distribuir.
+      </div>
+
+      <div style="margin-bottom:14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div style="font-size:10px;font-weight:700;color:var(--accent);letter-spacing:1px">COLABORADORES ATIVOS</div>
+          <div style="display:flex;gap:4px">
+            <button onclick="filtrarTurnoLote('')"      id="lote-turno-todos"  class="btn-turno-dist ativo">Todos</button>
+            <button onclick="filtrarTurnoLote('Manha')" id="lote-turno-manha"  class="btn-turno-dist">Manhã</button>
+            <button onclick="filtrarTurnoLote('Tarde')" id="lote-turno-tarde"  class="btn-turno-dist">Tarde</button>
+            <button onclick="filtrarTurnoLote('Noite')" id="lote-turno-noite"  class="btn-turno-dist">Noite</button>
+          </div>
+        </div>
+        <div id="lote-separadores-lista" style="display:flex;flex-wrap:wrap;gap:8px">
+          <div style="color:var(--text3);font-size:12px">Carregando...</div>
+        </div>
+      </div>
+
+      <div id="lote-resultado" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px;margin-bottom:14px"></div>
+
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn btn-outline" onclick="fecharModalFormarLote()">Cancelar</button>
+        <button class="btn btn-primary" onclick="calcularLotes()" id="btn-calcular-lote">Calcular Lotes</button>
+        <button class="btn btn-success" onclick="confirmarLotes()" id="btn-confirmar-lote" style="display:none">Confirmar Lotes</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <div id="modal-editar-usuario" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;align-items:center;justify-content:center;padding:16px">
   <div style="background:var(--surface);border-radius:var(--r);width:100%;max-width:500px;max-height:90vh;overflow-y:auto">

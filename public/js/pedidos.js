@@ -1891,6 +1891,104 @@ function fecharModalDistribuicao() {
   _turnoAtivoDistribuicao = '';
 }
 
+/* ══ FORMAR LOTES (separação por lote — teste) ══════════════════════════ */
+let _todosSepsLote = [];
+let _turnoAtivoLote = '';
+let _lotesPlano = null;
+
+async function abrirModalFormarLote() {
+  document.getElementById('modal-formar-lote').style.display = 'flex';
+  document.getElementById('lote-resultado').style.display = 'none';
+  document.getElementById('btn-confirmar-lote').style.display = 'none';
+  document.getElementById('btn-calcular-lote').style.display = 'inline-flex';
+  _lotesPlano = null;
+  _turnoAtivoLote = '';
+  try {
+    const res = await fetch(`${API}/usuarios`, { credentials:'include' });
+    const users = await res.json();
+    _todosSepsLote = users.filter(u => u.status === 'ativo');
+    filtrarTurnoLote('');
+  } catch(e) { console.warn(e); }
+}
+
+function fecharModalFormarLote() {
+  document.getElementById('modal-formar-lote').style.display = 'none';
+  _lotesPlano = null;
+}
+
+function filtrarTurnoLote(turno) {
+  _turnoAtivoLote = turno;
+  const el = document.getElementById('lote-separadores-lista');
+  if (!el) return;
+  ['todos','manha','tarde','noite'].forEach(t => {
+    const btn = document.getElementById('lote-turno-' + t);
+    if (!btn) return;
+    btn.classList.toggle('ativo', (turno === '' && t === 'todos') || turno.toLowerCase() === t);
+  });
+  const seps = turno ? _todosSepsLote.filter(s => {
+    const t = (s.turno || '').toLowerCase().replace('ã','a').replace('â','a');
+    return t.startsWith(turno.toLowerCase().replace('ã','a').replace('â','a').substring(0,4));
+  }) : _todosSepsLote;
+  if (!seps.length) { el.innerHTML = '<div style="color:var(--text3);font-size:12px">Nenhum colaborador neste turno</div>'; return; }
+  el.innerHTML = seps.map(s =>
+    `<label style="display:flex;align-items:center;gap:6px;padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface2);cursor:pointer;font-size:12px;font-weight:600"><input type="checkbox" class="lote-sep-check" value="${s.id}" data-nome="${s.nome}" checked style="accent-color:var(--accent)"> ${s.nome}</label>`
+  ).join('');
+}
+
+async function calcularLotes() {
+  const checks = document.querySelectorAll('.lote-sep-check:checked');
+  if (!checks.length) { toast('Selecione pelo menos um separador!', 'aviso'); return; }
+  const seps = Array.from(checks).map(c => parseInt(c.value));
+  try {
+    const res = await fetch(`${API}/pedidos/lote/formar`, {
+      credentials:'include', method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ separadores: seps, turno_filtro: _turnoAtivoLote || null })
+    });
+    const data = await res.json();
+    if (data.erro) { toast(data.erro, 'erro'); return; }
+    _lotesPlano = data.lotes;
+    const resEl = document.getElementById('lote-resultado');
+    resEl.style.display = 'block';
+    if (!data.lotes.length) {
+      resEl.innerHTML = `<div style="text-align:center;color:var(--text3);font-size:12px;padding:12px">Nenhum lote formado — sem pedidos elegíveis (${data.drive_thru_excluidos||0} Drive Thru ignorado(s)).</div>`;
+      document.getElementById('btn-confirmar-lote').style.display = 'none';
+      return;
+    }
+    const totalPedidos = data.lotes.reduce((s,l) => s+l.pedidos.length, 0);
+    resEl.innerHTML = `
+      <div style="font-size:11px;font-weight:700;color:var(--accent);letter-spacing:1px;margin-bottom:10px">
+        PRÉVIA — ${data.lotes.length} lote(s), ${totalPedidos} de ${data.total_pedidos} pedido(s) elegíveis
+        ${data.drive_thru_excluidos ? ` · ${data.drive_thru_excluidos} Drive Thru fora (individual)` : ''}
+      </div>
+      <div class="tabela-wrap"><table><thead><tr><th>SEPARADOR</th><th>PEDIDOS NO LOTE</th><th>RUAS</th><th>ITENS</th><th>PONTUAÇÃO</th><th>PEDIDOS HOJE (TOTAL)</th></tr></thead><tbody>
+        ${data.lotes.map(l => `<tr>
+          <td style="font-weight:700;color:var(--text)">${l.separador_nome}</td>
+          <td style="color:var(--green);font-weight:700">${l.pedidos.length} <span style="font-size:10px;color:var(--text3);font-weight:400">(${l.pedidos.map(p=>'#'+p.numero_pedido).join(', ')})</span></td>
+          <td style="font-family:'Space Mono',monospace;font-size:11px;color:var(--indigo)">${l.ruas.join(' → ')}</td>
+          <td style="font-weight:600">${l.itens_total}</td>
+          <td><span style="font-family:'Space Mono',monospace;color:var(--indigo);font-weight:700">${l.pontuacao_total}</span></td>
+          <td style="font-family:'Space Mono',monospace;font-weight:800">${l.pedidos_hoje_total}</td>
+        </tr>`).join('')}
+      </tbody></table></div>`;
+    document.getElementById('btn-confirmar-lote').style.display = 'inline-flex';
+  } catch(e) { toast('Erro ao calcular lotes', 'erro'); }
+}
+
+async function confirmarLotes() {
+  if (!_lotesPlano?.length) return;
+  try {
+    const res = await fetch(`${API}/pedidos/lote/formar/confirmar`, {
+      credentials:'include', method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ lotes: _lotesPlano })
+    });
+    const data = await res.json();
+    if (data.erro) { toast(data.erro, 'erro'); return; }
+    toast(`${data.lotes} lote(s) formado(s), ${data.pedidos} pedido(s) atribuído(s)!`, 'sucesso');
+    fecharModalFormarLote();
+    if (typeof carregarPedidos === 'function') carregarPedidos();
+  } catch(e) { toast('Erro ao confirmar lotes', 'erro'); }
+}
+
 /* ══ DISTRIBUIÇÃO MANUAL / POR TURNO ══════════════════════════════════ */
 let _distModoAtual = 'auto';
 

@@ -53,6 +53,17 @@ const TABLES = [
     data_criacao               TIMESTAMP DEFAULT NOW()
   )`,
 
+  // Separação por lote (formação automática) — agrupa vários pedidos formados
+  // por proximidade de rua num pacote só, atribuído a um separador. A tabela
+  // só guarda quem "dono" do lote; os pedidos em si apontam de volta via
+  // pedidos.lote_id (ver migrate.js).
+  `CREATE TABLE IF NOT EXISTS lotes_separacao (
+    id            SERIAL PRIMARY KEY,
+    separador_id  INTEGER,
+    status        TEXT DEFAULT 'aguardando',
+    criado_em     TIMESTAMPTZ DEFAULT NOW()
+  )`,
+
   `CREATE TABLE IF NOT EXISTS itens_pedido (
     id              SERIAL PRIMARY KEY,
     pedido_id       INTEGER NOT NULL REFERENCES pedidos(id),

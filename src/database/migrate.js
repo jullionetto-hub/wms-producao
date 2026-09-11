@@ -102,6 +102,9 @@ const ALTERATIONS = [
   // Banco de horas = "Saldo Final" lido direto do resumo do PDF (já soma o
   // acumulado de períodos anteriores, não dá pra recalcular por conta própria).
   "ALTER TABLE abs_colaboradores ADD COLUMN IF NOT EXISTS saldo_final_min INTEGER",
+  // Separação por lote (formação automática) — aponta o pedido de volta pro
+  // lotes_separacao que o agrupou, se houver.
+  "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS lote_id INTEGER DEFAULT NULL",
 ];
 
 async function runSchema() {

@@ -12,6 +12,7 @@ const CAIXA_OBRIGATORIA = false; // mudar para true para reativar vínculo de ca
 let _loteAtual         = [];   // [{id, numero_pedido, total_itens}, ...]
 let _loteItens         = [];   // itens mesclados com caixa_num
 let _lotePendentes     = [];   // pedidos elegíveis para o lote (usado pelo card)
+let _gruposLoteSistema = {};   // lote_id -> pedidos, formados pelo supervisor (Formar Lotes)
 
 const _CX_CORES = ['#4F46E5','#7c3aed','#b45309','#065a82','#155e3a'];
 
@@ -21,6 +22,26 @@ function _loteScreens(ativa) {
     if (!el) return;
     el.style.display = id === ativa ? (id === 'm-cl-wrap' ? '' : 'block') : 'none';
   });
+}
+
+// Abre um lote já formado pelo supervisor (Formar Lotes) — os pedidos já
+// vieram agrupados e atribuídos, então pula a tela de escolher caixa e vai
+// direto pra lista mesclada (caixa_num é numerado automaticamente pelo
+// backend, na ordem dos ids enviados).
+async function abrirLoteSistema(loteId) {
+  const peds = _gruposLoteSistema[loteId];
+  if (!peds?.length) { toast('Lote não encontrado — atualize a fila', 'erro'); return; }
+  const ids = peds.map(p => p.id);
+  try {
+    const res = await fetch(`${API}/pedidos/lote/iniciar`, {
+      method:'POST', credentials:'include', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ pedido_ids: ids })
+    });
+    const data = await res.json();
+    if (!res.ok) { toast(data.erro||'Erro ao iniciar lote', 'erro'); return; }
+    mudarTabSep('separar');
+    await carregarListaLote(ids);
+  } catch(e) { toast('Erro de rede', 'erro'); }
 }
 
 function abrirPreparacaoLote(pedidos) {
@@ -468,7 +489,35 @@ async function carregarFilaMobile() {
         </div>`
       : '';
 
-    lista.innerHTML = loteCard + ordenadosMob.map(p => {
+    // Lote formado automaticamente pelo supervisor (Formar Lotes) — agrupa
+    // pelos pedidos da própria fila que compartilham lote_id e ainda não
+    // começaram. Diferente do card acima (self-service, desligado): aqui o
+    // agrupamento já veio pronto do servidor (proximidade + justiça), então
+    // só precisa detectar e abrir — sem tela de escolher caixa.
+    _gruposLoteSistema = {};
+    ordenadosMob.forEach(p => {
+      if (p.lote_id && p.status === 'pendente') {
+        (_gruposLoteSistema[p.lote_id] = _gruposLoteSistema[p.lote_id] || []).push(p);
+      }
+    });
+    const loteSistemaCard = Object.entries(_gruposLoteSistema).map(([loteId, peds]) => `
+      <div onclick="abrirLoteSistema(${loteId})"
+           style="border:2px solid #7c3aed;border-radius:12px;padding:14px;margin-bottom:12px;background:linear-gradient(135deg,#faf5ff,#ede9fe);cursor:pointer">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <div style="width:38px;height:38px;border-radius:10px;background:#7c3aed;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">📦</div>
+          <div>
+            <div style="font-size:14px;font-weight:700;color:#4c1d95">Lote pronto — #${loteId}</div>
+            <div style="font-size:11px;color:#6d28d9">${peds.length} pedidos · toque pra começar</div>
+          </div>
+          <span style="margin-left:auto;font-size:18px;color:#7c3aed">›</span>
+        </div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap">
+          ${peds.slice(0,6).map((p,i)=>`<span style="background:${_CX_CORES[i%_CX_CORES.length]}22;border:1px solid ${_CX_CORES[i%_CX_CORES.length]}44;color:${_CX_CORES[i%_CX_CORES.length]};border-radius:8px;padding:2px 8px;font-size:11px">#${p.numero_pedido}</span>`).join('')}
+          ${peds.length>6?`<span style="font-size:11px;color:#6d28d9;padding:2px 4px">+${peds.length-6}</span>`:''}
+        </div>
+      </div>`).join('');
+
+    lista.innerHTML = loteSistemaCard + loteCard + ordenadosMob.filter(p => !p.lote_id || p.status !== 'pendente').map(p => {
       const transp   = String(p.transportadora||'').toUpperCase();
       const isDrive  = transp.includes('DRIVE');
       const isPrime  = p.tem_prime === true;
