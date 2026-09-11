@@ -2386,7 +2386,7 @@
 
 
 <script src="/js/config.js?v=11"></script>
-  <script src="/js/pedidos.js?v=33"></script>
+  <script src="/js/pedidos.js?v=34"></script>
   <script src="/js/separador.js?v=18"></script>
   <script src="/js/repositor.js?v=18"></script>
   <script src="/js/checkout.js?v=14"></script>
@@ -2656,6 +2656,32 @@
         <b style="color:var(--text)">proximidade de rua</b> em lotes de 5-8, fechando um lote antes se algum pedido já
         estiver esperando mais de <b style="color:var(--text)">20min</b>. Cada lote inteiro vai pro separador mais
         atrasado na mesma fórmula de pontuação + itens + quantidade de pedidos usada em Distribuir.
+      </div>
+
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px;align-items:flex-end">
+        <div class="fg">
+          <label>QUANTIDADE DE PEDIDOS A FORMAR EM LOTE</label>
+          <input type="number" id="lote-quantidade" placeholder="Todos elegíveis" min="1" style="min-width:180px;font-size:15px;font-weight:700"/>
+        </div>
+      </div>
+
+      <!-- Cenário -->
+      <div style="margin-bottom:14px;padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px">
+        <div style="font-size:10px;font-weight:700;color:var(--accent);letter-spacing:1px;margin-bottom:10px">CENÁRIO (mesmos critérios do Distribuir)</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button id="btn-lcen-balanceado" onclick="selecionarCenarioLote('balanceado')"
+            style="padding:6px 14px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;background:var(--accent);color:#fff;border:none;transition:all .15s">
+            Balanceado
+          </button>
+          <button id="btn-lcen-por_itens" onclick="selecionarCenarioLote('por_itens')"
+            style="padding:6px 14px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;background:transparent;color:var(--text3);border:1px solid var(--border);transition:all .15s">
+            Por Volume
+          </button>
+          <button id="btn-lcen-complexidade" onclick="selecionarCenarioLote('complexidade')"
+            style="padding:6px 14px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;background:transparent;color:var(--text3);border:1px solid var(--border);transition:all .15s">
+            Complexidade Total
+          </button>
+        </div>
       </div>
 
       <div style="margin-bottom:14px">

@@ -1895,14 +1895,34 @@ function fecharModalDistribuicao() {
 let _todosSepsLote = [];
 let _turnoAtivoLote = '';
 let _lotesPlano = null;
+let _cenarioLote = 'balanceado';
+
+function selecionarCenarioLote(c) {
+  _cenarioLote = c;
+  ['balanceado','por_itens','complexidade'].forEach(x => {
+    const btn = document.getElementById('btn-lcen-' + x);
+    if (!btn) return;
+    const ativo = x === c;
+    btn.style.background = ativo ? 'var(--accent)' : 'transparent';
+    btn.style.color      = ativo ? '#fff' : 'var(--text3)';
+    btn.style.border     = ativo ? 'none' : '1px solid var(--border)';
+  });
+  document.getElementById('lote-resultado').style.display = 'none';
+  document.getElementById('btn-confirmar-lote').style.display = 'none';
+  document.getElementById('btn-calcular-lote').style.display  = 'inline-flex';
+  _lotesPlano = null;
+}
 
 async function abrirModalFormarLote() {
   document.getElementById('modal-formar-lote').style.display = 'flex';
   document.getElementById('lote-resultado').style.display = 'none';
   document.getElementById('btn-confirmar-lote').style.display = 'none';
   document.getElementById('btn-calcular-lote').style.display = 'inline-flex';
+  const qtdEl = document.getElementById('lote-quantidade');
+  if (qtdEl) qtdEl.value = '';
   _lotesPlano = null;
   _turnoAtivoLote = '';
+  selecionarCenarioLote('balanceado');
   try {
     const res = await fetch(`${API}/usuarios`, { credentials:'include' });
     const users = await res.json();
@@ -1939,10 +1959,11 @@ async function calcularLotes() {
   const checks = document.querySelectorAll('.lote-sep-check:checked');
   if (!checks.length) { toast('Selecione pelo menos um separador!', 'aviso'); return; }
   const seps = Array.from(checks).map(c => parseInt(c.value));
+  const quantidade = parseInt(document.getElementById('lote-quantidade')?.value) || 0;
   try {
     const res = await fetch(`${API}/pedidos/lote/formar`, {
       credentials:'include', method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ separadores: seps, turno_filtro: _turnoAtivoLote || null })
+      body: JSON.stringify({ separadores: seps, turno_filtro: _turnoAtivoLote || null, quantidade: quantidade||null, cenario: _cenarioLote })
     });
     const data = await res.json();
     if (data.erro) { toast(data.erro, 'erro'); return; }
@@ -1955,9 +1976,11 @@ async function calcularLotes() {
       return;
     }
     const totalPedidos = data.lotes.reduce((s,l) => s+l.pedidos.length, 0);
+    const cenarioLabel = { balanceado:'BALANCEADO', por_itens:'POR VOLUME', complexidade:'COMPLEXIDADE TOTAL' };
     resEl.innerHTML = `
       <div style="font-size:11px;font-weight:700;color:var(--accent);letter-spacing:1px;margin-bottom:10px">
-        PRÉVIA — ${data.lotes.length} lote(s), ${totalPedidos} de ${data.total_pedidos} pedido(s) elegíveis
+        PRÉVIA — ${data.lotes.length} lote(s), ${totalPedidos} de ${data.total_disponivel} pedido(s) elegíveis
+        <span style="font-size:9px;font-weight:700;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:2px 7px;color:var(--text2);letter-spacing:.5px;margin-left:4px">${cenarioLabel[data.cenario]||'AUTOMÁTICO'}</span>
         ${data.drive_thru_excluidos ? ` · ${data.drive_thru_excluidos} Drive Thru fora (individual)` : ''}
       </div>
       <div class="tabela-wrap"><table><thead><tr><th>SEPARADOR</th><th>PEDIDOS NO LOTE</th><th>RUAS</th><th>ITENS</th><th>PONTUAÇÃO</th><th>PEDIDOS HOJE (TOTAL)</th></tr></thead><tbody>

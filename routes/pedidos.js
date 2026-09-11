@@ -1100,7 +1100,8 @@ function _rotaIdxLote(rua) {
 
 // Preview — não grava nada, só calcula os lotes e devolve pra conferência.
 router.post('/pedidos/lote/formar', requerAuth, requerPerfil('supervisor'), async (req,res) => {
-  const { separadores, turno_filtro } = req.body;
+  const { separadores, turno_filtro, quantidade, cenario } = req.body;
+  const modoLote = cenario || 'balanceado'; // 'balanceado' | 'por_itens' | 'complexidade'
   if (!separadores?.length) return res.status(400).json({erro:'Informe os separadores!'});
   try {
     let w = "p.status='pendente' AND p.separador_id IS NULL AND (p.tem_prime=false OR p.tem_prime IS NULL)";
@@ -1129,7 +1130,11 @@ router.post('/pedidos/lote/formar', requerAuth, requerPerfil('supervisor'), asyn
          p.id ASC`
     );
     const isDrive = p => String(p.transportadora||'').toUpperCase().includes('DRIVE');
-    const elegiveis = pedidos.filter(p => !isDrive(p));
+    let elegiveis = pedidos.filter(p => !isDrive(p));
+    const totalElegiveis = elegiveis.length;
+    // Quantidade opcional: pega só os N mais antigos (já vêm ordenados por
+    // aguardando_desde), igual ao campo "Quantidade" do Distribuir.
+    if (quantidade > 0) elegiveis = elegiveis.slice(0, quantidade);
 
     // 1. Forma ondas em ordem de chegada: fecha em 8, ou antes se o pedido
     //    mais antigo da onda já passou de 20min esperando.
@@ -1154,8 +1159,20 @@ router.post('/pedidos/lote/formar', requerAuth, requerPerfil('supervisor'), asyn
         const ruas = itens.map(i => _ruaPrincipalLote(i.endereco)).filter(Boolean);
         p._ruaPrincipal = [...ruas].sort((a,b) => _rotaIdxLote(a) - _rotaIdxLote(b))[0] || '';
         p._ruasSet = [...new Set(ruas)];
-        p._pontuacao = calcularPontuacaoPedido(itens);
         p._itensQtd = itens.reduce((s,i) => s + (parseInt(i.quantidade)||1), 0);
+        const scoreBase = calcularPontuacaoPedido(itens);
+        if (modoLote === 'complexidade') {
+          // Mesmo bônus do cenário "Complexidade Total" em /pedidos/distribuicao:
+          // ruas extras (>2) e SKUs distintos extras (>1) pesam mais na pontuação.
+          const ruasUnicas = new Set(ruas).size;
+          const skusUnicos = new Set(itens.map(i => i.codigo).filter(Boolean)).size;
+          const bonusRuas = Math.max(0, ruasUnicas - 2) * 15;
+          const bonusSkus = Math.max(0, skusUnicos - 1) * 3;
+          p._pontuacao = scoreBase + bonusRuas + bonusSkus;
+        } else {
+          p._pontuacao = scoreBase;
+        }
+        await pool.query('UPDATE pedidos SET pontuacao=$1 WHERE id=$2', [scoreBase, p.id]);
       }
       onda.sort((a,b) => _rotaIdxLote(a._ruaPrincipal) - _rotaIdxLote(b._ruaPrincipal));
       let i = 0;
@@ -1198,11 +1215,10 @@ router.post('/pedidos/lote/formar', requerAuth, requerPerfil('supervisor'), asyn
     for (const lote of lotesPreview) {
       const lotePts   = lote.pedidos.reduce((s,p) => s+p._pontuacao, 0);
       const loteItens = lote.pedidos.reduce((s,p) => s+p._itensQtd, 0);
-      filas.sort((a,b) => {
-        const sA = (a.pontuacao_total/alvoPts) + (a.itens_total/alvoItens) + (a.pedidos_total/alvoPedidos);
-        const sB = (b.pontuacao_total/alvoPts) + (b.itens_total/alvoItens) + (b.pedidos_total/alvoPedidos);
-        return sA - sB;
-      });
+      filas.sort((a,b) => modoLote === 'por_itens'
+        ? a.itens_total - b.itens_total
+        : ((a.pontuacao_total/alvoPts) + (a.itens_total/alvoItens) + (a.pedidos_total/alvoPedidos))
+          - ((b.pontuacao_total/alvoPts) + (b.itens_total/alvoItens) + (b.pedidos_total/alvoPedidos)));
       const alvoFila = filas[0];
       alvoFila.pontuacao_total += lotePts;
       alvoFila.itens_total     += loteItens;
@@ -1225,8 +1241,10 @@ router.post('/pedidos/lote/formar', requerAuth, requerPerfil('supervisor'), asyn
         itens_total: l.itens_total,
         pedidos_hoje_total: l.pedidos_hoje_total,
       })),
+      cenario: modoLote,
       total_pedidos: elegiveis.length,
-      drive_thru_excluidos: pedidos.length - elegiveis.length,
+      total_disponivel: totalElegiveis,
+      drive_thru_excluidos: pedidos.length - totalElegiveis,
     });
   } catch(err) { res.status(500).json({erro:err.message}); }
 });
