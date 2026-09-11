@@ -2,7 +2,7 @@
 // 1. Começa em E, desce ramal: E → D → C → B → A
 // 2. Sobe ao corredor principal, varre esquerda até F: Q → P → O → N → M → L → K → J → I → H → Arara → G → F → ZA
 // 3. Varre direita até Z: R → S → T → U → V → W → X → Y → Z
-const ROTA_FISICA = ['E','D','C','B','A','Q','P','O','N','M','L','K','J','I','H','Arara','G','F','ZA','R','S','T','U','V','W','X','Y','Z'];
+const ROTA_FISICA = ['E','D','C','B','A','Q','P','O','N','M','L','K','J','I','H','ARARA','G','F','ZA','R','S','T','U','V','W','X','Y','Z'];
 const _checklistSortDir = 1;
 const CAIXA_OBRIGATORIA = false; // mudar para true para reativar vínculo de caixa
 
@@ -148,7 +148,10 @@ function _renderizarListaLote() {
   }
 
   // 2. Ordenar pela rota física
-  const rotaIdx = e => { const l = e.replace(/\d+.*/,''); const i = ROTA_FISICA.indexOf(l); return i >= 0 ? i*10000 + (parseInt(e.match(/\d+/)?.[0])||0) : 99999; };
+  // Rua não reconhecida (fora da ROTA_FISICA) vai pro fim, não pro meio — 999999
+  // é maior que qualquer índice válido (máx. 27*10000+9999), senão uma rua
+  // desconhecida podia aparecer antes de ruas reais do fim da rota (R a Z).
+  const rotaIdx = e => { const l = e.replace(/\d+.*/,''); const i = ROTA_FISICA.indexOf(l); return i >= 0 ? i*10000 + (parseInt(e.match(/\d+/)?.[0])||0) : 999999; };
   const endsOrdenados = Object.keys(gruposPorEnd).sort((a,b) => rotaIdx(a) - rotaIdx(b));
 
   let html = '';
@@ -192,14 +195,15 @@ function _renderizarListaLote() {
       }
       const cxEntries = Object.entries(porCaixa).sort((a,b) => Number(a[0]) - Number(b[0]));
 
-      // Bolinha colorida + número (mesma cor/número da legenda no topo) em vez de
-      // repetir "Pedido #numero" em cada item — mais rápido de bater o olho e
-      // combinar com a caixa física certa enquanto separa rápido.
+      // Bolinha colorida (mesma cor/número da legenda no topo) + número do pedido
+      // direto no item — só a bolinha obrigava a olhar a legenda lá em cima toda
+      // hora rolando a lista; com o número aqui também não precisa mais disso.
       const cxHtml = cxEntries.map(([cx, qty]) => {
         const cor = _CX_CORES[(Number(cx)-1) % _CX_CORES.length];
+        const numPedido = _loteAtual[Number(cx)-1]?.numero_pedido || cx;
         return `<span style="display:inline-flex;align-items:center;gap:5px">
           <span style="width:18px;height:18px;border-radius:50%;background:${cor};color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0">${cx}</span>
-          <span style="font-size:12px;font-weight:700;color:var(--text2)">${qty} un</span>
+          <span style="font-size:12px;font-weight:700;color:var(--text2)">#${numPedido} · ${qty} un</span>
         </span>`;
       }).join('');
 
