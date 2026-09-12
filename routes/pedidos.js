@@ -1284,7 +1284,10 @@ router.post('/pedidos/lote/formar', requerAuth, requerPerfil('supervisor'), asyn
       lote.pontuacao_total = Math.round(lotePts);
       lote.itens_total     = loteItens;
       lote.pedidos_hoje_total = alvoFila.pedidos_total;
-      lote.ruas = [...new Set(lote.pedidos.flatMap(p => p._ruasSet))].sort((a,b) => _rotaIdxLote(a)-_rotaIdxLote(b));
+      // Ordem alfabética simples (A,B,C,...) — essa coluna é só informativa, pra o
+      // supervisor ver rápido quais zonas o lote toca; a ordem de caminhada real
+      // (ROTA_FISICA) continua sendo usada na tela de separação do celular.
+      lote.ruas = [...new Set(lote.pedidos.flatMap(p => p._ruasSet))].sort((a,b) => a.localeCompare(b, 'pt-BR'));
     }
 
     res.json({
