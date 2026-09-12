@@ -2022,10 +2022,12 @@ async function calcularLotes() {
         </tr>`).join('')}
       </tbody></table></div>`;
     document.getElementById('btn-confirmar-lote').style.display = 'inline-flex';
-    document.getElementById('btn-imprimir-etiquetas-lote').style.display = 'inline-flex';
   } catch(e) { toast('Erro ao calcular lotes', 'erro'); }
 }
 
+// Ordem certa: Calcular → Confirmar → Imprimir. As etiquetas só liberam depois
+// de confirmar — se imprimisse antes, um "Calcular" de novo com outro cenário/
+// quantidade podia trocar os pedidos e deixar etiquetas já impressas erradas.
 async function confirmarLotes() {
   if (!_lotesPlano?.length) return;
   try {
@@ -2036,7 +2038,15 @@ async function confirmarLotes() {
     const data = await res.json();
     if (data.erro) { toast(data.erro, 'erro'); return; }
     toast(`${data.lotes} lote(s) formado(s), ${data.pedidos} pedido(s) atribuído(s)!`, 'sucesso');
-    fecharModalFormarLote();
+    document.getElementById('lote-resultado').innerHTML = `
+      <div style="text-align:center;padding:16px">
+        <div style="font-size:32px;margin-bottom:8px">✅</div>
+        <div style="font-size:14px;font-weight:700;color:var(--green);margin-bottom:6px">${data.lotes} lote(s) confirmado(s) — ${data.pedidos} pedido(s) atribuídos!</div>
+        <div style="font-size:12px;color:var(--text3)">Agora clique em "Imprimir Etiquetas" e cole uma em cada caixa, na ordem 1, 2, 3...</div>
+      </div>`;
+    document.getElementById('btn-calcular-lote').style.display = 'none';
+    document.getElementById('btn-confirmar-lote').style.display = 'none';
+    document.getElementById('btn-imprimir-etiquetas-lote').style.display = 'inline-flex';
     if (typeof carregarPedidos === 'function') carregarPedidos();
   } catch(e) { toast('Erro ao confirmar lotes', 'erro'); }
 }
