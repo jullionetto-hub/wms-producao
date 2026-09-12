@@ -97,6 +97,47 @@ function fecharHistoricoLotes() {
   if (modal) modal.style.display = 'none';
 }
 
+// Mostra todos os itens de UM pedido do lote (não a posição atual) — pra o
+// separador conferir a caixa inteira antes de fechar e mandar pro checkout.
+function verDetalhePedidoLote(cx) {
+  const p = _loteAtual[cx-1];
+  const modal = document.getElementById('m-lote-pedido-detalhe-modal');
+  const body = document.getElementById('m-lote-pedido-detalhe-body');
+  const titulo = document.getElementById('m-lote-pedido-detalhe-titulo');
+  if (!p || !modal || !body) return;
+  const itensDoPedido = _loteItens.filter(i => i.caixa_num === cx);
+  const total = itensDoPedido.length;
+  const feitos = itensDoPedido.filter(i => i.status !== 'pendente').length;
+  const faltas = itensDoPedido.filter(i => i.status === 'falta').length;
+  if (titulo) titulo.textContent = `Pedido #${p.numero_pedido}`;
+
+  const resumoHtml = feitos < total
+    ? `<div style="background:rgba(224,168,62,.12);border:1px solid rgba(224,168,62,.4);border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:12px;color:var(--amber);font-weight:700">⚠ Faltam ${total-feitos} de ${total} itens — ainda não está pronto pro checkout</div>`
+    : faltas > 0
+      ? `<div style="background:rgba(224,168,62,.12);border:1px solid rgba(224,168,62,.4);border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:12px;color:var(--amber);font-weight:700">⏳ ${faltas} item(ns) em falta — aguardando repositor</div>`
+      : `<div style="background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.4);border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:12px;color:#22c55e;font-weight:700">✓ Tudo separado — pode fechar a caixa</div>`;
+
+  body.innerHTML = resumoHtml + itensDoPedido.map(item => {
+    const cor = item.status==='encontrado' ? '#22c55e' : item.status==='falta' ? '#dc2626' : item.status==='parcial' ? '#E0A83E' : 'var(--border)';
+    const bg  = item.status==='encontrado' ? 'rgba(34,197,94,.08)' : item.status==='falta' ? 'rgba(220,38,38,.08)' : item.status==='parcial' ? 'rgba(224,168,62,.08)' : 'var(--surface)';
+    const label = item.status==='encontrado' ? 'COLETADO' : item.status==='falta' ? 'FALTA' : item.status==='parcial' ? 'PARCIAL' : 'PENDENTE';
+    return `<div style="background:${bg};border:1px solid ${cor}66;border-left:3px solid ${cor};border-radius:8px;padding:10px 12px;margin-bottom:8px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:2px">
+        <span style="font-size:13px;font-weight:600;color:var(--text)">${item.descricao||item.codigo||'—'}</span>
+        <span style="font-size:9px;font-weight:800;letter-spacing:.5px;color:${cor};flex-shrink:0">${label}</span>
+      </div>
+      <div style="font-size:11px;color:var(--text3);font-family:monospace">${item.endereco||'—'} · x${item.quantidade||1}</div>
+    </div>`;
+  }).join('');
+
+  modal.style.display = 'block';
+}
+
+function fecharDetalhePedidoLote() {
+  const modal = document.getElementById('m-lote-pedido-detalhe-modal');
+  if (modal) modal.style.display = 'none';
+}
+
 function abrirPreparacaoLote(pedidos) {
   _loteAtual = pedidos;
   _loteScreens('m-lote-prep');
@@ -207,7 +248,9 @@ function _renderizarListaLote() {
   document.getElementById('m-lote-prog-cnt').textContent = `${processados} / ${total} itens`;
   document.getElementById('m-lote-prog-fill').style.width = total ? Math.round(processados/total*100)+'%' : '0%';
 
-  // "Pedidos do lote" — legenda colorida recolhível
+  // "Pedidos do lote" — legenda colorida recolhível; cada chip é clicável e
+  // abre a lista completa dos itens DAQUELE pedido, pra conferir tudo antes
+  // de fechar a caixa e mandar pro checkout.
   document.getElementById('m-lote-chips').innerHTML = _loteAtual.map((p, idx) => {
     const cx = idx + 1;
     const cor = _CX_CORES[idx % _CX_CORES.length];
@@ -215,7 +258,7 @@ function _renderizarListaLote() {
     const totalP  = itensDoPedido.length;
     const feitosP = itensDoPedido.filter(i => i.status !== 'pendente').length;
     const completoP = totalP > 0 && feitosP === totalP;
-    return `<span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;padding:3px 10px 3px 3px;border-radius:20px;white-space:nowrap;
+    return `<span onclick="verDetalhePedidoLote(${cx})" style="display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;padding:3px 10px 3px 3px;border-radius:20px;white-space:nowrap;cursor:pointer;
         background:${completoP ? 'rgba(34,197,94,.15)' : 'var(--surface2)'};
         border:1px solid ${completoP ? 'rgba(34,197,94,.4)' : cor+'66'}">
         <span style="width:20px;height:20px;border-radius:50%;background:${cor};color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0">${completoP ? '✓' : cx}</span>

@@ -2326,6 +2326,19 @@
       </div>
     </div>
 
+    <!-- Detalhe de um pedido do lote — todos os itens daquele pedido, pra
+         conferir a caixa inteira antes de mandar pro checkout. Mesmo motivo
+         do modal acima pra ficar fora das abas. -->
+    <div id="m-lote-pedido-detalhe-modal" style="display:none;position:fixed;inset:0;background:#0f0f1e;z-index:99999;overflow-y:auto">
+      <div style="padding:14px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+          <button onclick="fecharDetalhePedidoLote()" style="color:#f97316;font-size:16px;background:none;border:none;cursor:pointer;padding:0 4px">&#8592;</button>
+          <span id="m-lote-pedido-detalhe-titulo" style="color:#fff;font-size:15px;font-weight:600;flex:1">Pedido</span>
+        </div>
+        <div id="m-lote-pedido-detalhe-body"></div>
+      </div>
+    </div>
+
 
 
 
@@ -2405,7 +2418,7 @@
 
 <script src="/js/config.js?v=11"></script>
   <script src="/js/pedidos.js?v=38"></script>
-  <script src="/js/separador.js?v=25"></script>
+  <script src="/js/separador.js?v=26"></script>
   <script src="/js/repositor.js?v=18"></script>
   <script src="/js/checkout.js?v=14"></script>
   <script src="/js/dashboard.js?v=26"></script>
