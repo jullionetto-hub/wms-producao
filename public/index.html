@@ -2234,17 +2234,6 @@
             </div>
           </div>
 
-          <!-- Histórico de lotes concluídos -->
-          <div id="m-lote-historico-modal" style="display:none;position:fixed;inset:0;background:#0f0f1e;z-index:99999;overflow-y:auto">
-            <div style="padding:14px">
-              <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
-                <button onclick="fecharHistoricoLotes()" style="color:#f97316;font-size:16px;background:none;border:none;cursor:pointer;padding:0 4px">&#8592;</button>
-                <span style="color:#fff;font-size:15px;font-weight:600;flex:1">Lotes concluídos</span>
-              </div>
-              <div id="m-lote-historico-body"></div>
-            </div>
-          </div>
-
           <!-- Checklist mobile -->
           <div class="cl-wrap" id="m-cl-wrap">
             <div class="cl-header"><span id="m-cl-titulo">PEDIDO</span><span id="m-cl-contador" style="color:var(--accent);font-weight:700;font-size:12px">0/0</span></div>
@@ -2266,9 +2255,9 @@
       <!-- ABA 2 — FILA -->
       <div class="sep-tab-page ativa" id="sep-tab-fila">
         <div class="sep-scroll">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-            <div style="font-family:'Space Mono',monospace;font-size:15px;font-weight:700;color:var(--text)">Fila de Separação</div>
-            <div style="display:flex;gap:8px;align-items:center">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px">
+            <div style="font-family:'Space Mono',monospace;font-size:15px;font-weight:700;color:var(--text);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Fila de Separação</div>
+            <div style="display:flex;gap:8px;align-items:center;flex-shrink:0">
               <span id="badge-fila-m" style="font-size:11px;color:var(--text3);font-weight:600"></span>
               <button style="padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;font-size:13px;cursor:pointer" onclick="abrirHistoricoLotes()" title="Lotes concluídos">📋</button>
               <button style="padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;font-size:13px;cursor:pointer" onclick="carregarFilaMobile()">↺</button>
@@ -2323,6 +2312,19 @@
 
 
     </div><!-- /sep-mobile-root -->
+
+    <!-- Histórico de lotes concluídos — fora das abas (sep-tab-page ficam display:none
+         quando não ativas, o que escondia esse overlay mesmo com display:block nele
+         mesmo) pra abrir de qualquer aba, principalmente da Fila. -->
+    <div id="m-lote-historico-modal" style="display:none;position:fixed;inset:0;background:#0f0f1e;z-index:99999;overflow-y:auto">
+      <div style="padding:14px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+          <button onclick="fecharHistoricoLotes()" style="color:#f97316;font-size:16px;background:none;border:none;cursor:pointer;padding:0 4px">&#8592;</button>
+          <span style="color:#fff;font-size:15px;font-weight:600;flex:1">Lotes concluídos</span>
+        </div>
+        <div id="m-lote-historico-body"></div>
+      </div>
+    </div>
 
 
 
