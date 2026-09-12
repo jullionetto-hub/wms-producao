@@ -1908,6 +1908,14 @@ function fecharModalDistribuicao() {
   _turnoAtivoDistribuicao = '';
 }
 
+// Atalho "📦 Lotes" dentro do modal Distribuir — Formar Lotes é outra forma de
+// distribuir pedidos (por proximidade, em vez de individual), então fica
+// acessível a partir do mesmo ponto de entrada em vez de um botão solto na tela.
+function abrirFormarLotesDoDistribuir() {
+  fecharModalDistribuicao();
+  abrirModalFormarLote();
+}
+
 /* ══ FORMAR LOTES (separação por lote — teste) ══════════════════════════ */
 let _todosSepsLote = [];
 let _turnoAtivoLote = '';
