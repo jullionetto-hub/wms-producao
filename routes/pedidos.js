@@ -1204,7 +1204,8 @@ router.post('/pedidos/lote/formar', requerAuth, requerPerfil('supervisor'), asyn
         p._ruaPrincipal = [...ruas].sort((a,b) => _rotaIdxLote(a) - _rotaIdxLote(b))[0] || '';
         p._ruasSet = [...new Set(ruas)];
         p._itensQtd = itens.reduce((s,i) => s + (parseInt(i.quantidade)||1), 0);
-        p._skusQtd = new Set(itens.map(i => i.codigo).filter(Boolean)).size;
+        p._skusSet = [...new Set(itens.map(i => i.codigo).filter(Boolean))];
+        p._skusQtd = p._skusSet.length;
         const scoreBase = calcularPontuacaoPedido(itens);
         if (modoLote === 'complexidade') {
           // Mesmo bônus do cenário "Complexidade Total" em /pedidos/distribuicao:
@@ -1222,21 +1223,27 @@ router.post('/pedidos/lote/formar', requerAuth, requerPerfil('supervisor'), asyn
       const restantes = [...onda].sort((a,b) => _rotaIdxLote(a._ruaPrincipal) - _rotaIdxLote(b._ruaPrincipal));
       const grupo = [restantes.shift()];
       let ruasGrupo = [...grupo[0]._ruasSet];
-      // Escolhe sempre o candidato que resulta no MENOR diâmetro do grupo (não o
-      // mais perto do último pedido adicionado) — assim um pedido com posições
-      // muito espalhadas (ex.: toca Z071 e também Z220) só entra se isso não
-      // aumentar muito a área que o separador precisa cobrir; senão fica pra uma
-      // próxima onda/lote, em vez de "grudar" no grupo só por uma rua em comum.
+      let skusGrupo = new Set(grupo[0]._skusSet);
+      // Escolhe o candidato com o melhor "custo": diâmetro resultante do grupo
+      // (proximidade — quanto menor, melhor) menos um bônus por SKU que ele já
+      // compartilha com o grupo (produto em comum — quanto mais, melhor, porque
+      // vira uma coleta consolidada em vez de uma parada por pedido). PESO_SKU_COMUM
+      // é quantos "passos de rua" um SKU em comum vale — cada produto repetido
+      // pode justificar aceitar um grupo um pouco mais espalhado.
+      const PESO_SKU_COMUM = 3;
       while (restantes.length) {
-        let melhorIdx = 0, melhorDiam = Infinity;
+        let melhorIdx = 0, melhorCusto = Infinity;
         restantes.forEach((cand, idx) => {
           const ruasTeste = [...new Set([...ruasGrupo, ...cand._ruasSet])];
-          const d = _diametroRuas(ruasTeste);
-          if (d < melhorDiam) { melhorDiam = d; melhorIdx = idx; }
+          const diametro = _diametroRuas(ruasTeste);
+          const skusComuns = cand._skusSet.filter(sku => skusGrupo.has(sku)).length;
+          const custo = diametro - skusComuns * PESO_SKU_COMUM;
+          if (custo < melhorCusto) { melhorCusto = custo; melhorIdx = idx; }
         });
         const escolhido = restantes.splice(melhorIdx,1)[0];
         grupo.push(escolhido);
         ruasGrupo = [...new Set([...ruasGrupo, ...escolhido._ruasSet])];
+        escolhido._skusSet.forEach(sku => skusGrupo.add(sku));
       }
       lotesPreview.push({ pedidos: grupo });
     }
