@@ -1235,9 +1235,11 @@ router.post('/pedidos/lote/formar', requerAuth, requerPerfil('supervisor'), asyn
     //    só reordenava quem entrava, nunca decidia quem ENTRAVA. Fundir os
     //    dois passos aqui faz a vizinhança realmente escolher os membros,
     //    dentre toda a fila elegível, não só dentro de uma fatia já fechada.
-    //    Fecha o lote antes de 8 (mínimo 5, a não ser que sobre pouco no
-    //    final) se o pedido semente já estiver esperando mais de 20min — pra
-    //    não deixar um pedido antigo preso esperando um lote de 8 se formar.
+    //    Lote sempre busca 8 (só sai menor se a fila elegível não tiver mais
+    //    pedidos pra completar) — a prioridade de quem espera mais já é
+    //    respeitada pela semente ser sempre o mais antigo ainda disponível, e
+    //    a distribuição justa entre separadores continua no passo 3 abaixo.
+    const TAMANHO_LOTE = 8;
     const PESO_SKU_COMUM = 3;
     // Cada lote só busca candidato dentre os próximos JANELA_BUSCA pedidos mais
     // antigos ainda disponíveis (não a fila elegível inteira) — evita custo O(N²)
@@ -1252,8 +1254,7 @@ router.post('/pedidos/lote/formar', requerAuth, requerPerfil('supervisor'), asyn
       const grupo = [seed];
       let ruasGrupo = [...seed._ruasSet];
       let skusGrupo = new Set(seed._skusSet);
-      const tamanhoAlvo = (seed.espera_min||0) > 20 ? 5 : 8;
-      while (grupo.length < tamanhoAlvo && restantesGlobais.length) {
+      while (grupo.length < TAMANHO_LOTE && restantesGlobais.length) {
         const janela = restantesGlobais.slice(0, JANELA_BUSCA);
         let melhorIdx = 0, melhorCusto = Infinity;
         janela.forEach((cand, idx) => {
