@@ -19,7 +19,10 @@ let _loteEndIdx        = 0;    // posição atual na navegação passo-a-passo
 let _lotePedidosAbertos = true; // seção "Pedidos do lote" expandida/recolhida
 let _loteAcaoAberta    = null; // "p:<ids>" ou "f:<ids>" — grupo com Parcial/Falta aberto
 
-const _CX_CORES = ['#4F46E5','#7c3aed','#b45309','#065a82','#155e3a'];
+// Paleta discreta pra diferenciar até 5 pedidos no mesmo lote — variações de
+// azul/slate/violeta (mesma família do --accent do sistema), sem cores
+// "arco-íris" (evitar tons quentes/saturados que destoam do tema corporativo).
+const _CX_CORES = ['#4F46E5','#0891B2','#64748B','#7C3AED','#334155'];
 const MOTIVOS_FALTA_LOTE = ['Estoque vazio', 'Produto não localizado', 'Divergência de estoque'];
 
 function _loteScreens(ativa) {
@@ -68,23 +71,23 @@ async function abrirHistoricoLotes() {
   const body  = document.getElementById('m-lote-historico-body');
   if (!modal || !body) return;
   modal.style.display = 'block';
-  body.innerHTML = '<div style="color:#9ca3af;text-align:center;padding:30px;font-size:13px">Carregando...</div>';
+  body.innerHTML = '<div style="color:var(--text3);text-align:center;padding:30px;font-size:13px">Carregando...</div>';
   try {
     const sepId = separadorAtual?.id || 0;
     const res = await fetch(`${API}/pedidos/lote/historico?separador_id=${sepId}`, { credentials:'include' });
     const data = await res.json();
     if (!data.lotes?.length) {
-      body.innerHTML = '<div style="color:#9ca3af;text-align:center;padding:30px;font-size:13px">Nenhum lote concluído ainda</div>';
+      body.innerHTML = '<div style="color:var(--text3);text-align:center;padding:30px;font-size:13px">Nenhum lote concluído ainda</div>';
       return;
     }
     body.innerHTML = data.lotes.map(l => `
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
           <span style="font-size:13px;font-weight:700;color:var(--text)">Lote ${String(l.lote_id).padStart(3,'0')}</span>
           <span style="font-size:11px;color:var(--text3)">${l.total} pedido${l.total===1?'':'s'}</span>
         </div>
-        ${l.pedidos.map((p,i) => `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-top:${i===0?'none':'0.5px solid var(--border)'}">
-          <span style="width:18px;height:18px;border-radius:50%;background:${_CX_CORES[i%_CX_CORES.length]};color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">${i+1}</span>
+        ${l.pedidos.map((p,i) => `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-top:${i===0?'none':'1px solid var(--border)'}">
+          <span style="width:18px;height:18px;border-radius:5px;background:${_CX_CORES[i%_CX_CORES.length]};color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">${i+1}</span>
           <span style="font-size:12px;color:var(--text2);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">#${p.numero_pedido} · ${p.cliente||'—'}</span>
           <span style="font-size:11px;color:var(--text3);flex-shrink:0">${p.total_itens||p.itens||0} itens</span>
         </div>`).join('')}
@@ -112,16 +115,16 @@ function verDetalhePedidoLote(cx) {
   if (titulo) titulo.textContent = `Pedido #${p.numero_pedido}`;
 
   const resumoHtml = feitos < total
-    ? `<div style="background:rgba(224,168,62,.12);border:1px solid rgba(224,168,62,.4);border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:12px;color:var(--amber);font-weight:700">⚠ Faltam ${total-feitos} de ${total} itens — ainda não está pronto pro checkout</div>`
+    ? `<div style="background:rgba(224,168,62,.12);border:1px solid var(--amber);border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:12px;color:var(--amber);font-weight:700">Faltam ${total-feitos} de ${total} itens — ainda não está pronto pro checkout</div>`
     : faltas > 0
-      ? `<div style="background:rgba(224,168,62,.12);border:1px solid rgba(224,168,62,.4);border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:12px;color:var(--amber);font-weight:700">⏳ ${faltas} item(ns) em falta — aguardando repositor</div>`
-      : `<div style="background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.4);border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:12px;color:#22c55e;font-weight:700">✓ Tudo separado — pode fechar a caixa</div>`;
+      ? `<div style="background:rgba(224,168,62,.12);border:1px solid var(--amber);border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:12px;color:var(--amber);font-weight:700">${faltas} item(ns) em falta — aguardando repositor</div>`
+      : `<div style="background:rgba(87,185,129,.12);border:1px solid var(--green);border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:12px;color:var(--green);font-weight:700">Tudo separado — pode fechar a caixa</div>`;
 
   body.innerHTML = resumoHtml + itensDoPedido.map(item => {
-    const cor = item.status==='encontrado' ? '#22c55e' : item.status==='falta' ? '#dc2626' : item.status==='parcial' ? '#E0A83E' : 'var(--border)';
-    const bg  = item.status==='encontrado' ? 'rgba(34,197,94,.08)' : item.status==='falta' ? 'rgba(220,38,38,.08)' : item.status==='parcial' ? 'rgba(224,168,62,.08)' : 'var(--surface)';
+    const cor = item.status==='encontrado' ? 'var(--green)' : item.status==='falta' ? 'var(--red)' : item.status==='parcial' ? 'var(--amber)' : 'var(--border)';
+    const bg  = item.status==='encontrado' ? 'rgba(87,185,129,.08)' : item.status==='falta' ? 'rgba(201,82,79,.08)' : item.status==='parcial' ? 'rgba(224,168,62,.08)' : 'var(--surface)';
     const label = item.status==='encontrado' ? 'COLETADO' : item.status==='falta' ? 'FALTA' : item.status==='parcial' ? 'PARCIAL' : 'PENDENTE';
-    return `<div style="background:${bg};border:1px solid ${cor}66;border-left:3px solid ${cor};border-radius:8px;padding:10px 12px;margin-bottom:8px">
+    return `<div style="background:${bg};border:1px solid var(--border);border-left:3px solid ${cor};border-radius:8px;padding:10px 12px;margin-bottom:8px">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:2px">
         <span style="font-size:13px;font-weight:600;color:var(--text)">${item.descricao||item.codigo||'—'}</span>
         <span style="font-size:9px;font-weight:800;letter-spacing:.5px;color:${cor};flex-shrink:0">${label}</span>
@@ -233,12 +236,11 @@ function _renderizarListaLote() {
   // 4 cards de estatística
   const statsEl = document.getElementById('m-lote-stats');
   if (statsEl) {
-    const stats = [['📦',_loteAtual.length,'Pedidos'], ['🧾',total,'Itens'], ['🏷️',totalSkus,'SKUs'], ['📍',endsOrdenados.length,'Posições']];
-    statsEl.innerHTML = stats.map(([ic,val,lab]) => `
-      <div style="flex:1;background:rgba(255,255,255,.06);border-radius:10px;padding:8px 4px;text-align:center">
-        <div style="font-size:14px;line-height:1.2">${ic}</div>
-        <div style="font-size:15px;font-weight:800;color:#fff;line-height:1.3">${val}</div>
-        <div style="font-size:8px;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px">${lab}</div>
+    const stats = [['Pedidos',_loteAtual.length], ['Itens',total], ['SKUs',totalSkus], ['Posições',endsOrdenados.length]];
+    statsEl.innerHTML = stats.map(([lab,val]) => `
+      <div style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 4px;text-align:center">
+        <div style="font-size:15px;font-weight:800;color:var(--text);line-height:1.3">${val}</div>
+        <div style="font-size:8px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px">${lab}</div>
       </div>`).join('');
   }
 
@@ -258,11 +260,11 @@ function _renderizarListaLote() {
     const totalP  = itensDoPedido.length;
     const feitosP = itensDoPedido.filter(i => i.status !== 'pendente').length;
     const completoP = totalP > 0 && feitosP === totalP;
-    return `<span onclick="verDetalhePedidoLote(${cx})" style="display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;padding:3px 10px 3px 3px;border-radius:20px;white-space:nowrap;cursor:pointer;
-        background:${completoP ? 'rgba(34,197,94,.15)' : 'var(--surface2)'};
-        border:1px solid ${completoP ? 'rgba(34,197,94,.4)' : cor+'66'}">
-        <span style="width:20px;height:20px;border-radius:50%;background:${cor};color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0">${completoP ? '✓' : cx}</span>
-        <span style="color:${completoP ? '#22c55e' : 'var(--text2)'}">#${p.numero_pedido} · ${feitosP}/${totalP}</span>
+    return `<span onclick="verDetalhePedidoLote(${cx})" style="display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;padding:3px 10px 3px 3px;border-radius:7px;white-space:nowrap;cursor:pointer;
+        background:${completoP ? 'rgba(87,185,129,.12)' : 'var(--surface)'};
+        border:1px solid ${completoP ? 'var(--green)' : 'var(--border)'}">
+        <span style="width:19px;height:19px;border-radius:5px;background:${cor};color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0">${completoP ? '✓' : cx}</span>
+        <span style="color:${completoP ? 'var(--green)' : 'var(--text2)'}">#${p.numero_pedido} · ${feitosP}/${totalP}</span>
       </span>`;
   }).join('');
   const chipsWrap = document.getElementById('m-lote-chips');
@@ -282,14 +284,14 @@ function _renderizarListaLote() {
     }).length;
     if (body) body.innerHTML = faltas > 0 ? `
       <div style="padding:28px 18px;text-align:center">
-        <div style="font-size:32px;margin-bottom:8px">⚠️</div>
+        <div style="width:44px;height:44px;border-radius:8px;background:rgba(224,168,62,.12);border:1px solid var(--amber);display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-size:20px;color:var(--amber)">!</div>
         <div style="font-size:15px;font-weight:700;color:var(--amber);margin-bottom:6px">Existem divergências</div>
         <div style="font-size:12px;color:var(--text3);margin-bottom:16px">${processados-faltas} separados · ${faltas} em falta de ${total} itens previstos</div>
-        <button onclick="loteRevisarDivergencias()" style="background:rgba(224,168,62,.15);border:1.5px solid rgba(224,168,62,.4);color:var(--amber);font-size:13px;font-weight:700;padding:10px 20px;border-radius:10px;cursor:pointer">Revisar divergências</button>
+        <button onclick="loteRevisarDivergencias()" style="background:rgba(224,168,62,.15);border:1.5px solid var(--amber);color:var(--amber);font-size:13px;font-weight:700;padding:10px 20px;border-radius:8px;cursor:pointer">Revisar divergências</button>
       </div>` : `
       <div style="padding:28px 18px;text-align:center">
-        <div style="font-size:32px;margin-bottom:8px">✅</div>
-        <div style="font-size:15px;font-weight:700;color:#22c55e;margin-bottom:6px">Tudo separado!</div>
+        <div style="width:44px;height:44px;border-radius:8px;background:rgba(87,185,129,.12);border:1px solid var(--green);display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-size:20px;color:var(--green)">✓</div>
+        <div style="font-size:15px;font-weight:700;color:var(--green);margin-bottom:6px">Tudo separado</div>
         <div style="font-size:12px;color:var(--text3)">${total}/${total} itens · ${pedidosCompletos}/${_loteAtual.length} pedidos</div>
       </div>`;
     if (btnProx) { btnProx.textContent = 'Concluir lote'; btnProx.onclick = concluirLoteMobile; btnProx.disabled = false; btnProx.style.opacity = '1'; }
@@ -310,8 +312,8 @@ function _renderizarListaLote() {
 
   let html = `<div style="padding:12px 14px 4px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-      <span style="font-size:10px;font-weight:800;color:#f97316;letter-spacing:1px">PRÓXIMA POSIÇÃO</span>
-      <span style="font-size:11px;font-weight:700;color:var(--text2);background:var(--surface2);padding:2px 9px;border-radius:12px">📍 RUA ${rua}</span>
+      <span style="font-size:10px;font-weight:800;color:var(--accent);letter-spacing:1px">PRÓXIMA POSIÇÃO</span>
+      <span style="font-size:11px;font-weight:700;color:var(--text2);background:var(--surface2);border:1px solid var(--border);padding:2px 9px;border-radius:6px">RUA ${rua}</span>
     </div>
     <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px">
       <span style="font-family:'Space Mono',monospace;font-size:24px;font-weight:800;color:var(--text)">${end}</span>
@@ -348,19 +350,19 @@ function _renderizarListaLote() {
     const motivoAberto  = _loteAcaoAberta === `f:${ids}`;
     const primeiroId = ids.split(',')[0];
 
-    html += `<div style="margin:0 14px 12px;border-radius:12px;border:1px solid ${todosProc?(temFalta?'rgba(224,168,62,.4)':'rgba(34,197,94,.35)'):'var(--border)'};background:var(--surface);padding:14px;${todosProc?'opacity:0.6':''}">
+    html += `<div style="margin:0 14px 12px;border-radius:10px;border:1px solid ${todosProc?(temFalta?'var(--amber)':'var(--green)'):'var(--border)'};background:var(--surface);padding:14px;${todosProc?'opacity:0.6':''}">
       <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px">${items[0].descricao||cod}</div>
       <div style="font-size:11px;color:var(--text3);font-family:monospace;margin-bottom:10px">SKU: ${cod}</div>
-      <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(79,70,229,.12);border:1px solid rgba(79,70,229,.3);color:var(--accent);font-size:13px;font-weight:700;padding:7px 14px;border-radius:10px;margin-bottom:12px">
-        📦 PEGAR ${totalQty} UNIDADE${totalQty===1?'':'S'}
+      <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(79,70,229,.12);border:1px solid var(--accent);color:var(--accent);font-size:13px;font-weight:700;padding:7px 14px;border-radius:8px;margin-bottom:12px">
+        PEGAR ${totalQty} UNIDADE${totalQty===1?'':'S'}
       </div>
       <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.5px;margin-bottom:2px">DISTRIBUIÇÃO POR PEDIDO</div>
       <div style="margin-bottom:${todosProc?'0':'12px'}">${distribHtml}</div>
       ${!todosProc ? `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
-          <button onclick="verificarGrupoLote('${ids}')" style="padding:10px 0;border:1.5px solid rgba(87,185,129,.4);border-radius:9px;background:rgba(87,185,129,.12);color:var(--green);font-size:12px;font-weight:700;cursor:pointer">✓ Encontrei tudo</button>
-          <button onclick="toggleParcialLote('${ids}')" style="padding:10px 0;border:1.5px solid rgba(79,70,229,.4);border-radius:9px;background:rgba(79,70,229,.12);color:#818CF8;font-size:12px;font-weight:700;cursor:pointer">~ Parcial</button>
-          <button onclick="toggleFaltaLote('${ids}')" style="padding:10px 0;border:1.5px solid rgba(224,168,62,.4);border-radius:9px;background:rgba(224,168,62,.12);color:var(--amber);font-size:12px;font-weight:700;cursor:pointer">⚠ Falta</button>
-        </div>` : `<div style="font-size:11px;font-weight:700;color:${temFalta?'var(--amber)':'#22c55e'};text-align:center">${temFalta?'⏳ Aguardando repositor':'✓ Coletado'}</div>`}
+          <button onclick="verificarGrupoLote('${ids}')" style="padding:10px 0;border:1.5px solid var(--green);border-radius:8px;background:rgba(87,185,129,.12);color:var(--green);font-size:12px;font-weight:700;cursor:pointer">Encontrei tudo</button>
+          <button onclick="toggleParcialLote('${ids}')" style="padding:10px 0;border:1.5px solid var(--accent);border-radius:8px;background:rgba(79,70,229,.12);color:var(--accent);font-size:12px;font-weight:700;cursor:pointer">Parcial</button>
+          <button onclick="toggleFaltaLote('${ids}')" style="padding:10px 0;border:1.5px solid var(--amber);border-radius:8px;background:rgba(224,168,62,.12);color:var(--amber);font-size:12px;font-weight:700;cursor:pointer">Falta</button>
+        </div>` : `<div style="font-size:11px;font-weight:700;color:${temFalta?'var(--amber)':'var(--green)'};text-align:center">${temFalta?'Aguardando repositor':'Coletado'}</div>`}
       ${parcialAberto ? `<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
           <label style="font-size:11px;color:var(--amber);font-weight:700">Quantas unidades encontrou (de ${totalQty}):</label>
           <div style="display:flex;gap:8px;margin-top:6px">
@@ -410,8 +412,8 @@ async function loteProximaPosicao() {
   const end = endsOrdenados[_loteEndIdx];
   const body = document.getElementById('m-lote-lista-body');
   if (body) body.innerHTML = `<div style="padding:60px 18px;text-align:center">
-    <div style="font-size:36px;margin-bottom:10px">✓</div>
-    <div style="font-size:15px;font-weight:700;color:#22c55e">${end} concluído</div>
+    <div style="width:44px;height:44px;border-radius:8px;background:rgba(87,185,129,.12);border:1px solid var(--green);display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-size:20px;color:var(--green)">✓</div>
+    <div style="font-size:15px;font-weight:700;color:var(--green)">${end} concluído</div>
   </div>`;
   const btnProx = document.getElementById('m-lote-btn-prox');
   if (btnProx) btnProx.disabled = true;
@@ -544,7 +546,7 @@ async function concluirLoteMobile() {
       const r = data.resultados?.find(r => r.id === p.id);
       const ok = r?.ok; const ag = r?.aguardando;
       const label = ok ? 'Concluído' : ag ? 'Aguardando repositor' : (r?.erro||'Erro');
-      const cor = ok ? '#22c55e' : ag ? '#f97316' : '#dc2626';
+      const cor = ok ? 'var(--green)' : ag ? 'var(--amber)' : 'var(--red)';
       return `<div style="margin:6px 0;border-radius:10px;border:0.5px solid var(--border);background:var(--surface);padding:10px 14px;display:flex;align-items:center;gap:10px;text-align:left">
         <div style="width:30px;height:30px;border-radius:6px;background:${_CX_CORES[i%_CX_CORES.length]};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:500;color:#fff;flex-shrink:0">${i+1}</div>
         <div style="flex:1"><div style="font-size:13px;font-weight:500;color:var(--text)">#${p.numero_pedido}</div><div style="font-size:11px;color:var(--text3)">${label}</div></div>
@@ -723,9 +725,9 @@ async function carregarFilaMobile() {
     const _corLote = (peds) => {
       const temSup   = peds.some(p => (pedidosAguardSup[String(p.numero_pedido)]||0) > 0);
       const temFalta = peds.some(p => (pedidosComFalta[String(p.numero_pedido)]||0) > 0);
-      if (temSup)   return { bord:'#6366f1', bg:'linear-gradient(135deg,#eef2ff,#e0e7ff)', txt:'#3730a3', sub:'#4338ca', tag:'aguardando supervisor' };
-      if (temFalta) return { bord:'#E0A83E', bg:'linear-gradient(135deg,#fffbeb,#fef3c7)', txt:'#78350f', sub:'#92400e', tag:'aguardando repositor' };
-      return { bord:'#7c3aed', bg:'linear-gradient(135deg,#faf5ff,#ede9fe)', txt:'#4c1d95', sub:'#6d28d9', tag:'' };
+      if (temSup)   return { bord:'var(--indigo)', txt:'var(--text)', sub:'var(--indigo)', tag:'aguardando supervisor' };
+      if (temFalta) return { bord:'var(--amber)', txt:'var(--text)', sub:'var(--amber)', tag:'aguardando repositor' };
+      return { bord:'var(--accent)', txt:'var(--text)', sub:'var(--text3)', tag:'' };
     };
 
     const _renderLoteCard = (loteId, peds, { emAndamento }) => {
@@ -734,18 +736,17 @@ async function carregarFilaMobile() {
       const titulo = emAndamento ? `Lote em andamento — #${loteId}` : `Lote pronto — #${loteId}`;
       const sub = cor.tag ? `${cor.tag} · toque pra continuar` : (emAndamento ? `${peds.length} pedidos · toque pra continuar` : `${peds.length} pedidos · toque pra começar`);
       return `<div onclick="${onclickFn}"
-           style="border:2px solid ${cor.bord};border-radius:12px;padding:14px;margin-bottom:12px;background:${cor.bg};cursor:pointer">
+           style="border:1px solid var(--border);border-left:3px solid ${cor.bord};border-radius:10px;padding:14px;margin-bottom:12px;background:var(--surface);cursor:pointer">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <div style="width:38px;height:38px;border-radius:10px;background:${cor.bord};display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">📦</div>
           <div>
             <div style="font-size:14px;font-weight:700;color:${cor.txt}">${titulo}</div>
             <div style="font-size:11px;color:${cor.sub}">${sub}</div>
           </div>
-          <span style="margin-left:auto;font-size:18px;color:${cor.bord}">›</span>
+          <span style="margin-left:auto;font-size:16px;color:var(--text3)">›</span>
         </div>
         <div style="display:flex;gap:5px;flex-wrap:wrap">
-          ${peds.slice(0,6).map((p,i)=>`<span style="background:${_CX_CORES[i%_CX_CORES.length]}22;border:1px solid ${_CX_CORES[i%_CX_CORES.length]}44;color:${_CX_CORES[i%_CX_CORES.length]};border-radius:8px;padding:2px 8px;font-size:11px">#${p.numero_pedido}</span>`).join('')}
-          ${peds.length>6?`<span style="font-size:11px;color:${cor.sub};padding:2px 4px">+${peds.length-6}</span>`:''}
+          ${peds.slice(0,6).map((p,i)=>`<span style="background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:6px;padding:2px 8px;font-size:11px">#${p.numero_pedido}</span>`).join('')}
+          ${peds.length>6?`<span style="font-size:11px;color:var(--text3);padding:2px 4px">+${peds.length-6}</span>`:''}
         </div>
       </div>`;
     };
