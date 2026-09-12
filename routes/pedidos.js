@@ -1084,7 +1084,7 @@ router.post('/pedidos/distribuicao/confirmar', requerAuth, requerPerfil('supervi
    /pedidos/distribuicao. Prime e Drive Thru ficam de fora — continuam sendo
    distribuídos individual, como hoje.
 ══════════════════════════════════════════ */
-const ROTA_FISICA_LOTE = ['E','D','C','B','A','Q','P','O','N','M','L','K','J','I','H','ARARA','G','F','ZA','R','S','T','U','V','W','X','Y','Z'];
+const ROTA_FISICA_LOTE = ['A','B','C','D','E','Q','P','O','N','M','L','K','J','I','H','ARARA','G','F','ZA','R','S','T','U','V','W','X','Y','Z'];
 function _ruaPrincipalLote(endereco) {
   const end = String(endereco||'').split(',')[0].trim().toUpperCase();
   const semVert = end.includes('/') ? end.split('/')[0].trim() : end;
