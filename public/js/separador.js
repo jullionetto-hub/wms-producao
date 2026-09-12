@@ -12,7 +12,8 @@ const CAIXA_OBRIGATORIA = false; // mudar para true para reativar vínculo de ca
 let _loteAtual         = [];   // [{id, numero_pedido, total_itens}, ...]
 let _loteItens         = [];   // itens mesclados com caixa_num
 let _lotePendentes     = [];   // pedidos elegíveis para o lote (usado pelo card)
-let _gruposLoteSistema = {};   // lote_id -> pedidos, formados pelo supervisor (Formar Lotes)
+let _gruposLoteSistema   = {}; // lote_id -> pedidos pendentes, formados pelo supervisor (Formar Lotes)
+let _gruposLoteAndamento = {}; // lote_id -> pedidos já iniciados (status 'separando')
 let _loteIdAtual       = null; // id do lote (lotes_separacao.id), pra exibir "Lote 001"
 let _loteEndIdx        = 0;    // posição atual na navegação passo-a-passo
 let _lotePedidosAbertos = true; // seção "Pedidos do lote" expandida/recolhida
@@ -48,6 +49,52 @@ async function abrirLoteSistema(loteId) {
     mudarTabSep('separar');
     await carregarListaLote(ids);
   } catch(e) { toast('Erro de rede', 'erro'); }
+}
+
+// Lote já iniciado (status 'separando') — reabre direto na lista mesclada,
+// sem chamar /pedidos/lote/iniciar de novo (os pedidos já estão nesse status).
+function continuarLoteSistema(loteId) {
+  const peds = _gruposLoteAndamento[loteId];
+  if (!peds?.length) { toast('Lote não encontrado — atualize a fila', 'erro'); return; }
+  _loteIdAtual = loteId;
+  mudarTabSep('separar');
+  carregarListaLote(peds.map(p => p.id));
+}
+
+// Menu "Lotes concluídos" — histórico só de lotes 100% finalizados do
+// separador logado, pra conferir depois quais pedidos foram em qual lote.
+async function abrirHistoricoLotes() {
+  const modal = document.getElementById('m-lote-historico-modal');
+  const body  = document.getElementById('m-lote-historico-body');
+  if (!modal || !body) return;
+  modal.style.display = 'block';
+  body.innerHTML = '<div style="color:#9ca3af;text-align:center;padding:30px;font-size:13px">Carregando...</div>';
+  try {
+    const sepId = separadorAtual?.id || 0;
+    const res = await fetch(`${API}/pedidos/lote/historico?separador_id=${sepId}`, { credentials:'include' });
+    const data = await res.json();
+    if (!data.lotes?.length) {
+      body.innerHTML = '<div style="color:#9ca3af;text-align:center;padding:30px;font-size:13px">Nenhum lote concluído ainda</div>';
+      return;
+    }
+    body.innerHTML = data.lotes.map(l => `
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <span style="font-size:13px;font-weight:700;color:var(--text)">Lote ${String(l.lote_id).padStart(3,'0')}</span>
+          <span style="font-size:11px;color:var(--text3)">${l.total} pedido${l.total===1?'':'s'}</span>
+        </div>
+        ${l.pedidos.map((p,i) => `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-top:${i===0?'none':'0.5px solid var(--border)'}">
+          <span style="width:18px;height:18px;border-radius:50%;background:${_CX_CORES[i%_CX_CORES.length]};color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">${i+1}</span>
+          <span style="font-size:12px;color:var(--text2);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">#${p.numero_pedido} · ${p.cliente||'—'}</span>
+          <span style="font-size:11px;color:var(--text3);flex-shrink:0">${p.total_itens||p.itens||0} itens</span>
+        </div>`).join('')}
+      </div>`).join('');
+  } catch(e) { body.innerHTML = '<div style="color:var(--red);text-align:center;padding:20px;font-size:13px">Erro ao carregar</div>'; }
+}
+
+function fecharHistoricoLotes() {
+  const modal = document.getElementById('m-lote-historico-modal');
+  if (modal) modal.style.display = 'none';
 }
 
 function abrirPreparacaoLote(pedidos) {
@@ -612,34 +659,58 @@ async function carregarFilaMobile() {
       : '';
 
     // Lote formado automaticamente pelo supervisor (Formar Lotes) — agrupa
-    // pelos pedidos da própria fila que compartilham lote_id e ainda não
-    // começaram. Diferente do card acima (self-service, desligado): aqui o
-    // agrupamento já veio pronto do servidor (proximidade + justiça), então
-    // só precisa detectar e abrir — sem tela de escolher caixa.
+    // pelos pedidos da própria fila que compartilham lote_id. Diferente do
+    // card acima (self-service, desligado): aqui o agrupamento já veio
+    // pronto do servidor (proximidade + justiça), então só precisa detectar
+    // e abrir — sem tela de escolher caixa. Um lote SEMPRE aparece como UM
+    // card (pronto pra começar ou em andamento), nunca como pedidos soltos
+    // na lista abaixo — por isso o filtro no final exclui qualquer pedido
+    // com lote_id, seja qual for o status.
     _gruposLoteSistema = {};
+    _gruposLoteAndamento = {};
     ordenadosMob.forEach(p => {
-      if (p.lote_id && p.status === 'pendente') {
-        (_gruposLoteSistema[p.lote_id] = _gruposLoteSistema[p.lote_id] || []).push(p);
-      }
+      if (!p.lote_id) return;
+      if (p.status === 'pendente') (_gruposLoteSistema[p.lote_id] = _gruposLoteSistema[p.lote_id] || []).push(p);
+      else if (p.status === 'separando') (_gruposLoteAndamento[p.lote_id] = _gruposLoteAndamento[p.lote_id] || []).push(p);
     });
-    const loteSistemaCard = Object.entries(_gruposLoteSistema).map(([loteId, peds]) => `
-      <div onclick="abrirLoteSistema(${loteId})"
-           style="border:2px solid #7c3aed;border-radius:12px;padding:14px;margin-bottom:12px;background:linear-gradient(135deg,#faf5ff,#ede9fe);cursor:pointer">
+
+    // Cor do card do lote: mesma hierarquia das linhas individuais — se
+    // qualquer pedido do lote tiver falta/parcial (aviso ao repositor) ou
+    // estiver aguardando o supervisor, o card do lote inteiro sinaliza isso.
+    const _corLote = (peds) => {
+      const temSup   = peds.some(p => (pedidosAguardSup[String(p.numero_pedido)]||0) > 0);
+      const temFalta = peds.some(p => (pedidosComFalta[String(p.numero_pedido)]||0) > 0);
+      if (temSup)   return { bord:'#6366f1', bg:'linear-gradient(135deg,#eef2ff,#e0e7ff)', txt:'#3730a3', sub:'#4338ca', tag:'aguardando supervisor' };
+      if (temFalta) return { bord:'#E0A83E', bg:'linear-gradient(135deg,#fffbeb,#fef3c7)', txt:'#78350f', sub:'#92400e', tag:'aguardando repositor' };
+      return { bord:'#7c3aed', bg:'linear-gradient(135deg,#faf5ff,#ede9fe)', txt:'#4c1d95', sub:'#6d28d9', tag:'' };
+    };
+
+    const _renderLoteCard = (loteId, peds, { emAndamento }) => {
+      const cor = _corLote(peds);
+      const onclickFn = emAndamento ? `continuarLoteSistema(${loteId})` : `abrirLoteSistema(${loteId})`;
+      const titulo = emAndamento ? `Lote em andamento — #${loteId}` : `Lote pronto — #${loteId}`;
+      const sub = cor.tag ? `${cor.tag} · toque pra continuar` : (emAndamento ? `${peds.length} pedidos · toque pra continuar` : `${peds.length} pedidos · toque pra começar`);
+      return `<div onclick="${onclickFn}"
+           style="border:2px solid ${cor.bord};border-radius:12px;padding:14px;margin-bottom:12px;background:${cor.bg};cursor:pointer">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <div style="width:38px;height:38px;border-radius:10px;background:#7c3aed;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">📦</div>
+          <div style="width:38px;height:38px;border-radius:10px;background:${cor.bord};display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">📦</div>
           <div>
-            <div style="font-size:14px;font-weight:700;color:#4c1d95">Lote pronto — #${loteId}</div>
-            <div style="font-size:11px;color:#6d28d9">${peds.length} pedidos · toque pra começar</div>
+            <div style="font-size:14px;font-weight:700;color:${cor.txt}">${titulo}</div>
+            <div style="font-size:11px;color:${cor.sub}">${sub}</div>
           </div>
-          <span style="margin-left:auto;font-size:18px;color:#7c3aed">›</span>
+          <span style="margin-left:auto;font-size:18px;color:${cor.bord}">›</span>
         </div>
         <div style="display:flex;gap:5px;flex-wrap:wrap">
           ${peds.slice(0,6).map((p,i)=>`<span style="background:${_CX_CORES[i%_CX_CORES.length]}22;border:1px solid ${_CX_CORES[i%_CX_CORES.length]}44;color:${_CX_CORES[i%_CX_CORES.length]};border-radius:8px;padding:2px 8px;font-size:11px">#${p.numero_pedido}</span>`).join('')}
-          ${peds.length>6?`<span style="font-size:11px;color:#6d28d9;padding:2px 4px">+${peds.length-6}</span>`:''}
+          ${peds.length>6?`<span style="font-size:11px;color:${cor.sub};padding:2px 4px">+${peds.length-6}</span>`:''}
         </div>
-      </div>`).join('');
+      </div>`;
+    };
 
-    lista.innerHTML = loteSistemaCard + loteCard + ordenadosMob.filter(p => !p.lote_id || p.status !== 'pendente').map(p => {
+    const loteSistemaCard = Object.entries(_gruposLoteSistema).map(([loteId, peds]) => _renderLoteCard(loteId, peds, { emAndamento:false })).join('')
+      + Object.entries(_gruposLoteAndamento).map(([loteId, peds]) => _renderLoteCard(loteId, peds, { emAndamento:true })).join('');
+
+    lista.innerHTML = loteSistemaCard + loteCard + ordenadosMob.filter(p => !p.lote_id).map(p => {
       const transp   = String(p.transportadora||'').toUpperCase();
       const isDrive  = transp.includes('DRIVE');
       const isPrime  = p.tem_prime === true;

@@ -1343,6 +1343,35 @@ router.post('/pedidos/lote/formar/confirmar', requerAuth, requerPerfil('supervis
   } finally { client.release(); }
 });
 
+// Histórico de lotes já concluídos (todos os pedidos do lote com status='concluido')
+// de um separador — usado pelo menu "Lotes concluídos" no celular. lotes_separacao.status
+// nunca é atualizado após criado, então "concluído" é derivado direto dos pedidos.
+router.get('/pedidos/lote/historico', requerAuth, async (req,res) => {
+  const sepId = parseInt(req.query.separador_id) || 0;
+  if (!sepId) return res.json({ lotes: [] });
+  try {
+    const grupos = await db.all(
+      `SELECT p.lote_id, COUNT(*)::int AS total, MAX(p.concluido_em) AS concluido_em
+       FROM pedidos p
+       WHERE p.lote_id IS NOT NULL AND p.separador_id=$1
+       GROUP BY p.lote_id
+       HAVING COUNT(*) = COUNT(*) FILTER (WHERE p.status='concluido')
+       ORDER BY MAX(p.concluido_em) DESC NULLS LAST
+       LIMIT 20`,
+      [sepId]
+    );
+    const lotes = [];
+    for (const g of grupos) {
+      const pedidos = await db.all(
+        `SELECT id, numero_pedido, cliente, total_itens, itens, concluido_em FROM pedidos WHERE lote_id=$1 ORDER BY id`,
+        [g.lote_id]
+      );
+      lotes.push({ lote_id: g.lote_id, total: g.total, concluido_em: g.concluido_em, pedidos });
+    }
+    res.json({ lotes });
+  } catch(err) { res.status(500).json({erro:err.message}); }
+});
+
 router.post('/pedidos/recalcular-pontuacao', requerAuth, requerPerfil('supervisor'), async (req,res) => {
   try {
     const peds=await db.all("SELECT id FROM pedidos WHERE pontuacao=0 OR pontuacao IS NULL");
