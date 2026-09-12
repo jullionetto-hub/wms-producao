@@ -1144,8 +1144,11 @@ function _diametroRuas(ruas) {
   for (let i = 0; i < ruas.length; i++) {
     for (let j = i+1; j < ruas.length; j++) {
       const d = _distanciaRuas(ruas[i], ruas[j]);
-      const peso = (_pesoRua(ruas[i]) + _pesoRua(ruas[j])) / 2;
-      const custo = d * peso;
+      // 999 é a sentinela de "rua fora do mapa" (endereço especial não catalogado,
+      // ex. SALDAO) — já é maior que qualquer distância real ponderada (máx.
+      // ~27*3.5≈95), então não multiplica pelo peso de novo, senão vira um número
+      // artificialmente enorme (~3500) sem significado real.
+      const custo = d >= 999 ? d : d * ((_pesoRua(ruas[i]) + _pesoRua(ruas[j])) / 2);
       if (custo > max) max = custo;
     }
   }
@@ -1193,75 +1196,74 @@ router.post('/pedidos/lote/formar', requerAuth, requerPerfil('supervisor'), asyn
     // aguardando_desde), igual ao campo "Quantidade" do Distribuir.
     if (quantidade > 0) elegiveis = elegiveis.slice(0, quantidade);
 
-    // 1. Forma ondas em ordem de chegada: fecha em 8, ou antes (nunca abaixo de 5)
-    //    se o pedido mais antigo da onda já passou de 20min esperando. O piso de 5
-    //    evita que um backlog com pedidos já antigos (comum ao formar lotes de uma
-    //    fila represada) feche onda de 1 em 1 assim que o primeiro pedido entra —
-    //    nesse caso o pedido já nasce "urgente" e a onda fechava antes de agrupar nada.
-    const ondas = [];
-    let ondaAtual = [];
+    // 1. Pré-computa rua/SKU/pontuação de cada pedido elegível — precisa saber
+    //    isso de TODO o conjunto antes de agrupar, já que agora um lote pode
+    //    escolher membros de qualquer lugar da fila elegível, não só de uma
+    //    fatia cronológica fixa de 8 (ver nota abaixo).
     for (const p of elegiveis) {
-      ondaAtual.push(p);
-      const urgente = ondaAtual.length >= 5 && (ondaAtual[0].espera_min||0) > 20;
-      if (ondaAtual.length >= 8 || urgente) {
-        ondas.push(ondaAtual);
-        ondaAtual = [];
+      const itens = await db.all('SELECT endereco,quantidade,codigo FROM itens_pedido WHERE pedido_id=$1', [p.id]);
+      const ruas = itens.map(i => _ruaPrincipalLote(i.endereco)).filter(Boolean);
+      p._ruaPrincipal = [...ruas].sort((a,b) => _rotaIdxLote(a) - _rotaIdxLote(b))[0] || '';
+      p._ruasSet = [...new Set(ruas)];
+      p._itensQtd = itens.reduce((s,i) => s + (parseInt(i.quantidade)||1), 0);
+      p._skusSet = [...new Set(itens.map(i => i.codigo).filter(Boolean))];
+      p._skusQtd = p._skusSet.length;
+      const scoreBase = calcularPontuacaoPedido(itens);
+      if (modoLote === 'complexidade') {
+        // Mesmo bônus do cenário "Complexidade Total" em /pedidos/distribuicao:
+        // ruas extras (>2) e SKUs distintos extras (>1) pesam mais na pontuação.
+        const ruasUnicas = new Set(ruas).size;
+        const skusUnicos = new Set(itens.map(i => i.codigo).filter(Boolean)).size;
+        const bonusRuas = Math.max(0, ruasUnicas - 2) * 15;
+        const bonusSkus = Math.max(0, skusUnicos - 1) * 3;
+        p._pontuacao = scoreBase + bonusRuas + bonusSkus;
+      } else {
+        p._pontuacao = scoreBase;
       }
+      await pool.query('UPDATE pedidos SET pontuacao=$1 WHERE id=$2', [scoreBase, p.id]);
     }
-    if (ondaAtual.length) ondas.push(ondaAtual);
 
-    // 2. Dentro de cada onda (já limitada a até 8 pedidos pela formação acima),
-    //    monta o lote por vizinhança real: começa pelo pedido mais perto do
-    //    início da rota (E) e vai sempre pegando o pedido que resulta no menor
-    //    diâmetro do grupo (_diametroRuas), em vez de só ordenar pela posição
-    //    no índice da rota de caminhada — que sozinha colocaria pedidos do
-    //    ramal E-D-C-B-A "perto" uns dos outros mesmo quando fisicamente um
-    //    está na ponta oposta do outro.
+    // 2. Monta os lotes "esculpindo" o conjunto elegível (já ordenado por
+    //    aguardando_desde ASC): cada lote começa pelo pedido mais antigo ainda
+    //    disponível (preserva a prioridade de quem espera mais — sempre vira
+    //    semente antes de qualquer pedido mais novo) e cresce pegando, a cada
+    //    passo, o candidato que resulta no menor diâmetro ponderado por
+    //    dificuldade — com desconto por SKU em comum — até completar 8.
+    //    IMPORTANTE: antes, "onda" (fatia cronológica de até 8) e "grupo"
+    //    (esse laço de vizinhança) eram dois passos separados, mas o laço de
+    //    vizinhança sempre consumia a onda INTEIRA num único lote — ou seja,
+    //    só reordenava quem entrava, nunca decidia quem ENTRAVA. Fundir os
+    //    dois passos aqui faz a vizinhança realmente escolher os membros,
+    //    dentre toda a fila elegível, não só dentro de uma fatia já fechada.
+    //    Fecha o lote antes de 8 (mínimo 5, a não ser que sobre pouco no
+    //    final) se o pedido semente já estiver esperando mais de 20min — pra
+    //    não deixar um pedido antigo preso esperando um lote de 8 se formar.
+    const PESO_SKU_COMUM = 3;
+    // Cada lote só busca candidato dentre os próximos JANELA_BUSCA pedidos mais
+    // antigos ainda disponíveis (não a fila elegível inteira) — evita custo O(N²)
+    // com filas grandes sem "quantidade" definida, e evita puxar pra um lote um
+    // pedido bem mais novo só porque calhou de estar fisicamente perto (o que
+    // faria os mais antigos esperarem ainda mais pra virar semente de um lote).
+    const JANELA_BUSCA = 40;
+    const restantesGlobais = [...elegiveis];
     const lotesPreview = [];
-    for (const onda of ondas) {
-      for (const p of onda) {
-        const itens = await db.all('SELECT endereco,quantidade,codigo FROM itens_pedido WHERE pedido_id=$1', [p.id]);
-        const ruas = itens.map(i => _ruaPrincipalLote(i.endereco)).filter(Boolean);
-        p._ruaPrincipal = [...ruas].sort((a,b) => _rotaIdxLote(a) - _rotaIdxLote(b))[0] || '';
-        p._ruasSet = [...new Set(ruas)];
-        p._itensQtd = itens.reduce((s,i) => s + (parseInt(i.quantidade)||1), 0);
-        p._skusSet = [...new Set(itens.map(i => i.codigo).filter(Boolean))];
-        p._skusQtd = p._skusSet.length;
-        const scoreBase = calcularPontuacaoPedido(itens);
-        if (modoLote === 'complexidade') {
-          // Mesmo bônus do cenário "Complexidade Total" em /pedidos/distribuicao:
-          // ruas extras (>2) e SKUs distintos extras (>1) pesam mais na pontuação.
-          const ruasUnicas = new Set(ruas).size;
-          const skusUnicos = new Set(itens.map(i => i.codigo).filter(Boolean)).size;
-          const bonusRuas = Math.max(0, ruasUnicas - 2) * 15;
-          const bonusSkus = Math.max(0, skusUnicos - 1) * 3;
-          p._pontuacao = scoreBase + bonusRuas + bonusSkus;
-        } else {
-          p._pontuacao = scoreBase;
-        }
-        await pool.query('UPDATE pedidos SET pontuacao=$1 WHERE id=$2', [scoreBase, p.id]);
-      }
-      const restantes = [...onda].sort((a,b) => _rotaIdxLote(a._ruaPrincipal) - _rotaIdxLote(b._ruaPrincipal));
-      const grupo = [restantes.shift()];
-      let ruasGrupo = [...grupo[0]._ruasSet];
-      let skusGrupo = new Set(grupo[0]._skusSet);
-      // Escolhe o candidato com o melhor "custo": diâmetro resultante do grupo
-      // (proximidade — quanto menor, melhor) menos um bônus por SKU que ele já
-      // compartilha com o grupo (produto em comum — quanto mais, melhor, porque
-      // vira uma coleta consolidada em vez de uma parada por pedido). PESO_SKU_COMUM
-      // é quantos "passos de rua" um SKU em comum vale — cada produto repetido
-      // pode justificar aceitar um grupo um pouco mais espalhado.
-      const PESO_SKU_COMUM = 3;
-      while (restantes.length) {
+    while (restantesGlobais.length) {
+      const seed = restantesGlobais.shift();
+      const grupo = [seed];
+      let ruasGrupo = [...seed._ruasSet];
+      let skusGrupo = new Set(seed._skusSet);
+      const tamanhoAlvo = (seed.espera_min||0) > 20 ? 5 : 8;
+      while (grupo.length < tamanhoAlvo && restantesGlobais.length) {
+        const janela = restantesGlobais.slice(0, JANELA_BUSCA);
         let melhorIdx = 0, melhorCusto = Infinity;
-        restantes.forEach((cand, idx) => {
+        janela.forEach((cand, idx) => {
           const ruasTeste = [...new Set([...ruasGrupo, ...cand._ruasSet])];
           const diametro = _diametroRuas(ruasTeste);
           const skusComuns = cand._skusSet.filter(sku => skusGrupo.has(sku)).length;
           const custo = diametro - skusComuns * PESO_SKU_COMUM;
           if (custo < melhorCusto) { melhorCusto = custo; melhorIdx = idx; }
         });
-        const escolhido = restantes.splice(melhorIdx,1)[0];
+        const escolhido = restantesGlobais.splice(melhorIdx,1)[0];
         grupo.push(escolhido);
         ruasGrupo = [...new Set([...ruasGrupo, ...escolhido._ruasSet])];
         escolhido._skusSet.forEach(sku => skusGrupo.add(sku));
