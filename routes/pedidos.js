@@ -1118,14 +1118,35 @@ function _distanciaRuas(a, b) {
   if (!ca || !cb) return 999;
   return Math.abs(ca.x-cb.x) + Math.abs(ca.y-cb.y);
 }
-// Maior distância entre qualquer par de ruas de uma lista — o "diâmetro" da
-// área que o separador precisa cobrir pra pegar todos os itens daquelas ruas.
+// Peso de dificuldade por rua — mesma tabela de lib/pontuacao.js (PESOS/
+// SEGMENTOS_ESTOQUE), simplificada por rua inteira (sem distinguir Frente/Fundo
+// nem faixa de número, que calcularPesoCorredor já usa pra pontuação individual
+// do pedido). Usado só pra ponderar a distância na formação do lote: analisado
+// com dados reais (WMS11092026.xlsx), a maioria dos itens fica em A-E/P-U
+// (fácil) — quando um pedido toca uma rua difícil (F-L, rara no estoque), essa
+// distância pesa mais na decisão de agrupar, pra não esticar o lote metendo um
+// item difícil junto com algo distante numa área fácil.
+const PESO_DIFICULDADE_RUA = {
+  A:1.0, B:1.0, C:1.0, D:1.0, E:1.0,
+  F:2.8, G:2.8, H:2.8, I:2.8, J:2.8, K:2.8, L:2.8,
+  M:1.8, N:1.8, O:1.8,
+  P:1.0, Q:1.0, R:1.0, S:1.0, T:1.0, U:1.0,
+  V:1.8, W:1.8, X:1.8, Y:1.8, Z:1.8,
+  ZA:3.5, ARARA:3.5,
+};
+function _pesoRua(rua) { return PESO_DIFICULDADE_RUA[rua] || 1.0; }
+// Maior distância PONDERADA entre qualquer par de ruas de uma lista — o
+// "diâmetro" da área que o separador precisa cobrir, pesado pela dificuldade
+// média das duas pontas (uma rua difícil conta mais que a mesma distância
+// entre ruas fáceis).
 function _diametroRuas(ruas) {
   let max = 0;
   for (let i = 0; i < ruas.length; i++) {
     for (let j = i+1; j < ruas.length; j++) {
       const d = _distanciaRuas(ruas[i], ruas[j]);
-      if (d > max) max = d;
+      const peso = (_pesoRua(ruas[i]) + _pesoRua(ruas[j])) / 2;
+      const custo = d * peso;
+      if (custo > max) max = custo;
     }
   }
   return max;
