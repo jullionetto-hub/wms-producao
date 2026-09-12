@@ -2391,7 +2391,7 @@
 
 
 <script src="/js/config.js?v=11"></script>
-  <script src="/js/pedidos.js?v=35"></script>
+  <script src="/js/pedidos.js?v=36"></script>
   <script src="/js/separador.js?v=23"></script>
   <script src="/js/repositor.js?v=18"></script>
   <script src="/js/checkout.js?v=14"></script>
@@ -2724,6 +2724,7 @@
 
       <div style="display:flex;gap:8px;justify-content:flex-end">
         <button class="btn btn-outline" onclick="fecharModalFormarLote()">Cancelar</button>
+        <button class="btn btn-outline" onclick="imprimirEtiquetasLote()" id="btn-imprimir-etiquetas-lote" style="display:none">🖨️ Imprimir Etiquetas</button>
         <button class="btn btn-primary" onclick="calcularLotes()" id="btn-calcular-lote">Calcular Lotes</button>
         <button class="btn btn-success" onclick="confirmarLotes()" id="btn-confirmar-lote" style="display:none">Confirmar Lotes</button>
       </div>

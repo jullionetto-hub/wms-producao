@@ -1204,6 +1204,7 @@ router.post('/pedidos/lote/formar', requerAuth, requerPerfil('supervisor'), asyn
         p._ruaPrincipal = [...ruas].sort((a,b) => _rotaIdxLote(a) - _rotaIdxLote(b))[0] || '';
         p._ruasSet = [...new Set(ruas)];
         p._itensQtd = itens.reduce((s,i) => s + (parseInt(i.quantidade)||1), 0);
+        p._skusQtd = new Set(itens.map(i => i.codigo).filter(Boolean)).size;
         const scoreBase = calcularPontuacaoPedido(itens);
         if (modoLote === 'complexidade') {
           // Mesmo bônus do cenário "Complexidade Total" em /pedidos/distribuicao:
@@ -1288,7 +1289,14 @@ router.post('/pedidos/lote/formar', requerAuth, requerPerfil('supervisor'), asyn
 
     res.json({
       lotes: lotesPreview.map(l => ({
-        pedidos: l.pedidos.map(p => ({ id:p.id, numero_pedido:p.numero_pedido, itens:p._itensQtd, espera_min: Math.round(p.espera_min||0) })),
+        pedidos: l.pedidos.map(p => ({
+          id:p.id, numero_pedido:p.numero_pedido, itens:p._itensQtd, espera_min: Math.round(p.espera_min||0),
+          // Campos extras só pra imprimir etiqueta do lote (mesmo formato de imprimirEtiquetas
+          // em pedidos.js) sem depender da lista filtrada da tela de Pedidos, que pode estar
+          // com outro filtro ativo e não conter todos os pedidos deste lote.
+          cliente: p.cliente||'', transportadora: p.transportadora||'',
+          skus: p._skusQtd, total_itens: p._itensQtd, aguardando_desde: p.aguardando_desde||'',
+        })),
         ruas: l.ruas,
         separador_id: l.separador_id,
         separador_nome: l.separador_nome,

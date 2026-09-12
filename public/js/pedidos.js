@@ -543,6 +543,13 @@ function imprimirEtiquetas() {
   const lista = [...(_pedidosListaFiltrada || [])];
   if (!lista.length) { toast('Nenhum pedido na lista pra imprimir.','info'); return; }
   lista.sort((a, b) => (a.separador_nome || '~Sem separador').localeCompare(b.separador_nome || '~Sem separador', 'pt-BR'));
+  _imprimirEtiquetasLista(lista);
+}
+
+// Motor de impressão reaproveitado por imprimirEtiquetas() (lista filtrada da tela de
+// Pedidos) e imprimirEtiquetasLote() (pedidos de um lote formado) — mesmo layout de
+// etiqueta (Zebra ZD-220) e mesmo código de barras Code128 do número do pedido.
+function _imprimirEtiquetasLista(lista) {
   const cont = document.getElementById('etiquetas-print');
   if (!cont) return;
   cont.innerHTML = lista.map(p => `
@@ -552,7 +559,7 @@ function imprimirEtiquetas() {
         <span class="et-envio">${pfEsc(p.transportadora||'—')}</span>
       </div>
       <div class="et-cliente">${pfEsc(p.cliente||'—')}</div>
-      <div class="et-meta">${p.itens||0} SKUs · ${p.total_itens||p.itens||0} itens · desde ${pfEsc(p.aguardando_desde||'—')}</div>
+      <div class="et-meta">${p.itens||p.skus||0} SKUs · ${p.total_itens||p.itens||0} itens · desde ${pfEsc(p.aguardando_desde||'—')}</div>
       <div class="et-barcode"><svg data-barcode="${pfEsc(p.numero_pedido)}"></svg></div>
     </div>`).join('');
   renderizarBarcodes();
@@ -564,6 +571,16 @@ function imprimirEtiquetas() {
   requestAnimationFrame(() => requestAnimationFrame(() => window.print()));
 }
 window.addEventListener('afterprint', () => document.body.classList.remove('imprimindo-etiquetas'));
+
+// Etiquetas só dos pedidos do(s) lote(s) já calculados no modal Formar Lotes — na
+// mesma ordem 1,2,3... de cada lote, batendo com a legenda colorida da tela de
+// separação do celular, pra colar uma etiqueta por caixa física na ordem certa.
+function imprimirEtiquetasLote() {
+  if (!_lotesPlano?.length) { toast('Calcule os lotes primeiro.','aviso'); return; }
+  const lista = _lotesPlano.flatMap(l => l.pedidos);
+  if (!lista.length) { toast('Nenhum pedido nos lotes calculados.','info'); return; }
+  _imprimirEtiquetasLista(lista);
+}
 
 
 
@@ -1909,6 +1926,7 @@ function selecionarCenarioLote(c) {
   });
   document.getElementById('lote-resultado').style.display = 'none';
   document.getElementById('btn-confirmar-lote').style.display = 'none';
+  document.getElementById('btn-imprimir-etiquetas-lote').style.display = 'none';
   document.getElementById('btn-calcular-lote').style.display  = 'inline-flex';
   _lotesPlano = null;
 }
@@ -1917,6 +1935,7 @@ async function abrirModalFormarLote() {
   document.getElementById('modal-formar-lote').style.display = 'flex';
   document.getElementById('lote-resultado').style.display = 'none';
   document.getElementById('btn-confirmar-lote').style.display = 'none';
+  document.getElementById('btn-imprimir-etiquetas-lote').style.display = 'none';
   document.getElementById('btn-calcular-lote').style.display = 'inline-flex';
   const qtdEl = document.getElementById('lote-quantidade');
   if (qtdEl) qtdEl.value = '';
@@ -1981,6 +2000,7 @@ async function calcularLotes() {
     if (!data.lotes.length) {
       resEl.innerHTML = `<div style="text-align:center;color:var(--text3);font-size:12px;padding:12px">Nenhum lote formado — sem pedidos elegíveis (${data.drive_thru_excluidos||0} Drive Thru ignorado(s)).</div>`;
       document.getElementById('btn-confirmar-lote').style.display = 'none';
+      document.getElementById('btn-imprimir-etiquetas-lote').style.display = 'none';
       return;
     }
     const totalPedidos = data.lotes.reduce((s,l) => s+l.pedidos.length, 0);
@@ -2002,6 +2022,7 @@ async function calcularLotes() {
         </tr>`).join('')}
       </tbody></table></div>`;
     document.getElementById('btn-confirmar-lote').style.display = 'inline-flex';
+    document.getElementById('btn-imprimir-etiquetas-lote').style.display = 'inline-flex';
   } catch(e) { toast('Erro ao calcular lotes', 'erro'); }
 }
 
