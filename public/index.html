@@ -2196,10 +2196,15 @@
           <!-- LOTE: Lista unificada -->
           <div id="m-lote-lista" style="display:none">
             <div style="background:#1a1a2e;padding:10px 14px 8px">
-              <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
                 <button onclick="voltarFilaLote()" style="color:#f97316;font-size:16px;background:none;border:none;cursor:pointer;padding:0 4px">&#8592;</button>
                 <span style="color:#fff;font-size:14px;font-weight:500;flex:1">Separação em lote</span>
                 <span id="m-lote-badge" style="background:#f97316;color:#fff;font-size:10px;padding:2px 7px;border-radius:10px;font-weight:600"></span>
+              </div>
+              <div id="m-lote-stats" style="display:flex;gap:6px;margin-bottom:10px"></div>
+              <div onclick="toggleLotePedidos()" style="display:flex;align-items:center;gap:6px;cursor:pointer;margin-bottom:6px">
+                <span style="font-size:10px;font-weight:700;color:#9ca3af;letter-spacing:.5px;text-transform:uppercase">Pedidos do lote</span>
+                <span id="m-lote-chips-chevron" style="font-size:10px;color:#9ca3af">▾</span>
               </div>
               <div id="m-lote-chips" style="display:flex;gap:5px;flex-wrap:wrap"></div>
             </div>
@@ -2214,8 +2219,8 @@
             </div>
             <div id="m-lote-lista-body" style="overflow-y:auto;max-height:360px"></div>
             <div style="background:#1a1a2e;padding:12px 14px;display:flex;gap:8px">
-              <button onclick="voltarFilaLote()" style="flex:1;background:transparent;border:1.5px solid rgba(255,255,255,0.25);color:#e0e0e0;font-size:12px;padding:10px 0;border-radius:10px;cursor:pointer">Pausar</button>
-              <button id="m-lote-btn-concluir" onclick="concluirLoteMobile()" disabled style="flex:2;background:#22c55e;border:none;color:#fff;font-size:13px;font-weight:700;padding:10px 0;border-radius:10px;cursor:pointer;opacity:0.5">Concluir lote</button>
+              <button onclick="loteVoltarPosicao()" style="flex:1;background:transparent;border:1.5px solid rgba(255,255,255,0.25);color:#e0e0e0;font-size:12px;padding:10px 0;border-radius:10px;cursor:pointer">← Voltar</button>
+              <button id="m-lote-btn-prox" disabled style="flex:2;background:#22c55e;border:none;color:#fff;font-size:13px;font-weight:700;padding:10px 0;border-radius:10px;cursor:pointer;opacity:0.5">Próxima posição</button>
             </div>
           </div>
 
@@ -2387,7 +2392,7 @@
 
 <script src="/js/config.js?v=11"></script>
   <script src="/js/pedidos.js?v=35"></script>
-  <script src="/js/separador.js?v=22"></script>
+  <script src="/js/separador.js?v=23"></script>
   <script src="/js/repositor.js?v=18"></script>
   <script src="/js/checkout.js?v=14"></script>
   <script src="/js/dashboard.js?v=26"></script>

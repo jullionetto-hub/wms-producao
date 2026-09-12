@@ -1118,13 +1118,17 @@ function _distanciaRuas(a, b) {
   if (!ca || !cb) return 999;
   return Math.abs(ca.x-cb.x) + Math.abs(ca.y-cb.y);
 }
-function _distanciaPedidosLote(a, b) {
-  let menor = Infinity;
-  for (const ra of a._ruasSet) for (const rb of b._ruasSet) {
-    const d = _distanciaRuas(ra, rb);
-    if (d < menor) menor = d;
+// Maior distância entre qualquer par de ruas de uma lista — o "diâmetro" da
+// área que o separador precisa cobrir pra pegar todos os itens daquelas ruas.
+function _diametroRuas(ruas) {
+  let max = 0;
+  for (let i = 0; i < ruas.length; i++) {
+    for (let j = i+1; j < ruas.length; j++) {
+      const d = _distanciaRuas(ruas[i], ruas[j]);
+      if (d > max) max = d;
+    }
   }
-  return menor;
+  return max;
 }
 
 // Preview — não grava nada, só calcula os lotes e devolve pra conferência.
@@ -1187,11 +1191,11 @@ router.post('/pedidos/lote/formar', requerAuth, requerPerfil('supervisor'), asyn
 
     // 2. Dentro de cada onda (já limitada a até 8 pedidos pela formação acima),
     //    monta o lote por vizinhança real: começa pelo pedido mais perto do
-    //    início da rota (E) e vai sempre pegando o pedido fisicamente mais
-    //    próximo do último adicionado (_distanciaPedidosLote), em vez de só
-    //    ordenar pela posição no índice da rota de caminhada — que sozinha
-    //    colocaria pedidos do ramal E-D-C-B-A "perto" uns dos outros mesmo
-    //    quando fisicamente um está na ponta oposta do outro.
+    //    início da rota (E) e vai sempre pegando o pedido que resulta no menor
+    //    diâmetro do grupo (_diametroRuas), em vez de só ordenar pela posição
+    //    no índice da rota de caminhada — que sozinha colocaria pedidos do
+    //    ramal E-D-C-B-A "perto" uns dos outros mesmo quando fisicamente um
+    //    está na ponta oposta do outro.
     const lotesPreview = [];
     for (const onda of ondas) {
       for (const p of onda) {
@@ -1216,14 +1220,22 @@ router.post('/pedidos/lote/formar', requerAuth, requerPerfil('supervisor'), asyn
       }
       const restantes = [...onda].sort((a,b) => _rotaIdxLote(a._ruaPrincipal) - _rotaIdxLote(b._ruaPrincipal));
       const grupo = [restantes.shift()];
+      let ruasGrupo = [...grupo[0]._ruasSet];
+      // Escolhe sempre o candidato que resulta no MENOR diâmetro do grupo (não o
+      // mais perto do último pedido adicionado) — assim um pedido com posições
+      // muito espalhadas (ex.: toca Z071 e também Z220) só entra se isso não
+      // aumentar muito a área que o separador precisa cobrir; senão fica pra uma
+      // próxima onda/lote, em vez de "grudar" no grupo só por uma rua em comum.
       while (restantes.length) {
-        const ultimo = grupo[grupo.length-1];
-        let melhorIdx = 0, melhorDist = Infinity;
+        let melhorIdx = 0, melhorDiam = Infinity;
         restantes.forEach((cand, idx) => {
-          const d = _distanciaPedidosLote(ultimo, cand);
-          if (d < melhorDist) { melhorDist = d; melhorIdx = idx; }
+          const ruasTeste = [...new Set([...ruasGrupo, ...cand._ruasSet])];
+          const d = _diametroRuas(ruasTeste);
+          if (d < melhorDiam) { melhorDiam = d; melhorIdx = idx; }
         });
-        grupo.push(restantes.splice(melhorIdx,1)[0]);
+        const escolhido = restantes.splice(melhorIdx,1)[0];
+        grupo.push(escolhido);
+        ruasGrupo = [...new Set([...ruasGrupo, ...escolhido._ruasSet])];
       }
       lotesPreview.push({ pedidos: grupo });
     }

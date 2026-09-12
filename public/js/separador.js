@@ -13,8 +13,13 @@ let _loteAtual         = [];   // [{id, numero_pedido, total_itens}, ...]
 let _loteItens         = [];   // itens mesclados com caixa_num
 let _lotePendentes     = [];   // pedidos elegíveis para o lote (usado pelo card)
 let _gruposLoteSistema = {};   // lote_id -> pedidos, formados pelo supervisor (Formar Lotes)
+let _loteIdAtual       = null; // id do lote (lotes_separacao.id), pra exibir "Lote 001"
+let _loteEndIdx        = 0;    // posição atual na navegação passo-a-passo
+let _lotePedidosAbertos = true; // seção "Pedidos do lote" expandida/recolhida
+let _loteAcaoAberta    = null; // "p:<ids>" ou "f:<ids>" — grupo com Parcial/Falta aberto
 
 const _CX_CORES = ['#4F46E5','#7c3aed','#b45309','#065a82','#155e3a'];
+const MOTIVOS_FALTA_LOTE = ['Estoque vazio', 'Produto não localizado', 'Divergência de estoque'];
 
 function _loteScreens(ativa) {
   ['m-lote-prep','m-lote-lista','m-lote-conclusao','m-cl-wrap','m-caixa-wrap'].forEach(id => {
@@ -39,6 +44,7 @@ async function abrirLoteSistema(loteId) {
     });
     const data = await res.json();
     if (!res.ok) { toast(data.erro||'Erro ao iniciar lote', 'erro'); return; }
+    _loteIdAtual = loteId;
     mudarTabSep('separar');
     await carregarListaLote(ids);
   } catch(e) { toast('Erro de rede', 'erro'); }
@@ -102,27 +108,65 @@ async function carregarListaLote(ids) {
     if (!res.ok) { toast(data.erro||'Erro ao carregar lote','erro'); return; }
     _loteItens = data.itens;
     _loteAtual = data.pedidos;
+    _loteEndIdx = 0;
+    _loteAcaoAberta = null;
+    _lotePedidosAbertos = true;
     _renderizarListaLote();
     _loteScreens('m-lote-lista');
   } catch(e) { toast('Erro de rede','erro'); }
 }
 
+// Agrupa os itens do lote por endereço (posição), ordenados pela rota física —
+// usado tanto pra renderizar quanto pra navegar (próxima/anterior/revisar).
+function _loteAgruparPorEndereco() {
+  const gruposPorEnd = {};
+  for (const item of _loteItens) {
+    const end = String(item.endereco||'S/END').split(',')[0].trim().toUpperCase();
+    if (!gruposPorEnd[end]) gruposPorEnd[end] = [];
+    gruposPorEnd[end].push(item);
+  }
+  // Rua não reconhecida (fora da ROTA_FISICA) vai pro fim, não pro meio — 999999
+  // é maior que qualquer índice válido (máx. 27*10000+9999), senão uma rua
+  // desconhecida podia aparecer antes de ruas reais do fim da rota (R a Z).
+  const rotaIdx = e => { const l = e.replace(/\d+.*/,''); const i = ROTA_FISICA.indexOf(l); return i >= 0 ? i*10000 + (parseInt(e.match(/\d+/)?.[0])||0) : 999999; };
+  const endsOrdenados = Object.keys(gruposPorEnd).sort((a,b) => rotaIdx(a) - rotaIdx(b));
+  return { gruposPorEnd, endsOrdenados };
+}
+
 function _renderizarListaLote() {
   const itens = _loteItens;
   const total = itens.length;
-  const feitos = itens.filter(i => i.status === 'encontrado').length;
+  const { gruposPorEnd, endsOrdenados } = _loteAgruparPorEndereco();
+  const totalSkus = new Set(itens.map(i => i.codigo || '_sem_cod_')).size;
 
-  // Header: uma legenda fixa por pedido (número + cor), sempre visível acima da
-  // lista rolável. Cada item, mais abaixo, só precisa mostrar a bolinha colorida
-  // com o número — o separador bate a cor/número com a legenda pra saber em qual
-  // pedido colocar, sem ter que ler um número de pedido inteiro item por item.
-  document.getElementById('m-lote-badge').textContent = `${_loteAtual.length} pedidos`;
+  document.getElementById('m-lote-badge').textContent = _loteIdAtual
+    ? `Lote ${String(_loteIdAtual).padStart(3,'0')}` : `${_loteAtual.length} pedidos`;
+
+  // 4 cards de estatística
+  const statsEl = document.getElementById('m-lote-stats');
+  if (statsEl) {
+    const stats = [['📦',_loteAtual.length,'Pedidos'], ['🧾',total,'Itens'], ['🏷️',totalSkus,'SKUs'], ['📍',endsOrdenados.length,'Posições']];
+    statsEl.innerHTML = stats.map(([ic,val,lab]) => `
+      <div style="flex:1;background:rgba(255,255,255,.06);border-radius:10px;padding:8px 4px;text-align:center">
+        <div style="font-size:14px;line-height:1.2">${ic}</div>
+        <div style="font-size:15px;font-weight:800;color:#fff;line-height:1.3">${val}</div>
+        <div style="font-size:8px;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px">${lab}</div>
+      </div>`).join('');
+  }
+
+  // Progresso geral — 'parcial' também conta como processado (só 'pendente' bloqueia,
+  // igual ao backend em PUT /pedidos/lote/concluir).
+  const processados = itens.filter(i => i.status !== 'pendente').length;
+  document.getElementById('m-lote-prog-cnt').textContent = `${processados} / ${total} itens`;
+  document.getElementById('m-lote-prog-fill').style.width = total ? Math.round(processados/total*100)+'%' : '0%';
+
+  // "Pedidos do lote" — legenda colorida recolhível
   document.getElementById('m-lote-chips').innerHTML = _loteAtual.map((p, idx) => {
     const cx = idx + 1;
     const cor = _CX_CORES[idx % _CX_CORES.length];
     const itensDoPedido = itens.filter(i => i.caixa_num === cx);
     const totalP  = itensDoPedido.length;
-    const feitosP = itensDoPedido.filter(i => i.status === 'encontrado' || i.status === 'falta').length;
+    const feitosP = itensDoPedido.filter(i => i.status !== 'pendente').length;
     const completoP = totalP > 0 && feitosP === totalP;
     return `<span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;padding:3px 10px 3px 3px;border-radius:20px;white-space:nowrap;
         background:${completoP ? 'rgba(34,197,94,.15)' : 'var(--surface2)'};
@@ -131,132 +175,174 @@ function _renderizarListaLote() {
         <span style="color:${completoP ? '#22c55e' : 'var(--text2)'}">#${p.numero_pedido} · ${feitosP}/${totalP}</span>
       </span>`;
   }).join('');
+  const chipsWrap = document.getElementById('m-lote-chips');
+  if (chipsWrap) chipsWrap.style.display = _lotePedidosAbertos ? 'flex' : 'none';
+  const chevEl = document.getElementById('m-lote-chips-chevron');
+  if (chevEl) chevEl.textContent = _lotePedidosAbertos ? '▾' : '▸';
 
-  // Progresso: encontrado + falta = processado
-  const processados = itens.filter(i => i.status === 'encontrado' || i.status === 'falta').length;
-  document.getElementById('m-lote-prog-cnt').textContent = `${processados} / ${total} itens`;
-  document.getElementById('m-lote-prog-fill').style.width = total ? Math.round(processados/total*100)+'%' : '0%';
-  const btnFim = document.getElementById('m-lote-btn-concluir');
-  if (btnFim) { btnFim.disabled = processados < total; btnFim.style.opacity = processados >= total ? '1' : '0.5'; }
+  const body = document.getElementById('m-lote-lista-body');
+  const btnProx = document.getElementById('m-lote-btn-prox');
 
-  // 1. Agrupar por endereço primário
-  const gruposPorEnd = {};
-  for (const item of itens) {
-    const end = String(item.endereco||'S/END').split(',')[0].trim().toUpperCase();
-    if (!gruposPorEnd[end]) gruposPorEnd[end] = [];
-    gruposPorEnd[end].push(item);
-  }
-
-  // 2. Ordenar pela rota física
-  // Rua não reconhecida (fora da ROTA_FISICA) vai pro fim, não pro meio — 999999
-  // é maior que qualquer índice válido (máx. 27*10000+9999), senão uma rua
-  // desconhecida podia aparecer antes de ruas reais do fim da rota (R a Z).
-  const rotaIdx = e => { const l = e.replace(/\d+.*/,''); const i = ROTA_FISICA.indexOf(l); return i >= 0 ? i*10000 + (parseInt(e.match(/\d+/)?.[0])||0) : 999999; };
-  const endsOrdenados = Object.keys(gruposPorEnd).sort((a,b) => rotaIdx(a) - rotaIdx(b));
-
-  let html = '';
-  for (const end of endsOrdenados) {
-    const itemsEnd = gruposPorEnd[end];
-
-    // 3. Dentro do endereço, agrupar por SKU (codigo) — elimina linhas duplicadas
-    const porSku = {};
-    for (const item of itemsEnd) {
-      const cod = item.codigo || '_sem_cod_';
-      if (!porSku[cod]) porSku[cod] = [];
-      porSku[cod].push(item);
-    }
-
-    const totalEnd   = itemsEnd.length;
-    const feitosEnd  = itemsEnd.filter(i => i.status === 'encontrado' || i.status === 'falta').length;
-    const completo   = feitosEnd === totalEnd;
-
-    html += `<div style="padding:7px 14px 5px;background:var(--surface2);border-bottom:0.5px solid var(--border);display:flex;align-items:center;gap:8px">
-      <span style="background:var(--surface2);color:var(--text);font-size:12px;font-weight:700;padding:3px 10px;border-radius:6px;font-family:monospace;border:1px solid var(--border)">${end}</span>
-      <span style="font-size:11px;color:var(--text3)">${Object.keys(porSku).length} produto(s)</span>
-      ${completo
-        ? '<span style="margin-left:auto;font-size:11px;color:#22c55e;font-weight:700">✓ completo</span>'
-        : `<span style="margin-left:auto;font-size:11px;color:var(--text3)">${feitosEnd}/${totalEnd}</span>`}
-    </div>`;
-
-    for (const [cod, items] of Object.entries(porSku)) {
-      const todosProc = items.every(i => i.status === 'encontrado' || i.status === 'falta');
-      const temFalta  = items.some(i => i.status === 'falta');
-      const totalQty  = items.reduce((s, i) => s + (parseInt(i.quantidade)||1), 0);
-
-      // Endereço completo (ex: E011, COL 03, NIV 02)
-      const endCompleto = items[0].endereco || end;
-
-      // Distribuição por caixa: { cx_num: qty }
-      const porCaixa = {};
-      for (const item of items) {
-        const cx = item.caixa_num;
-        if (!porCaixa[cx]) porCaixa[cx] = 0;
-        porCaixa[cx] += parseInt(item.quantidade)||1;
-      }
-      const cxEntries = Object.entries(porCaixa).sort((a,b) => Number(a[0]) - Number(b[0]));
-
-      // Bolinha colorida (mesma cor/número da legenda no topo) + número do pedido
-      // direto no item — só a bolinha obrigava a olhar a legenda lá em cima toda
-      // hora rolando a lista; com o número aqui também não precisa mais disso.
-      const cxHtml = cxEntries.map(([cx, qty]) => {
-        const cor = _CX_CORES[(Number(cx)-1) % _CX_CORES.length];
-        const numPedido = _loteAtual[Number(cx)-1]?.numero_pedido || cx;
-        return `<span style="display:inline-flex;align-items:center;gap:5px">
-          <span style="width:18px;height:18px;border-radius:50%;background:${cor};color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0">${cx}</span>
-          <span style="font-size:12px;font-weight:700;color:var(--text2)">#${numPedido} · ${qty} un</span>
-        </span>`;
-      }).join('');
-
-      const ids = items.map(i => i.id).join(',');
-
-      // Cor do círculo: verde=encontrado, âmbar=falta/parcial, cinza=pendente
-      const circuloBg   = todosProc ? (temFalta ? '#f59e0b' : '#22c55e') : 'transparent';
-      const circuloBord = todosProc ? (temFalta ? '#f59e0b' : '#22c55e') : '#cbd5e1';
-      const circuloIcon = todosProc ? `<span style="color:#fff;font-size:13px;line-height:1">${temFalta?'!':'✓'}</span>` : '';
-
-      html += `<div style="padding:10px 14px;border-bottom:0.5px solid var(--border);${todosProc?'opacity:0.45':''}">
-        <div style="display:flex;gap:10px;align-items:flex-start">
-          <div onclick="verificarGrupoLote('${ids}')"
-            style="width:26px;height:26px;border-radius:50%;flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center;cursor:pointer;
-              background:${circuloBg};border:2px solid ${circuloBord}">
-            ${circuloIcon}
-          </div>
-          <div style="flex:1;min-width:0;cursor:pointer" onclick="verificarGrupoLote('${ids}')">
-            <div style="font-size:13px;font-weight:500;color:var(--text);line-height:1.35;margin-bottom:2px;${todosProc?'text-decoration:line-through':''}">
-              ${items[0].descricao||cod}
-            </div>
-            <div style="font-size:10px;color:var(--accent);font-family:monospace;margin-bottom:6px;font-weight:600">
-              ${endCompleto}
-            </div>
-            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:2px">
-              <span style="font-size:12px;font-weight:700;color:var(--text);background:var(--surface2);padding:3px 9px;border-radius:5px;border:0.5px solid var(--border)">PEGAR ${totalQty} un</span>
-            </div>
-            <div style="display:flex;flex-wrap:wrap;gap:10px;padding-left:2px">
-              ${cxHtml}
-            </div>
-          </div>
-        </div>
-        ${!todosProc ? `<div style="display:flex;gap:6px;margin-top:8px;margin-left:36px">
-          <button onclick="verificarGrupoLote('${ids}')"
-            style="flex:1;background:rgba(87,185,129,.15);border:1.5px solid rgba(87,185,129,.4);color:var(--green);font-size:12px;font-weight:700;padding:7px 0;border-radius:8px;cursor:pointer">
-            ✓ Encontrei tudo
-          </button>
-          <button onclick="event.stopPropagation();parcialGrupoLote('${ids}',${totalQty})"
-            style="flex:1;background:rgba(79,70,229,.15);border:1.5px solid rgba(79,70,229,.4);color:#818CF8;font-size:12px;font-weight:700;padding:7px 0;border-radius:8px;cursor:pointer">
-            ~ Parcial
-          </button>
-          <button onclick="event.stopPropagation();faltaGrupoLote('${ids}',${totalQty})"
-            style="flex:1;background:rgba(224,168,62,.15);border:1.5px solid rgba(224,168,62,.4);color:var(--amber);font-size:12px;font-weight:700;padding:7px 0;border-radius:8px;cursor:pointer">
-            ✗ Falta
-          </button>
-        </div>` : ''}
-        ${temFalta ? `<div style="margin-top:6px;margin-left:36px;background:rgba(224,168,62,.15);border:1px solid rgba(224,168,62,.4);border-radius:6px;padding:4px 10px;font-size:10px;color:var(--amber);font-weight:600">
-          ⏳ Aguardando repositor
-        </div>` : ''}
+  // Passou da última posição — mostra o resumo em vez de um card de posição.
+  if (_loteEndIdx >= endsOrdenados.length) {
+    const faltas = itens.filter(i => i.status === 'falta').length;
+    const pedidosCompletos = _loteAtual.filter((p, idx) => {
+      const itensDoPedido = itens.filter(i => i.caixa_num === idx+1);
+      return itensDoPedido.length > 0 && itensDoPedido.every(i => i.status !== 'pendente');
+    }).length;
+    if (body) body.innerHTML = faltas > 0 ? `
+      <div style="padding:28px 18px;text-align:center">
+        <div style="font-size:32px;margin-bottom:8px">⚠️</div>
+        <div style="font-size:15px;font-weight:700;color:var(--amber);margin-bottom:6px">Existem divergências</div>
+        <div style="font-size:12px;color:var(--text3);margin-bottom:16px">${processados-faltas} separados · ${faltas} em falta de ${total} itens previstos</div>
+        <button onclick="loteRevisarDivergencias()" style="background:rgba(224,168,62,.15);border:1.5px solid rgba(224,168,62,.4);color:var(--amber);font-size:13px;font-weight:700;padding:10px 20px;border-radius:10px;cursor:pointer">Revisar divergências</button>
+      </div>` : `
+      <div style="padding:28px 18px;text-align:center">
+        <div style="font-size:32px;margin-bottom:8px">✅</div>
+        <div style="font-size:15px;font-weight:700;color:#22c55e;margin-bottom:6px">Tudo separado!</div>
+        <div style="font-size:12px;color:var(--text3)">${total}/${total} itens · ${pedidosCompletos}/${_loteAtual.length} pedidos</div>
       </div>`;
-    }
+    if (btnProx) { btnProx.textContent = 'Concluir lote'; btnProx.onclick = concluirLoteMobile; btnProx.disabled = false; btnProx.style.opacity = '1'; }
+    return;
   }
-  document.getElementById('m-lote-lista-body').innerHTML = html;
+
+  // Card da posição atual — um bloco por SKU quando a posição tiver mais de um.
+  const end = endsOrdenados[_loteEndIdx];
+  const itemsEnd = gruposPorEnd[end];
+  const rua = end.match(/^([A-Z]+)/)?.[1] || end;
+  const porSku = {};
+  for (const item of itemsEnd) {
+    const cod = item.codigo || '_sem_cod_';
+    if (!porSku[cod]) porSku[cod] = [];
+    porSku[cod].push(item);
+  }
+  const posicaoCompleta = itemsEnd.every(i => i.status !== 'pendente');
+
+  let html = `<div style="padding:12px 14px 4px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+      <span style="font-size:10px;font-weight:800;color:#f97316;letter-spacing:1px">PRÓXIMA POSIÇÃO</span>
+      <span style="font-size:11px;font-weight:700;color:var(--text2);background:var(--surface2);padding:2px 9px;border-radius:12px">📍 RUA ${rua}</span>
+    </div>
+    <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px">
+      <span style="font-family:'Space Mono',monospace;font-size:24px;font-weight:800;color:var(--text)">${end}</span>
+      <span style="font-size:12px;color:var(--text3);font-weight:600">${_loteEndIdx+1}/${endsOrdenados.length}</span>
+    </div>
+  </div>`;
+
+  for (const [cod, items] of Object.entries(porSku)) {
+    const todosProc = items.every(i => i.status !== 'pendente');
+    const temFalta  = items.some(i => i.status === 'falta');
+    const totalQty  = items.reduce((s, i) => s + (parseInt(i.quantidade)||1), 0);
+    const ids = items.map(i => i.id).join(',');
+
+    const porCaixa = {};
+    for (const item of items) {
+      const cx = item.caixa_num;
+      if (!porCaixa[cx]) porCaixa[cx] = 0;
+      porCaixa[cx] += parseInt(item.quantidade)||1;
+    }
+    const cxEntries = Object.entries(porCaixa).sort((a,b) => Number(a[0]) - Number(b[0]));
+    const distribHtml = cxEntries.map(([cx, qty]) => {
+      const cor = _CX_CORES[(Number(cx)-1) % _CX_CORES.length];
+      const numPedido = _loteAtual[Number(cx)-1]?.numero_pedido || cx;
+      return `<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0">
+        <span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--text2)">
+          <span style="width:9px;height:9px;border-radius:50%;background:${cor};flex-shrink:0"></span>
+          Pedido #${numPedido}
+        </span>
+        <span style="font-size:12px;font-weight:700;color:var(--text)">${qty} un.</span>
+      </div>`;
+    }).join('');
+
+    const parcialAberto = _loteAcaoAberta === `p:${ids}`;
+    const motivoAberto  = _loteAcaoAberta === `f:${ids}`;
+    const primeiroId = ids.split(',')[0];
+
+    html += `<div style="margin:0 14px 12px;border-radius:12px;border:1px solid ${todosProc?(temFalta?'rgba(224,168,62,.4)':'rgba(34,197,94,.35)'):'var(--border)'};background:var(--surface);padding:14px;${todosProc?'opacity:0.6':''}">
+      <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px">${items[0].descricao||cod}</div>
+      <div style="font-size:11px;color:var(--text3);font-family:monospace;margin-bottom:10px">SKU: ${cod}</div>
+      <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(79,70,229,.12);border:1px solid rgba(79,70,229,.3);color:var(--accent);font-size:13px;font-weight:700;padding:7px 14px;border-radius:10px;margin-bottom:12px">
+        📦 PEGAR ${totalQty} UNIDADE${totalQty===1?'':'S'}
+      </div>
+      <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.5px;margin-bottom:2px">DISTRIBUIÇÃO POR PEDIDO</div>
+      <div style="margin-bottom:${todosProc?'0':'12px'}">${distribHtml}</div>
+      ${!todosProc ? `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+          <button onclick="verificarGrupoLote('${ids}')" style="padding:10px 0;border:1.5px solid rgba(87,185,129,.4);border-radius:9px;background:rgba(87,185,129,.12);color:var(--green);font-size:12px;font-weight:700;cursor:pointer">✓ Encontrei tudo</button>
+          <button onclick="toggleParcialLote('${ids}')" style="padding:10px 0;border:1.5px solid rgba(79,70,229,.4);border-radius:9px;background:rgba(79,70,229,.12);color:#818CF8;font-size:12px;font-weight:700;cursor:pointer">~ Parcial</button>
+          <button onclick="toggleFaltaLote('${ids}')" style="padding:10px 0;border:1.5px solid rgba(224,168,62,.4);border-radius:9px;background:rgba(224,168,62,.12);color:var(--amber);font-size:12px;font-weight:700;cursor:pointer">⚠ Falta</button>
+        </div>` : `<div style="font-size:11px;font-weight:700;color:${temFalta?'var(--amber)':'#22c55e'};text-align:center">${temFalta?'⏳ Aguardando repositor':'✓ Coletado'}</div>`}
+      ${parcialAberto ? `<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+          <label style="font-size:11px;color:var(--amber);font-weight:700">Quantas unidades encontrou (de ${totalQty}):</label>
+          <div style="display:flex;gap:8px;margin-top:6px">
+            <input type="number" id="lote-parc-input-${primeiroId}" min="0" max="${totalQty-1}" placeholder="0" inputmode="numeric"
+              style="flex:1;padding:9px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-size:15px;font-weight:700;text-align:center"/>
+            <button onclick="confirmarParcialLote('${ids}',${totalQty})" style="background:var(--accent);border:none;color:#fff;font-weight:700;padding:0 18px;border-radius:8px;cursor:pointer">OK</button>
+          </div>
+        </div>` : ''}
+      ${motivoAberto ? `<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+          <label style="font-size:11px;color:var(--amber);font-weight:700;display:block;margin-bottom:6px">Motivo da falta:</label>
+          ${MOTIVOS_FALTA_LOTE.map(m => `<button onclick="confirmarFaltaLote('${ids}',${totalQty},'${m.replace(/'/g,"\\'")}')"
+            style="display:block;width:100%;text-align:left;padding:9px 12px;margin-bottom:6px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text2);font-size:12px;font-weight:600;cursor:pointer">${m}</button>`).join('')}
+        </div>` : ''}
+    </div>`;
+  }
+
+  if (body) body.innerHTML = html;
+
+  if (btnProx) {
+    btnProx.textContent = 'Próxima posição';
+    btnProx.onclick = loteProximaPosicao;
+    btnProx.disabled = !posicaoCompleta;
+    btnProx.style.opacity = posicaoCompleta ? '1' : '0.5';
+  }
+}
+
+function toggleLotePedidos() {
+  _lotePedidosAbertos = !_lotePedidosAbertos;
+  _renderizarListaLote();
+}
+
+function toggleParcialLote(ids) {
+  _loteAcaoAberta = _loteAcaoAberta === `p:${ids}` ? null : `p:${ids}`;
+  _renderizarListaLote();
+  if (_loteAcaoAberta) setTimeout(() => document.getElementById(`lote-parc-input-${ids.split(',')[0]}`)?.focus(), 100);
+}
+
+function toggleFaltaLote(ids) {
+  _loteAcaoAberta = _loteAcaoAberta === `f:${ids}` ? null : `f:${ids}`;
+  _renderizarListaLote();
+}
+
+// Avança pra próxima posição — mostra um flash de "concluído" antes de trocar.
+async function loteProximaPosicao() {
+  const { endsOrdenados } = _loteAgruparPorEndereco();
+  if (_loteEndIdx >= endsOrdenados.length) return;
+  const end = endsOrdenados[_loteEndIdx];
+  const body = document.getElementById('m-lote-lista-body');
+  if (body) body.innerHTML = `<div style="padding:60px 18px;text-align:center">
+    <div style="font-size:36px;margin-bottom:10px">✓</div>
+    <div style="font-size:15px;font-weight:700;color:#22c55e">${end} concluído</div>
+  </div>`;
+  const btnProx = document.getElementById('m-lote-btn-prox');
+  if (btnProx) btnProx.disabled = true;
+  await new Promise(r => setTimeout(r, 500));
+  _loteEndIdx++;
+  _loteAcaoAberta = null;
+  _renderizarListaLote();
+}
+
+// Volta uma posição; na primeira, sai do lote (mesmo comportamento da seta do topo).
+function loteVoltarPosicao() {
+  if (_loteEndIdx > 0) { _loteEndIdx--; _loteAcaoAberta = null; _renderizarListaLote(); }
+  else voltarFilaLote();
+}
+
+// Pula direto pra primeira posição com item em falta (link do painel de resumo).
+function loteRevisarDivergencias() {
+  const { gruposPorEnd, endsOrdenados } = _loteAgruparPorEndereco();
+  const idx = endsOrdenados.findIndex(end => gruposPorEnd[end].some(i => i.status === 'falta'));
+  _loteEndIdx = idx === -1 ? 0 : idx;
+  _renderizarListaLote();
 }
 
 // Marca todos os itens de um mesmo produto+endereço de uma vez
@@ -279,15 +365,20 @@ async function verificarGrupoLote(idsStr) {
   } catch(e) { toast('Erro de rede','erro'); }
 }
 
-// Parcial: pergunta quantas unidades foram encontradas e distribui pelas caixas em ordem
-async function parcialGrupoLote(idsStr, qtdTotal) {
-  const resp = window.prompt(`Quantas unidades encontrou?\n(total esperado: ${qtdTotal})`, '');
-  if (resp === null || resp.trim() === '') return;
-  const qtdEncontrada = parseInt(resp);
-  if (isNaN(qtdEncontrada) || qtdEncontrada < 0) { toast('Quantidade inválida','erro'); return; }
-  if (qtdEncontrada >= qtdTotal) { await verificarGrupoLote(idsStr); return; }
-  if (qtdEncontrada === 0)       { await faltaGrupoLote(idsStr, qtdTotal); return; }
+// Confirma o campo inline de Parcial (reaproveita o mesmo padrão de toggleParcial/
+// confirmarParcial da tela normal de separação, sem window.prompt).
+async function confirmarParcialLote(idsStr, qtdTotal) {
+  const input = document.getElementById(`lote-parc-input-${idsStr.split(',')[0]}`);
+  const qtdEnc = parseInt(input?.value);
+  if (isNaN(qtdEnc) || qtdEnc < 0) { toast('Digite uma quantidade válida!','aviso'); return; }
+  if (qtdEnc >= qtdTotal) { _loteAcaoAberta = null; await verificarGrupoLote(idsStr); return; }
+  _loteAcaoAberta = null;
+  if (qtdEnc === 0) { await faltaGrupoLote(idsStr, qtdTotal, MOTIVOS_FALTA_LOTE[0]); return; }
+  await parcialGrupoLote(idsStr, qtdTotal, qtdEnc);
+}
 
+// Distribui a quantidade encontrada pelas caixas/pedidos em ordem
+async function parcialGrupoLote(idsStr, qtdTotal, qtdEncontrada) {
   const ids = idsStr.split(',').map(Number);
   const sep = separadorAtual;
   let restante = qtdEncontrada;
@@ -306,7 +397,7 @@ async function parcialGrupoLote(idsStr, qtdTotal) {
       await fetch(`${API}/itens/${id}/verificar`, {
         method:'PUT', credentials:'include',
         headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ status, obs:'Parcial no lote', qtd_falta, separador_id: sep?.id, separador_nome: sep?.nome })
+        body: JSON.stringify({ status, obs: status==='falta' ? MOTIVOS_FALTA_LOTE[0] : 'Parcial no lote', qtd_falta, separador_id: sep?.id, separador_nome: sep?.nome })
       });
       item.status = status;
     } catch(e) { /* segue */ }
@@ -316,16 +407,23 @@ async function parcialGrupoLote(idsStr, qtdTotal) {
   _renderizarListaLote();
 }
 
+// Confirma o motivo escolhido pra Falta (fecha o seletor e reporta ao repositor)
+async function confirmarFaltaLote(idsStr, qtdTotal, motivo) {
+  _loteAcaoAberta = null;
+  await faltaGrupoLote(idsStr, qtdTotal, motivo);
+}
+
 // Reporta falta para o repositor — marca os itens como falta e aciona aviso
-async function faltaGrupoLote(idsStr, qtdTotal) {
+async function faltaGrupoLote(idsStr, qtdTotal, motivo) {
   const ids = idsStr.split(',').map(Number);
   const sep = separadorAtual;
+  const obs = motivo || 'Falta no lote';
   try {
     await Promise.all(ids.map(id =>
       fetch(`${API}/itens/${id}/verificar`, {
         method:'PUT', credentials:'include',
         headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ status:'falta', obs:'Falta no lote', qtd_falta: parseInt(qtdTotal)||1, separador_id: sep?.id, separador_nome: sep?.nome })
+        body: JSON.stringify({ status:'falta', obs, qtd_falta: parseInt(qtdTotal)||1, separador_id: sep?.id, separador_nome: sep?.nome })
       })
     ));
     for (const id of ids) {
@@ -368,7 +466,7 @@ async function concluirLoteMobile() {
 }
 
 function voltarFilaLote() {
-  _loteAtual = []; _loteItens = [];
+  _loteAtual = []; _loteItens = []; _loteIdAtual = null; _loteEndIdx = 0; _loteAcaoAberta = null;
   _loteScreens('m-cl-wrap');
   mudarTabSep('fila');
   carregarFilaMobile();
