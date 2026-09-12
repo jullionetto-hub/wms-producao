@@ -769,4 +769,41 @@ router.post('/admin/zerar-dados-teste', requerAuth, requerPerfil('supervisor'), 
   }
 });
 
+/* ══════════════════════════════════════════════════════════════
+   LIMPAR PEDIDOS DE LOTE DE UM SEPARADOR
+   Remove só os pedidos que vieram de "Formar Lotes" (lote_id preenchido)
+   atribuídos aos separadores informados — pedidos individuais (sem lote_id)
+   ficam intocados. Usado pra limpar lotes de teste que ficaram presos na
+   fila de um separador. Requer perfil supervisor + confirmação explícita.
+══════════════════════════════════════════════════════════════ */
+router.post('/admin/limpar-lotes-separador', requerAuth, requerPerfil('supervisor'), async (req, res) => {
+  const { nomes, confirmar } = req.body;
+  if (!confirmar) return res.status(400).json({ erro: 'Envie { confirmar: true } para confirmar a operação.' });
+  if (!nomes?.length) return res.status(400).json({ erro: 'Informe os nomes dos separadores.' });
+  try {
+    const seps = await pool.query('SELECT id, nome FROM separadores WHERE nome = ANY($1)', [nomes]);
+    const sepIds = seps.rows.map(r => r.id);
+    if (!sepIds.length) return res.json({ mensagem: 'Nenhum separador encontrado com esses nomes.', removidos: 0 });
+
+    const peds = await pool.query('SELECT id, lote_id FROM pedidos WHERE separador_id = ANY($1) AND lote_id IS NOT NULL', [sepIds]);
+    const pedIds = peds.rows.map(r => r.id);
+    if (!pedIds.length) return res.json({ mensagem: 'Nenhum pedido de lote encontrado pra esses separadores.', removidos: 0, separadores: seps.rows.map(r => r.nome) });
+    const loteIds = [...new Set(peds.rows.map(r => r.lote_id).filter(Boolean))];
+
+    // Mesma ordem de exclusão de /admin/zerar-dados-teste (FKs pra pedidos.id).
+    await pool.query('DELETE FROM avisos_repositor WHERE pedido_id = ANY($1)', [pedIds]);
+    await pool.query('DELETE FROM itens_pedido WHERE pedido_id = ANY($1)', [pedIds]);
+    await pool.query('DELETE FROM checkout WHERE pedido_id = ANY($1)', [pedIds]);
+    await pool.query('DELETE FROM embalagem WHERE pedido_id = ANY($1)', [pedIds]);
+    const rPed = await pool.query('DELETE FROM pedidos WHERE id = ANY($1)', [pedIds]);
+    if (loteIds.length) await pool.query('DELETE FROM lotes_separacao WHERE id = ANY($1)', [loteIds]);
+
+    console.log(`[LIMPAR-LOTES] ${req.session?.usuario?.nome} removeu ${rPed.rowCount} pedido(s) de lote de:`, seps.rows.map(r => r.nome));
+    res.json({ mensagem: `${rPed.rowCount} pedido(s) de lote removido(s).`, removidos: rPed.rowCount, lotes_removidos: loteIds.length, separadores: seps.rows.map(r => r.nome) });
+  } catch(e) {
+    console.error('[LIMPAR-LOTES]', e);
+    res.status(500).json({ erro: e.message });
+  }
+});
+
 module.exports = router;
