@@ -279,7 +279,7 @@ async function abrirRastreioPedido(numero) {
   const cont  = document.getElementById('ped-rastreio-conteudo');
   if (!cont) return;
   if (!dados || dados.erro) {
-    cont.innerHTML = `<div style="color:#dc2626;padding:20px;text-align:center">${dados?.erro || 'Pedido não encontrado'}</div>`;
+    cont.innerHTML = `<div style="color:var(--red);padding:20px;text-align:center">${dados?.erro || 'Pedido não encontrado'}</div>`;
     return;
   }
   cont.innerHTML = pfRenderPedidoDetalhe(dados);
@@ -1210,7 +1210,7 @@ function limparHistorico() {
 
 
 function mostrarStatus(msg, tipo) {
-  const cores = { carregando:'background:rgba(79,70,229,.15);border:1px solid rgba(79,70,229,.35);color:#818CF8', sucesso:'background:rgba(87,185,129,.15);border:1px solid rgba(87,185,129,.35);color:var(--green)', erro:'background:rgba(201,82,79,.15);border:1px solid rgba(201,82,79,.35);color:var(--red)', aviso:'background:rgba(224,168,62,.15);border:1px solid rgba(224,168,62,.35);color:var(--amber)' };
+  const cores = { carregando:'background:rgba(79,70,229,.15);border:1px solid rgba(79,70,229,.35);color:var(--indigo)', sucesso:'background:rgba(87,185,129,.15);border:1px solid rgba(87,185,129,.35);color:var(--green)', erro:'background:rgba(201,82,79,.15);border:1px solid rgba(201,82,79,.35);color:var(--red)', aviso:'background:rgba(224,168,62,.15);border:1px solid rgba(224,168,62,.35);color:var(--amber)' };
   const el = document.getElementById('status-leitura');
   el.setAttribute('style', `display:block;margin-top:10px;padding:10px;border-radius:8px;font-size:12px;font-weight:600;text-align:center;${cores[tipo]}`);
   el.textContent = msg;
@@ -1235,7 +1235,7 @@ async function carregarPedidosBloqueados() {
     if (!rows.length) { wrap.style.display='none'; return; }
     wrap.style.display = 'block';
     lista.innerHTML = rows.map(r => `
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border-bottom:1px solid #FECACA;flex-wrap:wrap;gap:8px">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border-bottom:1px solid rgba(201,82,79,.3);flex-wrap:wrap;gap:8px">
         <div>
           <div style="font-weight:700;color:var(--red);font-size:14px">Pedido #${r.numero_pedido}</div>
           <div style="font-size:11px;color:var(--text3);margin-top:2px">
@@ -1808,7 +1808,7 @@ function renderHistoricoModal() {
   el.innerHTML = historicoImportacoes.map(h=>`<div class="hist-item"><div><div style="color:var(--green);font-weight:700">${h.ok} pedido(s)</div>${h.erro>0?`<div style="color:var(--amber);font-size:10px">${h.erro} já existiam</div>`:''}</div><div style="color:var(--text3);font-size:10px">${h.data} às ${h.hora}</div></div>`).join('');
 }
 function mostrarStatusModal(msg, tipo) {
-  const cores = { carregando:'background:rgba(79,70,229,.15);border:1px solid rgba(79,70,229,.35);color:#818CF8', sucesso:'background:rgba(87,185,129,.15);border:1px solid rgba(87,185,129,.35);color:var(--green)', erro:'background:rgba(201,82,79,.15);border:1px solid rgba(201,82,79,.35);color:var(--red)', aviso:'background:rgba(224,168,62,.15);border:1px solid rgba(224,168,62,.35);color:var(--amber)' };
+  const cores = { carregando:'background:rgba(79,70,229,.15);border:1px solid rgba(79,70,229,.35);color:var(--indigo)', sucesso:'background:rgba(87,185,129,.15);border:1px solid rgba(87,185,129,.35);color:var(--green)', erro:'background:rgba(201,82,79,.15);border:1px solid rgba(201,82,79,.35);color:var(--red)', aviso:'background:rgba(224,168,62,.15);border:1px solid rgba(224,168,62,.35);color:var(--amber)' };
   const el = document.getElementById('modal-status-leitura');
   if (!el) return;
   if (!msg) { el.style.display='none'; return; }
@@ -2197,7 +2197,7 @@ function _dmBipeRegistrar(numeroPedido, sucesso, msg) {
 
   const log = document.getElementById('dist-bipe-log');
   if (!log) return;
-  const cor    = sucesso ? 'var(--green)' : '#ef4444';
+  const cor    = sucesso ? 'var(--green)' : 'var(--red)';
   const icone  = sucesso ? '✅' : '❌';
   const linha  = document.createElement('div');
   linha.style.cssText = `display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--surface2);border-left:3px solid ${cor};border-radius:6px;font-size:12px`;
@@ -2218,7 +2218,7 @@ let _turnosPlanoCurrent = null;
 function renderTurnoConfig() {
   const el = document.getElementById('dist-turno-config');
   if (!el) return;
-  const colors = ['#3b82f6','#f59e0b','#8b5cf6'];
+  const colors = ['var(--accent)','var(--amber)','var(--indigo)'];
   el.innerHTML = _turnosConfig.map((t,i) => `
     <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-left:3px solid ${colors[i]};border-radius:6px">
       <input value="${t.nome}" oninput="_turnosConfig[${i}].nome=this.value"
@@ -2261,7 +2261,10 @@ function renderResultadoTurnos(data) {
   const el = document.getElementById('dist-turno-resultado');
   if (!el) return;
 
-  const colors  = ['#3b82f6','#f59e0b','#8b5cf6'];
+  // Hex literal (não var()) de propósito — mais abaixo o código concatena sufixo
+  // de opacidade no hex (colors[ti]+'99'), o que só funciona com string hex crua.
+  // Mesmas cores de --accent/--amber/--indigo em app.css.
+  const colors  = ['#4F46E5','#E0A83E','#8B5CF6'];
   const plano   = data.plano || [];
   const totalPed = plano.reduce((s,t) => s + t.pedidos_count, 0);
   const totalIts = plano.reduce((s,t) => s + (t.itens_total||0), 0);
@@ -2345,7 +2348,7 @@ function renderGraficoTurnos(plano, colors, maxIts, maxPts, maxPed) {
   // legenda
   const legenda = ['Pedidos','Itens','Pontuação'].map((lb,li) => {
     const lx = PAD + li * 110;
-    return `<rect x="${lx}" y="${H - 8}" width="10" height="10" rx="2" fill="${li===0?'#94a3b8':li===1?'#94a3b866':'#94a3b844'}"/>
+    return `<rect x="${lx}" y="${H - 8}" width="10" height="10" rx="2" fill="${li===0?'#a1a1aa':li===1?'#a1a1aa66':'#a1a1aa44'}"/>
             <text x="${lx + 14}" y="${H + 1}" font-size="9" fill="currentColor" opacity=".6">${lb}</text>`;
   }).join('');
 
@@ -2437,8 +2440,8 @@ async function distManualBuscar() {
             <tr style="border-bottom:1px solid rgba(51,65,85,.2)">
               <td style="padding:8px 10px;font-weight:700;color:var(--accent);font-family:'Space Mono',monospace">${p.numero_pedido}</td>
               <td style="padding:8px 10px;color:var(--text2);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.cliente||'—'}</td>
-              <td style="padding:8px 10px;text-align:center;font-weight:700;color:#38bdf8">${p.total_itens||p.itens||0}</td>
-              <td style="padding:8px 10px;text-align:center;font-size:11px;color:#f59e0b">${p.itens||0}</td>
+              <td style="padding:8px 10px;text-align:center;font-weight:700;color:var(--info)">${p.total_itens||p.itens||0}</td>
+              <td style="padding:8px 10px;text-align:center;font-size:11px;color:var(--amber)">${p.itens||0}</td>
               <td style="padding:8px 10px;text-align:center">${badgeTempoSep(p.total_itens||p.itens, p.pontuacao, p.itens)}</td>
               <td style="padding:8px 10px;color:var(--amber);font-size:11px;white-space:nowrap">${toISO(p.aguardando_desde||p.hora_pedido||'').slice(0,16)}</td>
               <td style="padding:8px 10px">
@@ -2456,7 +2459,7 @@ async function distManualBuscar() {
         </tbody>
       </table>`;
   } catch(e) {
-    el.innerHTML = '<div style="padding:16px;color:#ef4444">Erro ao buscar pedidos.</div>';
+    el.innerHTML = '<div style="padding:16px;color:var(--red)">Erro ao buscar pedidos.</div>';
   }
 }
 
@@ -2544,7 +2547,7 @@ async function carregarPedidosDistribuicao() {
     const totalDisponivel = lista.length;
     if (qtdInput > 0) lista = lista.slice(0, qtdInput);
     const labelModo = _modoPrime
-      ? `<span style="color:#D97706;font-weight:800">⭐ ${lista.length} pedido(s) Prime</span> de ${totalDisponivel} disponíveis`
+      ? `<span style="color:var(--amber);font-weight:800">⭐ ${lista.length} pedido(s) Prime</span> de ${totalDisponivel} disponíveis`
       : `${lista.length} de ${totalDisponivel} pedido(s) serão distribuídos`;
     if (!lista.length) {
       el.innerHTML = `<div style="font-size:11px;color:var(--text3);margin-bottom:8px">${labelModo}</div><div style="color:var(--text3);font-size:12px;text-align:center;padding:20px">${_modoPrime ? 'Nenhum pedido Prime pendente' : 'Nenhum pedido normal pendente'}</div>`;
@@ -2616,12 +2619,12 @@ async function calcularDistribuicao() {
     const turnoLabel = { Manha:'MANHÃ', Tarde:'TARDE', Noite:'NOITE' };
     const turnoAtivo = _turnoAtivoDistribuicao;
     let html = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-      <span style="font-size:11px;font-weight:700;color:${_modoPrime?'#D97706':'var(--accent)'};letter-spacing:1px">${_modoPrime?'RESULTADO PRIME':'RESULTADO DA DISTRIBUIÇÃO'}</span>
+      <span style="font-size:11px;font-weight:700;color:${_modoPrime?'var(--amber)':'var(--accent)'};letter-spacing:1px">${_modoPrime?'RESULTADO PRIME':'RESULTADO DA DISTRIBUIÇÃO'}</span>
       <span style="font-size:9px;font-weight:700;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:2px 7px;color:var(--text2);letter-spacing:.5px">${cenarioUsado}</span>
-      ${turnoAtivo ? `<span style="font-size:9px;font-weight:700;background:#dbeafe;border:1px solid #93c5fd;border-radius:4px;padding:2px 7px;color:#4338CA;letter-spacing:.5px">TURNO ${turnoLabel[turnoAtivo]||turnoAtivo}</span>` : ''}
+      ${turnoAtivo ? `<span style="font-size:9px;font-weight:700;background:rgba(79,70,229,.15);border:1px solid rgba(79,70,229,.4);border-radius:4px;padding:2px 7px;color:var(--accent);letter-spacing:.5px">TURNO ${turnoLabel[turnoAtivo]||turnoAtivo}</span>` : ''}
     </div>`;
     if (turnoAtivo) {
-      html += `<div style="background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.25);border-left:3px solid #3b82f6;border-radius:6px;padding:8px 12px;margin-bottom:10px;font-size:11px;color:#4338CA">
+      html += `<div style="background:rgba(79,70,229,.08);border:1px solid rgba(79,70,229,.25);border-left:3px solid var(--accent);border-radius:6px;padding:8px 12px;margin-bottom:10px;font-size:11px;color:var(--accent)">
         Distribuindo apenas pedidos do turno <b>${turnoLabel[turnoAtivo]||turnoAtivo}</b> — pedidos dos outros turnos não serão afetados.
       </div>`;
     }
