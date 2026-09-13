@@ -1159,7 +1159,7 @@ async function verificarValidacaoPendente() {
           </div>
           ${timerHtml}
         </div>
-        <button onclick="abrirModalValidacao()" style="width:100%;padding:12px;background:${validCor};color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:800;cursor:pointer;letter-spacing:.3px">
+        <button onclick="abrirModalValidacao()" style="width:100%;padding:12px;background:${atrasada?'rgba(224,168,62,.12)':'rgba(139,92,246,.12)'};color:${validCor};border:1.5px solid ${validCor};border-radius:8px;font-size:14px;font-weight:800;cursor:pointer;letter-spacing:.3px">
           Abrir Checklist e Validar Diário do Turno Anterior
         </button>
       </div>`;

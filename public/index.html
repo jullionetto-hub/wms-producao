@@ -365,12 +365,21 @@
               </div>
             </div>
           </div>
-          <div class="date-filter-bar">
-            <div class="fg"><label>DE</label><input type="date" id="filtro-ped-ini"/></div>
-            <div class="fg"><label>ATÉ</label><input type="date" id="filtro-ped-fim"/></div>
-
-            <div class="fg"><label>USUÁRIO</label><select id="filtro-ped-sep"><option value="">Todos</option></select></div>
-            <div class="fg"><label>STATUS</label>
+          <div class="filter-toolbar">
+            <div class="filter-grp">
+              <span class="filter-lbl">Período</span>
+              <div class="date-range">
+                <input type="date" id="filtro-ped-ini"/>
+                <span class="date-range-sep"><i class="ti ti-arrow-right" aria-hidden="true"></i></span>
+                <input type="date" id="filtro-ped-fim"/>
+              </div>
+            </div>
+            <div class="filter-grp fg">
+              <span class="filter-lbl">Usuário</span>
+              <select id="filtro-ped-sep"><option value="">Todos</option></select>
+            </div>
+            <div class="filter-grp fg">
+              <span class="filter-lbl">Status</span>
               <select id="filtro-ped-status">
                 <option value="">Todos</option>
                 <option value="pendente">Pendente</option>
@@ -380,8 +389,13 @@
                 <option value="embalado">Embalado</option>
               </select>
             </div>
-            <div class="fg"><label>Nº PEDIDO</label><input type="text" id="filtro-ped-num" placeholder="Buscar..."/></div>
-            <button class="btn btn-primary btn-sm" onclick="carregarPedidos()">Filtrar</button>
+            <div class="filter-grp fg">
+              <span class="filter-lbl">Nº Pedido</span>
+              <input type="text" id="filtro-ped-num" placeholder="Buscar..."/>
+            </div>
+            <div class="filter-actions">
+              <button class="btn btn-primary btn-sm" onclick="carregarPedidos()">Filtrar</button>
+            </div>
           </div>
           <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:10px;padding-top:4px">
             <!-- TURNO -->
@@ -955,14 +969,22 @@
           <!-- Filtros -->
           <div class="card" style="margin-bottom:12px">
             <div class="card-hd"><i class="ti ti-filter" aria-hidden="true"></i>Filtros</div>
-            <div class="date-filter-bar">
-              <div class="fg"><label>Data</label><input type="date" id="diario-data" onchange="iniciarDiario()"/></div>
-              <div class="fg"><label>Turno</label><select id="diario-turno" onchange="iniciarDiario()">
-                <option value="Manha">Manhã</option>
-                <option value="Tarde">Tarde</option>
-                <option value="Noite">Noite</option>
-              </select></div>
-              <button onclick="carregarDadosDiario()" class="btn btn-primary btn-sm">Atualizar</button>
+            <div class="filter-toolbar">
+              <div class="filter-grp fg">
+                <span class="filter-lbl">Data</span>
+                <input type="date" id="diario-data" onchange="iniciarDiario()"/>
+              </div>
+              <div class="filter-grp fg">
+                <span class="filter-lbl">Turno</span>
+                <select id="diario-turno" onchange="iniciarDiario()">
+                  <option value="Manha">Manhã</option>
+                  <option value="Tarde">Tarde</option>
+                  <option value="Noite">Noite</option>
+                </select>
+              </div>
+              <div class="filter-actions">
+                <button onclick="carregarDadosDiario()" class="btn btn-primary btn-sm">Atualizar</button>
+              </div>
             </div>
           </div>
 
@@ -2574,7 +2596,7 @@
   <script src="/js/gestao.js?v=58"></script>
   <script src="/js/caixas.js?v=4"></script>
   <script src="/js/matriz.js?v=16"></script>
-  <script src="/js/auth.js?v=39"></script>
+  <script src="/js/auth.js?v=40"></script>
 
 
 <!-- ══ MODAL IMPORTAR ══ -->
