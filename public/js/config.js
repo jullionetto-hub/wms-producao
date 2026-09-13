@@ -82,8 +82,8 @@ function badgeTempoSep(totalItens, pontuacao, skus) {
   const t = estimarTempoSep(totalItens, pontuacao, skus);
   if (!t) return '';
   const min = _minutosEstimados(totalItens, pontuacao, skus);
-  const cor = min <= 10 ? '#16a34a' : min <= 20 ? '#d97706' : '#dc2626';
-  const bg  = min <= 10 ? 'rgba(22,163,74,.1)' : min <= 20 ? 'rgba(217,119,6,.1)' : 'rgba(220,38,38,.1)';
+  const cor = min <= 10 ? 'var(--green)' : min <= 20 ? 'var(--amber)' : 'var(--red)';
+  const bg  = min <= 10 ? 'rgba(87,185,129,.1)' : min <= 20 ? 'rgba(224,168,62,.1)' : 'rgba(201,82,79,.1)';
   return `<span style="background:${bg};color:${cor};border-radius:20px;padding:2px 8px;font-size:11px;font-weight:700;white-space:nowrap">⏱ ${t}</span>`;
 }
 
@@ -117,7 +117,7 @@ function badgeTimerAoVivo(iniciadoEm, totalItens, pontuacao, tempoAguardandoMin,
   if (aguardandoDesde && aguardandoAgoraMin >= 0) {
     const decorReal = Math.max(0, totalDecorMin - jaAguardou - aguardandoAgoraMin);
     const decorTxt  = decorReal < 60 ? `${decorReal}min` : `${Math.floor(decorReal/60)}h${decorReal%60>0?decorReal%60+'m':''}`;
-    return `<span style="background:rgba(245,158,11,.12);color:#d97706;border-radius:20px;padding:2px 8px;font-size:11px;font-weight:700;white-space:nowrap">⏸ ${decorTxt} (aguard. rep.)</span>`;
+    return `<span style="background:rgba(224,168,62,.12);color:var(--amber);border-radius:20px;padding:2px 8px;font-size:11px;font-weight:700;white-space:nowrap">⏸ ${decorTxt} (aguard. rep.)</span>`;
   }
 
   // Tempo real de separação (sem espera)
@@ -127,7 +127,7 @@ function badgeTimerAoVivo(iniciadoEm, totalItens, pontuacao, tempoAguardandoMin,
   const decorTxt = decorMin < 60 ? `${decorMin}min` : `${Math.floor(decorMin/60)}h${decorMin%60>0?decorMin%60+'m':''}`;
   const estimTxt = estimMin < 60 ? `${estimMin}min` : `${Math.floor(estimMin/60)}h${estimMin%60>0?estimMin%60+'m':''}`;
   if (atrasado) {
-    return `<span style="background:rgba(220,38,38,.1);color:#dc2626;border-radius:20px;padding:2px 8px;font-size:11px;font-weight:700;white-space:nowrap">${decorTxt} +${decorMin-estimMin}min</span>`;
+    return `<span style="background:rgba(201,82,79,.1);color:var(--red);border-radius:20px;padding:2px 8px;font-size:11px;font-weight:700;white-space:nowrap">${decorTxt} +${decorMin-estimMin}min</span>`;
   }
   return `<span style="background:rgba(79,70,229,.1);color:var(--accent);border-radius:20px;padding:2px 8px;font-size:11px;font-weight:700;white-space:nowrap">⏱ ${decorTxt} / ${estimTxt} est.</span>`;
 }
@@ -334,11 +334,11 @@ function _renderProtoKpis(pedList, pedListH) {
   const tiposKpis = Object.entries(tipos).map(([k,v]) => `<div class="pipeline-card-kpi"><div class="pipeline-card-kpi-lbl">${k}</div><div class="pipeline-card-kpi-val">${v} ped.</div></div>`).join('');
 
   const cards = [
-    { label:'Aguardando', cor:'#7c3aed',
+    { label:'Aguardando', cor:'var(--indigo)',
       main: itensPend,
       sub: `${pedList.length} pedido${pedList.length!==1?'s':''}`,
       kpis: tiposKpis || `<div class="pipeline-card-kpi"><div class="pipeline-card-kpi-lbl">Nenhum aguardando</div></div>` },
-    { label:'Protocolados', cor:'#10b981',
+    { label:'Protocolados', cor:'var(--green)',
       main: itensProto,
       sub: `${pedListH.length} pedido${pedListH.length!==1?'s':''}`,
       kpis: [
@@ -378,7 +378,7 @@ function _transpBadgeProto(transp) {
   const t = (transp||'').trim();
   if (!t || t === '—') return '';
   if (/DRIVE|RETIRADA/i.test(t))  return `<span style="background:rgba(201,82,79,.15);color:var(--red);border:1.5px solid rgba(201,82,79,.35);font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;white-space:nowrap">Drive Thru</span>`;
-  if (/PRIME/i.test(t))           return `<span style="background:#FEF3C7;color:#92400E;border:1.5px solid #FCD34D;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;white-space:nowrap"><i class="ti ti-star-filled" aria-hidden="true"></i> Prime</span>`;
+  if (/PRIME/i.test(t))           return `<span style="background:rgba(224,168,62,.15);color:var(--amber);border:1.5px solid rgba(224,168,62,.35);font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;white-space:nowrap"><i class="ti ti-star-filled" aria-hidden="true"></i> Prime</span>`;
   if (/SEDEX/i.test(t))           return `<span style="background:rgba(79,70,229,.15);color:#818CF8;border:1.5px solid rgba(79,70,229,.35);font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;white-space:nowrap">${t}</span>`;
   if (/^PAC/i.test(t))            return `<span style="background:rgba(87,185,129,.15);color:#4ADE80;border:1.5px solid rgba(87,185,129,.35);font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;white-space:nowrap">${t}</span>`;
   if (/MOTOBOY|MOTO/i.test(t))    return `<span style="background:rgba(139,92,246,.15);color:#C4B5FD;border:1.5px solid rgba(139,92,246,.35);font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;white-space:nowrap">${t}</span>`;
@@ -429,12 +429,12 @@ async function carregarProtocolo() {
     el.innerHTML = `
       <div style="background:var(--surface);border-radius:16px;overflow:hidden;border:1.5px solid var(--border);box-shadow:0 2px 12px rgba(0,0,0,.07);margin-bottom:20px">
         <!-- Cabeçalho da seção -->
-        <div style="background:var(--surface2);border-bottom:1px solid var(--border);border-top:3px solid #7c3aed;padding:14px 18px;display:flex;align-items:center;justify-content:space-between">
+        <div style="background:var(--surface2);border-bottom:1px solid var(--border);border-top:3px solid var(--indigo);padding:14px 18px;display:flex;align-items:center;justify-content:space-between">
           <div style="display:flex;align-items:center;gap:8px">
-            <span style="width:8px;height:8px;border-radius:50%;background:#7c3aed;flex-shrink:0;display:inline-block"></span>
+            <span style="width:8px;height:8px;border-radius:50%;background:var(--indigo);flex-shrink:0;display:inline-block"></span>
             <span style="color:var(--text);font-weight:800;font-size:14px;letter-spacing:.3px">Aguardando Protocolo</span>
           </div>
-          <span style="background:rgba(124,58,237,.1);color:#7c3aed;padding:4px 14px;border-radius:20px;font-size:12px;font-weight:800">${todosItens.length} ${todosItens.length===1?'item':'itens'} · ${pedList.length} pedido${pedList.length!==1?'s':''}</span>
+          <span style="background:rgba(139,92,246,.1);color:var(--indigo);padding:4px 14px;border-radius:20px;font-size:12px;font-weight:800">${todosItens.length} ${todosItens.length===1?'item':'itens'} · ${pedList.length} pedido${pedList.length!==1?'s':''}</span>
         </div>
         <!-- Tabela de itens -->
         <div style="overflow-x:auto">
@@ -459,14 +459,14 @@ async function carregarProtocolo() {
                 return `<tr style="border-bottom:1px solid var(--border)" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
                   <td style="padding:9px 12px;color:var(--text3);font-size:11px;white-space:nowrap">${dataFmt}</td>
                   <td style="padding:9px 12px;white-space:nowrap">
-                    <span style="font-family:'Space Mono',monospace;font-weight:800;font-size:13px;color:#7c3aed">#${r._ped.numero_pedido}</span>
+                    <span style="font-family:'Space Mono',monospace;font-weight:800;font-size:13px;color:var(--indigo)">#${r._ped.numero_pedido}</span>
                     ${r._ped.cliente && r._ped.cliente !== '—' ? `<div style="font-size:10px;color:var(--text3);margin-top:1px">${r._ped.cliente}</div>` : ''}
                   </td>
                   <td style="padding:9px 12px">${transp}</td>
                   <td style="padding:9px 12px;font-family:'Space Mono',monospace;font-weight:700;color:var(--red);font-size:12px;white-space:nowrap">${r.codigo||'—'}</td>
                   <td style="padding:9px 12px;font-weight:600;color:var(--text);max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${r.descricao||''}">${r.descricao||'—'}</td>
                   <td style="padding:9px 12px;text-align:center">
-                    <span style="background:#FEF3C7;color:#92400E;border-radius:8px;padding:3px 10px;font-weight:900;font-size:14px">${r.quantidade||0}</span>
+                    <span style="background:rgba(224,168,62,.15);color:var(--amber);border-radius:8px;padding:3px 10px;font-weight:900;font-size:14px">${r.quantidade||0}</span>
                   </td>
                   <td style="padding:9px 12px;color:var(--text2);font-size:11px;white-space:nowrap">${r.separador_nome||'—'}</td>
                   <td style="padding:9px 12px;text-align:center;white-space:nowrap">
@@ -475,7 +475,7 @@ async function carregarProtocolo() {
                   ${usuarioAtual?.perfil==='supervisor' ? `
                   <td style="padding:6px 12px;text-align:center">
                     <button onclick="encerrarItemProtocolo(${r.id},this)" id="proto-btn-${r.id}"
-                      style="padding:5px 12px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">
+                      style="padding:5px 12px;background:var(--indigo);color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">
                       <i class="ti ti-check" aria-hidden="true"></i> Encerrar
                     </button>
                   </td>` : ''}
@@ -489,7 +489,7 @@ async function carregarProtocolo() {
         <div style="padding:14px 16px;border-top:1px solid var(--border);display:flex;gap:10px;flex-wrap:wrap">
           ${pedList.map(ped => `
             <button onclick="encerrarProtocoloPedido('${ped.numero_pedido}','${ped.itens.map(i=>i.id).join(',')}',${ped.itens.length},this)" id="proto-enc-${ped.numero_pedido}"
-              style="padding:9px 16px;background:#7c3aed;color:#fff;border:none;border-radius:10px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap">
+              style="padding:9px 16px;background:var(--indigo);color:#fff;border:none;border-radius:10px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap">
               Encerrar Pedido #${ped.numero_pedido} (${ped.itens.length} ${ped.itens.length===1?'item':'itens'})
             </button>`).join('')}
         </div>` : ''}
@@ -521,13 +521,13 @@ async function carregarProtocolo() {
     } else {
       const todosH = pedListH.flatMap(ped => ped.itens.map(r => ({...r, _ped: ped})));
       elHist.innerHTML = `
-        <div style="background:var(--surface);border-radius:16px;overflow:hidden;border:1.5px solid #d1fae5;box-shadow:0 1px 6px rgba(0,0,0,.04)">
-          <div style="background:var(--surface2);border-bottom:1px solid var(--border);border-top:3px solid #10b981;padding:12px 18px;display:flex;align-items:center;justify-content:space-between">
+        <div style="background:var(--surface);border-radius:16px;overflow:hidden;border:1.5px solid rgba(87,185,129,.3);box-shadow:0 1px 6px rgba(0,0,0,.04)">
+          <div style="background:var(--surface2);border-bottom:1px solid var(--border);border-top:3px solid var(--green);padding:12px 18px;display:flex;align-items:center;justify-content:space-between">
             <div style="display:flex;align-items:center;gap:8px">
-              <span style="width:8px;height:8px;border-radius:50%;background:#10b981;flex-shrink:0;display:inline-block"></span>
+              <span style="width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0;display:inline-block"></span>
               <span style="color:var(--text);font-weight:800;font-size:14px;letter-spacing:.3px">Protocolados</span>
             </div>
-            <span style="background:rgba(16,185,129,.1);color:#10b981;padding:3px 12px;border-radius:20px;font-size:11px;font-weight:800">${todosH.length} itens · ${pedListH.length} pedidos</span>
+            <span style="background:rgba(87,185,129,.1);color:var(--green);padding:3px 12px;border-radius:20px;font-size:11px;font-weight:800">${todosH.length} itens · ${pedListH.length} pedidos</span>
           </div>
           <div style="overflow-x:auto">
             <table style="width:100%;border-collapse:collapse;font-size:12px">
@@ -550,7 +550,7 @@ async function carregarProtocolo() {
                   return `<tr style="border-bottom:1px solid var(--border)" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
                     <td style="padding:8px 12px;color:var(--text3);font-size:11px;white-space:nowrap">${dataFmt}</td>
                     <td style="padding:8px 12px;white-space:nowrap">
-                      <span style="font-family:'Space Mono',monospace;font-weight:800;font-size:12px;color:#059669">#${r._ped.numero_pedido}</span>
+                      <span style="font-family:'Space Mono',monospace;font-weight:800;font-size:12px;color:var(--green)">#${r._ped.numero_pedido}</span>
                       ${r._ped.cliente && r._ped.cliente !== '—' ? `<div style="font-size:10px;color:var(--text3)">${r._ped.cliente}</div>` : ''}
                     </td>
                     <td style="padding:8px 12px">${transp}</td>
@@ -560,7 +560,7 @@ async function carregarProtocolo() {
                       <span style="background:rgba(87,185,129,.15);color:var(--green);border-radius:8px;padding:2px 10px;font-weight:800;font-size:13px">${r.quantidade||0}</span>
                     </td>
                     <td style="padding:8px 12px;color:var(--text2);font-size:11px;white-space:nowrap">${r.separador_nome||'—'}</td>
-                    <td style="padding:8px 12px;color:#059669;font-weight:700;font-size:11px;white-space:nowrap">${r.quem_guardou||'—'}</td>
+                    <td style="padding:8px 12px;color:var(--green);font-weight:700;font-size:11px;white-space:nowrap">${r.quem_guardou||'—'}</td>
                   </tr>`;
                 }).join('')}
               </tbody>
@@ -884,18 +884,18 @@ async function escanearQr(inputId, callbackFn) {
   overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.92);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;';
   overlay.innerHTML = `
     <div style="color:#fff;font-size:14px;font-weight:700;letter-spacing:1px">ESCANEIE O QR CODE</div>
-    <div style="position:relative;width:280px;height:280px;border-radius:12px;overflow:hidden;border:3px solid #3B82F6">
+    <div style="position:relative;width:280px;height:280px;border-radius:12px;overflow:hidden;border:3px solid var(--indigo)">
       <video id="qr-video" autoplay playsinline muted style="width:100%;height:100%;object-fit:cover"></video>
       <div style="position:absolute;inset:0;pointer-events:none">
-        <div style="position:absolute;top:12px;left:12px;width:28px;height:28px;border-top:3px solid #3B82F6;border-left:3px solid #3B82F6;border-radius:3px 0 0 0"></div>
-        <div style="position:absolute;top:12px;right:12px;width:28px;height:28px;border-top:3px solid #3B82F6;border-right:3px solid #3B82F6;border-radius:0 3px 0 0"></div>
-        <div style="position:absolute;bottom:12px;left:12px;width:28px;height:28px;border-bottom:3px solid #3B82F6;border-left:3px solid #3B82F6;border-radius:0 0 0 3px"></div>
-        <div style="position:absolute;bottom:12px;right:12px;width:28px;height:28px;border-bottom:3px solid #3B82F6;border-right:3px solid #3B82F6;border-radius:0 0 3px 0"></div>
-        <div style="position:absolute;left:12px;right:12px;top:12px;height:2px;background:#3B82F6;opacity:0.8;animation:qrScanLine 1.8s linear infinite"></div>
+        <div style="position:absolute;top:12px;left:12px;width:28px;height:28px;border-top:3px solid var(--indigo);border-left:3px solid var(--indigo);border-radius:3px 0 0 0"></div>
+        <div style="position:absolute;top:12px;right:12px;width:28px;height:28px;border-top:3px solid var(--indigo);border-right:3px solid var(--indigo);border-radius:0 3px 0 0"></div>
+        <div style="position:absolute;bottom:12px;left:12px;width:28px;height:28px;border-bottom:3px solid var(--indigo);border-left:3px solid var(--indigo);border-radius:0 0 0 3px"></div>
+        <div style="position:absolute;bottom:12px;right:12px;width:28px;height:28px;border-bottom:3px solid var(--indigo);border-right:3px solid var(--indigo);border-radius:0 0 3px 0"></div>
+        <div style="position:absolute;left:12px;right:12px;top:12px;height:2px;background:var(--indigo);opacity:0.8;animation:qrScanLine 1.8s linear infinite"></div>
       </div>
     </div>
-    <div style="color:#94A3B8;font-size:12px">Aponte para o QR Code</div>
-    <button onclick="fecharQrScan()" style="background:#DC2626;color:#fff;border:none;border-radius:8px;padding:12px 32px;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:1px">✕ CANCELAR</button>
+    <div style="color:var(--text3);font-size:12px">Aponte para o QR Code</div>
+    <button onclick="fecharQrScan()" style="background:var(--red);color:#fff;border:none;border-radius:8px;padding:12px 32px;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:1px">✕ CANCELAR</button>
   `;
 
   if (!document.getElementById('qr-scan-style')) {
