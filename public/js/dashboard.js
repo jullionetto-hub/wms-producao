@@ -29,7 +29,7 @@ async function carregarGraficoPizzaStatus() {
     data: {
       labels: ['Pendentes', 'Separando', 'Concluídos'],
       datasets: [{ data: [pendentes, separando, concluidos],
-        backgroundColor: ['#3B82F6','#F59E0B','#22C55E'],
+        backgroundColor: [_corToken('--info'),_corToken('--amber'),_corToken('--green')],
         borderWidth: 2, borderColor: '#fff' }]
     },
     options: {
@@ -52,7 +52,7 @@ async function carregarGraficoPizzaReposicao() {
     data: {
       labels: ['Pendente', 'Concluída', 'Não encontrado'],
       datasets: [{ data: [pendente, concluida, naoEnc],
-        backgroundColor: ['#F59E0B','#22C55E','#EF4444'],
+        backgroundColor: [_corToken('--amber'),_corToken('--green'),_corToken('--red')],
         borderWidth: 2, borderColor: '#fff' }]
     },
     options: {
@@ -150,7 +150,7 @@ async function carregarGraficoFunil() {
     data: {
       labels,
       datasets: [{ label: 'Pedidos', data: valores,
-        backgroundColor: ['#8B5CF6','#22C55E','#F59E0B','#3B82F6'],
+        backgroundColor: [_corToken('--indigo'),_corToken('--green'),_corToken('--amber'),_corToken('--info')],
         borderRadius: 6, borderSkipped: false }]
     },
     options: {
@@ -281,17 +281,17 @@ function renderMapaEstoque(contRua, isPedidoUnico) {
     ZA:'especial',ARARA:'especial'
   };
   const CORES = {
-    facil:   { bg:'rgba(87,185,129,.15)', bord:'#57B981', txt:'#57B981', bord2:'#57B981' },
-    medio:   { bg:'rgba(224,168,62,.15)', bord:'#E0A83E', txt:'#E0A83E', bord2:'#E0A83E' },
-    dificil: { bg:'rgba(201,82,79,.15)', bord:'#C9524F', txt:'#C9524F', bord2:'#C9524F' },
-    especial:{ bg:'rgba(139,92,246,.15)', bord:'#8B5CF6', txt:'#8B5CF6', bord2:'#8B5CF6' },
+    facil:   { bg:'rgba(87,185,129,.15)', bord:'var(--green)', txt:'var(--green)', bord2:'var(--green)' },
+    medio:   { bg:'rgba(224,168,62,.15)', bord:'var(--amber)', txt:'var(--amber)', bord2:'var(--amber)' },
+    dificil: { bg:'rgba(201,82,79,.15)', bord:'var(--red)', txt:'var(--red)', bord2:'var(--red)' },
+    especial:{ bg:'rgba(139,92,246,.15)', bord:'var(--indigo)', txt:'var(--indigo)', bord2:'var(--indigo)' },
   };
 
   function corPonto(total) {
     if (!total) return null;
-    if (total >= 10) return '#DC2626';
-    if (total >= 5)  return '#F59E0B';
-    return '#4F46E5';
+    if (total >= 10) return 'var(--red)';
+    if (total >= 5)  return 'var(--amber)';
+    return 'var(--accent)';
   }
 
   const BW = 42, BH = 36, HGAP = 5, VGAP = 8;
@@ -321,8 +321,8 @@ function renderMapaEstoque(contRua, isPedidoUnico) {
   s += `<line x1="${qCX}" y1="${fundoY+BH+4}" x2="${qCX}" y2="${frenteStartY-4}" stroke="var(--border)" stroke-width="2" stroke-dasharray="4,3"/>`;
 
   // ── Labels ──
-  s += `<text x="${PAD_L-2}" y="${fundoY-10}" font-size="9" fill="#94A3B8" font-weight="700" letter-spacing="1.5">FUNDO</text>`;
-  s += `<text x="${frenteX+BW+10}" y="${frenteStartY+BH/2+4}" font-size="9" fill="#94A3B8" font-weight="700" letter-spacing="1.5">FRENTE</text>`;
+  s += `<text x="${PAD_L-2}" y="${fundoY-10}" font-size="9" fill="var(--text3)" font-weight="700" letter-spacing="1.5">FUNDO</text>`;
+  s += `<text x="${frenteX+BW+10}" y="${frenteStartY+BH/2+4}" font-size="9" fill="var(--text3)" font-weight="700" letter-spacing="1.5">FRENTE</text>`;
 
   // ── ZA (canto superior esquerdo) ──
   {
@@ -420,8 +420,8 @@ function renderMapaEstoque(contRua, isPedidoUnico) {
   const ckY = frenteStartY + FRENTE.length * (BH + VGAP) + 12;
   const ckW = 100, ckH = 28;
   const ckX = qCX - ckW/2;
-  s += `<polygon points="${qCX-5},${ckY} ${qCX+5},${ckY} ${qCX},${ckY-9}" fill="#64748B"/>`;
-  s += `<rect x="${ckX}" y="${ckY}" width="${ckW}" height="${ckH}" rx="6" fill="#1E3A5F"/>`;
+  s += `<polygon points="${qCX-5},${ckY} ${qCX+5},${ckY} ${qCX},${ckY-9}" fill="var(--text3)"/>`;
+  s += `<rect x="${ckX}" y="${ckY}" width="${ckW}" height="${ckH}" rx="6" fill="#1E3A5F"/>`; /* sem token equivalente — azul-marinho da caixa de checkout no mapa */
   s += `<text x="${qCX}" y="${ckY+ckH/2+5}" text-anchor="middle" font-size="10" font-weight="700" fill="#fff" letter-spacing="0.5">CHECKOUT / ENTRADA</text>`;
 
   s += '</svg>';
@@ -517,7 +517,7 @@ async function carregarOperacao() {
         trEl.innerHTML = seps.map(s => {
           const total_sep = s.concluidos + s.separando + s.pendentes;
           const pct_sep   = total_sep > 0 ? Math.round((s.concluidos/total_sep)*100) : 0;
-          const statusColor = s.separando > 0 ? '#D97706' : s.concluidos > 0 ? '#15803D' : '#94A3B8';
+          const statusColor = s.separando > 0 ? 'var(--amber)' : s.concluidos > 0 ? 'var(--green)' : 'var(--text3)';
           const statusTxt   = s.separando > 0 ? 'Separando' : s.concluidos > 0 ? 'Disponível' : 'Aguardando';
           return `<div style="padding:10px 4px;border-bottom:0.5px solid var(--border)">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
@@ -534,7 +534,7 @@ async function carregarOperacao() {
               ${s.pendentes>0?`<span>⏳ ${s.pendentes} na fila</span>`:''}
             </div>
             <div style="height:5px;background:var(--surface2);border-radius:3px;overflow:hidden">
-              <div style="height:100%;background:linear-gradient(90deg,#16A34A,#4ADE80);width:${pct_sep}%;border-radius:3px;transition:width .4s"></div>
+              <div style="height:100%;background:linear-gradient(90deg,var(--green),#7DD3A8);width:${pct_sep}%;border-radius:3px;transition:width .4s"></div> <!-- 2º stop sem token: leve highlight de destaque -->
             </div>
           </div>`;
         }).join('');
@@ -727,9 +727,9 @@ async function carregarLiberacao() {
         <td style="color:var(--text2)">${r.repositor_nome||'—'}</td>
         <td style="color:var(--text3);font-size:12px">${fmtD(r.data_aviso)} ${r.hora_reposto||r.hora_aviso||''}</td>
         <td id="lib-btn-${r.id}" style="white-space:nowrap">
-          <button class="btn btn-sm" style="background:#10b981;color:#fff;margin-right:4px;white-space:nowrap"
+          <button class="btn btn-sm" style="background:var(--green);color:#fff;margin-right:4px;white-space:nowrap"
             onclick="liberarItem(${r.id},'encontrado',this)">Encontrado</button>
-          <button class="btn btn-sm" style="background:#ef4444;color:#fff;white-space:nowrap"
+          <button class="btn btn-sm" style="background:var(--red);color:#fff;white-space:nowrap"
             onclick="liberarItem(${r.id},'nao_encontrado',this)">Não Encontrado</button>
         </td>
       </tr>`).join('')
@@ -748,8 +748,8 @@ async function carregarLiberacao() {
         const horaLib     = libEntry?.hora || r.hora_reposto || '—';
         const decisao     = libEntry?.decisao || (r.status === 'protocolo' ? 'nao_encontrado' : 'encontrado');
         const decLabel    = decisao === 'encontrado'
-          ? '<span style="color:#10b981;font-weight:700">Encontrado</span>'
-          : '<span style="color:#7c3aed;font-weight:700">Não Encontrado</span>';
+          ? '<span style="color:var(--green);font-weight:700">Encontrado</span>'
+          : '<span style="color:var(--indigo);font-weight:700">Não Encontrado</span>';
         return `<tr>
           <td style="font-weight:700">${r.numero_pedido||'—'}</td>
           <td>
@@ -770,8 +770,8 @@ async function carregarLiberacao() {
 // IDs de itens atualmente em processo de liberação — impede duplo clique e re-render
 const _liberandoIds = new Set();
 function _btnsLiberacao(id) {
-  return `<button class="btn btn-sm" style="background:#10b981;color:#fff;margin-right:4px;white-space:nowrap" onclick="liberarItem(${id},'encontrado',this)">Encontrado</button>`+
-         `<button class="btn btn-sm" style="background:#ef4444;color:#fff;white-space:nowrap" onclick="liberarItem(${id},'nao_encontrado',this)">Não Encontrado</button>`;
+  return `<button class="btn btn-sm" style="background:var(--green);color:#fff;margin-right:4px;white-space:nowrap" onclick="liberarItem(${id},'encontrado',this)">Encontrado</button>`+
+         `<button class="btn btn-sm" style="background:var(--red);color:#fff;white-space:nowrap" onclick="liberarItem(${id},'nao_encontrado',this)">Não Encontrado</button>`;
 }
 
 async function liberarItem(id, decisao, btn) {
@@ -807,8 +807,8 @@ async function liberarItem(id, decisao, btn) {
       }
       toast(data.mensagem || 'Item liberado!','sucesso');
       const badge = decisao === 'encontrado'
-        ? '<span style="color:#10b981;font-weight:700;font-size:12px">Liberado (Encontrado)</span>'
-        : '<span style="color:#7c3aed;font-weight:700;font-size:12px">Em Protocolo</span>';
+        ? '<span style="color:var(--green);font-weight:700;font-size:12px">Liberado (Encontrado)</span>'
+        : '<span style="color:var(--indigo);font-weight:700;font-size:12px">Em Protocolo</span>';
       const cellFresh = document.getElementById(`lib-btn-${id}`);
       if (cellFresh) cellFresh.innerHTML = badge;
       _liberandoIds.delete(id);
@@ -1246,7 +1246,7 @@ function _pctBar(pct, temSessao) {
     return `<span style="color:var(--text3);font-size:11px">${txt}</span>`;
   }
   const p = Math.min(100, pct);
-  const cor = pct >= 100 ? '#16a34a' : pct >= 70 ? '#4F46E5' : pct >= 40 ? '#D97706' : '#DC2626';
+  const cor = pct >= 100 ? 'var(--green)' : pct >= 70 ? 'var(--accent)' : pct >= 40 ? 'var(--amber)' : 'var(--red)';
   return `<div style="display:flex;align-items:center;gap:6px">
     <div style="flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden;min-width:60px">
       <div style="height:100%;width:${p}%;background:${cor};border-radius:4px;transition:width .3s"></div>
@@ -1330,7 +1330,7 @@ async function carregarPerformance() {
         </div>`;
       }
 
-      const cor = area.cor || '#64748b';
+      const cor = area.cor || 'var(--text3)';
       const colabInfo = !colab ? `<div style="font-size:11px;color:var(--text3);margin-top:2px">${ag.colaboradores} colaborador${ag.colaboradores!==1?'es':''}</div>` : '';
 
       return `<div style="background:var(--surface);border-radius:16px;border:1px solid var(--border);border-top:3px solid ${cor};overflow:hidden;box-shadow:var(--sh)">
@@ -1486,7 +1486,7 @@ async function carregarPerformanceDetalhe(ini, fim, filtPerfil, filtColab) {
             <td>${tempo}</td>
             <td style="color:var(--text2);font-size:12px;max-width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.cliente||'—'}</td>
             <td style="color:var(--text2);font-size:12px">${p.transportadora||'—'}</td>
-            <td style="font-weight:700;color:#8B5CF6">${p.total_itens||0}</td>
+            <td style="font-weight:700;color:var(--indigo)">${p.total_itens||0}</td>
             <td style="font-weight:700;color:var(--text2)">${p.qtd_produtos||0}</td>
           </tr>`;
         }).join('');
@@ -1696,7 +1696,7 @@ async function abrirConfigMetas() {
     if (form) {
       form.innerHTML = Object.entries(LABELS).map(([k, label]) => `
         <div style="margin-bottom:10px">
-          <label style="font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase;display:block;margin-bottom:3px">${label}</label>
+          <label style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;display:block;margin-bottom:3px">${label}</label>
           <input type="number" id="cfg-${k}" value="${_configMetasData[k]?.valor || ''}" min="0" step="${STEP[k] || '1'}"
             style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:7px;font-size:14px;font-weight:600;box-sizing:border-box">
         </div>`).join('');
@@ -1786,7 +1786,7 @@ async function gerarRelatorioColaborador(nomeColab) {
 
       // Dificuldade pela pontuação
       const diffLabel = mediaPontuacao < 30 ? 'Simples' : mediaPontuacao < 60 ? 'Moderado' : 'Complexo';
-      const diffColor = mediaPontuacao < 30 ? '#22C55E' : mediaPontuacao < 60 ? '#F59E0B' : '#EF4444';
+      const diffColor = mediaPontuacao < 30 ? 'var(--green)' : mediaPontuacao < 60 ? 'var(--amber)' : 'var(--red)';
       const diffBar   = Math.min(100, Math.round((mediaPontuacao / 100) * 100));
 
       // Análise
@@ -1810,9 +1810,9 @@ async function gerarRelatorioColaborador(nomeColab) {
         const fim2  = p.concluido_em ? p.concluido_em.replace(/.*T/,'').slice(0,5) : '—';
         const tr    = p.tempo_real_min;
         const trStr = tr !== null ? `${Math.round(tr)}min` : '—';
-        const trCor = tr === null ? '#94A3B8' : tr <= 15 ? '#22C55E' : tr <= 30 ? '#F59E0B' : '#EF4444';
+        const trCor = tr === null ? 'var(--text3)' : tr <= 15 ? 'var(--green)' : tr <= 30 ? 'var(--amber)' : 'var(--red)';
         const pts   = p.pontuacao || 0;
-        const ptsCor= pts < 30 ? '#22C55E' : pts < 60 ? '#F59E0B' : '#EF4444';
+        const ptsCor= pts < 30 ? 'var(--green)' : pts < 60 ? 'var(--amber)' : 'var(--red)';
         return `<tr style="border-bottom:1px solid var(--border)">
           <td style="padding:5px 8px;font-family:monospace;font-size:11px;font-weight:700">${p.numero_pedido}</td>
           <td style="padding:5px 8px;font-size:11px;color:var(--text3)">${fmtData(p.data_pedido)}</td>
@@ -1822,7 +1822,7 @@ async function gerarRelatorioColaborador(nomeColab) {
           <td style="padding:5px 8px;text-align:center;font-size:12px;color:var(--accent)">${p.total_itens||0}</td>
           <td style="padding:5px 8px;text-align:center;font-size:12px;color:var(--text2)">${p.qtd_produtos||0}</td>
           <td style="padding:5px 8px;text-align:center;font-weight:700;color:${ptsCor}">${pts}</td>
-          <td style="padding:5px 8px;text-align:center;color:${p.qtd_reposicoes>0?'#F59E0B':'var(--text3)'}">${p.qtd_reposicoes||0}</td>
+          <td style="padding:5px 8px;text-align:center;color:${p.qtd_reposicoes>0?'var(--amber)':'var(--text3)'}">${p.qtd_reposicoes||0}</td>
         </tr>`;
       }).join('');
 
@@ -1847,9 +1847,9 @@ async function gerarRelatorioColaborador(nomeColab) {
               ['PEDIDOS', totalPedidos, 'var(--accent)'],
               ['ITENS TOTAIS', totalItens, 'var(--accent)'],
               ['PRODUTOS', totalProdutos, 'var(--text2)'],
-              ['PONTUAÇÃO TOTAL', totalPontuacao, '#8B5CF6'],
-              ['TEMPO MÉDIO', mediaTempoReal ? Math.round(mediaTempoReal)+'min' : '—', mediaTempoReal && mediaTempoReal<=30 ? '#22C55E' : '#F59E0B'],
-              ['REPOSIÇÕES', `${totalReps} (${pctRep}%)`, pctRep<=15 ? '#22C55E' : pctRep<=30 ? '#F59E0B' : '#EF4444'],
+              ['PONTUAÇÃO TOTAL', totalPontuacao, 'var(--indigo)'],
+              ['TEMPO MÉDIO', mediaTempoReal ? Math.round(mediaTempoReal)+'min' : '—', mediaTempoReal && mediaTempoReal<=30 ? 'var(--green)' : 'var(--amber)'],
+              ['REPOSIÇÕES', `${totalReps} (${pctRep}%)`, pctRep<=15 ? 'var(--green)' : pctRep<=30 ? 'var(--amber)' : 'var(--red)'],
             ].map(([l,v,c]) => `<div style="background:var(--surface2);border-radius:10px;padding:12px;text-align:center;border:1px solid var(--border)">
               <div style="font-size:20px;font-weight:900;color:${c}">${v}</div>
               <div style="font-size:9px;color:var(--text3);font-weight:700;letter-spacing:.5px;margin-top:2px">${l}</div>
@@ -1871,7 +1871,7 @@ async function gerarRelatorioColaborador(nomeColab) {
             <div style="display:flex;gap:16px;font-size:11px;color:var(--text3)">
               <span>Média por pedido: <b style="color:var(--text)">${mediaPontuacao} pts</b></span>
               <span>Total: <b style="color:var(--text)">${totalPontuacao} pts</b></span>
-              ${tempoMin!==null?`<span>T.min: <b style="color:#22C55E">${Math.round(tempoMin)}min</b></span><span>T.max: <b style="color:#EF4444">${Math.round(tempoMax)}min</b></span>`:''}
+              ${tempoMin!==null?`<span>T.min: <b style="color:var(--green)">${Math.round(tempoMin)}min</b></span><span>T.max: <b style="color:var(--red)">${Math.round(tempoMax)}min</b></span>`:''}
             </div>
             <div style="font-size:10px;color:var(--text3);margin-top:6px">Pontuação considera peso dos corredores (longe do início = mais pontos) e volume de itens.</div>
           </div>
@@ -1881,9 +1881,9 @@ async function gerarRelatorioColaborador(nomeColab) {
             <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:1px;margin-bottom:10px">DISTRIBUIÇÃO DE VELOCIDADE (${comTempo} pedidos com tempo calculado)</div>
             <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
               ${[
-                ['RÁPIDO','< 15min', rapido, pctR, '#22C55E'],
-                ['NORMAL','15–30min', normal, pctN, '#3B82F6'],
-                ['LENTO','> 30min', lento, pctL, '#EF4444'],
+                ['RÁPIDO','< 15min', rapido, pctR, 'var(--green)'],
+                ['NORMAL','15–30min', normal, pctN, 'var(--info)'],
+                ['LENTO','> 30min', lento, pctL, 'var(--red)'],
               ].map(([l,r,n,pct,c]) => `<div style="text-align:center;background:var(--surface);border-radius:8px;padding:10px;border:1px solid var(--border)">
                 <div style="font-size:18px;font-weight:900;color:${c}">${n}</div>
                 <div style="font-size:9px;font-weight:700;color:${c}">${pct}%</div>
@@ -1960,7 +1960,7 @@ async function gerarRelatorioColaborador(nomeColab) {
       const fmtTck = t => t === null ? '—' : t === 0 ? '<1min' : t+'min';
       const linhasCk = pedidos.map(p => {
         const tCol = p.tempo_checkout_min;
-        const tClr = tCol === null ? '#94A3B8' : tCol <= 3 ? '#22C55E' : tCol <= 10 ? '#F59E0B' : '#EF4444';
+        const tClr = tCol === null ? 'var(--text3)' : tCol <= 3 ? 'var(--green)' : tCol <= 10 ? 'var(--amber)' : 'var(--red)';
         return `<tr style="border-bottom:1px solid var(--border)">
           <td style="padding:5px 8px;font-family:monospace;font-size:11px;font-weight:700">${p.numero_pedido}</td>
           <td style="padding:5px 8px;font-size:11px;color:var(--text3)">${fmtData(p.data_pedido)}</td>
@@ -1988,17 +1988,17 @@ async function gerarRelatorioColaborador(nomeColab) {
             ${[
               ['CHECKOUTS', totalCk, 'var(--accent)'],
               ['ITENS PROCESSADOS', totalItens, 'var(--accent)'],
-              ['TEMPO MÉDIO', mediaCk !== null ? mediaCk.toFixed(1)+'min' : '—', mediaCk !== null && mediaCk <= 10 ? '#22C55E' : '#F59E0B'],
-              ['MAIS RÁPIDO', tempoMin !== null ? fmtTck(tempoMin) : '—', '#22C55E'],
-              ['MAIS LENTO', tempoMax !== null ? fmtTck(tempoMax) : '—', tempoMax > 10 ? '#EF4444' : '#F59E0B'],
-              ['RITMO', ckHora ? ckHora+' CK/h' : '—', '#8B5CF6'],
+              ['TEMPO MÉDIO', mediaCk !== null ? mediaCk.toFixed(1)+'min' : '—', mediaCk !== null && mediaCk <= 10 ? 'var(--green)' : 'var(--amber)'],
+              ['MAIS RÁPIDO', tempoMin !== null ? fmtTck(tempoMin) : '—', 'var(--green)'],
+              ['MAIS LENTO', tempoMax !== null ? fmtTck(tempoMax) : '—', tempoMax > 10 ? 'var(--red)' : 'var(--amber)'],
+              ['RITMO', ckHora ? ckHora+' CK/h' : '—', 'var(--indigo)'],
             ].map(([l,v,c])=>`<div style="background:var(--surface2);border-radius:10px;padding:12px;text-align:center;border:1px solid var(--border)"><div style="font-size:20px;font-weight:900;color:${c}">${v}</div><div style="font-size:9px;color:var(--text3);font-weight:700;letter-spacing:.5px;margin-top:2px">${l}</div></div>`).join('')}
           </div>
 
           ${comTempo > 0 ? `<div style="background:var(--surface2);border-radius:10px;padding:14px;margin-bottom:14px;border:1px solid var(--border)">
             <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:1px;margin-bottom:10px">DISTRIBUIÇÃO DE VELOCIDADE (${comTempo} checkouts com tempo)</div>
             <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
-              ${[['RÁPIDO','≤ 3min',rapido,pctR,'#22C55E'],['NORMAL','3–10min',normal,pctN,'#3B82F6'],['LENTO','> 10min',lento,pctL,'#EF4444']].map(([l,r,n,p2,c])=>`<div style="text-align:center;background:var(--surface);border-radius:8px;padding:10px;border:1px solid var(--border)"><div style="font-size:18px;font-weight:900;color:${c}">${n}</div><div style="font-size:9px;font-weight:700;color:${c}">${p2}%</div><div style="font-size:10px;color:var(--text3);font-weight:600;margin-top:2px">${l}</div><div style="font-size:9px;color:var(--text3)">${r}</div></div>`).join('')}
+              ${[['RÁPIDO','≤ 3min',rapido,pctR,'var(--green)'],['NORMAL','3–10min',normal,pctN,'var(--info)'],['LENTO','> 10min',lento,pctL,'var(--red)']].map(([l,r,n,p2,c])=>`<div style="text-align:center;background:var(--surface);border-radius:8px;padding:10px;border:1px solid var(--border)"><div style="font-size:18px;font-weight:900;color:${c}">${n}</div><div style="font-size:9px;font-weight:700;color:${c}">${p2}%</div><div style="font-size:10px;color:var(--text3);font-weight:600;margin-top:2px">${l}</div><div style="font-size:9px;color:var(--text3)">${r}</div></div>`).join('')}
             </div>
           </div>` : ''}
 
@@ -2057,7 +2057,7 @@ async function gerarRelatorioColaborador(nomeColab) {
       const fmtTe = t => t === null ? '—' : t === 0 ? '<1min' : t+'min';
       const linhasEmb = pedidos.map(p => {
         const tCol = p.tempo_embalagem_min;
-        const tClr = tCol === null ? '#94A3B8' : tCol <= 5 ? '#22C55E' : tCol <= 15 ? '#F59E0B' : '#EF4444';
+        const tClr = tCol === null ? 'var(--text3)' : tCol <= 5 ? 'var(--green)' : tCol <= 15 ? 'var(--amber)' : 'var(--red)';
         return `<tr style="border-bottom:1px solid var(--border)">
           <td style="padding:5px 8px;font-family:monospace;font-size:11px;font-weight:700">${p.numero_pedido}</td>
           <td style="padding:5px 8px;font-size:11px;color:var(--text3)">${fmtData(p.data_pedido)}</td>
@@ -2086,17 +2086,17 @@ async function gerarRelatorioColaborador(nomeColab) {
             ${[
               ['EMBALADOS', totalEmb, 'var(--accent)'],
               ['ITENS', totalItens, 'var(--accent)'],
-              ['TEMPO MÉDIO', mediaEmb !== null ? mediaEmb.toFixed(1)+'min' : '—', mediaEmb !== null && mediaEmb <= 15 ? '#22C55E' : '#F59E0B'],
-              ['MAIS RÁPIDO', tempoMin !== null ? fmtTe(tempoMin) : '—', '#22C55E'],
-              ['MAIS LENTO', tempoMax !== null ? fmtTe(tempoMax) : '—', tempoMax > 15 ? '#EF4444' : '#F59E0B'],
-              ['RITMO', embHora ? embHora+' emb/h' : '—', '#8B5CF6'],
+              ['TEMPO MÉDIO', mediaEmb !== null ? mediaEmb.toFixed(1)+'min' : '—', mediaEmb !== null && mediaEmb <= 15 ? 'var(--green)' : 'var(--amber)'],
+              ['MAIS RÁPIDO', tempoMin !== null ? fmtTe(tempoMin) : '—', 'var(--green)'],
+              ['MAIS LENTO', tempoMax !== null ? fmtTe(tempoMax) : '—', tempoMax > 15 ? 'var(--red)' : 'var(--amber)'],
+              ['RITMO', embHora ? embHora+' emb/h' : '—', 'var(--indigo)'],
             ].map(([l,v,c])=>`<div style="background:var(--surface2);border-radius:10px;padding:12px;text-align:center;border:1px solid var(--border)"><div style="font-size:20px;font-weight:900;color:${c}">${v}</div><div style="font-size:9px;color:var(--text3);font-weight:700;letter-spacing:.5px;margin-top:2px">${l}</div></div>`).join('')}
           </div>
 
           ${comTempo > 0 ? `<div style="background:var(--surface2);border-radius:10px;padding:14px;margin-bottom:14px;border:1px solid var(--border)">
             <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:1px;margin-bottom:10px">DISTRIBUIÇÃO DE VELOCIDADE (${comTempo} embalagens com tempo)</div>
             <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
-              ${[['RÁPIDO','≤ 5min',rapido,pctR,'#22C55E'],['NORMAL','5–15min',normal,pctN,'#3B82F6'],['LENTO','> 15min',lento,pctL,'#EF4444']].map(([l,r,n,p2,c])=>`<div style="text-align:center;background:var(--surface);border-radius:8px;padding:10px;border:1px solid var(--border)"><div style="font-size:18px;font-weight:900;color:${c}">${n}</div><div style="font-size:9px;font-weight:700;color:${c}">${p2}%</div><div style="font-size:10px;color:var(--text3);font-weight:600;margin-top:2px">${l}</div><div style="font-size:9px;color:var(--text3)">${r}</div></div>`).join('')}
+              ${[['RÁPIDO','≤ 5min',rapido,pctR,'var(--green)'],['NORMAL','5–15min',normal,pctN,'var(--info)'],['LENTO','> 15min',lento,pctL,'var(--red)']].map(([l,r,n,p2,c])=>`<div style="text-align:center;background:var(--surface);border-radius:8px;padding:10px;border:1px solid var(--border)"><div style="font-size:18px;font-weight:900;color:${c}">${n}</div><div style="font-size:9px;font-weight:700;color:${c}">${p2}%</div><div style="font-size:10px;color:var(--text3);font-weight:600;margin-top:2px">${l}</div><div style="font-size:9px;color:var(--text3)">${r}</div></div>`).join('')}
             </div>
           </div>` : ''}
 
@@ -2135,7 +2135,7 @@ async function gerarRelatorioColaborador(nomeColab) {
       const comTempo = tempos.length;
       const mediaRep = comTempo ? tempos.reduce((a,b)=>a+b,0)/comTempo : null;
       const taxa     = totalAv > 0 ? Math.round((repostos/totalAv)*100) : null;
-      const taxaClr  = taxa === null ? '#94A3B8' : taxa >= 80 ? '#22C55E' : taxa >= 60 ? '#F59E0B' : '#EF4444';
+      const taxaClr  = taxa === null ? 'var(--text3)' : taxa >= 80 ? 'var(--green)' : taxa >= 60 ? 'var(--amber)' : 'var(--red)';
       const diasMap  = {};
       pedidos.forEach(p => { diasMap[p.data_pedido]=(diasMap[p.data_pedido]||0)+1; });
 
@@ -2151,8 +2151,8 @@ async function gerarRelatorioColaborador(nomeColab) {
 
       const linhasRep = pedidos.map(p => {
         const tCol = p.tempo_resolucao_min;
-        const tClr = tCol === null ? '#94A3B8' : tCol <= 10 ? '#22C55E' : tCol <= 25 ? '#F59E0B' : '#EF4444';
-        const resClr = p.resultado_tentativa === 'encontrado' ? '#22C55E' : '#EF4444';
+        const tClr = tCol === null ? 'var(--text3)' : tCol <= 10 ? 'var(--green)' : tCol <= 25 ? 'var(--amber)' : 'var(--red)';
+        const resClr = p.resultado_tentativa === 'encontrado' ? 'var(--green)' : 'var(--red)';
         const resLbl = p.resultado_tentativa === 'encontrado' ? 'Enc' : 'NE';
         return `<tr style="border-bottom:1px solid var(--border)">
           <td style="padding:5px 8px;font-family:monospace;font-size:11px;font-weight:700">${p.numero_pedido}</td>
@@ -2160,7 +2160,7 @@ async function gerarRelatorioColaborador(nomeColab) {
           <td style="padding:5px 8px;text-align:center;font-size:11px;color:var(--text3)">${p.hora_aviso||'—'}</td>
           <td style="padding:5px 8px;text-align:center;font-size:10px">${p.numero_tentativa||'—'}</td>
           <td style="padding:5px 8px;text-align:center;font-size:12px;font-weight:700;color:${resClr}">${resLbl}</td>
-          <td style="padding:5px 8px;font-family:monospace;font-size:10px;color:#EF4444">${p.codigo||'—'}</td>
+          <td style="padding:5px 8px;font-family:monospace;font-size:10px;color:var(--red)">${p.codigo||'—'}</td>
           <td style="padding:5px 8px;font-size:10px;color:var(--text);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.descricao||''}">${p.descricao||'—'}</td>
           <td style="padding:5px 8px;text-align:center">${p.quantidade||0}</td>
           <td style="padding:5px 8px;text-align:center;font-weight:700;color:${tClr}">${tCol !== null ? tCol+'min' : '—'}</td>
@@ -2182,10 +2182,10 @@ async function gerarRelatorioColaborador(nomeColab) {
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:18px">
             ${[
               ['TOTAL AVISOS', totalAv, 'var(--accent)'],
-              ['REPOSTOS', repostos, '#22C55E'],
-              ['NÃO ENCONTR.', naoEnc, '#EF4444'],
+              ['REPOSTOS', repostos, 'var(--green)'],
+              ['NÃO ENCONTR.', naoEnc, 'var(--red)'],
               ['TAXA RESOLUÇÃO', taxa !== null ? taxa+'%' : '—', taxaClr],
-              ['TEMPO MÉDIO', mediaRep !== null ? mediaRep.toFixed(1)+'min' : '—', mediaRep !== null && mediaRep <= 20 ? '#22C55E' : '#F59E0B'],
+              ['TEMPO MÉDIO', mediaRep !== null ? mediaRep.toFixed(1)+'min' : '—', mediaRep !== null && mediaRep <= 20 ? 'var(--green)' : 'var(--amber)'],
               ['DIAS ATIVOS', Object.keys(diasMap).length, 'var(--accent)'],
             ].map(([l,v,c])=>`<div style="background:var(--surface2);border-radius:10px;padding:12px;text-align:center;border:1px solid var(--border)"><div style="font-size:20px;font-weight:900;color:${c}">${v}</div><div style="font-size:9px;color:var(--text3);font-weight:700;letter-spacing:.5px;margin-top:2px">${l}</div></div>`).join('')}
           </div>
@@ -2199,8 +2199,8 @@ async function gerarRelatorioColaborador(nomeColab) {
               <div style="font-size:18px;font-weight:900;color:${taxaClr};min-width:50px">${taxa}%</div>
             </div>
             <div style="display:flex;gap:16px;font-size:11px;color:var(--text3);margin-top:8px">
-              <span>Repostos: <b style="color:#22C55E">${repostos}</b></span>
-              <span>Não encontrados: <b style="color:#EF4444">${naoEnc}</b></span>
+              <span>Repostos: <b style="color:var(--green)">${repostos}</b></span>
+              <span>Não encontrados: <b style="color:var(--red)">${naoEnc}</b></span>
               <span>Total: <b>${totalAv}</b></span>
             </div>
           </div>` : ''}
@@ -2348,8 +2348,8 @@ async function carregarColaboradores() {
         `<tr>
           <td style="padding:10px 12px;font-weight:600">${r.nome}</td>
           <td style="padding:10px 12px;color:var(--text2);font-size:12px">${r.turno||'—'}</td>
-          <td style="padding:10px 12px;text-align:center;font-size:18px;font-weight:700;color:#10b981">${r.rep_resolvidas_hoje}</td>
-          <td style="padding:10px 12px;text-align:center;font-size:18px;font-weight:700;color:#ef4444">${r.rep_nao_encontrados_hoje}</td>
+          <td style="padding:10px 12px;text-align:center;font-size:18px;font-weight:700;color:var(--green)">${r.rep_resolvidas_hoje}</td>
+          <td style="padding:10px 12px;text-align:center;font-size:18px;font-weight:700;color:var(--red)">${r.rep_nao_encontrados_hoje}</td>
           <td style="padding:10px 12px;text-align:center;font-size:13px;color:var(--text3)">${r.rep_hoje}</td>
         </tr>`
       ).join('') : '<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--text3)">Nenhum repositor ativo</td></tr>';
@@ -2362,7 +2362,7 @@ async function carregarColaboradores() {
         `<tr>
           <td style="padding:10px 12px;font-weight:600">${c.nome}</td>
           <td style="padding:10px 12px;color:var(--text2);font-size:12px">${c.turno||'—'}</td>
-          <td style="padding:10px 12px;text-align:center;font-size:18px;font-weight:700;color:#8b5cf6">${c.ck_hoje}</td>
+          <td style="padding:10px 12px;text-align:center;font-size:18px;font-weight:700;color:var(--indigo)">${c.ck_hoje}</td>
           <td style="padding:10px 12px;text-align:center;font-size:13px;color:var(--text3)">${c.ck_total_hoje}</td>
           <td style="padding:10px 12px;text-align:center;font-size:13px;color:var(--text3)">—</td>
         </tr>`
@@ -2411,7 +2411,7 @@ async function carregarRelatorioAnalitico() {
     renderRelAnalitico(_relAnaliticoDados);
     ['btn-rel-excel','btn-rel-pdf'].forEach(id => { const el=document.getElementById(id); if(el) el.style.display=''; });
   } catch(e) {
-    wrap.innerHTML = `<div style="text-align:center;padding:40px;color:#ef4444"><b>Erro:</b> ${e.message}</div>`;
+    wrap.innerHTML = `<div style="text-align:center;padding:40px;color:var(--red)"><b>Erro:</b> ${e.message}</div>`;
   }
 }
 
@@ -2488,9 +2488,9 @@ function renderRelAnalitico(d) {
   const cx = d.complexidade;
   const cxTotalPed = (cx.facil?.pedidos||0) + (cx.medio?.pedidos||0) + (cx.dificil?.pedidos||0) || 1;
   const cxBars = [
-    { lbl:'Fácil',   cor:'var(--green)', bg:'#dcfce7', ped: cx.facil?.pedidos||0,   itens: cx.facil?.itens||0 },
-    { lbl:'Médio',   cor:'var(--amber)', bg:'#fef3c7', ped: cx.medio?.pedidos||0,   itens: cx.medio?.itens||0 },
-    { lbl:'Difícil', cor:'var(--red)',   bg:'#fee2e2', ped: cx.dificil?.pedidos||0, itens: cx.dificil?.itens||0 },
+    { lbl:'Fácil',   cor:'var(--green)', bg:'rgba(87,185,129,.15)', ped: cx.facil?.pedidos||0,   itens: cx.facil?.itens||0 },
+    { lbl:'Médio',   cor:'var(--amber)', bg:'rgba(224,168,62,.15)', ped: cx.medio?.pedidos||0,   itens: cx.medio?.itens||0 },
+    { lbl:'Difícil', cor:'var(--red)',   bg:'rgba(201,82,79,.15)', ped: cx.dificil?.pedidos||0, itens: cx.dificil?.itens||0 },
   ].map(b => `
     <div style="flex:1;background:${b.bg};border-radius:12px;padding:14px 12px;text-align:center">
       <div style="font-size:28px;font-weight:800;color:${b.cor};line-height:1">${pct(b.ped,cxTotalPed)}%</div>
@@ -2511,7 +2511,7 @@ function renderRelAnalitico(d) {
     </div>`).join('');
 
   // ── 3. Ranking de turnos ─────────────────────────────────────
-  const rankColors = ['#f59e0b','#94a3b8','#cd7c37'];
+  const rankColors = ['var(--amber)','var(--text3)','#cd7c37']; /* bronze sem token equivalente */
   const rankHTML = d.ranking_turnos.map((t,i) => `
     <div style="display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid var(--border);${i===0?'':''}">
       <div style="width:28px;height:28px;border-radius:50%;background:${rankColors[i]||'var(--text3)'};color:${i===0?'#1e293b':'#fff'};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0">${i+1}</div>
@@ -2536,11 +2536,11 @@ function renderRelAnalitico(d) {
       <div style="font-size:40px;font-weight:800;color:${slaColor}">${d.sla.pct != null ? d.sla.pct+'%' : '—'}</div>
       <div style="font-size:12px;color:var(--text2);margin:4px 0">pedidos separados em até ${d.sla.meta_horas}h</div>
       <div style="display:flex;gap:12px;justify-content:center;margin-top:10px">
-        <div style="background:#dcfce7;border-radius:8px;padding:6px 14px;text-align:center">
+        <div style="background:rgba(87,185,129,.15);border-radius:8px;padding:6px 14px;text-align:center">
           <div style="font-size:16px;font-weight:700;color:var(--green)">${fmtN(d.sla.dentro)}</div>
           <div style="font-size:10px;color:var(--green)">Dentro do SLA</div>
         </div>
-        <div style="background:#fee2e2;border-radius:8px;padding:6px 14px;text-align:center">
+        <div style="background:rgba(201,82,79,.15);border-radius:8px;padding:6px 14px;text-align:center">
           <div style="font-size:16px;font-weight:700;color:var(--red)">${fmtN(d.sla.fora)}</div>
           <div style="font-size:10px;color:var(--red)">Fora do SLA</div>
         </div>
@@ -2553,7 +2553,7 @@ function renderRelAnalitico(d) {
     ? `<div style="display:flex;align-items:flex-end;gap:3px;height:60px;padding-bottom:4px">
         ${d.por_hora.map(h=>`
           <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px">
-            <div style="width:100%;background:#4f46e5;border-radius:3px 3px 0 0;height:${Math.round((h.total/maxH)*50)+4}px;min-height:4px" title="${h.hora}h: ${h.total}"></div>
+            <div style="width:100%;background:var(--accent);border-radius:3px 3px 0 0;height:${Math.round((h.total/maxH)*50)+4}px;min-height:4px" title="${h.hora}h: ${h.total}"></div>
             <div style="font-size:8px;color:var(--text3)">${h.hora}</div>
           </div>`).join('')}
        </div>`
@@ -2565,7 +2565,7 @@ function renderRelAnalitico(d) {
     <div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border)">
       <div style="flex:1;font-size:13px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.transportadora}</div>
       <div style="width:80px;height:6px;background:var(--surface2);border-radius:3px;overflow:hidden;flex-shrink:0">
-        <div style="height:100%;width:${pct(t.total,trTotal)}%;background:#4f46e5;border-radius:3px"></div>
+        <div style="height:100%;width:${pct(t.total,trTotal)}%;background:var(--accent);border-radius:3px"></div>
       </div>
       <div style="font-size:13px;font-weight:700;color:var(--text);min-width:30px;text-align:right;flex-shrink:0">${fmtN(t.total)}</div>
     </div>`).join('');
@@ -2576,7 +2576,7 @@ function renderRelAnalitico(d) {
   const mkRow  = cells => `<tr style="border-bottom:1px solid var(--border)">${cells.join('')}</tr>`;
   const mkAreaCors = {'Separação':'var(--accent)','Checkout':'var(--accent)','Embalagem':'var(--accent)','Reposição':'var(--accent)'};
   const mkArea = (icon, label, grad, headers, rows) => {
-    const cor = mkAreaCors[label.split(' — ')[0]] || '#64748b';
+    const cor = mkAreaCors[label.split(' — ')[0]] || 'var(--text3)';
     return `
     <div class="card" style="margin-bottom:18px;overflow:hidden;border-top:3px solid ${cor}">
       <div style="padding:12px 16px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border)">
@@ -2603,7 +2603,7 @@ function renderRelAnalitico(d) {
       mkCell(`<span style="font-size:13px;color:var(--text2)">${fmtN(c.itens)}</span>`),
       mkCell(`<span style="font-size:13px;color:var(--text2)">${fmtN(c.pontuacao)}</span>`),
       mkCell(`<span style="font-size:13px;color:var(--text2)">${fmtT(c.tempo_medio)}</span>`),
-      mkCell(`<span style="font-size:12px;font-weight:700;color:#16a34a">${ritmo}</span>`),
+      mkCell(`<span style="font-size:12px;font-weight:700;color:var(--green)">${ritmo}</span>`),
     ]);
   });
 
@@ -2616,7 +2616,7 @@ function renderRelAnalitico(d) {
       mkCell(`<span style="font-size:15px;font-weight:800;color:var(--accent)">${fmtN(c.pedidos)}</span>`),
       mkCell(`<span style="font-size:13px;color:var(--text2)">${fmtN(c.itens)}</span>`),
       mkCell(`<span style="font-size:13px;color:var(--text2)">${fmtT(c.tempo_medio)}</span>`),
-      mkCell(`<span style="font-size:12px;font-weight:700;color:#16a34a">${ritmo}</span>`),
+      mkCell(`<span style="font-size:12px;font-weight:700;color:var(--green)">${ritmo}</span>`),
     ]);
   });
 
@@ -2629,7 +2629,7 @@ function renderRelAnalitico(d) {
       mkCell(`<span style="font-size:15px;font-weight:800;color:var(--accent)">${fmtN(c.pedidos)}</span>`),
       mkCell(`<span style="font-size:13px;color:var(--text2)">${fmtN(c.itens)}</span>`),
       mkCell(`<span style="font-size:13px;color:var(--text2)">${fmtT(c.tempo_medio)}</span>`),
-      mkCell(`<span style="font-size:12px;font-weight:700;color:#16a34a">${ritmo}</span>`),
+      mkCell(`<span style="font-size:12px;font-weight:700;color:var(--green)">${ritmo}</span>`),
     ]);
   });
 
@@ -2637,12 +2637,12 @@ function renderRelAnalitico(d) {
   const repColabs = d.colaboradores.filter(c=>c.perfil==='repositor').sort((a,b)=>(b.total||0)-(a.total||0));
   const repAreaRows = repColabs.map(c => {
     const taxa = (c.total||0)>0 ? Math.round(((c.repostos||0)/(c.total||0))*100) : null;
-    const taxaClr = taxa==null?'var(--text3)':taxa>=80?'#16a34a':taxa>=60?'#d97706':'#dc2626';
+    const taxaClr = taxa==null?'var(--text3)':taxa>=80?'var(--green)':taxa>=60?'var(--amber)':'var(--red)';
     return mkRow([
       mkCell(`<span style="font-weight:700;font-size:13px;color:var(--text)">${c.nome}</span>`),
       mkCell(`<span style="font-size:15px;font-weight:800;color:var(--accent)">${fmtN(c.total)}</span>`),
-      mkCell(`<span style="font-size:13px;font-weight:600;color:#16a34a">${fmtN(c.repostos)}</span>`),
-      mkCell(`<span style="font-size:13px;font-weight:600;color:#dc2626">${fmtN(c.nao_enc)}</span>`),
+      mkCell(`<span style="font-size:13px;font-weight:600;color:var(--green)">${fmtN(c.repostos)}</span>`),
+      mkCell(`<span style="font-size:13px;font-weight:600;color:var(--red)">${fmtN(c.nao_enc)}</span>`),
       mkCell(`<span style="font-size:13px;font-weight:700;color:${taxaClr}">${taxa!=null?taxa+'%':'—'}</span>`),
       mkCell(`<span style="font-size:13px;color:var(--text2)">${fmtT(c.tempo_medio)}</span>`),
     ]);
@@ -2659,7 +2659,7 @@ function renderRelAnalitico(d) {
           ${d.por_dia.map(x=>`
             <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px">
               <div style="font-size:9px;font-weight:700;color:var(--text2)">${x.total}</div>
-              <div style="width:100%;background:#4f46e5;border-radius:3px 3px 0 0;height:${Math.round((x.total/maxD)*55)+4}px;min-height:4px"></div>
+              <div style="width:100%;background:var(--accent);border-radius:3px 3px 0 0;height:${Math.round((x.total/maxD)*55)+4}px;min-height:4px"></div>
               <div style="font-size:8px;color:var(--text3)">${x.data.slice(8)+'/'+(x.data.slice(5,7))}</div>
             </div>`).join('')}
         </div>
@@ -2721,16 +2721,16 @@ function renderRelAnalitico(d) {
     ${porDiaHTML}
 
     <!-- Seções de colaboradores por área -->
-    ${mkArea('SEP','Separação — desempenho individual','linear-gradient(135deg,#8B5CF6,#4338CA)',
+    ${mkArea('SEP','Separação — desempenho individual','linear-gradient(135deg,var(--indigo),var(--accent2))',
       ['COLABORADOR / TURNO','PEDIDOS','ITENS','PONTUAÇÃO','TEMPO MÉD.','RITMO'],
       sepAreaRows)}
-    ${mkArea('CK','Checkout — desempenho individual','linear-gradient(135deg,#EC4899,#9D174D)',
+    ${mkArea('CK','Checkout — desempenho individual','linear-gradient(135deg,#EC4899,#9D174D)', /* rosa/magenta sem token equivalente */
       ['OPERADOR','EXPEDIÇÕES','ITENS','TEMPO MÉD.','RITMO'],
       ckAreaRows)}
-    ${mkArea('EMB','Embalagem — desempenho individual','linear-gradient(135deg,#a855f7,#6d28d9)',
+    ${mkArea('EMB','Embalagem — desempenho individual','linear-gradient(135deg,var(--indigo),#6d28d9)', /* 2º stop sem token: tom mais escuro do indigo */
       ['EMBALADOR','EMBALADOS','ITENS','TEMPO MÉD.','RITMO'],
       embAreaRows)}
-    ${mkArea('REP','Reposição — desempenho individual','linear-gradient(135deg,#f59e0b,#b45309)',
+    ${mkArea('REP','Reposição — desempenho individual','linear-gradient(135deg,var(--amber),#b45309)', /* 2º stop sem token: tom mais escuro do amber */
       ['REPOSITOR','TOTAL AVISOS','REPOSTOS','NÃO ENCONTR.','TAXA RESOLUÇÃO','T. MÉDIO'],
       repAreaRows)}
 
