@@ -269,8 +269,8 @@
               </div>
               <div class="filtros">
                 <div class="fg"><label>USUÁRIO</label><select id="filtro-sep-prod" onchange="carregarProdutividade()"><option value="">Todos</option></select></div>
-                <div class="fg"><label>DE</label><input type="date" id="filtro-data-ini" onchange="carregarProdutividade()"/></div>
-                <div class="fg"><label>ATÉ</label><input type="date" id="filtro-data-fim" onchange="carregarProdutividade()"/></div>
+                <div class="fg"><label>DE</label><input type="date" id="filtro-prod-ini" onchange="carregarProdutividade()"/></div>
+                <div class="fg"><label>ATÉ</label><input type="date" id="filtro-prod-fim" onchange="carregarProdutividade()"/></div>
                 <button class="btn btn-primary btn-sm" onclick="carregarProdutividade()">Filtrar</button>
               </div>
               <div class="tabela-wrap"><table><thead><tr><th>USUÁRIO</th><th>HOJE</th><th>MÊS</th><th>ANO</th><th>PROGRESSO</th><th>STATUS</th></tr></thead><tbody id="tbody-prod"></tbody></table></div>
@@ -1384,10 +1384,18 @@
           <div class="card-hd">Período
             <button onclick="exportarEmbalagemExcel()" class="excel-btn">Excel</button>
           </div>
-          <div class="date-filter-bar" style="flex-wrap:wrap;gap:10px;margin-bottom:14px">
-            <div class="fg"><label>DE</label><input type="date" id="emb-ini" onchange="carregarEmbalagemDesk()"/></div>
-            <div class="fg"><label>ATÉ</label><input type="date" id="emb-fim" onchange="carregarEmbalagemDesk()"/></div>
-            <button onclick="carregarEmbalagemDesk()" class="btn btn-primary btn-sm">Filtrar</button>
+          <div class="filter-toolbar" style="margin-bottom:14px">
+            <div class="filter-grp">
+              <span class="filter-lbl">Período</span>
+              <div class="date-range">
+                <input type="date" id="emb-ini" onchange="carregarEmbalagemDesk()"/>
+                <span class="date-range-sep"><i class="ti ti-arrow-right" aria-hidden="true"></i></span>
+                <input type="date" id="emb-fim" onchange="carregarEmbalagemDesk()"/>
+              </div>
+            </div>
+            <div class="filter-actions">
+              <button onclick="carregarEmbalagemDesk()" class="btn btn-primary btn-sm">Filtrar</button>
+            </div>
           </div>
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
             <div class="stat-card stat-card--accent"><div class="stat-card-hd">Total</div><div class="stat-card-value" id="emb-total">0</div><div class="stat-card-label">pedidos</div></div>
@@ -1480,10 +1488,18 @@
             <button class="excel-btn" onclick="exportarExcel('estatisticas')">Excel</button>
           </div>
         </div>
-        <div class="date-filter-bar">
-          <div class="fg"><label>DE</label><input type="date" id="est-ini"/></div>
-          <div class="fg"><label>ATÉ</label><input type="date" id="est-fim"/></div>
-          <button class="btn btn-primary btn-sm" onclick="carregarEstatisticas()">Filtrar</button>
+        <div class="filter-toolbar">
+          <div class="filter-grp">
+            <span class="filter-lbl">Período</span>
+            <div class="date-range">
+              <input type="date" id="est-ini"/>
+              <span class="date-range-sep"><i class="ti ti-arrow-right" aria-hidden="true"></i></span>
+              <input type="date" id="est-fim"/>
+            </div>
+          </div>
+          <div class="filter-actions">
+            <button class="btn btn-primary btn-sm" onclick="carregarEstatisticas()">Filtrar</button>
+          </div>
         </div>
         </div>
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px">
@@ -1561,10 +1577,18 @@
         <!-- Contadores + filtro de período (mantidos para carregarContadoresCk()) -->
         <div class="card" style="margin-bottom:14px">
           <div class="card-hd">Período</div>
-          <div class="date-filter-bar" style="margin-bottom:14px">
-            <div class="fg"><label>DE</label><input type="date" id="ck-ini" onchange="carregarContadoresCk()"/></div>
-            <div class="fg"><label>ATÉ</label><input type="date" id="ck-fim" onchange="carregarContadoresCk()"/></div>
-            <button onclick="carregarContadoresCk()" class="btn btn-primary btn-sm">Atualizar</button>
+          <div class="filter-toolbar" style="margin-bottom:14px">
+            <div class="filter-grp">
+              <span class="filter-lbl">Período</span>
+              <div class="date-range">
+                <input type="date" id="ck-ini" onchange="carregarContadoresCk()"/>
+                <span class="date-range-sep"><i class="ti ti-arrow-right" aria-hidden="true"></i></span>
+                <input type="date" id="ck-fim" onchange="carregarContadoresCk()"/>
+              </div>
+            </div>
+            <div class="filter-actions">
+              <button onclick="carregarContadoresCk()" class="btn btn-primary btn-sm">Atualizar</button>
+            </div>
           </div>
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
             <div class="stat-card stat-card--accent"><div class="stat-card-hd">Total</div><div class="stat-card-value" id="ck-cnt-total">0</div><div class="stat-card-label">pedidos</div></div>
@@ -1651,10 +1675,18 @@
               <button class="excel-btn" onclick="exportarExcel('stats-repositor')">Excel</button>
             </div>
           </div>
-          <div class="date-filter-bar">
-            <div class="fg"><label>DE</label><input type="date" id="srep-ini"/></div>
-            <div class="fg"><label>ATÉ</label><input type="date" id="srep-fim"/></div>
-            <button class="btn btn-primary btn-sm" onclick="carregarStatsRepositor()">Filtrar</button>
+          <div class="filter-toolbar">
+            <div class="filter-grp">
+              <span class="filter-lbl">Período</span>
+              <div class="date-range">
+                <input type="date" id="srep-ini"/>
+                <span class="date-range-sep"><i class="ti ti-arrow-right" aria-hidden="true"></i></span>
+                <input type="date" id="srep-fim"/>
+              </div>
+            </div>
+            <div class="filter-actions">
+              <button class="btn btn-primary btn-sm" onclick="carregarStatsRepositor()">Filtrar</button>
+            </div>
           </div>
         </div>
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:13px;margin-bottom:16px">
@@ -1689,10 +1721,18 @@
               <button class="excel-btn" onclick="exportarExcel('stats-checkout')">Excel</button>
             </div>
           </div>
-          <div class="date-filter-bar">
-            <div class="fg"><label>DE</label><input type="date" id="sck-ini"/></div>
-            <div class="fg"><label>ATÉ</label><input type="date" id="sck-fim"/></div>
-            <button class="btn btn-primary btn-sm" onclick="carregarStatsCheckout()">Filtrar</button>
+          <div class="filter-toolbar">
+            <div class="filter-grp">
+              <span class="filter-lbl">Período</span>
+              <div class="date-range">
+                <input type="date" id="sck-ini"/>
+                <span class="date-range-sep"><i class="ti ti-arrow-right" aria-hidden="true"></i></span>
+                <input type="date" id="sck-fim"/>
+              </div>
+            </div>
+            <div class="filter-actions">
+              <button class="btn btn-primary btn-sm" onclick="carregarStatsCheckout()">Filtrar</button>
+            </div>
           </div>
         </div>
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:13px;margin-bottom:16px">
@@ -1731,11 +1771,11 @@
         <!-- Barra de filtros -->
         <div class="card" style="margin:0 0 18px 0;border-radius:0 0 var(--r) var(--r);border-left:none;border-right:none">
           <div class="card-hd">Filtros</div>
-          <div style="display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px">
+          <div class="filter-toolbar">
             <!-- Turno -->
-            <div>
-              <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">TURNO</div>
-              <div style="display:flex;gap:4px" id="rel-turno-btns">
+            <div class="filter-grp">
+              <span class="filter-lbl">Turno</span>
+              <div class="turno-seg" id="rel-turno-btns">
                 <button onclick="setTurnoRel('Todos')" class="rel-turno-btn ativo" data-t="Todos">Todos</button>
                 <button onclick="setTurnoRel('Manha')" class="rel-turno-btn" data-t="Manha">Manhã</button>
                 <button onclick="setTurnoRel('Tarde')" class="rel-turno-btn" data-t="Tarde">Tarde</button>
@@ -1743,11 +1783,17 @@
               </div>
             </div>
             <!-- Datas -->
-            <div class="fg"><label>DE</label><input type="date" id="rel-de"/></div>
-            <div class="fg"><label>ATÉ</label><input type="date" id="rel-ate"/></div>
-            <button class="btn btn-primary btn-sm" onclick="carregarRelatorioAnalitico()">Gerar Relatório</button>
-            <!-- Exports -->
-            <div style="margin-left:auto;display:flex;gap:8px">
+            <div class="filter-grp">
+              <span class="filter-lbl">Período</span>
+              <div class="date-range">
+                <input type="date" id="rel-de"/>
+                <span class="date-range-sep"><i class="ti ti-arrow-right" aria-hidden="true"></i></span>
+                <input type="date" id="rel-ate"/>
+              </div>
+            </div>
+            <!-- Ação + Exports -->
+            <div class="filter-actions">
+              <button class="btn btn-primary btn-sm" onclick="carregarRelatorioAnalitico()">Gerar Relatório</button>
               <button onclick="exportarRelAnaliticoExcel()" class="excel-btn" id="btn-rel-excel" style="display:none">Excel</button>
               <button onclick="exportarRelAnaliticoPDF()" class="btn btn-outline btn-sm" id="btn-rel-pdf" style="display:none;color:var(--red);border-color:var(--red)">PDF</button>
             </div>
@@ -1763,19 +1809,33 @@
         <div class="pg-title">Log de Auditoria</div>
         <div class="card" style="margin-bottom:14px">
           <div class="card-hd">Filtros</div>
-          <div class="date-filter-bar">
-            <div class="fg"><label>DE</label><input type="date" id="aud-ini"/></div>
-            <div class="fg"><label>ATÉ</label><input type="date" id="aud-fim"/></div>
-            <div class="fg"><label>USUÁRIO</label><input type="text" id="aud-usuario" placeholder="Usuário..."/></div>
-            <div class="fg"><label>AÇÃO</label><select id="aud-acao">
+          <div class="filter-toolbar">
+            <div class="filter-grp">
+              <span class="filter-lbl">Período</span>
+              <div class="date-range">
+                <input type="date" id="aud-ini"/>
+                <span class="date-range-sep"><i class="ti ti-arrow-right" aria-hidden="true"></i></span>
+                <input type="date" id="aud-fim"/>
+              </div>
+            </div>
+            <div class="filter-grp">
+              <span class="filter-lbl">Usuário</span>
+              <input type="text" id="aud-usuario" placeholder="Usuário..."/>
+            </div>
+            <div class="filter-grp">
+              <span class="filter-lbl">Ação</span>
+              <select id="aud-acao">
               <option value="">Todas as ações</option>
               <option value="login">Login</option>
               <option value="logout">Logout</option>
               <option value="distribuicao_confirmada">Distribuição</option>
               <option value="zerar_dados">Zerar dados</option>
               <option value="relatorio_gerado">Relatório gerado</option>
-            </select></div>
-            <button class="btn btn-primary btn-sm" onclick="carregarAuditoria()">Filtrar</button>
+              </select>
+            </div>
+            <div class="filter-actions">
+              <button class="btn btn-primary btn-sm" onclick="carregarAuditoria()">Filtrar</button>
+            </div>
           </div>
         </div>
         <div class="card">
@@ -1808,11 +1868,19 @@
     <div class="card-hd">Filtros
       <button class="btn btn-outline btn-sm" onclick="exportarProtocolo()" title="Exportar lista em CSV">Excel</button>
     </div>
-    <div class="date-filter-bar">
-      <div class="fg"><label>DE</label><input type="date" id="proto-filtro-ini"/></div>
-      <div class="fg"><label>ATÉ</label><input type="date" id="proto-filtro-fim"/></div>
-      <button class="btn btn-primary btn-sm" onclick="carregarProtocolo()">Filtrar</button>
-      <button class="btn btn-outline btn-sm" onclick="document.getElementById('proto-filtro-ini').value='';document.getElementById('proto-filtro-fim').value='';carregarProtocolo()">↺</button>
+    <div class="filter-toolbar">
+      <div class="filter-grp">
+        <span class="filter-lbl">Período</span>
+        <div class="date-range">
+          <input type="date" id="proto-filtro-ini"/>
+          <span class="date-range-sep"><i class="ti ti-arrow-right" aria-hidden="true"></i></span>
+          <input type="date" id="proto-filtro-fim"/>
+        </div>
+      </div>
+      <div class="filter-actions">
+        <button class="btn btn-primary btn-sm" onclick="carregarProtocolo()">Filtrar</button>
+        <button class="btn-icon-outline" title="Limpar filtros" onclick="document.getElementById('proto-filtro-ini').value='';document.getElementById('proto-filtro-fim').value='';carregarProtocolo()"><i class="ti ti-refresh" aria-hidden="true"></i></button>
+      </div>
     </div>
   </div>
 
@@ -1853,10 +1921,18 @@
       <div class="card-hd">Filtro de período
         <button class="btn btn-outline btn-sm" onclick="carregarEstatisticasSep()">↺</button>
       </div>
-      <div class="date-filter-bar">
-        <div class="fg"><label>DE</label><input type="date" id="stats-sep-ini"></div>
-        <div class="fg"><label>ATÉ</label><input type="date" id="stats-sep-fim"></div>
-        <button class="btn btn-primary btn-sm" onclick="carregarEstatisticasSep()">Filtrar</button>
+      <div class="filter-toolbar">
+        <div class="filter-grp">
+          <span class="filter-lbl">Período</span>
+          <div class="date-range">
+            <input type="date" id="stats-sep-ini">
+            <span class="date-range-sep"><i class="ti ti-arrow-right" aria-hidden="true"></i></span>
+            <input type="date" id="stats-sep-fim">
+          </div>
+        </div>
+        <div class="filter-actions">
+          <button class="btn btn-primary btn-sm" onclick="carregarEstatisticasSep()">Filtrar</button>
+        </div>
       </div>
     </div>
     <div id="stats-sep-cards" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px"></div>
@@ -1872,10 +1948,18 @@
       <div class="card-hd">Filtro de período
         <button class="btn btn-outline btn-sm" onclick="carregarEstatisticasCk()">↺</button>
       </div>
-      <div class="date-filter-bar">
-        <div class="fg"><label>DE</label><input type="date" id="stats-ck-ini"></div>
-        <div class="fg"><label>ATÉ</label><input type="date" id="stats-ck-fim"></div>
-        <button class="btn btn-primary btn-sm" onclick="carregarEstatisticasCk()">Filtrar</button>
+      <div class="filter-toolbar">
+        <div class="filter-grp">
+          <span class="filter-lbl">Período</span>
+          <div class="date-range">
+            <input type="date" id="stats-ck-ini">
+            <span class="date-range-sep"><i class="ti ti-arrow-right" aria-hidden="true"></i></span>
+            <input type="date" id="stats-ck-fim">
+          </div>
+        </div>
+        <div class="filter-actions">
+          <button class="btn btn-primary btn-sm" onclick="carregarEstatisticasCk()">Filtrar</button>
+        </div>
       </div>
     </div>
     <div id="stats-ck-cards" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px"></div>
@@ -1891,10 +1975,18 @@
       <div class="card-hd">Filtro de período
         <button class="btn btn-outline btn-sm" onclick="carregarEstatisticasEmb()">↺</button>
       </div>
-      <div class="date-filter-bar">
-        <div class="fg"><label>DE</label><input type="date" id="stats-emb-ini"></div>
-        <div class="fg"><label>ATÉ</label><input type="date" id="stats-emb-fim"></div>
-        <button class="btn btn-primary btn-sm" onclick="carregarEstatisticasEmb()">Filtrar</button>
+      <div class="filter-toolbar">
+        <div class="filter-grp">
+          <span class="filter-lbl">Período</span>
+          <div class="date-range">
+            <input type="date" id="stats-emb-ini">
+            <span class="date-range-sep"><i class="ti ti-arrow-right" aria-hidden="true"></i></span>
+            <input type="date" id="stats-emb-fim">
+          </div>
+        </div>
+        <div class="filter-actions">
+          <button class="btn btn-primary btn-sm" onclick="carregarEstatisticasEmb()">Filtrar</button>
+        </div>
       </div>
     </div>
     <div id="stats-emb-cards" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px"></div>
