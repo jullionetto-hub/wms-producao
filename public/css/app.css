@@ -929,6 +929,54 @@ td{padding:10px 13px;vertical-align:middle;color:var(--text2)}
 .rel-turno-btn:hover:not(.ativo){background:var(--border);}
 
 /* ══════════════════════════════════════════
+   TOOLBAR DE FILTROS — controle segmentado
+   (usado onde a barra de filtro precisa de um
+   visual mais refinado que o .date-filter-bar
+   padrão — hoje: Dashboard)
+══════════════════════════════════════════ */
+.filter-toolbar{display:flex;align-items:flex-end;gap:22px;flex-wrap:wrap}
+.filter-grp{display:flex;flex-direction:column;gap:7px}
+.filter-lbl{font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.8px;text-transform:uppercase}
+
+/* Track único com os segmentos dentro — troca o antigo visual de botões
+   soltos por um seletor único, no padrão de apps como Linear/Vercel.
+   O accent fica reservado só pro botão "Filtrar" (a ação de verdade);
+   o segmento ativo aqui é neutro (superfície elevada), não colorido. */
+.turno-seg{
+  display:inline-flex;gap:2px;padding:3px;
+  background:var(--bg);border:1px solid var(--border);border-radius:var(--r-sm);
+}
+.turno-seg .rel-turno-btn{
+  padding:6px 13px;border:none;border-radius:4px;
+  background:transparent;color:var(--text3);
+}
+.turno-seg .rel-turno-btn.ativo{
+  background:var(--surface2);color:var(--text);
+  box-shadow:0 1px 3px rgba(0,0,0,.45),inset 0 0 0 1px var(--border);
+}
+.turno-seg .rel-turno-btn:hover:not(.ativo){background:rgba(244,244,245,.05);color:var(--text2)}
+
+.date-range{
+  display:flex;align-items:center;gap:6px;
+  background:var(--bg);border:1px solid var(--border);border-radius:var(--r-sm);
+  padding:0 6px;
+}
+.date-range input[type=date]{
+  border:none;background:transparent;padding:8px 4px;min-width:118px;
+  color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;outline:none;
+}
+.date-range-sep{color:var(--text3);font-size:12px;flex-shrink:0}
+
+.filter-actions{display:flex;align-items:center;gap:8px;margin-left:auto}
+.btn-icon-outline{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:33px;height:33px;flex-shrink:0;
+  background:transparent;border:1.5px solid var(--border);border-radius:var(--r-sm);
+  color:var(--text3);cursor:pointer;transition:all .15s;font-size:14px;
+}
+.btn-icon-outline:hover{border-color:var(--accent);color:var(--accent);background:var(--surface2)}
+
+/* ══════════════════════════════════════════
    PRINT — Relatório Analítico
 ══════════════════════════════════════════ */
 @media print {
