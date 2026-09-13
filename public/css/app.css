@@ -1,29 +1,31 @@
 /* ══════════════════════════════════════════
-   VARIÁVEIS — TEMA ESCURO (azul-marinho, sistema inteiro)
-   Pedido explícito do usuário: nada de fundo claro em área nenhuma —
-   sidebar E conteúdo no mesmo tom de azul-marinho escuro. Valores de
-   --bg/--surface/--surface2/--border/--text/--green/--red/--amber
-   reaproveitados do piloto testado em #pag-diario.db-dark (removido na
-   Fase 1), que já tinha sido ajustado pra contraste/legibilidade em
-   fundo escuro. --accent continua o indigo já escolhido antes — só o
-   fundo virou escuro, a cor de destaque não mudou.
+   VARIÁVEIS — TEMA ESCURO (zinc/corporativo, sistema inteiro)
+   Redesign pedido pelo usuário (estilo Vercel/Linear): paleta zinc
+   (--bg/--surface/--border/--text vêm direto da escala zinc do
+   Tailwind — 950/900/800/100) em vez do azul-marinho anterior.
+   --text3 (labels) é literalmente o zinc-400 pedido (#a1a1aa) — checado
+   contra --surface e dá ~6.9:1 de contraste, acima do mínimo AA (4.5:1)
+   mesmo em texto pequeno. --text2 usa zinc-300, ainda mais contrastado,
+   pra texto secundário que precisa se destacar mais que um label.
+   --accent continua o indigo já estabelecido — não foi pedido trocar a
+   cor de marca, só o fundo/neutros.
 ══════════════════════════════════════════ */
 :root {
-  --bg:        #0C1017;
-  --surface:   #111826;
-  --surface2:  #0F141D;
-  --border:    #1E2636;
+  --bg:        #09090b;
+  --surface:   #18181b;
+  --surface2:  #131316;
+  --border:    #27272a;
   --accent:    #4F46E5;
   --accent2:   #4338CA;
   --green:     #57B981;
   --red:       #C9524F;
   --amber:     #E0A83E;
   --indigo:    #8B5CF6;
-  --text:      #E7E9EE;
-  --text2:     #9AA3B5;
-  --text3:     #6B7280;
-  --sh:        0 1px 4px rgba(0,0,0,.3),0 4px 20px rgba(0,0,0,.25);
-  --sh-lg:     0 8px 32px rgba(0,0,0,.4);
+  --text:      #f4f4f5;
+  --text2:     #d4d4d8;
+  --text3:     #a1a1aa;
+  --sh:        0 1px 4px rgba(0,0,0,.4),0 4px 20px rgba(0,0,0,.35);
+  --sh-lg:     0 8px 32px rgba(0,0,0,.5);
   --r:         12px;
   --r-sm:      8px;
 
@@ -35,13 +37,15 @@
   --orange:    #FB923C;
   --font-sans: 'DM Sans', sans-serif;
 
-  /* Sidebar — mesmo tom de azul-marinho do conteúdo (--bg), levemente
-     mais escura pra dar profundidade sem quebrar a unidade de cor. */
-  --sidebar-bg:          #0A0D13;
-  --sidebar-border:      #1E2636;
-  --sidebar-text:        #9AA3B5;
-  --sidebar-text-hover:  #E7E9EE;
-  --sidebar-group:       #6B7280;
+  /* Sidebar — mesmo tom do conteúdo (--bg), sem separação de fundo — só
+     a borda (--sidebar-border) marca a divisão. Visual "unificado",
+     igual à referência (Vercel/Linear), em vez de sidebar mais escura
+     que o conteúdo. */
+  --sidebar-bg:          var(--bg);
+  --sidebar-border:      var(--border);
+  --sidebar-text:        var(--text3);
+  --sidebar-text-hover:  var(--text);
+  --sidebar-group:       var(--text3);
   --sidebar-active-bg:   rgba(79,70,229,.22);
   --sidebar-active-text: #A5B4FC;
 
@@ -145,8 +149,7 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
 .uinfo{display:flex;flex-direction:column;align-items:flex-end;gap:1px}
 .uinfo b{font-size:13px;color:var(--text);font-weight:700;text-align:right}
 .uinfo small{font-size:10px;color:var(--text3);font-weight:500;letter-spacing:.5px}
-#data-hora{font-size:11px;color:var(--text3);font-variant-numeric:tabular-nums}
-.btn-sair{padding:6px 13px;background:transparent;border:1.5px solid rgba(220,38,38,.4);border-radius:8px;color:var(--red);font-size:11px;font-weight:700;cursor:pointer;transition:all .2s;font-family:var(--font-sans)}
+.btn-sair{padding:6px 13px;background:transparent;border:1.5px solid var(--border);border-radius:8px;color:var(--text2);font-size:11px;font-weight:700;cursor:pointer;transition:all .2s;font-family:var(--font-sans)}
 .btn-sair:hover{background:var(--red);color:#fff;border-color:var(--red)}
 .layout{display:flex;flex:1;overflow:hidden}
 
@@ -661,8 +664,6 @@ td{padding:10px 13px;vertical-align:middle;color:var(--text2)}
   /* Grids */
   .grid-4{grid-template-columns:1fr 1fr}
   .grid-2{grid-template-columns:1fr}
-  /* Data hora sumia — esconde no mobile */
-  #data-hora{display:none}
   /* Logo menor — esconde texto no mobile, só emoji */
   .logo-tx{display:none}
   /* Header compacto */
@@ -674,9 +675,9 @@ td{padding:10px 13px;vertical-align:middle;color:var(--text2)}
   .uinfo small{font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.8px;text-transform:uppercase}
   /* Botão Senha: esconder via JS mas garantir tamanho se visível */
   #btn-senha-hdr{padding:5px 10px;font-size:10px}
-  /* Botão Sair: sólido, vermelho */
-  .btn-sair{padding:7px 14px;font-size:12px;font-weight:700;background:var(--red);color:#fff;border:none;border-radius:8px}
-  .btn-sair:hover{background:#b91c1c;color:#fff}
+  /* Botão Sair: neutro, mesmo tom do resto do cabeçalho — vermelho só no hover */
+  .btn-sair{padding:7px 14px;font-size:12px;font-weight:700;background:var(--surface2);color:var(--text2);border:1px solid var(--border);border-radius:8px}
+  .btn-sair:hover{background:var(--red);color:#fff;border-color:var(--red)}
 }
 
 
@@ -1088,3 +1089,33 @@ td{padding:10px 13px;vertical-align:middle;color:var(--text2)}
 .pipeline-card-kpi{background:var(--surface2);border-radius:var(--r-sm);padding:7px 10px}
 .pipeline-card-kpi-lbl{font-size:9px;color:var(--text3);font-weight:700;letter-spacing:.2px}
 .pipeline-card-kpi-val{font-size:15px;font-weight:800;color:var(--text);margin-top:2px}
+
+/* Barra de progresso do card — 3 segmentos (concluído/em andamento/pendente)
+   proporcionais ao total do processo daquele card. */
+.pipeline-card-progress{display:flex;height:6px;border-radius:4px;overflow:hidden;background:var(--border);margin:0 20px 14px}
+.pipeline-card-progress-seg{height:100%}
+.pipeline-card-progress-legend{display:flex;gap:12px;padding:0 20px 14px;font-size:9px;color:var(--text3);font-weight:600}
+.pipeline-card-progress-legend span{display:inline-flex;align-items:center;gap:4px}
+.pipeline-card-progress-legend i{width:6px;height:6px;border-radius:50%;display:inline-block}
+
+/* ══════════════════════════════════════════
+   ALERTAS E GARGALOS — Dashboard
+══════════════════════════════════════════ */
+.alerta-lista{display:flex;flex-direction:column;gap:6px}
+.alerta-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 12px;background:var(--surface2);border:1px solid var(--border);border-left:3px solid var(--amber);border-radius:var(--r-sm);cursor:pointer;transition:border-color .15s}
+.alerta-item:hover{border-color:var(--amber)}
+.alerta-item-num{font-size:13px;font-weight:700;color:var(--text);font-family:'Space Mono',monospace}
+.alerta-item-sub{font-size:11px;color:var(--text3);margin-top:2px}
+.alerta-item-tempo{font-size:13px;font-weight:800;color:var(--amber);font-family:'Space Mono',monospace;flex-shrink:0}
+
+/* ══════════════════════════════════════════
+   MODO TV — Dashboard em telão, números grandes,
+   filtros e navegação secundária escondidos.
+══════════════════════════════════════════ */
+body.tv-mode .sidebar,
+body.tv-mode .sb-toggle-btn,
+body.tv-mode #dash-filtros-card,
+body.tv-mode .hdir #btn-senha-hdr { display:none !important; }
+body.tv-mode .pipeline-card-value { font-size:56px }
+body.tv-mode .pipeline-card-label { font-size:13px }
+body.tv-mode #dash-pipeline { grid-template-columns:repeat(auto-fit,minmax(280px,1fr)) }

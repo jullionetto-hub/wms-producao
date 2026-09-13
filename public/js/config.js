@@ -163,15 +163,6 @@ function toggleSubtipoRepositor() {
   wrap.style.display = perf.value === 'repositor' ? 'block' : 'none';
 }
 
-function atualizarRelogio() {
-  const agora = new Date();
-  const str   = agora.toLocaleString('pt-BR', { timeZone:'America/Sao_Paulo' });
-  const el    = document.getElementById('data-hora');
-  if (el) el.textContent = str;
-}
-setInterval(atualizarRelogio, 1000);
-atualizarRelogio();
-
 function toast(msg, tipo='info') {
   const el = document.createElement('div');
   el.className = `toast ${tipo}`;

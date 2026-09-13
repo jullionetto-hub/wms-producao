@@ -62,27 +62,73 @@ async function carregarGraficoPizzaReposicao() {
   });
 }
 
+// Lê uma cor de token do CSS (Chart.js precisa da cor resolvida, não "var(--x)").
+function _corToken(nome) {
+  return getComputedStyle(document.documentElement).getPropertyValue(nome).trim() || '#888';
+}
+
+// Início oficial de cada turno — mesmos horários de lib/absenteismo.js
+// (TURNOS_OFICIAIS), usados aqui só pra decidir qual meta/turno vale em
+// cada hora do gráfico. Se os horários oficiais mudarem lá, mudar aqui também.
+const _INICIO_TURNO = { manha: 6, tarde: 13, noite: 22 };
+
+// Meta por hora, em degraus por turno: dentro da janela de cada turno
+// (início..início+duração), a meta daquela hora é a soma das 4 metas do
+// processo (pedidos/turno) dividida pelas horas do turno — fora de
+// qualquer janela conhecida, null (Chart.js pula o ponto, sem linha reta
+// caindo a zero).
+function _metaPorHora(horaNum, metas) {
+  for (const turno of ['manha','tarde','noite']) {
+    const ini = _INICIO_TURNO[turno];
+    const dur = parseFloat(metas[`horas_turno_${turno}`]?.valor) || 0;
+    if (dur <= 0) continue;
+    const fim = (ini + dur) % 24;
+    const dentro = fim > ini ? (horaNum >= ini && horaNum < fim) : (horaNum >= ini || horaNum < fim);
+    if (!dentro) continue;
+    const metaTurno = ['separacao','checkout','embalagem','reposicao']
+      .reduce((s,p) => s + (parseFloat(metas[`meta_${p}`]?.valor) || 0), 0);
+    return dur > 0 ? Math.round((metaTurno / dur) * 10) / 10 : null;
+  }
+  return null;
+}
+
 async function carregarGraficoBarrasHoras() {
   const rows = await apiFetch('/dashboard/por-hora');
   const canvas = document.getElementById('grafico-barras-horas');
   if (!canvas || !rows || !rows.length) return;
   _destroyChart('barras-horas');
+
+  // Metas (mesma fonte de abrirConfigMetas) — reaproveita _configMetasData se já
+  // carregado nesta sessão, senão busca agora só pra montar a linha de Meta.
+  let metas = _configMetasData;
+  if (!metas || !Object.keys(metas).length) {
+    try {
+      const res = await fetch(`${API}/configuracoes`, { credentials:'include' });
+      const configs = res.ok ? await res.json() : [];
+      metas = Object.fromEntries(configs.map(c => [c.chave, c]));
+      _configMetasData = metas;
+    } catch(e) { metas = {}; }
+  }
+  const metaData = rows.map(r => _metaPorHora(parseInt(r.hora), metas));
+
   _charts['barras-horas'] = new Chart(canvas, {
     type: 'bar',
     data: {
       labels: rows.map(r => `${r.hora}h`),
       datasets: [
-        { label: 'Separação', data: rows.map(r => Number(r.separacao)), backgroundColor: '#3B82F6', borderRadius: 4, borderSkipped: false },
-        { label: 'Checkout',  data: rows.map(r => Number(r.checkout)),  backgroundColor: '#22C55E', borderRadius: 4, borderSkipped: false },
-        { label: 'Embalagem', data: rows.map(r => Number(r.embalagem)), backgroundColor: '#F59E0B', borderRadius: 4, borderSkipped: false },
-        { label: 'Reposição', data: rows.map(r => Number(r.reposicao)), backgroundColor: '#8B5CF6', borderRadius: 4, borderSkipped: false },
+        { label: 'Separação', data: rows.map(r => Number(r.separacao)), backgroundColor: _corToken('--accent'), borderRadius: 4, borderSkipped: false },
+        { label: 'Checkout',  data: rows.map(r => Number(r.checkout)),  backgroundColor: _corToken('--green'),  borderRadius: 4, borderSkipped: false },
+        { label: 'Embalagem', data: rows.map(r => Number(r.embalagem)), backgroundColor: _corToken('--amber'),  borderRadius: 4, borderSkipped: false },
+        { label: 'Reposição', data: rows.map(r => Number(r.reposicao)), backgroundColor: _corToken('--indigo'), borderRadius: 4, borderSkipped: false },
+        { label: 'Meta (total/h)', data: metaData, type: 'line', borderColor: _corToken('--red'), backgroundColor: _corToken('--red'),
+          borderWidth: 2, borderDash: [5,3], pointRadius: 0, tension: 0, spanGaps: false },
       ]
     },
     options: {
       responsive: true, maintainAspectRatio: true,
-      plugins: { legend: { display: true, position: 'top', labels: { font: { size: 11 }, boxWidth: 12 } } },
-      scales: { y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 11 } } },
-                x: { ticks: { font: { size: 11 } } } }
+      plugins: { legend: { display: true, position: 'top', labels: { font: { size: 11 }, boxWidth: 12, color: _corToken('--text2') } } },
+      scales: { y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 11 }, color: _corToken('--text3') }, grid: { color: _corToken('--border') } },
+                x: { ticks: { font: { size: 11 }, color: _corToken('--text3') }, grid: { display: false } } }
     }
   });
 }
@@ -882,6 +928,7 @@ function renderDashPipeline() {
   const cards = [
     { label: 'Separação', cor: 'var(--accent)',
       main: fmtN(sepConcluido), sub: 'pedidos concluídos',
+      progresso: { concluido: sepConcluido, andamento: sepSeparando, pendente: sepPendente },
       kpis: [
         { lbl: 'Total Pedidos',  val: fmtN(sepTotal) },
         { lbl: 'Em Separação',   val: fmtN(sepSeparando) },
@@ -890,6 +937,7 @@ function renderDashPipeline() {
       ]},
     { label: 'Checkout', cor: 'var(--accent)',
       main: fmtN(ckConc), sub: 'checkouts concluídos',
+      progresso: { concluido: ckConc, andamento: ckEmCk, pendente: ckFila },
       kpis: [
         { lbl: 'Total Checkout', val: fmtN(ckFila + ckEmCk + ckConc) },
         { lbl: 'Em Checkout',    val: fmtN(ckEmCk) },
@@ -898,6 +946,7 @@ function renderDashPipeline() {
       ]},
     { label: 'Embalagem', cor: 'var(--accent)',
       main: fmtN(embConc), sub: 'pedidos embalados',
+      progresso: { concluido: embConc, andamento: embalando, pendente: embPend },
       kpis: [
         { lbl: 'Emb. Pendente',  val: fmtN(embPend) },
         { lbl: 'Embalando',      val: fmtN(embalando) },
@@ -906,6 +955,7 @@ function renderDashPipeline() {
       ]},
     { label: 'Reposição', cor: 'var(--accent)',
       main: fmtN(repConc), sub: 'reposições resolvidas',
+      progresso: { concluido: repConc, andamento: repNaoEnc, pendente: repPend },
       kpis: [
         { lbl: 'Total Reposição', val: fmtN(repTotal) },
         { lbl: 'Pendentes',       val: fmtN(repPend) },
@@ -914,7 +964,11 @@ function renderDashPipeline() {
       ]},
   ];
 
-  wrap.innerHTML = cards.map(c => `
+  wrap.innerHTML = cards.map(c => {
+    const { concluido, andamento, pendente } = c.progresso;
+    const totalProg = concluido + andamento + pendente;
+    const pct = n => totalProg > 0 ? Math.round(n / totalProg * 100) : 0;
+    return `
     <div class="pipeline-card" style="border-top:3px solid ${c.cor}">
       <div class="pipeline-card-top">
         <div class="pipeline-card-hd">
@@ -924,6 +978,15 @@ function renderDashPipeline() {
         <div class="pipeline-card-value">${c.main}</div>
         <div class="pipeline-card-sub">${c.sub}</div>
       </div>
+      <div class="pipeline-card-progress" title="${concluido} concluído · ${andamento} em andamento · ${pendente} pendente">
+        ${concluido > 0 ? `<span class="pipeline-card-progress-seg" style="width:${pct(concluido)}%;background:var(--green)"></span>` : ''}
+        ${andamento > 0 ? `<span class="pipeline-card-progress-seg" style="width:${pct(andamento)}%;background:${c.cor}"></span>` : ''}
+      </div>
+      <div class="pipeline-card-progress-legend">
+        <span><i style="background:var(--green)"></i>${fmtN(concluido)} concluído</span>
+        <span><i style="background:${c.cor}"></i>${fmtN(andamento)} andamento</span>
+        <span><i style="background:var(--border)"></i>${fmtN(pendente)} pendente</span>
+      </div>
       <div class="pipeline-card-kpis">
         ${c.kpis.map(k => `
           <div class="pipeline-card-kpi">
@@ -931,7 +994,66 @@ function renderDashPipeline() {
             <div class="pipeline-card-kpi-val">${k.val}</div>
           </div>`).join('')}
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
+
+  renderAlertasGargalos();
+}
+
+// SLA em horas — mesmo limite usado no relatório analítico (routes/admin.js,
+// SLA_H). Ali é aplicado a pedidos já CONCLUÍDOS (histórico); aqui aplica ao
+// que está pendente/em separação AGORA, pra sinalizar antes de estourar.
+const _SLA_HORAS = 6;
+
+function _horasEsperando(aguardandoDesde) {
+  if (!aguardandoDesde) return null;
+  const m = String(aguardandoDesde).match(/^(\d{2})\/(\d{2})\/(\d{4})[ ,T]?(\d{2}):(\d{2})/);
+  if (!m) return null;
+  const desde = new Date(+m[3], +m[2]-1, +m[1], +m[4], +m[5]).getTime();
+  if (isNaN(desde)) return null;
+  return (Date.now() - desde) / 3600000;
+}
+
+function renderAlertasGargalos() {
+  const wrap = document.getElementById('dash-alertas');
+  if (!wrap) return;
+  const travados = (_pedidosOperacao || [])
+    .filter(p => p.status === 'pendente' || p.status === 'separando')
+    .map(p => ({ ...p, _horas: _horasEsperando(p.aguardando_desde) }))
+    .filter(p => p._horas != null && p._horas > _SLA_HORAS)
+    .sort((a,b) => b._horas - a._horas);
+
+  if (!travados.length) {
+    wrap.innerHTML = `<div style="text-align:center;padding:18px;color:var(--text3);font-size:12px">Nenhum pedido acima do SLA de ${_SLA_HORAS}h no momento.</div>`;
+    return;
+  }
+  const piores = travados.slice(0, 8);
+  wrap.innerHTML = `
+    <div style="font-size:11px;color:var(--amber);font-weight:700;margin-bottom:10px">${travados.length} pedido(s) acima do SLA de ${_SLA_HORAS}h</div>
+    <div class="alerta-lista">
+      ${piores.map(p => `
+        <div class="alerta-item" onclick="irParaPedidoDashboard('${p.numero_pedido}')">
+          <div class="alerta-item-info">
+            <div class="alerta-item-num">#${p.numero_pedido}</div>
+            <div class="alerta-item-sub">${p.cliente||'—'} · ${p.status==='separando'?'Em separação':'Pendente'}</div>
+          </div>
+          <div class="alerta-item-tempo">${p._horas.toFixed(1)}h</div>
+        </div>`).join('')}
+    </div>`;
+}
+
+// Atalho do painel de Alertas — vai pra tela de Pedidos já filtrada nesse número.
+function irParaPedidoDashboard(numero) {
+  irPara('pedidos');
+  const el = document.getElementById('filtro-ped-num');
+  if (el) { el.value = numero; if (typeof carregarPedidos === 'function') carregarPedidos(); }
+}
+
+// Modo TV — números grandes, filtros escondidos, pra exibir num telão do galpão.
+function toggleModoTV() {
+  const ativo = document.body.classList.toggle('tv-mode');
+  const btn = document.getElementById('btn-modo-tv');
+  if (btn) btn.textContent = ativo ? 'Sair do Modo TV' : 'Modo TV';
 }
 
 async function carregarKPIs() {
