@@ -308,14 +308,14 @@ input.db-stat-n:focus{outline:none;background:var(--surface);border-radius:4px;b
 ══════════════════════════════════════════ */
 .filtros{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}
 .fg{display:flex;flex-direction:column;gap:4px}
-.fg label{font-size:10px;color:var(--accent);font-weight:700;letter-spacing:1px}
+.fg label{font-size:10px;color:var(--text3);font-weight:700;letter-spacing:1px}
 .fg input,.fg select,.form-grp input,.form-grp select{
   padding:8px 11px;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r-sm);
   color:var(--text);font-size:13px;outline:none;min-width:130px;font-family:'DM Sans',sans-serif;transition:border-color .2s
 }
 .fg input:focus,.fg select:focus,.form-grp input:focus,.form-grp select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(79,70,229,.1)}
 .form-grp{margin-bottom:12px}
-.form-grp label{font-size:10px;color:var(--accent);font-weight:700;letter-spacing:1px;display:block;margin-bottom:4px}
+.form-grp label{font-size:10px;color:var(--text3);font-weight:700;letter-spacing:1px;display:block;margin-bottom:4px}
 .form-grp input,.form-grp select{width:100%}
 .sel-sm{padding:5px 8px;background:var(--surface);border:1.5px solid var(--border);border-radius:6px;color:var(--text);font-size:11px;outline:none;cursor:pointer;font-family:'DM Sans',sans-serif}
 
@@ -908,7 +908,7 @@ td{padding:10px 13px;vertical-align:middle;color:var(--text2)}
    FILTRO DE DATA — melhorado
 ══════════════════════════════════════════ */
 .date-filter-bar{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px;padding:12px 14px;background:var(--surface2);border-radius:var(--r-sm);border:1px solid var(--border)}
-.date-filter-bar .fg label{color:var(--accent);font-size:10px;font-weight:700;letter-spacing:1px}
+.date-filter-bar .fg label{color:var(--text3);font-size:10px;font-weight:700;letter-spacing:1px}
 .date-filter-bar input[type=date]{min-width:140px}
 .excel-btn{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;background:transparent;color:var(--text2);border:1.5px solid var(--border);border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font-sans);transition:all .18s;white-space:nowrap}
 .excel-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--bg)}
@@ -917,7 +917,7 @@ td{padding:10px 13px;vertical-align:middle;color:var(--text2)}
    RELATÓRIO ANALÍTICO — botões turno
 ══════════════════════════════════════════ */
 .rel-turno-btn{
-  padding:6px 14px;border:1.5px solid var(--border);border-radius:8px;
+  padding:6px 14px;border:1.5px solid var(--border);border-radius:var(--r-sm);
   font-size:12px;font-weight:600;cursor:pointer;
   background:var(--surface2);color:var(--text2);
   font-family:var(--font-sans);transition:all .15s;
