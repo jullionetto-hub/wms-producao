@@ -90,7 +90,7 @@ function _absnRenderBadgesMes() {
   if (!cont) return;
   cont.innerHTML = _absnMesesInfo.map(m => {
     const ativo = _absnDataIni === m.ini && _absnDataFim === m.fim;
-    return `<button onclick="absnFiltrarMes('${m.mes}','${m.ini}','${m.fim}')" title="${fmtData(m.ini)} a ${fmtData(m.fim)}" style="padding:6px 14px;background:${ativo?'var(--green)':'var(--accent)'};color:#fff;border:none;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer">📅 ${m.mes}</button>`;
+    return `<button onclick="absnFiltrarMes('${m.mes}','${m.ini}','${m.fim}')" title="${fmtData(m.ini)} a ${fmtData(m.fim)}" class="rel-turno-btn${ativo?' ativo':''}">📅 ${m.mes}</button>`;
   }).join('');
 }
 
@@ -128,7 +128,7 @@ function absnSetTolerancia(min) {
   _absnTolerancia = min;
   [0,5,10,15,30].forEach(m => {
     const btn = document.getElementById(`absn-tol-${m}`);
-    if (btn) { btn.style.background = m===min ? 'var(--accent)' : 'var(--surface)'; btn.style.color = m===min ? '#fff' : 'var(--text2)'; }
+    if (btn) btn.classList.toggle('ativo', m === min);
   });
   absnCarregarResultado();
 }
@@ -405,8 +405,10 @@ function renderizarPagGestao() {
     <div id="absn-meses-ativos" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"></div>
     <textarea id="absn-debug-out" readonly style="display:none;width:100%;min-height:300px;margin-top:10px;padding:10px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:monospace;font-size:11px;white-space:pre;overflow:auto"></textarea>
     <div id="absn-tolerancia" style="display:none;align-items:center;gap:8px;margin-top:10px;font-size:11.5px">
-      <span style="color:var(--text3);font-weight:700">TOLERÂNCIA:</span>
-      ${[0,5,10,15,30].map(m => `<button onclick="absnSetTolerancia(${m})" id="absn-tol-${m}" style="padding:5px 10px;border-radius:20px;border:1.5px solid var(--border);background:${m===0?'var(--accent)':'var(--surface)'};color:${m===0?'#fff':'var(--text2)'};font-size:11px;font-weight:700;cursor:pointer">${m} min</button>`).join('')}
+      <span class="filter-lbl">Tolerância</span>
+      <div class="turno-seg">
+        ${[0,5,10,15,30].map(m => `<button onclick="absnSetTolerancia(${m})" id="absn-tol-${m}" class="rel-turno-btn${m===0?' ativo':''}">${m} min</button>`).join('')}
+      </div>
     </div>
     <div class="filter-toolbar" style="margin-top:10px">
       <div class="filter-grp">

@@ -923,8 +923,11 @@ td{padding:10px 13px;vertical-align:middle;color:var(--text2)}
   font-family:var(--font-sans);transition:all .15s;
   white-space:nowrap;
 }
+/* Ativo neutro (superfície elevada) — usado tanto como filtro quanto
+   como aba de navegação (Fila/Separar/Avisos etc.) nas várias telas;
+   cor de marca reservada pra ações reais, não pra "aba selecionada". */
 .rel-turno-btn.ativo{
-  background:var(--accent);color:#fff;border-color:var(--accent);
+  background:var(--surface);color:var(--text);border-color:var(--text3);
 }
 .rel-turno-btn:hover:not(.ativo){background:var(--border);}
 
@@ -1020,7 +1023,10 @@ td{padding:10px 13px;vertical-align:middle;color:var(--text2)}
   cursor:pointer;letter-spacing:.3px;font-family:'DM Sans',sans-serif;
   transition:all .18s;white-space:nowrap
 }
-.btn-turno-dist.ativo{background:var(--accent);color:#fff;border-color:var(--accent)}
+/* Ativo neutro — superfície elevada em vez de indigo sólido, mesmo
+   raciocínio do .turno-seg: cor de marca fica só pras ações de
+   verdade, não pra "qual filtro está selecionado". */
+.btn-turno-dist.ativo{background:var(--surface2);color:var(--text);border-color:var(--text3)}
 .btn-transp{
   padding:4px 11px;font-size:11px;font-weight:700;
   border:1.5px solid var(--border);border-radius:var(--r-sm);
@@ -1028,7 +1034,7 @@ td{padding:10px 13px;vertical-align:middle;color:var(--text2)}
   cursor:pointer;letter-spacing:.3px;font-family:'DM Sans',sans-serif;
   transition:all .18s;white-space:nowrap
 }
-.btn-transp.ativo{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn-transp.ativo{background:var(--surface2);color:var(--text);border-color:var(--text3)}
 
 /* Tabela de pedidos — hora formato BR */
 .hora-br{font-variant-numeric:tabular-nums;white-space:nowrap}
