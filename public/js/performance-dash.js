@@ -30,12 +30,15 @@ function pfEsc(s) {
     .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-const PF_COR_TURNO   = { Manha:'#38bdf8', Tarde:'#f59e0b', Noite:'#a78bfa' };
+// Hex literal (não var()) de propósito — usado com sufixo de opacidade
+// concatenado no hex (colors.map(c => c+'99')), que só funciona com string
+// hex crua. Mesmas cores de --info/--amber/--indigo em app.css.
+const PF_COR_TURNO   = { Manha:'#38BDF8', Tarde:'#E0A83E', Noite:'#8B5CF6' };
 const PF_LABEL_TURNO = { Manha:'Manhã', Tarde:'Tarde', Noite:'Noite' };
-const PF_GRID = { color:'rgba(51,65,85,.25)' };
-const PF_TICK = { color:'#64748b', font:{ size:10 } };
+const PF_GRID = { color:_corToken('--border') };
+const PF_TICK = { color:_corToken('--text3'), font:{ size:10 } };
 
-function pfCor(turno) { return PF_COR_TURNO[turno] || '#8B5CF6'; }
+function pfCor(turno) { return PF_COR_TURNO[turno] || '#8B5CF6'; } // fallback = --indigo
 function pfChartOpts(extra={}) {
   return Object.assign({ responsive:true, maintainAspectRatio:false,
     plugins:{ legend:{display:false} }, animation:{duration:250} }, extra);
@@ -402,7 +405,7 @@ async function pfBuscarDados() {
   setTimeout(() => {
     const kpisEl = document.getElementById('pf-kpis');
     if (kpisEl && !kpisEl.children.length && dados.colaboradores?.length) {
-      kpisEl.innerHTML = `<div style="grid-column:1/-1;background:#fef3c7;border:1px solid #f59e0b;border-radius:12px;padding:16px;color:#92400e;font-size:12px">
+      kpisEl.innerHTML = `<div style="grid-column:1/-1;background:rgba(224,168,62,.1);border:1px solid rgba(224,168,62,.4);border-radius:12px;padding:16px;color:var(--text2);font-size:12px">
         Dados recebidos mas cards não renderizaram.<br>
         <b>${dados.colaboradores.length} colaborador(es):</b>
         ${dados.colaboradores.map(c=>`${pfEsc(c.nome||'?')} (${c.pedidos} ped)`).join(', ')}<br>
@@ -704,8 +707,8 @@ function pfRenderChartDia(porDia) {
     data: {
       labels,
       datasets: [{ data: porDia.map(r => r.pedidos),
-        borderColor:'#38bdf8', backgroundColor:'rgba(56,189,248,.1)',
-        borderWidth:2, pointBackgroundColor:'#38bdf8', pointRadius:4, fill:true, tension:.3 }]
+        borderColor:_corToken('--info'), backgroundColor:'rgba(56,189,248,.1)',
+        borderWidth:2, pointBackgroundColor:_corToken('--info'), pointRadius:4, fill:true, tension:.3 }]
     },
     options: pfChartOpts({
       plugins: { legend:{display:false}, tooltip:{ callbacks:{ label:c=>` ${pfFmtN(c.parsed.y)} pedidos` }}},
@@ -718,14 +721,14 @@ function pfRenderChartDia(porDia) {
 function pfRenderTabela(colab, totPed) {
   document.getElementById('pf-table-count').textContent = `${colab.length} colaboradores`;
   const ICONS = ['1º','2º','3º'];
-  const T_BG  = { Manha:'rgba(56,189,248,.12)', Tarde:'rgba(245,158,11,.12)', Noite:'rgba(167,139,250,.12)' };
-  const T_TXT = { Manha:'#38bdf8', Tarde:'#f59e0b', Noite:'#a78bfa' };
+  const T_BG  = { Manha:'rgba(56,189,248,.12)', Tarde:'rgba(224,168,62,.12)', Noite:'rgba(139,92,246,.12)' };
+  const T_TXT = { Manha:'var(--info)', Tarde:'var(--amber)', Noite:'var(--indigo)' };
   const maxPed = colab[0]?.pedidos || 1;
 
   document.getElementById('pf-tbody').innerHTML = colab.map((c,i) => {
     const ipd  = c.pedidos > 0 ? (c.itens/c.pedidos).toFixed(1) : '—';
     const cor  = pfCor(c.turno);
-    return `<tr style="border-bottom:1px solid rgba(51,65,85,.4)">
+    return `<tr style="border-bottom:1px solid var(--border)">
       <td style="padding:10px 12px;text-align:center;font-size:14px">${ICONS[i]||`<span style="font-size:10px;color:var(--text3);font-weight:700">${i+1}</span>`}</td>
       <td style="padding:10px 14px">
         <div style="font-weight:700;color:var(--text);font-size:13px">${pfEsc(c.nome)}</div>
@@ -738,12 +741,12 @@ function pfRenderTabela(colab, totPed) {
           ${PF_LABEL_TURNO[c.turno]||c.turno}
         </span>
       </td>
-      <td style="padding:10px 14px;text-align:right;font-weight:700;color:#38bdf8;font-size:13px">${pfFmtN(c.pedidos)}</td>
+      <td style="padding:10px 14px;text-align:right;font-weight:700;color:var(--info);font-size:13px">${pfFmtN(c.pedidos)}</td>
       <td style="padding:10px 14px;text-align:right;font-weight:600;font-size:13px">${pfFmtN(c.itens)}</td>
-      <td style="padding:10px 14px;text-align:right;font-size:12px;color:#f59e0b">${pfFmtN(c.skus)}</td>
-      <td style="padding:10px 14px;text-align:right;font-size:12px;color:#ef4444">${pfFmtN(c.reposicoes)}</td>
+      <td style="padding:10px 14px;text-align:right;font-size:12px;color:var(--amber)">${pfFmtN(c.skus)}</td>
+      <td style="padding:10px 14px;text-align:right;font-size:12px;color:var(--red)">${pfFmtN(c.reposicoes)}</td>
       <td style="padding:10px 14px;text-align:right;font-size:12px;color:var(--text3)">${ipd}</td>
-      <td style="padding:10px 14px;text-align:right;font-size:12px;color:#a78bfa">${c.tempo_medio_min!=null?c.tempo_medio_min.toFixed(1)+' min':'—'}</td>
+      <td style="padding:10px 14px;text-align:right;font-size:12px;color:var(--indigo)">${c.tempo_medio_min!=null?c.tempo_medio_min.toFixed(1)+' min':'—'}</td>
     </tr>`;
   }).join('');
 }
@@ -783,12 +786,12 @@ function pfRenderTabelaSetor(titulo, rows, temItens) {
         </thead>
         <tbody>
           ${filtrado.map(r => `
-          <tr style="border-bottom:1px solid rgba(51,65,85,.4)">
+          <tr style="border-bottom:1px solid var(--border)">
             <td style="padding:10px 14px;font-weight:700;color:var(--text);font-size:13px">${pfEsc(r.nome)}</td>
-            <td style="padding:10px 14px;text-align:right;font-weight:700;color:#38bdf8;font-size:13px">${pfFmtN(r.concluidos)}</td>
-            <td style="padding:10px 14px;text-align:right;font-size:12px;color:#ef4444">${pfFmtN(r.pendentes)}</td>
+            <td style="padding:10px 14px;text-align:right;font-weight:700;color:var(--info);font-size:13px">${pfFmtN(r.concluidos)}</td>
+            <td style="padding:10px 14px;text-align:right;font-size:12px;color:var(--red)">${pfFmtN(r.pendentes)}</td>
             ${temItens ? `<td style="padding:10px 14px;text-align:right;font-size:12px">${pfFmtN(r.itens||0)}</td>` : ''}
-            <td style="padding:10px 14px;text-align:right;font-size:12px;color:#a78bfa">${r.tempo_medio_min!=null?r.tempo_medio_min.toFixed(1)+' min':'—'}</td>
+            <td style="padding:10px 14px;text-align:right;font-size:12px;color:var(--indigo)">${r.tempo_medio_min!=null?r.tempo_medio_min.toFixed(1)+' min':'—'}</td>
           </tr>`).join('')}
         </tbody>
       </table>
@@ -829,7 +832,7 @@ async function pfCarregarTiming() {
   const dados = await apiFetch(`/performance/timing?${qs}`);
 
   if (!dados || dados.erro) {
-    wrap.innerHTML = `<div style="padding:20px;color:#ef4444;font-size:13px">${pfEsc(dados?.erro || 'Erro ao carregar')}</div>`;
+    wrap.innerHTML = `<div style="padding:20px;color:var(--red);font-size:13px">${pfEsc(dados?.erro || 'Erro ao carregar')}</div>`;
     return;
   }
   _pfTiming = dados;
@@ -841,11 +844,15 @@ function pfRenderTiming(filtroNome) {
   if (!wrap || !_pfTiming) return;
   if (filtroNome === undefined) filtroNome = document.getElementById('pf-colab')?.value || '';
 
+  // cor em hex literal (não var()) de propósito — usada abaixo concatenada com
+  // sufixo de opacidade (a.cor+'1a'/'22'), que só funciona com hex cru.
+  // Mesma cor de --accent em app.css. Antes disso era 'var(--accent)', o que
+  // gerava um valor de CSS inválido ("var(--accent)1a") e derrubava o estilo.
   const ABAS = [
-    { id:'separacao', label:'Separação', cor:'var(--accent)' },
-    { id:'reposicao', label:'Reposição', cor:'var(--accent)' },
-    { id:'checkout',  label:'Checkout',  cor:'var(--accent)' },
-    { id:'embalagem', label:'Embalagem', cor:'var(--accent)' },
+    { id:'separacao', label:'Separação', cor:'#4F46E5' },
+    { id:'reposicao', label:'Reposição', cor:'#4F46E5' },
+    { id:'checkout',  label:'Checkout',  cor:'#4F46E5' },
+    { id:'embalagem', label:'Embalagem', cor:'#4F46E5' },
   ];
   const abaAtual = ABAS.find(a => a.id === _pfTimingAba) || ABAS[0];
 
@@ -860,8 +867,8 @@ function pfRenderTiming(filtroNome) {
   };
   const badgeDur = (min) => {
     if (min == null) return `<span style="color:var(--text3);font-size:11px">—</span>`;
-    const cor  = min <= 5 ? '#16a34a' : min <= 15 ? '#d97706' : '#dc2626';
-    const bg   = min <= 5 ? 'rgba(22,163,74,.12)' : min <= 15 ? 'rgba(217,119,6,.12)' : 'rgba(220,38,38,.12)';
+    const cor  = min <= 5 ? 'var(--green)' : min <= 15 ? 'var(--amber)' : 'var(--red)';
+    const bg   = min <= 5 ? 'rgba(87,185,129,.12)' : min <= 15 ? 'rgba(224,168,62,.12)' : 'rgba(201,82,79,.12)';
     return `<span style="background:${bg};color:${cor};border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;white-space:nowrap">${fmtDur(min)}</span>`;
   };
 
@@ -896,12 +903,12 @@ function pfRenderTiming(filtroNome) {
         ['REGISTROS', dados.length, ''],
         ['COLABORADORES', nColab, ''],
         ['TEMPO MÉDIO', mediaGeral!=null?fmtDur(mediaGeral):'—', ''],
-        ['MAIS RÁPIDO', minDur!=null?fmtDur(minDur):'—', 'color:#16a34a'],
-        ['MAIS LENTO',  maxDur!=null?fmtDur(maxDur):'—', 'color:#dc2626'],
+        ['MAIS RÁPIDO', minDur!=null?fmtDur(minDur):'—', 'color:var(--green)'],
+        ['MAIS LENTO',  maxDur!=null?fmtDur(maxDur):'—', 'color:var(--red)'],
         _pfTimingAba==='reposicao' ? ['ENCONTRADOS',
-          dados.filter(r=>['encontrado','buscado','abastecido'].includes(r.resultado)).length,'color:#16a34a'] : null,
+          dados.filter(r=>['encontrado','buscado','abastecido'].includes(r.resultado)).length,'color:var(--green)'] : null,
         _pfTimingAba==='reposicao' ? ['NÃO ENCONTR.',
-          dados.filter(r=>['nao_encontrado','protocolo'].includes(r.resultado)).length,'color:#dc2626'] : null,
+          dados.filter(r=>['nao_encontrado','protocolo'].includes(r.resultado)).length,'color:var(--red)'] : null,
       ].filter(Boolean).map(([lbl,val,sty])=>`
         <div style="background:var(--surface2);border-radius:10px;padding:12px 14px">
           <div style="font-size:9px;font-weight:800;color:var(--text3);letter-spacing:.6px;margin-bottom:4px">${lbl}</div>
@@ -942,8 +949,8 @@ function pfRenderTiming(filtroNome) {
         const enc    = rows.filter(r=>['encontrado','buscado','abastecido'].includes(r.resultado)).length;
         const naoEnc = rows.filter(r=>['nao_encontrado','protocolo'].includes(r.resultado)).length;
         statsExtra = `
-          <div style="font-size:11px"><b style="color:#16a34a">${enc}</b> encontrado(s)</div>
-          <div style="font-size:11px"><b style="color:#dc2626">${naoEnc}</b> não encontrado(s)</div>`;
+          <div style="font-size:11px"><b style="color:var(--green)">${enc}</b> encontrado(s)</div>
+          <div style="font-size:11px"><b style="color:var(--red)">${naoEnc}</b> não encontrado(s)</div>`;
       }
 
       const linhas = rows.map((r,i) => {
@@ -959,10 +966,10 @@ function pfRenderTiming(filtroNome) {
             </td>`;
         } else if (_pfTimingAba === 'separacao' || _pfTimingAba === 'checkout' || _pfTimingAba === 'embalagem') {
           extraCells = `
-            <td style="padding:8px 14px;text-align:right;font-size:12px;font-weight:700;color:#38bdf8">${r.total_itens ?? '—'}</td>
-            <td style="padding:8px 14px;text-align:right;font-size:12px;color:#f59e0b">${r.skus ?? '—'}</td>`;
+            <td style="padding:8px 14px;text-align:right;font-size:12px;font-weight:700;color:var(--info)">${r.total_itens ?? '—'}</td>
+            <td style="padding:8px 14px;text-align:right;font-size:12px;color:var(--amber)">${r.skus ?? '—'}</td>`;
         }
-        const bg = i%2===0 ? 'transparent' : 'rgba(51,65,85,.04)';
+        const bg = i%2===0 ? 'transparent' : 'rgba(39,39,42,.5)';
         return `<tr style="background:${bg}">
           <td style="padding:8px 14px;font-size:12px;font-weight:700;color:var(--text)">${pfEsc(r.numero_pedido||'—')}</td>
           <td style="padding:8px 14px;font-size:11px;color:var(--text3)">${dataFmt}</td>
@@ -981,14 +988,14 @@ function pfRenderTiming(filtroNome) {
 
       tabelasHtml += `
         <div class="card" style="padding:0;overflow:hidden;margin-bottom:16px">
-          <div style="background:${abaAtual.grad};padding:14px 18px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+          <div style="background:var(--surface2);border-bottom:1px solid var(--border);padding:14px 18px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
             <div>
-              <div style="font-size:14px;font-weight:800;color:#fff">${pfEsc(nome)}</div>
-              <div style="font-size:11px;color:rgba(255,255,255,.75);margin-top:2px">${rows.length} registro(s)</div>
+              <div style="font-size:14px;font-weight:800;color:var(--text)">${pfEsc(nome)}</div>
+              <div style="font-size:11px;color:var(--text3);margin-top:2px">${rows.length} registro(s)</div>
             </div>
             <div style="display:flex;gap:16px;margin-left:auto;flex-wrap:wrap;align-items:center">
               ${statsExtra}
-              ${media!=null ? `<div style="background:rgba(255,255,255,.15);border-radius:20px;padding:4px 14px;color:#fff;font-size:12px;font-weight:700">⌀ ${fmtDur(media)}</div>` : ''}
+              ${media!=null ? `<div style="background:rgba(79,70,229,.12);border:1px solid rgba(79,70,229,.3);border-radius:20px;padding:4px 14px;color:var(--accent);font-size:12px;font-weight:700">⌀ ${fmtDur(media)}</div>` : ''}
             </div>
           </div>
           <div style="overflow-x:auto">
@@ -1026,19 +1033,19 @@ function pfSwitchAba(id) {
 let _pfOcorrencias = [];
 
 const OC_TIPOS = {
-  processo_errado:      { label: 'Processo Errado',          icon: '',  cor: '#f59e0b' },
-  absenteismo:          { label: 'Absenteísmo',              icon: '',  cor: '#ef4444' },
-  conduta_inapropriada: { label: 'Conduta Inapropriada',     icon: '',  cor: '#dc2626' },
-  atraso:               { label: 'Atraso',                   icon: '⏰',  cor: '#f97316' },
-  descumprimento_norma: { label: 'Descumprimento de Norma',  icon: '',  cor: '#8b5cf6' },
-  qualidade:            { label: 'Problema de Qualidade',    icon: '',  cor: '#db2777' },
-  outro:                { label: 'Outro',                    icon: '',  cor: '#6b7280' },
+  processo_errado:      { label: 'Processo Errado',          icon: '',  cor: 'var(--amber)' },
+  absenteismo:          { label: 'Absenteísmo',              icon: '',  cor: 'var(--red)' },
+  conduta_inapropriada: { label: 'Conduta Inapropriada',     icon: '',  cor: 'var(--red)' },
+  atraso:               { label: 'Atraso',                   icon: '⏰',  cor: 'var(--orange)' },
+  descumprimento_norma: { label: 'Descumprimento de Norma',  icon: '',  cor: 'var(--indigo)' },
+  qualidade:            { label: 'Problema de Qualidade',    icon: '',  cor: '#db2777' }, // rosa — sem token equivalente no app
+  outro:                { label: 'Outro',                    icon: '',  cor: 'var(--text3)' },
 };
 
 const OC_GRAVIDADE = {
-  leve:     { label: 'Leve',     bg: 'rgba(34,197,94,.12)',   cor: '#16a34a' },
-  moderada: { label: 'Moderada', bg: 'rgba(245,158,11,.12)',  cor: '#d97706' },
-  grave:    { label: 'Grave',    bg: 'rgba(220,38,38,.12)',   cor: '#dc2626' },
+  leve:     { label: 'Leve',     bg: 'rgba(87,185,129,.12)',  cor: 'var(--green)' },
+  moderada: { label: 'Moderada', bg: 'rgba(224,168,62,.12)',  cor: 'var(--amber)' },
+  grave:    { label: 'Grave',    bg: 'rgba(201,82,79,.12)',   cor: 'var(--red)' },
 };
 
 async function pfCarregarOcorrencias() {
@@ -1086,13 +1093,13 @@ function pfRenderOcorrenciasUI(lista, carregando) {
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px" class="pf-grid-2">
         <div>
-          <label style="${LBL}">Colaborador <span style="color:#ef4444">*</span></label>
+          <label style="${LBL}">Colaborador <span style="color:var(--red)">*</span></label>
           <select id="oc-colab" style="${INP}">
             <option value="">— Selecione o colaborador —</option>${usuariosOpts}
           </select>
         </div>
         <div>
-          <label style="${LBL}">Tipo de Ocorrência <span style="color:#ef4444">*</span></label>
+          <label style="${LBL}">Tipo de Ocorrência <span style="color:var(--red)">*</span></label>
           <select id="oc-tipo" style="${INP}">
             <option value="">— Selecione o tipo —</option>${tiposOpts}
           </select>
@@ -1104,7 +1111,7 @@ function pfRenderOcorrenciasUI(lista, carregando) {
           </select>
         </div>
         <div>
-          <label style="${LBL}">Data da ocorrência <span style="color:#ef4444">*</span></label>
+          <label style="${LBL}">Data da ocorrência <span style="color:var(--red)">*</span></label>
           <input type="date" id="oc-data" value="${new Date().toISOString().slice(0,10)}" style="${INP}">
         </div>
         <div>
@@ -1119,7 +1126,7 @@ function pfRenderOcorrenciasUI(lista, carregando) {
       </div>
 
       <div style="margin-bottom:20px">
-        <label style="${LBL}">Descrição / O que aconteceu <span style="color:#ef4444">*</span></label>
+        <label style="${LBL}">Descrição / O que aconteceu <span style="color:var(--red)">*</span></label>
         <textarea id="oc-desc" rows="4"
           placeholder="Descreva com detalhes o que ocorreu: local, horário, o que foi feito de errado, impacto na operação..."
           style="${INP}resize:vertical;font-family:inherit;line-height:1.5"></textarea>
@@ -1150,7 +1157,7 @@ function pfRenderOcorrenciasUI(lista, carregando) {
         <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:6px">Total de Ocorrências</div>
         <div style="font-size:32px;font-weight:900;color:var(--text)">${lista.length}</div>
       </div>
-      ${Object.entries(contGrav).map(([g,n])=>{const gc=OC_GRAVIDADE[g]||{cor:'#6b7280',bg:'var(--surface2)',label:g};return`
+      ${Object.entries(contGrav).map(([g,n])=>{const gc=OC_GRAVIDADE[g]||{cor:'var(--text3)',bg:'var(--surface2)',label:g};return`
       <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px 18px">
         <div style="font-size:11px;font-weight:700;color:${gc.cor};margin-bottom:6px">${gc.label}</div>
         <div style="font-size:32px;font-weight:900;color:var(--text)">${n}</div>
@@ -1163,11 +1170,11 @@ function pfRenderOcorrenciasUI(lista, carregando) {
         <div style="font-size:13px;font-weight:700">Nenhuma ocorrência no período</div>
        </div>`
     : lista.map(o => {
-        const t  = OC_TIPOS[o.tipo]    || { icon:'', label: o.tipo,      cor:'#6b7280' };
-        const g  = OC_GRAVIDADE[o.gravidade] || { label: o.gravidade, bg:'var(--surface2)', cor:'#6b7280' };
+        const t  = OC_TIPOS[o.tipo]    || { icon:'', label: o.tipo,      cor:'var(--text3)' };
+        const g  = OC_GRAVIDADE[o.gravidade] || { label: o.gravidade, bg:'var(--surface2)', cor:'var(--text3)' };
         const tu = { Manha:'Manhã', Tarde:'Tarde', Noite:'Noite' }[o.turno] || o.turno || '—';
         // Borda esquerda colorida pela gravidade
-        const bordaGrav = { leve:'#22c55e', moderada:'#f59e0b', grave:'#dc2626' }[o.gravidade] || '#6b7280';
+        const bordaGrav = { leve:'var(--green)', moderada:'var(--amber)', grave:'var(--red)' }[o.gravidade] || 'var(--text3)';
         return `
           <div style="background:var(--surface);border:1.5px solid var(--border);border-left:4px solid ${bordaGrav};border-radius:12px;padding:18px 20px;margin-bottom:14px">
             <div style="display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap">
@@ -1176,7 +1183,7 @@ function pfRenderOcorrenciasUI(lista, carregando) {
                   <span style="font-size:20px">${t.icon}</span>
                   <span style="font-size:15px;font-weight:800;color:var(--text)">${pfEsc(o.colaborador_nome)}</span>
                   <span style="background:${g.bg};color:${g.cor};border-radius:20px;padding:3px 12px;font-size:12px;font-weight:700">${g.label}</span>
-                  <span style="background:rgba(0,0,0,.07);color:${t.cor};border-radius:20px;padding:3px 12px;font-size:12px;font-weight:700">${t.label}</span>
+                  <span style="background:var(--surface2);border:1px solid var(--border);color:${t.cor};border-radius:20px;padding:3px 12px;font-size:12px;font-weight:700">${t.label}</span>
                 </div>
                 <div style="font-size:14px;color:var(--text);line-height:1.5;margin-bottom:8px">${pfEsc(o.descricao)}</div>
                 <div style="font-size:12px;color:var(--text3)">
@@ -1579,10 +1586,10 @@ async function pfCarregarMetas() {
     return `${h}h${String(m).padStart(2,'0')}`;
   };
   const pctCor = pct => {
-    if (pct === null) return '#64748b';
-    if (pct >= 100) return '#22c55e';
-    if (pct >= 80)  return '#f59e0b';
-    return '#ef4444';
+    if (pct === null) return 'var(--text3)';
+    if (pct >= 100) return 'var(--green)';
+    if (pct >= 80)  return 'var(--amber)';
+    return 'var(--red)';
   };
   const fmtData = d => { if (!d) return '—'; const [y,m,dy] = d.split('-'); return `${dy}/${m}/${y}`; };
 
@@ -1746,10 +1753,13 @@ async function pfCarregarRanking() {
     const desconto  = descontos[t.nome] || 0;
     const nota      = Math.max(0, pctCapado - desconto);
     const qtdOcorr  = (ocorrPorNome[t.nome] || []).length;
+    // Hex literal (não var()) de propósito — mais abaixo o código concatena
+    // sufixo de opacidade no hex (`${r.faixaCor}22`), que só funciona com hex
+    // cru. Mesmas cores de --green/--amber/--red em app.css.
     let faixa, faixaCor;
-    if      (nota >= 90) { faixa = 'Bônus cheio';    faixaCor = '#22c55e'; }
-    else if (nota >= 70) { faixa = 'Bônus parcial';  faixaCor = '#f59e0b'; }
-    else                 { faixa = 'Sem bônus';      faixaCor = '#ef4444'; }
+    if      (nota >= 90) { faixa = 'Bônus cheio';    faixaCor = '#57B981'; }
+    else if (nota >= 70) { faixa = 'Bônus parcial';  faixaCor = '#E0A83E'; }
+    else                 { faixa = 'Sem bônus';      faixaCor = '#C9524F'; }
     return { ...t, pct, desconto, nota, qtdOcorr, faixa, faixaCor };
   });
   _pfRanking = linhas;
@@ -1790,8 +1800,8 @@ async function pfCarregarRanking() {
               <td style="padding:7px 12px;text-align:center;color:var(--text3)">${i + 1}</td>
               <td style="padding:7px 12px;font-weight:700;color:var(--text)">${pfEsc(r.nome)}</td>
               <td style="padding:7px 12px;text-align:center;color:var(--text)">${r.pct != null ? r.pct + '%' : '—'}</td>
-              <td style="padding:7px 12px;text-align:center;color:${r.qtdOcorr ? '#dc2626' : 'var(--text3)'}">${r.qtdOcorr || 0}</td>
-              <td style="padding:7px 12px;text-align:center;color:${r.desconto ? '#dc2626' : 'var(--text3)'}">${r.desconto ? '-' + r.desconto : '—'}</td>
+              <td style="padding:7px 12px;text-align:center;color:${r.qtdOcorr ? 'var(--red)' : 'var(--text3)'}">${r.qtdOcorr || 0}</td>
+              <td style="padding:7px 12px;text-align:center;color:${r.desconto ? 'var(--red)' : 'var(--text3)'}">${r.desconto ? '-' + r.desconto : '—'}</td>
               <td style="padding:7px 12px;text-align:center;font-weight:800;color:${r.faixaCor}">${r.nota}</td>
               <td style="padding:7px 12px;text-align:center">
                 <span style="background:${r.faixaCor}22;color:${r.faixaCor};border-radius:20px;padding:3px 10px;font-size:10px;font-weight:800">${r.faixa}</span>
@@ -1813,7 +1823,7 @@ async function pfBuscarPedido(num) {
   if (el) el.innerHTML = '<span style="color:var(--text3);font-size:12px">Buscando...</span>';
   const dados = await apiFetch(`/performance/pedido/${encodeURIComponent(num)}`);
   if (!dados || dados.erro) {
-    if (el) el.innerHTML = `<div style="color:#dc2626;font-size:12px;padding:8px 0">${pfEsc(dados?.erro || 'Pedido não encontrado')}</div>`;
+    if (el) el.innerHTML = `<div style="color:var(--red);font-size:12px;padding:8px 0">${pfEsc(dados?.erro || 'Pedido não encontrado')}</div>`;
     return;
   }
   if (el) el.innerHTML = pfRenderPedidoDetalhe(dados);
@@ -2137,8 +2147,8 @@ function pfRenderPedidoDetalhe(d) {
   };
   const badgeDur = min => {
     if (min == null) return `<span style="color:var(--text3);font-size:11px">—</span>`;
-    const cor = min <= 5 ? '#16a34a' : min <= 15 ? '#d97706' : '#dc2626';
-    const bg  = min <= 5 ? 'rgba(22,163,74,.12)' : min <= 15 ? 'rgba(217,119,6,.12)' : 'rgba(220,38,38,.12)';
+    const cor = min <= 5 ? 'var(--green)' : min <= 15 ? 'var(--amber)' : 'var(--red)';
+    const bg  = min <= 5 ? 'rgba(87,185,129,.12)' : min <= 15 ? 'rgba(224,168,62,.12)' : 'rgba(201,82,79,.12)';
     return `<span style="background:${bg};color:${cor};border-radius:20px;padding:3px 12px;font-size:12px;font-weight:800">${fmtDur(min)}</span>`;
   };
   const resMap = { encontrado:'Enc', buscado:'Enc', abastecido:'Abast', nao_encontrado:'NE', protocolo:'Proto' };
@@ -2161,7 +2171,7 @@ function pfRenderPedidoDetalhe(d) {
 
   const etapaColors = { 'Separação':'var(--accent)', 'Reposição':'var(--accent)', 'Checkout':'var(--accent)', 'Embalagem':'var(--accent)' };
   const etapaCard = (icon, label, grad, corpo, durMin) => {
-    const cor = etapaColors[label] || '#64748b';
+    const cor = etapaColors[label] || 'var(--text3)';
     return `
     <div style="flex:1;min-width:190px;border-radius:12px;overflow:hidden;border:1px solid var(--border);border-top:3px solid ${cor};display:flex;flex-direction:column">
       <div style="background:var(--surface2);padding:10px 14px;display:flex;align-items:center;gap:8px">
@@ -2270,7 +2280,7 @@ function pfRenderPedidoDetalhe(d) {
     if (/DRIVE|RETIRADA/i.test(envio))
       return `<span style="background:rgba(201,82,79,.15);color:var(--red);border:1.5px solid rgba(201,82,79,.35);font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">Drive Thru</span>`;
     if (/PRIME/i.test(envio))
-      return `<span style="background:#FEF3C7;color:#92400E;border:1.5px solid #FCD34D;font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap"><i class="ti ti-star-filled" aria-hidden="true"></i> Prime</span>`;
+      return `<span style="background:rgba(224,168,62,.15);color:var(--amber);border:1.5px solid rgba(224,168,62,.35);font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap"><i class="ti ti-star-filled" aria-hidden="true"></i> Prime</span>`;
     if (/SEDEX/i.test(envio))
       return `<span style="background:rgba(79,70,229,.15);color:#818CF8;border:1.5px solid rgba(79,70,229,.35);font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap">${pfEsc(envio)}</span>`;
     if (/^PAC/i.test(envio))
