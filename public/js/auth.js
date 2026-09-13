@@ -1149,7 +1149,7 @@ async function verificarValidacaoPendente() {
 
     el.style.display = '';
     el.innerHTML = `
-      <div style="background:var(--surface);border-radius:12px;border:1px solid var(--border);border-top:3px solid ${validCor};padding:18px 20px;box-shadow:var(--sh)">
+      <div style="background:var(--surface);border-radius:12px;border:1px solid var(--border);padding:18px 20px;box-shadow:var(--sh)">
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
           <span style="width:10px;height:10px;border-radius:50%;background:${validCor};flex-shrink:0;display:inline-block"></span>
           <div style="flex:1">
@@ -1423,7 +1423,7 @@ async function carregarListaDiarios() {
           <div style="font-weight:700;font-size:13px">${fmtData(d.data)} — ${d.turno} ${leuBadge} ${stBadge}</div>
           <div style="font-size:11px;color:var(--text3)">${d.supervisor}</div>
         </div>
-        <button onclick="event.stopPropagation();exportarDiarioExcel(${d.id})" style="padding:4px 10px;background:var(--green);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:11px">Excel</button>
+        <button class="btn-icon-outline" title="Exportar Excel" onclick="event.stopPropagation();exportarDiarioExcel(${d.id})"><i class="ti ti-download" aria-hidden="true"></i></button>
       </div>`;
     }).join('');
   } catch(e) { console.warn(e); }
