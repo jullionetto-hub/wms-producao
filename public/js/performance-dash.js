@@ -86,39 +86,41 @@ function renderizarPerformanceDash() {
     </div>
 
     <!-- FILTROS (compartilhado entre abas) -->
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px 16px;margin-bottom:18px;display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap">
-      <div>
-        <div style="font-size:9px;font-weight:700;color:var(--text3);letter-spacing:.8px;margin-bottom:3px">DE</div>
-        <input type="date" id="pf-ini"
-          style="padding:7px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;outline:none">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px 16px;margin-bottom:18px">
+      <div class="filter-toolbar">
+        <div class="filter-grp">
+          <span class="filter-lbl">Período</span>
+          <div class="date-range">
+            <input type="date" id="pf-ini">
+            <span class="date-range-sep"><i class="ti ti-arrow-right" aria-hidden="true"></i></span>
+            <input type="date" id="pf-fim">
+          </div>
+        </div>
+        <div class="filter-grp">
+          <span class="filter-lbl">Turno</span>
+          <select id="pf-turno"
+            style="padding:7px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;outline:none">
+            <option value="">Todos</option>
+            <option value="Manha">Manhã</option>
+            <option value="Tarde">Tarde</option>
+            <option value="Noite">Noite</option>
+          </select>
+        </div>
+        <div class="filter-grp" id="pf-colab-wrap">
+          <span class="filter-lbl">Colaborador</span>
+          <select id="pf-colab" onchange="pfAplicarFiltroColab()"
+            style="padding:7px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;outline:none;min-width:160px">
+            <option value="">Todos os colaboradores</option>
+          </select>
+        </div>
+        <div class="filter-actions">
+          <button id="pf-btn-filtrar" onclick="pfFiltrarAtivo()" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer">Filtrar</button>
+          <button class="btn-icon-outline" title="Limpar filtros" onclick="pfInicializar()"><i class="ti ti-refresh" aria-hidden="true"></i></button>
+          <button onclick="pfExportarExcel()" style="background:var(--surface2);color:var(--green);border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer">Excel</button>
+          <button onclick="pfAbrirAnalisePdf()" style="background:var(--surface2);color:var(--red);border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer"><i class="ti ti-file-text" aria-hidden="true"></i> Análise PDF</button>
+        </div>
+        <span id="pf-filtro-info" style="margin-left:8px;font-size:11px;color:var(--text3);align-self:center"></span>
       </div>
-      <div>
-        <div style="font-size:9px;font-weight:700;color:var(--text3);letter-spacing:.8px;margin-bottom:3px">ATÉ</div>
-        <input type="date" id="pf-fim"
-          style="padding:7px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;outline:none">
-      </div>
-      <div>
-        <div style="font-size:9px;font-weight:700;color:var(--text3);letter-spacing:.8px;margin-bottom:3px">TURNO</div>
-        <select id="pf-turno"
-          style="padding:7px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;outline:none">
-          <option value="">Todos</option>
-          <option value="Manha">Manhã</option>
-          <option value="Tarde">Tarde</option>
-          <option value="Noite">Noite</option>
-        </select>
-      </div>
-      <div id="pf-colab-wrap">
-        <div style="font-size:9px;font-weight:700;color:var(--text3);letter-spacing:.8px;margin-bottom:3px">COLABORADOR</div>
-        <select id="pf-colab" onchange="pfAplicarFiltroColab()"
-          style="padding:7px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;outline:none;min-width:160px">
-          <option value="">Todos os colaboradores</option>
-        </select>
-      </div>
-      <button id="pf-btn-filtrar" onclick="pfFiltrarAtivo()" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer">Filtrar</button>
-      <button onclick="pfInicializar()" style="background:var(--surface2);color:var(--text3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:12px;cursor:pointer"><i class="ti ti-x" aria-hidden="true"></i> Limpar</button>
-      <button onclick="pfExportarExcel()" style="background:var(--surface2);color:var(--green);border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer">Excel</button>
-      <button onclick="pfAbrirAnalisePdf()" style="background:var(--surface2);color:var(--red);border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer"><i class="ti ti-file-text" aria-hidden="true"></i> Análise PDF</button>
-      <span id="pf-filtro-info" style="margin-left:auto;font-size:11px;color:var(--text3);align-self:center"></span>
     </div>
 
     <!-- LOADING -->
