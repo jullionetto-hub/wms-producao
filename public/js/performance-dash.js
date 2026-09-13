@@ -114,7 +114,7 @@ function renderizarPerformanceDash() {
           </select>
         </div>
         <div class="filter-actions">
-          <button id="pf-btn-filtrar" onclick="pfFiltrarAtivo()" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer">Filtrar</button>
+          <button id="pf-btn-filtrar" onclick="pfFiltrarAtivo()" class="btn btn-primary btn-sm">Filtrar</button>
           <button class="btn-icon-outline" title="Limpar filtros" onclick="pfInicializar()"><i class="ti ti-refresh" aria-hidden="true"></i></button>
           <button onclick="pfExportarExcel()" style="background:var(--surface2);color:var(--green);border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer">Excel</button>
           <button onclick="pfAbrirAnalisePdf()" style="background:var(--surface2);color:var(--red);border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer"><i class="ti ti-file-text" aria-hidden="true"></i> Análise PDF</button>
