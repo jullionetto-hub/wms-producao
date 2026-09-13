@@ -1411,7 +1411,7 @@ function _mzRenderFerias() {
   if (_mzFeriasSetorFiltro!=='Todos') lista = lista.filter(r=>r.setor===_mzFeriasSetorFiltro);
   if (_mzFeriasTurnoFiltro!=='Todos') lista = lista.filter(r=>r.turno===_mzFeriasTurnoFiltro);
 
-  const pill = (label, ativo, onclick) => `<button onclick="${onclick}" style="padding:6px 12px;background:${ativo?'var(--accent)':'var(--surface2)'};border:none;border-radius:20px;color:${ativo?'#fff':'var(--text2)'};font-size:11.5px;font-weight:700;cursor:pointer">${pfEsc(label)}</button>`;
+  const pill = (label, ativo, onclick) => `<button onclick="${onclick}" class="rel-turno-btn${ativo?' ativo':''}">${pfEsc(label)}</button>`;
   const fmtCell = p => p ? `<div>${fmtData(p.data_inicio)}<div style="font-size:10px;color:var(--text3)">${p.dias} dias</div></div>` : '<span style="color:var(--text3);font-size:11px">não programado</span>';
 
   cont.innerHTML = `
@@ -1421,11 +1421,19 @@ function _mzRenderFerias() {
       <div class="tile" style="background:var(--surface2);border-radius:10px;padding:12px"><div style="font-size:10px;color:var(--text3)">LIMITE EM ATÉ 60 DIAS</div><div style="font-size:18px;font-weight:800;margin-top:4px;color:var(--amber)">${vencendo}</div></div>
       <div class="tile" style="background:var(--surface2);border-radius:10px;padding:12px"><div style="font-size:10px;color:var(--text3)">LIMITE VENCIDO</div><div style="font-size:18px;font-weight:800;margin-top:4px;color:var(--red)">${vencidos}</div></div>
     </div>
-    <div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap">
-      ${setores.map(s => pill(s, s===_mzFeriasSetorFiltro, `_mzFeriasSetorFiltro='${s.replace(/'/g,"\\'")}';_mzRenderFerias()`)).join('')}
-    </div>
-    <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">
-      ${turnos.map(t => pill(t, t===_mzFeriasTurnoFiltro, `_mzFeriasTurnoFiltro='${t.replace(/'/g,"\\'")}';_mzRenderFerias()`)).join('')}
+    <div class="filter-toolbar" style="margin-bottom:14px">
+      <div class="filter-grp">
+        <span class="filter-lbl">Setor</span>
+        <div class="turno-seg">
+          ${setores.map(s => pill(s, s===_mzFeriasSetorFiltro, `_mzFeriasSetorFiltro='${s.replace(/'/g,"\\'")}';_mzRenderFerias()`)).join('')}
+        </div>
+      </div>
+      <div class="filter-grp">
+        <span class="filter-lbl">Turno</span>
+        <div class="turno-seg">
+          ${turnos.map(t => pill(t, t===_mzFeriasTurnoFiltro, `_mzFeriasTurnoFiltro='${t.replace(/'/g,"\\'")}';_mzRenderFerias()`)).join('')}
+        </div>
+      </div>
     </div>
     <div class="card" style="padding:0;overflow-x:auto">
       <table style="width:100%;border-collapse:collapse;font-size:12px">
