@@ -198,8 +198,7 @@ function absnSetTurnoFiltro(turno) {
     const btn = document.getElementById(`absn-turno-${t||'todos'}`);
     if (!btn) return;
     const ativo = (t||null) === _absnTurnoFiltro;
-    btn.style.background = ativo ? 'var(--accent)' : 'var(--surface)';
-    btn.style.color = ativo ? '#fff' : 'var(--text2)';
+    btn.classList.toggle('ativo', ativo);
   });
   _absnRenderTabela();
 }
@@ -252,13 +251,7 @@ function _absnRenderTabela() {
   const cont = document.getElementById('absn-resultado');
   if (!cont) return;
   const linhas = _absnLinhasFiltradas();
-  const turnos = ['Manhã','Tarde','Madrugada'];
   cont.innerHTML = `
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
-        <button id="absn-turno-todos" onclick="absnSetTurnoFiltro(null)" style="padding:5px 12px;border-radius:20px;border:1.5px solid var(--border);background:${!_absnTurnoFiltro?'var(--accent)':'var(--surface)'};color:${!_absnTurnoFiltro?'#fff':'var(--text2)'};font-size:11px;font-weight:700;cursor:pointer">Todos</button>
-        ${turnos.map(t => `<button id="absn-turno-${t}" onclick="absnSetTurnoFiltro('${t}')" style="padding:5px 12px;border-radius:20px;border:1.5px solid var(--border);background:${_absnTurnoFiltro===t?'var(--accent)':'var(--surface)'};color:${_absnTurnoFiltro===t?'#fff':'var(--text2)'};font-size:11px;font-weight:700;cursor:pointer">${t}</button>`).join('')}
-        <button onclick="absnGerarPDF()" style="margin-left:auto;padding:5px 12px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">🖨️ Gerar PDF / Imprimir</button>
-      </div>
       <div style="overflow-x:auto;background:var(--surface);border:1px solid var(--border);border-radius:10px">
         <table style="width:100%;border-collapse:collapse;font-size:12.5px">
           <thead><tr style="background:var(--surface2)">
@@ -415,15 +408,31 @@ function renderizarPagGestao() {
       <span style="color:var(--text3);font-weight:700">TOLERÂNCIA:</span>
       ${[0,5,10,15,30].map(m => `<button onclick="absnSetTolerancia(${m})" id="absn-tol-${m}" style="padding:5px 10px;border-radius:20px;border:1.5px solid var(--border);background:${m===0?'var(--accent)':'var(--surface)'};color:${m===0?'#fff':'var(--text2)'};font-size:11px;font-weight:700;cursor:pointer">${m} min</button>`).join('')}
     </div>
-    <div id="absn-periodo" style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:11.5px;flex-wrap:wrap">
-      <span style="color:var(--text3);font-weight:700">PERÍODO:</span>
-      <input type="date" id="absn-data-ini" style="padding:5px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:11px">
-      <span style="color:var(--text3)">até</span>
-      <input type="date" id="absn-data-fim" style="padding:5px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:11px">
-      <button onclick="absnAplicarPeriodo()" style="padding:5px 12px;background:var(--accent);color:#fff;border:none;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer">Aplicar</button>
-      <button onclick="absnLimparPeriodo()" style="padding:5px 12px;background:var(--surface);border:1.5px solid var(--border);color:var(--text2);border-radius:20px;font-size:11px;font-weight:700;cursor:pointer">Ver tudo</button>
-      <span id="absn-periodo-label" style="color:var(--text3)"></span>
+    <div class="filter-toolbar" style="margin-top:10px">
+      <div class="filter-grp">
+        <span class="filter-lbl">Turno</span>
+        <div class="turno-seg" id="absn-turno-btns">
+          <button id="absn-turno-todos" onclick="absnSetTurnoFiltro(null)" class="rel-turno-btn${!_absnTurnoFiltro ? ' ativo' : ''}">Todos</button>
+          <button id="absn-turno-Manhã" onclick="absnSetTurnoFiltro('Manhã')" class="rel-turno-btn${_absnTurnoFiltro==='Manhã' ? ' ativo' : ''}">Manhã</button>
+          <button id="absn-turno-Tarde" onclick="absnSetTurnoFiltro('Tarde')" class="rel-turno-btn${_absnTurnoFiltro==='Tarde' ? ' ativo' : ''}">Tarde</button>
+          <button id="absn-turno-Madrugada" onclick="absnSetTurnoFiltro('Madrugada')" class="rel-turno-btn${_absnTurnoFiltro==='Madrugada' ? ' ativo' : ''}">Madrugada</button>
+        </div>
+      </div>
+      <div class="filter-grp">
+        <span class="filter-lbl">Período</span>
+        <div class="date-range">
+          <input type="date" id="absn-data-ini"/>
+          <span class="date-range-sep"><i class="ti ti-arrow-right" aria-hidden="true"></i></span>
+          <input type="date" id="absn-data-fim"/>
+        </div>
+      </div>
+      <div class="filter-actions">
+        <button class="btn btn-primary btn-sm" onclick="absnAplicarPeriodo()">Aplicar</button>
+        <button class="btn-icon-outline" title="Limpar filtros" onclick="absnLimparPeriodo()"><i class="ti ti-refresh" aria-hidden="true"></i></button>
+        <button onclick="absnGerarPDF()" style="padding:6px 12px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">🖨️ Gerar PDF / Imprimir</button>
+      </div>
     </div>
+    <div id="absn-periodo-label" style="color:var(--text3);font-size:11px;margin-top:6px"></div>
     <div id="absn-resultado" style="margin-top:14px"></div>
   </div>
 </div>`;
