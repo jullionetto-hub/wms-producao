@@ -968,6 +968,11 @@ td{padding:10px 13px;vertical-align:middle;color:var(--text2)}
 .date-range-sep{color:var(--text3);font-size:12px;flex-shrink:0}
 
 .filter-actions{display:flex;align-items:center;gap:8px;margin-left:auto}
+/* "Filtrar" sem cor de marca — neutro/invertido, no padrão Vercel (o
+   toolbar inteiro já é monocromático; branding reservado pros CTAs
+   de verdade da tela, não pra um filtro). */
+.filter-actions .btn-primary{background:var(--text);color:var(--bg)}
+.filter-actions .btn-primary:hover{background:var(--text2)}
 .btn-icon-outline{
   display:inline-flex;align-items:center;justify-content:center;
   width:33px;height:33px;flex-shrink:0;
