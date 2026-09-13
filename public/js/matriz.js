@@ -133,8 +133,7 @@ function _mzRenderTabs() {
     ['carreira','Plano de Carreira'],
   ];
   document.getElementById('mz-tabs').innerHTML = `<div style="display:flex;gap:4px;flex-wrap:wrap;padding-bottom:8px">` + tabs.map(([id,label]) => `
-    <button onclick="mzTrocarTab('${id}')"
-      style="padding:7px 13px;background:${_mzTab===id?'var(--accent)':'var(--surface2)'};border:none;border-radius:20px;color:${_mzTab===id?'#fff':'var(--text2)'};font-size:11.5px;font-weight:700;cursor:pointer;white-space:nowrap">
+    <button onclick="mzTrocarTab('${id}')" class="rel-turno-btn${_mzTab===id?' ativo':''}">
       ${label}
     </button>`).join('') + `</div>`;
 }
@@ -332,10 +331,10 @@ function _mzRenderRaci() {
       }),
     ];
     categoriaCardsHtml = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:14px">
-      ${cards.map(c => `<div onclick="_mzRaciCategoriaFiltro='${c.nome.replace(/'/g,"\\'")}';_mzRenderRaci()" style="cursor:pointer;background:${c.nome===_mzRaciCategoriaFiltro?'var(--accent)':'var(--surface2)'};border-radius:10px;padding:10px 12px">
-        <div style="font-size:11px;font-weight:700;color:${c.nome===_mzRaciCategoriaFiltro?'#fff':'var(--text)'}">${pfEsc(c.nome)}</div>
-        <div style="font-size:18px;font-weight:800;color:${c.nome===_mzRaciCategoriaFiltro?'#fff':'var(--text)'};margin-top:2px">${c.count}<span style="font-size:10px;font-weight:600"> ativ.</span></div>
-        <div style="font-size:9.5px;color:${c.nome===_mzRaciCategoriaFiltro?'rgba(255,255,255,.8)':'var(--text3)'};margin-top:2px">${_mzBreakdownLabel(area,c.counts)}</div>
+      ${cards.map(c => `<div onclick="_mzRaciCategoriaFiltro='${c.nome.replace(/'/g,"\\'")}';_mzRenderRaci()" style="cursor:pointer;background:${c.nome===_mzRaciCategoriaFiltro?'var(--surface)':'var(--surface2)'};border:1px solid ${c.nome===_mzRaciCategoriaFiltro?'var(--text3)':'var(--border)'};border-radius:10px;padding:10px 12px">
+        <div style="font-size:11px;font-weight:700;color:var(--text)">${pfEsc(c.nome)}</div>
+        <div style="font-size:18px;font-weight:800;color:var(--text);margin-top:2px">${c.count}<span style="font-size:10px;font-weight:600"> ativ.</span></div>
+        <div style="font-size:9.5px;color:var(--text3);margin-top:2px">${_mzBreakdownLabel(area,c.counts)}</div>
       </div>`).join('')}
     </div>`;
     categoriasVisiveis = (_mzRaciCategoriaFiltro==='Todas' ? categorias : categorias.filter(c=>c===_mzRaciCategoriaFiltro))
@@ -430,7 +429,7 @@ function _mzRenderRaci() {
   cont.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
       <div style="display:flex;gap:6px;flex-wrap:wrap">
-        ${_mzRaci.map(a => `<button onclick="_mzRaciAreaId=${a.id};_mzRaciCategoriaFiltro='Todas';_mzRenderRaci()" style="padding:6px 12px;background:${a.id===_mzRaciAreaId?'var(--accent)':'var(--surface2)'};border:none;border-radius:20px;color:${a.id===_mzRaciAreaId?'#fff':'var(--text2)'};font-size:11.5px;font-weight:700;cursor:pointer">${pfEsc(a.nome)}</button>`).join('')}
+        ${_mzRaci.map(a => `<button onclick="_mzRaciAreaId=${a.id};_mzRaciCategoriaFiltro='Todas';_mzRenderRaci()" class="rel-turno-btn${a.id===_mzRaciAreaId?' ativo':''}">${pfEsc(a.nome)}</button>`).join('')}
       </div>
       ${podeEditar?`<button class="btn btn-outline btn-sm" onclick="mzAbrirNovaAreaRaci()">+ Nova área</button>`:''}
     </div>

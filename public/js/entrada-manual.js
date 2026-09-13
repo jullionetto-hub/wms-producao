@@ -812,8 +812,8 @@ function renderizarPagEntradaManual(containerId) {
           <input id="em-busca" placeholder="Código ou descrição..." oninput="_emBusca=this.value;_emPagina=1;emRenderizarTabela()"
             style="flex:1;min-width:160px;padding:7px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;outline:none">
           ${['todos','pendente','abastecido','parcial','nao_encontrado'].map(s=>`
-          <button onclick="_emFiltroStatus='${s}';_emPagina=1;emRenderizarTabela();this.closest('.card').querySelectorAll('button').forEach(b=>b.style.background='var(--surface2)');this.style.background='var(--accent)';this.style.color='#fff'"
-            style="padding:6px 12px;border-radius:20px;border:1px solid var(--border);background:${s==='todos'?'var(--accent)':'var(--surface2)'};color:${s==='todos'?'#fff':'var(--text3)'};font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap">
+          <button onclick="_emFiltroStatus='${s}';_emPagina=1;emRenderizarTabela();this.closest('.card').querySelectorAll('.rel-turno-btn').forEach(b=>b.classList.remove('ativo'));this.classList.add('ativo')"
+            class="rel-turno-btn${s==='todos'?' ativo':''}">
             ${s==='todos'?'Todos':emStatusLabel[s]}
           </button>`).join('')}
         </div>
@@ -1405,8 +1405,8 @@ function invRenderizarSessaoAtiva() {
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         ${['todos','pendente','ok','divergente'].map(st=>`
-        <button onclick="_invFiltroStatus='${st}';_invPagina=1;invRenderizarSessaoAtiva();this.closest('.card').querySelectorAll('[data-sf]').forEach(b=>{b.style.background='var(--surface2)';b.style.color='var(--text3)'});this.style.background='var(--accent)';this.style.color='#fff'" data-sf="1"
-          style="padding:6px 12px;border-radius:20px;border:1px solid var(--border);background:${st==='todos'?'var(--accent)':'var(--surface2)'};color:${st==='todos'?'#fff':'var(--text3)'};font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap">
+        <button onclick="_invFiltroStatus='${st}';_invPagina=1;invRenderizarSessaoAtiva()"
+          class="rel-turno-btn${st===_invFiltroStatus?' ativo':''}">
           ${st==='todos'?'Todos':SL[st]||st}
         </button>`).join('')}
       </div>
