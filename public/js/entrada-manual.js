@@ -26,7 +26,10 @@ const emToast = (msg, tipo='info') => typeof toast === 'function' ? toast(msg, t
 const emFmt   = d => { if (!d) return '—'; const [y,m,dy] = d.split('-'); return `${dy}/${m}/${y}`; };
 const emFmtPct= (a,b) => b > 0 ? Math.round((a/b)*100) : 0;
 const emStatusLabel = { pendente:'Pendente', abastecido:'Abastecido', parcial:'Parcial', nao_encontrado:'Não encontrado' };
-const emStatusClr   = { pendente:'#64748b', abastecido:'#22c55e', parcial:'#f59e0b', nao_encontrado:'#ef4444' };
+// Hex literal (não var()) de propósito — usado abaixo concatenado com sufixo de
+// opacidade (${clr}22), que só funciona com string hex crua. Mesmas cores de
+// --text3/--green/--amber/--red em app.css.
+const emStatusClr   = { pendente:'#a1a1aa', abastecido:'#57B981', parcial:'#E0A83E', nao_encontrado:'#C9524F' };
 
 // ── Carregar lista de lotes ───────────────────────────────────────────────
 async function carregarEntradaManualLotes() {
@@ -50,7 +53,7 @@ async function carregarEntradaManualLotes() {
 
   wrap.innerHTML = lotes.map(l => {
     const pct = emFmtPct(l.itens_concluidos, l.total_itens);
-    const barClr = pct === 100 ? '#22c55e' : pct >= 60 ? '#f59e0b' : '#3b82f6';
+    const barClr = pct === 100 ? 'var(--green)' : pct >= 60 ? 'var(--amber)' : 'var(--info)';
     const statusChip = l.status === 'concluido'
       ? `<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--green)"><span style="width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0;display:inline-block"></span>Concluído</span>`
       : `<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--amber)"><span style="width:7px;height:7px;border-radius:50%;background:var(--amber);flex-shrink:0;display:inline-block"></span>Em andamento</span>`;
@@ -72,10 +75,10 @@ async function carregarEntradaManualLotes() {
         </div>
       </div>
       <div style="display:flex;gap:12px;margin-top:10px;font-size:11px">
-        <span style="color:#22c55e">${l.itens_abastecidos} abast.</span>
-        <span style="color:#f59e0b">${l.itens_parciais} parcial</span>
-        <span style="color:#64748b"><i class="ti ti-square" aria-hidden="true"></i> ${l.itens_pendentes} pend.</span>
-        <span style="color:#ef4444">${l.itens_nao_encontrados} n/enc.</span>
+        <span style="color:var(--green)">${l.itens_abastecidos} abast.</span>
+        <span style="color:var(--amber)">${l.itens_parciais} parcial</span>
+        <span style="color:var(--text3)"><i class="ti ti-square" aria-hidden="true"></i> ${l.itens_pendentes} pend.</span>
+        <span style="color:var(--red)">${l.itens_nao_encontrados} n/enc.</span>
         <span style="margin-left:auto;color:var(--accent);font-weight:700;cursor:pointer" onclick="event.stopPropagation();emExcluirLote(${l.id})"><i class="ti ti-trash" aria-hidden="true"></i></span>
       </div>
     </div>`;
@@ -120,7 +123,7 @@ function emAtualizarProgresso() {
   const total     = _emItens.length;
   const concluidos= _emItens.filter(i => i.status === 'abastecido' || i.status === 'parcial').length;
   const pct       = emFmtPct(concluidos, total);
-  const barClr    = pct === 100 ? '#22c55e' : pct >= 60 ? '#f59e0b' : '#3b82f6';
+  const barClr    = pct === 100 ? 'var(--green)' : pct >= 60 ? 'var(--amber)' : 'var(--info)';
   const el = document.getElementById('em-progress-bar');
   const et = document.getElementById('em-progress-txt');
   if (el) { el.style.width = pct+'%'; el.style.background = barClr; }
@@ -172,11 +175,13 @@ function emRenderizarTabela() {
 
 // ── HTML de uma linha (desktop) ───────────────────────────────────────────
 function emRowHTML(it) {
-  const clr = emStatusClr[it.status] || '#64748b';
-  const endClr = it.endereco ? '#22c55e' : '#64748b';
+  const clr = emStatusClr[it.status] || '#a1a1aa';
+  // endClr também é hex literal de propósito — concatenado com sufixo de
+  // opacidade (${endClr}18) logo abaixo. Mesmas cores de --green/--text3.
+  const endClr = it.endereco ? '#57B981' : '#a1a1aa';
   return `
   <tr id="em-tr-${it.id}" style="border-bottom:1px solid var(--border)">
-    <td style="padding:8px 10px;font-family:monospace;font-size:11px;font-weight:800;color:#f97316">${it.codigo}</td>
+    <td style="padding:8px 10px;font-family:monospace;font-size:11px;font-weight:800;color:var(--orange)">${it.codigo}</td>
     <td style="padding:8px 10px;font-size:11px;color:var(--text);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${it.descricao||''}">${it.descricao||'—'}</td>
     <td style="padding:8px 10px;text-align:center;font-weight:700">${it.quantidade_esperada}</td>
     <td style="padding:8px 10px;text-align:center">
@@ -209,13 +214,13 @@ function emRowHTML(it) {
 
 // ── HTML de um card (mobile) ──────────────────────────────────────────────
 function emCardHTML(it) {
-  const clr = emStatusClr[it.status] || '#64748b';
-  const endClr = it.endereco ? '#22c55e' : 'var(--text3)';
+  const clr = emStatusClr[it.status] || '#a1a1aa';
+  const endClr = it.endereco ? 'var(--green)' : 'var(--text3)';
   return `
   <div id="em-card-${it.id}" style="background:var(--surface);border:1px solid var(--border);border-radius:14px;margin-bottom:8px;overflow:hidden">
     <div style="padding:10px 14px 8px;display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
       <div style="min-width:0">
-        <div style="font-family:monospace;font-size:11px;font-weight:800;color:#f97316">${it.codigo}</div>
+        <div style="font-family:monospace;font-size:11px;font-weight:800;color:var(--orange)">${it.codigo}</div>
         <div style="font-size:12px;color:var(--text);margin-top:2px;line-height:1.4">${it.descricao||'—'}</div>
       </div>
       <span style="background:${clr}22;color:${clr};border-radius:20px;padding:3px 8px;font-size:9px;font-weight:800;flex-shrink:0;white-space:nowrap">${emStatusLabel[it.status]||it.status}</span>
@@ -251,11 +256,11 @@ function emCardHTML(it) {
     </div>
     ${it.status !== 'pendente'
       ? `<button id="em-mbtn-${it.id}" onclick="emSalvarItem(${it.id},true)" data-saved="true" disabled
-          style="display:block;width:calc(100% - 28px);margin:8px 14px 12px;background:#16a34a;color:#fff;border:none;border-radius:10px;padding:11px;font-size:13px;font-weight:800;cursor:not-allowed;opacity:.85">
+          style="display:block;width:calc(100% - 28px);margin:8px 14px 12px;background:var(--green);color:#fff;border:none;border-radius:10px;padding:11px;font-size:13px;font-weight:800;cursor:not-allowed;opacity:.85">
           <i class="ti ti-check" aria-hidden="true"></i> Salvo
         </button>`
       : `<button id="em-mbtn-${it.id}" onclick="emSalvarItem(${it.id},true)"
-          style="display:block;width:calc(100% - 28px);margin:8px 14px 12px;background:#f97316;color:#fff;border:none;border-radius:10px;padding:11px;font-size:13px;font-weight:800;cursor:pointer">
+          style="display:block;width:calc(100% - 28px);margin:8px 14px 12px;background:var(--orange);color:#fff;border:none;border-radius:10px;padding:11px;font-size:13px;font-weight:800;cursor:pointer">
           Salvar
         </button>`}
   </div>`;
@@ -279,7 +284,7 @@ function emQtdChange(id, val, mobile = false) {
   // Reativa botão de salvar se estava no estado "já salvo"
   const btn = document.getElementById(mobile ? `em-mbtn-${id}` : `em-btn-save-${id}`);
   if (btn && btn.dataset.saved === 'true') {
-    btn.disabled = false; btn.dataset.saved = ''; btn.style.background = '#f97316'; btn.innerHTML = 'Salvar';
+    btn.disabled = false; btn.dataset.saved = ''; btn.style.background = 'var(--orange)'; btn.innerHTML = 'Salvar';
   }
 }
 
@@ -300,14 +305,14 @@ function emEnderecoInput(id, inp, mobile = false) {
   }
   const v = emValidarEndereco(val);
   if (v.ok) {
-    inp.style.borderColor = '#22c55e'; inp.style.color = '#22c55e';
+    inp.style.borderColor = 'var(--green)'; inp.style.color = 'var(--green)';
     if (ic)   ic.textContent  = 'OK';
-    if (hint) hint.style.color = '#22c55e';
+    if (hint) hint.style.color = 'var(--green)';
     if (hint) hint.textContent = 'Formato válido';
   } else {
-    inp.style.borderColor = '#ef4444'; inp.style.color = '#ef4444';
+    inp.style.borderColor = 'var(--red)'; inp.style.color = 'var(--red)';
     if (ic)   ic.textContent  = 'NG';
-    if (hint) hint.style.color = '#ef4444';
+    if (hint) hint.style.color = 'var(--red)';
     if (hint) hint.textContent = 'Inválido. Ex: D106, ZA387, C099/VERT-C02-CX18';
   }
 
@@ -329,10 +334,10 @@ async function emEnderecoBlur(id, inp, mobile = false) {
   const hintId = mobile ? `em-mend-hint-${id}` : `em-end-hint-${id}`;
   const hint   = document.getElementById(hintId);
   if (hist && hist.endereco && hist.endereco.toUpperCase() !== val) {
-    inp.style.borderColor = '#f59e0b'; inp.style.color = '#f59e0b';
-    if (hint) { hint.style.color = '#f59e0b'; hint.textContent = `Histórico indica: ${hist.endereco}`; }
+    inp.style.borderColor = 'var(--amber)'; inp.style.color = 'var(--amber)';
+    if (hint) { hint.style.color = 'var(--amber)'; hint.textContent = `Histórico indica: ${hist.endereco}`; }
   } else if (hist && hist.endereco) {
-    if (hint) { hint.style.color = '#22c55e'; hint.textContent = 'Confirmado pelo histórico'; }
+    if (hint) { hint.style.color = 'var(--green)'; hint.textContent = 'Confirmado pelo histórico'; }
   }
 }
 
@@ -399,7 +404,7 @@ async function emSalvarItem(id, mobile = false) {
   if (savedBtn) {
     savedBtn.disabled = true;
     savedBtn.dataset.saved = 'true';
-    savedBtn.style.background = '#16a34a';
+    savedBtn.style.background = 'var(--green)';
     savedBtn.innerHTML = '<i class="ti ti-check" aria-hidden="true"></i> Salvo';
   }
 
@@ -415,20 +420,23 @@ function emConfirmarQtd(codigo, qtd, esp, tipo = 'maior') {
     el.id = mid;
     el.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:2000;display:flex;align-items:center;justify-content:center;padding:20px';
     const isMaior = tipo === 'maior';
-    const cor     = isMaior ? '#dc2626' : '#d97706';
-    const bgCor   = isMaior ? '#fff7ed' : '#fefce8';
-    const borda   = isMaior ? '#f97316' : '#f59e0b';
+    const cor     = isMaior ? 'var(--red)' : 'var(--amber)';
+    // bgCor era fundo sólido claro (tema pré-redesign); vira tom translúcido
+    // do laranja/âmbar para funcionar sobre o modal escuro. Mesmo padrão do
+    // badge "Prime" em performance-dash.js (rgba com --orange/--amber).
+    const bgCor   = isMaior ? 'rgba(251,146,60,.12)' : 'rgba(224,168,62,.12)';
+    const borda   = isMaior ? 'var(--orange)' : 'var(--amber)';
     const titulo  = isMaior ? 'Quantidade acima do esperado' : 'Quantidade abaixo do esperado';
     const msg     = isMaior ? `Realmente chegaram <b>${qtd}</b> unidades?` : `Confirma salvar com quantidade incompleta (${qtd} de ${esp})?`;
-    const corBtn  = isMaior ? '#16a34a' : '#d97706';
+    const corBtn  = isMaior ? 'var(--green)' : 'var(--amber)';
     el.innerHTML = `
       <div style="background:var(--surface);border-radius:16px;padding:24px;width:100%;max-width:360px;box-shadow:0 8px 32px rgba(0,0,0,.3)">
         
         <div style="font-size:15px;font-weight:800;color:var(--text);text-align:center;margin-bottom:8px">${titulo}</div>
         <div style="background:${bgCor};border:1.5px solid ${borda};border-radius:10px;padding:14px;margin-bottom:16px;text-align:center">
-          <div style="font-size:12px;font-weight:700;color:#92400e;margin-bottom:6px">${codigo}</div>
+          <div style="font-size:12px;font-weight:700;color:var(--amber);margin-bottom:6px">${codigo}</div>
           <div style="display:flex;justify-content:center;gap:24px">
-            <div><div style="font-size:10px;color:#92400e;font-weight:700">Esperado</div><div style="font-size:28px;font-weight:900;color:#92400e">${esp}</div></div>
+            <div><div style="font-size:10px;color:var(--amber);font-weight:700">Esperado</div><div style="font-size:28px;font-weight:900;color:var(--amber)">${esp}</div></div>
             <div style="font-size:24px;color:${borda};align-self:center">→</div>
             <div><div style="font-size:10px;color:${cor};font-weight:700">Informado</div><div style="font-size:28px;font-weight:900;color:${cor}">${qtd}</div></div>
           </div>
@@ -476,7 +484,7 @@ async function emSalvarTudo() {
     if (btn) { btn.disabled = false; btn.innerHTML = 'Salvar Tudo'; }
     const linhas = acimaDaEsperança.map(p => {
       const it = _emItens.find(i => i.id === p.id);
-      return `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border)"><span style="font-family:monospace;font-size:12px;color:#f97316">${it.codigo}</span><span style="font-size:12px">esp. <b>${it.quantidade_esperada}</b> → inf. <b style="color:#dc2626">${p.quantidade_abastecida}</b></span></div>`;
+      return `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border)"><span style="font-family:monospace;font-size:12px;color:var(--orange)">${it.codigo}</span><span style="font-size:12px">esp. <b>${it.quantidade_esperada}</b> → inf. <b style="color:var(--red)">${p.quantidade_abastecida}</b></span></div>`;
     }).join('');
     const modalId = 'em-modal-bulk-confirm';
     document.getElementById(modalId)?.remove();
@@ -491,7 +499,7 @@ async function emSalvarTudo() {
         <div style="font-size:13px;color:var(--text2);text-align:center;margin-bottom:20px">Confirma salvar com essas quantidades?</div>
         <div style="display:flex;gap:10px">
           <button id="em-bk-nao" style="flex:1;padding:13px;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;color:var(--text)"><i class="ti ti-x" aria-hidden="true"></i> Corrigir</button>
-          <button id="em-bk-sim" style="flex:1;padding:13px;background:#16a34a;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;color:#fff"><i class="ti ti-check" aria-hidden="true"></i> Confirmar tudo</button>
+          <button id="em-bk-sim" style="flex:1;padding:13px;background:var(--green);border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;color:#fff"><i class="ti ti-check" aria-hidden="true"></i> Confirmar tudo</button>
         </div>
       </div>`;
     document.body.appendChild(el);
@@ -609,12 +617,12 @@ function emMostrarPreview(itens, nomeArq) {
   <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px 16px">
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px">
       <div>
-        <div style="font-size:13px;font-weight:800;color:#22c55e">${nomeArq}</div>
+        <div style="font-size:13px;font-weight:800;color:var(--green)">${nomeArq}</div>
         <div style="font-size:11px;color:var(--text3);margin-top:2px">${itens.length} itens detectados</div>
       </div>
       <div style="display:flex;gap:8px">
         <button onclick="emConfirmarImport(window.__emItensPreview)"
-          style="background:#22c55e;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer">
+          style="background:var(--green);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer">
           Importar ${itens.length} itens
         </button>
         <button onclick="emResetUpload()"
@@ -623,8 +631,10 @@ function emMostrarPreview(itens, nomeArq) {
         </button>
       </div>
     </div>
-    ${semEnd ? `<div style="font-size:11px;color:#f59e0b;background:#78350f22;border-radius:6px;padding:6px 10px;margin-bottom:8px">${semEnd} item(ns) sem endereço — poderão ser preenchidos depois.</div>` : ''}
-    ${endInv ? `<div style="font-size:11px;color:#ef4444;background:#7f1d1d22;border-radius:6px;padding:6px 10px;margin-bottom:8px">${endInv} endereço(s) com formato inválido — serão importados e deverão ser corrigidos.</div>` : ''}
+    <!-- Fundos abaixo usam hex+alpha de 8 dígitos (##RRGGBBAA), não var(), pois
+         var(--x)+sufixo gera CSS inválido. Bases alinhadas a --amber/--red. -->
+    ${semEnd ? `<div style="font-size:11px;color:var(--amber);background:#E0A83E22;border-radius:6px;padding:6px 10px;margin-bottom:8px">${semEnd} item(ns) sem endereço — poderão ser preenchidos depois.</div>` : ''}
+    ${endInv ? `<div style="font-size:11px;color:var(--red);background:#C9524F22;border-radius:6px;padding:6px 10px;margin-bottom:8px">${endInv} endereço(s) com formato inválido — serão importados e deverão ser corrigidos.</div>` : ''}
     <div style="overflow-x:auto;border-radius:8px;border:1px solid var(--border);max-height:200px;overflow-y:auto">
       <table style="width:100%;border-collapse:collapse;font-size:11px">
         <thead style="position:sticky;top:0;background:var(--surface2)">
@@ -638,9 +648,9 @@ function emMostrarPreview(itens, nomeArq) {
         <tbody>
           ${itens.slice(0,50).map(it => {
             const vEnd = it.endereco ? emValidarEndereco(it.endereco) : null;
-            const endClr = !it.endereco ? '#64748b' : vEnd?.ok ? '#22c55e' : '#ef4444';
+            const endClr = !it.endereco ? 'var(--text3)' : vEnd?.ok ? 'var(--green)' : 'var(--red)';
             return `<tr style="border-bottom:1px solid var(--border)">
-              <td style="padding:5px 10px;font-family:monospace;font-weight:700;color:#f97316">${it.codigo}</td>
+              <td style="padding:5px 10px;font-family:monospace;font-weight:700;color:var(--orange)">${it.codigo}</td>
               <td style="padding:5px 10px;color:var(--text)">${it.descricao||'—'}</td>
               <td style="padding:5px 10px;text-align:center;font-weight:700">${it.quantidade}</td>
               <td style="padding:5px 10px;font-family:monospace;font-weight:700;color:${endClr}">${it.endereco||'—'}</td>
@@ -774,7 +784,7 @@ function renderizarPagEntradaManual(containerId) {
           <div id="em-lote-titulo" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
         </div>
         <div style="display:flex;gap:8px;justify-content:flex-end">
-          <button onclick="emExportarCSV()" style="background:#16a34a;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">Excel</button>
+          <button onclick="emExportarCSV()" style="background:var(--green);color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">Excel</button>
           <button id="em-btn-salvar-tudo" onclick="emSalvarTudo()" style="background:var(--surface2);color:var(--accent);border:1px solid var(--border);border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">Salvar Tudo</button>
         </div>
       </div>
@@ -785,10 +795,10 @@ function renderizarPagEntradaManual(containerId) {
           <span>Progresso</span><span id="em-progress-txt">0/0</span>
         </div>
         <div style="background:var(--surface2);border-radius:6px;height:8px;overflow:hidden;margin-bottom:10px">
-          <div id="em-progress-bar" style="height:100%;width:0%;background:#3b82f6;border-radius:6px;transition:width .4s"></div>
+          <div id="em-progress-bar" style="height:100%;width:0%;background:var(--info);border-radius:6px;transition:width .4s"></div>
         </div>
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">
-          ${[['ti-circle','Pendentes','em-stat-pend','#64748b'],['ti-circle-check','Abastecidos','em-stat-abast','#22c55e'],['ti-alert-triangle','Parciais','em-stat-parc','#f59e0b'],['ti-x','Não enc.','em-stat-nenc','#ef4444']].map(([ic,lb,id,c])=>`
+          ${[['ti-circle','Pendentes','em-stat-pend','var(--text3)'],['ti-circle-check','Abastecidos','em-stat-abast','var(--green)'],['ti-alert-triangle','Parciais','em-stat-parc','var(--amber)'],['ti-x','Não enc.','em-stat-nenc','var(--red)']].map(([ic,lb,id,c])=>`
           <div style="background:var(--surface2);border-radius:8px;padding:8px;text-align:center;border:1px solid var(--border)">
             <div style="font-size:18px;font-weight:900;color:${c}" id="${id}">0</div>
             <div style="font-size:8px;color:var(--text3);font-weight:700;letter-spacing:.2px"><i class="ti ${ic}" aria-hidden="true"></i> ${lb}</div>
@@ -1009,10 +1019,13 @@ function bcRenderizar(p) {
 
   div.innerHTML = `
     <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px">
-      <div style="font-family:monospace;font-size:12px;font-weight:800;color:#f97316">${p.codigo}</div>
+      <div style="font-family:monospace;font-size:12px;font-weight:800;color:var(--orange)">${p.codigo}</div>
       <div style="font-size:14px;color:var(--text);margin:4px 0">${p.nome||'—'}</div>
       <div style="font-size:11px;color:var(--text3);margin-bottom:14px">Saldo: ${p.saldo} · Disp.: ${p.disponivel} · ${p.localizacao||'—'}</div>
       ${temCB ? `
+      <!-- Fundo branco intencional: código de barras (JsBarcode) precisa de alto
+           contraste pra ser lido pelo leitor, independente do tema. #666 é o
+           texto sobre esse fundo branco — sem token equivalente aqui. -->
       <div style="text-align:center;background:#fff;border-radius:12px;padding:24px 16px;margin-bottom:10px">
         <svg id="bc-svg" style="max-width:100%;height:auto"></svg>
         <div style="font-size:13px;color:#666;margin-top:10px;font-family:monospace;letter-spacing:2px">${cb}</div>
@@ -1120,10 +1133,10 @@ function invRenderizarSessoes() {
 
 function invSessaoCardHTML(s) {
   const pct   = s.total_itens > 0 ? Math.round((s.contados / s.total_itens) * 100) : 0;
-  const barClr= pct === 100 ? '#22c55e' : pct >= 60 ? '#f59e0b' : '#3b82f6';
+  const barClr= pct === 100 ? 'var(--green)' : pct >= 60 ? 'var(--amber)' : 'var(--info)';
   const chip  = s.status === 'concluido'
-    ? `<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:#16A34A"><span style="width:7px;height:7px;border-radius:50%;background:#16A34A;flex-shrink:0;display:inline-block"></span>Concluído</span>`
-    : `<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:#D97706"><span style="width:7px;height:7px;border-radius:50%;background:#D97706;flex-shrink:0;display:inline-block"></span>Em andamento</span>`;
+    ? `<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--green)"><span style="width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0;display:inline-block"></span>Concluído</span>`
+    : `<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--amber)"><span style="width:7px;height:7px;border-radius:50%;background:var(--amber);flex-shrink:0;display:inline-block"></span>Em andamento</span>`;
   const dt = s.criado_em ? new Date(s.criado_em).toLocaleDateString('pt-BR') : '—';
   return `
     <div class="card" style="margin-bottom:10px;padding:14px 16px;cursor:pointer" onclick="invAbrirSessao(${s.id})">
@@ -1135,7 +1148,7 @@ function invSessaoCardHTML(s) {
         <div style="display:flex;align-items:center;gap:8px">
           ${chip}
           <a href="/inventario/sessoes/${s.id}/exportar" onclick="event.stopPropagation()" title="Exportar CSV"
-            style="color:#22c55e;font-size:15px;text-decoration:none">CSV</a>
+            style="color:var(--green);font-size:15px;text-decoration:none">CSV</a>
           <span onclick="event.stopPropagation();invExcluirSessao(${s.id})" title="Excluir"
             style="color:var(--accent);font-size:14px;cursor:pointer"><i class="ti ti-trash" aria-hidden="true"></i></span>
         </div>
@@ -1235,7 +1248,7 @@ function invRenderizarDashboard() {
   if (!wrap || !_invSessaoAtiva) return;
   const s = _invSessaoAtiva;
   const pct    = s.total_itens > 0 ? Math.round(((s.contados||0) / s.total_itens) * 100) : 0;
-  const barClr = pct === 100 ? '#22c55e' : pct >= 60 ? '#f59e0b' : '#3b82f6';
+  const barClr = pct === 100 ? 'var(--green)' : pct >= 60 ? 'var(--amber)' : 'var(--info)';
   const stats  = { ok:0, divergente:0, pendente:0, aMais:0, aMenos:0 };
   _invItens.forEach(i => {
     if (stats[i.status]!==undefined) stats[i.status]++;
@@ -1247,8 +1260,8 @@ function invRenderizarDashboard() {
   });
   const acuracia = s.total_itens > 0 ? Math.round((stats.ok / s.total_itens) * 100) : 0;
   const chip = s.status === 'concluido'
-    ? `<span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:#16A34A"><span style="width:8px;height:8px;border-radius:50%;background:#16A34A;flex-shrink:0;display:inline-block"></span>Concluído</span>`
-    : `<span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:#D97706"><span style="width:8px;height:8px;border-radius:50%;background:#D97706;flex-shrink:0;display:inline-block"></span>Em andamento</span>`;
+    ? `<span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--green)"><span style="width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0;display:inline-block"></span>Concluído</span>`
+    : `<span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--amber)"><span style="width:8px;height:8px;border-radius:50%;background:var(--amber);flex-shrink:0;display:inline-block"></span>Em andamento</span>`;
   const dt     = s.criado_em    ? new Date(s.criado_em).toLocaleString('pt-BR')    : '—';
   const dtConc = s.concluido_em ? new Date(s.concluido_em).toLocaleString('pt-BR') : null;
 
@@ -1279,7 +1292,7 @@ function invRenderizarDashboard() {
       </div>
 
       <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px">
-        ${[['○','Pendentes',stats.pendente,'#64748b'],['●','OK',stats.ok,'#22c55e'],['+','A mais',stats.aMais,'#f97316'],['-','A menos',stats.aMenos,'#ef4444'],[`${acuracia}%`,'Acurácia','','#38bdf8']].map(([ic,lb,n,c])=>`
+        ${[['○','Pendentes',stats.pendente,'var(--text3)'],['●','OK',stats.ok,'var(--green)'],['+','A mais',stats.aMais,'var(--orange)'],['-','A menos',stats.aMenos,'var(--red)'],[`${acuracia}%`,'Acurácia','','var(--info)']].map(([ic,lb,n,c])=>`
         <div style="background:var(--surface2);border-radius:10px;padding:12px 8px;text-align:center;border:1px solid var(--border)">
           <div style="font-size:${lb==='Acurácia'?'18px':'22px'};font-weight:900;color:${c}">${lb==='Acurácia'?ic:n}</div>
           <div style="font-size:8px;color:var(--text3);font-weight:700;letter-spacing:.4px;margin-top:3px">${lb==='Acurácia'?'':ic+' '}${lb}</div>
@@ -1294,7 +1307,7 @@ function invRenderizarDashboard() {
       </button>
       ${s.status !== 'concluido' ? `
       <button onclick="invConcluir()"
-        style="background:#16a34a;color:#fff;border:none;border-radius:12px;padding:14px 22px;font-size:14px;font-weight:700;cursor:pointer">
+        style="background:var(--green);color:#fff;border:none;border-radius:12px;padding:14px 22px;font-size:14px;font-weight:700;cursor:pointer">
         Concluir
       </button>` : ''}
       <button onclick="invExcluirSessao(${s.id})"
@@ -1313,10 +1326,13 @@ function invRenderizarSessaoAtiva() {
   if (!wrap || !_invSessaoAtiva) return;
   const s = _invSessaoAtiva;
   const pct    = s.total_itens > 0 ? Math.round(((s.contados||0) / s.total_itens) * 100) : 0;
-  const barClr = pct === 100 ? '#22c55e' : pct >= 60 ? '#f59e0b' : '#3b82f6';
+  const barClr = pct === 100 ? 'var(--green)' : pct >= 60 ? 'var(--amber)' : 'var(--info)';
   const isMob = window.innerWidth < 768;
   const SL = { ok:'OK', divergente:'Divergente', pendente:'Pendente' };
-  const SC = { ok:'#22c55e', divergente:'#f59e0b', pendente:'#64748b' };
+  // Hex literal (não var()) de propósito — usado com sufixo de opacidade
+  // concatenado (${clr}22) em invRowHTML/invMobileCardHTML. Mesmas cores de
+  // --green/--amber/--text3 em app.css.
+  const SC = { ok:'#57B981', divergente:'#E0A83E', pendente:'#a1a1aa' };
 
   const itens = _invItens.filter(i => {
     const mS = _invFiltroStatus === 'todos' || i.status === _invFiltroStatus;
@@ -1348,7 +1364,7 @@ function invRenderizarSessaoAtiva() {
       </div>
       <div style="display:flex;gap:6px">
         ${s.status !== 'concluido' ? `<button onclick="invConcluir()"
-          style="background:#16a34a;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:11px;font-weight:700;cursor:pointer">Concluir</button>` : ''}
+          style="background:var(--green);color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:11px;font-weight:700;cursor:pointer">Concluir</button>` : ''}
         <a href="/inventario/sessoes/${s.id}/exportar"
           style="background:var(--surface2);color:var(--accent);border:1px solid var(--border);border-radius:8px;padding:7px 14px;font-size:11px;font-weight:700;cursor:pointer;text-decoration:none;display:inline-block">CSV</a>
       </div>
@@ -1362,7 +1378,7 @@ function invRenderizarSessaoAtiva() {
         <div style="height:100%;width:${pct}%;background:${barClr};border-radius:6px;transition:width .4s"></div>
       </div>
       <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px">
-        ${[['○','Pendentes',stats.pendente,'#64748b'],['●','OK',stats.ok,'#22c55e'],['+','A mais',stats.aMais,'#f97316'],['-','A menos',stats.aMenos,'#ef4444'],[`${acuracia}%`,'Acurácia','','#38bdf8']].map(([ic,lb,n,c])=>`
+        ${[['○','Pendentes',stats.pendente,'var(--text3)'],['●','OK',stats.ok,'var(--green)'],['+','A mais',stats.aMais,'var(--orange)'],['-','A menos',stats.aMenos,'var(--red)'],[`${acuracia}%`,'Acurácia','','var(--info)']].map(([ic,lb,n,c])=>`
         <div style="background:var(--surface2);border-radius:8px;padding:8px;text-align:center;border:1px solid var(--border)">
           <div style="font-size:${lb==='Acurácia'?'16px':'18px'};font-weight:900;color:${c}">${lb==='Acurácia'?ic:n}</div>
           <div style="font-size:8px;color:var(--text3);font-weight:700;letter-spacing:.5px">${lb==='Acurácia'?'':''+ic+' '}${lb}</div>
@@ -1382,7 +1398,7 @@ function invRenderizarSessaoAtiva() {
           ${[...new Set(_invItens.map(i=>invExtrairRua(i.localizacao)).filter(Boolean))].sort().map(r=>`<option value="${r}" ${_invFiltroRua===r?'selected':''}>${r}</option>`).join('')}
         </select>
         ${s.status !== 'concluido' ? `<button onclick="invAbrirColetor()"
-          style="padding:7px 12px;border-radius:8px;border:none;background:#7c3aed;color:#fff;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">Coletor</button>` : ''}
+          style="padding:7px 12px;border-radius:8px;border:none;background:var(--indigo);color:#fff;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">Coletor</button>` : ''}
         <button onclick="invSincronizarEnderecos()"
           title="Atualiza endereços a partir do catálogo importado"
           style="padding:7px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text3);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">Sync</button>
@@ -1428,13 +1444,13 @@ function invRenderizarSessaoAtiva() {
 
 function invRowHTML(it, SL, SC) {
   const concluido = _invSessaoAtiva?.status === 'concluido';
-  const clr = SC[it.status] || '#64748b';
+  const clr = SC[it.status] || '#a1a1aa';
   const dif = it.qtd_contada != null ? (parseFloat(it.qtd_contada) - parseFloat(it.saldo_sistema)) : null;
   const difStr = dif === null ? '—' : (dif > 0 ? `+${dif}` : String(Math.round(dif*100)/100));
-  const difClr = dif === null ? 'var(--text3)' : dif === 0 ? '#22c55e' : dif > 0 ? '#f97316' : '#ef4444';
+  const difClr = dif === null ? 'var(--text3)' : dif === 0 ? 'var(--green)' : dif > 0 ? 'var(--orange)' : 'var(--red)';
   return `
   <tr id="inv-tr-${it.id}" style="border-bottom:1px solid var(--border)">
-    <td style="padding:8px 10px;font-family:monospace;font-size:11px;font-weight:800;color:#f97316">${it.codigo}</td>
+    <td style="padding:8px 10px;font-family:monospace;font-size:11px;font-weight:800;color:var(--orange)">${it.codigo}</td>
     <td style="padding:8px 10px;font-size:11px;color:var(--text);max-width:280px">${it.nome||'—'}</td>
     <td style="padding:8px 10px;font-family:monospace;font-size:11px;color:var(--text3)">${it.localizacao||'—'}</td>
     <td style="padding:8px 10px;text-align:center;font-weight:700">${it.saldo_sistema}</td>
@@ -1505,14 +1521,14 @@ async function invExcluirSessao(id) {
 // ── Card mobile para cada item do inventário ──────────────────────────────
 function invMobileCardHTML(it, SL, SC) {
   const concluido = _invSessaoAtiva?.status === 'concluido';
-  const clr = SC[it.status] || '#64748b';
+  const clr = SC[it.status] || '#a1a1aa';
   const dif = it.qtd_contada != null ? parseFloat(it.qtd_contada) - parseFloat(it.saldo_sistema) : null;
   const difStr = dif === null ? null : (dif > 0 ? `+${dif}` : String(Math.round(dif * 100) / 100));
-  const difClr = dif === null ? '' : dif === 0 ? '#22c55e' : dif > 0 ? '#f97316' : '#ef4444';
+  const difClr = dif === null ? '' : dif === 0 ? 'var(--green)' : dif > 0 ? 'var(--orange)' : 'var(--red)';
   return `
   <div id="inv-tr-${it.id}" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-      <span style="font-family:monospace;font-size:13px;font-weight:900;color:#f97316">${it.codigo}</span>
+      <span style="font-family:monospace;font-size:13px;font-weight:900;color:var(--orange)">${it.codigo}</span>
       <span style="background:${clr}22;color:${clr};border-radius:20px;padding:3px 10px;font-size:10px;font-weight:800">${SL[it.status]||it.status}</span>
     </div>
     <div style="font-size:13px;color:var(--text);line-height:1.4;margin-bottom:8px">${it.nome||'—'}</div>
@@ -1550,50 +1566,50 @@ function invAbrirColetor() {
 
   const modal = document.createElement('div');
   modal.id = 'inv-coletor-modal';
-  modal.style.cssText = 'position:fixed;inset:0;background:#000;z-index:9999;display:flex;flex-direction:column;align-items:center;overflow-y:auto';
+  modal.style.cssText = 'position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;flex-direction:column;align-items:center;overflow-y:auto';
   modal.innerHTML = `
     <style>@keyframes scanPulse{0%,100%{opacity:.5}50%{opacity:1}}</style>
     <div style="width:100%;max-width:500px;padding:16px">
 
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-        <div style="font-size:16px;font-weight:900;color:#fff">Coletor de Dados</div>
-        <button onclick="invColetorCancelar()" style="background:#334155;border:none;border-radius:8px;padding:8px 16px;color:#fff;font-size:12px;font-weight:700;cursor:pointer"><i class="ti ti-x" aria-hidden="true"></i> Fechar</button>
+        <div style="font-size:16px;font-weight:900;color:var(--text)">Coletor de Dados</div>
+        <button onclick="invColetorCancelar()" style="background:var(--surface2);border:none;border-radius:8px;padding:8px 16px;color:var(--text);font-size:12px;font-weight:700;cursor:pointer"><i class="ti ti-x" aria-hidden="true"></i> Fechar</button>
       </div>
 
       <!-- CÂMERA -->
-      <div id="coletor-video-wrap" style="position:relative;border-radius:14px;overflow:hidden;background:#0f172a;margin-bottom:12px">
+      <div id="coletor-video-wrap" style="position:relative;border-radius:14px;overflow:hidden;background:var(--surface2);margin-bottom:12px">
         <video id="coletor-video" autoplay playsinline muted
           style="width:100%;max-height:240px;object-fit:cover;display:block"></video>
-        <div style="position:absolute;inset:0;border:2px solid #7c3aed;border-radius:14px;pointer-events:none"></div>
-        <div style="position:absolute;top:50%;left:8%;right:8%;height:2px;background:#a855f7;box-shadow:0 0 14px #a855f7;animation:scanPulse 1.5s infinite;transform:translateY(-50%);pointer-events:none"></div>
-        <div id="coletor-cam-status" style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.5);padding:6px;text-align:center;font-size:10px;color:#94a3b8">
+        <div style="position:absolute;inset:0;border:2px solid var(--indigo);border-radius:14px;pointer-events:none"></div>
+        <div style="position:absolute;top:50%;left:8%;right:8%;height:2px;background:var(--indigo);box-shadow:0 0 14px var(--indigo);animation:scanPulse 1.5s infinite;transform:translateY(-50%);pointer-events:none"></div>
+        <div id="coletor-cam-status" style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.5);padding:6px;text-align:center;font-size:10px;color:var(--text3)">
           Aguardando câmera...
         </div>
       </div>
 
       <!-- INPUT MANUAL -->
-      <div style="background:#1e293b;border-radius:12px;padding:12px;margin-bottom:12px">
-        <div style="font-size:9px;color:#64748b;font-weight:700;letter-spacing:.2px;margin-bottom:6px">Ou digite / cole o código manualmente</div>
+      <div style="background:var(--surface);border-radius:12px;padding:12px;margin-bottom:12px">
+        <div style="font-size:9px;color:var(--text3);font-weight:700;letter-spacing:.2px;margin-bottom:6px">Ou digite / cole o código manualmente</div>
         <div style="display:flex;gap:8px">
           <input id="coletor-scan-input" type="text" placeholder="Código do produto ou EAN..." inputmode="none"
-            style="flex:1;padding:10px 12px;background:#0f172a;border:2px solid #7c3aed;border-radius:8px;color:#fff;font-size:14px;outline:none;box-sizing:border-box"
+            style="flex:1;padding:10px 12px;background:var(--surface2);border:2px solid var(--indigo);border-radius:8px;color:var(--text);font-size:14px;outline:none;box-sizing:border-box"
             onkeydown="if(event.key==='Enter'){invColetorBuscar()}">
-          <button onclick="invColetorBuscar()" style="padding:10px 16px;background:#7c3aed;border:none;border-radius:8px;color:#fff;font-size:14px;font-weight:700;cursor:pointer">Buscar</button>
+          <button onclick="invColetorBuscar()" style="padding:10px 16px;background:var(--indigo);border:none;border-radius:8px;color:#fff;font-size:14px;font-weight:700;cursor:pointer">Buscar</button>
         </div>
       </div>
 
       <!-- ITEM ENCONTRADO -->
-      <div id="coletor-item-card" style="display:none;background:#1e293b;border-radius:12px;padding:16px;margin-bottom:12px">
+      <div id="coletor-item-card" style="display:none;background:var(--surface);border-radius:12px;padding:16px;margin-bottom:12px">
         <div id="coletor-item-info" style="margin-bottom:12px"></div>
-        <div style="font-size:9px;color:#64748b;font-weight:700;letter-spacing:.2px;margin-bottom:6px">Quantidade contada</div>
+        <div style="font-size:9px;color:var(--text3);font-weight:700;letter-spacing:.2px;margin-bottom:6px">Quantidade contada</div>
         <input id="coletor-qty-input" type="number" min="0" placeholder="0" inputmode="decimal"
-          style="width:100%;padding:16px;background:#0f172a;border:2px solid #22c55e;border-radius:10px;color:#fff;font-size:28px;font-weight:900;text-align:center;outline:none;box-sizing:border-box"
+          style="width:100%;padding:16px;background:var(--surface2);border:2px solid var(--green);border-radius:10px;color:var(--text);font-size:28px;font-weight:900;text-align:center;outline:none;box-sizing:border-box"
           onkeydown="if(event.key==='Enter'){invColetorSalvar()}">
-        <button onclick="invColetorSalvar()" style="width:100%;margin-top:10px;padding:14px;background:#16a34a;border:none;border-radius:12px;color:#fff;font-size:15px;font-weight:700;cursor:pointer">Salvar (Enter)</button>
-        <button onclick="invColetorPularItem()" style="width:100%;margin-top:6px;padding:8px;background:#1e293b;border:1px solid #334155;border-radius:8px;color:#64748b;font-size:12px;font-weight:600;cursor:pointer">↩ Cancelar / próximo</button>
+        <button onclick="invColetorSalvar()" style="width:100%;margin-top:10px;padding:14px;background:var(--green);border:none;border-radius:12px;color:#fff;font-size:15px;font-weight:700;cursor:pointer">Salvar (Enter)</button>
+        <button onclick="invColetorPularItem()" style="width:100%;margin-top:6px;padding:8px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text3);font-size:12px;font-weight:600;cursor:pointer">↩ Cancelar / próximo</button>
       </div>
 
-      <div id="coletor-msg" style="text-align:center;padding:8px;font-size:13px;color:#64748b">
+      <div id="coletor-msg" style="text-align:center;padding:8px;font-size:13px;color:var(--text3)">
         ${pendentes.length} itens pendentes · aponte para o código de barras
       </div>
     </div>`;
@@ -1628,7 +1644,7 @@ async function invColetorIniciarCamera() {
   } catch {
     if (videoWrap) videoWrap.style.display = 'none';
     const msg = document.getElementById('coletor-msg');
-    if (msg) { msg.style.color = '#f59e0b'; msg.textContent = 'Câmera não autorizada. Use o campo de texto abaixo.'; }
+    if (msg) { msg.style.color = 'var(--amber)'; msg.textContent = 'Câmera não autorizada. Use o campo de texto abaixo.'; }
     setTimeout(() => document.getElementById('coletor-scan-input')?.focus(), 100);
   }
 }
@@ -1691,7 +1707,7 @@ function invColetorPularItem() {
   _coletorUltimoCode = '';
   document.getElementById('coletor-item-card') && (document.getElementById('coletor-item-card').style.display = 'none');
   const msg = document.getElementById('coletor-msg');
-  if (msg) { msg.style.color = '#64748b'; msg.textContent = 'Aponte para o próximo código de barras.'; }
+  if (msg) { msg.style.color = 'var(--text3)'; msg.textContent = 'Aponte para o próximo código de barras.'; }
   document.getElementById('coletor-scan-input') && (document.getElementById('coletor-scan-input').value = '');
 }
 
@@ -1707,7 +1723,7 @@ async function invColetorBuscar() {
 
   if (!it) {
     invColetorBeep('erro');
-    if (msg) { msg.style.color = '#ef4444'; msg.textContent = `"${q}" não encontrado no inventário.`; }
+    if (msg) { msg.style.color = 'var(--red)'; msg.textContent = `"${q}" não encontrado no inventário.`; }
     if (card) card.style.display = 'none';
     _coletorIdx = -1;
     return;
@@ -1737,21 +1753,21 @@ async function invColetorBuscar() {
   const info = document.getElementById('coletor-item-info');
   if (info) info.innerHTML = `
     ${colmeiaErrada ? `
-    <div style="background:#7f1d1d;border:2px solid #ef4444;border-radius:10px;padding:10px;margin-bottom:10px;text-align:center">
+    <div style="background:rgba(201,82,79,.15);border:2px solid var(--red);border-radius:10px;padding:10px;margin-bottom:10px;text-align:center">
       <div style="font-size:16px;margin-bottom:2px">ITEM NA COLMEIA ERRADA!</div>
-      <div style="font-size:11px;color:#fca5a5">Rua <strong>${ruaItem}</strong> — você está contando a rua <strong>${ruaFiltro}</strong></div>
+      <div style="font-size:11px;color:var(--red)">Rua <strong>${ruaItem}</strong> — você está contando a rua <strong>${ruaFiltro}</strong></div>
     </div>` : ''}
-    <div style="font-size:14px;font-weight:900;color:#f97316">${it.codigo}</div>
-    <div style="font-size:12px;color:#e2e8f0;margin:4px 0;line-height:1.4">${it.nome||'—'}</div>
-    <div style="font-size:11px;color:${colmeiaErrada?'#fca5a5':'#94a3b8'}">
-      <strong style="color:${colmeiaErrada?'#fca5a5':'#38bdf8'}">${it.localizacao||'—'}</strong>
+    <div style="font-size:14px;font-weight:900;color:var(--orange)">${it.codigo}</div>
+    <div style="font-size:12px;color:var(--text);margin:4px 0;line-height:1.4">${it.nome||'—'}</div>
+    <div style="font-size:11px;color:${colmeiaErrada?'var(--red)':'var(--text3)'}">
+      <strong style="color:${colmeiaErrada?'var(--red)':'var(--info)'}">${it.localizacao||'—'}</strong>
       &nbsp;·&nbsp; Saldo: <strong style="color:var(--accent)">${it.saldo_sistema}</strong>
     </div>`;
 
   const msgTxt = colmeiaErrada
     ? `Rua ${ruaItem} (esperado: ${ruaFiltro})  — contado: ${novaQtd}`
     : `${mesmoCodigo ? `+1 acumulado →` : '✅'} ${it.codigo}: ${novaQtd} unidade${novaQtd !== 1 ? 's' : ''}`;
-  if (msg) { msg.style.color = colmeiaErrada ? '#ef4444' : '#22c55e'; msg.textContent = msgTxt; }
+  if (msg) { msg.style.color = colmeiaErrada ? 'var(--red)' : 'var(--green)'; msg.textContent = msgTxt; }
 
   // Auto-salvar silenciosamente
   const r = await apiFetch(`/inventario/itens/${it.id}`, {
@@ -1761,7 +1777,7 @@ async function invColetorBuscar() {
   if (r?.erro) { emToast('Erro ao salvar: '+r.erro, 'erro'); return; }
   it.qtd_contada = novaQtd; it.status = r.status;
   if (_invSessaoAtiva && r.contados !== undefined) _invSessaoAtiva.contados = r.contados;
-  if (qtyInp) { qtyInp.style.borderColor = '#22c55e'; setTimeout(() => { if (qtyInp) qtyInp.style.borderColor = '#22c55e'; }, 500); }
+  if (qtyInp) { qtyInp.style.borderColor = 'var(--green)'; setTimeout(() => { if (qtyInp) qtyInp.style.borderColor = 'var(--green)'; }, 500); }
 }
 
 async function invColetorSalvar() {
@@ -1779,7 +1795,7 @@ async function invColetorSalvar() {
   if (_invSessaoAtiva && r.contados !== undefined) _invSessaoAtiva.contados = r.contados;
   invColetorBeep('ok');
   const msg = document.getElementById('coletor-msg');
-  if (msg) { msg.style.color = '#22c55e'; msg.textContent = `${it?.codigo||''} salvo com ${qty}! Aponte para o próximo.`; }
+  if (msg) { msg.style.color = 'var(--green)'; msg.textContent = `${it?.codigo||''} salvo com ${qty}! Aponte para o próximo.`; }
   document.getElementById('coletor-item-card') && (document.getElementById('coletor-item-card').style.display = 'none');
   _coletorIdx = -1;
   _coletorUltimoCode = '';
