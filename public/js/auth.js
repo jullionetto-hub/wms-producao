@@ -278,14 +278,14 @@ async function carregarAvisosSeparador() {
       const isSubiu    = a.status === 'subiu';
       const isAbast    = a.status === 'abastecido';
       const isAguard   = a.status === 'aguardando_abastecer';
-      const bg    = isSubiu ? '#F0FDF4' : isAguard ? '#FFFBEB' : '#EFF6FF';
-      const bord  = isSubiu ? '#BBF7D0' : isAguard ? '#FDE68A' : '#BFDBFE';
+      const bg    = isSubiu ? 'rgba(87,185,129,.12)' : isAguard ? 'rgba(224,168,62,.12)' : 'rgba(79,70,229,.12)';
+      const bord  = isSubiu ? 'rgba(87,185,129,.4)' : isAguard ? 'rgba(224,168,62,.4)' : 'rgba(79,70,229,.4)';
       const label = isSubiu ? 'SUBIU' : isAguard ? 'AGUARD. GUARDAR' : 'ABASTECIDO';
-      const cor   = isSubiu ? 'var(--green)' : isAguard ? '#92400e' : 'var(--accent)';
+      const cor   = isSubiu ? 'var(--green)' : isAguard ? 'var(--amber)' : 'var(--accent)';
       const nomeLogado = usuarioAtual?.nome || '';
       const btnGuardei = isAguard
         ? `<button onclick="sepGuardeiItem(${a.id},'${nomeLogado.replace(/'/g,"\\'")}',this)"
-            style="width:100%;margin-top:12px;padding:13px;background:#10b981;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer">
+            style="width:100%;margin-top:12px;padding:13px;background:var(--green);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer">
             Guardei este item eu mesmo
            </button>`
         : `<button onclick="sepCienteAviso(${a.id},this)"
@@ -388,7 +388,7 @@ function montarSidebar() {
       <a class="mi" onclick="irPara('performance',this)"><span class="mi-ic">${IC.performance}</span>Performance</a>
       <a class="mi" onclick="irPara('relatorios',this)"><span class="mi-ic">${IC.relatorios}</span>Relatórios</a>
       <a class="mi" onclick="irPara('auditoria',this)"><span class="mi-ic">${IC.auditoria}</span>Auditoria</a>
-      <a class="mi" onclick="irPara('diario',this)"><span class="mi-ic">${IC.diario}</span>Diário de Bordo<span class="mbadge" id="menu-badge-diario" style="display:none;background:#7c3aed">!</span></a>
+      <a class="mi" onclick="irPara('diario',this)"><span class="mi-ic">${IC.diario}</span>Diário de Bordo<span class="mbadge" id="menu-badge-diario" style="display:none;background:var(--indigo)">!</span></a>
       <a class="mi" onclick="irPara('celulares',this)"><span class="mi-ic">${IC.celulares}</span>Celulares</a>
       <a class="mi" onclick="irPara('caixas',this)"><span class="mi-ic">${IC.caixas}</span>Caixas</a>
       <a class="mi" onclick="irPara('cadastros',this)"><span class="mi-ic">${IC.cadastros}</span>Cadastros</a>
@@ -428,7 +428,7 @@ function montarSidebar() {
       <a class="mi" onclick="irPara('performance',this)"><span class="mi-ic">${IC.performance}</span>Performance</a>
       <a class="mi" onclick="irPara('relatorios',this)"><span class="mi-ic">${IC.relatorios}</span>Relatórios</a>
       <a class="mi" onclick="irPara('auditoria',this)"><span class="mi-ic">${IC.auditoria}</span>Auditoria</a>
-      <a class="mi" onclick="irPara('diario',this)"><span class="mi-ic">${IC.diario}</span>Diário de Bordo<span class="mbadge" id="menu-badge-diario" style="display:none;background:#7c3aed">!</span></a>
+      <a class="mi" onclick="irPara('diario',this)"><span class="mi-ic">${IC.diario}</span>Diário de Bordo<span class="mbadge" id="menu-badge-diario" style="display:none;background:var(--indigo)">!</span></a>
       <a class="mi" onclick="irPara('celulares',this)"><span class="mi-ic">${IC.celulares}</span>Celulares</a>
       <a class="mi" onclick="irPara('caixas',this)"><span class="mi-ic">${IC.caixas}</span>Caixas</a>
       <a class="mi" onclick="irPara('cadastros',this)"><span class="mi-ic">${IC.cadastros}</span>Cadastros</a>
@@ -693,8 +693,8 @@ async function verRelatorioData(data) {
       [['Pedidos',r.total_pedidos],['Concluidos',r.pedidos_concluidos],['Pendentes',r.pedidos_pendentes],['Faltas',r.total_faltas],['Checkouts',r.total_checkouts]].map(function(x){
         return '<div style="background:var(--surface2);border-radius:8px;padding:12px;text-align:center"><div style="font-size:22px;font-weight:700">' + x[1] + '</div><div style="font-size:11px;color:var(--text3)">' + x[0] + '</div></div>';
       }).join('') + '</div>' +
-      '<div style="background:var(--surface2);border-radius:8px;padding:8px"><div style="font-size:11px;color:var(--text3);margin-bottom:4px">Conclusao</div><div style="background:var(--border);border-radius:4px;height:8px;overflow:hidden"><div style="background:#10b981;height:100%;width:' + pct + '%;border-radius:4px"></div></div><div style="font-size:12px;font-weight:700;color:#10b981;margin-top:4px">' + pct + '%</div></div></div>';
-  } catch(e) { el.innerHTML = '<div style="color:#ef4444;padding:16px">Erro: ' + e.message + '</div>'; }
+      '<div style="background:var(--surface2);border-radius:8px;padding:8px"><div style="font-size:11px;color:var(--text3);margin-bottom:4px">Conclusao</div><div style="background:var(--border);border-radius:4px;height:8px;overflow:hidden"><div style="background:var(--green);height:100%;width:' + pct + '%;border-radius:4px"></div></div><div style="font-size:12px;font-weight:700;color:var(--green);margin-top:4px">' + pct + '%</div></div></div>';
+  } catch(e) { el.innerHTML = '<div style="color:var(--red);padding:16px">Erro: ' + e.message + '</div>'; }
 }
 async function gerarRelatorioHoje() {
   try {
@@ -738,9 +738,9 @@ async function carregarAuditoria() {
     var logs = res.ok ? await res.json() : [];
     if (!logs.length) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:32px;color:var(--text3)">Nenhum registro encontrado</td></tr>'; return; }
     tbody.innerHTML = logs.map(function(l) {
-      return '<tr style="border-bottom:1px solid var(--border)"><td style="padding:10px 12px;font-size:12px">' + (l.data||'') + ' ' + (l.hora||'') + '</td><td style="padding:10px 12px;font-size:13px;font-weight:600">' + (l.usuario_nome||l.usuario_login||'&mdash;') + '</td><td style="padding:10px 12px"><span style="font-size:11px;font-weight:700;color:var(--indigo);background:rgba(79,70,229,.1);padding:3px 8px;border-radius:20px">' + l.acao + '</span></td><td style="padding:10px 12px;font-size:12px;color:var(--text2)">' + (l.entidade||'&mdash;') + (l.entidade_id?' #'+l.entidade_id:'') + '</td><td style="padding:10px 12px;font-size:11px;color:var(--text3)">' + (l.ip||'&mdash;') + '</td></tr>';
+      return '<tr style="border-bottom:1px solid var(--border)"><td style="padding:10px 12px;font-size:12px">' + (l.data||'') + ' ' + (l.hora||'') + '</td><td style="padding:10px 12px;font-size:13px;font-weight:600">' + (l.usuario_nome||l.usuario_login||'&mdash;') + '</td><td style="padding:10px 12px"><span style="font-size:11px;font-weight:700;color:var(--indigo);background:rgba(139,92,246,.1);padding:3px 8px;border-radius:20px">' + l.acao + '</span></td><td style="padding:10px 12px;font-size:12px;color:var(--text2)">' + (l.entidade||'&mdash;') + (l.entidade_id?' #'+l.entidade_id:'') + '</td><td style="padding:10px 12px;font-size:11px;color:var(--text3)">' + (l.ip||'&mdash;') + '</td></tr>';
     }).join('');
-  } catch(e) { tbody.innerHTML = '<tr><td colspan="5" style="color:#ef4444;padding:16px">Erro: ' + e.message + '</td></tr>'; }
+  } catch(e) { tbody.innerHTML = '<tr><td colspan="5" style="color:var(--red);padding:16px">Erro: ' + e.message + '</td></tr>'; }
 }
 
 /* EDITAR USUARIO */
@@ -870,7 +870,7 @@ async function carregarDiarioAnterior() {
     const obsGeral = ant.observacoes?.geral || '';
     el.style.display = '';
     el.innerHTML = `
-      <div style="background:var(--surface);border-radius:12px;border:1px solid var(--border);border-top:3px solid #64748b;padding:14px 18px">
+      <div style="background:var(--surface);border-radius:12px;border:1px solid var(--border);border-top:3px solid var(--text3);padding:14px 18px">
         <div style="font-weight:800;font-size:13px;color:var(--text);margin-bottom:8px">
           <i class="ti ti-history" aria-hidden="true"></i> Turno anterior — ${ant.turno} · ${fmtData(ant.data)} · ${ant.supervisor||'—'}
         </div>
@@ -884,7 +884,7 @@ async function carregarDiarioAnterior() {
             <div style="font-size:9px;color:var(--text3);text-transform:uppercase">Checkout</div>
           </div>
           <div style="text-align:center;background:var(--surface2);border-radius:8px;padding:6px">
-            <div style="font-size:15px;font-weight:800;color:${(d.reposicao?.nao_encontrados||0)>0?'#dc2626':'inherit'}">${d.reposicao?.nao_encontrados||0}</div>
+            <div style="font-size:15px;font-weight:800;color:${(d.reposicao?.nao_encontrados||0)>0?'var(--red)':'inherit'}">${d.reposicao?.nao_encontrados||0}</div>
             <div style="font-size:9px;color:var(--text3);text-transform:uppercase">Não encontr.</div>
           </div>
         </div>
@@ -1058,10 +1058,10 @@ function atualizarStatusBanner(status, extra, supervisor) {
   // por último só como informação, não trava mais a edição pros outros.
   const editadoPor = supervisor ? ` — editado por ${escHtml(supervisor)}` : '';
   const cfg = {
-    rascunho: { acc:'#64748b', msg:`Rascunho salvo${editadoPor} — clique em "Finalizar e enviar" para enviar ao próximo turno` },
-    enviado:  { acc:'#3b82f6', msg:`Enviado para validação${editadoPor} — prazo: ${extra||'30 min'}` },
-    validado: { acc:'#10b981', msg:`Validado pelo próximo turno — Pontuação: <b>${extra||'?'}/100</b>` },
-    expirado: { acc:'#ef4444', msg:'Prazo de validação expirou sem resposta do próximo turno' },
+    rascunho: { acc:'var(--text3)', msg:`Rascunho salvo${editadoPor} — clique em "Finalizar e enviar" para enviar ao próximo turno` },
+    enviado:  { acc:'var(--info)', msg:`Enviado para validação${editadoPor} — prazo: ${extra||'30 min'}` },
+    validado: { acc:'var(--green)', msg:`Validado pelo próximo turno — Pontuação: <b>${extra||'?'}/100</b>` },
+    expirado: { acc:'var(--red)', msg:'Prazo de validação expirou sem resposta do próximo turno' },
   };
   const c = cfg[status] || cfg.rascunho;
   el.style.display = '';
@@ -1131,7 +1131,7 @@ async function verificarValidacaoPendente() {
     if (!val) { el.style.display='none'; return; }
     _validacaoId = val.validacao_id;
     const atrasada = val.atrasada;
-    const validCor = atrasada ? '#d97706' : '#7c3aed';
+    const validCor = atrasada ? 'var(--amber)' : 'var(--indigo)';
 
     let timerHtml = '';
     if (!atrasada && val.restante_segundos > 0) {
@@ -1143,7 +1143,7 @@ async function verificarValidacaoPendente() {
       </div>`;
     } else if (atrasada) {
       timerHtml = `<div style="text-align:right">
-        <div style="background:rgba(217,119,6,.12);color:#d97706;border-radius:8px;padding:4px 10px;font-size:11px;font-weight:700">Atrasada</div>
+        <div style="background:rgba(224,168,62,.12);color:var(--amber);border-radius:8px;padding:4px 10px;font-size:11px;font-weight:700">Atrasada</div>
       </div>`;
     }
 
@@ -1177,14 +1177,14 @@ function iniciarCountdown(segundos) {
       clearInterval(_valTimer);
       // Mantém o banner visível mas muda para indicar que está atrasada
       // (não oculta — validação retroativa ainda é possível)
-      if (el) { el.textContent = 'Atrasada'; el.style.color='#fcd34d'; }
+      if (el) { el.textContent = 'Atrasada'; el.style.color='var(--amber)'; }
       return;
     }
     if (el) {
       const m = Math.floor(restante/60).toString().padStart(2,'0');
       const s = (restante%60).toString().padStart(2,'0');
       el.textContent = `${m}:${s}`;
-      if (restante <= 60) el.style.color = '#fca5a5';
+      if (restante <= 60) el.style.color = 'var(--red)';
     }
   }, 1000);
 }
@@ -1223,8 +1223,8 @@ async function abrirModalValidacao() {
         </div>
       </div>
       <div style="text-align:center;background:var(--surface);border-radius:8px;padding:8px;margin-bottom:8px">
-        <div style="font-size:18px;font-weight:800;color:#dc2626">${d.reposicao?.nao_encontrados||0}</div>
-        <div style="font-size:9px;color:#dc2626;text-transform:uppercase">Não encontr. (reposição)</div>
+        <div style="font-size:18px;font-weight:800;color:var(--red)">${d.reposicao?.nao_encontrados||0}</div>
+        <div style="font-size:9px;color:var(--red);text-transform:uppercase">Não encontr. (reposição)</div>
       </div>
       ${obs.geral ? `<div style="font-size:12px;color:var(--text2)"><b>Obs. geral:</b> ${escHtml(obs.geral)}</div>` : ''}`;
 
@@ -1238,7 +1238,7 @@ async function abrirModalValidacao() {
           </div>
           <div style="display:flex;gap:6px">
             <button onclick="marcarItem('${item.id}',true,this)" data-item="${item.id}" data-val="true"
-              style="padding:7px 16px;border-radius:7px;border:2px solid #86efac;background:transparent;color:#16a34a;font-weight:800;font-size:13px;cursor:pointer;transition:.15s">
+              style="padding:7px 16px;border-radius:7px;border:2px solid rgba(87,185,129,.4);background:transparent;color:var(--green);font-weight:800;font-size:13px;cursor:pointer;transition:.15s">
               Sim
             </button>
             <button onclick="marcarItem('${item.id}',false,this)" data-item="${item.id}" data-val="false"
@@ -1272,11 +1272,11 @@ async function abrirModalValidacao() {
       if (restante <= 0) {
         clearInterval(_valTimer);
         // NÃO fecha o modal — apenas indica que expirou e permite validação retroativa
-        if (timerEl) { timerEl.textContent = 'Expirado'; timerEl.style.color='#f97316'; timerEl.style.fontSize='13px'; }
+        if (timerEl) { timerEl.textContent = 'Expirado'; timerEl.style.color='var(--orange)'; timerEl.style.fontSize='13px'; }
         const subtitulo = document.getElementById('modal-val-subtitulo');
         if (subtitulo && !subtitulo.dataset.exp) {
           subtitulo.dataset.exp = '1';
-          subtitulo.innerHTML += ' <span style="background:#fef3c7;color:#92400e;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:700">Atrasada — validação ainda possível</span>';
+          subtitulo.innerHTML += ' <span style="background:rgba(224,168,62,.12);color:var(--amber);font-size:10px;padding:2px 8px;border-radius:10px;font-weight:700">Atrasada — validação ainda possível</span>';
         }
         return;
       }
@@ -1284,7 +1284,7 @@ async function abrirModalValidacao() {
         const mm = Math.floor(restante/60).toString().padStart(2,'0');
         const ss = (restante%60).toString().padStart(2,'0');
         timerEl.textContent = `${mm}:${ss}`;
-        if (restante<=60) timerEl.style.color='#ef4444';
+        if (restante<=60) timerEl.style.color='var(--red)';
       }
     }, 1000);
   } catch(e) { toast('Erro ao abrir validação','erro'); }
@@ -1298,8 +1298,8 @@ function marcarItem(itemId, passou, btnEl) {
     b.style.background = 'transparent';
     b.style.boxShadow  = 'none';
   });
-  btnEl.style.background  = passou ? '#dcfce7' : '#fee2e2';
-  btnEl.style.boxShadow   = passou ? '0 0 0 2px #16a34a' : '0 0 0 2px #dc2626';
+  btnEl.style.background  = passou ? 'rgba(87,185,129,.15)' : 'rgba(201,82,79,.15)';
+  btnEl.style.boxShadow   = passou ? '0 0 0 2px var(--green)' : '0 0 0 2px var(--red)';
 
   // Mostra/oculta campo de observação
   const obsWrap = document.getElementById(`obs-wrap-${itemId}`);
@@ -1324,7 +1324,7 @@ function marcarItem(itemId, passou, btnEl) {
   const scoreEl = document.getElementById('modal-val-score');
   if (scoreEl) {
     scoreEl.textContent = Math.max(0, pts);
-    scoreEl.style.color = pts>=80 ? '#16a34a' : pts>=60 ? '#d97706' : '#dc2626';
+    scoreEl.style.color = pts>=80 ? 'var(--green)' : pts>=60 ? 'var(--amber)' : 'var(--red)';
   }
 }
 
@@ -1408,13 +1408,13 @@ async function carregarListaDiarios() {
     const lista = await res.json();
     if (!lista.length) { el.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:8px">Nenhum diário salvo ainda</div>'; return; }
     el.innerHTML = lista.map(d => {
-      const turnoCor = d.turno === 'Manha' ? '#F59E0B' : d.turno === 'Tarde' ? '#3B82F6' : '#8B5CF6';
-      const leuBadge = d.leu_anterior ? '<span style="font-size:9px;background:var(--surface2);color:#10b981;border:1px solid #10b981;border-radius:4px;padding:1px 6px">Leu</span>' : '';
+      const turnoCor = d.turno === 'Manha' ? 'var(--amber)' : d.turno === 'Tarde' ? 'var(--info)' : 'var(--indigo)';
+      const leuBadge = d.leu_anterior ? '<span style="font-size:9px;background:var(--surface2);color:var(--green);border:1px solid var(--green);border-radius:4px;padding:1px 6px">Leu</span>' : '';
       const statusMap = {
         rascunho: '<span style="font-size:9px;background:var(--surface2);color:var(--text3);border:1px solid var(--border);border-radius:4px;padding:1px 6px">Rascunho</span>',
-        enviado:  '<span style="font-size:9px;background:var(--surface2);color:#3b82f6;border:1px solid #3b82f6;border-radius:4px;padding:1px 6px">Enviado</span>',
-        validado: `<span style="font-size:9px;background:var(--surface2);color:#10b981;border:1px solid #10b981;border-radius:4px;padding:1px 6px">${d.pontuacao!=null?d.pontuacao+'/100':'Validado'}</span>`,
-        expirado: '<span style="font-size:9px;background:var(--surface2);color:#ef4444;border:1px solid #ef4444;border-radius:4px;padding:1px 6px">Expirado</span>',
+        enviado:  '<span style="font-size:9px;background:var(--surface2);color:var(--info);border:1px solid var(--info);border-radius:4px;padding:1px 6px">Enviado</span>',
+        validado: `<span style="font-size:9px;background:var(--surface2);color:var(--green);border:1px solid var(--green);border-radius:4px;padding:1px 6px">${d.pontuacao!=null?d.pontuacao+'/100':'Validado'}</span>`,
+        expirado: '<span style="font-size:9px;background:var(--surface2);color:var(--red);border:1px solid var(--red);border-radius:4px;padding:1px 6px">Expirado</span>',
       };
       const stBadge = statusMap[d.status] || statusMap.rascunho;
       return `<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);cursor:pointer;margin-bottom:6px" onclick="verDiario(${d.id})">
@@ -1423,7 +1423,7 @@ async function carregarListaDiarios() {
           <div style="font-weight:700;font-size:13px">${fmtData(d.data)} — ${d.turno} ${leuBadge} ${stBadge}</div>
           <div style="font-size:11px;color:var(--text3)">${d.supervisor}</div>
         </div>
-        <button onclick="event.stopPropagation();exportarDiarioExcel(${d.id})" style="padding:4px 10px;background:#10b981;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:11px">Excel</button>
+        <button onclick="event.stopPropagation();exportarDiarioExcel(${d.id})" style="padding:4px 10px;background:var(--green);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:11px">Excel</button>
       </div>`;
     }).join('');
   } catch(e) { console.warn(e); }
@@ -1596,8 +1596,8 @@ function rowEmb(p) {
 
   // Transportadora + badges
   const transp     = p.transportadora || '—';
-  const driveBadge = isDrive ? '<span style="font-size:10px;font-weight:800;padding:2px 7px;border-radius:20px;background:#dc2626;color:#fff;margin-left:5px">DRIVE</span>' : '';
-  const primeBadge = isPrime ? '<span style="font-size:10px;font-weight:800;padding:2px 7px;border-radius:20px;background:#7c3aed;color:#fff;margin-left:5px">PRIME</span>' : '';
+  const driveBadge = isDrive ? '<span style="font-size:10px;font-weight:800;padding:2px 7px;border-radius:20px;background:var(--red);color:#fff;margin-left:5px">DRIVE</span>' : '';
+  const primeBadge = isPrime ? '<span style="font-size:10px;font-weight:800;padding:2px 7px;border-radius:20px;background:var(--indigo);color:#fff;margin-left:5px">PRIME</span>' : '';
 
   // Botão de ação
   let acao;
@@ -1621,7 +1621,7 @@ function rowEmb(p) {
       ${transp}${driveBadge}${primeBadge}
     </td>
     <td style="font-size:11px;color:var(--text2);white-space:nowrap">${p.hora_checkout||'—'}</td>
-    <td style="font-size:11px;color:${isEmbalando ? '#4F46E5' : 'var(--text2)'};font-weight:${isEmbalando ? 700 : 400};white-space:nowrap">${p.embalagem_iniciado_em||'—'}</td>
+    <td style="font-size:11px;color:${isEmbalando ? 'var(--accent)' : 'var(--text2)'};font-weight:${isEmbalando ? 700 : 400};white-space:nowrap">${p.embalagem_iniciado_em||'—'}</td>
     <td><span class="pill ${pillClass}">${pillText}</span></td>
     <td style="font-size:11px;color:var(--text2)">${p.embalado_por||'—'}</td>
     <td style="font-weight:600;color:${(p.itens||0)>20 ? 'var(--red)' : (p.itens||0)>10 ? 'var(--amber)' : 'var(--text)'}">${p.itens||'—'}</td>
@@ -1663,7 +1663,7 @@ async function carregarEmbalagem() {
     const cont = document.getElementById('emb-desk-scan-resultado');
     if (cont && !document.getElementById('emb-desk-scan')?.value) cont.innerHTML = '';
   } catch(e) {
-    if (el) el.innerHTML = '<tr><td colspan="9" style="color:#ef4444;text-align:center;padding:24px">Erro ao carregar</td></tr>';
+    if (el) el.innerHTML = '<tr><td colspan="9" style="color:var(--red);text-align:center;padding:24px">Erro ao carregar</td></tr>';
   }
 }
 
@@ -1689,7 +1689,7 @@ async function _buscarEmbalagemDeskLegacy() {
       return;
     }
     if (cont) cont.innerHTML = renderCardEmb(p, p.status_embalagem === 'embalando', 'desk');
-  } catch(e) { if (cont) cont.innerHTML = '<div style="color:#ef4444;font-size:13px;padding:8px">Erro ao buscar</div>'; }
+  } catch(e) { if (cont) cont.innerHTML = '<div style="color:var(--red);font-size:13px;padding:8px">Erro ao buscar</div>'; }
 }
 
 // Mantém compatibilidade com código antigo
@@ -1837,8 +1837,8 @@ function filtrarEmbalagemMobile() {
 function renderCardEmbFila(p, emAndamento) {
   const isDrive = String(p.transportadora||'').toUpperCase().includes('DRIVE');
   const isPrime = p.tem_prime;
-  const bordColor = emAndamento ? '#bfdbfe' : isDrive ? '#FECACA' : isPrime ? '#ddd6fe' : 'var(--border)';
-  const numColor  = emAndamento ? '#4F46E5' : isDrive ? '#DC2626' : isPrime ? '#7c3aed' : 'var(--accent)';
+  const bordColor = emAndamento ? 'rgba(79,70,229,.3)' : isDrive ? 'rgba(201,82,79,.3)' : isPrime ? 'rgba(139,92,246,.3)' : 'var(--border)';
+  const numColor  = emAndamento ? 'var(--accent)' : isDrive ? 'var(--red)' : isPrime ? 'var(--indigo)' : 'var(--accent)';
   const pillTxt   = emAndamento ? 'embalando' : isDrive ? 'drive thru' : isPrime ? 'prime' : 'aguardando emb';
   const pillCls   = emAndamento ? 'separando' : 'pendente';
   const btnTxt    = emAndamento ? 'Continuar Embalagem' : 'Iniciar Embalagem';
@@ -1856,7 +1856,7 @@ function renderCardEmbFila(p, emAndamento) {
         ${p.transportadora ? `<span>${p.transportadora}</span>` : ''}
       </div>
       ${p.hora_checkout ? `<div style="font-size:11px;color:var(--text3);margin-top:2px">Checkout às ${p.hora_checkout}</div>` : ''}
-      ${emAndamento && p.embalagem_iniciado_em ? `<div style="font-size:11px;color:#4F46E5;margin-top:2px">Embalagem iniciada às ${p.embalagem_iniciado_em}</div>` : ''}
+      ${emAndamento && p.embalagem_iniciado_em ? `<div style="font-size:11px;color:var(--accent);margin-top:2px">Embalagem iniciada às ${p.embalagem_iniciado_em}</div>` : ''}
       <button class="btn btn-primary btn-sm" style="width:100%;margin-top:8px;padding:10px;font-size:14px;font-weight:700"
         onclick="selecionarPedidoEmbFila(${p.id})">
         ${btnTxt}
@@ -1873,12 +1873,12 @@ function renderCardEmb(p, emAndamento, mode, readOnly) {
   const isDrive  = String(p.transportadora||'').toUpperCase().includes('DRIVE');
   const isPrime  = p.tem_prime;
   const isEmbalado = p.status_embalagem === 'embalado';
-  const corBorda = isEmbalado ? '#16a34a' : emAndamento ? '#4F46E5' : isDrive ? '#dc2626' : isPrime ? '#7c3aed' : '#64748b';
-  const corFundo = isEmbalado ? '#f0fdf4' : emAndamento ? '#eff6ff' : isDrive ? '#fef2f2' : isPrime ? '#f5f3ff' : '#f8fafc';
+  const corBorda = isEmbalado ? 'var(--green)' : emAndamento ? 'var(--accent)' : isDrive ? 'var(--red)' : isPrime ? 'var(--indigo)' : 'var(--text3)';
+  const corFundo = isEmbalado ? 'rgba(87,185,129,.1)' : emAndamento ? 'rgba(79,70,229,.1)' : isDrive ? 'rgba(201,82,79,.1)' : isPrime ? 'rgba(139,92,246,.1)' : 'var(--surface2)';
   const statusBadge = isEmbalado
-    ? `<span style="font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;background:#16a34a;color:#fff">EMBALADO</span>`
+    ? `<span style="font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;background:var(--green);color:#fff">EMBALADO</span>`
     : emAndamento
-      ? `<span style="font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;background:#4F46E5;color:#fff;animation:pulse 1.5s infinite">⏱ EM ANDAMENTO</span>`
+      ? `<span style="font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;background:var(--accent);color:#fff;animation:pulse 1.5s infinite">⏱ EM ANDAMENTO</span>`
       : '';
   let botoes;
   if (readOnly) {
@@ -1889,7 +1889,7 @@ function renderCardEmb(p, emAndamento, mode, readOnly) {
          </div>`
       : emAndamento
         ? `<div style="display:flex;align-items:center;gap:8px;padding:10px 16px;background:rgba(79,70,229,.1);border-top:1px solid rgba(79,70,229,.35)">
-             <span style="font-size:12px;color:#818CF8;font-weight:700">Em andamento</span>
+             <span style="font-size:12px;color:var(--accent);font-weight:700">Em andamento</span>
            </div>`
         : `<div style="display:flex;align-items:center;gap:8px;padding:10px 16px;background:var(--surface2);border-top:1px solid var(--border)">
              <span style="font-size:12px;color:var(--text3);font-weight:600">Aguardando embalagem</span>
@@ -1903,16 +1903,16 @@ function renderCardEmb(p, emAndamento, mode, readOnly) {
       : `<div style="padding:14px 16px;display:grid;grid-template-columns:${emAndamento?'1fr 1fr':'1fr'};gap:10px">
           ${emAndamento ? `
             <button onclick="${initFn}(${p.id})"
-              style="padding:14px;background:#f1f5f9;color:#64748b;border:2px solid #cbd5e1;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer">
+              style="padding:14px;background:var(--surface2);color:var(--text3);border:2px solid var(--border);border-radius:12px;font-size:13px;font-weight:700;cursor:pointer">
               Reiniciar
             </button>
             <button onclick="${endFn}(${p.id})"
-              style="padding:14px;background:#16a34a;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(22,163,74,.3)">
+              style="padding:14px;background:var(--green);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(87,185,129,.3)">
               Encerrar
             </button>
           ` : `
             <button onclick="${initFn}(${p.id})"
-              style="padding:16px;background:#4f46e5;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(79,70,229,.3)">
+              style="padding:16px;background:var(--accent);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(79,70,229,.3)">
               Iniciar Embalagem
             </button>
           `}
@@ -1928,8 +1928,8 @@ function renderCardEmb(p, emAndamento, mode, readOnly) {
           </div>
           <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0">
             ${statusBadge}
-            ${isDrive?'<span style="font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;background:#dc2626;color:#fff">DRIVE</span>':''}
-            ${isPrime?'<span style="font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;background:#7c3aed;color:#fff">PRIME</span>':''}
+            ${isDrive?'<span style="font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;background:var(--red);color:#fff">DRIVE</span>':''}
+            ${isPrime?'<span style="font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;background:var(--indigo);color:#fff">PRIME</span>':''}
           </div>
         </div>
       </div>
@@ -1940,7 +1940,7 @@ function renderCardEmb(p, emAndamento, mode, readOnly) {
         </div>
         <div style="background:var(--surface2);border-radius:10px;padding:8px 10px;text-align:center">
           <div style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.5px;margin-bottom:2px">ITENS</div>
-          <div style="font-size:16px;font-weight:800;color:#4f46e5">${p.itens||0}</div>
+          <div style="font-size:16px;font-weight:800;color:var(--accent)">${p.itens||0}</div>
         </div>
         <div style="background:var(--surface2);border-radius:10px;padding:8px 10px;text-align:center">
           <div style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.5px;margin-bottom:2px">SAIU CHECKOUT</div>
@@ -1948,7 +1948,7 @@ function renderCardEmb(p, emAndamento, mode, readOnly) {
         </div>
         <div style="background:var(--surface2);border-radius:10px;padding:8px 10px;text-align:center">
           <div style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.5px;margin-bottom:2px">INÍCIO EMB.</div>
-          <div style="font-size:13px;font-weight:700;color:${emAndamento?'#4F46E5':'var(--text3)'}">${p.embalagem_iniciado_em||'—'}</div>
+          <div style="font-size:13px;font-weight:700;color:${emAndamento?'var(--accent)':'var(--text3)'}">${p.embalagem_iniciado_em||'—'}</div>
         </div>
       </div>
       <div style="padding:8px 16px;border-bottom:1px solid var(--border)">
@@ -1988,7 +1988,7 @@ async function carregarEmbalagemMobile() {
       ...embalando.map(p => renderCardEmbFila(p, true)),
       ...pendentes.map(p => renderCardEmbFila(p, false)),
     ].join('');
-  } catch(e) { if(el) el.innerHTML = '<div style="color:#ef4444;text-align:center;padding:24px">Erro ao carregar</div>'; }
+  } catch(e) { if(el) el.innerHTML = '<div style="color:var(--red);text-align:center;padding:24px">Erro ao carregar</div>'; }
 }
 
 async function carregarEmbalagemEmbalados() {
@@ -2014,7 +2014,7 @@ async function carregarEmbalagemEmbalados() {
               <div style="font-family:'Space Mono',monospace;font-size:19px;font-weight:700;color:var(--text)">${p.numero_pedido}</div>
               <div style="font-size:12px;color:var(--text2);margin-top:3px;font-weight:500">${p.cliente||'—'}</div>
             </div>
-            <span style="font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;background:#16a34a;color:#fff;flex-shrink:0">EMBALADO</span>
+            <span style="font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;background:var(--green);color:#fff;flex-shrink:0">EMBALADO</span>
           </div>
         </div>
         <div style="padding:12px 16px;display:grid;grid-template-columns:1fr 1fr;gap:8px;border-bottom:1px solid var(--border)">
@@ -2024,11 +2024,11 @@ async function carregarEmbalagemEmbalados() {
           </div>
           <div style="background:var(--surface2);border-radius:10px;padding:8px 10px;text-align:center">
             <div style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.5px;margin-bottom:2px">DATA EMB.</div>
-            <div style="font-size:13px;font-weight:700;color:#16a34a">${fmtDt(p.data_embalagem)}</div>
+            <div style="font-size:13px;font-weight:700;color:var(--green)">${fmtDt(p.data_embalagem)}</div>
           </div>
           <div style="background:var(--surface2);border-radius:10px;padding:8px 10px;text-align:center">
             <div style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.5px;margin-bottom:2px">QTDE ITENS</div>
-            <div style="font-size:16px;font-weight:800;color:#16a34a">${p.total_itens||p.itens||0}</div>
+            <div style="font-size:16px;font-weight:800;color:var(--green)">${p.total_itens||p.itens||0}</div>
           </div>
           <div style="background:var(--surface2);border-radius:10px;padding:8px 10px;text-align:center">
             <div style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.5px;margin-bottom:2px">SKUs</div>
@@ -2040,7 +2040,7 @@ async function carregarEmbalagemEmbalados() {
           </div>
           <div style="background:var(--surface2);border-radius:10px;padding:8px 10px;text-align:center">
             <div style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.5px;margin-bottom:2px">EMBALADO POR</div>
-            <div style="font-size:12px;font-weight:700;color:#16a34a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.embalado_por||'—'}</div>
+            <div style="font-size:12px;font-weight:700;color:var(--green);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.embalado_por||'—'}</div>
           </div>
         </div>
         <div style="padding:8px 16px">
@@ -2048,7 +2048,7 @@ async function carregarEmbalagemEmbalados() {
         </div>
       </div>
     `).join('');
-  } catch(e) { if(el) el.innerHTML = '<div style="color:#ef4444;text-align:center;padding:24px">Erro ao carregar</div>'; }
+  } catch(e) { if(el) el.innerHTML = '<div style="color:var(--red);text-align:center;padding:24px">Erro ao carregar</div>'; }
 }
 
 async function iniciarEmbalagemMobile(id) {
@@ -2079,7 +2079,7 @@ async function encerrarEmbalagemMobile(id) {
     if (embInput) embInput.value = '';
     const cont = document.getElementById('m-emb-embalar-resultado');
     if (cont) cont.innerHTML = `<div style="text-align:center;padding:50px 20px;color:var(--text3)">
-      <div style="font-size:14px;font-weight:700;color:#16a34a">Embalagem concluída!</div>
+      <div style="font-size:14px;font-weight:700;color:var(--green)">Embalagem concluída!</div>
       <div style="font-size:12px;margin-top:6px">Selecione o próximo pedido na Fila</div>
     </div>`;
     await carregarEmbalagemMobile();
@@ -2145,7 +2145,7 @@ async function trocarSenhaTemp() {
     document.getElementById('trocar-senha-box').style.display = 'none';
     document.getElementById('login-box').style.display = 'flex';
     const erroLogin = document.getElementById('login-erro');
-    if (erroLogin) { erroLogin.textContent = 'Senha alterada! Faça o login.'; erroLogin.style.display='block'; erroLogin.style.color='#16a34a'; }
+    if (erroLogin) { erroLogin.textContent = 'Senha alterada! Faça o login.'; erroLogin.style.display='block'; erroLogin.style.color='var(--green)'; }
   } catch(e) { if(erroEl) erroEl.textContent='Erro ao salvar'; }
 }
 
@@ -2160,9 +2160,9 @@ function mudarPassagemTab(tab, btn) {
     const bt  = document.getElementById(`ptab-${t}`);
     if (sec) sec.style.display = t === tab ? '' : 'none';
     if (bt) {
-      bt.style.background = t === tab ? '#4F46E5' : '#fff';
-      bt.style.color = t === tab ? '#fff' : '#64748B';
-      bt.style.border = t === tab ? 'none' : '1.5px solid #E2E8F0';
+      bt.style.background = t === tab ? 'var(--accent)' : 'var(--surface)';
+      bt.style.color = t === tab ? '#fff' : 'var(--text3)';
+      bt.style.border = t === tab ? 'none' : '1.5px solid var(--border)';
     }
   });
   if (tab === 'historico')  carregarHistoricoPassagens();
@@ -2197,7 +2197,7 @@ function ckInit() {
     const b = document.createElement('button');
     b.id = `ck-cel-${i}`;
     b.textContent = `#${i}`;
-    b.style.cssText = `padding:8px 14px;border-radius:8px;border:1.5px solid var(--border);background:var(--surface);color:#64748B;font-size:13px;font-weight:600;cursor:pointer`;
+    b.style.cssText = `padding:8px 14px;border-radius:8px;border:1.5px solid var(--border);background:var(--surface);color:var(--text3);font-size:13px;font-weight:600;cursor:pointer`;
     b.onclick = () => { _ckCel = i; ckLoadFields(); ckRender(); };
     wrap.appendChild(b);
   }
@@ -2220,7 +2220,7 @@ function _ckHighlightSeg() {
     if (!b) continue;
     const ativo = i === _ckCel;
     b.style.background = ativo ? 'var(--accent)' : 'var(--surface)';
-    b.style.color      = ativo ? '#fff'    : '#64748B';
+    b.style.color      = ativo ? '#fff'    : 'var(--text3)';
     b.style.border     = ativo ? 'none'    : '1.5px solid var(--border)';
   }
 }
@@ -2264,16 +2264,16 @@ function ckRender() {
     if (s === 'prob') probCnt++;
     const okAct   = s === 'ok';
     const probAct = s === 'prob';
-    return `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:${probAct?'#FEF2F2':okAct?'#F0FDF4':'var(--surface2)'};border-radius:8px;margin-bottom:6px;border:1px solid ${probAct?'#FECACA':okAct?'#BBF7D0':'var(--border)'}">
+    return `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:${probAct?'rgba(201,82,79,.12)':okAct?'rgba(87,185,129,.12)':'var(--surface2)'};border-radius:8px;margin-bottom:6px;border:1px solid ${probAct?'rgba(201,82,79,.4)':okAct?'rgba(87,185,129,.4)':'var(--border)'}">
       <div style="flex:1">
-        <div style="font-size:13px;font-weight:600;color:${probAct?'#991B1B':okAct?'#166534':'#374151'}">${item.txt}</div>
+        <div style="font-size:13px;font-weight:600;color:${probAct?'var(--red)':okAct?'var(--green)':'var(--text2)'}">${item.txt}</div>
         <div style="font-size:11px;color:var(--text3);margin-top:1px">${item.sub}</div>
       </div>
       <div style="display:flex;gap:5px">
         <button onclick="ckToggle('${item.id}','ok')"
-          style="padding:5px 11px;border-radius:6px;border:none;font-size:11px;font-weight:700;cursor:pointer;background:${okAct?'var(--green)':'#E5E7EB'};color:${okAct?'#fff':'#6B7280'}">OK</button>
+          style="padding:5px 11px;border-radius:6px;border:none;font-size:11px;font-weight:700;cursor:pointer;background:${okAct?'var(--green)':'var(--surface2)'};color:${okAct?'#fff':'var(--text3)'}">OK</button>
         <button onclick="ckToggle('${item.id}','prob')"
-          style="padding:5px 11px;border-radius:6px;border:none;font-size:11px;font-weight:700;cursor:pointer;background:${probAct?'var(--red)':'#E5E7EB'};color:${probAct?'#fff':'#6B7280'}">PROB.</button>
+          style="padding:5px 11px;border-radius:6px;border:none;font-size:11px;font-weight:700;cursor:pointer;background:${probAct?'var(--red)':'var(--surface2)'};color:${probAct?'#fff':'var(--text3)'}">PROB.</button>
       </div>
     </div>`;
   }).join('');
@@ -2329,10 +2329,10 @@ function ckRenderHist() {
   el.innerHTML = hist.map(h => `
     <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:var(--surface2);border-radius:8px;margin-bottom:6px;border:1px solid var(--border)">
       <div style="width:8px;height:8px;border-radius:50%;margin-top:4px;flex-shrink:0;background:${h.probs?.length?'var(--red)':'var(--green)'}"></div>
-      <div style="flex:1;font-size:12px;color:#64748B;line-height:1.5">
+      <div style="flex:1;font-size:12px;color:var(--text3);line-height:1.5">
         <span style="font-weight:700;color:var(--text)">Celular #${h.cel} — ${h.turno}</span> · ${h.ts}<br>
         Recebido por: ${h.recebeu}
-        ${h.probs?.length ? `<div style="margin-top:3px"><span style="background:#FEE2E2;color:#991B1B;border-radius:4px;padding:1px 7px;font-size:11px;font-weight:700"><i class="ti ti-alert-triangle" aria-hidden="true"></i> ${h.probs.join(' · ')}</span></div>` : ''}
+        ${h.probs?.length ? `<div style="margin-top:3px"><span style="background:rgba(201,82,79,.12);color:var(--red);border-radius:4px;padding:1px 7px;font-size:11px;font-weight:700"><i class="ti ti-alert-triangle" aria-hidden="true"></i> ${h.probs.join(' · ')}</span></div>` : ''}
         ${h.obs ? `<div style="color:var(--text3);font-size:11px;margin-top:2px">${h.obs}</div>` : ''}
       </div>
     </div>`).join('');
@@ -2353,23 +2353,23 @@ async function carregarPlacar() {
     const { placar } = await res.json();
     const el = document.getElementById('pass-placar-content');
     if (!el) return;
-    const COR = { Manha:'#F59E0B', Tarde:'#3B82F6', Noite:'#8B5CF6' };
+    const COR = { Manha:'var(--amber)', Tarde:'var(--info)', Noite:'var(--indigo)' };
     const RANK = ['1º', '2º', '3º'];
     el.innerHTML = `
       <div style="margin-bottom:16px">
         ${placar.map((p,i) => `
-          <div style="background:#fff;border:1px solid #E2E8F0;border-left:4px solid ${COR[p.turno]||'#CBD5E1'};border-radius:10px;padding:14px 16px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">
+          <div style="background:var(--surface);border:1px solid var(--border);border-left:4px solid ${COR[p.turno]||'var(--border)'};border-radius:10px;padding:14px 16px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">
             <div>
-              <div style="font-size:12px;font-weight:700;color:#0F172A">${RANK[i]||''} ${p.turno}</div>
+              <div style="font-size:12px;font-weight:700;color:var(--text)">${RANK[i]||''} ${p.turno}</div>
             </div>
             <div style="text-align:right">
-              <div style="font-size:22px;font-weight:800;color:${COR[p.turno]||'#334155'}">${p.pontos}</div>
-              <div style="font-size:10px;color:#94A3B8">pontos</div>
+              <div style="font-size:22px;font-weight:800;color:${COR[p.turno]||'var(--text2)'}">${p.pontos}</div>
+              <div style="font-size:10px;color:var(--text3)">pontos</div>
             </div>
           </div>`).join('')}
       </div>
       <button onclick="resetarPlacar(prompt('Turno para resetar (Manha/Tarde/Noite):'))"
-        style="width:100%;padding:10px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;font-size:12px;color:#64748B;cursor:pointer">
+        style="width:100%;padding:10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;font-size:12px;color:var(--text3);cursor:pointer">
         Resetar pontuação de turno
       </button>`;
   } catch(e) { console.warn(e); }
@@ -2414,7 +2414,7 @@ function renderFormValidacao(p) {
   if (!sec) return;
   const SECOES = [
     {
-      titulo: 'Separação', cor: '#4F46E5', fundo: '#EFF6FF', borda: '#BFDBFE',
+      titulo: 'Separação', cor: 'var(--accent)', fundo: 'rgba(79,70,229,.08)', borda: 'rgba(79,70,229,.3)',
       campos: [
         { key:'sep_separados',    label:'Separados',      val: p.sep_separados,    pts: 75 },
         { key:'sep_pendentes',    label:'Pendentes',      val: p.sep_pendentes,    pts: 75 },
@@ -2422,28 +2422,28 @@ function renderFormValidacao(p) {
       ]
     },
     {
-      titulo: 'Checkout', cor: '#16a34a', fundo: '#F0FDF4', borda: '#BBF7D0',
+      titulo: 'Checkout', cor: 'var(--green)', fundo: 'rgba(87,185,129,.08)', borda: 'rgba(87,185,129,.3)',
       campos: [
         { key:'ck_feitos',    label:'Realizados', val: p.ck_feitos,    pts: 75 },
         { key:'ck_pendentes', label:'Pendentes',  val: p.ck_pendentes, pts: 75 },
       ]
     },
     {
-      titulo: 'Embalagem', cor: '#7C3AED', fundo: '#F5F3FF', borda: '#DDD6FE',
+      titulo: 'Embalagem', cor: 'var(--indigo)', fundo: 'rgba(139,92,246,.08)', borda: 'rgba(139,92,246,.3)',
       campos: [
         { key:'emb_embalados', label:'Embalados', val: p.emb_embalados, pts: 75 },
         { key:'emb_pendentes', label:'Pendentes', val: p.emb_pendentes, pts: 75 },
       ]
     },
     {
-      titulo: 'Reposição — Pendências', cor: '#DC2626', fundo: '#FEF2F2', borda: '#FECACA',
+      titulo: 'Reposição — Pendências', cor: 'var(--red)', fundo: 'rgba(201,82,79,.08)', borda: 'rgba(201,82,79,.3)',
       campos: [
         { key:'rep_procurando', label:'Procurando Itens', val: p.rep_procurando, pts: 75 },
         { key:'rep_na_rua',     label:'Caixas na Rua',    val: p.rep_na_rua,     pts: 75 },
       ]
     },
     {
-      titulo: 'Informações Gerais', cor: '#475569', fundo: '#F8FAFC', borda: '#E2E8F0',
+      titulo: 'Informações Gerais', cor: 'var(--text3)', fundo: 'var(--surface2)', borda: 'var(--border)',
       campos: [
         { key:'separadores_presentes', label:'Separadores Presentes', val: p.separadores_presentes, pts: 25 },
         { key:'ocorrencias',           label:'Ocorrências',           val: p.ocorrencias,           pts: 25 },
@@ -2451,28 +2451,28 @@ function renderFormValidacao(p) {
     },
   ];
   const campoHTML = (c) => `
-    <div style="background:#fff;border:1px solid #E2E8F0;border-radius:8px;padding:12px;margin-bottom:8px" id="val-card-${c.key}">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:8px" id="val-card-${c.key}">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
         <div style="flex:1">
-          <div style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.5px">${c.label}</div>
-          <div style="font-size:15px;font-weight:700;color:#0F172A;margin-top:2px">${c.val !== null && c.val !== undefined && c.val !== '' ? c.val : '—'}</div>
+          <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px">${c.label}</div>
+          <div style="font-size:15px;font-weight:700;color:var(--text);margin-top:2px">${c.val !== null && c.val !== undefined && c.val !== '' ? c.val : '—'}</div>
         </div>
         <div style="display:flex;gap:6px;flex-shrink:0">
           <button onclick="marcarCampo('${c.key}',true)" id="btn-ok-${c.key}"
-            style="padding:6px 12px;border-radius:7px;border:1.5px solid #BBF7D0;background:#F0FDF4;color:#15803D;font-size:11px;font-weight:600;cursor:pointer">
+            style="padding:6px 12px;border-radius:7px;border:1.5px solid rgba(87,185,129,.4);background:rgba(87,185,129,.1);color:var(--green);font-size:11px;font-weight:600;cursor:pointer">
             ✓ Correto
           </button>
           <button onclick="marcarCampo('${c.key}',false)" id="btn-no-${c.key}"
-            style="padding:6px 12px;border-radius:7px;border:1.5px solid #FECACA;background:#FEF2F2;color:#DC2626;font-size:11px;font-weight:600;cursor:pointer">
+            style="padding:6px 12px;border-radius:7px;border:1.5px solid rgba(201,82,79,.4);background:rgba(201,82,79,.1);color:var(--red);font-size:11px;font-weight:600;cursor:pointer">
             ✗ Incorreto <span style="font-size:9px">(-${c.pts}pts)</span>
           </button>
         </div>
       </div>
     </div>`;
   sec.innerHTML = `
-    <div style="background:#FEF3C7;border:1px solid #FDE68A;border-radius:10px;padding:14px 16px;margin-bottom:16px">
-      <div style="font-size:12px;font-weight:700;color:#92400E">Passagem pendente de validação</div>
-      <div style="font-size:11px;color:#78350F;margin-top:4px">Turno: <b>${p.turno}</b> | Data: <b>${fmtData(p.data)}</b> | Supervisor: <b>${p.supervisor}</b></div>
+    <div style="background:rgba(224,168,62,.12);border:1px solid rgba(224,168,62,.4);border-radius:10px;padding:14px 16px;margin-bottom:16px">
+      <div style="font-size:12px;font-weight:700;color:var(--amber)">Passagem pendente de validação</div>
+      <div style="font-size:11px;color:var(--amber);margin-top:4px">Turno: <b>${p.turno}</b> | Data: <b>${fmtData(p.data)}</b> | Supervisor: <b>${p.supervisor}</b></div>
     </div>
     ${SECOES.map(s => `
       <div style="border:1.5px solid ${s.borda};border-radius:10px;padding:12px 14px;margin-bottom:12px;background:${s.fundo}">
@@ -2480,20 +2480,20 @@ function renderFormValidacao(p) {
         ${s.campos.map(campoHTML).join('')}
       </div>`).join('')}
     <div style="margin-top:6px">
-      <label style="font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase">Observação geral</label>
+      <label style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase">Observação geral</label>
       <textarea id="val-obs-geral" rows="2" placeholder="Comentário sobre a passagem (opcional)"
-        style="width:100%;margin-top:4px;padding:10px;border:1px solid #E2E8F0;border-radius:8px;font-size:13px;resize:none;box-sizing:border-box"></textarea>
+        style="width:100%;margin-top:4px;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;resize:none;box-sizing:border-box"></textarea>
     </div>
     <div style="margin-top:6px">
-      <label style="font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase">Turno que está ENTRANDO</label>
-      <select id="val-turno-entrando" style="width:100%;margin-top:4px;padding:10px;border:1px solid #E2E8F0;border-radius:8px;font-size:13px;box-sizing:border-box">
+      <label style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase">Turno que está ENTRANDO</label>
+      <select id="val-turno-entrando" style="width:100%;margin-top:4px;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;box-sizing:border-box">
         <option value="Manha">Manhã</option>
         <option value="Tarde">Tarde</option>
         <option value="Noite">Noite</option>
       </select>
     </div>
     <button onclick="confirmarValidacao(${p.id})"
-      style="width:100%;margin-top:14px;padding:14px;background:#4F46E5;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">
+      style="width:100%;margin-top:14px;padding:14px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">
       Confirmar Validação
     </button>`;
 }
@@ -2504,9 +2504,9 @@ function marcarCampo(campo, ok) {
   const card  = document.getElementById(`val-card-${campo}`);
   const btnOk = document.getElementById(`btn-ok-${campo}`);
   const btnNo = document.getElementById(`btn-no-${campo}`);
-  if (card) { card.style.borderColor = ok ? '#86EFAC' : '#FCA5A5'; card.style.background = ok ? '#F0FDF4' : '#FEF2F2'; }
-  if (btnOk) { btnOk.style.background = ok ? '#16a34a' : '#F0FDF4'; btnOk.style.color = ok ? '#fff' : '#15803D'; }
-  if (btnNo) { btnNo.style.background = !ok ? '#DC2626' : '#FEF2F2'; btnNo.style.color = !ok ? '#fff' : '#DC2626'; }
+  if (card) { card.style.borderColor = ok ? 'var(--green)' : 'var(--red)'; card.style.background = ok ? 'rgba(87,185,129,.1)' : 'rgba(201,82,79,.1)'; }
+  if (btnOk) { btnOk.style.background = ok ? 'var(--green)' : 'rgba(87,185,129,.1)'; btnOk.style.color = ok ? '#fff' : 'var(--green)'; }
+  if (btnNo) { btnNo.style.background = !ok ? 'var(--red)' : 'rgba(201,82,79,.1)'; btnNo.style.color = !ok ? '#fff' : 'var(--red)'; }
 }
 
 async function confirmarValidacao(passagem_id) {
@@ -2638,8 +2638,8 @@ function filtrarEmbalagemDesk() {
 function renderCardEmbFilaDesk(p, emAndamento) {
   const isDrive  = String(p.transportadora||'').toUpperCase().includes('DRIVE');
   const isPrime  = p.tem_prime;
-  const bordColor = emAndamento ? '#bfdbfe' : isDrive ? '#FECACA' : isPrime ? '#ddd6fe' : 'var(--border)';
-  const numColor  = emAndamento ? '#4F46E5' : isDrive ? '#DC2626' : isPrime ? '#7c3aed' : 'var(--accent)';
+  const bordColor = emAndamento ? 'rgba(79,70,229,.3)' : isDrive ? 'rgba(201,82,79,.3)' : isPrime ? 'rgba(139,92,246,.3)' : 'var(--border)';
+  const numColor  = emAndamento ? 'var(--accent)' : isDrive ? 'var(--red)' : isPrime ? 'var(--indigo)' : 'var(--accent)';
   const pillTxt   = emAndamento ? 'embalando' : isDrive ? 'drive thru' : isPrime ? 'prime' : 'aguardando emb';
   const pillCls   = emAndamento ? 'separando' : 'pendente';
   const btnTxt    = emAndamento ? 'Continuar Embalagem' : 'Iniciar Embalagem';
@@ -2656,7 +2656,7 @@ function renderCardEmbFilaDesk(p, emAndamento) {
         ${p.transportadora ? `<span>${p.transportadora}</span>` : ''}
       </div>
       ${p.hora_checkout ? `<div style="font-size:11px;color:var(--text3);margin-top:2px"><i class="ti ti-check" aria-hidden="true"></i> Checkout às ${p.hora_checkout}</div>` : ''}
-      ${emAndamento && p.embalagem_iniciado_em ? `<div style="font-size:11px;color:#4F46E5;margin-top:2px"><i class="ti ti-clock" aria-hidden="true"></i> Embalagem iniciada às ${p.embalagem_iniciado_em}</div>` : ''}
+      ${emAndamento && p.embalagem_iniciado_em ? `<div style="font-size:11px;color:var(--accent);margin-top:2px"><i class="ti ti-clock" aria-hidden="true"></i> Embalagem iniciada às ${p.embalagem_iniciado_em}</div>` : ''}
       <button class="btn btn-primary btn-sm" style="width:100%;margin-top:8px;padding:10px;font-size:14px;font-weight:700"
         onclick="selecionarPedidoEmbFilaDesk(${p.id})">
         ${btnTxt}
@@ -2692,7 +2692,7 @@ async function carregarEmbalagemEmbaladesDesk() {
       <div style="border:1.5px solid rgba(87,185,129,.4);border-radius:12px;padding:12px 14px;margin-bottom:8px;background:rgba(87,185,129,.1)">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
           <div style="font-size:20px;font-weight:800;color:var(--green);font-family:'Space Mono',monospace">#${p.numero_pedido}</div>
-          <span style="font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;background:#16a34a;color:#fff">EMBALADO</span>
+          <span style="font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;background:var(--green);color:#fff">EMBALADO</span>
         </div>
         <div style="display:flex;gap:12px;font-size:12px;color:var(--text2);flex-wrap:wrap">
           <span>${r.ped_itens||0}<b style="color:var(--text)">${p.total_itens||p.itens||0} itens</b></span>
@@ -2702,7 +2702,7 @@ async function carregarEmbalagemEmbaladesDesk() {
           ${p.embalado_por ? `<span>${p.embalado_por}${p.embalado_por}</span>` : ''}
         </div>
         ${p.hora_checkout ? `<div style="font-size:11px;color:var(--text3);margin-top:4px">Checkout: ${p.hora_checkout}</div>` : ''}
-        ${p.embalagem_iniciado_em ? `<div style="font-size:11px;color:#16a34a;margin-top:2px">Início emb.: ${p.embalagem_iniciado_em}</div>` : ''}
+        ${p.embalagem_iniciado_em ? `<div style="font-size:11px;color:var(--green);margin-top:2px">Início emb.: ${p.embalagem_iniciado_em}</div>` : ''}
       </div>`).join('');
   } catch(e) { if (el) el.innerHTML = '<div style="color:var(--red);text-align:center;padding:24px">Erro ao carregar</div>'; }
 }
@@ -2731,7 +2731,7 @@ async function buscarEmbalagemDesk() {
       return;
     }
     if (cont) cont.innerHTML = renderCardEmb(p, p.status_embalagem === 'embalando', 'desk');
-  } catch(e) { if (cont) cont.innerHTML = '<div style="color:#ef4444;font-size:13px;padding:8px">Erro ao buscar</div>'; }
+  } catch(e) { if (cont) cont.innerHTML = '<div style="color:var(--red);font-size:13px;padding:8px">Erro ao buscar</div>'; }
 }
 
 // iniciarEmbalagemDesk and encerrarEmbalagemDesk are defined above (lines ~946/958)
@@ -2984,7 +2984,7 @@ async function carregarStatsPedidosDesk(page) {
         <td style="padding:10px 12px;font-size:13px;color:var(--text2)">${p.cliente || '—'}</td>
       </tr>`).join('');
   } catch(e) {
-    tbody.innerHTML = `<tr><td colspan="4" style="color:#ef4444;padding:24px;text-align:center">Erro: ${e.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="4" style="color:var(--red);padding:24px;text-align:center">Erro: ${e.message}</td></tr>`;
   }
 }
 
@@ -3026,15 +3026,15 @@ async function carregarAvisosSeparadorDesk() {
     destEl.innerHTML = avisos.map(a => {
       const isSubiu  = a.status === 'subiu';
       const isAguard = a.status === 'aguardando_abastecer';
-      const bg    = isSubiu ? '#F0FDF4' : isAguard ? '#FFFBEB' : '#EFF6FF';
-      const bord  = isSubiu ? '#BBF7D0' : isAguard ? '#FDE68A' : '#BFDBFE';
+      const bg    = isSubiu ? 'rgba(87,185,129,.12)' : isAguard ? 'rgba(224,168,62,.12)' : 'rgba(79,70,229,.12)';
+      const bord  = isSubiu ? 'rgba(87,185,129,.4)' : isAguard ? 'rgba(224,168,62,.4)' : 'rgba(79,70,229,.4)';
       const label = isSubiu ? 'Subiu' : isAguard ? 'Aguard. guardar' : 'Abastecido';
-      const cor   = isSubiu ? 'var(--green)' : isAguard ? '#92400e' : 'var(--accent)';
+      const cor   = isSubiu ? 'var(--green)' : isAguard ? 'var(--amber)' : 'var(--accent)';
       const icon  = isSubiu ? 'ti-arrow-big-up-lines' : isAguard ? 'ti-clock' : 'ti-check';
       const nomeLogado = usuarioAtual?.nome || '';
       const btnGuardei = isAguard
         ? `<button onclick="sepGuardeiItem(${a.id},'${nomeLogado.replace(/'/g,"\\'")}',this)"
-            style="margin-top:10px;padding:10px 18px;background:#10b981;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">
+            style="margin-top:10px;padding:10px 18px;background:var(--green);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">
             Guardei este item eu mesmo
            </button>`
         : `<button onclick="sepCienteAviso(${a.id},this)"
@@ -3090,20 +3090,23 @@ async function carregarAguardandoDesk() {
     });
     el.innerHTML = Object.entries(porPedido).map(([ped, itens]) => {
       const temProtocolo = itens.some(a => a.status === 'protocolo');
-      const borderColor  = temProtocolo ? '#8B5CF6' : '#f59e0b';
-      const bgColor      = temProtocolo ? '#f5f3ff' : '#fffbeb';
+      // Hex literal (não var()) — usado com sufixo de opacidade concatenado
+      // abaixo (${borderColor}44 etc.), o que só funciona com string hex crua.
+      // Valores alinhados a --indigo/--amber.
+      const borderColor  = temProtocolo ? '#8B5CF6' : '#E0A83E';
+      const bgColor      = temProtocolo ? 'rgba(139,92,246,.08)' : 'rgba(224,168,62,.08)';
       const labelTxt     = temProtocolo ? 'Protocolo' : 'Não encontrado';
-      const labelColor   = temProtocolo ? '#7c3aed'   : 'var(--amber)';
+      const labelColor   = temProtocolo ? 'var(--indigo)' : 'var(--amber)';
       return `<div style="background:${bgColor};border:1px solid ${borderColor}44;border-left:3px solid ${borderColor};border-radius:10px;padding:14px;margin-bottom:10px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
           <span style="font-family:'Space Mono',monospace;font-size:15px;font-weight:700;color:var(--text)">Pedido #${ped}</span>
           <span style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:12px;background:${borderColor}22;color:${labelColor};border:1px solid ${borderColor}66">${labelTxt}</span>
         </div>
         ${itens.map(a => `
-          <div style="background:rgba(255,255,255,.75);border:1px solid var(--border);border-radius:7px;padding:10px;margin-bottom:6px">
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:10px;margin-bottom:6px">
             <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:2px">${a.codigo||'—'}</div>
             <div style="font-size:11px;color:var(--text2);margin-bottom:3px">${a.descricao||'—'}</div>
-            <div style="font-size:11px;color:#64748b">Qtd: <b>${a.quantidade||1}</b>${a.endereco?' | End: '+a.endereco:''}${a.hora_aviso?' | '+a.hora_aviso:''}</div>
+            <div style="font-size:11px;color:var(--text3)">Qtd: <b>${a.quantidade||1}</b>${a.endereco?' | End: '+a.endereco:''}${a.hora_aviso?' | '+a.hora_aviso:''}</div>
           </div>
         `).join('')}
       </div>`;
@@ -3120,23 +3123,23 @@ async function carregarHistoricoPassagens() {
     const lista = await res.json();
     const el = document.getElementById('pass-historico');
     if (!el) return;
-    const STATUS_COR  = { pendente:'#F59E0B', validado:'#16a34a', contestado:'#DC2626' };
+    const STATUS_COR  = { pendente:'var(--amber)', validado:'var(--green)', contestado:'var(--red)' };
     const STATUS_NOME = { pendente:'Pendente', validado:'Validado', contestado:'Contestado' };
     el.innerHTML = lista.length ? lista.map(p => `
-      <div style="background:#fff;border:1px solid #E2E8F0;border-left:3px solid ${STATUS_COR[p.status]||'#CBD5E1'};border-radius:8px;padding:12px 14px;margin-bottom:8px">
+      <div style="background:var(--surface);border:1px solid var(--border);border-left:3px solid ${STATUS_COR[p.status]||'var(--border)'};border-radius:8px;padding:12px 14px;margin-bottom:8px">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">
           <div>
-            <span style="font-size:13px;font-weight:700;color:#0F172A">${fmtData(p.data)} — ${p.turno}</span>
-            <span style="margin-left:8px;font-size:11px;font-weight:600;color:${STATUS_COR[p.status]||'#64748B'}">${STATUS_NOME[p.status]||p.status}</span>
+            <span style="font-size:13px;font-weight:700;color:var(--text)">${fmtData(p.data)} — ${p.turno}</span>
+            <span style="margin-left:8px;font-size:11px;font-weight:600;color:${STATUS_COR[p.status]||'var(--text3)'}">${STATUS_NOME[p.status]||p.status}</span>
           </div>
-          <div style="font-size:11px;color:#64748B">${p.supervisor}</div>
+          <div style="font-size:11px;color:var(--text3)">${p.supervisor}</div>
         </div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;font-size:11px;color:#475569">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;font-size:11px;color:var(--text3)">
           <span>Sep: ${p.sep_separados||0} / ${p.sep_pendentes||0} pend</span>
           <span>CK: ${p.ck_feitos||0} / ${p.ck_pendentes||0} pend</span>
           <span>Emb: ${p.emb_embalados||0} / ${p.emb_pendentes||0} pend</span>
           <span>Rep: ${p.rep_procurando||0} proc / ${p.rep_na_rua||0} rua</span>
-          ${p.pontos_perdidos ? `<span style="color:#DC2626;font-weight:700">-${p.pontos_perdidos} pts</span>` : ''}
+          ${p.pontos_perdidos ? `<span style="color:var(--red);font-weight:700">-${p.pontos_perdidos} pts</span>` : ''}
         </div>
       </div>`).join('') : '<div style="color:var(--text3);text-align:center;padding:20px;font-size:13px">Nenhuma passagem registrada</div>';
   } catch(e) { console.warn(e); }
