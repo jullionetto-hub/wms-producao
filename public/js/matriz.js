@@ -759,8 +759,11 @@ function _mzRenderClassificacoes() {
 
   cont.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
-      <div style="display:flex;gap:6px;flex-wrap:wrap">
-        ${periodos.map(p => `<button onclick="_mzClassPeriodo='${p.replace(/'/g,"\\'")}';_mzRenderClassificacoes()" style="padding:6px 12px;background:${p===periodo?'var(--accent)':'var(--surface2)'};border:none;border-radius:20px;color:${p===periodo?'#fff':'var(--text2)'};font-size:11.5px;font-weight:700;cursor:pointer">${pfEsc(p)}</button>`).join('')}
+      <div class="filter-grp">
+        <span class="filter-lbl">Período</span>
+        <div class="turno-seg">
+          ${periodos.map(p => `<button onclick="_mzClassPeriodo='${p.replace(/'/g,"\\'")}';_mzRenderClassificacoes()" class="rel-turno-btn${p===periodo?' ativo':''}">${pfEsc(p)}</button>`).join('')}
+        </div>
       </div>
       <button class="btn btn-outline btn-sm" onclick="mzNovoCicloClassificacao()">+ Novo ciclo</button>
     </div>
@@ -782,11 +785,18 @@ function _mzRenderClassificacoes() {
 
     <div class="card" style="margin-bottom:14px">${breakdownHtml}</div>
 
-    <div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap">
-      ${turnos.map(t => `<button onclick="_mzClassTurnoFiltro='${t.replace(/'/g,"\\'")}';_mzRenderClassificacoes()" style="padding:6px 12px;background:${t===_mzClassTurnoFiltro?'var(--accent)':'var(--surface2)'};border:none;border-radius:20px;color:${t===_mzClassTurnoFiltro?'#fff':'var(--text2)'};font-size:11.5px;font-weight:700;cursor:pointer">${pfEsc(t)}</button>`).join('')}
+    <div class="filter-grp" style="margin-bottom:6px">
+      <span class="filter-lbl">Turno</span>
+      <div class="turno-seg">
+        ${turnos.map(t => `<button onclick="_mzClassTurnoFiltro='${t.replace(/'/g,"\\'")}';_mzRenderClassificacoes()" class="rel-turno-btn${t===_mzClassTurnoFiltro?' ativo':''}">${pfEsc(t)}</button>`).join('')}
+      </div>
     </div>
-    <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">
-      ${alertas.map(a => `<button onclick="_mzClassAlertaFiltro='${a}';_mzRenderClassificacoes()" style="padding:6px 12px;background:${a===_mzClassAlertaFiltro?'var(--accent)':'var(--surface2)'};border:none;border-radius:20px;color:${a===_mzClassAlertaFiltro?'#fff':'var(--text2)'};font-size:11.5px;font-weight:700;cursor:pointer">${pfEsc(a)}</button>`).join('')}
+    <div class="filter-grp" style="margin-bottom:14px">
+      <span class="filter-lbl">Alerta</span>
+      <div class="turno-seg">
+        ${alertas.map(a => `<button onclick="_mzClassAlertaFiltro='${a}';_mzRenderClassificacoes()" class="rel-turno-btn${a===_mzClassAlertaFiltro?' ativo':''}">${pfEsc(a)}</button>`).join('')}
+      </div>
+    </div>
     </div>
 
     <div class="card" style="padding:0;overflow-x:auto">
@@ -1051,8 +1061,11 @@ function _mzRenderAusencias() {
 
   cont.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">
-      <div style="display:flex;gap:6px;flex-wrap:wrap">
-        ${periodos.map(p => `<button onclick="_mzAusPeriodo='${p.replace(/'/g,"\\'")}';_mzAusTurno='Todos';_mzRenderAusencias()" style="padding:6px 12px;background:${p===_mzAusPeriodo?'var(--accent)':'var(--surface2)'};border:none;border-radius:20px;color:${p===_mzAusPeriodo?'#fff':'var(--text2)'};font-size:11.5px;font-weight:700;cursor:pointer">${pfEsc(p)}</button>`).join('')}
+      <div class="filter-grp">
+        <span class="filter-lbl">Período</span>
+        <div class="turno-seg">
+          ${periodos.map(p => `<button onclick="_mzAusPeriodo='${p.replace(/'/g,"\\'")}';_mzAusTurno='Todos';_mzRenderAusencias()" class="rel-turno-btn${p===_mzAusPeriodo?' ativo':''}">${pfEsc(p)}</button>`).join('')}
+        </div>
       </div>
       <button class="btn btn-primary btn-sm" onclick="mzAbrirAusencia()">+ Nova ausência</button>
     </div>
@@ -1063,11 +1076,14 @@ function _mzRenderAusencias() {
       <div class="tile" style="background:var(--surface2);border-radius:10px;padding:12px"><div style="font-size:10px;color:var(--text3)">PENDENTES DE JUSTIFICATIVA</div><div style="font-size:18px;font-weight:800;margin-top:4px;color:var(--amber)">${pendentes}</div></div>
       <div class="tile" style="background:var(--surface2);border-radius:10px;padding:12px"><div style="font-size:10px;color:var(--text3)">NÃO JUSTIFICADAS</div><div style="font-size:18px;font-weight:800;margin-top:4px;color:var(--red)">${naoJust}</div></div>
     </div>
-    <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">
-      ${turnosFiltro.map(t => {
-        const n = t==='Todos' ? rows.length : rows.filter(r=>r.turno===t).length;
-        return `<button onclick="_mzAusTurno='${t.replace(/'/g,"\\'")}';_mzRenderAusencias()" style="padding:6px 12px;background:${t===_mzAusTurno?'var(--accent)':'var(--surface2)'};border:none;border-radius:20px;color:${t===_mzAusTurno?'#fff':'var(--text2)'};font-size:11.5px;font-weight:700;cursor:pointer">${pfEsc(t)} (${n})</button>`;
-      }).join('')}
+    <div class="filter-grp" style="margin-bottom:14px">
+      <span class="filter-lbl">Turno</span>
+      <div class="turno-seg">
+        ${turnosFiltro.map(t => {
+          const n = t==='Todos' ? rows.length : rows.filter(r=>r.turno===t).length;
+          return `<button onclick="_mzAusTurno='${t.replace(/'/g,"\\'")}';_mzRenderAusencias()" class="rel-turno-btn${t===_mzAusTurno?' ativo':''}">${pfEsc(t)} (${n})</button>`;
+        }).join('')}
+      </div>
     </div>
     ${turnosParaMostrar.map(turno => {
       const registros = rows.filter(r=>r.turno===turno);
@@ -1246,8 +1262,8 @@ function _mzRenderBancoHoras() {
         </div>`;
       }).join('')}
     </div>
-    <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
-      ${filtros.map(f => `<button onclick="_mzBancoFiltro='${f.key}';_mzRenderBancoHoras()" style="padding:6px 12px;background:${_mzBancoFiltro===f.key?'var(--accent)':'var(--surface2)'};border:none;border-radius:20px;color:${_mzBancoFiltro===f.key?'#fff':'var(--text2)'};font-size:11.5px;font-weight:700;cursor:pointer">${f.label}</button>`).join('')}
+    <div class="turno-seg" style="margin-bottom:10px">
+      ${filtros.map(f => `<button onclick="_mzBancoFiltro='${f.key}';_mzRenderBancoHoras()" class="rel-turno-btn${_mzBancoFiltro===f.key?' ativo':''}">${f.label}</button>`).join('')}
     </div>
     <div class="card" style="padding:0;overflow-x:auto">
       <table style="width:100%;border-collapse:collapse;font-size:12.5px">
@@ -1501,10 +1517,10 @@ function _mzRenderCargos() {
   const filtrados = _mzCargoFiltro === 'Todos' ? _mzCargos : _mzCargos.filter(c => c.area === _mzCargoFiltro);
   cont.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
-      <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <div class="turno-seg">
         ${areas.map(a => {
           const n = a==='Todos' ? _mzCargos.length : _mzCargos.filter(c=>c.area===a).length;
-          return `<button onclick="_mzCargoFiltro='${a.replace(/'/g,"\\'")}';_mzRenderCargos()" style="padding:6px 12px;background:${_mzCargoFiltro===a?'var(--accent)':'var(--surface2)'};border:none;border-radius:20px;color:${_mzCargoFiltro===a?'#fff':'var(--text2)'};font-size:11.5px;font-weight:700;cursor:pointer">${pfEsc(a)} (${n})</button>`;
+          return `<button onclick="_mzCargoFiltro='${a.replace(/'/g,"\\'")}';_mzRenderCargos()" class="rel-turno-btn${_mzCargoFiltro===a?' ativo':''}">${pfEsc(a)} (${n})</button>`;
         }).join('')}
       </div>
       <button class="btn btn-primary btn-sm" onclick="mzAbrirCargo()">+ Novo cargo</button>
@@ -1692,8 +1708,11 @@ function _mzRenderIncentivo() {
       <p style="font-size:12px;color:var(--text2);margin:0">Bonificação calculada a partir da Classificação do ciclo — Absenteísmo (${_mzIncentivo?.abs_green ?? 30} pts) + Performance (${_mzIncentivo?.perf_green ?? 40} pts) + Comportamento (${_mzIncentivo?.comp_green ?? 30} pts).</p>
     </div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
-      <div style="display:flex;gap:6px;flex-wrap:wrap">
-        ${periodos.map(p => `<button onclick="_mzIncentivoPeriodo='${p.replace(/'/g,"\\'")}';_mzRenderIncentivo()" style="padding:6px 12px;background:${p===periodo?'var(--accent)':'var(--surface2)'};border:none;border-radius:20px;color:${p===periodo?'#fff':'var(--text2)'};font-size:11.5px;font-weight:700;cursor:pointer">${pfEsc(p)}</button>`).join('')}
+      <div class="filter-grp">
+        <span class="filter-lbl">Período</span>
+        <div class="turno-seg">
+          ${periodos.map(p => `<button onclick="_mzIncentivoPeriodo='${p.replace(/'/g,"\\'")}';_mzRenderIncentivo()" class="rel-turno-btn${p===periodo?' ativo':''}">${pfEsc(p)}</button>`).join('')}
+        </div>
       </div>
       <button class="btn btn-outline btn-sm" onclick="mzAbrirIncentivoConfig()">Editar pontuação</button>
     </div>
@@ -1703,8 +1722,11 @@ function _mzRenderIncentivo() {
       <div class="tile" style="background:var(--surface2);border-radius:10px;padding:12px"><div style="font-size:10px;color:var(--text3)">👍 REGULAR</div><div style="font-size:18px;font-weight:800;margin-top:4px">${regular}</div></div>
       <div class="tile" style="background:var(--surface2);border-radius:10px;padding:12px"><div style="font-size:10px;color:var(--text3)">📋 ATENÇÃO</div><div style="font-size:18px;font-weight:800;margin-top:4px">${atencao}</div></div>
     </div>
-    <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">
-      ${turnos.map(t => `<button onclick="_mzIncentivoTurnoFiltro='${t.replace(/'/g,"\\'")}';_mzRenderIncentivo()" style="padding:6px 12px;background:${t===_mzIncentivoTurnoFiltro?'var(--accent)':'var(--surface2)'};border:none;border-radius:20px;color:${t===_mzIncentivoTurnoFiltro?'#fff':'var(--text2)'};font-size:11.5px;font-weight:700;cursor:pointer">${pfEsc(t)}</button>`).join('')}
+    <div class="filter-grp" style="margin-bottom:14px">
+      <span class="filter-lbl">Turno</span>
+      <div class="turno-seg">
+        ${turnos.map(t => `<button onclick="_mzIncentivoTurnoFiltro='${t.replace(/'/g,"\\'")}';_mzRenderIncentivo()" class="rel-turno-btn${t===_mzIncentivoTurnoFiltro?' ativo':''}">${pfEsc(t)}</button>`).join('')}
+      </div>
     </div>
     <div class="card" style="padding:0;overflow-x:auto">
       <table style="width:100%;border-collapse:collapse;font-size:12.5px">
@@ -1865,8 +1887,8 @@ function _mzRenderCarreira() {
 
   cont.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
-      <div style="display:flex;gap:6px;flex-wrap:wrap">
-        ${areas.map(a => `<button onclick="_mzCarreiraArea='${a.replace(/'/g,"\\'")}';_mzRenderCarreira()" style="padding:6px 12px;background:${a===_mzCarreiraArea?'var(--accent)':'var(--surface2)'};border:none;border-radius:20px;color:${a===_mzCarreiraArea?'#fff':'var(--text2)'};font-size:11.5px;font-weight:700;cursor:pointer">${pfEsc(a)}</button>`).join('')}
+      <div class="turno-seg">
+        ${areas.map(a => `<button onclick="_mzCarreiraArea='${a.replace(/'/g,"\\'")}';_mzRenderCarreira()" class="rel-turno-btn${a===_mzCarreiraArea?' ativo':''}">${pfEsc(a)}</button>`).join('')}
       </div>
       <div style="display:flex;gap:8px">
         <button class="btn btn-outline btn-sm" onclick="mzNovaAreaCarreira()">+ Nova área</button>
@@ -1956,8 +1978,8 @@ function _mzRenderOrganograma() {
       </div>` : ''}
     </div>` : ''}
 
-    <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">
-      ${MZ_TURNOS.map(t => `<button onclick="_mzOrgTurno='${t}';_mzRenderOrganograma()" style="padding:7px 13px;background:${_mzOrgTurno===t?'var(--accent)':'var(--surface2)'};border:none;border-radius:20px;color:${_mzOrgTurno===t?'#fff':'var(--text2)'};font-size:11.5px;font-weight:700;cursor:pointer">${t}</button>`).join('')}
+    <div class="turno-seg" style="margin-bottom:14px">
+      ${MZ_TURNOS.map(t => `<button onclick="_mzOrgTurno='${t}';_mzRenderOrganograma()" class="rel-turno-btn${_mzOrgTurno===t?' ativo':''}">${t}</button>`).join('')}
     </div>
 
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">
