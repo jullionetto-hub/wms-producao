@@ -90,7 +90,7 @@ function _absnRenderBadgesMes() {
   if (!cont) return;
   cont.innerHTML = _absnMesesInfo.map(m => {
     const ativo = _absnDataIni === m.ini && _absnDataFim === m.fim;
-    return `<button onclick="absnFiltrarMes('${m.mes}','${m.ini}','${m.fim}')" title="${fmtData(m.ini)} a ${fmtData(m.fim)}" class="rel-turno-btn${ativo?' ativo':''}">📅 ${m.mes}</button>`;
+    return `<button onclick="absnFiltrarMes('${m.mes}','${m.ini}','${m.fim}')" title="${fmtData(m.ini)} a ${fmtData(m.fim)}" class="rel-turno-btn${ativo?' ativo':''}"><i class="ti ti-calendar" aria-hidden="true"></i> ${m.mes}</button>`;
   }).join('');
 }
 
@@ -395,11 +395,11 @@ function renderizarPagGestao() {
   <div style="background:var(--surface2);padding:16px 24px;flex-shrink:0">
     <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:1px;margin-bottom:10px">ATRASO POR MARCAÇÃO — ESPELHO DE PONTO</div>
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-      <button onclick="document.getElementById('absn-file-input').click()" style="padding:8px 16px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📄 Enviar PDF(s) do espelho de ponto</button>
+      <button onclick="document.getElementById('absn-file-input').click()" style="padding:8px 16px;background:var(--surface);border:1.5px solid var(--border);color:var(--text2);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer"><i class="ti ti-file-upload" aria-hidden="true"></i> Enviar PDF(s) do espelho de ponto</button>
       <input type="file" id="absn-file-input" accept=".pdf" multiple style="display:none" onchange="absnEnviarPdfs(this.files)">
-      <button onclick="document.getElementById('absn-debug-input').click()" style="padding:8px 16px;background:var(--surface);border:1.5px solid var(--border);color:var(--text2);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🔍 Diagnóstico (temporário)</button>
+      <button onclick="document.getElementById('absn-debug-input').click()" style="padding:8px 16px;background:var(--surface);border:1.5px solid var(--border);color:var(--text2);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer"><i class="ti ti-search" aria-hidden="true"></i> Diagnóstico (temporário)</button>
       <input type="file" id="absn-debug-input" accept=".pdf" style="display:none" onchange="absnDebugPdf(this.files[0])">
-      <button onclick="absnApagarTudo()" style="padding:8px 16px;background:transparent;border:1.5px solid var(--red);color:var(--red);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🗑️ Apagar todos os dados</button>
+      <button onclick="absnApagarTudo()" style="padding:8px 16px;background:transparent;border:1.5px solid var(--red);color:var(--red);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer"><i class="ti ti-trash" aria-hidden="true"></i> Apagar todos os dados</button>
       <div id="absn-status" style="font-size:12px;color:var(--text3)"></div>
     </div>
     <div id="absn-meses-ativos" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"></div>
@@ -431,7 +431,7 @@ function renderizarPagGestao() {
       <div class="filter-actions">
         <button class="btn btn-primary btn-sm" onclick="absnAplicarPeriodo()">Aplicar</button>
         <button class="btn-icon-outline" title="Limpar filtros" onclick="absnLimparPeriodo()"><i class="ti ti-refresh" aria-hidden="true"></i></button>
-        <button onclick="absnGerarPDF()" style="padding:6px 12px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">🖨️ Gerar PDF / Imprimir</button>
+        <button onclick="absnGerarPDF()" style="padding:6px 12px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:8px;font-size:11px;font-weight:700;cursor:pointer"><i class="ti ti-printer" aria-hidden="true"></i> Gerar PDF / Imprimir</button>
       </div>
     </div>
     <div id="absn-periodo-label" style="color:var(--text3);font-size:11px;margin-top:6px"></div>
