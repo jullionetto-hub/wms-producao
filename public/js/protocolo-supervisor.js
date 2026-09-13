@@ -38,7 +38,7 @@ async function carregarProtocoloSupervisor() {
 
     el.innerHTML = avisos.map(a => renderCardProtocolo(a)).join('');
   } catch(e) {
-    el.innerHTML = `<div style="color:#ef4444;text-align:center;padding:24px">Erro ao carregar itens</div>`;
+    el.innerHTML = `<div style="color:var(--red);text-align:center;padding:24px">Erro ao carregar itens</div>`;
   }
 }
 
