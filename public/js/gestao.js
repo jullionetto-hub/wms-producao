@@ -257,7 +257,7 @@ function _absnRenderTabela() {
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
         <button id="absn-turno-todos" onclick="absnSetTurnoFiltro(null)" style="padding:5px 12px;border-radius:20px;border:1.5px solid var(--border);background:${!_absnTurnoFiltro?'var(--accent)':'var(--surface)'};color:${!_absnTurnoFiltro?'#fff':'var(--text2)'};font-size:11px;font-weight:700;cursor:pointer">Todos</button>
         ${turnos.map(t => `<button id="absn-turno-${t}" onclick="absnSetTurnoFiltro('${t}')" style="padding:5px 12px;border-radius:20px;border:1.5px solid var(--border);background:${_absnTurnoFiltro===t?'var(--accent)':'var(--surface)'};color:${_absnTurnoFiltro===t?'#fff':'var(--text2)'};font-size:11px;font-weight:700;cursor:pointer">${t}</button>`).join('')}
-        <button onclick="absnGerarPDF()" style="margin-left:auto;padding:5px 12px;background:#0F172A;color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">🖨️ Gerar PDF / Imprimir</button>
+        <button onclick="absnGerarPDF()" style="margin-left:auto;padding:5px 12px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">🖨️ Gerar PDF / Imprimir</button>
       </div>
       <div style="overflow-x:auto;background:var(--surface);border:1px solid var(--border);border-radius:10px">
         <table style="width:100%;border-collapse:collapse;font-size:12.5px">
