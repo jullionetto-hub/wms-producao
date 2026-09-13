@@ -25,7 +25,8 @@ let _mzCarregado = {
 
 const MZ_TIER_LABEL = { gerente:'Gerente', coordenador:'Coordenador', supervisor:'Supervisor', analista:'Analista', assistente:'Assistente', auxiliar:'Auxiliar' };
 const MZ_STATUS_OPCOES = ['Executa','Garante','Acompanha','Apoia','Sim','Não'];
-const MZ_STATUS_COR = { Sim:'#dc2626', Garante:'#7c3aed', Acompanha:'#d97706', Apoia:'#c2703d', Executa:'#16a34a', 'Não':'#6b7280' };
+// Apoia (#c2703d, terracota) não tem token equivalente no app — mantido literal
+const MZ_STATUS_COR = { Sim:'var(--red)', Garante:'var(--indigo)', Acompanha:'var(--amber)', Apoia:'#c2703d', Executa:'var(--green)', 'Não':'var(--text3)' };
 const MZ_STATUS_DESC = {
   Sim: 'É o dono principal da atividade. Faz acontecer e responde primeiro pela entrega.',
   Garante: 'Cobra, verifica e assegura que a atividade seja executada corretamente.',
@@ -683,7 +684,7 @@ function mzExcluirFeedback(id) {
 }
 
 /* ── Classificações mensais (absenteísmo/performance/comportamento) ── */
-const MZ_SEMAFORO = { green:'#16a34a', yellow:'#d97706', red:'#dc2626' };
+const MZ_SEMAFORO = { green:'var(--green)', yellow:'var(--amber)', red:'var(--red)' };
 const MZ_SEMAFORO_CICLO = [null, 'green', 'yellow', 'red'];
 
 async function mzCarregarClassificacoes() {
@@ -996,7 +997,7 @@ function _mzAusRows(periodo) {
 function _mzAusStatus(motivo) {
   motivo = motivo || '';
   if (motivo.startsWith('Ainda não apresentou')) return { label:'Pendente', cor:'var(--amber)' };
-  if (motivo.startsWith('Ausência convertida')) return { label:'Convertida (BH)', cor:'#2563eb' };
+  if (motivo.startsWith('Ausência convertida')) return { label:'Convertida (BH)', cor:'var(--info)' };
   if (motivo === 'Falta' || motivo.startsWith('Desconto')) return { label:'Não justificada', cor:'var(--red)' };
   return { label:'Justificada', cor:'var(--green)' };
 }
@@ -1206,7 +1207,7 @@ function _mzRenderBancoHoras() {
   const tiers = [
     { label:'Acima de 160h', test:v=>v>=160, cor:'var(--red)' },
     { label:'101h – 159h',   test:v=>v>=101 && v<160, cor:'var(--amber)' },
-    { label:'41h – 100h',    test:v=>v>=41 && v<=100, cor:'#2563eb' },
+    { label:'41h – 100h',    test:v=>v>=41 && v<=100, cor:'var(--info)' },
     { label:'Até 40h',       test:v=>v<=40, cor:'var(--green)' },
   ];
   const totalRows = rows.length;
