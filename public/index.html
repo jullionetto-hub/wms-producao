@@ -486,7 +486,7 @@
                   <button class="btn btn-sm" style="padding:3px 10px;background:rgba(139,92,246,.15);color:var(--indigo);border:1.5px solid rgba(139,92,246,.4);font-size:11px;font-weight:700" onclick="vincularTodosSeparadores()" title="Corrigir vínculos quebrados">Corrigir vínculos</button>
                 </div>
                 <div style="display:flex;gap:6px">
-                  <button id="uf-todos" onclick="filtrarTurnoUsr('todos')" style="flex:1;padding:4px 0;border-radius:7px;border:1.5px solid var(--accent);background:var(--accent);color:#fff;font-size:10px;font-weight:700;text-align:center;cursor:pointer">Todos</button>
+                  <button id="uf-todos" onclick="filtrarTurnoUsr('todos')" style="flex:1;padding:4px 0;border-radius:7px;border:1.5px solid var(--text3);background:var(--surface);color:var(--text);font-size:10px;font-weight:700;text-align:center;cursor:pointer">Todos</button>
                   <button id="uf-manha" onclick="filtrarTurnoUsr('Manha')" style="flex:1;padding:4px 0;border-radius:7px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text2);font-size:10px;font-weight:700;text-align:center;cursor:pointer">Manhã</button>
                   <button id="uf-tarde" onclick="filtrarTurnoUsr('Tarde')" style="flex:1;padding:4px 0;border-radius:7px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text2);font-size:10px;font-weight:700;text-align:center;cursor:pointer">Tarde</button>
                   <button id="uf-noite" onclick="filtrarTurnoUsr('Noite')" style="flex:1;padding:4px 0;border-radius:7px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text2);font-size:10px;font-weight:700;text-align:center;cursor:pointer">Noite</button>
@@ -2586,7 +2586,7 @@
 
 
 <script src="/js/config.js?v=13"></script>
-  <script src="/js/pedidos.js?v=39"></script>
+  <script src="/js/pedidos.js?v=40"></script>
   <script src="/js/separador.js?v=27"></script>
   <script src="/js/repositor.js?v=18"></script>
   <script src="/js/checkout.js?v=14"></script>
@@ -2609,7 +2609,7 @@
     <div style="padding:18px">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
         <div>
-          <div style="font-size:10px;font-weight:700;color:var(--accent);letter-spacing:1px;margin-bottom:10px">IMPORTAR PLANILHA</div>
+          <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1px;margin-bottom:10px">IMPORTAR PLANILHA</div>
           <div class="upload-area" id="modal-upload-area"
             ondragover="event.preventDefault();this.classList.add('drag')"
             ondragleave="this.classList.remove('drag')"
@@ -2634,7 +2634,7 @@
           </div>
         </div>
         <div>
-          <div style="font-size:10px;font-weight:700;color:var(--accent);letter-spacing:1px;margin-bottom:10px">HISTÓRICO</div>
+          <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1px;margin-bottom:10px">HISTÓRICO</div>
           <div id="modal-hist-importacoes"></div>
         </div>
       </div>
@@ -2649,7 +2649,7 @@
       <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">Distribuição de Pedidos</div>
       <div style="display:flex;gap:4px;background:var(--surface);border-radius:8px;padding:3px">
         <button id="btn-modo-auto" onclick="distSetModo('auto')"
-          style="padding:5px 14px;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;background:var(--accent);color:#fff;transition:all .2s">
+          style="padding:5px 14px;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;background:var(--surface);color:var(--text);transition:all .2s">
           Automática
         </button>
         <button id="btn-modo-turno" onclick="distSetModo('turno')"
@@ -2683,7 +2683,7 @@
       <!-- Filtro de data + imprimir -->
       <div style="display:flex;gap:10px;align-items:flex-end;margin-bottom:14px;padding:10px 14px;background:var(--surface2);border-radius:8px;border:1px solid var(--border)">
         <div>
-          <div style="font-size:10px;font-weight:700;color:var(--accent);letter-spacing:1px;margin-bottom:5px">DATA DOS PEDIDOS</div>
+          <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1px;margin-bottom:5px">DATA DOS PEDIDOS</div>
           <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
             <div style="display:flex;align-items:center;gap:4px">
               <span style="font-size:10px;font-weight:600;color:var(--text2)">DE</span>
@@ -2693,7 +2693,7 @@
               <span style="font-size:10px;font-weight:600;color:var(--text2)">ATÉ</span>
               <input type="date" id="dist-data-ate" style="font-size:13px;font-weight:700;padding:6px 8px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text)" onkeydown="if(event.key==='Enter')carregarPedidosDistribuicao()"/>
             </div>
-            <button onclick="carregarPedidosDistribuicao()" class="btn btn-primary btn-sm" style="height:36px;white-space:nowrap">Filtrar</button>
+            <span class="filter-actions" style="display:inline-flex;margin-left:0"><button onclick="carregarPedidosDistribuicao()" class="btn btn-primary btn-sm" style="height:36px;white-space:nowrap">Filtrar</button></span>
           </div>
         </div>
         <button onclick="imprimirPedidosDistribuicao()" class="btn btn-outline" style="height:38px;white-space:nowrap;font-size:13px">Imprimir Lista</button>
@@ -2703,7 +2703,7 @@
           <label>QUANTIDADE DE PEDIDOS A DISTRIBUIR</label>
           <div style="display:flex;gap:6px;align-items:center">
             <input type="number" id="dist-quantidade" placeholder="Todos" min="1" style="min-width:140px;font-size:15px;font-weight:700" oninput="clearTimeout(window._distTimer);window._distTimer=setTimeout(carregarPedidosDistribuicao,400)"/>
-            <button class="btn btn-primary btn-sm" onclick="carregarPedidosDistribuicao()" title="Atualizar prévia com a quantidade informada" style="height:36px;white-space:nowrap">Filtrar</button>
+            <span class="filter-actions" style="display:inline-flex;margin-left:0"><button class="btn btn-primary btn-sm" onclick="carregarPedidosDistribuicao()" title="Atualizar prévia com a quantidade informada" style="height:36px;white-space:nowrap">Filtrar</button></span>
           </div>
         </div>
         <label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;cursor:pointer;margin-bottom:4px">
@@ -2727,7 +2727,7 @@
 
       <div style="margin-bottom:14px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-          <div style="font-size:10px;font-weight:700;color:var(--accent);letter-spacing:1px">COLABORADORES ATIVOS</div>
+          <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1px">COLABORADORES ATIVOS</div>
           <div style="display:flex;gap:4px">
             <button onclick="filtrarTurnoDistribuicao('')"      id="dist-turno-todos"  class="btn-turno-dist ativo">Todos</button>
             <button onclick="filtrarTurnoDistribuicao('Manha')" id="dist-turno-manha"  class="btn-turno-dist">Manhã</button>
@@ -2741,10 +2741,10 @@
       </div>
       <!-- Cenário de distribuição -->
       <div style="margin-bottom:14px;padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px">
-        <div style="font-size:10px;font-weight:700;color:var(--accent);letter-spacing:1px;margin-bottom:10px">CENÁRIO DE DISTRIBUIÇÃO</div>
+        <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1px;margin-bottom:10px">CENÁRIO DE DISTRIBUIÇÃO</div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
           <button id="btn-cen-balanceado" onclick="selecionarCenario('balanceado')"
-            style="padding:6px 14px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;background:var(--accent);color:#fff;border:none;transition:all .15s">
+            style="padding:6px 14px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;background:var(--surface);color:var(--text);border:1px solid var(--text3);transition:all .15s">
             Balanceado
           </button>
           <button id="btn-cen-por_itens" onclick="selecionarCenario('por_itens')"
@@ -2762,7 +2762,7 @@
       </div>
 
       <div style="margin-bottom:14px">
-        <div style="font-size:10px;font-weight:700;color:var(--accent);letter-spacing:1px;margin-bottom:8px">PEDIDOS PENDENTES PARA DISTRIBUIR</div>
+        <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1px;margin-bottom:8px">PEDIDOS PENDENTES PARA DISTRIBUIR</div>
         <div id="dist-preview" style="max-height:300px;overflow-y:auto">
           <div style="color:var(--text3);font-size:12px;text-align:center;padding:20px">Carregando pedidos...</div>
         </div>
@@ -2794,7 +2794,7 @@
       <!-- PAINEL MANUAL -->
       <div id="dist-painel-manual" style="display:none">
         <div style="display:flex;gap:6px;margin-bottom:14px">
-          <button id="btn-dm-buscar" class="btn btn-sm" onclick="distManualSubModo('buscar')" style="flex:1;background:var(--accent);color:#fff">🔍 Buscar</button>
+          <button id="btn-dm-buscar" class="btn btn-sm" onclick="distManualSubModo('buscar')" style="flex:1;background:var(--surface);color:var(--text)">🔍 Buscar</button>
           <button id="btn-dm-bipar"  class="btn btn-sm" onclick="distManualSubModo('bipar')"  style="flex:1;background:transparent;color:var(--text3)">📷 Bipar Código de Barras</button>
         </div>
 
@@ -2863,7 +2863,7 @@
 
       <div style="display:flex;gap:10px;align-items:flex-end;margin-bottom:14px;padding:10px 14px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);flex-wrap:wrap">
         <div>
-          <div style="font-size:10px;font-weight:700;color:var(--accent);letter-spacing:1px;margin-bottom:5px">DATA DOS PEDIDOS (AGUARDANDO DESDE)</div>
+          <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1px;margin-bottom:5px">DATA DOS PEDIDOS (AGUARDANDO DESDE)</div>
           <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
             <div style="display:flex;align-items:center;gap:4px">
               <span style="font-size:10px;font-weight:600;color:var(--text2)">DE</span>
@@ -2886,10 +2886,10 @@
 
       <!-- Cenário -->
       <div style="margin-bottom:14px;padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px">
-        <div style="font-size:10px;font-weight:700;color:var(--accent);letter-spacing:1px;margin-bottom:10px">CENÁRIO (mesmos critérios do Distribuir)</div>
+        <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1px;margin-bottom:10px">CENÁRIO (mesmos critérios do Distribuir)</div>
         <div style="display:flex;gap:6px;flex-wrap:wrap">
           <button id="btn-lcen-balanceado" onclick="selecionarCenarioLote('balanceado')"
-            style="padding:6px 14px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;background:var(--accent);color:#fff;border:none;transition:all .15s">
+            style="padding:6px 14px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;background:var(--surface);color:var(--text);border:1px solid var(--text3);transition:all .15s">
             Balanceado
           </button>
           <button id="btn-lcen-por_itens" onclick="selecionarCenarioLote('por_itens')"
@@ -2905,7 +2905,7 @@
 
       <div style="margin-bottom:14px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-          <div style="font-size:10px;font-weight:700;color:var(--accent);letter-spacing:1px">COLABORADORES ATIVOS</div>
+          <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1px">COLABORADORES ATIVOS</div>
           <div style="display:flex;gap:4px">
             <button onclick="filtrarTurnoLote('')"      id="lote-turno-todos"  class="btn-turno-dist ativo">Todos</button>
             <button onclick="filtrarTurnoLote('Manha')" id="lote-turno-manha"  class="btn-turno-dist">Manhã</button>

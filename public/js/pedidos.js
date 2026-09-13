@@ -408,9 +408,9 @@ function filtrarTurnoUsr(turno) {
     const btn = document.getElementById(`uf-${t.toLowerCase()}`);
     if (!btn) return;
     const ativo = t === turno;
-    btn.style.background  = ativo ? 'var(--accent)' : 'var(--surface2)';
-    btn.style.color       = ativo ? '#fff'           : 'var(--text2)';
-    btn.style.borderColor = ativo ? 'var(--accent)'  : 'var(--border)';
+    btn.style.background  = ativo ? 'var(--surface)' : 'var(--surface2)';
+    btn.style.color       = ativo ? 'var(--text)'    : 'var(--text2)';
+    btn.style.borderColor = ativo ? 'var(--text3)'   : 'var(--border)';
   });
   _renderListaUsuarios();
 }
@@ -1835,9 +1835,9 @@ function selecionarCenario(c) {
     const btn = document.getElementById('btn-cen-' + x);
     if (!btn) return;
     const ativo = x === c;
-    btn.style.background = ativo ? 'var(--accent)' : 'transparent';
-    btn.style.color      = ativo ? '#fff' : 'var(--text3)';
-    btn.style.border     = ativo ? 'none' : '1px solid var(--border)';
+    btn.style.background = ativo ? 'var(--surface)' : 'transparent';
+    btn.style.color      = ativo ? 'var(--text)' : 'var(--text3)';
+    btn.style.border     = ativo ? '1px solid var(--text3)' : '1px solid var(--border)';
   });
   const el = document.getElementById('dist-cenario-desc');
   if (el) el.textContent = _CENARIO_DESC[c] || '';
@@ -1928,9 +1928,9 @@ function selecionarCenarioLote(c) {
     const btn = document.getElementById('btn-lcen-' + x);
     if (!btn) return;
     const ativo = x === c;
-    btn.style.background = ativo ? 'var(--accent)' : 'transparent';
-    btn.style.color      = ativo ? '#fff' : 'var(--text3)';
-    btn.style.border     = ativo ? 'none' : '1px solid var(--border)';
+    btn.style.background = ativo ? 'var(--surface)' : 'transparent';
+    btn.style.color      = ativo ? 'var(--text)' : 'var(--text3)';
+    btn.style.border     = ativo ? '1px solid var(--text3)' : '1px solid var(--border)';
   });
   document.getElementById('lote-resultado').style.display = 'none';
   document.getElementById('btn-confirmar-lote').style.display = 'none';
@@ -2080,14 +2080,14 @@ function distSetModo(modo) {
   if (resultado)    resultado.style.display     = 'none';
 
   if (modo === 'auto') {
-    if (btnAuto) { btnAuto.style.background='var(--accent)'; btnAuto.style.color='#fff'; }
+    if (btnAuto) { btnAuto.style.background='var(--surface)'; btnAuto.style.color='var(--text)'; }
     if (botoesAuto) botoesAuto.style.display = 'flex';
     if (resultado)  resultado.style.display  = distribuicaoPlano ? '' : 'none';
   } else if (modo === 'turno') {
-    if (btnTurno) { btnTurno.style.background='var(--accent)'; btnTurno.style.color='#fff'; }
+    if (btnTurno) { btnTurno.style.background='var(--surface)'; btnTurno.style.color='var(--text)'; }
     if (painelTurno) { painelTurno.style.display = ''; renderTurnoConfig(); }
   } else {
-    if (btnManual) { btnManual.style.background='var(--accent)'; btnManual.style.color='#fff'; }
+    if (btnManual) { btnManual.style.background='var(--surface)'; btnManual.style.color='var(--text)'; }
     if (painelManual) painelManual.style.display = '';
     const r = document.getElementById('dist-manual-resultado');
     const inp = document.getElementById('dist-manual-busca');
@@ -2103,7 +2103,7 @@ function distManualSubModo(modo) {
   const bipeWrap    = document.getElementById('dist-manual-bipe-wrap');
   const btnBuscar   = document.getElementById('btn-dm-buscar');
   const btnBipar    = document.getElementById('btn-dm-bipar');
-  const ativo   = { background:'var(--accent)', color:'#fff' };
+  const ativo   = { background:'var(--surface)', color:'var(--text)' };
   const inativo = { background:'transparent', color:'var(--text3)' };
   const aplicar = (el, s) => { if (el) { el.style.background = s.background; el.style.color = s.color; } };
 
