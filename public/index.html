@@ -2573,7 +2573,7 @@
 
 
 <script src="/js/config.js?v=13"></script>
-  <script src="/js/pedidos.js?v=43"></script>
+  <script src="/js/pedidos.js?v=44"></script>
   <script src="/js/separador.js?v=27"></script>
   <script src="/js/repositor.js?v=18"></script>
   <script src="/js/checkout.js?v=14"></script>
@@ -2685,81 +2685,88 @@
         </div>
         <button onclick="imprimirPedidosDistribuicao()" class="btn btn-outline" style="height:38px;white-space:nowrap;font-size:13px">Imprimir Lista</button>
       </div>
-      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px;align-items:flex-end">
-        <div class="fg">
-          <label>QUANTIDADE DE PEDIDOS A DISTRIBUIR</label>
-          <div style="display:flex;gap:6px;align-items:center">
-            <input type="number" id="dist-quantidade" placeholder="Todos" min="1" style="min-width:140px;font-size:15px;font-weight:700" oninput="clearTimeout(window._distTimer);window._distTimer=setTimeout(carregarPedidosDistribuicao,400)"/>
-            <span class="filter-actions" style="display:inline-flex;margin-left:0"><button class="btn btn-primary btn-sm" onclick="carregarPedidosDistribuicao()" title="Atualizar prévia com a quantidade informada" style="height:36px;white-space:nowrap">Filtrar</button></span>
+      <!-- PAINEL AUTOMÁTICA — antes ficava sempre visível (só os botões de baixo e
+           o resultado eram escondidos ao trocar de aba), então trocar pra
+           Turno/Manual/Lotes deixava essa seção inteira "vazando" por baixo do
+           painel da aba escolhida. Agora é um painel de verdade, escondido pelo
+           distSetModo() igual aos outros três. -->
+      <div id="dist-painel-auto">
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px;align-items:flex-end">
+          <div class="fg">
+            <label>QUANTIDADE DE PEDIDOS A DISTRIBUIR</label>
+            <div style="display:flex;gap:6px;align-items:center">
+              <input type="number" id="dist-quantidade" placeholder="Todos" min="1" style="min-width:140px;font-size:15px;font-weight:700" oninput="clearTimeout(window._distTimer);window._distTimer=setTimeout(carregarPedidosDistribuicao,400)"/>
+              <span class="filter-actions" style="display:inline-flex;margin-left:0"><button class="btn btn-primary btn-sm" onclick="carregarPedidosDistribuicao()" title="Atualizar prévia com a quantidade informada" style="height:36px;white-space:nowrap">Filtrar</button></span>
+            </div>
           </div>
-        </div>
-        <label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;cursor:pointer;margin-bottom:4px">
-          <input type="checkbox" id="dist-apenas-sem-sep" checked style="accent-color:var(--accent)" onchange="carregarPedidosDistribuicao()">
-          Apenas sem separador atribuído
-        </label>
-        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:4px">
-          <label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;cursor:pointer">
-            <input type="checkbox" id="dist-respeitar-hora" checked style="accent-color:var(--accent)" onchange="carregarPedidosDistribuicao()">
-            Respeitar horário do pedido (mais antigo primeiro)
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;cursor:pointer;margin-bottom:4px">
+            <input type="checkbox" id="dist-apenas-sem-sep" checked style="accent-color:var(--accent)" onchange="carregarPedidosDistribuicao()">
+            Apenas sem separador atribuído
           </label>
-          <button id="btn-prime-dist" onclick="togglePrimeDistribuicao()"
-            style="padding:4px 10px;border-radius:6px;border:1.5px solid var(--amber);background:transparent;color:var(--amber);font-size:11px;font-weight:700;cursor:pointer;transition:all .15s;white-space:nowrap">
-            <i class="ti ti-star-filled" aria-hidden="true"></i> Incluir Prime
-          </button>
-        </div>
-        <div id="dist-prime-aviso" style="display:none;margin-top:6px;padding:7px 11px;border-radius:7px;background:rgba(224,168,62,.12);border:1.5px solid rgba(224,168,62,.4);font-size:11px;font-weight:600;color:var(--amber)">
-          Modo Prime ativo — Apenas pedidos <em>Postagem Ágil Miess Prime</em> serão distribuídos.
-        </div>
-      </div>
-
-      <div style="margin-bottom:14px">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-          <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1px">COLABORADORES ATIVOS</div>
-          <div style="display:flex;gap:4px">
-            <button onclick="filtrarTurnoDistribuicao('')"      id="dist-turno-todos"  class="btn-turno-dist ativo">Todos</button>
-            <button onclick="filtrarTurnoDistribuicao('Manha')" id="dist-turno-manha"  class="btn-turno-dist">Manhã</button>
-            <button onclick="filtrarTurnoDistribuicao('Tarde')" id="dist-turno-tarde"  class="btn-turno-dist">Tarde</button>
-            <button onclick="filtrarTurnoDistribuicao('Noite')" id="dist-turno-noite"  class="btn-turno-dist">Noite</button>
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:4px">
+            <label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;cursor:pointer">
+              <input type="checkbox" id="dist-respeitar-hora" checked style="accent-color:var(--accent)" onchange="carregarPedidosDistribuicao()">
+              Respeitar horário do pedido (mais antigo primeiro)
+            </label>
+            <button id="btn-prime-dist" onclick="togglePrimeDistribuicao()"
+              style="padding:4px 10px;border-radius:6px;border:1.5px solid var(--amber);background:transparent;color:var(--amber);font-size:11px;font-weight:700;cursor:pointer;transition:all .15s;white-space:nowrap">
+              <i class="ti ti-star-filled" aria-hidden="true"></i> Incluir Prime
+            </button>
+          </div>
+          <div id="dist-prime-aviso" style="display:none;margin-top:6px;padding:7px 11px;border-radius:7px;background:rgba(224,168,62,.12);border:1.5px solid rgba(224,168,62,.4);font-size:11px;font-weight:600;color:var(--amber)">
+            Modo Prime ativo — Apenas pedidos <em>Postagem Ágil Miess Prime</em> serão distribuídos.
           </div>
         </div>
-        <div id="dist-separadores-lista" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">
-          <div style="color:var(--text3);font-size:12px">Carregando...</div>
-        </div>
-      </div>
-      <!-- Cenário de distribuição -->
-      <div style="margin-bottom:14px;padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px">
-        <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1px;margin-bottom:10px">CENÁRIO DE DISTRIBUIÇÃO</div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
-          <button id="btn-cen-balanceado" onclick="selecionarCenario('balanceado')"
-            style="padding:6px 14px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;background:var(--surface);color:var(--text);border:1px solid var(--text3);transition:all .15s">
-            Balanceado
-          </button>
-          <button id="btn-cen-por_itens" onclick="selecionarCenario('por_itens')"
-            style="padding:6px 14px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;background:transparent;color:var(--text3);border:1px solid var(--border);transition:all .15s">
-            Por Volume
-          </button>
-          <button id="btn-cen-complexidade" onclick="selecionarCenario('complexidade')"
-            style="padding:6px 14px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;background:transparent;color:var(--text3);border:1px solid var(--border);transition:all .15s">
-            Complexidade Total
-          </button>
-        </div>
-        <div id="dist-cenario-desc" style="font-size:11px;color:var(--text3);line-height:1.5">
-          Score por corredor: itens × dificuldade + deslocamento por localização. LPT balanceia pontuação e volume.
-        </div>
-      </div>
 
-      <div style="margin-bottom:14px">
-        <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1px;margin-bottom:8px">PEDIDOS PENDENTES PARA DISTRIBUIR</div>
-        <div id="dist-preview" style="max-height:300px;overflow-y:auto">
-          <div style="color:var(--text3);font-size:12px;text-align:center;padding:20px">Carregando pedidos...</div>
+        <div style="margin-bottom:14px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1px">COLABORADORES ATIVOS</div>
+            <div style="display:flex;gap:4px">
+              <button onclick="filtrarTurnoDistribuicao('')"      id="dist-turno-todos"  class="btn-turno-dist ativo">Todos</button>
+              <button onclick="filtrarTurnoDistribuicao('Manha')" id="dist-turno-manha"  class="btn-turno-dist">Manhã</button>
+              <button onclick="filtrarTurnoDistribuicao('Tarde')" id="dist-turno-tarde"  class="btn-turno-dist">Tarde</button>
+              <button onclick="filtrarTurnoDistribuicao('Noite')" id="dist-turno-noite"  class="btn-turno-dist">Noite</button>
+            </div>
+          </div>
+          <div id="dist-separadores-lista" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+            <div style="color:var(--text3);font-size:12px">Carregando...</div>
+          </div>
         </div>
-      </div>
-      <div id="dist-resultado" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px;margin-bottom:14px">
-      </div>
-      <div style="display:flex;gap:8px;justify-content:flex-end" id="dist-botoes-auto">
-        <button class="btn btn-outline" onclick="fecharModalDistribuicao()">Cancelar</button>
-        <button class="btn btn-primary" onclick="calcularDistribuicao()" id="btn-calcular-dist">Calcular Distribuição</button>
-        <button class="btn btn-success" onclick="confirmarDistribuicao()" id="btn-confirmar-dist" style="display:none">Confirmar Distribuição</button>
+        <!-- Cenário de distribuição -->
+        <div style="margin-bottom:14px;padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px">
+          <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1px;margin-bottom:10px">CENÁRIO DE DISTRIBUIÇÃO</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+            <button id="btn-cen-balanceado" onclick="selecionarCenario('balanceado')"
+              style="padding:6px 14px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;background:var(--surface);color:var(--text);border:1px solid var(--text3);transition:all .15s">
+              Balanceado
+            </button>
+            <button id="btn-cen-por_itens" onclick="selecionarCenario('por_itens')"
+              style="padding:6px 14px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;background:transparent;color:var(--text3);border:1px solid var(--border);transition:all .15s">
+              Por Volume
+            </button>
+            <button id="btn-cen-complexidade" onclick="selecionarCenario('complexidade')"
+              style="padding:6px 14px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;background:transparent;color:var(--text3);border:1px solid var(--border);transition:all .15s">
+              Complexidade Total
+            </button>
+          </div>
+          <div id="dist-cenario-desc" style="font-size:11px;color:var(--text3);line-height:1.5">
+            Score por corredor: itens × dificuldade + deslocamento por localização. LPT balanceia pontuação e volume.
+          </div>
+        </div>
+
+        <div style="margin-bottom:14px">
+          <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1px;margin-bottom:8px">PEDIDOS PENDENTES PARA DISTRIBUIR</div>
+          <div id="dist-preview" style="max-height:300px;overflow-y:auto">
+            <div style="color:var(--text3);font-size:12px;text-align:center;padding:20px">Carregando pedidos...</div>
+          </div>
+        </div>
+        <div id="dist-resultado" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px;margin-bottom:14px">
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end" id="dist-botoes-auto">
+          <button class="btn btn-outline" onclick="fecharModalDistribuicao()">Cancelar</button>
+          <button class="btn btn-primary" onclick="calcularDistribuicao()" id="btn-calcular-dist">Calcular Distribuição</button>
+          <button class="btn btn-success" onclick="confirmarDistribuicao()" id="btn-confirmar-dist" style="display:none">Confirmar Distribuição</button>
+        </div>
       </div>
 
       <!-- PAINEL POR TURNO -->
@@ -2833,26 +2840,10 @@
       <!-- PAINEL LOTES — mesma aba do Distribuir, formação por proximidade -->
       <div id="dist-painel-lotes" style="display:none">
         <div style="background:rgba(79,70,229,.06);border:1px solid rgba(79,70,229,.2);border-radius:10px;padding:14px 16px;margin-bottom:14px;font-size:12px;color:var(--text2);line-height:1.6">
-          <b>Formar Lotes:</b> agrupa pedidos pendentes (sem Prime, sem Drive Thru — esses continuam indo individual) por
-          <b style="color:var(--text)">proximidade de rua</b> em lotes de 5-8, fechando um lote antes se algum pedido já
-          estiver esperando mais de <b style="color:var(--text)">20min</b>. Cada lote inteiro vai pro separador mais
-          atrasado na mesma fórmula de pontuação + itens + quantidade de pedidos usada em Distribuir.
-        </div>
-
-        <div style="display:flex;gap:10px;align-items:flex-end;margin-bottom:14px;padding:10px 14px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);flex-wrap:wrap">
-          <div>
-            <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1px;margin-bottom:5px">DATA DOS PEDIDOS (AGUARDANDO DESDE)</div>
-            <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-              <div style="display:flex;align-items:center;gap:4px">
-                <span style="font-size:10px;font-weight:600;color:var(--text2)">DE</span>
-                <input type="date" id="lote-data-de" style="font-size:13px;font-weight:700;padding:6px 8px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text)"/>
-              </div>
-              <div style="display:flex;align-items:center;gap:4px">
-                <span style="font-size:10px;font-weight:600;color:var(--text2)">ATÉ</span>
-                <input type="date" id="lote-data-ate" style="font-size:13px;font-weight:700;padding:6px 8px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text)"/>
-              </div>
-            </div>
-          </div>
+          <b>Formar Lotes:</b> agrupa pedidos pendentes (sem Drive Thru — e sem Prime, a menos que "Incluir Prime" esteja
+          ativo — esses continuam indo individual) por <b style="color:var(--text)">proximidade de rua</b> em lotes de
+          até 8 pedidos. Cada lote inteiro vai pro separador mais atrasado na mesma fórmula de pontuação + itens +
+          quantidade de pedidos usada em Distribuir.
         </div>
 
         <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:4px;align-items:flex-end">

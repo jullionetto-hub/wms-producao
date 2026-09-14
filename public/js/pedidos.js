@@ -1889,6 +1889,10 @@ function selecionarCenario(c) {
 
 async function abrirModalDistribuicao() {
   document.getElementById('modal-distribuicao').style.display = 'flex';
+  // Sempre volta pra aba Automática ao (re)abrir — sem isso, fechar o modal
+  // numa aba diferente (Turno/Manual/Lotes) deixava aquele painel ainda
+  // marcado como visível na reabertura, "vazando" por baixo do conteúdo novo.
+  distSetModo('auto');
   document.getElementById('dist-resultado').style.display = 'none';
   document.getElementById('btn-confirmar-dist').style.display = 'none';
   document.getElementById('btn-calcular-dist').style.display = 'inline-flex';
@@ -2013,12 +2017,10 @@ async function _initPainelLotes() {
   _turnoAtivoLote = '';
   _modoPrimeLote = false;
   _aplicarEstadoPrimeLote();
-  const _hoje = new Date();
-  const _hojeStr = `${_hoje.getFullYear()}-${String(_hoje.getMonth()+1).padStart(2,'0')}-${String(_hoje.getDate()).padStart(2,'0')}`;
-  const _ldDe = document.getElementById('lote-data-de');
-  const _ldAte = document.getElementById('lote-data-ate');
-  if (_ldDe)  _ldDe.value  = _hojeStr;
-  if (_ldAte) _ldAte.value = _hojeStr;
+  // Data vem do filtro compartilhado (dist-data-de/ate, já preenchido por
+  // abrirModalDistribuicao) — não reseta aqui pra não "voltar pra hoje" toda
+  // vez que essa aba é aberta, sobrescrevendo uma data antiga que o
+  // supervisor tenha escolhido (fila de trabalho normalmente é de dias atrás).
   selecionarCenarioLote('balanceado');
   try {
     const res = await fetch(`${API}/usuarios`, { credentials:'include' });
@@ -2052,8 +2054,11 @@ async function calcularLotes() {
   if (!checks.length) { toast('Selecione pelo menos um separador!', 'aviso'); return; }
   const seps = Array.from(checks).map(c => parseInt(c.value));
   const quantidade = parseInt(document.getElementById('lote-quantidade')?.value) || 0;
-  const dataDe  = document.getElementById('lote-data-de')?.value  || null;
-  const dataAte = document.getElementById('lote-data-ate')?.value || null;
+  // Data compartilhada com a aba Automática (dist-data-de/ate) — não existe mais
+  // um filtro de data próprio do Lotes, pra não ficar dois campos divergentes
+  // na mesma "Distribuição de Pedidos" (um resetava pra hoje, outro não).
+  const dataDe  = document.getElementById('dist-data-de')?.value  || null;
+  const dataAte = document.getElementById('dist-data-ate')?.value || null;
   try {
     const res = await fetch(`${API}/pedidos/lote/formar`, {
       credentials:'include', method:'POST', headers:{'Content-Type':'application/json'},
@@ -2127,6 +2132,7 @@ function distSetModo(modo) {
   const btnManual = document.getElementById('btn-modo-manual');
   const btnTurno  = document.getElementById('btn-modo-turno');
   const btnLotes  = document.getElementById('btn-modo-lotes');
+  const painelAuto   = document.getElementById('dist-painel-auto');
   const painelManual = document.getElementById('dist-painel-manual');
   const painelTurno  = document.getElementById('dist-painel-turno');
   const painelLotes  = document.getElementById('dist-painel-lotes');
@@ -2135,6 +2141,7 @@ function distSetModo(modo) {
 
   // Reset all buttons
   [btnAuto, btnManual, btnTurno, btnLotes].forEach(b => { if (b) { b.style.background='transparent'; b.style.color='var(--text3)'; } });
+  if (painelAuto)   painelAuto.style.display   = 'none';
   if (painelManual) painelManual.style.display = 'none';
   if (painelTurno)  painelTurno.style.display  = 'none';
   if (painelLotes)  painelLotes.style.display  = 'none';
@@ -2143,6 +2150,7 @@ function distSetModo(modo) {
 
   if (modo === 'auto') {
     if (btnAuto) { btnAuto.style.background='var(--surface)'; btnAuto.style.color='var(--text)'; }
+    if (painelAuto) painelAuto.style.display = '';
     if (botoesAuto) botoesAuto.style.display = 'flex';
     if (resultado)  resultado.style.display  = distribuicaoPlano ? '' : 'none';
   } else if (modo === 'turno') {

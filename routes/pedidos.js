@@ -1080,12 +1080,14 @@ router.post('/pedidos/distribuicao/confirmar', requerAuth, requerPerfil('supervi
 /* ══════════════════════════════════════════
    SEPARAÇÃO POR LOTE — formação automática
    Agrupa pedidos pendentes por proximidade de rua (mesma ROTA_FISICA usada no
-   celular do separador, em public/js/separador.js) e por onda de chegada
-   (fecha em até 8 pedidos, ou antes se o mais antigo da onda passar de
-   20min esperando). Cada lote inteiro é atribuído ao separador mais atrasado
-   na mesma fórmula de 3 eixos (pontuação+itens+qtd. de pedidos) usada em
-   /pedidos/distribuicao. Prime e Drive Thru ficam de fora — continuam sendo
-   distribuídos individual, como hoje.
+   celular do separador, em public/js/separador.js), sempre até 8 por lote —
+   sem limite de tempo de espera (a fila de trabalho normalmente é de dias
+   atrás, não do turno atual, então um corte por minutos de espera não faz
+   sentido aqui). Cada lote inteiro é atribuído ao separador mais atrasado na
+   mesma fórmula de 3 eixos (pontuação+itens+qtd. de pedidos) usada em
+   /pedidos/distribuicao. Drive Thru fica sempre de fora (distribuído
+   individual); Prime também fica de fora, a menos que apenas_prime=true seja
+   passado (mesmo alterna-entre-só-Prime-ou-só-normal do /pedidos/distribuicao).
 ══════════════════════════════════════════ */
 const ROTA_FISICA_LOTE = ['A','B','C','D','E','Q','P','O','N','M','L','K','J','I','H','ARARA','G','F','ZA','R','S','T','U','V','W','X','Y','Z'];
 function _ruaPrincipalLote(endereco) {
