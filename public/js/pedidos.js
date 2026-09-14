@@ -172,6 +172,18 @@ function _renderTabelaPedidos() {
     btnReatr.textContent = `Reatribuir ${pendentesDoUsr} pendente(s)`;
   }
 
+  // Botão "Redefinir Todos" — limpa em lote pedidos travados de teste (status
+  // pendente/separando) de um colaborador específico, voltando pra fila sem
+  // separador. Mesma condição de "só filtrando um colaborador" do Reatribuir,
+  // mas cobre também 'separando' (Reatribuir só mexe em pendente).
+  const btnRedef = document.getElementById('btn-redefinir-todos');
+  if (btnRedef) {
+    const usrFiltro = document.getElementById('filtro-ped-sep')?.value || '';
+    const alvo = lista.filter(p => p.status === 'pendente' || p.status === 'separando').length;
+    btnRedef.style.display = (usrFiltro && alvo > 0) ? 'inline-flex' : 'none';
+    btnRedef.textContent = `Redefinir ${alvo} pedido(s)`;
+  }
+
   // ── Totalizadores ──────────────────────────────────────────────
   const totEl = document.getElementById('ped-totalizadores');
   if (totEl) {
@@ -382,6 +394,32 @@ async function _confirmarReatribuir() {
   toast(`${ok} pedido(s) ${acao}${falhas ? ` — ${falhas} falharam` : ''}`, falhas ? 'aviso' : 'sucesso');
   _reatribuirPedidos = [];
   carregarPedidos();
+}
+
+// Reset em lote — volta status pra 'pendente' e tira o separador de todos os
+// pedidos pendente/separando filtrados atualmente (ex.: limpar pedidos de
+// teste que ficaram travados em "Separando"). Reusa o mesmo endpoint que já
+// existe pra um pedido só (PUT /pedidos/:id/redefinir), só que em lote.
+async function confirmarRedefinirTodos() {
+  const alvo = (_pedidosListaFiltrada || []).filter(p => p.status === 'pendente' || p.status === 'separando');
+  if (!alvo.length) { toast('Nenhum pedido pendente/separando na lista atual.', 'aviso'); return; }
+  const nomeAtual = document.getElementById('filtro-ped-sep')?.value || 'colaborador atual';
+  wmsConfirm({
+    titulo:     `Redefinir ${alvo.length} pedido(s) de ${nomeAtual}?`,
+    sub:        `Volta o status pra Pendente e remove o separador de todos os pedidos pendente/separando filtrados. Itens já escaneados não são desfeitos.`,
+    btnOk:      'Redefinir todos',
+    btnOkClass: 'btn-danger',
+  }, async () => {
+    let ok = 0, falhas = 0;
+    for (const p of alvo) {
+      try {
+        const res = await fetch(`${API}/pedidos/${p.id}/redefinir`, { credentials:'include', method:'PUT' });
+        if (res.ok) ok++; else falhas++;
+      } catch(e) { falhas++; }
+    }
+    toast(`${ok} pedido(s) redefinido(s)${falhas ? ` — ${falhas} falharam` : ''}`, falhas ? 'aviso' : 'sucesso');
+    carregarPedidos();
+  });
 }
 
 
