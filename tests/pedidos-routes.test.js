@@ -1048,6 +1048,32 @@ describe('Pedidos — formação de lotes', () => {
     expect(res.body.pedidos).toBe(0);
   });
 
+  test('POST /pedidos/lote/formar/confirmar — pedidos que deixaram de estar pendente (corrida) não geram lote fantasma', async () => {
+    // Regressão: entre o preview e a confirmação, os pedidos do lote deixaram
+    // de ser 'pendente' (ex: outra ação já pegou primeiro) — a UPDATE não
+    // afeta nenhuma linha. Antes desta correção, o lote em lotes_separacao
+    // já tinha sido gravado mesmo assim e contava como "gravado" na resposta.
+    const calls = [];
+    const clientMock = {
+      query: jest.fn().mockImplementation(async (sql, params) => {
+        calls.push(sql);
+        if (sql.includes('FROM separadores WHERE usuario_id=$1')) return { rows: [{ id: 77 }] };
+        if (sql.includes('INSERT INTO lotes_separacao')) return { rows: [{ id: 900 }] };
+        if (sql.includes('UPDATE pedidos')) return { rowCount: 0 }; // ninguém mais pendente
+        return { rows: [] };
+      }),
+      release: jest.fn(),
+    };
+    mockPool.connect.mockResolvedValueOnce(clientMock);
+    const res = await agent.post('/pedidos/lote/formar/confirmar').send({
+      lotes: [{ separador_id: 5, pedidos: [{ id: 1 }, { id: 2 }] }],
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.lotes).toBe(0);
+    expect(res.body.pedidos).toBe(0);
+    expect(calls.some(sql => sql.includes('DELETE FROM lotes_separacao'))).toBe(true);
+  });
+
   test('GET /pedidos/lote/historico sem separador_id → lista vazia sem consultar banco', async () => {
     const res = await agent.get('/pedidos/lote/historico');
     expect(res.status).toBe(200);

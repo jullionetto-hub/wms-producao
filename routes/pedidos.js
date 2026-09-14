@@ -1369,6 +1369,15 @@ router.post('/pedidos/lote/formar/confirmar', requerAuth, requerPerfil('supervis
         `UPDATE pedidos SET separador_id=$1, lote_id=$2 WHERE id=ANY($3) AND status='pendente'`,
         [dbId, loteId, ids]
       );
+      // Se nenhum pedido do lote ainda estava 'pendente' (mudou de status entre
+      // o preview e a confirmação — outra ação pegou primeiro), o lote acabou de
+      // ser criado vazio. Desfaz o INSERT em vez de deixar um lote fantasma sem
+      // pedido nenhum (apareceria pro separador como "tem lote esperando", com 0
+      // itens) e sem contar como gravado na resposta.
+      if (r.rowCount === 0) {
+        await client.query('DELETE FROM lotes_separacao WHERE id=$1', [loteId]);
+        continue;
+      }
       lotesGravados++;
       pedidosGravados += r.rowCount;
     }
