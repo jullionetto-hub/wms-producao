@@ -1160,11 +1160,15 @@ function _diametroRuas(ruas) {
 
 // Preview — não grava nada, só calcula os lotes e devolve pra conferência.
 router.post('/pedidos/lote/formar', requerAuth, requerPerfil('supervisor'), async (req,res) => {
-  const { separadores, quantidade, cenario, data_de, data_ate } = req.body;
+  const { separadores, quantidade, cenario, data_de, data_ate, apenas_prime } = req.body;
   const modoLote = cenario || 'balanceado'; // 'balanceado' | 'por_itens' | 'complexidade'
   if (!separadores?.length) return res.status(400).json({erro:'Informe os separadores!'});
   try {
-    let w = "p.status='pendente' AND p.separador_id IS NULL AND (p.tem_prime=false OR p.tem_prime IS NULL)";
+    // Mesmo comportamento de /pedidos/distribuicao: apenas_prime alterna entre só
+    // Prime ou só normal, nunca mistura os dois num mesmo lote/distribuição.
+    let w = apenas_prime === true
+      ? "p.status='pendente' AND p.separador_id IS NULL AND p.tem_prime=true"
+      : "p.status='pendente' AND p.separador_id IS NULL AND (p.tem_prime=false OR p.tem_prime IS NULL)";
     const wParams = [];
     // Filtro por data de "aguardando desde" — pedido pendente/não atribuído nunca tem
     // turno_distribuicao preenchido (só é gravado no momento da distribuição), então

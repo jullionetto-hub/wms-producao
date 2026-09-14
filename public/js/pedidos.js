@@ -1951,6 +1951,36 @@ let _todosSepsLote = [];
 let _turnoAtivoLote = '';
 let _lotesPlano = null;
 let _cenarioLote = 'balanceado';
+let _modoPrimeLote = false;
+
+// Mesmo alterna-entre-só-Prime-ou-só-normal do "Incluir Prime" em Automática
+// (togglePrimeDistribuicao), só que pro Formar Lotes.
+function togglePrimeLote() {
+  _modoPrimeLote = !_modoPrimeLote;
+  _aplicarEstadoPrimeLote();
+  document.getElementById('lote-resultado').style.display = 'none';
+  document.getElementById('btn-confirmar-lote').style.display = 'none';
+  document.getElementById('btn-imprimir-etiquetas-lote').style.display = 'none';
+  document.getElementById('btn-calcular-lote').style.display = 'inline-flex';
+  _lotesPlano = null;
+}
+
+function _aplicarEstadoPrimeLote() {
+  const btn   = document.getElementById('btn-prime-lote');
+  const aviso = document.getElementById('lote-prime-aviso');
+  if (!btn) return;
+  if (_modoPrimeLote) {
+    btn.style.background = 'var(--amber)';
+    btn.style.color      = '#fff';
+    btn.innerHTML        = '<i class="ti ti-star-filled" aria-hidden="true"></i> Modo Prime ativo';
+    if (aviso) aviso.style.display = 'block';
+  } else {
+    btn.style.background = 'transparent';
+    btn.style.color      = 'var(--amber)';
+    btn.innerHTML        = '<i class="ti ti-star-filled" aria-hidden="true"></i> Incluir Prime';
+    if (aviso) aviso.style.display = 'none';
+  }
+}
 
 function selecionarCenarioLote(c) {
   _cenarioLote = c;
@@ -1981,6 +2011,8 @@ async function _initPainelLotes() {
   if (qtdEl) qtdEl.value = '';
   _lotesPlano = null;
   _turnoAtivoLote = '';
+  _modoPrimeLote = false;
+  _aplicarEstadoPrimeLote();
   const _hoje = new Date();
   const _hojeStr = `${_hoje.getFullYear()}-${String(_hoje.getMonth()+1).padStart(2,'0')}-${String(_hoje.getDate()).padStart(2,'0')}`;
   const _ldDe = document.getElementById('lote-data-de');
@@ -2025,7 +2057,7 @@ async function calcularLotes() {
   try {
     const res = await fetch(`${API}/pedidos/lote/formar`, {
       credentials:'include', method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ separadores: seps, quantidade: quantidade||null, cenario: _cenarioLote, data_de: dataDe, data_ate: dataAte })
+      body: JSON.stringify({ separadores: seps, quantidade: quantidade||null, cenario: _cenarioLote, data_de: dataDe, data_ate: dataAte, apenas_prime: _modoPrimeLote })
     });
     const data = await res.json();
     if (data.erro) { toast(data.erro, 'erro'); return; }

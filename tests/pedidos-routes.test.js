@@ -1006,6 +1006,13 @@ describe('Pedidos — formação de lotes', () => {
     expect(res.body.lotes[0].separador_id).toBe(11);
   });
 
+  test('POST /pedidos/lote/formar com apenas_prime=true filtra pedidos Prime na query', async () => {
+    mockDb.all.mockResolvedValue([]);
+    await agent.post('/pedidos/lote/formar').send({ separadores: [11], apenas_prime: true });
+    const pedidosQueryCall = mockDb.all.mock.calls.find(c => c[0].includes('FROM pedidos p WHERE'));
+    expect(pedidosQueryCall[0]).toContain('p.tem_prime=true');
+  });
+
   test('POST /pedidos/lote/formar/confirmar sem lotes → 400', async () => {
     const res = await agent.post('/pedidos/lote/formar/confirmar').send({});
     expect(res.status).toBe(400);
