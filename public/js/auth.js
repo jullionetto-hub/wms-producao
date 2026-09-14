@@ -1407,25 +1407,22 @@ async function carregarListaDiarios() {
     const res = await fetch(`${API}/diario`, { credentials:'include' });
     const lista = await res.json();
     if (!lista.length) { el.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:8px">Nenhum diário salvo ainda</div>'; return; }
-    el.innerHTML = lista.map(d => {
-      const turnoCor = d.turno === 'Manha' ? 'var(--amber)' : d.turno === 'Tarde' ? 'var(--info)' : 'var(--indigo)';
-      const leuBadge = d.leu_anterior ? '<span style="font-size:9px;background:var(--surface2);color:var(--green);border:1px solid var(--green);border-radius:4px;padding:1px 6px">Leu</span>' : '';
-      const statusMap = {
-        rascunho: '<span style="font-size:9px;background:var(--surface2);color:var(--text3);border:1px solid var(--border);border-radius:4px;padding:1px 6px">Rascunho</span>',
-        enviado:  '<span style="font-size:9px;background:var(--surface2);color:var(--info);border:1px solid var(--info);border-radius:4px;padding:1px 6px">Enviado</span>',
-        validado: `<span style="font-size:9px;background:var(--surface2);color:var(--green);border:1px solid var(--green);border-radius:4px;padding:1px 6px">${d.pontuacao!=null?d.pontuacao+'/100':'Validado'}</span>`,
-        expirado: '<span style="font-size:9px;background:var(--surface2);color:var(--red);border:1px solid var(--red);border-radius:4px;padding:1px 6px">Expirado</span>',
-      };
-      const stBadge = statusMap[d.status] || statusMap.rascunho;
-      return `<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);cursor:pointer;margin-bottom:6px" onclick="verDiario(${d.id})">
-        <span style="width:8px;height:8px;border-radius:50%;background:${turnoCor};flex-shrink:0;display:inline-block"></span>
-        <div style="flex:1">
-          <div style="font-weight:700;font-size:13px">${fmtData(d.data)} — ${d.turno} ${leuBadge} ${stBadge}</div>
-          <div style="font-size:11px;color:var(--text3)">${d.supervisor}</div>
-        </div>
-        <button class="btn-icon-outline" title="Exportar Excel" onclick="event.stopPropagation();exportarDiarioExcel(${d.id})"><i class="ti ti-download" aria-hidden="true"></i></button>
-      </div>`;
+    const statusLabel = {
+      rascunho: 'Rascunho', enviado: 'Enviado', expirado: 'Expirado',
+      validado: d => d.pontuacao != null ? `Validado ${d.pontuacao}/100` : 'Validado',
+    };
+    const opts = lista.map(d => {
+      const st = typeof statusLabel[d.status] === 'function' ? statusLabel[d.status](d) : (statusLabel[d.status] || 'Rascunho');
+      const leu = d.leu_anterior ? ' · Leu' : '';
+      return `<option value="${d.id}">${fmtData(d.data)} — ${d.turno} — ${d.supervisor} — ${st}${leu}</option>`;
     }).join('');
+    el.innerHTML = `
+      <div style="display:flex;gap:8px">
+        <select id="diario-hist-select" class="sel-sm" style="flex:1;padding:10px 12px;font-size:13px" onchange="verDiario(parseInt(this.value))">
+          ${opts}
+        </select>
+        <button class="btn-icon-outline" title="Exportar Excel" onclick="exportarDiarioExcel(parseInt(document.getElementById('diario-hist-select').value))"><i class="ti ti-download" aria-hidden="true"></i></button>
+      </div>`;
   } catch(e) { console.warn(e); }
 }
 
