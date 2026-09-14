@@ -1486,7 +1486,12 @@ async function verDiario(id) {
 // estilo de verdade na versão grátis.
 async function exportarDiarioExcel(id) {
   try {
-    await _carregarScript('https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js');
+    // cdn.jsdelivr.net (não cdnjs.cloudflare.com) de propósito — o resto do
+    // app já carrega Chart.js/SheetJS de CDNs fora do cdnjs e funciona em
+    // redes corporativas que bloqueiam esse domínio especificamente; um
+    // colaborador nessa situação via o export falhar com "[object Event]"
+    // (erro de carregamento do <script>, sem nem chegar a gerar o Excel).
+    await _carregarScript('https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js');
     const res = await fetch(`${API}/diario/${id}`, { credentials:'include' });
     const d = await res.json();
     if (!res.ok) return;
