@@ -1574,7 +1574,7 @@ async function exportarDiarioExcel(id) {
     a.click();
     URL.revokeObjectURL(a.href);
     toast('Excel exportado!','sucesso');
-  } catch(e) { toast('Erro ao exportar','erro'); }
+  } catch(e) { console.error('Erro ao exportar diário:', e); toast('Erro ao exportar: ' + (e?.message || e), 'erro'); }
 }
 
 /* EMBALAGEM DESKTOP */
