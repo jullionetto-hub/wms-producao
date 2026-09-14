@@ -120,9 +120,9 @@ const TURNO_LABEL = { Manha:'Manhã', Tarde:'Tarde', Noite:'Noite' };
 // Log completo pra gestão/supervisão acompanharem todas as conferências —
 // filtrável por período, caixa e turno.
 async function carregarLogCaixas() {
-  const tbody = document.getElementById('cxlog-tbody');
-  if (!tbody) return;
-  tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:16px">Carregando...</td></tr>';
+  const el = document.getElementById('cxlog-lista');
+  if (!el) return;
+  el.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:8px">Carregando...</div>';
   const ini = document.getElementById('cxlog-ini')?.value || '';
   const fim = document.getElementById('cxlog-fim')?.value || '';
   const numero = document.getElementById('cxlog-numero')?.value || '';
@@ -136,23 +136,20 @@ async function carregarLogCaixas() {
     const res = await fetch(`${API}/caixas/checklist/log?${qs}`, { credentials:'include' });
     const lista = await res.json();
     if (!lista.length) {
-      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:16px">Nenhuma conferência encontrada</td></tr>';
+      el.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:8px">Nenhuma conferência encontrada</div>';
       return;
     }
-    tbody.innerHTML = lista.map(h => {
+    const opts = lista.map(h => {
       const ok = h.organizada && h.limpa && !h.produtos_espalhados && !h.objetos_indevidos;
-      const cor = ok ? 'var(--green)' : 'var(--red)';
-      return `<tr>
-        <td style="padding:7px 10px">${fmtData(h.data)} ${pfEsc((h.hora||'').slice(0,5))}</td>
-        <td style="padding:7px 10px;font-weight:700">Caixa ${String(h.numero).padStart(2,'0')}</td>
-        <td style="padding:7px 10px">${pfEsc(TURNO_LABEL[h.turno]||h.turno||'—')}</td>
-        <td style="padding:7px 10px">${pfEsc(h.operador_nome||'—')}</td>
-        <td style="padding:7px 10px;color:var(--text3)">${pfEsc(h.usuario_nome||'—')}</td>
-        <td style="padding:7px 10px;text-align:center;color:${cor};font-weight:700">${ok?'OK':'Atenção'}</td>
-        <td style="padding:7px 10px;color:var(--text3)">${pfEsc(h.observacoes||'—')}</td>
-      </tr>`;
+      const st = ok ? 'OK' : 'Atenção';
+      const data = `${fmtData(h.data)} ${pfEsc((h.hora||'').slice(0,5))}`;
+      const caixa = `Caixa ${String(h.numero).padStart(2,'0')}`;
+      const turnoLbl = pfEsc(TURNO_LABEL[h.turno]||h.turno||'—');
+      const obs = h.observacoes ? ` — ${pfEsc(h.observacoes)}` : '';
+      return `<option>${data} — ${caixa} — ${turnoLbl} — ${pfEsc(h.operador_nome||'—')} — Conferido por ${pfEsc(h.usuario_nome||'—')} — ${st}${obs}</option>`;
     }).join('');
+    el.innerHTML = `<select class="sel-sm" style="width:100%;padding:10px 12px;font-size:13px">${opts}</select>`;
   } catch(e) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--red);padding:16px">Erro ao carregar histórico</td></tr>';
+    el.innerHTML = '<div style="color:var(--red);font-size:13px;padding:8px">Erro ao carregar histórico</div>';
   }
 }

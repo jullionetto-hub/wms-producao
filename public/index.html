@@ -1312,22 +1312,7 @@
                 <button onclick="carregarLogCaixas()" class="btn btn-primary btn-sm">Filtrar</button>
               </div>
             </div>
-            <div style="overflow-x:auto">
-              <table style="width:100%;border-collapse:collapse;font-size:12px">
-                <thead>
-                  <tr style="background:var(--surface2)">
-                    <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:800;color:var(--text3)">DATA</th>
-                    <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:800;color:var(--text3)">CAIXA</th>
-                    <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:800;color:var(--text3)">TURNO</th>
-                    <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:800;color:var(--text3)">OPERADOR</th>
-                    <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:800;color:var(--text3)">CONFERIDO POR</th>
-                    <th style="padding:8px 10px;text-align:center;font-size:10px;font-weight:800;color:var(--text3)">STATUS</th>
-                    <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:800;color:var(--text3)">OBSERVAÇÕES</th>
-                  </tr>
-                </thead>
-                <tbody id="cxlog-tbody"><tr><td colspan="7" style="text-align:center;color:var(--text3);padding:16px">Carregando...</td></tr></tbody>
-              </table>
-            </div>
+            <div id="cxlog-lista" style="color:var(--text3);font-size:13px;padding:8px">Carregando...</div>
           </div>
         </div>
       </div>
@@ -2594,7 +2579,7 @@
   <script src="/js/entrada-manual.js?v=8"></script>
   <script src="/js/performance-dash.js?v=11"></script>
   <script src="/js/gestao.js?v=60"></script>
-  <script src="/js/caixas.js?v=4"></script>
+  <script src="/js/caixas.js?v=5"></script>
   <script src="/js/matriz.js?v=17"></script>
   <script src="/js/auth.js?v=44"></script>
 
