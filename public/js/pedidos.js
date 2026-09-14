@@ -1946,14 +1946,6 @@ function fecharModalDistribuicao() {
   _turnoAtivoDistribuicao = '';
 }
 
-// Atalho "📦 Lotes" dentro do modal Distribuir — Formar Lotes é outra forma de
-// distribuir pedidos (por proximidade, em vez de individual), então fica
-// acessível a partir do mesmo ponto de entrada em vez de um botão solto na tela.
-function abrirFormarLotesDoDistribuir() {
-  fecharModalDistribuicao();
-  abrirModalFormarLote();
-}
-
 /* ══ FORMAR LOTES (separação por lote — teste) ══════════════════════════ */
 let _todosSepsLote = [];
 let _turnoAtivoLote = '';
@@ -1977,8 +1969,10 @@ function selecionarCenarioLote(c) {
   _lotesPlano = null;
 }
 
-async function abrirModalFormarLote() {
-  document.getElementById('modal-formar-lote').style.display = 'flex';
+// Inicializa a aba "Lotes" do modal de Distribuição (chamado por distSetModo
+// quando essa aba é selecionada) — mesmo papel que renderTurnoConfig() tem
+// pra aba "Por Turno": preenche datas/cenário padrão e busca os colaboradores.
+async function _initPainelLotes() {
   document.getElementById('lote-resultado').style.display = 'none';
   document.getElementById('btn-confirmar-lote').style.display = 'none';
   document.getElementById('btn-imprimir-etiquetas-lote').style.display = 'none';
@@ -2000,11 +1994,6 @@ async function abrirModalFormarLote() {
     _todosSepsLote = users.filter(u => u.status === 'ativo');
     filtrarTurnoLote('');
   } catch(e) { console.warn(e); }
-}
-
-function fecharModalFormarLote() {
-  document.getElementById('modal-formar-lote').style.display = 'none';
-  _lotesPlano = null;
 }
 
 function filtrarTurnoLote(turno) {
@@ -2105,15 +2094,18 @@ function distSetModo(modo) {
   const btnAuto   = document.getElementById('btn-modo-auto');
   const btnManual = document.getElementById('btn-modo-manual');
   const btnTurno  = document.getElementById('btn-modo-turno');
+  const btnLotes  = document.getElementById('btn-modo-lotes');
   const painelManual = document.getElementById('dist-painel-manual');
   const painelTurno  = document.getElementById('dist-painel-turno');
+  const painelLotes  = document.getElementById('dist-painel-lotes');
   const botoesAuto   = document.getElementById('dist-botoes-auto');
   const resultado    = document.getElementById('dist-resultado');
 
   // Reset all buttons
-  [btnAuto, btnManual, btnTurno].forEach(b => { if (b) { b.style.background='transparent'; b.style.color='var(--text3)'; } });
+  [btnAuto, btnManual, btnTurno, btnLotes].forEach(b => { if (b) { b.style.background='transparent'; b.style.color='var(--text3)'; } });
   if (painelManual) painelManual.style.display = 'none';
   if (painelTurno)  painelTurno.style.display  = 'none';
+  if (painelLotes)  painelLotes.style.display  = 'none';
   if (botoesAuto)   botoesAuto.style.display   = 'none';
   if (resultado)    resultado.style.display     = 'none';
 
@@ -2124,6 +2116,9 @@ function distSetModo(modo) {
   } else if (modo === 'turno') {
     if (btnTurno) { btnTurno.style.background='var(--surface)'; btnTurno.style.color='var(--text)'; }
     if (painelTurno) { painelTurno.style.display = ''; renderTurnoConfig(); }
+  } else if (modo === 'lotes') {
+    if (btnLotes) { btnLotes.style.background='var(--surface)'; btnLotes.style.color='var(--text)'; }
+    if (painelLotes) { painelLotes.style.display = ''; _initPainelLotes(); }
   } else {
     if (btnManual) { btnManual.style.background='var(--surface)'; btnManual.style.color='var(--text)'; }
     if (painelManual) painelManual.style.display = '';
