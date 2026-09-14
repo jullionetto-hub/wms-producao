@@ -23,14 +23,5 @@ jobs:
       - name: Instalar dependências
         run: npm ci --include=dev
 
-      # bcrypt é módulo nativo (binário compilado, não JS puro) — o binário
-      # pré-compilado que resolve certo localmente no Windows não necessariamente
-      # cobre o Linux do runner do GitHub, e o próprio npm avisou (rodando local)
-      # que o script de instalação do bcrypt estava sendo pulado por política de
-      # segurança de scripts. Reconstrói explicitamente pra garantir o binário
-      # certo pra esta plataforma antes de rodar os testes.
-      - name: Reconstruir módulos nativos (bcrypt)
-        run: npm rebuild bcrypt
-
       - name: Rodar testes
         run: npm test

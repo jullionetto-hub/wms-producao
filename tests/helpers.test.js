@@ -53,9 +53,10 @@ describe('formatarAguardandoDesde', () => {
   });
 
   test('número serial do Excel é convertido pra DD/MM/YYYY HH:MM', () => {
-    // Época do Excel: 30/12/1899 + N dias. Conferido rodando o cálculo real.
-    expect(formatarAguardandoDesde(45000)).toBe('15/03/2023 00:06');
-    expect(formatarAguardandoDesde('45000')).toBe('15/03/2023 00:06'); // aceita string numérica também
+    // Época do Excel: 30/12/1899 + N dias, em UTC (sem depender do fuso da
+    // máquina). 45000 é inteiro (sem fração de dia), então a hora é 00:00.
+    expect(formatarAguardandoDesde(45000)).toBe('15/03/2023 00:00');
+    expect(formatarAguardandoDesde('45000')).toBe('15/03/2023 00:00'); // aceita string numérica também
   });
 
   test('número fora da faixa plausível de datas (não é serial do Excel) é retornado como string, sem conversão', () => {
