@@ -1,0 +1,27 @@
+name: Testes
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      # O .npmrc do projeto tem "omit=dev" (pensado pro deploy de produção no
+      # Railway não instalar jest/supertest/nodemon à toa) — aqui no CI a gente
+      # PRECISA dessas dependências pra rodar os testes, então inclui de propósito.
+      - name: Instalar dependências
+        run: npm ci --include=dev
+
+      - name: Rodar testes
+        run: npm test
