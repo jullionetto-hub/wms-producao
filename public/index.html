@@ -38,8 +38,17 @@
       overflow: hidden;
     }
     .etiqueta .et-topo { display:flex; justify-content:space-between; align-items:baseline; gap:6px; flex:0 0 auto }
+    .etiqueta .et-topo-esq { display:flex; align-items:baseline; gap:2mm }
     .etiqueta .et-pedido { font-size: 6.5mm; font-weight: 800; letter-spacing: .2px; white-space:nowrap }
     .etiqueta .et-envio { font-size: 3.6mm; font-weight: 700; text-transform:uppercase; white-space:nowrap }
+    /* Nº da caixa física dentro do lote — mesmo número que já aparece no
+       quadradinho colorido da tela de separação do celular (separador.js),
+       só pra bater o pedido com a caixa certa sem abrir o app. Só aparece
+       em etiquetas de pedidos formados em lote (imprimirEtiquetasLote). */
+    .etiqueta .et-caixa {
+      font-size: 4.2mm; font-weight: 800; white-space:nowrap;
+      background:#000; color:#fff; padding: .3mm 2mm; border-radius: 1mm;
+    }
     .etiqueta .et-cliente {
       font-size: 4mm; font-weight: 600; overflow:hidden; text-overflow:ellipsis;
       white-space:nowrap; flex:0 0 auto; margin-top:1mm;
@@ -2573,7 +2582,7 @@
 
 
 <script src="/js/config.js?v=13"></script>
-  <script src="/js/pedidos.js?v=44"></script>
+  <script src="/js/pedidos.js?v=45"></script>
   <script src="/js/separador.js?v=27"></script>
   <script src="/js/repositor.js?v=18"></script>
   <script src="/js/checkout.js?v=14"></script>

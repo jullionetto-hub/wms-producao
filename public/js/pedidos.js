@@ -593,7 +593,10 @@ function _imprimirEtiquetasLista(lista) {
   cont.innerHTML = lista.map(p => `
     <div class="etiqueta">
       <div class="et-topo">
-        <span class="et-pedido">#${pfEsc(p.numero_pedido)}</span>
+        <span class="et-topo-esq">
+          <span class="et-pedido">#${pfEsc(p.numero_pedido)}</span>
+          ${p.caixa_lote_num ? `<span class="et-caixa">CX ${pfEsc(p.caixa_lote_num)}</span>` : ''}
+        </span>
         <span class="et-envio">${pfEsc(p.transportadora||'—')}</span>
       </div>
       <div class="et-cliente">${pfEsc(p.cliente||'—')}</div>
@@ -615,7 +618,12 @@ window.addEventListener('afterprint', () => document.body.classList.remove('impr
 // separação do celular, pra colar uma etiqueta por caixa física na ordem certa.
 function imprimirEtiquetasLote() {
   if (!_lotesPlano?.length) { toast('Calcule os lotes primeiro.','aviso'); return; }
-  const lista = _lotesPlano.flatMap(l => l.pedidos);
+  // Nº da caixa = posição do pedido dentro do PRÓPRIO lote (1,2,3...) — mesmo
+  // índice que separador.js usa pra colorir o quadradinho de cada pedido na
+  // tela de separação (_loteAtual.map((p,idx) => cx = idx+1)). Precisa ser
+  // calculado por lote (não no flatMap todo), senão o 2º lote em diante
+  // continuaria contando a partir do total do lote anterior.
+  const lista = _lotesPlano.flatMap(l => l.pedidos.map((p, idx) => ({ ...p, caixa_lote_num: idx + 1 })));
   if (!lista.length) { toast('Nenhum pedido nos lotes calculados.','info'); return; }
   _imprimirEtiquetasLista(lista);
 }
