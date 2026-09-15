@@ -6,6 +6,23 @@ const ROTA_FISICA = ['A','B','C','D','E','Q','P','O','N','M','L','K','J','I','H'
 const _checklistSortDir = 1;
 const CAIXA_OBRIGATORIA = false; // mudar para true para reativar vínculo de caixa
 
+// Índice de um endereço (ex.: "Q12") na rota física — usado pra ordenar
+// checklists/lotes na ordem real de caminhada, não alfabética. Rua fora da
+// ROTA_FISICA vai pro fim (999999), não pro meio.
+function _rotaIdx(endereco) {
+  const e = String(endereco||'').split(',')[0].trim().toUpperCase();
+  const l = e.replace(/\d+.*/,'');
+  const i = ROTA_FISICA.indexOf(l);
+  return i >= 0 ? i*10000 + (parseInt(e.match(/\d+/)?.[0])||0) : 999999;
+}
+
+// Mesma ordem, mas só pela rua (sem número de posição) — usado pra ordenar
+// a lista de ruas únicas de um pedido, não os endereços completos.
+function _rotaIdxRua(rua) {
+  const i = ROTA_FISICA.indexOf(String(rua||'').trim().toUpperCase());
+  return i >= 0 ? i : 999999;
+}
+
 /* ══════════════════════════════════════════
    SEPARAÇÃO EM LOTE — TURNO NOITE
 ══════════════════════════════════════════ */
@@ -216,11 +233,7 @@ function _loteAgruparPorEndereco() {
     if (!gruposPorEnd[end]) gruposPorEnd[end] = [];
     gruposPorEnd[end].push(item);
   }
-  // Rua não reconhecida (fora da ROTA_FISICA) vai pro fim, não pro meio — 999999
-  // é maior que qualquer índice válido (máx. 27*10000+9999), senão uma rua
-  // desconhecida podia aparecer antes de ruas reais do fim da rota (R a Z).
-  const rotaIdx = e => { const l = e.replace(/\d+.*/,''); const i = ROTA_FISICA.indexOf(l); return i >= 0 ? i*10000 + (parseInt(e.match(/\d+/)?.[0])||0) : 999999; };
-  const endsOrdenados = Object.keys(gruposPorEnd).sort((a,b) => rotaIdx(a) - rotaIdx(b));
+  const endsOrdenados = Object.keys(gruposPorEnd).sort((a,b) => _rotaIdx(a) - _rotaIdx(b));
   return { gruposPorEnd, endsOrdenados };
 }
 
@@ -585,16 +598,7 @@ async function carregarChecklistMobile() {
     const wrap = document.getElementById('m-cl-wrap');
     if (!itensAtuais.length) { wrap.style.display = 'none'; return; }
     // Ordena pela rota física do estoque, sempre partindo do corredor E
-    itensAtuais.sort((a,b) => {
-      const ra = String(a.endereco||'').split(',')[0].trim();
-      const rb = String(b.endereco||'').split(',')[0].trim();
-      const rua_a = ra.match(/^([A-Z]+)/)?.[1] || '';
-      const rua_b = rb.match(/^([A-Z]+)/)?.[1] || '';
-      const num_a = parseInt(ra.match(/\d+/)?.[0]||0);
-      const num_b = parseInt(rb.match(/\d+/)?.[0]||0);
-      const ri = rua_a.localeCompare(rua_b) * _checklistSortDir;
-      return ri !== 0 ? ri : (num_a - num_b) * _checklistSortDir;
-    });
+    itensAtuais.sort((a,b) => (_rotaIdx(a.endereco) - _rotaIdx(b.endereco)) * _checklistSortDir);
     wrap.style.display = 'block';
     renderChecklist('m-cl');
   } catch(e) { toast('Erro ao carregar itens!','erro'); }
@@ -1338,9 +1342,9 @@ function renderChecklist(prefix) {
   // Extrai rua do endereço
   const getRua = (end) => String(end||'').split(',')[0].trim().match(/^([A-Z]+)/)?.[1] || '?';
 
-  // Ruas únicas neste pedido, em ordem alfabética
+  // Ruas únicas neste pedido, na ordem física da rota (não alfabética)
   const ruasNoPedido = [...new Set(itensAtuais.map(i=>getRua(i.endereco)))]
-    .sort((a,b)=>a.localeCompare(b)*_checklistSortDir);
+    .sort((a,b)=>(_rotaIdxRua(a)-_rotaIdxRua(b))*_checklistSortDir);
 
   // Rua atual = primeira rua com itens pendentes
   const primeirosPendentes = itensAtuais.filter(i=>i.status==='pendente');
