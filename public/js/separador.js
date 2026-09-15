@@ -337,10 +337,13 @@ function _renderizarListaLote() {
     const distribHtml = cxEntries.map(([cx, qty]) => {
       const cor = _CX_CORES[(Number(cx)-1) % _CX_CORES.length];
       const numPedido = _loteAtual[Number(cx)-1]?.numero_pedido || cx;
+      // Nº da caixa em texto, não só a bolinha colorida — com lote de 6-8
+      // pedidos, a paleta de 5 cores repete (caixa 3 e caixa 8 saem com a
+      // mesma cor) e a bolinha sozinha não dá pra distinguir qual é qual.
       return `<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0">
         <span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--text2)">
           <span style="width:9px;height:9px;border-radius:50%;background:${cor};flex-shrink:0"></span>
-          Pedido #${numPedido}
+          Caixa ${cx} · Pedido #${numPedido}
         </span>
         <span style="font-size:12px;font-weight:700;color:var(--text)">${qty} un.</span>
       </div>`;
