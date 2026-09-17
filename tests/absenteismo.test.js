@@ -6,7 +6,7 @@
 
 const {
   parseEspelhoPonto, inferirHorariosEsperados, classificarDia, classificarAbsenteismoMes,
-  paraMinutos, paraHHMM, extrairEmpresaDoArquivo, mesReferencia,
+  paraMinutos, paraHHMM, extrairEmpresaDoArquivo, mesReferencia, ehDiaUtilEsperado,
 } = require('../lib/absenteismo');
 
 /* ════════════════════════════════════════════════════════════
@@ -252,5 +252,31 @@ describe('parseEspelhoPonto', () => {
     expect(dias[1].data).toBe('2026-07-28');
     expect(dias[1].status).toBe('Férias');
     expect(dias[1].registros).toEqual([]);
+  });
+});
+
+/* ════════════════════════════════════════════════════════════
+   ehDiaUtilEsperado
+════════════════════════════════════════════════════════════ */
+describe('ehDiaUtilEsperado', () => {
+  test('domingo nunca é dia útil, seja qual for o turno', () => {
+    expect(ehDiaUtilEsperado('Logistica - Manhã 06h - 15h20', 'Dom')).toBe(false);
+    expect(ehDiaUtilEsperado('Logistica - Tarde 13h - 22h', 'Dom')).toBe(false);
+    expect(ehDiaUtilEsperado('Logistica - Madrugada 22h - 06h48', 'Dom')).toBe(false);
+  });
+
+  test('sábado é dia útil pra Manhã/Tarde, mas não pra Madrugada', () => {
+    expect(ehDiaUtilEsperado('Logistica - Manhã 06h - 15h20', 'Sáb')).toBe(true);
+    expect(ehDiaUtilEsperado('Logistica - Tarde 13h - 22h', 'Sáb')).toBe(true);
+    expect(ehDiaUtilEsperado('Logistica - Madrugada 22h - 06h48', 'Sáb')).toBe(false);
+    expect(ehDiaUtilEsperado('Logistica - Madrugada 22h - 06h48', 'Sab')).toBe(false); // sem acento
+  });
+
+  test('segunda a sexta é dia útil pra qualquer turno, inclusive turno não reconhecido', () => {
+    ['Seg','Ter','Qua','Qui','Sex'].forEach(d => {
+      expect(ehDiaUtilEsperado('Logistica - Manhã 06h - 15h20', d)).toBe(true);
+      expect(ehDiaUtilEsperado('Logistica - Madrugada 22h - 06h48', d)).toBe(true);
+      expect(ehDiaUtilEsperado('Turno desconhecido', d)).toBe(true);
+    });
   });
 });

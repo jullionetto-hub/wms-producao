@@ -4,7 +4,13 @@ const router  = express.Router();
 const { requerAuth, requerPerfil } = require('../lib/auth');
 const { db, pool } = require('../lib/db');
 const pdfParse = require('pdf-parse');
-const { parseEspelhoPonto, inferirHorariosEsperados, classificarDia, classificarAbsenteismoMes, mesReferencia } = require('../lib/absenteismo');
+const { parseEspelhoPonto, inferirHorariosEsperados, classificarDia, classificarAbsenteismoMes, mesReferencia, ehDiaUtilEsperado } = require('../lib/absenteismo');
+
+// Feriados em que o time inteiro não trabalha, mesmo caindo em dia útil
+// normal (não tem como inferir isso só pelo dia da semana). Lista mantida
+// manualmente — sem biblioteca de calendário/feriados móveis — adicionar
+// aqui conforme forem confirmados feriados observados no período.
+const FERIADOS = ['2026-09-07'];
 
 // ── Absenteísmo nativo — lê o espelho de ponto (PDF do InPonto) direto no WMS.
 // Substitui o antigo proxy pro serviço FastAPI separado (desativado). Guarda
@@ -33,21 +39,28 @@ function fmtSaldoHoras(min) {
 // Saldo Final salvo no cadastro do colaborador (saldoFinalMin), não é
 // somado dia a dia. faltas_injustificadas/ausencias_justificadas contam pelo
 // texto de Status batido no PDF ("Falta" / "Atestado Médico").
-function resumoColaborador(diasDele, tolerancia, saldoFinalMin) {
+function resumoColaborador(diasDele, tolerancia, saldoFinalMin, horario) {
   const passaTolerancia = min => min != null && min > tolerancia;
   const semTolerancia   = min => min != null && min > 0;
   const positivo = min => (min != null && min > 0) ? min : 0;
+  // "Dias trabalhados" e as contagens abaixo só consideram dias úteis
+  // ESPERADOS pro turno do colaborador (ver ehDiaUtilEsperado — domingo
+  // nunca, sábado só pra Manhã/Tarde) e excluem feriados confirmados (ver
+  // FERIADOS acima). Sem isso, total_dias contava toda linha do espelho de
+  // ponto — inclusive folga semanal e feriado, em que ninguém bate ponto —
+  // inflando "quantos dias trabalhou" no resumo de texto.
+  const diasUteis = diasDele.filter(d => !FERIADOS.includes(d.data) && ehDiaUtilEsperado(horario, d.dia_semana));
   return {
-    total_dias: diasDele.length,
-    entradas_atrasadas: diasDele.filter(d => passaTolerancia(d.entrada_atraso_min)).length,
-    almocos_atrasados:  diasDele.filter(d => semTolerancia(d.almoco_atraso_min)).length,
-    pausas_atrasadas:   diasDele.filter(d => semTolerancia(d.pausa_atraso_min)).length,
-    total_atraso_min: diasDele.reduce((s, d) =>
+    total_dias: diasUteis.length,
+    entradas_atrasadas: diasUteis.filter(d => passaTolerancia(d.entrada_atraso_min)).length,
+    almocos_atrasados:  diasUteis.filter(d => semTolerancia(d.almoco_atraso_min)).length,
+    pausas_atrasadas:   diasUteis.filter(d => semTolerancia(d.pausa_atraso_min)).length,
+    total_atraso_min: diasUteis.reduce((s, d) =>
       s + positivo(d.entrada_atraso_min) + positivo(d.almoco_atraso_min) + positivo(d.pausa_atraso_min), 0),
     banco_horas_min: saldoFinalMin ?? null,
-    faltas_injustificadas: diasDele.filter(d => d.status === 'Falta').length,
-    ausencias_justificadas: diasDele.filter(d => d.status === 'Atestado Médico').length,
-    declaracoes_horas: diasDele.filter(d => d.status === 'Declaração de Horas').length,
+    faltas_injustificadas: diasUteis.filter(d => d.status === 'Falta').length,
+    ausencias_justificadas: diasUteis.filter(d => d.status === 'Atestado Médico').length,
+    declaracoes_horas: diasUteis.filter(d => d.status === 'Declaração de Horas').length,
   };
 }
 
@@ -254,7 +267,7 @@ router.get('/absenteismo/resultado', requerAuth, gLeitura, wrap(async (req, res)
 
   const resultado = colaboradores.map(c => {
     const diasDele = porColaborador[c.id] || [];
-    return { colaborador: c, ...resumoColaborador(diasDele, tolerancia, c.saldo_final_min), dias: diasDele };
+    return { colaborador: c, ...resumoColaborador(diasDele, tolerancia, c.saldo_final_min, c.horario), dias: diasDele };
   }).filter(r => r.total_dias > 0);
 
   res.json({ resultado });
@@ -280,7 +293,7 @@ router.get('/absenteismo/uploads/:id/resultado', requerAuth, gLeitura, wrap(asyn
 
   const resultado = colaboradores.map(c => {
     const diasDele = porColaborador[c.id] || [];
-    return { colaborador: c, ...resumoColaborador(diasDele, tolerancia, c.saldo_final_min), dias: diasDele };
+    return { colaborador: c, ...resumoColaborador(diasDele, tolerancia, c.saldo_final_min, c.horario), dias: diasDele };
   });
 
   res.json({ upload, resultado });
@@ -335,7 +348,7 @@ router.post('/absenteismo/colaboradores/:id/enviar-matriz', requerAuth, gLeitura
   }
 
   const dias = await db.all('SELECT * FROM abs_registros_diarios WHERE colaborador_id=$1', [req.params.id]);
-  const resumo = resumoColaborador(dias, 0, colaborador.saldo_final_min);
+  const resumo = resumoColaborador(dias, 0, colaborador.saldo_final_min, colaborador.horario);
   const status = classificarAbsenteismoMes({
     atrasoMin: resumo.total_atraso_min,
     faltasInjustificadas: resumo.faltas_injustificadas,
