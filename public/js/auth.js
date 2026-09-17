@@ -531,7 +531,7 @@ function irPara(pag, el) {
   if (pag === 'performance')  { renderizarPerformanceDash(); }
   if (pag === 'relatorios')   { var hj=hojeLocal(); var rd=document.getElementById('rel-de'),ra=document.getElementById('rel-ate'); if(rd&&!rd.value)rd.value=hj; if(ra&&!ra.value)ra.value=hj; }
   if (pag === 'auditoria')    { var hj=hojeLocal(); var ea=document.getElementById('aud-ini'); if(ea&&!ea.value)ea.value=hj; carregarAuditoria(); }
-  if (pag === 'diario')       { iniciarDiario(); }
+  if (pag === 'diario')       { var _dt=document.getElementById('diario-turno'); if(_dt) _dt.value=_turnoAtualPorHora(); iniciarDiario(); }
   if (pag === 'celulares')    { ckInit(); }
   if (pag === 'caixas')       { carregarCaixas(); carregarLogCaixas(); }
   if (pag === 'embalagem')    { var _ei=document.getElementById('emb-ini'),_ef=document.getElementById('emb-fim'); if(_ei&&!_ei.value)_ei.value=hojeLocal(); if(_ef&&!_ef.value)_ef.value=hojeLocal(); mudarTabEmbDesk('fila'); }
@@ -812,6 +812,18 @@ let _diarioAtualId    = null;   // id do diário salvo/carregado
 let _validacaoId      = null;   // id da diario_validacoes pendente
 let _valTimer         = null;   // interval do countdown
 let _diarioLeuAnterior = false; // true assim que o resumo do turno anterior é checado/exibido
+
+// Mesmos limites de turno usados em lib/absenteismo.js (TURNOS_OFICIAIS):
+// Manhã 06h, Tarde 13h, Noite 22h. Usado só pra abrir a tela já no turno de
+// quem está entrando agora — sem isso, o <select> sempre começava em
+// "Manhã" (primeira <option> do HTML), então um supervisor de Tarde/Noite
+// via por padrão o diário anterior errado (o de Manhã) até trocar na mão.
+function _turnoAtualPorHora() {
+  const h = new Date().getHours();
+  if (h >= 6 && h < 13) return 'Manha';
+  if (h >= 13 && h < 22) return 'Tarde';
+  return 'Noite';
+}
 
 // Checklist espelhada do backend
 const CHECKLIST_VAL = [
