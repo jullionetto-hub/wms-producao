@@ -431,7 +431,7 @@
             <!-- TOTALIZADORES inline -->
             <div id="ped-totalizadores" style="display:none;gap:0;align-items:center;margin-left:auto"></div>
           </div>
-          <div class="tabela-wrap"><table><thead><tr><th>Nº PEDIDO</th><th>CLIENTE</th><th>TRANSPORTADORA</th><th>AGUARDANDO DESDE</th><th>USUÁRIO</th><th>STATUS</th><th>SKUs</th><th>ITENS</th><th>⏱ TEMPO EST.</th></tr></thead><tbody id="tbody-ped"></tbody></table></div>
+          <div class="tabela-wrap"><table><thead><tr><th>Nº PEDIDO</th><th>CLIENTE</th><th>TRANSPORTADORA</th><th>AGUARDANDO DESDE</th><th>USUÁRIO</th><th>STATUS</th><th onclick="ordenarPedidosPor('skus')" style="cursor:pointer;white-space:nowrap" title="Ordenar por SKUs">SKUs <span id="seta-ord-skus" style="opacity:.4">↕</span></th><th onclick="ordenarPedidosPor('itens')" style="cursor:pointer;white-space:nowrap" title="Ordenar por itens">ITENS <span id="seta-ord-itens" style="opacity:.4">↕</span></th><th>⏱ TEMPO EST.</th></tr></thead><tbody id="tbody-ped"></tbody></table></div>
         </div>
       </div>
 
@@ -2582,7 +2582,7 @@
 
 
 <script src="/js/config.js?v=13"></script>
-  <script src="/js/pedidos.js?v=46"></script>
+  <script src="/js/pedidos.js?v=47"></script>
   <script src="/js/separador.js?v=28"></script>
   <script src="/js/repositor.js?v=18"></script>
   <script src="/js/checkout.js?v=14"></script>

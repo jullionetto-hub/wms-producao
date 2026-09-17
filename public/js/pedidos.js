@@ -142,6 +142,21 @@ function _atualizarBadgesTransp(lista) {
   });
 }
 
+let _pedidosSortCol = null; // 'skus' | 'itens' | null
+let _pedidosSortDir = 1;    // 1 = crescente, -1 = decrescente
+
+function ordenarPedidosPor(coluna) {
+  if (_pedidosSortCol === coluna) _pedidosSortDir = -_pedidosSortDir;
+  else { _pedidosSortCol = coluna; _pedidosSortDir = 1; }
+  ['skus','itens'].forEach(c => {
+    const el = document.getElementById('seta-ord-' + c);
+    if (!el) return;
+    if (_pedidosSortCol !== c) { el.textContent = '↕'; el.style.opacity = '.4'; }
+    else { el.textContent = _pedidosSortDir === 1 ? '↑' : '↓'; el.style.opacity = '1'; }
+  });
+  _renderTabelaPedidos();
+}
+
 function _renderTabelaPedidos() {
   const tbody = document.getElementById('tbody-ped');
   if (!tbody) return;
@@ -161,6 +176,16 @@ function _renderTabelaPedidos() {
   // Filtro de status geral (pipeline inteiro, não só separação — ver _statusGeral)
   const filtroStatus = document.getElementById('filtro-ped-status')?.value || '';
   if (filtroStatus) lista = lista.filter(p => _statusGeral(p) === filtroStatus);
+
+  // Ordenação por SKUs/Itens (setas no cabeçalho) — aplicada antes de virar
+  // _pedidosListaFiltrada, pra tabela, totalizadores e impressão de
+  // etiquetas baterem todos com a mesma ordem exibida.
+  if (_pedidosSortCol) {
+    lista = [...lista].sort((a, b) => {
+      const val = p => _pedidosSortCol === 'skus' ? (parseInt(p.itens)||0) : (parseInt(p.total_itens||p.itens)||0);
+      return (val(a) - val(b)) * _pedidosSortDir;
+    });
+  }
   _pedidosListaFiltrada = lista;
 
   // Botão "Reatribuir Todos" — só faz sentido filtrando por um colaborador específico
@@ -238,7 +263,8 @@ function _renderTabelaPedidos() {
       <td style="font-size:11px;color:var(--amber);font-weight:600;white-space:nowrap">${p.aguardando_desde||'—'}</td>
       <td style="font-size:12px;color:var(--text2)">${p.separador_nome||'—'}</td>
       <td><span class="pill ${_statusGeral(p)}">${_statusGeralLabel[_statusGeral(p)]}</span></td>
-      <td style="font-weight:600;text-align:center;color:var(--text2)">${p.itens||'—'}</td>
+      <td style="font-weight:600;text-align:center;color:var(--accent);cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px"
+        onclick="abrirCorredoresSku(${p.id},'${p.numero_pedido}')" title="Ver em quais corredores estão essas SKUs">${p.itens||'—'}</td>
       <td style="font-weight:700;text-align:center;color:${(p.total_itens||p.itens||0)>100?'var(--red)':(p.total_itens||p.itens||0)>30?'var(--amber)':'var(--text)'}">${p.total_itens||p.itens||'—'}</td>
       <td style="text-align:center" id="timer-ped-${p.id}">${p.status==='separando' && p.iniciado_em
         ? badgeTimerAoVivo(p.iniciado_em, p.total_itens||p.itens, p.pontuacao, p.tempo_aguardando_min, p.aguardando_repositor_desde, p.itens)
@@ -260,6 +286,62 @@ function _renderTabelaPedidos() {
 
 
 
+
+/* ── Corredores das SKUs de um pedido (modal) ────────────────────────
+   Aberto ao clicar no número de SKUs da tabela de Pedidos — agrupa os
+   itens do pedido por rua (letra inicial do endereço, mesmo critério de
+   _ruaPrincipalLote em routes/pedidos.js) pra mostrar rápido onde estão
+   fisicamente espalhados, sem precisar abrir o rastreio completo. */
+async function abrirCorredoresSku(pedidoId, numeroPedido) {
+  let modal = document.getElementById('ped-corredores-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'ped-corredores-modal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+    modal.onclick = e => { if (e.target === modal) modal.style.display = 'none'; };
+    document.body.appendChild(modal);
+  }
+  modal.style.display = 'flex';
+  modal.innerHTML = `
+    <div style="background:var(--surface);border-radius:16px;width:min(440px,96vw);max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.4)">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border)">
+        <div style="font-weight:800;font-size:14px;color:var(--text)">Corredores — Pedido #${pfEsc(numeroPedido)}</div>
+        <button onclick="document.getElementById('ped-corredores-modal').style.display='none'" style="background:transparent;border:none;font-size:20px;cursor:pointer;color:var(--text3);line-height:1">✕</button>
+      </div>
+      <div id="ped-corredores-corpo" style="padding:16px 18px">
+        <div style="text-align:center;padding:20px;color:var(--text3)">Carregando...</div>
+      </div>
+    </div>`;
+
+  const itens = await apiFetch(`/pedidos/${pedidoId}/itens`);
+  const corpo = document.getElementById('ped-corredores-corpo');
+  if (!corpo) return;
+  if (!Array.isArray(itens) || !itens.length) {
+    corpo.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text3)">Nenhum item encontrado.</div>';
+    return;
+  }
+  const porRua = {};
+  itens.forEach(i => {
+    const end = String(i.endereco||'').split(',')[0].trim().toUpperCase();
+    const rua = end.match(/^([A-Z]+)/)?.[1] || (end || 'SEM ENDEREÇO');
+    (porRua[rua] = porRua[rua] || []).push(i);
+  });
+  const ruas = Object.keys(porRua).sort((a,b) => a.localeCompare(b, 'pt-BR'));
+  corpo.innerHTML = `
+    <div style="font-size:11px;color:var(--text3);margin-bottom:10px">${ruas.length} corredor${ruas.length===1?'':'es'} · ${itens.length} SKU${itens.length===1?'':'s'}</div>
+    ${ruas.map(rua => `
+      <div style="margin-bottom:12px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <span style="font-family:'Space Mono',monospace;font-weight:800;font-size:12px;color:var(--accent);background:rgba(79,70,229,.12);border:1px solid var(--accent);border-radius:6px;padding:2px 10px">RUA ${pfEsc(rua)}</span>
+          <span style="font-size:11px;color:var(--text3)">${porRua[rua].length} SKU${porRua[rua].length===1?'':'s'}</span>
+        </div>
+        ${porRua[rua].map(i => `
+          <div style="display:flex;justify-content:space-between;gap:10px;padding:5px 8px;font-size:12px;border-bottom:1px solid var(--border)">
+            <span style="color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${pfEsc(i.descricao||i.codigo||'—')}</span>
+            <span style="color:var(--text3);font-family:monospace;white-space:nowrap;flex-shrink:0">${pfEsc(i.endereco||'—')} · x${i.quantidade||1}</span>
+          </div>`).join('')}
+      </div>`).join('')}`;
+}
 
 /* ── Rastreio de pedido (modal) ──────────────────────────────────── */
 async function abrirRastreioPedido(numero) {
