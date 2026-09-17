@@ -2582,7 +2582,7 @@
 
 
 <script src="/js/config.js?v=13"></script>
-  <script src="/js/pedidos.js?v=45"></script>
+  <script src="/js/pedidos.js?v=46"></script>
   <script src="/js/separador.js?v=28"></script>
   <script src="/js/repositor.js?v=18"></script>
   <script src="/js/checkout.js?v=14"></script>
@@ -2855,6 +2855,12 @@
           quantidade de pedidos usada em Distribuir.
         </div>
 
+        <div style="display:flex;gap:6px;margin-bottom:14px">
+          <button id="btn-lote-modo-auto" class="btn btn-sm" onclick="loteSetModo('auto')" style="flex:1;background:var(--surface);color:var(--text)">Automático</button>
+          <button id="btn-lote-modo-manual" class="btn btn-sm" onclick="loteSetModo('manual')" style="flex:1;background:transparent;color:var(--text3)">Manual</button>
+        </div>
+
+        <div id="lote-sub-auto">
         <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:4px;align-items:flex-end">
           <div class="fg">
             <label>QUANTIDADE DE PEDIDOS A FORMAR EM LOTE</label>
@@ -2910,6 +2916,35 @@
           <button class="btn btn-outline" onclick="imprimirEtiquetasLote()" id="btn-imprimir-etiquetas-lote" style="display:none">🖨️ Imprimir Etiquetas</button>
           <button class="btn btn-primary" onclick="calcularLotes()" id="btn-calcular-lote">Calcular Lotes</button>
           <button class="btn btn-success" onclick="confirmarLotes()" id="btn-confirmar-lote" style="display:none">Confirmar Lotes</button>
+        </div>
+        </div>
+
+        <!-- Lote Manual — mesmo padrão de "Bipar Código de Barras" do Manual individual,
+             só que junta vários pedidos num lote só em vez de atribuir um por um. -->
+        <div id="lote-sub-manual" style="display:none">
+          <div style="background:rgba(79,70,229,.06);border:1px solid rgba(79,70,229,.2);border-radius:10px;padding:14px 16px;margin-bottom:14px;font-size:12px;color:var(--text2)">
+            <b>Lote Manual:</b> escolha o colaborador uma vez e vá bipando ou digitando os pedidos que devem entrar
+            nesse lote — todos são atribuídos juntos, como um lote só, ao confirmar.
+          </div>
+          <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center">
+            <label style="font-size:12px;font-weight:700;color:var(--text2);white-space:nowrap">Colaborador:</label>
+            <select id="lote-manual-sep" style="flex:1;padding:10px 14px;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;color:var(--text);font-size:13px;outline:none">
+              <option value="">— Selecione o colaborador —</option>
+            </select>
+          </div>
+          <input id="lote-manual-input" type="text" placeholder="Bipe ou digite o número do pedido..." autocomplete="off"
+            style="width:100%;padding:14px 16px;background:var(--surface2);border:2px solid var(--accent);border-radius:10px;color:var(--text);font-size:15px;outline:none;box-sizing:border-box;font-family:'Space Mono',monospace"
+            onkeydown="if(event.key==='Enter'){event.preventDefault();loteManualAdicionarPedido();}">
+          <div style="display:flex;gap:16px;margin:12px 2px;font-size:12px;color:var(--text3)">
+            <span><b id="lote-manual-count" style="color:var(--text)">0</b> pedido(s)</span>
+            <span><b id="lote-manual-itens" style="color:var(--text)">0</b> itens</span>
+          </div>
+          <div id="lote-manual-lista" style="max-height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;margin-bottom:12px"></div>
+          <div style="display:flex;gap:8px;justify-content:flex-end">
+            <button class="btn btn-outline" onclick="fecharModalDistribuicao()">Cancelar</button>
+            <button class="btn btn-outline" onclick="imprimirEtiquetasLoteManual()" id="btn-imprimir-etiquetas-lote-manual" style="display:none">🖨️ Imprimir Etiquetas</button>
+            <button class="btn btn-success" onclick="confirmarLoteManual()" id="btn-confirmar-lote-manual">Confirmar Lote Manual</button>
+          </div>
         </div>
       </div>
     </div>

@@ -2030,12 +2030,146 @@ async function _initPainelLotes() {
   // vez que essa aba é aberta, sobrescrevendo uma data antiga que o
   // supervisor tenha escolhido (fila de trabalho normalmente é de dias atrás).
   selecionarCenarioLote('balanceado');
+  loteSetModo('auto');
+  _loteManualPedidos = [];
+  _loteManualConfirmados = null;
+  _renderLoteManualLista();
+  document.getElementById('btn-confirmar-lote-manual').style.display = 'inline-flex';
+  document.getElementById('btn-imprimir-etiquetas-lote-manual').style.display = 'none';
+  const inpManual = document.getElementById('lote-manual-input');
+  if (inpManual) inpManual.value = '';
   try {
     const res = await fetch(`${API}/usuarios`, { credentials:'include' });
     const users = await res.json();
     _todosSepsLote = users.filter(u => u.status === 'ativo');
     filtrarTurnoLote('');
+    _popularSepsLoteManual();
   } catch(e) { console.warn(e); }
+}
+
+/* ── Sub-modo do painel Lotes: Automático x Manual ─────────────────────── */
+function loteSetModo(modo) {
+  const btnAuto   = document.getElementById('btn-lote-modo-auto');
+  const btnManual = document.getElementById('btn-lote-modo-manual');
+  const subAuto   = document.getElementById('lote-sub-auto');
+  const subManual = document.getElementById('lote-sub-manual');
+  if (modo === 'manual') {
+    if (btnManual) { btnManual.style.background='var(--surface)'; btnManual.style.color='var(--text)'; }
+    if (btnAuto)   { btnAuto.style.background='transparent';      btnAuto.style.color='var(--text3)'; }
+    if (subManual) subManual.style.display = '';
+    if (subAuto)   subAuto.style.display   = 'none';
+  } else {
+    if (btnAuto)   { btnAuto.style.background='var(--surface)'; btnAuto.style.color='var(--text)'; }
+    if (btnManual) { btnManual.style.background='transparent';  btnManual.style.color='var(--text3)'; }
+    if (subAuto)   subAuto.style.display   = '';
+    if (subManual) subManual.style.display = 'none';
+  }
+}
+
+function _popularSepsLoteManual() {
+  const sel = document.getElementById('lote-manual-sep');
+  if (!sel) return;
+  const atual = sel.value;
+  sel.innerHTML = '<option value="">— Selecione o colaborador —</option>' +
+    (_todosSepsLote || []).map(s => `<option value="${s.id}">${s.nome}</option>`).join('');
+  if (atual) sel.value = atual;
+}
+
+/* ── Lote Manual: adicionar/remover pedidos e confirmar ────────────────── */
+let _loteManualPedidos = [];
+let _loteManualConfirmados = null;
+
+function _renderLoteManualLista() {
+  const el   = document.getElementById('lote-manual-lista');
+  const cEl  = document.getElementById('lote-manual-count');
+  const iEl  = document.getElementById('lote-manual-itens');
+  if (cEl) cEl.textContent = _loteManualPedidos.length;
+  if (iEl) iEl.textContent = _loteManualPedidos.reduce((s,p) => s + (parseInt(p.total_itens||p.itens)||0), 0);
+  if (!el) return;
+  if (!_loteManualPedidos.length) {
+    el.innerHTML = '<div style="color:var(--text3);font-size:12px;text-align:center;padding:12px">Nenhum pedido adicionado ainda</div>';
+    return;
+  }
+  el.innerHTML = _loteManualPedidos.map((p, idx) => `
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface2)">
+      <span style="width:20px;height:20px;border-radius:5px;background:var(--accent);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">${idx+1}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:700;color:var(--text)">#${pfEsc(p.numero_pedido)}</div>
+        <div style="font-size:11px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${pfEsc(p.cliente||'—')} · ${p.total_itens||p.itens||0} itens</div>
+      </div>
+      <button onclick="loteManualRemoverPedido(${idx})" style="background:transparent;border:none;color:var(--text3);font-size:16px;cursor:pointer;padding:2px 6px" title="Remover">✕</button>
+    </div>`).join('');
+}
+
+function loteManualRemoverPedido(idx) {
+  _loteManualPedidos.splice(idx, 1);
+  _renderLoteManualLista();
+}
+
+async function loteManualAdicionarPedido() {
+  const input  = document.getElementById('lote-manual-input');
+  const sepSel = document.getElementById('lote-manual-sep');
+  const raw    = (input?.value || '').trim();
+  if (input) input.value = '';
+  if (!raw) return;
+  if (!sepSel?.value) { toast('Selecione o colaborador antes de adicionar pedidos.', 'aviso'); input?.focus(); return; }
+
+  // Aceita tanto o número puro quanto o código de barras completo bipado da folha.
+  const m = raw.match(/\d{5,}/);
+  const numero = m ? m[0] : raw;
+
+  if (_loteManualPedidos.some(p => String(p.numero_pedido) === String(numero))) {
+    toast(`Pedido #${numero} já está nesse lote.`, 'aviso'); input?.focus(); return;
+  }
+
+  try {
+    const res  = await fetch(`${API}/pedidos?numero_pedido=${encodeURIComponent(numero)}`, { credentials:'include' });
+    const rows = await res.json();
+    const ped  = rows?.[0];
+    if (!ped) { toast(`Pedido #${numero} não encontrado.`, 'erro'); input?.focus(); return; }
+    if (ped.status !== 'pendente') { toast(`Pedido #${numero} não está pendente (status: ${ped.status}).`, 'erro'); input?.focus(); return; }
+    if (ped.separador_id) { toast(`Pedido #${numero} já tem separador atribuído.`, 'erro'); input?.focus(); return; }
+    _loteManualPedidos.push(ped);
+    _renderLoteManualLista();
+  } catch(e) {
+    toast('Erro de conexão ao buscar pedido.', 'erro');
+  } finally {
+    input?.focus();
+  }
+}
+
+// Reusa o mesmo endpoint de confirmação dos lotes automáticos
+// (/pedidos/lote/formar/confirmar) — ele só precisa de separador_id + lista
+// de {id}, sem depender de nada calculado pelo algoritmo de proximidade.
+async function confirmarLoteManual() {
+  const sepId = parseInt(document.getElementById('lote-manual-sep')?.value);
+  if (!sepId) { toast('Selecione o colaborador.', 'aviso'); return; }
+  if (!_loteManualPedidos.length) { toast('Adicione pelo menos um pedido ao lote.', 'aviso'); return; }
+  try {
+    const res = await fetch(`${API}/pedidos/lote/formar/confirmar`, {
+      credentials:'include', method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ lotes: [{ separador_id: sepId, pedidos: _loteManualPedidos.map(p => ({id: p.id})) }] })
+    });
+    const data = await res.json();
+    if (data.erro) { toast(data.erro, 'erro'); return; }
+    if (!data.lotes) {
+      toast('Não foi possível formar o lote — os pedidos podem ter sido atribuídos por outra ação nesse meio-tempo.', 'erro');
+      return;
+    }
+    toast(`Lote formado! ${data.pedidos} pedido(s) atribuído(s).`, 'sucesso');
+    _loteManualConfirmados = [..._loteManualPedidos];
+    document.getElementById('btn-confirmar-lote-manual').style.display = 'none';
+    document.getElementById('btn-imprimir-etiquetas-lote-manual').style.display = 'inline-flex';
+    _loteManualPedidos = [];
+    _renderLoteManualLista();
+    if (typeof carregarPedidos === 'function') carregarPedidos();
+  } catch(e) { toast('Erro ao confirmar lote manual.', 'erro'); }
+}
+
+function imprimirEtiquetasLoteManual() {
+  if (!_loteManualConfirmados?.length) { toast('Nenhum lote manual confirmado ainda.', 'info'); return; }
+  const lista = _loteManualConfirmados.map((p, idx) => ({ ...p, caixa_lote_num: idx + 1 }));
+  _imprimirEtiquetasLista(lista);
 }
 
 function filtrarTurnoLote(turno) {
