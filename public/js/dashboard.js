@@ -673,7 +673,6 @@ function confirmarZerarDados() {
 
 async function carregarDashboard() {
   await popularSelects();
-  carregarControlTower();
   carregarHoraAHora();
   carregarSimulador();
   carregarAnomalias();

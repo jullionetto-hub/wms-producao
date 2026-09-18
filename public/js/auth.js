@@ -371,6 +371,7 @@ const _IC = {
   caixas:      `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>`,
   matriz:      `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>`,
   colmeias:    `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 3 7v10l9 5 9-5V7z"/><path d="M12 2v20"/><path d="M3 7l9 5 9-5"/></svg>`,
+  controlTower:`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v6"/><path d="M8 5a4 4 0 0 1 8 0"/><path d="M5 9a7 7 0 0 1 14 0"/><rect x="9" y="9" width="6" height="6" rx="1"/><path d="M10 15v7"/><path d="M14 15v7"/><path d="M8 22h8"/></svg>`,
 };
 
 function montarSidebar() {
@@ -380,6 +381,7 @@ function montarSidebar() {
     supervisor: `
       <div class="mg">SUPERVISÃO</div>
       <a class="mi ativo" onclick="irPara('dashboard',this)"><span class="mi-ic">${IC.dashboard}</span>Dashboard</a>
+      <a class="mi" onclick="irPara('control-tower',this)"><span class="mi-ic">${IC.controlTower}</span>Control Tower</a>
       <a class="mi" onclick="irPara('pedidos',this)"><span class="mi-ic">${IC.pedidos}</span>Pedidos</a>
       <a class="mi" onclick="irPara('liberacao',this)"><span class="mi-ic">${IC.liberacao}</span>Liberação <span class="mbadge" id="menu-badge-lib" style="display:none;background:var(--red)">0</span></a>
       <a class="mi" onclick="irPara('performance',this)"><span class="mi-ic">${IC.performance}</span>Performance</a>
@@ -421,6 +423,7 @@ function montarSidebar() {
     gestor: `
       <div class="mg">VISÃO GERAL</div>
       <a class="mi ativo" onclick="irPara('dashboard',this)"><span class="mi-ic">${IC.dashboard}</span>Dashboard</a>
+      <a class="mi" onclick="irPara('control-tower',this)"><span class="mi-ic">${IC.controlTower}</span>Control Tower</a>
       <a class="mi" onclick="irPara('pedidos',this)"><span class="mi-ic">${IC.pedidos}</span>Pedidos</a>
       <a class="mi" onclick="irPara('liberacao',this)"><span class="mi-ic">${IC.liberacao}</span>Liberação <span class="mbadge" id="menu-badge-lib" style="display:none;background:var(--red)">0</span></a>
       <a class="mi" onclick="irPara('performance',this)"><span class="mi-ic">${IC.performance}</span>Performance</a>
@@ -517,6 +520,7 @@ function irPara(pag, el) {
   if (pg) pg.classList.add('ativa');
   if (el) el.classList.add('ativo');
   if (pag === 'dashboard')       { carregarDashboard(); mudarDashTab('operacao'); }
+  if (pag === 'control-tower')   { carregarControlTower(); }
   if (pag === 'pedidos') { popularSelects(); var _pi=document.getElementById('filtro-ped-ini'),_pf=document.getElementById('filtro-ped-fim'); if(_pi&&!_pi.value)_pi.value=hojeLocal(); if(_pf&&!_pf.value)_pf.value=hojeLocal(); carregarPedidos(); }
   if (pag === 'cadastros')       { trocarCadastroTab('usuarios'); carregarUsuarios(); }
   if (pag === 'separacao')       { var _si=document.getElementById('sep-ini'),_sf=document.getElementById('sep-fim'); if(_si&&!_si.value)_si.value=hojeLocal(); if(_sf&&!_sf.value)_sf.value=hojeLocal(); carregarContadoresSep(); mudarTabSepDesk('fila'); }
