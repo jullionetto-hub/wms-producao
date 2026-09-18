@@ -292,6 +292,31 @@ const TABLES = [
     criado_em            TIMESTAMPTZ DEFAULT NOW()
   )`,
 
+  /* ── Colmeias — estoque manual por SKU que abate conforme os pedidos com
+     aquele código são concluídos (ver saldo calculado em routes/colmeias.js,
+     não uma coluna aqui: evita ficar desincronizado se um pedido for
+     cancelado/editado depois). quantidade_total é cumulativa (soma de todo
+     abastecimento já feito), nunca resetada. */
+  `CREATE TABLE IF NOT EXISTS colmeias (
+    id               SERIAL PRIMARY KEY,
+    codigo           TEXT NOT NULL,
+    descricao        TEXT DEFAULT '',
+    endereco         TEXT DEFAULT '',
+    quantidade_total INTEGER NOT NULL DEFAULT 0,
+    estoque_minimo   INTEGER NOT NULL DEFAULT 0,
+    criado_por       TEXT DEFAULT '',
+    status           TEXT DEFAULT 'ativo',
+    criado_em        TIMESTAMPTZ DEFAULT NOW()
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS colmeias_abastecimentos (
+    id           SERIAL PRIMARY KEY,
+    colmeia_id   INTEGER NOT NULL REFERENCES colmeias(id) ON DELETE CASCADE,
+    quantidade   INTEGER NOT NULL,
+    criado_por   TEXT DEFAULT '',
+    criado_em    TIMESTAMPTZ DEFAULT NOW()
+  )`,
+
   /* ── Catálogo de Produtos (barras.xlsx) ─────────────────────────────── */
   `CREATE TABLE IF NOT EXISTS produtos (
     id            SERIAL PRIMARY KEY,
@@ -582,6 +607,21 @@ const TABLES = [
     atualizado_em  TIMESTAMPTZ DEFAULT NOW(),
     UNIQUE(horario, padrao, indice)
   )`,
+
+  // Permissões granulares (V12) — camada ADITIVA sobre o perfil/perfis_acesso
+  // já existente (nunca substitui): sem linha aqui, o acesso é exatamente o
+  // que o perfil já dava antes; uma linha com concedida=false REVOGA uma ação
+  // específica pra aquele usuário, mesmo que o perfil dele normalmente
+  // permitisse. Ver lib/permissoes.js.
+  `CREATE TABLE IF NOT EXISTS permissoes_usuario (
+    id             SERIAL PRIMARY KEY,
+    usuario_id     INTEGER NOT NULL REFERENCES usuarios(id),
+    acao           TEXT NOT NULL,
+    concedida      BOOLEAN NOT NULL DEFAULT true,
+    concedido_por  TEXT DEFAULT '',
+    concedido_em   TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(usuario_id, acao)
+  )`,
 ];
 
 const INDEXES = [
@@ -606,6 +646,9 @@ const INDEXES = [
   'CREATE INDEX IF NOT EXISTS idx_em_itens_lote       ON entrada_manual_itens(lote_id)',
   'CREATE INDEX IF NOT EXISTS idx_em_itens_codigo     ON entrada_manual_itens(codigo)',
   'CREATE INDEX IF NOT EXISTS idx_em_itens_status     ON entrada_manual_itens(status)',
+  'CREATE INDEX IF NOT EXISTS idx_colmeias_codigo     ON colmeias(codigo)',
+  'CREATE INDEX IF NOT EXISTS idx_colmeias_status      ON colmeias(status)',
+  'CREATE INDEX IF NOT EXISTS idx_colmeias_abast_colm  ON colmeias_abastecimentos(colmeia_id)',
   'CREATE INDEX IF NOT EXISTS idx_produtos_codigo     ON produtos(codigo)',
   'CREATE INDEX IF NOT EXISTS idx_produtos_barras     ON produtos(codigo_barras)',
   'CREATE INDEX IF NOT EXISTS idx_inv_sessoes_status  ON inventario_sessoes(status)',
@@ -628,6 +671,7 @@ const INDEXES = [
   'CREATE INDEX IF NOT EXISTS idx_abs_reg_colab        ON abs_registros_diarios(colaborador_id)',
   'CREATE INDEX IF NOT EXISTS idx_abs_reg_data         ON abs_registros_diarios(data)',
   'CREATE INDEX IF NOT EXISTS idx_abs_reg_upload       ON abs_registros_diarios(upload_id)',
+  'CREATE INDEX IF NOT EXISTS idx_permissoes_usuario   ON permissoes_usuario(usuario_id)',
 ];
 
 module.exports = { TABLES, INDEXES };

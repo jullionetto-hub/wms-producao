@@ -100,11 +100,39 @@ async function carregarPedidos() {
 function filtrarPedidosTransp(tipo) {
   // Toggle: clicar no botão ativo desativa o filtro
   _filtroTransp = (_filtroTransp === tipo) ? '' : tipo;
-  document.querySelectorAll('.btn-transp').forEach(b => b.classList.remove('ativo'));
+  // Escopado só nos botões de transportadora (id^="ftransp-") — não mexe nos
+  // botões de prioridade, que também usam a classe .btn-transp pro mesmo
+  // visual mas são um filtro independente (podem ficar ativos juntos).
+  document.querySelectorAll('[id^="ftransp-"]').forEach(b => b.classList.remove('ativo'));
   const mapa = { 'DRIVE':'ftransp-drive', 'PRIME':'ftransp-prime',
                  'SEDEX':'ftransp-sedex', 'PAC':'ftransp-pac', 'MOTOBOY':'ftransp-motoboy' };
   if (_filtroTransp) {
     const btnEl = document.getElementById(mapa[_filtroTransp]);
+    if (btnEl) btnEl.classList.add('ativo');
+  }
+  _renderTabelaPedidos();
+}
+
+// Badge de prioridade — o servidor já manda nível + motivo calculados (ver
+// lib/prioridade.js); aqui só formata visualmente, sem recalcular nada.
+const _PRIOR_INFO = {
+  critico: { label:'Crítico', cor:'var(--red)' },
+  atencao: { label:'Atenção', cor:'var(--amber)' },
+  normal:  { label:'Normal',  cor:'var(--text3)' },
+};
+function _badgePrioridade(prioridade) {
+  if (!prioridade) return '<span style="font-size:11px;color:var(--text3)">—</span>';
+  const info = _PRIOR_INFO[prioridade.nivel] || _PRIOR_INFO.normal;
+  return `<span class="badge" style="background:${info.cor}22;color:${info.cor};border-color:transparent;cursor:help" title="${pfEsc(prioridade.motivo||'')}">${info.label}</span>`;
+}
+
+let _filtroPrioridade = '';
+function filtrarPedidosPrioridade(nivel) {
+  _filtroPrioridade = (_filtroPrioridade === nivel) ? '' : nivel;
+  document.querySelectorAll('[id^="fprior-"]').forEach(b => b.classList.remove('ativo'));
+  const mapa = { critico:'fprior-critico', atencao:'fprior-atencao' };
+  if (_filtroPrioridade) {
+    const btnEl = document.getElementById(mapa[_filtroPrioridade]);
     if (btnEl) btnEl.classList.add('ativo');
   }
   _renderTabelaPedidos();
@@ -173,6 +201,8 @@ function _renderTabelaPedidos() {
   } else if (_filtroTransp) {
     lista = lista.filter(p => String(p.transportadora||'').toUpperCase().includes(_filtroTransp));
   }
+  // Filtro de prioridade (NORMAL/ATENÇÃO/CRÍTICO, calculado no servidor — ver lib/prioridade.js)
+  if (_filtroPrioridade) lista = lista.filter(p => p.prioridade?.nivel === _filtroPrioridade);
   // Filtro de status geral (pipeline inteiro, não só separação — ver _statusGeral)
   const filtroStatus = document.getElementById('filtro-ped-status')?.value || '';
   if (filtroStatus) lista = lista.filter(p => _statusGeral(p) === filtroStatus);
@@ -242,7 +272,7 @@ function _renderTabelaPedidos() {
   }
   // ───────────────────────────────────────────────────────────────
   if (!lista.length) {
-    tbody.innerHTML = '<tr><td colspan="8" style="color:var(--text3);text-align:center;padding:28px">Nenhum pedido</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10" style="color:var(--text3);text-align:center;padding:28px">Nenhum pedido</td></tr>';
     return;
   }
   const isDrive = p => String(p.transportadora||'').toUpperCase().includes('DRIVE');
@@ -261,6 +291,7 @@ function _renderTabelaPedidos() {
       <td style="font-size:11px;color:var(--text2);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.cliente||''}">${p.cliente||'—'}</td>
       <td style="font-size:11px;font-weight:700;color:${corTransp}">${p.transportadora||'—'}${primeBadge}</td>
       <td style="font-size:11px;color:var(--amber);font-weight:600;white-space:nowrap">${p.aguardando_desde||'—'}</td>
+      <td>${_badgePrioridade(p.prioridade)}</td>
       <td style="font-size:12px;color:var(--text2)">${p.separador_nome||'—'}</td>
       <td><span class="pill ${_statusGeral(p)}">${_statusGeralLabel[_statusGeral(p)]}</span></td>
       <td style="font-weight:600;text-align:center;color:var(--accent);cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px"
@@ -570,10 +601,83 @@ function _renderListaUsuarios() {
           <i class="ti ti-${u.status==='ativo'?'player-pause-filled':'player-play-filled'}" aria-hidden="true"></i>
         </button>
         <button class="usr-btn edit" onclick="abrirEditarUsuario(${u.id})">Editar</button>
+        ${typeof usuarioAtual !== 'undefined' && usuarioAtual?.perfil === 'gestor'
+          ? `<button class="usr-btn" title="Permissões granulares" onclick="abrirPermissoesUsuario(${u.id},'${u.nome.replace(/'/g,"\\'")}')"><i class="ti ti-shield-lock" aria-hidden="true"></i></button>`
+          : ''}
         <button class="usr-btn del" title="Excluir" onclick="excluirUsuario(${u.id},'${u.nome}')"><i class="ti ti-trash" aria-hidden="true"></i></button>
       </div>
     </div>`;
   }).join('');
+}
+
+// ── V12: Permissões granulares (só gestor) ─────────────────────────────────
+const PERM_LABEL = { ver:'Ver', criar:'Criar', editar:'Editar', excluir:'Excluir', executar:'Executar', aprovar:'Aprovar', administrar:'Administrar' };
+let _permUsuarioAtualId = null;
+
+async function abrirPermissoesUsuario(id, nome) {
+  _permUsuarioAtualId = id;
+  let modal = document.getElementById('modal-permissoes');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'modal-permissoes';
+    modal.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;align-items:center;justify-content:center';
+    modal.onclick = e => { if (e.target === modal) modal.style.display = 'none'; };
+    document.body.appendChild(modal);
+  }
+  modal.style.display = 'flex';
+  modal.innerHTML = `
+    <div style="background:var(--surface);border-radius:16px;padding:24px;width:420px;max-width:95vw;max-height:85vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.3)" onclick="event.stopPropagation()">
+      <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:4px">Permissões — ${nome}</div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:14px">Por padrão, o acesso segue o perfil. Revogar aqui bloqueia essa ação especificamente pra este usuário, mesmo que o perfil normalmente permita.</div>
+      <div id="perm-lista" style="display:flex;flex-direction:column;gap:8px">Carregando...</div>
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button onclick="document.getElementById('modal-permissoes').style.display='none'" class="btn btn-outline" style="flex:1;padding:10px">Fechar</button>
+      </div>
+    </div>`;
+  await _renderPermissoesLista(id);
+}
+
+async function _renderPermissoesLista(id) {
+  const el = document.getElementById('perm-lista');
+  if (!el) return;
+  try {
+    const [acoes, overrides] = await Promise.all([
+      apiFetch('/permissoes/acoes'),
+      apiFetch(`/permissoes/usuarios/${id}`),
+    ]);
+    const porAcao = Object.fromEntries((overrides||[]).map(o => [o.acao, o.concedida]));
+    el.innerHTML = acoes.map(a => {
+      const estado = porAcao[a] === undefined ? 'padrao' : (porAcao[a] ? 'permitido' : 'revogado');
+      const cor = estado === 'revogado' ? 'var(--red)' : estado === 'permitido' ? 'var(--green)' : 'var(--text3)';
+      const label = estado === 'revogado' ? 'Revogado' : estado === 'permitido' ? 'Permitido' : 'Padrão (perfil)';
+      return `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:var(--surface2);border-radius:8px">
+        <span style="font-size:13px;font-weight:600;color:var(--text)">${PERM_LABEL[a]||a}</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:11px;font-weight:700;color:${cor}">${label}</span>
+          <select onchange="_mudarPermissao('${a}', this.value)" style="font-size:11px;padding:4px 6px;border:1px solid var(--border);border-radius:6px;background:var(--surface)">
+            <option value="padrao" ${estado==='padrao'?'selected':''}>Padrão</option>
+            <option value="permitido" ${estado==='permitido'?'selected':''}>Permitir</option>
+            <option value="revogado" ${estado==='revogado'?'selected':''}>Revogar</option>
+          </select>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) { el.innerHTML = '<div style="color:var(--red);font-size:12px">Erro ao carregar permissões.</div>'; }
+}
+
+async function _mudarPermissao(acao, valor) {
+  const id = _permUsuarioAtualId;
+  if (!id) return;
+  const resultado = valor === 'padrao'
+    ? await apiFetch(`/permissoes/usuarios/${id}/${acao}`, { method:'DELETE' })
+    : await apiFetch(`/permissoes/usuarios/${id}`, {
+        method:'PUT', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ acao, concedida: valor === 'permitido' }),
+      });
+  if (resultado === null) { await _renderPermissoesLista(id); return; } // apiFetch já mostrou o erro
+  toast('Permissão atualizada!', 'info');
+  await _renderPermissoesLista(id);
 }
 
 async function vincularTodosSeparadores() {
@@ -1429,13 +1533,6 @@ function exportarExcel(tipo) {
         if (tds.length > 1) rows.push([tds[0].textContent.trim(), tds[1].textContent.trim(), tds[2].textContent.trim(), tds[3].textContent.trim(), tds[4].textContent.trim(), tds[5].textContent.trim()]);
       });
       nomeArq = `pedidos_${hoje}`;
-    } else if (tipo === 'estatisticas') {
-      rows = [['Separador','Hoje','Mês','Ano','Status']];
-      document.querySelectorAll('#tbody-est-sep tr').forEach(tr => {
-        const tds = tr.querySelectorAll('td');
-        if (tds.length > 1) rows.push([tds[0].textContent.trim(), tds[1].textContent.trim(), tds[2].textContent.trim(), tds[3].textContent.trim(), tds[4].textContent.trim()]);
-      });
-      nomeArq = `estatisticas_separadores_${hoje}`;
     } else if (tipo === 'stats-repositor') {
       rows = [['Repositor','Hoje','Repostos','Não Encontrados','Total']];
       document.querySelectorAll('#tbody-srep-prod tr').forEach(tr => {
@@ -1443,13 +1540,6 @@ function exportarExcel(tipo) {
         if (tds.length > 1) rows.push([tds[0].textContent.trim(), tds[1].textContent.trim(), tds[2].textContent.trim(), tds[3].textContent.trim(), tds[4].textContent.trim()]);
       });
       nomeArq = `estatisticas_repositor_${hoje}`;
-    } else if (tipo === 'checkout-lista') {
-      rows = [['Caixa','Nº Pedido','Separador','Status','Hora']];
-      document.querySelectorAll('#tbody-checkout tr').forEach(tr => {
-        const tds = tr.querySelectorAll('td');
-        if (tds.length > 1) rows.push([tds[0].textContent.trim(), tds[1].textContent.trim(), tds[2].textContent.trim(), tds[3].textContent.trim(), tds[4].textContent.trim()]);
-      });
-      nomeArq = `checkouts_${hoje}`;
     } else if (tipo === 'stats-checkout') {
       rows = [['Caixa','Nº Pedido','Separador','Status','Data','Hora']];
       document.querySelectorAll('#tbody-sck-lista tr').forEach(tr => {
@@ -2307,15 +2397,24 @@ async function calcularLotes() {
         <span style="font-size:9px;font-weight:700;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:2px 7px;color:var(--text2);letter-spacing:.5px;margin-left:4px">${cenarioLabel[data.cenario]||'AUTOMÁTICO'}</span>
         ${data.drive_thru_excluidos ? ` · ${data.drive_thru_excluidos} Drive Thru fora (individual)` : ''}
       </div>
-      <div class="tabela-wrap"><table><thead><tr><th>SEPARADOR</th><th>PEDIDOS NO LOTE</th><th>RUAS</th><th>ITENS</th><th>PONTUAÇÃO</th><th>PEDIDOS HOJE (TOTAL)</th></tr></thead><tbody>
-        ${data.lotes.map(l => `<tr>
+      <div class="tabela-wrap"><table><thead><tr><th>SEPARADOR</th><th>PEDIDOS NO LOTE</th><th>ROTA (ORDEM DE CAMINHADA)</th><th>ITENS</th><th>PONTUAÇÃO</th><th>⏱ TEMPO EST.</th><th>PEDIDOS HOJE (TOTAL)</th></tr></thead><tbody>
+        ${data.lotes.map(l => {
+          // V6 — mesma lógica que o algoritmo já usa internamente pra montar o lote,
+          // só exibida: rota real de caminhada (não alfabética) e tempo estimado
+          // (mesma fórmula calibrada por dados reais já usada na coluna Tempo Est.
+          // da tela de Pedidos — ver estimarTempoSep em config.js).
+          const skusTotal = l.pedidos.reduce((s,p) => s + (p.skus||0), 0);
+          const tempoEst = estimarTempoSep(l.itens_total, l.pontuacao_total, skusTotal) || '—';
+          return `<tr>
           <td style="font-weight:700;color:var(--text)">${l.separador_nome}</td>
           <td style="color:var(--green);font-weight:700">${l.pedidos.length} <span style="font-size:10px;color:var(--text3);font-weight:400">(${l.pedidos.map(p=>'#'+p.numero_pedido).join(', ')})</span></td>
-          <td style="font-family:'Space Mono',monospace;font-size:11px;color:var(--indigo)">${l.ruas.join(' → ')}</td>
+          <td style="font-family:'Space Mono',monospace;font-size:11px;color:var(--indigo)" title="Distância ponderada do algoritmo: ${l.distancia_ponderada ?? '—'} (não é metros — unidade abstrata de distância×dificuldade)">${(l.rota||l.ruas).join(' → ')}</td>
           <td style="font-weight:600">${l.itens_total}</td>
           <td><span style="font-family:'Space Mono',monospace;color:var(--indigo);font-weight:700">${l.pontuacao_total}</span></td>
+          <td style="font-family:'Space Mono',monospace;font-weight:700;color:var(--amber)">${tempoEst}</td>
           <td style="font-family:'Space Mono',monospace;font-weight:800">${l.pedidos_hoje_total}</td>
-        </tr>`).join('')}
+        </tr>`;
+        }).join('')}
       </tbody></table></div>`;
     document.getElementById('btn-confirmar-lote').style.display = 'inline-flex';
   } catch(e) { toast('Erro ao calcular lotes', 'erro'); }

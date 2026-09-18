@@ -5,17 +5,19 @@ const { requerAuth, requerPerfil } = require('../lib/auth');
 const { dataHoraLocal, validarId } = require('../lib/helpers');
 const { registrarAuditoria } = require('../lib/auditoria');
 const { gerarRelatorio } = require('../lib/relatorio');
+const { requerPermissao } = require('../lib/permissoes');
 
-router.post('/admin/zerar-sessoes', requerAuth, requerPerfil('supervisor'), async (req, res) => {
+router.post('/admin/zerar-sessoes', requerAuth, requerPerfil('supervisor'), requerPermissao('excluir'), async (req, res) => {
   const { data } = req.body;
   const { data: hoje } = dataHoraLocal();
   try {
     const r = await pool.query('DELETE FROM sessoes_trabalho WHERE data=$1', [data || hoje]);
+    await registrarAuditoria(req, 'SESSOES_ZERADAS', 'sessoes_trabalho', null, {data: data || hoje}, {removidas: r.rowCount});
     res.json({ mensagem: `${r.rowCount} sessão(ões) removida(s).` });
   } catch(e) { res.status(500).json({ erro: e.message }); }
 });
 
-router.post('/admin/zerar-dados', requerAuth, requerPerfil('supervisor'), async (req,res) => {
+router.post('/admin/zerar-dados', requerAuth, requerPerfil('supervisor'), requerPermissao('excluir'), async (req,res) => {
   const { confirmar } = req.body;
   if (confirmar !== 'ZERAR_TUDO_CONFIRMO') {
     return res.status(400).json({ erro: 'Confirmação inválida.' });
@@ -721,7 +723,7 @@ router.get('/relatorio/analitico', requerAuth, requerPerfil('supervisor'), async
    Limpa todas as tabelas operacionais do dia informado (ou hoje).
    Requer perfil supervisor + confirmação via body { confirmar: true }.
 ══════════════════════════════════════════════════════════════ */
-router.post('/admin/zerar-dados-teste', requerAuth, requerPerfil('supervisor'), async (req, res) => {
+router.post('/admin/zerar-dados-teste', requerAuth, requerPerfil('supervisor'), requerPermissao('excluir'), async (req, res) => {
   const { confirmar, data } = req.body;
   if (!confirmar) return res.status(400).json({ erro: 'Envie { confirmar: true } para confirmar a operação.' });
 
@@ -762,6 +764,7 @@ router.post('/admin/zerar-dados-teste', requerAuth, requerPerfil('supervisor'), 
     resultados.sessoes = rSess.rowCount;
 
     console.log(`[ZERAR-TESTE] ${req.session?.usuario?.nome} zerou dados de ${dia}:`, resultados);
+    await registrarAuditoria(req, 'DADOS_TESTE_ZERADOS', 'sistema', null, {data: dia}, resultados);
     res.json({ mensagem: `Dados de ${dia} removidos com sucesso.`, removidos: resultados });
   } catch(e) {
     console.error('[ZERAR-TESTE]', e);
@@ -776,7 +779,7 @@ router.post('/admin/zerar-dados-teste', requerAuth, requerPerfil('supervisor'), 
    ficam intocados. Usado pra limpar lotes de teste que ficaram presos na
    fila de um separador. Requer perfil supervisor + confirmação explícita.
 ══════════════════════════════════════════════════════════════ */
-router.post('/admin/limpar-lotes-separador', requerAuth, requerPerfil('supervisor'), async (req, res) => {
+router.post('/admin/limpar-lotes-separador', requerAuth, requerPerfil('supervisor'), requerPermissao('excluir'), async (req, res) => {
   const { nomes, confirmar } = req.body;
   if (!confirmar) return res.status(400).json({ erro: 'Envie { confirmar: true } para confirmar a operação.' });
   if (!nomes?.length) return res.status(400).json({ erro: 'Informe os nomes dos separadores.' });
@@ -799,6 +802,7 @@ router.post('/admin/limpar-lotes-separador', requerAuth, requerPerfil('superviso
     if (loteIds.length) await pool.query('DELETE FROM lotes_separacao WHERE id = ANY($1)', [loteIds]);
 
     console.log(`[LIMPAR-LOTES] ${req.session?.usuario?.nome} removeu ${rPed.rowCount} pedido(s) de lote de:`, seps.rows.map(r => r.nome));
+    await registrarAuditoria(req, 'LOTES_SEPARADOR_LIMPOS', 'pedidos', null, {separadores: seps.rows.map(r => r.nome)}, {removidos: rPed.rowCount, lotes_removidos: loteIds.length});
     res.json({ mensagem: `${rPed.rowCount} pedido(s) de lote removido(s).`, removidos: rPed.rowCount, lotes_removidos: loteIds.length, separadores: seps.rows.map(r => r.nome) });
   } catch(e) {
     console.error('[LIMPAR-LOTES]', e);

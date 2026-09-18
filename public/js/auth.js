@@ -80,6 +80,8 @@ async function fazerLogin() {
       if (tBox) tBox.style.display = 'flex';
       const hid = document.getElementById('trocar-login-hidden');
       if (hid) hid.value = login;
+      const hidSenha = document.getElementById('trocar-senha-atual-hidden');
+      if (hidSenha) hidSenha.value = senha;
       return;
     }
     usuarioAtual   = data.usuario;
@@ -155,9 +157,7 @@ async function ativarApp() {
 
 
 function ativarMobileSep() {
-  document.body.classList.add('sep-mobile');
-  document.getElementById('sep-mobile-root').style.display = 'flex';
-  document.getElementById('sep-tabbar').style.display = 'flex';
+  _wmsAtivarShellMobile('sep-mobile-root', 'sep-tabbar', 'sep-mobile');
   mudarTabSep('fila');
   setTimeout(() => document.getElementById('m-input-pedido').focus(), 400);
   carregarStatsMobile();
@@ -244,17 +244,13 @@ async function _confirmarSair() {
    TABS MOBILE DO SEPARADOR
 ══════════════════════════════════════════ */
 function mudarTabSep(tab) {
-  ['separar','fila','avisos-sep','aguardando','stats'].forEach(t => {
-    const pg = document.getElementById(`sep-tab-${t}`);
-    const bt = document.getElementById(`stab-${t}`);
-    if (pg) pg.classList.toggle('ativa', t === tab);
-    if (bt) bt.classList.toggle('ativo', t === tab);
+  _wmsAlternarAbaClasse(['separar','fila','avisos-sep','aguardando','stats'], tab, 'sep-tab-', 'stab-', (t) => {
+    if (t === 'fila')        carregarFilaMobile();
+    if (t === 'stats')       carregarStatsMobile();
+    if (t === 'avisos-sep')  carregarAvisosSeparador();
+    if (t === 'aguardando')  carregarAguardandoMobile();
+    if (t === 'separar' && pedidoAtualId) renderChecklistMobile();
   });
-  if (tab === 'fila')        carregarFilaMobile();
-  if (tab === 'stats')       carregarStatsMobile();
-  if (tab === 'avisos-sep')  carregarAvisosSeparador();
-  if (tab === 'aguardando')  carregarAguardandoMobile();
-  if (tab === 'separar' && pedidoAtualId) renderChecklistMobile();
 }
 
 
@@ -374,6 +370,7 @@ const _IC = {
   celulares:   `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>`,
   caixas:      `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>`,
   matriz:      `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>`,
+  colmeias:    `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 3 7v10l9 5 9-5V7z"/><path d="M12 2v20"/><path d="M3 7l9 5 9-5"/></svg>`,
 };
 
 function montarSidebar() {
@@ -397,6 +394,7 @@ function montarSidebar() {
       <a class="mi" onclick="irPara('separacao',this)"><span class="mi-ic">${IC.separacao}</span>Separação</a>
       <a class="mi" onclick="irPara('reposicao',this)"><span class="mi-ic">${IC.reposicao}</span>Reposição <span class="mbadge" id="menu-badge-rep" style="display:none">0</span></a>
       <a class="mi" onclick="irPara('entrada-manual',this)"><span class="mi-ic">${IC.entrada}</span>Entrada Manual</a>
+      <a class="mi" onclick="irPara('colmeias',this)"><span class="mi-ic">${IC.colmeias}</span>Colmeias</a>
       <a class="mi" onclick="irPara('checkout',this)"><span class="mi-ic">${IC.checkout}</span>Checkout</a>
       <a class="mi" onclick="irPara('embalagem',this)"><span class="mi-ic">${IC.embalagem}</span>Embalagem</a>`,
     separador: `
@@ -437,6 +435,7 @@ function montarSidebar() {
       <a class="mi" onclick="irPara('separacao',this)"><span class="mi-ic">${IC.separacao}</span>Separação</a>
       <a class="mi" onclick="irPara('reposicao',this)"><span class="mi-ic">${IC.reposicao}</span>Reposição <span class="mbadge" id="menu-badge-rep" style="display:none">0</span></a>
       <a class="mi" onclick="irPara('entrada-manual',this)"><span class="mi-ic">${IC.entrada}</span>Entrada Manual</a>
+      <a class="mi" onclick="irPara('colmeias',this)"><span class="mi-ic">${IC.colmeias}</span>Colmeias</a>
       <a class="mi" onclick="irPara('checkout',this)"><span class="mi-ic">${IC.checkout}</span>Checkout</a>
       <a class="mi" onclick="irPara('embalagem',this)"><span class="mi-ic">${IC.embalagem}</span>Embalagem</a>
       <div class="mg">PESSOAL</div>
@@ -521,7 +520,6 @@ function irPara(pag, el) {
   if (pag === 'pedidos') { popularSelects(); var _pi=document.getElementById('filtro-ped-ini'),_pf=document.getElementById('filtro-ped-fim'); if(_pi&&!_pi.value)_pi.value=hojeLocal(); if(_pf&&!_pf.value)_pf.value=hojeLocal(); carregarPedidos(); }
   if (pag === 'cadastros')       { trocarCadastroTab('usuarios'); carregarUsuarios(); }
   if (pag === 'separacao')       { var _si=document.getElementById('sep-ini'),_sf=document.getElementById('sep-fim'); if(_si&&!_si.value)_si.value=hojeLocal(); if(_sf&&!_sf.value)_sf.value=hojeLocal(); carregarContadoresSep(); mudarTabSepDesk('fila'); }
-  if (pag === 'estatisticas')    { carregarEstatisticas(); carregarCheckoutLista(); }
   if (pag === 'reposicao')       { carregarAvisos(); verificarDuplicatas(); }
 
   if (pag === 'checkout')        { var _ci=document.getElementById('ck-ini'),_cf=document.getElementById('ck-fim'); if(_ci&&!_ci.value)_ci.value=hojeLocal(); if(_cf&&!_cf.value)_cf.value=hojeLocal(); carregarContadoresCk(); mudarTabCkDesk('fila'); }
@@ -546,8 +544,8 @@ function irPara(pag, el) {
   if (pag === 'estatisticas-sep') { carregarEstatisticasSep(); }
   if (pag === 'estatisticas-ck')  { carregarEstatisticasCk(); }
   if (pag === 'estatisticas-emb') { carregarEstatisticasEmb(); }
-  if (pag === 'passagem')         { iniciarPassagem(); }
   if (pag === 'entrada-manual')   { renderizarPagEntradaManual(); }
+  if (pag === 'colmeias')         { renderizarPagColmeias(); }
   if (pag === 'gestao')          { renderizarPagGestao(); }
   if (pag === 'matriz')          { renderizarPagMatriz(); }
 }
@@ -1756,11 +1754,7 @@ async function carregarContadoresCk() {
 let _embPedidos = [];
 
 async function ativarMobileEmb() {
-  document.body.classList.add('emb-mobile');
-  const root = document.getElementById('emb-mobile-root');
-  if (root) root.style.display = 'flex';
-  const bar = document.getElementById('emb-tabbar');
-  if (bar) bar.style.display = 'flex';
+  _wmsAtivarShellMobile('emb-mobile-root', 'emb-tabbar', 'emb-mobile');
   mudarTabEmb('fila');
   carregarEmbalagemMobile();
   setInterval(() => {
@@ -2142,6 +2136,7 @@ async function salvarRedefinirSenha() {
 
 async function trocarSenhaTemp() {
   const login = document.getElementById('trocar-login-hidden')?.value || '';
+  const senhaAtual = document.getElementById('trocar-senha-atual-hidden')?.value || '';
   const nova  = document.getElementById('trocar-senha-nova')?.value  || '';
   const conf  = document.getElementById('trocar-senha-conf')?.value  || '';
   const erroEl = document.getElementById('trocar-erro');
@@ -2151,7 +2146,7 @@ async function trocarSenhaTemp() {
   try {
     const res = await fetch(`${API}/auth/trocar-senha-temp`, {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ login, senha_nova: nova, senha_conf: conf })
+      body: JSON.stringify({ login, senha_atual: senhaAtual, senha_nova: nova, senha_conf: conf })
     });
     const r = await res.json();
     if (!res.ok) { if(erroEl) erroEl.textContent = r.erro||'Erro'; return; }
@@ -2161,26 +2156,6 @@ async function trocarSenhaTemp() {
     const erroLogin = document.getElementById('login-erro');
     if (erroLogin) { erroLogin.textContent = 'Senha alterada! Faça o login.'; erroLogin.style.display='block'; erroLogin.style.color='var(--green)'; }
   } catch(e) { if(erroEl) erroEl.textContent='Erro ao salvar'; }
-}
-
-/* ══════════════════════════════════════════
-   PASSAGEM DE TURNO
-══════════════════════════════════════════ */
-let _passagemPendente = null;
-
-function mudarPassagemTab(tab, btn) {
-  ['registrar','validar','placar','historico'].forEach(t => {
-    const sec = document.getElementById(`pass-sec-${t}`);
-    const bt  = document.getElementById(`ptab-${t}`);
-    if (sec) sec.style.display = t === tab ? '' : 'none';
-    if (bt) {
-      bt.style.background = t === tab ? 'var(--accent)' : 'var(--surface)';
-      bt.style.color = t === tab ? '#fff' : 'var(--text3)';
-      bt.style.border = t === tab ? 'none' : '1.5px solid var(--border)';
-    }
-  });
-  if (tab === 'historico')  carregarHistoricoPassagens();
-  if (tab === 'placar')     carregarPlacar();
 }
 
 /* ══ CHECKLIST CELULARES ══════════════════════════════════════════ */
@@ -2352,245 +2327,17 @@ function ckRenderHist() {
     </div>`).join('');
 }
 
-async function iniciarPassagem() {
-  // Set today's date
-  const dtEl = document.getElementById('pass-data');
-  if (dtEl && !dtEl.value) dtEl.value = hojeLocal();
-  mudarPassagemTab('registrar', document.getElementById('ptab-registrar'));
-  await Promise.all([carregarPlacar(), carregarHistoricoPassagens(), verificarPassagemPendente()]);
-}
-
-async function carregarPlacar() {
-  try {
-    const res = await fetch(`${API}/passagem/placar`, { credentials:'include' });
-    if (!res.ok) return;
-    const { placar } = await res.json();
-    const el = document.getElementById('pass-placar-content');
-    if (!el) return;
-    const COR = { Manha:'var(--amber)', Tarde:'var(--info)', Noite:'var(--indigo)' };
-    const RANK = ['1º', '2º', '3º'];
-    el.innerHTML = `
-      <div style="margin-bottom:16px">
-        ${placar.map((p,i) => `
-          <div style="background:var(--surface);border:1px solid var(--border);border-left:4px solid ${COR[p.turno]||'var(--border)'};border-radius:10px;padding:14px 16px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">
-            <div>
-              <div style="font-size:12px;font-weight:700;color:var(--text)">${RANK[i]||''} ${p.turno}</div>
-            </div>
-            <div style="text-align:right">
-              <div style="font-size:22px;font-weight:800;color:${COR[p.turno]||'var(--text2)'}">${p.pontos}</div>
-              <div style="font-size:10px;color:var(--text3)">pontos</div>
-            </div>
-          </div>`).join('')}
-      </div>
-      <button onclick="resetarPlacar(prompt('Turno para resetar (Manha/Tarde/Noite):'))"
-        style="width:100%;padding:10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;font-size:12px;color:var(--text3);cursor:pointer">
-        Resetar pontuação de turno
-      </button>`;
-  } catch(e) { console.warn(e); }
-}
-
-async function resetarPlacar(turno) {
-  if (!turno || !['Manha','Tarde','Noite'].includes(turno)) { toast('Turno inválido','aviso'); return; }
-  try {
-    const res = await fetch(`${API}/passagem/placar/resetar`, {
-      method:'POST', credentials:'include', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ turno })
-    });
-    const r = await res.json();
-    if (!res.ok) { toast(r.erro||'Erro','erro'); return; }
-    toast(r.mensagem, 'info');
-    carregarPlacar();
-  } catch(e) { console.warn(e); toast('Erro ao resetar','erro'); }
-}
-
-async function verificarPassagemPendente() {
-  try {
-    const res = await fetch(`${API}/passagem/pendente`, { credentials:'include' });
-    if (!res.ok) return;
-    _passagemPendente = await res.json();
-    const badge    = document.getElementById('menu-badge-passagem');
-    const badgeTab = document.getElementById('menu-badge-passagem-tab');
-    const secValEl = document.getElementById('pass-sec-validar');
-    if (_passagemPendente) {
-      if (badge)    badge.style.display    = 'inline';
-      if (badgeTab) badgeTab.style.display = 'inline';
-      if (secValEl) renderFormValidacao(_passagemPendente);
-    } else {
-      if (badge)    badge.style.display    = 'none';
-      if (badgeTab) badgeTab.style.display = 'none';
-      if (secValEl) secValEl.innerHTML = '<div style="color:var(--text3);text-align:center;padding:30px;font-size:13px">Nenhuma passagem aguardando validação.</div>';
-    }
-  } catch(e) { console.warn(e); }
-}
-
-function renderFormValidacao(p) {
-  const sec = document.getElementById('pass-sec-validar');
-  if (!sec) return;
-  const SECOES = [
-    {
-      titulo: 'Separação', cor: 'var(--accent)', fundo: 'rgba(79,70,229,.08)', borda: 'rgba(79,70,229,.3)',
-      campos: [
-        { key:'sep_separados',    label:'Separados',      val: p.sep_separados,    pts: 75 },
-        { key:'sep_pendentes',    label:'Pendentes',      val: p.sep_pendentes,    pts: 75 },
-        { key:'sep_em_separacao', label:'Em Separação',   val: p.sep_em_separacao, pts: 50 },
-      ]
-    },
-    {
-      titulo: 'Checkout', cor: 'var(--green)', fundo: 'rgba(87,185,129,.08)', borda: 'rgba(87,185,129,.3)',
-      campos: [
-        { key:'ck_feitos',    label:'Realizados', val: p.ck_feitos,    pts: 75 },
-        { key:'ck_pendentes', label:'Pendentes',  val: p.ck_pendentes, pts: 75 },
-      ]
-    },
-    {
-      titulo: 'Embalagem', cor: 'var(--indigo)', fundo: 'rgba(139,92,246,.08)', borda: 'rgba(139,92,246,.3)',
-      campos: [
-        { key:'emb_embalados', label:'Embalados', val: p.emb_embalados, pts: 75 },
-        { key:'emb_pendentes', label:'Pendentes', val: p.emb_pendentes, pts: 75 },
-      ]
-    },
-    {
-      titulo: 'Reposição — Pendências', cor: 'var(--red)', fundo: 'rgba(201,82,79,.08)', borda: 'rgba(201,82,79,.3)',
-      campos: [
-        { key:'rep_procurando', label:'Procurando Itens', val: p.rep_procurando, pts: 75 },
-        { key:'rep_na_rua',     label:'Caixas na Rua',    val: p.rep_na_rua,     pts: 75 },
-      ]
-    },
-    {
-      titulo: 'Informações Gerais', cor: 'var(--text3)', fundo: 'var(--surface2)', borda: 'var(--border)',
-      campos: [
-        { key:'separadores_presentes', label:'Separadores Presentes', val: p.separadores_presentes, pts: 25 },
-        { key:'ocorrencias',           label:'Ocorrências',           val: p.ocorrencias,           pts: 25 },
-      ]
-    },
-  ];
-  const campoHTML = (c) => `
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:8px" id="val-card-${c.key}">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
-        <div style="flex:1">
-          <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px">${c.label}</div>
-          <div style="font-size:15px;font-weight:700;color:var(--text);margin-top:2px">${c.val !== null && c.val !== undefined && c.val !== '' ? c.val : '—'}</div>
-        </div>
-        <div style="display:flex;gap:6px;flex-shrink:0">
-          <button onclick="marcarCampo('${c.key}',true)" id="btn-ok-${c.key}"
-            style="padding:6px 12px;border-radius:7px;border:1.5px solid rgba(87,185,129,.4);background:rgba(87,185,129,.1);color:var(--green);font-size:11px;font-weight:600;cursor:pointer">
-            ✓ Correto
-          </button>
-          <button onclick="marcarCampo('${c.key}',false)" id="btn-no-${c.key}"
-            style="padding:6px 12px;border-radius:7px;border:1.5px solid rgba(201,82,79,.4);background:rgba(201,82,79,.1);color:var(--red);font-size:11px;font-weight:600;cursor:pointer">
-            ✗ Incorreto <span style="font-size:9px">(-${c.pts}pts)</span>
-          </button>
-        </div>
-      </div>
-    </div>`;
-  sec.innerHTML = `
-    <div style="background:rgba(224,168,62,.12);border:1px solid rgba(224,168,62,.4);border-radius:10px;padding:14px 16px;margin-bottom:16px">
-      <div style="font-size:12px;font-weight:700;color:var(--amber)">Passagem pendente de validação</div>
-      <div style="font-size:11px;color:var(--amber);margin-top:4px">Turno: <b>${p.turno}</b> | Data: <b>${fmtData(p.data)}</b> | Supervisor: <b>${p.supervisor}</b></div>
-    </div>
-    ${SECOES.map(s => `
-      <div style="border:1.5px solid ${s.borda};border-radius:10px;padding:12px 14px;margin-bottom:12px;background:${s.fundo}">
-        <div style="font-size:12px;font-weight:700;color:${s.cor};margin-bottom:10px">${s.titulo}</div>
-        ${s.campos.map(campoHTML).join('')}
-      </div>`).join('')}
-    <div style="margin-top:6px">
-      <label style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase">Observação geral</label>
-      <textarea id="val-obs-geral" rows="2" placeholder="Comentário sobre a passagem (opcional)"
-        style="width:100%;margin-top:4px;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;resize:none;box-sizing:border-box"></textarea>
-    </div>
-    <div style="margin-top:6px">
-      <label style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase">Turno que está ENTRANDO</label>
-      <select id="val-turno-entrando" style="width:100%;margin-top:4px;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;box-sizing:border-box">
-        <option value="Manha">Manhã</option>
-        <option value="Tarde">Tarde</option>
-        <option value="Noite">Noite</option>
-      </select>
-    </div>
-    <button onclick="confirmarValidacao(${p.id})"
-      style="width:100%;margin-top:14px;padding:14px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">
-      Confirmar Validação
-    </button>`;
-}
-
-const _valResultados = {};
-function marcarCampo(campo, ok) {
-  _valResultados[campo] = ok;
-  const card  = document.getElementById(`val-card-${campo}`);
-  const btnOk = document.getElementById(`btn-ok-${campo}`);
-  const btnNo = document.getElementById(`btn-no-${campo}`);
-  if (card) { card.style.borderColor = ok ? 'var(--green)' : 'var(--red)'; card.style.background = ok ? 'rgba(87,185,129,.1)' : 'rgba(201,82,79,.1)'; }
-  if (btnOk) { btnOk.style.background = ok ? 'var(--green)' : 'rgba(87,185,129,.1)'; btnOk.style.color = ok ? '#fff' : 'var(--green)'; }
-  if (btnNo) { btnNo.style.background = !ok ? 'var(--red)' : 'rgba(201,82,79,.1)'; btnNo.style.color = !ok ? '#fff' : 'var(--red)'; }
-}
-
-async function confirmarValidacao(passagem_id) {
-  const CAMPOS = ['sep_separados','sep_pendentes','sep_em_separacao','ck_feitos','ck_pendentes','emb_embalados','emb_pendentes','rep_procurando','rep_na_rua','separadores_presentes','ocorrencias'];
-  const naoMarcados = CAMPOS.filter(c => _valResultados[c] === undefined);
-  if (naoMarcados.length) { toast(`Marque todos os ${naoMarcados.length} campo(s) antes de confirmar.`,'aviso'); return; }
-  const turno_entrando = document.getElementById('val-turno-entrando')?.value;
-  const obs_geral = document.getElementById('val-obs-geral')?.value || '';
-  try {
-    const res = await fetch(`${API}/passagem/${passagem_id}/validar`, {
-      method:'POST', credentials:'include', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ turno_entrando, resultados: _valResultados, obs_geral })
-    });
-    const r = await res.json();
-    if (!res.ok) { toast(r.erro||'Erro','erro'); return; }
-    const status = r.status === 'contestado' ? 'Passagem contestada' : 'Passagem validada';
-    const msg = r.pontos_perdidos > 0 ? `${status} — ${r.pontos_perdidos} pontos descontados!` : `${status} sem penalidades.`;
-    toast(msg, r.pontos_perdidos > 0 ? 'aviso' : 'info');
-    Object.keys(_valResultados).forEach(k => delete _valResultados[k]);
-    await iniciarPassagem();
-  } catch(e) { console.warn(e); toast('Erro ao validar','erro'); }
-}
-
-async function salvarPassagem() {
-  const data  = document.getElementById('pass-data')?.value;
-  const turno = document.getElementById('pass-turno')?.value;
-  if (!data || !turno) { toast('Preencha data e turno','aviso'); return; }
-  const n = id => parseInt(document.getElementById(id)?.value)||0;
-  const body = {
-    data, turno,
-    sep_separados:    n('pass-sep-sep'),
-    sep_pendentes:    n('pass-sep-pend'),
-    sep_em_separacao: n('pass-sep-em'),
-    ck_feitos:        n('pass-ck-feitos'),
-    ck_pendentes:     n('pass-ck-pend'),
-    emb_embalados:    n('pass-emb-emb'),
-    emb_pendentes:    n('pass-emb-pend'),
-    rep_procurando:   n('pass-rep-proc'),
-    rep_na_rua:       n('pass-rep-rua'),
-    separadores_presentes: document.getElementById('pass-seps')?.value||'',
-    ocorrencias:       document.getElementById('pass-ocorr')?.value||'',
-  };
-  try {
-    const res = await fetch(`${API}/passagem`, {
-      method:'POST', credentials:'include', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify(body)
-    });
-    const r = await res.json();
-    if (!res.ok) { toast(r.erro||'Erro','erro'); return; }
-    toast(r.mensagem, 'info');
-    carregarHistoricoPassagens();
-    verificarPassagemPendente();
-  } catch(e) { console.warn(e); toast('Erro ao salvar','erro'); }
-}
-
 /* ══════════════════════════════════════════
    EMBALAGEM DESKTOP — TABS
 ══════════════════════════════════════════ */
 let _embPedidosDesk = [];
 
 function mudarTabEmbDesk(tab) {
-  ['fila','embalar','embalados'].forEach(t => {
-    const el  = document.getElementById(`d-emb-tab-${t}`);
-    const btn = document.getElementById(`dembtab-${t}`);
-    if (el)  el.style.display = t === tab ? '' : 'none';
-    if (btn) btn.classList.toggle('ativo', t === tab);
+  _wmsAlternarAbaDisplay(['fila','embalar','embalados'], tab, 'd-emb-tab-', 'dembtab-', (t) => {
+    if (t === 'fila')      carregarEmbalagemDesk();
+    if (t === 'embalar')   setTimeout(() => document.getElementById('d-emb-embalar-input')?.focus(), 200);
+    if (t === 'embalados') carregarEmbalagemEmbaladesDesk();
   });
-  if (tab === 'fila')      carregarEmbalagemDesk();
-  if (tab === 'embalar')   setTimeout(() => document.getElementById('d-emb-embalar-input')?.focus(), 200);
-  if (tab === 'embalados') carregarEmbalagemEmbaladesDesk();
 }
 
 async function carregarEmbalagemDesk() {
@@ -2784,18 +2531,14 @@ async function encerrarEmbalagemDesk(id) {
 function mudarTabCkDesk(tab) {
   // 'checkout' foi unificado na fila — redireciona silenciosamente
   if (tab === 'checkout') tab = 'fila';
-  ['fila','feitos','aguardando'].forEach(t => {
-    const el  = document.getElementById(`d-ck-tab-${t}`);
-    const btn = document.getElementById(`dcktab-${t}`);
-    if (el)  el.style.display = t === tab ? '' : 'none';
-    if (btn) btn.classList.toggle('ativo', t === tab);
+  _wmsAlternarAbaDisplay(['fila','feitos','aguardando'], tab, 'd-ck-tab-', 'dcktab-', (t) => {
+    if (t === 'fila') {
+      carregarFilaCkDesk();
+      setTimeout(() => document.getElementById('ck-input-caixa')?.focus(), 200);
+    }
+    if (t === 'feitos')     carregarFeitosCkDesk();
+    if (t === 'aguardando') carregarAguardandoCkDesk();
   });
-  if (tab === 'fila') {
-    carregarFilaCkDesk();
-    setTimeout(() => document.getElementById('ck-input-caixa')?.focus(), 200);
-  }
-  if (tab === 'feitos')     carregarFeitosCkDesk();
-  if (tab === 'aguardando') carregarAguardandoCkDesk();
 }
 
 async function carregarAguardandoCkDesk() {
@@ -3006,19 +2749,15 @@ async function carregarStatsPedidosDesk(page) {
    SEPARAÇÃO DESKTOP — TABS
 ══════════════════════════════════════════ */
 function mudarTabSepDesk(tab) {
-  ['fila','separar','avisos','aguardando'].forEach(t => {
-    const el  = document.getElementById(`d-sep-tab-${t}`);
-    const btn = document.getElementById(`dstab-${t}`);
-    if (el)  el.style.display = t === tab ? '' : 'none';
-    if (btn) btn.classList.toggle('ativo', t === tab);
+  _wmsAlternarAbaDisplay(['fila','separar','avisos','aguardando'], tab, 'd-sep-tab-', 'dstab-', (t) => {
+    if (t === 'fila')       carregarFilaDesk();
+    if (t === 'separar') {
+      setTimeout(() => document.getElementById('input-pedido')?.focus(), 200);
+      if (pedidoAtualId) renderChecklist('cl');
+    }
+    if (t === 'avisos')     carregarAvisosSeparadorDesk();
+    if (t === 'aguardando') carregarAguardandoDesk();
   });
-  if (tab === 'fila')       carregarFilaDesk();
-  if (tab === 'separar') {
-    setTimeout(() => document.getElementById('input-pedido')?.focus(), 200);
-    if (pedidoAtualId) renderChecklist('cl');
-  }
-  if (tab === 'avisos')     carregarAvisosSeparadorDesk();
-  if (tab === 'aguardando') carregarAguardandoDesk();
 }
 
 async function carregarAvisosSeparadorDesk() {
@@ -3130,31 +2869,3 @@ async function carregarAguardandoDesk() {
   }
 }
 
-async function carregarHistoricoPassagens() {
-  try {
-    const res = await fetch(`${API}/passagem`, { credentials:'include' });
-    if (!res.ok) return;
-    const lista = await res.json();
-    const el = document.getElementById('pass-historico');
-    if (!el) return;
-    const STATUS_COR  = { pendente:'var(--amber)', validado:'var(--green)', contestado:'var(--red)' };
-    const STATUS_NOME = { pendente:'Pendente', validado:'Validado', contestado:'Contestado' };
-    el.innerHTML = lista.length ? lista.map(p => `
-      <div style="background:var(--surface);border:1px solid var(--border);border-left:3px solid ${STATUS_COR[p.status]||'var(--border)'};border-radius:8px;padding:12px 14px;margin-bottom:8px">
-        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">
-          <div>
-            <span style="font-size:13px;font-weight:700;color:var(--text)">${fmtData(p.data)} — ${p.turno}</span>
-            <span style="margin-left:8px;font-size:11px;font-weight:600;color:${STATUS_COR[p.status]||'var(--text3)'}">${STATUS_NOME[p.status]||p.status}</span>
-          </div>
-          <div style="font-size:11px;color:var(--text3)">${p.supervisor}</div>
-        </div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;font-size:11px;color:var(--text3)">
-          <span>Sep: ${p.sep_separados||0} / ${p.sep_pendentes||0} pend</span>
-          <span>CK: ${p.ck_feitos||0} / ${p.ck_pendentes||0} pend</span>
-          <span>Emb: ${p.emb_embalados||0} / ${p.emb_pendentes||0} pend</span>
-          <span>Rep: ${p.rep_procurando||0} proc / ${p.rep_na_rua||0} rua</span>
-          ${p.pontos_perdidos ? `<span style="color:var(--red);font-weight:700">-${p.pontos_perdidos} pts</span>` : ''}
-        </div>
-      </div>`).join('') : '<div style="color:var(--text3);text-align:center;padding:20px;font-size:13px">Nenhuma passagem registrada</div>';
-  } catch(e) { console.warn(e); }
-}

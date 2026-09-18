@@ -3,6 +3,8 @@ const router = express.Router();
 const { db, pool } = require('../lib/db');
 const { requerAuth, requerPerfil } = require('../lib/auth');
 const { hashSenha, validarId } = require('../lib/helpers');
+const { registrarAuditoria } = require('../lib/auditoria');
+const { requerPermissao } = require('../lib/permissoes');
 
 router.get('/usuarios', requerAuth, requerPerfil('supervisor', 'gestor'), async (req,res) => {
   try {
@@ -23,6 +25,7 @@ router.post('/usuarios', requerAuth, requerPerfil('supervisor', 'gestor'), async
       [nome,login,hashSenha(senha),perfil,subtipo,extras,turno||'Manha']);
     const novoId=r.rows[0].id;
     if (perfil==='separador') await pool.query(`INSERT INTO separadores (nome,matricula,turno,usuario_id) VALUES ($1,$2,$3,$4) ON CONFLICT(matricula) DO NOTHING`,[nome,login,turno||'Manha',novoId]);
+    await registrarAuditoria(req, 'USUARIO_CRIADO', 'usuario', novoId, null, {nome,login,perfil,perfis_acesso:extras,turno:turno||'Manha'});
     res.json({id:novoId,mensagem:'Usuario cadastrado!'});
   } catch(e){
     if (e.code==='23505') return res.status(409).json({erro:'Login ja cadastrado!'});
@@ -35,6 +38,7 @@ router.put('/usuarios/:id', requerAuth, requerPerfil('supervisor', 'gestor'), as
   const subtipo=perfil==='repositor'?(subtipo_repositor||'geral'):'geral';
   const extras=Array.isArray(perfis_acesso)?perfis_acesso.filter(Boolean).filter(p=>p!==perfil).join(','):String(perfis_acesso||'');
   try {
+    const antes = await db.get('SELECT nome,login,perfil,perfis_acesso,turno,status FROM usuarios WHERE id=$1', [req.params.id]);
     const senhaTemp = req.body.senha_temporaria === true;
     if (senha) {
       const expira = senhaTemp ? new Date(Date.now() + 24*60*60*1000) : null;
@@ -46,6 +50,8 @@ router.put('/usuarios/:id', requerAuth, requerPerfil('supervisor', 'gestor'), as
     }
     // Sincroniza separadores.turno para manter consistência com usuarios.turno
     await pool.query(`UPDATE separadores SET turno=$1, nome=$2 WHERE usuario_id=$3`, [turno||'Manha', nome, req.params.id]);
+    await registrarAuditoria(req, 'USUARIO_EDITADO', 'usuario', req.params.id, antes,
+      {nome,login,perfil,perfis_acesso:extras,turno:turno||'Manha',status,senha_trocada:!!senha,senha_temporaria:senhaTemp});
     res.json({mensagem:'Atualizado!'});
   } catch(e){res.status(500).json({erro:e.message});}
 });
@@ -56,14 +62,20 @@ router.patch('/usuarios/:id/status', requerAuth, requerPerfil('supervisor', 'ges
   const {status} = req.body;
   if (!['ativo','inativo'].includes(status)) return res.status(400).json({erro:'Status invalido'});
   try {
+    const antes = await db.get('SELECT status FROM usuarios WHERE id=$1', [id]);
     await pool.query('UPDATE usuarios SET status=$1 WHERE id=$2', [status, id]);
+    await registrarAuditoria(req, 'USUARIO_STATUS_ALTERADO', 'usuario', id, antes, {status});
     res.json({mensagem:'Status atualizado!'});
   } catch(err) { res.status(500).json({erro:err.message}); }
 });
 
-router.delete('/usuarios/:id', requerAuth, requerPerfil('supervisor', 'gestor'), async (req,res) => {
-  try { await pool.query('DELETE FROM usuarios WHERE id=$1',[req.params.id]); res.json({mensagem:'Excluido!'}); }
-  catch(e){res.status(500).json({erro:e.message});}
+router.delete('/usuarios/:id', requerAuth, requerPerfil('supervisor', 'gestor'), requerPermissao('excluir'), async (req,res) => {
+  try {
+    const antes = await db.get('SELECT nome,login,perfil FROM usuarios WHERE id=$1', [req.params.id]);
+    await pool.query('DELETE FROM usuarios WHERE id=$1',[req.params.id]);
+    await registrarAuditoria(req, 'USUARIO_EXCLUIDO', 'usuario', req.params.id, antes, null);
+    res.json({mensagem:'Excluido!'});
+  } catch(e){res.status(500).json({erro:e.message});}
 });
 
 // ── SEPARADORES ───────────────────────────────────────────────────────────────
@@ -128,8 +140,13 @@ router.put('/separadores/:id', requerAuth, requerPerfil('supervisor', 'gestor'),
   catch(e){res.status(500).json({erro:e.message});}
 });
 
-router.delete('/separadores/:id', requerAuth, requerPerfil('supervisor', 'gestor'), async (req,res) => {
-  try { await pool.query('DELETE FROM separadores WHERE id=$1',[req.params.id]); res.json({mensagem:'Excluido!'}); }
+router.delete('/separadores/:id', requerAuth, requerPerfil('supervisor', 'gestor'), requerPermissao('excluir'), async (req,res) => {
+  try {
+    const antes = await db.get('SELECT nome,matricula FROM separadores WHERE id=$1', [req.params.id]);
+    await pool.query('DELETE FROM separadores WHERE id=$1',[req.params.id]);
+    await registrarAuditoria(req, 'SEPARADOR_EXCLUIDO', 'separador', req.params.id, antes, null);
+    res.json({mensagem:'Excluido!'});
+  }
   catch(e){res.status(500).json({erro:e.message});}
 });
 

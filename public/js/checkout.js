@@ -2,22 +2,16 @@
    MOBILE CHECKOUT
 ══════════════════════════════════════════ */
 function ativarMobileCk() {
-  document.body.classList.add('ck-mobile');
-  document.getElementById('ck-mobile-root').style.display = 'flex';
-  document.getElementById('ck-tabbar').style.display = 'flex';
+  _wmsAtivarShellMobile('ck-mobile-root', 'ck-tabbar', 'ck-mobile');
   mudarTabCk('fila');
 }
 
 function mudarTabCk(tab) {
-  ['fila','busca','feitos','aguardando'].forEach(t => {
-    const page = document.getElementById(`ck-tab-${t}`);
-    const btn  = document.getElementById(`cktab-${t}`);
-    if (page) page.classList.toggle('ativa', t === tab);
-    if (btn)  btn.classList.toggle('ativo', t === tab);
+  _wmsAlternarAbaClasse(['fila','busca','feitos','aguardando'], tab, 'ck-tab-', 'cktab-', (t) => {
+    if (t === 'fila')       carregarFilaCkMobile();
+    if (t === 'feitos')     carregarFeitosCkMobile();
+    if (t === 'aguardando') carregarAguardandoCkMobile();
   });
-  if (tab === 'fila')       carregarFilaCkMobile();
-  if (tab === 'feitos')     carregarFeitosCkMobile();
-  if (tab === 'aguardando') carregarAguardandoCkMobile();
 }
 
 /* ── Estado dos itens marcados como faltando (por checkout_id) ──── */

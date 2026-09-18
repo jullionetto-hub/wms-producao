@@ -194,12 +194,14 @@ router.post('/auth/redefinir-senha', requerAuth, async (req,res) => {
 
 router.post('/auth/trocar-senha-temp', async (req,res) => {
   try {
-    const { login, senha_nova, senha_conf } = req.body;
-    if (!login || !senha_nova || !senha_conf) return res.status(400).json({erro:'Preencha todos os campos'});
+    const { login, senha_atual, senha_nova, senha_conf } = req.body;
+    if (!login || !senha_atual || !senha_nova || !senha_conf) return res.status(400).json({erro:'Preencha todos os campos'});
     if (senha_nova.length < 6) return res.status(400).json({erro:'Senha minima 6 caracteres'});
     if (senha_nova !== senha_conf) return res.status(400).json({erro:'Senhas nao conferem'});
-    const u = await db.get('SELECT id,senha_temporaria_expira FROM usuarios WHERE login=$1 AND senha_temporaria=true', [login]);
-    if (!u) return res.status(400).json({erro:'Nao autorizado'});
+    const u = await db.get('SELECT id,senha_hash,senha_temporaria_expira FROM usuarios WHERE login=$1 AND senha_temporaria=true', [login]);
+    // Mesma mensagem genérica tanto para login inexistente/sem senha temporária quanto
+    // para senha atual incorreta — não dar pista de qual delas falhou.
+    if (!u || !verificarSenha(senha_atual, u.senha_hash || '')) return res.status(400).json({erro:'Nao autorizado'});
     if (u.senha_temporaria_expira && new Date() > new Date(u.senha_temporaria_expira)) {
       return res.status(400).json({erro:'Senha temporária expirada. Contate o supervisor.'});
     }

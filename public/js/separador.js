@@ -456,6 +456,7 @@ async function verificarGrupoLote(idsStr) {
       const item = _loteItens.find(i => i.id === id);
       if (item) item.status = 'encontrado';
     }
+    feedbackColetor('sucesso');
     _renderizarListaLote();
   } catch(e) { toast('Erro de rede','erro'); }
 }
@@ -498,6 +499,7 @@ async function parcialGrupoLote(idsStr, qtdTotal, qtdEncontrada) {
     } catch(e) { /* segue */ }
   }
 
+  feedbackColetor('parcial');
   toast(`${qtdEncontrada} de ${qtdTotal} unidades registradas`,'aviso');
   _renderizarListaLote();
 }
@@ -525,6 +527,7 @@ async function faltaGrupoLote(idsStr, qtdTotal, motivo) {
       const item = _loteItens.find(i => i.id === id);
       if (item) item.status = 'falta';
     }
+    feedbackColetor('falta');
     toast('Repositor acionado','aviso');
     _renderizarListaLote();
   } catch(e) { toast('Erro de rede','erro'); }
@@ -541,8 +544,8 @@ async function concluirLoteMobile() {
     const data = await res.json();
     if (!res.ok) { toast(data.erro||'Erro ao concluir lote','erro'); return; }
 
-    if (data.aguardando) toast('Lote enviado para aguardando repositor','aviso');
-    else toast('Lote concluído!','sucesso');
+    if (data.aguardando) { feedbackColetor('parcial'); toast('Lote enviado para aguardando repositor','aviso'); }
+    else { feedbackColetor('sucesso'); toast('Lote concluído!','sucesso'); }
 
     // Tela de conclusão
     document.getElementById('m-lote-conclusao-body').innerHTML = _loteAtual.map((p,i) => {
@@ -1637,6 +1640,7 @@ async function verificarItem(itemId, status, obs='', qtdFalta=0, prefix, renderP
     });
     if (!resp.ok) { toast('Erro ao verificar item!','erro'); return; }
     if (item) { item.status=status; item.obs=obs; item.aviso_status=''; }
+    feedbackColetor(status==='falta' ? 'falta' : status==='parcial' ? 'parcial' : 'sucesso');
     if (status==='falta')     toast('Falta — repositor avisado!','aviso');
     if (status==='parcial')   toast('Parcial — repositor avisado!','aviso');
     renderChecklist(renderPrefix);

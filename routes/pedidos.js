@@ -3,7 +3,21 @@ const router = express.Router();
 const { db, pool } = require('../lib/db');
 const { requerAuth, requerPerfil } = require('../lib/auth');
 const { dataHoraLocal, formatarAguardandoDesde, validarId } = require('../lib/helpers');
+const { registrarAuditoria } = require('../lib/auditoria');
+const { requerPermissao } = require('../lib/permissoes');
 const { calcularPesoCorredor, calcularPontuacaoPedido } = require('../lib/pontuacao');
+const { calcularPrioridade } = require('../lib/prioridade');
+
+// Prioridade só faz sentido pra pedido ainda não concluído (aguardando
+// alguma etapa) — pedido concluído não carrega selo de prioridade.
+function _comPrioridade(r) {
+  const aguardando_desde = formatarAguardandoDesde(r.aguardando_desde);
+  const prioridade = (r.status === 'pendente' || r.status === 'separando')
+    ? calcularPrioridade(aguardando_desde)
+    : null;
+  return { ...r, aguardando_desde, prioridade };
+}
+const GeometriaEstoque = require('../public/js/geometria-estoque.js');
 
 router.get('/pedidos', requerAuth, async (req,res) => {
   const {separador_id,status,data,data_ini,data_fim,aguardando_ini,aguardando_fim,numero_pedido,page,pageSize}=req.query;
@@ -64,7 +78,7 @@ router.get('/pedidos', requerAuth, async (req,res) => {
       p.push(size); q+=order+` LIMIT $${p.length}`;
       p.push((pg-1)*size); q+=` OFFSET $${p.length}`;
       const rows=await db.all(q,p);
-      return res.json({ total, pagina:pg, totalPaginas:Math.ceil(total/size), dados:rows.map(r=>({...r,aguardando_desde:formatarAguardandoDesde(r.aguardando_desde)})) });
+      return res.json({ total, pagina:pg, totalPaginas:Math.ceil(total/size), dados:rows.map(_comPrioridade) });
     }
     q+=order;
     const rows=await db.all(q,p);
@@ -93,7 +107,7 @@ router.get('/pedidos', requerAuth, async (req,res) => {
       }
     }
 
-    res.json(rows.map(r=>({...r,aguardando_desde:formatarAguardandoDesde(r.aguardando_desde)})));
+    res.json(rows.map(_comPrioridade));
   } catch(e){res.status(500).json({erro:e.message});}
 });
 
@@ -258,7 +272,11 @@ router.put('/pedidos/:id/liberar-caixa', requerAuth, requerPerfil('supervisor'),
 });
 
 router.post('/pedidos/bipar', requerAuth, async (req,res) => {
-  const {numero_pedido,separador_id}=req.body;
+  const {numero_pedido}=req.body;
+  // Identidade de quem bipou vem da sessão, não do corpo da requisição — mesma
+  // regra já aplicada em /pedidos/reordenar-fila e /itens/:id/verificar: confiar
+  // no valor enviado deixaria qualquer chamada atribuir o pedido a outro separador.
+  const separador_id = req.session?.separador?.id || null;
   if (!numero_pedido) return res.status(400).json({erro:'Numero do pedido nao informado!'});
   try {
     const ped=await db.get('SELECT * FROM pedidos WHERE numero_pedido=$1',[numero_pedido]);
@@ -637,6 +655,7 @@ router.delete('/pedidos/vazios', requerAuth, requerPerfil('supervisor'), async (
     const r = await pool.query(
       `DELETE FROM pedidos p WHERE ${WHERE_PEDIDOS_VAZIOS}`
     );
+    await registrarAuditoria(req, 'PEDIDOS_VAZIOS_EXCLUIDOS', 'pedidos', null, null, {excluidos:r.rowCount});
     res.json({ mensagem:`${r.rowCount} pedido(s) vazio(s) excluído(s)!`, excluidos: r.rowCount });
   } catch(e) { res.status(500).json({erro:e.message}); }
 });
@@ -645,15 +664,17 @@ router.delete('/pedidos/:id', requerAuth, requerPerfil('supervisor'), async (req
   const id = validarId(req.params.id);
   if (!id) return res.status(400).json({erro:'ID invalido'});
   try {
+    const antes = await db.get('SELECT numero_pedido,status,cliente FROM pedidos WHERE id=$1', [id]);
     await pool.query('DELETE FROM avisos_repositor WHERE pedido_id=$1',[id]);
     await pool.query('DELETE FROM checkout WHERE pedido_id=$1',[id]);
     await pool.query('DELETE FROM itens_pedido WHERE pedido_id=$1',[id]);
     await pool.query('DELETE FROM pedidos WHERE id=$1',[id]);
+    await registrarAuditoria(req, 'PEDIDO_EXCLUIDO', 'pedido', id, antes, null);
     res.json({mensagem:'Pedido excluido!'});
   } catch(e){res.status(500).json({erro:e.message});}
 });
 
-router.delete('/pedidos', requerAuth, requerPerfil('supervisor'), async (req,res) => {
+router.delete('/pedidos', requerAuth, requerPerfil('supervisor'), requerPermissao('excluir'), async (req,res) => {
   const {data,status}=req.query;
   if (!data && !status) return res.status(400).json({erro:'Informe data ou status!'});
   try {
@@ -665,6 +686,7 @@ router.delete('/pedidos', requerAuth, requerPerfil('supervisor'), async (req,res
     await pool.query(`DELETE FROM checkout WHERE pedido_id IN (SELECT id FROM pedidos WHERE ${cond})`,[val]);
     await pool.query(`DELETE FROM itens_pedido WHERE pedido_id IN (SELECT id FROM pedidos WHERE ${cond})`,[val]);
     const r=await pool.query(`DELETE FROM pedidos WHERE ${cond}`,[val]);
+    await registrarAuditoria(req, 'PEDIDOS_EM_MASSA_EXCLUIDOS', 'pedidos', null, {data,status}, {excluidos:r.rowCount});
     res.json({mensagem:`${r.rowCount} pedidos excluidos!`});
   } catch(e){res.status(500).json({erro:e.message});}
 });
@@ -1103,43 +1125,13 @@ function _rotaIdxLote(rua) {
   return i === -1 ? 999 : i;
 }
 // Distância física real (não a posição na rota de caminhada) — usada só pra decidir
-// QUAIS pedidos cabem no mesmo lote. O corredor principal (FUNDO) é uma reta; o
-// ramal da frente (E→D→C→B→A) pendura perpendicular bem no meio dele, na altura de
-// Q — por isso E fica fisicamente colado em Q/P/N e longe de A (ponta morta do
-// ramal), mesmo E aparecendo "antes" de N na ordem de caminhada (que precisa
-// descer o ramal inteiro e voltar antes de seguir pro resto do corredor). Mesma
-// geometria validada em public/js/dashboard.js (renderMapaEstoque).
-const FUNDO_COORD  = ['ZA','F','G','ARARA','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'];
-const FRENTE_COORD = { E:1, D:2, C:3, B:4, A:5 };
-const Q_IDX_COORD  = FUNDO_COORD.indexOf('Q');
-function _coordRua(rua) {
-  const fIdx = FUNDO_COORD.indexOf(rua);
-  if (fIdx !== -1) return { x: fIdx, y: 0 };
-  if (FRENTE_COORD[rua] != null) return { x: Q_IDX_COORD, y: FRENTE_COORD[rua] };
-  return null;
-}
-function _distanciaRuas(a, b) {
-  const ca = _coordRua(a), cb = _coordRua(b);
-  if (!ca || !cb) return 999;
-  return Math.abs(ca.x-cb.x) + Math.abs(ca.y-cb.y);
-}
-// Peso de dificuldade por rua — mesma tabela de lib/pontuacao.js (PESOS/
-// SEGMENTOS_ESTOQUE), simplificada por rua inteira (sem distinguir Frente/Fundo
-// nem faixa de número, que calcularPesoCorredor já usa pra pontuação individual
-// do pedido). Usado só pra ponderar a distância na formação do lote: analisado
-// com dados reais (WMS11092026.xlsx), a maioria dos itens fica em A-E/P-U
-// (fácil) — quando um pedido toca uma rua difícil (F-L, rara no estoque), essa
-// distância pesa mais na decisão de agrupar, pra não esticar o lote metendo um
-// item difícil junto com algo distante numa área fácil.
-const PESO_DIFICULDADE_RUA = {
-  A:1.0, B:1.0, C:1.0, D:1.0, E:1.0,
-  F:2.8, G:2.8, H:2.8, I:2.8, J:2.8, K:2.8, L:2.8,
-  M:1.8, N:1.8, O:1.8,
-  P:1.0, Q:1.0, R:1.0, S:1.0, T:1.0, U:1.0,
-  V:1.8, W:1.8, X:1.8, Y:1.8, Z:1.8,
-  ZA:3.5, ARARA:3.5,
-};
-function _pesoRua(rua) { return PESO_DIFICULDADE_RUA[rua] || 1.0; }
+// QUAIS pedidos cabem no mesmo lote. Modelo (corredor "fundo" reto + ramal "frente"
+// perpendicular na altura de Q) e peso de dificuldade por rua agora vêm de
+// public/js/geometria-estoque.js — fonte única compartilhada com o Mapa do Estoque
+// (public/js/dashboard.js), consolidada na V2 da evolução do WMS (antes cada um
+// mantinha sua própria cópia manual dos mesmos valores).
+function _distanciaRuas(a, b) { return GeometriaEstoque.distanciaRuas(a, b); }
+function _pesoRua(rua) { return GeometriaEstoque.pesoDificuldadeRua(rua); }
 // Maior distância PONDERADA entre qualquer par de ruas de uma lista — o
 // "diâmetro" da área que o separador precisa cobrir, pesado pela dificuldade
 // média das duas pontas (uma rua difícil conta mais que a mesma distância
@@ -1328,6 +1320,15 @@ router.post('/pedidos/lote/formar', requerAuth, requerPerfil('supervisor'), asyn
       // supervisor ver rápido quais zonas o lote toca; a ordem de caminhada real
       // (ROTA_FISICA) continua sendo usada na tela de separação do celular.
       lote.ruas = [...new Set(lote.pedidos.flatMap(p => p._ruasSet))].sort((a,b) => a.localeCompare(b, 'pt-BR'));
+      // V6 — mostra ao supervisor a MESMA lógica que o algoritmo já usa pra montar
+      // o lote (ROTA_FISICA_LOTE + _diametroRuas), em vez de só o resultado final:
+      // rota = ordem real de caminhada (não alfabética); distancia_ponderada = a
+      // métrica de distância×dificuldade que o algoritmo usou pra decidir o
+      // agrupamento (não é metros reais — não existe calibração física no
+      // projeto pra converter em unidade física; é a mesma unidade abstrata já
+      // usada internamente, recalculada uma vez pro conjunto final de ruas).
+      lote.rota = [...lote.ruas].sort((a,b) => _rotaIdxLote(a) - _rotaIdxLote(b));
+      lote.distancia_ponderada = Math.round(_diametroRuas(lote.ruas) * 10) / 10;
     }
 
     res.json({
@@ -1341,6 +1342,8 @@ router.post('/pedidos/lote/formar', requerAuth, requerPerfil('supervisor'), asyn
           skus: p._skusQtd, total_itens: p._itensQtd, aguardando_desde: p.aguardando_desde||'',
         })),
         ruas: l.ruas,
+        rota: l.rota,
+        distancia_ponderada: l.distancia_ponderada,
         separador_id: l.separador_id,
         separador_nome: l.separador_nome,
         pontuacao_total: l.pontuacao_total,

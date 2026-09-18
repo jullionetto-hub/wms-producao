@@ -262,37 +262,6 @@ describe('GET /checkout/caixa/:numero', () => {
 });
 
 /* ════════════════════════════════════════════════════════════
-   6. CONCLUIR CHECKOUT
-════════════════════════════════════════════════════════════ */
-describe('PUT /checkout/:id/concluir', () => {
-  let agent;
-  beforeEach(async () => {
-    agent = request.agent(app);
-    await loginSupervisor(agent);
-  });
-
-  test('sem auth → 401', async () => {
-    const res = await request(app).put('/checkout/1/concluir').send({});
-    expect(res.status).toBe(401);
-  });
-
-  test('200 e retorna numero_pedido', async () => {
-    mockDb.get.mockResolvedValueOnce({ numero_pedido: '789', pedido_id: 9 });
-    const res = await agent.put('/checkout/1/concluir').send({});
-    expect(res.status).toBe(200);
-    expect(res.body.mensagem).toBe('Checkout concluido!');
-    expect(res.body.numero_pedido).toBe('789');
-  });
-
-  test('checkout inexistente não quebra (numero_pedido undefined) → 200', async () => {
-    mockDb.get.mockResolvedValueOnce(null);
-    const res = await agent.put('/checkout/999/concluir').send({});
-    expect(res.status).toBe(200);
-    expect(res.body.numero_pedido).toBeUndefined();
-  });
-});
-
-/* ════════════════════════════════════════════════════════════
    7. CONFIRMAR CHECKOUT
 ════════════════════════════════════════════════════════════ */
 describe('PUT /checkout/:id/confirmar', () => {

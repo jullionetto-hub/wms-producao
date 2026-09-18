@@ -1,5 +1,5 @@
 /* ══ WMS Miess — Service Worker ══ */
-const CACHE_NAME = 'wms-v37';
+const CACHE_NAME = 'wms-v43';
 // Só cacheia o CSS — JS e HTML sempre vão buscar da rede
 const STATIC_ASSETS = [
   '/css/app.css',
@@ -53,7 +53,14 @@ self.addEventListener('fetch', e => {
       url.pathname.startsWith('/configuracoes') || url.pathname.startsWith('/caixas') ||
       url.pathname.startsWith('/diario') || url.pathname.startsWith('/gestao') ||
       url.pathname.startsWith('/matriz') || url.pathname.startsWith('/passagem') ||
-      url.pathname.startsWith('/protocolo') || url.pathname.startsWith('/absenteismo')) {
+      url.pathname.startsWith('/protocolo') || url.pathname.startsWith('/absenteismo') ||
+      url.pathname.startsWith('/separadores') || url.pathname.startsWith('/colmeias') ||
+      url.pathname.startsWith('/importar') || url.pathname.startsWith('/inventario') ||
+      url.pathname.startsWith('/itens') || url.pathname.startsWith('/liberacao') ||
+      url.pathname.startsWith('/relatorio') || url.pathname.startsWith('/control-tower') ||
+      url.pathname.startsWith('/mapa-estoque') || url.pathname.startsWith('/faturamento') ||
+      url.pathname.startsWith('/hora-a-hora') || url.pathname.startsWith('/simulador') ||
+      url.pathname.startsWith('/anomalias') || url.pathname.startsWith('/permissoes')) {
     e.respondWith(
       fetch(e.request).catch(() => new Response(JSON.stringify({ erro: 'Sem conexão' }), {
         status: 503,

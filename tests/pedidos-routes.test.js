@@ -69,14 +69,17 @@ const loginSupervisor = (agent) => {
   return agent.post('/auth/login').send({ login: 'admin', senha: SENHA_ADMIN, perfil: 'supervisor' });
 };
 
-const loginSeparador = async () => {
+// separadorRow: quando informado, simula um vínculo separadores↔usuário já
+// existente (req.session.separador fica com esse id) — necessário pra testar
+// rotas que derivam a identidade do separador da sessão (ex: /pedidos/bipar).
+const loginSeparador = async (separadorRow = null) => {
   mockDb.get.mockResolvedValueOnce({
     id: 2, nome: 'Sep', login: 'sep1', perfil: 'separador',
     senha_hash: HASH_SEP, subtipo_repositor: 'geral',
     perfis_acesso: '', turno: 'Manhã', status: 'ativo', senha_temporaria: false,
   });
   const sepAgent = request.agent(app);
-  mockDb.get.mockResolvedValueOnce(null); // busca de separador vinculado no login (se houver)
+  mockDb.get.mockResolvedValueOnce(separadorRow); // busca de separador vinculado no login (se houver)
   await sepAgent.post('/auth/login').send({ login: 'sep1', senha: SENHA_SEP, perfil: 'separador' });
   return sepAgent;
 };
@@ -325,12 +328,28 @@ describe('Pedidos — bipar', () => {
   });
 
   test('POST /pedidos/bipar → já atribuído ao mesmo separador', async () => {
+    // Identidade vem da sessão (não do corpo) desde a correção de segurança da
+    // V0 — precisa logar como o próprio separador 5, não como supervisor.
+    const sepAgent = await loginSeparador({ id: 5, nome: 'Sep', matricula: 'sep1', turno: 'Manhã', status: 'ativo' });
     mockDb.get.mockResolvedValueOnce({ id: 1, status: 'separando', separador_id: 5 });
     mockPool.query.mockResolvedValueOnce({ rows: [{ id: 1, numero_caixa: 'CX9' }] });
-    const res = await agent.post('/pedidos/bipar').send({ numero_pedido: '123', separador_id: 5 });
+    const res = await sepAgent.post('/pedidos/bipar').send({ numero_pedido: '123' });
     expect(res.status).toBe(200);
     expect(res.body.ja_atribuido).toBe(true);
     expect(res.body.caixa_vinculada).toBe(true);
+  });
+
+  test('POST /pedidos/bipar → separador_id no corpo é ignorado (vem da sessão)', async () => {
+    // Regressão da correção de segurança: um separador logado (id real 5) não
+    // consegue mais atribuir o pedido a OUTRO separador (ex: 999) forjando o
+    // corpo da requisição — o valor enviado é ignorado.
+    const sepAgent = await loginSeparador({ id: 5, nome: 'Sep', matricula: 'sep1', turno: 'Manhã', status: 'ativo' });
+    mockDb.get.mockResolvedValueOnce({ id: 1, status: 'pendente', separador_id: null });
+    mockPool.query.mockResolvedValueOnce({ rows: [{ id: 1, numero_caixa: '' }] });
+    const res = await sepAgent.post('/pedidos/bipar').send({ numero_pedido: '123', separador_id: 999 });
+    expect(res.status).toBe(200);
+    const chamada = mockPool.query.mock.calls.find(c => String(c[0]).includes('UPDATE pedidos'));
+    expect(chamada[1][0]).toBe(5); // primeiro parâmetro da query = separador_id efetivo
   });
 });
 
@@ -1004,6 +1023,31 @@ describe('Pedidos — formação de lotes', () => {
     expect(res.body.lotes).toHaveLength(1);
     expect(res.body.lotes[0].pedidos).toHaveLength(2);
     expect(res.body.lotes[0].separador_id).toBe(11);
+    // V6 — rota (ordem real de caminhada) e distância ponderada calculadas pro lote
+    expect(res.body.lotes[0].rota).toEqual(['A']);
+    expect(res.body.lotes[0].distancia_ponderada).toBe(0); // uma única rua, sem par pra comparar
+  });
+
+  test('POST /pedidos/lote/formar → rota segue ROTA_FISICA_LOTE, não ordem alfabética', async () => {
+    // ROTA_FISICA_LOTE = [...,'Q','P',...] — na caminhada real, Q vem ANTES de P,
+    // mesmo P vindo antes de Q em ordem alfabética. Prova que `rota` (novo campo,
+    // V6) não é só uma cópia de `ruas` (alfabética, já existia).
+    const pedidosFixture = [
+      { id: 1, numero_pedido: '1', transportadora: '', cliente: 'C1' },
+      { id: 2, numero_pedido: '2', transportadora: '', cliente: 'C2' },
+    ];
+    mockDb.all.mockImplementation(async (sql, params) => {
+      if (sql.includes('itens_pedido WHERE pedido_id=$1')) {
+        return params[0] === 1 ? [{ endereco: 'P1', quantidade: 1, codigo: 'X1' }] : [{ endereco: 'Q1', quantidade: 1, codigo: 'X2' }];
+      }
+      if (sql.includes('FROM pedidos p WHERE')) return pedidosFixture;
+      return [];
+    });
+    mockDb.get.mockImplementation(async () => null);
+    const res = await agent.post('/pedidos/lote/formar').send({ separadores: [11] });
+    expect(res.body.lotes[0].ruas).toEqual(['P', 'Q']); // alfabética: P antes de Q
+    expect(res.body.lotes[0].rota).toEqual(['Q', 'P']); // rota física real: Q antes de P
+    expect(res.body.lotes[0].distancia_ponderada).toBeGreaterThan(0);
   });
 
   test('POST /pedidos/lote/formar com apenas_prime=true filtra pedidos Prime na query', async () => {

@@ -197,12 +197,25 @@ function mudarDashTab(tab) {
   if (tab === 'operacao') carregarOperacao();
 }
 
+// Estado vivo por rua (V8) — separado da atividade de pedidos de hoje
+// (contRua, calculado abaixo): ruptura/estoque baixo/separação ativa AGORA/
+// reposição pendente. Guardado à parte pra não recarregar a cada troca de
+// filtro de pedido único (muda bem menos que a atividade de hoje).
+let _mapaEstoqueVivo = null;
+async function carregarMapaVivo() {
+  try {
+    const res = await fetch(`${API}/mapa-estoque`, { credentials:'include' });
+    _mapaEstoqueVivo = res.ok ? await res.json() : null;
+  } catch(e) { _mapaEstoqueVivo = null; }
+}
+
 async function carregarMapaEstoque() {
   const el = document.getElementById('mapa-estoque-svg');
   if (!el) return;
   el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:40px;font-size:13px">Carregando mapa...</div>';
 
   try {
+    await carregarMapaVivo();
     const hoje = hojeLocal();
     const res = await fetch(`${API}/pedidos?data=${hoje}`, { credentials:'include' });
     const pedidos = await res.json();
@@ -272,20 +285,29 @@ function renderMapaEstoque(contRua, isPedidoUnico) {
   const el = document.getElementById('mapa-estoque-svg');
   if (!el) return;
 
-  const DIFIC = {
-    A:'facil',B:'facil',C:'facil',D:'facil',E:'facil',
-    F:'dificil',G:'dificil',H:'dificil',I:'dificil',J:'dificil',K:'dificil',L:'dificil',
-    M:'medio',N:'medio',O:'medio',
-    P:'facil',Q:'facil',R:'facil',S:'facil',T:'facil',U:'facil',
-    V:'medio',W:'medio',X:'medio',Y:'medio',Z:'medio',
-    ZA:'especial',ARARA:'especial'
-  };
+  // Classificação de dificuldade por rua — vem de geometria-estoque.js (fonte
+  // única compartilhada com a formação de lote em routes/pedidos.js, desde a
+  // V2 da evolução do WMS; antes era uma cópia manual só deste arquivo).
+  const DIFIC = window.GeometriaEstoque.DIFICULDADE_POR_RUA;
   const CORES = {
     facil:   { bg:'rgba(87,185,129,.15)', bord:'var(--green)', txt:'var(--green)', bord2:'var(--green)' },
     medio:   { bg:'rgba(224,168,62,.15)', bord:'var(--amber)', txt:'var(--amber)', bord2:'var(--amber)' },
     dificil: { bg:'rgba(201,82,79,.15)', bord:'var(--red)', txt:'var(--red)', bord2:'var(--red)' },
     especial:{ bg:'rgba(139,92,246,.15)', bord:'var(--indigo)', txt:'var(--indigo)', bord2:'var(--indigo)' },
+    // V8 — Mapa Vivo: estados reais, sobrepõem a cor de dificuldade quando a
+    // rua tem algo acontecendo AGORA (ruptura/estoque baixo/separação/reposição).
+    ruptura:       { bg:'rgba(201,82,79,.3)',  bord:'var(--red)',    txt:'var(--red)',    bord2:'var(--red)' },
+    estoque_baixo: { bg:'rgba(224,168,62,.3)', bord:'var(--amber)',  txt:'var(--amber)',  bord2:'var(--amber)' },
+    separacao:     { bg:'rgba(79,70,229,.3)',  bord:'var(--accent)', txt:'var(--accent)', bord2:'var(--accent)' },
+    reposicao:     { bg:'rgba(139,92,246,.3)', bord:'var(--indigo)', txt:'var(--indigo)', bord2:'var(--indigo)' },
   };
+  // Cor final de uma rua: estado vivo (se tiver algo além de "normal") vence
+  // a cor de dificuldade estática — é literalmente o que torna o mapa "vivo".
+  function corDaRua(rua) {
+    const estado = _mapaEstoqueVivo?.ruas?.[rua]?.estado_principal;
+    if (estado && estado !== 'normal' && CORES[estado]) return CORES[estado];
+    return CORES[DIFIC[rua]||'facil'];
+  }
 
   function corPonto(total) {
     if (!total) return null;
@@ -295,7 +317,9 @@ function renderMapaEstoque(contRua, isPedidoUnico) {
   }
 
   const BW = 42, BH = 36, HGAP = 5, VGAP = 8;
-  const FUNDO  = ['F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'];
+  // FUNDO/FRENTE também vêm de geometria-estoque.js — FUNDO_SEM_ESPECIAIS já
+  // exclui ZA/ARARA (desenhadas como caixas de canto separadas abaixo).
+  const FUNDO  = window.GeometriaEstoque.FUNDO_SEM_ESPECIAIS;
   const FRENTE = ['E','D','C','B','A'];
   const qIdx   = FUNDO.indexOf('Q');
 
@@ -326,10 +350,10 @@ function renderMapaEstoque(contRua, isPedidoUnico) {
 
   // ── ZA (canto superior esquerdo) ──
   {
-    const zC = CORES.especial;
+    const zC = corDaRua('ZA');
     const zD = contRua['ZA']?.total || 0;
-    s += `<rect x="4" y="8" width="${BW}" height="${BH}" rx="6" fill="${zC.bg}" stroke="${zC.bord2}" stroke-width="1.5"/>`;
-    s += `<text x="${4+BW/2}" y="${8+BH/2+4}" text-anchor="middle" font-size="11" font-weight="700" fill="${zC.txt}">ZA</text>`;
+    s += `<rect x="4" y="8" width="${BW}" height="${BH}" rx="6" fill="${zC.bg}" stroke="${zC.bord2}" stroke-width="1.5" style="cursor:pointer" onclick="abrirDetalheRuaMapa('ZA')"><title>Clique pra ver detalhes</title></rect>`;
+    s += `<text x="${4+BW/2}" y="${8+BH/2+4}" text-anchor="middle" font-size="11" font-weight="700" fill="${zC.txt}" style="pointer-events:none">ZA</text>`;
     if (zD > 0) {
       const c = corPonto(zD), r = zD>=10?11:9;
       s += `<circle cx="${4+BW}" cy="8" r="${r}" fill="${c}" stroke="#fff" stroke-width="2"/>`;
@@ -339,11 +363,11 @@ function renderMapaEstoque(contRua, isPedidoUnico) {
 
   // ── ARARA (canto superior direito) ──
   {
-    const aC = CORES.especial;
+    const aC = corDaRua('ARARA');
     const aD = contRua['ARARA']?.total || 0;
     const ax = svgW - BW - 8;
-    s += `<rect x="${ax}" y="8" width="${BW}" height="${BH}" rx="6" fill="${aC.bg}" stroke="${aC.bord2}" stroke-width="1.5"/>`;
-    s += `<text x="${ax+BW/2}" y="${8+BH/2+4}" text-anchor="middle" font-size="9" font-weight="700" fill="${aC.txt}">ARARA</text>`;
+    s += `<rect x="${ax}" y="8" width="${BW}" height="${BH}" rx="6" fill="${aC.bg}" stroke="${aC.bord2}" stroke-width="1.5" style="cursor:pointer" onclick="abrirDetalheRuaMapa('ARARA')"><title>Clique pra ver detalhes</title></rect>`;
+    s += `<text x="${ax+BW/2}" y="${8+BH/2+4}" text-anchor="middle" font-size="9" font-weight="700" fill="${aC.txt}" style="pointer-events:none">ARARA</text>`;
     if (aD > 0) {
       const c = corPonto(aD), r = aD>=10?11:9;
       s += `<circle cx="${ax+BW}" cy="8" r="${r}" fill="${c}" stroke="#fff" stroke-width="2"/>`;
@@ -356,15 +380,15 @@ function renderMapaEstoque(contRua, isPedidoUnico) {
     const x = fundoX(i), y = fundoY;
     const d = contRua[rua];
     const total = d?.total || 0;
-    const cor = CORES[DIFIC[rua]||'facil'];
+    const cor = corDaRua(rua);
     const atv = total > 0;
     const strokeW = atv ? '2' : '1';
     const strokeC = atv ? cor.bord2 : cor.bord;
 
     s += `<rect x="${x}" y="${y}" width="${BW}" height="${BH}" rx="6" `
-       + `fill="${cor.bg}" stroke="${strokeC}" stroke-width="${strokeW}" `
-       + `opacity="${atv?'1':'0.35'}"><title>Rua ${rua}: ${total} itens</title></rect>`;
-    s += `<text x="${x+BW/2}" y="${y+BH/2+4}" text-anchor="middle" `
+       + `fill="${cor.bg}" stroke="${strokeC}" stroke-width="${strokeW}" style="cursor:pointer" onclick="abrirDetalheRuaMapa('${rua}')" `
+       + `opacity="${atv?'1':'0.35'}"><title>Rua ${rua}: ${total} itens — clique pra ver detalhes</title></rect>`;
+    s += `<text x="${x+BW/2}" y="${y+BH/2+4}" text-anchor="middle" style="pointer-events:none" `
        + `font-size="12" font-weight="700" fill="${cor.txt}" opacity="${atv?'1':'0.45'}">${rua}</text>`;
 
     if (total > 0) {
@@ -389,14 +413,14 @@ function renderMapaEstoque(contRua, isPedidoUnico) {
     const x = frenteX, y = frenteStartY + i * (BH + VGAP);
     const d = contRua[rua];
     const total = d?.total || 0;
-    const cor = CORES[DIFIC[rua]||'facil'];
+    const cor = corDaRua(rua);
     const atv = total > 0;
     const strokeC = atv ? cor.bord2 : cor.bord;
 
     s += `<rect x="${x}" y="${y}" width="${BW}" height="${BH}" rx="6" `
-       + `fill="${cor.bg}" stroke="${strokeC}" stroke-width="${atv?'2':'1'}" `
-       + `opacity="${atv?'1':'0.35'}"><title>Rua ${rua}: ${total} itens</title></rect>`;
-    s += `<text x="${x+BW/2}" y="${y+BH/2+4}" text-anchor="middle" `
+       + `fill="${cor.bg}" stroke="${strokeC}" stroke-width="${atv?'2':'1'}" style="cursor:pointer" onclick="abrirDetalheRuaMapa('${rua}')" `
+       + `opacity="${atv?'1':'0.35'}"><title>Rua ${rua}: ${total} itens — clique pra ver detalhes</title></rect>`;
+    s += `<text x="${x+BW/2}" y="${y+BH/2+4}" text-anchor="middle" style="pointer-events:none" `
        + `font-size="12" font-weight="700" fill="${cor.txt}" opacity="${atv?'1':'0.45'}">${rua}</text>`;
 
     if (total > 0) {
@@ -426,6 +450,70 @@ function renderMapaEstoque(contRua, isPedidoUnico) {
 
   s += '</svg>';
   el.innerHTML = s;
+}
+
+// ── Detalhe de uma rua no Mapa Vivo (V8) — clique num bloco do mapa ──────
+const _ESTADO_LABEL = { ruptura:'Ruptura', estoque_baixo:'Estoque baixo', separacao:'Separação', reposicao:'Reposição', normal:'Normal' };
+const _ESTADO_COR   = { ruptura:'var(--red)', estoque_baixo:'var(--amber)', separacao:'var(--accent)', reposicao:'var(--indigo)', normal:'var(--text3)' };
+
+async function abrirDetalheRuaMapa(rua) {
+  let modal = document.getElementById('mapa-rua-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'mapa-rua-modal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+    modal.onclick = e => { if (e.target === modal) modal.style.display = 'none'; };
+    document.body.appendChild(modal);
+  }
+  modal.style.display = 'flex';
+  modal.innerHTML = `
+    <div style="background:var(--surface);border-radius:16px;width:min(460px,96vw);max-height:82vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.4)">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border)">
+        <div style="font-weight:800;font-size:14px;color:var(--text)">Rua ${rua} — Mapa Vivo</div>
+        <button onclick="document.getElementById('mapa-rua-modal').style.display='none'" style="background:transparent;border:none;font-size:20px;cursor:pointer;color:var(--text3);line-height:1">✕</button>
+      </div>
+      <div id="mapa-rua-corpo" style="padding:16px 18px">
+        <div style="text-align:center;padding:20px;color:var(--text3)">Carregando...</div>
+      </div>
+    </div>`;
+
+  const data = await apiFetch(`/mapa-estoque/${encodeURIComponent(rua)}`);
+  const corpo = document.getElementById('mapa-rua-corpo');
+  if (!corpo) return;
+  if (!data || data.erro) { corpo.innerHTML = '<div style="text-align:center;padding:20px;color:var(--red)">Erro ao carregar detalhes.</div>'; return; }
+
+  const estados = data.estado?.estados || ['normal'];
+  const badges = estados.map(e => `<span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;background:${_ESTADO_COR[e]}22;color:${_ESTADO_COR[e]};margin-right:6px">${_ESTADO_LABEL[e]||e}</span>`).join('');
+
+  const secao = (titulo, itens, linhaFn, vazio) => `
+    <div style="margin-bottom:16px">
+      <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.5px;margin-bottom:8px">${titulo.toUpperCase()} (${itens.length})</div>
+      ${itens.length ? itens.map(linhaFn).join('') : `<div style="font-size:12px;color:var(--text3)">${vazio}</div>`}
+    </div>`;
+
+  corpo.innerHTML = `
+    <div style="margin-bottom:16px">${badges}</div>
+    ${secao('SKUs em ruptura', data.skus_ruptura||[], i => `
+      <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px">
+        <span style="color:var(--text2)">${i.nome||i.codigo}</span>
+        <span style="color:var(--red);font-weight:700;font-family:monospace">${i.codigo}</span>
+      </div>`, 'Nenhum produto zerado nesta rua.')}
+    ${secao('Colmeias com estoque baixo', data.colmeias_estoque_baixo||[], c => `
+      <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px">
+        <span style="color:var(--text2)">${c.descricao||c.codigo}</span>
+        <span style="color:var(--amber);font-weight:700;font-family:monospace">${c.saldo}/${c.estoque_minimo}</span>
+      </div>`, 'Nenhuma colmeia em alerta nesta rua.')}
+    ${secao('Pedidos sendo separados agora', data.pedidos_separando||[], p => `
+      <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px">
+        <span style="color:var(--text2)">#${p.numero_pedido}</span>
+        <span style="color:var(--accent);font-weight:700">${p.separador_nome||'—'}</span>
+      </div>`, 'Ninguém separando nesta rua agora.')}
+    ${secao('Avisos de reposição pendentes', data.avisos_pendentes||[], a => `
+      <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px">
+        <span style="color:var(--text2)">${a.descricao||a.codigo} <span style="color:var(--text3)">x${a.quantidade||1}</span></span>
+        <span style="color:var(--indigo);font-weight:700">#${a.numero_pedido}</span>
+      </div>`, 'Nenhum aviso pendente nesta rua.')}
+  `;
 }
 
 
@@ -585,6 +673,10 @@ function confirmarZerarDados() {
 
 async function carregarDashboard() {
   await popularSelects();
+  carregarControlTower();
+  carregarHoraAHora();
+  carregarSimulador();
+  carregarAnomalias();
   // KPIs e Operação em paralelo — garante que renderDashPipeline
   // receba os dois datasets antes do render final
   await Promise.all([carregarKPIs(), carregarOperacao()]);
@@ -1040,6 +1132,264 @@ function renderAlertasGargalos() {
           <div class="alerta-item-tempo">${p._horas.toFixed(1)}h</div>
         </div>`).join('')}
     </div>`;
+}
+
+/* ══════════════════════════════════════════
+   CONTROL TOWER — ritmo/gap/previsão/risco por etapa (GET /control-tower)
+   V4 da evolução do WMS: dados 100% reais, nada calculado/inventado no
+   cliente — o servidor já manda produção atual, necessário, gap, volume
+   restante, tempo estimado e o gargalo (se houver) prontos.
+══════════════════════════════════════════ */
+const CT_LABEL = { separacao:'Separação', checkout:'Checkout', embalagem:'Embalagem', reposicao:'Reposição' };
+const CT_ICON  = { separacao:'ti-box', checkout:'ti-check', embalagem:'ti-package', reposicao:'ti-refresh' };
+const CT_SITUACAO = {
+  dentro_do_prazo: { label:'No prazo', cor:'var(--green)' },
+  risco:           { label:'Risco',    cor:'var(--amber)' },
+  atrasado:        { label:'Atrasado', cor:'var(--red)' },
+  concluido:       { label:'Concluído', cor:'var(--text3)' },
+};
+
+function _ctFmtMin(min) {
+  if (min == null) return '—';
+  if (min < 60) return `${min}min`;
+  const h = Math.floor(min/60), m = min%60;
+  return m ? `${h}h${String(m).padStart(2,'0')}` : `${h}h`;
+}
+
+async function carregarControlTower() {
+  const wrapProc = document.getElementById('ct-processos');
+  const wrapGarg = document.getElementById('ct-gargalo-wrap');
+  const turnoInfo = document.getElementById('ct-turno-info');
+  if (!wrapProc) return;
+  try {
+    const res = await fetch(`${API}/control-tower`, { credentials:'include' });
+    if (!res.ok) { wrapProc.innerHTML = ''; if (wrapGarg) wrapGarg.innerHTML=''; return; }
+    const data = await res.json();
+
+    if (turnoInfo) turnoInfo.textContent = `Turno ${data.turno_atual} — termina às ${data.turno_fim} (${_ctFmtMin(data.minutos_restantes_turno)} restantes)`;
+
+    if (wrapGarg) {
+      wrapGarg.innerHTML = data.gargalo ? `
+        <div style="background:rgba(201,82,79,.1);border:1px solid rgba(201,82,79,.35);border-radius:var(--r-sm);padding:10px 14px;margin-bottom:12px;display:flex;gap:10px;align-items:flex-start">
+          <i class="ti ti-alert-triangle" aria-hidden="true" style="color:var(--red);font-size:16px;margin-top:2px"></i>
+          <div>
+            <div style="font-size:12px;font-weight:700;color:var(--red);margin-bottom:2px">Gargalo: ${CT_LABEL[data.gargalo.processo]||data.gargalo.processo}</div>
+            <div style="font-size:12px;color:var(--text2)">${data.gargalo.motivo}</div>
+          </div>
+        </div>` : '';
+    }
+
+    wrapProc.innerHTML = data.processos.map(p => {
+      const sit = CT_SITUACAO[p.situacao] || CT_SITUACAO.dentro_do_prazo;
+      const gapTxt = p.gap_h > 0 ? `+${p.gap_h}` : `${p.gap_h}`;
+      const gapCor = p.gap_h >= 0 ? 'var(--green)' : 'var(--red)';
+      return `
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px 14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--text)">
+            <i class="ti ${CT_ICON[p.processo]||'ti-circle'}" aria-hidden="true" style="color:var(--text3)"></i>
+            ${CT_LABEL[p.processo]||p.processo}
+          </div>
+          <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:${sit.cor}22;color:${sit.cor}">${sit.label}</span>
+        </div>
+        <div style="font-size:22px;font-weight:800;color:var(--text);line-height:1">${p.producao_atual_h}<span style="font-size:11px;font-weight:600;color:var(--text3)"> itens/h</span></div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px">Necessário: ${p.necessario_h} itens/h · <span style="color:${gapCor};font-weight:700">${gapTxt}</span></div>
+        <div style="display:flex;justify-content:space-between;margin-top:10px;padding-top:8px;border-top:1px solid var(--border);font-size:11px;color:var(--text3)">
+          <span>Restante: <b style="color:var(--text2)">${p.volume_restante} itens</b></span>
+          <span>Previsão: <b style="color:var(--text2)">${_ctFmtMin(p.tempo_estimado_min)}</b></span>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) { console.warn(e); }
+}
+
+// ── V10: Faturamento, Embalagem e Expedição hora a hora ──────────────────
+const HH_LABEL = { embalagem:'Embalagem', expedicao:'Expedição', faturamento:'Faturamento' };
+const HH_ICON  = { embalagem:'ti-package', expedicao:'ti-truck', faturamento:'ti-currency-dollar' };
+const HH_SITUACAO = {
+  dentro_do_prazo: { label:'No prazo', cor:'var(--green)' },
+  risco:           { label:'Risco',    cor:'var(--amber)' },
+  atrasado:        { label:'Atrasado', cor:'var(--red)' },
+  sem_meta:        { label:'Sem meta', cor:'var(--text3)' },
+};
+function _fmtReal(n) {
+  return (Number(n) || 0).toLocaleString('pt-BR', { style:'currency', currency:'BRL', maximumFractionDigits:0 });
+}
+
+async function carregarHoraAHora() {
+  const wrap = document.getElementById('hh-processos');
+  if (!wrap) return;
+  try {
+    const res = await fetch(`${API}/hora-a-hora`, { credentials:'include' });
+    if (!res.ok) { wrap.innerHTML = ''; return; }
+    const data = await res.json();
+    wrap.innerHTML = ['embalagem','expedicao','faturamento'].map(k => {
+      const p = data[k];
+      const sit = HH_SITUACAO[p.situacao] || HH_SITUACAO.sem_meta;
+      const isFat = k === 'faturamento';
+      const fmt = n => isFat ? _fmtReal(n) : Number(n||0).toLocaleString('pt-BR');
+      return `
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px 14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--text)">
+            <i class="ti ${HH_ICON[k]}" aria-hidden="true" style="color:var(--text3)"></i>
+            ${HH_LABEL[k]}
+          </div>
+          <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:${sit.cor}22;color:${sit.cor}">${sit.label}</span>
+        </div>
+        <div style="font-size:22px;font-weight:800;color:var(--text);line-height:1">${fmt(p.realizado)}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px">Meta do turno: ${p.meta > 0 ? fmt(p.meta) : 'não configurada'}${p.pct_meta!=null?` (${p.pct_meta}%)`:''}</div>
+        <div style="display:flex;justify-content:space-between;margin-top:10px;padding-top:8px;border-top:1px solid var(--border);font-size:11px;color:var(--text3)">
+          <span>Ritmo: <b style="color:var(--text2)">${fmt(p.ritmo_hora)}/h</b></span>
+          <span>Previsão: <b style="color:var(--text2)">${fmt(p.previsao_fim_turno)}</b></span>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) { console.warn(e); }
+}
+
+// ── Import de Faturamento (planilha processada no cliente, igual a Pedidos) ──
+let _faturamentoImportar = [];
+
+function abrirImportarFaturamento() {
+  const modal = document.getElementById('modal-importar-faturamento');
+  if (modal) modal.style.display = 'flex';
+  _faturamentoImportar = [];
+  const status = document.getElementById('fat-import-status');
+  if (status) status.textContent = '';
+  const prev = document.getElementById('fat-import-preview');
+  if (prev) prev.style.display = 'none';
+}
+function fecharImportarFaturamento() {
+  const modal = document.getElementById('modal-importar-faturamento');
+  if (modal) modal.style.display = 'none';
+}
+
+function processarArquivoFaturamento(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const status = document.getElementById('fat-import-status');
+  if (status) status.textContent = '⏳ Lendo arquivo...';
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    try {
+      const wb = XLSX.read(new Uint8Array(ev.target.result), { type:'array', cellDates:false });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { defval:'', header:1 });
+      if (!rows.length) throw new Error('Arquivo vazio');
+      const cab = rows[0].map(c => String(c).toLowerCase().trim().normalize('NFD').replace(/[̀-ͯ]/g,''));
+      const iPed  = cab.findIndex(c=>c.includes('pedido')||c.includes('numero'));
+      const iFat  = cab.findIndex(c=>c.includes('fatur')||c.includes('valor'));
+      const iItens= cab.findIndex(c=>c.includes('iten'));
+      const iData = cab.findIndex(c=>c.includes('data'));
+      const iHora = cab.findIndex(c=>c.includes('hora'));
+      const iUsr  = cab.findIndex(c=>c.includes('usuario')||c.includes('login'));
+      const iNome = cab.findIndex(c=>c.includes('nome'));
+      const iTurno= cab.findIndex(c=>c.includes('turno'));
+      const iStat = cab.findIndex(c=>c.includes('status'));
+      const dados = [];
+      for (let i = 1; i < rows.length; i++) {
+        const r = rows[i];
+        const num = String(r[iPed>=0?iPed:0]||'').trim();
+        if (!num || !/\d/.test(num)) continue;
+        dados.push({
+          numero_pedido: num,
+          faturado: parseFloat(r[iFat>=0?iFat:1]) || 0,
+          itens: parseInt(r[iItens>=0?iItens:2]) || 0,
+          data_fat: String(r[iData>=0?iData:3]||'').trim(),
+          hora_fat: String(r[iHora>=0?iHora:4]||'').trim(),
+          usuario: String(r[iUsr>=0?iUsr:''] ||'').trim(),
+          nome_usuario: String(r[iNome>=0?iNome:'']||'').trim(),
+          turno: String(r[iTurno>=0?iTurno:'']||'').trim() || '?',
+          status_ped: String(r[iStat>=0?iStat:'']||'').trim(),
+        });
+      }
+      if (!dados.length) { if(status) status.textContent = 'Nenhuma linha válida encontrada!'; return; }
+      _faturamentoImportar = dados;
+      const totalFat = dados.reduce((s,d)=>s+d.faturado,0);
+      if (status) status.textContent = `${dados.length} registro(s) — ${_fmtReal(totalFat)}`;
+      const prev = document.getElementById('fat-import-preview');
+      const tbody = document.getElementById('fat-import-tbody');
+      if (prev && tbody) {
+        tbody.innerHTML = dados.slice(0,10).map(d=>`<tr><td>${d.numero_pedido}</td><td>${d.data_fat}</td><td>${d.hora_fat}</td><td style="color:var(--green)">${_fmtReal(d.faturado)}</td></tr>`).join('') +
+          (dados.length>10?`<tr><td colspan="4" style="color:var(--text3);text-align:center;padding:6px">... +${dados.length-10} linhas</td></tr>`:'');
+        prev.style.display = 'block';
+      }
+    } catch(err) { if (status) status.textContent = err.message; }
+  };
+  reader.onerror = () => { if (status) status.textContent = 'Erro ao abrir arquivo!'; };
+  reader.readAsArrayBuffer(file);
+}
+
+async function confirmarImportarFaturamento() {
+  if (!_faturamentoImportar.length) { toast('Nenhum registro pra importar','aviso'); return; }
+  try {
+    const res = await fetch(`${API}/faturamento/importar`, {
+      method:'POST', credentials:'include', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ registros: _faturamentoImportar, nome_arquivo: document.getElementById('fat-import-arquivo')?.files[0]?.name || '' })
+    });
+    const d = await res.json();
+    if (!res.ok) { toast(d.erro || 'Erro ao importar','erro'); return; }
+    toast(d.mensagem, 'info');
+    fecharImportarFaturamento();
+    carregarHoraAHora();
+  } catch(e) { toast('Erro de conexão: ' + e.message, 'erro'); }
+}
+
+// ── V11: Simulador de Capacidade ──────────────────────────────────────────
+const SIM_LABEL = { separacao:'Separação', checkout:'Checkout', embalagem:'Embalagem' };
+
+async function carregarSimulador() {
+  const wrap = document.getElementById('sim-resultado');
+  if (!wrap) return;
+  const processo = document.getElementById('sim-processo')?.value || 'separacao';
+  const delta = parseInt(document.getElementById('sim-delta')?.value, 10) || 0;
+  try {
+    const res = await fetch(`${API}/simulador/capacidade?processo=${processo}&delta=${delta}`, { credentials:'include' });
+    if (!res.ok) { wrap.innerHTML = ''; return; }
+    const p = await res.json();
+    const sit = CT_SITUACAO[p.situacao] || CT_SITUACAO.dentro_do_prazo;
+    const deltaTxt = delta > 0 ? `+${delta}` : `${delta}`;
+    wrap.innerHTML = `
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:14px 16px;display:flex;gap:24px;flex-wrap:wrap;align-items:center">
+        <div>
+          <div style="font-size:11px;color:var(--text3)">${SIM_LABEL[processo]} — hoje</div>
+          <div style="font-size:20px;font-weight:800;color:var(--text)">${p.pessoas_ativas} pessoa(s) <span style="font-size:12px;font-weight:600;color:var(--text3)">→ ${p.producao_atual_h} itens/h</span></div>
+        </div>
+        <i class="ti ti-arrow-right" aria-hidden="true" style="color:var(--text3);font-size:20px"></i>
+        <div>
+          <div style="font-size:11px;color:var(--text3)">Simulado (${deltaTxt} pessoa(s))</div>
+          <div style="font-size:20px;font-weight:800;color:var(--accent)">${p.pessoas_simuladas} pessoa(s) <span style="font-size:12px;font-weight:600;color:var(--text3)">→ ${p.producao_simulada_h} itens/h</span></div>
+        </div>
+        <div style="margin-left:auto;text-align:right">
+          <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:${sit.cor}22;color:${sit.cor}">${sit.label}</span>
+          <div style="font-size:11px;color:var(--text3);margin-top:4px">Previsão: <b style="color:var(--text2)">${_ctFmtMin(p.tempo_estimado_min)}</b> · Restante: <b style="color:var(--text2)">${p.volume_restante} itens</b></div>
+        </div>
+      </div>`;
+  } catch(e) { console.warn(e); }
+}
+
+// ── V11: Detecção de Anomalias ────────────────────────────────────────────
+async function carregarAnomalias() {
+  const wrap = document.getElementById('anom-lista');
+  if (!wrap) return;
+  try {
+    const res = await fetch(`${API}/anomalias/ritmo`, { credentials:'include' });
+    if (!res.ok) { wrap.innerHTML = ''; return; }
+    const { anomalias } = await res.json();
+    if (!anomalias.length) { wrap.innerHTML = '<div style="color:var(--text3);text-align:center;padding:16px;font-size:12px">Nenhuma anomalia de ritmo hoje.</div>'; return; }
+    wrap.innerHTML = anomalias.map(a => `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 4px;border-bottom:1px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:8px">
+          <i class="ti ti-alert-triangle" aria-hidden="true" style="color:var(--amber);font-size:15px"></i>
+          <span style="font-size:13px;font-weight:600;color:var(--text)">${a.nome}</span>
+        </div>
+        <div style="text-align:right;font-size:12px;color:var(--text2)">
+          ${a.ritmo_hoje} itens/h hoje <span style="color:var(--text3)">(normal: ${a.ritmo_historico}/h)</span>
+          <span style="color:var(--red);font-weight:700;margin-left:6px">${a.pct_do_normal}%</span>
+        </div>
+      </div>`).join('');
+  } catch(e) { console.warn(e); }
 }
 
 // Atalho do painel de Alertas — vai pra tela de Pedidos já filtrada nesse número.
@@ -1687,11 +2037,12 @@ async function abrirConfigMetas() {
       meta_checkout:  'Meta Checkout (checkouts/turno)',
       meta_embalagem: 'Meta Embalagem (pedidos/turno)',
       meta_reposicao: 'Meta Reposição (itens/turno)',
+      meta_faturamento: 'Meta Faturamento (R$/turno)',
       horas_turno_manha: 'Horas turno Manhã (decimal — ex: 7:45 = 7.75)',
       horas_turno_tarde: 'Horas turno Tarde (decimal — ex: 7:45 = 7.75)',
       horas_turno_noite: 'Horas turno Noite (decimal — ex: 7:33 = 7.55)',
     };
-    const STEP = { horas_turno_manha: '0.01', horas_turno_tarde: '0.01', horas_turno_noite: '0.01' };
+    const STEP = { horas_turno_manha: '0.01', horas_turno_tarde: '0.01', horas_turno_noite: '0.01', meta_faturamento: '0.01' };
     const form = document.getElementById('config-metas-form');
     if (form) {
       form.innerHTML = Object.entries(LABELS).map(([k, label]) => `
@@ -1712,7 +2063,7 @@ function fecharConfigMetas() {
 }
 
 async function salvarConfigMetas() {
-  const CHAVES = ['meta_separacao','meta_checkout','meta_embalagem','meta_reposicao','horas_turno_manha','horas_turno_tarde','horas_turno_noite'];
+  const CHAVES = ['meta_separacao','meta_checkout','meta_embalagem','meta_reposicao','meta_faturamento','horas_turno_manha','horas_turno_tarde','horas_turno_noite'];
   try {
     for (const k of CHAVES) {
       const v = document.getElementById(`cfg-${k}`)?.value;
@@ -2253,58 +2604,6 @@ async function gerarRelatorioColaborador(nomeColab) {
 }
 
 /* ESTATÍSTICAS */
-async function carregarEstatisticas() {
-  try {
-    const ini = document.getElementById('est-ini')?.value || '';
-    const fim = document.getElementById('est-fim')?.value || '';
-    let url = `${API}/estatisticas/pedidos`;
-    if (ini && fim) url += `?data_ini=${ini}&data_fim=${fim}`;
-    const res  = await fetch(url, { credentials:'include' });
-    const data = await res.json();
-
-
-
-
-    const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val ?? 0; };
-    set('est-hoje-c', data.concluidos_hoje);
-    set('est-hoje-t', data.total_hoje);
-    set('est-mes-c',  data.concluidos_mes);
-    set('est-mes-t',  data.total_mes);
-    set('est-ano-c',  data.concluidos_ano);
-    set('est-ano-t',  data.total_ano);
-
-
-
-
-    const periodoWrap = document.getElementById('est-periodo-wrap');
-    if (ini && fim && periodoWrap) {
-      periodoWrap.style.display = 'block';
-      set('est-per-c', data.concluidos_periodo);
-      set('est-per-t', data.total_periodo);
-    } else if (periodoWrap) {
-      periodoWrap.style.display = 'none';
-    }
-
-
-
-
-    // Produtividade por separador
-    const res2   = await fetch(`${API}/produtividade`, { credentials:'include' });
-    const prods  = await res2.json();
-    const tbody  = document.getElementById('tbody-est-sep');
-    if (tbody) {
-      if (!prods.length) { tbody.innerHTML = '<tr><td colspan="5" style="color:var(--text3);text-align:center;padding:20px">Nenhum separador</td></tr>'; }
-      else tbody.innerHTML = prods.map(d => `<tr>
-        <td style="font-weight:600;color:var(--text)">${d.nome}</td>
-        <td style="color:var(--green);font-weight:700">${d.hoje||0}</td>
-        <td style="color:var(--amber)">${d.mes||0}</td>
-        <td style="color:var(--accent)">${d.total_ano||0}</td>
-        <td><span class="pill ${d.status}">${d.status}</span></td>
-      </tr>`).join('');
-    }
-  } catch(e) { toast('Erro ao carregar estatísticas!','erro'); }
-}
-
 async function exportarDashboardExcel() {
   try {
     const ini = document.getElementById('filtro-data-ini')?.value || hoje;

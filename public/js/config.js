@@ -78,6 +78,34 @@ function estimarTempoSep(totalItens, pontuacao, skus) {
   return m > 0 ? `~${h}h ${m}min` : `~${h}h`;
 }
 
+/* ══════════════════════════════════════════
+   FEEDBACK DO COLETOR — vibração + flash visual
+   V7 da evolução do WMS: o briefing original pedia validação "dura" por
+   scan de posição/SKU, mas nem posição nem SKU têm código de barras
+   consistente no estoque ainda (confirmado com o usuário) — essa parte fica
+   pra quando o código de barras existir de verdade. O que dá pra entregar
+   já, sem mudar o fluxo de toque em botão que já funciona: feedback tátil e
+   visual mais forte nas confirmações (sucesso/parcial/falta), como o
+   briefing também pedia ("usar feedback visual e, quando suportado: som;
+   vibração"). Sem som — a maioria dos coletores fica no silencioso no chão
+   de fábrica; vibração + flash cobre o mesmo objetivo sem incomodar.
+   Silencioso (não quebra nada) em navegador/aparelho sem suporte a vibração.
+══════════════════════════════════════════ */
+const _FEEDBACK_VIBRACAO = {
+  sucesso: [60],
+  parcial: [50, 40, 50],
+  falta:   [80, 50, 80],
+};
+function feedbackColetor(tipo) {
+  try { navigator.vibrate && navigator.vibrate(_FEEDBACK_VIBRACAO[tipo] || _FEEDBACK_VIBRACAO.sucesso); } catch(e) {}
+  const cor = tipo === 'falta' ? 'var(--red)' : tipo === 'parcial' ? 'var(--amber)' : 'var(--green)';
+  const flash = document.createElement('div');
+  flash.style.cssText = `position:fixed;inset:0;z-index:9998;pointer-events:none;background:${cor};opacity:0.18;transition:opacity .3s ease-out`;
+  document.body.appendChild(flash);
+  requestAnimationFrame(() => { flash.style.opacity = '0'; });
+  setTimeout(() => flash.remove(), 350);
+}
+
 function badgeTempoSep(totalItens, pontuacao, skus) {
   const t = estimarTempoSep(totalItens, pontuacao, skus);
   if (!t) return '';
@@ -161,6 +189,48 @@ function toggleSubtipoRepositor() {
   const wrap = document.getElementById('usr-subtipo-wrap');
   if (!perf || !wrap) return;
   wrap.style.display = perf.value === 'repositor' ? 'block' : 'none';
+}
+
+/* ══════════════════════════════════════════
+   ABAS MOBILE/COLETOR — helpers compartilhados
+   Extraídos na V2 da evolução do WMS: separador/checkout/embalagem/repositor
+   tinham cada um sua própria cópia (~10-15 linhas quase idênticas) da lógica
+   de "ativar shell mobile" e "trocar de aba". Duas famílias de troca de aba
+   coexistem de propósito (uma alterna classes .ativa/.ativo, a outra alterna
+   style.display) — são padrões de DOM genuinamente diferentes entre as telas,
+   então NÃO foram forçadas pra um helper só (ver comentário em cada chamada).
+══════════════════════════════════════════ */
+function _wmsAtivarShellMobile(rootId, tabbarId, bodyClass) {
+  document.body.classList.add(bodyClass);
+  const root = document.getElementById(rootId);
+  if (root) root.style.display = 'flex';
+  const bar = document.getElementById(tabbarId);
+  if (bar) bar.style.display = 'flex';
+}
+
+// Família "classe" — usada pelas abas mobile de Checkout/Separador/Repositor:
+// a página ganha/perde a classe .ativa, o botão ganha/perde .ativo.
+function _wmsAlternarAbaClasse(tabs, tab, pagePrefix, btnPrefix, onChange) {
+  tabs.forEach(t => {
+    const page = document.getElementById(pagePrefix + t);
+    const btn  = document.getElementById(btnPrefix + t);
+    if (page) page.classList.toggle('ativa', t === tab);
+    if (btn)  btn.classList.toggle('ativo', t === tab);
+  });
+  if (onChange) onChange(tab);
+}
+
+// Família "display" — usada pelas abas de mesa (Desk) de todo mundo e pela
+// aba mobile de Embalagem: a página alterna style.display '' / 'none', o
+// botão ganha/perde .ativo.
+function _wmsAlternarAbaDisplay(tabs, tab, pagePrefix, btnPrefix, onChange) {
+  tabs.forEach(t => {
+    const el  = document.getElementById(pagePrefix + t);
+    const btn = document.getElementById(btnPrefix + t);
+    if (el)  el.style.display = t === tab ? '' : 'none';
+    if (btn) btn.classList.toggle('ativo', t === tab);
+  });
+  if (onChange) onChange(tab);
 }
 
 function toast(msg, tipo='info') {
