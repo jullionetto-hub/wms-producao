@@ -673,9 +673,6 @@ function confirmarZerarDados() {
 
 async function carregarDashboard() {
   await popularSelects();
-  carregarHoraAHora();
-  carregarSimulador();
-  carregarAnomalias();
   // KPIs e Operação em paralelo — garante que renderDashPipeline
   // receba os dois datasets antes do render final
   await Promise.all([carregarKPIs(), carregarOperacao()]);

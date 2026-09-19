@@ -520,7 +520,7 @@ function irPara(pag, el) {
   if (pg) pg.classList.add('ativa');
   if (el) el.classList.add('ativo');
   if (pag === 'dashboard')       { carregarDashboard(); mudarDashTab('operacao'); }
-  if (pag === 'control-tower')   { carregarControlTower(); }
+  if (pag === 'control-tower')   { carregarControlTower(); carregarHoraAHora(); carregarSimulador(); carregarAnomalias(); }
   if (pag === 'pedidos') { popularSelects(); var _pi=document.getElementById('filtro-ped-ini'),_pf=document.getElementById('filtro-ped-fim'); if(_pi&&!_pi.value)_pi.value=hojeLocal(); if(_pf&&!_pf.value)_pf.value=hojeLocal(); carregarPedidos(); }
   if (pag === 'cadastros')       { trocarCadastroTab('usuarios'); carregarUsuarios(); }
   if (pag === 'separacao')       { var _si=document.getElementById('sep-ini'),_sf=document.getElementById('sep-fim'); if(_si&&!_si.value)_si.value=hojeLocal(); if(_sf&&!_sf.value)_sf.value=hojeLocal(); carregarContadoresSep(); mudarTabSepDesk('fila'); }
