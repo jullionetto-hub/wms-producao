@@ -16,7 +16,7 @@ const router  = express.Router();
 const { db } = require('../lib/db');
 const { requerAuth, requerPerfil } = require('../lib/auth');
 const { dataHoraLocal, turnoAtualEHorarios } = require('../lib/helpers');
-const { bucketsPorHora, ritmoEPrevisao } = require('../lib/hora-a-hora');
+const { bucketsPorHora, ritmoEPrevisao, inicioTurnoTimestamp } = require('../lib/hora-a-hora');
 
 async function metasConfiguradas() {
   const rows = await db.all(
@@ -63,6 +63,59 @@ router.get('/hora-a-hora', requerAuth, requerPerfil('supervisor', 'gestor'), asy
       embalagem:   { ...ritmoEPrevisao(realizadoEmb, metas.embalagem, minutosDecorridos, minutos_restantes), buckets: bucketsEmb },
       expedicao:   { ...ritmoEPrevisao(realizadoCk,  metas.expedicao, minutosDecorridos, minutos_restantes), buckets: bucketsCk },
       faturamento: { ...ritmoEPrevisao(realizadoFat, metas.faturamento, minutosDecorridos, minutos_restantes), buckets: bucketsFat },
+    });
+  } catch (e) { res.status(500).json({ erro: e.message }); }
+});
+
+// ── GET /hora-a-hora/pedidos — anúncio operacional (Separação/Checkout/
+// Embalagem em PEDIDOS, não itens/R$) ──────────────────────────────────
+// Mesma janela de "última hora" já usada no Control Tower (lib/control-tower)
+// pra produção atual, mas contando PEDIDOS (COUNT) em vez de ITENS (SUM) —
+// unidade diferente, pedida especificamente pro anúncio sonoro. O "gap pra
+// meta do turno" é só de Checkout (a etapa que "puxa o resultado", segundo
+// o usuário) — meta configurável por turno (meta_checkout_manha/tarde/
+// noite), diferente da meta_checkout genérica (pedidos/turno) já usada no
+// Control Tower/Hora a Hora — essa aqui é especificamente por turno de
+// verdade, com valores diferentes por turno (ex: manhã 300, tarde 250).
+router.get('/hora-a-hora/pedidos', requerAuth, requerPerfil('supervisor', 'gestor'), async (req, res) => {
+  try {
+    const { data: hoje, hora: horaAgoraStr } = dataHoraLocal();
+    const { turno } = turnoAtualEHorarios();
+    const horaAgora = parseInt(horaAgoraStr.slice(0, 2), 10);
+    const inicioTurno = inicioTurnoTimestamp(turno, hoje, horaAgora);
+
+    const metaRow = await db.get(
+      `SELECT valor FROM configuracoes WHERE chave=$1`,
+      [`meta_checkout_${turno === 'Manha' ? 'manha' : turno === 'Tarde' ? 'tarde' : 'noite'}`]
+    );
+    const metaCheckoutTurno = parseFloat(metaRow?.valor) || 0; // 0 = sem meta configurada pra esse turno
+
+    const [sepUltHora, ckUltHora, embUltHora, ckTurnoAtual] = await Promise.all([
+      db.get(`SELECT COUNT(*)::int AS n FROM pedidos
+        WHERE status='concluido' AND concluido_em <> ''
+          AND concluido_em::timestamptz >= NOW() - INTERVAL '60 minutes'`),
+      db.get(`SELECT COUNT(*)::int AS n FROM checkout
+        WHERE status='concluido' AND hora_checkout <> '' AND data_checkout=$1
+          AND (data_checkout || 'T' || hora_checkout)::timestamp >= NOW() AT TIME ZONE 'America/Sao_Paulo' - INTERVAL '60 minutes'`, [hoje]),
+      db.get(`SELECT COUNT(*)::int AS n FROM embalagem
+        WHERE embalado_em <> '' AND data_embalagem=$1
+          AND (data_embalagem || 'T' || embalado_em)::timestamp >= NOW() AT TIME ZONE 'America/Sao_Paulo' - INTERVAL '60 minutes'`, [hoje]),
+      db.get(`SELECT COUNT(*)::int AS n FROM checkout
+        WHERE status='concluido' AND hora_checkout <> '' AND data_checkout <> ''
+          AND (data_checkout || ' ' || hora_checkout)::timestamp >= $1::timestamp`, [inicioTurno]),
+    ]);
+
+    const checkoutTurnoAtual = ckTurnoAtual.n;
+    const gapCheckout = metaCheckoutTurno > 0 ? Math.max(0, metaCheckoutTurno - checkoutTurnoAtual) : null;
+
+    res.json({
+      turno_atual: turno,
+      separacao_ultima_hora: sepUltHora.n,
+      checkout_ultima_hora: ckUltHora.n,
+      embalagem_ultima_hora: embUltHora.n,
+      checkout_turno_atual: checkoutTurnoAtual,
+      meta_checkout_turno: metaCheckoutTurno,
+      gap_checkout_meta: gapCheckout,
     });
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });

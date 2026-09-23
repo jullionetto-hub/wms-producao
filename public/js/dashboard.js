@@ -1244,12 +1244,14 @@ async function carregarHoraAHora() {
   } catch(e) { console.warn(e); }
 }
 
-// ── Anúncio sonoro de Faturamento — fala em voz alta o faturamento hora a
-// hora e quanto falta pra bater a meta. Usa a Web Speech API (nativa do
-// navegador, sem serviço externo); some sozinho em navegador sem suporte.
-let _anuncioFaturamentoAtivo = false;
-let _anuncioFaturamentoTimer = null;
-const ANUNCIO_FATURAMENTO_INTERVALO_MS = 60 * 60 * 1000; // a cada hora
+// ── Anúncio sonoro da Operação — fala em voz alta quantos pedidos cada etapa
+// (Separação/Checkout/Embalagem) fechou na última hora, e quanto falta pra
+// bater a meta do turno de Checkout (a etapa que "puxa o resultado"). Usa a
+// Web Speech API (nativa do navegador, sem serviço externo); some sozinho em
+// navegador sem suporte.
+let _anuncioOperacaoAtivo = false;
+let _anuncioOperacaoTimer = null;
+const ANUNCIO_OPERACAO_INTERVALO_MS = 60 * 60 * 1000; // a cada hora
 
 function _falarTexto(texto) {
   try {
@@ -1261,36 +1263,33 @@ function _falarTexto(texto) {
   } catch(e) { /* navegador sem suporte a fala — silencioso, não quebra nada */ }
 }
 
-async function anunciarFaturamentoAgora() {
+async function anunciarOperacaoAgora() {
   try {
-    const res = await fetch(`${API}/hora-a-hora`, { credentials:'include' });
+    const res = await fetch(`${API}/hora-a-hora/pedidos`, { credentials:'include' });
     if (!res.ok) return;
-    const data = await res.json();
-    const f = data.faturamento;
-    if (!f) return;
-    let texto = `Faturamento até agora: ${_fmtReal(f.realizado)}.`;
-    if (f.meta > 0) {
-      const falta = Math.max(0, f.meta - f.realizado);
-      texto += falta > 0
-        ? ` Meta do turno: ${_fmtReal(f.meta)}. Faltam ${_fmtReal(falta)} para bater a meta.`
-        : ' Meta do turno já foi batida!';
+    const d = await res.json();
+    let texto = `Na última hora: Separação ${d.separacao_ultima_hora} pedidos, Checkout ${d.checkout_ultima_hora} pedidos, Embalagem ${d.embalagem_ultima_hora} pedidos.`;
+    if (d.meta_checkout_turno > 0) {
+      texto += d.gap_checkout_meta > 0
+        ? ` Estamos a ${d.gap_checkout_meta} pedidos da meta do turno de Checkout.`
+        : ' Meta do turno de Checkout já foi batida!';
     } else {
-      texto += ' Meta do turno ainda não foi configurada.';
+      texto += ' Meta de Checkout deste turno ainda não foi configurada.';
     }
     _falarTexto(texto);
   } catch(e) { console.warn(e); }
 }
 
-function toggleAnuncioFaturamento() {
+function toggleAnuncioOperacao() {
   const btn = document.getElementById('btn-anuncio-faturamento');
-  _anuncioFaturamentoAtivo = !_anuncioFaturamentoAtivo;
-  if (_anuncioFaturamentoAtivo) {
+  _anuncioOperacaoAtivo = !_anuncioOperacaoAtivo;
+  if (_anuncioOperacaoAtivo) {
     if (btn) { btn.textContent = '🔊 Anúncio ativo (clique pra desligar)'; btn.classList.remove('btn-outline'); btn.classList.add('btn-primary'); }
-    anunciarFaturamentoAgora(); // fala assim que ativa, não espera 1h
-    _anuncioFaturamentoTimer = setInterval(anunciarFaturamentoAgora, ANUNCIO_FATURAMENTO_INTERVALO_MS);
+    anunciarOperacaoAgora(); // fala assim que ativa, não espera 1h
+    _anuncioOperacaoTimer = setInterval(anunciarOperacaoAgora, ANUNCIO_OPERACAO_INTERVALO_MS);
   } else {
-    if (btn) { btn.textContent = '🔇 Ativar anúncio de faturamento'; btn.classList.remove('btn-primary'); btn.classList.add('btn-outline'); }
-    if (_anuncioFaturamentoTimer) { clearInterval(_anuncioFaturamentoTimer); _anuncioFaturamentoTimer = null; }
+    if (btn) { btn.textContent = '🔇 Ativar anúncio da operação'; btn.classList.remove('btn-primary'); btn.classList.add('btn-outline'); }
+    if (_anuncioOperacaoTimer) { clearInterval(_anuncioOperacaoTimer); _anuncioOperacaoTimer = null; }
     if (window.speechSynthesis) window.speechSynthesis.cancel();
   }
 }
@@ -2085,6 +2084,9 @@ async function abrirConfigMetas() {
       meta_embalagem: 'Meta Embalagem (pedidos/turno)',
       meta_reposicao: 'Meta Reposição (itens/turno)',
       meta_faturamento: 'Meta Faturamento (R$/turno)',
+      meta_checkout_manha: 'Meta Checkout — Manhã (pedidos/turno)',
+      meta_checkout_tarde: 'Meta Checkout — Tarde (pedidos/turno)',
+      meta_checkout_noite: 'Meta Checkout — Noite (pedidos/turno)',
       horas_turno_manha: 'Horas turno Manhã (decimal — ex: 7:45 = 7.75)',
       horas_turno_tarde: 'Horas turno Tarde (decimal — ex: 7:45 = 7.75)',
       horas_turno_noite: 'Horas turno Noite (decimal — ex: 7:33 = 7.55)',
@@ -2110,7 +2112,7 @@ function fecharConfigMetas() {
 }
 
 async function salvarConfigMetas() {
-  const CHAVES = ['meta_separacao','meta_checkout','meta_embalagem','meta_reposicao','meta_faturamento','horas_turno_manha','horas_turno_tarde','horas_turno_noite'];
+  const CHAVES = ['meta_separacao','meta_checkout','meta_embalagem','meta_reposicao','meta_faturamento','meta_checkout_manha','meta_checkout_tarde','meta_checkout_noite','horas_turno_manha','horas_turno_tarde','horas_turno_noite'];
   try {
     for (const k of CHAVES) {
       const v = document.getElementById(`cfg-${k}`)?.value;

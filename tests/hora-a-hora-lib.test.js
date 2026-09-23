@@ -4,7 +4,7 @@
  * Roda com: npm test
  */
 
-const { bucketsPorHora, calcularSituacaoHoraAHora, ritmoEPrevisao } = require('../lib/hora-a-hora');
+const { bucketsPorHora, calcularSituacaoHoraAHora, ritmoEPrevisao, inicioTurnoTimestamp } = require('../lib/hora-a-hora');
 
 describe('bucketsPorHora', () => {
   test('conta registros por hora quando campoValor é null', () => {
@@ -78,5 +78,23 @@ describe('ritmoEPrevisao', () => {
     const r = ritmoEPrevisao(200, 0, 120, 120);
     expect(r.pct_meta).toBeNull();
     expect(r.situacao).toBe('sem_meta');
+  });
+});
+
+describe('inicioTurnoTimestamp', () => {
+  test('Manhã → hoje às 06:00', () => {
+    expect(inicioTurnoTimestamp('Manha', '2026-09-22', 8)).toBe('2026-09-22 06:00:00');
+  });
+  test('Tarde → hoje às 13:00', () => {
+    expect(inicioTurnoTimestamp('Tarde', '2026-09-22', 15)).toBe('2026-09-22 13:00:00');
+  });
+  test('Noite, ainda antes da meia-noite (ex: 23h) → hoje às 22:00', () => {
+    expect(inicioTurnoTimestamp('Noite', '2026-09-22', 23)).toBe('2026-09-22 22:00:00');
+  });
+  test('Noite, já depois da meia-noite (ex: 2h) → ONTEM às 22:00', () => {
+    expect(inicioTurnoTimestamp('Noite', '2026-09-22', 2)).toBe('2026-09-21 22:00:00');
+  });
+  test('Noite atravessando virada de mês/ano continua correta', () => {
+    expect(inicioTurnoTimestamp('Noite', '2026-01-01', 3)).toBe('2025-12-31 22:00:00');
   });
 });

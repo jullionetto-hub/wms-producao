@@ -134,3 +134,78 @@ describe('GET /hora-a-hora', () => {
     expect(res.status).toBe(500);
   });
 });
+
+describe('GET /hora-a-hora/pedidos', () => {
+  test('sem auth → 401', async () => {
+    const res = await request(app).get('/hora-a-hora/pedidos');
+    expect(res.status).toBe(401);
+  });
+
+  test('como separador → 403', async () => {
+    const sepAgent = request.agent(app);
+    await loginSeparador(sepAgent);
+    const res = await sepAgent.get('/hora-a-hora/pedidos');
+    expect(res.status).toBe(403);
+  });
+
+  test('200 combina pedidos da última hora das 3 etapas + gap da meta de checkout do turno', async () => {
+    const agent = request.agent(app);
+    await loginSupervisor(agent);
+
+    // Ordem: metaRow (db.get), depois Promise.all([sepUltHora, ckUltHora, embUltHora, ckTurnoAtual]) (4× db.get)
+    mockDb.get
+      .mockResolvedValueOnce({ valor: '300' })  // meta_checkout_manha
+      .mockResolvedValueOnce({ n: 30 })         // separacao_ultima_hora
+      .mockResolvedValueOnce({ n: 34 })         // checkout_ultima_hora
+      .mockResolvedValueOnce({ n: 40 })         // embalagem_ultima_hora
+      .mockResolvedValueOnce({ n: 34 });        // checkout_turno_atual
+
+    const res = await agent.get('/hora-a-hora/pedidos');
+    expect(res.status).toBe(200);
+    expect(res.body.separacao_ultima_hora).toBe(30);
+    expect(res.body.checkout_ultima_hora).toBe(34);
+    expect(res.body.embalagem_ultima_hora).toBe(40);
+    expect(res.body.checkout_turno_atual).toBe(34);
+    expect(res.body.meta_checkout_turno).toBe(300);
+    expect(res.body.gap_checkout_meta).toBe(266);
+  });
+
+  test('meta já batida → gap_checkout_meta é 0, nunca negativo', async () => {
+    const agent = request.agent(app);
+    await loginSupervisor(agent);
+    mockDb.get
+      .mockResolvedValueOnce({ valor: '300' })
+      .mockResolvedValueOnce({ n: 10 })
+      .mockResolvedValueOnce({ n: 310 })
+      .mockResolvedValueOnce({ n: 15 })
+      .mockResolvedValueOnce({ n: 310 });
+
+    const res = await agent.get('/hora-a-hora/pedidos');
+    expect(res.status).toBe(200);
+    expect(res.body.gap_checkout_meta).toBe(0);
+  });
+
+  test('sem meta_checkout do turno configurada → gap_checkout_meta null', async () => {
+    const agent = request.agent(app);
+    await loginSupervisor(agent);
+    mockDb.get
+      .mockResolvedValueOnce(null) // sem meta configurada pro turno
+      .mockResolvedValueOnce({ n: 5 })
+      .mockResolvedValueOnce({ n: 5 })
+      .mockResolvedValueOnce({ n: 5 })
+      .mockResolvedValueOnce({ n: 5 });
+
+    const res = await agent.get('/hora-a-hora/pedidos');
+    expect(res.status).toBe(200);
+    expect(res.body.meta_checkout_turno).toBe(0);
+    expect(res.body.gap_checkout_meta).toBeNull();
+  });
+
+  test('erro de banco → 500', async () => {
+    const agent = request.agent(app);
+    await loginSupervisor(agent);
+    mockDb.get.mockRejectedValueOnce(new Error('conexão perdida'));
+    const res = await agent.get('/hora-a-hora/pedidos');
+    expect(res.status).toBe(500);
+  });
+});
