@@ -1253,12 +1253,51 @@ let _anuncioOperacaoAtivo = false;
 let _anuncioOperacaoTimer = null;
 const ANUNCIO_OPERACAO_INTERVALO_MS = 60 * 60 * 1000; // a cada hora
 
+// A lista de vozes carrega async em vários navegadores (getVoices() volta
+// vazio na primeira chamada) — invalida o cache quando o navegador avisa
+// que terminou de carregar, pra pegar a escolha certa na próxima fala.
+let _vozAnuncioCache = null;
+if (window.speechSynthesis) {
+  window.speechSynthesis.onvoiceschanged = () => { _vozAnuncioCache = null; };
+}
+
+// Escolhe a melhor voz pt-BR disponível — a voz "padrão" do sistema em boa
+// parte dos navegadores/SOs é sintética e robotizada; vozes de nuvem
+// (Google/Microsoft Natural/Online) soam muito mais humanas quando existem.
+function _escolherVozAnuncio() {
+  if (_vozAnuncioCache) return _vozAnuncioCache;
+  const vozes = window.speechSynthesis.getVoices();
+  if (!vozes.length) return null;
+  const criterios = [
+    v => v.lang === 'pt-BR' && /google/i.test(v.name),
+    v => v.lang === 'pt-BR' && /natural|online|neural/i.test(v.name),
+    v => v.lang === 'pt-BR',
+    v => (v.lang || '').startsWith('pt'),
+  ];
+  for (const criterio of criterios) {
+    const achada = vozes.find(criterio);
+    if (achada) { _vozAnuncioCache = achada; return achada; }
+  }
+  return null;
+}
+
+// Corrige pronúncia de palavras em inglês que o mecanismo de fala em
+// português lê errado, soletrando do jeito que soa certo em voz alta —
+// não muda o texto exibido em tela, só o que é falado.
+function _corrigirPronunciaFala(texto) {
+  return texto.replace(/\bcheckout\b/gi, 'checaute');
+}
+
 function _falarTexto(texto) {
   try {
     if (!window.speechSynthesis) return;
     window.speechSynthesis.cancel(); // evita empilhar se a fala anterior ainda não terminou
-    const u = new SpeechSynthesisUtterance(texto);
+    const u = new SpeechSynthesisUtterance(_corrigirPronunciaFala(texto));
     u.lang = 'pt-BR';
+    u.rate = 0.95;   // um pouco mais devagar que o padrão — soa menos robótico
+    u.pitch = 1;
+    const voz = _escolherVozAnuncio();
+    if (voz) u.voice = voz;
     window.speechSynthesis.speak(u);
   } catch(e) { /* navegador sem suporte a fala — silencioso, não quebra nada */ }
 }
