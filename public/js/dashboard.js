@@ -1244,6 +1244,57 @@ async function carregarHoraAHora() {
   } catch(e) { console.warn(e); }
 }
 
+// ── Anúncio sonoro de Faturamento — fala em voz alta o faturamento hora a
+// hora e quanto falta pra bater a meta. Usa a Web Speech API (nativa do
+// navegador, sem serviço externo); some sozinho em navegador sem suporte.
+let _anuncioFaturamentoAtivo = false;
+let _anuncioFaturamentoTimer = null;
+const ANUNCIO_FATURAMENTO_INTERVALO_MS = 60 * 60 * 1000; // a cada hora
+
+function _falarTexto(texto) {
+  try {
+    if (!window.speechSynthesis) return;
+    window.speechSynthesis.cancel(); // evita empilhar se a fala anterior ainda não terminou
+    const u = new SpeechSynthesisUtterance(texto);
+    u.lang = 'pt-BR';
+    window.speechSynthesis.speak(u);
+  } catch(e) { /* navegador sem suporte a fala — silencioso, não quebra nada */ }
+}
+
+async function anunciarFaturamentoAgora() {
+  try {
+    const res = await fetch(`${API}/hora-a-hora`, { credentials:'include' });
+    if (!res.ok) return;
+    const data = await res.json();
+    const f = data.faturamento;
+    if (!f) return;
+    let texto = `Faturamento até agora: ${_fmtReal(f.realizado)}.`;
+    if (f.meta > 0) {
+      const falta = Math.max(0, f.meta - f.realizado);
+      texto += falta > 0
+        ? ` Meta do turno: ${_fmtReal(f.meta)}. Faltam ${_fmtReal(falta)} para bater a meta.`
+        : ' Meta do turno já foi batida!';
+    } else {
+      texto += ' Meta do turno ainda não foi configurada.';
+    }
+    _falarTexto(texto);
+  } catch(e) { console.warn(e); }
+}
+
+function toggleAnuncioFaturamento() {
+  const btn = document.getElementById('btn-anuncio-faturamento');
+  _anuncioFaturamentoAtivo = !_anuncioFaturamentoAtivo;
+  if (_anuncioFaturamentoAtivo) {
+    if (btn) { btn.textContent = '🔊 Anúncio ativo (clique pra desligar)'; btn.classList.remove('btn-outline'); btn.classList.add('btn-primary'); }
+    anunciarFaturamentoAgora(); // fala assim que ativa, não espera 1h
+    _anuncioFaturamentoTimer = setInterval(anunciarFaturamentoAgora, ANUNCIO_FATURAMENTO_INTERVALO_MS);
+  } else {
+    if (btn) { btn.textContent = '🔇 Ativar anúncio de faturamento'; btn.classList.remove('btn-primary'); btn.classList.add('btn-outline'); }
+    if (_anuncioFaturamentoTimer) { clearInterval(_anuncioFaturamentoTimer); _anuncioFaturamentoTimer = null; }
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+  }
+}
+
 // ── Import de Faturamento (planilha processada no cliente, igual a Pedidos) ──
 let _faturamentoImportar = [];
 
