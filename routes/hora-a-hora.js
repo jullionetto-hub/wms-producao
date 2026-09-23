@@ -93,7 +93,7 @@ router.get('/hora-a-hora/pedidos', requerAuth, requerPerfil('supervisor', 'gesto
     const [sepUltHora, ckUltHora, embUltHora, ckTurnoAtual] = await Promise.all([
       db.get(`SELECT COUNT(*)::int AS n FROM pedidos
         WHERE status='concluido' AND concluido_em <> ''
-          AND concluido_em::timestamptz >= NOW() - INTERVAL '60 minutes'`),
+          AND concluido_em::timestamp >= NOW() AT TIME ZONE 'America/Sao_Paulo' - INTERVAL '60 minutes'`),
       db.get(`SELECT COUNT(*)::int AS n FROM checkout
         WHERE status='concluido' AND hora_checkout <> '' AND data_checkout=$1
           AND (data_checkout || 'T' || hora_checkout)::timestamp >= NOW() AT TIME ZONE 'America/Sao_Paulo' - INTERVAL '60 minutes'`, [hoje]),

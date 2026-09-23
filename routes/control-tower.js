@@ -40,7 +40,7 @@ async function metricasSeparacao(hoje) {
   const [producaoAtual, restante, mediaItens] = await Promise.all([
     db.get(`SELECT COALESCE(SUM(total_itens),0)::int AS itens FROM pedidos
       WHERE status='concluido' AND concluido_em <> ''
-        AND concluido_em::timestamptz >= NOW() - INTERVAL '60 minutes'`),
+        AND concluido_em::timestamp >= NOW() AT TIME ZONE 'America/Sao_Paulo' - INTERVAL '60 minutes'`),
     db.get(`SELECT COALESCE(SUM(total_itens),0)::int AS itens FROM pedidos
       WHERE status IN ('pendente','separando')`),
     db.get(`SELECT COALESCE(AVG(NULLIF(total_itens,0)),1)::float AS media FROM pedidos

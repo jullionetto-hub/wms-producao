@@ -19,7 +19,7 @@ router.get('/colmeias', requerPerfil('supervisor', 'gestor'), async (req, res) =
             AND i.status IN ('encontrado', 'parcial')
             AND p.status = 'concluido'
             AND p.concluido_em <> ''
-            AND p.concluido_em::timestamptz >= c.criado_em
+            AND p.concluido_em::timestamp AT TIME ZONE 'America/Sao_Paulo' >= c.criado_em
         ), 0)::int AS consumido
       FROM colmeias c
       WHERE c.status = 'ativo'

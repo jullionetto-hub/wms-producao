@@ -20,7 +20,7 @@ const { metricasSeparacao, metricasCheckout, metricasEmbalagem } = require('./co
 async function pessoasAtivasSeparacao() {
   const r = await db.get(`SELECT COUNT(DISTINCT separador_id)::int AS n FROM pedidos
     WHERE status='concluido' AND separador_id IS NOT NULL AND concluido_em <> ''
-      AND concluido_em::timestamptz >= NOW() - INTERVAL '60 minutes'`);
+      AND concluido_em::timestamp >= NOW() AT TIME ZONE 'America/Sao_Paulo' - INTERVAL '60 minutes'`);
   return r?.n || 0;
 }
 async function pessoasAtivasCheckout(hoje) {

@@ -53,7 +53,7 @@ router.get('/mapa-estoque', requerAuth, requerPerfil('supervisor', 'gestor'), as
             SELECT SUM(i.quantidade - COALESCE(i.qtd_falta,0))
             FROM itens_pedido i JOIN pedidos p ON p.id=i.pedido_id
             WHERE i.codigo=c.codigo AND i.status IN ('encontrado','parcial') AND p.status='concluido'
-              AND p.concluido_em <> '' AND p.concluido_em::timestamptz >= c.criado_em
+              AND p.concluido_em <> '' AND p.concluido_em::timestamp AT TIME ZONE 'America/Sao_Paulo' >= c.criado_em
           ),0)) <= c.estoque_minimo
         GROUP BY rua HAVING ${ruaColmeias} <> ''`),
       contagemPorRua(`
@@ -104,7 +104,7 @@ router.get('/mapa-estoque/:rua', requerAuth, requerPerfil('supervisor', 'gestor'
             SELECT SUM(i.quantidade - COALESCE(i.qtd_falta,0))
             FROM itens_pedido i JOIN pedidos p ON p.id=i.pedido_id
             WHERE i.codigo=c.codigo AND i.status IN ('encontrado','parcial') AND p.status='concluido'
-              AND p.concluido_em <> '' AND p.concluido_em::timestamptz >= c.criado_em
+              AND p.concluido_em <> '' AND p.concluido_em::timestamp AT TIME ZONE 'America/Sao_Paulo' >= c.criado_em
           ),0))::int AS saldo
         FROM colmeias c
         WHERE c.status='ativo' AND ${ruaColmeias}=$1 ORDER BY c.codigo LIMIT 30`, [rua]),
