@@ -2248,9 +2248,12 @@
               </div>
             </div>
             <div id="m-lote-lista-body" style="overflow-y:auto;max-height:360px"></div>
-            <div style="background:var(--surface2);padding:12px 14px;display:flex;gap:8px;border-top:1px solid var(--border)">
-              <button onclick="loteVoltarPosicao()" style="flex:1;background:transparent;border:1.5px solid var(--border);color:var(--text2);font-size:12px;padding:10px 0;border-radius:8px;cursor:pointer">← Voltar</button>
-              <button id="m-lote-btn-prox" disabled style="flex:2;background:var(--accent);border:none;color:#fff;font-size:13px;font-weight:700;padding:10px 0;border-radius:8px;cursor:pointer;opacity:0.5">Próxima posição</button>
+            <div style="background:var(--surface2);padding:12px 14px;display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--border)">
+              <button id="m-lote-btn-concluir" onclick="loteConcluirOuIrPendente()" style="width:100%;background:var(--green);border:none;color:#fff;font-size:13px;font-weight:700;padding:11px 0;border-radius:8px;cursor:pointer">Concluir lote</button>
+              <div style="display:flex;gap:8px">
+                <button onclick="loteVoltarPosicao()" style="flex:1;background:transparent;border:1.5px solid var(--border);color:var(--text2);font-size:12px;padding:10px 0;border-radius:8px;cursor:pointer">← Voltar</button>
+                <button id="m-lote-btn-prox" disabled style="flex:2;background:var(--accent);border:none;color:#fff;font-size:13px;font-weight:700;padding:10px 0;border-radius:8px;cursor:pointer;opacity:0.5">Próxima posição</button>
+              </div>
             </div>
           </div>
 
@@ -2450,7 +2453,7 @@
 <script src="/js/geometria-estoque.js?v=1"></script>
 <script src="/js/config.js?v=15"></script>
   <script src="/js/pedidos.js?v=51"></script>
-  <script src="/js/separador.js?v=29"></script>
+  <script src="/js/separador.js?v=30"></script>
   <script src="/js/repositor.js?v=19"></script>
   <script src="/js/checkout.js?v=15"></script>
   <script src="/js/dashboard.js?v=39"></script>

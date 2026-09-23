@@ -247,6 +247,7 @@ function _renderizarListaLote() {
   // Progresso geral — 'parcial' também conta como processado (só 'pendente' bloqueia,
   // igual ao backend em PUT /pedidos/lote/concluir).
   const processados = itens.filter(i => i.status !== 'pendente').length;
+  _atualizarBotaoConcluirLote(itens, total - processados);
   document.getElementById('m-lote-prog-cnt').textContent = `${processados} / ${total} itens`;
   document.getElementById('m-lote-prog-fill').style.width = total ? Math.round(processados/total*100)+'%' : '0%';
 
@@ -390,6 +391,45 @@ function _renderizarListaLote() {
     btnProx.disabled = !posicaoCompleta;
     btnProx.style.opacity = posicaoCompleta ? '1' : '0.5';
   }
+}
+
+// Botão "Concluir lote" sempre visível no rodapé — antes só aparecia depois de
+// avançar "Próxima posição" por TODAS as ruas (e "Revisar divergências" ainda
+// jogava de volta pra uma rua do meio, obrigando a andar tudo de novo). Mesma
+// regra do backend (POST /pedidos/lote/concluir): só item 'pendente' bloqueia;
+// falta/parcial conta como processado e o pedido vai pra "aguardando repositor".
+// Com pendentes, o botão vira atalho pra próxima posição com item pendente.
+function _atualizarBotaoConcluirLote(itens, pendentes) {
+  const btn = document.getElementById('m-lote-btn-concluir');
+  if (!btn) return;
+  if (pendentes > 0) {
+    btn.textContent = `Faltam ${pendentes} item(ns) — ir pro próximo pendente`;
+    btn.style.background = 'var(--amber)';
+  } else {
+    const divergencias = itens.filter(i => i.status === 'falta' || i.status === 'parcial').length;
+    btn.textContent = divergencias > 0 ? `Concluir lote (${divergencias} com divergência)` : 'Concluir lote';
+    btn.style.background = 'var(--green)';
+  }
+}
+
+function loteConcluirOuIrPendente() {
+  const pendentes = _loteItens.filter(i => i.status === 'pendente').length;
+  if (pendentes > 0) {
+    const { gruposPorEnd, endsOrdenados } = _loteAgruparPorEndereco();
+    const idx = endsOrdenados.findIndex(end => gruposPorEnd[end].some(i => i.status === 'pendente'));
+    if (idx !== -1) { _loteEndIdx = idx; _loteAcaoAberta = null; _renderizarListaLote(); }
+    return;
+  }
+  const divergencias = _loteItens.filter(i => i.status === 'falta' || i.status === 'parcial').length;
+  if (divergencias > 0 && typeof wmsConfirm === 'function') {
+    wmsConfirm({
+      icone: '⚠️', titulo: 'Concluir com divergências?',
+      sub: `${divergencias} item(ns) em falta/parcial vão pro repositor. Os pedidos com divergência ficam aguardando reposição.`,
+      btnOk: 'Concluir lote',
+    }, concluirLoteMobile);
+    return;
+  }
+  concluirLoteMobile();
 }
 
 function toggleLotePedidos() {
