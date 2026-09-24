@@ -1028,6 +1028,26 @@ describe('Pedidos — formação de lotes', () => {
     expect(res.body.lotes[0].distancia_ponderada).toBe(0); // uma única rua, sem par pra comparar
   });
 
+  test('POST /pedidos/lote/formar → nenhum lote passa de 4 pedidos (9 elegíveis viram 4+4+1)', async () => {
+    const pedidosFixture = Array.from({ length: 9 }, (_, i) => (
+      { id: i + 1, numero_pedido: String(i + 1), transportadora: '', cliente: 'C' + (i + 1) }
+    ));
+    mockDb.all.mockImplementation(async (sql, params) => {
+      if (sql.includes('itens_pedido WHERE pedido_id=$1')) {
+        return [{ endereco: 'A1', quantidade: 1, codigo: 'X' + params[0] }];
+      }
+      if (sql.includes('FROM pedidos p WHERE')) return pedidosFixture;
+      return [];
+    });
+    mockDb.get.mockImplementation(async () => null);
+    const res = await agent.post('/pedidos/lote/formar').send({ separadores: [11] });
+    expect(res.status).toBe(200);
+    const tamanhos = res.body.lotes.map(l => l.pedidos.length);
+    expect(Math.max(...tamanhos)).toBe(4);
+    expect(tamanhos.reduce((s, n) => s + n, 0)).toBe(9);
+    expect(res.body.lotes).toHaveLength(3);
+  });
+
   test('POST /pedidos/lote/formar → rota segue ROTA_FISICA_LOTE, não ordem alfabética', async () => {
     // ROTA_FISICA_LOTE = [...,'Q','P',...] — na caminhada real, Q vem ANTES de P,
     // mesmo P vindo antes de Q em ordem alfabética. Prova que `rota` (novo campo,

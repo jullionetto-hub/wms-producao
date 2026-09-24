@@ -1102,7 +1102,7 @@ router.post('/pedidos/distribuicao/confirmar', requerAuth, requerPerfil('supervi
 /* ══════════════════════════════════════════
    SEPARAÇÃO POR LOTE — formação automática
    Agrupa pedidos pendentes por proximidade de rua (mesma ROTA_FISICA usada no
-   celular do separador, em public/js/separador.js), sempre até 8 por lote —
+   celular do separador, em public/js/separador.js), sempre até 4 por lote —
    sem limite de tempo de espera (a fila de trabalho normalmente é de dias
    atrás, não do turno atual, então um corte por minutos de espera não faz
    sentido aqui). Cada lote inteiro é atribuído ao separador mais atrasado na
@@ -1200,7 +1200,7 @@ router.post('/pedidos/lote/formar', requerAuth, requerPerfil('supervisor'), asyn
     // 1. Pré-computa rua/SKU/pontuação de cada pedido elegível — precisa saber
     //    isso de TODO o conjunto antes de agrupar, já que agora um lote pode
     //    escolher membros de qualquer lugar da fila elegível, não só de uma
-    //    fatia cronológica fixa de 8 (ver nota abaixo).
+    //    fatia cronológica fixa (tamanho do lote) (ver nota abaixo).
     for (const p of elegiveis) {
       const itens = await db.all('SELECT endereco,quantidade,codigo FROM itens_pedido WHERE pedido_id=$1', [p.id]);
       const ruas = itens.map(i => _ruaPrincipalLote(i.endereco)).filter(Boolean);
@@ -1230,17 +1230,17 @@ router.post('/pedidos/lote/formar', requerAuth, requerPerfil('supervisor'), asyn
     //    semente antes de qualquer pedido mais novo) e cresce pegando, a cada
     //    passo, o candidato que resulta no menor diâmetro ponderado por
     //    dificuldade — com desconto por SKU em comum — até completar 8.
-    //    IMPORTANTE: antes, "onda" (fatia cronológica de até 8) e "grupo"
+    //    IMPORTANTE: antes, "onda" (fatia cronológica de até o tamanho do lote) e "grupo"
     //    (esse laço de vizinhança) eram dois passos separados, mas o laço de
     //    vizinhança sempre consumia a onda INTEIRA num único lote — ou seja,
     //    só reordenava quem entrava, nunca decidia quem ENTRAVA. Fundir os
     //    dois passos aqui faz a vizinhança realmente escolher os membros,
     //    dentre toda a fila elegível, não só dentro de uma fatia já fechada.
-    //    Lote sempre busca 8 (só sai menor se a fila elegível não tiver mais
+    //    Lote sempre busca TAMANHO_LOTE (só sai menor se a fila elegível não tiver mais
     //    pedidos pra completar) — a prioridade de quem espera mais já é
     //    respeitada pela semente ser sempre o mais antigo ainda disponível, e
     //    a distribuição justa entre separadores continua no passo 3 abaixo.
-    const TAMANHO_LOTE = 8;
+    const TAMANHO_LOTE = 4; // era 8 — lote de 8 ficou difícil de separar no celular
     const PESO_SKU_COMUM = 3;
     // Cada lote só busca candidato dentre os próximos JANELA_BUSCA pedidos mais
     // antigos ainda disponíveis (não a fila elegível inteira) — evita custo O(N²)
