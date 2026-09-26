@@ -448,6 +448,21 @@ function toggleFaltaLote(ids) {
   _renderizarListaLote();
 }
 
+// Depois de Encontrei tudo / Parcial / Falta: se a posição atual ficou toda
+// resolvida (posição com vários SKUs só avança quando o último for marcado),
+// vai sozinho pra próxima — o separador não precisa apertar "Próxima posição".
+// Só é chamada logo após uma ação, nunca ao renderizar, então voltar pra uma
+// posição já concluída (botão Voltar / Revisar divergências) não pula sozinho.
+let _loteAvancando = false;
+function _loteAutoAvancar() {
+  if (_loteAvancando) return;
+  const { gruposPorEnd, endsOrdenados } = _loteAgruparPorEndereco();
+  if (_loteEndIdx >= endsOrdenados.length) return;
+  if (!gruposPorEnd[endsOrdenados[_loteEndIdx]].every(i => i.status !== 'pendente')) return;
+  _loteAvancando = true;
+  loteProximaPosicao().finally(() => { _loteAvancando = false; });
+}
+
 // Avança pra próxima posição — mostra um flash de "concluído" antes de trocar.
 async function loteProximaPosicao() {
   const { endsOrdenados } = _loteAgruparPorEndereco();
@@ -498,6 +513,7 @@ async function verificarGrupoLote(idsStr) {
     }
     feedbackColetor('sucesso');
     _renderizarListaLote();
+    _loteAutoAvancar();
   } catch(e) { toast('Erro de rede','erro'); }
 }
 
@@ -542,6 +558,7 @@ async function parcialGrupoLote(idsStr, qtdTotal, qtdEncontrada) {
   feedbackColetor('parcial');
   toast(`${qtdEncontrada} de ${qtdTotal} unidades registradas`,'aviso');
   _renderizarListaLote();
+  _loteAutoAvancar();
 }
 
 // Confirma o motivo escolhido pra Falta (fecha o seletor e reporta ao repositor)
@@ -570,6 +587,7 @@ async function faltaGrupoLote(idsStr, qtdTotal, motivo) {
     feedbackColetor('falta');
     toast('Repositor acionado','aviso');
     _renderizarListaLote();
+    _loteAutoAvancar();
   } catch(e) { toast('Erro de rede','erro'); }
 }
 
