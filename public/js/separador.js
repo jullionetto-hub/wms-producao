@@ -129,6 +129,7 @@ function verDetalhePedidoLote(cx) {
         <span style="font-size:13px;font-weight:600;color:var(--text)">${item.descricao||item.codigo||'—'}</span>
         <span style="font-size:9px;font-weight:800;letter-spacing:.5px;color:${cor};flex-shrink:0">${label}</span>
       </div>
+      ${item.codigo ? `<div style="font-size:12px;font-weight:700;color:var(--accent);font-family:monospace;margin-bottom:2px">Cód: ${item.codigo}</div>` : ''}
       <div style="font-size:11px;color:var(--text3);font-family:monospace">${item.endereco||'—'} · x${item.quantidade||1}</div>
     </div>`;
   }).join('');
