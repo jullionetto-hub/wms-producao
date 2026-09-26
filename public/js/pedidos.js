@@ -2250,6 +2250,8 @@ function _popularSepsLoteManual() {
 /* ── Lote Manual: adicionar/remover pedidos e confirmar ────────────────── */
 let _loteManualPedidos = [];
 let _loteManualConfirmados = null;
+// Mesmo limite do TAMANHO_LOTE em routes/pedidos.js (o servidor também recusa acima disso)
+const LOTE_MANUAL_MAX_PEDIDOS = 4;
 
 function _renderLoteManualLista() {
   const el   = document.getElementById('lote-manual-lista');
@@ -2290,6 +2292,9 @@ async function loteManualAdicionarPedido() {
   const m = raw.match(/\d{5,}/);
   const numero = m ? m[0] : raw;
 
+  if (_loteManualPedidos.length >= LOTE_MANUAL_MAX_PEDIDOS) {
+    toast(`Lote cheio: máximo de ${LOTE_MANUAL_MAX_PEDIDOS} pedidos por lote.`, 'aviso'); input?.focus(); return;
+  }
   if (_loteManualPedidos.some(p => String(p.numero_pedido) === String(numero))) {
     toast(`Pedido #${numero} já está nesse lote.`, 'aviso'); input?.focus(); return;
   }

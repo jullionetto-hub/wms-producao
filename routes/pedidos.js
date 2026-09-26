@@ -1111,6 +1111,9 @@ router.post('/pedidos/distribuicao/confirmar', requerAuth, requerPerfil('supervi
    individual); Prime também fica de fora, a menos que apenas_prime=true seja
    passado (mesmo alterna-entre-só-Prime-ou-só-normal do /pedidos/distribuicao).
 ══════════════════════════════════════════ */
+// Máximo de pedidos por lote (formação automática E lote manual) — lote de 8
+// ficou difícil de separar no celular. Validado também em /lote/formar/confirmar.
+const TAMANHO_LOTE = 4;
 const ROTA_FISICA_LOTE = ['A','B','C','D','E','Q','P','O','N','M','L','K','J','I','H','ARARA','G','F','ZA','R','S','T','U','V','W','X','Y','Z'];
 function _ruaPrincipalLote(endereco) {
   const end = String(endereco||'').split(',')[0].trim().toUpperCase();
@@ -1240,7 +1243,6 @@ router.post('/pedidos/lote/formar', requerAuth, requerPerfil('supervisor'), asyn
     //    pedidos pra completar) — a prioridade de quem espera mais já é
     //    respeitada pela semente ser sempre o mais antigo ainda disponível, e
     //    a distribuição justa entre separadores continua no passo 3 abaixo.
-    const TAMANHO_LOTE = 4; // era 8 — lote de 8 ficou difícil de separar no celular
     const PESO_SKU_COMUM = 3;
     // Cada lote só busca candidato dentre os próximos JANELA_BUSCA pedidos mais
     // antigos ainda disponíveis (não a fila elegível inteira) — evita custo O(N²)
@@ -1362,6 +1364,8 @@ router.post('/pedidos/lote/formar', requerAuth, requerPerfil('supervisor'), asyn
 router.post('/pedidos/lote/formar/confirmar', requerAuth, requerPerfil('supervisor'), async (req,res) => {
   const { lotes } = req.body;
   if (!lotes?.length) return res.status(400).json({erro:'Nenhum lote informado!'});
+  const grande = lotes.find(l => (l.pedidos||[]).length > TAMANHO_LOTE);
+  if (grande) return res.status(400).json({erro:`Lote com ${(grande.pedidos||[]).length} pedidos — o máximo é ${TAMANHO_LOTE} por lote.`});
   const client = await pool.connect();
   let lotesGravados = 0, pedidosGravados = 0;
   try {

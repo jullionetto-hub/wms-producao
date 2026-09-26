@@ -1082,6 +1082,15 @@ describe('Pedidos — formação de lotes', () => {
     expect(res.status).toBe(400);
   });
 
+  test('POST /pedidos/lote/formar/confirmar com 5 pedidos num lote (ex: lote manual) → 400, nada é gravado', async () => {
+    const res = await agent.post('/pedidos/lote/formar/confirmar').send({
+      lotes: [{ separador_id: 11, pedidos: [{id:1},{id:2},{id:3},{id:4},{id:5}] }],
+    });
+    expect(res.status).toBe(400);
+    expect(res.body.erro).toMatch(/máximo é 4/);
+    expect(mockPool.connect).not.toHaveBeenCalled();
+  });
+
   test('POST /pedidos/lote/formar/confirmar → grava lotes_separacao e atualiza pedidos', async () => {
     const clientMock = {
       query: jest.fn().mockImplementation(async (sql) => {
