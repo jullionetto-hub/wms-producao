@@ -1070,7 +1070,7 @@ function _processarSheetsMIESS(wb, _norm, iItens, iTransp) {
         descricao: String(r[2]||'').trim(),          // col 2 = Item - Nome
         quantidade: parseInt(r[3]) || 1,             // col 3 = Item - Qtde. pedida
         endereco:  String(r[4]||'').trim(),          // col 4 = Endereço do Produto no Estoque
-        cliente: '', transportadora: '', aguardando_desde: '',
+        cliente: '', transportadora: '', aguardando_desde: '', estado: '',
       });
     }
     if (!dadosItens.length) throw new Error('Nenhum item válido na sheet itens — coluna B deve ter o número do pedido (5+ dígitos). Primeiros valores col B: ' + [1,2,3].map(i => rowsI[i] ? String(rowsI[i][1]) : '').join(', '));
@@ -1088,6 +1088,11 @@ function _processarSheetsMIESS(wb, _norm, iItens, iTransp) {
       const iAg  = findT(c => c.includes('aguard'), 1);
       const iRaz = findT(c => c.includes('razao') || c.includes('social'), 2);
       const iSrv = findT(c => c.includes('servico') || c.includes('entrega'), 3);
+      // Coluna "Estado" (ou "Destinatário - Estado") — opcional, sem fallback por
+      // índice fixo: se não existir no arquivo, fica vazia e não derruba o resto
+      // do import. Usada pra imprimir na etiqueta e classificar NF cheia x
+      // Declaração (lib/helpers.js classificarFiscal).
+      const iEst = findT(c => c.includes('estado') || c.includes(' uf') || c === 'uf', -1);
       for (let i = 1; i < rowsT.length; i++) {
         const r   = rowsT[i];
         const num = String(r[iNum]||'').trim();       // Nº do pedido
@@ -1108,7 +1113,8 @@ function _processarSheetsMIESS(wb, _norm, iItens, iTransp) {
         } else {
           aguardando = String(val||'').trim();
         }
-        if (!transpLookup[num]) transpLookup[num] = { cliente, transportadora, aguardando_desde: aguardando };
+        const estado = iEst>=0 ? String(r[iEst]||'').trim().toUpperCase() : '';
+        if (!transpLookup[num]) transpLookup[num] = { cliente, transportadora, aguardando_desde: aguardando, estado };
       }
     }
 
@@ -1119,6 +1125,7 @@ function _processarSheetsMIESS(wb, _norm, iItens, iTransp) {
         if (tr.cliente)          item.cliente          = tr.cliente;
         if (tr.transportadora)   item.transportadora   = tr.transportadora;
         if (tr.aguardando_desde) item.aguardando_desde = tr.aguardando_desde;
+        if (tr.estado)           item.estado           = tr.estado;
       }
     }
 
