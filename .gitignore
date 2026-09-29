@@ -5,4 +5,4 @@ npm-debug.log
 *.db-wal
 .env
 .env.*
-!.env.example
+!.env.examplemockup-*.html
