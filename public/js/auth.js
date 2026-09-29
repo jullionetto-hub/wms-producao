@@ -386,6 +386,7 @@ function montarSidebar() {
       <a class="mi" onclick="irPara('pedidos',this)"><span class="mi-ic">${IC.pedidos}</span>Pedidos</a>
       <a class="mi" onclick="irPara('liberacao',this)"><span class="mi-ic">${IC.liberacao}</span>Liberação <span class="mbadge" id="menu-badge-lib" style="display:none;background:var(--red)">0</span></a>
       <a class="mi" onclick="irPara('performance',this)"><span class="mi-ic">${IC.performance}</span>Performance</a>
+      <a class="mi" href="/lideranca-turnos.htm" target="_blank" rel="noopener"><span class="mi-ic">${IC.performance}</span>Liderança dos Turnos</a>
       <a class="mi" onclick="irPara('relatorios',this)"><span class="mi-ic">${IC.relatorios}</span>Relatórios</a>
       <a class="mi" onclick="irPara('auditoria',this)"><span class="mi-ic">${IC.auditoria}</span>Auditoria</a>
       <a class="mi" onclick="irPara('diario',this)"><span class="mi-ic">${IC.diario}</span>Diário de Bordo<span class="mbadge" id="menu-badge-diario" style="display:none;background:var(--indigo)">!</span></a>
@@ -431,6 +432,7 @@ function montarSidebar() {
       <a class="mi" onclick="irPara('pedidos',this)"><span class="mi-ic">${IC.pedidos}</span>Pedidos</a>
       <a class="mi" onclick="irPara('liberacao',this)"><span class="mi-ic">${IC.liberacao}</span>Liberação <span class="mbadge" id="menu-badge-lib" style="display:none;background:var(--red)">0</span></a>
       <a class="mi" onclick="irPara('performance',this)"><span class="mi-ic">${IC.performance}</span>Performance</a>
+      <a class="mi" href="/lideranca-turnos.htm" target="_blank" rel="noopener"><span class="mi-ic">${IC.performance}</span>Liderança dos Turnos</a>
       <a class="mi" onclick="irPara('relatorios',this)"><span class="mi-ic">${IC.relatorios}</span>Relatórios</a>
       <a class="mi" onclick="irPara('auditoria',this)"><span class="mi-ic">${IC.auditoria}</span>Auditoria</a>
       <a class="mi" onclick="irPara('diario',this)"><span class="mi-ic">${IC.diario}</span>Diário de Bordo<span class="mbadge" id="menu-badge-diario" style="display:none;background:var(--indigo)">!</span></a>
