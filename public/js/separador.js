@@ -19,6 +19,43 @@ let _loteEndIdx        = 0;    // posição atual na navegação passo-a-passo
 let _lotePedidosAbertos = true; // seção "Pedidos do lote" expandida/recolhida
 let _loteAcaoAberta    = null; // "p:<ids>" ou "f:<ids>" — grupo com Parcial/Falta aberto
 
+// Modo de separação escolhido pelo separador na fila: 'lote' (lotes formados pelo
+// supervisor aparecem como card único) ou 'pedido' (pedidos dos lotes ainda não
+// iniciados aparecem soltos, um a um). Preferência guardada só neste aparelho.
+const _MODO_SEP_KEY = 'wms_modo_separacao';
+let _lotesPedidosAbertos = new Set(); // lotes com a lista "pedido a pedido" expandida
+
+function _modoSeparacao() {
+  try { return localStorage.getItem(_MODO_SEP_KEY) === 'pedido' ? 'pedido' : 'lote'; }
+  catch (e) { return 'lote'; }
+}
+
+function setModoSeparacao(modo) {
+  try { localStorage.setItem(_MODO_SEP_KEY, modo === 'pedido' ? 'pedido' : 'lote'); } catch (e) {}
+  carregarFilaMobile();
+}
+
+function _toggleLotePedidos(loteId) {
+  const box = document.getElementById(`lote-peds-${loteId}`);
+  if (!box) return;
+  const abrir = box.style.display === 'none';
+  box.style.display = abrir ? 'block' : 'none';
+  if (abrir) _lotesPedidosAbertos.add(String(loteId)); else _lotesPedidosAbertos.delete(String(loteId));
+  const seta = document.getElementById(`lote-peds-seta-${loteId}`);
+  if (seta) seta.textContent = abrir ? '▴' : '▾';
+}
+
+// Separa UM pedido de um lote ainda não iniciado: o servidor tira o pedido do
+// lote (o restante do lote continua intacto) e o fluxo segue como pedido comum.
+async function iniciarPedidoDoLoteMobile(pedidoId, numeroPedido) {
+  try {
+    const res = await fetch(`${API}/pedidos/${pedidoId}/tirar-do-lote`, { method:'PUT', credentials:'include' });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) { toast(data.erro || 'Não foi possível separar este pedido à parte', 'erro'); carregarFilaMobile(); return; }
+    selecionarPedidoFilaMobile(numeroPedido);
+  } catch (e) { toast('Erro de rede', 'erro'); }
+}
+
 // Paleta discreta pra diferenciar até 5 pedidos no mesmo lote — variações de
 // azul/slate/violeta (mesma família do --accent do sistema), sem cores
 // "arco-íris" (evitar tons quentes/saturados que destoam do tema corporativo).
@@ -813,13 +850,57 @@ async function carregarFilaMobile() {
           ${peds.slice(0,6).map((p,i)=>`<span style="background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:6px;padding:2px 8px;font-size:11px">#${p.numero_pedido}</span>`).join('')}
           ${peds.length>6?`<span style="font-size:11px;color:var(--text3);padding:2px 4px">+${peds.length-6}</span>`:''}
         </div>
+        ${emAndamento ? '' : _renderLotePedidoAPedido(loteId, peds)}
       </div>`;
     };
 
-    const loteSistemaCard = Object.entries(_gruposLoteSistema).map(([loteId, peds]) => _renderLoteCard(loteId, peds, { emAndamento:false })).join('')
+    // Dentro de um lote ainda não iniciado, o separador pode optar por pegar um
+    // pedido só (sai do lote no servidor; os demais continuam no lote).
+    const _renderLotePedidoAPedido = (loteId, peds) => {
+      const aberto = _lotesPedidosAbertos.has(String(loteId));
+      return `<div onclick="event.stopPropagation()" style="margin-top:10px;border-top:1px solid var(--border);padding-top:8px">
+        <button type="button" onclick="_toggleLotePedidos(${loteId})"
+          style="width:100%;background:none;border:none;color:var(--text2);font-size:12px;font-weight:600;padding:4px 0;cursor:pointer;display:flex;align-items:center;justify-content:space-between">
+          <span>Separar pedido a pedido</span><span id="lote-peds-seta-${loteId}">${aberto ? '▴' : '▾'}</span>
+        </button>
+        <div id="lote-peds-${loteId}" style="display:${aberto ? 'block' : 'none'};margin-top:6px">
+          ${peds.map(p => `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--border)">
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13px;font-weight:700;color:var(--text);font-family:'Space Mono',monospace">#${p.numero_pedido}</div>
+              <div style="font-size:11px;color:var(--text3)">${p.total_itens||p.itens||0} itens · ${p.itens||0} SKUs</div>
+            </div>
+            <button type="button" class="btn btn-outline btn-sm" style="padding:8px 12px;font-size:12px;font-weight:700"
+              onclick="iniciarPedidoDoLoteMobile(${p.id},'${p.numero_pedido}')">Separar só este</button>
+          </div>`).join('')}
+          <div style="font-size:10px;color:var(--text3);margin-top:4px">O pedido sai deste lote e é separado sozinho.</div>
+        </div>
+      </div>`;
+    };
+
+    // Modo "por lote": lotes (prontos e em andamento) como card único + pedidos soltos.
+    // Modo "pedido a pedido": pedidos de lotes ainda não iniciados aparecem soltos,
+    // um por card; lotes em andamento continuam como card pra poderem ser concluídos.
+    const modo = _modoSeparacao();
+    const loteSistemaCard = (modo === 'lote'
+        ? Object.entries(_gruposLoteSistema).map(([loteId, peds]) => _renderLoteCard(loteId, peds, { emAndamento:false })).join('')
+        : '')
       + Object.entries(_gruposLoteAndamento).map(([loteId, peds]) => _renderLoteCard(loteId, peds, { emAndamento:true })).join('');
 
-    lista.innerHTML = loteSistemaCard + loteCard + ordenadosMob.filter(p => !p.lote_id).map(p => {
+    const temLote = Object.keys(_gruposLoteSistema).length + Object.keys(_gruposLoteAndamento).length > 0;
+    const _btnModo = (valor, rotulo) => {
+      const ativo = modo === valor;
+      return `<button type="button" onclick="setModoSeparacao('${valor}')"
+        style="flex:1;padding:9px 6px;font-size:13px;font-weight:700;border:none;border-radius:8px;cursor:pointer;${ativo ? 'background:var(--accent);color:#fff' : 'background:transparent;color:var(--text2)'}">${rotulo}</button>`;
+    };
+    const seletorModo = temLote
+      ? `<div style="display:flex;gap:4px;padding:4px;margin-bottom:12px;background:var(--surface2);border:1px solid var(--border);border-radius:10px">
+          ${_btnModo('lote', 'Por lote')}${_btnModo('pedido', 'Pedido a pedido')}
+        </div>`
+      : '';
+
+    const pedidosSoltos = ordenadosMob.filter(p => !p.lote_id || (modo === 'pedido' && p.status === 'pendente'));
+
+    const _renderPedidoCard = (p) => {
       const transp   = String(p.transportadora||'').toUpperCase();
       const isDrive  = transp.includes('DRIVE');
       const isPrime  = p.tem_prime === true;
@@ -851,6 +932,7 @@ async function carregarFilaMobile() {
           <span><b style="color:var(--text)">${p.itens||0} SKUs</b></span>
           ${p.cliente ? `<span>${p.cliente}</span>` : ''}
           ${p.transportadora ? `<span>${p.transportadora}</span>` : ''}
+          ${p.lote_id ? `<span style="color:var(--text3)">do lote #${p.lote_id}</span>` : ''}
         </div>
         ${temSup ? `<div style="display:flex;align-items:center;gap:5px;background:rgba(139,92,246,.15);border:1px solid rgba(139,92,246,.4);border-radius:6px;padding:5px 9px;margin-bottom:5px">
           <span style="font-size:11px;font-weight:700;color:var(--indigo)">${qtdSup} item${qtdSup>1?'s':''} aguardando supervisor</span>
@@ -863,11 +945,13 @@ async function carregarFilaMobile() {
           <span style="font-size:11px;font-weight:700;color:var(--green)">${qtdReposto} item${qtdReposto>1?'s':''} reposto${qtdReposto>1?'s':''} pelo repositor — volte para este pedido!</span>
         </div>` : ''}
         <button class="btn btn-primary btn-sm" style="width:100%;margin-top:8px;padding:10px;font-size:14px;font-weight:700${temReposto?';background:#16a34a':''}"
-          onclick="selecionarPedidoFilaMobile('${p.numero_pedido}')">
+          onclick="${p.lote_id ? `iniciarPedidoDoLoteMobile(${p.id},'${p.numero_pedido}')` : `selecionarPedidoFilaMobile('${p.numero_pedido}')`}">
           ${temReposto ? 'Continuar Separação' : 'Iniciar Separação'}
         </button>
       </div>`);
-    }).join('');
+    };
+
+    lista.innerHTML = seletorModo + loteSistemaCard + loteCard + pedidosSoltos.map(_renderPedidoCard).join('');
     _initFilaDragReorder(lista);
   } catch(e) { console.warn(e); }
 }

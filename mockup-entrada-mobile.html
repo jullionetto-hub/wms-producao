@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Entrada Manual — Desktop + Mobile Mockup</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', sans-serif; background: #0a0f1e; color: #e2e8f0; min-height: 100vh; padding: 24px; }
+
+h1 { font-size: 18px; font-weight: 900; color: #f97316; margin-bottom: 6px; }
+.subtitle { font-size: 12px; color: #64748b; margin-bottom: 28px; }
+
+.frames { display: flex; gap: 32px; align-items: flex-start; flex-wrap: wrap; }
+
+/* ─── LABEL BADGE ─── */
+.frame-label {
+  font-size: 10px; font-weight: 800; color: #fff; letter-spacing: 1.5px;
+  background: #334155; padding: 4px 12px; border-radius: 20px;
+  margin-bottom: 12px; display: inline-block;
+}
+
+/* ══════════════════ MOBILE FRAME ══════════════════ */
+.phone-frame {
+  width: 375px; background: #0f172a; border-radius: 40px;
+  border: 8px solid #1e293b; box-shadow: 0 24px 80px rgba(0,0,0,.7);
+  overflow: hidden; position: relative;
+}
+.phone-notch {
+  background: #1e293b; height: 36px; border-radius: 0 0 20px 20px;
+  margin: 0 80px 0; display: flex; align-items: center; justify-content: center;
+  font-size: 9px; color: #475569;
+}
+.phone-body { padding: 0 0 24px; overflow-y: auto; max-height: 760px; }
+
+/* Mobile Top Bar */
+.m-topbar {
+  background: #1e293b; padding: 10px 16px;
+  display: flex; align-items: center; gap: 10px;
+  border-bottom: 1px solid #334155; position: sticky; top: 0; z-index: 10;
+}
+.m-back { color: #f97316; font-size: 18px; cursor: pointer; }
+.m-title { font-size: 14px; font-weight: 800; color: #f1f5f9; flex: 1; }
+.m-action { background: #f97316; color: #fff; border: none; border-radius: 8px; padding: 6px 12px; font-size: 11px; font-weight: 700; cursor: pointer; }
+
+/* Mobile Tabs */
+.m-tabs { display: flex; border-bottom: 1px solid #334155; background: #1e293b; }
+.m-tab { flex: 1; padding: 10px; text-align: center; font-size: 11px; font-weight: 700; color: #64748b; cursor: pointer; }
+.m-tab.active { color: #f97316; border-bottom: 2px solid #f97316; }
+
+/* Mobile Search/Filter */
+.m-filter { padding: 10px 12px; background: #0f172a; display: flex; gap: 8px; }
+.m-search {
+  flex: 1; background: #1e293b; border: 1px solid #334155; border-radius: 10px;
+  padding: 8px 12px; color: #e2e8f0; font-size: 12px; outline: none;
+}
+.m-filter-btn { background: #334155; border: none; border-radius: 10px; padding: 8px 12px; color: #94a3b8; font-size: 13px; cursor: pointer; }
+
+/* Mobile Upload Card */
+.m-upload {
+  margin: 10px 12px; background: #1e293b; border: 2px dashed #334155;
+  border-radius: 16px; padding: 18px; text-align: center;
+}
+.m-upload-icon { font-size: 28px; margin-bottom: 6px; }
+.m-upload-title { font-size: 13px; font-weight: 700; color: #e2e8f0; }
+.m-upload-sub { font-size: 10px; color: #64748b; margin-top: 2px; }
+.m-upload-btn {
+  display: block; width: 100%; margin-top: 12px;
+  background: #1e3a5f; color: #38bdf8; border: 1px solid #1d4ed8;
+  border-radius: 10px; padding: 10px; font-size: 12px; font-weight: 700; cursor: pointer;
+}
+
+/* Mobile Stats */
+.m-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 0 12px 8px; }
+.m-stat { background: #1e293b; border-radius: 10px; padding: 10px 12px; }
+.m-stat .lbl { font-size: 9px; font-weight: 700; color: #64748b; letter-spacing: .5px; }
+.m-stat .val { font-size: 20px; font-weight: 900; margin-top: 2px; }
+
+/* Mobile Cards */
+.m-card {
+  margin: 6px 12px; background: #1e293b; border-radius: 14px;
+  border: 1px solid #334155; overflow: hidden;
+}
+.m-card-header {
+  padding: 10px 14px 8px;
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;
+}
+.m-code { font-family: monospace; font-size: 11px; font-weight: 800; color: #f97316; }
+.m-desc { font-size: 12px; color: #e2e8f0; margin-top: 1px; }
+.m-badge { display: inline-flex; align-items: center; gap: 3px; padding: 3px 8px; border-radius: 20px; font-size: 9px; font-weight: 800; white-space: nowrap; flex-shrink: 0; margin-top: 2px; }
+.badge-ok  { background: #14532d; color: #22c55e; }
+.badge-pend{ background: #292524; color: #f59e0b; }
+.badge-zero{ background: #1f2937; color: #6b7280; }
+.badge-err { background: #3b0a0a; color: #f87171; }
+
+.m-card-body { border-top: 1px solid #334155; padding: 10px 14px; }
+.m-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.m-field-lbl { font-size: 9px; font-weight: 700; color: #64748b; letter-spacing: .5px; }
+.m-field-val { font-size: 12px; font-weight: 600; color: #e2e8f0; }
+.m-addr { font-family: monospace; font-size: 13px; font-weight: 800; color: #38bdf8; }
+.m-addr.valid { color: #22c55e; }
+.m-addr.warn  { color: #f59e0b; }
+.m-addr.error { color: #f87171; }
+
+/* Mobile QTD Control */
+.m-qty-wrap { display: flex; align-items: center; gap: 0; }
+.m-qty-btn {
+  width: 34px; height: 34px; background: #334155; border: 1px solid #475569;
+  border-radius: 8px; color: #e2e8f0; font-size: 18px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+}
+.m-qty-input {
+  width: 56px; text-align: center; background: #0f172a; border: none;
+  border-top: 1px solid #475569; border-bottom: 1px solid #475569;
+  color: #f1f5f9; font-size: 16px; font-weight: 900; padding: 6px 0;
+  outline: none;
+}
+.m-qty-input.ok   { color: #22c55e; border-color: #22c55e; }
+.m-qty-input.warn { color: #f59e0b; border-color: #f59e0b; }
+
+/* ADDRESS VALIDATION */
+.addr-input-wrap { position: relative; flex: 1; }
+.addr-input {
+  width: 100%; background: #0f172a; border: 1.5px solid #475569;
+  border-radius: 8px; padding: 7px 32px 7px 10px; color: #e2e8f0; font-family: monospace;
+  font-size: 13px; font-weight: 700; outline: none; text-transform: uppercase;
+}
+.addr-input.valid { border-color: #22c55e; color: #22c55e; }
+.addr-input.warn  { border-color: #f59e0b; color: #f59e0b; }
+.addr-input.error { border-color: #f87171; color: #f87171; }
+.addr-icon { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font-size: 14px; }
+.addr-hint {
+  font-size: 9px; font-weight: 700; padding: 3px 8px; border-radius: 6px; margin-top: 3px;
+  display: flex; align-items: center; gap: 4px;
+}
+.addr-hint.ok-hint   { background: #14532d22; color: #22c55e; }
+.addr-hint.warn-hint { background: #78350f22; color: #f59e0b; }
+.addr-hint.err-hint  { background: #7f1d1d22; color: #f87171; }
+
+/* Save BTN */
+.m-save-btn {
+  display: block; width: calc(100% - 28px); margin: 4px 14px 10px;
+  background: #f97316; color: #fff; border: none; border-radius: 10px;
+  padding: 11px; font-size: 13px; font-weight: 800; cursor: pointer;
+  text-align: center;
+}
+.m-save-btn.saved { background: #16a34a; }
+
+/* Bottom Nav */
+.m-bottom-nav {
+  position: sticky; bottom: 0; background: #1e293b; border-top: 1px solid #334155;
+  display: flex; justify-content: space-around; padding: 8px 0;
+  margin-top: 8px;
+}
+.m-nav-item { text-align: center; color: #64748b; font-size: 9px; font-weight: 700; cursor: pointer; padding: 4px 12px; }
+.m-nav-item .nav-ico { font-size: 20px; display: block; margin-bottom: 2px; }
+.m-nav-item.active { color: #f97316; }
+
+/* ══════════════════ VALIDATION PANEL ══════════════════ */
+.validation-panel {
+  width: 480px; background: #1e293b; border: 1px solid #334155; border-radius: 16px;
+  overflow: hidden;
+}
+.vp-header {
+  background: linear-gradient(135deg,#1e3a5f,#1e293b);
+  padding: 16px 20px; border-bottom: 1px solid #334155;
+}
+.vp-title { font-size: 15px; font-weight: 900; color: #f1f5f9; }
+.vp-sub { font-size: 11px; color: #64748b; margin-top: 3px; }
+.vp-body { padding: 16px 20px; }
+.vp-row { margin-bottom: 16px; }
+.vp-label { font-size: 9px; font-weight: 800; color: #64748b; letter-spacing: 1px; margin-bottom: 6px; }
+
+/* States */
+.state-demo { display: flex; flex-direction: column; gap: 10px; }
+.state-item { background: #0f172a; border-radius: 10px; padding: 12px 14px; border: 1px solid #334155; }
+.state-item.s-ok   { border-color: #22c55e44; }
+.state-item.s-warn { border-color: #f59e0b44; }
+.state-item.s-err  { border-color: #f8717144; }
+.state-top { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.state-icon { font-size: 20px; }
+.state-title { font-size: 13px; font-weight: 800; }
+.state-item.s-ok   .state-title { color: #22c55e; }
+.state-item.s-warn .state-title { color: #f59e0b; }
+.state-item.s-err  .state-title { color: #f87171; }
+.state-desc { font-size: 11px; color: #94a3b8; line-height: 1.5; }
+.state-example {
+  margin-top: 8px; background: #1e293b; border-radius: 8px; padding: 10px 12px;
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+}
+.ex-input {
+  font-family: monospace; font-size: 14px; font-weight: 800; padding: 5px 10px;
+  border-radius: 6px; border: 1.5px solid;
+}
+.ex-input.ok-inp   { border-color: #22c55e; color: #22c55e; background: #14532d22; }
+.ex-input.warn-inp { border-color: #f59e0b; color: #f59e0b; background: #78350f22; }
+.ex-input.err-inp  { border-color: #f87171; color: #f87171; background: #7f1d1d22; }
+.ex-label { font-size: 10px; color: #94a3b8; }
+.ex-msg { font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 6px; }
+.ex-msg.ok-msg   { background: #14532d; color: #22c55e; }
+.ex-msg.warn-msg { background: #78350f; color: #f59e0b; }
+.ex-msg.err-msg  { background: #7f1d1d; color: #f87171; }
+
+.format-box {
+  background: #0f172a; border: 1px solid #334155; border-radius: 10px;
+  padding: 12px 16px; margin-top: 12px;
+}
+.format-title { font-size: 11px; font-weight: 800; color: #e2e8f0; margin-bottom: 8px; }
+.format-pattern { font-family: monospace; font-size: 18px; color: #38bdf8; font-weight: 900; margin-bottom: 4px; }
+.format-desc { font-size: 10px; color: #64748b; }
+.format-examples { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.format-ex { font-family: monospace; font-size: 12px; font-weight: 700; padding: 3px 10px; background: #1e293b; border-radius: 6px; color: #94a3b8; border: 1px solid #334155; }
+.format-ex.valid { color: #22c55e; background: #14532d22; border-color: #22c55e44; }
+.format-ex.invalid { color: #f87171; background: #7f1d1d22; border-color: #f8717144; text-decoration: line-through; }
+
+.flow-steps { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.flow-step { display: flex; align-items: flex-start; gap: 10px; }
+.step-num { width: 22px; height: 22px; border-radius: 50%; background: #334155; color: #e2e8f0; font-size: 10px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+.step-num.ok { background: #14532d; color: #22c55e; }
+.step-num.warn { background: #78350f; color: #f59e0b; }
+.step-text { font-size: 11px; color: #94a3b8; line-height: 1.5; }
+.step-text b { color: #e2e8f0; }
+
+</style>
+</head>
+<body>
+
+<h1>📥 Entrada Manual — Mockup Visual</h1>
+<div class="subtitle">Desktop (Reposição) · Mobile · Validação de Endereço</div>
+
+<div class="frames">
+
+  <!-- ══ MOBILE FRAME ══ -->
+  <div>
+    <div class="frame-label">📱 MOBILE — REPOSIÇÃO / ENTRADA MANUAL</div>
+    <div class="phone-frame">
+      <div class="phone-notch">● ●  |  📶 🔋</div>
+      <div class="phone-body">
+
+        <!-- TOP BAR -->
+        <div class="m-topbar">
+          <div class="m-back">←</div>
+          <div class="m-title">📥 Entrada Manual</div>
+          <button class="m-action">+ Novo</button>
+        </div>
+
+        <!-- TABS -->
+        <div class="m-tabs">
+          <div class="m-tab active">📥 Registrar</div>
+          <div class="m-tab">📋 Histórico</div>
+        </div>
+
+        <!-- UPLOAD -->
+        <div class="m-upload">
+          <div class="m-upload-icon">📂</div>
+          <div class="m-upload-title">Importar Arquivo</div>
+          <div class="m-upload-sub">.xlsx · .xls · .csv</div>
+          <button class="m-upload-btn">📎 Selecionar Arquivo</button>
+        </div>
+
+        <!-- STATS -->
+        <div class="m-stats">
+          <div class="m-stat">
+            <div class="lbl">📦 TOTAL ITENS</div>
+            <div class="val" style="color:#38bdf8">42</div>
+          </div>
+          <div class="m-stat">
+            <div class="lbl">✅ ABASTECIDOS</div>
+            <div class="val" style="color:#22c55e">28</div>
+          </div>
+          <div class="m-stat">
+            <div class="lbl">⏳ PENDENTES</div>
+            <div class="val" style="color:#f59e0b">12</div>
+          </div>
+          <div class="m-stat">
+            <div class="lbl">❌ NÃO ENC.</div>
+            <div class="val" style="color:#ef4444">2</div>
+          </div>
+        </div>
+
+        <!-- FILTER -->
+        <div class="m-filter">
+          <input class="m-search" placeholder="🔍 Buscar código...">
+          <button class="m-filter-btn">⚙️</button>
+        </div>
+
+        <!-- CARD 1 — OK -->
+        <div class="m-card">
+          <div class="m-card-header">
+            <div>
+              <div class="m-code">PB521-Lollipop</div>
+              <div class="m-desc">Pirulito Morango 100g</div>
+            </div>
+            <span class="m-badge badge-ok">✅ Abastecido</span>
+          </div>
+          <div class="m-card-body">
+            <div class="m-row">
+              <div>
+                <div class="m-field-lbl">ENDEREÇO</div>
+                <div class="m-addr valid">A-01-02</div>
+              </div>
+              <div style="text-align:right">
+                <div class="m-field-lbl">QTD ESPERADA</div>
+                <div class="m-field-val">50 un</div>
+              </div>
+            </div>
+            <div class="m-row" style="margin-bottom:0">
+              <div class="m-field-lbl">QTD ABASTECIDA</div>
+              <div class="m-qty-wrap">
+                <div class="m-qty-btn">−</div>
+                <input class="m-qty-input ok" value="50">
+                <div class="m-qty-btn">+</div>
+              </div>
+            </div>
+          </div>
+          <button class="m-save-btn saved">✅ Salvo</button>
+        </div>
+
+        <!-- CARD 2 — PARCIAL + ENDEREÇO WARN -->
+        <div class="m-card">
+          <div class="m-card-header">
+            <div>
+              <div class="m-code">CH-CROCANTE-200</div>
+              <div class="m-desc">Chocolate Crocante 200g</div>
+            </div>
+            <span class="m-badge badge-pend">⏳ Parcial</span>
+          </div>
+          <div class="m-card-body">
+            <div class="m-row">
+              <div style="flex:1;margin-right:12px">
+                <div class="m-field-lbl">ENDEREÇO DO ESTOQUE ⚠️</div>
+                <div class="addr-input-wrap">
+                  <input class="addr-input warn" value="B-03-05">
+                  <span class="addr-icon">⚠️</span>
+                </div>
+                <div class="addr-hint warn-hint">⚠️ Endereço diferente do histórico (B-03-01)</div>
+              </div>
+              <div style="text-align:right;flex-shrink:0">
+                <div class="m-field-lbl">QTD ESP.</div>
+                <div class="m-field-val">30 un</div>
+              </div>
+            </div>
+            <div class="m-row" style="margin-bottom:0">
+              <div class="m-field-lbl">QTD ABASTECIDA</div>
+              <div class="m-qty-wrap">
+                <div class="m-qty-btn">−</div>
+                <input class="m-qty-input warn" value="18">
+                <div class="m-qty-btn">+</div>
+              </div>
+            </div>
+          </div>
+          <button class="m-save-btn">💾 Confirmar e Salvar</button>
+        </div>
+
+        <!-- CARD 3 — ERRO DE ENDEREÇO -->
+        <div class="m-card" style="border-color:#f8717144">
+          <div class="m-card-header">
+            <div>
+              <div class="m-code">DROPS-MENTA-12</div>
+              <div class="m-desc">Drops Menta Caixa c/ 12un</div>
+            </div>
+            <span class="m-badge badge-err">❌ Endereço Inválido</span>
+          </div>
+          <div class="m-card-body">
+            <div class="m-row">
+              <div style="flex:1;margin-right:12px">
+                <div class="m-field-lbl">ENDEREÇO DO ESTOQUE ❌</div>
+                <div class="addr-input-wrap">
+                  <input class="addr-input error" value="XZ-99">
+                  <span class="addr-icon">❌</span>
+                </div>
+                <div class="addr-hint err-hint">❌ Formato inválido. Use: A-01-01</div>
+              </div>
+              <div style="text-align:right;flex-shrink:0">
+                <div class="m-field-lbl">QTD ESP.</div>
+                <div class="m-field-val">24 un</div>
+              </div>
+            </div>
+            <div class="m-row" style="margin-bottom:0">
+              <div class="m-field-lbl">QTD ABASTECIDA</div>
+              <div class="m-qty-wrap">
+                <div class="m-qty-btn">−</div>
+                <input class="m-qty-input" value="0">
+                <div class="m-qty-btn">+</div>
+              </div>
+            </div>
+          </div>
+          <button class="m-save-btn" style="background:#475569;cursor:not-allowed">🔒 Corrija o Endereço</button>
+        </div>
+
+        <!-- BOTTOM NAV -->
+        <div class="m-bottom-nav">
+          <div class="m-nav-item">
+            <span class="nav-ico">🔧</span> Reposição
+          </div>
+          <div class="m-nav-item active">
+            <span class="nav-ico">📥</span> Entrada
+          </div>
+          <div class="m-nav-item">
+            <span class="nav-ico">📋</span> Protocolo
+          </div>
+          <div class="m-nav-item">
+            <span class="nav-ico">📦</span> Separar
+          </div>
+        </div>
+
+      </div><!-- phone-body -->
+    </div><!-- phone-frame -->
+  </div>
+
+  <!-- ══ VALIDAÇÃO PANEL ══ -->
+  <div>
+    <div class="frame-label">🔒 VALIDAÇÃO DE ENDEREÇO — REGRAS</div>
+    <div class="validation-panel">
+      <div class="vp-header">
+        <div class="vp-title">🔒 Como funciona a Validação de Endereço</div>
+        <div class="vp-sub">3 camadas de proteção contra erros de estoque</div>
+      </div>
+      <div class="vp-body">
+
+        <!-- FORMATO -->
+        <div class="vp-row">
+          <div class="vp-label">CAMADA 1 — FORMATO DO ENDEREÇO</div>
+          <div class="format-box">
+            <div class="format-title">Padrão esperado</div>
+            <div class="format-pattern">A-01-02</div>
+            <div class="format-desc">Letra (corredor) · Número (rua) · Número (posição)</div>
+            <div class="format-examples">
+              <span class="format-ex valid">A-01-02</span>
+              <span class="format-ex valid">B-03-01</span>
+              <span class="format-ex valid">C-12-04</span>
+              <span class="format-ex invalid">XZ-99</span>
+              <span class="format-ex invalid">A01-02</span>
+              <span class="format-ex invalid">abc</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3 ESTADOS -->
+        <div class="vp-row">
+          <div class="vp-label">CAMADA 2 — HISTÓRICO DO PRODUTO</div>
+          <div class="state-demo">
+
+            <div class="state-item s-ok">
+              <div class="state-top">
+                <span class="state-icon">✅</span>
+                <div class="state-title">Endereço Correto</div>
+              </div>
+              <div class="state-desc">Formato válido + produto já foi guardado aqui antes</div>
+              <div class="state-example">
+                <span class="ex-input ok-inp">A-01-02</span>
+                <span class="ex-label">→</span>
+                <span class="ex-msg ok-msg">✅ Endereço confirmado</span>
+              </div>
+            </div>
+
+            <div class="state-item s-warn">
+              <div class="state-top">
+                <span class="state-icon">⚠️</span>
+                <div class="state-title">Endereço Diferente do Histórico</div>
+              </div>
+              <div class="state-desc">Formato válido, mas produto costuma ir para outro local. <b>Pede confirmação antes de salvar.</b></div>
+              <div class="state-example">
+                <span class="ex-input warn-inp">B-03-05</span>
+                <span class="ex-label">→</span>
+                <div>
+                  <div class="ex-msg warn-msg">⚠️ Histórico: B-03-01</div>
+                  <div style="font-size:9px;color:#64748b;margin-top:3px">Clique para confirmar mesmo assim</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="state-item s-err">
+              <div class="state-top">
+                <span class="state-icon">❌</span>
+                <div class="state-title">Formato Inválido — Bloqueado</div>
+              </div>
+              <div class="state-desc">Não segue o padrão. <b>Botão salvar fica bloqueado</b> até corrigir.</div>
+              <div class="state-example">
+                <span class="ex-input err-inp">XZ-99</span>
+                <span class="ex-label">→</span>
+                <div>
+                  <div class="ex-msg err-msg">❌ Formato inválido</div>
+                  <div style="font-size:9px;color:#64748b;margin-top:3px">Use o padrão: A-01-02</div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- CAMADA 3 -->
+        <div class="vp-row" style="margin-bottom:0">
+          <div class="vp-label">CAMADA 3 — FLUXO DE CONFIRMAÇÃO</div>
+          <div class="flow-steps">
+            <div class="flow-step">
+              <div class="step-num ok">1</div>
+              <div class="step-text">Usuário digita o endereço → sistema valida o formato <b>em tempo real</b></div>
+            </div>
+            <div class="flow-step">
+              <div class="step-num ok">2</div>
+              <div class="step-text">Se válido, consulta o <b>histórico do produto</b> para checar se o endereço bate</div>
+            </div>
+            <div class="flow-step">
+              <div class="step-num warn">3</div>
+              <div class="step-text">Se endereço diferente: <b>popup de confirmação</b> "Este produto costuma ir para B-03-01. Quer salvar em B-03-05?"</div>
+            </div>
+            <div class="flow-step">
+              <div class="step-num" style="background:#7f1d1d;color:#f87171">4</div>
+              <div class="step-text">Se formato inválido: <b>botão salvar bloqueado</b> + mensagem de erro inline</div>
+            </div>
+            <div class="flow-step">
+              <div class="step-num ok">5</div>
+              <div class="step-text">Ao salvar com sucesso: <b>atualiza o histórico</b> com o novo endereço confirmado</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</div><!-- frames -->
+
+</body>
+</html>

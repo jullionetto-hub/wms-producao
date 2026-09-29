@@ -354,6 +354,72 @@ describe('Pedidos — bipar', () => {
 });
 
 /* ════════════════════════════════════════════════════════════
+   TIRAR DO LOTE — separador escolhe separar pedido a pedido
+════════════════════════════════════════════════════════════ */
+describe('Pedidos — tirar do lote', () => {
+  const SEP = { id: 5, nome: 'Sep', matricula: 'sep1', turno: 'Manhã', status: 'ativo' };
+
+  test('sem auth → 401', async () => {
+    const res = await request(app).put('/pedidos/1/tirar-do-lote');
+    expect(res.status).toBe(401);
+  });
+
+  test('ID inválido → 400', async () => {
+    const sepAgent = await loginSeparador(SEP);
+    const res = await sepAgent.put('/pedidos/abc/tirar-do-lote');
+    expect(res.status).toBe(400);
+  });
+
+  test('sem separador vinculado (supervisor) → 403', async () => {
+    const agent = request.agent(app);
+    await loginSupervisor(agent);
+    const res = await agent.put('/pedidos/1/tirar-do-lote');
+    expect(res.status).toBe(403);
+  });
+
+  test('pedido de outro separador → 403, nada é alterado', async () => {
+    const sepAgent = await loginSeparador(SEP);
+    mockDb.get.mockResolvedValueOnce({ id: 1, numero_pedido: '10', status: 'pendente', lote_id: 7, separador_id: 99 });
+    const res = await sepAgent.put('/pedidos/1/tirar-do-lote');
+    expect(res.status).toBe(403);
+    expect(mockPool.query.mock.calls.some(c => String(c[0]).includes('lote_id=NULL'))).toBe(false);
+  });
+
+  test('lote já iniciado (status separando) → 409', async () => {
+    const sepAgent = await loginSeparador(SEP);
+    mockDb.get.mockResolvedValueOnce({ id: 1, numero_pedido: '10', status: 'separando', lote_id: 7, separador_id: 5 });
+    const res = await sepAgent.put('/pedidos/1/tirar-do-lote');
+    expect(res.status).toBe(409);
+  });
+
+  test('pedido já fora de lote → 200 sem UPDATE', async () => {
+    const sepAgent = await loginSeparador(SEP);
+    mockDb.get.mockResolvedValueOnce({ id: 1, numero_pedido: '10', status: 'pendente', lote_id: null, separador_id: 5 });
+    const res = await sepAgent.put('/pedidos/1/tirar-do-lote');
+    expect(res.status).toBe(200);
+    expect(mockPool.query.mock.calls.some(c => String(c[0]).includes('lote_id=NULL'))).toBe(false);
+  });
+
+  test('corrida (UPDATE não afeta linha) → 409', async () => {
+    const sepAgent = await loginSeparador(SEP);
+    mockDb.get.mockResolvedValueOnce({ id: 1, numero_pedido: '10', status: 'pendente', lote_id: 7, separador_id: 5 });
+    mockPool.query.mockResolvedValueOnce({ rows: [] });
+    const res = await sepAgent.put('/pedidos/1/tirar-do-lote');
+    expect(res.status).toBe(409);
+  });
+
+  test('pendente do próprio separador → 200 e lote_id zerado', async () => {
+    const sepAgent = await loginSeparador(SEP);
+    mockDb.get.mockResolvedValueOnce({ id: 1, numero_pedido: '10', status: 'pendente', lote_id: 7, separador_id: 5 });
+    mockPool.query.mockResolvedValueOnce({ rows: [{ id: 1 }] });
+    const res = await sepAgent.put('/pedidos/1/tirar-do-lote');
+    expect(res.status).toBe(200);
+    expect(res.body.numero_pedido).toBe('10');
+    expect(mockPool.query.mock.calls.some(c => String(c[0]).includes('lote_id=NULL'))).toBe(true);
+  });
+});
+
+/* ════════════════════════════════════════════════════════════
    REORDENAR FILA (drag-and-drop do separador)
 ════════════════════════════════════════════════════════════ */
 describe('Pedidos — reordenar fila', () => {

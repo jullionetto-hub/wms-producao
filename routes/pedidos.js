@@ -574,6 +574,28 @@ router.put('/pedidos/:id/concluir-com-falta', requerAuth, async (req, res) => {
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
+// Separador escolhe separar UM pedido de um lote ainda não iniciado, pedido a pedido:
+// o pedido sai do lote (lote_id=NULL) e segue o fluxo normal de pedido individual.
+// Só o dono do lote e só enquanto 'pendente' — depois de iniciado o lote não se divide.
+router.put('/pedidos/:id/tirar-do-lote', requerAuth, async (req,res) => {
+  const id = validarId(req.params.id);
+  if (!id) return res.status(400).json({erro:'Id inválido!'});
+  const sepId = req.session?.separador?.id;
+  if (!sepId) return res.status(403).json({erro:'Usuário não vinculado a um separador.'});
+  try {
+    const ped = await db.get('SELECT id,numero_pedido,status,lote_id,separador_id FROM pedidos WHERE id=$1',[id]);
+    if (!ped) return res.status(404).json({erro:'Pedido não encontrado!'});
+    if (String(ped.separador_id) !== String(sepId)) return res.status(403).json({erro:'Este pedido não é seu.'});
+    if (!ped.lote_id) return res.json({mensagem:'Pedido já está fora de lote.', numero_pedido:ped.numero_pedido});
+    if (ped.status !== 'pendente') return res.status(409).json({erro:'O lote já foi iniciado — não é possível separar este pedido à parte.'});
+    const r = await pool.query(
+      `UPDATE pedidos SET lote_id=NULL WHERE id=$1 AND status='pendente' AND lote_id IS NOT NULL RETURNING id`,[id]);
+    if (!r.rows.length) return res.status(409).json({erro:'O lote já foi iniciado — não é possível separar este pedido à parte.'});
+    await registrarAuditoria(req, 'PEDIDO_TIRADO_DO_LOTE', 'pedido', id, {lote_id:ped.lote_id}, {lote_id:null});
+    res.json({mensagem:'Pedido separado do lote.', numero_pedido:ped.numero_pedido});
+  } catch(e){res.status(500).json({erro:e.message});}
+});
+
 router.put('/pedidos/:id/redefinir', requerAuth, requerPerfil('supervisor'), async (req,res) => {
   try { await pool.query(`UPDATE pedidos SET status='pendente',separador_id=NULL WHERE id=$1`,[req.params.id]); res.json({mensagem:'Redefinido!'}); }
   catch(e){res.status(500).json({erro:e.message});}
