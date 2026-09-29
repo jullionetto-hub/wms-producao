@@ -174,6 +174,11 @@ describe('Entrada manual — Lotes', () => {
     expect(res.status).toBe(200);
     expect(res.body.id).toBe(1);
     expect(res.body.itens).toHaveLength(1);
+    // Itens vêm em ordem natural de endereço (N203 antes de N221), não ordem de
+    // inserção — planilha "tudo misturado" era o problema reportado.
+    const itensQueryCall = mockDb.all.mock.calls.find(c => c[0].includes('FROM entrada_manual_itens WHERE lote_id=$1'));
+    expect(itensQueryCall[0]).toContain("SUBSTRING(endereco FROM '^[A-Za-z]+')");
+    expect(itensQueryCall[0]).toContain("SUBSTRING(endereco FROM '[0-9]+')");
   });
 
   test('DELETE /entrada-manual/lotes/:id como separador → 403', async () => {
@@ -375,15 +380,23 @@ describe('Entrada manual — Exportar CSV', () => {
     expect(res.status).toBe(401);
   });
 
-  test('GET /entrada-manual/exportar → 200 com CSV', async () => {
+  test('GET /entrada-manual/exportar → 200 com CSV, data e hora em colunas separadas', async () => {
     mockDb.all.mockResolvedValueOnce([
       { data_fmt: '09/05/2026', criado_por: 'admin', codigo: 'X1', descricao: 'Produto', quantidade_esperada: 10,
-        quantidade_abastecida: 10, endereco: 'D106', status: 'abastecido', responsavel: 'admin', obs: '', confirmado_em: '09/05/2026 10:00' },
+        quantidade_abastecida: 10, endereco: 'D106', status: 'abastecido', responsavel: 'admin', obs: '',
+        confirmado_data: '09/05/2026', confirmado_hora: '10:00' },
     ]);
     const res = await agent.get('/entrada-manual/exportar');
     expect(res.status).toBe(200);
     expect(res.headers['content-type']).toMatch(/text\/csv/);
     expect(res.text).toContain('Abastecido');
+    // Cabeçalho com "Data Confirmação"/"Hora Confirmação" em colunas separadas
+    // (antes era uma coluna só "Confirmado Em" com data+hora juntos).
+    expect(res.text).toContain('Data Confirmação;Hora Confirmação');
+    expect(res.text).toContain('09/05/2026;10:00');
+    // Query ordena por endereço em ordem natural, não por id de inserção.
+    const exportQueryCall = mockDb.all.mock.calls[0];
+    expect(exportQueryCall[0]).toContain("SUBSTRING(i.endereco FROM '^[A-Za-z]+')");
   });
 });
 
