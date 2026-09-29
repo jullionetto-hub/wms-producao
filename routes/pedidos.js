@@ -19,6 +19,15 @@ function _comPrioridade(r) {
 }
 const GeometriaEstoque = require('../public/js/geometria-estoque.js');
 
+// Colmeias são bins físicos extras (formato livre, ex: "Bancada 3 / Colmeia B12")
+// onde um mesmo código de produto pode ter várias localizações registradas, além
+// do endereço principal (corredor) já gravado em itens_pedido.endereco. Durante
+// a separação, mostra todas pra não o separador correr todas as ruas achando só
+// um endereço desatualizado. Subquery reaproveitada nos dois pontos que montam
+// a lista de itens pro separador (pedido individual e lote).
+const SUBQ_COLMEIA_ENDERECOS = `(SELECT STRING_AGG(DISTINCT c.endereco, ' · ' ORDER BY c.endereco)
+   FROM colmeias c WHERE c.codigo=i.codigo AND c.status='ativo' AND c.endereco<>'')`;
+
 router.get('/pedidos', requerAuth, async (req,res) => {
   const {separador_id,status,data,data_ini,data_fim,aguardando_ini,aguardando_fim,numero_pedido,page,pageSize}=req.query;
   try {
@@ -337,6 +346,7 @@ router.get('/pedidos/lote-itens', requerAuth, async (req,res) => {
       `SELECT i.*,
         COALESCE((SELECT a.status FROM avisos_repositor a WHERE a.item_id=i.id ORDER BY a.id DESC LIMIT 1),'') AS aviso_status,
         COALESCE((SELECT a.qtd_encontrada FROM avisos_repositor a WHERE a.item_id=i.id ORDER BY a.id DESC LIMIT 1),0) AS aviso_qtd_encontrada,
+        ${SUBQ_COLMEIA_ENDERECOS} AS colmeia_enderecos,
         p.numero_pedido
        FROM itens_pedido i JOIN pedidos p ON p.id=i.pedido_id
        WHERE i.pedido_id=ANY($1)
@@ -429,7 +439,8 @@ router.get('/pedidos/:id/itens', requerAuth, async (req,res) => {
     res.json(await db.all(
       `SELECT i.*,
         COALESCE((SELECT a.status        FROM avisos_repositor a WHERE a.item_id=i.id ORDER BY a.id DESC LIMIT 1),'') AS aviso_status,
-        COALESCE((SELECT a.qtd_encontrada FROM avisos_repositor a WHERE a.item_id=i.id ORDER BY a.id DESC LIMIT 1), 0) AS aviso_qtd_encontrada
+        COALESCE((SELECT a.qtd_encontrada FROM avisos_repositor a WHERE a.item_id=i.id ORDER BY a.id DESC LIMIT 1), 0) AS aviso_qtd_encontrada,
+        ${SUBQ_COLMEIA_ENDERECOS} AS colmeia_enderecos
        FROM itens_pedido i WHERE i.pedido_id=$1 ORDER BY i.id`,
       [req.params.id]
     ));

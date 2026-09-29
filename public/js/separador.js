@@ -168,6 +168,7 @@ function verDetalhePedidoLote(cx) {
       </div>
       ${item.codigo ? `<div style="font-size:12px;font-weight:700;color:var(--accent);font-family:monospace;margin-bottom:2px">Cód: ${item.codigo}</div>` : ''}
       <div style="font-size:11px;color:var(--text3);font-family:monospace">${item.endereco||'—'} · x${item.quantidade||1}</div>
+      ${item.colmeia_enderecos ? `<div style="font-size:11px;color:var(--indigo);font-family:monospace;margin-top:2px">Também em: ${item.colmeia_enderecos}</div>` : ''}
     </div>`;
   }).join('');
 
@@ -394,7 +395,8 @@ function _renderizarListaLote() {
 
     html += `<div style="margin:0 14px 12px;border-radius:10px;border:1px solid ${todosProc?(temFalta?'var(--amber)':'var(--green)'):'var(--border)'};background:var(--surface);padding:14px;${todosProc?'opacity:0.6':''}">
       <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px">${items[0].descricao||cod}</div>
-      <div style="font-size:11px;color:var(--text3);font-family:monospace;margin-bottom:10px">SKU: ${cod}</div>
+      <div style="font-size:11px;color:var(--text3);font-family:monospace;margin-bottom:${items[0].colmeia_enderecos?'2px':'10px'}">SKU: ${cod}</div>
+      ${items[0].colmeia_enderecos ? `<div style="font-size:11px;color:var(--indigo);font-family:monospace;margin-bottom:10px">Também em: ${items[0].colmeia_enderecos}</div>` : ''}
       <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(79,70,229,.12);border:1px solid var(--accent);color:var(--accent);font-size:13px;font-weight:700;padding:7px 14px;border-radius:8px;margin-bottom:12px">
         PEGAR ${totalQty} UNIDADE${totalQty===1?'':'S'}
       </div>
@@ -1653,6 +1655,7 @@ function renderChecklist(prefix) {
             <div style="font-family:'Space Mono',monospace;font-size:14px;font-weight:700;color:var(--text3);letter-spacing:-.3px;margin-bottom:2px">${item.codigo||'—'}</div>
             <div style="font-size:16px;font-weight:800;color:var(--text);line-height:1.3;margin-bottom:4px">${item.descricao||'<span style="color:var(--text3);font-style:italic">Sem descrição</span>'}</div>
             <div style="font-size:15px;font-weight:700;color:#818CF8;letter-spacing:.5px">${item.endereco||'—'}</div>
+            ${item.colmeia_enderecos ? `<div style="font-size:11px;font-weight:600;color:var(--indigo);margin-top:2px">Também em: ${item.colmeia_enderecos}</div>` : ''}
           </div>
           <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;margin-left:10px">
             ${item.status!=='pendente'?`<span style="font-size:9px;font-weight:800;letter-spacing:1.5px;padding:3px 8px;border-radius:4px;background:${cardAccent};color:#fff">${statusLabel}</span>`:''}
@@ -1709,6 +1712,7 @@ function renderChecklist(prefix) {
           <span style="font-family:'Space Mono',monospace;font-size:13px;font-weight:700;color:var(--text);background:var(--surface2);padding:2px 8px;border-radius:5px;border:1px solid var(--border)">×${item.quantidade||1}</span>
           ${item.hora_verificado?`<span style="font-size:10px;color:var(--text3)">${item.hora_verificado}</span>`:''}
         </div>
+        ${item.colmeia_enderecos ? `<div style="font-size:11px;font-weight:600;color:var(--indigo);margin-bottom:4px">Também em: ${item.colmeia_enderecos}</div>` : ''}
         <div style="font-size:12px;color:var(--text2);line-height:1.35">${item.descricao||'—'}</div>
         ${item.status==='falta'?`<div style="font-size:11px;color:var(--red);font-weight:600;margin-top:4px">Repositor notificado — aguardando reposição</div>`:''}
         ${item.status==='parcial'?`<div style="font-size:11px;color:var(--amber);font-weight:600;margin-top:4px">${item.obs||'Parcial'} — repositor notificado</div>`:''}

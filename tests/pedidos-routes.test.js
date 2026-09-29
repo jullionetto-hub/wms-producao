@@ -471,6 +471,10 @@ describe('Pedidos — lote (itens/iniciar/buscar-caixa/concluir)', () => {
     expect(res.body.itens[0].caixa_num).toBe(1); // pedido 1 é o primeiro da lista => caixa 1
     expect(res.body.itens[1].caixa_num).toBe(2);
     expect(res.body.pedidos).toHaveLength(2);
+    // Busca também as colmeias extras do código (além do endereço principal do item).
+    const itensQueryCall = mockDb.all.mock.calls.find(c => c[0].includes('FROM itens_pedido i JOIN pedidos p'));
+    expect(itensQueryCall[0]).toContain('colmeia_enderecos');
+    expect(itensQueryCall[0]).toContain("FROM colmeias c WHERE c.codigo=i.codigo AND c.status='ativo'");
   });
 
   test('POST /pedidos/lote/iniciar sem pedido_ids → 400', async () => {
@@ -562,6 +566,10 @@ describe('Pedidos — itens e verificação', () => {
     const res = await agent.get('/pedidos/1/itens');
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);
+    // Busca também as colmeias extras do código (além do endereço principal do item)
+    // pra mostrar "Também em: ..." na tela de separação.
+    const itensQueryCall = mockDb.all.mock.calls.find(c => c[0].includes('FROM itens_pedido i WHERE i.pedido_id=$1'));
+    expect(itensQueryCall[0]).toContain('colmeia_enderecos');
   });
 
   test('PUT /itens/:id/verificar item não encontrado → 404', async () => {
