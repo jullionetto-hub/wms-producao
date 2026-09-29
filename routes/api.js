@@ -24,5 +24,6 @@ router.use(require('./anomalias'));
 router.use(require('./permissoes'));
 router.use(require('./matriz'));
 router.use(require('./absenteismo'));
+router.use(require('./lideranca'));
 
 module.exports = router;

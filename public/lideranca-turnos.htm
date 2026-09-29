@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Performance da Liderança por Turno</title>
+<style>
+  :root {
+    --bg:#f5f6f8; --card:#fff; --ink:#1c2230; --mute:#6b7385; --line:#e3e6ec;
+    --accent:#2563eb; --ok:#15803d; --warn:#b45309; --bad:#b91c1c;
+    --t-manha:#2563eb; --t-tarde:#d97706; --t-noite:#7c3aed;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#12151c; --card:#1b202b; --ink:#e8ebf2; --mute:#98a1b5; --line:#2c3342;
+            --accent:#6ea0ff; --ok:#4ade80; --warn:#fbbf24; --bad:#f87171;
+            --t-manha:#6ea0ff; --t-tarde:#fbbf24; --t-noite:#b794f6; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; background:var(--bg); color:var(--ink); }
+  header { padding:16px; display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between; }
+  h1 { font-size:20px; margin:0; }
+  h2 { font-size:14px; margin:0 0 10px; color:var(--mute); text-transform:uppercase; letter-spacing:.04em; }
+  main { padding:0 16px 32px; max-width:1200px; margin:0 auto; }
+  .bar { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+  label { font-size:12px; color:var(--mute); display:flex; flex-direction:column; gap:2px; }
+  input, select, button, textarea { font:inherit; color:inherit; background:var(--card); border:1px solid var(--line); border-radius:8px; padding:7px 10px; }
+  button { cursor:pointer; }
+  button.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+  button:hover { filter:brightness(.96); }
+  .grid { display:grid; gap:12px; }
+  .kpis { grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); margin-bottom:12px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; }
+  .kpi .v { font-size:28px; font-weight:700; }
+  .kpi .s { font-size:12px; color:var(--mute); }
+  .two { grid-template-columns:repeat(auto-fit,minmax(340px,1fr)); margin-bottom:12px; }
+  table { width:100%; border-collapse:collapse; }
+  th, td { text-align:left; padding:8px 6px; border-bottom:1px solid var(--line); white-space:nowrap; }
+  th { font-size:12px; color:var(--mute); font-weight:600; cursor:pointer; user-select:none; }
+  td.n, th.n { text-align:right; font-variant-numeric:tabular-nums; }
+  .scroll { overflow-x:auto; }
+  .pill { display:inline-block; padding:2px 8px; border-radius:99px; font-size:12px; font-weight:600; }
+  .ok { color:var(--ok); } .warn { color:var(--warn); } .bad { color:var(--bad); }
+  .tag { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:6px; }
+  .pbar { height:8px; background:var(--line); border-radius:99px; overflow:hidden; min-width:80px; }
+  .pbar > i { display:block; height:100%; }
+  dialog { border:1px solid var(--line); border-radius:12px; background:var(--card); color:var(--ink); max-width:560px; width:calc(100% - 32px); }
+  dialog::backdrop { background:rgba(0,0,0,.45); }
+  .form { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
+  .form .full { grid-column:1/-1; }
+  .aviso { font-size:12px; color:var(--mute); margin-top:8px; }
+  svg text { fill:var(--mute); font-size:11px; }
+  .legend { display:flex; gap:12px; font-size:12px; color:var(--mute); margin-top:6px; flex-wrap:wrap; }
+  .empty { color:var(--mute); padding:24px; text-align:center; }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Performance da Liderança por Turno</h1>
+    <div class="aviso" id="fonteInfo"></div>
+  </div>
+  <div class="bar">
+    <label>De <input type="date" id="fIni"></label>
+    <label>Até <input type="date" id="fFim"></label>
+    <label>Turno
+      <select id="fTurno"><option value="">Todos</option><option>Manha</option><option>Tarde</option><option>Noite</option></select>
+    </label>
+    <button id="btnAtualizar">Atualizar do WMS</button>
+    <button class="primary" id="btnNovo">+ Lançar turno</button>
+    <button id="btnMetas">Metas e pesos</button>
+    <button id="btnCsvIn">Importar CSV</button>
+    <button id="btnCsvOut">Exportar CSV</button>
+    <button id="btnDemo">Dados de exemplo</button>
+    <input type="file" id="fileCsv" accept=".csv,text/csv" hidden>
+  </div>
+</header>
+
+<main>
+  <div class="card" id="aviso" hidden style="margin-bottom:12px"></div>
+  <section class="grid kpis" id="kpis"></section>
+
+  <section class="grid two">
+    <div class="card"><h2>Ranking de líderes</h2><div class="scroll" id="ranking"></div></div>
+    <div class="card"><h2>Comparativo entre turnos</h2><div id="porTurno"></div></div>
+  </section>
+
+  <section class="grid two">
+    <div class="card"><h2>Nota diária (evolução)</h2><div id="tendencia"></div><div class="legend" id="legTend"></div></div>
+    <div class="card"><h2>Pedidos separados vs. meta</h2><div id="metaChart"></div></div>
+  </section>
+
+  <section class="card">
+    <h2>Lançamentos</h2>
+    <div class="scroll" id="tabela"></div>
+  </section>
+  <p class="aviso">
+    Nota do líder = <b id="txtPesos"></b>. Com login de supervisor/gestor, os dados vêm direto do WMS (passagem de turno + diário de bordo validado pelo turno seguinte). Diário ou passagem ainda não validados não entram na nota; ausentes valem 0.<br>Sem login, vale o modo local: lançamentos ficam neste navegador e podem ser exportados em CSV.
+  </p>
+</main>
+
+<dialog id="dlgLanc">
+  <form method="dialog" id="formLanc" class="form">
+    <h2 class="full" id="dlgTitulo">Lançar turno</h2>
+    <label>Data <input type="date" name="data" required></label>
+    <label>Turno <select name="turno"><option>Manha</option><option>Tarde</option><option>Noite</option></select></label>
+    <label class="full">Líder / supervisor <input name="supervisor" required list="listaLideres"></label>
+    <datalist id="listaLideres"></datalist>
+    <label>Pedidos separados <input type="number" min="0" name="pedidos" value="0"></label>
+    <label>Checkouts feitos <input type="number" min="0" name="checkouts" value="0"></label>
+    <label>Pessoas presentes <input type="number" min="0" name="presentes" value="0"></label>
+    <label>Nota do diário (0-100) <input type="number" min="0" max="100" name="diarioNota" value="100"></label>
+    <label>Pontos perdidos na passagem <input type="number" min="0" max="100" name="pontosPerdidos" value="0"></label>
+    <label class="full">Ocorrências <textarea name="ocorrencias" rows="2"></textarea></label>
+    <div class="full bar" style="justify-content:flex-end">
+      <button type="button" id="lancCancel">Cancelar</button>
+      <button class="primary" value="ok">Salvar</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dlgMetas">
+  <form method="dialog" id="formMetas" class="form">
+    <h2 class="full">Metas por turno e pesos da nota</h2>
+    <label>Meta pedidos – Manhã <input type="number" min="1" name="m_Manha"></label>
+    <label>Meta pedidos – Tarde <input type="number" min="1" name="m_Tarde"></label>
+    <label>Meta pedidos – Noite <input type="number" min="1" name="m_Noite"></label>
+    <span></span>
+    <label>Peso: meta de pedidos (%) <input type="number" min="0" max="100" name="w_meta"></label>
+    <label>Peso: diário de bordo (%) <input type="number" min="0" max="100" name="w_diario"></label>
+    <label>Peso: qualidade da passagem (%) <input type="number" min="0" max="100" name="w_passagem"></label>
+    <div class="aviso full" id="avisoPesos">Os pesos devem somar 100.</div>
+    <div class="full bar" style="justify-content:flex-end">
+      <button type="button" id="metasCancel">Cancelar</button>
+      <button class="primary" value="ok">Salvar</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+(function () {
+  'use strict';
+  var LS_REG = 'lidTurnos.registros.v1', LS_CFG = 'lidTurnos.config.v1';
+  var TURNOS = ['Manha', 'Tarde', 'Noite'];
+  var TURNO_LBL = { Manha: 'Manhã', Tarde: 'Tarde', Noite: 'Noite' };
+  var TURNO_COR = { Manha: 'var(--t-manha)', Tarde: 'var(--t-tarde)', Noite: 'var(--t-noite)' };
+  var CFG_PADRAO = { metas: { Manha: 400, Tarde: 350, Noite: 250 }, pesos: { meta: 50, diario: 25, passagem: 25 } };
+  var CSV_COLS = ['data','turno','supervisor','pedidos_separados','checkouts_feitos','separadores_presentes','pontos_perdidos','diario_nota','ocorrencias'];
+
+  var $ = function (id) { return document.getElementById(id); };
+  var remoto = false;
+  var registros = ler(LS_REG, []);
+  var locais = registros;
+  var cfg = migraCfg(Object.assign({}, CFG_PADRAO, ler(LS_CFG, {})));
+  var ordem = { col: 'data', dir: -1 };
+  var editandoId = null;
+
+  function ler(k, def) { try { var v = JSON.parse(localStorage.getItem(k)); return v == null ? def : v; } catch (e) { return def; } }
+  function migraCfg(c) { if (c.pesos && c.pesos.diario == null) c.pesos = CFG_PADRAO.pesos; return c; }
+  function salvar() { if (remoto) return; locais = registros; try { localStorage.setItem(LS_REG, JSON.stringify(registros)); localStorage.setItem(LS_CFG, JSON.stringify(cfg)); } catch (e) {} }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]; }); }
+  function iso(d) { return d.toISOString().slice(0, 10); }
+  function fmtData(s) { var p = s.split('-'); return p[2] + '/' + p[1]; }
+  function pct(n) { return Math.round(n) + '%'; }
+  function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
+  function normTurno(t) { t = String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase(); return t.indexOf('tar') === 0 ? 'Tarde' : t.indexOf('noi') === 0 ? 'Noite' : 'Manha'; }
+
+  // ── Nota ────────────────────────────────────────────────────────────────────
+  // Componentes sem dado (null) saem da média e o peso é redistribuído: diário ainda não
+  // validado ou passagem ainda não conferida não penalizam o líder. Ausente = 0.
+  function calc(r) {
+    var meta = cfg.metas[r.turno] || 1;
+    var atingMeta = clamp(r.pedidos / meta * 100, 0, 100);
+    var diario = r.diarioNota != null ? r.diarioNota : (r.diarioStatus === 'ausente' || r.diarioStatus === 'rascunho' ? 0 : null);
+    var passagem = r.pontosPerdidos != null ? clamp(100 - r.pontosPerdidos, 0, 100) : (r.passagemStatus === 'ausente' ? 0 : null);
+    var w = cfg.pesos, soma = 0, tot = 0;
+    [[atingMeta, w.meta], [diario, w.diario], [passagem, w.passagem]].forEach(function (c) { if (c[0] != null) { tot += c[0] * c[1]; soma += c[1]; } });
+    return { atingMeta: atingMeta, diario: diario, passagem: passagem, nota: soma ? tot / soma : atingMeta, meta: meta };
+  }
+  function cls(nota) { return nota >= 85 ? 'ok' : nota >= 70 ? 'warn' : 'bad'; }
+  function cor(nota) { return nota >= 85 ? 'var(--ok)' : nota >= 70 ? 'var(--warn)' : 'var(--bad)'; }
+
+  function filtrados() {
+    var ini = $('fIni').value, fim = $('fFim').value, t = $('fTurno').value;
+    return registros.filter(function (r) {
+      return (!ini || r.data >= ini) && (!fim || r.data <= fim) && (!t || r.turno === t);
+    }).map(function (r) { return Object.assign({}, r, { c: calc(r) }); });
+  }
+  function media(arr, f) { return arr.length ? arr.reduce(function (a, x) { return a + f(x); }, 0) / arr.length : 0; }
+
+  // ── Render ──────────────────────────────────────────────────────────────────
+  function render() {
+    var dados = filtrados();
+    $('fonteInfo').textContent = (remoto ? 'Dados do WMS (passagem de turno + diário de bordo)' : 'Modo local (' + registros.length + ' lançamentos salvos neste navegador)') + ' · ' + dados.length + ' turnos no filtro';
+    $('txtPesos').textContent = cfg.pesos.meta + '% meta de pedidos + ' + cfg.pesos.diario + '% diário de bordo + ' + cfg.pesos.passagem + '% qualidade da passagem';
+    $('listaLideres').innerHTML = uniq(registros.map(function (r) { return r.supervisor; })).map(function (n) { return '<option value="' + esc(n) + '">'; }).join('');
+    renderKpis(dados); renderRanking(dados); renderTurnos(dados); renderTendencia(dados); renderMeta(dados); renderTabela(dados);
+  }
+  function uniq(a) { return a.filter(function (x, i) { return x && a.indexOf(x) === i; }); }
+
+  function renderKpis(d) {
+    if (!d.length) { $('kpis').innerHTML = '<div class="card empty" style="grid-column:1/-1">Nenhum lançamento no período. Use “Lançar turno”, importe um CSV ou carregue os dados de exemplo.</div>'; return; }
+    var nota = media(d, function (x) { return x.c.nota; });
+    var ped = d.reduce(function (a, x) { return a + x.pedidos; }, 0);
+    var dv = d.filter(function (x) { return x.c.diario != null; });
+    var pv = d.filter(function (x) { return x.pontosPerdidos != null; });
+    var perd = media(pv, function (x) { return x.pontosPerdidos; });
+    var abaixo = d.filter(function (x) { return x.c.nota < 70; }).length;
+    function k(t, v, s, c) { return '<div class="card kpi"><div class="s">' + t + '</div><div class="v ' + (c || '') + '">' + v + '</div><div class="s">' + s + '</div></div>'; }
+    $('kpis').innerHTML =
+      k('Nota média da liderança', nota.toFixed(1), d.length + ' turnos avaliados', cls(nota)) +
+      k('Pedidos separados', ped.toLocaleString('pt-BR'), 'média ' + Math.round(ped / d.length) + ' por turno') +
+      k('Atingimento de meta', pct(media(d, function (x) { return x.c.atingMeta; })), 'média dos turnos') +
+      k('Nota do diário de bordo', dv.length ? media(dv, function (x) { return x.c.diario; }).toFixed(1) : '–', dv.length + ' de ' + d.length + ' diários avaliados') +
+      k('Pontos perdidos na passagem', pv.length ? perd.toFixed(1) : '–', 'média por turno validado', perd > 15 ? 'bad' : perd > 5 ? 'warn' : 'ok') +
+      k('Turnos abaixo de 70', abaixo, pct(abaixo / d.length * 100) + ' dos turnos', abaixo ? 'bad' : 'ok');
+  }
+
+  function renderRanking(d) {
+    if (!d.length) { $('ranking').innerHTML = '<div class="empty">Sem dados.</div>'; return; }
+    var m = {};
+    d.forEach(function (x) { (m[x.supervisor] = m[x.supervisor] || []).push(x); });
+    var linhas = Object.keys(m).map(function (n) {
+      var a = m[n];
+      var tc = {}; a.forEach(function (x) { tc[x.turno] = (tc[x.turno] || 0) + 1; });
+      var turno = Object.keys(tc).sort(function (p, q) { return tc[q] - tc[p]; })[0];
+      // tendência: metade recente vs. metade anterior
+      var s = a.slice().sort(function (p, q) { return p.data < q.data ? -1 : 1; }), h = Math.floor(s.length / 2), tend = null;
+      if (h >= 2) tend = media(s.slice(h), function (x) { return x.c.nota; }) - media(s.slice(0, h), function (x) { return x.c.nota; });
+      return { n: n, turno: turno, dias: a.length, nota: media(a, function (x) { return x.c.nota; }), meta: media(a, function (x) { return x.c.atingMeta; }), tend: tend };
+    }).sort(function (p, q) { return q.nota - p.nota; });
+    $('ranking').innerHTML = '<table><thead><tr><th>#</th><th>Líder</th><th>Turno</th><th class="n">Turnos</th><th class="n">Meta</th><th style="min-width:130px">Nota</th><th class="n">Tend.</th></tr></thead><tbody>' +
+      linhas.map(function (l, i) {
+        var t = l.tend == null ? '–' : '<span class="' + (l.tend >= 0 ? 'ok' : 'bad') + '">' + (l.tend >= 0 ? '▲ ' : '▼ ') + Math.abs(l.tend).toFixed(1) + '</span>';
+        return '<tr><td>' + (i + 1) + '</td><td><b>' + esc(l.n) + '</b></td><td><span class="tag" style="background:' + TURNO_COR[l.turno] + '"></span>' + TURNO_LBL[l.turno] + '</td><td class="n">' + l.dias + '</td><td class="n">' + pct(l.meta) +
+          '</td><td><div class="bar" style="flex-wrap:nowrap"><b class="' + cls(l.nota) + '" style="width:36px">' + l.nota.toFixed(1) + '</b><div class="pbar" style="flex:1"><i style="width:' + l.nota + '%;background:' + cor(l.nota) + '"></i></div></div></td><td class="n">' + t + '</td></tr>';
+      }).join('') + '</tbody></table>';
+  }
+
+  function renderTurnos(d) {
+    if (!d.length) { $('porTurno').innerHTML = '<div class="empty">Sem dados.</div>'; return; }
+    var rows = TURNOS.map(function (t) {
+      var a = d.filter(function (x) { return x.turno === t; });
+      return { t: t, n: a.length, nota: media(a, function (x) { return x.c.nota; }), meta: media(a, function (x) { return x.c.atingMeta; }),
+               faltas: media(a.filter(function (x) { return x.c.diario != null; }), function (x) { return x.c.diario; }), pass: media(a.filter(function (x) { return x.c.passagem != null; }), function (x) { return x.c.passagem; }) };
+    }).filter(function (r) { return r.n; });
+    function linha(lbl, v, c) { return '<div class="bar" style="flex-wrap:nowrap;margin:3px 0"><span style="width:110px;font-size:12px;color:var(--mute)">' + lbl + '</span><div class="pbar" style="flex:1"><i style="width:' + v + '%;background:' + c + '"></i></div><span style="width:38px;text-align:right;font-variant-numeric:tabular-nums">' + Math.round(v) + '</span></div>'; }
+    $('porTurno').innerHTML = rows.map(function (r) {
+      return '<div style="margin-bottom:14px"><div><span class="tag" style="background:' + TURNO_COR[r.t] + '"></span><b>' + TURNO_LBL[r.t] + '</b> <span class="' + cls(r.nota) + '"><b>' + r.nota.toFixed(1) + '</b></span> <span class="aviso">' + r.n + ' turnos</span></div>' +
+        linha('Meta de pedidos', r.meta, TURNO_COR[r.t]) + linha('Diário de bordo', r.faltas, TURNO_COR[r.t]) + linha('Passagem', r.pass, TURNO_COR[r.t]) + '</div>';
+    }).join('');
+  }
+
+  function svgBase(w, h) { return '<svg viewBox="0 0 ' + w + ' ' + h + '" width="100%" role="img">'; }
+
+  function renderTendencia(d) {
+    if (!d.length) { $('tendencia').innerHTML = '<div class="empty">Sem dados.</div>'; $('legTend').innerHTML = ''; return; }
+    var W = 560, H = 220, L = 30, R = 8, T = 10, B = 24;
+    var dias = uniq(d.map(function (x) { return x.data; })).sort();
+    var x = function (i) { return L + (dias.length < 2 ? (W - L - R) / 2 : i * (W - L - R) / (dias.length - 1)); };
+    var y = function (v) { return T + (100 - v) / 100 * (H - T - B); };
+    var out = svgBase(W, H);
+    [0, 50, 70, 85, 100].forEach(function (g) { out += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(g) + '" y2="' + y(g) + '" stroke="var(--line)" ' + (g === 70 || g === 85 ? 'stroke-dasharray="4 3"' : '') + '/><text x="' + (L - 4) + '" y="' + (y(g) + 4) + '" text-anchor="end">' + g + '</text>'; });
+    var passo = Math.ceil(dias.length / 8);
+    dias.forEach(function (dia, i) { if (i % passo === 0) out += '<text x="' + x(i) + '" y="' + (H - 6) + '" text-anchor="middle">' + fmtData(dia) + '</text>'; });
+    var lg = '';
+    TURNOS.forEach(function (t) {
+      var pts = [];
+      dias.forEach(function (dia, i) { var a = d.filter(function (r) { return r.turno === t && r.data === dia; }); if (a.length) pts.push([x(i), y(media(a, function (r) { return r.c.nota; })), dia, media(a, function (r) { return r.c.nota; })]); });
+      if (!pts.length) return;
+      out += '<polyline fill="none" stroke="' + TURNO_COR[t] + '" stroke-width="2" points="' + pts.map(function (p) { return p[0] + ',' + p[1]; }).join(' ') + '"/>';
+      pts.forEach(function (p) { out += '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="3" fill="' + TURNO_COR[t] + '"><title>' + TURNO_LBL[t] + ' ' + fmtData(p[2]) + ': ' + p[3].toFixed(1) + '</title></circle>'; });
+      lg += '<span><span class="tag" style="background:' + TURNO_COR[t] + '"></span>' + TURNO_LBL[t] + '</span>';
+    });
+    $('tendencia').innerHTML = out + '</svg>';
+    $('legTend').innerHTML = lg + '<span>linhas tracejadas: 70 e 85</span>';
+  }
+
+  function renderMeta(d) {
+    if (!d.length) { $('metaChart').innerHTML = '<div class="empty">Sem dados.</div>'; return; }
+    var W = 560, H = 220, L = 40, R = 8, T = 10, B = 24;
+    var dias = uniq(d.map(function (x) { return x.data; })).sort().slice(-14);
+    var soma = function (dia) { return d.filter(function (r) { return r.data === dia; }); };
+    var totais = dias.map(function (dia) { var a = soma(dia); return { ped: a.reduce(function (s, r) { return s + r.pedidos; }, 0), meta: a.reduce(function (s, r) { return s + r.c.meta; }, 0) }; });
+    var max = Math.max.apply(null, totais.map(function (t) { return Math.max(t.ped, t.meta); })) * 1.1 || 1;
+    var y = function (v) { return T + (1 - v / max) * (H - T - B); };
+    var bw = (W - L - R) / dias.length;
+    var out = svgBase(W, H);
+    [0, .5, 1].forEach(function (f) { var v = max / 1.1 * f; out += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(v) + '" y2="' + y(v) + '" stroke="var(--line)"/><text x="' + (L - 4) + '" y="' + (y(v) + 4) + '" text-anchor="end">' + Math.round(v) + '</text>'; });
+    totais.forEach(function (t, i) {
+      var bx = L + i * bw + bw * .15, w = bw * .7, ok = t.ped >= t.meta;
+      out += '<rect x="' + bx + '" y="' + y(t.ped) + '" width="' + w + '" height="' + (H - B - y(t.ped)) + '" rx="3" fill="' + (ok ? 'var(--ok)' : 'var(--accent)') + '"><title>' + fmtData(dias[i]) + ': ' + t.ped + ' de ' + t.meta + '</title></rect>';
+      out += '<line x1="' + (bx - 3) + '" x2="' + (bx + w + 3) + '" y1="' + y(t.meta) + '" y2="' + y(t.meta) + '" stroke="var(--bad)" stroke-width="2"/>';
+      if (i % Math.ceil(dias.length / 10) === 0) out += '<text x="' + (bx + w / 2) + '" y="' + (H - 6) + '" text-anchor="middle">' + fmtData(dias[i]) + '</text>';
+    });
+    $('metaChart').innerHTML = out + '</svg>';
+  }
+
+  var STATUS_DIARIO = { ausente: 'não feito', rascunho: 'rascunho', enviado: 'a validar', expirado: 'a validar', validado: 'validado' };
+  var FALHA_LBL = { sep_ok: 'Separação', emb_ok: 'Embalagem', ck_ok: 'Checkout', rep_ok: 'Reposição', caixas_ok: 'Caixas p/ ruas', estoque_ok: 'Estoque' };
+  function diarioTip(r) {
+    var t = 'Diário: ' + (STATUS_DIARIO[r.diarioStatus] || '–') + (r.diarioValidador ? ' · validado por ' + r.diarioValidador : '');
+    if (r.diarioFalhas && r.diarioFalhas.length) t += ' · reprovado em: ' + r.diarioFalhas.map(function (f) { return FALHA_LBL[f] || f; }).join(', ');
+    return t;
+  }
+  function renderTabela(d) {
+    if (!d.length) { $('tabela').innerHTML = '<div class="empty">Sem lançamentos.</div>'; return; }
+    var cols = [['data','Data'],['turno','Turno'],['supervisor','Líder'],['pedidos','Pedidos','n'],['atingMeta','Meta','n'],['checkouts','Checkouts','n'],['diario','Diário','n'],['pontosPerdidos','Pts perdidos','n'],['nota','Nota','n']];
+    var val = function (r, c) { return c === 'atingMeta' ? r.c.atingMeta : c === 'nota' ? r.c.nota : c === 'diario' ? (r.c.diario == null ? -1 : r.c.diario) : c === 'pontosPerdidos' ? (r.pontosPerdidos == null ? -1 : r.pontosPerdidos) : r[c]; };
+    var s = d.slice().sort(function (a, b) { var x = val(a, ordem.col), y = val(b, ordem.col); return (x < y ? -1 : x > y ? 1 : 0) * ordem.dir; });
+    $('tabela').innerHTML = '<table><thead><tr>' + cols.map(function (c) { return '<th data-col="' + c[0] + '" class="' + (c[2] || '') + '">' + c[1] + (ordem.col === c[0] ? (ordem.dir > 0 ? ' ▲' : ' ▼') : '') + '</th>'; }).join('') + '<th></th></tr></thead><tbody>' +
+      s.map(function (r) {
+        return '<tr title="' + esc(r.ocorrencias) + '"><td>' + fmtData(r.data) + '</td><td><span class="tag" style="background:' + TURNO_COR[r.turno] + '"></span>' + TURNO_LBL[r.turno] + '</td><td>' + esc(r.supervisor) + '</td><td class="n">' + r.pedidos + '</td><td class="n">' + pct(r.c.atingMeta) + '</td><td class="n">' + r.checkouts + '</td><td class="n" title="' + esc(diarioTip(r)) + '">' + (r.c.diario == null ? '<span class="aviso">' + esc(STATUS_DIARIO[r.diarioStatus] || '–') + '</span>' : Math.round(r.c.diario)) + '</td><td class="n">' + (r.pontosPerdidos == null ? '<span class="aviso">' + (r.passagemStatus === 'ausente' ? 'sem passagem' : 'a validar') + '</span>' : r.pontosPerdidos) + '</td><td class="n"><b class="' + cls(r.c.nota) + '">' + r.c.nota.toFixed(1) + '</b></td><td class="n">' + (remoto ? '' : '<button data-ed="' + r.id + '">Editar</button> <button data-del="' + r.id + '">✕</button>') + '</td></tr>';
+      }).join('') + '</tbody></table>';
+  }
+
+  // ── Ações ───────────────────────────────────────────────────────────────────
+  $('tabela').addEventListener('click', function (e) {
+    var th = e.target.closest('th[data-col]');
+    if (th) { ordem = { col: th.dataset.col, dir: ordem.col === th.dataset.col ? -ordem.dir : -1 }; render(); return; }
+    if (e.target.dataset.del && confirm('Excluir este lançamento?')) { registros = registros.filter(function (r) { return r.id !== e.target.dataset.del; }); salvar(); render(); }
+    if (e.target.dataset.ed) abrirLanc(registros.filter(function (r) { return r.id === e.target.dataset.ed; })[0]);
+  });
+  $('fTurno').addEventListener('change', render);
+
+  function abrirLanc(r) {
+    var f = $('formLanc'); editandoId = r ? r.id : null;
+    $('dlgTitulo').textContent = r ? 'Editar lançamento' : 'Lançar turno';
+    f.reset();
+    if (r) { f.data.value = r.data; f.turno.value = r.turno; f.supervisor.value = r.supervisor; f.pedidos.value = r.pedidos; f.checkouts.value = r.checkouts; f.presentes.value = r.presentes; f.diarioNota.value = r.diarioNota == null ? 0 : r.diarioNota; f.pontosPerdidos.value = r.pontosPerdidos == null ? 0 : r.pontosPerdidos; f.ocorrencias.value = r.ocorrencias; }
+    else f.data.value = iso(new Date());
+    $('dlgLanc').showModal();
+  }
+  $('btnNovo').onclick = function () { abrirLanc(null); };
+  $('lancCancel').onclick = function () { $('dlgLanc').close(); };
+  $('formLanc').addEventListener('submit', function (e) {
+    var f = e.target, n = function (k) { return Math.max(0, parseInt(f[k].value, 10) || 0); };
+    var r = { id: editandoId || String(Date.now()) + Math.random().toString(36).slice(2, 6), data: f.data.value, turno: f.turno.value, supervisor: f.supervisor.value.trim(),
+      pedidos: n('pedidos'), checkouts: n('checkouts'), presentes: n('presentes'), diarioNota: Math.min(100, n('diarioNota')), diarioStatus: 'validado', passagemStatus: 'validado', pontosPerdidos: Math.min(100, n('pontosPerdidos')), ocorrencias: f.ocorrencias.value.trim() };
+    if (!r.data || !r.supervisor) return;
+    registros = registros.filter(function (x) { return x.id !== r.id && !(x.data === r.data && x.turno === r.turno && !editandoId); });
+    registros.push(r); salvar(); render();
+  });
+
+  $('btnMetas').onclick = function () {
+    var f = $('formMetas');
+    TURNOS.forEach(function (t) { f['m_' + t].value = cfg.metas[t]; });
+    f.w_meta.value = cfg.pesos.meta; f.w_diario.value = cfg.pesos.diario; f.w_passagem.value = cfg.pesos.passagem;
+    $('dlgMetas').showModal();
+  };
+  $('metasCancel').onclick = function () { $('dlgMetas').close(); };
+  $('formMetas').addEventListener('submit', function (e) {
+    var f = e.target, p = { meta: +f.w_meta.value || 0, diario: +f.w_diario.value || 0, passagem: +f.w_passagem.value || 0 };
+    if (p.meta + p.diario + p.passagem !== 100) { e.preventDefault(); $('avisoPesos').className = 'aviso bad full'; $('avisoPesos').textContent = 'Os pesos somam ' + (p.meta + p.diario + p.passagem) + ' — ajuste para 100.'; return; }
+    TURNOS.forEach(function (t) { cfg.metas[t] = Math.max(1, +f['m_' + t].value || 1); });
+    cfg.pesos = p; salvar(); render();
+  });
+
+  // ── CSV ─────────────────────────────────────────────────────────────────────
+  function csvCell(v) { v = String(v == null ? '' : v); return /[;"\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
+  $('btnCsvOut').onclick = function () {
+    var linhas = [CSV_COLS.join(';')].concat(registros.map(function (r) {
+      return [r.data, r.turno, r.supervisor, r.pedidos, r.checkouts, r.presentes, r.pontosPerdidos == null ? '' : r.pontosPerdidos, r.diarioNota == null ? '' : r.diarioNota, r.ocorrencias].map(csvCell).join(';');
+    }));
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob(['﻿' + linhas.join('\n')], { type: 'text/csv;charset=utf-8' }));
+    a.download = 'lideranca-turnos-' + iso(new Date()) + '.csv'; a.click(); URL.revokeObjectURL(a.href);
+  };
+  function parseCsv(txt) {
+    txt = txt.replace(/^﻿/, ''); var sep = (txt.split('\n')[0].match(/;/g) || []).length >= (txt.split('\n')[0].match(/,/g) || []).length ? ';' : ',';
+    var rows = [], row = [], cell = '', q = false;
+    for (var i = 0; i < txt.length; i++) {
+      var c = txt[i];
+      if (q) { if (c === '"') { if (txt[i + 1] === '"') { cell += '"'; i++; } else q = false; } else cell += c; }
+      else if (c === '"') q = true;
+      else if (c === sep) { row.push(cell); cell = ''; }
+      else if (c === '\n' || c === '\r') { if (c === '\r' && txt[i + 1] === '\n') i++; row.push(cell); rows.push(row); row = []; cell = ''; }
+      else cell += c;
+    }
+    if (cell || row.length) { row.push(cell); rows.push(row); }
+    return rows.filter(function (r) { return r.some(function (x) { return x.trim(); }); });
+  }
+  $('btnCsvIn').onclick = function () { $('fileCsv').click(); };
+  $('fileCsv').addEventListener('change', function (e) {
+    var file = e.target.files[0]; if (!file) return;
+    var rd = new FileReader();
+    rd.onload = function () {
+      var rows = parseCsv(String(rd.result)), h = rows.shift().map(function (x) { return x.trim().toLowerCase(); }), ix = function (k) { return h.indexOf(k); };
+      if (ix('data') < 0 || ix('supervisor') < 0) { alert('CSV inválido: precisa das colunas data e supervisor.'); return; }
+      var g = function (r, k) { var i = ix(k); return i < 0 ? '' : (r[i] || '').trim(); }, n = function (r, k) { return Math.max(0, parseInt(g(r, k), 10) || 0); }, add = 0;
+      rows.forEach(function (r) {
+        var d = g(r, 'data'); if (/^\d{2}\/\d{2}\/\d{4}$/.test(d)) d = d.split('/').reverse().join('-');
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(d) || !g(r, 'supervisor')) return;
+        var t = normTurno(g(r, 'turno'));
+        registros = registros.filter(function (x) { return !(x.data === d && x.turno === t); });
+        registros.push({ id: String(Date.now()) + Math.random().toString(36).slice(2, 6), data: d, turno: t, supervisor: g(r, 'supervisor'), pedidos: n(r, 'pedidos_separados'), checkouts: n(r, 'checkouts_feitos'),
+          presentes: n(r, 'separadores_presentes'), pontosPerdidos: Math.min(100, n(r, 'pontos_perdidos')), diarioNota: g(r, 'diario_nota') === '' ? 100 : Math.min(100, n(r, 'diario_nota')), diarioStatus: 'validado', passagemStatus: 'validado', ocorrencias: g(r, 'ocorrencias') });
+        add++;
+      });
+      salvar(); locais = registros; setPeriodoPadrao(); recarregar(); alert(add + ' lançamentos importados.'); e.target.value = '';
+    };
+    rd.readAsText(file, 'utf-8');
+  });
+
+  // ── Dados de exemplo (claramente fictícios) ─────────────────────────────────
+  $('btnDemo').onclick = function () {
+    if (registros.length && !confirm('Isto SUBSTITUI os lançamentos atuais por dados fictícios de exemplo. Continuar?')) return;
+    var lideres = { Manha: ['Líder A', 'Líder B'], Tarde: ['Líder C'], Noite: ['Líder D'] }, base = { Manha: 1.02, Tarde: 0.92, Noite: 0.8 };
+    var seed = 7; var rnd = function () { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+    registros = [];
+    for (var i = 29; i >= 0; i--) {
+      var dt = new Date(); dt.setDate(dt.getDate() - i); if (dt.getDay() === 0) continue;
+      TURNOS.forEach(function (t) {
+        var l = lideres[t][Math.floor(i / 7) % lideres[t].length], meta = cfg.metas[t];
+        var ped = Math.round(meta * clamp(base[t] + (rnd() - .5) * .35 - (30 - i) * -0.002, .5, 1.25));
+        registros.push({ id: 'demo' + i + t, data: iso(dt), turno: t, supervisor: l, pedidos: ped, checkouts: Math.round(ped * (.85 + rnd() * .15)), presentes: 8 + Math.round(rnd() * 6), pontosPerdidos: rnd() < .6 ? 0 : Math.round(rnd() * 30), diarioNota: rnd() < .7 ? 100 : 85 - Math.round(rnd() * 3) * 5, diarioStatus: 'validado', passagemStatus: 'validado', ocorrencias: '' });
+      });
+    }
+    salvar(); locais = registros; setPeriodoPadrao(); recarregar();
+  };
+
+  function setPeriodoPadrao() {
+    var ds = registros.map(function (r) { return r.data; }).sort();
+    var fim = ds.length ? ds[ds.length - 1] : iso(new Date()), d = new Date(fim + 'T12:00:00'); d.setDate(d.getDate() - 29);
+    $('fFim').value = fim; $('fIni').value = iso(d);
+  }
+  // ── Carga do WMS ────────────────────────────────────────────────────────────
+  function aviso(html) { $('aviso').hidden = !html; $('aviso').innerHTML = html || ''; }
+  function modoManual(on) { ['btnNovo', 'btnCsvIn', 'btnDemo'].forEach(function (id) { $(id).hidden = !on; }); }
+
+  function carregar() {
+    var ini = $('fIni').value, fim = $('fFim').value;
+    if (!ini || !fim) return Promise.resolve();
+    return fetch('/lideranca/turnos?ini=' + ini + '&fim=' + fim, { credentials: 'same-origin' }).then(function (res) {
+      if (res.status === 401) throw { auth: true };
+      if (res.status === 403) throw { perm: true };
+      if (!res.ok) throw { msg: 'HTTP ' + res.status };
+      return res.json();
+    }).then(function (lista) {
+      remoto = true; registros = lista.map(function (r, i) { r.id = 'w' + i; return r; }); modoManual(false); aviso('');
+    }).catch(function (e) {
+      remoto = false; registros = locais; modoManual(true);
+      aviso(e && e.auth ? '<b>Você não está logado no WMS.</b> <a href="/">Entre no sistema</a> (perfil supervisor ou gestor) e volte a esta página para ver os dados reais. Enquanto isso, o modo local abaixo continua funcionando.'
+          : e && e.perm ? '<b>Sem permissão.</b> Esta página exige perfil supervisor ou gestor. Mostrando o modo local.'
+          : '<b>Não foi possível buscar os dados do WMS</b> (' + esc((e && e.msg) || 'servidor indisponível') + '). Mostrando o modo local.');
+    });
+  }
+  function recarregar() { return carregar().then(render); }
+  ['fIni', 'fFim'].forEach(function (id) { $(id).addEventListener('change', recarregar); });
+  $('btnAtualizar').onclick = recarregar;
+
+  // período padrão no WMS: últimos 30 dias
+  (function () { var f = new Date(), i = new Date(); i.setDate(i.getDate() - 29); $('fFim').value = iso(f); $('fIni').value = iso(i); })();
+  recarregar();
+})();
+</script>
+</body>
+</html>
