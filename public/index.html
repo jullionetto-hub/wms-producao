@@ -53,6 +53,14 @@
       font-size: 4mm; font-weight: 600; overflow:hidden; text-overflow:ellipsis;
       white-space:nowrap; flex:0 0 auto; margin-top:1mm;
     }
+    /* Estado do destinatário já resolvido em NF cheia x Declaração/Talão (ver
+       lib/helpers.js classificarFiscal) — destaque em caixa pro checkout bater
+       o olho sem precisar consultar o cartaz de estados na mesa. */
+    .etiqueta .et-fiscal {
+      font-size: 3.4mm; font-weight: 800; text-transform:uppercase; white-space:nowrap;
+      border: .5mm solid #000; border-radius: 1mm; padding: .3mm 2mm;
+      display:inline-block; flex:0 0 auto; margin-top:1mm; align-self:flex-start;
+    }
     .etiqueta .et-meta {
       font-size: 3mm; font-weight: 600; color:#333; overflow:hidden; text-overflow:ellipsis;
       white-space:nowrap; flex:0 0 auto; margin-top:.5mm;
@@ -504,7 +512,7 @@
             <!-- TOTALIZADORES inline -->
             <div id="ped-totalizadores" style="display:none;gap:0;align-items:center;margin-left:auto"></div>
           </div>
-          <div class="tabela-wrap"><table><thead><tr><th>Nº PEDIDO</th><th>CLIENTE</th><th>TRANSPORTADORA</th><th>AGUARDANDO DESDE</th><th>PRIORIDADE</th><th>USUÁRIO</th><th>STATUS</th><th onclick="ordenarPedidosPor('skus')" style="cursor:pointer;white-space:nowrap" title="Ordenar por SKUs">SKUs <span id="seta-ord-skus" style="opacity:.4">↕</span></th><th onclick="ordenarPedidosPor('itens')" style="cursor:pointer;white-space:nowrap" title="Ordenar por itens">ITENS <span id="seta-ord-itens" style="opacity:.4">↕</span></th><th>⏱ TEMPO EST.</th></tr></thead><tbody id="tbody-ped"></tbody></table></div>
+          <div class="tabela-wrap"><table><thead><tr><th>Nº PEDIDO</th><th>CLIENTE</th><th>TRANSPORTADORA</th><th>UF</th><th>AGUARDANDO DESDE</th><th>PRIORIDADE</th><th>USUÁRIO</th><th>STATUS</th><th onclick="ordenarPedidosPor('skus')" style="cursor:pointer;white-space:nowrap" title="Ordenar por SKUs">SKUs <span id="seta-ord-skus" style="opacity:.4">↕</span></th><th onclick="ordenarPedidosPor('itens')" style="cursor:pointer;white-space:nowrap" title="Ordenar por itens">ITENS <span id="seta-ord-itens" style="opacity:.4">↕</span></th><th>⏱ TEMPO EST.</th></tr></thead><tbody id="tbody-ped"></tbody></table></div>
         </div>
       </div>
 
@@ -2452,7 +2460,7 @@
 
 <script src="/js/geometria-estoque.js?v=1"></script>
 <script src="/js/config.js?v=15"></script>
-  <script src="/js/pedidos.js?v=52"></script>
+  <script src="/js/pedidos.js?v=53"></script>
   <script src="/js/separador.js?v=33"></script>
   <script src="/js/repositor.js?v=19"></script>
   <script src="/js/checkout.js?v=15"></script>

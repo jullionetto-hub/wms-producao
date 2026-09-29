@@ -734,17 +734,19 @@ router.post('/pedidos/importar', requerAuth, requerPerfil('supervisor'), async (
       const cliente       = itens[0]?.cliente||'';
       const transportadora= itens[0]?.transportadora||'';
       const aguardando    = itens[0]?.aguardando_desde||'';
+      const estado        = String(itens[0]?.estado||'').trim().toUpperCase().slice(0,2);
       const r=await pool.query(
-        `INSERT INTO pedidos (numero_pedido,status,itens,total_itens,rua,cliente,transportadora,aguardando_desde,pontuacao,data_pedido,hora_pedido,tem_prime,status_embalagem)
-         VALUES ($1,'pendente',$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'nao_iniciado')
+        `INSERT INTO pedidos (numero_pedido,status,itens,total_itens,rua,cliente,transportadora,aguardando_desde,pontuacao,data_pedido,hora_pedido,tem_prime,status_embalagem,estado)
+         VALUES ($1,'pendente',$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'nao_iniciado',$12)
          ON CONFLICT(numero_pedido) DO UPDATE SET
            cliente=CASE WHEN pedidos.cliente='' OR pedidos.cliente IS NULL THEN EXCLUDED.cliente ELSE pedidos.cliente END,
            transportadora=CASE WHEN pedidos.transportadora='' OR pedidos.transportadora IS NULL THEN EXCLUDED.transportadora ELSE pedidos.transportadora END,
            aguardando_desde=CASE WHEN pedidos.aguardando_desde='' OR pedidos.aguardando_desde IS NULL THEN EXCLUDED.aguardando_desde ELSE pedidos.aguardando_desde END,
+           estado=CASE WHEN pedidos.estado='' OR pedidos.estado IS NULL THEN EXCLUDED.estado ELSE pedidos.estado END,
            data_pedido=EXCLUDED.data_pedido,
            hora_pedido=EXCLUDED.hora_pedido
          RETURNING id, (xmax = 0) AS inserido`,
-        [numero,itensCount,totalItens,itens[0]?.endereco||'',cliente,transportadora,aguardando,pts,hoje,hora,itensReais.some(i=>String(i.codigo||'').toUpperCase()==='PRIME')]);
+        [numero,itensCount,totalItens,itens[0]?.endereco||'',cliente,transportadora,aguardando,pts,hoje,hora,itensReais.some(i=>String(i.codigo||'').toUpperCase()==='PRIME'),estado]);
       if (!r.rows[0]){ignorados++;continue;}
       const pid=r.rows[0].id;
       const pedidoNovo=r.rows[0].inserido;
@@ -1362,7 +1364,7 @@ router.post('/pedidos/lote/formar', requerAuth, requerPerfil('supervisor'), asyn
           // Campos extras só pra imprimir etiqueta do lote (mesmo formato de imprimirEtiquetas
           // em pedidos.js) sem depender da lista filtrada da tela de Pedidos, que pode estar
           // com outro filtro ativo e não conter todos os pedidos deste lote.
-          cliente: p.cliente||'', transportadora: p.transportadora||'',
+          cliente: p.cliente||'', transportadora: p.transportadora||'', estado: p.estado||'',
           skus: p._skusQtd, total_itens: p._itensQtd, aguardando_desde: p.aguardando_desde||'',
         })),
         ruas: l.ruas,

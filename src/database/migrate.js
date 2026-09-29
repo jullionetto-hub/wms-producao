@@ -105,6 +105,11 @@ const ALTERATIONS = [
   // Separação por lote (formação automática) — aponta o pedido de volta pro
   // lotes_separacao que o agrupou, se houver.
   "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS lote_id INTEGER DEFAULT NULL",
+  // Estado (UF) do destinatário — vem da coluna "Destinatário - Estado" do
+  // arquivo de transportadora importado. Usado pra imprimir na etiqueta e
+  // classificar automaticamente NF cheia x Declaração/Talão (ver
+  // lib/helpers.js classificarFiscal).
+  "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS estado TEXT DEFAULT ''",
 ];
 
 async function runSchema() {

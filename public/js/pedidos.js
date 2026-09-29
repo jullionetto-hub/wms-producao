@@ -2,6 +2,18 @@
    PEDIDOS
 ══════════════════════════════════════════ */
 
+// Mesma classificação de lib/helpers.js classificarFiscal — duplicada aqui porque
+// o frontend não importa módulos do backend. Usada na coluna UF da tabela e na
+// etiqueta, pra já sair sabendo se o pedido é NF cheia ou Declaração/Talão.
+const _ESTADOS_NF_CHEIA   = new Set(['AL','CE','MS','MT','PB','PI','RN','RO','SE']);
+const _ESTADOS_DECLARACAO = new Set(['AC','AM','AP','BA','DF','ES','GO','MA','MG','PA','PE','PR','RJ','RR','RS','SC','SP','TO']);
+function _fiscalLabel(uf) {
+  const sigla = String(uf||'').trim().toUpperCase();
+  if (_ESTADOS_NF_CHEIA.has(sigla)) return 'NF cheia';
+  if (_ESTADOS_DECLARACAO.has(sigla)) return 'Declaração';
+  return '';
+}
+
 function filtrarPedidosHoje() {
   const h = hojeLocal();
   document.getElementById('filtro-ped-ini').value = h;
@@ -272,7 +284,7 @@ function _renderTabelaPedidos() {
   }
   // ───────────────────────────────────────────────────────────────
   if (!lista.length) {
-    tbody.innerHTML = '<tr><td colspan="10" style="color:var(--text3);text-align:center;padding:28px">Nenhum pedido</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="11" style="color:var(--text3);text-align:center;padding:28px">Nenhum pedido</td></tr>';
     return;
   }
   const isDrive = p => String(p.transportadora||'').toUpperCase().includes('DRIVE');
@@ -290,6 +302,7 @@ function _renderTabelaPedidos() {
       </td>
       <td style="font-size:11px;color:var(--text2);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.cliente||''}">${p.cliente||'—'}</td>
       <td style="font-size:11px;font-weight:700;color:${corTransp}">${p.transportadora||'—'}${primeBadge}</td>
+      <td style="font-size:11px;white-space:nowrap">${p.estado ? `<span title="${_fiscalLabel(p.estado) || 'estado não mapeado'}" style="font-weight:700;color:var(--text2)">${p.estado}</span>${_fiscalLabel(p.estado) ? ` <span class="pill" style="font-size:9px;padding:1px 6px;background:${_fiscalLabel(p.estado)==='NF cheia'?'rgba(87,185,129,.15)':'rgba(139,92,246,.15)'};color:${_fiscalLabel(p.estado)==='NF cheia'?'var(--green)':'var(--indigo)'};border:1px solid ${_fiscalLabel(p.estado)==='NF cheia'?'rgba(87,185,129,.35)':'rgba(139,92,246,.35)'}">${_fiscalLabel(p.estado)}</span>` : ''}` : '<span style="color:var(--text3)">—</span>'}</td>
       <td style="font-size:11px;color:var(--amber);font-weight:600;white-space:nowrap">${p.aguardando_desde||'—'}</td>
       <td>${_badgePrioridade(p.prioridade)}</td>
       <td style="font-size:12px;color:var(--text2)">${p.separador_nome||'—'}</td>
@@ -783,9 +796,10 @@ function _imprimirEtiquetasLista(lista) {
           <span class="et-pedido">#${pfEsc(p.numero_pedido)}</span>
           ${p.caixa_lote_num ? `<span class="et-caixa">CX ${pfEsc(p.caixa_lote_num)}</span>` : ''}
         </span>
-        <span class="et-envio">${pfEsc(p.transportadora||'—')}</span>
+        <span class="et-envio">${pfEsc(p.transportadora||'—')}${p.estado ? ` · ${pfEsc(p.estado)}` : ''}</span>
       </div>
       <div class="et-cliente">${pfEsc(p.cliente||'—')}</div>
+      ${_fiscalLabel(p.estado) ? `<div class="et-fiscal">${pfEsc(_fiscalLabel(p.estado))}</div>` : ''}
       <div class="et-meta">${p.itens||p.skus||0} SKUs · ${p.total_itens||p.itens||0} itens · desde ${pfEsc(p.aguardando_desde||'—')}</div>
       <div class="et-barcode"><svg data-barcode="${pfEsc(p.numero_pedido)}"></svg></div>
     </div>`).join('');
@@ -1206,6 +1220,7 @@ function processarArquivoHTML(file) {
         const colData       = headerCells.findIndex(c => c.includes('data') || c.includes('movim'));
         const colAguardando = headerCells.findIndex(c => c.includes('aguard'));
         const colServico    = headerCells.findIndex(c => c.includes('servi') || c.includes('entrega') || c.includes('frete'));
+        const colEstado     = headerCells.findIndex(c => c.includes('estado') || c.includes(' uf') || c === 'uf');
         if (colPedido < 0) throw new Error('Coluna "Nº do pedido" não localizada no cabeçalho');
         const dados = [];
         for (let i = headerIdx + 1; i < rows.length; i++) {
@@ -1219,7 +1234,8 @@ function processarArquivoHTML(file) {
           const aguardando = colAguardando >= 0 ? cells[colAguardando]?.textContent.trim() : '';
           const servico = colServico >= 0 ? cells[colServico]?.textContent.trim() : '';
           const transportadora = /SEDEX/i.test(servico) ? 'SEDEX' : /PAC/i.test(servico) ? 'PAC' : servico;
-          dados.push({ numero_pedido:num, codigo:'', descricao:'', quantidade:0, endereco:'', cliente, transportadora, aguardando_desde: aguardando||data, total_itens_hint:qtd });
+          const estado = colEstado >= 0 ? cells[colEstado]?.textContent.trim().toUpperCase() : '';
+          dados.push({ numero_pedido:num, codigo:'', descricao:'', quantidade:0, endereco:'', cliente, transportadora, aguardando_desde: aguardando||data, total_itens_hint:qtd, estado });
         }
         if (!dados.length) throw new Error('Nenhum pedido válido encontrado no HTML');
         pedidosImportar = dados;
@@ -1311,6 +1327,8 @@ async function processarDoisHTMLs(htmlFiles) {
       const tAgu = ft(c => c.includes('aguard'));
       const tRaz = ft(c => c.includes('razao') || c.includes('social'));
       const tSrv = ft(c => c.includes('servico') || c.includes('entrega'));
+      // "Destinatário - Estado" — mesma lógica opcional da aba Transportadora do Excel.
+      const tEst = ft(c => c.includes('estado') || c.includes(' uf') || c === 'uf');
 
       for (const row of infoTransp.doc.querySelectorAll('tr')) {
         const cells = Array.from(row.querySelectorAll(':scope > td'));
@@ -1322,7 +1340,8 @@ async function processarDoisHTMLs(htmlFiles) {
         const servico      = tSrv >= 0 ? cells[tSrv]?.textContent.trim() : '';
         const transportadora = /SEDEX/i.test(servico) ? 'SEDEX' : /PAC/i.test(servico) ? 'PAC' : servico;
         const aguardando   = tAgu >= 0 ? cells[tAgu]?.textContent.trim() : '';
-        if (!transpLookup[num]) transpLookup[num] = { cliente, transportadora, aguardando_desde: aguardando };
+        const estado       = tEst >= 0 ? cells[tEst]?.textContent.trim().toUpperCase() : '';
+        if (!transpLookup[num]) transpLookup[num] = { cliente, transportadora, aguardando_desde: aguardando, estado };
       }
     }
 
@@ -1333,6 +1352,7 @@ async function processarDoisHTMLs(htmlFiles) {
         if (tr.transportadora)   item.transportadora    = tr.transportadora;
         if (tr.aguardando_desde) item.aguardando_desde  = tr.aguardando_desde;
         if (!item.cliente && tr.cliente) item.cliente   = tr.cliente;
+        if (tr.estado)            item.estado           = tr.estado;
       }
     }
 
@@ -1899,6 +1919,10 @@ function processarArquivoModalFile(file) {
         const iPed  = tCab.findIndex(c=>c.includes('pedido')) >= 0 ? tCab.findIndex(c=>c.includes('pedido')) : 0;
         const iCli  = tCab.findIndex(c=>c.includes('razao')||c.includes('cliente')||c.includes('nome')) >= 0 ? tCab.findIndex(c=>c.includes('razao')||c.includes('cliente')||c.includes('nome')) : 2;
         const iServ = tCab.findIndex(c=>c.includes('servico')||c.includes('entrega')||c.includes('transport')) >= 0 ? tCab.findIndex(c=>c.includes('servico')||c.includes('entrega')||c.includes('transport')) : 3;
+        // Coluna "Destinatário - Estado" — opcional (sem valor default: se não vier no
+        // arquivo, não sobrescreve o que já existe no pedido). Usada pra imprimir na
+        // etiqueta e classificar NF cheia x Declaração (lib/helpers.js classificarFiscal).
+        const iEst  = tCab.findIndex(c=>c.includes('estado')||c.includes(' uf')||c==='uf');
         for (let i = 1; i < tRows.length; i++) {
           const r = tRows[i];
           const num = String(r[iPed]||'').trim();
@@ -1936,7 +1960,7 @@ function processarArquivoModalFile(file) {
               agVal = String(raw).trim();
             }
           }
-          transpData[num] = { cliente:String(r[iCli]||'').trim(), transportadora:String(r[iServ]||'').trim(), aguardando_desde:agVal };
+          transpData[num] = { cliente:String(r[iCli]||'').trim(), transportadora:String(r[iServ]||'').trim(), aguardando_desde:agVal, estado: iEst>=0 ? String(r[iEst]||'').trim().toUpperCase() : '' };
         }
       }
       // Filtra: só importa pedidos que existem na aba Transportadora
@@ -1945,7 +1969,7 @@ function processarArquivoModalFile(file) {
       if (transpSheet && Object.keys(transpData).length > 0) {
         const antes = new Set(dados.map(d=>d.numero_pedido)).size;
         dadosFiltrados = dados.filter(d => transpData[d.numero_pedido]);
-        dadosFiltrados.forEach(d => { const t = transpData[d.numero_pedido]; d.cliente = t.cliente; d.transportadora = t.transportadora; d.aguardando_desde = t.aguardando_desde||''; });
+        dadosFiltrados.forEach(d => { const t = transpData[d.numero_pedido]; d.cliente = t.cliente; d.transportadora = t.transportadora; d.aguardando_desde = t.aguardando_desde||''; d.estado = t.estado||''; });
         const depois = new Set(dadosFiltrados.map(d=>d.numero_pedido)).size;
         const ignorados = antes - depois;
         if (ignorados > 0) {
@@ -1959,7 +1983,7 @@ function processarArquivoModalFile(file) {
         Object.keys(transpData).forEach(num => {
           if (!pedidosComItens.has(num)) {
             const t = transpData[num];
-            dadosFiltrados.push({ numero_pedido:num, codigo:'', descricao:'', quantidade:0, endereco:'', cliente:t.cliente, transportadora:t.transportadora, aguardando_desde:t.aguardando_desde||'' });
+            dadosFiltrados.push({ numero_pedido:num, codigo:'', descricao:'', quantidade:0, endereco:'', cliente:t.cliente, transportadora:t.transportadora, aguardando_desde:t.aguardando_desde||'', estado:t.estado||'' });
             semItens++;
           }
         });

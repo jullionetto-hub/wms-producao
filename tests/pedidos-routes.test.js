@@ -853,6 +853,19 @@ describe('Pedidos — importação', () => {
     expect(res.body.importados).toBe(0);
   });
 
+  test('POST /pedidos/importar grava o estado (UF) vindo da coluna Destinatário - Estado', async () => {
+    mockPool.query.mockResolvedValueOnce({ rows: [{ id: 56, inserido: true }] }); // INSERT pedidos
+    mockPool.query.mockResolvedValueOnce({ rows: [] }); // SELECT itens_pedido existentes
+    const clientMock = { query: jest.fn().mockResolvedValue({ rows: [] }), release: jest.fn() };
+    mockPool.connect.mockResolvedValueOnce(clientMock);
+    const res = await agent.post('/pedidos/importar').send({
+      pedidos: [{ numero_pedido: '1003', codigo: 'A1', descricao: 'Produto', endereco: 'A1', quantidade: 1, estado: ' rj ' }],
+    });
+    expect(res.status).toBe(200);
+    const insertCall = mockPool.query.mock.calls.find(c => String(c[0]).includes('INSERT INTO pedidos'));
+    expect(insertCall[1]).toContain('RJ'); // normalizado: trim + maiúsculo
+  });
+
   test('POST /importar (alias) redireciona 307 para /pedidos/importar', async () => {
     const res = await agent.post('/importar').send({ pedidos: [] }).redirects(0);
     expect(res.status).toBe(307);
