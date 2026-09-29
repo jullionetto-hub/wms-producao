@@ -372,6 +372,7 @@ const _IC = {
   matriz:      `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>`,
   colmeias:    `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 3 7v10l9 5 9-5V7z"/><path d="M12 2v20"/><path d="M3 7l9 5 9-5"/></svg>`,
   controlTower:`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v6"/><path d="M8 5a4 4 0 0 1 8 0"/><path d="M5 9a7 7 0 0 1 14 0"/><rect x="9" y="9" width="6" height="6" rx="1"/><path d="M10 15v7"/><path d="M14 15v7"/><path d="M8 22h8"/></svg>`,
+  barcode:     `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="5" x2="4" y2="19"/><line x1="8" y1="5" x2="8" y2="19"/><line x1="12" y1="5" x2="12" y2="19"/><line x1="15" y1="5" x2="15" y2="19"/><line x1="19" y1="5" x2="19" y2="19"/></svg>`,
 };
 
 function montarSidebar() {
@@ -402,7 +403,8 @@ function montarSidebar() {
     separador: `
       <div class="mg">SEPARAÇÃO</div>
       <a class="mi ativo" onclick="irPara('separacao',this)"><span class="mi-ic">${IC.separacao}</span>Pedidos</a>
-      <a class="mi" onclick="irPara('estatisticas-sep',this);carregarEstatisticasSep()"><span class="mi-ic">${IC.estatisticas}</span>Estatísticas</a>`,
+      <a class="mi" onclick="irPara('estatisticas-sep',this);carregarEstatisticasSep()"><span class="mi-ic">${IC.estatisticas}</span>Estatísticas</a>
+      <a class="mi" onclick="irPara('entrada-manual',this)"><span class="mi-ic">${IC.barcode}</span>Código de Barras</a>`,
     repositor: `
       <div class="mg">REPOSIÇÃO</div>
       <a class="mi ativo" onclick="irPara('reposicao',this)"><span class="mi-ic">${IC.reposicao}</span>Solicitações <span class="mbadge" id="menu-badge-rep" style="display:none">0</span></a>
@@ -413,11 +415,13 @@ function montarSidebar() {
     checkout: `
       <div class="mg">CHECKOUT</div>
       <a class="mi ativo" onclick="irPara('checkout',this)"><span class="mi-ic">${IC.checkout}</span>Checkout</a>
+      <a class="mi" onclick="irPara('entrada-manual',this)"><span class="mi-ic">${IC.barcode}</span>Código de Barras</a>
       <div class="mg">ANÁLISE</div>
       <a class="mi" onclick="irPara('estatisticas-ck',this)"><span class="mi-ic">${IC.estatisticas}</span>Estatísticas</a>`,
     embalador: `
       <div class="mg">EMBALAGEM</div>
       <a class="mi ativo" onclick="irPara('embalagem',this)"><span class="mi-ic">${IC.embalagem}</span>Embalar</a>
+      <a class="mi" onclick="irPara('entrada-manual',this)"><span class="mi-ic">${IC.barcode}</span>Código de Barras</a>
       <div class="mg">ANÁLISE</div>
       <a class="mi" onclick="irPara('estatisticas-emb',this);carregarEstatisticasEmb()"><span class="mi-ic">${IC.estatisticas}</span>Estatísticas</a>`,
     gestor: `
