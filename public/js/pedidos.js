@@ -494,6 +494,27 @@ function _renderListaUsuarios() {
   }).join('');
 }
 
+// Exporta login + senha inicial (padrão PrimeiroNome@2026) só de quem ainda
+// não trocou a senha — depois da troca a senha original vira irrecuperável
+// (fica só o hash bcrypt no banco), então não tem como listar a senha atual.
+function exportarUsuariosExcel() {
+  if (!_usrTodos.length) { toast('Carregue os usuários antes de exportar!','aviso'); return; }
+  try {
+    const rows = [['NOME','LOGIN','PERFIL','TURNO','STATUS','SENHA INICIAL (' + new Date().getFullYear() + ')']];
+    _usrTodos.forEach(u => {
+      const primeiroNome = (u.nome||'').trim().split(' ')[0];
+      const senhaSugerida = u.senha_temporaria ? `${primeiroNome}@${new Date().getFullYear()}` : 'Já alterada pelo usuário';
+      rows.push([u.nome, u.login, u.perfil, _turnoLabel[u.turno]||u.turno||'', u.status, senhaSugerida]);
+    });
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [{wch:25},{wch:18},{wch:12},{wch:10},{wch:10},{wch:22}];
+    XLSX.utils.book_append_sheet(wb, ws, 'Usuários');
+    XLSX.writeFile(wb, `usuarios_acessos_${hojeLocal()}.xlsx`);
+    toast('Excel exportado! Apague o arquivo depois de distribuir as senhas.','sucesso');
+  } catch(e) { toast('Erro ao exportar!','erro'); }
+}
+
 async function vincularTodosSeparadores() {
   const btn = event?.target;
   if (btn) { btn.disabled = true; btn.textContent = 'Corrigindo...'; }
@@ -526,6 +547,28 @@ async function carregarUsuarios() {
 
 
 
+// Sugere LOGIN (nome.sobrenome) e SENHA (PrimeiroNome@AnoAtual) a partir do
+// nome completo, só enquanto o supervisor não tiver editado esses campos à
+// mão (dataset.editado) — assim ele pode sobrescrever em caso de duplicidade.
+function sugerirLoginSenha() {
+  const nome = document.getElementById('usr-nome').value.trim();
+  if (!nome) return;
+  const partes = nome.split(/\s+/).filter(Boolean);
+  const norm = p => p.normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-zA-Z]/g,'').toLowerCase();
+  const loginEl = document.getElementById('usr-login');
+  if (loginEl && loginEl.dataset.editado !== '1') {
+    const primeiro = norm(partes[0]||'');
+    const ultimo   = partes.length > 1 ? norm(partes[partes.length-1]) : '';
+    loginEl.value = ultimo ? `${primeiro}.${ultimo}` : primeiro;
+  }
+  const senhaEl = document.getElementById('usr-senha');
+  if (senhaEl && senhaEl.dataset.editado !== '1') {
+    const p0 = partes[0] || '';
+    const primeiroCap = p0.charAt(0).toUpperCase() + p0.slice(1).toLowerCase();
+    senhaEl.value = `${primeiroCap}@${new Date().getFullYear()}`;
+  }
+}
+
 async function cadastrarUsuario() {
   const nome   = document.getElementById('usr-nome').value.trim();
   const login  = document.getElementById('usr-login').value.trim();
@@ -542,8 +585,9 @@ async function cadastrarUsuario() {
     if (!res.ok) { toast(data.erro || 'Erro ao cadastrar!','erro'); return; }
     toast('Usuário cadastrado!','sucesso');
     document.getElementById('usr-nome').value = '';
-    document.getElementById('usr-login').value = '';
-    document.getElementById('usr-senha').value = '';
+    const loginEl = document.getElementById('usr-login'), senhaEl = document.getElementById('usr-senha');
+    loginEl.value = ''; delete loginEl.dataset.editado;
+    senhaEl.value = ''; delete senhaEl.dataset.editado;
     document.querySelectorAll('.usr-perm').forEach(el => {
       el.checked = false;
       const opt = el.closest('.perm-sel-opt');
