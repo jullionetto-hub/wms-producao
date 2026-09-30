@@ -49,10 +49,11 @@ function selecionarPerfilItem(p, el) {}
 
 
 
-function toggleSenha() {
-  const inp = document.getElementById('login-senha');
-  const aberto = document.getElementById('ico-olho-aberto');
-  const fechado = document.getElementById('ico-olho-fechado');
+function toggleSenhaCampo(inputId, abertoId, fechadoId) {
+  const inp = document.getElementById(inputId);
+  const aberto = document.getElementById(abertoId);
+  const fechado = document.getElementById(fechadoId);
+  if (!inp || !aberto || !fechado) return;
   if (inp.type === 'password') {
     inp.type = 'text';
     aberto.style.display = 'none';
@@ -62,6 +63,10 @@ function toggleSenha() {
     aberto.style.display = 'block';
     fechado.style.display = 'none';
   }
+}
+
+function toggleSenha() {
+  toggleSenhaCampo('login-senha', 'ico-olho-aberto', 'ico-olho-fechado');
 }
 
 async function fazerLogin() {
