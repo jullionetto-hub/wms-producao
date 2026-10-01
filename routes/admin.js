@@ -733,10 +733,13 @@ router.post('/admin/zerar-dados-teste', requerAuth, requerPerfil('supervisor'), 
   try {
     const resultados = {};
 
-    // itens_pedido, avisos_repositor, checkout e embalagem têm FK para pedidos.id —
-    // precisam ser apagados antes do pedido, senão o DELETE de pedidos viola a constraint.
+    // itens_pedido, avisos_repositor, checkout, checkout_itens_conferencia e embalagem
+    // têm FK para pedidos.id — precisam ser apagados antes do pedido, senão o DELETE
+    // de pedidos viola a constraint. checkout_itens_conferencia também referencia
+    // itens_pedido.id e checkout.id, então sai primeiro de todos.
     const pedIds = (await pool.query('SELECT id FROM pedidos WHERE data_pedido = $1', [dia])).rows.map(r => r.id);
     if (pedIds.length) {
+      await pool.query('DELETE FROM checkout_itens_conferencia WHERE pedido_id = ANY($1)', [pedIds]);
       await pool.query('DELETE FROM avisos_repositor WHERE pedido_id = ANY($1)', [pedIds]); // referencia itens_pedido.id tambem
       await pool.query('DELETE FROM itens_pedido WHERE pedido_id = ANY($1)', [pedIds]);
       await pool.query('DELETE FROM checkout WHERE pedido_id = ANY($1)', [pedIds]);
@@ -794,6 +797,7 @@ router.post('/admin/limpar-lotes-separador', requerAuth, requerPerfil('superviso
     const loteIds = [...new Set(peds.rows.map(r => r.lote_id).filter(Boolean))];
 
     // Mesma ordem de exclusão de /admin/zerar-dados-teste (FKs pra pedidos.id).
+    await pool.query('DELETE FROM checkout_itens_conferencia WHERE pedido_id = ANY($1)', [pedIds]);
     await pool.query('DELETE FROM avisos_repositor WHERE pedido_id = ANY($1)', [pedIds]);
     await pool.query('DELETE FROM itens_pedido WHERE pedido_id = ANY($1)', [pedIds]);
     await pool.query('DELETE FROM checkout WHERE pedido_id = ANY($1)', [pedIds]);

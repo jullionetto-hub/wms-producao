@@ -683,6 +683,9 @@ router.get('/pedidos/vazios', requerAuth, requerPerfil('supervisor'), async (req
 router.delete('/pedidos/vazios', requerAuth, requerPerfil('supervisor'), async (req,res) => {
   try {
     const idsSub = `SELECT p.id FROM pedidos p WHERE ${WHERE_PEDIDOS_VAZIOS}`;
+    // checkout_itens_conferencia referencia pedidos.id/checkout.id/itens_pedido.id —
+    // precisa sair antes de checkout (senão viola a FK quando houver conferência).
+    await pool.query(`DELETE FROM checkout_itens_conferencia WHERE pedido_id IN (${idsSub})`);
     await pool.query(`DELETE FROM avisos_repositor WHERE pedido_id IN (${idsSub})`);
     await pool.query(`DELETE FROM checkout WHERE pedido_id IN (${idsSub})`);
     const r = await pool.query(
@@ -698,6 +701,7 @@ router.delete('/pedidos/:id', requerAuth, requerPerfil('supervisor'), async (req
   if (!id) return res.status(400).json({erro:'ID invalido'});
   try {
     const antes = await db.get('SELECT numero_pedido,status,cliente FROM pedidos WHERE id=$1', [id]);
+    await pool.query('DELETE FROM checkout_itens_conferencia WHERE pedido_id=$1',[id]);
     await pool.query('DELETE FROM avisos_repositor WHERE pedido_id=$1',[id]);
     await pool.query('DELETE FROM checkout WHERE pedido_id=$1',[id]);
     await pool.query('DELETE FROM itens_pedido WHERE pedido_id=$1',[id]);
@@ -715,6 +719,7 @@ router.delete('/pedidos', requerAuth, requerPerfil('supervisor'), requerPermissa
     // idas ao banco em listas grandes e estoura o timeout da requisição.
     const cond = data ? 'data_pedido=$1' : 'status=$1';
     const val  = data || status;
+    await pool.query(`DELETE FROM checkout_itens_conferencia WHERE pedido_id IN (SELECT id FROM pedidos WHERE ${cond})`,[val]);
     await pool.query(`DELETE FROM avisos_repositor WHERE pedido_id IN (SELECT id FROM pedidos WHERE ${cond})`,[val]);
     await pool.query(`DELETE FROM checkout WHERE pedido_id IN (SELECT id FROM pedidos WHERE ${cond})`,[val]);
     await pool.query(`DELETE FROM itens_pedido WHERE pedido_id IN (SELECT id FROM pedidos WHERE ${cond})`,[val]);

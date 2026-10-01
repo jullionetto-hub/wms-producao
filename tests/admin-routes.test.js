@@ -562,6 +562,7 @@ describe('Admin — Zerar Dados de Teste', () => {
   test('com confirmação → apaga em cascata e retorna contagem por tabela', async () => {
     mockPool.query
       .mockResolvedValueOnce({ rows: [{ id: 1 }, { id: 2 }] }) // SELECT ids de pedidos do dia
+      .mockResolvedValueOnce({ rowCount: 0 }) // DELETE checkout_itens_conferencia (por pedido_id)
       .mockResolvedValueOnce({ rowCount: 3 }) // DELETE avisos_repositor (por pedido_id)
       .mockResolvedValueOnce({ rowCount: 2 }) // DELETE itens_pedido
       .mockResolvedValueOnce({ rowCount: 1 }) // DELETE checkout (por pedido_id)
@@ -631,6 +632,7 @@ describe('Admin — Limpar Lotes de Separador', () => {
     mockPool.query
       .mockResolvedValueOnce({ rows: [{ id: 1, nome: 'Ana' }] })                       // SELECT separadores
       .mockResolvedValueOnce({ rows: [{ id: 10, lote_id: 100 }, { id: 11, lote_id: 100 }] }) // SELECT pedidos com lote
+      .mockResolvedValueOnce({}) // DELETE checkout_itens_conferencia
       .mockResolvedValueOnce({}) // DELETE avisos_repositor
       .mockResolvedValueOnce({}) // DELETE itens_pedido
       .mockResolvedValueOnce({}) // DELETE checkout

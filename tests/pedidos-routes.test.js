@@ -800,6 +800,7 @@ describe('Pedidos — exclusão', () => {
   });
 
   test('DELETE /pedidos?status=cancelado → 200 com contagem', async () => {
+    mockPool.query.mockResolvedValueOnce({ rowCount: 0 }); // checkout_itens_conferencia
     mockPool.query.mockResolvedValueOnce({ rowCount: 0 }); // avisos
     mockPool.query.mockResolvedValueOnce({ rowCount: 0 }); // checkout
     mockPool.query.mockResolvedValueOnce({ rowCount: 0 }); // itens
@@ -817,6 +818,7 @@ describe('Pedidos — exclusão', () => {
   });
 
   test('DELETE /pedidos/vazios → 200', async () => {
+    mockPool.query.mockResolvedValueOnce({ rowCount: 0 }); // checkout_itens_conferencia
     mockPool.query.mockResolvedValueOnce({ rowCount: 0 }); // avisos
     mockPool.query.mockResolvedValueOnce({ rowCount: 0 }); // checkout
     mockPool.query.mockResolvedValueOnce({ rowCount: 4 }); // DELETE pedidos
