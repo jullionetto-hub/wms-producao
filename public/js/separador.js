@@ -343,40 +343,40 @@ async function carregarListaLote(ids) {
 // Só muda a ORDEM de navegação; o que já foi separado continua separado
 // independente da direção (status fica no item, não na posição do índice).
 let _loteOrdemReversa = false;
-function _loteAgruparPorEndereco() {
-  const gruposPorEnd = {};
+// Agrupa por RUA (não por endereço exato) — a "posição" de navegação do lote
+// passou a ser a rua inteira, com todos os seus endereços listados de uma vez
+// em vez de aparecer um por vez (pedido explícito: separação em lote travava
+// avançando endereço a endereço dentro da mesma rua sem necessidade).
+function _loteAgruparPorRua() {
+  const gruposPorRua = {};
   for (const item of _loteItens) {
     const end = String(item.endereco||'S/END').split(',')[0].trim().toUpperCase();
-    if (!gruposPorEnd[end]) gruposPorEnd[end] = [];
-    gruposPorEnd[end].push(item);
+    const rua = end.match(/^([A-Z]+)/)?.[1] || end;
+    if (!gruposPorRua[rua]) gruposPorRua[rua] = [];
+    gruposPorRua[rua].push(item);
   }
-  // Rua não reconhecida (fora da ROTA_FISICA) vai pro fim, não pro meio — 999999
-  // é maior que qualquer índice válido (máx. 27*10000+9999), senão uma rua
-  // desconhecida podia aparecer antes de ruas reais do fim da rota (R a Z).
-  const rotaIdx = e => { const l = e.replace(/\d+.*/,''); const i = ROTA_FISICA.indexOf(l); return i >= 0 ? i*10000 + (parseInt(e.match(/\d+/)?.[0])||0) : 999999; };
-  const endsOrdenados = Object.keys(gruposPorEnd).sort((a,b) => rotaIdx(a) - rotaIdx(b));
-  if (_loteOrdemReversa) endsOrdenados.reverse();
-  return { gruposPorEnd, endsOrdenados };
+  const rotaIdx = r => { const i = ROTA_FISICA.indexOf(r); return i >= 0 ? i : 999; };
+  const ruasOrdenadas = Object.keys(gruposPorRua).sort((a,b) => rotaIdx(a) - rotaIdx(b));
+  if (_loteOrdemReversa) ruasOrdenadas.reverse();
+  return { gruposPorRua, ruasOrdenadas };
 }
 
-// Inverte a direção de caminhada e pula pra primeira posição ainda pendente
-// nessa nova ordem (não força o separador a passar de novo por tudo que já
-// separou do outro lado).
+// Inverte a direção de caminhada e pula pra primeira rua ainda pendente nessa
+// nova ordem (não força o separador a passar de novo pelo que já separou do
+// outro lado).
 function toggleOrdemLote() {
   _loteOrdemReversa = !_loteOrdemReversa;
-  const { gruposPorEnd, endsOrdenados } = _loteAgruparPorEndereco();
-  const idx = endsOrdenados.findIndex(end => gruposPorEnd[end].some(i => i.status === 'pendente'));
-  _loteEndIdx = idx === -1 ? endsOrdenados.length : idx;
+  const { gruposPorRua, ruasOrdenadas } = _loteAgruparPorRua();
+  const idx = ruasOrdenadas.findIndex(rua => gruposPorRua[rua].some(i => i.status === 'pendente'));
+  _loteEndIdx = idx === -1 ? ruasOrdenadas.length : idx;
   _loteAcaoAberta = null;
   _renderizarListaLote();
 }
 
-// Lista, num modal simples, todos os itens do lote inteiro que estão numa rua —
-// não só os da posição atual. Útil pra ver de longe o que ainda falta ali antes
-// de chegar, ou conferir tudo de uma vez numa rua grande sem navegar posição a
-// posição. Pura leitura (mesmas ações continuam na tela de posição).
-// Compartilhada pelo lote (verItensDaRuaLote) e pelo pedido individual/"pedido a
-// pedido" (verItensDaRuaChecklist) — mesmo modal, só muda de onde vêm os itens.
+// Modal simples de "todos os itens desta rua" — usado só pelo pedido
+// individual/"pedido a pedido" (verItensDaRuaChecklist). No lote isso deixou
+// de ser necessário: a rua inteira já aparece direto na tela principal (ver
+// _renderizarListaLote), sem precisar de um modal à parte pra isso.
 function _renderItensDaRuaModal(rua, itensDaRua, { mostrarPedido }) {
   const modal = document.getElementById('m-lote-rua-modal');
   const body  = document.getElementById('m-lote-rua-body');
@@ -409,12 +409,6 @@ function _renderItensDaRuaModal(rua, itensDaRua, { mostrarPedido }) {
   modal.style.display = 'block';
 }
 
-// Lote (posição por posição) — todos os itens da rua no lote inteiro.
-function verItensDaRuaLote(rua) {
-  const itensDaRua = _loteItens.filter(i => (String(i.endereco||'').split(',')[0].trim().toUpperCase().match(/^([A-Z]+)/)?.[1] || '') === rua);
-  _renderItensDaRuaModal(rua, itensDaRua, { mostrarPedido: true });
-}
-
 // Pedido individual / "pedido a pedido" — itens dessa rua só no pedido aberto.
 function verItensDaRuaChecklist(rua) {
   const getRua = (end) => String(end||'').split(',')[0].trim().match(/^([A-Z]+)/)?.[1] || '?';
@@ -430,7 +424,7 @@ function fecharItensDaRuaLote() {
 function _renderizarListaLote() {
   const itens = _loteItens;
   const total = itens.length;
-  const { gruposPorEnd, endsOrdenados } = _loteAgruparPorEndereco();
+  const { gruposPorRua, ruasOrdenadas } = _loteAgruparPorRua();
   const totalSkus = new Set(itens.map(i => i.codigo || '_sem_cod_')).size;
 
   document.getElementById('m-lote-badge').textContent = _loteIdAtual
@@ -439,7 +433,7 @@ function _renderizarListaLote() {
   // 4 cards de estatística
   const statsEl = document.getElementById('m-lote-stats');
   if (statsEl) {
-    const stats = [['Pedidos',_loteAtual.length], ['Itens',total], ['SKUs',totalSkus], ['Posições',endsOrdenados.length]];
+    const stats = [['Pedidos',_loteAtual.length], ['Itens',total], ['SKUs',totalSkus], ['Ruas',ruasOrdenadas.length]];
     statsEl.innerHTML = stats.map(([lab,val]) => `
       <div style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 4px;text-align:center">
         <div style="font-size:15px;font-weight:800;color:var(--text);line-height:1.3">${val}</div>
@@ -479,8 +473,8 @@ function _renderizarListaLote() {
   const body = document.getElementById('m-lote-lista-body');
   const btnProx = document.getElementById('m-lote-btn-prox');
 
-  // Passou da última posição — mostra o resumo em vez de um card de posição.
-  if (_loteEndIdx >= endsOrdenados.length) {
+  // Passou da última rua — mostra o resumo em vez de um card de rua.
+  if (_loteEndIdx >= ruasOrdenadas.length) {
     const faltas = itens.filter(i => i.status === 'falta').length;
     const pedidosCompletos = _loteAtual.filter((p, idx) => {
       const itensDoPedido = itens.filter(i => i.caixa_num === idx+1);
@@ -502,100 +496,114 @@ function _renderizarListaLote() {
     return;
   }
 
-  // Card da posição atual — um bloco por SKU quando a posição tiver mais de um.
-  const end = endsOrdenados[_loteEndIdx];
-  const itemsEnd = gruposPorEnd[end];
-  const rua = end.match(/^([A-Z]+)/)?.[1] || end;
-  const porSku = {};
-  for (const item of itemsEnd) {
-    const cod = item.codigo || '_sem_cod_';
-    if (!porSku[cod]) porSku[cod] = [];
-    porSku[cod].push(item);
+  // Card da rua atual — TODOS os endereços dela em lista, não um de cada vez
+  // (pedido explícito: antes cada endereço exigia "Próxima posição", mesmo
+  // dentro da mesma rua). Dentro de cada endereço, um bloco por SKU, igual já
+  // era antes.
+  const rua = ruasOrdenadas[_loteEndIdx];
+  const itemsRua = gruposPorRua[rua];
+  const gruposPorEndNaRua = {};
+  for (const item of itemsRua) {
+    const end = String(item.endereco||'S/END').split(',')[0].trim().toUpperCase();
+    (gruposPorEndNaRua[end] = gruposPorEndNaRua[end] || []).push(item);
   }
-  const posicaoCompleta = itemsEnd.every(i => i.status !== 'pendente');
+  // Dentro da rua, endereços sempre em ordem numérica crescente — só a ordem
+  // ENTRE ruas inverte com toggleOrdemLote, não a caminhada dentro de uma rua.
+  const endsNaRua = Object.keys(gruposPorEndNaRua).sort((a,b) => {
+    const na = parseInt(a.match(/\d+/)?.[0])||0, nb = parseInt(b.match(/\d+/)?.[0])||0;
+    return na - nb || a.localeCompare(b);
+  });
+  const posicaoCompleta = itemsRua.every(i => i.status !== 'pendente');
 
   let html = `<div style="padding:12px 14px 4px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-      <span style="font-size:10px;font-weight:800;color:var(--accent);letter-spacing:1px">PRÓXIMA POSIÇÃO</span>
-      <div style="display:flex;align-items:center;gap:6px">
-        <button type="button" onclick="toggleOrdemLote()" title="Inverter ordem de caminhada"
-          style="font-size:10px;font-weight:700;color:var(--text2);background:var(--surface2);border:1px solid var(--border);padding:2px 8px;border-radius:6px;cursor:pointer">⇅ ${_loteOrdemReversa ? 'Z→A' : 'A→Z'}</button>
-        <span onclick="verItensDaRuaLote('${rua}')" title="Ver todos os itens desta rua no lote"
-          style="font-size:11px;font-weight:700;color:var(--text2);background:var(--surface2);border:1px solid var(--border);padding:2px 9px;border-radius:6px;cursor:pointer">RUA ${rua} ›</span>
-      </div>
+      <span style="font-size:10px;font-weight:800;color:var(--accent);letter-spacing:1px">RUA ATUAL</span>
+      <button type="button" onclick="toggleOrdemLote()" title="Inverter ordem de caminhada"
+        style="font-size:10px;font-weight:700;color:var(--text2);background:var(--surface2);border:1px solid var(--border);padding:2px 8px;border-radius:6px;cursor:pointer">⇅ ${_loteOrdemReversa ? 'Z→A' : 'A→Z'}</button>
     </div>
     <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px">
-      <span style="font-family:'Space Mono',monospace;font-size:24px;font-weight:800;color:var(--text)">${end}</span>
-      <span style="font-size:12px;color:var(--text3);font-weight:600">${_loteEndIdx+1}/${endsOrdenados.length}</span>
+      <span style="font-family:'Space Mono',monospace;font-size:24px;font-weight:800;color:var(--text)">${rua}</span>
+      <span style="font-size:12px;color:var(--text3);font-weight:600">${endsNaRua.length} endereço${endsNaRua.length===1?'':'s'} · rua ${_loteEndIdx+1}/${ruasOrdenadas.length}</span>
     </div>
   </div>`;
 
-  for (const [cod, items] of Object.entries(porSku)) {
-    const todosProc = items.every(i => i.status !== 'pendente');
-    const temFalta  = items.some(i => i.status === 'falta');
-    const totalQty  = items.reduce((s, i) => s + (parseInt(i.quantidade)||1), 0);
-    const ids = items.map(i => i.id).join(',');
-
-    const porCaixa = {};
-    for (const item of items) {
-      const cx = item.caixa_num;
-      if (!porCaixa[cx]) porCaixa[cx] = 0;
-      porCaixa[cx] += parseInt(item.quantidade)||1;
+  for (const end of endsNaRua) {
+    const itemsEnd = gruposPorEndNaRua[end];
+    const porSku = {};
+    for (const item of itemsEnd) {
+      const cod = item.codigo || '_sem_cod_';
+      if (!porSku[cod]) porSku[cod] = [];
+      porSku[cod].push(item);
     }
-    const cxEntries = Object.entries(porCaixa).sort((a,b) => Number(a[0]) - Number(b[0]));
-    const distribHtml = cxEntries.map(([cx, qty]) => {
-      const cor = _CX_CORES[(Number(cx)-1) % _CX_CORES.length];
-      const numPedido = _loteAtual[Number(cx)-1]?.numero_pedido || cx;
-      // Nº da caixa em texto, não só a bolinha colorida — com lote de 6-8
-      // pedidos, a paleta de 5 cores repete (caixa 3 e caixa 8 saem com a
-      // mesma cor) e a bolinha sozinha não dá pra distinguir qual é qual.
-      return `<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0">
-        <span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--text2)">
-          <span style="width:9px;height:9px;border-radius:50%;background:${cor};flex-shrink:0"></span>
-          Caixa ${cx} · Pedido #${numPedido}
-        </span>
-        <span style="font-size:12px;font-weight:700;color:var(--text)">${qty} un.</span>
+    html += `<div style="margin:0 14px 2px;padding:6px 0 2px;font-size:11px;font-weight:800;color:var(--text3);letter-spacing:.5px;border-top:1px solid var(--border)">${end}</div>`;
+
+    for (const [cod, items] of Object.entries(porSku)) {
+      const todosProc = items.every(i => i.status !== 'pendente');
+      const temFalta  = items.some(i => i.status === 'falta');
+      const totalQty  = items.reduce((s, i) => s + (parseInt(i.quantidade)||1), 0);
+      const ids = items.map(i => i.id).join(',');
+
+      const porCaixa = {};
+      for (const item of items) {
+        const cx = item.caixa_num;
+        if (!porCaixa[cx]) porCaixa[cx] = 0;
+        porCaixa[cx] += parseInt(item.quantidade)||1;
+      }
+      const cxEntries = Object.entries(porCaixa).sort((a,b) => Number(a[0]) - Number(b[0]));
+      const distribHtml = cxEntries.map(([cx, qty]) => {
+        const cor = _CX_CORES[(Number(cx)-1) % _CX_CORES.length];
+        const numPedido = _loteAtual[Number(cx)-1]?.numero_pedido || cx;
+        // Nº da caixa em texto, não só a bolinha colorida — com lote de 6-8
+        // pedidos, a paleta de 5 cores repete (caixa 3 e caixa 8 saem com a
+        // mesma cor) e a bolinha sozinha não dá pra distinguir qual é qual.
+        return `<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0">
+          <span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--text2)">
+            <span style="width:9px;height:9px;border-radius:50%;background:${cor};flex-shrink:0"></span>
+            Caixa ${cx} · Pedido #${numPedido}
+          </span>
+          <span style="font-size:12px;font-weight:700;color:var(--text)">${qty} un.</span>
+        </div>`;
+      }).join('');
+
+      const parcialAberto = _loteAcaoAberta === `p:${ids}`;
+      const motivoAberto  = _loteAcaoAberta === `f:${ids}`;
+      const primeiroId = ids.split(',')[0];
+
+      html += `<div style="margin:0 14px 12px;border-radius:10px;border:1px solid ${todosProc?(temFalta?'var(--amber)':'var(--green)'):'var(--border)'};background:var(--surface);padding:14px;${todosProc?'opacity:0.6':''}">
+        <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px">${items[0].descricao||cod}</div>
+        <div style="font-size:11px;color:var(--text3);font-family:monospace;margin-bottom:${items[0].colmeia_enderecos?'2px':'10px'}">SKU: ${cod}</div>
+        ${items[0].colmeia_enderecos ? `<div style="font-size:11px;color:var(--indigo);font-family:monospace;margin-bottom:10px">Também em: ${items[0].colmeia_enderecos}</div>` : ''}
+        <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(79,70,229,.12);border:1px solid var(--accent);color:var(--accent);font-size:13px;font-weight:700;padding:7px 14px;border-radius:8px;margin-bottom:12px">
+          PEGAR ${totalQty} UNIDADE${totalQty===1?'':'S'}
+        </div>
+        <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.5px;margin-bottom:2px">DISTRIBUIÇÃO POR PEDIDO</div>
+        <div style="margin-bottom:${todosProc?'0':'12px'}">${distribHtml}</div>
+        ${!todosProc ? `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+            <button onclick="verificarGrupoLote('${ids}')" style="padding:10px 0;border:1.5px solid var(--green);border-radius:8px;background:rgba(87,185,129,.12);color:var(--green);font-size:12px;font-weight:700;cursor:pointer">Encontrei tudo</button>
+            <button onclick="toggleParcialLote('${ids}')" style="padding:10px 0;border:1.5px solid var(--accent);border-radius:8px;background:rgba(79,70,229,.12);color:var(--accent);font-size:12px;font-weight:700;cursor:pointer">Parcial</button>
+            <button onclick="toggleFaltaLote('${ids}')" style="padding:10px 0;border:1.5px solid var(--amber);border-radius:8px;background:rgba(224,168,62,.12);color:var(--amber);font-size:12px;font-weight:700;cursor:pointer">Falta</button>
+          </div>` : `<div style="font-size:11px;font-weight:700;color:${temFalta?'var(--amber)':'var(--green)'};text-align:center">${temFalta?'Aguardando repositor':'Coletado'}</div>`}
+        ${parcialAberto ? `<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+            <label style="font-size:11px;color:var(--amber);font-weight:700">Quantas unidades encontrou (de ${totalQty}):</label>
+            <div style="display:flex;gap:8px;margin-top:6px">
+              <input type="number" id="lote-parc-input-${primeiroId}" min="0" max="${totalQty-1}" placeholder="0" inputmode="numeric"
+                style="flex:1;padding:9px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-size:15px;font-weight:700;text-align:center"/>
+              <button onclick="confirmarParcialLote('${ids}',${totalQty})" style="background:var(--accent);border:none;color:#fff;font-weight:700;padding:0 18px;border-radius:8px;cursor:pointer">OK</button>
+            </div>
+          </div>` : ''}
+        ${motivoAberto ? `<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+            <label style="font-size:11px;color:var(--amber);font-weight:700;display:block;margin-bottom:6px">Motivo da falta:</label>
+            ${MOTIVOS_FALTA_LOTE.map(m => `<button onclick="confirmarFaltaLote('${ids}',${totalQty},'${m.replace(/'/g,"\\'")}')"
+              style="display:block;width:100%;text-align:left;padding:9px 12px;margin-bottom:6px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text2);font-size:12px;font-weight:600;cursor:pointer">${m}</button>`).join('')}
+          </div>` : ''}
       </div>`;
-    }).join('');
-
-    const parcialAberto = _loteAcaoAberta === `p:${ids}`;
-    const motivoAberto  = _loteAcaoAberta === `f:${ids}`;
-    const primeiroId = ids.split(',')[0];
-
-    html += `<div style="margin:0 14px 12px;border-radius:10px;border:1px solid ${todosProc?(temFalta?'var(--amber)':'var(--green)'):'var(--border)'};background:var(--surface);padding:14px;${todosProc?'opacity:0.6':''}">
-      <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px">${items[0].descricao||cod}</div>
-      <div style="font-size:11px;color:var(--text3);font-family:monospace;margin-bottom:${items[0].colmeia_enderecos?'2px':'10px'}">SKU: ${cod}</div>
-      ${items[0].colmeia_enderecos ? `<div style="font-size:11px;color:var(--indigo);font-family:monospace;margin-bottom:10px">Também em: ${items[0].colmeia_enderecos}</div>` : ''}
-      <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(79,70,229,.12);border:1px solid var(--accent);color:var(--accent);font-size:13px;font-weight:700;padding:7px 14px;border-radius:8px;margin-bottom:12px">
-        PEGAR ${totalQty} UNIDADE${totalQty===1?'':'S'}
-      </div>
-      <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.5px;margin-bottom:2px">DISTRIBUIÇÃO POR PEDIDO</div>
-      <div style="margin-bottom:${todosProc?'0':'12px'}">${distribHtml}</div>
-      ${!todosProc ? `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
-          <button onclick="verificarGrupoLote('${ids}')" style="padding:10px 0;border:1.5px solid var(--green);border-radius:8px;background:rgba(87,185,129,.12);color:var(--green);font-size:12px;font-weight:700;cursor:pointer">Encontrei tudo</button>
-          <button onclick="toggleParcialLote('${ids}')" style="padding:10px 0;border:1.5px solid var(--accent);border-radius:8px;background:rgba(79,70,229,.12);color:var(--accent);font-size:12px;font-weight:700;cursor:pointer">Parcial</button>
-          <button onclick="toggleFaltaLote('${ids}')" style="padding:10px 0;border:1.5px solid var(--amber);border-radius:8px;background:rgba(224,168,62,.12);color:var(--amber);font-size:12px;font-weight:700;cursor:pointer">Falta</button>
-        </div>` : `<div style="font-size:11px;font-weight:700;color:${temFalta?'var(--amber)':'var(--green)'};text-align:center">${temFalta?'Aguardando repositor':'Coletado'}</div>`}
-      ${parcialAberto ? `<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
-          <label style="font-size:11px;color:var(--amber);font-weight:700">Quantas unidades encontrou (de ${totalQty}):</label>
-          <div style="display:flex;gap:8px;margin-top:6px">
-            <input type="number" id="lote-parc-input-${primeiroId}" min="0" max="${totalQty-1}" placeholder="0" inputmode="numeric"
-              style="flex:1;padding:9px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-size:15px;font-weight:700;text-align:center"/>
-            <button onclick="confirmarParcialLote('${ids}',${totalQty})" style="background:var(--accent);border:none;color:#fff;font-weight:700;padding:0 18px;border-radius:8px;cursor:pointer">OK</button>
-          </div>
-        </div>` : ''}
-      ${motivoAberto ? `<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
-          <label style="font-size:11px;color:var(--amber);font-weight:700;display:block;margin-bottom:6px">Motivo da falta:</label>
-          ${MOTIVOS_FALTA_LOTE.map(m => `<button onclick="confirmarFaltaLote('${ids}',${totalQty},'${m.replace(/'/g,"\\'")}')"
-            style="display:block;width:100%;text-align:left;padding:9px 12px;margin-bottom:6px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text2);font-size:12px;font-weight:600;cursor:pointer">${m}</button>`).join('')}
-        </div>` : ''}
-    </div>`;
+    }
   }
 
   if (body) body.innerHTML = html;
 
   if (btnProx) {
-    btnProx.textContent = 'Próxima posição';
+    btnProx.textContent = 'Próxima rua';
     btnProx.onclick = loteProximaPosicao;
     btnProx.disabled = !posicaoCompleta;
     btnProx.style.opacity = posicaoCompleta ? '1' : '0.5';
@@ -624,8 +632,8 @@ function _atualizarBotaoConcluirLote(itens, pendentes) {
 function loteConcluirOuIrPendente() {
   const pendentes = _loteItens.filter(i => i.status === 'pendente').length;
   if (pendentes > 0) {
-    const { gruposPorEnd, endsOrdenados } = _loteAgruparPorEndereco();
-    const idx = endsOrdenados.findIndex(end => gruposPorEnd[end].some(i => i.status === 'pendente'));
+    const { gruposPorRua, ruasOrdenadas } = _loteAgruparPorRua();
+    const idx = ruasOrdenadas.findIndex(rua => gruposPorRua[rua].some(i => i.status === 'pendente'));
     if (idx !== -1) { _loteEndIdx = idx; _loteAcaoAberta = null; _renderizarListaLote(); }
     return;
   }
@@ -657,11 +665,11 @@ function toggleFaltaLote(ids) {
   _renderizarListaLote();
 }
 
-// Depois de Encontrei tudo / Parcial / Falta: se a posição atual ficou toda
-// resolvida (posição com vários SKUs só avança quando o último for marcado),
-// vai sozinho pra próxima — o separador não precisa apertar "Próxima posição".
-// Só é chamada logo após uma ação, nunca ao renderizar, então voltar pra uma
-// posição já concluída (botão Voltar / Revisar divergências) não pula sozinho.
+// Depois de Encontrei tudo / Parcial / Falta: se a RUA atual ficou toda
+// resolvida (uma rua com vários endereços/SKUs só avança quando o último for
+// marcado), vai sozinho pra próxima — o separador não precisa apertar "Próxima
+// rua". Só é chamada logo após uma ação, nunca ao renderizar, então voltar pra
+// uma rua já concluída (botão Voltar / Revisar divergências) não pula sozinho.
 let _loteAvancando = false;
 // Guarda do auto-conclusão do pedido individual mobile (ver renderChecklist) —
 // id do último pedido já auto-concluído, pra não disparar de novo a cada
@@ -669,22 +677,22 @@ let _loteAvancando = false;
 let _autoConcluirPedidoId = null;
 function _loteAutoAvancar() {
   if (_loteAvancando) return;
-  const { gruposPorEnd, endsOrdenados } = _loteAgruparPorEndereco();
-  if (_loteEndIdx >= endsOrdenados.length) return;
-  if (!gruposPorEnd[endsOrdenados[_loteEndIdx]].every(i => i.status !== 'pendente')) return;
+  const { gruposPorRua, ruasOrdenadas } = _loteAgruparPorRua();
+  if (_loteEndIdx >= ruasOrdenadas.length) return;
+  if (!gruposPorRua[ruasOrdenadas[_loteEndIdx]].every(i => i.status !== 'pendente')) return;
   _loteAvancando = true;
   loteProximaPosicao().finally(() => { _loteAvancando = false; });
 }
 
-// Avança pra próxima posição — mostra um flash de "concluído" antes de trocar.
+// Avança pra próxima rua — mostra um flash de "concluído" antes de trocar.
 async function loteProximaPosicao() {
-  const { endsOrdenados } = _loteAgruparPorEndereco();
-  if (_loteEndIdx >= endsOrdenados.length) return;
-  const end = endsOrdenados[_loteEndIdx];
+  const { ruasOrdenadas } = _loteAgruparPorRua();
+  if (_loteEndIdx >= ruasOrdenadas.length) return;
+  const rua = ruasOrdenadas[_loteEndIdx];
   const body = document.getElementById('m-lote-lista-body');
   if (body) body.innerHTML = `<div style="padding:60px 18px;text-align:center">
     <div style="width:44px;height:44px;border-radius:8px;background:rgba(87,185,129,.12);border:1px solid var(--green);display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-size:20px;color:var(--green)">✓</div>
-    <div style="font-size:15px;font-weight:700;color:var(--green)">${end} concluído</div>
+    <div style="font-size:15px;font-weight:700;color:var(--green)">Rua ${rua} concluída</div>
   </div>`;
   const btnProx = document.getElementById('m-lote-btn-prox');
   if (btnProx) btnProx.disabled = true;
@@ -694,16 +702,16 @@ async function loteProximaPosicao() {
   _renderizarListaLote();
 }
 
-// Volta uma posição; na primeira, sai do lote (mesmo comportamento da seta do topo).
+// Volta uma rua; na primeira, sai do lote (mesmo comportamento da seta do topo).
 function loteVoltarPosicao() {
   if (_loteEndIdx > 0) { _loteEndIdx--; _loteAcaoAberta = null; _renderizarListaLote(); }
   else voltarFilaLote();
 }
 
-// Pula direto pra primeira posição com item em falta (link do painel de resumo).
+// Pula direto pra primeira rua com item em falta (link do painel de resumo).
 function loteRevisarDivergencias() {
-  const { gruposPorEnd, endsOrdenados } = _loteAgruparPorEndereco();
-  const idx = endsOrdenados.findIndex(end => gruposPorEnd[end].some(i => i.status === 'falta'));
+  const { gruposPorRua, ruasOrdenadas } = _loteAgruparPorRua();
+  const idx = ruasOrdenadas.findIndex(rua => gruposPorRua[rua].some(i => i.status === 'falta'));
   _loteEndIdx = idx === -1 ? 0 : idx;
   _renderizarListaLote();
 }
