@@ -494,6 +494,10 @@ function toggleFaltaLote(ids) {
 // Só é chamada logo após uma ação, nunca ao renderizar, então voltar pra uma
 // posição já concluída (botão Voltar / Revisar divergências) não pula sozinho.
 let _loteAvancando = false;
+// Guarda do auto-conclusão do pedido individual mobile (ver renderChecklist) —
+// id do último pedido já auto-concluído, pra não disparar de novo a cada
+// rerender do checklist enquanto esse mesmo pedido estiver na tela.
+let _autoConcluirPedidoId = null;
 function _loteAutoAvancar() {
   if (_loteAvancando) return;
   const { gruposPorEnd, endsOrdenados } = _loteAgruparPorEndereco();
@@ -1602,7 +1606,16 @@ function renderChecklist(prefix) {
     if(bf) bf.style.display='none';
   }
 
-
+  // Conclui sozinho assim que o botão chega no estado "pode concluir sem
+  // ressalva" (bc.disabled===false com o texto padrão) — mesmo padrão já usado
+  // no lote (_loteAutoAvancar): bipou tudo certo, vai direto pra "Separado"
+  // sem precisar apertar. Só no mobile (prefix 'm-cl') e uma vez por pedido —
+  // sem a guarda, cada rerender do checklist tentaria concluir de novo.
+  if (prefix === 'm-cl' && bc && !bc.disabled && bc.textContent === 'CONCLUIR PEDIDO'
+      && pedidoAtualId && _autoConcluirPedidoId !== pedidoAtualId) {
+    _autoConcluirPedidoId = pedidoAtualId;
+    concluirPedidoMobile();
+  }
 
 
   const listEl = document.getElementById(`${prefix}-lista`);
