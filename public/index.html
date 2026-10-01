@@ -2474,7 +2474,7 @@
 
 <script src="/js/geometria-estoque.js?v=1"></script>
 <script src="/js/config.js?v=15"></script>
-  <script src="/js/pedidos.js?v=54"></script>
+  <script src="/js/pedidos.js?v=55"></script>
   <script src="/js/separador.js?v=34"></script>
   <script src="/js/repositor.js?v=19"></script>
   <script src="/js/checkout.js?v=15"></script>
@@ -2813,12 +2813,15 @@
         </div>
         </div>
 
-        <!-- Lote Manual — mesmo padrão de "Bipar Código de Barras" do Manual individual,
-             só que junta vários pedidos num lote só em vez de atribuir um por um. -->
+        <!-- Lote Manual — supervisor escolhe o colaborador e vai bipando/digitando os
+             pedidos (um pool, sem decidir o agrupamento); ao mandar montar, o sistema
+             identifica a melhor divisão em lotes de até 4 (mesmo algoritmo de
+             proximidade de rua + SKU em comum do Formar Lotes automático). -->
         <div id="lote-sub-manual" style="display:none">
           <div style="background:rgba(79,70,229,.06);border:1px solid rgba(79,70,229,.2);border-radius:10px;padding:14px 16px;margin-bottom:14px;font-size:12px;color:var(--text2)">
-            <b>Lote Manual:</b> escolha o colaborador uma vez e vá bipando ou digitando os pedidos que devem entrar
-            nesse lote — todos são atribuídos juntos, como um lote só, ao confirmar.
+            <b>Lote Manual:</b> escolha o colaborador e vá bipando ou digitando os pedidos que devem entrar no pool.
+            Quando terminar, clique em <b>"Montar Melhores Lotes"</b> — o sistema identifica a melhor divisão em
+            lotes de até 4 pedidos (mesma lógica de proximidade de rua e SKU em comum do automático).
           </div>
           <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center">
             <label style="font-size:12px;font-weight:700;color:var(--text2);white-space:nowrap">Colaborador:</label>
@@ -2830,14 +2833,17 @@
             style="width:100%;padding:14px 16px;background:var(--surface2);border:2px solid var(--accent);border-radius:10px;color:var(--text);font-size:15px;outline:none;box-sizing:border-box;font-family:'Space Mono',monospace"
             onkeydown="if(event.key==='Enter'){event.preventDefault();loteManualAdicionarPedido();}">
           <div style="display:flex;gap:16px;margin:12px 2px;font-size:12px;color:var(--text3)">
-            <span><b id="lote-manual-count" style="color:var(--text)">0</b> / 4 pedido(s)</span>
+            <span><b id="lote-manual-count" style="color:var(--text)">0</b> pedido(s) no pool</span>
+            <span>vira <b id="lote-manual-previsto" style="color:var(--text)">0</b> lote(s)</span>
             <span><b id="lote-manual-itens" style="color:var(--text)">0</b> itens</span>
           </div>
           <div id="lote-manual-lista" style="max-height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;margin-bottom:12px"></div>
+          <div id="lote-resultado-manual" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px;margin-bottom:14px"></div>
           <div style="display:flex;gap:8px;justify-content:flex-end">
             <button class="btn btn-outline" onclick="fecharModalDistribuicao()">Cancelar</button>
-            <button class="btn btn-outline" onclick="imprimirEtiquetasLoteManual()" id="btn-imprimir-etiquetas-lote-manual" style="display:none">🖨️ Imprimir Etiquetas</button>
-            <button class="btn btn-success" onclick="confirmarLoteManual()" id="btn-confirmar-lote-manual">Confirmar Lote Manual</button>
+            <button class="btn btn-outline" onclick="imprimirEtiquetasLote()" id="btn-imprimir-etiquetas-lote-manual" style="display:none">🖨️ Imprimir Etiquetas</button>
+            <button class="btn btn-primary" onclick="montarMelhorLoteManual()" id="btn-montar-lote-manual" disabled>Montar Melhores Lotes</button>
+            <button class="btn btn-success" onclick="confirmarLotes()" id="btn-confirmar-lote-manual" style="display:none">Confirmar Lotes</button>
           </div>
         </div>
       </div>

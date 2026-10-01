@@ -1261,6 +1261,102 @@ describe('Pedidos — formação de lotes', () => {
 });
 
 /* ════════════════════════════════════════════════════════════
+   LOTE MANUAL — preview do pool bipado/digitado pelo supervisor
+════════════════════════════════════════════════════════════ */
+describe('Pedidos — lote manual (preview do pool bipado)', () => {
+  let agent;
+  beforeEach(async () => {
+    agent = request.agent(app);
+    await loginSupervisor(agent);
+  });
+
+  test('sem auth → 401', async () => {
+    const res = await request(app).post('/pedidos/lote/formar-manual').send({ pedido_ids: [1], separador_id: 5 });
+    expect(res.status).toBe(401);
+  });
+
+  test('sem pedido_ids → 400', async () => {
+    const res = await agent.post('/pedidos/lote/formar-manual').send({ separador_id: 5 });
+    expect(res.status).toBe(400);
+  });
+
+  test('sem separador_id → 400', async () => {
+    const res = await agent.post('/pedidos/lote/formar-manual').send({ pedido_ids: [1] });
+    expect(res.status).toBe(400);
+  });
+
+  test('agrupa o pool bipado (4 pedidos) em um único lote', async () => {
+    const pedidosFixture = [
+      { id: 1, numero_pedido: '1', status: 'pendente', separador_id: null, transportadora: '', cliente: 'C1' },
+      { id: 2, numero_pedido: '2', status: 'pendente', separador_id: null, transportadora: '', cliente: 'C2' },
+      { id: 3, numero_pedido: '3', status: 'pendente', separador_id: null, transportadora: '', cliente: 'C3' },
+      { id: 4, numero_pedido: '4', status: 'pendente', separador_id: null, transportadora: '', cliente: 'C4' },
+    ];
+    mockDb.all.mockImplementation(async (sql, params) => {
+      if (sql.includes('itens_pedido WHERE pedido_id=$1')) return [{ endereco: 'A1', quantidade: 1, codigo: 'X' + params[0] }];
+      if (sql.includes('FROM pedidos p WHERE p.id = ANY($1)')) return pedidosFixture;
+      return [];
+    });
+    mockDb.get.mockImplementation(async (sql) => sql.includes('separadores') ? { id: 77, nome: 'Ana' } : null);
+    const res = await agent.post('/pedidos/lote/formar-manual').send({ pedido_ids: [1, 2, 3, 4], separador_id: 11 });
+    expect(res.status).toBe(200);
+    expect(res.body.lotes).toHaveLength(1);
+    expect(res.body.lotes[0].pedidos).toHaveLength(4);
+    expect(res.body.lotes[0].separador_id).toBe(11);
+    expect(res.body.lotes[0].separador_nome).toBe('Ana');
+    expect(res.body.total_bipados).toBe(4);
+    expect(res.body.ignorados).toBe(0);
+  });
+
+  test('8 pedidos bipados viram 2 lotes de 4', async () => {
+    const pedidosFixture = Array.from({ length: 8 }, (_, i) => (
+      { id: i + 1, numero_pedido: String(i + 1), status: 'pendente', separador_id: null, transportadora: '', cliente: 'C' + (i + 1) }
+    ));
+    mockDb.all.mockImplementation(async (sql, params) => {
+      if (sql.includes('itens_pedido WHERE pedido_id=$1')) return [{ endereco: 'A1', quantidade: 1, codigo: 'X' + params[0] }];
+      if (sql.includes('FROM pedidos p WHERE p.id = ANY($1)')) return pedidosFixture;
+      return [];
+    });
+    mockDb.get.mockImplementation(async () => null);
+    const res = await agent.post('/pedidos/lote/formar-manual').send({ pedido_ids: pedidosFixture.map(p => p.id), separador_id: 11 });
+    expect(res.status).toBe(200);
+    expect(res.body.lotes).toHaveLength(2);
+    expect(res.body.lotes.every(l => l.pedidos.length === 4)).toBe(true);
+  });
+
+  test('ignora Drive Thru, já atribuído e não pendente do pool — relata quantos e quais', async () => {
+    const pedidosFixture = [
+      { id: 1, numero_pedido: '1', status: 'pendente', separador_id: null, transportadora: '', cliente: 'C1' },
+      { id: 2, numero_pedido: '2', status: 'pendente', separador_id: null, transportadora: 'DRIVE THRU', cliente: 'C2' },
+      { id: 3, numero_pedido: '3', status: 'separando', separador_id: null, transportadora: '', cliente: 'C3' },
+      { id: 4, numero_pedido: '4', status: 'pendente', separador_id: 9, transportadora: '', cliente: 'C4' },
+    ];
+    mockDb.all.mockImplementation(async (sql, params) => {
+      if (sql.includes('itens_pedido WHERE pedido_id=$1')) return [{ endereco: 'A1', quantidade: 1, codigo: 'X' + params[0] }];
+      if (sql.includes('FROM pedidos p WHERE p.id = ANY($1)')) return pedidosFixture;
+      return [];
+    });
+    mockDb.get.mockImplementation(async () => null);
+    const res = await agent.post('/pedidos/lote/formar-manual').send({ pedido_ids: [1, 2, 3, 4, 999], separador_id: 11 });
+    expect(res.status).toBe(200);
+    expect(res.body.total_elegiveis).toBe(1);
+    expect(res.body.lotes[0].pedidos).toHaveLength(1);
+    // 999 não existe no banco + 3 pedidos inelegíveis do pool
+    expect(res.body.ignorados).toBe(4);
+    expect(res.body.ignorados_numeros.sort()).toEqual(['2', '3', '4']);
+  });
+
+  test('nenhum pedido elegível no pool → 400', async () => {
+    mockDb.all.mockImplementation(async (sql) => {
+      if (sql.includes('FROM pedidos p WHERE p.id = ANY($1)')) return [{ id: 1, numero_pedido: '1', status: 'concluido', separador_id: null, transportadora: '' }];
+      return [];
+    });
+    const res = await agent.post('/pedidos/lote/formar-manual').send({ pedido_ids: [1], separador_id: 11 });
+    expect(res.status).toBe(400);
+  });
+});
+
+/* ════════════════════════════════════════════════════════════
    RECALCULAR PONTUAÇÃO / RELATÓRIO DE TEMPO
 ════════════════════════════════════════════════════════════ */
 describe('Pedidos — recalcular pontuação e relatório de tempo', () => {

@@ -2235,9 +2235,10 @@ async function _initPainelLotes() {
   selecionarCenarioLote('balanceado');
   loteSetModo('auto');
   _loteManualPedidos = [];
-  _loteManualConfirmados = null;
   _renderLoteManualLista();
-  document.getElementById('btn-confirmar-lote-manual').style.display = 'inline-flex';
+  document.getElementById('lote-resultado-manual').style.display = 'none';
+  document.getElementById('btn-montar-lote-manual').style.display = 'inline-flex';
+  document.getElementById('btn-confirmar-lote-manual').style.display = 'none';
   document.getElementById('btn-imprimir-etiquetas-lote-manual').style.display = 'none';
   const inpManual = document.getElementById('lote-manual-input');
   if (inpManual) inpManual.value = '';
@@ -2256,6 +2257,22 @@ function loteSetModo(modo) {
   const btnManual = document.getElementById('btn-lote-modo-manual');
   const subAuto   = document.getElementById('lote-sub-auto');
   const subManual = document.getElementById('lote-sub-manual');
+  // Troca de aba invalida qualquer prévia pendente (Automático e Manual
+  // compartilham _lotesPlano/_loteFlowAtivo) — evita confirmar, pela aba
+  // errada, uma prévia calculada antes de trocar de modo.
+  _lotesPlano = null;
+  document.getElementById('lote-resultado').style.display = 'none';
+  document.getElementById('btn-confirmar-lote').style.display = 'none';
+  document.getElementById('btn-imprimir-etiquetas-lote').style.display = 'none';
+  document.getElementById('btn-calcular-lote').style.display = 'inline-flex';
+  const resManual = document.getElementById('lote-resultado-manual');
+  if (resManual) resManual.style.display = 'none';
+  const btnMontarM = document.getElementById('btn-montar-lote-manual');
+  if (btnMontarM) btnMontarM.style.display = 'inline-flex';
+  const btnConfM = document.getElementById('btn-confirmar-lote-manual');
+  if (btnConfM) btnConfM.style.display = 'none';
+  const btnImpM = document.getElementById('btn-imprimir-etiquetas-lote-manual');
+  if (btnImpM) btnImpM.style.display = 'none';
   if (modo === 'manual') {
     if (btnManual) { btnManual.style.background='var(--surface)'; btnManual.style.color='var(--text)'; }
     if (btnAuto)   { btnAuto.style.background='transparent';      btnAuto.style.color='var(--text3)'; }
@@ -2280,16 +2297,32 @@ function _popularSepsLoteManual() {
 
 /* ── Lote Manual: adicionar/remover pedidos e confirmar ────────────────── */
 let _loteManualPedidos = [];
-let _loteManualConfirmados = null;
-// Mesmo limite do TAMANHO_LOTE em routes/pedidos.js (o servidor também recusa acima disso)
-const LOTE_MANUAL_MAX_PEDIDOS = 4;
+// Não é mais "o lote inteiro" — é o POOL que o supervisor bipa antes de pedir
+// pro sistema montar os melhores grupos de até TAMANHO_LOTE (4) cada. Limite alto
+// só pra evitar bipagem descontrolada; o agrupamento em si não tem limite de pool.
+const LOTE_MANUAL_MAX_PEDIDOS = 40;
 
 function _renderLoteManualLista() {
   const el   = document.getElementById('lote-manual-lista');
   const cEl  = document.getElementById('lote-manual-count');
   const iEl  = document.getElementById('lote-manual-itens');
+  const lotesPrevistos = Math.ceil(_loteManualPedidos.length / 4) || 0;
   if (cEl) cEl.textContent = _loteManualPedidos.length;
+  const lEl = document.getElementById('lote-manual-previsto');
+  if (lEl) lEl.textContent = lotesPrevistos;
   if (iEl) iEl.textContent = _loteManualPedidos.reduce((s,p) => s + (parseInt(p.total_itens||p.itens)||0), 0);
+  const btnMontar = document.getElementById('btn-montar-lote-manual');
+  if (btnMontar) btnMontar.disabled = !_loteManualPedidos.length;
+  // Pool mudou (adicionou/removeu pedido) — qualquer prévia já montada fica
+  // desatualizada, então invalida e volta pro passo "Montar Melhores Lotes".
+  const resManual = document.getElementById('lote-resultado-manual');
+  if (resManual && resManual.style.display !== 'none') {
+    resManual.style.display = 'none';
+    document.getElementById('btn-confirmar-lote-manual').style.display = 'none';
+    document.getElementById('btn-imprimir-etiquetas-lote-manual').style.display = 'none';
+    document.getElementById('btn-montar-lote-manual').style.display = 'inline-flex';
+    if (_loteFlowAtivo === 'manual') _lotesPlano = null;
+  }
   if (!el) return;
   if (!_loteManualPedidos.length) {
     el.innerHTML = '<div style="color:var(--text3);font-size:12px;text-align:center;padding:12px">Nenhum pedido adicionado ainda</div>';
@@ -2324,10 +2357,10 @@ async function loteManualAdicionarPedido() {
   const numero = m ? m[0] : raw;
 
   if (_loteManualPedidos.length >= LOTE_MANUAL_MAX_PEDIDOS) {
-    toast(`Lote cheio: máximo de ${LOTE_MANUAL_MAX_PEDIDOS} pedidos por lote.`, 'aviso'); input?.focus(); return;
+    toast(`Pool cheio: máximo de ${LOTE_MANUAL_MAX_PEDIDOS} pedidos bipados por vez.`, 'aviso'); input?.focus(); return;
   }
   if (_loteManualPedidos.some(p => String(p.numero_pedido) === String(numero))) {
-    toast(`Pedido #${numero} já está nesse lote.`, 'aviso'); input?.focus(); return;
+    toast(`Pedido #${numero} já está no pool.`, 'aviso'); input?.focus(); return;
   }
 
   try {
@@ -2346,38 +2379,30 @@ async function loteManualAdicionarPedido() {
   }
 }
 
-// Reusa o mesmo endpoint de confirmação dos lotes automáticos
-// (/pedidos/lote/formar/confirmar) — ele só precisa de separador_id + lista
-// de {id}, sem depender de nada calculado pelo algoritmo de proximidade.
-async function confirmarLoteManual() {
+// Pede pro sistema identificar, dentro do pool bipado, o melhor agrupamento em
+// lotes de até 4 (mesmo algoritmo de proximidade de rua + SKU em comum do
+// Formar Lotes automático — ver _prepararEAgruparPedidos no backend). Só monta
+// a prévia; confirmar/imprimir reaproveitam confirmarLotes()/imprimirEtiquetasLote()
+// (mesmas funções do fluxo Automático, compartilhando _lotesPlano).
+async function montarMelhorLoteManual() {
   const sepId = parseInt(document.getElementById('lote-manual-sep')?.value);
   if (!sepId) { toast('Selecione o colaborador.', 'aviso'); return; }
-  if (!_loteManualPedidos.length) { toast('Adicione pelo menos um pedido ao lote.', 'aviso'); return; }
+  if (!_loteManualPedidos.length) { toast('Bipe pelo menos um pedido antes.', 'aviso'); return; }
+  _loteFlowAtivo = 'manual';
   try {
-    const res = await fetch(`${API}/pedidos/lote/formar/confirmar`, {
+    const res = await fetch(`${API}/pedidos/lote/formar-manual`, {
       credentials:'include', method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ lotes: [{ separador_id: sepId, pedidos: _loteManualPedidos.map(p => ({id: p.id})) }] })
+      body: JSON.stringify({ pedido_ids: _loteManualPedidos.map(p => p.id), separador_id: sepId })
     });
     const data = await res.json();
     if (data.erro) { toast(data.erro, 'erro'); return; }
-    if (!data.lotes) {
-      toast('Não foi possível formar o lote — os pedidos podem ter sido atribuídos por outra ação nesse meio-tempo.', 'erro');
-      return;
-    }
-    toast(`Lote formado! ${data.pedidos} pedido(s) atribuído(s).`, 'sucesso');
-    _loteManualConfirmados = [..._loteManualPedidos];
-    document.getElementById('btn-confirmar-lote-manual').style.display = 'none';
-    document.getElementById('btn-imprimir-etiquetas-lote-manual').style.display = 'inline-flex';
-    _loteManualPedidos = [];
-    _renderLoteManualLista();
-    if (typeof carregarPedidos === 'function') carregarPedidos();
-  } catch(e) { toast('Erro ao confirmar lote manual.', 'erro'); }
-}
-
-function imprimirEtiquetasLoteManual() {
-  if (!_loteManualConfirmados?.length) { toast('Nenhum lote manual confirmado ainda.', 'info'); return; }
-  const lista = _loteManualConfirmados.map((p, idx) => ({ ...p, caixa_lote_num: idx + 1 }));
-  _imprimirEtiquetasLista(lista);
+    _lotesPlano = data.lotes;
+    const resEl = document.getElementById('lote-resultado-manual');
+    resEl.style.display = 'block';
+    resEl.innerHTML = _htmlPreviewLotes(data);
+    document.getElementById('btn-confirmar-lote-manual').style.display = data.lotes.length ? 'inline-flex' : 'none';
+    document.getElementById('btn-imprimir-etiquetas-lote-manual').style.display = 'none';
+  } catch(e) { toast('Erro ao montar os lotes.', 'erro'); }
 }
 
 function filtrarTurnoLote(turno) {
@@ -2399,6 +2424,51 @@ function filtrarTurnoLote(turno) {
   ).join('');
 }
 
+// Controla, após confirmar/imprimir, QUAL conjunto de botões/painel mexer —
+// o fluxo Automático e o Manual (bipado) compartilham _lotesPlano e as funções
+// de confirmar/imprimir, mas cada um tem seus próprios ids de botão/resultado.
+let _loteFlowAtivo = 'auto'; // 'auto' | 'manual'
+const _LOTE_FLOW_IDS = {
+  auto:   { resultado:'lote-resultado',        btnCalcular:'btn-calcular-lote',        btnConfirmar:'btn-confirmar-lote',        btnImprimir:'btn-imprimir-etiquetas-lote' },
+  manual: { resultado:'lote-resultado-manual', btnCalcular:'btn-montar-lote-manual',   btnConfirmar:'btn-confirmar-lote-manual', btnImprimir:'btn-imprimir-etiquetas-lote-manual' },
+};
+
+// HTML da prévia de lotes — reaproveitado pelo cálculo Automático e pelo Lote
+// Manual (depois de bipar o pool e mandar o sistema montar os melhores grupos).
+function _htmlPreviewLotes(data) {
+  if (!data.lotes.length) {
+    return `<div style="text-align:center;color:var(--text3);font-size:12px;padding:12px">Nenhum lote formado — sem pedidos elegíveis${data.drive_thru_excluidos ? ` (${data.drive_thru_excluidos} Drive Thru ignorado(s))` : ''}.</div>`;
+  }
+  const totalPedidos = data.lotes.reduce((s,l) => s+l.pedidos.length, 0);
+  const cenarioLabel = { balanceado:'BALANCEADO', por_itens:'POR VOLUME', complexidade:'COMPLEXIDADE TOTAL' };
+  return `
+    <div style="font-size:11px;font-weight:700;color:var(--accent);letter-spacing:1px;margin-bottom:10px">
+      PRÉVIA — ${data.lotes.length} lote(s), ${totalPedidos} de ${data.total_disponivel ?? totalPedidos} pedido(s) elegíveis
+      ${data.cenario ? `<span style="font-size:9px;font-weight:700;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:2px 7px;color:var(--text2);letter-spacing:.5px;margin-left:4px">${cenarioLabel[data.cenario]||'AUTOMÁTICO'}</span>` : ''}
+      ${data.drive_thru_excluidos ? ` · ${data.drive_thru_excluidos} Drive Thru fora (individual)` : ''}
+      ${data.ignorados ? ` · ${data.ignorados} pedido(s) do pool ignorado(s)${data.ignorados_numeros?.length ? ` (#${data.ignorados_numeros.join(', #')})` : ''}` : ''}
+    </div>
+    <div class="tabela-wrap"><table><thead><tr><th>SEPARADOR</th><th>PEDIDOS NO LOTE</th><th>ROTA (ORDEM DE CAMINHADA)</th><th>ITENS</th><th>PONTUAÇÃO</th><th>⏱ TEMPO EST.</th>${data.lotes.some(l=>l.pedidos_hoje_total!=null)?'<th>PEDIDOS HOJE (TOTAL)</th>':''}</tr></thead><tbody>
+      ${data.lotes.map(l => {
+        // V6 — mesma lógica que o algoritmo já usa internamente pra montar o lote,
+        // só exibida: rota real de caminhada (não alfabética) e tempo estimado
+        // (mesma fórmula calibrada por dados reais já usada na coluna Tempo Est.
+        // da tela de Pedidos — ver estimarTempoSep em config.js).
+        const skusTotal = l.pedidos.reduce((s,p) => s + (p.skus||0), 0);
+        const tempoEst = estimarTempoSep(l.itens_total, l.pontuacao_total, skusTotal) || '—';
+        return `<tr>
+        <td style="font-weight:700;color:var(--text)">${l.separador_nome}</td>
+        <td style="color:var(--green);font-weight:700">${l.pedidos.length} <span style="font-size:10px;color:var(--text3);font-weight:400">(${l.pedidos.map(p=>'#'+p.numero_pedido).join(', ')})</span></td>
+        <td style="font-family:'Space Mono',monospace;font-size:11px;color:var(--indigo)" title="Distância ponderada do algoritmo: ${l.distancia_ponderada ?? '—'} (não é metros — unidade abstrata de distância×dificuldade)">${(l.rota||l.ruas).join(' → ')}</td>
+        <td style="font-weight:600">${l.itens_total}</td>
+        <td><span style="font-family:'Space Mono',monospace;color:var(--indigo);font-weight:700">${l.pontuacao_total}</span></td>
+        <td style="font-family:'Space Mono',monospace;font-weight:700;color:var(--amber)">${tempoEst}</td>
+        ${l.pedidos_hoje_total!=null?`<td style="font-family:'Space Mono',monospace;font-weight:800">${l.pedidos_hoje_total}</td>`:''}
+      </tr>`;
+      }).join('')}
+    </tbody></table></div>`;
+}
+
 async function calcularLotes() {
   const checks = document.querySelectorAll('.lote-sep-check:checked');
   if (!checks.length) { toast('Selecione pelo menos um separador!', 'aviso'); return; }
@@ -2409,6 +2479,7 @@ async function calcularLotes() {
   // na mesma "Distribuição de Pedidos" (um resetava pra hoje, outro não).
   const dataDe  = document.getElementById('dist-data-de')?.value  || null;
   const dataAte = document.getElementById('dist-data-ate')?.value || null;
+  _loteFlowAtivo = 'auto';
   try {
     const res = await fetch(`${API}/pedidos/lote/formar`, {
       credentials:'include', method:'POST', headers:{'Content-Type':'application/json'},
@@ -2419,48 +2490,19 @@ async function calcularLotes() {
     _lotesPlano = data.lotes;
     const resEl = document.getElementById('lote-resultado');
     resEl.style.display = 'block';
-    if (!data.lotes.length) {
-      resEl.innerHTML = `<div style="text-align:center;color:var(--text3);font-size:12px;padding:12px">Nenhum lote formado — sem pedidos elegíveis (${data.drive_thru_excluidos||0} Drive Thru ignorado(s)).</div>`;
-      document.getElementById('btn-confirmar-lote').style.display = 'none';
-      document.getElementById('btn-imprimir-etiquetas-lote').style.display = 'none';
-      return;
-    }
-    const totalPedidos = data.lotes.reduce((s,l) => s+l.pedidos.length, 0);
-    const cenarioLabel = { balanceado:'BALANCEADO', por_itens:'POR VOLUME', complexidade:'COMPLEXIDADE TOTAL' };
-    resEl.innerHTML = `
-      <div style="font-size:11px;font-weight:700;color:var(--accent);letter-spacing:1px;margin-bottom:10px">
-        PRÉVIA — ${data.lotes.length} lote(s), ${totalPedidos} de ${data.total_disponivel} pedido(s) elegíveis
-        <span style="font-size:9px;font-weight:700;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:2px 7px;color:var(--text2);letter-spacing:.5px;margin-left:4px">${cenarioLabel[data.cenario]||'AUTOMÁTICO'}</span>
-        ${data.drive_thru_excluidos ? ` · ${data.drive_thru_excluidos} Drive Thru fora (individual)` : ''}
-      </div>
-      <div class="tabela-wrap"><table><thead><tr><th>SEPARADOR</th><th>PEDIDOS NO LOTE</th><th>ROTA (ORDEM DE CAMINHADA)</th><th>ITENS</th><th>PONTUAÇÃO</th><th>⏱ TEMPO EST.</th><th>PEDIDOS HOJE (TOTAL)</th></tr></thead><tbody>
-        ${data.lotes.map(l => {
-          // V6 — mesma lógica que o algoritmo já usa internamente pra montar o lote,
-          // só exibida: rota real de caminhada (não alfabética) e tempo estimado
-          // (mesma fórmula calibrada por dados reais já usada na coluna Tempo Est.
-          // da tela de Pedidos — ver estimarTempoSep em config.js).
-          const skusTotal = l.pedidos.reduce((s,p) => s + (p.skus||0), 0);
-          const tempoEst = estimarTempoSep(l.itens_total, l.pontuacao_total, skusTotal) || '—';
-          return `<tr>
-          <td style="font-weight:700;color:var(--text)">${l.separador_nome}</td>
-          <td style="color:var(--green);font-weight:700">${l.pedidos.length} <span style="font-size:10px;color:var(--text3);font-weight:400">(${l.pedidos.map(p=>'#'+p.numero_pedido).join(', ')})</span></td>
-          <td style="font-family:'Space Mono',monospace;font-size:11px;color:var(--indigo)" title="Distância ponderada do algoritmo: ${l.distancia_ponderada ?? '—'} (não é metros — unidade abstrata de distância×dificuldade)">${(l.rota||l.ruas).join(' → ')}</td>
-          <td style="font-weight:600">${l.itens_total}</td>
-          <td><span style="font-family:'Space Mono',monospace;color:var(--indigo);font-weight:700">${l.pontuacao_total}</span></td>
-          <td style="font-family:'Space Mono',monospace;font-weight:700;color:var(--amber)">${tempoEst}</td>
-          <td style="font-family:'Space Mono',monospace;font-weight:800">${l.pedidos_hoje_total}</td>
-        </tr>`;
-        }).join('')}
-      </tbody></table></div>`;
-    document.getElementById('btn-confirmar-lote').style.display = 'inline-flex';
+    resEl.innerHTML = _htmlPreviewLotes(data);
+    document.getElementById('btn-confirmar-lote').style.display = data.lotes.length ? 'inline-flex' : 'none';
+    document.getElementById('btn-imprimir-etiquetas-lote').style.display = 'none';
   } catch(e) { toast('Erro ao calcular lotes', 'erro'); }
 }
 
-// Ordem certa: Calcular → Confirmar → Imprimir. As etiquetas só liberam depois
-// de confirmar — se imprimisse antes, um "Calcular" de novo com outro cenário/
-// quantidade podia trocar os pedidos e deixar etiquetas já impressas erradas.
+// Ordem certa: Calcular/Montar → Confirmar → Imprimir. As etiquetas só liberam
+// depois de confirmar — se imprimisse antes, recalcular com outro cenário/pool
+// podia trocar os pedidos e deixar etiquetas já impressas erradas. Compartilhada
+// pelos fluxos Automático e Manual — _loteFlowAtivo diz quais botões mexer.
 async function confirmarLotes() {
   if (!_lotesPlano?.length) return;
+  const ids = _LOTE_FLOW_IDS[_loteFlowAtivo] || _LOTE_FLOW_IDS.auto;
   try {
     const res = await fetch(`${API}/pedidos/lote/formar/confirmar`, {
       credentials:'include', method:'POST', headers:{'Content-Type':'application/json'},
@@ -2469,15 +2511,15 @@ async function confirmarLotes() {
     const data = await res.json();
     if (data.erro) { toast(data.erro, 'erro'); return; }
     toast(`${data.lotes} lote(s) formado(s), ${data.pedidos} pedido(s) atribuído(s)!`, 'sucesso');
-    document.getElementById('lote-resultado').innerHTML = `
+    document.getElementById(ids.resultado).innerHTML = `
       <div style="text-align:center;padding:16px">
         <div style="font-size:32px;margin-bottom:8px">✅</div>
         <div style="font-size:14px;font-weight:700;color:var(--green);margin-bottom:6px">${data.lotes} lote(s) confirmado(s) — ${data.pedidos} pedido(s) atribuídos!</div>
         <div style="font-size:12px;color:var(--text3)">Agora clique em "Imprimir Etiquetas" e cole uma em cada caixa, na ordem 1, 2, 3...</div>
       </div>`;
-    document.getElementById('btn-calcular-lote').style.display = 'none';
-    document.getElementById('btn-confirmar-lote').style.display = 'none';
-    document.getElementById('btn-imprimir-etiquetas-lote').style.display = 'inline-flex';
+    document.getElementById(ids.btnCalcular).style.display = 'none';
+    document.getElementById(ids.btnConfirmar).style.display = 'none';
+    document.getElementById(ids.btnImprimir).style.display = 'inline-flex';
     if (typeof carregarPedidos === 'function') carregarPedidos();
   } catch(e) { toast('Erro ao confirmar lotes', 'erro'); }
 }
