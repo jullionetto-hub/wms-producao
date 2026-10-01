@@ -1927,7 +1927,20 @@ document.getElementById('ck-input-caixa')?.addEventListener('keypress', e => { i
   if (fim) fim.value = hoje;
 })();
 (async function verificarSessao() {
-  const mostrarLogin = () => { const el = document.getElementById('tela-login'); if (el) el.style.display = 'flex'; };
+  const mostrarLogin = () => {
+    const el = document.getElementById('tela-login');
+    if (el) el.style.display = 'flex';
+    // Mensagem deixada por trocarSenhaTemp() antes do reload (ver auth.js) —
+    // mostra uma vez só e limpa, senão reaparece em todo F5 subsequente.
+    try {
+      const msg = sessionStorage.getItem('wms_login_msg');
+      if (msg) {
+        sessionStorage.removeItem('wms_login_msg');
+        const erroLogin = document.getElementById('login-erro');
+        if (erroLogin) { erroLogin.textContent = msg; erroLogin.style.display = 'block'; erroLogin.style.color = 'var(--green)'; }
+      }
+    } catch(e) {}
+  };
   try {
     const res  = await fetch(`${API}/auth/me`, { credentials:'include' });
     if (!res.ok) { mostrarLogin(); return; }

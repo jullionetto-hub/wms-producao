@@ -2179,11 +2179,14 @@ async function trocarSenhaTemp() {
     });
     const r = await res.json();
     if (!res.ok) { if(erroEl) erroEl.textContent = r.erro||'Erro'; return; }
-    // Volta para login com mensagem
-    document.getElementById('trocar-senha-box').style.display = 'none';
-    document.getElementById('login-box').style.display = 'flex';
-    const erroLogin = document.getElementById('login-erro');
-    if (erroLogin) { erroLogin.textContent = 'Senha alterada! Faça o login.'; erroLogin.style.display='block'; erroLogin.style.color='var(--green)'; }
+    // Recarrega a página em vez de só trocar a visibilidade das divs — no
+    // celular, o teclado virtual mexe no viewport enquanto a caixa de troca de
+    // senha (position:fixed em tela cheia) está aberta, e trocar pra login-box
+    // sem recarregar deixava o layout emaranhado em alguns Android/Chrome (sem
+    // reflow completo do viewport). Mensagem sobrevive ao reload via
+    // sessionStorage — lida e exibida por mostrarLogin() em separador.js.
+    try { sessionStorage.setItem('wms_login_msg', 'Senha alterada! Faça o login.'); } catch(e) {}
+    window.location.reload();
   } catch(e) { if(erroEl) erroEl.textContent='Erro ao salvar'; }
 }
 
