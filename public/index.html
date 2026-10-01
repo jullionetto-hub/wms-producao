@@ -2395,6 +2395,18 @@
       </div>
     </div>
 
+    <!-- Todos os itens de uma RUA no lote inteiro (não só a posição atual) — ver
+         verItensDaRuaLote(). Mesmo padrão do modal de detalhe do pedido acima. -->
+    <div id="m-lote-rua-modal" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:99999;overflow-y:auto">
+      <div style="padding:14px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+          <button onclick="fecharItensDaRuaLote()" style="color:var(--accent);font-size:16px;background:none;border:none;cursor:pointer;padding:0 4px">&#8592;</button>
+          <span id="m-lote-rua-titulo" style="color:var(--text);font-size:15px;font-weight:600;flex:1">Rua</span>
+        </div>
+        <div id="m-lote-rua-body"></div>
+      </div>
+    </div>
+
 
 
 
@@ -2475,7 +2487,7 @@
 <script src="/js/geometria-estoque.js?v=1"></script>
 <script src="/js/config.js?v=15"></script>
   <script src="/js/pedidos.js?v=55"></script>
-  <script src="/js/separador.js?v=39"></script>
+  <script src="/js/separador.js?v=40"></script>
   <script src="/js/repositor.js?v=19"></script>
   <script src="/js/checkout.js?v=15"></script>
   <script src="/js/dashboard.js?v=39"></script>

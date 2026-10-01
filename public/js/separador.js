@@ -313,6 +313,11 @@ async function carregarListaLote(ids) {
 
 // Agrupa os itens do lote por endereço (posição), ordenados pela rota física —
 // usado tanto pra renderizar quanto pra navegar (próxima/anterior/revisar).
+// false = caminha a rota física normal (A→...→Z); true = mesma rota ao contrário
+// (Z→...→A) — útil quando o separador já está na ponta oposta do estoque.
+// Só muda a ORDEM de navegação; o que já foi separado continua separado
+// independente da direção (status fica no item, não na posição do índice).
+let _loteOrdemReversa = false;
 function _loteAgruparPorEndereco() {
   const gruposPorEnd = {};
   for (const item of _loteItens) {
@@ -325,7 +330,62 @@ function _loteAgruparPorEndereco() {
   // desconhecida podia aparecer antes de ruas reais do fim da rota (R a Z).
   const rotaIdx = e => { const l = e.replace(/\d+.*/,''); const i = ROTA_FISICA.indexOf(l); return i >= 0 ? i*10000 + (parseInt(e.match(/\d+/)?.[0])||0) : 999999; };
   const endsOrdenados = Object.keys(gruposPorEnd).sort((a,b) => rotaIdx(a) - rotaIdx(b));
+  if (_loteOrdemReversa) endsOrdenados.reverse();
   return { gruposPorEnd, endsOrdenados };
+}
+
+// Inverte a direção de caminhada e pula pra primeira posição ainda pendente
+// nessa nova ordem (não força o separador a passar de novo por tudo que já
+// separou do outro lado).
+function toggleOrdemLote() {
+  _loteOrdemReversa = !_loteOrdemReversa;
+  const { gruposPorEnd, endsOrdenados } = _loteAgruparPorEndereco();
+  const idx = endsOrdenados.findIndex(end => gruposPorEnd[end].some(i => i.status === 'pendente'));
+  _loteEndIdx = idx === -1 ? endsOrdenados.length : idx;
+  _loteAcaoAberta = null;
+  _renderizarListaLote();
+}
+
+// Lista, num modal simples, todos os itens do lote inteiro que estão numa rua —
+// não só os da posição atual. Útil pra ver de longe o que ainda falta ali antes
+// de chegar, ou conferir tudo de uma vez numa rua grande sem navegar posição a
+// posição. Pura leitura (mesmas ações continuam na tela de posição).
+function verItensDaRuaLote(rua) {
+  const modal = document.getElementById('m-lote-rua-modal');
+  const body  = document.getElementById('m-lote-rua-body');
+  const titulo = document.getElementById('m-lote-rua-titulo');
+  if (!modal || !body) return;
+  if (titulo) titulo.textContent = `Rua ${rua}`;
+  const itensDaRua = _loteItens.filter(i => (String(i.endereco||'').split(',')[0].trim().toUpperCase().match(/^([A-Z]+)/)?.[1] || '') === rua);
+  const porEndereco = {};
+  itensDaRua.forEach(i => {
+    const end = String(i.endereco||'S/END').split(',')[0].trim().toUpperCase();
+    (porEndereco[end] = porEndereco[end] || []).push(i);
+  });
+  const ends = Object.keys(porEndereco).sort();
+  body.innerHTML = ends.map(end => `
+    <div style="font-size:11px;font-weight:800;color:var(--text3);letter-spacing:.5px;margin:14px 0 6px">${end}</div>
+    ${porEndereco[end].map(item => {
+      const cor = item.status==='encontrado' ? 'var(--green)' : item.status==='falta' ? 'var(--red)' : item.status==='parcial' ? 'var(--amber)' : 'var(--border)';
+      const bg  = item.status==='encontrado' ? 'rgba(87,185,129,.08)' : item.status==='falta' ? 'rgba(201,82,79,.08)' : item.status==='parcial' ? 'rgba(224,168,62,.08)' : 'var(--surface)';
+      const label = item.status==='encontrado' ? 'COLETADO' : item.status==='falta' ? 'FALTA' : item.status==='parcial' ? 'PARCIAL' : 'PENDENTE';
+      return `<div style="background:${bg};border:1px solid var(--border);border-left:3px solid ${cor};border-radius:8px;padding:10px 12px;margin-bottom:8px">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:2px">
+          <span style="font-size:13px;font-weight:600;color:var(--text)">${item.descricao||item.codigo||'—'}</span>
+          <span style="font-size:9px;font-weight:800;letter-spacing:.5px;color:${cor};flex-shrink:0">${label}</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:2px">
+          <div style="font-size:11px;color:var(--text3)">${item.codigo||'—'} · Pedido #${item.numero_pedido||'—'}</div>
+          <div style="font-family:'Space Mono',monospace;font-size:18px;font-weight:800;color:var(--text);line-height:1;flex-shrink:0">×${item.quantidade||1}</div>
+        </div>
+      </div>`;
+    }).join('')}`).join('') || '<div style="color:var(--text3);text-align:center;padding:30px;font-size:13px">Nenhum item desta rua neste lote</div>';
+  modal.style.display = 'block';
+}
+
+function fecharItensDaRuaLote() {
+  const modal = document.getElementById('m-lote-rua-modal');
+  if (modal) modal.style.display = 'none';
 }
 
 function _renderizarListaLote() {
@@ -418,7 +478,12 @@ function _renderizarListaLote() {
   let html = `<div style="padding:12px 14px 4px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
       <span style="font-size:10px;font-weight:800;color:var(--accent);letter-spacing:1px">PRÓXIMA POSIÇÃO</span>
-      <span style="font-size:11px;font-weight:700;color:var(--text2);background:var(--surface2);border:1px solid var(--border);padding:2px 9px;border-radius:6px">RUA ${rua}</span>
+      <div style="display:flex;align-items:center;gap:6px">
+        <button type="button" onclick="toggleOrdemLote()" title="Inverter ordem de caminhada"
+          style="font-size:10px;font-weight:700;color:var(--text2);background:var(--surface2);border:1px solid var(--border);padding:2px 8px;border-radius:6px;cursor:pointer">⇅ ${_loteOrdemReversa ? 'Z→A' : 'A→Z'}</button>
+        <span onclick="verItensDaRuaLote('${rua}')" title="Ver todos os itens desta rua no lote"
+          style="font-size:11px;font-weight:700;color:var(--text2);background:var(--surface2);border:1px solid var(--border);padding:2px 9px;border-radius:6px;cursor:pointer">RUA ${rua} ›</span>
+      </div>
     </div>
     <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px">
       <span style="font-family:'Space Mono',monospace;font-size:24px;font-weight:800;color:var(--text)">${end}</span>
