@@ -161,14 +161,23 @@ function verDetalhePedidoLote(cx) {
     const cor = item.status==='encontrado' ? 'var(--green)' : item.status==='falta' ? 'var(--red)' : item.status==='parcial' ? 'var(--amber)' : 'var(--border)';
     const bg  = item.status==='encontrado' ? 'rgba(87,185,129,.08)' : item.status==='falta' ? 'rgba(201,82,79,.08)' : item.status==='parcial' ? 'rgba(224,168,62,.08)' : 'var(--surface)';
     const label = item.status==='encontrado' ? 'COLETADO' : item.status==='falta' ? 'FALTA' : item.status==='parcial' ? 'PARCIAL' : 'PENDENTE';
+    const pendente = item.status === 'pendente';
     return `<div style="background:${bg};border:1px solid var(--border);border-left:3px solid ${cor};border-radius:8px;padding:10px 12px;margin-bottom:8px">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:2px">
         <span style="font-size:13px;font-weight:600;color:var(--text)">${item.descricao||item.codigo||'—'}</span>
         <span style="font-size:9px;font-weight:800;letter-spacing:.5px;color:${cor};flex-shrink:0">${label}</span>
       </div>
       ${item.codigo ? `<div style="font-size:12px;font-weight:700;color:var(--accent);font-family:monospace;margin-bottom:2px">Cód: ${item.codigo}</div>` : ''}
-      <div style="font-size:11px;color:var(--text3);font-family:monospace">${item.endereco||'—'} · x${item.quantidade||1}</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:4px">
+        <div style="font-size:11px;color:var(--text3);font-family:monospace">${item.endereco||'—'}</div>
+        <div style="font-family:'Space Mono',monospace;font-size:22px;font-weight:800;color:var(--text);line-height:1;flex-shrink:0">×${item.quantidade||1}</div>
+      </div>
       ${item.colmeia_enderecos ? `<div style="font-size:11px;color:var(--indigo);font-family:monospace;margin-top:2px">Também em: ${item.colmeia_enderecos}</div>` : ''}
+      ${pendente ? `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:10px">
+          <button onclick="verificarItemDetalheLote(${item.id},'encontrado',${cx})" style="padding:10px 0;border:1.5px solid rgba(87,185,129,.4);border-radius:8px;background:rgba(87,185,129,.12);color:var(--green);font-size:12px;font-weight:700;cursor:pointer">Coletado</button>
+          <button onclick="parcialItemDetalheLote(${item.id},${item.quantidade||1},${cx})" style="padding:10px 0;border:1.5px solid rgba(224,168,62,.4);border-radius:8px;background:rgba(224,168,62,.12);color:var(--amber);font-size:12px;font-weight:700;cursor:pointer">Parcial</button>
+          <button onclick="verificarItemDetalheLote(${item.id},'falta',${cx})" style="padding:10px 0;border:1.5px solid rgba(201,82,79,.4);border-radius:8px;background:rgba(201,82,79,.12);color:var(--red);font-size:12px;font-weight:700;cursor:pointer">Falta</button>
+        </div>` : ''}
     </div>`;
   }).join('');
 
@@ -178,6 +187,62 @@ function verDetalhePedidoLote(cx) {
 function fecharDetalhePedidoLote() {
   const modal = document.getElementById('m-lote-pedido-detalhe-modal');
   if (modal) modal.style.display = 'none';
+}
+
+// Recarrega _loteItens do servidor sem resetar navegação (posição atual, tela
+// aberta) — diferente de carregarListaLote(), que é só pra ABRIR o lote do zero.
+async function _recarregarLoteItensSilencioso() {
+  try {
+    const ids = _loteAtual.map(p => p.id);
+    const res = await fetch(`${API}/pedidos/lote-itens?pedido_ids=${ids.join(',')}`, { credentials:'include' });
+    const data = await res.json();
+    if (!res.ok) return false;
+    _loteItens = data.itens;
+    return true;
+  } catch(e) { return false; }
+}
+
+// Ações rápidas direto no detalhe do pedido (dentro do lote) — pro separador não
+// precisar sair daqui e caçar a posição certa na tela de rua-a-rua só pra marcar
+// o último item pendente. Atualiza o item, recarrega o lote e reabre o próprio
+// detalhe (e a tela de posição por trás, pra ficar tudo consistente).
+async function verificarItemDetalheLote(itemId, status, cx) {
+  try {
+    const res = await fetch(`${API}/itens/${itemId}/verificar`, {
+      method:'PUT', credentials:'include', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ status })
+    });
+    const data = await res.json();
+    if (!res.ok) { toast(data.erro||'Erro ao verificar item', 'erro'); return; }
+    await _recarregarLoteItensSilencioso();
+    _renderizarListaLote();
+    verDetalhePedidoLote(cx);
+  } catch(e) { toast('Erro de rede', 'erro'); }
+}
+
+function parcialItemDetalheLote(itemId, quantidade, cx) {
+  wmsPrompt({
+    titulo: 'Quantos foram encontrados?',
+    sub: `Pedido tem ${quantidade} unidade(s) deste item.`,
+    valor: '',
+    placeholder: `0 a ${quantidade-1}`,
+  }, async (valor) => {
+    const qtdEncontrada = parseInt(valor);
+    if (isNaN(qtdEncontrada) || qtdEncontrada < 0 || qtdEncontrada >= quantidade) {
+      toast('Quantidade inválida', 'erro'); return;
+    }
+    try {
+      const res = await fetch(`${API}/itens/${itemId}/verificar`, {
+        method:'PUT', credentials:'include', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ status:'parcial', qtd_falta: quantidade - qtdEncontrada })
+      });
+      const data = await res.json();
+      if (!res.ok) { toast(data.erro||'Erro ao verificar item', 'erro'); return; }
+      await _recarregarLoteItensSilencioso();
+      _renderizarListaLote();
+      verDetalhePedidoLote(cx);
+    } catch(e) { toast('Erro de rede', 'erro'); }
+  });
 }
 
 function abrirPreparacaoLote(pedidos) {
