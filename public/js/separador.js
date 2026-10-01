@@ -921,12 +921,16 @@ async function carregarFilaMobile() {
           ${peds.slice(0,6).map((p,i)=>`<span style="background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:6px;padding:2px 8px;font-size:11px">#${p.numero_pedido}</span>`).join('')}
           ${peds.length>6?`<span style="font-size:11px;color:var(--text3);padding:2px 4px">+${peds.length-6}</span>`:''}
         </div>
-        ${emAndamento ? '' : _renderLotePedidoAPedido(loteId, peds)}
+        ${_renderLotePedidoAPedido(loteId, peds)}
       </div>`;
     };
 
-    // Dentro de um lote ainda não iniciado, o separador pode optar por pegar um
-    // pedido só (sai do lote no servidor; os demais continuam no lote).
+    // Deixa o separador pegar um pedido só, mesmo com o lote já em andamento —
+    // antes isso só existia pra lote ainda pendente (bug relatado: depois de
+    // entrar no lote, que já marca tudo 'separando' na hora, a opção sumia e
+    // não tinha mais como voltar a separar pedido a pedido). Pendente: sai do
+    // lote no servidor (tirar-do-lote) e inicia. Já separando: só continua —
+    // tirar-do-lote rejeitaria (só funciona pra pendente), então nem tenta.
     const _renderLotePedidoAPedido = (loteId, peds) => {
       const aberto = _lotesPedidosAbertos.has(String(loteId));
       return `<div onclick="event.stopPropagation()" style="margin-top:10px;border-top:1px solid var(--border);padding-top:8px">
@@ -935,15 +939,19 @@ async function carregarFilaMobile() {
           <span>Separar pedido a pedido</span><span id="lote-peds-seta-${loteId}">${aberto ? '▴' : '▾'}</span>
         </button>
         <div id="lote-peds-${loteId}" style="display:${aberto ? 'block' : 'none'};margin-top:6px">
-          ${peds.map(p => `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--border)">
+          ${peds.map(p => {
+            const jaSeparando = p.status === 'separando';
+            const acao = jaSeparando ? `selecionarPedidoFilaMobile('${p.numero_pedido}')` : `iniciarPedidoDoLoteMobile(${p.id},'${p.numero_pedido}')`;
+            return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--border)">
             <div style="flex:1;min-width:0">
               <div style="font-size:13px;font-weight:700;color:var(--text);font-family:'Space Mono',monospace">#${p.numero_pedido}</div>
               <div style="font-size:11px;color:var(--text3)">${p.total_itens||p.itens||0} itens · ${p.itens||0} SKUs</div>
             </div>
             <button type="button" class="btn btn-outline btn-sm" style="padding:8px 12px;font-size:12px;font-weight:700"
-              onclick="iniciarPedidoDoLoteMobile(${p.id},'${p.numero_pedido}')">Separar só este</button>
-          </div>`).join('')}
-          <div style="font-size:10px;color:var(--text3);margin-top:4px">O pedido sai deste lote e é separado sozinho.</div>
+              onclick="${acao}">${jaSeparando ? 'Continuar' : 'Separar só este'}</button>
+          </div>`;
+          }).join('')}
+          <div style="font-size:10px;color:var(--text3);margin-top:4px">${peds.some(p=>p.status==='pendente') ? 'O pedido sai deste lote e é separado sozinho.' : ''}</div>
         </div>
       </div>`;
     };
