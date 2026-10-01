@@ -880,13 +880,16 @@ async function carregarFilaMobile() {
     };
 
     // Modo "por lote": lotes (prontos e em andamento) como card único + pedidos soltos.
-    // Modo "pedido a pedido": pedidos de lotes ainda não iniciados aparecem soltos,
-    // um por card; lotes em andamento continuam como card pra poderem ser concluídos.
+    // Modo "pedido a pedido": TODOS os pedidos aparecem soltos, um por card — inclusive
+    // os de um lote já iniciado (o item continua marcado como já verificado, porque o
+    // status fica em itens_pedido, independente de ter sido aberto pela tela de lote
+    // ou individual). Sem isso o separador ficava preso: uma vez iniciado o lote, não
+    // tinha jeito de voltar a trabalhar pedido a pedido nele.
     const modo = _modoSeparacao();
-    const loteSistemaCard = (modo === 'lote'
-        ? Object.entries(_gruposLoteSistema).map(([loteId, peds]) => _renderLoteCard(loteId, peds, { emAndamento:false })).join('')
-        : '')
-      + Object.entries(_gruposLoteAndamento).map(([loteId, peds]) => _renderLoteCard(loteId, peds, { emAndamento:true })).join('');
+    const loteSistemaCard = modo === 'lote'
+      ? Object.entries(_gruposLoteSistema).map(([loteId, peds]) => _renderLoteCard(loteId, peds, { emAndamento:false })).join('')
+        + Object.entries(_gruposLoteAndamento).map(([loteId, peds]) => _renderLoteCard(loteId, peds, { emAndamento:true })).join('')
+      : '';
 
     const temLote = Object.keys(_gruposLoteSistema).length + Object.keys(_gruposLoteAndamento).length > 0;
     const _btnModo = (valor, rotulo) => {
@@ -900,7 +903,7 @@ async function carregarFilaMobile() {
         </div>`
       : '';
 
-    const pedidosSoltos = ordenadosMob.filter(p => !p.lote_id || (modo === 'pedido' && p.status === 'pendente'));
+    const pedidosSoltos = modo === 'pedido' ? ordenadosMob : ordenadosMob.filter(p => !p.lote_id);
 
     const _renderPedidoCard = (p) => {
       const transp   = String(p.transportadora||'').toUpperCase();
@@ -947,8 +950,8 @@ async function carregarFilaMobile() {
           <span style="font-size:11px;font-weight:700;color:var(--green)">${qtdReposto} item${qtdReposto>1?'s':''} reposto${qtdReposto>1?'s':''} pelo repositor — volte para este pedido!</span>
         </div>` : ''}
         <button class="btn btn-primary btn-sm" style="width:100%;margin-top:8px;padding:10px;font-size:14px;font-weight:700${temReposto?';background:#16a34a':''}"
-          onclick="${p.lote_id ? `iniciarPedidoDoLoteMobile(${p.id},'${p.numero_pedido}')` : `selecionarPedidoFilaMobile('${p.numero_pedido}')`}">
-          ${temReposto ? 'Continuar Separação' : 'Iniciar Separação'}
+          onclick="${p.lote_id && p.status === 'pendente' ? `iniciarPedidoDoLoteMobile(${p.id},'${p.numero_pedido}')` : `selecionarPedidoFilaMobile('${p.numero_pedido}')`}">
+          ${temReposto || p.status === 'separando' ? 'Continuar Separação' : 'Iniciar Separação'}
         </button>
       </div>`);
     };
