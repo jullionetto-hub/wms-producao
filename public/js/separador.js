@@ -3,8 +3,33 @@
 // 2. Sobe ao corredor principal, varre esquerda até F: Q → P → O → N → M → L → K → J → I → H → Arara → G → F → ZA
 // 3. Varre direita até Z: R → S → T → U → V → W → X → Y → Z
 const ROTA_FISICA = ['A','B','C','D','E','Q','P','O','N','M','L','K','J','I','H','ARARA','G','F','ZA','R','S','T','U','V','W','X','Y','Z'];
-const _checklistSortDir = 1;
+let _checklistSortDir = 1; // 1 = A→Z, -1 = Z→A — ver toggleOrdemChecklist()
 const CAIXA_OBRIGATORIA = false; // mudar para true para reativar vínculo de caixa
+
+// Ordena itensAtuais pela rota física do estoque, na direção de _checklistSortDir.
+// Usada tanto ao carregar o pedido quanto ao inverter a ordem depois.
+function _ordenarItensAtuaisPorRua() {
+  itensAtuais.sort((a,b) => {
+    const ra = String(a.endereco||'').split(',')[0].trim();
+    const rb = String(b.endereco||'').split(',')[0].trim();
+    const rua_a = ra.match(/^([A-Z]+)/)?.[1] || '';
+    const rua_b = rb.match(/^([A-Z]+)/)?.[1] || '';
+    const num_a = parseInt(ra.match(/\d+/)?.[0]||0);
+    const num_b = parseInt(rb.match(/\d+/)?.[0]||0);
+    const ri = rua_a.localeCompare(rua_b) * _checklistSortDir;
+    return ri !== 0 ? ri : (num_a - num_b) * _checklistSortDir;
+  });
+}
+
+// Inverte a ordem de caminhada do pedido individual/"pedido a pedido" — mesmo
+// botão e mesma ideia do lote (toggleOrdemLote), só que aqui reordena a lista
+// de itens em vez de pular posições (o checklist individual não navega por
+// posição, mostra a lista inteira de uma vez).
+function toggleOrdemChecklist() {
+  _checklistSortDir = _checklistSortDir === 1 ? -1 : 1;
+  _ordenarItensAtuaisPorRua();
+  renderChecklistMobile();
+}
 
 /* ══════════════════════════════════════════
    SEPARAÇÃO EM LOTE — TURNO NOITE
@@ -350,13 +375,14 @@ function toggleOrdemLote() {
 // não só os da posição atual. Útil pra ver de longe o que ainda falta ali antes
 // de chegar, ou conferir tudo de uma vez numa rua grande sem navegar posição a
 // posição. Pura leitura (mesmas ações continuam na tela de posição).
-function verItensDaRuaLote(rua) {
+// Compartilhada pelo lote (verItensDaRuaLote) e pelo pedido individual/"pedido a
+// pedido" (verItensDaRuaChecklist) — mesmo modal, só muda de onde vêm os itens.
+function _renderItensDaRuaModal(rua, itensDaRua, { mostrarPedido }) {
   const modal = document.getElementById('m-lote-rua-modal');
   const body  = document.getElementById('m-lote-rua-body');
   const titulo = document.getElementById('m-lote-rua-titulo');
   if (!modal || !body) return;
   if (titulo) titulo.textContent = `Rua ${rua}`;
-  const itensDaRua = _loteItens.filter(i => (String(i.endereco||'').split(',')[0].trim().toUpperCase().match(/^([A-Z]+)/)?.[1] || '') === rua);
   const porEndereco = {};
   itensDaRua.forEach(i => {
     const end = String(i.endereco||'S/END').split(',')[0].trim().toUpperCase();
@@ -375,12 +401,25 @@ function verItensDaRuaLote(rua) {
           <span style="font-size:9px;font-weight:800;letter-spacing:.5px;color:${cor};flex-shrink:0">${label}</span>
         </div>
         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:2px">
-          <div style="font-size:11px;color:var(--text3)">${item.codigo||'—'} · Pedido #${item.numero_pedido||'—'}</div>
+          <div style="font-size:11px;color:var(--text3)">${item.codigo||'—'}${mostrarPedido ? ` · Pedido #${item.numero_pedido||'—'}` : ''}</div>
           <div style="font-family:'Space Mono',monospace;font-size:18px;font-weight:800;color:var(--text);line-height:1;flex-shrink:0">×${item.quantidade||1}</div>
         </div>
       </div>`;
-    }).join('')}`).join('') || '<div style="color:var(--text3);text-align:center;padding:30px;font-size:13px">Nenhum item desta rua neste lote</div>';
+    }).join('')}`).join('') || '<div style="color:var(--text3);text-align:center;padding:30px;font-size:13px">Nenhum item desta rua</div>';
   modal.style.display = 'block';
+}
+
+// Lote (posição por posição) — todos os itens da rua no lote inteiro.
+function verItensDaRuaLote(rua) {
+  const itensDaRua = _loteItens.filter(i => (String(i.endereco||'').split(',')[0].trim().toUpperCase().match(/^([A-Z]+)/)?.[1] || '') === rua);
+  _renderItensDaRuaModal(rua, itensDaRua, { mostrarPedido: true });
+}
+
+// Pedido individual / "pedido a pedido" — itens dessa rua só no pedido aberto.
+function verItensDaRuaChecklist(rua) {
+  const getRua = (end) => String(end||'').split(',')[0].trim().match(/^([A-Z]+)/)?.[1] || '?';
+  const itensDaRua = itensAtuais.filter(i => getRua(i.endereco) === rua);
+  _renderItensDaRuaModal(rua, itensDaRua, { mostrarPedido: false });
 }
 
 function fecharItensDaRuaLote() {
@@ -822,17 +861,8 @@ async function carregarChecklistMobile() {
     itensAtuais = await res.json();
     const wrap = document.getElementById('m-cl-wrap');
     if (!itensAtuais.length) { wrap.style.display = 'none'; return; }
-    // Ordena pela rota física do estoque, sempre partindo do corredor E
-    itensAtuais.sort((a,b) => {
-      const ra = String(a.endereco||'').split(',')[0].trim();
-      const rb = String(b.endereco||'').split(',')[0].trim();
-      const rua_a = ra.match(/^([A-Z]+)/)?.[1] || '';
-      const rua_b = rb.match(/^([A-Z]+)/)?.[1] || '';
-      const num_a = parseInt(ra.match(/\d+/)?.[0]||0);
-      const num_b = parseInt(rb.match(/\d+/)?.[0]||0);
-      const ri = rua_a.localeCompare(rua_b) * _checklistSortDir;
-      return ri !== 0 ? ri : (num_a - num_b) * _checklistSortDir;
-    });
+    // Ordena pela rota física do estoque — ver toggleOrdemChecklist() pra inverter.
+    _ordenarItensAtuaisPorRua();
     wrap.style.display = 'block';
     renderChecklist('m-cl');
   } catch(e) { toast('Erro ao carregar itens!','erro'); }
@@ -1651,15 +1681,18 @@ function renderChecklist(prefix) {
   if(contEl)   contEl.textContent   = `${verificados}/${total} itens`;
   if(barraEl)  barraEl.style.width  = `${pct}%`;
 
-  // Rota no resumo — pills de rua com destaque na atual
+  // Rota no resumo — botão de inverter ordem + pills de rua (clicáveis, mostram
+  // todos os itens daquela rua no pedido) com destaque na atual.
   if(resumoEl) {
-    resumoEl.innerHTML = ruasNoPedido.map(r => {
+    const toggleBtn = `<button type="button" onclick="toggleOrdemChecklist()" title="Inverter ordem de caminhada"
+      style="display:inline-block;font-size:10px;font-weight:700;color:var(--text2);background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:2px 8px;margin:2px 6px 2px 0;cursor:pointer">⇅ ${_checklistSortDir===1?'A→Z':'Z→A'}</button>`;
+    resumoEl.innerHTML = toggleBtn + ruasNoPedido.map(r => {
       const ruaOk = itensAtuais.filter(i=>getRua(i.endereco)===r).every(i=>i.status!=='pendente');
       const ativo = r === ruaEmFoco;
       const bg  = ativo?'#185FA5':ruaOk?'#EAF3DE':'#F1F5F9';
       const cor = ativo?'#fff':ruaOk?'#27500A':'#64748B';
       const bord= ativo?'#185FA5':ruaOk?'#97C459':'#CBD5E1';
-      return `<span style="display:inline-block;font-size:11px;font-weight:500;padding:2px 9px;border-radius:20px;background:${bg};color:${cor};border:1px solid ${bord};margin:2px 2px 2px 0;">${r}</span>`;
+      return `<span onclick="verItensDaRuaChecklist('${r}')" style="display:inline-block;font-size:11px;font-weight:500;padding:2px 9px;border-radius:20px;background:${bg};color:${cor};border:1px solid ${bord};margin:2px 2px 2px 0;cursor:pointer">${r}</span>`;
     }).join('');
   }
 
