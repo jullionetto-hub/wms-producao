@@ -489,6 +489,35 @@ router.put('/itens/:id/verificar', requerAuth, async (req,res) => {
   } catch(e){res.status(500).json({erro:e.message});}
 });
 
+// Desfaz uma marcação acidental (encontrado/falta/parcial) — volta o item pra
+// 'pendente' e cancela o aviso ao repositor, se um foi gerado. Bloqueia se o
+// repositor já começou a cuidar do aviso (status diferente de 'pendente'),
+// pra não sumir um aviso que já está sendo resolvido sem o separador saber.
+router.put('/itens/:id/desfazer', requerAuth, async (req,res) => {
+  try {
+    const item = await db.get(`SELECT i.*,p.numero_pedido FROM itens_pedido i JOIN pedidos p ON i.pedido_id=p.id WHERE i.id=$1`,[req.params.id]);
+    if (!item) return res.status(404).json({erro:'Item nao encontrado'});
+    if (item.status === 'pendente') return res.status(400).json({erro:'Item já está pendente.'});
+
+    const aviso = await db.get(`SELECT id,status FROM avisos_repositor WHERE item_id=$1 ORDER BY id DESC LIMIT 1`,[item.id]);
+    if (aviso && aviso.status !== 'pendente') {
+      return res.status(409).json({erro:'O repositor já está cuidando deste item — fale com ele antes de desfazer.'});
+    }
+
+    await pool.query(`UPDATE itens_pedido SET status='pendente', obs='', qtd_falta=0, hora_verificado='' WHERE id=$1`,[item.id]);
+    if (aviso) await pool.query(`DELETE FROM avisos_repositor WHERE id=$1`,[aviso.id]);
+
+    // Se não sobrou nenhum outro item deste pedido aguardando repositor, limpa o marcador de espera.
+    const outros = await db.get(`SELECT COUNT(*)::int AS cnt FROM avisos_repositor WHERE pedido_id=$1 AND status IN ('pendente','verificando')`,[item.pedido_id]);
+    if (!outros || parseInt(outros.cnt) === 0) {
+      await pool.query(`UPDATE pedidos SET aguardando_repositor_desde='' WHERE id=$1`,[item.pedido_id]);
+    }
+
+    await registrarAuditoria(req, 'ITEM_DESFEITO', 'item', item.id, {status: item.status}, {status: 'pendente'});
+    res.json({mensagem:'Marcação desfeita!', numero_pedido: item.numero_pedido});
+  } catch(e){res.status(500).json({erro:e.message});}
+});
+
 router.put('/pedidos/:id/concluir', requerAuth, async (req,res) => {
   try {
     // Se o repositor já resolveu os avisos e concluiu automaticamente, retorna sucesso

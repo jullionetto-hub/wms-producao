@@ -311,7 +311,7 @@ function verDetalhePedidoLote(cx) {
           <button onclick="verificarItemDetalheLote(${item.id},'encontrado',${cx})" style="padding:10px 0;border:1.5px solid rgba(87,185,129,.4);border-radius:8px;background:rgba(87,185,129,.12);color:var(--green);font-size:12px;font-weight:700;cursor:pointer">Coletado</button>
           <button onclick="parcialItemDetalheLote(${item.id},${item.quantidade||1},${cx})" style="padding:10px 0;border:1.5px solid rgba(224,168,62,.4);border-radius:8px;background:rgba(224,168,62,.12);color:var(--amber);font-size:12px;font-weight:700;cursor:pointer">Parcial</button>
           <button onclick="verificarItemDetalheLote(${item.id},'falta',${cx})" style="padding:10px 0;border:1.5px solid rgba(201,82,79,.4);border-radius:8px;background:rgba(201,82,79,.12);color:var(--red);font-size:12px;font-weight:700;cursor:pointer">Falta</button>
-        </div>` : ''}
+        </div>` : `<button onclick="desfazerItemDetalheLote(${item.id},${cx})" style="width:100%;margin-top:10px;padding:10px 0;border:1.5px solid rgba(56,189,248,.4);border-radius:8px;background:rgba(56,189,248,.1);color:#0ea5e9;font-size:12px;font-weight:700;cursor:pointer">↺ Desfazer</button>`}
     </div>`;
   }).join('');
 
@@ -352,6 +352,24 @@ async function verificarItemDetalheLote(itemId, status, cx) {
     _renderizarListaLote();
     verDetalhePedidoLote(cx);
   } catch(e) { toast('Erro de rede', 'erro'); }
+}
+
+function desfazerItemDetalheLote(itemId, cx) {
+  wmsConfirm({
+    titulo: 'Desfazer esta marcação?',
+    sub: 'O item volta para pendente e o aviso ao repositor (se houver) é cancelado.',
+    btnOk: 'Desfazer',
+  }, async () => {
+    try {
+      const res = await fetch(`${API}/itens/${itemId}/desfazer`, { method:'PUT', credentials:'include' });
+      const data = await res.json();
+      if (!res.ok) { toast(data.erro||'Erro ao desfazer', 'erro'); return; }
+      await _recarregarLoteItensSilencioso();
+      _renderizarListaLote();
+      verDetalhePedidoLote(cx);
+      toast('Marcação desfeita!', 'sucesso');
+    } catch(e) { toast('Erro de rede', 'erro'); }
+  });
 }
 
 function parcialItemDetalheLote(itemId, quantidade, cx) {
@@ -691,7 +709,10 @@ function _renderizarListaLote() {
             <button onclick="verificarGrupoLote('${ids}')" style="padding:10px 0;border:1.5px solid var(--green);border-radius:8px;background:rgba(87,185,129,.12);color:var(--green);font-size:12px;font-weight:700;cursor:pointer">Encontrei tudo</button>
             <button onclick="toggleParcialLote('${ids}')" style="padding:10px 0;border:1.5px solid var(--accent);border-radius:8px;background:rgba(79,70,229,.12);color:var(--accent);font-size:12px;font-weight:700;cursor:pointer">Parcial</button>
             <button onclick="toggleFaltaLote('${ids}')" style="padding:10px 0;border:1.5px solid var(--amber);border-radius:8px;background:rgba(224,168,62,.12);color:var(--amber);font-size:12px;font-weight:700;cursor:pointer">Falta</button>
-          </div>` : `<div style="font-size:11px;font-weight:700;color:${temFalta?'var(--amber)':'var(--green)'};text-align:center">${temFalta?'Aguardando repositor':'Coletado'}</div>`}
+          </div>` : `<div>
+            <div style="font-size:11px;font-weight:700;color:${temFalta?'var(--amber)':'var(--green)'};text-align:center;margin-bottom:8px">${temFalta?'Aguardando repositor':'Coletado'}</div>
+            <button onclick="desfazerGrupoLote('${ids}')" style="width:100%;padding:9px 0;border:1.5px solid rgba(56,189,248,.4);border-radius:8px;background:rgba(56,189,248,.1);color:#0ea5e9;font-size:12px;font-weight:700;cursor:pointer">↺ Desfazer</button>
+          </div>`}
         ${parcialAberto ? `<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
             <label style="font-size:11px;color:var(--amber);font-weight:700">Quantas unidades encontrou (de ${totalQty}):</label>
             <div style="display:flex;gap:8px;margin-top:6px">
@@ -845,6 +866,30 @@ async function verificarGrupoLote(idsStr) {
     _renderizarListaLote();
     _loteAutoAvancar();
   } catch(e) { toast('Erro de rede','erro'); }
+}
+
+// Desfaz a marcação de um grupo inteiro (mesmo SKU, possivelmente espalhado
+// em mais de um pedido do lote) — pede confirmação pelo mesmo motivo do
+// desfazerItem individual: evita apagar um aviso que o repositor já atende.
+function desfazerGrupoLote(idsStr) {
+  wmsConfirm({
+    titulo: 'Desfazer esta marcação?',
+    sub: 'Os itens voltam pra pendente e o aviso ao repositor (se houver) é cancelado.',
+    btnOk: 'Desfazer',
+  }, async () => {
+    const ids = idsStr.split(',').map(Number);
+    try {
+      const resultados = await Promise.all(ids.map(id =>
+        fetch(`${API}/itens/${id}/desfazer`, { method:'PUT', credentials:'include' })
+          .then(r => r.json().then(d => ({ ok: r.ok, erro: d.erro })))
+      ));
+      await _recarregarLoteItensSilencioso();
+      _renderizarListaLote();
+      const falhou = resultados.find(r => !r.ok);
+      if (falhou) toast(falhou.erro || 'Erro ao desfazer', 'erro');
+      else toast('Marcação desfeita!', 'sucesso');
+    } catch(e) { toast('Erro de rede', 'erro'); }
+  });
 }
 
 // Confirma o campo inline de Parcial (reaproveita o mesmo padrão de toggleParcial/
@@ -1998,7 +2043,10 @@ function renderChecklist(prefix) {
             style="padding:12px 0;border:1.5px solid rgba(201,82,79,.4);border-radius:8px;background:rgba(201,82,79,.12);color:var(--red);font-size:12px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;letter-spacing:.3px">
             FALTA
           </button>
-        </div>`:`<div style="font-size:11px;color:#94A3B8;text-align:center;padding:6px 0">Item verificado</div>`}
+        </div>`:`<button onclick="desfazerItemMobile(${item.id},'${prefix}')"
+            style="width:100%;padding:10px 0;border:1.5px solid rgba(56,189,248,.4);border-radius:8px;background:rgba(56,189,248,.1);color:#0ea5e9;font-size:12px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;letter-spacing:.3px;margin-top:4px">
+            ↺ DESFAZER MARCAÇÃO
+          </button>`}
       </div>`;
     }
 
@@ -2033,9 +2081,13 @@ function renderChecklist(prefix) {
         </div>
       </div>
       <div style="display:flex;flex-direction:column;gap:5px;flex-shrink:0">
-        <button style="width:80px;padding:8px 0;border:1px solid ${v?'var(--border)':'rgba(87,185,129,.4)'};border-radius:7px;background:${v?'var(--surface2)':'rgba(87,185,129,.12)'};color:${v?'var(--text3)':'var(--green)'};font-size:11px;font-weight:700;cursor:${v?'not-allowed':'pointer'};font-family:'DM Sans',sans-serif;letter-spacing:.5px" ${v?'disabled':''} onclick="${fnVerif}(${item.id},'encontrado','${prefix}')">COLETADO</button>
-        <button style="width:80px;padding:8px 0;border:1px solid ${v?'var(--border)':'rgba(224,168,62,.4)'};border-radius:7px;background:${v?'var(--surface2)':'rgba(224,168,62,.12)'};color:${v?'var(--text3)':'var(--amber)'};font-size:11px;font-weight:700;cursor:${v?'not-allowed':'pointer'};font-family:'DM Sans',sans-serif;letter-spacing:.5px" ${v?'disabled':''} onclick="${fnToggle}(${item.id},'${prefix}')">PARCIAL</button>
-        <button style="width:80px;padding:8px 0;border:1px solid ${v?'var(--border)':'rgba(201,82,79,.4)'};border-radius:7px;background:${v?'var(--surface2)':'rgba(201,82,79,.12)'};color:${v?'var(--text3)':'var(--red)'};font-size:11px;font-weight:700;cursor:${v?'not-allowed':'pointer'};font-family:'DM Sans',sans-serif;letter-spacing:.5px" ${v?'disabled':''} onclick="${fnVerif}(${item.id},'falta','${prefix}')">FALTA</button>
+        ${!v ? `
+        <button style="width:80px;padding:8px 0;border:1px solid rgba(87,185,129,.4);border-radius:7px;background:rgba(87,185,129,.12);color:var(--green);font-size:11px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;letter-spacing:.5px" onclick="${fnVerif}(${item.id},'encontrado','${prefix}')">COLETADO</button>
+        <button style="width:80px;padding:8px 0;border:1px solid rgba(224,168,62,.4);border-radius:7px;background:rgba(224,168,62,.12);color:var(--amber);font-size:11px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;letter-spacing:.5px" onclick="${fnToggle}(${item.id},'${prefix}')">PARCIAL</button>
+        <button style="width:80px;padding:8px 0;border:1px solid rgba(201,82,79,.4);border-radius:7px;background:rgba(201,82,79,.12);color:var(--red);font-size:11px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;letter-spacing:.5px" onclick="${fnVerif}(${item.id},'falta','${prefix}')">FALTA</button>
+        ` : `
+        <button style="width:80px;padding:8px 0;border:1px solid rgba(56,189,248,.4);border-radius:7px;background:rgba(56,189,248,.12);color:#0ea5e9;font-size:11px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;letter-spacing:.5px" onclick="desfazerItemDesktop(${item.id},'${prefix}')">DESFAZER</button>
+        `}
       </div>
     </div>`;
   }).join('');
@@ -2099,6 +2151,30 @@ async function verificarItem(itemId, status, obs='', qtdFalta=0, prefix, renderP
     renderChecklist(renderPrefix);
   } catch(e) { toast('Erro ao verificar item!','erro'); }
 }
+
+// Desfaz uma marcação acidental (Encontrado/Parcial/Falta) — volta o item pra
+// pendente e cancela o aviso ao repositor, se um foi gerado. Pede confirmação
+// porque um toque sem querer no botão errado não deveria apagar um aviso que
+// o repositor já esteja atendendo (o backend também bloqueia esse caso).
+function desfazerItem(itemId, prefix, renderPrefix) {
+  wmsConfirm({
+    titulo: 'Desfazer esta marcação?',
+    sub: 'O item volta para pendente e o aviso ao repositor (se houver) é cancelado.',
+    btnOk: 'Desfazer',
+  }, async () => {
+    try {
+      const resp = await fetch(`${API}/itens/${itemId}/desfazer`, { credentials:'include', method:'PUT' });
+      const data = await resp.json();
+      if (!resp.ok) { toast(data.erro || 'Erro ao desfazer!', 'erro'); return; }
+      const item = itensAtuais.find(i => i.id === itemId);
+      if (item) { item.status = 'pendente'; item.obs = ''; item.aviso_status = ''; item.hora_verificado = ''; }
+      toast('Marcação desfeita!', 'sucesso');
+      renderChecklist(renderPrefix);
+    } catch(e) { toast('Erro de rede!', 'erro'); }
+  });
+}
+function desfazerItemDesktop(id, prefix) { desfazerItem(id, prefix, 'cl'); }
+function desfazerItemMobile (id, prefix) { desfazerItem(id, prefix, 'm-cl'); }
 
 
 
