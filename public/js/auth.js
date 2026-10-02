@@ -50,8 +50,9 @@ function selecionarPerfilItem(p, el) {}
 
 
 // Versão genérica do olhinho — reaproveitada nos campos de troca de senha
-// (primeiro acesso e autoatendimento), onde a pessoa precisa conferir se
-// digitou a senha nova igual nos dois campos antes de salvar.
+// (primeiro acesso, autoatendimento e cadastro de usuário), onde a pessoa
+// precisa conferir a senha digitada/sugerida antes de salvar. Espera os
+// ícones nomeados como ico-olho-aberto-<inputId> / ico-olho-fechado-<inputId>.
 function toggleSenhaCampo(inputId) {
   const inp = document.getElementById(inputId);
   const aberto = document.getElementById('ico-olho-aberto-' + inputId);

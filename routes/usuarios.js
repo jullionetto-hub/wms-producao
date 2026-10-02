@@ -8,7 +8,7 @@ const { requerPermissao } = require('../lib/permissoes');
 
 router.get('/usuarios', requerAuth, requerPerfil('supervisor', 'gestor'), async (req,res) => {
   try {
-    let sql='SELECT id,nome,login,perfil,subtipo_repositor,perfis_acesso,turno,status,data_cadastro FROM usuarios WHERE 1=1';
+    let sql='SELECT id,nome,login,perfil,subtipo_repositor,perfis_acesso,turno,status,senha_temporaria,data_cadastro FROM usuarios WHERE 1=1';
     const p=[];
     if (req.query.perfil){p.push(req.query.perfil);sql+=` AND perfil=$${p.length}`;}
     res.json(await db.all(sql+' ORDER BY nome',p));
@@ -21,7 +21,12 @@ router.post('/usuarios', requerAuth, requerPerfil('supervisor', 'gestor'), async
   const extras=Array.isArray(perfis_acesso)?perfis_acesso.filter(Boolean).filter(p=>p!==perfil).join(','):String(perfis_acesso||'');
   const subtipo=perfil==='repositor'?(subtipo_repositor||'geral'):'geral';
   try {
-    const r=await pool.query(`INSERT INTO usuarios (nome,login,senha_hash,perfil,subtipo_repositor,perfis_acesso,turno) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
+    // Senha do cadastro é sempre tratada como provisória — obriga o
+    // colaborador a trocá-la no primeiro acesso (mesma tela/fluxo do reset
+    // manual de senha pelo supervisor). Sem prazo de expiração aqui: o
+    // cadastro pode acontecer dias antes do colaborador começar, diferente
+    // do reset manual (que já pressupõe login iminente).
+    const r=await pool.query(`INSERT INTO usuarios (nome,login,senha_hash,perfil,subtipo_repositor,perfis_acesso,turno,senha_temporaria) VALUES ($1,$2,$3,$4,$5,$6,$7,true) RETURNING id`,
       [nome,login,hashSenha(senha),perfil,subtipo,extras,turno||'Manha']);
     const novoId=r.rows[0].id;
     if (perfil==='separador') await pool.query(`INSERT INTO separadores (nome,matricula,turno,usuario_id) VALUES ($1,$2,$3,$4) ON CONFLICT(matricula) DO NOTHING`,[nome,login,turno||'Manha',novoId]);
