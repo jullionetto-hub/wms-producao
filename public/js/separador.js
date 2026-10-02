@@ -108,30 +108,77 @@ function _loteScreens(ativa) {
 // mostra a lista com caixinhas pra escolher o que fica junto no lote e o que
 // o separador prefere separar sozinho (todos começam marcados = "no lote").
 let _loteEscolhaMarcados = new Set();
+let _loteEscolhaExpandido = new Set();   // ids com a lista de itens aberta
+let _loteEscolhaItensPorPed = {};        // pedido_id -> [itens], carregado em segundo plano
 function abrirEscolhaLote(loteId) {
   const peds = _gruposLoteSistema[loteId];
   if (!peds?.length) { toast('Lote não encontrado — atualize a fila', 'erro'); return; }
   _loteIdAtual = loteId;
   _loteEscolhaMarcados = new Set(peds.map(p => p.id));
+  _loteEscolhaExpandido = new Set();
+  _loteEscolhaItensPorPed = {};
   _renderEscolhaLote(peds);
   _loteScreens('m-lote-escolher');
   mudarTabSep('separar');
+  _carregarItensEscolhaLote(peds);
+}
+
+// Busca os itens de cada pedido pra deixar expandir e ver antes de decidir —
+// é a mesma consulta de sempre (lote-itens), só leitura, não inicia nada.
+// Roda em segundo plano pra não atrasar a abertura da tela de escolha.
+async function _carregarItensEscolhaLote(peds) {
+  const ids = peds.map(p => p.id);
+  try {
+    const res = await fetch(`${API}/pedidos/lote-itens?pedido_ids=${ids.join(',')}`, { credentials:'include' });
+    const data = await res.json();
+    if (!res.ok) return;
+    _loteEscolhaItensPorPed = {};
+    (data.itens||[]).forEach(item => {
+      const pedId = ids[item.caixa_num - 1];
+      if (pedId == null) return;
+      (_loteEscolhaItensPorPed[pedId] = _loteEscolhaItensPorPed[pedId] || []).push(item);
+    });
+    if (_loteIdAtual && _gruposLoteSistema[_loteIdAtual]) _renderEscolhaLote(_gruposLoteSistema[_loteIdAtual]);
+  } catch(e) { /* mantém só a contagem de itens, sem a lista detalhada */ }
 }
 
 function _renderEscolhaLote(peds) {
   const body = document.getElementById('m-lote-escolher-body');
   if (!body) return;
-  body.innerHTML = peds.map(p => `
-    <label style="display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--border);border-radius:10px;margin-bottom:8px;background:var(--surface);cursor:pointer">
-      <input type="checkbox" data-ped-id="${p.id}" ${_loteEscolhaMarcados.has(p.id)?'checked':''}
-        onchange="_toggleEscolhaLotePed(${p.id}, this.checked)"
-        style="width:22px;height:22px;accent-color:var(--accent);flex-shrink:0">
-      <div style="flex:1;min-width:0">
-        <div style="font-size:14px;font-weight:700;color:var(--text);font-family:'Space Mono',monospace">#${p.numero_pedido}</div>
-        <div style="font-size:11px;color:var(--text3)">${p.total_itens||p.itens||0} itens</div>
+  body.innerHTML = peds.map(p => {
+    const aberto = _loteEscolhaExpandido.has(p.id);
+    const itens = _loteEscolhaItensPorPed[p.id];
+    return `<div style="border:1px solid var(--border);border-radius:10px;margin-bottom:8px;background:var(--surface);overflow:hidden">
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 14px">
+        <input type="checkbox" data-ped-id="${p.id}" onclick="event.stopPropagation()" ${_loteEscolhaMarcados.has(p.id)?'checked':''}
+          onchange="_toggleEscolhaLotePed(${p.id}, this.checked)"
+          style="width:22px;height:22px;accent-color:var(--accent);flex-shrink:0">
+        <div style="flex:1;min-width:0;cursor:pointer" onclick="_toggleExpandirEscolhaLote(${p.id})">
+          <div style="font-size:14px;font-weight:700;color:var(--text);font-family:'Space Mono',monospace">#${p.numero_pedido}</div>
+          <div style="font-size:11px;color:var(--text3)">${p.total_itens||p.itens||0} itens</div>
+        </div>
+        <button type="button" onclick="_toggleExpandirEscolhaLote(${p.id})" style="background:none;border:none;color:var(--text3);font-size:13px;cursor:pointer;padding:4px 6px">${aberto ? 'ocultar ▴' : 'ver itens ▾'}</button>
       </div>
-    </label>`).join('');
+      ${aberto ? `<div style="padding:0 14px 10px;border-top:1px solid var(--border)">
+        ${!itens
+          ? `<div style="padding:10px 0;color:var(--text3);font-size:12px">Carregando itens...</div>`
+          : itens.map(item => `
+            <div style="padding:8px 0;border-top:1px solid var(--border)">
+              <div style="display:flex;justify-content:space-between;gap:8px">
+                <span style="font-size:12px;font-weight:600;color:var(--text)">${item.descricao||item.codigo||'—'}</span>
+                <span style="font-family:'Space Mono',monospace;font-size:13px;font-weight:700;color:var(--text);flex-shrink:0">×${item.quantidade||1}</span>
+              </div>
+              <div style="font-size:11px;color:var(--text3);font-family:monospace">${item.endereco||'—'}</div>
+            </div>`).join('') || `<div style="padding:10px 0;color:var(--text3);font-size:12px">Sem itens</div>`}
+      </div>` : ''}
+    </div>`;
+  }).join('');
   _atualizarResumoEscolhaLote();
+}
+
+function _toggleExpandirEscolhaLote(id) {
+  if (_loteEscolhaExpandido.has(id)) _loteEscolhaExpandido.delete(id); else _loteEscolhaExpandido.add(id);
+  _renderEscolhaLote(_gruposLoteSistema[_loteIdAtual] || []);
 }
 
 function _toggleEscolhaLotePed(id, marcado) {
