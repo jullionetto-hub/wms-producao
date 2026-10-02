@@ -213,49 +213,32 @@ async function carregarRepSeparar(silent=false) {
     if (!n) {
       html = `<div style="text-align:center;padding:60px 16px"><div style="color:var(--text3);font-size:15px;font-weight:500">Nenhum item para separar</div></div>`;
     } else {
-      // Separa quem já está em busca ativa — fica numa seção fixa no topo,
-      // pro repositor ver de cara o que já começou sem procurar entre os cards pendentes.
-      const emBusca   = av.filter(a => (a.situacao || a.status) === 'verificando');
-      const pendentes = av.filter(a => (a.situacao || a.status) !== 'verificando');
-
-      if (emBusca.length) {
-        html += `<div style="display:flex;align-items:center;gap:8px;margin:2px 0 8px;padding:7px 12px;background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.3);border-radius:10px">
-          <span style="font-size:14px">🔍</span>
-          <span style="font-size:11px;font-weight:800;color:#8b5cf6;letter-spacing:.4px;text-transform:uppercase">Em busca agora</span>
-          <span style="background:#8b5cf6;color:#fff;border-radius:20px;padding:2px 9px;font-size:11px;font-weight:800">${emBusca.length}</span>
-        </div>`;
-        html += emBusca.map(a => `<div style="margin-bottom:6px">${renderCardRepSimples(a, 'separar')}</div>`).join('');
-        html += `<div style="margin-bottom:14px"></div>`;
-      }
-
-      if (pendentes.length) {
-        if (emBusca.length) {
-          html += `<div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.3px;margin:0 0 6px 2px">Pendentes</div>`;
+      // Agrupa por código de produto — a ordem (inclusive quem já está
+      // buscando) fica a critério do próprio repositor via arrastar;
+      // o card de cada item já muda de cor/texto sozinho quando entra
+      // em busca (ver renderCardRepSimples, sit === 'verificando').
+      const grupos = {};
+      av.forEach(a => { const k = a.codigo || ''; if (!grupos[k]) grupos[k] = []; grupos[k].push(a); });
+      Object.values(grupos).forEach(itens => {
+        const ids = itens.map(a => a.id).join(',');
+        let bloco = '';
+        if (itens.length > 1) {
+          // Cabeçalho do grupo
+          bloco += `<div style="background:rgba(251,146,60,.1);border:2px solid var(--orange);border-radius:12px;padding:10px 14px;margin-bottom:4px;display:flex;align-items:center;justify-content:space-between">
+            <div>
+              <span style="font-size:13px;font-weight:800;color:#c2410c;font-family:'Space Mono',monospace">${itens[0].codigo||'—'}</span>
+              <div style="font-size:11px;color:#92400e;margin-top:2px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${itens[0].descricao||''}</div>
+            </div>
+            <span style="background:#f97316;color:#fff;border-radius:20px;padding:4px 10px;font-size:11px;font-weight:800;white-space:nowrap">${itens.length} pedidos</span>
+          </div>`;
+          // Cards individuais levemente recuados
+          bloco += itens.map(a => `<div style="margin-left:12px;border-left:3px solid #f97316;padding-left:4px;margin-bottom:2px">${renderCardRepSimples(a,'separar')}</div>`).join('');
+          bloco += `<div style="margin-bottom:10px"></div>`;
+        } else {
+          bloco = renderCardRepSimples(itens[0], 'separar');
         }
-        // Agrupa por código de produto
-        const grupos = {};
-        pendentes.forEach(a => { const k = a.codigo || ''; if (!grupos[k]) grupos[k] = []; grupos[k].push(a); });
-        Object.values(grupos).forEach(itens => {
-          const ids = itens.map(a => a.id).join(',');
-          let bloco = '';
-          if (itens.length > 1) {
-            // Cabeçalho do grupo
-            bloco += `<div style="background:rgba(251,146,60,.1);border:2px solid var(--orange);border-radius:12px;padding:10px 14px;margin-bottom:4px;display:flex;align-items:center;justify-content:space-between">
-              <div>
-                <span style="font-size:13px;font-weight:800;color:#c2410c;font-family:'Space Mono',monospace">${itens[0].codigo||'—'}</span>
-                <div style="font-size:11px;color:#92400e;margin-top:2px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${itens[0].descricao||''}</div>
-              </div>
-              <span style="background:#f97316;color:#fff;border-radius:20px;padding:4px 10px;font-size:11px;font-weight:800;white-space:nowrap">${itens.length} pedidos</span>
-            </div>`;
-            // Cards individuais levemente recuados
-            bloco += itens.map(a => `<div style="margin-left:12px;border-left:3px solid #f97316;padding-left:4px;margin-bottom:2px">${renderCardRepSimples(a,'separar')}</div>`).join('');
-            bloco += `<div style="margin-bottom:10px"></div>`;
-          } else {
-            bloco = renderCardRepSimples(itens[0], 'separar');
-          }
-          html += _repDragWrap(ids, bloco);
-        });
-      }
+        html += _repDragWrap(ids, bloco);
+      });
     }
     if (el)  { el.innerHTML  = html; _initRepDragReorder(el); }
     if (elD) { elD.innerHTML = html; _initRepDragReorder(elD); }
