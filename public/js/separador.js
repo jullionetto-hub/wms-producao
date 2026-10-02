@@ -97,32 +97,85 @@ const _CX_CORES = ['#4F46E5','#0891B2','#64748B','#7C3AED','#334155'];
 const MOTIVOS_FALTA_LOTE = ['Estoque vazio', 'Produto não localizado', 'Divergência de estoque'];
 
 function _loteScreens(ativa) {
-  ['m-lote-prep','m-lote-lista','m-lote-conclusao','m-cl-wrap','m-caixa-wrap'].forEach(id => {
+  ['m-lote-escolher','m-lote-prep','m-lote-lista','m-lote-conclusao','m-cl-wrap','m-caixa-wrap'].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
     el.style.display = id === ativa ? (id === 'm-cl-wrap' ? '' : 'block') : 'none';
   });
 }
 
-// Abre um lote já formado pelo supervisor (Formar Lotes) — os pedidos já
-// vieram agrupados e atribuídos, então pula a tela de escolher caixa e vai
-// direto pra lista mesclada (caixa_num é numerado automaticamente pelo
-// backend, na ordem dos ids enviados).
-async function abrirLoteSistema(loteId) {
+// Abre um lote já formado pelo supervisor (Formar Lotes) — antes de começar,
+// mostra a lista com caixinhas pra escolher o que fica junto no lote e o que
+// o separador prefere separar sozinho (todos começam marcados = "no lote").
+let _loteEscolhaMarcados = new Set();
+function abrirEscolhaLote(loteId) {
   const peds = _gruposLoteSistema[loteId];
   if (!peds?.length) { toast('Lote não encontrado — atualize a fila', 'erro'); return; }
-  const ids = peds.map(p => p.id);
+  _loteIdAtual = loteId;
+  _loteEscolhaMarcados = new Set(peds.map(p => p.id));
+  _renderEscolhaLote(peds);
+  _loteScreens('m-lote-escolher');
+  mudarTabSep('separar');
+}
+
+function _renderEscolhaLote(peds) {
+  const body = document.getElementById('m-lote-escolher-body');
+  if (!body) return;
+  body.innerHTML = peds.map(p => `
+    <label style="display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--border);border-radius:10px;margin-bottom:8px;background:var(--surface);cursor:pointer">
+      <input type="checkbox" data-ped-id="${p.id}" ${_loteEscolhaMarcados.has(p.id)?'checked':''}
+        onchange="_toggleEscolhaLotePed(${p.id}, this.checked)"
+        style="width:22px;height:22px;accent-color:var(--accent);flex-shrink:0">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:14px;font-weight:700;color:var(--text);font-family:'Space Mono',monospace">#${p.numero_pedido}</div>
+        <div style="font-size:11px;color:var(--text3)">${p.total_itens||p.itens||0} itens</div>
+      </div>
+    </label>`).join('');
+  _atualizarResumoEscolhaLote();
+}
+
+function _toggleEscolhaLotePed(id, marcado) {
+  if (marcado) _loteEscolhaMarcados.add(id); else _loteEscolhaMarcados.delete(id);
+  _atualizarResumoEscolhaLote();
+}
+
+function _atualizarResumoEscolhaLote() {
+  const total = (_gruposLoteSistema[_loteIdAtual]||[]).length;
+  const n = _loteEscolhaMarcados.size;
+  const resumo = document.getElementById('m-lote-escolher-resumo');
+  if (resumo) resumo.textContent = total ? `${n} no lote · ${total-n} individual` : '';
+  const btn = document.getElementById('m-lote-escolher-btn');
+  if (btn) btn.disabled = n === 0;
+}
+
+// Confirma a escolha: tira do lote (volta pra fila normal, pendente e solto)
+// quem ficou desmarcado, e inicia o lote só com quem ficou marcado.
+async function confirmarEscolhaLote() {
+  const peds = _gruposLoteSistema[_loteIdAtual] || [];
+  const idsLote = peds.filter(p => _loteEscolhaMarcados.has(p.id)).map(p => p.id);
+  const idsIndividual = peds.filter(p => !_loteEscolhaMarcados.has(p.id)).map(p => p.id);
+  if (!idsLote.length) { toast('Marque ao menos 1 pedido pra formar o lote', 'aviso'); return; }
+  const btn = document.getElementById('m-lote-escolher-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Iniciando...'; }
   try {
+    for (const id of idsIndividual) {
+      await fetch(`${API}/pedidos/${id}/tirar-do-lote`, { method:'PUT', credentials:'include' });
+    }
     const res = await fetch(`${API}/pedidos/lote/iniciar`, {
       method:'POST', credentials:'include', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ pedido_ids: ids })
+      body: JSON.stringify({ pedido_ids: idsLote })
     });
     const data = await res.json();
-    if (!res.ok) { toast(data.erro||'Erro ao iniciar lote', 'erro'); return; }
-    _loteIdAtual = loteId;
-    mudarTabSep('separar');
-    await carregarListaLote(ids);
-  } catch(e) { toast('Erro de rede', 'erro'); }
+    if (!res.ok) {
+      toast(data.erro||'Erro ao iniciar lote', 'erro');
+      if (btn) { btn.disabled = false; btn.textContent = 'Começar separação'; }
+      return;
+    }
+    await carregarListaLote(idsLote);
+  } catch(e) {
+    toast('Erro de rede', 'erro');
+    if (btn) { btn.disabled = false; btn.textContent = 'Começar separação'; }
+  }
 }
 
 // Lote já iniciado (status 'separando') — reabre direto na lista mesclada,
@@ -1017,9 +1070,11 @@ async function carregarFilaMobile() {
 
     const _renderLoteCard = (loteId, peds, { emAndamento }) => {
       const cor = _corLote(peds);
-      const onclickFn = emAndamento ? `continuarLoteSistema(${loteId})` : `abrirLoteSistema(${loteId})`;
+      // Pronto: abre a tela de escolher o que fica no lote antes de começar.
+      // Em andamento: já foi decidido no começo, só retoma direto.
+      const onclickFn = emAndamento ? `continuarLoteSistema(${loteId})` : `abrirEscolhaLote(${loteId})`;
       const titulo = emAndamento ? `Lote em andamento — #${loteId}` : `Lote pronto — #${loteId}`;
-      const sub = cor.tag ? `${cor.tag} · toque pra continuar` : (emAndamento ? `${peds.length} pedidos · toque pra continuar` : `${peds.length} pedidos · toque pra começar`);
+      const sub = cor.tag ? `${cor.tag} · toque pra continuar` : (emAndamento ? `${peds.length} pedidos · toque pra continuar` : `${peds.length} pedidos · toque pra escolher`);
       return `<div onclick="${onclickFn}"
            style="border:1px solid var(--border);border-left:3px solid ${cor.bord};border-radius:10px;padding:14px;margin-bottom:12px;background:var(--surface);cursor:pointer">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
@@ -1033,7 +1088,7 @@ async function carregarFilaMobile() {
           ${peds.slice(0,6).map((p,i)=>`<span style="background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:6px;padding:2px 8px;font-size:11px">#${p.numero_pedido}</span>`).join('')}
           ${peds.length>6?`<span style="font-size:11px;color:var(--text3);padding:2px 4px">+${peds.length-6}</span>`:''}
         </div>
-        ${_renderLotePedidoAPedido(loteId, peds)}
+        ${emAndamento ? _renderLotePedidoAPedido(loteId, peds) : ''}
       </div>`;
     };
 
