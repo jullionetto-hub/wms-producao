@@ -1018,10 +1018,16 @@ async function carregarFilaMobile() {
 
     // Pedidos aguardando repositor (repositor ainda não resolveu)
     const pedidosComFalta = {};
+    // Dentro desses, os que o repositor já está procurando agora (status
+    // 'verificando' — rótulo "Procurando" na tela do repositor) — distinto de
+    // só "na fila esperando alguém pegar", pro separador saber que já tem
+    // gente atrás do item.
+    const pedidosProcurando = {};
     avisos.forEach(a => {
       const n = String(a.numero_pedido);
       if (!pedidosComFalta[n]) pedidosComFalta[n] = 0;
       pedidosComFalta[n]++;
+      if (a.status === 'verificando') pedidosProcurando[n] = (pedidosProcurando[n]||0) + 1;
     });
 
     // Pedidos aguardando supervisor (nao_encontrado)
@@ -1202,16 +1208,18 @@ async function carregarFilaMobile() {
       const isPrime  = p.tem_prime === true;
       const qtdFalta   = pedidosComFalta[String(p.numero_pedido)] || 0;
       const temFalta   = qtdFalta > 0;
+      const qtdProcurando = pedidosProcurando[String(p.numero_pedido)] || 0;
+      const temProcurando = qtdProcurando > 0;
       const qtdSup     = pedidosAguardSup[String(p.numero_pedido)] || 0;
       const temSup     = qtdSup > 0;
       const qtdReposto = (!temFalta && !temSup) ? (pedidosReposto[String(p.numero_pedido)] || 0) : 0;
       const temReposto = qtdReposto > 0;
 
-      // Hierarquia: supervisor (roxo) > falta (âmbar) > reposto (verde) > drive > normal
-      const bordColor = temSup ? 'var(--indigo)' : temFalta ? 'var(--amber)' : temReposto ? 'var(--green)' : isDrive ? 'var(--red)' : 'var(--border)';
-      const bgColor   = temSup ? 'rgba(139,92,246,.1)' : temFalta ? 'rgba(224,168,62,.1)' : temReposto ? 'rgba(87,185,129,.1)' : isDrive ? 'rgba(201,82,79,.1)' : 'var(--surface)';
-      const numColor  = isDrive ? 'var(--red)' : temSup ? 'var(--indigo)' : temFalta ? 'var(--amber)' : temReposto ? 'var(--green)' : 'var(--accent)';
-      const pillTxt   = temSup ? 'supervisor' : temFalta ? 'aguard. repositor' : temReposto ? 'pode continuar!' : isDrive ? 'drive thru' : 'aguardando sep';
+      // Hierarquia: supervisor (roxo) > falta/procurando (âmbar/índigo) > reposto (verde) > drive > normal
+      const bordColor = temSup ? 'var(--indigo)' : temProcurando ? 'var(--indigo)' : temFalta ? 'var(--amber)' : temReposto ? 'var(--green)' : isDrive ? 'var(--red)' : 'var(--border)';
+      const bgColor   = temSup ? 'rgba(139,92,246,.1)' : temProcurando ? 'rgba(139,92,246,.1)' : temFalta ? 'rgba(224,168,62,.1)' : temReposto ? 'rgba(87,185,129,.1)' : isDrive ? 'rgba(201,82,79,.1)' : 'var(--surface)';
+      const numColor  = isDrive ? 'var(--red)' : temSup ? 'var(--indigo)' : temProcurando ? 'var(--indigo)' : temFalta ? 'var(--amber)' : temReposto ? 'var(--green)' : 'var(--accent)';
+      const pillTxt   = temSup ? 'supervisor' : temProcurando ? 'repositor procurando' : temFalta ? 'aguard. repositor' : temReposto ? 'pode continuar!' : isDrive ? 'drive thru' : 'aguardando sep';
       const pillCls   = temSup ? 'separando' : temReposto ? 'separando' : 'pendente';
       const bordWidth = (temSup || temFalta || temReposto) ? '2.5px' : '1.5px';
 
@@ -1233,8 +1241,8 @@ async function carregarFilaMobile() {
         ${temSup ? `<div style="display:flex;align-items:center;gap:5px;background:rgba(139,92,246,.15);border:1px solid rgba(139,92,246,.4);border-radius:6px;padding:5px 9px;margin-bottom:5px">
           <span style="font-size:11px;font-weight:700;color:var(--indigo)">${qtdSup} item${qtdSup>1?'s':''} aguardando supervisor</span>
         </div>` : ''}
-        ${temFalta ? `<div style="display:flex;align-items:center;gap:5px;background:rgba(224,168,62,.15);border:1px solid rgba(224,168,62,.4);border-radius:6px;padding:5px 9px;margin-bottom:5px">
-          <span style="font-size:11px;font-weight:700;color:var(--amber)">⏳ ${qtdFalta} item${qtdFalta>1?'s':''} aguardando repositor — não pegue ainda!</span>
+        ${temFalta ? `<div style="display:flex;align-items:center;gap:5px;background:${temProcurando?'rgba(139,92,246,.15)':'rgba(224,168,62,.15)'};border:1px solid ${temProcurando?'rgba(139,92,246,.4)':'rgba(224,168,62,.4)'};border-radius:6px;padding:5px 9px;margin-bottom:5px">
+          <span style="font-size:11px;font-weight:700;color:${temProcurando?'var(--indigo)':'var(--amber)'}">${temProcurando?`🔍 ${qtdProcurando} item${qtdProcurando>1?'s':''} — repositor procurando em outras colmeias agora`:`⏳ ${qtdFalta} item${qtdFalta>1?'s':''} aguardando repositor — não pegue ainda!`}</span>
         </div>` : ''}
         ${temReposto ? `<div style="display:flex;align-items:center;gap:6px;background:rgba(87,185,129,.15);border:1px solid rgba(87,185,129,.4);border-radius:6px;padding:6px 10px;margin-bottom:5px">
 

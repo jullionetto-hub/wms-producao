@@ -95,7 +95,7 @@ function corSituacao(sit) {
 
 function labelSituacao(sit) {
   return {
-    pendente:'Separar', verificando:'Verificando',
+    pendente:'Separar', verificando:'Procurando',
     buscado:'Separado', separado:'Separado',
     aguardando_abastecer:'Aguard. Entregar',
     subiu:'Subiu', abastecido:'Abastecido',
@@ -898,7 +898,7 @@ function renderCardMobile(a) {
   // ── Badge de status ──
   const BADGES = {
     pendente:            `<span style="background:rgba(224,168,62,.15);color:var(--amber);border:1px solid rgba(224,168,62,.35);font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px">⏳ Separar</span>`,
-    verificando:         `<span style="background:rgba(139,92,246,.15);color:var(--indigo);border:1px solid rgba(139,92,246,.35);font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px">Verificando</span>`,
+    verificando:         `<span style="background:rgba(139,92,246,.15);color:var(--indigo);border:1px solid rgba(139,92,246,.35);font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px">🔍 Procurando</span>`,
     buscado:             `<span style="background:rgba(79,70,229,.15);color:#818CF8;border:1px solid rgba(79,70,229,.35);font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px">Separado</span>`,
     separado:            `<span style="background:rgba(79,70,229,.15);color:#818CF8;border:1px solid rgba(79,70,229,.35);font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px">Separado</span>`,
     aguardando_abastecer:`<span style="background:rgba(251,146,60,.15);color:var(--orange);border:1px solid rgba(251,146,60,.35);font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px">Aguardando</span>`,
@@ -931,7 +931,7 @@ function renderCardMobile(a) {
   // ── Progress stepper ──
   const STEPS = [
     {k:'pendente',label:'Separar'},
-    {k:'verificando',label:'Verificando'},
+    {k:'verificando',label:'Procurando'},
     {k:'buscado',label:'Separado'},
     {k:'aguardando_abastecer',label:'Aguard.'},
     {k:'subiu',label:'Subiu'},
@@ -986,7 +986,7 @@ function renderCardMobile(a) {
   // ── Botões de ação ──
   // ── Dropdown de etapas ──
   const ETAPAS_DROP = [
-    { acao:'e_verificando', ico:'', lbl:'Verificando',    cor:'#8b5cf6' },
+    { acao:'e_verificando', ico:'🔍', lbl:'Procurando',    cor:'#8b5cf6' },
     { acao:'e_separado',    ico:'', lbl:'Separado',        cor:'#3b82f6' },
     { acao:'e_subiu',       ico:'⬆️', lbl:'Subiu',           cor:'#0ea5e9' },
     { acao:'e_abastecido',  ico:'', lbl:'Abastecido',      cor:'#10b981' },
@@ -1116,7 +1116,7 @@ function selecionarEtapaRep(id, acao, nomeLogado, el, e) {
   if (seta) seta.style.transform = '';
   // Feedback visual imediato no label
   const labels = {
-    e_verificando:'Verificando', e_separado:'Separado', e_subiu:'Subiu',
+    e_verificando:'Procurando', e_separado:'Separado', e_subiu:'Subiu',
     e_abastecido:'Abastecido',  e_protocolo:'Protocolo', e_devolucao:'Devolução',
     e_nao_enc:'Não encontrado'
   };

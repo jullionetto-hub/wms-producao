@@ -33,6 +33,8 @@
         carregarAguardandoMobile();
       }
       // Notifica separador no mobile quando repositor marca Subiu ou Abastecido
+      // — ou começa a Procurar (status 'verificando' no backend) em outras
+      // colmeias, pra ele saber que tem alguém atrás do item agora mesmo.
       if (typeof usuarioAtual !== 'undefined' && usuarioAtual?.perfil === 'separador') {
         if (data?.status === 'subiu') {
           const ped = data?.numero_pedido ? ` — Pedido #${data.numero_pedido}` : '';
@@ -40,6 +42,9 @@
         } else if (data?.status === 'abastecido') {
           const ped = data?.numero_pedido ? ` — Pedido #${data.numero_pedido}` : '';
           if (typeof toast === 'function') toast(`Item abastecido pelo repositor${ped}!`, 'sucesso');
+        } else if (data?.status === 'verificando') {
+          const ped = data?.numero_pedido ? ` — Pedido #${data.numero_pedido}` : '';
+          if (typeof toast === 'function') toast(`🔍 Repositor procurando item em outras colmeias${ped}`, 'info');
         }
       }
     });
