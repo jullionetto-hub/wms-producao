@@ -41,9 +41,7 @@ let _filtroMobileRep   = '';   // valor do filtro customizado mobile
 
 /* ── Inicialização ─────────────────────────────────────────────────── */
 function ativarMobileRep() {
-  document.body.classList.add('rep-mobile');
-  document.getElementById('rep-mobile-root').style.display = 'flex';
-  document.getElementById('rep-tabbar').style.display = 'flex';
+  _wmsAtivarShellMobile('rep-mobile-root', 'rep-tabbar', 'rep-mobile');
   carregarUsuariosParaRep();
   mudarTabRep('separar');
   setInterval(() => {
@@ -58,18 +56,14 @@ function ativarMobileRep() {
 const _REP_TABS_LIST = ['separar','separado','subiu','protocolo','entrada-manual'];
 
 function mudarTabRep(tab) {
-  _REP_TABS_LIST.forEach(t => {
-    const pg = document.getElementById(`rep-tab-${t}`);
-    const bt = document.getElementById(`rtab-${t}`);
-    if (pg) pg.classList.toggle('ativa', t === tab);
-    if (bt) bt.classList.toggle('ativo', t === tab);
+  _wmsAlternarAbaClasse(_REP_TABS_LIST, tab, 'rep-tab-', 'rtab-', (t) => {
+    if      (t === 'separar')        carregarRepSeparar();
+    else if (t === 'separado')       carregarRepSeparado();
+    else if (t === 'subiu')          carregarRepSubiu();
+    else if (t === 'protocolo')      carregarRepProtocolo();
+    else if (t === 'stats')          carregarStatsRepMobile();
+    else if (t === 'entrada-manual') renderizarPagEntradaManual('rep-em-root');
   });
-  if      (tab === 'separar')        carregarRepSeparar();
-  else if (tab === 'separado')       carregarRepSeparado();
-  else if (tab === 'subiu')          carregarRepSubiu();
-  else if (tab === 'protocolo')      carregarRepProtocolo();
-  else if (tab === 'stats')          carregarStatsRepMobile();
-  else if (tab === 'entrada-manual') renderizarPagEntradaManual('rep-em-root');
 }
 
 /* ── Usuários ──────────────────────────────────────────────────────── */
@@ -1229,18 +1223,14 @@ function atualizarUltimaAtualizacaoRep() {
 const _REP_DESK_TABS = ['separar','separado','subiu','protocolo','stats','ranking'];
 
 function mudarTabRepDesk(tab) {
-  _REP_DESK_TABS.forEach(t => {
-    const pg = document.getElementById(`d-rep-tab-${t}`);
-    const bt = document.getElementById(`d-rtab-${t}`);
-    if (pg) pg.style.display = t === tab ? '' : 'none';
-    if (bt) bt.classList.toggle('ativo', t === tab);
+  _wmsAlternarAbaDisplay(_REP_DESK_TABS, tab, 'd-rep-tab-', 'd-rtab-', (t) => {
+    if      (t === 'separar')   carregarRepSeparar();
+    else if (t === 'separado')  carregarRepSeparado();
+    else if (t === 'subiu')     carregarRepSubiu();
+    else if (t === 'protocolo') carregarRepProtocolo();
+    else if (t === 'stats')     carregarEstatisticasRep();
+    else if (t === 'ranking')   carregarRankingProdutos();
   });
-  if      (tab === 'separar')   carregarRepSeparar();
-  else if (tab === 'separado')  carregarRepSeparado();
-  else if (tab === 'subiu')     carregarRepSubiu();
-  else if (tab === 'protocolo') carregarRepProtocolo();
-  else if (tab === 'stats')     carregarEstatisticasRep();
-  else if (tab === 'ranking')   carregarRankingProdutos();
 }
 
 async function carregarReposicaoDesktop() {

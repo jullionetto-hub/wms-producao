@@ -2,6 +2,18 @@
    PEDIDOS
 ══════════════════════════════════════════ */
 
+// Mesma classificação de lib/helpers.js classificarFiscal — duplicada aqui porque
+// o frontend não importa módulos do backend. Usada na coluna UF da tabela e na
+// etiqueta, pra já sair sabendo se o pedido é NF cheia ou Declaração/Talão.
+const _ESTADOS_NF_CHEIA   = new Set(['AL','CE','MS','MT','PB','PI','RN','RO','SE']);
+const _ESTADOS_DECLARACAO = new Set(['AC','AM','AP','BA','DF','ES','GO','MA','MG','PA','PE','PR','RJ','RR','RS','SC','SP','TO']);
+function _fiscalLabel(uf) {
+  const sigla = String(uf||'').trim().toUpperCase();
+  if (_ESTADOS_NF_CHEIA.has(sigla)) return 'NF cheia';
+  if (_ESTADOS_DECLARACAO.has(sigla)) return 'Declaração';
+  return '';
+}
+
 function filtrarPedidosHoje() {
   const h = hojeLocal();
   document.getElementById('filtro-ped-ini').value = h;
@@ -100,11 +112,39 @@ async function carregarPedidos() {
 function filtrarPedidosTransp(tipo) {
   // Toggle: clicar no botão ativo desativa o filtro
   _filtroTransp = (_filtroTransp === tipo) ? '' : tipo;
-  document.querySelectorAll('.btn-transp').forEach(b => b.classList.remove('ativo'));
+  // Escopado só nos botões de transportadora (id^="ftransp-") — não mexe nos
+  // botões de prioridade, que também usam a classe .btn-transp pro mesmo
+  // visual mas são um filtro independente (podem ficar ativos juntos).
+  document.querySelectorAll('[id^="ftransp-"]').forEach(b => b.classList.remove('ativo'));
   const mapa = { 'DRIVE':'ftransp-drive', 'PRIME':'ftransp-prime',
                  'SEDEX':'ftransp-sedex', 'PAC':'ftransp-pac', 'MOTOBOY':'ftransp-motoboy' };
   if (_filtroTransp) {
     const btnEl = document.getElementById(mapa[_filtroTransp]);
+    if (btnEl) btnEl.classList.add('ativo');
+  }
+  _renderTabelaPedidos();
+}
+
+// Badge de prioridade — o servidor já manda nível + motivo calculados (ver
+// lib/prioridade.js); aqui só formata visualmente, sem recalcular nada.
+const _PRIOR_INFO = {
+  critico: { label:'Crítico', cor:'var(--red)' },
+  atencao: { label:'Atenção', cor:'var(--amber)' },
+  normal:  { label:'Normal',  cor:'var(--text3)' },
+};
+function _badgePrioridade(prioridade) {
+  if (!prioridade) return '<span style="font-size:11px;color:var(--text3)">—</span>';
+  const info = _PRIOR_INFO[prioridade.nivel] || _PRIOR_INFO.normal;
+  return `<span class="badge" style="background:${info.cor}22;color:${info.cor};border-color:transparent;cursor:help" title="${pfEsc(prioridade.motivo||'')}">${info.label}</span>`;
+}
+
+let _filtroPrioridade = '';
+function filtrarPedidosPrioridade(nivel) {
+  _filtroPrioridade = (_filtroPrioridade === nivel) ? '' : nivel;
+  document.querySelectorAll('[id^="fprior-"]').forEach(b => b.classList.remove('ativo'));
+  const mapa = { critico:'fprior-critico', atencao:'fprior-atencao' };
+  if (_filtroPrioridade) {
+    const btnEl = document.getElementById(mapa[_filtroPrioridade]);
     if (btnEl) btnEl.classList.add('ativo');
   }
   _renderTabelaPedidos();
@@ -142,6 +182,21 @@ function _atualizarBadgesTransp(lista) {
   });
 }
 
+let _pedidosSortCol = null; // 'skus' | 'itens' | null
+let _pedidosSortDir = 1;    // 1 = crescente, -1 = decrescente
+
+function ordenarPedidosPor(coluna) {
+  if (_pedidosSortCol === coluna) _pedidosSortDir = -_pedidosSortDir;
+  else { _pedidosSortCol = coluna; _pedidosSortDir = 1; }
+  ['skus','itens'].forEach(c => {
+    const el = document.getElementById('seta-ord-' + c);
+    if (!el) return;
+    if (_pedidosSortCol !== c) { el.textContent = '↕'; el.style.opacity = '.4'; }
+    else { el.textContent = _pedidosSortDir === 1 ? '↑' : '↓'; el.style.opacity = '1'; }
+  });
+  _renderTabelaPedidos();
+}
+
 function _renderTabelaPedidos() {
   const tbody = document.getElementById('tbody-ped');
   if (!tbody) return;
@@ -158,9 +213,21 @@ function _renderTabelaPedidos() {
   } else if (_filtroTransp) {
     lista = lista.filter(p => String(p.transportadora||'').toUpperCase().includes(_filtroTransp));
   }
+  // Filtro de prioridade (NORMAL/ATENÇÃO/CRÍTICO, calculado no servidor — ver lib/prioridade.js)
+  if (_filtroPrioridade) lista = lista.filter(p => p.prioridade?.nivel === _filtroPrioridade);
   // Filtro de status geral (pipeline inteiro, não só separação — ver _statusGeral)
   const filtroStatus = document.getElementById('filtro-ped-status')?.value || '';
   if (filtroStatus) lista = lista.filter(p => _statusGeral(p) === filtroStatus);
+
+  // Ordenação por SKUs/Itens (setas no cabeçalho) — aplicada antes de virar
+  // _pedidosListaFiltrada, pra tabela, totalizadores e impressão de
+  // etiquetas baterem todos com a mesma ordem exibida.
+  if (_pedidosSortCol) {
+    lista = [...lista].sort((a, b) => {
+      const val = p => _pedidosSortCol === 'skus' ? (parseInt(p.itens)||0) : (parseInt(p.total_itens||p.itens)||0);
+      return (val(a) - val(b)) * _pedidosSortDir;
+    });
+  }
   _pedidosListaFiltrada = lista;
 
   // Botão "Reatribuir Todos" — só faz sentido filtrando por um colaborador específico
@@ -217,7 +284,7 @@ function _renderTabelaPedidos() {
   }
   // ───────────────────────────────────────────────────────────────
   if (!lista.length) {
-    tbody.innerHTML = '<tr><td colspan="8" style="color:var(--text3);text-align:center;padding:28px">Nenhum pedido</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="11" style="color:var(--text3);text-align:center;padding:28px">Nenhum pedido</td></tr>';
     return;
   }
   const isDrive = p => String(p.transportadora||'').toUpperCase().includes('DRIVE');
@@ -235,10 +302,13 @@ function _renderTabelaPedidos() {
       </td>
       <td style="font-size:11px;color:var(--text2);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.cliente||''}">${p.cliente||'—'}</td>
       <td style="font-size:11px;font-weight:700;color:${corTransp}">${p.transportadora||'—'}${primeBadge}</td>
+      <td style="font-size:11px;white-space:nowrap">${p.estado ? `<span title="${_fiscalLabel(p.estado) || 'estado não mapeado'}" style="font-weight:700;color:var(--text2)">${p.estado}</span>${_fiscalLabel(p.estado) ? ` <span class="pill" style="font-size:9px;padding:1px 6px;background:${_fiscalLabel(p.estado)==='NF cheia'?'rgba(87,185,129,.15)':'rgba(139,92,246,.15)'};color:${_fiscalLabel(p.estado)==='NF cheia'?'var(--green)':'var(--indigo)'};border:1px solid ${_fiscalLabel(p.estado)==='NF cheia'?'rgba(87,185,129,.35)':'rgba(139,92,246,.35)'}">${_fiscalLabel(p.estado)}</span>` : ''}` : '<span style="color:var(--text3)">—</span>'}</td>
       <td style="font-size:11px;color:var(--amber);font-weight:600;white-space:nowrap">${p.aguardando_desde||'—'}</td>
+      <td>${_badgePrioridade(p.prioridade)}</td>
       <td style="font-size:12px;color:var(--text2)">${p.separador_nome||'—'}</td>
       <td><span class="pill ${_statusGeral(p)}">${_statusGeralLabel[_statusGeral(p)]}</span></td>
-      <td style="font-weight:600;text-align:center;color:var(--text2)">${p.itens||'—'}</td>
+      <td style="font-weight:600;text-align:center;color:var(--accent);cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px"
+        onclick="abrirCorredoresSku(${p.id},'${p.numero_pedido}')" title="Ver em quais corredores estão essas SKUs">${p.itens||'—'}</td>
       <td style="font-weight:700;text-align:center;color:${(p.total_itens||p.itens||0)>100?'var(--red)':(p.total_itens||p.itens||0)>30?'var(--amber)':'var(--text)'}">${p.total_itens||p.itens||'—'}</td>
       <td style="text-align:center" id="timer-ped-${p.id}">${p.status==='separando' && p.iniciado_em
         ? badgeTimerAoVivo(p.iniciado_em, p.total_itens||p.itens, p.pontuacao, p.tempo_aguardando_min, p.aguardando_repositor_desde, p.itens)
@@ -260,6 +330,62 @@ function _renderTabelaPedidos() {
 
 
 
+
+/* ── Corredores das SKUs de um pedido (modal) ────────────────────────
+   Aberto ao clicar no número de SKUs da tabela de Pedidos — agrupa os
+   itens do pedido por rua (letra inicial do endereço, mesmo critério de
+   _ruaPrincipalLote em routes/pedidos.js) pra mostrar rápido onde estão
+   fisicamente espalhados, sem precisar abrir o rastreio completo. */
+async function abrirCorredoresSku(pedidoId, numeroPedido) {
+  let modal = document.getElementById('ped-corredores-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'ped-corredores-modal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+    modal.onclick = e => { if (e.target === modal) modal.style.display = 'none'; };
+    document.body.appendChild(modal);
+  }
+  modal.style.display = 'flex';
+  modal.innerHTML = `
+    <div style="background:var(--surface);border-radius:16px;width:min(440px,96vw);max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.4)">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border)">
+        <div style="font-weight:800;font-size:14px;color:var(--text)">Corredores — Pedido #${pfEsc(numeroPedido)}</div>
+        <button onclick="document.getElementById('ped-corredores-modal').style.display='none'" style="background:transparent;border:none;font-size:20px;cursor:pointer;color:var(--text3);line-height:1">✕</button>
+      </div>
+      <div id="ped-corredores-corpo" style="padding:16px 18px">
+        <div style="text-align:center;padding:20px;color:var(--text3)">Carregando...</div>
+      </div>
+    </div>`;
+
+  const itens = await apiFetch(`/pedidos/${pedidoId}/itens`);
+  const corpo = document.getElementById('ped-corredores-corpo');
+  if (!corpo) return;
+  if (!Array.isArray(itens) || !itens.length) {
+    corpo.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text3)">Nenhum item encontrado.</div>';
+    return;
+  }
+  const porRua = {};
+  itens.forEach(i => {
+    const end = String(i.endereco||'').split(',')[0].trim().toUpperCase();
+    const rua = end.match(/^([A-Z]+)/)?.[1] || (end || 'SEM ENDEREÇO');
+    (porRua[rua] = porRua[rua] || []).push(i);
+  });
+  const ruas = Object.keys(porRua).sort((a,b) => a.localeCompare(b, 'pt-BR'));
+  corpo.innerHTML = `
+    <div style="font-size:11px;color:var(--text3);margin-bottom:10px">${ruas.length} corredor${ruas.length===1?'':'es'} · ${itens.length} SKU${itens.length===1?'':'s'}</div>
+    ${ruas.map(rua => `
+      <div style="margin-bottom:12px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <span style="font-family:'Space Mono',monospace;font-weight:800;font-size:12px;color:var(--accent);background:rgba(79,70,229,.12);border:1px solid var(--accent);border-radius:6px;padding:2px 10px">RUA ${pfEsc(rua)}</span>
+          <span style="font-size:11px;color:var(--text3)">${porRua[rua].length} SKU${porRua[rua].length===1?'':'s'}</span>
+        </div>
+        ${porRua[rua].map(i => `
+          <div style="display:flex;justify-content:space-between;gap:10px;padding:5px 8px;font-size:12px;border-bottom:1px solid var(--border)">
+            <span style="color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${pfEsc(i.descricao||i.codigo||'—')}</span>
+            <span style="color:var(--text3);font-family:monospace;white-space:nowrap;flex-shrink:0">${pfEsc(i.endereco||'—')} · x${i.quantidade||1}</span>
+          </div>`).join('')}
+      </div>`).join('')}`;
+}
 
 /* ── Rastreio de pedido (modal) ──────────────────────────────────── */
 async function abrirRastreioPedido(numero) {
@@ -488,6 +614,9 @@ function _renderListaUsuarios() {
           <i class="ti ti-${u.status==='ativo'?'player-pause-filled':'player-play-filled'}" aria-hidden="true"></i>
         </button>
         <button class="usr-btn edit" onclick="abrirEditarUsuario(${u.id})">Editar</button>
+        ${typeof usuarioAtual !== 'undefined' && usuarioAtual?.perfil === 'gestor'
+          ? `<button class="usr-btn" title="Permissões granulares" onclick="abrirPermissoesUsuario(${u.id},'${u.nome.replace(/'/g,"\\'")}')"><i class="ti ti-shield-lock" aria-hidden="true"></i></button>`
+          : ''}
         <button class="usr-btn del" title="Excluir" onclick="excluirUsuario(${u.id},'${u.nome}')"><i class="ti ti-trash" aria-hidden="true"></i></button>
       </div>
     </div>`;
@@ -513,6 +642,76 @@ function exportarUsuariosExcel() {
     XLSX.writeFile(wb, `usuarios_acessos_${hojeLocal()}.xlsx`);
     toast('Excel exportado! Apague o arquivo depois de distribuir as senhas.','sucesso');
   } catch(e) { toast('Erro ao exportar!','erro'); }
+}
+
+// ── V12: Permissões granulares (só gestor) ─────────────────────────────────
+const PERM_LABEL = { ver:'Ver', criar:'Criar', editar:'Editar', excluir:'Excluir', executar:'Executar', aprovar:'Aprovar', administrar:'Administrar' };
+let _permUsuarioAtualId = null;
+
+async function abrirPermissoesUsuario(id, nome) {
+  _permUsuarioAtualId = id;
+  let modal = document.getElementById('modal-permissoes');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'modal-permissoes';
+    modal.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;align-items:center;justify-content:center';
+    modal.onclick = e => { if (e.target === modal) modal.style.display = 'none'; };
+    document.body.appendChild(modal);
+  }
+  modal.style.display = 'flex';
+  modal.innerHTML = `
+    <div style="background:var(--surface);border-radius:16px;padding:24px;width:420px;max-width:95vw;max-height:85vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.3)" onclick="event.stopPropagation()">
+      <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:4px">Permissões — ${nome}</div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:14px">Por padrão, o acesso segue o perfil. Revogar aqui bloqueia essa ação especificamente pra este usuário, mesmo que o perfil normalmente permita.</div>
+      <div id="perm-lista" style="display:flex;flex-direction:column;gap:8px">Carregando...</div>
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button onclick="document.getElementById('modal-permissoes').style.display='none'" class="btn btn-outline" style="flex:1;padding:10px">Fechar</button>
+      </div>
+    </div>`;
+  await _renderPermissoesLista(id);
+}
+
+async function _renderPermissoesLista(id) {
+  const el = document.getElementById('perm-lista');
+  if (!el) return;
+  try {
+    const [acoes, overrides] = await Promise.all([
+      apiFetch('/permissoes/acoes'),
+      apiFetch(`/permissoes/usuarios/${id}`),
+    ]);
+    const porAcao = Object.fromEntries((overrides||[]).map(o => [o.acao, o.concedida]));
+    el.innerHTML = acoes.map(a => {
+      const estado = porAcao[a] === undefined ? 'padrao' : (porAcao[a] ? 'permitido' : 'revogado');
+      const cor = estado === 'revogado' ? 'var(--red)' : estado === 'permitido' ? 'var(--green)' : 'var(--text3)';
+      const label = estado === 'revogado' ? 'Revogado' : estado === 'permitido' ? 'Permitido' : 'Padrão (perfil)';
+      return `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:var(--surface2);border-radius:8px">
+        <span style="font-size:13px;font-weight:600;color:var(--text)">${PERM_LABEL[a]||a}</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:11px;font-weight:700;color:${cor}">${label}</span>
+          <select onchange="_mudarPermissao('${a}', this.value)" style="font-size:11px;padding:4px 6px;border:1px solid var(--border);border-radius:6px;background:var(--surface)">
+            <option value="padrao" ${estado==='padrao'?'selected':''}>Padrão</option>
+            <option value="permitido" ${estado==='permitido'?'selected':''}>Permitir</option>
+            <option value="revogado" ${estado==='revogado'?'selected':''}>Revogar</option>
+          </select>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) { el.innerHTML = '<div style="color:var(--red);font-size:12px">Erro ao carregar permissões.</div>'; }
+}
+
+async function _mudarPermissao(acao, valor) {
+  const id = _permUsuarioAtualId;
+  if (!id) return;
+  const resultado = valor === 'padrao'
+    ? await apiFetch(`/permissoes/usuarios/${id}/${acao}`, { method:'DELETE' })
+    : await apiFetch(`/permissoes/usuarios/${id}`, {
+        method:'PUT', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ acao, concedida: valor === 'permitido' }),
+      });
+  if (resultado === null) { await _renderPermissoesLista(id); return; } // apiFetch já mostrou o erro
+  toast('Permissão atualizada!', 'info');
+  await _renderPermissoesLista(id);
 }
 
 async function vincularTodosSeparadores() {
@@ -637,10 +836,14 @@ function _imprimirEtiquetasLista(lista) {
   cont.innerHTML = lista.map(p => `
     <div class="etiqueta">
       <div class="et-topo">
-        <span class="et-pedido">#${pfEsc(p.numero_pedido)}</span>
-        <span class="et-envio">${pfEsc(p.transportadora||'—')}</span>
+        <span class="et-topo-esq">
+          <span class="et-pedido">#${pfEsc(p.numero_pedido)}</span>
+          ${p.caixa_lote_num ? `<span class="et-caixa">CX ${pfEsc(p.caixa_lote_num)}</span>` : ''}
+        </span>
+        <span class="et-envio">${pfEsc(p.transportadora||'—')}${p.estado ? ` · ${pfEsc(p.estado)}` : ''}</span>
       </div>
       <div class="et-cliente">${pfEsc(p.cliente||'—')}</div>
+      ${_fiscalLabel(p.estado) ? `<div class="et-fiscal">${pfEsc(_fiscalLabel(p.estado))}</div>` : ''}
       <div class="et-meta">${p.itens||p.skus||0} SKUs · ${p.total_itens||p.itens||0} itens · desde ${pfEsc(p.aguardando_desde||'—')}</div>
       <div class="et-barcode"><svg data-barcode="${pfEsc(p.numero_pedido)}"></svg></div>
     </div>`).join('');
@@ -659,7 +862,12 @@ window.addEventListener('afterprint', () => document.body.classList.remove('impr
 // separação do celular, pra colar uma etiqueta por caixa física na ordem certa.
 function imprimirEtiquetasLote() {
   if (!_lotesPlano?.length) { toast('Calcule os lotes primeiro.','aviso'); return; }
-  const lista = _lotesPlano.flatMap(l => l.pedidos);
+  // Nº da caixa = posição do pedido dentro do PRÓPRIO lote (1,2,3...) — mesmo
+  // índice que separador.js usa pra colorir o quadradinho de cada pedido na
+  // tela de separação (_loteAtual.map((p,idx) => cx = idx+1)). Precisa ser
+  // calculado por lote (não no flatMap todo), senão o 2º lote em diante
+  // continuaria contando a partir do total do lote anterior.
+  const lista = _lotesPlano.flatMap(l => l.pedidos.map((p, idx) => ({ ...p, caixa_lote_num: idx + 1 })));
   if (!lista.length) { toast('Nenhum pedido nos lotes calculados.','info'); return; }
   _imprimirEtiquetasLista(lista);
 }
@@ -906,7 +1114,7 @@ function _processarSheetsMIESS(wb, _norm, iItens, iTransp) {
         descricao: String(r[2]||'').trim(),          // col 2 = Item - Nome
         quantidade: parseInt(r[3]) || 1,             // col 3 = Item - Qtde. pedida
         endereco:  String(r[4]||'').trim(),          // col 4 = Endereço do Produto no Estoque
-        cliente: '', transportadora: '', aguardando_desde: '',
+        cliente: '', transportadora: '', aguardando_desde: '', estado: '',
       });
     }
     if (!dadosItens.length) throw new Error('Nenhum item válido na sheet itens — coluna B deve ter o número do pedido (5+ dígitos). Primeiros valores col B: ' + [1,2,3].map(i => rowsI[i] ? String(rowsI[i][1]) : '').join(', '));
@@ -924,6 +1132,11 @@ function _processarSheetsMIESS(wb, _norm, iItens, iTransp) {
       const iAg  = findT(c => c.includes('aguard'), 1);
       const iRaz = findT(c => c.includes('razao') || c.includes('social'), 2);
       const iSrv = findT(c => c.includes('servico') || c.includes('entrega'), 3);
+      // Coluna "Estado" (ou "Destinatário - Estado") — opcional, sem fallback por
+      // índice fixo: se não existir no arquivo, fica vazia e não derruba o resto
+      // do import. Usada pra imprimir na etiqueta e classificar NF cheia x
+      // Declaração (lib/helpers.js classificarFiscal).
+      const iEst = findT(c => c.includes('estado') || c.includes(' uf') || c === 'uf', -1);
       for (let i = 1; i < rowsT.length; i++) {
         const r   = rowsT[i];
         const num = String(r[iNum]||'').trim();       // Nº do pedido
@@ -944,7 +1157,8 @@ function _processarSheetsMIESS(wb, _norm, iItens, iTransp) {
         } else {
           aguardando = String(val||'').trim();
         }
-        if (!transpLookup[num]) transpLookup[num] = { cliente, transportadora, aguardando_desde: aguardando };
+        const estado = iEst>=0 ? String(r[iEst]||'').trim().toUpperCase() : '';
+        if (!transpLookup[num]) transpLookup[num] = { cliente, transportadora, aguardando_desde: aguardando, estado };
       }
     }
 
@@ -955,6 +1169,7 @@ function _processarSheetsMIESS(wb, _norm, iItens, iTransp) {
         if (tr.cliente)          item.cliente          = tr.cliente;
         if (tr.transportadora)   item.transportadora   = tr.transportadora;
         if (tr.aguardando_desde) item.aguardando_desde = tr.aguardando_desde;
+        if (tr.estado)           item.estado           = tr.estado;
       }
     }
 
@@ -1056,6 +1271,7 @@ function processarArquivoHTML(file) {
         const colData       = headerCells.findIndex(c => c.includes('data') || c.includes('movim'));
         const colAguardando = headerCells.findIndex(c => c.includes('aguard'));
         const colServico    = headerCells.findIndex(c => c.includes('servi') || c.includes('entrega') || c.includes('frete'));
+        const colEstado     = headerCells.findIndex(c => c.includes('estado') || c.includes(' uf') || c === 'uf');
         if (colPedido < 0) throw new Error('Coluna "Nº do pedido" não localizada no cabeçalho');
         const dados = [];
         for (let i = headerIdx + 1; i < rows.length; i++) {
@@ -1069,7 +1285,8 @@ function processarArquivoHTML(file) {
           const aguardando = colAguardando >= 0 ? cells[colAguardando]?.textContent.trim() : '';
           const servico = colServico >= 0 ? cells[colServico]?.textContent.trim() : '';
           const transportadora = /SEDEX/i.test(servico) ? 'SEDEX' : /PAC/i.test(servico) ? 'PAC' : servico;
-          dados.push({ numero_pedido:num, codigo:'', descricao:'', quantidade:0, endereco:'', cliente, transportadora, aguardando_desde: aguardando||data, total_itens_hint:qtd });
+          const estado = colEstado >= 0 ? cells[colEstado]?.textContent.trim().toUpperCase() : '';
+          dados.push({ numero_pedido:num, codigo:'', descricao:'', quantidade:0, endereco:'', cliente, transportadora, aguardando_desde: aguardando||data, total_itens_hint:qtd, estado });
         }
         if (!dados.length) throw new Error('Nenhum pedido válido encontrado no HTML');
         pedidosImportar = dados;
@@ -1161,6 +1378,8 @@ async function processarDoisHTMLs(htmlFiles) {
       const tAgu = ft(c => c.includes('aguard'));
       const tRaz = ft(c => c.includes('razao') || c.includes('social'));
       const tSrv = ft(c => c.includes('servico') || c.includes('entrega'));
+      // "Destinatário - Estado" — mesma lógica opcional da aba Transportadora do Excel.
+      const tEst = ft(c => c.includes('estado') || c.includes(' uf') || c === 'uf');
 
       for (const row of infoTransp.doc.querySelectorAll('tr')) {
         const cells = Array.from(row.querySelectorAll(':scope > td'));
@@ -1172,7 +1391,8 @@ async function processarDoisHTMLs(htmlFiles) {
         const servico      = tSrv >= 0 ? cells[tSrv]?.textContent.trim() : '';
         const transportadora = /SEDEX/i.test(servico) ? 'SEDEX' : /PAC/i.test(servico) ? 'PAC' : servico;
         const aguardando   = tAgu >= 0 ? cells[tAgu]?.textContent.trim() : '';
-        if (!transpLookup[num]) transpLookup[num] = { cliente, transportadora, aguardando_desde: aguardando };
+        const estado       = tEst >= 0 ? cells[tEst]?.textContent.trim().toUpperCase() : '';
+        if (!transpLookup[num]) transpLookup[num] = { cliente, transportadora, aguardando_desde: aguardando, estado };
       }
     }
 
@@ -1183,6 +1403,7 @@ async function processarDoisHTMLs(htmlFiles) {
         if (tr.transportadora)   item.transportadora    = tr.transportadora;
         if (tr.aguardando_desde) item.aguardando_desde  = tr.aguardando_desde;
         if (!item.cliente && tr.cliente) item.cliente   = tr.cliente;
+        if (tr.estado)            item.estado           = tr.estado;
       }
     }
 
@@ -1383,13 +1604,6 @@ function exportarExcel(tipo) {
         if (tds.length > 1) rows.push([tds[0].textContent.trim(), tds[1].textContent.trim(), tds[2].textContent.trim(), tds[3].textContent.trim(), tds[4].textContent.trim(), tds[5].textContent.trim()]);
       });
       nomeArq = `pedidos_${hoje}`;
-    } else if (tipo === 'estatisticas') {
-      rows = [['Separador','Hoje','Mês','Ano','Status']];
-      document.querySelectorAll('#tbody-est-sep tr').forEach(tr => {
-        const tds = tr.querySelectorAll('td');
-        if (tds.length > 1) rows.push([tds[0].textContent.trim(), tds[1].textContent.trim(), tds[2].textContent.trim(), tds[3].textContent.trim(), tds[4].textContent.trim()]);
-      });
-      nomeArq = `estatisticas_separadores_${hoje}`;
     } else if (tipo === 'stats-repositor') {
       rows = [['Repositor','Hoje','Repostos','Não Encontrados','Total']];
       document.querySelectorAll('#tbody-srep-prod tr').forEach(tr => {
@@ -1397,13 +1611,6 @@ function exportarExcel(tipo) {
         if (tds.length > 1) rows.push([tds[0].textContent.trim(), tds[1].textContent.trim(), tds[2].textContent.trim(), tds[3].textContent.trim(), tds[4].textContent.trim()]);
       });
       nomeArq = `estatisticas_repositor_${hoje}`;
-    } else if (tipo === 'checkout-lista') {
-      rows = [['Caixa','Nº Pedido','Separador','Status','Hora']];
-      document.querySelectorAll('#tbody-checkout tr').forEach(tr => {
-        const tds = tr.querySelectorAll('td');
-        if (tds.length > 1) rows.push([tds[0].textContent.trim(), tds[1].textContent.trim(), tds[2].textContent.trim(), tds[3].textContent.trim(), tds[4].textContent.trim()]);
-      });
-      nomeArq = `checkouts_${hoje}`;
     } else if (tipo === 'stats-checkout') {
       rows = [['Caixa','Nº Pedido','Separador','Status','Data','Hora']];
       document.querySelectorAll('#tbody-sck-lista tr').forEach(tr => {
@@ -1763,6 +1970,10 @@ function processarArquivoModalFile(file) {
         const iPed  = tCab.findIndex(c=>c.includes('pedido')) >= 0 ? tCab.findIndex(c=>c.includes('pedido')) : 0;
         const iCli  = tCab.findIndex(c=>c.includes('razao')||c.includes('cliente')||c.includes('nome')) >= 0 ? tCab.findIndex(c=>c.includes('razao')||c.includes('cliente')||c.includes('nome')) : 2;
         const iServ = tCab.findIndex(c=>c.includes('servico')||c.includes('entrega')||c.includes('transport')) >= 0 ? tCab.findIndex(c=>c.includes('servico')||c.includes('entrega')||c.includes('transport')) : 3;
+        // Coluna "Destinatário - Estado" — opcional (sem valor default: se não vier no
+        // arquivo, não sobrescreve o que já existe no pedido). Usada pra imprimir na
+        // etiqueta e classificar NF cheia x Declaração (lib/helpers.js classificarFiscal).
+        const iEst  = tCab.findIndex(c=>c.includes('estado')||c.includes(' uf')||c==='uf');
         for (let i = 1; i < tRows.length; i++) {
           const r = tRows[i];
           const num = String(r[iPed]||'').trim();
@@ -1800,7 +2011,7 @@ function processarArquivoModalFile(file) {
               agVal = String(raw).trim();
             }
           }
-          transpData[num] = { cliente:String(r[iCli]||'').trim(), transportadora:String(r[iServ]||'').trim(), aguardando_desde:agVal };
+          transpData[num] = { cliente:String(r[iCli]||'').trim(), transportadora:String(r[iServ]||'').trim(), aguardando_desde:agVal, estado: iEst>=0 ? String(r[iEst]||'').trim().toUpperCase() : '' };
         }
       }
       // Filtra: só importa pedidos que existem na aba Transportadora
@@ -1809,7 +2020,7 @@ function processarArquivoModalFile(file) {
       if (transpSheet && Object.keys(transpData).length > 0) {
         const antes = new Set(dados.map(d=>d.numero_pedido)).size;
         dadosFiltrados = dados.filter(d => transpData[d.numero_pedido]);
-        dadosFiltrados.forEach(d => { const t = transpData[d.numero_pedido]; d.cliente = t.cliente; d.transportadora = t.transportadora; d.aguardando_desde = t.aguardando_desde||''; });
+        dadosFiltrados.forEach(d => { const t = transpData[d.numero_pedido]; d.cliente = t.cliente; d.transportadora = t.transportadora; d.aguardando_desde = t.aguardando_desde||''; d.estado = t.estado||''; });
         const depois = new Set(dadosFiltrados.map(d=>d.numero_pedido)).size;
         const ignorados = antes - depois;
         if (ignorados > 0) {
@@ -1823,7 +2034,7 @@ function processarArquivoModalFile(file) {
         Object.keys(transpData).forEach(num => {
           if (!pedidosComItens.has(num)) {
             const t = transpData[num];
-            dadosFiltrados.push({ numero_pedido:num, codigo:'', descricao:'', quantidade:0, endereco:'', cliente:t.cliente, transportadora:t.transportadora, aguardando_desde:t.aguardando_desde||'' });
+            dadosFiltrados.push({ numero_pedido:num, codigo:'', descricao:'', quantidade:0, endereco:'', cliente:t.cliente, transportadora:t.transportadora, aguardando_desde:t.aguardando_desde||'', estado:t.estado||'' });
             semItens++;
           }
         });
@@ -2066,12 +2277,176 @@ async function _initPainelLotes() {
   // vez que essa aba é aberta, sobrescrevendo uma data antiga que o
   // supervisor tenha escolhido (fila de trabalho normalmente é de dias atrás).
   selecionarCenarioLote('balanceado');
+  loteSetModo('auto');
+  _loteManualPedidos = [];
+  _renderLoteManualLista();
+  document.getElementById('lote-resultado-manual').style.display = 'none';
+  document.getElementById('btn-montar-lote-manual').style.display = 'inline-flex';
+  document.getElementById('btn-confirmar-lote-manual').style.display = 'none';
+  document.getElementById('btn-imprimir-etiquetas-lote-manual').style.display = 'none';
+  const inpManual = document.getElementById('lote-manual-input');
+  if (inpManual) inpManual.value = '';
   try {
     const res = await fetch(`${API}/usuarios`, { credentials:'include' });
     const users = await res.json();
     _todosSepsLote = users.filter(u => u.status === 'ativo');
     filtrarTurnoLote('');
+    _popularSepsLoteManual();
   } catch(e) { console.warn(e); }
+}
+
+/* ── Sub-modo do painel Lotes: Automático x Manual ─────────────────────── */
+function loteSetModo(modo) {
+  const btnAuto   = document.getElementById('btn-lote-modo-auto');
+  const btnManual = document.getElementById('btn-lote-modo-manual');
+  const subAuto   = document.getElementById('lote-sub-auto');
+  const subManual = document.getElementById('lote-sub-manual');
+  // Troca de aba invalida qualquer prévia pendente (Automático e Manual
+  // compartilham _lotesPlano/_loteFlowAtivo) — evita confirmar, pela aba
+  // errada, uma prévia calculada antes de trocar de modo.
+  _lotesPlano = null;
+  document.getElementById('lote-resultado').style.display = 'none';
+  document.getElementById('btn-confirmar-lote').style.display = 'none';
+  document.getElementById('btn-imprimir-etiquetas-lote').style.display = 'none';
+  document.getElementById('btn-calcular-lote').style.display = 'inline-flex';
+  const resManual = document.getElementById('lote-resultado-manual');
+  if (resManual) resManual.style.display = 'none';
+  const btnMontarM = document.getElementById('btn-montar-lote-manual');
+  if (btnMontarM) btnMontarM.style.display = 'inline-flex';
+  const btnConfM = document.getElementById('btn-confirmar-lote-manual');
+  if (btnConfM) btnConfM.style.display = 'none';
+  const btnImpM = document.getElementById('btn-imprimir-etiquetas-lote-manual');
+  if (btnImpM) btnImpM.style.display = 'none';
+  if (modo === 'manual') {
+    if (btnManual) { btnManual.style.background='var(--surface)'; btnManual.style.color='var(--text)'; }
+    if (btnAuto)   { btnAuto.style.background='transparent';      btnAuto.style.color='var(--text3)'; }
+    if (subManual) subManual.style.display = '';
+    if (subAuto)   subAuto.style.display   = 'none';
+  } else {
+    if (btnAuto)   { btnAuto.style.background='var(--surface)'; btnAuto.style.color='var(--text)'; }
+    if (btnManual) { btnManual.style.background='transparent';  btnManual.style.color='var(--text3)'; }
+    if (subAuto)   subAuto.style.display   = '';
+    if (subManual) subManual.style.display = 'none';
+  }
+}
+
+function _popularSepsLoteManual() {
+  const sel = document.getElementById('lote-manual-sep');
+  if (!sel) return;
+  const atual = sel.value;
+  sel.innerHTML = '<option value="">— Selecione o colaborador —</option>' +
+    (_todosSepsLote || []).map(s => `<option value="${s.id}">${s.nome}</option>`).join('');
+  if (atual) sel.value = atual;
+}
+
+/* ── Lote Manual: adicionar/remover pedidos e confirmar ────────────────── */
+let _loteManualPedidos = [];
+// Não é mais "o lote inteiro" — é o POOL que o supervisor bipa antes de pedir
+// pro sistema montar os melhores grupos de até TAMANHO_LOTE (4) cada. Limite alto
+// só pra evitar bipagem descontrolada; o agrupamento em si não tem limite de pool.
+const LOTE_MANUAL_MAX_PEDIDOS = 40;
+
+function _renderLoteManualLista() {
+  const el   = document.getElementById('lote-manual-lista');
+  const cEl  = document.getElementById('lote-manual-count');
+  const iEl  = document.getElementById('lote-manual-itens');
+  const lotesPrevistos = Math.ceil(_loteManualPedidos.length / 4) || 0;
+  if (cEl) cEl.textContent = _loteManualPedidos.length;
+  const lEl = document.getElementById('lote-manual-previsto');
+  if (lEl) lEl.textContent = lotesPrevistos;
+  if (iEl) iEl.textContent = _loteManualPedidos.reduce((s,p) => s + (parseInt(p.total_itens||p.itens)||0), 0);
+  const btnMontar = document.getElementById('btn-montar-lote-manual');
+  if (btnMontar) btnMontar.disabled = !_loteManualPedidos.length;
+  // Pool mudou (adicionou/removeu pedido) — qualquer prévia já montada fica
+  // desatualizada, então invalida e volta pro passo "Montar Melhores Lotes".
+  const resManual = document.getElementById('lote-resultado-manual');
+  if (resManual && resManual.style.display !== 'none') {
+    resManual.style.display = 'none';
+    document.getElementById('btn-confirmar-lote-manual').style.display = 'none';
+    document.getElementById('btn-imprimir-etiquetas-lote-manual').style.display = 'none';
+    document.getElementById('btn-montar-lote-manual').style.display = 'inline-flex';
+    if (_loteFlowAtivo === 'manual') _lotesPlano = null;
+  }
+  if (!el) return;
+  if (!_loteManualPedidos.length) {
+    el.innerHTML = '<div style="color:var(--text3);font-size:12px;text-align:center;padding:12px">Nenhum pedido adicionado ainda</div>';
+    return;
+  }
+  el.innerHTML = _loteManualPedidos.map((p, idx) => `
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface2)">
+      <span style="width:20px;height:20px;border-radius:5px;background:var(--accent);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">${idx+1}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:700;color:var(--text)">#${pfEsc(p.numero_pedido)}</div>
+        <div style="font-size:11px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${pfEsc(p.cliente||'—')} · ${p.total_itens||p.itens||0} itens</div>
+      </div>
+      <button onclick="loteManualRemoverPedido(${idx})" style="background:transparent;border:none;color:var(--text3);font-size:16px;cursor:pointer;padding:2px 6px" title="Remover">✕</button>
+    </div>`).join('');
+}
+
+function loteManualRemoverPedido(idx) {
+  _loteManualPedidos.splice(idx, 1);
+  _renderLoteManualLista();
+}
+
+async function loteManualAdicionarPedido() {
+  const input  = document.getElementById('lote-manual-input');
+  const sepSel = document.getElementById('lote-manual-sep');
+  const raw    = (input?.value || '').trim();
+  if (input) input.value = '';
+  if (!raw) return;
+  if (!sepSel?.value) { toast('Selecione o colaborador antes de adicionar pedidos.', 'aviso'); input?.focus(); return; }
+
+  // Aceita tanto o número puro quanto o código de barras completo bipado da folha.
+  const m = raw.match(/\d{5,}/);
+  const numero = m ? m[0] : raw;
+
+  if (_loteManualPedidos.length >= LOTE_MANUAL_MAX_PEDIDOS) {
+    toast(`Pool cheio: máximo de ${LOTE_MANUAL_MAX_PEDIDOS} pedidos bipados por vez.`, 'aviso'); input?.focus(); return;
+  }
+  if (_loteManualPedidos.some(p => String(p.numero_pedido) === String(numero))) {
+    toast(`Pedido #${numero} já está no pool.`, 'aviso'); input?.focus(); return;
+  }
+
+  try {
+    const res  = await fetch(`${API}/pedidos?numero_pedido=${encodeURIComponent(numero)}`, { credentials:'include' });
+    const rows = await res.json();
+    const ped  = rows?.[0];
+    if (!ped) { toast(`Pedido #${numero} não encontrado.`, 'erro'); input?.focus(); return; }
+    if (ped.status !== 'pendente') { toast(`Pedido #${numero} não está pendente (status: ${ped.status}).`, 'erro'); input?.focus(); return; }
+    if (ped.separador_id) { toast(`Pedido #${numero} já tem separador atribuído.`, 'erro'); input?.focus(); return; }
+    _loteManualPedidos.push(ped);
+    _renderLoteManualLista();
+  } catch(e) {
+    toast('Erro de conexão ao buscar pedido.', 'erro');
+  } finally {
+    input?.focus();
+  }
+}
+
+// Pede pro sistema identificar, dentro do pool bipado, o melhor agrupamento em
+// lotes de até 4 (mesmo algoritmo de proximidade de rua + SKU em comum do
+// Formar Lotes automático — ver _prepararEAgruparPedidos no backend). Só monta
+// a prévia; confirmar/imprimir reaproveitam confirmarLotes()/imprimirEtiquetasLote()
+// (mesmas funções do fluxo Automático, compartilhando _lotesPlano).
+async function montarMelhorLoteManual() {
+  const sepId = parseInt(document.getElementById('lote-manual-sep')?.value);
+  if (!sepId) { toast('Selecione o colaborador.', 'aviso'); return; }
+  if (!_loteManualPedidos.length) { toast('Bipe pelo menos um pedido antes.', 'aviso'); return; }
+  _loteFlowAtivo = 'manual';
+  try {
+    const res = await fetch(`${API}/pedidos/lote/formar-manual`, {
+      credentials:'include', method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ pedido_ids: _loteManualPedidos.map(p => p.id), separador_id: sepId })
+    });
+    const data = await res.json();
+    if (data.erro) { toast(data.erro, 'erro'); return; }
+    _lotesPlano = data.lotes;
+    const resEl = document.getElementById('lote-resultado-manual');
+    resEl.style.display = 'block';
+    resEl.innerHTML = _htmlPreviewLotes(data);
+    document.getElementById('btn-confirmar-lote-manual').style.display = data.lotes.length ? 'inline-flex' : 'none';
+    document.getElementById('btn-imprimir-etiquetas-lote-manual').style.display = 'none';
+  } catch(e) { toast('Erro ao montar os lotes.', 'erro'); }
 }
 
 function filtrarTurnoLote(turno) {
@@ -2093,6 +2468,51 @@ function filtrarTurnoLote(turno) {
   ).join('');
 }
 
+// Controla, após confirmar/imprimir, QUAL conjunto de botões/painel mexer —
+// o fluxo Automático e o Manual (bipado) compartilham _lotesPlano e as funções
+// de confirmar/imprimir, mas cada um tem seus próprios ids de botão/resultado.
+let _loteFlowAtivo = 'auto'; // 'auto' | 'manual'
+const _LOTE_FLOW_IDS = {
+  auto:   { resultado:'lote-resultado',        btnCalcular:'btn-calcular-lote',        btnConfirmar:'btn-confirmar-lote',        btnImprimir:'btn-imprimir-etiquetas-lote' },
+  manual: { resultado:'lote-resultado-manual', btnCalcular:'btn-montar-lote-manual',   btnConfirmar:'btn-confirmar-lote-manual', btnImprimir:'btn-imprimir-etiquetas-lote-manual' },
+};
+
+// HTML da prévia de lotes — reaproveitado pelo cálculo Automático e pelo Lote
+// Manual (depois de bipar o pool e mandar o sistema montar os melhores grupos).
+function _htmlPreviewLotes(data) {
+  if (!data.lotes.length) {
+    return `<div style="text-align:center;color:var(--text3);font-size:12px;padding:12px">Nenhum lote formado — sem pedidos elegíveis${data.drive_thru_excluidos ? ` (${data.drive_thru_excluidos} Drive Thru ignorado(s))` : ''}.</div>`;
+  }
+  const totalPedidos = data.lotes.reduce((s,l) => s+l.pedidos.length, 0);
+  const cenarioLabel = { balanceado:'BALANCEADO', por_itens:'POR VOLUME', complexidade:'COMPLEXIDADE TOTAL' };
+  return `
+    <div style="font-size:11px;font-weight:700;color:var(--accent);letter-spacing:1px;margin-bottom:10px">
+      PRÉVIA — ${data.lotes.length} lote(s), ${totalPedidos} de ${data.total_disponivel ?? totalPedidos} pedido(s) elegíveis
+      ${data.cenario ? `<span style="font-size:9px;font-weight:700;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:2px 7px;color:var(--text2);letter-spacing:.5px;margin-left:4px">${cenarioLabel[data.cenario]||'AUTOMÁTICO'}</span>` : ''}
+      ${data.drive_thru_excluidos ? ` · ${data.drive_thru_excluidos} Drive Thru fora (individual)` : ''}
+      ${data.ignorados ? ` · ${data.ignorados} pedido(s) do pool ignorado(s)${data.ignorados_numeros?.length ? ` (#${data.ignorados_numeros.join(', #')})` : ''}` : ''}
+    </div>
+    <div class="tabela-wrap"><table><thead><tr><th>SEPARADOR</th><th>PEDIDOS NO LOTE</th><th>ROTA (ORDEM DE CAMINHADA)</th><th>ITENS</th><th>PONTUAÇÃO</th><th>⏱ TEMPO EST.</th>${data.lotes.some(l=>l.pedidos_hoje_total!=null)?'<th>PEDIDOS HOJE (TOTAL)</th>':''}</tr></thead><tbody>
+      ${data.lotes.map(l => {
+        // V6 — mesma lógica que o algoritmo já usa internamente pra montar o lote,
+        // só exibida: rota real de caminhada (não alfabética) e tempo estimado
+        // (mesma fórmula calibrada por dados reais já usada na coluna Tempo Est.
+        // da tela de Pedidos — ver estimarTempoSep em config.js).
+        const skusTotal = l.pedidos.reduce((s,p) => s + (p.skus||0), 0);
+        const tempoEst = estimarTempoSep(l.itens_total, l.pontuacao_total, skusTotal) || '—';
+        return `<tr>
+        <td style="font-weight:700;color:var(--text)">${l.separador_nome}</td>
+        <td style="color:var(--green);font-weight:700">${l.pedidos.length} <span style="font-size:10px;color:var(--text3);font-weight:400">(${l.pedidos.map(p=>'#'+p.numero_pedido).join(', ')})</span></td>
+        <td style="font-family:'Space Mono',monospace;font-size:11px;color:var(--indigo)" title="Distância ponderada do algoritmo: ${l.distancia_ponderada ?? '—'} (não é metros — unidade abstrata de distância×dificuldade)">${(l.rota||l.ruas).join(' → ')}</td>
+        <td style="font-weight:600">${l.itens_total}</td>
+        <td><span style="font-family:'Space Mono',monospace;color:var(--indigo);font-weight:700">${l.pontuacao_total}</span></td>
+        <td style="font-family:'Space Mono',monospace;font-weight:700;color:var(--amber)">${tempoEst}</td>
+        ${l.pedidos_hoje_total!=null?`<td style="font-family:'Space Mono',monospace;font-weight:800">${l.pedidos_hoje_total}</td>`:''}
+      </tr>`;
+      }).join('')}
+    </tbody></table></div>`;
+}
+
 async function calcularLotes() {
   const checks = document.querySelectorAll('.lote-sep-check:checked');
   if (!checks.length) { toast('Selecione pelo menos um separador!', 'aviso'); return; }
@@ -2103,6 +2523,7 @@ async function calcularLotes() {
   // na mesma "Distribuição de Pedidos" (um resetava pra hoje, outro não).
   const dataDe  = document.getElementById('dist-data-de')?.value  || null;
   const dataAte = document.getElementById('dist-data-ate')?.value || null;
+  _loteFlowAtivo = 'auto';
   try {
     const res = await fetch(`${API}/pedidos/lote/formar`, {
       credentials:'include', method:'POST', headers:{'Content-Type':'application/json'},
@@ -2113,39 +2534,19 @@ async function calcularLotes() {
     _lotesPlano = data.lotes;
     const resEl = document.getElementById('lote-resultado');
     resEl.style.display = 'block';
-    if (!data.lotes.length) {
-      resEl.innerHTML = `<div style="text-align:center;color:var(--text3);font-size:12px;padding:12px">Nenhum lote formado — sem pedidos elegíveis (${data.drive_thru_excluidos||0} Drive Thru ignorado(s)).</div>`;
-      document.getElementById('btn-confirmar-lote').style.display = 'none';
-      document.getElementById('btn-imprimir-etiquetas-lote').style.display = 'none';
-      return;
-    }
-    const totalPedidos = data.lotes.reduce((s,l) => s+l.pedidos.length, 0);
-    const cenarioLabel = { balanceado:'BALANCEADO', por_itens:'POR VOLUME', complexidade:'COMPLEXIDADE TOTAL' };
-    resEl.innerHTML = `
-      <div style="font-size:11px;font-weight:700;color:var(--accent);letter-spacing:1px;margin-bottom:10px">
-        PRÉVIA — ${data.lotes.length} lote(s), ${totalPedidos} de ${data.total_disponivel} pedido(s) elegíveis
-        <span style="font-size:9px;font-weight:700;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:2px 7px;color:var(--text2);letter-spacing:.5px;margin-left:4px">${cenarioLabel[data.cenario]||'AUTOMÁTICO'}</span>
-        ${data.drive_thru_excluidos ? ` · ${data.drive_thru_excluidos} Drive Thru fora (individual)` : ''}
-      </div>
-      <div class="tabela-wrap"><table><thead><tr><th>SEPARADOR</th><th>PEDIDOS NO LOTE</th><th>RUAS</th><th>ITENS</th><th>PONTUAÇÃO</th><th>PEDIDOS HOJE (TOTAL)</th></tr></thead><tbody>
-        ${data.lotes.map(l => `<tr>
-          <td style="font-weight:700;color:var(--text)">${l.separador_nome}</td>
-          <td style="color:var(--green);font-weight:700">${l.pedidos.length} <span style="font-size:10px;color:var(--text3);font-weight:400">(${l.pedidos.map(p=>'#'+p.numero_pedido).join(', ')})</span></td>
-          <td style="font-family:'Space Mono',monospace;font-size:11px;color:var(--indigo)">${l.ruas.join(' → ')}</td>
-          <td style="font-weight:600">${l.itens_total}</td>
-          <td><span style="font-family:'Space Mono',monospace;color:var(--indigo);font-weight:700">${l.pontuacao_total}</span></td>
-          <td style="font-family:'Space Mono',monospace;font-weight:800">${l.pedidos_hoje_total}</td>
-        </tr>`).join('')}
-      </tbody></table></div>`;
-    document.getElementById('btn-confirmar-lote').style.display = 'inline-flex';
+    resEl.innerHTML = _htmlPreviewLotes(data);
+    document.getElementById('btn-confirmar-lote').style.display = data.lotes.length ? 'inline-flex' : 'none';
+    document.getElementById('btn-imprimir-etiquetas-lote').style.display = 'none';
   } catch(e) { toast('Erro ao calcular lotes', 'erro'); }
 }
 
-// Ordem certa: Calcular → Confirmar → Imprimir. As etiquetas só liberam depois
-// de confirmar — se imprimisse antes, um "Calcular" de novo com outro cenário/
-// quantidade podia trocar os pedidos e deixar etiquetas já impressas erradas.
+// Ordem certa: Calcular/Montar → Confirmar → Imprimir. As etiquetas só liberam
+// depois de confirmar — se imprimisse antes, recalcular com outro cenário/pool
+// podia trocar os pedidos e deixar etiquetas já impressas erradas. Compartilhada
+// pelos fluxos Automático e Manual — _loteFlowAtivo diz quais botões mexer.
 async function confirmarLotes() {
   if (!_lotesPlano?.length) return;
+  const ids = _LOTE_FLOW_IDS[_loteFlowAtivo] || _LOTE_FLOW_IDS.auto;
   try {
     const res = await fetch(`${API}/pedidos/lote/formar/confirmar`, {
       credentials:'include', method:'POST', headers:{'Content-Type':'application/json'},
@@ -2154,15 +2555,15 @@ async function confirmarLotes() {
     const data = await res.json();
     if (data.erro) { toast(data.erro, 'erro'); return; }
     toast(`${data.lotes} lote(s) formado(s), ${data.pedidos} pedido(s) atribuído(s)!`, 'sucesso');
-    document.getElementById('lote-resultado').innerHTML = `
+    document.getElementById(ids.resultado).innerHTML = `
       <div style="text-align:center;padding:16px">
         <div style="font-size:32px;margin-bottom:8px">✅</div>
         <div style="font-size:14px;font-weight:700;color:var(--green);margin-bottom:6px">${data.lotes} lote(s) confirmado(s) — ${data.pedidos} pedido(s) atribuídos!</div>
         <div style="font-size:12px;color:var(--text3)">Agora clique em "Imprimir Etiquetas" e cole uma em cada caixa, na ordem 1, 2, 3...</div>
       </div>`;
-    document.getElementById('btn-calcular-lote').style.display = 'none';
-    document.getElementById('btn-confirmar-lote').style.display = 'none';
-    document.getElementById('btn-imprimir-etiquetas-lote').style.display = 'inline-flex';
+    document.getElementById(ids.btnCalcular).style.display = 'none';
+    document.getElementById(ids.btnConfirmar).style.display = 'none';
+    document.getElementById(ids.btnImprimir).style.display = 'inline-flex';
     if (typeof carregarPedidos === 'function') carregarPedidos();
   } catch(e) { toast('Erro ao confirmar lotes', 'erro'); }
 }

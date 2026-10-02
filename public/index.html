@@ -38,11 +38,28 @@
       overflow: hidden;
     }
     .etiqueta .et-topo { display:flex; justify-content:space-between; align-items:baseline; gap:6px; flex:0 0 auto }
+    .etiqueta .et-topo-esq { display:flex; align-items:baseline; gap:2mm }
     .etiqueta .et-pedido { font-size: 6.5mm; font-weight: 800; letter-spacing: .2px; white-space:nowrap }
     .etiqueta .et-envio { font-size: 3.6mm; font-weight: 700; text-transform:uppercase; white-space:nowrap }
+    /* Nº da caixa física dentro do lote — mesmo número que já aparece no
+       quadradinho colorido da tela de separação do celular (separador.js),
+       só pra bater o pedido com a caixa certa sem abrir o app. Só aparece
+       em etiquetas de pedidos formados em lote (imprimirEtiquetasLote). */
+    .etiqueta .et-caixa {
+      font-size: 4.2mm; font-weight: 800; white-space:nowrap;
+      background:#000; color:#fff; padding: .3mm 2mm; border-radius: 1mm;
+    }
     .etiqueta .et-cliente {
       font-size: 4mm; font-weight: 600; overflow:hidden; text-overflow:ellipsis;
       white-space:nowrap; flex:0 0 auto; margin-top:1mm;
+    }
+    /* Estado do destinatário já resolvido em NF cheia x Declaração/Talão (ver
+       lib/helpers.js classificarFiscal) — destaque em caixa pro checkout bater
+       o olho sem precisar consultar o cartaz de estados na mesa. */
+    .etiqueta .et-fiscal {
+      font-size: 3.4mm; font-weight: 800; text-transform:uppercase; white-space:nowrap;
+      border: .5mm solid #000; border-radius: 1mm; padding: .3mm 2mm;
+      display:inline-block; flex:0 0 auto; margin-top:1mm; align-self:flex-start;
     }
     .etiqueta .et-meta {
       font-size: 3mm; font-weight: 600; color:#333; overflow:hidden; text-overflow:ellipsis;
@@ -75,25 +92,26 @@
         <div style="font-size:12px;color:var(--text3);margin-top:6px;line-height:1.5">Sua senha foi redefinida pelo supervisor.<br>Crie uma nova senha para continuar.</div>
       </div>
       <input type="hidden" id="trocar-login-hidden">
+      <input type="hidden" id="trocar-senha-atual-hidden">
       <div class="form-grp">
         <label>NOVA SENHA</label>
         <div style="position:relative;display:flex;align-items:center">
-          <input type="password" id="trocar-senha-nova" placeholder="Mínimo 6 caracteres" style="padding-right:40px">
-          <button type="button" onclick="toggleSenhaCampo('trocar-senha-nova','ico-olho-aberto-tn','ico-olho-fechado-tn')"
-            style="position:absolute;right:8px;background:none;border:none;cursor:pointer;padding:4px;color:var(--text3);display:flex;align-items:center">
-            <svg id="ico-olho-aberto-tn" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-            <svg id="ico-olho-fechado-tn" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+          <input type="password" id="trocar-senha-nova" placeholder="Mínimo 6 caracteres" style="flex:1;padding-right:44px">
+          <button type="button" onclick="toggleSenhaCampo('trocar-senha-nova')"
+            style="position:absolute;right:10px;background:none;border:none;cursor:pointer;padding:4px;color:var(--text3);font-size:18px;line-height:1;display:flex;align-items:center">
+            <svg id="ico-olho-aberto-trocar-senha-nova" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            <svg id="ico-olho-fechado-trocar-senha-nova" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
           </button>
         </div>
       </div>
       <div class="form-grp" style="margin-top:12px">
         <label>CONFIRMAR NOVA SENHA</label>
         <div style="position:relative;display:flex;align-items:center">
-          <input type="password" id="trocar-senha-conf" placeholder="Digite novamente" style="padding-right:40px">
-          <button type="button" onclick="toggleSenhaCampo('trocar-senha-conf','ico-olho-aberto-tc','ico-olho-fechado-tc')"
-            style="position:absolute;right:8px;background:none;border:none;cursor:pointer;padding:4px;color:var(--text3);display:flex;align-items:center">
-            <svg id="ico-olho-aberto-tc" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-            <svg id="ico-olho-fechado-tc" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+          <input type="password" id="trocar-senha-conf" placeholder="Digite novamente" style="flex:1;padding-right:44px">
+          <button type="button" onclick="toggleSenhaCampo('trocar-senha-conf')"
+            style="position:absolute;right:10px;background:none;border:none;cursor:pointer;padding:4px;color:var(--text3);font-size:18px;line-height:1;display:flex;align-items:center">
+            <svg id="ico-olho-aberto-trocar-senha-conf" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            <svg id="ico-olho-fechado-trocar-senha-conf" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
           </button>
         </div>
       </div>
@@ -153,6 +171,7 @@
       </div>
     </div>
     <div class="hdir">
+      <button onclick="abrirCommandPalette()" class="btn btn-outline btn-sm" style="margin-right:6px" title="Busca rápida (Ctrl+K)"><i class="ti ti-search" aria-hidden="true"></i> Ctrl+K</button>
       <div class="uinfo"><b id="hdr-nome">—</b><small id="hdr-perfil">—</small></div>
       <button id="btn-senha-hdr" onclick="abrirRedefinirSenha()" class="btn btn-outline btn-sm" style="margin-right:6px">Senha</button><button class="btn-sair" onclick="sair()">Sair</button>
     </div>
@@ -334,6 +353,22 @@
                 </span>
                 <span style="margin-left:auto;font-size:11px;color:var(--text3)" id="mapa-info-pedido"></span>
               </div>
+              <!-- Legenda — Mapa Vivo (estado real da rua, sobrepõe a cor de dificuldade) -->
+              <div style="display:flex;gap:16px;margin-bottom:14px;font-size:11px;color:var(--text2);flex-wrap:wrap;align-items:center">
+                <span style="font-size:9px;letter-spacing:1px;color:var(--text3)">MAPA VIVO (clique numa rua p/ detalhes):</span>
+                <span style="display:flex;align-items:center;gap:5px">
+                  <span style="width:10px;height:10px;border-radius:3px;background:var(--red);display:inline-block"></span>Ruptura
+                </span>
+                <span style="display:flex;align-items:center;gap:5px">
+                  <span style="width:10px;height:10px;border-radius:3px;background:var(--amber);display:inline-block"></span>Estoque baixo
+                </span>
+                <span style="display:flex;align-items:center;gap:5px">
+                  <span style="width:10px;height:10px;border-radius:3px;background:var(--accent);display:inline-block"></span>Separação em andamento
+                </span>
+                <span style="display:flex;align-items:center;gap:5px">
+                  <span style="width:10px;height:10px;border-radius:3px;background:var(--indigo);display:inline-block"></span>Reposição pendente
+                </span>
+              </div>
               <!-- SVG do mapa -->
               <div id="mapa-estoque-svg" style="width:100%;overflow-x:auto;min-height:280px"></div>
             </div>
@@ -342,7 +377,58 @@
 
       </div>
 
+      <!-- CONTROL TOWER — tela própria, saiu do topo do Dashboard -->
+      <div class="pagina" id="pag-control-tower">
+        <div class="pg-title">Control Tower</div>
+        <div class="card" style="margin-bottom:14px">
+          <div class="card-hd">
+            Ritmo, necessário, gap e previsão por etapa
+            <div style="display:flex;align-items:center;gap:10px">
+              <span id="ct-turno-info" style="font-size:11px;font-weight:600;color:var(--text3)"></span>
+              <button id="btn-anuncio-faturamento" class="btn btn-outline btn-sm" onclick="toggleAnuncioOperacao()" title="Anuncia em voz os pedidos de Separação/Checkout/Embalagem da última hora e quanto falta pra meta de Checkout do turno">🔇 Ativar anúncio da operação</button>
+            </div>
+          </div>
+          <div id="ct-gargalo-wrap"></div>
+          <div id="ct-processos" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;padding:4px 0"></div>
+        </div>
 
+        <!-- V10: Faturamento, Embalagem e Expedição hora a hora -->
+        <div class="card" style="margin-bottom:14px">
+          <div class="card-hd">
+            Faturamento, Embalagem e Expedição — hora a hora
+            <button class="btn btn-outline btn-sm" onclick="abrirImportarFaturamento()">Importar Faturamento</button>
+          </div>
+          <div id="hh-processos" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;padding:4px 0"></div>
+        </div>
+
+        <!-- V11: Simulador de Capacidade + Detecção de Anomalias -->
+        <div class="card" style="margin-bottom:14px">
+          <div class="card-hd">Simulador de Capacidade — "E se eu adicionar/remover pessoas agora?"</div>
+          <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;padding:4px 0 12px">
+            <div class="fg">
+              <label style="font-size:9px;letter-spacing:1px">PROCESSO</label>
+              <select id="sim-processo" class="sel-sm" onchange="carregarSimulador()">
+                <option value="separacao">Separação</option>
+                <option value="checkout">Checkout</option>
+                <option value="embalagem">Embalagem</option>
+              </select>
+            </div>
+            <div class="fg">
+              <label style="font-size:9px;letter-spacing:1px">PESSOAS (+/-)</label>
+              <input type="number" id="sim-delta" value="0" step="1" style="width:90px;padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:13px" oninput="carregarSimulador()"/>
+            </div>
+          </div>
+          <div id="sim-resultado"></div>
+        </div>
+
+        <div class="card" style="margin-bottom:14px">
+          <div class="card-hd">
+            Anomalias — separadores fora do próprio padrão
+            <button class="btn btn-outline btn-sm" onclick="carregarAnomalias()">↺</button>
+          </div>
+          <div id="anom-lista" style="padding:4px 0"></div>
+        </div>
+      </div>
 
 
       <!-- PEDIDOS -->
@@ -429,6 +515,10 @@
             <button onclick="filtrarPedidosTransp('SEDEX')"   id="ftransp-sedex"   class="btn-transp">SEDEX</button>
             <button onclick="filtrarPedidosTransp('PAC')"     id="ftransp-pac"     class="btn-transp">PAC</button>
             <button onclick="filtrarPedidosTransp('MOTOBOY')" id="ftransp-motoboy" class="btn-transp">MOTOBOY</button>
+            <span style="width:1px;height:22px;background:var(--border);margin:0 2px"></span>
+            <!-- PRIORIDADE -->
+            <button onclick="filtrarPedidosPrioridade('critico')" id="fprior-critico" class="btn-transp" style="color:var(--red)" title="Já ultrapassou o SLA">Crítico</button>
+            <button onclick="filtrarPedidosPrioridade('atencao')" id="fprior-atencao" class="btn-transp" style="color:var(--amber)" title="60%+ do SLA decorrido">Atenção</button>
             <button onclick="abrirReatribuirTodos()" id="btn-reatribuir-todos" class="btn btn-outline btn-sm"
               style="display:none;color:#c2410c;border-color:#fb923c;white-space:nowrap">Reatribuir</button>
             <button onclick="confirmarRedefinirTodos()" id="btn-redefinir-todos" class="btn btn-outline btn-sm"
@@ -436,7 +526,7 @@
             <!-- TOTALIZADORES inline -->
             <div id="ped-totalizadores" style="display:none;gap:0;align-items:center;margin-left:auto"></div>
           </div>
-          <div class="tabela-wrap"><table><thead><tr><th>Nº PEDIDO</th><th>CLIENTE</th><th>TRANSPORTADORA</th><th>AGUARDANDO DESDE</th><th>USUÁRIO</th><th>STATUS</th><th>SKUs</th><th>ITENS</th><th>⏱ TEMPO EST.</th></tr></thead><tbody id="tbody-ped"></tbody></table></div>
+          <div class="tabela-wrap"><table><thead><tr><th>Nº PEDIDO</th><th>CLIENTE</th><th>TRANSPORTADORA</th><th>UF</th><th>AGUARDANDO DESDE</th><th>PRIORIDADE</th><th>USUÁRIO</th><th>STATUS</th><th onclick="ordenarPedidosPor('skus')" style="cursor:pointer;white-space:nowrap" title="Ordenar por SKUs">SKUs <span id="seta-ord-skus" style="opacity:.4">↕</span></th><th onclick="ordenarPedidosPor('itens')" style="cursor:pointer;white-space:nowrap" title="Ordenar por itens">ITENS <span id="seta-ord-itens" style="opacity:.4">↕</span></th><th>⏱ TEMPO EST.</th></tr></thead><tbody id="tbody-ped"></tbody></table></div>
         </div>
       </div>
 
@@ -460,10 +550,10 @@
                 <label>SENHA <span style="font-weight:400;color:var(--text3);letter-spacing:0">— gerada como Nome@Ano, peça pra trocar no 1º acesso</span></label>
                 <div style="position:relative;display:flex;align-items:center">
                   <input type="password" id="usr-senha" placeholder="Mínimo 6 caracteres" oninput="this.dataset.editado='1'" style="padding-right:40px">
-                  <button type="button" onclick="toggleSenhaCampo('usr-senha','ico-olho-aberto-us','ico-olho-fechado-us')"
+                  <button type="button" onclick="toggleSenhaCampo('usr-senha')"
                     style="position:absolute;right:8px;background:none;border:none;cursor:pointer;padding:4px;color:var(--text3);display:flex;align-items:center">
-                    <svg id="ico-olho-aberto-us" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                    <svg id="ico-olho-fechado-us" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                    <svg id="ico-olho-aberto-usr-senha" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    <svg id="ico-olho-fechado-usr-senha" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
                   </button>
                 </div>
               </div>
@@ -963,12 +1053,34 @@
 
       <!-- Modal de configuração de metas — fora das paginas para funcionar em qualquer tela -->
       <div id="modal-config-metas" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;align-items:center;justify-content:center">
-        <div style="background:var(--surface);border-radius:16px;padding:24px;width:360px;max-width:95vw;box-shadow:0 8px 32px rgba(0,0,0,.3)">
+        <div style="background:var(--surface);border-radius:16px;padding:24px;width:360px;max-width:95vw;max-height:88vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.3)">
           <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:16px">Configurar Metas e Horas de Turno</div>
           <div id="config-metas-form"></div>
           <div style="display:flex;gap:10px;margin-top:16px">
             <button onclick="fecharConfigMetas()" class="btn btn-outline" style="flex:1;padding:10px">Cancelar</button>
             <button onclick="salvarConfigMetas()" class="btn btn-primary" style="flex:1;padding:10px">Salvar</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal de importação de Faturamento (V10) — fora das paginas pra funcionar a partir do Dashboard -->
+      <div id="modal-importar-faturamento" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;align-items:center;justify-content:center">
+        <div style="background:var(--surface);border-radius:16px;padding:24px;width:520px;max-width:95vw;max-height:85vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.3)">
+          <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:6px">Importar Faturamento</div>
+          <div style="font-size:12px;color:var(--text3);margin-bottom:14px">Planilha com colunas: Pedido, Faturado, Itens, Data, Hora, Usuário, Nome, Turno, Status.</div>
+          <input type="file" id="fat-import-arquivo" accept=".xlsx,.xls,.csv" onchange="processarArquivoFaturamento(event)"/>
+          <div id="fat-import-status" style="font-size:12px;color:var(--text2);margin-top:8px"></div>
+          <div id="fat-import-preview" style="display:none;margin-top:12px">
+            <div class="tbl-wrap" style="max-height:220px;overflow-y:auto">
+              <table style="width:100%;font-size:12px">
+                <thead><tr><th>Pedido</th><th>Data</th><th>Hora</th><th>Faturado</th></tr></thead>
+                <tbody id="fat-import-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+          <div style="display:flex;gap:10px;margin-top:16px">
+            <button onclick="fecharImportarFaturamento()" class="btn btn-outline" style="flex:1;padding:10px">Cancelar</button>
+            <button onclick="confirmarImportarFaturamento()" class="btn btn-primary" style="flex:1;padding:10px">Importar</button>
           </div>
         </div>
       </div>
@@ -1513,98 +1625,6 @@
         </div>
       </div>
 
-      <div class="pagina" id="pag-estatisticas">
-        <div class="pg-title">Estatísticas</div>
-        <div class="card" style="margin-bottom:16px">
-        <div class="card-hd">Filtro de período
-          <div style="display:flex;gap:8px">
-            <button class="btn btn-outline btn-sm" onclick="carregarEstatisticas()">↺</button>
-            <button class="excel-btn" onclick="exportarExcel('estatisticas')">Excel</button>
-          </div>
-        </div>
-        <div class="filter-toolbar">
-          <div class="filter-grp">
-            <span class="filter-lbl">Período</span>
-            <div class="date-range">
-              <input type="date" id="est-ini"/>
-              <span class="date-range-sep"><i class="ti ti-arrow-right" aria-hidden="true"></i></span>
-              <input type="date" id="est-fim"/>
-            </div>
-          </div>
-          <div class="filter-actions">
-            <button class="btn btn-primary btn-sm" onclick="carregarEstatisticas()">Filtrar</button>
-          </div>
-        </div>
-        </div>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px">
-        <div class="cnt-card verde">
-          <div class="cnt-lbl">PEDIDOS HOJE</div>
-          <div class="cnt-val" id="est-hoje-c" style="font-size:36px">0</div>
-          <div class="cnt-sub">concluídos</div>
-          <div style="font-size:12px;color:var(--text3);margin-top:4px">Total: <b id="est-hoje-t">0</b></div>
-        </div>
-        <div class="cnt-card azul">
-          <div class="cnt-lbl">PEDIDOS NO MÊS</div>
-          <div class="cnt-val" id="est-mes-c" style="font-size:36px">0</div>
-          <div class="cnt-sub">concluídos</div>
-          <div style="font-size:12px;color:var(--text3);margin-top:4px">Total: <b id="est-mes-t">0</b></div>
-        </div>
-        <div class="cnt-card roxo">
-          <div class="cnt-lbl">PEDIDOS NO ANO</div>
-          <div class="cnt-val" id="est-ano-c" style="font-size:36px">0</div>
-          <div class="cnt-sub">concluídos</div>
-          <div style="font-size:12px;color:var(--text3);margin-top:4px">Total: <b id="est-ano-t">0</b></div>
-        </div>
-        </div>
-        <div id="est-periodo-wrap" style="display:none" class="card">
-        <div class="card-hd">RESULTADO DO PERÍODO</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:10px 0">
-          <div class="cnt-card verde">
-            <div class="cnt-lbl">CONCLUÍDOS</div>
-            <div class="cnt-val" id="est-per-c" style="font-size:32px">0</div>
-            <div class="cnt-sub">no período</div>
-          </div>
-          <div class="cnt-card azul">
-            <div class="cnt-lbl">TOTAL IMPORTADOS</div>
-            <div class="cnt-val" id="est-per-t" style="font-size:32px">0</div>
-            <div class="cnt-sub">no período</div>
-          </div>
-        </div>
-        </div>
-        <div class="card" style="margin-bottom:16px">
-        <div class="card-hd">PRODUTIVIDADE POR SEPARADOR
-          <button class="btn btn-outline btn-sm" onclick="carregarEstatisticas()">↺</button>
-        </div>
-        <div class="tabela-wrap">
-          <table><thead><tr><th>SEPARADOR</th><th>HOJE</th><th>MÊS</th><th>ANO</th><th>STATUS</th></tr></thead>
-          <tbody id="tbody-est-sep"></tbody></table>
-        </div>
-        </div>
-        <!-- Lista de checkouts fica aqui embaixo das estatísticas -->
-        <div class="card">
-        <div class="card-hd">TODOS OS CHECKOUTS
-          <div style="display:flex;gap:8px;align-items:center">
-            <select id="filtro-ck-status" class="sel-sm" onchange="carregarCheckoutLista()">
-              <option value="">Todos</option>
-              <option value="pendente">Pendente</option>
-              <option value="concluido">Concluído</option>
-            </select>
-            <button class="btn btn-outline btn-sm" onclick="carregarCheckoutLista()">↺</button>
-            <button class="excel-btn" onclick="exportarExcel('checkout-lista')">Excel</button>
-          </div>
-        </div>
-        <div class="tabela-wrap">
-          <table>
-            <thead><tr><th>CAIXA</th><th>Nº PEDIDO</th><th>SEPARADOR</th><th>STATUS</th><th>HORA</th><th>AÇÃO</th></tr></thead>
-            <tbody id="tbody-checkout"></tbody>
-          </table>
-        </div>
-        </div>
-      </div>
-
-
-
-
       <!-- CHECKOUT -->
       <div class="pagina" id="pag-checkout">
         <div class="pg-title">Checkout</div>
@@ -2029,150 +2049,13 @@
 </div>
 
 
-      <!-- ══ PASSAGEM DE TURNO ══ -->
-      <div class="pagina" id="pag-passagem">
-        <div class="pag-header"><h2>Passagem de Turno</h2></div>
-        <div style="padding:16px;max-width:600px;margin:0 auto">
-
-          <!-- TABS -->
-          <div style="display:flex;gap:8px;margin-bottom:16px">
-            <button id="ptab-registrar" onclick="mudarPassagemTab('registrar',this)"
-              style="flex:1;padding:10px;border-radius:8px;border:none;background:#4F46E5;color:#fff;font-size:13px;font-weight:700;cursor:pointer">
-              Registrar
-            </button>
-            <button id="ptab-validar" onclick="mudarPassagemTab('validar',this)"
-              style="flex:1;padding:10px;border-radius:8px;border:1.5px solid #E2E8F0;background:#fff;color:#64748B;font-size:13px;font-weight:600;cursor:pointer">
-              Validar <span id="menu-badge-passagem-tab" style="display:none;background:#DC2626;color:#fff;border-radius:50%;padding:1px 5px;font-size:10px;margin-left:4px">!</span>
-            </button>
-            <button id="ptab-placar" onclick="mudarPassagemTab('placar',this)"
-              style="flex:1;padding:10px;border-radius:8px;border:1.5px solid #E2E8F0;background:#fff;color:#64748B;font-size:13px;font-weight:600;cursor:pointer">
-              Placar
-            </button>
-            <button id="ptab-historico" onclick="mudarPassagemTab('historico',this)"
-              style="flex:1;padding:10px;border-radius:8px;border:1.5px solid #E2E8F0;background:#fff;color:#64748B;font-size:13px;font-weight:600;cursor:pointer">
-              Histórico
-            </button>
-          </div>
-
-          <!-- REGISTRAR -->
-          <div id="pass-sec-registrar">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
-              <div>
-                <label style="font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase">Data</label>
-                <input type="date" id="pass-data" style="width:100%;margin-top:4px;padding:10px;border:1px solid #E2E8F0;border-radius:8px;font-size:13px;box-sizing:border-box">
-              </div>
-              <div>
-                <label style="font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase">Turno saindo</label>
-                <select id="pass-turno" style="width:100%;margin-top:4px;padding:10px;border:1px solid #E2E8F0;border-radius:8px;font-size:13px;box-sizing:border-box">
-                  <option value="Manha">Manhã</option>
-                  <option value="Tarde">Tarde</option>
-                  <option value="Noite">Noite</option>
-                </select>
-              </div>
-            </div>
-
-            <!-- Separação -->
-            <div style="border:1.5px solid #BFDBFE;border-radius:10px;padding:12px 14px;margin-bottom:12px;background:#EFF6FF">
-              <div style="font-size:12px;font-weight:700;color:#4F46E5;margin-bottom:10px">Separação</div>
-              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
-                <div>
-                  <label style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase">Separados</label>
-                  <input type="number" id="pass-sep-sep" min="0" value="0" style="width:100%;margin-top:3px;padding:8px;border:1px solid #BFDBFE;border-radius:7px;font-size:14px;font-weight:700;text-align:center;box-sizing:border-box">
-                </div>
-                <div>
-                  <label style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase">Pendentes</label>
-                  <input type="number" id="pass-sep-pend" min="0" value="0" style="width:100%;margin-top:3px;padding:8px;border:1px solid #BFDBFE;border-radius:7px;font-size:14px;font-weight:700;text-align:center;box-sizing:border-box">
-                </div>
-                <div>
-                  <label style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase">Em Separação</label>
-                  <input type="number" id="pass-sep-em" min="0" value="0" style="width:100%;margin-top:3px;padding:8px;border:1px solid #BFDBFE;border-radius:7px;font-size:14px;font-weight:700;text-align:center;box-sizing:border-box">
-                </div>
-              </div>
-            </div>
-
-            <!-- Checkout -->
-            <div style="border:1.5px solid #BBF7D0;border-radius:10px;padding:12px 14px;margin-bottom:12px;background:#F0FDF4">
-              <div style="font-size:12px;font-weight:700;color:#16a34a;margin-bottom:10px">Checkout</div>
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-                <div>
-                  <label style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase">Realizados</label>
-                  <input type="number" id="pass-ck-feitos" min="0" value="0" style="width:100%;margin-top:3px;padding:8px;border:1px solid #BBF7D0;border-radius:7px;font-size:14px;font-weight:700;text-align:center;box-sizing:border-box">
-                </div>
-                <div>
-                  <label style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase">Pendentes</label>
-                  <input type="number" id="pass-ck-pend" min="0" value="0" style="width:100%;margin-top:3px;padding:8px;border:1px solid #BBF7D0;border-radius:7px;font-size:14px;font-weight:700;text-align:center;box-sizing:border-box">
-                </div>
-              </div>
-            </div>
-
-            <!-- Embalagem -->
-            <div style="border:1.5px solid #DDD6FE;border-radius:10px;padding:12px 14px;margin-bottom:12px;background:#F5F3FF">
-              <div style="font-size:12px;font-weight:700;color:#7C3AED;margin-bottom:10px">Embalagem</div>
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-                <div>
-                  <label style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase">Embalados</label>
-                  <input type="number" id="pass-emb-emb" min="0" value="0" style="width:100%;margin-top:3px;padding:8px;border:1px solid #DDD6FE;border-radius:7px;font-size:14px;font-weight:700;text-align:center;box-sizing:border-box">
-                </div>
-                <div>
-                  <label style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase">Pendentes</label>
-                  <input type="number" id="pass-emb-pend" min="0" value="0" style="width:100%;margin-top:3px;padding:8px;border:1px solid #DDD6FE;border-radius:7px;font-size:14px;font-weight:700;text-align:center;box-sizing:border-box">
-                </div>
-              </div>
-            </div>
-
-            <!-- Reposição Pendências -->
-            <div style="border:1.5px solid #FECACA;border-radius:10px;padding:12px 14px;margin-bottom:12px;background:#FEF2F2">
-              <div style="font-size:12px;font-weight:700;color:#DC2626;margin-bottom:10px">Reposição — Pendências</div>
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-                <div>
-                  <label style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase">Procurando Itens</label>
-                  <input type="number" id="pass-rep-proc" min="0" value="0" style="width:100%;margin-top:3px;padding:8px;border:1px solid #FECACA;border-radius:7px;font-size:14px;font-weight:700;text-align:center;box-sizing:border-box">
-                </div>
-                <div>
-                  <label style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase">Caixas na Rua</label>
-                  <input type="number" id="pass-rep-rua" min="0" value="0" style="width:100%;margin-top:3px;padding:8px;border:1px solid #FECACA;border-radius:7px;font-size:14px;font-weight:700;text-align:center;box-sizing:border-box">
-                </div>
-              </div>
-            </div>
-
-            <!-- Separadores e Ocorrências -->
-            <div style="margin-bottom:10px">
-              <label style="font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase">Separadores presentes</label>
-              <textarea id="pass-seps" rows="2" placeholder="Ex: João, Maria, Pedro..."
-                style="width:100%;margin-top:4px;padding:10px;border:1px solid #E2E8F0;border-radius:8px;font-size:13px;resize:none;box-sizing:border-box"></textarea>
-            </div>
-            <div style="margin-bottom:14px">
-              <label style="font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase">Ocorrências do turno</label>
-              <textarea id="pass-ocorr" rows="3" placeholder="Registre ocorrências, problemas ou observações do turno..."
-                style="width:100%;margin-top:4px;padding:10px;border:1px solid #E2E8F0;border-radius:8px;font-size:13px;resize:none;box-sizing:border-box"></textarea>
-            </div>
-
-            <button onclick="salvarPassagem()"
-              style="width:100%;padding:14px;background:#4F46E5;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">
-              Salvar Passagem
-            </button>
-          </div>
-
-          <!-- VALIDAR -->
-          <div id="pass-sec-validar" style="display:none"></div>
-
-          <!-- PLACAR -->
-          <div id="pass-sec-placar" style="display:none">
-            <div id="pass-placar-content"></div>
-          </div>
-
-          <!-- HISTÓRICO -->
-          <div id="pass-sec-historico" style="display:none">
-            <div id="pass-historico"></div>
-          </div>
-
-
-        </div>
-      </div>
-
       <!-- ══ ENTRADA MANUAL ══ -->
       <div class="pagina" id="pag-entrada-manual">
         <!-- conteúdo renderizado dinamicamente pelo entrada-manual.js -->
+      </div>
+
+      <div class="pagina" id="pag-colmeias">
+        <!-- conteúdo renderizado dinamicamente pelo colmeias.js -->
       </div>
 
       <div class="pagina" id="pag-gestao">
@@ -2398,9 +2281,12 @@
               </div>
             </div>
             <div id="m-lote-lista-body" style="overflow-y:auto;max-height:360px"></div>
-            <div style="background:var(--surface2);padding:12px 14px;display:flex;gap:8px;border-top:1px solid var(--border)">
-              <button onclick="loteVoltarPosicao()" style="flex:1;background:transparent;border:1.5px solid var(--border);color:var(--text2);font-size:12px;padding:10px 0;border-radius:8px;cursor:pointer">← Voltar</button>
-              <button id="m-lote-btn-prox" disabled style="flex:2;background:var(--accent);border:none;color:#fff;font-size:13px;font-weight:700;padding:10px 0;border-radius:8px;cursor:pointer;opacity:0.5">Próxima posição</button>
+            <div style="background:var(--surface2);padding:12px 14px;display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--border)">
+              <button id="m-lote-btn-concluir" onclick="loteConcluirOuIrPendente()" style="width:100%;background:var(--green);border:none;color:#fff;font-size:13px;font-weight:700;padding:11px 0;border-radius:8px;cursor:pointer">Concluir lote</button>
+              <div style="display:flex;gap:8px">
+                <button onclick="loteVoltarPosicao()" style="flex:1;background:transparent;border:1.5px solid var(--border);color:var(--text2);font-size:12px;padding:10px 0;border-radius:8px;cursor:pointer">← Voltar</button>
+                <button id="m-lote-btn-prox" disabled style="flex:2;background:var(--accent);border:none;color:#fff;font-size:13px;font-weight:700;padding:10px 0;border-radius:8px;cursor:pointer;opacity:0.5">Próxima posição</button>
+              </div>
             </div>
           </div>
 
@@ -2520,6 +2406,18 @@
       </div>
     </div>
 
+    <!-- Todos os itens de uma rua no pedido individual/"pedido a pedido" — ver
+         verItensDaRuaChecklist(). Mesmo padrão do modal de detalhe do pedido acima. -->
+    <div id="m-lote-rua-modal" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:99999;overflow-y:auto">
+      <div style="padding:14px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+          <button onclick="fecharItensDaRuaLote()" style="color:var(--accent);font-size:16px;background:none;border:none;cursor:pointer;padding:0 4px">&#8592;</button>
+          <span id="m-lote-rua-titulo" style="color:var(--text);font-size:15px;font-weight:600;flex:1">Rua</span>
+        </div>
+        <div id="m-lote-rua-body"></div>
+      </div>
+    </div>
+
 
 
 
@@ -2597,18 +2495,21 @@
 </div>
 
 
-<script src="/js/config.js?v=13"></script>
-  <script src="/js/pedidos.js?v=44"></script>
-  <script src="/js/separador.js?v=27"></script>
-  <script src="/js/repositor.js?v=18"></script>
-  <script src="/js/checkout.js?v=14"></script>
-  <script src="/js/dashboard.js?v=28"></script>
-  <script src="/js/entrada-manual.js?v=8"></script>
-  <script src="/js/performance-dash.js?v=11"></script>
-  <script src="/js/gestao.js?v=60"></script>
+<script src="/js/geometria-estoque.js?v=1"></script>
+<script src="/js/config.js?v=15"></script>
+  <script src="/js/pedidos.js?v=55"></script>
+  <script src="/js/separador.js?v=42"></script>
+  <script src="/js/repositor.js?v=19"></script>
+  <script src="/js/checkout.js?v=15"></script>
+  <script src="/js/dashboard.js?v=39"></script>
+  <script src="/js/entrada-manual.js?v=9"></script>
+  <script src="/js/performance-dash.js?v=12"></script>
+  <script src="/js/gestao.js?v=61"></script>
   <script src="/js/caixas.js?v=5"></script>
   <script src="/js/matriz.js?v=17"></script>
-  <script src="/js/auth.js?v=44"></script>
+  <script src="/js/colmeias.js?v=1"></script>
+  <script src="/js/command-palette.js?v=1"></script>
+  <script src="/js/auth.js?v=53"></script>
 
 
 <!-- ══ MODAL IMPORTAR ══ -->
@@ -2867,10 +2768,16 @@
         <div style="background:rgba(79,70,229,.06);border:1px solid rgba(79,70,229,.2);border-radius:10px;padding:14px 16px;margin-bottom:14px;font-size:12px;color:var(--text2);line-height:1.6">
           <b>Formar Lotes:</b> agrupa pedidos pendentes (sem Drive Thru — e sem Prime, a menos que "Incluir Prime" esteja
           ativo — esses continuam indo individual) por <b style="color:var(--text)">proximidade de rua</b> em lotes de
-          até 8 pedidos. Cada lote inteiro vai pro separador mais atrasado na mesma fórmula de pontuação + itens +
+          até 4 pedidos. Cada lote inteiro vai pro separador mais atrasado na mesma fórmula de pontuação + itens +
           quantidade de pedidos usada em Distribuir.
         </div>
 
+        <div style="display:flex;gap:6px;margin-bottom:14px">
+          <button id="btn-lote-modo-auto" class="btn btn-sm" onclick="loteSetModo('auto')" style="flex:1;background:var(--surface);color:var(--text)">Automático</button>
+          <button id="btn-lote-modo-manual" class="btn btn-sm" onclick="loteSetModo('manual')" style="flex:1;background:transparent;color:var(--text3)">Manual</button>
+        </div>
+
+        <div id="lote-sub-auto">
         <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:4px;align-items:flex-end">
           <div class="fg">
             <label>QUANTIDADE DE PEDIDOS A FORMAR EM LOTE</label>
@@ -2926,6 +2833,41 @@
           <button class="btn btn-outline" onclick="imprimirEtiquetasLote()" id="btn-imprimir-etiquetas-lote" style="display:none">🖨️ Imprimir Etiquetas</button>
           <button class="btn btn-primary" onclick="calcularLotes()" id="btn-calcular-lote">Calcular Lotes</button>
           <button class="btn btn-success" onclick="confirmarLotes()" id="btn-confirmar-lote" style="display:none">Confirmar Lotes</button>
+        </div>
+        </div>
+
+        <!-- Lote Manual — supervisor escolhe o colaborador e vai bipando/digitando os
+             pedidos (um pool, sem decidir o agrupamento); ao mandar montar, o sistema
+             identifica a melhor divisão em lotes de até 4 (mesmo algoritmo de
+             proximidade de rua + SKU em comum do Formar Lotes automático). -->
+        <div id="lote-sub-manual" style="display:none">
+          <div style="background:rgba(79,70,229,.06);border:1px solid rgba(79,70,229,.2);border-radius:10px;padding:14px 16px;margin-bottom:14px;font-size:12px;color:var(--text2)">
+            <b>Lote Manual:</b> escolha o colaborador e vá bipando ou digitando os pedidos que devem entrar no pool.
+            Quando terminar, clique em <b>"Montar Melhores Lotes"</b> — o sistema identifica a melhor divisão em
+            lotes de até 4 pedidos (mesma lógica de proximidade de rua e SKU em comum do automático).
+          </div>
+          <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center">
+            <label style="font-size:12px;font-weight:700;color:var(--text2);white-space:nowrap">Colaborador:</label>
+            <select id="lote-manual-sep" style="flex:1;padding:10px 14px;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;color:var(--text);font-size:13px;outline:none">
+              <option value="">— Selecione o colaborador —</option>
+            </select>
+          </div>
+          <input id="lote-manual-input" type="text" placeholder="Bipe ou digite o número do pedido..." autocomplete="off"
+            style="width:100%;padding:14px 16px;background:var(--surface2);border:2px solid var(--accent);border-radius:10px;color:var(--text);font-size:15px;outline:none;box-sizing:border-box;font-family:'Space Mono',monospace"
+            onkeydown="if(event.key==='Enter'){event.preventDefault();loteManualAdicionarPedido();}">
+          <div style="display:flex;gap:16px;margin:12px 2px;font-size:12px;color:var(--text3)">
+            <span><b id="lote-manual-count" style="color:var(--text)">0</b> pedido(s) no pool</span>
+            <span>vira <b id="lote-manual-previsto" style="color:var(--text)">0</b> lote(s)</span>
+            <span><b id="lote-manual-itens" style="color:var(--text)">0</b> itens</span>
+          </div>
+          <div id="lote-manual-lista" style="max-height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;margin-bottom:12px"></div>
+          <div id="lote-resultado-manual" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px;margin-bottom:14px"></div>
+          <div style="display:flex;gap:8px;justify-content:flex-end">
+            <button class="btn btn-outline" onclick="fecharModalDistribuicao()">Cancelar</button>
+            <button class="btn btn-outline" onclick="imprimirEtiquetasLote()" id="btn-imprimir-etiquetas-lote-manual" style="display:none">🖨️ Imprimir Etiquetas</button>
+            <button class="btn btn-primary" onclick="montarMelhorLoteManual()" id="btn-montar-lote-manual" disabled>Montar Melhores Lotes</button>
+            <button class="btn btn-success" onclick="confirmarLotes()" id="btn-confirmar-lote-manual" style="display:none">Confirmar Lotes</button>
+          </div>
         </div>
       </div>
     </div>
@@ -3106,15 +3048,36 @@
         </div>
         <div class="form-grp">
           <label>SENHA ATUAL</label>
-          <input type="password" id="redef-senha-atual" placeholder="Digite sua senha atual">
+          <div style="position:relative;display:flex;align-items:center">
+            <input type="password" id="redef-senha-atual" placeholder="Digite sua senha atual" style="flex:1;padding-right:44px">
+            <button type="button" onclick="toggleSenhaCampo('redef-senha-atual')"
+              style="position:absolute;right:10px;background:none;border:none;cursor:pointer;padding:4px;color:var(--text3);font-size:18px;line-height:1;display:flex;align-items:center">
+              <svg id="ico-olho-aberto-redef-senha-atual" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              <svg id="ico-olho-fechado-redef-senha-atual" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+            </button>
+          </div>
         </div>
         <div class="form-grp">
           <label>NOVA SENHA</label>
-          <input type="password" id="redef-senha-nova" placeholder="Mínimo 6 caracteres">
+          <div style="position:relative;display:flex;align-items:center">
+            <input type="password" id="redef-senha-nova" placeholder="Mínimo 6 caracteres" style="flex:1;padding-right:44px">
+            <button type="button" onclick="toggleSenhaCampo('redef-senha-nova')"
+              style="position:absolute;right:10px;background:none;border:none;cursor:pointer;padding:4px;color:var(--text3);font-size:18px;line-height:1;display:flex;align-items:center">
+              <svg id="ico-olho-aberto-redef-senha-nova" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              <svg id="ico-olho-fechado-redef-senha-nova" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+            </button>
+          </div>
         </div>
         <div class="form-grp">
           <label>CONFIRMAR NOVA SENHA</label>
-          <input type="password" id="redef-senha-conf" placeholder="Digite novamente a nova senha">
+          <div style="position:relative;display:flex;align-items:center">
+            <input type="password" id="redef-senha-conf" placeholder="Digite novamente a nova senha" style="flex:1;padding-right:44px">
+            <button type="button" onclick="toggleSenhaCampo('redef-senha-conf')"
+              style="position:absolute;right:10px;background:none;border:none;cursor:pointer;padding:4px;color:var(--text3);font-size:18px;line-height:1;display:flex;align-items:center">
+              <svg id="ico-olho-aberto-redef-senha-conf" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              <svg id="ico-olho-fechado-redef-senha-conf" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+            </button>
+          </div>
         </div>
         <div style="display:flex;gap:10px;margin-top:16px">
           <button onclick="fecharRedefinirSenha()" class="btn btn-outline" style="flex:1;padding:12px">Cancelar</button>

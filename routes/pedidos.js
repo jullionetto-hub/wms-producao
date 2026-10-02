@@ -3,7 +3,30 @@ const router = express.Router();
 const { db, pool } = require('../lib/db');
 const { requerAuth, requerPerfil } = require('../lib/auth');
 const { dataHoraLocal, formatarAguardandoDesde, validarId } = require('../lib/helpers');
+const { registrarAuditoria } = require('../lib/auditoria');
+const { requerPermissao } = require('../lib/permissoes');
 const { calcularPesoCorredor, calcularPontuacaoPedido } = require('../lib/pontuacao');
+const { calcularPrioridade } = require('../lib/prioridade');
+
+// Prioridade só faz sentido pra pedido ainda não concluído (aguardando
+// alguma etapa) — pedido concluído não carrega selo de prioridade.
+function _comPrioridade(r) {
+  const aguardando_desde = formatarAguardandoDesde(r.aguardando_desde);
+  const prioridade = (r.status === 'pendente' || r.status === 'separando')
+    ? calcularPrioridade(aguardando_desde)
+    : null;
+  return { ...r, aguardando_desde, prioridade };
+}
+const GeometriaEstoque = require('../public/js/geometria-estoque.js');
+
+// Colmeias são bins físicos extras (formato livre, ex: "Bancada 3 / Colmeia B12")
+// onde um mesmo código de produto pode ter várias localizações registradas, além
+// do endereço principal (corredor) já gravado em itens_pedido.endereco. Durante
+// a separação, mostra todas pra não o separador correr todas as ruas achando só
+// um endereço desatualizado. Subquery reaproveitada nos dois pontos que montam
+// a lista de itens pro separador (pedido individual e lote).
+const SUBQ_COLMEIA_ENDERECOS = `(SELECT STRING_AGG(DISTINCT c.endereco, ' · ' ORDER BY c.endereco)
+   FROM colmeias c WHERE c.codigo=i.codigo AND c.status='ativo' AND c.endereco<>'')`;
 
 router.get('/pedidos', requerAuth, async (req,res) => {
   const {separador_id,status,data,data_ini,data_fim,aguardando_ini,aguardando_fim,numero_pedido,page,pageSize}=req.query;
@@ -64,7 +87,7 @@ router.get('/pedidos', requerAuth, async (req,res) => {
       p.push(size); q+=order+` LIMIT $${p.length}`;
       p.push((pg-1)*size); q+=` OFFSET $${p.length}`;
       const rows=await db.all(q,p);
-      return res.json({ total, pagina:pg, totalPaginas:Math.ceil(total/size), dados:rows.map(r=>({...r,aguardando_desde:formatarAguardandoDesde(r.aguardando_desde)})) });
+      return res.json({ total, pagina:pg, totalPaginas:Math.ceil(total/size), dados:rows.map(_comPrioridade) });
     }
     q+=order;
     const rows=await db.all(q,p);
@@ -93,7 +116,7 @@ router.get('/pedidos', requerAuth, async (req,res) => {
       }
     }
 
-    res.json(rows.map(r=>({...r,aguardando_desde:formatarAguardandoDesde(r.aguardando_desde)})));
+    res.json(rows.map(_comPrioridade));
   } catch(e){res.status(500).json({erro:e.message});}
 });
 
@@ -258,7 +281,11 @@ router.put('/pedidos/:id/liberar-caixa', requerAuth, requerPerfil('supervisor'),
 });
 
 router.post('/pedidos/bipar', requerAuth, async (req,res) => {
-  const {numero_pedido,separador_id}=req.body;
+  const {numero_pedido}=req.body;
+  // Identidade de quem bipou vem da sessão, não do corpo da requisição — mesma
+  // regra já aplicada em /pedidos/reordenar-fila e /itens/:id/verificar: confiar
+  // no valor enviado deixaria qualquer chamada atribuir o pedido a outro separador.
+  const separador_id = req.session?.separador?.id || null;
   if (!numero_pedido) return res.status(400).json({erro:'Numero do pedido nao informado!'});
   try {
     const ped=await db.get('SELECT * FROM pedidos WHERE numero_pedido=$1',[numero_pedido]);
@@ -319,6 +346,7 @@ router.get('/pedidos/lote-itens', requerAuth, async (req,res) => {
       `SELECT i.*,
         COALESCE((SELECT a.status FROM avisos_repositor a WHERE a.item_id=i.id ORDER BY a.id DESC LIMIT 1),'') AS aviso_status,
         COALESCE((SELECT a.qtd_encontrada FROM avisos_repositor a WHERE a.item_id=i.id ORDER BY a.id DESC LIMIT 1),0) AS aviso_qtd_encontrada,
+        ${SUBQ_COLMEIA_ENDERECOS} AS colmeia_enderecos,
         p.numero_pedido
        FROM itens_pedido i JOIN pedidos p ON p.id=i.pedido_id
        WHERE i.pedido_id=ANY($1)
@@ -411,7 +439,8 @@ router.get('/pedidos/:id/itens', requerAuth, async (req,res) => {
     res.json(await db.all(
       `SELECT i.*,
         COALESCE((SELECT a.status        FROM avisos_repositor a WHERE a.item_id=i.id ORDER BY a.id DESC LIMIT 1),'') AS aviso_status,
-        COALESCE((SELECT a.qtd_encontrada FROM avisos_repositor a WHERE a.item_id=i.id ORDER BY a.id DESC LIMIT 1), 0) AS aviso_qtd_encontrada
+        COALESCE((SELECT a.qtd_encontrada FROM avisos_repositor a WHERE a.item_id=i.id ORDER BY a.id DESC LIMIT 1), 0) AS aviso_qtd_encontrada,
+        ${SUBQ_COLMEIA_ENDERECOS} AS colmeia_enderecos
        FROM itens_pedido i WHERE i.pedido_id=$1 ORDER BY i.id`,
       [req.params.id]
     ));
@@ -556,6 +585,28 @@ router.put('/pedidos/:id/concluir-com-falta', requerAuth, async (req, res) => {
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
+// Separador escolhe separar UM pedido de um lote ainda não iniciado, pedido a pedido:
+// o pedido sai do lote (lote_id=NULL) e segue o fluxo normal de pedido individual.
+// Só o dono do lote e só enquanto 'pendente' — depois de iniciado o lote não se divide.
+router.put('/pedidos/:id/tirar-do-lote', requerAuth, async (req,res) => {
+  const id = validarId(req.params.id);
+  if (!id) return res.status(400).json({erro:'Id inválido!'});
+  const sepId = req.session?.separador?.id;
+  if (!sepId) return res.status(403).json({erro:'Usuário não vinculado a um separador.'});
+  try {
+    const ped = await db.get('SELECT id,numero_pedido,status,lote_id,separador_id FROM pedidos WHERE id=$1',[id]);
+    if (!ped) return res.status(404).json({erro:'Pedido não encontrado!'});
+    if (String(ped.separador_id) !== String(sepId)) return res.status(403).json({erro:'Este pedido não é seu.'});
+    if (!ped.lote_id) return res.json({mensagem:'Pedido já está fora de lote.', numero_pedido:ped.numero_pedido});
+    if (ped.status !== 'pendente') return res.status(409).json({erro:'O lote já foi iniciado — não é possível separar este pedido à parte.'});
+    const r = await pool.query(
+      `UPDATE pedidos SET lote_id=NULL WHERE id=$1 AND status='pendente' AND lote_id IS NOT NULL RETURNING id`,[id]);
+    if (!r.rows.length) return res.status(409).json({erro:'O lote já foi iniciado — não é possível separar este pedido à parte.'});
+    await registrarAuditoria(req, 'PEDIDO_TIRADO_DO_LOTE', 'pedido', id, {lote_id:ped.lote_id}, {lote_id:null});
+    res.json({mensagem:'Pedido separado do lote.', numero_pedido:ped.numero_pedido});
+  } catch(e){res.status(500).json({erro:e.message});}
+});
+
 router.put('/pedidos/:id/redefinir', requerAuth, requerPerfil('supervisor'), async (req,res) => {
   try { await pool.query(`UPDATE pedidos SET status='pendente',separador_id=NULL WHERE id=$1`,[req.params.id]); res.json({mensagem:'Redefinido!'}); }
   catch(e){res.status(500).json({erro:e.message});}
@@ -632,11 +683,15 @@ router.get('/pedidos/vazios', requerAuth, requerPerfil('supervisor'), async (req
 router.delete('/pedidos/vazios', requerAuth, requerPerfil('supervisor'), async (req,res) => {
   try {
     const idsSub = `SELECT p.id FROM pedidos p WHERE ${WHERE_PEDIDOS_VAZIOS}`;
+    // checkout_itens_conferencia referencia pedidos.id/checkout.id/itens_pedido.id —
+    // precisa sair antes de checkout (senão viola a FK quando houver conferência).
+    await pool.query(`DELETE FROM checkout_itens_conferencia WHERE pedido_id IN (${idsSub})`);
     await pool.query(`DELETE FROM avisos_repositor WHERE pedido_id IN (${idsSub})`);
     await pool.query(`DELETE FROM checkout WHERE pedido_id IN (${idsSub})`);
     const r = await pool.query(
       `DELETE FROM pedidos p WHERE ${WHERE_PEDIDOS_VAZIOS}`
     );
+    await registrarAuditoria(req, 'PEDIDOS_VAZIOS_EXCLUIDOS', 'pedidos', null, null, {excluidos:r.rowCount});
     res.json({ mensagem:`${r.rowCount} pedido(s) vazio(s) excluído(s)!`, excluidos: r.rowCount });
   } catch(e) { res.status(500).json({erro:e.message}); }
 });
@@ -645,15 +700,18 @@ router.delete('/pedidos/:id', requerAuth, requerPerfil('supervisor'), async (req
   const id = validarId(req.params.id);
   if (!id) return res.status(400).json({erro:'ID invalido'});
   try {
+    const antes = await db.get('SELECT numero_pedido,status,cliente FROM pedidos WHERE id=$1', [id]);
+    await pool.query('DELETE FROM checkout_itens_conferencia WHERE pedido_id=$1',[id]);
     await pool.query('DELETE FROM avisos_repositor WHERE pedido_id=$1',[id]);
     await pool.query('DELETE FROM checkout WHERE pedido_id=$1',[id]);
     await pool.query('DELETE FROM itens_pedido WHERE pedido_id=$1',[id]);
     await pool.query('DELETE FROM pedidos WHERE id=$1',[id]);
+    await registrarAuditoria(req, 'PEDIDO_EXCLUIDO', 'pedido', id, antes, null);
     res.json({mensagem:'Pedido excluido!'});
   } catch(e){res.status(500).json({erro:e.message});}
 });
 
-router.delete('/pedidos', requerAuth, requerPerfil('supervisor'), async (req,res) => {
+router.delete('/pedidos', requerAuth, requerPerfil('supervisor'), requerPermissao('excluir'), async (req,res) => {
   const {data,status}=req.query;
   if (!data && !status) return res.status(400).json({erro:'Informe data ou status!'});
   try {
@@ -661,10 +719,12 @@ router.delete('/pedidos', requerAuth, requerPerfil('supervisor'), async (req,res
     // idas ao banco em listas grandes e estoura o timeout da requisição.
     const cond = data ? 'data_pedido=$1' : 'status=$1';
     const val  = data || status;
+    await pool.query(`DELETE FROM checkout_itens_conferencia WHERE pedido_id IN (SELECT id FROM pedidos WHERE ${cond})`,[val]);
     await pool.query(`DELETE FROM avisos_repositor WHERE pedido_id IN (SELECT id FROM pedidos WHERE ${cond})`,[val]);
     await pool.query(`DELETE FROM checkout WHERE pedido_id IN (SELECT id FROM pedidos WHERE ${cond})`,[val]);
     await pool.query(`DELETE FROM itens_pedido WHERE pedido_id IN (SELECT id FROM pedidos WHERE ${cond})`,[val]);
     const r=await pool.query(`DELETE FROM pedidos WHERE ${cond}`,[val]);
+    await registrarAuditoria(req, 'PEDIDOS_EM_MASSA_EXCLUIDOS', 'pedidos', null, {data,status}, {excluidos:r.rowCount});
     res.json({mensagem:`${r.rowCount} pedidos excluidos!`});
   } catch(e){res.status(500).json({erro:e.message});}
 });
@@ -690,17 +750,19 @@ router.post('/pedidos/importar', requerAuth, requerPerfil('supervisor'), async (
       const cliente       = itens[0]?.cliente||'';
       const transportadora= itens[0]?.transportadora||'';
       const aguardando    = itens[0]?.aguardando_desde||'';
+      const estado        = String(itens[0]?.estado||'').trim().toUpperCase().slice(0,2);
       const r=await pool.query(
-        `INSERT INTO pedidos (numero_pedido,status,itens,total_itens,rua,cliente,transportadora,aguardando_desde,pontuacao,data_pedido,hora_pedido,tem_prime,status_embalagem)
-         VALUES ($1,'pendente',$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'nao_iniciado')
+        `INSERT INTO pedidos (numero_pedido,status,itens,total_itens,rua,cliente,transportadora,aguardando_desde,pontuacao,data_pedido,hora_pedido,tem_prime,status_embalagem,estado)
+         VALUES ($1,'pendente',$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'nao_iniciado',$12)
          ON CONFLICT(numero_pedido) DO UPDATE SET
            cliente=CASE WHEN pedidos.cliente='' OR pedidos.cliente IS NULL THEN EXCLUDED.cliente ELSE pedidos.cliente END,
            transportadora=CASE WHEN pedidos.transportadora='' OR pedidos.transportadora IS NULL THEN EXCLUDED.transportadora ELSE pedidos.transportadora END,
            aguardando_desde=CASE WHEN pedidos.aguardando_desde='' OR pedidos.aguardando_desde IS NULL THEN EXCLUDED.aguardando_desde ELSE pedidos.aguardando_desde END,
+           estado=CASE WHEN pedidos.estado='' OR pedidos.estado IS NULL THEN EXCLUDED.estado ELSE pedidos.estado END,
            data_pedido=EXCLUDED.data_pedido,
            hora_pedido=EXCLUDED.hora_pedido
          RETURNING id, (xmax = 0) AS inserido`,
-        [numero,itensCount,totalItens,itens[0]?.endereco||'',cliente,transportadora,aguardando,pts,hoje,hora,itensReais.some(i=>String(i.codigo||'').toUpperCase()==='PRIME')]);
+        [numero,itensCount,totalItens,itens[0]?.endereco||'',cliente,transportadora,aguardando,pts,hoje,hora,itensReais.some(i=>String(i.codigo||'').toUpperCase()==='PRIME'),estado]);
       if (!r.rows[0]){ignorados++;continue;}
       const pid=r.rows[0].id;
       const pedidoNovo=r.rows[0].inserido;
@@ -1080,7 +1142,7 @@ router.post('/pedidos/distribuicao/confirmar', requerAuth, requerPerfil('supervi
 /* ══════════════════════════════════════════
    SEPARAÇÃO POR LOTE — formação automática
    Agrupa pedidos pendentes por proximidade de rua (mesma ROTA_FISICA usada no
-   celular do separador, em public/js/separador.js), sempre até 8 por lote —
+   celular do separador, em public/js/separador.js), sempre até 4 por lote —
    sem limite de tempo de espera (a fila de trabalho normalmente é de dias
    atrás, não do turno atual, então um corte por minutos de espera não faz
    sentido aqui). Cada lote inteiro é atribuído ao separador mais atrasado na
@@ -1089,6 +1151,9 @@ router.post('/pedidos/distribuicao/confirmar', requerAuth, requerPerfil('supervi
    individual); Prime também fica de fora, a menos que apenas_prime=true seja
    passado (mesmo alterna-entre-só-Prime-ou-só-normal do /pedidos/distribuicao).
 ══════════════════════════════════════════ */
+// Máximo de pedidos por lote (formação automática E lote manual) — lote de 8
+// ficou difícil de separar no celular. Validado também em /lote/formar/confirmar.
+const TAMANHO_LOTE = 4;
 const ROTA_FISICA_LOTE = ['A','B','C','D','E','Q','P','O','N','M','L','K','J','I','H','ARARA','G','F','ZA','R','S','T','U','V','W','X','Y','Z'];
 function _ruaPrincipalLote(endereco) {
   const end = String(endereco||'').split(',')[0].trim().toUpperCase();
@@ -1103,43 +1168,13 @@ function _rotaIdxLote(rua) {
   return i === -1 ? 999 : i;
 }
 // Distância física real (não a posição na rota de caminhada) — usada só pra decidir
-// QUAIS pedidos cabem no mesmo lote. O corredor principal (FUNDO) é uma reta; o
-// ramal da frente (E→D→C→B→A) pendura perpendicular bem no meio dele, na altura de
-// Q — por isso E fica fisicamente colado em Q/P/N e longe de A (ponta morta do
-// ramal), mesmo E aparecendo "antes" de N na ordem de caminhada (que precisa
-// descer o ramal inteiro e voltar antes de seguir pro resto do corredor). Mesma
-// geometria validada em public/js/dashboard.js (renderMapaEstoque).
-const FUNDO_COORD  = ['ZA','F','G','ARARA','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'];
-const FRENTE_COORD = { E:1, D:2, C:3, B:4, A:5 };
-const Q_IDX_COORD  = FUNDO_COORD.indexOf('Q');
-function _coordRua(rua) {
-  const fIdx = FUNDO_COORD.indexOf(rua);
-  if (fIdx !== -1) return { x: fIdx, y: 0 };
-  if (FRENTE_COORD[rua] != null) return { x: Q_IDX_COORD, y: FRENTE_COORD[rua] };
-  return null;
-}
-function _distanciaRuas(a, b) {
-  const ca = _coordRua(a), cb = _coordRua(b);
-  if (!ca || !cb) return 999;
-  return Math.abs(ca.x-cb.x) + Math.abs(ca.y-cb.y);
-}
-// Peso de dificuldade por rua — mesma tabela de lib/pontuacao.js (PESOS/
-// SEGMENTOS_ESTOQUE), simplificada por rua inteira (sem distinguir Frente/Fundo
-// nem faixa de número, que calcularPesoCorredor já usa pra pontuação individual
-// do pedido). Usado só pra ponderar a distância na formação do lote: analisado
-// com dados reais (WMS11092026.xlsx), a maioria dos itens fica em A-E/P-U
-// (fácil) — quando um pedido toca uma rua difícil (F-L, rara no estoque), essa
-// distância pesa mais na decisão de agrupar, pra não esticar o lote metendo um
-// item difícil junto com algo distante numa área fácil.
-const PESO_DIFICULDADE_RUA = {
-  A:1.0, B:1.0, C:1.0, D:1.0, E:1.0,
-  F:2.8, G:2.8, H:2.8, I:2.8, J:2.8, K:2.8, L:2.8,
-  M:1.8, N:1.8, O:1.8,
-  P:1.0, Q:1.0, R:1.0, S:1.0, T:1.0, U:1.0,
-  V:1.8, W:1.8, X:1.8, Y:1.8, Z:1.8,
-  ZA:3.5, ARARA:3.5,
-};
-function _pesoRua(rua) { return PESO_DIFICULDADE_RUA[rua] || 1.0; }
+// QUAIS pedidos cabem no mesmo lote. Modelo (corredor "fundo" reto + ramal "frente"
+// perpendicular na altura de Q) e peso de dificuldade por rua agora vêm de
+// public/js/geometria-estoque.js — fonte única compartilhada com o Mapa do Estoque
+// (public/js/dashboard.js), consolidada na V2 da evolução do WMS (antes cada um
+// mantinha sua própria cópia manual dos mesmos valores).
+function _distanciaRuas(a, b) { return GeometriaEstoque.distanciaRuas(a, b); }
+function _pesoRua(rua) { return GeometriaEstoque.pesoDificuldadeRua(rua); }
 // Maior distância PONDERADA entre qualquer par de ruas de uma lista — o
 // "diâmetro" da área que o separador precisa cobrir, pesado pela dificuldade
 // média das duas pontas (uma rua difícil conta mais que a mesma distância
@@ -1158,6 +1193,72 @@ function _diametroRuas(ruas) {
     }
   }
   return max;
+}
+
+// Pré-computa rua/SKU/pontuação de cada pedido elegível e os agrupa em lotes de
+// até TAMANHO_LOTE, minimizando diâmetro de ruas com desconto por SKU em comum.
+// Extraído de /pedidos/lote/formar pra ser reaproveitado por /pedidos/lote/formar-manual
+// (mesmo algoritmo, só que restrito a um pool de pedidos já escolhido/bipado pelo
+// supervisor, em vez da fila inteira elegível).
+async function _prepararEAgruparPedidos(elegiveis, modoLote) {
+  for (const p of elegiveis) {
+    const itens = await db.all('SELECT endereco,quantidade,codigo FROM itens_pedido WHERE pedido_id=$1', [p.id]);
+    const ruas = itens.map(i => _ruaPrincipalLote(i.endereco)).filter(Boolean);
+    p._ruaPrincipal = [...ruas].sort((a,b) => _rotaIdxLote(a) - _rotaIdxLote(b))[0] || '';
+    p._ruasSet = [...new Set(ruas)];
+    p._itensQtd = itens.reduce((s,i) => s + (parseInt(i.quantidade)||1), 0);
+    p._skusSet = [...new Set(itens.map(i => i.codigo).filter(Boolean))];
+    p._skusQtd = p._skusSet.length;
+    const scoreBase = calcularPontuacaoPedido(itens);
+    if (modoLote === 'complexidade') {
+      // Mesmo bônus do cenário "Complexidade Total" em /pedidos/distribuicao:
+      // ruas extras (>2) e SKUs distintos extras (>1) pesam mais na pontuação.
+      const ruasUnicas = new Set(ruas).size;
+      const skusUnicos = new Set(itens.map(i => i.codigo).filter(Boolean)).size;
+      const bonusRuas = Math.max(0, ruasUnicas - 2) * 15;
+      const bonusSkus = Math.max(0, skusUnicos - 1) * 3;
+      p._pontuacao = scoreBase + bonusRuas + bonusSkus;
+    } else {
+      p._pontuacao = scoreBase;
+    }
+    await pool.query('UPDATE pedidos SET pontuacao=$1 WHERE id=$2', [scoreBase, p.id]);
+  }
+
+  // Monta os lotes "esculpindo" o conjunto elegível (já ordenado por aguardando_desde
+  // ASC): cada lote começa pelo pedido mais antigo ainda disponível (preserva a
+  // prioridade de quem espera mais) e cresce pegando, a cada passo, o candidato que
+  // resulta no menor diâmetro ponderado por dificuldade — com desconto por SKU em
+  // comum — até completar TAMANHO_LOTE.
+  const PESO_SKU_COMUM = 3;
+  // Cada lote só busca candidato dentre os próximos JANELA_BUSCA pedidos mais antigos
+  // ainda disponíveis (não a fila elegível inteira) — evita custo O(N²) com filas
+  // grandes sem "quantidade" definida.
+  const JANELA_BUSCA = 40;
+  const restantesGlobais = [...elegiveis];
+  const lotesPreview = [];
+  while (restantesGlobais.length) {
+    const seed = restantesGlobais.shift();
+    const grupo = [seed];
+    let ruasGrupo = [...seed._ruasSet];
+    let skusGrupo = new Set(seed._skusSet);
+    while (grupo.length < TAMANHO_LOTE && restantesGlobais.length) {
+      const janela = restantesGlobais.slice(0, JANELA_BUSCA);
+      let melhorIdx = 0, melhorCusto = Infinity;
+      janela.forEach((cand, idx) => {
+        const ruasTeste = [...new Set([...ruasGrupo, ...cand._ruasSet])];
+        const diametro = _diametroRuas(ruasTeste);
+        const skusComuns = cand._skusSet.filter(sku => skusGrupo.has(sku)).length;
+        const custo = diametro - skusComuns * PESO_SKU_COMUM;
+        if (custo < melhorCusto) { melhorCusto = custo; melhorIdx = idx; }
+      });
+      const escolhido = restantesGlobais.splice(melhorIdx,1)[0];
+      grupo.push(escolhido);
+      ruasGrupo = [...new Set([...ruasGrupo, ...escolhido._ruasSet])];
+      escolhido._skusSet.forEach(sku => skusGrupo.add(sku));
+    }
+    lotesPreview.push({ pedidos: grupo });
+  }
+  return lotesPreview;
 }
 
 // Preview — não grava nada, só calcula os lotes e devolve pra conferência.
@@ -1205,81 +1306,8 @@ router.post('/pedidos/lote/formar', requerAuth, requerPerfil('supervisor'), asyn
     // aguardando_desde), igual ao campo "Quantidade" do Distribuir.
     if (quantidade > 0) elegiveis = elegiveis.slice(0, quantidade);
 
-    // 1. Pré-computa rua/SKU/pontuação de cada pedido elegível — precisa saber
-    //    isso de TODO o conjunto antes de agrupar, já que agora um lote pode
-    //    escolher membros de qualquer lugar da fila elegível, não só de uma
-    //    fatia cronológica fixa de 8 (ver nota abaixo).
-    for (const p of elegiveis) {
-      const itens = await db.all('SELECT endereco,quantidade,codigo FROM itens_pedido WHERE pedido_id=$1', [p.id]);
-      const ruas = itens.map(i => _ruaPrincipalLote(i.endereco)).filter(Boolean);
-      p._ruaPrincipal = [...ruas].sort((a,b) => _rotaIdxLote(a) - _rotaIdxLote(b))[0] || '';
-      p._ruasSet = [...new Set(ruas)];
-      p._itensQtd = itens.reduce((s,i) => s + (parseInt(i.quantidade)||1), 0);
-      p._skusSet = [...new Set(itens.map(i => i.codigo).filter(Boolean))];
-      p._skusQtd = p._skusSet.length;
-      const scoreBase = calcularPontuacaoPedido(itens);
-      if (modoLote === 'complexidade') {
-        // Mesmo bônus do cenário "Complexidade Total" em /pedidos/distribuicao:
-        // ruas extras (>2) e SKUs distintos extras (>1) pesam mais na pontuação.
-        const ruasUnicas = new Set(ruas).size;
-        const skusUnicos = new Set(itens.map(i => i.codigo).filter(Boolean)).size;
-        const bonusRuas = Math.max(0, ruasUnicas - 2) * 15;
-        const bonusSkus = Math.max(0, skusUnicos - 1) * 3;
-        p._pontuacao = scoreBase + bonusRuas + bonusSkus;
-      } else {
-        p._pontuacao = scoreBase;
-      }
-      await pool.query('UPDATE pedidos SET pontuacao=$1 WHERE id=$2', [scoreBase, p.id]);
-    }
-
-    // 2. Monta os lotes "esculpindo" o conjunto elegível (já ordenado por
-    //    aguardando_desde ASC): cada lote começa pelo pedido mais antigo ainda
-    //    disponível (preserva a prioridade de quem espera mais — sempre vira
-    //    semente antes de qualquer pedido mais novo) e cresce pegando, a cada
-    //    passo, o candidato que resulta no menor diâmetro ponderado por
-    //    dificuldade — com desconto por SKU em comum — até completar 8.
-    //    IMPORTANTE: antes, "onda" (fatia cronológica de até 8) e "grupo"
-    //    (esse laço de vizinhança) eram dois passos separados, mas o laço de
-    //    vizinhança sempre consumia a onda INTEIRA num único lote — ou seja,
-    //    só reordenava quem entrava, nunca decidia quem ENTRAVA. Fundir os
-    //    dois passos aqui faz a vizinhança realmente escolher os membros,
-    //    dentre toda a fila elegível, não só dentro de uma fatia já fechada.
-    //    Lote sempre busca 8 (só sai menor se a fila elegível não tiver mais
-    //    pedidos pra completar) — a prioridade de quem espera mais já é
-    //    respeitada pela semente ser sempre o mais antigo ainda disponível, e
-    //    a distribuição justa entre separadores continua no passo 3 abaixo.
-    const TAMANHO_LOTE = 8;
-    const PESO_SKU_COMUM = 3;
-    // Cada lote só busca candidato dentre os próximos JANELA_BUSCA pedidos mais
-    // antigos ainda disponíveis (não a fila elegível inteira) — evita custo O(N²)
-    // com filas grandes sem "quantidade" definida, e evita puxar pra um lote um
-    // pedido bem mais novo só porque calhou de estar fisicamente perto (o que
-    // faria os mais antigos esperarem ainda mais pra virar semente de um lote).
-    const JANELA_BUSCA = 40;
-    const restantesGlobais = [...elegiveis];
-    const lotesPreview = [];
-    while (restantesGlobais.length) {
-      const seed = restantesGlobais.shift();
-      const grupo = [seed];
-      let ruasGrupo = [...seed._ruasSet];
-      let skusGrupo = new Set(seed._skusSet);
-      while (grupo.length < TAMANHO_LOTE && restantesGlobais.length) {
-        const janela = restantesGlobais.slice(0, JANELA_BUSCA);
-        let melhorIdx = 0, melhorCusto = Infinity;
-        janela.forEach((cand, idx) => {
-          const ruasTeste = [...new Set([...ruasGrupo, ...cand._ruasSet])];
-          const diametro = _diametroRuas(ruasTeste);
-          const skusComuns = cand._skusSet.filter(sku => skusGrupo.has(sku)).length;
-          const custo = diametro - skusComuns * PESO_SKU_COMUM;
-          if (custo < melhorCusto) { melhorCusto = custo; melhorIdx = idx; }
-        });
-        const escolhido = restantesGlobais.splice(melhorIdx,1)[0];
-        grupo.push(escolhido);
-        ruasGrupo = [...new Set([...ruasGrupo, ...escolhido._ruasSet])];
-        escolhido._skusSet.forEach(sku => skusGrupo.add(sku));
-      }
-      lotesPreview.push({ pedidos: grupo });
-    }
+    // 1-2. Prepara (rua/SKU/pontuação) e agrupa em lotes — ver _prepararEAgruparPedidos.
+    const lotesPreview = await _prepararEAgruparPedidos(elegiveis, modoLote);
 
     // 3. Atribui cada lote ao separador mais atrasado na fórmula de 3 eixos
     //    (mesma lógica de /pedidos/distribuicao, aplicada ao lote inteiro).
@@ -1328,6 +1356,15 @@ router.post('/pedidos/lote/formar', requerAuth, requerPerfil('supervisor'), asyn
       // supervisor ver rápido quais zonas o lote toca; a ordem de caminhada real
       // (ROTA_FISICA) continua sendo usada na tela de separação do celular.
       lote.ruas = [...new Set(lote.pedidos.flatMap(p => p._ruasSet))].sort((a,b) => a.localeCompare(b, 'pt-BR'));
+      // V6 — mostra ao supervisor a MESMA lógica que o algoritmo já usa pra montar
+      // o lote (ROTA_FISICA_LOTE + _diametroRuas), em vez de só o resultado final:
+      // rota = ordem real de caminhada (não alfabética); distancia_ponderada = a
+      // métrica de distância×dificuldade que o algoritmo usou pra decidir o
+      // agrupamento (não é metros reais — não existe calibração física no
+      // projeto pra converter em unidade física; é a mesma unidade abstrata já
+      // usada internamente, recalculada uma vez pro conjunto final de ruas).
+      lote.rota = [...lote.ruas].sort((a,b) => _rotaIdxLote(a) - _rotaIdxLote(b));
+      lote.distancia_ponderada = Math.round(_diametroRuas(lote.ruas) * 10) / 10;
     }
 
     res.json({
@@ -1337,10 +1374,12 @@ router.post('/pedidos/lote/formar', requerAuth, requerPerfil('supervisor'), asyn
           // Campos extras só pra imprimir etiqueta do lote (mesmo formato de imprimirEtiquetas
           // em pedidos.js) sem depender da lista filtrada da tela de Pedidos, que pode estar
           // com outro filtro ativo e não conter todos os pedidos deste lote.
-          cliente: p.cliente||'', transportadora: p.transportadora||'',
+          cliente: p.cliente||'', transportadora: p.transportadora||'', estado: p.estado||'',
           skus: p._skusQtd, total_itens: p._itensQtd, aguardando_desde: p.aguardando_desde||'',
         })),
         ruas: l.ruas,
+        rota: l.rota,
+        distancia_ponderada: l.distancia_ponderada,
         separador_id: l.separador_id,
         separador_nome: l.separador_nome,
         pontuacao_total: l.pontuacao_total,
@@ -1355,10 +1394,92 @@ router.post('/pedidos/lote/formar', requerAuth, requerPerfil('supervisor'), asyn
   } catch(err) { res.status(500).json({erro:err.message}); }
 });
 
+// Preview do LOTE MANUAL: o supervisor já bipou/digitou um pool de pedidos (sem
+// decidir o agrupamento) — aqui o sistema roda o MESMO algoritmo de proximidade
+// de ruas/SKU em comum de /pedidos/lote/formar, só que restrito a esse pool
+// (não a fila elegível inteira), dividindo em quantos lotes de até TAMANHO_LOTE
+// forem necessários. Confirma pelo MESMO endpoint /pedidos/lote/formar/confirmar
+// — o preview já devolve no formato que esse endpoint espera.
+router.post('/pedidos/lote/formar-manual', requerAuth, requerPerfil('supervisor'), async (req,res) => {
+  const { pedido_ids, separador_id } = req.body;
+  if (!pedido_ids?.length) return res.status(400).json({erro:'Informe os pedidos bipados!'});
+  if (!separador_id) return res.status(400).json({erro:'Selecione o colaborador!'});
+  try {
+    const ids = [...new Set(pedido_ids.map(Number).filter(Boolean))];
+    const pedidos = await db.all(
+      `SELECT p.*,
+         EXTRACT(EPOCH FROM (
+           (NOW() AT TIME ZONE 'America/Sao_Paulo') -
+           CASE WHEN p.aguardando_desde ~ '^[0-9]{2}/[0-9]{2}/[0-9]{4}'
+                THEN TO_TIMESTAMP(p.aguardando_desde, 'DD/MM/YYYY HH24:MI')
+                ELSE (NOW() AT TIME ZONE 'America/Sao_Paulo')
+           END
+         ))/60 AS espera_min
+       FROM pedidos p WHERE p.id = ANY($1)
+       ORDER BY
+         CASE WHEN p.aguardando_desde ~ '^[0-9]{2}/[0-9]{2}/[0-9]{4}'
+              THEN TO_TIMESTAMP(p.aguardando_desde, 'DD/MM/YYYY HH24:MI')
+              ELSE NULL END ASC NULLS LAST,
+         p.id ASC`,
+      [ids]
+    );
+    const isDrive = p => String(p.transportadora||'').toUpperCase().includes('DRIVE');
+    const encontradosIds = new Set(pedidos.map(p => p.id));
+    const naoEncontrados = ids.filter(id => !encontradosIds.has(id));
+    const naoElegiveis = pedidos.filter(p => p.status !== 'pendente' || p.separador_id || isDrive(p));
+    const elegiveis    = pedidos.filter(p => p.status === 'pendente' && !p.separador_id && !isDrive(p));
+
+    if (!elegiveis.length) {
+      return res.status(400).json({erro:'Nenhum pedido elegível entre os bipados (precisa estar pendente, sem separador e não ser Drive Thru).'});
+    }
+
+    const lotesPreview = await _prepararEAgruparPedidos(elegiveis, 'balanceado');
+
+    const sepRow  = await db.get('SELECT s.id,s.nome FROM separadores s WHERE s.usuario_id=$1 LIMIT 1', [separador_id]);
+    const userRow = await db.get('SELECT id,nome FROM usuarios WHERE id=$1', [separador_id]);
+    const sepNome = sepRow?.nome || userRow?.nome || `Sep ${separador_id}`;
+
+    for (const lote of lotesPreview) {
+      lote.separador_id   = separador_id;
+      lote.separador_nome = sepNome;
+      lote.pontuacao_total = Math.round(lote.pedidos.reduce((s,p) => s+p._pontuacao, 0));
+      lote.itens_total     = lote.pedidos.reduce((s,p) => s+p._itensQtd, 0);
+      lote.ruas = [...new Set(lote.pedidos.flatMap(p => p._ruasSet))].sort((a,b) => a.localeCompare(b, 'pt-BR'));
+      lote.rota = [...lote.ruas].sort((a,b) => _rotaIdxLote(a) - _rotaIdxLote(b));
+      lote.distancia_ponderada = Math.round(_diametroRuas(lote.ruas) * 10) / 10;
+    }
+
+    res.json({
+      lotes: lotesPreview.map(l => ({
+        pedidos: l.pedidos.map(p => ({
+          id:p.id, numero_pedido:p.numero_pedido, itens:p._itensQtd, espera_min: Math.round(p.espera_min||0),
+          cliente: p.cliente||'', transportadora: p.transportadora||'', estado: p.estado||'',
+          skus: p._skusQtd, total_itens: p._itensQtd, aguardando_desde: p.aguardando_desde||'',
+        })),
+        ruas: l.ruas,
+        rota: l.rota,
+        distancia_ponderada: l.distancia_ponderada,
+        separador_id: l.separador_id,
+        separador_nome: l.separador_nome,
+        pontuacao_total: l.pontuacao_total,
+        itens_total: l.itens_total,
+      })),
+      total_bipados: ids.length,
+      total_elegiveis: elegiveis.length,
+      ignorados: naoEncontrados.length + naoElegiveis.length,
+      // numero_pedido de quem foi excluído do agrupamento (já não pendente, já tem
+      // separador, ou é Drive Thru) — ids que nem existiam não têm numero pra mostrar.
+      ignorados_numeros: naoElegiveis.map(p => p.numero_pedido),
+    });
+  } catch(err) { res.status(500).json({erro:err.message}); }
+});
+
 // Confirma — grava lotes_separacao + separador_id/lote_id nos pedidos.
 router.post('/pedidos/lote/formar/confirmar', requerAuth, requerPerfil('supervisor'), async (req,res) => {
   const { lotes } = req.body;
   if (!lotes?.length) return res.status(400).json({erro:'Nenhum lote informado!'});
+  const grande = lotes.find(l => (l.pedidos||[]).length > TAMANHO_LOTE);
+  if (grande) return res.status(400).json({erro:`Lote com ${(grande.pedidos||[]).length} pedidos — o máximo é ${TAMANHO_LOTE} por lote.`});
   const client = await pool.connect();
   let lotesGravados = 0, pedidosGravados = 0;
   try {

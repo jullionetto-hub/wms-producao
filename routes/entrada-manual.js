@@ -86,7 +86,14 @@ router.get('/entrada-manual/lotes/:id', requerAuth, async (req, res) => {
     const lote = await db.get(`SELECT * FROM entrada_manual_lotes WHERE id=$1`, [req.params.id]);
     if (!lote) return res.status(404).json({ erro: 'Lote não encontrado.' });
     const itens = await db.all(
-      `SELECT * FROM entrada_manual_itens WHERE lote_id=$1 ORDER BY id`,
+      // Ordem natural do endereço (ex: N203 antes de N221, N221 antes de N244) em vez
+      // da ordem de inserção da planilha — o pedido do usuário foi "tudo misturado",
+      // sem isso o repositor pula de rua em rua em vez de andar em sequência.
+      // SUBSTRING FROM '[0-9]+' pega o primeiro número (ex: "221" em "N221/VERT-N08-CX15").
+      `SELECT * FROM entrada_manual_itens WHERE lote_id=$1
+       ORDER BY COALESCE(SUBSTRING(endereco FROM '^[A-Za-z]+'), ''),
+                COALESCE(NULLIF(SUBSTRING(endereco FROM '[0-9]+'), '')::int, 0),
+                endereco, id`,
       [req.params.id]
     );
     res.json({ ...lote, itens });
@@ -262,22 +269,28 @@ router.get('/entrada-manual/exportar', requerAuth, async (req, res) => {
              l.criado_por,
              i.codigo, i.descricao, i.quantidade_esperada, i.quantidade_abastecida,
              i.endereco, i.status, i.responsavel, i.obs,
-             TO_CHAR(i.confirmado_em AT TIME ZONE 'America/Sao_Paulo','DD/MM/YYYY HH24:MI') AS confirmado_em
+             TO_CHAR(i.confirmado_em AT TIME ZONE 'America/Sao_Paulo','DD/MM/YYYY') AS confirmado_data,
+             TO_CHAR(i.confirmado_em AT TIME ZONE 'America/Sao_Paulo','HH24:MI') AS confirmado_hora
       FROM entrada_manual_itens i
       JOIN entrada_manual_lotes l ON l.id=i.lote_id
       WHERE ${where}
-      ORDER BY l.data_entrada DESC, l.id, i.id
+      -- Ordem natural do endereço (N203 antes de N221, N221 antes de N244) em vez de
+      -- ordem de inserção — mesma lógica de GET /entrada-manual/lotes/:id.
+      ORDER BY l.data_entrada DESC, l.id,
+               COALESCE(SUBSTRING(i.endereco FROM '^[A-Za-z]+'), ''),
+               COALESCE(NULLIF(SUBSTRING(i.endereco FROM '[0-9]+'), '')::int, 0),
+               i.endereco, i.id
     `, params);
 
     const SEP = ';';
     const statusPT = { abastecido:'Abastecido', parcial:'Parcial', pendente:'Pendente', nao_encontrado:'Não encontrado' };
     const esc = v => { const s = String(v??''); return /[;\n"]/g.test(s) ? `"${s.replace(/"/g,'""')}"` : s; };
-    const hdrs = ['Data','Responsável','Código','Descrição','Qtd Esperada','Qtd Abastecida','Endereço','Status','Confirmado Em','Obs'];
+    const hdrs = ['Data','Responsável','Código','Descrição','Qtd Esperada','Qtd Abastecida','Endereço','Status','Data Confirmação','Hora Confirmação','Obs'];
     const lines = [hdrs.join(SEP)];
     for (const r of rows) {
       lines.push([r.data_fmt, r.responsavel || r.criado_por, r.codigo, r.descricao,
         r.quantidade_esperada, r.quantidade_abastecida||0, r.endereco,
-        statusPT[r.status]||r.status, r.confirmado_em||'', r.obs||''].map(esc).join(SEP));
+        statusPT[r.status]||r.status, r.confirmado_data||'', r.confirmado_hora||'', r.obs||''].map(esc).join(SEP));
     }
     const csv = '﻿' + lines.join('\r\n');
     res.setHeader('Content-Type','text/csv; charset=utf-8');

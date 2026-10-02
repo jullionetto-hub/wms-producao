@@ -214,6 +214,19 @@ describe('Pedidos', () => {
     expect(Array.isArray(res.body)).toBe(true);
   });
 
+  test('GET /pedidos → pedido pendente vem com prioridade calculada (V5)', async () => {
+    mockDb.all.mockResolvedValueOnce([{ id: 1, numero_pedido: '12345', status: 'pendente', itens: 3, aguardando_desde: null }]);
+    const res = await agent.get('/pedidos');
+    expect(res.status).toBe(200);
+    expect(res.body[0].prioridade).toEqual({ nivel: 'normal', horas_aguardando: null, pct_sla: null, motivo: expect.any(String) });
+  });
+
+  test('GET /pedidos → pedido concluído não recebe prioridade (null)', async () => {
+    mockDb.all.mockResolvedValueOnce([{ id: 2, numero_pedido: '99999', status: 'concluido', itens: 5 }]);
+    const res = await agent.get('/pedidos');
+    expect(res.body[0].prioridade).toBeNull();
+  });
+
   test('GET /pedidos sem auth → 401', async () => {
     const res = await request(app).get('/pedidos');
     expect(res.status).toBe(401);
@@ -276,6 +289,15 @@ describe('Usuários', () => {
   test('DELETE /usuarios/:id → responde (sem erro 5xx)', async () => {
     const res = await agent.delete('/usuarios/99');
     expect(res.status).toBeLessThan(500);
+  });
+
+  // V12: permissão granular "excluir" revogada pro supervisor logado bloqueia
+  // a exclusão mesmo ele tendo perfil supervisor (requerPerfil sozinho deixaria passar).
+  test('DELETE /usuarios/:id → 403 quando a permissão "excluir" foi revogada (V12)', async () => {
+    mockDb.get.mockResolvedValueOnce({ concedida: false }); // requerPermissao('excluir') consulta primeiro
+    const res = await agent.delete('/usuarios/99');
+    expect(res.status).toBe(403);
+    expect(mockPool.query).not.toHaveBeenCalledWith(expect.stringContaining('DELETE FROM usuarios'), expect.anything());
   });
 });
 

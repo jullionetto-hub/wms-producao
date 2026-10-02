@@ -69,14 +69,17 @@ const loginSupervisor = (agent) => {
   return agent.post('/auth/login').send({ login: 'admin', senha: SENHA_ADMIN, perfil: 'supervisor' });
 };
 
-const loginSeparador = async () => {
+// separadorRow: quando informado, simula um vínculo separadores↔usuário já
+// existente (req.session.separador fica com esse id) — necessário pra testar
+// rotas que derivam a identidade do separador da sessão (ex: /pedidos/bipar).
+const loginSeparador = async (separadorRow = null) => {
   mockDb.get.mockResolvedValueOnce({
     id: 2, nome: 'Sep', login: 'sep1', perfil: 'separador',
     senha_hash: HASH_SEP, subtipo_repositor: 'geral',
     perfis_acesso: '', turno: 'Manhã', status: 'ativo', senha_temporaria: false,
   });
   const sepAgent = request.agent(app);
-  mockDb.get.mockResolvedValueOnce(null); // busca de separador vinculado no login (se houver)
+  mockDb.get.mockResolvedValueOnce(separadorRow); // busca de separador vinculado no login (se houver)
   await sepAgent.post('/auth/login').send({ login: 'sep1', senha: SENHA_SEP, perfil: 'separador' });
   return sepAgent;
 };
@@ -325,12 +328,94 @@ describe('Pedidos — bipar', () => {
   });
 
   test('POST /pedidos/bipar → já atribuído ao mesmo separador', async () => {
+    // Identidade vem da sessão (não do corpo) desde a correção de segurança da
+    // V0 — precisa logar como o próprio separador 5, não como supervisor.
+    const sepAgent = await loginSeparador({ id: 5, nome: 'Sep', matricula: 'sep1', turno: 'Manhã', status: 'ativo' });
     mockDb.get.mockResolvedValueOnce({ id: 1, status: 'separando', separador_id: 5 });
     mockPool.query.mockResolvedValueOnce({ rows: [{ id: 1, numero_caixa: 'CX9' }] });
-    const res = await agent.post('/pedidos/bipar').send({ numero_pedido: '123', separador_id: 5 });
+    const res = await sepAgent.post('/pedidos/bipar').send({ numero_pedido: '123' });
     expect(res.status).toBe(200);
     expect(res.body.ja_atribuido).toBe(true);
     expect(res.body.caixa_vinculada).toBe(true);
+  });
+
+  test('POST /pedidos/bipar → separador_id no corpo é ignorado (vem da sessão)', async () => {
+    // Regressão da correção de segurança: um separador logado (id real 5) não
+    // consegue mais atribuir o pedido a OUTRO separador (ex: 999) forjando o
+    // corpo da requisição — o valor enviado é ignorado.
+    const sepAgent = await loginSeparador({ id: 5, nome: 'Sep', matricula: 'sep1', turno: 'Manhã', status: 'ativo' });
+    mockDb.get.mockResolvedValueOnce({ id: 1, status: 'pendente', separador_id: null });
+    mockPool.query.mockResolvedValueOnce({ rows: [{ id: 1, numero_caixa: '' }] });
+    const res = await sepAgent.post('/pedidos/bipar').send({ numero_pedido: '123', separador_id: 999 });
+    expect(res.status).toBe(200);
+    const chamada = mockPool.query.mock.calls.find(c => String(c[0]).includes('UPDATE pedidos'));
+    expect(chamada[1][0]).toBe(5); // primeiro parâmetro da query = separador_id efetivo
+  });
+});
+
+/* ════════════════════════════════════════════════════════════
+   TIRAR DO LOTE — separador escolhe separar pedido a pedido
+════════════════════════════════════════════════════════════ */
+describe('Pedidos — tirar do lote', () => {
+  const SEP = { id: 5, nome: 'Sep', matricula: 'sep1', turno: 'Manhã', status: 'ativo' };
+
+  test('sem auth → 401', async () => {
+    const res = await request(app).put('/pedidos/1/tirar-do-lote');
+    expect(res.status).toBe(401);
+  });
+
+  test('ID inválido → 400', async () => {
+    const sepAgent = await loginSeparador(SEP);
+    const res = await sepAgent.put('/pedidos/abc/tirar-do-lote');
+    expect(res.status).toBe(400);
+  });
+
+  test('sem separador vinculado (supervisor) → 403', async () => {
+    const agent = request.agent(app);
+    await loginSupervisor(agent);
+    const res = await agent.put('/pedidos/1/tirar-do-lote');
+    expect(res.status).toBe(403);
+  });
+
+  test('pedido de outro separador → 403, nada é alterado', async () => {
+    const sepAgent = await loginSeparador(SEP);
+    mockDb.get.mockResolvedValueOnce({ id: 1, numero_pedido: '10', status: 'pendente', lote_id: 7, separador_id: 99 });
+    const res = await sepAgent.put('/pedidos/1/tirar-do-lote');
+    expect(res.status).toBe(403);
+    expect(mockPool.query.mock.calls.some(c => String(c[0]).includes('lote_id=NULL'))).toBe(false);
+  });
+
+  test('lote já iniciado (status separando) → 409', async () => {
+    const sepAgent = await loginSeparador(SEP);
+    mockDb.get.mockResolvedValueOnce({ id: 1, numero_pedido: '10', status: 'separando', lote_id: 7, separador_id: 5 });
+    const res = await sepAgent.put('/pedidos/1/tirar-do-lote');
+    expect(res.status).toBe(409);
+  });
+
+  test('pedido já fora de lote → 200 sem UPDATE', async () => {
+    const sepAgent = await loginSeparador(SEP);
+    mockDb.get.mockResolvedValueOnce({ id: 1, numero_pedido: '10', status: 'pendente', lote_id: null, separador_id: 5 });
+    const res = await sepAgent.put('/pedidos/1/tirar-do-lote');
+    expect(res.status).toBe(200);
+    expect(mockPool.query.mock.calls.some(c => String(c[0]).includes('lote_id=NULL'))).toBe(false);
+  });
+
+  test('corrida (UPDATE não afeta linha) → 409', async () => {
+    const sepAgent = await loginSeparador(SEP);
+    mockDb.get.mockResolvedValueOnce({ id: 1, numero_pedido: '10', status: 'pendente', lote_id: 7, separador_id: 5 });
+    mockPool.query.mockResolvedValueOnce({ rows: [] });
+    const res = await sepAgent.put('/pedidos/1/tirar-do-lote');
+    expect(res.status).toBe(409);
+  });
+
+  test('pendente do próprio separador → 200 e lote_id zerado', async () => {
+    const sepAgent = await loginSeparador(SEP);
+    mockDb.get.mockResolvedValueOnce({ id: 1, numero_pedido: '10', status: 'pendente', lote_id: 7, separador_id: 5 });
+    mockPool.query.mockResolvedValueOnce({ rows: [{ id: 1 }] });
+    const res = await sepAgent.put('/pedidos/1/tirar-do-lote');
+    expect(res.status).toBe(200);
+    expect(res.body.numero_pedido).toBe('10');
+    expect(mockPool.query.mock.calls.some(c => String(c[0]).includes('lote_id=NULL'))).toBe(true);
   });
 });
 
@@ -386,6 +471,10 @@ describe('Pedidos — lote (itens/iniciar/buscar-caixa/concluir)', () => {
     expect(res.body.itens[0].caixa_num).toBe(1); // pedido 1 é o primeiro da lista => caixa 1
     expect(res.body.itens[1].caixa_num).toBe(2);
     expect(res.body.pedidos).toHaveLength(2);
+    // Busca também as colmeias extras do código (além do endereço principal do item).
+    const itensQueryCall = mockDb.all.mock.calls.find(c => c[0].includes('FROM itens_pedido i JOIN pedidos p'));
+    expect(itensQueryCall[0]).toContain('colmeia_enderecos');
+    expect(itensQueryCall[0]).toContain("FROM colmeias c WHERE c.codigo=i.codigo AND c.status='ativo'");
   });
 
   test('POST /pedidos/lote/iniciar sem pedido_ids → 400', async () => {
@@ -477,6 +566,10 @@ describe('Pedidos — itens e verificação', () => {
     const res = await agent.get('/pedidos/1/itens');
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);
+    // Busca também as colmeias extras do código (além do endereço principal do item)
+    // pra mostrar "Também em: ..." na tela de separação.
+    const itensQueryCall = mockDb.all.mock.calls.find(c => c[0].includes('FROM itens_pedido i WHERE i.pedido_id=$1'));
+    expect(itensQueryCall[0]).toContain('colmeia_enderecos');
   });
 
   test('PUT /itens/:id/verificar item não encontrado → 404', async () => {
@@ -707,6 +800,7 @@ describe('Pedidos — exclusão', () => {
   });
 
   test('DELETE /pedidos?status=cancelado → 200 com contagem', async () => {
+    mockPool.query.mockResolvedValueOnce({ rowCount: 0 }); // checkout_itens_conferencia
     mockPool.query.mockResolvedValueOnce({ rowCount: 0 }); // avisos
     mockPool.query.mockResolvedValueOnce({ rowCount: 0 }); // checkout
     mockPool.query.mockResolvedValueOnce({ rowCount: 0 }); // itens
@@ -724,6 +818,7 @@ describe('Pedidos — exclusão', () => {
   });
 
   test('DELETE /pedidos/vazios → 200', async () => {
+    mockPool.query.mockResolvedValueOnce({ rowCount: 0 }); // checkout_itens_conferencia
     mockPool.query.mockResolvedValueOnce({ rowCount: 0 }); // avisos
     mockPool.query.mockResolvedValueOnce({ rowCount: 0 }); // checkout
     mockPool.query.mockResolvedValueOnce({ rowCount: 4 }); // DELETE pedidos
@@ -766,6 +861,19 @@ describe('Pedidos — importação', () => {
     expect(res.status).toBe(200);
     expect(res.body.ignorados).toBe(1);
     expect(res.body.importados).toBe(0);
+  });
+
+  test('POST /pedidos/importar grava o estado (UF) vindo da coluna Destinatário - Estado', async () => {
+    mockPool.query.mockResolvedValueOnce({ rows: [{ id: 56, inserido: true }] }); // INSERT pedidos
+    mockPool.query.mockResolvedValueOnce({ rows: [] }); // SELECT itens_pedido existentes
+    const clientMock = { query: jest.fn().mockResolvedValue({ rows: [] }), release: jest.fn() };
+    mockPool.connect.mockResolvedValueOnce(clientMock);
+    const res = await agent.post('/pedidos/importar').send({
+      pedidos: [{ numero_pedido: '1003', codigo: 'A1', descricao: 'Produto', endereco: 'A1', quantidade: 1, estado: ' rj ' }],
+    });
+    expect(res.status).toBe(200);
+    const insertCall = mockPool.query.mock.calls.find(c => String(c[0]).includes('INSERT INTO pedidos'));
+    expect(insertCall[1]).toContain('RJ'); // normalizado: trim + maiúsculo
   });
 
   test('POST /importar (alias) redireciona 307 para /pedidos/importar', async () => {
@@ -1004,6 +1112,51 @@ describe('Pedidos — formação de lotes', () => {
     expect(res.body.lotes).toHaveLength(1);
     expect(res.body.lotes[0].pedidos).toHaveLength(2);
     expect(res.body.lotes[0].separador_id).toBe(11);
+    // V6 — rota (ordem real de caminhada) e distância ponderada calculadas pro lote
+    expect(res.body.lotes[0].rota).toEqual(['A']);
+    expect(res.body.lotes[0].distancia_ponderada).toBe(0); // uma única rua, sem par pra comparar
+  });
+
+  test('POST /pedidos/lote/formar → nenhum lote passa de 4 pedidos (9 elegíveis viram 4+4+1)', async () => {
+    const pedidosFixture = Array.from({ length: 9 }, (_, i) => (
+      { id: i + 1, numero_pedido: String(i + 1), transportadora: '', cliente: 'C' + (i + 1) }
+    ));
+    mockDb.all.mockImplementation(async (sql, params) => {
+      if (sql.includes('itens_pedido WHERE pedido_id=$1')) {
+        return [{ endereco: 'A1', quantidade: 1, codigo: 'X' + params[0] }];
+      }
+      if (sql.includes('FROM pedidos p WHERE')) return pedidosFixture;
+      return [];
+    });
+    mockDb.get.mockImplementation(async () => null);
+    const res = await agent.post('/pedidos/lote/formar').send({ separadores: [11] });
+    expect(res.status).toBe(200);
+    const tamanhos = res.body.lotes.map(l => l.pedidos.length);
+    expect(Math.max(...tamanhos)).toBe(4);
+    expect(tamanhos.reduce((s, n) => s + n, 0)).toBe(9);
+    expect(res.body.lotes).toHaveLength(3);
+  });
+
+  test('POST /pedidos/lote/formar → rota segue ROTA_FISICA_LOTE, não ordem alfabética', async () => {
+    // ROTA_FISICA_LOTE = [...,'Q','P',...] — na caminhada real, Q vem ANTES de P,
+    // mesmo P vindo antes de Q em ordem alfabética. Prova que `rota` (novo campo,
+    // V6) não é só uma cópia de `ruas` (alfabética, já existia).
+    const pedidosFixture = [
+      { id: 1, numero_pedido: '1', transportadora: '', cliente: 'C1' },
+      { id: 2, numero_pedido: '2', transportadora: '', cliente: 'C2' },
+    ];
+    mockDb.all.mockImplementation(async (sql, params) => {
+      if (sql.includes('itens_pedido WHERE pedido_id=$1')) {
+        return params[0] === 1 ? [{ endereco: 'P1', quantidade: 1, codigo: 'X1' }] : [{ endereco: 'Q1', quantidade: 1, codigo: 'X2' }];
+      }
+      if (sql.includes('FROM pedidos p WHERE')) return pedidosFixture;
+      return [];
+    });
+    mockDb.get.mockImplementation(async () => null);
+    const res = await agent.post('/pedidos/lote/formar').send({ separadores: [11] });
+    expect(res.body.lotes[0].ruas).toEqual(['P', 'Q']); // alfabética: P antes de Q
+    expect(res.body.lotes[0].rota).toEqual(['Q', 'P']); // rota física real: Q antes de P
+    expect(res.body.lotes[0].distancia_ponderada).toBeGreaterThan(0);
   });
 
   test('POST /pedidos/lote/formar com apenas_prime=true filtra pedidos Prime na query', async () => {
@@ -1016,6 +1169,15 @@ describe('Pedidos — formação de lotes', () => {
   test('POST /pedidos/lote/formar/confirmar sem lotes → 400', async () => {
     const res = await agent.post('/pedidos/lote/formar/confirmar').send({});
     expect(res.status).toBe(400);
+  });
+
+  test('POST /pedidos/lote/formar/confirmar com 5 pedidos num lote (ex: lote manual) → 400, nada é gravado', async () => {
+    const res = await agent.post('/pedidos/lote/formar/confirmar').send({
+      lotes: [{ separador_id: 11, pedidos: [{id:1},{id:2},{id:3},{id:4},{id:5}] }],
+    });
+    expect(res.status).toBe(400);
+    expect(res.body.erro).toMatch(/máximo é 4/);
+    expect(mockPool.connect).not.toHaveBeenCalled();
   });
 
   test('POST /pedidos/lote/formar/confirmar → grava lotes_separacao e atualiza pedidos', async () => {
@@ -1095,6 +1257,102 @@ describe('Pedidos — formação de lotes', () => {
     expect(res.status).toBe(200);
     expect(res.body.lotes).toHaveLength(1);
     expect(res.body.lotes[0].pedidos).toHaveLength(2);
+  });
+});
+
+/* ════════════════════════════════════════════════════════════
+   LOTE MANUAL — preview do pool bipado/digitado pelo supervisor
+════════════════════════════════════════════════════════════ */
+describe('Pedidos — lote manual (preview do pool bipado)', () => {
+  let agent;
+  beforeEach(async () => {
+    agent = request.agent(app);
+    await loginSupervisor(agent);
+  });
+
+  test('sem auth → 401', async () => {
+    const res = await request(app).post('/pedidos/lote/formar-manual').send({ pedido_ids: [1], separador_id: 5 });
+    expect(res.status).toBe(401);
+  });
+
+  test('sem pedido_ids → 400', async () => {
+    const res = await agent.post('/pedidos/lote/formar-manual').send({ separador_id: 5 });
+    expect(res.status).toBe(400);
+  });
+
+  test('sem separador_id → 400', async () => {
+    const res = await agent.post('/pedidos/lote/formar-manual').send({ pedido_ids: [1] });
+    expect(res.status).toBe(400);
+  });
+
+  test('agrupa o pool bipado (4 pedidos) em um único lote', async () => {
+    const pedidosFixture = [
+      { id: 1, numero_pedido: '1', status: 'pendente', separador_id: null, transportadora: '', cliente: 'C1' },
+      { id: 2, numero_pedido: '2', status: 'pendente', separador_id: null, transportadora: '', cliente: 'C2' },
+      { id: 3, numero_pedido: '3', status: 'pendente', separador_id: null, transportadora: '', cliente: 'C3' },
+      { id: 4, numero_pedido: '4', status: 'pendente', separador_id: null, transportadora: '', cliente: 'C4' },
+    ];
+    mockDb.all.mockImplementation(async (sql, params) => {
+      if (sql.includes('itens_pedido WHERE pedido_id=$1')) return [{ endereco: 'A1', quantidade: 1, codigo: 'X' + params[0] }];
+      if (sql.includes('FROM pedidos p WHERE p.id = ANY($1)')) return pedidosFixture;
+      return [];
+    });
+    mockDb.get.mockImplementation(async (sql) => sql.includes('separadores') ? { id: 77, nome: 'Ana' } : null);
+    const res = await agent.post('/pedidos/lote/formar-manual').send({ pedido_ids: [1, 2, 3, 4], separador_id: 11 });
+    expect(res.status).toBe(200);
+    expect(res.body.lotes).toHaveLength(1);
+    expect(res.body.lotes[0].pedidos).toHaveLength(4);
+    expect(res.body.lotes[0].separador_id).toBe(11);
+    expect(res.body.lotes[0].separador_nome).toBe('Ana');
+    expect(res.body.total_bipados).toBe(4);
+    expect(res.body.ignorados).toBe(0);
+  });
+
+  test('8 pedidos bipados viram 2 lotes de 4', async () => {
+    const pedidosFixture = Array.from({ length: 8 }, (_, i) => (
+      { id: i + 1, numero_pedido: String(i + 1), status: 'pendente', separador_id: null, transportadora: '', cliente: 'C' + (i + 1) }
+    ));
+    mockDb.all.mockImplementation(async (sql, params) => {
+      if (sql.includes('itens_pedido WHERE pedido_id=$1')) return [{ endereco: 'A1', quantidade: 1, codigo: 'X' + params[0] }];
+      if (sql.includes('FROM pedidos p WHERE p.id = ANY($1)')) return pedidosFixture;
+      return [];
+    });
+    mockDb.get.mockImplementation(async () => null);
+    const res = await agent.post('/pedidos/lote/formar-manual').send({ pedido_ids: pedidosFixture.map(p => p.id), separador_id: 11 });
+    expect(res.status).toBe(200);
+    expect(res.body.lotes).toHaveLength(2);
+    expect(res.body.lotes.every(l => l.pedidos.length === 4)).toBe(true);
+  });
+
+  test('ignora Drive Thru, já atribuído e não pendente do pool — relata quantos e quais', async () => {
+    const pedidosFixture = [
+      { id: 1, numero_pedido: '1', status: 'pendente', separador_id: null, transportadora: '', cliente: 'C1' },
+      { id: 2, numero_pedido: '2', status: 'pendente', separador_id: null, transportadora: 'DRIVE THRU', cliente: 'C2' },
+      { id: 3, numero_pedido: '3', status: 'separando', separador_id: null, transportadora: '', cliente: 'C3' },
+      { id: 4, numero_pedido: '4', status: 'pendente', separador_id: 9, transportadora: '', cliente: 'C4' },
+    ];
+    mockDb.all.mockImplementation(async (sql, params) => {
+      if (sql.includes('itens_pedido WHERE pedido_id=$1')) return [{ endereco: 'A1', quantidade: 1, codigo: 'X' + params[0] }];
+      if (sql.includes('FROM pedidos p WHERE p.id = ANY($1)')) return pedidosFixture;
+      return [];
+    });
+    mockDb.get.mockImplementation(async () => null);
+    const res = await agent.post('/pedidos/lote/formar-manual').send({ pedido_ids: [1, 2, 3, 4, 999], separador_id: 11 });
+    expect(res.status).toBe(200);
+    expect(res.body.total_elegiveis).toBe(1);
+    expect(res.body.lotes[0].pedidos).toHaveLength(1);
+    // 999 não existe no banco + 3 pedidos inelegíveis do pool
+    expect(res.body.ignorados).toBe(4);
+    expect(res.body.ignorados_numeros.sort()).toEqual(['2', '3', '4']);
+  });
+
+  test('nenhum pedido elegível no pool → 400', async () => {
+    mockDb.all.mockImplementation(async (sql) => {
+      if (sql.includes('FROM pedidos p WHERE p.id = ANY($1)')) return [{ id: 1, numero_pedido: '1', status: 'concluido', separador_id: null, transportadora: '' }];
+      return [];
+    });
+    const res = await agent.post('/pedidos/lote/formar-manual').send({ pedido_ids: [1], separador_id: 11 });
+    expect(res.status).toBe(400);
   });
 });
 

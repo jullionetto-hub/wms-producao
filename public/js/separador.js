@@ -3,7 +3,7 @@
 // 2. Sobe ao corredor principal, varre esquerda até F: Q → P → O → N → M → L → K → J → I → H → Arara → G → F → ZA
 // 3. Varre direita até Z: R → S → T → U → V → W → X → Y → Z
 const ROTA_FISICA = ['A','B','C','D','E','Q','P','O','N','M','L','K','J','I','H','ARARA','G','F','ZA','R','S','T','U','V','W','X','Y','Z'];
-const _checklistSortDir = 1;
+let _checklistSortDir = 1; // 1 = A→Z, -1 = Z→A — ver toggleOrdemChecklist()
 const CAIXA_OBRIGATORIA = false; // mudar para true para reativar vínculo de caixa
 
 // Índice de um endereço (ex.: "Q12") na rota física — usado pra ordenar
@@ -23,6 +23,23 @@ function _rotaIdxRua(rua) {
   return i >= 0 ? i : 999999;
 }
 
+// Ordena itensAtuais pela rota física do estoque (não alfabética), na direção
+// de _checklistSortDir. Usada tanto ao carregar o pedido quanto ao inverter a
+// ordem depois.
+function _ordenarItensAtuaisPorRua() {
+  itensAtuais.sort((a,b) => (_rotaIdx(a.endereco) - _rotaIdx(b.endereco)) * _checklistSortDir);
+}
+
+// Inverte a ordem de caminhada do pedido individual/"pedido a pedido" — mesmo
+// botão e mesma ideia do lote (toggleOrdemLote), só que aqui reordena a lista
+// de itens em vez de pular posições (o checklist individual não navega por
+// posição, mostra a lista inteira de uma vez).
+function toggleOrdemChecklist() {
+  _checklistSortDir = _checklistSortDir === 1 ? -1 : 1;
+  _ordenarItensAtuaisPorRua();
+  renderChecklistMobile();
+}
+
 /* ══════════════════════════════════════════
    SEPARAÇÃO EM LOTE — TURNO NOITE
 ══════════════════════════════════════════ */
@@ -35,6 +52,43 @@ let _loteIdAtual       = null; // id do lote (lotes_separacao.id), pra exibir "L
 let _loteEndIdx        = 0;    // posição atual na navegação passo-a-passo
 let _lotePedidosAbertos = true; // seção "Pedidos do lote" expandida/recolhida
 let _loteAcaoAberta    = null; // "p:<ids>" ou "f:<ids>" — grupo com Parcial/Falta aberto
+
+// Modo de separação escolhido pelo separador na fila: 'lote' (lotes formados pelo
+// supervisor aparecem como card único) ou 'pedido' (pedidos dos lotes ainda não
+// iniciados aparecem soltos, um a um). Preferência guardada só neste aparelho.
+const _MODO_SEP_KEY = 'wms_modo_separacao';
+let _lotesPedidosAbertos = new Set(); // lotes com a lista "pedido a pedido" expandida
+
+function _modoSeparacao() {
+  try { return localStorage.getItem(_MODO_SEP_KEY) === 'pedido' ? 'pedido' : 'lote'; }
+  catch (e) { return 'lote'; }
+}
+
+function setModoSeparacao(modo) {
+  try { localStorage.setItem(_MODO_SEP_KEY, modo === 'pedido' ? 'pedido' : 'lote'); } catch (e) {}
+  carregarFilaMobile();
+}
+
+function _toggleLotePedidos(loteId) {
+  const box = document.getElementById(`lote-peds-${loteId}`);
+  if (!box) return;
+  const abrir = box.style.display === 'none';
+  box.style.display = abrir ? 'block' : 'none';
+  if (abrir) _lotesPedidosAbertos.add(String(loteId)); else _lotesPedidosAbertos.delete(String(loteId));
+  const seta = document.getElementById(`lote-peds-seta-${loteId}`);
+  if (seta) seta.textContent = abrir ? '▴' : '▾';
+}
+
+// Separa UM pedido de um lote ainda não iniciado: o servidor tira o pedido do
+// lote (o restante do lote continua intacto) e o fluxo segue como pedido comum.
+async function iniciarPedidoDoLoteMobile(pedidoId, numeroPedido) {
+  try {
+    const res = await fetch(`${API}/pedidos/${pedidoId}/tirar-do-lote`, { method:'PUT', credentials:'include' });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) { toast(data.erro || 'Não foi possível separar este pedido à parte', 'erro'); carregarFilaMobile(); return; }
+    selecionarPedidoFilaMobile(numeroPedido);
+  } catch (e) { toast('Erro de rede', 'erro'); }
+}
 
 // Paleta discreta pra diferenciar até 5 pedidos no mesmo lote — variações de
 // azul/slate/violeta (mesma família do --accent do sistema), sem cores
@@ -141,12 +195,23 @@ function verDetalhePedidoLote(cx) {
     const cor = item.status==='encontrado' ? 'var(--green)' : item.status==='falta' ? 'var(--red)' : item.status==='parcial' ? 'var(--amber)' : 'var(--border)';
     const bg  = item.status==='encontrado' ? 'rgba(87,185,129,.08)' : item.status==='falta' ? 'rgba(201,82,79,.08)' : item.status==='parcial' ? 'rgba(224,168,62,.08)' : 'var(--surface)';
     const label = item.status==='encontrado' ? 'COLETADO' : item.status==='falta' ? 'FALTA' : item.status==='parcial' ? 'PARCIAL' : 'PENDENTE';
+    const pendente = item.status === 'pendente';
     return `<div style="background:${bg};border:1px solid var(--border);border-left:3px solid ${cor};border-radius:8px;padding:10px 12px;margin-bottom:8px">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:2px">
         <span style="font-size:13px;font-weight:600;color:var(--text)">${item.descricao||item.codigo||'—'}</span>
         <span style="font-size:9px;font-weight:800;letter-spacing:.5px;color:${cor};flex-shrink:0">${label}</span>
       </div>
-      <div style="font-size:11px;color:var(--text3);font-family:monospace">${item.endereco||'—'} · x${item.quantidade||1}</div>
+      ${item.codigo ? `<div style="font-size:12px;font-weight:700;color:var(--accent);font-family:monospace;margin-bottom:2px">Cód: ${item.codigo}</div>` : ''}
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:4px">
+        <div style="font-size:11px;color:var(--text3);font-family:monospace">${item.endereco||'—'}</div>
+        <div style="font-family:'Space Mono',monospace;font-size:22px;font-weight:800;color:var(--text);line-height:1;flex-shrink:0">×${item.quantidade||1}</div>
+      </div>
+      ${item.colmeia_enderecos ? `<div style="font-size:11px;color:var(--indigo);font-family:monospace;margin-top:2px">Também em: ${item.colmeia_enderecos}</div>` : ''}
+      ${pendente ? `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:10px">
+          <button onclick="verificarItemDetalheLote(${item.id},'encontrado',${cx})" style="padding:10px 0;border:1.5px solid rgba(87,185,129,.4);border-radius:8px;background:rgba(87,185,129,.12);color:var(--green);font-size:12px;font-weight:700;cursor:pointer">Coletado</button>
+          <button onclick="parcialItemDetalheLote(${item.id},${item.quantidade||1},${cx})" style="padding:10px 0;border:1.5px solid rgba(224,168,62,.4);border-radius:8px;background:rgba(224,168,62,.12);color:var(--amber);font-size:12px;font-weight:700;cursor:pointer">Parcial</button>
+          <button onclick="verificarItemDetalheLote(${item.id},'falta',${cx})" style="padding:10px 0;border:1.5px solid rgba(201,82,79,.4);border-radius:8px;background:rgba(201,82,79,.12);color:var(--red);font-size:12px;font-weight:700;cursor:pointer">Falta</button>
+        </div>` : ''}
     </div>`;
   }).join('');
 
@@ -156,6 +221,62 @@ function verDetalhePedidoLote(cx) {
 function fecharDetalhePedidoLote() {
   const modal = document.getElementById('m-lote-pedido-detalhe-modal');
   if (modal) modal.style.display = 'none';
+}
+
+// Recarrega _loteItens do servidor sem resetar navegação (posição atual, tela
+// aberta) — diferente de carregarListaLote(), que é só pra ABRIR o lote do zero.
+async function _recarregarLoteItensSilencioso() {
+  try {
+    const ids = _loteAtual.map(p => p.id);
+    const res = await fetch(`${API}/pedidos/lote-itens?pedido_ids=${ids.join(',')}`, { credentials:'include' });
+    const data = await res.json();
+    if (!res.ok) return false;
+    _loteItens = data.itens;
+    return true;
+  } catch(e) { return false; }
+}
+
+// Ações rápidas direto no detalhe do pedido (dentro do lote) — pro separador não
+// precisar sair daqui e caçar a posição certa na tela de rua-a-rua só pra marcar
+// o último item pendente. Atualiza o item, recarrega o lote e reabre o próprio
+// detalhe (e a tela de posição por trás, pra ficar tudo consistente).
+async function verificarItemDetalheLote(itemId, status, cx) {
+  try {
+    const res = await fetch(`${API}/itens/${itemId}/verificar`, {
+      method:'PUT', credentials:'include', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ status })
+    });
+    const data = await res.json();
+    if (!res.ok) { toast(data.erro||'Erro ao verificar item', 'erro'); return; }
+    await _recarregarLoteItensSilencioso();
+    _renderizarListaLote();
+    verDetalhePedidoLote(cx);
+  } catch(e) { toast('Erro de rede', 'erro'); }
+}
+
+function parcialItemDetalheLote(itemId, quantidade, cx) {
+  wmsPrompt({
+    titulo: 'Quantos foram encontrados?',
+    sub: `Pedido tem ${quantidade} unidade(s) deste item.`,
+    valor: '',
+    placeholder: `0 a ${quantidade-1}`,
+  }, async (valor) => {
+    const qtdEncontrada = parseInt(valor);
+    if (isNaN(qtdEncontrada) || qtdEncontrada < 0 || qtdEncontrada >= quantidade) {
+      toast('Quantidade inválida', 'erro'); return;
+    }
+    try {
+      const res = await fetch(`${API}/itens/${itemId}/verificar`, {
+        method:'PUT', credentials:'include', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ status:'parcial', qtd_falta: quantidade - qtdEncontrada })
+      });
+      const data = await res.json();
+      if (!res.ok) { toast(data.erro||'Erro ao verificar item', 'erro'); return; }
+      await _recarregarLoteItensSilencioso();
+      _renderizarListaLote();
+      verDetalhePedidoLote(cx);
+    } catch(e) { toast('Erro de rede', 'erro'); }
+  });
 }
 
 function abrirPreparacaoLote(pedidos) {
@@ -226,21 +347,93 @@ async function carregarListaLote(ids) {
 
 // Agrupa os itens do lote por endereço (posição), ordenados pela rota física —
 // usado tanto pra renderizar quanto pra navegar (próxima/anterior/revisar).
-function _loteAgruparPorEndereco() {
-  const gruposPorEnd = {};
+// false = caminha a rota física normal (A→...→Z); true = mesma rota ao contrário
+// (Z→...→A) — útil quando o separador já está na ponta oposta do estoque.
+// Só muda a ORDEM de navegação; o que já foi separado continua separado
+// independente da direção (status fica no item, não na posição do índice).
+let _loteOrdemReversa = false;
+// Agrupa por RUA (não por endereço exato) — a "posição" de navegação do lote
+// passou a ser a rua inteira, com todos os seus endereços listados de uma vez
+// em vez de aparecer um por vez (pedido explícito: separação em lote travava
+// avançando endereço a endereço dentro da mesma rua sem necessidade).
+function _loteAgruparPorRua() {
+  const gruposPorRua = {};
   for (const item of _loteItens) {
     const end = String(item.endereco||'S/END').split(',')[0].trim().toUpperCase();
-    if (!gruposPorEnd[end]) gruposPorEnd[end] = [];
-    gruposPorEnd[end].push(item);
+    const rua = end.match(/^([A-Z]+)/)?.[1] || end;
+    if (!gruposPorRua[rua]) gruposPorRua[rua] = [];
+    gruposPorRua[rua].push(item);
   }
-  const endsOrdenados = Object.keys(gruposPorEnd).sort((a,b) => _rotaIdx(a) - _rotaIdx(b));
-  return { gruposPorEnd, endsOrdenados };
+  const rotaIdx = r => { const i = ROTA_FISICA.indexOf(r); return i >= 0 ? i : 999; };
+  const ruasOrdenadas = Object.keys(gruposPorRua).sort((a,b) => rotaIdx(a) - rotaIdx(b));
+  if (_loteOrdemReversa) ruasOrdenadas.reverse();
+  return { gruposPorRua, ruasOrdenadas };
+}
+
+// Inverte a direção de caminhada e pula pra primeira rua ainda pendente nessa
+// nova ordem (não força o separador a passar de novo pelo que já separou do
+// outro lado).
+function toggleOrdemLote() {
+  _loteOrdemReversa = !_loteOrdemReversa;
+  const { gruposPorRua, ruasOrdenadas } = _loteAgruparPorRua();
+  const idx = ruasOrdenadas.findIndex(rua => gruposPorRua[rua].some(i => i.status === 'pendente'));
+  _loteEndIdx = idx === -1 ? ruasOrdenadas.length : idx;
+  _loteAcaoAberta = null;
+  _renderizarListaLote();
+}
+
+// Modal simples de "todos os itens desta rua" — usado só pelo pedido
+// individual/"pedido a pedido" (verItensDaRuaChecklist). No lote isso deixou
+// de ser necessário: a rua inteira já aparece direto na tela principal (ver
+// _renderizarListaLote), sem precisar de um modal à parte pra isso.
+function _renderItensDaRuaModal(rua, itensDaRua, { mostrarPedido }) {
+  const modal = document.getElementById('m-lote-rua-modal');
+  const body  = document.getElementById('m-lote-rua-body');
+  const titulo = document.getElementById('m-lote-rua-titulo');
+  if (!modal || !body) return;
+  if (titulo) titulo.textContent = `Rua ${rua}`;
+  const porEndereco = {};
+  itensDaRua.forEach(i => {
+    const end = String(i.endereco||'S/END').split(',')[0].trim().toUpperCase();
+    (porEndereco[end] = porEndereco[end] || []).push(i);
+  });
+  const ends = Object.keys(porEndereco).sort();
+  body.innerHTML = ends.map(end => `
+    <div style="font-size:11px;font-weight:800;color:var(--text3);letter-spacing:.5px;margin:14px 0 6px">${end}</div>
+    ${porEndereco[end].map(item => {
+      const cor = item.status==='encontrado' ? 'var(--green)' : item.status==='falta' ? 'var(--red)' : item.status==='parcial' ? 'var(--amber)' : 'var(--border)';
+      const bg  = item.status==='encontrado' ? 'rgba(87,185,129,.08)' : item.status==='falta' ? 'rgba(201,82,79,.08)' : item.status==='parcial' ? 'rgba(224,168,62,.08)' : 'var(--surface)';
+      const label = item.status==='encontrado' ? 'COLETADO' : item.status==='falta' ? 'FALTA' : item.status==='parcial' ? 'PARCIAL' : 'PENDENTE';
+      return `<div style="background:${bg};border:1px solid var(--border);border-left:3px solid ${cor};border-radius:8px;padding:10px 12px;margin-bottom:8px">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:2px">
+          <span style="font-size:13px;font-weight:600;color:var(--text)">${item.descricao||item.codigo||'—'}</span>
+          <span style="font-size:9px;font-weight:800;letter-spacing:.5px;color:${cor};flex-shrink:0">${label}</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:2px">
+          <div style="font-size:11px;color:var(--text3)">${item.codigo||'—'}${mostrarPedido ? ` · Pedido #${item.numero_pedido||'—'}` : ''}</div>
+          <div style="font-family:'Space Mono',monospace;font-size:18px;font-weight:800;color:var(--text);line-height:1;flex-shrink:0">×${item.quantidade||1}</div>
+        </div>
+      </div>`;
+    }).join('')}`).join('') || '<div style="color:var(--text3);text-align:center;padding:30px;font-size:13px">Nenhum item desta rua</div>';
+  modal.style.display = 'block';
+}
+
+// Pedido individual / "pedido a pedido" — itens dessa rua só no pedido aberto.
+function verItensDaRuaChecklist(rua) {
+  const getRua = (end) => String(end||'').split(',')[0].trim().match(/^([A-Z]+)/)?.[1] || '?';
+  const itensDaRua = itensAtuais.filter(i => getRua(i.endereco) === rua);
+  _renderItensDaRuaModal(rua, itensDaRua, { mostrarPedido: false });
+}
+
+function fecharItensDaRuaLote() {
+  const modal = document.getElementById('m-lote-rua-modal');
+  if (modal) modal.style.display = 'none';
 }
 
 function _renderizarListaLote() {
   const itens = _loteItens;
   const total = itens.length;
-  const { gruposPorEnd, endsOrdenados } = _loteAgruparPorEndereco();
+  const { gruposPorRua, ruasOrdenadas } = _loteAgruparPorRua();
   const totalSkus = new Set(itens.map(i => i.codigo || '_sem_cod_')).size;
 
   document.getElementById('m-lote-badge').textContent = _loteIdAtual
@@ -249,7 +442,7 @@ function _renderizarListaLote() {
   // 4 cards de estatística
   const statsEl = document.getElementById('m-lote-stats');
   if (statsEl) {
-    const stats = [['Pedidos',_loteAtual.length], ['Itens',total], ['SKUs',totalSkus], ['Posições',endsOrdenados.length]];
+    const stats = [['Pedidos',_loteAtual.length], ['Itens',total], ['SKUs',totalSkus], ['Ruas',ruasOrdenadas.length]];
     statsEl.innerHTML = stats.map(([lab,val]) => `
       <div style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 4px;text-align:center">
         <div style="font-size:15px;font-weight:800;color:var(--text);line-height:1.3">${val}</div>
@@ -260,6 +453,7 @@ function _renderizarListaLote() {
   // Progresso geral — 'parcial' também conta como processado (só 'pendente' bloqueia,
   // igual ao backend em PUT /pedidos/lote/concluir).
   const processados = itens.filter(i => i.status !== 'pendente').length;
+  _atualizarBotaoConcluirLote(itens, total - processados);
   document.getElementById('m-lote-prog-cnt').textContent = `${processados} / ${total} itens`;
   document.getElementById('m-lote-prog-fill').style.width = total ? Math.round(processados/total*100)+'%' : '0%';
 
@@ -288,8 +482,8 @@ function _renderizarListaLote() {
   const body = document.getElementById('m-lote-lista-body');
   const btnProx = document.getElementById('m-lote-btn-prox');
 
-  // Passou da última posição — mostra o resumo em vez de um card de posição.
-  if (_loteEndIdx >= endsOrdenados.length) {
+  // Passou da última rua — mostra o resumo em vez de um card de rua.
+  if (_loteEndIdx >= ruasOrdenadas.length) {
     const faltas = itens.filter(i => i.status === 'falta').length;
     const pedidosCompletos = _loteAtual.filter((p, idx) => {
       const itensDoPedido = itens.filter(i => i.caixa_num === idx+1);
@@ -311,95 +505,157 @@ function _renderizarListaLote() {
     return;
   }
 
-  // Card da posição atual — um bloco por SKU quando a posição tiver mais de um.
-  const end = endsOrdenados[_loteEndIdx];
-  const itemsEnd = gruposPorEnd[end];
-  const rua = end.match(/^([A-Z]+)/)?.[1] || end;
-  const porSku = {};
-  for (const item of itemsEnd) {
-    const cod = item.codigo || '_sem_cod_';
-    if (!porSku[cod]) porSku[cod] = [];
-    porSku[cod].push(item);
+  // Card da rua atual — TODOS os endereços dela em lista, não um de cada vez
+  // (pedido explícito: antes cada endereço exigia "Próxima posição", mesmo
+  // dentro da mesma rua). Dentro de cada endereço, um bloco por SKU, igual já
+  // era antes.
+  const rua = ruasOrdenadas[_loteEndIdx];
+  const itemsRua = gruposPorRua[rua];
+  const gruposPorEndNaRua = {};
+  for (const item of itemsRua) {
+    const end = String(item.endereco||'S/END').split(',')[0].trim().toUpperCase();
+    (gruposPorEndNaRua[end] = gruposPorEndNaRua[end] || []).push(item);
   }
-  const posicaoCompleta = itemsEnd.every(i => i.status !== 'pendente');
+  // Dentro da rua, endereços sempre em ordem numérica crescente — só a ordem
+  // ENTRE ruas inverte com toggleOrdemLote, não a caminhada dentro de uma rua.
+  const endsNaRua = Object.keys(gruposPorEndNaRua).sort((a,b) => {
+    const na = parseInt(a.match(/\d+/)?.[0])||0, nb = parseInt(b.match(/\d+/)?.[0])||0;
+    return na - nb || a.localeCompare(b);
+  });
+  const posicaoCompleta = itemsRua.every(i => i.status !== 'pendente');
 
   let html = `<div style="padding:12px 14px 4px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-      <span style="font-size:10px;font-weight:800;color:var(--accent);letter-spacing:1px">PRÓXIMA POSIÇÃO</span>
-      <span style="font-size:11px;font-weight:700;color:var(--text2);background:var(--surface2);border:1px solid var(--border);padding:2px 9px;border-radius:6px">RUA ${rua}</span>
+      <span style="font-size:10px;font-weight:800;color:var(--accent);letter-spacing:1px">RUA ATUAL</span>
+      <button type="button" onclick="toggleOrdemLote()" title="Inverter ordem de caminhada"
+        style="font-size:10px;font-weight:700;color:var(--text2);background:var(--surface2);border:1px solid var(--border);padding:2px 8px;border-radius:6px;cursor:pointer">⇅ ${_loteOrdemReversa ? 'Z→A' : 'A→Z'}</button>
     </div>
     <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px">
-      <span style="font-family:'Space Mono',monospace;font-size:24px;font-weight:800;color:var(--text)">${end}</span>
-      <span style="font-size:12px;color:var(--text3);font-weight:600">${_loteEndIdx+1}/${endsOrdenados.length}</span>
+      <span style="font-family:'Space Mono',monospace;font-size:24px;font-weight:800;color:var(--text)">${rua}</span>
+      <span style="font-size:12px;color:var(--text3);font-weight:600">${endsNaRua.length} endereço${endsNaRua.length===1?'':'s'} · rua ${_loteEndIdx+1}/${ruasOrdenadas.length}</span>
     </div>
   </div>`;
 
-  for (const [cod, items] of Object.entries(porSku)) {
-    const todosProc = items.every(i => i.status !== 'pendente');
-    const temFalta  = items.some(i => i.status === 'falta');
-    const totalQty  = items.reduce((s, i) => s + (parseInt(i.quantidade)||1), 0);
-    const ids = items.map(i => i.id).join(',');
-
-    const porCaixa = {};
-    for (const item of items) {
-      const cx = item.caixa_num;
-      if (!porCaixa[cx]) porCaixa[cx] = 0;
-      porCaixa[cx] += parseInt(item.quantidade)||1;
+  for (const end of endsNaRua) {
+    const itemsEnd = gruposPorEndNaRua[end];
+    const porSku = {};
+    for (const item of itemsEnd) {
+      const cod = item.codigo || '_sem_cod_';
+      if (!porSku[cod]) porSku[cod] = [];
+      porSku[cod].push(item);
     }
-    const cxEntries = Object.entries(porCaixa).sort((a,b) => Number(a[0]) - Number(b[0]));
-    const distribHtml = cxEntries.map(([cx, qty]) => {
-      const cor = _CX_CORES[(Number(cx)-1) % _CX_CORES.length];
-      const numPedido = _loteAtual[Number(cx)-1]?.numero_pedido || cx;
-      return `<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0">
-        <span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--text2)">
-          <span style="width:9px;height:9px;border-radius:50%;background:${cor};flex-shrink:0"></span>
-          Pedido #${numPedido}
-        </span>
-        <span style="font-size:12px;font-weight:700;color:var(--text)">${qty} un.</span>
+    html += `<div style="margin:0 14px 2px;padding:6px 0 2px;font-size:11px;font-weight:800;color:var(--text3);letter-spacing:.5px;border-top:1px solid var(--border)">${end}</div>`;
+
+    for (const [cod, items] of Object.entries(porSku)) {
+      const todosProc = items.every(i => i.status !== 'pendente');
+      const temFalta  = items.some(i => i.status === 'falta');
+      const totalQty  = items.reduce((s, i) => s + (parseInt(i.quantidade)||1), 0);
+      const ids = items.map(i => i.id).join(',');
+
+      const porCaixa = {};
+      for (const item of items) {
+        const cx = item.caixa_num;
+        if (!porCaixa[cx]) porCaixa[cx] = 0;
+        porCaixa[cx] += parseInt(item.quantidade)||1;
+      }
+      const cxEntries = Object.entries(porCaixa).sort((a,b) => Number(a[0]) - Number(b[0]));
+      const distribHtml = cxEntries.map(([cx, qty]) => {
+        const cor = _CX_CORES[(Number(cx)-1) % _CX_CORES.length];
+        const numPedido = _loteAtual[Number(cx)-1]?.numero_pedido || cx;
+        // Nº da caixa em texto, não só a bolinha colorida — com lote de 6-8
+        // pedidos, a paleta de 5 cores repete (caixa 3 e caixa 8 saem com a
+        // mesma cor) e a bolinha sozinha não dá pra distinguir qual é qual.
+        return `<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0">
+          <span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--text2)">
+            <span style="width:9px;height:9px;border-radius:50%;background:${cor};flex-shrink:0"></span>
+            Caixa ${cx} · Pedido #${numPedido}
+          </span>
+          <span style="font-size:12px;font-weight:700;color:var(--text)">${qty} un.</span>
+        </div>`;
+      }).join('');
+
+      const parcialAberto = _loteAcaoAberta === `p:${ids}`;
+      const motivoAberto  = _loteAcaoAberta === `f:${ids}`;
+      const primeiroId = ids.split(',')[0];
+
+      html += `<div style="margin:0 14px 12px;border-radius:10px;border:1px solid ${todosProc?(temFalta?'var(--amber)':'var(--green)'):'var(--border)'};background:var(--surface);padding:14px;${todosProc?'opacity:0.6':''}">
+        <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px">${items[0].descricao||cod}</div>
+        <div style="font-size:11px;color:var(--text3);font-family:monospace;margin-bottom:${items[0].colmeia_enderecos?'2px':'10px'}">SKU: ${cod}</div>
+        ${items[0].colmeia_enderecos ? `<div style="font-size:11px;color:var(--indigo);font-family:monospace;margin-bottom:10px">Também em: ${items[0].colmeia_enderecos}</div>` : ''}
+        <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(79,70,229,.12);border:1px solid var(--accent);color:var(--accent);font-size:13px;font-weight:700;padding:7px 14px;border-radius:8px;margin-bottom:12px">
+          PEGAR ${totalQty} UNIDADE${totalQty===1?'':'S'}
+        </div>
+        <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.5px;margin-bottom:2px">DISTRIBUIÇÃO POR PEDIDO</div>
+        <div style="margin-bottom:${todosProc?'0':'12px'}">${distribHtml}</div>
+        ${!todosProc ? `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+            <button onclick="verificarGrupoLote('${ids}')" style="padding:10px 0;border:1.5px solid var(--green);border-radius:8px;background:rgba(87,185,129,.12);color:var(--green);font-size:12px;font-weight:700;cursor:pointer">Encontrei tudo</button>
+            <button onclick="toggleParcialLote('${ids}')" style="padding:10px 0;border:1.5px solid var(--accent);border-radius:8px;background:rgba(79,70,229,.12);color:var(--accent);font-size:12px;font-weight:700;cursor:pointer">Parcial</button>
+            <button onclick="toggleFaltaLote('${ids}')" style="padding:10px 0;border:1.5px solid var(--amber);border-radius:8px;background:rgba(224,168,62,.12);color:var(--amber);font-size:12px;font-weight:700;cursor:pointer">Falta</button>
+          </div>` : `<div style="font-size:11px;font-weight:700;color:${temFalta?'var(--amber)':'var(--green)'};text-align:center">${temFalta?'Aguardando repositor':'Coletado'}</div>`}
+        ${parcialAberto ? `<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+            <label style="font-size:11px;color:var(--amber);font-weight:700">Quantas unidades encontrou (de ${totalQty}):</label>
+            <div style="display:flex;gap:8px;margin-top:6px">
+              <input type="number" id="lote-parc-input-${primeiroId}" min="0" max="${totalQty-1}" placeholder="0" inputmode="numeric"
+                style="flex:1;padding:9px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-size:15px;font-weight:700;text-align:center"/>
+              <button onclick="confirmarParcialLote('${ids}',${totalQty})" style="background:var(--accent);border:none;color:#fff;font-weight:700;padding:0 18px;border-radius:8px;cursor:pointer">OK</button>
+            </div>
+          </div>` : ''}
+        ${motivoAberto ? `<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+            <label style="font-size:11px;color:var(--amber);font-weight:700;display:block;margin-bottom:6px">Motivo da falta:</label>
+            ${MOTIVOS_FALTA_LOTE.map(m => `<button onclick="confirmarFaltaLote('${ids}',${totalQty},'${m.replace(/'/g,"\\'")}')"
+              style="display:block;width:100%;text-align:left;padding:9px 12px;margin-bottom:6px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text2);font-size:12px;font-weight:600;cursor:pointer">${m}</button>`).join('')}
+          </div>` : ''}
       </div>`;
-    }).join('');
-
-    const parcialAberto = _loteAcaoAberta === `p:${ids}`;
-    const motivoAberto  = _loteAcaoAberta === `f:${ids}`;
-    const primeiroId = ids.split(',')[0];
-
-    html += `<div style="margin:0 14px 12px;border-radius:10px;border:1px solid ${todosProc?(temFalta?'var(--amber)':'var(--green)'):'var(--border)'};background:var(--surface);padding:14px;${todosProc?'opacity:0.6':''}">
-      <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px">${items[0].descricao||cod}</div>
-      <div style="font-size:11px;color:var(--text3);font-family:monospace;margin-bottom:10px">SKU: ${cod}</div>
-      <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(79,70,229,.12);border:1px solid var(--accent);color:var(--accent);font-size:13px;font-weight:700;padding:7px 14px;border-radius:8px;margin-bottom:12px">
-        PEGAR ${totalQty} UNIDADE${totalQty===1?'':'S'}
-      </div>
-      <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.5px;margin-bottom:2px">DISTRIBUIÇÃO POR PEDIDO</div>
-      <div style="margin-bottom:${todosProc?'0':'12px'}">${distribHtml}</div>
-      ${!todosProc ? `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
-          <button onclick="verificarGrupoLote('${ids}')" style="padding:10px 0;border:1.5px solid var(--green);border-radius:8px;background:rgba(87,185,129,.12);color:var(--green);font-size:12px;font-weight:700;cursor:pointer">Encontrei tudo</button>
-          <button onclick="toggleParcialLote('${ids}')" style="padding:10px 0;border:1.5px solid var(--accent);border-radius:8px;background:rgba(79,70,229,.12);color:var(--accent);font-size:12px;font-weight:700;cursor:pointer">Parcial</button>
-          <button onclick="toggleFaltaLote('${ids}')" style="padding:10px 0;border:1.5px solid var(--amber);border-radius:8px;background:rgba(224,168,62,.12);color:var(--amber);font-size:12px;font-weight:700;cursor:pointer">Falta</button>
-        </div>` : `<div style="font-size:11px;font-weight:700;color:${temFalta?'var(--amber)':'var(--green)'};text-align:center">${temFalta?'Aguardando repositor':'Coletado'}</div>`}
-      ${parcialAberto ? `<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
-          <label style="font-size:11px;color:var(--amber);font-weight:700">Quantas unidades encontrou (de ${totalQty}):</label>
-          <div style="display:flex;gap:8px;margin-top:6px">
-            <input type="number" id="lote-parc-input-${primeiroId}" min="0" max="${totalQty-1}" placeholder="0" inputmode="numeric"
-              style="flex:1;padding:9px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-size:15px;font-weight:700;text-align:center"/>
-            <button onclick="confirmarParcialLote('${ids}',${totalQty})" style="background:var(--accent);border:none;color:#fff;font-weight:700;padding:0 18px;border-radius:8px;cursor:pointer">OK</button>
-          </div>
-        </div>` : ''}
-      ${motivoAberto ? `<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
-          <label style="font-size:11px;color:var(--amber);font-weight:700;display:block;margin-bottom:6px">Motivo da falta:</label>
-          ${MOTIVOS_FALTA_LOTE.map(m => `<button onclick="confirmarFaltaLote('${ids}',${totalQty},'${m.replace(/'/g,"\\'")}')"
-            style="display:block;width:100%;text-align:left;padding:9px 12px;margin-bottom:6px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text2);font-size:12px;font-weight:600;cursor:pointer">${m}</button>`).join('')}
-        </div>` : ''}
-    </div>`;
+    }
   }
 
   if (body) body.innerHTML = html;
 
   if (btnProx) {
-    btnProx.textContent = 'Próxima posição';
+    btnProx.textContent = 'Próxima rua';
     btnProx.onclick = loteProximaPosicao;
     btnProx.disabled = !posicaoCompleta;
     btnProx.style.opacity = posicaoCompleta ? '1' : '0.5';
   }
+}
+
+// Botão "Concluir lote" sempre visível no rodapé — antes só aparecia depois de
+// avançar "Próxima posição" por TODAS as ruas (e "Revisar divergências" ainda
+// jogava de volta pra uma rua do meio, obrigando a andar tudo de novo). Mesma
+// regra do backend (POST /pedidos/lote/concluir): só item 'pendente' bloqueia;
+// falta/parcial conta como processado e o pedido vai pra "aguardando repositor".
+// Com pendentes, o botão vira atalho pra próxima posição com item pendente.
+function _atualizarBotaoConcluirLote(itens, pendentes) {
+  const btn = document.getElementById('m-lote-btn-concluir');
+  if (!btn) return;
+  if (pendentes > 0) {
+    btn.textContent = `Faltam ${pendentes} item(ns) — ir pro próximo pendente`;
+    btn.style.background = 'var(--amber)';
+  } else {
+    const divergencias = itens.filter(i => i.status === 'falta' || i.status === 'parcial').length;
+    btn.textContent = divergencias > 0 ? `Concluir lote (${divergencias} com divergência)` : 'Concluir lote';
+    btn.style.background = 'var(--green)';
+  }
+}
+
+function loteConcluirOuIrPendente() {
+  const pendentes = _loteItens.filter(i => i.status === 'pendente').length;
+  if (pendentes > 0) {
+    const { gruposPorRua, ruasOrdenadas } = _loteAgruparPorRua();
+    const idx = ruasOrdenadas.findIndex(rua => gruposPorRua[rua].some(i => i.status === 'pendente'));
+    if (idx !== -1) { _loteEndIdx = idx; _loteAcaoAberta = null; _renderizarListaLote(); }
+    return;
+  }
+  const divergencias = _loteItens.filter(i => i.status === 'falta' || i.status === 'parcial').length;
+  if (divergencias > 0 && typeof wmsConfirm === 'function') {
+    wmsConfirm({
+      icone: '⚠️', titulo: 'Concluir com divergências?',
+      sub: `${divergencias} item(ns) em falta/parcial vão pro repositor. Os pedidos com divergência ficam aguardando reposição.`,
+      btnOk: 'Concluir lote',
+    }, concluirLoteMobile);
+    return;
+  }
+  concluirLoteMobile();
 }
 
 function toggleLotePedidos() {
@@ -418,15 +674,34 @@ function toggleFaltaLote(ids) {
   _renderizarListaLote();
 }
 
-// Avança pra próxima posição — mostra um flash de "concluído" antes de trocar.
+// Depois de Encontrei tudo / Parcial / Falta: se a RUA atual ficou toda
+// resolvida (uma rua com vários endereços/SKUs só avança quando o último for
+// marcado), vai sozinho pra próxima — o separador não precisa apertar "Próxima
+// rua". Só é chamada logo após uma ação, nunca ao renderizar, então voltar pra
+// uma rua já concluída (botão Voltar / Revisar divergências) não pula sozinho.
+let _loteAvancando = false;
+// Guarda do auto-conclusão do pedido individual mobile (ver renderChecklist) —
+// id do último pedido já auto-concluído, pra não disparar de novo a cada
+// rerender do checklist enquanto esse mesmo pedido estiver na tela.
+let _autoConcluirPedidoId = null;
+function _loteAutoAvancar() {
+  if (_loteAvancando) return;
+  const { gruposPorRua, ruasOrdenadas } = _loteAgruparPorRua();
+  if (_loteEndIdx >= ruasOrdenadas.length) return;
+  if (!gruposPorRua[ruasOrdenadas[_loteEndIdx]].every(i => i.status !== 'pendente')) return;
+  _loteAvancando = true;
+  loteProximaPosicao().finally(() => { _loteAvancando = false; });
+}
+
+// Avança pra próxima rua — mostra um flash de "concluído" antes de trocar.
 async function loteProximaPosicao() {
-  const { endsOrdenados } = _loteAgruparPorEndereco();
-  if (_loteEndIdx >= endsOrdenados.length) return;
-  const end = endsOrdenados[_loteEndIdx];
+  const { ruasOrdenadas } = _loteAgruparPorRua();
+  if (_loteEndIdx >= ruasOrdenadas.length) return;
+  const rua = ruasOrdenadas[_loteEndIdx];
   const body = document.getElementById('m-lote-lista-body');
   if (body) body.innerHTML = `<div style="padding:60px 18px;text-align:center">
     <div style="width:44px;height:44px;border-radius:8px;background:rgba(87,185,129,.12);border:1px solid var(--green);display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-size:20px;color:var(--green)">✓</div>
-    <div style="font-size:15px;font-weight:700;color:var(--green)">${end} concluído</div>
+    <div style="font-size:15px;font-weight:700;color:var(--green)">Rua ${rua} concluída</div>
   </div>`;
   const btnProx = document.getElementById('m-lote-btn-prox');
   if (btnProx) btnProx.disabled = true;
@@ -436,16 +711,16 @@ async function loteProximaPosicao() {
   _renderizarListaLote();
 }
 
-// Volta uma posição; na primeira, sai do lote (mesmo comportamento da seta do topo).
+// Volta uma rua; na primeira, sai do lote (mesmo comportamento da seta do topo).
 function loteVoltarPosicao() {
   if (_loteEndIdx > 0) { _loteEndIdx--; _loteAcaoAberta = null; _renderizarListaLote(); }
   else voltarFilaLote();
 }
 
-// Pula direto pra primeira posição com item em falta (link do painel de resumo).
+// Pula direto pra primeira rua com item em falta (link do painel de resumo).
 function loteRevisarDivergencias() {
-  const { gruposPorEnd, endsOrdenados } = _loteAgruparPorEndereco();
-  const idx = endsOrdenados.findIndex(end => gruposPorEnd[end].some(i => i.status === 'falta'));
+  const { gruposPorRua, ruasOrdenadas } = _loteAgruparPorRua();
+  const idx = ruasOrdenadas.findIndex(rua => gruposPorRua[rua].some(i => i.status === 'falta'));
   _loteEndIdx = idx === -1 ? 0 : idx;
   _renderizarListaLote();
 }
@@ -466,7 +741,9 @@ async function verificarGrupoLote(idsStr) {
       const item = _loteItens.find(i => i.id === id);
       if (item) item.status = 'encontrado';
     }
+    feedbackColetor('sucesso');
     _renderizarListaLote();
+    _loteAutoAvancar();
   } catch(e) { toast('Erro de rede','erro'); }
 }
 
@@ -508,8 +785,10 @@ async function parcialGrupoLote(idsStr, qtdTotal, qtdEncontrada) {
     } catch(e) { /* segue */ }
   }
 
+  feedbackColetor('parcial');
   toast(`${qtdEncontrada} de ${qtdTotal} unidades registradas`,'aviso');
   _renderizarListaLote();
+  _loteAutoAvancar();
 }
 
 // Confirma o motivo escolhido pra Falta (fecha o seletor e reporta ao repositor)
@@ -535,8 +814,10 @@ async function faltaGrupoLote(idsStr, qtdTotal, motivo) {
       const item = _loteItens.find(i => i.id === id);
       if (item) item.status = 'falta';
     }
+    feedbackColetor('falta');
     toast('Repositor acionado','aviso');
     _renderizarListaLote();
+    _loteAutoAvancar();
   } catch(e) { toast('Erro de rede','erro'); }
 }
 
@@ -551,8 +832,8 @@ async function concluirLoteMobile() {
     const data = await res.json();
     if (!res.ok) { toast(data.erro||'Erro ao concluir lote','erro'); return; }
 
-    if (data.aguardando) toast('Lote enviado para aguardando repositor','aviso');
-    else toast('Lote concluído!','sucesso');
+    if (data.aguardando) { feedbackColetor('parcial'); toast('Lote enviado para aguardando repositor','aviso'); }
+    else { feedbackColetor('sucesso'); toast('Lote concluído!','sucesso'); }
 
     // Tela de conclusão
     document.getElementById('m-lote-conclusao-body').innerHTML = _loteAtual.map((p,i) => {
@@ -597,8 +878,8 @@ async function carregarChecklistMobile() {
     itensAtuais = await res.json();
     const wrap = document.getElementById('m-cl-wrap');
     if (!itensAtuais.length) { wrap.style.display = 'none'; return; }
-    // Ordena pela rota física do estoque, sempre partindo do corredor E
-    itensAtuais.sort((a,b) => (_rotaIdx(a.endereco) - _rotaIdx(b.endereco)) * _checklistSortDir);
+    // Ordena pela rota física do estoque — ver toggleOrdemChecklist() pra inverter.
+    _ordenarItensAtuaisPorRua();
     wrap.style.display = 'block';
     renderChecklist('m-cl');
   } catch(e) { toast('Erro ao carregar itens!','erro'); }
@@ -752,13 +1033,68 @@ async function carregarFilaMobile() {
           ${peds.slice(0,6).map((p,i)=>`<span style="background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:6px;padding:2px 8px;font-size:11px">#${p.numero_pedido}</span>`).join('')}
           ${peds.length>6?`<span style="font-size:11px;color:var(--text3);padding:2px 4px">+${peds.length-6}</span>`:''}
         </div>
+        ${_renderLotePedidoAPedido(loteId, peds)}
       </div>`;
     };
 
-    const loteSistemaCard = Object.entries(_gruposLoteSistema).map(([loteId, peds]) => _renderLoteCard(loteId, peds, { emAndamento:false })).join('')
-      + Object.entries(_gruposLoteAndamento).map(([loteId, peds]) => _renderLoteCard(loteId, peds, { emAndamento:true })).join('');
+    // Deixa o separador pegar um pedido só, mesmo com o lote já em andamento —
+    // antes isso só existia pra lote ainda pendente (bug relatado: depois de
+    // entrar no lote, que já marca tudo 'separando' na hora, a opção sumia e
+    // não tinha mais como voltar a separar pedido a pedido). Pendente: sai do
+    // lote no servidor (tirar-do-lote) e inicia. Já separando: só continua —
+    // tirar-do-lote rejeitaria (só funciona pra pendente), então nem tenta.
+    const _renderLotePedidoAPedido = (loteId, peds) => {
+      const aberto = _lotesPedidosAbertos.has(String(loteId));
+      return `<div onclick="event.stopPropagation()" style="margin-top:10px;border-top:1px solid var(--border);padding-top:8px">
+        <button type="button" onclick="_toggleLotePedidos(${loteId})"
+          style="width:100%;background:none;border:none;color:var(--text2);font-size:12px;font-weight:600;padding:4px 0;cursor:pointer;display:flex;align-items:center;justify-content:space-between">
+          <span>Separar pedido a pedido</span><span id="lote-peds-seta-${loteId}">${aberto ? '▴' : '▾'}</span>
+        </button>
+        <div id="lote-peds-${loteId}" style="display:${aberto ? 'block' : 'none'};margin-top:6px">
+          ${peds.map(p => {
+            const jaSeparando = p.status === 'separando';
+            const acao = jaSeparando ? `selecionarPedidoFilaMobile('${p.numero_pedido}')` : `iniciarPedidoDoLoteMobile(${p.id},'${p.numero_pedido}')`;
+            return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--border)">
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13px;font-weight:700;color:var(--text);font-family:'Space Mono',monospace">#${p.numero_pedido}</div>
+              <div style="font-size:11px;color:var(--text3)">${p.total_itens||p.itens||0} itens · ${p.itens||0} SKUs</div>
+            </div>
+            <button type="button" class="btn btn-outline btn-sm" style="padding:8px 12px;font-size:12px;font-weight:700"
+              onclick="${acao}">${jaSeparando ? 'Continuar' : 'Separar só este'}</button>
+          </div>`;
+          }).join('')}
+          <div style="font-size:10px;color:var(--text3);margin-top:4px">${peds.some(p=>p.status==='pendente') ? 'O pedido sai deste lote e é separado sozinho.' : ''}</div>
+        </div>
+      </div>`;
+    };
 
-    lista.innerHTML = loteSistemaCard + loteCard + ordenadosMob.filter(p => !p.lote_id).map(p => {
+    // Modo "por lote": lotes (prontos e em andamento) como card único + pedidos soltos.
+    // Modo "pedido a pedido": TODOS os pedidos aparecem soltos, um por card — inclusive
+    // os de um lote já iniciado (o item continua marcado como já verificado, porque o
+    // status fica em itens_pedido, independente de ter sido aberto pela tela de lote
+    // ou individual). Sem isso o separador ficava preso: uma vez iniciado o lote, não
+    // tinha jeito de voltar a trabalhar pedido a pedido nele.
+    const modo = _modoSeparacao();
+    const loteSistemaCard = modo === 'lote'
+      ? Object.entries(_gruposLoteSistema).map(([loteId, peds]) => _renderLoteCard(loteId, peds, { emAndamento:false })).join('')
+        + Object.entries(_gruposLoteAndamento).map(([loteId, peds]) => _renderLoteCard(loteId, peds, { emAndamento:true })).join('')
+      : '';
+
+    const temLote = Object.keys(_gruposLoteSistema).length + Object.keys(_gruposLoteAndamento).length > 0;
+    const _btnModo = (valor, rotulo) => {
+      const ativo = modo === valor;
+      return `<button type="button" onclick="setModoSeparacao('${valor}')"
+        style="flex:1;padding:9px 6px;font-size:13px;font-weight:700;border:none;border-radius:8px;cursor:pointer;${ativo ? 'background:var(--accent);color:#fff' : 'background:transparent;color:var(--text2)'}">${rotulo}</button>`;
+    };
+    const seletorModo = temLote
+      ? `<div style="display:flex;gap:4px;padding:4px;margin-bottom:12px;background:var(--surface2);border:1px solid var(--border);border-radius:10px">
+          ${_btnModo('lote', 'Por lote')}${_btnModo('pedido', 'Pedido a pedido')}
+        </div>`
+      : '';
+
+    const pedidosSoltos = modo === 'pedido' ? ordenadosMob : ordenadosMob.filter(p => !p.lote_id);
+
+    const _renderPedidoCard = (p) => {
       const transp   = String(p.transportadora||'').toUpperCase();
       const isDrive  = transp.includes('DRIVE');
       const isPrime  = p.tem_prime === true;
@@ -790,6 +1126,7 @@ async function carregarFilaMobile() {
           <span><b style="color:var(--text)">${p.itens||0} SKUs</b></span>
           ${p.cliente ? `<span>${p.cliente}</span>` : ''}
           ${p.transportadora ? `<span>${p.transportadora}</span>` : ''}
+          ${p.lote_id ? `<span style="color:var(--text3)">do lote #${p.lote_id}</span>` : ''}
         </div>
         ${temSup ? `<div style="display:flex;align-items:center;gap:5px;background:rgba(139,92,246,.15);border:1px solid rgba(139,92,246,.4);border-radius:6px;padding:5px 9px;margin-bottom:5px">
           <span style="font-size:11px;font-weight:700;color:var(--indigo)">${qtdSup} item${qtdSup>1?'s':''} aguardando supervisor</span>
@@ -802,11 +1139,13 @@ async function carregarFilaMobile() {
           <span style="font-size:11px;font-weight:700;color:var(--green)">${qtdReposto} item${qtdReposto>1?'s':''} reposto${qtdReposto>1?'s':''} pelo repositor — volte para este pedido!</span>
         </div>` : ''}
         <button class="btn btn-primary btn-sm" style="width:100%;margin-top:8px;padding:10px;font-size:14px;font-weight:700${temReposto?';background:#16a34a':''}"
-          onclick="selecionarPedidoFilaMobile('${p.numero_pedido}')">
-          ${temReposto ? 'Continuar Separação' : 'Iniciar Separação'}
+          onclick="${p.lote_id && p.status === 'pendente' ? `iniciarPedidoDoLoteMobile(${p.id},'${p.numero_pedido}')` : `selecionarPedidoFilaMobile('${p.numero_pedido}')`}">
+          ${temReposto || p.status === 'separando' ? 'Continuar Separação' : 'Iniciar Separação'}
         </button>
       </div>`);
-    }).join('');
+    };
+
+    lista.innerHTML = seletorModo + loteSistemaCard + loteCard + pedidosSoltos.map(_renderPedidoCard).join('');
     _initFilaDragReorder(lista);
   } catch(e) { console.warn(e); }
 }
@@ -1359,15 +1698,18 @@ function renderChecklist(prefix) {
   if(contEl)   contEl.textContent   = `${verificados}/${total} itens`;
   if(barraEl)  barraEl.style.width  = `${pct}%`;
 
-  // Rota no resumo — pills de rua com destaque na atual
+  // Rota no resumo — botão de inverter ordem + pills de rua (clicáveis, mostram
+  // todos os itens daquela rua no pedido) com destaque na atual.
   if(resumoEl) {
-    resumoEl.innerHTML = ruasNoPedido.map(r => {
+    const toggleBtn = `<button type="button" onclick="toggleOrdemChecklist()" title="Inverter ordem de caminhada"
+      style="display:inline-block;font-size:10px;font-weight:700;color:var(--text2);background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:2px 8px;margin:2px 6px 2px 0;cursor:pointer">⇅ ${_checklistSortDir===1?'A→Z':'Z→A'}</button>`;
+    resumoEl.innerHTML = toggleBtn + ruasNoPedido.map(r => {
       const ruaOk = itensAtuais.filter(i=>getRua(i.endereco)===r).every(i=>i.status!=='pendente');
       const ativo = r === ruaEmFoco;
       const bg  = ativo?'#185FA5':ruaOk?'#EAF3DE':'#F1F5F9';
       const cor = ativo?'#fff':ruaOk?'#27500A':'#64748B';
       const bord= ativo?'#185FA5':ruaOk?'#97C459':'#CBD5E1';
-      return `<span style="display:inline-block;font-size:11px;font-weight:500;padding:2px 9px;border-radius:20px;background:${bg};color:${cor};border:1px solid ${bord};margin:2px 2px 2px 0;">${r}</span>`;
+      return `<span onclick="verItensDaRuaChecklist('${r}')" style="display:inline-block;font-size:11px;font-weight:500;padding:2px 9px;border-radius:20px;background:${bg};color:${cor};border:1px solid ${bord};margin:2px 2px 2px 0;cursor:pointer">${r}</span>`;
     }).join('');
   }
 
@@ -1452,7 +1794,16 @@ function renderChecklist(prefix) {
     if(bf) bf.style.display='none';
   }
 
-
+  // Conclui sozinho assim que o botão chega no estado "pode concluir sem
+  // ressalva" (bc.disabled===false com o texto padrão) — mesmo padrão já usado
+  // no lote (_loteAutoAvancar): bipou tudo certo, vai direto pra "Separado"
+  // sem precisar apertar. Só no mobile (prefix 'm-cl') e uma vez por pedido —
+  // sem a guarda, cada rerender do checklist tentaria concluir de novo.
+  if (prefix === 'm-cl' && bc && !bc.disabled && bc.textContent === 'CONCLUIR PEDIDO'
+      && pedidoAtualId && _autoConcluirPedidoId !== pedidoAtualId) {
+    _autoConcluirPedidoId = pedidoAtualId;
+    concluirPedidoMobile();
+  }
 
 
   const listEl = document.getElementById(`${prefix}-lista`);
@@ -1508,6 +1859,7 @@ function renderChecklist(prefix) {
             <div style="font-family:'Space Mono',monospace;font-size:14px;font-weight:700;color:var(--text3);letter-spacing:-.3px;margin-bottom:2px">${item.codigo||'—'}</div>
             <div style="font-size:16px;font-weight:800;color:var(--text);line-height:1.3;margin-bottom:4px">${item.descricao||'<span style="color:var(--text3);font-style:italic">Sem descrição</span>'}</div>
             <div style="font-size:15px;font-weight:700;color:#818CF8;letter-spacing:.5px">${item.endereco||'—'}</div>
+            ${item.colmeia_enderecos ? `<div style="font-size:11px;font-weight:600;color:var(--indigo);margin-top:2px">Também em: ${item.colmeia_enderecos}</div>` : ''}
           </div>
           <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;margin-left:10px">
             ${item.status!=='pendente'?`<span style="font-size:9px;font-weight:800;letter-spacing:1.5px;padding:3px 8px;border-radius:4px;background:${cardAccent};color:#fff">${statusLabel}</span>`:''}
@@ -1564,6 +1916,7 @@ function renderChecklist(prefix) {
           <span style="font-family:'Space Mono',monospace;font-size:13px;font-weight:700;color:var(--text);background:var(--surface2);padding:2px 8px;border-radius:5px;border:1px solid var(--border)">×${item.quantidade||1}</span>
           ${item.hora_verificado?`<span style="font-size:10px;color:var(--text3)">${item.hora_verificado}</span>`:''}
         </div>
+        ${item.colmeia_enderecos ? `<div style="font-size:11px;font-weight:600;color:var(--indigo);margin-bottom:4px">Também em: ${item.colmeia_enderecos}</div>` : ''}
         <div style="font-size:12px;color:var(--text2);line-height:1.35">${item.descricao||'—'}</div>
         ${item.status==='falta'?`<div style="font-size:11px;color:var(--red);font-weight:600;margin-top:4px">Repositor notificado — aguardando reposição</div>`:''}
         ${item.status==='parcial'?`<div style="font-size:11px;color:var(--amber);font-weight:600;margin-top:4px">${item.obs||'Parcial'} — repositor notificado</div>`:''}
@@ -1638,6 +1991,7 @@ async function verificarItem(itemId, status, obs='', qtdFalta=0, prefix, renderP
     });
     if (!resp.ok) { toast('Erro ao verificar item!','erro'); return; }
     if (item) { item.status=status; item.obs=obs; item.aviso_status=''; }
+    feedbackColetor(status==='falta' ? 'falta' : status==='parcial' ? 'parcial' : 'sucesso');
     if (status==='falta')     toast('Falta — repositor avisado!','aviso');
     if (status==='parcial')   toast('Parcial — repositor avisado!','aviso');
     renderChecklist(renderPrefix);
@@ -1777,7 +2131,20 @@ document.getElementById('ck-input-caixa')?.addEventListener('keypress', e => { i
   if (fim) fim.value = hoje;
 })();
 (async function verificarSessao() {
-  const mostrarLogin = () => { const el = document.getElementById('tela-login'); if (el) el.style.display = 'flex'; };
+  const mostrarLogin = () => {
+    const el = document.getElementById('tela-login');
+    if (el) el.style.display = 'flex';
+    // Mensagem deixada por trocarSenhaTemp() antes do reload (ver auth.js) —
+    // mostra uma vez só e limpa, senão reaparece em todo F5 subsequente.
+    try {
+      const msg = sessionStorage.getItem('wms_login_msg');
+      if (msg) {
+        sessionStorage.removeItem('wms_login_msg');
+        const erroLogin = document.getElementById('login-erro');
+        if (erroLogin) { erroLogin.textContent = msg; erroLogin.style.display = 'block'; erroLogin.style.color = 'var(--green)'; }
+      }
+    } catch(e) {}
+  };
   try {
     const res  = await fetch(`${API}/auth/me`, { credentials:'include' });
     if (!res.ok) { mostrarLogin(); return; }

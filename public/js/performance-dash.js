@@ -24,6 +24,17 @@ function pfFmtBR(iso) {
 function pfDestroyChart(id) {
   if (_pfCharts[id]) { _pfCharts[id].destroy(); delete _pfCharts[id]; }
 }
+// Duração em horas legíveis (pedido: "não quero 178 minutos, quero saber
+// quantas horas"): abaixo de 1 min em segundos, até 59 min em minutos, e de
+// 1h pra cima como "2h 58min".
+function pfFmtTempo(min) {
+  if (min == null || isNaN(min)) return '—';
+  min = Number(min);
+  if (min < 1) return `${Math.round(min * 60)}s`;
+  const total = Math.round(min);
+  if (total < 60) return `${total} min`;
+  return `${Math.floor(total / 60)}h ${String(total % 60).padStart(2, '0')}min`;
+}
 function pfEsc(s) {
   return String(s||'')
     .replace(/&/g,'&amp;').replace(/</g,'&lt;')
@@ -591,7 +602,7 @@ function pfRenderKPIs({ totPed, totItens, totSkus, totRep, tempoMed, tempoMin, t
   // ── Checkout e Embalagem — vêm prontos do backend (não dependem do filtro de colaborador) ──
   const setorCard = (cor, label, setor, unidade) => {
     if (!setor) return '';
-    const tempoTxt = setor.tempo_medio_min != null ? setor.tempo_medio_min.toFixed(1)+' min' : '—';
+    const tempoTxt = setor.tempo_medio_min != null ? pfFmtTempo(setor.tempo_medio_min) : '—';
     const rapNome = setor.mais_rapido?.nome ? setor.mais_rapido.nome.split(' ')[0] : '—';
     return card(
       cor, label, pfFmtN(setor.concluidos), `${unidade} concluídos`,
@@ -623,15 +634,15 @@ function pfRenderKPIs({ totPed, totItens, totSkus, totRep, tempoMed, tempoMin, t
       'var(--accent)',
       'Reposição', pfFmtN(totRep), 'reposições geradas',
       mini('% dos pedidos', repPct + '%') +
-      mini('Tempo médio', _pfDados?.reposicao?.tempo_medio_min != null ? _pfDados.reposicao.tempo_medio_min.toFixed(1)+' min' : '—') +
+      mini('Tempo médio', _pfDados?.reposicao?.tempo_medio_min != null ? pfFmtTempo(_pfDados.reposicao.tempo_medio_min) : '—') +
       mini('Mais repos.', liderRep?.reposicoes ? (liderRep.nome||'?').split(' ')[0] : '—') +
       mini('Méd/colab', nColab > 0 ? (totRep / nColab).toFixed(1) : '0')
     ) +
     card(
       'var(--accent)',
-      'Tempo médio', tempoMed != null ? tempoMed.toFixed(1)+' min' : '—', 'por pedido (separação)',
-      mini('Mais rápido', tempoMin ? (tempoMin.nome||'?').split(' ')[0]+' ('+tempoMin.t.toFixed(1)+'m)' : '—') +
-      mini('Mais lento', tempoMax ? (tempoMax.nome||'?').split(' ')[0]+' ('+tempoMax.t.toFixed(1)+'m)' : '—') +
+      'Tempo médio', tempoMed != null ? pfFmtTempo(tempoMed) : '—', 'por pedido (separação)',
+      mini('Mais rápido', tempoMin ? (tempoMin.nome||'?').split(' ')[0]+' ('+pfFmtTempo(tempoMin.t)+')' : '—') +
+      mini('Mais lento', tempoMax ? (tempoMax.nome||'?').split(' ')[0]+' ('+pfFmtTempo(tempoMax.t)+')' : '—') +
       mini('Com tempo', pfFmtN(nComTempo)) +
       mini('Sem tempo', pfFmtN(nColab - nComTempo))
     ) +
@@ -694,7 +705,7 @@ function pfRenderChartTempo(colab) {
     },
     options: pfChartOpts({
       indexAxis: 'y',
-      plugins: { legend:{display:false}, tooltip:{ callbacks:{ label:c => ` ${c.parsed.x.toFixed(1)} min/pedido` }}},
+      plugins: { legend:{display:false}, tooltip:{ callbacks:{ label:c => ` ${pfFmtTempo(c.parsed.x)} por pedido` }}},
       scales: { x:{ ticks:{...PF_TICK, callback:v=>`${v}min`}, grid:PF_GRID }, y:{ ticks:{...PF_TICK,font:{size:11}}, grid:PF_GRID } }
     })
   });
@@ -748,7 +759,7 @@ function pfRenderTabela(colab, totPed) {
       <td style="padding:10px 14px;text-align:right;font-size:12px;color:var(--amber)">${pfFmtN(c.skus)}</td>
       <td style="padding:10px 14px;text-align:right;font-size:12px;color:var(--red)">${pfFmtN(c.reposicoes)}</td>
       <td style="padding:10px 14px;text-align:right;font-size:12px;color:var(--text3)">${ipd}</td>
-      <td style="padding:10px 14px;text-align:right;font-size:12px;color:var(--indigo)">${c.tempo_medio_min!=null?c.tempo_medio_min.toFixed(1)+' min':'—'}</td>
+      <td style="padding:10px 14px;text-align:right;font-size:12px;color:var(--indigo)">${c.tempo_medio_min!=null?pfFmtTempo(c.tempo_medio_min):'—'}</td>
     </tr>`;
   }).join('');
 }
@@ -793,7 +804,7 @@ function pfRenderTabelaSetor(titulo, rows, temItens) {
             <td style="padding:10px 14px;text-align:right;font-weight:700;color:var(--info);font-size:13px">${pfFmtN(r.concluidos)}</td>
             <td style="padding:10px 14px;text-align:right;font-size:12px;color:var(--red)">${pfFmtN(r.pendentes)}</td>
             ${temItens ? `<td style="padding:10px 14px;text-align:right;font-size:12px">${pfFmtN(r.itens||0)}</td>` : ''}
-            <td style="padding:10px 14px;text-align:right;font-size:12px;color:var(--indigo)">${r.tempo_medio_min!=null?r.tempo_medio_min.toFixed(1)+' min':'—'}</td>
+            <td style="padding:10px 14px;text-align:right;font-size:12px;color:var(--indigo)">${r.tempo_medio_min!=null?pfFmtTempo(r.tempo_medio_min):'—'}</td>
           </tr>`).join('')}
         </tbody>
       </table>
@@ -865,7 +876,7 @@ function pfRenderTiming(filtroNome) {
   const fmtDur = min => {
     if (min == null) return '—';
     if (min < 1) return `${Math.round(min*60)}s`;
-    return `${min.toFixed(1)} min`;
+    return pfFmtTempo(min);
   };
   const badgeDur = (min) => {
     if (min == null) return `<span style="color:var(--text3);font-size:11px">—</span>`;
@@ -1246,7 +1257,7 @@ function pfGerarInsights() {
     const ordenado = [...comTempo].sort((a,b) => a.tempo_medio_min - b.tempo_medio_min);
     const rapido = ordenado[0], lento = ordenado[ordenado.length-1];
     if (lento.tempo_medio_min > rapido.tempo_medio_min * 1.5) {
-      insights.push(`${pfEsc(lento.nome)} levou em média ${lento.tempo_medio_min.toFixed(1)} min por pedido — cerca de ${(lento.tempo_medio_min/rapido.tempo_medio_min).toFixed(1)}x mais que ${pfEsc(rapido.nome)} (${rapido.tempo_medio_min.toFixed(1)} min). Vale entender se foi complexidade dos pedidos recebidos ou dificuldade pontual.`);
+      insights.push(`${pfEsc(lento.nome)} levou em média ${pfFmtTempo(lento.tempo_medio_min)} por pedido — cerca de ${(lento.tempo_medio_min/rapido.tempo_medio_min).toFixed(1)}x mais que ${pfEsc(rapido.nome)} (${pfFmtTempo(rapido.tempo_medio_min)}). Vale entender se foi complexidade dos pedidos recebidos ou dificuldade pontual.`);
     }
   }
 
@@ -1323,22 +1334,22 @@ function pfAbrirAnalisePdf() {
         ${linha('Itens separados', pfFmtN(totItens))}
         ${linha('SKUs (total)', pfFmtN(totSkus))}
         ${linha('Ruas percorridas (total)', pfFmtN(totRuas))}
-        ${linha('Tempo médio de separação', tempoMedio!=null ? tempoMedio.toFixed(1)+' min' : '—')}
+        ${linha('Tempo médio de separação', tempoMedio!=null ? pfFmtTempo(tempoMedio) : '—')}
         ${linha('Colaboradores', colab.length)}
       </table></div>
       <div class="box"><h3>Reposição</h3><table>
         ${linha('Reposições geradas', pfFmtN(totRep))}
-        ${linha('Tempo médio de resolução', rep.tempo_medio_min!=null ? rep.tempo_medio_min.toFixed(1)+' min' : '—')}
+        ${linha('Tempo médio de resolução', rep.tempo_medio_min!=null ? pfFmtTempo(rep.tempo_medio_min) : '—')}
       </table></div>
       <div class="box"><h3>Checkout</h3><table>
         ${linha('Pedidos concluídos / pendentes', `${ck.concluidos||0} / ${ck.pendentes||0}`)}
         ${linha('Itens conferidos', pfFmtN(ck.itens||0))}
-        ${linha('Tempo médio', ck.tempo_medio_min!=null ? ck.tempo_medio_min.toFixed(1)+' min' : '—')}
+        ${linha('Tempo médio', ck.tempo_medio_min!=null ? pfFmtTempo(ck.tempo_medio_min) : '—')}
       </table></div>
       <div class="box"><h3>Embalagem</h3><table>
         ${linha('Pedidos concluídos / pendentes', `${emb.concluidos||0} / ${emb.pendentes||0}`)}
         ${linha('Itens embalados', pfFmtN(emb.itens||0))}
-        ${linha('Tempo médio', emb.tempo_medio_min!=null ? emb.tempo_medio_min.toFixed(1)+' min' : '—')}
+        ${linha('Tempo médio', emb.tempo_medio_min!=null ? pfFmtTempo(emb.tempo_medio_min) : '—')}
       </table></div>
     </div>
 
@@ -1357,7 +1368,7 @@ function pfAbrirAnalisePdf() {
         <td style="padding:6px 10px;text-align:right;font-size:12px">${c.pedidos||0}</td>
         <td style="padding:6px 10px;text-align:right;font-size:12px">${c.itens||0}</td>
         <td style="padding:6px 10px;text-align:right;font-size:12px">${c.reposicoes||0}</td>
-        <td style="padding:6px 10px;text-align:right;font-size:12px">${c.tempo_medio_min!=null ? c.tempo_medio_min.toFixed(1)+' min' : '—'}</td>
+        <td style="padding:6px 10px;text-align:right;font-size:12px">${c.tempo_medio_min!=null ? pfFmtTempo(c.tempo_medio_min) : '—'}</td>
       </tr>`).join('')}
     </table>
 
@@ -2145,7 +2156,7 @@ function pfRenderPedidoDetalhe(d) {
   const fmtDur  = min => {
     if (min == null) return '—';
     if (min < 1) return `${Math.round(min * 60)}s`;
-    return `${min.toFixed(1)} min`;
+    return pfFmtTempo(min);
   };
   const badgeDur = min => {
     if (min == null) return `<span style="color:var(--text3);font-size:11px">—</span>`;

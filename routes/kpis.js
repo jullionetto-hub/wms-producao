@@ -3,6 +3,7 @@ const router = express.Router();
 const { db, pool } = require('../lib/db');
 const { requerAuth, requerPerfil } = require('../lib/auth');
 const { dataHoraLocal, formatarAguardandoDesde } = require('../lib/helpers');
+const { registrarAuditoria } = require('../lib/auditoria');
 
 router.get('/kpis', requerAuth, async (req,res) => {
   const { turnos, data_ini, data_fim } = req.query;
@@ -336,10 +337,12 @@ router.put('/configuracoes/:chave', requerAuth, requerPerfil('supervisor'), asyn
   const { valor } = req.body;
   if (valor === undefined) return res.status(400).json({ erro: 'Valor obrigatório' });
   try {
+    const antes = await db.get('SELECT valor FROM configuracoes WHERE chave=$1', [req.params.chave]);
     await pool.query(
       `INSERT INTO configuracoes (chave,valor) VALUES ($1,$2) ON CONFLICT (chave) DO UPDATE SET valor=$2`,
       [req.params.chave, String(valor)]
     );
+    await registrarAuditoria(req, 'CONFIGURACAO_ALTERADA', 'configuracao', req.params.chave, antes, {valor:String(valor)});
     res.json({ mensagem: 'Salvo!' });
   } catch(e) { res.status(500).json({ erro: e.message }); }
 });

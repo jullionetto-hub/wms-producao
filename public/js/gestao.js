@@ -334,10 +334,53 @@ function absnGerarPDF() {
     </tr></thead>
     <tbody>${linhasHtml || '<tr><td colspan="10" style="text-align:center">Nenhum colaborador</td></tr>'}</tbody>
   </table>
+  ${linhas.length ? `
+  <h2 style="font-size:14px;margin-top:24px">Resumo por colaborador</h2>
+  ${linhas.map(r => `
+    <div style="margin-bottom:10px;padding:10px 12px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px;line-height:1.6">
+      <div style="font-weight:700;margin-bottom:4px">${pfEsc(r.colaborador.nome)}</div>
+      <div style="color:#334155">${_absnTextoPerformance(r)}</div>
+    </div>`).join('')}` : ''}
 </body></html>`;
   const w = window.open('', '_blank');
   w.document.write(html);
   w.document.close();
+}
+
+// Resumo em texto corrido de como foi a performance do colaborador no
+// período, comparado com o horário da empresa (campo livre lido do PDF do
+// InPonto, ex: "Logistica - Manhã 06h - 15h20"). Complementa a tabela
+// numérica com algo que dá pra ler/copiar direto num feedback, sem precisar
+// traduzir as colunas mentalmente.
+function _absnTextoPerformance(r) {
+  const c = r.colaborador;
+  const dia = n => n === 1 ? 'dia' : 'dias';
+  const partes = [];
+
+  partes.push(`No período analisado, <b>${pfEsc(c.nome)}</b> trabalhou <b>${r.total_dias}</b> ${dia(r.total_dias)}, seguindo o horário <b>${pfEsc(c.horario || 'não identificado no espelho de ponto')}</b> definido pela empresa.`);
+
+  const atrasos = [];
+  if (r.entradas_atrasadas) atrasos.push(`${r.entradas_atrasadas} atraso${r.entradas_atrasadas===1?'':'s'} na entrada`);
+  if (r.almocos_atrasados)  atrasos.push(`${r.almocos_atrasados} atraso${r.almocos_atrasados===1?'':'s'} na volta do almoço`);
+  if (r.pausas_atrasadas)   atrasos.push(`${r.pausas_atrasadas} atraso${r.pausas_atrasadas===1?'':'s'} na volta da pausa`);
+  partes.push(atrasos.length
+    ? `Registrou ${atrasos.join(', ')}, somando <b>${_absnFmtMin(r.total_atraso_min,false)}</b> de atraso no total.`
+    : `Não teve nenhum atraso registrado no período — cumpriu o horário à risca.`);
+
+  if (r.banco_horas_min != null) {
+    const tom = r.banco_horas_min > 0 ? 'positivo' : (r.banco_horas_min < 0 ? 'negativo' : 'zerado');
+    partes.push(`O banco de horas atual está <b>${tom}</b> (${_absnFmtMin(r.banco_horas_min,true)}).`);
+  }
+
+  const ocorrencias = [];
+  if (r.faltas_injustificadas)  ocorrencias.push(`${r.faltas_injustificadas} falta${r.faltas_injustificadas===1?'':'s'} injustificada${r.faltas_injustificadas===1?'':'s'}`);
+  if (r.ausencias_justificadas) ocorrencias.push(`${r.ausencias_justificadas} atestado${r.ausencias_justificadas===1?'':'s'} médico${r.ausencias_justificadas===1?'':'s'}`);
+  if (r.declaracoes_horas)      ocorrencias.push(`${r.declaracoes_horas} declaração${r.declaracoes_horas===1?'':'ões'} de horas`);
+  partes.push(ocorrencias.length
+    ? `Também teve ${ocorrencias.join(', ')} no período.`
+    : `Sem faltas ou ausências registradas no período.`);
+
+  return partes.join(' ');
 }
 
 function absnAbrirDetalhe(colaboradorId) {

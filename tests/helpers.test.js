@@ -6,7 +6,7 @@
  */
 
 const {
-  perfisPermitidos, formatarAguardandoDesde, sanitizeStr, validarId, dataHoraLocal,
+  perfisPermitidos, formatarAguardandoDesde, sanitizeStr, validarId, dataHoraLocal, classificarFiscal,
 } = require('../lib/helpers');
 
 /* ════════════════════════════════════════════════════════════
@@ -132,5 +132,35 @@ describe('dataHoraLocal', () => {
     const { data, hora } = dataHoraLocal();
     expect(data).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(hora).toMatch(/^\d{2}:\d{2}:\d{2}$/);
+  });
+});
+
+/* ════════════════════════════════════════════════════════════
+   classificarFiscal
+════════════════════════════════════════════════════════════ */
+describe('classificarFiscal', () => {
+  test('estado da lista NF cheia retorna "NF cheia"', () => {
+    expect(classificarFiscal('CE')).toBe('NF cheia');
+    expect(classificarFiscal('ro')).toBe('NF cheia'); // case-insensitive
+  });
+
+  test('estado da lista Declaração retorna "Declaração"', () => {
+    expect(classificarFiscal('SP')).toBe('Declaração');
+    expect(classificarFiscal(' rj ')).toBe('Declaração'); // aceita espaços
+  });
+
+  test('estado vazio, nulo ou sigla desconhecida retorna string vazia', () => {
+    expect(classificarFiscal('')).toBe('');
+    expect(classificarFiscal(null)).toBe('');
+    expect(classificarFiscal(undefined)).toBe('');
+    expect(classificarFiscal('XX')).toBe('');
+  });
+
+  test('todas as 27 UFs ficam classificadas em exatamente uma das duas categorias', () => {
+    const todas = ['AC','AL','AM','AP','BA','CE','DF','ES','GO','MA','MG','MS','MT','PA','PB',
+      'PE','PI','PR','RJ','RN','RO','RR','RS','SC','SE','SP','TO'];
+    expect(todas).toHaveLength(27);
+    const classificadas = todas.map(classificarFiscal);
+    expect(classificadas.every(c => c === 'NF cheia' || c === 'Declaração')).toBe(true);
   });
 });

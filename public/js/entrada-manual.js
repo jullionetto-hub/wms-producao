@@ -714,9 +714,33 @@ function emExportarCSV() {
 }
 
 // ── Renderização da página principal ─────────────────────────────────────
+// Separador/checkout/embalador só enxergam a busca de código de barras (achar o
+// produto e exibir o código na tela pro leitor físico bipar) — as outras abas
+// (Entrada de Estoque, Inventário) são ferramentas de gestão de estoque, fora
+// do que essas funções fazem no dia a dia.
+const PERFIS_SO_LEITOR = ['separador', 'checkout', 'embalador'];
+
 function renderizarPagEntradaManual(containerId) {
   const pag = document.getElementById(containerId || 'pag-entrada-manual');
   if (!pag) return;
+
+  if (PERFIS_SO_LEITOR.includes(usuarioAtual?.perfil)) {
+    pag.innerHTML = `
+    <div style="padding:0 0 32px;max-width:480px">
+      <div class="card" style="padding:20px">
+        <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:6px">Código de Barras</div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:14px">Quando o leitor não consegue ler a etiqueta física, busque o produto aqui e bipe o código exibido na tela.</div>
+        <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+          <input id="bc-input" type="text" placeholder="Código do produto ou código de barras (EAN)..."
+            style="flex:1;min-width:200px;padding:11px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:14px;outline:none"
+            onkeydown="if(event.key==='Enter')bcBuscar()">
+          <button onclick="bcBuscar()" style="background:var(--accent);color:#fff;border:none;border-radius:10px;padding:11px 22px;font-size:13px;font-weight:700;cursor:pointer">Buscar</button>
+        </div>
+        <div id="bc-resultado"></div>
+      </div>
+    </div>`;
+    return;
+  }
 
   const hoje = new Date().toISOString().split('T')[0];
   const primDia = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
