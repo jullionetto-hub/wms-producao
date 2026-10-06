@@ -483,6 +483,87 @@ router.put('/repositor/avisos/:id/liberar', requerAuth, requerPerfil('supervisor
   } catch(e) { res.status(500).json({erro: e.message}); }
 });
 
+/* ── Busca final — um repositor (o "assistente") faz uma última conferência
+   física no item antes de fechar a falta pra valer. Substitui a decisão às
+   cegas que a Liberação pedia do supervisor: aqui tem busca de verdade, com
+   Iniciar/Encontrei/Não encontrei, igual às 3 tentativas normais — só que
+   fora do contador de tentativas (não usa o array `tentativas`), porque essa
+   não é mais uma tentativa comum, é a confirmação final. */
+router.put('/repositor/avisos/:id/busca-final/iniciar', requerAuth, async (req,res) => {
+  const id = validarId(req.params.id);
+  if (!id) return res.status(400).json({erro:'ID invalido'});
+  const { hora } = dataHoraLocal();
+  const usuario = req.session?.usuario?.nome || req.body?.repositor_nome || 'Sistema';
+  try {
+    const atual = await db.get('SELECT status, historico FROM avisos_repositor WHERE id=$1',[id]);
+    if (!atual) return res.status(404).json({erro:'Aviso não encontrado'});
+    if (atual.status !== 'nao_encontrado') return res.status(409).json({erro:`Item não está aguardando busca final (status atual: ${atual.status})`});
+    let hist = [];
+    try { hist = Array.isArray(atual.historico) ? atual.historico : (atual.historico ? JSON.parse(atual.historico) : []); } catch{}
+    const histNovo = [...hist, { usuario, acao:'busca_final_iniciada', hora }];
+    await pool.query(
+      `UPDATE avisos_repositor SET status='busca_final', situacao='busca_final', hora_inicio_busca=$1, quem_pegou=$2, historico=$3 WHERE id=$4`,
+      [hora, usuario, JSON.stringify(histNovo), id]
+    );
+    req.app.get('io')?.emit('aviso:atualizado', { id, status:'busca_final' });
+    res.json({ mensagem:'Busca final iniciada!' });
+  } catch(e){res.status(500).json({erro:e.message});}
+});
+
+router.put('/repositor/avisos/:id/busca-final/encontrado', requerAuth, async (req,res) => {
+  const id = validarId(req.params.id);
+  if (!id) return res.status(400).json({erro:'ID invalido'});
+  const atual = await db.get('SELECT status FROM avisos_repositor WHERE id=$1',[id]);
+  if (!atual) return res.status(404).json({erro:'Aviso não encontrado'});
+  if (atual.status !== 'busca_final') return res.status(409).json({erro:`Item não está em busca final (status atual: ${atual.status})`});
+  // 'abastecido' é o mesmo status terminal que o repositor normal usa quando
+  // já entrega o item resolvido com a própria mão — o assistente encontrou e
+  // resolveu ali, não precisa devolver pro separador buscar de novo.
+  await resolverAvisoEAcumularTempo(req, res, 'abastecido');
+  // resolverAvisoEAcumularTempo já respondeu a requisição. O que falta é um caso
+  // que ela não cobre: se o pedido já tinha sido concluído com falta (checkout
+  // em 'aguardando_item') antes do assistente achar o item agora, ninguém
+  // atualiza o checkout — faz isso aqui como trabalho de fundo.
+  try {
+    const av = await db.get('SELECT pedido_id FROM avisos_repositor WHERE id=$1',[id]);
+    if (!av) return;
+    const ped = await db.get(`SELECT status FROM pedidos WHERE id=$1`,[av.pedido_id]);
+    if (!ped || ped.status !== 'concluido') return;
+    const ck = await db.get(`SELECT id FROM checkout WHERE pedido_id=$1 AND status='aguardando_item'`,[av.pedido_id]);
+    if (!ck) return;
+    const restantes = await db.all(`SELECT codigo,descricao,quantidade FROM avisos_repositor WHERE pedido_id=$1 AND status='nao_encontrado'`,[av.pedido_id]);
+    if (!restantes.length) {
+      await pool.query(`UPDATE checkout SET status='fila', itens_falta='[]'::jsonb WHERE id=$1`,[ck.id]);
+    } else {
+      const itens_falta = restantes.map(a=>({codigo:a.codigo, descricao:a.descricao, quantidade:a.quantidade}));
+      await pool.query(`UPDATE checkout SET itens_falta=$1 WHERE id=$2`,[JSON.stringify(itens_falta), ck.id]);
+    }
+  } catch(e) { console.warn('sync checkout pós busca final:', e.message); }
+});
+
+router.put('/repositor/avisos/:id/busca-final/nao-encontrado', requerAuth, async (req,res) => {
+  const id = validarId(req.params.id);
+  if (!id) return res.status(400).json({erro:'ID invalido'});
+  const { hora } = dataHoraLocal();
+  const usuario = req.session?.usuario?.nome || req.body?.repositor_nome || 'Sistema';
+  try {
+    const atual = await db.get('SELECT status, historico FROM avisos_repositor WHERE id=$1',[id]);
+    if (!atual) return res.status(404).json({erro:'Aviso não encontrado'});
+    if (atual.status !== 'busca_final') return res.status(409).json({erro:`Item não está em busca final (status atual: ${atual.status})`});
+    let hist = [];
+    try { hist = Array.isArray(atual.historico) ? atual.historico : (atual.historico ? JSON.parse(atual.historico) : []); } catch{}
+    const histNovo = [...hist, { usuario, acao:'protocolado_busca_final', hora }];
+    // Vai direto pra 'protocolado' (sem passar por 'protocolo') — a busca final
+    // já É a confirmação definitiva, não precisa de mais ninguém encerrando depois.
+    await pool.query(
+      `UPDATE avisos_repositor SET status='protocolado', situacao='protocolado', hora_protocolo=$1, quem_guardou=$2, historico=$3 WHERE id=$4`,
+      [hora, usuario, JSON.stringify(histNovo), id]
+    );
+    req.app.get('io')?.emit('aviso:atualizado', { id, status:'protocolado' });
+    res.json({ mensagem:'Falta confirmada — item encerrado em protocolo.' });
+  } catch(e){res.status(500).json({erro:e.message});}
+});
+
 router.get('/protocolo/historico', requerAuth, async (req,res) => {
   try {
     const { data_ini, data_fim } = req.query;
