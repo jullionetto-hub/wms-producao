@@ -12,6 +12,7 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.131.0",
     "bcrypt": "^6.0.0",
     "connect-pg-simple": "^9.0.1",
     "cors": "^2.8.5",

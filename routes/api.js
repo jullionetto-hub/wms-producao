@@ -12,6 +12,7 @@ router.use(require('./embalagem'));
 router.use(require('./passagem'));
 router.use(require('./entrada-manual'));
 router.use(require('./performance-dash'));
+router.use(require('./padroes'));
 router.use(require('./gestao'));
 router.use(require('./caixas'));
 router.use(require('./colmeias'));
