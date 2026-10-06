@@ -88,6 +88,9 @@ function renderizarPerformanceDash() {
       <button id="pf-tab-ocorrencias" onclick="pfSwitchTab('ocorrencias')" class="rel-turno-btn">
         Ocorrências
       </button>
+      <button id="pf-tab-padroes" onclick="pfSwitchTab('padroes')" class="rel-turno-btn">
+        <i class="ti ti-brain" aria-hidden="true"></i> Padrões
+      </button>
       <button id="pf-tab-metas" onclick="pfSwitchTab('metas')" class="rel-turno-btn">
         Metas
       </button>
@@ -236,6 +239,16 @@ function renderizarPerformanceDash() {
       <div id="pf-ocorrencias-wrap"></div>
     </div>
 
+    <!-- ABA PADRÕES -->
+    <div id="pf-padroes-conteudo" style="display:none">
+      <div id="pf-padroes-wrap">
+        <div style="text-align:center;padding:64px 24px;color:var(--text3)">
+          <div style="font-size:14px;font-weight:700;margin-bottom:6px">Selecione o período e clique em Filtrar</div>
+          <div style="font-size:12px">Cruza tempos, correções de marcação, faltas e ocorrências para apontar onde vale investigar</div>
+        </div>
+      </div>
+    </div>
+
     <!-- ABA METAS -->
     <div id="pf-metas-conteudo" style="display:none">
       <div id="pf-metas-wrap">
@@ -275,8 +288,8 @@ let _pfAbaAtiva = 'resumo';
 
 function pfSwitchTab(aba) {
   _pfAbaAtiva = aba;
-  const tabs = { resumo:'pf-tab-resumo', tempos:'pf-tab-tempos', ocorrencias:'pf-tab-ocorrencias', metas:'pf-tab-metas', ranking:'pf-tab-ranking' };
-  const divs = { resumo:'pf-conteudo', tempos:'pf-tempos-conteudo', ocorrencias:'pf-ocorrencias-conteudo', metas:'pf-metas-conteudo', ranking:'pf-ranking-conteudo' };
+  const tabs = { resumo:'pf-tab-resumo', tempos:'pf-tab-tempos', ocorrencias:'pf-tab-ocorrencias', padroes:'pf-tab-padroes', metas:'pf-tab-metas', ranking:'pf-tab-ranking' };
+  const divs = { resumo:'pf-conteudo', tempos:'pf-tempos-conteudo', ocorrencias:'pf-ocorrencias-conteudo', padroes:'pf-padroes-conteudo', metas:'pf-metas-conteudo', ranking:'pf-ranking-conteudo' };
   // Reset todos os botões
   Object.values(tabs).forEach(id => {
     const b = document.getElementById(id);
@@ -306,6 +319,8 @@ function pfSwitchTab(aba) {
       if (!_pfTiming) pfCarregarTiming();
     } else if (aba === 'ocorrencias') {
       pfCarregarOcorrencias();
+    } else if (aba === 'padroes') {
+      pfCarregarPadroes();
     } else if (aba === 'metas') {
       pfCarregarMetas();
     } else if (aba === 'ranking') {
@@ -320,6 +335,8 @@ function pfFiltrarAtivo() {
     pfCarregarTiming();
   } else if (_pfAbaAtiva === 'ocorrencias') {
     pfCarregarOcorrencias();
+  } else if (_pfAbaAtiva === 'padroes') {
+    pfCarregarPadroes();
   } else if (_pfAbaAtiva === 'metas') {
     pfCarregarMetas();
   } else if (_pfAbaAtiva === 'ranking') {
@@ -1566,6 +1583,94 @@ const PF_PERFIL_META = {
   embalador: 120,
   repositor: 90,
 };
+
+// ── Padrões — detecção estatística de sinais por colaborador ───────────────
+const PF_NIVEL_INFO = {
+  critico:  { label: 'Crítico',  cor: 'var(--red)',   borda: 'var(--red)'   },
+  atencao:  { label: 'Atenção',  cor: 'var(--amber)', borda: 'var(--amber)' },
+  melhoria: { label: 'Melhora',  cor: 'var(--green)', borda: 'var(--green)' },
+  ok:       { label: 'OK',       cor: 'var(--text3)', borda: 'var(--border)' },
+};
+
+async function pfCarregarPadroes() {
+  const wrap = document.getElementById('pf-padroes-wrap');
+  if (!wrap) return;
+  const ini   = document.getElementById('pf-ini')?.value   || '';
+  const fim   = document.getElementById('pf-fim')?.value   || '';
+  const turno = document.getElementById('pf-turno')?.value || '';
+
+  wrap.innerHTML = `<div style="text-align:center;padding:48px;color:var(--text3)">Analisando padrões...</div>`;
+
+  const qs = new URLSearchParams({ ini, fim });
+  if (turno) qs.set('turno', turno);
+  qs.set('_', Date.now());
+
+  const dados = await apiFetch(`/performance/padroes?${qs}`);
+  wrap.innerHTML = pfRenderPadroesUI(dados);
+}
+
+function pfRenderPadroesUI(dados) {
+  if (!dados || dados.erro) {
+    return `<div style="text-align:center;padding:48px;color:var(--text3)">Não foi possível calcular os padrões do período.</div>`;
+  }
+
+  const resumo = dados.resumo || { total_avaliado: 0, criticos: 0, atencao: 0 };
+  const kpis = `
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px;margin-bottom:20px">
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px 18px">
+        <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:6px">Colaboradores Avaliados</div>
+        <div style="font-size:32px;font-weight:900;color:var(--text)">${resumo.total_avaliado}</div>
+      </div>
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px 18px">
+        <div style="font-size:11px;font-weight:700;color:var(--red);margin-bottom:6px">Críticos</div>
+        <div style="font-size:32px;font-weight:900;color:var(--text)">${resumo.criticos}</div>
+      </div>
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px 18px">
+        <div style="font-size:11px;font-weight:700;color:var(--amber);margin-bottom:6px">Atenção</div>
+        <div style="font-size:32px;font-weight:900;color:var(--text)">${resumo.atencao}</div>
+      </div>
+    </div>`;
+
+  if (!dados.colaboradores || !dados.colaboradores.length) {
+    return kpis + `
+      <div style="text-align:center;padding:48px;color:var(--text3)">
+        <div style="font-size:13px;font-weight:700">Nenhum padrão relevante identificado automaticamente no período</div>
+        <div style="font-size:12px;margin-top:4px">Operação dentro do esperado para os dados disponíveis.</div>
+      </div>`;
+  }
+
+  const cards = dados.colaboradores.map(c => {
+    const nv = PF_NIVEL_INFO[c.nivel_geral] || PF_NIVEL_INFO.ok;
+    const sinaisHtml = c.sinais.map(s => {
+      const sv = PF_NIVEL_INFO[s.nivel] || PF_NIVEL_INFO.ok;
+      return `
+        <div style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-top:1px solid var(--border)">
+          <span style="background:${sv.cor};color:#fff;border-radius:20px;padding:2px 10px;font-size:10px;font-weight:800;white-space:nowrap">${sv.label}</span>
+          <span style="font-size:13px;color:var(--text);line-height:1.5">${pfEsc(s.texto)}</span>
+        </div>`;
+    }).join('');
+
+    return `
+      <div class="card" style="border-left:4px solid ${nv.borda};padding:16px 20px;margin-bottom:14px">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px">
+          <span style="font-size:15px;font-weight:800;color:var(--text)">${pfEsc(c.nome)}</span>
+          ${c.turno ? `<span style="font-size:11px;color:var(--text3)">${pfEsc(c.turno)}</span>` : ''}
+          <span style="margin-left:auto;background:${nv.cor};color:#fff;border-radius:20px;padding:3px 12px;font-size:11px;font-weight:700">${nv.label}</span>
+        </div>
+        ${sinaisHtml}
+      </div>`;
+  }).join('');
+
+  return kpis + `
+    <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:14px">
+      Sinais detectados — ${dados.colaboradores.length} colaborador(es)
+    </div>
+    ${cards}
+    <div style="font-size:11px;color:var(--text3);margin-top:16px;line-height:1.5">
+      Os sinais acima são indícios estatísticos a partir de dados já registrados pelo sistema — não são veredito de culpa.
+      Vale confirmar a causa (processo, estoque, complexidade do pedido) antes de qualquer ação com o colaborador.
+    </div>`;
+}
 
 async function pfCarregarMetas() {
   const wrap = document.getElementById('pf-metas-wrap');

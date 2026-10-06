@@ -367,8 +367,11 @@ function parseDDMMAAparaISO(str) {
 
 // ── Protocolo ─────────────────────────────────────────────────────────────────
 let _protocoloRows = [];
+let _protocoloRowsHist = [];
+let _protocoloTabAtiva = 'aguardando';
 
 function mudarProtoTab(tab) {
+  _protocoloTabAtiva = tab;
   ['aguardando','protocolados'].forEach(t => {
     const btn = document.getElementById(`proto-tab-btn-${t}`);
     const pnl = document.getElementById(`proto-tab-${t}`);
@@ -387,7 +390,14 @@ function _renderProtoKpis(pedList, pedListH) {
   const itensPend  = pedList.reduce((s, p) => s + p.itens.length, 0);
   const itensProto = pedListH.reduce((s, p) => s + p.itens.length, 0);
   const totalItens = itensPend + itensProto;
-  const totalPeds  = pedList.length + pedListH.length;
+  // Pedido parcialmente fechado (1 item protocolado, outro ainda aguardando)
+  // aparece nas duas listas — conta pedidos únicos, não soma os tamanhos das
+  // duas listas (senão esse pedido entra em dobro no "Total período").
+  const chavesUnicas = new Set([
+    ...pedList.map(p => p.pedido_id || p.numero_pedido),
+    ...pedListH.map(p => p.pedido_id || p.numero_pedido),
+  ]);
+  const totalPeds  = chavesUnicas.size;
 
   // Breakdowns por tipo de entrega no aguardando
   const tipos = {};
@@ -455,6 +465,19 @@ function _transpBadgeProto(transp) {
   return `<span style="background:var(--surface2);color:var(--text2);border:1px solid var(--border);font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;white-space:nowrap">${t}</span>`;
 }
 
+// Atualiza só o badge do menu — chamado via socket quando um item entra/sai
+// de 'protocolo' em qualquer lugar do app, sem precisar abrir a página pra
+// saber que tem trabalho esperando (antes só atualizava ao visitar a tela).
+async function atualizarBadgeProtocolo() {
+  try {
+    const rows = await apiFetch(`/protocolo`);
+    if (!rows) return;
+    const pedidosUnicos = new Set(rows.map(r => r.pedido_id || `manual-${r.id}`));
+    const badge = document.getElementById('menu-badge-proto');
+    if (badge) { badge.textContent = pedidosUnicos.size; badge.style.display = pedidosUnicos.size ? '' : 'none'; }
+  } catch(e) {}
+}
+
 async function carregarProtocolo() {
   const ini = document.getElementById('proto-filtro-ini')?.value || '';
   const fim = document.getElementById('proto-filtro-fim')?.value || '';
@@ -471,7 +494,10 @@ async function carregarProtocolo() {
   // ── Badge do menu ──────────────────────────────────────────────────────────
   const pedMap = {};
   (_protocoloRows).forEach(r => {
-    const key = r.pedido_id || r.numero_pedido;
+    // Entrada Manual tem pedido_id=0 em todas as linhas — se agrupasse por
+    // pedido_id, itens sem nenhuma relação entre si cairiam juntos no mesmo
+    // "pedido" fantasma. Cada um vira grupo próprio (chave por id do aviso).
+    const key = r.pedido_id || `manual-${r.id}`;
     if (!pedMap[key]) pedMap[key] = {
       pedido_id: r.pedido_id, numero_pedido: r.numero_pedido || r.pedido_id,
       cliente: r.cliente || '—', transportadora: r.transportadora || '—', itens: []
@@ -557,8 +583,8 @@ async function carregarProtocolo() {
         <!-- Botão encerrar todos (supervisor) -->
         ${usuarioAtual?.perfil==='supervisor' ? `
         <div style="padding:14px 16px;border-top:1px solid var(--border);display:flex;gap:10px;flex-wrap:wrap">
-          ${pedList.map(ped => `
-            <button onclick="encerrarProtocoloPedido('${ped.numero_pedido}','${ped.itens.map(i=>i.id).join(',')}',${ped.itens.length},this)" id="proto-enc-${ped.numero_pedido}"
+          ${pedList.filter(ped => ped.pedido_id).map(ped => `
+            <button onclick="encerrarProtocoloPedido(${ped.pedido_id},'${ped.numero_pedido}',this)" id="proto-enc-${ped.numero_pedido}"
               style="padding:9px 16px;background:var(--indigo);color:#fff;border:none;border-radius:10px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap">
               Encerrar Pedido #${ped.numero_pedido} (${ped.itens.length} ${ped.itens.length===1?'item':'itens'})
             </button>`).join('')}
@@ -568,12 +594,12 @@ async function carregarProtocolo() {
 
   // ── Histórico (protocolados) — tabela unificada ────────────────────────────
   const elHist  = document.getElementById('proto-historico');
-  const histBdg = document.getElementById('proto-hist-badge');
   const rowsH   = await apiFetch(`/protocolo/historico${q}`) || [];
+  _protocoloRowsHist = rowsH;
 
   const pedMapH = {};
   rowsH.forEach(r => {
-    const key = r.pedido_id || r.numero_pedido;
+    const key = r.pedido_id || `manual-${r.id}`;
     if (!pedMapH[key]) pedMapH[key] = {
       pedido_id: r.pedido_id, numero_pedido: r.numero_pedido || r.pedido_id,
       cliente: r.cliente || '—', transportadora: r.transportadora || '—', itens: []
@@ -615,8 +641,20 @@ async function carregarProtocolo() {
               </thead>
               <tbody>
                 ${todosH.map(r => {
-                  const dataFmt = (r.data_aviso||'').split('-').reverse().join('/') || '—';
+                  // Data de fechamento (quando existir) é mais útil aqui que a
+                  // data de abertura do aviso — é isso que a aba "Protocolados"
+                  // representa.
+                  const dataFmt = (r.data_fechamento || r.data_aviso || '').split('-').reverse().join('/') || '—';
                   const transp  = _transpBadgeProto(r._ped.transportadora);
+                  // "Encerrado por" pode ser o supervisor (fluxo normal, botão
+                  // Encerrar) ou o repositor que fez a busca final — distingue
+                  // pra quem for auditar não confundir os dois.
+                  let _hist = [];
+                  try { _hist = Array.isArray(r.historico) ? r.historico : (r.historico ? JSON.parse(r.historico) : []); } catch{}
+                  const _viaBuscaFinal = _hist.some(h => h.acao === 'protocolado_busca_final');
+                  const _origemTag = _viaBuscaFinal
+                    ? `<span style="font-size:9px;font-weight:800;color:#dc2626;background:rgba(220,38,38,.1);padding:1px 6px;border-radius:10px;margin-left:5px;white-space:nowrap">busca final</span>`
+                    : `<span style="font-size:9px;font-weight:800;color:var(--indigo);background:rgba(139,92,246,.1);padding:1px 6px;border-radius:10px;margin-left:5px;white-space:nowrap">supervisor</span>`;
                   return `<tr style="border-bottom:1px solid var(--border)" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
                     <td style="padding:8px 12px;color:var(--text3);font-size:11px;white-space:nowrap">${dataFmt}</td>
                     <td style="padding:8px 12px;white-space:nowrap">
@@ -630,7 +668,7 @@ async function carregarProtocolo() {
                       <span style="background:rgba(87,185,129,.15);color:var(--green);border-radius:8px;padding:2px 10px;font-weight:800;font-size:13px">${r.quantidade||0}</span>
                     </td>
                     <td style="padding:8px 12px;color:var(--text2);font-size:11px;white-space:nowrap">${r.separador_nome||'—'}</td>
-                    <td style="padding:8px 12px;color:var(--green);font-weight:700;font-size:11px;white-space:nowrap">${r.quem_guardou||'—'}</td>
+                    <td style="padding:8px 12px;color:var(--green);font-weight:700;font-size:11px;white-space:nowrap">${r.quem_guardou||'—'}${_origemTag}</td>
                   </tr>`;
                 }).join('')}
               </tbody>
@@ -647,42 +685,31 @@ async function encerrarItemProtocolo(id, btn) {
   const orig = btn?.innerHTML;
   if (btn) { btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader-2" aria-hidden="true"></i>'; }
   try {
-    const r = await apiFetch(`/repositor/avisos/${id}`, {
-      method:'PUT', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ status:'protocolado', situacao:'protocolado', quem_guardou: usuarioAtual?.nome || '' })
-    });
-    if (!r?.erro) {
+    // apiFetch já mostra o toast de erro sozinho (status != 2xx vira null) —
+    // só precisa diferenciar sucesso (resposta não-nula) de falha aqui.
+    const r = await apiFetch(`/protocolo/${id}/encerrar`, { method:'PUT' });
+    if (r) {
       // Remove a linha da tabela imediatamente
       const row = btn?.closest('tr');
       if (row) { row.style.opacity='0'; row.style.transition='opacity .3s'; setTimeout(()=>{ row.remove(); carregarProtocolo(); }, 300); }
       else carregarProtocolo();
     } else {
       if (btn) { btn.disabled=false; btn.innerHTML=orig; }
-      toast(r.erro, 'erro');
     }
   } catch(e) { if (btn) { btn.disabled=false; btn.innerHTML=orig; } toast('Erro','erro'); }
 }
 
-async function encerrarProtocoloPedido(numero_pedido, idsStr, qtdItens, btn) {
+async function encerrarProtocoloPedido(pedido_id, numero_pedido, btn) {
   if (btn?.disabled) return;
-  wmsConfirm(`Encerrar protocolo do pedido #${numero_pedido}?\n${qtdItens} item(ns) serão marcados como protocolados.`, async () => {
+  wmsConfirm(`Encerrar protocolo do pedido #${numero_pedido}?\nTodos os itens ainda em protocolo desse pedido serão marcados como protocolados.`, async () => {
     const orig = btn?.innerHTML;
     if (btn) { btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader-2" aria-hidden="true"></i> Encerrando...'; }
     try {
-      const ids = String(idsStr).split(',').map(Number).filter(Boolean);
-      let ok = 0, erros = 0;
-      for (const id of ids) {
-        const r = await apiFetch(`/repositor/avisos/${id}`, {
-          method:'PUT', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ status:'protocolado', situacao:'protocolado', quem_guardou: usuarioAtual?.nome || '' })
-        });
-        r?.erro ? erros++ : ok++;
-      }
-      if (erros === 0) {
-        toast(`Pedido #${numero_pedido}: ${ok} item(ns) protocolado(s)`, 'sucesso');
-      } else {
-        toast(`${ok} ok · ${erros} com erro — recarregando...`, 'aviso');
-      }
+      // Endpoint em lote: transacional de verdade (tudo ou nada) — não faz
+      // mais uma chamada por item igual antes.
+      const r = await apiFetch(`/protocolo/pedido/${pedido_id}/encerrar`, { method:'POST' });
+      if (r?.erro) { toast(r.erro, 'erro'); if (btn) { btn.disabled=false; btn.innerHTML=orig; } return; }
+      toast(r?.mensagem || `Pedido #${numero_pedido} encerrado!`, 'sucesso');
       carregarProtocolo();
     } catch(e) {
       if (btn) { btn.disabled=false; btn.innerHTML=orig; }
@@ -692,9 +719,18 @@ async function encerrarProtocoloPedido(numero_pedido, idsStr, qtdItens, btn) {
 }
 
 function exportarProtocolo() {
-  if (!_protocoloRows.length) { toast('Nenhum item para exportar','aviso'); return; }
-  const header = ['Código','Descrição','Pedido','Cliente','Separador','Data','Hora','Endereço','Qtd'];
-  const csvRows = [header, ..._protocoloRows.map(r => [
+  // Exporta a aba que está na tela — antes sempre exportava "Aguardando"
+  // mesmo com "Protocolados" aberta.
+  const naAba = _protocoloTabAtiva === 'protocolados';
+  const linhas = naAba ? _protocoloRowsHist : _protocoloRows;
+  if (!linhas.length) { toast('Nenhum item para exportar','aviso'); return; }
+  const header = naAba
+    ? ['Código','Descrição','Pedido','Cliente','Separador','Data abertura','Data fechamento','Encerrado por','Endereço','Qtd']
+    : ['Código','Descrição','Pedido','Cliente','Separador','Data','Hora','Endereço','Qtd'];
+  const csvRows = [header, ...linhas.map(r => naAba ? [
+    r.codigo||'', r.descricao||'', r.numero_pedido||r.pedido_id||'', r.cliente||'',
+    r.separador_nome||'', fmtData(r.data_aviso), fmtData(r.data_fechamento), r.quem_guardou||'', r.endereco||'', r.quantidade||0
+  ] : [
     r.codigo||'', r.descricao||'', r.numero_pedido||r.pedido_id||'', r.cliente||'',
     r.separador_nome||'', fmtData(r.data_aviso), r.hora_aviso||'', r.endereco||'', r.quantidade||0
   ])];
@@ -703,7 +739,7 @@ function exportarProtocolo() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   const _hoje = new Date().toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo'}).replace(/\//g,'-');
-  a.href = url; a.download = `protocolo_${_hoje}.csv`;
+  a.href = url; a.download = `protocolo_${naAba?'protocolados':'aguardando'}_${_hoje}.csv`;
   a.click(); URL.revokeObjectURL(url);
 }
 

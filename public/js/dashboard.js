@@ -1607,7 +1607,10 @@ async function carregarStatsRepositor() {
   try {
     const ini = document.getElementById('srep-ini')?.value || '';
     const fim = document.getElementById('srep-fim')?.value || '';
-    const res  = await fetch(`${API}/estatisticas/repositor`, { credentials:'include' });
+    const qs = new URLSearchParams();
+    if (ini) qs.set('data_ini', ini);
+    if (fim) qs.set('data_fim', fim);
+    const res  = await fetch(`${API}/estatisticas/repositor${qs.toString()?'?'+qs.toString():''}`, { credentials:'include' });
     const data = await res.json();
     const set  = (id, val) => { const e = document.getElementById(id); if(e) e.textContent = val ?? 0; };
     set('srep-rep-hoje',  data.repostos_hoje);

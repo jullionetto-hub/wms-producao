@@ -89,7 +89,8 @@ function corSituacao(sit) {
     pendente:'#f59e0b', verificando:'#8b5cf6', buscado:'#3b82f6',
     separado:'#3b82f6', aguardando_abastecer:'#f97316',
     subiu:'#0ea5e9', abastecido:'#10b981',
-    protocolo:'#6b7280', devolucao:'#a855f7', nao_encontrado:'#ef4444'
+    protocolo:'#6b7280', devolucao:'#a855f7', nao_encontrado:'#ef4444',
+    busca_final:'#dc2626'
   }[sit] || '#6b7280';
 }
 
@@ -100,7 +101,7 @@ function labelSituacao(sit) {
     aguardando_abastecer:'Aguard. Entregar',
     subiu:'Subiu', abastecido:'Abastecido',
     protocolo:'Protocolo', devolucao:'Devolução',
-    nao_encontrado:'Não encontrado'
+    nao_encontrado:'Não encontrado', busca_final:'Busca Final'
   }[sit] || sit;
 }
 
@@ -416,7 +417,7 @@ async function carregarRepProtocolo(silent=false) {
   const elD = document.getElementById('d-rep-lista-protocolo');
   if (!el && !elD) return;
   try {
-    const res = await fetch(`${API}/repositor/avisos?status=nao_encontrado${_repFiltroData()}`, { credentials:'include' });
+    const res = await fetch(`${API}/repositor/avisos?status=nao_encontrado,busca_final${_repFiltroData()}`, { credentials:'include' });
     if (!res.ok) throw new Error();
     const av = await res.json();
     const n = av.length;
@@ -540,11 +541,35 @@ function renderCardRepSimples(a, modo) {
         </button>
       </div>`;
   } else if (modo === 'protocolo') {
-    botoes = `
-      <div style="padding:10px 14px;border-top:1px solid var(--border);background:#fff1f2;border-radius:0 0 14px 14px">
-        <div style="font-size:12px;color:#be123c;font-weight:600;text-align:center"><i class="ti ti-clock" aria-hidden="true"></i> Aguardando liberação do supervisor</div>
-        ${a.quem_pegou?`<div style="font-size:11px;color:#9f1239;text-align:center;margin-top:3px">Registrado por: ${a.quem_pegou}</div>`:''}
-      </div>`;
+    if (sit === 'busca_final') {
+      // Alguém (o "assistente") já está fazendo a última conferência física —
+      // mesmo padrão visual de "está buscando" das tentativas normais.
+      botoes = `
+        <div style="padding:10px 14px;border-top:1px solid var(--border)">
+          <div style="background:rgba(220,38,38,.1);border:1px solid rgba(220,38,38,.35);border-radius:7px;padding:5px 9px;margin-bottom:8px;font-size:11px;color:#dc2626">
+            <strong>${a.quem_pegou||'Alguém'}</strong> está fazendo a busca final
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+            <button onclick="buscaFinalEncontrado(${a.id},'${nomeLogado}')"
+              style="padding:9px 8px;background:rgba(87,185,129,.15);border:2px solid var(--green);border-radius:8px;color:var(--green);font-weight:700;font-size:12px;cursor:pointer;touch-action:manipulation">
+              <i class="ti ti-check" aria-hidden="true"></i> Encontrei
+            </button>
+            <button onclick="buscaFinalNaoEncontrado(${a.id},'${nomeLogado}')"
+              style="padding:9px 8px;background:rgba(201,82,79,.15);border:2px solid var(--red);border-radius:8px;color:var(--red);font-weight:700;font-size:12px;cursor:pointer;touch-action:manipulation">
+              <i class="ti ti-x" aria-hidden="true"></i> Não encontrei
+            </button>
+          </div>
+        </div>`;
+    } else {
+      // 'nao_encontrado' — ainda esperando alguém pegar pra fazer a última busca.
+      botoes = `
+        <div style="padding:10px 14px;border-top:1px solid var(--border)">
+          <button onclick="iniciarBuscaFinalRep(${a.id},'${nomeLogado}')"
+            style="width:100%;padding:11px 10px;background:rgba(220,38,38,.12);border:2px solid #dc2626;border-radius:8px;color:#dc2626;font-weight:700;font-size:12px;cursor:pointer;touch-action:manipulation;display:flex;align-items:center;justify-content:center;gap:8px">
+            <i class="ti ti-search" aria-hidden="true"></i> Buscar uma última vez
+          </button>
+        </div>`;
+    }
   }
 
   // Layout compacto só na aba Separar: código + descrição na mesma linha,
@@ -730,6 +755,59 @@ async function iniciarBuscaRep(id, nomeLogado) {
       _atualizarBadgesRep();
     } else { toast('Erro ao iniciar busca', 'danger'); }
   } catch(e) { toast('Sem conexão', 'danger'); }
+}
+
+/* ── Busca final — última conferência antes de confirmar a falta ───── */
+async function iniciarBuscaFinalRep(id, nomeLogado) {
+  try {
+    const res = await fetch(`${API}/repositor/avisos/${id}/busca-final/iniciar`, {
+      credentials:'include', method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ repositor_nome: nomeLogado })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) { toast('Busca final iniciada!', 'success'); carregarRepProtocolo(); _atualizarBadgesRep(); }
+    else { toast(data.erro || 'Erro ao iniciar busca final', 'danger'); }
+  } catch(e) { toast('Sem conexão', 'danger'); }
+}
+
+function buscaFinalEncontrado(id, nomeLogado) {
+  wmsConfirm({
+    titulo: 'Encontrou o item?',
+    sub: 'Marca como resolvido — não volta mais pro separador, considera entregue.',
+    btnOk: 'Sim, encontrei',
+  }, async () => {
+    try {
+      const res = await fetch(`${API}/repositor/avisos/${id}/busca-final/encontrado`, {
+        credentials:'include', method:'PUT',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ repositor_nome: nomeLogado })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) { toast('Resolvido!', 'success'); carregarRepProtocolo(); _atualizarBadgesRep(); }
+      else { toast(data.erro || 'Erro ao registrar', 'danger'); }
+    } catch(e) { toast('Sem conexão', 'danger'); }
+  });
+}
+
+function buscaFinalNaoEncontrado(id, nomeLogado) {
+  wmsConfirm({
+    titulo: 'Confirmar falta definitiva?',
+    sub: 'Essa é a última busca — não dá pra desfazer depois. O item fecha em protocolo.',
+    btnOk: 'Confirmar falta',
+    btnOkClass: 'btn-danger',
+  }, async () => {
+    try {
+      const res = await fetch(`${API}/repositor/avisos/${id}/busca-final/nao-encontrado`, {
+        credentials:'include', method:'PUT',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ repositor_nome: nomeLogado })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) { toast('Falta confirmada.', 'success'); carregarRepProtocolo(); _atualizarBadgesRep(); }
+      else { toast(data.erro || 'Erro ao registrar', 'danger'); }
+    } catch(e) { toast('Sem conexão', 'danger'); }
+  });
 }
 
 /* ── Exportar Excel de Tentativas (análise estratégica) ─────────── */

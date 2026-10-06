@@ -27,6 +27,7 @@
       if (typeof carregarFilaMobile === 'function') carregarFilaMobile();
       if (typeof carregarAvisosSeparador === 'function') carregarAvisosSeparador();
       if (typeof atualizarBadgeLiberacao === 'function') atualizarBadgeLiberacao();
+      if (typeof atualizarBadgeProtocolo === 'function') atualizarBadgeProtocolo();
       // Atualiza aba Aguardando quando item vai para protocolo
       if (typeof carregarAguardandoMobile === 'function' &&
           (data?.status === 'nao_encontrado' || data?.status === 'protocolo')) {
@@ -62,6 +63,16 @@
           badge.style.animation = 'pulse 0.6s ease infinite';
           setTimeout(() => { if (badge) badge.style.animation = ''; }, 3000);
         }
+      }
+    });
+
+    // Item entrou em protocolo (pelo fluxo normal) ou foi fechado (encerrado
+    // pelo supervisor ou pela busca final) → mantém o badge do menu "Protocolo"
+    // e a própria tela (se aberta) em dia sem precisar recarregar a página.
+    socket.on('protocolo:encerrado', () => {
+      if (typeof atualizarBadgeProtocolo === 'function') atualizarBadgeProtocolo();
+      if (typeof carregarProtocolo === 'function' && document.getElementById('pag-protocolo')?.classList.contains('ativa')) {
+        carregarProtocolo();
       }
     });
 
