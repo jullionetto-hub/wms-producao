@@ -1592,8 +1592,6 @@ const PF_NIVEL_INFO = {
   ok:       { label: 'OK',       cor: 'var(--text3)', borda: 'var(--border)' },
 };
 
-let _pfPadroesResumoIA = null;
-
 async function pfCarregarPadroes() {
   const wrap = document.getElementById('pf-padroes-wrap');
   if (!wrap) return;
@@ -1601,7 +1599,6 @@ async function pfCarregarPadroes() {
   const fim   = document.getElementById('pf-fim')?.value   || '';
   const turno = document.getElementById('pf-turno')?.value || '';
 
-  _pfPadroesResumoIA = null;
   wrap.innerHTML = `<div style="text-align:center;padding:48px;color:var(--text3)">Analisando padrões...</div>`;
 
   const qs = new URLSearchParams({ ini, fim });
@@ -1634,23 +1631,8 @@ function pfRenderPadroesUI(dados) {
       </div>
     </div>`;
 
-  const iaBox = `
-    <div class="card" style="padding:18px 20px;margin-bottom:20px;border:1.5px solid var(--border)">
-      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-        <div style="flex:1;min-width:200px">
-          <div style="font-size:14px;font-weight:800;color:var(--text)">Resumo por IA</div>
-          <div style="font-size:12px;color:var(--text3);margin-top:2px">Gera um resumo em linguagem natural a partir dos sinais calculados abaixo — nunca inventa números.</div>
-        </div>
-        <button onclick="pfGerarResumoIA()" id="pf-btn-ia"
-          style="background:var(--accent);color:#fff;border:none;border-radius:10px;padding:10px 18px;font-size:13px;font-weight:700;cursor:pointer">
-          Gerar resumo
-        </button>
-      </div>
-      <div id="pf-ia-resultado" style="margin-top:14px"></div>
-    </div>`;
-
   if (!dados.colaboradores || !dados.colaboradores.length) {
-    return kpis + iaBox + `
+    return kpis + `
       <div style="text-align:center;padding:48px;color:var(--text3)">
         <div style="font-size:13px;font-weight:700">Nenhum padrão relevante identificado automaticamente no período</div>
         <div style="font-size:12px;margin-top:4px">Operação dentro do esperado para os dados disponíveis.</div>
@@ -1679,7 +1661,7 @@ function pfRenderPadroesUI(dados) {
       </div>`;
   }).join('');
 
-  return kpis + iaBox + `
+  return kpis + `
     <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:14px">
       Sinais detectados — ${dados.colaboradores.length} colaborador(es)
     </div>
@@ -1688,32 +1670,6 @@ function pfRenderPadroesUI(dados) {
       Os sinais acima são indícios estatísticos a partir de dados já registrados pelo sistema — não são veredito de culpa.
       Vale confirmar a causa (processo, estoque, complexidade do pedido) antes de qualquer ação com o colaborador.
     </div>`;
-}
-
-async function pfGerarResumoIA() {
-  const btn = document.getElementById('pf-btn-ia');
-  const out = document.getElementById('pf-ia-resultado');
-  if (!out) return;
-  if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; }
-  out.innerHTML = `<div style="font-size:12px;color:var(--text3)">Gerando resumo...</div>`;
-
-  const ini   = document.getElementById('pf-ini')?.value   || '';
-  const fim   = document.getElementById('pf-fim')?.value   || '';
-  const turno = document.getElementById('pf-turno')?.value || '';
-  const qs = new URLSearchParams({ ini, fim });
-  if (turno) qs.set('turno', turno);
-
-  const r = await fetch(`/performance/padroes/resumo-ia?${qs}`, { credentials: 'same-origin' });
-  const dados = await r.json().catch(() => null);
-
-  if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
-
-  if (!r.ok || !dados) {
-    out.innerHTML = `<div style="font-size:12px;color:var(--text3);background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px">${pfEsc(dados?.erro || 'Não foi possível gerar o resumo.')}</div>`;
-    return;
-  }
-  _pfPadroesResumoIA = dados.resumo;
-  out.innerHTML = `<div style="font-size:13px;color:var(--text);line-height:1.6;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;white-space:pre-wrap">${pfEsc(dados.resumo)}</div>`;
 }
 
 async function pfCarregarMetas() {
