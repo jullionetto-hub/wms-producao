@@ -486,7 +486,7 @@ describe('Repositor — liberar (supervisor)', () => {
   test('decisao=encontrado → status reposto', async () => {
     const agent = request.agent(app);
     await loginSupervisor(agent);
-    mockDb.get.mockResolvedValueOnce({ historico: [] });     // busca historico
+    mockDb.get.mockResolvedValueOnce({ status: 'nao_encontrado', historico: [] });     // busca historico
     mockDb.get.mockResolvedValueOnce({ item_id: 7 });        // busca item_id (status reposto)
     mockDb.get.mockResolvedValueOnce({ numero_pedido: 'P9' });// busca numero_pedido p/ emit
     const res = await agent.put('/repositor/avisos/1/liberar').send({ decisao: 'encontrado' });
@@ -497,7 +497,7 @@ describe('Repositor — liberar (supervisor)', () => {
   test('decisao padrão (nao_encontrado) → status protocolo', async () => {
     const agent = request.agent(app);
     await loginSupervisor(agent);
-    mockDb.get.mockResolvedValueOnce({ historico: [] });
+    mockDb.get.mockResolvedValueOnce({ status: 'nao_encontrado', historico: [] });
     mockDb.get.mockResolvedValueOnce({ numero_pedido: 'P9' });
     const res = await agent.put('/repositor/avisos/1/liberar').send({});
     expect(res.status).toBe(200);
@@ -562,10 +562,13 @@ describe('Protocolo', () => {
   test('POST /protocolo/pedido/:pedido_id/encerrar com itens → 200 e encerra todos', async () => {
     const agent = request.agent(app);
     await loginSupervisor(agent);
-    mockDb.all.mockResolvedValueOnce([
-      { id: 1, historico: [] },
-      { id: 2, historico: [] },
-    ]);
+    const clientQuery = jest.fn()
+      .mockResolvedValueOnce({})                                                          // BEGIN
+      .mockResolvedValueOnce({ rows: [{ id: 1, historico: [] }, { id: 2, historico: [] }] }) // SELECT ... FOR UPDATE
+      .mockResolvedValueOnce({ rowCount: 1 })                                              // UPDATE item 1
+      .mockResolvedValueOnce({ rowCount: 1 })                                              // UPDATE item 2
+      .mockResolvedValueOnce({});                                                          // COMMIT
+    mockPool.connect.mockResolvedValueOnce({ query: clientQuery, release: jest.fn() });
     mockDb.get.mockResolvedValueOnce({ numero_pedido: 'P42' });
     const res = await agent.post('/protocolo/pedido/1/encerrar');
     expect(res.status).toBe(200);

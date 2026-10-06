@@ -757,7 +757,7 @@
               <button class="btn btn-outline btn-sm" onclick="carregarAguardandoDesk()">↺</button>
             </div>
             <div style="font-size:12px;color:var(--text3);margin:8px 16px 10px;padding:8px 12px;background:rgba(224,168,62,.1);border-radius:8px;border:1px solid rgba(224,168,62,.35)">
-              Pedidos com itens em <b style="color:var(--amber)">Protocolo</b> — aguardando definição do supervisor.
+              Pedidos com itens em <b style="color:var(--amber)">Busca Final</b> — aguardando repositor conferir ou supervisor decidir.
             </div>
             <div id="d-sep-aguardando" style="padding:4px 0">
               <div style="color:var(--text3);text-align:center;padding:30px;font-size:13px">Carregando...</div>
@@ -803,7 +803,7 @@
           <div class="stat-card stat-card--accent"><div class="stat-card-hd">Separar</div><div class="stat-card-value" id="d-rep-cnt-separar">0</div><div class="stat-card-label">pendentes</div></div>
           <div class="stat-card stat-card--warning"><div class="stat-card-hd">Separado</div><div class="stat-card-value" id="d-rep-cnt-separado">0</div><div class="stat-card-label">em andamento</div></div>
           <div class="stat-card stat-card--orange"><div class="stat-card-hd">Subiu</div><div class="stat-card-value" id="d-rep-cnt-subiu">0</div><div class="stat-card-label">para guardar</div></div>
-          <div class="stat-card stat-card--warning"><div class="stat-card-hd">Protocolo</div><div class="stat-card-value" id="d-rep-cnt-protocolo">0</div><div class="stat-card-label">aguardando</div></div>
+          <div class="stat-card stat-card--warning"><div class="stat-card-hd">Busca Final</div><div class="stat-card-value" id="d-rep-cnt-protocolo">0</div><div class="stat-card-label">aguardando</div></div>
         </div>
 
         <!-- Abas -->
@@ -818,7 +818,7 @@
             Subiu <span id="d-rtab-subiu-badge" style="display:none;background:var(--info);color:#fff;border-radius:20px;padding:1px 7px;font-size:10px;font-weight:700;margin-left:4px">0</span>
           </button>
           <button id="d-rtab-protocolo" onclick="mudarTabRepDesk('protocolo')" class="rel-turno-btn" data-t="protocolo">
-            Protocolo <span id="d-rtab-protocolo-badge" style="display:none;background:#6b7280;color:#fff;border-radius:20px;padding:1px 7px;font-size:10px;font-weight:700;margin-left:4px">0</span>
+            Busca Final <span id="d-rtab-protocolo-badge" style="display:none;background:#6b7280;color:#fff;border-radius:20px;padding:1px 7px;font-size:10px;font-weight:700;margin-left:4px">0</span>
           </button>
           <button id="d-rtab-stats" onclick="mudarTabRepDesk('stats')" class="rel-turno-btn" data-t="stats">Indicadores</button>
           <button id="d-rtab-ranking" onclick="mudarTabRepDesk('ranking')" class="rel-turno-btn" data-t="ranking">Ranking</button>
@@ -863,7 +863,7 @@
         <!-- Tab: PROTOCOLO -->
         <div id="d-rep-tab-protocolo" style="display:none">
           <div class="card">
-            <div class="card-hd">Protocolo — não encontrado
+            <div class="card-hd">Busca Final — não encontrado
               <button class="btn btn-outline btn-sm" onclick="carregarRepProtocolo()">Atualizar</button>
             </div>
             <div id="d-rep-lista-protocolo" style="padding:8px 4px">
@@ -2121,7 +2121,7 @@
       <div class="rep-tab-page" id="rep-tab-protocolo">
         <div class="rep-scroll">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-            <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">Protocolo</div>
+            <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">Busca Final</div>
             <div style="display:flex;gap:8px;align-items:center">
               <span style="font-size:12px;color:#ef4444;font-weight:700"><span id="rep-cnt-protocolo">0</span></span>
               <button class="btn btn-outline btn-sm" onclick="carregarRepProtocolo()">↺</button>
@@ -2379,7 +2379,7 @@
             </div>
           </div>
           <div style="font-size:12px;color:var(--text3);margin-bottom:12px;padding:8px 12px;background:rgba(224,168,62,.1);border-radius:8px;border:1px solid rgba(224,168,62,.35)">
-            Pedidos com itens em <b style="color:var(--amber)">Protocolo</b> — aguardando definição do supervisor.
+            Pedidos com itens em <b style="color:var(--amber)">Busca Final</b> — aguardando repositor conferir ou supervisor decidir.
           </div>
           <div id="sep-lista-aguardando">
             <div style="color:var(--text3);text-align:center;padding:40px;font-size:13px">Nenhum item aguardando</div>
@@ -2481,7 +2481,7 @@
     <span class="rep-tab-badge" id="rtab-subiu-badge" style="display:none">0</span>
   </button>
   <button class="rep-tab" id="rtab-protocolo" onclick="mudarTabRep('protocolo')">
-    PROTOCOLO
+    BUSCA FINAL
     <span class="rep-tab-badge" id="rtab-protocolo-badge" style="display:none">0</span>
   </button>
   <button class="rep-tab" id="rtab-entrada-manual" onclick="mudarTabRep('entrada-manual')">

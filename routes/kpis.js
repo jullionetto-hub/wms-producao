@@ -103,7 +103,7 @@ router.get('/estatisticas/pedidos', requerAuth, async (req,res) => {
 });
 
 router.get('/estatisticas/repositor', requerAuth, async (req,res) => {
-  const {repositor_nome}=req.query;
+  const {repositor_nome, data_ini, data_fim}=req.query;
   const {data:hoje}=dataHoraLocal(); const mes=hoje.substring(0,7); const ano=hoje.substring(0,4);
   try {
     let sql=`SELECT
@@ -119,6 +119,12 @@ router.get('/estatisticas/repositor', requerAuth, async (req,res) => {
     FROM avisos_repositor WHERE 1=1`;
     const p=[hoje,hoje,mes+'%',mes+'%',ano+'%',ano+'%'];
     if (repositor_nome){p.push(repositor_nome);sql+=` AND repositor_nome=$${p.length}`;}
+    // A tela manda data_ini/data_fim mas antes nada aqui usava — pendentes_total,
+    // nao_encontrados e protocolos saíam sempre como total histórico, ignorando
+    // o período escolhido. Com filtro, essas 3 passam a contar só avisos abertos
+    // (data_aviso) dentro do período, em vez de "desde sempre".
+    if (data_ini) { p.push(data_ini); sql += ` AND data_aviso >= $${p.length}`; }
+    if (data_fim) { p.push(data_fim); sql += ` AND data_aviso <= $${p.length}`; }
     const row=await db.get(sql,p);
     const prod=await db.all(`SELECT repositor_nome as nome,COUNT(*) as total,SUM(CASE WHEN status='reposto' THEN 1 ELSE 0 END) as repostos,SUM(CASE WHEN status='nao_encontrado' THEN 1 ELSE 0 END) as nao_encontrados,SUM(CASE WHEN data_aviso=$1 THEN 1 ELSE 0 END) as hoje FROM avisos_repositor WHERE repositor_nome!='' GROUP BY repositor_nome ORDER BY repostos DESC`,[hoje]);
     res.json({...row,produtividade:prod});

@@ -10,6 +10,8 @@ pool.query(`ALTER TABLE avisos_repositor ADD COLUMN IF NOT EXISTS tentativas    
 pool.query(`ALTER TABLE avisos_repositor ADD COLUMN IF NOT EXISTS total_tentativas INTEGER DEFAULT 0`).catch(()=>{});
 pool.query(`ALTER TABLE avisos_repositor ADD COLUMN IF NOT EXISTS hora_inicio_busca TEXT  DEFAULT ''`).catch(()=>{});
 pool.query(`ALTER TABLE avisos_repositor ADD COLUMN IF NOT EXISTS hora_protocolo    TEXT  DEFAULT ''`).catch(()=>{});
+pool.query(`ALTER TABLE avisos_repositor ADD COLUMN IF NOT EXISTS data_fechamento   TEXT  DEFAULT ''`).catch(()=>{});
+pool.query(`ALTER TABLE avisos_repositor ADD COLUMN IF NOT EXISTS hora_fechamento   TEXT  DEFAULT ''`).catch(()=>{});
 pool.query(`ALTER TABLE avisos_repositor ADD COLUMN IF NOT EXISTS turno_pendente    TEXT  DEFAULT ''`).catch(()=>{});
 pool.query(`ALTER TABLE avisos_repositor ADD COLUMN IF NOT EXISTS ordem_manual      INTEGER DEFAULT 0`).catch(()=>{});
 
@@ -109,7 +111,7 @@ router.put('/repositor/avisos/:id', requerAuth, async (req,res) => {
     const st = situacao || status || 'pendente';
     const atual = await db.get('SELECT * FROM avisos_repositor WHERE id=$1',[id]);
     // Impede reverter um item já finalizado (protocolo/abastecido) para etapa anterior
-    const estadosFinais = ['abastecido','protocolo','devolucao'];
+    const estadosFinais = ['abastecido','protocolo','protocolado','devolucao'];
     const estadosNaoFinal = ['pendente','verificando','buscado','separado','aguardando_abastecer','subiu'];
     if (estadosFinais.includes(atual?.status) && estadosNaoFinal.includes(st)) {
       return res.status(409).json({erro:`Item já está em estado final: ${atual.status}. Não pode ser revertido.`});
@@ -465,14 +467,23 @@ router.put('/repositor/avisos/:id/liberar', requerAuth, requerPerfil('supervisor
     //          'nao_encontrado' ou padrão → protocolo (registra falta)
     const decisao = req.body?.decisao || 'nao_encontrado';
     const novoStatus = decisao === 'encontrado' ? 'reposto' : 'protocolo';
-    const atual = await db.get('SELECT historico FROM avisos_repositor WHERE id=$1', [req.params.id]);
+    const atual = await db.get('SELECT status, historico FROM avisos_repositor WHERE id=$1', [req.params.id]);
+    if (!atual) return res.status(404).json({erro:'Aviso não encontrado'});
+    // Evita atropelar um repositor que já pegou esse item pra fazer a busca
+    // final — a tela de Liberação pode estar desatualizada numa aba antiga.
+    if (atual.status !== 'nao_encontrado') {
+      return res.status(409).json({erro:`Este item não está mais aguardando liberação (status atual: ${atual.status}). Atualize a tela.`});
+    }
     let hist = [];
     try { hist = Array.isArray(atual?.historico) ? atual.historico : (atual?.historico ? JSON.parse(atual.historico) : []); } catch{}
     const histNovo = [...hist, { usuario: supervisorNome, acao: 'liberado_supervisor', decisao, hora }];
-    await pool.query(
-      `UPDATE avisos_repositor SET status=$1, situacao=$1, hora_reposto=$2, historico=$3, quem_guardou=$4 WHERE id=$5`,
+    const upd = await pool.query(
+      `UPDATE avisos_repositor SET status=$1, situacao=$1, hora_reposto=$2, historico=$3, quem_guardou=$4 WHERE id=$5 AND status='nao_encontrado'`,
       [novoStatus, hora, JSON.stringify(histNovo), supervisorNome, req.params.id]
     );
+    if (upd.rowCount === 0) {
+      return res.status(409).json({erro:'Este item não está mais aguardando liberação — outra ação já mudou o status dele.'});
+    }
     if (novoStatus === 'reposto') {
       const av = await db.get('SELECT item_id FROM avisos_repositor WHERE id=$1', [req.params.id]);
       if (av?.item_id) await pool.query(`UPDATE itens_pedido SET status='encontrado' WHERE id=$1`, [av.item_id]);
@@ -544,7 +555,7 @@ router.put('/repositor/avisos/:id/busca-final/encontrado', requerAuth, async (re
 router.put('/repositor/avisos/:id/busca-final/nao-encontrado', requerAuth, async (req,res) => {
   const id = validarId(req.params.id);
   if (!id) return res.status(400).json({erro:'ID invalido'});
-  const { hora } = dataHoraLocal();
+  const { data, hora } = dataHoraLocal();
   const usuario = req.session?.usuario?.nome || req.body?.repositor_nome || 'Sistema';
   try {
     const atual = await db.get('SELECT status, historico FROM avisos_repositor WHERE id=$1',[id]);
@@ -555,10 +566,15 @@ router.put('/repositor/avisos/:id/busca-final/nao-encontrado', requerAuth, async
     const histNovo = [...hist, { usuario, acao:'protocolado_busca_final', hora }];
     // Vai direto pra 'protocolado' (sem passar por 'protocolo') — a busca final
     // já É a confirmação definitiva, não precisa de mais ninguém encerrando depois.
-    await pool.query(
-      `UPDATE avisos_repositor SET status='protocolado', situacao='protocolado', hora_protocolo=$1, quem_guardou=$2, historico=$3 WHERE id=$4`,
-      [hora, usuario, JSON.stringify(histNovo), id]
+    // Não mexe em hora_protocolo (isso já foi gravado quando o item virou
+    // 'nao_encontrado', na 3ª tentativa) — data/hora_fechamento é que marcam
+    // o fechamento de verdade, pra não misturar os dois significados.
+    const upd = await pool.query(
+      `UPDATE avisos_repositor SET status='protocolado', situacao='protocolado', quem_guardou=$1,
+              historico=$2, data_fechamento=$3, hora_fechamento=$4 WHERE id=$5 AND status='busca_final'`,
+      [usuario, JSON.stringify(histNovo), data, hora, id]
     );
+    if (upd.rowCount === 0) return res.status(409).json({erro:'Este item não está mais em busca final.'});
     req.app.get('io')?.emit('aviso:atualizado', { id, status:'protocolado' });
     res.json({ mensagem:'Falta confirmada — item encerrado em protocolo.' });
   } catch(e){res.status(500).json({erro:e.message});}
@@ -567,13 +583,18 @@ router.put('/repositor/avisos/:id/busca-final/nao-encontrado', requerAuth, async
 router.get('/protocolo/historico', requerAuth, async (req,res) => {
   try {
     const { data_ini, data_fim } = req.query;
+    // Filtra pela data em que o item FECHOU (data_fechamento), não pela data em
+    // que o aviso foi aberto — senão um item aberto há dias e fechado hoje não
+    // aparecia no filtro "hoje". Itens antigos sem data_fechamento (fechados
+    // antes dessa coluna existir) caem de volta pra data_aviso como aproximação.
     let sql = `SELECT a.*, COALESCE(p.numero_pedido, a.numero_pedido) as numero_pedido, COALESCE(p.cliente,'') as cliente, COALESCE(p.transportadora,'') as transportadora
                FROM avisos_repositor a
                LEFT JOIN pedidos p ON a.pedido_id = p.id
                WHERE a.status = 'protocolado'`;
     const params = [];
-    if (data_ini) { params.push(data_ini); sql += ` AND a.data_aviso >= $${params.length}`; }
-    if (data_fim) { params.push(data_fim); sql += ` AND a.data_aviso <= $${params.length}`; }
+    const dataRef = `COALESCE(NULLIF(a.data_fechamento,''), a.data_aviso)`;
+    if (data_ini) { params.push(data_ini); sql += ` AND ${dataRef} >= $${params.length}`; }
+    if (data_fim) { params.push(data_fim); sql += ` AND ${dataRef} <= $${params.length}`; }
     sql += ` ORDER BY a.id DESC LIMIT 200`;
     res.json(await db.all(sql, params) || []);
   } catch(e) { res.status(500).json({ erro: e.message }); }
@@ -593,37 +614,79 @@ router.get('/protocolo', requerAuth, async (req,res) => {
   } catch(e) { res.status(500).json({erro: e.message}); }
 });
 
-// Encerra o protocolo de todos os itens de um pedido de uma vez
-router.post('/protocolo/pedido/:pedido_id/encerrar', requerAuth, requerPerfil('supervisor'), async (req, res) => {
+// Encerra UM item em protocolo — equivalente de item único do endpoint em lote
+// abaixo. Supervisor-only: fechar um protocolo (confirmar baixa definitiva de
+// estoque) é decisão de supervisão, não de qualquer perfil autenticado.
+router.put('/protocolo/:id/encerrar', requerAuth, requerPerfil('supervisor'), async (req,res) => {
+  const id = validarId(req.params.id);
+  if (!id) return res.status(400).json({erro:'ID invalido'});
+  const supervisorNome = req.session?.usuario?.nome || 'Supervisor';
+  const { data, hora } = dataHoraLocal();
   try {
-    const { pedido_id } = req.params;
-    const supervisorNome = req.session?.usuario?.nome || 'Supervisor';
-    const { hora } = dataHoraLocal();
+    const atual = await db.get('SELECT status, historico, numero_pedido FROM avisos_repositor WHERE id=$1',[id]);
+    if (!atual) return res.status(404).json({erro:'Aviso não encontrado'});
+    if (atual.status !== 'protocolo') return res.status(409).json({erro:`Item não está em protocolo (status atual: ${atual.status})`});
+    let hist = [];
+    try { hist = Array.isArray(atual.historico) ? atual.historico : (atual.historico ? JSON.parse(atual.historico) : []); } catch{}
+    const histNovo = [...hist, { usuario: supervisorNome, acao:'protocolado', hora }];
+    // WHERE status='protocolo' de novo na hora de gravar: se alguém já fechou
+    // esse mesmo item nos milissegundos entre o SELECT e aqui (ex.: clique duplo
+    // ou corrida com "Encerrar Pedido"), rowCount vem 0 em vez de sobrescrever.
+    const upd = await pool.query(
+      `UPDATE avisos_repositor SET status='protocolado', situacao='protocolado', quem_guardou=$1,
+              historico=$2, data_fechamento=$3, hora_fechamento=$4 WHERE id=$5 AND status='protocolo'`,
+      [supervisorNome, JSON.stringify(histNovo), data, hora, id]
+    );
+    if (upd.rowCount === 0) return res.status(409).json({erro:'Este item já foi encerrado por outra ação.'});
+    req.app.get('io')?.emit('protocolo:encerrado', { id, numero_pedido: atual.numero_pedido });
+    res.json({ mensagem:'Item encerrado em protocolo!' });
+  } catch(e){res.status(500).json({erro:e.message});}
+});
 
-    const itens = await db.all(
-      `SELECT id, historico FROM avisos_repositor WHERE pedido_id=$1 AND status='protocolo'`,
+// Encerra o protocolo de todos os itens de um pedido de uma vez — transacional:
+// se qualquer item falhar no meio, desfaz tudo em vez de deixar o pedido
+// parcialmente fechado sem explicação.
+router.post('/protocolo/pedido/:pedido_id/encerrar', requerAuth, requerPerfil('supervisor'), async (req, res) => {
+  const { pedido_id } = req.params;
+  const supervisorNome = req.session?.usuario?.nome || 'Supervisor';
+  const { data, hora } = dataHoraLocal();
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const itens = await client.query(
+      `SELECT id, historico FROM avisos_repositor WHERE pedido_id=$1 AND status='protocolo' FOR UPDATE`,
       [pedido_id]
     );
-    if (!itens.length) return res.status(400).json({ erro: 'Nenhum item em protocolo para este pedido.' });
+    if (!itens.rows.length) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ erro: 'Nenhum item em protocolo para este pedido.' });
+    }
 
-    for (const item of itens) {
+    let fechados = 0;
+    for (const item of itens.rows) {
       let hist = [];
       try { hist = Array.isArray(item.historico) ? item.historico : (item.historico ? JSON.parse(item.historico) : []); } catch{}
       const histNovo = [...hist, { usuario: supervisorNome, acao: 'protocolado', hora }];
-      await pool.query(
-        `UPDATE avisos_repositor SET status='protocolado', situacao='protocolado', quem_guardou=$1, hora_reposto=$2, historico=$3 WHERE id=$4`,
-        [supervisorNome, hora, JSON.stringify(histNovo), item.id]
+      const upd = await client.query(
+        `UPDATE avisos_repositor SET status='protocolado', situacao='protocolado', quem_guardou=$1,
+                historico=$2, data_fechamento=$3, hora_fechamento=$4 WHERE id=$5 AND status='protocolo'`,
+        [supervisorNome, JSON.stringify(histNovo), data, hora, item.id]
       );
+      fechados += upd.rowCount;
     }
+    await client.query('COMMIT');
 
     const ped = await db.get('SELECT numero_pedido FROM pedidos WHERE id=$1', [pedido_id]);
     req.app.get('io')?.emit('protocolo:encerrado', { pedido_id, numero_pedido: ped?.numero_pedido });
 
     res.json({
-      mensagem: `✅ Protocolo do pedido #${ped?.numero_pedido || pedido_id} encerrado! ${itens.length} item(ns) protocolado(s).`,
-      itens_encerrados: itens.length
+      mensagem: `✅ Protocolo do pedido #${ped?.numero_pedido || pedido_id} encerrado! ${fechados} item(ns) protocolado(s).`,
+      itens_encerrados: fechados
     });
-  } catch(e) { res.status(500).json({ erro: e.message }); }
+  } catch(e) {
+    await client.query('ROLLBACK');
+    res.status(500).json({ erro: e.message });
+  } finally { client.release(); }
 });
 
 module.exports = router;
