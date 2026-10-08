@@ -33,6 +33,39 @@ function fmtSaldoHoras(min) {
   return `${sinal}${Math.floor(abs / 60)}:${String(abs % 60).padStart(2, '0')}`;
 }
 
+// Normaliza nome pra comparação: sem acento, minúsculo, espaços únicos.
+const normNome = s => (s || '').normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().replace(/\s+/g, ' ').trim();
+const NOME_STOP = new Set(['da', 'de', 'do', 'das', 'dos', 'e']);
+const tokensNome = s => normNome(s).split(' ').filter(t => t.length > 1 && !NOME_STOP.has(t));
+
+// Acha o colaborador da Matriz (mz_colaboradores) pelo nome do WMS. Tenta match
+// exato; senão, por palavras significativas em comum (≥2, ignora da/de/dos) —
+// só aceita se houver um único melhor candidato, pra nunca ligar a pessoa errada.
+// Quando acha por aproximação, alinha o nome na Matriz ao do WMS (fonte do ponto),
+// assim os dois sistemas passam a ter o mesmo nome e o próximo envio é exato.
+async function acharMzColaborador(nomeWms) {
+  const todos = await db.all('SELECT * FROM mz_colaboradores');
+  const alvo = normNome(nomeWms);
+  const exato = todos.find(c => normNome(c.nome) === alvo);
+  if (exato) return exato;
+
+  const tAlvo = tokensNome(nomeWms);
+  const pontuados = todos
+    .map(c => {
+      const t = new Set(tokensNome(c.nome));
+      const comum = tAlvo.filter(x => t.has(x)).length;
+      return { c, comum, razao: comum / Math.max(tAlvo.length, t.size || 1) };
+    })
+    .filter(x => x.comum >= 2)
+    .sort((a, b) => b.razao - a.razao);
+  if (!pontuados.length) return null;
+  if (pontuados[1] && pontuados[1].razao === pontuados[0].razao) return null; // ambíguo
+
+  const achado = pontuados[0].c;
+  const r = await pool.query('UPDATE mz_colaboradores SET nome=$1 WHERE id=$2 RETURNING *', [nomeWms.trim(), achado.id]);
+  return r.rows[0] || achado;
+}
+
 // Resumo de um colaborador a partir dos dias dele já salvos. total_atraso_min
 // é a soma bruta de entrada+almoço+pausa atrasados (sem tolerância — é o
 // número absoluto usado nos critérios da Matriz). banco_horas_min vem do
@@ -337,13 +370,10 @@ router.post('/absenteismo/colaboradores/:id/enviar-matriz', requerAuth, gLeitura
   const colaborador = await db.get('SELECT * FROM abs_colaboradores WHERE id=$1', [req.params.id]);
   if (!colaborador) return res.status(404).json({ erro: 'Colaborador não encontrado' });
 
-  const mzColab = await db.get(
-    `SELECT * FROM mz_colaboradores WHERE LOWER(TRIM(nome))=LOWER(TRIM($1)) LIMIT 1`,
-    [colaborador.nome]
-  );
+  const mzColab = await acharMzColaborador(colaborador.nome);
   if (!mzColab) {
     return res.status(404).json({
-      erro: `Não achei "${colaborador.nome}" cadastrado na Matriz de Responsabilidades (nome tem que bater exatamente). Cadastre lá primeiro ou confira o nome.`,
+      erro: `Não achei "${colaborador.nome}" cadastrado na Matriz de Responsabilidades. Cadastre lá primeiro ou confira o nome.`,
     });
   }
 
