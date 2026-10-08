@@ -2084,7 +2084,7 @@ function _mzFeedbackCardHtml(f) {
           <div style="font-size:10px;font-weight:800;color:var(--text3);margin-bottom:4px">4 — ABSENTEÍSMO DO MÊS: RESUMO</div>
           ${grid(stAbs.bg, [['ATRASOS (MIN)',f.atrasos||0],['FALTAS INJUST.',f.faltas_injustificadas||0],['AUSÊNCIAS JUST.',f.ausencias_justificadas||0],['STATUS',stAbs.label,stAbs.cor]])}
         </div>` : ''}
-        ${f.absenteismo_mes?`<div style="font-size:11.5px;margin-top:8px"><b>4 — Absenteísmo do mês: detalhes</b><div style="color:var(--text2);margin-top:2px">${pfEsc(f.absenteismo_mes)}</div></div>`:''}
+        ${f.absenteismo_mes?`<div style="font-size:11.5px;margin-top:8px"><b>4 — Absenteísmo do mês: detalhes</b><div style="color:var(--text2);margin-top:2px;white-space:pre-line">${pfEsc(f.absenteismo_mes)}</div></div>`:''}
         ${f.retorno_antecipado?`<div style="font-size:11.5px;margin-top:6px"><b>5 — Retorno antecipado:</b> ${pfEsc(f.retorno_antecipado)}</div>`:''}
         ${f.recorrencia_ausencia?`<div style="font-size:11.5px;margin-top:6px"><b>6 — Recorrência de ausência:</b> ${pfEsc(f.recorrencia_ausencia)}</div>`:''}
         ${f.outros_pontos?`<div style="font-size:11.5px;margin-top:6px"><b>7 — Outros pontos:</b> ${pfEsc(f.outros_pontos)}</div>`:''}
