@@ -262,6 +262,9 @@ function _absnRenderTabela() {
             <th style="padding:8px 12px;text-align:center;font-size:10px;font-weight:800;color:var(--text3)">PAUSA ATRASADA</th>
             <th style="padding:8px 12px;text-align:center;font-size:10px;font-weight:800;color:var(--text3)">TOTAL ATRASOS</th>
             <th style="padding:8px 12px;text-align:center;font-size:10px;font-weight:800;color:var(--text3)">BANCO DE HORAS</th>
+            <th style="padding:8px 12px;text-align:center;font-size:10px;font-weight:800;color:var(--text3)">ATESTADOS</th>
+            <th style="padding:8px 12px;text-align:center;font-size:10px;font-weight:800;color:var(--text3)">FALTAS</th>
+            <th style="padding:8px 12px;text-align:center;font-size:10px;font-weight:800;color:var(--text3)">DECL. HORAS</th>
             <th style="padding:8px 12px"></th>
           </tr></thead>
           <tbody>${linhas.map(r => `
@@ -273,11 +276,14 @@ function _absnRenderTabela() {
               <td style="padding:8px 12px;text-align:center;font-weight:800;color:${r.pausas_atrasadas?'var(--red)':'var(--text3)'}">${r.pausas_atrasadas}</td>
               <td style="padding:8px 12px;text-align:center;font-weight:800;color:${r.total_atraso_min?'var(--red)':'var(--text3)'}">${_absnFmtMin(r.total_atraso_min,false)}</td>
               <td style="padding:8px 12px;text-align:center;font-weight:800;color:${r.banco_horas_min>0?'var(--green)':(r.banco_horas_min<0?'var(--red)':'var(--text3)')}">${_absnFmtMin(r.banco_horas_min,true)}</td>
+              <td style="padding:8px 12px;text-align:center;font-weight:800;color:${r.ausencias_justificadas?'var(--amber)':'var(--text3)'}">${r.ausencias_justificadas}</td>
+              <td style="padding:8px 12px;text-align:center;font-weight:800;color:${r.faltas_injustificadas?'var(--red)':'var(--text3)'}">${r.faltas_injustificadas}</td>
+              <td style="padding:8px 12px;text-align:center;font-weight:800;color:${r.declaracoes_horas?'var(--text2)':'var(--text3)'}">${r.declaracoes_horas}</td>
               <td style="padding:8px 12px;text-align:right;white-space:nowrap">
                 <button class="btn btn-outline btn-sm" onclick="absnAbrirDetalhe(${r.colaborador.id})">Ver dias</button>
                 <button class="btn btn-outline btn-sm" onclick="absnEnviarMatriz(${r.colaborador.id},'${pfEsc(r.colaborador.nome).replace(/'/g,"\\'")}')">Enviar p/ Matriz</button>
               </td>
-            </tr>`).join('') || `<tr><td colspan="8" style="text-align:center;color:var(--text3);padding:20px">Nenhum colaborador</td></tr>`}
+            </tr>`).join('') || `<tr><td colspan="11" style="text-align:center;color:var(--text3);padding:20px">Nenhum colaborador</td></tr>`}
           </tbody>
         </table>
       </div>
