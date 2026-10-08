@@ -363,6 +363,35 @@ router.get('/absenteismo/colaboradores/:id/dias', requerAuth, gLeitura, wrap(asy
 // casamento entre abs_colaboradores e mz_colaboradores é só por nome
 // (tabelas separadas, sem FK entre elas) — se não achar, retorna erro
 // pedindo pra conferir o cadastro em vez de criar um colaborador novo.
+// Texto com os dias e minutos de cada ocorrência (mesmo universo de dias do
+// resumoColaborador: dias úteis esperados, sem feriado) — vai no campo
+// "Detalhes" do bloco 4 do feedback, pra o gestor passar ao colaborador.
+function detalheAbsenteismo(diasDele, horario, status, resumo) {
+  const dias = diasDele
+    .filter(d => !FERIADOS.includes(d.data) && ehDiaUtilEsperado(horario, d.dia_semana))
+    .sort((a, b) => (a.data < b.data ? -1 : 1));
+  const fmtD = iso => (iso || '').split('-').reverse().slice(0, 2).join('/');
+  const fmtMin = m => m >= 60 ? `${Math.floor(m / 60)}h${m % 60 ? String(m % 60).padStart(2, '0') + 'min' : ''}` : `${m}min`;
+  const secao = (titulo, campo) => {
+    const itens = dias.filter(d => d[campo] != null && d[campo] > 0);
+    return itens.length ? [`${titulo}:`, ...itens.map(d => `  ${fmtD(d.data)}: ${fmtMin(d[campo])}`)] : [];
+  };
+  const porStatus = (titulo, st) => {
+    const itens = dias.filter(d => d.status === st);
+    return itens.length ? [`${titulo}:`, ...itens.map(d => `  ${fmtD(d.data)}`)] : [];
+  };
+  const linhas = [
+    `Absenteísmo: ${status} — ${resumo.total_atraso_min}min de atraso no total, ${resumo.faltas_injustificadas} falta(s), ${resumo.ausencias_justificadas} atestado(s)`,
+    ...secao('Atrasos na entrada', 'entrada_atraso_min'),
+    ...secao('Almoço prolongado', 'almoco_atraso_min'),
+    ...secao('Pausa prolongada', 'pausa_atraso_min'),
+    ...porStatus('Faltas injustificadas', 'Falta'),
+    ...porStatus('Atestados', 'Atestado Médico'),
+    ...porStatus('Declaração de horas', 'Declaração de Horas'),
+  ];
+  return linhas.join('\n');
+}
+
 // Se já existe feedback desse colaborador nesse mês, atualiza só os campos de
 // absenteísmo (reenviar não duplica); senão cria um novo. Retorna
 // { erro, status: <http> } quando o colaborador não está na Matriz.
@@ -380,6 +409,7 @@ async function enviarParaMatriz(colaborador, mes, autorNome) {
     ausenciasJustificadas: resumo.ausencias_justificadas,
   });
   const saldo = fmtSaldoHoras(resumo.banco_horas_min);
+  const detalhe = detalheAbsenteismo(dias, colaborador.horario, status, resumo);
 
   const existente = await db.get(
     'SELECT id FROM mz_feedbacks WHERE colaborador_id=$1 AND LOWER(TRIM(mes))=LOWER(TRIM($2)) ORDER BY id DESC LIMIT 1',
@@ -391,7 +421,7 @@ async function enviarParaMatriz(colaborador, mes, autorNome) {
       `UPDATE mz_feedbacks SET absenteismo_mes=$1, atrasos=$2, faltas_injustificadas=$3,
          ausencias_justificadas=$4, saldo_banco_horas=$5
        WHERE id=$6 RETURNING *, criado_em AS created_at`,
-      [status, resumo.total_atraso_min, resumo.faltas_injustificadas, resumo.ausencias_justificadas, saldo, existente.id]
+      [detalhe, resumo.total_atraso_min, resumo.faltas_injustificadas, resumo.ausencias_justificadas, saldo, existente.id]
     );
   } else {
     r = await pool.query(
@@ -400,7 +430,7 @@ async function enviarParaMatriz(colaborador, mes, autorNome) {
           atrasos,faltas_injustificadas,ausencias_justificadas,saldo_banco_horas)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
        RETURNING *, criado_em AS created_at`,
-      [mzColab.id, autorNome, mes, mzColab.cargo||'', mzColab.area||'', status,
+      [mzColab.id, autorNome, mes, mzColab.cargo||'', mzColab.area||'', detalhe,
        resumo.total_atraso_min, resumo.faltas_injustificadas, resumo.ausencias_justificadas, saldo]
     );
   }
