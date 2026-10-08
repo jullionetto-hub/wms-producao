@@ -172,6 +172,35 @@ async function absnEnviarMatriz(colaboradorId, nome) {
   } catch(e) { toast('Erro: ' + e.message, 'erro'); }
 }
 
+// Envia de uma vez todos os colaboradores que estão na tabela (respeita o filtro
+// de turno). Reenviar o mesmo mês atualiza o feedback existente em vez de duplicar.
+async function absnEnviarTodosMatriz() {
+  const linhas = _absnLinhasFiltradas();
+  if (!linhas.length) { toast('Nenhum colaborador na tabela', 'erro'); return; }
+  const mes = prompt(`Mês de referência na Matriz de Responsabilidades (ex: Agosto/2026)\nVão ser enviados ${linhas.length} colaboradores${_absnTurnoFiltro ? ` (turno ${_absnTurnoFiltro})` : ''}.`, _absnMesAtivo || '');
+  if (!mes) return;
+  const btn = document.getElementById('absn-btn-enviar-todos');
+  const txtOriginal = btn ? btn.innerHTML : '';
+  if (btn) { btn.disabled = true; btn.textContent = 'Enviando...'; }
+  try {
+    const res = await fetch(`${API}/absenteismo/enviar-matriz-lote`, {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mes, ids: linhas.map(r => r.colaborador.id) }),
+    });
+    const data = await res.json();
+    if (!res.ok) { toast(data.erro || 'Erro ao enviar pra Matriz', 'erro'); return; }
+    const ok = data.criados + data.atualizados;
+    if (!data.falhas.length) {
+      toast(`Enviado pra Matriz: ${ok} colaboradores (${data.criados} novos, ${data.atualizados} atualizados)`, 'sucesso');
+    } else {
+      toast(`${ok} enviados, ${data.falhas.length} com problema`, 'erro');
+      alert(`${ok} colaboradores enviados.\n\nNão enviados:\n` + data.falhas.map(f => `• ${f.nome}: ${f.erro}`).join('\n'));
+    }
+  } catch(e) { toast('Erro: ' + e.message, 'erro'); }
+  finally { if (btn) { btn.disabled = false; btn.innerHTML = txtOriginal; } }
+}
+
 // Turno do colaborador a partir do texto livre de horario do PDF — mesmo
 // casamento por substring usado no backend (lib/absenteismo.js turnoOficial).
 let _absnTurnoFiltro = null; // null = todos
@@ -480,6 +509,7 @@ function renderizarPagGestao() {
       <div class="filter-actions">
         <button class="btn btn-primary btn-sm" onclick="absnAplicarPeriodo()">Aplicar</button>
         <button class="btn-icon-outline" title="Limpar filtros" onclick="absnLimparPeriodo()"><i class="ti ti-refresh" aria-hidden="true"></i></button>
+        <button id="absn-btn-enviar-todos" onclick="absnEnviarTodosMatriz()" style="padding:6px 12px;background:var(--accent,#6366f1);border:1px solid var(--accent,#6366f1);color:#fff;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer"><i class="ti ti-send" aria-hidden="true"></i> Enviar todos p/ Matriz</button>
         <button onclick="absnGerarPDF()" style="padding:6px 12px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:8px;font-size:11px;font-weight:700;cursor:pointer"><i class="ti ti-printer" aria-hidden="true"></i> Gerar PDF / Imprimir</button>
       </div>
     </div>

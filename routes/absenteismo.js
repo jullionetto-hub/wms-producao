@@ -363,6 +363,50 @@ router.get('/absenteismo/colaboradores/:id/dias', requerAuth, gLeitura, wrap(asy
 // casamento entre abs_colaboradores e mz_colaboradores é só por nome
 // (tabelas separadas, sem FK entre elas) — se não achar, retorna erro
 // pedindo pra conferir o cadastro em vez de criar um colaborador novo.
+// Se já existe feedback desse colaborador nesse mês, atualiza só os campos de
+// absenteísmo (reenviar não duplica); senão cria um novo. Retorna
+// { erro, status: <http> } quando o colaborador não está na Matriz.
+async function enviarParaMatriz(colaborador, mes, autorNome) {
+  const mzColab = await acharMzColaborador(colaborador.nome);
+  if (!mzColab) {
+    return { httpStatus: 404, erro: `Não achei "${colaborador.nome}" cadastrado na Matriz de Responsabilidades. Cadastre lá primeiro ou confira o nome.` };
+  }
+
+  const dias = await db.all('SELECT * FROM abs_registros_diarios WHERE colaborador_id=$1', [colaborador.id]);
+  const resumo = resumoColaborador(dias, 0, colaborador.saldo_final_min, colaborador.horario);
+  const status = classificarAbsenteismoMes({
+    atrasoMin: resumo.total_atraso_min,
+    faltasInjustificadas: resumo.faltas_injustificadas,
+    ausenciasJustificadas: resumo.ausencias_justificadas,
+  });
+  const saldo = fmtSaldoHoras(resumo.banco_horas_min);
+
+  const existente = await db.get(
+    'SELECT id FROM mz_feedbacks WHERE colaborador_id=$1 AND LOWER(TRIM(mes))=LOWER(TRIM($2)) ORDER BY id DESC LIMIT 1',
+    [mzColab.id, mes]
+  );
+  let r;
+  if (existente) {
+    r = await pool.query(
+      `UPDATE mz_feedbacks SET absenteismo_mes=$1, atrasos=$2, faltas_injustificadas=$3,
+         ausencias_justificadas=$4, saldo_banco_horas=$5
+       WHERE id=$6 RETURNING *, criado_em AS created_at`,
+      [status, resumo.total_atraso_min, resumo.faltas_injustificadas, resumo.ausencias_justificadas, saldo, existente.id]
+    );
+  } else {
+    r = await pool.query(
+      `INSERT INTO mz_feedbacks
+         (colaborador_id,autor_nome,mes,cargo_snapshot,area_snapshot,absenteismo_mes,
+          atrasos,faltas_injustificadas,ausencias_justificadas,saldo_banco_horas)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+       RETURNING *, criado_em AS created_at`,
+      [mzColab.id, autorNome, mes, mzColab.cargo||'', mzColab.area||'', status,
+       resumo.total_atraso_min, resumo.faltas_injustificadas, resumo.ausencias_justificadas, saldo]
+    );
+  }
+  return { feedback: r.rows[0], resumo, status, mz_colaborador: mzColab, atualizado: !!existente };
+}
+
 router.post('/absenteismo/colaboradores/:id/enviar-matriz', requerAuth, gLeitura, wrap(async (req, res) => {
   const { mes } = req.body || {};
   if (!mes) return res.status(400).json({ erro: 'Informe o mês (ex: Agosto/2026)' });
@@ -370,33 +414,33 @@ router.post('/absenteismo/colaboradores/:id/enviar-matriz', requerAuth, gLeitura
   const colaborador = await db.get('SELECT * FROM abs_colaboradores WHERE id=$1', [req.params.id]);
   if (!colaborador) return res.status(404).json({ erro: 'Colaborador não encontrado' });
 
-  const mzColab = await acharMzColaborador(colaborador.nome);
-  if (!mzColab) {
-    return res.status(404).json({
-      erro: `Não achei "${colaborador.nome}" cadastrado na Matriz de Responsabilidades. Cadastre lá primeiro ou confira o nome.`,
-    });
+  const out = await enviarParaMatriz(colaborador, mes, req.session?.usuario?.nome || '');
+  if (out.erro) return res.status(out.httpStatus).json({ erro: out.erro });
+  res.status(out.atualizado ? 200 : 201).json(out);
+}));
+
+// Envio em lote: manda vários colaboradores de uma vez (ids = os que estão na
+// tela, já respeitando o filtro de turno). Um que falhe não derruba os outros.
+router.post('/absenteismo/enviar-matriz-lote', requerAuth, gLeitura, wrap(async (req, res) => {
+  const { mes, ids } = req.body || {};
+  if (!mes) return res.status(400).json({ erro: 'Informe o mês (ex: Agosto/2026)' });
+  if (!Array.isArray(ids) || !ids.length) return res.status(400).json({ erro: 'Nenhum colaborador informado' });
+
+  const autor = req.session?.usuario?.nome || '';
+  let criados = 0, atualizados = 0;
+  const falhas = [];
+  for (const id of ids) {
+    try {
+      const colaborador = await db.get('SELECT * FROM abs_colaboradores WHERE id=$1', [id]);
+      if (!colaborador) { falhas.push({ id, nome: `#${id}`, erro: 'Colaborador não encontrado' }); continue; }
+      const out = await enviarParaMatriz(colaborador, mes, autor);
+      if (out.erro) { falhas.push({ id, nome: colaborador.nome, erro: out.erro }); continue; }
+      if (out.atualizado) atualizados++; else criados++;
+    } catch (e) {
+      falhas.push({ id, nome: `#${id}`, erro: e.message });
+    }
   }
-
-  const dias = await db.all('SELECT * FROM abs_registros_diarios WHERE colaborador_id=$1', [req.params.id]);
-  const resumo = resumoColaborador(dias, 0, colaborador.saldo_final_min, colaborador.horario);
-  const status = classificarAbsenteismoMes({
-    atrasoMin: resumo.total_atraso_min,
-    faltasInjustificadas: resumo.faltas_injustificadas,
-    ausenciasJustificadas: resumo.ausencias_justificadas,
-  });
-
-  const autor_nome = req.session?.usuario?.nome || '';
-  const r = await pool.query(
-    `INSERT INTO mz_feedbacks
-       (colaborador_id,autor_nome,mes,cargo_snapshot,area_snapshot,absenteismo_mes,
-        atrasos,faltas_injustificadas,ausencias_justificadas,saldo_banco_horas)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
-     RETURNING *, criado_em AS created_at`,
-    [mzColab.id, autor_nome, mes, mzColab.cargo||'', mzColab.area||'', status,
-     resumo.total_atraso_min, resumo.faltas_injustificadas, resumo.ausencias_justificadas,
-     fmtSaldoHoras(resumo.banco_horas_min)]
-  );
-  res.status(201).json({ feedback: r.rows[0], resumo, status, mz_colaborador: mzColab });
+  res.json({ total: ids.length, criados, atualizados, falhas });
 }));
 
 function wrap(fn) { return (req, res, next) => fn(req, res).catch(next); }
