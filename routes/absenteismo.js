@@ -374,14 +374,16 @@ function detalheAbsenteismo(diasDele, horario, status, resumo) {
   const fmtMin = m => m >= 60 ? `${Math.floor(m / 60)}h${m % 60 ? String(m % 60).padStart(2, '0') + 'min' : ''}` : `${m}min`;
   const secao = (titulo, campo) => {
     const itens = dias.filter(d => d[campo] != null && d[campo] > 0);
-    return itens.length ? [`${titulo}:`, ...itens.map(d => `  ${fmtD(d.data)}: ${fmtMin(d[campo])}`)] : [];
+    if (!itens.length) return [];
+    const total = itens.reduce((s, d) => s + d[campo], 0);
+    return [`${titulo} (total ${fmtMin(total)}):`, ...itens.map(d => `  ${fmtD(d.data)}: ${fmtMin(d[campo])}`)];
   };
   const porStatus = (titulo, st) => {
     const itens = dias.filter(d => d.status === st);
     return itens.length ? [`${titulo}:`, ...itens.map(d => `  ${fmtD(d.data)}`)] : [];
   };
   const linhas = [
-    `Absenteísmo: ${status} — ${resumo.total_atraso_min}min de atraso no total, ${resumo.faltas_injustificadas} falta(s), ${resumo.ausencias_justificadas} atestado(s)`,
+    `Absenteísmo: ${status} — ${resumo.total_atraso_min}min${resumo.total_atraso_min >= 60 ? ` (${fmtMin(resumo.total_atraso_min)})` : ''} de atraso no total,${resumo.faltas_injustificadas} falta(s), ${resumo.ausencias_justificadas} atestado(s)`,
     ...secao('Atrasos na entrada', 'entrada_atraso_min'),
     ...secao('Almoço prolongado', 'almoco_atraso_min'),
     ...secao('Pausa prolongada', 'pausa_atraso_min'),

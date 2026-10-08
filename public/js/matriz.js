@@ -2078,18 +2078,18 @@ function _mzFeedbackCardHtml(f) {
           <div style="font-size:10px;font-weight:800;color:var(--text3);margin-bottom:4px">1 — META X ENTREGUE</div>
           ${grid(stPerf.bg, [['META',f.meta],['ENTREGUE',f.entregue],['%',pct+'%',stPerf.cor],['STATUS',stPerf.label,stPerf.cor]])}
         </div>` : ''}
-        ${f.pontos_positivos?`<div style="font-size:11.5px;margin-top:8px"><b>2 — Pontos positivos:</b> ${pfEsc(f.pontos_positivos)}</div>`:''}
-        ${f.pontos_construtivos?`<div style="font-size:11.5px;margin-top:6px"><b>3 — Pontos construtivos:</b> ${pfEsc(f.pontos_construtivos)}</div>`:''}
+        ${f.pontos_positivos?`<div style="font-size:11.5px;margin-top:8px;white-space:pre-line"><b>2 — Pontos positivos:</b> ${pfEsc(f.pontos_positivos)}</div>`:''}
+        ${f.pontos_construtivos?`<div style="font-size:11.5px;margin-top:6px;white-space:pre-line"><b>3 — Pontos construtivos:</b> ${pfEsc(f.pontos_construtivos)}</div>`:''}
         ${stAbs ? `<div style="margin-top:8px">
           <div style="font-size:10px;font-weight:800;color:var(--text3);margin-bottom:4px">4 — ABSENTEÍSMO DO MÊS: RESUMO</div>
-          ${grid(stAbs.bg, [['ATRASOS (MIN)',f.atrasos||0],['FALTAS INJUST.',f.faltas_injustificadas||0],['AUSÊNCIAS JUST.',f.ausencias_justificadas||0],['STATUS',stAbs.label,stAbs.cor]])}
+          ${grid(stAbs.bg, [['ATRASOS (MIN)',(f.atrasos||0)+((f.atrasos||0)>=60?` <span style="font-weight:600;color:var(--text3)">(${Math.floor(f.atrasos/60)}h${String(f.atrasos%60).padStart(2,'0')}min)</span>`:'')],['FALTAS INJUST.',f.faltas_injustificadas||0],['AUSÊNCIAS JUST.',f.ausencias_justificadas||0],['STATUS',stAbs.label,stAbs.cor]])}
         </div>` : ''}
         ${f.absenteismo_mes?`<div style="font-size:11.5px;margin-top:8px"><b>4 — Absenteísmo do mês: detalhes</b><div style="color:var(--text2);margin-top:2px;white-space:pre-line">${pfEsc(f.absenteismo_mes)}</div></div>`:''}
-        ${f.retorno_antecipado?`<div style="font-size:11.5px;margin-top:6px"><b>5 — Retorno antecipado:</b> ${pfEsc(f.retorno_antecipado)}</div>`:''}
-        ${f.recorrencia_ausencia?`<div style="font-size:11.5px;margin-top:6px"><b>6 — Recorrência de ausência:</b> ${pfEsc(f.recorrencia_ausencia)}</div>`:''}
-        ${f.outros_pontos?`<div style="font-size:11.5px;margin-top:6px"><b>7 — Outros pontos:</b> ${pfEsc(f.outros_pontos)}</div>`:''}
-        ${f.saldo_banco_horas?`<div style="font-size:11.5px;margin-top:6px"><b>8 — Saldo banco de horas:</b> ${pfEsc(f.saldo_banco_horas)}</div>`:''}
-        ${f.combinado_mes?`<div style="font-size:11.5px;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)"><b>9 — Combinado deste mês:</b> ${pfEsc(f.combinado_mes)}</div>`:''}
+        ${f.retorno_antecipado?`<div style="font-size:11.5px;margin-top:6px;white-space:pre-line"><b>5 — Retorno antecipado:</b> ${pfEsc(f.retorno_antecipado)}</div>`:''}
+        ${f.recorrencia_ausencia?`<div style="font-size:11.5px;margin-top:6px;white-space:pre-line"><b>6 — Recorrência de ausência:</b> ${pfEsc(f.recorrencia_ausencia)}</div>`:''}
+        ${f.outros_pontos?`<div style="font-size:11.5px;margin-top:6px;white-space:pre-line"><b>7 — Outros pontos:</b> ${pfEsc(f.outros_pontos)}</div>`:''}
+        ${f.saldo_banco_horas?`<div style="font-size:11.5px;margin-top:6px;white-space:pre-line"><b>8 — Saldo banco de horas:</b> ${pfEsc(f.saldo_banco_horas)}</div>`:''}
+        ${f.combinado_mes?`<div style="font-size:11.5px;margin-top:8px;padding-top:8px;border-top:1px solid var(--border);white-space:pre-line"><b>9 — Combinado deste mês:</b> ${pfEsc(f.combinado_mes)}</div>`:''}
       </div>
     </div>`;
 }
