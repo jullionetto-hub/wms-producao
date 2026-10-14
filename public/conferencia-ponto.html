@@ -6,7 +6,7 @@
 <title>Conferência de Ponto</title>
 <style>
 :root{--bg:#f5f6f8;--card:#fff;--tx:#1d2330;--mut:#6b7385;--bd:#dfe3ea;--pri:#2457d6;
---at:#7c3aed;--fo:#0d9488;--fa:#dc2626;--fe:#d97706;--ab:#2563eb;--ok:#16a34a;--ou:#64748b}
+--at:#7c3aed;--fo:#0d9488;--fa:#dc2626;--fe:#d97706;--ab:#2563eb;--bh:#db2777;--ok:#16a34a;--ou:#64748b}
 @media (prefers-color-scheme:dark){:root{--bg:#12151c;--card:#1b2029;--tx:#e8ebf2;--mut:#98a1b5;--bd:#2c3340;--pri:#6b8cff}}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
@@ -103,6 +103,7 @@ const CATS = {
   atestado:{n:'Atestados',c:'--at'},
   falta:{n:'Faltas',c:'--fa'},
   folga:{n:'Folgas',c:'--fo'},
+  folgabh:{n:'Folga BH (desconta do banco)',c:'--bh'},
   dsr:{n:'DSR (descanso semanal)',c:'--ou'},
   feriado:{n:'Feriados',c:'--fe'},
   abono:{n:'Abonos',c:'--ab'},
@@ -111,7 +112,7 @@ const CATS = {
   trab:{n:'Trabalhados',c:'--ok'},
   fora:{n:'Sem arquivo no período',c:'--ou'},
 };
-const ORDER=['atestado','falta','folga','semreg','abono','afast','feriado','dsr','trab','fora'];
+const ORDER=['atestado','falta','folga','folgabh','semreg','abono','afast','feriado','dsr','trab','fora'];
 const PUNCH=/^\d{1,2}:\d{2}[oi]?$/, TIME=/^-?\d{1,3}:\d{2}$/, DATE=/^\d{2}\/\d{2}\/\d{4}$/;
 const COLS=['H.Pos','H.Neg','H.Ext','Atraso','Falta','Abono','Art.59','Ad.N','J.T','J.C'];
 
@@ -197,6 +198,7 @@ function classificar(d){
   if(/atestad|medic|cid\b|declaracao de comparec|acompanhamento/.test(st))return['atestado',d.status];
   if(/\bfalta|injustific|ausen|nao justif|nao compar/.test(st))return['falta',d.status];
   if(/\bdsr\b|descanso semanal/.test(st))return['dsr',d.status];
+  if(/(folga|compensa|day off).*(bh|banco)|(bh|banco).*(folga|compensa)|^\s*bh\s*$|banco de horas/.test(st))return['folgabh',d.status];
   if(/folga|compensa|banco de horas|\bbh\b|day off/.test(st))return['folga',d.status];
   if(/ferias|afast|licen|inss|suspens|maternid|paternid|luto|casamento|doacao/.test(st))return['afast',d.status];
   if(/abono/.test(st)||(temAbono&&!pontos))return['abono',d.status||'Abono '+abono];
@@ -258,7 +260,7 @@ function render(){
   if(nomes.length>1)h+=`<div class="warn">⚠ Os arquivos têm nomes de colaboradores diferentes: ${nomes.join(', ')}. Confira se são todos da mesma pessoa.</div>`;
   if(cont.fora)h+=`<div class="warn">⚠ ${cont.fora} dia(s) no intervalo não estão cobertos por nenhum arquivo. Veja os períodos faltando em “Sem arquivo no período”.</div>`;
   $('head').innerHTML=h;
-  $('stats').innerHTML=ORDER.filter(k=>cont[k]||['atestado','falta','folga'].includes(k)).map(k=>
+  $('stats').innerHTML=ORDER.filter(k=>cont[k]||['atestado','falta','folga','folgabh'].includes(k)).map(k=>
     `<button class="stat ${state.filtro===k?'on':''}" style="--c:var(${CATS[k].c})" data-k="${k}"><div class="n">${cont[k]||0}</div><div class="l">${CATS[k].n}</div></button>`).join('')
     +`<button class="stat ${state.filtro==='todos'?'on':''}" style="--c:var(--pri)" data-k="todos"><div class="n">${ls.length}</div><div class="l">Todos os dias</div></button>`;
   document.querySelectorAll('.stat').forEach(b=>b.onclick=()=>{state.filtro=state.filtro===b.dataset.k?null:b.dataset.k;render();});
@@ -267,7 +269,7 @@ function render(){
   const bhd=ls.filter(d=>d.data&&d.cols&&(mins(d.cols['H.Neg'])>0||mins(d.cols['Abono'])>0||/banco|compensa|\bbh\b/.test(norm(d.status))));
   $('bhDias').innerHTML=bhd.length?'<tr><th>Data</th><th>Dia</th><th>Tipo</th><th>H.Neg (descontada do banco)</th><th>Abono</th><th>Status</th><th>Leitura</th></tr>'+bhd.map(d=>{
     const hn=mins(d.cols['H.Neg']),ab=mins(d.cols['Abono']);
-    const lei=ab&&hn?'Abono e hora negativa no mesmo dia — conferir se o abono foi descontado do banco':ab?'Abono lançado, sem hora negativa (não desconta do banco)':hn?'Hora negativa debitada do banco':'Menção a banco/compensação';
+    const lei=d.cat==='folgabh'?(hn?'Folga BH: '+d.cols['H.Neg']+' descontadas do banco de horas':'Folga BH sem hora negativa lançada — conferir'):ab&&hn?'Abono e hora negativa no mesmo dia — conferir se o abono foi descontado do banco':ab?'Abono lançado, sem hora negativa (não desconta do banco)':hn?'Hora negativa debitada do banco':'Menção a banco/compensação';
     return `<tr><td>${br(d.data)}</td><td>${d.dow||''}</td><td>${CATS[d.cat].n}</td><td>${d.cols['H.Neg']||''}</td><td>${d.cols['Abono']||''}</td><td>${d.status||''}</td><td>${lei}</td></tr>`}).join(''):'<tr><td>Nenhum dia com hora negativa, abono ou menção a banco de horas no intervalo.</td></tr>';
   $('bhArq').innerHTML='<tr><th>Espelho</th><th>Saldo anterior</th><th>Acerto BH (−)</th><th>H.Neg período (−)</th><th>H.Pos período (+)</th><th>Saldo final</th></tr>'+state.docs.slice().sort((a,b)=>(a.ini||'').localeCompare(b.ini||'')).map(d=>{const b=d.info.banco;return `<tr><td>${d.info.periodo||d.nome}</td>`+(b?`<td>${b.anterior}</td><td>${b.acerto}</td><td>${b.hneg}</td><td>${b.hpos}</td><td>${b.final}</td>`:'<td colspan="5">resumo não encontrado</td>')+'</tr>'}).join('');
   // calendário
