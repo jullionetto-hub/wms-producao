@@ -71,6 +71,12 @@ th{font-size:12px;color:var(--mut);text-transform:uppercase;letter-spacing:.03em
       <div class="stats" id="stats"></div>
     </div>
     <div class="card">
+      <h2>Banco de horas</h2>
+      <div class="sub" style="margin:0 0 8px">Dias em que houve hora negativa (descontada do banco), abono ou texto de banco/compensação, e o fechamento de cada espelho.</div>
+      <div class="scroll"><table id="bhDias"></table></div>
+      <div class="scroll" style="margin-top:14px"><table id="bhArq"></table></div>
+    </div>
+    <div class="card">
       <h2>Calendário</h2>
       <div class="leg" id="leg"></div>
       <div class="months" id="months"></div>
@@ -118,7 +124,7 @@ const mins=t=>{if(!t||!TIME.test(t))return 0;const[h,m]=t.replace('-','').split(
 
 async function lerPdf(file){
   const pdf=await pdfjsLib.getDocument({data:await file.arrayBuffer()}).promise;
-  const info={nome:'',periodo:'',setor:'',horario:''}, dias=[];
+  const info={nome:'',periodo:'',setor:'',horario:'',banco:null}, dias=[];
   for(let p=1;p<=pdf.numPages;p++){
     const page=await pdf.getPage(p), tc=await page.getTextContent();
     const items=[];
@@ -136,6 +142,10 @@ async function lerPdf(file){
     if(!info.nome&&(m=txt.match(/Colaborador:\s*(.+?)\s+(?:Setor:|Matr)/)))info.nome=m[1].trim();
     if(!info.periodo&&(m=txt.match(/Per[ií]odo:\s*(\d{2}\/\d{2}\/\d{4})\s*[àa]\s*(\d{2}\/\d{2}\/\d{4})/)))info.periodo=m[1]+' a '+m[2];
     if(!info.setor&&(m=txt.match(/Setor:\s*(.+?)\s+(?:Espelho|Hor[aá]rio|Matr)/)))info.setor=m[1].trim();
+    if(!info.banco&&(m=txt.match(/Saldo Final\s*\(\s*=\s*\)\s*((?:-?\d{1,3}:\d{2}\s*){7})/))){
+      const v=m[1].trim().split(/\s+/);
+      info.banco={anterior:v[0],acerto:v[1],saldo:v[2],hneg:v[3],hpos:v[5],final:v[6]};
+    }
     // posição das colunas pelo cabeçalho
     const colX={};
     for(const c of COLS){const h=items.find(i=>i.s===c);if(h)colX[c]=h.x;}
@@ -195,7 +205,7 @@ function classificar(d){
   if(pontos)return['trab',st?d.status:''];
   // sem texto e sem batidas
   if(jc>0)return['semreg','Dia útil sem batida e sem justificativa'];
-  return['folga',fimSemana?'Folga de escala ('+d.dow+')':'Folga de escala'];
+  return['folga',fimSemana?'Folga de escala ('+d.dow+')':'Folga em dia útil ('+d.dow+') — conferir se é compensação/folga concedida'];
 }
 
 async function processar(files){
@@ -204,7 +214,7 @@ async function processar(files){
     try{
       const r=await lerPdf(f);
       if(!r.dias.length)throw new Error('nenhum dia encontrado (PDF escaneado ou formato diferente?)');
-      state.docs.push({nome:f.name,info:r.info,qtd:r.dias.length});
+      state.docs.push({nome:f.name,info:r.info,qtd:r.dias.length,ini:r.dias.map(d=>d.data).sort()[0]});
       for(const d of r.dias){
         const [cat,obs]=classificar(d);
         const reg={...d,cat,obs,arquivo:f.name,periodo:r.info.periodo};
@@ -253,6 +263,13 @@ function render(){
     +`<button class="stat ${state.filtro==='todos'?'on':''}" style="--c:var(--pri)" data-k="todos"><div class="n">${ls.length}</div><div class="l">Todos os dias</div></button>`;
   document.querySelectorAll('.stat').forEach(b=>b.onclick=()=>{state.filtro=state.filtro===b.dataset.k?null:b.dataset.k;render();});
   $('leg').innerHTML=ORDER.filter(k=>cont[k]).map(k=>`<span style="--c:var(${CATS[k].c})"><i></i>${CATS[k].n}</span>`).join('');
+  // banco de horas
+  const bhd=ls.filter(d=>d.data&&d.cols&&(mins(d.cols['H.Neg'])>0||mins(d.cols['Abono'])>0||/banco|compensa|\bbh\b/.test(norm(d.status))));
+  $('bhDias').innerHTML=bhd.length?'<tr><th>Data</th><th>Dia</th><th>Tipo</th><th>H.Neg (descontada do banco)</th><th>Abono</th><th>Status</th><th>Leitura</th></tr>'+bhd.map(d=>{
+    const hn=mins(d.cols['H.Neg']),ab=mins(d.cols['Abono']);
+    const lei=ab&&hn?'Abono e hora negativa no mesmo dia — conferir se o abono foi descontado do banco':ab?'Abono lançado, sem hora negativa (não desconta do banco)':hn?'Hora negativa debitada do banco':'Menção a banco/compensação';
+    return `<tr><td>${br(d.data)}</td><td>${d.dow||''}</td><td>${CATS[d.cat].n}</td><td>${d.cols['H.Neg']||''}</td><td>${d.cols['Abono']||''}</td><td>${d.status||''}</td><td>${lei}</td></tr>`}).join(''):'<tr><td>Nenhum dia com hora negativa, abono ou menção a banco de horas no intervalo.</td></tr>';
+  $('bhArq').innerHTML='<tr><th>Espelho</th><th>Saldo anterior</th><th>Acerto BH (−)</th><th>H.Neg período (−)</th><th>H.Pos período (+)</th><th>Saldo final</th></tr>'+state.docs.slice().sort((a,b)=>(a.ini||'').localeCompare(b.ini||'')).map(d=>{const b=d.info.banco;return `<tr><td>${d.info.periodo||d.nome}</td>`+(b?`<td>${b.anterior}</td><td>${b.acerto}</td><td>${b.hneg}</td><td>${b.hpos}</td><td>${b.final}</td>`:'<td colspan="5">resumo não encontrado</td>')+'</tr>'}).join('');
   // calendário
   const meses={};
   ls.forEach(d=>(meses[d.data.slice(0,7)]??=[]).push(d));
@@ -272,8 +289,8 @@ function render(){
     const g=agrupar(base);
     $('tab').innerHTML='<tr><th>Período</th><th>Dias</th><th>Tipo</th><th>Observação</th></tr>'+g.map(x=>`<tr><td>${br(x.ini)}${x.ini!==x.fim?' a '+br(x.fim):''}</td><td>${x.n}</td><td>${tag(x.cat)}</td><td>${x.obs||''}</td></tr>`).join('');
   }else{
-    $('tab').innerHTML='<tr><th>Data</th><th>Dia</th><th>Tipo</th><th>Status / observação</th><th>Batidas</th><th>Falta</th><th>Abono</th><th>Arquivo</th></tr>'
-     +base.map(d=>`<tr><td>${br(d.data)}</td><td>${d.dow||''}</td><td>${tag(d.cat)}</td><td>${d.obs||''}</td><td>${(d.pontos||[]).join(' ')}</td><td>${(d.cols&&d.cols.Falta)||''}</td><td>${(d.cols&&d.cols.Abono)||''}</td><td style="color:var(--mut);font-size:12px">${d.periodo||''}</td></tr>`).join('');
+    $('tab').innerHTML='<tr><th>Data</th><th>Dia</th><th>Tipo</th><th>Status / observação</th><th>Batidas</th><th>Falta</th><th>Abono</th><th>H.Neg</th><th>Arquivo</th></tr>'
+     +base.map(d=>`<tr><td>${br(d.data)}</td><td>${d.dow||''}</td><td>${tag(d.cat)}</td><td>${d.obs||''}</td><td>${(d.pontos||[]).join(' ')}</td><td>${(d.cols&&d.cols.Falta)||''}</td><td>${(d.cols&&d.cols.Abono)||''}</td><td>${(d.cols&&d.cols['H.Neg'])||''}</td><td style="color:var(--mut);font-size:12px">${d.periodo||''}</td></tr>`).join('');
   }
   if(!base.length)$('tab').innerHTML='<tr><td>Nada encontrado nesta categoria.</td></tr>';
   state.vis=base;
