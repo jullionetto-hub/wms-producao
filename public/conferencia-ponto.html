@@ -88,11 +88,12 @@ body.pr .wrap{display:none}body.pr #relov{position:static;background:#fff;paddin
     </div>
     <div class="card">
       <h2>Custo das ausências</h2>
-      <div class="sub" style="margin:0 0 8px">Sem hora extra e sem substituto: o custo é o dia pago sem produção (atestado, abono, Folga BH) e, se você informar, a produção perdida em cada ausência. Os valores ficam salvos neste navegador.</div>
+      <div class="sub" style="margin:0 0 8px">Sem hora extra e sem substituto: o custo é o dia pago sem produção (atestado, abono, Folga BH) e os pedidos que deixam de ser processados em cada ausência. Se você souber quanto vale cada pedido, informe o valor para ver a perda em reais. Os valores ficam salvos neste navegador.</div>
       <div class="row noprint">
         <div><label>Custo mensal total (R$) — salário + encargos + benefícios</label><input type="number" id="cMes" min="0" step="0.01" placeholder="ex.: 4400"></div>
         <div><label>Dias de escala no mês</label><input type="number" id="cDias" min="1" value="22" style="width:90px"></div>
-        <div><label>Produção perdida por dia (R$) — opcional</label><input type="number" id="cProd" min="0" step="0.01" placeholder="0"></div>
+        <div><label>Pedidos que ela processa por dia (média)</label><input type="number" id="cPed" min="0" step="1" placeholder="ex.: 120"></div>
+        <div><label>Valor por pedido (R$) — opcional</label><input type="number" id="cVal" min="0" step="0.01" placeholder="0"></div>
       </div>
       <div class="stats" id="custo" style="margin-top:12px"></div>
     </div>
@@ -275,11 +276,11 @@ function indicadores(ls){
 }
 const brl=v=>v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 function custos(ls){
-  const mes=parseFloat($('cMes').value)||0, dias=parseFloat($('cDias').value)||22, prod=parseFloat($('cProd').value)||0;
+  const mes=parseFloat($('cMes').value)||0, dias=parseFloat($('cDias').value)||22, ped=parseFloat($('cPed').value)||0, val=parseFloat($('cVal').value)||0;
   const dia=mes/dias, n=k=>ls.filter(d=>d.cat===k).length;
   const pagos=n('atestado')+n('abono')+n('folgabh'), faltas=n('falta'), sr=n('semreg');
-  const direto=pagos*dia, perda=(pagos+faltas)*prod;
-  return{mes,dias,prod,dia,pagos,faltas,sr,direto,perda,total:direto+perda,n};
+  const ausDias=pagos+faltas, pedPerd=ausDias*ped, direto=pagos*dia, perda=pedPerd*val;
+  return{mes,dias,ped,val,dia,pagos,faltas,sr,ausDias,pedPerd,custoPed:ped?dia/ped:0,direto,perda,total:direto+perda,n};
 }
 const DOW=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 
@@ -320,7 +321,13 @@ function render(){
   $('ind').innerHTML=[['Absenteísmo',I.f(I.abs),'--fa'],['Presenteísmo',I.f(I.pres),'--ok'],['Absenteísmo em horas',I.f(I.absH),'--fa'],['Dias previstos de trabalho',I.dp,'--pri']].map(x=>`<div class="stat" style="--c:var(${x[2]});cursor:default"><div class="n">${x[1]}</div><div class="l">${x[0]}</div></div>`).join('');
   $('indNota').innerHTML=`Dias previstos = trabalhados + faltas + atestados + abonos + afastamentos + Folga BH + dias úteis sem registro (${I.dp}). Absenteísmo = (faltas + atestados) ÷ dias previstos (${I.aus} ÷ ${I.dp}). Presenteísmo = dias trabalhados ÷ dias previstos (${I.tr} ÷ ${I.dp}). Folgas de escala, DSR e feriados não entram. `+(I.semreg?`<b>Atenção:</b> há ${I.semreg} dia(s) sem registro; se forem faltas, o absenteísmo sobe para ${I.f(I.absSR)}.`:'');
   const C=custos(ls);
-  $('custo').innerHTML=C.mes?[['Custo por dia',brl(C.dia),'--pri'],[`Dias pagos sem produção (${C.n('atestado')} atestado + ${C.n('abono')} abono + ${C.n('folgabh')} Folga BH)`,brl(C.direto),'--fa'],[`Produção perdida (${C.pagos+C.faltas} dia(s) × ${brl(C.prod)})`,brl(C.perda),'--fe'],['Custo total das ausências',brl(C.total),'--fa']].map(x=>`<div class="stat" style="--c:var(${x[2]});cursor:default"><div class="n" style="font-size:20px">${x[1]}</div><div class="l">${x[0]}</div></div>`).join('')+(C.faltas?`<div class="sub" style="width:100%;font-size:13px">As ${C.faltas} falta(s) injustificada(s) não têm custo de salário (são descontadas); só entram na produção perdida.${C.sr?` Há ${C.sr} dia(s) sem registro ainda não contados.`:''}</div>`:''):'<div class="sub">Informe o custo mensal acima para calcular.</div>';
+  const cards=[['Custo por dia',brl(C.dia),'--pri']];
+  if(C.ped)cards.push(['Custo de mão de obra por pedido',brl(C.custoPed),'--pri']);
+  cards.push([`Dias pagos sem produção (${C.n('atestado')} atestado + ${C.n('abono')} abono + ${C.n('folgabh')} Folga BH)`,brl(C.direto),'--fa']);
+  if(C.ped)cards.push([`Pedidos não processados (${C.ausDias} dia(s) × ${C.ped} pedidos)`,C.pedPerd.toLocaleString('pt-BR'),'--fe']);
+  if(C.ped&&C.val)cards.push([`Produção perdida (${C.pedPerd.toLocaleString('pt-BR')} × ${brl(C.val)})`,brl(C.perda),'--fe']);
+  cards.push([C.val?'Custo total das ausências':'Custo dos dias pagos',brl(C.total),'--fa']);
+  $('custo').innerHTML=C.mes?cards.map(x=>`<div class="stat" style="--c:var(${x[2]});cursor:default"><div class="n" style="font-size:20px">${x[1]}</div><div class="l">${x[0]}</div></div>`).join('')+(C.faltas?`<div class="sub" style="width:100%;font-size:13px">As ${C.faltas} falta(s) injustificada(s) não têm custo de salário (são descontadas); só entram nos pedidos não processados.${C.sr?` Há ${C.sr} dia(s) sem registro ainda não contados.`:''}</div>`:''):'<div class="sub">Informe o custo mensal acima para calcular.</div>';
   // banco de horas
   const bhd=ls.filter(d=>d.data&&d.cols&&(mins(d.cols['H.Neg'])>0||mins(d.cols['Abono'])>0||/banco|compensa|\bbh\b/.test(norm(d.status))));
   $('bhDias').innerHTML=bhd.length?'<tr><th>Data</th><th>Dia</th><th>Tipo</th><th>H.Neg (descontada do banco)</th><th>Abono</th><th>Status</th><th>Leitura</th></tr>'+bhd.map(d=>{
@@ -381,7 +388,7 @@ function gerarRel(){
   <h3>Indicadores de assiduidade</h3>
   <div class="kv">${kv('Dias previstos de trabalho',IND.dp)}${kv('Dias trabalhados',IND.tr)}${kv('Faltas + atestados',IND.aus)}${kv('<b>Absenteísmo</b> (dias)',`<span class="${IND.abs?'bad':''}">${IND.f(IND.abs)}</span>`)}${kv('<b>Presenteísmo</b> (dias)',IND.f(IND.pres))}${kv('Absenteísmo em horas',IND.f(IND.absH))}${IND.semreg?kv('Absenteísmo c/ dias sem registro',`<span class="bad">${IND.f(IND.absSR)}</span>`):''}</div>
   <div style="color:#555;font-size:11px;margin-top:4px">Absenteísmo = (faltas + atestados) ÷ dias previstos. Presenteísmo = dias trabalhados ÷ dias previstos. Dias previstos = trabalhados + faltas + atestados + abonos + afastamentos + Folga BH + dias sem registro; folgas de escala, DSR e feriados não entram.</div>
-  ${(()=>{const C=custos(ls);return C.mes?`<h3>Custo das ausências</h3><div class="kv">${kv('Custo por dia',brl(C.dia))}${kv('Dias pagos sem produção',C.pagos)}${kv('Custo dos dias pagos',brl(C.direto))}${kv('Faltas (sem custo de salário)',C.faltas)}${kv('Produção perdida',brl(C.perda))}${kv('<b>Custo total</b>',`<b>${brl(C.total)}</b>`)}</div><div style="color:#555;font-size:11px;margin-top:4px">Sem hora extra nem substituto. Custo dos dias pagos = (atestados + abonos + Folga BH) × custo por dia. Custo por dia = custo mensal ÷ dias de escala.</div>`:''})()}
+  ${(()=>{const C=custos(ls);return C.mes?`<h3>Custo das ausências</h3><div class="kv">${kv('Custo por dia',brl(C.dia))}${C.ped?kv('Custo de mão de obra por pedido',brl(C.custoPed)):''}${kv('Dias pagos sem produção',C.pagos)}${kv('Custo dos dias pagos',brl(C.direto))}${kv('Faltas (sem custo de salário)',C.faltas)}${C.ped?kv('Pedidos não processados',C.pedPerd.toLocaleString('pt-BR')):''}${C.ped&&C.val?kv('Produção perdida',brl(C.perda)):''}${kv(C.val?'<b>Custo total</b>':'<b>Custo dos dias pagos</b>',`<b>${brl(C.total)}</b>`)}</div><div style="color:#555;font-size:11px;margin-top:4px">Sem hora extra nem substituto. Custo dos dias pagos = (atestados + abonos + Folga BH) × custo por dia. Pedidos não processados = (dias pagos + faltas) × média de pedidos por dia.</div>`:''})()}
   <h3>2. Horas</h3>
   <div class="kv">${kv('Horas previstas (J.C)',fmt(sum('J.C')))}${kv('Horas trabalhadas (J.T)',fmt(sum('J.T')))}${kv('Horas positivas',fmt(sum('H.Pos')))}${kv('Horas negativas',fmt(sum('H.Neg')))}${kv('Horas extras',fmt(sum('H.Ext')))}${kv('Adicional noturno',fmt(sum('Ad.N')))}${kv('Atrasos (total)',fmt(sum('Atraso')))}${kv('Abonos (horas)',fmt(sum('Abono')))}</div>
   <h3>3. Faltas</h3>${per('falta')}
@@ -405,7 +412,7 @@ function gerarRel(){
 $('rel').onclick=gerarRel;
 $('rfec').onclick=()=>{$('relov').classList.add('hide');document.body.classList.remove('pr');};
 $('rimp').onclick=()=>window.print();
-['cMes','cDias','cProd'].forEach(id=>{
+['cMes','cDias','cPed','cVal'].forEach(id=>{
   try{const v=localStorage.getItem('cp_'+id);if(v!==null)$(id).value=v;}catch(e){}
   $(id).oninput=()=>{try{localStorage.setItem('cp_'+id,$(id).value);}catch(e){} if(state.docs.length)render();};
 });
