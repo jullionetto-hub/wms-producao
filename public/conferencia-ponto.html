@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Conferência de Ponto</title>
+<style>
+:root{--bg:#f5f6f8;--card:#fff;--tx:#1d2330;--mut:#6b7385;--bd:#dfe3ea;--pri:#2457d6;
+--at:#7c3aed;--fo:#0d9488;--fa:#dc2626;--fe:#d97706;--ab:#2563eb;--ok:#16a34a;--ou:#64748b}
+@media (prefers-color-scheme:dark){:root{--bg:#12151c;--card:#1b2029;--tx:#e8ebf2;--mut:#98a1b5;--bd:#2c3340;--pri:#6b8cff}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+.wrap{max-width:1100px;margin:0 auto;padding:20px 16px 60px}
+h1{font-size:22px;margin:0 0 4px}h2{font-size:16px;margin:0 0 10px}
+.sub{color:var(--mut);margin:0 0 18px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:16px;margin-bottom:16px}
+#drop{border:2px dashed var(--bd);border-radius:12px;padding:28px;text-align:center;cursor:pointer;color:var(--mut)}
+#drop.over{border-color:var(--pri);background:rgba(36,87,214,.06)}
+#drop b{color:var(--tx)}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:end}
+label{font-size:13px;color:var(--mut);display:block;margin-bottom:3px}
+input[type=date],select,input[type=text]{padding:7px 9px;border:1px solid var(--bd);border-radius:8px;background:var(--card);color:var(--tx);font:inherit}
+button{padding:8px 14px;border:1px solid var(--bd);border-radius:8px;background:var(--card);color:var(--tx);font:inherit;cursor:pointer}
+button.p{background:var(--pri);border-color:var(--pri);color:#fff}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.stat{border:1px solid var(--bd);border-left:5px solid var(--c);border-radius:10px;padding:10px 12px;background:var(--card);cursor:pointer;text-align:left}
+.stat.on{outline:2px solid var(--c)}
+.stat .n{font-size:26px;font-weight:700;color:var(--c)}.stat .l{font-size:13px;color:var(--mut)}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:6px 8px;border-bottom:1px solid var(--bd);text-align:left;vertical-align:top}
+th{font-size:12px;color:var(--mut);text-transform:uppercase;letter-spacing:.03em}
+.tag{display:inline-block;padding:1px 8px;border-radius:99px;font-size:12px;font-weight:600;color:#fff;background:var(--c)}
+.files{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.chip{font-size:12px;border:1px solid var(--bd);border-radius:99px;padding:2px 10px;color:var(--mut)}
+.chip.err{color:var(--fa);border-color:var(--fa)}
+.warn{background:rgba(217,119,6,.1);border:1px solid var(--fe);border-radius:8px;padding:8px 12px;margin-top:10px;font-size:14px}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;max-width:420px}
+.cal div{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:6px;font-size:12px;background:var(--bd);color:var(--mut);position:relative}
+.cal .h{background:none;aspect-ratio:auto;font-weight:600}
+.cal .d{background:var(--c);color:#fff}
+.months{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+.mt{font-weight:600;margin-bottom:4px;font-size:14px}
+.leg{display:flex;flex-wrap:wrap;gap:10px;font-size:12px;color:var(--mut);margin-bottom:10px}
+.leg i{display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--c);margin-right:4px}
+.hide{display:none}
+.scroll{overflow-x:auto}
+@media print{#drop,.noprint{display:none}body{background:#fff}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Conferência de Ponto da Colaboradora</h1>
+  <p class="sub">Coloque os espelhos de ponto (PDF) de janeiro a 12/10/2026. Os arquivos são lidos só no seu navegador — nada é enviado.</p>
+
+  <div class="card noprint">
+    <div id="drop">Arraste os PDFs aqui ou <b>clique para escolher</b> (pode selecionar vários)</div>
+    <input id="file" type="file" accept="application/pdf" multiple class="hide">
+    <div class="row" style="margin-top:14px">
+      <div><label>Início da análise</label><input type="date" id="ini" value="2026-01-01"></div>
+      <div><label>Fim da análise</label><input type="date" id="fim" value="2026-10-12"></div>
+      <button id="limpar">Limpar tudo</button>
+    </div>
+    <div class="files" id="files"></div>
+    <div id="msg"></div>
+  </div>
+
+  <div id="out" class="hide">
+    <div class="card" id="head"></div>
+    <div class="card">
+      <h2>Resumo (clique para filtrar)</h2>
+      <div class="stats" id="stats"></div>
+    </div>
+    <div class="card">
+      <h2>Calendário</h2>
+      <div class="leg" id="leg"></div>
+      <div class="months" id="months"></div>
+    </div>
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <h2 id="listTitle" style="margin:0">Detalhamento</h2>
+        <div class="row noprint">
+          <select id="modo"><option value="dias">Dia a dia</option><option value="per">Agrupado por períodos</option></select>
+          <button id="csv">Exportar CSV</button>
+          <button id="imp" class="p">Imprimir</button>
+        </div>
+      </div>
+      <div class="scroll"><table id="tab"></table></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+const CATS = {
+  atestado:{n:'Atestados',c:'--at'},
+  falta:{n:'Faltas',c:'--fa'},
+  folga:{n:'Folgas',c:'--fo'},
+  dsr:{n:'DSR (descanso semanal)',c:'--ou'},
+  feriado:{n:'Feriados',c:'--fe'},
+  abono:{n:'Abonos',c:'--ab'},
+  afast:{n:'Férias / afastamentos',c:'--ab'},
+  semreg:{n:'Sem registro (conferir)',c:'--fa'},
+  trab:{n:'Trabalhados',c:'--ok'},
+  fora:{n:'Sem arquivo no período',c:'--ou'},
+};
+const ORDER=['atestado','falta','folga','semreg','abono','afast','feriado','dsr','trab','fora'];
+const PUNCH=/^\d{1,2}:\d{2}[oi]?$/, TIME=/^-?\d{1,3}:\d{2}$/, DATE=/^\d{2}\/\d{2}\/\d{4}$/;
+const COLS=['H.Pos','H.Neg','H.Ext','Atraso','Falta','Abono','Art.59','Ad.N','J.T','J.C'];
+
+const state={docs:[],days:new Map(),filtro:null,errs:[]};
+const $=id=>document.getElementById(id);
+const norm=s=>(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
+const iso=d=>d.split('/').reverse().join('-');
+const br=i=>i.split('-').reverse().join('/');
+const mins=t=>{if(!t||!TIME.test(t))return 0;const[h,m]=t.replace('-','').split(':').map(Number);return h*60+m;};
+
+async function lerPdf(file){
+  const pdf=await pdfjsLib.getDocument({data:await file.arrayBuffer()}).promise;
+  const info={nome:'',periodo:'',setor:'',horario:''}, dias=[];
+  for(let p=1;p<=pdf.numPages;p++){
+    const page=await pdf.getPage(p), tc=await page.getTextContent();
+    const items=[];
+    for(const i of tc.items){
+      const t=i.str.trim(); if(!t)continue;
+      const parts=t.split(/\s+/);
+      // vários valores de hora colados num só texto (ex.: batidas) → separa
+      if(parts.length>1&&parts.every(x=>/^(-?\d{1,3}:\d{2}[oi]?|--:--)$/.test(x))){
+        parts.forEach((x,k)=>items.push({s:x,x:i.transform[4]+(i.width||0)*k/parts.length,y:i.transform[5]}));
+      }else items.push({s:t,x:i.transform[4],y:i.transform[5]});
+    }
+    // cabeçalho
+    const txt=items.map(i=>i.s).join(' ');
+    let m;
+    if(!info.nome&&(m=txt.match(/Colaborador:\s*(.+?)\s+(?:Setor:|Matr)/)))info.nome=m[1].trim();
+    if(!info.periodo&&(m=txt.match(/Per[ií]odo:\s*(\d{2}\/\d{2}\/\d{4})\s*[àa]\s*(\d{2}\/\d{2}\/\d{4})/)))info.periodo=m[1]+' a '+m[2];
+    if(!info.setor&&(m=txt.match(/Setor:\s*(.+?)\s+(?:Espelho|Hor[aá]rio|Matr)/)))info.setor=m[1].trim();
+    // posição das colunas pelo cabeçalho
+    const colX={};
+    for(const c of COLS){const h=items.find(i=>i.s===c);if(h)colX[c]=h.x;}
+    const statusX=(items.find(i=>i.s==='Status')||{}).x;
+    const regX=(items.find(i=>i.s==='Registros')||{}).x;
+    // linhas por y
+    const linhas=[];
+    for(const it of items.slice().sort((a,b)=>b.y-a.y||a.x-b.x)){
+      let l=linhas.find(l=>Math.abs(l.y-it.y)<3);
+      if(!l){l={y:it.y,its:[]};linhas.push(l);}
+      l.its.push(it);
+    }
+    for(const l of linhas){
+      l.its.sort((a,b)=>a.x-b.x);
+      const di=l.its.findIndex(i=>DATE.test(i.s));
+      if(di<0)continue;
+      const its=l.its.slice(di);
+      const d={data:iso(its[0].s),dow:'',pontos:[],status:'',cols:{}};
+      const ccols=Object.entries(colX);
+      for(const it of its.slice(1)){
+        if(/^(Dom|Seg|Ter|Qua|Qui|Sex|S[aá]b)$/i.test(it.s)){d.dow=it.s;continue;}
+        if(PUNCH.test(it.s)&&!/^\d{2}:\d{2}$/.test(it.s)&&/[oi]$/.test(it.s)){d.pontos.push(it.s);continue;}
+        if(it.s==='--:--'||TIME.test(it.s)||/^\d{1,3}$/.test(it.s)&&ccols.length&&it.x>(statusX||0)+150){
+          if(ccols.length){
+            const c=ccols.reduce((b,e)=>Math.abs(e[1]-it.x)<Math.abs(b[1]-it.x)?e:b);
+            d.cols[c[0]]=it.s;
+          }
+          continue;
+        }
+        if(PUNCH.test(it.s)&&regX!=null&&it.x<(statusX||1e9)-5){d.pontos.push(it.s);continue;}
+        d.status+=(d.status?' ':'')+it.s;
+      }
+      // "H" (hora/dia) numérico após o dia da semana já foi descartado pela regra de coluna; garantir:
+      d.status=d.status.replace(/^\d{1,3}\s+/,'').replace(/^\d{1,3}$/,'').trim();
+      dias.push(d);
+    }
+  }
+  return{info,dias};
+}
+
+function classificar(d){
+  const st=norm(d.status), pontos=d.pontos.length;
+  const falta=d.cols['Falta'], abono=d.cols['Abono'];
+  const temFalta=falta&&falta!=='--:--'&&mins(falta)>=0&&falta.trim()!=='';
+  const temAbono=abono&&abono!=='--:--'&&mins(abono)>0;
+  const jc=mins(d.cols['J.C']);
+  const dow=norm(d.dow);
+  const fimSemana=dow==='sab'||dow==='dom';
+  if(/atestad|medic|cid\b|declaracao de comparec|acompanhamento/.test(st))return['atestado',d.status];
+  if(/\bfalta|injustific|ausen|nao justif|nao compar/.test(st))return['falta',d.status];
+  if(/\bdsr\b|descanso semanal/.test(st))return['dsr',d.status];
+  if(/folga|compensa|banco de horas|\bbh\b|day off/.test(st))return['folga',d.status];
+  if(/ferias|afast|licen|inss|suspens|maternid|paternid|luto|casamento|doacao/.test(st))return['afast',d.status];
+  if(/abono/.test(st)||(temAbono&&!pontos))return['abono',d.status||'Abono '+abono];
+  if(temFalta&&!pontos)return['falta',d.status||'Falta '+falta];
+  if(st&&!pontos)return['feriado',d.status];     // texto livre sem batida: feriado/outro evento
+  if(pontos)return['trab',st?d.status:''];
+  // sem texto e sem batidas
+  if(jc>0)return['semreg','Dia útil sem batida e sem justificativa'];
+  return['folga',fimSemana?'Folga de escala ('+d.dow+')':'Folga de escala'];
+}
+
+async function processar(files){
+  $('msg').innerHTML='Lendo arquivos…';
+  for(const f of files){
+    try{
+      const r=await lerPdf(f);
+      if(!r.dias.length)throw new Error('nenhum dia encontrado (PDF escaneado ou formato diferente?)');
+      state.docs.push({nome:f.name,info:r.info,qtd:r.dias.length});
+      for(const d of r.dias){
+        const [cat,obs]=classificar(d);
+        const reg={...d,cat,obs,arquivo:f.name,periodo:r.info.periodo};
+        const antigo=state.days.get(d.data);
+        // se o dia aparece em dois arquivos (períodos sobrepostos), mantém o que tem mais informação
+        if(!antigo||(reg.pontos.length+reg.status.length)>(antigo.pontos.length+antigo.status.length))state.days.set(d.data,reg);
+      }
+    }catch(e){state.errs.push(f.name+': '+e.message);}
+  }
+  $('msg').innerHTML='';
+  render();
+}
+
+function range(a,b){const o=[];for(let d=new Date(a+'T12:00');d<=new Date(b+'T12:00');d.setDate(d.getDate()+1))o.push(d.toISOString().slice(0,10));return o;}
+const DOW=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+
+function lista(){
+  const ini=$('ini').value,fim=$('fim').value;
+  return range(ini,fim).map(k=>state.days.get(k)||{data:k,cat:'fora',obs:'Sem espelho de ponto para este dia',pontos:[],status:'',cols:{},dow:DOW[new Date(k+'T12:00').getDay()]});
+}
+
+function agrupar(ls){
+  const out=[];
+  for(const d of ls){
+    const u=out[out.length-1];
+    const prox=u&&new Date(d.data+'T12:00')-new Date(u.fim+'T12:00')===864e5;
+    if(u&&prox&&u.cat===d.cat&&u.obs===d.obs)u.fim=d.data,u.n++;
+    else out.push({cat:d.cat,obs:d.obs,ini:d.data,fim:d.data,n:1});
+  }
+  return out;
+}
+
+function render(){
+  $('files').innerHTML=state.docs.map(d=>`<span class="chip">${d.nome} · ${d.info.periodo||'?'}</span>`).join('')+state.errs.map(e=>`<span class="chip err">${e}</span>`).join('');
+  if(!state.docs.length){$('out').classList.add('hide');return;}
+  $('out').classList.remove('hide');
+  const ls=lista(), cont={};
+  ls.forEach(d=>cont[d.cat]=(cont[d.cat]||0)+1);
+  const nomes=[...new Set(state.docs.map(d=>d.info.nome).filter(Boolean))];
+  let h=`<h2>${nomes.join(' / ')||'Colaboradora'}</h2><div class="sub" style="margin:0">${state.docs[0].info.setor||''} · ${state.docs.length} arquivo(s) · análise de ${br($('ini').value)} a ${br($('fim').value)} (${ls.length} dias)</div>`;
+  if(nomes.length>1)h+=`<div class="warn">⚠ Os arquivos têm nomes de colaboradores diferentes: ${nomes.join(', ')}. Confira se são todos da mesma pessoa.</div>`;
+  if(cont.fora)h+=`<div class="warn">⚠ ${cont.fora} dia(s) no intervalo não estão cobertos por nenhum arquivo. Veja os períodos faltando em “Sem arquivo no período”.</div>`;
+  $('head').innerHTML=h;
+  $('stats').innerHTML=ORDER.filter(k=>cont[k]||['atestado','falta','folga'].includes(k)).map(k=>
+    `<button class="stat ${state.filtro===k?'on':''}" style="--c:var(${CATS[k].c})" data-k="${k}"><div class="n">${cont[k]||0}</div><div class="l">${CATS[k].n}</div></button>`).join('')
+    +`<button class="stat ${state.filtro==='todos'?'on':''}" style="--c:var(--pri)" data-k="todos"><div class="n">${ls.length}</div><div class="l">Todos os dias</div></button>`;
+  document.querySelectorAll('.stat').forEach(b=>b.onclick=()=>{state.filtro=state.filtro===b.dataset.k?null:b.dataset.k;render();});
+  $('leg').innerHTML=ORDER.filter(k=>cont[k]).map(k=>`<span style="--c:var(${CATS[k].c})"><i></i>${CATS[k].n}</span>`).join('');
+  // calendário
+  const meses={};
+  ls.forEach(d=>(meses[d.data.slice(0,7)]??=[]).push(d));
+  const MN=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  $('months').innerHTML=Object.entries(meses).map(([ym,ds])=>{
+    const off=new Date(ds[0].data+'T12:00').getDay();
+    return `<div><div class="mt">${MN[+ym.slice(5)-1]} ${ym.slice(0,4)}</div><div class="cal">`
+      +DOW.map(x=>`<div class="h">${x[0]}</div>`).join('')+'<div class="h"></div>'.repeat(off)
+      +ds.map(d=>`<div class="d" style="--c:var(${CATS[d.cat].c})" title="${br(d.data)} — ${CATS[d.cat].n}${d.obs?': '+d.obs:''}">${+d.data.slice(8)}</div>`).join('')+'</div></div>';
+  }).join('');
+  // tabela
+  const f=state.filtro;
+  const base=f==='todos'?ls:f?ls.filter(d=>d.cat===f):ls.filter(d=>d.cat!=='trab'&&d.cat!=='fora');
+  $('listTitle').textContent=f==='todos'?'Todos os dias':f?CATS[f].n:'Ocorrências (sem dias trabalhados) — clique num card para filtrar';
+  const tag=c=>`<span class="tag" style="--c:var(${CATS[c].c})">${CATS[c].n}</span>`;
+  if($('modo').value==='per'){
+    const g=agrupar(base);
+    $('tab').innerHTML='<tr><th>Período</th><th>Dias</th><th>Tipo</th><th>Observação</th></tr>'+g.map(x=>`<tr><td>${br(x.ini)}${x.ini!==x.fim?' a '+br(x.fim):''}</td><td>${x.n}</td><td>${tag(x.cat)}</td><td>${x.obs||''}</td></tr>`).join('');
+  }else{
+    $('tab').innerHTML='<tr><th>Data</th><th>Dia</th><th>Tipo</th><th>Status / observação</th><th>Batidas</th><th>Falta</th><th>Abono</th><th>Arquivo</th></tr>'
+     +base.map(d=>`<tr><td>${br(d.data)}</td><td>${d.dow||''}</td><td>${tag(d.cat)}</td><td>${d.obs||''}</td><td>${(d.pontos||[]).join(' ')}</td><td>${(d.cols&&d.cols.Falta)||''}</td><td>${(d.cols&&d.cols.Abono)||''}</td><td style="color:var(--mut);font-size:12px">${d.periodo||''}</td></tr>`).join('');
+  }
+  if(!base.length)$('tab').innerHTML='<tr><td>Nada encontrado nesta categoria.</td></tr>';
+  state.vis=base;
+}
+
+$('drop').onclick=()=>$('file').click();
+$('file').onchange=e=>{processar([...e.target.files]);e.target.value='';};
+$('drop').ondragover=e=>{e.preventDefault();$('drop').classList.add('over');};
+$('drop').ondragleave=()=>$('drop').classList.remove('over');
+$('drop').ondrop=e=>{e.preventDefault();$('drop').classList.remove('over');processar([...e.dataTransfer.files].filter(f=>/pdf$/i.test(f.name)||f.type==='application/pdf'));};
+$('ini').onchange=$('fim').onchange=$('modo').onchange=render;
+$('limpar').onclick=()=>{state.docs=[];state.days.clear();state.errs=[];state.filtro=null;render();};
+$('imp').onclick=()=>window.print();
+$('csv').onclick=()=>{
+  const rows=[['Data','Dia','Tipo','Observação','Batidas','Falta','Abono','Período do arquivo']].concat((state.vis||[]).map(d=>[br(d.data),d.dow||'',CATS[d.cat].n,d.obs||'',(d.pontos||[]).join(' '),(d.cols||{}).Falta||'',(d.cols||{}).Abono||'',d.periodo||'']));
+  const csv='﻿'+rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(';')).join('\r\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='conferencia-ponto.csv';a.click();
+};
+</script>
+</body>
+</html>
