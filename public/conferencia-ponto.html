@@ -44,7 +44,17 @@ th{font-size:12px;color:var(--mut);text-transform:uppercase;letter-spacing:.03em
 .leg i{display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--c);margin-right:4px}
 .hide{display:none}
 .scroll{overflow-x:auto}
-@media print{#drop,.noprint{display:none}body{background:#fff}}
+#relov{position:fixed;inset:0;background:#e9ebef;overflow:auto;z-index:50;padding:16px}
+.rbar{max-width:900px;margin:0 auto 10px;display:flex;gap:8px}
+#rel-body{max-width:900px;margin:0 auto;background:#fff;color:#111;padding:28px 32px;border-radius:8px;font-size:13px}
+#rel-body h1{font-size:20px;margin:0}#rel-body h3{font-size:14px;margin:18px 0 6px;border-bottom:2px solid #222;padding-bottom:3px}
+#rel-body table{font-size:12px}#rel-body th{color:#444}#rel-body td,#rel-body th{border-bottom:1px solid #ccc;padding:4px 6px}
+#rel-body .kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:6px 18px}
+#rel-body .kv div{display:flex;justify-content:space-between;border-bottom:1px dotted #bbb;padding:2px 0}
+#rel-body .ok{color:#15803d}#rel-body .bad{color:#b91c1c;font-weight:600}
+.sig{display:flex;gap:40px;margin-top:50px}.sig div{flex:1;border-top:1px solid #111;text-align:center;padding-top:4px;font-size:12px}
+@media print{#drop,.noprint{display:none!important}body{background:#fff}
+body.pr .wrap{display:none}body.pr #relov{position:static;background:#fff;padding:0;overflow:visible}body.pr #rel-body{max-width:none;padding:0;border-radius:0}}
 </style>
 </head>
 <body>
@@ -65,6 +75,7 @@ th{font-size:12px;color:var(--mut);text-transform:uppercase;letter-spacing:.03em
   </div>
 
   <div id="out" class="hide">
+    <div class="noprint" style="margin-bottom:12px"><button id="rel" class="p" style="font-size:16px;padding:10px 20px">📄 Gerar relatório da colaboradora</button></div>
     <div class="card" id="head"></div>
     <div class="card">
       <h2>Resumo (clique para filtrar)</h2>
@@ -96,6 +107,7 @@ th{font-size:12px;color:var(--mut);text-transform:uppercase;letter-spacing:.03em
   </div>
 </div>
 
+<div id="relov" class="hide"><div class="rbar noprint"><button class="p" id="rimp">Imprimir / Salvar PDF</button><button id="rfec">Fechar</button></div><div id="rel-body"></div></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
 if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
@@ -126,7 +138,7 @@ const mins=t=>{if(!t||!TIME.test(t))return 0;const[h,m]=t.replace('-','').split(
 
 async function lerPdf(file){
   const pdf=await pdfjsLib.getDocument({data:await file.arrayBuffer()}).promise;
-  const info={nome:'',periodo:'',setor:'',horario:'',banco:null}, dias=[];
+  const info={nome:'',periodo:'',setor:'',horario:'',admissao:'',banco:null}, dias=[];
   for(let p=1;p<=pdf.numPages;p++){
     const page=await pdf.getPage(p), tc=await page.getTextContent();
     const items=[];
@@ -143,6 +155,8 @@ async function lerPdf(file){
     let m;
     if(!info.nome&&(m=txt.match(/Colaborador:\s*(.+?)\s+(?:Setor:|Matr)/)))info.nome=m[1].trim();
     if(!info.periodo&&(m=txt.match(/Per[ií]odo:\s*(\d{2}\/\d{2}\/\d{4})\s*[àa]\s*(\d{2}\/\d{2}\/\d{4})/)))info.periodo=m[1]+' a '+m[2];
+    if(!info.admissao&&(m=txt.match(/Admiss[aã]o:\s*(\d{2}\/\d{2}\/\d{4})/)))info.admissao=m[1];
+    if(!info.horario&&(m=txt.match(/Hor[aá]rio:\s*(.+?)\s+(?:Per[ií]odo:|Data de|Admiss)/)))info.horario=m[1].trim();
     if(!info.setor&&(m=txt.match(/Setor:\s*(.+?)\s+(?:Espelho|Hor[aá]rio|Matr)/)))info.setor=m[1].trim();
     if(!info.banco&&(m=txt.match(/Saldo Final\s*\(\s*=\s*\)\s*((?:-?\d{1,3}:\d{2}\s*){7})/))){
       const v=m[1].trim().split(/\s+/);
@@ -305,6 +319,48 @@ function render(){
   state.vis=base;
 }
 
+function gerarRel(){
+  const ls=lista(), nomes=[...new Set(state.docs.map(d=>d.info.nome).filter(Boolean))];
+  const i0=state.docs[0].info, cats={};
+  ls.forEach(d=>(cats[d.cat]??=[]).push(d));
+  const n=k=>(cats[k]||[]).length, sum=c=>ls.reduce((a,d)=>a+mins((d.cols||{})[c]),0);
+  const per=k=>{const g=agrupar((cats[k]||[]));return g.length?'<table><tr><th>Período</th><th>Dias</th><th>Observação</th></tr>'+g.map(x=>`<tr><td>${br(x.ini)}${x.ini!==x.fim?' a '+br(x.fim):''}</td><td>${x.n}</td><td>${x.obs||''}</td></tr>`).join('')+'</table>':'<div class="ok">Nenhuma ocorrência no período.</div>';};
+  const kv=(a,b)=>`<div><span>${a}</span><b>${b}</b></div>`;
+  const docs=state.docs.slice().sort((a,b)=>(a.ini||'').localeCompare(b.ini||''));
+  const sm=t=>t?(/^-/.test(t)?-1:1)*mins(t):null;
+  const fb=cats.folgabh||[], semfora=ls.filter(d=>d.cat!=='fora');
+  const fora=agrupar(cats.fora||[]);
+  const trab=cats.trab||[];
+  const atrasos=trab.filter(d=>mins(d.cols['Atraso'])>0);
+  const nt=trab.filter(d=>d.pontos.length&&d.pontos.length<6);
+  let h=`<h1>Relatório de Frequência — ${nomes.join(' / ')||'Colaboradora'}</h1>
+  <div style="color:#555;margin:2px 0 10px">Emitido em ${new Date().toLocaleDateString('pt-BR')} · Análise de ${br($('ini').value)} a ${br($('fim').value)} (${ls.length} dias) · ${state.docs.length} espelho(s) de ponto</div>
+  <div class="kv">${kv('Setor',i0.setor||'—')}${kv('Admissão',i0.admissao||'—')}${kv('Horário',i0.horario||'—')}${kv('Dias com espelho',semfora.length+' de '+ls.length)}</div>
+  <h3>1. Resumo geral</h3>
+  <div class="kv">${kv('Dias trabalhados',n('trab'))}${kv('Faltas',`<span class="${n('falta')?'bad':''}">${n('falta')}</span>`)}${kv('Atestados',n('atestado'))}${kv('Folgas de escala',n('folga'))}${kv('Folgas BH',n('folgabh'))}${kv('DSR',n('dsr'))}${kv('Feriados',n('feriado'))}${kv('Abonos',n('abono'))}${kv('Férias/afastamentos',n('afast'))}${kv('Sem registro (conferir)',`<span class="${n('semreg')?'bad':''}">${n('semreg')}</span>`)}${kv('Sem espelho no período',n('fora'))}</div>
+  <h3>2. Horas</h3>
+  <div class="kv">${kv('Horas previstas (J.C)',fmt(sum('J.C')))}${kv('Horas trabalhadas (J.T)',fmt(sum('J.T')))}${kv('Horas positivas',fmt(sum('H.Pos')))}${kv('Horas negativas',fmt(sum('H.Neg')))}${kv('Horas extras',fmt(sum('H.Ext')))}${kv('Adicional noturno',fmt(sum('Ad.N')))}${kv('Atrasos (total)',fmt(sum('Atraso')))}${kv('Abonos (horas)',fmt(sum('Abono')))}</div>
+  <h3>3. Faltas</h3>${per('falta')}
+  <h3>4. Atestados</h3>${per('atestado')}
+  <h3>5. Folgas BH (descontadas do banco de horas)</h3>${fb.length?'<table><tr><th>Data</th><th>Dia</th><th>Horas descontadas</th></tr>'+fb.map(d=>`<tr><td>${br(d.data)}</td><td>${d.dow}</td><td>${d.cols['H.Neg']||'—'}</td></tr>`).join('')+`</table><div style="margin-top:4px"><b>Total:</b> ${fb.length} dia(s), ${fmt(fb.reduce((a,d)=>a+mins(d.cols['H.Neg']),0))}</div>`:'<div class="ok">Nenhuma Folga BH no período.</div>'}
+  <h3>6. Folgas de escala e DSR</h3>${per('folga')}<div style="margin-top:6px"><b>DSR:</b> ${n('dsr')} dia(s)</div>
+  <h3>7. Abonos, férias e afastamentos</h3>${per('abono')}${n('afast')?per('afast'):''}
+  <h3>8. Feriados</h3>${per('feriado')}
+  <h3>9. Dias úteis sem registro (a conferir)</h3>${per('semreg')}
+  <h3>10. Atrasos e horas negativas por dia</h3>${(()=>{const l=ls.filter(d=>d.cols&&(mins(d.cols['H.Neg'])>0||mins(d.cols['Atraso'])>0));return l.length?'<table><tr><th>Data</th><th>Dia</th><th>Tipo</th><th>Atraso</th><th>H.Neg</th></tr>'+l.map(d=>`<tr><td>${br(d.data)}</td><td>${d.dow}</td><td>${CATS[d.cat].n}</td><td>${mins(d.cols['Atraso'])?d.cols['Atraso']:'—'}</td><td>${mins(d.cols['H.Neg'])?d.cols['H.Neg']:'—'}</td></tr>`).join('')+'</table>':'<div class="ok">Sem atrasos ou horas negativas.</div>';})()}
+  <h3>11. Banco de horas por espelho</h3>
+  <table><tr><th>Período</th><th>Saldo anterior</th><th>Acerto BH</th><th>H.Neg</th><th>H.Pos</th><th>Saldo final</th><th>Confere</th></tr>${docs.map((d,i)=>{const b=d.info.banco,a=i?docs[i-1].info.banco:null;const c=i&&b&&a?(sm(a.final)===sm(b.anterior)?'<span class="ok">✔</span>':'<span class="bad">⚠</span>'):'—';return `<tr><td>${d.info.periodo||d.nome}</td>`+(b?`<td>${b.anterior}</td><td>${b.acerto}</td><td>${b.hneg}</td><td>${b.hpos}</td><td>${b.final}</td><td>${c}</td>`:'<td colspan="6">—</td>')+'</tr>'}).join('')}</table>
+  <h3>12. Pendências</h3>
+  ${fora.length?`<div class="bad">Períodos sem espelho de ponto: ${fora.map(g=>g.ini===g.fim?br(g.ini):br(g.ini)+' a '+br(g.fim)).join(' · ')}</div>`:'<div class="ok">Todos os dias do intervalo possuem espelho.</div>'}
+  ${n('semreg')?`<div class="bad">${n('semreg')} dia(s) útil(eis) sem batida e sem justificativa.</div>`:''}
+  ${nomes.length>1?'<div class="bad">Arquivos com nomes de colaboradores diferentes.</div>':''}
+  <div class="sig"><div>Responsável RH</div><div>Chefia imediata</div><div>${nomes[0]||'Colaboradora'}</div></div>`;
+  $('rel-body').innerHTML=h;
+  $('relov').classList.remove('hide');document.body.classList.add('pr');
+}
+$('rel').onclick=gerarRel;
+$('rfec').onclick=()=>{$('relov').classList.add('hide');document.body.classList.remove('pr');};
+$('rimp').onclick=()=>window.print();
 $('drop').onclick=()=>$('file').click();
 $('file').onchange=e=>{processar([...e.target.files]);e.target.value='';};
 $('drop').ondragover=e=>{e.preventDefault();$('drop').classList.add('over');};
