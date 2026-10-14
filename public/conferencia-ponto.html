@@ -73,6 +73,7 @@ th{font-size:12px;color:var(--mut);text-transform:uppercase;letter-spacing:.03em
     <div class="card">
       <h2>Banco de horas</h2>
       <div class="sub" style="margin:0 0 8px">Dias em que houve hora negativa (descontada do banco), abono ou texto de banco/compensação, e o fechamento de cada espelho.</div>
+      <div id="bhTot" style="margin-bottom:10px"></div>
       <div class="scroll"><table id="bhDias"></table></div>
       <div class="scroll" style="margin-top:14px"><table id="bhArq"></table></div>
     </div>
@@ -231,6 +232,7 @@ async function processar(files){
 }
 
 function range(a,b){const o=[];for(let d=new Date(a+'T12:00');d<=new Date(b+'T12:00');d.setDate(d.getDate()+1))o.push(d.toISOString().slice(0,10));return o;}
+const fmt=m=>String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');
 const DOW=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 
 function lista(){
@@ -258,7 +260,8 @@ function render(){
   const nomes=[...new Set(state.docs.map(d=>d.info.nome).filter(Boolean))];
   let h=`<h2>${nomes.join(' / ')||'Colaboradora'}</h2><div class="sub" style="margin:0">${state.docs[0].info.setor||''} · ${state.docs.length} arquivo(s) · análise de ${br($('ini').value)} a ${br($('fim').value)} (${ls.length} dias)</div>`;
   if(nomes.length>1)h+=`<div class="warn">⚠ Os arquivos têm nomes de colaboradores diferentes: ${nomes.join(', ')}. Confira se são todos da mesma pessoa.</div>`;
-  if(cont.fora)h+=`<div class="warn">⚠ ${cont.fora} dia(s) no intervalo não estão cobertos por nenhum arquivo. Veja os períodos faltando em “Sem arquivo no período”.</div>`;
+  if(cont.fora){const gaps=agrupar(ls.filter(d=>d.cat==='fora')).map(g=>g.ini===g.fim?br(g.ini):br(g.ini)+' a '+br(g.fim));
+    h+=`<div class="warn">⚠ ${cont.fora} dia(s) sem espelho de ponto. Faltam arquivos de: <b>${gaps.join(' · ')}</b></div>`;}
   $('head').innerHTML=h;
   $('stats').innerHTML=ORDER.filter(k=>cont[k]||['atestado','falta','folga','folgabh'].includes(k)).map(k=>
     `<button class="stat ${state.filtro===k?'on':''}" style="--c:var(${CATS[k].c})" data-k="${k}"><div class="n">${cont[k]||0}</div><div class="l">${CATS[k].n}</div></button>`).join('')
@@ -271,7 +274,11 @@ function render(){
     const hn=mins(d.cols['H.Neg']),ab=mins(d.cols['Abono']);
     const lei=d.cat==='folgabh'?(hn?'Folga BH: '+d.cols['H.Neg']+' descontadas do banco de horas':'Folga BH sem hora negativa lançada — conferir'):ab&&hn?'Abono e hora negativa no mesmo dia — conferir se o abono foi descontado do banco':ab?'Abono lançado, sem hora negativa (não desconta do banco)':hn?'Hora negativa debitada do banco':'Menção a banco/compensação';
     return `<tr><td>${br(d.data)}</td><td>${d.dow||''}</td><td>${CATS[d.cat].n}</td><td>${d.cols['H.Neg']||''}</td><td>${d.cols['Abono']||''}</td><td>${d.status||''}</td><td>${lei}</td></tr>`}).join(''):'<tr><td>Nenhum dia com hora negativa, abono ou menção a banco de horas no intervalo.</td></tr>';
-  $('bhArq').innerHTML='<tr><th>Espelho</th><th>Saldo anterior</th><th>Acerto BH (−)</th><th>H.Neg período (−)</th><th>H.Pos período (+)</th><th>Saldo final</th></tr>'+state.docs.slice().sort((a,b)=>(a.ini||'').localeCompare(b.ini||'')).map(d=>{const b=d.info.banco;return `<tr><td>${d.info.periodo||d.nome}</td>`+(b?`<td>${b.anterior}</td><td>${b.acerto}</td><td>${b.hneg}</td><td>${b.hpos}</td><td>${b.final}</td>`:'<td colspan="5">resumo não encontrado</td>')+'</tr>'}).join('');
+  const fb=ls.filter(d=>d.cat==='folgabh');
+  $('bhTot').innerHTML=fb.length?`<b>${fb.length}</b> Folga(s) BH no período, total de <b>${fmt(fb.reduce((a,d)=>a+mins(d.cols['H.Neg']),0))}</b> descontadas do banco: ${fb.map(d=>br(d.data)).join(', ')}`:'Nenhuma Folga BH no período.';
+  const sm=t=>t?(/^-/.test(t)?-1:1)*mins(t):null;
+  const docs=state.docs.slice().sort((a,b)=>(a.ini||'').localeCompare(b.ini||''));
+  $('bhArq').innerHTML='<tr><th>Espelho</th><th>Saldo anterior</th><th>Acerto BH (−)</th><th>H.Neg período (−)</th><th>H.Pos período (+)</th><th>Saldo final</th><th>Confere com o espelho anterior?</th></tr>'+docs.map((d,i)=>{const b=d.info.banco,a=i?docs[i-1].info.banco:null;let c='—';if(i&&b&&a)c=sm(a.final)===sm(b.anterior)?'✔ confere':`⚠ anterior terminou em ${a.final}, este começa em ${b.anterior} (pode faltar espelho no meio)`;return `<tr><td>${d.info.periodo||d.nome}</td>`+(b?`<td>${b.anterior}</td><td>${b.acerto}</td><td>${b.hneg}</td><td>${b.hpos}</td><td>${b.final}</td><td>${c}</td>`:'<td colspan="6">resumo não encontrado</td>')+'</tr>'}).join('');
   // calendário
   const meses={};
   ls.forEach(d=>(meses[d.data.slice(0,7)]??=[]).push(d));
