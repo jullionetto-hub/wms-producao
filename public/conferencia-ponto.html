@@ -82,6 +82,11 @@ body.pr .wrap{display:none}body.pr #relov{position:static;background:#fff;paddin
       <div class="stats" id="stats"></div>
     </div>
     <div class="card">
+      <h2>Absenteísmo e presenteísmo</h2>
+      <div class="stats" id="ind"></div>
+      <div class="sub" id="indNota" style="margin:10px 0 0;font-size:13px"></div>
+    </div>
+    <div class="card">
       <h2>Banco de horas</h2>
       <div class="sub" style="margin:0 0 8px">Dias em que houve hora negativa (descontada do banco), abono ou texto de banco/compensação, e o fechamento de cada espelho.</div>
       <div id="bhTot" style="margin-bottom:10px"></div>
@@ -247,6 +252,17 @@ async function processar(files){
 
 function range(a,b){const o=[];for(let d=new Date(a+'T12:00');d<=new Date(b+'T12:00');d.setDate(d.getDate()+1))o.push(d.toISOString().slice(0,10));return o;}
 const fmt=m=>String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');
+function indicadores(ls){
+  const c=k=>ls.filter(d=>d.cat===k);
+  const prev=ls.filter(d=>['trab','falta','atestado','semreg','abono','afast','folgabh'].includes(d.cat));
+  const aus=ls.filter(d=>d.cat==='falta'||d.cat==='atestado');
+  const hp=prev.reduce((a,d)=>a+mins((d.cols||{})['J.C']),0), ha=aus.reduce((a,d)=>a+mins((d.cols||{})['J.C']),0);
+  const pct=(a,b)=>b?(a/b*100):null, f=v=>v==null?'—':v.toFixed(2).replace('.',',')+'%';
+  const tr=c('trab').length;
+  return{dp:prev.length,tr,aus:aus.length,faltas:c('falta').length,atest:c('atestado').length,semreg:c('semreg').length,
+    abs:pct(aus.length,prev.length),absSR:pct(aus.length+c('semreg').length,prev.length),pres:pct(tr,prev.length),
+    hp,ha,absH:pct(ha,hp),f};
+}
 const DOW=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 
 function lista(){
@@ -282,6 +298,9 @@ function render(){
     +`<button class="stat ${state.filtro==='todos'?'on':''}" style="--c:var(--pri)" data-k="todos"><div class="n">${ls.length}</div><div class="l">Todos os dias</div></button>`;
   document.querySelectorAll('.stat').forEach(b=>b.onclick=()=>{state.filtro=state.filtro===b.dataset.k?null:b.dataset.k;render();});
   $('leg').innerHTML=ORDER.filter(k=>cont[k]).map(k=>`<span style="--c:var(${CATS[k].c})"><i></i>${CATS[k].n}</span>`).join('');
+  const I=indicadores(ls);
+  $('ind').innerHTML=[['Absenteísmo',I.f(I.abs),'--fa'],['Presenteísmo',I.f(I.pres),'--ok'],['Absenteísmo em horas',I.f(I.absH),'--fa'],['Dias previstos de trabalho',I.dp,'--pri']].map(x=>`<div class="stat" style="--c:var(${x[2]});cursor:default"><div class="n">${x[1]}</div><div class="l">${x[0]}</div></div>`).join('');
+  $('indNota').innerHTML=`Dias previstos = trabalhados + faltas + atestados + abonos + afastamentos + Folga BH + dias úteis sem registro (${I.dp}). Absenteísmo = (faltas + atestados) ÷ dias previstos (${I.aus} ÷ ${I.dp}). Presenteísmo = dias trabalhados ÷ dias previstos (${I.tr} ÷ ${I.dp}). Folgas de escala, DSR e feriados não entram. `+(I.semreg?`<b>Atenção:</b> há ${I.semreg} dia(s) sem registro; se forem faltas, o absenteísmo sobe para ${I.f(I.absSR)}.`:'');
   // banco de horas
   const bhd=ls.filter(d=>d.data&&d.cols&&(mins(d.cols['H.Neg'])>0||mins(d.cols['Abono'])>0||/banco|compensa|\bbh\b/.test(norm(d.status))));
   $('bhDias').innerHTML=bhd.length?'<tr><th>Data</th><th>Dia</th><th>Tipo</th><th>H.Neg (descontada do banco)</th><th>Abono</th><th>Status</th><th>Leitura</th></tr>'+bhd.map(d=>{
@@ -325,6 +344,7 @@ function gerarRel(){
   ls.forEach(d=>(cats[d.cat]??=[]).push(d));
   const n=k=>(cats[k]||[]).length, sum=c=>ls.reduce((a,d)=>a+mins((d.cols||{})[c]),0);
   const per=k=>{const g=agrupar((cats[k]||[]));return g.length?'<table><tr><th>Período</th><th>Dias</th><th>Observação</th></tr>'+g.map(x=>`<tr><td>${br(x.ini)}${x.ini!==x.fim?' a '+br(x.fim):''}</td><td>${x.n}</td><td>${x.obs||''}</td></tr>`).join('')+'</table>':'<div class="ok">Nenhuma ocorrência no período.</div>';};
+  const IND=indicadores(ls);
   const kv=(a,b)=>`<div><span>${a}</span><b>${b}</b></div>`;
   const docs=state.docs.slice().sort((a,b)=>(a.ini||'').localeCompare(b.ini||''));
   const sm=t=>t?(/^-/.test(t)?-1:1)*mins(t):null;
@@ -338,6 +358,9 @@ function gerarRel(){
   <div class="kv">${kv('Setor',i0.setor||'—')}${kv('Admissão',i0.admissao||'—')}${kv('Horário',i0.horario||'—')}${kv('Dias com espelho',semfora.length+' de '+ls.length)}</div>
   <h3>1. Resumo geral</h3>
   <div class="kv">${kv('Dias trabalhados',n('trab'))}${kv('Faltas',`<span class="${n('falta')?'bad':''}">${n('falta')}</span>`)}${kv('Atestados',n('atestado'))}${kv('Folgas de escala',n('folga'))}${kv('Folgas BH',n('folgabh'))}${kv('DSR',n('dsr'))}${kv('Feriados',n('feriado'))}${kv('Abonos',n('abono'))}${kv('Férias/afastamentos',n('afast'))}${kv('Sem registro (conferir)',`<span class="${n('semreg')?'bad':''}">${n('semreg')}</span>`)}${kv('Sem espelho no período',n('fora'))}</div>
+  <h3>Indicadores de assiduidade</h3>
+  <div class="kv">${kv('Dias previstos de trabalho',IND.dp)}${kv('Dias trabalhados',IND.tr)}${kv('Faltas + atestados',IND.aus)}${kv('<b>Absenteísmo</b> (dias)',`<span class="${IND.abs?'bad':''}">${IND.f(IND.abs)}</span>`)}${kv('<b>Presenteísmo</b> (dias)',IND.f(IND.pres))}${kv('Absenteísmo em horas',IND.f(IND.absH))}${IND.semreg?kv('Absenteísmo c/ dias sem registro',`<span class="bad">${IND.f(IND.absSR)}</span>`):''}</div>
+  <div style="color:#555;font-size:11px;margin-top:4px">Absenteísmo = (faltas + atestados) ÷ dias previstos. Presenteísmo = dias trabalhados ÷ dias previstos. Dias previstos = trabalhados + faltas + atestados + abonos + afastamentos + Folga BH + dias sem registro; folgas de escala, DSR e feriados não entram.</div>
   <h3>2. Horas</h3>
   <div class="kv">${kv('Horas previstas (J.C)',fmt(sum('J.C')))}${kv('Horas trabalhadas (J.T)',fmt(sum('J.T')))}${kv('Horas positivas',fmt(sum('H.Pos')))}${kv('Horas negativas',fmt(sum('H.Neg')))}${kv('Horas extras',fmt(sum('H.Ext')))}${kv('Adicional noturno',fmt(sum('Ad.N')))}${kv('Atrasos (total)',fmt(sum('Atraso')))}${kv('Abonos (horas)',fmt(sum('Abono')))}</div>
   <h3>3. Faltas</h3>${per('falta')}
