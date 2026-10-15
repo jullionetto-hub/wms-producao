@@ -2094,7 +2094,7 @@ function _mzFeedbackCardHtml(f, idx, arr) {
 
   const kpiAbs = stAbs ? `<div class="mzfb-kpi">
       <div class="mzfb-k">Atrasos no mês</div>
-      <div class="mzfb-v" style="color:${stAbs.cor}">${_mzFmtMin(minTotal)} <small>${minTotal} min</small></div>
+      <div class="mzfb-v" style="color:${stAbs.cor}">${_mzFmtMin(minTotal)} ${minTotal >= 60 ? `<small>${minTotal} min</small>` : ''}</div>
       <div class="mzfb-n">${atrasosLista.length ? `${atrasosLista.length} atraso(s) · maior: ${maior.min}min em ${pfEsc(maior.dia)}` : 'Sem atrasos detalhados'}</div>
       <div class="mzfb-mini"><span>Faltas injust.: <b>${f.faltas_injustificadas||0}</b></span><span>Ausências just.: <b>${f.ausencias_justificadas||0}</b></span></div>
     </div>` : '';
@@ -2110,28 +2110,28 @@ function _mzFeedbackCardHtml(f, idx, arr) {
 
   return `
     <style>
-      .mzfb-chip{font-size:11px;font-weight:700;padding:2px 9px;border-radius:99px;border:1px solid;white-space:nowrap}
+      .mzfb-chip{font-size:12.5px;font-weight:700;padding:2px 9px;border-radius:99px;border:1px solid;white-space:nowrap}
       .mzfb-chip.g{color:var(--green);border-color:rgba(22,163,74,.4);background:rgba(22,163,74,.12)}
       .mzfb-chip.a{color:var(--amber);border-color:rgba(217,119,6,.4);background:rgba(217,119,6,.12)}
       .mzfb-chip.r{color:var(--red);border-color:rgba(220,38,38,.4);background:rgba(220,38,38,.12)}
-      .mzfb-sec{margin-top:14px}.mzfb-sec h4{margin:0 0 6px;font-size:12px;font-weight:800}
+      .mzfb-sec{margin-top:14px}.mzfb-sec h4{margin:0 0 8px;font-size:14.5px;font-weight:800}
       .mzfb-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
       .mzfb-kpi{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px}
-      .mzfb-k{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em}
-      .mzfb-v{font-size:22px;font-weight:800;line-height:1.25}.mzfb-v small{font-size:12px;color:var(--text3);font-weight:600}
+      .mzfb-k{font-size:11.5px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em}
+      .mzfb-v{font-size:30px;font-weight:800;line-height:1.25}.mzfb-v small{font-size:15px;color:var(--text3);font-weight:600}
       .mzfb-bar{height:6px;background:var(--border);border-radius:9px;margin:8px 0 6px;overflow:hidden}.mzfb-bar i{display:block;height:100%}
-      .mzfb-n{font-size:11px;color:var(--text2)}.mzfb-mini{display:flex;gap:14px;font-size:11px;color:var(--text2);margin-top:4px}
-      .mzfb-details summary{cursor:pointer;font-size:11.5px;color:var(--blue,#60a5fa);margin-top:8px}
+      .mzfb-n{font-size:13px;color:var(--text2)}.mzfb-mini{display:flex;gap:14px;font-size:13px;color:var(--text2);margin-top:4px}
+      .mzfb-details summary{cursor:pointer;font-size:13.5px;color:var(--blue,#60a5fa);margin-top:10px}
       .mzfb-days{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
-      .mzfb-day{font-size:10.5px;padding:2px 8px;border-radius:6px;background:var(--surface);border:1px solid var(--border);color:var(--text2)}
+      .mzfb-day{font-size:12.5px;padding:3px 10px;border-radius:6px;background:var(--surface);border:1px solid var(--border);color:var(--text2)}
       .mzfb-day.hi{color:var(--red);border-color:rgba(220,38,38,.4)}
-      .mzfb-raw{font-size:11px;color:var(--text3);white-space:pre-line;margin-top:8px}
-      .mzfb-note{border-left:3px solid;background:var(--surface);border-radius:0 8px 8px 0;padding:9px 12px;font-size:12px;color:var(--text2);white-space:pre-line}
+      .mzfb-raw{font-size:12.5px;color:var(--text3);white-space:pre-line;margin-top:8px}
+      .mzfb-note{border-left:3px solid;background:var(--surface);border-radius:0 8px 8px 0;padding:11px 14px;font-size:14px;line-height:1.55;color:var(--text);white-space:pre-line}
       .mzfb-note.g{border-color:var(--green)}.mzfb-note.a{border-color:var(--amber)}.mzfb-note.b{border-color:#60a5fa}
     </style>
     <div style="background:var(--surface2);border-radius:10px;margin-bottom:8px;overflow:hidden">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px;cursor:pointer;flex-wrap:wrap" onclick="mzToggleFeedback(${f.id})">
-        <div style="font-weight:800;font-size:12.5px">${pfEsc(f.mes||'Sem data')}<span style="color:var(--text3);font-weight:500">${f.cargo_snapshot?` · ${pfEsc(f.cargo_snapshot)}`:''}${f.area_snapshot?` · ${pfEsc(f.area_snapshot)}`:''}</span></div>
+        <div style="font-weight:800;font-size:14.5px">${pfEsc(f.mes||'Sem data')}<span style="color:var(--text3);font-weight:500">${f.cargo_snapshot?` · ${pfEsc(f.cargo_snapshot)}`:''}${f.area_snapshot?` · ${pfEsc(f.area_snapshot)}`:''}</span></div>
         <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
           ${chips}
           <button class="btn btn-outline btn-sm" style="padding:3px 8px;font-size:10.5px" onclick="event.stopPropagation();mzAbrirFeedback(${f.id})">Editar</button>
