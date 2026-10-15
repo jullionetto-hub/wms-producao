@@ -2056,40 +2056,98 @@ function _mzStatusAbsenteismo(atrasosMin, faltasInj, ausJust) {
   return { cor:'var(--amber)', bg:'rgba(217,119,6,.12)', label:'🟡 Mediano' };
 }
 
-function _mzFeedbackCardHtml(f) {
+// Extrai "dd/mm: Nmin" do texto de absenteísmo (só lista os dias de atraso).
+function _mzParseAtrasos(txt) {
+  const out = [];
+  const re = /(\d{1,2}\/\d{1,2})\s*:\s*(\d+)\s*min/gi;
+  let m;
+  while ((m = re.exec(txt || '')) !== null) out.push({ dia: m[1], min: Number(m[2]) });
+  return out;
+}
+function _mzFmtMin(min) {
+  return min >= 60 ? `${Math.floor(min/60)}h${String(min%60).padStart(2,'0')}` : `${min}min`;
+}
+
+function _mzFeedbackCardHtml(f, idx, arr) {
+  const aberto = !!arr && idx === arr.length - 1; // lista em ordem cronológica: último mês aberto
   const pct = (f.meta != null && f.entregue != null) ? _mzPerformancePct(f.meta, f.entregue) : null;
   const stPerf = _mzStatusPorFaixa(pct);
   const stAbs = _mzStatusAbsenteismo(f.atrasos, f.faltas_injustificadas, f.ausencias_justificadas);
-  const grid = (bg, cols) => `<div style="display:grid;grid-template-columns:repeat(${cols.length},1fr);gap:8px;background:${bg};border-radius:8px;padding:10px 12px">
-    ${cols.map(([label,valor,cor]) => `<div><div style="font-size:9px;color:var(--text3)">${label}</div><div style="font-size:13px;font-weight:800;${cor?`color:${cor}`:''}">${valor}</div></div>`).join('')}
-  </div>`;
+  const emoji = st => st.label.split(' ')[0];
+  const chipCls = st => st.cor === 'var(--green)' ? 'g' : st.cor === 'var(--amber)' ? 'a' : 'r';
+  const chip = (st, txt) => `<span class="mzfb-chip ${chipCls(st)}">${emoji(st)} ${txt}</span>`;
+  const atrasosLista = _mzParseAtrasos(f.absenteismo_mes);
+  const maior = atrasosLista.reduce((a, d) => (!a || d.min > a.min) ? d : a, null);
+  const minTotal = Number(f.atrasos) || 0;
+
+  const chips = [
+    stPerf ? chip(stPerf, `${pct}% da meta`) : '',
+    stAbs ? chip(stAbs, `${minTotal}min atraso`) : ''
+  ].join('');
+
+  const kpiPerf = stPerf ? `<div class="mzfb-kpi">
+      <div class="mzfb-k">Meta × Entregue</div>
+      <div class="mzfb-v" style="color:${stPerf.cor}">${pct}% <small>${pfEsc(String(f.entregue))} / ${pfEsc(String(f.meta))}</small></div>
+      <div class="mzfb-bar"><i style="width:${Math.min(pct,100)}%;background:${stPerf.cor}"></i></div>
+      <div class="mzfb-n">${f.entregue >= f.meta ? 'Meta atingida' : `Faltaram ${Number(f.meta) - Number(f.entregue)} para a meta`}</div>
+    </div>` : '';
+
+  const kpiAbs = stAbs ? `<div class="mzfb-kpi">
+      <div class="mzfb-k">Atrasos no mês</div>
+      <div class="mzfb-v" style="color:${stAbs.cor}">${_mzFmtMin(minTotal)} <small>${minTotal} min</small></div>
+      <div class="mzfb-n">${atrasosLista.length ? `${atrasosLista.length} atraso(s) · maior: ${maior.min}min em ${pfEsc(maior.dia)}` : 'Sem atrasos detalhados'}</div>
+      <div class="mzfb-mini"><span>Faltas injust.: <b>${f.faltas_injustificadas||0}</b></span><span>Ausências just.: <b>${f.ausencias_justificadas||0}</b></span></div>
+    </div>` : '';
+
+  const detalhes = f.absenteismo_mes ? `<details class="mzfb-details">
+      <summary>${atrasosLista.length ? `Ver dias de atraso (${atrasosLista.length})` : 'Ver detalhes do absenteísmo'}</summary>
+      ${atrasosLista.length ? `<div class="mzfb-days">${atrasosLista.map(d => `<span class="mzfb-day${d.min > 10 ? ' hi' : ''}">${pfEsc(d.dia)} · ${d.min}min</span>`).join('')}</div>` : ''}
+      <div class="mzfb-raw">${pfEsc(f.absenteismo_mes)}</div>
+    </details>` : '';
+
+  const sec = (icone, titulo, corpo) => corpo ? `<div class="mzfb-sec"><h4>${icone} ${titulo}</h4>${corpo}</div>` : '';
+  const nota = (cls, txt) => txt ? `<div class="mzfb-note ${cls}">${pfEsc(txt)}</div>` : '';
+
   return `
+    <style>
+      .mzfb-chip{font-size:11px;font-weight:700;padding:2px 9px;border-radius:99px;border:1px solid;white-space:nowrap}
+      .mzfb-chip.g{color:var(--green);border-color:rgba(22,163,74,.4);background:rgba(22,163,74,.12)}
+      .mzfb-chip.a{color:var(--amber);border-color:rgba(217,119,6,.4);background:rgba(217,119,6,.12)}
+      .mzfb-chip.r{color:var(--red);border-color:rgba(220,38,38,.4);background:rgba(220,38,38,.12)}
+      .mzfb-sec{margin-top:14px}.mzfb-sec h4{margin:0 0 6px;font-size:12px;font-weight:800}
+      .mzfb-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+      .mzfb-kpi{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px}
+      .mzfb-k{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em}
+      .mzfb-v{font-size:22px;font-weight:800;line-height:1.25}.mzfb-v small{font-size:12px;color:var(--text3);font-weight:600}
+      .mzfb-bar{height:6px;background:var(--border);border-radius:9px;margin:8px 0 6px;overflow:hidden}.mzfb-bar i{display:block;height:100%}
+      .mzfb-n{font-size:11px;color:var(--text2)}.mzfb-mini{display:flex;gap:14px;font-size:11px;color:var(--text2);margin-top:4px}
+      .mzfb-details summary{cursor:pointer;font-size:11.5px;color:var(--blue,#60a5fa);margin-top:8px}
+      .mzfb-days{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+      .mzfb-day{font-size:10.5px;padding:2px 8px;border-radius:6px;background:var(--surface);border:1px solid var(--border);color:var(--text2)}
+      .mzfb-day.hi{color:var(--red);border-color:rgba(220,38,38,.4)}
+      .mzfb-raw{font-size:11px;color:var(--text3);white-space:pre-line;margin-top:8px}
+      .mzfb-note{border-left:3px solid;background:var(--surface);border-radius:0 8px 8px 0;padding:9px 12px;font-size:12px;color:var(--text2);white-space:pre-line}
+      .mzfb-note.g{border-color:var(--green)}.mzfb-note.a{border-color:var(--amber)}.mzfb-note.b{border-color:#60a5fa}
+    </style>
     <div style="background:var(--surface2);border-radius:10px;margin-bottom:8px;overflow:hidden">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px;cursor:pointer" onclick="mzToggleFeedback(${f.id})">
-        <div style="font-weight:800;font-size:12.5px">${pfEsc(f.mes||'Sem data')}${f.cargo_snapshot?` · ${pfEsc(f.cargo_snapshot)}`:''}${f.area_snapshot?` · ${pfEsc(f.area_snapshot)}`:''}</div>
-        <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px;cursor:pointer;flex-wrap:wrap" onclick="mzToggleFeedback(${f.id})">
+        <div style="font-weight:800;font-size:12.5px">${pfEsc(f.mes||'Sem data')}<span style="color:var(--text3);font-weight:500">${f.cargo_snapshot?` · ${pfEsc(f.cargo_snapshot)}`:''}${f.area_snapshot?` · ${pfEsc(f.area_snapshot)}`:''}</span></div>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+          ${chips}
           <button class="btn btn-outline btn-sm" style="padding:3px 8px;font-size:10.5px" onclick="event.stopPropagation();mzAbrirFeedback(${f.id})">Editar</button>
           <button class="btn btn-outline btn-sm" style="padding:3px 8px;font-size:10.5px;color:var(--red);border-color:var(--red)" onclick="event.stopPropagation();mzExcluirFeedback(${f.id})">Excluir</button>
-          <span id="mzfb-chevron-${f.id}" style="font-size:11px;color:var(--text3);transition:transform .2s ease">▾</span>
+          <span id="mzfb-chevron-${f.id}" style="font-size:11px;color:var(--text3);transition:transform .2s ease;${aberto?'transform:rotate(180deg)':''}">▾</span>
         </div>
       </div>
-      <div id="mzfb-body-${f.id}" style="display:none;padding:0 12px 12px">
-        ${pct != null ? `<div style="margin-top:2px">
-          <div style="font-size:10px;font-weight:800;color:var(--text3);margin-bottom:4px">1 — META X ENTREGUE</div>
-          ${grid(stPerf.bg, [['META',f.meta],['ENTREGUE',f.entregue],['%',pct+'%',stPerf.cor],['STATUS',stPerf.label,stPerf.cor]])}
-        </div>` : ''}
-        ${f.pontos_positivos?`<div style="font-size:11.5px;margin-top:8px;white-space:pre-line"><b>2 — Pontos positivos:</b> ${pfEsc(f.pontos_positivos)}</div>`:''}
-        ${f.pontos_construtivos?`<div style="font-size:11.5px;margin-top:6px;white-space:pre-line"><b>3 — Pontos construtivos:</b> ${pfEsc(f.pontos_construtivos)}</div>`:''}
-        ${stAbs ? `<div style="margin-top:8px">
-          <div style="font-size:10px;font-weight:800;color:var(--text3);margin-bottom:4px">4 — ABSENTEÍSMO DO MÊS: RESUMO</div>
-          ${grid(stAbs.bg, [['ATRASOS (MIN)',(f.atrasos||0)+((f.atrasos||0)>=60?` <span style="font-weight:600;color:var(--text3)">(${Math.floor(f.atrasos/60)}h${String(f.atrasos%60).padStart(2,'0')}min)</span>`:'')],['FALTAS INJUST.',f.faltas_injustificadas||0],['AUSÊNCIAS JUST.',f.ausencias_justificadas||0],['STATUS',stAbs.label,stAbs.cor]])}
-        </div>` : ''}
-        ${f.absenteismo_mes?`<div style="font-size:11.5px;margin-top:8px"><b>4 — Absenteísmo do mês: detalhes</b><div style="color:var(--text2);margin-top:2px;white-space:pre-line">${pfEsc(f.absenteismo_mes)}</div></div>`:''}
-        ${f.retorno_antecipado?`<div style="font-size:11.5px;margin-top:6px;white-space:pre-line"><b>5 — Retorno antecipado:</b> ${pfEsc(f.retorno_antecipado)}</div>`:''}
-        ${f.recorrencia_ausencia?`<div style="font-size:11.5px;margin-top:6px;white-space:pre-line"><b>6 — Recorrência de ausência:</b> ${pfEsc(f.recorrencia_ausencia)}</div>`:''}
-        ${f.outros_pontos?`<div style="font-size:11.5px;margin-top:6px;white-space:pre-line"><b>7 — Outros pontos:</b> ${pfEsc(f.outros_pontos)}</div>`:''}
-        ${f.saldo_banco_horas?`<div style="font-size:11.5px;margin-top:6px;white-space:pre-line"><b>8 — Saldo banco de horas:</b> ${pfEsc(f.saldo_banco_horas)}</div>`:''}
-        ${f.combinado_mes?`<div style="font-size:11.5px;margin-top:8px;padding-top:8px;border-top:1px solid var(--border);white-space:pre-line"><b>9 — Combinado deste mês:</b> ${pfEsc(f.combinado_mes)}</div>`:''}
+      <div id="mzfb-body-${f.id}" style="display:${aberto?'block':'none'};padding:0 12px 12px">
+        ${(kpiPerf || kpiAbs) ? sec('📊', 'Desempenho e absenteísmo', `<div class="mzfb-kpis">${kpiPerf}${kpiAbs}</div>${detalhes}`) : (f.absenteismo_mes ? sec('📊', 'Absenteísmo', detalhes) : '')}
+        ${sec('✅', 'Pontos positivos', nota('g', f.pontos_positivos))}
+        ${sec('🛠', 'Pontos construtivos', nota('a', f.pontos_construtivos))}
+        ${sec('↩️', 'Retorno antecipado', nota('b', f.retorno_antecipado))}
+        ${sec('🔁', 'Recorrência de ausência', nota('b', f.recorrencia_ausencia))}
+        ${sec('💬', 'Outros pontos', nota('b', f.outros_pontos))}
+        ${sec('⏱', 'Saldo banco de horas', nota('b', f.saldo_banco_horas))}
+        ${sec('📌', 'Combinado deste mês', nota('a', f.combinado_mes))}
       </div>
     </div>`;
 }
