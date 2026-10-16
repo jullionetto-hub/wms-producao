@@ -1,0 +1,134 @@
+<section class="tela" id="entrada">
+<h3>Entrada Manual <span class="tag op">Repositor</span><span class="tag sup">Supervisão</span></h3>
+<p><b>Para que serve:</b> controlar a <b>chegada de mercadoria</b> (entrada de estoque), buscar o <b>código de barras</b> de um produto e fazer o <b>inventário</b> físico com o coletor. Funciona no computador e no celular.</p>
+<p><b>Quem vê o quê:</b></p>
+<ul>
+  <li><b>Supervisão, Gestão e Reposição:</b> as 3 abas — <i>Entrada de Estoque</i>, <i>Código de Barras</i> e <i>Inventário</i>.</li>
+  <li><b>Separação, Checkout e Embalagem:</b> só a consulta <b>Código de Barras</b> (menu "Código de Barras").</li>
+</ul>
+<p><b>Como chegar:</b> menu <i>Entrada Manual</i> (Supervisão, Gestão, Reposição) ou <i>Código de Barras</i> (os demais perfis). Na Reposição, a aba <b>ENTRADA</b> do celular leva ao registro de entrada de produto.</p>
+
+<h3>Aba Entrada de Estoque</h3>
+<p>Uma <b>entrada</b> é um <b>lote</b>: uma planilha com os produtos que chegaram e onde cada um deve ser guardado. O repositor vai conferindo item a item, informando quanto realmente abasteceu.</p>
+<h4>1) Criar um lote (importar o arquivo)</h4>
+<ol>
+  <li>Em <b>Importar novo arquivo</b>, dê um <b>Nome do lote</b> (ex.: <i>"3R Import 28/05"</i>).</li>
+  <li>Clique ou arraste o arquivo (<b>.xlsx, .xls ou .csv</b>). O sistema reconhece as colunas pelo nome (sem diferenciar maiúscula): <b>Código</b> (obrigatório; aceita <i>cod, sku, ref</i>), <b>Descrição</b> (<i>produto, nome</i>), <b>Quantidade</b> (<i>quant., qtd, qty</i>; vazio = 1) e <b>Endereço</b> (<i>local, localização</i>).</li>
+  <li>Confira a <b>prévia</b> e confirme. Mensagem: <i>"N itens importados! Abrindo lote..."</i></li>
+</ol>
+<table>
+<tr><th>Mensagem</th><th>Significa</th></tr>
+<tr><td>Arquivo vazio.</td><td>Não há linhas.</td></tr>
+<tr><td>Coluna Código não encontrada.</td><td>O cabeçalho não tem uma coluna de código reconhecida.</td></tr>
+<tr><td>Nenhum item válido encontrado.</td><td>Todas as linhas estão sem código.</td></tr>
+<tr><td>Erro ao ler arquivo / Erro ao importar</td><td>Arquivo corrompido ou falha de servidor.</td></tr>
+</table>
+<h4>2) Lista de lotes</h4>
+<p>Filtre por <b>DE/ATÉ</b> (começa no 1º dia do mês até hoje) e clique em <b>Filtrar</b>. Cada lote mostra o progresso e as contagens de itens <b>Pendentes, Abastecidos, Parciais</b> e <b>Não encontrados</b>. Clique no lote para abrir. O botão <b>Excel</b> exporta o lote.</p>
+<h4>3) Abastecer os itens de um lote</h4>
+<ol>
+  <li>Dentro do lote, o topo mostra a <b>barra de Progresso</b> (<i>x/y</i>) e os quatro contadores. Use a busca (<i>"Código ou descrição..."</i>) e os filtros <b>Todos / Pendente / Abastecido / Parcial / Não encontrado</b>. A lista tem paginação.</li>
+  <li>Cada linha (desktop) ou cartão (celular) tem: <b>CÓDIGO</b>, <b>DESCRIÇÃO</b>, <b>QTD ESP.</b> (esperada), <b>QTD ABAST.</b> (campo com <b>− / +</b>), <b>ENDEREÇO</b>, <b>OBSERVAÇÃO</b>, <b>STATUS</b> e <b>SALVAR</b>.</li>
+  <li><b>Endereço:</b> é validado ao digitar. Formatos aceitos: letras/números com barra e hífen, por exemplo <code>D106</code>, <code>ZA387</code>, <code>C099/VERT-C82-CX18</code>, <code>U080</code>, <code>U087/VERT-U01-CX13</code>. Endereço vazio ou fora do padrão mostra erro na própria linha. Ao sair do campo, o sistema consulta o histórico daquele código no servidor.</li>
+  <li>Informe a <b>quantidade abastecida</b> e toque em <b>Salvar</b> (a linha) — <i>"CÓDIGO salvo!"</i>. Sem mudança: <i>"Nenhuma alteração para salvar"</i>.</li>
+  <li>Se a quantidade for <b>maior que a esperada</b>, abre <i>"Quantidade acima do esperado — Realmente chegaram N unidades?"</i>; se for <b>menor (e maior que zero)</b>, abre <i>"Quantidade abaixo do esperado — Confirma salvar com quantidade incompleta (X de Y)?"</i>. Confirme ou corrija.</li>
+  <li>O status é definido pela quantidade: <b>0 = Não encontrado</b> (vermelho); <b>igual ou maior que a esperada = Abastecido</b> (verde); <b>entre 1 e a esperada = Parcial</b> (amarelo); antes de salvar = <b>Pendente</b> (cinza).</li>
+  <li>Para salvar vários de uma vez, ajuste os itens e clique em <b>Salvar Tudo</b>: só envia os que mudaram (<i>"N itens salvos!"</i>; sem mudança: <i>"Nenhum item com alterações para salvar."</i>).</li>
+  <li><b>← Voltar</b> retorna à lista de lotes. O lote pode ser <b>excluído</b> (<i>"Lote excluído."</i>).</li>
+</ol>
+<div class="note">Cada salvamento é gravado na hora; se a internet cair, a linha mostra erro e a quantidade <b>não foi salva</b>. Salve de novo quando a rede voltar.</div>
+
+<h3>Aba Código de Barras</h3>
+<p><b>Para que serve:</b> quando o leitor <b>não consegue ler a etiqueta física</b> de um produto, busque-o aqui e <b>bipe o código de barras exibido na tela</b>.</p>
+<h4>Passo a passo</h4>
+<ol>
+  <li>Digite o <b>código do produto</b> ou o <b>EAN</b> no campo <i>"Código do produto ou código de barras (EAN)..."</i> e clique em <b>Buscar</b> (ou <span class="k">Enter</span>).</li>
+  <li>O sistema mostra o nome, o código e o <b>código de barras desenhado em fundo branco</b> (de propósito, para o leitor conseguir ler). Bipe a tela.</li>
+  <li>Para outro produto, use <b>Nova busca</b>.</li>
+</ol>
+<table>
+<tr><th>Mensagem</th><th>Significa</th></tr>
+<tr><td>Produto não encontrado. Verifique o código e tente novamente.</td><td>O código não existe no catálogo.</td></tr>
+<tr><td>Produto sem código de barras cadastrado.</td><td>O catálogo tem o produto mas não o EAN.</td></tr>
+</table>
+<h4>Importar o catálogo (Supervisão)</h4>
+<p>O catálogo vem do arquivo <b>barras.xlsx</b> (códigos, nomes, código de barras, saldo e localização). Clique em <b>"Clique para importar barras.xlsx"</b> e selecione o arquivo (.xlsx, .xls ou .csv). Mensagem: <i>"Catálogo importado! N produtos."</i> Produtos que já existem são <b>atualizados</b>; novos são criados. Avisos: <i>"Arquivo vazio."</i>, <i>"Coluna Código não encontrada."</i>, <i>"Nenhum produto válido."</i></p>
+
+<h3>Aba Inventário</h3>
+<p><b>Para que serve:</b> contar fisicamente o estoque e comparar com o <b>saldo do sistema</b>, mostrando as divergências.</p>
+<h4>Criar um inventário</h4>
+<ol>
+  <li>Em <b>Criar novo inventário</b>, digite um <b>nome</b> (ex.: <i>"Inventário Geral Jul/2026"</i>). Sem nome: <i>"Informe um nome para o inventário."</i></li>
+  <li>Em <b>FILTRAR POR RUA (opcional)</b> escolha <b>Todos os produtos</b> ou uma rua (para contar só uma parte do estoque).</li>
+  <li>Clique para criar. O sistema monta a lista a partir do <b>catálogo</b>. Se o catálogo estiver vazio: <i>"Catálogo vazio. Importe o barras.xlsx na aba Código de Barras primeiro."</i> Sucesso: <i>"Inventário criado com N produtos!"</i></li>
+</ol>
+<h4>Lista de inventários</h4>
+<p>Cada inventário aparece como <b>Em andamento</b> ou <b>Concluído</b>, com o progresso da contagem. Abra um para ver o <b>painel</b>.</p>
+<h4>Painel do inventário</h4>
+<ul>
+  <li><b>Progresso da contagem</b> (contados / total) e uma tabela com <b>CÓDIGO, NOME, LOCALIZAÇÃO, SALDO SIS.</b> (saldo do sistema), <b>CONTADO</b>, <b>DIF.</b> (diferença) e <b>STATUS</b>. Busca por código ou nome e filtro por rua.</li>
+  <li>Status do item: <b>pendente</b> (não contado), <b>ok</b> (contado igual ao saldo) e <b>divergente</b> (contado diferente do saldo).</li>
+  <li><b>Contar manualmente:</b> digite a quantidade no campo do item e use <b>SALVAR</b> (<i>"CÓDIGO contado!"</i>). Depois que o inventário é concluído a edição trava: <i>"Inventário concluído — edição bloqueada."</i></li>
+  <li><b>Sync:</b> atualiza as <b>localizações</b> do inventário com as do catálogo (<i>"N endereços atualizados do catálogo!"</i>).</li>
+  <li><b>Concluir:</b> encerra o inventário (<i>"Inventário concluído!"</i>). Não dá para contar mais.</li>
+  <li><b>Excel:</b> exporta o inventário. <b>Excluir</b> (Supervisão) remove tudo (<i>"Inventário excluído."</i>).</li>
+</ul>
+<h4>Coletor de Dados (contagem no celular)</h4>
+<ol>
+  <li>No painel, toque em <b>Coletor</b> (<b>Coletor de Dados</b>). Opcionalmente escolha a <b>Rua</b> que você vai contar (ou <i>Todas as ruas</i>).</li>
+  <li>A <b>câmera</b> abre (<i>"Câmera ativa — aponte para o código de barras"</i>). Se o aparelho não suportar leitura pela câmera, use o campo de texto (<i>"Ou digite / cole o código manualmente"</i>). Se a câmera for bloqueada: <i>"Câmera não autorizada. Use o campo de texto abaixo."</i></li>
+  <li>Bipe o produto. A tela mostra o item, a <b>Rua</b>, o <b>Saldo</b> do sistema e a <b>Quantidade contada</b>. <b>Cada nova leitura do mesmo código soma +1</b> (há uma pausa de 2 segundos entre leituras do mesmo código) e o sistema <b>salva sozinho</b>, com um bip de confirmação.</li>
+  <li>Para digitar a quantidade, ajuste o campo e toque em <b>Salvar (Enter)</b>: <i>"CÓDIGO salvo com N! Aponte para o próximo."</i></li>
+  <li>Para trocar de produto sem salvar, use <b>↩ Cancelar / próximo</b>.</li>
+  <li><b>Alerta de rua errada:</b> se você escolheu contar a rua X e bipa um item cuja localização é de outra rua, aparece em vermelho <b>ITEM NA COLMEIA ERRADA!</b> com <i>"Rua Y — você está contando a rua X"</i>. Leve o item para o lugar certo ou registre a divergência.</li>
+  <li>Código que não está no inventário: <i>"\"código\" não encontrado no inventário."</i></li>
+  <li>Toque em <b>← Painel</b> para voltar.</li>
+</ol>
+<div class="note info">Bipar o <b>mesmo produto</b> várias vezes soma as unidades: bipe uma vez para cada peça (ou digite o total). Conte tudo que está no endereço, inclusive o que está em caixas fechadas, para a comparação com o sistema fazer sentido.</div>
+<h4>Dúvidas comuns</h4>
+<table>
+<tr><th>Situação</th><th>Solução</th></tr>
+<tr><td>Quantidade abastecida ficou errada num lote</td><td>Reabra o lote, corrija o número e salve de novo; o status se ajusta.</td></tr>
+<tr><td>Endereço não aceita</td><td>Use só letras, números, barra e hífen (2 a 30 caracteres), sem espaços.</td></tr>
+<tr><td>A câmera não lê</td><td>Aproxime/afaste, melhore a luz ou digite o código.</td></tr>
+<tr><td>Contei errado no inventário</td><td>Enquanto estiver "Em andamento", é só contar de novo e salvar.</td></tr>
+</table>
+</section>
+
+<section class="tela" id="colmeias">
+<h3>Colmeias <span class="tag sup">Supervisão</span><span class="tag gp">Gestão</span></h3>
+<p><b>Para que serve:</b> controlar o estoque de <b>bancadas/colmeias pré-abastecidas</b> por SKU (um estoque manual extra, fora do corredor principal). O sistema calcula o <b>saldo ao vivo</b>: quantidade abastecida menos o que já saiu em pedidos concluídos daquele código desde o abastecimento. Quando o saldo cai até o mínimo, a colmeia entra em alerta, para você <b>abastecer antes de faltar</b>.</p>
+<p><b>Como chegar:</b> menu <i>Operação › Colmeias</i> (Supervisão e Gestão).</p>
+<h4>Cartões de resumo</h4>
+<p><b>Colmeias ativas</b>, <b>Total cadastrado</b>, <b>Total consumido</b>, <b>Saldo total</b>, <b>Em alerta</b> e <b>Esgotadas</b>.</p>
+<h4>Faixa de alerta</h4>
+<p>Quando há colmeias no mínimo, uma faixa vermelha lista: <i>"N colmeia(s) no estoque mínimo"</i> com cada código, saldo e mínimo (ex.: <code>MVELS8008 (saldo 40 / mín. 50)</code>). Colmeia sem mínimo definido (0) só entra em alerta quando esgota.</p>
+<h4>Tabela</h4>
+<table>
+<tr><th>Coluna</th><th>Significa</th></tr>
+<tr><td>CÓDIGO / DESCRIÇÃO</td><td>Produto da colmeia.</td></tr>
+<tr><td>ENDEREÇO</td><td>Onde ela fica fisicamente (ex.: <i>Bancada 3 / Colmeia B12</i>).</td></tr>
+<tr><td>CADASTRADO</td><td>Total abastecido até agora.</td></tr>
+<tr><td>CONSUMIDO</td><td>Quanto já saiu em pedidos concluídos.</td></tr>
+<tr><td>SALDO</td><td>Cadastrado − Consumido, com barra colorida.</td></tr>
+<tr><td>MÍNIMO</td><td>Estoque mínimo para alertar.</td></tr>
+<tr><td>SITUAÇÃO</td><td><span style="color:var(--g)">OK</span> (saldo acima de 20% do cadastrado), <span style="color:var(--a)">Baixo</span> (até 20%), <span style="color:var(--r)">Alerta</span> (no ou abaixo do mínimo), <span style="color:var(--r)">Esgotado</span> (saldo zero).</td></tr>
+<tr><td>Ações</td><td><b>Abastecer</b>, <b>Editar endereço</b>, <b>Editar estoque mínimo</b>, <b>Remover</b>.</td></tr>
+</table>
+<h4>Passo a passo</h4>
+<ol>
+  <li><b>Nova colmeia:</b> clique em <b>Nova Colmeia</b> e preencha <b>Código do produto</b> (ex.: <code>MVELS8008</code>), <b>Descrição (opcional)</b>, <b>Quantidade abastecida</b> (ex.: 200), <b>Endereço da colmeia</b> e <b>Estoque mínimo (alerta)</b> (ex.: 50). Clique em <b>Adicionar</b>: <i>"Colmeia cadastrada!"</i></li>
+  <li><b>Abastecer:</b> na linha, clique em <b>Abastecer</b>, informe a <b>Quantidade a adicionar</b> e confirme: <i>"Abastecimento registrado!"</i> O histórico de abastecimentos fica guardado.</li>
+  <li><b>Editar endereço</b> ou <b>estoque mínimo:</b> informe o <b>Novo endereço</b>/<b>Novo estoque mínimo</b> e salve (<i>"Endereço atualizado!"</i> / <i>"Estoque mínimo atualizado!"</i>).</li>
+  <li><b>Remover:</b> confirma <i>"Remover colmeia? A colmeia do código X será removida da lista."</i> → <i>"Colmeia removida!"</i></li>
+</ol>
+<table>
+<tr><th>Mensagem</th><th>Significa</th></tr>
+<tr><td>Informe o código do produto</td><td>Campo de código vazio.</td></tr>
+<tr><td>Informe uma quantidade válida / Quantidade inválida</td><td>Quantidade vazia, zero ou negativa.</td></tr>
+<tr><td>Estoque mínimo inválido / Informe um valor válido</td><td>Mínimo negativo ou texto.</td></tr>
+<tr><td>Nenhuma colmeia cadastrada ainda.</td><td>Lista vazia.</td></tr>
+<tr><td>Colmeia não encontrada</td><td>Já foi removida por outra pessoa. Atualize.</td></tr>
+</table>
+<div class="note ok"><b>Efeito na Separação:</b> o separador vê, no item, <i>"Também em: [endereço da colmeia]"</i> quando o produto tem colmeia, para não correr o corredor inteiro à toa.</div>
+</section>

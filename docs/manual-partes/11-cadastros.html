@@ -1,0 +1,68 @@
+<section class="tela" id="cadastros">
+<h3>Cadastros (usuários) <span class="tag sup">Supervisão</span><span class="tag gp">Gestão</span></h3>
+<p><b>Para que serve:</b> criar e manter as pessoas que usam o sistema: login, senha, perfil, turno e acessos extras. Todo colaborador que vai separar, repor, conferir ou embalar precisa ter um usuário aqui.</p>
+<p><b>Como chegar:</b> menu <i>Supervisão › Cadastros</i>. Hoje a tela tem uma aba: <b>Usuários</b>. (A importação de pedidos fica em <a href="#pedidos">Pedidos › Importar</a>.)</p>
+
+<h4>Novo usuário (passo a passo)</h4>
+<ol>
+  <li>No bloco <b>Novo usuário</b>, preencha <b>Nome completo</b> (ex.: "Nome do colaborador"). Ao digitar o nome, o sistema <b>sugere o login</b> (ex.: <code>joao.silva</code>) e a <b>senha inicial</b> no padrão <code>PrimeiroNome@Ano</code>. Você pode editar ambos; depois de editado, o sistema para de sugerir.</li>
+  <li><b>Login:</b> identificação usada no acesso. Evite espaços e acentos.</li>
+  <li><b>Senha:</b> mínimo de <b>6 caracteres</b>. O olho mostra/oculta. Ela é gerada como <b>senha temporária</b>: o colaborador será obrigado a trocar no primeiro acesso.</li>
+  <li><b>Perfil principal:</b> <b>Separação, Supervisão, Reposição, Checkout, Embalagem</b> ou <b>Gestão (Gerente/Coordenador)</b>. Define o menu e as permissões padrão.</li>
+  <li><b>Função do repositor</b> (só aparece se o perfil for Reposição): <b>Geral</b>, <b>Busca no armazém</b> ou <b>Abastecimento</b>. Aparece no cabeçalho do colaborador.</li>
+  <li><b>Pode acessar também:</b> abra a lista e marque outros perfis liberados (Supervisão, Separação, Reposição, Checkout, Embalagem). Quem tem acessos extras escolhe o perfil na tela de login.</li>
+  <li><b>Turno:</b> Manhã, Tarde ou Noite. É usado em distribuição por turno, relatórios, ranking e Diário de Bordo.</li>
+  <li>Clique em <b>Cadastrar Usuário</b>. Mensagem: <i>"Usuário cadastrado!"</i></li>
+</ol>
+<table>
+<tr><th>Mensagem</th><th>Significa</th></tr>
+<tr><td>Preencha todos os campos!</td><td>Faltou nome, login ou senha.</td></tr>
+<tr><td>Senha mínimo 6 caracteres!</td><td>A senha é curta demais.</td></tr>
+<tr><td>Erro ao cadastrar! (ou mensagem do servidor)</td><td>Normalmente: login já existe. Escolha outro.</td></tr>
+</table>
+<div class="note">Colaboradores que separam pedidos precisam estar <b>vinculados a um cadastro de separador</b>. Isso acontece sozinho no cadastro; se um usuário aparecer como "não vinculado" na separação, use <b>Corrigir vínculos</b> (abaixo).</div>
+
+<h4>Lista de usuários cadastrados</h4>
+<ul>
+  <li><b>Cabeçalho:</b> "Usuários cadastrados" com a contagem <i>"• X de Y usuário(s)"</i> e os botões <b>↺</b> (recarregar), <b>Corrigir vínculos</b> e <b>Excel</b>.</li>
+  <li><b>Filtro de turno:</b> <b>Todos / Manhã / Tarde / Noite</b>. Vazio: <i>"Nenhum usuário neste turno"</i>.</li>
+  <li><b>Cartão do usuário:</b> iniciais, nome, <code>@login</code>, etiquetas dos perfis (Sup, Sep, Rep, CK, Emb, Gest), turno e situação (<b>ativo</b>/<b>inativo</b>).</li>
+</ul>
+<h4>Botões de cada usuário</h4>
+<table>
+<tr><th>Botão</th><th>O que faz</th></tr>
+<tr><td><b>⏸ / ▶ (Desativar / Ativar)</b></td><td>Inativa ou reativa o acesso sem apagar o histórico. Usuário <b>inativo não consegue entrar</b> ("Login ou senha incorretos!"). Mensagem: <i>"Usuário ativado!"</i> / <i>"Usuário desativado!"</i>. É a forma recomendada ao desligar um colaborador.</td></tr>
+<tr><td><b>Editar</b></td><td>Abre a janela de edição (veja abaixo).</td></tr>
+<tr><td><b>🛡 Permissões granulares</b> (só Gestão)</td><td>Restringe ações sensíveis de um usuário (veja abaixo).</td></tr>
+<tr><td><b>🗑 Excluir</b></td><td>Pede confirmação: <i>"Excluir "Nome"? O usuário será removido permanentemente do sistema."</i> Prefira desativar, pois excluir não tem volta (e pode ser bloqueado para você pela Gestão).</td></tr>
+</table>
+
+<h4>Editar usuário</h4>
+<ol>
+  <li>Clique em <b>Editar</b>. Altere <b>Nome</b>, <b>Login</b>, <b>Perfil</b>, <b>Turno</b>, <b>Função do repositor</b> e os <b>acessos extras</b>.</li>
+  <li><b>Redefinir a senha:</b> digite a nova senha (mínimo 6) no campo de senha. Marque <b>senha temporária</b> se quiser que o colaborador seja obrigado a trocar no próximo login. Deixe em branco para manter a senha atual.</li>
+  <li>Clique em <b>Salvar</b>: <i>"Usuario atualizado!"</i> Avisos: <i>"Preencha nome e login!"</i> e <i>"Senha minimo 6 caracteres!"</i></li>
+</ol>
+
+<h4>Permissões granulares (somente Gestão)</h4>
+<p>Clique no escudo do usuário. A janela <b>"Permissões — Nome"</b> lista as ações <b>Ver, Criar, Editar, Excluir, Executar, Aprovar, Administrar</b>. Para cada uma o estado pode ser <b>Padrão (perfil)</b>, <b>Permitido</b> ou <b>Revogado</b> (use a caixa de seleção: Padrão / Permitir / Revogar). Mensagem: <i>"Permissão atualizada!"</i></p>
+<ul>
+  <li>Por padrão o acesso segue o perfil. <b>Revogar</b> bloqueia aquela ação para esse usuário mesmo que o perfil permita.</li>
+  <li>Hoje as ações revogáveis protegem as operações mais destrutivas: excluir usuário/separador, excluir pedidos em massa e zerar dados. Tentativa bloqueada mostra: <i>Acesso negado. A ação "…" foi revogada pra este usuário.</i></li>
+  <li>Cada mudança fica registrada na Auditoria.</li>
+</ul>
+
+<h4>Corrigir vínculos</h4>
+<p>Reconecta os cadastros de <b>usuário</b> e <b>separador</b> (por matrícula e por nome). O botão mostra "Corrigindo…" e termina com: <i>"N vínculo(s) corrigido(s). Todos vinculados!"</i> ou <i>"…X sem correspondência: nome1, nome2"</i> (esses precisam ser revistos manualmente: confira se o nome do usuário está igual ao do separador). Use quando alguém aparecer sem pedidos ou como <i>"Usuário não vinculado a um separador"</i>.</p>
+
+<h4>Excel</h4>
+<p>Exporta a lista (Nome, Login, Perfil, Turno, Status e <b>Senha inicial</b>). A senha inicial só aparece para quem <b>ainda não trocou</b> a senha (padrão <code>PrimeiroNome@Ano</code>); depois da troca ela fica irrecuperável e a planilha mostra <i>"Já alterada pelo usuário"</i>. Guarde o arquivo com cuidado e apague depois de entregar as senhas.</p>
+<h4>Dúvidas comuns</h4>
+<table>
+<tr><th>Situação</th><th>Solução</th></tr>
+<tr><td>Colaborador esqueceu a senha</td><td>Editar › digite uma senha nova › marque senha temporária › Salvar. Informe a senha e peça para trocar no primeiro login.</td></tr>
+<tr><td>Colaborador não consegue escolher um perfil no login</td><td>Marque o perfil em <b>Pode acessar também</b> (ou mude o perfil principal).</td></tr>
+<tr><td>Funcionário desligado</td><td>Desative o usuário (não exclua), para manter o histórico de produção.</td></tr>
+<tr><td>Mudou de turno</td><td>Edite o usuário e troque o <b>Turno</b>. O cadastro de separador é atualizado junto.</td></tr>
+</table>
+</section>
