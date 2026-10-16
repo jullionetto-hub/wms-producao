@@ -1,0 +1,65 @@
+<h2 id="regras">6. Regras, cálculos e referências rápidas</h2>
+<table>
+<tr><th>Regra</th><th>Como funciona</th></tr>
+<tr><td>SLA do pedido</td><td>6 horas desde "aguardando desde". 60% (3,6 h) = <b>Atenção</b>; 100% (6 h) = <b>Crítico</b>. Alertas do Dashboard listam pedidos pendentes/em separação acima de 6 h.</td></tr>
+<tr><td>Tentativas de reposição</td><td>Máximo de <b>3</b> buscas por item. Na 3ª falha o item vai para <b>Busca Final</b>/<b>Liberação</b>.</td></tr>
+<tr><td>Busca Final</td><td>Última conferência física. <i>Encontrei</i> resolve o item; <i>Não encontrei</i> fecha em protocolo (sem volta).</td></tr>
+<tr><td>Liberação (supervisor)</td><td><i>Encontrado</i> = reposto (separador desbloqueado); <i>Não Encontrado</i> = vai para Protocolo. Vale a ação que acontecer primeiro (supervisor ou Busca Final).</td></tr>
+<tr><td>Prioridade de entrega</td><td><b>Drive Thru</b> primeiro (distribuição, fila de reposição, destaque vermelho). <b>Prime</b> tem selo e filtro próprios.</td></tr>
+<tr><td>Pesos por corredor</td><td>Fácil (A–E, P–U) 1,0; Médio (M, N, O, V–Z) 1,5; Difícil (F–L, ZA, Arara) 2,0 por item; +2 pontos por rua diferente no pedido.</td></tr>
+<tr><td>Turnos (Control Tower)</td><td>Manhã 06:00–13:00, Tarde 13:00–22:00, Noite 22:00–06:00. Em Distribuição, o botão de turno atual usa 06–14, 14–22 e 22–06.</td></tr>
+<tr><td>Situação (Control Tower)</td><td><b>No prazo</b> (previsão ≤ tempo restante), <b>Risco</b> (até +25%), <b>Atrasado</b> (acima disso ou produção zero com volume parado).</td></tr>
+<tr><td>Hora a hora</td><td>Previsão de fechamento do turno vs meta: ≥ 100% no prazo, ≥ 85% risco, abaixo atrasado.</td></tr>
+<tr><td>Anomalia de ritmo</td><td>Separador com ritmo do dia abaixo de 60% do próprio histórico (mínimo 20 itens no dia).</td></tr>
+<tr><td>Metas diárias de referência (Performance › Metas)</td><td>Separação 65 pedidos, Checkout 90, Embalagem 120, Reposição 90 SKUs, proporcionais ao tempo logado.</td></tr>
+<tr><td>Ranking de bonificação</td><td>Nota = % da meta (máx. 120) − desconto por ocorrência de Qualidade/Processo Errado (leve −10, moderada −25, grave −50). ≥ 90 bônus cheio; ≥ 70 parcial; abaixo, sem bônus.</td></tr>
+<tr><td>Liderança dos turnos</td><td>Nota = 50% meta de pedidos + 25% diário de bordo + 25% qualidade da passagem (pesos editáveis). Meta padrão 400/350/250.</td></tr>
+<tr><td>Validação do diário</td><td>30 minutos para o turno seguinte validar. Checklist de 6 itens (pesos 20/15/15/15/20/15) começando em 100 pontos.</td></tr>
+<tr><td>Absenteísmo (mês)</td><td>Ótimo: até 10 min de atraso e 0 ausências; Ruim: falta injustificada, mais de 30 min ou 2+ ausências justificadas; Mediano: o resto.</td></tr>
+<tr><td>Incentivo</td><td>Pontos (abs 30/15/0 + perf 40/20/0 + comp 30/15/0). 90+ Destaque R$ 200; 70+ Bom R$ 100; 50+ Regular; abaixo Atenção.</td></tr>
+<tr><td>Sessão</td><td>Dura até 8 horas e renova enquanto houver uso. 10 senhas erradas bloqueiam o usuário por 5 minutos.</td></tr>
+</table>
+
+<h2 id="glossario">7. Glossário</h2>
+<table>
+<tr><td><b>SKU</b></td><td>Código do produto (tipo de produto). "N SKUs" = N códigos diferentes no pedido.</td></tr>
+<tr><td><b>Itens</b></td><td>Quantidade total de peças (soma das quantidades).</td></tr>
+<tr><td><b>Picking</b></td><td>Local de onde o separador retira o item.</td></tr>
+<tr><td><b>Colmeia</b></td><td>Bancada/bin com estoque manual de um SKU, fora do corredor.</td></tr>
+<tr><td><b>Subiu</b></td><td>Item que o repositor levou ao picking, aguardando ser guardado.</td></tr>
+<tr><td><b>Abastecido</b></td><td>Item já guardado no endereço; reposição resolvida.</td></tr>
+<tr><td><b>Busca Final</b></td><td>Última conferência física antes de confirmar a falta de um item.</td></tr>
+<tr><td><b>Liberação</b></td><td>Decisão da supervisão sobre um item não encontrado.</td></tr>
+<tr><td><b>Protocolo</b></td><td>Registro formal dos itens sem estoque/não encontrados.</td></tr>
+<tr><td><b>Pendência (checkout)</b></td><td>Pedido com item faltando, em espera até o item chegar.</td></tr>
+<tr><td><b>Lote</b></td><td>Grupo de até 4 pedidos separados juntos pela proximidade das ruas (separação) ou conjunto de itens de uma entrada de estoque (entrada manual).</td></tr>
+<tr><td><b>Drive Thru / Prime</b></td><td>Tipos de entrega com tratamento prioritário (cliente retira / entrega ágil).</td></tr>
+<tr><td><b>NF cheia / Declaração</b></td><td>Classificação fiscal pelo estado de destino, mostrada na coluna UF e na etiqueta.</td></tr>
+<tr><td><b>Aguardando desde</b></td><td>Momento em que o pedido passou a aguardar separação (base do SLA).</td></tr>
+<tr><td><b>SLA</b></td><td>Prazo máximo combinado (6 horas) entre o pedido aguardar e ser concluído.</td></tr>
+<tr><td><b>Gap</b></td><td>Diferença entre o ritmo atual e o necessário para bater a meta.</td></tr>
+<tr><td><b>RACI</b></td><td>Matriz de papéis: quem é responsável, garante, acompanha, apoia, executa.</td></tr>
+<tr><td><b>BH</b></td><td>Banco de horas.</td></tr>
+<tr><td><b>EAN</b></td><td>Código de barras numérico do produto.</td></tr>
+</table>
+
+<h2 id="faq">8. Problemas comuns e o que fazer</h2>
+<table>
+<tr><th>Situação</th><th>O que fazer</th></tr>
+<tr><td>Não consigo entrar ("Login ou senha incorretos!")</td><td>Confira o perfil escolhido, usuário e senha. Se esqueceu, a Supervisão redefine. Após 10 erros, aguarde 5 minutos.</td></tr>
+<tr><td>"Este colaborador não pode acessar este perfil!"</td><td>Escolha outro perfil ou peça um acesso extra à Supervisão.</td></tr>
+<tr><td>Meus pedidos não aparecem na separação</td><td>A Supervisão ainda não distribuiu, ou o usuário não está vinculado a um separador (Cadastros › Corrigir vínculos).</td></tr>
+<tr><td>"Pedido sendo separado por outro operador!"</td><td>Outro separador abriu o pedido primeiro. Peça reatribuição à Supervisão.</td></tr>
+<tr><td>Marquei falta/parcial sem querer</td><td>Toque em ↺ Desfazer no item (só funciona se o repositor ainda não iniciou a busca).</td></tr>
+<tr><td>O botão CONCLUIR está bloqueado</td><td>Leia o texto do botão: itens sem marcar, aguardando repositor, aguardando supervisor.</td></tr>
+<tr><td>Item "não encontrado" travou o pedido</td><td>A Supervisão decide em Liberação (Encontrado ou Não Encontrado), ou um repositor faz a Busca Final.</td></tr>
+<tr><td>Confirmei o checkout e o pedido não aparece na embalagem</td><td>Supervisão: Liberação › Reenviar para Embalagem.</td></tr>
+<tr><td>Caixa aparece como ocupada</td><td>Confirme o checkout do pedido que a usa ou peça à Supervisão para liberar a caixa.</td></tr>
+<tr><td>Importei e os pedidos não aparecem</td><td>Confira o filtro de período (usa "aguardando desde"), o status e clique em Atualizar.</td></tr>
+<tr><td>A tela está desatualizada depois de uma atualização do sistema</td><td>Recarregue com <span class="k">Ctrl</span>+<span class="k">F5</span> (computador) ou feche e reabra o app (celular).</td></tr>
+<tr><td>Apareceu "Erro de rede" / "Sem conexão"</td><td>Verifique Wi-Fi/dados. A ação <b>não foi gravada</b>; repita depois de conferir o estado atual da tela.</td></tr>
+<tr><td>Câmera não lê QR/código</td><td>Melhore a luz, aproxime, ou digite o número manualmente.</td></tr>
+<tr><td>Cometi um erro em uma ação em massa (excluir, marcar embalado, zerar)</td><td>Não há "desfazer" pela tela. Avise a Supervisão/Gestão e a equipe técnica o quanto antes; a Auditoria registra quem fez o quê.</td></tr>
+</table>
+<div class="note">Quando o problema persistir, anote: <b>tela</b>, <b>horário</b>, <b>número do pedido/item</b>, <b>mensagem exata</b> e o <b>usuário</b> logado. Isso acelera muito o suporte.</div>
+<p style="margin-top:36px;font-size:13px;color:var(--t3)">Este manual foi elaborado a partir da leitura do código e das telas do sistema. Quando o sistema mudar, atualize o capítulo correspondente.</p>

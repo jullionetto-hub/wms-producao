@@ -1,0 +1,51 @@
+<h2 id="visao">1. Visão geral e como usar este manual</h2>
+<p>O <b>WMS Miess</b> controla a operação do galpão do começo ao fim: o pedido entra, é distribuído para um separador, o item é buscado no estoque (com apoio do repositor quando falta), o pedido passa pelo checkout, é embalado e segue para expedição. Cada etapa tem uma tela e um perfil responsável, e a supervisão acompanha tudo em tempo real.</p>
+
+<h3>Como usar este manual</h3>
+<ul>
+  <li>Use o <b>menu à esquerda</b> para ir direto à tela que você quer. Cada tela segue a mesma estrutura: <b>para que serve</b>, <b>quem usa</b>, <b>como chegar</b>, elementos da tela, <b>passo a passo</b>, mensagens do sistema (com o que significam) e dúvidas comuns.</li>
+  <li><b>Colaboradores de chão</b> (separação, reposição, checkout, embalagem): leiam o capítulo 2 (acesso) e o da sua etapa, em <b>4. Operação</b>.</li>
+  <li><b>Supervisão e Gestão</b>: capítulos 3 (telas de supervisão), 4 (operação) e, para a Gestão, 5 (pessoal).</li>
+  <li>Para <b>imprimir</b> ou salvar em PDF, use <span class="k">Ctrl</span>+<span class="k">P</span> (o menu lateral some na impressão e cada capítulo começa em uma página nova).</li>
+  <li>As <b>mensagens do sistema</b> aparecem em <i>itálico</i> exatamente como surgem na tela, para você reconhecê-las.</li>
+</ul>
+
+<h3>Caminho de um pedido</h3>
+<div class="flow">
+  <span>Importar</span><i>→</i><span>Distribuir</span><i>→</i><span>Separação</span><i>→</i><span>Checkout</span><i>→</i><span>Embalagem</span><i>→</i><span>Expedição</span>
+</div>
+<div class="flow">
+  <span>Item não achado</span><i>→</i><span>Reposição (até 3 tentativas)</span><i>→</i><span>Busca Final / Liberação</span><i>→</i><span>Protocolo</span>
+</div>
+<ol>
+  <li><b>Importar</b> (Supervisão): carrega a planilha (ou os HTMLs do MIESS) com pedidos e itens.</li>
+  <li><b>Distribuir</b> (Supervisão): atribui os pedidos pendentes a separadores (automática, por turno, manual ou em lotes).</li>
+  <li><b>Separação</b> (Separador): abre o pedido, percorre os endereços e marca cada item como <i>coletado</i>, <i>parcial</i> ou <i>falta</i>. Falta e parcial geram aviso para o repositor.</li>
+  <li><b>Reposição</b> (Repositor): procura o item (até 3 tentativas), leva ao picking (<i>Subiu</i>) e abastece. Se não acha, o item vai para <b>Busca Final</b>/<b>Liberação</b> e, no limite, para o <b>Protocolo</b>.</li>
+  <li><b>Checkout</b> (Operador de checkout): confere os itens do pedido e confirma; pode registrar pendência ou pausar.</li>
+  <li><b>Embalagem</b> (Embalador): inicia e encerra a embalagem do pedido.</li>
+  <li><b>Expedição / Faturamento</b>: o checkout concluído é contado como expedição; o faturamento é importado e acompanhado no Control Tower.</li>
+</ol>
+<div class="note info">As telas atualizam sozinhas (em tempo real e a cada ~30 segundos) e várias têm o botão <span class="k">↺</span> para recarregar manualmente. Quase todas têm filtro de <b>período</b> e muitas exportam para <b>Excel</b>.</div>
+
+<h3>Quem faz o quê</h3>
+<table>
+<tr><th>Perfil</th><th>Responsabilidade principal</th><th>Capítulos</th></tr>
+<tr><td><b>Supervisão</b></td><td>Importa, distribui, libera itens, acompanha indicadores, fecha o diário de bordo, cadastra usuários.</td><td>2, 3, 4</td></tr>
+<tr><td><b>Gestão</b> (gerente/coordenador)</td><td>Tudo da Supervisão, mais gestão de pessoas (absenteísmo, matriz, bonificação) e permissões.</td><td>2, 3, 4, 5</td></tr>
+<tr><td><b>Separação</b></td><td>Separar pedidos no estoque.</td><td>2, 4 (Separação, Estatísticas)</td></tr>
+<tr><td><b>Reposição</b></td><td>Buscar e repor itens em falta; entrada de estoque.</td><td>2, 4 (Reposição, Entrada Manual, Estatísticas)</td></tr>
+<tr><td><b>Checkout</b></td><td>Conferir e confirmar o pedido antes da embalagem.</td><td>2, 4 (Checkout, Estatísticas)</td></tr>
+<tr><td><b>Embalagem</b></td><td>Embalar o pedido.</td><td>2, 4 (Embalagem, Estatísticas)</td></tr>
+</table>
+
+<h3>Estados de um pedido</h3>
+<table>
+<tr><th>Estado (tela Pedidos)</th><th>Significa</th></tr>
+<tr><td><b>Pendente</b></td><td>Importado e aguardando separação (distribuído ou não).</td></tr>
+<tr><td><b>Separando</b></td><td>Um separador abriu o pedido e está trabalhando nele.</td></tr>
+<tr><td><b>Separado</b></td><td>Separação concluída; aguardando checkout.</td></tr>
+<tr><td><b>Checkoutado</b></td><td>Checkout confirmado; aguardando embalagem.</td></tr>
+<tr><td><b>Embalado</b></td><td>Embalagem encerrada. Fim do percurso.</td></tr>
+</table>
+<p>Um pedido concluído <b>com falta</b> segue para o Checkout como <i>"aguardando item"</i> e só termina quando o item chega.</p>

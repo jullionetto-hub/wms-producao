@@ -1,0 +1,208 @@
+<h2 id="pessoal">5. Telas de Pessoal (somente Gestão)</h2>
+
+<section class="tela" id="absenteismo">
+<h3>Absenteísmo <span class="tag gp">Gestão</span></h3>
+<p><b>Para que serve:</b> calcular <b>atrasos por marcação de ponto</b> a partir do <b>espelho de ponto em PDF</b> (sistema InPonto). O sistema lê as batidas de cada dia e mede atraso na <b>entrada</b>, na <b>volta do almoço</b> e na <b>volta da pausa</b>, e consolida por colaborador. O resultado pode ser enviado à <a href="#matriz">Matriz de Responsabilidades</a> como feedback do mês.</p>
+<p><b>Como chegar:</b> menu <i>Pessoal › Absenteísmo</i> (perfil Gestão).</p>
+
+<h4>Elementos da tela</h4>
+<table>
+<tr><th>Elemento</th><th>O que faz</th></tr>
+<tr><td><b>Enviar PDF(s) do espelho de ponto</b></td><td>Seleciona um ou vários PDFs (um por empresa). Aceita vários de uma vez.</td></tr>
+<tr><td><b>Diagnóstico (temporário)</b></td><td>Lê um PDF só para mostrar como o sistema o interpretou (apoio técnico). Não grava nada.</td></tr>
+<tr><td><b>Apagar todos os dados</b></td><td>Apaga TODO o absenteísmo importado (colaboradores, dias e uploads). Pede <b>duas confirmações</b>. Os PDFs precisam ser reimportados.</td></tr>
+<tr><td><b>Botões de mês</b></td><td>Um botão por mês já importado (ex.: <i>Agosto</i>). Clique para filtrar o resultado pelo período daquele mês; ele passa a ser o <b>mês ativo</b> (usado no envio para a Matriz).</td></tr>
+<tr><td><b>Tolerância</b></td><td><b>0, 5, 10, 15 ou 30 min</b>. Desconta esse tempo apenas dos atrasos de <b>entrada</b>.</td></tr>
+<tr><td><b>Turno</b></td><td>Todos, <b>Manhã</b>, <b>Tarde</b>, <b>Madrugada</b>.</td></tr>
+<tr><td><b>Período</b> + <b>Aplicar</b></td><td>Datas De/Até. O botão ↻ limpa.</td></tr>
+<tr><td><b>Enviar todos p/ Matriz</b></td><td>Envia os colaboradores listados (respeitando o filtro de turno).</td></tr>
+<tr><td><b>Gerar PDF / Imprimir</b></td><td>Gera um relatório imprimível com a tabela, a tolerância usada e a data de geração.</td></tr>
+</table>
+
+<h4>Passo a passo — importar e analisar</h4>
+<ol>
+  <li>Exporte o <b>espelho de ponto em PDF</b> do InPonto (um arquivo por empresa).</li>
+  <li>Clique em <b>Enviar PDF(s) do espelho de ponto</b> e selecione os arquivos.</li>
+  <li>A faixa de status mostra o andamento (<i>"Enviando 1 de 3: arquivo.pdf..."</i>) e o resultado: <i>"Importado! 3/3 arquivo(s), N colaborador(es), período dd/mm/aaaa a dd/mm/aaaa."</i> Se algum falhar: <i>"Falhas: arquivo: motivo"</i> (amarelo). Se nenhum entrar: <i>"Erro: nenhum PDF foi importado."</i> (vermelho).</li>
+  <li>A tela mostra sempre o <b>resultado geral</b> de tudo que já foi importado (não só o último envio). Escolha o <b>mês</b>, o <b>turno</b> e a <b>tolerância</b>.</li>
+  <li>Leia a tabela <b>Resumo por colaborador</b>:
+    <table>
+    <tr><th>Coluna</th><th>Significa</th></tr>
+    <tr><td>COLABORADOR / SETOR</td><td>Nome e setor/horário contratado.</td></tr>
+    <tr><td>ENTRADAS ATRASADAS</td><td>Minutos de atraso acumulados na chegada (acima da tolerância).</td></tr>
+    <tr><td>ALMOÇO ATRASADO</td><td>Minutos que o almoço excedeu o tempo permitido.</td></tr>
+    <tr><td>PAUSA ATRASADA</td><td>Minutos que a pausa excedeu o tempo permitido.</td></tr>
+    <tr><td>TOTAL ATRASOS</td><td>Soma dos três (vermelho quando maior que zero).</td></tr>
+    <tr><td>BANCO DE HORAS</td><td>Saldo do período (verde positivo, vermelho negativo).</td></tr>
+    <tr><td>ATESTADOS / FALTAS / DECL. HORAS</td><td>Dias de atestado médico, faltas e declarações de horas.</td></tr>
+    </table>
+  </li>
+  <li>Clique em <b>Ver dias</b> para abrir o detalhe de um colaborador: por data, o <b>status</b> do dia, a <b>ENTRADA</b> (hora e atraso), a <b>VOLTA ALMOÇO</b> e a <b>VOLTA PAUSA</b>. Verde = no prazo; vermelho = atrasou. Também há um texto automático resumindo o desempenho (dias trabalhados, atrasos somados, situação do banco de horas).</li>
+</ol>
+
+<h4>Como o atraso é calculado</h4>
+<table>
+<tr><th>Regra</th><th>Detalhe</th></tr>
+<tr><td>Turnos oficiais</td><td><b>Madrugada</b> entra às <b>22:00</b>; <b>Tarde</b> às <b>13:00</b> (sábado 10:00); <b>Manhã</b> às <b>06:00</b>. O turno é reconhecido pelo texto do horário no PDF (ex.: "Logística – Madrugada 22h – 06:48h").</td></tr>
+<tr><td>Entrada</td><td>Atraso = horário batido − horário oficial de entrada (menos a tolerância escolhida).</td></tr>
+<tr><td>Almoço e pausa</td><td>Mede a <b>duração</b> do intervalo (saída → volta) contra o tempo permitido: <b>almoço 60 min</b> e <b>pausa 15 min</b>. Só avalia dias com <b>4 ou 6 marcações</b>; em dias com outro padrão (ex.: sábado com 2 batidas), só a entrada é avaliada. Em dias com 6 marcações, o intervalo mais longo é tratado como almoço.</td></tr>
+<tr><td>Dias esperados</td><td>Domingo nunca conta; sábado conta só para Manhã e Tarde (expediente reduzido); Madrugada trabalha de segunda a sexta. Folgas não entram como "dia trabalhado".</td></tr>
+<tr><td>Turno desconhecido</td><td>Se o horário do PDF não bate com os 3 oficiais, o sistema compara com o horário "típico" (mediana) do mesmo grupo.</td></tr>
+<tr><td>Status do dia</td><td>Reconhece Férias, DSR, Atestado Médico, Folga BH, Banco de Horas, Declaração de Horas e Falta.</td></tr>
+</table>
+<div class="note">Os números são calculados a partir das <b>batidas</b>, não das colunas prontas do PDF (que costumam vir em branco). Se um PDF de formato diferente for enviado, o resultado pode vir incompleto: use o <b>Diagnóstico</b> e fale com a equipe técnica.</div>
+
+<h4>Enviar para a Matriz (passo a passo)</h4>
+<ol>
+  <li><b>Um colaborador:</b> na linha, clique em <b>Enviar p/ Matriz</b>. Aparece uma caixa pedindo o <b>Mês de referência na Matriz de Responsabilidades</b> (ex.: <code>Agosto/2026</code>), já preenchido com o mês ativo. Confirme.</li>
+  <li><b>Todos:</b> clique em <b>Enviar todos p/ Matriz</b>. A caixa informa quantos colaboradores serão enviados (e o turno, se filtrado). Informe o mês e confirme.</li>
+  <li>Resultado: <i>"Enviado pra Matriz — absenteísmo: Ruim/Mediano/Ótimo"</i> ou <i>"Enviado pra Matriz: N colaboradores (X novos, Y atualizados)"</i>. Se houver falhas: <i>"N enviados, M com problema"</i>. Sem colaboradores na tabela: <i>"Nenhum colaborador na tabela"</i>.</li>
+  <li>Reenviar <b>não duplica</b>: atualiza o feedback do mês. O texto de detalhes (<i>"27/08: 6min …"</i>) e os totais passam a aparecer no cartão de feedback do colaborador na Matriz.</li>
+</ol>
+<p>A classificação do mês enviada à Matriz segue: <b>Ruim</b> = qualquer falta injustificada, mais de 30 min de atraso ou 2+ ausências justificadas; <b>Ótimo</b> = até 10 min de atraso e nenhuma ausência justificada; <b>Mediano</b> = o restante.</p>
+</section>
+
+<section class="tela" id="matriz">
+<h3>Matriz de Responsabilidades <span class="tag gp">Gestão</span></h3>
+<p><b>Para que serve:</b> concentrar a gestão de pessoas: quem faz o quê em cada área (RACI), cargos e plano de carreira, banco de horas, férias, ausências, <b>classificação mensal</b> (absenteísmo, performance e comportamento), <b>incentivo</b> (bônus) e o <b>registro mensal de feedback</b> de cada colaborador.</p>
+<p><b>Como chegar:</b> menu <i>Pessoal › Matriz de Responsabilidades</i>. No topo aparece a origem dos dados (<i>"Dados no banco do próprio WMS"</i>) e o botão <b>Migração ▾</b> (uso técnico: copia dados de um sistema antigo; <b>Migrar agora</b> e <b>Conferir contagens</b>; não apaga nada na origem; só use com a equipe técnica).</p>
+<p>A tela tem <b>10 abas</b>: Responsabilidades, Cargos, Banco de Horas, Férias, Organograma, Classificação, Painel do Colaborador, Incentivo, Ausências e Plano de Carreira.</p>
+
+<h3>Aba Responsabilidades (RACI)</h3>
+<p>Mostra, por <b>área</b> (ex.: Reposição, Separação, Checkout, Embalagem) e por <b>atividade</b>, qual é o envolvimento de cada <b>papel</b> (Gerente, Coordenador, Analista…).</p>
+<table>
+<tr><th>Status</th><th>Significa</th></tr>
+<tr><td><b>Responsável Direto</b> (vermelho)</td><td>Dono principal da atividade: faz acontecer e responde primeiro pela entrega.</td></tr>
+<tr><td><b>Garante</b> (roxo)</td><td>Cobra, verifica e assegura que a atividade seja executada corretamente.</td></tr>
+<tr><td><b>Acompanha</b> (amarelo)</td><td>Tem visibilidade do resultado, mas não participa da rotina.</td></tr>
+<tr><td><b>Apoia</b> (terracota)</td><td>Contribui, mas não decide nem responde pela atividade.</td></tr>
+<tr><td><b>Executa</b> (verde)</td><td>Realiza a atividade no dia a dia.</td></tr>
+<tr><td><b>Não</b> (cinza)</td><td>Sem envolvimento.</td></tr>
+</table>
+<ul>
+  <li>A tela também explica os <b>papéis</b> (Gerente "faz a operação evoluir"; Coordenador "garante a operação"; Analista do Turno "faz o turno acontecer: executa, acompanha, organiza, orienta, identifica desvios e resolve o primeiro nível de problemas") e o <b>escalonamento</b> de problemas (→ Analista resolve → Coordenador resolve → Gerente resolve; problema repetitivo ou que exige mudança estrutural sobe de nível), em seções que abrem e fecham.</li>
+  <li><b>Alterar um status:</b> em cada atividade, escolha o status do papel na lista (<i>"Atualizado!"</i>).</li>
+  <li><b>+ Nova área</b> (nome da área e papéis, um por linha) e <b>+ Nova atividade</b> (nome, categoria e sugestão opcional exibida como dica 💡). <b>excluir</b> remove uma atividade (<i>"Excluir esta atividade? Ação permanente."</i>).</li>
+</ul>
+
+<h3>Aba Cargos</h3>
+<p>Descrição de cada cargo (job description). Filtre por <b>área</b> e abra um cartão (▾) para ver: <b>gestor</b>, <b>perfil</b>, <b>descrição</b>, <b>formação</b>, <b>graduações</b>, <b>funções</b>, <b>técnicas</b>, <b>comportamentais</b> e <b>atitudes</b>. <b>+ Novo cargo</b> abre o formulário (campos de lista: um item por linha); cada cargo tem <b>Editar</b> e <b>Excluir</b>.</p>
+
+<h3>Aba Banco de Horas</h3>
+<ul>
+  <li><b>Período:</b> <b>Editar período</b> define os rótulos de início e fim (ex.: "Jan/2026" → "Jun/2026").</li>
+  <li><b>Cartões:</b> saldo no início, saldo atual, <b>redução líquida</b> e <b>variação do período (%)</b>.</li>
+  <li><b>Faixas de saldo:</b> Acima de 160h (vermelho), 101h–159h (amarelo), 41h–100h (azul), Até 40h (verde), com quantos colaboradores em cada.</li>
+  <li><b>Filtros:</b> Todos / Reduziram / Estáveis / Aumentaram.</li>
+  <li><b>Tabela:</b> #, colaborador, turno, saldo inicial, saldo atual, variação, %, status (Reduziu/Estável/Aumentou) e <b>Editar</b> (informe <b>Saldo atual (h)</b> e <b>Variação do período (h)</b>).</li>
+</ul>
+
+<h3>Aba Férias</h3>
+<p>Controle da programação por colaborador: <b>Limite legal</b> (data limite e dias), <b>Período 1</b> e <b>Período 2</b> (data de início e dias). Cartões: <b>Colaboradores</b>, <b>Programação completa</b> (dias programados ≥ 30), <b>Limite em até 60 dias</b> e <b>Limite vencido</b>. Filtros por setor e turno. <b>Editar</b> abre os três pares data/dias; <i>"Férias salvas!"</i>. Período sem data aparece como <i>"não programado"</i>.</p>
+
+<h3>Aba Organograma</h3>
+<p>Mostra a hierarquia: <b>Gerente → Coordenador → Supervisores</b> (Supervisão e Prevenção de Protocolos) e, por <b>turno</b> (escolha o turno), as pessoas organizadas por <b>área</b>. Cada pessoa tem <b>Editar</b>. <b>+ novo colaborador — [turno]</b> cadastra alguém no turno escolhido. Em <b>Ex-colaboradores</b> ficam os desligados, apenas para histórico; <b>Excluir</b> ali apaga a pessoa <b>e todo o histórico dela</b> (banco de horas, férias, classificações, feedbacks) permanentemente.</p>
+<h4>Cadastrar/editar colaborador (janela)</h4>
+<p>Campos: <b>NOME</b>, <b>ÁREA</b> (ex.: Separação, Checkout…), <b>CARGO</b>, <b>NÍVEL</b> (Gerente, Coordenador, Supervisor, Analista, Assistente, Auxiliar), <b>TURNO</b> (1° Turno, 2° Turno, 3° Turno), <b>Ativo</b> e <b>Vaga em aberto</b>. <b>Salvar</b>: <i>"Salvo!"</i>; sem nome: <i>"Informe o nome."</i></p>
+
+<h3>Aba Classificação</h3>
+<p>Classifica cada colaborador, por <b>ciclo/mês</b>, em três dimensões com semáforo: <b>Absenteísmo</b>, <b>Performance</b> e <b>Comportamento</b>.</p>
+<ol>
+  <li>Escolha o <b>Período</b> (ou crie com <b>+ Novo ciclo</b>, informando o nome, ex.: <i>Julho 2026</i>).</li>
+  <li>Filtre por <b>Turno</b> e <b>Alerta</b> (Todos, Problema, Mediano, Ótimo).</li>
+  <li>Na linha do colaborador, <b>clique na bolinha</b> para alternar: sem cor → <span style="color:var(--g)">verde</span> → <span style="color:var(--a)">amarelo</span> → <span style="color:var(--r)">vermelho</span> → sem cor.</li>
+  <li>Em <b>Comportamento</b> use <b>calcular</b> (abaixo).</li>
+</ol>
+<p>Cartões do topo: <b>COLABORADORES</b>, <b>PERFIL PROBLEMA</b>, <b>PERFIL MEDIANO</b> e <b>PERFIL ÓTIMO</b>, e o resumo de verde/amarelo/vermelho por dimensão. O perfil geral soma os pontos de risco (verde 0, amarelo 1, vermelho 2): <b>Problema</b> = 3 ou mais; <b>Mediano</b> = 1 a 2; <b>Ótimo</b> = 0.</p>
+<h4>Critérios de classificação (referência)</h4>
+<table>
+<tr><th>Dimensão</th><th>🟢 Ótimo</th><th>🟡 Mediano</th><th>🔴 Ruim</th></tr>
+<tr><td><b>Absenteísmo</b></td><td>0 atrasos, 0 ausência</td><td>0 falta injustificada, máximo 3 atrasos, até 2 ausências justificadas</td><td>Mais de 1 falta injustificada, mais de 3 atrasos, padrão repetitivo de ausência</td></tr>
+<tr><td><b>Performance</b></td><td>Bate meta com frequência (90%), entrega volume + qualidade</td><td>Entrega parcial (abaixo de 89%), +2 erros</td><td>Não bate meta, gera retrabalho, abaixo de 70%</td></tr>
+<tr><td><b>Comportamento</b></td><td>Assume responsabilidade, resolve problema, ajuda o time</td><td>Faz o básico, não atrapalha mas também não puxa</td><td>Reclama, transfere culpa, influencia negativamente</td></tr>
+</table>
+<table>
+<tr><th>Perfil geral</th><th>Decisão</th></tr>
+<tr><td>🟢 🟢 🟢 (Ótimo — reter e desenvolver)</td><td>Desenvolver / reconhecer</td></tr>
+<tr><td>🟢 🟡 🟡 (Mediano — direcionar)</td><td>Ajustar e acompanhar (mais cobrança, clareza e acompanhamento)</td></tr>
+<tr><td>🔴 em qualquer (Problema — agir rápido)</td><td>Plano imediato ou substituir</td></tr>
+</table>
+<p><b>Regras:</b> 1) <b>Presença vem antes de performance.</b> 2) <b>Comportamento sustenta resultado.</b> 3) <b>Não sustentar 🔴.</b></p>
+<h4>Calcular Comportamento</h4>
+<p>Clique em <b>calcular</b> na linha. Informe <b>quantas vezes</b> cada comportamento foi observado no período, com seus pesos:</p>
+<table>
+<tr><th>Comportamento</th><th>Peso</th></tr>
+<tr><td>Assume responsabilidade</td><td>+2</td></tr>
+<tr><td>Resolve problema</td><td>+3</td></tr>
+<tr><td>Ajuda o time</td><td>+3</td></tr>
+<tr><td>Faz o básico</td><td>+1</td></tr>
+<tr><td>Não atrapalha, mas também não puxa</td><td>0</td></tr>
+<tr><td>Espera ser cobrado para agir</td><td>0</td></tr>
+<tr><td>Reclama</td><td>−2</td></tr>
+<tr><td>Transfere culpa</td><td>−2</td></tr>
+<tr><td>Influencia negativamente</td><td>−3</td></tr>
+</table>
+<p>Pontuação = soma das ocorrências × pesos. <b>Ótimo ≥ 8</b>, <b>Mediano 1 a 7</b>, <b>Ruim ≤ 0</b>. Regra de exceção: <i>"influencia negativamente"</i> <b>2 ou mais vezes</b> zera a nota (Ruim). Use <b>Pré-visualizar</b> para ver o resultado e <b>Salvar</b> (<i>"Comportamento calculado e salvo!"</i>).</p>
+
+<h3>Aba Ausências</h3>
+<ul>
+  <li>Escolha o <b>Período</b>; cartões: <b>TOTAL DE REGISTROS</b>, <b>JUSTIFICADAS</b>, <b>PENDENTES DE JUSTIFICATIVA</b>, <b>NÃO JUSTIFICADAS</b>.</li>
+  <li>Quando há período anterior, mostra o <b>comparativo por turno</b> (dias e variação %) e o total.</li>
+  <li>Registros agrupados por turno: <b>COLABORADOR, DIAS, DATA, MOTIVO, STATUS</b>, com <b>Editar</b> e <b>Excluir</b>. Status: <span style="color:var(--g)">Justificada</span>; <span style="color:var(--a)">Pendente</span> (motivo "Ainda não apresentou…"); <span style="color:var(--r)">Não justificada</span> (motivo "Falta" ou "Desconto…"); <span style="color:var(--info)">Convertida (BH)</span> (motivo "Ausência convertida…").</li>
+  <li><b>+ Nova ausência:</b> colaborador, período, dias, data(s) e motivo. Sem período: <i>"Informe o período."</i></li>
+</ul>
+
+<h3>Aba Incentivo</h3>
+<p>Calcula a <b>bonificação</b> do ciclo a partir da Classificação: pontos de Absenteísmo + Performance + Comportamento.</p>
+<table>
+<tr><th>Dimensão</th><th>Ótimo</th><th>Mediano</th><th>Ruim</th></tr>
+<tr><td>Absenteísmo</td><td>30</td><td>15</td><td>0</td></tr>
+<tr><td>Performance</td><td>40</td><td>20</td><td>0</td></tr>
+<tr><td>Comportamento</td><td>30</td><td>15</td><td>0</td></tr>
+</table>
+<table>
+<tr><th>Pontuação total</th><th>Classificação</th><th>Bônus</th></tr>
+<tr><td>90 ou mais</td><td>🏆 Destaque</td><td>R$ 200,00</td></tr>
+<tr><td>70 a 89</td><td>⭐ Bom</td><td>R$ 100,00</td></tr>
+<tr><td>50 a 69</td><td>👍 Regular</td><td>—</td></tr>
+<tr><td>abaixo de 50</td><td>📋 Atenção</td><td>—</td></tr>
+</table>
+<p>Valores acima são os padrão. <b>Editar pontuação</b> altera os pontos por nível (<i>"Configuração de incentivo salva!"</i>). Escolha o <b>Período</b> e o <b>Turno</b>; a tabela mostra <b>COLABORADOR, TURNO, PONTUAÇÃO, CLASSIFICAÇÃO, BÔNUS</b>. Colaborador sem as 3 classificações aparece como <i>"ciclo incompleto"</i>.</p>
+
+<h3>Aba Plano de Carreira</h3>
+<p>Mostra a <b>trilha de cargos por área</b> (níveis 1, 2, 3…) com a job description de cada nível e, ao final, o <b>próximo passo</b> (Coordenador → Gerente de Logística, de crescimento transversal). Escolha a área; use <b>+ Nova área</b> e <b>Editar trilhas</b> (uma área por linha, no formato <code>Área: cargo1, cargo2…</code>).</p>
+
+<h3>Aba Painel do Colaborador</h3>
+<p>Visão <b>agregada de uma pessoa</b> por vez: escolha o colaborador na lista. Mostra: dados do cargo, a <b>classificação</b> (ABSENT., PERFORM., COMPORT.), <b>BANCO DE HORAS</b>, <b>AUSÊNCIAS REGISTRADAS</b>, <b>FEEDBACKS</b>, as <b>férias</b> (limite, período 1 e 2), as <b>ausências</b> do colaborador, a <b>Job Description</b>, o <b>Plano de Carreira</b> e o <b>Registro Mensal</b>.</p>
+
+<h4>Registro Mensal (feedback do colaborador) — passo a passo</h4>
+<p><b>Regra de ouro:</b> antes de cada nova conversa, releia o "Combinado deste mês" da linha anterior. <b>Uma linha = uma conversa.</b> O histórico se acumula mês a mês. Se houve feedback anterior, o painel destaca <i>"📌 Combinado do último ciclo (mês): …"</i>.</p>
+<ol>
+  <li>No Painel do Colaborador, clique em <b>+ Novo feedback</b>.</li>
+  <li>Preencha o <b>MÊS</b> (ex.: <code>Agosto 2026</code>), a <b>ÁREA</b> e o <b>CARGO</b> (ficam registrados como foto do momento).</li>
+  <li>Preencha as seções:
+    <ul>
+      <li><b>1 — META X ENTREGUE:</b> informe <b>Meta</b> e <b>Entregue</b>; o sistema calcula o % e o status (verde ≥ 90%, amarelo 70–89%, vermelho abaixo de 70%).</li>
+      <li><b>2 — PONTOS POSITIVOS</b> e <b>3 — PONTOS CONSTRUTIVOS</b>.</li>
+      <li><b>4 — ABSENTEÍSMO DO MÊS:</b> <b>Atrasos (min)</b>, <b>Faltas injust.</b>, <b>Ausências just.</b> e <b>Detalhes</b> (datas, minutos, ocorrências; pode vir do Absenteísmo).</li>
+      <li><b>5 — RETORNO ANTECIPADO DO ALMOÇO</b>, <b>6 — RECORRÊNCIA DE AUSÊNCIA</b>, <b>7 — OUTROS PONTOS</b>, <b>8 — SALDO DE BANCO DE HORAS</b>.</li>
+      <li><b>9 — COMBINADO DESTE MÊS:</b> o que foi acordado com o colaborador para o próximo ciclo.</li>
+    </ul>
+  </li>
+  <li>Clique em <b>Salvar</b> (<i>"Feedback salvo!"</i>). Sem colaborador: <i>"Selecione o colaborador."</i>. <b>Excluir</b> pede confirmação (<i>"Excluir feedback? Ação permanente."</i>).</li>
+</ol>
+<h4>Como o cartão do feedback é exibido</h4>
+<ul>
+  <li><b>Cabeçalho:</b> mês, cargo e área, com <b>chips de status</b> (% da meta e minutos de atraso). O <b>último mês vem aberto</b>, os anteriores recolhidos (clique para abrir/fechar).</li>
+  <li><b>Desempenho e absenteísmo:</b> dois blocos grandes — Meta × Entregue (com barra de progresso e "Faltaram N para a meta") e Atrasos no mês (horas e minutos, quantidade de atrasos e o maior). Mostra também faltas injustificadas e ausências justificadas.</li>
+  <li><b>Ver dias de atraso (N):</b> lista de datas e minutos (vermelho acima de 10 min), e o texto original completo.</li>
+  <li><b>Seções com conteúdo</b> (Pontos positivos em verde, construtivos e Combinado em âmbar, demais em azul).</li>
+</ul>
+<table>
+<tr><th>Status do absenteísmo no mês</th><th>Regra</th></tr>
+<tr><td>🟢 Ótimo</td><td>0 faltas injustificadas, até 10 min de atraso e 0 ausências justificadas.</td></tr>
+<tr><td>🟡 Mediano</td><td>Situações intermediárias.</td></tr>
+<tr><td>🔴 Ruim</td><td>Qualquer falta injustificada, mais de 30 min de atraso ou 2 ou mais ausências justificadas.</td></tr>
+</table>
+<div class="note">O envio feito pela tela <b>Absenteísmo</b> preenche automaticamente os campos de atrasos, faltas, ausências e detalhes do feedback do mês indicado, poupando digitação.</div>
+</section>
