@@ -1,0 +1,493 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Manual do WMS Miess</title>
+<style>
+:root{--bg:#0f1115;--s:#171a21;--s2:#1e222b;--b:#2b303b;--t:#eef0f4;--t2:#b6bcc8;--t3:#808795;--ac:#6366f1;--g:#22c55e;--a:#f59e0b;--r:#ef4444;--bl:#60a5fa}
+@media(prefers-color-scheme:light){:root{--bg:#f6f7f9;--s:#fff;--s2:#f0f2f5;--b:#dcdfe6;--t:#1a1d24;--t2:#464c59;--t3:#7b8190}}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:16px}
+body{margin:0;background:var(--bg);color:var(--t);font:16px/1.65 system-ui,-apple-system,"Segoe UI",sans-serif}
+.layout{display:grid;grid-template-columns:270px 1fr;min-height:100vh}
+nav{position:sticky;top:0;height:100vh;overflow:auto;background:var(--s);border-right:1px solid var(--b);padding:20px 14px}
+nav h1{font-size:15px;margin:0 0 4px}nav .sub{font-size:12px;color:var(--t3);margin-bottom:14px}
+nav a{display:block;color:var(--t2);text-decoration:none;font-size:13.5px;padding:5px 8px;border-radius:6px}
+nav a:hover{background:var(--s2);color:var(--t)}
+nav .g{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--t3);margin:14px 8px 4px}
+main{padding:32px 28px 80px;max-width:900px}
+h2{font-size:26px;margin:52px 0 8px;padding-top:8px;border-top:1px solid var(--b)}
+h2:first-of-type{border:0;margin-top:0}
+h3{font-size:20px;margin:36px 0 6px}
+h4{font-size:15px;margin:18px 0 4px;color:var(--t2);text-transform:uppercase;letter-spacing:.05em}
+p,li{color:var(--t2)}li{margin:3px 0}
+b,strong{color:var(--t)}
+code,.k{background:var(--s2);border:1px solid var(--b);border-radius:5px;padding:1px 6px;font-size:.9em;color:var(--t)}
+table{width:100%;border-collapse:collapse;margin:10px 0;font-size:14.5px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--b);vertical-align:top}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--t3)}
+.tela{background:var(--s);border:1px solid var(--b);border-radius:12px;padding:6px 20px 18px;margin:18px 0}
+.tag{display:inline-block;font-size:12px;font-weight:700;padding:2px 9px;border-radius:99px;margin:0 6px 0 0;border:1px solid var(--b);color:var(--t2)}
+.tag.sup{color:var(--bl)}.tag.op{color:var(--g)}.tag.gp{color:var(--a)}
+.note{border-left:3px solid var(--a);background:var(--s2);padding:10px 14px;border-radius:0 8px 8px 0;margin:12px 0;color:var(--t2)}
+.note.ok{border-color:var(--g)}.note.info{border-color:var(--bl)}
+.flow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:14px 0}
+.flow span{background:var(--s);border:1px solid var(--b);border-radius:8px;padding:6px 12px;font-size:14px;font-weight:600;color:var(--t)}
+.flow i{color:var(--t3);font-style:normal}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px}
+.toc-print{display:none}
+@media(max-width:820px){.layout{grid-template-columns:1fr}nav{position:static;height:auto;border-right:0;border-bottom:1px solid var(--b)}main{padding:20px 16px 60px}}
+@media print{nav{display:none}.layout{display:block}body{background:#fff;color:#000;font-size:12px}.tela{break-inside:avoid;border-color:#bbb}h2{break-before:page}p,li,td{color:#222}}
+</style>
+</head>
+<body>
+<div class="layout">
+<nav>
+  <h1>Manual do WMS Miess</h1>
+  <div class="sub">Guia de telas e funcionalidades</div>
+  <a href="#visao">1. Visão geral</a>
+  <a href="#acesso">2. Acesso e perfis</a>
+  <div class="g">Supervisão / Gestão</div>
+  <a href="#dashboard">Dashboard</a>
+  <a href="#tower">Control Tower</a>
+  <a href="#pedidos">Pedidos</a>
+  <a href="#liberacao">Liberação</a>
+  <a href="#performance">Performance</a>
+  <a href="#lideranca">Liderança dos Turnos</a>
+  <a href="#relatorios">Relatórios</a>
+  <a href="#auditoria">Auditoria</a>
+  <a href="#diario">Diário de Bordo</a>
+  <a href="#celulares">Celulares</a>
+  <a href="#caixas">Caixas</a>
+  <a href="#cadastros">Cadastros</a>
+  <a href="#protocolo">Protocolo</a>
+  <div class="g">Operação</div>
+  <a href="#separacao">Separação</a>
+  <a href="#reposicao">Reposição</a>
+  <a href="#entrada">Entrada Manual</a>
+  <a href="#colmeias">Colmeias</a>
+  <a href="#checkout">Checkout</a>
+  <a href="#embalagem">Embalagem</a>
+  <a href="#stats">Minhas Estatísticas</a>
+  <div class="g">Pessoal</div>
+  <a href="#absenteismo">Absenteísmo</a>
+  <a href="#matriz">Matriz de Responsabilidades</a>
+  <div class="g">Referência</div>
+  <a href="#regras">Regras e cálculos</a>
+  <a href="#glossario">Glossário</a>
+  <a href="#faq">Problemas comuns</a>
+</nav>
+
+<main>
+
+<h2 id="visao">1. Visão geral</h2>
+<p>O <b>WMS Miess</b> controla a operação do galpão do começo ao fim: o pedido entra, é distribuído para um separador, o item é buscado no estoque (com apoio do repositor quando falta), o pedido passa pelo checkout, é embalado e segue para expedição. Cada etapa tem uma tela e um perfil responsável, e a supervisão acompanha tudo em tempo real.</p>
+
+<h3>Caminho de um pedido</h3>
+<div class="flow">
+  <span>Importar</span><i>→</i><span>Distribuir</span><i>→</i><span>Separação</span><i>→</i><span>Checkout</span><i>→</i><span>Embalagem</span><i>→</i><span>Expedição</span>
+</div>
+<div class="flow">
+  <span>Item não achado</span><i>→</i><span>Reposição</span><i>→</i><span>Busca Final</span><i>→</i><span>Liberação (supervisor)</span><i>→</i><span>Protocolo</span>
+</div>
+<ol>
+  <li><b>Importar</b>: a supervisão carrega a planilha (ou os arquivos HTML do Miess) com os pedidos e itens.</li>
+  <li><b>Distribuir</b>: os pedidos pendentes são atribuídos a separadores, manualmente, por turno ou em lotes.</li>
+  <li><b>Separação</b>: o separador bipa o pedido, vincula uma <b>caixa</b> e confere cada item no endereço. Item que não está no lugar vira aviso para o repositor.</li>
+  <li><b>Reposição</b>: o repositor busca o item, sobe, abastece. Se não encontra após as tentativas, o item vai para <b>Busca Final</b> e depois para a <b>Liberação</b> da supervisão.</li>
+  <li><b>Checkout</b>: a caixa é bipada, os itens são conferidos e o checkout é confirmado, o que libera a caixa.</li>
+  <li><b>Embalagem</b>: o embalador inicia e confirma a embalagem do pedido.</li>
+  <li><b>Expedição / Faturamento</b>: o faturamento é importado e acompanhado hora a hora no Control Tower.</li>
+</ol>
+<div class="note info">As telas atualizam sozinhas (tempo real) e várias têm botão <span class="k">↺</span> para recarregar manualmente. Quase todas têm filtro de <b>período</b>, e muitas exportam para <b>Excel</b>.</div>
+
+<h2 id="acesso">2. Acesso e perfis</h2>
+<h3>Entrando no sistema</h3>
+<ol>
+  <li>Na tela de login, escolha o <b>Perfil de acesso</b> (Supervisão, Separação, Reposição, Checkout, Embalagem ou Gestão).</li>
+  <li>Informe <b>usuário</b> e <b>senha</b> e clique em <b>Entrar</b>. O olho no campo mostra/oculta a senha.</li>
+  <li>Se a senha foi redefinida pela supervisão, o sistema pede uma <b>troca de senha obrigatória</b> antes de continuar.</li>
+  <li>Para sair, use <b>Sair</b> (confirma a saída). Em aparelho compartilhado, sempre saia ao terminar.</li>
+</ol>
+<div class="note">Senhas novas de colaboradores são geradas como <code>Nome@Ano</code>; peça para trocar no primeiro acesso.</div>
+
+<h3>Atalhos úteis</h3>
+<ul>
+  <li><span class="k">Ctrl</span>+<span class="k">K</span>: busca rápida (command palette). Digite o nome da tela e ela abre, já respeitando o que o seu perfil pode ver.</li>
+  <li>O menu lateral pode ser recolhido; os grupos (Supervisão, Operação...) abrem e fecham ao clicar no título.</li>
+  <li>Nos celulares/coletores, separador, repositor, checkout e embalador usam uma versão <b>mobile</b> com barra de abas na parte de baixo.</li>
+</ul>
+
+<h3>O que cada perfil vê</h3>
+<table>
+<tr><th>Perfil</th><th>Menu</th></tr>
+<tr><td><b>Supervisão</b></td><td>Dashboard, Control Tower, Pedidos, Liberação, Performance, Liderança dos Turnos, Relatórios, Auditoria, Diário de Bordo, Celulares, Caixas, Cadastros, Protocolo, e o grupo Operação inteiro (Separação, Reposição, Entrada Manual, Colmeias, Checkout, Embalagem).</td></tr>
+<tr><td><b>Gestão</b> (gerente/coordenador)</td><td>Tudo da Supervisão, mais o grupo <b>Pessoal</b>: Absenteísmo e Matriz de Responsabilidades.</td></tr>
+<tr><td><b>Separação</b></td><td>Pedidos, Estatísticas, Código de Barras.</td></tr>
+<tr><td><b>Reposição</b></td><td>Solicitações, Protocolo, Entrada Manual, Estatísticas.</td></tr>
+<tr><td><b>Checkout</b></td><td>Checkout, Código de Barras, Estatísticas.</td></tr>
+<tr><td><b>Embalagem</b></td><td>Embalar, Código de Barras, Estatísticas.</td></tr>
+</table>
+<p>Um usuário pode ter <b>acessos extras</b> além do perfil principal (campo "Pode acessar também" no cadastro). Além disso, a Gestão pode <b>revogar ações sensíveis</b> de um usuário específico (excluir usuário/separador, exclusão em massa de pedidos, zerar dados). A revogação só restringe, nunca amplia o acesso do perfil.</p>
+
+<!-- ============ SUPERVISÃO ============ -->
+<h2>3. Telas da Supervisão e Gestão</h2>
+
+<section class="tela" id="dashboard">
+<h3>Dashboard <span class="tag sup">Supervisão</span><span class="tag gp">Gestão</span></h3>
+<p>Painel de acompanhamento da operação do dia. É a tela de abertura da supervisão.</p>
+<h4>O que tem</h4>
+<ul>
+  <li><b>Filtros</b>: turno (Todos/Manhã/Tarde/Noite) e período, com botão <b>Filtrar</b> e exportação para <b>Excel</b>.</li>
+  <li><b>Alertas e Gargalos da Operação</b>: destaca o que está atrasado ou travado.</li>
+  <li><b>Operação</b>: ranking geral (hoje), status dos pedidos do dia, situação da reposição, produção por hora e funil operacional.</li>
+  <li><b>Produtividade por separador</b>: por usuário, com hoje/mês/ano, progresso e status.</li>
+  <li><b>Linha do tempo</b> do período escolhido.</li>
+  <li><b>Mapa do estoque (Mapa Vivo)</b>: mostra as ruas coloridas por demanda (alta ≥10, média 5–9, baixa 1–4, sem atividade) e por estado: <i>ruptura</i>, <i>estoque baixo</i>, <i>separação em andamento</i> e <i>reposição pendente</i>. Clique em uma rua para ver os detalhes. Dá para filtrar por pedido.</li>
+</ul>
+<h4>Dicas</h4>
+<ul><li><b>Modo TV</b> deixa os números grandes e esconde os filtros, para exibir em telão.</li><li>Clicar em um pedido nos alertas abre a tela de Pedidos já filtrada por ele.</li></ul>
+</section>
+
+<section class="tela" id="tower">
+<h3>Control Tower <span class="tag sup">Supervisão</span><span class="tag gp">Gestão</span></h3>
+<p>Mostra se a operação vai fechar o turno dentro da meta. Para cada etapa (Separação, Checkout, Embalagem) compara o <b>ritmo atual</b> com o <b>ritmo necessário</b> e calcula o <b>gap</b> e a <b>previsão</b> de término.</p>
+<h4>Blocos</h4>
+<ul>
+  <li><b>Etapas</b>: produção atual por hora, necessário por hora, gap, volume restante, tempo estimado e situação.</li>
+  <li><b>Faturamento, Embalagem e Expedição, hora a hora</b>, com botão <b>Importar Faturamento</b> (planilha com Pedido, Faturado, Itens, Data, Hora, Usuário, Nome, Turno, Status).</li>
+  <li><b>Simulador de Capacidade</b>: "e se eu adicionar ou remover pessoas agora?". Escolha o processo e o número de pessoas (+/-) e veja a nova previsão.</li>
+  <li><b>Anomalias</b>: separadores fora do próprio padrão de ritmo.</li>
+  <li><b>Anúncio sonoro</b> (<i>Ativar anúncio da operação</i>): fala em voz alta quantos pedidos há em cada etapa.</li>
+</ul>
+<h4>Como ler a situação</h4>
+<table>
+<tr><th>Situação</th><th>Significa</th></tr>
+<tr><td><span class="dot" style="background:var(--g)"></span>Dentro do prazo</td><td>No ritmo atual, o volume restante zera antes do fim do turno.</td></tr>
+<tr><td><span class="dot" style="background:var(--a)"></span>Risco</td><td>O tempo estimado passa do restante do turno em até 25%.</td></tr>
+<tr><td><span class="dot" style="background:var(--r)"></span>Atrasado</td><td>Passa de 25% do restante do turno, ou há volume represado e produção zero.</td></tr>
+<tr><td>Concluído</td><td>Não há volume restante.</td></tr>
+</table>
+</section>
+
+<section class="tela" id="pedidos">
+<h3>Pedidos <span class="tag sup">Supervisão</span><span class="tag gp">Gestão</span></h3>
+<p>Central de controle dos pedidos: importar, distribuir, acompanhar e corrigir.</p>
+<h4>Botões da barra superior</h4>
+<ul>
+  <li><b>Importar</b>: carrega pedidos por planilha Excel/CSV (colunas <code>Pedido, Codigo, Descricao, Qtde, Endereço</code>) ou por HTML do MIESS (selecione os 2 arquivos juntos: itens + pedidos). Mostra um preview das 10 primeiras linhas antes de <b>Importar para Fila</b>.</li>
+  <li><b>Distribuir</b>: atribui pedidos pendentes aos separadores. Modos: <b>Manual</b> (inclui bipar código de barras), <b>Por turno</b> e <b>Lotes</b> (automático ou manual).</li>
+  <li><b>Imprimir etiquetas</b> e <b>Excel</b>.</li>
+  <li><b>Metas</b>: configura metas e horas de turno.</li>
+  <li><b>Mais ações</b>: Limpar vazios, Recalcular tempo, Marcar embalado (fecha dias parados) e Excluir pendentes.</li>
+  <li><b>Zerar Dados de Teste</b>: apaga dados de teste. Ação destrutiva, restrita e registrada na Auditoria.</li>
+</ul>
+<h4>Filtros</h4>
+<p>Período, usuário, status (Pendente, Separando, Separado, Checkout, Embalado), nº do pedido, turno (Manhã/Tarde/Noite/Sem turno) e marcadores: <b>Drive Thru, Prime, SEDEX, PAC, MOTOBOY</b>, além de <b>Crítico</b> e <b>Atenção</b>.</p>
+<h4>Tabela</h4>
+<p>Nº do pedido, cliente, transportadora, UF, "aguardando desde", prioridade, usuário, status, SKUs, itens e tempo estimado. Dá para ordenar SKUs/itens, abrir os <b>corredores</b> das SKUs e o <b>rastreio</b> completo do pedido.</p>
+<h4>Ações em massa</h4>
+<ul><li><b>Reatribuir</b> os pedidos pendentes de um colaborador e <b>Redefinir todos</b> (voltar a fila ao estado inicial).</li></ul>
+<div class="note ok"><b>Prioridade</b>: baseada no SLA de 6 horas. Abaixo de 60% do SLA = normal; a partir de 60% = <b>Atenção</b>; passou de 100% = <b>Crítico</b>.</div>
+<h4>Lotes</h4>
+<p>O separador pode trabalhar vários pedidos de uma vez. No <b>Lote Automático</b> o sistema monta o lote; no <b>Lote Manual</b> a supervisão monta pedido a pedido. Na separação, o separador pode desmarcar pedidos do lote para fazer sozinhos e depois <b>atribui as caixas físicas</b> a cada pedido.</p>
+</section>
+
+<section class="tela" id="liberacao">
+<h3>Liberação <span class="tag sup">Supervisão</span><span class="tag gp">Gestão</span></h3>
+<p>Fila dos itens que o repositor marcou como <b>Não encontrado</b> e que dependem de decisão da supervisão. Ao <b>liberar</b>, o item vai para o <b>Protocolo</b> e o separador pode continuar o pedido.</p>
+<ul>
+  <li>Tabela com pedido, item, quantidade, separador, repositor e data/hora, e a ação de liberar.</li>
+  <li><b>Histórico de liberados</b>: quem liberou e quando.</li>
+  <li><b>Reenviar para Embalagem</b>: use quando o checkout foi confirmado mas o pedido não aparece na fila de embalagem (digite o nº do pedido).</li>
+  <li>O menu mostra um <b>contador vermelho</b> com os itens aguardando liberação.</li>
+</ul>
+</section>
+
+<section class="tela" id="performance">
+<h3>Performance <span class="tag sup">Supervisão</span><span class="tag gp">Gestão</span></h3>
+<p>Análise de desempenho dos colaboradores. Escolha o período e, se quiser, um colaborador específico.</p>
+<table>
+<tr><th>Aba</th><th>Para que serve</th></tr>
+<tr><td>Resumo</td><td>Cards de KPI, gráficos e ranking de separadores, com ranking por setor (Checkout, Embalagem, Reposição). Inclui "análise do turno" com pontos de atenção.</td></tr>
+<tr><td>Tempos</td><td>Tempos detalhados por pedido e rastreio completo de um pedido.</td></tr>
+<tr><td>Ocorrências</td><td>Registro e consulta de ocorrências por colaborador.</td></tr>
+<tr><td>Padrões</td><td>Detecção estatística de sinais fora do padrão de cada colaborador, com resumo por IA.</td></tr>
+<tr><td>Metas</td><td>Configuração das metas e horas do turno. Também há importação de faturamento.</td></tr>
+<tr><td>Ranking</td><td>Ranking de bonificação. A pontuação considera o segmento do estoque (rua, frente/fundo e dificuldade fácil/média/difícil).</td></tr>
+</table>
+<p>Há exportação para <b>Excel</b>.</p>
+</section>
+
+<section class="tela" id="lideranca">
+<h3>Liderança dos Turnos <span class="tag sup">Supervisão</span><span class="tag gp">Gestão</span></h3>
+<p>Página própria (abre em nova aba): <b>Performance da Liderança por Turno</b>.</p>
+<ul>
+  <li><b>Ranking de líderes</b> e <b>comparativo entre turnos</b>.</li>
+  <li><b>Nota diária</b> (evolução) e <b>pedidos separados vs. meta</b>.</li>
+  <li><b>Lançamentos</b>: registrar um turno, e configurar <b>metas por turno e pesos da nota</b>.</li>
+</ul>
+</section>
+
+<section class="tela" id="relatorios">
+<h3>Relatórios <span class="tag sup">Supervisão</span><span class="tag gp">Gestão</span></h3>
+<p>Escolha turno e período e clique em <b>Gerar Relatório</b>. Exporte em <b>Excel</b> ou <b>PDF</b>. O sistema também gera um <b>relatório diário automático</b> e recupera relatórios que tenham ficado pendentes.</p>
+</section>
+
+<section class="tela" id="auditoria">
+<h3>Auditoria <span class="tag sup">Supervisão</span><span class="tag gp">Gestão</span></h3>
+<p>Log de tudo que é sensível: login, logout, distribuição, zerar dados e relatórios gerados. Filtre por período, usuário e ação. Cada linha traz data/hora, usuário, ação, entidade e IP.</p>
+</section>
+
+<section class="tela" id="diario">
+<h3>Diário de Bordo <span class="tag sup">Supervisão</span><span class="tag gp">Gestão</span></h3>
+<p>Passagem de turno. O supervisor registra como foi o turno e o próximo turno valida.</p>
+<ul>
+  <li>Escolha <b>data</b> e <b>turno</b>. O sistema traz os números de <b>Separação, Checkout, Embalagem e Reposição</b> (totais, concluídos, pendentes, não encontrados).</li>
+  <li>Cada área tem um campo de <b>observações</b>, e há <b>pedidos com problema</b> (cliente e item não encontrado).</li>
+  <li><b>Observações gerais do turno</b>: ocorrências, equipamento, ausências etc.</li>
+  <li><b>Salvar rascunho</b> ou <b>Finalizar e enviar</b>. O <b>histórico</b> de diários fica na mesma tela.</li>
+  <li><b>Validar Diário de Bordo</b>: o turno seguinte confere um checklist, anota observações e confirma. A tela mostra uma <b>pontuação calculada</b> a partir do checklist e o <b>prazo restante</b> para validar.</li>
+  <li>Um aviso <b>!</b> aparece no menu quando há diário para validar.</li>
+</ul>
+</section>
+
+<section class="tela" id="celulares">
+<h3>Celulares <span class="tag sup">Supervisão</span><span class="tag gp">Gestão</span></h3>
+<p>Ficha de recebimento dos aparelhos de coleta por turno: <b>quem recebeu</b>, <b>horário</b>, <b>condição do aparelho</b> e <b>observações</b> (avarias, problemas). Use <b>Salvar ficha</b>; as fichas ficam listadas em <i>Fichas salvas</i>.</p>
+</section>
+
+<section class="tela" id="caixas">
+<h3>Caixas <span class="tag sup">Supervisão</span><span class="tag gp">Gestão</span></h3>
+<p>Checklist de organização das <b>estações de checkout (Caixa 01 a 10)</b>. Clique em uma caixa para conferir.</p>
+<ul>
+  <li>Informe quem estava operando e o turno.</li>
+  <li>Responda <b>Sim/Não</b>: está organizada? está limpa? tem produtos espalhados? tem outros objetos que não deveriam estar ali?</li>
+  <li>Use <b>Observações</b> para o que precisa ser resolvido e <b>Salvar conferência</b>.</li>
+  <li><b>Histórico de conferências</b> com filtro por período, caixa e turno.</li>
+</ul>
+</section>
+
+<section class="tela" id="cadastros">
+<h3>Cadastros <span class="tag sup">Supervisão</span><span class="tag gp">Gestão</span></h3>
+<p>Cadastro de usuários e importação de planilha.</p>
+<h4>Usuários</h4>
+<ul>
+  <li><b>Novo usuário</b>: nome completo, login, senha (mínimo 6 caracteres), <b>perfil principal</b> (Separação, Supervisão, Reposição, Checkout, Embalagem ou Gestão), <b>função do repositor</b> (Geral, Busca no armazém, Abastecimento), <b>acessos extras</b> e <b>turno</b>.</li>
+  <li><b>Usuários cadastrados</b>: lista com filtro por turno, exportação Excel, e <b>Corrigir vínculos</b> (reconecta usuário e separador).</li>
+  <li>É possível editar, ativar/inativar, redefinir senha e excluir (esta última pode ser revogada por usuário).</li>
+</ul>
+<h4>Importar planilha</h4>
+<p>Mesma importação de pedidos descrita em <a href="#pedidos">Pedidos</a>, com preview e histórico de importações.</p>
+</section>
+
+<section class="tela" id="protocolo">
+<h3>Protocolo <span class="tag sup">Supervisão</span><span class="tag op">Reposição</span></h3>
+<p>Controle dos itens <b>não encontrados</b> que foram liberados. Mostra os itens <b>Aguardando</b> e os <b>Protocolados</b>, com filtro por período e exportação para Excel. O repositor acessa a mesma tela para acompanhar os seus.</p>
+</section>
+
+<!-- ============ OPERAÇÃO ============ -->
+<h2>4. Telas de Operação</h2>
+
+<section class="tela" id="separacao">
+<h3>Separação <span class="tag op">Separador</span><span class="tag sup">Supervisão</span></h3>
+<p>Onde o pedido é fisicamente separado. Existe versão <b>desktop</b> (abas) e <b>mobile</b> (barra inferior). As abas são as mesmas.</p>
+<h4>Cabeçalho</h4>
+<p>Filtro de período e contadores: <b>Total</b>, <b>Pendentes</b>, <b>Separados</b>.</p>
+<h4>Abas</h4>
+<table>
+<tr><th>Aba</th><th>O que faz</th></tr>
+<tr><td><b>Fila</b></td><td>Lista de pedidos do separador. Dá para <b>reordenar arrastando</b> e a ordem fica salva.</td></tr>
+<tr><td><b>Separar</b></td><td>Leitura do pedido e checklist dos itens.</td></tr>
+<tr><td><b>Avisos</b></td><td>Respostas do repositor sobre itens que você pediu (subiu, abastecido, aguardando guardar).</td></tr>
+<tr><td><b>Aguardando</b></td><td>Pedidos com itens em reposição/Busca Final, aguardando o repositor ou a decisão do supervisor.</td></tr>
+<tr><td><b>Estatísticas</b> (mobile)</td><td>Seus números.</td></tr>
+</table>
+<h4>Passo a passo</h4>
+<ol>
+  <li>Bipe ou digite o <b>número do pedido</b> e confirme (▶).</li>
+  <li><b>Vincule a caixa</b> antes de iniciar: digite o número ou escaneie o <b>QR da caixa</b> e clique em <b>Vincular</b>. Sem caixa não inicia.</li>
+  <li>Percorra os itens pelo endereço. A tela mostra código, descrição, endereço e quantidade, além de outras localizações (colmeias) quando existem.</li>
+  <li>Marque cada item como <b>encontrado</b>, <b>falta</b> ou <b>parcial</b>. Marcou errado? Dá para <b>desfazer</b>, desde que o repositor ainda não tenha começado a cuidar do aviso.</li>
+  <li>Item em falta gera <b>aviso para o repositor</b> automaticamente.</li>
+  <li><b>CONCLUIR</b> quando tudo estiver verificado, ou <b>AGUARDANDO</b> / <b>CONCLUIR COM FALTA</b> conforme a situação. O contador "n/total" mostra o progresso.</li>
+</ol>
+<div class="note">O sistema bloqueia a conclusão se houver aviso ainda pendente de busca pelo repositor. O tempo de espera do repositor <b>não penaliza</b> o tempo de separação.</div>
+<h4>Em lote</h4>
+<p>Escolha os pedidos do lote (desmarque os que quer fazer sozinho), clique em <b>Começar separação</b> e informe a <b>caixa física</b> de cada pedido.</p>
+</section>
+
+<section class="tela" id="reposicao">
+<h3>Reposição <span class="tag op">Repositor</span><span class="tag sup">Supervisão</span></h3>
+<p>Resolve os itens que o separador não encontrou. É um quadro de etapas.</p>
+<table>
+<tr><th>Etapa</th><th>Significa</th></tr>
+<tr><td><b>Separar</b></td><td>Pedido de busca pendente. O repositor toca em <b>Iniciar busca</b> (abre uma tentativa).</td></tr>
+<tr><td><b>Separado</b></td><td>O item foi encontrado e está aguardando guardar.</td></tr>
+<tr><td><b>Subiu</b></td><td>O item subiu para o picking e aguarda abastecer. Informa-se a <b>quantidade subindo</b>.</td></tr>
+<tr><td><b>Busca Final</b></td><td>Não encontrado nas tentativas: última conferência antes de confirmar a falta.</td></tr>
+</table>
+<h4>Regras</h4>
+<ul>
+  <li>Cada item tem até <b>3 tentativas</b> de busca. Passando disso, vai para <b>Liberação</b> da supervisão.</li>
+  <li>Cada tentativa fica registrada com turno e responsável. Se não achou, volta para a fila e <b>qualquer turno</b> pode pegar.</li>
+  <li>A fila pode ser <b>reordenada arrastando</b> na aba Separar; a ordem é compartilhada entre repositores. Por padrão, <b>Drive Thru</b> vem primeiro.</li>
+  <li><b>Quem guardou</b> é obrigatório ao registrar abastecimento. O separador também pode guardar o item ele mesmo ("Guardei este item eu mesmo").</li>
+</ul>
+<h4>Supervisão</h4>
+<p>Além do quadro, a supervisão vê <b>Indicadores por colaborador</b>, <b>Ranking</b> e <b>Produtos que mais geram reposição</b>, com exportação Excel (inclui análise das tentativas). Há verificação de <b>duplicatas</b> de avisos.</p>
+<h4>Entrada Manual de Produto</h4>
+<p>Botão <b>+ Entrada Manual</b>: registra chegada de produto (código, descrição, quantidade, quem guardou, observação).</p>
+</section>
+
+<section class="tela" id="entrada">
+<h3>Entrada Manual <span class="tag op">Repositor</span><span class="tag sup">Supervisão</span></h3>
+<p>Controle de entrada e conferência de estoque, em desktop e mobile. Três abas:</p>
+<ul>
+  <li><b>Entrada de Estoque</b>: cria <b>lotes</b> de entrada, com itens por endereço. Importa Excel/CSV, valida o endereço em tempo real, ajusta quantidades (pede confirmação quando a quantidade foge do esperado), salva item a item ou todos de uma vez, exclui lote e <b>exporta CSV</b>.</li>
+  <li><b>Código de Barras</b>: trabalho por leitura de código de barras. Separador, checkout e embalador chegam a ela pelo menu "Código de Barras".</li>
+  <li><b>Inventário</b>: sessões de contagem com o <b>Coletor de Dados</b> no celular.</li>
+</ul>
+<p>Formatos de endereço aceitos: <code>D106</code>, <code>ZA387</code>, <code>C099/VERT-C82-CX18</code>, <code>U080</code>, <code>U087/VERT-U01-CX13</code>.</p>
+</section>
+
+<section class="tela" id="colmeias">
+<h3>Colmeias <span class="tag sup">Supervisão</span></h3>
+<p>Estoque manual por SKU em bancadas/colmeias pré-abastecidas. Cada colmeia guarda quanto foi abastecido de um código. O <b>saldo</b> é calculado ao vivo: quantidade abastecida menos o que já saiu em pedidos concluídos daquele código desde o abastecimento.</p>
+<ul>
+  <li>Cadastrar colmeia, <b>abastecer</b>, ajustar <b>estoque mínimo</b> e <b>endereço</b>, ver <b>histórico</b> e excluir.</li>
+  <li>Quando o saldo cai até o mínimo, a colmeia entra em <b>alerta</b>.</li>
+  <li>Na separação, as colmeias do código aparecem como localizações extras do item.</li>
+</ul>
+</section>
+
+<section class="tela" id="checkout">
+<h3>Checkout <span class="tag op">Checkout</span><span class="tag sup">Supervisão</span></h3>
+<p>Conferência final do pedido separado, feita pela caixa.</p>
+<h4>Cabeçalho</h4>
+<p>Contadores <b>Total</b>, <b>Aguardando item</b> (clique para ver a fila) e <b>Checkouts</b> concluídos.</p>
+<h4>Abas</h4>
+<ul>
+  <li><b>Fila</b>: pedidos prontos para checkout. Bipe o <b>QR da caixa</b> ou digite o número do pedido e clique em <b>Buscar Pedido</b>.</li>
+  <li><b>Feitos</b>: checkouts concluídos hoje.</li>
+  <li><b>Aguardando item</b>: pedidos com pendência (item faltando).</li>
+</ul>
+<h4>Passo a passo</h4>
+<ol>
+  <li>Busque o pedido pela caixa.</li>
+  <li>Confira os itens e marque os que estiverem faltando, se houver.</li>
+  <li><b>Confirmar</b> o checkout: a caixa é <b>liberada automaticamente</b>.</li>
+  <li>Se faltou item, o pedido fica em <b>pendência</b>. Também é possível <b>pausar</b> e <b>retomar</b>.</li>
+</ol>
+<div class="note">O sistema impede que duas estações abram o mesmo checkout ao mesmo tempo: a segunda espera a primeira. Se a caixa estiver "presa", a supervisão pode <b>liberar</b> a caixa.</div>
+</section>
+
+<section class="tela" id="embalagem">
+<h3>Embalagem <span class="tag op">Embalador</span><span class="tag sup">Supervisão</span></h3>
+<p>Última etapa física antes da expedição.</p>
+<ul>
+  <li>Contadores: <b>Total</b>, <b>Pendentes</b> (aguardando) e <b>Embalados</b>.</li>
+  <li><b>Fila</b>: pedidos que passaram no checkout. Filtre por número.</li>
+  <li><b>Embalar</b>: digite ou bipe (QR) o número do pedido e clique em <b>Buscar</b>; <b>inicie</b> a embalagem (registra a hora) e <b>confirme</b> ao terminar.</li>
+  <li><b>Embalados</b>: histórico, com exportação Excel para a supervisão.</li>
+  <li>Há embalagem <b>em lote</b> (pré-visualização e confirmação).</li>
+</ul>
+<div class="note">O mobile do embalador mostra pedidos pendentes de qualquer dia, sem filtro de data. Já a supervisão filtra por data.</div>
+</section>
+
+<section class="tela" id="stats">
+<h3>Estatísticas <span class="tag op">Separação</span><span class="tag op">Checkout</span><span class="tag op">Embalagem</span><span class="tag op">Reposição</span></h3>
+<p>Cada colaborador vê os <b>próprios números</b> (menu "Estatísticas" / "Minhas Estatísticas"), com filtro de período.</p>
+<ul>
+  <li><b>Reposição</b>: repostos hoje/mês, pendentes agora, não encontrados, protocolos em análise, avisos no ano e tabela de produtividade por repositor.</li>
+  <li><b>Checkout</b>: expedidos hoje/mês/ano, pendentes agora, importados hoje e lista dos últimos checkouts (caixa, pedido, separador, status, data, hora), com Excel.</li>
+  <li><b>Separação / Embalagem</b>: produção do colaborador no período.</li>
+</ul>
+</section>
+
+<!-- ============ PESSOAL ============ -->
+<h2>5. Telas de Pessoal (somente Gestão)</h2>
+
+<section class="tela" id="absenteismo">
+<h3>Absenteísmo <span class="tag gp">Gestão</span></h3>
+<p>Calcula atrasos a partir do <b>espelho de ponto em PDF</b> (InPonto).</p>
+<ol>
+  <li><b>Envie o PDF</b>. Cada PDF (uma empresa) vira um upload separado, mas a tela sempre mostra o resultado <b>geral</b>, com todos que já têm dado salvo.</li>
+  <li>O sistema lê os horários batidos de cada dia e calcula o atraso de <b>entrada</b>, <b>almoço</b> e <b>pausa</b> contra um horário esperado inferido. As colunas prontas do PDF não são usadas.</li>
+  <li>Ajuste a <b>tolerância</b> em minutos, se necessário.</li>
+  <li>Abra um colaborador para ver os <b>dias</b> e envie para a Matriz: individualmente ou <b>em lote</b>. O mês de referência é pedido no envio.</li>
+</ol>
+<p>O envio alimenta o <b>feedback mensal</b> e a <b>classificação</b> do colaborador na Matriz.</p>
+</section>
+
+<section class="tela" id="matriz">
+<h3>Matriz de Responsabilidades <span class="tag gp">Gestão</span></h3>
+<p>Gestão de pessoas em uma única tela, com abas:</p>
+<table>
+<tr><th>Aba</th><th>Para que serve</th></tr>
+<tr><td>Responsabilidades</td><td>Grade <b>RACI</b>: quem é responsável, aprova, é consultado ou informado em cada atividade.</td></tr>
+<tr><td>Cargos</td><td>Descrição de cada cargo.</td></tr>
+<tr><td>Banco de Horas</td><td>Saldo de horas por colaborador e período.</td></tr>
+<tr><td>Férias</td><td>Controle de férias.</td></tr>
+<tr><td>Organograma</td><td>Liderança e times por turno, com cadastro de colaborador.</td></tr>
+<tr><td>Classificação</td><td>Classificação mensal de <b>absenteísmo, performance e comportamento</b>.</td></tr>
+<tr><td>Painel do Colaborador</td><td>Visão agregada de um colaborador por vez, incluindo o <b>Registro Mensal</b> de feedbacks.</td></tr>
+<tr><td>Incentivo</td><td>Pontuação por critério.</td></tr>
+<tr><td>Ausências</td><td>Registro de ausências (justificadas e injustificadas).</td></tr>
+<tr><td>Plano de Carreira</td><td>Trilha de evolução por cargo.</td></tr>
+</table>
+<h4>Feedback mensal (Registro Mensal)</h4>
+<p>Cada conversa mensal vira um cartão no Painel do Colaborador:</p>
+<ul>
+  <li>O <b>cabeçalho</b> mostra mês, cargo e área, com chips de status: <b>% da meta</b> e <b>minutos de atraso</b>.</li>
+  <li><b>Desempenho</b>: meta × entregue. <span style="color:var(--g)">Verde ≥ 90%</span>, <span style="color:var(--a)">amarelo 70–89%</span>, <span style="color:var(--r)">vermelho &lt; 70%</span>.</li>
+  <li><b>Absenteísmo</b>: <span style="color:var(--g)">verde</span> = 0 faltas injustificadas, até 10 min de atraso e 0 ausências; <span style="color:var(--r)">vermelho</span> = alguma falta injustificada, mais de 30 min de atraso ou 2+ ausências; o resto é <span style="color:var(--a)">amarelo</span>.</li>
+  <li>Dias de atraso em chips, pontos positivos, construtivos, retorno antecipado, recorrência de ausência, outros pontos, saldo de banco de horas e <b>Combinado do mês</b>.</li>
+</ul>
+<div class="note ok"><b>Regra de ouro</b>: antes de cada nova conversa, releia o "Combinado deste mês" da linha anterior. Uma linha = uma conversa.</div>
+</section>
+
+<!-- ============ REGRAS ============ -->
+<h2 id="regras">6. Regras e cálculos</h2>
+<table>
+<tr><th>Regra</th><th>Como funciona</th></tr>
+<tr><td>SLA do pedido</td><td>6 horas desde "aguardando desde". 60% = Atenção; 100% = Crítico.</td></tr>
+<tr><td>Tentativas de reposição</td><td>Máximo de 3 por item; depois vai para Liberação.</td></tr>
+<tr><td>Situação (Control Tower)</td><td>Dentro do prazo / Risco (até +25% do tempo restante) / Atrasado.</td></tr>
+<tr><td>Hora a hora</td><td>Previsão de fechamento vs. meta: ≥100% dentro, ≥85% risco, abaixo atrasado.</td></tr>
+<tr><td>Turnos</td><td>Manhã, Tarde e Noite. O turno de uma tentativa de reposição é definido pela hora atual (horário de Brasília).</td></tr>
+<tr><td>Caixa</td><td>Uma caixa só pode estar vinculada a um pedido ativo; é liberada ao confirmar o checkout.</td></tr>
+<tr><td>Dificuldade do estoque</td><td>Cada rua tem dificuldade (fácil/média/difícil), usada na formação de lotes, no mapa e na pontuação.</td></tr>
+<tr><td>Prioridade na reposição</td><td>Drive Thru primeiro; depois o mais novo, a menos que haja ordem manual.</td></tr>
+</table>
+
+<h2 id="glossario">7. Glossário</h2>
+<table>
+<tr><td><b>SKU</b></td><td>Código do produto.</td></tr>
+<tr><td><b>Picking</b></td><td>Local de onde o separador retira o item.</td></tr>
+<tr><td><b>Subiu</b></td><td>Item que o repositor levou para o picking.</td></tr>
+<tr><td><b>Busca Final</b></td><td>Última conferência antes de confirmar a falta de um item.</td></tr>
+<tr><td><b>Protocolo</b></td><td>Registro dos itens não encontrados e já liberados pela supervisão.</td></tr>
+<tr><td><b>Colmeia</b></td><td>Bancada/bin com estoque manual de um SKU.</td></tr>
+<tr><td><b>Drive Thru / Prime</b></td><td>Tipos de pedido com tratamento prioritário.</td></tr>
+<tr><td><b>Aguardando desde</b></td><td>Momento em que o pedido passou a esperar separação.</td></tr>
+<tr><td><b>RACI</b></td><td>Matriz de papéis: Responsável, Aprovador, Consultado, Informado.</td></tr>
+</table>
+
+<h2 id="faq">8. Problemas comuns</h2>
+<table>
+<tr><th>Situação</th><th>O que fazer</th></tr>
+<tr><td>Pedido concluído não aparece na embalagem</td><td>Supervisão: Liberação → <b>Reenviar para Embalagem</b> com o nº do pedido.</td></tr>
+<tr><td>Caixa aparece como ocupada</td><td>Confirme o checkout do pedido que a usa, ou peça à supervisão para liberar a caixa.</td></tr>
+<tr><td>Marquei um item errado na separação</td><td>Desfaça a marcação, desde que o repositor ainda não tenha iniciado a busca.</td></tr>
+<tr><td>Não consigo iniciar o pedido</td><td>Vincule a caixa primeiro (obrigatório).</td></tr>
+<tr><td>Tela não atualizou</td><td>Use <span class="k">↺</span> ou recarregue com <span class="k">Ctrl</span>+<span class="k">F5</span> (importante após uma atualização do sistema).</td></tr>
+<tr><td>Esqueci a senha</td><td>A supervisão redefine; no próximo login o sistema pede uma nova.</td></tr>
+<tr><td>Não vejo uma tela no menu</td><td>Depende do perfil. Peça acesso extra à supervisão ou à gestão.</td></tr>
+</table>
+<p style="margin-top:40px;font-size:13px;color:var(--t3)">Este manual foi montado a partir do código e das telas do sistema. Se alguma tela mudar, atualize a seção correspondente.</p>
+</main>
+</div>
+</body>
+</html>
