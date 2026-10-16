@@ -1,0 +1,171 @@
+<section class="tela" id="relatorios">
+<h3>Relatórios <span class="tag sup">Supervisão</span><span class="tag gp">Gestão</span></h3>
+<p><b>Para que serve:</b> relatório <b>analítico</b> de um período, para reuniões de resultado e fechamento de turno/semana/mês. Reúne volume, prazo (SLA), complexidade e desempenho individual por área, e uma análise automática em texto.</p>
+<p><b>Como chegar:</b> menu <i>Supervisão › Relatórios</i>.</p>
+<h4>Passo a passo</h4>
+<ol>
+  <li>Em <b>Turno</b> escolha <b>Todos, Manhã, Tarde</b> ou <b>Noite</b>.</li>
+  <li>Em <b>Período</b> informe De e Até (se deixar em branco, usa hoje).</li>
+  <li>Clique em <b>Gerar Relatório</b>. Aparece "carregando" e depois o relatório. Em caso de problema: <i>"Erro: …"</i> em vermelho.</li>
+  <li>Os botões <b>Excel</b> e <b>PDF</b> aparecem depois de gerar. O PDF usa a impressão do navegador ("Salvar como PDF").</li>
+</ol>
+<h4>O que o relatório traz</h4>
+<ul>
+  <li><b>Resumo do volume:</b> Importados, Distribuídos, Separando, Pendentes (com total de itens).</li>
+  <li><b>SLA de separação:</b> pedidos <b>Dentro do SLA</b> e <b>Fora do SLA</b> (limite de 6 horas, contados em pedidos já concluídos).</li>
+  <li><b>Complexidade dos pedidos:</b> pedidos classificados como <b>Fácil</b>, <b>Médio</b> e <b>Difícil</b> pelos corredores envolvidos, com a <b>pontuação total</b>.</li>
+  <li><b>Pedidos por dia</b> e <b>Pedidos por hora do dia</b> (gráficos).</li>
+  <li><b>Top transportadoras</b> (quantidade de pedidos por serviço de entrega).</li>
+  <li><b>Ranking por turno</b> (Manhã, Tarde, Noite).</li>
+  <li><b>Desempenho individual</b> de <b>Separação</b> (colaborador/turno, pedidos, itens, pontuação, tempo médio), <b>Checkout</b> (operador, expedições, tempo médio), <b>Embalagem</b> (embalador, embalados, tempo médio) e <b>Reposição</b> (repositor, total de avisos, repostos, não encontrados, taxa de resolução, tempo médio). Sem dados: <i>"Sem colaboradores neste período"</i>.</li>
+  <li><b>Análise automática:</b> frases geradas a partir dos números (ponto forte, gargalo, atenção ao SLA etc.).</li>
+</ul>
+<div class="note info">O sistema também gera sozinho um <b>relatório diário</b> todos os dias às <b>23:55</b> (horário de Brasília), consolidando pedidos, faltas, checkouts e produção por separador. A geração fica registrada na Auditoria (<i>relatório gerado</i>).</div>
+</section>
+
+<section class="tela" id="auditoria">
+<h3>Auditoria (Log de Auditoria) <span class="tag sup">Supervisão</span><span class="tag gp">Gestão</span></h3>
+<p><b>Para que serve:</b> rastrear <b>quem fez o quê e quando</b> em ações sensíveis. Use para investigar um pedido apagado, um usuário alterado, uma distribuição ou uma importação.</p>
+<p><b>Como chegar:</b> menu <i>Supervisão › Auditoria</i>. A data inicial já vem preenchida com hoje.</p>
+<h4>Passo a passo</h4>
+<ol>
+  <li>Em <b>Filtros</b>, informe o <b>Período</b> (De/Até), o <b>Usuário</b> (texto parcial do login/nome) e a <b>Ação</b> (Todas as ações, Login, Logout, Distribuição, Zerar dados, Relatório gerado).</li>
+  <li>Clique em <b>Filtrar</b>.</li>
+  <li>A tabela <b>Registro de ações</b> mostra <b>DATA/HORA</b>, <b>USUÁRIO</b>, <b>AÇÃO</b>, <b>ENTIDADE</b> e <b>IP</b>. São exibidos até <b>200</b> registros por consulta (refine o filtro se precisar de mais).</li>
+</ol>
+<p>Sem resultados: <i>"Nenhum registro encontrado"</i>. Antes de filtrar: <i>"Selecione um filtro e clique em Filtrar"</i>.</p>
+<h4>Ações que ficam registradas</h4>
+<table>
+<tr><th>Grupo</th><th>Exemplos de ação registrada</th></tr>
+<tr><td>Acesso</td><td>Login, Logout, redefinição de senha.</td></tr>
+<tr><td>Usuários e permissões</td><td>Usuário criado/editado/excluído, status alterado, separador excluído, permissão alterada/resetada.</td></tr>
+<tr><td>Pedidos</td><td>Distribuição, pedido excluído, pedidos vazios excluídos, exclusão em massa de pendentes, pedido tirado de lote, lotes do separador limpos, item desfeito.</td></tr>
+<tr><td>Operação</td><td>Embalar, Embalar em lote, importação de faturamento.</td></tr>
+<tr><td>Diário de Bordo</td><td>Diário enviado, diário validado.</td></tr>
+<tr><td>Administrativas</td><td>Zerar dados / dados de teste zerados, sessões zeradas, configuração (metas) alterada, relatório gerado.</td></tr>
+</table>
+<div class="note">A Auditoria é somente leitura: nada pode ser editado ou apagado por aqui.</div>
+</section>
+
+<section class="tela" id="diario">
+<h3>Diário de Bordo <span class="tag sup">Supervisão</span><span class="tag gp">Gestão</span></h3>
+<p><b>Para que serve:</b> registrar como foi o turno e <b>passar o bastão</b> para o turno seguinte, que confere (valida) o que foi deixado. Cria um histórico e uma nota de qualidade da passagem (usada em <a href="#lideranca">Liderança dos Turnos</a>).</p>
+<p><b>Como chegar:</b> menu <i>Supervisão › Diário de Bordo</i>. Um aviso <b>"!"</b> aparece no menu quando há diário para validar. Ao abrir, a tela já escolhe o <b>turno atual</b> e a data de hoje.</p>
+
+<h4>Elementos da tela</h4>
+<table>
+<tr><th>Bloco</th><th>O que tem</th></tr>
+<tr><td><b>Filtros</b></td><td><b>Data</b>, <b>Turno</b> (Manhã/Tarde/Noite) e <b>Atualizar</b>.</td></tr>
+<tr><td><b>Turno anterior</b></td><td>Resumo do que o turno anterior deixou (Separação x/y, Checkout x/y, Não encontrados e a <i>Obs. geral deixada pelo turno anterior</i>). Ler esse resumo é registrado como "leu o diário anterior".</td></tr>
+<tr><td><b>Validação pendente</b></td><td>Cartão roxo "Validação Pendente" (ou "Atrasada") com turno, data, nome de quem enviou e um <b>cronômetro</b> de 30 min. Botão <b>Abrir Checklist e Validar Diário do Turno Anterior</b>.</td></tr>
+<tr><td><b>Faixa de status</b></td><td>Rascunho salvo / Enviado para validação (com prazo) / Validado (com pontuação) / Prazo de validação expirou.</td></tr>
+<tr><td><b>4 seções</b>: Separação, Checkout, Embalagem, Reposição</td><td>Cada uma com um anel de progresso, o total e <b>números editáveis</b>: Separação (Concluídos, Separando, Pendentes), Checkout (Concluídos, Pendentes), Embalagem (Embalados, Pendentes), Reposição (Resolvidas, Pendentes, Não encontradas). Mais um campo de <b>Observações</b> por seção (ex.: "Ocorrências na separação...").</td></tr>
+<tr><td><b>Pedidos com problema</b></td><td>Lista automática: Nº do pedido, cliente e item não encontrado. Vazio: <i>"Nenhum problema registrado"</i>.</td></tr>
+<tr><td><b>Observações gerais do turno</b></td><td>Campo livre: ocorrências gerais, equipamento, funcionários ausentes, intercorrências.</td></tr>
+<tr><td><b>Salvar rascunho / Finalizar e enviar</b></td><td>Veja o passo a passo.</td></tr>
+<tr><td><b>Histórico de diários</b></td><td>Lista dos diários anteriores; abrir um mostra o conteúdo e o botão de Excel.</td></tr>
+</table>
+
+<h4>Passo a passo — preencher e enviar</h4>
+<ol>
+  <li>Confira <b>Data</b> e <b>Turno</b> e clique em <b>Atualizar</b>. Se já existe um diário salvo para essa data e turno, ele é reaberto (edições feitas são mantidas); senão o sistema <b>calcula os números ao vivo</b>.</li>
+  <li>Leia o quadro <b>Turno anterior</b> para não repetir problemas já relatados.</li>
+  <li>Revise os números das 4 seções. Se algum estiver errado, <b>edite na mão</b> (o total e o anel se atualizam sozinhos).</li>
+  <li>Escreva as <b>Observações</b> de cada área e as <b>Observações gerais do turno</b>.</li>
+  <li>Clique em <b>Salvar rascunho</b> (<i>"Diário salvo como rascunho!"</i>) quantas vezes precisar.</li>
+  <li>Quando estiver pronto, clique em <b>Finalizar e enviar</b>. Confirma: <i>"Enviar Diário de Bordo? O próximo supervisor terá 30 minutos para validar as informações do turno."</i> Mensagem: <i>"Diário enviado! Aguardando validação do próximo turno."</i> A faixa mostra o prazo (<i>"até HH:MM"</i>).</li>
+</ol>
+<div class="note">Depois de <b>enviado</b> ou <b>validado</b>, os campos ficam <b>travados</b>. Antes de enviar é obrigatório ter salvo: <i>"Salve o diário primeiro antes de enviar!"</i> Qualquer supervisor pode editar o rascunho do turno; a faixa mostra quem editou por último.</div>
+
+<h4>Passo a passo — validar o diário do turno anterior</h4>
+<ol>
+  <li>Ao entrar no turno, abra o Diário de Bordo: aparece o cartão <b>Validação Pendente</b> com o cronômetro (30 min). Se passou do prazo vira <b>Atrasada</b>, mas <b>ainda dá para validar</b>.</li>
+  <li>Clique em <b>Abrir Checklist e Validar Diário do Turno Anterior</b>.</li>
+  <li>Na janela <b>Validar Diário de Bordo</b> responda cada item como <b>Sim</b> ou <b>Não</b> (cada "Não" tira os pontos do peso):
+    <table>
+    <tr><th>Item do checklist</th><th>Peso</th></tr>
+    <tr><td>As informações da Separação estão corretas</td><td>20</td></tr>
+    <tr><td>As informações da Embalagem estão corretas</td><td>15</td></tr>
+    <tr><td>As informações do Checkout estão corretas</td><td>15</td></tr>
+    <tr><td>As informações da Reposição estão corretas</td><td>15</td></tr>
+    <tr><td>Há caixas para abastecimento pelas ruas</td><td>20</td></tr>
+    <tr><td>O estoque está organizado</td><td>15</td></tr>
+    </table>
+  </li>
+  <li>Se marcar <b>Não</b> em algum item, é obrigatório descrever a ocorrência: <i>"Registre o que foi encontrado / ocorrência"</i>. A <b>Pontuação calculada</b> começa em 100 e perde o peso de cada item reprovado (verde ≥ 80, amarelo ≥ 60, vermelho abaixo).</li>
+  <li>Opcionalmente escreva observações sobre a entrega do turno e clique em <b>Confirmar Validação</b>.</li>
+</ol>
+<table>
+<tr><th>Mensagem</th><th>Significa</th></tr>
+<tr><td>Responda todos os itens antes de confirmar (N pendentes)</td><td>Falta marcar algum item.</td></tr>
+<tr><td>Preencha a ocorrência para: "…"</td><td>Item reprovado sem descrição.</td></tr>
+<tr><td>Validação concluída! Pontuação: N/100</td><td>Sucesso.</td></tr>
+<tr><td>Este diário já foi validado por outro supervisor.</td><td>Outra pessoa validou antes; nada a fazer.</td></tr>
+<tr><td>Nenhuma validação pendente / Validação não encontrada ou expirada</td><td>Não há diário esperando validação.</td></tr>
+</table>
+<h4>Histórico</h4>
+<p>No final da tela, <b>Histórico de diários</b> lista os diários por data/turno/supervisor e situação. Abra um para ver o conteúdo e use <b>Excel</b> para exportar.</p>
+</section>
+
+<section class="tela" id="celulares">
+<h3>Celulares <span class="tag sup">Supervisão</span><span class="tag gp">Gestão</span></h3>
+<p><b>Para que serve:</b> controlar o <b>estado dos 5 aparelhos coletores</b> na troca de turno (bateria, avarias, funcionamento do WMS), para saber quem recebeu cada aparelho e em que condição.</p>
+<p><b>Como chegar:</b> menu <i>Supervisão › Celulares</i>.</p>
+<h4>Passo a passo</h4>
+<ol>
+  <li>Escolha o <b>Turno</b> (Manhã, Tarde, Noite).</li>
+  <li>Escolha o aparelho: botões <b>#1 a #5</b>.</li>
+  <li>No <b>Recebimento</b>, preencha <b>Quem recebeu</b> e <b>Horário</b> (já vem a hora atual).</li>
+  <li>No checklist de <b>Condição do aparelho</b>, marque cada item como <b style="color:var(--g)">OK</b> ou <b style="color:var(--r)">Problema</b> (tocar de novo desmarca):
+    <ul>
+      <li>Bateria carregada (acima de 80% ao receber)</li>
+      <li>Carregador no local (cabo e tomada/base)</li>
+      <li>Tela sem avarias (sem rachaduras ou manchas)</li>
+      <li>Carcaça íntegra (sem amassados ou sinais de queda)</li>
+      <li>Capa protetora no lugar (case/película)</li>
+      <li>Celular ligando normalmente (sem trava ou loop de boot)</li>
+      <li>Touch screen respondendo (sem áreas mortas ou lentidão)</li>
+      <li>WMS abrindo pelo atalho (ícone na tela inicial funciona)</li>
+    </ul>
+    A barra de progresso mostra a proporção de itens OK e com problema.
+  </li>
+  <li>Em <b>Observações</b>, descreva avarias, problemas ou ocorrências.</li>
+  <li>Clique em <b>Salvar ficha</b>. Mensagem: <i>"Ficha do Celular #N salva!"</i> e, se houver problema, <i>"⚠ N problema(s)"</i>. Sem informar quem recebeu: <i>"Informe o nome de quem recebeu o celular"</i>.</li>
+  <li><b>Limpar</b> apaga o checklist do celular/turno atual (pede confirmação).</li>
+</ol>
+<p>As <b>Fichas salvas</b> aparecem em lista (data/hora, celular, turno, quem recebeu, problemas em vermelho). Mostra as 40 mais recentes; vazio: <i>"Nenhuma ficha salva"</i>.</p>
+<div class="note"><b>Importante:</b> as fichas ficam gravadas <b>apenas no navegador deste computador</b> (não vão para o servidor). Se trocar de computador, limpar os dados do navegador ou usar outro login em outro aparelho, elas não aparecem. Para guardar histórico oficial, fotografe/anote ou peça à equipe técnica para centralizar.</div>
+</section>
+
+<section class="tela" id="caixas">
+<h3>Caixas <span class="tag sup">Supervisão</span><span class="tag gp">Gestão</span></h3>
+<p><b>Para que serve:</b> checklist de <b>organização das estações de checkout (Caixa 01 a 10)</b>: computador, mouse, impressora, produtos espalhados etc. Mantém um histórico por estação e por turno.</p>
+<p><b>Como chegar:</b> menu <i>Supervisão › Caixas</i>.</p>
+<h4>Tela inicial</h4>
+<p>Uma grade com as 10 caixas. Cada cartão mostra o número, a situação da <b>última conferência</b> — <span style="color:var(--g)">OK</span>, <span style="color:var(--r)">Atenção</span> ou <span style="color:var(--t3)">Nunca conferida</span> —, a data/hora e quem conferiu (ou <i>"Sem registro"</i>). A cor da borda segue a situação.</p>
+<h4>Passo a passo — conferir uma caixa</h4>
+<ol>
+  <li>Clique no cartão da caixa. Abre a janela com o histórico de <b>CONFERÊNCIAS ANTERIORES</b> (data, hora, quem, OK/Atenção, observações).</li>
+  <li>Preencha <b>Quem estava operando*</b> e <b>Turno*</b>.</li>
+  <li>Responda <b>Sim/Não</b> para cada pergunta (a sugestão já vem preenchida como o esperado):
+    <ul>
+      <li><b>Está organizada?</b> (esperado Sim)</li>
+      <li><b>Está limpa?</b> (esperado Sim)</li>
+      <li><b>Tem produtos espalhados?</b> (esperado Não)</li>
+      <li><b>Tem outros objetos (que não deveriam estar ali)?</b> (esperado Não)</li>
+    </ul>
+  </li>
+  <li>Use <b>Observações</b> para detalhes e o que precisa ser resolvido.</li>
+  <li>Clique em <b>Salvar conferência</b>. A caixa fica <b>OK</b> somente se organizada e limpa e sem produtos espalhados nem objetos indevidos; qualquer outra combinação vira <b>Atenção</b>.</li>
+</ol>
+<table>
+<tr><th>Mensagem</th><th>Significa</th></tr>
+<tr><td>Informe quem estava operando a caixa.</td><td>Campo obrigatório vazio.</td></tr>
+<tr><td>Selecione o turno.</td><td>Turno não escolhido.</td></tr>
+<tr><td>Conferência registrada!</td><td>Salvo no servidor.</td></tr>
+<tr><td>Erro ao carregar caixas. / Erro ao salvar!</td><td>Falha de rede ou servidor.</td></tr>
+</table>
+<h4>Histórico de conferências</h4>
+<p>Abaixo da grade, o <b>Histórico de conferências</b> pode ser filtrado por <b>Período</b>, <b>Caixa</b> (Todas, Caixa 01…10) e <b>Turno</b>, com o botão <b>Filtrar</b>.</p>
+<div class="note info">Não confunda: esta tela é o <b>checklist das estações</b>. O <b>número da caixa</b> usado para vincular um pedido na separação/checkout é outro conceito (a "caixa" física que carrega o pedido).</div>
+</section>
