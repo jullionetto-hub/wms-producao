@@ -1,0 +1,80 @@
+<section class="tela" id="liberacao">
+<h3>Liberação <span class="tag sup">Supervisão</span><span class="tag gp">Gestão</span></h3>
+<p><b>Para que serve:</b> decidir o destino dos itens que o repositor <b>não encontrou</b> depois das 3 tentativas. Enquanto você não decide, o separador fica com o pedido travado (<i>"AGUARDANDO SUPERVISOR"</i>).</p>
+<p><b>Como chegar:</b> menu <i>Supervisão › Liberação</i>. O menu mostra um <b>contador vermelho</b> com o número de itens esperando (atualiza a cada 20 segundos). A tela abre com o período de hoje.</p>
+
+<h4>Elementos da tela</h4>
+<table>
+<tr><th>Elemento</th><th>O que mostra</th></tr>
+<tr><td><b>Filtros › Período</b> + Filtrar</td><td>Datas De/Até aplicadas às duas tabelas.</td></tr>
+<tr><td><b>Aguardando liberação do supervisor</b> (com contador)</td><td>Itens marcados <i>Não Encontrado</i> pelo repositor. Colunas: <b>Nº Pedido</b>, <b>Item</b> (código + descrição), <b>Qtde</b>, <b>Separador</b>, <b>Repositor</b>, <b>Data/Hora</b> e <b>Ação</b>.</td></tr>
+<tr><td><b>Pedido não aparece na embalagem?</b></td><td>Campo para o nº do pedido e o botão <b>Reenviar para Embalagem</b>.</td></tr>
+<tr><td><b>Liberados — histórico</b> (com contador)</td><td>Itens já decididos: pedido, item, separador, repositor, <b>liberado por</b> (e a decisão: <span style="color:var(--g)">Encontrado</span> ou <span style="color:#7c3aed">Não Encontrado</span>) e data/hora. Vazio: <i>"Nenhum item liberado no período"</i>.</td></tr>
+</table>
+
+<h4>Passo a passo — liberar um item</h4>
+<ol>
+  <li>Antes de decidir, confira se o item realmente não existe: pergunte ao repositor/separador ou faça uma conferência física.</li>
+  <li>Na linha do item, escolha:
+    <ul>
+      <li><b style="color:var(--g)">Encontrado</b>: confirma <i>"Liberar como ENCONTRADO? O separador será desbloqueado."</i> O item passa a <b>reposto</b> e o separador pode seguir e concluir o pedido normalmente.</li>
+      <li><b style="color:var(--r)">Não Encontrado</b>: confirma <i>"Liberar como NÃO ENCONTRADO? O item ficará em Protocolo."</i> O item vai para o <b>Protocolo</b> (registro de falta) e o pedido pode ser finalizado sem ele.</li>
+    </ul>
+  </li>
+  <li>Confirme. A linha mostra <i>⏳ Processando...</i> e depois <i>"Liberado (Encontrado)"</i> ou <i>"Em Protocolo"</i>. O item vai para o histórico. Os botões ficam bloqueados enquanto processa para evitar clique duplo.</li>
+</ol>
+<table>
+<tr><th>Mensagem</th><th>Significa</th></tr>
+<tr><td>Este item não está mais aguardando liberação (status atual: …). Atualize a tela.</td><td>Outra pessoa (ou o repositor, pela <b>Busca Final</b>) já resolveu esse item. Atualize com o filtro e confira o histórico.</td></tr>
+<tr><td>Este item não está mais aguardando liberação — outra ação já mudou o status dele.</td><td>Mesma situação, detectada no momento de gravar.</td></tr>
+<tr><td>Nenhum item aguardando liberação</td><td>Fila vazia. Tudo decidido.</td></tr>
+<tr><td>Erro ao liberar! / Erro ao carregar liberações</td><td>Falha de rede. Atualize antes de repetir.</td></tr>
+</table>
+<div class="note info"><b>Duas formas de fechar a falta:</b> (1) você decide aqui, na Liberação; ou (2) um repositor faz a <b>Busca Final</b> (última conferência física) e marca Encontrei/Não encontrei. Vale a que acontecer primeiro: o item sai da outra fila automaticamente.</div>
+
+<h4>Reenviar para Embalagem</h4>
+<p>Use quando o <b>checkout foi confirmado mas o pedido não aparece</b> na fila de embalagem.</p>
+<ol>
+  <li>Digite o <b>nº do pedido</b> (ex.: 5568815) no campo.</li>
+  <li>Toque em <b>Reenviar para Embalagem</b>.</li>
+  <li>O sistema marca o pedido como <b>concluído</b> e <b>pendente de embalagem</b>. Mensagem: <i>"Pedido #N reenviado para embalagem!"</i></li>
+</ol>
+<table>
+<tr><th>Mensagem</th><th>Significa</th></tr>
+<tr><td>Informe o número do pedido</td><td>Campo vazio.</td></tr>
+<tr><td>Pedido não encontrado</td><td>Número inexistente.</td></tr>
+<tr><td>Pedido já embalado!</td><td>Já foi embalado; não precisa reenviar.</td></tr>
+</table>
+<div class="note">Use apenas depois de confirmar que o checkout foi realmente concluído; a função força o pedido para a fila de embalagem sem conferir o checkout.</div>
+</section>
+
+<section class="tela" id="protocolo">
+<h3>Protocolo <span class="tag sup">Supervisão</span><span class="tag op">Reposição</span></h3>
+<p><b>Para que serve:</b> registro formal dos itens <b>sem estoque / não encontrados</b>. Um item chega aqui quando a supervisão o libera como <i>Não Encontrado</i>. Para o repositor é uma tela de consulta; para a <b>Supervisão</b>, onde o item é <b>encerrado</b> (baixa definitiva).</p>
+<p><b>Como chegar:</b> menu <i>Protocolo</i> (Supervisão/Gestão e Reposição). O contador no menu mostra quantos pedidos têm itens aguardando.</p>
+
+<h4>Elementos da tela</h4>
+<table>
+<tr><th>Elemento</th><th>O que mostra</th></tr>
+<tr><td><b>Filtros › Período</b> + Filtrar + <b>Excel</b></td><td>Datas De/Até e exportação.</td></tr>
+<tr><td><b>Três cartões</b> no topo</td><td><b>Aguardando</b> (itens e pedidos, e quantos pedidos por tipo de entrega: Drive Thru, Prime, SEDEX, PAC, Motoboy, Outros); <b>Protocolados</b> (itens e pedidos encerrados); <b>Total período</b> (aguardando + resolvidos).</td></tr>
+<tr><td>Aba <b>Aguardando</b></td><td>Itens em protocolo esperando encerramento. Colunas: <b>Data</b>, <b>Nº Pedido</b> (com cliente), <b>Entrega</b>, <b>Código</b>, <b>Descrição</b>, <b>Qtd</b>, <b>Separador</b>, <b>Aviso</b> (hora) e, só para Supervisão, o botão <b>Encerrar</b>.</td></tr>
+<tr><td>Aba <b>Protocolados</b></td><td>Itens já encerrados. Colunas iguais, mais <b>Encerrado por</b> com a origem: <span style="color:#dc2626">busca final</span> (um repositor confirmou a falta) ou <span style="color:#7c3aed">supervisor</span>.</td></tr>
+</table>
+
+<h4>Passo a passo — encerrar protocolo (Supervisão)</h4>
+<ol>
+  <li>Abra a aba <b>Aguardando</b> e confira os itens.</li>
+  <li><b>Item a item:</b> clique em <b>Encerrar</b> na linha. O item some da lista e passa para <b>Protocolados</b>.</li>
+  <li><b>Pedido inteiro:</b> no rodapé, clique em <b>Encerrar Pedido #N (X itens)</b>. Confirma: <i>"Encerrar protocolo do pedido #N? Todos os itens ainda em protocolo desse pedido serão marcados como protocolados."</i> Mensagem final: <i>"✅ Protocolo do pedido #N encerrado! X item(ns) protocolado(s)."</i></li>
+  <li>Use o <b>Excel</b> para levar a lista ao financeiro/compras ou ao cliente.</li>
+</ol>
+<table>
+<tr><th>Mensagem</th><th>Significa</th></tr>
+<tr><td>Nenhum item aguardando protocolo</td><td>Nada pendente.</td></tr>
+<tr><td>Nenhum pedido protocolado no período</td><td>Histórico vazio para as datas filtradas.</td></tr>
+<tr><td>Item não está em protocolo (status atual: …)</td><td>Já foi encerrado por outra pessoa. Atualize a tela.</td></tr>
+<tr><td>Nenhum item em protocolo para este pedido.</td><td>Não há mais o que encerrar nesse pedido.</td></tr>
+</table>
+<div class="note">Só o perfil <b>Supervisão</b> vê os botões <b>Encerrar</b>. Os demais perfis (Gestão, Reposição) apenas consultam.</div>
+</section>

@@ -1,0 +1,108 @@
+<section class="tela" id="performance">
+<h3>Performance (Performance Logística) <span class="tag sup">Supervisão</span><span class="tag gp">Gestão</span></h3>
+<p><b>Para que serve:</b> analisar o desempenho dos colaboradores por período: produção, tempos, ocorrências, padrões fora do normal, cumprimento de meta e bonificação. É uma tela de <b>análise</b> (olhar para trás), diferente do Dashboard (agora) e do Control Tower (previsão do turno).</p>
+<p><b>Como chegar:</b> menu <i>Performance</i>. Os dados são lidos do que o próprio sistema registrou (sessões de trabalho, tempos de cada etapa, avisos de reposição, marcações desfeitas).</p>
+
+<h4>Barra de filtros (vale para todas as abas)</h4>
+<table>
+<tr><th>Elemento</th><th>Como usar</th></tr>
+<tr><td><b>Período</b> (De/Até)</td><td>Datas a analisar. Aba Metas e Ranking exigem período preenchido: <i>"Selecione o período e clique em Filtrar."</i></td></tr>
+<tr><td><b>Turno</b></td><td>Todos, Manhã, Tarde ou Noite.</td></tr>
+<tr><td><b>Colaborador</b></td><td>"Todos os colaboradores" ou uma pessoa (lista de usuários ativos). Troca na hora, sem precisar filtrar de novo.</td></tr>
+<tr><td><b>Filtrar</b></td><td>Carrega os dados da aba aberta.</td></tr>
+<tr><td>Botão <b>↻</b></td><td>Limpa os filtros e recarrega.</td></tr>
+<tr><td><b>Excel</b></td><td>Exporta o conteúdo da aba atual (em Ocorrências, a lista de ocorrências; senão os dados de performance). Sem dados: <i>"Nenhuma ocorrência para exportar."</i></td></tr>
+<tr><td><b>Análise PDF</b></td><td>Abre uma janela de impressão com a análise do período. Se nada abrir, <b>habilite pop-ups</b> no navegador (<i>"Habilite pop-ups no navegador para gerar a análise."</i>). Sem dados: <i>"Carregue os dados antes de gerar a análise."</i></td></tr>
+</table>
+
+<h3>Aba Resumo</h3>
+<p>Mostra, para o período filtrado:</p>
+<ul>
+  <li><b>Cartões:</b> <b>Separação</b> (pedidos concluídos, colaboradores, itens por pedido, total de itens e SKUs), <b>Itens</b> (itens separados, SKUs por pedido, quem mais separou itens, média por dia), <b>Reposição</b> (reposições geradas, % dos pedidos que precisaram de reposição, tempo médio, quem mais repôs, média por colaborador), <b>Checkout</b>, <b>Embalagem</b> (concluídos, itens, pendentes, tempo médio e o mais rápido) e <b>Ruas</b> (quantas ruas foram percorridas, a mais ativa, itens nela, cobertura do armazém de 27 ruas e as <b>Top ruas</b> em barras).</li>
+  <li><b>Gráficos:</b> Pedidos por colaborador, Itens por colaborador, SKUs por colaborador, Reposições por colaborador, Tempo médio por pedido (min) e Evolução diária de pedidos.</li>
+  <li><b>RANKING DETALHADO:</b> tabela com #, Colaborador, Turno, Pedidos, Itens, SKUs, Reposições, Itens/Ped e Tempo médio.</li>
+  <li><b>Tabelas de setor</b> (Checkout, Embalagem, Reposição): colaborador, concluídos, pendentes, itens e tempo médio.</li>
+  <li><b>Pontos de atenção</b> (análise automática do período), por exemplo: um colaborador com tempo médio 1,5x maior que o mais rápido; mais de 40% dos pedidos precisando de reposição (ruptura frequente); checkout ou embalagem com mais de 30% pendente (candidata a gargalo); colaboradores sem tempo registrado (início/fim não batidos no app). Se nada se destaca: <i>"Nenhum ponto crítico identificado automaticamente…"</i></li>
+</ul>
+
+<h3>Aba Tempos por Pedido</h3>
+<p>Detalha o <b>início e o fim de cada operação por colaborador</b>. Quatro sub-abas: <b>Separação</b>, <b>Reposição</b>, <b>Checkout</b> e <b>Embalagem</b>. As linhas vêm agrupadas por colaborador, com: <b>Pedido</b>, <b>Início</b>, <b>Fim</b>, <b>Duração</b>, itens/SKUs e, na Reposição, o <b>resultado</b> (<i>Enc</i> encontrado, <i>Abast</i> abastecido, <i>NE</i> não encontrado, <i>Proto</i> protocolo), com os totais de encontrados e não encontrados. Sem registros: <i>"Nenhum registro de [etapa] no período"</i>. A Separação mostra a nota sobre o que o tempo <b>não inclui</b> (a espera pelo repositor).</p>
+
+<h3>Aba Ocorrências</h3>
+<p>Registro formal de problemas de conduta e processo por colaborador, que também alimenta o Ranking.</p>
+<h4>Registrar uma ocorrência (passo a passo)</h4>
+<ol>
+  <li>Abra a aba <b>Ocorrências</b> (cartão <b>Registrar Ocorrência</b>).</li>
+  <li><b>Colaborador*</b>: escolha na lista.</li>
+  <li><b>Tipo de Ocorrência*</b>: Processo Errado, Absenteísmo, Conduta Inapropriada, Atraso, Descumprimento de Norma, Problema de Qualidade ou Outro.</li>
+  <li><b>Gravidade</b>: <span style="color:var(--g)">Leve</span>, <span style="color:var(--a)">Moderada</span> ou <span style="color:var(--r)">Grave</span>.</li>
+  <li><b>Data da ocorrência*</b> (já vem hoje) e <b>Turno</b> (opcional).</li>
+  <li><b>Descrição / O que aconteceu*</b>: escreva com detalhes (local, horário, o que foi feito de errado, impacto na operação).</li>
+  <li>Clique em <b>Registrar Ocorrência</b>.</li>
+</ol>
+<p>Abaixo do formulário: o <b>Total de Ocorrências</b> do período, a contagem por gravidade e a lista (data, colaborador, tipo, gravidade, descrição, quem registrou). <b>Excluir</b> remove uma ocorrência (<i>"Excluir esta ocorrência? Ação não pode ser desfeita."</i>). Vazio: <i>"Nenhuma ocorrência no período"</i>.</p>
+<div class="note">Os campos marcados com * são obrigatórios. Seja objetivo e factual: o registro pode ser usado em feedbacks e no ranking de bonificação.</div>
+
+<h3>Aba Padrões</h3>
+<p>Detecta <b>sinais estatísticos</b> por colaborador comparando com a equipe do mesmo turno e com o próprio histórico. Mostra três contadores (<b>Colaboradores Avaliados</b>, <b>Críticos</b>, <b>Atenção</b>) e um cartão por colaborador com o nível geral (Crítico, Atenção, Melhora, OK) e os sinais, como:</p>
+<ul>
+  <li><b>Tempo médio</b> muito acima ou abaixo da equipe do turno (abaixo demais sugere conferência apressada).</li>
+  <li><b>Tendência</b>: tempo médio subindo ou melhorando entre a 1ª e a 2ª metade do período.</li>
+  <li><b>Marcações corrigidas</b> (desfeitas) acima da média da equipe.</li>
+  <li><b>Avisos de falta</b> acima da média da equipe.</li>
+  <li><b>Busca Final achou o item</b>: pode ser erro de endereço/localização, não falta real.</li>
+  <li><b>Ocorrências registradas</b> no período.</li>
+</ul>
+<div class="note"><b>Os sinais são indícios, não veredito.</b> O sistema não separa erro humano de produto fora do lugar. Confirme a causa (processo, estoque, complexidade do pedido) antes de qualquer ação com o colaborador. Existe também um resumo por IA, que só funciona se o servidor estiver configurado para isso.</div>
+
+<h3>Aba Metas</h3>
+<p>Compara o realizado com a <b>meta proporcional ao tempo logado</b> em cada função, por dia. Meta cheia por turno inteiro: <b>Separação 65 pedidos</b>, <b>Checkout 90</b>, <b>Embalagem 120</b>, <b>Reposição 90 SKUs</b>. Para cada perfil: <b>Colaborador, Data, Turno, Logado</b> (tempo conectado), <b>Meta prop.</b>, <b>Realizado</b> e o percentual (verde = meta batida, amarelo/vermelho abaixo), com o <b>Resumo do período</b>. Sem registro: <i>"Nenhuma sessão registrada neste perfil no período."</i> (o tempo logado só existe a partir de quando o recurso foi ativado).</p>
+
+<h3>Aba Ranking Bonificação</h3>
+<p>Sugere a faixa de bônus de cada colaborador, por perfil (Separação, Checkout, Embalagem, Reposição), do maior para o menor.</p>
+<table>
+<tr><th>Item</th><th>Regra</th></tr>
+<tr><td><b>% META</b></td><td>Realizado ÷ meta proporcional do período, limitado a <b>120%</b>.</td></tr>
+<tr><td><b>DESCONTO</b></td><td>Só ocorrências do tipo <b>Qualidade</b> ou <b>Processo Errado</b> no período: <b>leve −10</b>, <b>moderada −25</b>, <b>grave −50</b> pontos (somam).</td></tr>
+<tr><td><b>NOTA</b></td><td>% meta (máx. 120) menos o desconto; nunca abaixo de zero.</td></tr>
+<tr><td><b>FAIXA</b></td><td><span style="color:var(--g)">Bônus cheio</span> (nota ≥ 90), <span style="color:var(--a)">Bônus parcial</span> (≥ 70), <span style="color:var(--r)">Sem bônus</span> (abaixo de 70).</td></tr>
+</table>
+<div class="note">É uma <b>sugestão</b> calculada com dados do sistema; a decisão de pagamento é da gestão. Registre as ocorrências com cuidado, pois elas pesam na nota.</div>
+
+<h4>Rastreio do pedido (também dentro de Performance)</h4>
+<p>O rastreio (aberto clicando no número do pedido na tela <a href="#pedidos">Pedidos</a>) traz, além dos cartões de etapa, a lista <b>Itens do Pedido</b> (item e endereço) e o <b>mapa do caminho</b>: um desenho do estoque (ruas F–Z, ZA, araras e corredores A–E) com os pontos <b>Início</b>, <b>Passagem</b> e a <b>Rota ideal sugerida</b>, reconstruídos a partir da ordem real em que o separador conferiu os itens. Serve para ver se o separador andou mais do que o necessário. Sem itens conferidos: <i>"Sem itens conferidos ainda pra desenhar o caminho."</i></p>
+</section>
+
+<section class="tela" id="lideranca">
+<h3>Liderança dos Turnos <span class="tag sup">Supervisão</span><span class="tag gp">Gestão</span></h3>
+<p><b>Para que serve:</b> avaliar o <b>líder/supervisor de cada turno</b> com uma nota que combina três coisas: atingimento da meta de pedidos, qualidade do <b>Diário de Bordo</b> e qualidade da <b>passagem de turno</b>.</p>
+<p><b>Como chegar:</b> menu <i>Supervisão › Liderança dos Turnos</i>. Abre em uma <b>nova aba</b> do navegador (página própria).</p>
+
+<h4>Como a nota é calculada</h4>
+<p><b>Nota = (peso da meta × % da meta de pedidos) + (peso do diário × nota do diário) + (peso da passagem × (100 − pontos perdidos na passagem))</b>, dividida pela soma dos pesos usados. Padrão: <b>50% meta de pedidos + 25% diário de bordo + 25% qualidade da passagem</b>. A meta padrão de pedidos é <b>400 (Manhã), 350 (Tarde) e 250 (Noite)</b>. O % da meta é limitado a 100%. Diário ou passagem ausente/rascunho conta como <b>0</b>; se não houver informação, aquele item fica de fora do cálculo. Faixas de cor: <span style="color:var(--g)">verde ≥ 85</span>, <span style="color:var(--a)">amarelo ≥ 70</span>, <span style="color:var(--r)">vermelho abaixo de 70</span>.</p>
+
+<h4>Elementos da tela</h4>
+<table>
+<tr><th>Elemento</th><th>O que faz</th></tr>
+<tr><td><b>De / Até / Turno</b></td><td>Filtros de data e turno.</td></tr>
+<tr><td><b>Atualizar do WMS</b></td><td>Busca os dados do sistema (passagem de turno + diário de bordo validado pelo turno seguinte). Com login de Supervisão/Gestão, é a fonte principal. O cabeçalho informa a fonte: <i>"Dados do WMS (passagem de turno + diário de bordo)"</i> ou <i>"Modo local (N lançamentos salvos neste navegador)"</i>.</td></tr>
+<tr><td><b>+ Lançar turno</b></td><td>Cria um lançamento manual (modo local).</td></tr>
+<tr><td><b>Metas e pesos</b></td><td>Edita as metas de pedidos por turno e os pesos da nota.</td></tr>
+<tr><td><b>Importar CSV / Exportar CSV</b></td><td>Traz/leva lançamentos em CSV (colunas: data, turno, supervisor, pedidos_separados, checkouts_feitos, separadores_presentes, pontos_perdidos, diario_nota, ocorrencias; mínimo data e supervisor — <i>"CSV inválido: precisa das colunas data e supervisor."</i>).</td></tr>
+<tr><td><b>Dados de exemplo</b></td><td>Substitui os lançamentos por dados fictícios (confirma antes). Só para demonstração.</td></tr>
+</table>
+<h4>Painéis</h4>
+<ul>
+  <li><b>Indicadores:</b> Nota média da liderança, Pedidos separados, Atingimento de meta, Nota do diário de bordo, Pontos perdidos na passagem, Turnos abaixo de 70.</li>
+  <li><b>Ranking de líderes</b> e <b>Comparativo entre turnos</b> (Manhã/Tarde/Noite).</li>
+  <li><b>Nota diária (evolução)</b> (linha por turno) e <b>Pedidos separados vs. meta</b> (barras).</li>
+  <li><b>Lançamentos:</b> tabela com cada turno e o detalhe da nota (editável/excluível: <i>"Excluir este lançamento?"</i>).</li>
+</ul>
+<h4>Lançar um turno (passo a passo)</h4>
+<ol>
+  <li>Clique em <b>+ Lançar turno</b>.</li>
+  <li>Preencha <b>Data</b>, <b>Turno</b>, <b>Líder / supervisor</b>, <b>Pedidos separados</b>, <b>Checkouts feitos</b>, <b>Pessoas presentes</b>, <b>Nota do diário (0–100)</b>, <b>Pontos perdidos na passagem</b> (0–100) e <b>Ocorrências</b>.</li>
+  <li><b>Salvar</b>. Em <b>Metas e pesos</b>, os pesos devem somar <b>100</b>; senão aparece o aviso <i>"Os pesos devem somar 100."</i></li>
+</ol>
+<div class="note">No modo local os lançamentos ficam <b>salvos neste navegador</b> (não vão para o servidor). Use "Atualizar do WMS" para a visão oficial, ou exporte CSV para guardar.</div>
+</section>

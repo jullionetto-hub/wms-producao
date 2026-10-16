@@ -1,0 +1,103 @@
+<section class="tela" id="dashboard">
+<h3>Dashboard <span class="tag sup">Supervisão</span><span class="tag gp">Gestão</span></h3>
+<p><b>Para que serve:</b> visão em tempo real da operação do dia: quantos pedidos estão em cada etapa, quem produz mais, onde há gargalo e o que está estourando o prazo. É a tela de abertura da Supervisão e da Gestão.</p>
+<p><b>Como chegar:</b> menu <i>Dashboard</i>. A tela atualiza sozinha a cada 30 segundos (o horário da última atualização aparece ao lado do título). Os números considerem só pedidos <b>já distribuídos</b> a um separador.</p>
+
+<h4>Barra superior e filtros</h4>
+<table>
+<tr><th>Elemento</th><th>O que faz</th></tr>
+<tr><td><b>Modo TV</b></td><td>Deixa a tela em formato de telão: números grandes e filtros escondidos. O botão vira <b>Sair do Modo TV</b>.</td></tr>
+<tr><td><b>Filtros › Turno</b> (Todos / Manhã / Tarde / Noite)</td><td>Filtra os cartões e KPIs pelo turno do pedido. Clique no turno ativo para voltar a "Todos". Pedidos ainda sem turno não entram em nenhum turno específico.</td></tr>
+<tr><td><b>Filtros › Período</b> (De/Até)</td><td>Intervalo de datas. Vazio = hoje. Clique em <b>Filtrar</b> para aplicar; o botão de atualizar (↻) limpa as datas.</td></tr>
+<tr><td><b>Excel</b></td><td>Exporta os dados do painel.</td></tr>
+</table>
+
+<h4>Cartões das 4 etapas</h4>
+<p>Quatro cartões lado a lado: <b>Separação</b>, <b>Checkout</b>, <b>Embalagem</b> e <b>Reposição</b>. Cada um tem o número grande (concluídos), uma <b>barra de progresso</b> (verde = concluído, azul = em andamento, cinza = pendente) e quatro indicadores.</p>
+<table>
+<tr><th>Cartão</th><th>Número grande</th><th>Indicadores</th></tr>
+<tr><td><b>Separação</b></td><td>Pedidos concluídos</td><td>Total de pedidos, Em separação, Pendentes, Total de itens.</td></tr>
+<tr><td><b>Checkout</b></td><td>Checkouts concluídos</td><td>Total, Em checkout (no balcão agora), Pendentes (fila), Total de itens.</td></tr>
+<tr><td><b>Embalagem</b></td><td>Pedidos embalados</td><td>Emb. pendente, Embalando, Embalados, Total de itens.</td></tr>
+<tr><td><b>Reposição</b></td><td>Reposições resolvidas</td><td>Total, Pendentes, Não encontrados, Encontrados.</td></tr>
+</table>
+<p>Logo abaixo, a linha <b>⏱ Previsão</b> estima quando os pedidos pendentes terminam, com base na velocidade dos já concluídos.</p>
+
+<h4>Alertas e Gargalos da Operação</h4>
+<p>Lista até <b>8</b> pedidos <b>pendentes ou em separação</b> que já passaram do <b>SLA de 6 horas</b> (do mais atrasado para o menos): número, cliente, situação (<i>Pendente</i> ou <i>Em separação</i>) e as horas de espera (ex.: <b>7.4h</b>). O título informa o total (<i>"N pedido(s) acima do SLA de 6h"</i>). <b>Clique</b> em um alerta para abrir a tela Pedidos já filtrada nesse número. Sem atrasos: <i>"Nenhum pedido acima do SLA de 6h no momento."</i></p>
+
+<h4>Ranking geral</h4>
+<p>Quatro colunas — <b>Separação</b> (pedidos e itens), <b>Checkout</b>, <b>Embalagem</b> e <b>Reposição</b> (repostos) — com os colaboradores do período em ordem (1º, 2º, 3º…) e uma barra proporcional ao melhor. O rótulo mostra <i>Hoje</i> ou o intervalo escolhido. Sem dados: <i>"Sem dados no período"</i>.</p>
+
+<h4>Gráficos</h4>
+<table>
+<tr><th>Gráfico</th><th>O que mostra</th></tr>
+<tr><td><b>Status dos pedidos — hoje</b> (pizza)</td><td>Pendentes, Separando e Concluídos.</td></tr>
+<tr><td><b>Situação da reposição</b> (pizza)</td><td>Pendente, Concluída e Não encontrado.</td></tr>
+<tr><td><b>Produção por hora</b> (barras)</td><td>Por hora do dia: Separação, Checkout, Embalagem e Reposição, mais a linha vermelha da <b>Meta (total/h)</b>.</td></tr>
+<tr><td><b>Funil operacional — hoje</b></td><td>Importados → Separados → Embalados → Checkout: mostra onde os pedidos "ficam parados".</td></tr>
+</table>
+<p>Cada gráfico tem o botão <b>↺</b> para recarregar só ele.</p>
+
+<div class="note info">No código existem ainda os painéis <i>Histórico</i> (Produtividade por separador com Hoje/Mês/Ano, e Linha do tempo) e <i>Mapa do estoque</i>, mas os botões das abas correspondentes estão <b>ocultos</b> no momento: hoje a tela mostra somente a aba <b>Operação</b>. O <b>Mapa Vivo</b> (ruas coloridas por demanda e por ruptura/estoque baixo/separação/reposição pendente) faz parte dessa aba oculta.</div>
+
+<h4>Como interpretar</h4>
+<ul>
+  <li>Muitos pedidos "Pendentes" em Separação com poucos "Em separação": falta distribuir ou há separadores ociosos.</li>
+  <li>Checkout com muitos "Pendentes" e Embalagem vazia: gargalo no checkout.</li>
+  <li>Reposição com muitos "Não encontrados": veja a tela Liberação.</li>
+  <li>Alertas acima de 6h: priorize esses pedidos.</li>
+</ul>
+</section>
+
+<section class="tela" id="tower">
+<h3>Control Tower <span class="tag sup">Supervisão</span><span class="tag gp">Gestão</span></h3>
+<p><b>Para que serve:</b> responder "vamos bater a meta deste turno?". Para cada etapa, compara quanto a equipe <b>está produzindo por hora</b> com quanto <b>precisaria produzir</b> para fechar a meta, e prevê quando o volume restante termina.</p>
+<p><b>Como chegar:</b> menu <i>Control Tower</i>. Ao abrir, carrega os 4 blocos abaixo: etapas, hora a hora, simulador e anomalias.</p>
+
+<h4>1. Cabeçalho do turno e gargalo</h4>
+<p>A linha do turno mostra, por exemplo: <i>"Turno Tarde — termina às 22:00 (3h20 restantes)"</i>. Os turnos usados nos cálculos são: <b>Manhã 06:00–13:00</b>, <b>Tarde 13:00–22:00</b>, <b>Noite 22:00–06:00</b>. Quando o sistema identifica o pior ponto, aparece um aviso vermelho <b>"Gargalo: [etapa]"</b> com o motivo.</p>
+
+<h4>2. Cartões das etapas (Separação, Checkout, Embalagem, Reposição)</h4>
+<table>
+<tr><th>Campo</th><th>Significa</th></tr>
+<tr><td><b>X itens/h</b> (número grande)</td><td>Produção atual: itens processados na <b>última hora</b>.</td></tr>
+<tr><td><b>Necessário: Y itens/h · gap</b></td><td>Ritmo necessário para bater a meta do turno (meta de pedidos × média de itens por pedido ÷ horas do turno). O <b>gap</b> é produção − necessário: <span style="color:var(--g)">+N verde</span> (sobrando) ou <span style="color:var(--r)">−N vermelho</span> (faltando).</td></tr>
+<tr><td><b>Restante</b></td><td>Itens que ainda faltam processar.</td></tr>
+<tr><td><b>Previsão</b></td><td>Tempo para zerar o restante no ritmo atual (ex.: 2h15).</td></tr>
+<tr><td><b>Selo de situação</b></td><td><span style="color:var(--g)">No prazo</span> (previsão ≤ tempo que resta de turno), <span style="color:var(--a)">Risco</span> (passa em até 25%), <span style="color:var(--r)">Atrasado</span> (passa mais de 25%, ou há volume parado com produção zero) e <span style="color:var(--t3)">Concluído</span> (nada restante).</td></tr>
+</table>
+<div class="note">As metas vêm da janela <b>Pedidos › Metas</b> e as horas do turno também. Se a meta não estiver configurada, o sistema usa valores padrão; configure para os números refletirem sua realidade.</div>
+
+<h4>3. Faturamento, Embalagem e Expedição — hora a hora</h4>
+<p>Três cartões: <b>Embalagem</b>, <b>Expedição</b> (os pedidos que concluíram o checkout) e <b>Faturamento</b> (em R$). Cada um mostra o <b>realizado no turno</b>, a <b>Meta do turno</b> (e o % atingido), o <b>Ritmo por hora</b> e a <b>Previsão</b> de fechamento do turno. Selo: <span style="color:var(--g)">No prazo</span> (previsão ≥ 100% da meta), <span style="color:var(--a)">Risco</span> (≥ 85%), <span style="color:var(--r)">Atrasado</span> (abaixo) ou <span style="color:var(--t3)">Sem meta</span> (meta não configurada: <i>"não configurada"</i>).</p>
+<h4>Importar Faturamento (passo a passo)</h4>
+<ol>
+  <li>Clique em <b>Importar Faturamento</b>.</li>
+  <li>Selecione a planilha. Colunas esperadas (o sistema acha pelo nome): <b>Pedido, Faturado, Itens, Data, Hora, Usuário, Nome, Turno, Status</b>.</li>
+  <li>A faixa mostra <i>"N registro(s) — R$ total"</i> e a prévia (Pedido, Data, Hora, Faturado) das 10 primeiras linhas.</li>
+  <li>Clique em <b>Importar</b>. O cartão de Faturamento se atualiza.</li>
+</ol>
+<table>
+<tr><th>Mensagem</th><th>Significa</th></tr>
+<tr><td>Arquivo vazio / Nenhuma linha válida encontrada!</td><td>A planilha não tem linhas com número de pedido.</td></tr>
+<tr><td>Nenhum registro pra importar</td><td>Clicou em Importar sem carregar arquivo.</td></tr>
+<tr><td>Erro ao importar / Erro de conexão</td><td>Falha de servidor/rede.</td></tr>
+</table>
+
+<h4>4. 🔊 Anúncio da operação</h4>
+<p>O botão <b>🔇 Ativar anúncio da operação</b> liga uma <b>voz falada</b> (do navegador, em português) que, a cada <b>1 hora</b> e imediatamente ao ativar, informa: <i>"Na última hora: Separação X pedidos, Checkout Y pedidos, Embalagem Z pedidos. Estamos a N pedidos da meta do turno de Checkout"</i> (ou "Meta … já foi batida!"). O botão vira <b>🔊 Anúncio ativo (clique pra desligar)</b>. Deixe a aba aberta; precisa de som no computador/TV.</p>
+
+<h4>5. Simulador de Capacidade</h4>
+<p>Pergunta "E se eu adicionar/remover pessoas agora?".</p>
+<ol>
+  <li>Em <b>PROCESSO</b> escolha Separação, Checkout ou Embalagem.</li>
+  <li>Em <b>PESSOAS (+/-)</b> digite quantas pessoas adicionar (positivo) ou remover (negativo).</li>
+  <li>O resultado mostra: pessoas ativas hoje e produção atual (itens/h) <b>→</b> pessoas simuladas e produção simulada, a <b>Previsão</b> de término, o <b>Restante</b> e o selo de situação.</li>
+</ol>
+<p>A conta usa a produtividade <b>média por pessoa</b> (produção atual ÷ pessoas que trabalharam na última hora) multiplicada pelas pessoas simuladas. É uma estimativa: não considera diferença de habilidade entre colaboradores.</p>
+
+<h4>6. Anomalias — separadores fora do próprio padrão</h4>
+<p>Lista os separadores cujo <b>ritmo de hoje</b> está abaixo de <b>60% do próprio ritmo histórico</b> (cada pessoa é comparada com ela mesma, não com os colegas). Mostra: <i>"X itens/h hoje (normal: Y/h)"</i> e o percentual em vermelho. Ignora quem trabalhou pouco hoje (menos de 20 itens) e quem não tem histórico suficiente. Vazio: <i>"Nenhuma anomalia de ritmo hoje."</i> Use como convite a conversar/ajudar, não como punição: pode ser pedido difícil, falta de item, equipamento ou ausência.</p>
+<div class="note info">Todos os números do Control Tower vêm de dados reais do sistema; quando falta dado (ex.: sem meta), ele mostra "Sem meta" ou "não configurada" em vez de inventar um valor.</div>
+</section>
