@@ -1,0 +1,127 @@
+<h2 id="operacao">4. Operação — passo a passo por etapa</h2>
+
+<section class="tela" id="separacao">
+<h3>Separação <span class="tag op">Separador</span><span class="tag sup">Supervisão</span></h3>
+<p><b>Para que serve:</b> é onde o pedido é fisicamente separado no estoque. O separador recebe os pedidos na <b>Fila</b>, caminha pelas ruas conferindo cada item e, ao terminar, o pedido segue para o <b>Checkout</b>.</p>
+<p><b>Quem usa:</b> perfil Separação (no celular/coletor ou no computador) e a Supervisão (para acompanhar ou separar). <b>Como chegar:</b> menu <i>Pedidos</i> (perfil Separação) ou <i>Operação › Separação</i> (Supervisão). No celular, abre direto.</p>
+
+<div class="note">O sistema só mostra ao separador os pedidos que foram <b>distribuídos para ele</b> (ver <a href="#pedidos">Pedidos › Distribuir</a>). Se a fila estiver vazia, a supervisão ainda não distribuiu. Se aparecer em vermelho <i>"Usuário não vinculado a um separador. Fale com o supervisor."</i>, o seu usuário não está ligado a um cadastro de separador: peça para a supervisão usar <b>Cadastros › Corrigir vínculos</b>.</div>
+
+<h4>Como a tela é organizada</h4>
+<table>
+<tr><th>Elemento</th><th>O que mostra</th></tr>
+<tr><td><b>Período + Atualizar</b> (computador)</td><td>Datas De/Até. Os três quadros acima contam os pedidos do período: <b>Total</b>, <b>Pendentes</b> (aguardando) e <b>Separados</b> (concluídos).</td></tr>
+<tr><td>Aba <b>Fila</b></td><td>Seus pedidos ainda não concluídos, com o contador de pedidos na aba.</td></tr>
+<tr><td>Aba <b>Separar</b></td><td>Leitura do pedido e lista de itens (checklist).</td></tr>
+<tr><td>Aba <b>Avisos</b></td><td>Respostas do repositor sobre itens que você marcou como falta/parcial. Contador amarelo na aba.</td></tr>
+<tr><td>Aba <b>Aguard.</b> / <b>Aguardando</b></td><td>Itens "Não encontrado" ou em "Protocolo" dos seus pedidos, esperando a decisão da supervisão.</td></tr>
+<tr><td>Aba <b>Stats</b> (celular)</td><td>Seus números: <b>Hoje</b> (separados hoje), <b>Recebidos</b> (pedidos recebidos hoje), <b>Total</b>.</td></tr>
+</table>
+
+<h3>Passo 1 — Escolher o pedido na Fila</h3>
+<p>Cada pedido da fila é um cartão com: número (<code>#5649461</code>), etiqueta de situação, quantidade de <b>itens</b> e de <b>SKUs</b>, cliente, transportadora e, quando há dados, o <b>tempo estimado</b> de separação (⏱ em verde até 10 min, amarelo até 20, vermelho acima).</p>
+<table>
+<tr><th>Cor / etiqueta do cartão</th><th>Significa</th><th>O que fazer</th></tr>
+<tr><td>Borda normal, etiqueta <b>aguardando sep</b></td><td>Pedido pendente, normal.</td><td>Toque em <b>Iniciar Separação</b>.</td></tr>
+<tr><td>Borda e número <b style="color:var(--r)">vermelhos</b>, etiqueta <b>drive thru</b></td><td>Pedido <b>Drive Thru</b> (cliente esperando). Prioridade.</td><td>Separar primeiro.</td></tr>
+<tr><td>Borda <b style="color:var(--a)">âmbar</b>: "N item(s) aguardando repositor"</td><td>Você marcou falta/parcial e o repositor ainda está buscando.</td><td>Continue o resto do pedido; o item volta quando o repositor resolver.</td></tr>
+<tr><td>Borda <b style="color:#8b5cf6">roxa</b>: "N item(s) aguardando supervisor"</td><td>O repositor não achou; a supervisão precisa liberar.</td><td>Aguarde a liberação (aba Aguardando).</td></tr>
+<tr><td>Borda <b style="color:var(--g)">verde</b>: "N item(s) reposto(s) pelo repositor — volte para este pedido!"</td><td>O item que faltava foi encontrado/reposto.</td><td>Toque em <b>Continuar Separação</b> (botão verde) e colete o item.</td></tr>
+</table>
+<p>Prioridade visual entre as cores: supervisor (roxo) &gt; repositor (âmbar) &gt; reposto (verde) &gt; drive thru (vermelho) &gt; normal.</p>
+<h4>Reordenar a fila</h4>
+<p>Segure a <b>alça de arrastar</b> do cartão e solte na posição desejada. A ordem fica <b>salva</b>: pedidos reordenados vêm primeiro; os demais seguem o padrão (menos itens primeiro). Se der erro, aparece "Erro ao salvar nova ordem."</p>
+<h4>Lotes (apenas no celular)</h4>
+<p>Quando a supervisão forma <b>lotes</b>, eles aparecem como um cartão único: <b>"Lote pronto — #N"</b> (ainda não iniciado) ou <b>"Lote em andamento — #N"</b>. No topo da fila há o seletor <b>Por lote / Pedido a pedido</b> (a escolha fica salva neste aparelho): em <i>Pedido a pedido</i> todos os pedidos, inclusive os de lotes, aparecem soltos. Veja o passo a passo do lote mais abaixo.</p>
+
+<h3>Passo 2 — Abrir o pedido (bipar)</h3>
+<ol>
+  <li>Toque em <b>Iniciar Separação</b> no cartão <i>ou</i> vá na aba <b>Separar</b>, bipe o código do pedido (ou digite o número) no campo <b>Bipe ou digite o número do pedido...</b> e toque em <b>▶</b> (ou <span class="k">Enter</span>).</li>
+  <li>O sistema marca o pedido como <b>Em separação</b>, atribui a você e mostra uma faixa com <b>cliente</b> e <b>transportadora</b>. Mensagem azul: <i>"Pedido N iniciado"</i> (ou <i>"Pedido N carregado"</i> se já era seu).</li>
+  <li>A lista de itens aparece logo abaixo.</li>
+</ol>
+<table>
+<tr><th>Mensagem</th><th>Significa / o que fazer</th></tr>
+<tr><td>Digite o número!</td><td>O campo está vazio (celular).</td></tr>
+<tr><td>Pedido não encontrado!</td><td>O número não existe no sistema: confira a digitação ou se o pedido foi importado.</td></tr>
+<tr><td>Pedido ja concluido!</td><td>Esse pedido já foi finalizado. Nada a fazer.</td></tr>
+<tr><td>Pedido sendo separado por outro operador!</td><td>Outro separador já abriu esse pedido. Peça à supervisão para reatribuir se for engano.</td></tr>
+<tr><td>Erro ao conectar!</td><td>Sem rede. Tente de novo.</td></tr>
+</table>
+<div class="note ok">Se dois separadores bipam o mesmo pedido quase ao mesmo tempo, o sistema entrega para <b>quem chegou primeiro</b> e avisa o segundo.</div>
+
+<h3>Passo 3 — Caixa (quando houver)</h3>
+<div class="note"><b>Atenção:</b> hoje o vínculo obrigatório de caixa na separação individual está <b>desligado</b> no sistema. Ou seja, o checklist abre direto, sem pedir a caixa. O campo "VINCULAR CAIXA" só aparece se a obrigatoriedade for religada pela equipe técnica. Se o pedido já tiver uma caixa (vinda do lote ou de um vínculo anterior), aparece o aviso verde <b>"Caixa N já vinculada"</b>.</div>
+<p>Quando o vínculo estiver ativo: digite o número da caixa (ou toque em <b>Escanear QR</b> para ler o QR da caixa com a câmera) e toque em <b>Vincular</b>. O checklist só aparece depois disso e o botão final mostra <i>"VINCULE A CAIXA ANTES DE CONCLUIR"</i> enquanto faltar. Erros possíveis: <i>"Caixa N ja esta em uso no pedido #X!"</i> (a caixa pertence a outro pedido ainda não finalizado no checkout) e <i>"Caixa N ja esta aguardando checkout no pedido X!"</i>. Escolha outra caixa. Se a caixa ficou presa por engano, a Supervisão libera.</p>
+
+<h3>Passo 4 — Percorrer os itens (checklist)</h3>
+<p>O topo mostra <b>PEDIDO #número</b>, o contador <b>"x/total itens"</b> e uma barra de progresso. Abaixo, as <b>ruas do pedido</b> aparecem como pílulas na ordem física do galpão: a rua em foco (primeira com item pendente) fica azul-escura, as ruas concluídas ficam verdes. Toque em uma pílula para ver todos os itens daquela rua. O botão <b>⇅ A→Z / Z→A</b> inverte o sentido de caminhada.</p>
+<p>Cada item mostra: <b>código</b>, <b>descrição</b>, <b>endereço</b>, <b>quantidade (×N)</b> e, se existir, <i>"Também em: …"</i> (outras localizações em colmeias). No celular os itens vêm agrupados por rua, com <i>"x / y coletados"</i>.</p>
+<p>Para cada item, escolha uma das três ações:</p>
+<table>
+<tr><th>Botão</th><th>Quando usar</th><th>O que acontece</th></tr>
+<tr><td><b>COLETADO</b></td><td>Achou toda a quantidade pedida.</td><td>Item fica verde. Celular vibra e a tela pisca verde.</td></tr>
+<tr><td><b>PARCIAL</b></td><td>Achou só uma parte. Abre o campo <i>"Qtde encontrada (de N)"</i>: digite quantas achou e toque em <b>OK</b>.</td><td>O item fica amarelo com <i>"Encontrou X de N — faltam Y"</i> e o <b>repositor é avisado</b> do que falta. Toast: <i>"Parcial — repositor avisado!"</i>.</td></tr>
+<tr><td><b>FALTA</b></td><td>Não achou nada no endereço.</td><td>Item fica vermelho: <i>"Repositor notificado — aguardando reposição"</i>. Toast: <i>"Falta — repositor avisado!"</i>.</td></tr>
+<tr><td><b>↺ DESFAZER</b></td><td>Marcou errado.</td><td>Pede confirmação (<i>"Desfazer esta marcação? O item volta para pendente e o aviso ao repositor (se houver) é cancelado."</i>). Só funciona se o repositor <b>ainda não começou</b> a cuidar do aviso; se já começou, o sistema recusa.</td></tr>
+</table>
+<table>
+<tr><th>Mensagem na quantidade parcial</th><th>Significa</th></tr>
+<tr><td>Digite uma quantidade válida!</td><td>Campo vazio ou negativo.</td></tr>
+<tr><td>Se encontrou tudo, confirme acima!</td><td>A quantidade digitada é igual ou maior que a pedida. Use COLETADO.</td></tr>
+</table>
+<h4>Avisos que aparecem dentro do item (falta/parcial)</h4>
+<table>
+<tr><th>Texto no item</th><th>O que o repositor fez</th><th>O que você faz</th></tr>
+<tr><td>Repositor notificado — aguardando reposição</td><td>Ainda não resolveu.</td><td>Siga com os outros itens.</td></tr>
+<tr><td>⬆️ Repositor enviou o item — verifique na colmeia</td><td>Item "subiu".</td><td>Vá buscar e marque COLETADO.</td></tr>
+<tr><td>⬆️ Repositor enviou X/N unidades — confirme a quantidade ao coletar</td><td>Enviou só parte.</td><td>Confira e marque COLETADO ou PARCIAL.</td></tr>
+<tr><td>Repositor confirmou reposição</td><td>Reposto no endereço.</td><td>Colete.</td></tr>
+<tr><td>Não localizado — aguardando supervisor liberar</td><td>Não achou após as tentativas.</td><td>Aguarde a Liberação da supervisão.</td></tr>
+</table>
+
+<h3>Passo 5 — Concluir o pedido</h3>
+<p>O botão do rodapé muda conforme a situação:</p>
+<table>
+<tr><th>Texto do botão</th><th>Situação</th><th>Ação</th></tr>
+<tr><td><b>CONCLUIR (N pend.)</b> (cinza)</td><td>Ainda há N itens sem marcar.</td><td>Marque todos os itens.</td></tr>
+<tr><td><b>CONCLUIR PEDIDO</b></td><td>Tudo marcado e sem pendência de reposição.</td><td>Toque. No <b>celular</b>, o pedido é concluído <b>sozinho</b> assim que o último item é coletado, sem precisar tocar.</td></tr>
+<tr><td><b>⏳ AGUARDANDO REPOSITOR (N)</b> + <b>CONCLUIR COM FALTA</b></td><td>Há itens falta/parcial que o repositor ainda não resolveu.</td><td>Opção 1: esperar o repositor e voltar depois. Opção 2: tocar em <b>CONCLUIR COM FALTA</b> para fechar agora o pedido sem esses itens (ele vai ao Checkout como <i>"aguardando item"</i>).</td></tr>
+<tr><td><b>AGUARDANDO SUPERVISOR (N)</b> (roxo, bloqueado)</td><td>Itens "não encontrados" esperando liberação.</td><td>Aguarde a supervisão (tela Liberação).</td></tr>
+</table>
+<p>Mensagens: <i>"Pedido N concluído"</i> (verde); <i>"Pedido N enviado para AGUARDANDO (X item(s) faltando)"</i> (amarelo); <i>"⏳ Ainda aguardando o repositor!"</i>; <i>"Bloqueado! Aguarde o supervisor liberar."</i>; <i>"Ainda há N item(s) não verificado(s)!"</i>; <i>"Nenhum item com falta registrado. Use Concluir normalmente."</i>. Depois de concluir, a tela limpa e o cursor volta para o campo do pedido, pronto para o próximo.</p>
+<div class="note ok">Ao concluir, o pedido entra na <b>fila do Checkout</b>. O tempo que o repositor leva para resolver uma falta <b>não é descontado</b> do seu tempo de separação.</div>
+
+<h3>Separação em lote (celular)</h3>
+<ol>
+  <li>Na Fila, toque no cartão <b>Lote pronto — #N</b>. Abre a tela <b>"Escolher pedidos do lote"</b>: todos os pedidos vêm marcados. <b>Desmarque</b> os que prefere separar sozinho (toque na seta para ver os itens de cada um antes de decidir).</li>
+  <li>Toque em <b>Começar separação</b>. É preciso manter pelo menos 1 pedido marcado (<i>"Marque ao menos 1 pedido pra formar o lote"</i>). Os desmarcados saem do lote e voltam à fila como pedidos comuns.</li>
+  <li>Se o sistema pedir a caixa de cada pedido (<i>"Atribuir caixas físicas"</i>), digite o número da caixa de cada um. Não pode faltar nenhuma (<i>"Informe o número da caixa para o pedido #X"</i>) nem repetir (<i>"Caixa "N" já foi usada em outro pedido"</i>).</li>
+  <li>A tela do lote mostra 4 contadores (<b>Pedidos, Itens, SKUs, Ruas</b>), a barra "x / y itens" e os chips <b>Pedidos do lote</b> (cada um com uma cor e <i>"#pedido · feitos/total"</i>; toque para ver os itens daquele pedido).</li>
+  <li>O lote é separado <b>rua por rua</b> ("RUA ATUAL"). Para cada item/grupo da rua escolha: <b>Encontrei tudo</b>, <b>Parcial</b> (informe a quantidade encontrada) ou <b>Falta</b> (escolha o <b>Motivo da falta</b>: <i>Estoque vazio</i>, <i>Produto não localizado</i> ou <i>Divergência de estoque</i>). <b>↺ Desfazer</b> corrige uma marcação.</li>
+  <li>Quando a rua inteira é resolvida, o sistema mostra <i>"Rua X concluída"</i> e <b>avança sozinho</b> para a próxima. Use <b>Voltar</b> para retornar a uma rua e <b>Revisar divergências</b> para rever falta/parcial. <b>⇅</b> inverte a ordem de ruas.</li>
+  <li>No final aparece <b>Tudo separado</b> (ou <b>Existem divergências</b>). Se houver itens faltando/parciais, confirma: <i>"Concluir com divergências? N item(ns) em falta/parcial vão pro repositor. Os pedidos com divergência ficam aguardando reposição."</i> Toque em <b>Concluir lote</b>.</li>
+  <li>A tela final lista cada pedido com <b>Concluído</b> ✓, <b>Aguardando repositor</b> ou o erro. Toast: <i>"Lote concluído!"</i> ou <i>"Lote enviado para aguardando repositor"</i>.</li>
+  <li>No cartão do lote em andamento, <b>"Separar pedido a pedido"</b> permite pegar um pedido só (<b>Separar só este</b> / <b>Continuar</b>). O botão <b>📋</b> (<i>Lotes concluídos</i>) no topo da Fila mostra o histórico dos seus lotes finalizados (Lote 001, pedidos e itens).</li>
+</ol>
+
+<h3>Aba Avisos</h3>
+<p>Mostra, por item, o que o repositor fez: <b>SUBIU</b>, <b>ABASTECIDO</b> ou <b>AGUARD. GUARDAR</b>, com pedido, hora, código, descrição, endereço, quantidade e quem buscou. Dois botões:</p>
+<ul>
+  <li><b>Ciente — remover notificação</b>: limpa o aviso da sua lista.</li>
+  <li><b>Guardei este item eu mesmo</b> (só em "AGUARD. GUARDAR"): registra você como quem guardou ("Registrado!"), encerrando o aviso sem depender do repositor.</li>
+</ul>
+
+<h3>Aba Aguardando</h3>
+<p>Lista, por pedido, os itens que não foram encontrados (etiqueta laranja <b>NÃO ENCONTRADO</b>) ou já em <b>PROTOCOLO</b> (roxo), com código, descrição, quantidade, endereço e hora do aviso. Serve só para acompanhamento: quem decide é a supervisão (tela Liberação).</p>
+
+<h4>Dúvidas comuns da Separação</h4>
+<table>
+<tr><th>Situação</th><th>Solução</th></tr>
+<tr><td>Não aparece nenhum pedido na fila</td><td>A supervisão ainda não distribuiu, ou seu usuário não está vinculado a um separador.</td></tr>
+<tr><td>Marquei FALTA sem querer</td><td>Toque em ↺ DESFAZER logo em seguida. Se o repositor já iniciou a busca, o sistema não deixa: avise-o.</td></tr>
+<tr><td>O botão CONCLUIR está bloqueado</td><td>Veja o texto do botão: itens sem marcar, aguardando repositor, ou aguardando supervisor.</td></tr>
+<tr><td>Concluí e o pedido sumiu</td><td>Normal: ele foi para o Checkout. Fica no histórico/Estatísticas.</td></tr>
+<tr><td>No lote, vários itens aparecem na mesma tela</td><td>O lote é navegado <b>por rua</b>: todos os endereços e itens da rua aparecem juntos, de todos os pedidos do lote, para coletar numa passada só.</td></tr>
+</table>
+</section>

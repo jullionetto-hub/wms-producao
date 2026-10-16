@@ -1,0 +1,78 @@
+<section class="tela" id="checkout">
+<h3>Checkout <span class="tag op">Checkout</span><span class="tag sup">Supervisão</span></h3>
+<p><b>Para que serve:</b> é a conferência final do pedido que o separador terminou. O operador de checkout abre o pedido, confere os itens contra o que está na caixa e confirma. Ao confirmar, o pedido segue para a <b>Embalagem</b> e a caixa é liberada para reutilização.</p>
+<p><b>Quem usa:</b> perfil Checkout (celular/coletor ou computador) e Supervisão. <b>Como chegar:</b> menu <i>Checkout</i>. No celular, as abas ficam na barra inferior: <b>FILA</b>, <b>CHECKOUT</b> (busca), <b>FEITOS</b> e <b>AGUARDANDO</b>.</p>
+
+<h4>De onde vêm os pedidos</h4>
+<p>Quando o separador conclui um pedido, o sistema cria um registro de checkout com status <b>fila</b>. Quando o operador o abre, vira <b>pendente</b> (em atendimento). Só <b>um operador por vez</b> pode atender o mesmo pedido.</p>
+
+<h4>Elementos da tela (computador)</h4>
+<table>
+<tr><th>Elemento</th><th>O que mostra</th></tr>
+<tr><td><b>Período</b> + Atualizar</td><td>Datas De/Até para os números do topo (começa em hoje).</td></tr>
+<tr><td>Quadro <b>Total</b></td><td>Pedidos no período.</td></tr>
+<tr><td>Quadro <b>Aguardando item</b></td><td>Pedidos pausados ou com pendência. <i>"clique para ver ↗"</i> abre a lista.</td></tr>
+<tr><td>Quadro <b>Checkouts</b></td><td>Checkouts concluídos.</td></tr>
+<tr><td>Abas <b>Fila</b> e <b>Feitos</b></td><td><b>Fila</b>: pedidos esperando checkout <i>e</i> os que estão em espera por item (cartão laranja com a etiqueta <i>aguardando item</i> e o botão <b>Retomar Checkout</b>). <b>Feitos</b>: concluídos hoje. Cada aba tem seu selo de contagem. (A aba separada "Aguardando" existe no celular; no computador os pedidos em espera ficam na própria Fila.)</td></tr>
+<tr><td><b>Escanear / fila de checkout</b></td><td>Campo <i>"Digite o número do pedido..."</i> + botão <b>Buscar Pedido</b>. Em <b>Resultado</b> aparece o pedido encontrado.</td></tr>
+</table>
+
+<h3>Passo a passo do checkout</h3>
+<h4>1. Escolher o pedido</h4>
+<ol>
+  <li>Na aba <b>FILA</b>, cada pedido mostra: número, <i>"aguardando ck"</i>, quantidade de itens, nome do separador, <b>caixa</b> (<i>Cx: N</i>) e o horário em que a separação terminou (<i>"✓ Sep às HH:MM"</i>). Se o pedido foi concluído <b>com falta</b>, aparece uma faixa laranja com os itens em falta e a borda fica laranja.</li>
+  <li>Toque em <b>Iniciar Checkout</b>. No celular o sistema muda para a aba <b>CHECKOUT</b> e busca o pedido sozinho.</li>
+  <li>Alternativa: <b>bipe o QR da caixa</b> (botão <b>Escanear QR</b>) ou digite o número da caixa/pedido e toque em <b>Buscar Pedido</b> (ou <span class="k">Enter</span>).</li>
+</ol>
+<table>
+<tr><th>Mensagem</th><th>Significa</th></tr>
+<tr><td>Digite o número da caixa! / Digite o número do pedido!</td><td>Campo vazio.</td></tr>
+<tr><td>Pedido não encontrado ou ainda não está aguardando checkout.</td><td>O número não existe, o separador ainda não concluiu, ou o checkout já foi feito. Confira na tela Pedidos.</td></tr>
+<tr><td>Pedido #N já está sendo processado por Fulano</td><td>Outro operador abriu esse checkout e ainda não terminou. Peça a ele para concluir ou pausar.</td></tr>
+<tr><td>Erro ao buscar!</td><td>Falha de rede. Tente de novo.</td></tr>
+</table>
+<p>Pedidos já concluídos hoje também podem ser encontrados na busca: aparecem com a faixa verde <i>"Checkout às HH:MM"</i> e sem botões de ação.</p>
+
+<h4>2. Conferir os itens</h4>
+<p>O resultado mostra o cartão do pedido: número, quantidade de itens, separador, <i>"Iniciado às"</i> e o <b>código de barras</b> do pedido (Code 128, que o coletor consegue ler). Abaixo, o <b>HISTÓRICO DE CHECKOUT</b> do dia (quem abriu, pausou ou retomou, horários e minutos) e a lista <b>ITENS DO PEDIDO — confira cada um</b>.</p>
+<ol>
+  <li>Para cada item (código, descrição, endereço e quantidade) confira o produto na caixa.</li>
+  <li>Toque em <b style="color:var(--g)">✓</b> se está correto ou em <b style="color:var(--r)">✕</b> se está errado/faltando. O botão ✕ acende em vermelho; ✓ volta ao verde.</li>
+  <li>Ao marcar o primeiro ✕, aparece o botão laranja <b>⏳ Registrar Pendência</b>. A marcação também fica gravada no histórico do separador (para consulta futura, sem afetar a pontuação).</li>
+</ol>
+
+<h4>3. Finalizar — escolha o caminho</h4>
+<table>
+<tr><th>Botão</th><th>Quando usar</th><th>Resultado</th></tr>
+<tr><td><b>CONFIRMAR CHECKOUT</b></td><td>Tudo conferido e correto.</td><td>Toast <i>"Checkout confirmado! Caixa liberada automaticamente."</i>. O pedido sai da Fila, vai para <b>Feitos</b> e entra na fila da <b>Embalagem</b>. O número da caixa fica livre para outro pedido. O tempo entre abrir e confirmar é registrado.</td></tr>
+<tr><td><b>⏳ Registrar Pendência</b></td><td>Marcou pelo menos um item com ✕.</td><td>Toast <i>"Pendência registrada! Pedido enviado para fila de espera."</i> O pedido vai para <b>AGUARDANDO</b> com a lista <b>ITENS FALTANDO</b>. Sem item marcado: <i>"Marque pelo menos um item como faltando!"</i></td></tr>
+<tr><td><b>⏸ Pausar</b></td><td>Precisa interromper (ex.: aguardar um item, trocar de estação).</td><td><i>"Checkout pausado! Disponível na aba Aguardando."</i> O tempo da sessão é fechado e outro operador pode retomar.</td></tr>
+<tr><td><b>Liberar</b></td><td>Liberar a caixa sem concluir (ex.: caixa vinculada por engano).</td><td>Pede confirmação: <i>"Liberar esta caixa? Ela ficará disponível para uso."</i> Libera o número da caixa e, <b>se o checkout nunca foi confirmado, o registro de checkout é removido</b>. Use com cuidado e de preferência com a supervisão.</td></tr>
+</table>
+
+<h4>4. Retomar um pedido em espera</h4>
+<ol>
+  <li>No celular, abra a aba <b>AGUARDANDO</b> (no computador, procure os cartões laranja na <b>Fila</b>). Cada pedido mostra <i>⏳ AGUARDANDO</i>, quantidade de itens, separador, caixa e a lista <b>ITENS FALTANDO</b> (código · descrição · xquantidade).</li>
+  <li>Quando o item chegar (por exemplo, o repositor abasteceu), toque em <b>▶ Retomar Checkout</b>. Toast: <i>"▶ Checkout retomado!"</i>. O pedido é aberto na aba CHECKOUT.</li>
+  <li>Confira e <b>Confirme</b> normalmente.</li>
+</ol>
+<table>
+<tr><th>Mensagem</th><th>Significa</th></tr>
+<tr><td>Checkout não está em espera</td><td>Alguém já retomou ou concluiu. Atualize a tela.</td></tr>
+<tr><td>Checkout já foi concluído / Este checkout já foi confirmado por outro operador.</td><td>Dois operadores mexeram no mesmo pedido; o outro foi mais rápido. Nada a refazer.</td></tr>
+<tr><td>Erro ao confirmar checkout! / Erro de rede ao confirmar!</td><td>Não foi gravado. Busque o pedido de novo para ver o estado real antes de repetir.</td></tr>
+</table>
+
+<h4>Aba FEITOS</h4>
+<p>Lista os checkouts concluídos <b>hoje</b>: número, horário do checkout, quantidade de itens, separador e operador. O contador mostra "N feitos". No computador há a etiqueta <b>✓ Feito</b> ou <b>Liberado</b>.</p>
+
+<div class="note ok"><b>Regras importantes:</b> (1) um pedido só aparece na Fila depois que o separador conclui; (2) pedidos que já estão em <i>Aguardando</i> não aparecem duplicados na Fila; (3) depois do checkout, o pedido aparece na Embalagem como pendente; se não aparecer, a supervisão usa <b>Liberação › Reenviar para Embalagem</b>.</div>
+<h4>Dúvidas comuns</h4>
+<table>
+<tr><th>Situação</th><th>Solução</th></tr>
+<tr><td>O pedido não aparece na Fila</td><td>Verifique se o separador concluiu e se a data/período está correto. Pedidos concluídos "com falta" ficam em Aguardando.</td></tr>
+<tr><td>Confirmei o checkout mas o pedido não foi para a Embalagem</td><td>Peça à supervisão: Liberação › <b>Reenviar para Embalagem</b> (informando o nº do pedido).</td></tr>
+<tr><td>Preciso trocar de computador no meio do checkout</td><td>Toque em <b>Pausar</b> e retome na outra estação pela aba Aguardando.</td></tr>
+<tr><td>O QR da caixa não lê</td><td>Digite o número manualmente no campo e toque em Buscar.</td></tr>
+</table>
+</section>

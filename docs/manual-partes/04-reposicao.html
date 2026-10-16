@@ -1,0 +1,96 @@
+<section class="tela" id="reposicao">
+<h3>Reposição <span class="tag op">Repositor</span><span class="tag sup">Supervisão</span></h3>
+<p><b>Para que serve:</b> resolver os itens que o separador <b>não encontrou</b> (falta ou parcial). O repositor procura o produto, leva até o picking e abastece. Cada item passa por etapas visíveis em abas, e o separador é avisado em cada passo.</p>
+<p><b>Quem usa:</b> perfil Reposição (celular/coletor ou computador) e Supervisão (acompanha, ajusta e libera). <b>Como chegar:</b> menu <i>Solicitações</i> (Reposição) ou <i>Operação › Reposição</i> (Supervisão). Um contador vermelho no menu mostra quantos itens esperam.</p>
+<div class="note info"><b>Função do repositor</b> (cadastrada pela supervisão: Geral, Busca no armazém ou Abastecimento) aparece no cabeçalho como <i>REPOSITOR</i>, <i>REPOSITOR BUSCA</i> ou <i>REPOSITOR ABASTECIMENTO</i>. Hoje ela identifica o papel do colaborador no cabeçalho; as mesmas abas e botões ficam disponíveis para todos.</div>
+
+<h4>O caminho completo de um item</h4>
+<div class="flow">
+  <span>Separador marca FALTA/PARCIAL</span><i>→</i><span>SEPARAR (pendente)</span><i>→</i><span>Iniciar Busca (Procurando)</span><i>→</i><span>Encontrei → SEPARADO</span><i>→</i><span>Subiu → SUBIU</span><i>→</i><span>Abastecido ✔</span>
+</div>
+<div class="flow">
+  <span>Procurando</span><i>→</i><span>Não encontrei (1ª e 2ª)</span><i>→</i><span>volta à fila</span><i>→</i><span>3ª falha</span><i>→</i><span>BUSCA FINAL / Liberação</span><i>→</i><span>Encontrei ou falta definitiva (Protocolo)</span>
+</div>
+
+<h4>Abas (celular: barra inferior; computador: abas no topo)</h4>
+<table>
+<tr><th>Aba</th><th>O que lista</th><th>Botão principal</th></tr>
+<tr><td><b>SEPARAR</b></td><td>Itens pendentes e os que estão sendo procurados (<i>Procurando</i>).</td><td><b>Iniciar Busca</b>; depois <b>Encontrei</b> / <b>Não encontrei</b>.</td></tr>
+<tr><td><b>SEPARADO</b></td><td>Itens encontrados, esperando levar ao picking (inclui <i>Aguard. Entregar</i>).</td><td><b>Subiu</b></td></tr>
+<tr><td><b>SUBIU</b></td><td>Itens que já subiram, esperando abastecer.</td><td><b>Abastecido</b></td></tr>
+<tr><td><b>BUSCA FINAL</b></td><td>Itens "Não encontrado" (3 tentativas esgotadas) e os em <i>Busca Final</i>.</td><td><b>Buscar uma última vez</b>; depois <b>Encontrei</b> / <b>Não encontrei</b>.</td></tr>
+<tr><td><b>ENTRADA</b> (celular)</td><td>Registro de entrada manual de produto.</td><td>Ver <a href="#entrada">Entrada Manual</a>.</td></tr>
+<tr><td><b>Indicadores</b> e <b>Ranking</b> (computador)</td><td>Números por colaborador e produtos que mais geram reposição.</td><td>Filtrar / Excel.</td></tr>
+</table>
+<p>Cada aba mostra a quantidade de itens em um selo. No computador há ainda o filtro <b>Período</b> (começa em hoje) e o botão <b>Filtrar</b>, e quatro quadros de resumo no alto: <b>Separar</b> (pendentes), <b>Separado</b> (em andamento), <b>Subiu</b> (para guardar) e <b>Busca Final</b> (aguardando).</p>
+
+<h4>Como ler um cartão de item</h4>
+<ul>
+  <li>Barra colorida na lateral conforme a situação: âmbar (Separar), roxo (Procurando), azul (Separado), azul-claro (Subiu), verde (Abastecido), vermelho (Não encontrado/Busca Final), cinza (Protocolo), lilás (Devolução).</li>
+  <li><b>Código</b> e <b>descrição</b> do produto; <b>nº do pedido</b>, <b>nome do separador</b>, <b>endereço</b>.</li>
+  <li><b>Quantidade</b>: <i>"5 un"</i> em vermelho; se o repositor já informou o que achou, <i>"2/5 un"</i> em laranja.</li>
+  <li><b>Selo de entrega</b>: <b>Drive Thru</b> (vermelho, também para "Retirada"), <b>Prime</b> (amarelo), <b>SEDEX</b>, <b>PAC</b>, <b>MOTOBOY</b>. Itens de Drive Thru devem ter prioridade.</li>
+  <li><b>Tentativas:</b> selo <i>"2ª tentativa"</i> ou <i>"Última tentativa"</i>; abaixo, <i>"Tentativas anteriores"</i> com turno, quem buscou e horários, para você não repetir o mesmo caminho.</li>
+  <li><b>Itens iguais de vários pedidos</b> (mesmo código) aparecem agrupados sob um cabeçalho laranja <i>"N pedidos"</i>: busque uma vez e resolva todos.</li>
+</ul>
+
+<h3>Passo a passo do repositor</h3>
+<h4>1. Aba SEPARAR — procurar o item</h4>
+<ol>
+  <li>Escolha um cartão. Em <b>Iniciar Busca</b> o botão mostra a tentativa (<i>1ª tentativa</i>, <i>2ª tentativa</i> ou <i>Última tentativa</i>). Toque nele. Mensagem: <i>"Busca iniciada! (tentativa N)"</i>. O cartão passa para <b>Procurando</b> com o seu nome (<i>"Fulano está buscando"</i>), para ninguém duplicar a busca.</li>
+  <li>Vá ao estoque procurar o produto.</li>
+  <li><b>Achou:</b> toque em <b>Encontrei</b>. Abre <b>"Quantas unidades encontrou?"</b> (o campo já vem com a quantidade do pedido). Se achou mais do que o pedido precisa, digite a quantidade <b>total</b> que vai abastecer a colmeia (dica da tela). Toque em <b>Confirmar</b>. O item vai para <b>SEPARADO</b>.</li>
+  <li><b>Não achou:</b> toque em <b>Não encontrei</b>.
+    <ul>
+      <li><b>1ª ou 2ª vez:</b> mensagem <i>"Voltou para a fila — próximo turno vai buscar."</i> O item volta para SEPARAR com o selo da tentativa seguinte e o histórico da tentativa que falhou. <b>Qualquer</b> repositor (de qualquer turno) pode pegar a próxima.</li>
+      <li><b>3ª vez:</b> mensagem <i>"3ª tentativa — item enviado para Liberação do supervisor."</i> O item vai para a aba <b>BUSCA FINAL</b> e aparece na tela <b>Liberação</b> da supervisão.</li>
+    </ul>
+  </li>
+</ol>
+<h4>2. Aba SEPARADO — levar ao picking</h4>
+<ol>
+  <li>Com o produto em mãos, toque em <b>Subiu</b>.</li>
+  <li>Abre <b>"Quantas unidades estão subindo?"</b> com botões <b>−</b> e <b>+</b> (o máximo é a quantidade do pedido). Se a quantidade for menor, aparece o aviso <i>"Quantidade parcial — o separador será notificado da falta."</i></li>
+  <li><b>Confirmar</b>. O separador recebe o aviso <b>SUBIU</b> e pode ir coletar.</li>
+</ol>
+<h4>3. Aba SUBIU — abastecer</h4>
+<ol>
+  <li>Guarde o produto no endereço/colmeia e toque em <b>Abastecido</b>. Mensagem <i>"Salvo!"</i>.</li>
+  <li>O item é considerado <b>resolvido</b> e o separador vê <b>ABASTECIDO</b>. Se era o último item pendente do pedido e o separador já havia concluído "com falta", o sistema pode <b>concluir o pedido sozinho</b> e mandá-lo ao Checkout.</li>
+</ol>
+<h4>4. Aba BUSCA FINAL — última conferência</h4>
+<ol>
+  <li>Itens que esgotaram as 3 tentativas aparecem com <b>Buscar uma última vez</b>. Toque (<i>"Busca final iniciada!"</i>). O cartão mostra <i>"Fulano está fazendo a busca final"</i>.</li>
+  <li><b>Encontrei</b> → confirma <i>"Encontrou o item? Marca como resolvido — não volta mais pro separador, considera entregue."</i> → <b>Sim, encontrei</b> → <i>"Resolvido!"</i>.</li>
+  <li><b>Não encontrei</b> → confirma <i>"Confirmar falta definitiva? Essa é a última busca — não dá pra desfazer depois. O item fecha em protocolo."</i> → <b>Confirmar falta</b> → <i>"Falta confirmada."</i> O item fecha em <b>protocolo</b>.</li>
+</ol>
+<div class="note"><b>Reordenar:</b> na aba SEPARAR, arraste o cartão pela alça para priorizar. A nova ordem é <b>compartilhada</b>: todos os repositores passam a ver a mesma sequência. Por padrão, Drive Thru vem primeiro e depois o mais recente.</div>
+<div class="note">O sistema não deixa <b>voltar</b> um item já encerrado (abastecido, protocolo, devolução): <i>"Item já está em estado final: … Não pode ser revertido."</i> Também recusa ações fora de ordem, como <i>"Item não pode iniciar busca (status atual: …)"</i>: atualize a tela, outra pessoa já mexeu no item.</div>
+
+<h4>Mensagens da Reposição</h4>
+<table>
+<tr><th>Mensagem</th><th>Significa</th></tr>
+<tr><td>Salvo! / Resolvido!</td><td>Ação gravada com sucesso.</td></tr>
+<tr><td>Erro ao salvar / Erro ao iniciar busca</td><td>O servidor recusou: atualize e tente de novo.</td></tr>
+<tr><td>Sem conexão</td><td>Falta de rede. Nada foi salvo.</td></tr>
+<tr><td>Máximo de 3 tentativas atingido. Item enviado para Liberação.</td><td>Ao tentar iniciar a 4ª busca, o item é enviado direto para a supervisão.</td></tr>
+<tr><td>Erro ao carregar — toque atualizar</td><td>Falha ao listar. Use ↺ ou Atualizar.</td></tr>
+</table>
+
+<h3>Visão da Supervisão (computador)</h3>
+<ul>
+  <li><b>Quatro abas</b> iguais às do celular, mais <b>Indicadores</b> e <b>Ranking</b>.</li>
+  <li><b>Indicadores por colaborador:</b> período + <b>Filtrar</b> + <b>Excel</b>. Colunas: <b>Colaborador</b>, <b>Pegou</b> (itens que buscou), <b>Guardou</b>, <b>Abastecidos</b>, <b>Não enc.</b> e <b>Total</b>. Clique em ▼ para ver os itens de cada pessoa. O botão <b>Tentativas</b> exporta para Excel o detalhe de cada tentativa (quem, turno, horários e resultado), útil para análise.</li>
+  <li><b>Produtos que mais geram reposição:</b> ranking por <b>Código/Produto</b>, <b>Frequência</b> e <b>Última vez</b>, com Excel. Mostra onde o estoque do picking costuma faltar.</li>
+  <li><b>Tabela de acompanhamento:</b> permite à supervisão corrigir <b>quem pegou</b> e <b>quem guardou</b> (lista de colaboradores; ✕ limpa), registrar <b>Observação</b>, e marcar manualmente <b>Subiu</b>, <b>Protocolo</b> ou <b>Devolução</b>. Cada linha tem o <b>Histórico</b> (hora, quem, ação).</li>
+  <li><b>+ Entrada Manual:</b> registra chegada/abastecimento sem pedido. Campos: <b>Código do produto*</b> (ex.: <code>PB521-Lollipop</code>), <b>Descrição</b>, <b>Quantidade</b>, <b>Quem guardou*</b>, <b>Observação</b> (ex.: "chegou do fornecedor…"). Botão <b>Registrar Entrada</b>. Avisos: <i>"Informe o código do produto"</i> e <i>"Selecione quem guardou"</i>.</li>
+</ul>
+<h4>Dúvidas comuns</h4>
+<table>
+<tr><th>Situação</th><th>Solução</th></tr>
+<tr><td>Dois repositores no mesmo item</td><td>Só um consegue iniciar; o outro vê <i>"Fulano está buscando"</i>. Pegue outro item.</td></tr>
+<tr><td>Cliquei Encontrei com a quantidade errada</td><td>Peça à supervisão para ajustar no acompanhamento; ou corrija a quantidade na etapa seguinte (Subiu).</td></tr>
+<tr><td>Item sumiu da minha aba</td><td>Ele avançou de etapa (confira SEPARADO/SUBIU) ou outro turno/colega o pegou.</td></tr>
+<tr><td>Não vejo itens de outro turno</td><td>Itens que voltaram para a fila ficam disponíveis para o turno seguinte; confira o filtro de período.</td></tr>
+</table>
+</section>

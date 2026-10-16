@@ -1,0 +1,96 @@
+<h2 id="acesso">2. Acesso, perfis e navegação</h2>
+
+<section class="tela" id="login">
+<h3>Tela de login</h3>
+<p><b>Para que serve:</b> identificar quem está usando o sistema e abrir o menu certo para a função dele. Toda ação fica registrada com o nome do usuário (separação, checkout, liberações, auditoria).</p>
+<h4>Campos</h4>
+<table>
+<tr><th>Campo</th><th>Como preencher</th></tr>
+<tr><td><b>Perfil de acesso</b></td><td>Lista com 6 opções: <b>Supervisão, Separação, Reposição, Checkout, Embalagem, Gestão</b>. Escolha o perfil com que vai trabalhar <i>hoje</i>. Só aparece o que o seu cadastro permite.</td></tr>
+<tr><td><b>Usuário</b></td><td>O login cadastrado (ex.: <code>joao.silva</code>). Não diferencia maiúsculas de minúsculas na contagem de tentativas.</td></tr>
+<tr><td><b>Senha</b></td><td>O ícone de olho no canto mostra ou oculta o que foi digitado.</td></tr>
+<tr><td><b>Entrar</b></td><td>Valida e abre o sistema. Também funciona com a tecla <span class="k">Enter</span>.</td></tr>
+</table>
+<h4>Passo a passo</h4>
+<ol>
+  <li>Toque no campo <b>Selecione seu perfil</b> e escolha o perfil. O cursor vai sozinho para o campo Usuário.</li>
+  <li>Digite o <b>usuário</b> e a <b>senha</b>.</li>
+  <li>Toque em <b>Entrar</b>.</li>
+  <li>O sistema abre a tela inicial do perfil: no celular/coletor, separador, repositor, checkout e embalador entram direto na versão mobile (com barra de abas embaixo); no computador, aparece o menu lateral.</li>
+</ol>
+<h4>Mensagens que podem aparecer</h4>
+<table>
+<tr><th>Mensagem</th><th>Causa e solução</th></tr>
+<tr><td>Selecione um perfil!</td><td>Você não escolheu o perfil. Escolha na lista.</td></tr>
+<tr><td>Preencha usuário e senha!</td><td>Algum campo está vazio.</td></tr>
+<tr><td>Login ou senha incorretos!</td><td>Usuário inexistente, inativo ou senha errada. Confira se o caps lock está ligado. Se esqueceu a senha, peça à supervisão para redefinir.</td></tr>
+<tr><td>Este colaborador não pode acessar este perfil!</td><td>Você escolheu um perfil que não está liberado no seu cadastro. Escolha o seu perfil principal ou peça à supervisão um "acesso extra".</td></tr>
+<tr><td>Muitas tentativas para este usuário. Aguarde 5 minutos.</td><td>Proteção contra tentativa de adivinhar senha: depois de <b>10 senhas erradas</b> seguidas para o mesmo usuário (a partir do mesmo local), o login fica bloqueado por 5 minutos. Um login correto nunca gasta a cota.</td></tr>
+<tr><td>Senha temporária expirada. Contate o supervisor.</td><td>A senha provisória passou do prazo. A supervisão precisa gerar outra.</td></tr>
+<tr><td>Erro ao conectar com o servidor!</td><td>Sem internet/Wi-Fi ou sistema fora do ar. Verifique a rede e tente de novo.</td></tr>
+</table>
+<div class="note info">Se você fechar o navegador e reabrir, o sistema <b>restaura a sessão</b> sozinho (a sessão dura até 8 horas e renova enquanto você usa). Por isso, em aparelho compartilhado, <b>sempre toque em Sair</b> ao terminar: senão o próximo colaborador entra com o seu perfil.</div>
+</section>
+
+<section class="tela" id="trocasenha">
+<h3>Troca de senha</h3>
+<h4>Senha temporária (primeiro acesso ou senha redefinida)</h4>
+<p>Quando a supervisão cria o usuário ou redefine a senha, ela é gerada como <code>Nome@Ano</code> e é <b>temporária</b>. No primeiro login aparece a tela <b>Troca de Senha Obrigatória</b>:</p>
+<ol>
+  <li>Digite a <b>nova senha</b> (mínimo <b>6 caracteres</b>).</li>
+  <li>Digite de novo em <b>Confirmar nova senha</b>. O olho mostra/oculta cada campo.</li>
+  <li>Toque em <b>Salvar nova senha</b>.</li>
+  <li>A página recarrega e mostra a mensagem verde <b>"Senha alterada! Faça o login."</b>. Entre com a senha nova.</li>
+</ol>
+<table>
+<tr><th>Mensagem</th><th>Significa</th></tr>
+<tr><td>Preencha todos os campos</td><td>Faltou a nova senha ou a confirmação.</td></tr>
+<tr><td>Minimo 6 caracteres</td><td>A senha nova é curta demais.</td></tr>
+<tr><td>Senhas nao conferem</td><td>A confirmação é diferente da nova senha.</td></tr>
+</table>
+<h4>Trocar a senha por conta própria (Supervisão e Gestão)</h4>
+<p>No cabeçalho, ao lado de <b>Sair</b>, o botão <b>Senha</b> aparece <b>apenas para Supervisão e Gestão</b>. Informe a senha atual, a nova e a confirmação. Mensagens: "Nova senha minimo 6 caracteres", "Nova senha e confirmacao nao conferem", "Senha atual incorreta" e, ao final, "Senha redefinida com sucesso!". Os demais perfis não têm o botão: se esquecerem a senha ou quiserem trocar, pedem à supervisão.</p>
+</section>
+
+<section class="tela" id="cabecalho">
+<h3>Cabeçalho, menu lateral e Sair</h3>
+<ul>
+  <li><b>Cabeçalho:</b> mostra o <b>nome</b> e o <b>perfil</b> de quem está logado (para repositor aparece a função: Geral, Busca no armazém ou Abastecimento; para gestor aparece "GESTÃO"), o botão <b>Senha</b> (Supervisão/Gestão), <b>Ctrl+K</b> e <b>Sair</b>.</li>
+  <li><b>Menu lateral (computador):</b> grupos como SUPERVISÃO, OPERAÇÃO, PESSOAL. Clique no título do grupo para recolher/abrir. O botão de recolher esconde o menu inteiro e o sistema lembra sua escolha. No celular o menu abre por cima da tela e fecha ao escolher uma opção.</li>
+  <li><b>Contadores no menu:</b> bolinhas vermelhas/coloridas ao lado de Liberação, Reposição, Protocolo e Diário de Bordo indicam o que está esperando por você.</li>
+  <li><b>Ctrl+K:</b> abre a busca rápida de telas. Digite parte do nome (ex.: "perf"), use as setas e <span class="k">Enter</span>. Só lista o que o seu perfil enxerga.</li>
+  <li><b>Sair:</b> abre a pergunta de confirmação. Ao confirmar, o sistema encerra a sessão <b>no servidor</b> (tenta até 3 vezes). Se não conseguir confirmar por falta de rede, mostra "Sem conexão pra confirmar a saída — verifique antes de deixar o aparelho." Nesse caso, confirme que está de volta à tela de login antes de largar o aparelho.</li>
+  <li><b>Tempo logado:</b> o sistema envia um sinal a cada 3 minutos enquanto o app está aberto; é assim que o "tempo de trabalho" do colaborador é contado.</li>
+</ul>
+</section>
+
+<section class="tela" id="perfis">
+<h3>Perfis e o que cada um enxerga</h3>
+<table>
+<tr><th>Perfil</th><th>Telas do menu</th><th>Versão no celular</th></tr>
+<tr><td><b>Supervisão</b></td><td><b>Supervisão:</b> Dashboard, Control Tower, Pedidos, Liberação, Performance, Liderança dos Turnos, Relatórios, Auditoria, Diário de Bordo, Celulares, Caixas, Cadastros, Protocolo. <b>Operação:</b> Separação, Reposição, Entrada Manual, Colmeias, Checkout, Embalagem.</td><td>Usa o menu lateral.</td></tr>
+<tr><td><b>Gestão</b> (gerente/coordenador)</td><td>Tudo da Supervisão, mais <b>Pessoal:</b> Absenteísmo e Matriz de Responsabilidades.</td><td>Menu lateral.</td></tr>
+<tr><td><b>Separação</b></td><td>Pedidos (a separação), Estatísticas, Código de Barras.</td><td>Abas: Fila, Separar, Avisos, Aguardando, Stats.</td></tr>
+<tr><td><b>Reposição</b></td><td>Solicitações, Protocolo, Entrada Manual, Estatísticas.</td><td>Abas: Separar, Separado, Subiu, Busca Final, Entrada.</td></tr>
+<tr><td><b>Checkout</b></td><td>Checkout, Código de Barras, Estatísticas.</td><td>Abas próprias de checkout.</td></tr>
+<tr><td><b>Embalagem</b></td><td>Embalar, Código de Barras, Estatísticas.</td><td>Abas próprias de embalagem.</td></tr>
+</table>
+<h4>Acessos extras e permissões</h4>
+<ul>
+  <li>No cadastro do usuário, o campo <b>Pode acessar também</b> libera outros perfis (Supervisão, Separação, Reposição, Checkout, Embalagem). Quem tem acesso extra escolhe o perfil na hora do login.</li>
+  <li>A Gestão pode <b>revogar</b> ações sensíveis de um usuário (excluir usuário/separador, exclusão em massa de pedidos, zerar dados). A revogação só <b>restringe</b>, nunca dá acesso a algo que o perfil não tinha. Mensagem ao tentar: <i>Acesso negado. A ação "…" foi revogada pra este usuário.</i></li>
+</ul>
+<div class="note">Carregamento de bibliotecas: só os perfis Supervisão, Gestão (gráficos) e Supervisão, Gestão e Repositor (exportação Excel) carregam essas ferramentas. Por isso o botão <b>Excel</b> não existe nas telas dos demais perfis.</div>
+</section>
+
+<section class="tela" id="tempo-real">
+<h3>Tempo real, ↺ e mensagens na tela</h3>
+<ul>
+  <li><b>Atualização automática:</b> as telas operacionais se atualizam sozinhas (por tempo real/sockets e por consulta a cada ~30 segundos). Quando outra pessoa muda algo (ex.: o repositor encontra um item), seu aviso aparece sem recarregar.</li>
+  <li><b>Botão ↺:</b> recarrega só aquele bloco da tela, na hora.</li>
+  <li><b>Mensagens rápidas (toast):</b> aparecem no canto e somem sozinhas em cerca de 3 segundos. Verde = sucesso, amarelo = aviso, vermelho = erro, azul = informação.</li>
+  <li><b>Janelas de confirmação:</b> ações que não têm volta (excluir, zerar, desfazer) pedem uma confirmação com título e botões.</li>
+  <li><b>Retorno no coletor:</b> ao marcar itens no celular o aparelho <b>vibra</b> e a tela <b>pisca rapidamente</b> na cor do resultado: verde (coletado), amarelo (parcial) ou vermelho (falta).</li>
+  <li><b>Aplicativo instalável (PWA):</b> o sistema pode ser instalado na tela inicial do celular. Depois de uma atualização do sistema, feche e reabra o app (ou Ctrl+F5 no computador) para carregar a versão nova.</li>
+</ul>
+</section>

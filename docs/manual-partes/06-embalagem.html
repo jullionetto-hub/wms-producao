@@ -1,0 +1,74 @@
+<section class="tela" id="embalagem">
+<h3>Embalagem <span class="tag op">Embalador</span><span class="tag sup">Supervisão</span></h3>
+<p><b>Para que serve:</b> última etapa física do pedido. O embalador pega os pedidos que já passaram no Checkout, embala e registra o início e o fim. O sistema guarda quem embalou, a que horas começou e terminou, e se era Drive Thru ou Prime.</p>
+<p><b>Quem usa:</b> perfil Embalagem (celular/coletor ou computador) e Supervisão. <b>Como chegar:</b> menu <i>Embalar</i> (Embalagem) ou <i>Operação › Embalagem</i> (Supervisão). No celular as abas ficam embaixo: <b>FILA</b>, <b>EMBALAR</b> e <b>EMBALADOS</b>.</p>
+
+<h4>Elementos da tela (computador)</h4>
+<table>
+<tr><th>Elemento</th><th>O que mostra</th></tr>
+<tr><td><b>Período</b> + Filtrar + <b>Excel</b></td><td>Datas De/Até (começa em hoje). O Excel exporta os pedidos embalados do período.</td></tr>
+<tr><td>Quadros <b>Total</b>, <b>Pendentes</b> (aguardando), <b>Embalados</b></td><td>Resumo do período.</td></tr>
+<tr><td>Aba <b>Fila</b></td><td>Pedidos esperando embalagem ou em andamento. Campo <i>"Filtrar por número..."</i> filtra enquanto digita. ↺ recarrega.</td></tr>
+<tr><td>Aba <b>Embalar</b></td><td>"Embalar — buscar pedido": campo <i>"Digite ou bipe o número do pedido..."</i>, botão <b>Escanear QR</b> e <b>Buscar</b>.</td></tr>
+<tr><td>Aba <b>Embalados</b></td><td>Pedidos já embalados no período (somente leitura).</td></tr>
+</table>
+
+<h4>Como ler o cartão do pedido</h4>
+<ul>
+  <li><b>Número do pedido</b>, <b>cliente</b> e selos: <b style="color:var(--r)">DRIVE</b> (vermelho, Drive Thru), <b style="color:var(--indigo)">PRIME</b> (roxo), <b>EMBALADO</b> (verde) ou <b>⏱ EM ANDAMENTO</b> (azul piscando).</li>
+  <li><b>DATA</b> do pedido, <b>ITENS</b>, <b>SAIU CHECKOUT</b> (hora em que o checkout terminou) e <b>INÍCIO EMB.</b> (hora em que a embalagem começou).</li>
+  <li>Transportadora no rodapé. Na fila do celular: <i>"Checkout às HH:MM"</i> e, quando em andamento, <i>"Embalagem iniciada às HH:MM"</i>.</li>
+  <li>Cores da borda: vermelha = Drive Thru, roxa = Prime, azul = em andamento, verde = embalado.</li>
+</ul>
+
+<h3>Passo a passo</h3>
+<h4>1. Escolher o pedido</h4>
+<ol>
+  <li>Na <b>FILA</b>, os pedidos em andamento aparecem primeiro, depois os pendentes. Cada cartão tem a etiqueta <i>aguardando emb</i>, <i>drive thru</i>, <i>prime</i> ou <i>embalando</i>.</li>
+  <li>Toque em <b>Iniciar Embalagem</b> (ou <b>Continuar Embalagem</b> se já estava em andamento). No celular o sistema vai para a aba <b>EMBALAR</b> com o pedido já carregado.</li>
+  <li>Alternativa: na aba <b>EMBALAR</b>, <b>bipe</b> o código do pedido (ou toque em <b>Escanear QR</b>/digite o número) e toque em <b>Buscar</b>.</li>
+</ol>
+<table>
+<tr><th>Mensagem</th><th>Significa</th></tr>
+<tr><td>Digite o número do pedido!</td><td>O campo está vazio.</td></tr>
+<tr><td>Pedido N não encontrado — Não está na fila de embalagem</td><td>O pedido não passou no Checkout ainda, ou já foi embalado. Confira o número; se o checkout foi feito, avise a supervisão (Liberação › Reenviar para Embalagem).</td></tr>
+<tr><td>Tudo embalado! — Nenhum pedido pendente</td><td>Fila vazia. Não é erro.</td></tr>
+<tr><td>Nenhum pedido encontrado — "texto" não corresponde a nenhum pedido</td><td>O filtro da fila não achou o número digitado.</td></tr>
+</table>
+<h4>2. Iniciar</h4>
+<ol>
+  <li>Com o cartão aberto, toque em <b>Iniciar Embalagem</b>. O botão muda para "Iniciando...".</li>
+  <li>Toast: <i>"Embalagem iniciada às HH:MM!"</i>. O pedido fica <b>EM ANDAMENTO</b> em seu nome e a hora de início é gravada.</li>
+</ol>
+<h4>3. Embalar e encerrar</h4>
+<ol>
+  <li>Embale o pedido fisicamente.</li>
+  <li>Toque em <b>Encerrar</b> (botão verde). Toast <i>"Embalagem concluída!"</i> e a tela mostra <i>"Selecione o próximo pedido na Fila"</i> (celular) ou <i>"Embalagem concluída! Bipe o próximo pedido."</i> (computador). O sistema registra: quem embalou, início, fim, transportadora e se foi Drive Thru/Prime; a ação também entra na <b>Auditoria</b>.</li>
+  <li>Se precisar recomeçar a contagem de tempo (ex.: iniciou o pedido errado), toque em <b>Reiniciar</b>: ele grava um novo horário de início.</li>
+</ol>
+<table>
+<tr><th>Mensagem</th><th>Significa</th></tr>
+<tr><td>Pedido ja embalado!</td><td>Outra pessoa já encerrou esse pedido. Nada a fazer.</td></tr>
+<tr><td>Pedido nao encontrado</td><td>O pedido foi removido ou o número é inválido.</td></tr>
+<tr><td>Erro ao iniciar / Erro ao encerrar</td><td>Falha de rede ou do servidor. Verifique o estado do cartão antes de repetir.</td></tr>
+</table>
+<div class="note ok">O celular do embalador mostra todos os pedidos pendentes de embalagem <b>de qualquer dia</b> (sem filtro de data); a supervisão filtra por data. A fila do celular se atualiza sozinha a cada 30 segundos.</div>
+
+<h4>Aba EMBALADOS</h4>
+<p>No celular lista os embalados <b>hoje</b>. Cada cartão traz: <b>DATA PEDIDO</b>, <b>DATA EMB.</b>, <b>QTDE ITENS</b>, <b>SKUs</b>, <b>INÍCIO EMB.</b> e <b>EMBALADO POR</b>, mais a transportadora. Mensagem vazia: <i>"Nenhum pedido embalado no período de hoje"</i>.</p>
+
+<h3>Ferramentas da Supervisão</h3>
+<ul>
+  <li><b>Excel:</b> exporta os embalados do período.</li>
+  <li><b>Embalagem em lote (Pedidos › Mais ações › Marcar embalado):</b> para fechar dias parados. A supervisão escolhe a <b>data</b> ("aguardando desde") e um ou mais <b>separadores</b>; o sistema mostra uma <b>pré-visualização</b> de quantos pedidos serão afetados. Ao confirmar, esses pedidos viram <b>concluído + embalado</b> (mesmo os que ainda estavam pendentes ou em separação, pulando as etapas), com o nome <i>"Fulano (lote automático)"</i>, e cada um entra na Auditoria como <i>EMBALAR_LOTE</i>. Exige informar data e pelo menos um separador. <b>Ação irreversível pela tela: confira a pré-visualização antes.</b></li>
+  <li><b>Reenviar para Embalagem</b> (Liberação): quando o checkout foi confirmado mas o pedido não aparece na fila.</li>
+  <li><b>Estatísticas de embalagem:</b> pedidos embalados por colaborador no dia, com quantos eram Drive Thru e Prime.</li>
+</ul>
+<h4>Dúvidas comuns</h4>
+<table>
+<tr><th>Situação</th><th>Solução</th></tr>
+<tr><td>Bipei o pedido e diz que não está na fila</td><td>Ele ainda não passou no Checkout ou já foi embalado. Veja o histórico em Embalados.</td></tr>
+<tr><td>Iniciei por engano</td><td>Use <b>Reiniciar</b> se for o mesmo pedido; se for outro, encerre/cancele com a supervisão.</td></tr>
+<tr><td>Embalei mas o nome que aparece é de outra pessoa</td><td>O nome gravado é o de quem iniciou/encerrou na sessão. Saia e entre com o seu usuário em cada turno.</td></tr>
+</table>
+</section>

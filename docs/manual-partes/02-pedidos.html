@@ -1,0 +1,172 @@
+<h2 id="supervisao">3. Telas da Supervisão e Gestão</h2>
+
+<section class="tela" id="pedidos">
+<h3>Pedidos <span class="tag sup">Supervisão</span><span class="tag gp">Gestão</span></h3>
+<p><b>Para que serve:</b> é a central dos pedidos. Aqui a supervisão <b>importa</b> os pedidos, <b>distribui</b> para os separadores, acompanha cada pedido em todas as etapas (separação, checkout, embalagem) e corrige o que travar.</p>
+<p><b>Como chegar:</b> menu <i>Supervisão › Pedidos</i>. Ao abrir, os filtros de período já vêm com a data de hoje.</p>
+
+<h3>Mapa da tela</h3>
+<table>
+<tr><th>Elemento</th><th>Para que serve</th></tr>
+<tr><td><b>Metas</b> (topo)</td><td>Abre a janela <i>Configurar Metas e Horas de Turno</i> (detalhada abaixo).</td></tr>
+<tr><td><b>Zerar Dados de Teste</b> (topo)</td><td>Apaga os dados operacionais de uma data. Ação destrutiva (detalhada abaixo).</td></tr>
+<tr><td><b>Atualizar</b></td><td>Recarrega a lista com os filtros atuais.</td></tr>
+<tr><td><b>Importar</b></td><td>Abre a janela para carregar a planilha de pedidos.</td></tr>
+<tr><td><b>Distribuir</b></td><td>Abre a janela de distribuição para separadores e formação de lotes.</td></tr>
+<tr><td><b>Imprimir etiquetas</b></td><td>Imprime uma etiqueta por pedido da lista que está na tela.</td></tr>
+<tr><td><b>Excel</b></td><td>Exporta a lista de pedidos.</td></tr>
+<tr><td><b>Mais ações</b></td><td>Menu com <b>Limpar vazios</b>, <b>Recalcular tempo</b>, <b>Marcar embalado</b> e <b>Excluir pendentes</b>.</td></tr>
+</table>
+
+<h3>Filtros</h3>
+<table>
+<tr><th>Filtro</th><th>Como funciona</th></tr>
+<tr><td><b>Período</b> (De / Até)</td><td>Filtra pela data de <b>"aguardando desde"</b> (quando o pedido passou a esperar separação), não pela data de trabalho. Pedidos sem essa data preenchida ficam de fora do filtro por data.</td></tr>
+<tr><td><b>Usuário</b></td><td>Mostra só os pedidos do separador escolhido.</td></tr>
+<tr><td><b>Status</b></td><td><b>Pendente</b>, <b>Separando</b>, <b>Separado</b>, <b>Checkout</b> (checkout concluído) e <b>Embalado</b>. O status considera a esteira inteira: o mais avançado vence (Embalado &gt; Checkoutado &gt; Separado &gt; Separando &gt; Pendente).</td></tr>
+<tr><td><b>Nº Pedido</b></td><td>Busca pelo número.</td></tr>
+<tr><td><b>Filtrar</b></td><td>Aplica Período, Usuário e Nº do pedido (busca no servidor).</td></tr>
+<tr><td>Seletor de <b>Turno</b></td><td>Todos, Manhã, Tarde, Noite ou <b>Sem turno</b> (pedidos ainda não distribuídos).</td></tr>
+<tr><td>Botões <b>Drive Thru, Prime, SEDEX, PAC, MOTOBOY</b></td><td>Filtro por tipo de entrega, com contador. Toque de novo para limpar.</td></tr>
+<tr><td>Botões <b>Crítico</b> e <b>Atenção</b></td><td>Prioridade pelo SLA de 6h: Atenção = 60% ou mais do prazo; Crítico = prazo estourado.</td></tr>
+<tr><td><b>Reatribuir N pendente(s)</b> e <b>Redefinir N pedido(s)</b></td><td>Só aparecem quando um <b>Usuário</b> está filtrado e há pedidos que se encaixam (ver abaixo).</td></tr>
+</table>
+<div class="note info">Ao usar <b>Atualizar/Filtrar</b>, os filtros de turno e de entrega voltam a "Todos". Os demais (status, prioridade) são aplicados na própria tela, sem nova consulta ao servidor.</div>
+
+<h3>Totalizadores</h3>
+<p>Ao lado dos filtros, quatro números sobre a lista exibida: <b>Pedidos</b>, <b>SKUs</b>, <b>Itens</b> e <b>Tempo est.</b> (soma estimada de separação: verde até 1h, amarelo até 2h, vermelho acima).</p>
+
+<h3>Tabela de pedidos</h3>
+<table>
+<tr><th>Coluna</th><th>O que mostra</th></tr>
+<tr><td><b>Nº PEDIDO</b></td><td>Número (vermelho se Drive Thru). <b>Clique</b> para abrir o <b>Rastreio</b>.</td></tr>
+<tr><td><b>CLIENTE</b></td><td>Nome do cliente.</td></tr>
+<tr><td><b>TRANSPORTADORA</b></td><td>Serviço de entrega, com a etiqueta <b>Prime</b> quando for o caso.</td></tr>
+<tr><td><b>UF</b></td><td>Estado de destino, com a classificação fiscal: <b>NF cheia</b> (AL, CE, MS, MT, PB, PI, RN, RO, SE) ou <b>Declaração</b> (demais estados mapeados).</td></tr>
+<tr><td><b>AGUARDANDO DESDE</b></td><td>Data e hora em que o pedido passou a aguardar separação.</td></tr>
+<tr><td><b>PRIORIDADE</b></td><td>Normal / Atenção / Crítico. Passe o mouse para ver o motivo (ex.: "Aguardando há 3.2h — 53% do SLA de 6h").</td></tr>
+<tr><td><b>USUÁRIO</b></td><td>Separador responsável.</td></tr>
+<tr><td><b>STATUS</b></td><td>Pendente, Separando, Separado, Checkoutado, Embalado.</td></tr>
+<tr><td><b>SKUs</b> ↕</td><td>Quantidade de códigos diferentes. <b>Clique no número</b> para ver os <b>corredores</b> onde as SKUs estão (ex.: "3 corredores · 7 SKUs"). A seta ordena.</td></tr>
+<tr><td><b>ITENS</b> ↕</td><td>Quantidade total de peças (vermelho acima de 100, amarelo acima de 30). A seta ordena.</td></tr>
+<tr><td><b>⏱ TEMPO EST.</b></td><td>Tempo estimado de separação. Em pedidos <b>Separando</b> vira um cronômetro ao vivo, atualizado a cada 30 s.</td></tr>
+</table>
+
+<h4>Rastreio do pedido</h4>
+<p>Clique no número do pedido. A janela mostra o caminho completo em cartões: <b>Separação</b>, <b>Reposição</b>, <b>Checkout</b> e <b>Embalagem</b>. Em cada um: colaborador, início, fim, itens/SKUs e a <b>duração</b> (verde até 5 min, amarelo até 15 min, vermelho acima). Em Reposição, cada item traz o resultado (Enc, Abast, NE, Proto), quem buscou e os horários. Um cartão sem dados mostra <i>Não iniciada</i>, <i>Não realizado</i>, <i>Sem reposições</i> ou <i>Não embalado</i>.</p>
+<p>No topo há o botão <b>Voltar pra fila</b>: remove o colaborador atual e volta o pedido para <b>Pendente</b>. Pede confirmação (<i>"Voltar pedido #N pra fila? Remove … e volta o status pra Pendente. Itens já escaneados não são desfeitos."</i>). Se o pedido já estiver pendente e sem colaborador: <i>"Esse pedido já está na fila, sem colaborador."</i></p>
+
+<h4>Reatribuir e Redefinir (em lote)</h4>
+<ol>
+  <li>Filtre pelo <b>Usuário</b> cujos pedidos quer mexer.</li>
+  <li><b>Reatribuir N pendente(s):</b> abre uma janela com a lista de separadores ativos e a opção <i>"↩ Devolver para a fila (sem separador)"</i>. Escolha o destino e confirme. Só mexe em pedidos <b>pendentes</b>; os que já estão em separação não são tocados. Resultado: <i>"N pedido(s) reatribuído(s)"</i>, informando se alguma falhou. Sem destino: <i>"Selecione um destino."</i></li>
+  <li><b>Redefinir N pedido(s):</b> confirma <i>"Redefinir N pedido(s) de X? Volta o status pra Pendente e remove o separador de todos os pedidos pendente/separando filtrados. Itens já escaneados não são desfeitos."</i></li>
+</ol>
+
+<h3>Importar pedidos (passo a passo)</h3>
+<ol>
+  <li>Clique em <b>Importar</b>. Abre <i>Importar Planilha de Pedidos</i>.</li>
+  <li><b>Arraste o arquivo</b> para a área tracejada ou clique em <b>Selecionar Arquivo</b>. Formatos aceitos:
+    <ul>
+      <li><b>Planilha Excel do MIESS</b> com a aba <b>"Itens"</b> (colunas: Código do produto, Número do pedido, Nome do item, Qtde pedida, Endereço no estoque) e, opcionalmente, a aba <b>"Transportadora"</b> (Pedido, Razão social, Serviço de entrega, e Estado de destino quando existir).</li>
+      <li><b>Planilha/CSV simples</b> com cabeçalho: <code>Pedido, Codigo, Descricao, Qtde, Endereço</code>. O sistema acha as colunas pelo nome (sem acento); sem cabeçalho assume a ordem Pedido, Código, Descrição, Endereço, Qtde.</li>
+      <li><b>HTML do MIESS</b> (relatório de itens). Pode selecionar <b>dois HTMLs juntos</b>: o de itens e o de pedidos/transporte, que são combinados.</li>
+    </ul>
+  </li>
+  <li>O sistema lê e mostra a faixa de status: <i>"⏳ Lendo arquivo..."</i> e depois <i>"N SKU(s) em M pedido(s) — clique Importar"</i>, com a <b>prévia das 10 primeiras linhas</b> (Pedido, Código, Descrição, Endereço, Qtde) e o total <i>"M pedido(s) • N SKUs • X itens"</i>. Confira.</li>
+  <li>Clique em <b>Importar para Fila</b>. A importação é feita em blocos de 20 pedidos, com porcentagem (<i>"⏳ Importando... 60% (12/20 pedidos)"</i>).</li>
+  <li>Ao final: <i>"N pedido(s) importado(s)! X já existiam."</i> e o toast <i>"N pedidos na fila!"</i>. Pedidos que <b>já existiam</b> não são duplicados. O quadro <b>Histórico</b> guarda as últimas 20 importações (neste navegador).</li>
+</ol>
+<table>
+<tr><th>Mensagem</th><th>Significa</th></tr>
+<tr><td>Nenhuma linha encontrada!</td><td>O arquivo não tem linhas com número de pedido válido.</td></tr>
+<tr><td>Arquivo vazio</td><td>A planilha não tem dados.</td></tr>
+<tr><td>Erro ao abrir arquivo!</td><td>O arquivo está corrompido ou protegido.</td></tr>
+<tr><td>Sheet itens sem dados / Nenhum item válido na sheet itens — coluna B deve ter o número do pedido (5+ dígitos)</td><td>O formato MIESS não bateu: o número do pedido precisa estar na 2ª coluna da aba Itens, com 5 ou mais dígitos.</td></tr>
+<tr><td>Cabeçalho não encontrado no HTML / Nenhuma linha encontrada no HTML</td><td>O HTML não é o relatório esperado. Gere de novo no MIESS.</td></tr>
+<tr><td>Erro na importação!</td><td>Falha de rede/servidor no meio do processo. Confira em Pedidos o que entrou antes de repetir.</td></tr>
+</table>
+<div class="note">Importe <b>antes</b> de distribuir. Pedido sem endereço no arquivo é importado, mas a separação não consegue ordenar a rota: confira o endereço no MIESS.</div>
+
+<h3>Distribuir pedidos (passo a passo)</h3>
+<p>O botão <b>Distribuir</b> abre a janela <i>Distribuição de Pedidos</i> com <b>quatro modos</b>. Ela sempre abre em <b>Automática</b> com o dia de hoje preenchido.</p>
+<h4>Critérios usados pelo sistema</h4>
+<ul>
+  <li>Peso por item: corredores <b>fáceis</b> (A–E, P–U) = 1,0; <b>médios</b> (M, N, O, V–Z) = 1,5; <b>difíceis</b> (F–L, ZA, Arara) = 2,0.</li>
+  <li>Cada <b>rua diferente</b> no pedido soma <b>+2 pontos</b>.</li>
+  <li>Pedidos <b>RETIRADA DRIVE THRU</b> são priorizados e distribuídos primeiro, independentemente do horário.</li>
+</ul>
+<h4>Modo 1 — Automática</h4>
+<ol>
+  <li>Em <b>DATA DOS PEDIDOS</b> informe De/Até e clique em <b>Filtrar</b>. <b>Imprimir Lista</b> imprime os pedidos do período.</li>
+  <li><b>QUANTIDADE DE PEDIDOS A DISTRIBUIR</b>: deixe em branco para distribuir todos, ou informe um número e clique em Filtrar para ver a prévia.</li>
+  <li>Marque as opções: <b>Apenas sem separador atribuído</b> (não mexe nos já atribuídos) e <b>Respeitar horário do pedido (mais antigo primeiro)</b>.</li>
+  <li><b>Incluir Prime</b>: ativa o modo Prime. Aviso: <i>"Modo Prime ativo — Apenas pedidos Postagem Ágil Miess Prime serão distribuídos."</i></li>
+  <li>Em <b>COLABORADORES ATIVOS</b>, filtre por turno (<b>Todos / Manhã / Tarde / Noite</b>, com contagem) e <b>marque quem vai receber</b> pedidos. O filtro de turno só mostra/oculta nomes; não limita os pedidos.</li>
+  <li>Escolha o <b>CENÁRIO</b>:
+    <ul>
+      <li><b>Balanceado</b>: pontuação por corredor (itens × dificuldade + deslocamento); equilibra pontuação e volume.</li>
+      <li><b>Por Volume</b>: iguala só a quantidade total de itens, ignorando a dificuldade do corredor.</li>
+      <li><b>Complexidade Total</b>: pontuação completa com bônus por 3 ou mais ruas e por 2 ou mais SKUs distintos; o mais justo para pedidos trabalhosos.</li>
+    </ul>
+  </li>
+  <li>Clique em <b>Calcular Distribuição</b> (sem marcar ninguém: <i>"Selecione pelo menos um separador!"</i>). Aparece o <b>RESULTADO</b> com, por colaborador: <b>Pedidos agora</b>, <b>Pedidos hoje (total)</b> (com "falta N" para 65), <b>Itens agora</b>, <b>Carga total</b> em pontos e a <b>Lista</b> dos pedidos. A cor da carga mostra o equilíbrio: <span style="color:var(--g)">verde</span> (desvio &lt; 8% da média), <span style="color:var(--a)">amarelo</span> (&lt; 20%), <span style="color:var(--r)">vermelho</span> (maior). Se alguém já tinha carga, aparece <i>"Carga anterior considerada"</i>. Pedidos que não couberem ficam <i>"⏳ N pedido(s) ficam na fila"</i>.</li>
+  <li>Se estiver bom, clique em <b>Confirmar Distribuição</b>: <i>"N pedidos distribuídos!"</i>. Se quiser mudar, troque o cenário/colaboradores e calcule de novo. Nada é gravado antes da confirmação.</li>
+</ol>
+<h4>Modo 2 — Por Turno</h4>
+<p>Divide os pedidos entre <b>Manhã, Tarde e Noite</b> proporcionalmente ao número de separadores de cada turno (cada turno fica com carga equivalente por colaborador). Ajuste o <b>nome</b> e o <b>número de separadores</b> de cada turno (mínimo 1), clique em <b>Calcular por Turno</b> para ver o resultado e o gráfico de carga e depois <b>Confirmar por Turno</b>. Resultado: <i>"N pedidos marcados por turno — Manhã: X ped · Tarde: Y ped · Noite: Z ped"</i>. Esse modo <b>marca o turno</b> dos pedidos (que aparecem na coluna/filtro de turno); a atribuição ao colaborador acontece depois.</p>
+<h4>Modo 3 — Manual</h4>
+<p>Dois sub-modos:</p>
+<ol>
+  <li><b>🔍 Buscar:</b> digite o número do pedido ou o nome do cliente (a busca roda sozinha após 350 ms). Em cada resultado, escolha o colaborador e confirme. Mensagens: <i>"Pedido N atribuído com sucesso!"</i>, <i>"Selecione um colaborador para atribuir."</i>, <i>"Pedido N não foi atribuído — verifique se ainda está pendente."</i></li>
+  <li><b>📷 Bipar Código de Barras:</b> selecione o <b>colaborador uma vez</b> e vá <b>bipando as folhas</b> dos pedidos: cada bipagem atribui o pedido a ele. Há contadores <b>✅ atribuído(s)</b> e <b>❌ erro(s)</b>. Sem escolher o colaborador: <i>"Selecione o colaborador antes de bipar os pedidos."</i></li>
+</ol>
+<h4>Modo 4 — 📦 Lotes (formação por proximidade)</h4>
+<p>Agrupa pedidos pendentes em <b>lotes de até 4 pedidos</b> pela proximidade de rua, para o separador coletar tudo numa passada. Não entram Drive Thru (vão individuais) nem Prime (a menos que <b>Incluir Prime</b> esteja ativo). Cada lote inteiro vai para o separador mais "atrasado" na fórmula de pontuação.</p>
+<ul>
+  <li><b>Automático:</b> informe a quantidade de pedidos a formar, escolha o cenário, marque os separadores e clique em <b>Calcular Lotes</b>. Veja a prévia (lotes e pedidos de cada um), use <b>🖨️ Imprimir Etiquetas</b> (uma etiqueta por caixa, numerada 1, 2, 3… na ordem do lote, igual às cores da tela do separador; sem calcular antes: <i>"Calcule os lotes primeiro."</i>) e <b>Confirmar Lotes</b>: <i>"N lote(s) formado(s), M pedido(s) atribuído(s)!"</i></li>
+  <li><b>Manual:</b> escolha o colaborador e <b>bipe os pedidos</b> que quer no lote (máximo de <b>40 por vez</b>). O sistema recusa: <i>"Pool cheio: máximo de 40 pedidos bipados por vez."</i>, <i>"Pedido #N já está no pool."</i>, <i>"Pedido #N não encontrado."</i>, <i>"Pedido #N não está pendente (status: …)."</i>, <i>"Pedido #N já tem separador atribuído."</i>. Clique em <b>Montar Melhores Lotes</b> para o sistema formar os lotes e depois em <b>Confirmar Lotes</b>. Sem pedidos: <i>"Bipe pelo menos um pedido antes."</i></li>
+</ul>
+<p>O lote aparece para o separador no celular como <b>"Lote pronto — #N"</b> (ver <a href="#separacao">Separação</a>).</p>
+
+<h3>Imprimir etiquetas</h3>
+<p>O botão <b>Imprimir etiquetas</b> imprime uma etiqueta para <b>cada pedido da lista atual</b> (respeita todos os filtros), ordenada por separador. Cada etiqueta (formato da Zebra ZD-220) traz: nº do pedido, <b>CX n</b> (quando é de lote), transportadora e UF, cliente, a classificação fiscal (<i>NF cheia</i>/<i>Declaração</i>), "N SKUs · N itens · desde …" e o <b>código de barras</b> do pedido. Se a lista estiver vazia: <i>"Nenhum pedido na lista pra imprimir."</i></p>
+
+<h3>Menu "Mais ações"</h3>
+<table>
+<tr><th>Ação</th><th>O que faz</th><th>Cuidado</th></tr>
+<tr><td><b>Limpar vazios</b></td><td>Exclui pedidos <b>sem nenhum item, cliente, transportadora ou rua</b>, ainda pendentes e nunca distribuídos (lixo de importação). Mostra a contagem e pede confirmação.</td><td>Ação permanente. "Nenhum pedido vazio encontrado." se não houver.</td></tr>
+<tr><td><b>Recalcular tempo</b></td><td>Refaz a estimativa de tempo de separação usando o ritmo real dos pedidos concluídos recentes (ignora o cache de 30 min). Mostra <i>"Tempo estimado recalculado! X/Y faixas com dado real."</i></td><td>Seguro.</td></tr>
+<tr><td><b>Marcar embalado</b></td><td>Fecha em lote dias parados. Pede por <b>caixas de texto do navegador</b>: (1) a data de "aguardando desde" no formato <code>AAAA-MM-DD</code> e (2) o <b>nome do(s) separador(es)</b> separados por vírgula. Mostra quantos pedidos serão afetados e pede confirmação: pedidos pendentes/separando viram <b>Concluído + Embalado</b>, pulando separação e checkout.</td><td>Ação grande. Só a Supervisão. Confira o número na confirmação.</td></tr>
+<tr><td><b>Excluir pendentes</b></td><td>Exclui <b>TODOS</b> os pedidos com status Pendente do sistema (não só os da tela), incluindo cliente, itens e histórico. A confirmação mostra o total.</td><td><b>Irreversível e sem filtro.</b> Pode ser bloqueada para um usuário pela Gestão. Prefira Reatribuir/Redefinir.</td></tr>
+</table>
+
+<h3>Metas (janela "Configurar Metas e Horas de Turno")</h3>
+<p>Clique em <b>Metas</b>. Preencha apenas números (deixe em branco o que não quiser mudar) e clique em <b>Salvar</b> (<i>"Configurações salvas!"</i>):</p>
+<table>
+<tr><th>Campo</th><th>Uso</th></tr>
+<tr><td>Meta Separação (pedidos/turno)</td><td>Meta de pedidos separados por turno.</td></tr>
+<tr><td>Meta Checkout (checkouts/turno) e Meta Checkout — Manhã / Tarde / Noite</td><td>Meta geral e metas por turno.</td></tr>
+<tr><td>Meta Embalagem (pedidos/turno)</td><td>Meta de pedidos embalados.</td></tr>
+<tr><td>Meta Reposição (itens/turno)</td><td>Meta de itens repostos.</td></tr>
+<tr><td>Meta Faturamento (R$/turno)</td><td>Meta de faturamento (aceita 2 casas decimais).</td></tr>
+<tr><td>Horas turno Manhã / Tarde / Noite</td><td>Duração do turno em <b>decimal</b> (ex.: 7:45 = <code>7.75</code>; 7:33 = <code>7.55</code>). Usadas no Control Tower e no Dashboard para calcular o ritmo necessário.</td></tr>
+</table>
+
+<h3>Zerar Dados de Teste</h3>
+<ol>
+  <li>Clique em <b>Zerar Dados de Teste</b>. Pergunta <i>"Zerar dados de qual data?"</i> (formato <code>DD/MM/AA</code>; em branco = hoje).</li>
+  <li>Aparece a confirmação: <i>"Serão apagados PERMANENTEMENTE: Pedidos, Checkout, Embalagem, Reposições e Sessões de trabalho desta data."</i> Confirme em <b>Zerar dados</b>.</li>
+  <li>O resultado lista quantos registros foram removidos de cada tipo. Data inválida: <i>"Data inválida — use o formato DD/MM/AA"</i>.</li>
+</ol>
+<div class="note"><b>Cuidado:</b> serve para limpar testes. Nunca use em uma data com operação real. A ação fica registrada na Auditoria e pode ser revogada para usuários específicos.</div>
+
+<h4>Dúvidas comuns</h4>
+<table>
+<tr><th>Situação</th><th>Solução</th></tr>
+<tr><td>Importei e os pedidos não aparecem</td><td>Confira o filtro de <b>Período</b> (usa "aguardando desde") e o status. Limpe os filtros e clique em Atualizar.</td></tr>
+<tr><td>Um separador está sem pedidos</td><td>Use <b>Distribuir</b> ou filtre o colega sobrecarregado e use <b>Reatribuir</b> para mover os pendentes.</td></tr>
+<tr><td>Pedido preso em "Separando" com a pessoa ausente</td><td>Abra o Rastreio e clique em <b>Voltar pra fila</b>.</td></tr>
+<tr><td>Quero separar um Drive Thru primeiro</td><td>Ele já é priorizado na distribuição e aparece em vermelho. Use o filtro <b>Drive Thru</b>.</td></tr>
+</table>
+</section>
