@@ -2661,49 +2661,61 @@ async function carregarFilaCkDesk() {
       el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:32px;font-size:13px">Nenhum pedido aguardando checkout</div>';
       return;
     }
+    // Chips de envio / Prime / UF + tipo de nota — o que o operador precisa
+    // saber antes de abrir o pedido (etiqueta, documento fiscal).
+    const chipCk = (txt, cor, fundo, borda) =>
+      `<span style="background:${fundo};color:${cor};border:1.5px solid ${borda};font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;white-space:nowrap">${txt}</span>`;
+    const chipsPedidoCk = r => {
+      const chips = [];
+      const transp = _transpBadgeProto(r.transportadora);
+      if (transp) chips.push(transp);
+      if (r.tem_prime && !/PRIME/i.test(r.transportadora || '')) {
+        chips.push(chipCk('<i class="ti ti-star-filled" aria-hidden="true"></i> Prime', 'var(--amber)', 'rgba(224,168,62,.15)', 'rgba(224,168,62,.35)'));
+      }
+      const uf = String(r.estado || '').trim().toUpperCase();
+      if (uf) {
+        chips.push(chipCk(uf, 'var(--text)', 'var(--surface2)', 'var(--border)'));
+        const fiscal = _fiscalLabel(uf);
+        if (fiscal === 'NF cheia')   chips.push(chipCk(fiscal, 'var(--green)',  'rgba(87,185,129,.15)',  'rgba(87,185,129,.35)'));
+        else if (fiscal)             chips.push(chipCk(fiscal, 'var(--indigo)', 'rgba(139,92,246,.15)', 'rgba(139,92,246,.35)'));
+      }
+      return chips.join('');
+    };
     el.innerHTML = fila.map(r => {
       const isAguardando = r.status === 'aguardando_item';
+      const cor    = isAguardando ? 'var(--orange)' : 'var(--accent)';
+      const sepNome = r.separador_nome_join || r.separador_nome || '—';
+      const meta = [
+        `<b style="color:var(--text)">${r.ped_total_itens||r.ped_itens||0} itens</b>`,
+        sepNome,
+        r.cliente || '',
+        r.hora_criacao ? `<span style="color:var(--text3)">Sep às ${String(r.hora_criacao).substring(0,5)}</span>` : ''
+      ].filter(Boolean).join(' · ');
+      let itensFalta = [];
       if (isAguardando) {
-        let itens = [];
-        try { itens = Array.isArray(r.itens_falta) ? r.itens_falta : (r.itens_falta ? JSON.parse(r.itens_falta) : []); } catch(e) {}
-        return `
-      <div style="border:2px solid var(--orange);border-radius:12px;padding:12px 14px;margin-bottom:8px;background:rgba(251,146,60,.08)">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-          <div style="font-size:20px;font-weight:800;color:var(--orange);font-family:'Space Mono',monospace">#${r.numero_pedido}</div>
-          <span style="background:var(--orange);color:#fff;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;white-space:nowrap"><i class="ti ti-clock" aria-hidden="true"></i> aguardando item</span>
-        </div>
-        <div style="display:flex;gap:12px;font-size:12px;color:var(--text2);margin-bottom:4px">
-          <span><b style="color:var(--orange)">${r.ped_total_itens||r.ped_itens||0} itens</b></span>
-          <span>${r.separador_nome_join||r.separador_nome||'—'}</span>
-          ${r.cliente ? `<span>${r.cliente}</span>` : ''}
-        </div>
-        ${itens.length ? `
-        <div style="background:var(--surface);border:1px solid rgba(251,146,60,.4);border-radius:8px;padding:6px 10px;margin-bottom:6px">
-          <div style="font-size:10px;font-weight:700;color:var(--orange);letter-spacing:.5px;margin-bottom:3px">Itens faltando</div>
-          ${itens.map(it=>`<div style="font-size:11px;padding:1px 0"><b>${it.codigo}</b> · ${it.descricao} · x${it.quantidade}</div>`).join('')}
-        </div>` : ''}
-        <button style="width:100%;background:var(--orange);color:#fff;border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:700;cursor:pointer"
-          onclick="retomarCheckoutDesk(${r.id},'${r.numero_caixa||r.numero_pedido}')">
-          <i class="ti ti-player-play-filled" aria-hidden="true"></i> Retomar Checkout
-        </button>
-      </div>`;
+        try { itensFalta = Array.isArray(r.itens_falta) ? r.itens_falta : (r.itens_falta ? JSON.parse(r.itens_falta) : []); } catch(e) {}
       }
+      const botao = isAguardando
+        ? `<button style="background:var(--orange);color:#fff;border:none;border-radius:var(--r-sm);padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0"
+             onclick="retomarCheckoutDesk(${r.id},'${r.numero_caixa||r.numero_pedido}')">
+             <i class="ti ti-player-play-filled" aria-hidden="true"></i> Retomar
+           </button>`
+        : `<button class="btn btn-primary btn-sm" style="padding:7px 14px;flex-shrink:0"
+             onclick="iniciarCkDesk('${r.numero_pedido||''}')">Iniciar Checkout</button>`;
       return `
-      <div style="border:1.5px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:8px;background:var(--surface)">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-          <div style="font-size:20px;font-weight:800;color:var(--accent);font-family:'Space Mono',monospace">#${r.numero_pedido}</div>
-          <span class="pill pendente" style="font-size:10px">aguardando ck</span>
+      <div style="border:${isAguardando?'2px solid var(--orange)':'1.5px solid var(--border)'};border-radius:10px;padding:8px 12px;margin-bottom:6px;background:${isAguardando?'rgba(251,146,60,.08)':'var(--surface)'}">
+        <div style="display:flex;align-items:center;gap:10px 12px;flex-wrap:wrap">
+          <div style="font-size:16px;font-weight:800;color:${cor};font-family:'Space Mono',monospace">#${r.numero_pedido}</div>
+          ${isAguardando ? `<span style="background:var(--orange);color:#fff;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;white-space:nowrap"><i class="ti ti-clock" aria-hidden="true"></i> aguardando item</span>` : ''}
+          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">${chipsPedidoCk(r)}</div>
+          <div style="flex:1;min-width:160px;font-size:11px;color:var(--text2);line-height:1.4">${meta}</div>
+          ${botao}
         </div>
-        <div style="display:flex;gap:12px;font-size:12px;color:var(--text2)">
-          <span><b style="color:var(--text)">${r.ped_total_itens||r.ped_itens||0} itens</b></span>
-          <span>${r.separador_nome_join||r.separador_nome||'—'}</span>
-          ${r.cliente ? `<span>${r.cliente}</span>` : ''}
-        </div>
-        ${r.hora_criacao ? `<div style="font-size:11px;color:var(--text3);margin-top:4px">Sep às ${r.hora_criacao}</div>` : ''}
-        <button class="btn btn-primary btn-sm" style="width:100%;margin-top:8px;padding:10px"
-          onclick="iniciarCkDesk('${r.numero_pedido||''}')">
-          Iniciar Checkout
-        </button>
+        ${itensFalta.length ? `
+        <div style="background:var(--surface);border:1px solid rgba(251,146,60,.4);border-radius:8px;padding:5px 10px;margin-top:8px">
+          <div style="font-size:10px;font-weight:700;color:var(--orange);letter-spacing:.5px;margin-bottom:2px">Itens faltando</div>
+          ${itensFalta.map(it=>`<div style="font-size:11px;padding:1px 0"><b>${it.codigo}</b> · ${it.descricao} · x${it.quantidade}</div>`).join('')}
+        </div>` : ''}
       </div>`;
     }).join('');
   } catch(e) {
