@@ -1789,7 +1789,7 @@ async function ativarMobileEmb() {
   carregarEmbalagemMobile();
   setInterval(() => {
     const tabAtiva = document.querySelector('.emb-tab-btn.ativo')?.id?.replace('etab-','');
-    if (tabAtiva === 'fila') carregarEmbalagemMobile();
+    if (tabAtiva === 'fila') carregarEmbalagemMobile(true);
     if (tabAtiva === 'embalados') carregarEmbalagemEmbalados();
   }, 30000);
 }
@@ -1996,11 +1996,13 @@ function renderCardEmb(p, emAndamento, mode, readOnly) {
     </div>`;
 }
 
-async function carregarEmbalagemMobile() {
+// silent=true (atualização automática): não pisca "Carregando...", não apaga o que
+// a embaladora está digitando na busca e mantém o filtro aplicado.
+async function carregarEmbalagemMobile(silent=false) {
   const el = document.getElementById('m-emb-lista');
   const cnt = document.getElementById('m-emb-pend');
   if (!el) return;
-  el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3)">Carregando...</div>';
+  if (!silent) el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3)">Carregando...</div>';
   try {
     const res = await fetch(`${API}/embalagem?status=pendente`, { credentials:'include' });
     const pedidos = await res.json();
@@ -2009,8 +2011,9 @@ async function carregarEmbalagemMobile() {
     // Atualiza badge da aba Fila ANTES do early return
     const badge = document.getElementById('etab-fila-badge');
     if (badge) { badge.textContent = pedidos.length; badge.style.display = pedidos.length ? 'block' : 'none'; }
-    // Limpa busca ao recarregar lista completa
     const busca = document.getElementById('m-emb-busca');
+    if (silent && busca?.value.trim() && pedidos.length) { filtrarEmbalagemMobile(); return; }
+    // Recarga completa (manual): limpa a busca e mostra a lista inteira
     if (busca) busca.value = '';
     if (!pedidos.length) {
       el.innerHTML = `<div style="text-align:center;padding:60px 16px">
@@ -2026,7 +2029,7 @@ async function carregarEmbalagemMobile() {
       ...embalando.map(p => renderCardEmbFila(p, true)),
       ...pendentes.map(p => renderCardEmbFila(p, false)),
     ].join('');
-  } catch(e) { if(el) el.innerHTML = '<div style="color:var(--red);text-align:center;padding:24px">Erro ao carregar</div>'; }
+  } catch(e) { if (el && !silent) el.innerHTML = '<div style="color:var(--red);text-align:center;padding:24px">Erro ao carregar</div>'; }
 }
 
 async function carregarEmbalagemEmbalados() {
