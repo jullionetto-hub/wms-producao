@@ -218,6 +218,50 @@ describe('Repositor — editar status do aviso', () => {
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ mensagem: 'Aviso atualizado!', stFinal: 'buscado' });
   });
+
+  describe('checkout em "Itens pendentes" acompanha a reposição', () => {
+    const avisoDoPedido = { status: 'separado', tentativas: [], historico: [], pedido_id: 7, numero_pedido: '5682114' };
+    const sqlsCheckout = () => mockPool.query.mock.calls
+      .filter(([sql]) => /UPDATE checkout/.test(sql));
+
+    test('último item reposto → checkout volta pra fila', async () => {
+      mockDb.get
+        .mockResolvedValueOnce(avisoDoPedido)                               // aviso atual
+        .mockResolvedValueOnce({ id: 55, numero_pedido: '5682114' });       // checkout aguardando_item
+      mockDb.all.mockResolvedValueOnce([]);                                  // nada mais faltando
+      mockPool.query.mockResolvedValueOnce({ rows: [], rowCount: 1 });
+      const res = await agent.put('/repositor/avisos/1').send({ status: 'subiu' });
+      expect(res.status).toBe(200);
+      const upd = sqlsCheckout();
+      expect(upd).toHaveLength(1);
+      expect(upd[0][0]).toMatch(/status='fila'/);
+      expect(upd[0][1]).toEqual([55]);
+    });
+
+    test('ainda sobra item faltando → mantém aguardando e atualiza a lista', async () => {
+      mockDb.get
+        .mockResolvedValueOnce(avisoDoPedido)
+        .mockResolvedValueOnce({ id: 55, numero_pedido: '5682114' });
+      mockDb.all.mockResolvedValueOnce([{ codigo: 'NGS500', descricao: 'Gel', quantidade: 2 }]);
+      mockPool.query.mockResolvedValueOnce({ rows: [], rowCount: 1 });
+      const res = await agent.put('/repositor/avisos/1').send({ status: 'subiu' });
+      expect(res.status).toBe(200);
+      const upd = sqlsCheckout();
+      expect(upd).toHaveLength(1);
+      expect(upd[0][0]).not.toMatch(/status='fila'/);
+      expect(JSON.parse(upd[0][1][0])).toEqual([{ codigo: 'NGS500', descricao: 'Gel', quantidade: 2 }]);
+    });
+
+    test('pedido sem checkout pendente → não mexe no checkout', async () => {
+      mockDb.get
+        .mockResolvedValueOnce(avisoDoPedido)
+        .mockResolvedValueOnce(null);
+      mockPool.query.mockResolvedValueOnce({ rows: [], rowCount: 1 });
+      const res = await agent.put('/repositor/avisos/1').send({ status: 'subiu' });
+      expect(res.status).toBe(200);
+      expect(sqlsCheckout()).toHaveLength(0);
+    });
+  });
 });
 
 /* ════════════════════════════════════════════════════════════

@@ -180,6 +180,7 @@ router.put('/repositor/avisos/:id', requerAuth, async (req,res) => {
     const io = req.app.get('io');
     io?.emit('aviso:atualizado', { id, status: stFinal, numero_pedido: atual?.numero_pedido });
     if (stFinal === 'nao_encontrado') io?.emit('liberacao:novo', { id });
+    await sincronizarCheckoutPendente(atual?.pedido_id, io).catch(e => console.warn('sync checkout pendente:', e.message));
     res.json({ mensagem: 'Aviso atualizado!', stFinal });
   } catch(e){res.status(500).json({erro:e.message});}
 });
@@ -372,6 +373,30 @@ router.get('/repositor/avisos/separador/:separador_id', requerAuth, async (req,r
   } catch(e) { res.status(500).json({erro:e.message}); }
 });
 
+// Avisos nesses estados já chegaram (ou estão a caminho) — não seguram mais o pedido.
+const STATUS_AVISO_RESOLVIDO = ['reposto','buscado','separado','aguardando_abastecer','subiu','abastecido','encontrado'];
+
+// Pedido concluído com falta fica no checkout como 'aguardando_item'. Quando o
+// repositor repõe o último item, volta pra 'fila'; se ainda sobram itens, só
+// atualiza a lista do que falta. Sem isso o pedido ficava preso em "Itens
+// pendentes" mesmo com tudo abastecido.
+async function sincronizarCheckoutPendente(pedidoId, io) {
+  if (!pedidoId) return;
+  const ck = await db.get(`SELECT id, numero_pedido FROM checkout WHERE pedido_id=$1 AND status='aguardando_item' ORDER BY id DESC LIMIT 1`, [pedidoId]);
+  if (!ck) return;
+  const faltando = await db.all(
+    `SELECT codigo, descricao, quantidade FROM avisos_repositor WHERE pedido_id=$1 AND NOT (status = ANY($2::text[]))`,
+    [pedidoId, STATUS_AVISO_RESOLVIDO]
+  );
+  if (!faltando.length) {
+    await pool.query(`UPDATE checkout SET status='fila', itens_falta='[]'::jsonb WHERE id=$1`, [ck.id]);
+  } else {
+    const itens_falta = faltando.map(a => ({ codigo: a.codigo, descricao: a.descricao, quantidade: a.quantidade }));
+    await pool.query(`UPDATE checkout SET itens_falta=$1 WHERE id=$2`, [JSON.stringify(itens_falta), ck.id]);
+  }
+  io?.emit('pedido:concluido', { pedido_id: pedidoId, numero_pedido: ck.numero_pedido });
+}
+
 async function atualizarAviso(req, res, status, extra={}) {
   const {hora} = dataHoraLocal();
   const {qtd_encontrada, repositor_nome} = req.body || {};
@@ -393,6 +418,7 @@ async function resolverAvisoEAcumularTempo(req, res, status, extra={}) {
   try {
     const av = await db.get('SELECT pedido_id FROM avisos_repositor WHERE id=$1',[req.params.id]);
     if (!av) return;
+    await sincronizarCheckoutPendente(av.pedido_id, req.app.get('io')).catch(e => console.warn('sync checkout pendente:', e.message));
     const ped = await db.get(
       'SELECT aguardando_repositor_desde, tempo_aguardando_min, status, numero_pedido, numero_caixa, separador_id FROM pedidos WHERE id=$1',
       [av.pedido_id]
@@ -488,8 +514,9 @@ router.put('/repositor/avisos/:id/liberar', requerAuth, requerPerfil('supervisor
       const av = await db.get('SELECT item_id FROM avisos_repositor WHERE id=$1', [req.params.id]);
       if (av?.item_id) await pool.query(`UPDATE itens_pedido SET status='encontrado' WHERE id=$1`, [av.item_id]);
     }
-    const atual2 = await db.get('SELECT numero_pedido FROM avisos_repositor WHERE id=$1', [req.params.id]);
+    const atual2 = await db.get('SELECT numero_pedido, pedido_id FROM avisos_repositor WHERE id=$1', [req.params.id]);
     req.app.get('io')?.emit('aviso:atualizado', { id: req.params.id, status: novoStatus, numero_pedido: atual2?.numero_pedido });
+    await sincronizarCheckoutPendente(atual2?.pedido_id, req.app.get('io')).catch(e => console.warn('sync checkout pendente:', e.message));
     res.json({mensagem: decisao === 'encontrado' ? 'Item liberado como Encontrado.' : 'Item liberado para Protocolo.'});
   } catch(e) { res.status(500).json({erro: e.message}); }
 });
@@ -531,25 +558,8 @@ router.put('/repositor/avisos/:id/busca-final/encontrado', requerAuth, async (re
   // já entrega o item resolvido com a própria mão — o assistente encontrou e
   // resolveu ali, não precisa devolver pro separador buscar de novo.
   await resolverAvisoEAcumularTempo(req, res, 'abastecido');
-  // resolverAvisoEAcumularTempo já respondeu a requisição. O que falta é um caso
-  // que ela não cobre: se o pedido já tinha sido concluído com falta (checkout
-  // em 'aguardando_item') antes do assistente achar o item agora, ninguém
-  // atualiza o checkout — faz isso aqui como trabalho de fundo.
-  try {
-    const av = await db.get('SELECT pedido_id FROM avisos_repositor WHERE id=$1',[id]);
-    if (!av) return;
-    const ped = await db.get(`SELECT status FROM pedidos WHERE id=$1`,[av.pedido_id]);
-    if (!ped || ped.status !== 'concluido') return;
-    const ck = await db.get(`SELECT id FROM checkout WHERE pedido_id=$1 AND status='aguardando_item'`,[av.pedido_id]);
-    if (!ck) return;
-    const restantes = await db.all(`SELECT codigo,descricao,quantidade FROM avisos_repositor WHERE pedido_id=$1 AND status='nao_encontrado'`,[av.pedido_id]);
-    if (!restantes.length) {
-      await pool.query(`UPDATE checkout SET status='fila', itens_falta='[]'::jsonb WHERE id=$1`,[ck.id]);
-    } else {
-      const itens_falta = restantes.map(a=>({codigo:a.codigo, descricao:a.descricao, quantidade:a.quantidade}));
-      await pool.query(`UPDATE checkout SET itens_falta=$1 WHERE id=$2`,[JSON.stringify(itens_falta), ck.id]);
-    }
-  } catch(e) { console.warn('sync checkout pós busca final:', e.message); }
+  // resolverAvisoEAcumularTempo já respondeu a requisição e também sincroniza
+  // o checkout em 'aguardando_item' (sincronizarCheckoutPendente).
 });
 
 router.put('/repositor/avisos/:id/busca-final/nao-encontrado', requerAuth, async (req,res) => {
