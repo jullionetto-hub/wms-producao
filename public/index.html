@@ -1646,7 +1646,7 @@
           </div>
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
             <div class="stat-card stat-card--accent"><div class="stat-card-hd">Total</div><div class="stat-card-value" id="ck-cnt-total">0</div><div class="stat-card-label">pedidos</div></div>
-            <div class="stat-card stat-card--warning" onclick="mudarTabCkDesk('fila')" title="Ver pedidos aguardando na fila"><div class="stat-card-hd">Aguardando item</div><div class="stat-card-value" id="ck-cnt-pendentes">0</div><div class="stat-card-label">clique para ver ↗</div></div>
+            <div class="stat-card stat-card--warning" onclick="mudarTabCkDesk('aguardando')" title="Ver pedidos com itens pendentes"><div class="stat-card-hd">Aguardando item</div><div class="stat-card-value" id="ck-cnt-pendentes">0</div><div class="stat-card-label">clique para ver ↗</div></div>
             <div class="stat-card stat-card--success"><div class="stat-card-hd">Checkouts</div><div class="stat-card-value" id="ck-cnt-checkouts">0</div><div class="stat-card-label">concluídos</div></div>
           </div>
         </div>
@@ -1654,7 +1654,7 @@
         <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap" id="ck-desk-tabbar">
           <button class="rel-turno-btn ativo" id="dcktab-fila"      onclick="mudarTabCkDesk('fila')">Fila <span id="d-cktab-fila-badge" style="display:none;background:var(--accent);color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:3px">0</span></button>
           <button class="rel-turno-btn"        id="dcktab-feitos"    onclick="mudarTabCkDesk('feitos')">Feitos <span id="d-ck-feitos-cnt" style="display:none;background:#10b981;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:3px">0</span></button>
-          <button class="rel-turno-btn" id="dcktab-aguardando" onclick="mudarTabCkDesk('aguardando')" style="display:none">Aguardando <span id="d-cktab-aguardando-badge" style="display:none;background:var(--orange);color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:3px">0</span></button>
+          <button class="rel-turno-btn" id="dcktab-aguardando" onclick="mudarTabCkDesk('aguardando')">Itens pendentes <span id="d-cktab-aguardando-badge" style="display:none;background:var(--orange);color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:3px">0</span></button>
         </div>
 
         <!-- Tab FILA (unificada com scan) -->
@@ -1705,7 +1705,7 @@
         <!-- Tab AGUARDANDO -->
         <div id="d-ck-tab-aguardando" style="display:none">
           <div class="card">
-            <div class="card-hd">Aguardando item
+            <div class="card-hd">Pedidos com itens pendentes
               <button class="btn btn-outline btn-sm" onclick="carregarAguardandoCkDesk()">↺</button>
             </div>
             <div id="d-ck-aguardando" style="padding:4px 0">
@@ -2525,7 +2525,7 @@
   <script src="/js/matriz.js?v=17"></script>
   <script src="/js/colmeias.js?v=1"></script>
   <script src="/js/command-palette.js?v=1"></script>
-  <script src="/js/auth.js?v=54"></script>
+  <script src="/js/auth.js?v=55"></script>
 
 
 <!-- ══ MODAL IMPORTAR ══ -->
