@@ -1664,13 +1664,13 @@
               <button class="btn btn-outline btn-sm" onclick="carregarFilaCkDesk()">↺</button>
             </div>
             <!-- Scan input (unificado aqui) -->
-            <input type="text" class="bip-input" id="ck-input-caixa"
-              placeholder="Digite o número do pedido..."
-              autocomplete="off" inputmode="numeric"
-              onkeydown="if(event.key==='Enter')buscarCaixa()"
-              style="width:100%;font-size:20px;letter-spacing:3px;margin-bottom:8px;box-sizing:border-box"/>
-            <div style="display:flex;gap:8px;margin-bottom:14px">
-              <button onclick="buscarCaixa()" class="btn btn-primary" style="flex:1;padding:10px 0;font-size:13px;font-weight:700;letter-spacing:.5px"><i class="ti ti-player-play-filled" aria-hidden="true"></i>Buscar Pedido</button>
+            <div style="display:flex;gap:8px;align-items:stretch;max-width:520px;margin-bottom:16px">
+              <input type="text" class="bip-input" id="ck-input-caixa"
+                placeholder="Número do pedido"
+                autocomplete="off" inputmode="numeric"
+                onkeydown="if(event.key==='Enter')buscarCaixa()"
+                style="flex:1;min-width:0;padding:10px 14px;font-size:15px;letter-spacing:1px;border-width:1.5px;border-radius:var(--r-sm)"/>
+              <button onclick="buscarCaixa()" class="btn btn-primary" style="padding:0 18px;font-size:13px;flex-shrink:0"><i class="ti ti-search" aria-hidden="true"></i>Buscar</button>
             </div>
             <!-- Resultado da busca (aparece aqui, na mesma tela) -->
             <div id="ck-resultado" style="display:none;margin-bottom:16px;border-top:1px solid var(--border);padding-top:14px">
