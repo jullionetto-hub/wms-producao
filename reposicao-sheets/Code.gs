@@ -4,6 +4,9 @@
  * Os dados nunca saem da conta Google: a pagina e servida pelo proprio Apps Script.
  */
 var ANO = 2026;
+// Se o projeto NAO foi criado por Extensoes > Apps Script dentro da planilha,
+// cole aqui o ID da planilha (trecho da URL entre /d/ e /edit). Senao deixe vazio.
+var ID_PLANILHA = '';
 // Cabecalhos esperados (sem acento, minusculo) -> campo
 var CAMPOS = {
   'horario': 'horario',
@@ -15,6 +18,12 @@ var CAMPOS = {
   'situacao': 'situacao',
   'obs': 'obs'
 };
+
+function planilha_() {
+  var ss = ID_PLANILHA ? SpreadsheetApp.openById(ID_PLANILHA) : SpreadsheetApp.getActiveSpreadsheet();
+  if (!ss) throw new Error('Planilha nao encontrada: preencha ID_PLANILHA no topo do Codigo.gs');
+  return ss;
+}
 
 function doGet() {
   return HtmlService.createHtmlOutputFromFile('Index')
@@ -36,7 +45,7 @@ function horario_(txt) {
 /** Le todas as abas com nome de dia (01/10, 1-10, 01.10) e devolve as linhas. */
 function getDados() {
   var out = [];
-  SpreadsheetApp.getActiveSpreadsheet().getSheets().forEach(function (sh) {
+  planilha_().getSheets().forEach(function (sh) {
     var m = /^\s*(\d{1,2})\s*[\/\-.]\s*(\d{1,2})\s*$/.exec(sh.getName());
     if (!m) return; // ignora abas que nao sao dia
     var dia = +m[1], mes = +m[2];
@@ -75,4 +84,11 @@ function getDados() {
     }
   });
   return out;
+}
+
+/** Teste: rode esta funcao no editor e veja o Registro de execucao. */
+function testar() {
+  var d = getDados();
+  Logger.log('Linhas lidas: ' + d.length);
+  Logger.log(JSON.stringify(d.slice(0, 3)));
 }
