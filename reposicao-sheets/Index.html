@@ -27,6 +27,8 @@
   table { border-collapse:collapse; width:100%; }
   th,td { padding:5px 8px; border-bottom:1px solid var(--line); text-align:left; white-space:nowrap; }
   th { position:sticky; top:0; background:var(--card); }
+  .mini td,.mini th { padding:3px 6px; font-size:13px; }
+  .mini .n { text-align:right; }
   #msg { color:var(--mut); margin:8px 0; }
   @media print { body{background:#fff;color:#000;padding:0} .bar,.noprint{display:none} .scroll{max-height:none;overflow:visible} }
 </style>
@@ -44,10 +46,14 @@
 <div id="msg"></div>
 <div class="kpis" id="kpis"></div>
 <div class="grid">
-  <div class="card"><h2>Por separador</h2><div id="gSep"></div></div>
+  <div class="card scroll" style="max-height:420px"><h2>Por separador</h2><div id="gSep"></div></div>
   <div class="card"><h2>Por forma de envio</h2><div id="gEnv"></div></div>
   <div class="card"><h2>Por situação</h2><div id="gSit"></div></div>
   <div class="card"><h2>Por dia</h2><div id="gDia"></div></div>
+</div>
+<div class="card scroll" style="margin-bottom:12px">
+  <h2>Quantidade por código <span id="nCod" style="color:var(--mut);font-weight:normal"></span></h2>
+  <table class="mini"><thead><tr><th>#</th><th>Código</th><th class="n">Qtd</th><th class="n">%</th><th class="n">Dias</th></tr></thead><tbody id="tCod"></tbody></table>
 </div>
 <div class="card scroll">
   <table><thead><tr>
@@ -94,6 +100,33 @@ function graf(id, pares, ordenaChave) {
 }
 function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
 
+function dm(d) { return d.slice(8) + '/' + d.slice(5, 7); }
+function agrupar(rows, k) {
+  var m = {};
+  rows.forEach(function (r) {
+    var v = (r[k] || '(vazio)').toUpperCase();
+    var o = m[v] || (m[v] = { n: 0, dias: {} });
+    o.n++; o.dias[r.data] = 1;
+  });
+  return Object.keys(m).map(function (x) {
+    var d = Object.keys(m[x].dias).sort();
+    return { nome: x, n: m[x].n, dias: d.length, ini: d[0], fim: d[d.length - 1] };
+  }).sort(function (a, b) { return b.n - a.n; });
+}
+function porSeparador(rows) {
+  $('gSep').innerHTML = '<table class="mini"><thead><tr><th>Separador</th><th class="n">Qtd</th><th class="n">Dias</th><th>1º dia</th><th>Último</th></tr></thead><tbody>' +
+    agrupar(rows, 'separador').map(function (g) {
+      return '<tr><td>' + esc(g.nome) + '</td><td class="n">' + g.n + '</td><td class="n">' + g.dias + '</td><td>' + dm(g.ini) + '</td><td>' + dm(g.fim) + '</td></tr>';
+    }).join('') + '</tbody></table>';
+}
+function porCodigo(rows) {
+  var g = agrupar(rows, 'codigo'), tot = rows.length || 1;
+  $('nCod').textContent = '(' + g.length + ' códigos distintos)';
+  $('tCod').innerHTML = g.map(function (x, i) {
+    return '<tr><td>' + (i + 1) + '</td><td>' + esc(x.nome) + '</td><td class="n">' + x.n + '</td><td class="n">' + (x.n / tot * 100).toFixed(1) + '%</td><td class="n">' + x.dias + '</td></tr>';
+  }).join('');
+}
+
 function render() {
   var mes = $('mes').value, q = $('busca').value.toLowerCase();
   var rows = DADOS.filter(function (r) {
@@ -112,7 +145,8 @@ function render() {
     [dias.length ? (rows.length / dias.length).toFixed(1) : '0', 'média por dia'],
     [rows.length ? Math.round(abast / rows.length * 100) + '%' : '—', 'abastecidas']
   ].map(function (k) { return '<div class="card kpi"><b>' + k[0] + '</b><span>' + k[1] + '</span></div>'; }).join('');
-  graf('gSep', contar(rows, 'separador'));
+  porSeparador(rows);
+  porCodigo(rows);
   graf('gEnv', contar(rows, 'envio'));
   graf('gSit', contar(rows, 'situacao'));
   graf('gDia', contar(rows, 'data').map(function (p) { return [p[0].slice(8) + '/' + p[0].slice(5, 7), p[1]]; }), true);
