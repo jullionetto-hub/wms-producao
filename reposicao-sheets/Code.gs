@@ -44,17 +44,41 @@ function horario_(txt) {
   return ('0' + m[1]).slice(-2) + ':' + m[2];
 }
 
-/** Le todas as abas com nome de dia (01/10, 1-10, 01.10) e devolve as linhas. */
-function getDados() {
-  var out = [];
+/** Abas com nome de dia (01/10, 1-10, 01.10, 01*10): devolve {sh, data}. */
+function abasDia_() {
   var hoje = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  var out = [];
   planilha_().getSheets().forEach(function (sh) {
     var m = /^\s*(\d{1,2})\s*[\/\-.*_]\s*(\d{1,2})\s*$/.exec(sh.getName());
     if (!m) return; // ignora abas que nao sao dia
-    var dia = +m[1], mes = +m[2];
-    var data = ANO + '-' + ('0' + mes).slice(-2) + '-' + ('0' + dia).slice(-2);
+    var data = ANO + '-' + ('0' + +m[2]).slice(-2) + '-' + ('0' + +m[1]).slice(-2);
     if (IGNORAR_FUTURO && data > hoje) return;
-    var v = sh.getDataRange().getDisplayValues();
+    out.push({ sh: sh, data: data });
+  });
+  return out;
+}
+
+/** Meses que existem na planilha (so olha o nome das abas, e rapido). */
+function getMeses() {
+  var m = {};
+  abasDia_().forEach(function (a) { m[a.data.slice(0, 7)] = 1; });
+  return Object.keys(m).sort();
+}
+
+/** Le so as abas do mes pedido (ex.: '2026-10'); sem argumento, o ultimo mes. */
+function getDados(mes) {
+  var abas = abasDia_();
+  if (!mes) {
+    var ms = getMeses();
+    mes = ms[ms.length - 1];
+  }
+  var out = [];
+  abas.forEach(function (a) {
+    if (a.data.indexOf(mes) !== 0) return;
+    var sh = a.sh, lr = sh.getLastRow();
+    if (lr < 2) return;
+    // so as 10 primeiras colunas: ignora tabelas laterais/resumos
+    var v = sh.getRange(1, 1, lr, Math.min(sh.getLastColumn(), 10)).getDisplayValues();
 
     // acha a linha de cabecalho (primeira com "codigo") e mapeia as colunas
     var h = -1, col = {};
@@ -66,7 +90,7 @@ function getDados() {
     if (h < 0) return;
     v[h].forEach(function (t, c) {
       var k = CAMPOS[norm_(t)];
-      if (k && col[k] === undefined) col[k] = c; // so a 1a ocorrencia (ignora tabelas laterais)
+      if (k && col[k] === undefined) col[k] = c;
     });
     if (col.codigo === undefined) return;
 
@@ -75,7 +99,7 @@ function getDados() {
       if (!cod) continue;
       var g = function (k) { return col[k] === undefined ? '' : String(v[i][col[k]]).trim(); };
       out.push({
-        data: data,
+        data: a.data,
         horario: horario_(g('horario')),
         codigo: cod,
         envio: g('envio'),
@@ -92,8 +116,9 @@ function getDados() {
 
 /** Teste: rode esta funcao no editor e veja o Registro de execucao. */
 function testar() {
-  var d = getDados();
-  Logger.log('Linhas lidas: ' + d.length);
+  var t = new Date();
+  var d = getDados(); // ultimo mes
+  Logger.log('Linhas lidas: ' + d.length + ' em ' + (new Date() - t) / 1000 + 's');
   Logger.log(JSON.stringify(d.slice(0, 3)));
 }
 

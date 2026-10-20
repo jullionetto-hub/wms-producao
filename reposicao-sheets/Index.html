@@ -64,27 +64,38 @@
 var DADOS = [], $ = function (id) { return document.getElementById(id); };
 var MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
-google.script.run
-  .withSuccessHandler(function (d) { DADOS = d; init(); })
-  .withFailureHandler(function (e) { $('msg').textContent = 'Erro: ' + e.message; })
-  .getDados();
-
 function uniq(arr) { return arr.filter(function (x, i) { return x && arr.indexOf(x) === i; }).sort(); }
-function fill(sel, vals) { vals.forEach(function (v) { var o = document.createElement('option'); o.value = o.textContent = v; sel.appendChild(o); }); }
+function fill(sel, vals) {
+  while (sel.options.length > 1) sel.remove(1);
+  vals.forEach(function (v) { var o = document.createElement('option'); o.value = o.textContent = v; sel.appendChild(o); });
+}
+function erro(e) { $('msg').textContent = 'Erro: ' + (e && e.message ? e.message : e); }
 
-function init() {
-  $('msg').textContent = '';
-  var meses = uniq(DADOS.map(function (r) { return r.data.slice(0, 7); }));
-  meses.forEach(function (m) {
+// 1) so os nomes dos meses (rapido); 2) so os dados do mes escolhido
+$('msg').textContent = 'Carregando meses…';
+google.script.run.withSuccessHandler(function (ms) {
+  if (!ms.length) { $('msg').textContent = 'Nenhuma aba de dia encontrada.'; return; }
+  ms.forEach(function (m) {
     var o = document.createElement('option'); o.value = m; o.textContent = MESES[+m.slice(5) - 1] + ' ' + m.slice(0, 4); $('mes').appendChild(o);
   });
-  if (meses.length) $('mes').value = meses[meses.length - 1];
-  fill($('fsep'), uniq(DADOS.map(function (r) { return r.separador; })));
-  fill($('fsit'), uniq(DADOS.map(function (r) { return r.situacao; })));
-  fill($('fenv'), uniq(DADOS.map(function (r) { return r.envio; })));
-  ['mes','fsep','fsit','fenv'].forEach(function (id) { $(id).onchange = render; });
+  $('mes').value = ms[ms.length - 1];
+  $('mes').onchange = carregar;
+  ['fsep', 'fsit', 'fenv'].forEach(function (id) { $(id).onchange = render; });
   $('busca').oninput = render;
-  render();
+  carregar();
+}).withFailureHandler(erro).getMeses();
+
+function carregar() {
+  var mes = $('mes').value;
+  $('msg').textContent = 'Carregando ' + $('mes').selectedOptions[0].textContent + '… (pode levar alguns segundos)';
+  google.script.run.withSuccessHandler(function (d) {
+    DADOS = d;
+    $('msg').textContent = '';
+    fill($('fsep'), uniq(d.map(function (r) { return r.separador; })));
+    fill($('fsit'), uniq(d.map(function (r) { return r.situacao; })));
+    fill($('fenv'), uniq(d.map(function (r) { return r.envio; })));
+    render();
+  }).withFailureHandler(erro).getDados(mes);
 }
 
 function contar(rows, k) {
