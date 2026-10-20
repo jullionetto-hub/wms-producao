@@ -62,7 +62,7 @@ function getDados() {
     if (h < 0) return;
     v[h].forEach(function (t, c) {
       var k = CAMPOS[norm_(t)];
-      if (k) col[k] = c;
+      if (k && col[k] === undefined) col[k] = c; // so a 1a ocorrencia (ignora tabelas laterais)
     });
     if (col.codigo === undefined) return;
 
@@ -91,4 +91,28 @@ function testar() {
   var d = getDados();
   Logger.log('Linhas lidas: ' + d.length);
   Logger.log(JSON.stringify(d.slice(0, 3)));
+}
+
+/**
+ * Diagnostico: procura um nome em TODAS as abas e mostra onde ele esta
+ * (aba, celula e titulo da coluna). Troque NOME se quiser outro.
+ */
+function diagnostico() {
+  var NOME = 'ronivaldo';
+  var achou = 0;
+  planilha_().getSheets().forEach(function (sh) {
+    var v = sh.getDataRange().getDisplayValues();
+    for (var r = 0; r < v.length; r++) {
+      for (var c = 0; c < v[r].length; c++) {
+        if (String(v[r][c]).toLowerCase().indexOf(NOME) >= 0) {
+          achou++;
+          if (achou <= 40) {
+            Logger.log(sh.getName() + ' | celula ' + sh.getRange(r + 1, c + 1).getA1Notation() +
+              ' | coluna: ' + (v[Math.min(2, v.length - 1)][c] || v[1][c] || '?'));
+          }
+        }
+      }
+    }
+  });
+  Logger.log('Total de celulas com "' + NOME + '": ' + achou);
 }
