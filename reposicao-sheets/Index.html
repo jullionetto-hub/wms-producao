@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reposição</title>
+<style>
+  :root { --bg:#f6f5f7; --card:#fff; --ink:#222; --mut:#777; --acc:#a64d79; --line:#e4e0e6; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#17151a; --card:#221f26; --ink:#eee; --mut:#999; --line:#35303a; } }
+  * { box-sizing:border-box; }
+  body { margin:0; padding:16px; font:14px system-ui,sans-serif; background:var(--bg); color:var(--ink); }
+  h1 { font-size:20px; margin:0 0 12px; }
+  h2 { font-size:15px; margin:0 0 8px; color:var(--acc); }
+  .bar { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
+  select,input,button { padding:7px 10px; border:1px solid var(--line); border-radius:6px; background:var(--card); color:var(--ink); font:inherit; }
+  button { background:var(--acc); color:#fff; border:0; cursor:pointer; }
+  .kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:8px; margin-bottom:12px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:12px; }
+  .kpi b { display:block; font-size:24px; }
+  .kpi span { color:var(--mut); font-size:12px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:8px; margin-bottom:12px; }
+  .row { display:grid; grid-template-columns:110px 1fr 36px; align-items:center; gap:6px; margin:3px 0; font-size:13px; }
+  .row i { display:block; height:10px; background:var(--acc); border-radius:3px; }
+  .row em { font-style:normal; text-align:right; }
+  .scroll { overflow:auto; max-height:60vh; }
+  table { border-collapse:collapse; width:100%; }
+  th,td { padding:5px 8px; border-bottom:1px solid var(--line); text-align:left; white-space:nowrap; }
+  th { position:sticky; top:0; background:var(--card); }
+  #msg { color:var(--mut); margin:8px 0; }
+  @media print { body{background:#fff;color:#000;padding:0} .bar,.noprint{display:none} .scroll{max-height:none;overflow:visible} }
+</style>
+</head>
+<body>
+<h1>Solicitação de Reposição 2026 — <span id="titulo">carregando…</span></h1>
+<div class="bar noprint">
+  <select id="mes"></select>
+  <select id="fsep"><option value="">Separador: todos</option></select>
+  <select id="fsit"><option value="">Situação: todas</option></select>
+  <select id="fenv"><option value="">Envio: todos</option></select>
+  <input id="busca" placeholder="Buscar código / obs">
+  <button onclick="window.print()">Imprimir / PDF</button>
+</div>
+<div id="msg"></div>
+<div class="kpis" id="kpis"></div>
+<div class="grid">
+  <div class="card"><h2>Por separador</h2><div id="gSep"></div></div>
+  <div class="card"><h2>Por forma de envio</h2><div id="gEnv"></div></div>
+  <div class="card"><h2>Por situação</h2><div id="gSit"></div></div>
+  <div class="card"><h2>Por dia</h2><div id="gDia"></div></div>
+</div>
+<div class="card scroll">
+  <table><thead><tr>
+    <th>Data</th><th>Horário</th><th>Código</th><th>Envio</th><th>Separador</th><th>Pegou</th><th>Guardou</th><th>Situação</th><th>Obs</th>
+  </tr></thead><tbody id="tb"></tbody></table>
+</div>
+<script>
+var DADOS = [], $ = function (id) { return document.getElementById(id); };
+var MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+google.script.run
+  .withSuccessHandler(function (d) { DADOS = d; init(); })
+  .withFailureHandler(function (e) { $('msg').textContent = 'Erro: ' + e.message; })
+  .getDados();
+
+function uniq(arr) { return arr.filter(function (x, i) { return x && arr.indexOf(x) === i; }).sort(); }
+function fill(sel, vals) { vals.forEach(function (v) { var o = document.createElement('option'); o.value = o.textContent = v; sel.appendChild(o); }); }
+
+function init() {
+  $('msg').textContent = '';
+  var meses = uniq(DADOS.map(function (r) { return r.data.slice(0, 7); }));
+  meses.forEach(function (m) {
+    var o = document.createElement('option'); o.value = m; o.textContent = MESES[+m.slice(5) - 1] + ' ' + m.slice(0, 4); $('mes').appendChild(o);
+  });
+  if (meses.length) $('mes').value = meses[meses.length - 1];
+  fill($('fsep'), uniq(DADOS.map(function (r) { return r.separador; })));
+  fill($('fsit'), uniq(DADOS.map(function (r) { return r.situacao; })));
+  fill($('fenv'), uniq(DADOS.map(function (r) { return r.envio; })));
+  ['mes','fsep','fsit','fenv'].forEach(function (id) { $(id).onchange = render; });
+  $('busca').oninput = render;
+  render();
+}
+
+function contar(rows, k) {
+  var m = {}; rows.forEach(function (r) { var v = r[k] || '(vazio)'; m[v] = (m[v] || 0) + 1; });
+  return Object.keys(m).map(function (x) { return [x, m[x]]; }).sort(function (a, b) { return b[1] - a[1]; });
+}
+function graf(id, pares, ordenaChave) {
+  if (ordenaChave) pares.sort(function (a, b) { return a[0] < b[0] ? -1 : 1; });
+  var max = Math.max.apply(null, pares.map(function (p) { return p[1]; }).concat(1));
+  $(id).innerHTML = pares.map(function (p) {
+    return '<div class="row"><span>' + esc(p[0]) + '</span><i style="width:' + (p[1] / max * 100) + '%"></i><em>' + p[1] + '</em></div>';
+  }).join('');
+}
+function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+
+function render() {
+  var mes = $('mes').value, q = $('busca').value.toLowerCase();
+  var rows = DADOS.filter(function (r) {
+    return (!mes || r.data.indexOf(mes) === 0) &&
+      (!$('fsep').value || r.separador === $('fsep').value) &&
+      (!$('fsit').value || r.situacao === $('fsit').value) &&
+      (!$('fenv').value || r.envio === $('fenv').value) &&
+      (!q || (r.codigo + ' ' + r.obs).toLowerCase().indexOf(q) >= 0);
+  });
+  $('titulo').textContent = mes ? MESES[+mes.slice(5) - 1] : 'todos';
+  var dias = uniq(rows.map(function (r) { return r.data; }));
+  var abast = rows.filter(function (r) { return r.situacao === 'ABASTECIDO'; }).length;
+  $('kpis').innerHTML = [
+    [rows.length, 'solicitações'],
+    [dias.length, 'dias com registro'],
+    [dias.length ? (rows.length / dias.length).toFixed(1) : '0', 'média por dia'],
+    [rows.length ? Math.round(abast / rows.length * 100) + '%' : '—', 'abastecidas']
+  ].map(function (k) { return '<div class="card kpi"><b>' + k[0] + '</b><span>' + k[1] + '</span></div>'; }).join('');
+  graf('gSep', contar(rows, 'separador'));
+  graf('gEnv', contar(rows, 'envio'));
+  graf('gSit', contar(rows, 'situacao'));
+  graf('gDia', contar(rows, 'data').map(function (p) { return [p[0].slice(8) + '/' + p[0].slice(5, 7), p[1]]; }), true);
+  $('tb').innerHTML = rows.sort(function (a, b) { return (a.data + a.horario) < (b.data + b.horario) ? -1 : 1; }).map(function (r) {
+    return '<tr><td>' + r.data.slice(8) + '/' + r.data.slice(5, 7) + '</td><td>' + r.horario + '</td><td>' + esc(r.codigo) + '</td><td>' + esc(r.envio) +
+      '</td><td>' + esc(r.separador) + '</td><td>' + esc(r.pegou) + '</td><td>' + esc(r.guardou) + '</td><td>' + esc(r.situacao) + '</td><td>' + esc(r.obs) + '</td></tr>';
+  }).join('');
+}
+</script>
+</body>
+</html>
