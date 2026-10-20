@@ -7,6 +7,8 @@ var ANO = 2026;
 // Se o projeto NAO foi criado por Extensoes > Apps Script dentro da planilha,
 // cole aqui o ID da planilha (trecho da URL entre /d/ e /edit). Senao deixe vazio.
 var ID_PLANILHA = '';
+// true = ignora abas com data depois de hoje (modelos/copias adiantadas nao entram no relatorio)
+var IGNORAR_FUTURO = true;
 // Cabecalhos esperados (sem acento, minusculo) -> campo
 var CAMPOS = {
   'horario': 'horario',
@@ -45,11 +47,13 @@ function horario_(txt) {
 /** Le todas as abas com nome de dia (01/10, 1-10, 01.10) e devolve as linhas. */
 function getDados() {
   var out = [];
+  var hoje = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
   planilha_().getSheets().forEach(function (sh) {
-    var m = /^\s*(\d{1,2})\s*[\/\-.]\s*(\d{1,2})\s*$/.exec(sh.getName());
+    var m = /^\s*(\d{1,2})\s*[\/\-.*_]\s*(\d{1,2})\s*$/.exec(sh.getName());
     if (!m) return; // ignora abas que nao sao dia
     var dia = +m[1], mes = +m[2];
     var data = ANO + '-' + ('0' + mes).slice(-2) + '-' + ('0' + dia).slice(-2);
+    if (IGNORAR_FUTURO && data > hoje) return;
     var v = sh.getDataRange().getDisplayValues();
 
     // acha a linha de cabecalho (primeira com "codigo") e mapeia as colunas
@@ -94,25 +98,23 @@ function testar() {
 }
 
 /**
- * Diagnostico: procura um nome em TODAS as abas e mostra onde ele esta
- * (aba, celula e titulo da coluna). Troque NOME se quiser outro.
+ * Diagnostico: conta, aba por aba, quantas celulas contem o NOME.
+ * Rode e veja o Registro de execucao. Troque NOME se quiser outro.
  */
 function diagnostico() {
   var NOME = 'ronivaldo';
-  var achou = 0;
+  var total = 0;
   planilha_().getSheets().forEach(function (sh) {
-    var v = sh.getDataRange().getDisplayValues();
+    var v = sh.getDataRange().getDisplayValues(), n = 0, primeira = '';
     for (var r = 0; r < v.length; r++) {
       for (var c = 0; c < v[r].length; c++) {
         if (String(v[r][c]).toLowerCase().indexOf(NOME) >= 0) {
-          achou++;
-          if (achou <= 40) {
-            Logger.log(sh.getName() + ' | celula ' + sh.getRange(r + 1, c + 1).getA1Notation() +
-              ' | coluna: ' + (v[Math.min(2, v.length - 1)][c] || v[1][c] || '?'));
-          }
+          n++;
+          if (!primeira) primeira = sh.getRange(r + 1, c + 1).getA1Notation();
         }
       }
     }
+    if (n) { Logger.log('Aba "' + sh.getName() + '": ' + n + ' celulas (primeira em ' + primeira + ')'); total += n; }
   });
-  Logger.log('Total de celulas com "' + NOME + '": ' + achou);
+  Logger.log('Total de celulas com "' + NOME + '": ' + total);
 }
