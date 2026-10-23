@@ -129,6 +129,7 @@ const mx = p => (p - X0) * K, mz = p => (p - Y0) * K;   // x: leste · z: sul (p
 const TIPOS = {
   // bw/bd/bh = cesto plástico existente; pitch = passo ao longo da longarina; tp = passo vertical
   C: { depth:.95, bd:.41, bw:.55,  bh:.27,  pitch:.575, tiers:8, cols:4, tp:.25,  r:.045, cor:'#1fa21f', nome:'Módulo C' },
+  Z: { depth:.41, bd:.41, bw:.53, bh:.27, pitch:.55, tiers:7, cols:1, tp:.285, r:.04, cor:'#1fa21f', nome:'Cesto de parede (ZA)' },
   D: { depth:.85, bd:.345,bw:.43,  bh:.245, pitch:.46,  tiers:9, cols:5, tp:.225, r:.036, cor:'#e0141c', nome:'Módulo D' }
 };
 const TILT = 0.245;      // inclinação do cesto (rad ≈ 14°)
@@ -230,6 +231,25 @@ Object.keys(porRua).forEach(k => {
 });
 const CORREDORES = Object.keys(porRua).sort((a,b) => 'ABCDE'.includes(a) === 'ABCDE'.includes(b) ? 0 : 0);
 
+/* ZA: pilhas de cestos encostadas na parede dos fundos (sul). ZA001 começa na rua X e segue até ZA497;
+   dali faz a curva para a parede da direita, dentro da rua F (ZA498–ZA518). Pilhas de 7 cestos, numeração subindo. */
+const ZA = { niveis:7, colsFundo:71, colsF:3, parede:null };
+{
+  const wallZ = mz(1995) - .13, wallX = mx(3517) - .13, TZ = TIPOS.Z;
+  const xi = (mx(1123) + mx(1245)) / 2, xf = wallX - .65, p = (xf - xi) / ZA.colsFundo;
+  ZA.parede = { xi, xf, wallZ, wallX, p };
+  const lista = [];
+  for (let k = 0; k < ZA.colsFundo + ZA.colsF; k++) for (let t = 0; t < ZA.niveis; t++) {
+    const num = k * ZA.niveis + t + 1, fundo = k < ZA.colsFundo;
+    const r = { rk:-1, mod:k, tipo:'Z', face:0, side:-1, corr:'ZA', col:0, tier:t, y:.02 + t * TZ.tp, num, addr:'ZA' + String(num).padStart(3, '0'), parede:true };
+    if (fundo) { r.along = r.x = xi + (k + .5) * p; r.z = wallZ; r.rot = Math.PI / 2; }
+    else { const kk = k - ZA.colsFundo; r.x = wallX; r.along = r.z = wallZ - .7 - (kk + .5) * p; r.rot = Math.PI; }
+    lista.push(r);
+  }
+  lista.forEach(c => { cestos.push(c); byAddr[c.addr] = c; });
+  porRua.ZA = lista;
+}
+
 // produtos de exemplo (determinísticos) — o modelo não lê o banco do WMS
 const PRODUTOS = ['Bomba de banho','Sabonete esfoliante','Hidratante corporal','Sais de banho','Vela aromática','Body splash','Creme para mãos','Óleo corporal','Espuma de banho','Máscara facial','Kit presente','Difusor de ambiente'];
 const AROMAS = ['Lavanda','Morango','Baunilha','Algodão doce','Coco','Frutas vermelhas','Jasmim','Maçã verde','Pêssego','Cereja'];
@@ -250,6 +270,12 @@ function bbox(rk){
   const a0 = rk.a0, a1 = rk.a0 + rk.len, h = rk.depth / 2;
   return rk.axis === 'z' ? { x0:rk.c - h, x1:rk.c + h, z0:a0, z1:a1 } : { x0:a0, x1:a1, z0:rk.c - h, z1:rk.c + h };
 }
+{
+  const P = ZA.parede;
+  corrInfo.ZA = { letra:'ZA', n:0, frente:false, zonas:[
+    { x0:P.wallX - 1.3, x1:P.wallX - .4, z0:P.wallZ - 3.9, z1:P.wallZ - .7, sec:'Z', axis:'z', face:0 },
+    { x0:P.xi, x1:P.xf, z0:P.wallZ - 1.3, z1:P.wallZ - .4, sec:'Z', axis:'x', face:0 } ] };
+}
 racks.forEach(rk => {
   const b = bbox(rk);
   const reg = (letra, face) => {
@@ -261,6 +287,7 @@ racks.forEach(rk => {
   };
   reg(rk.neg, 0); reg(rk.pos, 1);
 });
+
 cestos.forEach(c => corrInfo[c.corr].n++);
 // ponto de entrada de cada rua (extremo norte/oeste da 1ª seção)
 function entradaRua(letra, secPref){
@@ -431,10 +458,10 @@ function geoCesto(T){
 const nTipo = { C:0, D:0 };
 cestos.forEach(c => nTipo[c.tipo]++);
 const meshCesto = {};
-const reg = { C:[], D:[] };
+const reg = { C:[], D:[], Z:[] };
 cestos.forEach(c => reg[c.tipo].push(c));
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _p = new THREE.Vector3(), _s = new THREE.Vector3(1, 1, 1), _e = new THREE.Euler();
-['C', 'D'].forEach(t => {
+['C', 'D', 'Z'].forEach(t => {
   const im = new THREE.InstancedMesh(geoCesto(TIPOS[t]), MAT.cesto, reg[t].length);
   reg[t].forEach((c, i) => {
     _q.setFromEuler(_e.set(0, c.rot, 0)); _p.set(c.x, c.y, c.z);
@@ -587,6 +614,7 @@ function pointInPoly(x, z, poly){
   return inside;
 }
 const obst = racks.map(rk => { const b = bbox(rk); return { x0:b.x0 - .05, x1:b.x1 + .05, z0:b.z0 - .05, z1:b.z1 + .05 }; });
+obst.push({ x0:ZA.parede.xi, x1:ZA.parede.xf + .6, z0:ZA.parede.wallZ - .5, z1:ZA.parede.wallZ + .2 }, { x0:ZA.parede.wallX - .5, x1:ZA.parede.wallX + .2, z0:ZA.parede.wallZ - 4.7, z1:ZA.parede.wallZ - .6 });
 PILARES.forEach(p => obst.push({ x0:mx(p) - .2, x1:mx(p) + .2, z0:mz(VIGA_Y) - .22, z1:mz(VIGA_Y) + .22 }));
 function livre(x, z){
   const r = .22;
@@ -706,7 +734,7 @@ function achar(cx, cy){
   const r = cv3.getBoundingClientRect();
   ndc.set(((cx - r.left) / r.width) * 2 - 1, -((cy - r.top) / r.height) * 2 + 1);
   ray.setFromCamera(ndc, camera);
-  const hits = ray.intersectObjects([meshCesto.C, meshCesto.D], false);
+  const hits = ray.intersectObjects([meshCesto.C, meshCesto.D, meshCesto.Z], false);
   if (!hits.length) return null;
   const h = hits[0]; return h.object.userData.recs[h.instanceId];
 }
@@ -724,12 +752,12 @@ function pick(cx, cy){ const c = achar(cx, cy); if (c) selecionar(c); else { sel
 const infoEl = document.getElementById('info');
 function selecionar(c, ir){
   sel = c; realcar(c);
-  const T = TIPOS[c.tipo], rk = racks[c.rk];
-  const lado = rk.axis === 'z' ? (c.face ? 'Leste' : 'Oeste') : (c.face ? 'Sul' : 'Norte');
-  const sec = rk.grupo === 'Frente' ? 'Frente (ramal A–E)' : 'Fundo · bloco ' + (rk.sec === 'N' ? 'norte' : 'sul');
+  const T = TIPOS[c.tipo], rk = c.rk >= 0 ? racks[c.rk] : null;
+  const lado = rk ? (rk.axis === 'z' ? (c.face ? 'Leste' : 'Oeste') : (c.face ? 'Sul' : 'Norte')) : (c.num <= ZA.colsFundo * ZA.niveis ? 'Parede dos fundos' : 'Parede direita (rua F)');
+  const sec = !rk ? 'Parede ZA · pilha ' + (c.mod + 1) : rk.grupo === 'Frente' ? 'Frente (ramal A–E)' : 'Fundo · bloco ' + (rk.sec === 'N' ? 'norte' : 'sul');
   infoEl.innerHTML = `<h2>${c.addr}</h2><div style="color:var(--mut)">${c.vazio ? 'Cesto vazio' : c.prod}</div>
-  <dl><dt>Rua</dt><dd>${c.corr} · ${sec}</dd><dt>Lado</dt><dd>${lado}</dd><dt>Módulo</dt><dd>${T.nome} · nº ${c.mod + 1}</dd>
-  <dt>Coluna</dt><dd>${c.col + 1} de ${rk.mods[c.mod].n}</dd><dt>Nível</dt><dd>${c.tier + 1} de ${T.tiers}</dd>
+  <dl><dt>Rua</dt><dd>${c.corr} · ${sec}</dd><dt>Lado</dt><dd>${lado}</dd><dt>Módulo</dt><dd>${rk ? T.nome + ' · nº ' + (c.mod + 1) : T.nome}</dd>
+  <dt>Coluna</dt><dd>${rk ? (c.col + 1) + ' de ' + rk.mods[c.mod].n : 'pilha ' + (c.mod + 1)}</dd><dt>Nível</dt><dd>${c.tier + 1} de ${T.tiers}</dd>
   <dt>Cesto</dt><dd>${Math.round(T.bw*1000+25)}×${Math.round(T.bd*1000)}×${Math.round(T.bh*1000)} mm</dd>
   <dt>SKU</dt><dd>${c.vazio ? '—' : c.sku}</dd><dt>Saldo</dt><dd>${c.vazio ? '0' : c.qtd + ' un'}</dd></dl>
   <div class="row"><button class="pri" id="bIr">Aproximar</button><button id="bX">Fechar</button></div>
@@ -810,6 +838,10 @@ function desenhar(ctx, W, H, v, opt){
       ctx.save(); ctx.translate(X(cx), Z(cz)); if (rk.axis === 'z') ctx.rotate(-Math.PI / 2); ctx.fillText(m.t, 0, 0); ctx.restore();
     }
   }));
+  { const P = ZA.parede, T = TIPOS.Z; ctx.strokeStyle = TIPOS.C.cor; ctx.lineWidth = Math.max(1, v.s * .07);
+    for (let k = 0; k < ZA.colsFundo; k++) ctx.strokeRect(X(P.xi + k * P.p), Z(P.wallZ - T.bd), P.p * v.s, T.bd * v.s);
+    for (let k = 0; k < ZA.colsF; k++) ctx.strokeRect(X(P.wallX - T.bd), Z(P.wallZ - .7 - (k + 1) * P.p), T.bd * v.s, P.p * v.s);
+    if (!opt.mini && v.s > 9) { ctx.fillStyle = '#d000d0'; ctx.font = `${Math.max(9, v.s * .6)}px sans-serif`; ctx.textAlign = 'center'; ctx.fillText('ZA001 → ZA497  (parede dos fundos)', X((P.xi + P.xf) / 2), Z(P.wallZ - .75)); } }
   // letras das ruas
   ctx.fillStyle = opt.mini ? '#c8d1da' : '#111'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   Object.keys(corrInfo).forEach(l => {
@@ -910,7 +942,7 @@ function aplicarToggles(){
 }
 ['tgItens','tgCaixas','tgTeto','tgParedes','tgPlaca'].forEach(id => $(id).onchange = aplicarToggles);
 const mkChip = (l, el, fr) => { const b = document.createElement('button'); b.className = 'chip' + (fr ? ' fr' : ''); b.textContent = l; b.dataset.l = l; b.onclick = () => { if (cam.modeUI === 'plan') { v2.selRua = l; cartaRua(l); } else irRua(l); }; el.appendChild(b); };
-['Z','Y','X','W','V','U','T','S','R','Q','P','O','N','M','L','K','J','I','H','G','F'].forEach(l => mkChip(l, $('chFundo')));
+['ZA','Z','Y','X','W','V','U','T','S','R','Q','P','O','N','M','L','K','J','I','H','G','F'].forEach(l => mkChip(l, $('chFundo')));
 ['A','B','C','D','E'].forEach(l => mkChip(l, $('chFrente'), true));
 {
   const nm = cestos.length, nmod = racks.reduce((s, r) => s + r.mods.length, 0), nc = cestos.filter(c => c.tipo === 'C').length;
@@ -919,9 +951,9 @@ const mkChip = (l, el, fr) => { const b = document.createElement('button'); b.cl
 function toast(t){ const e = $('toast'); e.textContent = t; e.style.display = 'block'; clearTimeout(toast.t); toast.t = setTimeout(() => e.style.display = 'none', 2600); }
 $('sf').onsubmit = e => {
   e.preventDefault();
-  const q = $('q').value.trim().toUpperCase().replace(/[\s-]/g, ''), m = q.match(/^([A-Z])(\d{1,4})$/);
+  const q = $('q').value.trim().toUpperCase().replace(/[\s-]/g, ''), m = q.match(/^([A-Z]{1,2})(\d{1,4})$/);
   if (m) { const a = m[1] + String(m[2]).padStart(3, '0'), c = byAddr[a]; if (c) { selecionar(c, true); return; } }
-  if (/^[A-Z]$/.test(q) && corrInfo[q]) { irRua(q); return; }
+  if (/^[A-Z]{1,2}$/.test(q) && corrInfo[q]) { irRua(q); return; }
   toast('Endereço não encontrado: ' + q);
 };
 $('q').placeholder = 'Endereço: T120 ou rua';
