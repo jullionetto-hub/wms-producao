@@ -91,12 +91,15 @@ label.tg{display:flex;gap:7px;align-items:center;padding:3px 0;cursor:pointer;co
     <div class="chips" id="chFundo"></div>
     <h3>Ruas — frente</h3>
     <div class="chips" id="chFrente"></div>
+    <h3>Araras (roupas)</h3>
+    <div class="chips" id="chAraras"></div>
     <h3>Exibir</h3>
     <label class="tg"><input type="checkbox" id="tgItens" checked> Produtos nos cestos</label>
     <label class="tg"><input type="checkbox" id="tgCaixas" checked> Caixas no topo</label>
     <label class="tg"><input type="checkbox" id="tgTeto" checked> Teto e luminárias</label>
     <label class="tg"><input type="checkbox" id="tgParedes" checked> Paredes</label>
     <label class="tg"><input type="checkbox" id="tgPlaca" checked> Placas das ruas</label>
+    <label class="tg"><input type="checkbox" id="tgAraras" checked> Araras nas paredes</label>
     <div class="leg">
       <div><i style="background:#1fa21f"></i>Módulo C · 2300×950 · cesto 575×410×275 · 8 níveis</div>
       <div><i style="background:#e0141c"></i>Módulo D · 2300×850 · cesto 435×340×245 · 9 níveis</div>
@@ -248,6 +251,30 @@ const ZA = { niveis:7, colsFundo:71, colsF:3, parede:null };
   }
   lista.forEach(c => { cestos.push(c); byAddr[c.addr] = c; });
   porRua.ZA = lista;
+}
+
+/* Araras 1–26: armários brancos com varões cromados encostados nas paredes (fotos).
+   1–7 parede leste (frente da rua I) · 8–14 parede norte (rua I até M) · 15 parede norte junto às ruas X/W
+   16–24 parede oeste (ao lado da rua Z) · 25–26 parede sul-esquerda (frente das ruas Y/Z). */
+const ARARA = { w:1.3, d:.4, h:2.35 };
+const araras = [];
+{
+  const w = ARARA.w, g = .06, W = .12;           // g = folga entre unidades, W = meia espessura da parede
+  const paredes = [
+    { n0:1,  n:7, x:mx(3312) - W, z0:mz(1498) - .15, dz:-1, rot:Math.PI,      txt:'Parede leste · frente da rua I' },
+    { n0:8,  n:7, z:mz(961) + W,  x0:mx(3312) - W - .2, dx:-1, rot:-Math.PI / 2, txt:'Parede norte · ruas I → M' },
+    { n0:15, n:1, z:mz(1043) + W, x0:mx(1184) + w / 2, dx:-1, rot:-Math.PI / 2, txt:'Parede norte · ruas X / W' },
+    { n0:16, n:9, x:mx(863) + W,  z0:mz(1043) + .15, dz:1,  rot:0,            txt:'Parede oeste · ao lado da rua Z' },
+    { n0:25, n:2, z:mz(1835) - W, x0:mx(863) + W + .15, dx:1, rot:Math.PI / 2, txt:'Parede sul · ruas Z / Y' }
+  ];
+  paredes.forEach(P => {
+    for (let i = 0; i < P.n; i++) {
+      const off = (w + g) * i + w / 2, num = P.n0 + i;
+      const r = { ar:true, n:num, addr:'ARARA ' + num, rot:P.rot, parede:P.txt, tipo:'A', y:1.2, w };
+      if (P.x != null) { r.bx = P.x; r.bz = P.z0 + P.dz * off; } else { r.bz = P.z; r.bx = P.x0 + P.dx * off; }
+      r.x = r.bx; r.z = r.bz; araras.push(r);
+    }
+  });
 }
 
 // produtos de exemplo (determinísticos) — o modelo não lê o banco do WMS
@@ -592,12 +619,53 @@ function texPlaca(letra, faixa){
   scene.add(new THREE.Mesh(mergeG(g), M(0xc4a77a)));
 }
 
+/* araras */
+const ararasGrp = new THREE.Group(), hitAraras = [];
+{
+  const A = ARARA, branco = [], cromo = [], garm = [], R = rnd(99);
+  const loc = (r, lx, lz) => { const cs = Math.cos(r.rot), sn = Math.sin(r.rot); return [r.bx + lx * cs + lz * sn, r.bz - lx * sn + lz * cs]; };
+  const PAL = [0xe0409a,0x7a1530,0x181818,0xefe6c8,0xc4202a,0x9db8e0,0xb79ad6,0xe7b79d,0x1c2a52,0x9fbf90,0xf4f4f0];
+  araras.forEach(r => {
+    const put = (arr, lx, ly, lz, dx, dy, dz) => { const p = loc(r, lx, lz); arr.push(boxG(dx, dy, dz, p[0], ly, p[1], 0, r.rot, 0)); };
+    put(branco, .015, A.h / 2, 0, .03, A.h, A.w);                       // fundo
+    put(branco, A.d / 2, A.h - .02, 0, A.d, .04, A.w);                  // tampo
+    put(branco, A.d / 2, A.h / 2, -A.w / 2 + .015, A.d, A.h, .03);      // laterais
+    put(branco, A.d / 2, A.h / 2,  A.w / 2 - .015, A.d, A.h, .03);
+    put(branco, A.d / 2, .06, 0, A.d, .12, A.w);                         // rodapé
+    [.5, .88, 1.26, 1.64, 2.02].forEach(y => {
+      put(cromo, .2, y, 0, .028, .028, A.w - .06);                      // varão
+      if (R() < .12) return;                                            // varão vazio
+      const n = 6 + Math.floor(R() * 5), cor = [PAL[Math.floor(R() * PAL.length)], PAL[Math.floor(R() * PAL.length)]];
+      for (let k = 0; k < n; k++) {
+        const lz = -A.w / 2 + .14 + k * ((A.w - .28) / Math.max(1, n - 1)), p = loc(r, .2, lz);
+        garm.push({ x:p[0], y:y - .2, z:p[1], rot:r.rot, c:R() < .7 ? cor[0] : cor[1], h:.3 + R() * .12 });
+      }
+    });
+    const hp = loc(r, A.d / 2, 0), hit = new THREE.Mesh(new THREE.BoxGeometry(A.d, A.h, A.w), new THREE.MeshBasicMaterial({ visible:false }));
+    hit.position.set(hp[0], A.h / 2, hp[1]); hit.rotation.y = r.rot; hit.userData.rec = r; hit.updateMatrixWorld(); hitAraras.push(hit); ararasGrp.add(hit);
+    // etiqueta
+    const c = document.createElement('canvas'); c.width = 256; c.height = 64; const g = c.getContext('2d');
+    g.fillStyle = '#fff'; g.fillRect(0, 0, 256, 64); g.strokeStyle = '#d93a63'; g.lineWidth = 6; g.strokeRect(3, 3, 250, 58);
+    g.fillStyle = '#111'; g.font = 'bold 40px Arial,sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('ARARA ' + r.n, 128, 34);
+    const lb = new THREE.Mesh(new THREE.PlaneGeometry(.5, .125), new THREE.MeshBasicMaterial({ map:new THREE.CanvasTexture(c) }));
+    const lp = loc(r, A.d + .003, 0); lb.position.set(lp[0], A.h - .12, lp[1]); lb.rotation.y = r.rot + Math.PI / 2; ararasGrp.add(lb);
+    // área ocupada (colisão e planta)
+    const cs = Math.abs(Math.cos(r.rot)), sn = Math.abs(Math.sin(r.rot)), hx = (A.d * cs + A.w * sn) / 2, hz = (A.d * sn + A.w * cs) / 2;
+    r.bb = { x0:hp[0] - hx, x1:hp[0] + hx, z0:hp[1] - hz, z1:hp[1] + hz };
+  });
+  ararasGrp.add(new THREE.Mesh(mergeG(branco), M(0xf3f3ef)), new THREE.Mesh(mergeG(cromo), new THREE.MeshLambertMaterial({ color:0xc9cfd6 })));
+  const gm = new THREE.InstancedMesh(new THREE.BoxGeometry(.05, 1, .1), new THREE.MeshLambertMaterial({ color:0xffffff }), garm.length), col = new THREE.Color();
+  garm.forEach((p, i) => { _p.set(p.x, p.y - p.h / 2 + .2, p.z); _q.setFromEuler(_e.set(0, p.rot, 0)); _s.set(1, p.h, 1); gm.setMatrixAt(i, _m.compose(_p, _q, _s)); gm.setColorAt(i, col.setHex(p.c)); });
+  _s.set(1, 1, 1); ararasGrp.add(gm); scene.add(ararasGrp);
+}
+
 /* realce do cesto selecionado */
 const hi = new THREE.Group();
 const hiBox = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({ color:0x28d8ff, transparent:true, opacity:.28, depthTest:false }));
 const hiEdge = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1)), new THREE.LineBasicMaterial({ color:0x7ff0ff, depthTest:false }));
 hiBox.renderOrder = hiEdge.renderOrder = 10; hi.add(hiBox, hiEdge); hi.visible = false; scene.add(hi);
 function realcar(c){
+  if (c.ar) { const cs = Math.cos(c.rot), sn = Math.sin(c.rot), lx = ARARA.d / 2; hi.position.set(c.bx + lx * cs, ARARA.h / 2, c.bz - lx * sn); hi.rotation.set(0, c.rot, 0); hi.scale.set(ARARA.d + .04, ARARA.h + .04, ARARA.w + .04); hi.visible = true; return; }
   const T = TIPOS[c.tipo], cs = Math.cos(c.rot), sn = Math.sin(c.rot);
   const lx = T.bd / 2, ly = T.bh * .55 + T.bd * .1;
   hi.position.set(c.x + lx * cs, c.y + ly, c.z - lx * sn); hi.rotation.set(0, c.rot, 0);
@@ -615,6 +683,7 @@ function pointInPoly(x, z, poly){
 }
 const obst = racks.map(rk => { const b = bbox(rk); return { x0:b.x0 - .05, x1:b.x1 + .05, z0:b.z0 - .05, z1:b.z1 + .05 }; });
 obst.push({ x0:ZA.parede.xi, x1:ZA.parede.xf + .6, z0:ZA.parede.wallZ - .5, z1:ZA.parede.wallZ + .2 }, { x0:ZA.parede.wallX - .5, x1:ZA.parede.wallX + .2, z0:ZA.parede.wallZ - 4.7, z1:ZA.parede.wallZ - .6 });
+araras.forEach(r => obst.push(r.bb));
 PILARES.forEach(p => obst.push({ x0:mx(p) - .2, x1:mx(p) + .2, z0:mz(VIGA_Y) - .22, z1:mz(VIGA_Y) + .22 }));
 function livre(x, z){
   const r = .22;
@@ -735,6 +804,8 @@ function achar(cx, cy){
   ndc.set(((cx - r.left) / r.width) * 2 - 1, -((cy - r.top) / r.height) * 2 + 1);
   ray.setFromCamera(ndc, camera);
   const hits = ray.intersectObjects([meshCesto.C, meshCesto.D, meshCesto.Z], false);
+  const ah = ararasGrp.visible ? ray.intersectObjects(hitAraras, false) : [];
+  if (ah.length && (!hits.length || ah[0].distance < hits[0].distance)) return ah[0].object.userData.rec;
   if (!hits.length) return null;
   const h = hits[0]; return h.object.userData.recs[h.instanceId];
 }
@@ -745,13 +816,23 @@ function hover(e){
   const c = cam.mode === 'walk' && ptr.down ? null : achar(e.clientX, e.clientY);
   if (!c) { tip.style.display = 'none'; return; }
   const r = document.getElementById('stage').getBoundingClientRect();
-  tip.textContent = c.addr + (c.vazio ? ' · vazio' : ' · ' + c.prod); tip.style.display = 'block';
+  tip.textContent = c.ar ? c.addr + ' · ' + c.parede : c.addr + (c.vazio ? ' · vazio' : ' · ' + c.prod); tip.style.display = 'block';
   tip.style.left = Math.min(r.width - 220, e.clientX - r.left + 14) + 'px'; tip.style.top = (e.clientY - r.top + 14) + 'px';
 }
 function pick(cx, cy){ const c = achar(cx, cy); if (c) selecionar(c); else { sel = null; hi.visible = false; document.getElementById('info').style.display = 'none'; } }
 const infoEl = document.getElementById('info');
 function selecionar(c, ir){
   sel = c; realcar(c);
+  if (c.ar) {
+    infoEl.innerHTML = `<h2>${c.addr}</h2><div style="color:var(--mut)">Arara de roupas (cabides em varões)</div>
+    <dl><dt>Local</dt><dd>${c.parede}</dd><dt>Medidas</dt><dd>${ARARA.w * 1000}×${ARARA.d * 1000}×${ARARA.h * 1000} mm</dd><dt>Varões</dt><dd>5 níveis</dd></dl>
+    <div class="row"><button class="pri" id="bIr">Aproximar</button><button id="bX">Fechar</button></div>
+    <div class="tiny">Medidas e peças penduradas são aproximadas (fotos).</div>`;
+    infoEl.style.display = 'block';
+    document.getElementById('bX').onclick = () => { sel = null; hi.visible = false; infoEl.style.display = 'none'; };
+    document.getElementById('bIr').onclick = () => irPara(c);
+    if (ir) irPara(c); return;
+  }
   const T = TIPOS[c.tipo], rk = c.rk >= 0 ? racks[c.rk] : null;
   const lado = rk ? (rk.axis === 'z' ? (c.face ? 'Leste' : 'Oeste') : (c.face ? 'Sul' : 'Norte')) : (c.num <= ZA.colsFundo * ZA.niveis ? 'Parede dos fundos' : 'Parede direita (rua F)');
   const sec = !rk ? 'Parede ZA · pilha ' + (c.mod + 1) : rk.grupo === 'Frente' ? 'Frente (ramal A–E)' : 'Fundo · bloco ' + (rk.sec === 'N' ? 'norte' : 'sul');
@@ -842,6 +923,11 @@ function desenhar(ctx, W, H, v, opt){
     for (let k = 0; k < ZA.colsFundo; k++) ctx.strokeRect(X(P.xi + k * P.p), Z(P.wallZ - T.bd), P.p * v.s, T.bd * v.s);
     for (let k = 0; k < ZA.colsF; k++) ctx.strokeRect(X(P.wallX - T.bd), Z(P.wallZ - .7 - (k + 1) * P.p), T.bd * v.s, P.p * v.s);
     if (!opt.mini && v.s > 9) { ctx.fillStyle = '#d000d0'; ctx.font = `${Math.max(9, v.s * .6)}px sans-serif`; ctx.textAlign = 'center'; ctx.fillText('ZA001 → ZA497  (parede dos fundos)', X((P.xi + P.xf) / 2), Z(P.wallZ - .75)); } }
+  araras.forEach(r => {
+    ctx.fillStyle = opt.mini ? '#9aa6b1' : '#e9e9e4'; ctx.strokeStyle = '#d93a63'; ctx.lineWidth = Math.max(1, v.s * .06);
+    ctx.fillRect(X(r.bb.x0), Z(r.bb.z0), (r.bb.x1 - r.bb.x0) * v.s, (r.bb.z1 - r.bb.z0) * v.s); ctx.strokeRect(X(r.bb.x0), Z(r.bb.z0), (r.bb.x1 - r.bb.x0) * v.s, (r.bb.z1 - r.bb.z0) * v.s);
+    if (!opt.mini && v.s > 9) { ctx.fillStyle = '#a0204a'; ctx.font = `bold ${v.s * .55}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(r.n, X((r.bb.x0 + r.bb.x1) / 2), Z((r.bb.z0 + r.bb.z1) / 2)); }
+  });
   // letras das ruas
   ctx.fillStyle = opt.mini ? '#c8d1da' : '#111'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   Object.keys(corrInfo).forEach(l => {
@@ -938,20 +1024,22 @@ function mostrar(m){
 document.querySelectorAll('.tab').forEach(b => b.onclick = () => mostrar(b.dataset.mode));
 function aplicarToggles(){
   itensGrp.visible = $('tgItens').checked; caixasTopo.visible = $('tgCaixas').checked;
-  teto.visible = $('tgTeto').checked; paredes.visible = $('tgParedes').checked; placas.visible = $('tgPlaca').checked;
+  teto.visible = $('tgTeto').checked; paredes.visible = $('tgParedes').checked; placas.visible = $('tgPlaca').checked; ararasGrp.visible = $('tgAraras').checked;
 }
-['tgItens','tgCaixas','tgTeto','tgParedes','tgPlaca'].forEach(id => $(id).onchange = aplicarToggles);
+['tgItens','tgCaixas','tgTeto','tgParedes','tgPlaca','tgAraras'].forEach(id => $(id).onchange = aplicarToggles);
 const mkChip = (l, el, fr) => { const b = document.createElement('button'); b.className = 'chip' + (fr ? ' fr' : ''); b.textContent = l; b.dataset.l = l; b.onclick = () => { if (cam.modeUI === 'plan') { v2.selRua = l; cartaRua(l); } else irRua(l); }; el.appendChild(b); };
 ['ZA','Z','Y','X','W','V','U','T','S','R','Q','P','O','N','M','L','K','J','I','H','G','F'].forEach(l => mkChip(l, $('chFundo')));
 ['A','B','C','D','E'].forEach(l => mkChip(l, $('chFrente'), true));
+araras.forEach(r => { const b = document.createElement('button'); b.className = 'chip'; b.style.borderColor = '#d93a63'; b.textContent = r.n; b.onclick = () => selecionar(r, true); $('chAraras').appendChild(b); });
 {
   const nm = cestos.length, nmod = racks.reduce((s, r) => s + r.mods.length, 0), nc = cestos.filter(c => c.tipo === 'C').length;
-  $('stats').innerHTML = `<div><b>${racks.length}</b> porta-pallets · <b>${nmod}</b> módulos</div><div><b>${nm.toLocaleString('pt-BR')}</b> cestos (<b>${nc.toLocaleString('pt-BR')}</b> C · <b>${(nm - nc).toLocaleString('pt-BR')}</b> D)</div><div><b>${Object.keys(corrInfo).length}</b> ruas · A–E frente, F–Z fundo</div>`;
+  $('stats').innerHTML = `<div><b>${racks.length}</b> porta-pallets · <b>${nmod}</b> módulos</div><div><b>${nm.toLocaleString('pt-BR')}</b> cestos (<b>${nc.toLocaleString('pt-BR')}</b> C · <b>${(nm - nc).toLocaleString('pt-BR')}</b> D)</div><div><b>${araras.length}</b> araras de roupas</div><div><b>${Object.keys(corrInfo).length}</b> ruas · A–E frente, F–Z fundo</div>`;
 }
 function toast(t){ const e = $('toast'); e.textContent = t; e.style.display = 'block'; clearTimeout(toast.t); toast.t = setTimeout(() => e.style.display = 'none', 2600); }
 $('sf').onsubmit = e => {
   e.preventDefault();
-  const q = $('q').value.trim().toUpperCase().replace(/[\s-]/g, ''), m = q.match(/^([A-Z]{1,2})(\d{1,4})$/);
+  const q = $('q').value.trim().toUpperCase().replace(/[\s-]/g, ''), ma = q.match(/^ARARA(\d{1,2})$/), m = q.match(/^([A-Z]{1,2})(\d{1,4})$/);
+  if (ma && araras[+ma[1] - 1]) { selecionar(araras[+ma[1] - 1], true); return; }
   if (m) { const a = m[1] + String(m[2]).padStart(3, '0'), c = byAddr[a]; if (c) { selecionar(c, true); return; } }
   if (/^[A-Z]{1,2}$/.test(q) && corrInfo[q]) { irRua(q); return; }
   toast('Endereço não encontrado: ' + q);
