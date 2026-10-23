@@ -296,7 +296,7 @@ const pd2 = n => String(n).padStart(2, '0'), pd3 = n => String(n).padStart(3, '0
 function normLoc(tok){
   tok = tok.trim().toUpperCase(); let m;
   if ((m = tok.match(/^[A-Z]?VERT-([A-Z])(\d{1,2})-CX(\d{1,2})$/))) return 'VERT-' + m[1] + pd2(m[2]) + '-CX' + pd2(m[3]);
-  if ((m = tok.match(/^\.?ARARA\s*(\d{1,2})$/))) return 'ARARA ' + m[1];
+  if ((m = tok.match(/^\.?ARARA\s*(\d{1,2})$/))) return 'ARARA ' + (+m[1]);
   if ((m = tok.match(/^ZA\s*(\d{1,3})$/))) return 'ZA' + pd3(m[1]);
   if ((m = tok.match(/^([A-Z])(\d{1,3})$/))) return m[1] + pd3(m[2]);
   return null;
@@ -1080,7 +1080,7 @@ const indice = produtos.map(p => semAcento(p.cod + ' ' + p.nome));
 function chaveEnd(q){
   const u = q.trim().toUpperCase(); let m;
   if ((m = u.match(/^(?:[A-Z])?VERT[-\s]?([A-Z])(\d{1,2})[-\s]?CX[-\s]?(\d{1,2})$/))) return 'VERT-' + m[1] + pd2(m[2]) + '-CX' + pd2(m[3]);
-  if ((m = u.match(/^ARARA\s*(\d{1,2})$/))) return 'ARARA ' + m[1];
+  if ((m = u.match(/^ARARA\s*(\d{1,2})$/))) return 'ARARA ' + (+m[1]);
   if ((m = u.match(/^ZA[\s-]?(\d{1,3})$/))) return 'ZA' + pd3(m[1]);
   if ((m = u.match(/^([A-Z])[\s-]?(\d{1,3})$/))) return m[1] + pd3(m[2]);
   return null;
