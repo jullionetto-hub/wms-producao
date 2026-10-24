@@ -407,12 +407,12 @@ const texTeto = tex(256, 256, (g, w, h) => {
   for (let x = 0; x < w; x += 16) { g.fillStyle = 'rgba(255,255,255,.28)'; g.fillRect(x, 0, 6, h); g.fillStyle = 'rgba(0,0,0,.18)'; g.fillRect(x + 8, 0, 5, h); }
 }, [.6, .6]);
 
+// plástico vazado: cada tile = 2,5 × 4 cm, com um furo vertical (~35 % de área aberta — some de longe, aparece de perto)
 const texMalha = tex(64, 64, (g, w, h) => {
-  g.clearRect(0, 0, w, h); g.fillStyle = '#fff'; g.fillRect(0, 0, w, h);
-  g.clearRect(12, 12, 40, 40);
-}, [7, 7]);
-texMalha.magFilter = THREE.NearestFilter;
-MAT.cesto = new THREE.MeshLambertMaterial({ color:0x363c44 });
+  g.fillStyle = '#fff'; g.fillRect(0, 0, w, h); g.clearRect(20, 10, 24, 44);
+}, null);
+texMalha.anisotropy = 8;
+MAT.cesto = new THREE.MeshLambertMaterial({ color:0x2e343b, map:texMalha, alphaTest:.5, side:THREE.DoubleSide });
 
 /* piso */
 const shape = new THREE.Shape(CONTORNO.map(p => new THREE.Vector2(p[0], -p[1])));
@@ -506,14 +506,29 @@ scene.add(new THREE.Mesh(mergeG(gAzul), MAT.azul), new THREE.Mesh(mergeG(gLaranj
 
 /* cestos plásticos inclinados */
 function geoCesto(T){
-  const d = T.bd, w = T.bw, H = T.bh, parts = [];
-  parts.push(boxG(d, .014, w, d / 2, 0, 0));
-  parts.push(boxG(.014, H, w, 0, H / 2, 0));
+  const d = T.bd, w = T.bw, H = T.bh, hf = H * .4, parts = [], SU = 1 / .025, SV = 1 / .04;
+  // painel com UV em escala real (metros) para o furo repetir igual em todos os cestos
+  const painel = (pts, nor, ua, va) => {
+    const g = new THREE.BufferGeometry(), pos = [], uv = [], nr = [], idx = [];
+    pts.forEach(p => { pos.push(p[0], p[1], p[2]); uv.push(p[ua] * SU, p[va] * SV); nr.push(nor[0], nor[1], nor[2]); });
+    for (let i = 1; i < pts.length - 1; i++) idx.push(0, i, i + 1);
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+    g.setAttribute('normal', new THREE.Float32BufferAttribute(nr, 3)); g.setIndex(idx); return g;
+  };
+  const solido = g => { const u = g.attributes.uv; for (let i = 0; i < u.count; i++) u.setXY(i, .03, .03); return g; };   // sampla a parte maciça da textura
+  parts.push(painel([[0, 0, -w / 2], [d, 0, -w / 2], [d, 0, w / 2], [0, 0, w / 2]], [0, 1, 0], 0, 2));          // fundo
+  parts.push(painel([[0, 0, -w / 2], [0, 0, w / 2], [0, H, w / 2], [0, H, -w / 2]], [1, 0, 0], 2, 1));         // traseira
+  parts.push(painel([[d, 0, -w / 2], [d, 0, w / 2], [d, hf, w / 2], [d, hf, -w / 2]], [-1, 0, 0], 2, 1));      // frente baixa
+  for (const s of [-1, 1]) parts.push(painel([[0, 0, s * w / 2], [d, 0, s * w / 2], [d, hf, s * w / 2], [0, H, s * w / 2]], [0, 0, s], 0, 1)); // laterais em rampa
+  const L = Math.hypot(d, H - hf), ang = Math.atan2(hf - H, d), r = .013;
   for (const s of [-1, 1]) {
-    parts.push(boxG(d, H * .62, .012, d / 2, H * .31, s * w / 2));
-    parts.push(boxG(d * .45, H * .9, .012, d * .225, H * .45, s * w / 2));
+    parts.push(solido(boxG(L, r, r, d / 2, (H + hf) / 2, s * w / 2, 0, 0, ang)));    // borda superior inclinada
+    parts.push(solido(boxG(d, r, r, d / 2, 0, s * w / 2)));                           // borda do fundo
+    parts.push(solido(boxG(r, H, r, 0, H / 2, s * w / 2)));                           // coluna traseira
   }
-  parts.push(boxG(.014, .075, w, d, .037, 0));
+  parts.push(solido(boxG(r, r, w, 0, H, 0)));                                         // borda traseira
+  parts.push(solido(boxG(.016, .05, w, d, hf - .025, 0)));                            // faixa frontal maciça (porta-etiqueta)
+  parts.push(solido(boxG(r, r, w, d, 0, 0)));
   const g = mergeG(parts);
   g.applyMatrix4(new THREE.Matrix4().makeRotationZ(-TILT));
   g.translate(0, d * Math.tan(TILT) + .004, 0);
@@ -538,7 +553,8 @@ const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _p = new THREE.Vect
 const tagG = new THREE.BoxGeometry(.006, .03, .075);
 const tags = new THREE.InstancedMesh(tagG, new THREE.MeshBasicMaterial({ color:0xf3d60c }), cestos.length);
 cestos.forEach((c, i) => {
-  const T = TIPOS[c.tipo], ex = T.bd * Math.cos(TILT) + .004, ey = c.y + .012;
+  const T = TIPOS[c.tipo], lx = T.bd + .01, ly = T.bh * .4 - .025;
+  const ex = lx * Math.cos(TILT) + ly * Math.sin(TILT), ey = c.y + (-lx * Math.sin(TILT) + ly * Math.cos(TILT)) + T.bd * Math.tan(TILT) + .004;
   const cs = Math.cos(c.rot), sn = Math.sin(c.rot);
   _p.set(c.x + ex * cs, ey, c.z - ex * sn); _q.setFromEuler(_e.set(0, c.rot, 0));
   tags.setMatrixAt(i, _m.compose(_p, _q, _s));
