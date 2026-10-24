@@ -176,7 +176,7 @@ const FUNDO = [
   ['V',1394, {top:198,t:'D',c:2,s:3,g:5},         {top:628,t:'C',c:2}],
   ['U',1521, {top:85, t:'D',c:3,s:3,g:5},         {top:628,t:'C',c:2}],
   ['T',1647, {top:90, t:'C',c:3,s:1,g:6},         {top:628,t:'C',c:2}],
-  ['S',1779, {top:65, t:'C',c:3,s:1,g:5},         {top:628,t:'C',c:2}],
+  ['S',1779, {top:65, t:'C',c:3,s:1,g:5,sp:1},         {top:628,t:'C',c:2}],
   ['R',1910, {top:90, t:'C',c:3,s:1,g:6},         {top:628,t:'C',c:2}],
   ['Q',2061, {top:90, t:'C',c:3,s:1,g:6},         {top:628,t:'C',c:2}],
   ['P',2198, {top:90, t:'C',c:3},                 {top:628,t:'C',c:2}],
@@ -206,7 +206,7 @@ function sect(cfg, sec){
   const T = TIPOS[cfg.t], mods = [];
   for (let i = 0; i < cfg.c; i++) mods.push({ t:cfg.t, L:MOD_L, n:T.cols, al:'s' });
   (cfg.x || []).forEach(e => mods.push({ t:cfg.t, L:MOD_L, n:e.n, al:'s', parcial:true }));
-  if (cfg.s) mods.push({ t:cfg.t, L:cfg.s * T.pitch + .06, n:cfg.s, gap:cfg.g * K, al:'c', curto:true });
+  if (cfg.s) mods.push({ t:cfg.t, L:cfg.s * T.pitch + .06, n:cfg.s, gap:cfg.g * K, al:'c', curto:true, soPos:!!cfg.sp });
   return mods;
 }
 function addRack(o){
@@ -224,7 +224,7 @@ FUNDO.forEach((R, i) => {
 // Ramal da frente: 4 fileiras horizontais de 3 módulos C → ruas A (norte) … E (sul)
 [515,650,782,917].forEach((top, r) => {
   const mods = [0,1,2].map(() => ({ t:'C', L:MOD_L, n:4, al:'s' }));
-  if (r === 3) { mods[0].n = 3; mods[0].al = 'e'; mods[0].parcial = true; }
+  if (r === 3) { mods[0].n = 3; mods[0].nNeg = 4; mods[0].al = 'e'; mods[0].parcial = true; }
   addRack({ axis:'x', c:mz(top + 27.5), a0:mx(1630), neg:'ABCDE'[r], pos:'ABCDE'[r+1], grupo:'Frente', sec:'F', mods });
 });
 
@@ -233,14 +233,16 @@ const cestos = [];       // um registro por cesto
 racks.forEach((rk, ri) => {
   rk.mods.forEach((m, mi) => {
     const T = TIPOS[m.t];
-    const off = m.al === 's' ? 0 : m.al === 'e' ? m.L - m.n * T.pitch : (m.L - m.n * T.pitch) / 2;
     for (let face = 0; face < 2; face++) {
+      if (m.soPos && face === 0) continue;                       // módulo curto sem cestos na face oeste (planilha de dificuldade)
+      const nf = face === 0 && m.nNeg ? m.nNeg : m.n;
+      const off = m.al === 's' ? 0 : m.al === 'e' ? m.L - nf * T.pitch : (m.L - nf * T.pitch) / 2;
       const side = face ? 1 : -1;
       const corr = face ? rk.pos : rk.neg;
-      for (let j = 0; j < m.n; j++) {
+      for (let j = 0; j < nf; j++) {
         const along = rk.a0 + m.a + off + (j + .5) * T.pitch;
         for (let t = 0; t < T.tiers; t++) {
-          const r = { rk:ri, mod:mi, tipo:m.t, face, side, corr, col:j, tier:t, along, y:.02 + t * T.tp };
+          const r = { rk:ri, mod:mi, tipo:m.t, face, side, corr, col:j, nCols:nf, tier:t, along, y:.02 + t * T.tp };
           if (rk.axis === 'z') { r.x = rk.c + side * .012; r.z = along; r.rot = face ? 0 : Math.PI; }
           else                 { r.z = rk.c + side * .012; r.x = along; r.rot = face ? -Math.PI/2 : Math.PI/2; }
           cestos.push(r);
@@ -252,19 +254,32 @@ racks.forEach((rk, ri) => {
 // numeração por rua: do norte para o sul (ou oeste→leste), lado oeste/norte primeiro
 const porRua = {};
 cestos.forEach(c => (porRua[c.corr] = porRua[c.corr] || []).push(c));
-// Regra deduzida da planilha (máx. por rua = nº de colunas × níveis; placas "T197–T287" / "I113–I203"):
-// bloco sul (lower) primeiro, depois o bloco norte; dentro do bloco, lado oeste/norte antes do leste/sul;
-// em cada lado as colunas vão do sul para o norte (ramal: oeste→leste) e cada coluna sobe do 1º ao último nível.
-const ORD_SEC = { F:0, S:0, N:1 };
+// Regra da planilha de dificuldade (Rua / DE / Até / Local): a numeração começa em 1 e percorre UM lado da rua e depois o OUTRO —
+// lado leste primeiro, descendo do bloco "Frente" (norte) para o "Fundo" (sul); volta pelo lado oeste, do Fundo para a Frente.
+// Em cada lado as colunas seguem o sentido da caminhada e cada coluna sobe do 1º ao último nível. Ramal (A–E): lado norte da rua
+// (oeste→leste) e depois o lado sul (leste→oeste).
+const ORD_SEC = { F:0, S:1, N:0 };
 const byAddr = {};
+const ladoDaRua = (rk, face) => rk.axis === 'z' ? (face === 0 ? 0 : 1) : (face === 1 ? 0 : 1);       // 0 = primeiro lado
+const ordBloco = (rk, lado) => rk.sec === 'F' ? 0 : (lado === 0 ? (rk.sec === 'N' ? 0 : 1) : (rk.sec === 'S' ? 0 : 1));
+const sentido = (rk, lado) => rk.axis === 'z' ? (lado === 0 ? 1 : -1) : (lado === 0 ? 1 : -1);
 Object.keys(porRua).forEach(k => {
   const arr = porRua[k];
-  arr.sort((a, b) => { const ra = racks[a.rk], rb = racks[b.rk], dir = ra.axis === 'z' ? -1 : 1;
-    return (ORD_SEC[ra.sec] - ORD_SEC[rb.sec]) || (Math.round(ra.c * 100) - Math.round(rb.c * 100)) ||
-      dir * (Math.round(a.along * 100) - Math.round(b.along * 100)) || (a.tier - b.tier); });
+  arr.sort((a, b) => { const ra = racks[a.rk], rb = racks[b.rk], la = ladoDaRua(ra, a.face), lb = ladoDaRua(rb, b.face);
+    return (la - lb) || (ordBloco(ra, la) - ordBloco(rb, lb)) ||
+      sentido(ra, la) * (Math.round(a.along * 100) - Math.round(b.along * 100)) || (a.tier - b.tier); });
   arr.forEach((c, i) => { c.num = i + 1; c.addr = k + String(i + 1).padStart(3, '0'); byAddr[c.addr] = c; });
 });
-const CORREDORES = Object.keys(porRua).sort((a,b) => 'ABCDE'.includes(a) === 'ABCDE'.includes(b) ? 0 : 0);
+/* Colmeia V1–V8 (fotos): torre de 8 cestos empilhados na ENTRADA da rua V, bem na frente. São os endereços V001–V008
+   (1ª coluna do lado leste), então a numeração segue igual; só mudam a forma e o lugar dos cestos. */
+const COLMEIA_V = { x:0, z:0 };
+{
+  const rkU = racks.find(r => r.axis === 'z' && r.sec === 'N' && r.pos === 'U'), xv = (mx(1394) + mx(1521)) / 2 + .32;
+  COLMEIA_V.x = xv; COLMEIA_V.z = rkU.a0 - .08;
+  cestos.filter(c => c.corr === 'V' && c.num <= 8).forEach(c => {
+    c.colmeia = true; c.tipo = 'Z'; c.niveis = 8; c.y = .02 + c.tier * .265; c.x = xv; c.z = COLMEIA_V.z; c.rot = Math.PI / 2;
+  });
+}
 
 /* ZA: pilhas de cestos encostadas na parede dos fundos (sul). ZA001 começa na rua X e segue até ZA497;
    dali faz a curva para a parede da direita, dentro da rua F (ZA498–ZA518). Pilhas de 7 cestos, numeração subindo. */
@@ -647,10 +662,10 @@ racks.forEach((rk, ri) => rk.mods.forEach((m, mi) => {
 }));
 // VERT-<rua><NN>-CX<MM>: NN = módulo da rua (bloco sul primeiro, oeste→leste, sul→norte); CX sobe a coluna e segue para a próxima
 Object.keys(modFaces).forEach(corr => {
-  const arr = modFaces[corr].filter(mf => !mf.curto).sort((a, b) => { const ra = racks[a.ri], rb = racks[b.ri], dir = ra.axis === 'z' ? -1 : 1;
-    return (ORD_SEC[ra.sec] - ORD_SEC[rb.sec]) || (Math.round(ra.c * 100) - Math.round(rb.c * 100)) || dir * (ra.mods[a.mi].a - rb.mods[b.mi].a); });
+  const arr = modFaces[corr].filter(mf => !mf.curto).sort((a, b) => { const ra = racks[a.ri], rb = racks[b.ri], la = ladoDaRua(ra, a.side < 0 ? 0 : 1), lb = ladoDaRua(rb, b.side < 0 ? 0 : 1);
+    return (la - lb) || (ordBloco(ra, la) - ordBloco(rb, lb)) || sentido(ra, la) * (ra.mods[a.mi].a - rb.mods[b.mi].a); });
   arr.forEach((mf, n) => mf.recs.forEach(r => {
-    const col = racks[mf.ri].axis === 'z' ? mf.nC - 1 - r.i : r.i;
+    const col = sentido(racks[mf.ri], ladoDaRua(racks[mf.ri], mf.side < 0 ? 0 : 1)) < 0 ? mf.nC - 1 - r.i : r.i;
     r.addr = 'VERT-' + corr + pd2(n + 1) + '-CX' + pd2(col * 6 + r.k + 1); r.nn = n + 1; r.cx = col * 6 + r.k + 1;
     r.prods = prodLoc[r.addr] || []; byAddr[r.addr] = r;
     if (hash(r.addr) % 100 < 60) { const o = r.side * .203;
@@ -773,6 +788,7 @@ function pointInPoly(x, z, poly){
 const obst = racks.map(rk => { const b = bbox(rk); return { x0:b.x0 - .05, x1:b.x1 + .05, z0:b.z0 - .05, z1:b.z1 + .05 }; });
 obst.push({ x0:ZA.parede.xi, x1:ZA.parede.xf + .6, z0:ZA.parede.wallZ - .5, z1:ZA.parede.wallZ + .2 }, { x0:ZA.parede.wallX - .5, x1:ZA.parede.wallX + .2, z0:ZA.parede.wallZ - 4.7, z1:ZA.parede.wallZ - .6 });
 araras.forEach(r => obst.push(r.bb));
+obst.push({ x0:COLMEIA_V.x - .3, x1:COLMEIA_V.x + .3, z0:COLMEIA_V.z - .5, z1:COLMEIA_V.z + .02 });
 PILARES.forEach(p => obst.push({ x0:mx(p) - .2, x1:mx(p) + .2, z0:mz(VIGA_Y) - .22, z1:mz(VIGA_Y) + .22 }));
 function livre(x, z){
   const r = .22;
@@ -938,11 +954,11 @@ function selecionar(c, ir){
     cartao(c, c.addr, 'Caixa de reserva sobre o porta-pallet', `<dt>Rua</dt><dd>${c.corr}</dd><dt>Módulo</dt><dd>nº ${c.nn} da rua</dd><dt>Caixa</dt><dd>CX${pd2(c.cx)}</dd><dt>Altura</dt><dd>${(c.y - .15).toFixed(2)} m</dd>`, 'Numeração do módulo/caixa deduzida da planilha — confira no local.');
   } else {
     const T = TIPOS[c.tipo], rk = c.rk >= 0 ? racks[c.rk] : null;
-    const lado = rk ? (rk.axis === 'z' ? (c.face ? 'Leste' : 'Oeste') : (c.face ? 'Sul' : 'Norte')) : (c.num <= ZA.colsFundo * ZA.niveis ? 'Parede dos fundos' : 'Parede direita (rua F)');
+    const lado = c.colmeia ? 'Torre na entrada da rua V (norte)' : rk ? (rk.axis === 'z' ? (c.face ? 'Leste' : 'Oeste') : (c.face ? 'Sul' : 'Norte')) : (c.num <= ZA.colsFundo * ZA.niveis ? 'Parede dos fundos' : 'Parede direita (rua F)');
     const sec = !rk ? 'Parede ZA · pilha ' + (c.mod + 1) : rk.grupo === 'Frente' ? 'Frente (ramal A–E)' : 'Fundo · bloco ' + (rk.sec === 'N' ? 'norte' : 'sul');
     cartao(c, c.addr, c.vazio ? 'Cesto sem produto vinculado' : esc(c.prods[0].nome) + (c.prods.length > 1 ? ' + ' + (c.prods.length - 1) : ''),
-      `<dt>Rua</dt><dd>${c.corr} · ${sec}</dd><dt>Lado</dt><dd>${lado}</dd><dt>Módulo</dt><dd>${rk ? T.nome + ' · nº ' + (c.mod + 1) : T.nome}</dd>
-      <dt>Coluna</dt><dd>${rk ? (c.col + 1) + ' de ' + rk.mods[c.mod].n : 'pilha ' + (c.mod + 1)}</dd><dt>Nível</dt><dd>${c.tier + 1} de ${T.tiers}</dd>
+      `<dt>Rua</dt><dd>${c.corr} · ${sec}</dd><dt>Lado</dt><dd>${lado}</dd><dt>Módulo</dt><dd>${c.colmeia ? 'Colmeia V1–V8' : rk ? T.nome + ' · nº ' + (c.mod + 1) : T.nome}</dd>
+      <dt>Coluna</dt><dd>${c.colmeia ? 'torre (V' + (c.tier + 1) + ')' : rk ? (c.col + 1) + ' de ' + c.nCols : 'pilha ' + (c.mod + 1)}</dd><dt>Nível</dt><dd>${c.tier + 1} de ${c.niveis || T.tiers}</dd>
       <dt>Cesto</dt><dd>${Math.round(T.bw*1000+25)}×${Math.round(T.bd*1000)}×${Math.round(T.bh*1000)} mm</dd>`, 'Produtos vindos da planilha (coluna Localização no estoque).');
   }
   if (ir) irPara(c);
