@@ -274,8 +274,9 @@ Object.keys(porRua).forEach(k => {
    (1ª coluna do lado leste), então a numeração segue igual; só mudam a forma e o lugar dos cestos. */
 const COLMEIA_V = { x:0, z:0 };
 {
-  const rkU = racks.find(r => r.axis === 'z' && r.sec === 'N' && r.pos === 'U'), xv = (mx(1394) + mx(1521)) / 2 + .32;
-  COLMEIA_V.x = xv; COLMEIA_V.z = rkU.a0 - .08;
+  // fica na frente (norte) da estrutura da rua V, entre os dois montantes do fim da prateleira, onde estão as placas V e W
+  const rkV = racks.find(r => r.axis === 'z' && r.sec === 'N' && r.pos === 'V'), xv = rkV.c;
+  COLMEIA_V.x = xv; COLMEIA_V.z = rkV.a0 - .12;
   cestos.filter(c => c.corr === 'V' && c.num <= 8).forEach(c => {
     c.colmeia = true; c.tipo = 'Z'; c.niveis = 8; c.y = .02 + c.tier * .265; c.x = xv; c.z = COLMEIA_V.z; c.rot = Math.PI / 2;
   });
