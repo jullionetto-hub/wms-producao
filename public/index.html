@@ -437,7 +437,7 @@
           Pedidos
           <div style="display:flex;gap:8px;align-items:center">
             <button onclick="abrirConfigMetas()" class="btn btn-outline btn-sm" title="Configurar metas de performance">Metas</button>
-            <button onclick="confirmarZerarDados()" class="btn btn-danger btn-sm">Zerar Dados de Teste</button>
+            <button onclick="confirmarZerarDados()" class="btn btn-outline btn-sm">Zerar Dados de Teste</button>
           </div>
         </div>
 
@@ -449,10 +449,10 @@
           <div class="card-hd">Filtros
             <div style="display:flex;gap:8px;position:relative">
               <button class="btn btn-outline btn-sm" onclick="carregarPedidos()">Atualizar</button>
-              <button class="btn btn-primary btn-sm" onclick="abrirModalImportar()">Importar</button>
-              <button class="btn btn-primary btn-sm" onclick="abrirModalDistribuicao()">Distribuir</button>
+              <button class="btn btn-outline btn-sm" onclick="abrirModalImportar()">Importar</button>
+              <button class="btn btn-outline btn-sm" onclick="abrirModalDistribuicao()">Distribuir</button>
               <button class="btn btn-outline btn-sm" onclick="imprimirEtiquetas()">Imprimir etiquetas</button>
-              <button class="excel-btn" onclick="exportarExcel('pedidos')">Excel</button>
+              <button class="btn btn-outline btn-sm" onclick="exportarExcel('pedidos')">Excel</button>
               <div style="position:relative">
                 <button class="btn btn-outline btn-sm" onclick="toggleMenuPedidosMais(event)">Mais ações <i class="ti ti-chevron-down" aria-hidden="true"></i></button>
                 <div id="menu-pedidos-mais" class="mais-acoes-drop">
@@ -494,7 +494,7 @@
               <input type="text" id="filtro-ped-num" placeholder="Buscar..."/>
             </div>
             <div class="filter-actions">
-              <button class="btn btn-primary btn-sm" onclick="carregarPedidos()">Filtrar</button>
+              <button class="btn btn-outline btn-sm" onclick="carregarPedidos()">Filtrar</button>
             </div>
           </div>
           <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:10px;padding-top:4px">
