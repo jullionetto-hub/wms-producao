@@ -1394,7 +1394,7 @@ function spriteNum(n, tipo){
   g.fillStyle = '#fff'; g.font = 'bold 32px Arial'; g.textAlign = 'center'; g.textBaseline = 'middle';
   g.fillText(tipo === 'ini' ? n + ' · INÍCIO' : tipo === 'fim' ? n + ' · FIM' : n, larg / 2, 34);
   const s = new THREE.Sprite(new THREE.SpriteMaterial({ map:new THREE.CanvasTexture(c), depthTest:false, sizeAttenuation:false })); s.renderOrder = 12;
-  const h = tipo ? .06 : .045; s.scale.set(h * larg / 64, h, 1); return s;
+  const h = tipo ? .06 : .045; s.scale.set(h * larg / 64, h, 1); if (tipo) s.center.set(.5, -.35); return s;   // pílula INÍCIO/FIM fica acima do ponto, sem cobrir a parada
 }
 const rampa = t => { const A = new THREE.Color(0x1f9d3a), B = new THREE.Color(0xf5c400), C = new THREE.Color(0xd6232b); return t < .5 ? A.lerp(B, t * 2) : B.lerp(C, (t - .5) * 2); };
 function desenharRota(recs, ord, P){
