@@ -123,6 +123,17 @@ describe('GET /estoque-3d/dados', () => {
   });
 });
 
+describe('GET /estoque-3d/pedidos', () => {
+  test('200 devolve os pedidos com as ruas por onde passam', async () => {
+    const agent = request.agent(app);
+    await loginSupervisor(agent);
+    mockDb.all.mockResolvedValueOnce([{ numero_pedido: '900', status: 'separando', itens: 3, rua: '', separador: 'Ana', ruas: ['Q', 'T'] }]);
+    const res = await agent.get('/estoque-3d/pedidos');
+    expect(res.status).toBe(200);
+    expect(res.body.pedidos[0].ruas).toEqual(['Q', 'T']);
+  });
+});
+
 describe('GET /estoque-3d/pedido/:numero', () => {
   let agent;
   beforeEach(async () => {
