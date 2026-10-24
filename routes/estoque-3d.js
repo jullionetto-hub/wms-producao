@@ -47,8 +47,15 @@ router.get('/estoque-3d/dados', requerAuth, requerPerfil(...PERFIS), async (req,
 // pedidos que ainda têm separação a fazer — alimenta o seletor da rota
 router.get('/estoque-3d/pedidos', requerAuth, requerPerfil(...PERFIS), async (_req, res) => {
   try {
-    const rows = await db.all(`SELECT p.numero_pedido, p.status, p.itens, p.rua, s.nome AS separador
+    // ruas = ruas distintas dos endereços dos itens, para o operador ver por onde o pedido passa sem abrir um a um
+    const rows = await db.all(`SELECT p.numero_pedido, p.status, p.itens, p.rua, s.nome AS separador, ru.ruas
       FROM pedidos p LEFT JOIN separadores s ON s.id=p.separador_id
+      LEFT JOIN LATERAL (
+        SELECT array_agg(r) AS ruas FROM (
+          SELECT DISTINCT regexp_replace(trim(split_part(split_part(i.endereco,'/',1),',',1)), '[0-9].*$', '') AS r
+          FROM itens_pedido i WHERE i.pedido_id=p.id AND i.endereco IS NOT NULL AND i.endereco <> ''
+        ) x WHERE r <> ''
+      ) ru ON true
       WHERE p.status IN ('pendente','separando') ORDER BY p.status DESC, p.ordem_fila, p.numero_pedido LIMIT 300`);
     res.json({ pedidos: rows });
   } catch (e) { res.status(500).json({ erro: e.message }); }

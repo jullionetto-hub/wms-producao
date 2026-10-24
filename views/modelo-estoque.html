@@ -1421,17 +1421,18 @@ function desenharRota2D(ctx, X, Z, s){
 /* — aba Rota — */
 function chavesDeTexto(txt){
   const out = [], vistos = new Set();
-  String(txt || '').split(/[\n,;]+/).forEach(t => { t = t.trim(); if (!t) return; const k = chaveEnd(t) || normLoc(t); if (k && !vistos.has(k)) { vistos.add(k); out.push(k); } });
+  String(txt || '').split(/[\n,;\/]+/).forEach(t => { t = t.trim(); if (!t) return; const k = chaveEnd(t) || normLoc(t); if (k && !vistos.has(k)) { vistos.add(k); out.push(k); } });
   return out;
 }
 function calcularRota(){
   const chaves = chavesDeTexto($('rtEnd').value), recs = [], faltam = [];
   chaves.forEach(k => { const r = byAddr[k]; if (r) recs.push(r); else faltam.push(k); });
   const out = $('rtOut');
-  if (recs.length < 2) { out.innerHTML = '<div class="tiny">Informe pelo menos 2 endereços existentes no modelo.</div>' + (faltam.length ? `<div class="tiny">Fora do modelo: ${esc(faltam.join(', '))}</div>` : ''); limparRota(); return; }
+  if (recs.length < 1) { out.innerHTML = '<div class="tiny">Nenhum endereço existente no modelo.</div>' + (faltam.length ? `<div class="tiny">Fora do modelo: ${esc(faltam.join(', '))}</div>` : ''); limparRota(); return; }
   const R = otimizar(recs); desenharRota(recs, R.ordem, R.P);
+  const ruasRota = [...new Set(R.ordem.map(k => recs[k].corr).filter(Boolean))];
   const ganho = R.distBase > 0 ? Math.round((1 - R.dist / R.distBase) * 100) : 0, min = m => (m / 1.1 / 60).toFixed(1).replace('.', ',');
-  out.innerHTML = `<div class="kv"><span>Ordem atual do WMS</span><b>${Math.round(R.distBase)} m · ${min(R.distBase)} min</b></div>
+  out.innerHTML = `<div class="kv"><span>Ruas da rota</span><b>${esc(ruasRota.join(' › '))}</b></div><div class="kv"><span>Ordem atual do WMS</span><b>${Math.round(R.distBase)} m · ${min(R.distBase)} min</b></div>
     <div class="kv"><span>Rota otimizada</span><b style="color:var(--ok)">${Math.round(R.dist)} m · ${min(R.dist)} min</b></div>
     <div class="kv"><span>Economia</span><b>${ganho > 0 ? '−' + ganho + '%' : '0%'}</b></div>
     <ol class="stops">${R.ordem.map(k => { const r = recs[k]; return `<li data-a="${esc(r.addr)}"><b>${esc(r.addr)}</b> <span class="tiny">${esc(((r.prods || [])[0] || {}).nome || '')}</span></li>`; }).join('')}</ol>
@@ -1451,7 +1452,8 @@ function percorrer(lista){
 async function carregarPedidos(){
   if (!live) return;
   try { const r = await fetch('/estoque-3d/pedidos', { credentials:'same-origin' }); if (!r.ok) return; const j = await r.json();
-    $('rtPed').innerHTML = '<option value="">— escolher pedido —</option>' + j.pedidos.map(p => `<option value="${esc(p.numero_pedido)}">${esc(p.numero_pedido)} · ${esc(p.status)} · ${p.itens || '?'} itens${p.separador ? ' · ' + esc(p.separador) : ''}</option>`).join('');
+    const ordRuas = a => (a || []).slice().sort((x, y) => { const i = ROTA_FISICA.indexOf(x), k = ROTA_FISICA.indexOf(y); return (i < 0 ? 99 : i) - (k < 0 ? 99 : k); });
+    $('rtPed').innerHTML = '<option value="">— escolher pedido —</option>' + j.pedidos.map(p => `<option value="${esc(p.numero_pedido)}">${esc(p.numero_pedido)} · ${esc(p.separador || 'sem separador')} · ${p.itens || '?'} itens · ruas ${esc(ordRuas(p.ruas).join(' › ') || '—')}</option>`).join('');
   } catch (e) { /* segue sem a lista */ }
 }
 async function carregarPedido(){
@@ -1518,7 +1520,7 @@ function exportarCsv(){
     <div id="opLeg" class="leg"></div><div id="opResumo" style="margin-top:8px"></div>
   </section>
   <section data-s="rota" style="display:none">
-    <label class="fl">Pedido <select id="rtPed" style="max-width:210px"><option value="">— só no app logado —</option></select> <button class="tab" id="rtCarregar" style="padding:2px 8px">carregar</button></label>
+    <label class="fl">Pedido <select id="rtPed" style="max-width:100%;width:100%"><option value="">— só no app logado —</option></select> <button class="tab" id="rtCarregar" style="padding:2px 8px">carregar</button></label>
     <textarea id="rtEnd" rows="3" placeholder="Endereços separados por vírgula ou linha: J121, K022, ZA216, ARARA 9, VERT-V06-CX16"></textarea>
     <div class="row2"><button class="tab" id="rtCalc" style="background:var(--blue);color:#fff;border-color:var(--blue)">Calcular rota</button><button class="tab" id="rtLimpa">Limpar</button></div>
     <div id="rtOut" style="margin-top:8px"></div>
@@ -1531,7 +1533,7 @@ function exportarCsv(){
   $('opModo').onchange = e => { modo = e.target.value; recolorir(); };
   $('opBaixo').onchange = e => { limBaixo = Math.max(0, +e.target.value || 0); recolorir(); renderStatus(); };
   $('opDias').onchange = e => atualizarAoVivo(+e.target.value);
-  $('rtCarregar').onclick = carregarPedido; $('rtCalc').onclick = calcularRota; $('rtLimpa').onclick = () => { $('rtEnd').value = ''; $('rtOut').innerHTML = ''; limparRota(); };
+  $('rtCarregar').onclick = carregarPedido; $('rtPed').onchange = carregarPedido; $('rtCalc').onclick = calcularRota; $('rtLimpa').onclick = () => { $('rtEnd').value = ''; $('rtOut').innerHTML = ''; limparRota(); };
 }
 indexarLive(); renderStatus(); renderAuditoria(); carregarPedidos(); renderLegenda();
 if (live) setInterval(() => { if (document.visibilityState === 'visible') atualizarAoVivo(); }, 90000);
