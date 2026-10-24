@@ -527,7 +527,8 @@ racks.forEach(rk => {
     gMadeira.push(ax === 'z' ? boxG(rk.depth - .02, .03, m.L - .02, pw[0], pw[1], pw[2]) : boxG(m.L - .02, .03, rk.depth - .02, pw[0], pw[1], pw[2]));
   });
 });
-scene.add(new THREE.Mesh(mergeG(gAzul), MAT.azul), new THREE.Mesh(mergeG(gLaranja), MAT.laranja), new THREE.Mesh(mergeG(gMadeira), MAT.madeira));
+const tabladoMesh = new THREE.Mesh(mergeG(gMadeira), MAT.madeira);
+scene.add(new THREE.Mesh(mergeG(gAzul), MAT.azul), new THREE.Mesh(mergeG(gLaranja), MAT.laranja), tabladoMesh);
 
 /* cestos plásticos inclinados */
 function geoCesto(T){
@@ -1127,7 +1128,7 @@ function mostrar(m){
 }
 document.querySelectorAll('.tab[data-mode]').forEach(b => b.onclick = () => mostrar(b.dataset.mode));
 function aplicarToggles(){
-  itensGrp.visible = $('tgItens').checked; caixasTopo.visible = $('tgCaixas').checked && !(typeof modo !== 'undefined' && modo !== 'off');
+  itensGrp.visible = $('tgItens').checked; const cor = typeof modo !== 'undefined' && modo !== 'off'; caixasTopo.visible = $('tgCaixas').checked && !cor; tabladoMesh.visible = !cor;   // com cores, tira caixas e tablado para ver os cestos de cima
   teto.visible = $('tgTeto').checked; paredes.visible = $('tgParedes').checked; placas.visible = $('tgPlaca').checked; ararasGrp.visible = $('tgAraras').checked;
 }
 ['tgItens','tgCaixas','tgTeto','tgParedes','tgPlaca','tgAraras'].forEach(id => $(id).onchange = aplicarToggles);
