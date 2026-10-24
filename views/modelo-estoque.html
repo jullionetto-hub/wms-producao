@@ -1127,7 +1127,7 @@ function mostrar(m){
 }
 document.querySelectorAll('.tab[data-mode]').forEach(b => b.onclick = () => mostrar(b.dataset.mode));
 function aplicarToggles(){
-  itensGrp.visible = $('tgItens').checked; caixasTopo.visible = $('tgCaixas').checked;
+  itensGrp.visible = $('tgItens').checked; caixasTopo.visible = $('tgCaixas').checked && !(typeof modo !== 'undefined' && modo !== 'off');
   teto.visible = $('tgTeto').checked; paredes.visible = $('tgParedes').checked; placas.visible = $('tgPlaca').checked; ararasGrp.visible = $('tgAraras').checked;
 }
 ['tgItens','tgCaixas','tgTeto','tgParedes','tgPlaca','tgAraras'].forEach(id => $(id).onchange = aplicarToggles);
@@ -1260,6 +1260,7 @@ function corDe(c){
   return -1;
 }
 function recolorir(){
+  aplicarToggles();
   if (modo === 'off') { overlay.visible = false; renderLegenda(); return; }
   giroMax = Math.max(1, ...Object.values(giroPorEnd).map(g => g.linhas));
   const col = new THREE.Color();
