@@ -18,6 +18,7 @@ router.use(require('./caixas'));
 router.use(require('./colmeias'));
 router.use(require('./control-tower'));
 router.use(require('./mapa-estoque'));
+router.use(require('./estoque-3d'));
 router.use(require('./faturamento'));
 router.use(require('./hora-a-hora'));
 router.use(require('./simulador'));

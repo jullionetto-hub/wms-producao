@@ -33,6 +33,7 @@ const apiRouter = require('./routes/api');
 
 // ── Utilitários ───────────────────────────────────────────────────────────────
 const log               = require('./lib/logger');
+const { requerPerfil }  = require('./lib/auth');
 const { dataHoraLocal } = require('./lib/helpers');
 
 // ── KPI Cache (em memória — considere Redis para escala futura) ───────────────
@@ -66,6 +67,14 @@ app.use(sessionMiddleware);
 app.get('/', (_req, res) => {
   res.set('Cache-Control', 'no-cache, must-revalidate');
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+// Modelo 3D do estoque: embute o catálogo de produtos, então só é servido logado (supervisor/gestor)
+app.get('/modelo-estoque', (req, res, next) => {
+  if (!req.session?.usuario) return res.redirect('/');
+  requerPerfil('supervisor', 'gestor')(req, res, () => {
+    res.set('Cache-Control', 'no-cache, must-revalidate');
+    res.sendFile(path.join(__dirname, 'views', 'modelo-estoque.html'));
+  });
 });
 app.use('/', apiRouter);
 
