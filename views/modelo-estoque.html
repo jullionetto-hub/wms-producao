@@ -52,7 +52,7 @@ label.tg{display:flex;gap:7px;align-items:center;padding:3px 0;cursor:pointer;co
 .row2{display:flex;gap:6px;margin:8px 0;flex-wrap:wrap}.stops{margin:8px 0;padding-left:22px;font-size:12px}.stops li{cursor:pointer;padding:1px 0}.stops li:hover{color:var(--acc)}
 #op details{border-top:1px solid var(--line);padding:6px 0}#op summary{cursor:pointer}.alist{max-height:220px;overflow:auto;font-size:12px}.al{padding:2px 0;cursor:pointer;border-bottom:1px solid var(--line)}.al:hover{color:var(--acc)}
 @media (max-width:900px){#op{left:10px;right:10px;width:auto;top:auto;bottom:70px;max-height:60%}}
-#info{max-height:calc(100% - 20px);overflow:auto}
+#info{max-height:calc(100% - 215px);overflow:auto}
 .plist{margin:8px 0;font-size:12px;border-top:1px solid var(--line);padding-top:6px}.plist div{padding:2px 0}.plist code{background:var(--panel2);border-radius:4px;padding:0 4px;font-size:11px}
 #res{left:600px;top:10px;width:min(460px,calc(100% - 620px));max-height:calc(100% - 20px);overflow:auto;display:none;z-index:5}
 #res .r{padding:6px 0;border-top:1px solid var(--line);font-size:12px}#res .r:first-of-type{border-top:0}#res .lc{display:inline-block;margin:2px 4px 0 0;padding:1px 7px;border-radius:6px;border:1px solid var(--line);background:var(--panel2);cursor:pointer;font-weight:600}#res .lc:hover{background:var(--acc);color:#1a1004}#res .lc.x{opacity:.55;cursor:default;font-weight:400}
@@ -63,8 +63,11 @@ label.tg{display:flex;gap:7px;align-items:center;padding:3px 0;cursor:pointer;co
 #info button{flex:1;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:6px;cursor:pointer}
 #info button.pri{background:var(--blue);border-color:var(--blue);color:#fff}
 #info .tiny{font-size:11px;color:var(--mut);margin-top:6px}
-#mini{right:10px;bottom:10px;padding:6px}
-#mini canvas{width:260px;height:150px;border-radius:8px}
+#mini{right:10px;bottom:10px;padding:6px;user-select:none;touch-action:none}
+#mini canvas{width:var(--mw,260px);height:auto;aspect-ratio:520/300;border-radius:8px;display:block}
+.mhead{display:flex;justify-content:space-between;align-items:center;cursor:move;font-size:11px;color:var(--mut);padding:0 2px 5px}
+.mhead button{background:var(--panel2);border:1px solid var(--line);border-radius:5px;color:var(--txt);cursor:pointer;margin-left:3px;line-height:1;padding:1px 6px}
+#mini.min canvas{display:none}#mini.min .mhead{padding-bottom:0}
 #hint{transition:opacity .8s;left:50%;bottom:10px;transform:translateX(-50%);font-size:12px;color:var(--mut);padding:6px 12px;text-align:center;max-width:calc(100% - 300px)}
 #tip{position:absolute;pointer-events:none;background:#000c;color:#fff;border-radius:6px;padding:3px 8px;font-size:12px;display:none;white-space:nowrap}
 #toast{position:absolute;left:50%;top:14px;transform:translateX(-50%);background:var(--red);color:#fff;border-radius:8px;padding:6px 14px;display:none}
@@ -126,7 +129,10 @@ label.tg{display:flex;gap:7px;align-items:center;padding:3px 0;cursor:pointer;co
 
   <div class="card" id="info"></div>
   <div class="card" id="res"></div>
-  <div class="card" id="mini"><canvas id="cm" width="520" height="300"></canvas></div>
+  <div class="card" id="mini">
+    <div class="mhead" id="mHead" title="Arraste para mover o mapa"><span>⠿ Mapa</span><span><button id="mTam" title="Mudar tamanho">⤢</button><button id="mMin" title="Minimizar">−</button></span></div>
+    <canvas id="cm" width="520" height="300"></canvas>
+  </div>
   <div class="card" id="hint"></div>
   <div id="tip"></div>
   <div id="toast"></div>
@@ -1797,6 +1803,30 @@ $('abData').onchange = () => { abcTrimestres(); abcCalcular(); };
 indexarLive(); renderStatus(); renderAuditoria(); carregarPedidos(); renderLegenda();
 if (live) setInterval(() => { if (document.visibilityState === 'visible') atualizarAoVivo(); }, 90000);
 
+/* mini mapa: arrastável, minimizável e com 3 tamanhos; posição lembrada neste navegador */
+{
+  const mini = $('mini'), st = $('stage'), TAM = [180, 260, 380], KEY = 'estoque3d.mini';
+  let est = { l:null, t:null, tam:1, min:false };
+  try { est = Object.assign(est, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch (e) { /* sem armazenamento: usa o padrão */ }
+  const salvar = () => { try { localStorage.setItem(KEY, JSON.stringify(est)); } catch (e) { /* ignorar */ } };
+  const prender = () => {                                    // mantém o mapa dentro da área visível
+    if (est.l == null) return; const W = st.clientWidth, H = st.clientHeight, w = mini.offsetWidth, h = mini.offsetHeight;
+    est.l = Math.min(Math.max(0, est.l), Math.max(0, W - w)); est.t = Math.min(Math.max(0, est.t), Math.max(0, H - h));
+    mini.style.left = est.l + 'px'; mini.style.top = est.t + 'px'; mini.style.right = 'auto'; mini.style.bottom = 'auto';
+  };
+  const aplicar = () => { mini.style.setProperty('--mw', TAM[est.tam] + 'px'); mini.classList.toggle('min', !!est.min); $('mMin').textContent = est.min ? '+' : '−'; prender(); };
+  aplicar();
+  $('mTam').onclick = () => { est.tam = (est.tam + 1) % TAM.length; est.min = false; aplicar(); salvar(); };
+  $('mMin').onclick = () => { est.min = !est.min; aplicar(); salvar(); };
+  let arr = null;
+  $('mHead').addEventListener('pointerdown', e => { if (e.target.closest('button')) return; const r = mini.getBoundingClientRect(), s0 = st.getBoundingClientRect();
+    arr = { dx:e.clientX - r.left, dy:e.clientY - r.top, ox:s0.left, oy:s0.top }; $('mHead').setPointerCapture(e.pointerId); });
+  $('mHead').addEventListener('pointermove', e => { if (!arr) return; est.l = e.clientX - arr.ox - arr.dx; est.t = e.clientY - arr.oy - arr.dy; prender(); });
+  const solta = () => { if (arr) { arr = null; salvar(); } };
+  $('mHead').addEventListener('pointerup', solta); $('mHead').addEventListener('pointercancel', solta);
+  $('mHead').addEventListener('dblclick', () => { est.l = est.t = null; est.tam = 1; est.min = false; mini.style.left = mini.style.top = ''; mini.style.right = mini.style.bottom = ''; aplicar(); salvar(); });   // duplo clique: volta ao canto padrão
+  addEventListener('resize', prender);
+}
 setMode('walk'); mostrar('walk');
 { const e = entradaRua('T', 'S'); cam.x = e.x; cam.z = e.z; cam.yaw = cam.yawT = e.yaw; cam.pitch = cam.pitchT = -.04; cam.vx = cam.vz = 0; }
 requestAnimationFrame(loop);
