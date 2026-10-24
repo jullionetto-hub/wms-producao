@@ -1385,37 +1385,65 @@ function otimizar(recs){
 /* — desenho da rota (3D e 2D) — */
 let rotaAtiva = null, rotaGrp = null, tour = null;
 function limparRota(){ if (rotaGrp) { scene.remove(rotaGrp); rotaGrp.traverse(o => { if (o.geometry) o.geometry.dispose(); }); rotaGrp = null; } rotaAtiva = null; if (tour) { clearTimeout(tour.t); tour = null; } }
-function spriteNum(n){
-  const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d');
-  g.fillStyle = '#00b8d9'; g.beginPath(); g.arc(32, 32, 29, 0, 7); g.fill(); g.strokeStyle = '#fff'; g.lineWidth = 4; g.stroke();
-  g.fillStyle = '#fff'; g.font = 'bold 34px Arial'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(n, 32, 34);
-  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map:new THREE.CanvasTexture(c), depthTest:false })); s.renderOrder = 12; return s;
+function spriteNum(n, tipo){
+  const larg = tipo ? 224 : 64, c = document.createElement('canvas'); c.width = larg; c.height = 64; const g = c.getContext('2d');
+  const cor = tipo === 'ini' ? '#1f9d3a' : tipo === 'fim' ? '#d6232b' : '#0a8fb3';
+  g.fillStyle = cor; g.strokeStyle = '#fff'; g.lineWidth = 5;
+  if (tipo) { g.beginPath(); g.roundRect ? g.roundRect(4, 6, larg - 8, 52, 26) : g.rect(4, 6, larg - 8, 52); g.fill(); g.stroke(); }
+  else { g.beginPath(); g.arc(32, 32, 28, 0, 7); g.fill(); g.stroke(); }
+  g.fillStyle = '#fff'; g.font = 'bold 32px Arial'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText(tipo === 'ini' ? n + ' · INÍCIO' : tipo === 'fim' ? n + ' · FIM' : n, larg / 2, 34);
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map:new THREE.CanvasTexture(c), depthTest:false, sizeAttenuation:false })); s.renderOrder = 12;
+  const h = tipo ? .06 : .045; s.scale.set(h * larg / 64, h, 1); if (tipo) s.center.set(.5, -.35); return s;   // pílula INÍCIO/FIM fica acima do ponto, sem cobrir a parada
 }
+const rampa = t => { const A = new THREE.Color(0x1f9d3a), B = new THREE.Color(0xf5c400), C = new THREE.Color(0xd6232b); return t < .5 ? A.lerp(B, t * 2) : B.lerp(C, (t - .5) * 2); };
 function desenharRota(recs, ord, P){
   limparRota(); rotaGrp = new THREE.Group();
   const pts = []; for (let i = 0; i + 1 < ord.length; i++) pts.push(...caminhoPar(P[ord[i]], P[ord[i + 1]]).filter((p, j, a) => j === 0 || p[0] !== a[j - 1][0] || p[1] !== a[j - 1][1]));
-  const pos = [], idx = [], W = .11; let v = 0;
+  if (ord.length === 1) pts.push(P[ord[0]].pos);
+  const cum = [0]; for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+  const total = Math.max(1e-6, cum[cum.length - 1]);
+  const pos = [], col = [], idx = [], W = .15; let v = 0;
   for (let i = 0; i + 1 < pts.length; i++) {
     const [x1, z1] = pts[i], [x2, z2] = pts[i + 1], dx = x2 - x1, dz = z2 - z1, L = Math.hypot(dx, dz); if (L < 1e-3) continue;
-    const nx = -dz / L * W, nz = dx / L * W;
-    pos.push(x1 + nx, .05, z1 + nz, x1 - nx, .05, z1 - nz, x2 - nx, .05, z2 - nz, x2 + nx, .05, z2 + nz); idx.push(v, v + 1, v + 2, v, v + 2, v + 3); v += 4;
+    const nx = -dz / L * W, nz = dx / L * W, c1 = rampa(cum[i] / total), c2 = rampa(cum[i + 1] / total);
+    pos.push(x1 + nx, .05, z1 + nz, x1 - nx, .05, z1 - nz, x2 - nx, .05, z2 - nz, x2 + nx, .05, z2 + nz);
+    col.push(c1.r, c1.g, c1.b, c1.r, c1.g, c1.b, c2.r, c2.g, c2.b, c2.r, c2.g, c2.b); idx.push(v, v + 1, v + 2, v, v + 2, v + 3); v += 4;
   }
-  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx);
-  const fita = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color:0x00e5ff, side:THREE.DoubleSide, depthTest:false, transparent:true, opacity:.9 })); fita.renderOrder = 9; rotaGrp.add(fita);
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); g.setIndex(idx);
+  const fita = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ vertexColors:true, side:THREE.DoubleSide, depthTest:false, transparent:true, opacity:.95 })); fita.renderOrder = 9; rotaGrp.add(fita);
+  // setas no sentido da caminhada, a cada ~3 m
+  const setas = [], apos = [], aidx = []; let w = 0, prox = 1.2, andado = 0;
+  for (let i = 0; i + 1 < pts.length; i++) {
+    const [x1, z1] = pts[i], [x2, z2] = pts[i + 1], L = Math.hypot(x2 - x1, z2 - z1); if (L < 1e-3) continue; const ux = (x2 - x1) / L, uz = (z2 - z1) / L, nx = -uz, nz = ux;
+    while (prox <= andado + L) {
+      const d = prox - andado, px = x1 + ux * d, pz = z1 + uz * d; setas.push({ x:px, z:pz, a:Math.atan2(uz, ux) });
+      apos.push(px + ux * .34, .07, pz + uz * .34, px - ux * .2 + nx * .3, .07, pz - uz * .2 + nz * .3, px - ux * .2 - nx * .3, .07, pz - uz * .2 - nz * .3); aidx.push(w, w + 1, w + 2); w += 3; prox += 3;
+    }
+    andado += L;
+  }
+  if (aidx.length) { const ag = new THREE.BufferGeometry(); ag.setAttribute('position', new THREE.Float32BufferAttribute(apos, 3)); ag.setIndex(aidx);
+    const am = new THREE.Mesh(ag, new THREE.MeshBasicMaterial({ color:0xffffff, side:THREE.DoubleSide, depthTest:false })); am.renderOrder = 10; rotaGrp.add(am); }
   const stops = ord.map((k, n) => {
-    const r = recs[k], s = spriteNum(n + 1);
+    const r = recs[k], tipo = n === 0 ? 'ini' : (n === ord.length - 1 && ord.length > 1 ? 'fim' : null), s = spriteNum(n + 1, tipo);
     const cs = Math.cos(r.rot || 0), sn = Math.sin(r.rot || 0), px = (r.ar ? r.bx : r.x) + cs * .3, pz = (r.ar ? r.bz : r.z) - sn * .3;
-    s.position.set(px, Math.max(.4, (r.y || 1.2) + .25), pz); s.scale.set(.34, .34, .34); rotaGrp.add(s);
-    return { x:px, z:pz, n:n + 1 };
+    s.position.set(px, Math.max(.4, (r.y || 1.2) + .25), pz); rotaGrp.add(s);
+    return { x:px, z:pz, n:n + 1, tipo };
   });
-  scene.add(rotaGrp); rotaAtiva = { pts, stops, vis:true };
+  scene.add(rotaGrp); rotaAtiva = { pts, cum, total, setas, stops, vis:true };
 }
 function desenharRota2D(ctx, X, Z, s){
   if (!rotaAtiva) return;
-  ctx.strokeStyle = '#00a6c4'; ctx.lineWidth = Math.max(2, s * .22); ctx.lineJoin = 'round'; ctx.beginPath();
-  rotaAtiva.pts.forEach((p, i) => i ? ctx.lineTo(X(p[0]), Z(p[1])) : ctx.moveTo(X(p[0]), Z(p[1]))); ctx.stroke();
-  rotaAtiva.stops.forEach(t => { ctx.fillStyle = '#00b8d9'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(X(t.x), Z(t.z), Math.max(7, s * .55), 0, 7); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#fff'; ctx.font = `bold ${Math.max(9, s * .6)}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(t.n, X(t.x), Z(t.z)); });
+  const R = rotaAtiva; ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.lineWidth = Math.max(3, s * .28);
+  for (let i = 0; i + 1 < R.pts.length; i++) { ctx.strokeStyle = '#' + rampa((R.cum[i] + R.cum[i + 1]) / 2 / R.total).getHexString(); ctx.beginPath(); ctx.moveTo(X(R.pts[i][0]), Z(R.pts[i][1])); ctx.lineTo(X(R.pts[i + 1][0]), Z(R.pts[i + 1][1])); ctx.stroke(); }
+  ctx.fillStyle = '#fff'; ctx.strokeStyle = '#333'; ctx.lineWidth = 1;
+  R.setas.forEach(a => { const px = X(a.x), pz = Z(a.z), k = Math.max(5, s * .42); ctx.save(); ctx.translate(px, pz); ctx.rotate(a.a); ctx.beginPath(); ctx.moveTo(k, 0); ctx.lineTo(-k * .6, k * .8); ctx.lineTo(-k * .6, -k * .8); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore(); });
+  R.stops.forEach(t => {
+    const cor = t.tipo === 'ini' ? '#1f9d3a' : t.tipo === 'fim' ? '#d6232b' : '#0a8fb3', r = Math.max(8, s * .6);
+    ctx.fillStyle = cor; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(X(t.x), Z(t.z), r, 0, 7); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#fff'; ctx.font = `bold ${Math.max(10, s * .65)}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(t.n, X(t.x), Z(t.z));
+    if (t.tipo) { ctx.fillStyle = cor; ctx.font = `bold ${Math.max(11, s * .7)}px sans-serif`; ctx.fillText(t.tipo === 'ini' ? 'INÍCIO' : 'FIM', X(t.x), Z(t.z) - r - 8); }
+  });
 }
 
 /* — aba Rota — */
@@ -1435,7 +1463,8 @@ function calcularRota(){
   out.innerHTML = `<div class="kv"><span>Ruas da rota</span><b>${esc(ruasRota.join(' › '))}</b></div><div class="kv"><span>Ordem atual do WMS</span><b>${Math.round(R.distBase)} m · ${min(R.distBase)} min</b></div>
     <div class="kv"><span>Rota otimizada</span><b style="color:var(--ok)">${Math.round(R.dist)} m · ${min(R.dist)} min</b></div>
     <div class="kv"><span>Economia</span><b>${ganho > 0 ? '−' + ganho + '%' : '0%'}</b></div>
-    <ol class="stops">${R.ordem.map(k => { const r = recs[k]; return `<li data-a="${esc(r.addr)}"><b>${esc(r.addr)}</b> <span class="tiny">${esc(((r.prods || [])[0] || {}).nome || '')}</span></li>`; }).join('')}</ol>
+    <div class="tiny">Na tela: <b style="color:#1f9d3a">verde = início</b> → <b style="color:#d6232b">vermelho = fim</b>; as setas brancas mostram o sentido; os números são a ordem das paradas.</div>
+    <ol class="stops">${R.ordem.map((k, n) => { const r = recs[k]; return `<li data-a="${esc(r.addr)}">${n === 0 ? '<b style="color:#1f9d3a">▶ INÍCIO</b> ' : n === R.ordem.length - 1 && n > 0 ? '<b style="color:#d6232b">■ FIM</b> ' : ''}<b>${esc(r.addr)}</b> <span class="tiny">${esc(((r.prods || [])[0] || {}).nome || '')}</span></li>`; }).join('')}</ol>
     ${faltam.length ? `<div class="tiny">Fora do modelo (ignorados): ${esc(faltam.join(', '))}</div>` : ''}
     <div class="row2"><button class="tab" id="rtTour">▶ Percorrer</button><button class="tab" id="rtVer">👁 Ver do alto</button></div>
     <div class="tiny">Distância aproximada (caminho pelas ruas do desenho a ~1,1 m/s, sem tempo de coleta). Início livre: a rota começa no melhor ponto.</div>`;
