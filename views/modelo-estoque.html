@@ -28,6 +28,9 @@ h1 small{display:block;font-weight:400;color:var(--mut);font-size:11px}
 .search input{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:6px 10px;width:150px;text-transform:uppercase}
 .search button{background:var(--blue);border:0;border-radius:8px;color:#fff;padding:6px 12px;cursor:pointer}
 #stage{position:fixed;inset:0;top:var(--hh,56px)}
+#stage::after{content:'';position:absolute;inset:0;pointer-events:none;z-index:1;background:radial-gradient(ellipse at center,transparent 58%,rgba(0,0,0,.30) 100%)}
+#stage.plan::after{display:none}
+.card{z-index:3}#tip,#toast{z-index:5}
 canvas{display:block}
 #c3{position:absolute;inset:0;width:100%;height:100%;touch-action:none;outline:none}
 #c2{position:absolute;inset:0;width:100%;height:100%;display:none;background:#f4f5f2;touch-action:none}
@@ -44,7 +47,7 @@ label.tg{display:flex;gap:7px;align-items:center;padding:3px 0;cursor:pointer;co
 #info{right:10px;top:10px;width:272px;display:none}
 #op{left:250px;top:10px;width:380px;max-height:calc(100% - 20px);overflow:auto;display:none;z-index:6;font-size:13px}
 #op .fl{display:flex;gap:6px;align-items:center;margin:6px 0;flex-wrap:wrap}#op select,#op input,#op textarea{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:4px 6px;color:var(--txt)}
-#op textarea{width:100%;resize:vertical;margin:6px 0}#op .leg div{display:flex;align-items:center}
+#op textarea{width:100%;resize:vertical;margin:6px 0}#op .leg div{display:flex;align-items:center}#op .leg div.tiny{display:block}#op select{max-width:100%}
 .abt{width:100%;border-collapse:collapse;font-size:12px;margin:6px 0}.abt th,.abt td{padding:3px 6px;border-bottom:1px solid var(--line);text-align:left}
 .cb{display:inline-block;min-width:18px;text-align:center;border-radius:4px;color:#10151a;font-size:11px;padding:0 4px}.cA{background:#2fb344}.cB{background:#f5d90a}.cC{background:#f28a1c}.cP{background:#8a96a3}
 .fl.ck{flex-wrap:nowrap;align-items:flex-start}.fl.ck input{margin-top:3px}.al.sp{cursor:default}.vl{display:block;margin-top:2px}.vl input{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:2px 6px;color:var(--txt);text-transform:uppercase}.vl .tab{padding:2px 8px;margin-left:4px}
@@ -113,6 +116,9 @@ label.tg{display:flex;gap:7px;align-items:center;padding:3px 0;cursor:pointer;co
     <div class="chips" id="chFrente"></div>
     <h3>Araras (roupas)</h3>
     <div class="chips" id="chAraras"></div>
+    <h3>Qualidade gráfica</h3>
+    <select id="qualSel" style="width:100%;margin-bottom:4px"><option value="auto">Automática (recomendado)</option><option value="alta">Alta</option><option value="media">Equilibrada</option><option value="leve">Leve (computador fraco)</option></select>
+    <div class="tiny" id="fps" style="margin-bottom:10px"></div>
     <h3>Exibir</h3>
     <label class="tg"><input type="checkbox" id="tgItens" checked> Produtos nos cestos</label>
     <label class="tg"><input type="checkbox" id="tgCaixas" checked> Caixas no topo</label>
@@ -402,7 +408,9 @@ function entradaRua(letra, secPref){
 /* ════════════════ 2. CENA 3D ════════════════ */
 const cv3 = document.getElementById('c3');
 const renderer = new THREE.WebGLRenderer({ canvas:cv3, antialias:true, powerPreference:'high-performance' });
-renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.75));
+const DPR = Math.min(devicePixelRatio || 1, 2);
+let prAtual = Math.min(DPR, 1.5);
+renderer.setPixelRatio(prAtual);
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x1a1f25);
 scene.fog = new THREE.Fog(0x1a1f25, 26, 78);
@@ -486,12 +494,21 @@ ground.rotation.x = -Math.PI / 2; ground.position.y = -.05; scene.add(ground);
   });
 }
 
-/* paredes */
+/* paredes: reboco claro até 3 m e chapa metálica ondulada acima (como nas fotos) */
+const texParede = tex(256, 512, (g, w, h) => {
+  g.fillStyle = '#b7bfc7'; g.fillRect(0, 0, w, h * .5);                                    // metade de cima do canvas = parte alta da parede
+  for (let x = 0; x < w; x += 12) { g.fillStyle = 'rgba(255,255,255,.35)'; g.fillRect(x, 0, 5, h * .5); g.fillStyle = 'rgba(0,0,0,.16)'; g.fillRect(x + 6, 0, 5, h * .5); }
+  g.fillStyle = '#dcdedb'; g.fillRect(0, h * .5, w, h * .5);                              // reboco
+  for (let i = 0; i < 2500; i++) { const v = 200 + Math.random() * 40 | 0; g.fillStyle = `rgba(${v},${v},${v - 4},.35)`; g.fillRect(Math.random() * w, h * .5 + Math.random() * h * .5, 2 + Math.random() * 4, 2 + Math.random() * 4); }
+  const gr = g.createLinearGradient(0, h, 0, h * .78); gr.addColorStop(0, 'rgba(60,58,52,.28)'); gr.addColorStop(1, 'rgba(60,58,52,0)'); g.fillStyle = gr; g.fillRect(0, h * .78, w, h * .22);   // sujeira junto ao piso
+  g.fillStyle = 'rgba(90,96,104,.55)'; g.fillRect(0, h * .5 - 3, w, 6);                    // viga de transição
+}, null);
 const paredes = new THREE.Group();
 for (let i = 0; i < CONTORNO.length; i++) {
   const a = CONTORNO[i], b = CONTORNO[(i + 1) % CONTORNO.length];
   const len = Math.hypot(b[0] - a[0], b[1] - a[1]), ang = Math.atan2(b[1] - a[1], b[0] - a[0]);
-  const w = new THREE.Mesh(new THREE.BoxGeometry(len + .24, PE, .24), MAT.parede);
+  const tp = texParede.clone(); tp.needsUpdate = true; tp.repeat.set((len + .24) / 4, 1);
+  const w = new THREE.Mesh(new THREE.BoxGeometry(len + .24, PE, .24), new THREE.MeshLambertMaterial({ map:tp }));
   w.position.set((a[0] + b[0]) / 2, PE / 2, (a[1] + b[1]) / 2); w.rotation.y = -ang; paredes.add(w);
   const rod = new THREE.Mesh(new THREE.BoxGeometry(len + .25, .25, .26), M(0x5f6872));
   rod.position.set(w.position.x, .125, w.position.z); rod.rotation.y = -ang; paredes.add(rod);
@@ -501,6 +518,7 @@ const porta = new THREE.Mesh(new THREE.BoxGeometry(.06, 2.1, .9), M(0x6b4a2a));
 porta.position.set(mx(1161) + .02, 1.05, mz(1932)); paredes.add(porta);
 scene.add(paredes);
 
+const _m0 = new THREE.Matrix4();
 /* teto, tesouras e luminárias */
 const teto = new THREE.Group();
 const tetoG = new THREE.ShapeGeometry(shape); tetoG.rotateX(Math.PI / 2);
@@ -508,10 +526,17 @@ const tetoM = new THREE.Mesh(tetoG, new THREE.MeshLambertMaterial({ map:texTeto 
 const bb = { x0:mx(863), x1:mx(3517), z0:mz(397), z1:mz(1995) };
 const lampG = new THREE.CircleGeometry(.32, 16); lampG.rotateX(Math.PI / 2);
 const lampM = new THREE.MeshBasicMaterial({ color:0xfff6dc, side:THREE.DoubleSide });
-for (let x = bb.x0 + 3; x < bb.x1; x += 5.2) for (let z = bb.z0 + 1.5; z < bb.z1; z += 4.6) {
-  const px = (x - mx(0)) / K + X0, pz = (z - mz(0)) / K + Y0;
-  if (!pointInPoly(x, z, CONTORNO)) continue;
-  const l = new THREE.Mesh(lampG, lampM); l.position.set(x, PE - .08, z); teto.add(l);
+const lampPos = [];
+for (let x = bb.x0 + 3; x < bb.x1; x += 5.2) for (let z = bb.z0 + 1.5; z < bb.z1; z += 4.6) if (pointInPoly(x, z, CONTORNO)) lampPos.push([x, z]);
+{
+  const lampI = new THREE.InstancedMesh(lampG, lampM, lampPos.length); lampI.frustumCulled = false;
+  lampPos.forEach((p, i) => lampI.setMatrixAt(i, _m0.makeTranslation(p[0], PE - .08, p[1]))); teto.add(lampI);
+  // poças de luz suaves no piso, sob cada luminária
+  const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'), gr = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+  gr.addColorStop(0, 'rgba(255,244,214,.9)'); gr.addColorStop(.45, 'rgba(255,240,205,.35)'); gr.addColorStop(1, 'rgba(255,236,200,0)'); g.fillStyle = gr; g.fillRect(0, 0, 128, 128);
+  const poolG = new THREE.PlaneGeometry(9, 9); poolG.rotateX(-Math.PI / 2);
+  const pools = new THREE.InstancedMesh(poolG, new THREE.MeshBasicMaterial({ map:new THREE.CanvasTexture(c), transparent:true, opacity:.2, depthWrite:false, blending:THREE.AdditiveBlending }), lampPos.length); pools.frustumCulled = false;
+  lampPos.forEach((p, i) => pools.setMatrixAt(i, _m0.makeTranslation(p[0], .015, p[1]))); teto.add(pools);
 }
 const trussG = [];
 for (let x = bb.x0 + 1.2; x < bb.x1; x += 5.2) trussG.push(boxG(.25, .45, bb.z1 - bb.z0, x, PE - .25, (bb.z0 + bb.z1) / 2));
@@ -586,32 +611,43 @@ function geoCesto(T){
   g.translate(0, d * Math.tan(TILT) + .004, 0);
   return g;
 }
-const nTipo = { C:0, D:0 };
-cestos.forEach(c => nTipo[c.tipo]++);
-const meshCesto = {};
 const reg = { C:[], D:[], Z:[] };
 cestos.forEach(c => reg[c.tipo].push(c));
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _p = new THREE.Vector3(), _s = new THREE.Vector3(1, 1, 1), _e = new THREE.Euler();
+
+/* ── desenho por blocos de 6×6 m: cada bloco liga/desliga por visibilidade e distância (muito mais fluido que desenhar tudo sempre) ── */
+const CH = 6, chunks = [];
+function porCelula(lista, xz){ const m = new Map(); lista.forEach(it => { const p = xz(it), k = Math.floor(p[0] / CH) + ',' + Math.floor(p[1] / CH); if (!m.has(k)) m.set(k, []); m.get(k).push(it); }); return m; }
+function criaBloco(cat, geo, mat, itens, xz, setar, pai){
+  const im = new THREE.InstancedMesh(geo, mat, itens.length); im.frustumCulled = false;
+  let sx = 0, sz = 0; itens.forEach((it, i) => { setar(it, i, im); const p = xz(it); sx += p[0]; sz += p[1]; });
+  const cx = sx / itens.length, cz = sz / itens.length; let r = 0; itens.forEach(it => { const p = xz(it); r = Math.max(r, Math.hypot(p[0] - cx, p[1] - cz)); });
+  im.instanceMatrix.needsUpdate = true; if (im.instanceColor) im.instanceColor.needsUpdate = true;
+  chunks.push({ mesh:im, c:new THREE.Vector3(cx, 1.8, cz), r:Math.hypot(r, 2.8) + 1.2, cat });
+  pai.add(im); return im;
+}
+const cestoMeshes = [], cestosGrp = new THREE.Group(); scene.add(cestosGrp);
+const _cv = new THREE.Color();
 ['C', 'D', 'Z'].forEach(t => {
-  const im = new THREE.InstancedMesh(geoCesto(TIPOS[t]), MAT.cesto, reg[t].length);
-  reg[t].forEach((c, i) => {
-    _q.setFromEuler(_e.set(0, c.rot, 0)); _p.set(c.x, c.y, c.z);
-    im.setMatrixAt(i, _m.compose(_p, _q, _s)); c.inst = { mesh:im, id:i };
+  const geo = geoCesto(TIPOS[t]);
+  porCelula(reg[t], c => [c.x, c.z]).forEach(lista => {
+    const im = criaBloco('cestos', geo, MAT.cesto, lista, c => [c.x, c.z], (c, i, m) => {
+      _q.setFromEuler(_e.set(0, c.rot, 0)); _p.set(c.x, c.y, c.z); m.setMatrixAt(i, _m.compose(_p, _q, _s));
+      m.setColorAt(i, _cv.setScalar(.8 + (hash(c.addr) % 1000) / 1000 * .38));         // pequena variação de tom entre cestos
+    }, cestosGrp);
+    im.userData.recs = lista; cestoMeshes.push(im);
   });
-  im.userData.recs = reg[t]; im.instanceMatrix.needsUpdate = true; meshCesto[t] = im; scene.add(im);
 });
 
 /* etiquetas amarelas na borda do cesto */
-const tagG = new THREE.BoxGeometry(.006, .03, .075);
-const tags = new THREE.InstancedMesh(tagG, new THREE.MeshBasicMaterial({ color:0xf3d60c }), cestos.length);
-cestos.forEach((c, i) => {
+const tagG = new THREE.BoxGeometry(.006, .03, .075), tagMat = new THREE.MeshBasicMaterial({ color:0xf3d60c }), tagsGrp = new THREE.Group(); scene.add(tagsGrp);
+porCelula(cestos, c => [c.x, c.z]).forEach(lista => criaBloco('tags', tagG, tagMat, lista, c => [c.x, c.z], (c, i, m) => {
   const T = TIPOS[c.tipo], lx = T.bd + .01, ly = T.bh * .4 - .025;
   const ex = lx * Math.cos(TILT) + ly * Math.sin(TILT), ey = c.y + (-lx * Math.sin(TILT) + ly * Math.cos(TILT)) + T.bd * Math.tan(TILT) + .004;
   const cs = Math.cos(c.rot), sn = Math.sin(c.rot);
   _p.set(c.x + ex * cs, ey, c.z - ex * sn); _q.setFromEuler(_e.set(0, c.rot, 0));
-  tags.setMatrixAt(i, _m.compose(_p, _q, _s));
-});
-scene.add(tags);
+  m.setMatrixAt(i, _m.compose(_p, _q, _s));
+}, tagsGrp));
 
 /* produtos dentro dos cestos */
 const PAL_BOMBA = [[0xf4f2ee,0xf4f2ee,0xe9e6e1,0xffffff],[0xf3b9cb,0xf7d1de,0xe8a1b8],[0xbfe0b5,0xdff0d3,0xa9d49d],[0xf6c7a0,0xf2ad78,0xf9dcc2],[0xd2b8e8,0xe6d6f3],[0xeee,0xf3b9cb,0xbfe0b5,0xf6c7a0]];
@@ -636,23 +672,17 @@ cestos.forEach(c => {
     }
   }
 });
-const itensGrp = new THREE.Group();
+const itensGrp = new THREE.Group(); scene.add(itensGrp);
 {
-  const sg = new THREE.SphereGeometry(1, 9, 7);
-  const sm = new THREE.InstancedMesh(sg, new THREE.MeshLambertMaterial({ color:0xffffff }), itensEsf.length);
-  const col = new THREE.Color();
-  itensEsf.forEach((p, i) => {
+  const sg = new THREE.SphereGeometry(1, 8, 6), sMat = new THREE.MeshLambertMaterial({ color:0xffffff }), bg = new THREE.BoxGeometry(.15, .05, .19), col = new THREE.Color();
+  porCelula(itensEsf, p => [p.x, p.z]).forEach(lista => criaBloco('itens', sg, sMat, lista, p => [p.x, p.z], (p, i, m) => {
     const r = TIPOS.C.r * p.sc; _p.set(p.x, p.y, p.z); _q.identity(); _s.set(r, r * .96, r);
-    sm.setMatrixAt(i, _m.compose(_p, _q, _s)); sm.setColorAt(i, col.setHex(p.col));
-  });
+    m.setMatrixAt(i, _m.compose(_p, _q, _s)); m.setColorAt(i, col.setHex(p.col));
+  }, itensGrp));
   _s.set(1, 1, 1);
-  const bg = new THREE.BoxGeometry(.15, .05, .19);
-  const bm = new THREE.InstancedMesh(bg, new THREE.MeshLambertMaterial({ color:0xffffff }), itensBox.length);
-  itensBox.forEach((p, i) => {
-    _p.set(p.x, p.y, p.z); _q.setFromEuler(_e.set(0, p.rot, p.tilt * 0, 'YXZ'));
-    bm.setMatrixAt(i, _m.compose(_p, _q, _s)); bm.setColorAt(i, col.setHex(p.col));
-  });
-  itensGrp.add(sm, bm); scene.add(itensGrp);
+  porCelula(itensBox, p => [p.x, p.z]).forEach(lista => criaBloco('itens', bg, sMat, lista, p => [p.x, p.z], (p, i, m) => {
+    _p.set(p.x, p.y, p.z); _q.setFromEuler(_e.set(0, p.rot, 0, 'YXZ')); m.setMatrixAt(i, _m.compose(_p, _q, _s)); m.setColorAt(i, col.setHex(p.col));
+  }, itensGrp));
 }
 
 /* caixas pretas empilhadas sobre o tablado (estoque de reserva) + etiquetas */
@@ -683,16 +713,16 @@ Object.keys(modFaces).forEach(corr => {
       labelList.push(racks[mf.ri].axis === 'z' ? [r.x + o, r.y - .02, r.z, r.side > 0 ? Math.PI / 2 : -Math.PI / 2] : [r.x, r.y - .02, r.z + o, r.side > 0 ? 0 : Math.PI]); }
   }));
 });
-const caixasTopo = new THREE.Group(); let meshCaixas;
+const caixasTopo = new THREE.Group(), crateMeshes = []; scene.add(caixasTopo);
+const texCaixa = (() => { const t = texMalha.clone(); t.needsUpdate = true; t.repeat.set(9, 5); return t; })();
 {
-  const cg = new THREE.BoxGeometry(.55, .29, .4);
-  const cm = new THREE.InstancedMesh(cg, new THREE.MeshLambertMaterial({ color:0x24282e }), crateRecs.length);
-  crateRecs.forEach((c, i) => { _p.set(c.x, c.y, c.z); _q.setFromEuler(_e.set(0, c.rotM, 0)); cm.setMatrixAt(i, _m.compose(_p, _q, _s)); });
-  cm.userData.recs = crateRecs; meshCaixas = cm;
-  const lg = new THREE.PlaneGeometry(.09, .06);
-  const lm = new THREE.InstancedMesh(lg, new THREE.MeshBasicMaterial({ color:0xf3d60c }), labelList.length);
-  labelList.forEach((c, i) => { _p.set(c[0], c[1], c[2]); _q.setFromEuler(_e.set(0, c[3], 0)); lm.setMatrixAt(i, _m.compose(_p, _q, _s)); });
-  caixasTopo.add(cm, lm); scene.add(caixasTopo);
+  const cg = new THREE.BoxGeometry(.55, .29, .4), cMat = new THREE.MeshLambertMaterial({ color:0x2a2f35, map:texCaixa, alphaTest:.5, side:THREE.DoubleSide });
+  porCelula(crateRecs, c => [c.x, c.z]).forEach(lista => {
+    const im = criaBloco('caixas', cg, cMat, lista, c => [c.x, c.z], (c, i, m) => { _p.set(c.x, c.y, c.z); _q.setFromEuler(_e.set(0, c.rotM, 0)); m.setMatrixAt(i, _m.compose(_p, _q, _s)); }, caixasTopo);
+    im.userData.recs = lista; crateMeshes.push(im);
+  });
+  const lg = new THREE.PlaneGeometry(.09, .06), lMat = new THREE.MeshBasicMaterial({ color:0xf3d60c });
+  porCelula(labelList, c => [c[0], c[2]]).forEach(lista => criaBloco('caixas', lg, lMat, lista, c => [c[0], c[2]], (c, i, m) => { _p.set(c[0], c[1], c[2]); _q.setFromEuler(_e.set(0, c[3], 0)); m.setMatrixAt(i, _m.compose(_p, _q, _s)); }, caixasTopo));
 }
 
 /* placas das ruas (cartão branco com a letra + faixa de endereços, como na foto) */
@@ -924,11 +954,11 @@ function achar(cx, cy){
   const r = cv3.getBoundingClientRect();
   ndc.set(((cx - r.left) / r.width) * 2 - 1, -((cy - r.top) / r.height) * 2 + 1);
   ray.setFromCamera(ndc, camera);
-  const hits = ray.intersectObjects([meshCesto.C, meshCesto.D, meshCesto.Z], false);
-  const ch = caixasTopo.visible ? ray.intersectObject(meshCaixas, false) : [];
+  const hits = ray.intersectObjects(cestoMeshes.filter(m => m.visible), false);
+  const ch = caixasTopo.visible ? ray.intersectObjects(crateMeshes.filter(m => m.visible), false) : [];
   const ah = ararasGrp.visible ? ray.intersectObjects(hitAraras, false) : [];
   if (ah.length && (!hits.length || ah[0].distance < hits[0].distance)) return ah[0].object.userData.rec;
-  if (ch.length && (!hits.length || ch[0].distance < hits[0].distance)) return crateRecs[ch[0].instanceId];
+  if (ch.length && (!hits.length || ch[0].distance < hits[0].distance)) return ch[0].object.userData.recs[ch[0].instanceId];
   if (!hits.length) return null;
   const h = hits[0]; return h.object.userData.recs[h.instanceId];
 }
@@ -1146,7 +1176,7 @@ function mostrar(m){
   const plan = m === 'plan';
   cv2.style.display = plan ? 'block' : 'none'; cv3.style.visibility = plan ? 'hidden' : 'visible';
   $('mini').style.display = plan ? 'none' : ''; hint.textContent = HINTS[m];
-  cam.modeUI = m; tip.style.display = 'none';
+  cam.modeUI = m; tip.style.display = 'none'; $('stage').classList.toggle('plan', plan);
   if (plan) { ajusta2D(); fit2D(); } else setMode(m);
   $('tgTeto').parentNode.style.opacity = plan ? .4 : 1;
   if (m === 'aerial') { $('tgTeto').checked = false; } else if (m === 'walk') { $('tgTeto').checked = true; }
@@ -1206,6 +1236,23 @@ $('sf').onsubmit = e => {
 };
 $('q').placeholder = 'Produto, código ou T120';
 
+
+/* ── qualidade gráfica: automática (ajusta a resolução pela fluidez) ou fixa ── */
+const QUAL = { alta:{ pr:2, d:{ cestos:90, itens:32, tags:42, caixas:90 } }, media:{ pr:1.5, d:{ cestos:80, itens:20, tags:26, caixas:60 } }, leve:{ pr:1, d:{ cestos:60, itens:12, tags:15, caixas:40 } } };
+const DIST_ORBITAL = { cestos:500, itens:34, tags:42, caixas:500 };
+let qualSel = 'auto';
+try { qualSel = localStorage.getItem('estoque3d.qual') || 'auto'; } catch (e) { /* padrão */ }
+if (!['auto', 'alta', 'media', 'leve'].includes(qualSel)) qualSel = 'auto';
+const nivelAtual = () => QUAL[qualSel] || QUAL.media;
+function aplicaPR(pr){ prAtual = Math.max(.6, Math.min(DPR, pr)); renderer.setPixelRatio(prAtual); const st = $('stage').getBoundingClientRect(); renderer.setSize(st.width, st.height, false); renderer.render(scene, camera); }   // redesenha na hora para não piscar
+const _fr = new THREE.Frustum(), _pm = new THREE.Matrix4(), _sp = new THREE.Sphere();
+function atualizarBlocos(){
+  camera.updateMatrixWorld(); _pm.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse); _fr.setFromProjectionMatrix(_pm);
+  const lim = cam.mode === 'walk' ? nivelAtual().d : DIST_ORBITAL, cp = camera.position;
+  chunks.forEach(ch => { _sp.set(ch.c, ch.r); ch.mesh.visible = _fr.intersectsSphere(_sp) && Math.max(0, ch.c.distanceTo(cp) - ch.r) <= lim[ch.cat]; });
+}
+$('qualSel').value = qualSel;
+$('qualSel').onchange = e => { qualSel = e.target.value; try { localStorage.setItem('estoque3d.qual', qualSel); } catch (x) { /* ok */ } if (qualSel !== 'auto') aplicaPR(nivelAtual().pr); };
 function redim(){
   const hh = $('hd').offsetHeight; document.documentElement.style.setProperty('--hh', hh + 'px');
   const st = $('stage').getBoundingClientRect();
@@ -1214,14 +1261,26 @@ function redim(){
 }
 addEventListener('resize', redim); redim();
 
-let last = performance.now(), mmT = 0;
+let last = performance.now(), mmT = 0, mmX = 1e9, mmZ = 1e9, nFr = 0, acumMs = 0, fpsT = 0;
 function loop(now){
   requestAnimationFrame(loop);
-  const dt = Math.min(.1, (now - last) / 1000); last = now;
+  const dtMs = now - last, dt = Math.min(.1, dtMs / 1000); last = now;
   if (cam.modeUI === 'plan') { render2D(); return; }
-  animFly(dt); passo(dt); aplicarCamera();
+  animFly(dt); passo(dt); aplicarCamera(); atualizarBlocos();
   renderer.render(scene, camera);
-  if (now - mmT > 120) { mmT = now; const c = cm.getContext('2d'); desenhar(c, cm.width, cm.height, { s:cm.width / (bb.x1 - bb.x0 + 3), ox:centro.x, oz:centro.z }, { mini:true, cam:{ x:cam.mode === 'walk' ? cam.x : cam.tx, z:cam.mode === 'walk' ? cam.z : cam.tz, yaw:cam.mode === 'walk' ? cam.yaw : cam.oyaw } }); }
+  // fluidez: média do tempo de quadro; no modo automático ajusta a resolução (nitidez) para manter ~60 fps
+  nFr++; acumMs += Math.min(dtMs, 200);
+  if (nFr >= 40) {
+    const med = acumMs / nFr; nFr = 0; acumMs = 0;
+    if (qualSel === 'auto') { if (med > 24 && prAtual > .7) aplicaPR(prAtual - .25); else if (med < 14 && prAtual < DPR) aplicaPR(prAtual + .25); }
+    else if (Math.abs(prAtual - Math.min(DPR, nivelAtual().pr)) > .01) aplicaPR(nivelAtual().pr);
+    if (now - fpsT > 500) { fpsT = now; const e = $('fps'); if (e) e.textContent = Math.round(1000 / med) + ' fps · resolução ' + Math.round(prAtual * 100) + '%'; }
+  }
+  const px = cam.mode === 'walk' ? cam.x : cam.tx, pz = cam.mode === 'walk' ? cam.z : cam.tz;
+  if (now - mmT > 250 && (Math.abs(px - mmX) > .05 || Math.abs(pz - mmZ) > .05 || now - mmT > 1500) && !$('mini').classList.contains('min')) {
+    mmT = now; mmX = px; mmZ = pz; const c = cm.getContext('2d');
+    desenhar(c, cm.width, cm.height, { s:cm.width / (bb.x1 - bb.x0 + 3), ox:centro.x, oz:centro.z }, { mini:true, cam:{ x:px, z:pz, yaw:cam.mode === 'walk' ? cam.yaw : cam.oyaw } });
+  }
 }
 /* ═══════════════ OPERAÇÃO — dados reais do WMS, cores, rota e auditoria ═══════════════ */
 const sepPorEnd = {}, repPorEnd = {}, giroPorEnd = {};
@@ -1245,7 +1304,7 @@ function extraOp(c){
   if (repPorEnd[k]) out.push('🟣 Reposição pendente (' + repPorEnd[k].length + ')');
   if (typeof abcRes !== 'undefined' && abcRes && c.abc) out.push(`📈 Curva ABC: classe <b>${c.abc}</b> · ${Math.round(c.vendasPos || 0).toLocaleString('pt-BR')} un no período · esforço da posição ${c.peso}`);
   if (typeof abcRes !== 'undefined' && abcRes && c.prodsAbc) c.prodsAbc.filter(p => p.virtual).slice(0, 5).forEach(p => out.push(`${p.origem === 'vinculo' ? '🔗' : '≈'} <code>${esc(p.cod)}</code> ${esc((p.nome || '').slice(0, 40))} <b class="cb c${p.abc}">${p.abc}</b> <span class="tiny">${p.origem === 'vinculo' ? 'vínculo manual' : 'posição aproximada (mesmo modelo)'} · ${Math.round(p.vendas)} un</span>`));
-  if (giroPorEnd[k]) out.push(`🔥 ${giroPorEnd[k].linhas} separações / ${giroPorEnd[k].qtd} un em ${live.dias} dias`);
+  if (giroPorEnd[k]) out.push(`🔥 WMS: ${giroPorEnd[k].linhas} separações / ${giroPorEnd[k].qtd} un em ${live.dias} dias (uso parcial)`);
   return out.length ? '<div class="plist">' + out.map(t => '<div>' + t + '</div>').join('') + '</div>' : '';
 }
 // saldo do WMS é do PRODUTO (total), não da posição: a posição fica com o pior saldo entre seus produtos
@@ -1268,7 +1327,7 @@ const MODOS = {
   produtos: { nome:'Produtos por posição', live:false, leg:[[CINZA, '0'], [VERDE, '1'], [AMAR, '2–3'], [VERM, '4 ou mais']] },
   saldo:    { nome:'Saldo do produto', live:true, leg:[[VERM, 'Ruptura (≤ 0)'], [LARA, 'Baixo'], [VERDE, 'OK'], [CINZA, 'Sem produto']] },
   estado:   { nome:'Estado operacional', live:true, leg:[[VERM, 'Ruptura'], [LARA, 'Saldo baixo'], [AZUL, 'Em separação agora'], [ROXO, 'Reposição pendente'], [VERDE, 'Normal'], [CINZA, 'Sem produto']] },
-  giro:     { nome:'Giro (mapa de calor)', live:true, leg:[[CINZA, 'Sem saída'], [0xffe680, 'Pouco'], [0xf28a1c, 'Médio'], [0xb30000, 'Muito']] },
+  giro:     { nome:'Giro — vendas da planilha (ou separações do WMS)', live:true, leg:[[CINZA, 'Sem venda registrada'], [0xffe680, 'Pouco'], [0xf28a1c, 'Médio'], [0xb30000, 'Muito']] },
   abc:      { nome:'Curva ABC (nova) ·planilha', abc:true, leg:[[VERDE, 'A — mais vendidos'], [AMAR, 'B — intermediários'], [LARA, 'C — poucas vendas'], [CINZA, 'Parado (sem venda)']] },
   abcAjuste:{ nome:'ABC × posição (ajustes) ·planilha', abc:true, leg:[[VERDE, 'Bem posicionado (A nas ruas A–E)'], [AZUL, 'Destino sugerido para um produto A'], [LARA, 'A fora de A–E (posição fácil) / B em difícil'], [VERM, 'A fora de A–E em posição média ou difícil'], [AMAR, 'C ou parado em posição nobre']] },
   abcMuda:  { nome:'ABC — mudança entre períodos ·planilha', abc:true, leg:[[AZUL, 'Subiu de classe'], [VERM, 'Caiu de classe'], [ROXO, 'Novo nas vendas'], [CINZA, 'Sem mudança']] }
@@ -1299,16 +1358,19 @@ function corDe(c){
     return ORDEM_CLASSE[c.abc] < ORDEM_CLASSE[c.abcPrev] ? AZUL : VERM;
   }
   if (modo === 'giro') {
-    const g = giroPorEnd[c.addr]; if (!g) return CINZA;
-    const t = Math.min(1, Math.log(1 + g.linhas) / Math.log(1 + giroMax)), A = new THREE.Color(0xffe680), B = new THREE.Color(0xf28a1c), C = new THREE.Color(0xb30000);
+    const v = giroDaPlanilha() ? (c.vendasPos || 0) : (giroPorEnd[c.addr] ? giroPorEnd[c.addr].linhas : 0);   // planilha de vendas tem prioridade sobre as separações do WMS
+    if (v <= 0) return CINZA;
+    const t = Math.min(1, Math.log(1 + v) / Math.log(1 + giroMax)), A = new THREE.Color(0xffe680), B = new THREE.Color(0xf28a1c), C = new THREE.Color(0xb30000);
     return t < .5 ? A.lerp(B, t * 2).getHex() : B.lerp(C, (t - .5) * 2).getHex();
   }
   return -1;
 }
+const giroDaPlanilha = () => typeof abcRes !== 'undefined' && !!abcRes;
 function recolorir(){
   aplicarToggles();
   if (modo === 'off') { overlay.visible = false; renderLegenda(); return; }
-  giroMax = Math.max(1, ...Object.values(giroPorEnd).map(g => g.linhas));
+  if (giroDaPlanilha()) { const v = cestos.map(c => c.vendasPos || 0).filter(x => x > 0).sort((a, b) => a - b); giroMax = Math.max(1, v.length ? v[Math.floor(v.length * .95)] : 1); }   // escala até o percentil 95 para um campeão não apagar o resto
+  else giroMax = Math.max(1, ...Object.values(giroPorEnd).map(g => g.linhas));
   const col = new THREE.Color();
   cestos.forEach((c, i) => { const h = corDe(c); if (h < 0) overlay.setMatrixAt(i, ovZero); else { overlay.setMatrixAt(i, ovMats[i]); overlay.setColorAt(i, col.setHex(h)); } });
   overlay.instanceMatrix.needsUpdate = true; if (overlay.instanceColor) overlay.instanceColor.needsUpdate = true;
@@ -1317,7 +1379,7 @@ function recolorir(){
 function renderLegenda(){
   const M = MODOS[modo]; let h = M.leg.map(([c, t]) => `<div><i style="background:#${c.toString(16).padStart(6, '0')}"></i>${t}</div>`).join('');
   if (modo === 'saldo' || modo === 'estado') h += `<div class="tiny">Baixo = saldo do produto ≤ ${limBaixo}. O WMS guarda o saldo do produto, não por posição.</div>`;
-  if (modo === 'giro') h += `<div class="tiny">Linhas separadas por endereço nos últimos ${live ? live.dias : '—'} dias · máx. ${giroMax}</div>`;
+  if (modo === 'giro') h += giroDaPlanilha() ? `<div class="tiny"><b>Fonte: planilha de vendas</b> (período escolhido na aba Curva ABC). Quantidade vendida por posição; cor máxima a partir de ${Math.round(giroMax).toLocaleString('pt-BR')} un.</div>` : `<div class="tiny"><b>Fonte: separações registradas no WMS</b> nos últimos ${live ? live.dias : '—'} dias (o WMS ainda não registra todas as vendas). Suba a planilha de vendas na aba Curva ABC para usar as vendas reais.</div>`;
   $('opLeg').innerHTML = h;
 }
 
@@ -1329,14 +1391,14 @@ function renderStatus(){
     el.innerHTML = `<b style="color:var(--ok)">● Ao vivo</b> · WMS às ${hh} <button class="tab" id="opAtu" style="padding:1px 8px;margin-left:6px">↻ atualizar</button>`;
     $('opAtu').onclick = () => atualizarAoVivo();
   } else el.innerHTML = '<b style="color:var(--mut)">○ Offline</b> · planilha embutida.<div class="tiny">Abra pelo app (logado como supervisor/gestor) em <code>/modelo-estoque</code> para saldo, separação, reposição e giro reais.</div>';
-  const sel = $('opModo'); if (sel) [...sel.options].forEach(o => { o.disabled = (MODOS[o.value].live && !live) || (MODOS[o.value].abc && typeof abcRes !== 'undefined' && !abcRes); });
-  if ((!live && MODOS[modo].live) || (MODOS[modo].abc && !abcRes)) { modo = 'off'; sel.value = 'off'; }
+  const sel = $('opModo'); if (sel) [...sel.options].forEach(o => { o.disabled = (MODOS[o.value].live && !live && !(o.value === 'giro' && giroDaPlanilha())) || (MODOS[o.value].abc && typeof abcRes !== 'undefined' && !abcRes); });
+  if ((!live && MODOS[modo].live && !(modo === 'giro' && giroDaPlanilha())) || (MODOS[modo].abc && !abcRes)) { modo = 'off'; sel.value = 'off'; }
   const r = $('opResumo');
   if (live) {
     let rup = 0, bx = 0; cestos.forEach(c => { const m = minSaldo(c); if (m !== null) { if (m <= 0) rup++; else if (m <= limBaixo) bx++; } });
     r.innerHTML = `<div class="kv"><span>Posições em ruptura</span><b>${rup}</b></div><div class="kv"><span>Saldo baixo (≤ ${limBaixo})</span><b>${bx}</b></div>
       <div class="kv"><span>Endereços em separação</span><b>${Object.keys(sepPorEnd).length}</b></div><div class="kv"><span>Endereços c/ reposição</span><b>${Object.keys(repPorEnd).length}</b></div>
-      <div class="kv"><span>Endereços c/ giro (${live.dias} d)</span><b>${Object.keys(giroPorEnd).length}</b></div>`;
+      <div class="kv"><span>Endereços c/ separação no WMS (${live.dias} d)</span><b>${Object.keys(giroPorEnd).length}</b></div>`;
   } else r.innerHTML = '';
 }
 async function atualizarAoVivo(dias){
@@ -1590,7 +1652,7 @@ function exportarCsv(){
   <section data-s="cores">
     <label class="fl">Colorir por <select id="opModo">${Object.keys(MODOS).map(k => `<option value="${k}">${MODOS[k].nome}${MODOS[k].live ? ' ·ao vivo' : ''}</option>`).join('')}</select></label>
     <label class="fl">Saldo baixo ≤ <input id="opBaixo" type="number" min="0" value="5" style="width:64px"></label>
-    <label class="fl">Giro dos últimos <select id="opDias"><option>7</option><option>15</option><option selected>30</option><option>60</option><option>90</option></select> dias</label>
+    <label class="fl">Separações do WMS: últimos <select id="opDias"><option>7</option><option>15</option><option selected>30</option><option>60</option><option>90</option></select> dias</label>
     <div id="opLeg" class="leg"></div><div id="opResumo" style="margin-top:8px"></div>
   </section>
   <section data-s="rota" style="display:none">
