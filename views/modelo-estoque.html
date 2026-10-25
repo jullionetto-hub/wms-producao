@@ -1235,8 +1235,7 @@ $('sf').onsubmit = e => {
   buscaProduto(raw);
 };
 $('q').placeholder = 'Produto, código ou T120';
-$('qualSel').value = qualSel;
-$('qualSel').onchange = e => { qualSel = e.target.value; try { localStorage.setItem('estoque3d.qual', qualSel); } catch (x) { /* ok */ } if (qualSel !== 'auto') aplicaPR(nivelAtual().pr); };
+
 
 /* ── qualidade gráfica: automática (ajusta a resolução pela fluidez) ou fixa ── */
 const QUAL = { alta:{ pr:2, d:{ cestos:90, itens:32, tags:42, caixas:90 } }, media:{ pr:1.5, d:{ cestos:80, itens:20, tags:26, caixas:60 } }, leve:{ pr:1, d:{ cestos:60, itens:12, tags:15, caixas:40 } } };
@@ -1252,6 +1251,8 @@ function atualizarBlocos(){
   const lim = cam.mode === 'walk' ? nivelAtual().d : DIST_ORBITAL, cp = camera.position;
   chunks.forEach(ch => { _sp.set(ch.c, ch.r); ch.mesh.visible = _fr.intersectsSphere(_sp) && Math.max(0, ch.c.distanceTo(cp) - ch.r) <= lim[ch.cat]; });
 }
+$('qualSel').value = qualSel;
+$('qualSel').onchange = e => { qualSel = e.target.value; try { localStorage.setItem('estoque3d.qual', qualSel); } catch (x) { /* ok */ } if (qualSel !== 'auto') aplicaPR(nivelAtual().pr); };
 function redim(){
   const hh = $('hd').offsetHeight; document.documentElement.style.setProperty('--hh', hh + 'px');
   const st = $('stage').getBoundingClientRect();
