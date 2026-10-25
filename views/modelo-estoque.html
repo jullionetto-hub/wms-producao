@@ -1270,7 +1270,7 @@ const MODOS = {
   estado:   { nome:'Estado operacional', live:true, leg:[[VERM, 'Ruptura'], [LARA, 'Saldo baixo'], [AZUL, 'Em separação agora'], [ROXO, 'Reposição pendente'], [VERDE, 'Normal'], [CINZA, 'Sem produto']] },
   giro:     { nome:'Giro (mapa de calor)', live:true, leg:[[CINZA, 'Sem saída'], [0xffe680, 'Pouco'], [0xf28a1c, 'Médio'], [0xb30000, 'Muito']] },
   abc:      { nome:'Curva ABC (nova) ·planilha', abc:true, leg:[[VERDE, 'A — mais vendidos'], [AMAR, 'B — intermediários'], [LARA, 'C — poucas vendas'], [CINZA, 'Parado (sem venda)']] },
-  abcAjuste:{ nome:'ABC × posição (ajustes) ·planilha', abc:true, leg:[[VERDE, 'Bem posicionado'], [LARA, 'A em posição média / B em difícil'], [VERM, 'A em posição difícil'], [AMAR, 'C ou parado em posição nobre']] },
+  abcAjuste:{ nome:'ABC × posição (ajustes) ·planilha', abc:true, leg:[[VERDE, 'Bem posicionado (A nas ruas A–E)'], [AZUL, 'Destino sugerido para um produto A'], [LARA, 'A fora de A–E (posição fácil) / B em difícil'], [VERM, 'A fora de A–E em posição média ou difícil'], [AMAR, 'C ou parado em posição nobre']] },
   abcMuda:  { nome:'ABC — mudança entre períodos ·planilha', abc:true, leg:[[AZUL, 'Subiu de classe'], [VERM, 'Caiu de classe'], [ROXO, 'Novo nas vendas'], [CINZA, 'Sem mudança']] }
 };
 function corDe(c){
@@ -1288,7 +1288,8 @@ function corDe(c){
   if (modo === 'abc') return c.abc === 'A' ? VERDE : c.abc === 'B' ? AMAR : c.abc === 'C' ? LARA : c.abc === 'P' ? CINZA : -1;
   if (modo === 'abcAjuste') {
     if (!c.abc) return -1; const w = c.peso || 2;
-    if (c.abc === 'A') return w <= 1.3 ? VERDE : w <= 2.2 ? LARA : VERM;
+    if (c.destinoPlano) return AZUL;
+    if (c.abc === 'A') return 'ABCDE'.includes(c.corr) ? VERDE : (w <= 1.3 ? LARA : VERM);
     if (c.abc === 'B') return w <= 2.2 ? VERDE : LARA;
     return w <= 1.3 ? AMAR : VERDE;
   }
@@ -1834,25 +1835,38 @@ function abcCalcular(){
   produtos.forEach(p => { if (p.abc === 'P') resumo.P.n++; });
   semPos.sort((a, b) => b.q - a.q);
   abcRes = { S, R, resumo, origem, semPos, virtuais, prev, per, cmp, cutA, cutB, todos:null };
+  cestos.forEach(c => { c.destinoPlano = false; c.origemPlano = false; });
   abcRes.plano = abcPlano(); abcDesenhar(); renderStatus(); recolorir();
 }
+// Regra do usuário: os produtos da curva A devem ficar nas ruas A–E (ramal da frente).
+// Cada produto A recebe uma posição ideal: já está em A–E, vai para uma vaga em A–E ou troca de lugar com um produto que não é A.
+const RUAS_A = 'ABCDE';
 function abcPlano(){
-  const livres = {}, trocaveis = {}, usados = new Set();
-  const addSpot = (c, v) => { if (c.peso > 1.3 || c.tipo === 'Z' || c.colmeia) return; const M = v ? livres : trocaveis; (M[c.tipo] = M[c.tipo] || []).push(c); };
-  cestos.forEach(c => { if (c.tipo === 'Z') return; if (!c.prodsAbc.length) addSpot(c, true); else if (c.prodsAbc.every(p => p.abc === 'C' || p.abc === 'P')) addSpot(c, false); });
-  Object.values(livres).forEach(a => a.sort((x, y) => x.peso - y.peso)); Object.values(trocaveis).forEach(a => a.sort((x, y) => x.peso - y.peso || (x.vendasPos - y.vendasPos)));
-  const quem = produtos.filter(p => p.abc === 'A' && noModelo(p)).concat(abcRes ? [] : []);
-  const todosA = quem.concat(abcRes.virtuais.filter(v => v.abc === 'A'));
-  const ruins = todosA.map(p => { const ps = posDe(p).filter(c => c.tipo === 'C' || c.tipo === 'D'); if (!ps.length) return null; const pior = ps.reduce((a, b) => b.peso > a.peso ? b : a); return pior.peso >= 1.8 ? { p, de:pior } : null; }).filter(Boolean)
-    .sort((a, b) => (b.de.peso - a.de.peso) || (b.p.vendas - a.p.vendas));
-  const plano = [];
-  ruins.forEach(({ p, de }) => {
-    const L = (livres[de.tipo] || []).find(c => !usados.has(c.addr));
-    if (L) { usados.add(L.addr); plano.push({ p, de, para:L, tipo:'vaga', ganho:p.vendas * (de.peso - L.peso) }); return; }
-    const T = (trocaveis[de.tipo] || []).find(c => !usados.has(c.addr));
-    if (T) { usados.add(T.addr); plano.push({ p, de, para:T, tipo:'troca', outro:T.prodsAbc[0], ganho:p.vendas * (de.peso - T.peso) }); }
+  const todosA = produtos.filter(p => p.abc === 'A' && noModelo(p)).concat(abcRes.virtuais.filter(v => v.abc === 'A')).sort((a, b) => b.vendas - a.vendas);
+  const emAE = p => posDe(p).filter(c => RUAS_A.includes(c.corr) && c.tipo === 'C');
+  const reservados = new Set(), rows = [];
+  const ja = [], mover = [];
+  todosA.forEach(p => { const e = emAE(p); if (e.length) { ja.push(p); e.forEach(c => reservados.add(c.addr)); } else mover.push(p); });
+  // posições de A–E disponíveis, da melhor para a pior: altura de mão (níveis do meio) → ordem de caminhada do WMS (A primeiro)
+  const qual = c => Math.abs(c.tier - 3) * 100 + RUAS_A.indexOf(c.corr) * 10 + c.num / 1000;
+  const slots = cestos.filter(c => RUAS_A.includes(c.corr) && c.tipo === 'C' && !reservados.has(c.addr)).sort((x, y) => qual(x) - qual(y));
+  const vagas = slots.filter(c => !c.prodsAbc.length), ocupadas = slots.filter(c => c.prodsAbc.length && c.prodsAbc.every(p => p.abc !== 'A')).sort((x, y) => (ORDEM_CLASSE[y.abc] - ORDEM_CLASSE[x.abc]) || (qual(x) - qual(y)));   // troca primeiro com parados/C, B só por último
+  ja.forEach(p => { const e = emAE(p).sort((x, y) => qual(x) - qual(y)); rows.push({ p, de:e[0], para:e[0], tipo:'ok', ganho:0 }); });
+  let iv = 0; const usadas = new Set();
+  mover.forEach(p => {
+    const ps = posDe(p).filter(c => c.tipo === 'C' || c.tipo === 'D'), de = ps.length ? ps.reduce((a, b) => b.peso > a.peso ? b : a) : null;
+    if (!de) { rows.push({ p, de:null, para:null, tipo:'sem', ganho:0 }); return; }
+    let dest = null, tipo = null;
+    while (iv < vagas.length && usadas.has(vagas[iv].addr)) iv++;
+    if (iv < vagas.length) { dest = vagas[iv]; tipo = 'vaga'; }
+    else if (de.tipo === 'C') {                       // troca só se o lugar do A também comporta o cesto C (o outro produto vai para lá)
+      dest = ocupadas.find(c => !usadas.has(c.addr)); tipo = dest ? 'troca' : null;
+    }
+    if (!dest) { rows.push({ p, de, para:null, tipo:'sem', ganho:0 }); return; }
+    usadas.add(dest.addr); dest.destinoPlano = true; de.origemPlano = true;
+    rows.push({ p, de, para:dest, tipo, outro: tipo === 'troca' ? dest.prodsAbc[0] : null, ganho:p.vendas * (de.peso - dest.peso) });
   });
-  return plano.sort((a, b) => b.ganho - a.ganho);
+  return rows.sort((a, b) => { const o = { vaga:0, troca:1, sem:2, ok:3 }; return (o[a.tipo] - o[b.tipo]) || (b.p.vendas - a.p.vendas); });
 }
 function abcDesenhar(){
   const X = abcRes, el = $('abOut'), pc = v => (v * 100).toFixed(1).replace('.', ',') + '%', nf = v => Math.round(v).toLocaleString('pt-BR');
@@ -1866,16 +1880,20 @@ function abcDesenhar(){
   if (X.prev) { const T = {}, cls = ['A', 'B', 'C', 'P'], cod = new Set([...X.R.cls.keys(), ...X.prev.cls.keys()]), cat = new Map(); produtos.forEach(p => cat.set(normCod(p.cod), p));
     cod.forEach(k => { const a = X.prev.cls.get(k), b = X.R.cls.get(k), key = (a ? a.classe : 'P') + '>' + (b ? b.classe : 'P'); T[key] = (T[key] || 0) + 1; });
     h += `<details open><summary><b>Mudança de classe</b> <span class="tiny">(linha = antes, coluna = agora)</span></summary><table class="abt"><tr><th></th>${cls.map(c => `<th>${c}</th>`).join('')}</tr>${cls.map(a => `<tr><th>${a}</th>${cls.map(b => `<td class="${a === b ? 'ig' : (ORDEM_CLASSE[b] < ORDEM_CLASSE[a] ? 'up' : 'dn')}">${T[a + '>' + b] || 0}</td>`).join('')}</tr>`).join('')}</table></details>`; }
-  h += `<details open><summary><b>${X.plano.length}</b> movimentos sugeridos <span class="tiny">(A em posição difícil → posição fácil)</span></summary>
-    <div class="tiny">Ganho estimado: ${efTot ? '−' + pc(gan / efTot) + ' do esforço de separação' : '—'} (quantidade × peso do WMS).</div>
-    <div class="alist">${X.plano.slice(0, 60).map((m, i) => `<div class="al" data-a="${esc(m.de.addr)}"><b>${i + 1}.</b> <code>${esc(m.p.cod)}</code> ${esc(m.p.nome.slice(0, 40))} <span class="tiny">(${nf(m.p.vendas)} un${m.p.origem === 'parecido' ? ' · posição aproximada' : ''})</span><br>
-      <b>${esc(m.de.addr)}</b> <span class="tiny">peso ${m.de.peso}</span> → <b style="color:var(--ok)">${esc(m.para.addr)}</b> <span class="tiny">peso ${m.para.peso}</span> ${m.tipo === 'vaga' ? '· <i>posição vazia</i>' : '· <i>troca com</i> <code>' + esc(m.outro.cod) + '</code> (' + (m.outro.abc === 'P' ? 'parado' : 'C') + ')'}</div>`).join('')}</div></details>`;
+  const PL = X.plano, cont = t => PL.filter(m => m.tipo === t).length, movs = PL.filter(m => m.tipo === 'vaga' || m.tipo === 'troca');
+  h += `<details open><summary><b>Curva A nas ruas A–E</b> <span class="tiny">(${PL.length} produtos A)</span></summary>
+    <div class="tiny">✅ já em A–E: <b>${cont('ok')}</b> · ➡ mover para vaga: <b>${cont('vaga')}</b> · 🔁 trocar de lugar: <b>${cont('troca')}</b> · ⚠ sem espaço em A–E: <b>${cont('sem')}</b>.
+      ${efTot ? 'Ganho estimado: −' + pc(movs.reduce((s, m) => s + m.ganho, 0) / efTot) + ' do esforço de separação.' : ''}</div>
+    <div class="tiny"><b>Como ler:</b> “mover” = leve o produto A para a vaga indicada. “Trocar” = o produto que está na posição de destino (não é A) <i>sai de lá e vai para a posição de onde o A saiu</i>.</div>
+    <div class="alist">${PL.filter(m => m.tipo !== 'ok').slice(0, 80).map((m, i) => `<div class="al" data-a="${esc((m.para || m.de || {}).addr || '')}"><b>${i + 1}.</b> <code>${esc(m.p.cod)}</code> ${esc(m.p.nome.slice(0, 40))} <span class="tiny">(${nf(m.p.vendas)} un${m.p.origem === 'parecido' ? ' · posição atual aproximada' : ''})</span><br>
+      ${m.tipo === 'sem' ? '<span style="color:var(--red)">⚠ sem espaço livre em A–E' + (m.de ? ' (está em <b>' + esc(m.de.addr) + '</b>)' : ' (sem posição)') + '</span>'
+      : `de <b>${esc(m.de.addr)}</b> → <b style="color:var(--ok)">${esc(m.para.addr)}</b> <span class="tiny">(rua ${esc(m.para.corr)}, nível ${m.para.tier + 1})</span> ${m.tipo === 'vaga' ? '· ➡ <i>vaga livre</i>' : '· 🔁 <i>troca:</i> <code>' + esc(m.outro.cod) + '</code> ' + esc((m.outro.nome || '').slice(0, 26)) + ' vai para <b>' + esc(m.de.addr) + '</b>'}`}</div>`).join('')}</div></details>`;
   h += `<details open><summary><b>${X.semPos.length.toLocaleString('pt-BR')}</b> produtos vendidos <u>sem posição</u> <span class="tiny">(${pc(O.sem / ot)} das vendas)</span></summary>
     <div class="tiny">Digite a colmeia (ex.: J121) e confirme para vincular; fica guardado neste navegador e pode ser exportado.</div>
     <div class="alist">${X.semPos.slice(0, 40).map((s, i) => `<div class="al sp"><code>${esc(s.cod)}</code> ${esc((s.nome || '(sem nome)').slice(0, 42))} <span class="tiny">· ${nf(s.q)} un${s.noCad ? '' : ' · fora do cadastro'}</span>
       <span class="vl"><input data-v="${i}" placeholder="colmeia" size="7"><button class="tab" data-vb="${i}">vincular</button></span></div>`).join('')}</div></details>`;
   h += `<details><summary><b>${X.R.lista.length.toLocaleString('pt-BR')}</b> produtos vendidos — top 30</summary><div class="alist">${X.R.lista.slice(0, 30).map(([cod, q]) => { const x = X.R.cls.get(cod); return `<div class="al"><b class="cb c${x.classe}">${x.classe}</b> <code>${esc(cod)}</code> ${esc((X.S.nomes.get(cod) || '').slice(0, 44))} <span class="tiny">· ${nf(q)} un · ${pc(x.pct)}</span></div>`; }).join('')}</div></details>`;
-  h += `<div class="row2"><button class="tab" id="abCsv1">⬇ Curva (CSV)</button><button class="tab" id="abCsv2">⬇ Trocas (CSV)</button><button class="tab" id="abCsv3">⬇ Sem posição (CSV)</button></div>`;
+  h += `<div class="row2"><button class="tab" id="abCsv1">⬇ Curva (CSV)</button><button class="tab" id="abCsv2">⬇ Posição ideal da curva A (CSV)</button><button class="tab" id="abCsv3">⬇ Sem posição (CSV)</button></div>`;
   el.innerHTML = h;
   el.querySelectorAll('[data-m]').forEach(b => b.onclick = () => { modo = b.dataset.m; $('opModo').value = modo; recolorir(); mostrar('orbit'); });
   el.querySelectorAll('.al[data-a]').forEach(d => d.onclick = () => selecionar(byAddr[d.dataset.a], true));
@@ -1886,8 +1904,9 @@ function abcDesenhar(){
   $('abCsv1').onclick = () => baixarCsv('curva-abc.csv', [['posicao_curva', 'codigo', 'produto', 'classe', 'quantidade_vendida', 'percentual', 'percentual_acumulado', 'origem_da_posicao', 'colmeias', 'peso_melhor_posicao', 'peso_pior_posicao']]
     .concat(X.R.lista.map(([cod, q]) => { const x = X.R.cls.get(cod), p = catP.get(cod) || X.virtuais.find(v => v.cod === cod), locs = p ? (p.virtual ? p.locs : p.locs.filter(k => byAddr[k])) : [], ps = locs.map(k => byAddr[k]).filter(Boolean);
       return [x.rank, cod, (p && p.nome) || X.S.nomes.get(cod) || '', x.classe, q, (x.pct * 100).toFixed(2), (x.acum * 100).toFixed(2), origemDe(cod), locs.join(' / '), ps.length ? Math.min(...ps.map(c => c.peso)) : '', ps.length ? Math.max(...ps.map(c => c.peso)) : '']; })));
-  $('abCsv2').onclick = () => baixarCsv('trocas-sugeridas.csv', [['ordem', 'codigo', 'produto', 'quantidade_vendida', 'de', 'peso_de', 'para', 'peso_para', 'tipo', 'troca_com', 'posicao_aproximada', 'ganho']]
-    .concat(X.plano.map((m, i) => [i + 1, m.p.cod, m.p.nome, m.p.vendas, m.de.addr, m.de.peso, m.para.addr, m.para.peso, m.tipo === 'vaga' ? 'posicao vazia' : 'troca', m.outro ? m.outro.cod : '', m.p.origem === 'parecido' ? 'sim' : '', Math.round(m.ganho)])));
+  $('abCsv2').onclick = () => baixarCsv('curva-A-posicao-ideal.csv', [['ordem', 'codigo', 'produto', 'quantidade_vendida', 'posicao_atual', 'posicao_ideal (A–E)', 'acao', 'produto_que_sai_do_destino', 'nome_do_que_sai', 'ele_vai_para', 'posicao_atual_aproximada']]
+    .concat(X.plano.map((m, i) => [i + 1, m.p.cod, m.p.nome, Math.round(m.p.vendas), m.de ? m.de.addr : (m.p.loc || ''), m.para ? m.para.addr : '',
+      { ok:'ja esta em A-E', vaga:'mover para vaga', troca:'trocar de lugar', sem:'sem espaco em A-E' }[m.tipo], m.outro ? m.outro.cod : '', m.outro ? m.outro.nome : '', m.outro && m.de ? m.de.addr : '', m.p.origem === 'parecido' ? 'sim' : ''])));
   $('abCsv3').onclick = () => baixarCsv('vendidos-sem-posicao.csv', [['codigo', 'produto', 'quantidade_vendida', 'colmeia (preencher)']].concat(X.semPos.map(s => [s.cod, s.nome, s.q, ''])));
 }
 function baixarCsv(nome, linhas){
