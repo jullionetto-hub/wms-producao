@@ -47,6 +47,7 @@ label.tg{display:flex;gap:7px;align-items:center;padding:3px 0;cursor:pointer;co
 #op textarea{width:100%;resize:vertical;margin:6px 0}#op .leg div{display:flex;align-items:center}
 .abt{width:100%;border-collapse:collapse;font-size:12px;margin:6px 0}.abt th,.abt td{padding:3px 6px;border-bottom:1px solid var(--line);text-align:left}
 .cb{display:inline-block;min-width:18px;text-align:center;border-radius:4px;color:#10151a;font-size:11px;padding:0 4px}.cA{background:#2fb344}.cB{background:#f5d90a}.cC{background:#f28a1c}.cP{background:#8a96a3}
+.al.sp{cursor:default}.vl{display:block;margin-top:2px}.vl input{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:2px 6px;color:var(--txt);text-transform:uppercase}.vl .tab{padding:2px 8px;margin-left:4px}
 .abt td.up{color:#2fb344;font-weight:700}.abt td.dn{color:#e0262d;font-weight:700}.abt td.ig{color:var(--mut)}
 .kv{display:flex;justify-content:space-between;gap:8px;padding:2px 0;border-bottom:1px dashed var(--line);font-size:12px}
 .row2{display:flex;gap:6px;margin:8px 0;flex-wrap:wrap}.stops{margin:8px 0;padding-left:22px;font-size:12px}.stops li{cursor:pointer;padding:1px 0}.stops li:hover{color:var(--acc)}
@@ -1243,6 +1244,7 @@ function extraOp(c){
   if (sepPorEnd[k]) out.push('🔵 Em separação agora: pedido' + (sepPorEnd[k].length > 1 ? 's ' : ' ') + [...new Set(sepPorEnd[k])].slice(0, 4).join(', '));
   if (repPorEnd[k]) out.push('🟣 Reposição pendente (' + repPorEnd[k].length + ')');
   if (typeof abcRes !== 'undefined' && abcRes && c.abc) out.push(`📈 Curva ABC: classe <b>${c.abc}</b> · ${Math.round(c.vendasPos || 0).toLocaleString('pt-BR')} un no período · esforço da posição ${c.peso}`);
+  if (typeof abcRes !== 'undefined' && abcRes && c.prodsAbc) c.prodsAbc.filter(p => p.virtual).slice(0, 5).forEach(p => out.push(`${p.origem === 'vinculo' ? '🔗' : '≈'} <code>${esc(p.cod)}</code> ${esc((p.nome || '').slice(0, 40))} <b class="cb c${p.abc}">${p.abc}</b> <span class="tiny">${p.origem === 'vinculo' ? 'vínculo manual' : 'posição aproximada (mesmo modelo)'} · ${Math.round(p.vendas)} un</span>`));
   if (giroPorEnd[k]) out.push(`🔥 ${giroPorEnd[k].linhas} separações / ${giroPorEnd[k].qtd} un em ${live.dias} dias`);
   return out.length ? '<div class="plist">' + out.map(t => '<div>' + t + '</div>').join('') + '</div>' : '';
 }
@@ -1599,19 +1601,27 @@ function exportarCsv(){
   <section data-s="aud" style="display:none"><div id="auOut"></div></section>
   <section data-s="abc" style="display:none">
     <label class="fl">Arquivo de vendas <input type="file" id="abFile" accept=".xlsx,.xls,.csv"></label>
-    <div class="tiny">Excel ou CSV com o código do produto e a quantidade vendida (e a data, para ver por trimestre). O arquivo é lido só aqui no navegador.</div>
+    <div class="tiny">Aceita o relatório com os <b>meses em colunas</b> (jul, ago, set…) ou uma linha por venda com data. Produtos repetidos e “-BRINDESITE” somam no mesmo código. O arquivo é lido só aqui no navegador.</div>
     <div id="abMapa" style="display:none">
       <label class="fl">Aba <select id="abSheet"></select></label>
       <label class="fl">Coluna do código <select id="abCod"></select></label>
-      <label class="fl">Coluna da quantidade <select id="abQtd"></select></label>
-      <label class="fl">Coluna da data <select id="abData"></select></label>
+      <label class="fl">Coluna do nome <select id="abNome"></select></label>
+      <label class="fl" id="abQtdL">Coluna da quantidade <select id="abQtd"></select></label>
+      <label class="fl" id="abDataL">Coluna da data <select id="abData"></select></label>
+      <div id="abMesesInfo" class="tiny" style="display:none"></div>
       <label class="fl">Período <select id="abPer"></select></label>
       <div id="abCust" class="fl" style="display:none">de <input type="date" id="abDe"> até <input type="date" id="abAte"></div>
       <label class="fl">Comparar com <select id="abCmp"></select></label>
       <label class="fl">A até <input id="abCa" type="number" value="80" min="1" max="99" style="width:58px">% · B até <input id="abCb" type="number" value="95" min="1" max="100" style="width:58px">%</label>
-      <label class="fl"><input type="checkbox" id="abBrinde" checked> Somar linhas de brinde no mesmo produto</label>
+      <label class="fl"><input type="checkbox" id="abBrinde" checked> Somar “-BRINDESITE” no produto original</label>
+      <label class="fl"><input type="checkbox" id="abParec" checked> Sem posição: usar o mesmo modelo (ex.: VB123-Vermelho → colmeia de VB123-Preto) — aproximado</label>
     </div>
     <div id="abOut" style="margin-top:8px"></div>
+    <details><summary>Vínculos manuais (<span id="abVincN">0</span>)</summary>
+      <label class="fl">Importar planilha (código + colmeia) <input type="file" id="abVincFile" accept=".xlsx,.xls,.csv"></label>
+      <div class="row2"><button class="tab" id="abVincCsv">⬇ Exportar vínculos</button><button class="tab" id="abVincLimpa">Limpar</button></div>
+      <div class="tiny">Valem só neste navegador. Exporte para guardar ou usar em outro computador.</div>
+    </details>
   </section>`;
   $('stage').appendChild(op);
   $('bOp').onclick = () => { op.style.display = op.style.display === 'block' ? 'none' : 'block'; };
@@ -1623,9 +1633,10 @@ function exportarCsv(){
   $('rtCarregar').onclick = carregarPedido; $('rtPed').onchange = carregarPedido; $('rtCalc').onclick = calcularRota; $('rtLimpa').onclick = () => { $('rtEnd').value = ''; $('rtOut').innerHTML = ''; limparRota(); };
 }
 /* ════════ CURVA ABC — planilha de vendas por produto → classe de cada colmeia (posição) ════════
-   Lê Excel/CSV no navegador (nada é gravado). A curva é por PRODUTO (linhas repetidas e "brinde" somam no mesmo código);
-   cada colmeia herda a melhor classe entre seus produtos. O "esforço" de cada posição usa os mesmos pesos do WMS
-   (lib/pontuacao.js: Fácil/Médio/Difícil × Frente/Fundo). */
+   Lê Excel/CSV no navegador (nada vai para o servidor). Aceita (1) relatório com os MESES em colunas ou (2) uma linha por venda com data.
+   A curva é por PRODUTO: linhas repetidas e "-BRINDESITE" somam no código original. A posição vem do cadastro do WMS; quando o
+   produto não tem posição, usa (a) vínculo manual, (b) produto de mesmo modelo (aproximado). O "esforço" de cada posição usa os
+   mesmos pesos do WMS (lib/pontuacao.js: Fácil/Médio/Difícil × Frente/Fundo). */
 const SEG_ESF = [["A",1,84,"Frente","Facil"],["B",1,168,"Frente","Facil"],["C",1,168,"Frente","Facil"],["D",1,168,"Frente","Facil"],["E",1,77,"Frente","Facil"],["F",1,40,"Fundo","Dificil"],["G",41,96,"Fundo","Dificil"],["H",1,112,"Fundo","Dificil"],["I",1,112,"Fundo","Dificil"],["I",113,203,"Frente","Dificil"],["J",1,91,"Frente","Dificil"],["J",204,287,"Frente","Dificil"],["J",92,147,"Fundo","Dificil"],["J",148,203,"Fundo","Dificil"],["K",1,84,"Frente","Dificil"],["K",197,287,"Frente","Dificil"],["K",85,140,"Fundo","Dificil"],["K",141,196,"Fundo","Dificil"],["L",1,91,"Frente","Dificil"],["L",204,294,"Frente","Dificil"],["L",148,203,"Fundo","Dificil"],["L",92,147,"Fundo","Dificil"],["M",1,91,"Frente","Medio"],["M",204,287,"Frente","Medio"],["M",92,147,"Fundo","Medio"],["M",148,203,"Fundo","Medio"],["N",1,84,"Frente","Medio"],["N",197,287,"Frente","Medio"],["N",141,196,"Fundo","Medio"],["N",85,140,"Fundo","Medio"],["O",1,91,"Frente","Medio"],["O",204,294,"Frente","Medio"],["O",92,147,"Fundo","Medio"],["O",148,203,"Fundo","Medio"],["P",1,91,"Frente","Facil"],["P",204,287,"Frente","Facil"],["P",92,147,"Fundo","Facil"],["P",148,203,"Fundo","Facil"],["Q",1,84,"Frente","Facil"],["Q",197,287,"Frente","Facil"],["Q",85,140,"Fundo","Facil"],["Q",141,196,"Fundo","Facil"],["R",1,91,"Frente","Facil"],["R",204,294,"Frente","Facil"],["R",92,147,"Fundo","Facil"],["R",148,203,"Fundo","Facil"],["S",1,91,"Frente","Facil"],["S",204,294,"Frente","Facil"],["S",92,147,"Fundo","Facil"],["S",148,203,"Fundo","Facil"],["T",1,84,"Frente","Facil"],["T",197,287,"Frente","Facil"],["T",85,140,"Fundo","Facil"],["T",141,196,"Fundo","Facil"],["U",1,91,"Frente","Facil"],["U",204,347,"Frente","Facil"],["U",92,147,"Fundo","Facil"],["U",148,203,"Fundo","Facil"],["V",1,144,"Frente","Medio"],["V",257,360,"Frente","Medio"],["V",145,200,"Fundo","Medio"],["V",201,256,"Fundo","Medio"],["W",1,104,"Frente","Medio"],["W",241,352,"Frente","Medio"],["W",105,160,"Fundo","Medio"],["W",161,240,"Fundo","Medio"],["X",1,112,"Frente","Medio"],["X",233,352,"Frente","Medio"],["X",113,192,"Fundo","Medio"],["X",193,232,"Fundo","Medio"],["Y",1,120,"Frente","Medio"],["Y",201,320,"Frente","Medio"],["Y",121,160,"Fundo","Medio"],["Y",161,200,"Fundo","Medio"],["Z",1,120,"Frente","Medio"],["Z",121,160,"Fundo","Medio"]];
 const PESO_ESF = { Facil_Frente:1.0, Facil_Fundo:1.3, Medio_Frente:1.8, Medio_Fundo:2.2, Dificil_Frente:2.8, Dificil_Fundo:3.5 };
 function pesoEnd(addr){
@@ -1640,165 +1651,269 @@ cestos.forEach(c => { c.peso = pesoEnd(c.addr); });
 araras.forEach(r => { r.peso = 3.5; }); crateRecs.forEach(r => { r.peso = 3.5; });
 const NOMES_CLASSE = { A:'A — mais vendidos', B:'B — intermediários', C:'C — poucas vendas', P:'Parados (sem venda)' };
 const ORDEM_CLASSE = { A:0, B:1, C:2, P:3 };
-let abcArq = null;     // { linhas:[arrays], cab:[], aba, nomesAbas, wb }
-let abcMapa = { cod:-1, qtd:-1, data:-1 };
-let XLSXlib = null;
+const MES_NOME = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+let abcArq = null, abcRes = null;
 const carregarXlsx = () => new Promise((res, rej) => {
   if (window.XLSX) return res(window.XLSX);
   const s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
   s.onload = () => res(window.XLSX); s.onerror = () => rej(new Error('Não foi possível carregar o leitor de Excel (precisa de internet).')); document.head.appendChild(s);
 });
-const normCod = v => v == null ? '' : String(typeof v === 'number' && Number.isFinite(v) ? v : v).trim().toUpperCase();
+const normCod = v => v == null ? '' : String(v).trim().toUpperCase();
+const RE_BRINDE = /-?BRINDE\w*$/i;
+const codeKey = v => { const k = normCod(v); return RE_BRINDE.test(k) ? { k:k.replace(RE_BRINDE, ''), brinde:true } : { k, brinde:false }; };
+const num = v => typeof v === 'number' ? v : parseFloat(String(v == null ? '' : v).replace(/\./g, '').replace(',', '.'));
+// datas sempre ao meio-dia local, para fuso horário nunca virar o dia/mês
+const partes = d => { const u = new Date(d.getTime() + 12 * 36e5); return [u.getUTCFullYear(), u.getUTCMonth(), u.getUTCDate()]; };
 function lerData(v){
-  if (v instanceof Date && !isNaN(v)) return v;
-  if (typeof v === 'number' && v > 20000 && v < 80000) return new Date(Math.round((v - 25569) * 864e5));    // serial do Excel
+  if (v instanceof Date && !isNaN(v)) { const [y, m, d] = partes(v); return new Date(y, m, d, 12); }
+  if (typeof v === 'number' && v > 20000 && v < 80000) { const [y, m, d] = partes(new Date(Math.round((v - 25569) * 864e5))); return new Date(y, m, d, 12); }
   const t = String(v == null ? '' : v).trim(); let m;
-  if ((m = t.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})/))) { const y = +m[3] < 100 ? 2000 + +m[3] : +m[3]; return new Date(y, +m[2] - 1, +m[1]); }
-  if ((m = t.match(/^(\d{4})-(\d{2})-(\d{2})/))) return new Date(+m[1], +m[2] - 1, +m[3]);
+  if ((m = t.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})/))) return new Date(+m[3] < 100 ? 2000 + +m[3] : +m[3], +m[2] - 1, +m[1], 12);
+  if ((m = t.match(/^(\d{4})-(\d{2})-(\d{2})/))) return new Date(+m[1], +m[2] - 1, +m[3], 12);
   return null;
 }
-const trimDe = d => d.getFullYear() + '-T' + (Math.floor(d.getMonth() / 3) + 1);
+function mesDe(c){      // cabeçalho que representa um mês (data, "07/2026", "jul/26", "julho 2026")
+  if (c instanceof Date && !isNaN(c)) { const [y, m] = partes(c); return { y, m }; }
+  const t = String(c == null ? '' : c).trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); let mm;
+  if ((mm = t.match(/^(\d{1,2})[\/.-](\d{4})$/))) return { y:+mm[2], m:+mm[1] - 1 };
+  if ((mm = t.match(/^([a-z]{3})[a-z]*[\/. -]*(\d{2,4})$/))) { const i = MES_NOME.indexOf(mm[1]); if (i >= 0) return { y:+mm[2] < 100 ? 2000 + +mm[2] : +mm[2], m:i }; }
+  return null;
+}
+const pad2m = n => String(n).padStart(2, '0');
+const mkey = o => o.y + '-' + pad2m(o.m + 1), qkey = o => o.y + '-T' + (Math.floor(o.m / 3) + 1);
+const rotMes = o => MES_NOME[o.m] + '/' + o.y;
 const MESES_TRIM = ['jan–mar', 'abr–jun', 'jul–set', 'out–dez'];
 const rotuloTrim = k => { const [y, t] = k.split('-T'); return 'T' + t + '/' + y + ' (' + MESES_TRIM[+t - 1] + ')'; };
 const iniTrim = k => { const [y, t] = k.split('-T'); return new Date(+y, (+t - 1) * 3, 1); };
 const fimTrim = k => { const [y, t] = k.split('-T'); return new Date(+y, +t * 3, 0, 23, 59, 59); };
 const setTxt = (id, h) => { $(id).innerHTML = h; };
 
+async function lerPlanilha(file){ const X = await carregarXlsx(), wb = X.read(await file.arrayBuffer(), { type:'array', cellDates:true }); return { X, wb }; }
 async function abcLerArquivo(file){
   try {
-    const X = await carregarXlsx(), buf = await file.arrayBuffer(), wb = X.read(buf, { type:'array', cellDates:true });
-    abcArq = { wb, X, nomeArq:file.name, abas:wb.SheetNames, aba:wb.SheetNames[0] };
+    const { X, wb } = await lerPlanilha(file);
+    abcArq = { wb, X, nomeArq:file.name, aba:wb.SheetNames[0] };
     $('abSheet').innerHTML = wb.SheetNames.map(n => `<option>${esc(n)}</option>`).join('');
     abcCarregarAba();
   } catch (e) { toast(e.message || 'Erro ao ler o arquivo'); }
 }
 function abcCarregarAba(){
   const A = abcArq, ws = A.wb.Sheets[A.aba], todas = A.X.utils.sheet_to_json(ws, { header:1, raw:true, defval:null, blankrows:false });
-  let h = todas.findIndex(r => r.filter(c => typeof c === 'string' && c.trim()).length >= 2); if (h < 0) h = 0;
-  A.cab = (todas[h] || []).map((c, i) => c == null || c === '' ? 'Coluna ' + (i + 1) : String(c).trim());
-  A.linhas = todas.slice(h + 1);
-  const ach = re => A.cab.findIndex(c => re.test(c));
-  abcMapa = { cod:ach(/c[oó]d|sku|ref|item|produto/i), qtd:ach(/qtd|quant|vendid|saída|saida|unid/i), data:ach(/data|date|dt\b|emiss|pedido em/i) };
-  if (abcMapa.cod === abcMapa.qtd) abcMapa.qtd = -1;
-  const opts = (sel, v, vazio) => (vazio ? '<option value="-1">— não tem —</option>' : '<option value="-1">— escolher —</option>') + A.cab.map((c, i) => `<option value="${i}"${i === v ? ' selected' : ''}>${esc(c)}</option>`).join('');
-  $('abCod').innerHTML = opts('cod', abcMapa.cod); $('abQtd').innerHTML = opts('qtd', abcMapa.qtd); $('abData').innerHTML = opts('data', abcMapa.data, true);
+  A.largo = null;
+  for (let hr = 0; hr < Math.min(8, todas.length - 1) && !A.largo; hr++) {         // formato "meses em colunas": linha de datas + linha "Qtde."
+    const ms = [], nxt = todas[hr + 1] || []; (todas[hr] || []).forEach((c, i) => { const o = mesDe(c); if (o && /qtd|quant|vend|unid/i.test(String(nxt[i] || ''))) ms.push(Object.assign({ col:i }, o)); });
+    if (ms.length) A.largo = { hr, ms: ms.sort((a, b) => (a.y * 12 + a.m) - (b.y * 12 + b.m)) };
+  }
+  let nomes;
+  if (A.largo) { nomes = todas[A.largo.hr + 1]; A.linhas = todas.slice(A.largo.hr + 2); }
+  else { let h = todas.findIndex(r => r.filter(c => typeof c === 'string' && c.trim()).length >= 2); if (h < 0) h = 0; nomes = todas[h] || []; A.linhas = todas.slice(h + 1); }
+  A.cab = nomes.map((c, i) => c == null || c === '' ? 'Coluna ' + (i + 1) : String(c).trim());
+  const ach = (re, ex) => A.cab.findIndex((c, i) => re.test(c) && i !== ex);
+  const cod = ach(/c[oó]d|sku|ref|item/i), nome = ach(/nome|descri|produto/i, cod);
+  A.map = { cod:cod >= 0 ? cod : ach(/produto/i), nome, qtd:ach(/qtd|quant|vendid|saída|saida|unid/i), data:ach(/data|date|dt\b|emiss|pedido em/i) };
+  if (A.map.qtd === A.map.cod) A.map.qtd = -1;
+  const opts = (v, vazio) => (vazio ? '<option value="-1">— não tem —</option>' : '<option value="-1">— escolher —</option>') + A.cab.map((c, i) => `<option value="${i}"${i === v ? ' selected' : ''}>${esc(c)}</option>`).join('');
+  $('abCod').innerHTML = opts(A.map.cod); $('abNome').innerHTML = opts(A.map.nome, true); $('abQtd').innerHTML = opts(A.map.qtd); $('abData').innerHTML = opts(A.map.data, true);
+  const L = !!A.largo;
+  $('abQtdL').style.display = $('abDataL').style.display = L ? 'none' : ''; $('abMesesInfo').style.display = L ? '' : 'none';
+  if (L) $('abMesesInfo').innerHTML = `Meses encontrados no arquivo: <b>${A.largo.ms.map(rotMes).join(', ')}</b> (coluna “Total” é ignorada).`;
   $('abMapa').style.display = '';
-  abcTrimestres(); abcCalcular();
+  abcPeriodos(); abcCalcular();
 }
-function abcTrimestres(){
-  const A = abcArq, di = +$('abData').value, set = new Set();
-  if (di >= 0) A.linhas.forEach(r => { const d = lerData(r[di]); if (d) set.add(trimDe(d)); });
-  A.trims = [...set].sort();
-  const ops = ['<option value="todo">Todo o período do arquivo</option>'];
-  if (A.trims.length) { ops.push('<option value="u90">Últimos 90 dias do arquivo</option>'); A.trims.forEach(k => ops.push(`<option value="${k}">${rotuloTrim(k)}</option>`)); ops.push('<option value="custom">Personalizado…</option>'); }
-  const cur = $('abPer').value; $('abPer').innerHTML = ops.join(''); if ([...$('abPer').options].some(o => o.value === cur)) $('abPer').value = cur; else if (A.trims.length) $('abPer').value = A.trims[A.trims.length - 1];
-  $('abCmp').innerHTML = '<option value="">— não comparar —</option>' + A.trims.map(k => `<option value="${k}">${rotuloTrim(k)}</option>`).join('');
-  $('abPer').parentNode.style.display = A.trims.length ? '' : 'none'; $('abCmp').parentNode.style.display = A.trims.length ? '' : 'none';
+function abcPeriodos(){
+  const A = abcArq, ops = [], cmp = ['<option value="">— não comparar —</option>'];
+  if (A.largo) {
+    const ms = A.largo.ms, trims = [...new Set(ms.map(qkey))];
+    ops.push(`<option value="todo">Todo o período (${ms.length} ${ms.length > 1 ? 'meses' : 'mês'})</option>`);
+    if (ms.length > 3) ops.push('<option value="u90">Últimos 3 meses</option>');
+    trims.forEach(k => { const n = ms.filter(o => qkey(o) === k).length; const t = `<option value="${k}">${rotuloTrim(k)}${n < 3 ? ' · só ' + n + ' de 3 meses' : ''}</option>`; ops.push(t); cmp.push(t); });
+    ms.forEach(o => { const t = `<option value="m:${mkey(o)}">${rotMes(o)}</option>`; ops.push(t); cmp.push(t); });
+    ops.push('<option value="custom">Personalizado…</option>');
+  } else {
+    const di = +$('abData').value, set = new Set(); if (di >= 0) A.linhas.forEach(r => { const d = lerData(r[di]); if (d) set.add(d.getFullYear() + '-T' + (Math.floor(d.getMonth() / 3) + 1)); });
+    A.trims = [...set].sort();
+    ops.push('<option value="todo">Todo o período do arquivo</option>');
+    if (A.trims.length) { ops.push('<option value="u90">Últimos 90 dias do arquivo</option>'); A.trims.forEach(k => { const t = `<option value="${k}">${rotuloTrim(k)}</option>`; ops.push(t); cmp.push(t); }); ops.push('<option value="custom">Personalizado…</option>'); }
+  }
+  const cur = $('abPer').value; $('abPer').innerHTML = ops.join('');
+  if ([...$('abPer').options].some(o => o.value === cur)) $('abPer').value = cur;
+  else { const q = [...$('abPer').options].filter(o => /-T\d$/.test(o.value)); if (q.length) $('abPer').value = q[q.length - 1].value; }
+  $('abCmp').innerHTML = cmp.join('');
+  $('abPer').parentNode.style.display = ops.length > 1 ? '' : 'none'; $('abCmp').parentNode.style.display = cmp.length > 1 ? '' : 'none';
 }
-function abcIntervalo(sel){
+function abcMesesSel(sel){        // formato largo: quais colunas de mês entram
+  const ms = abcArq.largo.ms;
+  if (!sel || sel === 'todo') return ms;
+  if (sel === 'u90') return ms.slice(-3);
+  if (sel.startsWith('m:')) return ms.filter(o => mkey(o) === sel.slice(2));
+  if (/-T\d$/.test(sel)) return ms.filter(o => qkey(o) === sel);
+  if (sel === 'custom') { const a = $('abDe').value ? new Date($('abDe').value + 'T00:00:00') : new Date(0), b = $('abAte').value ? new Date($('abAte').value + 'T23:59:59') : new Date(8.64e15);
+    return ms.filter(o => new Date(o.y, o.m, 1) <= b && new Date(o.y, o.m + 1, 0, 23, 59, 59) >= a); }
+  return ms;
+}
+function abcIntervalo(sel){       // formato longo: intervalo de datas
   const A = abcArq, di = +$('abData').value; if (di < 0 || !sel || sel === 'todo') return null;
-  if (sel === 'u90') { let mx = null; A.linhas.forEach(r => { const d = lerData(r[di]); if (d && (!mx || d > mx)) mx = d; }); return mx ? [new Date(mx.getTime() - 89 * 864e5), new Date(mx.getTime() + 864e5 - 1)] : null; }
+  if (sel === 'u90') { let mx = null; A.linhas.forEach(r => { const d = lerData(r[di]); if (d && (!mx || d > mx)) mx = d; }); return mx ? [new Date(mx.getTime() - 89 * 864e5), new Date(mx.getTime() + 864e5)] : null; }
   if (sel === 'custom') { const a = $('abDe').value, b = $('abAte').value; return [a ? new Date(a + 'T00:00:00') : new Date(0), b ? new Date(b + 'T23:59:59') : new Date(8.64e15)]; }
   return [iniTrim(sel), fimTrim(sel)];
 }
 const abcCortes = () => { const a = Math.min(99, Math.max(1, +$('abCa').value || 80)), b = Math.min(100, Math.max(a, +$('abCb').value || 95)); return [a / 100, b / 100]; };
-// soma por código (linhas repetidas e brindes entram no mesmo produto) dentro do intervalo
-function abcSomar(intervalo){
-  const A = abcArq, ci = +$('abCod').value, qi = +$('abQtd').value, di = +$('abData').value, brinde = $('abBrinde').checked;
-  const soma = new Map(); let linhas = 0, ignoradas = 0;
+// soma por código (linhas repetidas e -BRINDESITE entram no mesmo produto) dentro do período escolhido
+function abcSomar(sel){
+  const A = abcArq, ci = +$('abCod').value, ni = +$('abNome').value, soma = new Map(), nomes = new Map(), brindes = new Map(); let linhas = 0, ignoradas = 0;
+  const brindeOk = $('abBrinde').checked;
+  const cols = A.largo ? abcMesesSel(sel).map(o => o.col) : null, qi = +$('abQtd').value, di = +$('abData').value, iv = A.largo ? null : abcIntervalo(sel);
   A.linhas.forEach(r => {
-    const cod = normCod(r[ci]); const q = typeof r[qi] === 'number' ? r[qi] : parseFloat(String(r[qi] == null ? '' : r[qi]).replace(/\./g, '').replace(',', '.'));
-    if (!cod || !Number.isFinite(q)) { ignoradas++; return; }
-    if (!brinde && r.some(c => typeof c === 'string' && /brinde/i.test(c))) { ignoradas++; return; }
-    if (intervalo && di >= 0) { const d = lerData(r[di]); if (!d || d < intervalo[0] || d > intervalo[1]) return; }
-    soma.set(cod, (soma.get(cod) || 0) + q); linhas++;
+    const { k, brinde } = codeKey(r[ci]); if (!k) { ignoradas++; return; }
+    if (brinde && !brindeOk) { ignoradas++; return; }
+    let q = 0;
+    if (cols) cols.forEach(c => { const v = num(r[c]); if (Number.isFinite(v)) q += v; });
+    else { q = num(r[qi]); if (!Number.isFinite(q)) { ignoradas++; return; }
+      if (!brindeOk && r.some(c => typeof c === 'string' && /brinde/i.test(c))) { ignoradas++; return; }
+      if (iv && di >= 0) { const d = lerData(r[di]); if (!d || d < iv[0] || d > iv[1]) return; } }
+    soma.set(k, (soma.get(k) || 0) + q); if (brinde) brindes.set(k, (brindes.get(k) || 0) + q); linhas++;
+    if (ni >= 0 && r[ni] && !nomes.has(k)) nomes.set(k, String(r[ni]).trim());
   });
-  return { soma, linhas, ignoradas };
+  return { soma, nomes, brindes, linhas, ignoradas };
 }
 function abcClassificar(soma, cutA, cutB){
   const lista = [...soma.entries()].filter(([, q]) => q > 0).sort((a, b) => b[1] - a[1]), total = lista.reduce((s, x) => s + x[1], 0), cls = new Map();
   let acum = 0; lista.forEach(([cod, q], i) => { const antes = total ? acum / total : 0; acum += q; cls.set(cod, { qtd:q, classe: antes < cutA ? 'A' : antes < cutB ? 'B' : 'C', pct:total ? q / total : 0, acum:total ? acum / total : 0, rank:i + 1 }); });
   return { cls, total, lista };
 }
-let abcRes = null;
-const porCod = () => { const m = new Map(); produtos.forEach(p => { const k = normCod(p.cod); if (!m.has(k)) m.set(k, p); }); return m; };
+
+/* — vínculos produto → colmeia (manuais ou importados), guardados neste navegador — */
+const VKEY = 'estoque3d.vinculos';
+let vinc = {};
+try { vinc = JSON.parse(localStorage.getItem(VKEY) || '{}') || {}; } catch (e) { vinc = {}; }
+const salvarVinc = () => { try { localStorage.setItem(VKEY, JSON.stringify(vinc)); } catch (e) { /* sem armazenamento: vale só nesta sessão */ } $('abVincN').textContent = Object.keys(vinc).length; };
+function addVinc(cod, texto){
+  const ks = String(texto).split(/[\/,;\n]+/).map(t => chaveEnd(t.trim()) || normLoc(t.trim())).filter(k => k && byAddr[k]);
+  if (!ks.length) return false; const c = codeKey(cod).k; vinc[c] = [...new Set((vinc[c] || []).concat(ks))]; return true;
+}
+
+const noModelo = p => p.locs.some(k => byAddr[k]);
+const posDe = p => p.locs.map(k => byAddr[k]).filter(Boolean);
 function abcCalcular(){
-  if (!abcArq || +$('abCod').value < 0 || +$('abQtd').value < 0) { setTxt('abOut', '<div class="tiny">Escolha as colunas de código e quantidade vendida.</div>'); abcRes = null; recolorir(); renderStatus(); return; }
+  if (!abcArq || +$('abCod').value < 0 || (!abcArq.largo && +$('abQtd').value < 0)) { setTxt('abOut', '<div class="tiny">Escolha a coluna do código' + (abcArq && !abcArq.largo ? ' e a da quantidade vendida' : '') + '.</div>'); abcRes = null; recolorir(); renderStatus(); return; }
   const [cutA, cutB] = abcCortes(), per = $('abPer').value, cmp = $('abCmp').value;
-  const S = abcSomar(abcIntervalo(per)), R = abcClassificar(S.soma, cutA, cutB), cat = porCod();
-  // produto → classe; parados = produtos com posição no modelo e sem venda no período
-  const noModelo = p => p.locs.some(k => byAddr[k]);
-  produtos.forEach(p => { const x = R.cls.get(normCod(p.cod)); p.abc = x ? x.classe : (noModelo(p) ? 'P' : null); p.vendas = x ? x.qtd : 0; p.abcPct = x ? x.pct : 0; p.abcPrev = undefined; });
-  const semCadastro = [], semPosicao = [];
-  R.lista.forEach(([cod, q]) => { const p = cat.get(cod); if (!p) semCadastro.push([cod, q]); else if (!noModelo(p)) semPosicao.push([p, q]); });
+  const S = abcSomar(per), R = abcClassificar(S.soma, cutA, cutB);
+  const cat = new Map(), base = new Map();
+  produtos.forEach(p => { const k = normCod(p.cod); if (!cat.has(k)) cat.set(k, p); const b = k.split('-')[0]; if (!base.has(b)) base.set(b, []); base.get(b).push(p); });
+  const usaParecido = $('abParec').checked;
+  // posição de cada código vendido: cadastro → vínculo manual → produto de mesmo modelo
+  const virtuais = [], semPos = [], origem = { cadastro:0, vinculo:0, parecido:0, sem:0 }, extras = {};
+  const virtDe = new Map();
+  R.lista.forEach(([cod, q]) => {
+    const p = cat.get(cod);
+    if (p && noModelo(p)) { origem.cadastro += q; return; }
+    let locs = [], tipo = null; const vl = (vinc[cod] || []).filter(k => byAddr[k]);
+    if (vl.length) { locs = vl; tipo = 'vinculo'; }
+    else if (usaParecido) {
+      const cands = (base.get(cod.split('-')[0]) || []).filter(noModelo);
+      if (cands.length) { const cont = {}; cands.forEach(c => { const k = c.locs.find(x => byAddr[x]); cont[k] = (cont[k] || 0) + 1; }); locs = [Object.keys(cont).sort((a, b) => cont[b] - cont[a])[0]]; tipo = 'parecido'; }
+    }
+    const nome = p ? p.nome : (S.nomes.get(cod) || '');
+    if (locs.length) { const v = { cod, nome, locs, loc:'', outros:[], saldo:null, virtual:true, origem:tipo, vendas:q }; virtuais.push(v); virtDe.set(cod, v); origem[tipo] += q; locs.forEach(k => { (extras[k] = extras[k] || []).push(v); }); }
+    else { semPos.push({ cod, nome, q, noCad:!!p }); origem.sem += q; }
+  });
+  const classeDe = (res, cod, noMod) => { const x = res.cls.get(cod); return x ? x.classe : (noMod ? 'P' : null); };
+  produtos.forEach(p => { const k = normCod(p.cod), x = R.cls.get(k); p.abc = classeDe(R, k, noModelo(p)); p.vendas = x ? x.qtd : 0; p.abcPrev = undefined; });
+  virtuais.forEach(v => { const x = R.cls.get(v.cod); v.abc = x.classe; v.vendas = x.qtd; v.abcPrev = undefined; });
   let prev = null;
-  if (cmp && cmp !== per) { const S2 = abcSomar(abcIntervalo(cmp)), R2 = abcClassificar(S2.soma, cutA, cutB); prev = R2;
-    produtos.forEach(p => { const x = R2.cls.get(normCod(p.cod)); p.abcPrev = x ? x.classe : (noModelo(p) ? 'P' : null); }); }
-  // classe da colmeia = melhor classe entre seus produtos
+  if (cmp && cmp !== per) { const S2 = abcSomar(cmp); prev = abcClassificar(S2.soma, cutA, cutB);
+    produtos.forEach(p => { p.abcPrev = classeDe(prev, normCod(p.cod), noModelo(p)); }); virtuais.forEach(v => { v.abcPrev = classeDe(prev, v.cod, true); }); }
   cestos.forEach(c => {
-    const cl = (c.prods || []).map(p => p.abc).filter(Boolean).sort((a, b) => ORDEM_CLASSE[a] - ORDEM_CLASSE[b]); c.abc = cl[0] || null;
-    const cp = (c.prods || []).map(p => p.abcPrev).filter(Boolean).sort((a, b) => ORDEM_CLASSE[a] - ORDEM_CLASSE[b]); c.abcPrev = prev ? (cp[0] || null) : undefined;
-    c.vendasPos = (c.prods || []).reduce((s, p) => s + p.vendas / Math.max(1, p.locs.filter(k => byAddr[k]).length), 0);
+    c.prodsAbc = (c.prods || []).concat(extras[c.addr] || []);
+    const cl = c.prodsAbc.map(p => p.abc).filter(Boolean).sort((a, b) => ORDEM_CLASSE[a] - ORDEM_CLASSE[b]); c.abc = cl[0] || null;
+    const cp = c.prodsAbc.map(p => p.abcPrev).filter(Boolean).sort((a, b) => ORDEM_CLASSE[a] - ORDEM_CLASSE[b]); c.abcPrev = prev ? (cp[0] || null) : undefined;
+    c.vendasPos = c.prodsAbc.reduce((s, p) => s + (p.vendas || 0) / Math.max(1, p.locs.filter(k => byAddr[k]).length), 0);
   });
   const resumo = { A:{ n:0, q:0 }, B:{ n:0, q:0 }, C:{ n:0, q:0 }, P:{ n:0, q:0 } };
-  produtos.forEach(p => { if (p.abc) { resumo[p.abc].n++; resumo[p.abc].q += p.vendas; } });
-  abcRes = { S, R, resumo, semCadastro, semPosicao, prev, per, cmp, cutA, cutB };
+  R.cls.forEach(x => { resumo[x.classe].n++; resumo[x.classe].q += x.qtd; });
+  produtos.forEach(p => { if (p.abc === 'P') resumo.P.n++; });
+  semPos.sort((a, b) => b.q - a.q);
+  abcRes = { S, R, resumo, origem, semPos, virtuais, prev, per, cmp, cutA, cutB, todos:null };
   abcRes.plano = abcPlano(); abcDesenhar(); renderStatus(); recolorir();
 }
-// peso "pior" de um produto = maior peso entre as posições dele no modelo; melhor = menor
-const posDe = p => p.locs.map(k => byAddr[k]).filter(Boolean).filter(c => c.tipo !== 'V');
 function abcPlano(){
   const livres = {}, trocaveis = {}, usados = new Set();
-  const addSpot = (c, tipo) => { if (c.peso > 1.3 || !c.addr || c.crate || c.ar || c.colmeia) return; (tipo === 'v' ? livres : trocaveis)[c.tipo] = (tipo === 'v' ? livres : trocaveis)[c.tipo] || []; (tipo === 'v' ? livres : trocaveis)[c.tipo].push(c); };
-  cestos.forEach(c => { if (c.tipo === 'Z') return; if (!c.prods.length) addSpot(c, 'v'); else if (c.abc === 'C' || c.abc === 'P') { if (c.prods.every(p => p.abc === 'C' || p.abc === 'P')) addSpot(c, 't'); } });
+  const addSpot = (c, v) => { if (c.peso > 1.3 || c.tipo === 'Z' || c.colmeia) return; const M = v ? livres : trocaveis; (M[c.tipo] = M[c.tipo] || []).push(c); };
+  cestos.forEach(c => { if (c.tipo === 'Z') return; if (!c.prodsAbc.length) addSpot(c, true); else if (c.prodsAbc.every(p => p.abc === 'C' || p.abc === 'P')) addSpot(c, false); });
   Object.values(livres).forEach(a => a.sort((x, y) => x.peso - y.peso)); Object.values(trocaveis).forEach(a => a.sort((x, y) => x.peso - y.peso || (x.vendasPos - y.vendasPos)));
-  const ruins = produtos.filter(p => p.abc === 'A').map(p => { const ps = posDe(p).filter(c => c.tipo === 'C' || c.tipo === 'D'); if (!ps.length) return null; const pior = ps.reduce((a, b) => b.peso > a.peso ? b : a); return pior.peso >= 1.8 ? { p, de:pior } : null; }).filter(Boolean)
+  const quem = produtos.filter(p => p.abc === 'A' && noModelo(p)).concat(abcRes ? [] : []);
+  const todosA = quem.concat(abcRes.virtuais.filter(v => v.abc === 'A'));
+  const ruins = todosA.map(p => { const ps = posDe(p).filter(c => c.tipo === 'C' || c.tipo === 'D'); if (!ps.length) return null; const pior = ps.reduce((a, b) => b.peso > a.peso ? b : a); return pior.peso >= 1.8 ? { p, de:pior } : null; }).filter(Boolean)
     .sort((a, b) => (b.de.peso - a.de.peso) || (b.p.vendas - a.p.vendas));
   const plano = [];
   ruins.forEach(({ p, de }) => {
     const L = (livres[de.tipo] || []).find(c => !usados.has(c.addr));
     if (L) { usados.add(L.addr); plano.push({ p, de, para:L, tipo:'vaga', ganho:p.vendas * (de.peso - L.peso) }); return; }
     const T = (trocaveis[de.tipo] || []).find(c => !usados.has(c.addr));
-    if (T) { usados.add(T.addr); plano.push({ p, de, para:T, tipo:'troca', outro:T.prods[0], ganho:p.vendas * (de.peso - T.peso) }); }
+    if (T) { usados.add(T.addr); plano.push({ p, de, para:T, tipo:'troca', outro:T.prodsAbc[0], ganho:p.vendas * (de.peso - T.peso) }); }
   });
   return plano.sort((a, b) => b.ganho - a.ganho);
 }
 function abcDesenhar(){
   const X = abcRes, el = $('abOut'), pc = v => (v * 100).toFixed(1).replace('.', ',') + '%', nf = v => Math.round(v).toLocaleString('pt-BR');
   const totalQ = X.R.total, linhaCls = k => `<tr><td><b class="cb c${k}">${k}</b> ${NOMES_CLASSE[k]}</td><td>${X.resumo[k].n.toLocaleString('pt-BR')}</td><td>${k === 'P' ? '—' : pc(totalQ ? X.resumo[k].q / totalQ : 0)}</td></tr>`;
-  let h = `<div class="tiny">${esc(abcArq.nomeArq)} · ${X.S.linhas.toLocaleString('pt-BR')} linhas no período · ${nf(totalQ)} un vendidas${X.S.ignoradas ? ` · ${X.S.ignoradas} linhas ignoradas` : ''}</div>
-  <table class="abt"><tr><th>Classe</th><th>Produtos</th><th>% das vendas</th></tr>${['A', 'B', 'C', 'P'].map(linhaCls).join('')}</table>`;
-  const efTot = produtos.reduce((s, p) => { const ps = posDe(p); return s + (ps.length ? p.vendas * Math.min(...ps.map(c => c.peso)) : 0); }, 0), gan = X.plano.reduce((s, m) => s + m.ganho, 0);
+  const O = X.origem, ot = Math.max(1, O.cadastro + O.vinculo + O.parecido + O.sem);
+  let h = `<div class="tiny">${esc(abcArq.nomeArq)} · ${X.S.linhas.toLocaleString('pt-BR')} linhas · ${nf(totalQ)} un vendidas no período${X.S.ignoradas ? ` · ${X.S.ignoradas} linhas ignoradas` : ''}</div>
+  <table class="abt"><tr><th>Classe</th><th>Produtos</th><th>% das vendas</th></tr>${['A', 'B', 'C', 'P'].map(linhaCls).join('')}</table>
+  <div class="tiny"><b>Posição das vendas:</b> cadastro ${pc(O.cadastro / ot)} · vínculo manual ${pc(O.vinculo / ot)} · produto parecido ${pc(O.parecido / ot)} · <b style="color:${O.sem / ot > .1 ? 'var(--red)' : 'inherit'}">sem posição ${pc(O.sem / ot)}</b></div>`;
+  const efTot = produtos.concat(X.virtuais).reduce((s, p) => { const ps = posDe(p); return s + (ps.length && p.vendas ? p.vendas * Math.min(...ps.map(c => c.peso)) : 0); }, 0), gan = X.plano.reduce((s, m) => s + m.ganho, 0);
   h += `<div class="row2"><button class="tab" data-m="abc">🎨 Pintar curva ABC</button><button class="tab" data-m="abcAjuste">🎯 Ver ajustes</button>${X.prev ? '<button class="tab" data-m="abcMuda">↔ Ver mudanças</button>' : ''}</div>`;
-  if (X.prev) { const T = {}; produtos.forEach(p => { if (p.abcPrev !== undefined && (p.abc || p.abcPrev)) { const k = (p.abcPrev || '—') + '>' + (p.abc || '—'); T[k] = (T[k] || 0) + 1; } });
-    const cl = ['A', 'B', 'C', 'P'];
-    h += `<details open><summary><b>Mudança de classe</b> <span class="tiny">(linha = antes, coluna = agora)</span></summary><table class="abt"><tr><th></th>${cl.map(c => `<th>${c}</th>`).join('')}</tr>${cl.map(a => `<tr><th>${a}</th>${cl.map(b => `<td class="${a === b ? 'ig' : (ORDEM_CLASSE[b] < ORDEM_CLASSE[a] ? 'up' : 'dn')}">${T[a + '>' + b] || 0}</td>`).join('')}</tr>`).join('')}</table></details>`; }
+  if (X.prev) { const T = {}, cls = ['A', 'B', 'C', 'P'], cod = new Set([...X.R.cls.keys(), ...X.prev.cls.keys()]), cat = new Map(); produtos.forEach(p => cat.set(normCod(p.cod), p));
+    cod.forEach(k => { const a = X.prev.cls.get(k), b = X.R.cls.get(k), key = (a ? a.classe : 'P') + '>' + (b ? b.classe : 'P'); T[key] = (T[key] || 0) + 1; });
+    h += `<details open><summary><b>Mudança de classe</b> <span class="tiny">(linha = antes, coluna = agora)</span></summary><table class="abt"><tr><th></th>${cls.map(c => `<th>${c}</th>`).join('')}</tr>${cls.map(a => `<tr><th>${a}</th>${cls.map(b => `<td class="${a === b ? 'ig' : (ORDEM_CLASSE[b] < ORDEM_CLASSE[a] ? 'up' : 'dn')}">${T[a + '>' + b] || 0}</td>`).join('')}</tr>`).join('')}</table></details>`; }
   h += `<details open><summary><b>${X.plano.length}</b> movimentos sugeridos <span class="tiny">(A em posição difícil → posição fácil)</span></summary>
     <div class="tiny">Ganho estimado: ${efTot ? '−' + pc(gan / efTot) + ' do esforço de separação' : '—'} (quantidade × peso do WMS).</div>
-    <div class="alist">${X.plano.slice(0, 60).map((m, i) => `<div class="al" data-a="${esc(m.de.addr)}" data-b="${esc(m.para.addr)}"><b>${i + 1}.</b> <code>${esc(m.p.cod)}</code> ${esc(m.p.nome.slice(0, 40))} <span class="tiny">(${nf(m.p.vendas)} un)</span><br>
+    <div class="alist">${X.plano.slice(0, 60).map((m, i) => `<div class="al" data-a="${esc(m.de.addr)}"><b>${i + 1}.</b> <code>${esc(m.p.cod)}</code> ${esc(m.p.nome.slice(0, 40))} <span class="tiny">(${nf(m.p.vendas)} un${m.p.origem === 'parecido' ? ' · posição aproximada' : ''})</span><br>
       <b>${esc(m.de.addr)}</b> <span class="tiny">peso ${m.de.peso}</span> → <b style="color:var(--ok)">${esc(m.para.addr)}</b> <span class="tiny">peso ${m.para.peso}</span> ${m.tipo === 'vaga' ? '· <i>posição vazia</i>' : '· <i>troca com</i> <code>' + esc(m.outro.cod) + '</code> (' + (m.outro.abc === 'P' ? 'parado' : 'C') + ')'}</div>`).join('')}</div></details>`;
-  h += `<details><summary><b>${X.R.lista.length.toLocaleString('pt-BR')}</b> produtos vendidos — top 30</summary><div class="alist">${X.R.lista.slice(0, 30).map(([cod, q]) => { const x = X.R.cls.get(cod), p = porCod().get(cod); return `<div class="al" data-p="${esc(p ? p.locs.find(k => byAddr[k]) || '' : '')}"><b class="cb c${x.classe}">${x.classe}</b> <code>${esc(cod)}</code> ${esc(p ? p.nome.slice(0, 44) : '(não está no cadastro)')} <span class="tiny">· ${nf(q)} un · ${pc(x.pct)}</span></div>`; }).join('')}</div></details>`;
-  if (X.semCadastro.length || X.semPosicao.length) h += `<details><summary><b>${X.semCadastro.length + X.semPosicao.length}</b> vendidos que não entram no mapa</summary><div class="tiny">${X.semCadastro.length} códigos não estão no cadastro do WMS; ${X.semPosicao.length} estão, mas sem posição neste modelo (AMZ, SALDÃO etc.).</div><div class="alist">${X.semCadastro.slice(0, 15).map(([c, q]) => `<div class="al"><code>${esc(c)}</code> sem cadastro · ${nf(q)} un</div>`).join('')}${X.semPosicao.slice(0, 15).map(([p, q]) => `<div class="al"><code>${esc(p.cod)}</code> ${esc(p.nome.slice(0, 40))} · ${nf(q)} un · ${esc(p.loc || 'sem localização')}</div>`).join('')}</div></details>`;
-  h += `<div class="row2"><button class="tab" id="abCsv1">⬇ Curva (CSV)</button><button class="tab" id="abCsv2">⬇ Trocas (CSV)</button></div>`;
+  h += `<details open><summary><b>${X.semPos.length.toLocaleString('pt-BR')}</b> produtos vendidos <u>sem posição</u> <span class="tiny">(${pc(O.sem / ot)} das vendas)</span></summary>
+    <div class="tiny">Digite a colmeia (ex.: J121) e confirme para vincular; fica guardado neste navegador e pode ser exportado.</div>
+    <div class="alist">${X.semPos.slice(0, 40).map((s, i) => `<div class="al sp"><code>${esc(s.cod)}</code> ${esc((s.nome || '(sem nome)').slice(0, 42))} <span class="tiny">· ${nf(s.q)} un${s.noCad ? '' : ' · fora do cadastro'}</span>
+      <span class="vl"><input data-v="${i}" placeholder="colmeia" size="7"><button class="tab" data-vb="${i}">vincular</button></span></div>`).join('')}</div></details>`;
+  h += `<details><summary><b>${X.R.lista.length.toLocaleString('pt-BR')}</b> produtos vendidos — top 30</summary><div class="alist">${X.R.lista.slice(0, 30).map(([cod, q]) => { const x = X.R.cls.get(cod); return `<div class="al"><b class="cb c${x.classe}">${x.classe}</b> <code>${esc(cod)}</code> ${esc((X.S.nomes.get(cod) || '').slice(0, 44))} <span class="tiny">· ${nf(q)} un · ${pc(x.pct)}</span></div>`; }).join('')}</div></details>`;
+  h += `<div class="row2"><button class="tab" id="abCsv1">⬇ Curva (CSV)</button><button class="tab" id="abCsv2">⬇ Trocas (CSV)</button><button class="tab" id="abCsv3">⬇ Sem posição (CSV)</button></div>`;
   el.innerHTML = h;
   el.querySelectorAll('[data-m]').forEach(b => b.onclick = () => { modo = b.dataset.m; $('opModo').value = modo; recolorir(); mostrar('orbit'); });
   el.querySelectorAll('.al[data-a]').forEach(d => d.onclick = () => selecionar(byAddr[d.dataset.a], true));
-  el.querySelectorAll('.al[data-p]').forEach(d => d.onclick = () => { if (d.dataset.p && byAddr[d.dataset.p]) selecionar(byAddr[d.dataset.p], true); });
-  $('abCsv1').onclick = () => baixarCsv('curva-abc.csv', [['posicao_curva', 'codigo', 'produto', 'classe', 'quantidade_vendida', 'percentual', 'percentual_acumulado', 'posicoes', 'peso_melhor_posicao', 'peso_pior_posicao']]
-    .concat(X.R.lista.map(([cod, q]) => { const x = X.R.cls.get(cod), p = porCod().get(cod), ps = p ? posDe(p) : []; return [x.rank, cod, p ? p.nome : '', x.classe, q, (x.pct * 100).toFixed(2), (x.acum * 100).toFixed(2), p ? p.locs.join(' / ') : '', ps.length ? Math.min(...ps.map(c => c.peso)) : '', ps.length ? Math.max(...ps.map(c => c.peso)) : '']; })));
-  $('abCsv2').onclick = () => baixarCsv('trocas-sugeridas.csv', [['ordem', 'codigo', 'produto', 'quantidade_vendida', 'de', 'peso_de', 'para', 'peso_para', 'tipo', 'troca_com', 'ganho']]
-    .concat(X.plano.map((m, i) => [i + 1, m.p.cod, m.p.nome, m.p.vendas, m.de.addr, m.de.peso, m.para.addr, m.para.peso, m.tipo === 'vaga' ? 'posicao vazia' : 'troca', m.outro ? m.outro.cod : '', Math.round(m.ganho)])));
+  el.querySelectorAll('[data-vb]').forEach(b => b.onclick = () => { const i = +b.dataset.vb, inp = el.querySelector(`[data-v="${i}"]`), s = X.semPos[i];
+    if (addVinc(s.cod, inp.value)) { salvarVinc(); abcCalcular(); } else toast('Colmeia não encontrada no modelo: ' + inp.value); });
+  const origemDe = cod => { const v = X.virtuais.find(x => x.cod === cod); return v ? v.origem : (X.semPos.some(s => s.cod === cod) ? 'sem posicao' : 'cadastro'); };
+  const catP = new Map(); produtos.forEach(p => { const k = normCod(p.cod); if (!catP.has(k)) catP.set(k, p); });
+  $('abCsv1').onclick = () => baixarCsv('curva-abc.csv', [['posicao_curva', 'codigo', 'produto', 'classe', 'quantidade_vendida', 'percentual', 'percentual_acumulado', 'origem_da_posicao', 'colmeias', 'peso_melhor_posicao', 'peso_pior_posicao']]
+    .concat(X.R.lista.map(([cod, q]) => { const x = X.R.cls.get(cod), p = catP.get(cod) || X.virtuais.find(v => v.cod === cod), locs = p ? (p.virtual ? p.locs : p.locs.filter(k => byAddr[k])) : [], ps = locs.map(k => byAddr[k]).filter(Boolean);
+      return [x.rank, cod, (p && p.nome) || X.S.nomes.get(cod) || '', x.classe, q, (x.pct * 100).toFixed(2), (x.acum * 100).toFixed(2), origemDe(cod), locs.join(' / '), ps.length ? Math.min(...ps.map(c => c.peso)) : '', ps.length ? Math.max(...ps.map(c => c.peso)) : '']; })));
+  $('abCsv2').onclick = () => baixarCsv('trocas-sugeridas.csv', [['ordem', 'codigo', 'produto', 'quantidade_vendida', 'de', 'peso_de', 'para', 'peso_para', 'tipo', 'troca_com', 'posicao_aproximada', 'ganho']]
+    .concat(X.plano.map((m, i) => [i + 1, m.p.cod, m.p.nome, m.p.vendas, m.de.addr, m.de.peso, m.para.addr, m.para.peso, m.tipo === 'vaga' ? 'posicao vazia' : 'troca', m.outro ? m.outro.cod : '', m.p.origem === 'parecido' ? 'sim' : '', Math.round(m.ganho)])));
+  $('abCsv3').onclick = () => baixarCsv('vendidos-sem-posicao.csv', [['codigo', 'produto', 'quantidade_vendida', 'colmeia (preencher)']].concat(X.semPos.map(s => [s.cod, s.nome, s.q, ''])));
 }
 function baixarCsv(nome, linhas){
   const q = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
   const blob = new Blob(['﻿' + linhas.map(r => r.map(q).join(';')).join('\n')], { type:'text/csv;charset=utf-8' });
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = nome; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
 }
+async function importarVinculos(file){
+  try {
+    const { X, wb } = await lerPlanilha(file), rows = X.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header:1, raw:true, defval:null, blankrows:false });
+    let h = rows.findIndex(r => r.filter(c => typeof c === 'string').length >= 2); if (h < 0) h = 0;
+    const cab = (rows[h] || []).map(c => String(c == null ? '' : c)), ci = cab.findIndex(c => /c[oó]d|sku|ref/i.test(c)), li = cab.findIndex(c => /colmeia|local|endere|posi/i.test(c));
+    if (ci < 0 || li < 0) { toast('Preciso de uma coluna de código e outra com a colmeia/localização'); return; }
+    let ok = 0, ruim = 0; rows.slice(h + 1).forEach(r => { if (!r[ci] || !r[li]) return; if (addVinc(r[ci], r[li])) ok++; else ruim++; });
+    salvarVinc(); toast(ok + ' vínculos importados' + (ruim ? ' · ' + ruim + ' ignorados (colmeia fora do modelo)' : '')); if (abcArq) abcCalcular();
+  } catch (e) { toast(e.message || 'Erro ao importar'); }
+}
 $('abFile').onchange = e => { if (e.target.files[0]) abcLerArquivo(e.target.files[0]); };
 $('abSheet').onchange = e => { abcArq.aba = e.target.value; abcCarregarAba(); };
-['abCod', 'abQtd'].forEach(id => $(id).onchange = abcCalcular);
-$('abData').onchange = () => { abcTrimestres(); abcCalcular(); };
-['abPer', 'abCmp', 'abBrinde', 'abCa', 'abCb', 'abDe', 'abAte'].forEach(id => $(id).onchange = () => { $('abCust').style.display = $('abPer').value === 'custom' ? '' : 'none'; abcCalcular(); });
+['abCod', 'abNome', 'abQtd'].forEach(id => $(id).onchange = abcCalcular);
+$('abData').onchange = () => { abcPeriodos(); abcCalcular(); };
+['abPer', 'abCmp', 'abBrinde', 'abParec', 'abCa', 'abCb', 'abDe', 'abAte'].forEach(id => $(id).onchange = () => { $('abCust').style.display = $('abPer').value === 'custom' ? '' : 'none'; abcCalcular(); });
+$('abVincFile').onchange = e => { if (e.target.files[0]) importarVinculos(e.target.files[0]); e.target.value = ''; };
+$('abVincCsv').onclick = () => baixarCsv('vinculos-colmeias.csv', [['codigo', 'colmeia']].concat(Object.entries(vinc).map(([c, ks]) => [c, ks.join(' / ')])));
+$('abVincLimpa').onclick = () => { if (confirm('Apagar todos os vínculos manuais deste navegador?')) { vinc = {}; salvarVinc(); if (abcArq) abcCalcular(); } };
+$('abVincN').textContent = Object.keys(vinc).length;
 
 indexarLive(); renderStatus(); renderAuditoria(); carregarPedidos(); renderLegenda();
 if (live) setInterval(() => { if (document.visibilityState === 'visible') atualizarAoVivo(); }, 90000);
