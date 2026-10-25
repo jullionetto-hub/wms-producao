@@ -47,7 +47,7 @@ label.tg{display:flex;gap:7px;align-items:center;padding:3px 0;cursor:pointer;co
 #op textarea{width:100%;resize:vertical;margin:6px 0}#op .leg div{display:flex;align-items:center}
 .abt{width:100%;border-collapse:collapse;font-size:12px;margin:6px 0}.abt th,.abt td{padding:3px 6px;border-bottom:1px solid var(--line);text-align:left}
 .cb{display:inline-block;min-width:18px;text-align:center;border-radius:4px;color:#10151a;font-size:11px;padding:0 4px}.cA{background:#2fb344}.cB{background:#f5d90a}.cC{background:#f28a1c}.cP{background:#8a96a3}
-.al.sp{cursor:default}.vl{display:block;margin-top:2px}.vl input{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:2px 6px;color:var(--txt);text-transform:uppercase}.vl .tab{padding:2px 8px;margin-left:4px}
+.fl.ck{flex-wrap:nowrap;align-items:flex-start}.fl.ck input{margin-top:3px}.al.sp{cursor:default}.vl{display:block;margin-top:2px}.vl input{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:2px 6px;color:var(--txt);text-transform:uppercase}.vl .tab{padding:2px 8px;margin-left:4px}
 .abt td.up{color:#2fb344;font-weight:700}.abt td.dn{color:#e0262d;font-weight:700}.abt td.ig{color:var(--mut)}
 .kv{display:flex;justify-content:space-between;gap:8px;padding:2px 0;border-bottom:1px dashed var(--line);font-size:12px}
 .row2{display:flex;gap:6px;margin:8px 0;flex-wrap:wrap}.stops{margin:8px 0;padding-left:22px;font-size:12px}.stops li{cursor:pointer;padding:1px 0}.stops li:hover{color:var(--acc)}
@@ -1613,8 +1613,8 @@ function exportarCsv(){
       <div id="abCust" class="fl" style="display:none">de <input type="date" id="abDe"> até <input type="date" id="abAte"></div>
       <label class="fl">Comparar com <select id="abCmp"></select></label>
       <label class="fl">A até <input id="abCa" type="number" value="80" min="1" max="99" style="width:58px">% · B até <input id="abCb" type="number" value="95" min="1" max="100" style="width:58px">%</label>
-      <label class="fl"><input type="checkbox" id="abBrinde" checked> Somar “-BRINDESITE” no produto original</label>
-      <label class="fl"><input type="checkbox" id="abParec" checked> Sem posição: usar o mesmo modelo (ex.: VB123-Vermelho → colmeia de VB123-Preto) — aproximado</label>
+      <label class="fl ck"><input type="checkbox" id="abBrinde" checked><span>Somar “-BRINDESITE” no produto original</span></label>
+      <label class="fl ck"><input type="checkbox" id="abParec" checked><span>Sem posição: usar a colmeia do mesmo modelo (ex.: VB123-Vermelho → onde está VB123-Preto) — aproximado</span></label>
     </div>
     <div id="abOut" style="margin-top:8px"></div>
     <details><summary>Vínculos manuais (<span id="abVincN">0</span>)</summary>
