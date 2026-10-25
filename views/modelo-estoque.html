@@ -1244,7 +1244,7 @@ let qualSel = 'auto';
 try { qualSel = localStorage.getItem('estoque3d.qual') || 'auto'; } catch (e) { /* padrão */ }
 if (!['auto', 'alta', 'media', 'leve'].includes(qualSel)) qualSel = 'auto';
 const nivelAtual = () => QUAL[qualSel] || QUAL.media;
-function aplicaPR(pr){ prAtual = Math.max(.6, Math.min(DPR, pr)); renderer.setPixelRatio(prAtual); const st = $('stage').getBoundingClientRect(); renderer.setSize(st.width, st.height, false); }
+function aplicaPR(pr){ prAtual = Math.max(.6, Math.min(DPR, pr)); renderer.setPixelRatio(prAtual); const st = $('stage').getBoundingClientRect(); renderer.setSize(st.width, st.height, false); renderer.render(scene, camera); }   // redesenha na hora para não piscar
 const _fr = new THREE.Frustum(), _pm = new THREE.Matrix4(), _sp = new THREE.Sphere();
 function atualizarBlocos(){
   camera.updateMatrixWorld(); _pm.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse); _fr.setFromProjectionMatrix(_pm);
