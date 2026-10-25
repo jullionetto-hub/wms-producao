@@ -1245,7 +1245,7 @@ function extraOp(c){
   if (repPorEnd[k]) out.push('🟣 Reposição pendente (' + repPorEnd[k].length + ')');
   if (typeof abcRes !== 'undefined' && abcRes && c.abc) out.push(`📈 Curva ABC: classe <b>${c.abc}</b> · ${Math.round(c.vendasPos || 0).toLocaleString('pt-BR')} un no período · esforço da posição ${c.peso}`);
   if (typeof abcRes !== 'undefined' && abcRes && c.prodsAbc) c.prodsAbc.filter(p => p.virtual).slice(0, 5).forEach(p => out.push(`${p.origem === 'vinculo' ? '🔗' : '≈'} <code>${esc(p.cod)}</code> ${esc((p.nome || '').slice(0, 40))} <b class="cb c${p.abc}">${p.abc}</b> <span class="tiny">${p.origem === 'vinculo' ? 'vínculo manual' : 'posição aproximada (mesmo modelo)'} · ${Math.round(p.vendas)} un</span>`));
-  if (giroPorEnd[k]) out.push(`🔥 ${giroPorEnd[k].linhas} separações / ${giroPorEnd[k].qtd} un em ${live.dias} dias`);
+  if (giroPorEnd[k]) out.push(`🔥 WMS: ${giroPorEnd[k].linhas} separações / ${giroPorEnd[k].qtd} un em ${live.dias} dias (uso parcial)`);
   return out.length ? '<div class="plist">' + out.map(t => '<div>' + t + '</div>').join('') + '</div>' : '';
 }
 // saldo do WMS é do PRODUTO (total), não da posição: a posição fica com o pior saldo entre seus produtos
@@ -1268,7 +1268,7 @@ const MODOS = {
   produtos: { nome:'Produtos por posição', live:false, leg:[[CINZA, '0'], [VERDE, '1'], [AMAR, '2–3'], [VERM, '4 ou mais']] },
   saldo:    { nome:'Saldo do produto', live:true, leg:[[VERM, 'Ruptura (≤ 0)'], [LARA, 'Baixo'], [VERDE, 'OK'], [CINZA, 'Sem produto']] },
   estado:   { nome:'Estado operacional', live:true, leg:[[VERM, 'Ruptura'], [LARA, 'Saldo baixo'], [AZUL, 'Em separação agora'], [ROXO, 'Reposição pendente'], [VERDE, 'Normal'], [CINZA, 'Sem produto']] },
-  giro:     { nome:'Giro (mapa de calor)', live:true, leg:[[CINZA, 'Sem saída'], [0xffe680, 'Pouco'], [0xf28a1c, 'Médio'], [0xb30000, 'Muito']] },
+  giro:     { nome:'Giro — vendas da planilha (ou separações do WMS)', live:true, leg:[[CINZA, 'Sem venda registrada'], [0xffe680, 'Pouco'], [0xf28a1c, 'Médio'], [0xb30000, 'Muito']] },
   abc:      { nome:'Curva ABC (nova) ·planilha', abc:true, leg:[[VERDE, 'A — mais vendidos'], [AMAR, 'B — intermediários'], [LARA, 'C — poucas vendas'], [CINZA, 'Parado (sem venda)']] },
   abcAjuste:{ nome:'ABC × posição (ajustes) ·planilha', abc:true, leg:[[VERDE, 'Bem posicionado (A nas ruas A–E)'], [AZUL, 'Destino sugerido para um produto A'], [LARA, 'A fora de A–E (posição fácil) / B em difícil'], [VERM, 'A fora de A–E em posição média ou difícil'], [AMAR, 'C ou parado em posição nobre']] },
   abcMuda:  { nome:'ABC — mudança entre períodos ·planilha', abc:true, leg:[[AZUL, 'Subiu de classe'], [VERM, 'Caiu de classe'], [ROXO, 'Novo nas vendas'], [CINZA, 'Sem mudança']] }
@@ -1299,16 +1299,19 @@ function corDe(c){
     return ORDEM_CLASSE[c.abc] < ORDEM_CLASSE[c.abcPrev] ? AZUL : VERM;
   }
   if (modo === 'giro') {
-    const g = giroPorEnd[c.addr]; if (!g) return CINZA;
-    const t = Math.min(1, Math.log(1 + g.linhas) / Math.log(1 + giroMax)), A = new THREE.Color(0xffe680), B = new THREE.Color(0xf28a1c), C = new THREE.Color(0xb30000);
+    const v = giroDaPlanilha() ? (c.vendasPos || 0) : (giroPorEnd[c.addr] ? giroPorEnd[c.addr].linhas : 0);   // planilha de vendas tem prioridade sobre as separações do WMS
+    if (v <= 0) return CINZA;
+    const t = Math.min(1, Math.log(1 + v) / Math.log(1 + giroMax)), A = new THREE.Color(0xffe680), B = new THREE.Color(0xf28a1c), C = new THREE.Color(0xb30000);
     return t < .5 ? A.lerp(B, t * 2).getHex() : B.lerp(C, (t - .5) * 2).getHex();
   }
   return -1;
 }
+const giroDaPlanilha = () => typeof abcRes !== 'undefined' && !!abcRes;
 function recolorir(){
   aplicarToggles();
   if (modo === 'off') { overlay.visible = false; renderLegenda(); return; }
-  giroMax = Math.max(1, ...Object.values(giroPorEnd).map(g => g.linhas));
+  if (giroDaPlanilha()) { const v = cestos.map(c => c.vendasPos || 0).filter(x => x > 0).sort((a, b) => a - b); giroMax = Math.max(1, v.length ? v[Math.floor(v.length * .95)] : 1); }   // escala até o percentil 95 para um campeão não apagar o resto
+  else giroMax = Math.max(1, ...Object.values(giroPorEnd).map(g => g.linhas));
   const col = new THREE.Color();
   cestos.forEach((c, i) => { const h = corDe(c); if (h < 0) overlay.setMatrixAt(i, ovZero); else { overlay.setMatrixAt(i, ovMats[i]); overlay.setColorAt(i, col.setHex(h)); } });
   overlay.instanceMatrix.needsUpdate = true; if (overlay.instanceColor) overlay.instanceColor.needsUpdate = true;
@@ -1317,7 +1320,7 @@ function recolorir(){
 function renderLegenda(){
   const M = MODOS[modo]; let h = M.leg.map(([c, t]) => `<div><i style="background:#${c.toString(16).padStart(6, '0')}"></i>${t}</div>`).join('');
   if (modo === 'saldo' || modo === 'estado') h += `<div class="tiny">Baixo = saldo do produto ≤ ${limBaixo}. O WMS guarda o saldo do produto, não por posição.</div>`;
-  if (modo === 'giro') h += `<div class="tiny">Linhas separadas por endereço nos últimos ${live ? live.dias : '—'} dias · máx. ${giroMax}</div>`;
+  if (modo === 'giro') h += giroDaPlanilha() ? `<div class="tiny"><b>Fonte: planilha de vendas</b> (período escolhido na aba Curva ABC). Quantidade vendida por posição; cor máxima a partir de ${Math.round(giroMax).toLocaleString('pt-BR')} un.</div>` : `<div class="tiny"><b>Fonte: separações registradas no WMS</b> nos últimos ${live ? live.dias : '—'} dias (o WMS ainda não registra todas as vendas). Suba a planilha de vendas na aba Curva ABC para usar as vendas reais.</div>`;
   $('opLeg').innerHTML = h;
 }
 
@@ -1329,14 +1332,14 @@ function renderStatus(){
     el.innerHTML = `<b style="color:var(--ok)">● Ao vivo</b> · WMS às ${hh} <button class="tab" id="opAtu" style="padding:1px 8px;margin-left:6px">↻ atualizar</button>`;
     $('opAtu').onclick = () => atualizarAoVivo();
   } else el.innerHTML = '<b style="color:var(--mut)">○ Offline</b> · planilha embutida.<div class="tiny">Abra pelo app (logado como supervisor/gestor) em <code>/modelo-estoque</code> para saldo, separação, reposição e giro reais.</div>';
-  const sel = $('opModo'); if (sel) [...sel.options].forEach(o => { o.disabled = (MODOS[o.value].live && !live) || (MODOS[o.value].abc && typeof abcRes !== 'undefined' && !abcRes); });
-  if ((!live && MODOS[modo].live) || (MODOS[modo].abc && !abcRes)) { modo = 'off'; sel.value = 'off'; }
+  const sel = $('opModo'); if (sel) [...sel.options].forEach(o => { o.disabled = (MODOS[o.value].live && !live && !(o.value === 'giro' && giroDaPlanilha())) || (MODOS[o.value].abc && typeof abcRes !== 'undefined' && !abcRes); });
+  if ((!live && MODOS[modo].live && !(modo === 'giro' && giroDaPlanilha())) || (MODOS[modo].abc && !abcRes)) { modo = 'off'; sel.value = 'off'; }
   const r = $('opResumo');
   if (live) {
     let rup = 0, bx = 0; cestos.forEach(c => { const m = minSaldo(c); if (m !== null) { if (m <= 0) rup++; else if (m <= limBaixo) bx++; } });
     r.innerHTML = `<div class="kv"><span>Posições em ruptura</span><b>${rup}</b></div><div class="kv"><span>Saldo baixo (≤ ${limBaixo})</span><b>${bx}</b></div>
       <div class="kv"><span>Endereços em separação</span><b>${Object.keys(sepPorEnd).length}</b></div><div class="kv"><span>Endereços c/ reposição</span><b>${Object.keys(repPorEnd).length}</b></div>
-      <div class="kv"><span>Endereços c/ giro (${live.dias} d)</span><b>${Object.keys(giroPorEnd).length}</b></div>`;
+      <div class="kv"><span>Endereços c/ separação no WMS (${live.dias} d)</span><b>${Object.keys(giroPorEnd).length}</b></div>`;
   } else r.innerHTML = '';
 }
 async function atualizarAoVivo(dias){
@@ -1590,7 +1593,7 @@ function exportarCsv(){
   <section data-s="cores">
     <label class="fl">Colorir por <select id="opModo">${Object.keys(MODOS).map(k => `<option value="${k}">${MODOS[k].nome}${MODOS[k].live ? ' ·ao vivo' : ''}</option>`).join('')}</select></label>
     <label class="fl">Saldo baixo ≤ <input id="opBaixo" type="number" min="0" value="5" style="width:64px"></label>
-    <label class="fl">Giro dos últimos <select id="opDias"><option>7</option><option>15</option><option selected>30</option><option>60</option><option>90</option></select> dias</label>
+    <label class="fl">Separações do WMS: últimos <select id="opDias"><option>7</option><option>15</option><option selected>30</option><option>60</option><option>90</option></select> dias</label>
     <div id="opLeg" class="leg"></div><div id="opResumo" style="margin-top:8px"></div>
   </section>
   <section data-s="rota" style="display:none">
