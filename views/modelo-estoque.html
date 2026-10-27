@@ -166,7 +166,10 @@ async function carregarAoVivo(dias){
     const j = await r.json(); return j && Array.isArray(j.produtos) ? j : null;
   } catch (e) { return null; }
 }
-let live = await carregarAoVivo(30);
+/* Fase de teste: por padrão o mapa usa só as planilhas Excel (locais e vendas). Os dados do WMS só entram se for ligado no painel. */
+const USA_WMS = (() => { try { return localStorage.getItem('estoque3d.wms') === '1'; } catch (e) { return false; } })();
+const defineWms = on => { try { localStorage.setItem('estoque3d.wms', on ? '1' : '0'); } catch (e) {} location.reload(); };
+let live = USA_WMS ? await carregarAoVivo(30) : null;
 
 
 /* ════════════════ 1. DADOS — transcritos do PDF (planta 1:200, medidas em mm) ════════════════ */
@@ -1418,7 +1421,11 @@ function renderStatus(){
     const hh = new Date(live.atualizado_em).toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
     el.innerHTML = `<b style="color:var(--ok)">● Ao vivo</b> · WMS às ${hh} <button class="tab" id="opAtu" style="padding:1px 8px;margin-left:6px">↻ atualizar</button>`;
     $('opAtu').onclick = () => atualizarAoVivo();
-  } else el.innerHTML = '<b style="color:var(--mut)">○ Offline</b> · planilha embutida.<div class="tiny">Abra pelo app (logado como supervisor/gestor) em <code>/modelo-estoque</code> para saldo, separação, reposição e giro reais.</div>';
+    el.innerHTML += '<div class="tiny"><button class="tab" id="opWms" style="padding:1px 8px">Voltar a usar só planilhas</button></div>'; $('opWms').onclick = () => defineWms(false);
+  } else {
+    el.innerHTML = '<b style="color:var(--blue)">▤ Modo planilhas</b> · ' + (locais ? 'locais de <b>' + esc(locais.nome) + '</b>' : 'cadastro embutido') + '. Dados do WMS desligados (fase de teste).<div class="tiny">Saldo e separação do WMS ficam indisponíveis. Use as abas Locais e Curva ABC para subir os Excel.' + (USA_WMS ? ' O WMS não respondeu.' : ' <button class="tab" id="opWms" style="padding:1px 8px">Ligar dados do WMS</button>') + '</div>';
+    if ($('opWms')) $('opWms').onclick = () => defineWms(true);
+  }
   const sel = $('opModo'); if (sel) [...sel.options].forEach(o => { o.disabled = (MODOS[o.value].live && !live && !(o.value === 'giro' && giroDaPlanilha())) || (MODOS[o.value].abc && typeof abcRes !== 'undefined' && !abcRes); });
   if ((!live && MODOS[modo].live && !(modo === 'giro' && giroDaPlanilha())) || (MODOS[modo].abc && !abcRes)) { modo = 'off'; sel.value = 'off'; }
   const r = $('opResumo');
