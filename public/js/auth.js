@@ -391,6 +391,7 @@ const _IC = {
   caixas:      `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>`,
   matriz:      `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>`,
   colmeias:    `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 3 7v10l9 5 9-5V7z"/><path d="M12 2v20"/><path d="M3 7l9 5 9-5"/></svg>`,
+  estoque3d:   `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>`,
   controlTower:`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v6"/><path d="M8 5a4 4 0 0 1 8 0"/><path d="M5 9a7 7 0 0 1 14 0"/><rect x="9" y="9" width="6" height="6" rx="1"/><path d="M10 15v7"/><path d="M14 15v7"/><path d="M8 22h8"/></svg>`,
   barcode:     `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="5" x2="4" y2="19"/><line x1="8" y1="5" x2="8" y2="19"/><line x1="12" y1="5" x2="12" y2="19"/><line x1="15" y1="5" x2="15" y2="19"/><line x1="19" y1="5" x2="19" y2="19"/></svg>`,
 };
@@ -419,6 +420,7 @@ function montarSidebar() {
       <a class="mi" onclick="irPara('reposicao',this)"><span class="mi-ic">${IC.reposicao}</span>Reposição <span class="mbadge" id="menu-badge-rep" style="display:none">0</span></a>
       <a class="mi" onclick="irPara('entrada-manual',this)"><span class="mi-ic">${IC.entrada}</span>Entrada Manual</a>
       <a class="mi" onclick="irPara('colmeias',this)"><span class="mi-ic">${IC.colmeias}</span>Colmeias</a>
+      <a class="mi" onclick="irPara('estoque-3d',this)"><span class="mi-ic">${IC.estoque3d}</span>Estoque 3D</a>
       <a class="mi" onclick="irPara('checkout',this)"><span class="mi-ic">${IC.checkout}</span>Checkout</a>
       <a class="mi" onclick="irPara('embalagem',this)"><span class="mi-ic">${IC.embalagem}</span>Embalagem</a>`,
     separador: `
@@ -465,6 +467,7 @@ function montarSidebar() {
       <a class="mi" onclick="irPara('reposicao',this)"><span class="mi-ic">${IC.reposicao}</span>Reposição <span class="mbadge" id="menu-badge-rep" style="display:none">0</span></a>
       <a class="mi" onclick="irPara('entrada-manual',this)"><span class="mi-ic">${IC.entrada}</span>Entrada Manual</a>
       <a class="mi" onclick="irPara('colmeias',this)"><span class="mi-ic">${IC.colmeias}</span>Colmeias</a>
+      <a class="mi" onclick="irPara('estoque-3d',this)"><span class="mi-ic">${IC.estoque3d}</span>Estoque 3D</a>
       <a class="mi" onclick="irPara('checkout',this)"><span class="mi-ic">${IC.checkout}</span>Checkout</a>
       <a class="mi" onclick="irPara('embalagem',this)"><span class="mi-ic">${IC.embalagem}</span>Embalagem</a>
       <div class="mg">PESSOAL</div>
@@ -546,6 +549,7 @@ function irPara(pag, el) {
   if (pg) pg.classList.add('ativa');
   if (el) el.classList.add('ativo');
   if (pag === 'dashboard')       { carregarDashboard(); mudarDashTab('operacao'); }
+  if (pag === 'estoque-3d')      { carregarEstoque3D(); }
   if (pag === 'control-tower')   { carregarControlTower(); carregarHoraAHora(); carregarSimulador(); carregarAnomalias(); }
   if (pag === 'pedidos') { popularSelects(); var _pi=document.getElementById('filtro-ped-ini'),_pf=document.getElementById('filtro-ped-fim'); if(_pi&&!_pi.value)_pi.value=hojeLocal(); if(_pf&&!_pf.value)_pf.value=hojeLocal(); carregarPedidos(); }
   if (pag === 'cadastros')       { trocarCadastroTab('usuarios'); carregarUsuarios(); }
