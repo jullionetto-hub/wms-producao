@@ -1,5 +1,5 @@
 /* ══ WMS Miess — Service Worker ══ */
-const CACHE_NAME = 'wms-v43';
+const CACHE_NAME = 'wms-v44';   // v44: Estoque 3D sempre da rede (a cópia guardada mostrava versão antiga e bloqueava o iframe)
 // Só cacheia o CSS — JS e HTML sempre vão buscar da rede
 const STATIC_ASSETS = [
   '/css/app.css',
@@ -24,6 +24,12 @@ self.addEventListener('fetch', e => {
 
   if (e.request.method !== 'GET') return;
   if (!url.origin.includes(self.location.origin)) return;
+
+  // Estoque 3D (página e dados): sempre da rede, nunca da cópia guardada
+  if (url.pathname.startsWith('/modelo-estoque') || url.pathname.startsWith('/estoque-3d')) {
+    e.respondWith(fetch(e.request));
+    return;
+  }
 
   // HTML — sempre network-first para nunca cachear versão antiga
   if (url.pathname === '/' || url.pathname.endsWith('.html')) {
