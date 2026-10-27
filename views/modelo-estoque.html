@@ -122,6 +122,7 @@ label.tg{display:flex;gap:7px;align-items:center;padding:3px 0;cursor:pointer;co
     <h3>Exibir</h3>
     <label class="tg"><input type="checkbox" id="tgItens" checked> Produtos nos cestos</label>
     <label class="tg"><input type="checkbox" id="tgCaixas" checked> Caixas no topo</label>
+    <label class="tg"><input type="checkbox" id="tgVert" checked> Cores nas caixas VERT</label>
     <label class="tg"><input type="checkbox" id="tgTeto" checked> Teto e luminárias</label>
     <label class="tg"><input type="checkbox" id="tgParedes" checked> Paredes</label>
     <label class="tg"><input type="checkbox" id="tgPlaca" checked> Placas das ruas</label>
@@ -364,7 +365,18 @@ function montarProdutos(rows){
     const k = normLoc(t); if (k) { if (!p.locs.includes(k)) { p.locs.push(k); (prodLoc[k] = prodLoc[k] || []).push(p); } } else p.outros.push(t);
   }));
 }
-montarProdutos(live ? live.produtos : DADOS);
+/* arquivo de locais enviado pelo usuário (Código, Nome, Localização no estoque) — guardado só neste navegador */
+let locais = null;
+try { const j = JSON.parse(localStorage.getItem('estoque3d.locais') || 'null'); if (j && Array.isArray(j.rows) && j.rows.length) locais = j; } catch (e) {}
+function produtosBase(){
+  if (!locais) return live ? live.produtos : DADOS;
+  if (!live) return locais.rows;
+  const m = new Map(locais.rows.map(r => [String(r[0]), r])), vistos = new Set();
+  const out = live.produtos.map(r => { const k = String(r[0]), l = m.get(k); vistos.add(k); return [r[0], (l && l[1]) || r[1], l ? l[2] : '', r[3], r[4]]; });   // saldo vem do WMS; a localização vem do arquivo
+  locais.rows.forEach(r => { if (!vistos.has(String(r[0]))) out.push(r); });
+  return out;
+}
+montarProdutos(produtosBase());
 cestos.forEach(c => {
   const R = rnd(hash(c.addr));
   c.prods = prodLoc[c.addr] || []; c.vazio = !c.prods.length;
@@ -651,7 +663,11 @@ porCelula(cestos, c => [c.x, c.z]).forEach(lista => criaBloco('tags', tagG, tagM
 
 /* produtos dentro dos cestos */
 const PAL_BOMBA = [[0xf4f2ee,0xf4f2ee,0xe9e6e1,0xffffff],[0xf3b9cb,0xf7d1de,0xe8a1b8],[0xbfe0b5,0xdff0d3,0xa9d49d],[0xf6c7a0,0xf2ad78,0xf9dcc2],[0xd2b8e8,0xe6d6f3],[0xeee,0xf3b9cb,0xbfe0b5,0xf6c7a0]];
+const itensGrp = new THREE.Group(); scene.add(itensGrp);
+function reconstruirItens(){
 const itensEsf = [], itensBox = [];
+for (let i = chunks.length - 1; i >= 0; i--) if (chunks[i].cat === 'itens') chunks.splice(i, 1);
+while (itensGrp.children.length) { const m = itensGrp.children.pop(); m.dispose && m.dispose(); }
 cestos.forEach(c => {
   if (c.vazio) return;
   const T = TIPOS[c.tipo], R = rnd(hash(c.addr + 'i'));
@@ -672,7 +688,6 @@ cestos.forEach(c => {
     }
   }
 });
-const itensGrp = new THREE.Group(); scene.add(itensGrp);
 {
   const sg = new THREE.SphereGeometry(1, 8, 6), sMat = new THREE.MeshLambertMaterial({ color:0xffffff }), bg = new THREE.BoxGeometry(.15, .05, .19), col = new THREE.Color();
   porCelula(itensEsf, p => [p.x, p.z]).forEach(lista => criaBloco('itens', sg, sMat, lista, p => [p.x, p.z], (p, i, m) => {
@@ -684,6 +699,8 @@ const itensGrp = new THREE.Group(); scene.add(itensGrp);
     _p.set(p.x, p.y, p.z); _q.setFromEuler(_e.set(0, p.rot, 0, 'YXZ')); m.setMatrixAt(i, _m.compose(_p, _q, _s)); m.setColorAt(i, col.setHex(p.col));
   }, itensGrp));
 }
+}
+reconstruirItens();
 
 /* caixas pretas empilhadas sobre o tablado (estoque de reserva) + etiquetas */
 const crateRecs = [], labelList = [], modFaces = {};
@@ -724,6 +741,12 @@ const texCaixa = (() => { const t = texMalha.clone(); t.needsUpdate = true; t.re
   const lg = new THREE.PlaneGeometry(.09, .06), lMat = new THREE.MeshBasicMaterial({ color:0xf3d60c });
   porCelula(labelList, c => [c[0], c[2]]).forEach(lista => criaBloco('caixas', lg, lMat, lista, c => [c[0], c[2]], (c, i, m) => { _p.set(c[0], c[1], c[2]); _q.setFromEuler(_e.set(0, c[3], 0)); m.setMatrixAt(i, _m.compose(_p, _q, _s)); }, caixasTopo));
 }
+
+const overlayV = (() => {
+  const rs = crateRecs.filter(r => r.addr), im = new THREE.InstancedMesh(new THREE.BoxGeometry(.57, .31, .42), new THREE.MeshBasicMaterial({ color:0xffffff, transparent:true, opacity:.8, depthWrite:false }), rs.length);
+  im.frustumCulled = false; im.userData.recs = rs;
+  im.visible = false; scene.add(im); return im;
+})();
 
 /* placas das ruas (cartão branco com a letra + faixa de endereços, como na foto) */
 const placas = new THREE.Group();
@@ -1185,10 +1208,10 @@ function mostrar(m){
 }
 document.querySelectorAll('.tab[data-mode]').forEach(b => b.onclick = () => mostrar(b.dataset.mode));
 function aplicarToggles(){
-  itensGrp.visible = $('tgItens').checked; const cor = typeof modo !== 'undefined' && modo !== 'off'; caixasTopo.visible = $('tgCaixas').checked && !cor; tabladoMesh.visible = !cor;   // com cores, tira caixas e tablado para ver os cestos de cima
+  itensGrp.visible = $('tgItens').checked; const cor = typeof modo !== 'undefined' && modo !== 'off'; const vc = cor && $('tgVert').checked; caixasTopo.visible = $('tgCaixas').checked && (!cor || vc); overlayV.visible = vc && !!overlayV.userData.pronto; tabladoMesh.visible = !cor;   // com cores, tira caixas e tablado para ver os cestos de cima
   teto.visible = $('tgTeto').checked; paredes.visible = $('tgParedes').checked; placas.visible = $('tgPlaca').checked; ararasGrp.visible = $('tgAraras').checked;
 }
-['tgItens','tgCaixas','tgTeto','tgParedes','tgPlaca','tgAraras'].forEach(id => $(id).onchange = aplicarToggles);
+['tgItens','tgCaixas','tgVert','tgTeto','tgParedes','tgPlaca','tgAraras'].forEach(id => $(id).onchange = aplicarToggles);
 const mkChip = (l, el, fr) => { const b = document.createElement('button'); b.className = 'chip' + (fr ? ' fr' : ''); b.textContent = l; b.dataset.l = l; b.onclick = () => { if (cam.modeUI === 'plan') { v2.selRua = l; cartaRua(l); } else irRua(l); }; el.appendChild(b); };
 ['ZA','Z','Y','X','W','V','U','T','S','R','Q','P','O','N','M','L','K','J','I','H','G','F'].forEach(l => mkChip(l, $('chFundo')));
 ['A','B','C','D','E'].forEach(l => mkChip(l, $('chFrente'), true));
@@ -1293,6 +1316,7 @@ function indexarLive(){
   (live.reposicao || []).forEach(r => tokens(r.endereco).forEach(k => { (repPorEnd[k] = repPorEnd[k] || []).push(r.numero_pedido); }));
   (live.giro || []).forEach(r => tokens(r.endereco).forEach(k => { const g = giroPorEnd[k] = giroPorEnd[k] || { linhas:0, qtd:0 }; g.linhas += r.linhas; g.qtd += r.qtd; }));
 }
+const posicoes = () => cestos.concat(crateRecs.filter(r => r.addr));   // cestos + caixas VERT
 function religar(){
   cestos.forEach(c => { c.prods = prodLoc[c.addr] || []; c.vazio = !c.prods.length; });
   araras.forEach(r => { r.prods = prodLoc[r.addr] || []; });
@@ -1368,13 +1392,17 @@ function corDe(c){
 const giroDaPlanilha = () => typeof abcRes !== 'undefined' && !!abcRes;
 function recolorir(){
   aplicarToggles();
-  if (modo === 'off') { overlay.visible = false; renderLegenda(); return; }
-  if (giroDaPlanilha()) { const v = cestos.map(c => c.vendasPos || 0).filter(x => x > 0).sort((a, b) => a - b); giroMax = Math.max(1, v.length ? v[Math.floor(v.length * .95)] : 1); }   // escala até o percentil 95 para um campeão não apagar o resto
+  if (modo === 'off') { overlay.visible = false; overlayV.visible = false; renderLegenda(); return; }
+  if (giroDaPlanilha()) { const v = posicoes().map(c => c.vendasPos || 0).filter(x => x > 0).sort((a, b) => a - b); giroMax = Math.max(1, v.length ? v[Math.floor(v.length * .95)] : 1); }   // escala até o percentil 95 para um campeão não apagar o resto
   else giroMax = Math.max(1, ...Object.values(giroPorEnd).map(g => g.linhas));
   const col = new THREE.Color();
   cestos.forEach((c, i) => { const h = corDe(c); if (h < 0) overlay.setMatrixAt(i, ovZero); else { overlay.setMatrixAt(i, ovMats[i]); overlay.setColorAt(i, col.setHex(h)); } });
   overlay.instanceMatrix.needsUpdate = true; if (overlay.instanceColor) overlay.instanceColor.needsUpdate = true;
-  overlay.visible = true; renderLegenda();
+  overlay.visible = true;
+  const zeroV = new THREE.Matrix4().makeScale(0, 0, 0);
+  overlayV.userData.recs.forEach((c, i) => { const h = corDe(c); if (h < 0) overlayV.setMatrixAt(i, zeroV); else { _p.set(c.x, c.y, c.z); _q.setFromEuler(_e.set(0, c.rotM, 0)); _s.set(1, 1, 1); overlayV.setMatrixAt(i, _m.compose(_p, _q, _s)); overlayV.setColorAt(i, col.setHex(h)); } });
+  overlayV.instanceMatrix.needsUpdate = true; if (overlayV.instanceColor) overlayV.instanceColor.needsUpdate = true;
+  overlayV.userData.pronto = true; aplicarToggles(); renderLegenda();
 }
 function renderLegenda(){
   const M = MODOS[modo]; let h = M.leg.map(([c, t]) => `<div><i style="background:#${c.toString(16).padStart(6, '0')}"></i>${t}</div>`).join('');
@@ -1395,7 +1423,7 @@ function renderStatus(){
   if ((!live && MODOS[modo].live && !(modo === 'giro' && giroDaPlanilha())) || (MODOS[modo].abc && !abcRes)) { modo = 'off'; sel.value = 'off'; }
   const r = $('opResumo');
   if (live) {
-    let rup = 0, bx = 0; cestos.forEach(c => { const m = minSaldo(c); if (m !== null) { if (m <= 0) rup++; else if (m <= limBaixo) bx++; } });
+    let rup = 0, bx = 0; posicoes().forEach(c => { const m = minSaldo(c); if (m !== null) { if (m <= 0) rup++; else if (m <= limBaixo) bx++; } });
     r.innerHTML = `<div class="kv"><span>Posições em ruptura</span><b>${rup}</b></div><div class="kv"><span>Saldo baixo (≤ ${limBaixo})</span><b>${bx}</b></div>
       <div class="kv"><span>Endereços em separação</span><b>${Object.keys(sepPorEnd).length}</b></div><div class="kv"><span>Endereços c/ reposição</span><b>${Object.keys(repPorEnd).length}</b></div>
       <div class="kv"><span>Endereços c/ separação no WMS (${live.dias} d)</span><b>${Object.keys(giroPorEnd).length}</b></div>`;
@@ -1404,7 +1432,7 @@ function renderStatus(){
 async function atualizarAoVivo(dias){
   const j = await carregarAoVivo(dias || (live && live.dias) || 30);
   if (!j) { toast('Não foi possível ler os dados do WMS'); return; }
-  live = j; montarProdutos(live.produtos); religar(); indexarLive(); recolorir(); renderStatus(); renderAuditoria();
+  live = j; montarProdutos(produtosBase()); religar(); indexarLive(); recolorir(); renderStatus(); renderAuditoria();
   const g = $('opDias'); if (g) g.value = String(live.dias);
 }
 
@@ -1647,7 +1675,7 @@ function exportarCsv(){
 {
   const op = document.createElement('div'); op.className = 'card'; op.id = 'op';
   op.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center"><b>Operação</b><button class="tab" id="opX" style="padding:1px 8px">✕</button></div>
-  <div class="tabs" style="margin:8px 0"><button class="tab" data-t="cores" aria-pressed="true">Cores</button><button class="tab" data-t="rota" aria-pressed="false">Rota</button><button class="tab" data-t="aud" aria-pressed="false">Auditoria</button><button class="tab" data-t="abc" aria-pressed="false">Curva ABC</button></div>
+  <div class="tabs" style="margin:8px 0"><button class="tab" data-t="cores" aria-pressed="true">Cores</button><button class="tab" data-t="rota" aria-pressed="false">Rota</button><button class="tab" data-t="aud" aria-pressed="false">Auditoria</button><button class="tab" data-t="abc" aria-pressed="false">Curva ABC</button><button class="tab" data-t="loc" aria-pressed="false">Locais</button></div>
   <div id="opLive" style="font-size:12px;margin-bottom:8px"></div>
   <section data-s="cores">
     <label class="fl">Colorir por <select id="opModo">${Object.keys(MODOS).map(k => `<option value="${k}">${MODOS[k].nome}${MODOS[k].live ? ' ·ao vivo' : ''}</option>`).join('')}</select></label>
@@ -1685,6 +1713,13 @@ function exportarCsv(){
       <div class="row2"><button class="tab" id="abVincCsv">⬇ Exportar vínculos</button><button class="tab" id="abVincLimpa">Limpar</button></div>
       <div class="tiny">Valem só neste navegador. Exporte para guardar ou usar em outro computador.</div>
     </details>
+  </section>
+  <section data-s="loc" style="display:none">
+    <div id="lcAtual" class="tiny"></div>
+    <label class="fl">Planilha de locais <input type="file" id="lcFile" accept=".xlsx,.xls,.csv"></label>
+    <div class="tiny">Colunas: <b>Código</b>, <b>Nome</b> e <b>Localização no estoque</b> (várias posições separadas por / , ou ;). Inclui os endereços <b>VERT-rua módulo-CX</b>. Códigos repetidos somam as posições. Substitui as localizações do modelo; o saldo ao vivo do WMS é mantido. Lido só aqui no navegador.</div>
+    <div id="lcOut" style="margin-top:8px"></div>
+    <div class="row2"><button class="tab" id="lcCsv">⬇ Exportar locais</button><button class="tab" id="lcRest">Voltar ao original</button></div>
   </section>`;
   $('stage').appendChild(op);
   $('bOp').onclick = () => { op.style.display = op.style.display === 'block' ? 'none' : 'block'; };
@@ -1886,7 +1921,7 @@ function abcCalcular(){
   let prev = null;
   if (cmp && cmp !== per) { const S2 = abcSomar(cmp); prev = abcClassificar(S2.soma, cutA, cutB);
     produtos.forEach(p => { p.abcPrev = classeDe(prev, normCod(p.cod), noModelo(p)); }); virtuais.forEach(v => { v.abcPrev = classeDe(prev, v.cod, true); }); }
-  cestos.forEach(c => {
+  posicoes().forEach(c => {
     c.prodsAbc = (c.prods || []).concat(extras[c.addr] || []);
     const cl = c.prodsAbc.map(p => p.abc).filter(Boolean).sort((a, b) => ORDEM_CLASSE[a] - ORDEM_CLASSE[b]); c.abc = cl[0] || null;
     const cp = c.prodsAbc.map(p => p.abcPrev).filter(Boolean).sort((a, b) => ORDEM_CLASSE[a] - ORDEM_CLASSE[b]); c.abcPrev = prev ? (cp[0] || null) : undefined;
@@ -1897,7 +1932,7 @@ function abcCalcular(){
   produtos.forEach(p => { if (p.abc === 'P') resumo.P.n++; });
   semPos.sort((a, b) => b.q - a.q);
   abcRes = { S, R, resumo, origem, semPos, virtuais, prev, per, cmp, cutA, cutB, todos:null };
-  cestos.forEach(c => { c.destinoPlano = false; c.origemPlano = false; });
+  posicoes().forEach(c => { c.destinoPlano = false; c.origemPlano = false; });
   abcRes.plano = abcPlano(); abcDesenhar(); renderStatus(); recolorir();
 }
 // Regra do usuário: os produtos da curva A devem ficar nas ruas A–E (ramal da frente).
@@ -1916,7 +1951,7 @@ function abcPlano(){
   ja.forEach(p => { const e = emAE(p).sort((x, y) => qual(x) - qual(y)); rows.push({ p, de:e[0], para:e[0], tipo:'ok', ganho:0 }); });
   let iv = 0; const usadas = new Set();
   mover.forEach(p => {
-    const ps = posDe(p).filter(c => c.tipo === 'C' || c.tipo === 'D'), de = ps.length ? ps.reduce((a, b) => b.peso > a.peso ? b : a) : null;
+    const ps = posDe(p).filter(c => c.tipo === 'C' || c.tipo === 'D' || c.tipo === 'V'), de = ps.length ? ps.reduce((a, b) => b.peso > a.peso ? b : a) : null;
     if (!de) { rows.push({ p, de:null, para:null, tipo:'sem', ganho:0 }); return; }
     let dest = null, tipo = null;
     while (iv < vagas.length && usadas.has(vagas[iv].addr)) iv++;
@@ -2023,6 +2058,49 @@ if (live) setInterval(() => { if (document.visibilityState === 'visible') atuali
   $('mHead').addEventListener('dblclick', () => { est.l = est.t = null; est.tam = 1; est.min = false; mini.style.left = mini.style.top = ''; mini.style.right = mini.style.bottom = ''; aplicar(); salvar(); });   // duplo clique: volta ao canto padrão
   addEventListener('resize', prender);
 }
+/* ════ LOCAIS — planilha (código, nome, localização no estoque) que substitui o cadastro embutido; inclui VERT ════ */
+function lcAplicar(){
+  montarProdutos(produtosBase()); religar(); reconstruirItens(); indexarLive();
+  if (typeof abcRes !== 'undefined' && abcRes) abcCalcular(); else recolorir();
+  renderStatus(); renderAuditoria(); lcAtual();
+}
+function lcAtual(){
+  const n = produtos.length, com = produtos.filter(p => p.locs.some(k => byAddr[k])).length, vt = produtos.filter(p => p.locs.some(k => k.startsWith('VERT-') && byAddr[k])).length;
+  const cx = crateRecs.filter(r => r.addr && r.prods && r.prods.length).length, tc = crateRecs.filter(r => r.addr).length;
+  $('lcAtual').innerHTML = `<b>${locais ? 'Arquivo: ' + esc(locais.nome) + ' · ' + new Date(locais.em).toLocaleDateString('pt-BR') : 'Cadastro embutido (padrão)'}</b><br>${n.toLocaleString('pt-BR')} produtos · ${com.toLocaleString('pt-BR')} com posição no mapa · ${vt.toLocaleString('pt-BR')} em caixas VERT (${cx.toLocaleString('pt-BR')} de ${tc.toLocaleString('pt-BR')} caixas ocupadas)`;
+}
+async function lcImportar(file){
+  const out = $('lcOut'); out.innerHTML = '<div class="tiny">Lendo…</div>';
+  try {
+    const { X, wb } = await lerPlanilha(file), rows = X.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header:1, raw:true, defval:null, blankrows:false });
+    const norm = t => String(t == null ? '' : t).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''), h = (rows[0] || []).map(norm);
+    const ach = (re, d) => { const i = h.findIndex(x => re.test(x)); return i >= 0 ? i : d; };
+    const ic = ach(/cod|sku|ref/, 0), iloc = ach(/local|endere|posic|colmeia/, 2), ino = ach(/nome|produto|descri/, 1), temCab = h.some(x => /cod|local|nome|produto/.test(x));
+    const mapa = new Map(); let ignoradas = 0;
+    rows.slice(temCab ? 1 : 0).forEach(r => {
+      const cod = r[ic] == null ? '' : String(r[ic]).trim(); if (!cod) { ignoradas++; return; }
+      const loc = r[iloc] == null ? '' : String(r[iloc]).trim(), nome = r[ino] == null ? '' : String(r[ino]).trim(), o = mapa.get(cod);
+      if (!o) mapa.set(cod, { nome, locs:loc ? [loc] : [] });
+      else { if (!o.nome) o.nome = nome; if (loc && !o.locs.some(x => x.split(/[\/,;]/).map(t => t.trim()).includes(loc))) o.locs.push(loc); }
+    });
+    const novo = [...mapa].map(([cod, o]) => [cod, o.nome, o.locs.join(' / ')]);
+    if (!novo.length) { out.innerHTML = '<div class="tiny" style="color:var(--red)">Nenhum produto encontrado. Confira as colunas.</div>'; return; }
+    const antes = new Map(produtos.map(p => [String(p.cod), p.loc]));
+    let nov = 0, mud = 0, vt = 0, sem = 0;
+    novo.forEach(r => { if (!antes.has(r[0])) nov++; else if (antes.get(r[0]) !== r[2]) mud++; if (/VERT-/i.test(r[2])) vt++; if (!r[2]) sem++; });
+    const sumiram = [...antes.keys()].filter(k => !mapa.has(k)).length;
+    locais = { nome:file.name, em:Date.now(), rows:novo };
+    let salvo = true; try { localStorage.setItem('estoque3d.locais', JSON.stringify(locais)); } catch (e) { salvo = false; }
+    lcAplicar();
+    const nf = v => v.toLocaleString('pt-BR');
+    out.innerHTML = `<div class="kv"><span>Produtos no arquivo</span><b>${nf(novo.length)}</b></div><div class="kv"><span>Novos (não estavam no mapa)</span><b>${nf(nov)}</b></div><div class="kv"><span>Com localização alterada</span><b>${nf(mud)}</b></div><div class="kv"><span>Fora do arquivo (ficam sem posição)</span><b>${nf(sumiram)}</b></div><div class="kv"><span>Com endereço VERT</span><b>${nf(vt)}</b></div><div class="kv"><span>Sem localização</span><b>${nf(sem)}</b></div>${ignoradas ? `<div class="tiny">${ignoradas} linhas sem código ignoradas.</div>` : ''}<div class="tiny">${salvo ? 'Guardado neste navegador.' : 'Não foi possível guardar (valerá só até fechar a página).'} Veja os endereços que não existem no mapa na aba Auditoria.</div>`;
+    toast('Locais atualizados: ' + nf(novo.length) + ' produtos');
+  } catch (e) { out.innerHTML = '<div class="tiny" style="color:var(--red)">' + esc(e.message || e) + '</div>'; }
+}
+$('lcFile').onchange = e => { const f = e.target.files[0]; if (f) lcImportar(f); e.target.value = ''; };
+$('lcRest').onclick = () => { locais = null; try { localStorage.removeItem('estoque3d.locais'); } catch (e) {} lcAplicar(); $('lcOut').innerHTML = '<div class="tiny">Voltou ao cadastro embutido' + (live ? ' + WMS' : '') + '.</div>'; };
+$('lcCsv').onclick = () => baixarCsv('locais-estoque.csv', [['codigo', 'nome', 'localizacao', 'no_mapa']].concat(produtos.map(p => [p.cod, p.nome, p.loc, p.locs.some(k => byAddr[k]) ? 'sim' : 'nao'])));
+lcAtual();
 setMode('walk'); mostrar('walk');
 { const e = entradaRua('T', 'S'); cam.x = e.x; cam.z = e.z; cam.yaw = cam.yawT = e.yaw; cam.pitch = cam.pitchT = -.04; cam.vx = cam.vz = 0; }
 requestAnimationFrame(loop);
