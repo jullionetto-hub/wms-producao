@@ -1152,6 +1152,12 @@ function _ctFmtMin(min) {
   return m ? `${h}h${String(m).padStart(2,'0')}` : `${h}h`;
 }
 
+// Estoque 3D: o modelo (views/modelo-estoque.html) é carregado dentro do WMS só na primeira vez que a tela é aberta
+function carregarEstoque3D() {
+  const f = document.getElementById('estoque3d-frame');
+  if (f && !f.getAttribute('src')) f.setAttribute('src', '/modelo-estoque');
+}
+
 async function carregarControlTower() {
   const wrapProc = document.getElementById('ct-processos');
   const wrapGarg = document.getElementById('ct-gargalo-wrap');

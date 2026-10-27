@@ -59,11 +59,19 @@ const cspDirectives = {
     "cdn.jsdelivr.net",       // chart.js sourcemaps (DevTools)
   ],
   workerSrc:  ["'self'"],     // service worker
-  frameSrc:   ["'none'"],
+  frameSrc:   ["'self'"],   // só o próprio site (o Estoque 3D abre dentro do WMS); outros domínios continuam bloqueados
   objectSrc:  ["'none'"],
   // frameAncestors impede embed em iframes de outros domínios
   frameAncestors: ["'none'"],
 };
+
+// Libera UMA resposta para ser exibida em iframe, mas só pelo próprio site (nunca por outro domínio).
+// Usada pela página do Estoque 3D, que abre dentro do WMS. As demais respostas continuam com DENY / frame-ancestors 'none'.
+function permitirEmbedMesmaOrigem(res) {
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  const csp = res.getHeader('Content-Security-Policy');
+  if (typeof csp === 'string') res.setHeader('Content-Security-Policy', csp.replace("frame-ancestors 'none'", "frame-ancestors 'self'"));
+}
 
 const helmetMiddleware = helmet({
   // reportOnly: false → modo enforcing: CSP ativamente bloqueia violações.
@@ -74,4 +82,4 @@ const helmetMiddleware = helmet({
   crossOriginEmbedderPolicy: false,
 });
 
-module.exports = { httpsRedirect, corsMiddleware, extraHeaders, helmetMiddleware };
+module.exports = { httpsRedirect, corsMiddleware, extraHeaders, helmetMiddleware, permitirEmbedMesmaOrigem };

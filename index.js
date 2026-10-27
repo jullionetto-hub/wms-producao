@@ -18,7 +18,7 @@ const { Server } = require('socket.io');
 
 // ── Config ───────────────────────────────────────────────────────────────────
 const { PORT, isProd }                                           = require('./src/config/env');
-const { httpsRedirect, corsMiddleware, extraHeaders, helmetMiddleware } = require('./src/config/security');
+const { httpsRedirect, corsMiddleware, extraHeaders, helmetMiddleware, permitirEmbedMesmaOrigem } = require('./src/config/security');
 const { sessionMiddleware }                                      = require('./src/config/session');
 
 // ── Database ──────────────────────────────────────────────────────────────────
@@ -73,6 +73,7 @@ app.get('/modelo-estoque', (req, res, next) => {
   if (!req.session?.usuario) return res.redirect('/');
   requerPerfil('supervisor', 'gestor')(req, res, () => {
     res.set('Cache-Control', 'no-cache, must-revalidate');
+    permitirEmbedMesmaOrigem(res);   // esta página (e só ela) pode abrir dentro do WMS, nunca em outros domínios
     res.sendFile(path.join(__dirname, 'views', 'modelo-estoque.html'));
   });
 });

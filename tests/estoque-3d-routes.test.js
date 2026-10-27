@@ -171,6 +171,25 @@ describe('GET /modelo-estoque (página)', () => {
     expect(res.text).toContain('Estoque Vertical');
   });
 
+  test('a página pode ser embutida só pelo próprio site (X-Frame-Options SAMEORIGIN); o resto continua DENY', async () => {
+    const agent = request.agent(app);
+    await loginSupervisor(agent);
+    const pag = await agent.get('/modelo-estoque');
+    expect(pag.headers['x-frame-options']).toBe('SAMEORIGIN');
+    const outra = await agent.get('/estoque-3d/pedidos');
+    expect(outra.headers['x-frame-options']).toBe('DENY');
+  });
+
+  test('permitirEmbedMesmaOrigem troca frame-ancestors none por self na CSP', () => {
+    const { permitirEmbedMesmaOrigem } = require('../src/config/security');
+    const h = { 'Content-Security-Policy': "default-src 'self';frame-ancestors 'none';frame-src 'self'" };
+    const res = { getHeader: k => h[k], setHeader: (k, v) => { h[k] = v; } };
+    permitirEmbedMesmaOrigem(res);
+    expect(h['X-Frame-Options']).toBe('SAMEORIGIN');
+    expect(h['Content-Security-Policy']).toContain("frame-ancestors 'self'");
+    expect(h['Content-Security-Policy']).not.toContain("frame-ancestors 'none'");
+  });
+
   test('o arquivo não é servido de graça pela pasta public', async () => {
     const res = await request(app).get('/modelo-estoque.html');
     expect(res.status).toBe(404);
