@@ -899,6 +899,23 @@ async function carregarOuCalcularDiario() {
 // preencher o próprio diário — evita repetir problema já reportado / perder
 // contexto na virada de turno. Marca leu_anterior=true pra refletir que a
 // tela realmente exibiu (ou confirmou a ausência de) o diário anterior.
+// Observações do diário por setor + geral — o turno seguinte precisa ver tudo
+// que o anterior escreveu pra poder validar/dar continuidade.
+function _diarioObsHtml(obs, titulo) {
+  const secoes = [['separacao','Separação'], ['checkout','Checkout'], ['reposicao','Reposição'], ['embalagem','Embalagem'], ['geral','Geral']];
+  const itens = secoes
+    .filter(([k]) => obs && obs[k] && String(obs[k]).trim())
+    .map(([k, rotulo]) => `<div style="margin-bottom:8px">
+      <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.4px">${rotulo}</div>
+      <div style="font-size:12px;color:var(--text2);white-space:pre-line">${escHtml(obs[k])}</div>
+    </div>`);
+  if (!itens.length) return '';
+  return `<div style="margin-top:10px">
+    <div style="font-size:11px;font-weight:800;color:var(--text);margin-bottom:6px">${titulo}</div>
+    ${itens.join('')}
+  </div>`;
+}
+
 async function carregarDiarioAnterior() {
   const data = document.getElementById('diario-data')?.value || hojeLocal();
   const turno = document.getElementById('diario-turno')?.value || 'Manha';
@@ -911,14 +928,14 @@ async function carregarDiarioAnterior() {
     _diarioLeuAnterior = true;
     if (!ant) { el.style.display = 'none'; el.innerHTML = ''; return; }
     const d = ant.dados || {};
-    const obsGeral = ant.observacoes?.geral || '';
+    const obsHtml = _diarioObsHtml(ant.observacoes, 'Observações deixadas pelo turno anterior');
     el.style.display = '';
     el.innerHTML = `
       <div style="background:var(--surface);border-radius:12px;border:1px solid var(--border);border-top:3px solid var(--text3);padding:14px 18px">
         <div style="font-weight:800;font-size:13px;color:var(--text);margin-bottom:8px">
           <i class="ti ti-history" aria-hidden="true"></i> Turno anterior — ${ant.turno} · ${fmtData(ant.data)} · ${ant.supervisor||'—'}
         </div>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:${obsGeral?'8px':'0'}">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
           <div style="text-align:center;background:var(--surface2);border-radius:8px;padding:6px">
             <div style="font-size:15px;font-weight:800">${d.separacao?.concluidos||0}/${d.separacao?.total||0}</div>
             <div style="font-size:9px;color:var(--text3);text-transform:uppercase">Separação</div>
@@ -932,7 +949,7 @@ async function carregarDiarioAnterior() {
             <div style="font-size:9px;color:var(--text3);text-transform:uppercase">Não encontr.</div>
           </div>
         </div>
-        ${obsGeral ? `<div style="font-size:12px;color:var(--text2)"><b>Obs. geral deixada pelo turno anterior:</b> ${escHtml(obsGeral)}</div>` : ''}
+        ${obsHtml}
       </div>`;
   } catch(e) {
     console.warn('carregarDiarioAnterior:', e);
@@ -1270,7 +1287,7 @@ async function abrirModalValidacao() {
         <div style="font-size:18px;font-weight:800;color:var(--red)">${d.reposicao?.nao_encontrados||0}</div>
         <div style="font-size:9px;color:var(--red);text-transform:uppercase">Não encontr. (reposição)</div>
       </div>
-      ${obs.geral ? `<div style="font-size:12px;color:var(--text2)"><b>Obs. geral:</b> ${escHtml(obs.geral)}</div>` : ''}`;
+      ${_diarioObsHtml(obs, 'Observações do turno')}`;
 
     // Checklist com campo de observação para cada "Não"
     document.getElementById('modal-val-checklist').innerHTML = CHECKLIST_VAL.map(item => `

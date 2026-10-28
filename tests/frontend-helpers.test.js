@@ -21,6 +21,35 @@ describe('helpers globais do front-end', () => {
   });
 });
 
+describe('_diarioObsHtml (observações do diário para o turno seguinte)', () => {
+  const ctx = {};
+  vm.createContext(ctx);
+  vm.runInContext(codigo['config.js'].match(/function escHtml[\s\S]*?\n}\n/)[0], ctx);
+  vm.runInContext(codigo['auth.js'].match(/function _diarioObsHtml[\s\S]*?\n}\n/)[0], ctx);
+
+  test('mostra todas as seções preenchidas, não só a geral', () => {
+    const html = ctx._diarioObsHtml({
+      separacao: '11 pedidos com divergência', checkout: '5 checkoutado', reposicao: 'Corredores sem caixas',
+      embalagem: '', geral: 'Prime sem integração',
+    }, 'Observações do turno');
+    expect(html).toContain('Observações do turno');
+    expect(html).toContain('11 pedidos com divergência');
+    expect(html).toContain('5 checkoutado');
+    expect(html).toContain('Corredores sem caixas');
+    expect(html).toContain('Prime sem integração');
+    expect(html).not.toContain('>Embalagem<'); // seção vazia não aparece
+  });
+
+  test('sem nenhuma observação não renderiza nada', () => {
+    expect(ctx._diarioObsHtml({ separacao: '', geral: '  ' }, 'x')).toBe('');
+    expect(ctx._diarioObsHtml(null, 'x')).toBe('');
+  });
+
+  test('escapa HTML digitado pelo supervisor', () => {
+    expect(ctx._diarioObsHtml({ geral: '<script>alert(1)</script>' }, 't')).not.toContain('<script>');
+  });
+});
+
 describe('escHtml', () => {
   const ctx = {};
   vm.createContext(ctx);
