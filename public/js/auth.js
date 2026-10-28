@@ -872,10 +872,8 @@ async function iniciarDiario() {
   const dataEl = document.getElementById('diario-data');
   if (dataEl && !dataEl.value) dataEl.value = hj;
   initDiarioHistorico();
-  await carregarOuCalcularDiario();
-  await carregarDiarioAnterior();
-  await carregarListaDiarios();
-  await verificarValidacaoPendente();
+  // anterior, lista e validação não dependem do diário aberto: buscam em paralelo
+  await Promise.all([carregarOuCalcularDiario(), carregarDiarioAnterior(), carregarListaDiarios(), verificarValidacaoPendente()]);
 }
 
 // Se já existe um diário salvo pra essa data+turno, reabre ele (respeitando
@@ -916,6 +914,14 @@ function _diarioObsHtml(obs, titulo) {
   </div>`;
 }
 
+function toggleDiarioAnterior() {
+  const c = document.getElementById('diario-ant-corpo'), a = document.getElementById('diario-ant-seta');
+  if (!c) return;
+  const abrir = c.style.display === 'none';
+  c.style.display = abrir ? '' : 'none';
+  if (a) a.style.transform = abrir ? 'rotate(180deg)' : '';
+}
+
 async function carregarDiarioAnterior() {
   const data = document.getElementById('diario-data')?.value || hojeLocal();
   const turno = document.getElementById('diario-turno')?.value || 'Manha';
@@ -929,27 +935,22 @@ async function carregarDiarioAnterior() {
     if (!ant) { el.style.display = 'none'; el.innerHTML = ''; return; }
     const d = ant.dados || {};
     const obsHtml = _diarioObsHtml(ant.observacoes, 'Observações deixadas pelo turno anterior');
+    const nao = d.reposicao?.nao_encontrados || 0;
+    const chip = (rot, val, cor) => `<span style="font-size:11px;background:var(--surface2);border-radius:6px;padding:3px 8px;white-space:nowrap"><span style="color:var(--text3)">${rot}</span> <b style="color:${cor||'inherit'}">${val}</b></span>`;
     el.style.display = '';
     el.innerHTML = `
-      <div style="background:var(--surface);border-radius:12px;border:1px solid var(--border);border-top:3px solid var(--text3);padding:14px 18px">
-        <div style="font-weight:800;font-size:13px;color:var(--text);margin-bottom:8px">
-          <i class="ti ti-history" aria-hidden="true"></i> Turno anterior — ${ant.turno} · ${fmtData(ant.data)} · ${ant.supervisor||'—'}
+      <div style="background:var(--surface);border-radius:12px;border:1px solid var(--border);border-left:3px solid var(--text3);overflow:hidden">
+        <div onclick="toggleDiarioAnterior()" role="button" tabindex="0" onkeydown="if(event.key==='Enter')toggleDiarioAnterior()" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 14px;cursor:pointer;user-select:none">
+          <i class="ti ti-history" aria-hidden="true"></i>
+          <span style="font-weight:800;font-size:13px;flex:1;min-width:180px">Turno anterior — ${escHtml(ant.turno)} · ${fmtData(ant.data)} · ${escHtml(ant.supervisor||'—')}</span>
+          ${chip('Sep.', (d.separacao?.concluidos||0)+'/'+(d.separacao?.total||0))}
+          ${chip('Check.', (d.checkout?.concluidos||0)+'/'+(d.checkout?.total||0))}
+          ${chip('Não encontr.', nao, nao>0?'var(--red)':'')}
+          <span id="diario-ant-seta" style="opacity:.5;transition:transform .2s;display:flex"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></span>
         </div>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
-          <div style="text-align:center;background:var(--surface2);border-radius:8px;padding:6px">
-            <div style="font-size:15px;font-weight:800">${d.separacao?.concluidos||0}/${d.separacao?.total||0}</div>
-            <div style="font-size:9px;color:var(--text3);text-transform:uppercase">Separação</div>
-          </div>
-          <div style="text-align:center;background:var(--surface2);border-radius:8px;padding:6px">
-            <div style="font-size:15px;font-weight:800">${d.checkout?.concluidos||0}/${d.checkout?.total||0}</div>
-            <div style="font-size:9px;color:var(--text3);text-transform:uppercase">Checkout</div>
-          </div>
-          <div style="text-align:center;background:var(--surface2);border-radius:8px;padding:6px">
-            <div style="font-size:15px;font-weight:800;color:${(d.reposicao?.nao_encontrados||0)>0?'var(--red)':'inherit'}">${d.reposicao?.nao_encontrados||0}</div>
-            <div style="font-size:9px;color:var(--text3);text-transform:uppercase">Não encontr.</div>
-          </div>
+        <div id="diario-ant-corpo" style="display:none;padding:0 14px 12px;border-top:1px solid var(--border)">
+          ${obsHtml || '<div style="font-size:12px;color:var(--text3);padding-top:10px">O turno anterior não deixou observações.</div>'}
         </div>
-        ${obsHtml}
       </div>`;
   } catch(e) {
     console.warn('carregarDiarioAnterior:', e);
@@ -1261,58 +1262,57 @@ async function abrirModalValidacao() {
     document.getElementById('modal-val-subtitulo').textContent =
       `${val.turno} · ${fmtData(val.data)} · ${val.supervisor}`;
 
-    // Resumo
+    // Cabeçalho: só a observação geral; o que foi feito em cada setor aparece dentro do próprio item do checklist
     const d = val.dados || {};
     const obs = val.observacoes || {};
+    const geral = obs.geral && String(obs.geral).trim();
     document.getElementById('modal-val-resumo').innerHTML = `
-      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:8px">
-        <div style="text-align:center;background:var(--surface);border-radius:8px;padding:8px">
-          <div style="font-size:18px;font-weight:800">${d.separacao?.concluidos||0}/${d.separacao?.total||0}</div>
-          <div style="font-size:9px;color:var(--text3);text-transform:uppercase">Separação</div>
-        </div>
-        <div style="text-align:center;background:var(--surface);border-radius:8px;padding:8px">
-          <div style="font-size:18px;font-weight:800">${d.embalagem?.embalados||0}/${d.embalagem?.total||0}</div>
-          <div style="font-size:9px;color:var(--text3);text-transform:uppercase">Embalagem</div>
-        </div>
-        <div style="text-align:center;background:var(--surface);border-radius:8px;padding:8px">
-          <div style="font-size:18px;font-weight:800">${d.checkout?.concluidos||0}/${d.checkout?.total||0}</div>
-          <div style="font-size:9px;color:var(--text3);text-transform:uppercase">Checkout</div>
-        </div>
-        <div style="text-align:center;background:var(--surface);border-radius:8px;padding:8px">
-          <div style="font-size:18px;font-weight:800">${d.reposicao?.resolvidas||0}/${d.reposicao?.total||0}</div>
-          <div style="font-size:9px;color:var(--text3);text-transform:uppercase">Reposição</div>
-        </div>
-      </div>
-      <div style="text-align:center;background:var(--surface);border-radius:8px;padding:8px;margin-bottom:8px">
-        <div style="font-size:18px;font-weight:800;color:var(--red)">${d.reposicao?.nao_encontrados||0}</div>
-        <div style="font-size:9px;color:var(--red);text-transform:uppercase">Não encontr. (reposição)</div>
-      </div>
-      ${_diarioObsHtml(obs, 'Observações do turno')}`;
+      <div style="font-size:12px;color:var(--text2)">Confira cada item abaixo com o que o turno registrou. Se algo não bater com a realidade, marque <b>Não confere</b> e descreva o cenário real.</div>
+      ${geral ? `<div style="margin-top:10px"><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.4px">Observação geral do turno</div><div style="font-size:12px;color:var(--text2);white-space:pre-line">${escHtml(geral)}</div></div>` : ''}`;
 
-    // Checklist com campo de observação para cada "Não"
+    // O que cada setor registrou (números + observação) para o item correspondente
+    const num = (v, t, rot) => `<span style="background:var(--surface2);border-radius:6px;padding:3px 8px;font-size:12px"><b>${v}</b>${t != null ? '/' + t : ''} <span style="color:var(--text3)">${rot}</span></span>`;
+    const DETALHE = {
+      sep_ok: { nums: [num(d.separacao?.concluidos||0, d.separacao?.total||0, 'separados')], obs: obs.separacao },
+      emb_ok: { nums: [num(d.embalagem?.embalados||0, d.embalagem?.total||0, 'embalados')], obs: obs.embalagem },
+      ck_ok:  { nums: [num(d.checkout?.concluidos||0, d.checkout?.total||0, 'no checkout')], obs: obs.checkout },
+      rep_ok: { nums: [num(d.reposicao?.resolvidas||0, d.reposicao?.total||0, 'repostas'), num(d.reposicao?.nao_encontrados||0, null, 'não encontrados')], obs: obs.reposicao },
+    };
+    const detalheHtml = id => {
+      const x = DETALHE[id]; if (!x) return '';
+      const o = x.obs && String(x.obs).trim();
+      return `<div style="padding:10px 14px;border-top:1px solid var(--border)">
+        <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">O que o turno registrou</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">${x.nums.join('')}</div>
+        <div style="font-size:12px;color:${o ? 'var(--text2)' : 'var(--text3)'};white-space:pre-line;margin-top:8px">${o ? escHtml(x.obs) : 'Sem observações neste setor.'}</div>
+      </div>`;
+    };
+
+    // Checklist: cada item mostra o que foi feito; "Não confere" abre o campo do cenário real
     document.getElementById('modal-val-checklist').innerHTML = CHECKLIST_VAL.map(item => `
-      <div id="item-wrap-${item.id}" style="border:1px solid var(--border);border-radius:10px;margin-bottom:8px;overflow:hidden">
-        <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--surface2)">
-          <div style="flex:1">
+      <div id="item-wrap-${item.id}" style="border:1px solid var(--border);border-radius:10px;margin-bottom:10px;overflow:hidden">
+        <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--surface2);flex-wrap:wrap">
+          <div style="flex:1;min-width:180px">
             <div style="font-size:13px;font-weight:700;color:var(--text)">${item.label}</div>
-            <div style="font-size:10px;color:var(--text3);margin-top:2px">Penalidade se Não: −${item.peso} pts</div>
+            <div style="font-size:10px;color:var(--text3);margin-top:2px">Penalidade se não confere: −${item.peso} pts</div>
           </div>
           <div style="display:flex;gap:6px">
             <button onclick="marcarItem('${item.id}',true,this)" data-item="${item.id}" data-val="true"
-              style="padding:7px 16px;border-radius:7px;border:2px solid rgba(87,185,129,.4);background:transparent;color:var(--green);font-weight:800;font-size:13px;cursor:pointer;transition:.15s">
-              Sim
+              style="padding:7px 14px;border-radius:7px;border:2px solid rgba(87,185,129,.4);background:transparent;color:var(--green);font-weight:800;font-size:13px;cursor:pointer;transition:.15s">
+              ✓ Confere
             </button>
             <button onclick="marcarItem('${item.id}',false,this)" data-item="${item.id}" data-val="false"
-              style="padding:7px 16px;border-radius:7px;border:2px solid rgba(201,82,79,.4);background:transparent;color:var(--red);font-weight:800;font-size:13px;cursor:pointer;transition:.15s">
-              Não
+              style="padding:7px 14px;border-radius:7px;border:2px solid rgba(201,82,79,.4);background:transparent;color:var(--red);font-weight:800;font-size:13px;cursor:pointer;transition:.15s">
+              ✗ Não confere
             </button>
           </div>
         </div>
+        ${detalheHtml(item.id)}
         <div id="obs-wrap-${item.id}" style="display:none;padding:10px 14px;border-top:1px solid var(--border);background:rgba(201,82,79,.08)">
           <label style="font-size:11px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.5px">
-            Registre o que foi encontrado / ocorrência:
+            Qual é o cenário real? (obrigatório)
           </label>
-          <textarea id="obs-${item.id}" placeholder="Descreva a ocorrência encontrada..."
+          <textarea id="obs-${item.id}" placeholder="Descreva o que você realmente encontrou..."
             style="width:100%;min-height:60px;margin-top:6px;border:1px solid rgba(201,82,79,.4);border-radius:7px;padding:8px;font-size:12px;font-family:inherit;background:var(--surface);color:var(--text);resize:vertical;box-sizing:border-box"></textarea>
         </div>
       </div>`).join('');
@@ -1472,19 +1472,27 @@ async function carregarListaDiarios() {
       rascunho: 'Rascunho', enviado: 'Enviado', expirado: 'Expirado',
       validado: d => d.pontuacao != null ? `Validado ${d.pontuacao}/100` : 'Validado',
     };
-    const opts = lista.map(d => {
+    const cor = { rascunho:'var(--text3)', enviado:'var(--indigo)', expirado:'var(--amber)', validado:'var(--green)' };
+    const linhas = lista.map(d => {
       const st = typeof statusLabel[d.status] === 'function' ? statusLabel[d.status](d) : (statusLabel[d.status] || 'Rascunho');
-      const leu = d.leu_anterior ? ' · Leu' : '';
-      return `<option value="${d.id}">${fmtData(d.data)} — ${d.turno} — ${d.supervisor} — ${st}${leu}</option>`;
-    }).join('');
-    el.innerHTML = `
-      <div style="display:flex;gap:8px">
-        <select id="diario-hist-select" class="sel-sm" style="flex:1;padding:10px 12px;font-size:13px" onchange="verDiario(parseInt(this.value))">
-          ${opts}
-        </select>
-        <button class="btn-icon-outline" title="Exportar Excel" onclick="exportarDiarioExcel(parseInt(document.getElementById('diario-hist-select').value))"><i class="ti ti-download" aria-hidden="true"></i></button>
+      return `<div class="diario-item" role="button" tabindex="0" onclick="abrirDiarioDaLista(${d.id})" onkeydown="if(event.key==='Enter')abrirDiarioDaLista(${d.id})"
+        style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:6px;cursor:pointer;background:var(--surface2);transition:.15s"
+        onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:700">${fmtData(d.data)} · ${escHtml(d.turno)}</div>
+          <div style="font-size:11px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(d.supervisor||'—')}${d.leu_anterior ? ' · leu o anterior' : ''}</div>
+        </div>
+        <span style="font-size:11px;font-weight:700;color:${cor[d.status]||'var(--text3)'}">${st}</span>
+        <button class="btn-icon-outline" title="Exportar Excel" onclick="event.stopPropagation();exportarDiarioExcel(${d.id})"><i class="ti ti-download" aria-hidden="true"></i></button>
       </div>`;
+    }).join('');
+    el.innerHTML = linhas;
   } catch(e) { console.warn(e); }
+}
+
+function abrirDiarioDaLista(id) {
+  verDiario(id);
+  const t = document.getElementById('pag-diario'); if (t) t.scrollIntoView({ behavior:'smooth', block:'start' });
 }
 
 async function verDiario(id) {
