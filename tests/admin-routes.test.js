@@ -100,6 +100,10 @@ const ALL_ADMIN_ROUTES = [
   { method: 'get',  path: '/diario/1' },
   { method: 'post', path: '/diario' },
   { method: 'post', path: '/diario/1/enviar' },
+  { method: 'get',  path: '/diario/1/fotos' },
+  { method: 'post', path: '/diario/1/fotos' },
+  { method: 'get',  path: '/diario/foto/1' },
+  { method: 'delete', path: '/diario/foto/1' },
   { method: 'get',  path: '/diario/validacao/pendente' },
   { method: 'get',  path: '/diario/1/validacao' },
   { method: 'post', path: '/diario/validacao/1/validar' },
@@ -394,6 +398,70 @@ describe('Admin — Diário de Bordo', () => {
 /* ════════════════════════════════════════════════════════════
    DIÁRIO — ENVIO E VALIDAÇÃO
 ════════════════════════════════════════════════════════════ */
+describe('Admin — Diário: Fotos', () => {
+  let agent;
+  const IMG = 'data:image/jpeg;base64,' + Buffer.from('fake-jpeg-bytes').toString('base64');
+  beforeEach(async () => {
+    agent = request.agent(app);
+    await loginSupervisor(agent);
+  });
+
+  test('POST fotos com origem inválida → 400', async () => {
+    const res = await agent.post('/diario/1/fotos').send({ origem: 'x', secao: 'separacao', imagem: IMG });
+    expect(res.status).toBe(400);
+  });
+
+  test('POST fotos que não é imagem → 400', async () => {
+    const res = await agent.post('/diario/1/fotos').send({ origem: 'diario', secao: 'separacao', imagem: 'data:text/html;base64,PGI+' });
+    expect(res.status).toBe(400);
+  });
+
+  test('POST fotos acima de 2 MB → 400', async () => {
+    const grande = 'data:image/jpeg;base64,' + Buffer.alloc(2 * 1024 * 1024 + 10).toString('base64');
+    const res = await agent.post('/diario/1/fotos').send({ origem: 'diario', secao: 'separacao', imagem: grande });
+    expect(res.status).toBe(400);
+  });
+
+  test('POST fotos em diário já enviado → 403', async () => {
+    mockDb.get.mockResolvedValueOnce({ id: 1, status: 'enviado' });
+    const res = await agent.post('/diario/1/fotos').send({ origem: 'diario', secao: 'separacao', imagem: IMG });
+    expect(res.status).toBe(403);
+  });
+
+  test('POST fotos de validação em diário enviado → 200', async () => {
+    mockDb.get.mockResolvedValueOnce({ id: 1, status: 'enviado' }).mockResolvedValueOnce({ n: 0 });
+    mockPool.query.mockResolvedValueOnce({ rows: [{ id: 7 }] });
+    const res = await agent.post('/diario/1/fotos').send({ origem: 'validacao', secao: 'ck_ok', imagem: IMG });
+    expect(res.status).toBe(200);
+    expect(res.body.id).toBe(7);
+  });
+
+  test('POST fotos acima do limite por seção → 400', async () => {
+    mockDb.get.mockResolvedValueOnce({ id: 1, status: 'rascunho' }).mockResolvedValueOnce({ n: 6 });
+    const res = await agent.post('/diario/1/fotos').send({ origem: 'diario', secao: 'separacao', imagem: IMG });
+    expect(res.status).toBe(400);
+  });
+
+  test('GET foto inexistente → 404', async () => {
+    mockDb.get.mockResolvedValueOnce(null);
+    const res = await agent.get('/diario/foto/9');
+    expect(res.status).toBe(404);
+  });
+
+  test('GET foto devolve a imagem com o tipo correto', async () => {
+    mockDb.get.mockResolvedValueOnce({ mime: 'image/jpeg', dados: Buffer.from('abc') });
+    const res = await agent.get('/diario/foto/9');
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/image\/jpeg/);
+  });
+
+  test('DELETE foto de diário enviado (origem diario) → 403', async () => {
+    mockDb.get.mockResolvedValueOnce({ id: 9, origem: 'diario', status: 'enviado' });
+    const res = await agent.delete('/diario/foto/9');
+    expect(res.status).toBe(403);
+  });
+});
+
 describe('Admin — Diário: Envio e Validação', () => {
   let agent;
   beforeEach(async () => {

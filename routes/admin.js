@@ -260,6 +260,64 @@ router.get('/diario/:id', requerAuth, requerPerfil('supervisor'), async (req,res
   } catch(e) { res.status(500).json({erro:e.message}); }
 });
 
+// ── Fotos do diário de bordo (guardadas no banco; o navegador já reduz a imagem) ──
+const FOTO_MAX_BYTES = 2 * 1024 * 1024;
+const FOTO_MAX_POR_SECAO = 6;
+const FOTO_TIPOS = ['image/jpeg', 'image/png', 'image/webp'];
+// Foto do turno só mexe enquanto o diário é rascunho; foto da validação só enquanto aguarda validação.
+const fotoEditavel = (origem, status) => origem === 'validacao' ? ['enviado', 'expirado'].includes(status) : status === 'rascunho';
+
+router.get('/diario/:id/fotos', requerAuth, requerPerfil('supervisor'), async (req, res) => {
+  try {
+    const id = validarId(req.params.id); if (!id) return res.status(400).json({ erro: 'ID inválido' });
+    const fotos = await db.all('SELECT id, origem, secao, autor FROM diario_fotos WHERE diario_id=$1 ORDER BY id', [id]);
+    res.json(fotos);
+  } catch(e) { res.status(500).json({ erro: e.message }); }
+});
+
+router.post('/diario/:id/fotos', requerAuth, requerPerfil('supervisor'), async (req, res) => {
+  try {
+    const id = validarId(req.params.id); if (!id) return res.status(400).json({ erro: 'ID inválido' });
+    const { origem, secao, imagem } = req.body || {};
+    if (!['diario', 'validacao'].includes(origem)) return res.status(400).json({ erro: 'Origem inválida' });
+    if (!/^[a-z_]{2,20}$/.test(secao || '')) return res.status(400).json({ erro: 'Seção inválida' });
+    const m = /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/.exec(imagem || '');
+    if (!m || !FOTO_TIPOS.includes(m[1])) return res.status(400).json({ erro: 'Envie uma imagem JPEG, PNG ou WebP' });
+    const bytes = Buffer.from(m[2], 'base64');
+    if (!bytes.length || bytes.length > FOTO_MAX_BYTES) return res.status(400).json({ erro: 'Imagem muito grande (máximo 2 MB)' });
+    const d = await db.get('SELECT id, status FROM diario_bordo WHERE id=$1', [id]);
+    if (!d) return res.status(404).json({ erro: 'Diário não encontrado' });
+    if (!fotoEditavel(origem, d.status)) return res.status(403).json({ erro: 'Este diário não aceita mais fotos nesta etapa.' });
+    const n = await db.get('SELECT COUNT(*)::int AS n FROM diario_fotos WHERE diario_id=$1 AND origem=$2 AND secao=$3', [id, origem, secao]);
+    if (n.n >= FOTO_MAX_POR_SECAO) return res.status(400).json({ erro: `Máximo de ${FOTO_MAX_POR_SECAO} fotos por seção` });
+    const autor = req.session?.usuario?.nome || '';
+    const r = await pool.query('INSERT INTO diario_fotos (diario_id, origem, secao, mime, dados, autor) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id',
+      [id, origem, secao, m[1], bytes, autor]);
+    res.json({ id: r.rows[0].id, origem, secao, autor });
+  } catch(e) { res.status(500).json({ erro: e.message }); }
+});
+
+router.get('/diario/foto/:fotoId', requerAuth, requerPerfil('supervisor'), async (req, res) => {
+  try {
+    const id = validarId(req.params.fotoId); if (!id) return res.status(400).json({ erro: 'ID inválido' });
+    const f = await db.get('SELECT mime, dados FROM diario_fotos WHERE id=$1', [id]);
+    if (!f) return res.status(404).json({ erro: 'Foto não encontrada' });
+    res.set({ 'Content-Type': f.mime, 'Cache-Control': 'private, max-age=86400', 'X-Content-Type-Options': 'nosniff' });
+    res.send(f.dados);
+  } catch(e) { res.status(500).json({ erro: e.message }); }
+});
+
+router.delete('/diario/foto/:fotoId', requerAuth, requerPerfil('supervisor'), async (req, res) => {
+  try {
+    const id = validarId(req.params.fotoId); if (!id) return res.status(400).json({ erro: 'ID inválido' });
+    const f = await db.get('SELECT f.id, f.origem, d.status FROM diario_fotos f JOIN diario_bordo d ON d.id=f.diario_id WHERE f.id=$1', [id]);
+    if (!f) return res.status(404).json({ erro: 'Foto não encontrada' });
+    if (!fotoEditavel(f.origem, f.status)) return res.status(403).json({ erro: 'Este diário não aceita mais alterações de fotos.' });
+    await pool.query('DELETE FROM diario_fotos WHERE id=$1', [id]);
+    res.json({ mensagem: 'Foto removida' });
+  } catch(e) { res.status(500).json({ erro: e.message }); }
+});
+
 router.post('/diario', requerAuth, requerPerfil('supervisor'), async (req,res) => {
   try {
     const {data, turno, dados, observacoes, leu_anterior} = req.body;
