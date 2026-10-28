@@ -1,5 +1,5 @@
 /* ══ WMS Miess — Service Worker ══ */
-const CACHE_NAME = 'wms-v45';   // v44: Estoque 3D sempre da rede (a cópia guardada mostrava versão antiga e bloqueava o iframe)
+const CACHE_NAME = 'wms-v46';   // v44: Estoque 3D sempre da rede (a cópia guardada mostrava versão antiga e bloqueava o iframe)
 // Só cacheia o CSS — JS e HTML sempre vão buscar da rede
 const STATIC_ASSETS = [
   '/css/app.css',

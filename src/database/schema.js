@@ -208,6 +208,18 @@ const TABLES = [
     criado_em        TIMESTAMPTZ DEFAULT NOW()
   )`,
 
+  `CREATE TABLE IF NOT EXISTS diario_fotos (
+    id         SERIAL PRIMARY KEY,
+    diario_id  INTEGER NOT NULL REFERENCES diario_bordo(id) ON DELETE CASCADE,
+    origem     TEXT NOT NULL DEFAULT 'diario',
+    secao      TEXT NOT NULL,
+    mime       TEXT NOT NULL DEFAULT 'image/jpeg',
+    dados      BYTEA NOT NULL,
+    autor      TEXT DEFAULT '',
+    criado_em  TIMESTAMPTZ DEFAULT NOW()
+  )`,
+  'CREATE INDEX IF NOT EXISTS idx_diario_fotos_diario ON diario_fotos(diario_id)',
+
   `CREATE TABLE IF NOT EXISTS passagem_turno (
     id                    SERIAL PRIMARY KEY,
     data                  TEXT NOT NULL,

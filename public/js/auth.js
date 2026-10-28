@@ -867,11 +867,146 @@ const CHECKLIST_VAL = [
   { id: 'estoque_ok', peso: 15, label: 'O estoque está organizado' },
 ];
 
+/* ── Fotos do diário: anexadas por setor (turno) e na validação ("não confere") ── */
+const FOTO_SECOES = { separacao:['Separação','diario-obs-sep'], checkout:['Checkout','diario-obs-ck'], embalagem:['Embalagem','diario-obs-emb'], reposicao:['Reposição','diario-obs-rep'], geral:['Geral','diario-obs-geral'] };
+const FOTO_DO_ITEM = { sep_ok:'separacao', emb_ok:'embalagem', ck_ok:'checkout', rep_ok:'reposicao' };   // item do checklist → setor
+let _diarioFotos = [];          // fotos do diário aberto na tela
+let _diarioBloqueado = false;   // enviado/validado: não aceita foto do turno
+let _valDiarioId = null;        // diário que está sendo validado no modal
+let _valFotos = [];             // fotos desse diário (turno + validação)
+
+function _fotoRedimensionar(file, maxLado = 1280, qualidade = 0.72) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file), img = new Image();
+    img.onload = () => {
+      const k = Math.min(1, maxLado / Math.max(img.width, img.height));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      resolve(c.toDataURL('image/jpeg', qualidade));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Não foi possível ler a imagem')); };
+    img.src = url;
+  });
+}
+
+function abrirFoto(id) {
+  const ov = document.createElement('div');
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:10000;display:flex;align-items:center;justify-content:center;padding:16px;cursor:zoom-out';
+  ov.innerHTML = `<img src="${API}/diario/foto/${id}" alt="Foto do diário" style="max-width:100%;max-height:100%;border-radius:8px">`;
+  const fechar = () => { ov.remove(); document.removeEventListener('keydown', esc); };
+  const esc = e => { if (e.key === 'Escape') fechar(); };
+  ov.onclick = fechar; document.addEventListener('keydown', esc); document.body.appendChild(ov);
+}
+
+// Miniaturas (clicam para ampliar); com edição mostra ✕ e o botão de adicionar
+function _fotoMiniaturas(fotos, { editavel = false, origem = 'diario', secao = '', ctx = 'diario' } = {}) {
+  const minis = fotos.map(f => `<span style="position:relative;display:inline-block">
+      <img src="${API}/diario/foto/${f.id}" alt="Foto" loading="lazy" onclick="abrirFoto(${f.id})" title="${escHtml(f.autor || '')}"
+        style="width:64px;height:64px;object-fit:cover;border-radius:8px;border:1px solid var(--border);cursor:zoom-in;display:block">
+      ${editavel ? `<button type="button" onclick="removerFoto(${f.id},'${ctx}')" title="Remover foto" aria-label="Remover foto"
+        style="position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;border:none;background:var(--red);color:#fff;font-size:12px;line-height:1;cursor:pointer">×</button>` : ''}
+    </span>`).join('');
+  const add = editavel && fotos.length < 6 ? `<label style="display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;width:64px;height:64px;border:1.5px dashed var(--border);border-radius:8px;cursor:pointer;color:var(--text3);font-size:10px;text-align:center">
+      <i class="ti ti-camera" aria-hidden="true" style="font-size:18px"></i>Foto
+      <input type="file" accept="image/*" multiple style="display:none" onchange="adicionarFotos('${origem}','${secao}',this,'${ctx}')">
+    </label>` : '';
+  return `<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px">${minis}${add}</div>`;
+}
+
+function renderFotosDiario() {
+  Object.entries(FOTO_SECOES).forEach(([secao, [rot, taId]]) => {
+    const ta = document.getElementById(taId); if (!ta) return;
+    let box = document.getElementById('fotos-diario-' + secao);
+    if (!box) { box = document.createElement('div'); box.id = 'fotos-diario-' + secao; ta.insertAdjacentElement('afterend', box); }
+    const doSetor = _diarioFotos.filter(f => f.origem === 'diario' && f.secao === secao);
+    box.innerHTML = (doSetor.length || !_diarioBloqueado) ? _fotoMiniaturas(doSetor, { editavel: !_diarioBloqueado, origem: 'diario', secao, ctx: 'diario' }) : '';
+  });
+  // fotos que o validador anexou ao dizer "não confere"
+  let vbox = document.getElementById('fotos-validacao-diario');
+  const banner = document.getElementById('diario-status-banner');
+  const dasVal = _diarioFotos.filter(f => f.origem === 'validacao');
+  if (!vbox && banner) { vbox = document.createElement('div'); vbox.id = 'fotos-validacao-diario'; banner.insertAdjacentElement('afterend', vbox); }
+  if (vbox) vbox.innerHTML = dasVal.length ? `<div style="margin-bottom:12px;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:var(--surface2)">
+      <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.4px">Fotos anexadas na validação</div>
+      ${_fotoMiniaturas(dasVal)}</div>` : '';
+}
+
+async function carregarFotosDiario(id) {
+  _diarioFotos = [];
+  if (id) {
+    try { const r = await fetch(`${API}/diario/${id}/fotos`, { credentials:'include' }); if (r.ok) _diarioFotos = await r.json(); } catch(e) { console.warn('fotos:', e); }
+  }
+  renderFotosDiario();
+}
+
+// Anexa as fotos do turno anterior (somente leitura) dentro do painel compacto
+async function _fotosAnteriorAnexar(id) {
+  const corpo = document.getElementById('diario-ant-corpo'); if (!corpo || !id) return;
+  try {
+    const r = await fetch(`${API}/diario/${id}/fotos`, { credentials:'include' }); if (!r.ok) return;
+    const fotos = (await r.json()).filter(f => f.origem === 'diario'); if (!fotos.length) return;
+    corpo.insertAdjacentHTML('beforeend', Object.entries(FOTO_SECOES).map(([secao, [rot]]) => {
+      const l = fotos.filter(f => f.secao === secao); if (!l.length) return '';
+      return `<div style="margin-top:10px"><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.4px">Fotos · ${rot}</div>${_fotoMiniaturas(l)}</div>`;
+    }).join(''));
+  } catch(e) { console.warn('fotos anterior:', e); }
+}
+
+async function _enviarFoto(diarioId, origem, secao, file) {
+  const imagem = await _fotoRedimensionar(file);
+  const r = await fetch(`${API}/diario/${diarioId}/fotos`, { method:'POST', credentials:'include', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ origem, secao, imagem }) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.erro || 'Não foi possível enviar a foto');
+  return j;
+}
+
+async function adicionarFotos(origem, secao, input, ctx) {
+  const arquivos = [...(input.files || [])]; input.value = '';
+  if (!arquivos.length) return;
+  try {
+    let id = ctx === 'modal' ? _valDiarioId : _diarioAtualId;
+    if (!id && ctx === 'diario') { const r = await _persistirDiario(); if (!r) return; id = r.id; }   // precisa existir para receber a foto
+    if (!id) { toast('Diário não encontrado','erro'); return; }
+    toast(arquivos.length > 1 ? 'Enviando fotos...' : 'Enviando foto...', 'aviso');
+    for (const f of arquivos) {
+      const nova = await _enviarFoto(id, origem, secao, f);
+      (ctx === 'modal' ? _valFotos : _diarioFotos).push(nova);
+    }
+    ctx === 'modal' ? _renderFotosModal() : renderFotosDiario();
+  } catch(e) { toast(e.message || 'Erro ao enviar foto','erro'); }
+}
+
+async function removerFoto(id, ctx) {
+  try {
+    const r = await fetch(`${API}/diario/foto/${id}`, { method:'DELETE', credentials:'include' });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) { toast(j.erro || 'Não foi possível remover','erro'); return; }
+    if (ctx === 'modal') { _valFotos = _valFotos.filter(f => f.id !== id); _renderFotosModal(); }
+    else { _diarioFotos = _diarioFotos.filter(f => f.id !== id); renderFotosDiario(); }
+  } catch(e) { toast('Erro ao remover foto','erro'); }
+}
+
+// No modal: fotos do turno (somente leitura) em cada setor e fotos da validação nos itens "não confere"
+function _renderFotosModal() {
+  Object.entries(FOTO_DO_ITEM).forEach(([item, secao]) => {
+    const box = document.getElementById('fotos-turno-' + item); if (!box) return;
+    const l = _valFotos.filter(f => f.origem === 'diario' && f.secao === secao);
+    box.innerHTML = l.length ? `<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-top:8px">Fotos do turno</div>${_fotoMiniaturas(l)}` : '';
+  });
+  CHECKLIST_VAL.forEach(item => {
+    const box = document.getElementById('fotos-modal-' + item.id); if (!box) return;
+    box.innerHTML = _fotoMiniaturas(_valFotos.filter(f => f.origem === 'validacao' && f.secao === item.id), { editavel: true, origem: 'validacao', secao: item.id, ctx: 'modal' });
+  });
+}
+
 async function iniciarDiario() {
   const hj = hojeLocal();
   const dataEl = document.getElementById('diario-data');
   if (dataEl && !dataEl.value) dataEl.value = hj;
   initDiarioHistorico();
+  renderFotosDiario();
   // anterior, lista e validação não dependem do diário aberto: buscam em paralelo
   await Promise.all([carregarOuCalcularDiario(), carregarDiarioAnterior(), carregarListaDiarios(), verificarValidacaoPendente()]);
 }
@@ -952,6 +1087,7 @@ async function carregarDiarioAnterior() {
           ${obsHtml || '<div style="font-size:12px;color:var(--text3);padding-top:10px">O turno anterior não deixou observações.</div>'}
         </div>
       </div>`;
+    _fotosAnteriorAnexar(ant.id);
   } catch(e) {
     console.warn('carregarDiarioAnterior:', e);
     el.style.display = 'none';
@@ -1012,6 +1148,8 @@ function _atualizarAnelDiario(prefixo, total, concluidos) {
 // via um diário já enviado/validado, o próximo diário (mesmo em branco, novo)
 // continuava com a aparência travada, porque só existia código pra travar.
 function _diarioAplicarBloqueio(bloqueado) {
+  _diarioBloqueado = bloqueado;
+  renderFotosDiario();
   document.querySelectorAll('#pag-diario textarea, #pag-diario input.db-stat-n').forEach(el => {
     el.readOnly = bloqueado;
     el.disabled = bloqueado && el.tagName === 'INPUT';
@@ -1035,6 +1173,7 @@ async function carregarDadosDiario() {
     // data+turno (ver carregarOuCalcularDiario) — então é sempre editável.
     _diarioAplicarBloqueio(false);
     _diarioAtualId = null;
+    carregarFotosDiario(null);
     const bannerEl = document.getElementById('diario-status-banner');
     if (bannerEl) bannerEl.style.display = 'none';
     document.getElementById('diario-sep-total').textContent = d.separacao.total;
@@ -1285,6 +1424,7 @@ async function abrirModalValidacao() {
         <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">O que o turno registrou</div>
         <div style="display:flex;flex-wrap:wrap;gap:6px">${x.nums.join('')}</div>
         <div style="font-size:12px;color:${o ? 'var(--text2)' : 'var(--text3)'};white-space:pre-line;margin-top:8px">${o ? escHtml(x.obs) : 'Sem observações neste setor.'}</div>
+        <div id="fotos-turno-${id}"></div>
       </div>`;
     };
 
@@ -1314,8 +1454,15 @@ async function abrirModalValidacao() {
           </label>
           <textarea id="obs-${item.id}" placeholder="Descreva o que você realmente encontrou..."
             style="width:100%;min-height:60px;margin-top:6px;border:1px solid rgba(201,82,79,.4);border-radius:7px;padding:8px;font-size:12px;font-family:inherit;background:var(--surface);color:var(--text);resize:vertical;box-sizing:border-box"></textarea>
+          <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-top:8px">Fotos do cenário real (opcional)</div>
+          <div id="fotos-modal-${item.id}"></div>
         </div>
       </div>`).join('');
+
+    // Fotos: as do turno (somente leitura) e as que o validador anexar
+    _valDiarioId = val.diario_id; _valFotos = [];
+    _renderFotosModal();
+    fetch(`${API}/diario/${val.diario_id}/fotos`, { credentials:'include' }).then(r => r.ok ? r.json() : []).then(l => { _valFotos = l; _renderFotosModal(); }).catch(() => {});
 
     // Timer no modal
     const m = Math.floor(val.restante_segundos/60).toString().padStart(2,'0');
@@ -1510,6 +1657,7 @@ async function verDiario(id) {
     if (document.getElementById('diario-obs-geral')) document.getElementById('diario-obs-geral').value = obs.geral||'';
     window._dadosDiario = d.dados;
     _diarioAtualId = d.id;
+    carregarFotosDiario(d.id);
 
     // Qualquer supervisor/gestor pode editar o diário do turno (não só quem
     // criou) — só trava depois de enviado/validado.
