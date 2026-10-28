@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { db, pool } = require('../lib/db');
 const { requerAuth, requerPerfil } = require('../lib/auth');
-const { dataHoraLocal, validarId } = require('../lib/helpers');
+const { dataHoraLocal, validarId, normalizarTurno } = require('../lib/helpers');
 
 // Garante colunas novas (roda uma vez na inicialização)
 pool.query(`ALTER TABLE avisos_repositor ADD COLUMN IF NOT EXISTS historico        JSONB   DEFAULT '[]'::jsonb`).catch(()=>{});
@@ -31,7 +31,7 @@ router.get('/repositor/avisos', requerAuth, async (req,res) => {
   const {status, data, data_ini, data_fim, codigo} = req.query;
   const usuario = req.session.usuario;
   const perfil  = usuario.perfil || '';
-  const meuTurno = (usuario.turno || '').replace('ã','a').replace('Manh','Manha');
+  const meuTurno = normalizarTurno(usuario.turno);
 
   try {
     let sql=`SELECT a.*,

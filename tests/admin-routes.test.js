@@ -282,12 +282,30 @@ describe('Admin — Diário de Bordo', () => {
     expect(Array.isArray(res.body)).toBe(true);
   });
 
-  test('GET /diario/anterior turno Manha → busca dia anterior + turno Noite', async () => {
-    mockDb.get.mockResolvedValueOnce(null);
+  test('GET /diario/anterior turno Manha → busca Noite de ontem ou de hoje de manhã', async () => {
     const res = await agent.get('/diario/anterior').query({ data: '2026-05-09', turno: 'Manha' });
     expect(res.status).toBe(200);
     expect(res.body).toBeNull();
-    expect(mockDb.get).toHaveBeenCalledWith(expect.any(String), ['2026-05-08', 'Noite']);
+    expect(mockDb.all).toHaveBeenCalledWith(expect.any(String), ['Noite', '2026-05-08', '2026-05-09']);
+  });
+
+  test('GET /diario/anterior Manha → acha a Noite datada de hoje e escrita às 07h (caso real)', async () => {
+    mockDb.all.mockResolvedValueOnce([
+      { id: 26, data: '2026-05-09', turno: 'Noite', criado_em: '2026-05-09T09:59:51Z', dados: '{}', observacoes: '{"geral":"ok"}' }, // 06:59 em Brasília
+    ]);
+    const res = await agent.get('/diario/anterior').query({ data: '2026-05-09', turno: 'Manha' });
+    expect(res.status).toBe(200);
+    expect(res.body.id).toBe(26);
+    expect(res.body.observacoes).toEqual({ geral: 'ok' });
+  });
+
+  test('GET /diario/anterior Manha → ignora Noite de hoje escrita à noite (é a do turno seguinte)', async () => {
+    mockDb.all.mockResolvedValueOnce([
+      { id: 30, data: '2026-05-09', turno: 'Noite', criado_em: '2026-05-10T02:30:00Z', dados: '{}', observacoes: '{}' }, // 23:30 em Brasília
+    ]);
+    const res = await agent.get('/diario/anterior').query({ data: '2026-05-09', turno: 'Manha' });
+    expect(res.status).toBe(200);
+    expect(res.body).toBeNull();
   });
 
   test('GET /diario/anterior turno Tarde → retorna anterior com dados/observações parseados', async () => {
@@ -426,6 +444,29 @@ describe('Admin — Diário: Envio e Validação', () => {
     expect(res.status).toBe(200);
     expect(res.body.checklist).toBeDefined();
     expect(res.body.atrasada).toBe(false);
+  });
+
+  test('GET /diario/validacao/pendente supervisor de Manhã valida só o diário da Noite', async () => {
+    mockDb.get.mockClear();
+    await agent.get('/diario/validacao/pendente');
+    const chamada = mockDb.get.mock.calls.find(c => /diario_validacoes/.test(c[0]));
+    expect(chamada).toBeDefined();
+    expect(chamada[1]).toContain('Noite');
+    expect(chamada[0]).toMatch(/d\.turno = \$3/);
+  });
+
+  test('GET /diario/validacao/pendente gestor enxerga qualquer turno (sem filtro de turno)', async () => {
+    const gestor = request.agent(app);
+    mockDb.get.mockResolvedValueOnce({
+      id: 9, nome: 'Gestor Teste', login: 'gestor1', perfil: 'gestor', senha_hash: HASH_ADMIN,
+      subtipo_repositor: 'geral', perfis_acesso: '', turno: 'Manha', status: 'ativo', senha_temporaria: false,
+    });
+    await gestor.post('/auth/login').send({ login: 'gestor1', senha: SENHA_ADMIN, perfil: 'gestor' });
+    mockDb.get.mockClear();
+    await gestor.get('/diario/validacao/pendente');
+    const chamada = mockDb.get.mock.calls.find(c => /diario_validacoes/.test(c[0]));
+    expect(chamada).toBeDefined();
+    expect(chamada[0]).not.toMatch(/d\.turno = \$3/);
   });
 
   test('GET /diario/:id/validacao com id inválido → 400', async () => {

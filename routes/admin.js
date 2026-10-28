@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { db, pool } = require('../lib/db');
 const { requerAuth, requerPerfil } = require('../lib/auth');
-const { dataHoraLocal, validarId } = require('../lib/helpers');
+const { dataHoraLocal, validarId, normalizarTurno } = require('../lib/helpers');
 const { registrarAuditoria } = require('../lib/auditoria');
 const { gerarRelatorio } = require('../lib/relatorio');
 const { requerPermissao } = require('../lib/permissoes');
@@ -141,15 +141,26 @@ router.get('/diario/anterior', requerAuth, requerPerfil('supervisor'), async (re
     const idxT = turnos.indexOf(turno);
     let dataAnterior = data;
     let turnoAnterior;
+    let anterior;
     if (idxT === 0) {
       const dt = new Date(data + 'T12:00:00');
       dt.setDate(dt.getDate() - 1);
       dataAnterior = dt.toISOString().split('T')[0];
       turnoAnterior = 'Noite';
+      // A Noite cruza a meia-noite e o supervisor fecha o diário já de manhã: ele
+      // pode estar datado no dia em que o turno começou (ontem) ou no dia em que
+      // foi preenchido (hoje, entre 00h e 12h). Hoje só vale se foi escrito pela
+      // manhã — um diário da Noite criado à noite é o do turno seguinte, não o anterior.
+      const candidatos = await db.all(
+        `SELECT * FROM diario_bordo WHERE turno=$1 AND data IN ($2,$3) ORDER BY criado_em DESC`,
+        [turnoAnterior, dataAnterior, data]
+      );
+      const horaLocal = c => Number(new Date(c.criado_em).toLocaleString('en-GB', { timeZone: 'America/Sao_Paulo', hour: '2-digit', hour12: false }));
+      anterior = candidatos.find(c => c.data !== data || horaLocal(c) < 12);
     } else {
       turnoAnterior = turnos[idxT - 1];
+      anterior = await db.get('SELECT * FROM diario_bordo WHERE data=$1 AND turno=$2', [dataAnterior, turnoAnterior]);
     }
-    const anterior = await db.get('SELECT * FROM diario_bordo WHERE data=$1 AND turno=$2', [dataAnterior, turnoAnterior]);
     if (!anterior) return res.json(null);
     if (typeof anterior.dados === 'string') anterior.dados = JSON.parse(anterior.dados);
     if (typeof anterior.observacoes === 'string') {
@@ -341,10 +352,12 @@ router.get('/diario/validacao/pendente', requerAuth, requerPerfil('supervisor'),
     );
     // Turno do supervisor logado → determina qual turno anterior deve validar
     const supervisorAtual = req.session?.usuario?.nome || '';
-    const turnoAtual = (req.session?.usuario?.turno || '').replace('ã','a').replace('Manh','Manha');
+    const turnoAtual = normalizarTurno(req.session?.usuario?.turno);
     // Manhã valida Noite, Tarde valida Manhã, Noite valida Tarde
     const PREV_TURNO = { Tarde: 'Manha', Noite: 'Tarde', Manha: 'Noite' };
-    const turnoParaValidar = PREV_TURNO[turnoAtual] || null;
+    // Gestor acompanha qualquer turno; supervisor só valida o turno anterior ao seu
+    const ehGestor = req.session?.usuario?.perfil === 'gestor';
+    const turnoParaValidar = ehGestor ? null : (PREV_TURNO[turnoAtual] || null);
 
     // Busca pendente OU expirado — janela de 2 dias (cobre turno que cruza meia-noite)
     // Filtra pela data do diário (campo TEXT 'YYYY-MM-DD') — mais confiável que criado_em

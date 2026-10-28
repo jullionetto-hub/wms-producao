@@ -104,7 +104,7 @@
       if (usuarioAtual?.nome === data.supervisor) return;
       // Determina qual turno deve validar (próximo ao turno que criou)
       const NEXT_TURNO = { Manha: 'Tarde', Tarde: 'Noite', Noite: 'Manha' };
-      const meuTurno = (usuarioAtual?.turno || '').replace('ã','a').replace('Manh','Manha');
+      const meuTurno = (usuarioAtual?.turno || '').normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
       const turnoQueValida = NEXT_TURNO[data.turno];
       if (turnoQueValida && meuTurno && meuTurno !== turnoQueValida) return;
       const turnoIcon = data.turno==='Manha'?'M':data.turno==='Tarde'?'T':'N';
