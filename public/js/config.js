@@ -244,6 +244,11 @@ function toast(msg, tipo='info') {
 
 function fmtData(iso){if(!iso)return'';const[y,m,d]=iso.split('-');return d+'/'+m+'/'+y;}
 
+// Escapa texto vindo do usuário antes de entrar em innerHTML (diário de bordo, etc.)
+function escHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
 async function apiFetch(path, opts={}) {
   try {
     const res = await fetch(`${API}${path}`, { credentials:'include', ...opts });
