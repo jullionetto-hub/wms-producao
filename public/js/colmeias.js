@@ -403,8 +403,11 @@ function imprimirEtiquetasEndereco(lista) {
   const cont = document.getElementById('etiquetas-print');
   if (!cont || !lista.length) { toast('Nenhum endereço para imprimir.', 'info'); return; }
   const esc = s => s.replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
-  cont.innerHTML = lista.map(e =>
-    `<div class="etiqueta-end"><div class="ee-texto${e.length > 6 ? ' longo' : ''}">${esc(e)}</div></div>`).join('');
+  // 2 endereços por etiqueta (um embaixo do outro)
+  const pares = [];
+  for (let i = 0; i < lista.length; i += 2) pares.push(lista.slice(i, i + 2));
+  cont.innerHTML = pares.map(par => `<div class="etiqueta-end">${par.map(e =>
+    `<div class="ee-linha"><div class="ee-texto${e.length > 6 ? ' longo' : ''}">${esc(e)}</div></div>`).join('')}</div>`).join('');
   const st = document.createElement('style');
   st.id = 'page-etiqueta-endereco';
   st.textContent = '@media print { @page { size: 70mm 40mm; margin: 0; } }';
