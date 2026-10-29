@@ -30,13 +30,14 @@ ws.column_dimensions['A'].width = 17.4
 ws.column_dimensions['B'].width = 17.4
 fonte = Font(name='Arial', size=36, bold=True)
 centro = Alignment(horizontal='center', vertical='center')
-lado = Border(left=Side(style='thin'))
+linha = Side(style='medium', color='000000')  # linha do meio: direita da col. A + esquerda da col. B
 for i, par in enumerate(pares, start=1):
     ws.row_dimensions[i].height = 40 * MM_PT  # 40mm
-    for j, e in enumerate(par):
+    for j in range(2):  # sempre as 2 colunas, pra linha do meio aparecer em toda etiqueta
+        e = par[j] if j < len(par) else None
         c = ws.cell(row=i, column=j + 1, value=e)
         c.font = fonte; c.alignment = centro
-        if j == 1: c.border = lado
+        c.border = Border(right=linha) if j == 0 else Border(left=linha)
     if i < len(pares): ws.row_breaks.append(Break(id=i))
 
 ws.page_setup.paperWidth = '70mm'; ws.page_setup.paperHeight = '40mm'
