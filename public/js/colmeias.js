@@ -420,8 +420,8 @@ function imprimirEtiquetasEndereco(lista) {
       const inkW = m.actualBoundingBoxLeft + m.actualBoundingBoxRight;
       const inkH = m.actualBoundingBoxAscent + m.actualBoundingBoxDescent;
       const cel = t.parentElement;
-      const sx = (cel.clientWidth - 10) / inkW;
-      const sy = (cel.clientHeight - 10) / inkH;
+      const sx = cel.clientWidth * 0.85 / inkW;
+      const sy = cel.clientHeight * 0.8 / inkH;
       const base = (fs - (m.fontBoundingBoxAscent + m.fontBoundingBoxDescent)) / 2 + m.fontBoundingBoxAscent;
       const offX = (m.actualBoundingBoxRight - m.actualBoundingBoxLeft) / 2 - t.offsetWidth / 2;
       const offY = base + (m.actualBoundingBoxDescent - m.actualBoundingBoxAscent) / 2 - fs / 2;
