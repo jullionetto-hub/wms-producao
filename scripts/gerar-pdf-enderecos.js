@@ -32,7 +32,7 @@ function expandir(txt) {
     .e:last-child { page-break-after:auto; break-after:auto }
     .l { flex:1 1 0; display:flex; align-items:center; justify-content:center; min-width:0; overflow:hidden }
     .l + .l { border-left:.4mm solid #000 }
-    .t { font-size:26mm; line-height:1; white-space:nowrap; text-align:center; display:inline-block; transform-origin:center center }
+    .t { font-size:38mm; line-height:1; white-space:nowrap; text-align:center; display:inline-block; transform-origin:center center }
     .t.g { font-size:9mm; white-space:normal; word-break:break-word; line-height:1.05 }
   </style>${pares.map(par => `<div class="e">${par.map(e => `<div class="l"><div class="t${e.length > 6 ? ' g' : ''}">${esc(e)}</div></div>`).join('')}</div>`).join('')}`;
   const b = await chromium.launch();
