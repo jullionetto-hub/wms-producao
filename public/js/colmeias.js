@@ -403,14 +403,14 @@ function imprimirEtiquetasEndereco(lista) {
   const cont = document.getElementById('etiquetas-print');
   if (!cont || !lista.length) { toast('Nenhum endereço para imprimir.', 'info'); return; }
   const esc = s => s.replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
-  // 2 endereços por etiqueta (um embaixo do outro)
+  // 2 endereços por etiqueta (lado a lado: B167|B168)
   const pares = [];
   for (let i = 0; i < lista.length; i += 2) pares.push(lista.slice(i, i + 2));
   cont.innerHTML = pares.map(par => `<div class="etiqueta-end">${par.map(e =>
     `<div class="ee-linha"><div class="ee-texto${e.length > 6 ? ' longo' : ''}">${esc(e)}</div></div>`).join('')}</div>`).join('');
-  // Preenche a largura da etiqueta: escala horizontal de cada texto (máx. 1,5x; encolhe se passar).
+  // Preenche a largura da coluna: escala horizontal de cada texto (alonga até 1,5x ou comprime pra caber).
   cont.style.display = 'block'; // precisa de layout pra medir (volta ao CSS no afterprint)
-  const alvo = cont.querySelector('.ee-linha')?.clientWidth || 0;
+  const alvo = (cont.querySelector('.ee-linha')?.clientWidth || 0) - 14; // folga p/ divisória
   cont.querySelectorAll('.ee-texto:not(.longo)').forEach(t => {
     t.style.transform = `scaleX(${Math.min(alvo / t.offsetWidth, 1.5)})`;
   });

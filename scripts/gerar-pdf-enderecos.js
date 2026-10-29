@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Gera PDF de etiquetas de endereço 70 x 40mm pra imprimir na ZD220 — 2 endereços por etiqueta
-// (um em cima do outro, texto grande). Endereços consecutivos são agrupados de 2 em 2.
+// (lado a lado: B167|B168, texto grande). Endereços consecutivos são agrupados de 2 em 2.
 // Uso: node scripts/gerar-pdf-enderecos.js "A01-A10, B05" saida.pdf
 'use strict';
 const { chromium } = require('playwright');
@@ -27,20 +27,20 @@ function expandir(txt) {
   const html = `<!doctype html><meta charset="utf-8"><style>
     @page { size: 70mm 40mm; margin: 0 }
     html,body { margin:0; padding:0 }
-    .e { width:70mm; height:40mm; box-sizing:border-box; padding:1mm .8mm; display:flex; flex-direction:column;
+    .e { width:70mm; height:40mm; box-sizing:border-box; padding:1mm 1mm; display:flex; flex-direction:row;
          page-break-after:always; break-after:page; overflow:hidden; font-family:Arial,Helvetica,sans-serif; font-weight:900; color:#000 }
     .e:last-child { page-break-after:auto; break-after:auto }
-    .l { flex:1 1 0; display:flex; align-items:center; justify-content:center; min-height:0 }
-    .l + .l { border-top:.6mm solid #000 }
-    .t { font-size:18mm; line-height:1; white-space:nowrap; text-align:center; display:inline-block; transform-origin:center center }
+    .l { flex:1 1 0; display:flex; align-items:center; justify-content:center; min-width:0; overflow:hidden }
+    .l + .l { border-left:.6mm solid #000 }
+    .t { font-size:26mm; line-height:1; white-space:nowrap; text-align:center; display:inline-block; transform-origin:center center }
     .t.g { font-size:9mm; white-space:normal; word-break:break-word; line-height:1.05 }
   </style>${pares.map(par => `<div class="e">${par.map(e => `<div class="l"><div class="t${e.length > 6 ? ' g' : ''}">${esc(e)}</div></div>`).join('')}</div>`).join('')}`;
   const b = await chromium.launch();
   const p = await b.newPage();
   await p.setContent(html);
-  // Preenche a largura: escala horizontal de cada texto até ocupar a linha (máx. 1,4x; encolhe se passar).
+  // Preenche a largura da coluna: escala horizontal de cada texto (alonga até 1,5x ou comprime pra caber).
   await p.evaluate(() => {
-    const alvo = document.querySelector('.l').clientWidth;
+    const alvo = document.querySelector('.l').clientWidth - 14; // folga p/ divisória
     document.querySelectorAll('.t').forEach(t => {
       if (t.classList.contains('g')) return;
       t.style.transform = `scaleX(${Math.min(alvo / t.offsetWidth, 1.5)})`;
