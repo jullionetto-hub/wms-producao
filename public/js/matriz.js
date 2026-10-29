@@ -2134,6 +2134,7 @@ function _mzFeedbackCardHtml(f, idx, arr) {
         <div style="font-weight:800;font-size:14.5px">${pfEsc(f.mes||'Sem data')}<span style="color:var(--text3);font-weight:500">${f.cargo_snapshot?` · ${pfEsc(f.cargo_snapshot)}`:''}${f.area_snapshot?` · ${pfEsc(f.area_snapshot)}`:''}</span></div>
         <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
           ${chips}
+          <button class="btn btn-outline btn-sm" style="padding:3px 8px;font-size:10.5px" title="Copiar o feedback completo (colaborador, metas, atrasos, ausências e observações)" onclick="event.stopPropagation();mzCopiarFeedback(${f.id})">Copiar</button>
           <button class="btn btn-outline btn-sm" style="padding:3px 8px;font-size:10.5px" onclick="event.stopPropagation();mzAbrirFeedback(${f.id})">Editar</button>
           <button class="btn btn-outline btn-sm" style="padding:3px 8px;font-size:10.5px;color:var(--red);border-color:var(--red)" onclick="event.stopPropagation();mzExcluirFeedback(${f.id})">Excluir</button>
           <span id="mzfb-chevron-${f.id}" style="font-size:11px;color:var(--text3);transition:transform .2s ease;${aberto?'transform:rotate(180deg)':''}">▾</span>
@@ -2150,6 +2151,85 @@ function _mzFeedbackCardHtml(f, idx, arr) {
         ${sec('📌', 'Combinado deste mês', nota('a', f.combinado_mes))}
       </div>
     </div>`;
+}
+
+// Texto completo do feedback, pronto pra colar em mensagem/e-mail. Recebe os dados
+// já resolvidos (colaborador e ausências) pra ficar independente do estado da tela.
+function _mzFeedbackTexto(f, colab, ausencias) {
+  const L = [];
+  const bloco = (titulo, texto) => { if (texto && String(texto).trim()) L.push('', titulo, String(texto).trim()); };
+  const semEmoji = label => String(label || '').replace(/^\S+\s/, '');
+
+  L.push(`FEEDBACK MENSAL — ${f.mes || 'Sem data'}`);
+  L.push(`Colaborador: ${colab?.nome || '—'}`);
+  const info = [f.cargo_snapshot || colab?.cargo, f.area_snapshot || colab?.area, colab?.turno ? `Turno ${colab.turno}` : '']
+    .filter(Boolean).join(' · ');
+  if (info) L.push(info);
+  if (f.autor_nome) L.push(`Feedback registrado por: ${f.autor_nome}`);
+
+  const pct = (f.meta != null && f.entregue != null) ? _mzPerformancePct(f.meta, f.entregue) : null;
+  if (pct != null) {
+    const dif = Number(f.meta) - Number(f.entregue);
+    L.push('', 'DESEMPENHO',
+      `Meta: ${f.meta} · Entregue: ${f.entregue} · Atingido: ${pct}% (${semEmoji(_mzStatusPorFaixa(pct).label)})`,
+      dif > 0 ? `Faltaram ${dif} para a meta` : 'Meta atingida');
+  }
+
+  const atrasos = _mzParseAtrasos(f.absenteismo_mes);
+  const minTotal = Number(f.atrasos) || 0;
+  const ausMes = (ausencias || []).filter(a => a.periodo_label === f.mes);
+  const temAbs = f.atrasos != null || f.faltas_injustificadas != null || f.ausencias_justificadas != null
+    || f.absenteismo_mes || ausMes.length;
+  if (temAbs) {
+    L.push('', 'ABSENTEÍSMO');
+    if (f.atrasos != null) L.push(`Atrasos no mês: ${_mzFmtMin(minTotal)}${minTotal >= 60 ? ` (${minTotal} min)` : ''}`);
+    if (atrasos.length) {
+      const maior = atrasos.reduce((a, d) => (!a || d.min > a.min) ? d : a, null);
+      L.push(`Dias de atraso (${atrasos.length}): ${atrasos.map(d => `${d.dia} — ${d.min}min`).join('; ')}`);
+      L.push(`Maior atraso: ${maior.min}min em ${maior.dia}`);
+    }
+    L.push(`Faltas injustificadas: ${f.faltas_injustificadas || 0}`);
+    L.push(`Ausências justificadas: ${f.ausencias_justificadas || 0}`);
+    if (ausMes.length) {
+      L.push('Ausências registradas:');
+      ausMes.forEach(a => L.push(`- ${a.data ? a.data + ' · ' : ''}${a.dias || 1} dia(s)${a.motivo ? ' · ' + a.motivo : ''}`));
+    }
+    const stAbs = _mzStatusAbsenteismo(f.atrasos, f.faltas_injustificadas, f.ausencias_justificadas);
+    if (stAbs) L.push(`Avaliação do absenteísmo: ${semEmoji(stAbs.label)}`);
+    if (f.absenteismo_mes && String(f.absenteismo_mes).trim()) L.push('', 'Detalhes do absenteísmo:', String(f.absenteismo_mes).trim());
+  }
+
+  bloco('RECORRÊNCIA DE AUSÊNCIA', f.recorrencia_ausencia);
+  bloco('RETORNO ANTECIPADO', f.retorno_antecipado);
+  bloco('SALDO DO BANCO DE HORAS', f.saldo_banco_horas);
+  bloco('PONTOS POSITIVOS', f.pontos_positivos);
+  bloco('PONTOS CONSTRUTIVOS', f.pontos_construtivos);
+  bloco('OUTROS PONTOS', f.outros_pontos);
+  bloco('COMBINADO DESTE MÊS', f.combinado_mes);
+  return L.join('\n');
+}
+
+async function mzCopiarFeedback(id) {
+  const f = _mzFeedbacks.find(x => x.id === id);
+  if (!f) return;
+  const colab = _mzColaboradores.find(c => c.id === f.colaborador_id);
+  const ausencias = _mzAusencias.filter(a => a.colaborador_id === f.colaborador_id);
+  const texto = _mzFeedbackTexto(f, colab, ausencias);
+  try {
+    await navigator.clipboard.writeText(texto);
+  } catch (e) {
+    // Fallback pra navegador/contexto sem acesso à área de transferência
+    const ta = document.createElement('textarea');
+    ta.value = texto;
+    ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0';
+    document.body.appendChild(ta);
+    ta.select();
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch (e2) { /* segue */ }
+    document.body.removeChild(ta);
+    if (!ok) { toast('Não foi possível copiar', 'erro'); return; }
+  }
+  toast('Feedback copiado — é só colar', 'sucesso');
 }
 
 function mzToggleFeedback(id) {
