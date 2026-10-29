@@ -408,11 +408,11 @@ function imprimirEtiquetasEndereco(lista) {
   for (let i = 0; i < lista.length; i += 2) pares.push(lista.slice(i, i + 2));
   cont.innerHTML = pares.map(par => `<div class="etiqueta-end">${par.map(e =>
     `<div class="ee-linha"><div class="ee-texto${e.length > 6 ? ' longo' : ''}">${esc(e)}</div></div>`).join('')}</div>`).join('');
-  // Preenche a largura da coluna: escala horizontal de cada texto (alonga até 1,5x ou comprime pra caber).
+  // Preenche a largura da coluna: escala horizontal de cada texto (alonga até 2x ou comprime pra caber).
   cont.style.display = 'block'; // precisa de layout pra medir (volta ao CSS no afterprint)
-  const alvo = (cont.querySelector('.ee-linha')?.clientWidth || 0) - 14; // folga p/ divisória
+  const alvo = (cont.querySelector('.ee-linha')?.clientWidth || 0) - 8; // folga p/ divisória
   cont.querySelectorAll('.ee-texto:not(.longo)').forEach(t => {
-    t.style.transform = `scaleX(${Math.min(alvo / t.offsetWidth, 1.5)})`;
+    t.style.transform = `scaleX(${Math.min(alvo / t.offsetWidth, 2)})`;
   });
   cont.style.display = '';
   const st = document.createElement('style');

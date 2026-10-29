@@ -27,23 +27,23 @@ function expandir(txt) {
   const html = `<!doctype html><meta charset="utf-8"><style>
     @page { size: 70mm 40mm; margin: 0 }
     html,body { margin:0; padding:0 }
-    .e { width:70mm; height:40mm; box-sizing:border-box; padding:1mm 1mm; display:flex; flex-direction:row;
+    .e { width:70mm; height:40mm; box-sizing:border-box; padding:0; display:flex; flex-direction:row;
          page-break-after:always; break-after:page; overflow:hidden; font-family:Arial,Helvetica,sans-serif; font-weight:900; color:#000 }
     .e:last-child { page-break-after:auto; break-after:auto }
     .l { flex:1 1 0; display:flex; align-items:center; justify-content:center; min-width:0; overflow:hidden }
-    .l + .l { border-left:.6mm solid #000 }
+    .l + .l { border-left:.4mm solid #000 }
     .t { font-size:26mm; line-height:1; white-space:nowrap; text-align:center; display:inline-block; transform-origin:center center }
     .t.g { font-size:9mm; white-space:normal; word-break:break-word; line-height:1.05 }
   </style>${pares.map(par => `<div class="e">${par.map(e => `<div class="l"><div class="t${e.length > 6 ? ' g' : ''}">${esc(e)}</div></div>`).join('')}</div>`).join('')}`;
   const b = await chromium.launch();
   const p = await b.newPage();
   await p.setContent(html);
-  // Preenche a largura da coluna: escala horizontal de cada texto (alonga até 1,5x ou comprime pra caber).
+  // Preenche a largura da coluna: escala horizontal de cada texto (alonga até 2x ou comprime pra caber).
   await p.evaluate(() => {
-    const alvo = document.querySelector('.l').clientWidth - 14; // folga p/ divisória
+    const alvo = document.querySelector('.l').clientWidth - 8; // folga mínima da divisória
     document.querySelectorAll('.t').forEach(t => {
       if (t.classList.contains('g')) return;
-      t.style.transform = `scaleX(${Math.min(alvo / t.offsetWidth, 1.5)})`;
+      t.style.transform = `scaleX(${Math.min(alvo / t.offsetWidth, 2)})`;
     });
   });
   await p.pdf({ path: saida, width: '70mm', height: '40mm', printBackground: true, preferCSSPageSize: true });
