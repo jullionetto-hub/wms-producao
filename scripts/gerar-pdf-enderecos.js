@@ -38,22 +38,26 @@ function expandir(txt) {
   const b = await chromium.launch();
   const p = await b.newPage();
   await p.setContent(html);
-  // Preenche a largura da coluna: escala horizontal de cada texto (alonga até 2x ou comprime pra caber).
   await p.evaluate(() => {
-    const alvo = document.querySelector('.l').clientWidth - 8; // folga mínima da divisória
     document.querySelectorAll('.t').forEach(t => {
-        if (t.classList.contains('g')) return;
-        // Centraliza pela tinta real das letras (não pela caixa do texto, que tem folgas laterais)
-        const cs = getComputedStyle(t);
-        const ctx = document.createElement('canvas').getContext('2d');
-        ctx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
-        const m = ctx.measureText(t.textContent);
-        const tinta = m.actualBoundingBoxLeft + m.actualBoundingBoxRight;
-        const s = Math.min(alvo / tinta, 2);
-        const desloc = (m.actualBoundingBoxRight - m.actualBoundingBoxLeft) / 2 - t.offsetWidth / 2;
-        t.style.transform = `translateX(${-s * desloc}px) scaleX(${s})`;
-      });
-
+      if (t.classList.contains('g')) return;
+      // Preenche a célula inteira: escala X e Y independentes sobre a tinta real das letras
+      // (não sobre a caixa do texto, que tem folgas) e centraliza nos dois eixos.
+      const cs = getComputedStyle(t);
+      const ctx = document.createElement('canvas').getContext('2d');
+      ctx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+      const m = ctx.measureText(t.textContent);
+      const fs = parseFloat(cs.fontSize);
+      const inkW = m.actualBoundingBoxLeft + m.actualBoundingBoxRight;
+      const inkH = m.actualBoundingBoxAscent + m.actualBoundingBoxDescent;
+      const cel = t.parentElement;
+      const sx = (cel.clientWidth - 10) / inkW;
+      const sy = (cel.clientHeight - 10) / inkH;
+      const base = (fs - (m.fontBoundingBoxAscent + m.fontBoundingBoxDescent)) / 2 + m.fontBoundingBoxAscent;
+      const offX = (m.actualBoundingBoxRight - m.actualBoundingBoxLeft) / 2 - t.offsetWidth / 2;
+      const offY = base + (m.actualBoundingBoxDescent - m.actualBoundingBoxAscent) / 2 - fs / 2;
+      t.style.transform = `translate(${-sx * offX}px, ${-sy * offY}px) scale(${sx}, ${sy})`;
+    });
   });
   await p.pdf({ path: saida, width: '70mm', height: '40mm', printBackground: true, preferCSSPageSize: true });
   await b.close();

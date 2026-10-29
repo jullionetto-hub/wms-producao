@@ -408,21 +408,25 @@ function imprimirEtiquetasEndereco(lista) {
   for (let i = 0; i < lista.length; i += 2) pares.push(lista.slice(i, i + 2));
   cont.innerHTML = pares.map(par => `<div class="etiqueta-end">${par.map(e =>
     `<div class="ee-linha"><div class="ee-texto${e.length > 6 ? ' longo' : ''}">${esc(e)}</div></div>`).join('')}</div>`).join('');
-  // Preenche a largura da coluna: escala horizontal de cada texto (alonga até 2x ou comprime pra caber).
   cont.style.display = 'block'; // precisa de layout pra medir (volta ao CSS no afterprint)
-  const alvo = (cont.querySelector('.ee-linha')?.clientWidth || 0) - 8; // folga p/ divisória
   cont.querySelectorAll('.ee-texto:not(.longo)').forEach(t => {
-      // Centraliza pela tinta real das letras (não pela caixa do texto, que tem folgas laterais)
+      // Preenche a célula inteira: escala X e Y independentes sobre a tinta real das letras
+      // (não sobre a caixa do texto, que tem folgas) e centraliza nos dois eixos.
       const cs = getComputedStyle(t);
       const ctx = document.createElement('canvas').getContext('2d');
       ctx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
       const m = ctx.measureText(t.textContent);
-      const tinta = m.actualBoundingBoxLeft + m.actualBoundingBoxRight;
-      const s = Math.min(alvo / tinta, 2);
-      const desloc = (m.actualBoundingBoxRight - m.actualBoundingBoxLeft) / 2 - t.offsetWidth / 2;
-      t.style.transform = `translateX(${-s * desloc}px) scaleX(${s})`;
-    });
-
+      const fs = parseFloat(cs.fontSize);
+      const inkW = m.actualBoundingBoxLeft + m.actualBoundingBoxRight;
+      const inkH = m.actualBoundingBoxAscent + m.actualBoundingBoxDescent;
+      const cel = t.parentElement;
+      const sx = (cel.clientWidth - 10) / inkW;
+      const sy = (cel.clientHeight - 10) / inkH;
+      const base = (fs - (m.fontBoundingBoxAscent + m.fontBoundingBoxDescent)) / 2 + m.fontBoundingBoxAscent;
+      const offX = (m.actualBoundingBoxRight - m.actualBoundingBoxLeft) / 2 - t.offsetWidth / 2;
+      const offY = base + (m.actualBoundingBoxDescent - m.actualBoundingBoxAscent) / 2 - fs / 2;
+      t.style.transform = `translate(${-sx * offX}px, ${-sy * offY}px) scale(${sx}, ${sy})`;
+  });
   cont.style.display = '';
   const st = document.createElement('style');
   st.id = 'page-etiqueta-endereco';
