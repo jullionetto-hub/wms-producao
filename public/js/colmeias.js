@@ -408,6 +408,13 @@ function imprimirEtiquetasEndereco(lista) {
   for (let i = 0; i < lista.length; i += 2) pares.push(lista.slice(i, i + 2));
   cont.innerHTML = pares.map(par => `<div class="etiqueta-end">${par.map(e =>
     `<div class="ee-linha"><div class="ee-texto${e.length > 6 ? ' longo' : ''}">${esc(e)}</div></div>`).join('')}</div>`).join('');
+  // Preenche a largura da etiqueta: escala horizontal de cada texto (máx. 1,5x; encolhe se passar).
+  cont.style.display = 'block'; // precisa de layout pra medir (volta ao CSS no afterprint)
+  const alvo = cont.querySelector('.ee-linha')?.clientWidth || 0;
+  cont.querySelectorAll('.ee-texto:not(.longo)').forEach(t => {
+    t.style.transform = `scaleX(${Math.min(alvo / t.offsetWidth, 1.5)})`;
+  });
+  cont.style.display = '';
   const st = document.createElement('style');
   st.id = 'page-etiqueta-endereco';
   st.textContent = '@media print { @page { size: 70mm 40mm; margin: 0; } }';
