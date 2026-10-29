@@ -412,8 +412,17 @@ function imprimirEtiquetasEndereco(lista) {
   cont.style.display = 'block'; // precisa de layout pra medir (volta ao CSS no afterprint)
   const alvo = (cont.querySelector('.ee-linha')?.clientWidth || 0) - 8; // folga p/ divisória
   cont.querySelectorAll('.ee-texto:not(.longo)').forEach(t => {
-    t.style.transform = `scaleX(${Math.min(alvo / t.offsetWidth, 2)})`;
-  });
+      // Centraliza pela tinta real das letras (não pela caixa do texto, que tem folgas laterais)
+      const cs = getComputedStyle(t);
+      const ctx = document.createElement('canvas').getContext('2d');
+      ctx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+      const m = ctx.measureText(t.textContent);
+      const tinta = m.actualBoundingBoxLeft + m.actualBoundingBoxRight;
+      const s = Math.min(alvo / tinta, 2);
+      const desloc = (m.actualBoundingBoxRight - m.actualBoundingBoxLeft) / 2 - t.offsetWidth / 2;
+      t.style.transform = `translateX(${-s * desloc}px) scaleX(${s})`;
+    });
+
   cont.style.display = '';
   const st = document.createElement('style');
   st.id = 'page-etiqueta-endereco';

@@ -42,9 +42,18 @@ function expandir(txt) {
   await p.evaluate(() => {
     const alvo = document.querySelector('.l').clientWidth - 8; // folga mínima da divisória
     document.querySelectorAll('.t').forEach(t => {
-      if (t.classList.contains('g')) return;
-      t.style.transform = `scaleX(${Math.min(alvo / t.offsetWidth, 2)})`;
-    });
+        if (t.classList.contains('g')) return;
+        // Centraliza pela tinta real das letras (não pela caixa do texto, que tem folgas laterais)
+        const cs = getComputedStyle(t);
+        const ctx = document.createElement('canvas').getContext('2d');
+        ctx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+        const m = ctx.measureText(t.textContent);
+        const tinta = m.actualBoundingBoxLeft + m.actualBoundingBoxRight;
+        const s = Math.min(alvo / tinta, 2);
+        const desloc = (m.actualBoundingBoxRight - m.actualBoundingBoxLeft) / 2 - t.offsetWidth / 2;
+        t.style.transform = `translateX(${-s * desloc}px) scaleX(${s})`;
+      });
+
   });
   await p.pdf({ path: saida, width: '70mm', height: '40mm', printBackground: true, preferCSSPageSize: true });
   await b.close();
