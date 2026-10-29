@@ -69,6 +69,20 @@
        reservada (não só o tamanho intrínseco) pra não sobrar espaço morto. */
     .etiqueta .et-barcode { flex:1 1 auto; min-height:0; display:flex; justify-content:center; align-items:center; margin-top:1mm }
     .etiqueta .et-barcode svg { width:100%; height:100% }
+    /* ── Etiqueta de endereço (prateleira/colmeia), 70 x 40mm ────────────
+       Zebra ZD220: mídia 70 x 40mm. O @page é injetado em runtime por
+       imprimirEtiquetasEndereco() (colmeias.js) pra não colidir com o das etiquetas de pedido. */
+    .etiqueta-end {
+      width: 70mm; height: 40mm; box-sizing: border-box; padding: 2mm;
+      page-break-after: always; break-after: page; overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+      font-family: Arial, Helvetica, sans-serif; color: #000; background: #fff;
+    }
+    .etiqueta-end .ee-texto {
+      font-weight: 900; line-height: 1; text-align: center; white-space: nowrap;
+      font-size: 22mm; letter-spacing: .5mm;
+    }
+    .etiqueta-end .ee-texto.longo { font-size: 11mm; white-space: normal; word-break: break-word; }
   </style>
 </head>
 <body>
@@ -2532,7 +2546,7 @@
   <script src="/js/gestao.js?v=61"></script>
   <script src="/js/caixas.js?v=5"></script>
   <script src="/js/matriz.js?v=17"></script>
-  <script src="/js/colmeias.js?v=1"></script>
+  <script src="/js/colmeias.js?v=2"></script>
   <script src="/js/command-palette.js?v=1"></script>
   <script src="/js/auth.js?v=59"></script>
 

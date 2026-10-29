@@ -22,6 +22,7 @@ function renderizarPagColmeias() {
     <div class="pg-title" style="margin-bottom:16px">
       Colmeias
       <button onclick="abrirModalNovaColmeia()" class="btn btn-primary btn-sm" style="float:right"><i class="ti ti-plus" aria-hidden="true"></i> Nova Colmeia</button>
+      <button onclick="imprimirEtiquetasEnderecoPrompt()" class="btn btn-outline btn-sm" style="float:right;margin-right:8px"><i class="ti ti-printer" aria-hidden="true"></i> Etiquetas de endereço</button>
     </div>
 
     <div id="colmeias-alerta"></div>
@@ -230,6 +231,7 @@ function renderTabelaColmeias() {
       <td style="font-weight:700;font-family:'Space Mono',monospace">${c.codigo}</td>
       <td>
         <span style="color:var(--text2)">${c.endereco || '—'}</span>
+        <button onclick='imprimirEtiquetasEndereco([${JSON.stringify(c.endereco||"")}])' class="btn btn-outline btn-sm" title="Imprimir etiqueta do endereço (70x40mm)" style="padding:3px 6px;margin-left:4px" ${c.endereco ? '' : 'disabled'}><i class="ti ti-printer" aria-hidden="true"></i></button>
         <button onclick='abrirModalEndereco(${c.id},${JSON.stringify(c.codigo)},${JSON.stringify(c.endereco||"")})' class="btn btn-outline btn-sm" title="Editar endereço" style="padding:3px 6px;margin-left:4px"><i class="ti ti-pencil" aria-hidden="true"></i></button>
       </td>
       <td style="color:var(--text2);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.descricao || '—'}</td>
@@ -372,3 +374,43 @@ function excluirColmeia(id, codigo) {
     }
   );
 }
+
+
+// ── Etiqueta de endereço (Zebra ZD220, 70 x 40mm — 7cm largura x 4cm altura) ──
+// Reaproveita o container #etiquetas-print e a classe body.imprimindo-etiquetas
+// (index.html). O @page é injetado só durante a impressão.
+function _expandirEnderecos(txt) {
+  // "A01, A02" ou intervalo "A01-A10" (mesmo prefixo, número com zeros à esquerda preservados)
+  const out = [];
+  String(txt || '').split(/[,;\n]+/).map(t => t.trim()).filter(Boolean).forEach(t => {
+    const m = t.match(/^(.*?)(\d+)\s*-\s*\1?(\d+)$/);
+    if (m && +m[3] >= +m[2] && (+m[3] - +m[2]) < 500) {
+      const w = m[2].length;
+      for (let n = +m[2]; n <= +m[3]; n++) out.push(m[1] + String(n).padStart(w, '0'));
+    } else out.push(t);
+  });
+  return out;
+}
+
+function imprimirEtiquetasEnderecoPrompt() {
+  const txt = prompt('Endereços para imprimir (ex: A05  ou  A01-A10  ou  A01, B03, C07):');
+  if (!txt) return;
+  imprimirEtiquetasEndereco(_expandirEnderecos(txt));
+}
+
+function imprimirEtiquetasEndereco(lista) {
+  lista = (lista || []).map(e => String(e || '').trim()).filter(Boolean);
+  const cont = document.getElementById('etiquetas-print');
+  if (!cont || !lista.length) { toast('Nenhum endereço para imprimir.', 'info'); return; }
+  const esc = s => s.replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
+  cont.innerHTML = lista.map(e =>
+    `<div class="etiqueta-end"><div class="ee-texto${e.length > 6 ? ' longo' : ''}">${esc(e)}</div></div>`).join('');
+  const st = document.createElement('style');
+  st.id = 'page-etiqueta-endereco';
+  st.textContent = '@media print { @page { size: 70mm 40mm; margin: 0; } }';
+  document.head.appendChild(st);
+  document.body.classList.add('imprimindo-etiquetas');
+  void cont.offsetHeight;
+  requestAnimationFrame(() => requestAnimationFrame(() => window.print()));
+}
+window.addEventListener('afterprint', () => document.getElementById('page-etiqueta-endereco')?.remove());
