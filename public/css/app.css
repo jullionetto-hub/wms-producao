@@ -1180,3 +1180,43 @@ body.tv-mode .hdir #btn-senha-hdr { display:none !important; }
 body.tv-mode .pipeline-card-value { font-size:56px }
 body.tv-mode .pipeline-card-label { font-size:13px }
 body.tv-mode #dash-pipeline { grid-template-columns:repeat(auto-fit,minmax(280px,1fr)) }
+
+/* ══════════════════════════════════════════
+   DIÁRIO DE BORDO — celular
+   Cartões em coluna única, anel menor ao lado dos números, botões em largura
+   total e janela de validação como painel que sobe de baixo.
+══════════════════════════════════════════ */
+@media (max-width:768px) {
+  #pag-diario { max-width:100%; overflow-x:hidden }
+  #pag-diario .filter-toolbar { flex-wrap:wrap; gap:10px }
+  #pag-diario .filter-toolbar .filter-grp { flex:1 1 140px; min-width:0 }
+  #pag-diario .filter-toolbar input,
+  #pag-diario .filter-toolbar select { width:100%; box-sizing:border-box }
+  #pag-diario .filter-actions { width:100%; margin-left:0 }
+  #pag-diario .filter-actions .btn { width:100%; justify-content:center; padding:11px }
+
+  #pag-diario .diario-setores { grid-template-columns:1fr !important; gap:10px !important }
+  #pag-diario .diario-setor { display:grid; grid-template-columns:96px 1fr; column-gap:14px; align-items:center }
+  #pag-diario .diario-setor .card-hd { grid-column:1 / -1 }
+  #pag-diario .diario-setor .db-ring-wrap { margin:0 }
+  #pag-diario .diario-setor .db-ring-wrap svg { width:96px; height:96px }
+  #pag-diario .diario-stats { grid-template-columns:1fr !important; gap:6px !important; padding:0 !important }
+  #pag-diario .diario-stats .db-stat { display:flex; align-items:center; gap:10px; padding:6px 10px }
+  #pag-diario .diario-stats .db-stat-n { width:64px; flex:none; font-size:20px }
+  #pag-diario .diario-stats .db-stat-l { margin:0; font-size:12px }
+  #pag-diario .diario-obs { grid-column:1 / -1; margin-top:12px !important }
+  #pag-diario .diario-obs textarea,
+  #pag-diario #diario-obs-geral { font-size:15px !important; min-height:72px !important }
+
+  #pag-diario .tabela-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch }
+  #pag-diario .diario-acoes { grid-template-columns:1fr !important }
+  #pag-diario .diario-acoes .btn { width:100% }
+  #pag-diario #btn-enviar-diario { order:-1 }
+
+  #modal-diario-validacao { align-items:flex-end !important; padding:0 !important }
+  #modal-diario-validacao .diario-modal-box { max-width:100% !important; max-height:94vh !important; border-radius:16px 16px 0 0 !important }
+  #modal-diario-validacao .dm-sec { padding-left:16px !important; padding-right:16px !important }
+  #modal-diario-validacao .dm-rodape { flex-wrap:wrap }
+  #modal-diario-validacao .dm-botoes { flex:1 1 100%; gap:10px }
+  #modal-diario-validacao .dm-botoes button { flex:1; padding:13px 10px !important }
+}

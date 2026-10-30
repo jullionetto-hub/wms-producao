@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2/tabler-icons.min.css">
-  <link rel="stylesheet" href="/css/app.css?v=26">
+  <link rel="stylesheet" href="/css/app.css?v=27">
   <style>
     /* ── Etiquetas de pedido (Zebra ZD-220, 104 x 50,8mm) ────────────────
        Se a etiqueta física sair maior/menor, ajustar só o @page e .etiqueta abaixo. */
@@ -1137,8 +1137,8 @@
           </div>
 
           <!-- Separação + Checkout lado a lado -->
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
-            <div class="card" style="margin-bottom:0">
+          <div class="diario-setores" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+            <div class="card diario-setor" style="margin-bottom:0">
               <div class="card-hd"><i class="ti ti-package-export" aria-hidden="true"></i>Separação</div>
               <div class="db-ring-wrap">
                 <svg width="128" height="128" viewBox="0 0 128 128">
@@ -1149,7 +1149,7 @@
                   <text x="64" y="77" text-anchor="middle" class="db-ring-label" fill="var(--text3)">total</text>
                 </svg>
               </div>
-              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;padding:0 0 6px">
+              <div class="diario-stats" style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;padding:0 0 6px">
                 <div class="db-stat db-stat-ok">
                   <input class="db-stat-n" type="number" min="0" id="diario-sep-conc" value="0" oninput="_atualizarSetorDiario('sep')">
                   <div class="db-stat-l">Concluídos</div>
@@ -1165,12 +1165,12 @@
               </div>
               <!-- total numérico permanece no DOM (oculto) pra nao quebrar o JS que ja preenche esse id -->
               <div id="diario-sep-total" style="display:none">0</div>
-              <div style="margin-top:6px">
+              <div class="diario-obs" style="margin-top:6px">
                 <div style="font-size:10px;font-weight:600;color:var(--text3);margin-bottom:3px;letter-spacing:.2px">Observações</div>
                 <textarea id="diario-obs-sep" placeholder="Ocorrências na separação..." style="width:100%;min-height:56px;border:1px solid var(--border);border-radius:6px;padding:7px;font-size:12px;font-family:inherit;background:var(--surface2);color:var(--text);resize:vertical;box-sizing:border-box"></textarea>
               </div>
             </div>
-            <div class="card" style="margin-bottom:0">
+            <div class="card diario-setor" style="margin-bottom:0">
               <div class="card-hd"><i class="ti ti-truck-delivery" aria-hidden="true"></i>Checkout</div>
               <div class="db-ring-wrap">
                 <svg width="128" height="128" viewBox="0 0 128 128">
@@ -1181,7 +1181,7 @@
                   <text x="64" y="77" text-anchor="middle" class="db-ring-label" fill="var(--text3)">total</text>
                 </svg>
               </div>
-              <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:5px;padding:0 0 6px">
+              <div class="diario-stats" style="display:grid;grid-template-columns:repeat(2,1fr);gap:5px;padding:0 0 6px">
                 <div class="db-stat db-stat-ok">
                   <input class="db-stat-n" type="number" min="0" id="diario-ck-conc" value="0" oninput="_atualizarSetorDiario('ck')">
                   <div class="db-stat-l">Concluídos</div>
@@ -1192,7 +1192,7 @@
                 </div>
               </div>
               <div id="diario-ck-total" style="display:none">0</div>
-              <div style="margin-top:6px">
+              <div class="diario-obs" style="margin-top:6px">
                 <div style="font-size:10px;font-weight:600;color:var(--text3);margin-bottom:3px;letter-spacing:.2px">Observações</div>
                 <textarea id="diario-obs-ck" placeholder="Ocorrências no checkout..." style="width:100%;min-height:56px;border:1px solid var(--border);border-radius:6px;padding:7px;font-size:12px;font-family:inherit;background:var(--surface2);color:var(--text);resize:vertical;box-sizing:border-box"></textarea>
               </div>
@@ -1200,8 +1200,8 @@
           </div>
 
           <!-- Embalagem + Reposição lado a lado -->
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
-            <div class="card" style="margin-bottom:0">
+          <div class="diario-setores" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+            <div class="card diario-setor" style="margin-bottom:0">
               <div class="card-hd"><i class="ti ti-package" aria-hidden="true"></i>Embalagem</div>
               <div class="db-ring-wrap">
                 <svg width="128" height="128" viewBox="0 0 128 128">
@@ -1212,7 +1212,7 @@
                   <text x="64" y="77" text-anchor="middle" class="db-ring-label" fill="var(--text3)">total</text>
                 </svg>
               </div>
-              <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:5px;padding:0 0 6px">
+              <div class="diario-stats" style="display:grid;grid-template-columns:repeat(2,1fr);gap:5px;padding:0 0 6px">
                 <div class="db-stat db-stat-ok">
                   <input class="db-stat-n" type="number" min="0" id="diario-emb-emb" value="0" oninput="_atualizarSetorDiario('emb')">
                   <div class="db-stat-l">Embalados</div>
@@ -1223,12 +1223,12 @@
                 </div>
               </div>
               <div id="diario-emb-total" style="display:none">0</div>
-              <div style="margin-top:6px">
+              <div class="diario-obs" style="margin-top:6px">
                 <div style="font-size:10px;font-weight:600;color:var(--text3);margin-bottom:3px;letter-spacing:.2px">Observações</div>
                 <textarea id="diario-obs-emb" placeholder="Ocorrências na embalagem..." style="width:100%;min-height:56px;border:1px solid var(--border);border-radius:6px;padding:7px;font-size:12px;font-family:inherit;background:var(--surface2);color:var(--text);resize:vertical;box-sizing:border-box"></textarea>
               </div>
             </div>
-            <div class="card" style="margin-bottom:0">
+            <div class="card diario-setor" style="margin-bottom:0">
               <div class="card-hd"><i class="ti ti-package-import" aria-hidden="true"></i>Reposição</div>
               <div class="db-ring-wrap">
                 <svg width="128" height="128" viewBox="0 0 128 128">
@@ -1239,7 +1239,7 @@
                   <text x="64" y="77" text-anchor="middle" class="db-ring-label" fill="var(--text3)">total</text>
                 </svg>
               </div>
-              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;padding:0 0 6px">
+              <div class="diario-stats" style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;padding:0 0 6px">
                 <div class="db-stat db-stat-ok">
                   <input class="db-stat-n" type="number" min="0" id="diario-rep-res" value="0" oninput="_atualizarSetorDiario('rep')">
                   <div class="db-stat-l">Resolvidas</div>
@@ -1254,7 +1254,7 @@
                 </div>
               </div>
               <div id="diario-rep-total" style="display:none">0</div>
-              <div style="margin-top:6px">
+              <div class="diario-obs" style="margin-top:6px">
                 <div style="font-size:10px;font-weight:600;color:var(--text3);margin-bottom:3px;letter-spacing:.2px">Observações</div>
                 <textarea id="diario-obs-rep" placeholder="Ocorrências na reposição..." style="width:100%;min-height:56px;border:1px solid var(--border);border-radius:6px;padding:7px;font-size:12px;font-family:inherit;background:var(--surface2);color:var(--text);resize:vertical;box-sizing:border-box"></textarea>
               </div>
@@ -1281,7 +1281,7 @@
           <div id="diario-status-banner" style="display:none;margin-bottom:12px"></div>
 
           <!-- Botões de ação -->
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+          <div class="diario-acoes" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
             <button onclick="salvarDiario()" class="btn btn-outline" style="padding:13px;font-size:14px">Salvar rascunho</button>
             <button id="btn-enviar-diario" onclick="enviarDiario()" class="btn btn-primary" style="padding:13px;font-size:14px">Finalizar e enviar</button>
           </div>
@@ -1305,8 +1305,8 @@
 
       <!-- Modal de Validação do Diário de Bordo -->
       <div id="modal-diario-validacao" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9000;display:none;align-items:center;justify-content:center;padding:16px">
-        <div style="background:var(--surface);border-radius:16px;width:100%;max-width:540px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.4)">
-          <div style="padding:20px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px">
+        <div class="diario-modal-box" style="background:var(--surface);border-radius:16px;width:100%;max-width:540px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.4)">
+          <div class="dm-sec" style="padding:20px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px">
             <div style="flex:1">
               <div style="font-weight:800;font-size:16px">Validar Diário de Bordo</div>
               <div style="font-size:12px;color:var(--text3)" id="modal-val-subtitulo">Turno anterior</div>
@@ -1317,9 +1317,9 @@
             </div>
           </div>
           <!-- Resumo do turno -->
-          <div id="modal-val-resumo" style="padding:16px 22px;border-bottom:1px solid var(--border);background:var(--surface2)"></div>
+          <div id="modal-val-resumo" class="dm-sec" style="padding:16px 22px;border-bottom:1px solid var(--border);background:var(--surface2)"></div>
           <!-- Checklist -->
-          <div style="padding:16px 22px">
+          <div class="dm-sec" style="padding:16px 22px">
             <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.8px;margin-bottom:12px">CHECKLIST DE VALIDAÇÃO</div>
             <div id="modal-val-checklist"></div>
             <div style="margin-top:14px">
@@ -1328,12 +1328,12 @@
             </div>
           </div>
           <!-- Score preview + botão -->
-          <div style="padding:16px 22px;border-top:1px solid var(--border);display:flex;align-items:center;gap:12px">
+          <div class="dm-sec dm-rodape" style="padding:16px 22px;border-top:1px solid var(--border);display:flex;align-items:center;gap:12px">
             <div style="flex:1">
               <div style="font-size:10px;color:var(--text3);text-transform:uppercase">Pontuação calculada</div>
               <div id="modal-val-score" style="font-size:32px;font-weight:900;color:#16a34a">100</div>
             </div>
-            <div style="display:flex;gap:8px">
+            <div class="dm-botoes" style="display:flex;gap:8px">
               <button onclick="fecharModalValidacao()" style="padding:12px 18px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:13px">Cancelar</button>
               <button onclick="submeterValidacao()" style="padding:12px 22px;background:#16a34a;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px;font-weight:700">Confirmar Validação</button>
             </div>
