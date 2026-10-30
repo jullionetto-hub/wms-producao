@@ -385,6 +385,9 @@ const CHECKLIST_ITENS = [
 ];
 
 // ── POST /diario/:id/enviar — Finaliza e envia para validação ─────────────────
+// Tempo que o turno seguinte tem para validar o diário depois de enviado
+const PRAZO_VALIDACAO_DIARIO_MIN = 60;
+
 router.post('/diario/:id/enviar', requerAuth, requerPerfil('supervisor'), async (req, res) => {
   try {
     const id = validarId(req.params.id);
@@ -395,7 +398,7 @@ router.post('/diario/:id/enviar', requerAuth, requerPerfil('supervisor'), async 
       return res.status(400).json({ erro: 'Este diário já foi enviado ou validado' });
     }
     const agora = new Date();
-    const prazo  = new Date(agora.getTime() + 30 * 60 * 1000); // +30 minutos
+    const prazo  = new Date(agora.getTime() + PRAZO_VALIDACAO_DIARIO_MIN * 60 * 1000);
     await pool.query(
       `UPDATE diario_bordo SET status='enviado', enviado_em=$1, prazo_validacao=$2 WHERE id=$3`,
       [agora, prazo, id]

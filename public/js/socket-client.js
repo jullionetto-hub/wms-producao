@@ -109,7 +109,7 @@
       if (turnoQueValida && meuTurno && meuTurno !== turnoQueValida) return;
       const turnoIcon = data.turno==='Manha'?'M':data.turno==='Tarde'?'T':'N';
       if (typeof toast === 'function') {
-        toast(`Diário do turno ${data.turno} (${data.supervisor}) aguarda validação! Você tem 30 minutos.`, 'aviso');
+        toast(`Diário do turno ${data.turno} (${data.supervisor}) aguarda validação! Você tem 1 hora.`, 'aviso');
       }
       // Atualiza o banner de validação pendente se estiver na tela de diário
       if (typeof verificarValidacaoPendente === 'function') {

@@ -492,6 +492,10 @@ describe('Admin — Diário: Envio e Validação', () => {
     expect(res.status).toBe(200);
     expect(res.body.mensagem).toBe('Diário enviado para validação!');
     expect(res.body.prazo).toBeDefined();
+    // Prazo de validação do turno seguinte: 1 hora
+    const minutos = (new Date(res.body.prazo).getTime() - Date.now()) / 60000;
+    expect(minutos).toBeGreaterThan(59);
+    expect(minutos).toBeLessThanOrEqual(60);
   });
 
   test('GET /diario/validacao/pendente sem pendências → null', async () => {

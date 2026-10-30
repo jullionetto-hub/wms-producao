@@ -1260,7 +1260,7 @@ function atualizarStatusBanner(status, extra, supervisor) {
   const editadoPor = supervisor ? ` — editado por ${escHtml(supervisor)}` : '';
   const cfg = {
     rascunho: { acc:'var(--text3)', msg:`Rascunho salvo${editadoPor} — clique em "Finalizar e enviar" para enviar ao próximo turno` },
-    enviado:  { acc:'var(--info)', msg:`Enviado para validação${editadoPor} — prazo: ${extra||'30 min'}` },
+    enviado:  { acc:'var(--info)', msg:`Enviado para validação${editadoPor} — prazo: ${extra||'1 hora'}` },
     validado: { acc:'var(--green)', msg:`Validado pelo próximo turno — Pontuação: <b>${extra||'?'}/100</b>` },
     expirado: { acc:'var(--red)', msg:'Prazo de validação expirou sem resposta do próximo turno' },
   };
@@ -1301,7 +1301,7 @@ function enviarDiario() {
   }
   wmsConfirm({
     titulo:     'Enviar Diário de Bordo?',
-    sub:        'O próximo supervisor terá 30 minutos para validar as informações do turno.',
+    sub:        'O próximo supervisor terá 1 hora para validar as informações do turno.',
     btnOk:      'Sim, enviar',
     btnOkClass: 'btn-primary',
   }, async () => {
