@@ -514,6 +514,35 @@ describe('Admin — Diário: Envio e Validação', () => {
     expect(res.body.atrasada).toBe(false);
   });
 
+  test('GET /diario/:id registra que o usuário viu o diário', async () => {
+    mockDb.get.mockResolvedValueOnce({ id: 26, data: '2026-05-09', turno: 'Noite', status: 'enviado', dados: '{}' });
+    mockPool.query.mockClear();
+    const res = await agent.get('/diario/26');
+    expect(res.status).toBe(200);
+    const chamada = mockPool.query.mock.calls.find(c => /diario_visualizacoes/.test(c[0]));
+    expect(chamada).toBeDefined();
+    expect(chamada[1][0]).toBe(26);
+  });
+
+  test('POST /diario/:id/visto registra a visualização', async () => {
+    mockPool.query.mockClear();
+    const res = await agent.post('/diario/26/visto').send({});
+    expect(res.status).toBe(200);
+    expect(mockPool.query.mock.calls.some(c => /diario_visualizacoes/.test(c[0]))).toBe(true);
+  });
+
+  test('POST /diario/:id/visto com id inválido → 400', async () => {
+    const res = await agent.post('/diario/abc/visto').send({});
+    expect(res.status).toBe(400);
+  });
+
+  test('falha ao registrar a visualização não derruba a abertura do diário', async () => {
+    mockDb.get.mockResolvedValueOnce({ id: 26, data: '2026-05-09', turno: 'Noite', status: 'enviado', dados: '{}' });
+    mockPool.query.mockRejectedValueOnce(new Error('tabela inexistente'));
+    const res = await agent.get('/diario/26');
+    expect(res.status).toBe(200);
+  });
+
   test('GET /diario/validacao/pendente supervisor de Manhã valida só o diário da Noite', async () => {
     mockDb.get.mockClear();
     await agent.get('/diario/validacao/pendente');

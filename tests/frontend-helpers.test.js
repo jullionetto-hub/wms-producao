@@ -50,6 +50,45 @@ describe('_diarioObsHtml (observações do diário para o turno seguinte)', () =
   });
 });
 
+describe('_diarioMetaHtml (Adicionado por / Verificado por / Visto por)', () => {
+  const ctx = {};
+  vm.createContext(ctx);
+  vm.runInContext(codigo['config.js'].match(/function escHtml[\s\S]*?\n}\n/)[0], ctx);
+  vm.runInContext(codigo['auth.js'].match(/const _DIARIO_TURNO_ROTULO[\s\S]*?function _diarioMetaHtml[\s\S]*?\n}\n/)[0], ctx);
+  const texto = html => html.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+
+  test('diário validado: turno e nome de quem criou, de quem verificou e de quem viu', () => {
+    const t = texto(ctx._diarioMetaHtml({
+      turno: 'Tarde', supervisor: 'Maike Borges', status: 'validado',
+      validador: 'Ana Noite', turno_validador: 'Noite', validado_em: '2026-10-29T22:10:00Z',
+      vistos: [{ nome: 'Maike Borges', turno: 'Tarde' }, { nome: 'Luciene Tavares', turno: 'Manha' }, { nome: 'Ana Noite', turno: 'Noite' }],
+    }));
+    expect(t).toContain('Adicionado por: Tarde · Maike Borges');
+    expect(t).toContain('Verificado por: Noite · Ana Noite');
+    expect(t).toContain('Visto por: Luciene Tavares (Manhã), Ana Noite (Noite)');
+    expect(t).not.toContain('Visto por: Maike'); // quem criou não entra em "visto por"
+  });
+
+  test('enviado e ainda sem verificação: diz qual turno deve verificar', () => {
+    expect(texto(ctx._diarioMetaHtml({ turno: 'Noite', supervisor: 'Leiza', status: 'enviado', vistos: null })))
+      .toContain('Verificado por: ainda não verificado — aguardando o turno Manhã');
+    expect(texto(ctx._diarioMetaHtml({ turno: 'Manha', supervisor: 'X', status: 'expirado' })))
+      .toContain('aguardando o turno Tarde');
+  });
+
+  test('rascunho e ninguém viu ainda', () => {
+    const t = texto(ctx._diarioMetaHtml({ turno: 'Manha', supervisor: 'Fulano', status: 'rascunho' }));
+    expect(t).toContain('Adicionado por: Manhã · Fulano');
+    expect(t).toContain('Verificado por: diário ainda não enviado');
+    expect(t).toContain('Visto por: ninguém ainda');
+  });
+
+  test('escapa HTML nos nomes', () => {
+    expect(ctx._diarioMetaHtml({ turno: 'Tarde', supervisor: '<b>x</b>', status: 'rascunho', vistos: [{ nome: '<i>y</i>', turno: 'Noite' }] }))
+      .not.toMatch(/<b>x<\/b>|<i>y<\/i>/);
+  });
+});
+
 describe('escHtml', () => {
   const ctx = {};
   vm.createContext(ctx);

@@ -122,11 +122,28 @@ router.post('/relatorio/gerar', requerAuth, requerPerfil('supervisor'), async (r
   } catch(e) { res.status(500).json({erro:e.message}); }
 });
 
+// Registra que o usuário logado viu este diário (uma linha por pessoa; atualiza a hora).
+// Nunca derruba a resposta da tela por causa do registro.
+async function registrarVisualizacaoDiario(req, diarioId) {
+  const u = req.session?.usuario;
+  if (!u || !diarioId) return;
+  try {
+    await pool.query(
+      `INSERT INTO diario_visualizacoes (diario_id, usuario_id, usuario_nome, turno, visto_em)
+       VALUES ($1,$2,$3,$4,NOW())
+       ON CONFLICT (diario_id, usuario_id) DO UPDATE SET visto_em = NOW(), usuario_nome = EXCLUDED.usuario_nome, turno = EXCLUDED.turno`,
+      [diarioId, u.id, u.nome || '', normalizarTurno(u.turno)]
+    );
+  } catch (e) { console.warn('visualizacao do diario:', e.message); }
+}
+
 router.get('/diario', requerAuth, requerPerfil('supervisor'), async (req,res) => {
   try {
     res.json(await db.all(`
       SELECT d.id, d.data, d.turno, d.supervisor, d.leu_anterior, d.status, d.criado_em,
-             v.pontuacao
+             v.pontuacao, v.validador, v.turno_validador, v.validado_em,
+             (SELECT json_agg(json_build_object('nome', vz.usuario_nome, 'turno', vz.turno) ORDER BY vz.visto_em)
+                FROM diario_visualizacoes vz WHERE vz.diario_id = d.id) AS vistos
       FROM diario_bordo d
       LEFT JOIN diario_validacoes v ON v.diario_id = d.id
       ORDER BY d.criado_em DESC LIMIT 30
@@ -162,6 +179,7 @@ router.get('/diario/anterior', requerAuth, requerPerfil('supervisor'), async (re
       anterior = await db.get('SELECT * FROM diario_bordo WHERE data=$1 AND turno=$2', [dataAnterior, turnoAnterior]);
     }
     if (!anterior) return res.json(null);
+    await registrarVisualizacaoDiario(req, anterior.id);
     if (typeof anterior.dados === 'string') anterior.dados = JSON.parse(anterior.dados);
     if (typeof anterior.observacoes === 'string') {
       try { anterior.observacoes = JSON.parse(anterior.observacoes); } catch(e) { anterior.observacoes = {geral: anterior.observacoes}; }
@@ -255,9 +273,19 @@ router.get('/diario/:id', requerAuth, requerPerfil('supervisor'), async (req,res
   try {
     const d = await db.get('SELECT * FROM diario_bordo WHERE id=$1', [req.params.id]);
     if (!d) return res.status(404).json({erro:'Nao encontrado'});
+    await registrarVisualizacaoDiario(req, d.id);
     if (typeof d.dados === 'string') d.dados = JSON.parse(d.dados);
     res.json(d);
   } catch(e) { res.status(500).json({erro:e.message}); }
+});
+
+// Registro explícito de "visto" — usado quando o supervisor abre a janela de validação,
+// que mostra os dados do diário sem passar por GET /diario/:id.
+router.post('/diario/:id/visto', requerAuth, requerPerfil('supervisor'), async (req,res) => {
+  const id = validarId(req.params.id);
+  if (!id) return res.status(400).json({erro:'ID invalido'});
+  await registrarVisualizacaoDiario(req, id);
+  res.json({ ok: true });
 });
 
 // ── Fotos do diário de bordo (guardadas no banco; o navegador já reduz a imagem) ──

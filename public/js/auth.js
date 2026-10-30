@@ -1471,6 +1471,7 @@ async function abrirModalValidacao() {
     document.getElementById('modal-val-score').textContent = '100';
     document.getElementById('modal-val-obs').value = '';
     modal.style.display = 'flex';
+    fetch(`${API}/diario/${val.diario_id}/visto`, { method:'POST', credentials:'include' }).catch(() => {});
     // Sincroniza timer do modal com o countdown
     _valTimer && clearInterval(_valTimer);
     let restante = val.restante_segundos;
@@ -1608,6 +1609,36 @@ function fecharModalValidacao() {
   if (_valTimer) { clearInterval(_valTimer); _valTimer = null; }
 }
 
+const _DIARIO_TURNO_ROTULO = { Manha: 'Manhã', Tarde: 'Tarde', Noite: 'Noite' };
+// Turno que valida o diário de cada turno (Manhã valida a Noite, Tarde valida a Manhã, Noite valida a Tarde)
+const _DIARIO_QUEM_VALIDA = { Manha: 'Tarde', Tarde: 'Noite', Noite: 'Manha' };
+function _diarioChaveTurno(t) { return String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').trim(); }
+function _diarioRotuloTurno(t) { return _DIARIO_TURNO_ROTULO[_diarioChaveTurno(t)] || t || '—'; }
+
+// Três linhas do histórico: quem criou, quem verificou e quem viu o diário.
+function _diarioMetaHtml(d) {
+  const adicionado = `${_diarioRotuloTurno(d.turno)}${d.supervisor ? ' · ' + escHtml(d.supervisor) : ''}`;
+  let verificado;
+  if (d.status === 'validado') {
+    const quando = d.validado_em
+      ? new Date(d.validado_em).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+      : '';
+    verificado = `${_diarioRotuloTurno(d.turno_validador)}${d.validador ? ' · ' + escHtml(d.validador) : ''}${quando ? ' · ' + quando : ''}`;
+  } else if (d.status === 'enviado' || d.status === 'expirado') {
+    const quem = _DIARIO_QUEM_VALIDA[_diarioChaveTurno(d.turno)];
+    verificado = `<span style="color:var(--amber)">ainda não verificado${quem ? ' — aguardando o turno ' + _diarioRotuloTurno(quem) : ''}</span>`;
+  } else {
+    verificado = 'diário ainda não enviado';
+  }
+  const vistos = (d.vistos || []).filter(v => v && v.nome && v.nome !== d.supervisor);
+  const vistosTxt = vistos.length
+    ? vistos.map(v => `${escHtml(v.nome)}${v.turno ? ' (' + _diarioRotuloTurno(v.turno) + ')' : ''}`).join(', ')
+    : 'ninguém ainda';
+  return `<div><b>Adicionado por:</b> ${adicionado}</div>
+    <div><b>Verificado por:</b> ${verificado}</div>
+    <div><b>Visto por:</b> ${vistosTxt}</div>`;
+}
+
 async function carregarListaDiarios() {
   const el = document.getElementById('lista-diarios');
   if (!el) return;
@@ -1627,7 +1658,7 @@ async function carregarListaDiarios() {
         onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
         <div style="flex:1;min-width:0">
           <div style="font-size:13px;font-weight:700">${fmtData(d.data)} · ${escHtml(d.turno)}</div>
-          <div style="font-size:11px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(d.supervisor||'—')}${d.leu_anterior ? ' · leu o anterior' : ''}</div>
+          <div style="font-size:11px;color:var(--text3);line-height:1.5;margin-top:2px">${_diarioMetaHtml(d)}</div>
         </div>
         <span style="font-size:11px;font-weight:700;color:${cor[d.status]||'var(--text3)'}">${st}</span>
         <button class="btn-icon-outline" title="Exportar Excel" onclick="event.stopPropagation();exportarDiarioExcel(${d.id})"><i class="ti ti-download" aria-hidden="true"></i></button>

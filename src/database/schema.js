@@ -220,6 +220,18 @@ const TABLES = [
   )`,
   'CREATE INDEX IF NOT EXISTS idx_diario_fotos_diario ON diario_fotos(diario_id)',
 
+  // Quem abriu/viu cada diário de bordo (uma linha por pessoa e diário; visto_em
+  // guarda a última vez). Alimenta o "Visto por" da lista de diários.
+  `CREATE TABLE IF NOT EXISTS diario_visualizacoes (
+    id            SERIAL PRIMARY KEY,
+    diario_id     INTEGER NOT NULL REFERENCES diario_bordo(id) ON DELETE CASCADE,
+    usuario_id    INTEGER,
+    usuario_nome  TEXT NOT NULL,
+    turno         TEXT DEFAULT '',
+    visto_em      TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(diario_id, usuario_id)
+  )`,
+
   `CREATE TABLE IF NOT EXISTS passagem_turno (
     id                    SERIAL PRIMARY KEY,
     data                  TEXT NOT NULL,
