@@ -2273,7 +2273,7 @@ function _htmlResumoGlobalDist(r, sessao) {
   ].filter(Boolean).join(' · ');
   return `<div style="display:flex;gap:8px;flex-wrap:wrap">
       ${_chipResumo(r.distribuidos, 'Já distribuídos', 'var(--green)')}
-      ${_chipResumo(r.faltam, 'Faltam distribuir', r.faltam > 0 ? 'var(--amber)' : 'var(--border)')}
+      ${_chipResumo(r.faltam, 'Faltam distribuir (total geral)', r.faltam > 0 ? 'var(--amber)' : 'var(--border)')}
       ${sessao > 0 ? _chipResumo('+' + sessao, 'Distribuídos agora', 'var(--accent)') : ''}
     </div>
     ${detalhe ? `<div style="font-size:11px;color:var(--text3);margin-top:6px">Faltam: ${detalhe}</div>` : ''}
@@ -2313,9 +2313,9 @@ function registrarDistribuidos(n) {
   return atualizarResumoGlobalDist();
 }
 
-function _htmlResumoContagem(r, rotuloEntram, extra) {
+function _htmlResumoContagem(r, rotuloEntram, extra, rotuloTotal) {
   return `<div style="display:flex;gap:8px;flex-wrap:wrap">
-      ${_chipResumo(r.total, 'Disponíveis', 'var(--accent)')}
+      ${_chipResumo(r.total, rotuloTotal || 'Disponíveis', 'var(--accent)')}
       ${_chipResumo(r.entram, rotuloEntram, 'var(--green)')}
       ${_chipResumo(r.pendentes, 'Ficarão pendentes', r.pendentes > 0 ? 'var(--amber)' : 'var(--border)')}
     </div>
@@ -3246,7 +3246,10 @@ async function carregarPedidosDistribuicao() {
     const labelModo = _htmlResumoContagem(
       _resumoQuantidade(totalDisponivel, qtdInput),
       'A distribuir agora',
-      _modoPrime ? '<span style="color:var(--amber);font-weight:800">⭐ Modo Prime</span> — só pedidos Prime.' : ''
+      _modoPrime
+        ? '<span style="color:var(--amber);font-weight:800">⭐ Modo Prime</span> — esta lista tem só pedidos Prime. Os pedidos normais ficam de fora (desligue “Incluir Prime” para vê-los).'
+        : 'Esta lista tem só pedidos normais e Drive Thru. Os pedidos Prime ficam de fora (clique em “Incluir Prime” para distribuí-los).',
+      _modoPrime ? 'Prime na fila' : 'Normais + Drive Thru na fila'
     );
     if (!lista.length) {
       el.innerHTML = `<div style="font-size:11px;color:var(--text3);margin-bottom:8px">${labelModo}</div><div style="color:var(--text3);font-size:12px;text-align:center;padding:20px">${_modoPrime ? 'Nenhum pedido Prime pendente' : 'Nenhum pedido normal pendente'}</div>`;
