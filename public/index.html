@@ -550,7 +550,7 @@
           <button class="btn btn-primary btn-sm" id="ctab-usuarios" onclick="trocarCadastroTab('usuarios')">Usuários</button>
         </div>
         <div id="cad-usuarios">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start">
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start">
             <div class="card" style="position:sticky;top:70px">
               <div class="card-hd">Novo usuário</div>
               <div class="form-grp"><label>NOME COMPLETO</label><input type="text" id="usr-nome" placeholder="Nome do colaborador" oninput="sugerirLoginSenha()"/></div>
