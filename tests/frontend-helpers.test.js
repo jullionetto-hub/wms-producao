@@ -92,8 +92,8 @@ describe('_diarioMetaHtml (Adicionado por / Verificado por / Visto por)', () => 
 describe('_resumoQuantidade (quantos entram e quantos ficam pendentes)', () => {
   const ctx = {};
   vm.createContext(ctx);
-  vm.runInContext(codigo['pedidos.js'].match(/function _resumoQuantidade[\s\S]*?\n}\n/)[0], ctx);
-  vm.runInContext(codigo['pedidos.js'].match(/function _htmlResumoContagem[\s\S]*?\n}\n/)[0], ctx);
+  ['_resumoQuantidade', '_chipResumo', '_htmlResumoGlobalDist', '_htmlResumoContagem']
+    .forEach(n => vm.runInContext(codigo['pedidos.js'].match(new RegExp(`function ${n}[\\s\\S]*?\\n}\\n`))[0], ctx));
 
   test('sem quantidade (vazio ou 0): todos entram e nada fica pendente', () => {
     expect(ctx._resumoQuantidade(120, '')).toEqual({ total: 120, entram: 120, pendentes: 0, excedeu: false });
@@ -122,6 +122,44 @@ describe('_resumoQuantidade (quantos entram e quantos ficam pendentes)', () => {
     expect(html).toContain('>50<');
     expect(html).toContain('>70<');
     expect(html).toContain('3 Drive Thru fora');
+  });
+});
+
+describe('_htmlResumoGlobalDist (já distribuídos / faltam — vale pra todas as abas)', () => {
+  const ctx = {};
+  vm.createContext(ctx);
+  ['_chipResumo', '_htmlResumoGlobalDist']
+    .forEach(n => vm.runInContext(codigo['pedidos.js'].match(new RegExp(`function ${n}[\\s\\S]*?\\n}\\n`))[0], ctx));
+
+  test('mostra já distribuídos, faltam e o detalhe do que falta', () => {
+    const html = ctx._htmlResumoGlobalDist({ distribuidos: 85, faltam: 35, faltam_normais: 20, faltam_prime: 12, faltam_drive: 3, marcados_turno: 0 }, 0);
+    expect(html).toContain('Já distribuídos');
+    expect(html).toContain('Faltam distribuir');
+    expect(html).toContain('>85<');
+    expect(html).toContain('>35<');
+    expect(html).toContain('Faltam: 20 normais · 12 Prime · 3 Drive Thru');
+    expect(html).not.toContain('Distribuídos agora'); // nada distribuído nesta abertura
+  });
+
+  test('depois de distribuir nesta abertura aparece o contador "Distribuídos agora"', () => {
+    const html = ctx._htmlResumoGlobalDist({ distribuidos: 110, faltam: 10, faltam_normais: 10, faltam_prime: 0, faltam_drive: 0 }, 25);
+    expect(html).toContain('Distribuídos agora');
+    expect(html).toContain('>+25<');
+  });
+
+  test('avisa quando há pedidos marcados só por turno (sem colaborador)', () => {
+    const html = ctx._htmlResumoGlobalDist({ distribuidos: 0, faltam: 40, faltam_normais: 40, faltam_prime: 0, faltam_drive: 0, marcados_turno: 18 }, 0);
+    expect(html).toContain('18 deles já marcados por turno, ainda sem colaborador');
+  });
+
+  test('tudo distribuído: faltam zero e sem detalhe', () => {
+    const html = ctx._htmlResumoGlobalDist({ distribuidos: 120, faltam: 0, faltam_normais: 0, faltam_prime: 0, faltam_drive: 0 }, 0);
+    expect(html).toContain('>0<');
+    expect(html).not.toContain('Faltam:');
+  });
+
+  test('sem dados não renderiza nada', () => {
+    expect(ctx._htmlResumoGlobalDist(null, 0)).toBe('');
   });
 });
 

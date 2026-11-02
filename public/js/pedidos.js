@@ -2144,6 +2144,7 @@ function selecionarCenario(c) {
 
 async function abrirModalDistribuicao() {
   document.getElementById('modal-distribuicao').style.display = 'flex';
+  _distSessao = 0; _distResumo = null; // contador "distribuídos agora" recomeça a cada abertura
   // Sempre volta pra aba Automática ao (re)abrir — sem isso, fechar o modal
   // numa aba diferente (Turno/Manual/Lotes) deixava aquele painel ainda
   // marcado como visível na reabertura, "vazando" por baixo do conteúdo novo.
@@ -2252,15 +2253,70 @@ function _resumoQuantidade(total, qtd) {
   return { total: t, entram, pendentes: t - entram, excedeu: q > t };
 }
 
-function _htmlResumoContagem(r, rotuloEntram, extra) {
-  const chip = (valor, rotulo, cor) => `<div style="flex:1;min-width:120px;background:var(--surface2);border:1px solid var(--border);border-left:3px solid ${cor};border-radius:8px;padding:8px 12px">
+// Quadro numérico usado nos resumos de contagem da Distribuição
+function _chipResumo(valor, rotulo, cor) {
+  return `<div style="flex:1;min-width:120px;background:var(--surface2);border:1px solid var(--border);border-left:3px solid ${cor};border-radius:8px;padding:8px 12px">
       <div style="font-family:'Space Mono',monospace;font-size:20px;font-weight:800;color:var(--text)">${valor}</div>
       <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.5px;text-transform:uppercase">${rotulo}</div>
     </div>`;
+}
+
+// Resumo geral — fica no topo do modal e vale pra TODAS as abas (Automática, Por
+// Turno, Manual, Lotes): o que já foi distribuído e o que falta no período filtrado.
+function _htmlResumoGlobalDist(r, sessao) {
+  if (!r) return '';
+  const detalhe = [
+    r.faltam_normais ? `${r.faltam_normais} normais` : '',
+    r.faltam_prime   ? `${r.faltam_prime} Prime` : '',
+    r.faltam_drive   ? `${r.faltam_drive} Drive Thru` : '',
+  ].filter(Boolean).join(' · ');
   return `<div style="display:flex;gap:8px;flex-wrap:wrap">
-      ${chip(r.total, 'Disponíveis', 'var(--accent)')}
-      ${chip(r.entram, rotuloEntram, 'var(--green)')}
-      ${chip(r.pendentes, 'Ficarão pendentes', r.pendentes > 0 ? 'var(--amber)' : 'var(--border)')}
+      ${_chipResumo(r.distribuidos, 'Já distribuídos', 'var(--green)')}
+      ${_chipResumo(r.faltam, 'Faltam distribuir', r.faltam > 0 ? 'var(--amber)' : 'var(--border)')}
+      ${sessao > 0 ? _chipResumo('+' + sessao, 'Distribuídos agora', 'var(--accent)') : ''}
+    </div>
+    ${detalhe ? `<div style="font-size:11px;color:var(--text3);margin-top:6px">Faltam: ${detalhe}</div>` : ''}
+    ${r.marcados_turno ? `<div style="font-size:11px;color:var(--text3);margin-top:2px">${r.marcados_turno} deles já marcados por turno, ainda sem colaborador.</div>` : ''}`;
+}
+
+let _distSessao = 0;   // pedidos distribuídos desde que o modal foi aberto
+let _distResumo = null;
+
+function _renderResumoGlobalDist() {
+  const el = document.getElementById('dist-resumo-global');
+  if (!el) return;
+  el.innerHTML = _distResumo ? _htmlResumoGlobalDist(_distResumo, _distSessao) : '';
+}
+
+// Busca (no período do filtro de data) quanto já foi distribuído e quanto falta.
+async function atualizarResumoGlobalDist() {
+  if (!document.getElementById('dist-resumo-global')) return;
+  const q = new URLSearchParams();
+  const dataDe  = document.getElementById('dist-data-de')?.value  || '';
+  const dataAte = document.getElementById('dist-data-ate')?.value || '';
+  if (dataDe)  q.set('data_de', dataDe);
+  if (dataAte) q.set('data_ate', dataAte);
+  try {
+    const res = await fetch(`${API}/pedidos/distribuicao/resumo?${q}`, { credentials:'include' });
+    if (!res.ok) throw new Error('falha');
+    _distResumo = await res.json();
+  } catch(e) { _distResumo = null; }
+  _renderResumoGlobalDist();
+  return _distResumo;
+}
+
+// Chamado depois de qualquer distribuição confirmada: soma ao contador da abertura
+// e atualiza o que falta.
+function registrarDistribuidos(n) {
+  _distSessao += Math.max(0, parseInt(n) || 0);
+  return atualizarResumoGlobalDist();
+}
+
+function _htmlResumoContagem(r, rotuloEntram, extra) {
+  return `<div style="display:flex;gap:8px;flex-wrap:wrap">
+      ${_chipResumo(r.total, 'Disponíveis', 'var(--accent)')}
+      ${_chipResumo(r.entram, rotuloEntram, 'var(--green)')}
+      ${_chipResumo(r.pendentes, 'Ficarão pendentes', r.pendentes > 0 ? 'var(--amber)' : 'var(--border)')}
     </div>
     ${r.excedeu ? `<div style="font-size:11px;color:var(--amber);margin-top:6px">A quantidade informada é maior que a disponível — todos os ${r.total} entram.</div>` : ''}
     ${extra ? `<div style="font-size:11px;color:var(--text3);margin-top:6px">${extra}</div>` : ''}`;
@@ -2611,6 +2667,7 @@ async function confirmarLotes() {
     if (data.erro) { toast(data.erro, 'erro'); return; }
     toast(`${data.lotes} lote(s) formado(s), ${data.pedidos} pedido(s) atribuído(s)!`, 'sucesso');
     atualizarResumoLote(); // o que sobrou pendente depois desta confirmação
+    registrarDistribuidos(data.pedidos);
     document.getElementById(ids.resultado).innerHTML = `
       <div style="text-align:center;padding:16px">
         <div style="font-size:32px;margin-bottom:8px">✅</div>
@@ -2753,6 +2810,7 @@ async function distBipePedido() {
       _dmBipeRegistrar(numeroPedido, false, data.erro || 'Pedido não encontrado ou já atribuído');
     } else {
       _dmBipeRegistrar(numeroPedido, true, `Atribuído para ${sepNome}`);
+      registrarDistribuidos(1);
       if (typeof carregarPedidos === 'function') carregarPedidos();
     }
   } catch(e) {
@@ -2952,7 +3010,20 @@ async function confirmarDistribuicaoTurnos() {
     toast(`${data.marcados} pedidos marcados por turno — ${resumo}`, 'sucesso');
     _turnosPlanoCurrent = null;
     if (btn) btn.style.display = 'none';
-    fecharModalDistribuicao();
+    // Não fecha mais o modal: mostra o que foi e o que falta (resumo no topo)
+    const calcT = document.getElementById('btn-calcular-turnos');
+    if (calcT) calcT.style.display = 'inline-flex';
+    const resT = document.getElementById('dist-turno-resultado');
+    if (resT) {
+      resT.style.display = '';
+      resT.innerHTML = `
+        <div style="text-align:center;padding:16px">
+          <div style="font-size:32px;margin-bottom:8px">✅</div>
+          <div style="font-size:14px;font-weight:700;color:var(--green);margin-bottom:6px">${data.marcados} pedido(s) marcados por turno — ${resumo}</div>
+          <div style="font-size:12px;color:var(--text3)">Eles ainda não têm colaborador: o resumo acima mostra quantos faltam receber separador.</div>
+        </div>`;
+    }
+    atualizarResumoGlobalDist();
     carregarPedidos();
   } catch(e) { toast('Erro ao confirmar distribuição por turno!', 'erro'); }
   finally { if (btn) { btn.disabled = false; btn.textContent = 'Confirmar por Turno'; } }
@@ -3056,6 +3127,7 @@ async function distManualAtribuir(pedidoId, numeroPedido) {
       return;
     }
     toast(`Pedido ${numeroPedido} atribuído com sucesso!`, 'sucesso');
+    registrarDistribuidos(1);
     // Remove a linha da tabela
     const tr = document.getElementById(`sep-sel-${pedidoId}`)?.closest('tr');
     if (tr) tr.remove();
@@ -3077,7 +3149,9 @@ async function carregarSeparadoresDistribuicao() {
   } catch(e) { console.warn(e); }
 }
 async function carregarPedidosDistribuicao() {
-  // O filtro de data é compartilhado com a aba Lotes: atualiza a contagem de lá também
+  // O filtro de data vale pra todas as abas: atualiza o resumo geral (distribuídos /
+  // faltam) e, na aba Lotes, a contagem de elegíveis
+  atualizarResumoGlobalDist();
   if (_distModoAtual === 'lotes') atualizarResumoLote();
   try {
     const dataFiltroDE  = document.getElementById('dist-data-de')?.value || '';
@@ -3251,7 +3325,19 @@ async function confirmarDistribuicao() {
     if (data.erro) { toast(data.erro, 'erro'); return; }
     const turnoLabel = turnoLote ? ` · Lote ${turnoLote}` : '';
     toast(`${data.distribuidos} pedidos distribuídos!${turnoLabel}`, 'sucesso');
-    fecharModalDistribuicao();
+    // Não fecha mais o modal: mostra o que foi e o que falta (resumo no topo) e deixa
+    // calcular de novo pra distribuir o restante.
+    distribuicaoPlano = null;
+    document.getElementById('dist-resultado').innerHTML = `
+      <div style="text-align:center;padding:16px">
+        <div style="font-size:32px;margin-bottom:8px">✅</div>
+        <div style="font-size:14px;font-weight:700;color:var(--green);margin-bottom:6px">${data.distribuidos} pedido(s) distribuído(s)${turnoLabel}</div>
+        <div style="font-size:12px;color:var(--text3)">O resumo acima mostra quantos já foram distribuídos e quantos ainda faltam. Para distribuir o restante, calcule de novo.</div>
+      </div>`;
+    document.getElementById('btn-confirmar-dist').style.display = 'none';
+    document.getElementById('btn-calcular-dist').style.display = 'inline-flex';
+    registrarDistribuidos(data.distribuidos);
+    carregarPedidosDistribuicao();
     carregarPedidos();
   } catch(e) { toast('Erro ao confirmar distribuição!', 'erro'); }
 }

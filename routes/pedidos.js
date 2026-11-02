@@ -1296,19 +1296,53 @@ async function _prepararEAgruparPedidos(elegiveis, modoLote) {
 // comportamento de /pedidos/distribuicao). Filtro por data de "aguardando desde":
 // pedido pendente/não atribuído nunca tem turno_distribuicao preenchido (só é
 // gravado na distribuição), então a data é o filtro que faz sentido aqui.
+const AGUARDANDO_DATA_SQL = `(CASE WHEN p.aguardando_desde ~ '^[0-9]{2}/[0-9]{2}/[0-9]{4}' THEN TO_TIMESTAMP(p.aguardando_desde,'DD/MM/YYYY HH24:MI')::DATE END)`;
+// Trecho " AND ..." do filtro por data de "aguardando desde"; empilha os valores em wParams.
+function _clausulaDatas(data_de, data_ate, wParams) {
+  let s = '';
+  if (data_de)  { wParams.push(data_de);  s += ` AND ${AGUARDANDO_DATA_SQL} >= $${wParams.length}::DATE`; }
+  if (data_ate) { wParams.push(data_ate); s += ` AND ${AGUARDANDO_DATA_SQL} <= $${wParams.length}::DATE`; }
+  return s;
+}
+
 function _filtroElegiveisLote({ data_de, data_ate, apenas_prime }) {
   let w = apenas_prime === true || apenas_prime === 'true'
     ? "p.status='pendente' AND p.separador_id IS NULL AND p.tem_prime=true"
     : "p.status='pendente' AND p.separador_id IS NULL AND (p.tem_prime=false OR p.tem_prime IS NULL)";
   const wParams = [];
-  if (data_de || data_ate) {
-    const AGUARDANDO_DATA = `(CASE WHEN p.aguardando_desde ~ '^[0-9]{2}/[0-9]{2}/[0-9]{4}' THEN TO_TIMESTAMP(p.aguardando_desde,'DD/MM/YYYY HH24:MI')::DATE END)`;
-    if (data_de)  { wParams.push(data_de);  w += ` AND ${AGUARDANDO_DATA} >= $${wParams.length}::DATE`; }
-    if (data_ate) { wParams.push(data_ate); w += ` AND ${AGUARDANDO_DATA} <= $${wParams.length}::DATE`; }
-  }
+  w += _clausulaDatas(data_de, data_ate, wParams);
   return { w, wParams };
 }
 const _ehDriveThru = p => String(p.transportadora || '').toUpperCase().includes('DRIVE');
+
+// Resumo único da distribuição, valendo pra TODOS os modos (Automática, Por Turno,
+// Manual, Lotes): do que entrou no período, quanto já tem colaborador e quanto falta.
+// "Falta" = pendente sem colaborador (inclui o marcado só por turno, que ainda não
+// tem quem separe — contado à parte em marcados_turno).
+router.get('/pedidos/distribuicao/resumo', requerAuth, requerPerfil('supervisor'), async (req,res) => {
+  try {
+    const { data_de, data_ate } = req.query;
+    const params = [];
+    const w = `p.status IN ('pendente','separando','concluido')${_clausulaDatas(data_de, data_ate, params)}`;
+    const SEM_COLAB = "p.status='pendente' AND p.separador_id IS NULL";
+    const DRIVE = "UPPER(COALESCE(p.transportadora,'')) LIKE '%DRIVE%'";
+    const r = await db.get(
+      `SELECT COUNT(*) AS total,
+              COUNT(*) FILTER (WHERE p.separador_id IS NOT NULL) AS distribuidos,
+              COUNT(*) FILTER (WHERE ${SEM_COLAB}) AS faltam,
+              COUNT(*) FILTER (WHERE ${SEM_COLAB} AND p.tem_prime=true) AS faltam_prime,
+              COUNT(*) FILTER (WHERE ${SEM_COLAB} AND ${DRIVE}) AS faltam_drive,
+              COUNT(*) FILTER (WHERE ${SEM_COLAB} AND COALESCE(p.tem_prime,false)=false AND NOT ${DRIVE}) AS faltam_normais,
+              COUNT(*) FILTER (WHERE ${SEM_COLAB} AND COALESCE(p.turno_distribuicao,'')<>'') AS marcados_turno
+       FROM pedidos p WHERE ${w}`, params);
+    const n = k => parseInt(r?.[k]) || 0;
+    res.json({
+      total: n('total'), distribuidos: n('distribuidos'), faltam: n('faltam'),
+      faltam_normais: n('faltam_normais'), faltam_prime: n('faltam_prime'),
+      faltam_drive: n('faltam_drive'), marcados_turno: n('marcados_turno'),
+    });
+  } catch(err) { res.status(500).json({erro:err.message}); }
+});
 
 // Quantos pedidos entram na formação de lotes (sem Drive Thru, que vai individual).
 // Só conta — não monta lote nem grava nada.
