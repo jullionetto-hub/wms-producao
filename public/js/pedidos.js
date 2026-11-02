@@ -2145,6 +2145,7 @@ function selecionarCenario(c) {
 async function abrirModalDistribuicao() {
   document.getElementById('modal-distribuicao').style.display = 'flex';
   _distSessao = 0; _distResumo = null; // contador "distribuídos agora" recomeça a cada abertura
+  restaurarCriteriosDist();
   // Sempre volta pra aba Automática ao (re)abrir — sem isso, fechar o modal
   // numa aba diferente (Turno/Manual/Lotes) deixava aquele painel ainda
   // marcado como visível na reabertura, "vazando" por baixo do conteúdo novo.
@@ -2573,10 +2574,56 @@ function filtrarTurnoLote(turno) {
     const t = (s.turno || '').toLowerCase().replace('ã','a').replace('â','a');
     return t.startsWith(turno.toLowerCase().replace('ã','a').replace('â','a').substring(0,4));
   }) : _todosSepsLote;
+  _renderListaColabs(el, seps, 'lote-sep-check');
+}
+
+// Colaboradores em lista (uma linha por pessoa, rolável) em vez de todos os
+// chips de uma vez — com contagem de marcados e atalhos Todos/Nenhum.
+function _renderListaColabs(el, seps, cls) {
   if (!seps.length) { el.innerHTML = '<div style="color:var(--text3);font-size:12px">Nenhum colaborador neste turno</div>'; return; }
-  el.innerHTML = seps.map(s =>
-    `<label style="display:flex;align-items:center;gap:6px;padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface2);cursor:pointer;font-size:12px;font-weight:600"><input type="checkbox" class="lote-sep-check" value="${s.id}" data-nome="${s.nome}" checked style="accent-color:var(--accent)"> ${s.nome}</label>`
+  const linhas = seps.map(s =>
+    `<label style="display:flex;align-items:center;gap:8px;padding:6px 10px;border-bottom:1px solid var(--border);cursor:pointer;font-size:12px;font-weight:600"><input type="checkbox" class="${cls}" value="${escHtml(s.id)}" data-nome="${escHtml(s.nome)}" checked style="accent-color:var(--accent)" onchange="_atualizarContagemColabs('${cls}')"><span style="flex:1">${escHtml(s.nome)}</span><span style="font-size:10px;font-weight:600;color:var(--text3)">${escHtml(s.turno || '')}</span></label>`
   ).join('');
+  const btn = 'padding:2px 8px;border:1px solid var(--border);border-radius:6px;background:transparent;color:var(--text2);font-size:10px;font-weight:700;cursor:pointer';
+  el.innerHTML =
+    `<div style="border:1.5px solid var(--border);border-radius:8px;background:var(--surface2);overflow:hidden">` +
+      `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;border-bottom:1px solid var(--border);background:var(--surface)">` +
+        `<span class="colabs-contagem" data-cls="${cls}" style="font-size:11px;font-weight:700;color:var(--text2)"></span>` +
+        `<span style="display:flex;gap:4px"><button type="button" style="${btn}" onclick="_marcarColabs('${cls}',true)">Todos</button><button type="button" style="${btn}" onclick="_marcarColabs('${cls}',false)">Nenhum</button></span>` +
+      `</div>` +
+      `<div style="max-height:180px;overflow-y:auto">${linhas}</div>` +
+    `</div>`;
+  _atualizarContagemColabs(cls);
+}
+
+function _atualizarContagemColabs(cls) {
+  const total = document.querySelectorAll('.' + cls).length;
+  const marcados = document.querySelectorAll('.' + cls + ':checked').length;
+  document.querySelectorAll('.colabs-contagem[data-cls="' + cls + '"]').forEach(e => {
+    e.textContent = marcados + ' de ' + total + ' selecionados';
+  });
+}
+
+function _marcarColabs(cls, marcar) {
+  document.querySelectorAll('.' + cls).forEach(c => { c.checked = marcar; });
+  _atualizarContagemColabs(cls);
+}
+
+// Critérios de distribuição: o supervisor esconde/mostra e a escolha fica salva.
+function toggleCriteriosDist(forcar) {
+  const corpo = document.getElementById('dist-criterios-corpo');
+  const btn = document.getElementById('btn-toggle-criterios');
+  if (!corpo || !btn) return;
+  const mostrar = typeof forcar === 'boolean' ? forcar : corpo.style.display === 'none';
+  corpo.style.display = mostrar ? '' : 'none';
+  btn.textContent = mostrar ? 'Ocultar' : 'Mostrar';
+  btn.setAttribute('aria-expanded', String(mostrar));
+  try { localStorage.setItem('wms_dist_criterios', mostrar ? '1' : '0'); } catch (_) {}
+}
+function restaurarCriteriosDist() {
+  let v = null;
+  try { v = localStorage.getItem('wms_dist_criterios'); } catch (_) {}
+  toggleCriteriosDist(v !== '0');
 }
 
 // Controla, após confirmar/imprimir, QUAL conjunto de botões/painel mexer —
@@ -3395,11 +3442,5 @@ function filtrarTurnoDistribuicao(turno) {
     var tc = t.replace('\u00e3','a').replace('\u00e2','a');
     return tc.startsWith(tb.substring(0,4));
   }) : _todosSepsDistribuicao;
-  if (!seps.length) {
-    el.innerHTML = '<div style="color:var(--text3);font-size:12px">Nenhum colaborador neste turno</div>';
-    return;
-  }
-  el.innerHTML = seps.map(function(s) {
-    return '<label style="display:flex;align-items:center;gap:6px;padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface2);cursor:pointer;font-size:12px;font-weight:600"><input type="checkbox" class="dist-sep-check" value="' + s.id + '" data-nome="' + s.nome + '" checked style="accent-color:var(--accent)"> ' + s.nome + '</label>';
-  }).join('');
+  _renderListaColabs(el, seps, 'dist-sep-check');
 }

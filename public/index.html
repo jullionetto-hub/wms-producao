@@ -2522,7 +2522,7 @@
 
 <script src="/js/geometria-estoque.js?v=1"></script>
 <script src="/js/config.js?v=16"></script>
-  <script src="/js/pedidos.js?v=57"></script>
+  <script src="/js/pedidos.js?v=58"></script>
   <script src="/js/separador.js?v=43"></script>
   <script src="/js/repositor.js?v=21"></script>
   <script src="/js/checkout.js?v=15"></script>
@@ -2607,15 +2607,21 @@
     </div>
     <div style="padding:18px">
       <div style="background:linear-gradient(135deg,rgba(79,70,229,.04),rgba(79,70,229,.04));border:1px solid rgba(79,70,229,.15);border-radius:var(--r-sm);padding:14px 16px;margin-bottom:16px">
-        <div style="font-size:11px;font-weight:800;color:var(--accent);letter-spacing:1.5px;margin-bottom:10px;text-transform:uppercase">Critérios de Distribuição</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:11px;color:var(--text2)">
-          <div style="display:flex;align-items:flex-start;gap:6px"><span style="color:var(--green);font-size:13px">●</span><span><b style="color:var(--text)">Corredores fáceis</b> (A–E, P–U)<br><span style="color:var(--text3)">Peso 1.0 por item</span></span></div>
-          <div style="display:flex;align-items:flex-start;gap:6px"><span style="color:var(--amber);font-size:13px">●</span><span><b style="color:var(--text)">Corredores médios</b> (M, N, O, V–Z)<br><span style="color:var(--text3)">Peso 1.5 por item</span></span></div>
-          <div style="display:flex;align-items:flex-start;gap:6px"><span style="color:var(--red);font-size:13px">●</span><span><b style="color:var(--text)">Corredores difíceis</b> (F–L, ZA, Arara)<br><span style="color:var(--text3)">Peso 2.0 por item</span></span></div>
-          <div style="display:flex;align-items:flex-start;gap:6px"><span style="color:var(--indigo);font-size:13px">●</span><span><b style="color:var(--text)">Ruas únicas</b> no pedido<br><span style="color:var(--text3)">+ 2 pontos cada</span></span></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+          <div style="font-size:11px;font-weight:800;color:var(--accent);letter-spacing:1.5px;text-transform:uppercase">Critérios de Distribuição</div>
+          <button type="button" id="btn-toggle-criterios" onclick="toggleCriteriosDist()" aria-expanded="true" aria-controls="dist-criterios-corpo"
+            style="padding:3px 10px;border-radius:6px;border:1px solid rgba(79,70,229,.3);background:transparent;color:var(--accent);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">Ocultar</button>
         </div>
-        <div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(79,70,229,.12);font-size:11px;color:var(--text2);display:flex;align-items:center;gap:6px">
-          <span>Pedidos <b style="color:var(--text)">RETIRADA DRIVE THRU</b> são priorizados e distribuídos primeiro, independentemente do horário.</span>
+        <div id="dist-criterios-corpo" style="margin-top:10px">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:11px;color:var(--text2)">
+            <div style="display:flex;align-items:flex-start;gap:6px"><span style="color:var(--green);font-size:13px">●</span><span><b style="color:var(--text)">Corredores fáceis</b> (A–E, P–U)<br><span style="color:var(--text3)">Peso 1.0 por item</span></span></div>
+            <div style="display:flex;align-items:flex-start;gap:6px"><span style="color:var(--amber);font-size:13px">●</span><span><b style="color:var(--text)">Corredores médios</b> (M, N, O, V–Z)<br><span style="color:var(--text3)">Peso 1.5 por item</span></span></div>
+            <div style="display:flex;align-items:flex-start;gap:6px"><span style="color:var(--red);font-size:13px">●</span><span><b style="color:var(--text)">Corredores difíceis</b> (F–L, ZA, Arara)<br><span style="color:var(--text3)">Peso 2.0 por item</span></span></div>
+            <div style="display:flex;align-items:flex-start;gap:6px"><span style="color:var(--indigo);font-size:13px">●</span><span><b style="color:var(--text)">Ruas únicas</b> no pedido<br><span style="color:var(--text3)">+ 2 pontos cada</span></span></div>
+          </div>
+          <div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(79,70,229,.12);font-size:11px;color:var(--text2);display:flex;align-items:center;gap:6px">
+            <span>Pedidos <b style="color:var(--text)">RETIRADA DRIVE THRU</b> são priorizados e distribuídos primeiro, independentemente do horário.</span>
+          </div>
         </div>
       </div>
       <!-- Filtro de data + imprimir -->
@@ -2672,6 +2678,12 @@
         </div>
 
         <div style="margin-bottom:14px">
+          <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1px;margin-bottom:8px">PEDIDOS PENDENTES PARA DISTRIBUIR</div>
+          <div id="dist-preview" style="max-height:300px;overflow-y:auto">
+            <div style="color:var(--text3);font-size:12px;text-align:center;padding:20px">Carregando pedidos...</div>
+          </div>
+        </div>
+        <div style="margin-bottom:14px">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
             <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1px">COLABORADORES ATIVOS</div>
             <div style="display:flex;gap:4px">
@@ -2681,7 +2693,7 @@
               <button onclick="filtrarTurnoDistribuicao('Noite')" id="dist-turno-noite"  class="btn-turno-dist">Noite</button>
             </div>
           </div>
-          <div id="dist-separadores-lista" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+          <div id="dist-separadores-lista" style="margin-bottom:12px">
             <div style="color:var(--text3);font-size:12px">Carregando...</div>
           </div>
         </div>
@@ -2707,12 +2719,6 @@
           </div>
         </div>
 
-        <div style="margin-bottom:14px">
-          <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1px;margin-bottom:8px">PEDIDOS PENDENTES PARA DISTRIBUIR</div>
-          <div id="dist-preview" style="max-height:300px;overflow-y:auto">
-            <div style="color:var(--text3);font-size:12px;text-align:center;padding:20px">Carregando pedidos...</div>
-          </div>
-        </div>
         <div id="dist-resultado" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px;margin-bottom:14px">
         </div>
         <div style="display:flex;gap:8px;justify-content:flex-end" id="dist-botoes-auto">
@@ -2851,7 +2857,7 @@
               <button onclick="filtrarTurnoLote('Noite')" id="lote-turno-noite"  class="btn-turno-dist">Noite</button>
             </div>
           </div>
-          <div id="lote-separadores-lista" style="display:flex;flex-wrap:wrap;gap:8px">
+          <div id="lote-separadores-lista">
             <div style="color:var(--text3);font-size:12px">Carregando...</div>
           </div>
         </div>

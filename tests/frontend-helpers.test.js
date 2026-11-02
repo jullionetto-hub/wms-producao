@@ -163,6 +163,31 @@ describe('_htmlResumoGlobalDist (já distribuídos / faltam — vale pra todas a
   });
 });
 
+describe('_renderListaColabs (colaboradores em lista na distribuição)', () => {
+  const ctx = { document: { querySelectorAll: () => [] } };
+  vm.createContext(ctx);
+  vm.runInContext(codigo['config.js'].match(/function escHtml[\s\S]*?\n}\n/)[0], ctx);
+  ['_renderListaColabs', '_atualizarContagemColabs']
+    .forEach(n => vm.runInContext(codigo['pedidos.js'].match(new RegExp(`function ${n}[\\s\\S]*?\\n}\\n`))[0], ctx));
+
+  test('uma linha por colaborador, marcados, com a classe que o cálculo lê', () => {
+    const el = { innerHTML: '' };
+    ctx._renderListaColabs(el, [{ id: 1, nome: 'Ana', turno: 'Manha' }, { id: 2, nome: 'Bia', turno: 'Tarde' }], 'dist-sep-check');
+    expect(el.innerHTML.match(/class="dist-sep-check"/g)).toHaveLength(2);
+    expect(el.innerHTML).toContain('value="1" data-nome="Ana" checked');
+    expect(el.innerHTML).toContain('colabs-contagem');
+    expect(el.innerHTML).toContain('max-height:180px;overflow-y:auto');
+  });
+
+  test('escapa o nome e avisa quando o turno está vazio', () => {
+    const el = { innerHTML: '' };
+    ctx._renderListaColabs(el, [{ id: 3, nome: '<img src=x>', turno: '' }], 'lote-sep-check');
+    expect(el.innerHTML).not.toContain('<img');
+    ctx._renderListaColabs(el, [], 'lote-sep-check');
+    expect(el.innerHTML).toContain('Nenhum colaborador neste turno');
+  });
+});
+
 describe('escHtml', () => {
   const ctx = {};
   vm.createContext(ctx);
