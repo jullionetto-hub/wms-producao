@@ -10,11 +10,23 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="WMS Miess">
-  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+  <!-- Samsung Internet/Chrome transformam números longos (nº de pedido) em link de telefone -->
+  <meta name="format-detection" content="telephone=no">
+  <!-- defer: o gerador de código de barras só é usado ao imprimir; antes bloqueava a 1ª tela
+       até baixar do CDN (pesado em celular de entrada / Wi-Fi do galpão) -->
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js" defer></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2/tabler-icons.min.css">
-  <link rel="stylesheet" href="/css/app.css?v=28">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <!-- Fontes e ícones carregam sem travar a 1ª pintura (media=print + onload); o texto aparece
+       na hora com a fonte do sistema e troca quando chegar (display=swap). -->
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800&family=Space+Mono:wght@700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2/tabler-icons.min.css" media="print" onload="this.media='all'">
+  <noscript>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2/tabler-icons.min.css">
+  </noscript>
+  <link rel="stylesheet" href="/css/app.css?v=29">
   <style>
     /* ── Etiquetas de pedido (Zebra ZD-220, 104 x 50,8mm) ────────────────
        Se a etiqueta física sair maior/menor, ajustar só o @page e .etiqueta abaixo. */

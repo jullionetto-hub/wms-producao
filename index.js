@@ -12,6 +12,7 @@
  */
 
 const express = require('express');
+const compression = require('compression');
 const http    = require('http');
 const path    = require('path');
 const { Server } = require('socket.io');
@@ -52,6 +53,10 @@ app.set('trust proxy', 1);
 
 // ── Middlewares ───────────────────────────────────────────────────────────────
 app.use(httpsRedirect);
+// gzip/brotli em HTML, JS, CSS e JSON — sem isso os ~1,4 MB de JS + 210 KB de HTML
+// iam crus pelo 4G/Wi-Fi do celular de separação. O Socket.io (upgrade de WebSocket)
+// não passa por aqui.
+app.use(compression());
 app.use(helmetMiddleware);
 app.use(corsMiddleware);
 app.use(extraHeaders);

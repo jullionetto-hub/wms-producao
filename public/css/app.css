@@ -1213,3 +1213,40 @@ body.tv-mode #dash-pipeline { grid-template-columns:repeat(auto-fit,minmax(280px
   #modal-diario-validacao .dm-botoes { flex:1 1 100%; gap:10px }
   #modal-diario-validacao .dm-botoes button { flex:1; padding:13px 10px !important }
 }
+
+
+/* ══════════════════════════════════════════
+   OTIMIZAÇÃO CELULAR DE SEPARAÇÃO (Galaxy A07, ~412px de largura, tela de 720x1600)
+   Só acrescenta: não muda nenhuma função nem o visual do desktop.
+   Foco: toque sem erro, rolagem leve em aparelho de entrada e sem recarregar sem querer.
+══════════════════════════════════════════ */
+/* toque: sem espera de duplo-toque, sem "flash" cinza ao tocar */
+button,a,input,select,textarea,label,[onclick]{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+
+@media(max-width:768px){
+  /* puxar a tela pra baixo no Chrome/Samsung Internet recarregava o app e perdia o pedido em andamento */
+  html,body{overscroll-behavior-y:none}
+  .sep-scroll,.cl-lista,.conteudo{overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+
+  /* menu inferior do separador: texto legível e área de toque confortável */
+  .sep-tab{font-size:10px;letter-spacing:.5px}
+  .sep-tab-ic{font-size:22px}
+
+  /* V / X / parcial do item: alvo de 44px e mais espaço entre eles (evita marcar o errado) */
+  .item-btns{gap:10px}
+  .btn-item{width:44px;height:44px}
+  .btn-parc-ok{padding:11px 16px}
+
+  /* aparelho de entrada: sem animação por item, e itens fora da tela nem são desenhados */
+  .item-card{animation:none}
+  .item-card,.fila-card{content-visibility:auto;contain-intrinsic-size:auto 76px}
+
+  /* botões de ação principais: altura mínima de toque */
+  .btn-acao{min-height:48px}
+  .btn-bip{min-height:52px}
+}
+
+/* quem pede menos movimento no Android (Acessibilidade > Remover animações) */
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
+}
