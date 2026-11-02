@@ -125,6 +125,36 @@ describe('_resumoQuantidade (quantos entram e quantos ficam pendentes)', () => {
   });
 });
 
+describe('_htmlPendentesDist (texto corrido da aba Automática)', () => {
+  const ctx = {};
+  vm.createContext(ctx);
+  vm.runInContext(codigo['pedidos.js'].match(/function _resumoQuantidade[\s\S]*?\n}\n/)[0], ctx);
+  vm.runInContext(codigo['pedidos.js'].match(/function _htmlPendentesDist[\s\S]*?\n}\n/)[0], ctx);
+  const texto = h => h.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+
+  test('sem limite: todos entram, nada espera, e explica onde estão os Prime', () => {
+    const t = texto(ctx._htmlPendentesDist(ctx._resumoQuantidade(251, ''), false, 64));
+    expect(t).toContain('251 pedidos vão ser distribuídos agora');
+    expect(t).toContain('nenhum fica esperando');
+    expect(t).toContain('Os 64 pedidos Prime não entram aqui');
+  });
+
+  test('com limite: diz quantos esperam', () => {
+    const t = texto(ctx._htmlPendentesDist(ctx._resumoQuantidade(251, 50), false, 0));
+    expect(t).toContain('50 pedidos vão ser distribuídos agora');
+    expect(t).toContain('201 pedidos ficam esperando');
+  });
+
+  test('modo Prime explica que os normais ficam de fora', () => {
+    expect(texto(ctx._htmlPendentesDist(ctx._resumoQuantidade(64, ''), true, 0))).toContain('Os pedidos normais não entram aqui');
+  });
+
+  test('singular e fila vazia', () => {
+    expect(texto(ctx._htmlPendentesDist(ctx._resumoQuantidade(1, ''), false, 0))).toContain('1 pedido vai ser distribuído agora');
+    expect(texto(ctx._htmlPendentesDist(ctx._resumoQuantidade(0, ''), false, 0))).toContain('Não há pedidos na fila');
+  });
+});
+
 describe('_htmlResumoGlobalDist (já distribuídos / faltam — vale pra todas as abas)', () => {
   const ctx = {};
   vm.createContext(ctx);

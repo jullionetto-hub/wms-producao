@@ -2273,7 +2273,7 @@ function _htmlResumoGlobalDist(r, sessao) {
   ].filter(Boolean).join(' · ');
   return `<div style="display:flex;gap:8px;flex-wrap:wrap">
       ${_chipResumo(r.distribuidos, 'Já distribuídos', 'var(--green)')}
-      ${_chipResumo(r.faltam, 'Faltam distribuir (total geral)', r.faltam > 0 ? 'var(--amber)' : 'var(--border)')}
+      ${_chipResumo(r.faltam, 'Faltam distribuir', r.faltam > 0 ? 'var(--amber)' : 'var(--border)')}
       ${sessao > 0 ? _chipResumo('+' + sessao, 'Distribuídos agora', 'var(--accent)') : ''}
     </div>
     ${detalhe ? `<div style="font-size:11px;color:var(--text3);margin-top:6px">Faltam: ${detalhe}</div>` : ''}
@@ -2321,6 +2321,26 @@ function _htmlResumoContagem(r, rotuloEntram, extra, rotuloTotal) {
     </div>
     ${r.excedeu ? `<div style="font-size:11px;color:var(--amber);margin-top:6px">A quantidade informada é maior que a disponível — todos os ${r.total} entram.</div>` : ''}
     ${extra ? `<div style="font-size:11px;color:var(--text3);margin-top:6px">${extra}</div>` : ''}`;
+}
+
+// Texto corrido (sem quadros de número) pra aba Automática: quantos pedidos
+// entram AGORA, quantos esperam, e por que o total do topo é maior que este.
+function _htmlPendentesDist(r, modoPrime, qtdPrimeFora) {
+  const n = v => `<b style="color:var(--text)">${v}</b>`;
+  const plural = (v, s, p) => v === 1 ? s : p;
+  let linha2;
+  if (r.total === 0) linha2 = 'Não há pedidos na fila com essas opções.';
+  else if (r.pendentes > 0) linha2 = `Você limitou a quantidade: ${n(r.pendentes)} ${plural(r.pendentes, 'pedido fica esperando', 'pedidos ficam esperando')} para a próxima distribuição.`;
+  else linha2 = 'É tudo o que está na fila — nenhum fica esperando.';
+  const aviso = r.excedeu ? `<div style="font-size:12px;color:var(--amber);margin-top:4px">A quantidade informada é maior que a da fila — entram todos os ${r.total}.</div>` : '';
+  const tipo = modoPrime
+    ? 'Só pedidos <b style="color:var(--amber)">Prime</b>. Os pedidos normais não entram aqui — para distribuí-los, desligue “Incluir Prime”.'
+    : `Pedidos normais e Drive Thru. ${qtdPrimeFora > 0 ? `Os ${n(qtdPrimeFora)} pedidos <b style="color:var(--amber)">Prime</b>` : 'Os pedidos <b style="color:var(--amber)">Prime</b>'} não entram aqui — para distribuí-los, clique em “Incluir Prime”.`;
+  return `<div style="padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-left:3px solid var(--green);border-radius:8px">
+      <div style="font-size:15px;color:var(--text)"><span style="font-family:'Space Mono',monospace;font-size:22px;font-weight:800">${r.entram}</span> ${plural(r.entram, 'pedido vai', 'pedidos vão')} ser distribuído${r.entram === 1 ? '' : 's'} agora</div>
+      <div style="font-size:12px;color:var(--text2);margin-top:4px">${linha2}</div>${aviso}
+      <div style="font-size:11px;color:var(--text3);margin-top:6px">${tipo}</div>
+    </div>`;
 }
 
 let _loteElegiveis = null; // última contagem vinda de /pedidos/lote/elegiveis
@@ -3218,12 +3238,13 @@ async function carregarPedidosDistribuicao() {
       lista = lista.filter(p => !p.tem_prime);
     }
     // Filtro por intervalo de data: compara com aguardando_desde (formato DD/MM/YYYY HH:MM)
+    let naData = () => true;
     if (dataFiltroDE || dataFiltroATE) {
       const toBR = v => { if (!v) return ''; const [a,m,d] = v.split('-'); return `${d}/${m}/${a}`; };
       const toNum = v => { if (!v) return null; const [d,m,a] = v.split('/'); return parseInt(`${a}${m}${d}`); };
       const deNum  = dataFiltroDE  ? toNum(toBR(dataFiltroDE))  : null;
       const ateNum = dataFiltroATE ? toNum(toBR(dataFiltroATE)) : null;
-      lista = lista.filter(p => {
+      naData = p => {
         const ds = String(p.aguardando_desde||'');
         const partes = ds.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
         if (!partes) return false;
@@ -3231,7 +3252,8 @@ async function carregarPedidosDistribuicao() {
         if (deNum  && pNum < deNum)  return false;
         if (ateNum && pNum > ateNum) return false;
         return true;
-      });
+      };
+      lista = lista.filter(naData);
     }
     // Converte DD/MM/YYYY HH:MM → YYYY-MM-DD HH:MM para comparação cronológica correta
     const toISO = v => {
@@ -3243,13 +3265,9 @@ async function carregarPedidosDistribuicao() {
     if (respHora) lista.sort((a,b) => toISO(a.aguardando_desde||a.data_pedido||'').localeCompare(toISO(b.aguardando_desde||b.data_pedido||'')));
     const totalDisponivel = lista.length;
     if (qtdInput > 0) lista = lista.slice(0, qtdInput);
-    const labelModo = _htmlResumoContagem(
-      _resumoQuantidade(totalDisponivel, qtdInput),
-      'A distribuir agora',
-      _modoPrime
-        ? '<span style="color:var(--amber);font-weight:800">⭐ Modo Prime</span> — esta lista tem só pedidos Prime. Os pedidos normais ficam de fora (desligue “Incluir Prime” para vê-los).'
-        : 'Esta lista tem só pedidos normais e Drive Thru. Os pedidos Prime ficam de fora (clique em “Incluir Prime” para distribuí-los).',
-      _modoPrime ? 'Prime na fila' : 'Normais + Drive Thru na fila'
+    const labelModo = _htmlPendentesDist(
+      _resumoQuantidade(totalDisponivel, qtdInput), _modoPrime,
+      pedidos.filter(p => p.tem_prime && (!apenasSemCheck || !p.separador_id) && naData(p)).length
     );
     if (!lista.length) {
       el.innerHTML = `<div style="font-size:11px;color:var(--text3);margin-bottom:8px">${labelModo}</div><div style="color:var(--text3);font-size:12px;text-align:center;padding:20px">${_modoPrime ? 'Nenhum pedido Prime pendente' : 'Nenhum pedido normal pendente'}</div>`;
