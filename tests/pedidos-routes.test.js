@@ -1091,6 +1091,37 @@ describe('Pedidos — formação de lotes', () => {
     expect(res.status).toBe(400);
   });
 
+  test('GET /pedidos/lote/elegiveis sem auth → 401', async () => {
+    const res = await request(app).get('/pedidos/lote/elegiveis');
+    expect(res.status).toBe(401);
+  });
+
+  test('GET /pedidos/lote/elegiveis conta os pedidos sem Drive Thru (e quantos Drive ficaram de fora)', async () => {
+    mockDb.all.mockResolvedValueOnce([
+      { transportadora: 'SEDEX' }, { transportadora: 'PAC' }, { transportadora: '' },
+      { transportadora: 'RETIRADA DRIVE THRU' },
+    ]);
+    const res = await agent.get('/pedidos/lote/elegiveis');
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ total_disponivel: 3, drive_thru_excluidos: 1 });
+  });
+
+  test('GET /pedidos/lote/elegiveis usa a mesma regra do cálculo: Prime e datas', async () => {
+    mockDb.all.mockClear();
+    await agent.get('/pedidos/lote/elegiveis').query({ apenas_prime: 'true', data_de: '2026-10-01', data_ate: '2026-11-02' });
+    const [sql, params] = mockDb.all.mock.calls.find(c => /FROM pedidos p WHERE/.test(c[0]));
+    expect(sql).toMatch(/p\.tem_prime=true/);
+    expect(sql).toMatch(/p\.separador_id IS NULL/);
+    expect(params).toEqual(['2026-10-01', '2026-11-02']);
+  });
+
+  test('GET /pedidos/lote/elegiveis sem Prime exclui os Prime', async () => {
+    mockDb.all.mockClear();
+    await agent.get('/pedidos/lote/elegiveis');
+    const [sql] = mockDb.all.mock.calls.find(c => /FROM pedidos p WHERE/.test(c[0]));
+    expect(sql).toMatch(/p\.tem_prime=false OR p\.tem_prime IS NULL/);
+  });
+
   test('POST /pedidos/lote/formar agrupa pedidos elegíveis (exclui Drive Thru) em um único lote', async () => {
     const pedidosFixture = [
       { id: 1, numero_pedido: '1', transportadora: '', cliente: 'C1' },

@@ -89,6 +89,42 @@ describe('_diarioMetaHtml (Adicionado por / Verificado por / Visto por)', () => 
   });
 });
 
+describe('_resumoQuantidade (quantos entram e quantos ficam pendentes)', () => {
+  const ctx = {};
+  vm.createContext(ctx);
+  vm.runInContext(codigo['pedidos.js'].match(/function _resumoQuantidade[\s\S]*?\n}\n/)[0], ctx);
+  vm.runInContext(codigo['pedidos.js'].match(/function _htmlResumoContagem[\s\S]*?\n}\n/)[0], ctx);
+
+  test('sem quantidade (vazio ou 0): todos entram e nada fica pendente', () => {
+    expect(ctx._resumoQuantidade(120, '')).toEqual({ total: 120, entram: 120, pendentes: 0, excedeu: false });
+    expect(ctx._resumoQuantidade(120, 0)).toEqual({ total: 120, entram: 120, pendentes: 0, excedeu: false });
+  });
+
+  test('quantidade menor que o total: o resto fica pendente', () => {
+    expect(ctx._resumoQuantidade(120, '50')).toEqual({ total: 120, entram: 50, pendentes: 70, excedeu: false });
+  });
+
+  test('quantidade maior que o total: entram todos e avisa que excedeu', () => {
+    expect(ctx._resumoQuantidade(30, 80)).toEqual({ total: 30, entram: 30, pendentes: 0, excedeu: true });
+  });
+
+  test('valores inválidos não quebram', () => {
+    expect(ctx._resumoQuantidade(undefined, 'abc')).toEqual({ total: 0, entram: 0, pendentes: 0, excedeu: false });
+    expect(ctx._resumoQuantidade(10, -5).pendentes).toBe(0);
+  });
+
+  test('o resumo mostra Disponíveis, a formar e Ficarão pendentes', () => {
+    const html = ctx._htmlResumoContagem(ctx._resumoQuantidade(120, 50), 'A formar agora', '3 Drive Thru fora');
+    expect(html).toContain('Disponíveis');
+    expect(html).toContain('A formar agora');
+    expect(html).toContain('Ficarão pendentes');
+    expect(html).toContain('>120<');
+    expect(html).toContain('>50<');
+    expect(html).toContain('>70<');
+    expect(html).toContain('3 Drive Thru fora');
+  });
+});
+
 describe('escHtml', () => {
   const ctx = {};
   vm.createContext(ctx);

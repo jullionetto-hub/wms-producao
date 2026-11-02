@@ -2217,6 +2217,7 @@ let _modoPrimeLote = false;
 function togglePrimeLote() {
   _modoPrimeLote = !_modoPrimeLote;
   _aplicarEstadoPrimeLote();
+  atualizarResumoLote();
   document.getElementById('lote-resultado').style.display = 'none';
   document.getElementById('btn-confirmar-lote').style.display = 'none';
   document.getElementById('btn-imprimir-etiquetas-lote').style.display = 'none';
@@ -2239,6 +2240,59 @@ function _aplicarEstadoPrimeLote() {
     btn.innerHTML        = '<i class="ti ti-star-filled" aria-hidden="true"></i> Incluir Prime';
     if (aviso) aviso.style.display = 'none';
   }
+}
+
+/* ── Resumo: disponíveis / entram agora / ficarão pendentes ─────────────── */
+// Pura: dado o total elegível e a quantidade digitada (vazio/0 = todos), quantos
+// entram agora e quantos sobram pendentes.
+function _resumoQuantidade(total, qtd) {
+  const t = Math.max(0, Number(total) || 0);
+  const q = Math.max(0, parseInt(qtd) || 0);
+  const entram = q > 0 ? Math.min(q, t) : t;
+  return { total: t, entram, pendentes: t - entram, excedeu: q > t };
+}
+
+function _htmlResumoContagem(r, rotuloEntram, extra) {
+  const chip = (valor, rotulo, cor) => `<div style="flex:1;min-width:120px;background:var(--surface2);border:1px solid var(--border);border-left:3px solid ${cor};border-radius:8px;padding:8px 12px">
+      <div style="font-family:'Space Mono',monospace;font-size:20px;font-weight:800;color:var(--text)">${valor}</div>
+      <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.5px;text-transform:uppercase">${rotulo}</div>
+    </div>`;
+  return `<div style="display:flex;gap:8px;flex-wrap:wrap">
+      ${chip(r.total, 'Disponíveis', 'var(--accent)')}
+      ${chip(r.entram, rotuloEntram, 'var(--green)')}
+      ${chip(r.pendentes, 'Ficarão pendentes', r.pendentes > 0 ? 'var(--amber)' : 'var(--border)')}
+    </div>
+    ${r.excedeu ? `<div style="font-size:11px;color:var(--amber);margin-top:6px">A quantidade informada é maior que a disponível — todos os ${r.total} entram.</div>` : ''}
+    ${extra ? `<div style="font-size:11px;color:var(--text3);margin-top:6px">${extra}</div>` : ''}`;
+}
+
+let _loteElegiveis = null; // última contagem vinda de /pedidos/lote/elegiveis
+
+function _renderResumoLote() {
+  const el = document.getElementById('lote-resumo-contagem');
+  if (!el) return;
+  if (!_loteElegiveis) { el.style.display = 'none'; return; }
+  const r = _resumoQuantidade(_loteElegiveis.total_disponivel, document.getElementById('lote-quantidade')?.value);
+  const extra = _loteElegiveis.drive_thru_excluidos
+    ? `${_loteElegiveis.drive_thru_excluidos} pedido(s) Drive Thru ficam de fora (vão individual).` : '';
+  el.style.display = '';
+  el.innerHTML = _htmlResumoContagem(r, 'A formar agora', extra);
+}
+
+async function atualizarResumoLote() {
+  if (!document.getElementById('lote-resumo-contagem')) return;
+  const q = new URLSearchParams();
+  const dataDe  = document.getElementById('dist-data-de')?.value  || '';
+  const dataAte = document.getElementById('dist-data-ate')?.value || '';
+  if (dataDe)  q.set('data_de', dataDe);
+  if (dataAte) q.set('data_ate', dataAte);
+  if (_modoPrimeLote) q.set('apenas_prime', 'true');
+  try {
+    const res = await fetch(`${API}/pedidos/lote/elegiveis?${q}`, { credentials:'include' });
+    if (!res.ok) throw new Error('falha');
+    _loteElegiveis = await res.json();
+  } catch(e) { _loteElegiveis = null; }
+  _renderResumoLote();
 }
 
 function selecionarCenarioLote(c) {
@@ -2278,6 +2332,7 @@ async function _initPainelLotes() {
   // supervisor tenha escolhido (fila de trabalho normalmente é de dias atrás).
   selecionarCenarioLote('balanceado');
   loteSetModo('auto');
+  atualizarResumoLote();
   _loteManualPedidos = [];
   _renderLoteManualLista();
   document.getElementById('lote-resultado-manual').style.display = 'none';
@@ -2555,6 +2610,7 @@ async function confirmarLotes() {
     const data = await res.json();
     if (data.erro) { toast(data.erro, 'erro'); return; }
     toast(`${data.lotes} lote(s) formado(s), ${data.pedidos} pedido(s) atribuído(s)!`, 'sucesso');
+    atualizarResumoLote(); // o que sobrou pendente depois desta confirmação
     document.getElementById(ids.resultado).innerHTML = `
       <div style="text-align:center;padding:16px">
         <div style="font-size:32px;margin-bottom:8px">✅</div>
@@ -3021,6 +3077,8 @@ async function carregarSeparadoresDistribuicao() {
   } catch(e) { console.warn(e); }
 }
 async function carregarPedidosDistribuicao() {
+  // O filtro de data é compartilhado com a aba Lotes: atualiza a contagem de lá também
+  if (_distModoAtual === 'lotes') atualizarResumoLote();
   try {
     const dataFiltroDE  = document.getElementById('dist-data-de')?.value || '';
     const dataFiltroATE = document.getElementById('dist-data-ate')?.value || '';
@@ -3064,9 +3122,11 @@ async function carregarPedidosDistribuicao() {
     if (respHora) lista.sort((a,b) => toISO(a.aguardando_desde||a.data_pedido||'').localeCompare(toISO(b.aguardando_desde||b.data_pedido||'')));
     const totalDisponivel = lista.length;
     if (qtdInput > 0) lista = lista.slice(0, qtdInput);
-    const labelModo = _modoPrime
-      ? `<span style="color:var(--amber);font-weight:800">⭐ ${lista.length} pedido(s) Prime</span> de ${totalDisponivel} disponíveis`
-      : `${lista.length} de ${totalDisponivel} pedido(s) serão distribuídos`;
+    const labelModo = _htmlResumoContagem(
+      _resumoQuantidade(totalDisponivel, qtdInput),
+      'A distribuir agora',
+      _modoPrime ? '<span style="color:var(--amber);font-weight:800">⭐ Modo Prime</span> — só pedidos Prime.' : ''
+    );
     if (!lista.length) {
       el.innerHTML = `<div style="font-size:11px;color:var(--text3);margin-bottom:8px">${labelModo}</div><div style="color:var(--text3);font-size:12px;text-align:center;padding:20px">${_modoPrime ? 'Nenhum pedido Prime pendente' : 'Nenhum pedido normal pendente'}</div>`;
       return;

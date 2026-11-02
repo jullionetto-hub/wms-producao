@@ -2522,7 +2522,7 @@
 
 <script src="/js/geometria-estoque.js?v=1"></script>
 <script src="/js/config.js?v=16"></script>
-  <script src="/js/pedidos.js?v=55"></script>
+  <script src="/js/pedidos.js?v=56"></script>
   <script src="/js/separador.js?v=43"></script>
   <script src="/js/repositor.js?v=21"></script>
   <script src="/js/checkout.js?v=15"></script>
@@ -2806,7 +2806,7 @@
         <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:4px;align-items:flex-end">
           <div class="fg">
             <label>QUANTIDADE DE PEDIDOS A FORMAR EM LOTE</label>
-            <input type="number" id="lote-quantidade" placeholder="Todos elegíveis" min="1" style="min-width:180px;font-size:15px;font-weight:700"/>
+            <input type="number" id="lote-quantidade" placeholder="Todos elegíveis" min="1" style="min-width:180px;font-size:15px;font-weight:700" oninput="_renderResumoLote()"/>
           </div>
           <button id="btn-prime-lote" onclick="togglePrimeLote()"
             style="padding:4px 10px;border-radius:6px;border:1.5px solid var(--amber);background:transparent;color:var(--amber);font-size:11px;font-weight:700;cursor:pointer;transition:all .15s;white-space:nowrap;margin-bottom:4px">
@@ -2816,6 +2816,9 @@
         <div id="lote-prime-aviso" style="display:none;margin-bottom:14px;padding:7px 11px;border-radius:7px;background:rgba(224,168,62,.12);border:1.5px solid rgba(224,168,62,.4);font-size:11px;font-weight:600;color:var(--amber)">
           Modo Prime ativo — Apenas pedidos <em>Postagem Ágil Miess Prime</em> serão formados em lote.
         </div>
+
+        <!-- Quantos pedidos há para formar lote e quantos ficam pendentes -->
+        <div id="lote-resumo-contagem" style="display:none;margin-bottom:14px"></div>
 
         <!-- Cenário -->
         <div style="margin-bottom:14px;padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px">

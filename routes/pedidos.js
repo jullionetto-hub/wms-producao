@@ -1290,27 +1290,44 @@ async function _prepararEAgruparPedidos(elegiveis, modoLote) {
   return lotesPreview;
 }
 
+// Filtro dos pedidos elegíveis a lote — compartilhado pelo preview de lotes e pela
+// contagem que a tela mostra antes de calcular (mesma regra, um lugar só).
+// apenas_prime alterna entre só Prime ou só normal, nunca mistura os dois (mesmo
+// comportamento de /pedidos/distribuicao). Filtro por data de "aguardando desde":
+// pedido pendente/não atribuído nunca tem turno_distribuicao preenchido (só é
+// gravado na distribuição), então a data é o filtro que faz sentido aqui.
+function _filtroElegiveisLote({ data_de, data_ate, apenas_prime }) {
+  let w = apenas_prime === true || apenas_prime === 'true'
+    ? "p.status='pendente' AND p.separador_id IS NULL AND p.tem_prime=true"
+    : "p.status='pendente' AND p.separador_id IS NULL AND (p.tem_prime=false OR p.tem_prime IS NULL)";
+  const wParams = [];
+  if (data_de || data_ate) {
+    const AGUARDANDO_DATA = `(CASE WHEN p.aguardando_desde ~ '^[0-9]{2}/[0-9]{2}/[0-9]{4}' THEN TO_TIMESTAMP(p.aguardando_desde,'DD/MM/YYYY HH24:MI')::DATE END)`;
+    if (data_de)  { wParams.push(data_de);  w += ` AND ${AGUARDANDO_DATA} >= $${wParams.length}::DATE`; }
+    if (data_ate) { wParams.push(data_ate); w += ` AND ${AGUARDANDO_DATA} <= $${wParams.length}::DATE`; }
+  }
+  return { w, wParams };
+}
+const _ehDriveThru = p => String(p.transportadora || '').toUpperCase().includes('DRIVE');
+
+// Quantos pedidos entram na formação de lotes (sem Drive Thru, que vai individual).
+// Só conta — não monta lote nem grava nada.
+router.get('/pedidos/lote/elegiveis', requerAuth, requerPerfil('supervisor'), async (req,res) => {
+  try {
+    const { w, wParams } = _filtroElegiveisLote(req.query);
+    const pedidos = await db.all(`SELECT p.transportadora FROM pedidos p WHERE ${w}`, wParams);
+    const drive = pedidos.filter(_ehDriveThru).length;
+    res.json({ total_disponivel: pedidos.length - drive, drive_thru_excluidos: drive });
+  } catch(err) { res.status(500).json({erro:err.message}); }
+});
+
 // Preview — não grava nada, só calcula os lotes e devolve pra conferência.
 router.post('/pedidos/lote/formar', requerAuth, requerPerfil('supervisor'), async (req,res) => {
   const { separadores, quantidade, cenario, data_de, data_ate, apenas_prime } = req.body;
   const modoLote = cenario || 'balanceado'; // 'balanceado' | 'por_itens' | 'complexidade'
   if (!separadores?.length) return res.status(400).json({erro:'Informe os separadores!'});
   try {
-    // Mesmo comportamento de /pedidos/distribuicao: apenas_prime alterna entre só
-    // Prime ou só normal, nunca mistura os dois num mesmo lote/distribuição.
-    let w = apenas_prime === true
-      ? "p.status='pendente' AND p.separador_id IS NULL AND p.tem_prime=true"
-      : "p.status='pendente' AND p.separador_id IS NULL AND (p.tem_prime=false OR p.tem_prime IS NULL)";
-    const wParams = [];
-    // Filtro por data de "aguardando desde" — pedido pendente/não atribuído nunca tem
-    // turno_distribuicao preenchido (só é gravado no momento da distribuição), então
-    // filtrar por turno aqui sempre dava zero resultado. Data é o filtro que faz sentido
-    // pra um pedido ainda não distribuído.
-    if (data_de || data_ate) {
-      const AGUARDANDO_DATA = `(CASE WHEN p.aguardando_desde ~ '^[0-9]{2}/[0-9]{2}/[0-9]{4}' THEN TO_TIMESTAMP(p.aguardando_desde,'DD/MM/YYYY HH24:MI')::DATE END)`;
-      if (data_de)  { wParams.push(data_de);  w += ` AND ${AGUARDANDO_DATA} >= $${wParams.length}::DATE`; }
-      if (data_ate) { wParams.push(data_ate); w += ` AND ${AGUARDANDO_DATA} <= $${wParams.length}::DATE`; }
-    }
+    const { w, wParams } = _filtroElegiveisLote({ data_de, data_ate, apenas_prime });
     const pedidos = await db.all(
       `SELECT p.*,
          EXTRACT(EPOCH FROM (
@@ -1328,8 +1345,7 @@ router.post('/pedidos/lote/formar', requerAuth, requerPerfil('supervisor'), asyn
          p.id ASC`,
       wParams
     );
-    const isDrive = p => String(p.transportadora||'').toUpperCase().includes('DRIVE');
-    let elegiveis = pedidos.filter(p => !isDrive(p));
+    let elegiveis = pedidos.filter(p => !_ehDriveThru(p));
     const totalElegiveis = elegiveis.length;
     // Quantidade opcional: pega só os N mais antigos (já vêm ordenados por
     // aguardando_desde), igual ao campo "Quantidade" do Distribuir.
