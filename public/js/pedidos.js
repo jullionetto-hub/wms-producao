@@ -565,62 +565,72 @@ let _usrTodos = [];
 let _usrFiltroTurno = 'todos';
 
 const _turnoLabel = { Manha:'Manhã', Tarde:'Tarde', Noite:'Noite' };
+const _PERFIL_NOME = { supervisor:'Supervisão', separador:'Separação', repositor:'Reposição', checkout:'Checkout', embalador:'Embalagem', gestor:'Gestão' };
 
 function filtrarTurnoUsr(turno) {
   _usrFiltroTurno = turno;
   ['todos','Manha','Tarde','Noite'].forEach(t => {
-    const btn = document.getElementById(`uf-${t.toLowerCase()}`);
-    if (!btn) return;
-    const ativo = t === turno;
-    btn.style.background  = ativo ? 'var(--surface)' : 'var(--surface2)';
-    btn.style.color       = ativo ? 'var(--text)'    : 'var(--text2)';
-    btn.style.borderColor = ativo ? 'var(--text3)'   : 'var(--border)';
+    document.getElementById(`uf-${t.toLowerCase()}`)?.classList.toggle('ativo', t === turno);
   });
   _renderListaUsuarios();
+}
+
+// Agrupa por turno (Manhã, Tarde, Noite, depois quem não tem turno), cada grupo
+// em ordem alfabética. Aceita "Manha"/"Manhã" e variações de caixa.
+function _agruparUsuariosPorTurno(lista) {
+  const chave = t => {
+    const s = String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    return s.startsWith('man') ? 'Manha' : s.startsWith('tar') ? 'Tarde' : s.startsWith('noi') ? 'Noite' : '';
+  };
+  const grupos = { Manha: [], Tarde: [], Noite: [], '': [] };
+  lista.forEach(u => grupos[chave(u.turno)].push(u));
+  const rotulo = { Manha:'Manhã', Tarde:'Tarde', Noite:'Noite', '':'Sem turno' };
+  return ['Manha','Tarde','Noite',''].map(k => ({
+    turno: k, rotulo: rotulo[k],
+    itens: grupos[k].sort((a, b) => String(a.nome).localeCompare(String(b.nome), 'pt-BR')),
+  })).filter(g => g.itens.length);
+}
+
+function _htmlLinhaUsuario(u, ehGestor) {
+  const extras = (u.perfis_acesso || '').split(',').filter(Boolean).filter(p => p !== u.perfil);
+  const acessos = [u.perfil, ...extras].map(p => _PERFIL_NOME[p] || p).join(' · ');
+  const ativo = u.status === 'ativo';
+  return `<div class="usr-row ${escHtml(u.status)}">
+      <div class="usr-info">
+        <div class="usr-name">${escHtml(u.nome)}${ativo ? '' : '<span class="usr-tag-inativo">inativo</span>'}</div>
+        <div class="usr-sub">@${escHtml(u.login)} · ${escHtml(acessos)}</div>
+      </div>
+      <div class="usr-actions">
+        <button class="usr-btn edit" onclick="abrirEditarUsuario(${Number(u.id)})">Editar</button>
+        <button class="usr-btn" title="${ativo ? 'Desativar' : 'Ativar'}"
+          data-nome="${escHtml(u.nome)}" data-login="${escHtml(u.login)}" data-perfil="${escHtml(u.perfil)}" data-turno="${escHtml(u.turno || '')}"
+          onclick="alterarStatusUsuario(${Number(u.id)},'${ativo ? 'inativo' : 'ativo'}',this.dataset.nome,this.dataset.login,this.dataset.perfil,this.dataset.turno)">
+          <i class="ti ti-${ativo ? 'player-pause' : 'player-play'}" aria-hidden="true"></i>
+        </button>
+        ${ehGestor ? `<button class="usr-btn" title="Permissões granulares" data-nome="${escHtml(u.nome)}" onclick="abrirPermissoesUsuario(${Number(u.id)},this.dataset.nome)"><i class="ti ti-shield-lock" aria-hidden="true"></i></button>` : ''}
+        <button class="usr-btn del" title="Excluir" data-nome="${escHtml(u.nome)}" onclick="excluirUsuario(${Number(u.id)},this.dataset.nome)"><i class="ti ti-trash" aria-hidden="true"></i></button>
+      </div>
+    </div>`;
 }
 
 function _renderListaUsuarios() {
   const el = document.getElementById('lista-usuarios');
   if (!el) return;
-  const lista = _usrFiltroTurno === 'todos'
-    ? _usrTodos
-    : _usrTodos.filter(u => (u.turno || 'Manha') === _usrFiltroTurno);
+  const busca = (document.getElementById('usr-busca')?.value || '').trim().toLowerCase();
+  const lista = _usrTodos.filter(u =>
+    (_usrFiltroTurno === 'todos' || _agruparUsuariosPorTurno([u])[0]?.turno === _usrFiltroTurno) &&
+    (!busca || `${u.nome} ${u.login}`.toLowerCase().includes(busca)));
   const countEl = document.getElementById('usr-count');
-  if (countEl) countEl.textContent = `• ${lista.length} de ${_usrTodos.length} usuário(s)`;
+  if (countEl) countEl.textContent = `• ${lista.length} de ${_usrTodos.length}`;
   if (!lista.length) {
-    el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:24px;font-size:13px">Nenhum usuário neste turno</div>';
+    el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:24px;font-size:13px">Nenhum usuário encontrado</div>';
     return;
   }
-  const perfIcons = {supervisor:'Sup',separador:'Sep',repositor:'Rep',checkout:'CK',embalador:'Emb',gestor:'Gest'};
-  el.innerHTML = lista.map(u => {
-    const perfisExtra = (u.perfis_acesso || '').split(',').filter(Boolean).filter(p => p !== u.perfil);
-    const todosAcessos = [u.perfil, ...perfisExtra];
-    const iniciais = u.nome.split(' ').slice(0,2).map(n=>n[0]).join('').toUpperCase();
-    const turnoLabel = _turnoLabel[u.turno] || u.turno || '—';
-    return `<div class="usr-card ${u.status}">
-      <div class="usr-avatar">${iniciais}</div>
-      <div class="usr-info">
-        <div class="usr-name">${u.nome}</div>
-        <div class="usr-login">@${u.login}</div>
-        <div class="usr-pills">
-          ${todosAcessos.map(p=>`<span class="usr-pill ${p}">${perfIcons[p]||''} ${p}</span>`).join('')}
-          <span class="usr-pill turno"><i class="ti ti-clock" aria-hidden="true"></i> ${turnoLabel}</span>
-          <span class="pill ${u.status}" style="font-size:9px;padding:2px 7px">${u.status}</span>
-        </div>
-      </div>
-      <div class="usr-actions">
-        <button class="usr-btn ${u.status==='ativo'?'toggle-on':'toggle-off'}" title="${u.status==='ativo'?'Desativar':'Ativar'}"
-          onclick="alterarStatusUsuario(${u.id},'${u.status==='ativo'?'inativo':'ativo'}','${u.nome}','${u.login}','${u.perfil}','${u.turno||''}')">
-          <i class="ti ti-${u.status==='ativo'?'player-pause-filled':'player-play-filled'}" aria-hidden="true"></i>
-        </button>
-        <button class="usr-btn edit" onclick="abrirEditarUsuario(${u.id})">Editar</button>
-        ${typeof usuarioAtual !== 'undefined' && usuarioAtual?.perfil === 'gestor'
-          ? `<button class="usr-btn" title="Permissões granulares" onclick="abrirPermissoesUsuario(${u.id},'${u.nome.replace(/'/g,"\\'")}')"><i class="ti ti-shield-lock" aria-hidden="true"></i></button>`
-          : ''}
-        <button class="usr-btn del" title="Excluir" onclick="excluirUsuario(${u.id},'${u.nome}')"><i class="ti ti-trash" aria-hidden="true"></i></button>
-      </div>
-    </div>`;
-  }).join('');
+  const ehGestor = typeof usuarioAtual !== 'undefined' && usuarioAtual?.perfil === 'gestor';
+  el.innerHTML = _agruparUsuariosPorTurno(lista).map(g =>
+    `<div class="usr-grupo-hd"><span>${g.rotulo}</span><span>${g.itens.length}</span></div>` +
+    g.itens.map(u => _htmlLinhaUsuario(u, ehGestor)).join('')
+  ).join('');
 }
 
 // Exporta login + senha inicial (padrão PrimeiroNome@2026) só de quem ainda
@@ -734,12 +744,7 @@ async function carregarUsuarios() {
     const res   = await fetch(`${API}/usuarios`, { credentials:'include' });
     const users = await res.json();
     _usrTodos = users;
-    _usrFiltroTurno = 'todos';
-    ['todos','Manha','Tarde','Noite'].forEach(t => {
-      const btn = document.getElementById(`uf-${t.toLowerCase()}`);
-      if (btn) btn.className = `btn btn-sm ${t === 'todos' ? 'btn-primary' : 'btn-outline'}`;
-    });
-    _renderListaUsuarios();
+    filtrarTurnoUsr(_usrFiltroTurno);
   } catch(e) { console.warn(e); }
 }
 

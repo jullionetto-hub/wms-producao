@@ -218,6 +218,43 @@ describe('_renderListaColabs (colaboradores em lista na distribuição)', () => 
   });
 });
 
+describe('lista de usuários agrupada por turno', () => {
+  const ctx = {};
+  vm.createContext(ctx);
+  vm.runInContext(codigo['config.js'].match(/function escHtml[\s\S]*?\n}\n/)[0], ctx);
+  vm.runInContext(codigo['pedidos.js'].match(/const _PERFIL_NOME[^\n]*\n/)[0], ctx);
+  ['_agruparUsuariosPorTurno', '_htmlLinhaUsuario']
+    .forEach(n => vm.runInContext(codigo['pedidos.js'].match(new RegExp(`function ${n}[\\s\\S]*?\\n}\\n`))[0], ctx));
+
+  test('separa em Manhã/Tarde/Noite, em ordem alfabética, e põe quem não tem turno no fim', () => {
+    const g = ctx._agruparUsuariosPorTurno([
+      { nome: 'Zeca', turno: 'Manha' }, { nome: 'Ana', turno: 'Manhã' }, { nome: 'Bia', turno: 'noite' },
+      { nome: 'Caio', turno: null }, { nome: 'Davi', turno: 'Tarde' },
+    ]);
+    expect(g.map(x => x.rotulo)).toEqual(['Manhã', 'Tarde', 'Noite', 'Sem turno']);
+    expect(g[0].itens.map(u => u.nome)).toEqual(['Ana', 'Zeca']);
+  });
+
+  test('grupos vazios não aparecem', () => {
+    expect(ctx._agruparUsuariosPorTurno([{ nome: 'A', turno: 'Tarde' }]).map(x => x.turno)).toEqual(['Tarde']);
+    expect(ctx._agruparUsuariosPorTurno([])).toEqual([]);
+  });
+
+  test('linha mostra login e acessos por extenso, e marca inativo', () => {
+    const h = ctx._htmlLinhaUsuario({ id: 7, nome: 'Ana', login: 'ana.s', perfil: 'separador', perfis_acesso: 'separador,checkout', status: 'inativo', turno: 'Manha' }, false);
+    expect(h).toContain('@ana.s · Separação · Checkout');
+    expect(h).toContain('inativo');
+    expect(h).not.toContain('shield-lock');
+  });
+
+  test('escapa o nome (aspas e HTML) e só mostra permissões ao gestor', () => {
+    const u = { id: 1, nome: 'D\'Ávila <b>', login: 'x', perfil: 'gestor', status: 'ativo' };
+    const h = ctx._htmlLinhaUsuario(u, true);
+    expect(h).not.toContain('<b>');
+    expect(h).toContain('shield-lock');
+  });
+});
+
 describe('escHtml', () => {
   const ctx = {};
   vm.createContext(ctx);
