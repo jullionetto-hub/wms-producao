@@ -573,6 +573,8 @@ function filtrarTurnoUsr(turno) {
     document.getElementById(`uf-${t.toLowerCase()}`)?.classList.toggle('ativo', t === turno);
   });
   _renderListaUsuarios();
+  const lista = document.getElementById('lista-usuarios');
+  if (lista) lista.scrollTop = 0;
 }
 
 // Agrupa por turno (Manhã, Tarde, Noite, depois quem não tem turno), cada grupo
