@@ -361,7 +361,7 @@ function normLoc(tok){
 }
 let produtos = [], prodLoc = {}, indice = null;
 function montarProdutos(rows){
-  produtos = rows.map((r, i) => ({ i, cod:String(r[0]), nome:r[1] || '', loc:r[2] || '', saldo:r.length > 3 ? Number(r[3]) : null, disp:r.length > 4 ? Number(r[4]) : null, locs:[], outros:[] }));
+  produtos = rows.map((r, i) => ({ i, cod:String(r[0]), nome:r[1] || '', loc:r[2] || '', saldo:r.length > 3 && r[3] != null ? Number(r[3]) : null, disp:r.length > 4 && r[4] != null ? Number(r[4]) : null, desc:r.length > 5 && r[5] ? String(r[5]) : '', locs:[], outros:[] }));   // desc = "Descritor simples" (endereço do armazém)
   prodLoc = {}; indice = null;
   produtos.forEach(p => p.loc.split(/[\/,;]/).forEach(t => {
     t = t.trim(); if (!t || t === '.') return;
@@ -375,7 +375,7 @@ function produtosBase(){
   if (!locais) return live ? live.produtos : DADOS;
   if (!live) return locais.rows;
   const m = new Map(locais.rows.map(r => [String(r[0]), r])), vistos = new Set();
-  const out = live.produtos.map(r => { const k = String(r[0]), l = m.get(k); vistos.add(k); return [r[0], (l && l[1]) || r[1], l ? l[2] : '', r[3], r[4]]; });   // saldo vem do WMS; a localização vem do arquivo
+  const out = live.produtos.map(r => { const k = String(r[0]), l = m.get(k); vistos.add(k); return [r[0], (l && l[1]) || r[1], l ? l[2] : '', r[3], r[4], l && l[5] ? l[5] : '']; });   // saldo vem do WMS; a localização (e o descritor do armazém) vêm do arquivo
   locais.rows.forEach(r => { if (!vistos.has(String(r[0]))) out.push(r); });
   return out;
 }
@@ -1723,8 +1723,10 @@ function exportarCsv(){
   </section>
   <section data-s="loc" style="display:none">
     <div id="lcAtual" class="tiny"></div>
+    <div id="lcInd" style="margin:8px 0"></div>
     <label class="fl">Planilha de locais <input type="file" id="lcFile" accept=".xlsx,.xls,.csv"></label>
-    <div class="tiny">Colunas: <b>Código</b>, <b>Nome</b> e <b>Localização no estoque</b> (várias posições separadas por / , ou ;). Inclui os endereços <b>VERT-rua módulo-CX</b>. Códigos repetidos somam as posições. Substitui as localizações do modelo; o saldo ao vivo do WMS é mantido. Lido só aqui no navegador.</div>
+    <label class="fl" style="display:block"><input type="checkbox" id="lcSoSaldo" checked> Ignorar produtos sem saldo (só vale se a planilha tiver a coluna Saldo)</label>
+    <div class="tiny">Colunas: <b>Código</b>, <b>Nome</b> e <b>Localização no estoque</b> (várias posições separadas por / , ou ;). Opcionais: <b>Saldo</b>, <b>Disponível</b> e <b>Descritor simples</b> (endereço no armazém). Inclui os endereços <b>VERT-rua módulo-CX</b>. Códigos repetidos somam as posições. Substitui as localizações do modelo; o saldo ao vivo do WMS é mantido. Lido só aqui no navegador.</div>
     <div id="lcOut" style="margin-top:8px"></div>
     <div class="row2"><button class="tab" id="lcCsv">⬇ Exportar locais</button><button class="tab" id="lcRest">Voltar ao original</button></div>
   </section>`;
@@ -2074,7 +2076,78 @@ function lcAplicar(){
 function lcAtual(){
   const n = produtos.length, com = produtos.filter(p => p.locs.some(k => byAddr[k])).length, vt = produtos.filter(p => p.locs.some(k => k.startsWith('VERT-') && byAddr[k])).length;
   const cx = crateRecs.filter(r => r.addr && r.prods && r.prods.length).length, tc = crateRecs.filter(r => r.addr).length;
-  $('lcAtual').innerHTML = `<b>${locais ? 'Arquivo: ' + esc(locais.nome) + ' · ' + new Date(locais.em).toLocaleDateString('pt-BR') : 'Cadastro embutido (padrão)'}</b><br>${n.toLocaleString('pt-BR')} produtos · ${com.toLocaleString('pt-BR')} com posição no mapa · ${vt.toLocaleString('pt-BR')} em caixas VERT (${cx.toLocaleString('pt-BR')} de ${tc.toLocaleString('pt-BR')} caixas ocupadas)`;
+  $('lcAtual').innerHTML = `<b>${locais ? 'Arquivo: ' + esc(locais.nome) + ' · ' + new Date(locais.em).toLocaleDateString('pt-BR') : 'Cadastro embutido (padrão)'}</b><br>${n.toLocaleString('pt-BR')} produtos${locais && locais.ignorados ? ' (' + locais.ignorados.toLocaleString('pt-BR') + ' sem saldo ignorados)' : ''} · ${com.toLocaleString('pt-BR')} com posição no mapa · ${vt.toLocaleString('pt-BR')} em caixas VERT (${cx.toLocaleString('pt-BR')} de ${tc.toLocaleString('pt-BR')} caixas ocupadas)`;
+  renderIndicadoresLocais();
+}
+/* ── indicadores da aba Locais: onde cada produto está endereçado e como estão as posições ──
+   Um produto pode ter endereço em: C = colmeia/rua/arara (ex.: A012, ZA380), V = caixa vertical (VERT-…),
+   A = armazém (coluna "Descritor simples"), O = outro local sem posição no mapa (SALDÃO, outlet, pallet…). */
+const ROT_END = { C:'Colmeias', V:'Vertical', A:'Armazém', O:'Outros locais' };
+function classificarEnderecos(p){
+  const f = { C:false, V:false, A:false, O:false };
+  String(p.loc || '').split(/[\/,;]/).forEach(t => {
+    t = t.trim(); if (!t || t === '.') return;
+    if (/VERT/i.test(t)) f.V = true; else if (normLoc(t)) f.C = true; else f.O = true;
+  });
+  if (/[A-Za-z0-9]/.test(String(p.desc || ''))) f.A = true;
+  return f;
+}
+function calcularIndicadoresLocais(){
+  const grupos = {};   // 'CV' → produtos endereçados em colmeia + vertical (chave em ordem C,V,A,O; '-' = sem endereço)
+  produtos.forEach(p => { const f = classificarEnderecos(p), k = ['C', 'V', 'A', 'O'].filter(x => f[x]).join('') || '-'; (grupos[k] = grupos[k] || []).push(p); });
+  const vazia = c => !(c.prods && c.prods.length);
+  const col = cestos.filter(c => !c.parede), cx = crateRecs.filter(r => r.addr);
+  const ruas = {}; col.forEach(c => { const o = ruas[c.corr] = ruas[c.corr] || [0, 0]; o[0]++; if (vazia(c)) o[1]++; });
+  // "produtos" numa posição: códigos -BRINDE contam junto do original (é o mesmo item físico)
+  const nProd = c => new Set((c.prods || []).map(p => codeKey(p.cod).k)).size;
+  const mais3 = col.map(c => ({ c, n:nProd(c) })).filter(x => x.n > 3).sort((a, b) => b.n - a.n || String(a.c.addr).localeCompare(String(b.c.addr)));
+  return {
+    total: produtos.length, grupos,
+    soVertical: grupos.V || [], soArmazem: grupos.A || [], semEndereco: grupos['-'] || [],
+    colmeias: col.length, colmeiasLivres: col.filter(vazia), ruas,
+    caixas: cx.length, caixasLivres: cx.filter(vazia).length, caixasMais3: cx.filter(r => nProd(r) > 3).length,
+    mais3,
+  };
+}
+let locInd = null;
+function rotuloGrupo(k){
+  if (k === '-') return 'Sem endereço';
+  const l = k.split('').map(x => ROT_END[x]);
+  return k.length === 1 ? 'Só ' + l[0].toLowerCase() : l.join(' + ');
+}
+function renderIndicadoresLocais(){
+  const el = $('lcInd'); if (!el) return;
+  const I = locInd = calcularIndicadoresLocais(), nf = v => v.toLocaleString('pt-BR'), pc = (a, b) => b ? Math.round(a / b * 100) + '%' : '—';
+  const temSaldo = produtos.some(p => p.saldo != null);
+  const lp = (p, k) => `<div class="al" data-c="${esc(p.cod)}"><code>${esc(p.cod)}</code> ${esc(String(p.nome).slice(0, 50))}${k ? ' · <b>' + esc(k) + '</b>' : ''}${p.saldo != null ? ' · saldo ' + p.saldo : ''}</div>`;
+  const bloco = (n, tit, sub, linhas) => `<details><summary><b>${nf(n)}</b> ${tit}</summary>${sub ? `<div class="tiny">${sub}</div>` : ''}<div class="alist">${linhas.slice(0, 60).join('')}${linhas.length > 60 ? `<div class="tiny">+ ${nf(linhas.length - 60)} (veja no CSV)</div>` : ''}</div></details>`;
+  const d4 = I.mais3.filter(x => x.n === 4).length, d5 = I.mais3.filter(x => x.n === 5).length, d6 = I.mais3.filter(x => x.n >= 6).length;
+  const gr = Object.keys(I.grupos).sort((a, b) => I.grupos[b].length - I.grupos[a].length);
+  el.innerHTML = `<div class="tiny"><b>Indicadores do estoque</b>${temSaldo ? '' : ' · a planilha não tem a coluna Saldo: contam todos os produtos do arquivo'}</div>` +
+    bloco(I.colmeiasLivres.length, `colmeias livres, sem produto (de ${nf(I.colmeias)} · ${pc(I.colmeiasLivres.length, I.colmeias)})`,
+      `Caixas VERT livres: <b>${nf(I.caixasLivres)}</b> de ${nf(I.caixas)} (${pc(I.caixasLivres, I.caixas)}). Clique numa rua para ir até ela.`,
+      Object.keys(I.ruas).sort().map(k => `<div class="al" data-r="${esc(k)}"><b>${esc(k)}</b> · ${nf(I.ruas[k][1])} livres de ${nf(I.ruas[k][0])} (${pc(I.ruas[k][1], I.ruas[k][0])})</div>`)) +
+    bloco(I.soVertical.length, 'produtos só no vertical', 'Endereçados apenas em caixas VERT — sem colmeia e sem armazém.', I.soVertical.map(p => lp(p, p.loc))) +
+    bloco(I.mais3.length, 'colmeias com mais de 3 produtos', `4 produtos: ${nf(d4)} · 5: ${nf(d5)} · 6 ou mais: ${nf(d6)}. Caixas VERT com mais de 3: ${nf(I.caixasMais3)}. Códigos -BRINDE contam junto do original.`,
+      I.mais3.map(x => `<div class="al" data-k="${esc(x.c.addr)}"><b>${esc(x.c.addr)}</b> · ${x.n} produtos</div>`)) +
+    bloco(I.soArmazem.length, 'produtos só no armazém', 'Têm endereço no armazém (Descritor simples) e nenhuma colmeia/vertical.', I.soArmazem.map(p => lp(p, p.desc.trim()))) +
+    bloco(I.semEndereco.length, 'produtos sem endereço', 'Sem localização no estoque e sem descritor do armazém.', I.semEndereco.map(p => lp(p))) +
+    `<details><summary>Onde cada produto está endereçado (${nf(I.total)})</summary>${gr.map(k => `<div class="kv"><span>${rotuloGrupo(k)}</span><b>${nf(I.grupos[k].length)} · ${pc(I.grupos[k].length, I.total)}</b></div>`).join('')}</details>` +
+    `<div class="row2"><button class="tab" id="lcIndCsv">⬇ Exportar indicadores</button></div>`;
+  el.querySelectorAll('.al[data-k],.al[data-r],.al[data-c]').forEach(d => d.onclick = () => {
+    if (d.dataset.r) { irRua(d.dataset.r); return; }
+    const k = (d.dataset.k || '').split(', ')[0]; if (k && byAddr[k]) { selecionar(byAddr[k], true); return; }
+    if (d.dataset.c) { const q = $('q'); q.value = d.dataset.c; $('sf').requestSubmit(); }
+  });
+  $('lcIndCsv').onclick = () => {
+    const L = [['lista', 'codigo_ou_posicao', 'nome', 'endereco', 'saldo']];
+    I.colmeiasLivres.forEach(c => L.push(['colmeia_livre', c.addr, '', '', '']));
+    I.soVertical.forEach(p => L.push(['so_vertical', p.cod, p.nome, p.loc, p.saldo]));
+    I.mais3.forEach(x => L.push(['colmeia_mais_de_3_produtos', x.c.addr, x.n + ' produtos', [...new Set(x.c.prods.map(p => p.cod))].join(' | '), '']));
+    I.soArmazem.forEach(p => L.push(['so_armazem', p.cod, p.nome, p.desc.trim(), p.saldo]));
+    I.semEndereco.forEach(p => L.push(['sem_endereco', p.cod, p.nome, '', p.saldo]));
+    baixarCsv('indicadores-locais.csv', L);
+  };
 }
 async function lcImportar(file){
   const out = $('lcOut'); out.innerHTML = '<div class="tiny">Lendo…</div>';
@@ -2083,30 +2156,42 @@ async function lcImportar(file){
     const norm = t => String(t == null ? '' : t).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''), h = (rows[0] || []).map(norm);
     const ach = (re, d) => { const i = h.findIndex(x => re.test(x)); return i >= 0 ? i : d; };
     const ic = ach(/cod|sku|ref/, 0), iloc = ach(/local|endere|posic|colmeia/, 2), ino = ach(/nome|produto|descri/, 1), temCab = h.some(x => /cod|local|nome|produto/.test(x));
+    // colunas opcionais da planilha de saldo: Saldo, Disponível e "Descritor simples" (endereço no armazém)
+    const isal = temCab ? ach(/^saldo/, -1) : -1, idis = temCab ? ach(/^dispon/, -1) : -1, ides = temCab ? ach(/descritor|armazem/, -1) : -1;
+    const nz = v => { const n = num(v); return isNaN(n) ? null : n; };
+    const soSaldo = isal >= 0 && $('lcSoSaldo').checked;
     const mapa = new Map(); let ignoradas = 0;
     rows.slice(temCab ? 1 : 0).forEach(r => {
       const cod = r[ic] == null ? '' : String(r[ic]).trim(); if (!cod) { ignoradas++; return; }
       const loc = r[iloc] == null ? '' : String(r[iloc]).trim(), nome = r[ino] == null ? '' : String(r[ino]).trim(), o = mapa.get(cod);
-      if (!o) mapa.set(cod, { nome, locs:loc ? [loc] : [] });
-      else { if (!o.nome) o.nome = nome; if (loc && !o.locs.some(x => x.split(/[\/,;]/).map(t => t.trim()).includes(loc))) o.locs.push(loc); }
+      const desc = ides >= 0 && r[ides] != null ? String(r[ides]).trim() : '';
+      if (!o) mapa.set(cod, { nome, locs:loc ? [loc] : [], saldo:isal >= 0 ? nz(r[isal]) : null, disp:idis >= 0 ? nz(r[idis]) : null, desc });
+      else {
+        if (!o.nome) o.nome = nome; if (loc && !o.locs.some(x => x.split(/[\/,;]/).map(t => t.trim()).includes(loc))) o.locs.push(loc);
+        if (o.saldo == null && isal >= 0) o.saldo = nz(r[isal]); if (o.disp == null && idis >= 0) o.disp = nz(r[idis]);
+        if (desc && !o.desc.includes(desc)) o.desc = (o.desc + ' ' + desc).trim();
+      }
     });
-    const novo = [...mapa].map(([cod, o]) => [cod, o.nome, o.locs.join(' / ')]);
+    const temExtra = isal >= 0 || idis >= 0 || ides >= 0;
+    let semSaldo = 0;
+    const novo = [...mapa].filter(([, o]) => { if (soSaldo && !(o.saldo > 0)) { semSaldo++; return false; } return true; })
+      .map(([cod, o]) => temExtra ? [cod, o.nome, o.locs.join(' / '), o.saldo, o.disp, o.desc] : [cod, o.nome, o.locs.join(' / ')]);
     if (!novo.length) { out.innerHTML = '<div class="tiny" style="color:var(--red)">Nenhum produto encontrado. Confira as colunas.</div>'; return; }
     const antes = new Map(produtos.map(p => [String(p.cod), p.loc]));
     let nov = 0, mud = 0, vt = 0, sem = 0;
     novo.forEach(r => { if (!antes.has(r[0])) nov++; else if (antes.get(r[0]) !== r[2]) mud++; if (/VERT-/i.test(r[2])) vt++; if (!r[2]) sem++; });
-    const sumiram = [...antes.keys()].filter(k => !mapa.has(k)).length;
-    locais = { nome:file.name, em:Date.now(), rows:novo };
+    const ficam = new Set(novo.map(r => r[0])), sumiram = [...antes.keys()].filter(k => !ficam.has(k)).length;
+    locais = { nome:file.name, em:Date.now(), rows:novo, ignorados:semSaldo };
     let salvo = true; try { localStorage.setItem('estoque3d.locais', JSON.stringify(locais)); } catch (e) { salvo = false; }
     lcAplicar();
     const nf = v => v.toLocaleString('pt-BR');
-    out.innerHTML = `<div class="kv"><span>Produtos no arquivo</span><b>${nf(novo.length)}</b></div><div class="kv"><span>Novos (não estavam no mapa)</span><b>${nf(nov)}</b></div><div class="kv"><span>Com localização alterada</span><b>${nf(mud)}</b></div><div class="kv"><span>Fora do arquivo (ficam sem posição)</span><b>${nf(sumiram)}</b></div><div class="kv"><span>Com endereço VERT</span><b>${nf(vt)}</b></div><div class="kv"><span>Sem localização</span><b>${nf(sem)}</b></div>${ignoradas ? `<div class="tiny">${ignoradas} linhas sem código ignoradas.</div>` : ''}<div class="tiny">${salvo ? 'Guardado neste navegador.' : 'Não foi possível guardar (valerá só até fechar a página).'} Veja os endereços que não existem no mapa na aba Auditoria.</div>`;
+    out.innerHTML = `<div class="kv"><span>Produtos no arquivo</span><b>${nf(novo.length)}</b></div><div class="kv"><span>Novos (não estavam no mapa)</span><b>${nf(nov)}</b></div><div class="kv"><span>Com localização alterada</span><b>${nf(mud)}</b></div><div class="kv"><span>Fora do arquivo (ficam sem posição)</span><b>${nf(sumiram)}</b></div><div class="kv"><span>Com endereço VERT</span><b>${nf(vt)}</b></div><div class="kv"><span>Sem localização</span><b>${nf(sem)}</b></div>${semSaldo ? `<div class="kv"><span>Sem saldo (ignorados)</span><b>${nf(semSaldo)}</b></div>` : ''}${ignoradas ? `<div class="tiny">${ignoradas} linhas sem código ignoradas.</div>` : ''}<div class="tiny">${salvo ? 'Guardado neste navegador.' : 'Não foi possível guardar (valerá só até fechar a página).'} Veja os endereços que não existem no mapa na aba Auditoria.</div>`;
     toast('Locais atualizados: ' + nf(novo.length) + ' produtos');
   } catch (e) { out.innerHTML = '<div class="tiny" style="color:var(--red)">' + esc(e.message || e) + '</div>'; }
 }
 $('lcFile').onchange = e => { const f = e.target.files[0]; if (f) lcImportar(f); e.target.value = ''; };
 $('lcRest').onclick = () => { locais = null; try { localStorage.removeItem('estoque3d.locais'); } catch (e) {} lcAplicar(); $('lcOut').innerHTML = '<div class="tiny">Voltou ao cadastro embutido' + (live ? ' + WMS' : '') + '.</div>'; };
-$('lcCsv').onclick = () => baixarCsv('locais-estoque.csv', [['codigo', 'nome', 'localizacao', 'no_mapa']].concat(produtos.map(p => [p.cod, p.nome, p.loc, p.locs.some(k => byAddr[k]) ? 'sim' : 'nao'])));
+$('lcCsv').onclick = () => baixarCsv('locais-estoque.csv', [['codigo', 'nome', 'localizacao', 'no_mapa', 'armazem', 'saldo']].concat(produtos.map(p => [p.cod, p.nome, p.loc, p.locs.some(k => byAddr[k]) ? 'sim' : 'nao', p.desc || '', p.saldo == null ? '' : p.saldo])));
 lcAtual();
 setMode('walk'); mostrar('walk');
 { const e = entradaRua('T', 'S'); cam.x = e.x; cam.z = e.z; cam.yaw = cam.yawT = e.yaw; cam.pitch = cam.pitchT = -.04; cam.vx = cam.vz = 0; }
