@@ -1226,7 +1226,9 @@ button,a,input,select,textarea,label,[onclick]{touch-action:manipulation;-webkit
 @media(max-width:768px){
   /* puxar a tela pra baixo no Chrome/Samsung Internet recarregava o app e perdia o pedido em andamento */
   html,body{overscroll-behavior-y:none}
-  .sep-scroll,.cl-lista,.conteudo{overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+  /* só nos contêineres EXTERNOS de rolagem: em lista aninhada (ex.: .cl-lista, que não rola sozinha) o "contain"
+     prende o gesto e a tela só rola pela barra */
+  .sep-scroll,.conteudo{overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 
   /* menu inferior do separador: texto legível e área de toque confortável */
   .sep-tab{font-size:10px;letter-spacing:.5px}

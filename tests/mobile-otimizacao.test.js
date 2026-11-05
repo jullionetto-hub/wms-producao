@@ -52,6 +52,10 @@ describe('index.html e CSS para celular', () => {
     expect(css).toContain('OTIMIZAÇÃO CELULAR DE SEPARAÇÃO');
     expect(css).toMatch(/overscroll-behavior-y:none/);
     expect(css).toMatch(/\.btn-item\{width:44px;height:44px\}/);
+    // "contain" em lista aninhada que não rola sozinha prende o gesto de rolagem (tela só rolava pela barra)
+    const regra = css.split('\n').find(l => l.includes('overscroll-behavior:contain'));
+    expect(regra).toBeDefined();
+    expect(regra).not.toContain('.cl-lista');
     // classes que o separador usa continuam definidas
     ['.sep-tabbar', '.item-card', '.btn-item', '.bip-input', '.fila-card'].forEach(c => expect(css).toContain(c));
   });
