@@ -288,6 +288,24 @@ describe('importação: coluna da transportadora (nunca um número)', () => {
   });
 });
 
+describe('absenteísmo → Matriz: cache da Matriz', () => {
+  test('depois de enviar, marca os feedbacks da Matriz como velhos (senão o que foi enviado não aparece)', () => {
+    const ctx = { _mzCarregado: { feedbacks: true, colaboradores: true } };
+    vm.createContext(ctx);
+    vm.runInContext(codigo['gestao.js'].match(/function _absnInvalidarCacheMatriz[\s\S]*?\n}\n/)[0], ctx);
+    ctx._absnInvalidarCacheMatriz();
+    expect(ctx._mzCarregado.feedbacks).toBe(false);
+    expect(ctx._mzCarregado.colaboradores).toBe(true);   // o resto continua em cache
+  });
+
+  test('sem a Matriz carregada não quebra', () => {
+    const ctx = {};
+    vm.createContext(ctx);
+    vm.runInContext(codigo['gestao.js'].match(/function _absnInvalidarCacheMatriz[\s\S]*?\n}\n/)[0], ctx);
+    expect(() => ctx._absnInvalidarCacheMatriz()).not.toThrow();
+  });
+});
+
 describe('embalagem: início, fim e tempo', () => {
   const ctx = {};
   vm.createContext(ctx);

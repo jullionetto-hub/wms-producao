@@ -164,6 +164,13 @@ function _absnPeriodoDoMes(mes) {
   return info ? { data_ini: info.ini, data_fim: info.fim } : {};
 }
 
+// A Matriz guarda os feedbacks em memória depois da 1ª abertura (matriz.js, _mzCarregado) e não busca de novo
+// ao voltar pra ela — por isso o que acabou de ser enviado "não aparecia" até recarregar a página (F5).
+// Marca o cache como velho pra a próxima abertura da Matriz buscar os feedbacks atualizados.
+function _absnInvalidarCacheMatriz() {
+  try { if (typeof _mzCarregado !== 'undefined' && _mzCarregado) _mzCarregado.feedbacks = false; } catch (_) {}
+}
+
 async function absnEnviarMatriz(colaboradorId, nome) {
   const mes = prompt(`Mês de referência na Matriz de Responsabilidades (ex: Agosto/2026)\nColaborador: ${nome}`, _absnMesAtivo || '');
   if (!mes) return;
@@ -175,6 +182,7 @@ async function absnEnviarMatriz(colaboradorId, nome) {
     });
     const data = await res.json();
     if (!res.ok) { toast(data.erro || 'Erro ao enviar pra Matriz', 'erro'); return; }
+    _absnInvalidarCacheMatriz();
     toast(`Enviado pra Matriz — absenteísmo: ${data.status}`, 'sucesso');
   } catch(e) { toast('Erro: ' + e.message, 'erro'); }
 }
@@ -197,6 +205,7 @@ async function absnEnviarTodosMatriz() {
     });
     const data = await res.json();
     if (!res.ok) { toast(data.erro || 'Erro ao enviar pra Matriz', 'erro'); return; }
+    _absnInvalidarCacheMatriz();
     const ok = data.criados + data.atualizados;
     if (!data.falhas.length) {
       toast(`Enviado pra Matriz: ${ok} colaboradores (${data.criados} novos, ${data.atualizados} atualizados)`, 'sucesso');
