@@ -908,10 +908,13 @@ function _fotoMiniaturas(fotos, { editavel = false, origem = 'diario', secao = '
       ${editavel ? `<button type="button" onclick="removerFoto(${f.id},'${ctx}')" title="Remover foto" aria-label="Remover foto"
         style="position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;border:none;background:var(--red);color:#fff;font-size:12px;line-height:1;cursor:pointer">×</button>` : ''}
     </span>`).join('');
-  const add = editavel && fotos.length < 6 ? `<label style="display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;width:64px;height:64px;border:1.5px dashed var(--border);border-radius:8px;cursor:pointer;color:var(--text3);font-size:10px;text-align:center">
-      <i class="ti ti-camera" aria-hidden="true" style="font-size:18px"></i>Foto
-      <input type="file" accept="image/*" multiple style="display:none" onchange="adicionarFotos('${origem}','${secao}',this,'${ctx}')">
-    </label>` : '';
+  // "Foto" abre direto a câmera traseira do celular (capture); "Galeria" escolhe imagens já tiradas (várias de uma vez).
+  // No computador o capture é ignorado e abre o seletor de arquivos normal.
+  const botao = (icone, rotulo, camera) => `<label style="display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;width:64px;height:64px;border:1.5px dashed var(--border);border-radius:8px;cursor:pointer;color:var(--text3);font-size:10px;text-align:center">
+      <i class="ti ti-${icone}" aria-hidden="true" style="font-size:18px"></i>${rotulo}
+      <input type="file" accept="image/*" ${camera ? 'capture="environment"' : 'multiple'} style="display:none" onchange="adicionarFotos('${origem}','${secao}',this,'${ctx}')">
+    </label>`;
+  const add = editavel && fotos.length < 6 ? botao('camera', 'Foto', true) + botao('photo', 'Galeria', false) : '';
   return `<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px">${minis}${add}</div>`;
 }
 

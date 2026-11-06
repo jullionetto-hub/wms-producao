@@ -288,6 +288,30 @@ describe('importação: coluna da transportadora (nunca um número)', () => {
   });
 });
 
+describe('Diário de Bordo: botão de foto abre a câmera', () => {
+  const ctx = { API: '' };
+  vm.createContext(ctx);
+  vm.runInContext(codigo['config.js'].match(/function escHtml[\s\S]*?\n}\n/)[0], ctx);
+  vm.runInContext(codigo['auth.js'].match(/function _fotoMiniaturas[\s\S]*?\n}\n/)[0], ctx);
+
+  test('"Foto" usa capture (câmera direto) e "Galeria" aceita várias imagens', () => {
+    const html = ctx._fotoMiniaturas([], { editavel: true, origem: 'diario', secao: 'reposicao', ctx: 'diario' });
+    const inputs = html.match(/<input[^>]*>/g);
+    expect(inputs).toHaveLength(2);
+    expect(inputs[0]).toContain('capture="environment"');
+    expect(inputs[0]).not.toContain('multiple');
+    expect(inputs[1]).toContain('multiple');
+    expect(inputs[1]).not.toContain('capture');
+    inputs.forEach(i => expect(i).toContain("adicionarFotos('diario','reposicao',this,'diario')"));
+  });
+
+  test('sem edição (diário enviado) não mostra botões; com 6 fotos também não', () => {
+    expect(ctx._fotoMiniaturas([{ id: 1 }], { editavel: false })).not.toContain('<input');
+    const seis = Array.from({ length: 6 }, (_, i) => ({ id: i + 1 }));
+    expect(ctx._fotoMiniaturas(seis, { editavel: true })).not.toContain('<input');
+  });
+});
+
 describe('Diário de Bordo: carga atrasada não sobrescreve a tela (fotos sumiam)', () => {
   const corpo = nome => codigo['auth.js'].match(new RegExp(`async function ${nome}\\([\\s\\S]*?\\n}\\n`))[0];
 
