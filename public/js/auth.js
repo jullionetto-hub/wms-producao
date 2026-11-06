@@ -1954,15 +1954,23 @@ async function exportarEmbalagemExcel() {
     const res = await fetch(`${API}/embalagem?ini=${ini}&fim=${fim}`, { credentials:'include' });
     const pedidos = await res.json();
     const wb = XLSX.utils.book_new();
-    const rows = [['Nr Pedido','Cliente','Transportadora','Status','Embalado Por','Hora','Drive','Prime']];
-    pedidos.forEach(p => rows.push([
-      p.numero_pedido, p.cliente||'', p.transportadora||'',
-      p.status_embalagem||'pendente', p.embalado_por||'', p.embalado_em||'',
-      String(p.transportadora||'').toUpperCase().includes('DRIVE')?'Sim':'Nao',
-      p.tem_prime?'Sim':'Nao'
-    ]));
+    const fmtData = d => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(d || ''); return m ? `${m[3]}/${m[2]}/${m[1]}` : ''; };
+    const rows = [['Nr Pedido','Cliente','Transportadora','Status','Embalado Por','Data Embalagem','Início Embalagem','Fim Embalagem','Tempo (min)','Drive','Prime']];
+    pedidos.forEach(p => {
+      const embalado = p.status_embalagem === 'embalado';
+      const tempo = embalado ? _minutosEmb(p.embalagem_iniciado_em, p.embalado_em) : null;
+      rows.push([
+        p.numero_pedido, p.cliente||'', p.transportadora||'',
+        p.status_embalagem||'pendente', p.embalado_por||'',
+        embalado ? fmtData(p.data_embalagem) : '',
+        p.embalagem_iniciado_em||'', embalado ? (p.embalado_em||'') : '',
+        tempo == null ? '' : tempo,
+        String(p.transportadora||'').toUpperCase().includes('DRIVE')?'Sim':'Nao',
+        p.tem_prime?'Sim':'Nao'
+      ]);
+    });
     const ws = XLSX.utils.aoa_to_sheet(rows);
-    ws['!cols'] = [{wch:12},{wch:25},{wch:18},{wch:12},{wch:20},{wch:8},{wch:8},{wch:8}];
+    ws['!cols'] = [{wch:12},{wch:25},{wch:18},{wch:12},{wch:20},{wch:14},{wch:16},{wch:14},{wch:12},{wch:8},{wch:8}];
     XLSX.utils.book_append_sheet(wb, ws, 'Embalagem');
     XLSX.writeFile(wb, `embalagem_${ini}_${fim}.xlsx`);
     toast('Excel exportado!','sucesso');
@@ -2679,6 +2687,18 @@ function selecionarPedidoEmbFilaDesk(id) {
   if (cont) cont.innerHTML = renderCardEmb(pedido, pedido.status_embalagem === 'embalando', 'desk');
 }
 
+// Minutos entre o início e o fim da embalagem ('HH:MM[:SS]'). Se o fim for "menor", o turno virou a
+// meia-noite. Acima de 10h é dado inconsistente (início de um dia, fim de outro) → null.
+function _minutosEmb(ini, fim) {
+  const seg = h => { const m = /^(\d{1,2}):(\d{2})(?::(\d{2}))?/.exec(h || ''); return m ? (+m[1]) * 3600 + (+m[2]) * 60 + (+m[3] || 0) : null; };
+  const a = seg(ini), b = seg(fim);
+  if (a == null || b == null) return null;
+  let d = b - a; if (d < 0) d += 86400;
+  const min = d / 60;
+  return min > 600 ? null : Math.round(min * 10) / 10;
+}
+const _fmtTempoEmb = m => m == null ? '—' : (m < 60 ? `${m} min` : `${Math.floor(m / 60)}h${String(Math.round(m % 60)).padStart(2, '0')}`);
+
 async function carregarEmbalagemEmbaladesDesk() {
   const el = document.getElementById('d-emb-embalados');
   if (!el) return;
@@ -2693,21 +2713,22 @@ async function carregarEmbalagemEmbaladesDesk() {
       return;
     }
     const fmtDt = d => { if (!d) return '—'; const [y,m,dd] = d.split('-'); return `${dd}/${m}/${y}`; };
+    // (esse card usava uma variável "r" que não existe aqui — dava ReferenceError e a aba mostrava "Erro ao carregar")
     el.innerHTML = pedidos.map(p => `
       <div style="border:1.5px solid rgba(87,185,129,.4);border-radius:12px;padding:12px 14px;margin-bottom:8px;background:rgba(87,185,129,.1)">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-          <div style="font-size:20px;font-weight:800;color:var(--green);font-family:'Space Mono',monospace">#${p.numero_pedido}</div>
+          <div style="font-size:20px;font-weight:800;color:var(--green);font-family:'Space Mono',monospace">#${escHtml(p.numero_pedido)}</div>
           <span style="font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;background:var(--green);color:#fff">EMBALADO</span>
         </div>
         <div style="display:flex;gap:12px;font-size:12px;color:var(--text2);flex-wrap:wrap">
-          <span>${r.ped_itens||0}<b style="color:var(--text)">${p.total_itens||p.itens||0} itens</b></span>
-        <span><b style="color:var(--text)">${p.itens||0} SKUs</b></span>
-          ${p.cliente ? `<span>${r.separador_nome||'—'}${p.cliente}</span>` : ''}
-          ${p.transportadora ? `<span>${p.transportadora}${p.transportadora}</span>` : ''}
-          ${p.embalado_por ? `<span>${p.embalado_por}${p.embalado_por}</span>` : ''}
+          <span><b style="color:var(--text)">${p.total_itens||p.itens||0}</b> itens</span>
+          <span><b style="color:var(--text)">${p.itens||0}</b> SKUs</span>
+          ${p.cliente ? `<span>${escHtml(p.cliente)}</span>` : ''}
+          ${p.transportadora ? `<span>${escHtml(p.transportadora)}</span>` : ''}
+          ${p.embalado_por ? `<span>${escHtml(p.embalado_por)}</span>` : ''}
         </div>
-        ${p.hora_checkout ? `<div style="font-size:11px;color:var(--text3);margin-top:4px">Checkout: ${p.hora_checkout}</div>` : ''}
-        ${p.embalagem_iniciado_em ? `<div style="font-size:11px;color:var(--green);margin-top:2px">Início emb.: ${p.embalagem_iniciado_em}</div>` : ''}
+        ${p.hora_checkout ? `<div style="font-size:11px;color:var(--text3);margin-top:4px">Checkout: ${escHtml(p.hora_checkout)}</div>` : ''}
+        <div style="font-size:11px;color:var(--green);margin-top:2px">Início: ${escHtml(p.embalagem_iniciado_em || '—')} · Fim: ${escHtml(p.embalado_em || '—')} · Tempo: ${_fmtTempoEmb(_minutosEmb(p.embalagem_iniciado_em, p.embalado_em))}</div>
       </div>`).join('');
   } catch(e) { if (el) el.innerHTML = '<div style="color:var(--red);text-align:center;padding:24px">Erro ao carregar</div>'; }
 }

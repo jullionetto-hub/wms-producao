@@ -255,6 +255,65 @@ describe('lista de usuários agrupada por turno', () => {
   });
 });
 
+describe('importação: coluna da transportadora (nunca um número)', () => {
+  const ctx = {};
+  vm.createContext(ctx);
+  ['_RE_SERVICO', '_ehNumerico', '_normServico'].forEach(n => vm.runInContext(codigo['pedidos.js'].match(new RegExp(`const ${n} = [^\\n]*\\n`))[0], ctx));
+  vm.runInContext(codigo['pedidos.js'].match(/function _colunaServico[\s\S]*?\n}\n/)[0], ctx);
+  vm.runInContext('this._normServico = _normServico', ctx);   // const de topo no vm não vira propriedade do contexto
+
+  test('número puro não é transportadora; SEDEX/PAC são normalizados', () => {
+    expect(ctx._normServico('60')).toBe('');
+    expect(ctx._normServico('1.234,5')).toBe('');
+    expect(ctx._normServico('SEDEX II')).toBe('SEDEX');
+    expect(ctx._normServico('PAC II')).toBe('PAC');
+    expect(ctx._normServico('Drive Thru')).toBe('Drive Thru');
+    expect(ctx._normServico('')).toBe('');
+  });
+
+  test('cabeçalho acertou a coluna: mantém', () => {
+    const linhas = [['5705521', 'x', 'Ana', 'SEDEX II', '60'], ['5705522', 'x', 'Bia', 'PAC II', '9']];
+    expect(ctx._colunaServico(linhas, 3)).toBe(3);
+  });
+
+  test('cabeçalho apontou a quantidade (o bug): acha a coluna do serviço pelo conteúdo', () => {
+    // pedido | aguardando | razão | Qtde. de produtos | serviço
+    const linhas = [['5705521', '05/11', 'Idelania', '59', 'SEDEX II'], ['5705497', '05/11', 'Tatiane', '31', 'PAC II'], ['5705439', '05/11', 'Oscar', '49', 'SEDEX II']];
+    expect(ctx._colunaServico(linhas, 3)).toBe(4);
+    expect(ctx._colunaServico(linhas, -1)).toBe(4);
+  });
+
+  test('sem nenhuma coluna que pareça serviço: -1 (fica vazio, não vira número)', () => {
+    expect(ctx._colunaServico([['5705521', '59'], ['5705522', '31']], 1)).toBe(-1);
+  });
+});
+
+describe('embalagem: início, fim e tempo', () => {
+  const ctx = {};
+  vm.createContext(ctx);
+  vm.runInContext(codigo['auth.js'].match(/function _minutosEmb[\s\S]*?\n}\n/)[0], ctx);
+  vm.runInContext(codigo['auth.js'].match(/const _fmtTempoEmb = [^\n]*\n/)[0], ctx);
+  vm.runInContext('this._fmtTempoEmb = _fmtTempoEmb', ctx);
+
+  test('minutos entre início e fim', () => {
+    expect(ctx._minutosEmb('10:00:00', '10:03:30')).toBe(3.5);
+    expect(ctx._minutosEmb('10:00', '11:15')).toBe(75);
+  });
+  test('vira a meia-noite', () => {
+    expect(ctx._minutosEmb('23:58:00', '00:04:00')).toBe(6);
+  });
+  test('sem início/fim ou diferença absurda (>10h) → null', () => {
+    expect(ctx._minutosEmb('', '10:00')).toBeNull();
+    expect(ctx._minutosEmb('08:00', '')).toBeNull();
+    expect(ctx._minutosEmb('08:00', '22:00')).toBeNull();
+  });
+  test('formatação', () => {
+    expect(ctx._fmtTempoEmb(3.5)).toBe('3.5 min');
+    expect(ctx._fmtTempoEmb(75)).toBe('1h15');
+    expect(ctx._fmtTempoEmb(null)).toBe('—');
+  });
+});
+
 describe('escHtml', () => {
   const ctx = {};
   vm.createContext(ctx);

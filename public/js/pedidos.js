@@ -1099,6 +1099,27 @@ function processarArquivoFile(file) {
   reader.readAsArrayBuffer(file);
 }
 
+/* Transportadora é um nome (SEDEX, PAC, Drive Thru…), nunca um número. A exportação do MIESS às vezes traz
+   a coluna "Qtde. de produtos" colada ao serviço; quando o cabeçalho do serviço não era reconhecido o
+   import pegava a coluna errada e gravava a quantidade (ex.: "60") como transportadora. */
+const _RE_SERVICO = /SEDEX|\bPAC\b|DRIVE|RETIRADA|MOTO|CORREIOS|JADLOG|LOGGI|TRANSPORT|EXPRESS/i;
+const _ehNumerico = v => /^[\d.,\s]+$/.test(String(v == null ? '' : v)) && /\d/.test(String(v));
+// linhas: matriz de textos (só as linhas de pedido, sem cabeçalho); palpite: índice achado pelo cabeçalho (ou -1).
+// Mantém o palpite se a coluna tem texto; senão procura a coluna cujo conteúdo parece serviço de entrega.
+function _colunaServico(linhas, palpite) {
+  const col = i => linhas.map(r => String(r[i] == null ? '' : r[i]).trim()).filter(Boolean);
+  if (palpite >= 0) { const v = col(palpite); if (v.length && v.filter(x => !_ehNumerico(x)).length / v.length >= 0.5) return palpite; }
+  const larg = Math.max(0, ...linhas.map(r => r.length));
+  let melhor = -1, nota = 0;
+  for (let i = 0; i < larg; i++) {
+    const v = col(i); if (!v.length) continue;
+    const n = v.filter(x => _RE_SERVICO.test(x)).length / v.length;
+    if (n > nota) { nota = n; melhor = i; }
+  }
+  return nota >= 0.3 ? melhor : -1;
+}
+const _normServico = s => { s = String(s || '').trim(); return _ehNumerico(s) ? '' : (/SEDEX/i.test(s) ? 'SEDEX' : /PAC/i.test(s) ? 'PAC' : s); };
+
 function _processarSheetsMIESS(wb, _norm, iItens, iTransp) {
   try {
     // ── Sheet ITENS — índices fixos conforme exportação MIESS ──
@@ -1138,7 +1159,9 @@ function _processarSheetsMIESS(wb, _norm, iItens, iTransp) {
       const iNum = findT(c => c.includes('pedido'), 0);
       const iAg  = findT(c => c.includes('aguard'), 1);
       const iRaz = findT(c => c.includes('razao') || c.includes('social'), 2);
-      const iSrv = findT(c => c.includes('servico') || c.includes('entrega'), 3);
+      const linhasT = rowsT.slice(1).filter(r => /^\d{5,}$/.test(String(r[iNum]||'').trim()));
+      // sem fallback por índice fixo (o 3 caía na "Qtde. de produtos" quando a coluna do serviço mudava de posição)
+      const iSrv = _colunaServico(linhasT, findT(c => c.includes('servico') || c.includes('entrega'), -1));
       // Coluna "Estado" (ou "Destinatário - Estado") — opcional, sem fallback por
       // índice fixo: se não existir no arquivo, fica vazia e não derruba o resto
       // do import. Usada pra imprimir na etiqueta e classificar NF cheia x
@@ -1152,8 +1175,8 @@ function _processarSheetsMIESS(wb, _norm, iItens, iTransp) {
         const razao  = String(r[iRaz]||'').trim();    // Razão social
         const cliente = razao.replace(/^[\d.\/-]+\s+/, '');
 
-        const servico = String(r[iSrv]||'').trim();   // Serviço de entrega
-        const transportadora = /SEDEX/i.test(servico) ? 'SEDEX' : /PAC/i.test(servico) ? 'PAC' : servico;
+        const servico = iSrv >= 0 ? String(r[iSrv]||'').trim() : '';   // Serviço de entrega
+        const transportadora = _normServico(servico);
 
         let aguardando = '';
         const val = r[iAg];                           // Aguardando desde (serial Excel)
@@ -1277,9 +1300,15 @@ function processarArquivoHTML(file) {
         const colQtd        = headerCells.findIndex(c => c.includes('qtd') || c.includes('quant'));
         const colData       = headerCells.findIndex(c => c.includes('data') || c.includes('movim'));
         const colAguardando = headerCells.findIndex(c => c.includes('aguard'));
-        const colServico    = headerCells.findIndex(c => c.includes('servi') || c.includes('entrega') || c.includes('frete'));
         const colEstado     = headerCells.findIndex(c => c.includes('estado') || c.includes(' uf') || c === 'uf');
         if (colPedido < 0) throw new Error('Coluna "Nº do pedido" não localizada no cabeçalho');
+        // coluna do serviço de entrega: pelo cabeçalho, conferida pelo conteúdo (não pode ser só número)
+        const linhasR = [];
+        for (let i = headerIdx + 1; i < rows.length; i++) {
+          const cs = Array.from(rows[i].querySelectorAll(':scope > td')).map(c => c.textContent.trim());
+          if (cs.length >= 4 && /^\d{5,}$/.test(cs[colPedido] || '')) linhasR.push(cs);
+        }
+        const colServico = _colunaServico(linhasR, headerCells.findIndex(c => c.includes('servi') || c.includes('entrega') || c.includes('frete')));
         const dados = [];
         for (let i = headerIdx + 1; i < rows.length; i++) {
           const cells = Array.from(rows[i].querySelectorAll(':scope > td'));
@@ -1291,7 +1320,7 @@ function processarArquivoHTML(file) {
           const data = colData >= 0 ? cells[colData]?.textContent.trim() : '';
           const aguardando = colAguardando >= 0 ? cells[colAguardando]?.textContent.trim() : '';
           const servico = colServico >= 0 ? cells[colServico]?.textContent.trim() : '';
-          const transportadora = /SEDEX/i.test(servico) ? 'SEDEX' : /PAC/i.test(servico) ? 'PAC' : servico;
+          const transportadora = _normServico(servico);
           const estado = colEstado >= 0 ? cells[colEstado]?.textContent.trim().toUpperCase() : '';
           dados.push({ numero_pedido:num, codigo:'', descricao:'', quantidade:0, endereco:'', cliente, transportadora, aguardando_desde: aguardando||data, total_itens_hint:qtd, estado });
         }
@@ -1384,7 +1413,12 @@ async function processarDoisHTMLs(htmlFiles) {
       const tNum = ft(c => c.includes('pedido') && !c.includes('dat') && !c.includes('status'));
       const tAgu = ft(c => c.includes('aguard'));
       const tRaz = ft(c => c.includes('razao') || c.includes('social'));
-      const tSrv = ft(c => c.includes('servico') || c.includes('entrega'));
+      const linhasT = [];
+      for (const row of infoTransp.doc.querySelectorAll('tr')) {
+        const cs = Array.from(row.querySelectorAll(':scope > td')).map(c => c.textContent.trim());
+        if (cs.length >= 4 && tNum >= 0 && /^\d{5,}$/.test(cs[tNum] || '')) linhasT.push(cs);
+      }
+      const tSrv = _colunaServico(linhasT, ft(c => c.includes('servico') || c.includes('entrega')));
       // "Destinatário - Estado" — mesma lógica opcional da aba Transportadora do Excel.
       const tEst = ft(c => c.includes('estado') || c.includes(' uf') || c === 'uf');
 
@@ -1396,7 +1430,7 @@ async function processarDoisHTMLs(htmlFiles) {
         const razao        = tRaz >= 0 ? cells[tRaz]?.textContent.trim() : '';
         const cliente      = razao.replace(/^[\d.\/-]+\s+/, ''); // strip CPF/CNPJ prefix
         const servico      = tSrv >= 0 ? cells[tSrv]?.textContent.trim() : '';
-        const transportadora = /SEDEX/i.test(servico) ? 'SEDEX' : /PAC/i.test(servico) ? 'PAC' : servico;
+        const transportadora = _normServico(servico);
         const aguardando   = tAgu >= 0 ? cells[tAgu]?.textContent.trim() : '';
         const estado       = tEst >= 0 ? cells[tEst]?.textContent.trim().toUpperCase() : '';
         if (!transpLookup[num]) transpLookup[num] = { cliente, transportadora, aguardando_desde: aguardando, estado };

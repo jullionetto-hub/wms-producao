@@ -777,7 +777,10 @@ router.post('/pedidos/importar', requerAuth, requerPerfil('supervisor'), async (
         : (parseInt(itens[0]?.total_itens_hint)||0);
       const itensCount = itensReais.length || totalItens;
       const cliente       = itens[0]?.cliente||'';
-      const transportadora= itens[0]?.transportadora||'';
+      // Transportadora é um nome (SEDEX, PAC, Drive Thru…). Valor só de números é a coluna errada do
+      // arquivo (ex.: "Qtde. de produtos") — grava vazio pra não poluir e deixar o reimport preencher.
+      const transportadoraBruta = String(itens[0]?.transportadora||'').trim();
+      const transportadora= /^[\d.,\s]+$/.test(transportadoraBruta) ? '' : transportadoraBruta;
       const aguardando    = itens[0]?.aguardando_desde||'';
       const estado        = String(itens[0]?.estado||'').trim().toUpperCase().slice(0,2);
       const r=await pool.query(
@@ -785,7 +788,7 @@ router.post('/pedidos/importar', requerAuth, requerPerfil('supervisor'), async (
          VALUES ($1,'pendente',$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'nao_iniciado',$12)
          ON CONFLICT(numero_pedido) DO UPDATE SET
            cliente=CASE WHEN pedidos.cliente='' OR pedidos.cliente IS NULL THEN EXCLUDED.cliente ELSE pedidos.cliente END,
-           transportadora=CASE WHEN pedidos.transportadora='' OR pedidos.transportadora IS NULL THEN EXCLUDED.transportadora ELSE pedidos.transportadora END,
+           transportadora=CASE WHEN pedidos.transportadora='' OR pedidos.transportadora IS NULL OR pedidos.transportadora ~ '^[0-9.,[:space:]]+$' THEN EXCLUDED.transportadora ELSE pedidos.transportadora END,
            aguardando_desde=CASE WHEN pedidos.aguardando_desde='' OR pedidos.aguardando_desde IS NULL THEN EXCLUDED.aguardando_desde ELSE pedidos.aguardando_desde END,
            estado=CASE WHEN pedidos.estado='' OR pedidos.estado IS NULL THEN EXCLUDED.estado ELSE pedidos.estado END,
            data_pedido=EXCLUDED.data_pedido,
