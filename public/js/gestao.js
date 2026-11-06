@@ -157,6 +157,13 @@ async function absnApagarTudo() {
   } catch(e) { toast('Erro: ' + e.message, 'erro'); }
 }
 
+// Período do mês que vai pra Matriz: o servidor já deduz pelo mês dos uploads; isto reforça com o filtro
+// da tela quando o mês digitado é o mês ativo (o feedback nunca soma dias de outro período).
+function _absnPeriodoDoMes(mes) {
+  const info = (_absnMesesInfo || []).find(m => String(m.mes).toLowerCase() === String(mes || '').trim().toLowerCase());
+  return info ? { data_ini: info.ini, data_fim: info.fim } : {};
+}
+
 async function absnEnviarMatriz(colaboradorId, nome) {
   const mes = prompt(`Mês de referência na Matriz de Responsabilidades (ex: Agosto/2026)\nColaborador: ${nome}`, _absnMesAtivo || '');
   if (!mes) return;
@@ -164,7 +171,7 @@ async function absnEnviarMatriz(colaboradorId, nome) {
     const res = await fetch(`${API}/absenteismo/colaboradores/${colaboradorId}/enviar-matriz`, {
       method: 'POST', credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ mes }),
+      body: JSON.stringify({ mes, ..._absnPeriodoDoMes(mes) }),
     });
     const data = await res.json();
     if (!res.ok) { toast(data.erro || 'Erro ao enviar pra Matriz', 'erro'); return; }
@@ -186,7 +193,7 @@ async function absnEnviarTodosMatriz() {
     const res = await fetch(`${API}/absenteismo/enviar-matriz-lote`, {
       method: 'POST', credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ mes, ids: linhas.map(r => r.colaborador.id) }),
+      body: JSON.stringify({ mes, ids: linhas.map(r => r.colaborador.id), ..._absnPeriodoDoMes(mes) }),
     });
     const data = await res.json();
     if (!res.ok) { toast(data.erro || 'Erro ao enviar pra Matriz', 'erro'); return; }

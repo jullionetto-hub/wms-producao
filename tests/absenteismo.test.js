@@ -6,7 +6,7 @@
 
 const {
   parseEspelhoPonto, inferirHorariosEsperados, classificarDia, classificarAbsenteismoMes,
-  paraMinutos, paraHHMM, extrairEmpresaDoArquivo, mesReferencia, ehDiaUtilEsperado,
+  paraMinutos, paraHHMM, extrairEmpresaDoArquivo, mesReferencia, ehDiaUtilEsperado, periodoDoMes, diasNoPeriodo,
 } = require('../lib/absenteismo');
 
 /* ════════════════════════════════════════════════════════════
@@ -278,5 +278,42 @@ describe('ehDiaUtilEsperado', () => {
       expect(ehDiaUtilEsperado('Logistica - Madrugada 22h - 06h48', d)).toBe(true);
       expect(ehDiaUtilEsperado('Turno desconhecido', d)).toBe(true);
     });
+  });
+});
+
+/* ════════════════════════════════════════════════════════════
+   Período do mês — o feedback da Matriz não pode somar dois períodos
+════════════════════════════════════════════════════════════ */
+describe('periodoDoMes / diasNoPeriodo', () => {
+  const uploads = [
+    { periodo_inicio: '2026-08-27', periodo_fim: '2026-09-26' },   // Setembro/2026
+    { periodo_inicio: '2026-09-27', periodo_fim: '2026-10-26' },   // Outubro/2026
+  ];
+
+  test('o mês de referência é o mês em que o período FECHA', () => {
+    expect(periodoDoMes(uploads, 'Outubro/2026')).toEqual({ ini: '2026-09-27', fim: '2026-10-26' });
+    expect(periodoDoMes(uploads, 'Setembro/2026')).toEqual({ ini: '2026-08-27', fim: '2026-09-26' });
+  });
+
+  test('ignora caixa, espaços e acento do que foi digitado', () => {
+    expect(periodoDoMes(uploads, '  outubro/2026 ')).toEqual({ ini: '2026-09-27', fim: '2026-10-26' });
+    expect(periodoDoMes([{ periodo_inicio: '2026-02-27', periodo_fim: '2026-03-26' }], 'MARCO/2026')).toEqual({ ini: '2026-02-27', fim: '2026-03-26' });
+  });
+
+  test('vários PDFs do mesmo mês: junta do menor início ao maior fim', () => {
+    const dois = [{ periodo_inicio: '2026-09-27', periodo_fim: '2026-10-20' }, { periodo_inicio: '2026-09-29', periodo_fim: '2026-10-26' }];
+    expect(periodoDoMes(dois, 'Outubro/2026')).toEqual({ ini: '2026-09-27', fim: '2026-10-26' });
+  });
+
+  test('mês sem upload ou vazio → null (usa o período informado/todos)', () => {
+    expect(periodoDoMes(uploads, 'Dezembro/2026')).toBeNull();
+    expect(periodoDoMes(uploads, '')).toBeNull();
+    expect(periodoDoMes([], 'Outubro/2026')).toBeNull();
+  });
+
+  test('diasNoPeriodo: extremos incluídos; sem período devolve tudo', () => {
+    const dias = ['2026-08-29', '2026-09-26', '2026-09-27', '2026-10-02', '2026-10-26', '2026-10-27'].map(data => ({ data }));
+    expect(diasNoPeriodo(dias, { ini: '2026-09-27', fim: '2026-10-26' }).map(d => d.data)).toEqual(['2026-09-27', '2026-10-02', '2026-10-26']);
+    expect(diasNoPeriodo(dias, null)).toHaveLength(6);
   });
 });

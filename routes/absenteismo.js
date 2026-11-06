@@ -4,7 +4,7 @@ const router  = express.Router();
 const { requerAuth, requerPerfil } = require('../lib/auth');
 const { db, pool } = require('../lib/db');
 const pdfParse = require('pdf-parse');
-const { parseEspelhoPonto, inferirHorariosEsperados, classificarDia, classificarAbsenteismoMes, mesReferencia, ehDiaUtilEsperado } = require('../lib/absenteismo');
+const { parseEspelhoPonto, inferirHorariosEsperados, classificarDia, classificarAbsenteismoMes, mesReferencia, ehDiaUtilEsperado, periodoDoMes, diasNoPeriodo } = require('../lib/absenteismo');
 
 // Feriados em que o time inteiro não trabalha, mesmo caindo em dia útil
 // normal (não tem como inferir isso só pelo dia da semana). Lista mantida
@@ -357,9 +357,9 @@ router.get('/absenteismo/colaboradores/:id/dias', requerAuth, gLeitura, wrap(asy
   res.json(await db.all(sql, params));
 }));
 
-// Envia o resumo de absenteísmo do colaborador (todos os dias já salvos, sem
-// recorte de período — mesmo critério do resultado geral) como um feedback
-// mensal na Matriz de Responsabilidades (Painel do Colaborador). O
+// Envia o resumo de absenteísmo do colaborador, só dos dias do PERÍODO do mês
+// escolhido (ver periodoDoMes), como um feedback mensal na Matriz de
+// Responsabilidades (Painel do Colaborador). O
 // casamento entre abs_colaboradores e mz_colaboradores é só por nome
 // (tabelas separadas, sem FK entre elas) — se não achar, retorna erro
 // pedindo pra conferir o cadastro em vez de criar um colaborador novo.
@@ -397,13 +397,18 @@ function detalheAbsenteismo(diasDele, horario, status, resumo) {
 // Se já existe feedback desse colaborador nesse mês, atualiza só os campos de
 // absenteísmo (reenviar não duplica); senão cria um novo. Retorna
 // { erro, status: <http> } quando o colaborador não está na Matriz.
-async function enviarParaMatriz(colaborador, mes, autorNome) {
+async function enviarParaMatriz(colaborador, mes, autorNome, periodoInformado) {
   const mzColab = await acharMzColaborador(colaborador.nome);
   if (!mzColab) {
     return { httpStatus: 404, erro: `Não achei "${colaborador.nome}" cadastrado na Matriz de Responsabilidades. Cadastre lá primeiro ou confira o nome.` };
   }
 
-  const dias = await db.all('SELECT * FROM abs_registros_diarios WHERE colaborador_id=$1', [colaborador.id]);
+  // O feedback é do MÊS escolhido: só entram os dias do período desse mês (ex.: Outubro/2026 = 27/09 a 26/10).
+  // Antes somava todos os dias já salvos do colaborador — misturava dois períodos e inflava os atrasos
+  // (o Lucas saía com 44 min no feedback de outubro, quando o período tinha 2 min).
+  const periodo = periodoDoMes(await db.all('SELECT periodo_inicio, periodo_fim FROM abs_uploads'), mes) || periodoInformado || null;
+  const todos = await db.all('SELECT * FROM abs_registros_diarios WHERE colaborador_id=$1', [colaborador.id]);
+  const dias = diasNoPeriodo(todos, periodo);
   const resumo = resumoColaborador(dias, 0, colaborador.saldo_final_min, colaborador.horario);
   const status = classificarAbsenteismoMes({
     atrasoMin: resumo.total_atraso_min,
@@ -440,13 +445,13 @@ async function enviarParaMatriz(colaborador, mes, autorNome) {
 }
 
 router.post('/absenteismo/colaboradores/:id/enviar-matriz', requerAuth, gLeitura, wrap(async (req, res) => {
-  const { mes } = req.body || {};
+  const { mes, data_ini, data_fim } = req.body || {};
   if (!mes) return res.status(400).json({ erro: 'Informe o mês (ex: Agosto/2026)' });
 
   const colaborador = await db.get('SELECT * FROM abs_colaboradores WHERE id=$1', [req.params.id]);
   if (!colaborador) return res.status(404).json({ erro: 'Colaborador não encontrado' });
 
-  const out = await enviarParaMatriz(colaborador, mes, req.session?.usuario?.nome || '');
+  const out = await enviarParaMatriz(colaborador, mes, req.session?.usuario?.nome || '', data_ini && data_fim ? { ini: data_ini, fim: data_fim } : null);
   if (out.erro) return res.status(out.httpStatus).json({ erro: out.erro });
   res.status(out.atualizado ? 200 : 201).json(out);
 }));
@@ -454,9 +459,10 @@ router.post('/absenteismo/colaboradores/:id/enviar-matriz', requerAuth, gLeitura
 // Envio em lote: manda vários colaboradores de uma vez (ids = os que estão na
 // tela, já respeitando o filtro de turno). Um que falhe não derruba os outros.
 router.post('/absenteismo/enviar-matriz-lote', requerAuth, gLeitura, wrap(async (req, res) => {
-  const { mes, ids } = req.body || {};
+  const { mes, ids, data_ini, data_fim } = req.body || {};
   if (!mes) return res.status(400).json({ erro: 'Informe o mês (ex: Agosto/2026)' });
   if (!Array.isArray(ids) || !ids.length) return res.status(400).json({ erro: 'Nenhum colaborador informado' });
+  const periodoInformado = data_ini && data_fim ? { ini: data_ini, fim: data_fim } : null;
 
   const autor = req.session?.usuario?.nome || '';
   let criados = 0, atualizados = 0;
@@ -465,7 +471,7 @@ router.post('/absenteismo/enviar-matriz-lote', requerAuth, gLeitura, wrap(async 
     try {
       const colaborador = await db.get('SELECT * FROM abs_colaboradores WHERE id=$1', [id]);
       if (!colaborador) { falhas.push({ id, nome: `#${id}`, erro: 'Colaborador não encontrado' }); continue; }
-      const out = await enviarParaMatriz(colaborador, mes, autor);
+      const out = await enviarParaMatriz(colaborador, mes, autor, periodoInformado);
       if (out.erro) { falhas.push({ id, nome: colaborador.nome, erro: out.erro }); continue; }
       if (out.atualizado) atualizados++; else criados++;
     } catch (e) {
