@@ -327,6 +327,16 @@ describe('Diário de Bordo: recado da gestão (uma informação para os 3 turnos
     expect(n).toContain('id="rec-texto"'); expect(n).toContain('Salve o recado para poder anexar fotos');
   });
 
+  test('texto quebra de linha dentro da caixa e as quebras digitadas são mantidas', () => {
+    const c = monta('gestor');
+    const ver = c._recadoCardHtml({ ...rec, texto: 'linha 1\nlinha 2' });
+    expect(ver).toMatch(/white-space:pre-line;overflow-wrap:anywhere/);
+    c._recadoEditando = 4;
+    const ed = c._recadoCardHtml(rec);
+    expect(ed).toContain('box-sizing:border-box');
+    expect(ed).toMatch(/<textarea[^>]*wrap="soft"[^>]*overflow-wrap:anywhere/);
+  });
+
   test('o Diário carrega o recado junto com o resto, no topo da página', () => {
     expect(codigo['auth.js']).toMatch(/Promise\.all\(\[[^\]]*carregarRecadosDiario\(\)\]\)/);
     const idx = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');

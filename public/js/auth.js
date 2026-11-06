@@ -1051,9 +1051,12 @@ function _recadoCardHtml(rec) {
     </div>`;
   const caixa = 'border:1px solid var(--border);border-left:4px solid var(--amber);border-radius:12px;background:var(--surface);padding:14px 16px;margin-bottom:10px';
   if (_recadoEditando === rec.id || (_recadoEditando === 'novo' && !rec.id)) {
+    // box-sizing + overflow-wrap: o texto quebra de linha dentro da caixa (sem estourar a largura, inclusive no celular);
+    // Enter cria nova linha e o recado publicado mantém essas quebras (white-space:pre-line).
+    const campo = 'width:100%;box-sizing:border-box;font-family:inherit;color:var(--text);background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 11px;outline:none';
     return `<div style="${caixa}">${cab}
-      <input id="rec-titulo" maxlength="120" value="${escHtml(rec.titulo)}" placeholder="Título (opcional)" style="width:100%;margin-top:10px;font-weight:700">
-      <textarea id="rec-texto" rows="7" placeholder="Escreva o recado para os 3 turnos…" style="width:100%;margin-top:8px;font-size:13px">${escHtml(rec.texto)}</textarea>
+      <input id="rec-titulo" maxlength="120" value="${escHtml(rec.titulo)}" placeholder="Título (opcional)" style="${campo};margin-top:10px;font-size:14px;font-weight:700">
+      <textarea id="rec-texto" rows="7" wrap="soft" placeholder="Escreva o recado para os 3 turnos… (Enter para pular linha)" style="${campo};margin-top:8px;font-size:13px;line-height:1.55;resize:vertical;white-space:pre-wrap;overflow-wrap:anywhere">${escHtml(rec.texto)}</textarea>
       ${rec.id ? _recadoFotosHtml(rec, true) : '<div style="font-size:11px;color:var(--text3);margin-top:8px">Salve o recado para poder anexar fotos.</div>'}
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
         <button class="btn btn-outline btn-sm" onclick="cancelarRecado()">Cancelar</button>
@@ -1062,7 +1065,7 @@ function _recadoCardHtml(rec) {
   }
   return `<div style="${caixa}">${cab}
       ${rec.titulo ? `<div style="font-size:15px;font-weight:800;margin-top:8px;color:var(--text)">${escHtml(rec.titulo)}</div>` : ''}
-      <div style="font-size:13px;white-space:pre-line;margin-top:6px;color:var(--text2);line-height:1.5">${escHtml(rec.texto)}</div>
+      <div style="font-size:13px;white-space:pre-line;overflow-wrap:anywhere;margin-top:6px;color:var(--text2);line-height:1.5">${escHtml(rec.texto)}</div>
       ${_recadoFotosHtml(rec, gestor)}
       ${gestor ? `<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
         <button class="btn btn-outline btn-sm" onclick="editarRecado(${rec.id})">Editar</button>
