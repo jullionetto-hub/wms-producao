@@ -288,6 +288,53 @@ describe('importação: coluna da transportadora (nunca um número)', () => {
   });
 });
 
+describe('Diário de Bordo: recado da gestão (uma informação para os 3 turnos)', () => {
+  const monta = perfil => {
+    const ctx = { API: '', usuarioAtual: { perfil }, _recadoEditando: null, _recadoFotoRota: 'diario-recados/foto' };
+    vm.createContext(ctx);
+    vm.runInContext(codigo['config.js'].match(/function escHtml[\s\S]*?\n}\n/)[0], ctx);
+    ['_recadoFotosHtml', '_recadoCardHtml'].forEach(n => vm.runInContext(codigo['auth.js'].match(new RegExp(`function ${n}[\\s\\S]*?\\n}\\n`))[0], ctx));
+    return ctx;
+  };
+  const rec = { id: 4, titulo: 'Organização', texto: 'Caixas nas ruas\n<script>x</script>', autor: 'Júlio', criado_em: '2026-11-06T08:00:00Z', fotos: [{ id: 31 }, { id: 32 }] };
+
+  test('todo supervisor vê título, texto (escapado) e fotos; sem botões de gestão', () => {
+    const h = monta('supervisor')._recadoCardHtml(rec);
+    expect(h).toContain('Recado da gestão · vale para todos os turnos');
+    expect(h).toContain('Organização');
+    expect(h).toContain('Caixas nas ruas');
+    expect(h).not.toContain('<script>');
+    expect(h.match(/<img /g)).toHaveLength(2);
+    expect(h).toContain("abrirFoto(31,'diario-recados/foto')");
+    ['Editar', 'Encerrar recado', 'capture=', 'removerFotoRecado'].forEach(t => expect(h).not.toContain(t));
+  });
+
+  test('o gestor vê editar/encerrar, remover foto e os botões Foto (câmera) e Galeria', () => {
+    const h = monta('gestor')._recadoCardHtml(rec);
+    expect(h).toContain('editarRecado(4)');
+    expect(h).toContain('encerrarRecado(4)');
+    expect(h).toContain('removerFotoRecado(31)');
+    expect(h).toContain('capture="environment"');
+    expect(h).toContain('adicionarFotosRecado(4,this)');
+  });
+
+  test('em edição mostra os campos; recado novo avisa que a foto vem depois de salvar', () => {
+    const c = monta('gestor'); c._recadoEditando = 4;
+    const h = c._recadoCardHtml(rec);
+    expect(h).toContain('id="rec-titulo"'); expect(h).toContain('id="rec-texto"'); expect(h).toContain('salvarRecado()');
+    c._recadoEditando = 'novo';
+    const n = c._recadoCardHtml({ id: 0, titulo: '', texto: '', fotos: [] });
+    expect(n).toContain('id="rec-texto"'); expect(n).toContain('Salve o recado para poder anexar fotos');
+  });
+
+  test('o Diário carrega o recado junto com o resto, no topo da página', () => {
+    expect(codigo['auth.js']).toMatch(/Promise\.all\(\[[^\]]*carregarRecadosDiario\(\)\]\)/);
+    const idx = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
+    expect(idx.indexOf('id="diario-recados"')).toBeGreaterThan(-1);
+    expect(idx.indexOf('id="diario-recados"')).toBeLessThan(idx.indexOf('id="diario-anterior-resumo"'));
+  });
+});
+
 describe('Diário de Bordo: botão de foto abre a câmera', () => {
   const ctx = { API: '' };
   vm.createContext(ctx);

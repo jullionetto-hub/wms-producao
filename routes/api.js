@@ -8,6 +8,7 @@ router.use(require('./repositor'));
 router.use(require('./checkout'));
 router.use(require('./kpis'));
 router.use(require('./admin'));
+router.use(require('./diario-recados'));
 router.use(require('./embalagem'));
 router.use(require('./passagem'));
 router.use(require('./entrada-manual'));

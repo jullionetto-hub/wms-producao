@@ -891,10 +891,10 @@ function _fotoRedimensionar(file, maxLado = 1280, qualidade = 0.72) {
   });
 }
 
-function abrirFoto(id) {
+function abrirFoto(id, rota) {
   const ov = document.createElement('div');
   ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:10000;display:flex;align-items:center;justify-content:center;padding:16px;cursor:zoom-out';
-  ov.innerHTML = `<img src="${API}/diario/foto/${id}" alt="Foto do diário" style="max-width:100%;max-height:100%;border-radius:8px">`;
+  ov.innerHTML = `<img src="${API}/${rota || 'diario/foto'}/${id}" alt="Foto do diário" style="max-width:100%;max-height:100%;border-radius:8px">`;
   const fechar = () => { ov.remove(); document.removeEventListener('keydown', esc); };
   const esc = e => { if (e.key === 'Escape') fechar(); };
   ov.onclick = fechar; document.addEventListener('keydown', esc); document.body.appendChild(ov);
@@ -1010,8 +1010,128 @@ async function iniciarDiario() {
   if (dataEl && !dataEl.value) dataEl.value = hj;
   initDiarioHistorico();
   renderFotosDiario();
-  // anterior, lista e validação não dependem do diário aberto: buscam em paralelo
-  await Promise.all([carregarOuCalcularDiario(), carregarDiarioAnterior(), carregarListaDiarios(), verificarValidacaoPendente()]);
+  // anterior, lista, validação e recado da gestão não dependem do diário aberto: buscam em paralelo
+  await Promise.all([carregarOuCalcularDiario(), carregarDiarioAnterior(), carregarListaDiarios(), verificarValidacaoPendente(), carregarRecadosDiario()]);
+}
+
+/* ── Recado da gestão: UMA informação (texto + fotos) que aparece no Diário de Bordo dos 3 turnos de uma vez ──
+   Fica no topo até a gestão encerrar. Todos os supervisores leem; só o gestor cria, edita, anexa fotos e encerra. */
+let _recados = [];
+let _recadoEditando = null;   // id do recado em edição, 'novo' ou null
+const _recadoFotoRota = 'diario-recados/foto';
+
+async function carregarRecadosDiario() {
+  try { const r = await fetch(`${API}/diario-recados`, { credentials:'include' }); _recados = r.ok ? await r.json() : []; }
+  catch (e) { _recados = []; }
+  renderRecadosDiario();
+}
+
+function _recadoFotosHtml(rec, gestor) {
+  const minis = (rec.fotos || []).map(f => `<span style="position:relative;display:inline-block">
+      <img src="${API}/${_recadoFotoRota}/${f.id}" alt="Foto do recado" loading="lazy" onclick="abrirFoto(${f.id},'${_recadoFotoRota}')"
+        style="width:96px;height:96px;object-fit:cover;border-radius:8px;border:1px solid var(--border);cursor:zoom-in;display:block">
+      ${gestor ? `<button type="button" onclick="removerFotoRecado(${f.id})" title="Remover foto" aria-label="Remover foto"
+        style="position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;border:none;background:var(--red);color:#fff;font-size:12px;line-height:1;cursor:pointer">×</button>` : ''}
+    </span>`).join('');
+  const botao = (icone, rotulo, camera) => `<label style="display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;width:96px;height:96px;border:1.5px dashed var(--border);border-radius:8px;cursor:pointer;color:var(--text3);font-size:11px;text-align:center">
+      <i class="ti ti-${icone}" aria-hidden="true" style="font-size:22px"></i>${rotulo}
+      <input type="file" accept="image/*" ${camera ? 'capture="environment"' : 'multiple'} style="display:none" onchange="adicionarFotosRecado(${rec.id},this)">
+    </label>`;
+  const add = gestor && (rec.fotos || []).length < 12 ? botao('camera', 'Foto', true) + botao('photo', 'Galeria', false) : '';
+  return (minis || add) ? `<div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:10px">${minis}${add}</div>` : '';
+}
+
+function _recadoCardHtml(rec) {
+  const gestor = typeof usuarioAtual !== 'undefined' && usuarioAtual?.perfil === 'gestor';
+  const quando = rec.criado_em ? new Date(rec.criado_em).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }) : '';
+  const cab = `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <i class="ti ti-speakerphone" aria-hidden="true" style="color:var(--amber);font-size:18px"></i>
+      <span style="font-size:11px;font-weight:800;letter-spacing:.5px;color:var(--amber);text-transform:uppercase">Recado da gestão · vale para todos os turnos</span>
+      <span style="margin-left:auto;font-size:11px;color:var(--text3)">${escHtml(quando)}${rec.autor ? ' · ' + escHtml(rec.autor) : ''}${rec.editado_em ? ' · editado' : ''}</span>
+    </div>`;
+  const caixa = 'border:1px solid var(--border);border-left:4px solid var(--amber);border-radius:12px;background:var(--surface);padding:14px 16px;margin-bottom:10px';
+  if (_recadoEditando === rec.id || (_recadoEditando === 'novo' && !rec.id)) {
+    return `<div style="${caixa}">${cab}
+      <input id="rec-titulo" maxlength="120" value="${escHtml(rec.titulo)}" placeholder="Título (opcional)" style="width:100%;margin-top:10px;font-weight:700">
+      <textarea id="rec-texto" rows="7" placeholder="Escreva o recado para os 3 turnos…" style="width:100%;margin-top:8px;font-size:13px">${escHtml(rec.texto)}</textarea>
+      ${rec.id ? _recadoFotosHtml(rec, true) : '<div style="font-size:11px;color:var(--text3);margin-top:8px">Salve o recado para poder anexar fotos.</div>'}
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+        <button class="btn btn-outline btn-sm" onclick="cancelarRecado()">Cancelar</button>
+        <button class="btn btn-primary btn-sm" onclick="salvarRecado()">Salvar recado</button>
+      </div></div>`;
+  }
+  return `<div style="${caixa}">${cab}
+      ${rec.titulo ? `<div style="font-size:15px;font-weight:800;margin-top:8px;color:var(--text)">${escHtml(rec.titulo)}</div>` : ''}
+      <div style="font-size:13px;white-space:pre-line;margin-top:6px;color:var(--text2);line-height:1.5">${escHtml(rec.texto)}</div>
+      ${_recadoFotosHtml(rec, gestor)}
+      ${gestor ? `<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+        <button class="btn btn-outline btn-sm" onclick="editarRecado(${rec.id})">Editar</button>
+        <button class="btn btn-outline btn-sm" style="color:var(--red)" onclick="encerrarRecado(${rec.id})">Encerrar recado</button>
+      </div>` : ''}</div>`;
+}
+
+function renderRecadosDiario() {
+  const el = document.getElementById('diario-recados'); if (!el) return;
+  const gestor = typeof usuarioAtual !== 'undefined' && usuarioAtual?.perfil === 'gestor';
+  const lista = _recadoEditando === 'novo' ? [{ id: 0, titulo: '', texto: '', fotos: [] }, ..._recados] : _recados;
+  if (!lista.length && !gestor) { el.style.display = 'none'; el.innerHTML = ''; return; }
+  el.style.display = '';
+  const novo = gestor && _recadoEditando !== 'novo'
+    ? `<div style="display:flex;justify-content:flex-end;${lista.length ? 'margin-top:-2px' : ''}"><button class="btn btn-outline btn-sm" onclick="novoRecado()"><i class="ti ti-speakerphone" aria-hidden="true"></i> ${lista.length ? 'Novo recado' : 'Novo recado para os 3 turnos'}</button></div>` : '';
+  el.innerHTML = lista.map(r => _recadoCardHtml(r)).join('') + novo;
+}
+
+function novoRecado() { _recadoEditando = 'novo'; renderRecadosDiario(); document.getElementById('rec-texto')?.focus(); }
+function editarRecado(id) { _recadoEditando = id; renderRecadosDiario(); document.getElementById('rec-texto')?.focus(); }
+function cancelarRecado() { _recadoEditando = null; renderRecadosDiario(); }
+
+async function salvarRecado() {
+  const id = _recadoEditando === 'novo' ? null : _recadoEditando;
+  const corpo = { titulo: document.getElementById('rec-titulo')?.value || '', texto: document.getElementById('rec-texto')?.value || '' };
+  if (!corpo.texto.trim()) { toast('Escreva o texto do recado.', 'aviso'); return; }
+  try {
+    const r = await fetch(`${API}/diario-recados${id ? '/' + id : ''}`, { method: id ? 'PUT' : 'POST', credentials:'include', headers:{'Content-Type':'application/json'}, body: JSON.stringify(corpo) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) { toast(j.erro || 'Não foi possível salvar o recado', 'erro'); return; }
+    toast(id ? 'Recado atualizado!' : 'Recado publicado nos 3 turnos!', 'sucesso');
+    _recadoEditando = (!id && j.id) ? j.id : null;   // recém-criado: segue em edição para anexar as fotos
+    await carregarRecadosDiario();
+  } catch (e) { toast('Erro ao salvar o recado', 'erro'); }
+}
+
+function encerrarRecado(id) {
+  wmsConfirm({ titulo: 'Encerrar este recado?', sub: 'Ele some do Diário de Bordo de todos os turnos.', btnOk: 'Sim, encerrar', btnOkClass: 'btn-primary' }, async () => {
+    try {
+      const r = await fetch(`${API}/diario-recados/${id}`, { method:'DELETE', credentials:'include' });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) { toast(j.erro || 'Não foi possível encerrar', 'erro'); return; }
+      _recadoEditando = null; toast('Recado encerrado.', 'sucesso'); await carregarRecadosDiario();
+    } catch (e) { toast('Erro ao encerrar o recado', 'erro'); }
+  });
+}
+
+async function adicionarFotosRecado(id, input) {
+  const arquivos = [...(input.files || [])]; input.value = '';
+  if (!arquivos.length || !id) return;
+  try {
+    toast(arquivos.length > 1 ? 'Enviando fotos...' : 'Enviando foto...', 'aviso');
+    for (const f of arquivos) {
+      const imagem = await _fotoRedimensionar(f);
+      const r = await fetch(`${API}/diario-recados/${id}/fotos`, { method:'POST', credentials:'include', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ imagem }) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.erro || 'Não foi possível enviar a foto');
+    }
+    await carregarRecadosDiario();
+  } catch (e) { toast(e.message || 'Erro ao enviar foto', 'erro'); await carregarRecadosDiario(); }
+}
+
+async function removerFotoRecado(fotoId) {
+  try {
+    const r = await fetch(`${API}/diario-recados/foto/${fotoId}`, { method:'DELETE', credentials:'include' });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) { toast(j.erro || 'Não foi possível remover', 'erro'); return; }
+    await carregarRecadosDiario();
+  } catch (e) { toast('Erro ao remover foto', 'erro'); }
 }
 
 // Se já existe um diário salvo pra essa data+turno, reabre ele (respeitando

@@ -220,6 +220,28 @@ const TABLES = [
   )`,
   'CREATE INDEX IF NOT EXISTS idx_diario_fotos_diario ON diario_fotos(diario_id)',
 
+  // Recado da gestão: UMA informação (texto + fotos) que aparece no Diário de Bordo dos 3 turnos ao mesmo
+  // tempo, até a gestão encerrar. Separado dos diários (que são por data + turno).
+  `CREATE TABLE IF NOT EXISTS diario_recados (
+    id         SERIAL PRIMARY KEY,
+    titulo     TEXT NOT NULL DEFAULT '',
+    texto      TEXT NOT NULL DEFAULT '',
+    autor      TEXT DEFAULT '',
+    ativo      BOOLEAN NOT NULL DEFAULT true,
+    criado_em  TIMESTAMPTZ DEFAULT NOW(),
+    editado_em TIMESTAMPTZ,
+    encerrado_em TIMESTAMPTZ
+  )`,
+  `CREATE TABLE IF NOT EXISTS diario_recado_fotos (
+    id         SERIAL PRIMARY KEY,
+    recado_id  INTEGER NOT NULL REFERENCES diario_recados(id) ON DELETE CASCADE,
+    mime       TEXT NOT NULL DEFAULT 'image/jpeg',
+    dados      BYTEA NOT NULL,
+    autor      TEXT DEFAULT '',
+    criado_em  TIMESTAMPTZ DEFAULT NOW()
+  )`,
+  'CREATE INDEX IF NOT EXISTS idx_diario_recado_fotos_recado ON diario_recado_fotos(recado_id)',
+
   // Quem abriu/viu cada diário de bordo (uma linha por pessoa e diário; visto_em
   // guarda a última vez). Alimenta o "Visto por" da lista de diários.
   `CREATE TABLE IF NOT EXISTS diario_visualizacoes (
