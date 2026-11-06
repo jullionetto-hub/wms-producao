@@ -3,7 +3,24 @@ const express = require('express');
 const router  = express.Router();
 const { db, pool } = require('../lib/db');
 const { requerAuth, requerPerfil } = require('../lib/auth');
-const { dataHoraLocal } = require('../lib/helpers');
+const { dataHoraLocal, sqlDiaOperacional } = require('../lib/helpers');
+
+/* Dia operacional (data do turno): quem é da Noite tem o dia contado a partir da entrada do turno
+   (22h), então o que acontece de 00h às 06h47 vale pro dia anterior. Ver lib/helpers.js. */
+const TURNO_DE_NOME = n => `(SELECT u_.turno FROM usuarios u_ WHERE u_.nome = ${n} LIMIT 1)`;
+const diaSep = a => sqlDiaOperacional({
+  ts: `${a}.iniciado_em`,
+  civil: `COALESCE(NULLIF(LEFT(${a}.iniciado_em,10),''), NULLIF(${a}.data_distribuicao,''), ${a}.data_pedido)`,
+  turno: `(SELECT COALESCE(uu_.turno, ss_.turno) FROM separadores ss_ LEFT JOIN usuarios uu_ ON uu_.id = ss_.usuario_id WHERE ss_.id = ${a}.separador_id)`,
+});
+const diaCk = a => sqlDiaOperacional({ ts: `${a}.data_checkout||' '||${a}.hora_checkout`, civil: `${a}.data_checkout`, turno: TURNO_DE_NOME(`${a}.operador_nome`) });
+const diaEmb = a => sqlDiaOperacional({ ts: `${a}.data_embalagem||' '||${a}.embalado_em`, civil: `${a}.data_embalagem`, turno: TURNO_DE_NOME(`${a}.embalado_por`) });
+const EMB_DATA_PED = a => `COALESCE((SELECT eb.data_embalagem FROM embalagem eb WHERE eb.pedido_id = ${a}.id ORDER BY eb.id DESC LIMIT 1), ${a}.data_pedido)`;
+const diaEmbPed = a => sqlDiaOperacional({ ts: `${EMB_DATA_PED(a)}||' '||${a}.embalado_em`, civil: EMB_DATA_PED(a), turno: TURNO_DE_NOME(`${a}.embalado_por`) });
+// Reposição: aviso (hora_aviso, repositor_nome) ou tentativa de um repositor (hora_inicio) dentro do aviso
+const diaAv = (a, quem) => sqlDiaOperacional({ ts: `${a}.data_aviso||' '||${a}.hora_aviso`, civil: `${a}.data_aviso`, turno: TURNO_DE_NOME(quem) });
+const diaAvTent = sqlDiaOperacional({ ts: "ar.data_aviso||' '||(t.value->>'hora_inicio')", civil: 'ar.data_aviso', turno: TURNO_DE_NOME("t.value->>'repositor'") });
+const diaSessao = sqlDiaOperacional({ ts: "to_char(login_em AT TIME ZONE 'America/Sao_Paulo','YYYY-MM-DD HH24:MI:SS')", civil: 'data', turno: 'turno' });
 
 // â”€â”€ GET /performance/separadores?ini=YYYY-MM-DD&fim=YYYY-MM-DD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 router.get('/performance/separadores', requerAuth, requerPerfil('supervisor', 'gestor'), async (req, res) => {
@@ -55,16 +72,16 @@ router.get('/performance/separadores', requerAuth, requerPerfil('supervisor', 'g
           FROM pedidos p2
           WHERE p2.separador_id = s.id
             AND p2.status       = 'concluido'
-            AND COALESCE(NULLIF(LEFT(p2.iniciado_em,10),''), NULLIF(p2.data_distribuicao,''), p2.data_pedido) >= $1
-            AND COALESCE(NULLIF(LEFT(p2.iniciado_em,10),''), NULLIF(p2.data_distribuicao,''), p2.data_pedido) <= $2
+            AND ${diaSep('p2')} >= $1
+            AND ${diaSep('p2')} <= $2
         )                                                                     AS tempo_medio_min
       FROM separadores s
       LEFT JOIN usuarios u ON u.id = s.usuario_id
       JOIN pedidos p
         ON p.separador_id = s.id
        AND p.status       = 'concluido'
-       AND COALESCE(NULLIF(LEFT(p.iniciado_em,10),''), NULLIF(p.data_distribuicao,''), p.data_pedido) >= $1
-       AND COALESCE(NULLIF(LEFT(p.iniciado_em,10),''), NULLIF(p.data_distribuicao,''), p.data_pedido) <= $2
+       AND ${diaSep('p')} >= $1
+       AND ${diaSep('p')} <= $2
       LEFT JOIN itens_pedido ip ON ip.pedido_id = p.id
       WHERE s.status = 'ativo' ${turnoFiltro}
       GROUP BY s.id,
@@ -78,8 +95,8 @@ router.get('/performance/separadores', requerAuth, requerPerfil('supervisor', 'g
       SELECT separador_nome AS nome,
              COUNT(*)::int  AS reposicoes
       FROM avisos_repositor
-      WHERE data_aviso >= $1
-        AND data_aviso <= $2
+      WHERE ${diaAv('avisos_repositor', 'separador_nome')} >= $1
+        AND ${diaAv('avisos_repositor', 'separador_nome')} <= $2
         AND separador_nome IS NOT NULL
         AND separador_nome != ''
       GROUP BY separador_nome
@@ -89,16 +106,16 @@ router.get('/performance/separadores', requerAuth, requerPerfil('supervisor', 'g
     // â”€â”€ Pedidos por dia (para grÃ¡fico de linha) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const porDia = await db.all(`
       SELECT
-        COALESCE(NULLIF(LEFT(p.iniciado_em,10),''), NULLIF(p.data_distribuicao,''), p.data_pedido) AS data,
+        ${diaSep('p')} AS data,
         COUNT(DISTINCT p.id)::int                   AS pedidos,
         COALESCE(SUM(p.itens), 0)::int              AS itens
       FROM pedidos p
       JOIN separadores s ON s.id = p.separador_id
       WHERE p.status       = 'concluido'
-        AND COALESCE(NULLIF(LEFT(p.iniciado_em,10),''), NULLIF(p.data_distribuicao,''), p.data_pedido) >= $1
-        AND COALESCE(NULLIF(LEFT(p.iniciado_em,10),''), NULLIF(p.data_distribuicao,''), p.data_pedido) <= $2
+        AND ${diaSep('p')} >= $1
+        AND ${diaSep('p')} <= $2
         AND s.status = 'ativo'
-      GROUP BY COALESCE(NULLIF(LEFT(p.iniciado_em,10),''), NULLIF(p.data_distribuicao,''), p.data_pedido)
+      GROUP BY ${diaSep('p')}
       ORDER BY data
     `, [ini, fim]);
 
@@ -122,8 +139,8 @@ router.get('/performance/separadores', requerAuth, requerPerfil('supervisor', 'g
         JOIN itens_pedido ip ON ip.pedido_id = p.id
         WHERE p.status = 'concluido'
           AND ip.endereco IS NOT NULL AND ip.endereco != ''
-          AND COALESCE(NULLIF(LEFT(p.iniciado_em,10),''),NULLIF(p.data_distribuicao,''),p.data_pedido) >= $1
-          AND COALESCE(NULLIF(LEFT(p.iniciado_em,10),''),NULLIF(p.data_distribuicao,''),p.data_pedido) <= $2
+          AND ${diaSep('p')} >= $1
+          AND ${diaSep('p')} <= $2
           AND s.status = 'ativo' ${turnoFiltro}
       ) sq
       WHERE rua IS NOT NULL
@@ -142,7 +159,7 @@ router.get('/performance/separadores', requerAuth, requerPerfil('supervisor', 'g
       FROM (
         SELECT
           p.id                                                                          AS pedido_id,
-          COALESCE(NULLIF(LEFT(p.iniciado_em,10),''),NULLIF(p.data_distribuicao,''),p.data_pedido) AS data,
+          ${diaSep('p')} AS data,
           COALESCE(u.nome, s.nome)                                                     AS colaborador,
           REPLACE(COALESCE(u.turno, s.turno, 'Manha'), 'Ã£', 'a')                    AS turno,
           ip.quantidade                                                                AS itens,
@@ -161,8 +178,8 @@ router.get('/performance/separadores', requerAuth, requerPerfil('supervisor', 'g
         LEFT JOIN usuarios u ON u.id = s.usuario_id
         JOIN itens_pedido ip ON ip.pedido_id = p.id
         WHERE p.status = 'concluido'
-          AND COALESCE(NULLIF(LEFT(p.iniciado_em,10),''),NULLIF(p.data_distribuicao,''),p.data_pedido) >= $1
-          AND COALESCE(NULLIF(LEFT(p.iniciado_em,10),''),NULLIF(p.data_distribuicao,''),p.data_pedido) <= $2
+          AND ${diaSep('p')} >= $1
+          AND ${diaSep('p')} <= $2
           AND s.status = 'ativo' ${turnoFiltro}
       ) sub
       GROUP BY data, colaborador, turno
@@ -186,7 +203,7 @@ router.get('/performance/separadores', requerAuth, requerPerfil('supervisor', 'g
       JOIN pedidos p2 ON p2.id = ck.pedido_id
       LEFT JOIN separadores s2 ON s2.id = p2.separador_id
       LEFT JOIN usuarios u2 ON u2.id = s2.usuario_id
-      WHERE ck.data_checkout >= $1 AND ck.data_checkout <= $2 ${turno ? `AND REPLACE(COALESCE(u2.turno, s2.turno, 'Manha'), 'Ã£', 'a') = $3` : ''}
+      WHERE ${diaCk('ck')} >= $1 AND ${diaCk('ck')} <= $2 ${turno ? `AND REPLACE(COALESCE(u2.turno, s2.turno, 'Manha'), 'Ã£', 'a') = $3` : ''}
       GROUP BY NULLIF(ck.operador_nome,'')
     `, params);
 
@@ -207,8 +224,8 @@ router.get('/performance/separadores', requerAuth, requerPerfil('supervisor', 'g
       LEFT JOIN separadores s3 ON s3.id = p3.separador_id
       LEFT JOIN usuarios u3 ON u3.id = s3.usuario_id
       WHERE p3.status = 'concluido'
-        AND COALESCE(NULLIF(LEFT(p3.iniciado_em,10),''), NULLIF(p3.data_distribuicao,''), p3.data_pedido) >= $1
-        AND COALESCE(NULLIF(LEFT(p3.iniciado_em,10),''), NULLIF(p3.data_distribuicao,''), p3.data_pedido) <= $2
+        AND ${diaSep('p3')} >= $1
+        AND ${diaSep('p3')} <= $2
         ${turno ? `AND REPLACE(COALESCE(u3.turno, s3.turno, 'Manha'), 'Ã£', 'a') = $3` : ''}
       GROUP BY NULLIF(p3.embalado_por,'')
     `, params);
@@ -229,7 +246,7 @@ router.get('/performance/separadores', requerAuth, requerPerfil('supervisor', 'g
         )::numeric, 1) AS tempo_medio_min
       FROM avisos_repositor ar,
            jsonb_array_elements(COALESCE(ar.tentativas, '[]'::jsonb)) AS t(value)
-      WHERE ar.data_aviso >= $1 AND ar.data_aviso <= $2
+      WHERE ${diaAvTent} >= $1 AND ${diaAvTent} <= $2
         AND (t.value->>'repositor') IS NOT NULL AND (t.value->>'repositor') != ''
       GROUP BY t.value->>'repositor'
     `, [ini, fim]);
@@ -246,7 +263,7 @@ router.get('/performance/separadores', requerAuth, requerPerfil('supervisor', 'g
       LEFT JOIN separadores s4 ON s4.id = p4.separador_id
       LEFT JOIN usuarios u4 ON u4.id = s4.usuario_id,
       jsonb_array_elements(COALESCE(ar.tentativas, '[]'::jsonb)) AS t(value)
-      WHERE ar.data_aviso >= $1 AND ar.data_aviso <= $2
+      WHERE ${diaAvTent} >= $1 AND ${diaAvTent} <= $2
         AND (t.value->>'hora_inicio') IS NOT NULL AND (t.value->>'hora_inicio') != ''
         AND (t.value->>'hora_fim')    IS NOT NULL AND (t.value->>'hora_fim')    != ''
         ${turno ? `AND REPLACE(COALESCE(u4.turno, s4.turno, 'Manha'), 'Ã£', 'a') = $3` : ''}
@@ -260,8 +277,8 @@ router.get('/performance/separadores', requerAuth, requerPerfil('supervisor', 'g
       LEFT JOIN usuarios u5 ON u5.id = s5.usuario_id
       JOIN itens_pedido ip ON ip.pedido_id = p5.id
       WHERE p5.status = 'concluido'
-        AND COALESCE(NULLIF(LEFT(p5.iniciado_em,10),''), NULLIF(p5.data_distribuicao,''), p5.data_pedido) >= $1
-        AND COALESCE(NULLIF(LEFT(p5.iniciado_em,10),''), NULLIF(p5.data_distribuicao,''), p5.data_pedido) <= $2
+        AND ${diaSep('p5')} >= $1
+        AND ${diaSep('p5')} <= $2
         AND s5.status = 'ativo'
         ${turno ? `AND REPLACE(COALESCE(u5.turno, s5.turno, 'Manha'), 'Ã£', 'a') = $3` : ''}
     `, params);
@@ -317,7 +334,7 @@ router.get('/performance/pedidos-detail', requerAuth, requerPerfil('supervisor',
 
     const rows = await db.all(`
       SELECT
-        COALESCE(NULLIF(LEFT(p.iniciado_em,10),''), NULLIF(p.data_distribuicao,''), p.data_pedido) AS data,
+        ${diaSep('p')} AS data,
         p.numero_pedido,
         COALESCE(u.nome, s.nome)                                              AS colaborador,
         REPLACE(COALESCE(u.turno, s.turno, 'Manha'), 'Ã£', 'a')              AS turno,
@@ -361,8 +378,8 @@ router.get('/performance/pedidos-detail', requerAuth, requerPerfil('supervisor',
       JOIN separadores s ON s.id = p.separador_id
       LEFT JOIN usuarios u ON u.id = s.usuario_id
       WHERE p.status = 'concluido'
-        AND COALESCE(NULLIF(LEFT(p.iniciado_em,10),''), NULLIF(p.data_distribuicao,''), p.data_pedido) >= $1
-        AND COALESCE(NULLIF(LEFT(p.iniciado_em,10),''), NULLIF(p.data_distribuicao,''), p.data_pedido) <= $2
+        AND ${diaSep('p')} >= $1
+        AND ${diaSep('p')} <= $2
         AND s.status = 'ativo' ${turnoFiltro}
       ORDER BY data, COALESCE(u.nome, s.nome), p.numero_pedido
     `, params);
@@ -391,7 +408,7 @@ router.get('/performance/timing', requerAuth, requerPerfil('supervisor', 'gestor
         p.numero_pedido,
         COALESCE(u.nome, s.nome)                                         AS colaborador,
         REPLACE(COALESCE(u.turno, s.turno, 'Manha'), 'Ã£', 'a')          AS turno,
-        COALESCE(NULLIF(LEFT(p.iniciado_em,10),''), NULLIF(p.data_distribuicao,''), p.data_pedido) AS data,
+        ${diaSep('p')} AS data,
         p.iniciado_em,
         COALESCE(
           NULLIF(p.skus_concluido_em,''),
@@ -426,8 +443,8 @@ router.get('/performance/timing', requerAuth, requerPerfil('supervisor', 'gestor
       JOIN separadores s ON s.id = p.separador_id
       LEFT JOIN usuarios u ON u.id = s.usuario_id
       WHERE p.status = 'concluido'
-        AND COALESCE(NULLIF(LEFT(p.iniciado_em,10),''), NULLIF(p.data_distribuicao,''), p.data_pedido) >= $1
-        AND COALESCE(NULLIF(LEFT(p.iniciado_em,10),''), NULLIF(p.data_distribuicao,''), p.data_pedido) <= $2
+        AND ${diaSep('p')} >= $1
+        AND ${diaSep('p')} <= $2
         AND s.status = 'ativo'
         ${turnoFiltroSep}
       ORDER BY COALESCE(u.nome, s.nome), p.iniciado_em
@@ -439,7 +456,7 @@ router.get('/performance/timing', requerAuth, requerPerfil('supervisor', 'gestor
         ar.numero_pedido,
         ar.codigo,
         ar.descricao,
-        ar.data_aviso                    AS data,
+        ${diaAvTent}                    AS data,
         t.value->>'repositor'            AS colaborador,
         t.value->>'hora_inicio'          AS iniciado_em,
         t.value->>'hora_fim'             AS concluido_em,
@@ -455,8 +472,8 @@ router.get('/performance/timing', requerAuth, requerPerfil('supervisor', 'gestor
         END AS duracao_min
       FROM avisos_repositor ar,
            jsonb_array_elements(COALESCE(ar.tentativas, '[]'::jsonb)) AS t(value)
-      WHERE ar.data_aviso >= $1
-        AND ar.data_aviso <= $2
+      WHERE ${diaAvTent} >= $1
+        AND ${diaAvTent} <= $2
         AND ar.tentativas IS NOT NULL
         AND ar.tentativas != '[]'::jsonb
         AND (t.value->>'hora_inicio') IS NOT NULL
@@ -469,7 +486,7 @@ router.get('/performance/timing', requerAuth, requerPerfil('supervisor', 'gestor
       SELECT
         c.numero_pedido,
         COALESCE(NULLIF(c.operador_nome,''), 'Operador')            AS colaborador,
-        c.data_checkout                                              AS data,
+        ${diaCk('c')}                                              AS data,
         c.hora_criacao                                               AS iniciado_em,
         c.hora_checkout                                              AS concluido_em,
         COALESCE(NULLIF(p.total_itens,0), p.itens, 0)               AS total_itens,
@@ -493,8 +510,8 @@ router.get('/performance/timing', requerAuth, requerPerfil('supervisor', 'gestor
       LEFT JOIN pedidos p ON c.pedido_id = p.id
       WHERE c.status = 'concluido'
         AND NULLIF(c.hora_checkout,'') IS NOT NULL
-        AND c.data_checkout >= $1
-        AND c.data_checkout <= $2
+        AND ${diaCk('c')} >= $1
+        AND ${diaCk('c')} <= $2
       ORDER BY COALESCE(NULLIF(c.operador_nome,''), 'Operador'), c.data_checkout, c.hora_checkout
     `, [ini, fim]);
 
@@ -503,10 +520,7 @@ router.get('/performance/timing', requerAuth, requerPerfil('supervisor', 'gestor
       SELECT
         p.numero_pedido,
         NULLIF(p.embalado_por,'')                          AS colaborador,
-        COALESCE(
-          (SELECT eb.data_embalagem FROM embalagem eb WHERE eb.pedido_id = p.id ORDER BY eb.id DESC LIMIT 1),
-          p.data_pedido
-        )                                                    AS data,
+        ${diaEmbPed('p')}                                   AS data,
         p.embalagem_iniciado_em                             AS iniciado_em,
         p.embalado_em                                       AS concluido_em,
         COALESCE(NULLIF(p.total_itens,0), p.itens, 0)      AS total_itens,
@@ -523,9 +537,9 @@ router.get('/performance/timing', requerAuth, requerPerfil('supervisor', 'gestor
       FROM pedidos p
       WHERE p.status_embalagem = 'embalado'
         AND NULLIF(p.embalado_por,'') IS NOT NULL
-        AND COALESCE((SELECT eb.data_embalagem FROM embalagem eb WHERE eb.pedido_id = p.id ORDER BY eb.id DESC LIMIT 1), p.data_pedido) >= $1
-        AND COALESCE((SELECT eb.data_embalagem FROM embalagem eb WHERE eb.pedido_id = p.id ORDER BY eb.id DESC LIMIT 1), p.data_pedido) <= $2
-      ORDER BY p.embalado_por, COALESCE((SELECT eb.data_embalagem FROM embalagem eb WHERE eb.pedido_id = p.id ORDER BY eb.id DESC LIMIT 1), p.data_pedido), p.embalado_em
+        AND ${diaEmbPed('p')} >= $1
+        AND ${diaEmbPed('p')} <= $2
+      ORDER BY p.embalado_por, ${diaEmbPed('p')}, p.embalado_em
     `, [ini, fim]);
 
     res.json({ separacao, reposicao, checkout, embalagem });
@@ -550,7 +564,7 @@ router.get('/performance/metas', requerAuth, requerPerfil('supervisor', 'gestor'
         usuario_nome                                                AS nome,
         perfil,
         REPLACE(COALESCE(turno,'Manha'),'Ã£','a')                   AS turno,
-        data,
+        ${diaSessao}                                               AS data,
         SUM(
           CASE
             WHEN logout_em IS NOT NULL THEN COALESCE(duracao_min, 0)
@@ -565,47 +579,47 @@ router.get('/performance/metas', requerAuth, requerPerfil('supervisor', 'gestor'
           END
         )::int                                                      AS minutos_logado
       FROM sessoes_trabalho
-      WHERE data >= $1
-        AND data <= $2
+      WHERE ${diaSessao} >= $1
+        AND ${diaSessao} <= $2
         AND perfil IN ('separador','checkout','embalador','repositor')
-      GROUP BY usuario_nome, perfil, REPLACE(COALESCE(turno,'Manha'),'Ã£','a'), data
+      GROUP BY usuario_nome, perfil, REPLACE(COALESCE(turno,'Manha'),'Ã£','a'), ${diaSessao}
       ORDER BY data, usuario_nome
     `, [ini, fim]);
 
     const [sepRows, ckRows, embRows, repRows] = await Promise.all([
       db.all(`
         SELECT COALESCE(u.nome,s.nome) AS nome,
-               COALESCE(NULLIF(LEFT(p.iniciado_em,10),''), NULLIF(p.data_distribuicao,''), p.data_pedido) AS data,
+               ${diaSep('p')} AS data,
                COUNT(*)::int AS realizado
         FROM pedidos p
         JOIN separadores s ON s.id=p.separador_id
         LEFT JOIN usuarios u ON u.id=s.usuario_id
         WHERE p.status='concluido'
-          AND COALESCE(NULLIF(LEFT(p.iniciado_em,10),''), NULLIF(p.data_distribuicao,''), p.data_pedido) >= $1
-          AND COALESCE(NULLIF(LEFT(p.iniciado_em,10),''), NULLIF(p.data_distribuicao,''), p.data_pedido) <= $2
+          AND ${diaSep('p')} >= $1
+          AND ${diaSep('p')} <= $2
         GROUP BY COALESCE(u.nome,s.nome),
-                 COALESCE(NULLIF(LEFT(p.iniciado_em,10),''), NULLIF(p.data_distribuicao,''), p.data_pedido)
+                 ${diaSep('p')}
       `, [ini, fim]),
       db.all(`
-        SELECT operador_nome AS nome, data_checkout AS data, COUNT(*)::int AS realizado
-        FROM checkout
-        WHERE status='concluido' AND data_checkout>=$1 AND data_checkout<=$2
+        SELECT operador_nome AS nome, ${diaCk('c')} AS data, COUNT(*)::int AS realizado
+        FROM checkout c
+        WHERE status='concluido' AND ${diaCk('c')}>=$1 AND ${diaCk('c')}<=$2
           AND operador_nome != ''
-        GROUP BY operador_nome, data_checkout
+        GROUP BY operador_nome, ${diaCk('c')}
       `, [ini, fim]),
       db.all(`
-        SELECT embalado_por AS nome, data_embalagem AS data, COUNT(*)::int AS realizado
-        FROM embalagem
-        WHERE data_embalagem>=$1 AND data_embalagem<=$2 AND embalado_por != ''
-        GROUP BY embalado_por, data_embalagem
+        SELECT embalado_por AS nome, ${diaEmb('e')} AS data, COUNT(*)::int AS realizado
+        FROM embalagem e
+        WHERE ${diaEmb('e')}>=$1 AND ${diaEmb('e')}<=$2 AND embalado_por != ''
+        GROUP BY embalado_por, ${diaEmb('e')}
       `, [ini, fim]),
       db.all(`
-        SELECT repositor_nome AS nome, data_aviso AS data, COUNT(*)::int AS realizado
-        FROM avisos_repositor
-        WHERE data_aviso>=$1 AND data_aviso<=$2
+        SELECT repositor_nome AS nome, ${diaAv('a', 'a.repositor_nome')} AS data, COUNT(*)::int AS realizado
+        FROM avisos_repositor a
+        WHERE ${diaAv('a', 'a.repositor_nome')}>=$1 AND ${diaAv('a', 'a.repositor_nome')}<=$2
           AND repositor_nome != '' AND repositor_nome IS NOT NULL
           AND status NOT IN ('pendente','protocolo')
-        GROUP BY repositor_nome, data_aviso
+        GROUP BY repositor_nome, ${diaAv('a', 'a.repositor_nome')}
       `, [ini, fim]),
     ]);
 
@@ -644,8 +658,8 @@ router.get('/performance/range', requerAuth, requerPerfil('supervisor', 'gestor'
   try {
     const row = await db.get(`
       SELECT
-        MIN(data_pedido) AS ini,
-        MAX(data_pedido) AS fim
+        MIN(${diaSep('pedidos')}) AS ini,
+        MAX(${diaSep('pedidos')}) AS fim
       FROM pedidos
       WHERE status = 'concluido'
         AND separador_id IS NOT NULL

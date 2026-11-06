@@ -175,6 +175,12 @@ function hojeLocal() {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 const hoje = hojeLocal();
+// Dia operacional (data do turno): a Noite vai de 22:00 a 06:48 e conta como o dia em que ENTROU,
+// então antes das 06:48 o "dia de hoje" ainda é o de ontem. Mesma regra de lib/helpers.js (diaOperacional).
+function hojeOperacional() {
+  const d = new Date(Date.now() - (6 * 60 + 48) * 60000);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
 
 function labelSubtipoRepositor(v) {
   if (v === 'busca') return 'REPOSITOR BUSCA';

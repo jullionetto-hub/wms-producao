@@ -32,9 +32,14 @@ async function metasConfiguradas() {
 
 router.get('/hora-a-hora', requerAuth, requerPerfil('supervisor', 'gestor'), async (req, res) => {
   try {
-    const { data: hoje } = dataHoraLocal();
+    const { data: hoje, hora: horaAgoraStr } = dataHoraLocal();
     const { turno, minutos_restantes } = turnoAtualEHorarios();
     const metas = await metasConfiguradas();
+    // Noite atravessa a meia-noite: depois das 00h o turno em andamento começou ONTEM às 22h, então
+    // contar só os registros de "hoje" perdia as 22h–24h (e o ritmo/previsão saíam errados). Na Noite
+    // a janela é "desde a entrada do turno"; Manhã e Tarde continuam pela data do dia.
+    const noite = turno === 'Noite';
+    const inicioTurno = inicioTurnoTimestamp(turno, hoje, parseInt(horaAgoraStr.slice(0, 2), 10));
 
     const horasTurnoRow = await db.get(
       `SELECT valor FROM configuracoes WHERE chave=$1`,
@@ -43,7 +48,14 @@ router.get('/hora-a-hora', requerAuth, requerPerfil('supervisor', 'gestor'), asy
     const horasTurno = parseFloat(horasTurnoRow?.valor) || (turno === 'Noite' ? 6 : 8);
     const minutosDecorridos = Math.max(horasTurno * 60 - minutos_restantes, 0);
 
-    const [embRows, ckRows, fatRows] = await Promise.all([
+    const [embRows, ckRows, fatRows] = await Promise.all(noite ? [
+      db.all(`SELECT embalado_em AS hora FROM embalagem WHERE embalado_em <> '' AND data_embalagem >= $2
+                AND (data_embalagem || ' ' || embalado_em)::timestamp >= $1::timestamp`, [inicioTurno, inicioTurno.slice(0, 10)]),
+      db.all(`SELECT hora_checkout AS hora FROM checkout WHERE status='concluido' AND hora_checkout <> '' AND data_checkout >= $2
+                AND (data_checkout || ' ' || hora_checkout)::timestamp >= $1::timestamp`, [inicioTurno, inicioTurno.slice(0, 10)]),
+      db.all(`SELECT hora_fat AS hora, faturado FROM faturamento_pedidos WHERE hora_fat <> '' AND data_fat >= $2
+                AND (data_fat || ' ' || hora_fat)::timestamp >= $1::timestamp`, [inicioTurno, inicioTurno.slice(0, 10)]),
+    ] : [
       db.all(`SELECT embalado_em AS hora FROM embalagem WHERE data_embalagem=$1 AND embalado_em <> ''`, [hoje]),
       db.all(`SELECT hora_checkout AS hora FROM checkout WHERE data_checkout=$1 AND status='concluido' AND hora_checkout <> ''`, [hoje]),
       db.all(`SELECT hora_fat AS hora, faturado FROM faturamento_pedidos WHERE data_fat=$1 AND hora_fat <> ''`, [hoje]),
@@ -83,6 +95,7 @@ router.get('/hora-a-hora/pedidos', requerAuth, requerPerfil('supervisor', 'gesto
     const { turno } = turnoAtualEHorarios();
     const horaAgora = parseInt(horaAgoraStr.slice(0, 2), 10);
     const inicioTurno = inicioTurnoTimestamp(turno, hoje, horaAgora);
+    const ontem = new Date(Date.UTC(+hoje.slice(0, 4), +hoje.slice(5, 7) - 1, +hoje.slice(8, 10) - 1)).toISOString().slice(0, 10);
 
     const metaRow = await db.get(
       `SELECT valor FROM configuracoes WHERE chave=$1`,
@@ -94,12 +107,13 @@ router.get('/hora-a-hora/pedidos', requerAuth, requerPerfil('supervisor', 'gesto
       db.get(`SELECT COUNT(*)::int AS n FROM pedidos
         WHERE status='concluido' AND concluido_em <> ''
           AND concluido_em::timestamp >= NOW() AT TIME ZONE 'America/Sao_Paulo' - INTERVAL '60 minutes'`),
+      // data >= ontem (e não = hoje): a janela de 60 min atravessa a meia-noite e perdia os registros de antes das 00h
       db.get(`SELECT COUNT(*)::int AS n FROM checkout
-        WHERE status='concluido' AND hora_checkout <> '' AND data_checkout=$1
-          AND (data_checkout || 'T' || hora_checkout)::timestamp >= NOW() AT TIME ZONE 'America/Sao_Paulo' - INTERVAL '60 minutes'`, [hoje]),
+        WHERE status='concluido' AND hora_checkout <> '' AND data_checkout >= $1
+          AND (data_checkout || 'T' || hora_checkout)::timestamp >= NOW() AT TIME ZONE 'America/Sao_Paulo' - INTERVAL '60 minutes'`, [ontem]),
       db.get(`SELECT COUNT(*)::int AS n FROM embalagem
-        WHERE embalado_em <> '' AND data_embalagem=$1
-          AND (data_embalagem || 'T' || embalado_em)::timestamp >= NOW() AT TIME ZONE 'America/Sao_Paulo' - INTERVAL '60 minutes'`, [hoje]),
+        WHERE embalado_em <> '' AND data_embalagem >= $1
+          AND (data_embalagem || 'T' || embalado_em)::timestamp >= NOW() AT TIME ZONE 'America/Sao_Paulo' - INTERVAL '60 minutes'`, [ontem]),
       db.get(`SELECT COUNT(*)::int AS n FROM checkout
         WHERE status='concluido' AND hora_checkout <> '' AND data_checkout <> ''
           AND (data_checkout || ' ' || hora_checkout)::timestamp >= $1::timestamp`, [inicioTurno]),

@@ -379,10 +379,11 @@ async function pfInicializar() {
       iniEl.value = ini < range.ini ? range.ini : ini;
       fimEl.value = fim;
     } else {
-      const hoje = new Date();
-      fimEl.value = hoje.toISOString().slice(0,10);
-      hoje.setDate(hoje.getDate() - 6);
-      iniEl.value = hoje.toISOString().slice(0,10);
+      // dia operacional (não toISOString: vira o dia às 21h no horário de Brasília e ignora a virada das 06:48 da Noite)
+      fimEl.value = hojeOperacional();
+      const dt = new Date(fimEl.value + 'T12:00:00');
+      dt.setDate(dt.getDate() - 6);
+      iniEl.value = `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
     }
   }
   await pfBuscarDados();
