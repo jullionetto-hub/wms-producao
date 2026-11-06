@@ -288,6 +288,29 @@ describe('importação: coluna da transportadora (nunca um número)', () => {
   });
 });
 
+describe('Diário de Bordo: carga atrasada não sobrescreve a tela (fotos sumiam)', () => {
+  const corpo = nome => codigo['auth.js'].match(new RegExp(`async function ${nome}\\([\\s\\S]*?\\n}\\n`))[0];
+
+  test('as três cargas descartam resposta de quem já trocou de data/turno', () => {
+    ['carregarOuCalcularDiario', 'carregarDadosDiario', 'verDiario'].forEach(n => expect(corpo(n)).toContain('seq !== _diarioSeq'));
+    expect(codigo['auth.js']).toMatch(/let _diarioSeq = 0;/);
+  });
+
+  test('carregarOuCalcularDiario repassa o seq para quem carrega', () => {
+    const c = corpo('carregarOuCalcularDiario');
+    expect(c).toContain('verDiario(existente.id, seq)');
+    expect(c).toContain('carregarDadosDiario(false, seq)');
+  });
+
+  test('"Atualizar" não solta o diário salvo (id e fotos) e recusa diário já enviado', () => {
+    const c = corpo('carregarDadosDiario');
+    expect(c).toContain('manterSalvo');
+    expect(c).toMatch(/if \(!salvo\) \{[\s\S]*_diarioAtualId = null;[\s\S]*carregarFotosDiario\(null\)/);
+    expect(c).toContain('já foi enviado');
+    expect(fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8')).toContain('onclick="carregarDadosDiario(true)"');
+  });
+});
+
 describe('absenteísmo → Matriz: cache da Matriz', () => {
   test('depois de enviar, marca os feedbacks da Matriz como velhos (senão o que foi enviado não aparece)', () => {
     const ctx = { _mzCarregado: { feedbacks: true, colaboradores: true } };

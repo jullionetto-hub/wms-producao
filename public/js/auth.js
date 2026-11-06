@@ -1016,16 +1016,23 @@ async function iniciarDiario() {
 // sobrescrever silenciosamente — era isso que fazia o turno seguinte ver os
 // valores zerados mesmo depois do turno anterior ter preenchido na mão.
 // Só cai no cálculo ao vivo quando o diário ainda nem existe.
+// Data e turno disparam esta carga cada um (onchange): trocar os dois seguidos deixa duas cargas correndo ao mesmo
+// tempo. Só a ÚLTIMA vale (_diarioSeq) — antes a resposta atrasada do cálculo ao vivo da combinação errada
+// chegava depois de reabrir o diário salvo e zerava os números, soltava o id e apagava as fotos da tela.
+let _diarioSeq = 0;
 async function carregarOuCalcularDiario() {
+  const seq = ++_diarioSeq;
   const data = document.getElementById('diario-data')?.value;
   const turno = document.getElementById('diario-turno')?.value;
-  if (!data || !turno) { await carregarDadosDiario(); return; }
+  if (!data || !turno) { await carregarDadosDiario(false, seq); return; }
   try {
     const res = await fetch(`${API}/diario/existe?data=${data}&turno=${turno}`, { credentials:'include' });
     const existente = await res.json();
-    if (existente?.id) { await verDiario(existente.id); return; }
+    if (seq !== _diarioSeq) return;
+    if (existente?.id) { await verDiario(existente.id, seq); return; }
   } catch(e) { /* segue pro cálculo ao vivo */ }
-  await carregarDadosDiario();
+  if (seq !== _diarioSeq) return;
+  await carregarDadosDiario(false, seq);
 }
 
 // ── Mostra o que o turno anterior deixou registrado, antes do supervisor
@@ -1162,20 +1169,28 @@ function _diarioAplicarBloqueio(bloqueado) {
   if (btnEnviar) btnEnviar.disabled = bloqueado;
 }
 
-async function carregarDadosDiario() {
+// manterSalvo (botão "Atualizar"): recalcula os números ao vivo SEM largar o diário já salvo — antes o botão
+// zerava o id do diário, apagava as fotos da tela e destravava o enviado/validado. seq: ver _diarioSeq.
+async function carregarDadosDiario(manterSalvo, seq) {
   const data = document.getElementById('diario-data')?.value || hojeLocal();
   const turno = document.getElementById('diario-turno')?.value || 'Manha';
+  if (manterSalvo && _diarioAtualId && _diarioBloqueado) { toast('Este diário já foi enviado e não pode mais ser recalculado.','aviso'); return; }
+  if (seq === undefined) seq = ++_diarioSeq;
+  const salvo = !!(manterSalvo && _diarioAtualId);
   try {
     const res = await fetch(`${API}/diario/dados/turno?data=${data}&turno=${turno}`, { credentials:'include' });
     const d = await res.json();
+    if (seq !== _diarioSeq) return;   // o supervisor já trocou de data/turno: resposta velha não pode sobrescrever a tela
     if (!res.ok) { toast('Erro ao carregar dados','erro'); return; }
-    // Esse caminho só roda quando ainda NÃO existe diário salvo pra essa
+    // Fora do "Atualizar", esse caminho só roda quando ainda NÃO existe diário salvo pra essa
     // data+turno (ver carregarOuCalcularDiario) — então é sempre editável.
-    _diarioAplicarBloqueio(false);
-    _diarioAtualId = null;
-    carregarFotosDiario(null);
-    const bannerEl = document.getElementById('diario-status-banner');
-    if (bannerEl) bannerEl.style.display = 'none';
+    if (!salvo) {
+      _diarioAplicarBloqueio(false);
+      _diarioAtualId = null;
+      carregarFotosDiario(null);
+      const bannerEl = document.getElementById('diario-status-banner');
+      if (bannerEl) bannerEl.style.display = 'none';
+    }
     document.getElementById('diario-sep-total').textContent = d.separacao.total;
     document.getElementById('diario-sep-conc').value = d.separacao.concluidos;
     document.getElementById('diario-sep-pend').value = d.separacao.pendentes;
@@ -1673,11 +1688,12 @@ function abrirDiarioDaLista(id) {
   const t = document.getElementById('pag-diario'); if (t) t.scrollIntoView({ behavior:'smooth', block:'start' });
 }
 
-async function verDiario(id) {
+async function verDiario(id, seq) {
+  if (seq === undefined) seq = ++_diarioSeq;   // aberto pela lista ("Ver"): vale como a carga mais nova
   try {
     const res = await fetch(`${API}/diario/${id}`, { credentials:'include' });
     const d = await res.json();
-    if (!res.ok) return;
+    if (!res.ok || seq !== _diarioSeq) return;
     if (document.getElementById('diario-data')) document.getElementById('diario-data').value = d.data;
     if (document.getElementById('diario-turno')) document.getElementById('diario-turno').value = d.turno;
     const obs = typeof d.observacoes === 'string' ? JSON.parse(d.observacoes||'{}') : (d.observacoes||{});
