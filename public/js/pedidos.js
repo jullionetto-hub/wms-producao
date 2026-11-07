@@ -1462,6 +1462,21 @@ async function processarDoisHTMLs(htmlFiles) {
   } catch(err) { mostrarStatus(err.message, 'erro'); }
 }
 
+/* Pedido repetido (mesmo número e nada novo no arquivo) é bloqueado. O servidor decide e bloqueia sempre; aqui a
+   verificação roda ANTES de enviar, pra mostrar quantos são e não mandar o que já existe. */
+async function _verificarRepetidosImportacao(linhas) {
+  const res = await fetch(`${API}/pedidos/importar/verificar`, { method:'POST', credentials:'include', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ linhas }) });
+  const d = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(d.erro || 'Erro ao verificar pedidos repetidos');
+  return d;   // { importar:[numeros], repetidos:[numeros], diferentes:[numeros], novos, completam }
+}
+function _msgImportacao(importados, repetidos, diferentes) {
+  const partes = [`${importados} pedido(s) importado(s)!`];
+  if (repetidos > 0) partes.push(`${repetidos} repetido(s) bloqueado(s) — já estavam no sistema.`);
+  if (diferentes > 0) partes.push(`${diferentes} deles com dados diferentes do arquivo (o sistema não foi alterado).`);
+  return partes.join(' ');
+}
+
 async function confirmarImportacao() {
   if (!pedidosImportar.length) return;
   mostrarStatus('⏳ Importando...', 'carregando');
@@ -1477,9 +1492,21 @@ async function confirmarImportacao() {
     if (!pedMapLocal[n]) pedMapLocal[n] = [];
     pedMapLocal[n].push(l);
   });
-  const numeros = Object.keys(pedMapLocal);
+  let numeros = Object.keys(pedMapLocal);
   const LOTE_PEDIDOS = 20; // lote de 20 pedidos completos por vez
-  let totalImportados = 0, totalIgnorados = 0;
+  let totalImportados = 0, totalIgnorados = 0, totalDiferentes = 0;
+  const totalEnviados = numeros.length;
+  try {
+    const v = await _verificarRepetidosImportacao(pedidosImportar);
+    const liberados = new Set(v.importar);
+    numeros = numeros.filter(n => liberados.has(n));
+    totalIgnorados = v.repetidos.length; totalDiferentes = v.diferentes.length;
+  } catch (e) { /* sem a verificação o servidor ainda bloqueia os repetidos */ }
+  if (!numeros.length) {
+    mostrarStatus(`Nada a importar: os ${totalEnviados} pedido(s) deste arquivo já estão no sistema (repetidos bloqueados).`, 'aviso');
+    toast('Pedidos repetidos bloqueados — nada novo para importar.', 'aviso');
+    return;
+  }
 
 
 
@@ -1503,7 +1530,8 @@ async function confirmarImportacao() {
       const data = await res.json();
       if (data.erro) { mostrarStatus(`${data.erro}`, 'erro'); return; }
       totalImportados += data.importados || 0;
-      totalIgnorados  += data.ignorados  || 0;
+      totalIgnorados  += (data.repetidos || 0) + (data.ignorados || 0);
+      totalDiferentes += data.repetidos_diferentes || 0;
     }
 
 
@@ -1512,13 +1540,13 @@ async function confirmarImportacao() {
     const reg = {
       data: new Date().toLocaleDateString('pt-BR', {timeZone:'America/Sao_Paulo'}),
       hora: new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit', timeZone:'America/Sao_Paulo' }),
-      total: numeros.length, ok: totalImportados, erro: totalIgnorados
+      total: totalEnviados, ok: totalImportados, erro: totalIgnorados
     };
     historicoImportacoes.unshift(reg);
     if (historicoImportacoes.length > 20) historicoImportacoes = historicoImportacoes.slice(0, 20);
     localStorage.setItem('historico_importacoes', JSON.stringify(historicoImportacoes));
     renderHistorico();
-    mostrarStatus(`${totalImportados} pedido(s) importado(s)!${totalIgnorados > 0 ? ` ${totalIgnorados} já existiam.` : ''}`, 'sucesso');
+    mostrarStatus(_msgImportacao(totalImportados, totalIgnorados, totalDiferentes), totalIgnorados > 0 ? 'aviso' : 'sucesso');
     document.getElementById('preview-importacao').style.display = 'none';
     pedidosImportar = [];
     document.getElementById('input-arquivo').value = '';
@@ -1536,7 +1564,7 @@ function renderHistorico() {
   if (!historicoImportacoes.length) { el.innerHTML = '<div style="color:var(--text3);font-size:11px;text-align:center;padding:14px">Nenhuma importação</div>'; return; }
   el.innerHTML = historicoImportacoes.map(h=>`
     <div class="hist-item">
-      <div><div style="color:var(--green);font-weight:700">${h.ok} pedido(s)</div>${h.erro>0?`<div style="color:var(--amber);font-size:10px">${h.erro} já existiam</div>`:''}</div>
+      <div><div style="color:var(--green);font-weight:700">${h.ok} pedido(s)</div>${h.erro>0?`<div style="color:var(--amber);font-size:10px">${h.erro} repetido(s) bloqueado(s)</div>`:''}</div>
       <div style="color:var(--text3);font-size:10px">${h.data} às ${h.hora}</div>
     </div>`).join('');
 }
@@ -2108,8 +2136,20 @@ async function confirmarImportacaoModal() {
   mostrarStatusModal('⏳ Importando...', 'carregando');
   const pedMapLocal = {};
   pedidosImportarModal.forEach(l => { const n = String(l.numero_pedido||'').trim(); if (!n) return; if (!pedMapLocal[n]) pedMapLocal[n] = []; pedMapLocal[n].push(l); });
-  const numeros = Object.keys(pedMapLocal);
-  let totalImportados = 0, totalIgnorados = 0;
+  let numeros = Object.keys(pedMapLocal);
+  let totalImportados = 0, totalIgnorados = 0, totalDiferentes = 0;
+  const totalEnviados = numeros.length;
+  try {
+    const v = await _verificarRepetidosImportacao(pedidosImportarModal);
+    const liberados = new Set(v.importar);
+    numeros = numeros.filter(n => liberados.has(n));
+    totalIgnorados = v.repetidos.length; totalDiferentes = v.diferentes.length;
+  } catch (e) { /* sem a verificação o servidor ainda bloqueia os repetidos */ }
+  if (!numeros.length) {
+    mostrarStatusModal(`Nada a importar: os ${totalEnviados} pedido(s) deste arquivo já estão no sistema (repetidos bloqueados).`, 'aviso');
+    toast('Pedidos repetidos bloqueados — nada novo para importar.', 'aviso');
+    return;
+  }
   try {
     for (let i = 0; i < numeros.length; i += 20) {
       const loteNums = numeros.slice(i, i + 20);
@@ -2120,14 +2160,15 @@ async function confirmarImportacaoModal() {
       const data = await res.json();
       if (data.erro) { mostrarStatusModal(`${data.erro}`, 'erro'); return; }
       totalImportados += data.importados || 0;
-      totalIgnorados  += data.ignorados  || 0;
+      totalIgnorados  += (data.repetidos || 0) + (data.ignorados || 0);
+      totalDiferentes += data.repetidos_diferentes || 0;
     }
-    const reg = { data:new Date().toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo'}), hora:new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',timeZone:'America/Sao_Paulo'}), total:numeros.length, ok:totalImportados, erro:totalIgnorados };
+    const reg = { data:new Date().toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo'}), hora:new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',timeZone:'America/Sao_Paulo'}), total:totalEnviados, ok:totalImportados, erro:totalIgnorados };
     historicoImportacoes.unshift(reg);
     if (historicoImportacoes.length > 20) historicoImportacoes = historicoImportacoes.slice(0,20);
     localStorage.setItem('historico_importacoes', JSON.stringify(historicoImportacoes));
     renderHistoricoModal();
-    mostrarStatusModal(`${totalImportados} pedido(s) importado(s)!${totalIgnorados>0?` ${totalIgnorados} já existiam.`:''}`, 'sucesso');
+    mostrarStatusModal(_msgImportacao(totalImportados, totalIgnorados, totalDiferentes), totalIgnorados > 0 ? 'aviso' : 'sucesso');
     document.getElementById('modal-preview-importacao').style.display = 'none';
     pedidosImportarModal = [];
     document.getElementById('modal-input-arquivo').value = '';
@@ -2139,7 +2180,7 @@ function renderHistoricoModal() {
   const el = document.getElementById('modal-hist-importacoes');
   if (!el) return;
   if (!historicoImportacoes.length) { el.innerHTML = '<div style="color:var(--text3);font-size:11px;text-align:center;padding:14px">Nenhuma importação</div>'; return; }
-  el.innerHTML = historicoImportacoes.map(h=>`<div class="hist-item"><div><div style="color:var(--green);font-weight:700">${h.ok} pedido(s)</div>${h.erro>0?`<div style="color:var(--amber);font-size:10px">${h.erro} já existiam</div>`:''}</div><div style="color:var(--text3);font-size:10px">${h.data} às ${h.hora}</div></div>`).join('');
+  el.innerHTML = historicoImportacoes.map(h=>`<div class="hist-item"><div><div style="color:var(--green);font-weight:700">${h.ok} pedido(s)</div>${h.erro>0?`<div style="color:var(--amber);font-size:10px">${h.erro} repetido(s) bloqueado(s)</div>`:''}</div><div style="color:var(--text3);font-size:10px">${h.data} às ${h.hora}</div></div>`).join('');
 }
 function mostrarStatusModal(msg, tipo) {
   const cores = { carregando:'background:rgba(79,70,229,.15);border:1px solid rgba(79,70,229,.35);color:var(--indigo)', sucesso:'background:rgba(87,185,129,.15);border:1px solid rgba(87,185,129,.35);color:var(--green)', erro:'background:rgba(201,82,79,.15);border:1px solid rgba(201,82,79,.35);color:var(--red)', aviso:'background:rgba(224,168,62,.15);border:1px solid rgba(224,168,62,.35);color:var(--amber)' };

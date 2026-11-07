@@ -7,6 +7,7 @@ const { registrarAuditoria } = require('../lib/auditoria');
 const { requerPermissao } = require('../lib/permissoes');
 const { calcularPesoCorredor, calcularPontuacaoPedido } = require('../lib/pontuacao');
 const { calcularPrioridade } = require('../lib/prioridade');
+const { classificarImportacao } = require('../lib/importacao');
 
 // Prioridade só faz sentido pra pedido ainda não concluído (aguardando
 // alguma etapa) — pedido concluído não carrega selo de prioridade.
@@ -758,13 +759,42 @@ router.delete('/pedidos', requerAuth, requerPerfil('supervisor'), requerPermissa
   } catch(e){res.status(500).json({erro:e.message});}
 });
 
+// Pedidos que já estão no sistema (com os itens), por número — base da detecção de pedido repetido
+async function _pedidosExistentes(numeros) {
+  const mapa = new Map();
+  if (!numeros.length) return mapa;
+  const peds = await db.all('SELECT id, numero_pedido, cliente, transportadora, aguardando_desde, estado FROM pedidos WHERE numero_pedido = ANY($1::text[])', [numeros]);
+  if (!peds.length) return mapa;
+  const itens = await db.all('SELECT pedido_id, codigo, quantidade FROM itens_pedido WHERE pedido_id = ANY($1::int[])', [peds.map(p => p.id)]);
+  peds.forEach(p => mapa.set(String(p.numero_pedido), { ...p, itens: itens.filter(i => i.pedido_id === p.id) }));
+  return mapa;
+}
+
+// Antes de importar: diz quais pedidos do arquivo são novos, quais completam um pedido incompleto e quais são
+// repetidos (já estão no sistema e o arquivo não traz nada novo) — esses últimos são bloqueados. Não grava nada.
+router.post('/pedidos/importar/verificar', requerAuth, requerPerfil('supervisor'), async (req, res) => {
+  const dados = req.body.pedidos || req.body.linhas || [];
+  if (!Array.isArray(dados) || !dados.length) return res.status(400).json({ erro: 'Nenhum pedido informado!' });
+  try {
+    const numeros = [...new Set(dados.map(d => String(d.numero_pedido ?? '').trim()).filter(Boolean))];
+    const r = classificarImportacao(dados, await _pedidosExistentes(numeros));
+    res.json({ total: numeros.length, importar: r.importar, novos: r.novos.length, completam: r.completam.length, repetidos: r.repetidos, diferentes: r.diferentes });
+  } catch (e) { res.status(500).json({ erro: e.message }); }
+});
+
 router.post('/pedidos/importar', requerAuth, requerPerfil('supervisor'), async (req,res) => {
   const dados = req.body.pedidos || req.body.linhas || [];
   if (!dados?.length) return res.status(400).json({erro:'Nenhum pedido informado!'});
   const {data:hoje,hora}=dataHoraLocal();
   let importados=0,ignorados=0,erros=0;
+  const repetidos=[], diferentes=[];
   const numeros=[...new Set(dados.map(d=>String(d.numero_pedido)))];
+  // Pedido repetido (mesmo número, nada novo no arquivo) é bloqueado — não importa de novo nem mexe no que já existe
+  let classif; try { classif = classificarImportacao(dados, await _pedidosExistentes(numeros.map(n=>n.trim()).filter(Boolean))); } catch(e) { classif = null; }
+  if (classif) { classif.repetidos.forEach(n=>repetidos.push(n)); classif.diferentes.forEach(n=>diferentes.push(n)); }
+  const bloqueados = new Set(repetidos);
   for (const numero of numeros) {
+    if (bloqueados.has(numero.trim())) continue;
     const itens=dados.filter(d=>String(d.numero_pedido)===numero);
     // itensReais: exclui linhas placeholder (pedidos sem itens têm codigo vazio)
     const itensReais=itens.filter(i=>String(i.codigo||'').trim());
@@ -818,7 +848,8 @@ router.post('/pedidos/importar', requerAuth, requerPerfil('supervisor'), async (
       importados++;
     } catch(err){erros++;}
   }
-  res.json({mensagem:'Importacao concluida!',importados,ignorados,erros,total:numeros.length});
+  if (repetidos.length) await registrarAuditoria(req, 'IMPORTACAO_REPETIDOS_BLOQUEADOS', 'pedidos', null, null, { bloqueados: repetidos.length, amostra: repetidos.slice(0, 20) }).catch(() => {});
+  res.json({mensagem:'Importacao concluida!',importados,ignorados,erros,total:numeros.length,repetidos:repetidos.length,repetidos_diferentes:diferentes.length,repetidos_numeros:repetidos.slice(0,100)});
 });
 
 router.post('/pedidos/distribuicao', requerAuth, requerPerfil('supervisor'), async (req,res) => {

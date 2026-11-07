@@ -255,6 +255,29 @@ describe('lista de usuários agrupada por turno', () => {
   });
 });
 
+describe('importação: bloqueio de pedidos repetidos', () => {
+  const ctx = {};
+  vm.createContext(ctx);
+  vm.runInContext(codigo['pedidos.js'].match(/function _msgImportacao[\s\S]*?\n}\n/)[0], ctx);
+
+  test('mensagem diz quantos foram importados e quantos repetidos foram bloqueados', () => {
+    expect(ctx._msgImportacao(10, 0, 0)).toBe('10 pedido(s) importado(s)!');
+    expect(ctx._msgImportacao(4, 6, 0)).toBe('4 pedido(s) importado(s)! 6 repetido(s) bloqueado(s) — já estavam no sistema.');
+    expect(ctx._msgImportacao(0, 3, 2)).toContain('2 deles com dados diferentes do arquivo (o sistema não foi alterado).');
+  });
+
+  test('as duas telas de importação (página e modal) verificam antes e só enviam o que não é repetido', () => {
+    const corpo = nome => codigo['pedidos.js'].match(new RegExp(`async function ${nome}\\([\\s\\S]*?\\n}\\n`))[0];
+    ['confirmarImportacao', 'confirmarImportacaoModal'].forEach(n => {
+      const c = corpo(n);
+      expect(c).toContain('_verificarRepetidosImportacao(');
+      expect(c).toContain('numeros.filter(n => liberados.has(n))');
+      expect(c).toContain('Nada a importar');                     // arquivo todo repetido: nem chama o servidor
+      expect(c).toContain('data.repetidos');                      // soma também o que o servidor bloqueou
+    });
+  });
+});
+
 describe('importação: coluna da transportadora (nunca um número)', () => {
   const ctx = {};
   vm.createContext(ctx);
