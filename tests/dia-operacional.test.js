@@ -82,3 +82,26 @@ describe('painel de Performance usa o dia operacional em todos os setores', () =
     expect(src).not.toMatch(/GROUP BY repositor_nome, data_aviso/);
   });
 });
+
+describe('duração que cruza a meia-noite não pode ser negativa', () => {
+  const dash = fs.readFileSync(path.join(__dirname, '..', 'routes', 'performance-dash.js'), 'utf8');
+  const kpis = fs.readFileSync(path.join(__dirname, '..', 'routes', 'kpis.js'), 'utf8');
+
+  test('minDia soma 1 dia (1440 min) quando a conta dá negativo', () => {
+    const minDia = new Function(dash.match(/const minDia = [^\n]*\n/)[0] + '; return minDia;')();
+    const sql = minDia('X');
+    expect(sql).toBe('(CASE WHEN (X) < 0 THEN (X) + 1440 ELSE (X) END)::numeric');
+  });
+
+  test('checkout e embalagem do painel de Performance usam minDia (início 23:44 / fim 00:01 não vira -1424 min)', () => {
+    expect((dash.match(/\$\{minDia\(/g) || []).length).toBeGreaterThanOrEqual(5);
+    // nenhuma duração de checkout/embalagem calculada direto, sem o ajuste (tira o que já está dentro de minDia)
+    const semAjuste = dash.replace(/\$\{minDia\("[^"]*"\)\}/g, '');
+    expect(semAjuste).not.toMatch(/EXTRACT\(EPOCH FROM \(\s*\(?[^\n]*::timestamp\s*-\s*[^\n]*hora_criacao[^\n]*::timestamp\s*\)\)\s*\/\s*60\.0/);
+    expect(semAjuste).not.toMatch(/EXTRACT\(EPOCH FROM \(\s*\(?[^\n]*::timestamp\s*-\s*[^\n]*embalagem_iniciado_em[^\n]*::timestamp\s*\)\)\s*\/\s*60\.0/);
+  });
+
+  test('KPIs de checkout somam 1 dia quando fim < início (antes virava 0 min)', () => {
+    expect((kpis.match(/CASE WHEN EXTRACT\(EPOCH FROM \(\w+\.hora_checkout::time - \w+\.hora_criacao::time\)\) < 0/g) || []).length).toBe(2);
+  });
+});

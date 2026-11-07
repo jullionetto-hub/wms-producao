@@ -709,7 +709,7 @@ router.get('/stats/performance/detalhe', requerAuth, requerPerfil('supervisor'),
           END AS tempo_total_min,
           (SELECT COUNT(*) FROM avisos_repositor a WHERE a.pedido_id=p.id) AS qtd_reposicoes,
           CASE WHEN ck.hora_criacao IS NOT NULL AND ck.hora_criacao!='' AND ck.hora_checkout IS NOT NULL AND ck.hora_checkout!=''
-            THEN GREATEST(0, ROUND(EXTRACT(EPOCH FROM (ck.hora_checkout::time - ck.hora_criacao::time))/60.0)::int)
+            THEN GREATEST(0, ROUND(CASE WHEN EXTRACT(EPOCH FROM (ck.hora_checkout::time - ck.hora_criacao::time)) < 0 THEN EXTRACT(EPOCH FROM (ck.hora_checkout::time - ck.hora_criacao::time))/60.0 + 1440 ELSE EXTRACT(EPOCH FROM (ck.hora_checkout::time - ck.hora_criacao::time))/60.0 END)::int)
             ELSE NULL END AS tempo_checkout_min,
           (SELECT em.embalado_em FROM embalagem em WHERE em.pedido_id=p.id ORDER BY em.id DESC LIMIT 1) AS emb_horario,
           (SELECT em.embalado_por FROM embalagem em WHERE em.pedido_id=p.id ORDER BY em.id DESC LIMIT 1) AS emb_operador
@@ -761,7 +761,7 @@ router.get('/stats/performance/detalhe', requerAuth, requerPerfil('supervisor'),
           CASE WHEN c.hora_criacao IS NOT NULL AND c.hora_criacao!=''
                     AND c.hora_checkout IS NOT NULL AND c.hora_checkout!=''
             THEN GREATEST(0,
-              ROUND(EXTRACT(EPOCH FROM (c.hora_checkout::time - c.hora_criacao::time))/60.0)::int
+              ROUND(CASE WHEN EXTRACT(EPOCH FROM (c.hora_checkout::time - c.hora_criacao::time)) < 0 THEN EXTRACT(EPOCH FROM (c.hora_checkout::time - c.hora_criacao::time))/60.0 + 1440 ELSE EXTRACT(EPOCH FROM (c.hora_checkout::time - c.hora_criacao::time))/60.0 END)::int
             )
             ELSE NULL END AS tempo_checkout_min
         FROM checkout c

@@ -20,6 +20,8 @@ const diaEmbPed = a => sqlDiaOperacional({ ts: `${EMB_DATA_PED(a)}||' '||${a}.em
 // Reposição: aviso (hora_aviso, repositor_nome) ou tentativa de um repositor (hora_inicio) dentro do aviso
 const diaAv = (a, quem) => sqlDiaOperacional({ ts: `${a}.data_aviso||' '||${a}.hora_aviso`, civil: `${a}.data_aviso`, turno: TURNO_DE_NOME(quem) });
 const diaAvTent = sqlDiaOperacional({ ts: "ar.data_aviso||' '||(t.value->>'hora_inicio')", civil: 'ar.data_aviso', turno: TURNO_DE_NOME("t.value->>'repositor'") });
+// Duração em minutos que cruza a meia-noite (início 23:44, fim 00:01, mesma data): a conta direta dá negativo → soma 1 dia.
+const minDia = expr => `(CASE WHEN (${expr}) < 0 THEN (${expr}) + 1440 ELSE (${expr}) END)::numeric`;
 const diaSessao = sqlDiaOperacional({ ts: "to_char(login_em AT TIME ZONE 'America/Sao_Paulo','YYYY-MM-DD HH24:MI:SS')", civil: 'data', turno: 'turno' });
 
 // â”€â”€ GET /performance/separadores?ini=YYYY-MM-DD&fim=YYYY-MM-DD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -195,10 +197,7 @@ router.get('/performance/separadores', requerAuth, requerPerfil('supervisor', 'g
         COALESCE(SUM(COALESCE(NULLIF(p2.total_itens,0), p2.itens, 0)) FILTER (WHERE ck.status='concluido'), 0)::int AS itens,
         ROUND(AVG(CASE WHEN ck.status='concluido'
             AND NULLIF(ck.hora_criacao,'') IS NOT NULL AND NULLIF(ck.hora_checkout,'') IS NOT NULL
-          THEN EXTRACT(EPOCH FROM (
-            (ck.data_checkout||' '||ck.hora_checkout)::timestamp
-            - (ck.data_checkout||' '||ck.hora_criacao)::timestamp
-          ))/60.0 END)::numeric, 1) AS tempo_medio_min
+          THEN ${minDia("EXTRACT(EPOCH FROM ((ck.data_checkout||' '||ck.hora_checkout)::timestamp - (ck.data_checkout||' '||ck.hora_criacao)::timestamp)) / 60.0")} END)::numeric, 1) AS tempo_medio_min
       FROM checkout ck
       JOIN pedidos p2 ON p2.id = ck.pedido_id
       LEFT JOIN separadores s2 ON s2.id = p2.separador_id
@@ -216,10 +215,7 @@ router.get('/performance/separadores', requerAuth, requerPerfil('supervisor', 'g
         COALESCE(SUM(COALESCE(NULLIF(p3.total_itens,0), p3.itens, 0)) FILTER (WHERE p3.status_embalagem='embalado'), 0)::int AS itens,
         ROUND(AVG(CASE WHEN p3.status_embalagem='embalado'
             AND NULLIF(p3.embalagem_iniciado_em,'') IS NOT NULL AND NULLIF(p3.embalado_em,'') IS NOT NULL
-          THEN EXTRACT(EPOCH FROM (
-            (p3.data_pedido||' '||p3.embalado_em)::timestamp
-            - (p3.data_pedido||' '||p3.embalagem_iniciado_em)::timestamp
-          ))/60.0 END)::numeric, 1) AS tempo_medio_min
+          THEN ${minDia("EXTRACT(EPOCH FROM ((p3.data_pedido||' '||p3.embalado_em)::timestamp - (p3.data_pedido||' '||p3.embalagem_iniciado_em)::timestamp)) / 60.0")} END)::numeric, 1) AS tempo_medio_min
       FROM pedidos p3
       LEFT JOIN separadores s3 ON s3.id = p3.separador_id
       LEFT JOIN usuarios u3 ON u3.id = s3.usuario_id
@@ -499,10 +495,7 @@ router.get('/performance/timing', requerAuth, requerPerfil('supervisor', 'gestor
              AND cs.data_sessao = c.data_checkout AND cs.operador_nome = c.operador_nome),
           CASE
             WHEN NULLIF(c.hora_criacao,'') IS NOT NULL AND NULLIF(c.hora_checkout,'') IS NOT NULL
-            THEN ROUND(EXTRACT(EPOCH FROM (
-              (c.data_checkout || ' ' || c.hora_checkout)::timestamp
-              - (c.data_checkout || ' ' || c.hora_criacao)::timestamp
-            )) / 60.0, 1)::float
+            THEN ROUND(${minDia("EXTRACT(EPOCH FROM ((c.data_checkout || ' ' || c.hora_checkout)::timestamp - (c.data_checkout || ' ' || c.hora_criacao)::timestamp)) / 60.0")}, 1)::float
             ELSE NULL
           END
         ) AS duracao_min
@@ -528,10 +521,7 @@ router.get('/performance/timing', requerAuth, requerPerfil('supervisor', 'gestor
           WHERE ip.pedido_id=p.id AND ip.codigo IS NOT NULL AND ip.codigo != '')::int AS skus,
         CASE
           WHEN NULLIF(p.embalagem_iniciado_em,'') IS NOT NULL AND NULLIF(p.embalado_em,'') IS NOT NULL
-          THEN ROUND(EXTRACT(EPOCH FROM (
-            (COALESCE((SELECT eb.data_embalagem FROM embalagem eb WHERE eb.pedido_id = p.id ORDER BY eb.id DESC LIMIT 1), p.data_pedido) || ' ' || p.embalado_em)::timestamp
-            - (COALESCE((SELECT eb.data_embalagem FROM embalagem eb WHERE eb.pedido_id = p.id ORDER BY eb.id DESC LIMIT 1), p.data_pedido) || ' ' || p.embalagem_iniciado_em)::timestamp
-          )) / 60.0, 1)::float
+          THEN ROUND(${minDia("EXTRACT(EPOCH FROM ((COALESCE((SELECT eb.data_embalagem FROM embalagem eb WHERE eb.pedido_id = p.id ORDER BY eb.id DESC LIMIT 1), p.data_pedido) || ' ' || p.embalado_em)::timestamp - (COALESCE((SELECT eb.data_embalagem FROM embalagem eb WHERE eb.pedido_id = p.id ORDER BY eb.id DESC LIMIT 1), p.data_pedido) || ' ' || p.embalagem_iniciado_em)::timestamp)) / 60.0")}, 1)::float
           ELSE NULL
         END AS duracao_min
       FROM pedidos p
@@ -789,10 +779,7 @@ router.get('/performance/pedido/:numero', requerAuth, requerPerfil('supervisor',
              AND cs.data_sessao = c.data_checkout AND cs.operador_nome = c.operador_nome),
           CASE
             WHEN NULLIF(c.hora_criacao,'') IS NOT NULL AND NULLIF(c.hora_checkout,'') IS NOT NULL
-            THEN ROUND(EXTRACT(EPOCH FROM (
-              (c.data_checkout || ' ' || c.hora_checkout)::timestamp
-              - (c.data_checkout || ' ' || c.hora_criacao)::timestamp
-            )) / 60.0, 1)::float
+            THEN ROUND(${minDia("EXTRACT(EPOCH FROM ((c.data_checkout || ' ' || c.hora_checkout)::timestamp - (c.data_checkout || ' ' || c.hora_criacao)::timestamp)) / 60.0")}, 1)::float
             ELSE NULL
           END
         ) AS duracao_min
@@ -817,10 +804,7 @@ router.get('/performance/pedido/:numero', requerAuth, requerPerfil('supervisor',
           WHERE ip.pedido_id=p.id AND ip.codigo IS NOT NULL AND ip.codigo != '')::int AS skus,
         CASE
           WHEN NULLIF(p.embalagem_iniciado_em,'') IS NOT NULL AND NULLIF(p.embalado_em,'') IS NOT NULL
-          THEN ROUND(EXTRACT(EPOCH FROM (
-            (COALESCE((SELECT eb.data_embalagem FROM embalagem eb WHERE eb.pedido_id = p.id ORDER BY eb.id DESC LIMIT 1), p.data_pedido) || ' ' || p.embalado_em)::timestamp
-            - (COALESCE((SELECT eb.data_embalagem FROM embalagem eb WHERE eb.pedido_id = p.id ORDER BY eb.id DESC LIMIT 1), p.data_pedido) || ' ' || p.embalagem_iniciado_em)::timestamp
-          )) / 60.0, 1)::float
+          THEN ROUND(${minDia("EXTRACT(EPOCH FROM ((COALESCE((SELECT eb.data_embalagem FROM embalagem eb WHERE eb.pedido_id = p.id ORDER BY eb.id DESC LIMIT 1), p.data_pedido) || ' ' || p.embalado_em)::timestamp - (COALESCE((SELECT eb.data_embalagem FROM embalagem eb WHERE eb.pedido_id = p.id ORDER BY eb.id DESC LIMIT 1), p.data_pedido) || ' ' || p.embalagem_iniciado_em)::timestamp)) / 60.0")}, 1)::float
           ELSE NULL
         END AS duracao_min
       FROM pedidos p WHERE p.numero_pedido = $1
