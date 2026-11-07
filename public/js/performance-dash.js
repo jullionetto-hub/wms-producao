@@ -2321,9 +2321,10 @@ function pfRenderPedidoDetalhe(d) {
   );
 
   // Reposição
-  const repCorpo = !rep.length
+  const avisosRep = d.avisos_reposicao || [];
+  const repCorpo = (!rep.length && !avisosRep.length)
     ? '<div style="color:var(--text3);text-align:center;padding:12px 0;font-size:11px">Sem reposições</div>'
-    : rep.map(r => `
+    : pfRenderAvisosReposicao(avisosRep) + rep.map(r => `
         <div style="padding:7px 8px;background:var(--surface2);border-radius:8px;margin-bottom:6px">
           <div style="font-size:10px;font-weight:700;color:var(--text);margin-bottom:3px">${resMap[r.resultado]||'?'} ${pfEsc(r.codigo||'')} — ${pfEsc((r.descricao||'').slice(0,30))}</div>
           <div style="display:flex;justify-content:space-between;align-items:center">
@@ -2342,7 +2343,8 @@ function pfRenderPedidoDetalhe(d) {
         linha('Início', fmtHora(ck.iniciado_em)) +
         linha('Fim', fmtHora(ck.concluido_em)) +
         linha('Itens', ck.total_itens ?? sep?.total_itens ?? '—') +
-        linha('SKUs', ck.skus ?? sep?.skus ?? '—')
+        linha('SKUs', ck.skus ?? sep?.skus ?? '—') +
+        pfRenderEtapasCheckout(d.checkout_etapas)
       : '<div style="color:var(--text3);text-align:center;padding:12px 0;font-size:11px">Não realizado</div>',
     ck?.duracao_min
   );
@@ -2434,6 +2436,64 @@ function pfRenderPedidoDetalhe(d) {
       </details>
       ${itensSecao}
     </div>`;
+}
+
+// Quebra do tempo do checkout em fila / espera do item / trabalho (calculada
+// no servidor por lib/checkout-etapas.js). Sem sessões registradas não há como
+// separar — nesse caso não mostra nada e o card fica só com o total.
+function pfRenderEtapasCheckout(et) {
+  if (!et || et.sem_detalhe || et.fila_min == null) return '';
+  const total = Number(et.total_min) || 0;
+  const fmt = m => (m > 0 ? pfFmtTempo(m) : '0 min');
+  const partes = [
+    { rot: 'Tempo de fila',     min: et.fila_min,        cor: 'var(--amber)', dica: 'esperando alguém pegar o pedido' },
+    { rot: 'Espera do item',    min: et.espera_item_min, cor: 'var(--red)',   dica: 'parado aguardando item faltante' },
+    { rot: 'Tempo de trabalho', min: et.trabalho_min,    cor: 'var(--green)', dica: 'conferindo/fechando o pedido', semRegistro: !et.trabalho_registrado },
+  ];
+  const barra = total > 0 ? partes.map(p => {
+    const w = Math.max(0, Math.min(100, (Number(p.min) || 0) / total * 100));
+    return w > 0 ? `<span style="width:${w.toFixed(1)}%;background:${p.cor};display:block;height:100%"></span>` : '';
+  }).join('') : '';
+  return `
+    <div style="margin-top:10px">
+      <div style="font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.4px;margin-bottom:5px">ONDE O TEMPO FOI</div>
+      ${barra ? `<div style="display:flex;height:6px;border-radius:3px;overflow:hidden;background:var(--surface2);margin-bottom:6px">${barra}</div>` : ''}
+      ${partes.map(p => `
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:3px 0" title="${pfEsc(p.dica)}">
+          <span style="font-size:11px;color:var(--text2)"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${p.cor};margin-right:6px"></span>${p.rot}</span>
+          ${p.semRegistro
+            ? '<span style="font-size:11px;color:var(--text3);font-style:italic">sem registro</span>'
+            : `<span style="font-size:12px;font-weight:700;color:var(--text)">${fmt(Number(p.min) || 0)}</span>`}
+        </div>`).join('')}
+    </div>`;
+}
+
+// Avisos de reposição do pedido. O aviso ainda em aberto (pendente/verificando)
+// fica em destaque — antes o card dizia "Sem reposições" mesmo com aviso parado.
+function pfRenderAvisosReposicao(avisos) {
+  if (!avisos || !avisos.length) return '';
+  const rotulo = { pendente:'Pendente', verificando:'Verificando', encontrado:'Encontrado', abastecido:'Abastecido', nao_encontrado:'Não encontrado' };
+  const dm = v => (v && String(v).length >= 10 ? `${String(v).slice(8, 10)}/${String(v).slice(5, 7)}` : '');
+  const hm = v => (v ? String(v).slice(0, 5) : '');
+  return avisos.map(a => {
+    const aberto = a.status === 'pendente' || a.status === 'verificando';
+    const ini = a.data_aviso && a.hora_aviso ? new Date(`${a.data_aviso}T${a.hora_aviso}`).getTime() : NaN;
+    const idadeMin = aberto && !isNaN(ini) ? Math.max(0, Math.round((Date.now() - ini) / 60000)) : null;
+    const cor = aberto ? 'var(--red)' : 'var(--green)';
+    const bg  = aberto ? 'rgba(201,82,79,.10)' : 'var(--surface2)';
+    const borda = aberto ? 'border:1px solid rgba(201,82,79,.35);' : '';
+    return `
+      <div style="padding:7px 8px;background:${bg};${borda}border-radius:8px;margin-bottom:6px">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;margin-bottom:3px">
+          <span style="font-size:10px;font-weight:800;color:${cor}">${aberto ? '⚠ ' : ''}Aviso ${pfEsc(rotulo[a.status] || a.status || '')}</span>
+          ${idadeMin != null ? `<span style="font-size:10px;color:var(--text3)">há ${pfFmtTempo(idadeMin)}</span>` : ''}
+        </div>
+        <div style="font-size:10px;font-weight:700;color:var(--text)">${pfEsc(a.codigo || '')} — ${pfEsc((a.descricao || '').slice(0, 30))}</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:2px">
+          avisado ${hm(a.hora_aviso)} ${dm(a.data_aviso)}${a.separador_nome ? ' por ' + pfEsc(a.separador_nome) : ''}${a.repositor ? ' · repositor ' + pfEsc(a.repositor) : ''}${a.hora_reposto ? ' · resolvido ' + hm(a.hora_reposto) : ''}
+        </div>
+      </div>`;
+  }).join('');
 }
 
 // Itens que o checkout marcou com X (errados) — histórico ligado ao

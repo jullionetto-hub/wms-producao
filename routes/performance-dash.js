@@ -4,6 +4,7 @@ const router  = express.Router();
 const { db, pool } = require('../lib/db');
 const { requerAuth, requerPerfil } = require('../lib/auth');
 const { dataHoraLocal, sqlDiaOperacional } = require('../lib/helpers');
+const { calcularEtapasCheckout } = require('../lib/checkout-etapas');
 
 /* Dia operacional (data do turno): quem é da Noite tem o dia contado a partir da entrada do turno
    (22h), então o que acontece de 00h às 06h47 vale pro dia anterior. Ver lib/helpers.js. */
@@ -764,6 +765,7 @@ router.get('/performance/pedido/:numero', requerAuth, requerPerfil('supervisor',
 
     const ck = await db.get(`
       SELECT
+        c.id AS checkout_id,
         c.numero_pedido,
         COALESCE(NULLIF(c.operador_nome,''), 'Operador') AS colaborador,
         c.data_checkout AS data,
@@ -831,7 +833,32 @@ router.get('/performance/pedido/:numero', requerAuth, requerPerfil('supervisor',
       ORDER BY cic.id ASC
     `, [numero]);
 
-    res.json({ numero_pedido: numero, separacao: sep, reposicoes: reposicoes || [], checkout: ck || null, embalagem: emb || null, itens: itens || [], itens_com_problema: itensComProblema || [] });
+    // Avisos de reposição do pedido — inclusive os que ninguém atendeu (sem
+    // tentativas, portanto invisíveis na lista de reposições acima).
+    const avisosReposicao = await db.all(`
+      SELECT ar.id, ar.codigo, ar.descricao, ar.status, ar.data_aviso, ar.hora_aviso,
+             ar.hora_reposto, NULLIF(ar.repositor_nome,'') AS repositor, ar.separador_nome
+      FROM avisos_repositor ar
+      WHERE ar.numero_pedido = $1
+      ORDER BY ar.id ASC
+    `, [numero]);
+
+    // Quebra do tempo do checkout em fila / espera do item / trabalho
+    let checkoutEtapas = null;
+    if (ck?.checkout_id) {
+      const sessoes = await db.all(
+        `SELECT hora_inicio, hora_fim, acao, tempo_min FROM checkout_sessoes WHERE checkout_id=$1 ORDER BY id ASC`,
+        [ck.checkout_id]
+      );
+      checkoutEtapas = calcularEtapasCheckout({
+        horaFila: sep.concluido_em,
+        horaCriacao: ck.iniciado_em,
+        horaCheckout: ck.concluido_em,
+        sessoes: sessoes || [],
+      });
+    }
+
+    res.json({ numero_pedido: numero, separacao: sep, reposicoes: reposicoes || [], avisos_reposicao: avisosReposicao || [], checkout: ck || null, checkout_etapas: checkoutEtapas, embalagem: emb || null, itens: itens || [], itens_com_problema: itensComProblema || [] });
   } catch(e) {
     console.error('performance/pedido:', e.message);
     res.status(500).json({ erro: e.message });

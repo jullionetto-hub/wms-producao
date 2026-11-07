@@ -585,6 +585,32 @@ describe('GET /performance/pedido/:numero', () => {
     expect(res.body.reposicoes).toEqual([]);
   });
 
+  test('devolve avisos de reposição (mesmo pendentes) e a quebra do tempo do checkout', async () => {
+    mockDb.get
+      .mockResolvedValueOnce({
+        numero_pedido: '5707115', cliente: 'C', transportadora: 'T', colaborador: 'Ana', data: '2026-11-06',
+        iniciado_em: '2026-11-06 21:50:00', concluido_em: '2026-11-06 22:16:36', total_itens: 3, skus: 3,
+      }) // sep
+      .mockResolvedValueOnce({ checkout_id: 534, numero_pedido: '5707115', colaborador: 'Gui', data: '2026-11-07', iniciado_em: '22:17:35', concluido_em: '03:02:25' }) // ck
+      .mockResolvedValueOnce(null); // emb
+    mockDb.all
+      .mockResolvedValueOnce([]) // reposicoes
+      .mockResolvedValueOnce([]) // itens
+      .mockResolvedValueOnce([]) // itensComProblema
+      .mockResolvedValueOnce([{ id: 231, codigo: 'HZ448', status: 'pendente', data_aviso: '2026-11-06', hora_aviso: '22:16:36' }]) // avisos
+      .mockResolvedValueOnce([ // sessões do checkout
+        { hora_inicio: '22:17:35', hora_fim: '01:18:05', acao: 'aguardando_item', tempo_min: 0 },
+        { hora_inicio: '22:17:35', hora_fim: '03:02:25', acao: 'concluido', tempo_min: 0 },
+      ]);
+    const res = await agent.get('/performance/pedido/5707115');
+    expect(res.status).toBe(200);
+    expect(res.body.avisos_reposicao).toHaveLength(1);
+    expect(res.body.avisos_reposicao[0].status).toBe('pendente');
+    expect(res.body.checkout_etapas.trabalho_registrado).toBe(false);
+    expect(res.body.checkout_etapas.espera_item_min).toBeGreaterThan(100);
+    expect(res.body.checkout_etapas.fila_min).toBeGreaterThan(170);
+  });
+
   test('erro no banco → 500', async () => {
     mockDb.get.mockRejectedValueOnce(new Error('falha'));
     const res = await agent.get('/performance/pedido/12345');
