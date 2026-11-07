@@ -290,10 +290,14 @@ describe('importação: coluna da transportadora (nunca um número)', () => {
 
 describe('Diário de Bordo: recado da gestão (uma informação para os 3 turnos)', () => {
   const monta = perfil => {
-    const ctx = { API: '', usuarioAtual: { perfil }, _recadoEditando: null, _recadoFotoRota: 'diario-recados/foto' };
+    const guardado = {};
+    const ctx = { API: '', usuarioAtual: { perfil }, _recadoEditando: null, _recadoFotoRota: 'diario-recados/foto', _recados: [], renderizacoes: 0,
+      localStorage: { getItem: k => guardado[k] ?? null, setItem: (k, v) => { guardado[k] = String(v); }, removeItem: k => { delete guardado[k]; } }, guardado };
     vm.createContext(ctx);
     vm.runInContext(codigo['config.js'].match(/function escHtml[\s\S]*?\n}\n/)[0], ctx);
-    ['_recadoFotosHtml', '_recadoCardHtml'].forEach(n => vm.runInContext(codigo['auth.js'].match(new RegExp(`function ${n}[\\s\\S]*?\\n}\\n`))[0], ctx));
+    ['_recadosRecolhidos', '_recadoChave', '_recadoVersao'].forEach(n => vm.runInContext(codigo['auth.js'].match(new RegExp(`const ${n} = [^\\n]*\\n`))[0], ctx));
+    ['_recadoFotosHtml', '_recadoCardHtml', '_recadoRecolhido', 'alternarRecado'].forEach(n => vm.runInContext(codigo['auth.js'].match(new RegExp(`function ${n}\\([\\s\\S]*?\\n}\\n`))[0], ctx));
+    vm.runInContext('function renderRecadosDiario() { renderizacoes++; }', ctx);
     return ctx;
   };
   const rec = { id: 4, titulo: 'Organização', texto: 'Caixas nas ruas\n<script>x</script>', autor: 'Júlio', criado_em: '2026-11-06T08:00:00Z', fotos: [{ id: 31 }, { id: 32 }] };
@@ -325,6 +329,52 @@ describe('Diário de Bordo: recado da gestão (uma informação para os 3 turnos
     c._recadoEditando = 'novo';
     const n = c._recadoCardHtml({ id: 0, titulo: '', texto: '', fotos: [] });
     expect(n).toContain('id="rec-texto"'); expect(n).toContain('Salve o recado para poder anexar fotos');
+  });
+
+  test('setinha: recolhe (só cabeçalho e título), mostra de novo, e lembra a escolha', () => {
+    const c = monta('supervisor'); c._recados = [rec];
+    const aberto = c._recadoCardHtml(rec);
+    expect(aberto).toContain('alternarRecado(4)');
+    expect(aberto).toContain('chevron-up'); expect(aberto).toContain('aria-expanded="true"');
+    expect(aberto).toContain('Caixas nas ruas');
+
+    c.alternarRecado(4);                                   // recolher
+    const fechado = c._recadoCardHtml(rec);
+    expect(fechado).toContain('chevron-down'); expect(fechado).toContain('aria-expanded="false"');
+    expect(fechado).toContain('Organização');              // título continua visível
+    expect(fechado).toContain('toque para mostrar');
+    expect(fechado).not.toContain('Caixas nas ruas');      // texto escondido
+    expect(fechado).not.toContain('<img');                 // fotos escondidas
+    expect(c.renderizacoes).toBe(1);
+    expect(c.guardado['wms_recado_recolhido_4']).toBe('2026-11-06T08:00:00Z');   // lembra no aparelho
+
+    c.alternarRecado(4);                                   // mostrar
+    expect(c._recadoCardHtml(rec)).toContain('Caixas nas ruas');
+    expect(c.guardado['wms_recado_recolhido_4']).toBeUndefined();
+  });
+
+  test('recado editado pela gestão volta aberto mesmo que tenha sido recolhido antes', () => {
+    const c = monta('supervisor'); c._recados = [rec]; c.alternarRecado(4);
+    expect(c._recadoCardHtml(rec)).not.toContain('Caixas nas ruas');
+    const editado = { ...rec, editado_em: '2026-11-06T09:00:00Z' };
+    c._recados = [editado];
+    c.guardado['wms_recado_recolhido_4'] = '2026-11-06T08:00:00Z';   // outro aparelho com a marca da versão velha
+    const outro = monta('supervisor'); outro.guardado['wms_recado_recolhido_4'] = '2026-11-06T08:00:00Z';
+    expect(outro._recadoCardHtml(editado)).toContain('Caixas nas ruas');
+  });
+
+  test('sem localStorage (bloqueado) a setinha ainda funciona na sessão', () => {
+    const c = monta('supervisor'); c._recados = [rec];
+    c.localStorage = { getItem() { throw new Error('bloqueado'); }, setItem() { throw new Error('bloqueado'); }, removeItem() { throw new Error('bloqueado'); } };
+    c.alternarRecado(4);
+    expect(c._recadoCardHtml(rec)).not.toContain('Caixas nas ruas');
+    c.alternarRecado(4);
+    expect(c._recadoCardHtml(rec)).toContain('Caixas nas ruas');
+  });
+
+  test('em edição não mostra a setinha (o formulário fica sempre aberto)', () => {
+    const c = monta('gestor'); c._recadoEditando = 4;
+    expect(c._recadoCardHtml(rec)).not.toContain('alternarRecado');
   });
 
   test('texto quebra de linha dentro da caixa e as quebras digitadas são mantidas', () => {

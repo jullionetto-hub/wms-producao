@@ -1041,16 +1041,37 @@ function _recadoFotosHtml(rec, gestor) {
   return (minis || add) ? `<div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:10px">${minis}${add}</div>` : '';
 }
 
+// Recolher/mostrar o recado (setinha): lembra neste aparelho. A marca guarda a última edição do recado, então um
+// recado editado volta aberto para todo mundo. Em memória também, caso o navegador bloqueie o localStorage.
+const _recadosRecolhidos = {};
+const _recadoChave = rec => 'wms_recado_recolhido_' + rec.id;
+const _recadoVersao = rec => String(rec.editado_em || rec.criado_em || '');
+function _recadoRecolhido(rec) {
+  if (_recadosRecolhidos[rec.id] === _recadoVersao(rec)) return true;
+  try { return localStorage.getItem(_recadoChave(rec)) === _recadoVersao(rec); } catch (_) { return false; }
+}
+function alternarRecado(id) {
+  const rec = _recados.find(r => r.id === id); if (!rec) return;
+  const recolher = !_recadoRecolhido(rec);
+  if (recolher) _recadosRecolhidos[id] = _recadoVersao(rec); else delete _recadosRecolhidos[id];
+  try { recolher ? localStorage.setItem(_recadoChave(rec), _recadoVersao(rec)) : localStorage.removeItem(_recadoChave(rec)); } catch (_) {}
+  renderRecadosDiario();
+}
+
 function _recadoCardHtml(rec) {
   const gestor = typeof usuarioAtual !== 'undefined' && usuarioAtual?.perfil === 'gestor';
   const quando = rec.criado_em ? new Date(rec.criado_em).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }) : '';
-  const cab = `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+  const editando = _recadoEditando === rec.id || (_recadoEditando === 'novo' && !rec.id);
+  const recolhido = !editando && _recadoRecolhido(rec);
+  const seta = editando ? '' : `<button type="button" onclick="event.stopPropagation();alternarRecado(${rec.id})" title="${recolhido ? 'Mostrar recado' : 'Ocultar recado'}" aria-label="${recolhido ? 'Mostrar recado' : 'Ocultar recado'}" aria-expanded="${!recolhido}"
+      style="background:none;border:none;color:var(--text3);cursor:pointer;padding:2px 4px;display:flex"><i class="ti ti-chevron-${recolhido ? 'down' : 'up'}" aria-hidden="true" style="font-size:20px"></i></button>`;
+  const cab = `<div ${editando ? '' : `onclick="alternarRecado(${rec.id})" style="cursor:pointer;user-select:none;`}${editando ? 'style="' : ''}display:flex;align-items:center;gap:8px;flex-wrap:wrap">
       <i class="ti ti-speakerphone" aria-hidden="true" style="color:var(--amber);font-size:18px"></i>
       <span style="font-size:11px;font-weight:800;letter-spacing:.5px;color:var(--amber);text-transform:uppercase">Recado da gestão · vale para todos os turnos</span>
-      <span style="margin-left:auto;font-size:11px;color:var(--text3)">${escHtml(quando)}${rec.autor ? ' · ' + escHtml(rec.autor) : ''}${rec.editado_em ? ' · editado' : ''}</span>
+      <span style="margin-left:auto;font-size:11px;color:var(--text3)">${escHtml(quando)}${rec.autor ? ' · ' + escHtml(rec.autor) : ''}${rec.editado_em ? ' · editado' : ''}</span>${seta}
     </div>`;
   const caixa = 'border:1px solid var(--border);border-left:4px solid var(--amber);border-radius:12px;background:var(--surface);padding:14px 16px;margin-bottom:10px';
-  if (_recadoEditando === rec.id || (_recadoEditando === 'novo' && !rec.id)) {
+  if (editando) {
     // box-sizing + overflow-wrap: o texto quebra de linha dentro da caixa (sem estourar a largura, inclusive no celular);
     // Enter cria nova linha e o recado publicado mantém essas quebras (white-space:pre-line).
     const campo = 'width:100%;box-sizing:border-box;font-family:inherit;color:var(--text);background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 11px;outline:none';
@@ -1063,6 +1084,8 @@ function _recadoCardHtml(rec) {
         <button class="btn btn-primary btn-sm" onclick="salvarRecado()">Salvar recado</button>
       </div></div>`;
   }
+  if (recolhido) return `<div style="${caixa};padding-top:10px;padding-bottom:${rec.titulo ? 12 : 10}px">${cab}
+      ${rec.titulo ? `<div style="font-size:14px;font-weight:700;margin-top:4px;color:var(--text2);overflow-wrap:anywhere">${escHtml(rec.titulo)} <span style="font-weight:500;font-size:11px;color:var(--text3)">· toque para mostrar</span></div>` : ''}</div>`;
   return `<div style="${caixa}">${cab}
       ${rec.titulo ? `<div style="font-size:15px;font-weight:800;margin-top:8px;color:var(--text)">${escHtml(rec.titulo)}</div>` : ''}
       <div style="font-size:13px;white-space:pre-line;overflow-wrap:anywhere;margin-top:6px;color:var(--text2);line-height:1.5">${escHtml(rec.texto)}</div>
