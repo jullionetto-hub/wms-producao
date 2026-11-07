@@ -103,6 +103,48 @@ function makeTxClient(atualRow) {
 }
 
 /* ════════════════════════════════════════════════════════════
+   GET /repositor/avisos/contagem — contadores leves das abas
+════════════════════════════════════════════════════════════ */
+describe('Repositor — contagem por status', () => {
+  test('sem auth → 401', async () => {
+    const res = await request(app).get('/repositor/avisos/contagem');
+    expect(res.status).toBe(401);
+  });
+
+  test('devolve contagem por status, aplicando o período pedido', async () => {
+    const agent = request.agent(app);
+    await loginSupervisor(agent);
+    mockDb.all.mockResolvedValueOnce([{ status: 'pendente', n: 8 }, { status: 'verificando', n: 1 }, { status: 'nao_encontrado', n: 1 }]);
+    const res = await agent.get('/repositor/avisos/contagem?data_ini=2026-11-06&data_fim=2026-11-07');
+    expect(res.status).toBe(200);
+    expect(res.body.por_status).toEqual({ pendente: 8, verificando: 1, nao_encontrado: 1 });
+    const [sql, params] = mockDb.all.mock.calls[mockDb.all.mock.calls.length - 1];
+    expect(sql).toContain('GROUP BY a.status');
+    expect(sql).not.toContain('turno_pendente');   // supervisor vê tudo
+    expect(params).toEqual(['2026-11-06', '2026-11-07']);
+  });
+
+  test('repositor: pendentes/verificando respeitam o mesmo filtro de turno da lista', async () => {
+    const agent = request.agent(app);
+    await loginRepositor(agent);
+    mockDb.all.mockResolvedValueOnce([{ status: 'pendente', n: 2 }]);
+    const res = await agent.get('/repositor/avisos/contagem');
+    expect(res.status).toBe(200);
+    const [sql, params] = mockDb.all.mock.calls[mockDb.all.mock.calls.length - 1];
+    expect(sql).toContain('turno_pendente');
+    expect(params).toEqual(['Manha', 'Repositor Test']);
+  });
+
+  test('erro no banco → 500', async () => {
+    const agent = request.agent(app);
+    await loginSupervisor(agent);
+    mockDb.all.mockRejectedValueOnce(new Error('falha'));
+    const res = await agent.get('/repositor/avisos/contagem');
+    expect(res.status).toBe(500);
+  });
+});
+
+/* ════════════════════════════════════════════════════════════
    PUT /repositor/avisos/reordenar
 ════════════════════════════════════════════════════════════ */
 describe('Repositor — reordenar fila', () => {

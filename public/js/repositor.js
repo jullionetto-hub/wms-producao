@@ -44,13 +44,89 @@ function ativarMobileRep() {
   _wmsAtivarShellMobile('rep-mobile-root', 'rep-tabbar', 'rep-mobile');
   carregarUsuariosParaRep();
   mudarTabRep('separar');
-  setInterval(() => {
-    const aba = document.querySelector('.rep-tab.ativo')?.id?.replace('rtab-','') || 'separar';
-    if      (aba === 'separar')   carregarRepSeparar(true);
-    else if (aba === 'separado')  carregarRepSeparado(true);
-    else if (aba === 'subiu')     carregarRepSubiu(true);
-    else if (aba === 'protocolo') carregarRepProtocolo(true);
-  }, 30000);
+  // Um único timer (se o app for reaberto não empilha outro) e só atualiza com a tela visível.
+  if (window._repMobileTimer) clearInterval(window._repMobileTimer);
+  window._repMobileTimer = setInterval(() => { if (!document.hidden) agendarAtualizacaoRep(); }, 30000);
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   ATUALIZAÇÃO DA TELA — um único caminho, sem corrida
+   Antes cada evento (socket, timer, ação do próprio usuário) disparava
+   várias buscas da mesma lista ao mesmo tempo, e a resposta que chegava
+   por último ganhava — mesmo sendo a mais velha. Resultado: a lista
+   piscava (vários re-desenhos seguidos) e um item já resolvido voltava
+   pra tela com dados antigos.
+   ══════════════════════════════════════════════════════════════════ */
+let _repRefreshTimer = null, _repRefreshRodando = false, _repRefreshDeNovo = false;
+let _repArrastando = false;                // true enquanto o repositor arrasta um card
+const _repSeq = {};                        // lista → nº da última busca disparada
+let _repSeqBadges = 0;
+const _repUltimoHtml = new WeakMap();      // elemento → último HTML que desenhamos nele
+const _repGravados = new Map();            // id → { status, ate }: o que ESTE aparelho acabou de gravar
+
+// Registra o status que acabei de gravar no servidor. Se uma resposta velha
+// (disparada antes da gravação) chegar depois, o item volta com o status
+// antigo — dentro de 10s isso é descartado em vez de "ressuscitar" o card.
+function _repGravou(id, status) {
+  if (id == null || !status) return;
+  _repGravados.set(Number(id), { status, ate: Date.now() + 10000 });
+}
+
+function _repFiltrarObsoletos(lista) {
+  const agora = Date.now();
+  return lista.filter(a => {
+    const g = _repGravados.get(Number(a.id));
+    if (!g) return true;
+    if (agora > g.ate) { _repGravados.delete(Number(a.id)); return true; }
+    return a.status === g.status;
+  });
+}
+
+// Só mexe no DOM quando o conteúdo mudou de verdade (evita piscar, perder
+// rolagem e interromper um arraste). Devolve true se redesenhou.
+function _repRender(el, html) {
+  if (!el) return false;
+  if (_repUltimoHtml.get(el) === html) return false;
+  if (_repArrastando) return false;
+  el.innerHTML = html;
+  _repUltimoHtml.set(el, html);
+  return true;
+}
+
+// Junta várias notificações seguidas (ex.: 3 eventos do socket) numa só atualização.
+function agendarAtualizacaoRep() {
+  clearTimeout(_repRefreshTimer);
+  _repRefreshTimer = setTimeout(_repAtualizarTudo, 300);
+}
+
+async function _repAtualizarTudo() {
+  if (_repRefreshRodando) { _repRefreshDeNovo = true; return; }
+  _repRefreshRodando = true;
+  try {
+    do {
+      _repRefreshDeNovo = false;
+      await _repAtualizarUmaVez();
+    } while (_repRefreshDeNovo);
+  } finally { _repRefreshRodando = false; }
+}
+
+async function _repAtualizarUmaVez() {
+  const mobile = document.body.classList.contains('rep-mobile');
+  // Na mesa só atualiza se a tela de Reposição está aberta (o resto do tempo é gasto à toa)
+  if (!mobile && !document.getElementById('pag-reposicao')?.classList.contains('ativa')) return;
+  if (!mobile) {
+    const fIni = document.getElementById('drep-data-ini');
+    const fFim = document.getElementById('drep-data-fim');
+    if (fIni && !fIni.value) fIni.value = hojeLocal();   // filtro começa sempre em hoje
+    if (fFim && !fFim.value) fFim.value = hojeLocal();
+    if (!_todosUsuarios.length) await carregarUsuariosParaRep();
+  }
+  const aba = mobile
+    ? (document.querySelector('.rep-tab.ativo')?.id?.replace('rtab-','') || 'separar')
+    : (document.querySelector('#pag-reposicao [id^="d-rtab-"].ativo')?.id?.replace('d-rtab-','') || 'separar');
+  // Indicadores/Ranking têm "Carregando..." próprio — redesenhar sozinho faria a tela piscar
+  const loader = { separar: carregarRepSeparar, separado: carregarRepSeparado, subiu: carregarRepSubiu, protocolo: carregarRepProtocolo }[aba];
+  await Promise.all([loader ? loader(true) : null, _atualizarBadgesRep()]);
 }
 
 const _REP_TABS_LIST = ['separar','separado','subiu','protocolo','entrada-manual'];
@@ -111,62 +187,43 @@ function labelSituacao(sit) {
 
 /* ── Compatibilidade socket-client.js ─────────────────────────────── */
 function carregarAvisosMobile() {
-  const aba = document.querySelector('.rep-tab.ativo')?.id?.replace('rtab-','') || 'separar';
-  if      (aba === 'separar')   carregarRepSeparar(true);
-  else if (aba === 'separado')  carregarRepSeparado(true);
-  else if (aba === 'subiu')     carregarRepSubiu(true);
-  else if (aba === 'protocolo') carregarRepProtocolo(true);
-  _atualizarBadgesRep();
+  return _repAtualizarTudo();
 }
 
+// Contadores das abas (badges e cartões do topo). Uma única consulta leve ao
+// servidor, agrupada por status — antes eram 1–2 buscas da TABELA INTEIRA de
+// avisos a cada atualização, e a contagem usava `situacao` enquanto as listas
+// usam `status`, então os números podiam divergir da lista.
 async function _atualizarBadgesRep() {
+  const seq = ++_repSeqBadges;
   try {
-    const res = await fetch(`${API}/repositor/avisos`, { credentials:'include' });
+    // No mobile o filtro de data não existe (repositor precisa ver tudo); na
+    // mesa respeita o período escolhido pelo supervisor.
+    const q = _repFiltroData();
+    const res = await fetch(`${API}/repositor/avisos/contagem${q ? '?' + q.slice(1) : ''}`, { credentials:'include' });
     if (!res.ok) return;
-    const av = await res.json();
-    const cnt = (lista, sits) => lista.filter(a => sits.includes(a.situacao||a.status)).length;
-
-    // Mobile (sem filtro de data — repositor precisa ver tudo)
-    const nSeparar   = cnt(av, ['pendente','verificando']);
-    const nSeparado  = cnt(av, ['buscado','separado','aguardando_abastecer']);
-    const nSubiu     = cnt(av, ['subiu']);
-    const nProtocolo = cnt(av, ['nao_encontrado']);
-    const setBdg = (id, n) => {
+    const { por_status: ps = {} } = await res.json();
+    if (seq !== _repSeqBadges) return;   // chegou uma contagem mais nova
+    const soma = sts => sts.reduce((t, s) => t + (Number(ps[s]) || 0), 0);
+    const n = {
+      separar:   soma(['pendente','verificando']),
+      separado:  soma(['buscado','separado','aguardando_abastecer']),
+      subiu:     soma(['subiu']),
+      protocolo: soma(['nao_encontrado','busca_final']),   // mesmas situações da lista "Busca Final"
+    };
+    const setBdg = (id, v) => {
       const el = document.getElementById(id);
       if (!el) return;
-      el.textContent = n;
-      el.style.display = n ? 'inline-flex' : 'none';
+      el.textContent = v;
+      el.style.display = v ? 'inline-flex' : 'none';
     };
-    const setC = (id, n) => { const e=document.getElementById(id); if(e) e.textContent=n; };
-    setBdg('rtab-separar-badge',   nSeparar);
-    setBdg('rtab-separado-badge',  nSeparado);
-    setBdg('rtab-subiu-badge',     nSubiu);
-    setBdg('rtab-protocolo-badge', nProtocolo);
-    setC('rep-cnt-separar',   nSeparar);
-    setC('rep-cnt-separado',  nSeparado);
-    setC('rep-cnt-subiu',     nSubiu);
-    setC('rep-cnt-protocolo', nProtocolo);
-
-    // Desktop — respeita o filtro de data do supervisor, se houver
-    const qDesk = _repFiltroData();
-    const avDesk = qDesk
-      ? await (async () => {
-          const r = await fetch(`${API}/repositor/avisos?${qDesk.slice(1)}`, { credentials:'include' });
-          return r.ok ? r.json() : av;
-        })()
-      : av;
-    const dSeparar   = cnt(avDesk, ['pendente','verificando']);
-    const dSeparado  = cnt(avDesk, ['buscado','separado','aguardando_abastecer']);
-    const dSubiu     = cnt(avDesk, ['subiu']);
-    const dProtocolo = cnt(avDesk, ['nao_encontrado']);
-    setBdg('d-rtab-separar-badge',   dSeparar);
-    setBdg('d-rtab-separado-badge',  dSeparado);
-    setBdg('d-rtab-subiu-badge',     dSubiu);
-    setBdg('d-rtab-protocolo-badge', dProtocolo);
-    setC('d-rep-cnt-separar',   dSeparar);
-    setC('d-rep-cnt-separado',  dSeparado);
-    setC('d-rep-cnt-subiu',     dSubiu);
-    setC('d-rep-cnt-protocolo', dProtocolo);
+    const setC = (id, v) => { const e=document.getElementById(id); if(e) e.textContent=v; };
+    Object.keys(n).forEach(k => {
+      setBdg(`rtab-${k}-badge`,   n[k]);
+      setBdg(`d-rtab-${k}-badge`, n[k]);
+      setC(`rep-cnt-${k}`,   n[k]);
+      setC(`d-rep-cnt-${k}`, n[k]);
+    });
   } catch(e) {}
 }
 
@@ -196,21 +253,43 @@ function limparFiltroRepDesk() {
 }
 
 /* ── Carregamento por aba ─────────────────────────────────────────── */
-async function carregarRepSeparar(silent=false) {
-  const el  = document.getElementById('rep-lista-separar');
-  const elD = document.getElementById('d-rep-lista-separar');
+// Busca uma lista (Separar/Separado/Subiu/Busca Final) e desenha nos dois
+// containers (celular e mesa). Se chegar uma resposta mais nova antes desta,
+// esta é descartada; se nada mudou desde o último desenho, não mexe na tela.
+async function _repCarregar(chave, status, idMobile, idDesk, silent, montarHtml, aposDesenhar) {
+  const el  = document.getElementById(idMobile);
+  const elD = document.getElementById(idDesk);
   if (!el && !elD) return;
+  const seq = _repSeq[chave] = (_repSeq[chave] || 0) + 1;
+  const erro = () => `<div style="color:#ef4444;text-align:center;padding:24px;font-size:13px">Erro ao carregar — toque atualizar</div>`;
   try {
-    const res = await fetch(`${API}/repositor/avisos?status=pendente,verificando${_repFiltroData()}`, { credentials:'include' });
+    const res = await fetch(`${API}/repositor/avisos?status=${status}${_repFiltroData()}`, { credentials:'include' });
     if (!res.ok) throw new Error();
-    const av = await res.json();
+    let av = await res.json();
+    if (seq !== _repSeq[chave]) return;
+    av = _repFiltrarObsoletos(av);
     const n = av.length;
-    const cntEl = document.getElementById('rep-cnt-separar');
-    const bdgEl = document.getElementById('rtab-separar-badge');
+    const cntEl = document.getElementById(`rep-cnt-${chave}`);
+    const bdgEl = document.getElementById(`rtab-${chave}-badge`);
     if (cntEl) cntEl.textContent = n;
     if (bdgEl) { bdgEl.textContent = n; bdgEl.style.display = n ? 'inline-flex' : 'none'; }
+    const html = montarHtml(av);
+    if (_repRender(el, html)  && aposDesenhar) aposDesenhar(el);
+    if (_repRender(elD, html) && aposDesenhar) aposDesenhar(elD);
+  } catch(e) {
+    if (seq !== _repSeq[chave]) return;
+    if (!silent) { _repRender(el, erro()); _repRender(elD, erro()); }
+  }
+}
 
-    let html = '';
+function carregarRepSeparar(silent=false) {
+  return _repCarregar('separar', 'pendente,verificando', 'rep-lista-separar', 'd-rep-lista-separar', silent, _repHtmlSeparar, _initRepDragReorder);
+}
+
+function _repHtmlSeparar(av) {
+  const n = av.length;
+  let html = '';
+  {
     if (!n) {
       html = `<div style="text-align:center;padding:60px 16px"><div style="color:var(--text3);font-size:15px;font-weight:500">Nenhum item para separar</div></div>`;
     } else {
@@ -241,15 +320,8 @@ async function carregarRepSeparar(silent=false) {
         html += _repDragWrap(ids, bloco);
       });
     }
-    if (el)  { el.innerHTML  = html; _initRepDragReorder(el); }
-    if (elD) { elD.innerHTML = html; _initRepDragReorder(elD); }
-  } catch(e) {
-    const errHtml = `<div style="color:#ef4444;text-align:center;padding:24px;font-size:13px">Erro ao carregar — toque atualizar</div>`;
-    if (!silent) {
-      if (el)  el.innerHTML  = errHtml;
-      if (elD) elD.innerHTML = errHtml;
-    }
   }
+  return html;
 }
 
 /* ── Reordenar por arrastar (só aba Separar) — mouse e touch via Pointer Events ── */
@@ -287,6 +359,7 @@ function _repDragStart(ev, container) {
   const startY = ev.clientY;
   let currentIndex = startIndex;
 
+  _repArrastando = true;   // enquanto arrasta, atualizações automáticas não redesenham a lista
   block.style.position   = 'relative';
   block.style.zIndex     = '50';
   block.style.opacity    = '.92';
@@ -337,7 +410,9 @@ function _repDragStart(ev, container) {
       if (currentIndex > startIndex) container.insertBefore(block, blocks[currentIndex].nextSibling);
       else container.insertBefore(block, blocks[currentIndex]);
     }
+    _repArrastando = false;
     await _repSalvarOrdem(container);
+    agendarAtualizacaoRep();   // pega o que mudou no servidor durante o arraste
   };
 
   document.addEventListener('pointermove', onMove);
@@ -358,85 +433,22 @@ async function _repSalvarOrdem(container) {
   } catch(e) { toast('Erro ao salvar nova ordem.', 'erro'); }
 }
 
-async function carregarRepSeparado(silent=false) {
-  const el  = document.getElementById('rep-lista-separado');
-  const elD = document.getElementById('d-rep-lista-separado');
-  if (!el && !elD) return;
-  try {
-    const res = await fetch(`${API}/repositor/avisos?status=buscado,separado,aguardando_abastecer${_repFiltroData()}`, { credentials:'include' });
-    if (!res.ok) throw new Error();
-    const av = await res.json();
-    const n = av.length;
-    const cntEl = document.getElementById('rep-cnt-separado');
-    const bdgEl = document.getElementById('rtab-separado-badge');
-    if (cntEl) cntEl.textContent = n;
-    if (bdgEl) { bdgEl.textContent = n; bdgEl.style.display = n ? 'inline-flex' : 'none'; }
-    const html = n
-      ? av.map(a => renderCardRepSimples(a, 'separado')).join('')
-      : `<div style="text-align:center;padding:60px 16px"><div style="display:none"><div style="color:var(--text3);font-size:15px;font-weight:500">Nenhum item separado</div></div>`;
-    if (el)  el.innerHTML  = html;
-    if (elD) elD.innerHTML = html;
-  } catch(e) {
-    const errHtml = `<div style="color:#ef4444;text-align:center;padding:24px;font-size:13px">Erro ao carregar — toque atualizar</div>`;
-    if (!silent) {
-      if (el)  el.innerHTML  = errHtml;
-      if (elD) elD.innerHTML = errHtml;
-    }
-  }
+function carregarRepSeparado(silent=false) {
+  return _repCarregar('separado', 'buscado,separado,aguardando_abastecer', 'rep-lista-separado', 'd-rep-lista-separado', silent, av => av.length
+    ? av.map(a => renderCardRepSimples(a, 'separado')).join('')
+    : `<div style="text-align:center;padding:60px 16px"><div style="display:none"><div style="color:var(--text3);font-size:15px;font-weight:500">Nenhum item separado</div></div>`);
 }
 
-async function carregarRepSubiu(silent=false) {
-  const el  = document.getElementById('rep-lista-subiu');
-  const elD = document.getElementById('d-rep-lista-subiu');
-  if (!el && !elD) return;
-  try {
-    const res = await fetch(`${API}/repositor/avisos?status=subiu${_repFiltroData()}`, { credentials:'include' });
-    if (!res.ok) throw new Error();
-    const av = await res.json();
-    const n = av.length;
-    const cntEl = document.getElementById('rep-cnt-subiu');
-    const bdgEl = document.getElementById('rtab-subiu-badge');
-    if (cntEl) cntEl.textContent = n;
-    if (bdgEl) { bdgEl.textContent = n; bdgEl.style.display = n ? 'inline-flex' : 'none'; }
-    const html = n
-      ? av.map(a => renderCardRepSimples(a, 'subiu')).join('')
-      : `<div style="text-align:center;padding:60px 16px"><div style="font-size:48px;margin-bottom:12px">⬆️</div><div style="color:var(--text3);font-size:15px;font-weight:500">Nenhum item subiu</div></div>`;
-    if (el)  el.innerHTML  = html;
-    if (elD) elD.innerHTML = html;
-  } catch(e) {
-    const errHtml = `<div style="color:#ef4444;text-align:center;padding:24px;font-size:13px">Erro ao carregar — toque atualizar</div>`;
-    if (!silent) {
-      if (el)  el.innerHTML  = errHtml;
-      if (elD) elD.innerHTML = errHtml;
-    }
-  }
+function carregarRepSubiu(silent=false) {
+  return _repCarregar('subiu', 'subiu', 'rep-lista-subiu', 'd-rep-lista-subiu', silent, av => av.length
+    ? av.map(a => renderCardRepSimples(a, 'subiu')).join('')
+    : `<div style="text-align:center;padding:60px 16px"><div style="font-size:48px;margin-bottom:12px">⬆️</div><div style="color:var(--text3);font-size:15px;font-weight:500">Nenhum item subiu</div></div>`);
 }
 
-async function carregarRepProtocolo(silent=false) {
-  const el  = document.getElementById('rep-lista-protocolo');
-  const elD = document.getElementById('d-rep-lista-protocolo');
-  if (!el && !elD) return;
-  try {
-    const res = await fetch(`${API}/repositor/avisos?status=nao_encontrado,busca_final${_repFiltroData()}`, { credentials:'include' });
-    if (!res.ok) throw new Error();
-    const av = await res.json();
-    const n = av.length;
-    const cntEl = document.getElementById('rep-cnt-protocolo');
-    const bdgEl = document.getElementById('rtab-protocolo-badge');
-    if (cntEl) cntEl.textContent = n;
-    if (bdgEl) { bdgEl.textContent = n; bdgEl.style.display = n ? 'inline-flex' : 'none'; }
-    const html = n
-      ? av.map(a => renderCardRepSimples(a, 'protocolo')).join('')
-      : `<div style="text-align:center;padding:60px 16px"><div style="display:none"><div style="color:var(--text3);font-size:15px;font-weight:500">Nenhum item em protocolo</div></div>`;
-    if (el)  el.innerHTML  = html;
-    if (elD) elD.innerHTML = html;
-  } catch(e) {
-    const errHtml = `<div style="color:#ef4444;text-align:center;padding:24px;font-size:13px">Erro ao carregar — toque atualizar</div>`;
-    if (!silent) {
-      if (el)  el.innerHTML  = errHtml;
-      if (elD) elD.innerHTML = errHtml;
-    }
-  }
+function carregarRepProtocolo(silent=false) {
+  return _repCarregar('protocolo', 'nao_encontrado,busca_final', 'rep-lista-protocolo', 'd-rep-lista-protocolo', silent, av => av.length
+    ? av.map(a => renderCardRepSimples(a, 'protocolo')).join('')
+    : `<div style="text-align:center;padding:60px 16px"><div style="display:none"><div style="color:var(--text3);font-size:15px;font-weight:500">Nenhum item em protocolo</div></div>`);
 }
 
 /* ── Card simplificado por aba ────────────────────────────────────── */
@@ -631,6 +643,7 @@ async function acaoRepTab(id, acao, nomeLogado, proximaTab, qtd = 0) {
     });
     if (res.ok) {
       const data = await res.json().catch(() => ({}));
+      _repGravou(id, data?.stFinal || body.status);
       // _smart: backend decide se volta pra fila ou vai pro protocolo
       if (proximaTab === '_smart') {
         const finalStatus = data?.stFinal || 'nao_encontrado';
@@ -750,6 +763,7 @@ async function iniciarBuscaRep(id, nomeLogado) {
     });
     if (res.ok) {
       const data = await res.json().catch(() => ({}));
+      _repGravou(id, 'verificando');
       toast(`Busca iniciada! (tentativa ${data.tentativa||'?'})`, 'success');
       carregarRepSeparar();
       _atualizarBadgesRep();
@@ -766,7 +780,7 @@ async function iniciarBuscaFinalRep(id, nomeLogado) {
       body: JSON.stringify({ repositor_nome: nomeLogado })
     });
     const data = await res.json().catch(() => ({}));
-    if (res.ok) { toast('Busca final iniciada!', 'success'); carregarRepProtocolo(); _atualizarBadgesRep(); }
+    if (res.ok) { _repGravou(id, 'busca_final'); toast('Busca final iniciada!', 'success'); carregarRepProtocolo(); _atualizarBadgesRep(); }
     else { toast(data.erro || 'Erro ao iniciar busca final', 'danger'); }
   } catch(e) { toast('Sem conexão', 'danger'); }
 }
@@ -784,7 +798,7 @@ function buscaFinalEncontrado(id, nomeLogado) {
         body: JSON.stringify({ repositor_nome: nomeLogado })
       });
       const data = await res.json().catch(() => ({}));
-      if (res.ok) { toast('Resolvido!', 'success'); carregarRepProtocolo(); _atualizarBadgesRep(); }
+      if (res.ok) { _repGravou(id, 'abastecido'); toast('Resolvido!', 'success'); carregarRepProtocolo(); _atualizarBadgesRep(); }
       else { toast(data.erro || 'Erro ao registrar', 'danger'); }
     } catch(e) { toast('Sem conexão', 'danger'); }
   });
@@ -804,7 +818,7 @@ function buscaFinalNaoEncontrado(id, nomeLogado) {
         body: JSON.stringify({ repositor_nome: nomeLogado })
       });
       const data = await res.json().catch(() => ({}));
-      if (res.ok) { toast('Falta confirmada.', 'success'); carregarRepProtocolo(); _atualizarBadgesRep(); }
+      if (res.ok) { _repGravou(id, 'protocolado'); toast('Falta confirmada.', 'success'); carregarRepProtocolo(); _atualizarBadgesRep(); }
       else { toast(data.erro || 'Erro ao registrar', 'danger'); }
     } catch(e) { toast('Sem conexão', 'danger'); }
   });
@@ -1329,7 +1343,7 @@ async function carregarReposicaoDesktop() {
 }
 
 async function carregarAvisos() {
-  await carregarReposicaoDesktop();
+  await _repAtualizarTudo();
 }
 
 function verificarDuplicatas() {}

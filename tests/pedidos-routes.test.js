@@ -599,6 +599,49 @@ describe('Pedidos — itens e verificação', () => {
     expect(res.body.mensagem).toMatch(/avisado/i);
   });
 
+  // Banco "de mentira" com estado: o INSERT do aviso passa a ser visto pela checagem seguinte.
+  function bancoComAvisos(avisosIniciais = []) {
+    const avisos = [...avisosIniciais];
+    mockDb.get.mockImplementation(async (sql) => {
+      if (sql.includes('FROM itens_pedido i JOIN pedidos')) return { id: 1, pedido_id: 10, numero_pedido: '10', quantidade: 3, codigo: 'A1', descricao: 'X', endereco: 'A1' };
+      if (sql.includes("status='pendente'") && sql.includes('COUNT(*)')) return { cnt: 0 };
+      if (sql.includes('SELECT transportadora')) return { transportadora: 'Correios' };
+      if (sql.includes('FROM avisos_repositor WHERE item_id=$1')) {
+        const aberto = avisos.filter(a => ['pendente', 'verificando', 'nao_encontrado', 'busca_final'].includes(a.status)).pop();
+        await new Promise(r => setTimeout(r, 15));   // janela em que uma 2ª requisição poderia passar junto
+        return aberto ? { id: aberto.id, status: aberto.status } : null;
+      }
+      if (sql.includes('aguardando_repositor_desde')) return { aguardando_repositor_desde: '2026-05-09T09:00:00' };
+      return null;
+    });
+    mockPool.query.mockImplementation(async (sql) => {
+      if (String(sql).includes('INSERT INTO avisos_repositor')) avisos.push({ id: avisos.length + 1, status: 'pendente' });
+      return { rows: [] };
+    });
+    return avisos;
+  }
+  const insertsDeAviso = () => mockPool.query.mock.calls.filter(c => String(c[0]).includes('INSERT INTO avisos_repositor')).length;
+
+  test('dois toques quase simultâneos em Falta criam UM aviso só (antes saíam dois, ex. ids 248/249)', async () => {
+    const avisos = bancoComAvisos();
+    const [a, b] = await Promise.all([
+      agent.put('/itens/1/verificar').send({ status: 'falta' }),
+      agent.put('/itens/1/verificar').send({ status: 'falta' }),
+    ]);
+    expect(a.status).toBe(200); expect(b.status).toBe(200);
+    expect(insertsDeAviso()).toBe(1);
+    expect(avisos).toHaveLength(1);
+  });
+
+  test('item que o repositor já está buscando (verificando) não ganha um 2º aviso nem tem o aviso alterado', async () => {
+    bancoComAvisos([{ id: 5, status: 'verificando' }]);
+    const res = await agent.put('/itens/1/verificar').send({ status: 'falta' });
+    expect(res.status).toBe(200);
+    expect(insertsDeAviso()).toBe(0);
+    const updates = mockPool.query.mock.calls.filter(c => String(c[0]).includes('UPDATE avisos_repositor'));
+    expect(updates).toHaveLength(0);
+  });
+
   test('PUT /itens/:id/verificar status parcial usa obs enviado e qtd_falta', async () => {
     mockDb.get
       .mockResolvedValueOnce({ id: 1, pedido_id: 10, numero_pedido: '10', quantidade: 5, codigo: 'A1', descricao: 'X', endereco: 'A1' })

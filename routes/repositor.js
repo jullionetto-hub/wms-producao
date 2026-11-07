@@ -86,6 +86,34 @@ router.get('/repositor/avisos', requerAuth, async (req,res) => {
   } catch(e){res.status(500).json({erro:e.message});}
 });
 
+// Contadores das abas (badges e cartões do topo): contagem por status, sem trazer
+// a tabela inteira. Aplica o mesmo filtro de turno da lista pro repositor, pra o
+// número bater com o que ele vê.
+router.get('/repositor/avisos/contagem', requerAuth, async (req,res) => {
+  if (!req.session?.usuario) return res.json({ por_status: {} });
+  const { data_ini, data_fim } = req.query;
+  const usuario = req.session.usuario;
+  const meuTurno = normalizarTurno(usuario.turno);
+  try {
+    const params = [];
+    let sql = `SELECT a.status, COUNT(*)::int AS n FROM avisos_repositor a WHERE 1=1`;
+    if (data_ini) { params.push(data_ini); sql += ` AND a.data_aviso>=$${params.length}`; }
+    if (data_fim) { params.push(data_fim); sql += ` AND a.data_aviso<=$${params.length}`; }
+    if (usuario.perfil === 'repositor' && meuTurno) {
+      params.push(meuTurno); params.push(usuario.nome || '');
+      sql += ` AND (a.status NOT IN ('pendente','verificando')
+                 OR COALESCE(a.turno_pendente,'') = ''
+                 OR a.turno_pendente = $${params.length-1}
+                 OR (a.status = 'verificando' AND a.quem_pegou = $${params.length}))`;
+    }
+    sql += ` GROUP BY a.status`;
+    const rows = await db.all(sql, params);
+    const por_status = {};
+    rows.forEach(r => { por_status[r.status || ''] = Number(r.n) || 0; });
+    res.json({ por_status });
+  } catch(e){res.status(500).json({erro:e.message});}
+});
+
 // Salva a ordem manual (drag-and-drop) definida pelo repositor na aba Separar —
 // compartilhada: todo repositor que olhar a fila vê a mesma sequência.
 router.put('/repositor/avisos/reordenar', requerAuth, async (req,res) => {

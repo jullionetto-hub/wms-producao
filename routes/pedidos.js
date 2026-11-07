@@ -1,6 +1,18 @@
 const express = require('express');
 const router = express.Router();
 const { db, pool } = require('../lib/db');
+
+// Executa `fn` um de cada vez para o mesmo item (fila de promessas por item_id).
+// Usado para tornar "checa se já existe aviso + insere" atômico dentro deste processo.
+const _filaPorItem = new Map();
+function serializarPorItem(itemId, fn) {
+  const anterior = _filaPorItem.get(itemId) || Promise.resolve();
+  const atual = anterior.catch(() => {}).then(fn);
+  _filaPorItem.set(itemId, atual);
+  const limpar = () => { if (_filaPorItem.get(itemId) === atual) _filaPorItem.delete(itemId); };
+  atual.then(limpar, limpar);
+  return atual;
+}
 const { requerAuth, requerPerfil } = require('../lib/auth');
 const { dataHoraLocal, formatarAguardandoDesde, validarId } = require('../lib/helpers');
 const { registrarAuditoria } = require('../lib/auditoria');
@@ -473,10 +485,20 @@ router.put('/itens/:id/verificar', requerAuth, async (req,res) => {
       const obsA=status==='parcial'?(obs||''):`Falta total - ${item.quantidade} unidade(s)`;
       const pedidoInfo = await db.get(`SELECT transportadora FROM pedidos WHERE id=$1`,[item.pedido_id]);
       const formaEnvio = pedidoInfo?.transportadora || '';
-      const ja=await db.get(`SELECT id FROM avisos_repositor WHERE item_id=$1 AND status='pendente'`,[item.id]);
-      if (ja) { await pool.query(`UPDATE avisos_repositor SET quantidade=$1,obs=$2,hora_aviso=$3,forma_envio=$4 WHERE id=$5`,[qtdA,obsA,hora,formaEnvio,ja.id]); }
-      else { await pool.query(`INSERT INTO avisos_repositor (item_id,pedido_id,numero_pedido,separador_id,separador_nome,codigo,descricao,endereco,quantidade,obs,status,hora_aviso,data_aviso,forma_envio) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'pendente',$11,$12,$13)`,
-        [item.id,item.pedido_id,item.numero_pedido,separador_id,separador_nome,item.codigo,item.descricao,item.endereco,qtdA,obsA,hora,data,formaEnvio]); }
+      // Checar "já existe aviso em aberto?" e inserir precisa ser atômico por item: dois toques
+      // quase simultâneos em "Falta" passavam os dois pela checagem e criavam DOIS avisos
+      // (ex.: ids 248/249, com 1s de diferença) — o repositor resolvia um e o outro ficava
+      // na tela. Também considera em aberto o que já está sendo buscado (verificando) ou
+      // aguardando busca final, em vez de só 'pendente'.
+      await serializarPorItem(item.id, async () => {
+        const ja=await db.get(`SELECT id,status FROM avisos_repositor WHERE item_id=$1 AND status IN ('pendente','verificando','nao_encontrado','busca_final') ORDER BY id DESC LIMIT 1`,[item.id]);
+        if (ja) {
+          if ((ja.status || 'pendente') === 'pendente') {
+            await pool.query(`UPDATE avisos_repositor SET quantidade=$1,obs=$2,hora_aviso=$3,forma_envio=$4 WHERE id=$5`,[qtdA,obsA,hora,formaEnvio,ja.id]);
+          }
+        } else { await pool.query(`INSERT INTO avisos_repositor (item_id,pedido_id,numero_pedido,separador_id,separador_nome,codigo,descricao,endereco,quantidade,obs,status,hora_aviso,data_aviso,forma_envio) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'pendente',$11,$12,$13)`,
+          [item.id,item.pedido_id,item.numero_pedido,separador_id,separador_nome,item.codigo,item.descricao,item.endereco,qtdA,obsA,hora,data,formaEnvio]); }
+      });
       // Define o início da espera pelo repositor (para cálculo de tempo real de separação).
       // Só marca se ainda não tiver aguardando (não sobrescreve se já havia outro item em falta).
       const pedAtual = await db.get(`SELECT aguardando_repositor_desde FROM pedidos WHERE id=$1`,[item.pedido_id]);

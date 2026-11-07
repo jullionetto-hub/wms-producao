@@ -15,15 +15,21 @@
     socket.on('disconnect', () => console.warn('[WMS] Socket desconectado'));
 
     // Novo aviso de repositor → atualiza tela de repositor e fila do separador
+    // Tela de Reposição: vários eventos seguidos viram UMA atualização (antes cada
+    // evento disparava 2–3 buscas da mesma lista e a tela piscava / mostrava dado velho).
+    const atualizarTelaReposicao = () => {
+      if (typeof agendarAtualizacaoRep === 'function') agendarAtualizacaoRep();
+      else if (typeof carregarAvisos === 'function') carregarAvisos();
+    };
+
     socket.on('aviso:novo', () => {
-      if (typeof carregarAvisos === 'function') carregarAvisos();
+      atualizarTelaReposicao();
       if (typeof carregarFilaMobile === 'function') carregarFilaMobile();
     });
 
     // Aviso atualizado (abastecido, reposto, etc.) → mesmas telas
     socket.on('aviso:atualizado', (data) => {
-      if (typeof carregarAvisos === 'function') carregarAvisos();
-      if (typeof carregarAvisosMobile === 'function') carregarAvisosMobile();
+      atualizarTelaReposicao();
       if (typeof carregarFilaMobile === 'function') carregarFilaMobile();
       if (typeof carregarAvisosSeparador === 'function') carregarAvisosSeparador();
       if (typeof atualizarBadgeLiberacao === 'function') atualizarBadgeLiberacao();
