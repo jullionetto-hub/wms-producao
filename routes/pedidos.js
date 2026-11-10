@@ -1320,6 +1320,7 @@ async function _prepararEAgruparPedidos(elegiveis, modoLote) {
   // grandes sem "quantidade" definida.
   const JANELA_BUSCA = 40;
   const restantesGlobais = [...elegiveis];
+  /** @type {Array<{ pedidos: any[], [campo: string]: any }>} */
   const lotesPreview = [];
   while (restantesGlobais.length) {
     const seed = restantesGlobais.shift();

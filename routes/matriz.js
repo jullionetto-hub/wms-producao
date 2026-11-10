@@ -27,15 +27,16 @@ async function getToken() {
   body.set('password', MATRIZ_PASS);
   const res = await fetch(`${MATRIZ_URL}/api/auth/login`, { method: 'POST', body });
   if (!res.ok) {
-    let d = ''; try { d = (await res.json()).detail || ''; } catch {}
+    let d = ''; try { d = (/** @type {any} */ (await res.json())).detail || ''; } catch {}
     throw new Error(`Auth Matriz ${res.status}: ${d}`);
   }
-  const { access_token } = await res.json();
+  const { access_token } = /** @type {any} */ (await res.json());
   _token    = access_token;
   _tokenExp = Date.now() + 50 * 60 * 1000;
   return _token;
 }
 
+/** @returns {Promise<any>} resposta JSON da Matriz (formato definido pelo outro servico) */
 async function mCall(method, path, body) {
   const token = await getToken();
   const opts = { method, headers: { Authorization: `Bearer ${token}` } };
@@ -45,8 +46,8 @@ async function mCall(method, path, body) {
   }
   const res = await fetch(`${MATRIZ_URL}${path}`, opts);
   if (!res.ok) {
-    let d = ''; try { d = (await res.json()).detail || ''; } catch {}
-    const err = new Error(d || `Matriz ${res.status}`);
+    let d = ''; try { d = (/** @type {any} */ (await res.json())).detail || ''; } catch {}
+    const err = /** @type {any} */ (new Error(d || `Matriz ${res.status}`));
     err.status = res.status;
     throw err;
   }

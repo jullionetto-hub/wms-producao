@@ -1,0 +1,20 @@
+{
+  "//": "Etapa 1 da migracao para TypeScript: so CHECA o JavaScript do servidor, nao compila nem gera arquivo (noEmit). O app continua rodando 'node index.js' como antes.",
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "strict": false,
+    "noImplicitAny": false,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "types": ["node"],
+    "lib": ["ES2022"]
+  },
+  "include": ["index.js", "routes/**/*.js", "lib/**/*.js", "types/**/*.d.ts"],
+  "exclude": ["node_modules", "public", "tests"]
+}
