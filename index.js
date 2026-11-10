@@ -36,6 +36,7 @@ const apiRouter = require('./routes/api');
 const log               = require('./lib/logger');
 const { requerPerfil }  = require('./lib/auth');
 const { dataHoraLocal } = require('./lib/helpers');
+const { normalizarQuery } = require('./lib/query');
 
 // ── KPI Cache (em memória — considere Redis para escala futura) ───────────────
 const kpiCache = { data: null, ts: 0, ttl: 20_000 };
@@ -67,6 +68,7 @@ app.use('/js',  (_req, res, next) => { res.set('Cache-Control', 'no-cache, must-
 app.use('/css', (_req, res, next) => { res.set('Cache-Control', 'public, max-age=86400');      next(); });
 app.use(express.static(path.join(__dirname, 'public'), { etag: true, lastModified: true }));
 app.use(sessionMiddleware);
+app.use(normalizarQuery);   // ?x=a&x=b chega como "a" (e nao como lista) em todas as rotas
 
 // ── Rotas ─────────────────────────────────────────────────────────────────────
 app.get('/', (_req, res) => {

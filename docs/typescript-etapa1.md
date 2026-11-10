@@ -24,11 +24,20 @@ Nenhum arquivo foi renomeado e a regra de negócio não mudou.
 Testes automáticos: 44 suítes / 1.122 testes passando.
 
 ## O que sobrou (43)
-**1. Achado real (~25 pontos) — parâmetros repetidos na URL.** O código usa `req.query.x` como texto
-(`.split`, `.substring`, passa direto para função). Se a URL vier com o mesmo parâmetro repetido
-(`?dia=a&dia=b`), o Express entrega uma *lista*, e o código quebra (erro 500) ou manda lista como
-parâmetro de SQL. Baixa gravidade, mas é fácil de blindar com uma função única que lê o parâmetro.
-Arquivos: admin.js, kpis.js, pedidos.js, repositor.js, lideranca.js, caixas.js, simulador.js, estoque-3d.js.
+**1. Achado — parâmetros repetidos na URL (24 pontos; CORRIGIDO na branch `url-parametros-repetidos`).**
+O código usa `req.query.x` como texto. Se a URL vier com o mesmo parâmetro repetido
+(`?dia=a&dia=b`), o Express entrega uma *lista*. Na prática (revisado linha a linha):
+- `parseInt(lista)` funciona (vira texto) — ~12 dos pontos são só reclamação do TypeScript.
+- **Reais (~8):** `routes/kpis.js` (turnos.split, dIni.substring, e lista mandada como parâmetro de SQL) e
+  `routes/repositor.js` (status.split). Em `/kpis` a conta fica **fora do try/catch**; como o servidor não
+  tem `unhandledRejection`, no Node >= 15 isso derruba o processo (o Railway reinicia). Exige usuário logado
+  e uma URL digitada à mão — a tela do WMS nunca manda parâmetro repetido.
+- **Correção:** `lib/query.js` (`normalizarQuery`), registrada em `index.js` antes das rotas: parâmetro
+  repetido vale o primeiro. Parâmetro único não muda. Testes: `tests/query-lib.test.js` e
+  `tests/query-rotas-reais.test.js` (rota `/kpis` real).
+- Os 24 pontos continuam aparecendo no `typecheck` (o TypeScript não enxerga a regra de execução).
+- **Sugestão futura (não feita):** registrar `process.on('unhandledRejection')` com log, para que um erro
+  esquecido num `async` não derrube o servidor inteiro.
 
 **2. Ruído de tipagem (~18 pontos) — sem risco, só o TypeScript reclamando:**
 - Conta entre datas (`new Date(a) - new Date(b)`): válido em JS; o TS pede `.getTime()` (admin.js, repositor.js).
