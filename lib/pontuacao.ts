@@ -1,5 +1,8 @@
 // Tabela de pontuação por segmento do estoque
-const SEGMENTOS_ESTOQUE = [
+// [rua, de, ate, localização (Frente/Fundo), nível (Facil/Medio/Dificil)]
+type Segmento = [string, number, number, string, string];
+
+export const SEGMENTOS_ESTOQUE: Segmento[] = [
   ['A',1,84,'Frente','Facil'],['B',1,168,'Frente','Facil'],['C',1,168,'Frente','Facil'],['D',1,168,'Frente','Facil'],['E',1,77,'Frente','Facil'],
   ['F',1,40,'Fundo','Dificil'],['G',41,96,'Fundo','Dificil'],['H',1,112,'Fundo','Dificil'],
   ['I',1,112,'Fundo','Dificil'],['I',113,203,'Frente','Dificil'],
@@ -22,13 +25,13 @@ const SEGMENTOS_ESTOQUE = [
   ['Z',1,120,'Frente','Medio'],['Z',121,160,'Fundo','Medio'],
 ];
 
-const PESOS = {
+const PESOS: Record<string, number> = {
   'Facil_Frente':1.0,'Facil_Fundo':1.3,
   'Medio_Frente':1.8,'Medio_Fundo':2.2,
   'Dificil_Frente':2.8,'Dificil_Fundo':3.5
 };
 
-function calcularPesoCorredor(endereco) {
+export function calcularPesoCorredor(endereco?: unknown): number {
   if (!endereco) return 1.0;
   const endFull = String(endereco).split(',')[0].trim().toUpperCase();
   // Endereços compostos: "N144/VERT-N08-CX21" ou "P200/VERT-Q04-CX24"
@@ -55,14 +58,14 @@ function calcularPesoCorredor(endereco) {
 // com muitos itens de um único produto. Cada visita a uma posição = 20 "unidades".
 const FATOR_LOCALIZACAO = 20;
 
-function calcularPontuacaoPedido(itens) {
+export function calcularPontuacaoPedido(itens?: Array<{ endereco?: unknown; quantidade?: unknown }> | null): number {
   if (!itens?.length) return 0;
 
   // Agrupa por endereço único (cada posição = uma visita ao armazém)
-  const porLocal = {};
+  const porLocal: Record<string, number> = {};
   for (const i of itens) {
     const end = String(i.endereco || 'X').split(',')[0].trim();
-    porLocal[end] = (porLocal[end] || 0) + (parseInt(i.quantidade) || 1);
+    porLocal[end] = (porLocal[end] || 0) + (parseInt(i.quantidade as string) || 1);
   }
 
   let score = 0;
@@ -74,5 +77,3 @@ function calcularPontuacaoPedido(itens) {
 
   return Math.round(score);
 }
-
-module.exports = { SEGMENTOS_ESTOQUE, calcularPesoCorredor, calcularPontuacaoPedido };

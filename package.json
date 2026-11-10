@@ -7,6 +7,9 @@
     "start": "node index.js",
     "dev": "nodemon index.js",
     "typecheck": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.build.json",
+    "verificar-build": "node scripts/verificar-build.js",
+    "pretest": "npm run build",
     "test": "jest --forceExit --detectOpenHandles --passWithNoTests"
   },
   "engines": {

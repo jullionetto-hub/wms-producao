@@ -13,9 +13,9 @@
 // Prioridade de exibição quando uma rua tem mais de um estado ao mesmo tempo
 // — a cor do mapa mostra sempre o mais urgente, mas TODOS os estados que se
 // aplicam continuam disponíveis (ver estados[]), não só o principal.
-const PRIORIDADE_ESTADO = ['ruptura', 'estoque_baixo', 'separacao', 'reposicao', 'normal'];
+export const PRIORIDADE_ESTADO = ['ruptura', 'estoque_baixo', 'separacao', 'reposicao', 'normal'];
 
-const LABEL_ESTADO = {
+export const LABEL_ESTADO: Record<string, string> = {
   ruptura: 'Ruptura',
   estoque_baixo: 'Estoque baixo',
   separacao: 'Separação',
@@ -23,8 +23,11 @@ const LABEL_ESTADO = {
   normal: 'Normal',
 };
 
-function montarEstadoRua({ ruptura = 0, estoqueBaixo = 0, separando = 0, reposicaoPendente = 0 } = {}) {
-  const estados = [];
+export function montarEstadoRua(
+  { ruptura = 0, estoqueBaixo = 0, separando = 0, reposicaoPendente = 0 }:
+  { ruptura?: number; estoqueBaixo?: number; separando?: number; reposicaoPendente?: number } = {},
+) {
+  const estados: string[] = [];
   if (ruptura > 0) estados.push('ruptura');
   if (estoqueBaixo > 0) estados.push('estoque_baixo');
   if (separando > 0) estados.push('separacao');
@@ -44,5 +47,3 @@ function montarEstadoRua({ ruptura = 0, estoqueBaixo = 0, separando = 0, reposic
     },
   };
 }
-
-module.exports = { montarEstadoRua, PRIORIDADE_ESTADO, LABEL_ESTADO };

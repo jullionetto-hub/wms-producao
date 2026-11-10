@@ -1,14 +1,14 @@
-const crypto = require('crypto');
-const bcrypt = require('bcrypt');
+import crypto from 'crypto';
+import bcrypt from 'bcrypt';
 
 const BCRYPT_ROUNDS = 12;
 
-function dataHoraLocal() {
+export function dataHoraLocal() {
   // Use en-US locale for consistent MM/DD/YYYY parsing regardless of server ICU data.
   // pt-BR may be unavailable on Railway containers, swapping day and month in the output.
   const agora = new Date();
   const sp = new Date(agora.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
-  const pad = n => String(n).padStart(2, '0');
+  const pad = (n: number) => String(n).padStart(2, '0');
   const dataISO = `${sp.getFullYear()}-${pad(sp.getMonth() + 1)}-${pad(sp.getDate())}`;
   const hora = `${pad(sp.getHours())}:${pad(sp.getMinutes())}:${pad(sp.getSeconds())}`;
   return { data: dataISO, hora };
@@ -23,17 +23,17 @@ function dataHoraLocal() {
 // pra propósitos diferentes; esta aqui é a única com horário de início/fim
 // de verdade, por isso é a usada para calcular "tempo restante até o fim do
 // turno" (Control Tower).
-const TURNOS_HORARIO = {
+const TURNOS_HORARIO: Record<string, { fimH: number }> = {
   Manha: { fimH: 13 },
   Tarde: { fimH: 22 },
   Noite: { fimH: 6 }, // atravessa a meia-noite
 };
 
-function turnoAtualEHorarios() {
+export function turnoAtualEHorarios() {
   const agora = new Date();
   const sp = new Date(agora.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
   const h = sp.getHours(), min = sp.getMinutes();
-  let turno;
+  let turno: string;
   if (h >= 6 && h < 13) turno = 'Manha';
   else if (h >= 13 && h < 22) turno = 'Tarde';
   else turno = 'Noite';
@@ -47,12 +47,12 @@ function turnoAtualEHorarios() {
 }
 
 // Gera hash bcrypt para novas senhas
-function hashSenha(senha) {
+export function hashSenha(senha: string): string {
   return bcrypt.hashSync(senha, BCRYPT_ROUNDS);
 }
 
 // Verifica senha contra hash bcrypt ou SHA-256 legado
-function verificarSenha(senha, hash) {
+export function verificarSenha(senha: string, hash: string): boolean {
   if (!senha || !hash) return false;
   // Hash bcrypt começa com $2a$ ou $2b$
   if (hash.startsWith('$2')) {
@@ -64,16 +64,16 @@ function verificarSenha(senha, hash) {
 }
 
 // Indica se o hash precisa ser atualizado para bcrypt
-function hashNeedsMigration(hash) {
+export function hashNeedsMigration(hash?: string | null) {
   return hash && !hash.startsWith('$2');
 }
 
-function perfisPermitidos(user) {
+export function perfisPermitidos(user: { perfil: string; perfis_acesso?: string | null }): string[] {
   const extras = String(user.perfis_acesso||'').split(',').map(s=>s.trim()).filter(Boolean);
   return [...new Set([user.perfil, ...extras])];
 }
 
-function formatarAguardandoDesde(val) {
+export function formatarAguardandoDesde(val: unknown): string {
   if (!val) return '';
   const s = String(val).trim();
   if (/^\d{2}\/\d{2}\/\d{4}/.test(s)) return s;
@@ -86,19 +86,19 @@ function formatarAguardandoDesde(val) {
     // São Paulo, arredondando a hora errado, e daria outro valor ainda num
     // runner de CI em UTC. UTC puro é o mesmo resultado em qualquer máquina.
     const d = new Date(Date.UTC(1899,11,30) + num * 86400000);
-    const p = n => String(n).padStart(2,'0');
+    const p = (n: number) => String(n).padStart(2,'0');
     return `${p(d.getUTCDate())}/${p(d.getUTCMonth()+1)}/${d.getUTCFullYear()} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`;
   }
   return s;
 }
 
-function sanitizeStr(val, maxLen = 255) {
+export function sanitizeStr(val: unknown, maxLen = 255): string {
   if (val === null || val === undefined) return '';
   return String(val).trim().slice(0, maxLen);
 }
 
-function validarId(id) {
-  const n = parseInt(id);
+export function validarId(id: unknown): number | null {
+  const n = parseInt(id as string);
   return !isNaN(n) && n > 0 ? n : null;
 }
 
@@ -111,7 +111,7 @@ const ESTADOS_DECLARACAO = new Set(['AC','AM','AP','BA','DF','ES','GO','MA','MG'
 // Classifica o estado do destinatário em 'NF cheia' ou 'Declaração' pra exibir
 // na tela de Pedidos e imprimir já resolvido na etiqueta. Retorna '' quando o
 // estado está vazio ou não é uma sigla reconhecida (evita etiqueta errada).
-function classificarFiscal(uf) {
+export function classificarFiscal(uf: unknown): string {
   const sigla = String(uf || '').trim().toUpperCase();
   if (ESTADOS_NF_CHEIA.has(sigla)) return 'NF cheia';
   if (ESTADOS_DECLARACAO.has(sigla)) return 'Declaração';
@@ -120,7 +120,8 @@ function classificarFiscal(uf) {
 
 // Turnos ficam gravados sem acento ('Manha'), mas a tela e alguns cadastros
 // trazem 'Manhã'. Remove acento/espaços pra comparar sempre na mesma forma.
-function normalizarTurno(t) {
+// (O intervalo ̀-ͯ são os acentos combinantes que o NFD separa das letras.)
+export function normalizarTurno(t: unknown): string {
   return String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
 }
 
@@ -132,12 +133,12 @@ function normalizarTurno(t) {
    das 06:48 vale pro dia anterior. Os demais turnos usam a data do calendário (a Manhã
    entra às 06:00, então só o relógio não distingue quem é da Manhã e quem é da Noite
    entre 06:00 e 06:48: por isso o turno do colaborador manda quando é conhecido). */
-const VIRADA_NOITE_MIN = 6 * 60 + 48;
+export const VIRADA_NOITE_MIN = 6 * 60 + 48;
 const VIRADA_NOITE_SQL = '6 hours 48 minutes';
-const ehNoite = t => /^(noite|madrugada)/i.test(normalizarTurno(t));
+const ehNoite = (t: unknown) => /^(noite|madrugada)/i.test(normalizarTurno(t));
 
 // data: 'YYYY-MM-DD', hora: 'HH:MM[:SS]'. turno omitido = só o relógio decide.
-function diaOperacional(data, hora, turno) {
+export function diaOperacional(data: string, hora?: string | null, turno?: string | null): string {
   if (turno !== undefined && !ehNoite(turno)) return data;
   const m = /^(\d{2}):(\d{2})/.exec(hora || '');
   if (!m || !/^\d{4}-\d{2}-\d{2}$/.test(data || '')) return data;
@@ -145,17 +146,15 @@ function diaOperacional(data, hora, turno) {
   const [y, mo, d] = data.split('-').map(Number);
   return new Date(Date.UTC(y, mo - 1, d - 1)).toISOString().slice(0, 10);
 }
-function diaOperacionalAgora(turno) {
+export function diaOperacionalAgora(turno?: string | null): string {
   const { data, hora } = dataHoraLocal();
   return diaOperacional(data, hora, turno);
 }
 // Mesma regra em SQL. ts = expressão de timestamp local em texto ('YYYY-MM-DD HH:MM[:SS]');
 // civil = expressão da data do calendário (usada fora da Noite ou se ts for inválido);
 // turno = expressão do turno do colaborador (omitida = só o relógio decide).
-function sqlDiaOperacional({ ts, civil, turno }) {
+export function sqlDiaOperacional({ ts, civil, turno }: { ts: string; civil: string; turno?: string }): string {
   const tsOk = `CASE WHEN (${ts}) ~ '^\\d{4}-\\d{2}-\\d{2}[ T]\\d{2}:\\d{2}' THEN (${ts})::timestamp END`;
   const noite = turno ? `COALESCE(${turno}, '') ~* '^(noite|madrugada)'` : 'TRUE';
   return `COALESCE(CASE WHEN ${noite} THEN TO_CHAR(${tsOk} - INTERVAL '${VIRADA_NOITE_SQL}', 'YYYY-MM-DD') END, ${civil})`;
 }
-
-module.exports = { normalizarTurno, dataHoraLocal, VIRADA_NOITE_MIN, diaOperacional, diaOperacionalAgora, sqlDiaOperacional, turnoAtualEHorarios, hashSenha, verificarSenha, hashNeedsMigration, perfisPermitidos, formatarAguardandoDesde, sanitizeStr, validarId, classificarFiscal };

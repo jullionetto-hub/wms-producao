@@ -1,8 +1,9 @@
-const { Pool } = require('pg');
+import { Pool } from 'pg';
+import type { QueryResult } from 'pg';
 
 const isProd = process.env.NODE_ENV === 'production';
 
-const pool = new Pool({
+export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: (process.env.DATABASE_URL||'').includes('railway') || isProd
     ? { rejectUnauthorized: false } : false,
@@ -17,17 +18,15 @@ pool.on('error', (err) => {
 
 /**
  * run: resultado cru do pg · get: UMA linha (ou null) · all: lista de linhas.
- * (Comentario de tipo: so ajuda o TypeScript a checar o codigo, nao muda nada na execucao.)
- * @type {{
- *   run: (sql: string, p?: any[]) => Promise<import('pg').QueryResult<any>>,
- *   get: (sql: string, p?: any[]) => Promise<any>,
- *   all: (sql: string, p?: any[]) => Promise<any[]>
- * }}
+ * As linhas voltam como `any` de propósito: o formato de cada tabela só vai ser tipado
+ * aos poucos, rota por rota, nas próximas etapas.
  */
-const db = {
+export const db: {
+  run: (sql: string, p?: any[]) => Promise<QueryResult<any>>;
+  get: (sql: string, p?: any[]) => Promise<any>;
+  all: (sql: string, p?: any[]) => Promise<any[]>;
+} = {
   run: (sql, p=[]) => pool.query(sql, p),
   get: async (sql, p=[]) => { const r = await pool.query(sql, p); return r.rows[0] || null; },
   all: async (sql, p=[]) => { const r = await pool.query(sql, p); return r.rows; }
 };
-
-module.exports = { pool, db };

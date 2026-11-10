@@ -1,4 +1,3 @@
-'use strict';
 /**
  * Quebra o tempo de um checkout concluído em três partes:
  *   - fila:         da entrada na fila (fim da separação) até alguém pegar o pedido
@@ -18,24 +17,35 @@
 
 const DIA = 86400;
 
-function segundos(h) {
+export function segundos(h: unknown): number | null {
   if (h == null) return null;
   const m = /(\d{1,2}):(\d{2})(?::(\d{2}))?/.exec(String(h));
   if (!m) return null;
   return (+m[1]) * 3600 + (+m[2]) * 60 + (+(m[3] || 0));
 }
 
-const aMin = s => Math.round(s / 60 * 10) / 10;
+const aMin = (s: number) => Math.round(s / 60 * 10) / 10;
 
-/**
- * @param {object} p
- * @param {string} [p.horaFila]     fim da separação (HH:MM[:SS] ou timestamp) = entrada na fila do checkout
- * @param {string} p.horaCriacao    checkout.hora_criacao
- * @param {string} p.horaCheckout   checkout.hora_checkout (conclusão)
- * @param {Array}  p.sessoes        checkout_sessoes [{hora_inicio, hora_fim, acao, tempo_min}]
- * @returns {null|object}
- */
-function calcularEtapasCheckout({ horaFila, horaCriacao, horaCheckout, sessoes }) {
+/** Uma sessão de trabalho do checkout (tabela checkout_sessoes). */
+export interface SessaoCheckout {
+  hora_inicio?: unknown;
+  hora_fim?: unknown;
+  acao?: string | null;
+  tempo_min?: unknown;
+}
+
+export interface EntradaEtapas {
+  /** fim da separação (HH:MM[:SS] ou timestamp) = entrada na fila do checkout */
+  horaFila?: unknown;
+  /** checkout.hora_criacao */
+  horaCriacao?: unknown;
+  /** checkout.hora_checkout (conclusão) */
+  horaCheckout?: unknown;
+  /** checkout_sessoes [{hora_inicio, hora_fim, acao, tempo_min}] */
+  sessoes?: SessaoCheckout[] | null;
+}
+
+export function calcularEtapasCheckout({ horaFila, horaCriacao, horaCheckout, sessoes }: EntradaEtapas) {
   const fim = segundos(horaCheckout);
   if (fim == null) return null;
 
@@ -47,7 +57,8 @@ function calcularEtapasCheckout({ horaFila, horaCriacao, horaCheckout, sessoes }
   }
   if (base == null) return null;
 
-  const off = h => { const s = segundos(h); return s == null ? null : (s - base + DIA) % DIA; };
+  const baseFixa: number = base;
+  const off = (h: unknown): number | null => { const s = segundos(h); return s == null ? null : (s - baseFixa + DIA) % DIA; };
   const total = (fim - base + DIA) % DIA;
 
   const ss = (sessoes || []).map(s => ({
@@ -56,19 +67,19 @@ function calcularEtapasCheckout({ horaFila, horaCriacao, horaCheckout, sessoes }
     acao: s.acao,
     tempo: Number(s.tempo_min) || 0,
   }));
-  if (!ss.length) return { ancora, total_min: aMin(total), sem_detalhe: true };
+  if (!ss.length) return { ancora, total_min: aMin(total), sem_detalhe: true as const };
 
   // Esperas: cada pendência/pausa vale até a próxima sessão que começa depois
   // dela (retomada) ou, se ninguém retomou, até a conclusão.
   const pendencias = ss
     .filter(s => (s.acao === 'aguardando_item' || s.acao === 'pausado') && s.fim != null && s.fim <= total)
-    .map(s => s.fim)
+    .map(s => s.fim as number)
     .sort((a, b) => a - b);
-  const esperas = [];
+  const esperas: Array<{ inicio: number; fim: number }> = [];
   let livreAte = -1;
   for (const p of pendencias) {
     if (p < livreAte) continue; // pausa dentro de uma espera que já está contada
-    const retomadas = ss.filter(s => s.ini != null && s.ini > p && s.ini <= total).map(s => s.ini);
+    const retomadas = ss.filter(s => s.ini != null && s.ini > p && s.ini <= total).map(s => s.ini as number);
     const fimEspera = retomadas.length ? Math.min(...retomadas) : total;
     esperas.push({ inicio: p, fim: fimEspera });
     livreAte = fimEspera;
@@ -77,7 +88,7 @@ function calcularEtapasCheckout({ horaFila, horaCriacao, horaCheckout, sessoes }
 
   // Trabalho: soma do tempo registrado, sem contar duas vezes sessões que
   // começam no mesmo instante (sessões retroativas duplicadas).
-  const porInicio = new Map();
+  const porInicio = new Map<number, number>();
   ss.forEach(s => {
     if (s.tempo > 0 && s.ini != null) porInicio.set(s.ini, Math.max(porInicio.get(s.ini) || 0, s.tempo));
   });
@@ -99,5 +110,3 @@ function calcularEtapasCheckout({ horaFila, horaCriacao, horaCheckout, sessoes }
     esperas: esperas.map(e => ({ min: aMin(e.fim - e.inicio) })),
   };
 }
-
-module.exports = { calcularEtapasCheckout, segundos };

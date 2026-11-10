@@ -1,16 +1,20 @@
 /* ══ Simulador de Capacidade — cálculo puro (sem banco) ══
    V11 da evolução do WMS: "E se eu adicionar/remover N pessoas nesse
    processo agora?" Reaproveita a mesma matemática do Control Tower
-   (lib/control-tower.js: calcularSituacao) — só troca a produção atual
+   (lib/control-tower.ts: calcularSituacao) — só troca a produção atual
    medida pela produção SIMULADA (produtividade média por pessoa × número
    de pessoas simulado), mantendo volume restante e tempo de turno reais.
    Nenhum número aqui é inventado: a produtividade por pessoa vem de dividir
    dois números reais (produção atual da equipe ÷ pessoas realmente ativas
    na última hora).
 ══════════════════════════════════════════════════════════════════════ */
-const { calcularSituacao } = require('./control-tower');
+import { calcularSituacao } from './control-tower';
 
-function simularCapacidade({ producaoAtualH, pessoasAtivas, volumeRestante }, deltaPessoas, minutosRestantesTurno) {
+export function simularCapacidade(
+  { producaoAtualH, pessoasAtivas, volumeRestante }: { producaoAtualH: number; pessoasAtivas: number; volumeRestante: number },
+  deltaPessoas: number,
+  minutosRestantesTurno: number,
+) {
   const produtividadePorPessoa = pessoasAtivas > 0 ? producaoAtualH / pessoasAtivas : 0;
   const pessoasSimuladas = Math.max(pessoasAtivas + deltaPessoas, 0);
   const producaoSimuladaH = Math.round(produtividadePorPessoa * pessoasSimuladas);
@@ -27,5 +31,3 @@ function simularCapacidade({ producaoAtualH, pessoasAtivas, volumeRestante }, de
     situacao,
   };
 }
-
-module.exports = { simularCapacidade };

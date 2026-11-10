@@ -1,6 +1,6 @@
-const { pool, db } = require('./db');
+import { pool, db } from './db';
 
-async function gerarRelatorio(data) {
+export async function gerarRelatorio(data: string) {
   try {
     const [pedidos, faltas, checkouts, seps] = await Promise.all([
       db.all(`SELECT p.*, s.nome as sep_nome FROM pedidos p LEFT JOIN separadores s ON p.separador_id=s.id WHERE p.data_pedido=$1`, [data]),
@@ -9,7 +9,7 @@ async function gerarRelatorio(data) {
       db.all(`SELECT DISTINCT s.nome FROM separadores s INNER JOIN pedidos p ON p.separador_id=s.id WHERE p.data_pedido=$1`, [data]),
     ]);
 
-    const porSep = {};
+    const porSep: Record<string, { concluidos: number; pendentes: number; itens: number }> = {};
     pedidos.forEach(p => {
       if (!p.sep_nome) return;
       if (!porSep[p.sep_nome]) porSep[p.sep_nome] = { concluidos:0, pendentes:0, itens:0 };
@@ -49,5 +49,3 @@ async function gerarRelatorio(data) {
     return null;
   }
 }
-
-module.exports = { gerarRelatorio };

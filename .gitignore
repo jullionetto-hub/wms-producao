@@ -5,4 +5,25 @@ npm-debug.log
 *.db-wal
 .env
 .env.*
-!.env.examplemockup-*.html
+!.env.example
+mockup-*.html
+
+# Gerados pelo build do TypeScript (npm run build) - NAO versionar; a fonte e o .ts ao lado
+lib/query.js
+lib/logger.js
+lib/db.js
+lib/auth.js
+lib/auditoria.js
+lib/permissoes.js
+lib/helpers.js
+lib/pontuacao.js
+lib/prioridade.js
+lib/mapa-estoque.js
+lib/control-tower.js
+lib/simulador.js
+lib/anomalias.js
+lib/hora-a-hora.js
+lib/importacao.js
+lib/relatorio.js
+lib/checkout-etapas.js
+lib/absenteismo.js

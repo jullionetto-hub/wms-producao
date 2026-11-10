@@ -6,10 +6,18 @@
    inventa um "normal" sem dado real).
 ══════════════════════════════════════════════════════════════════════ */
 
-const LIMIAR_RITMO = 0.6;   // ritmo hoje abaixo de 60% do histórico = anomalia
-const MIN_ITENS_HOJE = 20;  // abaixo disso, não há dado suficiente hoje pra julgar
+export const LIMIAR_RITMO = 0.6;   // ritmo hoje abaixo de 60% do histórico = anomalia
+export const MIN_ITENS_HOJE = 20;  // abaixo disso, não há dado suficiente hoje pra julgar
 
-function detectarAnomaliaRitmo({ nome, itensHoje, horasHoje, itensHistorico, horasHistorico }) {
+export interface DadosRitmo {
+  nome: string;
+  itensHoje?: number | null;
+  horasHoje?: number | null;
+  itensHistorico?: number | null;
+  horasHistorico?: number | null;
+}
+
+export function detectarAnomaliaRitmo({ nome, itensHoje, horasHoje, itensHistorico, horasHistorico }: DadosRitmo) {
   if (!itensHoje || itensHoje < MIN_ITENS_HOJE || !horasHoje || horasHoje <= 0) return null;
   if (!itensHistorico || !horasHistorico || horasHistorico <= 0) return null;
 
@@ -29,11 +37,9 @@ function detectarAnomaliaRitmo({ nome, itensHoje, horasHoje, itensHistorico, hor
   };
 }
 
-function detectarAnomalias(lista) {
+export function detectarAnomalias(lista?: DadosRitmo[] | null) {
   return (lista || [])
-    .map(detectarAnomaliaRitmo)
-    .filter(Boolean)
+    .map((d) => detectarAnomaliaRitmo(d))
+    .filter((a): a is NonNullable<typeof a> => Boolean(a))
     .sort((a, b) => a.pct_do_normal - b.pct_do_normal);
 }
-
-module.exports = { LIMIAR_RITMO, MIN_ITENS_HOJE, detectarAnomaliaRitmo, detectarAnomalias };

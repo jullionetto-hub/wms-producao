@@ -9,10 +9,10 @@
    usuário — por isso a fórmula é simples e auditável, não um score oculto.
 ══════════════════════════════════════════════════════════════════════ */
 
-const SLA_HORAS = 6;
-const LIMIAR_ATENCAO_PCT = 0.6; // 60% do SLA decorrido
+export const SLA_HORAS = 6;
+export const LIMIAR_ATENCAO_PCT = 0.6; // 60% do SLA decorrido
 
-function horasAguardando(aguardandoDesde, agora = new Date()) {
+export function horasAguardando(aguardandoDesde?: unknown, agora: Date = new Date()): number | null {
   if (!aguardandoDesde) return null;
   const m = String(aguardandoDesde).match(/^(\d{2})\/(\d{2})\/(\d{4})[ ,T]?(\d{2}):(\d{2})/);
   if (!m) return null;
@@ -21,14 +21,14 @@ function horasAguardando(aguardandoDesde, agora = new Date()) {
   return (agora.getTime() - desde) / 3600000;
 }
 
-function calcularPrioridade(aguardandoDesde, agora = new Date()) {
+export function calcularPrioridade(aguardandoDesde?: unknown, agora: Date = new Date()) {
   const horas = horasAguardando(aguardandoDesde, agora);
   if (horas == null) {
-    return { nivel: 'normal', horas_aguardando: null, pct_sla: null, motivo: 'Sem horário de início registrado.' };
+    return { nivel: 'normal', horas_aguardando: null as number | null, pct_sla: null as number | null, motivo: 'Sem horário de início registrado.' };
   }
   const pct = horas / SLA_HORAS;
   const horasFmt = horas.toFixed(1);
-  let nivel, motivo;
+  let nivel: string, motivo: string;
   if (pct >= 1) {
     nivel = 'critico';
     motivo = `Já ultrapassou o SLA de ${SLA_HORAS}h — aguardando há ${horasFmt}h.`;
@@ -41,5 +41,3 @@ function calcularPrioridade(aguardandoDesde, agora = new Date()) {
   }
   return { nivel, horas_aguardando: Math.round(horas * 10) / 10, pct_sla: Math.round(pct * 100), motivo };
 }
-
-module.exports = { SLA_HORAS, LIMIAR_ATENCAO_PCT, horasAguardando, calcularPrioridade };

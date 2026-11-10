@@ -1,6 +1,7 @@
 // Middlewares de autenticação e autorização
+import type { Request, Response, NextFunction } from 'express';
 
-function requerAuth(req, res, next) {
+export function requerAuth(req: Request, res: Response, next: NextFunction) {
   if (!req.session?.usuario) {
     console.log(`[AUTH] 401 em ${req.method} ${req.path} — sem sessão. Session ID: ${req.sessionID}`);
     return res.status(401).json({ erro: 'Não autenticado. Faça login.' });
@@ -8,8 +9,8 @@ function requerAuth(req, res, next) {
   next();
 }
 
-function requerPerfil(...perfis) {
-  return (req, res, next) => {
+export function requerPerfil(...perfis: string[]) {
+  return (req: Request, res: Response, next: NextFunction) => {
     if (!req.session?.usuario) {
       return res.status(401).json({ erro: 'Não autenticado.' });
     }
@@ -34,18 +35,18 @@ function requerPerfil(...perfis) {
 // Rate limiting para login — chave por IP+login (não só IP), para que várias pessoas
 // logando de uma mesma rede/IP compartilhado (comum em galpão) não travem umas às
 // outras. Só conta tentativas com senha errada; login bem-sucedido nunca consome a cota.
-const loginAttempts = new Map();
+const loginAttempts = new Map<string, { count: number; resetAt: number }>();
 const RATE_LIMIT_WINDOW_MS = 5 * 60 * 1000;
 const RATE_LIMIT_MAX_ATENTATIVAS = 10;
 
-function checkRateLimit(key) {
+export function checkRateLimit(key: string): boolean {
   if (process.env.NODE_ENV === 'test') return true;
   const now = Date.now();
   const entry = loginAttempts.get(key);
   if (!entry || now > entry.resetAt) return true;
   return entry.count < RATE_LIMIT_MAX_ATENTATIVAS;
 }
-function registrarFalhaLogin(key) {
+export function registrarFalhaLogin(key: string): void {
   if (process.env.NODE_ENV === 'test') return;
   const now = Date.now();
   const entry = loginAttempts.get(key) || { count:0, resetAt: now + RATE_LIMIT_WINDOW_MS };
@@ -61,4 +62,4 @@ const _cleanupInterval = setInterval(() => {
 }, 60 * 60 * 1000);
 if (_cleanupInterval.unref) _cleanupInterval.unref();
 
-module.exports = { requerAuth, requerPerfil, checkRateLimit, registrarFalhaLogin, _loginAttempts: loginAttempts };
+export const _loginAttempts = loginAttempts;

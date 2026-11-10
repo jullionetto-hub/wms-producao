@@ -1,5 +1,3 @@
-'use strict';
-
 // Só extrai o que a feature de atraso precisa: identidade do colaborador e a
 // lista de horários batidos por dia (coluna "Registros" do espelho de ponto
 // InPonto). As colunas já calculadas do PDF (H.Pos, H.Neg, Atraso etc.) não
@@ -10,15 +8,38 @@
 const DIAS = 'Seg|Ter|Qua|Qui|Sex|S[aá]b|Dom';
 const STATUS_PALAVRAS = ['Férias', 'DSR', 'Atestado Médico', 'Folga BH', 'Banco de Horas', 'Declaração de Horas', 'Falta'];
 
-function campo(texto, rotulo, ateRotulo) {
+/** Uma linha diária do espelho de ponto. */
+export interface DiaPonto {
+  data: string | null;
+  dia_semana: string;
+  status: string;
+  registros: string[];
+}
+
+/** Colaborador lido de uma página do espelho de ponto. */
+export interface ColaboradorPonto {
+  empresa: string;
+  nome: string;
+  setor: string;
+  matricula: string;
+  horario: string;
+  cnpj: string;
+  admissao: string | null;
+  pis: string;
+  cpf: string;
+  saldo_final_min: number | null;
+  dias: DiaPonto[];
+}
+
+function campo(texto: string, rotulo: string, ateRotulo: string): string {
   const re = new RegExp(`${rotulo}\\s*:?\\s*([\\s\\S]*?)\\s*(?=${ateRotulo})`, 'i');
   const m = texto.match(re);
   return m ? m[1].trim().replace(/\s+/g, ' ') : '';
 }
 
-function soDigitos(s) { return (s || '').replace(/\D/g, ''); }
+function soDigitos(s?: string | null): string { return (s || '').replace(/\D/g, ''); }
 
-function paraData(ddmmaaaa) {
+function paraData(ddmmaaaa?: string | null): string | null {
   const m = (ddmmaaaa || '').match(/(\d{2})\/(\d{2})\/(\d{4})/);
   if (!m) return null;
   return `${m[3]}-${m[2]}-${m[1]}`;
@@ -28,14 +49,14 @@ function paraData(ddmmaaaa) {
  *  Cada bloco começa exatamente em "Colaborador:" — a posição do nome da empresa antes disso
  *  varia demais entre PDFs pra confiar em quebra de linha, então a empresa vem do nome do
  *  arquivo (ver parseEspelhoPonto), não do corpo do texto. */
-function separarBlocos(textoCompleto) {
-  const marcadores = [];
+function separarBlocos(textoCompleto: string): string[] {
+  const marcadores: number[] = [];
   const reColab = /Colaborador\s*:/g;
   let m;
   while ((m = reColab.exec(textoCompleto))) marcadores.push(m.index);
   if (!marcadores.length) return [];
 
-  const blocos = [];
+  const blocos: string[] = [];
   for (let i = 0; i < marcadores.length; i++) {
     const fimBloco = i + 1 < marcadores.length ? marcadores[i + 1] : textoCompleto.length;
     blocos.push(textoCompleto.slice(marcadores[i], fimBloco));
@@ -44,13 +65,13 @@ function separarBlocos(textoCompleto) {
 }
 
 /** Nome da empresa a partir do nome do arquivo (ex: "espelho_ponto_USEECOM30082026_082632.pdf" → "USEECOM"). */
-function extrairEmpresaDoArquivo(nomeArquivo) {
+export function extrairEmpresaDoArquivo(nomeArquivo?: string | null): string {
   const m = (nomeArquivo || '').match(/espelho[_-]ponto[_-](.+?)\d{6,}[_-]\d{4,}/i);
   if (!m) return '';
   return m[1].replace(/[_-]+/g, ' ').trim();
 }
 
-function extrairCabecalho(bloco) {
+function extrairCabecalho(bloco: string) {
   return {
     nome:      campo(bloco, 'Colaborador', 'Setor'),
     setor:     campo(bloco, 'Setor', 'Espelho de Ponto'),
@@ -76,12 +97,12 @@ function extrairCabecalho(bloco) {
  * pdf-parse colar os tokens sem espaço, já que cada valor "HH:MM" continua
  * delimitado por caracteres não-numéricos ao redor.
  */
-function extrairSaldoFinal(bloco) {
+function extrairSaldoFinal(bloco: string): number | null {
   const m = bloco.match(/Anterior[\s\S]{0,500}?Saldo Final[\s\S]{0,150}/i);
   if (!m) return null;
   const valores = m[0].match(/-?\d{1,3}:\d{2}/g);
   if (!valores || !valores.length) return null;
-  const ultimo = valores[valores.length - 1].match(/(-?)(\d{1,3}):(\d{2})/);
+  const ultimo = valores[valores.length - 1].match(/(-?)(\d{1,3}):(\d{2})/)!;
   const sinal = ultimo[1] === '-' ? -1 : 1;
   return sinal * (parseInt(ultimo[2], 10) * 60 + parseInt(ultimo[3], 10));
 }
@@ -91,8 +112,8 @@ function extrairSaldoFinal(bloco) {
  *  então os separadores aqui são opcionais (\s*, não \s+) e o código H (nº de dia útil) nem é
  *  capturado à parte — capturar ele à parte é ambíguo quando gruda no primeiro horário batido
  *  (ex: "1021:57o" pode ser H=10+21:57 ou H=1+021:57), e ele não é usado em lugar nenhum mesmo. */
-function extrairDias(bloco) {
-  const dias = [];
+function extrairDias(bloco: string): DiaPonto[] {
+  const dias: DiaPonto[] = [];
   const reLinha = new RegExp(
     `(\\d{2}\\/\\d{2}\\/\\d{4})\\s*(${DIAS})([\\s\\S]*?)(?=\\d{2}\\/\\d{2}\\/\\d{4}\\s*(?:${DIAS})|TOTAL)`,
     'g'
@@ -113,7 +134,7 @@ function extrairDias(bloco) {
 }
 
 /** Parseia o texto extraído do PDF inteiro (várias páginas/colaboradores). */
-function parseEspelhoPonto(textoCompleto, nomeArquivo) {
+export function parseEspelhoPonto(textoCompleto: string, nomeArquivo?: string | null): ColaboradorPonto[] {
   const empresa = extrairEmpresaDoArquivo(nomeArquivo);
   const blocos = separarBlocos(textoCompleto);
   return blocos.map(bloco => ({
@@ -131,18 +152,18 @@ const MESES_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho',
  * de referência é o mês em que o período FECHA (26/08 → Agosto/2026), não o
  * mês em que começa.
  */
-function mesReferencia(dataFimISO) {
+export function mesReferencia(dataFimISO?: string | null): string {
   if (!dataFimISO) return '';
   const [ano, mes] = dataFimISO.split('-').map(Number);
   if (!ano || !mes || mes < 1 || mes > 12) return '';
   return `${MESES_PT[mes - 1]}/${ano}`;
 }
 
-function paraMinutos(hhmm) {
+export function paraMinutos(hhmm: string): number {
   const [h, m] = hhmm.split(':').map(Number);
   return h * 60 + m;
 }
-function paraHHMM(minutos) {
+export function paraHHMM(minutos: number): string {
   minutos = ((minutos % 1440) + 1440) % 1440;
   const h = String(Math.floor(minutos / 60)).padStart(2, '0');
   const m = String(minutos % 60).padStart(2, '0');
@@ -155,17 +176,17 @@ function paraHHMM(minutos) {
  * com o mesmo padrão de quantidade de marcações no dia (4 = uma pausa, 6 =
  * duas pausas). Mediana é mais resistente a um dia fora da curva do que média.
  */
-function inferirHorariosEsperados(registrosPorDia) {
-  const grupos = {};
+export function inferirHorariosEsperados(registrosPorDia: Array<{ horario?: string; registros?: string[] | null }>): Record<string, number[]> {
+  const grupos: Record<string, string[][]> = {};
   for (const r of registrosPorDia) {
     if (!r.registros || r.registros.length < 2) continue;
     const chave = `${r.horario}|${r.registros.length}`;
     (grupos[chave] = grupos[chave] || []).push(r.registros);
   }
-  const esperado = {};
+  const esperado: Record<string, number[]> = {};
   for (const [chave, listas] of Object.entries(grupos)) {
     const n = listas[0].length;
-    const medianas = [];
+    const medianas: number[] = [];
     for (let i = 0; i < n; i++) {
       const minutos = listas.map(l => paraMinutos(l[i])).sort((a, b) => a - b);
       medianas.push(minutos[Math.floor(minutos.length / 2)]);
@@ -184,13 +205,20 @@ function inferirHorariosEsperados(registrosPorDia) {
  * Sábado é expediente reduzido pra Manhã/Tarde (06h-10h / 10h-14h, sem pausa
  * cabível em turno de 4h) — entradaSabado sobrescreve a entrada só nesse dia.
  */
-const TURNOS_OFICIAIS = [
+interface TurnoOficial {
+  chave: string;
+  entrada: string;
+  almoco_min: number;
+  pausa_min: number;
+  entradaSabado?: string;
+}
+const TURNOS_OFICIAIS: TurnoOficial[] = [
   { chave: 'madrugada', entrada: '22:00', almoco_min: 60, pausa_min: 15 },
   { chave: 'tarde',     entrada: '13:00', almoco_min: 60, pausa_min: 15, entradaSabado: '10:00' },
   { chave: 'manh',      entrada: '06:00', almoco_min: 60, pausa_min: 15, entradaSabado: '06:00' }, // "manh" casa Manhã/Manha
 ];
 
-function ehSabado(diaSemana) {
+function ehSabado(diaSemana?: string | null): boolean {
   return /^s[aá]b/i.test(diaSemana || '');
 }
 
@@ -202,18 +230,28 @@ function ehSabado(diaSemana) {
  * trabalhado" nos resumos (routes/absenteismo.js) — sem isso, "total_dias"
  * contava toda linha do espelho de ponto, incluindo os dias de folga.
  */
-function ehDiaUtilEsperado(horarioTexto, diaSemana) {
+export function ehDiaUtilEsperado(horarioTexto?: string | null, diaSemana?: string | null): boolean {
   if (/^dom/i.test(diaSemana || '')) return false;
   if (ehSabado(diaSemana)) return !(horarioTexto || '').toLowerCase().includes('madrugada');
   return true;
 }
 
-function turnoOficial(horarioTexto, diaSemana) {
+function turnoOficial(horarioTexto?: string | null, diaSemana?: string | null): TurnoOficial | null {
   const t = (horarioTexto || '').toLowerCase();
   const base = TURNOS_OFICIAIS.find(o => t.includes(o.chave)) || null;
   if (!base) return null;
   if (ehSabado(diaSemana) && base.entradaSabado) return { ...base, entrada: base.entradaSabado };
   return base;
+}
+
+/** Resultado de classificarDia: só traz os campos que o dia permite avaliar. */
+export interface ClassificacaoDia {
+  entrada_hora?: string;
+  entrada_atraso_min?: number | null;
+  almoco_retorno_hora?: string;
+  almoco_atraso_min?: number | null;
+  pausa_retorno_hora?: string;
+  pausa_atraso_min?: number | null;
 }
 
 /**
@@ -229,7 +267,12 @@ function turnoOficial(horarioTexto, diaSemana) {
  * TURNOS_OFICIAIS.entradaSabado) — Manhã/Tarde têm expediente diferente aos
  * sábados.
  */
-function classificarDia(registros, horario, esperadoPorGrupo, diaSemana) {
+export function classificarDia(
+  registros: string[],
+  horario: string | undefined,
+  esperadoPorGrupo: Record<string, number[]>,
+  diaSemana?: string | null,
+): ClassificacaoDia {
   const n = registros.length;
   if (n < 2) return {};
   const oficial = turnoOficial(horario, diaSemana);
@@ -237,19 +280,19 @@ function classificarDia(registros, horario, esperadoPorGrupo, diaSemana) {
   const medianas = esperadoPorGrupo[chave];
   if (!oficial && !medianas) return {};
 
-  const out = { entrada_hora: registros[0] };
+  const out: ClassificacaoDia = { entrada_hora: registros[0] };
   out.entrada_atraso_min = oficial
     ? paraMinutos(registros[0]) - paraMinutos(oficial.entrada)
     : (medianas ? paraMinutos(registros[0]) - medianas[0] : null);
 
   // +1440 se o intervalo atravessa meia-noite (comum no turno Madrugada,
   // ex: saiu 23:50, voltou 00:10 — sem isso a duração daria negativa)
-  const duracao = (saida, volta) => {
+  const duracao = (saida: string, volta: string) => {
     let d = paraMinutos(volta) - paraMinutos(saida);
     if (d < 0) d += 1440;
     return d;
   };
-  const devMediana = i => (medianas ? paraMinutos(registros[i]) - medianas[i] : null);
+  const devMediana = (i: number) => (medianas ? paraMinutos(registros[i]) - medianas[i] : null);
 
   if (n === 4) {
     out.almoco_retorno_hora = registros[2];
@@ -284,7 +327,10 @@ function classificarDia(registros, horario, esperadoPorGrupo, diaSemana) {
  * ausenciasJustificadas são contagem de dias (status "Falta" e "Atestado
  * Médico" respectivamente).
  */
-function classificarAbsenteismoMes({ atrasoMin, faltasInjustificadas, ausenciasJustificadas }) {
+export function classificarAbsenteismoMes(
+  { atrasoMin, faltasInjustificadas, ausenciasJustificadas }:
+  { atrasoMin: number; faltasInjustificadas: number; ausenciasJustificadas: number },
+): 'Ruim' | 'Ótimo' | 'Mediano' {
   if (faltasInjustificadas > 0 || atrasoMin > 30 || ausenciasJustificadas >= 2) return 'Ruim';
   if (atrasoMin <= 10 && ausenciasJustificadas === 0) return 'Ótimo';
   return 'Mediano';
@@ -295,12 +341,16 @@ function classificarAbsenteismoMes({ atrasoMin, faltasInjustificadas, ausenciasJ
  * (cada um com periodo_inicio/periodo_fim). O período do InPonto fecha no meio do mês civil, então
  * "Outubro/2026" = 27/09 a 26/10. Aceita o mês digitado sem se preocupar com caixa/espaços.
  * Retorna null se nenhum upload tem esse mês de referência.
+ * (O intervalo ̀-ͯ são os acentos combinantes que o NFD separa das letras.)
  */
-function periodoDoMes(uploads, mes) {
+export function periodoDoMes(
+  uploads: Array<{ periodo_inicio?: string | null; periodo_fim?: string | null }> | null | undefined,
+  mes: unknown,
+): { ini: string; fim: string } | null {
   const alvo = String(mes || '').normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase();
   if (!alvo) return null;
   const doMes = (uploads || []).filter(u => u.periodo_inicio && u.periodo_fim &&
-    mesReferencia(u.periodo_fim).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase() === alvo);
+    mesReferencia(u.periodo_fim).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase() === alvo) as Array<{ periodo_inicio: string; periodo_fim: string }>;
   if (!doMes.length) return null;
   return {
     ini: doMes.reduce((m, u) => (u.periodo_inicio < m ? u.periodo_inicio : m), doMes[0].periodo_inicio),
@@ -309,13 +359,7 @@ function periodoDoMes(uploads, mes) {
 }
 
 // Só os dias dentro do período (datas 'YYYY-MM-DD', extremos incluídos). Sem período = todos.
-function diasNoPeriodo(dias, periodo) {
+export function diasNoPeriodo<T extends { data: string | null }>(dias: T[], periodo?: { ini: string; fim: string } | null): T[] {
   if (!periodo) return dias;
-  return dias.filter(d => d.data >= periodo.ini && d.data <= periodo.fim);
+  return dias.filter(d => d.data! >= periodo.ini && d.data! <= periodo.fim);
 }
-
-module.exports = {
-  parseEspelhoPonto, inferirHorariosEsperados, classificarDia, classificarAbsenteismoMes,
-  paraMinutos, paraHHMM, extrairEmpresaDoArquivo, mesReferencia, ehDiaUtilEsperado,
-  periodoDoMes, diasNoPeriodo,
-};

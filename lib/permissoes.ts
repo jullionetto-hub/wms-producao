@@ -1,5 +1,5 @@
-/* ══ Permissões Granulares — lib/permissoes.js ══
-   V12 da evolução do WMS: camada ADITIVA sobre requerPerfil (lib/auth.js),
+/* ══ Permissões Granulares — lib/permissoes.ts ══
+   V12 da evolução do WMS: camada ADITIVA sobre requerPerfil (lib/auth.ts),
    nunca uma substituição — o próprio audit avisou pra "estender, não
    substituir" o modelo de perfil atual (item 19 do briefing). Por padrão
    (sem nenhuma linha em permissoes_usuario), o acesso continua sendo
@@ -12,12 +12,13 @@
    dados) — não em todas as ~225 rotas, pra não arriscar quebrar acesso em
    massa numa mudança só.
 ══════════════════════════════════════════════════════════════════════ */
-const { db } = require('./db');
+import type { Request, Response, NextFunction } from 'express';
+import { db } from './db';
 
-const ACOES = ['ver', 'criar', 'editar', 'excluir', 'executar', 'aprovar', 'administrar'];
+export const ACOES = ['ver', 'criar', 'editar', 'excluir', 'executar', 'aprovar', 'administrar'];
 
-function requerPermissao(acao) {
-  return async (req, res, next) => {
+export function requerPermissao(acao: string) {
+  return async (req: Request, res: Response, next: NextFunction) => {
     const usuarioId = req.session?.usuario?.id;
     if (!usuarioId) return next(); // requerAuth já roda antes na cadeia de middlewares
     try {
@@ -26,7 +27,7 @@ function requerPermissao(acao) {
         [usuarioId, acao]
       );
       if (row && row.concedida === false) {
-        console.log(`[PERMISSAO] Acesso negado: ${req.session.usuario.login} teve a ação "${acao}" revogada explicitamente.`);
+        console.log(`[PERMISSAO] Acesso negado: ${req.session.usuario!.login} teve a ação "${acao}" revogada explicitamente.`);
         return res.status(403).json({ erro: `Acesso negado. A ação "${acao}" foi revogada pra este usuário.` });
       }
       next();
@@ -38,5 +39,3 @@ function requerPermissao(acao) {
     }
   };
 }
-
-module.exports = { ACOES, requerPermissao };

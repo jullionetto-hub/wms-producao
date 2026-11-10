@@ -1,7 +1,15 @@
-const { pool } = require('./db');
-const { dataHoraLocal } = require('./helpers');
+import type { Request } from 'express';
+import { pool } from './db';
+import { dataHoraLocal } from './helpers';
 
-async function registrarAuditoria(req, acao, entidade='', entidadeId=null, dadosAntes=null, dadosDepois=null) {
+export async function registrarAuditoria(
+  req: Request,
+  acao: string,
+  entidade: string = '',
+  entidadeId: string | number | null = null,
+  dadosAntes: unknown = null,
+  dadosDepois: unknown = null,
+): Promise<void> {
   try {
     const u = req.session?.usuario;
     const {data, hora} = dataHoraLocal();
@@ -16,5 +24,3 @@ async function registrarAuditoria(req, acao, entidade='', entidadeId=null, dados
     ).catch(()=>{});
   } catch(e) { console.warn(e); }
 }
-
-module.exports = { registrarAuditoria };

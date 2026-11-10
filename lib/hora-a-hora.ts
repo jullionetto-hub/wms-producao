@@ -2,13 +2,17 @@
    V10 da evolução do WMS: pra Embalagem, Expedição (Checkout) e Faturamento,
    agrupa registros por hora do dia e calcula ritmo atual (unidade/h desde o
    início do turno) e previsão de fechamento (ritmo atual projetado até o fim
-   do turno). Mesmo espírito do Control Tower (lib/control-tower.js): nenhum
+   do turno). Mesmo espírito do Control Tower (lib/control-tower.ts): nenhum
    número aqui é inventado, só derivado de dados reais + a meta configurada.
 ══════════════════════════════════════════════════════════════════════ */
 
 // Agrupa uma lista de registros em 24 posições (uma por hora do dia),
 // somando um campo numérico (ou contando registros, se campoValor for null).
-function bucketsPorHora(registros, campoHora, campoValor = null) {
+export function bucketsPorHora(
+  registros: Array<Record<string, any>> | null | undefined,
+  campoHora: string,
+  campoValor: string | null = null,
+): number[] {
   const buckets = Array.from({ length: 24 }, () => 0);
   for (const r of registros || []) {
     const bruto = String(r?.[campoHora] || '');
@@ -23,7 +27,7 @@ function bucketsPorHora(registros, campoHora, campoValor = null) {
 // mesmas faixas de tolerância do Control Tower (>=100% dentro do prazo,
 // >=85% risco, abaixo disso atrasado), adaptado pra um processo de
 // ACÚMULO ao longo do turno (não uma fila que se esvazia).
-function calcularSituacaoHoraAHora(previsaoFimTurno, metaTurno) {
+export function calcularSituacaoHoraAHora(previsaoFimTurno: number, metaTurno?: number | null): string {
   if (!metaTurno || metaTurno <= 0) return 'sem_meta';
   const pct = previsaoFimTurno / metaTurno;
   if (pct >= 1) return 'dentro_do_prazo';
@@ -34,7 +38,12 @@ function calcularSituacaoHoraAHora(previsaoFimTurno, metaTurno) {
 // realizadoAteAgora: soma real já ocorrida no turno até agora.
 // metaTurno: meta configurada pro turno inteiro (mesma unidade de realizado).
 // minutosDecorridosTurno / minutosRestantesTurno: janela real de turno.
-function ritmoEPrevisao(realizadoAteAgora, metaTurno, minutosDecorridosTurno, minutosRestantesTurno) {
+export function ritmoEPrevisao(
+  realizadoAteAgora: number,
+  metaTurno: number,
+  minutosDecorridosTurno: number,
+  minutosRestantesTurno: number,
+) {
   const horasDecorridas = Math.max(minutosDecorridosTurno, 1) / 60;
   const ritmoHora = Math.round((realizadoAteAgora / horasDecorridas) * 10) / 10;
   const horasRestantes = Math.max(minutosRestantesTurno, 0) / 60;
@@ -55,9 +64,9 @@ function ritmoEPrevisao(realizadoAteAgora, metaTurno, minutosDecorridosTurno, mi
 // usado pro anúncio sonoro contar "pedidos de checkout desde o início do
 // turno" (não só a última hora). Noite atravessa meia-noite: se já passou
 // da meia-noite (horaAgora < 6h), o turno começou ONTEM às 22h.
-const INICIO_TURNO_HORA = { Manha: 6, Tarde: 13, Noite: 22 };
+export const INICIO_TURNO_HORA: Record<string, number> = { Manha: 6, Tarde: 13, Noite: 22 };
 
-function inicioTurnoTimestamp(turno, hoje, horaAgora) {
+export function inicioTurnoTimestamp(turno: string, hoje: string, horaAgora: number): string {
   const inicioH = INICIO_TURNO_HORA[turno];
   let dataInicio = hoje;
   if (turno === 'Noite' && horaAgora < 6) {
@@ -67,5 +76,3 @@ function inicioTurnoTimestamp(turno, hoje, horaAgora) {
   }
   return `${dataInicio} ${String(inicioH).padStart(2, '0')}:00:00`;
 }
-
-module.exports = { bucketsPorHora, calcularSituacaoHoraAHora, ritmoEPrevisao, INICIO_TURNO_HORA, inicioTurnoTimestamp };
