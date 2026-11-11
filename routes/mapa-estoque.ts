@@ -32,6 +32,8 @@ async function contagemPorRua(sql: any, params: any = []) {
   return porRua;
 }
 
+// GROUP BY 1 (posicional): "GROUP BY rua" era ambiguo na consulta das separacoes, porque a tabela pedidos tem uma COLUNA
+// chamada rua e o Postgres a prefere ao apelido "rua" do SELECT (erro: i.endereco must appear in the GROUP BY clause).
 router.get('/mapa-estoque', requerAuth, requerPerfil('supervisor', 'gestor'), async (req, res) => {
   try {
     const ruaProdutos = ruaSql('localizacao');
@@ -44,7 +46,7 @@ router.get('/mapa-estoque', requerAuth, requerPerfil('supervisor', 'gestor'), as
         SELECT ${ruaProdutos} AS rua, COUNT(*)::int AS total
         FROM produtos
         WHERE localizacao IS NOT NULL AND localizacao <> '' AND COALESCE(saldo,0) <= 0
-        GROUP BY rua HAVING ${ruaProdutos} <> ''`),
+        GROUP BY 1 HAVING ${ruaProdutos} <> ''`),
       contagemPorRua(`
         SELECT ${ruaColmeias} AS rua, COUNT(*)::int AS total
         FROM colmeias c
@@ -55,17 +57,17 @@ router.get('/mapa-estoque', requerAuth, requerPerfil('supervisor', 'gestor'), as
             WHERE i.codigo=c.codigo AND i.status IN ('encontrado','parcial') AND p.status='concluido'
               AND p.concluido_em <> '' AND p.concluido_em::timestamp AT TIME ZONE 'America/Sao_Paulo' >= c.criado_em
           ),0)) <= c.estoque_minimo
-        GROUP BY rua HAVING ${ruaColmeias} <> ''`),
+        GROUP BY 1 HAVING ${ruaColmeias} <> ''`),
       contagemPorRua(`
         SELECT ${ruaItens} AS rua, COUNT(DISTINCT p.id)::int AS total
         FROM itens_pedido i JOIN pedidos p ON p.id=i.pedido_id
         WHERE p.status='separando' AND i.endereco IS NOT NULL AND i.endereco <> ''
-        GROUP BY rua HAVING ${ruaItens} <> ''`),
+        GROUP BY 1 HAVING ${ruaItens} <> ''`),
       contagemPorRua(`
         SELECT ${ruaAvisos} AS rua, COUNT(*)::int AS total
         FROM avisos_repositor
         WHERE status='pendente' AND endereco IS NOT NULL AND endereco <> ''
-        GROUP BY rua HAVING ${ruaAvisos} <> ''`),
+        GROUP BY 1 HAVING ${ruaAvisos} <> ''`),
     ]);
 
     const todasRuas = new Set([

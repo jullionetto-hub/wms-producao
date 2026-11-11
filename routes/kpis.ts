@@ -181,7 +181,7 @@ router.get('/stats/colaboradores', requerAuth, requerPerfil('supervisor'), async
         COALESCE(SUM(CASE WHEN ck.data_checkout=$1 AND ck.status='concluido' THEN 1 ELSE 0 END),0) as ck_hoje,
         COALESCE(SUM(CASE WHEN ck.data_checkout=$1 THEN 1 ELSE 0 END),0) as ck_total_hoje
       FROM usuarios u
-      LEFT JOIN checkout ck ON ck.usuario_id = (SELECT id FROM separadores WHERE usuario_id=u.id LIMIT 1)
+      LEFT JOIN checkout ck ON ck.operador_nome = u.nome
       WHERE u.perfil='checkout'
       GROUP BY u.id, u.nome, u.login, u.turno ORDER BY u.nome`, [hoje]);
     res.json({ data: hoje, separadores: seps, repositores: reps, checkouts: cks });

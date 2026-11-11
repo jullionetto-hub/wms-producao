@@ -10,6 +10,7 @@
  *   BOOLEAN                                 -> boolean
  *   TIMESTAMP/TIMESTAMPTZ/DATE              -> Date
  *   JSON/JSONB                              -> any
+ *   BYTEA                                   -> Buffer   (arquivos/fotos guardados no banco)
  * Coluna "pode ser nula" = sem NOT NULL, sem DEFAULT e sem PRIMARY KEY/SERIAL.
  * (Coluna com DEFAULT e tratada como nao nula: na pratica o banco sempre a preenche.)
  */
@@ -37,6 +38,7 @@ const TIPO_TS = {
   BOOLEAN: 'boolean',
   TIMESTAMP: 'Date', TIMESTAMPTZ: 'Date', DATE: 'Date',
   JSON: 'any', JSONB: 'any',
+  BYTEA: 'Buffer',
 };
 
 function dividirNivel0(texto) {

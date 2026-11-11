@@ -193,7 +193,7 @@ export interface Tabelas {
     origem: string;
     secao: string;
     mime: string;
-    dados: any;
+    dados: Buffer;
     autor: string;
     criado_em: Date;
   };
@@ -201,7 +201,7 @@ export interface Tabelas {
     id: number;
     recado_id: number;
     mime: string;
-    dados: any;
+    dados: Buffer;
     autor: string;
     criado_em: Date;
   };

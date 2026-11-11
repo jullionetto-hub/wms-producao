@@ -667,6 +667,19 @@ export const TABLES: string[] = [
     concedido_em   TIMESTAMPTZ DEFAULT NOW(),
     UNIQUE(usuario_id, acao)
   )`,
+
+  // Sessões de trabalho do checkout (uma por abertura/pausa/conclusão). Antes só era criada pela "auto-migração" de
+  // routes/checkout.ts ao carregar o arquivo — o que falhava num banco NOVO (a tabela checkout ainda não existia).
+  `CREATE TABLE IF NOT EXISTS checkout_sessoes (
+    id           SERIAL PRIMARY KEY,
+    checkout_id  INTEGER NOT NULL,
+    operador_nome TEXT NOT NULL DEFAULT '',
+    hora_inicio  TEXT NOT NULL DEFAULT '',
+    hora_fim     TEXT NOT NULL DEFAULT '',
+    data_sessao  TEXT NOT NULL DEFAULT '',
+    tempo_min    INTEGER NOT NULL DEFAULT 0,
+    acao         TEXT NOT NULL DEFAULT ''
+  )`,
 ];
 
 export const INDEXES: string[] = [

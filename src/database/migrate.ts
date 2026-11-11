@@ -8,7 +8,7 @@ import { TABLES, INDEXES } from './schema';
 import log from '../../lib/logger';
 
 // Seed de configurações padrão e alterações de colunas aplicadas após criação inicial
-const ALTERATIONS: string[] = [
+export const ALTERATIONS: string[] = [
   "INSERT INTO configuracoes (chave,valor,descricao) VALUES ('meta_separacao','75','Meta pedidos separação/turno') ON CONFLICT (chave) DO NOTHING",
   "INSERT INTO configuracoes (chave,valor,descricao) VALUES ('meta_embalagem','120','Meta embalagem/turno') ON CONFLICT (chave) DO NOTHING",
   "INSERT INTO configuracoes (chave,valor,descricao) VALUES ('meta_checkout','90','Meta checkout/turno') ON CONFLICT (chave) DO NOTHING",
@@ -114,6 +114,8 @@ const ALTERATIONS: string[] = [
   // classificar automaticamente NF cheia x Declaração/Talão (ver
   // lib/helpers.js classificarFiscal).
   "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS estado TEXT DEFAULT ''",
+  // Itens em falta do checkout (antes só criada pela auto-migração de routes/checkout.ts, que falha num banco novo)
+  "ALTER TABLE checkout ADD COLUMN IF NOT EXISTS itens_falta JSONB DEFAULT '[]'::jsonb",
 ];
 
 export async function runSchema(): Promise<void> {
