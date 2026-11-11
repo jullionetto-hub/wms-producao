@@ -319,7 +319,7 @@ describe('Diário de Bordo: recado da gestão (uma informação para os 3 turnos
     vm.createContext(ctx);
     vm.runInContext(codigo['config.js'].match(/function escHtml[\s\S]*?\n}\n/)[0], ctx);
     ['_recadosRecolhidos', '_recadoChave', '_recadoVersao', '_TURNO_ROTULO'].forEach(n => vm.runInContext(codigo['auth.js'].match(new RegExp(`const ${n} = [^\\n]*\\n`))[0], ctx));
-    ['_recadoFotosHtml', '_recadoCardHtml', '_recadoRecolhido', 'alternarRecado', '_recadoTurnosTexto', '_recadoTurnosCampoHtml'].forEach(n => vm.runInContext(codigo['auth.js'].match(new RegExp(`function ${n}\\([\\s\\S]*?\\n}\\n`))[0], ctx));
+    ['_recadoFotosHtml', '_recadoCardHtml', '_recadoRecolhido', 'alternarRecado', '_recadoTurnosTexto', '_recadoTurnosCampoHtml', 'alternarCorpoEdicaoRecado'].forEach(n => vm.runInContext(codigo['auth.js'].match(new RegExp(`function ${n}\\([\\s\\S]*?\\n}\\n`))[0], ctx));
     vm.runInContext('function renderRecadosDiario() { renderizacoes++; }', ctx);
     return ctx;
   };
@@ -418,9 +418,45 @@ describe('Diário de Bordo: recado da gestão (uma informação para os 3 turnos
     expect(c._recadoCardHtml(rec)).toContain('Caixas nas ruas');
   });
 
-  test('em edição não mostra a setinha (o formulário fica sempre aberto)', () => {
+  test('botão Ocultar/Mostrar COM TEXTO em todo cartão (supervisor e gestor)', () => {
+    for (const perfil of ['supervisor', 'gestor']) {
+      const c = monta(perfil); c._recados = [rec];
+      const aberto = c._recadoCardHtml(rec);
+      expect(aberto).toContain('</i> Ocultar</button>');          // texto visível, não só a setinha
+      expect(aberto).toContain('title="Ocultar recado"');
+      c.alternarRecado(4);
+      const fechado = c._recadoCardHtml(rec);
+      expect(fechado).toContain('</i> Mostrar</button>');
+      expect(fechado).toContain('title="Mostrar recado"');
+    }
+  });
+
+  test('em edição também tem o botão, mas ele só esconde os campos (não recria a tela, senão perderia o texto digitado)', () => {
     const c = monta('gestor'); c._recadoEditando = 4;
-    expect(c._recadoCardHtml(rec)).not.toContain('alternarRecado');
+    const h = c._recadoCardHtml({ ...rec, turnos: [] });
+    expect(h).toContain('alternarCorpoEdicaoRecado(this)');
+    expect(h).not.toContain('alternarRecado(');                       // a outra função recria o cartão
+    expect(h).toContain('</i> Ocultar</button>');
+    // os campos estão dentro do corpo que será escondido; o cabeçalho (com o botão) fica de fora
+    const corpo = h.slice(h.indexOf('id="rec-corpo"'));
+    ['rec-titulo', 'rec-texto', 'class="rec-turno"', 'salvarRecado()', 'cancelarRecado()'].forEach(t => expect(corpo).toContain(t));
+    expect(h.slice(0, h.indexOf('id="rec-corpo"'))).toContain('alternarCorpoEdicaoRecado(this)');
+  });
+
+  test('alternarCorpoEdicaoRecado esconde e mostra os campos e troca o texto do botão', () => {
+    const c = monta('gestor');
+    const corpo = { style: { display: '' } };
+    c.document = { getElementById: id => (id === 'rec-corpo' ? corpo : null) };
+    const btn = { atributos: {}, title: '', innerHTML: '', setAttribute(k, v) { this.atributos[k] = v; } };
+    vm.runInContext('0', c);
+    c.alternarCorpoEdicaoRecado(btn);                                  // 1º clique: oculta
+    expect(corpo.style.display).toBe('none');
+    expect(btn.innerHTML).toContain('Mostrar'); expect(btn.innerHTML).toContain('chevron-down');
+    expect(btn.atributos['aria-expanded']).toBe('false'); expect(btn.title).toBe('Mostrar recado');
+    c.alternarCorpoEdicaoRecado(btn);                                  // 2º clique: mostra de novo
+    expect(corpo.style.display).toBe('');
+    expect(btn.innerHTML).toContain('Ocultar'); expect(btn.innerHTML).toContain('chevron-up');
+    expect(btn.atributos['aria-expanded']).toBe('true');
   });
 
   test('texto quebra de linha dentro da caixa e as quebras digitadas são mantidas', () => {

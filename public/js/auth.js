@@ -1084,8 +1084,12 @@ function _recadoCardHtml(rec) {
   const quando = rec.criado_em ? new Date(rec.criado_em).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }) : '';
   const editando = _recadoEditando === rec.id || (_recadoEditando === 'novo' && !rec.id);
   const recolhido = !editando && _recadoRecolhido(rec);
-  const seta = editando ? '' : `<button type="button" onclick="event.stopPropagation();alternarRecado(${rec.id})" title="${recolhido ? 'Mostrar recado' : 'Ocultar recado'}" aria-label="${recolhido ? 'Mostrar recado' : 'Ocultar recado'}" aria-expanded="${!recolhido}"
-      style="background:none;border:none;color:var(--text3);cursor:pointer;padding:2px 4px;display:flex"><i class="ti ti-chevron-${recolhido ? 'down' : 'up'}" aria-hidden="true" style="font-size:20px"></i></button>`;
+  // Botão "Ocultar/Mostrar" COM TEXTO (fácil de achar), em todos os cartões. Fora da edição recolhe/expande o cartão e lembra
+  // no aparelho; na edição esconde/mostra só os campos, SEM recriar a tela (o que já foi digitado não se perde).
+  const rotuloOcultar = recolhido ? 'Mostrar' : 'Ocultar';
+  const acaoOcultar = editando ? 'alternarCorpoEdicaoRecado(this)' : `event.stopPropagation();alternarRecado(${rec.id})`;
+  const seta = `<button type="button" onclick="${acaoOcultar}" title="${rotuloOcultar} recado" aria-label="${rotuloOcultar} recado" aria-expanded="${!recolhido}"
+      class="btn btn-outline btn-sm" style="display:flex;align-items:center;gap:4px"><i class="ti ti-chevron-${recolhido ? 'down' : 'up'}" aria-hidden="true"></i> ${rotuloOcultar}</button>`;
   const cab = `<div ${editando ? '' : `onclick="alternarRecado(${rec.id})" style="cursor:pointer;user-select:none;`}${editando ? 'style="' : ''}display:flex;align-items:center;gap:8px;flex-wrap:wrap">
       <i class="ti ti-speakerphone" aria-hidden="true" style="color:var(--amber);font-size:18px"></i>
       <span style="font-size:11px;font-weight:800;letter-spacing:.5px;color:var(--amber);text-transform:uppercase">Recado da gestão · ${_recadoTurnosTexto(rec)}</span>
@@ -1097,6 +1101,7 @@ function _recadoCardHtml(rec) {
     // Enter cria nova linha e o recado publicado mantém essas quebras (white-space:pre-line).
     const campo = 'width:100%;box-sizing:border-box;font-family:inherit;color:var(--text);background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 11px;outline:none';
     return `<div style="${caixa}">${cab}
+      <div id="rec-corpo">
       <input id="rec-titulo" maxlength="120" value="${escHtml(rec.titulo)}" placeholder="Título (opcional)" style="${campo};margin-top:10px;font-size:14px;font-weight:700">
       <textarea id="rec-texto" rows="7" wrap="soft" placeholder="Escreva o recado… (Enter para pular linha)" style="${campo};margin-top:8px;font-size:13px;line-height:1.55;resize:vertical;white-space:pre-wrap;overflow-wrap:anywhere">${escHtml(rec.texto)}</textarea>
       ${_recadoTurnosCampoHtml(rec)}
@@ -1104,7 +1109,7 @@ function _recadoCardHtml(rec) {
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
         <button class="btn btn-outline btn-sm" onclick="cancelarRecado()">Cancelar</button>
         <button class="btn btn-primary btn-sm" onclick="salvarRecado()">Salvar recado</button>
-      </div></div>`;
+      </div></div></div>`;
   }
   if (recolhido) return `<div style="${caixa};padding-top:10px;padding-bottom:${rec.titulo ? 12 : 10}px">${cab}
       ${rec.titulo ? `<div style="font-size:14px;font-weight:700;margin-top:4px;color:var(--text2);overflow-wrap:anywhere">${escHtml(rec.titulo)} <span style="font-weight:500;font-size:11px;color:var(--text3)">· toque para mostrar</span></div>` : ''}</div>`;
@@ -1132,6 +1137,16 @@ function renderRecadosDiario() {
 function novoRecado() { _recadoEditando = 'novo'; renderRecadosDiario(); document.getElementById('rec-texto')?.focus(); }
 function editarRecado(id) { _recadoEditando = id; renderRecadosDiario(); document.getElementById('rec-texto')?.focus(); }
 function cancelarRecado() { _recadoEditando = null; renderRecadosDiario(); }
+// Em edição: esconde/mostra os campos mexendo só no que já está na tela (não recria o formulário, então nada que foi digitado se perde)
+function alternarCorpoEdicaoRecado(btn) {
+  const corpo = document.getElementById('rec-corpo'); if (!corpo) return;
+  const ocultar = corpo.style.display !== 'none';
+  corpo.style.display = ocultar ? 'none' : '';
+  const rotulo = ocultar ? 'Mostrar' : 'Ocultar';
+  btn.setAttribute('aria-expanded', String(!ocultar));
+  btn.title = rotulo + ' recado';
+  btn.innerHTML = `<i class="ti ti-chevron-${ocultar ? 'down' : 'up'}" aria-hidden="true"></i> ${rotulo}`;
+}
 
 async function salvarRecado() {
   const id = _recadoEditando === 'novo' ? null : _recadoEditando;
