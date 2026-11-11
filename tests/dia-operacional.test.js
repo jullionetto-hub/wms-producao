@@ -5,6 +5,15 @@
  */
 const fs = require('fs');
 const path = require('path');
+
+// routes/kpis e routes/performance-dash foram divididos em varias partes (routes/<nome>/*.js): le todas,
+// como se fosse o arquivo unico de antes
+// ext '.js' = codigo compilado (para EXECUTAR um trecho); '.ts' = codigo-fonte (para procurar TEXTO: o compilador
+// reescreve chamadas entre arquivos como "(0, _comum_1.f)(x)", entao "f(" so aparece no fonte).
+const lerPartes = (nome, ext = '.js') => {
+  const dir = path.join(__dirname, '..', 'routes', nome);
+  return fs.readdirSync(dir).filter((a) => a.endsWith(ext) && !a.endsWith('.d.ts')).map((a) => fs.readFileSync(path.join(dir, a), 'utf8')).join('\n');
+};
 const { diaOperacional, sqlDiaOperacional, VIRADA_NOITE_MIN } = require('../lib/helpers');
 
 describe('diaOperacional (JS)', () => {
@@ -67,7 +76,7 @@ describe('sqlDiaOperacional', () => {
 });
 
 describe('painel de Performance usa o dia operacional em todos os setores', () => {
-  const src = fs.readFileSync(path.join(__dirname, '..', 'routes', 'performance-dash.js'), 'utf8');
+  const src = lerPartes('performance-dash', '.ts');
 
   test('a data do calendário (LEFT(iniciado_em,10)) não é mais usada direto nas consultas', () => {
     const ocorrencias = src.match(/COALESCE\(NULLIF\(LEFT\(\w+\.iniciado_em,10\)/g) || [];
@@ -84,8 +93,9 @@ describe('painel de Performance usa o dia operacional em todos os setores', () =
 });
 
 describe('duração que cruza a meia-noite não pode ser negativa', () => {
-  const dash = fs.readFileSync(path.join(__dirname, '..', 'routes', 'performance-dash.js'), 'utf8');
-  const kpis = fs.readFileSync(path.join(__dirname, '..', 'routes', 'kpis.js'), 'utf8');
+  const dash = lerPartes('performance-dash');            // compilado: o teste abaixo EXECUTA minDia
+  const dashTs = lerPartes('performance-dash', '.ts');   // fonte: os testes de texto
+  const kpis = lerPartes('kpis');
 
   test('minDia soma 1 dia (1440 min) quando a conta dá negativo', () => {
     const minDia = new Function(dash.match(/const minDia = [^\n]*\n/)[0] + '; return minDia;')();
@@ -94,9 +104,9 @@ describe('duração que cruza a meia-noite não pode ser negativa', () => {
   });
 
   test('checkout e embalagem do painel de Performance usam minDia (início 23:44 / fim 00:01 não vira -1424 min)', () => {
-    expect((dash.match(/\$\{minDia\(/g) || []).length).toBeGreaterThanOrEqual(5);
+    expect((dashTs.match(/\$\{minDia\(/g) || []).length).toBeGreaterThanOrEqual(5);
     // nenhuma duração de checkout/embalagem calculada direto, sem o ajuste (tira o que já está dentro de minDia)
-    const semAjuste = dash.replace(/\$\{minDia\("[^"]*"\)\}/g, '');
+    const semAjuste = dashTs.replace(/\$\{minDia\("[^"]*"\)\}/g, '');
     expect(semAjuste).not.toMatch(/EXTRACT\(EPOCH FROM \(\s*\(?[^\n]*::timestamp\s*-\s*[^\n]*hora_criacao[^\n]*::timestamp\s*\)\)\s*\/\s*60\.0/);
     expect(semAjuste).not.toMatch(/EXTRACT\(EPOCH FROM \(\s*\(?[^\n]*::timestamp\s*-\s*[^\n]*embalagem_iniciado_em[^\n]*::timestamp\s*\)\)\s*\/\s*60\.0/);
   });

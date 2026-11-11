@@ -28,7 +28,7 @@ lib/relatorio.js
 lib/checkout-etapas.js
 lib/absenteismo.js
 routes/absenteismo.js
-routes/admin.js
+routes/admin/*.js
 routes/anomalias.js
 routes/api.js
 routes/auth.js
@@ -43,16 +43,16 @@ routes/estoque-3d.js
 routes/faturamento.js
 routes/gestao.js
 routes/hora-a-hora.js
-routes/kpis.js
+routes/kpis/*.js
 routes/lideranca.js
 routes/mapa-estoque.js
-routes/matriz.js
+routes/matriz/*.js
 routes/padroes.js
 routes/passagem.js
-routes/pedidos.js
-routes/performance-dash.js
+routes/pedidos/*.js
+routes/performance-dash/*.js
 routes/permissoes.js
-routes/repositor.js
+routes/repositor/*.js
 routes/simulador.js
 routes/usuarios.js
 /index.js
@@ -64,3 +64,4 @@ src/database/schema.js
 src/database/seed.js
 src/scheduler/relatorio.js
 lib/robustez.js
+
