@@ -17,7 +17,7 @@ pool.query(`ALTER TABLE avisos_repositor ADD COLUMN IF NOT EXISTS ordem_manual  
 
 // Sequência de turnos para passagem de item entre turnos
 const SEQ_TURNO = ['Manha', 'Tarde', 'Noite'];
-function proximoTurno(turnoAtual) {
+function proximoTurno(turnoAtual: any) {
   const i = SEQ_TURNO.indexOf(turnoAtual);
   return i >= 0 && i < SEQ_TURNO.length - 1 ? SEQ_TURNO[i + 1] : null;
 }
@@ -108,7 +108,7 @@ router.get('/repositor/avisos/contagem', requerAuth, async (req,res) => {
     }
     sql += ` GROUP BY a.status`;
     const rows = await db.all(sql, params);
-    const por_status = {};
+    const por_status: Record<string, any> = {};
     rows.forEach(r => { por_status[r.status || ''] = Number(r.n) || 0; });
     res.json({ por_status });
   } catch(e){res.status(500).json({erro:e.message});}
@@ -172,7 +172,7 @@ router.put('/repositor/avisos/:id', requerAuth, async (req,res) => {
     let stFinal = st;
     let turno_pendente = '';
     if (st === 'nao_encontrado' && atual?.status === 'verificando') {
-      const falhas = tentativas.filter(t => t.resultado === 'nao_encontrado').length;
+      const falhas = tentativas.filter((t: any) => t.resultado === 'nao_encontrado').length;
       if (falhas >= MAX_TENTATIVAS) {
         // 3 falhas → Liberação
         stFinal = 'nao_encontrado';
@@ -408,7 +408,7 @@ const STATUS_AVISO_RESOLVIDO = ['reposto','buscado','separado','aguardando_abast
 // repositor repõe o último item, volta pra 'fila'; se ainda sobram itens, só
 // atualiza a lista do que falta. Sem isso o pedido ficava preso em "Itens
 // pendentes" mesmo com tudo abastecido.
-async function sincronizarCheckoutPendente(pedidoId, io) {
+async function sincronizarCheckoutPendente(pedidoId: any, io: any) {
   if (!pedidoId) return;
   const ck = await db.get(`SELECT id, numero_pedido FROM checkout WHERE pedido_id=$1 AND status='aguardando_item' ORDER BY id DESC LIMIT 1`, [pedidoId]);
   if (!ck) return;
@@ -425,7 +425,7 @@ async function sincronizarCheckoutPendente(pedidoId, io) {
   io?.emit('pedido:concluido', { pedido_id: pedidoId, numero_pedido: ck.numero_pedido });
 }
 
-async function atualizarAviso(req, res, status, extra={}) {
+async function atualizarAviso(req: any, res: any, status: any, extra={}) {
   const {hora} = dataHoraLocal();
   const {qtd_encontrada, repositor_nome} = req.body || {};
   try {
@@ -441,7 +441,7 @@ async function atualizarAviso(req, res, status, extra={}) {
   } catch(e) { res.status(500).json({erro:e.message}); }
 }
 
-async function resolverAvisoEAcumularTempo(req, res, status, extra={}) {
+async function resolverAvisoEAcumularTempo(req: any, res: any, status: any, extra={}) {
   await atualizarAviso(req, res, status, extra);
   try {
     const av = await db.get('SELECT pedido_id FROM avisos_repositor WHERE id=$1',[req.params.id]);

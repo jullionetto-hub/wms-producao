@@ -4,7 +4,7 @@ const router  = express.Router();
 import { db, pool } from '../lib/db';
 import { requerAuth, requerPerfil } from '../lib/auth';
 
-const PONTOS_POR_CAMPO = {
+const PONTOS_POR_CAMPO: Record<string, number> = {
   sep_separados: 75, sep_pendentes: 75, sep_em_separacao: 50,
   ck_feitos: 75, ck_pendentes: 75,
   emb_embalados: 75, emb_pendentes: 75,
@@ -51,7 +51,7 @@ router.post('/passagem', requerAuth, requerPerfil('supervisor'), async (req, res
   if (!data || !turno) return res.status(400).json({ erro: 'Data e turno obrigatórios' });
   const supervisor = req.session?.usuario?.nome || 'Supervisor';
   const supervisor_id = req.session?.usuario?.id || null;
-  const n = v => parseInt(v) || 0;
+  const n = (v: any) => parseInt(v) || 0;
   try {
     const existe = await db.get('SELECT id, status FROM passagem_turno WHERE data=$1 AND turno=$2', [data, turno]);
     if (existe) {

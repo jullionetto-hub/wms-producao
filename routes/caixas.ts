@@ -16,7 +16,7 @@ router.get('/caixas/checklist', requerAuth, async (req, res) => {
       FROM checklist_caixas
       ORDER BY numero, criado_em DESC
     `);
-    const porNumero = {};
+    const porNumero: Record<string, any> = {};
     rows.forEach(r => { porNumero[r.numero] = r; });
     const hoje = req.query.data || dataHoraLocal().data;
     const caixas = Array.from({ length: TOTAL_CAIXAS }, (_, i) => {

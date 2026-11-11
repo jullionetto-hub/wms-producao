@@ -26,7 +26,7 @@ const gGestor  = requerPerfil('gestor'); // ações destrutivas (apagar tudo) s�
 
 // Formata minutos (podem ser negativos) como "+1:30" / "-0:45" — usado pro
 // saldo de banco de horas mandado pra Matriz de Responsabilidades.
-function fmtSaldoHoras(min) {
+function fmtSaldoHoras(min: any) {
   if (min == null) return '';
   const sinal = min > 0 ? '+' : (min < 0 ? '-' : '');
   const abs = Math.abs(min);
@@ -34,16 +34,16 @@ function fmtSaldoHoras(min) {
 }
 
 // Normaliza nome pra comparação: sem acento, minúsculo, espaços únicos.
-const normNome = s => (s || '').normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().replace(/\s+/g, ' ').trim();
+const normNome = (s: any) => (s || '').normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().replace(/\s+/g, ' ').trim();
 const NOME_STOP = new Set(['da', 'de', 'do', 'das', 'dos', 'e']);
-const tokensNome = s => normNome(s).split(' ').filter(t => t.length > 1 && !NOME_STOP.has(t));
+const tokensNome = (s: any) => normNome(s).split(' ').filter((t: any) => t.length > 1 && !NOME_STOP.has(t));
 
 // Acha o colaborador da Matriz (mz_colaboradores) pelo nome do WMS. Tenta match
 // exato; senão, por palavras significativas em comum (≥2, ignora da/de/dos) —
 // só aceita se houver um único melhor candidato, pra nunca ligar a pessoa errada.
 // Quando acha por aproximação, alinha o nome na Matriz ao do WMS (fonte do ponto),
 // assim os dois sistemas passam a ter o mesmo nome e o próximo envio é exato.
-async function acharMzColaborador(nomeWms) {
+async function acharMzColaborador(nomeWms: any) {
   const todos = await db.all('SELECT * FROM mz_colaboradores');
   const alvo = normNome(nomeWms);
   const exato = todos.find(c => normNome(c.nome) === alvo);
@@ -53,7 +53,7 @@ async function acharMzColaborador(nomeWms) {
   const pontuados = todos
     .map(c => {
       const t = new Set(tokensNome(c.nome));
-      const comum = tAlvo.filter(x => t.has(x)).length;
+      const comum = tAlvo.filter((x: any) => t.has(x)).length;
       return { c, comum, razao: comum / Math.max(tAlvo.length, t.size || 1) };
     })
     .filter(x => x.comum >= 2)
@@ -72,28 +72,28 @@ async function acharMzColaborador(nomeWms) {
 // Saldo Final salvo no cadastro do colaborador (saldoFinalMin), não é
 // somado dia a dia. faltas_injustificadas/ausencias_justificadas contam pelo
 // texto de Status batido no PDF ("Falta" / "Atestado Médico").
-function resumoColaborador(diasDele, tolerancia, saldoFinalMin, horario) {
-  const passaTolerancia = min => min != null && min > tolerancia;
-  const semTolerancia   = min => min != null && min > 0;
-  const positivo = min => (min != null && min > 0) ? min : 0;
+function resumoColaborador(diasDele: any, tolerancia: any, saldoFinalMin: any, horario: any) {
+  const passaTolerancia = (min: any) => min != null && min > tolerancia;
+  const semTolerancia   = (min: any) => min != null && min > 0;
+  const positivo = (min: any) => (min != null && min > 0) ? min : 0;
   // "Dias trabalhados" e as contagens abaixo só consideram dias úteis
   // ESPERADOS pro turno do colaborador (ver ehDiaUtilEsperado — domingo
   // nunca, sábado só pra Manhã/Tarde) e excluem feriados confirmados (ver
   // FERIADOS acima). Sem isso, total_dias contava toda linha do espelho de
   // ponto — inclusive folga semanal e feriado, em que ninguém bate ponto —
   // inflando "quantos dias trabalhou" no resumo de texto.
-  const diasUteis = diasDele.filter(d => !FERIADOS.includes(d.data) && ehDiaUtilEsperado(horario, d.dia_semana));
+  const diasUteis = diasDele.filter((d: any) => !FERIADOS.includes(d.data) && ehDiaUtilEsperado(horario, d.dia_semana));
   return {
     total_dias: diasUteis.length,
-    entradas_atrasadas: diasUteis.filter(d => passaTolerancia(d.entrada_atraso_min)).length,
-    almocos_atrasados:  diasUteis.filter(d => semTolerancia(d.almoco_atraso_min)).length,
-    pausas_atrasadas:   diasUteis.filter(d => semTolerancia(d.pausa_atraso_min)).length,
-    total_atraso_min: diasUteis.reduce((s, d) =>
+    entradas_atrasadas: diasUteis.filter((d: any) => passaTolerancia(d.entrada_atraso_min)).length,
+    almocos_atrasados:  diasUteis.filter((d: any) => semTolerancia(d.almoco_atraso_min)).length,
+    pausas_atrasadas:   diasUteis.filter((d: any) => semTolerancia(d.pausa_atraso_min)).length,
+    total_atraso_min: diasUteis.reduce((s: any, d: any) =>
       s + positivo(d.entrada_atraso_min) + positivo(d.almoco_atraso_min) + positivo(d.pausa_atraso_min), 0),
     banco_horas_min: saldoFinalMin ?? null,
-    faltas_injustificadas: diasUteis.filter(d => d.status === 'Falta').length,
-    ausencias_justificadas: diasUteis.filter(d => d.status === 'Atestado Médico').length,
-    declaracoes_horas: diasUteis.filter(d => d.status === 'Declaração de Horas').length,
+    faltas_injustificadas: diasUteis.filter((d: any) => d.status === 'Falta').length,
+    ausencias_justificadas: diasUteis.filter((d: any) => d.status === 'Atestado Médico').length,
+    declaracoes_horas: diasUteis.filter((d: any) => d.status === 'Declaração de Horas').length,
   };
 }
 
@@ -112,7 +112,7 @@ router.post('/absenteismo/debug', requerAuth, gLeitura,
       const colaboradores = parseEspelhoPonto(text, nomeArquivo);
       // Mesmo cálculo de período do upload de verdade — pra conferir aqui,
       // sem gravar nada, qual mês esse arquivo específico vai gerar.
-      let periodoInicio = null, periodoFim = null;
+      let periodoInicio: any = null, periodoFim: any = null;
       colaboradores.forEach(c => c.dias.forEach(d => {
         if (!d.data) return;
         if (!periodoInicio || d.data < periodoInicio) periodoInicio = d.data;
@@ -155,11 +155,11 @@ router.post('/absenteismo/upload', requerAuth, gLeitura,
 
       // Junta todos os dias de todos os colaboradores pra inferir o horário esperado
       // de cada turno (mediana dos horários batidos, por padrão de nº de marcações).
-      const todosOsDias = [];
+      const todosOsDias: any[] = [];
       colaboradores.forEach(c => c.dias.forEach(d => todosOsDias.push({ ...d, horario: c.horario })));
       const esperado = inferirHorariosEsperados(todosOsDias);
 
-      let periodoInicio = null, periodoFim = null;
+      let periodoInicio: any = null, periodoFim: any = null;
       colaboradores.forEach(c => c.dias.forEach(d => {
         if (!d.data) return;
         if (!periodoInicio || d.data < periodoInicio) periodoInicio = d.data;
@@ -271,7 +271,7 @@ router.post('/absenteismo/upload', requerAuth, gLeitura,
   }
 );
 
-router.get('/absenteismo/uploads', requerAuth, gLeitura, wrap(async (req, res) => {
+router.get('/absenteismo/uploads', requerAuth, gLeitura, wrap(async (req: any, res: any) => {
   const uploads = await db.all('SELECT * FROM abs_uploads ORDER BY enviado_em DESC LIMIT 50');
   res.json(uploads.map(u => ({ ...u, mes_referencia: mesReferencia(u.periodo_fim) })));
 }));
@@ -283,7 +283,7 @@ router.get('/absenteismo/uploads', requerAuth, gLeitura, wrap(async (req, res) =
 // atestados, declarações de horas) num período customizado (ex: julho a
 // setembro) — o banco de horas continua vindo do Saldo Final mais recente
 // do colaborador, não é filtrado por data (é um saldo acumulado).
-router.get('/absenteismo/resultado', requerAuth, gLeitura, wrap(async (req, res) => {
+router.get('/absenteismo/resultado', requerAuth, gLeitura, wrap(async (req: any, res: any) => {
   const tolerancia = parseInt(req.query.tolerancia) || 0;
   const { data_ini, data_fim } = req.query as Record<string, string>;
   const colaboradores = await db.all(`SELECT * FROM abs_colaboradores WHERE ativo=true ORDER BY nome`);
@@ -295,7 +295,7 @@ router.get('/absenteismo/resultado', requerAuth, gLeitura, wrap(async (req, res)
     `SELECT * FROM abs_registros_diarios${where.length ? ' WHERE ' + where.join(' AND ') : ''} ORDER BY data`,
     params
   );
-  const porColaborador = {};
+  const porColaborador: Record<string, any> = {};
   dias.forEach(d => { (porColaborador[d.colaborador_id] = porColaborador[d.colaborador_id] || []).push(d); });
 
   const resultado = colaboradores.map(c => {
@@ -308,7 +308,7 @@ router.get('/absenteismo/resultado', requerAuth, gLeitura, wrap(async (req, res)
 
 // Resultado de um upload específico: todos os colaboradores dele com os dias
 // classificados (entrada/almoço/pausa atrasados), já filtrando pela tolerância.
-router.get('/absenteismo/uploads/:id/resultado', requerAuth, gLeitura, wrap(async (req, res) => {
+router.get('/absenteismo/uploads/:id/resultado', requerAuth, gLeitura, wrap(async (req: any, res: any) => {
   const tolerancia = parseInt(req.query.tolerancia) || 0;
   const upload = await db.get('SELECT * FROM abs_uploads WHERE id=$1', [req.params.id]);
   if (!upload) return res.status(404).json({ erro: 'Upload não encontrado' });
@@ -321,7 +321,7 @@ router.get('/absenteismo/uploads/:id/resultado', requerAuth, gLeitura, wrap(asyn
   const dias = await db.all(
     `SELECT * FROM abs_registros_diarios WHERE upload_id=$1 ORDER BY data`, [req.params.id]
   );
-  const porColaborador = {};
+  const porColaborador: Record<string, any> = {};
   dias.forEach(d => { (porColaborador[d.colaborador_id] = porColaborador[d.colaborador_id] || []).push(d); });
 
   const resultado = colaboradores.map(c => {
@@ -335,7 +335,7 @@ router.get('/absenteismo/uploads/:id/resultado', requerAuth, gLeitura, wrap(asyn
 // Apaga TODOS os dados do absenteísmo nativo (colaboradores, dias importados,
 // uploads e horários esperados) — pra recomeçar do zero. Irreversível, por
 // isso só gestor pode chamar (a UI ainda pede confirmação dupla antes).
-router.delete('/absenteismo/dados', requerAuth, gGestor, wrap(async (req, res) => {
+router.delete('/absenteismo/dados', requerAuth, gGestor, wrap(async (req: any, res: any) => {
   await pool.query('DELETE FROM abs_registros_diarios');
   await pool.query('DELETE FROM abs_colaboradores');
   await pool.query('DELETE FROM abs_uploads');
@@ -343,11 +343,11 @@ router.delete('/absenteismo/dados', requerAuth, gGestor, wrap(async (req, res) =
   res.json({ mensagem: 'Todos os dados do absenteísmo foram apagados.' });
 }));
 
-router.get('/absenteismo/colaboradores', requerAuth, gLeitura, wrap(async (req, res) => {
+router.get('/absenteismo/colaboradores', requerAuth, gLeitura, wrap(async (req: any, res: any) => {
   res.json(await db.all('SELECT * FROM abs_colaboradores WHERE ativo=true ORDER BY nome'));
 }));
 
-router.get('/absenteismo/colaboradores/:id/dias', requerAuth, gLeitura, wrap(async (req, res) => {
+router.get('/absenteismo/colaboradores/:id/dias', requerAuth, gLeitura, wrap(async (req: any, res: any) => {
   const { data_ini, data_fim } = req.query as Record<string, string>;
   const params = [req.params.id];
   let sql = 'SELECT * FROM abs_registros_diarios WHERE colaborador_id=$1';
@@ -366,21 +366,21 @@ router.get('/absenteismo/colaboradores/:id/dias', requerAuth, gLeitura, wrap(asy
 // Texto com os dias e minutos de cada ocorrência (mesmo universo de dias do
 // resumoColaborador: dias úteis esperados, sem feriado) — vai no campo
 // "Detalhes" do bloco 4 do feedback, pra o gestor passar ao colaborador.
-function detalheAbsenteismo(diasDele, horario, status, resumo) {
+function detalheAbsenteismo(diasDele: any, horario: any, status: any, resumo: any) {
   const dias = diasDele
-    .filter(d => !FERIADOS.includes(d.data) && ehDiaUtilEsperado(horario, d.dia_semana))
-    .sort((a, b) => (a.data < b.data ? -1 : 1));
-  const fmtD = iso => (iso || '').split('-').reverse().slice(0, 2).join('/');
-  const fmtMin = m => m >= 60 ? `${Math.floor(m / 60)}h${m % 60 ? String(m % 60).padStart(2, '0') + 'min' : ''}` : `${m}min`;
-  const secao = (titulo, campo) => {
-    const itens = dias.filter(d => d[campo] != null && d[campo] > 0);
+    .filter((d: any) => !FERIADOS.includes(d.data) && ehDiaUtilEsperado(horario, d.dia_semana))
+    .sort((a: any, b: any) => (a.data < b.data ? -1 : 1));
+  const fmtD = (iso: any) => (iso || '').split('-').reverse().slice(0, 2).join('/');
+  const fmtMin = (m: any) => m >= 60 ? `${Math.floor(m / 60)}h${m % 60 ? String(m % 60).padStart(2, '0') + 'min' : ''}` : `${m}min`;
+  const secao = (titulo: any, campo: any) => {
+    const itens = dias.filter((d: any) => d[campo] != null && d[campo] > 0);
     if (!itens.length) return [];
-    const total = itens.reduce((s, d) => s + d[campo], 0);
-    return [`${titulo} (total ${fmtMin(total)}):`, ...itens.map(d => `  ${fmtD(d.data)}: ${fmtMin(d[campo])}`)];
+    const total = itens.reduce((s: any, d: any) => s + d[campo], 0);
+    return [`${titulo} (total ${fmtMin(total)}):`, ...itens.map((d: any) => `  ${fmtD(d.data)}: ${fmtMin(d[campo])}`)];
   };
-  const porStatus = (titulo, st) => {
-    const itens = dias.filter(d => d.status === st);
-    return itens.length ? [`${titulo}:`, ...itens.map(d => `  ${fmtD(d.data)}`)] : [];
+  const porStatus = (titulo: any, st: any) => {
+    const itens = dias.filter((d: any) => d.status === st);
+    return itens.length ? [`${titulo}:`, ...itens.map((d: any) => `  ${fmtD(d.data)}`)] : [];
   };
   const linhas = [
     `Absenteísmo: ${status} — ${resumo.total_atraso_min}min${resumo.total_atraso_min >= 60 ? ` (${fmtMin(resumo.total_atraso_min)})` : ''} de atraso no total,${resumo.faltas_injustificadas} falta(s), ${resumo.ausencias_justificadas} atestado(s)`,
@@ -397,7 +397,7 @@ function detalheAbsenteismo(diasDele, horario, status, resumo) {
 // Se já existe feedback desse colaborador nesse mês, atualiza só os campos de
 // absenteísmo (reenviar não duplica); senão cria um novo. Retorna
 // { erro, status: <http> } quando o colaborador não está na Matriz.
-async function enviarParaMatriz(colaborador, mes, autorNome, periodoInformado) {
+async function enviarParaMatriz(colaborador: any, mes: any, autorNome: any, periodoInformado: any) {
   const mzColab = await acharMzColaborador(colaborador.nome);
   if (!mzColab) {
     return { httpStatus: 404, erro: `Não achei "${colaborador.nome}" cadastrado na Matriz de Responsabilidades. Cadastre lá primeiro ou confira o nome.` };
@@ -444,7 +444,7 @@ async function enviarParaMatriz(colaborador, mes, autorNome, periodoInformado) {
   return { feedback: r.rows[0], resumo, status, mz_colaborador: mzColab, atualizado: !!existente };
 }
 
-router.post('/absenteismo/colaboradores/:id/enviar-matriz', requerAuth, gLeitura, wrap(async (req, res) => {
+router.post('/absenteismo/colaboradores/:id/enviar-matriz', requerAuth, gLeitura, wrap(async (req: any, res: any) => {
   const { mes, data_ini, data_fim } = req.body || {};
   if (!mes) return res.status(400).json({ erro: 'Informe o mês (ex: Agosto/2026)' });
 
@@ -458,7 +458,7 @@ router.post('/absenteismo/colaboradores/:id/enviar-matriz', requerAuth, gLeitura
 
 // Envio em lote: manda vários colaboradores de uma vez (ids = os que estão na
 // tela, já respeitando o filtro de turno). Um que falhe não derruba os outros.
-router.post('/absenteismo/enviar-matriz-lote', requerAuth, gLeitura, wrap(async (req, res) => {
+router.post('/absenteismo/enviar-matriz-lote', requerAuth, gLeitura, wrap(async (req: any, res: any) => {
   const { mes, ids, data_ini, data_fim } = req.body || {};
   if (!mes) return res.status(400).json({ erro: 'Informe o mês (ex: Agosto/2026)' });
   if (!Array.isArray(ids) || !ids.length) return res.status(400).json({ erro: 'Nenhum colaborador informado' });
@@ -481,6 +481,6 @@ router.post('/absenteismo/enviar-matriz-lote', requerAuth, gLeitura, wrap(async 
   res.json({ total: ids.length, criados, atualizados, falhas });
 }));
 
-function wrap(fn) { return (req, res, next) => fn(req, res).catch(next); }
+function wrap(fn: any) { return (req: any, res: any, next: any) => fn(req, res).catch(next); }
 
 module.exports = router;

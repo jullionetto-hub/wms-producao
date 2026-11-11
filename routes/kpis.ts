@@ -25,7 +25,7 @@ router.get('/kpis', requerAuth, async (req,res) => {
     const tSep = hasTurno
       ? ` AND REPLACE(COALESCE((SELECT s2.turno FROM separadores s2 WHERE s2.id=p.separador_id LIMIT 1),''),'ã','a')=ANY($T::text[])`
       : '';
-    const tNome = (col) => hasTurno
+    const tNome = (col: any) => hasTurno
       ? ` AND REPLACE(COALESCE((SELECT u2.turno FROM usuarios u2 WHERE u2.nome=${col} LIMIT 1),''),'ã','a')=ANY($T::text[])`
       : '';
 
@@ -364,13 +364,13 @@ router.get('/stats/performance', requerAuth, requerPerfil('supervisor'), async (
     // Configurações de metas e carga horária
     const configs = await db.all('SELECT chave, valor FROM configuracoes');
     const cfg = Object.fromEntries(configs.map(c => [c.chave, parseFloat(c.valor) || 0]));
-    const METAS = {
+    const METAS: Record<string, any> = {
       separador: cfg.meta_separacao || 75,
       embalador: cfg.meta_embalagem || 120,
       checkout:  cfg.meta_checkout  || 90,
       repositor: cfg.meta_reposicao || 90,
     };
-    const HORAS = { Manha: cfg.horas_turno_manha || 8, Tarde: cfg.horas_turno_tarde || 8, Noite: cfg.horas_turno_noite || 6 };
+    const HORAS: Record<string, any> = { Manha: cfg.horas_turno_manha || 8, Tarde: cfg.horas_turno_tarde || 8, Noite: cfg.horas_turno_noite || 6 };
 
     // Sessões agrupadas por (usuario, perfil)
     let sParams = [dataIni, dataFim, hoje];
@@ -476,7 +476,7 @@ router.get('/stats/performance', requerAuth, requerPerfil('supervisor'), async (
 
     // Todos os colaboradores ativos — garante que apareçam mesmo sem atividade/sessão
     const perfisOp = ['separador','checkout','embalador','repositor'];
-    let uParams = [];
+    let uParams: any[] = [];
     let uFilter = `perfil = ANY($1)`;
     uParams.push(perfisOp);
     if (filtPerfil) { uParams = [filtPerfil]; uFilter = `perfil=$1`; }
@@ -664,7 +664,7 @@ router.get('/stats/performance/detalhe', requerAuth, requerPerfil('supervisor'),
   const dataFim = fim || hoje;
 
   try {
-    const resultado = {};
+    const resultado: Record<string, any> = {};
 
     /* ── Separadores: pedido a pedido ── */
     if (!filtPerfil || filtPerfil === 'separador') {
@@ -851,7 +851,7 @@ router.get('/stats/performance/detalhe', requerAuth, requerPerfil('supervisor'),
         LIMIT 3000`, repParams);
 
       // Helper: calcula minutos entre dois HH:MM
-      const diffMin = (ini, fim) => {
+      const diffMin = (ini: any, fim: any) => {
         if (!ini || !fim) return null;
         const [hi, mi] = ini.split(':').map(Number);
         const [hf, mf] = fim.split(':').map(Number);
@@ -864,7 +864,7 @@ router.get('/stats/performance/detalhe', requerAuth, requerPerfil('supervisor'),
 
         if (tentativas.length > 0) {
           // Novo sistema — uma linha por tentativa, tempo individual de cada repositor
-          tentativas.forEach(t => {
+          tentativas.forEach((t: any) => {
             const rep = t.repositor;
             if (!rep) return;
             if (filtColab && rep !== filtColab) return;

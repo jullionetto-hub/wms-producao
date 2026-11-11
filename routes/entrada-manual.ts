@@ -8,7 +8,7 @@ import { dataHoraLocal } from '../lib/helpers';
 // Aceita qualquer endereço com letras, números, barra e hífen (ex: D106, ZA387, C099/VERT-C02-CX18)
 const ADDR_REGEX = /^[A-Z0-9][A-Z0-9\/\-]{1,29}$/i;
 
-function validarEndereco(end) {
+function validarEndereco(end: any) {
   if (!end || !end.trim()) return { ok: false, tipo: 'vazio' };
   return ADDR_REGEX.test(end.trim().toUpperCase())
     ? { ok: true, tipo: 'valido' }
@@ -241,7 +241,7 @@ router.post('/entrada-manual/validar-endereco', requerAuth, async (req, res) => 
     FROM entrada_manual_itens
     WHERE codigo=$1 AND status IN ('abastecido','parcial') AND endereco!=''
     GROUP BY endereco ORDER BY vezes DESC LIMIT 1
-  `, [String(codigo||'').trim().toUpperCase()]).catch(() => null);
+  `, [String(codigo||'').trim().toUpperCase()]).catch((): any => null);
 
   if (hist && hist.endereco !== endNorm) {
     return res.json({ valido: true, nivel: 'aviso',
@@ -283,8 +283,8 @@ router.get('/entrada-manual/exportar', requerAuth, async (req, res) => {
     `, params);
 
     const SEP = ';';
-    const statusPT = { abastecido:'Abastecido', parcial:'Parcial', pendente:'Pendente', nao_encontrado:'Não encontrado' };
-    const esc = v => { const s = String(v??''); return /[;\n"]/g.test(s) ? `"${s.replace(/"/g,'""')}"` : s; };
+    const statusPT: Record<string, string> = { abastecido:'Abastecido', parcial:'Parcial', pendente:'Pendente', nao_encontrado:'Não encontrado' };
+    const esc = (v: any) => { const s = String(v??''); return /[;\n"]/g.test(s) ? `"${s.replace(/"/g,'""')}"` : s; };
     const hdrs = ['Data','Responsável','Código','Descrição','Qtd Esperada','Qtd Abastecida','Endereço','Status','Data Confirmação','Hora Confirmação','Obs'];
     const lines = [hdrs.join(SEP)];
     for (const r of rows) {
@@ -547,9 +547,9 @@ router.get('/inventario/sessoes/:id/exportar', requerAuth, async (req, res) => {
     );
 
     const SEP = ';';
-    const esc = v => { const s = String(v ?? ''); return /[;\n"]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+    const esc = (v: any) => { const s = String(v ?? ''); return /[;\n"]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
     const hdrs = ['Código', 'Nome', 'Localização', 'Saldo Sistema', 'Qtd Contada', 'Diferença', 'Status', 'Contado Por', 'Contado Em', 'Obs'];
-    const statusPT = { ok: 'OK', divergente: 'Divergente', pendente: 'Pendente' };
+    const statusPT: Record<string, string> = { ok: 'OK', divergente: 'Divergente', pendente: 'Pendente' };
     const lines = [hdrs.join(SEP)];
     for (const it of itens) {
       lines.push([it.codigo, it.nome, it.localizacao, it.saldo_sistema,

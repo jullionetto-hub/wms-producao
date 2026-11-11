@@ -5,7 +5,7 @@ import { db, pool } from '../lib/db';
 // Executa `fn` um de cada vez para o mesmo item (fila de promessas por item_id).
 // Usado para tornar "checa se já existe aviso + insere" atômico dentro deste processo.
 const _filaPorItem = new Map();
-function serializarPorItem(itemId, fn) {
+function serializarPorItem(itemId: any, fn: any) {
   const anterior = _filaPorItem.get(itemId) || Promise.resolve();
   const atual = anterior.catch(() => {}).then(fn);
   _filaPorItem.set(itemId, atual);
@@ -23,7 +23,7 @@ import { classificarImportacao } from '../lib/importacao';
 
 // Prioridade só faz sentido pra pedido ainda não concluído (aguardando
 // alguma etapa) — pedido concluído não carrega selo de prioridade.
-function _comPrioridade(r) {
+function _comPrioridade(r: any) {
   const aguardando_desde = formatarAguardandoDesde(r.aguardando_desde);
   const prioridade = (r.status === 'pendente' || r.status === 'separando')
     ? calcularPrioridade(aguardando_desde)
@@ -52,7 +52,7 @@ router.get('/pedidos', requerAuth, async (req,res) => {
     // sep_turno NULL, pra não ser contado como se já tivesse ido pro turno da manhã.
     let q=`SELECT p.*, COALESCE(NULLIF(p.total_itens,0),(SELECT COALESCE(SUM(ip.quantidade),p.itens) FROM itens_pedido ip WHERE ip.pedido_id=p.id),p.itens) AS total_itens, s.nome as separador_nome,COALESCE(p.turno_distribuicao,s.turno) as sep_turno, EXISTS(SELECT 1 FROM checkout c WHERE c.pedido_id=p.id AND c.status='concluido') AS checkout_concluido FROM pedidos p LEFT JOIN separadores s ON p.separador_id=s.id WHERE 1=1`;
     const p=[];
-    const add=(c,v)=>{p.push(v);q+=` AND ${c}$${p.length}`;};
+    const add=(c: any,v: any)=>{p.push(v);q+=` AND ${c}$${p.length}`;};
     if (separador_id)  add('p.separador_id=',separador_id);
     if (status)        add('p.status=',status);
     // Data efetiva de trabalho (usada pelo Dashboard e afins, não pelo filtro De/Até de
@@ -146,7 +146,7 @@ router.get('/pedidos', requerAuth, async (req,res) => {
    grande. Calcula a partir dos pedidos já concluídos, descontando tempo de
    espera de repositor. Cacheado em memória — a query varre todo o histórico
    de pedidos concluídos, não vale recalcular a cada requisição. */
-let _ritmoCache = { data: null, calculadoEm: 0 };
+let _ritmoCache: { data: any; calculadoEm: number } = { data: null, calculadoEm: 0 };
 const RITMO_CACHE_MS      = 30 * 60 * 1000; // 30 min
 const RITMO_MIN_AMOSTRAS  = 20; // abaixo disso, o front usa o fallback fixo
 const RITMO_CONC_LIMIAR   = 8;  // itens/SKU a partir daqui = concentração "alta"
@@ -181,7 +181,7 @@ async function _computarRitmo() {
     WHERE total_itens > 0 AND pontuacao > 0 AND duracao_min BETWEEN 0.5 AND 180
     GROUP BY 1
   `);
-  const buckets = {};
+  const buckets: Record<string, any> = {};
   for (const r of rows) {
     const amostras = parseInt(r.amostras) || 0;
     buckets[r.bucket] = {
@@ -353,7 +353,7 @@ router.get('/pedidos/lote-itens', requerAuth, async (req,res) => {
   if (!ids.length) return res.status(400).json({erro:'pedido_ids obrigatorio'});
   try {
     const pedidos = await db.all(`SELECT id,numero_pedido,total_itens,itens,caixa_lote FROM pedidos WHERE id=ANY($1)`, [ids]);
-    const caixaMap = {};
+    const caixaMap: Record<string, any> = {};
     ids.forEach((id,i) => { caixaMap[id] = i+1; });
     const itens = await db.all(
       `SELECT i.*,
@@ -379,7 +379,7 @@ router.post('/pedidos/lote/iniciar', requerAuth, async (req,res) => {
   const { data, hora } = dataHoraLocal();
   try {
     for (const id of pedido_ids) {
-      const caixa = caixas?.find(c => c.pedido_id === id)?.caixa_lote || null;
+      const caixa = caixas?.find((c: any) => c.pedido_id === id)?.caixa_lote || null;
       await pool.query(
         `UPDATE pedidos SET status='separando', iniciado_em=COALESCE(NULLIF(iniciado_em,''),$1), caixa_lote=$2 WHERE id=$3`,
         [data+'T'+hora, caixa, id]
@@ -782,7 +782,7 @@ router.delete('/pedidos', requerAuth, requerPerfil('supervisor'), requerPermissa
 });
 
 // Pedidos que já estão no sistema (com os itens), por número — base da detecção de pedido repetido
-async function _pedidosExistentes(numeros) {
+async function _pedidosExistentes(numeros: any) {
   const mapa = new Map();
   if (!numeros.length) return mapa;
   const peds = await db.all('SELECT id, numero_pedido, cliente, transportadora, aguardando_desde, estado FROM pedidos WHERE numero_pedido = ANY($1::text[])', [numeros]);
@@ -809,23 +809,23 @@ router.post('/pedidos/importar', requerAuth, requerPerfil('supervisor'), async (
   if (!dados?.length) return res.status(400).json({erro:'Nenhum pedido informado!'});
   const {data:hoje,hora}=dataHoraLocal();
   let importados=0,ignorados=0,erros=0;
-  const repetidos=[], diferentes=[];
-  const numeros=[...new Set<string>(dados.map(d=>String(d.numero_pedido)))];
+  const repetidos: any[]=[], diferentes=[];
+  const numeros=[...new Set<string>(dados.map((d: any)=>String(d.numero_pedido)))];
   // Pedido repetido (mesmo número, nada novo no arquivo) é bloqueado — não importa de novo nem mexe no que já existe
   let classif; try { classif = classificarImportacao(dados, await _pedidosExistentes(numeros.map(n=>n.trim()).filter(Boolean))); } catch(e) { classif = null; }
   if (classif) { classif.repetidos.forEach(n=>repetidos.push(n)); classif.diferentes.forEach(n=>diferentes.push(n)); }
   const bloqueados = new Set(repetidos);
   for (const numero of numeros) {
     if (bloqueados.has(numero.trim())) continue;
-    const itens=dados.filter(d=>String(d.numero_pedido)===numero);
+    const itens=dados.filter((d: any)=>String(d.numero_pedido)===numero);
     // itensReais: exclui linhas placeholder (pedidos sem itens têm codigo vazio)
-    const itensReais=itens.filter(i=>String(i.codigo||'').trim());
+    const itensReais=itens.filter((i: any)=>String(i.codigo||'').trim());
     try {
-      const ruasU=new Set(itensReais.map(i=>String(i.endereco||'').split(',')[0].trim().replace(/\d+/g,'').trim())).size;
-      const pts=Math.round(itensReais.reduce((s,i)=>s+calcularPesoCorredor(i.endereco)*(parseInt(i.quantidade)||1),0)+ruasU*2);
+      const ruasU=new Set(itensReais.map((i: any)=>String(i.endereco||'').split(',')[0].trim().replace(/\d+/g,'').trim())).size;
+      const pts=Math.round(itensReais.reduce((s: any,i: any)=>s+calcularPesoCorredor(i.endereco)*(parseInt(i.quantidade)||1),0)+ruasU*2);
       // totalItens: quando importado via HTML MIESS (sem SKU), usa o hint de quantidade da planilha HTML
       const totalItens = itensReais.length > 0
-        ? itensReais.reduce((s,i)=>s+(parseInt(i.quantidade)||1),0)
+        ? itensReais.reduce((s: any,i: any)=>s+(parseInt(i.quantidade)||1),0)
         : (parseInt(itens[0]?.total_itens_hint)||0);
       const itensCount = itensReais.length || totalItens;
       const cliente       = itens[0]?.cliente||'';
@@ -846,7 +846,7 @@ router.post('/pedidos/importar', requerAuth, requerPerfil('supervisor'), async (
            data_pedido=EXCLUDED.data_pedido,
            hora_pedido=EXCLUDED.hora_pedido
          RETURNING id, (xmax = 0) AS inserido`,
-        [numero,itensCount,totalItens,itens[0]?.endereco||'',cliente,transportadora,aguardando,pts,hoje,hora,itensReais.some(i=>String(i.codigo||'').toUpperCase()==='PRIME'),estado]);
+        [numero,itensCount,totalItens,itens[0]?.endereco||'',cliente,transportadora,aguardando,pts,hoje,hora,itensReais.some((i: any)=>String(i.codigo||'').toUpperCase()==='PRIME'),estado]);
       if (!r.rows[0]){ignorados++;continue;}
       const pid=r.rows[0].id;
       const pedidoNovo=r.rows[0].inserido;
@@ -936,14 +936,14 @@ router.post('/pedidos/distribuicao', requerAuth, requerPerfil('supervisor'), asy
       await pool.query('UPDATE pedidos SET pontuacao=$1 WHERE id=$2',[scoreBase,ped.id]);
     }
     const lim=(quantidade>0)?quantidade:pedidos.length;
-    const isDrive=p=>String(p.transportadora||'').toUpperCase().includes('DRIVE');
+    const isDrive=(p: any)=>String(p.transportadora||'').toUpperCase().includes('DRIVE');
     // DRIVE THRU tem prioridade; os demais mantêm a ordem da query (aguardando_desde ASC = mais antigo primeiro)
     const drive=pedidos.filter(isDrive).slice(0,lim);
     const outros=pedidos.filter(p=>!isDrive(p)).slice(0,Math.max(0,lim-drive.length));
     // MANTÉM ordem cronológica: Drive primeiro, depois demais por data de chegada (Maio antes de Junho).
     // O balanceamento por pontuação ocorre na escolha do separador (filas.sort abaixo), não aqui.
     const ordenados = [...drive, ...outros];
-    const sepMap={};
+    const sepMap: Record<string, any>={};
     for (const sid of separadores) {
       // Busca separadores.id vinculado ao usuario; guarda também o usuarios.id para fallback de nome
       const sepRow = await db.get('SELECT s.id,s.nome FROM separadores s WHERE s.usuario_id=$1 LIMIT 1',[sid]);
@@ -1029,7 +1029,7 @@ router.post('/pedidos/distribuicao', requerAuth, requerPerfil('supervisor'), asy
 router.post('/pedidos/distribuicao-turnos', requerAuth, requerPerfil('supervisor'), async (req,res) => {
   const {turnos, cenario, apenas_sem_sep, quantidade} = req.body;
   // turnos = [{nome:'Manhã', separadores:5}, {nome:'Tarde', separadores:4}, {nome:'Noite', separadores:3}]
-  if (!turnos?.length || turnos.some(t => !(t.separadores > 0))) {
+  if (!turnos?.length || turnos.some((t: any) => !(t.separadores > 0))) {
     return res.status(400).json({erro:'Informe os turnos com pelo menos 1 separador cada!'});
   }
   const modoDist = cenario || 'balanceado';
@@ -1067,17 +1067,17 @@ router.post('/pedidos/distribuicao-turnos', requerAuth, requerPerfil('supervisor
     }
 
     const lim = (quantidade > 0) ? quantidade : pedidos.length;
-    const isDrive = p => String(p.transportadora||'').toUpperCase().includes('DRIVE');
+    const isDrive = (p: any) => String(p.transportadora||'').toUpperCase().includes('DRIVE');
     const drive  = pedidos.filter(isDrive).slice(0, lim);
     const outros = pedidos.filter(p => !isDrive(p)).slice(0, Math.max(0, lim - drive.length));
     const ordenados = [...drive, ...outros];
 
     // LPT proporcional: balanceia (score / sep_count) entre turnos
     // Assim, turno com mais separadores recebe mais pedidos proporcionalmente.
-    const buckets = turnos.map(t => ({
+    const buckets = turnos.map((t: any) => ({
       nome: t.nome,
       separadores: t.separadores,
-      pedidos: [],
+      pedidos: [] as any[],
       pontuacao_total: 0,
       itens_total: 0,
       ruas_total: 0,
@@ -1086,7 +1086,7 @@ router.post('/pedidos/distribuicao-turnos', requerAuth, requerPerfil('supervisor
 
     for (const ped of ordenados) {
       // Métrica de carga por separador em cada turno
-      buckets.sort((a, b) => {
+      buckets.sort((a: any, b: any) => {
         const rA = a.pontuacao_total / a.separadores;
         const rB = b.pontuacao_total / b.separadores;
         if (modoDist === 'por_itens') return (a.itens_total / a.separadores) - (b.itens_total / b.separadores);
@@ -1099,10 +1099,10 @@ router.post('/pedidos/distribuicao-turnos', requerAuth, requerPerfil('supervisor
       buckets[0].skus_total += (ped._skus || 0);
     }
 
-    const totalDist = buckets.reduce((s, b) => s + b.pedidos.length, 0);
+    const totalDist = buckets.reduce((s: any, b: any) => s + b.pedidos.length, 0);
     res.json({
       cenario: modoDist,
-      plano: buckets.map(b => ({
+      plano: buckets.map((b: any) => ({
         nome: b.nome,
         separadores: b.separadores,
         pedidos: b.pedidos,
@@ -1240,7 +1240,7 @@ router.post('/pedidos/distribuicao/confirmar', requerAuth, requerPerfil('supervi
 // ficou difícil de separar no celular. Validado também em /lote/formar/confirmar.
 const TAMANHO_LOTE = 4;
 const ROTA_FISICA_LOTE = ['A','B','C','D','E','Q','P','O','N','M','L','K','J','I','H','ARARA','G','F','ZA','R','S','T','U','V','W','X','Y','Z'];
-function _ruaPrincipalLote(endereco) {
+function _ruaPrincipalLote(endereco: any) {
   const end = String(endereco||'').split(',')[0].trim().toUpperCase();
   const semVert = end.includes('/') ? end.split('/')[0].trim() : end;
   if (semVert.startsWith('ZA')) return 'ZA';
@@ -1248,7 +1248,7 @@ function _ruaPrincipalLote(endereco) {
   const m = semVert.match(/^([A-Z]+)/);
   return m ? m[1] : '';
 }
-function _rotaIdxLote(rua) {
+function _rotaIdxLote(rua: any) {
   const i = ROTA_FISICA_LOTE.indexOf(rua);
   return i === -1 ? 999 : i;
 }
@@ -1258,13 +1258,13 @@ function _rotaIdxLote(rua) {
 // public/js/geometria-estoque.js — fonte única compartilhada com o Mapa do Estoque
 // (public/js/dashboard.js), consolidada na V2 da evolução do WMS (antes cada um
 // mantinha sua própria cópia manual dos mesmos valores).
-function _distanciaRuas(a, b) { return GeometriaEstoque.distanciaRuas(a, b); }
-function _pesoRua(rua) { return GeometriaEstoque.pesoDificuldadeRua(rua); }
+function _distanciaRuas(a: any, b: any) { return GeometriaEstoque.distanciaRuas(a, b); }
+function _pesoRua(rua: any) { return GeometriaEstoque.pesoDificuldadeRua(rua); }
 // Maior distância PONDERADA entre qualquer par de ruas de uma lista — o
 // "diâmetro" da área que o separador precisa cobrir, pesado pela dificuldade
 // média das duas pontas (uma rua difícil conta mais que a mesma distância
 // entre ruas fáceis).
-function _diametroRuas(ruas) {
+function _diametroRuas(ruas: any) {
   let max = 0;
   for (let i = 0; i < ruas.length; i++) {
     for (let j = i+1; j < ruas.length; j++) {
@@ -1285,7 +1285,7 @@ function _diametroRuas(ruas) {
 // Extraído de /pedidos/lote/formar pra ser reaproveitado por /pedidos/lote/formar-manual
 // (mesmo algoritmo, só que restrito a um pool de pedidos já escolhido/bipado pelo
 // supervisor, em vez da fila inteira elegível).
-async function _prepararEAgruparPedidos(elegiveis, modoLote) {
+async function _prepararEAgruparPedidos(elegiveis: any, modoLote: any) {
   for (const p of elegiveis) {
     const itens = await db.all('SELECT endereco,quantidade,codigo FROM itens_pedido WHERE pedido_id=$1', [p.id]);
     const ruas = itens.map(i => _ruaPrincipalLote(i.endereco)).filter(Boolean);
@@ -1321,7 +1321,7 @@ async function _prepararEAgruparPedidos(elegiveis, modoLote) {
   const JANELA_BUSCA = 40;
   const restantesGlobais = [...elegiveis];
   /** @type {Array<{ pedidos: any[], [campo: string]: any }>} */
-  const lotesPreview = [];
+  const lotesPreview: Array<{ pedidos: any[]; [campo: string]: any }> = [];
   while (restantesGlobais.length) {
     const seed = restantesGlobais.shift();
     const grupo = [seed];
@@ -1333,14 +1333,14 @@ async function _prepararEAgruparPedidos(elegiveis, modoLote) {
       janela.forEach((cand, idx) => {
         const ruasTeste = [...new Set([...ruasGrupo, ...cand._ruasSet])];
         const diametro = _diametroRuas(ruasTeste);
-        const skusComuns = cand._skusSet.filter(sku => skusGrupo.has(sku)).length;
+        const skusComuns = cand._skusSet.filter((sku: any) => skusGrupo.has(sku)).length;
         const custo = diametro - skusComuns * PESO_SKU_COMUM;
         if (custo < melhorCusto) { melhorCusto = custo; melhorIdx = idx; }
       });
       const escolhido = restantesGlobais.splice(melhorIdx,1)[0];
       grupo.push(escolhido);
       ruasGrupo = [...new Set([...ruasGrupo, ...escolhido._ruasSet])];
-      escolhido._skusSet.forEach(sku => skusGrupo.add(sku));
+      escolhido._skusSet.forEach((sku: any) => skusGrupo.add(sku));
     }
     lotesPreview.push({ pedidos: grupo });
   }
@@ -1355,22 +1355,22 @@ async function _prepararEAgruparPedidos(elegiveis, modoLote) {
 // gravado na distribuição), então a data é o filtro que faz sentido aqui.
 const AGUARDANDO_DATA_SQL = `(CASE WHEN p.aguardando_desde ~ '^[0-9]{2}/[0-9]{2}/[0-9]{4}' THEN TO_TIMESTAMP(p.aguardando_desde,'DD/MM/YYYY HH24:MI')::DATE END)`;
 // Trecho " AND ..." do filtro por data de "aguardando desde"; empilha os valores em wParams.
-function _clausulaDatas(data_de, data_ate, wParams) {
+function _clausulaDatas(data_de: any, data_ate: any, wParams: any) {
   let s = '';
   if (data_de)  { wParams.push(data_de);  s += ` AND ${AGUARDANDO_DATA_SQL} >= $${wParams.length}::DATE`; }
   if (data_ate) { wParams.push(data_ate); s += ` AND ${AGUARDANDO_DATA_SQL} <= $${wParams.length}::DATE`; }
   return s;
 }
 
-function _filtroElegiveisLote({ data_de, data_ate, apenas_prime }) {
+function _filtroElegiveisLote({ data_de, data_ate, apenas_prime }: any) {
   let w = apenas_prime === true || apenas_prime === 'true'
     ? "p.status='pendente' AND p.separador_id IS NULL AND p.tem_prime=true"
     : "p.status='pendente' AND p.separador_id IS NULL AND (p.tem_prime=false OR p.tem_prime IS NULL)";
-  const wParams = [];
+  const wParams: any[] = [];
   w += _clausulaDatas(data_de, data_ate, wParams);
   return { w, wParams };
 }
-const _ehDriveThru = p => String(p.transportadora || '').toUpperCase().includes('DRIVE');
+const _ehDriveThru = (p: any) => String(p.transportadora || '').toUpperCase().includes('DRIVE');
 
 // Resumo único da distribuição, valendo pra TODOS os modos (Automática, Por Turno,
 // Manual, Lotes): do que entrou no período, quanto já tem colaborador e quanto falta.
@@ -1379,7 +1379,7 @@ const _ehDriveThru = p => String(p.transportadora || '').toUpperCase().includes(
 router.get('/pedidos/distribuicao/resumo', requerAuth, requerPerfil('supervisor'), async (req,res) => {
   try {
     const { data_de, data_ate } = req.query as Record<string, string>;
-    const params = [];
+    const params: any[] = [];
     const w = `p.status IN ('pendente','separando','concluido')${_clausulaDatas(data_de, data_ate, params)}`;
     const SEM_COLAB = "p.status='pendente' AND p.separador_id IS NULL";
     const DRIVE = "UPPER(COALESCE(p.transportadora,'')) LIKE '%DRIVE%'";
@@ -1392,7 +1392,7 @@ router.get('/pedidos/distribuicao/resumo', requerAuth, requerPerfil('supervisor'
               COUNT(*) FILTER (WHERE ${SEM_COLAB} AND COALESCE(p.tem_prime,false)=false AND NOT ${DRIVE}) AS faltam_normais,
               COUNT(*) FILTER (WHERE ${SEM_COLAB} AND COALESCE(p.turno_distribuicao,'')<>'') AS marcados_turno
        FROM pedidos p WHERE ${w}`, params);
-    const n = k => parseInt(r?.[k]) || 0;
+    const n = (k: any) => parseInt(r?.[k]) || 0;
     res.json({
       total: n('total'), distribuidos: n('distribuidos'), faltam: n('faltam'),
       faltam_normais: n('faltam_normais'), faltam_prime: n('faltam_prime'),
@@ -1447,13 +1447,13 @@ router.post('/pedidos/lote/formar', requerAuth, requerPerfil('supervisor'), asyn
 
     // 3. Atribui cada lote ao separador mais atrasado na fórmula de 3 eixos
     //    (mesma lógica de /pedidos/distribuicao, aplicada ao lote inteiro).
-    const sepMap = {};
+    const sepMap: Record<string, any> = {};
     for (const sid of separadores) {
       const sepRow = await db.get('SELECT s.id,s.nome FROM separadores s WHERE s.usuario_id=$1 LIMIT 1', [sid]);
       const userRow = await db.get('SELECT id,nome FROM usuarios WHERE id=$1', [sid]);
       sepMap[sid] = { sepDbId: sepRow?.id || null, nome: sepRow?.nome || userRow?.nome || `Sep ${sid}` };
     }
-    const filas = separadores.map(sid => ({
+    const filas = separadores.map((sid: any) => ({
       separador_id: sid, separador_nome: sepMap[sid].nome, sep_db_id: sepMap[sid].sepDbId,
       pontuacao_total: 0, itens_total: 0, pedidos_total: 0,
     }));
@@ -1468,14 +1468,14 @@ router.post('/pedidos/lote/formar', requerAuth, requerPerfil('supervisor'), asyn
     const totalItensLotes  = lotesPreview.reduce((s,l) => s + l.pedidos.reduce((s2,p) => s2+p._itensQtd, 0), 0) || 1;
     const totalPedidosLotes= lotesPreview.reduce((s,l) => s + l.pedidos.length, 0) || 1;
     const n = filas.length || 1;
-    const alvoPts     = (filas.reduce((s,f)=>s+f.pontuacao_total,0) + totalPtsLotes)     / n;
-    const alvoItens   = (filas.reduce((s,f)=>s+f.itens_total,0)     + totalItensLotes)   / n;
-    const alvoPedidos = (filas.reduce((s,f)=>s+f.pedidos_total,0)   + totalPedidosLotes) / n;
+    const alvoPts     = (filas.reduce((s: any,f: any)=>s+f.pontuacao_total,0) + totalPtsLotes)     / n;
+    const alvoItens   = (filas.reduce((s: any,f: any)=>s+f.itens_total,0)     + totalItensLotes)   / n;
+    const alvoPedidos = (filas.reduce((s: any,f: any)=>s+f.pedidos_total,0)   + totalPedidosLotes) / n;
 
     for (const lote of lotesPreview) {
       const lotePts   = lote.pedidos.reduce((s,p) => s+p._pontuacao, 0);
       const loteItens = lote.pedidos.reduce((s,p) => s+p._itensQtd, 0);
-      filas.sort((a,b) => modoLote === 'por_itens'
+      filas.sort((a: any,b: any) => modoLote === 'por_itens'
         ? a.itens_total - b.itens_total
         : ((a.pontuacao_total/alvoPts) + (a.itens_total/alvoItens) + (a.pedidos_total/alvoPedidos))
           - ((b.pontuacao_total/alvoPts) + (b.itens_total/alvoItens) + (b.pedidos_total/alvoPedidos)));
@@ -1559,7 +1559,7 @@ router.post('/pedidos/lote/formar-manual', requerAuth, requerPerfil('supervisor'
          p.id ASC`,
       [ids]
     );
-    const isDrive = p => String(p.transportadora||'').toUpperCase().includes('DRIVE');
+    const isDrive = (p: any) => String(p.transportadora||'').toUpperCase().includes('DRIVE');
     const encontradosIds = new Set(pedidos.map(p => p.id));
     const naoEncontrados = ids.filter(id => !encontradosIds.has(id));
     const naoElegiveis = pedidos.filter(p => p.status !== 'pendente' || p.separador_id || isDrive(p));
@@ -1614,14 +1614,14 @@ router.post('/pedidos/lote/formar-manual', requerAuth, requerPerfil('supervisor'
 router.post('/pedidos/lote/formar/confirmar', requerAuth, requerPerfil('supervisor'), async (req,res) => {
   const { lotes } = req.body;
   if (!lotes?.length) return res.status(400).json({erro:'Nenhum lote informado!'});
-  const grande = lotes.find(l => (l.pedidos||[]).length > TAMANHO_LOTE);
+  const grande = lotes.find((l: any) => (l.pedidos||[]).length > TAMANHO_LOTE);
   if (grande) return res.status(400).json({erro:`Lote com ${(grande.pedidos||[]).length} pedidos — o máximo é ${TAMANHO_LOTE} por lote.`});
   const client = await pool.connect();
   let lotesGravados = 0, pedidosGravados = 0;
   try {
     await client.query('BEGIN');
     for (const lote of lotes) {
-      const ids = (lote.pedidos||[]).map(p => p.id).filter(Boolean);
+      const ids = (lote.pedidos||[]).map((p: any) => p.id).filter(Boolean);
       if (!ids.length) continue;
       const porUsuario = await client.query('SELECT id FROM separadores WHERE usuario_id=$1 LIMIT 1', [lote.separador_id]);
       const dbId = porUsuario.rows[0]?.id || null;

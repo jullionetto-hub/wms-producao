@@ -90,7 +90,7 @@ app.use('/', apiRouter);
 
 // ── Handlers de erro ──────────────────────────────────────────────────────────
 app.use((_req, res) => res.status(404).json({ erro: 'Rota não encontrada.' }));
-app.use((err, req, res, _next) => {
+app.use((err: any, req: any, res: any, _next: any) => {
   log.error({ err, url: req.url, method: req.method }, 'unhandled-error');
   res.status(500).json({ erro: isProd ? 'Erro interno do servidor.' : err.message });
 });

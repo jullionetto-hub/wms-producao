@@ -124,7 +124,7 @@ router.post('/relatorio/gerar', requerAuth, requerPerfil('supervisor'), async (r
 
 // Registra que o usuário logado viu este diário (uma linha por pessoa; atualiza a hora).
 // Nunca derruba a resposta da tela por causa do registro.
-async function registrarVisualizacaoDiario(req, diarioId) {
+async function registrarVisualizacaoDiario(req: any, diarioId: any) {
   const u = req.session?.usuario;
   if (!u || !diarioId) return;
   try {
@@ -172,7 +172,7 @@ router.get('/diario/anterior', requerAuth, requerPerfil('supervisor'), async (re
         `SELECT * FROM diario_bordo WHERE turno=$1 AND data IN ($2,$3) ORDER BY criado_em DESC`,
         [turnoAnterior, dataAnterior, data]
       );
-      const horaLocal = c => Number(new Date(c.criado_em).toLocaleString('en-GB', { timeZone: 'America/Sao_Paulo', hour: '2-digit', hour12: false }));
+      const horaLocal = (c: any) => Number(new Date(c.criado_em).toLocaleString('en-GB', { timeZone: 'America/Sao_Paulo', hour: '2-digit', hour12: false }));
       anterior = candidatos.find(c => c.data !== data || horaLocal(c) < 12);
     } else {
       turnoAnterior = turnos[idxT - 1];
@@ -293,7 +293,7 @@ const FOTO_MAX_BYTES = 2 * 1024 * 1024;
 const FOTO_MAX_POR_SECAO = 6;
 const FOTO_TIPOS = ['image/jpeg', 'image/png', 'image/webp'];
 // Foto do turno só mexe enquanto o diário é rascunho; foto da validação só enquanto aguarda validação.
-const fotoEditavel = (origem, status) => origem === 'validacao' ? ['enviado', 'expirado'].includes(status) : status === 'rascunho';
+const fotoEditavel = (origem: any, status: any) => origem === 'validacao' ? ['enviado', 'expirado'].includes(status) : status === 'rascunho';
 
 router.get('/diario/:id/fotos', requerAuth, requerPerfil('supervisor'), async (req, res) => {
   try {
@@ -443,7 +443,7 @@ router.get('/diario/validacao/pendente', requerAuth, requerPerfil('supervisor'),
     const supervisorAtual = req.session?.usuario?.nome || '';
     const turnoAtual = normalizarTurno(req.session?.usuario?.turno);
     // Manhã valida Noite, Tarde valida Manhã, Noite valida Tarde
-    const PREV_TURNO = { Tarde: 'Manha', Noite: 'Tarde', Manha: 'Noite' };
+    const PREV_TURNO: Record<string, string> = { Tarde: 'Manha', Noite: 'Tarde', Manha: 'Noite' };
     // Gestor acompanha qualquer turno; supervisor só valida o turno anterior ao seu
     const ehGestor = req.session?.usuario?.perfil === 'gestor';
     const turnoParaValidar = ehGestor ? null : (PREV_TURNO[turnoAtual] || null);
@@ -622,17 +622,17 @@ router.get('/relatorio/analitico', requerAuth, requerPerfil('supervisor'), async
     `, params);
 
     // ── Helpers ───────────────────────────────────────────────────
-    const minutesBetween = (s, e) => {
+    const minutesBetween = (s: any, e: any) => {
       try { const m = (+new Date(e) - +new Date(s)) / 60000; return (m > 0 && m < 600) ? m : null; } catch { return null; }
     };
-    const minutesTime = (s, e) => {
+    const minutesTime = (s: any, e: any) => {
       try {
         let m = (+new Date(`2000-01-01T${e}`) - +new Date(`2000-01-01T${s}`)) / 60000;
         if (m < 0) m += 1440;
         return (m > 0 && m < 300) ? m : null;
       } catch { return null; }
     };
-    const avgArr = a => a.length ? Math.round((a.reduce((s,v)=>s+v,0)/a.length)*10)/10 : null;
+    const avgArr = (a: any) => a.length ? Math.round((a.reduce((s: any,v: any)=>s+v,0)/a.length)*10)/10 : null;
 
     // ── Separação — baseado no lote do turno ─────────────────────
     const sepConcluidos = pedidosDistribuidos.filter(p => p.status === 'concluido');
@@ -644,7 +644,7 @@ router.get('/relatorio/analitico', requerAuth, requerPerfil('supervisor'), async
     // ── Complexidade — baseada no lote do turno ───────────────────
     const facil_set = new Set(['A','B','C','D','E','P','Q','R','S','T','U']);
     const medio_set = new Set(['M','N','O','V','W','X','Y','Z']);
-    const complexidade = {
+    const complexidade: Record<string, any> = {
       facil:   { pedidos: 0, itens: 0 },
       medio:   { pedidos: 0, itens: 0 },
       dificil: { pedidos: 0, itens: 0 },
@@ -719,7 +719,7 @@ router.get('/relatorio/analitico', requerAuth, requerPerfil('supervisor'), async
     }).sort((a,b) => a.nome.localeCompare(b.nome));
 
     // ── Ranking de turnos — usa sep_turno (turno do separador que trabalhou o pedido)
-    const tMap = { Manha:{label:'Manhã',pedidos:0,itens:0,pontuacao:0,tempos:[]}, Tarde:{label:'Tarde',pedidos:0,itens:0,pontuacao:0,tempos:[]}, Noite:{label:'Noite',pedidos:0,itens:0,pontuacao:0,tempos:[]} };
+    const tMap: Record<string, any> = { Manha:{label:'Manhã',pedidos:0,itens:0,pontuacao:0,tempos:[]}, Tarde:{label:'Tarde',pedidos:0,itens:0,pontuacao:0,tempos:[]}, Noite:{label:'Noite',pedidos:0,itens:0,pontuacao:0,tempos:[]} };
     // Para o ranking usa TODOS os concluídos do dia (não só o turno filtrado)
     pedidos.filter(p => p.status === 'concluido' && p.sep_nome).forEach(p => {
       const t = p.sep_turno || 'Manha';
@@ -736,7 +736,7 @@ router.get('/relatorio/analitico', requerAuth, requerPerfil('supervisor'), async
     })).sort((a,b) => b.pedidos - a.pedidos);
 
     // ── Por hora ──────────────────────────────────────────────────
-    const hMap = {};
+    const hMap: Record<string, any> = {};
     sepConcluidos.forEach(p => {
       if (!p.hora_pedido) return;
       const h = p.hora_pedido.substring(0,2);
@@ -753,7 +753,7 @@ router.get('/relatorio/analitico', requerAuth, requerPerfil('supervisor'), async
     const por_transportadora = Object.entries(trMap).sort((a,b)=>b[1]-a[1]).slice(0,10).map(([t,n])=>({transportadora:t,total:n}));
 
     // ── Por dia (para ranges) ─────────────────────────────────────
-    const dMap = {};
+    const dMap: Record<string, any> = {};
     sepConcluidos.forEach(p => { if (p.data_pedido) dMap[p.data_pedido]=(dMap[p.data_pedido]||0)+1; });
     const por_dia = Object.entries(dMap).sort().map(([d,t])=>({data:d,total:t}));
 
@@ -771,7 +771,7 @@ router.get('/relatorio/analitico', requerAuth, requerPerfil('supervisor'), async
     });
 
     // ── Por dia — total importado ─────────────────────────────────
-    const por_dia_total = {};
+    const por_dia_total: Record<string, any> = {};
     pedidos.forEach(p=>{ if(p.data_pedido) por_dia_total[p.data_pedido]=(por_dia_total[p.data_pedido]||0)+1; });
 
     res.json({

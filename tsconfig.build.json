@@ -7,7 +7,7 @@
     "allowJs": false,
     "noEmit": false,
     "strict": false,
-    "noImplicitAny": false,
+    "noImplicitAny": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,

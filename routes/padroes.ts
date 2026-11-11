@@ -10,22 +10,22 @@ import { requerAuth, requerPerfil } from '../lib/auth';
 // investigar. Os sinais são indícios, não veredito — o sistema não distingue
 // erro humano de produto fora de lugar, por exemplo.
 
-function media(arr) { return arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null; }
-function mediana(arr) {
+function media(arr: any) { return arr.length ? arr.reduce((a: any, b: any) => a + b, 0) / arr.length : null; }
+function mediana(arr: any) {
   if (!arr.length) return null;
   const s = [...arr].sort((a, b) => a - b);
   const meio = Math.floor(s.length / 2);
   return s.length % 2 ? s[meio] : (s[meio - 1] + s[meio]) / 2;
 }
-function desvioPadrao(arr, m) {
+function desvioPadrao(arr: any, m: any) {
   if (arr.length < 2) return 0;
-  const variancia = arr.reduce((s, v) => s + (v - m) ** 2, 0) / (arr.length - 1);
+  const variancia = arr.reduce((s: any, v: any) => s + (v - m) ** 2, 0) / (arr.length - 1);
   return Math.sqrt(variancia);
 }
 
-const NIVEL_PESO = { critico: 3, atencao: 2, melhoria: 1, ok: 0 };
+const NIVEL_PESO: Record<string, number> = { critico: 3, atencao: 2, melhoria: 1, ok: 0 };
 
-async function calcularPadroes({ ini, fim, turno }) {
+async function calcularPadroes({ ini, fim, turno }: any) {
   if (!ini || !fim) throw Object.assign(new Error('Informe ini e fim.'), { status: 400 });
 
   const turnoFiltroSep = turno ? ` AND REPLACE(COALESCE(u.turno, s.turno, 'Manha'), 'Ã£', 'a') = $3` : '';
@@ -135,12 +135,12 @@ async function calcularPadroes({ ini, fim, turno }) {
   const idxDesfeitos    = Object.fromEntries(desfeitos.filter(r => r.nome).map(r => [r.nome, r.desfeitos]));
 
   // ── Outlier de tempo — z-score dentro do mesmo turno ──
-  const temposPorTurno = {};
+  const temposPorTurno: Record<string, any> = {};
   tempoColab.forEach(r => {
     if (r.tempo_medio_min == null) return;
     (temposPorTurno[r.turno] ||= []).push(parseFloat(r.tempo_medio_min));
   });
-  const statsTurno = {};
+  const statsTurno: Record<string, any> = {};
   Object.entries(temposPorTurno).forEach(([t, arr]) => {
     const m = media(arr);
     statsTurno[t] = { media: m, desvio: desvioPadrao(arr, m) };
@@ -149,7 +149,7 @@ async function calcularPadroes({ ini, fim, turno }) {
   // ── Tendência — 1ª metade x 2ª metade dos dias do período ──
   const diasUnicos = [...new Set(porColabDia.map(r => r.data))].sort();
   const meio = diasUnicos[Math.floor(diasUnicos.length / 2)];
-  const porColabFase = {};
+  const porColabFase: Record<string, any> = {};
   porColabDia.forEach(r => {
     if (r.tempo_medio == null || !r.colaborador) return;
     const fase = r.data < meio ? 'a' : 'b';
@@ -157,14 +157,14 @@ async function calcularPadroes({ ini, fim, turno }) {
   });
 
   // ── Busca Final / falta por colaborador ──
-  const buscaFinalPorColab = {};
+  const buscaFinalPorColab: Record<string, any> = {};
   avisosRows.forEach(r => {
     if (!r.nome) return;
     const bf = (buscaFinalPorColab[r.nome] ||= { avisos: 0, buscaFinal: 0, encontrado: 0 });
     bf.avisos++;
     let hist = [];
     try { hist = Array.isArray(r.historico) ? r.historico : (r.historico ? JSON.parse(r.historico) : []); } catch {}
-    const foiBuscaFinal = hist.some(h => h && h.acao === 'busca_final_iniciada');
+    const foiBuscaFinal = hist.some((h: any) => h && h.acao === 'busca_final_iniciada');
     if (foiBuscaFinal) {
       bf.buscaFinal++;
       if (r.status === 'abastecido') bf.encontrado++;
@@ -172,7 +172,7 @@ async function calcularPadroes({ ini, fim, turno }) {
   });
 
   // ── Ocorrências por colaborador ──
-  const ocorrPorColab = {};
+  const ocorrPorColab: Record<string, any> = {};
   ocorrencias.forEach(o => {
     if (!o.nome) return;
     (ocorrPorColab[o.nome] ||= []).push(o);
@@ -274,7 +274,7 @@ async function calcularPadroes({ ini, fim, turno }) {
     // 5) Reincidência em ocorrências formais
     const ocs = ocorrPorColab[nome];
     if (ocs && ocs.length >= 2) {
-      const graves = ocs.filter(o => o.gravidade === 'grave').length;
+      const graves = ocs.filter((o: any) => o.gravidade === 'grave').length;
       const nivel = ocs.length >= 4 || graves >= 2 ? 'critico' : 'atencao';
       sinais.push({ tipo: 'reincidencia', nivel,
         texto: `${ocs.length} ocorrência(s) registrada(s) no período${graves ? ` (${graves} grave(s))` : ''}.`,
@@ -309,7 +309,7 @@ router.get('/performance/padroes', requerAuth, requerPerfil('supervisor', 'gesto
 
 // ── Fase 2 (opcional) — resumo em linguagem natural via API da Claude ──────
 // Nunca manda dado bruto/PII pro modelo: só os sinais já calculados acima.
-let _anthropicClient;
+let _anthropicClient: any;
 function getAnthropicClient() {
   if (!process.env.ANTHROPIC_API_KEY) return null;
   if (!_anthropicClient) {
@@ -350,7 +350,7 @@ router.get('/performance/padroes/resumo-ia', requerAuth, requerPerfil('superviso
     if (msg.stop_reason === 'refusal') {
       return res.status(502).json({ erro: 'O modelo recusou gerar o resumo para este período.' });
     }
-    const texto = msg.content.find(b => b.type === 'text')?.text || '';
+    const texto = msg.content.find((b: any) => b.type === 'text')?.text || '';
     res.json({ resumo: texto });
   } catch (e) {
     console.error('performance/padroes/resumo-ia:', e.message);

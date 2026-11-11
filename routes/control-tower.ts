@@ -36,7 +36,7 @@ async function metasConfiguradas() {
 // Produção da última hora + volume restante + itens médios/pedido hoje (pra
 // converter a meta de pedidos/turno em itens/h) — uma consulta por etapa,
 // todas cobrindo o mesmo "hoje" e "últimos 60 min" em horário de São Paulo.
-async function metricasSeparacao(hoje) {
+async function metricasSeparacao(hoje: any) {
   const [producaoAtual, restante, mediaItens] = await Promise.all([
     db.get(`SELECT COALESCE(SUM(total_itens),0)::int AS itens FROM pedidos
       WHERE status='concluido' AND concluido_em <> ''
@@ -49,7 +49,7 @@ async function metricasSeparacao(hoje) {
   return { producaoAtualH: producaoAtual.itens, volumeRestante: restante.itens, mediaItensPedido: mediaItens.media };
 }
 
-async function metricasCheckout(hoje) {
+async function metricasCheckout(hoje: any) {
   const [producaoAtual, restante, mediaItens] = await Promise.all([
     db.get(`SELECT COALESCE(SUM(p.total_itens),0)::int AS itens
       FROM checkout c JOIN pedidos p ON p.id=c.pedido_id
@@ -65,7 +65,7 @@ async function metricasCheckout(hoje) {
   return { producaoAtualH: producaoAtual.itens, volumeRestante: restante.itens, mediaItensPedido: mediaItens.media };
 }
 
-async function metricasEmbalagem(hoje) {
+async function metricasEmbalagem(hoje: any) {
   const [producaoAtual, restante, mediaItens] = await Promise.all([
     db.get(`SELECT COALESCE(SUM(p.total_itens),0)::int AS itens
       FROM embalagem e LEFT JOIN pedidos p ON p.id=e.pedido_id
@@ -83,7 +83,7 @@ async function metricasEmbalagem(hoje) {
 // Reposição não tem "pedido"/"itens médios por pedido" — cada aviso já É um
 // item (com sua própria quantidade), então a meta (pedidos/turno) é
 // convertida 1 aviso ≈ 1 "pedido" pra manter a mesma fórmula de conversão.
-async function metricasReposicao(hoje) {
+async function metricasReposicao(hoje: any) {
   const [producaoAtual, restante] = await Promise.all([
     db.get(`SELECT COALESCE(SUM(quantidade),0)::int AS itens FROM avisos_repositor
       WHERE status IN ('reposto','abastecido','encontrado','subiu') AND hora_reposto <> '' AND data_aviso=$1

@@ -66,16 +66,16 @@ const gGestor  = requerPerfil('gestor');                // "referência": RACI, 
    necessário — não é mais chamado no dia a dia.
 ══════════════════════════════════════════════════════════════════════════ */
 
-const wrap = fn => async (req, res) => {
+const wrap = (fn: any) => async (req: any, res: any) => {
   try { await fn(req, res); }
   catch (e) { res.status(500).json({ erro: e.message }); }
 };
 
 /* Colaboradores */
-router.get('/matriz/colaboradores', requerAuth, gLeitura, wrap(async (req, res) => {
+router.get('/matriz/colaboradores', requerAuth, gLeitura, wrap(async (req: any, res: any) => {
   res.json(await db.all('SELECT id,nome,cargo,tier,area,turno,ativo,vaga FROM mz_colaboradores ORDER BY nome'));
 }));
-router.post('/matriz/colaboradores', requerAuth, gLeitura, wrap(async (req, res) => {
+router.post('/matriz/colaboradores', requerAuth, gLeitura, wrap(async (req: any, res: any) => {
   const { nome, cargo, tier, area, turno, ativo, vaga } = req.body;
   if (!nome) return res.status(400).json({ erro: 'nome obrigatório' });
   const r = await pool.query(
@@ -84,7 +84,7 @@ router.post('/matriz/colaboradores', requerAuth, gLeitura, wrap(async (req, res)
   );
   res.status(201).json(r.rows[0]);
 }));
-router.patch('/matriz/colaboradores/:id', requerAuth, gLeitura, wrap(async (req, res) => {
+router.patch('/matriz/colaboradores/:id', requerAuth, gLeitura, wrap(async (req: any, res: any) => {
   const atual = await db.get('SELECT * FROM mz_colaboradores WHERE id=$1', [req.params.id]);
   if (!atual) return res.status(404).json({ erro: 'Colaborador não encontrado' });
   const campos = ['nome','cargo','tier','area','turno','ativo','vaga'];
@@ -95,16 +95,16 @@ router.patch('/matriz/colaboradores/:id', requerAuth, gLeitura, wrap(async (req,
   );
   res.json(r.rows[0]);
 }));
-router.delete('/matriz/colaboradores/:id', requerAuth, gLeitura, wrap(async (req, res) => {
+router.delete('/matriz/colaboradores/:id', requerAuth, gLeitura, wrap(async (req: any, res: any) => {
   await pool.query('DELETE FROM mz_colaboradores WHERE id=$1', [req.params.id]);
   res.status(204).end();
 }));
 
 /* Feedbacks */
-router.get('/matriz/feedbacks', requerAuth, gLeitura, wrap(async (req, res) => {
+router.get('/matriz/feedbacks', requerAuth, gLeitura, wrap(async (req: any, res: any) => {
   res.json(await db.all('SELECT *, criado_em AS created_at FROM mz_feedbacks ORDER BY criado_em DESC'));
 }));
-router.post('/matriz/feedbacks', requerAuth, gLeitura, wrap(async (req, res) => {
+router.post('/matriz/feedbacks', requerAuth, gLeitura, wrap(async (req: any, res: any) => {
   const b = req.body;
   if (!b.colaborador_id) return res.status(400).json({ erro: 'colaborador_id obrigatório' });
   const autor_nome = req.session?.usuario?.nome || '';
@@ -122,7 +122,7 @@ router.post('/matriz/feedbacks', requerAuth, gLeitura, wrap(async (req, res) => 
   );
   res.status(201).json(r.rows[0]);
 }));
-router.patch('/matriz/feedbacks/:id', requerAuth, gLeitura, wrap(async (req, res) => {
+router.patch('/matriz/feedbacks/:id', requerAuth, gLeitura, wrap(async (req: any, res: any) => {
   const atual = await db.get('SELECT * FROM mz_feedbacks WHERE id=$1', [req.params.id]);
   if (!atual) return res.status(404).json({ erro: 'Feedback não encontrado' });
   const campos = ['mes','cargo_snapshot','area_snapshot','meta','entregue','pontos_positivos','pontos_construtivos',
@@ -138,16 +138,16 @@ router.patch('/matriz/feedbacks/:id', requerAuth, gLeitura, wrap(async (req, res
   );
   res.json(r.rows[0]);
 }));
-router.delete('/matriz/feedbacks/:id', requerAuth, gLeitura, wrap(async (req, res) => {
+router.delete('/matriz/feedbacks/:id', requerAuth, gLeitura, wrap(async (req: any, res: any) => {
   await pool.query('DELETE FROM mz_feedbacks WHERE id=$1', [req.params.id]);
   res.status(204).end();
 }));
 
 /* Classificações mensais (upsert único por colaborador+período) */
-router.get('/matriz/classificacoes', requerAuth, gLeitura, wrap(async (req, res) => {
+router.get('/matriz/classificacoes', requerAuth, gLeitura, wrap(async (req: any, res: any) => {
   res.json(await db.all('SELECT * FROM mz_classificacoes'));
 }));
-router.put('/matriz/classificacoes', requerAuth, gLeitura, wrap(async (req, res) => {
+router.put('/matriz/classificacoes', requerAuth, gLeitura, wrap(async (req: any, res: any) => {
   const { colaborador_id, periodo_label, absenteismo, performance, comportamento } = req.body;
   if (!colaborador_id || !periodo_label) return res.status(400).json({ erro: 'colaborador_id e periodo_label obrigatórios' });
   const r = await pool.query(
@@ -162,10 +162,10 @@ router.put('/matriz/classificacoes', requerAuth, gLeitura, wrap(async (req, res)
 }));
 
 /* Ausências */
-router.get('/matriz/ausencias', requerAuth, gLeitura, wrap(async (req, res) => {
+router.get('/matriz/ausencias', requerAuth, gLeitura, wrap(async (req: any, res: any) => {
   res.json(await db.all('SELECT id,colaborador_id,periodo_label,dias,data,motivo FROM mz_ausencias'));
 }));
-router.post('/matriz/ausencias', requerAuth, gLeitura, wrap(async (req, res) => {
+router.post('/matriz/ausencias', requerAuth, gLeitura, wrap(async (req: any, res: any) => {
   const b = req.body;
   if (!b.colaborador_id || !b.periodo_label) return res.status(400).json({ erro: 'colaborador_id e periodo_label obrigatórios' });
   const r = await pool.query(
@@ -174,7 +174,7 @@ router.post('/matriz/ausencias', requerAuth, gLeitura, wrap(async (req, res) => 
   );
   res.status(201).json(r.rows[0]);
 }));
-router.patch('/matriz/ausencias/:id', requerAuth, gLeitura, wrap(async (req, res) => {
+router.patch('/matriz/ausencias/:id', requerAuth, gLeitura, wrap(async (req: any, res: any) => {
   const atual = await db.get('SELECT * FROM mz_ausencias WHERE id=$1', [req.params.id]);
   if (!atual) return res.status(404).json({ erro: 'Registro não encontrado' });
   const campos = ['periodo_label','dias','data','motivo'];
@@ -185,16 +185,16 @@ router.patch('/matriz/ausencias/:id', requerAuth, gLeitura, wrap(async (req, res
   );
   res.json(r.rows[0]);
 }));
-router.delete('/matriz/ausencias/:id', requerAuth, gLeitura, wrap(async (req, res) => {
+router.delete('/matriz/ausencias/:id', requerAuth, gLeitura, wrap(async (req: any, res: any) => {
   await pool.query('DELETE FROM mz_ausencias WHERE id=$1', [req.params.id]);
   res.status(204).end();
 }));
 
 /* Banco de horas */
-router.get('/matriz/banco-horas', requerAuth, gLeitura, wrap(async (req, res) => {
+router.get('/matriz/banco-horas', requerAuth, gLeitura, wrap(async (req: any, res: any) => {
   res.json(await db.all('SELECT id,colaborador_id,saldo_atual,delta FROM mz_banco_horas'));
 }));
-router.put('/matriz/banco-horas', requerAuth, gLeitura, wrap(async (req, res) => {
+router.put('/matriz/banco-horas', requerAuth, gLeitura, wrap(async (req: any, res: any) => {
   const { colaborador_id, saldo_atual, delta } = req.body;
   if (!colaborador_id) return res.status(400).json({ erro: 'colaborador_id obrigatório' });
   const r = await pool.query(
@@ -205,12 +205,12 @@ router.put('/matriz/banco-horas', requerAuth, gLeitura, wrap(async (req, res) =>
   );
   res.json(r.rows[0]);
 }));
-router.get('/matriz/banco-horas/periodo', requerAuth, gLeitura, wrap(async (req, res) => {
+router.get('/matriz/banco-horas/periodo', requerAuth, gLeitura, wrap(async (req: any, res: any) => {
   let p = await db.get('SELECT inicio_label,fim_label FROM mz_banco_horas_periodo LIMIT 1');
   if (!p) { await pool.query(`INSERT INTO mz_banco_horas_periodo (inicio_label,fim_label) VALUES ('','')`); p = { inicio_label:'', fim_label:'' }; }
   res.json(p);
 }));
-router.put('/matriz/banco-horas/periodo', requerAuth, gGestor, wrap(async (req, res) => {
+router.put('/matriz/banco-horas/periodo', requerAuth, gGestor, wrap(async (req: any, res: any) => {
   const { inicio_label, fim_label } = req.body;
   const existente = await db.get('SELECT id FROM mz_banco_horas_periodo LIMIT 1');
   if (existente) await pool.query('UPDATE mz_banco_horas_periodo SET inicio_label=$1, fim_label=$2 WHERE id=$3', [inicio_label||'', fim_label||'', existente.id]);
@@ -219,10 +219,10 @@ router.put('/matriz/banco-horas/periodo', requerAuth, gGestor, wrap(async (req, 
 }));
 
 /* Férias */
-router.get('/matriz/ferias', requerAuth, gLeitura, wrap(async (req, res) => {
+router.get('/matriz/ferias', requerAuth, gLeitura, wrap(async (req: any, res: any) => {
   res.json(await db.all('SELECT id,colaborador_id,tipo,data_inicio,dias FROM mz_ferias'));
 }));
-router.put('/matriz/ferias', requerAuth, gLeitura, wrap(async (req, res) => {
+router.put('/matriz/ferias', requerAuth, gLeitura, wrap(async (req: any, res: any) => {
   const { colaborador_id, tipo, data_inicio, dias } = req.body;
   if (!colaborador_id || !['limite','p1','p2'].includes(tipo)) return res.status(400).json({ erro: 'colaborador_id e tipo (limite|p1|p2) obrigatórios' });
   const r = await pool.query(
@@ -250,10 +250,10 @@ async function _carregarRaci() {
   }));
 }
 
-router.get('/matriz/raci', requerAuth, gLeitura, wrap(async (req, res) => {
+router.get('/matriz/raci', requerAuth, gLeitura, wrap(async (req: any, res: any) => {
   res.json(await _carregarRaci());
 }));
-router.post('/matriz/raci', requerAuth, gGestor, wrap(async (req, res) => {
+router.post('/matriz/raci', requerAuth, gGestor, wrap(async (req: any, res: any) => {
   const { nome, ordem, roles } = req.body;
   if (!nome) return res.status(400).json({ erro: 'nome obrigatório' });
   const client = await pool.connect();
@@ -274,14 +274,14 @@ router.post('/matriz/raci', requerAuth, gGestor, wrap(async (req, res) => {
   const [area] = (await _carregarRaci()).filter(a => a.id === areaId);
   res.status(201).json(area);
 }));
-router.post('/matriz/raci/areas/:areaId/roles', requerAuth, gGestor, wrap(async (req, res) => {
+router.post('/matriz/raci/areas/:areaId/roles', requerAuth, gGestor, wrap(async (req: any, res: any) => {
   const { nome } = req.body;
   if (!nome) return res.status(400).json({ erro: 'nome obrigatório' });
   const cnt = await db.get('SELECT COUNT(*)::int AS n FROM mz_roles WHERE area_id=$1', [req.params.areaId]);
   const r = await pool.query('INSERT INTO mz_roles (area_id,nome,ordem) VALUES ($1,$2,$3) RETURNING id,nome,ordem', [req.params.areaId, nome, cnt.n]);
   res.status(201).json(r.rows[0]);
 }));
-router.post('/matriz/raci/areas/:areaId/atividades', requerAuth, gGestor, wrap(async (req, res) => {
+router.post('/matriz/raci/areas/:areaId/atividades', requerAuth, gGestor, wrap(async (req: any, res: any) => {
   const { nome, ordem, categoria, sugestao, status } = req.body;
   if (!nome) return res.status(400).json({ erro: 'nome obrigatório' });
   const client = await pool.connect();
@@ -303,7 +303,7 @@ router.post('/matriz/raci/areas/:areaId/atividades', requerAuth, gGestor, wrap(a
   }
   res.status(201).json(atividade);
 }));
-router.patch('/matriz/raci/atividades/:id', requerAuth, gGestor, wrap(async (req, res) => {
+router.patch('/matriz/raci/atividades/:id', requerAuth, gGestor, wrap(async (req: any, res: any) => {
   const atual = await db.get('SELECT * FROM mz_atividades WHERE id=$1', [req.params.id]);
   if (!atual) return res.status(404).json({ erro: 'Atividade não encontrada' });
   const campos = ['nome','ordem','categoria','sugestao'];
@@ -312,11 +312,11 @@ router.patch('/matriz/raci/atividades/:id', requerAuth, gGestor, wrap(async (req
     [merged.nome, merged.ordem, merged.categoria, merged.sugestao, req.params.id]);
   res.json({ ok: true });
 }));
-router.delete('/matriz/raci/atividades/:id', requerAuth, gGestor, wrap(async (req, res) => {
+router.delete('/matriz/raci/atividades/:id', requerAuth, gGestor, wrap(async (req: any, res: any) => {
   await pool.query('DELETE FROM mz_atividades WHERE id=$1', [req.params.id]);
   res.status(204).end();
 }));
-router.put('/matriz/raci/atividades/:id/status', requerAuth, gGestor, wrap(async (req, res) => {
+router.put('/matriz/raci/atividades/:id/status', requerAuth, gGestor, wrap(async (req: any, res: any) => {
   const { role_id, status } = req.body;
   if (!role_id || !status) return res.status(400).json({ erro: 'role_id e status obrigatórios' });
   await pool.query(
@@ -328,10 +328,10 @@ router.put('/matriz/raci/atividades/:id/status', requerAuth, gGestor, wrap(async
 }));
 
 /* Cargos (descrição de cargo/job description) */
-router.get('/matriz/cargos', requerAuth, gLeitura, wrap(async (req, res) => {
+router.get('/matriz/cargos', requerAuth, gLeitura, wrap(async (req: any, res: any) => {
   res.json(await db.all('SELECT id,cargo,area,gestor,perfil,graduacoes,descricao,funcoes,formacao,tecnicas,comportamentais,atitudes FROM mz_cargos ORDER BY area, cargo'));
 }));
-router.post('/matriz/cargos', requerAuth, gGestor, wrap(async (req, res) => {
+router.post('/matriz/cargos', requerAuth, gGestor, wrap(async (req: any, res: any) => {
   const b = req.body;
   if (!b.cargo) return res.status(400).json({ erro: 'cargo obrigatório' });
   const r = await pool.query(
@@ -342,11 +342,11 @@ router.post('/matriz/cargos', requerAuth, gGestor, wrap(async (req, res) => {
   );
   res.status(201).json(r.rows[0]);
 }));
-router.patch('/matriz/cargos/:id', requerAuth, gGestor, wrap(async (req, res) => {
+router.patch('/matriz/cargos/:id', requerAuth, gGestor, wrap(async (req: any, res: any) => {
   const atual = await db.get('SELECT * FROM mz_cargos WHERE id=$1', [req.params.id]);
   if (!atual) return res.status(404).json({ erro: 'Cargo não encontrado' });
   const b = req.body;
-  const g = (v, atualV) => v !== undefined ? JSON.stringify(v) : JSON.stringify(atualV);
+  const g = (v: any, atualV: any) => v !== undefined ? JSON.stringify(v) : JSON.stringify(atualV);
   const r = await pool.query(
     `UPDATE mz_cargos SET cargo=$1,area=$2,gestor=$3,perfil=$4,graduacoes=$5,descricao=$6,funcoes=$7,formacao=$8,tecnicas=$9,comportamentais=$10,atitudes=$11 WHERE id=$12 RETURNING *`,
     [b.cargo??atual.cargo, b.area??atual.area, b.gestor??atual.gestor, b.perfil??atual.perfil, g(b.graduacoes, atual.graduacoes),
@@ -355,7 +355,7 @@ router.patch('/matriz/cargos/:id', requerAuth, gGestor, wrap(async (req, res) =>
   );
   res.json(r.rows[0]);
 }));
-router.delete('/matriz/cargos/:id', requerAuth, gGestor, wrap(async (req, res) => {
+router.delete('/matriz/cargos/:id', requerAuth, gGestor, wrap(async (req: any, res: any) => {
   await pool.query('DELETE FROM mz_cargos WHERE id=$1', [req.params.id]);
   res.status(204).end();
 }));
@@ -366,8 +366,8 @@ async function _getIncentivo() {
   if (!cfg) { const r = await pool.query('INSERT INTO mz_incentivo_config DEFAULT VALUES RETURNING *'); cfg = r.rows[0]; }
   return cfg;
 }
-router.get('/matriz/incentivo', requerAuth, gLeitura, wrap(async (req, res) => { res.json(await _getIncentivo()); }));
-router.put('/matriz/incentivo', requerAuth, gGestor, wrap(async (req, res) => {
+router.get('/matriz/incentivo', requerAuth, gLeitura, wrap(async (req: any, res: any) => { res.json(await _getIncentivo()); }));
+router.put('/matriz/incentivo', requerAuth, gGestor, wrap(async (req: any, res: any) => {
   const atual = await _getIncentivo();
   const campos = ['abs_green','abs_yellow','abs_red','perf_green','perf_yellow','perf_red','comp_green','comp_yellow','comp_red'];
   const merged: Record<string, any> = {}; campos.forEach(c => { merged[c] = req.body[c] !== undefined ? req.body[c] : atual[c]; });
@@ -384,8 +384,8 @@ async function _getCarreira() {
   if (!cfg) { const r = await pool.query(`INSERT INTO mz_carreira_config (ladder) VALUES ('{}') RETURNING *`); cfg = r.rows[0]; }
   return cfg;
 }
-router.get('/matriz/carreira', requerAuth, gLeitura, wrap(async (req, res) => { res.json(await _getCarreira()); }));
-router.put('/matriz/carreira', requerAuth, gGestor, wrap(async (req, res) => {
+router.get('/matriz/carreira', requerAuth, gLeitura, wrap(async (req: any, res: any) => { res.json(await _getCarreira()); }));
+router.put('/matriz/carreira', requerAuth, gGestor, wrap(async (req: any, res: any) => {
   const atual = await _getCarreira();
   const r = await pool.query('UPDATE mz_carreira_config SET ladder=$1 WHERE id=$2 RETURNING *', [JSON.stringify(req.body.ladder||{}), atual.id]);
   res.json(r.rows[0]);
@@ -398,9 +398,9 @@ router.put('/matriz/carreira', requerAuth, gGestor, wrap(async (req, res) => {
    Não apaga nada do lado de origem — só lê de lá e grava aqui.
 ══════════════════════════════════════════════════════════════════════════ */
 
-async function _migrarColaboradores(client) {
+async function _migrarColaboradores(client: any) {
   const lista = await mCall('GET', '/api/colaboradores');
-  const mapa = {};
+  const mapa: Record<string, any> = {};
   for (const c of lista) {
     const r = await client.query(
       `INSERT INTO mz_colaboradores (origem_id,nome,cargo,tier,area,turno,ativo,vaga)
@@ -416,7 +416,7 @@ async function _migrarColaboradores(client) {
   return { total: lista.length, mapa };
 }
 
-async function _migrarBancoHoras(client, colabMap) {
+async function _migrarBancoHoras(client: any, colabMap: any) {
   const [lista, periodo] = await Promise.all([
     mCall('GET', '/api/banco-horas'),
     mCall('GET', '/api/banco-horas/periodo'),
@@ -444,7 +444,7 @@ async function _migrarBancoHoras(client, colabMap) {
   return { total: lista.length, migrados: ok, sem_colaborador: semColab };
 }
 
-async function _migrarFerias(client, colabMap) {
+async function _migrarFerias(client: any, colabMap: any) {
   const lista = await mCall('GET', '/api/ferias');
   let ok = 0, semColab = 0;
   for (const f of lista) {
@@ -461,7 +461,7 @@ async function _migrarFerias(client, colabMap) {
   return { total: lista.length, migrados: ok, sem_colaborador: semColab };
 }
 
-async function _migrarClassificacoes(client, colabMap) {
+async function _migrarClassificacoes(client: any, colabMap: any) {
   const lista = await mCall('GET', '/api/classificacoes');
   let ok = 0, semColab = 0;
   for (const c of lista) {
@@ -479,7 +479,7 @@ async function _migrarClassificacoes(client, colabMap) {
   return { total: lista.length, migrados: ok, sem_colaborador: semColab };
 }
 
-async function _migrarAusencias(client, colabMap) {
+async function _migrarAusencias(client: any, colabMap: any) {
   const lista = await mCall('GET', '/api/ausencias');
   let ok = 0, semColab = 0;
   for (const a of lista) {
@@ -497,13 +497,13 @@ async function _migrarAusencias(client, colabMap) {
   return { total: lista.length, migrados: ok, sem_colaborador: semColab };
 }
 
-async function _migrarFeedbacks(client, colabMap) {
+async function _migrarFeedbacks(client: any, colabMap: any) {
   const [lista, usuarios] = await Promise.all([
     mCall('GET', '/api/feedbacks'),
-    mCall('GET', '/api/usuarios').catch(() => []), // pode falhar se a conta de serviço não for gerente — não é crítico
+    mCall('GET', '/api/usuarios').catch((): any[] => []), // pode falhar se a conta de serviço não for gerente — não é crítico
   ]);
-  const userMap = {};
-  (usuarios||[]).forEach(u => { userMap[u.id] = u.nome || u.email; });
+  const userMap: Record<string, any> = {};
+  (usuarios||[]).forEach((u: any) => { userMap[u.id] = u.nome || u.email; });
   let ok = 0, semColab = 0;
   for (const f of lista) {
     const novoColabId = colabMap[f.colaborador_id];
@@ -533,7 +533,7 @@ async function _migrarFeedbacks(client, colabMap) {
   return { total: lista.length, migrados: ok, sem_colaborador: semColab };
 }
 
-async function _migrarRaci(client) {
+async function _migrarRaci(client: any) {
   const areas = await mCall('GET', '/api/matriz');
   let totalAreas = 0, totalRoles = 0, totalAtividades = 0, totalStatus = 0;
   for (const area of areas) {
@@ -546,7 +546,7 @@ async function _migrarRaci(client) {
     const novaAreaId = rArea.rows[0].id;
     totalAreas++;
 
-    const roleMap = {};
+    const roleMap: Record<string, any> = {};
     for (const role of area.roles) {
       const rRole = await client.query(
         `INSERT INTO mz_roles (origem_id,area_id,nome,ordem) VALUES ($1,$2,$3,$4)
@@ -585,7 +585,7 @@ async function _migrarRaci(client) {
   return { areas: totalAreas, roles: totalRoles, atividades: totalAtividades, status: totalStatus };
 }
 
-async function _migrarCargos(client) {
+async function _migrarCargos(client: any) {
   const lista = await mCall('GET', '/api/cargos');
   for (const c of lista) {
     await client.query(
@@ -604,7 +604,7 @@ async function _migrarCargos(client) {
   return { total: lista.length };
 }
 
-async function _migrarIncentivo(client) {
+async function _migrarIncentivo(client: any) {
   const cfg = await mCall('GET', '/api/incentivo');
   const existente = await client.query('SELECT id FROM mz_incentivo_config LIMIT 1');
   const campos = ['abs_green','abs_yellow','abs_red','perf_green','perf_yellow','perf_red','comp_green','comp_yellow','comp_red'];
@@ -623,7 +623,7 @@ async function _migrarIncentivo(client) {
   return { ok: true };
 }
 
-async function _migrarCarreira(client) {
+async function _migrarCarreira(client: any) {
   const cfg = await mCall('GET', '/api/carreira');
   const existente = await client.query('SELECT id FROM mz_carreira_config LIMIT 1');
   if (existente.rows.length) {
@@ -678,11 +678,11 @@ router.get('/matriz/migrar/conferencia', requerAuth, requerPerfil('gestor'), asy
       mCall('GET', '/api/matriz'),
       mCall('GET', '/api/cargos'),
     ]);
-    const origStatus = origRaci.reduce((s,a) => s + a.atividades.reduce((s2,at) => s2 + at.status.length, 0), 0);
-    const origRoles = origRaci.reduce((s,a) => s + a.roles.length, 0);
-    const origAtividades = origRaci.reduce((s,a) => s + a.atividades.length, 0);
+    const origStatus = origRaci.reduce((s: any,a: any) => s + a.atividades.reduce((s2: any,at: any) => s2 + at.status.length, 0), 0);
+    const origRoles = origRaci.reduce((s: any,a: any) => s + a.roles.length, 0);
+    const origAtividades = origRaci.reduce((s: any,a: any) => s + a.atividades.length, 0);
 
-    const contar = async sql => parseInt((await db.get(sql)).n);
+    const contar = async (sql: any) => parseInt((await db.get(sql)).n);
     res.json({
       colaboradores:   { origem: origColab.length, wms: await contar('SELECT COUNT(*) n FROM mz_colaboradores') },
       feedbacks:       { origem: origFb.length,    wms: await contar('SELECT COUNT(*) n FROM mz_feedbacks') },

@@ -7,7 +7,7 @@ import { requerAuth, requerPerfil } from '../lib/auth';
 const TURNOS = ['Manha', 'Tarde', 'Noite'];
 const ISO    = /^\d{4}-\d{2}-\d{2}$/;
 
-function normTurno(t) {
+function normTurno(t: any) {
   const s = String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
   return s.startsWith('tar') ? 'Tarde' : s.startsWith('noi') ? 'Noite' : 'Manha';
 }
@@ -39,8 +39,8 @@ router.get('/lideranca/turnos', requerAuth, requerPerfil('supervisor', 'gestor')
     `, [ini, fim]);
 
     const mapa = new Map();
-    const chave = (data, t) => `${data}|${normTurno(t)}`;
-    const base  = (data, t) => {
+    const chave = (data: any, t: any) => `${data}|${normTurno(t)}`;
+    const base  = (data: any, t: any) => {
       const k = chave(data, t);
       if (!mapa.has(k)) mapa.set(k, { data, turno: normTurno(t), supervisor: '' });
       return mapa.get(k);

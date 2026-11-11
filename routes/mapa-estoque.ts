@@ -21,13 +21,13 @@ import { montarEstadoRua } from '../lib/mapa-estoque';
 // Extrai a rua (letras antes do primeiro número) de uma coluna TEXT — mesmo
 // padrão já usado em routes/entrada-manual.js (GET /produtos/ruas), só
 // parametrizado pra reutilizar com qualquer coluna de endereço.
-function ruaSql(coluna) {
+function ruaSql(coluna: any) {
   return `regexp_replace(split_part(${coluna},'/',1), '[0-9].*$', '')`;
 }
 
-async function contagemPorRua(sql, params = []) {
+async function contagemPorRua(sql: any, params: any = []) {
   const rows = await db.all(sql, params);
-  const porRua = {};
+  const porRua: Record<string, any> = {};
   rows.forEach(r => { porRua[r.rua] = parseInt(r.total) || 0; });
   return porRua;
 }
@@ -73,7 +73,7 @@ router.get('/mapa-estoque', requerAuth, requerPerfil('supervisor', 'gestor'), as
       ...Object.keys(separacao), ...Object.keys(reposicao),
     ]);
 
-    const mapa = {};
+    const mapa: Record<string, any> = {};
     todasRuas.forEach(rua => {
       mapa[rua] = montarEstadoRua({
         ruptura: ruptura[rua] || 0,

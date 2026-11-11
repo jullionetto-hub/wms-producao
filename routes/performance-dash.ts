@@ -8,21 +8,21 @@ import { calcularEtapasCheckout } from '../lib/checkout-etapas';
 
 /* Dia operacional (data do turno): quem é da Noite tem o dia contado a partir da entrada do turno
    (22h), então o que acontece de 00h às 06h47 vale pro dia anterior. Ver lib/helpers.js. */
-const TURNO_DE_NOME = n => `(SELECT u_.turno FROM usuarios u_ WHERE u_.nome = ${n} LIMIT 1)`;
-const diaSep = a => sqlDiaOperacional({
+const TURNO_DE_NOME = (n: any) => `(SELECT u_.turno FROM usuarios u_ WHERE u_.nome = ${n} LIMIT 1)`;
+const diaSep = (a: any) => sqlDiaOperacional({
   ts: `${a}.iniciado_em`,
   civil: `COALESCE(NULLIF(LEFT(${a}.iniciado_em,10),''), NULLIF(${a}.data_distribuicao,''), ${a}.data_pedido)`,
   turno: `(SELECT COALESCE(uu_.turno, ss_.turno) FROM separadores ss_ LEFT JOIN usuarios uu_ ON uu_.id = ss_.usuario_id WHERE ss_.id = ${a}.separador_id)`,
 });
-const diaCk = a => sqlDiaOperacional({ ts: `${a}.data_checkout||' '||${a}.hora_checkout`, civil: `${a}.data_checkout`, turno: TURNO_DE_NOME(`${a}.operador_nome`) });
-const diaEmb = a => sqlDiaOperacional({ ts: `${a}.data_embalagem||' '||${a}.embalado_em`, civil: `${a}.data_embalagem`, turno: TURNO_DE_NOME(`${a}.embalado_por`) });
-const EMB_DATA_PED = a => `COALESCE((SELECT eb.data_embalagem FROM embalagem eb WHERE eb.pedido_id = ${a}.id ORDER BY eb.id DESC LIMIT 1), ${a}.data_pedido)`;
-const diaEmbPed = a => sqlDiaOperacional({ ts: `${EMB_DATA_PED(a)}||' '||${a}.embalado_em`, civil: EMB_DATA_PED(a), turno: TURNO_DE_NOME(`${a}.embalado_por`) });
+const diaCk = (a: any) => sqlDiaOperacional({ ts: `${a}.data_checkout||' '||${a}.hora_checkout`, civil: `${a}.data_checkout`, turno: TURNO_DE_NOME(`${a}.operador_nome`) });
+const diaEmb = (a: any) => sqlDiaOperacional({ ts: `${a}.data_embalagem||' '||${a}.embalado_em`, civil: `${a}.data_embalagem`, turno: TURNO_DE_NOME(`${a}.embalado_por`) });
+const EMB_DATA_PED = (a: any) => `COALESCE((SELECT eb.data_embalagem FROM embalagem eb WHERE eb.pedido_id = ${a}.id ORDER BY eb.id DESC LIMIT 1), ${a}.data_pedido)`;
+const diaEmbPed = (a: any) => sqlDiaOperacional({ ts: `${EMB_DATA_PED(a)}||' '||${a}.embalado_em`, civil: EMB_DATA_PED(a), turno: TURNO_DE_NOME(`${a}.embalado_por`) });
 // Reposição: aviso (hora_aviso, repositor_nome) ou tentativa de um repositor (hora_inicio) dentro do aviso
-const diaAv = (a, quem) => sqlDiaOperacional({ ts: `${a}.data_aviso||' '||${a}.hora_aviso`, civil: `${a}.data_aviso`, turno: TURNO_DE_NOME(quem) });
+const diaAv = (a: any, quem: any) => sqlDiaOperacional({ ts: `${a}.data_aviso||' '||${a}.hora_aviso`, civil: `${a}.data_aviso`, turno: TURNO_DE_NOME(quem) });
 const diaAvTent = sqlDiaOperacional({ ts: "ar.data_aviso||' '||(t.value->>'hora_inicio')", civil: 'ar.data_aviso', turno: TURNO_DE_NOME("t.value->>'repositor'") });
 // Duração em minutos que cruza a meia-noite (início 23:44, fim 00:01, mesma data): a conta direta dá negativo → soma 1 dia.
-const minDia = expr => `(CASE WHEN (${expr}) < 0 THEN (${expr}) + 1440 ELSE (${expr}) END)::numeric`;
+const minDia = (expr: any) => `(CASE WHEN (${expr}) < 0 THEN (${expr}) + 1440 ELSE (${expr}) END)::numeric`;
 const diaSessao = sqlDiaOperacional({ ts: "to_char(login_em AT TIME ZONE 'America/Sao_Paulo','YYYY-MM-DD HH24:MI:SS')", civil: 'data', turno: 'turno' });
 
 // â”€â”€ GET /performance/separadores?ini=YYYY-MM-DD&fim=YYYY-MM-DD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -280,14 +280,14 @@ router.get('/performance/separadores', requerAuth, requerPerfil('supervisor', 'g
         ${turno ? `AND REPLACE(COALESCE(u5.turno, s5.turno, 'Manha'), 'Ã£', 'a') = $3` : ''}
     `, params);
 
-    const resumirSetor = rows => {
-      const concluidos = rows.reduce((s,r) => s + (r.concluidos||0), 0);
-      const pendentes  = rows.reduce((s,r) => s + (r.pendentes||0), 0);
-      const itens      = rows.reduce((s,r) => s + (r.itens||0), 0);
-      const comTempo   = rows.filter(r => r.tempo_medio_min != null).map(r => ({ ...r, tempo_medio_min: parseFloat(r.tempo_medio_min) }));
-      const tempoMedio = comTempo.length ? Math.round(comTempo.reduce((s,r) => s+r.tempo_medio_min, 0) / comTempo.length * 10) / 10 : null;
-      const maisRapido = comTempo.length ? comTempo.reduce((a,b) => a.tempo_medio_min < b.tempo_medio_min ? a : b) : null;
-      const maisLento  = comTempo.length ? comTempo.reduce((a,b) => a.tempo_medio_min > b.tempo_medio_min ? a : b) : null;
+    const resumirSetor = (rows: any) => {
+      const concluidos = rows.reduce((s: any,r: any) => s + (r.concluidos||0), 0);
+      const pendentes  = rows.reduce((s: any,r: any) => s + (r.pendentes||0), 0);
+      const itens      = rows.reduce((s: any,r: any) => s + (r.itens||0), 0);
+      const comTempo   = rows.filter((r: any) => r.tempo_medio_min != null).map((r: any) => ({ ...r, tempo_medio_min: parseFloat(r.tempo_medio_min) }));
+      const tempoMedio = comTempo.length ? Math.round(comTempo.reduce((s: any,r: any) => s+r.tempo_medio_min, 0) / comTempo.length * 10) / 10 : null;
+      const maisRapido = comTempo.length ? comTempo.reduce((a: any,b: any) => a.tempo_medio_min < b.tempo_medio_min ? a : b) : null;
+      const maisLento  = comTempo.length ? comTempo.reduce((a: any,b: any) => a.tempo_medio_min > b.tempo_medio_min ? a : b) : null;
       return {
         colaboradores: rows.length, concluidos, pendentes, itens, tempo_medio_min: tempoMedio,
         mais_rapido: maisRapido ? { nome: maisRapido.nome, tempo_medio_min: maisRapido.tempo_medio_min } : null,
@@ -295,13 +295,13 @@ router.get('/performance/separadores', requerAuth, requerPerfil('supervisor', 'g
       };
     };
 
-    const mapColab = rows => rows
-      .filter(r => r.nome)
-      .map(r => ({
+    const mapColab = (rows: any) => rows
+      .filter((r: any) => r.nome)
+      .map((r: any) => ({
         nome: r.nome, concluidos: r.concluidos, pendentes: r.pendentes, itens: r.itens ?? null,
         tempo_medio_min: r.tempo_medio_min != null ? parseFloat(r.tempo_medio_min) : null,
       }))
-      .sort((a,b) => b.concluidos - a.concluidos);
+      .sort((a: any,b: any) => b.concluidos - a.concluidos);
 
     res.json({
       colaboradores: resultado, por_dia: porDia, ruas: ruasRaw, por_colab_dia: porColabDia,
@@ -546,8 +546,8 @@ router.get('/performance/metas', requerAuth, requerPerfil('supervisor', 'gestor'
   if (!ini || !fim) return res.status(400).json({ erro: 'Informe ini e fim.' });
 
   try {
-    const METAS     = { separador: 65, checkout: 90, embalador: 120, repositor: 90 };
-    const TURNO_MIN = { Manha: 465, Tarde: 465, Noite: 453 };
+    const METAS: Record<string, number>     = { separador: 65, checkout: 90, embalador: 120, repositor: 90 };
+    const TURNO_MIN: Record<string, number> = { Manha: 465, Tarde: 465, Noite: 453 };
 
     // Tempo logado por colaborador/perfil/data
     const sessoes = await db.all(`
@@ -614,8 +614,8 @@ router.get('/performance/metas', requerAuth, requerPerfil('supervisor', 'gestor'
       `, [ini, fim]),
     ]);
 
-    const realIdx = {};
-    const addReal = (rows, perfil) => {
+    const realIdx: Record<string, any> = {};
+    const addReal = (rows: any, perfil: any) => {
       for (const r of rows) {
         const k = `${r.nome}|${perfil}|${r.data}`;
         realIdx[k] = (realIdx[k] || 0) + r.realizado;

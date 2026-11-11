@@ -16,7 +16,7 @@ const FOTO_MAX_POR_RECADO = 12;
 const FOTO_TIPOS = ['image/jpeg', 'image/png', 'image/webp'];
 const TITULO_MAX = 120, TEXTO_MAX = 4000;
 
-const dadosRecado = body => {
+const dadosRecado = (body: any) => {
   const titulo = String(body?.titulo ?? '').trim().slice(0, TITULO_MAX);
   const texto  = String(body?.texto ?? '').trim();
   return { titulo, texto };

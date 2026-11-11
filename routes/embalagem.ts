@@ -133,11 +133,11 @@ router.get('/embalagem/stats', requerAuth, async (req,res) => {
 // (pula separação/checkout) quando ainda não tinham sido finalizados. Só
 // supervisor. Nome comparado sem acento/maiúscula em JS (não em SQL) porque
 // ILIKE é sensível a acento — "Julio" não bateria com "Júlio" no banco.
-function _semAcento(s) {
+function _semAcento(s: any) {
   return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
 }
 
-async function _pedidosParaLote(data, nomes) {
+async function _pedidosParaLote(data: any, nomes: any) {
   const rows = await db.all(
     `SELECT p.id, p.numero_pedido, p.status, p.cliente, p.transportadora, p.tem_prime,
             p.embalagem_iniciado_em, p.embalado_em, s.nome AS separador_nome

@@ -23,13 +23,13 @@ async function pessoasAtivasSeparacao() {
       AND concluido_em::timestamp >= NOW() AT TIME ZONE 'America/Sao_Paulo' - INTERVAL '60 minutes'`);
   return r?.n || 0;
 }
-async function pessoasAtivasCheckout(hoje) {
+async function pessoasAtivasCheckout(hoje: any) {
   const r = await db.get(`SELECT COUNT(DISTINCT operador_nome)::int AS n FROM checkout
     WHERE status='concluido' AND operador_nome <> '' AND hora_checkout <> '' AND data_checkout=$1
       AND (data_checkout || 'T' || hora_checkout)::timestamp >= NOW() AT TIME ZONE 'America/Sao_Paulo' - INTERVAL '60 minutes'`, [hoje]);
   return r?.n || 0;
 }
-async function pessoasAtivasEmbalagem(hoje) {
+async function pessoasAtivasEmbalagem(hoje: any) {
   const r = await db.get(`SELECT COUNT(DISTINCT embalado_por)::int AS n FROM embalagem
     WHERE embalado_por <> '' AND embalado_em <> '' AND data_embalagem=$1
       AND (data_embalagem || 'T' || embalado_em)::timestamp >= NOW() AT TIME ZONE 'America/Sao_Paulo' - INTERVAL '60 minutes'`, [hoje]);
