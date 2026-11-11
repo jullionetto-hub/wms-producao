@@ -63,3 +63,4 @@ src/database/migrate.js
 src/database/schema.js
 src/database/seed.js
 src/scheduler/relatorio.js
+lib/robustez.js

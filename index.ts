@@ -39,6 +39,9 @@ import log from './lib/logger';
 import { requerPerfil } from './lib/auth';
 import { dataHoraLocal } from './lib/helpers';
 import { normalizarQuery } from './lib/query';
+import { ativarCapturaDeErrosAsync, tratadorDeErros, registrarTratadoresDeProcesso } from './lib/robustez';
+
+ativarCapturaDeErrosAsync();   // erro numa rota async vira resposta 500 (antes derrubava o processo inteiro)
 
 // ── KPI Cache (em memória — considere Redis para escala futura) ───────────────
 const kpiCache: { data: any; ts: number; ttl: number } = { data: null, ts: 0, ttl: 20_000 };
@@ -90,10 +93,7 @@ app.use('/', apiRouter);
 
 // ── Handlers de erro ──────────────────────────────────────────────────────────
 app.use((_req, res) => res.status(404).json({ erro: 'Rota não encontrada.' }));
-app.use((err: any, req: any, res: any, _next: any) => {
-  log.error({ err, url: req.url, method: req.method }, 'unhandled-error');
-  res.status(500).json({ erro: isProd ? 'Erro interno do servidor.' : err.message });
-});
+app.use(tratadorDeErros);
 
 // ── Inicialização ─────────────────────────────────────────────────────────────
 async function iniciar() {
@@ -112,6 +112,7 @@ async function iniciar() {
 }
 
 if (process.env.NODE_ENV !== 'test') {
+  registrarTratadoresDeProcesso();
   iniciar().catch((e) => {
     log.fatal({ err: e }, 'erro fatal ao iniciar');
     process.exit(1);

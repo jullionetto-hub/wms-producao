@@ -160,8 +160,10 @@ async function migrarHashesLegados(): Promise<void> {
     log.warn({ total: rows.length }, '⚠️  Usuários com hash SHA-256 legado detectados — forçando redefinição de senha');
 
     for (const u of rows) {
-      // Senha temporária: 8 caracteres aleatórios (maiúsculas + dígitos)
-      const tempPlain = crypto.randomBytes(4).toString('hex').toUpperCase(); // ex: "A3F8B1C2"
+      // Senha aleatória DESCARTADA: ninguém precisa conhecê-la e ela NUNCA vai para o log (os logs do Railway
+      // são visíveis a quem tem acesso ao projeto). O usuário só volta a entrar quando o supervisor definir
+      // uma nova senha temporária em Usuários (PUT /usuarios/:id).
+      const tempPlain = crypto.randomBytes(16).toString('hex');
       const tempHash  = await bcrypt.hash(tempPlain, 12);
       const expira    = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 dias
 
@@ -174,13 +176,12 @@ async function migrarHashesLegados(): Promise<void> {
         [tempHash, expira, u.id]
       );
 
-      // Loga a senha temporária para o admin comunicar ao usuário
-      // IMPORTANTE: esse log fica visível nos logs do Railway — informe e delete após uso
-      log.warn({ login: u.login, nome: u.nome, senha_temporaria: tempPlain, expira_em: expira.toISOString() },
-        `⚠️  Hash legado migrado — informe a senha temporária ao usuário e oriente a trocar`);
+      // Loga SÓ quem foi afetado (nunca a senha), para o supervisor saber a quem definir uma nova senha.
+      log.warn({ login: u.login, nome: u.nome },
+        'Hash legado invalidado — o supervisor deve definir uma nova senha temporária para este usuário (tela Usuários)');
     }
 
-    log.warn({ total: rows.length }, '✅  Migração de hashes legados concluída — verifique os logs acima para senhas temporárias');
+    log.warn({ total: rows.length }, '✅  Migração de hashes legados concluída — defina uma nova senha temporária para cada usuário listado acima (tela Usuários)');
   } catch (e) {
     log.error({ err: e }, 'Erro na migração de hashes legados (não fatal)');
   }
