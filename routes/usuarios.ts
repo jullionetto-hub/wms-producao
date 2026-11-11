@@ -1,10 +1,10 @@
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const { db, pool } = require('../lib/db');
-const { requerAuth, requerPerfil } = require('../lib/auth');
-const { hashSenha, validarId } = require('../lib/helpers');
-const { registrarAuditoria } = require('../lib/auditoria');
-const { requerPermissao } = require('../lib/permissoes');
+import { db, pool } from '../lib/db';
+import { requerAuth, requerPerfil } from '../lib/auth';
+import { hashSenha, validarId } from '../lib/helpers';
+import { registrarAuditoria } from '../lib/auditoria';
+import { requerPermissao } from '../lib/permissoes';
 
 router.get('/usuarios', requerAuth, requerPerfil('supervisor', 'gestor'), async (req,res) => {
   try {

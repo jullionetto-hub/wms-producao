@@ -4,12 +4,12 @@
    Ler: supervisor e gestor (quem usa o Diário). Criar/editar/encerrar/fotos: só gestor.
    Prefixo /diario-recados (não /diario/…): /diario/:id captura qualquer coisa depois de /diario/. */
 'use strict';
-const express = require('express');
+import express from 'express';
 const router  = express.Router();
-const { db, pool } = require('../lib/db');
-const { requerAuth, requerPerfil } = require('../lib/auth');
-const { validarId } = require('../lib/helpers');
-const { registrarAuditoria } = require('../lib/auditoria');
+import { db, pool } from '../lib/db';
+import { requerAuth, requerPerfil } from '../lib/auth';
+import { validarId } from '../lib/helpers';
+import { registrarAuditoria } from '../lib/auditoria';
 
 const FOTO_MAX_BYTES = 2 * 1024 * 1024;
 const FOTO_MAX_POR_RECADO = 12;

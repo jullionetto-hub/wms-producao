@@ -1,8 +1,8 @@
 'use strict';
-const express = require('express');
+import express from 'express';
 const router  = express.Router();
-const { db, pool } = require('../lib/db');
-const { requerAuth, requerPerfil } = require('../lib/auth');
+import { db, pool } from '../lib/db';
+import { requerAuth, requerPerfil } from '../lib/auth';
 
 const PONTOS_POR_CAMPO = {
   sep_separados: 75, sep_pendentes: 75, sep_em_separacao: 50,

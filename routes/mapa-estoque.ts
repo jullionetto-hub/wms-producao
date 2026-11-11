@@ -12,11 +12,11 @@
    nenhum desses dados existe no sistema hoje (pedido explícito do usuário
    pra não inventar).
 ══════════════════════════════════════════════════════════════════════ */
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const { db } = require('../lib/db');
-const { requerAuth, requerPerfil } = require('../lib/auth');
-const { montarEstadoRua } = require('../lib/mapa-estoque');
+import { db } from '../lib/db';
+import { requerAuth, requerPerfil } from '../lib/auth';
+import { montarEstadoRua } from '../lib/mapa-estoque';
 
 // Extrai a rua (letras antes do primeiro número) de uma coluna TEXT — mesmo
 // padrão já usado em routes/entrada-manual.js (GET /produtos/ruas), só

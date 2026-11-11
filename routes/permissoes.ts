@@ -5,13 +5,13 @@
    outro supervisor por conta própria.
 ══════════════════════════════════════════════════════════════════════ */
 'use strict';
-const express = require('express');
+import express from 'express';
 const router  = express.Router();
-const { db } = require('../lib/db');
-const { requerAuth, requerPerfil } = require('../lib/auth');
-const { validarId } = require('../lib/helpers');
-const { registrarAuditoria } = require('../lib/auditoria');
-const { ACOES } = require('../lib/permissoes');
+import { db } from '../lib/db';
+import { requerAuth, requerPerfil } from '../lib/auth';
+import { validarId } from '../lib/helpers';
+import { registrarAuditoria } from '../lib/auditoria';
+import { ACOES } from '../lib/permissoes';
 
 // ── GET /permissoes/acoes — lista fixa das 7 ações granulares ─────────────
 router.get('/permissoes/acoes', requerAuth, requerPerfil('gestor'), (req, res) => {

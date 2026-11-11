@@ -11,12 +11,12 @@
    calcular ritmo/previsão.
 ══════════════════════════════════════════════════════════════════════ */
 'use strict';
-const express = require('express');
+import express from 'express';
 const router  = express.Router();
-const { db } = require('../lib/db');
-const { requerAuth, requerPerfil } = require('../lib/auth');
-const { dataHoraLocal, turnoAtualEHorarios } = require('../lib/helpers');
-const { bucketsPorHora, ritmoEPrevisao, inicioTurnoTimestamp } = require('../lib/hora-a-hora');
+import { db } from '../lib/db';
+import { requerAuth, requerPerfil } from '../lib/auth';
+import { dataHoraLocal, turnoAtualEHorarios } from '../lib/helpers';
+import { bucketsPorHora, ritmoEPrevisao, inicioTurnoTimestamp } from '../lib/hora-a-hora';
 
 async function metasConfiguradas() {
   const rows = await db.all(

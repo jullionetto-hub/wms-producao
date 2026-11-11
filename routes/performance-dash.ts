@@ -1,10 +1,10 @@
-﻿'use strict';
-const express = require('express');
+'use strict';
+import express from 'express';
 const router  = express.Router();
-const { db, pool } = require('../lib/db');
-const { requerAuth, requerPerfil } = require('../lib/auth');
-const { dataHoraLocal, sqlDiaOperacional } = require('../lib/helpers');
-const { calcularEtapasCheckout } = require('../lib/checkout-etapas');
+import { db, pool } from '../lib/db';
+import { requerAuth, requerPerfil } from '../lib/auth';
+import { dataHoraLocal, sqlDiaOperacional } from '../lib/helpers';
+import { calcularEtapasCheckout } from '../lib/checkout-etapas';
 
 /* Dia operacional (data do turno): quem é da Noite tem o dia contado a partir da entrada do turno
    (22h), então o que acontece de 00h às 06h47 vale pro dia anterior. Ver lib/helpers.js. */
@@ -27,7 +27,7 @@ const diaSessao = sqlDiaOperacional({ ts: "to_char(login_em AT TIME ZONE 'Americ
 
 // â”€â”€ GET /performance/separadores?ini=YYYY-MM-DD&fim=YYYY-MM-DD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 router.get('/performance/separadores', requerAuth, requerPerfil('supervisor', 'gestor'), async (req, res) => {
-  const { ini, fim, turno } = req.query;
+  const { ini, fim, turno } = req.query as Record<string, string>;
   if (!ini || !fim) return res.status(400).json({ erro: 'Informe ini e fim.' });
 
   try {
@@ -321,7 +321,7 @@ router.get('/performance/separadores', requerAuth, requerPerfil('supervisor', 'g
 
 // ── GET /performance/pedidos-detail ──────────────────────────────────────────
 router.get('/performance/pedidos-detail', requerAuth, requerPerfil('supervisor', 'gestor'), async (req, res) => {
-  const { ini, fim, turno } = req.query;
+  const { ini, fim, turno } = req.query as Record<string, string>;
   if (!ini || !fim) return res.status(400).json({ erro: 'Informe ini e fim.' });
   try {
     const turnoFiltro = turno
@@ -390,7 +390,7 @@ router.get('/performance/pedidos-detail', requerAuth, requerPerfil('supervisor',
 
 // â”€â”€ GET /performance/timing?ini=YYYY-MM-DD&fim=YYYY-MM-DD&turno= â”€â”€â”€â”€â”€â”€â”€â”€â”€
 router.get('/performance/timing', requerAuth, requerPerfil('supervisor', 'gestor'), async (req, res) => {
-  const { ini, fim, turno } = req.query;
+  const { ini, fim, turno } = req.query as Record<string, string>;
   if (!ini || !fim) return res.status(400).json({ erro: 'Informe ini e fim.' });
 
   try {
@@ -542,7 +542,7 @@ router.get('/performance/timing', requerAuth, requerPerfil('supervisor', 'gestor
 
 // â”€â”€ GET /performance/metas â€” Metas proporcionais por tempo logado â”€â”€â”€â”€â”€â”€â”€â”€
 router.get('/performance/metas', requerAuth, requerPerfil('supervisor', 'gestor'), async (req, res) => {
-  const { ini, fim } = req.query;
+  const { ini, fim } = req.query as Record<string, string>;
   if (!ini || !fim) return res.status(400).json({ erro: 'Informe ini e fim.' });
 
   try {
@@ -663,7 +663,7 @@ router.get('/performance/range', requerAuth, requerPerfil('supervisor', 'gestor'
 
 // â”€â”€ GET /performance/ocorrencias â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 router.get('/performance/ocorrencias', requerAuth, requerPerfil('supervisor', 'gestor'), async (req, res) => {
-  const { ini, fim, colaborador, tipo } = req.query;
+  const { ini, fim, colaborador, tipo } = req.query as Record<string, string>;
   try {
     const params = [];
     let w = 'WHERE 1=1';

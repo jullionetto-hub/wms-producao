@@ -1,8 +1,8 @@
 'use strict';
-const express = require('express');
+import express from 'express';
 const router  = express.Router();
-const { requerAuth, requerPerfil } = require('../lib/auth');
-const { db, pool } = require('../lib/db');
+import { requerAuth, requerPerfil } from '../lib/auth';
+import { db, pool } from '../lib/db';
 
 // Painel antigo de absenteísmo (proxy pro FastAPI externo em ABS_API_URL) foi
 // removido — substituído pelo absenteísmo nativo (ver routes/absenteismo.js),

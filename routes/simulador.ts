@@ -6,12 +6,12 @@
    por pessoa. O cálculo em si é puro e testado em lib/simulador.js.
 ══════════════════════════════════════════════════════════════════════ */
 'use strict';
-const express = require('express');
+import express from 'express';
 const router  = express.Router();
-const { db } = require('../lib/db');
-const { requerAuth, requerPerfil } = require('../lib/auth');
-const { dataHoraLocal, turnoAtualEHorarios } = require('../lib/helpers');
-const { simularCapacidade } = require('../lib/simulador');
+import { db } from '../lib/db';
+import { requerAuth, requerPerfil } from '../lib/auth';
+import { dataHoraLocal, turnoAtualEHorarios } from '../lib/helpers';
+import { simularCapacidade } from '../lib/simulador';
 const { metricasSeparacao, metricasCheckout, metricasEmbalagem } = require('./control-tower');
 
 // Pessoas realmente ativas na última hora — mesma janela usada pra medir
@@ -41,7 +41,7 @@ const PROCESSOS = ['separacao', 'checkout', 'embalagem'];
 router.get('/simulador/capacidade', requerAuth, requerPerfil('supervisor', 'gestor'), async (req, res) => {
   try {
     const processo = String(req.query.processo || '').trim();
-    const delta = parseInt(req.query.delta, 10);
+    const delta = parseInt(req.query.delta as string, 10);
     if (!PROCESSOS.includes(processo)) return res.status(400).json({ erro: `processo deve ser um de: ${PROCESSOS.join(', ')}` });
     if (Number.isNaN(delta)) return res.status(400).json({ erro: 'delta (número de pessoas a adicionar/remover) é obrigatório' });
 

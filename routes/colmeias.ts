@@ -1,7 +1,7 @@
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const { db, pool } = require('../lib/db');
-const { requerPerfil } = require('../lib/auth');
+import { db, pool } from '../lib/db';
+import { requerPerfil } from '../lib/auth';
 
 // Lista colmeias ativas com saldo calculado ao vivo: quantidade cadastrada
 // menos o que já saiu em pedidos concluídos desse código desde que a

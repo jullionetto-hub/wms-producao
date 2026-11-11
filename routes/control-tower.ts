@@ -9,12 +9,12 @@
    só em pedidos/turno), o valor é DERIVADO de dois números reais (meta em
    pedidos × média real de itens/pedido hoje), nunca chutado.
 ══════════════════════════════════════════════════════════════════════ */
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const { db } = require('../lib/db');
-const { requerAuth, requerPerfil } = require('../lib/auth');
-const { dataHoraLocal, turnoAtualEHorarios } = require('../lib/helpers');
-const { montarProcesso, calcularGargalo } = require('../lib/control-tower');
+import { db } from '../lib/db';
+import { requerAuth, requerPerfil } from '../lib/auth';
+import { dataHoraLocal, turnoAtualEHorarios } from '../lib/helpers';
+import { montarProcesso, calcularGargalo } from '../lib/control-tower';
 
 // Meta padrão (pedidos/turno) usada só se a linha não existir em `configuracoes`
 // ainda — mesmo default do seed em src/database/migrate.js.

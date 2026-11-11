@@ -6,12 +6,12 @@
    ele precisa (itens e horas trabalhadas, hoje e no histórico).
 ══════════════════════════════════════════════════════════════════════ */
 'use strict';
-const express = require('express');
+import express from 'express';
 const router  = express.Router();
-const { db } = require('../lib/db');
-const { requerAuth, requerPerfil } = require('../lib/auth');
-const { dataHoraLocal } = require('../lib/helpers');
-const { detectarAnomalias } = require('../lib/anomalias');
+import { db } from '../lib/db';
+import { requerAuth, requerPerfil } from '../lib/auth';
+import { dataHoraLocal } from '../lib/helpers';
+import { detectarAnomalias } from '../lib/anomalias';
 
 const DIAS_HISTORICO = 30;
 

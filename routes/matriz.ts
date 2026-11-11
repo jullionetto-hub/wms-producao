@@ -1,8 +1,8 @@
 'use strict';
-const express = require('express');
+import express from 'express';
 const router  = express.Router();
-const { requerAuth, requerPerfil } = require('../lib/auth');
-const { db, pool } = require('../lib/db');
+import { requerAuth, requerPerfil } from '../lib/auth';
+import { db, pool } from '../lib/db';
 
 // ── Matriz de Responsabilidades — proxy completo ────────────────────────────
 // App FastAPI separado (repo próprio "matriz-responsabilidades"), com seu
@@ -16,10 +16,10 @@ const MATRIZ_URL  = (process.env.MATRIZ_URL || 'https://matriz-responsabilidades
 const MATRIZ_USER = process.env.MATRIZ_EMAIL    || '';
 const MATRIZ_PASS = process.env.MATRIZ_PASSWORD || '';
 
-let _token    = null;
+let _token: string | null = null;
 let _tokenExp = 0;
 
-async function getToken() {
+async function getToken(): Promise<string> {
   if (_token && Date.now() < _tokenExp) return _token;
   if (!MATRIZ_USER || !MATRIZ_PASS) throw new Error('Credenciais da Matriz não configuradas (MATRIZ_EMAIL / MATRIZ_PASSWORD)');
   const body = new URLSearchParams();
@@ -27,27 +27,28 @@ async function getToken() {
   body.set('password', MATRIZ_PASS);
   const res = await fetch(`${MATRIZ_URL}/api/auth/login`, { method: 'POST', body });
   if (!res.ok) {
-    let d = ''; try { d = (/** @type {any} */ (await res.json())).detail || ''; } catch {}
+    let d = ''; try { d = ((await res.json()) as any).detail || ''; } catch {}
     throw new Error(`Auth Matriz ${res.status}: ${d}`);
   }
-  const { access_token } = /** @type {any} */ (await res.json());
+  const { access_token } = (await res.json()) as any;
   _token    = access_token;
   _tokenExp = Date.now() + 50 * 60 * 1000;
-  return _token;
+  return _token as string;
 }
 
-/** @returns {Promise<any>} resposta JSON da Matriz (formato definido pelo outro servico) */
-async function mCall(method, path, body) {
+/** Resposta JSON da Matriz (o formato é definido pelo outro serviço, por isso `any`). */
+async function mCall(method: string, path: string, body?: any): Promise<any> {
   const token = await getToken();
-  const opts = { method, headers: { Authorization: `Bearer ${token}` } };
+  const headers: Record<string, string> = { Authorization: `Bearer ${token}` };
+  const opts: { method: string; headers: Record<string, string>; body?: string } = { method, headers };
   if (body !== undefined) {
     opts.headers['Content-Type'] = 'application/json';
     opts.body = JSON.stringify(body);
   }
   const res = await fetch(`${MATRIZ_URL}${path}`, opts);
   if (!res.ok) {
-    let d = ''; try { d = (/** @type {any} */ (await res.json())).detail || ''; } catch {}
-    const err = /** @type {any} */ (new Error(d || `Matriz ${res.status}`));
+    let d = ''; try { d = ((await res.json()) as any).detail || ''; } catch {}
+    const err: any = new Error(d || `Matriz ${res.status}`);
     err.status = res.status;
     throw err;
   }
@@ -87,7 +88,7 @@ router.patch('/matriz/colaboradores/:id', requerAuth, gLeitura, wrap(async (req,
   const atual = await db.get('SELECT * FROM mz_colaboradores WHERE id=$1', [req.params.id]);
   if (!atual) return res.status(404).json({ erro: 'Colaborador não encontrado' });
   const campos = ['nome','cargo','tier','area','turno','ativo','vaga'];
-  const merged = {}; campos.forEach(c => { merged[c] = req.body[c] !== undefined ? req.body[c] : atual[c]; });
+  const merged: Record<string, any> = {}; campos.forEach(c => { merged[c] = req.body[c] !== undefined ? req.body[c] : atual[c]; });
   const r = await pool.query(
     `UPDATE mz_colaboradores SET nome=$1,cargo=$2,tier=$3,area=$4,turno=$5,ativo=$6,vaga=$7 WHERE id=$8 RETURNING *`,
     [merged.nome, merged.cargo, merged.tier, merged.area, merged.turno, merged.ativo, merged.vaga, req.params.id]
@@ -127,7 +128,7 @@ router.patch('/matriz/feedbacks/:id', requerAuth, gLeitura, wrap(async (req, res
   const campos = ['mes','cargo_snapshot','area_snapshot','meta','entregue','pontos_positivos','pontos_construtivos',
     'absenteismo_mes','retorno_antecipado','atrasos','faltas_injustificadas','ausencias_justificadas',
     'recorrencia_ausencia','outros_pontos','saldo_banco_horas','combinado_mes'];
-  const merged = {}; campos.forEach(c => { merged[c] = req.body[c] !== undefined ? req.body[c] : atual[c]; });
+  const merged: Record<string, any> = {}; campos.forEach(c => { merged[c] = req.body[c] !== undefined ? req.body[c] : atual[c]; });
   const r = await pool.query(
     `UPDATE mz_feedbacks SET mes=$1,cargo_snapshot=$2,area_snapshot=$3,meta=$4,entregue=$5,pontos_positivos=$6,
        pontos_construtivos=$7,absenteismo_mes=$8,retorno_antecipado=$9,atrasos=$10,faltas_injustificadas=$11,
@@ -177,7 +178,7 @@ router.patch('/matriz/ausencias/:id', requerAuth, gLeitura, wrap(async (req, res
   const atual = await db.get('SELECT * FROM mz_ausencias WHERE id=$1', [req.params.id]);
   if (!atual) return res.status(404).json({ erro: 'Registro não encontrado' });
   const campos = ['periodo_label','dias','data','motivo'];
-  const merged = {}; campos.forEach(c => { merged[c] = req.body[c] !== undefined ? req.body[c] : atual[c]; });
+  const merged: Record<string, any> = {}; campos.forEach(c => { merged[c] = req.body[c] !== undefined ? req.body[c] : atual[c]; });
   const r = await pool.query(
     `UPDATE mz_ausencias SET periodo_label=$1,dias=$2,data=$3,motivo=$4 WHERE id=$5 RETURNING id,colaborador_id,periodo_label,dias,data,motivo`,
     [merged.periodo_label, merged.dias, merged.data, merged.motivo, req.params.id]
@@ -306,7 +307,7 @@ router.patch('/matriz/raci/atividades/:id', requerAuth, gGestor, wrap(async (req
   const atual = await db.get('SELECT * FROM mz_atividades WHERE id=$1', [req.params.id]);
   if (!atual) return res.status(404).json({ erro: 'Atividade não encontrada' });
   const campos = ['nome','ordem','categoria','sugestao'];
-  const merged = {}; campos.forEach(c => { merged[c] = req.body[c] !== undefined ? req.body[c] : atual[c]; });
+  const merged: Record<string, any> = {}; campos.forEach(c => { merged[c] = req.body[c] !== undefined ? req.body[c] : atual[c]; });
   await pool.query('UPDATE mz_atividades SET nome=$1,ordem=$2,categoria=$3,sugestao=$4 WHERE id=$5',
     [merged.nome, merged.ordem, merged.categoria, merged.sugestao, req.params.id]);
   res.json({ ok: true });
@@ -369,7 +370,7 @@ router.get('/matriz/incentivo', requerAuth, gLeitura, wrap(async (req, res) => {
 router.put('/matriz/incentivo', requerAuth, gGestor, wrap(async (req, res) => {
   const atual = await _getIncentivo();
   const campos = ['abs_green','abs_yellow','abs_red','perf_green','perf_yellow','perf_red','comp_green','comp_yellow','comp_red'];
-  const merged = {}; campos.forEach(c => { merged[c] = req.body[c] !== undefined ? req.body[c] : atual[c]; });
+  const merged: Record<string, any> = {}; campos.forEach(c => { merged[c] = req.body[c] !== undefined ? req.body[c] : atual[c]; });
   const r = await pool.query(
     `UPDATE mz_incentivo_config SET abs_green=$1,abs_yellow=$2,abs_red=$3,perf_green=$4,perf_yellow=$5,perf_red=$6,comp_green=$7,comp_yellow=$8,comp_red=$9 WHERE id=$10 RETURNING *`,
     [...campos.map(c => merged[c]), atual.id]

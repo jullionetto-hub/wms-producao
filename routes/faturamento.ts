@@ -7,11 +7,11 @@
    novo do Dashboard (routes/hora-a-hora.js).
 ══════════════════════════════════════════════════════════════════════ */
 'use strict';
-const express = require('express');
+import express from 'express';
 const router  = express.Router();
-const { pool, db } = require('../lib/db');
-const { requerAuth, requerPerfil } = require('../lib/auth');
-const { registrarAuditoria } = require('../lib/auditoria');
+import { pool, db } from '../lib/db';
+import { requerAuth, requerPerfil } from '../lib/auth';
+import { registrarAuditoria } from '../lib/auditoria';
 
 // ── POST /faturamento/importar — registros já parseados no cliente ────────
 router.post('/faturamento/importar', requerAuth, requerPerfil('supervisor', 'gestor'), async (req, res) => {

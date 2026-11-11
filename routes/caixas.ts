@@ -1,8 +1,8 @@
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const { db, pool } = require('../lib/db');
-const { requerAuth } = require('../lib/auth');
-const { dataHoraLocal } = require('../lib/helpers');
+import { db, pool } from '../lib/db';
+import { requerAuth } from '../lib/auth';
+import { dataHoraLocal } from '../lib/helpers';
 
 const TOTAL_CAIXAS = 10;
 
@@ -36,7 +36,7 @@ router.get('/caixas/checklist', requerAuth, async (req, res) => {
 // Log completo (todas as caixas, todas as datas) pra gestão/supervisão
 // acompanharem — com filtros opcionais de período, caixa e turno.
 router.get('/caixas/checklist/log', requerAuth, async (req, res) => {
-  const { data_ini, data_fim, numero, turno } = req.query;
+  const { data_ini, data_fim, numero, turno } = req.query as Record<string, string>;
   try {
     const cond = [];
     const params = [];

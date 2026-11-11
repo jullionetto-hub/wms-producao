@@ -1,9 +1,9 @@
 'use strict';
-const express = require('express');
+import express from 'express';
 const router  = express.Router();
-const { pool, db } = require('../lib/db');
-const { requerAuth, requerPerfil } = require('../lib/auth');
-const { dataHoraLocal } = require('../lib/helpers');
+import { pool, db } from '../lib/db';
+import { requerAuth, requerPerfil } from '../lib/auth';
+import { dataHoraLocal } from '../lib/helpers';
 
 // Aceita qualquer endereço com letras, números, barra e hífen (ex: D106, ZA387, C099/VERT-C02-CX18)
 const ADDR_REGEX = /^[A-Z0-9][A-Z0-9\/\-]{1,29}$/i;
@@ -17,7 +17,7 @@ function validarEndereco(end) {
 
 // ── GET /entrada-manual/lotes ─────────────────────────────────────────────
 router.get('/entrada-manual/lotes', requerAuth, async (req, res) => {
-  const { ini, fim, status } = req.query;
+  const { ini, fim, status } = req.query as Record<string, string>;
   const { data: hoje } = dataHoraLocal();
   const dIni = ini || hoje;
   const dFim = fim || hoje;
@@ -253,7 +253,7 @@ router.post('/entrada-manual/validar-endereco', requerAuth, async (req, res) => 
 
 // ── GET /entrada-manual/exportar — Download CSV ───────────────────────────
 router.get('/entrada-manual/exportar', requerAuth, async (req, res) => {
-  const { ini, fim, lote_id } = req.query;
+  const { ini, fim, lote_id } = req.query as Record<string, string>;
   const { data: hoje } = dataHoraLocal();
   try {
     const params = [];

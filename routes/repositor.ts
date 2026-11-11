@@ -1,8 +1,8 @@
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const { db, pool } = require('../lib/db');
-const { requerAuth, requerPerfil } = require('../lib/auth');
-const { dataHoraLocal, validarId, normalizarTurno } = require('../lib/helpers');
+import { db, pool } from '../lib/db';
+import { requerAuth, requerPerfil } from '../lib/auth';
+import { dataHoraLocal, validarId, normalizarTurno } from '../lib/helpers';
 
 // Garante colunas novas (roda uma vez na inicialização)
 pool.query(`ALTER TABLE avisos_repositor ADD COLUMN IF NOT EXISTS historico        JSONB   DEFAULT '[]'::jsonb`).catch(()=>{});
@@ -28,7 +28,7 @@ function turnoAtualHora() {
 
 router.get('/repositor/avisos', requerAuth, async (req,res) => {
   if (!req.session?.usuario) return res.json([]);
-  const {status, data, data_ini, data_fim, codigo} = req.query;
+  const {status, data, data_ini, data_fim, codigo} = req.query as Record<string, string>;
   const usuario = req.session.usuario;
   const perfil  = usuario.perfil || '';
   const meuTurno = normalizarTurno(usuario.turno);
@@ -91,7 +91,7 @@ router.get('/repositor/avisos', requerAuth, async (req,res) => {
 // número bater com o que ele vê.
 router.get('/repositor/avisos/contagem', requerAuth, async (req,res) => {
   if (!req.session?.usuario) return res.json({ por_status: {} });
-  const { data_ini, data_fim } = req.query;
+  const { data_ini, data_fim } = req.query as Record<string, string>;
   const usuario = req.session.usuario;
   const meuTurno = normalizarTurno(usuario.turno);
   try {
@@ -317,7 +317,7 @@ router.put('/repositor/avisos/:id/lido-separador', requerAuth, async (req,res) =
 });
 
 router.get('/repositor/ranking-produtos', requerAuth, async (req,res) => {
-  const {data_ini, data_fim} = req.query;
+  const {data_ini, data_fim} = req.query as Record<string, string>;
   try {
     let sql = `SELECT codigo, descricao, COUNT(*) as total,
                SUM(CASE WHEN status='abastecido' THEN 1 ELSE 0 END) as abastecidos,
@@ -333,7 +333,7 @@ router.get('/repositor/ranking-produtos', requerAuth, async (req,res) => {
 });
 
 router.get('/repositor/buscar-produto', requerAuth, async (req,res) => {
-  const {codigo}=req.query;
+  const {codigo}=req.query as Record<string, string>;
   if (!codigo) return res.status(400).json({erro:'Código não informado'});
   try {
     const rows = await db.all(
@@ -429,7 +429,7 @@ async function atualizarAviso(req, res, status, extra={}) {
   const {hora} = dataHoraLocal();
   const {qtd_encontrada, repositor_nome} = req.body || {};
   try {
-    const campos = { status, hora_reposto:hora, repositor_nome: repositor_nome||'', ...extra };
+    const campos: Record<string, any> = { status, hora_reposto:hora, repositor_nome: repositor_nome||'', ...extra };
     if (qtd_encontrada !== undefined) campos.qtd_encontrada = parseInt(qtd_encontrada)||0;
     const sets = Object.keys(campos).map((k,i) => `${k}=$${i+1}`).join(',');
     await pool.query(
@@ -456,7 +456,7 @@ async function resolverAvisoEAcumularTempo(req, res, status, extra={}) {
     if (ainda.length > 0) return;
     const inicio = new Date(ped.aguardando_repositor_desde);
     const agora  = new Date();
-    const mins   = Math.round((agora - inicio) / 60000);
+    const mins   = Math.round((+agora - +inicio) / 60000);
     const total  = (ped.tempo_aguardando_min || 0) + (mins > 0 ? mins : 0);
     await pool.query("UPDATE pedidos SET tempo_aguardando_min=$1, aguardando_repositor_desde='' WHERE id=$2",[total, av.pedido_id]);
 
@@ -620,7 +620,7 @@ router.put('/repositor/avisos/:id/busca-final/nao-encontrado', requerAuth, async
 
 router.get('/protocolo/historico', requerAuth, async (req,res) => {
   try {
-    const { data_ini, data_fim } = req.query;
+    const { data_ini, data_fim } = req.query as Record<string, string>;
     // Filtra pela data em que o item FECHOU (data_fechamento), não pela data em
     // que o aviso foi aberto — senão um item aberto há dias e fechado hoje não
     // aparecia no filtro "hoje". Itens antigos sem data_fechamento (fechados
@@ -640,7 +640,7 @@ router.get('/protocolo/historico', requerAuth, async (req,res) => {
 
 router.get('/protocolo', requerAuth, async (req,res) => {
   try {
-    const { data, data_ini, data_fim } = req.query;
+    const { data, data_ini, data_fim } = req.query as Record<string, string>;
     let sql = `SELECT a.*, COALESCE(p.numero_pedido, a.numero_pedido) as numero_pedido, COALESCE(p.cliente,'') as cliente, COALESCE(p.transportadora,'') as transportadora FROM avisos_repositor a LEFT JOIN pedidos p ON a.pedido_id=p.id WHERE a.status='protocolo'`;
     const params = [];
     // suporta filtro legado (data única) e novo (data_ini/data_fim)

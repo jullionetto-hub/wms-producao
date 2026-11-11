@@ -30,7 +30,7 @@ const { criarUsuarioPadrao } = require('./src/database/seed');
 const { iniciarScheduler, verificarRelatoriosPerdidos } = require('./src/scheduler/relatorio');
 
 // ── Rotas ─────────────────────────────────────────────────────────────────────
-const apiRouter = require('./routes/api');
+const apiRouter = /** @type {import('express').Router} */ (/** @type {unknown} */ (require('./routes/api')));
 
 // ── Utilitários ───────────────────────────────────────────────────────────────
 const log               = require('./lib/logger');

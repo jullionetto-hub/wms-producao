@@ -1,8 +1,8 @@
 'use strict';
-const express = require('express');
+import express from 'express';
 const router  = express.Router();
-const { db }  = require('../lib/db');
-const { requerAuth, requerPerfil } = require('../lib/auth');
+import { db } from '../lib/db';
+import { requerAuth, requerPerfil } from '../lib/auth';
 
 // ── Detecção de padrões por colaborador (Fase 1 — estatística, sem ML) ──────
 // Cruza dados que o sistema já coleta (tempo de separação, avisos de falta,
@@ -300,7 +300,7 @@ async function calcularPadroes({ ini, fim, turno }) {
 
 router.get('/performance/padroes', requerAuth, requerPerfil('supervisor', 'gestor'), async (req, res) => {
   try {
-    const dados = await calcularPadroes(req.query);
+    const dados = await calcularPadroes(req.query as any);
     res.json(dados);
   } catch (e) {
     res.status(e.status || 500).json({ erro: e.message });
@@ -325,7 +325,7 @@ router.get('/performance/padroes/resumo-ia', requerAuth, requerPerfil('superviso
     return res.status(501).json({ erro: 'Resumo por IA não configurado — defina ANTHROPIC_API_KEY no ambiente do servidor para habilitar.' });
   }
   try {
-    const dados = await calcularPadroes(req.query);
+    const dados = await calcularPadroes(req.query as any);
     if (!dados.colaboradores.length) {
       return res.json({ resumo: 'Nenhum padrão relevante identificado automaticamente no período — operação dentro do esperado.' });
     }

@@ -1,9 +1,9 @@
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const { db, pool } = require('../lib/db');
-const { requerAuth, checkRateLimit, registrarFalhaLogin } = require('../lib/auth');
-const { hashSenha, verificarSenha, hashNeedsMigration, perfisPermitidos, sanitizeStr, dataHoraLocal } = require('../lib/helpers');
-const { registrarAuditoria } = require('../lib/auditoria');
+import { db, pool } from '../lib/db';
+import { requerAuth, checkRateLimit, registrarFalhaLogin } from '../lib/auth';
+import { hashSenha, verificarSenha, hashNeedsMigration, perfisPermitidos, sanitizeStr, dataHoraLocal } from '../lib/helpers';
+import { registrarAuditoria } from '../lib/auditoria';
 
 router.post('/auth/login', async (req,res) => {
   const ip = req.ip || req.connection.remoteAddress || 'unknown';

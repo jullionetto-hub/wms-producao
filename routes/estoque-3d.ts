@@ -9,15 +9,15 @@
    A página só é servida a supervisor/gestor (ver index.js) e estas rotas
    exigem o mesmo perfil.
 ══════════════════════════════════════════════════════════════════════ */
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const { db } = require('../lib/db');
-const { requerAuth, requerPerfil } = require('../lib/auth');
+import { db } from '../lib/db';
+import { requerAuth, requerPerfil } from '../lib/auth';
 
 const PERFIS = ['supervisor', 'gestor'];
 
 router.get('/estoque-3d/dados', requerAuth, requerPerfil(...PERFIS), async (req, res) => {
-  const dias = Math.min(90, Math.max(1, parseInt(req.query.dias) || 30));
+  const dias = Math.min(90, Math.max(1, parseInt(req.query.dias as string) || 30));
   try {
     const [produtos, separando, reposicao, giro] = await Promise.all([
       db.all(`SELECT codigo, nome, localizacao, saldo, disponivel FROM produtos ORDER BY codigo`),

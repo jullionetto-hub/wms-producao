@@ -1,11 +1,11 @@
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const { db, pool } = require('../lib/db');
-const { requerAuth, requerPerfil } = require('../lib/auth');
-const { dataHoraLocal, validarId, normalizarTurno } = require('../lib/helpers');
-const { registrarAuditoria } = require('../lib/auditoria');
-const { gerarRelatorio } = require('../lib/relatorio');
-const { requerPermissao } = require('../lib/permissoes');
+import { db, pool } from '../lib/db';
+import { requerAuth, requerPerfil } from '../lib/auth';
+import { dataHoraLocal, validarId, normalizarTurno } from '../lib/helpers';
+import { registrarAuditoria } from '../lib/auditoria';
+import { gerarRelatorio } from '../lib/relatorio';
+import { requerPermissao } from '../lib/permissoes';
 
 router.post('/admin/zerar-sessoes', requerAuth, requerPerfil('supervisor'), requerPermissao('excluir'), async (req, res) => {
   const { data } = req.body;
@@ -72,7 +72,7 @@ router.post('/admin/migration-tempo-justo', requerAuth, requerPerfil('supervisor
 });
 
 router.get('/auditoria', requerAuth, requerPerfil('supervisor'), async (req,res) => {
-  const { data_ini, data_fim, usuario, acao, limit=100, page, pageSize } = req.query;
+  const { data_ini, data_fim, usuario, acao, limit=100, page, pageSize } = req.query as Record<string, string>;
   try {
     let sql = `SELECT * FROM auditoria WHERE 1=1`;
     const p = [];
@@ -89,14 +89,14 @@ router.get('/auditoria', requerAuth, requerPerfil('supervisor'), async (req,res)
       p.push((pg-1)*size); sql += ` OFFSET $${p.length}`;
       return res.json({ total, pagina:pg, totalPaginas:Math.ceil(total/size), dados: await db.all(sql, p) });
     }
-    p.push(parseInt(limit)||100);
+    p.push(parseInt(limit as string)||100);
     sql += ` ORDER BY id DESC LIMIT $${p.length}`;
     res.json(await db.all(sql, p));
   } catch(e) { res.status(500).json({erro:e.message}); }
 });
 
 router.get('/relatorio/diario', requerAuth, requerPerfil('supervisor'), async (req,res) => {
-  const {data} = req.query;
+  const {data} = req.query as Record<string, string>;
   const {data:hoje} = dataHoraLocal();
   const d = data || hoje;
   try {
@@ -153,7 +153,7 @@ router.get('/diario', requerAuth, requerPerfil('supervisor'), async (req,res) =>
 
 router.get('/diario/anterior', requerAuth, requerPerfil('supervisor'), async (req,res) => {
   try {
-    const { data, turno } = req.query;
+    const { data, turno } = req.query as Record<string, string>;
     const turnos = ['Manha','Tarde','Noite'];
     const idxT = turnos.indexOf(turno);
     let dataAnterior = data;
@@ -190,7 +190,7 @@ router.get('/diario/anterior', requerAuth, requerPerfil('supervisor'), async (re
 
 router.get('/diario/dados/turno', requerAuth, requerPerfil('supervisor'), async (req,res) => {
   try {
-    const { data, turno } = req.query;
+    const { data, turno } = req.query as Record<string, string>;
     const { dataHoraLocal: dhl } = require('../lib/helpers');
     const dt = data || dhl().data;
     // O parâmetro turno chegava a ser recebido mas nunca era usado pra filtrar —
@@ -262,7 +262,7 @@ router.get('/diario/dados/turno', requerAuth, requerPerfil('supervisor'), async 
 // qualquer valor preenchido manualmente antes de salvar.
 router.get('/diario/existe', requerAuth, requerPerfil('supervisor'), async (req,res) => {
   try {
-    const { data, turno } = req.query;
+    const { data, turno } = req.query as Record<string, string>;
     if (!data || !turno) return res.json(null);
     const d = await db.get('SELECT id FROM diario_bordo WHERE data=$1 AND turno=$2', [data, turno]);
     res.json(d ? { id: d.id } : null);
@@ -475,7 +475,7 @@ router.get('/diario/validacao/pendente', requerAuth, requerPerfil('supervisor'),
     if (!val) return res.json(null);
     if (typeof val.dados === 'string') val.dados = JSON.parse(val.dados || '{}');
     if (typeof val.observacoes === 'string') val.observacoes = JSON.parse(val.observacoes || '{}');
-    const restante = Math.max(0, Math.floor((new Date(val.prazo) - agora) / 1000));
+    const restante = Math.max(0, Math.floor((+new Date(val.prazo) - +agora) / 1000));
     const atrasada = val.val_status === 'expirado';
     res.json({ ...val, restante_segundos: restante, atrasada, checklist: CHECKLIST_ITENS });
   } catch(e) { res.status(500).json({ erro: e.message }); }
@@ -562,7 +562,7 @@ router.post('/diario/validacao/:id/validar', requerAuth, requerPerfil('superviso
    RELATÓRIO ANALÍTICO — DE/ATÉ + TURNO
 ══════════════════════════════════════════════════════════════ */
 router.get('/relatorio/analitico', requerAuth, requerPerfil('supervisor'), async (req, res) => {
-  const { de, ate, turno } = req.query;
+  const { de, ate, turno } = req.query as Record<string, string>;
   const { data: hoje } = dataHoraLocal();
   const dataIni = de || hoje;
   const dataFim = ate || hoje;
@@ -623,11 +623,11 @@ router.get('/relatorio/analitico', requerAuth, requerPerfil('supervisor'), async
 
     // ── Helpers ───────────────────────────────────────────────────
     const minutesBetween = (s, e) => {
-      try { const m = (new Date(e) - new Date(s)) / 60000; return (m > 0 && m < 600) ? m : null; } catch { return null; }
+      try { const m = (+new Date(e) - +new Date(s)) / 60000; return (m > 0 && m < 600) ? m : null; } catch { return null; }
     };
     const minutesTime = (s, e) => {
       try {
-        let m = (new Date(`2000-01-01T${e}`) - new Date(`2000-01-01T${s}`)) / 60000;
+        let m = (+new Date(`2000-01-01T${e}`) - +new Date(`2000-01-01T${s}`)) / 60000;
         if (m < 0) m += 1440;
         return (m > 0 && m < 300) ? m : null;
       } catch { return null; }
@@ -669,7 +669,7 @@ router.get('/relatorio/analitico', requerAuth, requerPerfil('supervisor'), async
     const temposEmb = embalagens.map(e => minutesTime(e.embalagem_inicio, e.embalado_em)).filter(Boolean);
 
     // ── Colaboradores — separadores filtrados pelo turno ─────────
-    const colabs = {};
+    const colabs: Record<string, any> = {};
     pedidosDistribuidos.forEach(p => {
       if (!p.sep_nome) return;
       const k = `${p.sep_nome}:separador`;
@@ -745,7 +745,7 @@ router.get('/relatorio/analitico', requerAuth, requerPerfil('supervisor'), async
     const por_hora = Object.entries(hMap).sort().map(([h,t])=>({hora:h,total:t}));
 
     // ── Por transportadora ────────────────────────────────────────
-    const trMap = {};
+    const trMap: Record<string, number> = {};
     sepConcluidos.forEach(p => {
       const t = String(p.transportadora||'Outros').trim()||'Outros';
       trMap[t] = (trMap[t]||0)+1;
@@ -765,7 +765,7 @@ router.get('/relatorio/analitico', requerAuth, requerPerfil('supervisor'), async
         const desde = p.aguardando_desde.includes('T')||p.aguardando_desde.includes(' ')
           ? new Date(p.aguardando_desde)
           : new Date(`${p.data_pedido}T${p.aguardando_desde}`);
-        const horas = (new Date(p.concluido_em)-desde)/3600000;
+        const horas = (+new Date(p.concluido_em)-+desde)/3600000;
         if (!isNaN(horas)) horas<=SLA_H ? slaDentro++ : slaFora++;
       } catch {}
     });
@@ -833,7 +833,7 @@ router.post('/admin/zerar-dados-teste', requerAuth, requerPerfil('supervisor'), 
   const dia = data || hoje;
 
   try {
-    const resultados = {};
+    const resultados: Record<string, any> = {};
 
     // itens_pedido, avisos_repositor, checkout, checkout_itens_conferencia e embalagem
     // têm FK para pedidos.id — precisam ser apagados antes do pedido, senão o DELETE

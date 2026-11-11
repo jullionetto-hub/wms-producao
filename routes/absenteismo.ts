@@ -1,10 +1,10 @@
 'use strict';
-const express = require('express');
+import express from 'express';
 const router  = express.Router();
-const { requerAuth, requerPerfil } = require('../lib/auth');
-const { db, pool } = require('../lib/db');
+import { requerAuth, requerPerfil } from '../lib/auth';
+import { db, pool } from '../lib/db';
 const pdfParse = require('pdf-parse');
-const { parseEspelhoPonto, inferirHorariosEsperados, classificarDia, classificarAbsenteismoMes, mesReferencia, ehDiaUtilEsperado, periodoDoMes, diasNoPeriodo } = require('../lib/absenteismo');
+import { parseEspelhoPonto, inferirHorariosEsperados, classificarDia, classificarAbsenteismoMes, mesReferencia, ehDiaUtilEsperado, periodoDoMes, diasNoPeriodo } from '../lib/absenteismo';
 
 // Feriados em que o time inteiro não trabalha, mesmo caindo em dia útil
 // normal (não tem como inferir isso só pelo dia da semana). Lista mantida
@@ -107,7 +107,7 @@ router.post('/absenteismo/debug', requerAuth, gLeitura,
       if (!Buffer.isBuffer(req.body) || !req.body.length) {
         return res.status(400).json({ erro: 'Nenhum arquivo PDF enviado.' });
       }
-      const nomeArquivo = req.query.nome || 'espelho_ponto.pdf';
+      const nomeArquivo = (req.query.nome || 'espelho_ponto.pdf') as string;
       const { text } = await pdfParse(req.body);
       const colaboradores = parseEspelhoPonto(text, nomeArquivo);
       // Mesmo cálculo de período do upload de verdade — pra conferir aqui,
@@ -146,7 +146,7 @@ router.post('/absenteismo/upload', requerAuth, gLeitura,
       if (!Buffer.isBuffer(req.body) || !req.body.length) {
         return res.status(400).json({ erro: 'Nenhum arquivo PDF enviado.' });
       }
-      const nomeArquivo = req.query.nome || req.headers['x-nome-arquivo'] || 'espelho_ponto.pdf';
+      const nomeArquivo = (req.query.nome || req.headers['x-nome-arquivo'] || 'espelho_ponto.pdf') as string;
       const { text } = await pdfParse(req.body);
       const colaboradores = parseEspelhoPonto(text, nomeArquivo);
       if (!colaboradores.length) {
@@ -285,7 +285,7 @@ router.get('/absenteismo/uploads', requerAuth, gLeitura, wrap(async (req, res) =
 // do colaborador, não é filtrado por data (é um saldo acumulado).
 router.get('/absenteismo/resultado', requerAuth, gLeitura, wrap(async (req, res) => {
   const tolerancia = parseInt(req.query.tolerancia) || 0;
-  const { data_ini, data_fim } = req.query;
+  const { data_ini, data_fim } = req.query as Record<string, string>;
   const colaboradores = await db.all(`SELECT * FROM abs_colaboradores WHERE ativo=true ORDER BY nome`);
   const params = [];
   const where = [];
@@ -348,7 +348,7 @@ router.get('/absenteismo/colaboradores', requerAuth, gLeitura, wrap(async (req, 
 }));
 
 router.get('/absenteismo/colaboradores/:id/dias', requerAuth, gLeitura, wrap(async (req, res) => {
-  const { data_ini, data_fim } = req.query;
+  const { data_ini, data_fim } = req.query as Record<string, string>;
   const params = [req.params.id];
   let sql = 'SELECT * FROM abs_registros_diarios WHERE colaborador_id=$1';
   if (data_ini) { params.push(data_ini); sql += ` AND data >= $${params.length}`; }

@@ -1,12 +1,12 @@
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const { db, pool } = require('../lib/db');
-const { requerAuth, requerPerfil } = require('../lib/auth');
-const { dataHoraLocal, formatarAguardandoDesde } = require('../lib/helpers');
-const { registrarAuditoria } = require('../lib/auditoria');
+import { db, pool } from '../lib/db';
+import { requerAuth, requerPerfil } from '../lib/auth';
+import { dataHoraLocal, formatarAguardandoDesde } from '../lib/helpers';
+import { registrarAuditoria } from '../lib/auditoria';
 
 router.get('/kpis', requerAuth, async (req,res) => {
-  const { turnos, data_ini, data_fim } = req.query;
+  const { turnos, data_ini, data_fim } = req.query as Record<string, string>;
   const turnosArr = turnos ? turnos.split(',').filter(Boolean) : null;
   const hasTurno  = turnosArr && turnosArr.length > 0;
 
@@ -30,7 +30,7 @@ router.get('/kpis', requerAuth, async (req,res) => {
       : '';
 
     // Build params: $1=dIni, $2=dFim, $3=mes%, [$4=turnos se hasTurno]
-    const p = [dIni, dFim, dIni.substring(0,7)+'%'];
+    const p: any[] = [dIni, dFim, dIni.substring(0,7)+'%'];
     if (hasTurno) p.push(turnosArr);
     const T = hasTurno ? `$${p.length}` : null;
 
@@ -67,7 +67,7 @@ router.get('/kpis', requerAuth, async (req,res) => {
 });
 
 router.get('/produtividade', requerAuth, async (req,res) => {
-  const {separador_id}=req.query;
+  const {separador_id}=req.query as Record<string, string>;
   const {data:hoje}=dataHoraLocal(); const mes=hoje.substring(0,7);
   try {
     let sql=`SELECT s.id,s.nome,s.matricula,s.status,
@@ -83,7 +83,7 @@ router.get('/produtividade', requerAuth, async (req,res) => {
 });
 
 router.get('/estatisticas/pedidos', requerAuth, async (req,res) => {
-  const {data_ini,data_fim}=req.query;
+  const {data_ini,data_fim}=req.query as Record<string, string>;
   const {data:hoje}=dataHoraLocal(); const mes=hoje.substring(0,7); const ano=hoje.substring(0,4);
   try {
     const row=await db.get(`SELECT
@@ -103,7 +103,7 @@ router.get('/estatisticas/pedidos', requerAuth, async (req,res) => {
 });
 
 router.get('/estatisticas/repositor', requerAuth, async (req,res) => {
-  const {repositor_nome, data_ini, data_fim}=req.query;
+  const {repositor_nome, data_ini, data_fim}=req.query as Record<string, string>;
   const {data:hoje}=dataHoraLocal(); const mes=hoje.substring(0,7); const ano=hoje.substring(0,4);
   try {
     let sql=`SELECT
@@ -147,7 +147,7 @@ router.get('/estatisticas/checkout', requerAuth, async (req,res) => {
 });
 
 router.get('/timeline', requerAuth, async (req,res) => {
-  const {data}=req.query; const {data:hoje}=dataHoraLocal();
+  const {data}=req.query as Record<string, string>; const {data:hoje}=dataHoraLocal();
   try {
     const rows=await db.all(`SELECT p.numero_pedido,p.cliente,p.transportadora,p.hora_pedido,p.status,p.itens,s.nome as separador_nome,p.data_pedido,p.aguardando_desde FROM pedidos p LEFT JOIN separadores s ON p.separador_id=s.id WHERE p.data_pedido=$1 ORDER BY p.hora_pedido ASC NULLS LAST`,[data||hoje]);
     res.json(rows.map(r=>({...r,aguardando_desde:formatarAguardandoDesde(r.aguardando_desde)})));
@@ -192,7 +192,7 @@ router.get('/stats/meus', requerAuth, async (req,res) => {
   const usuario = req.session?.usuario;
   if (!usuario) return res.status(401).json({erro:'Nao autenticado'});
   try {
-    const result = { perfil: usuario.perfil, nome: usuario.nome, hoje };
+    const result: Record<string, any> = { perfil: usuario.perfil, nome: usuario.nome, hoje };
     if (usuario.perfil === 'separador') {
       const sep = await db.get('SELECT id FROM separadores WHERE usuario_id=$1', [usuario.id]);
       if (sep) {
@@ -224,7 +224,7 @@ router.get('/stats/meus', requerAuth, async (req,res) => {
 
 router.get('/estatisticas/separador', requerAuth, async (req,res) => {
   try {
-    const {data, separador_id} = req.query;
+    const {data, separador_id} = req.query as Record<string, string>;
     const hoje = data || (await db.get(`SELECT TO_CHAR(NOW() AT TIME ZONE 'America/Sao_Paulo','YYYY-MM-DD') as d`)).d;
     const perfil = req.session.usuario?.perfil;
     const podeVerOutro = perfil === 'supervisor' || perfil === 'gestor';
@@ -355,7 +355,7 @@ router.put('/configuracoes/:chave', requerAuth, requerPerfil('supervisor'), asyn
 
 // ── Performance com sessões de trabalho ────────────────────────────────────────
 router.get('/stats/performance', requerAuth, requerPerfil('supervisor'), async (req, res) => {
-  const { ini, fim, perfil: filtPerfil, colaborador: filtColab } = req.query;
+  const { ini, fim, perfil: filtPerfil, colaborador: filtColab } = req.query as Record<string, string>;
   const { data: hoje } = dataHoraLocal();
   const dataIni = ini || hoje;
   const dataFim = fim || hoje;
@@ -442,7 +442,7 @@ router.get('/stats/performance', requerAuth, requerPerfil('supervisor'), async (
     const repIdx  = Object.fromEntries(reposicoes.map(r => [r.nome, r]));
 
     // Monta resultado por sessão
-    const resultado = sessoes.map(s => {
+    const resultado: any[] = sessoes.map(s => {
       const min   = parseInt(s.minutos_total) || 0;
       const horas = Math.round(min / 6) / 10;
       const horasTurno = HORAS[s.turno] || 8;
@@ -617,7 +617,7 @@ router.get('/dashboard/ranking-geral', requerAuth, requerPerfil('supervisor'), a
 
 /* ─── LIBERAÇÃO DE ITENS (nao_encontrado → aguardando supervisor) ─── */
 router.get('/liberacao/pendentes', requerAuth, requerPerfil('supervisor'), async (req, res) => {
-  const { data_ini, data_fim } = req.query;
+  const { data_ini, data_fim } = req.query as Record<string, string>;
   try {
     let sql = `
       SELECT a.id, a.numero_pedido, a.codigo, a.descricao, a.quantidade,
@@ -637,7 +637,7 @@ router.get('/liberacao/pendentes', requerAuth, requerPerfil('supervisor'), async
 });
 
 router.get('/liberacao/historico', requerAuth, requerPerfil('supervisor'), async (req, res) => {
-  const { data_ini, data_fim } = req.query;
+  const { data_ini, data_fim } = req.query as Record<string, string>;
   try {
     let sql = `
       SELECT a.id, a.numero_pedido, a.codigo, a.descricao, a.quantidade, a.status,
@@ -658,7 +658,7 @@ router.get('/liberacao/historico', requerAuth, requerPerfil('supervisor'), async
 
 /* ─── DETALHE POR PEDIDO (Performance) ─────────────────────────────── */
 router.get('/stats/performance/detalhe', requerAuth, requerPerfil('supervisor'), async (req, res) => {
-  const { ini, fim, colaborador: filtColab, perfil: filtPerfil } = req.query;
+  const { ini, fim, colaborador: filtColab, perfil: filtPerfil } = req.query as Record<string, string>;
   const { data: hoje } = dataHoraLocal();
   const dataIni = ini || hoje;
   const dataFim = fim || hoje;

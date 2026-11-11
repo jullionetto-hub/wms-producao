@@ -1,8 +1,8 @@
 'use strict';
-const express = require('express');
+import express from 'express';
 const router  = express.Router();
-const { db }  = require('../lib/db');
-const { requerAuth, requerPerfil } = require('../lib/auth');
+import { db } from '../lib/db';
+import { requerAuth, requerPerfil } from '../lib/auth';
 
 const TURNOS = ['Manha', 'Tarde', 'Noite'];
 const ISO    = /^\d{4}-\d{2}-\d{2}$/;
@@ -16,7 +16,7 @@ function normTurno(t) {
 // Um registro por (data, turno) juntando passagem de turno, diário de bordo e
 // as validações de ambos. A nota é calculada no front (metas/pesos configuráveis).
 router.get('/lideranca/turnos', requerAuth, requerPerfil('supervisor', 'gestor'), async (req, res) => {
-  const { ini, fim } = req.query;
+  const { ini, fim } = req.query as Record<string, string>;
   if (!ISO.test(ini || '') || !ISO.test(fim || '')) return res.status(400).json({ erro: 'Informe ini e fim (YYYY-MM-DD).' });
   const turno = req.query.turno ? normTurno(req.query.turno) : null;
 

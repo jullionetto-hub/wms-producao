@@ -1,6 +1,6 @@
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const { db, pool } = require('../lib/db');
+import { db, pool } from '../lib/db';
 
 // Executa `fn` um de cada vez para o mesmo item (fila de promessas por item_id).
 // Usado para tornar "checa se já existe aviso + insere" atômico dentro deste processo.
@@ -13,13 +13,13 @@ function serializarPorItem(itemId, fn) {
   atual.then(limpar, limpar);
   return atual;
 }
-const { requerAuth, requerPerfil } = require('../lib/auth');
-const { dataHoraLocal, formatarAguardandoDesde, validarId } = require('../lib/helpers');
-const { registrarAuditoria } = require('../lib/auditoria');
-const { requerPermissao } = require('../lib/permissoes');
-const { calcularPesoCorredor, calcularPontuacaoPedido } = require('../lib/pontuacao');
-const { calcularPrioridade } = require('../lib/prioridade');
-const { classificarImportacao } = require('../lib/importacao');
+import { requerAuth, requerPerfil } from '../lib/auth';
+import { dataHoraLocal, formatarAguardandoDesde, validarId } from '../lib/helpers';
+import { registrarAuditoria } from '../lib/auditoria';
+import { requerPermissao } from '../lib/permissoes';
+import { calcularPesoCorredor, calcularPontuacaoPedido } from '../lib/pontuacao';
+import { calcularPrioridade } from '../lib/prioridade';
+import { classificarImportacao } from '../lib/importacao';
 
 // Prioridade só faz sentido pra pedido ainda não concluído (aguardando
 // alguma etapa) — pedido concluído não carrega selo de prioridade.
@@ -42,7 +42,7 @@ const SUBQ_COLMEIA_ENDERECOS = `(SELECT STRING_AGG(DISTINCT c.endereco, ' · ' O
    FROM colmeias c WHERE c.codigo=i.codigo AND c.status='ativo' AND c.endereco<>'')`;
 
 router.get('/pedidos', requerAuth, async (req,res) => {
-  const {separador_id,status,data,data_ini,data_fim,aguardando_ini,aguardando_fim,numero_pedido,page,pageSize}=req.query;
+  const {separador_id,status,data,data_ini,data_fim,aguardando_ini,aguardando_fim,numero_pedido,page,pageSize}=req.query as Record<string, string>;
   try {
     // total_itens sobrescreve p.total_itens com o valor calculado da tabela itens_pedido
     // (fallback para pedidos antigos onde total_itens pode ser NULL ou 0)
@@ -390,7 +390,7 @@ router.post('/pedidos/lote/iniciar', requerAuth, async (req,res) => {
 });
 
 router.get('/pedidos/buscar-caixa-lote', requerAuth, async (req,res) => {
-  const { numero } = req.query;
+  const { numero } = req.query as Record<string, string>;
   if (!numero) return res.status(400).json({erro:'numero obrigatorio'});
   try {
     const ped = await db.get(
@@ -764,7 +764,7 @@ router.delete('/pedidos/:id', requerAuth, requerPerfil('supervisor'), async (req
 });
 
 router.delete('/pedidos', requerAuth, requerPerfil('supervisor'), requerPermissao('excluir'), async (req,res) => {
-  const {data,status}=req.query;
+  const {data,status}=req.query as Record<string, string>;
   if (!data && !status) return res.status(400).json({erro:'Informe data ou status!'});
   try {
     // Exclusão em lote (subquery), não em loop — um pedido por vez faz milhares de
@@ -810,7 +810,7 @@ router.post('/pedidos/importar', requerAuth, requerPerfil('supervisor'), async (
   const {data:hoje,hora}=dataHoraLocal();
   let importados=0,ignorados=0,erros=0;
   const repetidos=[], diferentes=[];
-  const numeros=[...new Set(dados.map(d=>String(d.numero_pedido)))];
+  const numeros=[...new Set<string>(dados.map(d=>String(d.numero_pedido)))];
   // Pedido repetido (mesmo número, nada novo no arquivo) é bloqueado — não importa de novo nem mexe no que já existe
   let classif; try { classif = classificarImportacao(dados, await _pedidosExistentes(numeros.map(n=>n.trim()).filter(Boolean))); } catch(e) { classif = null; }
   if (classif) { classif.repetidos.forEach(n=>repetidos.push(n)); classif.diferentes.forEach(n=>diferentes.push(n)); }
@@ -1378,7 +1378,7 @@ const _ehDriveThru = p => String(p.transportadora || '').toUpperCase().includes(
 // tem quem separe — contado à parte em marcados_turno).
 router.get('/pedidos/distribuicao/resumo', requerAuth, requerPerfil('supervisor'), async (req,res) => {
   try {
-    const { data_de, data_ate } = req.query;
+    const { data_de, data_ate } = req.query as Record<string, string>;
     const params = [];
     const w = `p.status IN ('pendente','separando','concluido')${_clausulaDatas(data_de, data_ate, params)}`;
     const SEM_COLAB = "p.status='pendente' AND p.separador_id IS NULL";
@@ -1405,7 +1405,7 @@ router.get('/pedidos/distribuicao/resumo', requerAuth, requerPerfil('supervisor'
 // Só conta — não monta lote nem grava nada.
 router.get('/pedidos/lote/elegiveis', requerAuth, requerPerfil('supervisor'), async (req,res) => {
   try {
-    const { w, wParams } = _filtroElegiveisLote(req.query);
+    const { w, wParams } = _filtroElegiveisLote(req.query as any);
     const pedidos = await db.all(`SELECT p.transportadora FROM pedidos p WHERE ${w}`, wParams);
     const drive = pedidos.filter(_ehDriveThru).length;
     res.json({ total_disponivel: pedidos.length - drive, drive_thru_excluidos: drive });
@@ -1491,7 +1491,7 @@ router.post('/pedidos/lote/formar', requerAuth, requerPerfil('supervisor'), asyn
       // Ordem alfabética simples (A,B,C,...) — essa coluna é só informativa, pra o
       // supervisor ver rápido quais zonas o lote toca; a ordem de caminhada real
       // (ROTA_FISICA) continua sendo usada na tela de separação do celular.
-      lote.ruas = [...new Set(lote.pedidos.flatMap(p => p._ruasSet))].sort((a,b) => a.localeCompare(b, 'pt-BR'));
+      lote.ruas = [...new Set<string>(lote.pedidos.flatMap(p => p._ruasSet))].sort((a,b) => a.localeCompare(b, 'pt-BR'));
       // V6 — mostra ao supervisor a MESMA lógica que o algoritmo já usa pra montar
       // o lote (ROTA_FISICA_LOTE + _diametroRuas), em vez de só o resultado final:
       // rota = ordem real de caminhada (não alfabética); distancia_ponderada = a
@@ -1580,7 +1580,7 @@ router.post('/pedidos/lote/formar-manual', requerAuth, requerPerfil('supervisor'
       lote.separador_nome = sepNome;
       lote.pontuacao_total = Math.round(lote.pedidos.reduce((s,p) => s+p._pontuacao, 0));
       lote.itens_total     = lote.pedidos.reduce((s,p) => s+p._itensQtd, 0);
-      lote.ruas = [...new Set(lote.pedidos.flatMap(p => p._ruasSet))].sort((a,b) => a.localeCompare(b, 'pt-BR'));
+      lote.ruas = [...new Set<string>(lote.pedidos.flatMap(p => p._ruasSet))].sort((a,b) => a.localeCompare(b, 'pt-BR'));
       lote.rota = [...lote.ruas].sort((a,b) => _rotaIdxLote(a) - _rotaIdxLote(b));
       lote.distancia_ponderada = Math.round(_diametroRuas(lote.ruas) * 10) / 10;
     }
@@ -1656,7 +1656,7 @@ router.post('/pedidos/lote/formar/confirmar', requerAuth, requerPerfil('supervis
 // de um separador — usado pelo menu "Lotes concluídos" no celular. lotes_separacao.status
 // nunca é atualizado após criado, então "concluído" é derivado direto dos pedidos.
 router.get('/pedidos/lote/historico', requerAuth, async (req,res) => {
-  const sepId = parseInt(req.query.separador_id) || 0;
+  const sepId = parseInt(req.query.separador_id as string) || 0;
   if (!sepId) return res.json({ lotes: [] });
   try {
     const grupos = await db.all(
@@ -1700,7 +1700,7 @@ router.post('/importar', requerAuth, requerPerfil('supervisor'), (req,res) => {
    Desconsidera o tempo aguardando repositor.
 ══════════════════════════════════════════ */
 router.get('/pedidos/relatorio/tempo-separacao', requerAuth, requerPerfil('supervisor'), async (req,res) => {
-  const {data_ini, data_fim, separador_id} = req.query;
+  const {data_ini, data_fim, separador_id} = req.query as Record<string, string>;
   try {
     let w = `p.status='concluido' AND p.iniciado_em IS NOT NULL AND p.iniciado_em!=''`;
     const params = [];

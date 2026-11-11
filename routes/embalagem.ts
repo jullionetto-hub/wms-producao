@@ -1,15 +1,15 @@
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const { db, pool } = require('../lib/db');
-const { requerAuth, requerPerfil } = require('../lib/auth');
-const { dataHoraLocal, validarId } = require('../lib/helpers');
-const { registrarAuditoria } = require('../lib/auditoria');
+import { db, pool } from '../lib/db';
+import { requerAuth, requerPerfil } from '../lib/auth';
+import { dataHoraLocal, validarId } from '../lib/helpers';
+import { registrarAuditoria } from '../lib/auditoria';
 
 
 router.get('/embalagem', requerAuth, async (req,res) => {
   try {
     const {data:hoje} = dataHoraLocal();
-    const {data, status, ini, fim, embalado_por} = req.query;
+    const {data, status, ini, fim, embalado_por} = req.query as Record<string, string>;
 
     const params = [];
 
@@ -153,7 +153,7 @@ async function _pedidosParaLote(data, nomes) {
 }
 
 router.get('/embalagem/lote/preview', requerAuth, requerPerfil('supervisor'), async (req, res) => {
-  const { data, separadores } = req.query;
+  const { data, separadores } = req.query as Record<string, string>;
   const nomes = String(separadores || '').split(',').map(n => n.trim()).filter(Boolean);
   if (!data || !nomes.length) return res.status(400).json({ erro: 'Informe data e ao menos um separador!' });
   try {

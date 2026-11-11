@@ -1,8 +1,8 @@
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const { db, pool } = require('../lib/db');
-const { requerAuth, requerPerfil } = require('../lib/auth');
-const { dataHoraLocal } = require('../lib/helpers');
+import { db, pool } from '../lib/db';
+import { requerAuth, requerPerfil } from '../lib/auth';
+import { dataHoraLocal } from '../lib/helpers';
 
 /* ── Auto-migração ──────────────────────────────────────────────── */
 (async () => {
@@ -77,7 +77,7 @@ router.get('/checkout/diagnostico', requerAuth, async (req,res) => {
 });
 
 router.get('/checkout', requerAuth, async (req,res) => {
-  const {status, numero_caixa, data, data_ini, data_fim, operador_nome} = req.query;
+  const {status, numero_caixa, data, data_ini, data_fim, operador_nome} = req.query as Record<string, string>;
   try {
     let sql = `SELECT c.*, p.status as ped_status, p.itens as ped_itens, p.total_itens as ped_total_itens, p.numero_caixa as ped_caixa, p.cliente, p.transportadora, p.estado, p.tem_prime, p.separador_id, s.nome as separador_nome_join FROM checkout c LEFT JOIN pedidos p ON c.pedido_id=p.id LEFT JOIN separadores s ON p.separador_id=s.id WHERE 1=1`;
     const pr = [];
@@ -120,7 +120,7 @@ router.get('/checkout/:id/sessoes', requerAuth, async (req,res) => {
 });
 
 router.get('/checkout/buscar', requerAuth, async (req,res) => {
-  const {numero}=req.query;
+  const {numero}=req.query as Record<string, string>;
   if (!numero) return res.status(400).json({erro:'Número não informado'});
   try {
     // 1. Tenta pelo numero_caixa no checkout
