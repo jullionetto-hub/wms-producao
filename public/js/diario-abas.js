@@ -118,7 +118,32 @@
   /* histórico: sempre aberto, sem o cabeçalho de "clique para abrir" */
   #dg-t-historico .card-hd{display:none !important} #dg-t-historico #diario-hist-body{max-height:none !important;overflow:visible}
   #dg-t-historico #lista-diarios{max-height:none !important}
-  #dg-t-verificar #diario-anterior-resumo{margin-top:6px}`;
+  #dg-t-verificar #diario-anterior-resumo{margin-top:6px}
+  /* visual calmo: fonte do sistema, pesos leves, cor só onde há problema de verdade (vermelho) */
+  #pag-diario{font-family:"Segoe UI",system-ui,-apple-system,Roboto,"Helvetica Neue",Arial,sans-serif;font-weight:400;letter-spacing:0}
+  #pag-diario *{font-family:inherit}
+  #pag-diario h1,#pag-diario h2,#pag-diario h3,#pag-diario .pg-title{font-weight:600}
+  #pag-diario b,#pag-diario strong{font-weight:600}
+  .dg-ctx h2{font-weight:600} .dg-ctx h2 span{color:inherit;font-weight:600}
+  .dg-seg button{font-weight:500} .dg-seg button.on{background:var(--surface);color:var(--text);box-shadow:inset 0 0 0 1px var(--border)}
+  .dg-aba{font-weight:500;font-size:14px} .dg-aba.on{font-weight:600}
+  .dg-aba.on{border-bottom-color:var(--text)}
+  .dg-aba .dg-n{font-weight:500} .dg-aba.on .dg-n{background:var(--text);border-color:var(--text);color:var(--bg)}
+  .dg-aba small{font-weight:400} .dg-aba small.am,.dg-aba small.vd{color:var(--text3)}
+  .dg-alerta{font-weight:600}
+  #pag-diario .dg-amb,#dg-info .f{color:var(--text2)}
+  .dg-q-c .dg-q-t{font-weight:600} .dg-q-s{font-weight:500}
+  .dg-chip{font-weight:500}
+  .dg-chip.vd,.dg-chip.am,.dg-chip.cz{color:var(--text2);background:transparent;border-color:var(--border)}
+  .dg-resp button{font-weight:500;border-width:1px}
+  .dg-resp button.s.on,.dg-resp button.n.on{background:var(--surface2);border-color:var(--text2);color:var(--text)}
+  .dg-resp .dg-est{font-weight:500;color:var(--text3) !important}
+  #pag-diario .db-stat{border-left-color:var(--border) !important}
+  #pag-diario .db-stat-n{color:var(--text) !important;font-weight:600}
+  #pag-diario [style*="font-weight:800"],#pag-diario [style*="font-weight: 800"],#pag-diario [style*="font-weight:700"]{font-weight:600 !important}
+  #diario-recados [style*="var(--amber)"]{color:var(--text2) !important}
+  #diario-recados [style*="border-left"]{border-left-color:var(--border) !important}
+  #pag-diario [style*="border-left:3px"],#pag-diario [style*="border-left: 3px"]{border-left-color:var(--border) !important}`;
 
   let abaAtual = 'preencher';
   let primeiraAbertura = false;
