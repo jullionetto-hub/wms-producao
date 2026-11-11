@@ -318,8 +318,8 @@ describe('Diário de Bordo: recado da gestão (uma informação para os 3 turnos
       localStorage: { getItem: k => guardado[k] ?? null, setItem: (k, v) => { guardado[k] = String(v); }, removeItem: k => { delete guardado[k]; } }, guardado };
     vm.createContext(ctx);
     vm.runInContext(codigo['config.js'].match(/function escHtml[\s\S]*?\n}\n/)[0], ctx);
-    ['_recadosRecolhidos', '_recadoChave', '_recadoVersao'].forEach(n => vm.runInContext(codigo['auth.js'].match(new RegExp(`const ${n} = [^\\n]*\\n`))[0], ctx));
-    ['_recadoFotosHtml', '_recadoCardHtml', '_recadoRecolhido', 'alternarRecado'].forEach(n => vm.runInContext(codigo['auth.js'].match(new RegExp(`function ${n}\\([\\s\\S]*?\\n}\\n`))[0], ctx));
+    ['_recadosRecolhidos', '_recadoChave', '_recadoVersao', '_TURNO_ROTULO'].forEach(n => vm.runInContext(codigo['auth.js'].match(new RegExp(`const ${n} = [^\\n]*\\n`))[0], ctx));
+    ['_recadoFotosHtml', '_recadoCardHtml', '_recadoRecolhido', 'alternarRecado', '_recadoTurnosTexto', '_recadoTurnosCampoHtml'].forEach(n => vm.runInContext(codigo['auth.js'].match(new RegExp(`function ${n}\\([\\s\\S]*?\\n}\\n`))[0], ctx));
     vm.runInContext('function renderRecadosDiario() { renderizacoes++; }', ctx);
     return ctx;
   };
@@ -334,6 +334,29 @@ describe('Diário de Bordo: recado da gestão (uma informação para os 3 turnos
     expect(h.match(/<img /g)).toHaveLength(2);
     expect(h).toContain("abrirFoto(31,'diario-recados/foto')");
     ['Editar', 'Encerrar recado', 'capture=', 'removerFotoRecado'].forEach(t => expect(h).not.toContain(t));
+  });
+
+  test('recado por turno: o cartão diz para quem vale (todos, 1 turno, 2 turnos)', () => {
+    const c = monta('supervisor');
+    expect(c._recadoCardHtml({ ...rec, turnos: [] })).toContain('Recado da gestão · vale para todos os turnos');
+    expect(c._recadoCardHtml({ ...rec, turnos: ['Manha', 'Tarde', 'Noite'] })).toContain('vale para todos os turnos');
+    expect(c._recadoCardHtml({ ...rec, turnos: ['Noite'] })).toContain('Recado da gestão · somente Noite');
+    expect(c._recadoCardHtml({ ...rec, turnos: ['Manha', 'Noite'] })).toContain('Recado da gestão · somente Manhã e Noite');
+    expect(c._recadoCardHtml({ ...rec, turnos: ['Manha', 'Noite'] })).not.toContain('todos os turnos');
+  });
+
+  test('recado por turno: o formulário tem as 3 caixinhas (novo = as 3 marcadas; editar = só as do recado)', () => {
+    const novo = monta('gestor'); novo._recadoEditando = 'novo';
+    const h1 = novo._recadoCardHtml({ id: 0, titulo: '', texto: '', fotos: [] });
+    expect(h1.match(/class="rec-turno"/g)).toHaveLength(3);
+    expect(h1.match(/ checked>/g)).toHaveLength(3);
+    ['Manhã', 'Tarde', 'Noite', 'Quem vê'].forEach(t => expect(h1).toContain(t));
+
+    const ed = monta('gestor'); ed._recadoEditando = 4;
+    const h2 = ed._recadoCardHtml({ ...rec, turnos: ['Noite'] });
+    expect(h2.match(/class="rec-turno" value="Noite" checked>/g)).toHaveLength(1);
+    expect(h2).not.toMatch(/value="Manha" checked>/);
+    expect(h2).not.toMatch(/value="Tarde" checked>/);
   });
 
   test('o gestor vê editar/encerrar, remover foto e os botões Foto (câmera) e Galeria', () => {

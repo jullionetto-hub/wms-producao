@@ -214,6 +214,7 @@ export interface Tabelas {
     criado_em: Date;
     editado_em: Date | null;
     encerrado_em: Date | null;
+    turnos: string;
   };
   diario_validacoes: {
     id: number;

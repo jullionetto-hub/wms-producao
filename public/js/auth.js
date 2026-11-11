@@ -1021,7 +1021,9 @@ let _recadoEditando = null;   // id do recado em edição, 'novo' ou null
 const _recadoFotoRota = 'diario-recados/foto';
 
 async function carregarRecadosDiario() {
-  try { const r = await fetch(`${API}/diario-recados`, { credentials:'include' }); _recados = r.ok ? await r.json() : []; }
+  // o Diario tem um seletor de turno: o servidor devolve so os recados que valem para ele (o gestor recebe todos)
+  const turno = document.getElementById('diario-turno')?.value || '';
+  try { const r = await fetch(`${API}/diario-recados?turno=${encodeURIComponent(turno)}`, { credentials:'include' }); _recados = r.ok ? await r.json() : []; }
   catch (e) { _recados = []; }
   renderRecadosDiario();
 }
@@ -1058,6 +1060,25 @@ function alternarRecado(id) {
   renderRecadosDiario();
 }
 
+const _TURNO_ROTULO = { Manha: 'Manhã', Tarde: 'Tarde', Noite: 'Noite' };
+// "vale para todos os turnos" ou "somente Manhã e Noite" (rec.turnos: lista vazia = todos)
+function _recadoTurnosTexto(rec) {
+  const t = rec.turnos || [];
+  if (!t.length || t.length >= 3) return 'vale para todos os turnos';
+  const nomes = t.map(x => _TURNO_ROTULO[x] || x);
+  return 'somente ' + (nomes.length > 1 ? nomes.slice(0, -1).join(', ') + ' e ' + nomes[nomes.length - 1] : nomes[0]);
+}
+// Caixinhas "quem vê": recado novo = os 3 marcados (todos os turnos); desmarcar limita aos turnos marcados
+function _recadoTurnosCampoHtml(rec) {
+  const t = rec.turnos || [];
+  const marcado = x => !t.length || t.includes(x);
+  return `<div style="margin-top:10px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+      <span style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.4px">Quem vê</span>
+      ${Object.keys(_TURNO_ROTULO).map(x => `<label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer"><input type="checkbox" class="rec-turno" value="${x}" ${marcado(x) ? 'checked' : ''}> ${_TURNO_ROTULO[x]}</label>`).join('')}
+    </div>
+    <div style="font-size:11px;color:var(--text3);margin-top:4px">Com os 3 marcados o recado vale para todos os turnos. Desmarque para limitar.</div>`;
+}
+
 function _recadoCardHtml(rec) {
   const gestor = typeof usuarioAtual !== 'undefined' && usuarioAtual?.perfil === 'gestor';
   const quando = rec.criado_em ? new Date(rec.criado_em).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }) : '';
@@ -1067,7 +1088,7 @@ function _recadoCardHtml(rec) {
       style="background:none;border:none;color:var(--text3);cursor:pointer;padding:2px 4px;display:flex"><i class="ti ti-chevron-${recolhido ? 'down' : 'up'}" aria-hidden="true" style="font-size:20px"></i></button>`;
   const cab = `<div ${editando ? '' : `onclick="alternarRecado(${rec.id})" style="cursor:pointer;user-select:none;`}${editando ? 'style="' : ''}display:flex;align-items:center;gap:8px;flex-wrap:wrap">
       <i class="ti ti-speakerphone" aria-hidden="true" style="color:var(--amber);font-size:18px"></i>
-      <span style="font-size:11px;font-weight:800;letter-spacing:.5px;color:var(--amber);text-transform:uppercase">Recado da gestão · vale para todos os turnos</span>
+      <span style="font-size:11px;font-weight:800;letter-spacing:.5px;color:var(--amber);text-transform:uppercase">Recado da gestão · ${_recadoTurnosTexto(rec)}</span>
       <span style="margin-left:auto;font-size:11px;color:var(--text3)">${escHtml(quando)}${rec.autor ? ' · ' + escHtml(rec.autor) : ''}${rec.editado_em ? ' · editado' : ''}</span>${seta}
     </div>`;
   const caixa = 'border:1px solid var(--border);border-left:4px solid var(--amber);border-radius:12px;background:var(--surface);padding:14px 16px;margin-bottom:10px';
@@ -1077,7 +1098,8 @@ function _recadoCardHtml(rec) {
     const campo = 'width:100%;box-sizing:border-box;font-family:inherit;color:var(--text);background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 11px;outline:none';
     return `<div style="${caixa}">${cab}
       <input id="rec-titulo" maxlength="120" value="${escHtml(rec.titulo)}" placeholder="Título (opcional)" style="${campo};margin-top:10px;font-size:14px;font-weight:700">
-      <textarea id="rec-texto" rows="7" wrap="soft" placeholder="Escreva o recado para os 3 turnos… (Enter para pular linha)" style="${campo};margin-top:8px;font-size:13px;line-height:1.55;resize:vertical;white-space:pre-wrap;overflow-wrap:anywhere">${escHtml(rec.texto)}</textarea>
+      <textarea id="rec-texto" rows="7" wrap="soft" placeholder="Escreva o recado… (Enter para pular linha)" style="${campo};margin-top:8px;font-size:13px;line-height:1.55;resize:vertical;white-space:pre-wrap;overflow-wrap:anywhere">${escHtml(rec.texto)}</textarea>
+      ${_recadoTurnosCampoHtml(rec)}
       ${rec.id ? _recadoFotosHtml(rec, true) : '<div style="font-size:11px;color:var(--text3);margin-top:8px">Salve o recado para poder anexar fotos.</div>'}
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
         <button class="btn btn-outline btn-sm" onclick="cancelarRecado()">Cancelar</button>
@@ -1113,20 +1135,22 @@ function cancelarRecado() { _recadoEditando = null; renderRecadosDiario(); }
 
 async function salvarRecado() {
   const id = _recadoEditando === 'novo' ? null : _recadoEditando;
-  const corpo = { titulo: document.getElementById('rec-titulo')?.value || '', texto: document.getElementById('rec-texto')?.value || '' };
+  const turnos = [...document.querySelectorAll('.rec-turno:checked')].map(c => c.value);
+  if (!turnos.length) { toast('Marque pelo menos um turno para ver o recado.', 'aviso'); return; }
+  const corpo = { titulo: document.getElementById('rec-titulo')?.value || '', texto: document.getElementById('rec-texto')?.value || '', turnos };
   if (!corpo.texto.trim()) { toast('Escreva o texto do recado.', 'aviso'); return; }
   try {
     const r = await fetch(`${API}/diario-recados${id ? '/' + id : ''}`, { method: id ? 'PUT' : 'POST', credentials:'include', headers:{'Content-Type':'application/json'}, body: JSON.stringify(corpo) });
     const j = await r.json().catch(() => ({}));
     if (!r.ok) { toast(j.erro || 'Não foi possível salvar o recado', 'erro'); return; }
-    toast(id ? 'Recado atualizado!' : 'Recado publicado nos 3 turnos!', 'sucesso');
+    toast(id ? 'Recado atualizado!' : (turnos.length >= 3 ? 'Recado publicado nos 3 turnos!' : 'Recado publicado: ' + _recadoTurnosTexto({ turnos })), 'sucesso');
     _recadoEditando = (!id && j.id) ? j.id : null;   // recém-criado: segue em edição para anexar as fotos
     await carregarRecadosDiario();
   } catch (e) { toast('Erro ao salvar o recado', 'erro'); }
 }
 
 function encerrarRecado(id) {
-  wmsConfirm({ titulo: 'Encerrar este recado?', sub: 'Ele some do Diário de Bordo de todos os turnos.', btnOk: 'Sim, encerrar', btnOkClass: 'btn-primary' }, async () => {
+  wmsConfirm({ titulo: 'Encerrar este recado?', sub: 'Ele some do Diário de Bordo dos turnos que o viam.', btnOk: 'Sim, encerrar', btnOkClass: 'btn-primary' }, async () => {
     try {
       const r = await fetch(`${API}/diario-recados/${id}`, { method:'DELETE', credentials:'include' });
       const j = await r.json().catch(() => ({}));

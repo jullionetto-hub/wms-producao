@@ -116,6 +116,8 @@ export const ALTERATIONS: string[] = [
   "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS estado TEXT DEFAULT ''",
   // Itens em falta do checkout (antes só criada pela auto-migração de routes/checkout.ts, que falha num banco novo)
   "ALTER TABLE checkout ADD COLUMN IF NOT EXISTS itens_falta JSONB DEFAULT '[]'::jsonb",
+  // Recado da gestão por turno: '' = todos os turnos; senão, os turnos que veem o recado separados por vírgula ("Manha,Noite")
+  "ALTER TABLE diario_recados ADD COLUMN IF NOT EXISTS turnos TEXT NOT NULL DEFAULT ''",
 ];
 
 export async function runSchema(): Promise<void> {

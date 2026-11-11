@@ -113,3 +113,88 @@ describe('gestor', () => {
     expect((await a.get('/diario-recados/foto/22')).status).toBe(404);
   });
 });
+
+/* ── Recado por turno: a gestão escolhe quais turnos veem (vazio/3 marcados = todos) ── */
+describe('recado por turno', () => {
+  const salvos = () => mockPool.query.mock.calls;
+  const insert = () => salvos().find(c => /INSERT INTO diario_recados/.test(c[0]));
+  const update = () => salvos().find(c => /UPDATE diario_recados SET titulo/.test(c[0]));
+
+  describe('gestor grava os turnos', () => {
+    let a;
+    beforeEach(async () => { a = request.agent(app); await login(a, 'gestor'); mockPool.query.mockResolvedValue({ rows: [{ id: 9 }] }); });
+
+    test('POST com 2 turnos guarda os dois, na ordem do dia (Manha antes de Noite)', async () => {
+      expect((await a.post('/diario-recados').send({ texto: 'x', turnos: ['Noite', 'Manha'] })).status).toBe(201);
+      expect(insert()[1]).toEqual(['', 'x', 'Gestor', 'Manha,Noite']);
+    });
+    test('aceita acento e "Madrugada" (= Noite), e texto separado por virgula', async () => {
+      await a.post('/diario-recados').send({ texto: 'x', turnos: ['Manhã', 'Madrugada'] });
+      expect(insert()[1][3]).toBe('Manha,Noite');
+      mockPool.query.mockClear(); mockPool.query.mockResolvedValue({ rows: [{ id: 9 }] });
+      await a.post('/diario-recados').send({ texto: 'x', turnos: 'Tarde' });
+      expect(insert()[1][3]).toBe('Tarde');
+    });
+    test('os 3 turnos, lista vazia ou sem o campo = todos (guarda vazio)', async () => {
+      for (const corpo of [{ turnos: ['Manha', 'Tarde', 'Noite'] }, { turnos: [] }, {}]) {
+        mockPool.query.mockClear(); mockPool.query.mockResolvedValue({ rows: [{ id: 9 }] });
+        expect((await a.post('/diario-recados').send({ texto: 'x', ...corpo })).status).toBe(201);
+        expect(insert()[1][3]).toBe('');
+      }
+    });
+    test('turno inexistente → 400 e nada e gravado', async () => {
+      const r = await a.post('/diario-recados').send({ texto: 'x', turnos: ['Manha', 'Sabado'] });
+      expect(r.status).toBe(400);
+      expect(r.body.erro).toMatch(/Turno inv/);
+      expect(insert()).toBeUndefined();
+    });
+    test('PUT troca os turnos; PUT SEM o campo (tela antiga) NAO mexe nos turnos ja salvos', async () => {
+      await a.put('/diario-recados/3').send({ texto: 'novo', turnos: ['Tarde'] });
+      expect(update()[1]).toEqual(['', 'novo', 3, 'Tarde']);
+      expect(update()[0]).toMatch(/turnos=COALESCE\(\$4, turnos\)/);
+      mockPool.query.mockClear(); mockPool.query.mockResolvedValue({ rows: [{ id: 3 }] });
+      await a.put('/diario-recados/3').send({ texto: 'novo' });
+      expect(update()[1][3]).toBeNull();                       // null => COALESCE mantem o valor atual
+      mockPool.query.mockClear(); mockPool.query.mockResolvedValue({ rows: [{ id: 3 }] });
+      expect((await a.put('/diario-recados/3').send({ texto: 'novo', turnos: ['Quinta'] })).status).toBe(400);
+    });
+  });
+
+  describe('quem ve o que', () => {
+    const RECADOS = [
+      { id: 1, titulo: 'Todos', texto: 'a', autor: 'G', turnos: '' },
+      { id: 2, titulo: 'So manha', texto: 'b', autor: 'G', turnos: 'Manha' },
+      { id: 3, titulo: 'Tarde e noite', texto: 'c', autor: 'G', turnos: 'Tarde,Noite' },
+      { id: 4, titulo: 'So noite', texto: 'd', autor: 'G', turnos: 'Noite' },
+    ];
+    const ids = r => r.body.map(x => x.id);
+    const lista = async (perfil, query = '') => {
+      const a = request.agent(app); await login(a, perfil);      // o usuario de teste e do turno "Manha"
+      mockDb.all.mockResolvedValueOnce(RECADOS.map(r => ({ ...r }))).mockResolvedValueOnce([]);
+      return a.get('/diario-recados' + query);
+    };
+
+    test('o GESTOR ve todos, com a lista de turnos de cada um (vazia = todos)', async () => {
+      const r = await lista('gestor', '?turno=Noite');
+      expect(ids(r)).toEqual([1, 2, 3, 4]);                        // mesmo olhando o turno Noite, ve os de Manha (precisa editar/encerrar)
+      expect(r.body.map(x => x.turnos)).toEqual([[], ['Manha'], ['Tarde', 'Noite'], ['Noite']]);
+    });
+    test('supervisor olhando a Manha ve os de todos os turnos e os da Manha', async () => {
+      expect(ids(await lista('supervisor', '?turno=Manha'))).toEqual([1, 2]);
+    });
+    test('supervisor olhando a Noite (seletor do Diario) ve os de todos e os que incluem Noite', async () => {
+      expect(ids(await lista('supervisor', '?turno=Noite'))).toEqual([1, 3, 4]);
+    });
+    test('sem ?turno usa o turno do proprio usuario (Manha); turno desconhecido tambem', async () => {
+      expect(ids(await lista('supervisor'))).toEqual([1, 2]);
+      expect(ids(await lista('supervisor', '?turno=xyz'))).toEqual([1, 2]);
+    });
+    test('recado antigo (coluna turnos vazia/ausente) continua valendo para todos', async () => {
+      const a = request.agent(app); await login(a, 'supervisor');
+      mockDb.all.mockResolvedValueOnce([{ id: 8, titulo: 'antigo', texto: 'x', autor: 'G' }]).mockResolvedValueOnce([]);
+      const r = await a.get('/diario-recados?turno=Tarde');
+      expect(ids(r)).toEqual([8]);
+      expect(r.body[0].turnos).toEqual([]);
+    });
+  });
+});
