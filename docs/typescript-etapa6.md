@@ -1,7 +1,7 @@
 # TypeScript — Etapa 6 (tipos das tabelas do banco)
 
 **Situação:** as linhas devolvidas pelo banco deixaram de ser `any` onde a consulta é inequívoca.
-**173 de 384 consultas** `db.get` / `db.all` agora têm o tipo real da tabela; o compilador passa a recusar, por exemplo,
+**172 de 352 consultas** `db.get` / `db.all` agora têm o tipo real da tabela; o compilador passa a recusar, por exemplo,
 `pedido.numero_pedidoo` (nome de coluna errado) ou tratar um campo que pode ser nulo como se nunca fosse.
 
 ## Como funciona
