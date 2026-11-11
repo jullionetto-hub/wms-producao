@@ -55,3 +55,11 @@ routes/permissoes.js
 routes/repositor.js
 routes/simulador.js
 routes/usuarios.js
+/index.js
+src/config/env.js
+src/config/security.js
+src/config/session.js
+src/database/migrate.js
+src/database/schema.js
+src/database/seed.js
+src/scheduler/relatorio.js

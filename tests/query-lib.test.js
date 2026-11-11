@@ -64,8 +64,8 @@ describe('normalizarQuery — parametro repetido na URL', () => {
   });
 });
 
-describe('index.js registra a regra antes das rotas', () => {
-  const src = fs.readFileSync(path.join(__dirname, '..', 'index.js'), 'utf8');
+describe('index.ts registra a regra antes das rotas', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'index.ts'), 'utf8');
   test('usa normalizarQuery depois da sessao e antes do apiRouter', () => {
     const iSessao = src.indexOf('app.use(sessionMiddleware)');
     const iRegra = src.indexOf('app.use(normalizarQuery)');

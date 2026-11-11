@@ -12,8 +12,8 @@ const raiz = path.join(__dirname, '..');
 const ler = (...p) => fs.readFileSync(path.join(raiz, ...p), 'utf8');
 
 describe('compressão HTTP', () => {
-  test('index.js ativa compression() antes de servir os arquivos estáticos', () => {
-    const src = ler('index.js');
+  test('index.ts ativa compression() antes de servir os arquivos estáticos', () => {
+    const src = ler('index.ts');
     const iComp = src.indexOf('app.use(compression())');
     const iStatic = src.indexOf('express.static');
     expect(iComp).toBeGreaterThan(-1);

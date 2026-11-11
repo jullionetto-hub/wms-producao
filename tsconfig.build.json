@@ -15,6 +15,6 @@
     "types": ["node"],
     "lib": ["ES2022"]
   },
-  "include": ["lib/**/*.ts", "routes/**/*.ts", "types/**/*.d.ts"],
+  "include": ["index.ts", "src/**/*.ts", "lib/**/*.ts", "routes/**/*.ts", "types/**/*.d.ts"],
   "exclude": ["node_modules", "public", "tests"]
 }

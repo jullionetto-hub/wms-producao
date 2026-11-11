@@ -1,15 +1,14 @@
-'use strict';
 // Executa o schema completo (tabelas + índices).
 // Todas as tabelas usam CREATE IF NOT EXISTS, então é seguro rodar múltiplas vezes.
 
-const crypto              = require('crypto');
-const bcrypt              = require('bcrypt');
-const { pool }            = require('../../lib/db');
-const { TABLES, INDEXES } = require('./schema');
-const log                 = require('../../lib/logger');
+import crypto from 'crypto';
+import bcrypt from 'bcrypt';
+import { pool } from '../../lib/db';
+import { TABLES, INDEXES } from './schema';
+import log from '../../lib/logger';
 
 // Seed de configurações padrão e alterações de colunas aplicadas após criação inicial
-const ALTERATIONS = [
+const ALTERATIONS: string[] = [
   "INSERT INTO configuracoes (chave,valor,descricao) VALUES ('meta_separacao','75','Meta pedidos separação/turno') ON CONFLICT (chave) DO NOTHING",
   "INSERT INTO configuracoes (chave,valor,descricao) VALUES ('meta_embalagem','120','Meta embalagem/turno') ON CONFLICT (chave) DO NOTHING",
   "INSERT INTO configuracoes (chave,valor,descricao) VALUES ('meta_checkout','90','Meta checkout/turno') ON CONFLICT (chave) DO NOTHING",
@@ -117,7 +116,7 @@ const ALTERATIONS = [
   "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS estado TEXT DEFAULT ''",
 ];
 
-async function runSchema() {
+export async function runSchema(): Promise<void> {
   // Cria/verifica tabelas
   for (const sql of TABLES) {
     await pool.query(sql).catch(e => log.warn({ err: e }, 'tabela: ignorado'));
@@ -145,7 +144,7 @@ async function runSchema() {
  * redefinição de senha na próxima entrada. Gera uma senha temporária aleatória,
  * faz o hash com bcrypt e registra no log para o admin comunicar aos usuários.
  */
-async function migrarHashesLegados() {
+async function migrarHashesLegados(): Promise<void> {
   try {
     const { rows } = await pool.query(
       `SELECT id, login, nome FROM usuarios
@@ -187,4 +186,3 @@ async function migrarHashesLegados() {
   }
 }
 
-module.exports = { runSchema };

@@ -1,17 +1,17 @@
-'use strict';
-const cors   = require('cors');
-const helmet = require('helmet');
-const { isProd, ALLOWED_ORIGINS } = require('./env');
+import type { Request, Response, NextFunction } from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import { isProd, ALLOWED_ORIGINS } from './env';
 
 // Força HTTPS em produção
-function httpsRedirect(req, res, next) {
+export function httpsRedirect(req: Request, res: Response, next: NextFunction) {
   if (!isProd) return next();
   if (req.secure || req.headers['x-forwarded-proto'] === 'https') return next();
   return res.redirect(301, `https://${req.hostname}${req.url}`);
 }
 
 // Configuração do CORS
-const corsMiddleware = cors({
+export const corsMiddleware = cors({
   credentials: true,
   origin: (origin, cb) => {
     if (!isProd) return cb(null, origin || 'http://localhost:3000');
@@ -21,7 +21,7 @@ const corsMiddleware = cors({
 });
 
 // Headers extras de segurança
-function extraHeaders(req, res, next) {
+export function extraHeaders(req: Request, res: Response, next: NextFunction) {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('X-XSS-Protection', '1; mode=block');
@@ -67,13 +67,13 @@ const cspDirectives = {
 
 // Libera UMA resposta para ser exibida em iframe, mas só pelo próprio site (nunca por outro domínio).
 // Usada pela página do Estoque 3D, que abre dentro do WMS. As demais respostas continuam com DENY / frame-ancestors 'none'.
-function permitirEmbedMesmaOrigem(res) {
+export function permitirEmbedMesmaOrigem(res: Response) {
   res.setHeader('X-Frame-Options', 'SAMEORIGIN');
   const csp = res.getHeader('Content-Security-Policy');
   if (typeof csp === 'string') res.setHeader('Content-Security-Policy', csp.replace("frame-ancestors 'none'", "frame-ancestors 'self'"));
 }
 
-const helmetMiddleware = helmet({
+export const helmetMiddleware = helmet({
   // reportOnly: false → modo enforcing: CSP ativamente bloqueia violações.
   // Validado em report-only — sem violações legítimas detectadas.
   contentSecurityPolicy: isProd
@@ -82,4 +82,3 @@ const helmetMiddleware = helmet({
   crossOriginEmbedderPolicy: false,
 });
 
-module.exports = { httpsRedirect, corsMiddleware, extraHeaders, helmetMiddleware, permitirEmbedMesmaOrigem };

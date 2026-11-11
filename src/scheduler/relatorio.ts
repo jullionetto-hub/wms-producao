@@ -1,15 +1,14 @@
-'use strict';
 // Agendador de relatórios diários usando node-cron.
 // Substitui o setTimeout frágil do index.js original.
 // Instale a dependência: npm install node-cron
 
-const cron               = require('node-cron');
-const { gerarRelatorio }  = require('../../lib/relatorio');
-const { db }             = require('../../lib/db');
-const { dataHoraLocal }  = require('../../lib/helpers');
-const log                = require('../../lib/logger');
+import * as cron from 'node-cron';
+import { gerarRelatorio }  from '../../lib/relatorio';
+import { db }             from '../../lib/db';
+import { dataHoraLocal }  from '../../lib/helpers';
+import log                from '../../lib/logger';
 
-async function verificarRelatoriosPerdidos() {
+export async function verificarRelatoriosPerdidos(): Promise<void> {
   try {
     const ontem = new Date();
     ontem.setDate(ontem.getDate() - 1);
@@ -24,7 +23,7 @@ async function verificarRelatoriosPerdidos() {
   }
 }
 
-function iniciarScheduler() {
+export function iniciarScheduler(): void {
   // Roda todo dia às 23:55 no fuso de Brasília
   cron.schedule('55 23 * * *', async () => {
     try {
@@ -42,5 +41,3 @@ function iniciarScheduler() {
 
   log.info('scheduler de relatório diário iniciado (23:55 BRT)');
 }
-
-module.exports = { iniciarScheduler, verificarRelatoriosPerdidos };

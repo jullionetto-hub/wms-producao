@@ -21,7 +21,10 @@ function listarTs(dir) {
   return out;
 }
 
-const fontes = ['lib', 'routes', 'src'].flatMap((d) => listarTs(path.join(RAIZ, d)));
+const fontes = [
+  ...['lib', 'routes', 'src'].flatMap((d) => listarTs(path.join(RAIZ, d))),
+  path.join(RAIZ, 'index.ts'),   // ponto de entrada
+];
 const rel = (p) => path.relative(RAIZ, p).split(path.sep).join('/');
 const git = (...args) => execFileSync('git', args, { cwd: RAIZ, encoding: 'utf8' });
 

@@ -7,11 +7,14 @@
 const fs = require('fs');
 const path = require('path');
 
+// Modo "test": o index.js monta o app mas NAO conecta no banco nem abre a porta (ver index.ts).
+process.env.NODE_ENV = 'test';
 process.env.DATABASE_URL = process.env.DATABASE_URL || 'postgres://verificacao-de-build';
 process.env.SESSION_SECRET = process.env.SESSION_SECRET || 'verificacao-de-build';
 
 const RAIZ = path.join(__dirname, '..');
 const PASTAS = ['lib', 'routes', 'src'];
+const RAIZ_ARQUIVOS = ['index.ts'];   // ponto de entrada: tambem precisa gerar o .js e carregar
 
 function listarTs(dir) {
   const out = [];
@@ -24,7 +27,10 @@ function listarTs(dir) {
   return out;
 }
 
-const arquivos = PASTAS.flatMap((d) => listarTs(path.join(RAIZ, d)));
+const arquivos = [
+  ...PASTAS.flatMap((d) => listarTs(path.join(RAIZ, d))),
+  ...RAIZ_ARQUIVOS.map((f) => path.join(RAIZ, f)),
+];
 const falhas = [];
 for (const ts of arquivos) {
   const js = ts.replace(/\.ts$/, '.js');

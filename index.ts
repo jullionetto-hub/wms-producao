@@ -1,6 +1,5 @@
-'use strict';
 /**
- * index.js — Ponto de entrada da aplicação WMS Produção.
+ * index.ts — Ponto de entrada da aplicação WMS Produção.
  *
  * Responsabilidades deste arquivo:
  *  1. Criar o servidor HTTP + Socket.io
@@ -9,37 +8,40 @@
  *  4. Inicializar banco de dados e scheduler
  *
  * Toda a lógica de negócio vive em src/ e lib/.
+ *
+ * Este arquivo é TypeScript: `npm run build` gera o index.js ao lado dele, e o servidor
+ * continua iniciando com `node index.js`.
  */
 
-const express = require('express');
-const compression = require('compression');
-const http    = require('http');
-const path    = require('path');
-const { Server } = require('socket.io');
+import express from 'express';
+import compression from 'compression';
+import http from 'http';
+import path from 'path';
+import { Server } from 'socket.io';
 
 // ── Config ───────────────────────────────────────────────────────────────────
-const { PORT, isProd }                                           = require('./src/config/env');
-const { httpsRedirect, corsMiddleware, extraHeaders, helmetMiddleware, permitirEmbedMesmaOrigem } = require('./src/config/security');
-const { sessionMiddleware }                                      = require('./src/config/session');
+import { PORT, isProd } from './src/config/env';
+import { httpsRedirect, corsMiddleware, extraHeaders, helmetMiddleware, permitirEmbedMesmaOrigem } from './src/config/security';
+import { sessionMiddleware } from './src/config/session';
 
 // ── Database ──────────────────────────────────────────────────────────────────
-const { runSchema }          = require('./src/database/migrate');
-const { criarUsuarioPadrao } = require('./src/database/seed');
+import { runSchema } from './src/database/migrate';
+import { criarUsuarioPadrao } from './src/database/seed';
 
 // ── Scheduler ─────────────────────────────────────────────────────────────────
-const { iniciarScheduler, verificarRelatoriosPerdidos } = require('./src/scheduler/relatorio');
+import { iniciarScheduler, verificarRelatoriosPerdidos } from './src/scheduler/relatorio';
 
 // ── Rotas ─────────────────────────────────────────────────────────────────────
-const apiRouter = /** @type {import('express').Router} */ (/** @type {unknown} */ (require('./routes/api')));
+const apiRouter: express.Router = require('./routes/api');
 
 // ── Utilitários ───────────────────────────────────────────────────────────────
-const log               = require('./lib/logger');
-const { requerPerfil }  = require('./lib/auth');
-const { dataHoraLocal } = require('./lib/helpers');
-const { normalizarQuery } = require('./lib/query');
+import log from './lib/logger';
+import { requerPerfil } from './lib/auth';
+import { dataHoraLocal } from './lib/helpers';
+import { normalizarQuery } from './lib/query';
 
 // ── KPI Cache (em memória — considere Redis para escala futura) ───────────────
-const kpiCache = { data: null, ts: 0, ttl: 20_000 };
+const kpiCache: { data: any; ts: number; ttl: number } = { data: null, ts: 0, ttl: 20_000 };
 
 // ─────────────────────────────────────────────────────────────────────────────
 const app    = express();
@@ -116,4 +118,5 @@ if (process.env.NODE_ENV !== 'test') {
   });
 }
 
-module.exports = app;
+// os testes (e o resto do codigo) fazem require('../index') e recebem o app
+export = app;

@@ -1,7 +1,6 @@
-'use strict';
 // Define as queries de criação de todas as tabelas do sistema.
 
-const TABLES = [
+export const TABLES: string[] = [
   `CREATE TABLE IF NOT EXISTS usuarios (
     id                      SERIAL PRIMARY KEY,
     nome                    TEXT NOT NULL,
@@ -670,7 +669,7 @@ const TABLES = [
   )`,
 ];
 
-const INDEXES = [
+export const INDEXES: string[] = [
   'CREATE INDEX IF NOT EXISTS idx_pedidos_sep         ON pedidos(separador_id, status)',
   'CREATE INDEX IF NOT EXISTS idx_pedidos_num         ON pedidos(numero_pedido)',
   'CREATE INDEX IF NOT EXISTS idx_pedidos_data_status ON pedidos(data_pedido, status)',
@@ -720,4 +719,3 @@ const INDEXES = [
   'CREATE INDEX IF NOT EXISTS idx_permissoes_usuario   ON permissoes_usuario(usuario_id)',
 ];
 
-module.exports = { TABLES, INDEXES };
