@@ -34,10 +34,10 @@ router.get('/kpis', requerAuth, async (req,res) => {
     if (hasTurno) p.push(turnosArr);
     const T = hasTurno ? `$${p.length}` : null;
 
-    const sepFilt = hasTurno ? tSep.replace('$T', T) : '';
-    const ckFilt  = hasTurno ? tNome('c.operador_nome').replace('$T', T) : '';
-    const embFilt = hasTurno ? tNome('e.embalado_por').replace('$T', T) : '';
-    const repFilt = hasTurno ? tNome('r.repositor_nome').replace('$T', T) : '';
+    const sepFilt = hasTurno ? tSep.replace('$T', T!) : '';
+    const ckFilt  = hasTurno ? tNome('c.operador_nome').replace('$T', T!) : '';
+    const embFilt = hasTurno ? tNome('e.embalado_por').replace('$T', T!) : '';
+    const repFilt = hasTurno ? tNome('r.repositor_nome').replace('$T', T!) : '';
 
     const r = await db.get(`SELECT
       (SELECT COUNT(*) FROM pedidos p WHERE p.status='concluido'

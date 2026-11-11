@@ -220,7 +220,7 @@ async function calcularPadroes({ ini, fim, turno }: any) {
     // 2) Tendência
     const fase = porColabFase[nome];
     if (fase && fase.a.length >= 2 && fase.b.length >= 2) {
-      const ma = media(fase.a), mb = media(fase.b);
+      const ma = media(fase.a)!, mb = media(fase.b)!;
       if (ma > 0) {
         const variacao = ((mb - ma) / ma) * 100;
         if (variacao >= 40) {

@@ -975,7 +975,7 @@ router.post('/pedidos/distribuicao', requerAuth, requerPerfil('supervisor'), asy
       filas.push({
         separador_id: sid,
         separador_nome: sepMap[sid]?.nome || `Sep ${sid}`,
-        pedidos: [],
+        pedidos: [] as any[],
         pontuacao_total: cargaAtual.pontuacao,   // começa com o que já tem
         itens_total:     cargaAtual.itens,
         pedidos_total:   cargaAtual.pedidos,     // quantidade de pedidos (independente de pontuação/itens)
@@ -1133,7 +1133,7 @@ router.post('/pedidos/distribuicao-turnos/confirmar', requerAuth, requerPerfil('
           `UPDATE pedidos SET turno_distribuicao=$1, data_distribuicao=$2 WHERE numero_pedido=$3 AND status='pendente'`,
           [turnoNome, dataDistrib, String(np)]
         );
-        if (r.rowCount > 0) marcados++;
+        if (r.rowCount! > 0) marcados++;
       }
     }
     res.json({marcados, mensagem:`${marcados} pedido(s) marcados por turno.`});
@@ -1216,7 +1216,7 @@ router.post('/pedidos/distribuicao/confirmar', requerAuth, requerPerfil('supervi
               [dbId, dataDistrib, np]
             );
           }
-          if(r.rowCount>0) dist++;
+          if(r.rowCount!>0) dist++;
         }
       }
     }
@@ -1642,7 +1642,7 @@ router.post('/pedidos/lote/formar/confirmar', requerAuth, requerPerfil('supervis
         continue;
       }
       lotesGravados++;
-      pedidosGravados += r.rowCount;
+      pedidosGravados += r.rowCount!;
     }
     await client.query('COMMIT');
     res.json({ mensagem:'Lotes formados!', lotes: lotesGravados, pedidos: pedidosGravados });

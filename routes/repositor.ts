@@ -710,7 +710,7 @@ router.post('/protocolo/pedido/:pedido_id/encerrar', requerAuth, requerPerfil('s
                 historico=$2, data_fechamento=$3, hora_fechamento=$4 WHERE id=$5 AND status='protocolo'`,
         [supervisorNome, JSON.stringify(histNovo), data, hora, item.id]
       );
-      fechados += upd.rowCount;
+      fechados += upd.rowCount!;
     }
     await client.query('COMMIT');
 

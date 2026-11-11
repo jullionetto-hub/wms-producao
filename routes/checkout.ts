@@ -40,7 +40,7 @@ import { dataHoraLocal } from '../lib/helpers';
           OR CAST(SUBSTRING(data_checkout, 6, 2) AS INTEGER) > 12
         )
     `);
-    if (repairCk.rowCount > 0) console.log(`[CHECKOUT] Reparadas ${repairCk.rowCount} datas invertidas em checkout.`);
+    if (repairCk.rowCount! > 0) console.log(`[CHECKOUT] Reparadas ${repairCk.rowCount} datas invertidas em checkout.`);
 
     const repairSess = await pool.query(`
       UPDATE checkout_sessoes
@@ -57,7 +57,7 @@ import { dataHoraLocal } from '../lib/helpers';
           OR CAST(SUBSTRING(data_sessao, 6, 2) AS INTEGER) > 12
         )
     `);
-    if (repairSess.rowCount > 0) console.log(`[CHECKOUT] Reparadas ${repairSess.rowCount} datas invertidas em checkout_sessoes.`);
+    if (repairSess.rowCount! > 0) console.log(`[CHECKOUT] Reparadas ${repairSess.rowCount} datas invertidas em checkout_sessoes.`);
 
     // Diagnóstico: loga quantos registros existem e amostra de datas
     const diag = await pool.query(`SELECT COUNT(*) as cnt, MIN(data_checkout) as min_dt, MAX(data_checkout) as max_dt FROM checkout`);
