@@ -7,13 +7,14 @@ import { gerarRelatorio }  from '../../lib/relatorio';
 import { db }             from '../../lib/db';
 import { dataHoraLocal }  from '../../lib/helpers';
 import log                from '../../lib/logger';
+import type { Linha } from '../../types/db';
 
 export async function verificarRelatoriosPerdidos(): Promise<void> {
   try {
     const ontem = new Date();
     ontem.setDate(ontem.getDate() - 1);
     const dataOntem = ontem.toISOString().split('T')[0];
-    const existe = await db.get('SELECT id FROM relatorios_diarios WHERE data=$1', [dataOntem]);
+    const existe = await db.get<Pick<Linha<'relatorios_diarios'>, 'id'>>('SELECT id FROM relatorios_diarios WHERE data=$1', [dataOntem]);
     if (!existe) {
       log.info({ data: dataOntem }, 'gerando relatório perdido de ontem');
       await gerarRelatorio(dataOntem);
@@ -28,7 +29,7 @@ export function iniciarScheduler(): void {
   cron.schedule('55 23 * * *', async () => {
     try {
       const { data } = dataHoraLocal();
-      const existe = await db.get('SELECT id FROM relatorios_diarios WHERE data=$1', [data]);
+      const existe = await db.get<Pick<Linha<'relatorios_diarios'>, 'id'>>('SELECT id FROM relatorios_diarios WHERE data=$1', [data]);
       if (!existe) {
         log.info({ data }, 'gerando relatório diário agendado');
         await gerarRelatorio(data);

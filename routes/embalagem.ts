@@ -4,6 +4,7 @@ import { db, pool } from '../lib/db';
 import { requerAuth, requerPerfil } from '../lib/auth';
 import { dataHoraLocal, validarId } from '../lib/helpers';
 import { registrarAuditoria } from '../lib/auditoria';
+import type { Linha } from '../types/db';
 
 
 router.get('/embalagem', requerAuth, async (req,res) => {
@@ -68,7 +69,7 @@ router.put('/embalagem/:id/iniciar', requerAuth, async (req,res) => {
   try {
     const {hora} = dataHoraLocal();
     const embalado_por = req.session?.usuario?.nome || 'Embalador';
-    const ped = await db.get('SELECT * FROM pedidos WHERE id=$1', [id]);
+    const ped = await db.get<Linha<'pedidos'>>('SELECT * FROM pedidos WHERE id=$1', [id]);
     if (!ped) return res.status(404).json({erro:'Pedido nao encontrado'});
     if (ped.status_embalagem === 'embalado') return res.status(400).json({erro:'Pedido ja embalado!'});
     await pool.query(
@@ -86,7 +87,7 @@ router.put('/embalagem/:id/confirmar', requerAuth, async (req,res) => {
   try {
     const {data:hoje, hora} = dataHoraLocal();
     const embalado_por = req.session?.usuario?.nome || 'Embalador';
-    const ped = await db.get('SELECT * FROM pedidos WHERE id=$1', [id]);
+    const ped = await db.get<Linha<'pedidos'>>('SELECT * FROM pedidos WHERE id=$1', [id]);
     if (!ped) return res.status(404).json({erro:'Pedido nao encontrado'});
     if (ped.status_embalagem === 'embalado') return res.status(400).json({erro:'Pedido ja embalado!'});
     const inicio = ped.embalagem_iniciado_em || ped.embalado_em || '';

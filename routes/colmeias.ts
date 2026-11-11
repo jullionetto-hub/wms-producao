@@ -2,6 +2,7 @@ import express from 'express';
 const router = express.Router();
 import { db, pool } from '../lib/db';
 import { requerPerfil } from '../lib/auth';
+import type { Linha } from '../types/db';
 
 // Lista colmeias ativas com saldo calculado ao vivo: quantidade cadastrada
 // menos o que já saiu em pedidos concluídos desse código desde que a
@@ -31,7 +32,7 @@ router.get('/colmeias', requerPerfil('supervisor', 'gestor'), async (req, res) =
 
 router.get('/colmeias/:id/historico', requerPerfil('supervisor', 'gestor'), async (req, res) => {
   try {
-    const rows = await db.all(
+    const rows = await db.all<Linha<'colmeias_abastecimentos'>>(
       `SELECT * FROM colmeias_abastecimentos WHERE colmeia_id=$1 ORDER BY criado_em DESC LIMIT 50`,
       [req.params.id]
     );

@@ -5,6 +5,7 @@ import { requerAuth, requerPerfil } from '../lib/auth';
 import { db, pool } from '../lib/db';
 const pdfParse = require('pdf-parse');
 import { parseEspelhoPonto, inferirHorariosEsperados, classificarDia, classificarAbsenteismoMes, mesReferencia, ehDiaUtilEsperado, periodoDoMes, diasNoPeriodo } from '../lib/absenteismo';
+import type { Linha } from '../types/db';
 
 // Feriados em que o time inteiro não trabalha, mesmo caindo em dia útil
 // normal (não tem como inferir isso só pelo dia da semana). Lista mantida
@@ -44,7 +45,7 @@ const tokensNome = (s: any) => normNome(s).split(' ').filter((t: any) => t.lengt
 // Quando acha por aproximação, alinha o nome na Matriz ao do WMS (fonte do ponto),
 // assim os dois sistemas passam a ter o mesmo nome e o próximo envio é exato.
 async function acharMzColaborador(nomeWms: any) {
-  const todos = await db.all('SELECT * FROM mz_colaboradores');
+  const todos = await db.all<Linha<'mz_colaboradores'>>('SELECT * FROM mz_colaboradores');
   const alvo = normNome(nomeWms);
   const exato = todos.find(c => normNome(c.nome) === alvo);
   if (exato) return exato;
@@ -272,7 +273,7 @@ router.post('/absenteismo/upload', requerAuth, gLeitura,
 );
 
 router.get('/absenteismo/uploads', requerAuth, gLeitura, wrap(async (req: any, res: any) => {
-  const uploads = await db.all('SELECT * FROM abs_uploads ORDER BY enviado_em DESC LIMIT 50');
+  const uploads = await db.all<Linha<'abs_uploads'>>('SELECT * FROM abs_uploads ORDER BY enviado_em DESC LIMIT 50');
   res.json(uploads.map(u => ({ ...u, mes_referencia: mesReferencia(u.periodo_fim) })));
 }));
 
@@ -286,7 +287,7 @@ router.get('/absenteismo/uploads', requerAuth, gLeitura, wrap(async (req: any, r
 router.get('/absenteismo/resultado', requerAuth, gLeitura, wrap(async (req: any, res: any) => {
   const tolerancia = parseInt(req.query.tolerancia) || 0;
   const { data_ini, data_fim } = req.query as Record<string, string>;
-  const colaboradores = await db.all(`SELECT * FROM abs_colaboradores WHERE ativo=true ORDER BY nome`);
+  const colaboradores = await db.all<Linha<'abs_colaboradores'>>(`SELECT * FROM abs_colaboradores WHERE ativo=true ORDER BY nome`);
   const params = [];
   const where = [];
   if (data_ini) { params.push(data_ini); where.push(`data >= $${params.length}`); }
@@ -310,7 +311,7 @@ router.get('/absenteismo/resultado', requerAuth, gLeitura, wrap(async (req: any,
 // classificados (entrada/almoço/pausa atrasados), já filtrando pela tolerância.
 router.get('/absenteismo/uploads/:id/resultado', requerAuth, gLeitura, wrap(async (req: any, res: any) => {
   const tolerancia = parseInt(req.query.tolerancia) || 0;
-  const upload = await db.get('SELECT * FROM abs_uploads WHERE id=$1', [req.params.id]);
+  const upload = await db.get<Linha<'abs_uploads'>>('SELECT * FROM abs_uploads WHERE id=$1', [req.params.id]);
   if (!upload) return res.status(404).json({ erro: 'Upload não encontrado' });
 
   const colaboradores = await db.all(
@@ -318,7 +319,7 @@ router.get('/absenteismo/uploads/:id/resultado', requerAuth, gLeitura, wrap(asyn
      JOIN abs_registros_diarios r ON r.colaborador_id=c.id
      WHERE r.upload_id=$1 ORDER BY c.nome`, [req.params.id]
   );
-  const dias = await db.all(
+  const dias = await db.all<Linha<'abs_registros_diarios'>>(
     `SELECT * FROM abs_registros_diarios WHERE upload_id=$1 ORDER BY data`, [req.params.id]
   );
   const porColaborador: Record<string, any> = {};
@@ -344,7 +345,7 @@ router.delete('/absenteismo/dados', requerAuth, gGestor, wrap(async (req: any, r
 }));
 
 router.get('/absenteismo/colaboradores', requerAuth, gLeitura, wrap(async (req: any, res: any) => {
-  res.json(await db.all('SELECT * FROM abs_colaboradores WHERE ativo=true ORDER BY nome'));
+  res.json(await db.all<Linha<'abs_colaboradores'>>('SELECT * FROM abs_colaboradores WHERE ativo=true ORDER BY nome'));
 }));
 
 router.get('/absenteismo/colaboradores/:id/dias', requerAuth, gLeitura, wrap(async (req: any, res: any) => {
@@ -406,8 +407,8 @@ async function enviarParaMatriz(colaborador: any, mes: any, autorNome: any, peri
   // O feedback é do MÊS escolhido: só entram os dias do período desse mês (ex.: Outubro/2026 = 27/09 a 26/10).
   // Antes somava todos os dias já salvos do colaborador — misturava dois períodos e inflava os atrasos
   // (o Lucas saía com 44 min no feedback de outubro, quando o período tinha 2 min).
-  const periodo = periodoDoMes(await db.all('SELECT periodo_inicio, periodo_fim FROM abs_uploads'), mes) || periodoInformado || null;
-  const todos = await db.all('SELECT * FROM abs_registros_diarios WHERE colaborador_id=$1', [colaborador.id]);
+  const periodo = periodoDoMes(await db.all<Pick<Linha<'abs_uploads'>, 'periodo_inicio' | 'periodo_fim'>>('SELECT periodo_inicio, periodo_fim FROM abs_uploads'), mes) || periodoInformado || null;
+  const todos = await db.all<Linha<'abs_registros_diarios'>>('SELECT * FROM abs_registros_diarios WHERE colaborador_id=$1', [colaborador.id]);
   const dias = diasNoPeriodo(todos, periodo);
   const resumo = resumoColaborador(dias, 0, colaborador.saldo_final_min, colaborador.horario);
   const status = classificarAbsenteismoMes({
@@ -418,7 +419,7 @@ async function enviarParaMatriz(colaborador: any, mes: any, autorNome: any, peri
   const saldo = fmtSaldoHoras(resumo.banco_horas_min);
   const detalhe = detalheAbsenteismo(dias, colaborador.horario, status, resumo);
 
-  const existente = await db.get(
+  const existente = await db.get<Pick<Linha<'mz_feedbacks'>, 'id'>>(
     'SELECT id FROM mz_feedbacks WHERE colaborador_id=$1 AND LOWER(TRIM(mes))=LOWER(TRIM($2)) ORDER BY id DESC LIMIT 1',
     [mzColab.id, mes]
   );
@@ -448,7 +449,7 @@ router.post('/absenteismo/colaboradores/:id/enviar-matriz', requerAuth, gLeitura
   const { mes, data_ini, data_fim } = req.body || {};
   if (!mes) return res.status(400).json({ erro: 'Informe o mês (ex: Agosto/2026)' });
 
-  const colaborador = await db.get('SELECT * FROM abs_colaboradores WHERE id=$1', [req.params.id]);
+  const colaborador = await db.get<Linha<'abs_colaboradores'>>('SELECT * FROM abs_colaboradores WHERE id=$1', [req.params.id]);
   if (!colaborador) return res.status(404).json({ erro: 'Colaborador não encontrado' });
 
   const out = await enviarParaMatriz(colaborador, mes, req.session?.usuario?.nome || '', data_ini && data_fim ? { ini: data_ini, fim: data_fim } : null);
@@ -469,7 +470,7 @@ router.post('/absenteismo/enviar-matriz-lote', requerAuth, gLeitura, wrap(async 
   const falhas = [];
   for (const id of ids) {
     try {
-      const colaborador = await db.get('SELECT * FROM abs_colaboradores WHERE id=$1', [id]);
+      const colaborador = await db.get<Linha<'abs_colaboradores'>>('SELECT * FROM abs_colaboradores WHERE id=$1', [id]);
       if (!colaborador) { falhas.push({ id, nome: `#${id}`, erro: 'Colaborador não encontrado' }); continue; }
       const out = await enviarParaMatriz(colaborador, mes, autor, periodoInformado);
       if (out.erro) { falhas.push({ id, nome: colaborador.nome, erro: out.erro }); continue; }

@@ -3,6 +3,7 @@ const router = express.Router();
 import { db, pool } from '../lib/db';
 import { requerAuth } from '../lib/auth';
 import { dataHoraLocal } from '../lib/helpers';
+import type { Linha } from '../types/db';
 
 const TOTAL_CAIXAS = 10;
 
@@ -57,7 +58,7 @@ router.get('/caixas/:numero/historico', requerAuth, async (req, res) => {
   const numero = parseInt(req.params.numero);
   if (!numero || numero < 1 || numero > TOTAL_CAIXAS) return res.status(400).json({ erro: 'Caixa inválida' });
   try {
-    const rows = await db.all(
+    const rows = await db.all<Linha<'checklist_caixas'>>(
       `SELECT * FROM checklist_caixas WHERE numero=$1 ORDER BY criado_em DESC LIMIT 30`,
       [numero]
     );

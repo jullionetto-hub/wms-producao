@@ -5,6 +5,7 @@ import { requerAuth, requerPerfil } from '../lib/auth';
 import { hashSenha, validarId } from '../lib/helpers';
 import { registrarAuditoria } from '../lib/auditoria';
 import { requerPermissao } from '../lib/permissoes';
+import type { Linha } from '../types/db';
 
 router.get('/usuarios', requerAuth, requerPerfil('supervisor', 'gestor'), async (req,res) => {
   try {
@@ -43,7 +44,7 @@ router.put('/usuarios/:id', requerAuth, requerPerfil('supervisor', 'gestor'), as
   const subtipo=perfil==='repositor'?(subtipo_repositor||'geral'):'geral';
   const extras=Array.isArray(perfis_acesso)?perfis_acesso.filter(Boolean).filter(p=>p!==perfil).join(','):String(perfis_acesso||'');
   try {
-    const antes = await db.get('SELECT nome,login,perfil,perfis_acesso,turno,status FROM usuarios WHERE id=$1', [req.params.id]);
+    const antes = await db.get<Pick<Linha<'usuarios'>, 'nome' | 'login' | 'perfil' | 'perfis_acesso' | 'turno' | 'status'>>('SELECT nome,login,perfil,perfis_acesso,turno,status FROM usuarios WHERE id=$1', [req.params.id]);
     const senhaTemp = req.body.senha_temporaria === true;
     if (senha) {
       const expira = senhaTemp ? new Date(Date.now() + 24*60*60*1000) : null;
@@ -67,7 +68,7 @@ router.patch('/usuarios/:id/status', requerAuth, requerPerfil('supervisor', 'ges
   const {status} = req.body;
   if (!['ativo','inativo'].includes(status)) return res.status(400).json({erro:'Status invalido'});
   try {
-    const antes = await db.get('SELECT status FROM usuarios WHERE id=$1', [id]);
+    const antes = await db.get<Pick<Linha<'usuarios'>, 'status'>>('SELECT status FROM usuarios WHERE id=$1', [id]);
     await pool.query('UPDATE usuarios SET status=$1 WHERE id=$2', [status, id]);
     await registrarAuditoria(req, 'USUARIO_STATUS_ALTERADO', 'usuario', id, antes, {status});
     res.json({mensagem:'Status atualizado!'});
@@ -76,7 +77,7 @@ router.patch('/usuarios/:id/status', requerAuth, requerPerfil('supervisor', 'ges
 
 router.delete('/usuarios/:id', requerAuth, requerPerfil('supervisor', 'gestor'), requerPermissao('excluir'), async (req,res) => {
   try {
-    const antes = await db.get('SELECT nome,login,perfil FROM usuarios WHERE id=$1', [req.params.id]);
+    const antes = await db.get<Pick<Linha<'usuarios'>, 'nome' | 'login' | 'perfil'>>('SELECT nome,login,perfil FROM usuarios WHERE id=$1', [req.params.id]);
     await pool.query('DELETE FROM usuarios WHERE id=$1',[req.params.id]);
     await registrarAuditoria(req, 'USUARIO_EXCLUIDO', 'usuario', req.params.id, antes, null);
     res.json({mensagem:'Excluido!'});
@@ -92,8 +93,8 @@ router.get('/separadores', requerAuth, async (req,res) => {
 // Rotas com path fixo ANTES de /:id para não serem capturadas como inteiro
 router.get('/separadores/diagnostico', requerAuth, requerPerfil('supervisor', 'gestor'), async (req,res) => {
   try {
-    const usuarios = await db.all(`SELECT id, nome, login, turno, status FROM usuarios WHERE perfil='separador' ORDER BY nome`);
-    const separadores = await db.all(`SELECT id, nome, matricula, turno, status, usuario_id FROM separadores ORDER BY nome`);
+    const usuarios = await db.all<Pick<Linha<'usuarios'>, 'id' | 'nome' | 'login' | 'turno' | 'status'>>(`SELECT id, nome, login, turno, status FROM usuarios WHERE perfil='separador' ORDER BY nome`);
+    const separadores = await db.all<Pick<Linha<'separadores'>, 'id' | 'nome' | 'matricula' | 'turno' | 'status' | 'usuario_id'>>(`SELECT id, nome, matricula, turno, status, usuario_id FROM separadores ORDER BY nome`);
     const semVinculo = separadores.filter(s => !s.usuario_id);
     const usuariosSemSep = usuarios.filter(u => !separadores.find(s => s.usuario_id === u.id));
     res.json({ usuarios, separadores, sem_vinculo: semVinculo, usuarios_sem_separador: usuariosSemSep });
@@ -116,7 +117,7 @@ router.post('/separadores/vincular-todos', requerAuth, requerPerfil('supervisor'
         AND s.status = 'ativo' AND u.perfil = 'separador' AND u.status = 'ativo'
         AND LOWER(TRIM(s.nome)) = LOWER(TRIM(u.nome))
     `);
-    const semVinculo = await db.all(`
+    const semVinculo = await db.all<Pick<Linha<'separadores'>, 'id' | 'nome' | 'matricula'>>(`
       SELECT s.id, s.nome, s.matricula FROM separadores s
       WHERE (s.usuario_id IS NULL OR s.usuario_id = 0) AND s.status = 'ativo' ORDER BY s.nome
     `);
@@ -125,7 +126,7 @@ router.post('/separadores/vincular-todos', requerAuth, requerPerfil('supervisor'
 });
 
 router.get('/separadores/:id', requerAuth, async (req,res) => {
-  try { res.json(await db.get('SELECT * FROM separadores WHERE id=$1',[req.params.id])); }
+  try { res.json(await db.get<Linha<'separadores'>>('SELECT * FROM separadores WHERE id=$1',[req.params.id])); }
   catch(e){res.status(500).json({erro:e.message});}
 });
 
@@ -147,7 +148,7 @@ router.put('/separadores/:id', requerAuth, requerPerfil('supervisor', 'gestor'),
 
 router.delete('/separadores/:id', requerAuth, requerPerfil('supervisor', 'gestor'), requerPermissao('excluir'), async (req,res) => {
   try {
-    const antes = await db.get('SELECT nome,matricula FROM separadores WHERE id=$1', [req.params.id]);
+    const antes = await db.get<Pick<Linha<'separadores'>, 'nome' | 'matricula'>>('SELECT nome,matricula FROM separadores WHERE id=$1', [req.params.id]);
     await pool.query('DELETE FROM separadores WHERE id=$1',[req.params.id]);
     await registrarAuditoria(req, 'SEPARADOR_EXCLUIDO', 'separador', req.params.id, antes, null);
     res.json({mensagem:'Excluido!'});

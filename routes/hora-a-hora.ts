@@ -17,9 +17,10 @@ import { db } from '../lib/db';
 import { requerAuth, requerPerfil } from '../lib/auth';
 import { dataHoraLocal, turnoAtualEHorarios } from '../lib/helpers';
 import { bucketsPorHora, ritmoEPrevisao, inicioTurnoTimestamp } from '../lib/hora-a-hora';
+import type { Linha } from '../types/db';
 
 async function metasConfiguradas() {
-  const rows = await db.all(
+  const rows = await db.all<Pick<Linha<'configuracoes'>, 'chave' | 'valor'>>(
     `SELECT chave, valor FROM configuracoes WHERE chave IN ('meta_embalagem','meta_checkout','meta_faturamento')`
   );
   const porChave = Object.fromEntries(rows.map(r => [r.chave, parseFloat(r.valor)]));
@@ -41,11 +42,11 @@ router.get('/hora-a-hora', requerAuth, requerPerfil('supervisor', 'gestor'), asy
     const noite = turno === 'Noite';
     const inicioTurno = inicioTurnoTimestamp(turno, hoje, parseInt(horaAgoraStr.slice(0, 2), 10));
 
-    const horasTurnoRow = await db.get(
+    const horasTurnoRow = await db.get<Pick<Linha<'configuracoes'>, 'valor'>>(
       `SELECT valor FROM configuracoes WHERE chave=$1`,
       [`horas_turno_${turno === 'Manha' ? 'manha' : turno === 'Tarde' ? 'tarde' : 'noite'}`]
     );
-    const horasTurno = parseFloat(horasTurnoRow?.valor) || (turno === 'Noite' ? 6 : 8);
+    const horasTurno = parseFloat(horasTurnoRow?.valor as string) || (turno === 'Noite' ? 6 : 8);
     const minutosDecorridos = Math.max(horasTurno * 60 - minutos_restantes, 0);
 
     const [embRows, ckRows, fatRows] = await Promise.all(noite ? [
@@ -97,11 +98,11 @@ router.get('/hora-a-hora/pedidos', requerAuth, requerPerfil('supervisor', 'gesto
     const inicioTurno = inicioTurnoTimestamp(turno, hoje, horaAgora);
     const ontem = new Date(Date.UTC(+hoje.slice(0, 4), +hoje.slice(5, 7) - 1, +hoje.slice(8, 10) - 1)).toISOString().slice(0, 10);
 
-    const metaRow = await db.get(
+    const metaRow = await db.get<Pick<Linha<'configuracoes'>, 'valor'>>(
       `SELECT valor FROM configuracoes WHERE chave=$1`,
       [`meta_checkout_${turno === 'Manha' ? 'manha' : turno === 'Tarde' ? 'tarde' : 'noite'}`]
     );
-    const metaCheckoutTurno = parseFloat(metaRow?.valor) || 0; // 0 = sem meta configurada pra esse turno
+    const metaCheckoutTurno = parseFloat(metaRow?.valor as string) || 0; // 0 = sem meta configurada pra esse turno
 
     const [sepUltHora, ckUltHora, embUltHora, ckTurnoAtual] = await Promise.all([
       db.get(`SELECT COUNT(*)::int AS n FROM pedidos

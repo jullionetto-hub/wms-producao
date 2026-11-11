@@ -20,6 +20,7 @@ import { requerPermissao } from '../lib/permissoes';
 import { calcularPesoCorredor, calcularPontuacaoPedido } from '../lib/pontuacao';
 import { calcularPrioridade } from '../lib/prioridade';
 import { classificarImportacao } from '../lib/importacao';
+import type { Linha } from '../types/db';
 
 // Prioridade só faz sentido pra pedido ainda não concluído (aguardando
 // alguma etapa) — pedido concluído não carrega selo de prioridade.
@@ -113,7 +114,7 @@ router.get('/pedidos', requerAuth, async (req,res) => {
       !r.skus_concluido_em  // só se ainda não terminou de escanear
     );
     for (const ped of semAguardando) {
-      const primeiroAviso = await db.get(
+      const primeiroAviso = await db.get<Pick<Linha<'avisos_repositor'>, 'hora_aviso' | 'data_aviso'>>(
         `SELECT hora_aviso, data_aviso FROM avisos_repositor
          WHERE pedido_id=$1 AND status IN ('pendente','verificando')
          ORDER BY id ASC LIMIT 1`, [ped.id]
@@ -253,7 +254,7 @@ router.get('/pedidos/bloqueados', requerAuth, requerPerfil('supervisor'), async 
 
 router.get('/pedidos/info/:numero_pedido', requerAuth, async (req,res) => {
   try {
-    const row=await db.get('SELECT numero_pedido,cliente,transportadora,numero_caixa FROM pedidos WHERE numero_pedido=$1',[req.params.numero_pedido]);
+    const row=await db.get<Pick<Linha<'pedidos'>, 'numero_pedido' | 'cliente' | 'transportadora' | 'numero_caixa'>>('SELECT numero_pedido,cliente,transportadora,numero_caixa FROM pedidos WHERE numero_pedido=$1',[req.params.numero_pedido]);
     if (!row) return res.status(404).json({erro:'Pedido não encontrado'});
     res.json({cliente:row.cliente||'',transportadora:row.transportadora||'',numero_caixa:row.numero_caixa||''});
   } catch(e){res.status(500).json({erro:e.message});}
@@ -267,7 +268,7 @@ router.put('/pedidos/:id/caixa', requerAuth, async (req,res) => {
   const caixa=String(numero_caixa).trim();
   try {
     // Caixa está ocupada se: existe outro pedido com ela E não foi cancelado E o checkout ainda não foi concluído
-    const usadaPed = await db.get(
+    const usadaPed = await db.get<Pick<Linha<'pedidos'>, 'numero_pedido'>>(
       `SELECT numero_pedido FROM pedidos
        WHERE numero_caixa=$1 AND id<>$2 AND status != 'cancelado'
          AND NOT EXISTS (
@@ -301,7 +302,7 @@ router.post('/pedidos/bipar', requerAuth, async (req,res) => {
   const separador_id = req.session?.separador?.id || null;
   if (!numero_pedido) return res.status(400).json({erro:'Numero do pedido nao informado!'});
   try {
-    const ped=await db.get('SELECT * FROM pedidos WHERE numero_pedido=$1',[numero_pedido]);
+    const ped=await db.get<Linha<'pedidos'>>('SELECT * FROM pedidos WHERE numero_pedido=$1',[numero_pedido]);
     if (!ped) return res.status(404).json({erro:'Pedido nao encontrado!'});
     if (ped.status==='concluido') return res.status(400).json({erro:'Pedido ja concluido!',status:'concluido'});
     const bipDHL = dataHoraLocal();
@@ -352,7 +353,7 @@ router.get('/pedidos/lote-itens', requerAuth, async (req,res) => {
   const ids = String(req.query.pedido_ids||'').split(',').map(s=>parseInt(s.trim())).filter(Boolean);
   if (!ids.length) return res.status(400).json({erro:'pedido_ids obrigatorio'});
   try {
-    const pedidos = await db.all(`SELECT id,numero_pedido,total_itens,itens,caixa_lote FROM pedidos WHERE id=ANY($1)`, [ids]);
+    const pedidos = await db.all<Pick<Linha<'pedidos'>, 'id' | 'numero_pedido' | 'total_itens' | 'itens' | 'caixa_lote'>>(`SELECT id,numero_pedido,total_itens,itens,caixa_lote FROM pedidos WHERE id=ANY($1)`, [ids]);
     const caixaMap: Record<string, any> = {};
     ids.forEach((id,i) => { caixaMap[id] = i+1; });
     const itens = await db.all(
@@ -393,7 +394,7 @@ router.get('/pedidos/buscar-caixa-lote', requerAuth, async (req,res) => {
   const { numero } = req.query as Record<string, string>;
   if (!numero) return res.status(400).json({erro:'numero obrigatorio'});
   try {
-    const ped = await db.get(
+    const ped = await db.get<Pick<Linha<'pedidos'>, 'id' | 'numero_pedido' | 'cliente' | 'transportadora' | 'status' | 'caixa_lote' | 'total_itens' | 'itens' | 'status_embalagem'>>(
       `SELECT p.id, p.numero_pedido, p.cliente, p.transportadora, p.status, p.caixa_lote,
               p.total_itens, p.itens, p.status_embalagem
        FROM pedidos p
@@ -414,9 +415,9 @@ router.post('/pedidos/lote/concluir', requerAuth, async (req,res) => {
   const resultados = [];
   try {
     for (const id of pedido_ids) {
-      const pend = await db.all(`SELECT id FROM itens_pedido WHERE pedido_id=$1 AND status='pendente'`,[id]);
+      const pend = await db.all<Pick<Linha<'itens_pedido'>, 'id'>>(`SELECT id FROM itens_pedido WHERE pedido_id=$1 AND status='pendente'`,[id]);
       if (pend.length) { resultados.push({id, ok:false, erro:`${pend.length} item(s) pendente(s)`}); continue; }
-      const avisos = await db.all(`SELECT id FROM avisos_repositor WHERE pedido_id=$1 AND status IN ('pendente','verificando')`,[id]);
+      const avisos = await db.all<Pick<Linha<'avisos_repositor'>, 'id'>>(`SELECT id FROM avisos_repositor WHERE pedido_id=$1 AND status IN ('pendente','verificando')`,[id]);
       if (avisos.length) {
         await pool.query(`UPDATE pedidos SET skus_concluido_em=COALESCE(NULLIF(skus_concluido_em,''),$1) WHERE id=$2`,[data+'T'+hora,id]);
         resultados.push({id, ok:false, aguardando:true}); continue;
@@ -425,8 +426,8 @@ router.post('/pedidos/lote/concluir', requerAuth, async (req,res) => {
         `UPDATE pedidos SET status='concluido', concluido_em=$1, skus_concluido_em=COALESCE(NULLIF(skus_concluido_em,''),$1) WHERE id=$2`,
         [data+'T'+hora, id]
       );
-      const ped = await db.get('SELECT numero_pedido,numero_caixa,caixa_lote,separador_id FROM pedidos WHERE id=$1',[id]);
-      const sep = ped?.separador_id ? await db.get('SELECT nome FROM separadores WHERE id=$1',[ped.separador_id]) : null;
+      const ped = await db.get<Pick<Linha<'pedidos'>, 'numero_pedido' | 'numero_caixa' | 'caixa_lote' | 'separador_id'>>('SELECT numero_pedido,numero_caixa,caixa_lote,separador_id FROM pedidos WHERE id=$1',[id]);
+      const sep = ped?.separador_id ? await db.get<Pick<Linha<'separadores'>, 'nome'>>('SELECT nome FROM separadores WHERE id=$1',[ped.separador_id]) : null;
       // Para pedidos de lote usa caixa_lote como número da caixa no checkout
       const ckNumCaixa = ped?.numero_caixa || ped?.caixa_lote || '';
       const ckUpd = await pool.query(
@@ -483,7 +484,7 @@ router.put('/itens/:id/verificar', requerAuth, async (req,res) => {
     if (status==='falta'||status==='parcial') {
       const qtdA=status==='falta'?item.quantidade:(qtd_falta||0);
       const obsA=status==='parcial'?(obs||''):`Falta total - ${item.quantidade} unidade(s)`;
-      const pedidoInfo = await db.get(`SELECT transportadora FROM pedidos WHERE id=$1`,[item.pedido_id]);
+      const pedidoInfo = await db.get<Pick<Linha<'pedidos'>, 'transportadora'>>(`SELECT transportadora FROM pedidos WHERE id=$1`,[item.pedido_id]);
       const formaEnvio = pedidoInfo?.transportadora || '';
       // Checar "já existe aviso em aberto?" e inserir precisa ser atômico por item: dois toques
       // quase simultâneos em "Falta" passavam os dois pela checagem e criavam DOIS avisos
@@ -491,7 +492,7 @@ router.put('/itens/:id/verificar', requerAuth, async (req,res) => {
       // na tela. Também considera em aberto o que já está sendo buscado (verificando) ou
       // aguardando busca final, em vez de só 'pendente'.
       await serializarPorItem(item.id, async () => {
-        const ja=await db.get(`SELECT id,status FROM avisos_repositor WHERE item_id=$1 AND status IN ('pendente','verificando','nao_encontrado','busca_final') ORDER BY id DESC LIMIT 1`,[item.id]);
+        const ja=await db.get<Pick<Linha<'avisos_repositor'>, 'id' | 'status'>>(`SELECT id,status FROM avisos_repositor WHERE item_id=$1 AND status IN ('pendente','verificando','nao_encontrado','busca_final') ORDER BY id DESC LIMIT 1`,[item.id]);
         if (ja) {
           if ((ja.status || 'pendente') === 'pendente') {
             await pool.query(`UPDATE avisos_repositor SET quantidade=$1,obs=$2,hora_aviso=$3,forma_envio=$4 WHERE id=$5`,[qtdA,obsA,hora,formaEnvio,ja.id]);
@@ -501,7 +502,7 @@ router.put('/itens/:id/verificar', requerAuth, async (req,res) => {
       });
       // Define o início da espera pelo repositor (para cálculo de tempo real de separação).
       // Só marca se ainda não tiver aguardando (não sobrescreve se já havia outro item em falta).
-      const pedAtual = await db.get(`SELECT aguardando_repositor_desde FROM pedidos WHERE id=$1`,[item.pedido_id]);
+      const pedAtual = await db.get<Pick<Linha<'pedidos'>, 'aguardando_repositor_desde'>>(`SELECT aguardando_repositor_desde FROM pedidos WHERE id=$1`,[item.pedido_id]);
       if (!pedAtual?.aguardando_repositor_desde) {
         const agoraISO = new Date().toISOString();
         await pool.query(`UPDATE pedidos SET aguardando_repositor_desde=$1 WHERE id=$2`,[agoraISO, item.pedido_id]);
@@ -522,7 +523,7 @@ router.put('/itens/:id/desfazer', requerAuth, async (req,res) => {
     if (!item) return res.status(404).json({erro:'Item nao encontrado'});
     if (item.status === 'pendente') return res.status(400).json({erro:'Item já está pendente.'});
 
-    const aviso = await db.get(`SELECT id,status FROM avisos_repositor WHERE item_id=$1 ORDER BY id DESC LIMIT 1`,[item.id]);
+    const aviso = await db.get<Pick<Linha<'avisos_repositor'>, 'id' | 'status'>>(`SELECT id,status FROM avisos_repositor WHERE item_id=$1 ORDER BY id DESC LIMIT 1`,[item.id]);
     if (aviso && aviso.status !== 'pendente') {
       return res.status(409).json({erro:'O repositor já está cuidando deste item — fale com ele antes de desfazer.'});
     }
@@ -544,15 +545,15 @@ router.put('/itens/:id/desfazer', requerAuth, async (req,res) => {
 router.put('/pedidos/:id/concluir', requerAuth, async (req,res) => {
   try {
     // Se o repositor já resolveu os avisos e concluiu automaticamente, retorna sucesso
-    const pedCheck = await db.get('SELECT status FROM pedidos WHERE id=$1', [req.params.id]);
+    const pedCheck = await db.get<Pick<Linha<'pedidos'>, 'status'>>('SELECT status FROM pedidos WHERE id=$1', [req.params.id]);
     if (pedCheck?.status === 'concluido') return res.json({ mensagem: 'Pedido já concluído!' });
-    const pend=await db.all(`SELECT id FROM itens_pedido WHERE pedido_id=$1 AND status='pendente'`,[req.params.id]);
+    const pend=await db.all<Pick<Linha<'itens_pedido'>, 'id'>>(`SELECT id FROM itens_pedido WHERE pedido_id=$1 AND status='pendente'`,[req.params.id]);
     if (pend.length) return res.status(400).json({erro:`Ainda ha ${pend.length} item(s) nao verificado(s)!`});
     const {data,hora}=dataHoraLocal();
     // Bloqueia se houver avisos 'pendente' (repositor ainda não iniciou busca)
     // OU 'verificando' (repositor está ativamente buscando o item agora).
     // Sem esse bloqueio, o pedido some da fila do separador enquanto o repositor busca.
-    const avisos=await db.all(
+    const avisos=await db.all<Pick<Linha<'avisos_repositor'>, 'id'>>(
       `SELECT id FROM avisos_repositor WHERE pedido_id=$1 AND status IN ('pendente','verificando')`,
       [req.params.id]
     );
@@ -576,8 +577,8 @@ router.put('/pedidos/:id/concluir', requerAuth, async (req,res) => {
     );
     // Garante registro de checkout com status 'fila' (aguardando operador escanear)
     // Só muda para 'pendente' quando o operador de checkout abre o pedido (GET /checkout/caixa/:numero)
-    const ped = await db.get('SELECT numero_pedido, numero_caixa, separador_id FROM pedidos WHERE id=$1',[req.params.id]);
-    const sep = ped?.separador_id ? await db.get('SELECT nome FROM separadores WHERE id=$1',[ped.separador_id]) : null;
+    const ped = await db.get<Pick<Linha<'pedidos'>, 'numero_pedido' | 'numero_caixa' | 'separador_id'>>('SELECT numero_pedido, numero_caixa, separador_id FROM pedidos WHERE id=$1',[req.params.id]);
+    const sep = ped?.separador_id ? await db.get<Pick<Linha<'separadores'>, 'nome'>>('SELECT nome FROM separadores WHERE id=$1',[ped.separador_id]) : null;
     const ckUpd = await pool.query(
       `UPDATE checkout SET status='fila',hora_criacao=$1,data_checkout=$2 WHERE pedido_id=$3 AND status != 'concluido'`,
       [hora, data, req.params.id]
@@ -595,13 +596,13 @@ router.put('/pedidos/:id/concluir', requerAuth, async (req,res) => {
 
 router.put('/pedidos/:id/concluir-com-falta', requerAuth, async (req, res) => {
   try {
-    const pend = await db.all(`SELECT id FROM itens_pedido WHERE pedido_id=$1 AND status='pendente'`, [req.params.id]);
+    const pend = await db.all<Pick<Linha<'itens_pedido'>, 'id'>>(`SELECT id FROM itens_pedido WHERE pedido_id=$1 AND status='pendente'`, [req.params.id]);
     if (pend.length) return res.status(400).json({ erro: `Ainda há ${pend.length} item(s) não verificado(s)!` });
 
     const { data, hora } = dataHoraLocal();
 
     // Busca itens que estão aguardando repositor
-    const avisos = await db.all(
+    const avisos = await db.all<Pick<Linha<'avisos_repositor'>, 'codigo' | 'descricao' | 'quantidade'>>(
       `SELECT codigo, descricao, quantidade FROM avisos_repositor
        WHERE pedido_id=$1 AND status IN ('pendente','verificando','nao_encontrado')`,
       [req.params.id]
@@ -618,8 +619,8 @@ router.put('/pedidos/:id/concluir-com-falta', requerAuth, async (req, res) => {
     );
 
     // Cria ou atualiza registro de checkout como aguardando_item
-    const ped = await db.get('SELECT numero_pedido, numero_caixa, separador_id FROM pedidos WHERE id=$1', [req.params.id]);
-    const sep = ped?.separador_id ? await db.get('SELECT nome FROM separadores WHERE id=$1', [ped.separador_id]) : null;
+    const ped = await db.get<Pick<Linha<'pedidos'>, 'numero_pedido' | 'numero_caixa' | 'separador_id'>>('SELECT numero_pedido, numero_caixa, separador_id FROM pedidos WHERE id=$1', [req.params.id]);
+    const sep = ped?.separador_id ? await db.get<Pick<Linha<'separadores'>, 'nome'>>('SELECT nome FROM separadores WHERE id=$1', [ped.separador_id]) : null;
     const ckUpd = await pool.query(
       `UPDATE checkout SET status='aguardando_item', itens_falta=$1, hora_criacao=$2, data_checkout=$3 WHERE pedido_id=$4 AND status != 'concluido'`,
       [JSON.stringify(itens_falta), hora, data, req.params.id]
@@ -646,7 +647,7 @@ router.put('/pedidos/:id/tirar-do-lote', requerAuth, async (req,res) => {
   const sepId = req.session?.separador?.id;
   if (!sepId) return res.status(403).json({erro:'Usuário não vinculado a um separador.'});
   try {
-    const ped = await db.get('SELECT id,numero_pedido,status,lote_id,separador_id FROM pedidos WHERE id=$1',[id]);
+    const ped = await db.get<Pick<Linha<'pedidos'>, 'id' | 'numero_pedido' | 'status' | 'lote_id' | 'separador_id'>>('SELECT id,numero_pedido,status,lote_id,separador_id FROM pedidos WHERE id=$1',[id]);
     if (!ped) return res.status(404).json({erro:'Pedido não encontrado!'});
     if (String(ped.separador_id) !== String(sepId)) return res.status(403).json({erro:'Este pedido não é seu.'});
     if (!ped.lote_id) return res.json({mensagem:'Pedido já está fora de lote.', numero_pedido:ped.numero_pedido});
@@ -668,7 +669,7 @@ router.put('/pedidos/embalagem/reenviar', requerAuth, requerPerfil('supervisor')
   const { numero_pedido } = req.body;
   if (!numero_pedido) return res.status(400).json({erro:'numero_pedido obrigatorio'});
   try {
-    const ped = await db.get('SELECT * FROM pedidos WHERE numero_pedido=$1',[numero_pedido]);
+    const ped = await db.get<Linha<'pedidos'>>('SELECT * FROM pedidos WHERE numero_pedido=$1',[numero_pedido]);
     if (!ped) return res.status(404).json({erro:'Pedido não encontrado'});
     if (ped.status_embalagem === 'embalado') return res.status(400).json({erro:'Pedido já embalado!'});
     await pool.query(`UPDATE pedidos SET status='concluido', status_embalagem='pendente' WHERE numero_pedido=$1`,[numero_pedido]);
@@ -681,9 +682,9 @@ router.put('/pedidos/:id/desbloquear', requerAuth, requerPerfil('supervisor'), a
   try {
     const {data, hora} = dataHoraLocal();
     await pool.query(`UPDATE pedidos SET status='concluido', status_embalagem='pendente' WHERE id=$1`,[req.params.id]);
-    const ped = await db.get('SELECT numero_pedido, numero_caixa, separador_id FROM pedidos WHERE id=$1',[req.params.id]);
-    const sep = ped?.separador_id ? await db.get('SELECT nome FROM separadores WHERE id=$1',[ped.separador_id]) : null;
-    const ckExist = await db.get('SELECT id FROM checkout WHERE pedido_id=$1',[req.params.id]);
+    const ped = await db.get<Pick<Linha<'pedidos'>, 'numero_pedido' | 'numero_caixa' | 'separador_id'>>('SELECT numero_pedido, numero_caixa, separador_id FROM pedidos WHERE id=$1',[req.params.id]);
+    const sep = ped?.separador_id ? await db.get<Pick<Linha<'separadores'>, 'nome'>>('SELECT nome FROM separadores WHERE id=$1',[ped.separador_id]) : null;
+    const ckExist = await db.get<Pick<Linha<'checkout'>, 'id'>>('SELECT id FROM checkout WHERE pedido_id=$1',[req.params.id]);
     if (ckExist) {
       await pool.query(`UPDATE checkout SET status='concluido',hora_checkout=$1,data_checkout=$2 WHERE pedido_id=$3`,[hora,data,req.params.id]);
     } else {
@@ -752,7 +753,7 @@ router.delete('/pedidos/:id', requerAuth, requerPerfil('supervisor'), async (req
   const id = validarId(req.params.id);
   if (!id) return res.status(400).json({erro:'ID invalido'});
   try {
-    const antes = await db.get('SELECT numero_pedido,status,cliente FROM pedidos WHERE id=$1', [id]);
+    const antes = await db.get<Pick<Linha<'pedidos'>, 'numero_pedido' | 'status' | 'cliente'>>('SELECT numero_pedido,status,cliente FROM pedidos WHERE id=$1', [id]);
     await pool.query('DELETE FROM checkout_itens_conferencia WHERE pedido_id=$1',[id]);
     await pool.query('DELETE FROM avisos_repositor WHERE pedido_id=$1',[id]);
     await pool.query('DELETE FROM checkout WHERE pedido_id=$1',[id]);
@@ -785,9 +786,9 @@ router.delete('/pedidos', requerAuth, requerPerfil('supervisor'), requerPermissa
 async function _pedidosExistentes(numeros: any) {
   const mapa = new Map();
   if (!numeros.length) return mapa;
-  const peds = await db.all('SELECT id, numero_pedido, cliente, transportadora, aguardando_desde, estado FROM pedidos WHERE numero_pedido = ANY($1::text[])', [numeros]);
+  const peds = await db.all<Pick<Linha<'pedidos'>, 'id' | 'numero_pedido' | 'cliente' | 'transportadora' | 'aguardando_desde' | 'estado'>>('SELECT id, numero_pedido, cliente, transportadora, aguardando_desde, estado FROM pedidos WHERE numero_pedido = ANY($1::text[])', [numeros]);
   if (!peds.length) return mapa;
-  const itens = await db.all('SELECT pedido_id, codigo, quantidade FROM itens_pedido WHERE pedido_id = ANY($1::int[])', [peds.map(p => p.id)]);
+  const itens = await db.all<Pick<Linha<'itens_pedido'>, 'pedido_id' | 'codigo' | 'quantidade'>>('SELECT pedido_id, codigo, quantidade FROM itens_pedido WHERE pedido_id = ANY($1::int[])', [peds.map(p => p.id)]);
   peds.forEach(p => mapa.set(String(p.numero_pedido), { ...p, itens: itens.filter(i => i.pedido_id === p.id) }));
   return mapa;
 }
@@ -919,7 +920,7 @@ router.post('/pedidos/distribuicao', requerAuth, requerPerfil('supervisor'), asy
     );
     if (!pedidos.length) return res.json({plano:[],total_pedidos:0,total_distribuidos:0});
     for (const ped of pedidos) {
-      const itens=await db.all('SELECT endereco,quantidade,codigo FROM itens_pedido WHERE pedido_id=$1',[ped.id]);
+      const itens=await db.all<Pick<Linha<'itens_pedido'>, 'endereco' | 'quantidade' | 'codigo'>>('SELECT endereco,quantidade,codigo FROM itens_pedido WHERE pedido_id=$1',[ped.id]);
       const scoreBase = calcularPontuacaoPedido(itens);
       // Métricas extras para cenário 'complexidade'
       const ruasSet=new Set(), skusSet=new Set();
@@ -946,8 +947,8 @@ router.post('/pedidos/distribuicao', requerAuth, requerPerfil('supervisor'), asy
     const sepMap: Record<string, any>={};
     for (const sid of separadores) {
       // Busca separadores.id vinculado ao usuario; guarda também o usuarios.id para fallback de nome
-      const sepRow = await db.get('SELECT s.id,s.nome FROM separadores s WHERE s.usuario_id=$1 LIMIT 1',[sid]);
-      const userRow = await db.get('SELECT id,nome,login,turno FROM usuarios WHERE id=$1',[sid]);
+      const sepRow = await db.get<Pick<Linha<'separadores'>, 'id' | 'nome'>>('SELECT s.id,s.nome FROM separadores s WHERE s.usuario_id=$1 LIMIT 1',[sid]);
+      const userRow = await db.get<Pick<Linha<'usuarios'>, 'id' | 'nome' | 'login' | 'turno'>>('SELECT id,nome,login,turno FROM usuarios WHERE id=$1',[sid]);
       sepMap[sid] = {
         sepDbId: sepRow?.id || null,          // separadores.id correto (null se não vinculado)
         nome: sepRow?.nome || userRow?.nome || `Sep ${sid}`,
@@ -1051,7 +1052,7 @@ router.post('/pedidos/distribuicao-turnos', requerAuth, requerPerfil('supervisor
     if (!pedidos.length) return res.json({plano:[], total_pedidos:0, total_distribuidos:0});
 
     for (const ped of pedidos) {
-      const itens = await db.all('SELECT endereco,quantidade,codigo FROM itens_pedido WHERE pedido_id=$1', [ped.id]);
+      const itens = await db.all<Pick<Linha<'itens_pedido'>, 'endereco' | 'quantidade' | 'codigo'>>('SELECT endereco,quantidade,codigo FROM itens_pedido WHERE pedido_id=$1', [ped.id]);
       const scoreBase = calcularPontuacaoPedido(itens);
       const ruasSet = new Set(), skusSet = new Set();
       for (const i of itens) {
@@ -1150,22 +1151,22 @@ router.post('/pedidos/distribuicao/confirmar', requerAuth, requerPerfil('supervi
     for (const item of plano) {
       // 1. Busca separadores.id pelo usuario_id (caso mais comum)
       let dbId = null;
-      const porUsuario = await db.get('SELECT id FROM separadores WHERE usuario_id=$1 LIMIT 1',[item.separador_id]);
+      const porUsuario = await db.get<Pick<Linha<'separadores'>, 'id'>>('SELECT id FROM separadores WHERE usuario_id=$1 LIMIT 1',[item.separador_id]);
       if (porUsuario) {
         dbId = porUsuario.id;
       } else {
         // 2. Tenta sep_db_id como separadores.id direto (separadores antigos sem usuario_id)
         if (item.sep_db_id) {
-          const direto = await db.get('SELECT id FROM separadores WHERE id=$1 LIMIT 1',[item.sep_db_id]);
+          const direto = await db.get<Pick<Linha<'separadores'>, 'id'>>('SELECT id FROM separadores WHERE id=$1 LIMIT 1',[item.sep_db_id]);
           if (direto) dbId = direto.id;
         }
         // 3. Colaborador não tem registro em separadores (checkout/embalagem/repositor):
         //    cria automaticamente para poder receber pedidos
         if (!dbId) {
-          const user = await db.get('SELECT nome, login, turno FROM usuarios WHERE id=$1',[item.separador_id]);
+          const user = await db.get<Pick<Linha<'usuarios'>, 'nome' | 'login' | 'turno'>>('SELECT nome, login, turno FROM usuarios WHERE id=$1',[item.separador_id]);
           if (user) {
             // Tenta encontrar por nome OU matrícula antes de criar
-            const porNome = await db.get(
+            const porNome = await db.get<Pick<Linha<'separadores'>, 'id'>>(
               `SELECT id FROM separadores
                WHERE LOWER(TRIM(nome))=LOWER(TRIM($1))
                   OR LOWER(TRIM(matricula))=LOWER(TRIM($2))
@@ -1189,8 +1190,8 @@ router.post('/pedidos/distribuicao/confirmar', requerAuth, requerPerfil('supervi
               } catch(e) {
                 // INSERT falhou (ex: constraint UNIQUE em matricula) — busca por usuario_id ou matricula
                 const recheck =
-                  await db.get('SELECT id FROM separadores WHERE usuario_id=$1 LIMIT 1',[item.separador_id]) ||
-                  await db.get('SELECT id FROM separadores WHERE LOWER(TRIM(matricula))=LOWER(TRIM($1)) LIMIT 1',[user.login]);
+                  await db.get<Pick<Linha<'separadores'>, 'id'>>('SELECT id FROM separadores WHERE usuario_id=$1 LIMIT 1',[item.separador_id]) ||
+                  await db.get<Pick<Linha<'separadores'>, 'id'>>('SELECT id FROM separadores WHERE LOWER(TRIM(matricula))=LOWER(TRIM($1)) LIMIT 1',[user.login]);
                 if (recheck) {
                   dbId = recheck.id;
                   pool.query('UPDATE separadores SET usuario_id=$1 WHERE id=$2 AND (usuario_id IS NULL OR usuario_id=0)',
@@ -1287,11 +1288,11 @@ function _diametroRuas(ruas: any) {
 // supervisor, em vez da fila inteira elegível).
 async function _prepararEAgruparPedidos(elegiveis: any, modoLote: any) {
   for (const p of elegiveis) {
-    const itens = await db.all('SELECT endereco,quantidade,codigo FROM itens_pedido WHERE pedido_id=$1', [p.id]);
+    const itens = await db.all<Pick<Linha<'itens_pedido'>, 'endereco' | 'quantidade' | 'codigo'>>('SELECT endereco,quantidade,codigo FROM itens_pedido WHERE pedido_id=$1', [p.id]);
     const ruas = itens.map(i => _ruaPrincipalLote(i.endereco)).filter(Boolean);
     p._ruaPrincipal = [...ruas].sort((a,b) => _rotaIdxLote(a) - _rotaIdxLote(b))[0] || '';
     p._ruasSet = [...new Set(ruas)];
-    p._itensQtd = itens.reduce((s,i) => s + (parseInt(i.quantidade)||1), 0);
+    p._itensQtd = itens.reduce((s,i) => s + (parseInt(i.quantidade as any)||1), 0);
     p._skusSet = [...new Set(itens.map(i => i.codigo).filter(Boolean))];
     p._skusQtd = p._skusSet.length;
     const scoreBase = calcularPontuacaoPedido(itens);
@@ -1449,8 +1450,8 @@ router.post('/pedidos/lote/formar', requerAuth, requerPerfil('supervisor'), asyn
     //    (mesma lógica de /pedidos/distribuicao, aplicada ao lote inteiro).
     const sepMap: Record<string, any> = {};
     for (const sid of separadores) {
-      const sepRow = await db.get('SELECT s.id,s.nome FROM separadores s WHERE s.usuario_id=$1 LIMIT 1', [sid]);
-      const userRow = await db.get('SELECT id,nome FROM usuarios WHERE id=$1', [sid]);
+      const sepRow = await db.get<Pick<Linha<'separadores'>, 'id' | 'nome'>>('SELECT s.id,s.nome FROM separadores s WHERE s.usuario_id=$1 LIMIT 1', [sid]);
+      const userRow = await db.get<Pick<Linha<'usuarios'>, 'id' | 'nome'>>('SELECT id,nome FROM usuarios WHERE id=$1', [sid]);
       sepMap[sid] = { sepDbId: sepRow?.id || null, nome: sepRow?.nome || userRow?.nome || `Sep ${sid}` };
     }
     const filas = separadores.map((sid: any) => ({
@@ -1571,8 +1572,8 @@ router.post('/pedidos/lote/formar-manual', requerAuth, requerPerfil('supervisor'
 
     const lotesPreview = await _prepararEAgruparPedidos(elegiveis, 'balanceado');
 
-    const sepRow  = await db.get('SELECT s.id,s.nome FROM separadores s WHERE s.usuario_id=$1 LIMIT 1', [separador_id]);
-    const userRow = await db.get('SELECT id,nome FROM usuarios WHERE id=$1', [separador_id]);
+    const sepRow  = await db.get<Pick<Linha<'separadores'>, 'id' | 'nome'>>('SELECT s.id,s.nome FROM separadores s WHERE s.usuario_id=$1 LIMIT 1', [separador_id]);
+    const userRow = await db.get<Pick<Linha<'usuarios'>, 'id' | 'nome'>>('SELECT id,nome FROM usuarios WHERE id=$1', [separador_id]);
     const sepNome = sepRow?.nome || userRow?.nome || `Sep ${separador_id}`;
 
     for (const lote of lotesPreview) {
@@ -1671,7 +1672,7 @@ router.get('/pedidos/lote/historico', requerAuth, async (req,res) => {
     );
     const lotes = [];
     for (const g of grupos) {
-      const pedidos = await db.all(
+      const pedidos = await db.all<Pick<Linha<'pedidos'>, 'id' | 'numero_pedido' | 'cliente' | 'total_itens' | 'itens' | 'concluido_em'>>(
         `SELECT id, numero_pedido, cliente, total_itens, itens, concluido_em FROM pedidos WHERE lote_id=$1 ORDER BY id`,
         [g.lote_id]
       );
@@ -1683,9 +1684,9 @@ router.get('/pedidos/lote/historico', requerAuth, async (req,res) => {
 
 router.post('/pedidos/recalcular-pontuacao', requerAuth, requerPerfil('supervisor'), async (req,res) => {
   try {
-    const peds=await db.all("SELECT id FROM pedidos WHERE pontuacao=0 OR pontuacao IS NULL");
+    const peds=await db.all<Pick<Linha<'pedidos'>, 'id'>>("SELECT id FROM pedidos WHERE pontuacao=0 OR pontuacao IS NULL");
     let at=0;
-    for (const p of peds){const itens=await db.all('SELECT endereco,quantidade FROM itens_pedido WHERE pedido_id=$1',[p.id]);const pts=calcularPontuacaoPedido(itens);if(pts>0){await pool.query('UPDATE pedidos SET pontuacao=$1 WHERE id=$2',[pts,p.id]);at++;}}
+    for (const p of peds){const itens=await db.all<Pick<Linha<'itens_pedido'>, 'endereco' | 'quantidade'>>('SELECT endereco,quantidade FROM itens_pedido WHERE pedido_id=$1',[p.id]);const pts=calcularPontuacaoPedido(itens);if(pts>0){await pool.query('UPDATE pedidos SET pontuacao=$1 WHERE id=$2',[pts,p.id]);at++;}}
     res.json({mensagem:`${at} pedidos recalculados`,atualizados:at});
   } catch(err){res.status(500).json({erro:err.message});}
 });

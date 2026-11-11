@@ -15,13 +15,14 @@ import { db } from '../lib/db';
 import { requerAuth, requerPerfil } from '../lib/auth';
 import { dataHoraLocal, turnoAtualEHorarios } from '../lib/helpers';
 import { montarProcesso, calcularGargalo } from '../lib/control-tower';
+import type { Linha } from '../types/db';
 
 // Meta padrão (pedidos/turno) usada só se a linha não existir em `configuracoes`
 // ainda — mesmo default do seed em src/database/migrate.js.
 const META_PADRAO = { separacao: 75, checkout: 90, embalagem: 120, reposicao: 90 };
 
 async function metasConfiguradas() {
-  const rows = await db.all(
+  const rows = await db.all<Pick<Linha<'configuracoes'>, 'chave' | 'valor'>>(
     `SELECT chave, valor FROM configuracoes WHERE chave IN ('meta_separacao','meta_checkout','meta_embalagem','meta_reposicao')`
   );
   const porChave = Object.fromEntries(rows.map(r => [r.chave, parseFloat(r.valor)]));
@@ -101,11 +102,11 @@ router.get('/control-tower', requerAuth, requerPerfil('supervisor', 'gestor'), a
     // Horas do turno pra converter meta (pedidos/turno) em ritmo por hora —
     // usa configuracoes.horas_turno_* (é o propósito dela: escalar metas),
     // não o horário de relógio acima (esse é só pra "quanto tempo falta").
-    const horasTurnoRow = await db.get(
+    const horasTurnoRow = await db.get<Pick<Linha<'configuracoes'>, 'valor'>>(
       `SELECT valor FROM configuracoes WHERE chave=$1`,
       [`horas_turno_${turno === 'Manha' ? 'manha' : turno === 'Tarde' ? 'tarde' : 'noite'}`]
     );
-    const horasTurno = parseFloat(horasTurnoRow?.valor) || (turno === 'Noite' ? 6 : 8);
+    const horasTurno = parseFloat(horasTurnoRow?.valor as string) || (turno === 'Noite' ? 6 : 8);
 
     const [sep, ck, emb, rep] = await Promise.all([
       metricasSeparacao(hoje),

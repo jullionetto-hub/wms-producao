@@ -6,6 +6,7 @@ import { dataHoraLocal, validarId, normalizarTurno } from '../lib/helpers';
 import { registrarAuditoria } from '../lib/auditoria';
 import { gerarRelatorio } from '../lib/relatorio';
 import { requerPermissao } from '../lib/permissoes';
+import type { Linha } from '../types/db';
 
 router.post('/admin/zerar-sessoes', requerAuth, requerPerfil('supervisor'), requerPermissao('excluir'), async (req, res) => {
   const { data } = req.body;
@@ -108,7 +109,7 @@ router.get('/relatorio/diario', requerAuth, requerPerfil('supervisor'), async (r
 
 router.get('/relatorio/lista', requerAuth, requerPerfil('supervisor'), async (req,res) => {
   try {
-    res.json(await db.all(`SELECT id, data, total_pedidos, pedidos_concluidos, total_faltas, gerado_em FROM relatorios_diarios ORDER BY data DESC LIMIT 30`));
+    res.json(await db.all<Pick<Linha<'relatorios_diarios'>, 'id' | 'data' | 'total_pedidos' | 'pedidos_concluidos' | 'total_faltas' | 'gerado_em'>>(`SELECT id, data, total_pedidos, pedidos_concluidos, total_faltas, gerado_em FROM relatorios_diarios ORDER BY data DESC LIMIT 30`));
   } catch(e) { res.status(500).json({erro:e.message}); }
 });
 
@@ -168,7 +169,7 @@ router.get('/diario/anterior', requerAuth, requerPerfil('supervisor'), async (re
       // pode estar datado no dia em que o turno começou (ontem) ou no dia em que
       // foi preenchido (hoje, entre 00h e 12h). Hoje só vale se foi escrito pela
       // manhã — um diário da Noite criado à noite é o do turno seguinte, não o anterior.
-      const candidatos = await db.all(
+      const candidatos = await db.all<Linha<'diario_bordo'>>(
         `SELECT * FROM diario_bordo WHERE turno=$1 AND data IN ($2,$3) ORDER BY criado_em DESC`,
         [turnoAnterior, dataAnterior, data]
       );
@@ -227,12 +228,12 @@ router.get('/diario/dados/turno', requerAuth, requerPerfil('supervisor'), async 
     const faltasRaw = await db.all(`SELECT ar.*, p.numero_pedido, p.cliente FROM avisos_repositor ar LEFT JOIN pedidos p ON ar.pedido_id = p.id WHERE ar.data_aviso=$1 AND ar.status='nao_encontrado'`, [dt]);
     const faltas = turnoFiltro ? faltasRaw.filter(f => idsPedidosTurno.has(f.pedido_id)) : faltasRaw;
 
-    const checkoutsRaw = await db.all('SELECT * FROM checkout WHERE data_checkout=$1', [dt]);
+    const checkoutsRaw = await db.all<Linha<'checkout'>>('SELECT * FROM checkout WHERE data_checkout=$1', [dt]);
     const checkouts = turnoFiltro ? checkoutsRaw.filter(c => idsPedidosTurno.has(c.pedido_id)) : checkoutsRaw;
     const ckConcluidos = checkouts.filter(c => c.status === 'concluido').length;
     const ckPendentes = checkouts.filter(c => c.status !== 'concluido').length;
 
-    const reposicoesRaw = await db.all('SELECT * FROM avisos_repositor WHERE data_aviso=$1', [dt]);
+    const reposicoesRaw = await db.all<Linha<'avisos_repositor'>>('SELECT * FROM avisos_repositor WHERE data_aviso=$1', [dt]);
     const reposicoes = turnoFiltro ? reposicoesRaw.filter(r => idsPedidosTurno.has(r.pedido_id)) : reposicoesRaw;
     const repResolvidas = reposicoes.filter(r => ['reposto','abastecido','subiu'].includes(r.status)).length;
     const repPendentes = reposicoes.filter(r => r.status === 'pendente' || r.status === 'aberto').length;
@@ -264,14 +265,14 @@ router.get('/diario/existe', requerAuth, requerPerfil('supervisor'), async (req,
   try {
     const { data, turno } = req.query as Record<string, string>;
     if (!data || !turno) return res.json(null);
-    const d = await db.get('SELECT id FROM diario_bordo WHERE data=$1 AND turno=$2', [data, turno]);
+    const d = await db.get<Pick<Linha<'diario_bordo'>, 'id'>>('SELECT id FROM diario_bordo WHERE data=$1 AND turno=$2', [data, turno]);
     res.json(d ? { id: d.id } : null);
   } catch(e) { res.status(500).json({erro:e.message}); }
 });
 
 router.get('/diario/:id', requerAuth, requerPerfil('supervisor'), async (req,res) => {
   try {
-    const d = await db.get('SELECT * FROM diario_bordo WHERE id=$1', [req.params.id]);
+    const d = await db.get<Linha<'diario_bordo'>>('SELECT * FROM diario_bordo WHERE id=$1', [req.params.id]);
     if (!d) return res.status(404).json({erro:'Nao encontrado'});
     await registrarVisualizacaoDiario(req, d.id);
     if (typeof d.dados === 'string') d.dados = JSON.parse(d.dados);
@@ -298,7 +299,7 @@ const fotoEditavel = (origem: any, status: any) => origem === 'validacao' ? ['en
 router.get('/diario/:id/fotos', requerAuth, requerPerfil('supervisor'), async (req, res) => {
   try {
     const id = validarId(req.params.id); if (!id) return res.status(400).json({ erro: 'ID inválido' });
-    const fotos = await db.all('SELECT id, origem, secao, autor FROM diario_fotos WHERE diario_id=$1 ORDER BY id', [id]);
+    const fotos = await db.all<Pick<Linha<'diario_fotos'>, 'id' | 'origem' | 'secao' | 'autor'>>('SELECT id, origem, secao, autor FROM diario_fotos WHERE diario_id=$1 ORDER BY id', [id]);
     res.json(fotos);
   } catch(e) { res.status(500).json({ erro: e.message }); }
 });
@@ -313,7 +314,7 @@ router.post('/diario/:id/fotos', requerAuth, requerPerfil('supervisor'), async (
     if (!m || !FOTO_TIPOS.includes(m[1])) return res.status(400).json({ erro: 'Envie uma imagem JPEG, PNG ou WebP' });
     const bytes = Buffer.from(m[2], 'base64');
     if (!bytes.length || bytes.length > FOTO_MAX_BYTES) return res.status(400).json({ erro: 'Imagem muito grande (máximo 2 MB)' });
-    const d = await db.get('SELECT id, status FROM diario_bordo WHERE id=$1', [id]);
+    const d = await db.get<Pick<Linha<'diario_bordo'>, 'id' | 'status'>>('SELECT id, status FROM diario_bordo WHERE id=$1', [id]);
     if (!d) return res.status(404).json({ erro: 'Diário não encontrado' });
     if (!fotoEditavel(origem, d.status)) return res.status(403).json({ erro: 'Este diário não aceita mais fotos nesta etapa.' });
     const n = await db.get('SELECT COUNT(*)::int AS n FROM diario_fotos WHERE diario_id=$1 AND origem=$2 AND secao=$3', [id, origem, secao]);
@@ -328,7 +329,7 @@ router.post('/diario/:id/fotos', requerAuth, requerPerfil('supervisor'), async (
 router.get('/diario/foto/:fotoId', requerAuth, requerPerfil('supervisor'), async (req, res) => {
   try {
     const id = validarId(req.params.fotoId); if (!id) return res.status(400).json({ erro: 'ID inválido' });
-    const f = await db.get('SELECT mime, dados FROM diario_fotos WHERE id=$1', [id]);
+    const f = await db.get<Pick<Linha<'diario_fotos'>, 'mime' | 'dados'>>('SELECT mime, dados FROM diario_fotos WHERE id=$1', [id]);
     if (!f) return res.status(404).json({ erro: 'Foto não encontrada' });
     res.set({ 'Content-Type': f.mime, 'Cache-Control': 'private, max-age=86400', 'X-Content-Type-Options': 'nosniff' });
     res.send(f.dados);
@@ -351,7 +352,7 @@ router.post('/diario', requerAuth, requerPerfil('supervisor'), async (req,res) =
     const {data, turno, dados, observacoes, leu_anterior} = req.body;
     if (!data || !turno) return res.status(400).json({erro:'Data e turno obrigatorios'});
     const supervisor = req.session?.usuario?.nome || 'Supervisor';
-    const existe = await db.get('SELECT id, supervisor, status FROM diario_bordo WHERE data=$1 AND turno=$2', [data, turno]);
+    const existe = await db.get<Pick<Linha<'diario_bordo'>, 'id' | 'supervisor' | 'status'>>('SELECT id, supervisor, status FROM diario_bordo WHERE data=$1 AND turno=$2', [data, turno]);
     if (existe) {
       // Qualquer supervisor/gestor pode editar o diário do turno, não só quem
       // criou — vários podem estar no mesmo turno ao mesmo tempo. Cada save
@@ -392,7 +393,7 @@ router.post('/diario/:id/enviar', requerAuth, requerPerfil('supervisor'), async 
   try {
     const id = validarId(req.params.id);
     if (!id) return res.status(400).json({ erro: 'ID inválido' });
-    const diario = await db.get('SELECT * FROM diario_bordo WHERE id=$1', [id]);
+    const diario = await db.get<Linha<'diario_bordo'>>('SELECT * FROM diario_bordo WHERE id=$1', [id]);
     if (!diario) return res.status(404).json({ erro: 'Diário não encontrado' });
     if (diario.status === 'enviado' || diario.status === 'validado') {
       return res.status(400).json({ erro: 'Este diário já foi enviado ou validado' });
@@ -486,7 +487,7 @@ router.get('/diario/:id/validacao', requerAuth, requerPerfil('supervisor'), asyn
   try {
     const id = validarId(req.params.id);
     if (!id) return res.status(400).json({ erro: 'ID inválido' });
-    const val = await db.get(
+    const val = await db.get<Linha<'diario_validacoes'>>(
       `SELECT * FROM diario_validacoes WHERE diario_id=$1 ORDER BY id DESC LIMIT 1`, [id]
     );
     if (!val) return res.json(null);
@@ -614,7 +615,7 @@ router.get('/relatorio/analitico', requerAuth, requerPerfil('supervisor'), async
     `, params);
 
     // ── Reposição ─────────────────────────────────────────────────
-    const reposicoes = await db.all(`
+    const reposicoes = await db.all<Pick<Linha<'avisos_repositor'>, 'status' | 'data_aviso' | 'repositor_nome' | 'separador_nome' | 'descricao' | 'hora_aviso' | 'hora_reposto'>>(`
       SELECT ar.status, ar.data_aviso, ar.repositor_nome, ar.separador_nome, ar.descricao,
              ar.hora_aviso, ar.hora_reposto
       FROM avisos_repositor ar

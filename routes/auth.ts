@@ -4,6 +4,7 @@ import { db, pool } from '../lib/db';
 import { requerAuth, checkRateLimit, registrarFalhaLogin } from '../lib/auth';
 import { hashSenha, verificarSenha, hashNeedsMigration, perfisPermitidos, sanitizeStr, dataHoraLocal } from '../lib/helpers';
 import { registrarAuditoria } from '../lib/auditoria';
+import type { Linha } from '../types/db';
 
 router.post('/auth/login', async (req,res) => {
   const ip = req.ip || req.connection.remoteAddress || 'unknown';
@@ -65,9 +66,9 @@ router.post('/auth/login', async (req,res) => {
     if (perfil === 'separador') {
       // Tenta encontrar o registro de separador por usuario_id, nome ou matricula
       req.session.separador =
-        await db.get(`SELECT id,nome,matricula,turno,status FROM separadores WHERE usuario_id=$1 AND status='ativo'`, [user.id]) ||
-        await db.get(`SELECT id,nome,matricula,turno,status FROM separadores WHERE LOWER(TRIM(nome))=LOWER(TRIM($1)) AND status='ativo'`, [user.nome]) ||
-        await db.get(`SELECT id,nome,matricula,turno,status FROM separadores WHERE LOWER(TRIM(matricula))=LOWER(TRIM($1)) AND status='ativo'`, [user.login]);
+        await db.get<Pick<Linha<'separadores'>, 'id' | 'nome' | 'matricula' | 'turno' | 'status'>>(`SELECT id,nome,matricula,turno,status FROM separadores WHERE usuario_id=$1 AND status='ativo'`, [user.id]) ||
+        await db.get<Pick<Linha<'separadores'>, 'id' | 'nome' | 'matricula' | 'turno' | 'status'>>(`SELECT id,nome,matricula,turno,status FROM separadores WHERE LOWER(TRIM(nome))=LOWER(TRIM($1)) AND status='ativo'`, [user.nome]) ||
+        await db.get<Pick<Linha<'separadores'>, 'id' | 'nome' | 'matricula' | 'turno' | 'status'>>(`SELECT id,nome,matricula,turno,status FROM separadores WHERE LOWER(TRIM(matricula))=LOWER(TRIM($1)) AND status='ativo'`, [user.login]);
 
       if (req.session.separador) {
         // Garante que usuario_id está vinculado para logins futuros
@@ -139,9 +140,9 @@ router.get('/auth/me', async (req,res) => {
   let separador = null;
   if (user.perfil === 'separador') {
     separador =
-      await db.get(`SELECT id,nome,matricula,turno,status FROM separadores WHERE usuario_id=$1 AND status='ativo'`, [user.id]) ||
-      await db.get(`SELECT id,nome,matricula,turno,status FROM separadores WHERE LOWER(TRIM(nome))=LOWER(TRIM($1)) AND status='ativo'`, [user.nome]) ||
-      await db.get(`SELECT id,nome,matricula,turno,status FROM separadores WHERE LOWER(TRIM(matricula))=LOWER(TRIM($1)) AND status='ativo'`, [user.login]);
+      await db.get<Pick<Linha<'separadores'>, 'id' | 'nome' | 'matricula' | 'turno' | 'status'>>(`SELECT id,nome,matricula,turno,status FROM separadores WHERE usuario_id=$1 AND status='ativo'`, [user.id]) ||
+      await db.get<Pick<Linha<'separadores'>, 'id' | 'nome' | 'matricula' | 'turno' | 'status'>>(`SELECT id,nome,matricula,turno,status FROM separadores WHERE LOWER(TRIM(nome))=LOWER(TRIM($1)) AND status='ativo'`, [user.nome]) ||
+      await db.get<Pick<Linha<'separadores'>, 'id' | 'nome' | 'matricula' | 'turno' | 'status'>>(`SELECT id,nome,matricula,turno,status FROM separadores WHERE LOWER(TRIM(matricula))=LOWER(TRIM($1)) AND status='ativo'`, [user.login]);
     if (separador) {
       // Garante que usuario_id está vinculado para logins futuros
       if (!req.session.separador || req.session.separador.id !== separador.id) {
@@ -183,7 +184,7 @@ router.post('/auth/redefinir-senha', requerAuth, async (req,res) => {
     if (!senha_atual || !senha_nova) return res.status(400).json({erro:'Campos obrigatorios'});
     if (senha_nova.length < 6) return res.status(400).json({erro:'Senha minima 6 caracteres'});
     const usuario = req.session?.usuario;
-    const u = await db.get('SELECT * FROM usuarios WHERE id=$1', [usuario!.id]);
+    const u = await db.get<Linha<'usuarios'>>('SELECT * FROM usuarios WHERE id=$1', [usuario!.id]);
     if (!u) return res.status(404).json({erro:'Usuario nao encontrado'});
     if (!verificarSenha(senha_atual, u.senha_hash)) return res.status(400).json({erro:'Senha atual incorreta'});
     await pool.query('UPDATE usuarios SET senha_hash=$1 WHERE id=$2', [hashSenha(senha_nova), usuario!.id]);
@@ -198,7 +199,7 @@ router.post('/auth/trocar-senha-temp', async (req,res) => {
     if (!login || !senha_atual || !senha_nova || !senha_conf) return res.status(400).json({erro:'Preencha todos os campos'});
     if (senha_nova.length < 6) return res.status(400).json({erro:'Senha minima 6 caracteres'});
     if (senha_nova !== senha_conf) return res.status(400).json({erro:'Senhas nao conferem'});
-    const u = await db.get('SELECT id,senha_hash,senha_temporaria_expira FROM usuarios WHERE login=$1 AND senha_temporaria=true', [login]);
+    const u = await db.get<Pick<Linha<'usuarios'>, 'id' | 'senha_hash' | 'senha_temporaria_expira'>>('SELECT id,senha_hash,senha_temporaria_expira FROM usuarios WHERE login=$1 AND senha_temporaria=true', [login]);
     // Mesma mensagem genérica tanto para login inexistente/sem senha temporária quanto
     // para senha atual incorreta — não dar pista de qual delas falhou.
     if (!u || !verificarSenha(senha_atual, u.senha_hash || '')) return res.status(400).json({erro:'Nao autorizado'});

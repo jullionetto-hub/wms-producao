@@ -3,6 +3,7 @@ import express from 'express';
 const router  = express.Router();
 import { requerAuth, requerPerfil } from '../lib/auth';
 import { db, pool } from '../lib/db';
+import type { Linha } from '../types/db';
 
 // ── Matriz de Responsabilidades — proxy completo ────────────────────────────
 // App FastAPI separado (repo próprio "matriz-responsabilidades"), com seu
@@ -73,7 +74,7 @@ const wrap = (fn: any) => async (req: any, res: any) => {
 
 /* Colaboradores */
 router.get('/matriz/colaboradores', requerAuth, gLeitura, wrap(async (req: any, res: any) => {
-  res.json(await db.all('SELECT id,nome,cargo,tier,area,turno,ativo,vaga FROM mz_colaboradores ORDER BY nome'));
+  res.json(await db.all<Pick<Linha<'mz_colaboradores'>, 'id' | 'nome' | 'cargo' | 'tier' | 'area' | 'turno' | 'ativo' | 'vaga'>>('SELECT id,nome,cargo,tier,area,turno,ativo,vaga FROM mz_colaboradores ORDER BY nome'));
 }));
 router.post('/matriz/colaboradores', requerAuth, gLeitura, wrap(async (req: any, res: any) => {
   const { nome, cargo, tier, area, turno, ativo, vaga } = req.body;
@@ -145,7 +146,7 @@ router.delete('/matriz/feedbacks/:id', requerAuth, gLeitura, wrap(async (req: an
 
 /* Classificações mensais (upsert único por colaborador+período) */
 router.get('/matriz/classificacoes', requerAuth, gLeitura, wrap(async (req: any, res: any) => {
-  res.json(await db.all('SELECT * FROM mz_classificacoes'));
+  res.json(await db.all<Linha<'mz_classificacoes'>>('SELECT * FROM mz_classificacoes'));
 }));
 router.put('/matriz/classificacoes', requerAuth, gLeitura, wrap(async (req: any, res: any) => {
   const { colaborador_id, periodo_label, absenteismo, performance, comportamento } = req.body;
@@ -163,7 +164,7 @@ router.put('/matriz/classificacoes', requerAuth, gLeitura, wrap(async (req: any,
 
 /* Ausências */
 router.get('/matriz/ausencias', requerAuth, gLeitura, wrap(async (req: any, res: any) => {
-  res.json(await db.all('SELECT id,colaborador_id,periodo_label,dias,data,motivo FROM mz_ausencias'));
+  res.json(await db.all<Pick<Linha<'mz_ausencias'>, 'id' | 'colaborador_id' | 'periodo_label' | 'dias' | 'data' | 'motivo'>>('SELECT id,colaborador_id,periodo_label,dias,data,motivo FROM mz_ausencias'));
 }));
 router.post('/matriz/ausencias', requerAuth, gLeitura, wrap(async (req: any, res: any) => {
   const b = req.body;
@@ -192,7 +193,7 @@ router.delete('/matriz/ausencias/:id', requerAuth, gLeitura, wrap(async (req: an
 
 /* Banco de horas */
 router.get('/matriz/banco-horas', requerAuth, gLeitura, wrap(async (req: any, res: any) => {
-  res.json(await db.all('SELECT id,colaborador_id,saldo_atual,delta FROM mz_banco_horas'));
+  res.json(await db.all<Pick<Linha<'mz_banco_horas'>, 'id' | 'colaborador_id' | 'saldo_atual' | 'delta'>>('SELECT id,colaborador_id,saldo_atual,delta FROM mz_banco_horas'));
 }));
 router.put('/matriz/banco-horas', requerAuth, gLeitura, wrap(async (req: any, res: any) => {
   const { colaborador_id, saldo_atual, delta } = req.body;
@@ -206,13 +207,13 @@ router.put('/matriz/banco-horas', requerAuth, gLeitura, wrap(async (req: any, re
   res.json(r.rows[0]);
 }));
 router.get('/matriz/banco-horas/periodo', requerAuth, gLeitura, wrap(async (req: any, res: any) => {
-  let p = await db.get('SELECT inicio_label,fim_label FROM mz_banco_horas_periodo LIMIT 1');
+  let p = await db.get<Pick<Linha<'mz_banco_horas_periodo'>, 'inicio_label' | 'fim_label'>>('SELECT inicio_label,fim_label FROM mz_banco_horas_periodo LIMIT 1');
   if (!p) { await pool.query(`INSERT INTO mz_banco_horas_periodo (inicio_label,fim_label) VALUES ('','')`); p = { inicio_label:'', fim_label:'' }; }
   res.json(p);
 }));
 router.put('/matriz/banco-horas/periodo', requerAuth, gGestor, wrap(async (req: any, res: any) => {
   const { inicio_label, fim_label } = req.body;
-  const existente = await db.get('SELECT id FROM mz_banco_horas_periodo LIMIT 1');
+  const existente = await db.get<Pick<Linha<'mz_banco_horas_periodo'>, 'id'>>('SELECT id FROM mz_banco_horas_periodo LIMIT 1');
   if (existente) await pool.query('UPDATE mz_banco_horas_periodo SET inicio_label=$1, fim_label=$2 WHERE id=$3', [inicio_label||'', fim_label||'', existente.id]);
   else await pool.query('INSERT INTO mz_banco_horas_periodo (inicio_label,fim_label) VALUES ($1,$2)', [inicio_label||'', fim_label||'']);
   res.json({ inicio_label: inicio_label||'', fim_label: fim_label||'' });
@@ -220,7 +221,7 @@ router.put('/matriz/banco-horas/periodo', requerAuth, gGestor, wrap(async (req: 
 
 /* Férias */
 router.get('/matriz/ferias', requerAuth, gLeitura, wrap(async (req: any, res: any) => {
-  res.json(await db.all('SELECT id,colaborador_id,tipo,data_inicio,dias FROM mz_ferias'));
+  res.json(await db.all<Pick<Linha<'mz_ferias'>, 'id' | 'colaborador_id' | 'tipo' | 'data_inicio' | 'dias'>>('SELECT id,colaborador_id,tipo,data_inicio,dias FROM mz_ferias'));
 }));
 router.put('/matriz/ferias', requerAuth, gLeitura, wrap(async (req: any, res: any) => {
   const { colaborador_id, tipo, data_inicio, dias } = req.body;
@@ -236,10 +237,10 @@ router.put('/matriz/ferias', requerAuth, gLeitura, wrap(async (req: any, res: an
 
 /* Matriz RACI (áreas → cargos → atividades → status) */
 async function _carregarRaci() {
-  const areas = await db.all('SELECT id,nome,ordem FROM mz_areas ORDER BY ordem, nome');
-  const roles = await db.all('SELECT id,area_id,nome,ordem FROM mz_roles ORDER BY ordem, nome');
-  const atividades = await db.all('SELECT id,area_id,nome,ordem,categoria,sugestao FROM mz_atividades ORDER BY ordem, nome');
-  const status = await db.all('SELECT atividade_id,role_id,status FROM mz_status');
+  const areas = await db.all<Pick<Linha<'mz_areas'>, 'id' | 'nome' | 'ordem'>>('SELECT id,nome,ordem FROM mz_areas ORDER BY ordem, nome');
+  const roles = await db.all<Pick<Linha<'mz_roles'>, 'id' | 'area_id' | 'nome' | 'ordem'>>('SELECT id,area_id,nome,ordem FROM mz_roles ORDER BY ordem, nome');
+  const atividades = await db.all<Pick<Linha<'mz_atividades'>, 'id' | 'area_id' | 'nome' | 'ordem' | 'categoria' | 'sugestao'>>('SELECT id,area_id,nome,ordem,categoria,sugestao FROM mz_atividades ORDER BY ordem, nome');
+  const status = await db.all<Pick<Linha<'mz_status'>, 'atividade_id' | 'role_id' | 'status'>>('SELECT atividade_id,role_id,status FROM mz_status');
   return areas.map(area => ({
     ...area,
     roles: roles.filter(r => r.area_id === area.id).map(({area_id, ...r}) => r),
@@ -329,7 +330,7 @@ router.put('/matriz/raci/atividades/:id/status', requerAuth, gGestor, wrap(async
 
 /* Cargos (descrição de cargo/job description) */
 router.get('/matriz/cargos', requerAuth, gLeitura, wrap(async (req: any, res: any) => {
-  res.json(await db.all('SELECT id,cargo,area,gestor,perfil,graduacoes,descricao,funcoes,formacao,tecnicas,comportamentais,atitudes FROM mz_cargos ORDER BY area, cargo'));
+  res.json(await db.all<Pick<Linha<'mz_cargos'>, 'id' | 'cargo' | 'area' | 'gestor' | 'perfil' | 'graduacoes' | 'descricao' | 'funcoes' | 'formacao' | 'tecnicas' | 'comportamentais' | 'atitudes'>>('SELECT id,cargo,area,gestor,perfil,graduacoes,descricao,funcoes,formacao,tecnicas,comportamentais,atitudes FROM mz_cargos ORDER BY area, cargo'));
 }));
 router.post('/matriz/cargos', requerAuth, gGestor, wrap(async (req: any, res: any) => {
   const b = req.body;
@@ -343,7 +344,7 @@ router.post('/matriz/cargos', requerAuth, gGestor, wrap(async (req: any, res: an
   res.status(201).json(r.rows[0]);
 }));
 router.patch('/matriz/cargos/:id', requerAuth, gGestor, wrap(async (req: any, res: any) => {
-  const atual = await db.get('SELECT * FROM mz_cargos WHERE id=$1', [req.params.id]);
+  const atual = await db.get<Linha<'mz_cargos'>>('SELECT * FROM mz_cargos WHERE id=$1', [req.params.id]);
   if (!atual) return res.status(404).json({ erro: 'Cargo não encontrado' });
   const b = req.body;
   const g = (v: any, atualV: any) => v !== undefined ? JSON.stringify(v) : JSON.stringify(atualV);

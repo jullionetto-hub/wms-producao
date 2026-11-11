@@ -4,6 +4,7 @@ const router  = express.Router();
 import { pool, db } from '../lib/db';
 import { requerAuth, requerPerfil } from '../lib/auth';
 import { dataHoraLocal } from '../lib/helpers';
+import type { Linha } from '../types/db';
 
 // Aceita qualquer endereço com letras, números, barra e hífen (ex: D106, ZA387, C099/VERT-C02-CX18)
 const ADDR_REGEX = /^[A-Z0-9][A-Z0-9\/\-]{1,29}$/i;
@@ -83,9 +84,9 @@ router.post('/entrada-manual/lotes', requerAuth, async (req, res) => {
 // ── GET /entrada-manual/lotes/:id — Lote + todos os itens ─────────────────
 router.get('/entrada-manual/lotes/:id', requerAuth, async (req, res) => {
   try {
-    const lote = await db.get(`SELECT * FROM entrada_manual_lotes WHERE id=$1`, [req.params.id]);
+    const lote = await db.get<Linha<'entrada_manual_lotes'>>(`SELECT * FROM entrada_manual_lotes WHERE id=$1`, [req.params.id]);
     if (!lote) return res.status(404).json({ erro: 'Lote não encontrado.' });
-    const itens = await db.all(
+    const itens = await db.all<Linha<'entrada_manual_itens'>>(
       // Ordem natural do endereço (ex: N203 antes de N221, N221 antes de N244) em vez
       // da ordem de inserção da planilha — o pedido do usuário foi "tudo misturado",
       // sem isso o repositor pula de rua em rua em vez de andar em sequência.
@@ -105,7 +106,7 @@ router.put('/entrada-manual/itens/:id', requerAuth, async (req, res) => {
   const { quantidade_abastecida, endereco, obs } = req.body;
   const responsavel = req.session?.usuario?.nome || '';
   try {
-    const item = await db.get(`SELECT * FROM entrada_manual_itens WHERE id=$1`, [req.params.id]);
+    const item = await db.get<Linha<'entrada_manual_itens'>>(`SELECT * FROM entrada_manual_itens WHERE id=$1`, [req.params.id]);
     if (!item) return res.status(404).json({ erro: 'Item não encontrado.' });
 
     // Validação de endereço
@@ -350,7 +351,7 @@ router.get('/entrada-manual/produtos/buscar', requerAuth, async (req, res) => {
   const q = String(req.query.q || '').trim();
   if (!q) return res.json([]);
   try {
-    const rows = await db.all(
+    const rows = await db.all<Pick<Linha<'produtos'>, 'codigo' | 'codigo_barras' | 'nome' | 'saldo' | 'disponivel' | 'localizacao'>>(
       `SELECT codigo, codigo_barras, nome, saldo, disponivel, localizacao
        FROM produtos
        WHERE codigo ILIKE $1 OR codigo_barras ILIKE $1
@@ -392,7 +393,7 @@ router.get('/entrada-manual/produtos/total', requerAuth, async (req, res) => {
 // ── GET /inventario/sessoes ───────────────────────────────────────────────
 router.get('/inventario/sessoes', requerAuth, async (req, res) => {
   try {
-    const rows = await db.all(
+    const rows = await db.all<Linha<'inventario_sessoes'>>(
       `SELECT * FROM inventario_sessoes ORDER BY criado_em DESC LIMIT 50`
     );
     res.json(rows);
@@ -452,9 +453,9 @@ router.post('/inventario/sessoes', requerAuth, async (req, res) => {
 // ── GET /inventario/sessoes/:id — Detalhes + itens ───────────────────────
 router.get('/inventario/sessoes/:id', requerAuth, async (req, res) => {
   try {
-    const sessao = await db.get(`SELECT * FROM inventario_sessoes WHERE id=$1`, [req.params.id]);
+    const sessao = await db.get<Linha<'inventario_sessoes'>>(`SELECT * FROM inventario_sessoes WHERE id=$1`, [req.params.id]);
     if (!sessao) return res.status(404).json({ erro: 'Sessão não encontrada.' });
-    const itens = await db.all(
+    const itens = await db.all<Linha<'inventario_itens'>>(
       `SELECT * FROM inventario_itens WHERE sessao_id=$1 ORDER BY localizacao, codigo`,
       [req.params.id]
     );
@@ -535,7 +536,7 @@ router.delete('/inventario/sessoes/:id', requerAuth, requerPerfil('supervisor'),
 // ── GET /inventario/sessoes/:id/exportar — CSV das divergências ───────────
 router.get('/inventario/sessoes/:id/exportar', requerAuth, async (req, res) => {
   try {
-    const sessao = await db.get(`SELECT * FROM inventario_sessoes WHERE id=$1`, [req.params.id]);
+    const sessao = await db.get<Linha<'inventario_sessoes'>>(`SELECT * FROM inventario_sessoes WHERE id=$1`, [req.params.id]);
     if (!sessao) return res.status(404).json({ erro: 'Sessão não encontrada.' });
 
     const itens = await db.all(

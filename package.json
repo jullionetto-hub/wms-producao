@@ -9,6 +9,7 @@
     "typecheck": "tsc -p tsconfig.json",
     "build": "tsc -p tsconfig.build.json",
     "verificar-build": "node scripts/verificar-build.js",
+    "gerar-tipos-db": "node scripts/gerar-tipos-db.js",
     "pretest": "npm run build",
     "test": "jest --forceExit --detectOpenHandles --passWithNoTests"
   },

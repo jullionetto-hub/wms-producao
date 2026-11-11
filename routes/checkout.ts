@@ -3,6 +3,7 @@ const router = express.Router();
 import { db, pool } from '../lib/db';
 import { requerAuth, requerPerfil } from '../lib/auth';
 import { dataHoraLocal } from '../lib/helpers';
+import type { Linha } from '../types/db';
 
 /* ── Auto-migração ──────────────────────────────────────────────── */
 (async () => {
@@ -70,7 +71,7 @@ import { dataHoraLocal } from '../lib/helpers';
 router.get('/checkout/diagnostico', requerAuth, async (req,res) => {
   try {
     const total   = await db.get('SELECT COUNT(*) as cnt FROM checkout');
-    const recentes = await db.all('SELECT id, status, data_checkout, numero_pedido FROM checkout ORDER BY id DESC LIMIT 15');
+    const recentes = await db.all<Pick<Linha<'checkout'>, 'id' | 'status' | 'data_checkout' | 'numero_pedido'>>('SELECT id, status, data_checkout, numero_pedido FROM checkout ORDER BY id DESC LIMIT 15');
     const hoje    = dataHoraLocal();
     res.json({ total_registros: parseInt(total.cnt||0), data_servidor: hoje.data, hora_servidor: hoje.hora, ultimos_15: recentes });
   } catch(e) { res.status(500).json({erro: e.message}); }
@@ -111,7 +112,7 @@ router.get('/checkout/aguardando', requerAuth, async (req,res) => {
 /* ── Sessões de um checkout ─────────────────────────────────────── */
 router.get('/checkout/:id/sessoes', requerAuth, async (req,res) => {
   try {
-    const rows = await db.all(
+    const rows = await db.all<Linha<'checkout_sessoes'>>(
       `SELECT * FROM checkout_sessoes WHERE checkout_id=$1 ORDER BY id ASC`,
       [parseInt(req.params.id)]
     );
@@ -131,7 +132,7 @@ router.get('/checkout/buscar', requerAuth, async (req,res) => {
     }
     // 3. Fallback: busca diretamente na tabela pedidos
     if (!row) {
-      const ped=await db.get('SELECT id,numero_pedido,numero_caixa,status FROM pedidos WHERE numero_pedido=$1',[numero]);
+      const ped=await db.get<Pick<Linha<'pedidos'>, 'id' | 'numero_pedido' | 'numero_caixa' | 'status'>>('SELECT id,numero_pedido,numero_caixa,status FROM pedidos WHERE numero_pedido=$1',[numero]);
       if (ped) row={numero_pedido:ped.numero_pedido,numero_caixa:ped.numero_caixa||'',status:'pendente',pedido_status:ped.status};
     }
     if (!row) return res.status(404).json({erro:'Não encontrado'});
@@ -264,7 +265,7 @@ router.get('/checkout/caixa/:numero', requerAuth, async (req,res) => {
         `SELECT id AS item_id, codigo, descricao, endereco, quantidade, status, obs FROM itens_pedido WHERE pedido_id=$1 ORDER BY id`,
         [row.pedido_id]
       );
-      row.sessoes = await db.all(
+      row.sessoes = await db.all<Linha<'checkout_sessoes'>>(
         `SELECT * FROM checkout_sessoes WHERE checkout_id=$1 ORDER BY id ASC`,
         [row.id]
       );
@@ -279,12 +280,12 @@ router.put('/checkout/:id/confirmar', requerAuth, async (req,res) => {
   const operador_nome = req.session?.usuario?.nome || '';
   const id = parseInt(req.params.id);
   try {
-    const ck = await db.get('SELECT * FROM checkout WHERE id=$1',[id]);
+    const ck = await db.get<Linha<'checkout'>>('SELECT * FROM checkout WHERE id=$1',[id]);
     if (!ck) return res.status(404).json({erro:'Checkout nao encontrado'});
     if (ck.status === 'concluido') return res.status(409).json({erro:'Este checkout já foi confirmado por outro operador.'});
     const horaFim = hora_checkout||hora;
     // Fecha sessão aberta deste operador
-    const sessaoAberta = await db.get(
+    const sessaoAberta = await db.get<Linha<'checkout_sessoes'>>(
       `SELECT * FROM checkout_sessoes WHERE checkout_id=$1 AND hora_fim='' ORDER BY id DESC LIMIT 1`, [id]
     );
     if (sessaoAberta) {
@@ -327,10 +328,10 @@ router.put('/checkout/:id/pendencia', requerAuth, async (req,res) => {
   const operador_nome = req.session?.usuario?.nome || '';
   const id = parseInt(req.params.id);
   try {
-    const ck = await db.get('SELECT * FROM checkout WHERE id=$1',[id]);
+    const ck = await db.get<Linha<'checkout'>>('SELECT * FROM checkout WHERE id=$1',[id]);
     if (!ck) return res.status(404).json({erro:'Checkout não encontrado'});
     // Fecha sessão aberta
-    const sessaoAberta = await db.get(
+    const sessaoAberta = await db.get<Linha<'checkout_sessoes'>>(
       `SELECT * FROM checkout_sessoes WHERE checkout_id=$1 AND hora_fim='' ORDER BY id DESC LIMIT 1`, [id]
     );
     if (sessaoAberta) {
@@ -369,7 +370,7 @@ router.put('/checkout/:id/item-verificacao', requerAuth, async (req,res) => {
   const id = parseInt(req.params.id);
   if (!item_id) return res.status(400).json({erro:'item_id obrigatório'});
   try {
-    const ck = await db.get('SELECT * FROM checkout WHERE id=$1',[id]);
+    const ck = await db.get<Linha<'checkout'>>('SELECT * FROM checkout WHERE id=$1',[id]);
     if (!ck) return res.status(404).json({erro:'Checkout não encontrado'});
     if (errado) {
       await pool.query(
@@ -392,7 +393,7 @@ router.put('/checkout/:id/retomar', requerAuth, async (req,res) => {
   const operador_nome = req.session?.usuario?.nome || '';
   const id = parseInt(req.params.id);
   try {
-    const ck = await db.get('SELECT * FROM checkout WHERE id=$1',[id]);
+    const ck = await db.get<Linha<'checkout'>>('SELECT * FROM checkout WHERE id=$1',[id]);
     if (!ck) return res.status(404).json({erro:'Checkout não encontrado'});
     if (ck.status !== 'aguardando_item') return res.status(400).json({erro:'Checkout não está em espera'});
     // Abre nova sessão para quem retomou
@@ -426,11 +427,11 @@ router.put('/checkout/:id/pausar', requerAuth, async (req,res) => {
   const operador_nome = req.session?.usuario?.nome || '';
   const id = parseInt(req.params.id);
   try {
-    const ck = await db.get('SELECT * FROM checkout WHERE id=$1',[id]);
+    const ck = await db.get<Linha<'checkout'>>('SELECT * FROM checkout WHERE id=$1',[id]);
     if (!ck) return res.status(404).json({erro:'Checkout não encontrado'});
     if (ck.status === 'concluido') return res.status(400).json({erro:'Checkout já foi concluído'});
     // Fecha sessão aberta
-    const sessaoAberta = await db.get(
+    const sessaoAberta = await db.get<Linha<'checkout_sessoes'>>(
       `SELECT * FROM checkout_sessoes WHERE checkout_id=$1 AND hora_fim='' ORDER BY id DESC LIMIT 1`, [id]
     );
     if (sessaoAberta) {
@@ -461,7 +462,7 @@ router.put('/checkout/:id/pausar', requerAuth, async (req,res) => {
 
 router.put('/checkout/:id/liberar', requerAuth, async (req,res) => {
   try {
-    const ck = await db.get('SELECT pedido_id, status FROM checkout WHERE id=$1',[req.params.id]);
+    const ck = await db.get<Pick<Linha<'checkout'>, 'pedido_id' | 'status'>>('SELECT pedido_id, status FROM checkout WHERE id=$1',[req.params.id]);
     if (ck) {
       // Libera o número da caixa do pedido para reutilização
       await pool.query(`UPDATE pedidos SET numero_caixa='' WHERE id=$1`,[ck.pedido_id]);

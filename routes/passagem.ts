@@ -3,6 +3,7 @@ import express from 'express';
 const router  = express.Router();
 import { db, pool } from '../lib/db';
 import { requerAuth, requerPerfil } from '../lib/auth';
+import type { Linha } from '../types/db';
 
 const PONTOS_POR_CAMPO: Record<string, number> = {
   sep_separados: 75, sep_pendentes: 75, sep_em_separacao: 50,
@@ -26,7 +27,7 @@ router.get('/passagem', requerAuth, requerPerfil('supervisor'), async (req, res)
 router.get('/passagem/placar', requerAuth, requerPerfil('supervisor'), async (req, res) => {
   try {
     await garantirPlacar();
-    const placar    = await db.all('SELECT * FROM placar_turno ORDER BY pontos DESC');
+    const placar    = await db.all<Linha<'placar_turno'>>('SELECT * FROM placar_turno ORDER BY pontos DESC');
     const historico = await db.all(`SELECT v.*, p.turno as turno_saindo, p.data FROM validacao_passagem v JOIN passagem_turno p ON p.id = v.passagem_id ORDER BY v.validado_em DESC LIMIT 20`);
     res.json({ placar, historico });
   } catch(e) { res.status(500).json({ erro: e.message }); }
@@ -40,9 +41,9 @@ router.get('/passagem/pendente', requerAuth, requerPerfil('supervisor'), async (
 
 router.get('/passagem/:id', requerAuth, requerPerfil('supervisor'), async (req, res) => {
   try {
-    const row = await db.get('SELECT * FROM passagem_turno WHERE id=$1', [req.params.id]);
+    const row = await db.get<Linha<'passagem_turno'>>('SELECT * FROM passagem_turno WHERE id=$1', [req.params.id]);
     if (!row) return res.status(404).json({ erro: 'Não encontrado' });
-    res.json({ ...row, validacao: await db.get('SELECT * FROM validacao_passagem WHERE passagem_id=$1', [row.id]) || null });
+    res.json({ ...row, validacao: await db.get<Linha<'validacao_passagem'>>('SELECT * FROM validacao_passagem WHERE passagem_id=$1', [row.id]) || null });
   } catch(e) { res.status(500).json({ erro: e.message }); }
 });
 
@@ -53,7 +54,7 @@ router.post('/passagem', requerAuth, requerPerfil('supervisor'), async (req, res
   const supervisor_id = req.session?.usuario?.id || null;
   const n = (v: any) => parseInt(v) || 0;
   try {
-    const existe = await db.get('SELECT id, status FROM passagem_turno WHERE data=$1 AND turno=$2', [data, turno]);
+    const existe = await db.get<Pick<Linha<'passagem_turno'>, 'id' | 'status'>>('SELECT id, status FROM passagem_turno WHERE data=$1 AND turno=$2', [data, turno]);
     if (existe) {
       if (existe.status === 'validado') return res.status(400).json({ erro: 'Esta passagem já foi validada.' });
       await pool.query(
@@ -79,10 +80,10 @@ router.post('/passagem/:id/validar', requerAuth, requerPerfil('supervisor'), asy
   const supervisor = req.session?.usuario?.nome || 'Supervisor';
   const supervisor_id = req.session?.usuario?.id || null;
   try {
-    const passagem = await db.get('SELECT * FROM passagem_turno WHERE id=$1', [passagem_id]);
+    const passagem = await db.get<Linha<'passagem_turno'>>('SELECT * FROM passagem_turno WHERE id=$1', [passagem_id]);
     if (!passagem) return res.status(404).json({ erro: 'Passagem não encontrada' });
     if (passagem.status === 'validado') return res.status(400).json({ erro: 'Passagem já foi validada' });
-    if (await db.get('SELECT id FROM validacao_passagem WHERE passagem_id=$1', [passagem_id])) return res.status(400).json({ erro: 'Passagem já foi validada' });
+    if (await db.get<Pick<Linha<'validacao_passagem'>, 'id'>>('SELECT id FROM validacao_passagem WHERE passagem_id=$1', [passagem_id])) return res.status(400).json({ erro: 'Passagem já foi validada' });
 
     let pontos_perdidos = 0;
     for (const [campo, ok] of Object.entries(resultados))

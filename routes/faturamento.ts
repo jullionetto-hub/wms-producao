@@ -12,6 +12,7 @@ const router  = express.Router();
 import { pool, db } from '../lib/db';
 import { requerAuth, requerPerfil } from '../lib/auth';
 import { registrarAuditoria } from '../lib/auditoria';
+import type { Linha } from '../types/db';
 
 // ── POST /faturamento/importar — registros já parseados no cliente ────────
 router.post('/faturamento/importar', requerAuth, requerPerfil('supervisor', 'gestor'), async (req, res) => {
@@ -65,7 +66,7 @@ router.post('/faturamento/importar', requerAuth, requerPerfil('supervisor', 'ges
 // ── GET /faturamento/importacoes — histórico de imports ───────────────────
 router.get('/faturamento/importacoes', requerAuth, requerPerfil('supervisor', 'gestor'), async (req, res) => {
   try {
-    const rows = await db.all(
+    const rows = await db.all<Linha<'fat_importacoes'>>(
       `SELECT * FROM fat_importacoes ORDER BY importado_em DESC LIMIT 30`
     );
     res.json(rows || []);

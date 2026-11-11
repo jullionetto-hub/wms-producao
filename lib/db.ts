@@ -18,15 +18,16 @@ pool.on('error', (err) => {
 
 /**
  * run: resultado cru do pg · get: UMA linha (ou null) · all: lista de linhas.
- * As linhas voltam como `any` de propósito: o formato de cada tabela só vai ser tipado
- * aos poucos, rota por rota, nas próximas etapas.
+ * Sem informar o tipo, as linhas voltam como `any` (como sempre foi). Quando a consulta é de UMA tabela,
+ * informe o tipo gerado em types/db.d.ts:   db.get<Linha<'pedidos'>>('SELECT * FROM pedidos WHERE id=$1', [id])
+ * (só vale para linhas completas da tabela; consultas com JOIN/colunas calculadas continuam sem tipo).
  */
 export const db: {
   run: (sql: string, p?: any[]) => Promise<QueryResult<any>>;
-  get: (sql: string, p?: any[]) => Promise<any>;
-  all: (sql: string, p?: any[]) => Promise<any[]>;
+  get: <T = any>(sql: string, p?: any[]) => Promise<T | null>;
+  all: <T = any>(sql: string, p?: any[]) => Promise<T[]>;
 } = {
   run: (sql, p=[]) => pool.query(sql, p),
-  get: async (sql, p=[]) => { const r = await pool.query(sql, p); return r.rows[0] || null; },
-  all: async (sql, p=[]) => { const r = await pool.query(sql, p); return r.rows; }
+  get: async <T = any>(sql: string, p: any[] = []) => { const r = await pool.query(sql, p); return (r.rows[0] || null) as T | null; },
+  all: async <T = any>(sql: string, p: any[] = []) => { const r = await pool.query(sql, p); return r.rows as T[]; }
 };

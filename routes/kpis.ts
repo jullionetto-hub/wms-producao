@@ -4,6 +4,7 @@ import { db, pool } from '../lib/db';
 import { requerAuth, requerPerfil } from '../lib/auth';
 import { dataHoraLocal, formatarAguardandoDesde } from '../lib/helpers';
 import { registrarAuditoria } from '../lib/auditoria';
+import type { Linha } from '../types/db';
 
 router.get('/kpis', requerAuth, async (req,res) => {
   const { turnos, data_ini, data_fim } = req.query as Record<string, string>;
@@ -194,7 +195,7 @@ router.get('/stats/meus', requerAuth, async (req,res) => {
   try {
     const result: Record<string, any> = { perfil: usuario.perfil, nome: usuario.nome, hoje };
     if (usuario.perfil === 'separador') {
-      const sep = await db.get('SELECT id FROM separadores WHERE usuario_id=$1', [usuario.id]);
+      const sep = await db.get<Pick<Linha<'separadores'>, 'id'>>('SELECT id FROM separadores WHERE usuario_id=$1', [usuario.id]);
       if (sep) {
         result.separacao = await db.get(`SELECT
           SUM(CASE WHEN data_pedido=$1 AND status='concluido' THEN 1 ELSE 0 END) as separados_hoje,
@@ -335,7 +336,7 @@ router.get('/dashboard/por-hora', requerAuth, requerPerfil('supervisor'), async 
 
 // ── Configurações (metas e horas de turno) ─────────────────────────────────────
 router.get('/configuracoes', requerAuth, requerPerfil('supervisor'), async (req, res) => {
-  try { res.json(await db.all('SELECT * FROM configuracoes ORDER BY chave')); }
+  try { res.json(await db.all<Linha<'configuracoes'>>('SELECT * FROM configuracoes ORDER BY chave')); }
   catch(e) { res.status(500).json({ erro: e.message }); }
 });
 
@@ -343,7 +344,7 @@ router.put('/configuracoes/:chave', requerAuth, requerPerfil('supervisor'), asyn
   const { valor } = req.body;
   if (valor === undefined) return res.status(400).json({ erro: 'Valor obrigatório' });
   try {
-    const antes = await db.get('SELECT valor FROM configuracoes WHERE chave=$1', [req.params.chave]);
+    const antes = await db.get<Pick<Linha<'configuracoes'>, 'valor'>>('SELECT valor FROM configuracoes WHERE chave=$1', [req.params.chave]);
     await pool.query(
       `INSERT INTO configuracoes (chave,valor) VALUES ($1,$2) ON CONFLICT (chave) DO UPDATE SET valor=$2`,
       [req.params.chave, String(valor)]
@@ -362,7 +363,7 @@ router.get('/stats/performance', requerAuth, requerPerfil('supervisor'), async (
 
   try {
     // Configurações de metas e carga horária
-    const configs = await db.all('SELECT chave, valor FROM configuracoes');
+    const configs = await db.all<Pick<Linha<'configuracoes'>, 'chave' | 'valor'>>('SELECT chave, valor FROM configuracoes');
     const cfg = Object.fromEntries(configs.map(c => [c.chave, parseFloat(c.valor) || 0]));
     const METAS: Record<string, any> = {
       separador: cfg.meta_separacao || 75,
@@ -488,7 +489,7 @@ router.get('/stats/performance', requerAuth, requerPerfil('supervisor'), async (
     );
 
     // Separadores sem usuario_id (cadastros antigos sem login)
-    const sepSemUsuario = await db.all(
+    const sepSemUsuario = await db.all<Pick<Linha<'separadores'>, 'nome' | 'turno'>>(
       `SELECT sep.nome, sep.turno FROM separadores sep
        WHERE sep.status='ativo' AND sep.usuario_id IS NULL ORDER BY sep.nome`
     );

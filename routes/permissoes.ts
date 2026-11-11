@@ -12,6 +12,7 @@ import { requerAuth, requerPerfil } from '../lib/auth';
 import { validarId } from '../lib/helpers';
 import { registrarAuditoria } from '../lib/auditoria';
 import { ACOES } from '../lib/permissoes';
+import type { Linha } from '../types/db';
 
 // ── GET /permissoes/acoes — lista fixa das 7 ações granulares ─────────────
 router.get('/permissoes/acoes', requerAuth, requerPerfil('gestor'), (req, res) => {
@@ -23,7 +24,7 @@ router.get('/permissoes/usuarios/:id', requerAuth, requerPerfil('gestor'), async
   const id = validarId(req.params.id);
   if (!id) return res.status(400).json({ erro: 'id inválido' });
   try {
-    const rows = await db.all(
+    const rows = await db.all<Pick<Linha<'permissoes_usuario'>, 'acao' | 'concedida' | 'concedido_por' | 'concedido_em'>>(
       `SELECT acao, concedida, concedido_por, concedido_em FROM permissoes_usuario WHERE usuario_id=$1 ORDER BY acao`,
       [id]
     );

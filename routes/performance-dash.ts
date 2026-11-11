@@ -5,6 +5,7 @@ import { db, pool } from '../lib/db';
 import { requerAuth, requerPerfil } from '../lib/auth';
 import { dataHoraLocal, sqlDiaOperacional } from '../lib/helpers';
 import { calcularEtapasCheckout } from '../lib/checkout-etapas';
+import type { Linha } from '../types/db';
 
 /* Dia operacional (data do turno): quem é da Noite tem o dia contado a partir da entrada do turno
    (22h), então o que acontece de 00h às 06h47 vale pro dia anterior. Ver lib/helpers.js. */
@@ -846,7 +847,7 @@ router.get('/performance/pedido/:numero', requerAuth, requerPerfil('supervisor',
     // Quebra do tempo do checkout em fila / espera do item / trabalho
     let checkoutEtapas = null;
     if (ck?.checkout_id) {
-      const sessoes = await db.all(
+      const sessoes = await db.all<Pick<Linha<'checkout_sessoes'>, 'hora_inicio' | 'hora_fim' | 'acao' | 'tempo_min'>>(
         `SELECT hora_inicio, hora_fim, acao, tempo_min FROM checkout_sessoes WHERE checkout_id=$1 ORDER BY id ASC`,
         [ck.checkout_id]
       );

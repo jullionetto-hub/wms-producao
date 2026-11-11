@@ -10,6 +10,7 @@ import { db, pool } from '../lib/db';
 import { requerAuth, requerPerfil } from '../lib/auth';
 import { validarId } from '../lib/helpers';
 import { registrarAuditoria } from '../lib/auditoria';
+import type { Linha } from '../types/db';
 
 const FOTO_MAX_BYTES = 2 * 1024 * 1024;
 const FOTO_MAX_POR_RECADO = 12;
@@ -27,7 +28,7 @@ router.get('/diario-recados', requerAuth, requerPerfil('supervisor'), async (_re
   try {
     const recados = await db.all(`SELECT id, titulo, texto, autor, criado_em, editado_em FROM diario_recados WHERE ativo=true ORDER BY criado_em DESC, id DESC`);
     if (recados.length) {
-      const fotos = await db.all(`SELECT id, recado_id FROM diario_recado_fotos WHERE recado_id = ANY($1::int[]) ORDER BY id`, [recados.map(r => r.id)]);
+      const fotos = await db.all<Pick<Linha<'diario_recado_fotos'>, 'id' | 'recado_id'>>(`SELECT id, recado_id FROM diario_recado_fotos WHERE recado_id = ANY($1::int[]) ORDER BY id`, [recados.map(r => r.id)]);
       recados.forEach(r => { r.fotos = fotos.filter(f => f.recado_id === r.id).map(f => ({ id: f.id })); });
     }
     res.json(recados);
@@ -77,7 +78,7 @@ router.post('/diario-recados/:id/fotos', requerAuth, requerPerfil('gestor'), asy
     if (!m || !FOTO_TIPOS.includes(m[1])) return res.status(400).json({ erro: 'Envie uma imagem JPEG, PNG ou WebP' });
     const bytes = Buffer.from(m[2], 'base64');
     if (!bytes.length || bytes.length > FOTO_MAX_BYTES) return res.status(400).json({ erro: 'Imagem muito grande (máximo 2 MB)' });
-    const rec = await db.get('SELECT id FROM diario_recados WHERE id=$1 AND ativo=true', [id]);
+    const rec = await db.get<Pick<Linha<'diario_recados'>, 'id'>>('SELECT id FROM diario_recados WHERE id=$1 AND ativo=true', [id]);
     if (!rec) return res.status(404).json({ erro: 'Recado não encontrado ou já encerrado.' });
     const n = await db.get('SELECT COUNT(*)::int AS n FROM diario_recado_fotos WHERE recado_id=$1', [id]);
     if (n.n >= FOTO_MAX_POR_RECADO) return res.status(400).json({ erro: `Máximo de ${FOTO_MAX_POR_RECADO} fotos por recado` });
@@ -90,7 +91,7 @@ router.post('/diario-recados/:id/fotos', requerAuth, requerPerfil('gestor'), asy
 router.get('/diario-recados/foto/:fotoId', requerAuth, requerPerfil('supervisor'), async (req, res) => {
   try {
     const id = validarId(req.params.fotoId); if (!id) return res.status(400).json({ erro: 'ID inválido' });
-    const f = await db.get('SELECT mime, dados FROM diario_recado_fotos WHERE id=$1', [id]);
+    const f = await db.get<Pick<Linha<'diario_recado_fotos'>, 'mime' | 'dados'>>('SELECT mime, dados FROM diario_recado_fotos WHERE id=$1', [id]);
     if (!f) return res.status(404).json({ erro: 'Foto não encontrada' });
     res.set({ 'Content-Type': f.mime, 'Cache-Control': 'private, max-age=86400', 'X-Content-Type-Options': 'nosniff' });
     res.send(f.dados);

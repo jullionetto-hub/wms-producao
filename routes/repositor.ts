@@ -3,6 +3,7 @@ const router = express.Router();
 import { db, pool } from '../lib/db';
 import { requerAuth, requerPerfil } from '../lib/auth';
 import { dataHoraLocal, validarId, normalizarTurno } from '../lib/helpers';
+import type { Linha } from '../types/db';
 
 // Garante colunas novas (roda uma vez na inicialização)
 pool.query(`ALTER TABLE avisos_repositor ADD COLUMN IF NOT EXISTS historico        JSONB   DEFAULT '[]'::jsonb`).catch(()=>{});
@@ -137,12 +138,12 @@ router.put('/repositor/avisos/:id', requerAuth, async (req,res) => {
   const usuario = req.session?.usuario?.nome || repositor_nome || 'Sistema';
   try {
     const st = situacao || status || 'pendente';
-    const atual = await db.get('SELECT * FROM avisos_repositor WHERE id=$1',[id]);
+    const atual = await db.get<Linha<'avisos_repositor'>>('SELECT * FROM avisos_repositor WHERE id=$1',[id]);
     // Impede reverter um item já finalizado (protocolo/abastecido) para etapa anterior
     const estadosFinais = ['abastecido','protocolo','protocolado','devolucao'];
     const estadosNaoFinal = ['pendente','verificando','buscado','separado','aguardando_abastecer','subiu'];
-    if (estadosFinais.includes(atual?.status) && estadosNaoFinal.includes(st)) {
-      return res.status(409).json({erro:`Item já está em estado final: ${atual.status}. Não pode ser revertido.`});
+    if (estadosFinais.includes(atual?.status as string) && estadosNaoFinal.includes(st)) {
+      return res.status(409).json({erro:`Item já está em estado final: ${atual!.status}. Não pode ser revertido.`});
     }
     const qPegou   = quem_pegou   || atual?.quem_pegou   || '';
     const qGuardou = quem_guardou || atual?.quem_guardou || '';
@@ -202,7 +203,7 @@ router.put('/repositor/avisos/:id', requerAuth, async (req,res) => {
     );
     if (upd.rowCount === 0) return res.status(404).json({erro:'Aviso não encontrado'});
     if (['abastecido','reposto','encontrado'].includes(stFinal)) {
-      const av = await db.get('SELECT item_id FROM avisos_repositor WHERE id=$1',[id]);
+      const av = await db.get<Pick<Linha<'avisos_repositor'>, 'item_id'>>('SELECT item_id FROM avisos_repositor WHERE id=$1',[id]);
       if (av) await pool.query(`UPDATE itens_pedido SET status='encontrado' WHERE id=$1`,[av.item_id]);
     }
     const io = req.app.get('io');
@@ -390,7 +391,7 @@ router.get('/repositor/duplicatas-dia', requerAuth, async (req,res) => {
 router.get('/repositor/avisos/separador/:separador_id', requerAuth, async (req,res) => {
   const {data:hoje} = dataHoraLocal();
   try {
-    const rows = await db.all(
+    const rows = await db.all<Linha<'avisos_repositor'>>(
       `SELECT a.* FROM avisos_repositor a
        WHERE a.separador_id=$1 AND a.status IN ('subiu','abastecido','aguardando_abastecer')
          AND a.data_aviso=$2 AND (a.lido_separador IS NULL OR a.lido_separador = false)
@@ -410,9 +411,9 @@ const STATUS_AVISO_RESOLVIDO = ['reposto','buscado','separado','aguardando_abast
 // pendentes" mesmo com tudo abastecido.
 async function sincronizarCheckoutPendente(pedidoId: any, io: any) {
   if (!pedidoId) return;
-  const ck = await db.get(`SELECT id, numero_pedido FROM checkout WHERE pedido_id=$1 AND status='aguardando_item' ORDER BY id DESC LIMIT 1`, [pedidoId]);
+  const ck = await db.get<Pick<Linha<'checkout'>, 'id' | 'numero_pedido'>>(`SELECT id, numero_pedido FROM checkout WHERE pedido_id=$1 AND status='aguardando_item' ORDER BY id DESC LIMIT 1`, [pedidoId]);
   if (!ck) return;
-  const faltando = await db.all(
+  const faltando = await db.all<Pick<Linha<'avisos_repositor'>, 'codigo' | 'descricao' | 'quantidade'>>(
     `SELECT codigo, descricao, quantidade FROM avisos_repositor WHERE pedido_id=$1 AND NOT (status = ANY($2::text[]))`,
     [pedidoId, STATUS_AVISO_RESOLVIDO]
   );
@@ -444,15 +445,15 @@ async function atualizarAviso(req: any, res: any, status: any, extra={}) {
 async function resolverAvisoEAcumularTempo(req: any, res: any, status: any, extra={}) {
   await atualizarAviso(req, res, status, extra);
   try {
-    const av = await db.get('SELECT pedido_id FROM avisos_repositor WHERE id=$1',[req.params.id]);
+    const av = await db.get<Pick<Linha<'avisos_repositor'>, 'pedido_id'>>('SELECT pedido_id FROM avisos_repositor WHERE id=$1',[req.params.id]);
     if (!av) return;
     await sincronizarCheckoutPendente(av.pedido_id, req.app.get('io')).catch(e => console.warn('sync checkout pendente:', e.message));
-    const ped = await db.get(
+    const ped = await db.get<Pick<Linha<'pedidos'>, 'aguardando_repositor_desde' | 'tempo_aguardando_min' | 'status' | 'numero_pedido' | 'numero_caixa' | 'separador_id'>>(
       'SELECT aguardando_repositor_desde, tempo_aguardando_min, status, numero_pedido, numero_caixa, separador_id FROM pedidos WHERE id=$1',
       [av.pedido_id]
     );
     if (!ped || !ped.aguardando_repositor_desde) return;
-    const ainda = await db.all("SELECT id FROM avisos_repositor WHERE pedido_id=$1 AND status='pendente'",[av.pedido_id]);
+    const ainda = await db.all<Pick<Linha<'avisos_repositor'>, 'id'>>("SELECT id FROM avisos_repositor WHERE pedido_id=$1 AND status='pendente'",[av.pedido_id]);
     if (ainda.length > 0) return;
     const inicio = new Date(ped.aguardando_repositor_desde);
     const agora  = new Date();
@@ -471,9 +472,9 @@ async function resolverAvisoEAcumularTempo(req: any, res: any, status: any, extr
          WHERE id=$2`,
         [data + 'T' + hora, av.pedido_id]
       );
-      const sep = ped.separador_id ? await db.get('SELECT nome FROM separadores WHERE id=$1',[ped.separador_id]) : null;
+      const sep = ped.separador_id ? await db.get<Pick<Linha<'separadores'>, 'nome'>>('SELECT nome FROM separadores WHERE id=$1',[ped.separador_id]) : null;
       // Verifica se ainda há itens com falta definitiva (não encontrados pelo repositor)
-      const comFalta = await db.all(
+      const comFalta = await db.all<Pick<Linha<'avisos_repositor'>, 'codigo' | 'descricao' | 'quantidade'>>(
         "SELECT codigo, descricao, quantidade FROM avisos_repositor WHERE pedido_id=$1 AND status='nao_encontrado'",
         [av.pedido_id]
       );
@@ -521,7 +522,7 @@ router.put('/repositor/avisos/:id/liberar', requerAuth, requerPerfil('supervisor
     //          'nao_encontrado' ou padrão → protocolo (registra falta)
     const decisao = req.body?.decisao || 'nao_encontrado';
     const novoStatus = decisao === 'encontrado' ? 'reposto' : 'protocolo';
-    const atual = await db.get('SELECT status, historico FROM avisos_repositor WHERE id=$1', [req.params.id]);
+    const atual = await db.get<Pick<Linha<'avisos_repositor'>, 'status' | 'historico'>>('SELECT status, historico FROM avisos_repositor WHERE id=$1', [req.params.id]);
     if (!atual) return res.status(404).json({erro:'Aviso não encontrado'});
     // Evita atropelar um repositor que já pegou esse item pra fazer a busca
     // final — a tela de Liberação pode estar desatualizada numa aba antiga.
@@ -539,10 +540,10 @@ router.put('/repositor/avisos/:id/liberar', requerAuth, requerPerfil('supervisor
       return res.status(409).json({erro:'Este item não está mais aguardando liberação — outra ação já mudou o status dele.'});
     }
     if (novoStatus === 'reposto') {
-      const av = await db.get('SELECT item_id FROM avisos_repositor WHERE id=$1', [req.params.id]);
+      const av = await db.get<Pick<Linha<'avisos_repositor'>, 'item_id'>>('SELECT item_id FROM avisos_repositor WHERE id=$1', [req.params.id]);
       if (av?.item_id) await pool.query(`UPDATE itens_pedido SET status='encontrado' WHERE id=$1`, [av.item_id]);
     }
-    const atual2 = await db.get('SELECT numero_pedido, pedido_id FROM avisos_repositor WHERE id=$1', [req.params.id]);
+    const atual2 = await db.get<Pick<Linha<'avisos_repositor'>, 'numero_pedido' | 'pedido_id'>>('SELECT numero_pedido, pedido_id FROM avisos_repositor WHERE id=$1', [req.params.id]);
     req.app.get('io')?.emit('aviso:atualizado', { id: req.params.id, status: novoStatus, numero_pedido: atual2?.numero_pedido });
     await sincronizarCheckoutPendente(atual2?.pedido_id, req.app.get('io')).catch(e => console.warn('sync checkout pendente:', e.message));
     res.json({mensagem: decisao === 'encontrado' ? 'Item liberado como Encontrado.' : 'Item liberado para Protocolo.'});
@@ -561,7 +562,7 @@ router.put('/repositor/avisos/:id/busca-final/iniciar', requerAuth, async (req,r
   const { hora } = dataHoraLocal();
   const usuario = req.session?.usuario?.nome || req.body?.repositor_nome || 'Sistema';
   try {
-    const atual = await db.get('SELECT status, historico FROM avisos_repositor WHERE id=$1',[id]);
+    const atual = await db.get<Pick<Linha<'avisos_repositor'>, 'status' | 'historico'>>('SELECT status, historico FROM avisos_repositor WHERE id=$1',[id]);
     if (!atual) return res.status(404).json({erro:'Aviso não encontrado'});
     if (atual.status !== 'nao_encontrado') return res.status(409).json({erro:`Item não está aguardando busca final (status atual: ${atual.status})`});
     let hist = [];
@@ -579,7 +580,7 @@ router.put('/repositor/avisos/:id/busca-final/iniciar', requerAuth, async (req,r
 router.put('/repositor/avisos/:id/busca-final/encontrado', requerAuth, async (req,res) => {
   const id = validarId(req.params.id);
   if (!id) return res.status(400).json({erro:'ID invalido'});
-  const atual = await db.get('SELECT status FROM avisos_repositor WHERE id=$1',[id]);
+  const atual = await db.get<Pick<Linha<'avisos_repositor'>, 'status'>>('SELECT status FROM avisos_repositor WHERE id=$1',[id]);
   if (!atual) return res.status(404).json({erro:'Aviso não encontrado'});
   if (atual.status !== 'busca_final') return res.status(409).json({erro:`Item não está em busca final (status atual: ${atual.status})`});
   // 'abastecido' é o mesmo status terminal que o repositor normal usa quando
@@ -596,7 +597,7 @@ router.put('/repositor/avisos/:id/busca-final/nao-encontrado', requerAuth, async
   const { data, hora } = dataHoraLocal();
   const usuario = req.session?.usuario?.nome || req.body?.repositor_nome || 'Sistema';
   try {
-    const atual = await db.get('SELECT status, historico FROM avisos_repositor WHERE id=$1',[id]);
+    const atual = await db.get<Pick<Linha<'avisos_repositor'>, 'status' | 'historico'>>('SELECT status, historico FROM avisos_repositor WHERE id=$1',[id]);
     if (!atual) return res.status(404).json({erro:'Aviso não encontrado'});
     if (atual.status !== 'busca_final') return res.status(409).json({erro:`Item não está em busca final (status atual: ${atual.status})`});
     let hist = [];
@@ -661,7 +662,7 @@ router.put('/protocolo/:id/encerrar', requerAuth, requerPerfil('supervisor'), as
   const supervisorNome = req.session?.usuario?.nome || 'Supervisor';
   const { data, hora } = dataHoraLocal();
   try {
-    const atual = await db.get('SELECT status, historico, numero_pedido FROM avisos_repositor WHERE id=$1',[id]);
+    const atual = await db.get<Pick<Linha<'avisos_repositor'>, 'status' | 'historico' | 'numero_pedido'>>('SELECT status, historico, numero_pedido FROM avisos_repositor WHERE id=$1',[id]);
     if (!atual) return res.status(404).json({erro:'Aviso não encontrado'});
     if (atual.status !== 'protocolo') return res.status(409).json({erro:`Item não está em protocolo (status atual: ${atual.status})`});
     let hist = [];
@@ -714,7 +715,7 @@ router.post('/protocolo/pedido/:pedido_id/encerrar', requerAuth, requerPerfil('s
     }
     await client.query('COMMIT');
 
-    const ped = await db.get('SELECT numero_pedido FROM pedidos WHERE id=$1', [pedido_id]);
+    const ped = await db.get<Pick<Linha<'pedidos'>, 'numero_pedido'>>('SELECT numero_pedido FROM pedidos WHERE id=$1', [pedido_id]);
     req.app.get('io')?.emit('protocolo:encerrado', { pedido_id, numero_pedido: ped?.numero_pedido });
 
     res.json({

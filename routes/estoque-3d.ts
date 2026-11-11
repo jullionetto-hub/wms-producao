@@ -13,6 +13,7 @@ import express from 'express';
 const router = express.Router();
 import { db } from '../lib/db';
 import { requerAuth, requerPerfil } from '../lib/auth';
+import type { Linha } from '../types/db';
 
 const PERFIS = ['supervisor', 'gestor'];
 
@@ -20,7 +21,7 @@ router.get('/estoque-3d/dados', requerAuth, requerPerfil(...PERFIS), async (req,
   const dias = Math.min(90, Math.max(1, parseInt(req.query.dias as string) || 30));
   try {
     const [produtos, separando, reposicao, giro] = await Promise.all([
-      db.all(`SELECT codigo, nome, localizacao, saldo, disponivel FROM produtos ORDER BY codigo`),
+      db.all<Pick<Linha<'produtos'>, 'codigo' | 'nome' | 'localizacao' | 'saldo' | 'disponivel'>>(`SELECT codigo, nome, localizacao, saldo, disponivel FROM produtos ORDER BY codigo`),
       db.all(`SELECT i.endereco, i.codigo, i.quantidade, i.status AS status_item, p.numero_pedido
         FROM itens_pedido i JOIN pedidos p ON p.id=i.pedido_id
         WHERE p.status='separando' AND i.endereco IS NOT NULL AND i.endereco <> ''`),
@@ -65,9 +66,9 @@ router.get('/estoque-3d/pedido/:numero', requerAuth, requerPerfil(...PERFIS), as
   const numero = String(req.params.numero || '').trim();
   if (!numero) return res.status(400).json({ erro: 'Informe o número do pedido' });
   try {
-    const p = await db.get(`SELECT id, numero_pedido, status FROM pedidos WHERE numero_pedido=$1`, [numero]);
+    const p = await db.get<Pick<Linha<'pedidos'>, 'id' | 'numero_pedido' | 'status'>>(`SELECT id, numero_pedido, status FROM pedidos WHERE numero_pedido=$1`, [numero]);
     if (!p) return res.status(404).json({ erro: 'Pedido não encontrado' });
-    const itens = await db.all(`SELECT codigo, descricao, endereco, quantidade, status, qtd_falta
+    const itens = await db.all<Pick<Linha<'itens_pedido'>, 'codigo' | 'descricao' | 'endereco' | 'quantidade' | 'status' | 'qtd_falta'>>(`SELECT codigo, descricao, endereco, quantidade, status, qtd_falta
       FROM itens_pedido WHERE pedido_id=$1 ORDER BY id`, [p.id]);
     res.json({ pedido: p, itens });
   } catch (e) { res.status(500).json({ erro: e.message }); }
