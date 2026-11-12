@@ -69,6 +69,9 @@ app.use(extraHeaders);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 // JS e HTML sempre buscados frescos — só CSS é cacheado pelo SW
+// Identificador desta versão do sistema (muda a cada deploy): o navegador compara e mostra o botão "Atualizar".
+const VERSAO_SISTEMA = process.env.RAILWAY_GIT_COMMIT_SHA || process.env.RENDER_GIT_COMMIT || process.env.SOURCE_VERSION || String(Date.now());
+app.get('/versao', (_req, res) => { res.set('Cache-Control', 'no-store'); res.json({ versao: VERSAO_SISTEMA }); });
 app.use('/js',  (_req, res, next) => { res.set('Cache-Control', 'no-cache, must-revalidate'); next(); });
 app.use('/css', (_req, res, next) => { res.set('Cache-Control', 'public, max-age=86400');      next(); });
 app.use(express.static(path.join(__dirname, 'public'), { etag: true, lastModified: true }));

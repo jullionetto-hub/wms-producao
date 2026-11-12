@@ -131,9 +131,22 @@
       <button onclick="trocarSenhaTemp()" class="btn-login" style="margin-top:4px">Salvar nova senha</button>
     </div>
   </div>
+  <div class="login-marca" aria-hidden="true">
+    <div class="login-marca-conteudo">
+      <img class="login-marca-logo" src="/img/miess-logo.png" alt="">
+      <div class="login-marca-titulo">Operação da Logística<br>em um só lugar.</div>
+      <ul class="login-marca-lista">
+        <li>Separação e checkout em tempo real</li>
+        <li>Embalagem e reposição acompanhadas por turno</li>
+        <li>Diário de Bordo e recados da gestão</li>
+      </ul>
+    </div>
+    <div class="login-marca-pe">WMS Miess · Sistema interno</div>
+  </div>
+  <div class="login-lado">
     <div class="login-box" id="login-box">
-    <div class="login-logo" style="width:48px;height:48px;background:var(--accent);border-radius:12px;margin:0 auto 12px"></div>
-    <div class="login-titulo">WMS — <span>Miess</span></div>
+    <img class="login-logo-img" src="/img/miess-logo.png" alt="Miess" width="168" height="97">
+    <div class="login-titulo">WMS <span>Miess</span></div>
     <div class="login-sub">Gestão de Pedidos</div>
     <div class="login-campo" style="position:relative">
       <label>PERFIL DE ACESSO</label>
@@ -166,6 +179,8 @@
     </div>
     <div class="login-erro" id="login-erro"></div>
     <button class="btn-login" onclick="fazerLogin()">▶ ENTRAR</button>
+    <div class="login-rodape">Sistema interno da Miess</div>
+  </div>
   </div>
 </div>
 
@@ -2538,6 +2553,7 @@
 </div>
 
 
+<script src="/js/atualizar.js?v=1"></script>
 <script src="/js/geometria-estoque.js?v=1"></script>
 <script src="/js/config.js?v=17"></script>
   <script src="/js/pedidos.js?v=64"></script>
