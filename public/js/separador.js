@@ -645,8 +645,6 @@ function _renderizarListaLote() {
   let html = `<div style="padding:12px 14px 4px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
       <span style="font-size:10px;font-weight:800;color:var(--accent);letter-spacing:1px">RUA ATUAL</span>
-      <button type="button" onclick="toggleOrdemLote()" title="Inverter ordem de caminhada"
-        style="font-size:10px;font-weight:700;color:var(--text2);background:var(--surface2);border:1px solid var(--border);padding:2px 8px;border-radius:6px;cursor:pointer">⇅ ${_loteOrdemReversa ? 'Z→A' : 'A→Z'}</button>
     </div>
     <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px">
       <span style="font-family:'Space Mono',monospace;font-size:24px;font-weight:800;color:var(--text)">${rua}</span>
@@ -1382,6 +1380,43 @@ async function carregarAguardandoMobile() {
 
 
 
+// Aba FEITOS: pedidos que o separador logado concluiu no dia escolhido (hoje por padrão).
+async function carregarRealizadosMobile() {
+  const el = document.getElementById('sep-lista-realizados');
+  const resumo = document.getElementById('sep-real-resumo');
+  const inp = document.getElementById('sep-real-data');
+  if (!el) return;
+  if (inp && !inp.value) { const d = new Date(); inp.value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
+  const sepId = separadorAtual?.id || usuarioAtual?.id || 0;
+  try {
+    const res = await fetch(`${API}/pedidos?separador_id=${sepId}&status=concluido&data=${encodeURIComponent(inp ? inp.value : '')}`, { credentials: 'include' });
+    if (!res.ok) throw new Error();
+    const lista = (await res.json()).filter(p => p.status === 'concluido')
+      .sort((a, b) => String(b.concluido_em || '').localeCompare(String(a.concluido_em || '')));
+    const totalItens = lista.reduce((s, p) => s + (Number(p.total_itens) || 0), 0);
+    if (resumo) resumo.textContent = lista.length ? `${lista.length} pedido${lista.length === 1 ? '' : 's'} · ${totalItens} ite${totalItens === 1 ? 'm' : 'ns'}` : '';
+    if (!lista.length) { el.innerHTML = '<div style="text-align:center;color:var(--text3);padding:40px;font-size:13px">Nenhum pedido realizado neste dia</div>'; return; }
+    el.innerHTML = lista.map(p => {
+      const hora = String(p.concluido_em || '').slice(11, 16);
+      return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:10px">
+        <div style="min-width:0">
+          <div style="font-family:'Space Mono',monospace;font-size:14px;font-weight:700;color:var(--text)">#${escHtml(String(p.numero_pedido || ''))}</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(p.cliente || '—')}${p.numero_caixa ? ' · caixa ' + escHtml(String(p.numero_caixa)) : ''}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-size:13px;font-weight:600;color:var(--text)">${hora || '—'}</div>
+          <div style="font-size:11px;color:var(--text3)">${Number(p.total_itens) || 0} ite${Number(p.total_itens) === 1 ? 'm' : 'ns'}</div>
+        </div>
+      </div>`;
+    }).join('');
+  } catch (e) {
+    el.innerHTML = '<div style="text-align:center;color:var(--red);padding:24px;font-size:13px">Erro ao carregar</div>';
+  }
+}
+
+
+
+
 async function carregarStatsMobile() {
   try {
     const nomeEl = document.getElementById('m-stat-nome');
@@ -1856,8 +1891,8 @@ function renderChecklist(prefix) {
   // Rota no resumo — botão de inverter ordem + pills de rua (clicáveis, mostram
   // todos os itens daquela rua no pedido) com destaque na atual.
   if(resumoEl) {
-    const toggleBtn = `<button type="button" onclick="toggleOrdemChecklist()" title="Inverter ordem de caminhada"
-      style="display:inline-block;font-size:10px;font-weight:700;color:var(--text2);background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:2px 8px;margin:2px 6px 2px 0;cursor:pointer">⇅ ${_checklistSortDir===1?'A→Z':'Z→A'}</button>`;
+    // Sem botão de inverter a ordem: o caminho é sempre o que o sistema calcula (ROTA_FISICA), o separador só segue.
+    const toggleBtn = '';
     resumoEl.innerHTML = toggleBtn + ruasNoPedido.map(r => {
       const ruaOk = itensAtuais.filter(i=>getRua(i.endereco)===r).every(i=>i.status!=='pendente');
       const ativo = r === ruaEmFoco;
@@ -2099,6 +2134,52 @@ function renderChecklist(prefix) {
       </div>
     </div>`;
   }).join('');
+  if (isMob) _aplicarFocoItemMobile(listEl, prefix);
+}
+
+// Mobile: o separador vê UMA RUA por vez. Aparecem todos os itens da rua atual (a do primeiro pendente na ordem da
+// rota), pendentes e já marcados; ao terminar a rua, entra a próxima. As ruas já terminadas ficam numa seção recolhida
+// (com "Desfazer") e as ruas futuras só aparecem pelo nome no topo. Parte do HTML já gerado acima: não muda regra de negócio nem ids.
+let _focoItemUltimo = null, _feitosAberto = false;
+function _aplicarFocoItemMobile(listEl, prefix) {
+  const idCard = id => `${prefix}-ic-${id}`;
+  const getRua = it => String(it.endereco || '').split(',')[0].trim().match(/^([A-Z]+)/)?.[1] || '?';
+  const pend = itensAtuais.filter(i => i.status === 'pendente');
+  const foco = pend[0] || null;                                   // primeiro pendente na ordem da rota
+  const ruaFoco = foco ? getRua(foco) : null;
+  const itensRua = ruaFoco ? itensAtuais.filter(i => getRua(i) === ruaFoco) : [];   // TODA a rua atual (pendentes e já marcados)
+  const feitosOutras = itensAtuais.filter(i => i.status !== 'pendente' && (!ruaFoco || getRua(i) !== ruaFoco));   // ruas já terminadas
+  const cartao = id => document.getElementById(idCard(id));
+  [...listEl.children].forEach(ch => { if (!ch.id || !ch.id.startsWith(`${prefix}-ic-`)) ch.remove(); });   // cabeçalhos de rua
+  const cardsFeitos = feitosOutras.map(i => cartao(i.id)).filter(Boolean);
+  const idsMostrar = new Set([...itensRua, ...feitosOutras].map(i => i.id));
+  itensAtuais.forEach(i => { if (!idsMostrar.has(i.id)) cartao(i.id)?.remove(); });   // pendentes de ruas futuras: só contagem
+  const pendRua = itensRua.filter(i => i.status === 'pendente').length;
+  const ruasDepois = [...new Set(pend.filter(i => getRua(i) !== ruaFoco).map(getRua))];
+  const topo = document.createElement('div');
+  topo.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:8px;padding:2px 4px 10px;font-size:12px;color:var(--text3)';
+  topo.innerHTML = foco
+    ? `<span style="font-weight:700;color:var(--text)">Rua ${ruaFoco} · ${itensRua.length - pendRua} de ${itensRua.length} itens</span><span>${ruasDepois.length ? 'depois: ' + ruasDepois.join(', ') : 'última rua'}</span>`
+    : `<span style="font-weight:700;color:var(--text)">Todos os ${itensAtuais.length} itens verificados</span>`;
+  const novo = document.createDocumentFragment();
+  novo.appendChild(topo);
+  itensRua.forEach(i => { const c = cartao(i.id); if (c) { c.style.marginLeft = '0'; novo.appendChild(c); } });
+  if (cardsFeitos.length) {
+    const det = document.createElement('details');
+    det.style.cssText = 'margin-top:12px';
+    det.open = !foco || _feitosAberto;
+    det.addEventListener('toggle', () => { _feitosAberto = det.open; });
+    const sm = document.createElement('summary');
+    sm.style.cssText = 'cursor:pointer;font-size:13px;font-weight:600;color:var(--text2);padding:8px 4px;list-style:revert';
+    sm.textContent = `Já verificados (${cardsFeitos.length})`;
+    det.appendChild(sm);
+    cardsFeitos.forEach(c => { c.style.marginLeft = '0'; det.appendChild(c); });
+    novo.appendChild(det);
+  }
+  listEl.innerHTML = '';
+  listEl.appendChild(novo);
+  const idFoco = ruaFoco;   // só rola para o topo quando muda a rua
+  if (idFoco !== _focoItemUltimo) { _focoItemUltimo = idFoco; try { listEl.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (_) { /* sem scroll */ } }
 }
 
 

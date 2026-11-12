@@ -264,7 +264,8 @@ async function _confirmarSair() {
    TABS MOBILE DO SEPARADOR
 ══════════════════════════════════════════ */
 function mudarTabSep(tab) {
-  _wmsAlternarAbaClasse(['separar','fila','avisos-sep','aguardando','stats'], tab, 'sep-tab-', 'stab-', (t) => {
+  _wmsAlternarAbaClasse(['separar','fila','avisos-sep','aguardando','realizados','stats'], tab, 'sep-tab-', 'stab-', (t) => {
+    if (t === 'realizados')  carregarRealizadosMobile();
     if (t === 'fila')        carregarFilaMobile();
     if (t === 'stats')       carregarStatsMobile();
     if (t === 'avisos-sep')  carregarAvisosSeparador();

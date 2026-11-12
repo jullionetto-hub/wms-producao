@@ -2436,6 +2436,23 @@
 
 
 
+      <!-- ABA 5 — PEDIDOS REALIZADOS (concluídos pelo separador logado) -->
+      <div class="sep-tab-page" id="sep-tab-realizados">
+        <div class="rep-scroll">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px">
+            <div style="font-family:'Space Mono',monospace;font-size:15px;color:var(--text)">Realizados</div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <input type="date" id="sep-real-data" onchange="carregarRealizadosMobile()" style="padding:6px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;font-family:inherit"/>
+              <button class="btn btn-outline btn-sm" onclick="carregarRealizadosMobile()">↺</button>
+            </div>
+          </div>
+          <div id="sep-real-resumo" style="font-size:12px;color:var(--text3);margin-bottom:10px"></div>
+          <div id="sep-lista-realizados">
+            <div style="color:var(--text3);text-align:center;padding:40px;font-size:13px">Carregando…</div>
+          </div>
+        </div>
+      </div>
+
     </div><!-- /sep-mobile-root -->
 
     <!-- Histórico de lotes concluídos — fora das abas (sep-tab-page ficam display:none
@@ -2503,6 +2520,9 @@
     AGUARD.
     <span class="sep-tab-badge" id="stab-aguardando-badge" style="display:none">0</span>
   </button>
+  <button class="sep-tab" id="stab-realizados" onclick="mudarTabSep('realizados')">
+    FEITOS
+  </button>
 </div>
 
 
@@ -2557,7 +2577,7 @@
 <script src="/js/geometria-estoque.js?v=1"></script>
 <script src="/js/config.js?v=17"></script>
   <script src="/js/pedidos.js?v=64"></script>
-  <script src="/js/separador.js?v=43"></script>
+  <script src="/js/separador.js?v=44"></script>
   <script src="/js/repositor.js?v=22"></script>
   <script src="/js/checkout.js?v=15"></script>
   <script src="/js/dashboard.js?v=39"></script>
@@ -2568,7 +2588,7 @@
   <script src="/js/matriz.js?v=18"></script>
   <script src="/js/colmeias.js?v=1"></script>
   <script src="/js/command-palette.js?v=1"></script>
-  <script src="/js/auth.js?v=69"></script>
+  <script src="/js/auth.js?v=70"></script>
   <script src="/js/diario-abas.js?v=1"></script>
 
 
