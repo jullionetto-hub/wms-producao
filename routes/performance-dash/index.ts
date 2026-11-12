@@ -8,5 +8,6 @@ router.use(require('./pedidos-timing'));
 router.use(require('./metas'));
 router.use(require('./ocorrencias'));
 router.use(require('./pedido-detalhe'));
+router.use(require('./eficiencia-rota'));
 
 module.exports = router;

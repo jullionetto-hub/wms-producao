@@ -17,6 +17,7 @@ lib/auditoria.js
 lib/permissoes.js
 lib/helpers.js
 lib/pontuacao.js
+lib/rota-eficiencia.js
 lib/prioridade.js
 lib/mapa-estoque.js
 lib/control-tower.js
@@ -64,4 +65,5 @@ src/database/schema.js
 src/database/seed.js
 src/scheduler/relatorio.js
 lib/robustez.js
+
 

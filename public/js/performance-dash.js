@@ -1,4 +1,4 @@
-﻿/* ══ WMS — Performance dos Separadores ══
+/* ══ WMS — Performance dos Separadores ══
    Versão 2 — cards gradiente + dropdown de colaboradores
    Pedidos, itens, SKUs, reposições, tempo médio por colaborador.
 ══════════════════════════════════════════════════════════════════════ */
@@ -90,6 +90,9 @@ function renderizarPerformanceDash() {
       </button>
       <button id="pf-tab-padroes" onclick="pfSwitchTab('padroes')" class="rel-turno-btn">
         <i class="ti ti-brain" aria-hidden="true"></i> Padrões
+      </button>
+      <button id="pf-tab-rota" onclick="pfSwitchTab('rota')" class="rel-turno-btn">
+        <i class="ti ti-route" aria-hidden="true"></i> Eficiência de Rota
       </button>
       <button id="pf-tab-metas" onclick="pfSwitchTab('metas')" class="rel-turno-btn">
         Metas
@@ -249,6 +252,16 @@ function renderizarPerformanceDash() {
       </div>
     </div>
 
+    <!-- ABA EFICIÊNCIA DE ROTA -->
+    <div id="pf-rota-conteudo" style="display:none">
+      <div id="pf-rota-wrap">
+        <div style="text-align:center;padding:64px 24px;color:var(--text3)">
+          <div style="font-size:14px;font-weight:700;margin-bottom:6px">Selecione o período e clique em Filtrar</div>
+          <div style="font-size:12px">Compara o caminho real de cada separador com a melhor ordem para as mesmas paradas e aponta marcações em rajada</div>
+        </div>
+      </div>
+    </div>
+
     <!-- ABA METAS -->
     <div id="pf-metas-conteudo" style="display:none">
       <div id="pf-metas-wrap">
@@ -288,8 +301,8 @@ let _pfAbaAtiva = 'resumo';
 
 function pfSwitchTab(aba) {
   _pfAbaAtiva = aba;
-  const tabs = { resumo:'pf-tab-resumo', tempos:'pf-tab-tempos', ocorrencias:'pf-tab-ocorrencias', padroes:'pf-tab-padroes', metas:'pf-tab-metas', ranking:'pf-tab-ranking' };
-  const divs = { resumo:'pf-conteudo', tempos:'pf-tempos-conteudo', ocorrencias:'pf-ocorrencias-conteudo', padroes:'pf-padroes-conteudo', metas:'pf-metas-conteudo', ranking:'pf-ranking-conteudo' };
+  const tabs = { resumo:'pf-tab-resumo', tempos:'pf-tab-tempos', ocorrencias:'pf-tab-ocorrencias', padroes:'pf-tab-padroes', rota:'pf-tab-rota', metas:'pf-tab-metas', ranking:'pf-tab-ranking' };
+  const divs = { resumo:'pf-conteudo', tempos:'pf-tempos-conteudo', ocorrencias:'pf-ocorrencias-conteudo', padroes:'pf-padroes-conteudo', rota:'pf-rota-conteudo', metas:'pf-metas-conteudo', ranking:'pf-ranking-conteudo' };
   // Reset todos os botões
   Object.values(tabs).forEach(id => {
     const b = document.getElementById(id);
@@ -321,6 +334,8 @@ function pfSwitchTab(aba) {
       pfCarregarOcorrencias();
     } else if (aba === 'padroes') {
       pfCarregarPadroes();
+    } else if (aba === 'rota') {
+      pfCarregarEficienciaRota();
     } else if (aba === 'metas') {
       pfCarregarMetas();
     } else if (aba === 'ranking') {
@@ -337,6 +352,8 @@ function pfFiltrarAtivo() {
     pfCarregarOcorrencias();
   } else if (_pfAbaAtiva === 'padroes') {
     pfCarregarPadroes();
+  } else if (_pfAbaAtiva === 'rota') {
+    pfCarregarEficienciaRota();
   } else if (_pfAbaAtiva === 'metas') {
     pfCarregarMetas();
   } else if (_pfAbaAtiva === 'ranking') {
@@ -1592,6 +1609,89 @@ const PF_NIVEL_INFO = {
   melhoria: { label: 'Melhora',  cor: 'var(--green)', borda: 'var(--green)' },
   ok:       { label: 'OK',       cor: 'var(--text3)', borda: 'var(--border)' },
 };
+
+// ── Eficiência de rota ──────────────────────────────────────────────────────
+async function pfCarregarEficienciaRota() {
+  const wrap = document.getElementById('pf-rota-wrap');
+  if (!wrap) return;
+  const ini   = document.getElementById('pf-ini')?.value   || '';
+  const fim   = document.getElementById('pf-fim')?.value   || '';
+  const turno = document.getElementById('pf-turno')?.value || '';
+  wrap.innerHTML = `<div style="text-align:center;padding:48px;color:var(--text3)">Analisando rotas...</div>`;
+  const qs = new URLSearchParams({ ini, fim });
+  if (turno) qs.set('turno', turno);
+  qs.set('_', Date.now());
+  const dados = await apiFetch(`/performance/eficiencia-rota?${qs}`);
+  wrap.innerHTML = pfRenderEficienciaRota(dados);
+}
+
+function pfRenderEficienciaRota(d) {
+  if (!d || d.erro) {
+    return `<div style="text-align:center;padding:48px;color:var(--text3)">${pfEsc((d && d.erro) || 'Não foi possível calcular a eficiência de rota do período.')}</div>`;
+  }
+  const t = d.totais || {}, r = d.regras || {};
+  const card = (rotulo, valor, sub) => `
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px 18px">
+      <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:6px">${rotulo}</div>
+      <div style="font-size:28px;font-weight:700;color:var(--text);line-height:1.1">${valor}</div>
+      ${sub ? `<div style="font-size:11px;color:var(--text3);margin-top:6px">${sub}</div>` : ''}
+    </div>`;
+  const seg = s => s == null ? '—' : (s >= 60 ? `${Math.floor(s / 60)}min ${String(s % 60).padStart(2, '0')}s` : `${s}s`);
+  const alto = (v, lim) => v > lim ? 'color:var(--red);font-weight:700' : '';
+  const kpis = `
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px;margin-bottom:18px">
+      ${card('Pedidos analisados', t.pedidos_analisados ?? 0, `de ${t.pedidos ?? 0} concluídos no período`)}
+      ${card('Caminhada evitável', `${t.caminhada_evitavel_pct ?? 0}%`, `${(t.metros_evitaveis ?? 0).toLocaleString('pt-BR')} m no período (~${t.minutos_evitaveis ?? 0} min a ${String(r.velocidade_m_s ?? 1.1).replace('.', ',')} m/s)`)}
+      ${card('Pedidos fora da rota', t.pedidos_fora_rota ?? 0, `rota ideal evitaria mais de ${r.fora_da_rota_pct}%`)}
+      ${card('Pedidos com rajada', t.pedidos_com_rajada ?? 0, `${r.rajada_min_itens}+ itens marcados com até ${r.rajada_seg}s entre si`)}
+    </div>`;
+  const linhasSep = (d.separadores || []).map(s => `
+    <tr style="border-top:1px solid var(--border)">
+      <td style="padding:10px 12px;font-weight:600">${pfEsc(s.nome)}</td>
+      <td style="padding:10px 12px;color:var(--text3)">${pfEsc(PF_LABEL_TURNO[s.turno] || s.turno || '')}</td>
+      <td style="padding:10px 12px;text-align:right">${s.pedidos_analisados}<span style="color:var(--text3)"> / ${s.pedidos}</span></td>
+      <td style="padding:10px 12px;text-align:right;${alto(s.caminhada_evitavel_pct, 25)}">${s.caminhada_evitavel_pct}%</td>
+      <td style="padding:10px 12px;text-align:right">${s.metros_evitaveis_por_pedido} m <span style="color:var(--text3)">de ${s.metros_por_pedido} m</span></td>
+      <td style="padding:10px 12px;text-align:right;${alto(s.pedidos_fora_rota_pct, 40)}">${s.pedidos_fora_rota}<span style="color:var(--text3)">(${s.pedidos_fora_rota_pct}%)</span></td>
+      <td style="padding:10px 12px;text-align:right;${alto(s.pedidos_com_rajada_pct, 30)}">${s.pedidos_com_rajada} <span style="color:var(--text3)">(${s.pedidos_com_rajada_pct}%)</span></td>
+      <td style="padding:10px 12px;text-align:right;${alto(s.itens_em_rajada_pct, 20)}">${s.itens_em_rajada_pct}%</td>
+      <td style="padding:10px 12px;text-align:right">${seg(s.intervalo_mediano_seg)}</td>
+    </tr>`).join('');
+  const th = (txt, dir) => `<th style="padding:10px 12px;text-align:${dir || 'right'};font-size:11px;font-weight:700;color:var(--text3)">${txt}</th>`;
+  const tabelaSep = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow-x:auto;margin-bottom:18px">
+      <div style="padding:14px 16px;font-size:13px;font-weight:700">Por separador</div>
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead><tr>${th('Separador', 'left')}${th('Turno', 'left')}${th('Pedidos analisados')}${th('Caminhada evitável')}${th('Metros evitáveis por pedido')}${th('Fora da rota')}${th('Com rajada')}${th('Itens em rajada')}${th('Intervalo típico entre itens')}</tr></thead>
+        <tbody>${linhasSep || `<tr><td colspan="9" style="padding:24px;text-align:center;color:var(--text3)">Nenhum pedido concluído com hora de marcação neste período.</td></tr>`}</tbody>
+      </table>
+    </div>`;
+  const linhasPior = (d.piores || []).map(p => `
+    <tr style="border-top:1px solid var(--border);cursor:pointer" onclick="abrirRastreioPedido('${pfEsc(p.numero)}')" title="Abrir o rastreio deste pedido">
+      <td style="padding:10px 12px;font-family:'Space Mono',monospace;font-weight:700;color:var(--accent)">#${pfEsc(p.numero)}</td>
+      <td style="padding:10px 12px">${pfEsc(p.nome)}</td>
+      <td style="padding:10px 12px;text-align:right">${p.passos}</td>
+      <td style="padding:10px 12px;text-align:right;${alto(p.evitavelPct, 25)}">${p.evitavelPct}%</td>
+      <td style="padding:10px 12px;text-align:right">${p.metrosEvitaveis} m</td>
+      <td style="padding:10px 12px;text-align:right">${p.itens}</td>
+      <td style="padding:10px 12px;text-align:right;${p.itensEmRajada ? 'color:var(--red);font-weight:700' : 'color:var(--text3)'}">${p.itensEmRajada}</td>
+    </tr>`).join('');
+  const tabelaPior = (d.piores || []).length ? `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow-x:auto;margin-bottom:18px">
+      <div style="padding:14px 16px;font-size:13px;font-weight:700">Pedidos mais fora da rota <span style="font-weight:400;color:var(--text3)">· clique para abrir o rastreio</span></div>
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead><tr>${th('Pedido', 'left')}${th('Separador', 'left')}${th('Paradas')}${th('Caminhada evitável')}${th('Metros evitáveis')}${th('Itens marcados')}${th('Itens em rajada')}</tr></thead>
+        <tbody>${linhasPior}</tbody>
+      </table>
+    </div>` : '';
+  const nota = `
+    <div style="padding:12px 14px;background:var(--surface2);border-radius:8px;font-size:12px;color:var(--text3);line-height:1.6">
+      <b style="color:var(--text2)">Como ler.</b> Caminhada evitável compara a ordem real em que os itens foram marcados com a melhor ordem para os mesmos endereços, usando as distâncias em metros do Estoque 3D (caminho pelas ruas do galpão). O mapa do rastreio usa um desenho esquemático, por isso os percentuais dele podem diferir.
+      Rajada é quando ${r.rajada_min_itens} ou mais itens seguidos são marcados com até ${r.rajada_seg} segundos entre um e outro, sinal de marcação sem passar pelo endereço. Fica vermelho acima de 25% (caminhada), 40% (pedidos fora da rota), 30% (pedidos com rajada) e 20% (itens em rajada).
+      É um indicador para investigar, não prova de erro: pedido em lote, item bloqueado ou corredor ocupado também alteram a ordem. Só entram pedidos com ${r.min_passos}+ paradas distintas; o intervalo típico ignora pausas acima de 30 minutos.
+    </div>`;
+  return kpis + tabelaSep + tabelaPior + nota;
+}
 
 async function pfCarregarPadroes() {
   const wrap = document.getElementById('pf-padroes-wrap');
