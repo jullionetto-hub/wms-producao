@@ -1394,11 +1394,14 @@ async function carregarRealizadosMobile() {
     const lista = (await res.json()).filter(p => p.status === 'concluido')
       .sort((a, b) => String(b.concluido_em || '').localeCompare(String(a.concluido_em || '')));
     const totalItens = lista.reduce((s, p) => s + (Number(p.total_itens) || 0), 0);
-    if (resumo) resumo.textContent = lista.length ? `${lista.length} pedido${lista.length === 1 ? '' : 's'} · ${totalItens} ite${totalItens === 1 ? 'm' : 'ns'}` : '';
+    if (resumo) resumo.innerHTML = lista.length ? `${lista.length} pedido${lista.length === 1 ? '' : 's'} · ${totalItens} ite${totalItens === 1 ? 'm' : 'ns'}<br><span style="color:var(--green)">● 100%</span> &nbsp;<span style="color:var(--amber)">● parcial</span> &nbsp;<span style="color:var(--red)">● com falta</span>` : '';
     if (!lista.length) { el.innerHTML = '<div style="text-align:center;color:var(--text3);padding:40px;font-size:13px">Nenhum pedido realizado neste dia</div>'; return; }
     el.innerHTML = lista.map(p => {
       const hora = String(p.concluido_em || '').slice(11, 16);
-      return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:10px">
+      // Verde = 100% separado, amarelo = com parcial, vermelho = com falta.
+      const cor = Number(p.itens_em_falta) > 0 ? 'var(--red)' : Number(p.itens_parciais) > 0 ? 'var(--amber)' : 'var(--green)';
+      const bgC = Number(p.itens_em_falta) > 0 ? 'rgba(201,82,79,.10)' : Number(p.itens_parciais) > 0 ? 'rgba(224,168,62,.12)' : 'rgba(87,185,129,.10)';
+      return `<div style="background:${bgC};border:1px solid ${cor};border-left:5px solid ${cor};border-radius:10px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:10px">
         <div style="min-width:0">
           <div style="font-family:'Space Mono',monospace;font-size:14px;font-weight:700;color:var(--text)">#${escHtml(String(p.numero_pedido || ''))}</div>
           <div style="font-size:12px;color:var(--text3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(p.cliente || '—')}${p.numero_caixa ? ' · caixa ' + escHtml(String(p.numero_caixa)) : ''}</div>
@@ -1993,6 +1996,24 @@ function renderChecklist(prefix) {
       && pedidoAtualId && _autoConcluirPedidoId !== pedidoAtualId) {
     _autoConcluirPedidoId = pedidoAtualId;
     concluirPedidoMobile();
+  }
+
+  // Mobile: CONCLUIR e CONCLUIR COM FALTA ficam sempre visíveis; só habilitam
+  // quando a regra do backend permite (tudo marcado + caixa vinculada, e o
+  // "com falta" só se houver item de falta ainda aberto com o repositor).
+  if (prefix === 'm-cl') {
+    const okStatus = ['encontrado','reposto','subiu','abastecido','protocolo'];
+    const faltaAberta = itensAtuais.some(i => (i.status==='falta'||i.status==='parcial') && !okStatus.includes(i.aviso_status));
+    const caixaOk = !(CAIXA_OBRIGATORIA && !caixaVinculada && pedidoAtualId);
+    if (bc && bc.style.display === 'none') {
+      bc.style.display = 'block'; bc.disabled = true; bc.textContent = 'CONCLUIR';
+      bc.style.background = ''; bc.style.color = ''; bc.style.border = ''; bc.style.cursor = '';
+    }
+    if (bf) {
+      bf.style.display = 'block';
+      bf.disabled = !(todosVerif && caixaOk && faltaAberta);
+      bf.style.opacity = bf.disabled ? '.45' : '1';
+    }
   }
 
 
