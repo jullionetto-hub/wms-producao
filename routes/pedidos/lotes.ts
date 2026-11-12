@@ -464,6 +464,85 @@ router.get('/pedidos/lote/historico', requerAuth, async (req,res) => {
   } catch(err) { res.status(500).json({erro:err.message}); }
 });
 
+/* ══════════════════════════════════════════
+   LOTES FORMADOS PELO PRÓPRIO CELULAR DO SEPARADOR
+   Depois da distribuição (pedidos já com separador_id, ainda 'pendente' e sem lote),
+   o celular pede uma SUGESTÃO de lotes só com os pedidos do separador logado
+   (mesmo algoritmo de proximidade de ruas do supervisor, até TAMANHO_LOTE por lote)
+   e, se o separador quiser "por lote", confirma o lote. Quem prefere pedido a pedido
+   simplesmente não confirma nada — nada é gravado até o toque. Drive Thru nunca entra;
+   Prime e não-Prime não se misturam (mesma regra da formação do supervisor).
+══════════════════════════════════════════ */
+function _sepIdSessao(req: any) { return req.session?.separador?.id || null; }
+
+router.get('/pedidos/meus-lotes/sugestao', requerAuth, async (req,res) => {
+  const sepId = _sepIdSessao(req);
+  if (!sepId) return res.status(403).json({erro:'Usuário não vinculado a um separador.'});
+  try {
+    const pedidos = await db.all(
+      `SELECT p.* FROM pedidos p
+       WHERE p.separador_id=$1 AND p.status='pendente' AND p.lote_id IS NULL
+       ORDER BY
+         CASE WHEN p.aguardando_desde ~ '^[0-9]{2}/[0-9]{2}/[0-9]{4}'
+              THEN TO_TIMESTAMP(p.aguardando_desde, 'DD/MM/YYYY HH24:MI')
+              ELSE NULL END ASC NULLS LAST,
+         p.id ASC`, [sepId]);
+    const lotes: any[] = [];
+    for (const prime of [false, true]) {
+      const grupo = pedidos.filter(p => !_ehDriveThru(p) && (p.tem_prime === true) === prime);
+      if (grupo.length < 2) continue;
+      const prev = await _prepararEAgruparPedidos(grupo, 'balanceado');
+      for (const l of prev) {
+        if (l.pedidos.length < 2) continue; // lote de 1 pedido não faz sentido: segue como pedido solto
+        const ruas = [...new Set<string>(l.pedidos.flatMap((p: any) => p._ruasSet))];
+        const rota = ruas.sort((a,b) => _rotaIdxLote(a) - _rotaIdxLote(b));
+        lotes.push({
+          prime,
+          pedidos: l.pedidos.map((p: any) => ({ id:p.id, numero_pedido:p.numero_pedido, itens:p._itensQtd, skus:p._skusQtd })),
+          rota,
+          itens_total: l.pedidos.reduce((s: number, p: any) => s + p._itensQtd, 0),
+        });
+      }
+    }
+    res.json({ lotes, tamanho_maximo: TAMANHO_LOTE });
+  } catch(err) { res.status(500).json({erro:err.message}); }
+});
+
+// Confirma UM lote sugerido: só pedidos do próprio separador, ainda pendentes e sem lote.
+router.post('/pedidos/meus-lotes/confirmar', requerAuth, async (req,res) => {
+  const sepId = _sepIdSessao(req);
+  if (!sepId) return res.status(403).json({erro:'Usuário não vinculado a um separador.'});
+  const ids = [...new Set(((req.body?.pedido_ids || []) as any[]).map(Number).filter(Boolean))];
+  if (ids.length < 2) return res.status(400).json({erro:'Um lote precisa de pelo menos 2 pedidos.'});
+  if (ids.length > TAMANHO_LOTE) return res.status(400).json({erro:`O máximo é ${TAMANHO_LOTE} pedidos por lote.`});
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    // Trava as linhas pra duas confirmações simultâneas não pegarem o mesmo pedido.
+    const ok = await client.query(
+      `SELECT id, transportadora, tem_prime FROM pedidos
+       WHERE id=ANY($1) AND separador_id=$2 AND status='pendente' AND lote_id IS NULL FOR UPDATE`, [ids, sepId]);
+    const validos = ok.rows.filter(p => !_ehDriveThru(p));
+    if (validos.length !== ids.length) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({erro:'A fila mudou — algum pedido já foi iniciado, é Drive Thru ou não é seu. Atualize a fila.'});
+    }
+    const primes = new Set(validos.map(p => p.tem_prime === true));
+    if (primes.size > 1) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({erro:'Não misture pedidos Prime e normais no mesmo lote.'});
+    }
+    const rLote = await client.query(`INSERT INTO lotes_separacao (separador_id, status) VALUES ($1,'aguardando') RETURNING id`, [sepId]);
+    const loteId = rLote.rows[0].id;
+    await client.query(`UPDATE pedidos SET lote_id=$1 WHERE id=ANY($2)`, [loteId, ids]);
+    await client.query('COMMIT');
+    res.json({ mensagem:'Lote formado!', lote_id: loteId, pedidos: ids.length });
+  } catch(err) {
+    await client.query('ROLLBACK').catch(() => {});
+    res.status(500).json({erro:err.message});
+  } finally { client.release(); }
+});
+
 router.post('/pedidos/recalcular-pontuacao', requerAuth, requerPerfil('supervisor'), async (req,res) => {
   try {
     const peds=await db.all<Pick<Linha<'pedidos'>, 'id'>>("SELECT id FROM pedidos WHERE pontuacao=0 OR pontuacao IS NULL");

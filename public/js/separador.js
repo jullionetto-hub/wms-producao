@@ -79,6 +79,22 @@ function _toggleLotePedidos(loteId) {
   if (seta) seta.textContent = abrir ? '▴' : '▾';
 }
 
+// Toque num "Lote sugerido": grava o lote (só pedidos deste separador, ainda
+// pendentes) e abre a tela de escolher o que fica junto — de lá ainda dá pra
+// deixar pedidos de fora e separá-los sozinhos.
+async function formarLoteSugerido(ids) {
+  try {
+    const res = await fetch(`${API}/pedidos/meus-lotes/confirmar`, {
+      method:'POST', credentials:'include', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ pedido_ids: ids })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) { toast(data.erro || 'Não foi possível formar o lote', 'erro'); carregarFilaMobile(); return; }
+    await carregarFilaMobile();
+    abrirEscolhaLote(data.lote_id);
+  } catch (e) { toast('Erro de rede', 'erro'); }
+}
+
 // Separa UM pedido de um lote ainda não iniciado: o servidor tira o pedido do
 // lote (o restante do lote continua intacto) e o fluxo segue como pedido comum.
 async function iniciarPedidoDoLoteMobile(pedidoId, numeroPedido) {
@@ -1231,7 +1247,33 @@ async function carregarFilaMobile() {
         + Object.entries(_gruposLoteAndamento).map(([loteId, peds]) => _renderLoteCard(loteId, peds, { emAndamento:true })).join('')
       : '';
 
-    const temLote = Object.keys(_gruposLoteSistema).length + Object.keys(_gruposLoteAndamento).length > 0;
+    // Lotes que o próprio celular sugere (pedidos já distribuídos a este separador,
+    // ainda sem lote): só no modo "por lote"; nada é gravado até o toque no card.
+    const _ehDriveP = p => String(p.transportadora||'').toUpperCase().includes('DRIVE');
+    const soltosPendentes = ordenadosMob.filter(p => p.status === 'pendente' && !p.lote_id && !_ehDriveP(p));
+    let sugestoesLote = [];
+    if (modo === 'lote' && soltosPendentes.length >= 2) {
+      try {
+        const rs = await fetch(`${API}/pedidos/meus-lotes/sugestao`, { credentials:'include' });
+        if (rs.ok) sugestoesLote = (await rs.json()).lotes || [];
+      } catch (e) { /* sem sugestão: segue só com os pedidos soltos */ }
+    }
+    const idsEmSugestao = new Set(sugestoesLote.flatMap(l => l.pedidos.map(p => p.id)));
+    const cardsSugestao = sugestoesLote.map(l => `<div onclick="formarLoteSugerido([${l.pedidos.map(p=>p.id).join(',')}])"
+         style="border:1px dashed var(--accent);border-left:3px solid var(--accent);border-radius:10px;padding:14px;margin-bottom:12px;background:var(--surface);cursor:pointer">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <div>
+            <div style="font-size:14px;font-weight:700;color:var(--text)">Lote sugerido${l.prime ? ' · Prime' : ''}</div>
+            <div style="font-size:11px;color:var(--text3)">${l.pedidos.length} pedidos · ${l.itens_total} itens · ruas ${l.rota.join(' → ')}</div>
+          </div>
+          <span style="margin-left:auto;font-size:12px;font-weight:700;color:var(--accent)">Iniciar ›</span>
+        </div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap">
+          ${l.pedidos.map(p=>`<span style="background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:6px;padding:2px 8px;font-size:11px">#${p.numero_pedido}</span>`).join('')}
+        </div>
+      </div>`).join('');
+
+    const temLote = Object.keys(_gruposLoteSistema).length + Object.keys(_gruposLoteAndamento).length > 0 || soltosPendentes.length >= 2;
     const _btnModo = (valor, rotulo) => {
       const ativo = modo === valor;
       return `<button type="button" onclick="setModoSeparacao('${valor}')"
@@ -1243,7 +1285,7 @@ async function carregarFilaMobile() {
         </div>`
       : '';
 
-    const pedidosSoltos = modo === 'pedido' ? ordenadosMob : ordenadosMob.filter(p => !p.lote_id);
+    const pedidosSoltos = modo === 'pedido' ? ordenadosMob : ordenadosMob.filter(p => !p.lote_id && !idsEmSugestao.has(p.id));
 
     const _renderPedidoCard = (p) => {
       const transp   = String(p.transportadora||'').toUpperCase();
@@ -1298,7 +1340,7 @@ async function carregarFilaMobile() {
       </div>`);
     };
 
-    lista.innerHTML = seletorModo + loteSistemaCard + loteCard + pedidosSoltos.map(_renderPedidoCard).join('');
+    lista.innerHTML = seletorModo + loteSistemaCard + cardsSugestao + loteCard + pedidosSoltos.map(_renderPedidoCard).join('');
     _initFilaDragReorder(lista);
   } catch(e) { console.warn(e); }
 }
