@@ -428,24 +428,28 @@ function montarSidebar() {
       <div class="mg">SEPARAÇÃO</div>
       <a class="mi ativo" onclick="irPara('separacao',this)"><span class="mi-ic">${IC.separacao}</span>Pedidos</a>
       <a class="mi" onclick="irPara('estatisticas-sep',this);carregarEstatisticasSep()"><span class="mi-ic">${IC.estatisticas}</span>Estatísticas</a>
-      <a class="mi" onclick="irPara('entrada-manual',this)"><span class="mi-ic">${IC.barcode}</span>Código de Barras</a>`,
+      <a class="mi" onclick="irPara('entrada-manual',this)"><span class="mi-ic">${IC.barcode}</span>Código de Barras</a>
+      <a class="mi" onclick="irPara('diario',this)"><span class="mi-ic">${IC.diario}</span>Diário de Bordo</a>`,
     repositor: `
       <div class="mg">REPOSIÇÃO</div>
       <a class="mi ativo" onclick="irPara('reposicao',this)"><span class="mi-ic">${IC.reposicao}</span>Solicitações <span class="mbadge" id="menu-badge-rep" style="display:none">0</span></a>
       <a class="mi" onclick="irPara('protocolo-rep',this)"><span class="mi-ic">${IC.protocolo}</span>Protocolo</a>
       <a class="mi" onclick="irPara('entrada-manual',this)"><span class="mi-ic">${IC.entrada}</span>Entrada Manual</a>
+      <a class="mi" onclick="irPara('diario',this)"><span class="mi-ic">${IC.diario}</span>Diário de Bordo</a>
       <div class="mg">ANÁLISE</div>
       <a class="mi" onclick="irPara('stats-repositor',this)"><span class="mi-ic">${IC.estatisticas}</span>Estatísticas</a>`,
     checkout: `
       <div class="mg">CHECKOUT</div>
       <a class="mi ativo" onclick="irPara('checkout',this)"><span class="mi-ic">${IC.checkout}</span>Checkout</a>
       <a class="mi" onclick="irPara('entrada-manual',this)"><span class="mi-ic">${IC.barcode}</span>Código de Barras</a>
+      <a class="mi" onclick="irPara('diario',this)"><span class="mi-ic">${IC.diario}</span>Diário de Bordo</a>
       <div class="mg">ANÁLISE</div>
       <a class="mi" onclick="irPara('estatisticas-ck',this)"><span class="mi-ic">${IC.estatisticas}</span>Estatísticas</a>`,
     embalador: `
       <div class="mg">EMBALAGEM</div>
       <a class="mi ativo" onclick="irPara('embalagem',this)"><span class="mi-ic">${IC.embalagem}</span>Embalar</a>
       <a class="mi" onclick="irPara('entrada-manual',this)"><span class="mi-ic">${IC.barcode}</span>Código de Barras</a>
+      <a class="mi" onclick="irPara('diario',this)"><span class="mi-ic">${IC.diario}</span>Diário de Bordo</a>
       <div class="mg">ANÁLISE</div>
       <a class="mi" onclick="irPara('estatisticas-emb',this);carregarEstatisticasEmb()"><span class="mi-ic">${IC.estatisticas}</span>Estatísticas</a>`,
     gestor: `
@@ -971,7 +975,7 @@ async function adicionarFotos(origem, secao, input, ctx) {
   if (!arquivos.length) return;
   try {
     let id = ctx === 'modal' ? _valDiarioId : _diarioAtualId;
-    if (!id && ctx === 'diario') { const r = await _persistirDiario(); if (!r) return; id = r.id; }   // precisa existir para receber a foto
+    if (!id && ctx === 'diario') { const r = await _persistirDiario(secao !== 'geral' ? secao : undefined); if (!r) return; id = r.id; }   // precisa existir para receber a foto
     if (!id) { toast('Diário não encontrado','erro'); return; }
     toast(arquivos.length > 1 ? 'Enviando fotos...' : 'Enviando foto...', 'aviso');
     for (const f of arquivos) {
@@ -1230,12 +1234,57 @@ async function carregarOuCalcularDiario() {
 // tela realmente exibiu (ou confirmou a ausência de) o diário anterior.
 // Observações do diário por setor + geral — o turno seguinte precisa ver tudo
 // que o anterior escreveu pra poder validar/dar continuidade.
-function _diarioObsHtml(obs, titulo) {
+// Números de cada setor em linguagem direta: "296 impressos · 286 concluídos · 10 pendentes"
+// (antes era "286/296 separados", que não dizia o que era cada número).
+function _diarioNumeros(chave, d) {
+  d = d || {};
+  const n = v => Math.max(0, parseInt(v) || 0);
+  if (chave === 'separacao') { const x = d.separacao || {}, t = n(x.total), c = n(x.concluidos); return [[t, 'impressos'], [c, 'concluídos'], [Math.max(0, t - c), 'pendentes']]; }
+  if (chave === 'embalagem') { const x = d.embalagem || {}, t = n(x.total), c = n(x.embalados); return [[t, 'para embalar'], [c, 'embalados'], [Math.max(0, t - c), 'pendentes']]; }
+  if (chave === 'checkout')  { const x = d.checkout || {}, t = n(x.total), c = n(x.concluidos); return [[t, 'no checkout'], [c, 'concluídos'], [Math.max(0, t - c), 'pendentes']]; }
+  if (chave === 'reposicao') { const x = d.reposicao || {}; return [[n(x.total), 'solicitações'], [n(x.resolvidas), 'resolvidas'], [n(x.pendentes), 'pendentes'], [n(x.nao_encontrados), 'não encontrados']]; }
+  return [];
+}
+// Quem trabalha num setor (separação, reposição, embalagem, checkout) usa o diário só para o SEU setor.
+// null = acesso total (supervisor/gestor); lista = setores que a pessoa pode preencher. Espelha lib/auth.ts.
+const _SETOR_DIARIO_DO_PERFIL = { separador:'separacao', repositor:'reposicao', embalador:'embalagem', checkout:'checkout' };
+function _diarioSetoresPermitidos(u) {
+  u = u || (typeof usuarioAtual !== 'undefined' ? usuarioAtual : null); if (!u) return [];
+  const perfis = [u.perfil, ...String(u.perfis_acesso || '').split(',').map(s => s.trim())].filter(Boolean);
+  if (perfis.includes('supervisor') || perfis.includes('gestor')) return null;
+  return [...new Set(perfis.map(p => _SETOR_DIARIO_DO_PERFIL[p]).filter(Boolean))];
+}
+// Trava os campos dos setores que não são da pessoa e esconde o envio do diário (é do supervisor)
+function _diarioAplicarRestricao() {
+  // gestão (gestor sem perfil supervisor) só acompanha: nenhum setor é editável
+  const u = typeof usuarioAtual !== 'undefined' ? usuarioAtual : null;
+  const soGestao = !!u && String([u.perfil, u.perfis_acesso].join(',')).split(',').map(s => s.trim()).includes('gestor') && !String([u.perfil, u.perfis_acesso].join(',')).split(',').map(s => s.trim()).includes('supervisor');
+  const meus = soGestao ? [] : _diarioSetoresPermitidos(); if (!meus) return;
+  const prefixo = { sep:'separacao', ck:'checkout', emb:'embalagem', rep:'reposicao' };
+  Object.entries(prefixo).forEach(([k, chave]) => {
+    if (meus.includes(chave)) return;
+    document.querySelectorAll(`#pag-diario [id^="diario-${k}-"], #diario-obs-${k}`).forEach(el => {
+      if (el.tagName !== 'INPUT' && el.tagName !== 'TEXTAREA') return;
+      el.readOnly = true; el.disabled = el.tagName === 'INPUT'; el.style.opacity = '.65'; el.style.cursor = 'not-allowed';
+    });
+  });
+  const geral = document.getElementById('diario-obs-geral'); if (geral) { geral.readOnly = true; geral.style.opacity = '.65'; }
+  const barra = document.getElementById('dg-barra'); if (barra) barra.style.display = 'none';
+  const acoes = document.querySelector('#pag-diario .diario-acoes'); if (acoes) acoes.style.display = 'none';
+}
+function _diarioNumerosTexto(chave, d) { return _diarioNumeros(chave, d).map(([v, r]) => `${v} ${r}`).join(' · '); }
+function _diarioAutorHtml(d, chave) {
+  const a = d && d.autores && d.autores[chave]; if (!a || !a.nome) return '';
+  const quando = a.em ? new Date(a.em).toLocaleString('pt-BR', { timeZone:'America/Sao_Paulo', day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }) : '';
+  return `<span style="font-size:11px;color:var(--text3)">preenchido por <b style="color:var(--text2)">${escHtml(a.nome)}</b>${quando ? ' · ' + quando : ''}</span>`;
+}
+
+function _diarioObsHtml(obs, titulo, dados) {
   const secoes = [['separacao','Separação'], ['checkout','Checkout'], ['reposicao','Reposição'], ['embalagem','Embalagem'], ['geral','Geral']];
   const itens = secoes
     .filter(([k]) => obs && obs[k] && String(obs[k]).trim())
     .map(([k, rotulo]) => `<div style="margin-bottom:8px">
-      <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.4px">${rotulo}</div>
+      <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.4px">${rotulo} ${_diarioAutorHtml(dados, k) ? '· ' + _diarioAutorHtml(dados, k) : ''}</div>
       <div style="font-size:12px;color:var(--text2);white-space:pre-line">${escHtml(obs[k])}</div>
     </div>`);
   if (!itens.length) return '';
@@ -1265,17 +1314,18 @@ async function carregarDiarioAnterior() {
     _diarioLeuAnterior = true;
     if (!ant) { el.style.display = 'none'; el.innerHTML = ''; return; }
     const d = ant.dados || {};
-    const obsHtml = _diarioObsHtml(ant.observacoes, 'Observações deixadas pelo turno anterior');
+    const obsHtml = _diarioObsHtml(ant.observacoes, 'Observações deixadas pelo turno anterior', d);
     const nao = d.reposicao?.nao_encontrados || 0;
     const chip = (rot, val, cor) => `<span style="font-size:11px;background:var(--surface2);border-radius:6px;padding:3px 8px;white-space:nowrap"><span style="color:var(--text3)">${rot}</span> <b style="color:${cor||'inherit'}">${val}</b></span>`;
+    const sepN = _diarioNumeros('separacao', d), ckN = _diarioNumeros('checkout', d);
     el.style.display = '';
     el.innerHTML = `
       <div style="background:var(--surface);border-radius:12px;border:1px solid var(--border);border-left:3px solid var(--text3);overflow:hidden">
         <div onclick="toggleDiarioAnterior()" role="button" tabindex="0" onkeydown="if(event.key==='Enter')toggleDiarioAnterior()" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 14px;cursor:pointer;user-select:none">
           <i class="ti ti-history" aria-hidden="true"></i>
           <span style="font-weight:800;font-size:13px;flex:1;min-width:180px">Turno anterior — ${escHtml(ant.turno)} · ${fmtData(ant.data)} · ${escHtml(ant.supervisor||'—')}</span>
-          ${chip('Sep.', (d.separacao?.concluidos||0)+'/'+(d.separacao?.total||0))}
-          ${chip('Check.', (d.checkout?.concluidos||0)+'/'+(d.checkout?.total||0))}
+          ${chip('Sep.', `${sepN[0][0]} impressos · ${sepN[1][0]} concluídos · ${sepN[2][0]} pendentes`)}
+          ${chip('Check.', `${ckN[0][0]} · ${ckN[1][0]} concluídos · ${ckN[2][0]} pendentes`)}
           ${chip('Não encontr.', nao, nao>0?'var(--red)':'')}
           <span id="diario-ant-seta" style="opacity:.5;transition:transform .2s;display:flex"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></span>
         </div>
@@ -1356,6 +1406,8 @@ function _diarioAplicarBloqueio(bloqueado) {
   const btnEnviar = document.getElementById('btn-enviar-diario');
   if (btnSalvar) btnSalvar.disabled = bloqueado;
   if (btnEnviar) btnEnviar.disabled = bloqueado;
+  document.querySelectorAll('.dg-btn-setor').forEach(b => { b.disabled = bloqueado; });
+  _diarioAplicarRestricao();
 }
 
 // manterSalvo (botão "Atualizar"): recalcula os números ao vivo SEM largar o diário já salvo — antes o botão
@@ -1423,7 +1475,7 @@ async function carregarDadosDiario(manterSalvo, seq) {
 // Persiste data+turno+dados+observações no backend. Usado tanto pelo botão
 // "Salvar rascunho" quanto silenciosamente por enviarDiario() — pra garantir
 // que o que é enviado pra validação seja sempre o snapshot mais recente.
-async function _persistirDiario() {
+async function _persistirDiario(setor) {
   const data = document.getElementById('diario-data')?.value;
   const turno = document.getElementById('diario-turno')?.value;
   if (!data || !turno) { toast('Selecione data e turno','aviso'); return null; }
@@ -1438,13 +1490,26 @@ async function _persistirDiario() {
     const res = await fetch(`${API}/diario`, {
       method: 'POST', credentials: 'include',
       headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ data, turno, dados: window._dadosDiario||{}, observacoes, leu_anterior: _diarioLeuAnterior })
+      body: JSON.stringify({ data, turno, dados: window._dadosDiario||{}, observacoes, leu_anterior: _diarioLeuAnterior, setor: setor || undefined })
     });
     const r = await res.json();
     if (!res.ok) { toast(r.erro||'Erro ao salvar','erro'); return null; }
     _diarioAtualId = r.id;
+    if (r.autores) window._dadosDiario = { ...(window._dadosDiario||{}), autores: r.autores };
     return r;
   } catch(e) { toast('Erro ao salvar','erro'); return null; }
+}
+
+// Cada setor salva só o seu pedaço: o servidor grava os números e a observação daquele setor e registra
+// quem salvou. Os outros setores (que outras pessoas podem ter salvo) não são tocados.
+async function salvarSetorDiario(setor) {
+  const r = await _persistirDiario(setor);
+  if (!r) return;
+  const rot = { separacao:'Separação', checkout:'Checkout', embalagem:'Embalagem', reposicao:'Reposição' }[setor] || setor;
+  toast(`${rot} salvo.`, 'sucesso');
+  atualizarStatusBanner('rascunho');
+  if (typeof window._dgAtualizarAutores === 'function') window._dgAtualizarAutores();
+  await carregarListaDiarios();
 }
 
 async function salvarDiario() {
@@ -1530,10 +1595,13 @@ function enviarDiario() {
 // ── Verifica se há validação pendente ou atrasada esperando este supervisor ────
 async function verificarValidacaoPendente() {
   try {
+    if (_diarioSetoresPermitidos()) {   // quem é de setor não valida: só o supervisor do turno seguinte
+      const e0 = document.getElementById('diario-validacao-pendente'); if (e0) e0.style.display = 'none'; return;
+    }
     const val = await apiFetch('/diario/validacao/pendente');
     const el = document.getElementById('diario-validacao-pendente');
     if (!el) return;
-    if (!val) { el.style.display='none'; return; }
+    if (!val || _diarioSetoresPermitidos()) { el.style.display='none'; return; }
     _validacaoId = val.validacao_id;
     const atrasada = val.atrasada;
     const validCor = atrasada ? 'var(--amber)' : 'var(--indigo)';
@@ -1614,18 +1682,14 @@ async function abrirModalValidacao() {
       ${geral ? `<div style="margin-top:10px"><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.4px">Observação geral do turno</div><div style="font-size:12px;color:var(--text2);white-space:pre-line">${escHtml(geral)}</div></div>` : ''}`;
 
     // O que cada setor registrou (números + observação) para o item correspondente
-    const num = (v, t, rot) => `<span style="background:var(--surface2);border-radius:6px;padding:3px 8px;font-size:12px"><b>${v}</b>${t != null ? '/' + t : ''} <span style="color:var(--text3)">${rot}</span></span>`;
-    const DETALHE = {
-      sep_ok: { nums: [num(d.separacao?.concluidos||0, d.separacao?.total||0, 'separados')], obs: obs.separacao },
-      emb_ok: { nums: [num(d.embalagem?.embalados||0, d.embalagem?.total||0, 'embalados')], obs: obs.embalagem },
-      ck_ok:  { nums: [num(d.checkout?.concluidos||0, d.checkout?.total||0, 'no checkout')], obs: obs.checkout },
-      rep_ok: { nums: [num(d.reposicao?.resolvidas||0, d.reposicao?.total||0, 'repostas'), num(d.reposicao?.nao_encontrados||0, null, 'não encontrados')], obs: obs.reposicao },
-    };
+    const num = ([v, rot]) => `<span style="background:var(--surface2);border-radius:6px;padding:3px 8px;font-size:12px"><b>${v}</b> <span style="color:var(--text3)">${rot}</span></span>`;
+    const setorDe = chave => ({ nums: _diarioNumeros(chave, d).map(num), obs: obs[chave], autor: _diarioAutorHtml(d, chave) });
+    const DETALHE = { sep_ok: setorDe('separacao'), emb_ok: setorDe('embalagem'), ck_ok: setorDe('checkout'), rep_ok: setorDe('reposicao') };
     const detalheHtml = id => {
       const x = DETALHE[id]; if (!x) return '';
       const o = x.obs && String(x.obs).trim();
       return `<div style="padding:10px 14px;border-top:1px solid var(--border)">
-        <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">O que o turno registrou</div>
+        <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">O que o turno registrou ${x.autor ? '· ' + x.autor : ''}</div>
         <div style="display:flex;flex-wrap:wrap;gap:6px">${x.nums.join('')}</div>
         <div style="font-size:12px;color:${o ? 'var(--text2)' : 'var(--text3)'};white-space:pre-line;margin-top:8px">${o ? escHtml(x.obs) : 'Sem observações neste setor.'}</div>
         <div id="fotos-turno-${id}"></div>

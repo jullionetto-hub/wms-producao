@@ -32,6 +32,20 @@
   const quemValida = { Manha: 'Tarde', Tarde: 'Noite', Noite: 'Manha' };
   const dataHora = v => v ? new Date(v).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
 
+  const ROT_SETOR = { separacao: 'Separação', checkout: 'Checkout', embalagem: 'Embalagem', reposicao: 'Reposição', geral: 'Geral' };
+  const CHAVE_SETOR = { sep: 'separacao', ck: 'checkout', emb: 'embalagem', rep: 'reposicao' };
+  // quem preencheu cada setor: [{nome, setores:['Separação',...]}]; diários antigos (sem autor por setor) caem no último que salvou
+  function quemPreencheu(d) {
+    const aut = (d && d.autores) || {}, mapa = [];
+    Object.keys(ROT_SETOR).forEach(k => {
+      const a = aut[k]; if (!a || !a.nome) return;
+      let p = mapa.find(x => x.nome === a.nome); if (!p) { p = { nome: a.nome, setores: [] }; mapa.push(p); }
+      p.setores.push(ROT_SETOR[k]);
+    });
+    return mapa.length ? mapa : (d && d.supervisor ? [{ nome: d.supervisor, setores: [] }] : []);
+  }
+  const preencheuHtml = d => { const l = quemPreencheu(d); return l.length ? l.map(p => `<b>${esc(p.nome)}</b>${p.setores.length ? ' <span class="dg-mudo">(' + esc(p.setores.join(', ')) + ')</span>' : ''}`).join(' · ') : '<b>—</b>'; };
+
   // Quadro da GESTÃO: uma coluna por turno, com quem preencheu, quem verificou e a situação
   function quadroGestaoHtml(lista, dataISO) {
     const doDia = (lista || []).filter(d => d && d.data === dataISO);
@@ -46,17 +60,20 @@
       if (d.status === 'validado') verificou = `<b>${esc(d.validador || '—')}</b>${d.turno_validador ? ' (' + esc(rot(d.turno_validador)) + ')' : ''}${d.validado_em ? ' · ' + dataHora(d.validado_em) : ''}`;
       else if (d.status === 'enviado' || d.status === 'expirado') verificou = `<span class="dg-amb">ainda não verificado — aguarda o turno ${esc(rot(quemValida[chaveTurno(d.turno)]))}</span>`;
       else verificou = '<span class="dg-mudo">diário ainda não enviado</span>';
-      const vistos = (d.vistos || []).filter(v => v && v.nome && v.nome !== d.supervisor);
+      // quem viu: nome e turno de cada pessoa (sem repetir; quem preencheu não conta como "visto")
+      const preenchedores = quemPreencheu(d).map(p => p.nome);
+      const vistos = []; (d.vistos || []).forEach(v => { if (v && v.nome && !preenchedores.includes(v.nome) && !vistos.some(x => x.nome === v.nome)) vistos.push(v); });
+      const nomesVistos = vistos.map(v => `<b>${esc(v.nome)}</b>${v.turno ? ' <span class="dg-mudo">(' + esc(rot(v.turno)) + ')</span>' : ''}`).join(', ');
       return `<div class="dg-q-c">${cab}<span class="dg-chip ${st.c}">${esc(st.t)}</span>
-        <div class="dg-q-l"><span class="dg-mudo">${d.status === 'rascunho' ? 'Preenchendo' : 'Preencheu'}</span> <b>${esc(d.supervisor || '—')}</b></div>
+        <div class="dg-q-l"><span class="dg-mudo">${d.status === 'rascunho' ? 'Preenchendo' : 'Preencheu'}</span> ${preencheuHtml(d)}</div>
         <div class="dg-q-l"><span class="dg-mudo">Verificou</span> ${verificou}</div>
-        ${vistos.length ? `<div class="dg-q-l dg-mudo" title="${esc(vistos.map(v => v.nome).join(', '))}">visto por ${vistos.length} ${vistos.length > 1 ? 'pessoas' : 'pessoa'}</div>` : ''}</div>`;
+        <div class="dg-q-l"><span class="dg-mudo">${vistos.length ? 'Visto por' : 'Ainda não visto por outras pessoas'}</span> ${nomesVistos}</div></div>`;
     };
     return `<div class="dg-q-h"><b>Quem preencheu e quem verificou</b><span class="dg-mudo"> · ${typeof fmtData === 'function' ? fmtData(dataISO) : dataISO} · visível só para a gestão</span></div>
       <div class="dg-q-g">${TURNOS.map(col).join('')}</div>`;
   }
 
-  const api = { TXT_OK, SETORES, naoLidos, estadoSetor, resumoSetores, abaInicial, textoRecados, quadroGestaoHtml, versaoRecado };
+  const api = { TXT_OK, SETORES, quemPreencheu, naoLidos, estadoSetor, resumoSetores, abaInicial, textoRecados, quadroGestaoHtml, versaoRecado };
   if (typeof globalThis !== 'undefined') globalThis.DiarioAbas = api;
   if (typeof document === 'undefined' || !document.getElementById) return;   // fora do navegador (testes): só as funções puras
 
@@ -87,6 +104,9 @@
   .dg-alerta{width:22px;height:22px;border-radius:50%;background:var(--red);color:#fff;font-weight:800;font-size:13px;display:grid;place-items:center;animation:dgpulsa 1.8s infinite;flex:none}
   .dg-alerta[hidden]{display:none}
   @keyframes dgpulsa{0%{box-shadow:0 0 0 0 rgba(201,82,79,.6)}70%{box-shadow:0 0 0 8px rgba(201,82,79,0)}100%{box-shadow:0 0 0 0 rgba(201,82,79,0)}}
+  .dg-salvar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:8px 0 2px;font-size:12px;color:var(--text2)}
+  .dg-btn-setor{border:1px solid var(--border);background:var(--surface2);color:var(--text);border-radius:8px;padding:6px 14px;font-size:12.5px;font-weight:500;cursor:pointer}
+  .dg-btn-setor:hover{border-color:var(--text2)} .dg-btn-setor:disabled{opacity:.5;cursor:not-allowed}
   .dg-tela{display:none} .dg-tela.on{display:block}
   .dg-intro{color:var(--text2);margin:0 0 14px;font-size:14px} .dg-intro b{color:var(--text)}
   .dg-vazio{background:var(--surface);border:1px dashed var(--border);border-radius:12px;padding:22px;text-align:center;color:var(--text3);margin-bottom:14px}
@@ -215,6 +235,11 @@
       const ta = $('diario-obs-' + k), obs = ta && ta.closest('.diario-obs'); if (!obs) return;
       const bloco = mk('div', null, 'dg-resp', `<button type="button" class="s" data-k="${k}" data-r="ok">✔ Tudo certo</button><button type="button" class="n" data-k="${k}" data-r="problema">⚠ Teve problema</button><span class="dg-est" id="dg-est-${k}"></span>`);
       obs.before(bloco);
+      // cada setor salva o seu e mostra quem foi o último a salvar; o supervisor envia o diário no fim
+      // a tela é montada ANTES do login: quem pode salvar o quê só se sabe depois (ver podeSalvar em atualizarAutores)
+      const lin = mk('div', null, 'dg-salvar', `<button type="button" class="dg-btn-setor" data-k="${k}">Salvar ${esc(nomeSetor(k))}</button><span class="dg-aut" id="dg-aut-${k}"></span>`);
+      obs.after(lin);
+      lin.querySelector('button').onclick = () => { if (typeof salvarSetorDiario === 'function') salvarSetorDiario(CHAVE_SETOR[k]); };
       bloco.querySelector('.s').onclick = () => { ta.value = TXT_OK; ta.dispatchEvent(new Event('input', { bubbles: true })); atualizar(); };
       bloco.querySelector('.n').onclick = () => { if (estadoSetor(ta.value) === 'ok') { ta.value = ''; ta.dispatchEvent(new Event('input', { bubbles: true })); } obs.dataset.problema = '1'; atualizar(); ta.focus(); };
     });
@@ -238,8 +263,30 @@
     atualizar();
   }
 
+  const nomeSetor = k => (SETORES.find(s => s[0] === k) || [k, k])[1];
+  // "preenchido por X · 12/11 22:10" embaixo de cada setor (lê dados.autores do diário aberto)
+  // gestão só acompanha; quem é de um setor salva só o seu; supervisor salva qualquer um
+  function podeSalvar(k) {
+    if (ehGestor()) return false;
+    const meus = typeof _diarioSetoresPermitidos === 'function' ? _diarioSetoresPermitidos() : null;   // null = todos
+    return !meus || meus.includes(CHAVE_SETOR[k]);
+  }
+  function atualizarAutores() {
+    const aut = (window._dadosDiario && window._dadosDiario.autores) || {};
+    SETORES.forEach(([k]) => {
+      const b = document.querySelector(`.dg-btn-setor[data-k="${k}"]`); if (b) b.style.display = podeSalvar(k) ? '' : 'none';
+      const resp = document.querySelector(`.dg-resp [data-k="${k}"]`);   // "Tudo certo / Teve problema" só no setor que a pessoa pode preencher
+      if (resp) resp.parentElement.querySelectorAll('button').forEach(x => { x.disabled = !podeSalvar(k); });
+      const e = $('dg-aut-' + k); if (!e) return;
+      const a = aut[CHAVE_SETOR[k]];
+      e.innerHTML = a && a.nome ? `preenchido por <b>${esc(a.nome)}</b>${a.em ? ' · ' + dataHora(a.em) : ''}` : '<span class="dg-mudo">ninguém salvou este setor ainda</span>';
+    });
+  }
+  window._dgAtualizarAutores = atualizarAutores;
+
   function atualizar() {
     if (!montado) return;
+    atualizarAutores();
     // título e botões de turno
     const t = chaveTurno(turnoSel());
     const tit = $('dg-titulo'); if (tit) tit.innerHTML = `Diário da <span>${esc(ROTULO[t] || t)}</span> · ${typeof fmtData === 'function' ? fmtData(dataSel()) : dataSel()}`;
@@ -253,7 +300,7 @@
     const val = $('diario-validacao-pendente'), pend = !!val && val.style.display !== 'none' && val.innerHTML.trim() !== '';
     const ev = $('dg-est-verificar');
     if (ev) { const cd = $('val-countdown'); ev.textContent = pend ? ('1 pendente' + (cd && cd.textContent ? ' · ' + (/^\d/.test(cd.textContent) ? 'faltam ' : '') + cd.textContent : '')) : 'nada pendente'; ev.className = pend ? 'am' : 'vd'; }
-    const vv = $('dg-vazio-ver'); if (vv) vv.hidden = pend;
+    const vv = $('dg-vazio-ver'); if (vv) { vv.hidden = pend; vv.textContent = (ehGestor() || (typeof _diarioSetoresPermitidos === 'function' && _diarioSetoresPermitidos())) ? 'A verificação do turno anterior é feita pelo supervisor do turno seguinte.' : 'Nenhum diário aguardando a sua verificação ✓'; }
     // 3 preencher
     const valores = {}; SETORES.forEach(([k]) => { const ta = $('diario-obs-' + k); valores[k] = ta ? ta.value : ''; });
     const rs = resumoSetores(valores);

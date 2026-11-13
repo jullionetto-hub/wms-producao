@@ -7,7 +7,7 @@
 import express from 'express';
 const router  = express.Router();
 import { db, pool } from '../lib/db';
-import { requerAuth, requerPerfil } from '../lib/auth';
+import { requerAuth, requerPerfil, requerDiario } from '../lib/auth';
 import { validarId, normalizarTurno, perfisPermitidos } from '../lib/helpers';
 import { registrarAuditoria } from '../lib/auditoria';
 import type { Linha } from '../types/db';
@@ -49,7 +49,7 @@ const turnosDoCorpo = (body: any): string | null | undefined => {
 // Recados ativos, mais novos primeiro, já com os ids das fotos
 // turnos: [] = todos. O gestor vê TODOS (precisa poder editar/encerrar mesmo os de outro turno); os demais, só os do turno
 // que estão olhando (?turno=Manha|Tarde|Noite = o seletor do Diário; sem ele, o turno do próprio usuário).
-router.get('/diario-recados', requerAuth, requerPerfil('supervisor'), async (req, res) => {
+router.get('/diario-recados', requerAuth, requerDiario, async (req, res) => {
   try {
     const todos = await db.all(`SELECT id, titulo, texto, autor, turnos, criado_em, editado_em FROM diario_recados WHERE ativo=true ORDER BY criado_em DESC, id DESC`);
     todos.forEach(r => { r.turnos = r.turnos ? String(r.turnos).split(',') : []; });
@@ -123,7 +123,7 @@ router.post('/diario-recados/:id/fotos', requerAuth, requerPerfil('gestor'), asy
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
-router.get('/diario-recados/foto/:fotoId', requerAuth, requerPerfil('supervisor'), async (req, res) => {
+router.get('/diario-recados/foto/:fotoId', requerAuth, requerDiario, async (req, res) => {
   try {
     const id = validarId(req.params.fotoId); if (!id) return res.status(400).json({ erro: 'ID inválido' });
     const f = await db.get<Pick<Linha<'diario_recado_fotos'>, 'mime' | 'dados'>>('SELECT mime, dados FROM diario_recado_fotos WHERE id=$1', [id]);

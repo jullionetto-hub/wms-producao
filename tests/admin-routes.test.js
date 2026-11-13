@@ -129,7 +129,10 @@ describe('Admin — Autorização', () => {
     expect(res.status).toBe(401);
   });
 
-  test.each(ALL_ADMIN_ROUTES)('$method $path como separador → 403', async ({ method, path }) => {
+  // Diário de Bordo: quem trabalha num setor (separador, repositor, embalador, checkout) passa a consultar e a
+  // salvar o próprio setor (testado em "perfil de setor"); enviar e validar continuam só do supervisor.
+  const DIARIO_DE_SETOR = r => /^\/diario(\/|$)/.test(r.path) && !/\/enviar$|\/validacao/.test(r.path);
+  test.each(ALL_ADMIN_ROUTES.filter(r => !DIARIO_DE_SETOR(r)))('$method $path como separador → 403', async ({ method, path }) => {
     const res = await sepAgent[method](path).send({});
     expect(res.status).toBe(403);
   });
@@ -372,14 +375,14 @@ describe('Admin — Diário de Bordo', () => {
     mockPool.query.mockResolvedValueOnce({ rows: [{ id: 42 }] });
     const res = await agent.post('/diario').send({ data: '2026-05-09', turno: 'Manha', dados: {} });
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ mensagem: 'Diario criado!', id: 42 });
+    expect(res.body).toMatchObject({ mensagem: 'Diario criado!', id: 42 });
   });
 
   test('POST /diario atualiza diário existente (não enviado/validado)', async () => {
     mockDb.get.mockResolvedValueOnce({ id: 5, supervisor: 'X', status: 'rascunho' });
     const res = await agent.post('/diario').send({ data: '2026-05-09', turno: 'Manha', dados: {} });
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ mensagem: 'Diario atualizado!', id: 5 });
+    expect(res.body).toMatchObject({ mensagem: 'Diario atualizado!', id: 5 });
   });
 
   test('POST /diario bloqueia edição de diário já enviado → 403', async () => {
@@ -556,7 +559,7 @@ describe('Admin — Diário: Envio e Validação', () => {
     expect(chamada[0]).toMatch(/d\.turno = \$3/);
   });
 
-  test('GET /diario/validacao/pendente gestor enxerga qualquer turno (sem filtro de turno)', async () => {
+  test('gestão só acompanha: não tem validação pendente e não pode validar', async () => {
     const gestor = request.agent(app);
     mockDb.get.mockResolvedValueOnce({
       id: 9, nome: 'Gestor Teste', login: 'gestor1', perfil: 'gestor', senha_hash: HASH_ADMIN,
@@ -564,10 +567,53 @@ describe('Admin — Diário: Envio e Validação', () => {
     });
     await gestor.post('/auth/login').send({ login: 'gestor1', senha: SENHA_ADMIN, perfil: 'gestor' });
     mockDb.get.mockClear();
-    await gestor.get('/diario/validacao/pendente');
-    const chamada = mockDb.get.mock.calls.find(c => /diario_validacoes/.test(c[0]));
-    expect(chamada).toBeDefined();
-    expect(chamada[0]).not.toMatch(/d\.turno = \$3/);
+    const pend = await gestor.get('/diario/validacao/pendente');
+    expect(pend.status).toBe(200);
+    expect(pend.body).toBeNull();
+    expect(mockDb.get.mock.calls.find(c => /diario_validacoes/.test(c[0]))).toBeUndefined();   // nem consulta
+    const val = await gestor.post('/diario/validacao/1/validar').send({ itens: [] });
+    expect(val.status).toBe(403);
+  });
+
+  describe('perfil de setor (reposição) no Diário de Bordo', () => {
+    let rep;
+    beforeAll(async () => {
+      rep = request.agent(app);
+      mockDb.get.mockResolvedValueOnce({
+        id: 11, nome: 'Repositor Teste', login: 'rep1', perfil: 'repositor', senha_hash: HASH_ADMIN,
+        subtipo_repositor: 'geral', perfis_acesso: '', turno: 'Manha', status: 'ativo', senha_temporaria: false,
+      });
+      await rep.post('/auth/login').send({ login: 'rep1', senha: SENHA_ADMIN, perfil: 'repositor' });
+    });
+
+    test('consulta o diário (lista sem os "vistos")', async () => {
+      mockDb.all.mockResolvedValueOnce([{ id: 1, data: '2026-11-12', turno: 'Manha', vistos: [{ nome: 'X' }] }]);
+      const res = await rep.get('/diario');
+      expect(res.status).toBe(200);
+      expect(res.body[0].vistos).toBeUndefined();
+    });
+    test('salva o próprio setor', async () => {
+      mockDb.get.mockResolvedValueOnce(null);
+      mockPool.query.mockResolvedValueOnce({ rows: [{ id: 50 }] });
+      const res = await rep.post('/diario').send({ data: '2026-11-12', turno: 'Manha', setor: 'reposicao', dados: { reposicao: { total: 3 } }, observacoes: { reposicao: 'ok' } });
+      expect(res.status).toBe(200);
+      expect(res.body.autores.reposicao.nome).toBe('Repositor Teste');
+    });
+    test('não salva setor dos outros nem o diário todo (sem setor)', async () => {
+      const outro = await rep.post('/diario').send({ data: '2026-11-12', turno: 'Manha', setor: 'separacao', dados: {} });
+      expect(outro.status).toBe(403);
+      const todo = await rep.post('/diario').send({ data: '2026-11-12', turno: 'Manha', dados: {} });
+      expect(todo.status).toBe(403);
+    });
+    test('não envia nem valida diário', async () => {
+      expect((await rep.post('/diario/1/enviar')).status).toBe(403);
+      expect((await rep.get('/diario/validacao/pendente')).status).toBe(403);
+      expect((await rep.post('/diario/validacao/1/validar').send({ itens: [] })).status).toBe(403);
+    });
+    test('só anexa foto do próprio setor', async () => {
+      const r = await rep.post('/diario/1/fotos').send({ origem: 'diario', secao: 'separacao', imagem: 'data:image/png;base64,AAAA' });
+      expect(r.status).toBe(403);
+    });
   });
 
   test('GET /diario/:id/validacao com id inválido → 400', async () => {

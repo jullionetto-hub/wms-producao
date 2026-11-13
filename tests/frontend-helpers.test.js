@@ -25,6 +25,7 @@ describe('_diarioObsHtml (observações do diário para o turno seguinte)', () =
   const ctx = {};
   vm.createContext(ctx);
   vm.runInContext(codigo['config.js'].match(/function escHtml[\s\S]*?\n}\n/)[0], ctx);
+  vm.runInContext(codigo['auth.js'].match(/function _diarioAutorHtml[\s\S]*?\n}\n/)[0], ctx);
   vm.runInContext(codigo['auth.js'].match(/function _diarioObsHtml[\s\S]*?\n}\n/)[0], ctx);
 
   test('mostra todas as seções preenchidas, não só a geral', () => {

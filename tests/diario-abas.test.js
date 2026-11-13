@@ -83,9 +83,15 @@ describe('quadro da gestao: quem preencheu e quem verificou', () => {
     expect(html).toContain('Preenchendo</span> <b>Leiza Benta Rodrigues');
     expect(html).toContain('diário ainda não enviado');
   });
-  test('quem so viu (nao e o autor) aparece como "visto por"; o autor nao conta', () => {
-    expect(html).toContain('visto por 1 pessoa');
-    expect(html).toContain('title="Leiza Benta Rodrigues"');
+  test('quem so viu (nao e o autor) aparece com NOME e turno; o autor nao conta', () => {
+    expect(html).toMatch(/Visto por<\/span> <b>Leiza Benta Rodrigues<\/b> <span class="dg-mudo">\(Noite\)/);
+    expect(html).not.toContain('visto por 1 pessoa');
+  });
+  test('preencheu: nome de cada colaborador com os setores que ele salvou', () => {
+    const h = A.quadroGestaoHtml([{ id: 5, data: '2026-11-11', turno: 'Noite', supervisor: 'Leiza', status: 'rascunho',
+      autores: { separacao: { nome: 'Ana' }, embalagem: { nome: 'Ana' }, checkout: { nome: 'Bia' } }, vistos: [] }], '2026-11-11');
+    expect(h).toContain('<b>Ana</b> <span class="dg-mudo">(Separação, Embalagem)</span>');
+    expect(h).toContain('<b>Bia</b> <span class="dg-mudo">(Checkout)</span>');
   });
   test('nao mistura diarios de outro dia', () => {
     expect(html).not.toContain('Outro Dia');

@@ -1,7 +1,7 @@
 import express from 'express';
 const router = express.Router();
 import { db, pool } from '../../lib/db';
-import { requerAuth, requerPerfil } from '../../lib/auth';
+import { requerAuth, requerPerfil, ehGestao } from '../../lib/auth';
 import { validarId, normalizarTurno } from '../../lib/helpers';
 import { registrarAuditoria } from '../../lib/auditoria';
 import type { Linha } from '../../types/db';
@@ -24,6 +24,7 @@ router.post('/diario/:id/enviar', requerAuth, requerPerfil('supervisor'), async 
   try {
     const id = validarId(req.params.id);
     if (!id) return res.status(400).json({ erro: 'ID inválido' });
+    if (ehGestao(req)) return res.status(403).json({ erro: 'A gestão apenas acompanha o diário; quem envia é o supervisor do turno.' });
     const diario = await db.get<Linha<'diario_bordo'>>('SELECT * FROM diario_bordo WHERE id=$1', [id]);
     if (!diario) return res.status(404).json({ erro: 'Diário não encontrado' });
     if (diario.status === 'enviado' || diario.status === 'validado') {
@@ -31,9 +32,11 @@ router.post('/diario/:id/enviar', requerAuth, requerPerfil('supervisor'), async 
     }
     const agora = new Date();
     const prazo  = new Date(agora.getTime() + PRAZO_VALIDACAO_DIARIO_MIN * 60 * 1000);
+    // quem envia passa a constar como o supervisor do diário (os setores continuam com os autores de cada um)
+    const quemEnviou = req.session?.usuario?.nome || diario.supervisor;
     await pool.query(
-      `UPDATE diario_bordo SET status='enviado', enviado_em=$1, prazo_validacao=$2 WHERE id=$3`,
-      [agora, prazo, id]
+      `UPDATE diario_bordo SET status='enviado', enviado_em=$1, prazo_validacao=$2, supervisor=$4 WHERE id=$3`,
+      [agora, prazo, id, quemEnviou]
     );
     // Cria/recria registro de validação pendente
     await pool.query(
@@ -48,7 +51,7 @@ router.post('/diario/:id/enviar', requerAuth, requerPerfil('supervisor'), async 
       diario_id: id,
       data: diario.data,
       turno: diario.turno,
-      supervisor: diario.supervisor,
+      supervisor: quemEnviou,
       prazo: prazo.toISOString(),
     });
     await registrarAuditoria(req, 'DIARIO_ENVIADO', 'diario_bordo', id, null,
@@ -76,9 +79,9 @@ router.get('/diario/validacao/pendente', requerAuth, requerPerfil('supervisor'),
     const turnoAtual = normalizarTurno(req.session?.usuario?.turno);
     // Manhã valida Noite, Tarde valida Manhã, Noite valida Tarde
     const PREV_TURNO: Record<string, string> = { Tarde: 'Manha', Noite: 'Tarde', Manha: 'Noite' };
-    // Gestor acompanha qualquer turno; supervisor só valida o turno anterior ao seu
-    const ehGestor = req.session?.usuario?.perfil === 'gestor';
-    const turnoParaValidar = ehGestor ? null : (PREV_TURNO[turnoAtual] || null);
+    // Gestão só acompanha: nunca tem validação pendente. Supervisor só valida o turno anterior ao seu.
+    if (ehGestao(req)) return res.json(null);
+    const turnoParaValidar = PREV_TURNO[turnoAtual] || null;
 
     // Busca pendente OU expirado — janela de 2 dias (cobre turno que cruza meia-noite)
     // Filtra pela data do diário (campo TEXT 'YYYY-MM-DD') — mais confiável que criado_em
@@ -129,6 +132,7 @@ router.get('/diario/:id/validacao', requerAuth, requerPerfil('supervisor'), asyn
 
 // ── POST /diario/validacao/:id/validar — Submete a validação ─────────────────
 router.post('/diario/validacao/:id/validar', requerAuth, requerPerfil('supervisor'), async (req, res) => {
+  if (ehGestao(req)) return res.status(403).json({ erro: 'A gestão apenas acompanha o diário; a validação é do supervisor do turno seguinte.' });
   const client = await pool.connect();
   try {
     const id = validarId(req.params.id);

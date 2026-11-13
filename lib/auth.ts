@@ -63,3 +63,34 @@ const _cleanupInterval = setInterval(() => {
 if (_cleanupInterval.unref) _cleanupInterval.unref();
 
 export const _loginAttempts = loginAttempts;
+
+// ── Diário de Bordo: quem entra e em qual setor ───────────────────────────────
+// Supervisor e gestor acessam o diário inteiro. Quem trabalha num setor (separação, reposição,
+// embalagem, checkout) entra no diário só para preencher/consultar o SEU setor — nunca para enviar
+// o diário nem validar o do turno anterior (isso continua sendo do supervisor).
+export const SETOR_DIARIO_DO_PERFIL: Record<string, string> = {
+  separador: 'separacao', repositor: 'reposicao', embalador: 'embalagem', checkout: 'checkout',
+};
+
+// null = acesso total (supervisor/gestor); lista = só esses setores; [] = sem acesso ao diário
+export function setoresDiarioDoUsuario(user: { perfil?: string; perfis_acesso?: string | null } | undefined): string[] | null {
+  if (!user) return [];
+  const perfis = [user.perfil || '', ...String(user.perfis_acesso || '').split(',').map(s => s.trim())].filter(Boolean);
+  if (perfis.includes('supervisor') || perfis.includes('gestor')) return null;
+  return [...new Set(perfis.map(p => SETOR_DIARIO_DO_PERFIL[p]).filter(Boolean))];
+}
+
+export function requerDiario(req: Request, res: Response, next: NextFunction) {
+  if (!req.session?.usuario) return res.status(401).json({ erro: 'Não autenticado.' });
+  const setores = setoresDiarioDoUsuario(req.session.usuario);
+  if (setores && !setores.length) return res.status(403).json({ erro: 'Acesso negado. Seu perfil não tem acesso ao Diário de Bordo.' });
+  (req as any).setoresDiario = setores;   // null = todos
+  next();
+}
+
+// Gestão (perfil gestor sem o perfil supervisor) só acompanha o Diário: não preenche, não envia, não valida.
+export function ehGestao(req: Request): boolean {
+  const u: any = req.session?.usuario || {};
+  const perfis = [u.perfil, ...String(u.perfis_acesso || '').split(',').map((s: string) => s.trim())];
+  return perfis.includes('gestor') && !perfis.includes('supervisor');
+}
