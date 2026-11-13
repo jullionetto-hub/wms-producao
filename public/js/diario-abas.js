@@ -24,6 +24,13 @@
     const faltam = SETORES.filter(([k]) => estadoSetor(valores[k]) === null).map(([, nome]) => nome);
     return { respondidas: SETORES.length - faltam.length, total: SETORES.length, faltam };
   }
+  // setores já salvos por alguém (dados.autores) — é o que diz se o diário está pronto para o supervisor enviar
+  const CHAVE_SETOR_PURA = { sep: 'separacao', ck: 'checkout', emb: 'embalagem', rep: 'reposicao' };
+  function resumoSalvos(autores) {
+    const aut = autores || {};
+    const faltam = SETORES.filter(([k]) => !(aut[CHAVE_SETOR_PURA[k]] && aut[CHAVE_SETOR_PURA[k]].nome)).map(([, nome]) => nome);
+    return { salvos: SETORES.length - faltam.length, total: SETORES.length, faltam };
+  }
   function abaInicial(o) { return o.novos > 0 ? 'recados' : (o.pendente ? 'verificar' : 'preencher'); }
   function textoRecados(total, novos) { return novos > 0 ? novos + (novos > 1 ? ' novos' : ' novo') : (total ? 'tudo lido' : 'nenhum recado'); }
   const chaveTurno = t => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
@@ -73,7 +80,7 @@
       <div class="dg-q-g">${TURNOS.map(col).join('')}</div>`;
   }
 
-  const api = { TXT_OK, SETORES, quemPreencheu, naoLidos, estadoSetor, resumoSetores, abaInicial, textoRecados, quadroGestaoHtml, versaoRecado };
+  const api = { TXT_OK, SETORES, quemPreencheu, resumoSalvos, naoLidos, estadoSetor, resumoSetores, abaInicial, textoRecados, quadroGestaoHtml, versaoRecado };
   if (typeof globalThis !== 'undefined') globalThis.DiarioAbas = api;
   if (typeof document === 'undefined' || !document.getElementById) return;   // fora do navegador (testes): só as funções puras
 
@@ -216,10 +223,10 @@
     const tR = mk('section', 'dg-t-recados', 'dg-tela'), tV = mk('section', 'dg-t-verificar', 'dg-tela'),
       tP = mk('section', 'dg-t-preencher', 'dg-tela'), tH = mk('section', 'dg-t-historico', 'dg-tela');
     tR.append(mk('p', null, 'dg-intro', '<b>Avisos da gestão</b> que valem para o turno selecionado. Leia antes de começar.'), rec, mk('div', 'dg-vazio-rec', 'dg-vazio', 'Nenhum recado para este turno.'));
-    tV.append(mk('p', null, 'dg-intro', '<b>Passo 1:</b> leia o que o turno anterior registrou (abaixo). <b>Passo 2:</b> abra o checklist e responda as perguntas.'),
+    tV.append(mk('p', null, 'dg-intro', '<b>Passo 1:</b> leia o que o turno anterior registrou (abaixo). <b>Passo 2:</b> abra o diário e marque, em cada setor, tudo certo ou teve problema.'),
       val, mk('div', 'dg-vazio-ver', 'dg-vazio', 'Nenhum diário aguardando a sua verificação ✓'), ant);
     const barra = mk('div', 'dg-barra', null); barra.append(mk('div', 'dg-info', null), acoes);
-    tP.append(mk('p', null, 'dg-intro', 'Para cada setor, diga se <b>está tudo certo</b> ou se <b>teve problema</b>. Os números já vêm do sistema e você pode ajustar.'), ...grades, probl, obsGer, banner);
+    tP.append(mk('p', null, 'dg-intro', 'Cada setor confere os seus números, escreve as observações do turno e clica em <b>Salvar</b>. O supervisor envia o diário ao próximo turno no fim.'), ...grades, probl, obsGer, banner);
     tH.append(hist);
     // qualquer coisa que ainda estivesse no bloco antigo (além do cartão "Filtros", já esvaziado) vai junto: NADA é apagado
     [...miolo.children].filter(c => c !== filtros).forEach(c => tP.append(c));
@@ -233,15 +240,12 @@
     // "Tudo certo / Teve problema" em cada setor (só preenche/limpa o campo de observação que já existia)
     SETORES.forEach(([k]) => {
       const ta = $('diario-obs-' + k), obs = ta && ta.closest('.diario-obs'); if (!obs) return;
-      const bloco = mk('div', null, 'dg-resp', `<button type="button" class="s" data-k="${k}" data-r="ok">✔ Tudo certo</button><button type="button" class="n" data-k="${k}" data-r="problema">⚠ Teve problema</button><span class="dg-est" id="dg-est-${k}"></span>`);
-      obs.before(bloco);
+      // (sem "Tudo certo / Teve problema": quem preenche só escreve as observações; a conferência é de quem verifica)
       // cada setor salva o seu e mostra quem foi o último a salvar; o supervisor envia o diário no fim
       // a tela é montada ANTES do login: quem pode salvar o quê só se sabe depois (ver podeSalvar em atualizarAutores)
       const lin = mk('div', null, 'dg-salvar', `<button type="button" class="dg-btn-setor" data-k="${k}">Salvar ${esc(nomeSetor(k))}</button><span class="dg-aut" id="dg-aut-${k}"></span>`);
       obs.after(lin);
       lin.querySelector('button').onclick = () => { if (typeof salvarSetorDiario === 'function') salvarSetorDiario(CHAVE_SETOR[k]); };
-      bloco.querySelector('.s').onclick = () => { ta.value = TXT_OK; ta.dispatchEvent(new Event('input', { bubbles: true })); atualizar(); };
-      bloco.querySelector('.n').onclick = () => { if (estadoSetor(ta.value) === 'ok') { ta.value = ''; ta.dispatchEvent(new Event('input', { bubbles: true })); } obs.dataset.problema = '1'; atualizar(); ta.focus(); };
     });
 
     // observa o que o código antigo atualiza (recados, validação pendente, lista) para manter os sinais em dia
@@ -275,8 +279,6 @@
     const aut = (window._dadosDiario && window._dadosDiario.autores) || {};
     SETORES.forEach(([k]) => {
       const b = document.querySelector(`.dg-btn-setor[data-k="${k}"]`); if (b) b.style.display = podeSalvar(k) ? '' : 'none';
-      const resp = document.querySelector(`.dg-resp [data-k="${k}"]`);   // "Tudo certo / Teve problema" só no setor que a pessoa pode preencher
-      if (resp) resp.parentElement.querySelectorAll('button').forEach(x => { x.disabled = !podeSalvar(k); });
       const e = $('dg-aut-' + k); if (!e) return;
       const a = aut[CHAVE_SETOR[k]];
       e.innerHTML = a && a.nome ? `preenchido por <b>${esc(a.nome)}</b>${a.em ? ' · ' + dataHora(a.em) : ''}` : '<span class="dg-mudo">ninguém salvou este setor ainda</span>';
@@ -302,19 +304,9 @@
     if (ev) { const cd = $('val-countdown'); ev.textContent = pend ? ('1 pendente' + (cd && cd.textContent ? ' · ' + (/^\d/.test(cd.textContent) ? 'faltam ' : '') + cd.textContent : '')) : 'nada pendente'; ev.className = pend ? 'am' : 'vd'; }
     const vv = $('dg-vazio-ver'); if (vv) { vv.hidden = pend; vv.textContent = (ehGestor() || (typeof _diarioSetoresPermitidos === 'function' && _diarioSetoresPermitidos())) ? 'A verificação do turno anterior é feita pelo supervisor do turno seguinte.' : 'Nenhum diário aguardando a sua verificação ✓'; }
     // 3 preencher
-    const valores = {}; SETORES.forEach(([k]) => { const ta = $('diario-obs-' + k); valores[k] = ta ? ta.value : ''; });
-    const rs = resumoSetores(valores);
-    SETORES.forEach(([k]) => {
-      const ta = $('diario-obs-' + k), obs = ta && ta.closest('.diario-obs'), est = estadoSetor(valores[k]); if (!obs) return;
-      const bloco = obs.previousElementSibling; if (!bloco || !bloco.classList.contains('dg-resp')) return;
-      bloco.querySelector('.s').classList.toggle('on', est === 'ok'); bloco.querySelector('.n').classList.toggle('on', est === 'problema' || (est === null && obs.dataset.problema === '1'));
-      const mostraCampo = est === 'problema' || (est === null && obs.dataset.problema === '1');
-      obs.classList.toggle('dg-oculta', !mostraCampo);
-      if (est !== null) delete obs.dataset.problema;
-      const e = $('dg-est-' + k); if (e) { e.textContent = est === 'ok' ? '✓ respondido' : est === 'problema' ? '✓ com observação' : 'responder'; e.style.color = est ? 'var(--green)' : 'var(--amber)'; }
-    });
-    const info = $('dg-info'); if (info) info.innerHTML = rs.faltam.length ? `<b>${rs.respondidas} de ${rs.total}</b> setores respondidos · <span class="f">falta: ${rs.faltam.join(', ')}</span>` : `<b>${rs.total} de ${rs.total}</b> setores respondidos · pronto para enviar`;
-    const ep = $('dg-est-preencher'); if (ep) { ep.textContent = rs.respondidas + ' de ' + rs.total + ' respondidos'; ep.className = rs.faltam.length ? '' : 'vd'; }
+    const rs = resumoSalvos((window._dadosDiario && window._dadosDiario.autores) || {});
+    const info = $('dg-info'); if (info) info.innerHTML = rs.faltam.length ? `<b>${rs.salvos} de ${rs.total}</b> setores salvos · <span class="f">falta: ${rs.faltam.join(', ')}</span>` : `<b>${rs.total} de ${rs.total}</b> setores salvos · pronto para enviar`;
+    const ep = $('dg-est-preencher'); if (ep) { ep.textContent = rs.salvos + ' de ' + rs.total + ' salvos'; ep.className = rs.faltam.length ? '' : 'vd'; }
   }
 
   let quadroSeq = 0;

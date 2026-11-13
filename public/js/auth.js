@@ -862,14 +862,12 @@ function _turnoAtualPorHora() {
   return 'Noite';
 }
 
-// Checklist espelhada do backend
+// Os 4 setores que o verificador lê (sem checklist de "confere / não confere"): id interno + nome do setor
 const CHECKLIST_VAL = [
-  { id: 'sep_ok',     peso: 20, label: 'As informações da Separação estão corretas' },
-  { id: 'emb_ok',     peso: 15, label: 'As informações da Embalagem estão corretas' },
-  { id: 'ck_ok',      peso: 15, label: 'As informações do Checkout estão corretas' },
-  { id: 'rep_ok',     peso: 15, label: 'As informações da Reposição estão corretas' },
-  { id: 'caixas_ok',  peso: 20, label: 'Há caixas para abastecimento pelas ruas' },
-  { id: 'estoque_ok', peso: 15, label: 'O estoque está organizado' },
+  { id: 'sep_ok', peso: 25, label: 'Separação' },
+  { id: 'emb_ok', peso: 25, label: 'Embalagem' },
+  { id: 'ck_ok',  peso: 25, label: 'Checkout' },
+  { id: 'rep_ok', peso: 25, label: 'Reposição' },
 ];
 
 /* ── Fotos do diário: anexadas por setor (turno) e na validação ("não confere") ── */
@@ -1530,7 +1528,7 @@ function atualizarStatusBanner(status, extra, supervisor) {
   const cfg = {
     rascunho: { acc:'var(--text3)', msg:`Rascunho salvo${editadoPor} — clique em "Finalizar e enviar" para enviar ao próximo turno` },
     enviado:  { acc:'var(--info)', msg:`Enviado para validação${editadoPor} — prazo: ${extra||'1 hora'}` },
-    validado: { acc:'var(--green)', msg:`Validado pelo próximo turno — Pontuação: <b>${extra||'?'}/100</b>` },
+    validado: { acc:'var(--green)', msg:`Validado pelo próximo turno — Nota: <b>${extra||'?'}/100</b>` },
     expirado: { acc:'var(--red)', msg:'Prazo de validação expirou sem resposta do próximo turno' },
   };
   const c = cfg[status] || cfg.rascunho;
@@ -1633,7 +1631,7 @@ async function verificarValidacaoPendente() {
           ${timerHtml}
         </div>
         <button onclick="abrirModalValidacao()" style="width:100%;padding:12px;background:${atrasada?'rgba(224,168,62,.12)':'rgba(139,92,246,.12)'};color:${validCor};border:1.5px solid ${validCor};border-radius:8px;font-size:14px;font-weight:800;cursor:pointer;letter-spacing:.3px">
-          Abrir Checklist e Validar Diário do Turno Anterior
+          Abrir o diário do turno anterior e confirmar
         </button>
       </div>`;
     if (!atrasada) iniciarCountdown(val.restante_segundos);
@@ -1678,7 +1676,7 @@ async function abrirModalValidacao() {
     const obs = val.observacoes || {};
     const geral = obs.geral && String(obs.geral).trim();
     document.getElementById('modal-val-resumo').innerHTML = `
-      <div style="font-size:12px;color:var(--text2)">Confira cada item abaixo com o que o turno registrou. Se algo não bater com a realidade, marque <b>Não confere</b> e descreva o cenário real.</div>
+      <div style="font-size:12px;color:var(--text2)">Para cada setor, confira o que o turno registrou e marque <b>Tudo certo</b> ou <b>Teve problema</b>. Cada problema desconta da nota e pede a descrição do que você encontrou.</div>
       ${geral ? `<div style="margin-top:10px"><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.4px">Observação geral do turno</div><div style="font-size:12px;color:var(--text2);white-space:pre-line">${escHtml(geral)}</div></div>` : ''}`;
 
     // O que cada setor registrou (números + observação) para o item correspondente
@@ -1700,29 +1698,23 @@ async function abrirModalValidacao() {
     document.getElementById('modal-val-checklist').innerHTML = CHECKLIST_VAL.map(item => `
       <div id="item-wrap-${item.id}" style="border:1px solid var(--border);border-radius:10px;margin-bottom:10px;overflow:hidden">
         <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--surface2);flex-wrap:wrap">
-          <div style="flex:1;min-width:180px">
+          <div style="flex:1;min-width:150px">
             <div style="font-size:13px;font-weight:700;color:var(--text)">${item.label}</div>
-            <div style="font-size:10px;color:var(--text3);margin-top:2px">Penalidade se não confere: −${item.peso} pts</div>
+            <div style="font-size:10px;color:var(--text3);margin-top:2px">Se teve problema: −${item.peso} pts</div>
           </div>
           <div style="display:flex;gap:6px">
             <button onclick="marcarItem('${item.id}',true,this)" data-item="${item.id}" data-val="true"
-              style="padding:7px 14px;border-radius:7px;border:2px solid rgba(87,185,129,.4);background:transparent;color:var(--green);font-weight:800;font-size:13px;cursor:pointer;transition:.15s">
-              ✓ Confere
-            </button>
+              style="padding:7px 14px;border-radius:7px;border:2px solid rgba(87,185,129,.4);background:transparent;color:var(--green);font-weight:800;font-size:13px;cursor:pointer;transition:.15s">✓ Tudo certo</button>
             <button onclick="marcarItem('${item.id}',false,this)" data-item="${item.id}" data-val="false"
-              style="padding:7px 14px;border-radius:7px;border:2px solid rgba(201,82,79,.4);background:transparent;color:var(--red);font-weight:800;font-size:13px;cursor:pointer;transition:.15s">
-              ✗ Não confere
-            </button>
+              style="padding:7px 14px;border-radius:7px;border:2px solid rgba(201,82,79,.4);background:transparent;color:var(--red);font-weight:800;font-size:13px;cursor:pointer;transition:.15s">⚠ Teve problema</button>
           </div>
         </div>
         ${detalheHtml(item.id)}
         <div id="obs-wrap-${item.id}" style="display:none;padding:10px 14px;border-top:1px solid var(--border);background:rgba(201,82,79,.08)">
-          <label style="font-size:11px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.5px">
-            Qual é o cenário real? (obrigatório)
-          </label>
+          <label style="font-size:11px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.5px">Qual foi o problema em ${item.label}? (obrigatório)</label>
           <textarea id="obs-${item.id}" placeholder="Descreva o que você realmente encontrou..."
             style="width:100%;min-height:60px;margin-top:6px;border:1px solid rgba(201,82,79,.4);border-radius:7px;padding:8px;font-size:12px;font-family:inherit;background:var(--surface);color:var(--text);resize:vertical;box-sizing:border-box"></textarea>
-          <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-top:8px">Fotos do cenário real (opcional)</div>
+          <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-top:8px">Fotos (opcional)</div>
           <div id="fotos-modal-${item.id}"></div>
         </div>
       </div>`).join('');
@@ -1736,8 +1728,8 @@ async function abrirModalValidacao() {
     const m = Math.floor(val.restante_segundos/60).toString().padStart(2,'0');
     const s = (val.restante_segundos%60).toString().padStart(2,'0');
     document.getElementById('modal-val-timer').textContent = `${m}:${s}`;
-    document.getElementById('modal-val-score').textContent = '100';
     document.getElementById('modal-val-obs').value = '';
+    _atualizarNotaModal();
     modal.style.display = 'flex';
     fetch(`${API}/diario/${val.diario_id}/visto`, { method:'POST', credentials:'include' }).catch(() => {});
     // Sincroniza timer do modal com o countdown
@@ -1767,68 +1759,41 @@ async function abrirModalValidacao() {
   } catch(e) { toast('Erro ao abrir validação','erro'); }
 }
 
-// ── Marca item do checklist como Sim/Não e mostra campo de observação se Não ──
+// ── Submete a validação ───────────────────────────────────────────────────────
+// ── Marca o setor como "Tudo certo" ou "Teve problema": o problema abre o campo da observação e tira pontos ──
 function marcarItem(itemId, passou, btnEl) {
-  // Destaca botão selecionado
-  const row = btnEl.closest(`#item-wrap-${itemId} div`);
-  if (row) row.querySelectorAll('button').forEach(b => {
-    b.style.background = 'transparent';
-    b.style.boxShadow  = 'none';
-  });
-  btnEl.style.background  = passou ? 'rgba(87,185,129,.15)' : 'rgba(201,82,79,.15)';
-  btnEl.style.boxShadow   = passou ? '0 0 0 2px var(--green)' : '0 0 0 2px var(--red)';
-
-  // Mostra/oculta campo de observação
+  const caixa = btnEl.parentElement;
+  caixa.querySelectorAll('button').forEach(b => { b.style.background = 'transparent'; b.style.boxShadow = 'none'; b.dataset.on = ''; });
+  btnEl.style.background = passou ? 'rgba(87,185,129,.15)' : 'rgba(201,82,79,.15)';
+  btnEl.style.boxShadow  = passou ? '0 0 0 2px var(--green)' : '0 0 0 2px var(--red)';
+  btnEl.dataset.on = '1';
   const obsWrap = document.getElementById(`obs-wrap-${itemId}`);
   if (obsWrap) obsWrap.style.display = passou ? 'none' : '';
-
-  // Limpa texto se voltou para Sim
-  if (passou) {
-    const obsEl = document.getElementById(`obs-${itemId}`);
-    if (obsEl) obsEl.value = '';
-  }
-
-  // Recalcula score
+  if (passou) { const o = document.getElementById(`obs-${itemId}`); if (o) o.value = ''; }
+  _atualizarNotaModal();
+}
+// nota = 100 menos o peso de cada setor marcado com problema
+function _atualizarNotaModal() {
   let pts = 100;
-  CHECKLIST_VAL.forEach(item => {
-    const btns = document.querySelectorAll(`button[data-item="${item.id}"]`);
-    btns.forEach(b => {
-      if (b.style.background && b.style.background !== 'transparent') {
-        if (b.dataset.val === 'false') pts -= item.peso;
-      }
-    });
-  });
-  const scoreEl = document.getElementById('modal-val-score');
-  if (scoreEl) {
-    scoreEl.textContent = Math.max(0, pts);
-    scoreEl.style.color = pts>=80 ? 'var(--green)' : pts>=60 ? 'var(--amber)' : 'var(--red)';
-  }
+  CHECKLIST_VAL.forEach(item => { const b = document.querySelector(`button[data-item="${item.id}"][data-val="false"]`); if (b && b.dataset.on === '1') pts -= item.peso; });
+  const el = document.getElementById('modal-val-score');
+  if (el) { el.textContent = Math.max(0, pts); el.style.color = pts >= 80 ? 'var(--green)' : pts >= 60 ? 'var(--amber)' : 'var(--red)'; }
 }
 
-// ── Submete a validação ───────────────────────────────────────────────────────
 let _submetendoValidacao = false;
 async function submeterValidacao() {
   if (_submetendoValidacao) return;           // bloqueia duplo clique
   if (!_validacaoId) { toast('Nenhuma validação ativa','aviso'); return; }
   const itens = CHECKLIST_VAL.map(item => {
-    let passou = null;
-    document.querySelectorAll(`button[data-item="${item.id}"]`).forEach(b => {
-      if (b.style.background && b.style.background !== 'transparent') {
-        passou = b.dataset.val === 'true';
-      }
-    });
-    const obs = (!passou && document.getElementById(`obs-${item.id}`)?.value) || '';
-    return { id: item.id, label: item.label, peso: item.peso, passou, obs };
+    const ok = document.querySelector(`button[data-item="${item.id}"][data-val="true"]`)?.dataset.on === '1';
+    const bad = document.querySelector(`button[data-item="${item.id}"][data-val="false"]`)?.dataset.on === '1';
+    const obs = bad ? (document.getElementById(`obs-${item.id}`)?.value || '').trim() : '';
+    return { id: item.id, label: item.label, peso: item.peso, passou: ok ? true : bad ? false : null, obs };
   });
   const naoMarcados = itens.filter(i => i.passou === null);
-  if (naoMarcados.length > 0) {
-    toast(`Responda todos os itens antes de confirmar (${naoMarcados.length} pendentes)`, 'aviso'); return;
-  }
-  // Verifica se itens marcados como "Não" têm observação preenchida
-  const semObs = itens.filter(i => i.passou === false && !i.obs.trim());
-  if (semObs.length > 0) {
-    toast(`Preencha a ocorrência para: "${semObs[0].label}"`, 'aviso'); return;
-  }
+  if (naoMarcados.length > 0) { toast(`Marque "Tudo certo" ou "Teve problema" em todos os setores (${naoMarcados.length} pendentes)`, 'aviso'); return; }
+  const semObs = itens.filter(i => i.passou === false && !i.obs);
+  if (semObs.length > 0) { toast(`Descreva o problema em: ${semObs[0].label}`, 'aviso'); return; }
   const obs_geral = document.getElementById('modal-val-obs')?.value || '';
   const btnConfirmar = document.querySelector('#modal-diario-validacao button[onclick="submeterValidacao()"]');
   _submetendoValidacao = true;
@@ -1854,7 +1819,7 @@ async function submeterValidacao() {
 
     if (res.ok && r.mensagem) {
       // Sucesso normal
-      toast(`Validação concluída! Pontuação: ${r.pontuacao ?? '?'}/100`, 'sucesso');
+      toast(`Verificação concluída! Nota: ${r.pontuacao ?? '?'}/100`, 'sucesso');
       _limparBanner();
     } else if (r.erro === 'Este diário já foi validado') {
       // Já foi validado por outro supervisor — limpa o banner normalmente
@@ -1867,7 +1832,7 @@ async function submeterValidacao() {
     toast('Erro ao submeter validação','erro');
   } finally {
     _submetendoValidacao = false;
-    if (btnConfirmar) { btnConfirmar.disabled = false; btnConfirmar.textContent = 'Confirmar Validação'; }
+    if (btnConfirmar) { btnConfirmar.disabled = false; btnConfirmar.textContent = 'Confirmar verificação'; }
   }
 }
 

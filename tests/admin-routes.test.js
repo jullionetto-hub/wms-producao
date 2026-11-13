@@ -678,8 +678,27 @@ describe('Admin — Diário: Envio e Validação', () => {
       obs_geral: 'ok',
     });
     expect(res.status).toBe(200);
-    // peso de sep_ok = 20 → 100 - 20 = 80
-    expect(res.body.pontuacao).toBe(80);
+    // cada setor pesa 25 → 100 - 25 = 75
+    expect(res.body.pontuacao).toBe(75);
+  });
+
+  test('validar: cada "teve problema" tira 25 pontos (dois problemas = 50)', async () => {
+    const client = makeClient([{}, { rows: [{ id: 1, status: 'pendente', diario_id: 2 }] }, {}, {}, {}]);
+    mockPool.connect.mockResolvedValueOnce(client);
+    const res = await agent.post('/diario/validacao/1/validar').send({
+      itens: [{ id: 'sep_ok', passou: false, obs: 'x' }, { id: 'emb_ok', passou: true }, { id: 'ck_ok', passou: false, obs: 'y' }, { id: 'rep_ok', passou: true }],
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.pontuacao).toBe(50);
+  });
+
+  test('validar: todos "tudo certo" = 100', async () => {
+    const client = makeClient([{}, { rows: [{ id: 1, status: 'pendente', diario_id: 2 }] }, {}, {}, {}]);
+    mockPool.connect.mockResolvedValueOnce(client);
+    const res = await agent.post('/diario/validacao/1/validar').send({
+      itens: ['sep_ok', 'emb_ok', 'ck_ok', 'rep_ok'].map(id => ({ id, passou: true })),
+    });
+    expect(res.body.pontuacao).toBe(100);
   });
 });
 

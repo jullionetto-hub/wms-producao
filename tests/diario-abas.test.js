@@ -129,3 +129,18 @@ describe('integracao com a pagina', () => {
     expect(auth).toContain('function abrirModalValidacao');
   });
 });
+
+describe('resumoSalvos: setores ja salvos por alguem', () => {
+  test('nenhum salvo: faltam os 4', () => {
+    expect(A.resumoSalvos({})).toEqual({ salvos: 0, total: 4, faltam: ['Separação', 'Checkout', 'Embalagem', 'Reposição'] });
+  });
+  test('conta so os setores com autor', () => {
+    const r = A.resumoSalvos({ separacao: { nome: 'Ana' }, reposicao: { nome: 'Bia' }, geral: { nome: 'Cris' } });
+    expect(r.salvos).toBe(2);
+    expect(r.faltam).toEqual(['Checkout', 'Embalagem']);
+  });
+  test('todos salvos: nada falta', () => {
+    const a = { separacao: { nome: 'A' }, checkout: { nome: 'B' }, embalagem: { nome: 'C' }, reposicao: { nome: 'D' } };
+    expect(A.resumoSalvos(a).faltam).toEqual([]);
+  });
+});

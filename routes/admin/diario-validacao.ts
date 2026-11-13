@@ -8,12 +8,10 @@ import type { Linha } from '../../types/db';
 
 // ── Checklist de validação (pesos somam 100) ──────────────────────────────────
 const CHECKLIST_ITENS = [
-  { id: 'sep_ok',     peso: 20, label: 'As informações da Separação estão corretas' },
-  { id: 'emb_ok',     peso: 15, label: 'As informações da Embalagem estão corretas' },
-  { id: 'ck_ok',      peso: 15, label: 'As informações do Checkout estão corretas' },
-  { id: 'rep_ok',     peso: 15, label: 'As informações da Reposição estão corretas' },
-  { id: 'caixas_ok',  peso: 20, label: 'Há caixas para abastecimento pelas ruas' },
-  { id: 'estoque_ok', peso: 15, label: 'O estoque está organizado' },
+  { id: 'sep_ok', peso: 25, label: 'Separação' },
+  { id: 'emb_ok', peso: 25, label: 'Embalagem' },
+  { id: 'ck_ok',  peso: 25, label: 'Checkout' },
+  { id: 'rep_ok', peso: 25, label: 'Reposição' },
 ];
 
 // ── POST /diario/:id/enviar — Finaliza e envia para validação ─────────────────
@@ -156,16 +154,20 @@ router.post('/diario/validacao/:id/validar', requerAuth, requerPerfil('superviso
     }
 
     const { itens, obs_geral } = req.body;
-    let pontuacao = 100;
-    if (Array.isArray(itens)) {
+    // Sem checklist: o verificador lê os setores e escreve observações (itens: [{id, label, obs}]) — não há nota.
+    // Só quem ainda mandar itens no formato antigo (passou: true/false) continua recebendo a pontuação.
+    const formatoAntigo = Array.isArray(itens) && itens.some((i: any) => typeof i?.passou === 'boolean');
+    let pontuacao: number | null = null;
+    if (formatoAntigo) {
+      pontuacao = 100;
       for (const item of itens) {
         if (item.passou === false) {
           const def = CHECKLIST_ITENS.find(c => c.id === item.id);
           if (def) pontuacao -= def.peso;
         }
       }
+      pontuacao = Math.max(0, pontuacao);
     }
-    pontuacao = Math.max(0, pontuacao);
     const agora    = new Date();
     const validador = req.session?.usuario?.nome || 'Supervisor';
     const turnoVal  = req.session?.usuario?.turno || '';
