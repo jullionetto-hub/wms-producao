@@ -156,6 +156,16 @@ router.get('/diario/existe', requerAuth, requerDiario, async (req,res) => {
   } catch(e) { res.status(500).json({erro:e.message}); }
 });
 
+// Todos os diários de uma data (manhã/tarde/noite) pro Excel com uma aba por turno.
+// Não registra "visto" — exportar não deve contar como leitura dos outros turnos.
+router.get('/diario/dia/:data', requerAuth, requerDiario, async (req,res) => {
+  try {
+    const lista = await db.all<Linha<'diario_bordo'>>('SELECT * FROM diario_bordo WHERE data=$1', [req.params.data]);
+    for (const d of lista) if (typeof d.dados === 'string') d.dados = JSON.parse(d.dados);
+    res.json(lista);
+  } catch(e) { res.status(500).json({erro:e.message}); }
+});
+
 router.get('/diario/:id', requerAuth, requerDiario, async (req,res) => {
   try {
     const d = await db.get<Linha<'diario_bordo'>>('SELECT * FROM diario_bordo WHERE id=$1', [req.params.id]);

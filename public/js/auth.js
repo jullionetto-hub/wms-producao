@@ -1961,11 +1961,34 @@ async function verDiario(id, seq) {
   } catch(e) { console.warn(e); }
 }
 
+// Excel do Diário de Bordo: UM arquivo com uma aba por turno (Manhã, Tarde, Noite)
+// e uma aba "Evolução" com o que se repetiu entre os turnos e se houve melhora.
 // Usa ExcelJS (não o XLSX/SheetJS usado no resto do app) só pra esse export
 // — a versão grátis do SheetJS aceita marcar estilo nas células mas IGNORA
 // tudo na hora de escrever o arquivo, então o Excel saía todo em texto
 // preto sem cor/negrito nenhum, apesar do código já tentar. ExcelJS aplica
 // estilo de verdade na versão grátis.
+const _DIARIO_XLS_TURNOS = [['Manha','Manhã'], ['Tarde','Tarde'], ['Noite','Noite']];
+// [setor, rótulo, [[campo, rótulo, "bom quando"]]] — 'mais' = subir é melhor, 'menos' = cair é melhor, null = neutro
+const _DIARIO_XLS_SETORES = [
+  ['separacao', 'Separação', [['total','Total',null],['concluidos','Concluídos','mais'],['pendentes','Pendentes','menos'],['separando','Separando',null]]],
+  ['checkout',  'Checkout',  [['total','Total',null],['concluidos','Concluídos','mais'],['pendentes','Pendentes','menos']]],
+  ['embalagem', 'Embalagem', [['total','Total',null],['embalados','Embalados','mais'],['pendentes','Pendentes','menos']]],
+  ['reposicao', 'Reposição', [['total','Total',null],['resolvidas','Resolvidas','mais'],['pendentes','Pendentes','menos'],['nao_encontrados','Não Encontrados','menos']]],
+];
+
+function _diarioXlsObs(d) {
+  const o = typeof d.observacoes === 'string' ? JSON.parse(d.observacoes || '{}') : (d.observacoes || {});
+  return o || {};
+}
+function _diarioXlsNorm(t) {
+  return String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+}
+// Quebra a observação em frases/linhas pra achar o que foi repetido literalmente de um turno pro outro.
+function _diarioXlsFrases(t) {
+  return String(t || '').split(/[\n;]+|(?<=[.!?])\s+/).map(s => s.trim()).filter(s => _diarioXlsNorm(s).length >= 8);
+}
+
 async function exportarDiarioExcel(id) {
   try {
     // cdn.jsdelivr.net (não cdnjs.cloudflare.com) de propósito — o resto do
@@ -1975,89 +1998,192 @@ async function exportarDiarioExcel(id) {
     // (erro de carregamento do <script>, sem nem chegar a gerar o Excel).
     await _carregarScript('https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js');
     const res = await fetch(`${API}/diario/${id}`, { credentials:'include' });
-    const d = await res.json();
+    const base = await res.json();
     if (!res.ok) return;
-    const dd = d.dados||{};
-    const obs = typeof d.observacoes === 'string' ? JSON.parse(d.observacoes||'{}') : (d.observacoes||{});
-    const turnoLabel = { Manha:'Manhã', Tarde:'Tarde', Noite:'Noite' }[d.turno] || d.turno;
+    // Os 3 turnos do mesmo dia (sem registrar "visto" nos outros diários).
+    const resDia = await fetch(`${API}/diario/dia/${encodeURIComponent(String(base.data).slice(0,10))}`, { credentials:'include' });
+    const doDia = resDia.ok ? await resDia.json() : [];
+    const porTurno = {};
+    doDia.forEach(x => { porTurno[x.turno] = x; });
+    porTurno[base.turno] = base;
+    const turnos = _DIARIO_XLS_TURNOS.filter(([k]) => porTurno[k]);   // só os que existem
 
-    const NCOLS = 4;
+    const NCOLS = 6;
     const ROXO = 'FF4F46E5', CINZA = 'FFE5E7EB', BORDA = 'FFD1D5DB';
+    const VERDE = 'FF15803D', VERMELHO = 'FFB91C1C', AMBAR = 'FFB45309';
     const fina = { style:'thin', color:{argb:BORDA} };
     const bordaFina = { top:fina, bottom:fina, left:fina, right:fina };
+    const preenche = (c, argb) => { c.fill = { type:'pattern', pattern:'solid', fgColor:{argb} }; };
 
     const wb = new ExcelJS.Workbook();
-    const ws = wb.addWorksheet('Diário');
-    ws.columns = [{width:24},{width:24},{width:20},{width:20}];
 
-    let r = 1;
-    const linha = (vals, estilo) => {
-      const row = ws.getRow(r);
-      vals.forEach((v, i) => { const c = row.getCell(i+1); c.value = v; if (estilo) estilo(c, i); });
-      r++;
-      return row.number;
+    // Cria uma aba com helpers de linha/seção; cada aba tem seu próprio contador de linha.
+    const novaAba = (nome, larguras) => {
+      const ws = wb.addWorksheet(nome);
+      ws.columns = larguras.map(w => ({ width:w }));
+      let r = 1;
+      const api = {
+        ws,
+        linha(vals, estilo) {
+          const row = ws.getRow(r);
+          vals.forEach((v, i) => { const c = row.getCell(i+1); c.value = v; if (estilo) estilo(c, i); });
+          r++;
+          return row.number;
+        },
+        pular() { r++; },
+        faixa(titulo, tam, altura) {
+          const n = api.linha([titulo]);
+          ws.mergeCells(n, 1, n, NCOLS);
+          const c = ws.getCell(n, 1);
+          c.font = { bold:true, size:tam, color:{argb:'FFFFFFFF'} };
+          preenche(c, ROXO);
+          c.alignment = { vertical:'middle' };
+          ws.getRow(n).height = altura;
+          return n;
+        },
+        cabecalho(vals) {
+          return api.linha(vals, (c) => { c.font = { bold:true }; preenche(c, CINZA); c.border = bordaFina; c.alignment = { horizontal:'center', vertical:'middle', wrapText:true }; });
+        },
+        texto(vals) {
+          return api.linha(vals, (c, i) => { c.border = bordaFina; c.alignment = { vertical:'top', wrapText:true, horizontal: (i===0 || i===5) ? 'left' : 'center' }; });
+        },
+      };
+      return api;
     };
-    const pular = () => { r++; };
 
-    const rTitulo = linha(['Diário de Bordo — WMS Miess']);
-    ws.mergeCells(rTitulo, 1, rTitulo, NCOLS);
-    ws.getCell(rTitulo, 1).font = { bold:true, size:16, color:{argb:ROXO} };
-    ws.getRow(rTitulo).height = 26;
-    pular();
+    // ----- Uma aba por turno -----
+    turnos.forEach(([chave, rotulo]) => {
+      const d = porTurno[chave];
+      const dd = d.dados || {};
+      const obs = _diarioXlsObs(d);
+      const a = novaAba(rotulo, [24,24,20,20]);
+      const rT = a.linha(['Diário de Bordo — WMS Miess']);
+      a.ws.mergeCells(rT, 1, rT, 4);
+      a.ws.getCell(rT, 1).font = { bold:true, size:16, color:{argb:ROXO} };
+      a.ws.getRow(rT).height = 26;
+      a.pular();
+      const neg = (c, i) => { if (i===0||i===2) c.font = { bold:true }; };
+      a.linha(['Data:', fmtData(d.data), 'Turno:', rotulo], neg);
+      a.linha(['Supervisor:', d.supervisor, 'Leu diário anterior:', d.leu_anterior ? 'Sim' : 'Não'], neg);
+      a.pular();
 
-    linha(['Data:', fmtData(d.data), 'Turno:', turnoLabel], (c, i) => { if (i===0||i===2) c.font = { bold:true }; });
-    linha(['Supervisor:', d.supervisor, 'Leu diário anterior:', d.leu_anterior ? 'Sim' : 'Não'], (c, i) => { if (i===0||i===2) c.font = { bold:true }; });
-    pular();
+      const secao = (titulo, header, dadosLinha, obsTexto) => {
+        const n = a.linha([titulo]);
+        a.ws.mergeCells(n, 1, n, 4);
+        const c = a.ws.getCell(n, 1);
+        c.font = { bold:true, size:12, color:{argb:'FFFFFFFF'} }; preenche(c, ROXO); c.alignment = { vertical:'middle' };
+        a.ws.getRow(n).height = 20;
+        a.linha(header, (cc) => { cc.font = { bold:true }; preenche(cc, CINZA); cc.border = bordaFina; });
+        a.linha(dadosLinha, (cc) => { cc.border = bordaFina; cc.alignment = { horizontal:'center' }; });
+        a.linha(['Observações:', obsTexto || '—'], (cc, i) => { if (i===0) cc.font = { bold:true }; });
+        a.pular();
+      };
+      secao('Separação', ['Total','Concluídos','Pendentes','Separando'],
+        [dd.separacao?.total||0, dd.separacao?.concluidos||0, dd.separacao?.pendentes||0, dd.separacao?.separando||0], obs.separacao);
+      secao('Checkout', ['Total','Concluídos','Pendentes',''],
+        [dd.checkout?.total||0, dd.checkout?.concluidos||0, dd.checkout?.pendentes||0,''], obs.checkout);
+      secao('Embalagem', ['Total','Embalados','Pendentes',''],
+        [dd.embalagem?.total||0, dd.embalagem?.embalados||0, dd.embalagem?.pendentes||0,''], obs.embalagem);
+      secao('Reposição', ['Total','Resolvidas','Pendentes','Não Encontrados'],
+        [dd.reposicao?.total||0, dd.reposicao?.resolvidas||0, dd.reposicao?.pendentes||0, dd.reposicao?.nao_encontrados||0], obs.reposicao);
 
-    const secao = (titulo, header, dadosLinha, obsTexto) => {
-      const rSec = linha([titulo]);
-      ws.mergeCells(rSec, 1, rSec, NCOLS);
-      const cSec = ws.getCell(rSec, 1);
-      cSec.font = { bold:true, size:12, color:{argb:'FFFFFFFF'} };
-      cSec.fill = { type:'pattern', pattern:'solid', fgColor:{argb:ROXO} };
-      cSec.alignment = { vertical:'middle' };
-      ws.getRow(rSec).height = 20;
+      const rP = a.linha(['Pedidos com Problema']);
+      a.ws.mergeCells(rP, 1, rP, 4);
+      const cP = a.ws.getCell(rP, 1);
+      cP.font = { bold:true, size:12, color:{argb:'FFFFFFFF'} }; preenche(cP, ROXO);
+      a.linha(['Pedido','Cliente','Item',''], (c) => { c.font = { bold:true }; preenche(c, CINZA); c.border = bordaFina; });
+      if (dd.problemas?.length) dd.problemas.forEach(p => a.linha([p.pedido||'-', p.cliente||'-', `${p.codigo||''} ${p.item||''}`.trim(), ''], (c) => { c.border = bordaFina; }));
+      else a.linha(['Nenhum problema registrado']);
+      a.pular();
 
-      const rHead = linha(header, (c) => {
-        c.font = { bold:true };
-        c.fill = { type:'pattern', pattern:'solid', fgColor:{argb:CINZA} };
-        c.border = bordaFina;
+      const rO = a.linha(['Observações Gerais']);
+      a.ws.mergeCells(rO, 1, rO, 4);
+      const cO = a.ws.getCell(rO, 1);
+      cO.font = { bold:true, size:12, color:{argb:'FFFFFFFF'} }; preenche(cO, ROXO);
+      a.linha([obs.geral || '—']);
+    });
+
+    // ----- Aba "Evolução" -----
+    const ev = novaAba('Evolução', [28,12,12,12,14,44]);
+    const rEt = ev.linha(['Evolução entre os turnos — ' + fmtData(base.data)]);
+    ev.ws.mergeCells(rEt, 1, rEt, NCOLS);
+    ev.ws.getCell(rEt, 1).font = { bold:true, size:16, color:{argb:ROXO} };
+    ev.ws.getRow(rEt).height = 26;
+    const nomesTurnos = turnos.map(([, r]) => r);
+    ev.linha([turnos.length > 1 ? 'Turnos comparados: ' + nomesTurnos.join(' → ') : 'Só existe diário de um turno nesta data (' + nomesTurnos.join('') + ') — nada a comparar ainda.']);
+    ev.pular();
+    const ultimo = turnos[turnos.length-1][0];
+    const simNao = (k, em) => !porTurno[k] ? '—' : (em.has(k) ? 'Sim' : 'Não');
+
+    // 1) Números: valor em cada turno + variação do primeiro ao último turno existente
+    ev.faixa('1. Números por turno', 12, 20);
+    ev.cabecalho(['Indicador', 'Manhã', 'Tarde', 'Noite', 'Variação', 'Houve evolução?']);
+    _DIARIO_XLS_SETORES.forEach(([setor, rotSetor, campos]) => {
+      campos.forEach(([campo, rotCampo, bom]) => {
+        const vals = _DIARIO_XLS_TURNOS.map(([k]) => porTurno[k] ? (porTurno[k].dados?.[setor]?.[campo] || 0) : '—');
+        const nums = turnos.map(([k]) => porTurno[k].dados?.[setor]?.[campo] || 0);
+        const delta = nums.length > 1 ? nums[nums.length-1] - nums[0] : null;
+        let veredito = '—', cor = null;
+        if (delta !== null) {
+          if (delta === 0) { veredito = 'Igual'; }
+          else if (!bom) { veredito = delta > 0 ? 'Subiu' : 'Caiu'; }
+          else if ((bom === 'mais') === (delta > 0)) { veredito = 'Evoluiu'; cor = VERDE; }
+          else { veredito = 'Piorou'; cor = VERMELHO; }
+        }
+        const n = ev.texto([`${rotSetor} — ${rotCampo}`, ...vals, delta === null ? '—' : (delta > 0 ? '+' : '') + delta, veredito]);
+        // colunas: Indicador, M, T, N, Variação, Veredito (a texto() alinha a 6ª à esquerda)
+        if (cor) ev.ws.getRow(n).getCell(6).font = { bold:true, color:{argb:cor} };
       });
-      const rDados = linha(dadosLinha, (c) => { c.border = bordaFina; c.alignment = { horizontal:'center' }; });
-      linha(['Observações:', obsTexto || '—'], (c, i) => { if (i===0) c.font = { bold:true }; });
-      pular();
-    };
-    secao('Separação', ['Total','Concluídos','Pendentes','Separando'],
-      [dd.separacao?.total||0, dd.separacao?.concluidos||0, dd.separacao?.pendentes||0, dd.separacao?.separando||0], obs.separacao);
-    secao('Checkout', ['Total','Concluídos','Pendentes',''],
-      [dd.checkout?.total||0, dd.checkout?.concluidos||0, dd.checkout?.pendentes||0,''], obs.checkout);
-    secao('Embalagem', ['Total','Embalados','Pendentes',''],
-      [dd.embalagem?.total||0, dd.embalagem?.embalados||0, dd.embalagem?.pendentes||0,''], obs.embalagem);
-    secao('Reposição', ['Total','Resolvidas','Pendentes','Não Encontrados'],
-      [dd.reposicao?.total||0, dd.reposicao?.resolvidas||0, dd.reposicao?.pendentes||0, dd.reposicao?.nao_encontrados||0], obs.reposicao);
+    });
+    ev.pular();
 
-    const rProb = linha(['Pedidos com Problema']);
-    ws.mergeCells(rProb, 1, rProb, NCOLS);
-    const cProb = ws.getCell(rProb, 1);
-    cProb.font = { bold:true, size:12, color:{argb:'FFFFFFFF'} };
-    cProb.fill = { type:'pattern', pattern:'solid', fgColor:{argb:ROXO} };
-    linha(['Pedido','Cliente','Item',''], (c) => { c.font = { bold:true }; c.fill = { type:'pattern', pattern:'solid', fgColor:{argb:CINZA} }; c.border = bordaFina; });
-    if (dd.problemas?.length) dd.problemas.forEach(p => linha([p.pedido||'-', p.cliente||'-', `${p.codigo||''} ${p.item||''}`.trim(), ''], (c) => { c.border = bordaFina; }));
-    else linha(['Nenhum problema registrado']);
-    pular();
+    // 2) Pedidos com problema: quem se repete, persiste ou foi resolvido
+    ev.faixa('2. Pedidos com problema entre os turnos', 12, 20);
+    ev.cabecalho(['Pedido / Item', 'Manhã', 'Tarde', 'Noite', 'Nº de turnos', 'Situação']);
+    const mapaProb = new Map();
+    turnos.forEach(([k]) => (porTurno[k].dados?.problemas || []).forEach(p => {
+      const chave = `${p.pedido||'-'}|${p.codigo||p.item||''}`;
+      if (!mapaProb.has(chave)) mapaProb.set(chave, { p, em: new Set() });
+      mapaProb.get(chave).em.add(k);
+    }));
+    if (!mapaProb.size) ev.texto(['Nenhum problema registrado em nenhum turno.', '', '', '', '', '']);
+    [...mapaProb.values()].sort((x, y) => y.em.size - x.em.size).forEach(({ p, em }) => {
+      const idxs = turnos.map(([k], i) => em.has(k) ? i : -1).filter(i => i >= 0);
+      let sit, cor;
+      if (em.size > 1 && em.has(ultimo)) { sit = 'Repetido — continua sem resolver'; cor = VERMELHO; }
+      else if (em.size > 1) { sit = 'Repetido — resolvido depois de ' + turnos[idxs[idxs.length-1]][1]; cor = VERDE; }
+      else if (em.has(ultimo)) { sit = turnos.length > 1 ? 'Novo neste turno' : 'Registrado'; cor = AMBAR; }
+      else { sit = 'Resolvido — não apareceu mais depois de ' + turnos[idxs[0]][1]; cor = VERDE; }
+      const n = ev.texto([`${p.pedido||'-'} · ${p.cliente||'-'}\n${`${p.codigo||''} ${p.item||''}`.trim()}`,
+        ..._DIARIO_XLS_TURNOS.map(([k]) => simNao(k, em)), em.size, sit]);
+      ev.ws.getRow(n).getCell(6).font = { bold:true, color:{argb:cor} };
+    });
+    ev.pular();
 
-    const rObs = linha(['Observações Gerais']);
-    ws.mergeCells(rObs, 1, rObs, NCOLS);
-    const cObs = ws.getCell(rObs, 1);
-    cObs.font = { bold:true, size:12, color:{argb:'FFFFFFFF'} };
-    cObs.fill = { type:'pattern', pattern:'solid', fgColor:{argb:ROXO} };
-    linha([obs.geral || '—']);
+    // 3) Observações: o que foi dito de novo em mais de um turno
+    ev.faixa('3. Observações repetidas entre os turnos', 12, 20);
+    ev.cabecalho(['Setor', 'Manhã', 'Tarde', 'Noite', 'Nº de turnos', 'Observação repetida']);
+    const setoresObs = [['separacao','Separação'],['checkout','Checkout'],['embalagem','Embalagem'],['reposicao','Reposição'],['geral','Geral']];
+    let achouRep = false;
+    setoresObs.forEach(([chave, rotulo]) => {
+      const mapa = new Map();   // frase normalizada -> { texto, em:Set }
+      turnos.forEach(([k]) => _diarioXlsFrases(_diarioXlsObs(porTurno[k])[chave]).forEach(f => {
+        const n = _diarioXlsNorm(f);
+        if (!mapa.has(n)) mapa.set(n, { texto: f, em: new Set() });
+        mapa.get(n).em.add(k);
+      }));
+      [...mapa.values()].filter(x => x.em.size > 1).forEach(({ texto, em }) => {
+        achouRep = true;
+        ev.texto([rotulo, ..._DIARIO_XLS_TURNOS.map(([k]) => simNao(k, em)), em.size, texto]);
+      });
+    });
+    if (!achouRep) ev.texto([turnos.length > 1 ? 'Nenhuma observação foi repetida entre os turnos.' : 'Sem outro turno para comparar.', '', '', '', '', '']);
 
     const buf = await wb.xlsx.writeBuffer();
     const blob = new Blob([buf], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `diario_${fmtData(d.data).replace(/\//g,'-')}_${d.turno}.xlsx`;
+    a.download = `diario_${fmtData(base.data).replace(/\//g,'-')}.xlsx`;
     a.click();
     URL.revokeObjectURL(a.href);
     toast('Excel exportado!','sucesso');
