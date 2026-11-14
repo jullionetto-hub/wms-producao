@@ -412,6 +412,7 @@ function montarSidebar() {
       <a class="mi" onclick="irPara('relatorios',this)"><span class="mi-ic">${IC.relatorios}</span>Relatórios</a>
       <a class="mi" onclick="irPara('auditoria',this)"><span class="mi-ic">${IC.auditoria}</span>Auditoria</a>
       <a class="mi" onclick="irPara('diario',this)"><span class="mi-ic">${IC.diario}</span>Diário de Bordo<span class="mbadge" id="menu-badge-diario" style="display:none;background:var(--indigo)">!</span></a>
+      <a class="mi" onclick="irPara('treino-diario',this)"><span class="mi-ic">${IC.diario}</span>Treinamento · Diário</a>
       <a class="mi" onclick="irPara('celulares',this)"><span class="mi-ic">${IC.celulares}</span>Celulares</a>
       <a class="mi" onclick="irPara('caixas',this)"><span class="mi-ic">${IC.caixas}</span>Caixas</a>
       <a class="mi" onclick="irPara('cadastros',this)"><span class="mi-ic">${IC.cadastros}</span>Cadastros</a>
@@ -429,13 +430,15 @@ function montarSidebar() {
       <a class="mi ativo" onclick="irPara('separacao',this)"><span class="mi-ic">${IC.separacao}</span>Pedidos</a>
       <a class="mi" onclick="irPara('estatisticas-sep',this);carregarEstatisticasSep()"><span class="mi-ic">${IC.estatisticas}</span>Estatísticas</a>
       <a class="mi" onclick="irPara('entrada-manual',this)"><span class="mi-ic">${IC.barcode}</span>Código de Barras</a>
-      <a class="mi" onclick="irPara('diario',this)"><span class="mi-ic">${IC.diario}</span>Diário de Bordo</a>`,
+      <a class="mi" onclick="irPara('diario',this)"><span class="mi-ic">${IC.diario}</span>Diário de Bordo</a>
+      <a class="mi" onclick="irPara('treino-diario',this)"><span class="mi-ic">${IC.diario}</span>Treinamento · Diário</a>`,
     repositor: `
       <div class="mg">REPOSIÇÃO</div>
       <a class="mi ativo" onclick="irPara('reposicao',this)"><span class="mi-ic">${IC.reposicao}</span>Solicitações <span class="mbadge" id="menu-badge-rep" style="display:none">0</span></a>
       <a class="mi" onclick="irPara('protocolo-rep',this)"><span class="mi-ic">${IC.protocolo}</span>Protocolo</a>
       <a class="mi" onclick="irPara('entrada-manual',this)"><span class="mi-ic">${IC.entrada}</span>Entrada Manual</a>
       <a class="mi" onclick="irPara('diario',this)"><span class="mi-ic">${IC.diario}</span>Diário de Bordo</a>
+      <a class="mi" onclick="irPara('treino-diario',this)"><span class="mi-ic">${IC.diario}</span>Treinamento · Diário</a>
       <div class="mg">ANÁLISE</div>
       <a class="mi" onclick="irPara('stats-repositor',this)"><span class="mi-ic">${IC.estatisticas}</span>Estatísticas</a>`,
     checkout: `
@@ -443,6 +446,7 @@ function montarSidebar() {
       <a class="mi ativo" onclick="irPara('checkout',this)"><span class="mi-ic">${IC.checkout}</span>Checkout</a>
       <a class="mi" onclick="irPara('entrada-manual',this)"><span class="mi-ic">${IC.barcode}</span>Código de Barras</a>
       <a class="mi" onclick="irPara('diario',this)"><span class="mi-ic">${IC.diario}</span>Diário de Bordo</a>
+      <a class="mi" onclick="irPara('treino-diario',this)"><span class="mi-ic">${IC.diario}</span>Treinamento · Diário</a>
       <div class="mg">ANÁLISE</div>
       <a class="mi" onclick="irPara('estatisticas-ck',this)"><span class="mi-ic">${IC.estatisticas}</span>Estatísticas</a>`,
     embalador: `
@@ -450,6 +454,7 @@ function montarSidebar() {
       <a class="mi ativo" onclick="irPara('embalagem',this)"><span class="mi-ic">${IC.embalagem}</span>Embalar</a>
       <a class="mi" onclick="irPara('entrada-manual',this)"><span class="mi-ic">${IC.barcode}</span>Código de Barras</a>
       <a class="mi" onclick="irPara('diario',this)"><span class="mi-ic">${IC.diario}</span>Diário de Bordo</a>
+      <a class="mi" onclick="irPara('treino-diario',this)"><span class="mi-ic">${IC.diario}</span>Treinamento · Diário</a>
       <div class="mg">ANÁLISE</div>
       <a class="mi" onclick="irPara('estatisticas-emb',this);carregarEstatisticasEmb()"><span class="mi-ic">${IC.estatisticas}</span>Estatísticas</a>`,
     gestor: `
@@ -463,6 +468,7 @@ function montarSidebar() {
       <a class="mi" onclick="irPara('relatorios',this)"><span class="mi-ic">${IC.relatorios}</span>Relatórios</a>
       <a class="mi" onclick="irPara('auditoria',this)"><span class="mi-ic">${IC.auditoria}</span>Auditoria</a>
       <a class="mi" onclick="irPara('diario',this)"><span class="mi-ic">${IC.diario}</span>Diário de Bordo<span class="mbadge" id="menu-badge-diario" style="display:none;background:var(--indigo)">!</span></a>
+      <a class="mi" onclick="irPara('treino-diario',this)"><span class="mi-ic">${IC.diario}</span>Treinamento · Diário</a>
       <a class="mi" onclick="irPara('celulares',this)"><span class="mi-ic">${IC.celulares}</span>Celulares</a>
       <a class="mi" onclick="irPara('caixas',this)"><span class="mi-ic">${IC.caixas}</span>Caixas</a>
       <a class="mi" onclick="irPara('cadastros',this)"><span class="mi-ic">${IC.cadastros}</span>Cadastros</a>
@@ -568,6 +574,7 @@ function irPara(pag, el) {
   if (pag === 'performance')  { renderizarPerformanceDash(); }
   if (pag === 'relatorios')   { var hj=hojeLocal(); var rd=document.getElementById('rel-de'),ra=document.getElementById('rel-ate'); if(rd&&!rd.value)rd.value=hj; if(ra&&!ra.value)ra.value=hj; }
   if (pag === 'auditoria')    { var hj=hojeLocal(); var ea=document.getElementById('aud-ini'); if(ea&&!ea.value)ea.value=hj; carregarAuditoria(); }
+  if (pag === 'treino-diario') { if (window.TreinoDiario) TreinoDiario.abrir(); }
   if (pag === 'diario')       { var _dt=document.getElementById('diario-turno'); if(_dt) _dt.value=_turnoAtualPorHora(); iniciarDiario(); }
   if (pag === 'celulares')    { ckInit(); }
   if (pag === 'caixas')       { carregarCaixas(); carregarLogCaixas(); }
